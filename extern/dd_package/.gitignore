@@ -1,0 +1,5 @@
+.idea/
+cmake-build-*/
+
+*.dot
+*.dot.svg
