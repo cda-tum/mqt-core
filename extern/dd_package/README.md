@@ -57,8 +57,8 @@ If you use the DD package for your research, we will be thankful if you refer to
 ```
 @article{zulehner2019package,
     title={How to Efficiently Handle Complex Values? Implementing Decision Diagrams for Quantum Computing},
-    author={Zulehner, Alwin ans Hillmich, Stefan and Wille, Robert},
-    journal={The {IEEE/ACM} International Conference on Computer-Aided Design},
+    author={Zulehner, Alwin and Hillmich, Stefan and Wille, Robert},
+    journal={{IEEE/ACM} International Conference on Computer-Aided Design},
     year={2019},
 }
 ```
