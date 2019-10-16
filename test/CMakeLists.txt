@@ -1,0 +1,4 @@
+project(IntermediateRepresentationTest)
+
+add_executable(IntermediateRepresentation main.cpp)
+target_link_libraries(IntermediateRepresentation IntermediateRepresentationLib)
