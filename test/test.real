@@ -1,0 +1,12 @@
+# test comment
+.version 1.0
+.numvars 2
+.variables a b
+.begin
+t1 a
+h1 a
+t1 b
+h1 b
+q1:-4 a
+q1:4 b
+.end

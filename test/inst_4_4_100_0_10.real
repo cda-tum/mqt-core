@@ -1,0 +1,101 @@
+.numvars 16
+.variables q0 q1 q2 q3 q4 q5 q6 q7 q8 q9 q10 q11 q12 q13 q14 q15
+.constants 0000000000000000
+.garbage ----------------
+.begin
+h1 q0
+h1 q1
+h1 q2
+h1 q3
+h1 q4
+h1 q5
+h1 q6
+h1 q7
+h1 q8
+h1 q9
+h1 q10
+h1 q11
+h1 q12
+h1 q13
+h1 q14
+h1 q15
+z2 q0 q1
+z2 q6 q7
+z2 q8 q9
+z2 q14 q15
+z2 q2 q3
+z2 q4 q5
+z2 q10 q11
+z2 q12 q13
+q1:4 q0
+q1:4 q1
+q1:4 q6
+q1:4 q7
+q1:4 q8
+q1:4 q9
+q1:4 q14
+q1:4 q15
+z2 q4 q8
+z2 q6 q10
+q1:4 q2
+q1:4 q3
+q1:4 q5
+q1:4 q11
+q1:4 q12
+q1:4 q13
+z2 q5 q9
+z2 q7 q11
+q1:4 q4
+rx1:2 q6
+ry1:2 q8
+q1:4 q10
+z2 q1 q2
+z2 q9 q10
+ry1:2 q5
+rx1:2 q7
+ry1:2 q11
+z2 q5 q6
+z2 q13 q14
+ry1:2 q1
+ry1:2 q2
+ry1:2 q9
+ry1:2 q10
+z2 q0 q4
+z2 q2 q6
+z2 q9 q13
+z2 q11 q15
+q1:4 q5
+ry1:2 q14
+z2 q1 q5
+z2 q3 q7
+z2 q8 q12
+z2 q10 q14
+rx1:2 q0
+rx1:2 q2
+ry1:2 q4
+ry1:2 q6
+rx1:2 q9
+rx1:2 q11
+rx1:2 q13
+rx1:2 q15
+z2 q0 q1
+z2 q6 q7
+z2 q8 q9
+z2 q14 q15
+ry1:2 q3
+rx1:2 q5
+q1:4 q10
+ry1:2 q12
+z2 q2 q3
+z2 q4 q5
+z2 q10 q11
+z2 q12 q13
+ry1:2 q0
+rx1:2 q1
+q1:4 q6
+q1:4 q7
+q1:4 q8
+q1:4 q9
+rx1:2 q14
+q1:4 q15
+.end
