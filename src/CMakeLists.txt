@@ -1,15 +1,32 @@
-project(IntermediateRepresentationLib)
+add_library(${PROJECT_NAME} STATIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/qasm_parser/Token.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/qasm_parser/Scanner.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/qasm_parser/Parser.cpp
 
-add_library(DDpackage STATIC ./DD-package/DDcomplex.cpp ./DD-package/DDpackage.cpp)
-set_property(TARGET DDpackage PROPERTY CXX_STANDARD 11)
-set_property(TARGET DDpackage PROPERTY CXX_EXTENSIONS OFF)
-target_compile_options(DDpackage PRIVATE -DNDEBUG -g -mtune=native -march=native -pipe -flto)
-target_include_directories(DDpackage PUBLIC DD-package)
+            ${CMAKE_CURRENT_SOURCE_DIR}/operations/Operation.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/operations/StandardOperation.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/operations/NonUnitaryOperation.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/operations/CompoundOperation.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/operations/ClassicControlledOperation.cpp
 
-add_library(IntermediateRepresentationLib STATIC QuantumComputation.cpp)
-set_property(TARGET IntermediateRepresentationLib PROPERTY CXX_STANDARD 14)
-set_property(TARGET IntermediateRepresentationLib PROPERTY CXX_EXTENSIONS OFF)
-target_compile_options(IntermediateRepresentationLib PRIVATE -mtune=native -march=native -flto)
-target_include_directories(IntermediateRepresentationLib PUBLIC ./ QASMParser Operations)
-target_link_libraries(IntermediateRepresentationLib DDpackage)
+            ${CMAKE_CURRENT_SOURCE_DIR}/QuantumComputation.cpp
+
+            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/QFT.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Grover.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/GoogleRandomCircuitSampling.cpp)
+
+target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/include/qasm_parser/ ${PROJECT_SOURCE_DIR}/include/operations/ ${PROJECT_SOURCE_DIR}/include/algorithms/)
+
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_14)
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
+target_link_libraries(${PROJECT_NAME} PUBLIC dd_package_lib)
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported)
+if(ipo_supported)
+	set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
+
+target_compile_options(${PROJECT_NAME} PRIVATE -mtune=native -march=native)
 

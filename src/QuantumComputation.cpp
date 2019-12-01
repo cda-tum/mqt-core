@@ -1,14 +1,12 @@
 //
 // Created by Lukas Burgholzer on 25.09.19.
 //
-#include "QuantumComputation.h"
-
-#include <algorithm>
-#include <regex>
-#include <limits>
+#include "QuantumComputation.hpp"
 
 namespace qc {
-
+	/***
+     * Protected Methods
+     ***/
 	void QuantumComputation::importReal(std::istream& is) {
 		readRealHeader(is);
 		readRealGateDescriptions(is);
@@ -41,8 +39,8 @@ namespace qc {
 			} else if (cmd == ".VARIABLES") {
 				for (int i = 0; i < nqubits; ++i) {
 					is >> variable;
-					qregs.insert({ variable, { i, i + 1 }});
-					cregs.insert({ "c_" + variable, { i, i + 1 }});
+					qregs.insert({ variable, { i, 1 }});
+					cregs.insert({ "c_" + variable, { i, 1 }});
 					inputPermutation.insert({ i, i });
 					outputPermutation.insert({ i, i });
 				}
@@ -62,6 +60,11 @@ namespace qc {
 				exit(1);
 			}
 
+		}
+
+		for (unsigned short i = 0; i < nqubits; ++i) {
+			inputPermutation.insert({i, i});
+			outputPermutation.insert({i,i});
 		}
 	}
 
@@ -113,7 +116,7 @@ namespace qc {
 				std::string qubits, label;
 				getline(is, qubits);
 
-				std::vector<short> controls{ };
+				std::vector<Control> controls{ };
 				std::istringstream iss(qubits);
 
 				// get controls and target
@@ -132,7 +135,7 @@ namespace qc {
 						std::cerr << "Label " << label << " not found!" << std::endl;
 						exit(1);
 					}
-					controls.push_back(negativeControl ? -(iter->second.first) : iter->second.first);
+					controls.emplace_back(iter->second.first, negativeControl? qc::Control::neg: qc::Control::pos);
 				}
 
 				if (!(iss >> label)) {
@@ -193,7 +196,7 @@ namespace qc {
 						break;
 					case SWAP:
 					case P:
-					case Pdag: unsigned short target1 = controls.back();
+					case Pdag: unsigned short target1 = controls.back().qubit;
 						controls.pop_back();
 						emplace_back<StandardOperation>(nqubits, controls, target, target1, gate);
 						break;
@@ -307,34 +310,137 @@ namespace qc {
 				exit(1);
 			}
 		} while (p.sym != Token::Kind::eof);
+
+		for (unsigned short i = 0; i < nqubits; ++i) {
+			inputPermutation.insert({i, i});
+			outputPermutation.insert({i,i});
+		}
 	}
 
-	dd::Edge QuantumComputation::buildFunctionality(std::unique_ptr<dd::Package>& dd, int nops) {
-		if (nops == -1)
-			nops= ops.size();
+	void QuantumComputation::importGRCS(std::istream& is, const std::string& filename) {
+		size_t slash = filename.find_last_of('/');
+		size_t dot = filename.find_last_of('.');
+		std::string benchmark = filename.substr(slash+1, dot-slash-1);
+		is >> nqubits;
+		std::string line;
+		std::string identifier;
+		unsigned short control = 0;
+		unsigned short target = 0;
+		unsigned int cycle = 0;
+		while (std::getline(is, line)) {
+			if (line.empty()) continue;
+			std::stringstream ss(line);
+			ss >> cycle;
+			ss >> identifier;
+			if (identifier == "cz") {
+				ss >> control;
+				ss >> target;
+				emplace_back<StandardOperation>(nqubits, Control(control), target, Z);
+			} else {
+				ss >> target;
+				if (identifier == "h")
+					emplace_back<StandardOperation>(nqubits, target, H);
+				else if (identifier == "t")
+					emplace_back<StandardOperation>(nqubits, target, T);
+				else if (identifier == "x_1_2")
+					emplace_back<StandardOperation>(nqubits, target, RX, PI_2);
+				else if (identifier == "y_1_2")
+					emplace_back<StandardOperation>(nqubits, target, RY, PI_2);
+				else {
+					std::cerr << "Unknown gate '" << identifier << "'\n";
+					exit(1);
+				}
+			}
+		}
+
+		for (unsigned short i = 0; i < nqubits; ++i) {
+			inputPermutation.insert({i, i});
+			outputPermutation.insert({i,i});
+		}
+	}
+
+	/***
+     * Public Methods
+     ***/
+	unsigned long long QuantumComputation::getNindividualOps() const {
+		unsigned long long nops = 0;
+		for (const auto& op: ops) {
+			/*
+			for (int i = 0; i < op->getNqubits(); ++i) {
+				if (op->getLine()[i] == 2)
+					nops++;
+			}
+			*/
+			nops += op->getTargets().size();
+		}
+
+		return nops;
+	}
+
+	void QuantumComputation::import(const std::string& filename, Format format) {
+		size_t slash = filename.find_last_of('/');
+		size_t dot = filename.find_last_of('.');
+		name = filename.substr(slash+1, dot-slash-1);
+
+		auto ifs = std::ifstream(filename);
+		if (!ifs.good()) {
+			std::cerr << "Error opening/reading from file: " << filename << std::endl;
+			exit(3);
+		}
+
+		switch (format) {
+			case Real: 
+				importReal(ifs);
+				break;
+			case OpenQASM: 
+				importOpenQASM(ifs);
+				break;
+			case GRCS: 
+				importGRCS(ifs, filename);
+				break;
+			default: 
+				ifs.close();
+				std::cerr << "Format " << format << " not yet supported." << std::endl;
+				exit(1);
+		}
+		ifs.close();
+	}
+
+	dd::Edge QuantumComputation::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
+		if (nqubits == 0)
+			return dd->DDone;
+		
+		std::array<short, MAX_QUBITS> line{};
+		line.fill(LINE_DEFAULT);
+
 		dd->useMatrixNormalization(true);
 		dd::Edge e = dd->makeIdent(0, nqubits-1);
+		
 		dd->incRef(e);
 
-		for (int i=0; i < nops; ++i) {
-			if (!ops[i]->isUnitary()) {
+		for (auto & op : ops) {
+			if (!op->isUnitary()) {
 				std::cerr << "Functionality not unitary." << std::endl;
 				exit(1);
 			}
 
-			auto tmp = dd->multiply(ops[i]->getDD(dd), e);
+			auto tmp = dd->multiply(op->getDD(dd, line), e);
 			dd->incRef(tmp);
 			dd->decRef(e);
 			e = tmp;
 
 			dd->garbageCollect();
-			//std::cout << dd->size(e) << std::endl;
 		}
-		//dd->useMatrixNormalization(false);
+		dd->useMatrixNormalization(false);
 		return e;
 	}
 
 	dd::Edge QuantumComputation::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
+		// TODO: this should be part of the simulator and not of the intermediate representation
+		// measurements are currently not supported here
+		std::array<short, MAX_QUBITS> line{};
+		line.fill(LINE_DEFAULT);
+
 		dd::Edge e = in;
 		dd->incRef(e);
 
@@ -344,7 +450,7 @@ namespace qc {
 				exit(1);
 			}
 
-			auto tmp = dd->multiply(op->getDD(dd), e);
+			auto tmp = dd->multiply(op->getDD(dd, line), e);
 			dd->incRef(tmp);
 			dd->decRef(e);
 			e = tmp;
@@ -355,11 +461,33 @@ namespace qc {
 		return e;
 	}
 
+	void QuantumComputation::create_reg_array(const registerMap& regs, std::vector<std::string>& regnames, unsigned short defaultnumber, char defaultname) {
+		regnames.clear();
+
+		std::stringstream ss;
+		if(regs.size() > 0) {
+			for(const auto& reg: regs) {
+				for(unsigned short i = 0; i < reg.second.second; i++) {
+					ss << reg.first << "[" << i << "]";
+					regnames.push_back(ss.str());
+					ss.str(std::string());
+				}
+			}
+		} else {
+			for(unsigned short i = 0; i < defaultnumber; i++) {
+				ss << defaultname << "[" << i << "]";
+				regnames.push_back(ss.str());
+				ss.str(std::string());
+			}
+		}
+	}
+	/*
 	void QuantumComputation::compareAndEmplace(std::vector<short>& controls, unsigned short target, Gate gate, fp lambda, fp phi, fp theta) {
 		if (!ops.empty()) {
 			if (auto op = dynamic_cast<StandardOperation*>(ops.back().get())) {
 				// TODO: only single qubit operations currently supported
-				if (!op->isControlled() && controls.empty() && op->getGate() == gate && fp_equals(lambda, op->getParameter()[0]) && fp_equals(phi, op->getParameter()[1]) && fp_equals(theta, op->getParameter()[2])) {
+				if (!op->isControlled() && controls.empty() && op->getGate() == gate &&  //TODO implement op equals gate
+				     fp_equals(lambda, op->getParameter()[0]) && fp_equals(phi, op->getParameter()[1]) && fp_equals(theta, op->getParameter()[2])) {
 					auto& line = op->getLine();
 					if (line[target] != -1) {
 						// TODO: Gate simplifications could happen here, e.g. -X-X- = -I-
@@ -376,7 +504,127 @@ namespace qc {
 
 		if (gate == X)
 			emplace_back<StandardOperation>(nqubits, controls, target);
+		else
+			emplace_back<StandardOperation>(nqubits, controls, target, gate, lambda, phi, theta);
+	}
+	 */
 
-		emplace_back<StandardOperation>(nqubits, controls, target, gate, lambda, phi, theta);
+	std::ostream& QuantumComputation::print(std::ostream& os) const {
+		os << std::setw(std::log10(ops.size())+5) << "i: \t\t";
+		for (unsigned short i = 0; i < nqubits; ++i) {
+			os << inputPermutation.at(i) << "\t";
+		}
+		os << std::endl;
+		size_t i = 0;
+		for (const auto& op:ops) {
+			os << std::setw(std::log10(ops.size())+1) << ++i << ": " << *op << "\n";
+		}
+		os << std::setw(std::log10(ops.size())+5) << "o: \t\t";
+		for (unsigned short i = 0; i < nqubits; ++i) {
+			os << outputPermutation.at(i) << "\t";
+		}
+		os << std::endl;
+		return os;
+	}
+
+	dd::Complex QuantumComputation::getEntry(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long i, unsigned long long j) {
+		if (dd->isTerminal(e))
+			return e.w;
+
+		dd::Complex c = dd->cn.getTempCachedComplex(1,0);
+		do {
+			unsigned short row = (i >> outputPermutation.at(e.p->v)) & 1;
+			unsigned short col = (j >> inputPermutation.at(e.p->v)) & 1;
+			e = e.p->e[dd::RADIX * row + col];
+			CN::mul(c, c, e.w);
+		} while (!dd->isTerminal(e));
+		return c;
+	}
+
+	std::ostream& QuantumComputation::printMatrix(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os) {
+		os << "Common Factor: " << e.w << "\n";
+		for (unsigned long long i = 0; i < std::pow(2, nqubits); ++i) {
+			for (unsigned long long j = 0; j < std::pow(2, nqubits); ++j) {
+				os << std::right << std::setw(7) << std::setfill(' ') << getEntry(dd, e, i, j) << "\t";
+			}
+			os << std::endl;
+		}
+		return os;
+	}
+
+	void QuantumComputation::printBin(unsigned long long n, std::stringstream& ss) {
+		if (n > 1)
+			printBin(n/2, ss);
+		ss << n%2;
+	}
+
+	std::ostream& QuantumComputation::printCol(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long j, std::ostream& os) {
+		os << "Common Factor: " << e.w << "\n";
+		for (unsigned long long i = 0; i < std::pow(2, nqubits); ++i) {
+			std::stringstream ss{};
+			printBin(i, ss);
+			os << std::setw(std::log2(std::pow(2,nqubits))) << ss.str() << ": " << getEntry(dd, e, i, j) << "\n";
+		}
+		return os;
+	}
+
+	std::ostream& QuantumComputation::printVector(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os) {
+		return printCol(dd, e, 0, os);
+	}
+
+	std::ostream& QuantumComputation::printStatistics(std::ostream& os) {
+		os << "QC Statistics:\n";
+		os << "\tn: " << nqubits << std::endl;
+		os << "\tm: " << ops.size() << std::endl;
+		os << "--------------" << std::endl;
+		return os;
+	}
+
+	void QuantumComputation::dump(const std::string& filename, Format format) {
+		auto of = std::ofstream(filename);
+		if (!of.good()) {
+			std::cerr << "Error opening file: " << filename << std::endl;
+			exit(3);
+		}
+
+		switch(format) {
+			// TODO: das mit den qubit registern darf man nicht so machen. dafür am besten einmal ansehen, wie das eingelesen wird
+			// Da gibt es explizit die member 'qregs' und 'cregs' in denen die richtige Information gespeichert wird
+			case  OpenQASM: {
+					of << "OPENQASM 2.0;"                << std::endl;
+					of << "include \"qelib1.inc\";"      << std::endl;
+					if(qregs.size() > 0) {
+						for (auto const& qreg : qregs) {
+							of << "qreg " << qreg.first << "[" << qreg.second.second << "];" << std::endl;
+						}
+					} else {
+						of << "qreg " << DEFAULT_QREG << "[" << nqubits   << "];" << std::endl;
+					}
+					if(cregs.size() > 0) {
+						for (auto const& creg : cregs) {
+							of << "creg " << creg.first << "[" << creg.second.second << "];" << std::endl;
+						}
+					} else {
+						of << "creg " << DEFAULT_CREG << "[" << nclassics << "];" << std::endl;
+					}
+
+					std::vector<std::string> qregnames{};
+					std::vector<std::string> cregnames{};
+					create_reg_array(qregs, qregnames, nqubits,   DEFAULT_QREG);
+					create_reg_array(cregs, cregnames, nclassics, DEFAULT_CREG);
+
+					for (const auto& op: ops) {
+						op->dumpOpenQASM(of, qregnames, cregnames);
+					}
+				}
+				break;
+			case Real:
+				std::cerr << "Dumping in real format currently not supported\n";
+				break;
+			case GRCS:
+				std::cerr << "Dumping in GRCS format currently not supported\n";
+				break;
+		}
+		of.close();
 	}
 }

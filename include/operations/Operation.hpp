@@ -1,0 +1,143 @@
+//
+// Created by Lukas Burgholzer on 25.09.19.
+//
+
+#ifndef INTERMEDIATEREPRESENTATION_OPERATION_H
+#define INTERMEDIATEREPRESENTATION_OPERATION_H
+
+#include <array>
+#include <iostream>
+#include <memory>
+#include <cstring>
+#include <fstream>
+#include <sstream>
+#include "DDpackage.h"
+
+#define UNUSED(x) {(void) x;}
+
+namespace qc {
+	enum Format {
+		Real, OpenQASM, GRCS
+	};	
+
+	struct Control {
+		enum controlType: bool {pos = true, neg = false};
+
+		unsigned short qubit = 0;
+		controlType    type  = pos;
+
+		explicit Control(unsigned short qubit = 0, controlType type = pos): qubit(qubit), type(type) {};
+	};
+
+	// Math Constants
+	static constexpr fp PI   = 3.141592653589793238462643383279502884197169399375105820974L;
+	static constexpr fp PI_2 = 1.570796326794896619231321691639751442098584699687552910487L;
+	static constexpr fp PI_4 = 0.785398163397448309615660845819875721049292349843776455243L;
+
+	// Operation Constants
+	constexpr std::size_t MAX_QUBITS        = 225; // Max. qubits supported
+	constexpr std::size_t MAX_PARAMETERS    =   3; // Max. parameters of an operation
+	constexpr std::size_t MAX_STRING_LENGTH =  20; // Ensure short-string-optimizations
+
+	static constexpr short LINE_TARGET      = dd::RADIX;
+	static constexpr short LINE_CONTROL_POS = 1;
+	static constexpr short LINE_CONTROL_NEG = 0;
+	static constexpr short LINE_DEFAULT     = -1;
+
+	class Operation {
+	protected:
+		//std::array<short, MAX_QUBITS>     line{ };
+		std::vector<unsigned short>       targets;
+		std::vector<Control>              controls;
+		std::array<fp,    MAX_PARAMETERS> parameter{ };
+		
+		unsigned short nqubits     = 0;
+		bool           multiTarget = false; // flag to distinguish multi target operations
+		bool           controlled  = false; // flag to distinguish multi control operations
+		char           name[MAX_STRING_LENGTH]{ };
+
+	public:
+		Operation() = default;
+
+		// Virtual Destructor
+		virtual ~Operation() = default;
+
+		// Getters
+		const std::vector<unsigned short>& getTargets() const {
+			return targets;
+		}
+		
+		std::vector<unsigned short>& getTargets() {
+			return targets;
+		}
+
+		const std::vector<Control>& getControls() const {
+			return controls;
+		}
+		
+		std::vector<Control>& getControls() {
+			return controls;
+		}
+
+		unsigned short getNqubits() const { 
+			return nqubits; 
+		}
+
+		const std::array<fp, MAX_PARAMETERS>& getParameter() const {
+			return parameter;
+		}
+		
+		std::array<fp, MAX_PARAMETERS>& getParameter() {
+			return parameter;
+		}
+
+		const char *getName() const {
+			return name;
+		}
+
+		// Setter
+		virtual void setNqubits(unsigned short nq) {
+			nqubits = nq;
+		}
+		
+		virtual void setControlled(bool contr) { 
+			controlled = contr; 
+		}
+		
+		virtual void setMultiTarget(bool multi) { 
+			multiTarget = multi; 
+		}
+
+		// Public Methods
+		void setLine(std::array<short, MAX_QUBITS>& line) const;
+
+		void resetLine(std::array<short, MAX_QUBITS>& line) const;
+
+		virtual dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) = 0;
+
+		virtual dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) = 0;
+
+		inline virtual bool isUnitary() const { 
+			return true; 
+		}
+
+		inline virtual bool isControlled() const  { 
+			return controlled; 
+		}
+
+		inline virtual bool isMultiTarget() const { 
+			return multiTarget; 
+		}
+
+		virtual std::ostream& print(std::ostream& os) const;
+
+		friend std::ostream& operator<<(std::ostream& os, const Operation& op) {
+			return op.print(os);
+		}
+
+		virtual void dumpOpenQASM(std::ofstream& of, const std::vector<std::string>& qreg, const std::vector<std::string>& creg) const { UNUSED(of); UNUSED(qreg); UNUSED(creg); } 
+		virtual void dumpReal(std::ofstream& of) const { UNUSED(of); }
+		virtual void dumpGRCS(std::ofstream& of) const { UNUSED(of); }
+	};
+}
+#endif //INTERMEDIATEREPRESENTATION_OPERATION_H
