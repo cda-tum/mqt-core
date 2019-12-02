@@ -3,261 +3,246 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum_dd/ for more information.
  */
 
-
 #ifndef DDpackage_H
 #define DDpackage_H
 
+#include <unordered_set>
+#include <vector>
+#include <array>
+#include <bitset>
+
 #include "DDcomplex.h"
 
-namespace dd_package {
-    const std::string DDversion = "IIC-DD package v1.0";
+using CN = dd::ComplexNumbers;
 
-    constexpr int MAXSTRLEN = 23;
-    constexpr int MAXN = 300;                       // max no. of inputs
-    constexpr int MAXRADIX = 2;                     // max logic radix
-    constexpr int MAXNEDGE = MAXRADIX * MAXRADIX;   // max no. of edges = MAXRADIX^2
-    constexpr int GCLIMIT1 = 250000;                // first garbage collection limit
-    constexpr int GCLIMIT_INC = 0;                  // garbage collection limit increment
-                                                    // added to garbage collection limit after each collection
-    constexpr int MAXND = 4;                        // max n for display purposes
-    constexpr int MAXDIM = 16;                      // max dimension of matrix for printing, (should be 2^MAXND)
-    constexpr int NBUCKET = 32768;                  // no. of hash table buckets; must be a power of 2
-    constexpr unsigned int HASHMASK = NBUCKET - 1;  // must be nbuckets-1
-    constexpr unsigned int CTSLOTS = 16384;         // no. of computed table slots
-    constexpr unsigned int CTMASK = CTSLOTS - 1;    // must be CTSLOTS-1
-    constexpr unsigned int TTSLOTS = 2048;          // Toffoli table slots
-    constexpr unsigned int TTMASK = TTSLOTS - 1;    // must be TTSLOTS-1
-    constexpr unsigned int MAXREFCNT = 4000000;     // max reference count (saturates at this value)
-    constexpr unsigned int MAXPL = 65536;           // max size for a permutation recording
+namespace dd {
+	const std::string DDversion = "IIC-DD package v1.1";
+	constexpr unsigned short RADIX = 2;                     // logic radix
+	constexpr unsigned short NEDGE = RADIX * RADIX;   // max no. of edges = RADIX^2
 
-    typedef struct DDnode *DDnodePtr;
+	// General package configuration parameters
+	constexpr unsigned int GCLIMIT1 = 250000;                // first garbage collection limit
+	constexpr unsigned int GCLIMIT_INC = 0;                  // garbage collection limit increment
+	constexpr unsigned int MAXREFCNT = 4000000;     // max reference count (saturates at this value)
+	constexpr unsigned int NODECOUNT_BUCKETS = 2000000;
+	constexpr unsigned short NBUCKET = 32768;                  // no. of hash table buckets; must be a power of 2
+	constexpr unsigned short HASHMASK = NBUCKET - 1;  // must be nbuckets-1
+	constexpr unsigned short CTSLOTS = 16384;         // no. of computed table slots
+	constexpr unsigned short CTMASK = CTSLOTS - 1;    // must be CTSLOTS-1
+	constexpr unsigned short TTSLOTS = 2048;          // Toffoli table slots
+	constexpr unsigned short TTMASK = TTSLOTS - 1;    // must be TTSLOTS-1
+	constexpr unsigned short CHUNK_SIZE = 2000;
+	constexpr unsigned short MAXN = 225;                       // max no. of inputs
 
-    struct DDedge {
-        DDnodePtr p;
-        complex w;
+    typedef struct Node *NodePtr;
+
+    struct Edge {
+	    NodePtr p;
+	    Complex w;
     };
 
-    struct DDnode {
-        DDnodePtr next;         // link for unique table and available space chain
-        unsigned int ref;       // reference count
-        unsigned char v;        // variable index (nonterminal) value (-1 for terminal)
-        complex renormFactor;   // factor that records renormalization factor
-        char ident, diag, block, symm, c01; // flag to mark if vertex heads a QMDD for a special matrix
-        char computeSpecialMatricesFlag;    // flag to mark whether SpecialMatrices are to be computed
-        DDedge e[MAXNEDGE];     // edges out of this node
+    struct Node {
+	    NodePtr next;         // link for unique table and available space chain
+	    Edge e[NEDGE];     // edges out of this node
+	    unsigned int ref;       // reference count
+	    short v;        // variable index (nonterminal) value (-1 for terminal)
+	    bool ident, symm; // special matrices flags
     };
 
-// list definitions for breadth first traversals (e.g. printing)  
+    // list definitions for breadth first traversals (e.g. printing)
     typedef struct ListElement *ListElementPtr;
 
     struct ListElement {
-        int w, cnt;
-        int line[MAXN];
-        DDnodePtr p;
-        ListElementPtr next;
+	    NodePtr p;
+	    ListElementPtr next;
+	    int w;
     };
 
     // computed table definitions
     // compute table entry kinds
     enum CTkind {
-        add,
+        ad,
         mult,
-        kronecker,
-        fidelity,
-        reduce,
-        transpose,
-        conjugateTranspose,
-        transform,
-        c0,
-        c1,
-        c2,
-        none,
-        norm,
-        createHdmSign,
-        findCmnSign,
-        findBin,
-        reduceHdm,
-        renormalize
+        fid,
+        transp,
+        conjTransp,
+        kron,
+        none
     };
 
     //computed table entry
     struct CTentry1// computed table entry defn
     {
-        DDedge a, b, r;     // a and b are arguments, r is the result
-        CTkind which;       // type of operation
+	    Edge a, b, r;     // a and b are arguments, r is the result
+	    CTkind which;       // type of operation
     };
 
     struct CTentry2// computed table entry defn
     {
-        DDedge a, b;     // a and b are arguments, r is the result
-        DDnodePtr r;
-        complex_value rw;
-        CTkind which;       // type of operation
+	    Edge a, b;     // a and b are arguments, r is the result
+	    NodePtr r;
+	    CTkind which;       // type of operation
+	    ComplexValue rw;
     };
 
     struct CTentry3// computed table entry defn
     {
-        DDnodePtr a, b, r;     // a and b are arguments, r is the result
-        complex_value aw, bw, rw;
-        CTkind which;       // type of operation
+	    NodePtr a, b, r;     // a and b are arguments, r is the result
+	    CTkind which;       // type of operation
+	    ComplexValue aw, bw, rw;
     };
-
 
     struct TTentry // Toffoli table entry defn
     {
-        int n, m, t, line[MAXN];
-        DDedge e;
+	    unsigned short n, m, t;
+	    short line[MAXN];
+	    Edge e;
     };
 
-    struct CircuitLine {
-        char input[MAXSTRLEN];
-        char output[MAXSTRLEN];
-        char variable[MAXSTRLEN];
-        char ancillary;
-        char garbage;
+    class Package {
 
+    	static Node terminal;
+	    constexpr static Node* terminalNode{&terminal};        // pointer to terminal node
+
+
+        NodePtr nodeAvail{};                 // pointer to available space chain
+	    ListElementPtr listAvail{ };           // pointer to available list elements for breadth first searches
+
+	    // Unique Tables (one per input variable)
+	    std::array<std::array<NodePtr, NBUCKET>, MAXN> Unique{ };
+	    // Three types since different possibilities for complex numbers  (caused by caching)
+	    // weights of operands and result are from complex table (e.g., transpose, conjugateTranspose)
+	    std::array<CTentry1, CTSLOTS> CTable1{ };
+	    // weights of operands are from complex table, weight of result from cache/ZERO (e.g., mult)
+	    std::array<CTentry2, CTSLOTS> CTable2{ };
+	    // weights of operands and result are from cache/ZERO (e.g., add)
+	    std::array<CTentry3, CTSLOTS> CTable3{ };
+	    // Toffoli gate table
+	    std::array<TTentry, TTSLOTS> TTable{ };
+	    // Identity matrix table
+	    std::array<Edge, MAXN> IdTable{ };
+
+	    unsigned int currentNodeGCLimit;              // current garbage collection limit
+	    unsigned int currentComplexGCLimit;         // current complex garbage collection limit
+	    std::array<int, MAXN> active{ };              // number of active nodes for each variable
+	    unsigned long nodecount = 0;                // node count in unique table
+	    unsigned long peaknodecount = 0;            // records peak node count in unique table
+
+	    std::array<unsigned long, 7> nOps{};                     // operation counters
+	    std::array<unsigned long, 7> CTlook{}, CThit{};      // counters for gathering compute table hit stats
+        unsigned long UTcol=0, UTmatch=0, UTlookups=0;  // counter for collisions / matches in hash tables
+
+	    std::vector<ListElementPtr> allocated_list_chunks;
+	    std::vector<NodePtr> allocated_node_chunks;
+
+	    bool forceMatrixNormalization = false;
+
+	    /// private helper routines
+	    void initComputeTable();
+	    NodePtr getNode();
+
+        Edge add2(Edge x, Edge y);
+	    Edge multiply2(Edge& x, Edge& y, unsigned short var);
+	    ComplexValue fidelity(Edge x, Edge y, int var);
+	    Edge trace(Edge a, short v, const std::bitset<MAXN>& eliminate);
+	    Edge kronecker2(Edge x, Edge y);
+
+	    void checkSpecialMatrices(Edge &e);
+	    Edge UTlookup(Edge& e);
+	    Edge CTlookup(const Edge& a, const Edge& b, CTkind which);
+	    void CTinsert(const Edge& a, const Edge& b, const Edge& r, CTkind which);
+
+	    static inline unsigned long CThash(const Edge& a, const Edge& b, const CTkind which) {
+		    const uintptr_t node_pointer = ((uintptr_t) a.p + (uintptr_t) b.p) >> 3u;
+		    const uintptr_t weights = (uintptr_t) a.w.i + (uintptr_t) a.w.r + (uintptr_t) b.w.i + (uintptr_t) b.w.r;
+		    return (node_pointer + weights + (uintptr_t) which) & CTMASK;
+	    }
+
+	    static inline unsigned long CThash2(NodePtr a, const ComplexValue& aw, NodePtr b, const ComplexValue& bw, const CTkind which) {
+		    const uintptr_t node_pointer = ((uintptr_t) a + (uintptr_t) b) >> 3u;
+		    const uintptr_t weights = (uintptr_t) (aw.r * 1000) + (uintptr_t) (aw.i * 2000) + (uintptr_t) (bw.r * 3000) + (uintptr_t) (bw.i * 4000);
+		    return (node_pointer + weights + (uintptr_t) which) & CTMASK;
+	    }
+	    static unsigned short TThash(unsigned short n, unsigned short t, const short line[]);
+
+	    unsigned int nodeCount(Edge e, std::unordered_set<NodePtr>& visited) const;
+	    ComplexValue getVectorElement(Edge e, unsigned long long int element);
+	    ListElementPtr newListElement();
+	    void toDot(Edge e, std::ostream& oss, bool isVector = false);
+
+    public:
+        constexpr static Edge DDone{ terminalNode, ComplexNumbers::ONE };
+        constexpr static Edge DDzero{ terminalNode, ComplexNumbers::ZERO };            // edges pointing to zero and one DD constants
+        unsigned long activeNodeCount = 0;             // number of active nodes
+		unsigned long maxActive = 0;
+
+        ComplexNumbers cn;
+        std::array<unsigned short, MAXN> varOrder{ };    // variable order initially 0,1,... from bottom up | Usage: varOrder[level] := varible at a certain level
+        std::array<unsigned short, MAXN> invVarOrder{ };// inverse of variable order (inverse permutation) | Usage: invVarOrder[variable] := level of a certain variable
+
+
+
+        Package();
+        ~Package();
+
+        void useMatrixNormalization(bool use) { forceMatrixNormalization = use; }
+
+        // DD creation
+        static inline Edge makeTerminal(const Complex& w) { return { terminalNode, w }; }
+
+	    Edge makeNonterminal(short v, const Edge *edge, bool cached = false);
+
+	    inline Edge makeNonterminal(const short v, const std::array<Edge, NEDGE>& edge, bool cached = false) {
+	    	return makeNonterminal(v, edge.data(), cached);
+	    };
+	    Edge makeZeroState(unsigned short n);
+	    Edge makeIdent(short x, short y);
+	    Edge makeGateDD(const Matrix2x2& mat, unsigned short n, const short *line);
+	    Edge makeGateDD(const std::array<ComplexValue,NEDGE>& mat, unsigned short n, const std::array<short,MAXN>& line);
+
+	    // operations on DDs
+	    Edge multiply(Edge x, Edge y);
+	    Edge add(Edge x, Edge y);
+	    Edge transpose(const Edge& a);
+	    Edge conjugateTranspose(Edge a);
+	    Edge normalize(Edge& e, bool cached);
+	    Edge partialTrace(Edge a, const std::bitset<MAXN>& eliminate);
+	    ComplexValue trace(Edge a);
+	    fp fidelity(Edge x, Edge y);
+	    Edge kronecker(Edge x, Edge y);
+	    Edge extend(Edge e, unsigned short h = 0, unsigned short l = 0);
+
+	    unsigned int size(Edge e) const;
+
+	    // reference counting and garbage collection
+	    void incRef(Edge& e);
+	    void decRef(Edge& e);
+	    void garbageCollect(bool force = false);
+
+	    // checks
+	    static inline bool isTerminal(const Edge& e) {
+		    return e.p == terminalNode;
+	    }
+	    static inline bool equals(const Edge& a, const Edge& b) {
+		    return a.p == b.p && ComplexNumbers::equals(a.w, b.w);
+	    }
+
+	    // Toffoli table insertion and lookup
+	    void TTinsert(unsigned short n, unsigned short m, unsigned short t, const short line[], const Edge& e);
+	    Edge TTlookup(unsigned short n, unsigned short m, unsigned short t, const short line[]);
+
+	    // printing
+	    void printVector(Edge e);
+	    void printActive(int n);
+	    void printDD(Edge e, unsigned int limit);
+	    void export2Dot(Edge basic, const char *outputFilename, bool isVector = false, bool show = true);
+
+	    // statistics and info
+	    void statistics();
+	    static void printInformation();
+
+	    // debugging - not normally used
+	    void debugnode(NodePtr p) const;
     };
-
-    struct DDrevlibDescription // circuit description structure
-    {
-        int n, ngates, qcost, nancillary, ngarbage;
-        DDedge e, totalDC;
-        CircuitLine line[MAXN];
-        char version[MAXSTRLEN];
-        char inperm[MAXN], outperm[MAXN];
-        char ngate, cgate, tgate, fgate, pgate, vgate, kind[7], dc[5], name[32], no[8], modified;
-    };
-
-    typedef complex_value DD_matrix[MAXRADIX][MAXRADIX];
-
-    // matrices for different operations
-    extern const DD_matrix Nm, Sm, Hm, Zm;
-
-    // Global Variables
-    extern const int Radix;                 // radix (default is 2)
-    extern const int Nedge;                 // no. of edges (default is 4)
-    extern DDnodePtr Avail;                 // pointer to available space chain
-    extern ListElementPtr Lavail;           // pointer to available list elements for breadth first searchess
-    extern DDnodePtr DDterminalNode;        // pointer to terminal node
-    extern DDedge DDone, DDzero;            // edges pointing to zero and complex_one DD constants
-    extern long DDorder[MAXN];              // variable order initially 0,1,... from bottom up | Usage: DDorder[level] := varible at a certain level
-    extern long DDinverseOrder[MAXN];       // inverse of variable order (inverse permutation) | Usage: DDinverseOrder[variable] := level of a certain variable
-    extern long DDnodecount;                // counts active nodes
-    extern long DDpeaknodecount;            // records peak node count in unique table
-    extern long Nop[6];                     // operation counters
-    extern long CTlook[20], CThit[20];      // counters for gathering compute table hit stats
-    extern long UTcol, UTmatch, UTlookups;  // counter for collisions / matches in hash tables
-    extern int GCcurrentLimit;              // current garbage collection limit
-    extern int ComplexCurrentLimit;         // current garbage collection limit
-    extern int ActiveNodeCount;             // number of active nodes
-    extern int Active[MAXN];                // number of active nodes for each variable
-    extern int GCswitch;                    // set switch to 1 to enable garbage collection
-    extern int Smode;                       // S mode switch for spectral transformation; Smode==1 0->+1 1->-1; Smode==0 0->0 1->1
-    extern int RMmode;                      // Select RM transformation mode forces mod Radix arithmetic
-    extern int MultMode;                    // set to 1 for matrix - vector multiplication
-    extern DDedge DDnullEdge;               // set in DDinit routine
-    extern int PermList[MAXPL];             // array for recording a permutation
-    extern int RenormalizationNodeCount;    // number of active nodes that need renormalization (used in DDdecRef)
-    extern int blockMatrixCounter;          // number of active nodes that represent block matrices (used in DDincRef, DDdecRef)
-    extern int globalComputeSpecialMatricesFlag; // default value for computeSpecialMatricesFlag of newly created nodes (used in DDmakeNonterminal)
-
-    // Unique Tables (one per input variable)
-    extern DDnodePtr Unique[MAXN][NBUCKET];
-
-    // Three types since different possibilities for complex numbers  (caused by caching)
-    // weights of operands and result are from complex table (e.g., transpose, conjugateTranspose)
-    extern CTentry1 CTable1[CTSLOTS];
-    // weights of operands are from complex table, weight of result from cache/COMPLEX_ZERO (e.g., mult)
-    extern CTentry2 CTable2[CTSLOTS];
-    // weights of operands and result are from cache/COMPLEX_ZERO (e.g., add)
-    extern CTentry3 CTable3[CTSLOTS];
-
-    // Toffoli gate table
-    extern TTentry TTable[TTSLOTS];
-
-    // Identity matrix table
-    extern DDedge DDid[MAXN];
-
-    // Variable labels
-    extern int Nlabel;        // number of labels
-    extern char Label[MAXN][MAXSTRLEN];  // label table
-
-
-    // checks if an edge points to the terminal node
-    inline bool DDterminal(const DDedge e) {
-        return e.p == DDterminalNode;
-    }
-
-    // checks if two edges are equal
-    inline bool DDedgeEqual(const DDedge a, const DDedge b) {
-        return a.p==b.p && a.w==b.w;
-    }
-
-    void DDdebugnode(DDnodePtr); // for debugging purposes - not normally used
-    ListElementPtr DDnewListElement();
-
-    void DDprint(DDedge, unsigned int);
-
-    void DD2dot(DDedge, std::ostream &, DDrevlibDescription);
-
-    DDedge DDmultiply(DDedge, DDedge);
-
-    DDedge DDadd(DDedge, DDedge);
-
-    void DDdecRef(DDedge);
-
-    void DDincRef(DDedge);
-
-    DDedge DDident(int, int);
-
-    DDedge DDmvlgate(const DD_matrix, int, const int[]);
-
-    void TTinsert(int, int, int, const int[], DDedge);
-
-    DDedge TTlookup(int, int, int, const int[]);
-
-    void DDgarbageCollect();
-
-    DDedge DDtranspose(DDedge);
-
-    void DDmatrixPrint2(DDedge);
-
-    DDedge DDnormalize(DDedge, bool);
-
-    void DDcheckSpecialMatrices(DDedge);
-
-    DDedge CTlookup(DDedge, DDedge, CTkind);
-
-    void CTinsert(DDedge, DDedge, DDedge, CTkind);
-
-    void DDinitComputeTable();
-
-    DDedge DDutLookup(DDedge);
-
-    DDedge DDmakeNonterminal(short, DDedge[MAXNEDGE], bool);
-
-    DDedge DDmakeTerminal(complex w);
-
-    void DDinit(bool verbose);
-
-    void DDdotExport(DDedge basic, const char *outputFilename, DDrevlibDescription circ, bool show);
-
-    void DDdotExportVector(DDedge basic, const char *outputFilename);
-
-    void DDdotExportMatrix(DDedge basic, const char *outputFilename);
-
-    void DDstatistics();
-
-    void DDprintActive(int n);
-
-    DDedge DDzeroState(int n);
-
-    void DDprintVector(DDedge e);
-
-    unsigned int DDsize(DDedge e);
-
-    long double DDfidelity(DDedge x, DDedge y);
-
-    int CacheSize();
 }
 #endif

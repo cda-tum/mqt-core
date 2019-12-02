@@ -3,104 +3,252 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum_dd/ for more information.
  */
 
-
 #ifndef DDcomplex_H
 #define DDcomplex_H
 
-#include <cstdint>
 #include <ostream>
+#include <cmath>
+#include <limits>
+#include <cassert>
 
-namespace dd_package {
-    constexpr unsigned int COMPLEX_NBUCKET = 32768;
-    constexpr long double COMPLEX_TOLERANCE = 1e-10l;
+using fp = double;
 
-    struct complex_table_entry {
-        long double val;
-        int ref;
-        complex_table_entry *next;
+namespace dd {
+	static constexpr fp SQRT_2 = 0.707106781186547524400844362104849039284835937688474036588L;
+	static constexpr fp PI = 3.141592653589793238462643383279502884197169399375105820974L;
+
+	struct ComplexTableEntry {
+        fp val;
+		ComplexTableEntry *next;
+	    int ref;
     };
 
-    struct complex {
-        complex_table_entry *r;
-        complex_table_entry *i;
+    struct Complex {
+	    ComplexTableEntry *r;
+	    ComplexTableEntry *i;
     };
 
-    struct complex_value {
-        long double r, i;
+    struct ComplexValue {
+        fp r, i;
     };
 
-    extern complex COMPLEX_ZERO;
-    extern complex COMPLEX_ONE;
-    extern complex COMPLEX_M_ONE;
+	inline bool operator==(const Complex& lhs, const Complex& rhs) {
+		return lhs.r == rhs.r && lhs.i == rhs.i;
+	}
 
-    extern complex_table_entry *Complex_table[COMPLEX_NBUCKET];
-    extern complex_table_entry *Complex_Avail;
-    extern complex_table_entry *CacheStart;
-    extern complex_table_entry *ComplexCache_Avail;
-    extern int ComplexCount;
+	inline bool operator==(const ComplexValue& lhs, const ComplexValue& rhs) {
+		return lhs.r == rhs.r && lhs.i == rhs.i;
+	}
 
-    inline long double CVAL(const complex_table_entry *x) {
-        if (((uintptr_t) x) & (uintptr_t) 1) {
-            return -((complex_table_entry *) (((uintptr_t) x) ^ (uintptr_t) 1))->val;
+	inline bool operator!=(const Complex& lhs, const Complex& rhs) {
+		return lhs.r != rhs.r || lhs.i != rhs.i;
+	}
+
+	inline bool operator!=(const ComplexValue& lhs, const ComplexValue& rhs) {
+		return lhs.r != rhs.r || lhs.i != rhs.i;
+	}
+
+    typedef ComplexValue Matrix2x2[2][2];
+
+    class ComplexNumbers {
+        struct ComplexChunk {
+	        ComplexTableEntry *entry;
+            ComplexChunk *next;
+        };
+
+        static ComplexTableEntry zeroEntry;
+        static ComplexTableEntry oneEntry;
+
+        static constexpr unsigned short NBUCKET = 32768;
+        static constexpr unsigned short CHUNK_SIZE = 2000;
+        static constexpr unsigned short INIT_SIZE = 300;
+
+	    static inline unsigned long getKey(const fp& val) {
+		    auto key = (unsigned long) (val * (NBUCKET - 1));
+		    if (key > NBUCKET - 1) {
+			    key = NBUCKET - 1;
+		    }
+		    return key;
+	    };
+
+	    ComplexTableEntry *lookupVal(const fp& val);
+	    ComplexTableEntry *getComplexTableEntry();
+
+    public:
+    	constexpr static Complex ZERO{ (&zeroEntry), (&zeroEntry) };
+    	constexpr static Complex ONE{ (&oneEntry), (&zeroEntry) };
+
+        long cacheCount = INIT_SIZE * 6;
+	    static constexpr fp TOLERANCE = 1e-10l;
+	    static constexpr unsigned int GCLIMIT1 = 100000;
+	    static constexpr unsigned int GCLIMIT_INC = 0;
+
+	    ComplexTableEntry *ComplexTable[NBUCKET]{ };
+	    ComplexTableEntry *Avail = nullptr;
+	    ComplexTableEntry *Cache_Avail = nullptr;
+	    ComplexTableEntry *Cache_Avail_Initial_Pointer = nullptr;
+	    ComplexChunk *chunks = nullptr;
+
+	    unsigned int count;
+
+	    ComplexNumbers();
+	    ~ComplexNumbers();
+
+	    // operations on complex numbers
+	    // meanings are self-evident from the names
+	    static inline fp val(const ComplexTableEntry *x) {
+            if (((uintptr_t) x) & (uintptr_t) 1) {
+	            return -((ComplexTableEntry *) (((uintptr_t) x) ^ (uintptr_t) 1))->val;
+            }
+            return x->val;
         }
-        return x->val;
-    }
 
-    inline bool operator==(const complex &lhs, const complex &rhs) {
-        return lhs.r == rhs.r && lhs.i == rhs.i;
-    }
+	    static inline bool equals(const Complex& a, const Complex& b) {
+		    return std::abs(val(a.r) - val(b.r)) < TOLERANCE && std::abs(val(a.i) - val(b.i)) < TOLERANCE;
+        };
 
-    inline bool operator!=(const complex &lhs, const complex &rhs) {
-        return lhs.r != rhs.r || lhs.i != rhs.i;
-    }
+	    static inline bool equals(const ComplexValue& a, const ComplexValue& b) {
+	    	return std::abs(a.r - b.r) < TOLERANCE && std::abs(a.i - b.i) < TOLERANCE;
+	    }
 
-    inline std::ostream& operator<<(std::ostream& os, const complex c)
-    {
-        os << CVAL(c.r) << std::showpos << CVAL(c.i) << "i" << std::noshowpos;
-        return os;
-    }
+	    static inline bool equalsZero(const Complex& c) {
+	    	return c == ZERO || (std::abs(val(c.r)) < TOLERANCE && std::abs(val(c.i)) < TOLERANCE);
+	    }
 
-    inline std::ostream& operator<<(std::ostream& os, const complex_value c)
-    {
-        os << c.r << std::showpos << c.i << "i" << std::noshowpos;
-        return os;
-    }
+	    static inline bool equalsOne(const Complex& c) {
+		    return c == ONE || (std::abs(val(c.r) - 1) < TOLERANCE && std::abs(val(c.i)) < TOLERANCE);
+	    }
+	    static void add(Complex& r, const Complex& a, const Complex& b);
+	    static void sub(Complex& r, const Complex& a, const Complex& b);
+	    static void mul(Complex& r, const Complex& a, const Complex& b);
+	    static void div(Complex& r, const Complex& a, const Complex& b);
 
-    void initComplexTable(); // initialize the complex value table and complex operation tables to empty
-    void complexInit();
+	    static inline fp mag2(const Complex& a) {
+		    auto ar = val(a.r);
+		    auto ai = val(a.i);
 
-    void complexIncRef(complex);
+		    return ar * ar + ai * ai;
+	    }
+	    static Complex conj(const Complex& a);
+	    static Complex neg(const Complex& a);
 
-    void complexDecRef(complex);
+	    inline Complex addCached(const Complex& a, const Complex& b) {
+		    auto c = getCachedComplex();
+		    add(c, a, b);
+		    return c;
+	    }
 
-    complex Clookup(const complex &); // lookup a complex value in the complex value table; if not found add it
-    complex Cconjugate(complex);
+	    inline Complex subCached(const Complex& a, const Complex& b) {
+		    auto c = getCachedComplex();
+		    sub(c, a, b);
+		    return c;
+	    }
 
-    // basic operations on complex values
-    // meanings are self-evident from the names
-    // NOTE arguments are the indices to the values
-    // in the complex value table not the values themselves
+	    inline Complex mulCached(const Complex& a, const Complex& b) {
+		    auto c = getCachedComplex();
+		    mul(c, a, b);
+		    return c;
+	    }
 
-    complex Cnegative(complex);
+	    inline Complex divCached(const Complex& a, const Complex& b) {
+		    auto c = getCachedComplex();
+		    div(c, a, b);
+		    return c;
+	    }
 
-    void Cadd(complex &, complex, complex);
+	    inline void releaseCached(const Complex& c) {
+		    c.i->next = Cache_Avail;
+		    Cache_Avail = c.r;
+            cacheCount += 2;
+	    }
 
-    void Cmul(complex &, complex, complex);
+	    // lookup a complex value in the complex value table; if not found add it
+        Complex lookup(const Complex &c);
 
-    void Cdiv(complex &, complex, complex);
+	    Complex lookup(const fp& r, const fp& i);
 
-    bool Ceq(complex, complex);
+	    inline Complex lookup(const ComplexValue& c) { return lookup(c.r, c.i); }
 
-    bool Ceq(complex_value, complex_value);
+	    // reference counting and garbage collection
+	    static void incRef(const Complex& c);
+	    static void decRef(const Complex& c);
+        void garbageCollect();
 
-    long double CmagSquared(const complex &);
+        // provide (temporary) cached complex number
+        inline Complex getTempCachedComplex() const {
+        	return { Cache_Avail, Cache_Avail->next};
+        }
 
-    void garbageCollectComplexTable();
+	    inline Complex getTempCachedComplex(const fp& r, const fp& i) const {
+		    Cache_Avail->val = r;
+		    Cache_Avail->next->val = i;
+        	return { Cache_Avail, Cache_Avail->next };
+        }
+        inline Complex getCachedComplex() {
+	        Complex c{ Cache_Avail, Cache_Avail->next };
+	        Cache_Avail = Cache_Avail->next->next;
+            cacheCount -= 2;
+	        assert(cacheCount >= 0);
+	        return c;
+        }
 
-    long double Ccos(long double fac, long double div);
+	    inline Complex getCachedComplex(const fp& r, const fp& i) {
+		    Complex c{ Cache_Avail, Cache_Avail->next };
+		    c.r->val = r;
+		    c.i->val = i;
+		    Cache_Avail = Cache_Avail->next->next;
+            cacheCount -= 2;
+            assert(cacheCount >= 0);
+		    return c;
+	    }
 
-    long double Csin(long double fac, long double div);
+	    // printing
+	    static void printFormattedReal(std::ostream& os, fp r, bool imaginary=false);
+        void printComplexTable();
+        void statistics();
 
-    complex_value Cmake(long double, long double); // make a complex value
+	    int cacheSize();
+    };
+
+	inline std::ostream& operator<<(std::ostream& os, const Complex c) {
+		auto r = ComplexNumbers::val(c.r);
+		auto i = ComplexNumbers::val(c.i);
+
+		if (r != 0) {
+			ComplexNumbers::printFormattedReal(os, r);
+		}
+		if (i != 0) {
+			if (r == i) {
+				os << "(1+i)";
+				return os;
+			} else if (i == -r) {
+				os << "(1-i)";
+				return os;
+			}
+			ComplexNumbers::printFormattedReal(os, i, true);
+		}
+		if (r == 0 && i == 0) os << 0;
+
+		return os;
+	}
+
+	inline std::ostream& operator<<(std::ostream& os, const ComplexValue c) {
+		if (c.r != 0) {
+			ComplexNumbers::printFormattedReal(os, c.r);
+		}
+		if (c.i != 0) {
+			if (c.r == c.i) {
+				os << "(1+i)";
+				return os;
+			} else if (c.i == -c.r) {
+				os << "(1-i)";
+				return os;
+			}
+			ComplexNumbers::printFormattedReal(os, c.i, true);
+		}
+		if (c.r == 0 && c.i == 0) os << 0;
+
+		return os;
+	}
 }
 #endif

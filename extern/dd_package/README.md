@@ -2,7 +2,7 @@
 
 DD package by JKU Linz, Austria
 
-Developers: Alwin Zulehner, Stefan Hillmich, Robert Wille
+Developers: Alwin Zulehner, Stefan Hillmich, Lukas Burgholzer, and Robert Wille
 
 With code from the QMDD implementation provided by Michael Miller (University of Victoria, Canada)
 and Philipp Niemann (University of Bremen, Germany).
@@ -10,6 +10,8 @@ and Philipp Niemann (University of Bremen, Germany).
 For more information, please visit [iic.jku.at/eda/research/quantum_dd](http://iic.jku.at/eda/research/quantum_dd).
 
 If you have any questions feel free to contact us using [iic_quantum@jku.at](mailto:iic_quantum@jku.at).
+
+The old version of this package which does not use namespaces or class can be found in the branch `non-oop`.
 
 ## Usage
 
@@ -27,27 +29,29 @@ $ cmake ..
 $ make
 $ ./dd_example
 Circuits are equal!
-00: 0.707107 + 0i
-01: 0 + 0i
-10: 0 + 0i
-11: 0.707107 + 0i
+00: √½
+01: 0
+10: 0
+11: √½
 Bell states have a fidelity of 1
-Bell state and zero state have a fidelity of 0.707107
+Bell state and zero state have a fidelity of 0.5
+DD of my gate has size 2
+Identity function for 4 qubits has trace: 16
 
 DD statistics:
-  Current # nodes in UniqueTable: 18
-  Total compute table lookups: 33
+  Current # nodes in UniqueTable: 23
+  Total compute table lookups: 37
   Number of operations:
-    add:  20
-    mult: 95
+    add:  52
+    mult: 86
     kron: 0
   Compute table hit ratios (hits/looks/ratio):
     adds: 0 / 4 / 0
-    mult: 14 / 29 / 0.482759
-    kron: 0 / 0 / -nan
+    mult: 14 / 28 / 0.5
+    kron: 0 / 0 / 0
   UniqueTable:
-    Collisions: 2
-    Matches:    20
+    Collisions: 7
+    Matches:    21
 ```
 
 ## Reference
@@ -58,8 +62,8 @@ If you use the DD package for your research, we will be thankful if you refer to
 @article{zulehner2019package,
     title={How to Efficiently Handle Complex Values? Implementing Decision Diagrams for Quantum Computing},
     author={Zulehner, Alwin and Hillmich, Stefan and Wille, Robert},
-    journal={{IEEE/ACM} International Conference on Computer-Aided Design},
-    year={2019},
+    journal={International Conference on Computer Aided Design (ICCAD)},
+    year={2019}
 }
 ```
 

@@ -3,173 +3,101 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum_dd/ for more information.
  */
 
-
-#include "DDcomplex.h"
-#include <cmath>
 #include <iostream>
 
-namespace dd_package {
-    constexpr unsigned int COMPLEX_CHUNK_SIZE = 2000;
-    constexpr unsigned int COMPLEX_INIT_SIZE = 300;
-    constexpr long double PI = 3.14159265358979323846264338327950288419716939937510L;
+#include "DDcomplex.h"
 
-    typedef struct complexChunk {
-        complex_table_entry *entry;
-        complexChunk *next;
-    } complexChunk;
+namespace dd {
+	ComplexTableEntry ComplexNumbers::zeroEntry{0L, nullptr, 1};
+	ComplexTableEntry ComplexNumbers::oneEntry{1L, nullptr, 1 };
+	constexpr Complex ComplexNumbers::ONE;
+	constexpr Complex ComplexNumbers::ZERO;
 
-    complex COMPLEX_ZERO;
-    complex COMPLEX_ONE;
-    complex COMPLEX_M_ONE;
+    ComplexNumbers::ComplexNumbers() {
+        Cache_Avail_Initial_Pointer = new ComplexTableEntry[INIT_SIZE * 6];
+	    Cache_Avail = Cache_Avail_Initial_Pointer;
 
-    complex_table_entry *Complex_table[COMPLEX_NBUCKET];
-    complex_table_entry *Complex_Avail;
-    complex_table_entry *CacheStart;
-    complex_table_entry *ComplexCache_Avail;
-    int ComplexCount;
+	    ComplexTableEntry *r = Cache_Avail;
+        for (unsigned int i = 0; i < INIT_SIZE * 6 - 1; i++, r++) {
+            r->next = r + 1;
+            r->ref = 0;
+        }
+        r->next = nullptr;
 
-    complexChunk *complex_chunks;
+	    for (auto& entry : ComplexTable) {
+		    entry = nullptr;
+        }
+	    //count = 0;
 
-    complex_table_entry *getComplexTableEntry() {
+	    ComplexTable[0] = ZERO.r;
+	    ComplexTable[NBUCKET - 1] = ONE.r;
+	    count = 2;
+
+	    lookupVal(0.5L);
+	    lookupVal(SQRT_2);
+    }
+
+    ComplexNumbers::~ComplexNumbers() {
+        ComplexChunk *c;
+        while (chunks != nullptr) {
+            c = chunks;
+	        chunks = chunks->next;
+            delete[] c->entry;
+            delete c;
+        }
+
+        delete[] Cache_Avail_Initial_Pointer;
+    }
+
+	ComplexTableEntry *ComplexNumbers::getComplexTableEntry() {
     // get memory space for a node
-        complex_table_entry *r, *r2;
+		ComplexTableEntry *r, *r2;
 
-        if (Complex_Avail != nullptr)    // get node from avail chain if possible
+        if (Avail != nullptr)    // get node from avail chain if possible
         {
-            r = Complex_Avail;
-            Complex_Avail = Complex_Avail->next;
-        } else {            // otherwise allocate COMPLEX_CHUNK_SIZE new nodes
-            r = new complex_table_entry[COMPLEX_CHUNK_SIZE];
-            complexChunk *c = new complexChunk;
-            c->next = complex_chunks;
+            r = Avail;
+	        Avail = Avail->next;
+        } else {            // otherwise allocate CHUNK_SIZE new nodes
+	        r = new ComplexTableEntry[CHUNK_SIZE];
+            auto *c = new ComplexChunk;
+            c->next = chunks;
             c->entry = r;
-            complex_chunks = c;
+	        chunks = c;
 
             r2 = r + 1;
-            Complex_Avail = r2;
-            for (unsigned int i = 0; i < COMPLEX_CHUNK_SIZE - 2; i++, r2++) {
+	        Avail = r2;
+            for (unsigned int i = 0; i < CHUNK_SIZE - 2; i++, r2++) {
                 r2->next = r2 + 1;
             }
             r2->next = nullptr;
         }
         r->next = nullptr;
         r->ref = 0;            // set reference count to 0
-        return (r);
+        return r;
     }
 
-    void complexIncRef(complex c) {
-        if (c != COMPLEX_ONE && c != COMPLEX_ZERO) {
-            ((complex_table_entry *) ((uintptr_t) c.r & (~1ull)))->ref++;
-            ((complex_table_entry *) ((uintptr_t) c.i & (~1ull)))->ref++;
-        }
-    }
-
-    void complexDecRef(complex c) {
-        if (c != COMPLEX_ONE && c != COMPLEX_ZERO) {
-            ((complex_table_entry *) (((uintptr_t) c.r) & (~1ull)))->ref--;
-            ((complex_table_entry *) ((uintptr_t) c.i & (~1ull)))->ref--;
-        }
-    }
-
-    bool Ceq(const complex a, const complex b) {
-        long double ar = CVAL(a.r);
-        long double ai = CVAL(a.i);
-
-        long double br = CVAL(b.r);
-        long double bi = CVAL(b.i);
-        return std::fabs(ar - br) < COMPLEX_TOLERANCE && std::fabs(ai - bi) < COMPLEX_TOLERANCE;
-    }
-
-    bool Ceq(complex_value a, complex_value b) {
-        return std::fabs(a.r - b.r) < COMPLEX_TOLERANCE && std::fabs(a.i - b.i) < COMPLEX_TOLERANCE;
-    }
-
-    void complexInit()
-    // initialization
-    {
-        complex_chunks = nullptr;
-        ComplexCache_Avail = new complex_table_entry[COMPLEX_INIT_SIZE * 6];
-        CacheStart = ComplexCache_Avail;
-
-        complex_table_entry *r = ComplexCache_Avail;
-        for (unsigned int i = 0; i < COMPLEX_INIT_SIZE * 6 - 1; i++, r++) {
-            r->next = r + 1;
-            r->ref = 0;
-        }
-        r->next = nullptr;
-
-        initComplexTable();
-
-        complex one;
-        one.r = ComplexCache_Avail;
-        one.i = ComplexCache_Avail->next;
-
-        one.r->val = 1.0;
-        one.i->val = 0.0;
-
-        COMPLEX_ONE = Clookup(one);
-        COMPLEX_ZERO.r = COMPLEX_ZERO.i = COMPLEX_ONE.i;
-        COMPLEX_M_ONE.r = (complex_table_entry *) (((uintptr_t) COMPLEX_ONE.r) | 1u);
-        COMPLEX_M_ONE.i = COMPLEX_ONE.i;
-
-        COMPLEX_ONE.i->ref++;
-        COMPLEX_ONE.r->ref++;
-    }
-
-    void complexFree() {
-        complexChunk *c;
-        while (complex_chunks != nullptr) {
-            c = complex_chunks;
-            complex_chunks = complex_chunks->next;
-            delete c->entry;
-            delete c;
-        }
-
-        delete[] ComplexCache_Avail;
-    }
-
-
-    long double Ccos(const long double fac, const long double div) {
-        return std::cos((PI * fac) / div);
-    }
-
-    long double Csin(const long double fac, const long double div) {
-        return std::sin((PI * fac) / div);
-    }
-
-    complex_value Cmake(const long double r, const long double i) {
-        return {r, i};
-    }
-
-    // initialize the complex value table and complex operation tables to empty
-    void initComplexTable()
-    {
-        for (auto & i : Complex_table) {
-            i = nullptr;
-        }
-        ComplexCount = 0;
-    }
-
-
-    void printComplexTable()
+	void ComplexNumbers::printComplexTable()
     // print the complex value table entries
     {
         int nentries = 0;
 
         std::cout << "Complex value table\n";
 
-        complex_table_entry *p;
+	    ComplexTableEntry *p;
         int max = -1;
         const auto prec_before = std::cout.precision(20);
-        for (unsigned int i = 0; i < COMPLEX_NBUCKET; i++) {
-            p = Complex_table[i];
+        for (unsigned int i = 0; i < NBUCKET; i++) {
+            p = ComplexTable[i];
             if (p != nullptr) {
                 std::cout << "BUCKET " << i << std::endl;
             }
 
             int num = 0;
             while (p != nullptr) {
-                std::cout << "  " << (intptr_t) p << ": " << p->val << std::endl;
+                std::cout << "  " << (intptr_t) p << ": ";
+                printFormattedReal(std::cout, p->val);
+                std::cout << " " << p->ref;
+                std::cout << std::endl;
                 num++;
                 nentries++;
                 p = p->next;
@@ -181,67 +109,75 @@ namespace dd_package {
         std::cout << "Largest number of entries in bucket: " << max << "\n";
     }
 
-    unsigned long getKey(const long double val) {
-        unsigned long key = (unsigned long) (val * (COMPLEX_NBUCKET - 1));
-        if (key > COMPLEX_NBUCKET - 1) {
-            key = COMPLEX_NBUCKET - 1;
-        }
-        return key;
+    void ComplexNumbers::statistics() {
+	    int nentries = 0;
+	    std::cout << "CN statistics:\n";
+
+	    ComplexTableEntry *p;
+	    int max = -1;
+	    for (unsigned int i = 0; i < NBUCKET; i++) {
+		    p = ComplexTable[i];
+		    int num = 0;
+		    while (p != nullptr) {
+			    num++;
+			    nentries++;
+			    p = p->next;
+		    }
+		    max = std::max(max, num);
+	    }
+	    std::cout << "\tComplex table has " << nentries << " entries\n";
+	    std::cout << "\tLargest number of entries in bucket: " << max << "\n";
     }
 
-    complex_table_entry *lookup(const long double val) {
-        complex_table_entry *r = getComplexTableEntry();
-        r->ref = 0;
-        r->val = val;
+	ComplexTableEntry *ComplexNumbers::lookupVal(const fp& val) {
+        assert(!std::isnan(val));
 
-        const unsigned long key = getKey(r->val);
+        const auto key = getKey(val);
 
-        complex_table_entry *p = Complex_table[key];
+		auto p = ComplexTable[key];
         while (p != nullptr) {
-            if (std::fabs(p->val - val) < COMPLEX_TOLERANCE) {
-                r->next = Complex_Avail;
-                Complex_Avail = r;
+            if (std::fabs(p->val - val) < TOLERANCE)
                 return p;
-            }
             p = p->next;
         }
 
-        const unsigned long key2 = getKey(val - COMPLEX_TOLERANCE);
+        const auto key2 = getKey(val - TOLERANCE);
 
         if (key2 != key) {
-            p = Complex_table[key2];
+            p = ComplexTable[key2];
             while (p != nullptr) {
-                if (std::fabs(p->val - val) < COMPLEX_TOLERANCE) {
-                    r->next = Complex_Avail;
-                    Complex_Avail = r;
+                if (std::fabs(p->val - val) < TOLERANCE)
                     return p;
-                }
                 p = p->next;
             }
         }
 
-        const unsigned long key3 = getKey(val + COMPLEX_TOLERANCE);
+        const auto key3 = getKey(val + TOLERANCE);
 
         if (key3 != key) {
-            p = Complex_table[key3];
+            p = ComplexTable[key3];
             while (p != nullptr) {
-                if (std::fabs(p->val - val) < COMPLEX_TOLERANCE) {
-                    r->next = Complex_Avail;
-                    Complex_Avail = r;
+                if (std::fabs(p->val - val) < TOLERANCE)
                     return p;
-                }
                 p = p->next;
             }
         }
 
-        r->next = Complex_table[key];
-        Complex_table[key] = r;
+		auto r = getComplexTableEntry();
+		r->val = val;
+        r->next = ComplexTable[key];
+	    ComplexTable[key] = r;
 
-        ComplexCount++;
+        count++;
         return r;
     }
 
-    complex Clookup(const complex &c) {
+    Complex ComplexNumbers::lookup(const Complex &c) {
+        if (equalsZero(c))
+    		return ZERO;
+        if (equalsOne(c))
+		    return ONE;
+
         bool sign_r = std::signbit(c.r->val);
         bool sign_i = std::signbit(c.i->val);
 
@@ -252,114 +188,128 @@ namespace dd_package {
             sign_i = false;
         }
 
-        complex ret;
-
-        //Lookup real part of complex number
-        ret.r = lookup(std::fabs(c.r->val));
-        ret.i = lookup(std::fabs(c.i->val));
+	    Complex ret{ lookupVal(std::abs(val(c.r))), lookupVal(std::abs(val(c.i))) };
 
         //Store sign bit in pointers
         if (sign_r) {
-            ret.r = (complex_table_entry *) (((uintptr_t) (ret.r)) | 1u);
+	        ret.r = (ComplexTableEntry *) (((uintptr_t) (ret.r)) | 1u);
         }
         if (sign_i) {
-            ret.i = (complex_table_entry *) (((uintptr_t) (ret.i)) | 1u);
+	        ret.i = (ComplexTableEntry *) (((uintptr_t) (ret.i)) | 1u);
         }
 
         return ret;
     }
 
-    complex Cconjugate(const complex a)
-    // return complex conjugate
+	Complex ComplexNumbers::lookup(const fp& r, const fp& i) {
+        if (std::fabs(i) < TOLERANCE) {
+    		if (std::abs(r-1L)< TOLERANCE)
+			    return ONE;
+    		else if (std::abs(r) < TOLERANCE)
+			    return ZERO;
+        }
+
+		Complex ret{ lookupVal(std::abs(r)), lookupVal(std::abs(i)) };
+
+		//Store sign bit in pointers
+		if (r < 0) {
+			ret.r = (ComplexTableEntry *) (((uintptr_t) (ret.r)) | 1u);
+		}
+		if (i < 0) {
+			ret.i = (ComplexTableEntry *) (((uintptr_t) (ret.i)) | 1u);
+		}
+
+		return ret;
+	}
+
+
+	// return complex conjugate
+	Complex ComplexNumbers::conj(const Complex& a)
     {
-        complex ret = a;
-        if (a.i != COMPLEX_ZERO.i) {
-            ret.i = (complex_table_entry *) (((uintptr_t) a.i) ^ 1u);
+        Complex ret = a;
+        if (a.i != ZERO.i) {
+	        ret.i = (ComplexTableEntry *) (((uintptr_t) a.i) ^ 1u);
         }
         return ret;
     }
 
-
-    // basic operations on complex values
-    // meanings are self-evident from the names
-    // NOTE arguments are the indices to the values
-    // in the complex value table not the values themselves
-
-    complex Cnegative(const complex a) {
-        complex ret = a;
-        if (a.i != COMPLEX_ZERO.r) {
-            ret.i = (complex_table_entry *) (((uintptr_t) a.i) ^ 1u);
+	Complex ComplexNumbers::neg(const Complex& a) {
+		auto ret = a;
+        if (a.i != ZERO.i) {
+	        ret.i = (ComplexTableEntry *) (((uintptr_t) a.i) ^ 1u);
         }
-        if (a.r != COMPLEX_ZERO.r) {
-            ret.r = (complex_table_entry *) (((uintptr_t) a.r) ^ 1u);
+        if (a.r != ZERO.r) {
+	        ret.r = (ComplexTableEntry *) (((uintptr_t) a.r) ^ 1u);
         }
-        return ret;
+		return ret;
     }
 
-    void Cadd(complex &r, const complex a, const complex b) {
-        r.r->val = CVAL(a.r) + CVAL(b.r);
-        r.i->val = CVAL(a.i) + CVAL(b.i);
+	void ComplexNumbers::add(Complex& r, const Complex& a, const Complex& b) {
+        r.r->val = val(a.r) + val(b.r);
+        r.i->val = val(a.i) + val(b.i);
     }
 
-    void Csub(complex &r, const complex a, const complex b) {
-        r.r->val = CVAL(a.r) - CVAL(b.r);
-        r.i->val = CVAL(a.i) - CVAL(b.i);
-
+	void ComplexNumbers::sub(Complex& r, const Complex& a, const Complex& b) {
+        r.r->val = val(a.r) - val(b.r);
+        r.i->val = val(a.i) - val(b.i);
     }
 
-    void Cmul(complex &r, const complex a, const complex b) {
-        if (a == COMPLEX_ONE) {
-            r.r->val = CVAL(b.r);
-            r.i->val = CVAL(b.i);
+	void ComplexNumbers::mul(Complex& r, const Complex& a, const Complex& b) {
+        if (equalsOne(a)) {
+            r.r->val = val(b.r);
+            r.i->val = val(b.i);
             return;
-        }
-        if (b == COMPLEX_ONE) {
-            r.r->val = CVAL(a.r);
-            r.i->val = CVAL(a.i);
+        } else if (equalsOne(b)) {
+            r.r->val = val(a.r);
+            r.i->val = val(a.i);
             return;
+        } else if (equalsZero(a) || equalsZero(b)) {
+	        r.r->val = 0.L;
+	        r.i->val = 0.L;
+	        return;
         }
 
-        long double ar = CVAL(a.r);
-        long double ai = CVAL(a.i);
-        long double br = CVAL(b.r);
-        long double bi = CVAL(b.i);
+        auto ar = val(a.r);
+        auto ai = val(a.i);
+        auto br = val(b.r);
+        auto bi = val(b.i);
 
         r.r->val = ar * br - ai * bi;
         r.i->val = ar * bi + ai * br;
     }
 
-    void Cdiv(complex &r, const complex a, const complex b) {
-        if (a == b) {
+	void ComplexNumbers::div(Complex& r, const Complex& a, const Complex& b) {
+        if (equals(a, b)) {
             r.r->val = 1;
             r.i->val = 0;
             return;
+        } else if (equalsZero(a)) {
+	        r.r->val = 0;
+	        r.i->val = 0;
+	        return;
+        } else if (equalsOne(b)) {
+        	r.r->val = val(a.r);
+        	r.i->val = val(a.i);
+	        return;
         }
 
-        long double ar = CVAL(a.r);
-        long double ai = CVAL(a.i);
-        long double br = CVAL(b.r);
-        long double bi = CVAL(b.i);
+        auto ar = val(a.r);
+        auto ai = val(a.i);
+        auto br = val(b.r);
+        auto bi = val(b.i);
 
-        long double cmag = br * br + bi * bi;
+        auto cmag = br * br + bi * bi;
 
         r.r->val = (ar * br + ai * bi) / cmag;
         r.i->val = (-ar * bi + ai * br) / cmag;
-
     }
 
-    long double CmagSquared(const complex &a) {
-        long double ar = CVAL(a.r);
-        long double ai = CVAL(a.i);
+    void ComplexNumbers::garbageCollect() {
+	    ComplexTableEntry *cur;
+	    ComplexTableEntry *prev;
+	    ComplexTableEntry *suc;
 
-        return ar * ar + ai * ai;
-    }
-
-    void garbageCollectComplexTable() {
-        complex_table_entry *cur;
-        complex_table_entry *prev;
-        complex_table_entry *suc;
-
-        for (auto & i : Complex_table) {
+        for (auto & i : ComplexTable) {
             prev = nullptr;
             cur = i;
             while (cur != nullptr) {
@@ -370,11 +320,11 @@ namespace dd_package {
                     } else {
                         prev->next = suc;
                     }
-                    cur->next = Complex_Avail;
-                    Complex_Avail = cur;
+                    cur->next = Avail;
+	                Avail = cur;
 
                     cur = suc;
-                    ComplexCount--;
+                    count--;
                 } else {
                     prev = cur;
                     cur = cur->next;
@@ -382,4 +332,136 @@ namespace dd_package {
             }
         }
     }
+
+	int ComplexNumbers::cacheSize() {
+		ComplexTableEntry *p = Cache_Avail;
+		int size = 0;
+
+		intptr_t min = std::numeric_limits<intptr_t>::max();
+		intptr_t max = std::numeric_limits<intptr_t>::min();
+
+		while (p != nullptr && size <= 0.9 * CHUNK_SIZE) {
+			if (p->ref != 0) {
+				std::cerr << "Entry with refcount != 0 in Cache!\n";
+				std::cerr << (intptr_t) p << " " << p->ref << " " << p->val << " " << (intptr_t) p->next << "\n";
+			}
+			if (((intptr_t) p) < min) { min = (intptr_t) p; }
+			if (((intptr_t) p) > max) { max = (intptr_t) p; }
+
+			p = p->next;
+			size++;
+		}
+		if (size > 0.9 * CHUNK_SIZE) {
+			p = Cache_Avail;
+			for (int i = 0; i < 10; i++) {
+				std::cout << i << ": " << (uintptr_t) p << "\n";
+				p = p->next;
+			}
+			std::cerr << "Error in Cache!\n" << std::flush;
+			exit(1);
+		}
+		std::cout << "Min ptr in cache: " << min << ", max ptr in cache: " << max << "\n";
+		return size;
+	}
+
+	void ComplexNumbers::incRef(const Complex& c) {
+		if (c != ZERO && c != ONE) {
+			((ComplexTableEntry *) ((uintptr_t) c.r & (~1ull)))->ref++;
+			((ComplexTableEntry *) ((uintptr_t) c.i & (~1ull)))->ref++;
+		}
+	}
+
+	void ComplexNumbers::decRef(const Complex& c) {
+		if (c != ZERO && c != ONE) {
+			((ComplexTableEntry *) ((uintptr_t) c.r & (~1ull)))->ref--;
+			((ComplexTableEntry *) ((uintptr_t) c.i & (~1ull)))->ref--;
+		}
+	}
+
+	void ComplexNumbers::printFormattedReal(std::ostream& os, fp r, bool imaginary) {
+		assert(r != 0.L);
+    	auto n = std::log2(std::abs(r));
+		auto m = std::log2(std::abs(r) / SQRT_2);
+		auto o = std::log2(std::abs(r) / PI);
+
+		if (n == 0) { // +-1
+			if (imaginary) {
+				os << (std::signbit(r) ? "-" : "+") << "i";
+			} else
+				os << (std::signbit(r) ? "-" : "") << 1;
+			return;
+		}
+
+		if (m == 0) { // +- sqrt(2)
+			if (imaginary) {
+				os << (std::signbit(r) ? "-" : "+") << "\u221a\u00bdi";
+			} else {
+				os << (std::signbit(r) ? "-" : "") << "\u221a\u00bd";
+			}
+			return;
+		}
+
+		if (o == 0) { // +- pi
+			if (imaginary) {
+				os << (std::signbit(r) ? "-" : "+") << "\u03c0i";
+			} else {
+				os << (std::signbit(r) ? "-" : "") << "\u03c0";
+		}
+			return;
+		}
+
+		if (std::abs(n + 1) < TOLERANCE) { // 1/2
+			if (imaginary) {
+				os << (std::signbit(r) ? "-" : "+") << "\u00bdi";
+			} else
+				os << (std::signbit(r) ? "-" : "") << "\u00bd";
+			return;
+		}
+
+		if (std::abs(m + 1) < TOLERANCE) { // 1/sqrt(2) 1/2
+			if (imaginary) {
+				os << (std::signbit(r) ? "-" : "+") << "\u221a\u00bd \u00bdi";
+			} else
+				os << (std::signbit(r) ? "-" : "") << "\u221a\u00bd \u00bd";
+			return;
+		}
+
+		if (std::abs(o + 1) < TOLERANCE) { // +-pi/2
+			if (imaginary) {
+				os << (std::signbit(r) ? "-" : "+") << "\u00bd \u03c0i";
+			} else
+				os << (std::signbit(r) ? "-" : "") << "\u00bd \u03c0";
+			return;
+	}
+
+		if (std::abs(std::round(n)-n) < TOLERANCE && n < 0) { // 1/2^n
+			if (imaginary) {
+				os << (std::signbit(r) ? "-" : "+") << "\u00bd\u002a\u002a" << (int) std::round(-n) << "i";
+			} else
+				os << (std::signbit(r) ? "-" : "") << "\u00bd\u002a\u002a" << (int) std::round(-n);
+			return;
+		}
+
+		if (std::abs(std::round(m) - m) < TOLERANCE && m < 0) { // 1/sqrt(2) 1/2^m
+			if (imaginary) {
+				os << (std::signbit(r) ? "-" : "+") << "\u221a\u00bd \u00bd\u002a\u002a" << (int) std::round(-m) << "i";
+			} else
+				os << (std::signbit(r) ? "-" : "") << "\u221a\u00bd \u00bd\u002a\u002a" << (int) std::round(-m);
+			return;
+		}
+
+		if (std::abs(std::round(o) - o) < TOLERANCE && o < 0) { // 1/2^o pi
+			if (imaginary) {
+				os << (std::signbit(r) ? "-" : "+") << "\u00bd\u002a\u002a" << (int) std::round(-o) << " \u03c0i";
+			} else
+				os << (std::signbit(r) ? "-" : "") << "\u00bd\u002a\u002a" << (int) std::round(-o) << " \u03c0";
+			return;
+		}
+
+		if (imaginary) { // default
+			os << (std::signbit(r) ? "" : "+") << r << "i";
+		} else
+			os << r;
+	}
+
 }

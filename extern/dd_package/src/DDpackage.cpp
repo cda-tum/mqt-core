@@ -3,128 +3,44 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum_dd/ for more information.
  */
 
-
-#include "DDpackage.h"
-#include <limits>
-#include <unordered_set>
-#include <iostream>
 #include <sstream>
 #include <fstream>
 #include <cstring>
-#include <cmath>
+#include <iostream>
 
-namespace dd_package {
-    constexpr unsigned int NODECOUNT_BUCKETS = 2000000;
-    const complex_value complex_one = {1, 0};
-    const complex_value complex_zero = {0, 0};
-    const long double sqrt_2 = 1.0L / std::sqrt(2.0L);
+#include "DDpackage.h"
 
-    // NOT operations
-    const DD_matrix Nm = {{complex_zero, complex_one},
-                          {complex_one,  complex_zero}};
-    // phase shift S
-    const DD_matrix Sm = {{complex_one,  complex_zero},
-                          {complex_zero, {0, 1}}};
-    // Hadamard
-    const DD_matrix Hm = {{{sqrt_2, 0}, {sqrt_2,  0}},
-                          {{sqrt_2, 0}, {-sqrt_2, 0}}};
-    // phase shift Z = S*S
-    const DD_matrix Zm = {{complex_one,  complex_zero},
-                          {complex_zero, {-1, 0}}};
+namespace dd {
 
-    const int Radix = MAXRADIX;                 // radix (default is 2)
-    const int Nedge = MAXNEDGE;                 // no. of edges (default is 4)
-    int GCswitch = 1;                           // set switch to 1 to enable garbage collection
-    int Smode = 1;                              // S mode switch for spectral transformation
-    int RMmode = 0;                             // Select RM transformation mode
-    int MultMode = 0;                           // set to 1 for matrix - vector multiplication
+	Node Package::terminal{ nullptr, {{ nullptr, CN::ZERO}, { nullptr, CN::ZERO }, { nullptr, CN::ZERO }, { nullptr, CN::ZERO }}, 0, -1, true, true};
+	constexpr Edge Package::DDzero;
+	constexpr Edge Package::DDone;
 
-    int RenormalizationNodeCount = 0;           // number of active nodes that need renormalization (used in DDdecRef)
-    int blockMatrixCounter = 0;                 // number of active nodes that represent block matrices (used in DDincRef, DDdecRef)
-    int globalComputeSpecialMatricesFlag = 1;   // default value for computeSpecialMatricesFlag of newly created nodes (used in DDmakeNonterminal)
-
-    DDnodePtr Avail;                            // pointer to available space chain
-    ListElementPtr Lavail;                      // pointer to available list elements for breadth first searchess
-    DDnodePtr DDterminalNode;                   // pointer to terminal node
-    DDedge DDone, DDzero;                       // edges pointing to zero and complex_one DD constants
-    long DDorder[MAXN];                         // variable order initially 0,1,... from bottom up | Usage: DDorder[level] := varible at a certain level
-    long DDinverseOrder[MAXN];                  // inverse of variable order (inverse permutation) | Usage: DDinverseOrder[variable] := level of a certain variable
-    long DDnodecount;                           // counts active nodes
-    long DDpeaknodecount;                       // records peak node count in unique table
-    long Nop[6];                                // operation counters
-    long CTlook[20], CThit[20];                 // counters for gathering compute table hit stats
-    long UTcol, UTmatch, UTlookups;             // counter for collisions / matches in hash tables
-    int GCcurrentLimit;                         // current garbage collection limit
-    int ComplexCurrentLimit;                    // current garbage collection limit
-    int ActiveNodeCount;                        // number of active nodes
-    int Active[MAXN];                           // number of active nodes for each variable
-    DDedge DDnullEdge;                          // set in DDinit routine
-    int PermList[MAXPL];                        // array for recording a permutation
-    DDnodePtr Unique[MAXN][NBUCKET];
-    CTentry1 CTable1[CTSLOTS];
-    CTentry2 CTable2[CTSLOTS];
-    CTentry3 CTable3[CTSLOTS];
-    TTentry TTable[TTSLOTS];
-    DDedge DDid[MAXN];
-    int Nlabel;        // number of labels
-    char Label[MAXN][MAXSTRLEN];  // label table
-
-    int CacheSize() {
-        complex_table_entry *p = ComplexCache_Avail;
-        int size = 0;
-
-        intptr_t min = std::numeric_limits<intptr_t>::max();
-        intptr_t max = std::numeric_limits<intptr_t>::min();
-
-        while (p != nullptr && size <= 1800) {
-            if (p->ref != 0) {
-                std::cerr << "Entry with refcount != 0 in Cache!\n";
-                std::cerr << (intptr_t) p << " " << p->ref << " " << p->val << " " << (intptr_t) p->next << "\n";
-            }
-            if (((intptr_t) p) < min) {min = (intptr_t) p;}
-            if (((intptr_t) p) > max) {max = (intptr_t) p;}
-
-            p = p->next;
-            size++;
-        }
-        if (size > 1800) {
-            p = ComplexCache_Avail;
-            for (int i = 0; i < 10; i++) {
-                std::cout << i << ": " << (uintptr_t) p << "\n";
-                p = p->next;
-            }
-            std::cerr << "Error in Cache!\n" << std::flush;
-            std::exit(1);
-        }
-        std::cout << "Min ptr in cache: " << min << ", max ptr in cache: " << max << "\n";
-        return size;
-    }
-
-    // for debugging purposes - not normally used
-    void DDdebugnode(DDnodePtr p) {
+    void Package::debugnode(NodePtr p) const {
        if (p == DDzero.p) {
             std::cout << "terminal\n";
             return;
         }
-        std::cout  <<"Debug node" << (intptr_t) p << "\n";
-        std::cout << "node v " << (int) DDorder[p->v] <<" (" << (int) p->v << ") edges (w,p) ";
+        std::cout << "Debug node" << (intptr_t) p << "\n";
+        std::cout << "node v " << (int) varOrder[p->v] << " (" << (int) p->v << ") edges (w,p) ";
         for (auto const & i : p->e) {
             std::cout << i.w << " " << (intptr_t) i.p <<" || ";
         }
-        std::cout << "ref " << p->ref << "\n";
+        std::cout << "ref " << p->ref << "\n" << std::flush;
     }
 
-    ListElementPtr DDnewListElement() {
+    ListElementPtr Package::newListElement() {
         ListElementPtr r;
 
-        if (Lavail != nullptr) {   // get node from avail chain if possible
-            r = Lavail;
-            Lavail = Lavail->next;
+        if (listAvail != nullptr) {   // get node from avail chain if possible
+            r = listAvail;
+	        listAvail = listAvail->next;
         } else {            // otherwise allocate 2000 new nodes
-            r = new ListElement[2000];
+            r = new ListElement[CHUNK_SIZE];
+            allocated_list_chunks.push_back(r);
             ListElementPtr r2 = r + 1;
-            Lavail = r2;
-            for (int i = 0; i < 1998; i++, r2++) {
+	        listAvail = r2;
+            for (int i = 0; i < CHUNK_SIZE-2; i++, r2++) {
                 r2->next = r2+1;
             }
             r2->next = nullptr;
@@ -133,61 +49,50 @@ namespace dd_package {
     }
 
     // a slightly better DD print utility
-    void DDprint(DDedge e, unsigned int limit) {
+    void Package::printDD(Edge e, unsigned int limit) {
         ListElementPtr first, q, lastq, pnext;
-        uint64_t n, i, j;
+        uint64_t n, i;
 
-        first = DDnewListElement();
+        first = newListElement();
         first->p = e.p;
         first->next = nullptr;
 
         first->w = 0;
-        first->cnt = 1;
         n = 0;
         i = 0;
         std::cout << "top edge weight " << e.w << "\n";
         pnext = first;
 
         while (pnext != nullptr) {
-            std::cout << pnext->cnt << " " << pnext->p->ref;
-            std::cout << (pnext->p->block ? 'B' : ' ');
-            std::cout << (pnext->p->diag ? 'D' : ' ');
-            std::cout << (pnext->p->ident ? 'I' : ' ');
-            std::cout << (pnext->p->symm ? 'S' : ' ');
+            std::cout << pnext->p->ref << " ";
 
-            if (pnext->p->renormFactor != COMPLEX_ONE)
-                std::cout << "R=" << pnext->p->renormFactor;
-            else
-                std::cout << "    ";
-            std::cout << i << "|  (" << pnext->p->v << ")";
+            std::cout << i << " \t|\t(" << pnext->p->v << ") \t";
 
             std::cout << "[";
             if (pnext->p != DDzero.p) {
-                for (j = 0; j < Nedge; j++) {
-                    if (pnext->p->e[j].p == nullptr) {
+	            for (auto& edge : pnext->p->e) {
+		            if (edge.p == nullptr) {
                         std::cout << "NULL ";
                     } else {
-                        if (!DDterminal(pnext->p->e[j])) {
+			            if (!isTerminal(edge)) {
                             q = first->next;
                             lastq = first;
-                            while (q != nullptr && pnext->p->e[j].p != q->p) {
+				            while (q != nullptr && edge.p != q->p) {
                                 lastq = q;
                                 q = q->next;
                             }
                             if (q == nullptr) {
-                                q = DDnewListElement();
-                                q->p = pnext->p->e[j].p;
+                                q = newListElement();
+	                            q->p = edge.p;
                                 q->next = nullptr;
                                 q->w = n = n + 1;
-                                q->cnt = 1;
                                 lastq->next = q;
-                            } else
-                                q->cnt = q->cnt + 1;
-                            std::cout << " " << q->w << ":";
+                            }
+                            std::cout << " " << q->w << ":\t";
                         } else {
-                            std::cout << "   T:";
+                            std::cout << "  T:\t";
                         }
-                        std::cout << " (" << pnext->p->e[j].w << ") ";
+			            std::cout << " (" << edge.w << ") ";
                     }
                 }
             }
@@ -202,49 +107,35 @@ namespace dd_package {
         }
     }
 
-    complex_value GetElementOfVector(DDedge e, unsigned long long element) {
-        if (DDterminal(e)) {
-            complex_value ret;
-            ret.r = ret.i = 0;
-            return ret;
+    ComplexValue Package::getVectorElement(Edge e, const unsigned long long element) {
+        if (isTerminal(e)) {
+            return {0,0};
         }
-        complex l;
-        l.r = ComplexCache_Avail;
-        l.i = l.r->next;
-        l.r->val = 1;
-        l.i->val = 0;
+        Complex l = cn.getTempCachedComplex(1, 0);
         do {
-            Cmul(l, l, e.w);
-            long tmp = (element >> DDinverseOrder[e.p->v]) & 1;
+	        ComplexNumbers::mul(l, l, e.w);
+            auto tmp = (element >> invVarOrder[e.p->v]) & 1u;
             e = e.p->e[2 * tmp];
-        } while (!DDterminal(e));
-        Cmul(l, l, e.w);
-        complex_value ret;
-        ret.r = l.r->val;
-        ret.i = l.i->val;
+        } while (!isTerminal(e));
+	    ComplexNumbers::mul(l, l, e.w);
 
-        return ret;
+        return {l.r->val, l.i->val};
     }
 
-
-    void DDprintVector(DDedge e) {
-        unsigned long long element = 2 << DDinverseOrder[e.p->v];
+    void Package::printVector(Edge e) {
+        unsigned long long element = 2u << invVarOrder[e.p->v];
         for (unsigned long long i = 0; i < element; i++) {
-            complex_value amplitude = GetElementOfVector(e, i);
-            for (int j = DDinverseOrder[e.p->v]; j >= 0; j--) {
+            ComplexValue amplitude = getVectorElement(e, i);
+            for (int j = invVarOrder[e.p->v]; j >= 0; j--) {
                 std::cout << ((i >> j) & 1u);
             }
             std::cout << ": " << amplitude << "\n";
-
         }
         std::cout << std::flush;
     }
 
 
-    /*
-     * DD2dot export. Nodes representing special matrices (symmetric/identity) are coloured green/red.
-     */
-    void DD2dot(DDedge e, std::ostream &oss, DDrevlibDescription circ) {
+    void Package::toDot(Edge e, std::ostream& oss, bool isVector) {
         /* first part of dot file*/
         std::ostringstream nodes;
         /*second part of dot file*/
@@ -258,60 +149,44 @@ namespace dd_package {
               << "\"T\" [ shape = box, label=\"1\" ];\n";
         /* Define Nodes */
         ListElementPtr first, q, lastq, pnext;
-        first = DDnewListElement();
+        first = newListElement();
         first->p = e.p;
         first->next = nullptr;
         first->w = 0;
-        first->cnt = 1;
 
         uint64_t n=0, i=0;
 
         nodes << "\"R\"";
         //füge Kante zwischen helper node und neuem Knoten hinzu
-        if (e.w == COMPLEX_ONE) {
+        if (ComplexNumbers::equalsOne(e.w)) {
             nodes << " [label=\"\", shape=point];\n";
             edges << "\"R\" -> \"0\"\n";
         } else {
             nodes << " [label=\"\", shape=point];\n";
-            edges << "\"R\" -> \"0\" [label=\"(" << e.w << ")\" ];\n";
+            edges << R"("R" -> "0" [label="()" << e.w << ")\" ];\n";
         }
 
 
         pnext = first;
         while (pnext != nullptr) {
             /* Zeichne Knoten*/
-            if (pnext->p->ident)
-                nodes << "\"" << i << "\" " << "[ label=\""
-                      << circ.line[((int) pnext->p->v)].variable
-                      << "\" ,style=filled, fillcolor=red ];\n";
-            else if (pnext->p->symm)
-                nodes << "\"" << i << "\" " << "[ label=\""
-                      << circ.line[((int) pnext->p->v)].variable
-                      << "\" ,style=filled, fillcolor=green ];\n";
-            else
-                nodes << "\"" << i << "\" " << "[ label=\""
-                      << circ.line[((int) pnext->p->v)].variable
-                      << "\" ,style=filled, fillcolor=lightgray ];\n";
+            nodes << "\"" << i << "\" " << "[ label=\""
+            << "q" << pnext->p->v
+            << "\" ,style=filled, fillcolor=lightgray ];\n";
 
             if (pnext->p != DDzero.p) {
                 edges << "{rank=same;";
-                for (unsigned int k = 0; k < MAXNEDGE; k++) {
-                    if (MultMode == 1) {
-                        if (k % MAXRADIX != 0) continue;
-                    }
+                for (unsigned int k = 0; k < NEDGE; k++) {
+                	if (isVector && k % RADIX != 0) continue;
                     edges << " \"" << i << "h" << k << "\"";
                 }
                 edges << "}\n";
 
-                for (int j = 0; j < Nedge; j++) {
-                    if (MultMode == 1) {
-                        if (j % MAXRADIX != 0) {
-                            continue;
-                        }
-                    }
+                for (int j = 0; j < NEDGE; j++) {
+                	if (isVector && j % RADIX != 0) continue;
                     if (pnext->p->e[j].p == nullptr);
                     else {
-                        if (!DDterminal(pnext->p->e[j])) {
+                        if (!isTerminal(pnext->p->e[j])) {
                             q = first->next;
                             lastq = first;
                             while (q != nullptr && pnext->p->e[j].p != q->p) {
@@ -319,14 +194,11 @@ namespace dd_package {
                                 q = q->next;
                             }
                             if (q == nullptr) {
-                                q = DDnewListElement();
+                                q = newListElement();
                                 q->p = pnext->p->e[j].p;
                                 q->next = nullptr;
                                 q->w = n = n + 1;
-                                q->cnt = 1;
                                 lastq->next = q;
-                            } else {
-                                q->cnt = q->cnt + 1;
                             }
                             nodes << "\"" << i << "h" << j << "\" ";
 
@@ -352,7 +224,7 @@ namespace dd_package {
                             }
                             edges << "];\n";
                             //füge Kante zwischen helper node und neuem Knoten hinzu
-                            if (pnext->p->e[j].w == COMPLEX_ONE) {
+                            if (ComplexNumbers::equalsOne(pnext->p->e[j].w)) {
                                 nodes << " [label=\"\", shape=point];\n";
                                 edges << "\"" << i << "h" << j << "\" -> \"" << q->w << "\";\n";
                             } else {
@@ -382,12 +254,12 @@ namespace dd_package {
                             }
                             edges << "];\n";
                             //connect helper node
-                            if (pnext->p->e[j].w == COMPLEX_ZERO) {
+                            if (ComplexNumbers::equalsZero(pnext->p->e[j].w)) {
                                 nodes << ", fillcolor=red, color=red";
-                            } else if (pnext->p->e[j].w == COMPLEX_ONE) {
+                            } else if (ComplexNumbers::equalsOne(pnext->p->e[j].w)) {
                                 edges << "\"" << i << "h" << j << "\"-> \"T\";\n";
                             } else {
-                                edges << "\"" << i << "h" << j << "\"-> \"T\" [label= \"(" << pnext->p->e[j].w << ")\", ];\n";
+                                edges << "\"" << i << "h" << j << R"("-> "T" [label= "()" << pnext->p->e[j].w << ")\", ];\n";
                             }
                             nodes << "];\n";
 
@@ -403,137 +275,192 @@ namespace dd_package {
 
     // export a DD in .dot format to the file specified by outputFilename
     // and call DOT->SVG export (optional, requires dot package)
-    void DDdotExport(DDedge basic, const char *outputFilename, DDrevlibDescription circ, bool show) {
+    void Package::export2Dot(Edge basic, const char *outputFilename, bool isVector, bool show) {
         std::ofstream init(outputFilename);
-        DD2dot(basic, init, circ);
+	    toDot(basic, init, isVector);
         init.close();
 
         if (show) {
             std::ostringstream oss;
             oss << "dot -Tsvg " << outputFilename << " -o " << outputFilename << ".svg";
             auto str = oss.str(); // required to avoid immediate deallocation of temporary
-            std::system(str.c_str());
+            static_cast<void>(!std::system(str.c_str())); // cast and ! just to suppress the unused result warning
         }
     }
 
-    void DDdotExportVector(DDedge basic, const char *outputFilename) {
-        DDrevlibDescription circ{};
-
-        for (long int i = 0; i <= DDinverseOrder[basic.p->v]; i++) {
-            snprintf(circ.line[i].variable, MAXSTRLEN, "x[%ld]", DDinverseOrder[basic.p->v] - i);
-        }
-        int MultMode_old = MultMode;
-        MultMode = 1;
-
-        DDdotExport(basic, outputFilename, circ, true);
-
-        MultMode = MultMode_old;
-    }
-
-    void DDdotExportMatrix(DDedge basic, const char *outputFilename) {
-        DDrevlibDescription circ{};
-
-        for (long i = 0; i <= DDinverseOrder[basic.p->v]; i++) {
-            snprintf(circ.line[i].variable, MAXSTRLEN, "x[%ld]", DDinverseOrder[basic.p->v] - i);
-        }
-        int MultMode_old = MultMode;
-        MultMode = 0;
-
-        DDdotExport(basic, outputFilename, circ, true);
-
-        MultMode = MultMode_old;
-    }
-
-    DDedge DDzeroState(int n) {
-        DDedge f = DDone;
-        DDedge edges[4];
+    Edge Package::makeZeroState(unsigned short n) {
+        Edge f = DDone;
+        Edge edges[4];
         edges[1] = edges[2] = edges[3] = DDzero;
 
-        for (int p = 0; p < n; p++) {
+        for (short p = 0; p < n; p++) {
             edges[0] = f;
-            f = DDmakeNonterminal(p, edges, false);
+	        f = makeNonterminal(p, edges);
         }
         return f;
     }
 
-    DDedge DDnormalize(DDedge e, bool cached) {
-        int max = -1;
-        long double sum = 0.0;
-        long double div = 0.0;
+    Edge Package::normalize(Edge& e, bool cached) {
+        int argmax = -1;
 
-        for (int i = 0; i < Nedge; i++) {
-            if ((e.p->e[i].p == nullptr || Ceq(e.p->e[i].w, COMPLEX_ZERO))) {
-                continue;
-            }
+	    bool zero[] = { ComplexNumbers::equalsZero(e.p->e[0].w),
+                        ComplexNumbers::equalsZero(e.p->e[1].w),
+                        ComplexNumbers::equalsZero(e.p->e[2].w),
+                        ComplexNumbers::equalsZero(e.p->e[3].w) };
 
-            if (max == -1) {
-                max = i;
-                sum = div = CmagSquared(e.p->e[i].w);
+	    /// --- Matrix treatment ---
+	    if (forceMatrixNormalization || !zero[1] || !zero[3]) {
+	    	fp max = 0.L;
+	    	Complex maxc = ComplexNumbers::ONE;
+		    // determine max amplitude
+	    for (int i = 0; i < NEDGE; ++i) {
+			    if (zero[i]) continue;
+			    if (argmax == -1) {
+			    	argmax = i;
+			    	max = ComplexNumbers::mag2(e.p->e[i].w);
+			    	maxc = e.p->e[i].w;
             } else {
-                sum += CmagSquared(e.p->e[i].w);
+				    auto mag = ComplexNumbers::mag2(e.p->e[i].w);
+			    	if (mag - max > CN::TOLERANCE) {
+			    		argmax = i;
+			    		max = mag;
+					    maxc = e.p->e[i].w;
+				    }
             }
-        }
-        if (max == -1) {
+	    }
+
+	    	// all equal to zero - make sure to release cached numbers approximately zero, but not exactly zero
+		    if (argmax == -1) {
             if (cached) {
-                for (auto & i : e.p->e) {
-                    if (i.p != nullptr && i.w != COMPLEX_ZERO) {
-                        i.w.i->next = ComplexCache_Avail;
-                        ComplexCache_Avail = i.w.r;
-                    }
-                }
+	            for (auto const & i : e.p->e) {
+					    if (i.w != CN::ZERO)
+			            cn.releaseCached(i.w);
+		            }
+	            }
+            return DDzero;
+        }
+
+		    // divide each entry by max
+		    for (int i = 0; i < NEDGE; ++i) {
+			    if (i == argmax) {
+			    	if (cached) {
+					    if (e.w == ComplexNumbers::ONE)
+						    e.w = maxc;
+					    else
+					        ComplexNumbers::mul(e.w, e.w, maxc);
+				    } else {
+			    		if (e.w == ComplexNumbers::ONE) {
+			    			e.w = maxc;
+			    		} else {
+						    auto c = cn.getTempCachedComplex();
+						    ComplexNumbers::mul(c, e.w, maxc);
+						    e.w = cn.lookup(c);
+					    }
+			    	}
+				    e.p->e[i].w = ComplexNumbers::ONE;
+			    } else {
+			    	if (zero[i]) {
+			    		if (cached && e.p->e[i].w != ComplexNumbers::ZERO)
+			    			cn.releaseCached(e.p->e[i].w);
+			    		e.p->e[i] = DDzero;
+			    		continue;
+			    	}
+					if (cached && !zero[i] && e.p->e[i].w != ComplexNumbers::ONE) {
+						cn.releaseCached(e.p->e[i].w);
+					}
+				    if (ComplexNumbers::equalsOne(e.p->e[i].w))
+					    e.p->e[i].w = ComplexNumbers::ONE;
+				    auto c = cn.getTempCachedComplex();
+					ComplexNumbers::div(c, e.p->e[i].w, maxc);
+				    e.p->e[i].w = cn.lookup(c);
+			    }
+		    }
+		    return e;
+			/*
+		    if (CN::equalsOne(e.p->e[argmax].w)) { // special treatment if leftmost weight equals CN::ONE
+			    if (cached && e.p->e[argmax].w != CN::ONE) { // weight close to CN::ONE but not exact
+				    cn.releaseCached(e.p->e[argmax].w);
+			    }
+			    e.p->e[argmax].w = ComplexNumbers::ONE;
+			    e.w = ComplexNumbers::ONE;
+
+			    for (int j = 0; j < NEDGE; j++) {
+				    if (cached && !zero[j] && j != argmax && e.p->e[j].w != ComplexNumbers::ONE) {
+					    cn.releaseCached(e.p->e[j].w);
+					    e.p->e[j].w = cn.lookup(e.p->e[j].w);
+				    }
+			    }
+			    return e;
+		    }
+
+		    // definitely no vector reaches this
+		    if (!(!zero[0] ^ !zero[1] ^ !zero[2] ^ !zero[3])) {
+			    // more than 1 non-zero
+			    sum /= 2;
+			    if ((!zero[0] && !zero[1] && !zero[2] && !zero[3])) {
+				    // all non-zero
+				    sum /= 2;
+			    }
+		    }*/
+	    }
+
+	    /// --- Vector treatment ---
+	    fp sum = 0.L;
+	    fp div = 0.L;
+
+	    for (int i = 0; i < NEDGE; ++i) {
+		    if (e.p->e[i].p == nullptr || zero[i]) continue;
+
+            if (argmax == -1) {
+	            argmax = i;
+                sum = div = ComplexNumbers::mag2(e.p->e[i].w);
+            } else {
+                sum += ComplexNumbers::mag2(e.p->e[i].w);
+		    }
+        }
+
+	    if (argmax == -1) {
+            if (cached) {
+	            for (int i = 0; i < NEDGE; ++i) {
+		            if (e.p->e[i].p == nullptr && !zero[i]) {
+			            cn.releaseCached(e.p->e[i].w);
+		            }
+	            }
             }
             return DDzero;
         }
 
-        if (e.p->e[1].w != COMPLEX_ZERO || e.p->e[3].w != COMPLEX_ZERO) {
-            sum /= 2;
-        }
-
         sum = std::sqrt(sum / div);
 
-        if (cached && e.p->e[max].w != COMPLEX_ONE) {
-            e.w = e.p->e[max].w;
+        if (cached && e.p->e[argmax].w != CN::ONE) {
+            e.w = e.p->e[argmax].w;
             e.w.r->val *= sum;
             e.w.i->val *= sum;
         } else {
-            complex c;
-            c.r = ComplexCache_Avail;
-            c.i = ComplexCache_Avail->next;
-            c.r->val = CVAL(e.p->e[max].w.r) * sum;
-            c.i->val = CVAL(e.p->e[max].w.i) * sum;
-            e.w = Clookup(c);
-            if (e.w == COMPLEX_ZERO) {
+            e.w = cn.lookup(ComplexNumbers::val(e.p->e[argmax].w.r) * sum, ComplexNumbers::val(e.p->e[argmax].w.i) * sum);
+            if (ComplexNumbers::equalsZero(e.w)) {
                 return DDzero;
             }
         }
 
-        for (int j = 0; j < Nedge; j++) {
-            if (max == j) {
-                complex c;
-                c.r = ComplexCache_Avail;
-                c.i = ComplexCache_Avail->next;
-                c.r->val = 1.0 / sum;
-                c.i->val = 0.0;
-                e.p->e[j].w = Clookup(c);
-                if (e.p->e[j].w == COMPLEX_ZERO) {
-                    e.p->e[j] = DDzero;
-                }
-            } else if (e.p->e[j].p != nullptr && e.p->e[j].w != COMPLEX_ZERO) {
-                if (cached) {
-                    e.p->e[j].w.i->next = ComplexCache_Avail;
-                    ComplexCache_Avail = e.p->e[j].w.r;
-                    Cdiv(e.p->e[j].w, e.p->e[j].w, e.w);
-                    e.p->e[j].w = Clookup(e.p->e[j].w);
-                    if (e.p->e[j].w == COMPLEX_ZERO) {
+        for (int j = 0; j < NEDGE; j++) {
+	        if (j == argmax) {
+		        e.p->e[j].w = cn.lookup(1.0L / sum, 0);
+		        if (e.p->e[j].w == CN::ZERO)
+		        	e.p->e[j] = DDzero;
+	        } else if (e.p->e[j].p != nullptr && !zero[j]) {
+		        if (cached) {
+			        cn.releaseCached(e.p->e[j].w);
+	                ComplexNumbers::div(e.p->e[j].w, e.p->e[j].w, e.w);
+                    e.p->e[j].w = cn.lookup(e.p->e[j].w);
+                    if (e.p->e[j].w == CN::ZERO) {
                         e.p->e[j] = DDzero;
                     }
                 } else {
-                    complex c;
-                    c.r = ComplexCache_Avail;
-                    c.i = ComplexCache_Avail->next;
-                    Cdiv(c, e.p->e[j].w, e.w);
-                    e.p->e[j].w = Clookup(c);
-                    if (e.p->e[j].w == COMPLEX_ZERO) {
+       	            Complex c = cn.getTempCachedComplex();
+	                ComplexNumbers::div(c, e.p->e[j].w, e.w);
+                    e.p->e[j].w = cn.lookup(c);
+                    if (e.p->e[j].w == CN::ZERO) {
                         e.p->e[j] = DDzero;
                     }
                 }
@@ -542,139 +469,39 @@ namespace dd_package {
         return e;
     }
 
-    //  check if e points to a block, identity, diagonal, symmetric or 0/1-matrix and
-    //  marks top node if it does
-    void DDcheckSpecialMatrices(DDedge e) {
-        // only perform checks if flag is set
-        if (!e.p->computeSpecialMatricesFlag)
-            return;
-
-        e.p->ident = 0;       // assume not identity
-        e.p->diag = 0;           // assume not diagonal
-        e.p->block = 0;           // assume not block
-        e.p->symm = 1;           // assume symmetric
-        e.p->c01 = 1;           // assume 0/1-matrix
-
-        /****************** CHECK IF 0-1 MATRIX ***********************/
-
-        for (int i = 0; i < Nedge; i++) {  // check if 0-1 matrix
-            if ((e.p->e[i].w != COMPLEX_ONE && e.p->e[i].w != COMPLEX_ZERO) || (!e.p->e[i].p->c01)) {
-                e.p->c01 = 0;
-                break;
-            }
-        }
-        /****************** CHECK IF Symmetric MATRIX *****************/
-
-        for (int i = 0; i < Radix; i++) {  // check if symmetric matrix (on diagonal)
-            if (!(e.p->e[Radix * i + i].p->symm)) {
-                e.p->symm = 0;
-                break;
-            }
-        }
-
-        for (int i = 0; e.p->symm && i < Radix - 1; i++) { // check off diagonal entries for transpose properties
-            for (int j = i + 1; j < Radix; j++) {
-                DDedge t = DDtranspose(e.p->e[i * Radix + j]);
-                if (!DDedgeEqual(t, e.p->e[j * Radix + i])) {
-                    e.p->symm = 0;
-                    break;
-                }
-            }
-        }
-
-        int w = DDinverseOrder[e.p->v];
-        if (w != 0) {
-            w = DDorder[w - 1];
-        }
-        // w:= variable complex_one level below current level or 0 if already at the bottom
-
-        /****************** CHECK IF Block MATRIX ***********************/
-
-        for (int i = 0; i < Radix; i++) { // check off diagonal entries
-            for (int j = 0; j < Radix; j++) {
-                if (e.p->e[i * Radix + j].p == nullptr || (i != j && e.p->e[i * Radix + j].w != COMPLEX_ZERO)) {
-                    return;
-                }
-            }
-        }
-        e.p->block = 1;
-
-        /****************** CHECK IF Diagonal MATRIX ***********************/
-        // will only reach this point if block == 1
-        e.p->diag = 1;
-        for (int i = 0; i < Radix; i++) { // check diagonal entries to verify matrix is diagonal
-            // necessary condition: edge points to a diagonal matrix
-            e.p->diag = e.p->e[i * Radix + i].p->diag;
-            int j = Radix * i + i;
-
-            // skipped variable: edge pointing to terminal with non-zero weight from level > 0
-            if ((DDterminal(e.p->e[j])) && e.p->e[j].w != COMPLEX_ZERO && DDinverseOrder[e.p->v] != 0) {
-                e.p->diag = 0;
-            }
-            // skipped variable: edge pointing to an irregular level (non-terminal)
-            if ((!DDterminal(e.p->e[j])) && e.p->e[j].p->v != w) {
-                e.p->diag = 0;
-            }
-
-            if (!e.p->diag){
-                return;
-            }
-        }
-
-        /****************** CHECK IF Identity MATRIX ***********************/
-        // will only reach this point if diag == 1
-        for (int i = 0; i < Radix; i++) { // check diagonal entries
-            int j = Radix * i + i;
-            // if skipped variable, then matrix cannot be diagonal (and we will not reach this point)!
-            if (e.p->e[j].w != COMPLEX_ONE || e.p->e[j].p->ident == 0){
-                return;
-            }
-        }
-        e.p->ident = 1;
-    }
-
-    DDedge DDutLookup(DDedge e) {
-    //  lookup a node in the unique table for the appropriate variable - if not found insert it
-    //  only normalized nodes shall be stored.
-        if (DDterminal(e)) // there is a unique terminal node
-        {
+	//  lookup a node in the unique table for the appropriate variable - if not found insert it
+	//  only normalized nodes shall be stored.
+	Edge Package::UTlookup(Edge& e) {
+		// there is a unique terminal node
+		if (isTerminal(e)) {
             e.p = DDzero.p;
             return e;
         }
-
         UTlookups++;
 
         uintptr_t key = 0;
         // note hash function shifts pointer values so that order is important
         // suggested by Dr. Nigel Horspool and helps significantly
-        for (unsigned int i = 0; i < Nedge; i++)
-            key += ((uintptr_t) (e.p->e[i].p) >> i) + ((uintptr_t) (e.p->e[i].w.r) >> i) +
-                   ((uintptr_t) (e.p->e[i].w.i) >> (i + 1));
+        for (unsigned int i = 0; i < NEDGE; i++) {
+            key += ((uintptr_t) (e.p->e[i].p) >> i)
+                   + ((uintptr_t) (e.p->e[i].w.r) >> i)
+                   + ((uintptr_t) (e.p->e[i].w.i) >> (i + 1));
+        }
         key = key & HASHMASK;
 
-        unsigned int v = e.p->v;
-        DDnodePtr p = Unique[v][key]; // find pointer to appropriate collision chain
+        unsigned short v = e.p->v;
+        NodePtr p = Unique[v][key]; // find pointer to appropriate collision chain
         while (p != nullptr)    // search for a match
         {
-            if (memcmp(e.p->e, p->e, Nedge * sizeof(DDedge)) == 0) {
+            if (memcmp(e.p->e, p->e, NEDGE * sizeof(Edge)) == 0) {
                 // Match found
-                e.p->next = Avail;    // put node pointed to by e.p on avail chain
-                Avail = e.p;
+                e.p->next = nodeAvail;    // put node pointed to by e.p on avail chain
+                nodeAvail = e.p;
 
                 // NOTE: reference counting is to be adjusted by function invoking the table lookup
                 UTmatch++;        // record hash table match
 
                 e.p = p;// and set it to point to node found (with weight unchanged)
-
-                if (p->renormFactor != COMPLEX_ONE) {
-                    std::cout << "Debug: table lookup found a node with active renormFactor with v="
-                        << p->v << "(id=" << (uintptr_t) p << ").\n";
-                    if (p->ref != 0)
-                        std::cout << "was active!";
-                    else
-                        std::cout << "was inactive!";
-                    std::exit(1);
-                }
                 return e;
             }
 
@@ -684,12 +511,12 @@ namespace dd_package {
         e.p->next = Unique[v][key]; // if end of chain is reached, this is a new node
         Unique[v][key] = e.p;       // add it to front of collision chain
 
-        DDnodecount++;          // count that it exists
-        if (DDnodecount > DDpeaknodecount)
-            DDpeaknodecount = DDnodecount;
+        nodecount++;          // count that it exists
+        if (nodecount > peaknodecount)
+	        peaknodecount = nodecount;
 
-        if (!DDterminal(e))
-            DDcheckSpecialMatrices(e); // check if it is identity or diagonal if nonterminal
+        if (!isTerminal(e))
+        	checkSpecialMatrices(e);
 
         return e;                // and return
     }
@@ -697,7 +524,7 @@ namespace dd_package {
     // set compute table to empty and
     // set toffoli gate table to empty and
     // set identity table to empty
-    void DDinitComputeTable() {
+    void Package::initComputeTable() {
         for (unsigned int i = 0; i < CTSLOTS; i++) {
             CTable1[i].r.p = nullptr;
             CTable1[i].which = none;
@@ -709,37 +536,36 @@ namespace dd_package {
         for (auto & i : TTable) {
             i.e.p = nullptr;
         }
-        for (auto & i : DDid) {
+        for (auto & i : IdTable) {
             i.p = nullptr;
         }
-        DDnullEdge.p = nullptr;
-        DDnullEdge.w = COMPLEX_ZERO;
     }
 
-    void DDgarbageCollect()
-// a simple garbage collector that removes nodes with 0 ref count from the unique
-// tables placing them on the available space chain
+	// a simple garbage collector that removes nodes with 0 ref count from the unique
+	// tables placing them on the available space chain
+	void Package::garbageCollect(bool force)
     {
-        if (DDnodecount < GCcurrentLimit && ComplexCount < ComplexCurrentLimit)
-            return; // do not collect if below GCcurrentLimit node count
-        int count = 0;
+	    if (!force && nodecount < currentNodeGCLimit && cn.count < currentComplexGCLimit) {
+		    return;
+	    } // do not collect if below current limits
+	    int count = 0;
         int counta = 0;
         for (auto & variable : Unique) {
             for (auto & bucket : variable) {
-                DDnodePtr lastp = nullptr;
-                DDnodePtr p = bucket;
+                NodePtr lastp = nullptr;
+                NodePtr p = bucket;
                 while (p != nullptr) {
                     if (p->ref == 0) {
-                        if (p == DDterminalNode)
+                        if (p == terminalNode)
                             std::cerr << "error in garbage collector\n";
                         count++;
-                        DDnodePtr nextp = p->next;
+                        NodePtr nextp = p->next;
                         if (lastp == nullptr)
                             bucket = p->next;
                         else
                             lastp->next = p->next;
-                        p->next = Avail;
-                        Avail = p;
+                        p->next = nodeAvail;
+	                    nodeAvail = p;
                         p = nextp;
                     } else {
                         lastp = p;
@@ -749,32 +575,34 @@ namespace dd_package {
                 }
             }
         }
-        GCcurrentLimit += GCLIMIT_INC;
-        DDnodecount = counta;
-        garbageCollectComplexTable();
-        DDinitComputeTable(); // IMPORTANT sets compute table to empty after garbage collection
+	    currentNodeGCLimit += GCLIMIT_INC;
+	    nodecount = counta;
+	    cn.garbageCollect(); // NOTE: this cleans all complex values with ref-count 0
+	    currentComplexGCLimit += ComplexNumbers::GCLIMIT_INC;
+	    initComputeTable(); // IMPORTANT sets compute table to empty after garbage collection
     }
 
     // get memory space for a node
-    DDnodePtr DDgetNode() {
-        DDnodePtr r;
+    NodePtr Package::getNode() {
+        NodePtr r;
 
-        if (Avail != nullptr)    // get node from avail chain if possible
+        if (nodeAvail != nullptr)    // get node from avail chain if possible
         {
-            r = Avail;
-            Avail = Avail->next;
+            r = nodeAvail;
+	        nodeAvail = nodeAvail->next;
         } else {            // otherwise allocate 2000 new nodes
-            r = new DDnode[2000];
-            DDnodePtr r2 = r+1;
-            Avail = r2;
-            for (int i = 0; i < 1998; i++, r2++) {
+	        r = new Node[CHUNK_SIZE];
+            allocated_node_chunks.push_back(r);
+            NodePtr r2 = r + 1;
+	        nodeAvail = r2;
+	        for (int i = 0; i < CHUNK_SIZE-2; i++, r2++) {
                 r2->next = r2+1;
             }
             r2->next = nullptr;
         }
         r->next = nullptr;
         r->ref = 0;            // set reference count to 0
-        r->ident = r->diag = r->block = 0;        // mark as not identity or diagonal
+	    r->ident = r->symm = false; // mark as not identity or symmetric
         return r;
     }
 
@@ -784,32 +612,27 @@ namespace dd_package {
     //
     // a ref count saturates and remains unchanged if it has reached
     // MAXREFCNT
-    void DDincRef(DDedge e) {
-        complexIncRef(e.w);
-        if (DDterminal(e))
+    void Package::incRef(Edge& e) {
+	    dd::ComplexNumbers::incRef(e.w);
+        if (isTerminal(e))
             return;
 
         if (e.p->ref == MAXREFCNT) {
             std::cout << "MAXREFCNT reached\n\n\ne.w=" << e.w << "\n";
-            DDdebugnode(e.p);
+	        debugnode(e.p);
             return;
         }
         e.p->ref++;
 
         if (e.p->ref == 1) {
-            if (!DDterminal(e))
-                for (int i = 0; i < Nedge; i++)
-                    if (e.p->e[i].p != nullptr) {
-                        DDincRef(e.p->e[i]);
+            if (!isTerminal(e))
+	            for (auto& edge : e.p->e)
+		            if (edge.p != nullptr) {
+			            incRef(edge);
                     }
-            Active[e.p->v]++;
-            ActiveNodeCount++;
-
-            /******* Part added for sifting purposes ********/
-            if (e.p->block)
-                blockMatrixCounter++;
-            /******* by Niemann, November 2012 ********/
-
+            active[e.p->v]++;
+            activeNodeCount++;
+            maxActive = std::max(maxActive, activeNodeCount);
         }
     }
 
@@ -819,169 +642,109 @@ namespace dd_package {
     //
     // a ref count saturates and remains unchanged if it has reached
     // MAXREFCNT
-    void DDdecRef(DDedge e) {
-        complexDecRef(e.w);
+    void Package::decRef(Edge& e) {
+	    dd::ComplexNumbers::decRef(e.w);
 
-        if (DDterminal(e))
-            return;
-
-        if (e.p->ref == MAXREFCNT)
-            return;
-
+        if (isTerminal(e)) return;
+        if (e.p->ref == MAXREFCNT) return;
 
         if (e.p->ref == 0) // ERROR CHECK
         {
             std::cerr <<"error in decref " << e.p->ref << "n";
-            DDdebugnode(e.p);
+	        debugnode(e.p);
             std::exit(8);
         }
         e.p->ref--;
 
         if (e.p->ref == 0) {
-            if (!DDterminal(e)) {
-                for (auto & i : e.p->e) {
-                    if (i.p != nullptr) {
-                        DDdecRef(i);
+            if (!isTerminal(e)) {
+	            for (auto& edge : e.p->e) {
+		            if (edge.p != nullptr) {
+			            decRef(edge);
                     }
                 }
             }
-            Active[e.p->v]--;
-            if (Active[e.p->v] < 0) {
+            active[e.p->v]--;
+            if (active[e.p->v] < 0) {
                 std::cerr << "ERROR in decref\n";
                 std::exit(1);
             }
-            ActiveNodeCount--;
-
-            /******* Part added for sifting purposes ********/
-            if (e.p->renormFactor != COMPLEX_ONE) {
-                RenormalizationNodeCount--;
-                e.p->renormFactor = COMPLEX_ONE;
-            }
-            if (e.p->block)
-                blockMatrixCounter--;
-            /******* by Niemann, November 2012 ********/
+            activeNodeCount--;
         }
     }
 
-    // counting number of unique nodes in a QMDD
-    unsigned int DDnodeCount(const DDedge e, std::unordered_set<DDnodePtr>& visited) {
+    // counting number of unique nodes in a DD
+    unsigned int Package::nodeCount(const Edge e, std::unordered_set<NodePtr>& visited) const {
         visited.insert(e.p);
 
         unsigned int sum = 1;
-        if (!DDterminal(e)) {
+        if (!isTerminal(e)) {
             for (const auto & edge : e.p->e) {
                 if (edge.p != nullptr && !visited.count(edge.p)) {
-                    sum += DDnodeCount(edge, visited);
+                    sum += nodeCount(edge, visited);
                 }
             }
         }
         return sum;
     }
 
-    // counts number of unique nodes in a QMDD
-    unsigned int DDsize(const DDedge e) {
-        std::unordered_set<DDnodePtr> visited(NODECOUNT_BUCKETS); // 2e6
+    // counts number of unique nodes in a DD
+    unsigned int Package::size(const Edge e) const {
+        std::unordered_set<NodePtr> visited(NODECOUNT_BUCKETS); // 2e6
         visited.max_load_factor(10);
         visited.clear();
-        return DDnodeCount(e, visited);
+        return nodeCount(e, visited);
     }
 
-    void DDradixPrint(int p, int n)
-    // prints p as an n bit Radix number
-    // with leading 0's and no CR
-    {
-        int buffer[MAXN];
-        for (int i = 0; i < n; i++) {
-            buffer[i] = p % Radix;
-            p = p / Radix;
-        }
-        for (int i = n - 1; i >= 0; i--)
-            std::cout << buffer[i];
-    }
-
-    inline unsigned long CThash(const DDedge a, const DDedge b, const CTkind which) {
-        const uintptr_t node_pointer = ((uintptr_t)a.p+(uintptr_t)b.p)>>3u;
-        const uintptr_t weights = (uintptr_t)a.w.i+(uintptr_t)a.w.r+(uintptr_t)b.w.i+(uintptr_t)b.w.r;
-        return (node_pointer+weights+(uintptr_t)which) & CTMASK;
-    }
-
-    inline unsigned long CThash2(DDnodePtr a, const complex_value aw, DDnodePtr b, const complex_value bw, const CTkind which) {
-        const uintptr_t node_pointer = ((uintptr_t)a+(uintptr_t)b)>>3u;
-        const uintptr_t weights = (uintptr_t)(aw.r*1000)+(uintptr_t)(aw.i*2000)+(uintptr_t)(bw.r*3000)+(uintptr_t)(bw.i*4000);
-        return (node_pointer+weights+(uintptr_t)which) & CTMASK;
-    }
-
-
-    DDedge CTlookup(DDedge a, DDedge b, CTkind which) {
+	Edge Package::CTlookup(const Edge& a, const Edge& b, const CTkind which) {
     // Lookup a computation in the compute table
     // return NULL if not a match else returns result of prior computation
-        DDedge r;
+        Edge r{};
         r.p = nullptr;
         CTlook[which]++;
 
-        if (which == mult || which == fidelity) {
+        if (which == mult || which == fid || which == kron) {
             const unsigned long i = CThash(a, b, which);
 
-            if (CTable2[i].which != which) return (r);
-            if (CTable2[i].a.p != a.p || !(CTable2[i].a.w == a.w)) return (r);
-            if (CTable2[i].b.p != b.p || !(CTable2[i].b.w == b.w)) return (r);
+            if (CTable2[i].which != which) return r;
+            if (!equals(CTable2[i].a, a)) return r;
+	        if (!equals(CTable2[i].b, b)) return r;
 
             CThit[which]++;
             r.p = CTable2[i].r;
 
-            complex c;
-            c.r = ComplexCache_Avail;
-            c.i = ComplexCache_Avail->next;
-            c.r->val = CTable2[i].rw.r;
-            c.i->val = CTable2[i].rw.i;
-
-            if (Ceq(c, COMPLEX_ZERO)) {
+            if (std::fabs(CTable2[i].rw.r) < ComplexNumbers::TOLERANCE && std::fabs(CTable2[i].rw.i) < ComplexNumbers::TOLERANCE) {
                 return DDzero;
             } else {
-                ComplexCache_Avail = c.i->next;
-                r.w = c;
+                r.w = cn.getCachedComplex(CTable2[i].rw.r, CTable2[i].rw.i);
             }
 
             return r;
-        } else if (which == add) {
-
-            complex_value aw;
-            aw.r = a.w.r->val;
-            aw.i = a.w.i->val;
-
-            complex_value bw;
-            bw.r = b.w.r->val;
-            bw.i = b.w.i->val;
-
+        } else if (which == ad) {
+            ComplexValue aw{ a.w.r->val, a.w.i->val};
+            ComplexValue bw{ b.w.r->val, b.w.i->val };
             const unsigned long i = CThash2(a.p, aw, b.p, bw, which);
 
-            if (CTable3[i].which != which) return (r);
-            if (CTable3[i].a != a.p || !Ceq(CTable3[i].aw, aw)) return (r);
-            if (CTable3[i].b != b.p || !Ceq(CTable3[i].bw, bw)) return (r);
+            if (CTable3[i].which != which) return r;
+            if (CTable3[i].a != a.p || !ComplexNumbers::equals(CTable3[i].aw, aw)) return r;
+            if (CTable3[i].b != b.p || !ComplexNumbers::equals(CTable3[i].bw, bw)) return r;
 
             CThit[which]++;
             r.p = CTable3[i].r;
 
-            complex c;
-            c.r = ComplexCache_Avail;
-            c.i = ComplexCache_Avail->next;
-            c.r->val = CTable3[i].rw.r;
-            c.i->val = CTable3[i].rw.i;
-
-            if (Ceq(c, COMPLEX_ZERO)) {
+            if (std::fabs(CTable3[i].rw.r) < ComplexNumbers::TOLERANCE && std::fabs(CTable3[i].rw.i) < ComplexNumbers::TOLERANCE) {
                 return DDzero;
             } else {
-                ComplexCache_Avail = c.i->next;
-                r.w = c;
+	            r.w = cn.getCachedComplex(CTable3[i].rw.r, CTable3[i].rw.i);
             }
 
             return r;
-        } else if (which == conjugateTranspose || which == transpose) {
+        } else if (which == conjTransp || which == transp) {
             const unsigned long i = CThash(a, b, which);
 
-            if (CTable1[i].which != which) return (r);
-            if (CTable1[i].a.p != a.p || !(CTable1[i].a.w == a.w)) return (r);
-            if (CTable1[i].b.p != b.p || !(CTable1[i].b.w == b.w)) return (r);
+            if (CTable1[i].which != which) return r;
+	        if (!equals(CTable1[i].a, a)) return r;
+	        if (!equals(CTable1[i].b, b)) return r;
 
             CThit[which]++;
             return CTable1[i].r;
@@ -993,8 +756,8 @@ namespace dd_package {
     }
 
     // put an entry into the compute table
-    void CTinsert(DDedge a, DDedge b, DDedge r, CTkind which) {
-        if (which == mult || which == fidelity) {
+    void Package::CTinsert(const Edge& a, const Edge& b, const Edge& r, const CTkind which) {
+        if (which == mult || which == fid || which == kron) {
             const unsigned long i = CThash(a, b, which);
 
             CTable2[i].a = a;
@@ -1003,13 +766,9 @@ namespace dd_package {
             CTable2[i].r = r.p;
             CTable2[i].rw.r = r.w.r->val;
             CTable2[i].rw.i = r.w.i->val;
-        } else if (which == add) {
-            complex_value aw, bw;
-            aw.r = a.w.r->val;
-            aw.i = a.w.i->val;
-            bw.r = b.w.r->val;
-            bw.i = b.w.i->val;
-
+        } else if (which == ad) {
+	        ComplexValue aw{ a.w.r->val, a.w.i->val };
+	        ComplexValue bw{ b.w.r->val, b.w.i->val };
             const unsigned long i = CThash2(a.p, aw, b.p, bw, which);
 
             CTable3[i].a = a.p;
@@ -1021,7 +780,7 @@ namespace dd_package {
             CTable3[i].rw.i = r.w.i->val;
             CTable3[i].which = which;
 
-        } else if (which == conjugateTranspose || which == transpose) {
+        } else if (which == conjTransp || which == transp) {
             const unsigned long i = CThash(a, b, which);
 
             CTable1[i].a = a;
@@ -1032,637 +791,450 @@ namespace dd_package {
             std::cerr << "Undefined kind in CTinsert: " << which << "\n";
             std::exit(1);
         }
-
     }
 
-    unsigned int TThash(unsigned int n, int t, const int line[]) {
-        unsigned int i = t;
-        for (unsigned int j = 0; j < n; j++){
+    unsigned short Package::TThash(const unsigned short n, const unsigned short t, const short line[]) {
+        unsigned short i = t;
+        for (unsigned short j = 0; j < n; j++){
             if (line[j] == 1){
-                i = i << (3 + j);
+                i = i << (3u + j);
             }
         }
         return i & TTMASK;
     }
 
-    DDedge TTlookup(int n, int m, int t, const int line[]) {
-        DDedge r;
+    Edge Package::TTlookup(const unsigned short n, const unsigned short m, const unsigned short t, const short line[]) {
+        Edge r{};
         r.p = nullptr;
-        const unsigned int i = TThash(n, t, line);
+        const unsigned short i = TThash(n, t, line);
 
         if (TTable[i].e.p == nullptr || TTable[i].t != t || TTable[i].m != m || TTable[i].n != n) {
             return r;
         }
-        if (0 == memcmp(TTable[i].line, line, n * sizeof(int))) {
+        if (0 == memcmp(TTable[i].line, line, n * sizeof(short))) {
             return TTable[i].e;
         }
         return r;
     }
 
-    void TTinsert(int n, int m, int t, const int line[], DDedge e) {
-        const unsigned int i = TThash(n, t, line);
+    void Package::TTinsert(unsigned short n, unsigned short m, unsigned short t, const short *line, const Edge& e) {
+        const unsigned short i = TThash(n, t, line);
         TTable[i].n = n;
         TTable[i].m = m;
         TTable[i].t = t;
-        memcpy(TTable[i].line, line, n * sizeof(int));
+        memcpy(TTable[i].line, line, n * sizeof(short));
         TTable[i].e = e;
     }
 
-    // recursively scan an QMDD putting values in entries of mat
-    // v is the variable index
-    void DDfillmat(complex mat[MAXDIM][MAXDIM], DDedge a, int r, int c, int dim, short v, const char vtype[]) {
-        if (a.p == nullptr) {
-            return;
-        }
-
-        if (v == -1) { // terminal node case
-            if (r >= MAXDIM || c >= MAXDIM) {
-                std::cerr << "out of bounds, r=" << r << ", c=" << c << "\n";
-                return;
-            }
-            complex co;
-            co.r = ComplexCache_Avail;
-            co.i = ComplexCache_Avail->next;
-            ComplexCache_Avail = co.i->next;
-
-            co.r->val = CVAL(a.w.r);
-            co.i->val = CVAL(a.w.i);
-
-            mat[r][c] = co;
-        } else {
-            bool expand = (DDterminal(a)) || v != DDinverseOrder[a.p->v];
-            for (int i = 0; i < Nedge; i++) {
-                if (expand) {
-                    DDfillmat(mat, a, r + (i / Radix) * dim / Radix,
-                              c + (i % Radix) * dim / Radix, dim / Radix, v - 1,
-                              vtype);
-                } else {
-                    DDedge e = a.p->e[i];
-
-                    complex co;
-                    co.r = ComplexCache_Avail;
-                    co.i = ComplexCache_Avail->next;
-                    ComplexCache_Avail = co.i->next;
-
-                    Cmul(co, a.w, e.w);
-                    e.w = co;
-
-                    DDfillmat(mat, e, r + (i / Radix) * dim / Radix,c + (i % Radix) * dim / Radix,
-                            dim / Radix, v - 1, vtype);
-
-                    co.i->next = ComplexCache_Avail;
-                    ComplexCache_Avail = co.r;
-                }
-            }
-        }
-    }
-
-    void DDpermPrint(DDedge e, int row, int col) {
-        if (DDterminal(e)) {
-            if (e.w != COMPLEX_ONE)
-                std::cerr << "error in permutation printing\n";
-            else
-                PermList[col] = row;
-        } else
-            for (int i = 0; i < Nedge; i++)
-                if (e.p->e[i].p != nullptr && e.p->e[i].w != COMPLEX_ZERO)
-                    DDpermPrint(e.p->e[i], row * Radix + i / Radix,col * Radix + i % Radix);
-    }
-
-/***************************************
-
- Public Routines
-
- ***************************************/
-
     // make a DD nonterminal node and return an edge pointing to it
     // node is not recreated if it already exists
-    DDedge DDmakeNonterminal(short v, DDedge edge[MAXNEDGE], bool cached) {
-        DDedge e;
-        e.p = DDgetNode();  // get space and form node
-        e.w = COMPLEX_ONE;
+    Edge Package::makeNonterminal(const short v, const Edge *edge, const bool cached) {
+    	Edge e{ getNode(), CN::ONE};
         e.p->v = v;
-        e.p->renormFactor = COMPLEX_ONE;
-        e.p->computeSpecialMatricesFlag = globalComputeSpecialMatricesFlag;
 
-        memcpy(e.p->e, edge, Nedge * sizeof(DDedge));
-        e = DDnormalize(e, cached); // normalize it
-        e = DDutLookup(e);  // look it up in the unique tables
+        memcpy(e.p->e, edge, NEDGE * sizeof(Edge));
+        e = normalize(e, cached); // normalize it
+        e = UTlookup(e);  // look it up in the unique tables
         return e;          // return result
     }
 
-    // make a terminal - actually make an edge with appropriate weight
-    // as there is only complex_one terminal DDone
-    DDedge DDmakeTerminal(complex w) {
-        DDedge e;
-        e.p = DDterminalNode;
-        e.w = w;
-        return e;
+    void Package::printInformation() {
+        std::cout << DDversion
+                  << "\n  compiled: " << __DATE__ << " " << __TIME__
+                  << "\n  Complex size: " << sizeof(Complex) << " bytes (aligned " << alignof(Complex) << " bytes)"
+                  << "\n  ComplexValue size: " << sizeof(ComplexValue) << " bytes (aligned " << alignof(ComplexValue) << " bytes)"
+                  << "\n  ComplexNumbers size: " << sizeof(ComplexNumbers) << " bytes (aligned " << alignof(ComplexNumbers) << " bytes)"
+                  << "\n  NodePtr size: " << sizeof(NodePtr) << " bytes (aligned " << alignof(NodePtr) << " bytes)"
+                  << "\n  Edge size: " << sizeof(Edge) << " bytes (aligned " << alignof(Edge) << " bytes)"
+                  << "\n  Node size: " << sizeof(Node) << " bytes (aligned " << alignof(Node) << " bytes)"
+                  << "\n  CTentry1 size: " << sizeof(CTentry1) << " bytes (aligned " << alignof(CTentry1) << " bytes)"
+                  << "\n  CTentry2 size: " << sizeof(CTentry2) << " bytes (aligned " << alignof(CTentry2) << " bytes)"
+                  << "\n  CTentry3 size: " << sizeof(CTentry3) << " bytes (aligned " << alignof(CTentry3) << " bytes)"
+                  << "\n  TTentry size: " << sizeof(TTentry) << " bytes (aligned " << alignof(TTentry) << " bytes)"
+                  << "\n  Package size: " << sizeof(Package) << " bytes (aligned " << alignof(Package) << " bytes)"
+                  << "\n  max variables: " << MAXN
+                  << "\n  UniqueTable buckets: " << NBUCKET
+                  << "\n  ComputeTable slots: " << CTSLOTS
+                  << "\n  ToffoliTable slots: " << TTSLOTS
+                  << "\n  garbage collection limit: " << GCLIMIT1
+                  << "\n  garbage collection increment: " << GCLIMIT_INC
+                  << "\n" << std::flush;
     }
-    // initialize DD package - must be called before other routines are used
-    void DDinit(const bool verbose) {
-        if (verbose) {
-            std::cout << DDversion
-                << "\n  compiled: " << __DATE__ << " " << __TIME__
-                << "\n  edge size: " << sizeof(DDedge) << " bytes"
-                << "\n  node size: " << sizeof(DDnode) << " bytes (with edges: " << sizeof(DDnode) + MAXNEDGE * sizeof(DDedge) << " bytes)"
-                << "\n  max variables: " << MAXN
-                << "\n  UniqueTable buckets: " << NBUCKET
-                << "\n  ComputeTable slots: " << CTSLOTS
-                << "\n  ToffoliTable slots: " << TTSLOTS
-                << "\n  garbage collection limit: " << GCLIMIT1
-                << "\n  garbage collection increment: " << GCLIMIT_INC
-                << "\n" << std::flush;
-        }
 
-        complexInit();       // init complex number package
-        DDinitComputeTable();  // init computed table to empty
+    Package::Package() : cn(ComplexNumbers()) {
+	    initComputeTable();  // init computed table to empty
+        currentNodeGCLimit = GCLIMIT1; // set initial garbage collection limit
+	    currentComplexGCLimit = ComplexNumbers::GCLIMIT1;
 
-        GCcurrentLimit = GCLIMIT1; // set initial garbage collection limit
-
-        ComplexCurrentLimit = 100000;
-
-        UTcol = UTmatch = UTlookups = 0;
-
-        DDnodecount = 0;            // zero node counter
-        DDpeaknodecount = 0;
-        Nlabel = 0;                        // zero variable label counter
-        Nop[0] = Nop[1] = Nop[2] = 0;        // zero op counter
-        CTlook[0] = CTlook[1] = CTlook[2] = CThit[0] = CThit[1] = CThit[2] = 0;    // zero CTable counters
-        Avail = nullptr;                // set available node list to empty
-        Lavail = nullptr;                // set available element list to empty
-        DDterminalNode = DDgetNode();// create terminal node - note does not go in unique table
-        DDterminalNode->ident = 1;
-        DDterminalNode->diag = 1;
-        DDterminalNode->block = 0;
-        DDterminalNode->symm = 1;
-        DDterminalNode->c01 = 1;
-        DDterminalNode->renormFactor = COMPLEX_ONE;
-        DDterminalNode->computeSpecialMatricesFlag = 0;
-        for (auto & i : DDterminalNode->e) {
-            i.p = nullptr;
-            i.w = COMPLEX_ZERO;
-        }
-        DDterminalNode->v = -1;
-
-        DDzero = DDmakeTerminal(COMPLEX_ZERO);
-        DDone = DDmakeTerminal(COMPLEX_ONE);
-
-
-        for (auto & variable : Unique) {
-            for (auto & bucket : variable) {
-                bucket = nullptr; // set unique tables to empty
-            }
-        }
         for (int i = 0; i < MAXN; i++) //  set initial variable order to 0,1,2... from bottom up
         {
-            DDorder[i] = DDinverseOrder[i] = i;
-            Active[i] = 0;
+	        varOrder[i] = invVarOrder[i] = i;
         }
-        ActiveNodeCount = 0;
-        if (verbose) {
-            std::cout << "DD initialization complete\n----------------------------------------------------------\n";
+    }
+
+    Package::~Package() {
+        for(auto chunk : allocated_list_chunks) {
+            delete[] chunk;
         }
+        for(auto chunk : allocated_node_chunks) {
+            delete[] chunk;
+        }
+    }
+
+    Edge Package::partialTrace(const Edge a, const std::bitset<MAXN>& eliminate) {
+        auto before = cn.cacheCount;
+        const auto result = trace(a, a.p->v, eliminate);
+        auto after = cn.cacheCount;
+        assert(before == after);
+        return result;
+    }
+
+    ComplexValue Package::trace(const Edge a) {
+        auto eliminate = std::bitset<MAXN>{}.set();
+        auto before = cn.cacheCount;
+        Edge res = partialTrace(a, eliminate);
+        auto after = cn.cacheCount;
+        assert(before == after);
+        return { ComplexNumbers::val(res.w.r), ComplexNumbers::val(res.w.i)};
     }
 
     // adds two matrices represented by DD
     // the two DD should have the same variable set and ordering
-    DDedge DDadd2(DDedge x, DDedge y) {
+    Edge Package::add2(Edge x, Edge y) {
         if (x.p == nullptr) {
             return y;  // handles partial matrices i.e.
         }
         if (y.p == nullptr) {
             return x;  // column and row vetors
         }
-        Nop[add]++;
+        nOps[ad]++;
 
-        if (x.w == COMPLEX_ZERO) {
-            if (y.w == COMPLEX_ZERO) {
+        if (x.w == CN::ZERO) {
+            if (y.w == CN::ZERO) {
                 return y;
             }
-            complex c;
-            c.r = ComplexCache_Avail;
-            c.i = ComplexCache_Avail->next;
-            ComplexCache_Avail = c.i->next;
-            c.r->val = y.w.r->val;
-            c.i->val = y.w.i->val;
-            y.w = c;
-
+            y.w = cn.getCachedComplex(y.w.r->val, y.w.i->val);
             return y;
         }
-        if (y.w == COMPLEX_ZERO) {
-            complex c;
-            c.r = ComplexCache_Avail;
-            c.i = ComplexCache_Avail->next;
-            ComplexCache_Avail = c.i->next;
-            c.r->val = x.w.r->val;
-            c.i->val = x.w.i->val;
-            x.w = c;
-
+        if (y.w == CN::ZERO) {
+        	x.w = cn.getCachedComplex(x.w.r->val, x.w.i->val);
             return x;
         }
         if (x.p == y.p) {
-            DDedge r = y;
-
-            complex result;
-            result.r = ComplexCache_Avail;
-            result.i = result.r->next;
-
-            Cadd(result, x.w, y.w);
-            if (Ceq(result, COMPLEX_ZERO)) {
-                return DDzero;
+            Edge r = y;
+	        r.w = cn.addCached(x.w, y.w);
+	        if (ComplexNumbers::equalsZero(r.w)) {
+		        cn.releaseCached(r.w);
+		        return DDzero;
             }
-            ComplexCache_Avail = result.i->next;
-            r.w = result;
-
             return r;
         }
 
-        DDedge r = CTlookup(x, y, add);
+        Edge r = CTlookup(x, y, ad);
         if (r.p != nullptr) {
-            return (r);
+	        return r;
         }
 
-        int w;
-        if (DDterminal(x)) {
+        short w;
+        if (isTerminal(x)) {
             w = y.p->v;
         } else {
             w = x.p->v;
-            if (!DDterminal(y) && DDinverseOrder[y.p->v] > DDinverseOrder[w]) {
+            if (!isTerminal(y) && invVarOrder[y.p->v] > invVarOrder[w]) {
                 w = y.p->v;
             }
         }
 
-        DDedge e1, e2, e[MAXNEDGE];
-        for (int i = 0; i < Nedge; i++) {
-            if (!DDterminal(x) && x.p->v == w) {
+        Edge e1{}, e2{}, e[NEDGE];
+        for (int i = 0; i < NEDGE; i++) {
+            if (!isTerminal(x) && x.p->v == w) {
                 e1 = x.p->e[i];
 
-                if (e1.w != COMPLEX_ZERO) {
-                    complex c;
-                    c.r = ComplexCache_Avail;
-                    c.i = ComplexCache_Avail->next;
-                    ComplexCache_Avail = c.i->next;
-                    Cmul(c, e1.w, x.w);
-                    e1.w = c;
+                if (e1.w != CN::ZERO) {
+                    e1.w = cn.mulCached(e1.w, x.w);
                 }
             } else {
-                if ((!MultMode) || (i % Radix == 0)) {
-                    e1 = x;
-                    if (y.p->e[i].p == nullptr) {
-                        e1 = DDnullEdge;
-                    }
-                } else {
-                    e1.p = nullptr;
-                    e1.w = COMPLEX_ZERO;
+                e1 = x;
+                if (y.p->e[i].p == nullptr) {
+                    e1 = { nullptr, CN::ZERO};
                 }
             }
-            if (!DDterminal(y) && y.p->v == w) {
+            if (!isTerminal(y) && y.p->v == w) {
                 e2 = y.p->e[i];
 
-                if (e2.w != COMPLEX_ZERO) {
-                    complex c;
-                    c.r = ComplexCache_Avail;
-                    c.i = ComplexCache_Avail->next;
-                    ComplexCache_Avail = c.i->next;
-                    Cmul(c, e2.w, y.w);
-                    e2.w = c;
+                if (e2.w != CN::ZERO) {
+                    e2.w = cn.mulCached(e2.w, y.w);
                 }
             } else {
-                if ((!MultMode) || (i % Radix == 0)) {
-                    e2 = y;
-                    if (x.p->e[i].p == nullptr) {
-                        e2 = DDnullEdge;
-                    }
-                } else {
-                    e2.p = nullptr;
-                    e2.w = COMPLEX_ZERO;
+                e2 = y;
+                if (x.p->e[i].p == nullptr) {
+                    e2 = { nullptr, CN::ZERO };
                 }
             }
 
-            e[i] = DDadd2(e1, e2);
+            e[i] = add2(e1, e2);
 
-            if (!DDterminal(x) && x.p->v == w && e1.w != COMPLEX_ZERO) {
-                e1.w.i->next = ComplexCache_Avail;
-                ComplexCache_Avail = e1.w.r;
+            if (!isTerminal(x) && x.p->v == w && e1.w != CN::ZERO) {
+	            cn.releaseCached(e1.w);
             }
 
-            if (!DDterminal(y) && y.p->v == w && e2.w != COMPLEX_ZERO) {
-                e2.w.i->next = ComplexCache_Avail;
-                ComplexCache_Avail = e2.w.r;
+            if (!isTerminal(y) && y.p->v == w && e2.w != CN::ZERO) {
+	            cn.releaseCached(e2.w);
             }
         }
 
-        r = DDmakeNonterminal(w, e, true);
+        r = makeNonterminal(w, e, true);
 
-        CTinsert(x, y, r, add);
+        CTinsert(x, y, r, ad);
 
         return r;
     }
 
-    DDedge DDadd(DDedge x, DDedge y) {
-        DDedge result = DDadd2(x, y);
+    Edge Package::add(Edge x, Edge y) {
+        const auto before = cn.cacheCount;
+        Edge result = add2(x, y);
 
-        if (result.w != COMPLEX_ZERO) {
-            complex c = Clookup(result.w);
-            result.w.i->next = ComplexCache_Avail;
-            ComplexCache_Avail = result.w.r;
-            result.w = c;
+        if (result.w != CN::ZERO) {
+	        cn.releaseCached(result.w);
+	        result.w = cn.lookup(result.w);
         }
+        const auto after = cn.cacheCount;
+        assert(after == before);
         return result;
     }
 
     // new multiply routine designed to handle missing variables properly
     // var is number of variables
-    DDedge DDmultiply2(DDedge x, DDedge y, const int var) {
+    Edge Package::multiply2(Edge& x, Edge& y, unsigned short var) {
         if (x.p == nullptr)
             return x;
         if (y.p == nullptr)
             return y;
 
-        Nop[mult]++;
+        nOps[mult]++;
 
-        if (x.w == COMPLEX_ZERO || y.w == COMPLEX_ZERO)  {
+        if (x.w == CN::ZERO || y.w == CN::ZERO)  {
             return DDzero;
         }
 
         if (var == 0) {
-            complex result;
-            result.r = ComplexCache_Avail;
-            result.i = result.r->next;
-            ComplexCache_Avail = result.i->next;
-            Cmul(result, x.w, y.w);
-            return DDmakeTerminal(result);
+	        return makeTerminal(cn.mulCached(x.w, y.w));
         }
 
-        const complex xweight = x.w;
-        const complex yweight = y.w;
-        x.w = COMPLEX_ONE;
-        y.w = COMPLEX_ONE;
+        const Complex xweight = x.w;
+        const Complex yweight = y.w;
+        x.w = CN::ONE;
+        y.w = CN::ONE;
 
-        DDedge r = CTlookup(x, y, mult);
+        Edge r = CTlookup(x, y, mult);
         if (r.p != nullptr) {
-            if (r.w != COMPLEX_ZERO) {
-                Cmul(r.w, r.w, xweight);
-                Cmul(r.w, r.w, yweight);
+            if (r.w != CN::ZERO) {
+	            ComplexNumbers::mul(r.w, r.w, xweight);
+	            ComplexNumbers::mul(r.w, r.w, yweight);
             }
             return r;
         }
 
-        const int w = DDorder[var - 1];
+        const short w = varOrder[var - 1];
 
         if (x.p->v == w && x.p->v == y.p->v) {
             if (x.p->ident) {
+            	if (y.p->ident) {
+            		r = makeIdent(0, w);
+            	} else {
                 r = y;
+	            }
                 CTinsert(x, y, r, mult);
-
-                complex result;
-                result.r = ComplexCache_Avail;
-                result.i = result.r->next;
-                ComplexCache_Avail = result.i->next;
-
-                Cmul(result, xweight, yweight);
-                r.w = result;
-
+	            r.w = cn.mulCached(xweight, yweight);
 
                 return r;
             }
             if (y.p->ident) {
                 r = x;
                 CTinsert(x, y, r, mult);
-
-                complex result;
-                result.r = ComplexCache_Avail;
-                result.i = result.r->next;
-                ComplexCache_Avail = result.i->next;
-
-                Cmul(result, xweight, yweight);
-                r.w = result;
+	            r.w = cn.mulCached(xweight, yweight);
 
                 return r;
             }
         }
 
-        DDedge e[MAXNEDGE];
-        for (int i = 0; i < Nedge; i += Radix) {
-            for (int j = 0; j < Radix; j++) {
+	    Edge e1{}, e2{}, e[NEDGE];
+        for (int i = 0; i < NEDGE; i += RADIX) {
+            for (int j = 0; j < RADIX; j++) {
                 e[i + j] = DDzero;
-                for (int k = 0; k < Radix; k++) {
-                    DDedge e1, e2;
-                    if (!DDterminal(x) && x.p->v == w) {
+                for (int k = 0; k < RADIX; k++) {
+                    if (!isTerminal(x) && x.p->v == w) {
                         e1 = x.p->e[i + k];
                     } else {
                         e1 = x;
                     }
-                    if (!DDterminal(y) && y.p->v == w) {
-                        e2 = y.p->e[j + Radix * k];
+                    if (!isTerminal(y) && y.p->v == w) {
+                        e2 = y.p->e[j + RADIX * k];
                     } else {
                         e2 = y;
                     }
 
-                    DDedge m = DDmultiply2(e1, e2, var - 1);
+                    Edge m = multiply2(e1, e2, var - 1);
 
-                    if (k == 0 || e[i + j].w == COMPLEX_ZERO) {
+                    if (k == 0 || e[i + j].w == CN::ZERO) {
                         e[i + j] = m;
-                    } else if (m.w != COMPLEX_ZERO) {
-                        DDedge old_e = e[i + j];
+                    } else if (m.w != CN::ZERO) {
+                        Edge old_e = e[i + j];
 
-                        e[i + j] = DDadd2(e[i + j], m);
-
-                        old_e.w.i->next = ComplexCache_Avail;
-                        ComplexCache_Avail = old_e.w.r;
-                        m.w.i->next = ComplexCache_Avail;
-                        ComplexCache_Avail = m.w.r;
+                        e[i + j] = add2(e[i + j], m);
+	                    cn.releaseCached(old_e.w);
+	                    cn.releaseCached(m.w);
                     }
                 }
             }
         }
-        r = DDmakeNonterminal(w, e, true);
+        r = makeNonterminal(w, e, true);
 
         CTinsert(x, y, r, mult);
-        if (r.w != COMPLEX_ZERO) {
-            Cmul(r.w, r.w, xweight);
-            Cmul(r.w, r.w, yweight);
-
+        if (r.w != CN::ZERO && (xweight != CN::ONE || yweight != CN::ONE)) {
+        	if (r.w == CN::ONE) {
+        		r.w = cn.mulCached(xweight, yweight);
+        	} else {
+	        ComplexNumbers::mul(r.w, r.w, xweight);
+	        ComplexNumbers::mul(r.w, r.w, yweight);
+        }
         }
         return r;
     }
 
-    DDedge DDmultiply(DDedge x, DDedge y) {
-        int var = 0;
-        if (!DDterminal(x) && (DDinverseOrder[x.p->v] + 1) > var) {
-            var = DDinverseOrder[x.p->v] + 1;
+    Edge Package::multiply(Edge x, Edge y) {
+        unsigned short var = 0;
+        if (!isTerminal(x) && (invVarOrder[x.p->v] + 1) > var) {
+            var = invVarOrder[x.p->v] + 1;
         }
-        if (!DDterminal(y) && (DDinverseOrder[y.p->v] + 1) > var) {
-            var = DDinverseOrder[y.p->v] + 1;
+        if (!isTerminal(y) && (invVarOrder[y.p->v] + 1) > var) {
+            var = invVarOrder[y.p->v] + 1;
         }
 
-        DDedge e = DDmultiply2(x, y, var);
+        Edge e = multiply2(x, y, var);
 
-        if (e.w != COMPLEX_ZERO) {
-            complex c = Clookup(e.w);
-            e.w.i->next = ComplexCache_Avail;
-            ComplexCache_Avail = e.w.r;
-            e.w = c;
+        if (e.w != CN::ZERO && e.w != ComplexNumbers::ONE) {
+	        cn.releaseCached(e.w);
+	        e.w = cn.lookup(e.w);
         }
 
         return e;
     }
 
-    DDedge DDtranspose(DDedge a)
-    // returns a pointer to the transpose of the matrix a points to
+	// returns a pointer to the transpose of the matrix a points to
+	Edge Package::transpose(const Edge& a)
     {
-        if (a.p == nullptr || DDterminal(a) || a.p->symm) {
-            return a;         // NULL pointer // terminal / or symmetric case   ADDED by Niemann Nov. 2012
-        }
-
-        DDedge r = CTlookup(a, a, transpose);     // check in compute table
-        if (r.p != nullptr) {
-            return (r);
-        }
-
-        DDedge e[MAXNEDGE];
-        for (int i = 0; i < Radix; i++) { // transpose submatrices and rearrange as required
-            for (int j = i; j < Radix; j++) {
-                e[i * Radix + j] = DDtranspose(a.p->e[j * Radix + i]);
-                if (i != j) {
-                    e[j * Radix + i] = DDtranspose(a.p->e[i * Radix + j]);
-                }
-            }
-        }
-
-        r = DDmakeNonterminal(a.p->v, e, false);           // create new top vertex
-        complex c;
-        c.r = ComplexCache_Avail;
-        c.i = ComplexCache_Avail->next;
-        Cmul(c, r.w, a.w);              // adjust top weight
-        r.w = Clookup(c);
-
-        CTinsert(a, a, r, transpose);      // put in compute table
-        return (r);
-    }
-
-    DDedge DDconjugateTranspose(DDedge a)
-    // returns a pointer to the conjugate transpose of the matrix pointed to by a
-    {
-        if (a.p == nullptr)
-            return a;          // NULL pointer
-        if (DDterminal(a)) {              // terminal case
-            a.w = Cconjugate(a.w);
+        if (a.p == nullptr || isTerminal(a) || a.p->symm) {
             return a;
         }
 
-        DDedge r = CTlookup(a, a, conjugateTranspose);  // check if in compute table
+        Edge r = CTlookup(a, a, transp);     // check in compute table
         if (r.p != nullptr) {
             return r;
         }
 
-        DDedge e[MAXNEDGE];
-        for (int i = 0; i < Radix; i++)    // conjugate transpose submatrices and rearrange as required
-            for (int j = i; j < Radix; j++) {
-                e[i * Radix + j] = DDconjugateTranspose(a.p->e[j * Radix + i]);
+	    r = makeNonterminal(a.p->v, { transpose(a.p->e[0]), transpose(a.p->e[2]), transpose(a.p->e[1]), transpose(a.p->e[3])});           // create new top vertex
+	    // adjust top weight
+	    Complex c = cn.getTempCachedComplex();
+	    ComplexNumbers::mul(c, r.w, a.w);
+	    r.w = cn.lookup(c);
+
+        CTinsert(a, a, r, transp);      // put in compute table
+	    return r;
+    }
+
+	// returns a pointer to the conjugate transpose of the matrix pointed to by a
+	Edge Package::conjugateTranspose(Edge a)
+    {
+        if (a.p == nullptr)
+            return a;          // NULL pointer
+        if (isTerminal(a)) {              // terminal case
+            a.w = dd::ComplexNumbers::conj(a.w);
+            return a;
+        }
+
+        Edge r = CTlookup(a, a, conjTransp);  // check if in compute table
+        if (r.p != nullptr) {
+            return r;
+        }
+
+        Edge e[NEDGE];
+	    // conjugate transpose submatrices and rearrange as required
+        for (int i = 0; i < RADIX; i++) {
+            for (int j = i; j < RADIX; j++) {
+                e[i * RADIX + j] = conjugateTranspose(a.p->e[j * RADIX + i]);
                 if (i != j)
-                    e[j * Radix + i] = DDconjugateTranspose(
-                            a.p->e[i * Radix + j]);
+                    e[j * RADIX + i] = conjugateTranspose(
+		                    a.p->e[i * RADIX + j]);
             }
-        r = DDmakeNonterminal(a.p->v, e, false);    // create new top node
+        }
+	    r = makeNonterminal(a.p->v, e);    // create new top node
 
-        complex c;
-        c.r = ComplexCache_Avail;
-        c.i = ComplexCache_Avail->next;
-        Cmul(c, r.w, Cconjugate(a.w));  // adjust top weight including conjugate
-        r.w = Clookup(c);
+	    Complex c = cn.getTempCachedComplex();
+	    ComplexNumbers::mul(c, r.w, dd::ComplexNumbers::conj(a.w));  // adjust top weight including conjugate
+        r.w = cn.lookup(c);
 
-        CTinsert(a, a, r, conjugateTranspose); // put it in the compute table
+        CTinsert(a, a, r, conjTransp); // put it in the compute table
         return r;
     }
 
-    DDedge DDident(const int x, const int y)
-    // build a DD for the identity matrix for variables x to y (x<y)
+	// build a DD for the identity matrix for variables x to y (x<y)
+	Edge Package::makeIdent(short x, short y)
     {
-        DDedge f, edge[MAXNEDGE];
-
         if (y < 0)
             return DDone;
 
-        if (x == 0 && DDid[y].p != nullptr) {
-            return (DDid[y]);
+        if (x == 0 && IdTable[y].p != nullptr) {
+            return IdTable[y];
         }
-        if (y >= 1 && (f = DDid[y - 1]).p != nullptr) {
-            for (int i = 0; i < Radix; i++) {
-                for (int j = 0; j < Radix; j++) {
-                    if (i == j)
-                        edge[i * Radix + j] = f;
-                    else
-                        edge[i * Radix + j] = DDzero;
-                }
-            }
-            DDedge e = DDmakeNonterminal(DDorder[y], edge, false);
-            DDid[y] = e;
-            return e;
+	    if (y >= 1 && (IdTable[y - 1]).p != nullptr) {
+	        IdTable[y] = makeNonterminal(varOrder[y], { IdTable[y - 1], DDzero, DDzero, IdTable[y - 1] });
+            return IdTable[y];
         }
-        for (int i = 0; i < Radix; i++) {
-            for (int j = 0; j < Radix; j++) {
-                if (i == j)
-                    edge[i * Radix + j] = DDone;
-                else
-                    edge[i * Radix + j] = DDzero;
-            }
-        }
-        DDedge e = DDmakeNonterminal(DDorder[x], edge, false);
+
+	    Edge e = makeNonterminal(varOrder[x], { DDone, DDzero, DDzero, DDone });
         for (int k = x + 1; k <= y; k++) {
-            for (int i = 0; i < Radix; i++)
-                for (int j = 0; j < Radix; j++)
-                    if (i == j)
-                        edge[i * Radix + j] = e;
-                    else
-                        edge[i * Radix + j] = DDzero;
-            e = DDmakeNonterminal(DDorder[k], edge, false);
+	        e = makeNonterminal(varOrder[k], { e, DDzero, DDzero, e });
         }
         if (x == 0)
-            DDid[y] = e;
+	        IdTable[y] = e;
         return e;
     }
 
     // build matrix representation for a single gate on a circuit with n lines
     // line is the vector of connections
     // -1 not connected
-    // 0...Radix-1 indicates a control by that value
-    // Radix indicates the line is the target
-    DDedge DDmvlgate(const DD_matrix mat, int n, const int line[]) {
-        DDedge em[MAXNEDGE], fm[MAXNEDGE];
-        int w, z;
-        complex c;
-        c.r = ComplexCache_Avail;
-        c.i = ComplexCache_Avail->next;
+    // 0...1 indicates a control by that value
+    // 2 indicates the line is the target
+    Edge Package::makeGateDD(const Matrix2x2& mat, unsigned short n, const short *line) {
+        Edge em[NEDGE], fm[NEDGE];
+        short w = 0, z = 0;
 
-        for (int i = 0; i < Radix; i++) {
-            for (int j = 0; j < Radix; j++) {
+        for (int i = 0; i < RADIX; i++) {
+            for (int j = 0; j < RADIX; j++) {
                 if (mat[i][j].r == 0.0 && mat[i][j].i == 0.0) {
-                    em[i * Radix + j] = DDzero;
+                    em[i * RADIX + j] = DDzero;
                 } else {
-                    c.r->val = mat[i][j].r;
-                    c.i->val = mat[i][j].i;
-                    em[i * Radix + j] = DDmakeTerminal(Clookup(c));
+	                em[i * RADIX + j] = makeTerminal(cn.lookup(mat[i][j]));
                 }
             }
         }
 
-        DDedge e = DDone;
-        for (z = 0; line[w = DDorder[z]] < Radix; z++) { //process lines below target
+        Edge e = DDone;
+	    Edge f{};
+        for (z = 0; line[w = varOrder[z]] < RADIX; z++) { //process lines below target
             if (line[w] >= 0) { //  control line below target in DD
-                for (int i1 = 0; i1 < Radix; i1++) {
-                    for (int i2 = 0; i2 < Radix; i2++) {
-                        DDedge f;
-                        int i = i1 * Radix + i2;
+                for (int i1 = 0; i1 < RADIX; i1++) {
+                    for (int i2 = 0; i2 < RADIX; i2++) {
+                        int i = i1 * RADIX + i2;
                         if (i1 == i2) {
                             f = e;
                         } else {
                             f = DDzero;
                         }
-                        for (int k = 0; k < Radix; k++) {
-                            for (int j = 0; j < Radix; j++) {
-                                int t = k * Radix + j;
+                        for (int k = 0; k < RADIX; k++) {
+                            for (int j = 0; j < RADIX; j++) {
+                                int t = k * RADIX + j;
                                 if (k == j) {
                                     if (k == line[w]) {
                                         fm[t] = em[i];
@@ -1674,305 +1246,335 @@ namespace dd_package {
                                 }
                             }
                         }
-                        em[i] = DDmakeNonterminal(w, fm, false);
+	                    em[i] = makeNonterminal(w, fm);
                     }
                 }
             } else { // not connected
-                for (int i = 0; i < Nedge; i++) {
-                    for (int i1 = 0; i1 < Radix; i1++) {
-                        for (int i2 = 0; i2 < Radix; i2++) {
+	            for (auto& edge : em) {
+		            for (int i1 = 0; i1 < RADIX; ++i1) {
+			            for (int i2 = 0; i2 < RADIX; ++i2) {
                             if (i1 == i2) {
-                                fm[i1 + i2 * Radix] = em[i];
+	                            fm[i1 + i2 * RADIX] = edge;
                             } else {
-                                fm[i1 + i2 * Radix] = DDzero;
+                                fm[i1 + i2 * RADIX] = DDzero;
                             }
                         }
                     }
-                    em[i] = DDmakeNonterminal(w, fm, false);
+		            edge = makeNonterminal(w, fm);
                 }
             }
-            e = DDident(0, z);
+            e = makeIdent(0, z);
         }
-        e = DDmakeNonterminal(DDorder[z], em, false);  // target line
+	    e = makeNonterminal(varOrder[z], em);  // target line
         for (z++; z < n; z++) { // go through lines above target
-            if (line[w = DDorder[z]] >= 0) { //  control line above target in DD
-                DDedge temp = DDident(0, z - 1);
-                for (int i = 0; i < Radix; i++) {
-                    for (int j = 0; j < Radix; j++) {
+            if (line[w = varOrder[z]] >= 0) { //  control line above target in DD
+                Edge temp = makeIdent(0, z - 1);
+                for (int i = 0; i < RADIX; i++) {
+                    for (int j = 0; j < RADIX; j++) {
                         if (i == j) {
                             if (i == line[w]) {
-                                em[i * Radix + j] = e;
+                                em[i * RADIX + j] = e;
                             } else {
-                                em[i * Radix + j] = temp;
+                                em[i * RADIX + j] = temp;
                             }
                         } else {
-                            em[i * Radix + j] = DDzero;
+                            em[i * RADIX + j] = DDzero;
                         }
                     }
                 }
-                e = DDmakeNonterminal(w, em, false);
+	            e = makeNonterminal(w, em);
             } else { // not connected
-                for (int i1 = 0; i1 < Radix; i1++) {
-                    for (int i2 = 0; i2 < Radix; i2++) {
+                for (int i1 = 0; i1 < RADIX; i1++) {
+                    for (int i2 = 0; i2 < RADIX; i2++) {
                         if (i1 == i2) {
-                            fm[i1 + i2 * Radix] = e;
+                            fm[i1 + i2 * RADIX] = e;
                         } else {
-                            fm[i1 + i2 * Radix] = DDzero;
+                            fm[i1 + i2 * RADIX] = DDzero;
                         }
                     }
                 }
-                e = DDmakeNonterminal(w, fm, false);
+	            e = makeNonterminal(w, fm);
             }
         }
         return e;
     }
 
-    // for building 0 or 1 control binary gates
-    // c is the control variable
-    // t is the target variable
-    DDedge DDgate(DD_matrix mat, int n, int control, int target) {
-        int line[MAXN];
-        for (int i = 0; i < n; i++) {
-            line[i] = -1;
-        }
-        if (control >= 0){
-            line[control] = Radix - 1;
-        }
-        line[target] = Radix;
-        return DDmvlgate(mat, n, line);
-    }
+	Edge Package::makeGateDD(const std::array<ComplexValue, NEDGE>& mat, unsigned short n, const std::array<short, MAXN>& line) {
+		std::array<Edge, NEDGE> em{ };
+		short w = 0, z = 0;
 
-    // a 0-1 matrix is printed more compactly
-    //
-    // Note: 0 entry and 1 entry in complex value table always denote
-    // the values 0 and 1 respectively, so it is sufficient to print the index
-    // for a 0-1 matrix.
-    //
-    // v is the variable index for the top vertex
-    void DDmatrixPrint(DDedge a, short v, const char vtype[], std::ostream &os) {
-        complex mat[MAXDIM][MAXDIM];
-        complex cTabPrint[MAXDIM * MAXDIM + 2];
-        int cTabEntries = 0;
-        bool cTabPrintFlag = false;
-        int n;
+		for (int i = 0; i < NEDGE; ++i) {
+			if (mat[i].r == 0 && mat[i].i == 0) {
+				em[i] = DDzero;
+			} else {
+				em[i] = makeTerminal(cn.lookup(mat[i]));
+			}
+		}
 
-        if (DDterminal(a)) {
-            n = 0;
-        } else {
-            n = v + 1;
-        }
-        int m = 1;
-        for (int i = 0; i < n; i++) {
-            m *= Radix;
-        }
+		//process lines below target
+		for (z = 0; line[w = varOrder[z]] < RADIX; z++) {
+			for (int i1 = 0; i1 < RADIX; i1++) {
+				for (int i2 = 0; i2 < RADIX; i2++) {
+					int i = i1 * RADIX + i2;
+					if (line[w] == 0) { // neg. control
+						em[i] = makeNonterminal(w, { em[i], DDzero, DDzero, (i1 == i2) ? makeIdent(0, z - 1) : DDzero });
+					} else if (line[w] == 1) { // pos. control
+						em[i] = makeNonterminal(w, { (i1 == i2) ? makeIdent(0, z - 1) : DDzero, DDzero, DDzero, em[i] });
+					} else { // not connected
+						em[i] = makeNonterminal(w, { em[i], DDzero, DDzero, em[i] });
+					}
+				}
+			}
+		}
 
-        if (n > MAXND) {
-            std::cerr << "Matrix is too big to print. No. of vars=" << n << "\n";
-            std::exit(1);
-        }
+		// target line
+		Edge e = makeNonterminal(varOrder[z], em);
 
-        DDfillmat(mat, a, 0, 0, m, v, vtype); // convert to matrix
+		//process lines above target
+		for (z++; z < n; z++) {
+			w = varOrder[z];
+			if (line[w] == 0) { //  neg. control
+				e = makeNonterminal(w, { e, DDzero, DDzero, makeIdent(0, z - 1) });
+			} else if (line[w] == 1) { // pos. control
+				e = makeNonterminal(w, { makeIdent(0, z - 1), DDzero, DDzero, e });
+			} else { // not connected
+				e = makeNonterminal(w, { e, DDzero, DDzero, e });
+			}
+		}
+		return e;
+	}
+
+	// displays DD package statistics
+    void Package::statistics() {
+    	auto hitRatioAdd = CTlook[ad] == 0? 0 :  (double) CThit[ad] / (double)CTlook[ad];
+		auto hitRatioMul = CTlook[mult] == 0? 0 :  (double) CThit[mult] / (double)CTlook[mult];
+		auto hitRatioKron = ((CTlook[kron] == 0) ? 0 : (double) CThit[kron] / (double)CTlook[kron]);
 
 
-        cTabPrint[0] = COMPLEX_ZERO;
-        cTabPrint[1] = COMPLEX_ONE;
-        cTabEntries = 2;
-
-        for (int i = 0; i < m; i++) {          // display matrix
-            for (int j = 0; j < m; j++) {
-                int k = 0;
-                while (k < cTabEntries && !Ceq(cTabPrint[k], mat[i][j])) {
-                    k++;
-                }
-
-                if (k == cTabEntries) {
-                    cTabEntries++;
-                    cTabPrint[k] = mat[i][j];
-                }
-                cTabPrintFlag = true;
-                if (k < 10) {
-                    os << " ";
-                }
-                os << k << " ";
-                if (j == m / 2 - 1) {
-                    os << "|";
-                }
-            }
-            os << "\n";
-            if (i == m / 2 - 1) {
-                for (int j = 0; j < m; j++) {
-                    os << " --";
-                }
-                os << "\n";
-            }
-        }
-        if (cTabPrintFlag) {
-            os << "ComplexTable values: "; //(0): 0; (1): 1; ";
-
-            for (int i = 0; i < cTabEntries; i++) {
-                os << "(" << i << "):" << cTabPrint[i] << "; ";
-            }
-        }
-
-        os << "\n";
-
-        for (int i = 0; i < (1 << n); i++) {
-            for (int j = 0; j < (1 << n); j++) {
-                mat[i][j].i->next = ComplexCache_Avail;
-                ComplexCache_Avail = mat[i][j].r;
-            }
-        }
-    }
-
-    void DDmatrixPrint(DDedge a, short v, char vtype[]) {
-        DDmatrixPrint(a, v, vtype, std::cout);
-    }
-
-    void DDmatrixPrint2(DDedge a, std::ostream &os) {
-        char v[MAXN];
-        int i;
-
-        if (DDterminal(a)) {
-            os << a.w << "\n";
-        } else {
-            for (i = 0; i < MAXN; i++) {
-                v[i] = 0;
-            }
-            DDmatrixPrint(a, a.p->v, v, os);
-        }
-    }
-
-    void DDmatrixPrint2(DDedge a, std::ostream &os, short n) {
-        if (DDterminal(a)) {
-            os << a.w << "\n";
-        } else {
-            char v[MAXN]{};
-            DDmatrixPrint(a, n, v, os);
-        }
-    }
-
-    void DDmatrixPrint2(DDedge a) {
-        if (DDterminal(a)) {
-            std::cout << a.w << "\n";
-        } else {
-            char v[MAXN]{};
-            DDmatrixPrint(a, DDinverseOrder[a.p->v], v);
-        }
-    }
-
-    // displays DD package statistics
-    void DDstatistics() {
         std::cout << "\nDD statistics:"
-            << "\n  Current # nodes in UniqueTable: " << DDnodecount
-            << "\n  Total compute table lookups: " << CTlook[0] + CTlook[1] + CTlook[2]
-            << "\n  Number of operations:"
-            << "\n    add:  " <<  Nop[add]
-            << "\n    mult: " <<  Nop[mult]
-            << "\n    kron: " <<  Nop[kronecker]
-            << "\n  Compute table hit ratios (hits/looks/ratio):"
-            << "\n    adds: " << CThit[add] << " / " << CTlook[add] << " / " << (double) CThit[add] / (double)CTlook[add]
-            << "\n    mult: " << CThit[mult] << " / " << CTlook[mult] << " / " << (double) CThit[mult] / (double)CTlook[mult]
-            << "\n    kron: " << CThit[kronecker] << " / " << CTlook[kronecker] << " / " << (double) CThit[kronecker] / (double)CTlook[kronecker]
-            << "\n  UniqueTable:"
-            << "\n    Collisions: " << UTcol
-            << "\n    Matches:    " << UTmatch
-            << "\n" << std::flush;
+                  << "\n  Current # nodes in UniqueTable: " << nodecount
+                  << "\n  Total compute table lookups: " << CTlook[0] + CTlook[1] + CTlook[2]
+                  << "\n  Number of operations:"
+                  << "\n    add:  " << nOps[ad]
+                  << "\n    mult: " << nOps[mult]
+                  << "\n    kron: " << nOps[kron]
+                  << "\n  Compute table hit ratios (hits/looks/ratio):"
+                  << "\n    adds: " << CThit[ad] << " / " << CTlook[ad] << " / " << hitRatioAdd
+                  << "\n    mult: " << CThit[mult] << " / " << CTlook[mult] << " / " << hitRatioMul
+		          << "\n    kron: " << CThit[kron] << " / " << CTlook[kron] << " / " << hitRatioKron
+                  << "\n  UniqueTable:"
+                  << "\n    Collisions: " << UTcol
+                  << "\n    Matches:    " << UTmatch
+                  << "\n" << std::flush;
     }
 
     // print number of active nodes for variables 0 to n-1
-    void DDprintActive(int n) {
-        std::cout << "#printActive: " << ActiveNodeCount << ". ";
+    void Package::printActive(const int n) {
+        std::cout << "#printActive: " << activeNodeCount << ". ";
         for (int i = 0; i < n; i++) {
-            std::cout << " " << Active[i] << " ";
+            std::cout << " " << active[i] << " ";
         }
         std::cout << "\n";
     }
 
-    complex_value DDfidelity(DDedge x, DDedge y, int var) {
-        if (x.p == nullptr || y.p == nullptr || x.w == COMPLEX_ZERO || y.w == COMPLEX_ZERO)  // the 0 case
+    ComplexValue Package::fidelity(Edge x, Edge y, int var) {
+        if (x.p == nullptr || y.p == nullptr || ComplexNumbers::equalsZero(x.w) || ComplexNumbers::equalsZero(y.w))  // the 0 case
         {
             return {0.0,0.0};
         }
 
         if (var == 0) {
-            complex result;
-            result.r = ComplexCache_Avail;
-            result.i = result.r->next;
-            Cmul(result, x.w, y.w);
-            return {result.r->val, result.i->val};
+	        Complex c = cn.getTempCachedComplex();
+	        ComplexNumbers::mul(c, x.w, y.w);
+            return {c.r->val, c.i->val};
         }
 
-        complex xweight = x.w;
-        complex yweight = y.w;
-        x.w = COMPLEX_ONE;
-        y.w = COMPLEX_ONE;
+        Complex xweight = x.w;
+        Complex yweight = y.w;
+        x.w = CN::ONE;
+        y.w = CN::ONE;
 
-        DDedge r = CTlookup(x, y, fidelity);
+        Edge r = CTlookup(x, y, fid);
         if (r.p != nullptr) {
-            r.w.i->next = ComplexCache_Avail;
-            ComplexCache_Avail = r.w.r;
-
-            Cmul(r.w, r.w, xweight);
-            Cmul(r.w, r.w, yweight);
+	        cn.releaseCached(r.w);
+	        ComplexNumbers::mul(r.w, r.w, xweight);
+	        ComplexNumbers::mul(r.w, r.w, yweight);
             return {r.w.r->val, r.w.i->val};
         }
 
-        long w = DDorder[var - 1];
-        complex_value sum{0.0, 0.0};
-        DDedge e1, e2;
+        short w = varOrder[var - 1];
+        ComplexValue sum{ 0.0, 0.0};
 
-        for (int i = 0; i < Nedge; i++) {
-            if (!DDterminal(x) && x.p->v == w) {
+        Edge e1{}, e2{};
+        for (int i = 0; i < NEDGE; i++) {
+            if (!isTerminal(x) && x.p->v == w) {
                 e1 = x.p->e[i];
             } else {
                 e1 = x;
             }
-            if (!DDterminal(y) && y.p->v == w) {
+            if (!isTerminal(y) && y.p->v == w) {
                 e2 = y.p->e[i];
-                e2.w = Cconjugate(e2.w);
+                e2.w = dd::ComplexNumbers::conj(e2.w);
             } else {
                 e2 = y;
             }
-            complex_value cv = DDfidelity(e1, e2, var - 1);
+            ComplexValue cv = fidelity(e1, e2, var - 1);
 
             sum.r += cv.r;
             sum.i += cv.i;
         }
 
         r = DDzero;
-        r.w.r = ComplexCache_Avail;
-        r.w.i = ComplexCache_Avail->next;
-        r.w.r->val = sum.r;
-        r.w.i->val = sum.i;
+        r.w = cn.getTempCachedComplex(sum.r, sum.i);
 
-        CTinsert(x, y, r, fidelity);
-        Cmul(r.w, r.w, xweight);
-        Cmul(r.w, r.w, yweight);
+        CTinsert(x, y, r, fid);
+	    ComplexNumbers::mul(r.w, r.w, xweight);
+	    ComplexNumbers::mul(r.w, r.w, yweight);
 
         return {r.w.r->val, r.w.i->val};
     }
 
-    long double DDfidelity(DDedge x, DDedge y) {
-        long w = DDinverseOrder[x.p->v];
-        if(DDinverseOrder[y.p->v] > w) {
-            w = DDinverseOrder[y.p->v];
+    fp Package::fidelity(Edge x, Edge y) {
+        short w = invVarOrder[x.p->v];
+        if(invVarOrder[y.p->v] > w) {
+            w = invVarOrder[y.p->v];
         }
 
-        complex c;
-        c.r = ComplexCache_Avail;
-        c.i = ComplexCache_Avail->next;
+	    Complex c = cn.getTempCachedComplex(ComplexNumbers::val(y.w.r), ComplexNumbers::val(y.w.i));
 
-        c.r->val = CVAL(y.w.r);
-        c.i->val = CVAL(y.w.i);
-
-        long double norm = CmagSquared(c);
+	    const fp norm = ComplexNumbers::mag2(c);
 
         c.r->val /= std::sqrt(norm);
         c.i->val /= std::sqrt(norm);
 
-        complex c2 = Clookup(c);
-
-        y.w = Cconjugate(c2);
-        return DDfidelity(x, y, w+1).r;
+        y.w = dd::ComplexNumbers::conj(cn.lookup(c));
+        const ComplexValue fid = fidelity(x, y, w + 1);
+        return fid.r*fid.r + fid.i*fid.i;
     }
+
+    Edge Package::kronecker(Edge x, Edge y) {
+	    Edge e = kronecker2(x, y);
+
+	    if (e.w != CN::ZERO && e.w != CN::ONE) {
+		    cn.releaseCached(e.w);
+		    e.w = cn.lookup(e.w);
+	    }
+
+	    return e;
+    }
+
+	Edge Package::kronecker2(Edge x, Edge y) {
+
+		if (CN::equalsZero(x.w))
+			return DDzero;
+
+    	nOps[kron]++;
+
+		if (isTerminal(x)) {
+			Edge r = y;
+			r.w = cn.mulCached(x.w, y.w);
+			return r;
+		}
+
+    	Edge r = CTlookup(x,y,kron);
+    	if (r.p != nullptr)
+		    return r;
+
+    	if (x.p->ident) {
+			r = makeNonterminal(y.p->v+1, {y, DDzero, DDzero, y});
+			for (int i = 0; i < x.p->v; ++i) {
+				r = makeNonterminal(r.p->v+1, {r, DDzero, DDzero, r});
+			}
+
+			r.w = cn.getCachedComplex(CN::val(y.w.r),CN::val(y.w.i));
+		    CTinsert(x,y,r, kron);
+		    return r;
+    	}
+
+		Edge e0 = kronecker2(x.p->e[0],y);
+		Edge e1 = kronecker2(x.p->e[1],y);
+		Edge e2 = kronecker2(x.p->e[2],y);
+		Edge e3 = kronecker2(x.p->e[3],y);
+
+		r = makeNonterminal(y.p->v+x.p->v+1, {e0, e1, e2, e3}, true);
+		//std::cout << r.w << " * " << x.w << " -> ";
+	    CN::mul(r.w, r.w, x.w);
+		//std::cout << r.w << std::endl;
+		CTinsert(x,y,r,kron);
+		return r;
+    }
+
+	Edge Package::extend(Edge e, unsigned short h, unsigned short l) {
+  	    Edge f = (l>0)? kronecker(e, makeIdent(0,l-1)) : e;
+  	    Edge g = (h>0)? kronecker(makeIdent(0, h-1), f): f;
+  	    return g;
+    }
+
+
+	Edge Package::trace(Edge a, short v, const std::bitset<MAXN>& eliminate) {
+    	short w = invVarOrder[a.p->v];
+
+		if (ComplexNumbers::equalsZero(a.w)) return DDzero;
+
+    	// Base case
+    	if (v == -1) {
+    		if (isTerminal(a)) return a;
+    		std::cerr << "Expected terminal node in trace." << std::endl;
+		    exit(1);
+    	}
+
+    	if (eliminate[v]) {
+    		if (v == w) {
+			    Edge r = DDzero;
+			    //std::cout << cn.cacheCount << " ";
+			    auto t0 = trace(a.p->e[0], v - 1, eliminate);
+			    r = add2(r, t0);
+			    auto r1 = r;
+			    //std::cout << "-> " << cn.cacheCount << " ";
+			    auto t1 = trace(a.p->e[3], v - 1, eliminate);
+			    r = add2(r, t1);
+			    auto r2 = r;
+			    //std::cout << "-> " << cn.cacheCount << std::endl;
+			    ComplexNumbers::mul(r.w, r.w, a.w);
+				if (r1.w != CN::ZERO)
+					cn.releaseCached(r1.w);
+
+			    if (r2.w != CN::ZERO) {
+					cn.releaseCached(r2.w);
+				}
+			    //cn.lookup(r.w);
+
+			    return r;
+    		} else {
+			    Edge r = trace(a, v - 1, eliminate);
+			    ComplexNumbers::mul(r.w, r.w, cn.getTempCachedComplex(RADIX, 0));
+			    return r;
+    		}
+    	} else {
+    		if (v == w) {
+			    Edge r = makeNonterminal(a.p->v, { trace(a.p->e[0], v - 1, eliminate),
+			                                       trace(a.p->e[1], v - 1, eliminate),
+			                                       trace(a.p->e[2], v - 1, eliminate),
+			                                       trace(a.p->e[3], v - 1, eliminate) }, false);
+			    ComplexNumbers::mul(r.w, r.w, a.w);
+			    return r;
+		    } else {
+			    return trace(a,v-1,eliminate);
+    		}
+    	}
+    }
+
+	void Package::checkSpecialMatrices(Edge &e) {
+		e.p->ident = false;       // assume not identity
+		e.p->symm = false;           // assume symmetric
+
+		/****************** CHECK IF Symmetric MATRIX *****************/
+		if (!e.p->e[0].p->symm || !e.p->e[3].p->symm) return;
+		if (!equals(transpose(e.p->e[1]), e.p->e[2])) return;
+		e.p->symm = true;
+
+		/****************** CHECK IF Identity MATRIX ***********************/
+		if(!(e.p->e[0].p->ident) || (e.p->e[1].w) != CN::ZERO || (e.p->e[2].w) != CN::ZERO || (e.p->e[0].w) != CN::ONE || (e.p->e[3].w) != CN::ONE || !(e.p->e[3].p->ident)) return;
+		e.p->ident = true;
+	}
 }
