@@ -33,8 +33,8 @@ namespace dd {
 	    ComplexTable[NBUCKET - 1] = ONE.r;
 	    count = 2;
 
-	    lookupVal(0.5L);
-	    lookupVal(SQRT_2);
+	    lookupVal(0.5L)->ref++;
+	    lookupVal(SQRT_2)->ref++;
     }
 
     ComplexNumbers::~ComplexNumbers() {

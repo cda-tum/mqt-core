@@ -63,13 +63,16 @@ namespace dd {
         static constexpr unsigned short CHUNK_SIZE = 2000;
         static constexpr unsigned short INIT_SIZE = 300;
 
-	    static inline unsigned long getKey(const fp& val) {
-		    auto key = (unsigned long) (val * (NBUCKET - 1));
-		    if (key > NBUCKET - 1) {
-			    key = NBUCKET - 1;
-		    }
-		    return key;
-	    };
+        static inline unsigned long getKey(const fp& val) {
+            assert(val >= 0);
+            //const fp hash = 4*val*val*val - 6*val*val + 3*val; // cubic
+            const fp hash = val; // linear
+            auto key = (unsigned long) (hash * (NBUCKET - 1));
+            if (key > NBUCKET - 1) {
+                key = NBUCKET - 1;
+            }
+            return key;
+        };
 
 	    ComplexTableEntry *lookupVal(const fp& val);
 	    ComplexTableEntry *getComplexTableEntry();
@@ -79,7 +82,7 @@ namespace dd {
     	constexpr static Complex ONE{ (&oneEntry), (&zeroEntry) };
 
         long cacheCount = INIT_SIZE * 6;
-	    static constexpr fp TOLERANCE = 1e-10l;
+	    static constexpr fp TOLERANCE = 1e-13l;
 	    static constexpr unsigned int GCLIMIT1 = 100000;
 	    static constexpr unsigned int GCLIMIT_INC = 0;
 

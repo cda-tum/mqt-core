@@ -1,6 +1,6 @@
 # A Package for Decision Diagrams Written in C++
 
-DD package by JKU Linz, Austria
+A DD package tailored to quantum computing by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at).
 
 Developers: Alwin Zulehner, Stefan Hillmich, Lukas Burgholzer, and Robert Wille
 
@@ -9,25 +9,53 @@ and Philipp Niemann (University of Bremen, Germany).
 
 For more information, please visit [iic.jku.at/eda/research/quantum_dd](http://iic.jku.at/eda/research/quantum_dd).
 
-If you have any questions feel free to contact us using [iic_quantum@jku.at](mailto:iic_quantum@jku.at).
+If you have any questions feel free to contact us using [iic_quantum@jku.at](mailto:iic_quantum@jku.at) or opening an issue.
 
-The old version of this package which does not use namespaces or class can be found in the branch `non-oop`.
+The old version of this package which does not use namespaces or classes can be found in the branch `non-oop`.
 
 ## Usage
 
+This package caters primarily to our requirements regarding quantum-related functionality and, hence, may not be straightforward to use for other purposes.
+
+A small example shows how to create set a single qubit in superposition.
+
+```c++
+auto* dd = std::make_new dd::Package; // Create new package instance
+dd::Edge zero_state = dd->makeZeroState(1) ; // zero_state = |0>
+
+/* Creating a DD requires three inputs:
+ * 1. A 2x2 matrix describing a single qubits operation (here: the Hadamard matrix)
+ * 2. The number of qubits the DD will operated on (here: one qubit)
+ * 3. An int array the length of the the number of qubits where the index is the qubit and the value is either
+ *    -1 -> don't care; 0 -> negative control; 1 -> positive control; 2 -> target qubit
+ *    In this example we only have a target.
+ */
+int line[1] = {2};
+dd::Edge h_op = dd->makeGateDD(Hmat, 1, line);
+
+// Multiplying the operation and the state results in a new state, here a single qubit in super position
+dd::Edge superposition = dd->multiply(h_op, zero_state); 
+
+delete dd; // alternatively use smart pointers ;)
+```
+
+For implementing more complex functionality which requires garbage collection, be advised that you have to do the reference counting by hand. 
+
 ### System Requirements
 
-The package has been tested under Linux (Ubuntu 18.04, 64-bit) and should be compatible with any current version of g++/cmake.
+Building and running have been tested under Linux (Ubuntu 18.04, 64-bit).
+The implementation should be compatible with any current version of g++/cmake that supports C++11.
   
 ### Build and Run 
 
-To build the package and run a small demo type:
+To build the package and run a small demo execute the following 
+(several *.dot files will be created in the working directory which will be automatically converted to SVG if GraphViz is installed).
 ```
 $ mkdir build
 $ cd build 
 $ cmake ..
 $ make
-$ ./dd_example
+$ ./test/dd_example
 Circuits are equal!
 00: √½
 01: 0
@@ -52,6 +80,32 @@ DD statistics:
   UniqueTable:
     Collisions: 7
     Matches:    21
+```
+
+As of now, a small set of unit tests is included as well which you can execute as follows (after performing the build steps described above).
+
+```
+$ ./test/dd_test
+Running main() from [...]/test/googletest-src/googletest/src/gtest_main.cc
+[==========] Running 4 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 3 tests from DDPackageTest
+[ RUN      ] DDPackageTest.TrivialTest
+[       OK ] DDPackageTest.TrivialTest (53 ms)
+[ RUN      ] DDPackageTest.BellState
+[       OK ] DDPackageTest.BellState (28 ms)
+[ RUN      ] DDPackageTest.IdentifyTrace
+[       OK ] DDPackageTest.IdentifyTrace (26 ms)
+[----------] 3 tests from DDPackageTest (108 ms total)
+
+[----------] 1 test from DDComplexTest
+[ RUN      ] DDComplexTest.TrivialTest
+[       OK ] DDComplexTest.TrivialTest (0 ms)
+[----------] 1 test from DDComplexTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 2 test suites ran. (108 ms total)
+[  PASSED  ] 4 tests.
 ```
 
 ## Reference
