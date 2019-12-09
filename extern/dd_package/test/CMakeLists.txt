@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.2)
+cmake_minimum_required (VERSION 3.10)
 project(dd_package_test)
 
 # Download and unpack googletest at configure time
@@ -34,14 +34,14 @@ if (CMAKE_VERSION VERSION_LESS 2.8.11)
 endif ()
 
 add_executable(dd_test test_complex.cpp test_package.cpp)
-target_compile_options(dd_test PUBLIC -mtune=native -march=native -pipe -Wall -Wextra -Wnon-virtual-dtor -pedantic -flto)
+target_compile_options(dd_test PUBLIC -mtune=native -march=native -pipe -Wall -Wextra -Wnon-virtual-dtor -pedantic)
 target_link_libraries(dd_test dd_package_lib gtest gtest_main)
-set_property(TARGET dd_test PROPERTY CXX_STANDARD 11)
+target_compile_features(dd_test PUBLIC cxx_std_11)
 set_property(TARGET dd_test PROPERTY CXX_EXTENSIONS OFF)
 
 add_executable(dd_example main.cpp)
-target_compile_options(dd_example PUBLIC -mtune=native -march=native -pipe -Wall -Wextra -Wnon-virtual-dtor -pedantic -flto)
+target_compile_options(dd_example PUBLIC -mtune=native -march=native -pipe -Wall -Wextra -Wnon-virtual-dtor -pedantic)
 target_link_libraries(dd_example dd_package_lib)
-set_property(TARGET dd_example PROPERTY CXX_STANDARD 11)
+target_compile_features(dd_example PUBLIC cxx_std_11)
 set_property(TARGET dd_example PROPERTY CXX_EXTENSIONS OFF)
 
