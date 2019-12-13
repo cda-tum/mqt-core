@@ -1,3 +1,5 @@
+![Travis CI Badge](https://travis-ci.com/iic-jku/dd_package.svg?branch=master)
+
 # A Package for Decision Diagrams Written in C++
 
 A DD package tailored to quantum computing by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at).

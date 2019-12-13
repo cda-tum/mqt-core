@@ -45,3 +45,5 @@ target_link_libraries(dd_example dd_package_lib)
 target_compile_features(dd_example PUBLIC cxx_std_11)
 set_property(TARGET dd_example PROPERTY CXX_EXTENSIONS OFF)
 
+enable_testing()
+add_test(NAME dd_test COMMAND ./dd_test)

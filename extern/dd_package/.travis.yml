@@ -1,0 +1,30 @@
+os: linux
+dist: bionic
+
+language: cpp
+
+addons:
+  apt:
+    sources:
+      - sourceline: 'ppa:ubuntu-toolchain-r/test'
+    packages:
+      - g++-9
+      - clang-8
+
+matrix:
+  include:
+    - env: MATRIX_EVAL="CC=gcc && CXX=g++"
+    - env: MATRIX_EVAL="CC=gcc-9 && CXX=g++-9"
+    - env: MATRIX_EVAL="CC=clang && CXX=clang++"
+    - env: MATRIX_EVAL="CC=clang-8 && CXX=clang++-8"
+
+before_install:
+  - eval "${MATRIX_EVAL}"
+  - which $CC
+  - which $CXX
+
+script:
+  - mkdir -p build && cd build
+  - cmake -DCMAKE_BUILD_TYPE=Release ..
+  - cmake --build .
+  - ctest
