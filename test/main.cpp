@@ -1,3 +1,8 @@
+/*
+ * This file is part of IIC-JKU QFR library which is released under the MIT license.
+ * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ */
+
 #include <functional>
 #include <memory>
 
@@ -22,10 +27,9 @@ int main() {
 	format = qc::OpenQASM;
 	qc.import(filename, format);
 	qc.dump("test_dump.qasm", format);
-	qc.import(filename, format);
 
 	qc.reset();
-	filename = "./circuits/grcs/bris_4_32_9_v2.txt";
+	filename = "./circuits/grcs/bris_4_40_9_v2.txt";
 	format = qc::GRCS;
 	qc.import(filename, format);
 

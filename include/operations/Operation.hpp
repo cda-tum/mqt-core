@@ -1,6 +1,7 @@
-//
-// Created by Lukas Burgholzer on 25.09.19.
-//
+/*
+ * This file is part of IIC-JKU QFR library which is released under the MIT license.
+ * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ */
 
 #ifndef INTERMEDIATEREPRESENTATION_OPERATION_H
 #define INTERMEDIATEREPRESENTATION_OPERATION_H

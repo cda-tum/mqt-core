@@ -9,21 +9,39 @@ set_target_properties(gtest_main PROPERTIES FOLDER extern)
 set_target_properties(gmock PROPERTIES FOLDER extern)
 set_target_properties(gmock_main PROPERTIES FOLDER extern)
 
-add_executable(GoogleTest algorithms/test_qft.cpp algorithms/test_grover.cpp)
-target_compile_options(GoogleTest PUBLIC -mtune=native -march=native -pipe -Wall -Wextra -Wnon-virtual-dtor -pedantic)
-target_link_libraries(GoogleTest PRIVATE QuantumFunctionalityRepresentation gtest gtest_main)
-target_compile_features(GoogleTest PUBLIC cxx_std_14)
-set_property(TARGET GoogleTest PROPERTY CXX_EXTENSIONS OFF)
-set_target_properties(GoogleTest PROPERTIES FOLDER test)
-
 add_executable(QFR_example main.cpp)
 target_compile_features(QFR_example PUBLIC cxx_std_14)
 set_target_properties(QFR_example PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_options(QFR_example PUBLIC -mtune=native -march=native -pipe -Wall -Wextra -Wnon-virtual-dtor -pedantic)
-target_link_libraries(QFR_example PRIVATE QuantumFunctionalityRepresentation)
+target_link_libraries(QFR_example PRIVATE ${PROJECT_NAME})
 
 
 file(COPY        ${CMAKE_CURRENT_SOURCE_DIR}/circuits
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY        ${CMAKE_CURRENT_SOURCE_DIR}/qelib1.inc
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+macro(package_add_test TESTNAME)
+	# create an exectuable in which the tests will be stored
+	add_executable(${TESTNAME} ${ARGN})
+	# link the Google test infrastructure, mocking library, and a default main fuction to
+	# the test executable.  Remove g_test_main if writing your own main function.
+	target_link_libraries(${TESTNAME} PRIVATE ${PROJECT_NAME} gtest gmock gtest_main)
+	target_compile_options(${TESTNAME} PUBLIC -mtune=native -march=native -pipe)
+	if (COVERAGE)
+		target_compile_options(${TESTNAME} PRIVATE --coverage)
+		target_link_libraries(${TESTNAME} PRIVATE --coverage)
+	endif()
+	set_property(TARGET ${TESTNAME} PROPERTY CXX_EXTENSIONS OFF)
+
+	# gtest_discover_tests replaces gtest_add_tests,
+	# see https://cmake.org/cmake/help/v3.10/module/GoogleTest.html for more options to pass to it
+	gtest_discover_tests(${TESTNAME}
+	                     # set a working directory so your project root so that you can find test data via paths relative to the project root
+	                     WORKING_DIRECTORY ${PROJECT_DIR}
+	                     PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
+	                     )
+	set_target_properties(${TESTNAME} PROPERTIES FOLDER tests)
+endmacro()
+
+package_add_test(GoogleTest ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_qft.cpp ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_grover.cpp)

@@ -1,10 +1,14 @@
-# A Library for Quantum Functionality Representation (QFR) Written in C++
+[![Build Status](https://travis-ci.com/burgholzer/IntermediateRepresentation.svg?token=md6M7jxUi7wqb4j9saQb&branch=master)](https://travis-ci.com/burgholzer/IntermediateRepresentation)
+[![codecov](https://codecov.io/gh/burgholzer/IntermediateRepresentation/branch/master/graph/badge.svg?token=S9lH0EEpfT)](https://codecov.io/gh/burgholzer/IntermediateRepresentation)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+# QFR - A Library for Quantum Functionality Representation Written in C++
 
 A library for the representation of quantum functionality by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at).
 
-Developers: Lukas Burgholzer, Stefan Hillmich, Hartwig Bauer and Robert Wille.
+Developers: Lukas Burgholzer, Hartwig Bauer, Stefan Hillmich and Robert Wille.
 
-If you have any questions feel free to contact us using [iic_quantum@jku.at](mailto:iic_quantum@jku.at) or opening an issue.
+If you have any questions feel free to contact us using [iic_quantum@jku.at](mailto:iic_quantum@jku.at) or by creating an issue on GitHub.
 
 ## Usage
 
@@ -17,6 +21,7 @@ The package can be used for a multitude of tasks, as illustrated in the followin
   * `OpenQASM` (e.g. used by [Qiskit](https://github.com/Qiskit/qiskit))
   * `GRCS` Google Random Circuit Sampling Benchmarks (see [GRCS](https://github.com/sboixo/GRCS))
       
+  Importing a circuit is done via:
   ```c++
       std::string filename = "PATH_TO_FILE";
       qc::Format format = qc::{ Real | OpenQASM | GRCS };
@@ -164,28 +169,22 @@ The package can be used for a multitude of tasks, as illustrated in the followin
 
 ## System Requirements
 
-Building and running have been tested under 
-* macOS 10.15,
-* Linux (Ubuntu 18.04, 64-bit),
-
-using 
-* gcc (7.4 and 9.1),
-* AppleClang,
-
-and 
-* CMake 3.15.
-
-However the implementation should be compatible with any modern compiler supporting C++14 and a minimum CMake Version of 3.10. 
+Building (and running) is continuously tested under Linux (Ubuntu 18.04) using gcc-7.4, gcc-9 and clang-9 and MacOS (Mojave 10.14) using AppleClang and gcc-9. 
+However, the implementation should be compatible with any current C++ compiler supporting C++14 and a minimum CMake version of 3.10.
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
 ## Build and Run
-To build the library and run a small demo, showcasing the library's features, execute the following (*.dot files will be created in the working directory which will be automatically converted to SVG if GraphViz is installed).
+For building the library alone the CMake target `QFR` is available, i.e.,
+```commandline
+mkdir build && cd build
+cmake ..
+cmake --build . --target QFR
+```
+
+To build the library and run a small demo, showcasing the library's features, just build the `QFR_example` CMake target and run the resulting executable (*.dot files will be created in the working directory which will be automatically converted to SVG if GraphViz is installed), i.e.,
 
 ```commandline
-mkdir build
-cd build
-cmake ..
 cmake --build . --target QFR_example
 cd test
 ./QFR_example
@@ -194,6 +193,5 @@ cd test
 The repository also includes some (at the moment very basic) unit tests (using GoogleTest), which aim to ensure the correct behaviour of the library. They can be built and executed in the following way:
 ```commandline
 cmake --build . --target GoogleTest
-cd test
-./GoogleTest
+ctest
 ```

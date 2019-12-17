@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
-project(QuantumFunctionalityRepresentation
-        VERSION 0.1
-        DESCRIPTION "A library for the representation of quantum functionality"
+project(QFR
+        VERSION 0.9.0
+        DESCRIPTION "QFR  - A library for the representation of quantum functionality"
         LANGUAGES CXX)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+SET(COVERAGE OFF CACHE BOOL "Coverage")
 
 set(default_build_type "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -32,30 +34,13 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 endif()
 
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/extern/dd_package/CMakeLists.txt")
-	message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
+	message(FATAL_ERROR "DD Package failed to download! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
 endif()
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-set(CMAKE_CXX_FLAGS "-pipe -Wall -Wextra -Wshadow -Wnon-virtual-dtor -pedantic")
-set(CMAKE_CXX_FLAGS_RELEASE  "-g0 -march=native -DNDEBUG-O3")
-set(CMAKE_CXX_FLAGS_DEBUG "-g3 -Og")
-=======
-set(CMAKE_CXX_FLAGS "-pipe -Wall -Wextra -Wshadow -Wnon-virtual-dtor -pedantic -g -march=native -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE  "-O3")
-<<<<<<< HEAD
-set(CMAKE_CXX_FLAGS_DEBUG "-Og -fno-omit-frame-pointer")
->>>>>>> d120d89... Fixed caching issues in transpose and trace.
-=======
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-omit-frame-pointer -fno-inline-small-functions")
->>>>>>> 5a096f3... Smaller modifications.master Fixed Complex Table polution by Trace.
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/extern/googletest/CMakeLists.txt")
+	message(FATAL_ERROR "GoogleTest failed to download! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
+endif()
 
-if (${CMAKE_CXX_COMPILER_ID} MATCHES "Intel")
-	set(${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS} -shared-intel -debug inline-debug-info)
-endif ()
-
-=======
->>>>>>> e9970ae... DD package fixes
 add_subdirectory(src)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
