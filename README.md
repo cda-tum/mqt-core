@@ -1,5 +1,5 @@
-[![Build Status](https://travis-ci.com/burgholzer/IntermediateRepresentation.svg?token=md6M7jxUi7wqb4j9saQb&branch=master)](https://travis-ci.com/burgholzer/IntermediateRepresentation)
-[![codecov](https://codecov.io/gh/burgholzer/IntermediateRepresentation/branch/master/graph/badge.svg?token=S9lH0EEpfT)](https://codecov.io/gh/burgholzer/IntermediateRepresentation)
+[![Build Status](https://travis-ci.com/iic-jku/qfr.svg?branch=master)](https://travis-ci.com/iic-jku/qfr)
+[![codecov](https://codecov.io/gh/iic-jku/qfr/branch/master/graph/badge.svg)](https://codecov.io/gh/iic-jku/qfr)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # QFR - A Library for Quantum Functionality Representation Written in C++
