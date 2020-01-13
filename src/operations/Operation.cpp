@@ -33,7 +33,7 @@ namespace qc {
 		setLine(line);
 		
 	    for (int i = 0; i < nqubits; i++) {
-			if (line[i] < 0) {
+			if (line[i] == LINE_DEFAULT) {
 				os << "|\t";
 			} else if (line[i] == LINE_CONTROL_NEG) {
 				os << "\033[31m" << "c\t" << "\033[0m";

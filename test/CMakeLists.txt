@@ -44,4 +44,7 @@ macro(package_add_test TESTNAME)
 	set_target_properties(${TESTNAME} PROPERTIES FOLDER tests)
 endmacro()
 
-package_add_test(GoogleTest ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_qft.cpp ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_grover.cpp)
+package_add_test(GoogleTest ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_qft.cpp 
+							${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_grover.cpp 
+							${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_io.cpp
+							${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_ddfunctionality.cpp)

@@ -35,7 +35,7 @@ namespace qc {
 			}
 		}
 
-		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) override {
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
 			dd::Edge e = dd->makeIdent(0, nqubits - 1);
 			for (auto& op: ops) {
 				e = dd->multiply(op->getDD(dd, line), e);
@@ -43,7 +43,7 @@ namespace qc {
 			return e;
 		}
 
-		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) override {
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
 			dd::Edge e = dd->makeIdent(0, nqubits - 1);
 			for (auto& op: ops) { 
 				e = dd->multiply(e, op->getInverseDD(dd, line));
@@ -58,6 +58,12 @@ namespace qc {
 			os << *(ops.back());
 
 			return os;
+		}
+		
+		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override {
+			for (auto& op: ops) { 
+				op->dumpOpenQASM(of, qreg, creg);
+			}
 		}
 	};
 }

@@ -262,6 +262,13 @@ namespace qc {
 				std::vector<std::pair<unsigned short, unsigned short>> args;
 				p.ArgList(args);
 				p.check(Token::Kind::semicolon);
+
+				std::vector<unsigned short> qubits;
+				for (auto& arg: args) {
+					qubits.emplace_back(arg.first);
+				}
+
+				emplace_back<NonUnitaryOperation>(nqubits, qubits, Barrier);
 			} else if (p.sym == Token::Kind::opaque) {
 				p.OpaqueGateDecl();
 			} else if (p.sym == Token::Kind::_if) {
@@ -367,12 +374,6 @@ namespace qc {
 	unsigned long long QuantumComputation::getNindividualOps() const {
 		unsigned long long nops = 0;
 		for (const auto& op: ops) {
-			/*
-			for (int i = 0; i < op->getNqubits(); ++i) {
-				if (op->getLine()[i] == 2)
-					nops++;
-			}
-			*/
 			nops += op->getTargets().size();
 		}
 
@@ -463,7 +464,7 @@ namespace qc {
 		return e;
 	}
 
-	void QuantumComputation::create_reg_array(const registerMap& regs, std::vector<std::string>& regnames, unsigned short defaultnumber, char defaultname) {
+	void QuantumComputation::create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, char defaultname) {
 		regnames.clear();
 
 		std::stringstream ss;
@@ -471,14 +472,15 @@ namespace qc {
 			for(const auto& reg: regs) {
 				for(unsigned short i = 0; i < reg.second.second; i++) {
 					ss << reg.first << "[" << i << "]";
-					regnames.push_back(ss.str());
+					regnames.push_back(std::make_pair(reg.first, ss.str()));
 					ss.str(std::string());
 				}
 			}
 		} else {
+			std::string defaultstring(1, defaultname);
 			for(unsigned short i = 0; i < defaultnumber; i++) {
-				ss << defaultname << "[" << i << "]";
-				regnames.push_back(ss.str());
+				ss << defaultstring << "[" << i << "]";
+				regnames.push_back(std::make_pair(defaultstring, ss.str()));
 				ss.str(std::string());
 			}
 		}
@@ -512,16 +514,16 @@ namespace qc {
 	 */
 
 	std::ostream& QuantumComputation::print(std::ostream& os) const {
-		os << std::setw(std::log10(ops.size())+5) << "i: \t\t";
+		os << std::setw(std::log10(ops.size())+1) << "i: \t\t";
 		for (unsigned short i = 0; i < nqubits; ++i) {
 			os << inputPermutation.at(i) << "\t";
 		}
 		os << std::endl;
 		size_t i = 0;
 		for (const auto& op:ops) {
-			os << std::setw(std::log10(ops.size())+1) << ++i << ": " << *op << "\n";
+			os << std::setw(std::log10(ops.size())+1) << ++i << ": \t" << *op << "\n";
 		}
-		os << std::setw(std::log10(ops.size())+5) << "o: \t\t";
+		os << std::setw(std::log10(ops.size())+1) << "o: \t\t";
 		for (unsigned short i = 0; i < nqubits; ++i) {
 			os << outputPermutation.at(i) << "\t";
 		}
@@ -610,11 +612,10 @@ namespace qc {
 						of << "creg " << DEFAULT_CREG << "[" << nclassics << "];" << std::endl;
 					}
 
-					std::vector<std::string> qregnames{};
-					std::vector<std::string> cregnames{};
+					regnames_t qregnames{};
+					regnames_t cregnames{};
 					create_reg_array(qregs, qregnames, nqubits,   DEFAULT_QREG);
 					create_reg_array(cregs, cregnames, nclassics, DEFAULT_CREG);
-
 					for (const auto& op: ops) {
 						op->dumpOpenQASM(of, qregnames, cregnames);
 					}

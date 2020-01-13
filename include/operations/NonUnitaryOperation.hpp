@@ -15,8 +15,9 @@
 namespace qc {
 
 	enum Op : short {
-		Measure, Reset, Snapshot, ShowProbabilities
+		Measure = 0, Reset, Snapshot, ShowProbabilities, Barrier
 	};
+	static std::vector<std::string> opNames = {"Measure", "Reset", "Snapshot", "ShowProbabilities", "Barrier"};
 
 	class NonUnitaryOperation : public Operation {
 	protected:
@@ -24,9 +25,6 @@ namespace qc {
 	public:
 		// Measurement constructor
 		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister, const std::vector<unsigned short>& classicalRegister);
-
-		// Reset constructor
-		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister);
 
 		// Snapshot constructor
 		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister, int n);
@@ -36,13 +34,16 @@ namespace qc {
 			nqubits = nq;
 		}
 
-		dd::Edge getDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>& line) override {
+		// General constructor
+		NonUnitaryOperation(const unsigned short nq, const std::vector<unsigned short>& qubitRegister, Op op = Reset);
+
+		dd::Edge getDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>& line) const override {
 			(void)line;
 			std::cerr << "DD for non-unitary operation not available!" << std::endl;
 			exit(1);
 		}
 
-		dd::Edge getInverseDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>& line) override {
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>& line) const override {
 			(void)line;
 			std::cerr << "DD for non-unitary operation not available!" << std::endl;
 			exit(1);
@@ -54,7 +55,7 @@ namespace qc {
 		
 		std::ostream& print(std::ostream& os) const override;
 		
-		void dumpOpenQASM(std::ofstream& of, const std::vector<std::string>& qreg, const std::vector<std::string>& creg) const override;
+		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override;
 	};
 }
 #endif //INTERMEDIATEREPRESENTATION_NONUNITARYOPERATION_H

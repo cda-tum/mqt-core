@@ -6,5 +6,5 @@
 #include "CompoundOperation.hpp"
 
 namespace qc {
-
+    
 }

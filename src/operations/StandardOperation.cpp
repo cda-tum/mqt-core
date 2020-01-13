@@ -224,7 +224,7 @@ namespace qc {
 		setName();
 	}
 
-	dd::Edge StandardOperation::getSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) {
+	dd::Edge StandardOperation::getSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const {
 		dd::Edge e{ };
 		line[targets[0]] = LINE_CONTROL_POS;
 		e = dd->makeGateDD(Xmat, nqubits, line);
@@ -235,7 +235,7 @@ namespace qc {
 		return e;
 	}
 
-	dd::Edge StandardOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, bool inverse) {
+	dd::Edge StandardOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, bool inverse) const {
 		dd::Edge e{ };
 		GateMatrix gm;
 		//TODO add assertions ? 
@@ -272,16 +272,18 @@ namespace qc {
 			case iSWAP: 
 				if(inverse) {
 					line[targets[0]] = LINE_DEFAULT;
-					e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line));
+					e = dd->makeGateDD(Hmat, nqubits, line);
 					line[targets[0]] = LINE_CONTROL_POS;
 					e = dd->multiply(e, dd->makeGateDD(Xmat, nqubits, line));
 					line[targets[0]] = LINE_DEFAULT;
-					e = dd->multiply(e, dd->makeGateDD(Smat, nqubits, line));
 					e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line));
-					line[targets[1]] = LINE_DEFAULT;
-					e = dd->multiply(e, dd->makeGateDD(Smat, nqubits, line));
-					e = dd->multiply(e, getSWAPDD(dd, line));
+					e = dd->multiply(e, dd->makeGateDD(Sdagmat, nqubits, line));
 					line[targets[0]] = LINE_TARGET;
+					line[targets[1]] = LINE_DEFAULT;
+					e = dd->multiply(e, dd->makeGateDD(Sdagmat, nqubits, line));
+					line[targets[1]] = LINE_TARGET;
+					e = dd->multiply(e, getSWAPDD(dd, line));
+					
 					return e;
 				}
 
@@ -298,6 +300,7 @@ namespace qc {
 				e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line));
 				
 				line[targets[0]] = LINE_TARGET;
+				
 				return e;
 			case P:
 				if (inverse) {
@@ -401,32 +404,32 @@ namespace qc {
 	// MCT Constructor
 	StandardOperation::StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short target) 
 		: StandardOperation(nq, controls, target, X) {
-		
-		//parameter[0] = 1;
-		//parameter[1] = controls.size();
-		//parameter[2] = target;
 	}
 
 	// MCF (cSWAP) and Peres Constructor
 	StandardOperation::StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short target0, unsigned short target1, Gate g) 
 		: StandardOperation(nq, controls, { target0, target1 }, g) {
-		
-		//parameter[0] = target0;
-		//parameter[1] = target1;
 	}
 
 	/***
      * Public Methods
     ***/	
-	void StandardOperation::dumpOpenQASM(std::ofstream& of, const std::vector<std::string>& qreg, const std::vector<std::string>& creg) const {
+	void StandardOperation::dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const {
 		//TODO handle multiple controls
 		std::ostringstream name;
+		if(controls.size() > 1 && gate != X || controls.size() > 2) {
+			std::cerr << "Dumping of multiple controls for other gates than toffoli not supported" << std::endl;
+		}
 		switch (gate) {
 			case I: 
                	name << "id";
 				break;
 			case H: 
-                name << "h";
+				if(controls.size() > 0) {
+					name << "ch " << qreg[controls[0].qubit].second << ", ";
+				} else {
+					name << "h";
+				}
 				break;
 			case X: 
 				switch(controls.size()) {
@@ -434,20 +437,28 @@ namespace qc {
                 		name << "x";
 						break;
 					case 1:
-               			name << "cx " << qreg[controls[0].qubit] << ", ";
+               			name << "cx " << qreg[controls[0].qubit].second << ", ";
 						break;
 					case 2:
-               			name << "ccx " << qreg[controls[0].qubit] << ", " << qreg[controls[1].qubit] << ",";
+               			name << "ccx " << qreg[controls[0].qubit].second << ", " << qreg[controls[1].qubit].second << ",";
 						break;
 					default:
 						std::cerr << "MCT not yet supported" << std::endl;
 				}
 				break;
 			case Y:
-                name << "y";
+				if(controls.size() > 0) {
+					name << "cy " << qreg[controls[0].qubit].second << ", ";
+				} else {
+					name << "y";
+				}
 				break;
 			case Z: 
-                name << "z";
+				if(controls.size() > 0) {
+					name << "cz " << qreg[controls[0].qubit].second << ", ";
+				} else {
+					name << "z";
+				}
 				break;
 			case S: 
                 name << "s";
@@ -468,13 +479,21 @@ namespace qc {
 				name << "u3(pi/2, pi/2, -pi/2)";				
 				break;
 			case U3: 
-                name << "u3(" << parameter[2] << "," << parameter[1] << "," << parameter[0] << ")";
+				if(controls.size() > 0) {
+					name << "cu3(" << parameter[2] << "," << parameter[1] << "," << parameter[0] << ")" << qreg[controls[0].qubit].second << ", ";
+				} else {
+					name << "u3(" << parameter[2] << "," << parameter[1] << "," << parameter[0] << ")";
+				}
 				break;
 			case U2: 
                 name << "u2(" << parameter[1] << "," << parameter[0] << ")";
 				break;
 			case U1: 
-                name << "u1(" << parameter[0] << ")";
+				if(controls.size() > 0) {
+					name << "cu1(" << parameter[0] << ")" << qreg[controls[0].qubit].second << ", ";
+				} else {
+					name << "u1(" << parameter[0] << ")";
+				}
 				break;
 			case RX: 
                 name << "rx(" << parameter[0] << ")";
@@ -483,36 +502,41 @@ namespace qc {
                 name << "ry(" << parameter[0] << ")";
 				break;
 			case RZ: 
-                name << "rz(" << parameter[0] << ")";
+				if(controls.size() > 0) {
+					name << "crz(" << parameter[0] << ")" << qreg[controls[0].qubit].second << ", ";
+				} else {
+					name << "rz(" << parameter[0] << ")";
+				}
 				break;
 			case SWAP: 
-                of << "cx " << qreg[targets[0]] << ", " << qreg[targets[1]] << ";" << std::endl;
-                of << "cx " << qreg[targets[1]] << ", " << qreg[targets[0]] << ";" << std::endl;
-                of << "cx " << qreg[targets[0]] << ", " << qreg[targets[1]] << ";" << std::endl;
+                of << "cx " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
+                of << "cx " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
+                of << "cx " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
 				return;
 			case iSWAP: 
-                of << "cx " << qreg[targets[0]] << ", " << qreg[targets[1]] << ";" << std::endl;
-                of << "cx " << qreg[targets[1]] << ", " << qreg[targets[0]] << ";" << std::endl;
-                of << "cx " << qreg[targets[0]] << ", " << qreg[targets[1]] << ";" << std::endl;
-				of << "s "  << qreg[targets[0]] << ";"  << std::endl;
-				of << "s "  << qreg[targets[1]] << ";"  << std::endl;
-				of << "h "  << qreg[targets[1]] << ";"  << std::endl;
-                of << "cx " << qreg[targets[0]] << ", " << qreg[targets[1]] << ";" << std::endl;
-				of << "h "  << qreg[targets[1]] << ";"  << std::endl;
+                of << "cx " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
+                of << "cx " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
+                of << "cx " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
+				of << "s "  << qreg[targets[0]].second << ";"  << std::endl;
+				of << "s "  << qreg[targets[1]].second << ";"  << std::endl;
+				of << "h "  << qreg[targets[1]].second << ";"  << std::endl;
+                of << "cx " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
+				of << "h "  << qreg[targets[1]].second << ";"  << std::endl;
 				return;
 			case P: 
-                of << "ccx " << qreg[controls[0].qubit] << ", " << qreg[targets[1]] << ";" << std::endl;
-                of << "cx " << qreg[targets[0]] << ", " << qreg[targets[1]] << ";" << std::endl;
+                of << "ccx " << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ";" << std::endl;
+                of << "cx "  << qreg[targets[0]].second        << ", " << qreg[targets[1]].second << ";" << std::endl;
 				return;
 			case Pdag: 
-                of << "cx " << qreg[targets[0]] << ", " << qreg[targets[1]] << ";" << std::endl;
-                of << "ccx " << qreg[controls[0].qubit] << ", " << qreg[targets[0]] << ", " << qreg[targets[1]] << ";" << std::endl;
+                of << "cx "  << qreg[targets[0]].second        << ", " << qreg[targets[1]].second << ";" << std::endl;
+                of << "ccx " << qreg[controls[0].qubit].second << ", " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
 				return;
 			default: 
                 std::cerr << "gate type (index) " << (int) gate << " could no be converted to qasm" << std::endl;
 		}
-        for(auto target: targets) 
-			of << name.str() << " " << qreg[target] << ";" << std::endl;
+        for(auto target: targets) {
+			of << name.str() << " " << qreg[target].second << ";" << std::endl;
+		}
 	}
 
 	void StandardOperation::dumpReal(std::ofstream& of) const {

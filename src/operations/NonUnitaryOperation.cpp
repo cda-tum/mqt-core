@@ -7,30 +7,28 @@
 
 namespace qc {
     // Measurement constructor
-	NonUnitaryOperation::NonUnitaryOperation(const unsigned short nq, const std::vector<unsigned short>& qubitRegister, const std::vector<unsigned short>& classicalRegister) : op(Measure) {
-		nqubits = nq;
-		strcpy(name, "Measure");
-		targets = qubitRegister;
+	NonUnitaryOperation::NonUnitaryOperation(const unsigned short nq, const std::vector<unsigned short>& qubitRegister, const std::vector<unsigned short>& classicalRegister) 
+		: NonUnitaryOperation(nq, classicalRegister, Measure) {
+		//targets = qubitRegister;
+		//targets = classicalRegister;
 		assert(qubitRegister.size() == classicalRegister.size());
 		// i-th qubit to be measured shall be measured into i-th classical register
 		for (const auto& qubit: qubitRegister)
 			controls.emplace_back(qubit);
-		targets = classicalRegister;
-	}
-
-	// Reset constructor
-	NonUnitaryOperation::NonUnitaryOperation(const unsigned short nq, const std::vector<unsigned short>& qubitRegister) : op(Reset) {
-		nqubits = nq;
-		strcpy(name, "Reset");
-		targets = qubitRegister;
 	}
 
 	// Snapshot constructor
-	NonUnitaryOperation::NonUnitaryOperation(const unsigned short nq, const std::vector<unsigned short>& qubitRegister, int n) : op(Snapshot) {
-		nqubits = nq;
-		strcpy(name, "Snapshot");
-		targets      = qubitRegister;
+	NonUnitaryOperation::NonUnitaryOperation(const unsigned short nq, const std::vector<unsigned short>& qubitRegister, int n) 
+		: NonUnitaryOperation(nq, qubitRegister, Snapshot) {
 		parameter[0] = n;
+	}	
+
+	// Snapshot constructor
+	NonUnitaryOperation::NonUnitaryOperation(const unsigned short nq, const std::vector<unsigned short>& qubitRegister, Op op) {
+		this->op = op;
+		nqubits  = nq;
+		targets  = qubitRegister;
+		strcpy(name, opNames[op].c_str());
 	}
 
     std::ostream& NonUnitaryOperation::print(std::ostream& os) const {
@@ -74,22 +72,43 @@ namespace qc {
 				}
 				os << "\tp: " << targets.size() << " " << parameter[1];
 				break;
-			case ShowProbabilities: os << "Show probabilities";
+			case ShowProbabilities: 
+				os << "Show probabilities";
+				break;
+			case Barrier: 
+				os << "Barrier \t";
+				setLine(line);
+				for (int i = 0; i < nqubits; ++i) {
+					if (line[i] == LINE_TARGET) {
+						os << "\033[31m" << "r\t" << "\033[0m";
+					} else {
+						os << "|\t";
+					}
+				}
 				break;
 		}
 		return os;
 	}
 
-	void NonUnitaryOperation::dumpOpenQASM(std::ofstream& of, const std::vector<std::string>& qreg, const std::vector<std::string>& creg) const {
-		switch (op) { //TODO check if same register
+	void NonUnitaryOperation::dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const {
+		switch (op) {
 			case Measure: 
-				for (int q = 0; q < controls.size(); ++q) {
-					of << "measure " << qreg[targets[q]] << " -> " << creg[controls[q].qubit] << std::endl;
+				if(isWholeQubitRegister(qreg, controls[0].qubit, controls.back().qubit) && 
+				   isWholeQubitRegister(qreg, targets[0],        targets.back())) {
+					of << "measure " << qreg[controls[0].qubit].first << " -> " << creg[targets[0]].first << ";" << std::endl;
+				} else {
+					for (int q = 0; q < controls.size(); ++q) {
+						of << "measure " << qreg[controls[q].qubit].second << " -> " << creg[targets[q]].second << ";" << std::endl;
+					}
 				}
 				break;
 			case Reset: 
-				for (auto target: targets) {
-					of << "reset " << qreg[target] << std::endl;
+				if(isWholeQubitRegister(qreg, targets[0], targets.back())) {
+					of << "reset " << qreg[targets[0]].first << ";" << std::endl;
+				} else {
+					for (auto target: targets) {
+						of << "reset " << qreg[target].second << ";" << std::endl;
+					}
 				}
 				break;
 			case Snapshot: 
@@ -100,13 +119,22 @@ namespace qc {
 						if(q > 0) {
 							of << ", ";
 						}
-						of << qreg[targets[q]];
+						of << qreg[targets[q]].second;
 					}
 					of << ";" << std::endl;
 				}
 				break;
 			case ShowProbabilities: 
-				of << "show_probabilities" << std::endl;
+				of << "show_probabilities;" << std::endl;
+				break;
+			case Barrier: 
+				if(isWholeQubitRegister(qreg, targets[0],        targets.back())) {
+					of << "barrier " << qreg[targets[0]].first << ";" << std::endl;
+				} else {
+					for (auto target: targets) {
+						of << "barrier " << qreg[target].first << ";" << std::endl;
+					}
+				}
 				break;
 		}
 	}

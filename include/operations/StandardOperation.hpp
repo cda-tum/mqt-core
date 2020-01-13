@@ -155,8 +155,8 @@ namespace qc {
 		void checkUgate();
 		void setup(unsigned short nq, fp par0, fp par1, fp par2);	
 		
-		dd::Edge getSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line);
-		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, bool inverse);
+		dd::Edge getSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const;
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, bool inverse) const;
 		
 	public:
 		StandardOperation() = default;
@@ -182,21 +182,21 @@ namespace qc {
 			return gate; 
 		}
 
-		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) override {
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
 			setLine(line);
 			dd::Edge e = getDD(dd, line, false);
 			resetLine(line);
 			return e;
 		}
 
-		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) override {
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
 			setLine(line);
 			dd::Edge e = getDD(dd, line, true);
 			resetLine(line);
 			return e;
 		}
 
-		void dumpOpenQASM(std::ofstream& of, const std::vector<std::string>& qreg, const std::vector<std::string>& creg) const override;
+		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override;
 		void dumpReal(std::ofstream& of) const override;
 		void dumpGRCS(std::ofstream& of) const override;
 	};

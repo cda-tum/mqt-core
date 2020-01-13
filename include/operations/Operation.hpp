@@ -16,7 +16,9 @@
 
 #define UNUSED(x) {(void) x;}
 
+
 namespace qc {
+	using regnames_t=std::vector<std::pair<std::string, std::string>>;
 	enum Format {
 		Real, OpenQASM, GRCS
 	};	
@@ -56,6 +58,12 @@ namespace qc {
 		bool           multiTarget = false; // flag to distinguish multi target operations
 		bool           controlled  = false; // flag to distinguish multi control operations
 		char           name[MAX_STRING_LENGTH]{ };
+
+		static bool isWholeQubitRegister(const regnames_t& reg, unsigned short start, unsigned short end) {
+			return reg.size() > 0 && reg[start].first.compare(reg[end].first) == 0
+					&& (start == 0             || reg[start].first.compare(reg[start - 1].first) != 0) 
+					&& (end   == reg.size() -1 || reg[end].first.compare(  reg[end   + 1].first) != 0);
+		}
 
 	public:
 		Operation() = default;
@@ -114,9 +122,9 @@ namespace qc {
 
 		void resetLine(std::array<short, MAX_QUBITS>& line) const;
 
-		virtual dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) = 0;
+		virtual dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const = 0;
 
-		virtual dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) = 0;
+		virtual dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const = 0;
 
 		inline virtual bool isUnitary() const { 
 			return true; 
@@ -136,7 +144,7 @@ namespace qc {
 			return op.print(os);
 		}
 
-		virtual void dumpOpenQASM(std::ofstream& of, const std::vector<std::string>& qreg, const std::vector<std::string>& creg) const { UNUSED(of); UNUSED(qreg); UNUSED(creg); } 
+		virtual void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const { UNUSED(of); UNUSED(qreg); UNUSED(creg); } 
 		virtual void dumpReal(std::ofstream& of) const { UNUSED(of); }
 		virtual void dumpGRCS(std::ofstream& of) const { UNUSED(of); }
 	};

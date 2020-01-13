@@ -54,7 +54,7 @@ namespace qc {
 		void importGRCS(std::istream& is, const std::string& filename);
 
 		//void compareAndEmplace(std::vector<short>& controls, unsigned short target, Gate gate = X, fp lambda = 0.L, fp phi = 0.L, fp theta = 0.L);
-		static void create_reg_array(const registerMap& regs, std::vector<std::string>& regnames, unsigned short defaultnumber, char defaultname = DEFAULT_CREG);
+		void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, char defaultname);
 	public:
 		QuantumComputation() = default;
 		explicit QuantumComputation(unsigned short nqubits): nqubits(nqubits) { }

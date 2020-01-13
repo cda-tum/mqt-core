@@ -16,7 +16,6 @@ using namespace std;
 using namespace chrono;
 
 int main() {
-
 	std::string filename = "./circuits/test.real";
 	qc::Format format = qc::Real;
 	qc::QuantumComputation qc;
@@ -27,7 +26,6 @@ int main() {
 	format = qc::OpenQASM;
 	qc.import(filename, format);
 	qc.dump("test_dump.qasm", format);
-
 	qc.reset();
 	filename = "./circuits/grcs/bris_4_40_9_v2.txt";
 	format = qc::GRCS;
@@ -50,6 +48,6 @@ int main() {
 	grover.printVector(dd, state_vector);
 	dd->export2Dot(state_vector, "state_vector.dot", true);
 	std::cout << grover << std::endl;
-
+	
 	return 0;
 }
