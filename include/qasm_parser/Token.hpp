@@ -56,7 +56,8 @@ namespace qasm {
 			_if,
 			eq,
 			reset,
-			snapshot
+			snapshot,
+			swap
 		};
 		
 		Kind        kind    = Kind::none;
@@ -93,6 +94,7 @@ namespace qasm {
 			{ Token::Kind::creg,          "creg" },
 			{ Token::Kind::ugate,         "U" },
 			{ Token::Kind::cxgate,        "CX" },
+			{ Token::Kind::swap,          "swap" },
 			{ Token::Kind::gate,          "gate" },
 			{ Token::Kind::pi,            "pi" },
 			{ Token::Kind::measure,       "measure" },

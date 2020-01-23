@@ -163,9 +163,18 @@ The package can be used for a multitude of tasks, as illustrated in the followin
     
   ```c++
   std::string filename = "PATH_TO_DESTINATION_FILE";
-  qc::Format format = qc::{ Real | OpenQASM | GRCS };
+  qc::Format format = qc::{ Real | OpenQASM | Qiskit };
   qc.dump(filename, format);
   ```
+  
+* **Circuit transcription**
+
+    The project also includes a small command line application `QFR_app` which can be used to transcribe circuits from one format into another format, e.g.
+    
+    ```commandline
+    QFR_app circuit.real circuit.py
+    ```
+    can be used to transcribe a circuit from `real` format to a qiskit realization
 
 ## System Requirements
 
@@ -188,6 +197,11 @@ To build the library and run a small demo, showcasing the library's features, ju
 cmake --build . --target QFR_example
 cd test
 ./QFR_example
+```
+
+The command line application `QFR_app` can be built via the identically named CMake target, i.e., 
+```commandline
+cmake --build . --target QFR_app
 ```
 
 The repository also includes some (at the moment very basic) unit tests (using GoogleTest), which aim to ensure the correct behaviour of the library. They can be built and executed in the following way:

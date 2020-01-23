@@ -46,7 +46,11 @@ namespace qc {
 					inputPermutation.insert({ i, i });
 					outputPermutation.insert({ i, i });
 				}
-			} else if (cmd == ".INPUTS" || cmd == ".OUTPUTS" || cmd == ".CONSTANTS" || cmd == ".GARBAGE" || cmd == ".VERSION" || cmd == ".INPUTBUS" || cmd == ".OUTPUTBUS") {
+			} else if (cmd == ".CONSTANTS") {
+				is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+				// TODO: Constants can be handled as X gate insertions!
+				continue;
+			} else if (cmd == ".INPUTS" || cmd == ".OUTPUTS" || cmd == ".GARBAGE" || cmd == ".VERSION" || cmd == ".INPUTBUS" || cmd == ".OUTPUTBUS") {
 				is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 				continue; // TODO: Decide if any action is really necessary here
 			} else if (cmd == ".DEFINE") {
@@ -62,11 +66,6 @@ namespace qc {
 				exit(1);
 			}
 
-		}
-
-		for (unsigned short i = 0; i < nqubits; ++i) {
-			inputPermutation.insert({i, i});
-			outputPermutation.insert({i,i});
 		}
 	}
 
@@ -150,6 +149,7 @@ namespace qc {
 					exit(1);
 				}
 
+				updateMaxControls(ncontrols);
 				unsigned short target = iter->second.first;
 				auto x = nearbyint(lambda);
 				switch (gate) {
@@ -248,7 +248,7 @@ namespace qc {
 				p.check(Token::Kind::semicolon);
 				p.cregs[s] = std::make_pair(nclassics, n);
 				nclassics += n;
-			} else if (p.sym == Token::Kind::ugate || p.sym == Token::Kind::cxgate || p.sym == Token::Kind::identifier || p.sym == Token::Kind::measure || p.sym == Token::Kind::reset) {
+			} else if (p.sym == Token::Kind::ugate || p.sym == Token::Kind::cxgate || p.sym == Token::Kind::swap || p.sym == Token::Kind::identifier || p.sym == Token::Kind::measure || p.sym == Token::Kind::reset) {
 				ops.emplace_back(p.Qop());
 			} else if (p.sym == Token::Kind::gate) {
 				p.GateDecl();
@@ -374,10 +374,26 @@ namespace qc {
 	unsigned long long QuantumComputation::getNindividualOps() const {
 		unsigned long long nops = 0;
 		for (const auto& op: ops) {
-			nops += op->getTargets().size();
+			nops += op->getTargets().size(); // TODO: this needs fixing
 		}
 
 		return nops;
+	}
+
+	void QuantumComputation::import(const std::string& filename) {
+		size_t dot = filename.find_last_of('.');
+		std::string extension = filename.substr(dot + 1);
+		std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return std::tolower(c); });
+		if (extension == "real") {
+			import(filename, Real);
+		} else if (extension == "qasm") {
+			import(filename, OpenQASM);
+		} else if(extension == "txt") {
+			import(filename, GRCS);
+		} else {
+			std::cerr << "Extension " << extension << " not recognized." << std::endl;
+			exit(1);
+		}
 	}
 
 	void QuantumComputation::import(const std::string& filename, Format format) {
@@ -395,7 +411,8 @@ namespace qc {
 			case Real: 
 				importReal(ifs);
 				break;
-			case OpenQASM: 
+			case OpenQASM:
+				updateMaxControls(2);
 				importOpenQASM(ifs);
 				break;
 			case GRCS: 
@@ -409,7 +426,49 @@ namespace qc {
 		ifs.close();
 	}
 
-	dd::Edge QuantumComputation::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
+	void QuantumComputation::addQubitRegister(unsigned short nq, const char* reg_name) {
+		if (nqubits+nq > dd::MAXN) {
+			std::cerr << "Adding additional ancillaries results in too many qubits. " << nqubits+nq << " vs. " << dd::MAXN << std::endl;
+			exit(1);
+		}
+
+		if (qregs.count(reg_name)) {
+			auto& reg = qregs.at(reg_name);
+			if(reg.first+reg.second == nqubits) {
+				reg.second+=nq;
+			} else {
+				std::cerr << "Augmenting existing qubit registers is only supported for the last register in a circuit" << std::endl;
+				exit(1);
+			}
+		} else {
+			qregs.insert({reg_name, {nqubits, nq}});
+		}
+
+		for (unsigned short i = 0; i < nq; ++i) {
+			unsigned short j = nqubits + i;
+			inputPermutation.insert({j,j});
+			outputPermutation.insert({j,j});
+		}
+		nqubits += nq;
+
+		for (auto& op:ops) {
+			op->setNqubits(nqubits);
+		}
+	}
+
+	void QuantumComputation::addClassicalRegister(unsigned short nc, const char* reg_name) {
+
+		if (cregs.count(reg_name)) {
+			std::cerr << "Augmenting existing classical registers is currently not supported" << std::endl;
+			exit(1);
+		}
+
+		cregs.insert({reg_name, {nclassics, nc}});
+		nclassics += nc;
+	}
+
+
+	dd::Edge QuantumComputation::buildFunctionality(std::unique_ptr<dd::Package>& dd, bool executeSwaps) {
 		if (nqubits == 0)
 			return dd->DDone;
 		
@@ -427,7 +486,8 @@ namespace qc {
 				exit(1);
 			}
 
-			auto tmp = dd->multiply(op->getDD(dd, line), e);
+			auto tmp = dd->multiply(op->getDD(dd, line, outputPermutation, executeSwaps), e);
+
 			dd->incRef(tmp);
 			dd->decRef(e);
 			e = tmp;
@@ -438,8 +498,7 @@ namespace qc {
 		return e;
 	}
 
-	dd::Edge QuantumComputation::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
-		// TODO: this should be part of the simulator and not of the intermediate representation
+	dd::Edge QuantumComputation::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, bool executeSwaps) {
 		// measurements are currently not supported here
 		std::array<short, MAX_QUBITS> line{};
 		line.fill(LINE_DEFAULT);
@@ -453,7 +512,8 @@ namespace qc {
 				exit(1);
 			}
 
-			auto tmp = dd->multiply(op->getDD(dd, line), e);
+			auto tmp = dd->multiply(op->getDD(dd, line, outputPermutation, executeSwaps), e);
+
 			dd->incRef(tmp);
 			dd->decRef(e);
 			e = tmp;
@@ -464,11 +524,21 @@ namespace qc {
 		return e;
 	}
 
-	void QuantumComputation::create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, char defaultname) {
+	void QuantumComputation::create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, char defaultname, bool fuseTogether) {
 		regnames.clear();
 
 		std::stringstream ss;
-		if(regs.size() > 0) {
+		if(fuseTogether && !regs.empty()) {
+			std::string defaultstring(1, defaultname);
+			for( const auto& reg: regs) {
+				for( unsigned short i = 0; i < reg.second.second; i++) {
+					ss << defaultstring << "[" << reg.second.first+i << "]";
+					regnames.push_back(std::make_pair(defaultstring, ss.str()));
+					ss.str(std::string());
+				}
+			}
+		}
+		if(!regs.empty()) {
 			for(const auto& reg: regs) {
 				for(unsigned short i = 0; i < reg.second.second; i++) {
 					ss << reg.first << "[" << i << "]";
@@ -514,7 +584,7 @@ namespace qc {
 	 */
 
 	std::ostream& QuantumComputation::print(std::ostream& os) const {
-		os << std::setw(std::log10(ops.size())+1) << "i: \t\t";
+		os << std::setw(std::log10(ops.size())+1) << "i" << ": \t\t\t";
 		for (unsigned short i = 0; i < nqubits; ++i) {
 			os << inputPermutation.at(i) << "\t";
 		}
@@ -523,7 +593,7 @@ namespace qc {
 		for (const auto& op:ops) {
 			os << std::setw(std::log10(ops.size())+1) << ++i << ": \t" << *op << "\n";
 		}
-		os << std::setw(std::log10(ops.size())+1) << "o: \t\t";
+		os << std::setw(std::log10(ops.size())+1) << "o" << ": \t\t\t";
 		for (unsigned short i = 0; i < nqubits; ++i) {
 			os << outputPermutation.at(i) << "\t";
 		}
@@ -592,19 +662,17 @@ namespace qc {
 		}
 
 		switch(format) {
-			// TODO: das mit den qubit registern darf man nicht so machen. dafür am besten einmal ansehen, wie das eingelesen wird
-			// Da gibt es explizit die member 'qregs' und 'cregs' in denen die richtige Information gespeichert wird
 			case  OpenQASM: {
 					of << "OPENQASM 2.0;"                << std::endl;
 					of << "include \"qelib1.inc\";"      << std::endl;
-					if(qregs.size() > 0) {
+					if(!qregs.empty()) {
 						for (auto const& qreg : qregs) {
 							of << "qreg " << qreg.first << "[" << qreg.second.second << "];" << std::endl;
 						}
 					} else {
 						of << "qreg " << DEFAULT_QREG << "[" << nqubits   << "];" << std::endl;
 					}
-					if(cregs.size() > 0) {
+					if(!cregs.empty()) {
 						for (auto const& creg : cregs) {
 							of << "creg " << creg.first << "[" << creg.second.second << "];" << std::endl;
 						}
@@ -627,7 +695,150 @@ namespace qc {
 			case GRCS:
 				std::cerr << "Dumping in GRCS format currently not supported\n";
 				break;
+			case Qiskit:
+				unsigned short totalQubits = nqubits + (max_controls >= 2? max_controls-2: 0);
+				if (totalQubits > 53) {
+					std::cerr << "No more than 53 total qubits are currently supported" << std::endl;
+					break;
+				}
+
+				// For the moment all registers are fused together into for simplicity
+				// This may be adapted in the future
+				of << "from qiskit import *" << std::endl;
+				of << "from qiskit.test.mock import ";
+				if (totalQubits <= 5) {
+					of << "FakeBurlington";
+				} else if (totalQubits <= 20) {
+					of << "FakeBoeblingen";
+				} else if (totalQubits <= 53) {
+					of << "FakeRochester";
+				}
+				of << std::endl;
+				of << "from qiskit.transpiler import PassManager, CouplingMap" << std::endl;
+				of << "from qiskit.converters import circuit_to_dag, dag_to_circuit" << std::endl;
+				of << "from qiskit.transpiler.passes import *" << std::endl;
+				of << "from math import pi" << std::endl << std::endl;
+
+				of << DEFAULT_QREG << " = QuantumRegister(" << nqubits << ", '" << DEFAULT_QREG << "')" << std::endl;
+				of << DEFAULT_CREG << " = ClassicalRegister(" << nclassics << ", '" << DEFAULT_CREG << "')" << std::endl;
+				if (max_controls > 2) {
+					of << DEFAULT_ANCREG << " = QuantumRegister(" << max_controls - 2 << ", '"<< DEFAULT_ANCREG << "')" << std::endl;
+				}
+				of << "qc = QuantumCircuit(";
+				of << DEFAULT_QREG << ", ";
+				of << DEFAULT_CREG << ", ";
+				if(max_controls > 2) {
+					of << "anc";
+				}
+				of << ")" << std::endl << std::endl;
+
+				regnames_t qregnames{};
+				regnames_t cregnames{};
+				create_reg_array(qregs, qregnames, nqubits,   DEFAULT_QREG, true);
+				create_reg_array(cregs, cregnames, nclassics, DEFAULT_CREG, true);
+
+				for (const auto& op: ops) {
+					op->dumpQiskit(of, qregnames, cregnames, DEFAULT_ANCREG);
+				}
+
+				of << "dag = circuit_to_dag(qc)" << std::endl << std::endl;
+				of << "qc_decomposed = dag_to_circuit(Unroller(['id', 'u1', 'u2', 'u3', 'cx']).run(dag))" << std::endl << std::endl;
+
+				of << "f = open(\"" << filename.substr(0, filename.size()-3) << R"(_decomposed.qasm", "w"))" << std::endl;
+				of << "f.write(qc_decomposed.qasm())" << std::endl;
+				of << "f.close()" << std::endl << std::endl;
+
+				of << "coupling_map = CouplingMap(";
+				if (totalQubits <= 5) {
+					of << "FakeBurlington";
+				} else if (totalQubits <= 20) {
+					of << "FakeBoeblingen";
+				} else if (totalQubits <= 53) {
+					of << "FakeRochester";
+				}
+				of << "().configuration().coupling_map)" << std::endl;
+
+				of << "layout_pass = TrivialLayout(coupling_map)" << std::endl;
+				of << "layout_pass.run(dag)" << std::endl;
+
+				of << "pm = PassManager()" << std::endl;
+				of << "pm.append([TrivialLayout(coupling_map), FullAncillaAllocation(coupling_map), EnlargeWithAncilla(), ApplyLayout(), StochasticSwap(coupling_map, trials=100, seed=420)])" << std::endl << std::endl;
+
+				of << "qc_transpiled = pm.run(dag_to_circuit(dag))" << std::endl << std::endl;
+				of << "layout = pm.property_set['layout']" << std::endl;
+
+				of << "f = open(\"" << filename.substr(0, filename.size()-3) << R"(_transpiled.qasm", "w"))" << std::endl;
+				of << R"(f.write("// layout: physical qubit <- logical qubit\n"))" << std::endl;
+				if(max_controls > 2) {
+					of << "for i in range(0, q.size + anc.size):" << std::endl;
+				} else {
+					of << "for i in range(0, q.size):" << std::endl;
+				}
+				of << '\t' << R"(f.write("// " + str(i) + " "))" << std::endl;
+				if (max_controls > 2) {
+					of << '\t' << R"(if layout[i].register.name is 'q':)" << std::endl;
+					of << "\t\t" << "f.write(str(layout[i].index))" << std::endl;
+					of << '\t' << "else:" << std::endl;
+					of << "\t\t" << "f.write(str(layout[i].index + layout[0].register.size))" << std::endl;
+				} else {
+					of << '\t' << "f.write(str(layout[i].index))" << std::endl;
+				}
+				of << '\t' << R"(f.write("\n"))" << std::endl;
+				of << R"(f.write("\n"))" << std::endl;
+				of << "f.write(qc_transpiled.qasm())" << std::endl;
+				of << "f.close()" << std::endl;
+				break;
 		}
 		of.close();
 	}
+
+	bool QuantumComputation::isIdleQubit(unsigned short i) {
+		for(const auto& op:ops) {
+			if (op->actsOn(i))
+				return false;
+		}
+		return true;
+	}
+
+	void QuantumComputation::stripTrailingIdleQubits() {
+		for (int i=nqubits-1; i>=0; i--) {
+			if(isIdleQubit(i)) {
+				inputPermutation.erase(i);
+				outputPermutation.erase(i);
+				nqubits--;
+				std::string reg_name = getQubitRegister(i);
+				auto& reg = qregs.at(reg_name);
+				if (reg.second == 1) {
+					qregs.erase(reg_name);
+				} else {
+					reg.second--;
+				}
+			} else {
+				for(auto& op:ops) {
+					op->setNqubits(nqubits);
+				}
+				return;
+			}
+		}
+	}
+
+	std::string QuantumComputation::getQubitRegister(unsigned short i ) {
+		for (const auto& reg:qregs) {
+			unsigned short start_idx = reg.second.first;
+			unsigned short count = reg.second.second;
+			if (i < start_idx) continue;
+			if (i >= start_idx + count) continue;
+			return reg.first;
+		}
+		std::cerr << "Qubit index " << i << " not found in any register" << std::endl;
+		exit(1);
+	}
+
+	std::pair<std::string, unsigned short> QuantumComputation::getQubitRegisterAndIndex(unsigned short i) {
+		std::string reg_name = getQubitRegister(i);
+		unsigned short index = i - qregs[reg_name].first;
+		return {reg_name, index};
+	}
+
+
 }

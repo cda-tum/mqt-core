@@ -112,7 +112,7 @@ namespace qc {
 				}
 				break;
 			case Snapshot: 
-				if(targets.size() > 0) {
+				if(!targets.empty()) {
 					of << "snapshot(" << parameter[0] << ") ";
 					
 					for (int q = 0; q < targets.size(); ++q) {
@@ -134,6 +134,61 @@ namespace qc {
 					for (auto target: targets) {
 						of << "barrier " << qreg[target].first << ";" << std::endl;
 					}
+				}
+				break;
+		}
+	}
+
+	void NonUnitaryOperation::dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const {
+		switch (op) {
+			case Measure:
+				if(isWholeQubitRegister(qreg, controls[0].qubit, controls.back().qubit) &&
+				   isWholeQubitRegister(qreg, targets[0],        targets.back())) {
+					of << "qc.measure(" << qreg[controls[0].qubit].first << ", " << creg[targets[0]].first << ")" << std::endl;
+				} else {
+					of << "qc.measure([";
+					for (auto control : controls) {
+						of << qreg[control.qubit].second << ", ";
+					}
+					of << "], [";
+					for (unsigned short target : targets) {
+						of << creg[target].second << ", ";
+					}
+					of << "])" << std::endl;
+				}
+				break;
+			case Reset:
+				if(isWholeQubitRegister(qreg, targets[0], targets.back())) {
+					of << "append(Reset(), " << qreg[targets[0]].first << ", [])" << std::endl;
+				} else {
+					of << "append(Reset(), [";
+					for (auto target: targets) {
+						of << qreg[target].second << ", " << std::endl;
+					}
+					of << "], [])" << std::endl;
+				}
+				break;
+			case Snapshot:
+				if(!targets.empty()) {
+					of << "qc.snapshot(" << parameter[0] << ", qubits=[";
+					for (unsigned short target : targets) {
+						of << qreg[target].second << ", ";
+					}
+					of << "])" << std::endl;
+				}
+				break;
+			case ShowProbabilities:
+				std::cerr << "No equivalent to show_probabilities statement in qiskit" << std::endl;
+				break;
+			case Barrier:
+				if(isWholeQubitRegister(qreg, targets[0],        targets.back())) {
+					of << "qc.barrier(" << qreg[targets[0]].first << ")" << std::endl;
+				} else {
+					of << "qc.barrier([";
+					for (auto target: targets) {
+						of  << qreg[target].first << ", ";
+					}
+					of << "])" << std::endl;
 				}
 				break;
 		}

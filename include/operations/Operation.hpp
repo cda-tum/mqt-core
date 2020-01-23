@@ -7,7 +7,9 @@
 #define INTERMEDIATEREPRESENTATION_OPERATION_H
 
 #include <array>
+#include <map>
 #include <iostream>
+#include <iomanip>
 #include <memory>
 #include <cstring>
 #include <fstream>
@@ -20,7 +22,7 @@
 namespace qc {
 	using regnames_t=std::vector<std::pair<std::string, std::string>>;
 	enum Format {
-		Real, OpenQASM, GRCS
+		Real, OpenQASM, GRCS, Qiskit
 	};	
 
 	struct Control {
@@ -38,9 +40,9 @@ namespace qc {
 	static constexpr fp PI_4 = 0.785398163397448309615660845819875721049292349843776455243L;
 
 	// Operation Constants
-	constexpr std::size_t MAX_QUBITS        = 225; // Max. qubits supported
-	constexpr std::size_t MAX_PARAMETERS    =   3; // Max. parameters of an operation
-	constexpr std::size_t MAX_STRING_LENGTH =  20; // Ensure short-string-optimizations
+	constexpr std::size_t MAX_QUBITS        = dd::MAXN; // Max. qubits supported
+	constexpr std::size_t MAX_PARAMETERS    =        3; // Max. parameters of an operation
+	constexpr std::size_t MAX_STRING_LENGTH =       20; // Ensure short-string-optimizations
 
 	static constexpr short LINE_TARGET      = dd::RADIX;
 	static constexpr short LINE_CONTROL_POS = 1;
@@ -119,12 +121,16 @@ namespace qc {
 
 		// Public Methods
 		void setLine(std::array<short, MAX_QUBITS>& line) const;
-
+		void setLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const;
 		void resetLine(std::array<short, MAX_QUBITS>& line) const;
+		void resetLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const;
+
 
 		virtual dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const = 0;
+		virtual dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool) const = 0;
 
 		virtual dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const = 0;
+		virtual dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool) const = 0;
 
 		inline virtual bool isUnitary() const { 
 			return true; 
@@ -138,15 +144,34 @@ namespace qc {
 			return multiTarget; 
 		}
 
+		inline virtual bool actsOn(unsigned short i) {
+			for (const auto t:targets) {
+				if (t == i)
+					return true;
+			}
+
+			for (const auto c:controls) {
+				if (c.qubit == i)
+					return true;
+			}
+			return false;
+		}
+
 		virtual std::ostream& print(std::ostream& os) const;
 
 		friend std::ostream& operator<<(std::ostream& os, const Operation& op) {
 			return op.print(os);
 		}
 
-		virtual void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const { UNUSED(of); UNUSED(qreg); UNUSED(creg); } 
-		virtual void dumpReal(std::ofstream& of) const { UNUSED(of); }
-		virtual void dumpGRCS(std::ofstream& of) const { UNUSED(of); }
+		virtual void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const { UNUSED(of); UNUSED(qreg); UNUSED(creg);
+			std::cerr << "Dump of " << name << " operation to OpenQASM not yet supported" << std::endl;
+		}
+		virtual void dumpReal(std::ofstream& of) const { UNUSED(of);
+			std::cerr << "Dump of " << name << " operation to Real not yet supported" << std::endl;
+		}
+		virtual void dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char* anc_reg_name) const { UNUSED(of); UNUSED(qreg); UNUSED(creg); UNUSED(anc_reg_name);
+			std::cerr << "Dump of " << name << " operation to Qiskit not yet supported" << std::endl;
+		}
 	};
 }
 #endif //INTERMEDIATEREPRESENTATION_OPERATION_H

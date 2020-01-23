@@ -107,14 +107,14 @@ namespace qc {
         }
     }
 
-    dd::Edge Grover::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
+    dd::Edge Grover::buildFunctionality(std::unique_ptr<dd::Package>& dd, bool applySwapToPermutation) {
         dd->useMatrixNormalization(true);
 
         QuantumComputation groverIteration(nqubits);
         oracle(groverIteration);
         diffusion(groverIteration);
 
-        dd::Edge iteration = groverIteration.buildFunctionality(dd);
+        dd::Edge iteration = groverIteration.buildFunctionality(dd, applySwapToPermutation);
 
         dd::Edge e = iteration;
         dd->incRef(e);
@@ -129,7 +129,7 @@ namespace qc {
         if(includeSetup) {
             QuantumComputation qc(nqubits);
             this->setup(qc);
-            auto g = qc.buildFunctionality(dd);
+            auto g = qc.buildFunctionality(dd, applySwapToPermutation);
             dd::Edge f = dd->multiply(e, g);
             dd->decRef(e);
             dd->decRef(g);
@@ -142,9 +142,9 @@ namespace qc {
         return e;
     }
 
-    dd::Edge Grover::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
+    dd::Edge Grover::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, bool applySwapToPermutation) {
         //TODO: Enhance this simulation routine // delegate to simulator
-        return QuantumComputation::simulate(in, dd);
+        return QuantumComputation::simulate(in, dd, applySwapToPermutation);
     }
 
     std::ostream& Grover::printStatistics(std::ostream& os) {

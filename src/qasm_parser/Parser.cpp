@@ -331,6 +331,19 @@
                 gate.emplace_back<qc::StandardOperation>(nqubits, target.first + i, qc::U3, lambda->num, phi->num, theta->num);
             }
             return std::make_unique<qc::CompoundOperation>(gate);
+        } else if (sym == Token::Kind::swap) {
+        	scan();
+        	auto first_target = ArgumentQreg();
+	        check(Token::Kind::comma);
+			auto second_target = ArgumentQreg();
+	        check(Token::Kind::semicolon);
+
+	        // return corresponding operation
+	        if (first_target.second == 1 && second_target.second == 1) {
+		        return std::make_unique<qc::StandardOperation>(nqubits, std::vector<qc::Control>{}, first_target.first, second_target.first, qc::SWAP);
+	        } else {
+	        	error("SWAP for whole qubit registers not yet implemented", 1);
+	        }
         } else if (sym == Token::Kind::cxgate) {
             scan();
             auto control = ArgumentQreg();
@@ -601,7 +614,7 @@
     }
 
     std::unique_ptr<qc::Operation> Parser::Qop() {
-        if (sym == Token::Kind::ugate || sym == Token::Kind::cxgate || sym == Token::Kind::identifier)
+        if (sym == Token::Kind::ugate || sym == Token::Kind::cxgate || sym == Token::Kind::swap || sym == Token::Kind::identifier)
             return Gate();
         else if (sym == Token::Kind::measure) {
             scan();

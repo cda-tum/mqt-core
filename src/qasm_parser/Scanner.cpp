@@ -67,7 +67,7 @@ namespace qasm {
             ss << ch;
             nextCh();
         }
-        if (ch != 'e' || ch != 'E') {
+        if (ch != 'e' && ch != 'E') {
             ss >> t.valReal;
             return;
         }
@@ -111,7 +111,8 @@ namespace qasm {
         keywords["measure"]            = Token::Kind::measure;
         keywords["U"]                  = Token::Kind::ugate;
         keywords["CX"]                 = Token::Kind::cxgate;
-        keywords["pi"]                 = Token::Kind::pi;
+	    keywords["swap"]               = Token::Kind::swap;
+	    keywords["pi"]                 = Token::Kind::pi;
         keywords["OPENQASM"]           = Token::Kind::openqasm;
         keywords["show_probabilities"] = Token::Kind::probabilities;
         keywords["sin"]                = Token::Kind::sin;

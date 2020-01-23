@@ -25,12 +25,12 @@ namespace qc {
 	constexpr dd::ComplexValue complex_one        = { 1, 0 };
 	constexpr dd::ComplexValue complex_mone       = { -1, 0 };
 	constexpr dd::ComplexValue complex_zero       = { 0, 0 };
-	constexpr dd::ComplexValue complex_one_one_2  = { 0.5, 0.5 };
-	constexpr dd::ComplexValue complex_one_mone_2 = { 0.5, -0.5 };
 	constexpr dd::ComplexValue complex_i          = { 0, 1 };
 	constexpr dd::ComplexValue complex_mi         = { 0, -1 };
 	constexpr dd::ComplexValue complex_SQRT_2     = {  dd::SQRT_2, 0 };
 	constexpr dd::ComplexValue complex_mSQRT_2    = { -dd::SQRT_2, 0 };
+	constexpr dd::ComplexValue complex_iSQRT_2     = {  0, dd::SQRT_2 };
+	constexpr dd::ComplexValue complex_miSQRT_2    = { 0, -dd::SQRT_2 };
 
 	// Gate matrices
 	constexpr GateMatrix Imat({    complex_one,        complex_zero,       complex_zero,       complex_one });
@@ -42,8 +42,8 @@ namespace qc {
 	constexpr GateMatrix Sdagmat({ complex_one,        complex_zero,       complex_zero,       complex_mi });
 	constexpr GateMatrix Tmat({    complex_one,        complex_zero,       complex_zero,       dd::ComplexValue{ dd::SQRT_2, dd::SQRT_2 }});
 	constexpr GateMatrix Tdagmat({ complex_one,        complex_zero,       complex_zero,       dd::ComplexValue{ dd::SQRT_2, -dd::SQRT_2 }});
-	constexpr GateMatrix Vmat({    complex_one_one_2,  complex_one_mone_2, complex_one_mone_2, complex_one_one_2 });
-	constexpr GateMatrix Vdagmat({ complex_one_mone_2, complex_one_one_2,  complex_one_one_2,  complex_one_mone_2 });
+	constexpr GateMatrix Vmat({    complex_SQRT_2,  complex_miSQRT_2, complex_miSQRT_2, complex_SQRT_2 });
+	constexpr GateMatrix Vdagmat({    complex_SQRT_2,  complex_iSQRT_2, complex_iSQRT_2, complex_SQRT_2 });
 
 	inline GateMatrix U3mat(fp lambda, fp phi, fp theta) {
 		return GateMatrix({ dd::ComplexValue{  std::cos(theta / 2), 0 },
@@ -52,25 +52,11 @@ namespace qc {
 		                    dd::ComplexValue{  std::cos(lambda + phi) * std::cos(theta / 2), std::sin(lambda + phi) * std::cos(theta / 2) }});
 	}
 
-	inline GateMatrix U3dagmat(fp lambda, fp phi, fp theta) {
-		return GateMatrix({ dd::ComplexValue{  std::cos(theta / 2), 0 },
-		                    dd::ComplexValue{  std::cos(phi)          * std::sin(theta / 2), -std::sin(phi)          * std::sin(theta / 2) },
-		                    dd::ComplexValue{ -std::cos(lambda)       * std::sin(theta / 2),  std::sin(lambda)       * std::sin(theta / 2) },
-		                    dd::ComplexValue{  std::cos(lambda + phi) * std::cos(theta / 2), -std::sin(lambda + phi) * std::cos(theta / 2) }});
-	}
-
 	inline GateMatrix U2mat(fp lambda, fp phi) {
 		return GateMatrix({ complex_SQRT_2,
 		                    dd::ComplexValue{ -std::cos(lambda)       * dd::SQRT_2, -std::sin(lambda)       * dd::SQRT_2 },
 		                    dd::ComplexValue{  std::cos(phi)          * dd::SQRT_2,  std::sin(phi)          * dd::SQRT_2 },
 		                    dd::ComplexValue{  std::cos(lambda + phi) * dd::SQRT_2,  std::sin(lambda + phi) * dd::SQRT_2 }});
-	}
-
-	inline GateMatrix U2dagmat(fp lambda, fp phi) {
-		return GateMatrix({ complex_SQRT_2,
-		                    dd::ComplexValue{  std::cos(phi)          * dd::SQRT_2, -std::sin(phi)          * dd::SQRT_2 },
-		                    dd::ComplexValue{ -std::cos(lambda)       * dd::SQRT_2,  std::sin(lambda)       * dd::SQRT_2 },
-		                    dd::ComplexValue{  std::cos(lambda + phi) * dd::SQRT_2, -std::sin(lambda + phi) * dd::SQRT_2 }});
 	}
 
 	inline GateMatrix RXmat(fp lambda) {
@@ -189,6 +175,26 @@ namespace qc {
 			return e;
 		}
 
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool executeSwaps=true) const override {
+
+			if(gate == SWAP) {
+				auto target0 = targets.at(0);
+				auto target1 = targets.at(1);
+				// update outgoing permutation
+				auto tmp = permutation.at(target0);
+				permutation.at(target0) = permutation.at(target1);
+				permutation.at(target1) = tmp;
+				if (!executeSwaps) {
+					return dd->makeIdent(0, nqubits-1);
+				}
+			}
+
+			executeSwaps? setLine(line): setLine(line, permutation);
+			dd::Edge e = getDD(dd, line, false);
+			executeSwaps? resetLine(line): resetLine(line, permutation);
+			return e;
+		}
+
 		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
 			setLine(line);
 			dd::Edge e = getDD(dd, line, true);
@@ -196,9 +202,29 @@ namespace qc {
 			return e;
 		}
 
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool executeSwaps=true) const override {
+
+			if(gate == SWAP) {
+				auto target0 = targets.at(0);
+				auto target1 = targets.at(1);
+				// update outgoing permutation
+				auto tmp = permutation.at(target0);
+				permutation.at(target0) = permutation.at(target1);
+				permutation.at(target1) = tmp;
+				if (!executeSwaps) {
+					return dd->makeIdent(0, nqubits-1);
+				}
+			}
+
+			executeSwaps? setLine(line): setLine(line, permutation);
+			dd::Edge e = getDD(dd, line, true);
+			executeSwaps? resetLine(line): resetLine(line, permutation);
+			return e;
+		}
+
 		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override;
 		void dumpReal(std::ofstream& of) const override;
-		void dumpGRCS(std::ofstream& of) const override;
+		void dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char* anc_reg_name) const override;
 	};
 
 }

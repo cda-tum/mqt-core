@@ -15,6 +15,15 @@ namespace qc {
 		}
 	}
 
+	void Operation::setLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
+		for(auto target: targets) {
+			line[permutation.at(target)] = LINE_TARGET;
+		}
+		for(auto control: controls) {
+			line[permutation.at(control.qubit)] = control.type == Control::pos? LINE_CONTROL_POS: LINE_CONTROL_NEG;
+		}
+	}
+
 	void Operation::resetLine(std::array<short, MAX_QUBITS>& line) const {
 		for(auto target: targets) {
 			line[target] = LINE_DEFAULT;
@@ -24,10 +33,19 @@ namespace qc {
 		}
 	}
 
+	void Operation::resetLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
+		for(auto target: targets) {
+			line[permutation.at(target)] = LINE_DEFAULT;
+		}
+		for(auto control: controls) {
+			line[permutation.at(control.qubit)] = LINE_DEFAULT;
+		}
+	}
+
     std::ostream& Operation::print(std::ostream& os) const {
 	    const auto prec_before = std::cout.precision(20);
 
-	    os << name << "\t";
+	    os << std::setw(4) << name << "\t";
 		std::array<short, MAX_QUBITS> line{};
 		line.fill(-1);
 		setLine(line);
@@ -50,9 +68,9 @@ namespace qc {
 				isZero = false;
 		}
 		if (!isZero) {
-			os << "\tp: ";
+			os << "\tp: (";
 			CN::printFormattedReal(os, parameter[0]);
-			os << " ";
+			os << ") (";
 			for (size_t j = 1; j < MAX_PARAMETERS; ++j) {
 				isZero = true;
 				for (size_t i = j; i < MAX_PARAMETERS; ++i) {
@@ -61,7 +79,8 @@ namespace qc {
 				}
 				if (isZero) break;
 				CN::printFormattedReal(os, parameter[j]);
-				os << " ";
+				os << ") ";
+				if (j != MAX_PARAMETERS-1) os << "(";
 			}
 		}
 

@@ -35,7 +35,7 @@ namespace qc {
 		}
 
 		// General constructor
-		NonUnitaryOperation(const unsigned short nq, const std::vector<unsigned short>& qubitRegister, Op op = Reset);
+		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister, Op op = Reset);
 
 		dd::Edge getDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>& line) const override {
 			(void)line;
@@ -49,13 +49,40 @@ namespace qc {
 			exit(1);
 		}
 
+		dd::Edge getDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&, std::map<unsigned short, unsigned short>&, bool) const override {
+			std::cerr << "DD for non-unitary operation not available!" << std::endl;
+			exit(1);
+		}
+
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&, std::map<unsigned short, unsigned short>&, bool) const override {
+			std::cerr << "DD for non-unitary operation not available!" << std::endl;
+			exit(1);
+		}
+
 		bool isUnitary() const override { 
 			return false;
 		}
-		
+
+		bool actsOn(unsigned short i) override {
+			if (op != Measure) {
+				for (const auto t:targets) {
+					if (t == i)
+						return true;
+				}
+			} else {
+				for (const auto c:controls) {
+					if (c.qubit == i)
+						return true;
+				}
+			}
+			return false;
+		}
+
 		std::ostream& print(std::ostream& os) const override;
 		
 		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override;
+
+		void dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const override;
 	};
 }
 #endif //INTERMEDIATEREPRESENTATION_NONUNITARYOPERATION_H

@@ -51,6 +51,22 @@ namespace qc {
 			return e;
 		}
 
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool executeSwaps=true) const override {
+			dd::Edge e = dd->makeIdent(0, nqubits - 1);
+			for (auto& op: ops) {
+				e = dd->multiply(op->getDD(dd, line, permutation, executeSwaps), e);
+			}
+			return e;
+		}
+
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool executeSwaps=true) const override {
+			dd::Edge e = dd->makeIdent(0, nqubits - 1);
+			for (auto& op: ops) {
+				e = dd->multiply(e, op->getInverseDD(dd, line, permutation, executeSwaps));
+			}
+			return e;
+		}
+
 		std::ostream& print(std::ostream& os) const override {
 			for (unsigned long i = 0; i < ops.size() - 1; ++i) {
 				os << *(ops[i]) << std::endl << "\t";
@@ -59,10 +75,24 @@ namespace qc {
 
 			return os;
 		}
-		
+
+		bool actsOn(unsigned short i) override {
+			for (const auto& op: ops) {
+				if(op->actsOn(i))
+					return true;
+			}
+			return false;
+		}
+
 		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override {
 			for (auto& op: ops) { 
 				op->dumpOpenQASM(of, qreg, creg);
+			}
+		}
+
+		void dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const override {
+			for (auto& op: ops) {
+				op->dumpQiskit(of, qreg, creg, anc_reg_name);
 			}
 		}
 	};

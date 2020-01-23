@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(QFR
-        VERSION 0.9.0
+        VERSION 0.9.1
         DESCRIPTION "QFR  - A library for the representation of quantum functionality"
         LANGUAGES CXX)
 
@@ -48,3 +48,5 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 	include(GoogleTest)
 	add_subdirectory(test)
 endif()
+
+add_subdirectory(apps)

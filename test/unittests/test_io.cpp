@@ -57,6 +57,7 @@ INSTANTIATE_TEST_SUITE_P(IO,
                                     return "OpenQasm";
                                 case qc::GRCS:
                                     return "GRCS";
+                                default: return "Unknown format";
                             }	         
                          });
                                          

@@ -32,6 +32,14 @@ namespace qc {
 			return op->getInverseDD(dd, line);
 		}
 
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool executeSwaps=true) const override {
+			return op->getDD(dd, line, permutation, executeSwaps);
+		}
+
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool executeSwaps=true) const override {
+			return op->getInverseDD(dd, line, permutation, executeSwaps);
+		}
+
 		bool isUnitary() const override {
 			return false;
 		}

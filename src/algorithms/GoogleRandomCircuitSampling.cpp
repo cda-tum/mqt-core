@@ -140,7 +140,7 @@ namespace qc {
         return os;
     }
 
-    dd::Edge GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
+    dd::Edge GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd, bool applySwapToPermutation) {
 		std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
 
@@ -150,7 +150,7 @@ namespace qc {
         for(const auto& cycle:cycles) {
             dd::Edge f = dd->makeIdent(0, nqubits-1);
             for(const auto& op: cycle)
-                f = dd->multiply(op->getDD(dd, line), f);
+                f = dd->multiply(op->getDD(dd, line, outputPermutation, applySwapToPermutation), f);
             //auto start = std::chrono::high_resolution_clock::now();
             dd::Edge g = dd->multiply(f, e);
             dd->decRef(e);
@@ -164,7 +164,7 @@ namespace qc {
         return e;
     }
 
-    dd::Edge GoogleRandomCircuitSampling::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
+    dd::Edge GoogleRandomCircuitSampling::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, bool applySwapToPermutation) {
 		std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
         
@@ -173,7 +173,7 @@ namespace qc {
 
         for (const auto& cycle: cycles) {
             for (const auto& op: cycle) {
-                auto tmp = dd->multiply(op->getDD(dd, line), e);
+                auto tmp = dd->multiply(op->getDD(dd, line, outputPermutation, applySwapToPermutation), e);
                 dd->incRef(tmp);
                 dd->decRef(e);
                 e = tmp;
