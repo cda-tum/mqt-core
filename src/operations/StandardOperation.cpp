@@ -559,12 +559,12 @@ namespace qc {
                 of << "cz " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
 				return;
 			case P: 
-                of << "ccx " << qreg[controls[0].qubit].second << ", " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
-                of << "cx "  << qreg[targets[0]].second        << ", " << qreg[targets[1]].second << ";" << std::endl;
+                of << "ccx " << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
+                of << "cx "  << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ";" << std::endl;
 				return;
 			case Pdag: 
-                of << "cx "  << qreg[targets[0]].second        << ", " << qreg[targets[1]].second << ";" << std::endl;
-                of << "ccx " << qreg[controls[0].qubit].second << ", " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
+                of << "cx "  << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ";" << std::endl;
+                of << "ccx " << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
 				return;
 			default: 
                 std::cerr << "gate type (index) " << (int) gate << " could not be converted to OpenQASM" << std::endl;
@@ -817,12 +817,12 @@ namespace qc {
 				}
 				return;
 			case P:
-				of << "qc.ccx(" << qreg[controls[0].qubit].second << ", " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ")" << std::endl;
-				of << "qc.cx(" << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ")" << std::endl;
+				of << "qc.ccx(" << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ")" << std::endl;
+				of << "qc.cx(" << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ")" << std::endl;
 				return;
 			case Pdag:
-				of << "qc.cx(" << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ")" << std::endl;
-				of << "qc.ccx(" << qreg[controls[0].qubit].second << ", " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ")" << std::endl;
+				of << "qc.cx(" << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ")" << std::endl;
+				of << "qc.ccx(" << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ")" << std::endl;
 				return;
 			default:
 				std::cerr << "gate type (index) " << (int) gate << " could not be converted to qiskit" << std::endl;

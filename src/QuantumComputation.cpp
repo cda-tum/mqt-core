@@ -530,15 +530,15 @@ namespace qc {
 		std::stringstream ss;
 		if(fuseTogether && !regs.empty()) {
 			std::string defaultstring(1, defaultname);
+			int q = 0;
 			for( const auto& reg: regs) {
 				for( unsigned short i = 0; i < reg.second.second; i++) {
-					ss << defaultstring << "[" << reg.second.first+i << "]";
+					ss << defaultstring << "[" << q++ << "]";
 					regnames.push_back(std::make_pair(defaultstring, ss.str()));
 					ss.str(std::string());
 				}
 			}
-		}
-		if(!regs.empty()) {
+		} else if(!regs.empty()) {
 			for(const auto& reg: regs) {
 				for(unsigned short i = 0; i < reg.second.second; i++) {
 					ss << reg.first << "[" << i << "]";
