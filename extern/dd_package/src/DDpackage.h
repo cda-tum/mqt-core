@@ -214,6 +214,17 @@ namespace dd {
 
 	    unsigned int size(Edge e) const;
 
+		/**
+		 * Get a single element of the vector or matrix represented by the dd with root edge e
+		 * @param dd package where the dd lives
+		 * @param e edge pointing to the root node
+		 * @param elements string {0, 1, 2, 3}^n describing which outgoing edge should be followed
+		 *                 (for vectors 0 is the 0-successor and 2 is the 1-successor due to the shared representation)
+		 *                 If string is longer than required, the additional characters are ignored.
+		 * @return the complex value of the specified element
+		 */
+		ComplexValue getValueByPath(Edge e, std::string elements);
+
 	    // reference counting and garbage collection
 	    void incRef(Edge& e);
 	    void decRef(Edge& e);
@@ -243,6 +254,6 @@ namespace dd {
 
 	    // debugging - not normally used
 	    void debugnode(NodePtr p) const;
-    };
+	};
 }
 #endif

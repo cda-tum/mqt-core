@@ -160,6 +160,7 @@ namespace dd {
 	    }
 
 	    inline void releaseCached(const Complex& c) {
+	        assert(c != ZERO && c != ONE);
 		    c.i->next = Cache_Avail;
 		    Cache_Avail = c.r;
             cacheCount += 2;
@@ -178,30 +179,30 @@ namespace dd {
         void garbageCollect();
 
         // provide (temporary) cached complex number
-        inline Complex getTempCachedComplex() const {
+        inline Complex getTempCachedComplex() {
         	return { Cache_Avail, Cache_Avail->next};
         }
 
-	    inline Complex getTempCachedComplex(const fp& r, const fp& i) const {
+	    inline Complex getTempCachedComplex(const fp& r, const fp& i) {
 		    Cache_Avail->val = r;
 		    Cache_Avail->next->val = i;
         	return { Cache_Avail, Cache_Avail->next };
         }
         inline Complex getCachedComplex() {
+            assert(cacheCount >= 2);
+            cacheCount -= 2;
 	        Complex c{ Cache_Avail, Cache_Avail->next };
 	        Cache_Avail = Cache_Avail->next->next;
-            cacheCount -= 2;
-	        assert(cacheCount >= 0);
 	        return c;
         }
 
 	    inline Complex getCachedComplex(const fp& r, const fp& i) {
+            assert(cacheCount >= 2);
+            cacheCount -= 2;
 		    Complex c{ Cache_Avail, Cache_Avail->next };
 		    c.r->val = r;
 		    c.i->val = i;
 		    Cache_Avail = Cache_Avail->next->next;
-            cacheCount -= 2;
-            assert(cacheCount >= 0);
 		    return c;
 	    }
 

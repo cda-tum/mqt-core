@@ -113,10 +113,8 @@ namespace dd {
 	    int nentries = 0;
 	    std::cout << "CN statistics:\n";
 
-	    ComplexTableEntry *p;
 	    int max = -1;
-	    for (unsigned int i = 0; i < NBUCKET; i++) {
-		    p = ComplexTable[i];
+	    for (auto & p : ComplexTable) {
 		    int num = 0;
 		    while (p != nullptr) {
 			    num++;
@@ -141,14 +139,15 @@ namespace dd {
             p = p->next;
         }
 
-        const auto key2 = getKey(val - TOLERANCE);
-
-        if (key2 != key) {
-            p = ComplexTable[key2];
-            while (p != nullptr) {
-                if (std::fabs(p->val - val) < TOLERANCE)
-                    return p;
-                p = p->next;
+        if (val - TOLERANCE >= 0) {
+            const auto key2 = getKey(val - TOLERANCE);
+            if (key2 != key) {
+                p = ComplexTable[key2];
+                while (p != nullptr) {
+                    if (std::fabs(p->val - val) < TOLERANCE)
+                        return p;
+                    p = p->next;
+                }
             }
         }
 
@@ -313,6 +312,7 @@ namespace dd {
             prev = nullptr;
             cur = i;
             while (cur != nullptr) {
+                assert(cur->ref >= 0);
                 if (cur->ref == 0) {
                     suc = cur->next;
                     if (prev == nullptr) {
@@ -366,16 +366,22 @@ namespace dd {
 
 	void ComplexNumbers::incRef(const Complex& c) {
 		if (c != ZERO && c != ONE) {
-			((ComplexTableEntry *) ((uintptr_t) c.r & (~1ull)))->ref++;
-			((ComplexTableEntry *) ((uintptr_t) c.i & (~1ull)))->ref++;
+		    auto* ptr_r = ((ComplexTableEntry *) ((uintptr_t) c.r & (~1ull)));
+		    auto* ptr_i = ((ComplexTableEntry *) ((uintptr_t) c.i & (~1ull)));
+			ptr_r->ref++;
+			ptr_i->ref++;
 		}
 	}
 
 	void ComplexNumbers::decRef(const Complex& c) {
-		if (c != ZERO && c != ONE) {
-			((ComplexTableEntry *) ((uintptr_t) c.r & (~1ull)))->ref--;
-			((ComplexTableEntry *) ((uintptr_t) c.i & (~1ull)))->ref--;
-		}
+        if (c != ZERO && c != ONE) {
+            auto* ptr_r = ((ComplexTableEntry *) ((uintptr_t) c.r & (~1ull)));
+            auto* ptr_i = ((ComplexTableEntry *) ((uintptr_t) c.i & (~1ull)));
+            assert(ptr_r->ref > 0);
+            assert(ptr_i->ref > 0);
+            ptr_r->ref--;
+            ptr_i->ref--;
+        }
 	}
 
 	void ComplexNumbers::printFormattedReal(std::ostream& os, fp r, bool imaginary) {
