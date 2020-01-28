@@ -9,7 +9,7 @@ TEST(DDPackageTest, TrivialTest) {
     dd::Edge x_gate = dd->makeGateDD(Xmat, 1, line);
     dd::Edge h_gate = dd->makeGateDD(Hmat, 1, line);
 
-    ASSERT_EQ(getValueByPath(dd.get(), h_gate, "0"), (dd::ComplexValue{dd::SQRT_2, 0}));
+    ASSERT_EQ(dd->getValueByPath(h_gate, "0"), (dd::ComplexValue{dd::SQRT_2, 0}));
 
     dd::Edge zero_state = dd->makeZeroState(1);
     dd::Edge h_state = dd->multiply(h_gate, zero_state);
@@ -30,10 +30,10 @@ TEST(DDPackageTest, BellState) {
 
     dd::Edge bell_state = dd->multiply(dd->multiply(cx_gate, h_gate), zero_state);
 
-    ASSERT_EQ(getValueByPath(dd.get(), bell_state, "00"), (dd::ComplexValue{dd::SQRT_2, 0}));
-    ASSERT_EQ(getValueByPath(dd.get(), bell_state, "02"), (dd::ComplexValue{0, 0}));
-    ASSERT_EQ(getValueByPath(dd.get(), bell_state, "20"), (dd::ComplexValue{0, 0}));
-    ASSERT_EQ(getValueByPath(dd.get(), bell_state, "22"), (dd::ComplexValue{dd::SQRT_2, 0}));
+    ASSERT_EQ(dd->getValueByPath(bell_state, "00"), (dd::ComplexValue{dd::SQRT_2, 0}));
+    ASSERT_EQ(dd->getValueByPath(bell_state, "02"), (dd::ComplexValue{0, 0}));
+    ASSERT_EQ(dd->getValueByPath(bell_state, "20"), (dd::ComplexValue{0, 0}));
+    ASSERT_EQ(dd->getValueByPath(bell_state, "22"), (dd::ComplexValue{dd::SQRT_2, 0}));
 
     ASSERT_DOUBLE_EQ(dd->fidelity(zero_state, bell_state), 0.5);
 }
