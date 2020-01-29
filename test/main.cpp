@@ -3,10 +3,6 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include <functional>
-#include <memory>
-
-#include "StandardOperation.hpp"
 #include "QuantumComputation.hpp"
 #include "QFT.hpp"
 #include "Grover.hpp"
@@ -17,19 +13,14 @@ using namespace chrono;
 
 int main() {
 	std::string filename = "./circuits/test.real";
-	qc::Format format = qc::Real;
-	qc::QuantumComputation qc;
-	qc.import(filename, format);
+	qc::QuantumComputation qc(filename);
 
-	qc.reset();
 	filename = "./circuits/test.qasm";
-	format = qc::OpenQASM;
-	qc.import(filename, format);
-	qc.dump("test_dump.qasm", format);
-	qc.reset();
+	qc.import(filename);
+	qc.dump("test_dump.qasm");
+
 	filename = "./circuits/grcs/bris_4_40_9_v2.txt";
-	format = qc::GRCS;
-	qc.import(filename, format);
+	qc.import(filename);
 
 	unsigned short n = 3;
 	qc::QFT qft(n); // generates the QFT for n qubits
@@ -41,13 +32,13 @@ int main() {
 	auto functionality = qft.buildFunctionality(dd);
 	qft.printMatrix(dd, functionality);
 	dd->export2Dot(functionality, "functionality.dot");
-
+	std::cout << std::endl;
 
 	auto initial_state = dd->makeZeroState(n+1); // create initial state |0...0>
 	auto state_vector = grover.simulate(initial_state, dd);
 	grover.printVector(dd, state_vector);
 	dd->export2Dot(state_vector, "state_vector.dot", true);
-	std::cout << grover << std::endl;
+	std::cout << std::endl << grover << std::endl;
 	
 	return 0;
 }

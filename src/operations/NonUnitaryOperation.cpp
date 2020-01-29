@@ -28,7 +28,7 @@ namespace qc {
 		this->op = op;
 		nqubits  = nq;
 		targets  = qubitRegister;
-		strcpy(name, opNames[op].c_str());
+		std::strcpy(name, opNames[op].c_str());
 	}
 
     std::ostream& NonUnitaryOperation::print(std::ostream& os) const {
@@ -38,7 +38,7 @@ namespace qc {
 		switch (op) {
 			case Measure: 
 				os << "Meas\t";
-				for (int q = 0; q < controls.size(); ++q) {
+				for (unsigned int q = 0; q < controls.size(); ++q) {
 					line[controls[q].qubit] = targets[q];
 				}
 				for (int i = 0; i < nqubits; ++i) {
@@ -76,11 +76,11 @@ namespace qc {
 				os << "Show probabilities";
 				break;
 			case Barrier: 
-				os << "Barrier \t";
+				os << "Barr\t";
 				setLine(line);
 				for (int i = 0; i < nqubits; ++i) {
 					if (line[i] == LINE_TARGET) {
-						os << "\033[31m" << "r\t" << "\033[0m";
+						os << "\033[31m" << "b\t" << "\033[0m";
 					} else {
 						os << "|\t";
 					}
@@ -97,7 +97,7 @@ namespace qc {
 				   isWholeQubitRegister(qreg, targets[0],        targets.back())) {
 					of << "measure " << qreg[controls[0].qubit].first << " -> " << creg[targets[0]].first << ";" << std::endl;
 				} else {
-					for (int q = 0; q < controls.size(); ++q) {
+					for (unsigned int q = 0; q < controls.size(); ++q) {
 						of << "measure " << qreg[controls[q].qubit].second << " -> " << creg[targets[q]].second << ";" << std::endl;
 					}
 				}
@@ -115,7 +115,7 @@ namespace qc {
 				if(!targets.empty()) {
 					of << "snapshot(" << parameter[0] << ") ";
 					
-					for (int q = 0; q < targets.size(); ++q) {
+					for (unsigned int q = 0; q < targets.size(); ++q) {
 						if(q > 0) {
 							of << ", ";
 						}
@@ -139,7 +139,7 @@ namespace qc {
 		}
 	}
 
-	void NonUnitaryOperation::dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const {
+	void NonUnitaryOperation::dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char *) const {
 		switch (op) {
 			case Measure:
 				if(isWholeQubitRegister(qreg, controls[0].qubit, controls.back().qubit) &&

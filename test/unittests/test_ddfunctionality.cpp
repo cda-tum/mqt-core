@@ -40,7 +40,7 @@ class DDFunctionality : public testing::Test {
         unsigned short                          nqubits             = 4;
         long                                    initialCacheCount   = 0;
         long                                    initialComplexCount = 0;
-        std::array<short, qc::MAX_QUBITS>       line;
+        std::array<short, qc::MAX_QUBITS>       line{};
         dd::Edge                                e{}, ident{}, state_preparation{};
         std::unique_ptr<dd::Package>            dd;
 };
@@ -55,7 +55,7 @@ INSTANTIATE_TEST_SUITE_P(DDFunctionalityParameters,
                                          qc::Vdag, qc::U3, qc::U2, qc::U1, qc::RX, qc::RY, qc::RZ, qc::P, qc::Pdag, 
                                          qc::SWAP, qc::iSWAP),
                          [](const testing::TestParamInfo<DDFunctionalityParameters::ParamType>& info) {
-                             qc::Gate gate = (qc::Gate)info.param;
+                             auto gate = (qc::Gate)info.param;
 	                         switch (gate) {
                                 case qc::I:     return "I";
                                 case qc::H:     return "H";
@@ -84,7 +84,7 @@ INSTANTIATE_TEST_SUITE_P(DDFunctionalityParameters,
 
 
 TEST_P(DDFunctionalityParameters, standard_op_build_inverse_build) {
-    qc::Gate gate = (qc::Gate)GetParam();
+    auto gate = (qc::Gate)GetParam();
     
     qc::StandardOperation             op;
     switch(gate) {

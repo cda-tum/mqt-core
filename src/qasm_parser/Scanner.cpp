@@ -39,7 +39,7 @@ namespace qasm {
 
     void Scanner::readName(Token& t) {
         std::stringstream ss;
-        while (isalnum(ch) || ch == '_') {
+        while (std::isalnum(ch) || ch == '_') {
             ss << ch;
             nextCh();
         }
@@ -50,7 +50,7 @@ namespace qasm {
 
     void Scanner::readNumber(Token& t) {
         std::stringstream ss;
-        while (isdigit(ch)) {
+        while (std::isdigit(ch)) {
             ss << ch;
             nextCh();
         }
@@ -63,7 +63,7 @@ namespace qasm {
         t.kind = Token::Kind::real;
         ss << ch;
         nextCh();
-        while (isdigit(ch)) {
+        while (std::isdigit(ch)) {
             ss << ch;
             nextCh();
         }
@@ -77,7 +77,7 @@ namespace qasm {
             ss << ch;
             nextCh();
         }
-        while (isdigit(ch)) {
+        while (std::isdigit(ch)) {
             ss << ch;
             nextCh();
         }
@@ -131,7 +131,7 @@ namespace qasm {
     }
 
     Token Scanner::next() {
-        while (iswspace(ch)) {
+        while (std::isspace(ch)) {
             nextCh();
         }
 

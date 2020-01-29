@@ -15,8 +15,7 @@
 class IO : public testing::TestWithParam<std::tuple<std::string, qc::Format>> {
 protected:
 	void TearDown() override {
-        //std::remove(output.c_str()); 
-        //std::remove(output2.c_str()); 
+
 	}
 
 	void SetUp() override {
@@ -30,7 +29,7 @@ protected:
 	std::unique_ptr<qc::QuantumComputation> qc;
 };
 
-void compare_files(std::string file1, std::string file2, bool strip_whitespaces = false) {
+void compare_files(const std::string& file1, const std::string& file2, bool strip_whitespaces = false) {
     std::ifstream fstream1(file1);
     std::string str1((std::istreambuf_iterator<char>(fstream1)),
                      std::istreambuf_iterator<char>());

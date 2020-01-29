@@ -6,9 +6,6 @@
 #ifndef INTERMEDIATEREPRESENTATION_COMPOUNDOPERATION_H
 #define INTERMEDIATEREPRESENTATION_COMPOUNDOPERATION_H
 
-#include <vector>
-#include <memory>
-
 #include "Operation.hpp"
 
 namespace qc {
@@ -18,7 +15,7 @@ namespace qc {
 		std::vector<std::shared_ptr<Operation>> ops{ };
 	public:
 		explicit CompoundOperation(unsigned short nq) {
-			strcpy(name, "Compound");
+			std::strcpy(name, "Compound");
 			nqubits = nq;
 		}
 
@@ -36,7 +33,7 @@ namespace qc {
 		}
 
 		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-			dd::Edge e = dd->makeIdent(0, nqubits - 1);
+			dd::Edge e = dd->makeIdent(0, short(nqubits - 1));
 			for (auto& op: ops) {
 				e = dd->multiply(op->getDD(dd, line), e);
 			}
@@ -44,25 +41,25 @@ namespace qc {
 		}
 
 		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-			dd::Edge e = dd->makeIdent(0, nqubits - 1);
+			dd::Edge e = dd->makeIdent(0, short(nqubits - 1));
 			for (auto& op: ops) { 
 				e = dd->multiply(e, op->getInverseDD(dd, line));
 			}
 			return e;
 		}
 
-		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool executeSwaps=true) const override {
-			dd::Edge e = dd->makeIdent(0, nqubits - 1);
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
+			dd::Edge e = dd->makeIdent(0, short(nqubits - 1));
 			for (auto& op: ops) {
-				e = dd->multiply(op->getDD(dd, line, permutation, executeSwaps), e);
+				e = dd->multiply(op->getDD(dd, line, permutation), e);
 			}
 			return e;
 		}
 
-		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool executeSwaps=true) const override {
-			dd::Edge e = dd->makeIdent(0, nqubits - 1);
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
+			dd::Edge e = dd->makeIdent(0, short(nqubits - 1));
 			for (auto& op: ops) {
-				e = dd->multiply(e, op->getInverseDD(dd, line, permutation, executeSwaps));
+				e = dd->multiply(e, op->getInverseDD(dd, line, permutation));
 			}
 			return e;
 		}

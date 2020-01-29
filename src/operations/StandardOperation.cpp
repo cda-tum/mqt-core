@@ -224,25 +224,207 @@ namespace qc {
 		setName();
 	}
 
-	dd::Edge StandardOperation::getSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const {
+	dd::Edge StandardOperation::getSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
 		dd::Edge e{ };
-		line[targets[0]] = LINE_CONTROL_POS;
+
+		if (permutation.empty()) {
+			line[targets[0]] = LINE_CONTROL_POS;
+		} else {
+			line[permutation.at(targets[0])] = LINE_CONTROL_POS;
+		}
+
 		e = dd->makeGateDD(Xmat, nqubits, line);
-		line[targets[0]] = LINE_TARGET;
-		line[targets[1]] = LINE_CONTROL_POS;
+
+		if(permutation.empty()) {
+			line[targets[0]] = LINE_TARGET;
+			line[targets[1]] = LINE_CONTROL_POS;
+		} else {
+			line[permutation.at(targets[0])] = LINE_TARGET;
+			line[permutation.at(targets[1])] = LINE_CONTROL_POS;
+		}
+
 		e = dd->multiply(e, dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e));
-		line[targets[1]] = LINE_TARGET;
+
+		if(permutation.empty()) {
+			line[targets[1]] = LINE_TARGET;
+		} else {
+			line[permutation.at(targets[1])] = LINE_TARGET;
+		}
+
+		return e;
+    }
+
+	dd::Edge StandardOperation::getPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
+		dd::Edge e{ };
+
+		if (permutation.empty()) {
+			line[targets[1]] = LINE_CONTROL_POS;
+		} else {
+			line[permutation.at(targets[1])] = LINE_CONTROL_POS;
+		}
+
+		e = dd->makeGateDD(Xmat, nqubits, line);
+
+		if(permutation.empty()) {
+			line[targets[0]] = LINE_DEFAULT;
+			line[targets[1]] = LINE_TARGET;
+		} else {
+			line[permutation.at(targets[0])] = LINE_DEFAULT;
+			line[permutation.at(targets[1])] = LINE_TARGET;
+		}
+
+		e = dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e);
+
+		if(permutation.empty()) {
+			line[targets[0]] = LINE_TARGET;
+		} else {
+			line[permutation.at(targets[0])] = LINE_TARGET;
+		}
+
 		return e;
 	}
 
-	dd::Edge StandardOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, bool inverse) const {
+	dd::Edge StandardOperation::getPdagDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
+		dd::Edge e{ };
+
+		if (permutation.empty()) {
+			line[targets[0]] = LINE_DEFAULT;
+		} else {
+			line[permutation.at(targets[0])] = LINE_DEFAULT;
+		}
+
+		e = dd->makeGateDD(Xmat, nqubits, line);
+
+		if(permutation.empty()) {
+			line[targets[0]] = LINE_TARGET;
+			line[targets[1]] = LINE_CONTROL_POS;
+		} else {
+			line[permutation.at(targets[0])] = LINE_TARGET;
+			line[permutation.at(targets[1])] = LINE_CONTROL_POS;
+		}
+
+		e = dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e);
+
+		if(permutation.empty()) {
+			line[targets[1]] = LINE_TARGET;
+		} else {
+			line[permutation.at(targets[1])] = LINE_TARGET;
+		}
+
+		return e;
+    }
+
+	dd::Edge StandardOperation::getiSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
+		// TODO: this can be simplified since H-CX-H == CZ
+
+    	dd::Edge e{ };
+
+		e = getSWAPDD(dd, line, permutation);
+
+		if(permutation.empty()) {
+			line[targets[1]] = LINE_DEFAULT;
+		} else {
+			line[permutation.at(targets[1])] = LINE_DEFAULT;
+		}
+
+		e = dd->multiply(e, dd->makeGateDD(Smat, nqubits, line));
+
+		if(permutation.empty()) {
+			line[targets[0]] = LINE_DEFAULT;
+			line[targets[1]] = LINE_TARGET;
+		} else {
+			line[permutation.at(targets[0])] = LINE_DEFAULT;
+			line[permutation.at(targets[1])] = LINE_TARGET;
+		}
+
+		e = dd->multiply(e, dd->makeGateDD(Smat, nqubits, line));
+		e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line));
+
+		if (permutation.empty()) {
+			line[targets[0]] = LINE_CONTROL_POS;
+		} else {
+			line[permutation.at(targets[0])] = LINE_CONTROL_POS;
+		}
+
+		e = dd->multiply(e, dd->makeGateDD(Xmat, nqubits, line));
+
+		if(permutation.empty()) {
+			line[targets[0]] = LINE_DEFAULT;
+		} else {
+			line[permutation.at(targets[0])] = LINE_DEFAULT;
+		}
+
+		e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line));
+
+		if(permutation.empty()) {
+			line[targets[0]] = LINE_TARGET;
+		} else {
+			line[permutation.at(targets[0])] = LINE_TARGET;
+		}
+
+		return e;
+    }
+
+	dd::Edge StandardOperation::getiSWAPinvDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
+		// TODO: this can be simplified since H-CX-H == CZ
+
+		dd::Edge e{ };
+
+		if(permutation.empty()) {
+			line[targets[0]] = LINE_DEFAULT;
+		} else {
+			line[permutation.at(targets[0])] = LINE_DEFAULT;
+		}
+
+		e = dd->makeGateDD(Hmat, nqubits, line);
+
+		if (permutation.empty()) {
+			line[targets[0]] = LINE_CONTROL_POS;
+		} else {
+			line[permutation.at(targets[0])] = LINE_CONTROL_POS;
+		}
+
+		e = dd->multiply(e, dd->makeGateDD(Xmat, nqubits, line));
+
+		if(permutation.empty()) {
+			line[targets[0]] = LINE_DEFAULT;
+		} else {
+			line[permutation.at(targets[0])] = LINE_DEFAULT;
+		}
+
+		e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line));
+		e = dd->multiply(e, dd->makeGateDD(Sdagmat, nqubits, line));
+
+		if(permutation.empty()) {
+			line[targets[0]] = LINE_TARGET;
+			line[targets[1]] = LINE_DEFAULT;
+		} else {
+			line[permutation.at(targets[0])] = LINE_TARGET;
+			line[permutation.at(targets[1])] = LINE_DEFAULT;
+		}
+
+		e = dd->multiply(e, dd->makeGateDD(Sdagmat, nqubits, line));
+
+		if(permutation.empty()) {
+			line[targets[1]] = LINE_TARGET;
+		} else {
+			line[permutation.at(targets[1])] = LINE_TARGET;
+		}
+
+		e = dd->multiply(e, getSWAPDD(dd, line, permutation));
+
+		return e;
+    }
+
+	dd::Edge StandardOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, bool inverse, const std::map<unsigned short, unsigned short>& permutation
+	) const {
 		dd::Edge e{ };
 		GateMatrix gm;
-		//TODO add assertions ? 
+		//TODO add assertions ?
 		switch (gate) {
 			case I:	gm = Imat; break;
 			case H: gm = Hmat; break;
-			case X: 
+			case X:
 				if (controls.size() > 1) { //Toffoli //TODO > 0 (include CNOT?)
 					e = dd->TTlookup(nqubits, controls.size(), targets[0], line.data());
 					if (e.p == nullptr) {
@@ -251,7 +433,7 @@ namespace qc {
 					}
 					return e;
 				}
-				gm = Xmat; 
+				gm = Xmat;
 				break;
 			case Y:    gm = Ymat; break;
 			case Z:    gm = Zmat; break;
@@ -267,78 +449,27 @@ namespace qc {
 			case RX:   gm = inverse? RXmat(-parameter[0]): RXmat(parameter[0]); break;
 			case RY:   gm = inverse? RYmat(-parameter[0]): RYmat(parameter[0]); break;
 			case RZ:   gm = inverse? RZmat(-parameter[0]): RZmat(parameter[0]); break;
-			case SWAP: 
-				return getSWAPDD(dd, line);
-			case iSWAP: 
+			case SWAP:
+				return getSWAPDD(dd, line, permutation);
+			case iSWAP:
 				if(inverse) {
-					line[targets[0]] = LINE_DEFAULT;
-					e = dd->makeGateDD(Hmat, nqubits, line);
-					line[targets[0]] = LINE_CONTROL_POS;
-					e = dd->multiply(e, dd->makeGateDD(Xmat, nqubits, line));
-					line[targets[0]] = LINE_DEFAULT;
-					e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line));
-					e = dd->multiply(e, dd->makeGateDD(Sdagmat, nqubits, line));
-					line[targets[0]] = LINE_TARGET;
-					line[targets[1]] = LINE_DEFAULT;
-					e = dd->multiply(e, dd->makeGateDD(Sdagmat, nqubits, line));
-					line[targets[1]] = LINE_TARGET;
-					e = dd->multiply(e, getSWAPDD(dd, line));
-					
-					return e;
+					return getiSWAPinvDD(dd, line, permutation);
+				} else {
+					return getiSWAPDD(dd, line, permutation);
 				}
-
-				e = getSWAPDD(dd, line);
-				line[targets[1]] = LINE_DEFAULT;
-				e = dd->multiply(e, dd->makeGateDD(Smat, nqubits, line));
-				line[targets[0]] = LINE_DEFAULT;
-				line[targets[1]] = LINE_TARGET;
-				e = dd->multiply(e, dd->makeGateDD(Smat, nqubits, line));
-				e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line));
-				line[targets[0]] = LINE_CONTROL_POS;
-				e = dd->multiply(e, dd->makeGateDD(Xmat, nqubits, line));
-				line[targets[0]] = LINE_DEFAULT;
-				e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line));
-				
-				line[targets[0]] = LINE_TARGET;
-				
-				return e;
 			case P:
 				if (inverse) {
-					line[targets[0]] = LINE_DEFAULT;
-					e = dd->makeGateDD(Xmat, nqubits, line);
-					line[targets[0]] = LINE_TARGET;
-					line[targets[1]] = LINE_CONTROL_POS;
-					e = dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e);
-					line[targets[1]] = LINE_TARGET;
-					return e;
+					return getPdagDD(dd, line, permutation);
+				} else {
+					return getPDD(dd, line, permutation);
 				}
-
-				line[targets[1]] = LINE_CONTROL_POS;
-				e = dd->makeGateDD(Xmat, nqubits, line);
-				line[targets[1]] = LINE_TARGET;
-				line[targets[0]] = LINE_DEFAULT;
-				e = dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e);
-				line[targets[0]] = LINE_TARGET;
-				return e;
 			case Pdag:
 				if (inverse) {
-					line[targets[1]] = LINE_CONTROL_POS;
-					e = dd->makeGateDD(Xmat, nqubits, line);
-					line[targets[1]] = LINE_TARGET;
-					line[targets[0]] = LINE_DEFAULT;
-					e = dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e);
-					line[targets[0]] = LINE_TARGET;
-					return e;
+					return getPDD(dd, line, permutation);
+				} else {
+					return getPdagDD(dd, line, permutation);
 				}
-
-				line[targets[0]] = LINE_DEFAULT;
-				e = dd->makeGateDD(Xmat, nqubits, line);
-				line[targets[0]] = LINE_TARGET;
-				line[targets[1]] = LINE_CONTROL_POS;
-				e = dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e);
-				line[targets[1]] = LINE_TARGET;
-				return e;
-			default: 
+			default:
 				std::cerr << "DD for gate" << name << " not available!" << std::endl;
 				exit(1);
 		}
@@ -348,7 +479,7 @@ namespace qc {
 		} else {
 			return dd->makeGateDD(gm, nqubits, line);
 		}
-	}
+    }
 
     /***
      * Constructors
@@ -414,7 +545,7 @@ namespace qc {
 	/***
      * Public Methods
     ***/	
-	void StandardOperation::dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const {
+	void StandardOperation::dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t&) const {
 		//TODO handle multiple controls
 		std::ostringstream name;
 		if((controls.size() > 1 && gate != X) || controls.size() > 2) {
@@ -615,7 +746,7 @@ namespace qc {
 						for (const auto& control:controls) {
 							name << qreg[control.qubit].second << ", ";
 						}
-						name << "], " << qreg[targets[0]].second << ", " << anc_reg_name << ", mode='advanced')" << std::endl;
+						name << "], " << qreg[targets[0]].second << ", " << anc_reg_name << ", mode='basic')" << std::endl;
 						of << name.str();
 						return;
 				}

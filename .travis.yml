@@ -76,7 +76,6 @@ matrix:
             - gcc@9
           update: true
 
-
 install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then
     export PATH="$(brew --prefix llvm)/bin:$PATH";
@@ -85,6 +84,9 @@ install:
   - echo ${CXX}
   - ${CXX} --version
   - cmake --version
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+    choco install ninja;
+    fi
 
 before_script:
   - mkdir -p build && cd build

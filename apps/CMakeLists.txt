@@ -4,4 +4,7 @@ set_target_properties(${PROJECT_NAME}_app PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_options(${PROJECT_NAME}_app PUBLIC -mtune=native -march=native -pipe)
 target_link_libraries(${PROJECT_NAME}_app PRIVATE ${PROJECT_NAME})
 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../extern/qelib1.inc
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_app ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_app)

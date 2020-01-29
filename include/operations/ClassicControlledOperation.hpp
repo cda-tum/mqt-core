@@ -20,7 +20,7 @@ namespace qc {
 			nqubits = op->getNqubits();
 			name[0] = 'c';
 			name[1] = '_';
-			strcpy(name + 2, op->getName());
+			std::strcpy(name + 2, op->getName());
 			parameter[0] = control;
 		}
 
@@ -32,12 +32,12 @@ namespace qc {
 			return op->getInverseDD(dd, line);
 		}
 
-		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool executeSwaps=true) const override {
-			return op->getDD(dd, line, permutation, executeSwaps);
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
+			return op->getDD(dd, line, permutation);
 		}
 
-		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool executeSwaps=true) const override {
-			return op->getInverseDD(dd, line, permutation, executeSwaps);
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
+			return op->getInverseDD(dd, line, permutation);
 		}
 
 		bool isUnitary() const override {

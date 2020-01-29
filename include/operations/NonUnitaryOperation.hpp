@@ -6,10 +6,6 @@
 #ifndef INTERMEDIATEREPRESENTATION_NONUNITARYOPERATION_H
 #define INTERMEDIATEREPRESENTATION_NONUNITARYOPERATION_H
 
-#include <cstring>
-#include <memory>
-#include <iostream>
-
 #include "Operation.hpp"
 
 namespace qc {
@@ -37,29 +33,27 @@ namespace qc {
 		// General constructor
 		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister, Op op = Reset);
 
-		dd::Edge getDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>& line) const override {
-			(void)line;
+		dd::Edge getDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&) const override {
 			std::cerr << "DD for non-unitary operation not available!" << std::endl;
 			exit(1);
 		}
 
-		dd::Edge getInverseDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>& line) const override {
-			(void)line;
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&) const override {
 			std::cerr << "DD for non-unitary operation not available!" << std::endl;
 			exit(1);
 		}
 
-		dd::Edge getDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&, std::map<unsigned short, unsigned short>&, bool) const override {
+		dd::Edge getDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&, std::map<unsigned short, unsigned short>&) const override {
 			std::cerr << "DD for non-unitary operation not available!" << std::endl;
 			exit(1);
 		}
 
-		dd::Edge getInverseDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&, std::map<unsigned short, unsigned short>&, bool) const override {
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&, std::map<unsigned short, unsigned short>&) const override {
 			std::cerr << "DD for non-unitary operation not available!" << std::endl;
 			exit(1);
 		}
 
-		bool isUnitary() const override { 
+		bool isUnitary() const override {
 			return false;
 		}
 

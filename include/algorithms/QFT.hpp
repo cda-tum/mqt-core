@@ -15,6 +15,10 @@ namespace qc {
 		explicit QFT(unsigned short nq, bool performSwaps = false);
 
 		std::ostream& printStatistics(std::ostream& os = std::cout) override;
+
+		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) override;
+
+		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) override;
 	};
 }
 

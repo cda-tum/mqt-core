@@ -9,9 +9,10 @@
 #include <stack>
 #include <map>
 #include <iostream>
-#include <sstream>
 #include <fstream>
-#include <string>
+#include <sstream>
+#include <cctype>
+#include <cwctype>
 
 #include "Token.hpp"
 

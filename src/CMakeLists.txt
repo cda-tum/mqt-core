@@ -13,7 +13,23 @@ add_library(${PROJECT_NAME} STATIC
 
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/QFT.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Grover.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/GoogleRandomCircuitSampling.cpp)
+            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/GoogleRandomCircuitSampling.cpp
+
+            ${PROJECT_SOURCE_DIR}/include/qasm_parser/Token.hpp
+            ${PROJECT_SOURCE_DIR}/include/qasm_parser/Scanner.hpp
+            ${PROJECT_SOURCE_DIR}/include/qasm_parser/Parser.hpp
+
+            ${PROJECT_SOURCE_DIR}/include/operations/Operation.hpp
+            ${PROJECT_SOURCE_DIR}/include/operations/StandardOperation.hpp
+            ${PROJECT_SOURCE_DIR}/include/operations/NonUnitaryOperation.hpp
+            ${PROJECT_SOURCE_DIR}/include/operations/CompoundOperation.hpp
+            ${PROJECT_SOURCE_DIR}/include/operations/ClassicControlledOperation.hpp
+
+            ${PROJECT_SOURCE_DIR}/include/QuantumComputation.hpp
+
+            ${PROJECT_SOURCE_DIR}/include/algorithms/QFT.hpp
+            ${PROJECT_SOURCE_DIR}/include/algorithms/Grover.hpp
+            ${PROJECT_SOURCE_DIR}/include/algorithms/GoogleRandomCircuitSampling.hpp)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/include/qasm_parser/ ${PROJECT_SOURCE_DIR}/include/operations/ ${PROJECT_SOURCE_DIR}/include/algorithms/)
 
@@ -32,5 +48,5 @@ if(ipo_supported)
 	set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_compile_options(${PROJECT_NAME} PRIVATE -mtune=native -march=native)
+target_compile_options(${PROJECT_NAME} PRIVATE -mtune=native -march=native -pipe -Wall -Wextra -Wnon-virtual-dtor -pedantic)
 

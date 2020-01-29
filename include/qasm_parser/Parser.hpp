@@ -10,7 +10,7 @@
 #include <vector>
 #include <set>
 #include <cmath>
-#include <QuantumComputation.hpp>
+#include <iostream>
 
 #include "Scanner.hpp"
 #include "StandardOperation.hpp"
@@ -93,7 +93,7 @@ namespace qasm {
 
 		static void error [[ noreturn ]] (const std::string& msg, int code) {
 			std::cerr << msg << std::endl;
-			exit(code);
+			std::exit(code);
 		}
 
 	public:

@@ -6,8 +6,6 @@
 #ifndef INTERMEDIATEREPRESENTATION_QUANTUMCOMPUTATION_H
 #define INTERMEDIATEREPRESENTATION_QUANTUMCOMPUTATION_H
 
-#define USE_PERMUTATION_FOR_RESOLVING_SWAPS 1 // enabling this option encodes swaps in the outputPermutation instead of applying them
-
 #include <vector>
 #include <memory>
 #include <iostream>
@@ -24,13 +22,17 @@
 #include "ClassicControlledOperation.hpp"
 #include "Parser.hpp"
 
+#define DEBUG_MODE_QC 0
+
 namespace qc {
-	using registerMap    = std::map<std::string, std::pair<unsigned short, unsigned short>>;
+	using reg            = std::pair<unsigned short, unsigned short>;
+	using registerMap    = std::map<std::string, reg>;
 	using permutationMap = std::map<unsigned short, unsigned short>;
 
-	static constexpr char DEFAULT_QREG = 'q';
-	static constexpr char DEFAULT_CREG = 'c';
+	static constexpr char DEFAULT_QREG[2]{"q"};
+	static constexpr char DEFAULT_CREG[2]{"c"};
 	static constexpr char DEFAULT_ANCREG[4]{"anc"};
+	static constexpr char DEFAULT_MCTREG[4]{"mct"};
 
 	class QuantumComputation {
 
@@ -38,12 +40,14 @@ namespace qc {
 		std::vector<std::unique_ptr<Operation>> ops{ };
 		unsigned short nqubits      = 0;
 		unsigned short nclassics    = 0;
+		unsigned short nancillae    = 0;
 		unsigned short max_controls = 0;
 		std::string name;
 
 		// reg[reg_name] = {start_index, length}
 		registerMap qregs{ };
 		registerMap cregs{ };
+		registerMap ancregs{ };
 
 		void importReal(std::istream& is);
 
@@ -55,47 +59,75 @@ namespace qc {
 
 		void importGRCS(std::istream& is, const std::string& filename);
 
-		//void compareAndEmplace(std::vector<short>& controls, unsigned short target, Gate gate = X, fp lambda = 0.L, fp phi = 0.L, fp theta = 0.L);
-		static void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, char defaultname, bool fuseTogether=false);
+		static void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, const char* defaultname);
 
 		bool isIdleQubit(unsigned short i);
+
 	public:
 		QuantumComputation() = default;
 		explicit QuantumComputation(unsigned short nqubits) {
-			addQubitRegister(nqubits, &DEFAULT_QREG);
+			addQubitRegister(nqubits, DEFAULT_QREG);
+		}
+		explicit QuantumComputation(const std::string& filename) {
+			import(filename);
 		}
 
 		virtual ~QuantumComputation() = default;
 
-		virtual  size_t getNops()    const { return ops.size();	}
-		unsigned short  getNqubits() const { return nqubits;	}
-		std::string     getName()    const { return name;       }
+		virtual  size_t getNops()                   const { return ops.size();	}
+		unsigned short  getNqubits()                const { return nqubits + nancillae;	}
+		unsigned short getNqubitsWithoutAncillae()  const { return nqubits; }
+		std::string     getName()                   const { return name;       }
 
-		// permutation[physical_qubit] = logical_qubit
-		permutationMap inputPermutation{ };
+		// initialLayout[physical_qubit] = logical_qubit
+		permutationMap initialLayout{ };
 		permutationMap outputPermutation{ };
 		
 		unsigned long long getNindividualOps() const;
 
-		std::string getQubitRegister(unsigned short i);
-		std::pair<std::string, unsigned short> getQubitRegisterAndIndex(unsigned short i);
+		std::string getQubitRegister(unsigned short physical_qubit_index);
+		unsigned short getHighestLogicalQubitIndex();
+		std::pair<std::string, unsigned short> getQubitRegisterAndIndex(unsigned short physical_qubit_index);
+		bool isAncilla(unsigned short i) { return i >= nqubits; }
+		void reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd);
+		void reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd);
+		dd::Edge createInitialMatrix(std::unique_ptr<dd::Package>& dd); // creates identity matrix, which is reduced with respect to the ancillary qubits
 
 		void stripTrailingIdleQubits();
 
 		void import(const std::string& filename);
 		void import(const std::string& filename, Format format);
 
-		// this function augments a given circuit by an additional qubit register (typically used for ancillaries)
-		void addQubitRegister(unsigned short nq, const char* reg_name = DEFAULT_ANCREG);
-		void addClassicalRegister(unsigned short nc, const char* reg_name);
+		// search through .qasm file and look for IO layout information of the form
+		//      'i Q_i Q_j ... Q_k' meaning, e.g. q_0 is mapped to Q_i, q_1 to Q_j, etc.
+		//      'o Q_i Q_j ... Q_k' meaning, e.g. q_0 is found at Q_i, q_1 at Q_j, etc.
+		bool lookForOpenQASM_IO_Layout(std::ifstream& ifs);
+
+		// optimize circuit by fusing CX-CX-CX gates
+		void fuseCXtoSwap();
+
+		// this function augments a given circuit by additional registers
+		void addQubitRegister(unsigned short nq, const char* reg_name = DEFAULT_QREG);
+		void addClassicalRegister(unsigned short nc, const char* reg_name = DEFAULT_CREG);
+		void addAncillaryRegister(unsigned short nq, const char* reg_name = DEFAULT_ANCREG);
+
+		// removes the a specific logical qubit and returns the index of the physical qubit in the initial layout
+		// as well as the index of the removed physical qubit's output permutation
+		// i.e., initialLayout[physical_qubit] = logical_qubit and outputPermutation[physicalQubit] = output_qubit
+		std::pair<unsigned short, short> removeQubit(unsigned short logical_qubit_index);
+
+		// adds physical qubit as ancillary qubit and gives it the appropriate output mapping
+		void addAncillaryQubit(unsigned short physical_qubit_index, short output_qubit_index);
+		// try to add logical qubit to circuit and assign it to physical qubit with certain output permutation value
+		void addQubit(unsigned short logical_qubit_index, unsigned short physical_qubit_index, short output_qubit_index);
 
 		void updateMaxControls(unsigned short ncontrols) {
 			max_controls = std::max(ncontrols, max_controls);
 		}
 
-		virtual dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd, bool executeSwaps=true);
+		virtual dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd);
 
-		virtual dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, bool executeSwaps=true);
+		virtual dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd);
 
 		/// Obtain vector/matrix entry for row i (and column j). Does not include common factor e.w!
 		/// \param dd package to use
@@ -122,15 +154,22 @@ namespace qc {
 
 		virtual std::ostream& printStatistics(std::ostream& os = std::cout);
 
+		std::ostream& printRegisters(std::ostream& os = std::cout);
+
+		static std::ostream& printPermutationMap(const permutationMap& map, std::ostream& os = std::cout);
+
 		virtual void dump(const std::string& filename, Format format);
+		virtual void dump(const std::string& filename);
 
 		virtual void reset() {
 			ops.clear();
 			nqubits = 0;
 			nclassics = 0;
+			nancillae = 0;
 			qregs.clear();
 			cregs.clear();
-			inputPermutation.clear();
+			ancregs.clear();
+			initialLayout.clear();
 			outputPermutation.clear();
 		}
 

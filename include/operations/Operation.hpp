@@ -7,15 +7,17 @@
 #define INTERMEDIATEREPRESENTATION_OPERATION_H
 
 #include <array>
+#include <vector>
 #include <map>
 #include <iostream>
 #include <iomanip>
 #include <memory>
-#include <cstring>
 #include <fstream>
-#include <sstream>
+#include <cstring>
+
 #include "DDpackage.h"
 
+#define DEBUG_MODE_OPERATIONS 0
 #define UNUSED(x) {(void) x;}
 
 
@@ -62,9 +64,9 @@ namespace qc {
 		char           name[MAX_STRING_LENGTH]{ };
 
 		static bool isWholeQubitRegister(const regnames_t& reg, unsigned short start, unsigned short end) {
-			return reg.size() > 0 && reg[start].first.compare(reg[end].first) == 0
-					&& (start == 0             || reg[start].first.compare(reg[start - 1].first) != 0) 
-					&& (end   == reg.size() -1 || reg[end].first.compare(  reg[end   + 1].first) != 0);
+			return !reg.empty() && reg[start].first == reg[end].first
+					&& (start == 0             || reg[start].first != reg[start - 1].first)
+					&& (end   == reg.size() -1 || reg[end].first != reg[end   + 1].first);
 		}
 
 	public:
@@ -110,6 +112,18 @@ namespace qc {
 		virtual void setNqubits(unsigned short nq) {
 			nqubits = nq;
 		}
+
+		virtual void setTargets(const std::vector<unsigned short>& t) {
+			Operation::targets = t;
+		}
+
+		virtual void setControls(const std::vector<Control>& c) {
+			Operation::controls = c;
+		}
+
+		virtual void setParameter(const std::array<fp, MAX_PARAMETERS>& p) {
+			Operation::parameter = p;
+		}
 		
 		virtual void setControlled(bool contr) { 
 			controlled = contr; 
@@ -120,17 +134,19 @@ namespace qc {
 		}
 
 		// Public Methods
+		// The methods with a permutation parameter apply these operations according to the mapping specified by the permutation, e.g.
+		//      if perm[0] = 1 and perm[1] = 0
+		//      then cx 0 1 will be translated to cx perm[0] perm[1] == cx 1 0
 		void setLine(std::array<short, MAX_QUBITS>& line) const;
 		void setLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const;
 		void resetLine(std::array<short, MAX_QUBITS>& line) const;
 		void resetLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const;
 
-
 		virtual dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const = 0;
-		virtual dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool) const = 0;
+		virtual dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const = 0;
 
 		virtual dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const = 0;
-		virtual dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation, bool) const = 0;
+		virtual dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const = 0;
 
 		inline virtual bool isUnitary() const { 
 			return true; 
@@ -158,6 +174,7 @@ namespace qc {
 		}
 
 		virtual std::ostream& print(std::ostream& os) const;
+		virtual std::ostream& print(std::ostream& os, const std::map<unsigned short, unsigned short>& permutation) const;
 
 		friend std::ostream& operator<<(std::ostream& os, const Operation& op) {
 			return op.print(os);

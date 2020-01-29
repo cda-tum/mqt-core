@@ -10,8 +10,8 @@ namespace qc {
         importGRCS(filename);
 
         for (unsigned short i = 0; i < nqubits; ++i) {
-            inputPermutation.insert({i, i});
-            outputPermutation.insert({i, i});
+            initialLayout.insert({ i, i});
+            outputPermutation.insert({ i, i});
         }
     }
 
@@ -31,8 +31,8 @@ namespace qc {
         importGRCS(ss.str());
 
         for (unsigned short i = 0; i < nqubits; ++i) {
-            inputPermutation.insert({i, i});
-            outputPermutation.insert({i, i});
+            initialLayout.insert({ i, i});
+            outputPermutation.insert({ i, i});
         }
         qregs.insert({"q", {0, nqubits}});
 	    cregs.insert({"c", {0, nqubits}});
@@ -58,8 +58,8 @@ namespace qc {
         importGRCS(ss.str());
 
         for (unsigned short i = 0; i < nqubits; ++i) {
-            inputPermutation.insert({i, i});
-            outputPermutation.insert({i, i});
+            initialLayout.insert({ i, i});
+            outputPermutation.insert({ i, i});
         }
 	    qregs.insert({"q", {0, nqubits}});
 	    cregs.insert({"c", {0, nqubits}});
@@ -140,17 +140,18 @@ namespace qc {
         return os;
     }
 
-    dd::Edge GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd, bool applySwapToPermutation) {
+    dd::Edge GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
 		std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
+        permutationMap map{};
 
-        dd::Edge e = dd->makeIdent(0, nqubits-1);
+        dd::Edge e = dd->makeIdent(0, short(nqubits-1));
         dd->incRef(e);
         //size_t i = 0;
         for(const auto& cycle:cycles) {
-            dd::Edge f = dd->makeIdent(0, nqubits-1);
+            dd::Edge f = dd->makeIdent(0, short(nqubits-1));
             for(const auto& op: cycle)
-                f = dd->multiply(op->getDD(dd, line, outputPermutation, applySwapToPermutation), f);
+                f = dd->multiply(op->getDD(dd, line, map), f);
             //auto start = std::chrono::high_resolution_clock::now();
             dd::Edge g = dd->multiply(f, e);
             dd->decRef(e);
@@ -164,16 +165,17 @@ namespace qc {
         return e;
     }
 
-    dd::Edge GoogleRandomCircuitSampling::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, bool applySwapToPermutation) {
+    dd::Edge GoogleRandomCircuitSampling::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
 		std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
-        
-        dd::Edge e = in;
+	    permutationMap map{};
+
+	    dd::Edge e = in;
         dd->incRef(e);
 
         for (const auto& cycle: cycles) {
             for (const auto& op: cycle) {
-                auto tmp = dd->multiply(op->getDD(dd, line, outputPermutation, applySwapToPermutation), e);
+                auto tmp = dd->multiply(op->getDD(dd, line, map), e);
                 dd->incRef(tmp);
                 dd->decRef(e);
                 e = tmp;

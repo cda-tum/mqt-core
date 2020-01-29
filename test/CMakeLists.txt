@@ -13,13 +13,17 @@ add_executable(QFR_example main.cpp)
 target_compile_features(QFR_example PUBLIC cxx_std_14)
 set_target_properties(QFR_example PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_options(QFR_example PUBLIC -mtune=native -march=native -pipe -Wall -Wextra -Wnon-virtual-dtor -pedantic)
-target_link_libraries(QFR_example PRIVATE ${PROJECT_NAME})
+target_link_libraries(QFR_example PUBLIC ${PROJECT_NAME})
 
+execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_example ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_example)
 
 file(COPY        ${CMAKE_CURRENT_SOURCE_DIR}/circuits
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-file(COPY        ${CMAKE_CURRENT_SOURCE_DIR}/qelib1.inc
+file(COPY ${CMAKE_SOURCE_DIR}/extern/qelib1.inc
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/qelib1.inc ${CMAKE_BINARY_DIR}/qelib1.inc)
+execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/circuits ${CMAKE_BINARY_DIR}/circuits)
 
 macro(package_add_test TESTNAME)
 	# create an exectuable in which the tests will be stored

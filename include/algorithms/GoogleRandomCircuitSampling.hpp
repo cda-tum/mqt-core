@@ -3,9 +3,6 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include <memory>
-#include <iostream>
-#include <vector>
 #include <chrono>
 
 #include <QuantumComputation.hpp>
@@ -37,9 +34,9 @@ namespace qc {
 
 		std::ostream& printStatistics(std::ostream& os = std::cout) override;
 
-		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd, bool applySwapToPermutation = false) override;
+		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) override;
 
-		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, bool applySwapToPermutation = false) override;
+		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) override;
 
 	};
 }

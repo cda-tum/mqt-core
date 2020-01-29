@@ -11,10 +11,10 @@ namespace qc {
         nqubits = nq;
         this->performSwaps = performSwaps;
         for (unsigned short i = 0; i < nqubits; ++i) {
-        	inputPermutation.insert({i, i});
-            outputPermutation.insert({i, i});
+        	initialLayout.insert({i, i});
+        	outputPermutation.insert({i, i});
         }
-        qregs.insert({"q", {0,nqubits}});
+        qregs.insert({"q", {0, nqubits}});
         cregs.insert({"c", {0, nqubits}});
 
         for (unsigned short i = 0; i < nqubits; ++i) {
@@ -36,14 +36,30 @@ namespace qc {
             for (unsigned short i = 0; i < nqubits/2; ++i) {
                 emplace_back<StandardOperation>(nqubits, std::vector<Control>{}, i, (unsigned short)(nqubits-1-i), SWAP);
             }
-        } else {
-            for (unsigned short i = 0; i < nqubits; ++i) {
-                outputPermutation.at(i) = nqubits-1-i;
-            }
         }
     }
 
-    std::ostream& QFT::printStatistics(std::ostream& os) {
+	dd::Edge QFT::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
+		auto e = QuantumComputation::buildFunctionality(dd);
+		if (!performSwaps) {
+			for (unsigned short i = 0; i < nqubits; ++i) {
+				outputPermutation.at(i) = nqubits - 1 - i;
+			}
+		}
+		return e;
+	}
+
+	dd::Edge QFT::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
+		auto e = QuantumComputation::simulate(in, dd);
+		if (!performSwaps) {
+			for (unsigned short i = 0; i < nqubits; ++i) {
+				outputPermutation.at(i) = nqubits - 1 - i;
+			}
+		}
+		return e;
+	}
+
+	std::ostream& QFT::printStatistics(std::ostream& os) {
         os << "QFT (" << nqubits << ") Statistics:\n";
         os << "\tn: " << nqubits << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;
