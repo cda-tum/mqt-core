@@ -10,6 +10,10 @@
 #include <vector>
 #include <array>
 #include <bitset>
+#include <sstream>
+#include <fstream>
+#include <cstring>
+#include <iostream>
 
 #include "DDcomplex.h"
 
