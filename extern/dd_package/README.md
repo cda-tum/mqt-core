@@ -1,4 +1,6 @@
-![Travis CI Badge](https://travis-ci.com/iic-jku/dd_package.svg?branch=master)
+[![Build Status](https://travis-ci.com/iic-jku/dd_package.svg?branch=master)](https://travis-ci.com/iic-jku/dd_package)
+[![codecov](https://codecov.io/gh/iic-jku/dd_package/branch/master/graph/badge.svg)](https://codecov.io/gh/iic-jku/dd_package)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # A Package for Decision Diagrams Written in C++
 
