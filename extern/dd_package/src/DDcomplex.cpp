@@ -468,4 +468,44 @@ namespace dd {
 			os << r;
 	}
 
+	std::ostream& operator<<(std::ostream& os, const Complex& c) {
+		auto r = ComplexNumbers::val(c.r);
+		auto i = ComplexNumbers::val(c.i);
+
+		if (r != 0) {
+			ComplexNumbers::printFormattedReal(os, r);
+		}
+		if (i != 0) {
+			if (r == i) {
+				os << "(1+i)";
+				return os;
+			} else if (i == -r) {
+				os << "(1-i)";
+				return os;
+			}
+			ComplexNumbers::printFormattedReal(os, i, true);
+		}
+		if (r == 0 && i == 0) os << 0;
+
+		return os;
+	}
+
+	std::ostream& operator<<(std::ostream& os, const ComplexValue& c) {
+		if (c.r != 0) {
+			ComplexNumbers::printFormattedReal(os, c.r);
+		}
+		if (c.i != 0) {
+			if (c.r == c.i) {
+				os << "(1+i)";
+				return os;
+			} else if (c.i == -c.r) {
+				os << "(1-i)";
+				return os;
+			}
+			ComplexNumbers::printFormattedReal(os, c.i, true);
+		}
+		if (c.r == 0 && c.i == 0) os << 0;
+
+		return os;
+	}
 }
