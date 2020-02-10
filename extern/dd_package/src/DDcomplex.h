@@ -6,10 +6,11 @@
 #ifndef DDcomplex_H
 #define DDcomplex_H
 
-#include <ostream>
+#include <iostream>
 #include <cmath>
 #include <limits>
 #include <cassert>
+#include <algorithm>
 
 using fp = double;
 

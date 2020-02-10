@@ -3,8 +3,6 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum_dd/ for more information.
  */
 
-#include <iostream>
-
 #include "DDcomplex.h"
 
 namespace dd {
