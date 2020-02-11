@@ -1,3 +1,6 @@
+# Prevent overriding the parent project's compiler/linker
+# settings on Windows
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest" "extern/googletest")
 mark_as_advanced(
 		BUILD_GMOCK BUILD_GTEST BUILD_SHARED_LIBS
@@ -14,7 +17,8 @@ target_compile_features(${PROJECT_NAME}_example PUBLIC cxx_std_14)
 set_target_properties(${PROJECT_NAME}_example PROPERTIES CXX_EXTENSIONS OFF)
 target_link_libraries(${PROJECT_NAME}_example PUBLIC ${PROJECT_NAME})
 if(MSVC)
-	target_compile_options(${PROJECT_NAME}_example PUBLIC "/W4" "$<$<CONFIG:RELEASE>:/O3>")
+	target_compile_options(${PROJECT_NAME}_example PUBLIC "/W4" "$<$<CONFIG:RELEASE>:/O2 /GL>")
+	target_link_options(${PROJECT_NAME}_example PUBLIC "$<$<CONFIG:Release>:/LTCG>")
 else()
 	target_compile_options(${PROJECT_NAME}_example PUBLIC -Wall -pipe -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-mtune=native -march=native>)
 endif()
@@ -41,7 +45,8 @@ macro(package_add_test TESTNAME)
 		target_link_libraries(${TESTNAME} PRIVATE --coverage)
 	endif()
 	if(MSVC)
-		target_compile_options(${TESTNAME} PUBLIC "/W4" "$<$<CONFIG:RELEASE>:/O3>")
+		target_compile_options(${TESTNAME} PUBLIC "/W4" "$<$<CONFIG:RELEASE>:/O2 /GL>")
+		target_link_options(${TESTNAME} PUBLIC "$<$<CONFIG:Release>:/LTCG>")
 	else()
 		target_compile_options(${TESTNAME} PUBLIC -Wall -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native>)
 	endif()

@@ -39,15 +39,15 @@ protected:
 };
 
 constexpr unsigned short GROVER_MAX_QUBITS = 14;
-constexpr unsigned int GROVER_NUM_SEEDS = 10;
+constexpr unsigned int GROVER_NUM_SEEDS = 5;
 constexpr fp GROVER_ACCURACY = 1e-8;
 constexpr fp GROVER_GOAL_PROBABILITY = 0.9;
 
 INSTANTIATE_TEST_SUITE_P(Grover,
                          Grover,
                          testing::Combine(
-		                         testing::Range((unsigned short)2,(unsigned short)(GROVER_MAX_QUBITS+1), 3),
-		                         testing::Range((unsigned int)0,GROVER_NUM_SEEDS)),
+		                         testing::Range((unsigned short)2, (unsigned short)(GROVER_MAX_QUBITS+1), 3),
+		                         testing::Range((unsigned int)0, GROVER_NUM_SEEDS)),
                          [](const testing::TestParamInfo<Grover::ParamType>& info) {
 	                         unsigned short nqubits = std::get<0>(info.param);
 	                         unsigned int seed = std::get<1>(info.param);

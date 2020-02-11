@@ -36,7 +36,7 @@ int main(int argc, char** argv){
 	size_t dot = infile.find_last_of('.');
 	std::string extension = infile.substr(dot + 1);
 	std::transform(extension.begin(), extension.end(), extension.begin(),
-	        [](const unsigned char c) { return std::tolower(c, std::locale());}
+	        [](const unsigned char c) { return ::tolower(c);}
 	        );
 	if (extension == "real") {
 		informat = qc::Real;
@@ -51,7 +51,7 @@ int main(int argc, char** argv){
 	dot = outfile.find_last_of('.');
 	extension = outfile.substr(dot + 1);
 	std::transform(extension.begin(), extension.end(), extension.begin(),
-	        [](const unsigned char c) { return std::tolower(c, std::locale());}
+	        [](const unsigned char c) { return ::tolower(c);}
 	        );
 	if (extension == "py") {
 		outformat = qc::Qiskit;
