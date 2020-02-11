@@ -9,11 +9,15 @@ set_target_properties(gtest_main PROPERTIES FOLDER extern)
 set_target_properties(gmock PROPERTIES FOLDER extern)
 set_target_properties(gmock_main PROPERTIES FOLDER extern)
 
-add_executable(QFR_example main.cpp)
-target_compile_features(QFR_example PUBLIC cxx_std_14)
-set_target_properties(QFR_example PROPERTIES CXX_EXTENSIONS OFF)
-target_compile_options(QFR_example PUBLIC -mtune=native -march=native -pipe -Wall -Wextra -Wnon-virtual-dtor -pedantic)
-target_link_libraries(QFR_example PUBLIC ${PROJECT_NAME})
+add_executable(${PROJECT_NAME}_example main.cpp)
+target_compile_features(${PROJECT_NAME}_example PUBLIC cxx_std_14)
+set_target_properties(${PROJECT_NAME}_example PROPERTIES CXX_EXTENSIONS OFF)
+target_link_libraries(${PROJECT_NAME}_example PUBLIC ${PROJECT_NAME})
+if(MSVC)
+	target_compile_options(${PROJECT_NAME}_example PUBLIC "/W4" "$<$<CONFIG:RELEASE>:/O3>")
+else()
+	target_compile_options(${PROJECT_NAME}_example PUBLIC -Wall -pipe -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-mtune=native -march=native>)
+endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_example ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_example)
 
@@ -31,12 +35,16 @@ macro(package_add_test TESTNAME)
 	# link the Google test infrastructure, mocking library, and a default main fuction to
 	# the test executable.  Remove g_test_main if writing your own main function.
 	target_link_libraries(${TESTNAME} PRIVATE ${PROJECT_NAME} gtest gmock gtest_main)
-	target_compile_options(${TESTNAME} PUBLIC -mtune=native -march=native -pipe)
+	set_property(TARGET ${TESTNAME} PROPERTY CXX_EXTENSIONS OFF)
 	if (COVERAGE)
 		target_compile_options(${TESTNAME} PRIVATE --coverage)
 		target_link_libraries(${TESTNAME} PRIVATE --coverage)
 	endif()
-	set_property(TARGET ${TESTNAME} PROPERTY CXX_EXTENSIONS OFF)
+	if(MSVC)
+		target_compile_options(${TESTNAME} PUBLIC "/W4" "$<$<CONFIG:RELEASE>:/O3>")
+	else()
+		target_compile_options(${TESTNAME} PUBLIC -Wall -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native>)
+	endif()
 
 	# gtest_discover_tests replaces gtest_add_tests,
 	# see https://cmake.org/cmake/help/v3.10/module/GoogleTest.html for more options to pass to it

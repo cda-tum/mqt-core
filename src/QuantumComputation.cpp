@@ -5,6 +5,8 @@
 
 #include "QuantumComputation.hpp"
 
+#include <locale>
+
 namespace qc {
 	/***
      * Protected Methods
@@ -20,7 +22,7 @@ namespace qc {
 
 		while (true) {
 			is >> cmd;
-			std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+			std::transform(cmd.begin(), cmd.end(), cmd.begin(), [](const unsigned char c) { return std::toupper(c, std::locale());});
 
 			// skip comments
 			if (cmd.front() == '#') {
@@ -74,7 +76,7 @@ namespace qc {
 				while (cmd != ".ENDDEFINE") {
 					is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 					is >> cmd;
-					std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+                    std::transform(cmd.begin(), cmd.end(), cmd.begin(), [](const unsigned char c) { return std::toupper(c, std::locale());});
 				}
 			} else {
 				std::cerr << "Unknown command: " << cmd << std::endl;
@@ -91,7 +93,7 @@ namespace qc {
 
 		while (!is.eof()) {
 			is >> cmd;
-			std::transform(cmd.begin(), cmd.end(), cmd.begin(), (int (*)(int))std::tolower);
+			std::transform(cmd.begin(), cmd.end(), cmd.begin(), [](const unsigned char c) { return std::tolower(c, std::locale());});
 
 			if (cmd.front() == '#') {
 				is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -398,7 +400,7 @@ namespace qc {
 
 		size_t dot = filename.find_last_of('.');
 		std::string extension = filename.substr(dot + 1);
-		std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return std::tolower(c); });
+		std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return std::tolower(c, std::locale()); });
 		if (extension == "real") {
 			import(filename, Real);
 		} else if (extension == "qasm") {
@@ -960,7 +962,7 @@ namespace qc {
 	void QuantumComputation::dump(const std::string& filename) {
 		size_t dot = filename.find_last_of('.');
 		std::string extension = filename.substr(dot + 1);
-		std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return std::tolower(c); });
+		std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return std::tolower(c, std::locale()); });
 		if (extension == "real") {
 			dump(filename, Real);
 		} else if (extension == "qasm") {

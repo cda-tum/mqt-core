@@ -185,7 +185,7 @@ The package can be used for a multitude of tasks, as illustrated in the followin
 
 ## System Requirements
 
-Building (and running) is continuously tested under Linux (Ubuntu 18.04) using gcc-7.4, gcc-9 and clang-9 and MacOS (Mojave 10.14) using AppleClang and gcc-9. 
+Building (and running) is continuously tested under Linux (Ubuntu 18.04) using gcc-7.4, gcc-9 and clang-9, MacOS (Mojave 10.14) using AppleClang and gcc-9, and Windows using MSVC 15.9. 
 However, the implementation should be compatible with any current C++ compiler supporting C++14 and a minimum CMake version of 3.10.
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
@@ -194,25 +194,31 @@ It is recommended (although not required) to have [GraphViz](https://www.graphvi
 For building the library alone the CMake target `QFR` is available, i.e.,
 ```commandline
 mkdir build && cd build
-cmake ..
-cmake --build . --target QFR
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --target QFR --config Release
 ```
+
+Windows users need to configure CMake by calling 
+
+`cmake .. -G "Visual Studio 15 2017" -A x64 -DCMAKE_BUILD_TYPE=Release`
+
+instead.
 
 To build the library and run a small demo, showcasing the library's features, just build the `QFR_example` CMake target and run the resulting executable (*.dot files will be created in the working directory which will be automatically converted to SVG if GraphViz is installed), i.e.,
 
 ```commandline
-cmake --build . --target QFR_example
+cmake --build . --target QFR_example --config Release
 cd test
 ./QFR_example
 ```
 
 The command line application `QFR_app` can be built via the identically named CMake target, i.e., 
 ```commandline
-cmake --build . --target QFR_app
+cmake --build . --target QFR_app --config Release
 ```
 
 The repository also includes some (at the moment very basic) unit tests (using GoogleTest), which aim to ensure the correct behaviour of the library. They can be built and executed in the following way:
 ```commandline
-cmake --build . --target GoogleTest
-ctest
+cmake --build . --target GoogleTest --config Release
+ctest -C Release
 ```

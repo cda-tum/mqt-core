@@ -4,9 +4,8 @@
  */
 
 #include <iostream>
-#include <memory>
 #include <string>
-#include <cctype>
+#include <locale>
 #include <algorithm>
 
 #include "QuantumComputation.hpp"
@@ -36,7 +35,9 @@ int main(int argc, char** argv){
 	qc::Format informat;
 	size_t dot = infile.find_last_of('.');
 	std::string extension = infile.substr(dot + 1);
-	std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return std::tolower(c); });
+	std::transform(extension.begin(), extension.end(), extension.begin(),
+	        [](const unsigned char c) { return std::tolower(c, std::locale());}
+	        );
 	if (extension == "real") {
 		informat = qc::Real;
 	} else if (extension == "qasm") {
@@ -49,7 +50,9 @@ int main(int argc, char** argv){
 	qc::Format outformat;
 	dot = outfile.find_last_of('.');
 	extension = outfile.substr(dot + 1);
-	std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return std::tolower(c); });
+	std::transform(extension.begin(), extension.end(), extension.begin(),
+	        [](const unsigned char c) { return std::tolower(c, std::locale());}
+	        );
 	if (extension == "py") {
 		outformat = qc::Qiskit;
 	} else if (extension == "qasm") {

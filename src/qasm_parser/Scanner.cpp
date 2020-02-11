@@ -5,6 +5,8 @@
 
 #include "Scanner.hpp"
 
+#include <locale>
+
 namespace qasm {
 
     /***
@@ -39,7 +41,7 @@ namespace qasm {
 
     void Scanner::readName(Token& t) {
         std::stringstream ss;
-        while (std::isalnum(ch) || ch == '_') {
+        while (std::isalnum(ch, std::locale()) || ch == '_') {
             ss << ch;
             nextCh();
         }
@@ -50,7 +52,7 @@ namespace qasm {
 
     void Scanner::readNumber(Token& t) {
         std::stringstream ss;
-        while (std::isdigit(ch)) {
+        while (std::isdigit(ch, std::locale())) {
             ss << ch;
             nextCh();
         }
@@ -63,7 +65,7 @@ namespace qasm {
         t.kind = Token::Kind::real;
         ss << ch;
         nextCh();
-        while (std::isdigit(ch)) {
+        while (std::isdigit(ch, std::locale())) {
             ss << ch;
             nextCh();
         }
@@ -77,7 +79,7 @@ namespace qasm {
             ss << ch;
             nextCh();
         }
-        while (std::isdigit(ch)) {
+        while (std::isdigit(ch, std::locale())) {
             ss << ch;
             nextCh();
         }
@@ -131,7 +133,7 @@ namespace qasm {
     }
 
     Token Scanner::next() {
-        while (std::isspace(ch)) {
+        while (std::isspace(ch, std::locale())) {
             nextCh();
         }
 

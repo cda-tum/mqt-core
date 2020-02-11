@@ -1,13 +1,12 @@
 language: cpp
+os: linux
 
-matrix:
+jobs:
   include:
     - os: linux
       dist: bionic
       compiler: "gcc"
-      env: BUILD='Debug' CC=gcc CXX=g++
-        COVERAGE=1
-        COV_EXE=gcov
+      env: BUILD='Debug' CC=gcc CXX=g++ COVERAGE=1 COV_EXE=gcov
       addons:
         apt:
           packages:
@@ -76,6 +75,9 @@ matrix:
             - gcc@9
           update: true
 
+    - os: windows
+      env: BUILD='Release' CC=gcc CXX=g++ COVERAGE=0
+
 install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then
     export PATH="$(brew --prefix llvm)/bin:$PATH";
@@ -84,17 +86,19 @@ install:
   - echo ${CXX}
   - ${CXX} --version
   - cmake --version
-  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
-    choco install ninja;
-    fi
 
 before_script:
   - mkdir -p build && cd build
-  - cmake .. -G Ninja -LA -DCMAKE_BUILD_TYPE=${BUILD} -DCOVERAGE=${COVERAGE}
-  - cmake --build .
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+      cmake .. -G "Visual Studio 15 2017" -A x64 -LA -DCMAKE_BUILD_TYPE=${BUILD} -DCOVERAGE=${COVERAGE}
+    else
+      cmake .. -G Ninja -LA -DCMAKE_BUILD_TYPE=${BUILD} -DCOVERAGE=${COVERAGE}
+    fi
+  - cmake --build . --config ${BUILD}
 
 script:
-  - ctest
+  - ctest -C ${BUILD} --jobs 2
 
 after_success:
   - |

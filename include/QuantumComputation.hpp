@@ -6,6 +6,11 @@
 #ifndef INTERMEDIATEREPRESENTATION_QUANTUMCOMPUTATION_H
 #define INTERMEDIATEREPRESENTATION_QUANTUMCOMPUTATION_H
 
+#include "StandardOperation.hpp"
+#include "NonUnitaryOperation.hpp"
+#include "ClassicControlledOperation.hpp"
+#include "Parser.hpp"
+
 #include <vector>
 #include <memory>
 #include <iostream>
@@ -16,11 +21,7 @@
 #include <algorithm>
 #include <regex>
 #include <limits>
-
-#include "StandardOperation.hpp"
-#include "NonUnitaryOperation.hpp"
-#include "ClassicControlledOperation.hpp"
-#include "Parser.hpp"
+#include <string>
 
 #define DEBUG_MODE_QC 0
 

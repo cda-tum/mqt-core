@@ -11,8 +11,6 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <cctype>
-#include <cwctype>
 
 #include "Token.hpp"
 

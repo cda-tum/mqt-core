@@ -7,7 +7,7 @@
 #define INTERMEDIATEREPRESENTATION_TOKEN_H
 
 #include <map>
-#include <iostream>
+#include <string>
 
 namespace qasm {
 

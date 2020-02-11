@@ -48,5 +48,8 @@ if(ipo_supported)
 	set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_compile_options(${PROJECT_NAME} PRIVATE -mtune=native -march=native -pipe -Wall -Wextra -Wnon-virtual-dtor -pedantic)
-
+if(MSVC)
+	target_compile_options(${PROJECT_NAME} PRIVATE "/W4" "$<$<CONFIG:RELEASE>:/O3>")
+else()
+	target_compile_options(${PROJECT_NAME} PRIVATE -Wall -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native>)
+endif()
