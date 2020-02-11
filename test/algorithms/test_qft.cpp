@@ -50,7 +50,7 @@ protected:
 constexpr unsigned short QFT_MAX_QUBITS = 20;
 
 INSTANTIATE_TEST_SUITE_P(QFT, QFT,
-		testing::Range((unsigned short)0,(unsigned short)(QFT_MAX_QUBITS+1)),
+		testing::Range((unsigned short)0,(unsigned short)(QFT_MAX_QUBITS+1), 3),
 		[](const testing::TestParamInfo<QFT::ParamType>& info) {
 			unsigned short nqubits = info.param;
 			std::stringstream ss{};

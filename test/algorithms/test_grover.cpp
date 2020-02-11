@@ -46,7 +46,7 @@ constexpr fp GROVER_GOAL_PROBABILITY = 0.9;
 INSTANTIATE_TEST_SUITE_P(Grover,
                          Grover,
                          testing::Combine(
-		                         testing::Range((unsigned short)2,(unsigned short)(GROVER_MAX_QUBITS+1)),
+		                         testing::Range((unsigned short)2,(unsigned short)(GROVER_MAX_QUBITS+1), 3),
 		                         testing::Range((unsigned int)0,GROVER_NUM_SEEDS)),
                          [](const testing::TestParamInfo<Grover::ParamType>& info) {
 	                         unsigned short nqubits = std::get<0>(info.param);

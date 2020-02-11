@@ -12,7 +12,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Entanglement, Entanglement,
-                         testing::Range((unsigned short)2,(unsigned short)129, 3),
+                         testing::Range((unsigned short)2,(unsigned short)129, 7),
                          [](const testing::TestParamInfo<Entanglement::ParamType>& info) {
                              // Generate names for test cases
                              unsigned short nqubits = info.param;
