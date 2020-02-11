@@ -47,18 +47,19 @@ For implementing more complex functionality which requires garbage collection, b
 
 ### System Requirements
 
-Building and running have been tested under Linux (Ubuntu 18.04, 64-bit).
-The implementation should be compatible with any current version of g++/cmake that supports C++11.
+Building (and running) is continuously tested under Linux (Ubuntu 18.04) using gcc-7.4, gcc-9 and clang-9, MacOS (Mojave 10.14) using AppleClang and gcc-9, and Windows using MSVC 15.9. 
+However, the implementation should be compatible with any current C++ compiler supporting C++11 and a minimum CMake version of 3.10.
+
+It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
   
 ### Build and Run 
 
 To build the package and run a small demo execute the following 
 (several *.dot files will be created in the working directory which will be automatically converted to SVG if GraphViz is installed).
 ```
-$ mkdir build
-$ cd build 
-$ cmake ..
-$ make
+$ mkdir build && cd build
+$ cmake .. -DCMAKE_BUILD_TYPE=Release
+$ cmake --build . --config Release
 $ ./test/dd_example
 Circuits are equal!
 00: √½
@@ -85,6 +86,11 @@ DD statistics:
     Collisions: 7
     Matches:    21
 ```
+Windows users need to configure CMake by calling 
+
+`cmake .. -G "Visual Studio 15 2017" -A x64 -DCMAKE_BUILD_TYPE=Release`
+
+instead.
 
 As of now, a small set of unit tests is included as well which you can execute as follows (after performing the build steps described above).
 

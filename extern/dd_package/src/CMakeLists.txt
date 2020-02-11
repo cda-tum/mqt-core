@@ -4,9 +4,6 @@ project( dd_package_lib
         VERSION 1.1
         DESCRIPTION "Library to handle the decisions diagrams and corresponding operations")
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og -Wall -Wextra -Wpedantic -pedantic")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -DNDEBUG -g0 -O3")
-
 add_library(${PROJECT_NAME} STATIC DDpackage.cpp DDcomplex.cpp DDpackage.h DDcomplex.h)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)
@@ -16,5 +13,12 @@ check_ipo_supported(RESULT ipo_supported)
 if(ipo_supported)
 	set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
-target_compile_options(${PROJECT_NAME} PRIVATE -mtune=native -march=native)
+
+if(MSVC)
+	target_compile_options(${PROJECT_NAME} PRIVATE "/W4" "$<$<CONFIG:RELEASE>:/O3>")
+else()
+	target_compile_options(${PROJECT_NAME} PRIVATE -Wall -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native>)
+endif()
+
+target_compile_options(${PROJECT_NAME} PRIVATE )
 target_include_directories(${PROJECT_NAME} PUBLIC ./)
