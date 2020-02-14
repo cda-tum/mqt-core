@@ -398,67 +398,67 @@ namespace dd {
 
 		if (m == 0) { // +- sqrt(2)
 			if (imaginary) {
-				os << (std::signbit(r) ? "-" : "+") << "\u221a\u00bdi";
+				os << (std::signbit(r) ? "-" : "+") << u8"\u221a\u00bdi";
 			} else {
-				os << (std::signbit(r) ? "-" : "") << "\u221a\u00bd";
+				os << (std::signbit(r) ? "-" : "") << u8"\u221a\u00bd";
 			}
 			return;
 		}
 
 		if (o == 0) { // +- pi
 			if (imaginary) {
-				os << (std::signbit(r) ? "-" : "+") << "\u03c0i";
+				os << (std::signbit(r) ? "-" : "+") << u8"\u03c0i";
 			} else {
-				os << (std::signbit(r) ? "-" : "") << "\u03c0";
+				os << (std::signbit(r) ? "-" : "") << u8"\u03c0";
 		}
 			return;
 		}
 
 		if (std::abs(n + 1) < TOLERANCE) { // 1/2
 			if (imaginary) {
-				os << (std::signbit(r) ? "-" : "+") << "\u00bdi";
+				os << (std::signbit(r) ? "-" : "+") << u8"\u00bdi";
 			} else
-				os << (std::signbit(r) ? "-" : "") << "\u00bd";
+				os << (std::signbit(r) ? "-" : "") << u8"\u00bd";
 			return;
 		}
 
 		if (std::abs(m + 1) < TOLERANCE) { // 1/sqrt(2) 1/2
 			if (imaginary) {
-				os << (std::signbit(r) ? "-" : "+") << "\u221a\u00bd \u00bdi";
+				os << (std::signbit(r) ? "-" : "+") << u8"\u221a\u00bd \u00bdi";
 			} else
-				os << (std::signbit(r) ? "-" : "") << "\u221a\u00bd \u00bd";
+				os << (std::signbit(r) ? "-" : "") << u8"\u221a\u00bd \u00bd";
 			return;
 		}
 
 		if (std::abs(o + 1) < TOLERANCE) { // +-pi/2
 			if (imaginary) {
-				os << (std::signbit(r) ? "-" : "+") << "\u00bd \u03c0i";
+				os << (std::signbit(r) ? "-" : "+") << u8"\u00bd \u03c0i";
 			} else
-				os << (std::signbit(r) ? "-" : "") << "\u00bd \u03c0";
+				os << (std::signbit(r) ? "-" : "") << u8"\u00bd \u03c0";
 			return;
 	}
 
 		if (std::abs(std::round(n)-n) < TOLERANCE && n < 0) { // 1/2^n
 			if (imaginary) {
-				os << (std::signbit(r) ? "-" : "+") << "\u00bd\u002a\u002a" << (int) std::round(-n) << "i";
+				os << (std::signbit(r) ? "-" : "+") << u8"\u00bd\u002a\u002a" << (int) std::round(-n) << "i";
 			} else
-				os << (std::signbit(r) ? "-" : "") << "\u00bd\u002a\u002a" << (int) std::round(-n);
+				os << (std::signbit(r) ? "-" : "") << u8"\u00bd\u002a\u002a" << (int) std::round(-n);
 			return;
 		}
 
 		if (std::abs(std::round(m) - m) < TOLERANCE && m < 0) { // 1/sqrt(2) 1/2^m
 			if (imaginary) {
-				os << (std::signbit(r) ? "-" : "+") << "\u221a\u00bd \u00bd\u002a\u002a" << (int) std::round(-m) << "i";
+				os << (std::signbit(r) ? "-" : "+") << u8"\u221a\u00bd \u00bd\u002a\u002a" << (int) std::round(-m) << "i";
 			} else
-				os << (std::signbit(r) ? "-" : "") << "\u221a\u00bd \u00bd\u002a\u002a" << (int) std::round(-m);
+				os << (std::signbit(r) ? "-" : "") << u8"\u221a\u00bd \u00bd\u002a\u002a" << (int) std::round(-m);
 			return;
 		}
 
 		if (std::abs(std::round(o) - o) < TOLERANCE && o < 0) { // 1/2^o pi
 			if (imaginary) {
-				os << (std::signbit(r) ? "-" : "+") << "\u00bd\u002a\u002a" << (int) std::round(-o) << " \u03c0i";
+				os << (std::signbit(r) ? "-" : "+") << u8"\u00bd\u002a\u002a" << (int) std::round(-o) << u8" \u03c0i";
 			} else
-				os << (std::signbit(r) ? "-" : "") << "\u00bd\u002a\u002a" << (int) std::round(-o) << " \u03c0";
+				os << (std::signbit(r) ? "-" : "") << u8"\u00bd\u002a\u002a" << (int) std::round(-o) << u8" \u03c0";
 			return;
 		}
 

@@ -14,7 +14,7 @@ if (COVERAGE)
 endif()
 
 if(MSVC)
-	target_compile_options(${PROJECT_NAME}_lib PRIVATE "/W4" "$<$<CONFIG:RELEASE>:/O2 /GL>")
+	target_compile_options(${PROJECT_NAME}_lib PRIVATE "/W4" "/utf-8" "$<$<CONFIG:RELEASE>:/O2 /GL>")
 	target_link_options(${PROJECT_NAME}_lib PRIVATE "$<$<CONFIG:Release>:/LTCG>")
 else()
 	target_compile_options(${PROJECT_NAME}_lib PRIVATE -Wall -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native>)
