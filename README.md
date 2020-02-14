@@ -36,6 +36,15 @@ The package can be used for a multitude of tasks, as illustrated in the followin
 * **Generating circuit representations for important quantum algorithms.** 
 
     Currently available algorithms are:
+    * Entanglement
+    
+          ```c++
+          unsigned short n = 2;
+          qc::Entanglement entanglement(n); // generates bell circuit
+          ```
+    
+      Generates the circuit for fully-entangling *n* qubits. Primarily used as a simple test case. 
+    
     * Quantum Fourier Transform (QFT)
   
         ```c++

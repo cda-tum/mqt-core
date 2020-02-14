@@ -11,6 +11,10 @@ set_target_properties(gtest PROPERTIES FOLDER extern)
 set_target_properties(gtest_main PROPERTIES FOLDER extern)
 set_target_properties(gmock PROPERTIES FOLDER extern)
 set_target_properties(gmock_main PROPERTIES FOLDER extern)
+target_compile_features(gtest PUBLIC cxx_std_14)
+target_compile_features(gtest_main PUBLIC cxx_std_14)
+target_compile_features(gmock PUBLIC cxx_std_14)
+target_compile_features(gmock_main PUBLIC cxx_std_14)
 
 add_executable(${PROJECT_NAME}_example main.cpp)
 target_compile_features(${PROJECT_NAME}_example PUBLIC cxx_std_14)
@@ -61,7 +65,7 @@ macro(package_add_test TESTNAME)
 	set_target_properties(${TESTNAME} PROPERTIES FOLDER tests)
 endmacro()
 
-package_add_test(GoogleTest ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_qft.cpp 
+package_add_test(${PROJECT_NAME}_test ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_qft.cpp
 							${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_grover.cpp 
 							${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_entanglement.cpp
 							${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_io.cpp
