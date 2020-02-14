@@ -15,12 +15,12 @@ dd::Edge BellCicuit1(dd::Package* dd) {
     //    0 neg. control
     //    1 pos. control
     //    2 target
-    short line[2] = {-1,2};
+    short line[2] = {2,-1};
     dd::Edge h_gate = dd->makeGateDD(Hmat, 2, line);
 
-    /***** define cx gate with control q0 and target q1*****/
-    line[0] = 2;
-    line[1] = 1;
+    /***** define cx gate with control q0 and target q1 *****/
+    line[0] = 1;
+    line[1] = 2;
 
     dd::Edge cx_gate = dd->makeGateDD(Xmat, 2, line);
 
@@ -30,16 +30,17 @@ dd::Edge BellCicuit1(dd::Package* dd) {
 
 dd::Edge BellCicuit2(dd::Package* dd) {
     /***** define Hadamard gate acting on q1 *****/
-    short line[2] = {2,-1};
+    short line[2] = {-1,2};
     dd::Edge h_gate_q1 = dd->makeGateDD(Hmat, 2, line);
 
-    line[0] = -1;
-    line[1] = 2;
+	/***** define Hadamard gate acting on q0 *****/
+	line[0] = 2;
+    line[1] = -1;
     dd::Edge h_gate_q0 = dd->makeGateDD(Hmat, 2, line);
 
-    /***** define cx gate with control q0 and target q1*****/
-    line[0] = 1;
-    line[1] = 2;
+    /***** define cx gate with control q1 and target q0 *****/
+    line[0] = 2;
+    line[1] = 1;
     dd::Edge cx_gate = dd->makeGateDD(Xmat, 2, line);
 
     //Multiply matrices to get functionality of circuit

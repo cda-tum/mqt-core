@@ -1,9 +1,11 @@
+#include <memory>
+
 #include "DDpackage.h"
 #include "util.h"
 #include "gtest/gtest.h"
 
 TEST(DDPackageTest, TrivialTest) {
-    auto dd = std::unique_ptr<dd::Package>(new dd::Package);
+    auto dd = std::make_unique<dd::Package>();
 
     short line[2] = {2};
     dd::Edge x_gate = dd->makeGateDD(Xmat, 1, line);
@@ -21,7 +23,7 @@ TEST(DDPackageTest, TrivialTest) {
 }
 
 TEST(DDPackageTest, BellState) {
-    auto dd = std::unique_ptr<dd::Package>(new dd::Package);
+    auto dd = std::make_unique<dd::Package>();
 
     short line[2] = {-1,2};
     dd::Edge h_gate = dd->makeGateDD(Hmat, 2, line);
@@ -39,7 +41,7 @@ TEST(DDPackageTest, BellState) {
 }
 
 TEST(DDPackageTest, IdentifyTrace) {
-    auto dd = std::unique_ptr<dd::Package>(new dd::Package);
+    auto dd = std::make_unique<dd::Package>();
     auto fullTrace = dd->trace(dd->makeIdent(0, 3));
 
     ASSERT_EQ(fullTrace, (dd::ComplexValue{16,0}));

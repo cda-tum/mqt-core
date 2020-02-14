@@ -56,11 +56,11 @@ It is recommended (although not required) to have [GraphViz](https://www.graphvi
 
 To build the package and run a small demo execute the following 
 (several *.dot files will be created in the working directory which will be automatically converted to SVG if GraphViz is installed).
-```
+```commandline
 $ mkdir build && cd build
 $ cmake .. -DCMAKE_BUILD_TYPE=Release
 $ cmake --build . --config Release
-$ ./test/dd_example
+$ ./test/dd_package_example
 Circuits are equal!
 00: √½
 01: 0
@@ -72,49 +72,50 @@ DD of my gate has size 2
 Identity function for 4 qubits has trace: 16
 
 DD statistics:
-  Current # nodes in UniqueTable: 23
+  Current # nodes in UniqueTable: 22
   Total compute table lookups: 37
   Number of operations:
-    add:  52
+    add:  44
     mult: 86
     kron: 0
   Compute table hit ratios (hits/looks/ratio):
-    adds: 0 / 4 / 0
+    adds: 2 / 4 / 0.5
     mult: 14 / 28 / 0.5
     kron: 0 / 0 / 0
   UniqueTable:
-    Collisions: 7
-    Matches:    21
+    Collisions: 5
+    Matches:    17
 ```
-Windows users need to configure CMake by calling 
-
-`cmake .. -G "Visual Studio 15 2017" -A x64 -DCMAKE_BUILD_TYPE=Release`
-
-instead.
+**Windows users** using Visual Studio and the MSVC compiler need to build the project with 
+```commandline
+$ mkdir build && cd build
+$ cmake .. -G "Visual Studio 15 2017" -A x64 -DCMAKE_BUILD_TYPE=Release
+$ cmake --build . --config Release
+```
 
 As of now, a small set of unit tests is included as well which you can execute as follows (after performing the build steps described above).
 
 ```
-$ ./test/dd_test
-Running main() from [...]/test/googletest-src/googletest/src/gtest_main.cc
+$ ./test/dd_package_test
+Running main() from [...]/extern/googletest/googletest/src/gtest_main.cc
 [==========] Running 4 tests from 2 test suites.
 [----------] Global test environment set-up.
-[----------] 3 tests from DDPackageTest
-[ RUN      ] DDPackageTest.TrivialTest
-[       OK ] DDPackageTest.TrivialTest (53 ms)
-[ RUN      ] DDPackageTest.BellState
-[       OK ] DDPackageTest.BellState (28 ms)
-[ RUN      ] DDPackageTest.IdentifyTrace
-[       OK ] DDPackageTest.IdentifyTrace (26 ms)
-[----------] 3 tests from DDPackageTest (108 ms total)
-
 [----------] 1 test from DDComplexTest
 [ RUN      ] DDComplexTest.TrivialTest
-[       OK ] DDComplexTest.TrivialTest (0 ms)
-[----------] 1 test from DDComplexTest (0 ms total)
+[       OK ] DDComplexTest.TrivialTest (1 ms)
+[----------] 1 test from DDComplexTest (1 ms total)
+
+[----------] 3 tests from DDPackageTest
+[ RUN      ] DDPackageTest.TrivialTest
+[       OK ] DDPackageTest.TrivialTest (31 ms)
+[ RUN      ] DDPackageTest.BellState
+[       OK ] DDPackageTest.BellState (21 ms)
+[ RUN      ] DDPackageTest.IdentifyTrace
+[       OK ] DDPackageTest.IdentifyTrace (18 ms)
+[----------] 3 tests from DDPackageTest (70 ms total)
 
 [----------] Global test environment tear-down
-[==========] 4 tests from 2 test suites ran. (108 ms total)
+[==========] 4 tests from 2 test suites ran. (71 ms total)
 [  PASSED  ] 4 tests.
 ```
 

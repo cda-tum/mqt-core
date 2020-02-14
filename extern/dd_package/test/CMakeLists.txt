@@ -1,68 +1,65 @@
-cmake_minimum_required (VERSION 3.10)
-project(dd_package_test)
-
-# Download and unpack googletest at configure time
-configure_file(CMakeLists.txt.in googletest-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-                RESULT_VARIABLE result
-                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
-if (result)
-	message(FATAL_ERROR "CMake step for googletest failed: ${result}")
-endif ()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-                RESULT_VARIABLE result
-                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
-if (result)
-	message(FATAL_ERROR "Build step for googletest failed: ${result}")
-endif ()
-
 # Prevent overriding the parent project's compiler/linker
 # settings on Windows
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest" "extern/googletest")
+mark_as_advanced(
+		BUILD_GMOCK BUILD_GTEST BUILD_SHARED_LIBS
+		gmock_build_tests gtest_build_samples gtest_build_tests
+		gtest_disable_pthreads gtest_force_shared_crt gtest_hide_internal_symbols
+)
+set_target_properties(gtest PROPERTIES FOLDER extern)
+set_target_properties(gtest_main PROPERTIES FOLDER extern)
+set_target_properties(gmock PROPERTIES FOLDER extern)
+set_target_properties(gmock_main PROPERTIES FOLDER extern)
+target_compile_features(gtest PUBLIC cxx_std_14)
+target_compile_features(gtest_main PUBLIC cxx_std_14)
 
-# Add googletest directly to our build. This defines
-# the gtest and gtest_main targets.
-add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
-                 ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
-                 EXCLUDE_FROM_ALL)
-
-# The gtest/gtest_main targets carry header search path
-# dependencies automatically when using CMake 2.8.11 or
-# later. Otherwise we have to add them here ourselves.
-if (CMAKE_VERSION VERSION_LESS 2.8.11)
-	include_directories("${gtest_SOURCE_DIR}/include")
-endif ()
-
-add_executable(dd_test test_complex.cpp test_package.cpp)
-target_link_libraries(dd_test PRIVATE dd_package_lib gtest gtest_main)
-target_compile_features(dd_test PUBLIC cxx_std_11)
-set_property(TARGET dd_test PROPERTY CXX_EXTENSIONS OFF)
+add_executable(${PROJECT_NAME}_example main.cpp)
+target_link_libraries(${PROJECT_NAME}_example PRIVATE dd_package_lib)
+target_compile_features(${PROJECT_NAME}_example PUBLIC cxx_std_11)
+set_property(TARGET ${PROJECT_NAME}_example PROPERTY CXX_EXTENSIONS OFF)
 if (COVERAGE)
-	target_compile_options(dd_test PRIVATE --coverage)
-	target_link_libraries(dd_test PRIVATE --coverage)
+	target_compile_options(${PROJECT_NAME}_example PRIVATE --coverage)
+	target_link_libraries(${PROJECT_NAME}_example PRIVATE --coverage)
 endif()
 if(MSVC)
-	target_compile_options(dd_test PRIVATE "/W4" "$<$<CONFIG:RELEASE>:/O2 /GL>")
-	target_link_options(dd_test PRIVATE "$<$<CONFIG:Release>:/LTCG>")
+	target_compile_options(${PROJECT_NAME}_example PRIVATE "/W4" "$<$<CONFIG:RELEASE>:/O2 /GL>")
+	target_link_options(${PROJECT_NAME}_example PRIVATE "$<$<CONFIG:Release>:/LTCG>")
 else()
-	target_compile_options(dd_test PRIVATE -Wall -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native>)
+	target_compile_options(${PROJECT_NAME}_example PRIVATE -Wall -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native>)
 endif()
 
-add_executable(dd_example main.cpp)
-target_link_libraries(dd_example PRIVATE dd_package_lib)
-target_compile_features(dd_example PUBLIC cxx_std_11)
-set_property(TARGET dd_example PROPERTY CXX_EXTENSIONS OFF)
-if (COVERAGE)
-	target_compile_options(dd_example PRIVATE --coverage)
-	target_link_libraries(dd_example PRIVATE --coverage)
-endif()
-if(MSVC)
-	target_compile_options(dd_example PRIVATE "/W4" "$<$<CONFIG:RELEASE>:/O2 /GL>")
-	target_link_options(dd_example PRIVATE "$<$<CONFIG:Release>:/LTCG>")
-else()
-	target_compile_options(dd_example PRIVATE -Wall -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native>)
-endif()
+macro(package_add_test TESTNAME)
+	# create an exectuable in which the tests will be stored
+	add_executable(${TESTNAME} ${ARGN})
+	# link the Google test infrastructure, mocking library, and a default main fuction to
+	# the test executable.  Remove g_test_main if writing your own main function.
+	target_link_libraries(${TESTNAME} PRIVATE ${PROJECT_NAME}_lib gtest gtest_main)
+	target_compile_features(${TESTNAME} PUBLIC cxx_std_14)
+	set_property(TARGET ${TESTNAME} PROPERTY CXX_EXTENSIONS OFF)
+	if (COVERAGE)
+		target_compile_options(${TESTNAME} PRIVATE --coverage)
+		target_link_libraries(${TESTNAME} PRIVATE --coverage)
+	endif()
+	if(MSVC)
+		target_compile_options(${TESTNAME} PUBLIC "/W4" "$<$<CONFIG:RELEASE>:/O2 /GL>")
+		target_link_options(${TESTNAME} PUBLIC "$<$<CONFIG:Release>:/LTCG>")
+	else()
+		target_compile_options(${TESTNAME} PUBLIC -Wall -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native>)
+	endif()
 
-enable_testing()
-add_test(NAME dd_test COMMAND ./dd_test)
-add_test(NAME dd_example COMMAND ./dd_example)
+	# gtest_discover_tests replaces gtest_add_tests,
+	# see https://cmake.org/cmake/help/v3.10/module/GoogleTest.html for more options to pass to it
+	gtest_discover_tests(${TESTNAME}
+	                     # set a working directory so your project root so that you can find test data via paths relative to the project root
+	                     WORKING_DIRECTORY ${PROJECT_DIR}
+	                     PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
+	                     )
+	set_target_properties(${TESTNAME} PROPERTIES FOLDER tests)
+endmacro()
+
+# add unit tests
+package_add_test(${PROJECT_NAME}_test ${CMAKE_CURRENT_SOURCE_DIR}/test_complex.cpp ${CMAKE_CURRENT_SOURCE_DIR}/test_package.cpp)
+
+# include dd_example in test suite
+add_test(NAME ${PROJECT_NAME}_example COMMAND ${CMAKE_CURRENT_BINARY_DIR}/dd_package_example)

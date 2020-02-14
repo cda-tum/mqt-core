@@ -1,8 +1,10 @@
+#include <memory>
+
 #include "DDcomplex.h"
 #include "gtest/gtest.h"
 
 TEST(DDComplexTest, TrivialTest) {
-    auto cn = std::unique_ptr<dd::ComplexNumbers>(new dd::ComplexNumbers);
+    auto cn = std::make_unique<dd::ComplexNumbers>();
     unsigned int before_count = cn->count;
 
     auto a = cn->getCachedComplex(2, -3);

@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
-project(dd_package)
+project( dd_package
+         LANGUAGES CXX
+         VERSION 1.1
+         DESCRIPTION "Library to handle the decisions diagrams and corresponding operations")
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+SET(COVERAGE OFF CACHE BOOL "Coverage")
 
 set(default_build_type "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -14,6 +21,25 @@ endif()
 add_subdirectory(src)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+	find_package(Git QUIET)
+	if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+		# Update submodules as needed
+		option(GIT_SUBMODULE "Check submodules during build" ON)
+		if(GIT_SUBMODULE)
+			message(STATUS "Submodule update")
+			execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --remote
+			                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+			                RESULT_VARIABLE GIT_SUBMOD_RESULT)
+			if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+				message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+			endif()
+		endif()
+	endif()
+
+	if(NOT EXISTS "${PROJECT_SOURCE_DIR}/extern/googletest/CMakeLists.txt")
+		message(FATAL_ERROR "GoogleTest failed to download! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
+	endif()
+
 	enable_testing()
 	include(GoogleTest)
 	add_subdirectory(test)
