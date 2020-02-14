@@ -342,10 +342,7 @@ namespace qc {
 		} while (p.sym != Token::Kind::eof);
 	}
 
-	void QuantumComputation::importGRCS(std::istream& is, const std::string& filename) {
-		size_t slash = filename.find_last_of('/');
-		size_t dot = filename.find_last_of('.');
-		std::string benchmark = filename.substr(slash+1, dot-slash-1);
+	void QuantumComputation::importGRCS(std::istream& is) {
 		is >> nqubits;
 		std::string line;
 		std::string identifier;
@@ -397,9 +394,6 @@ namespace qc {
 	}
 
 	void QuantumComputation::import(const std::string& filename) {
-		// reset circuit before importing
-		reset();
-
 		size_t dot = filename.find_last_of('.');
 		std::string extension = filename.substr(dot + 1);
 		std::transform(extension.begin(), extension.end(), extension.begin(), [] (unsigned char ch) { return ::tolower(ch); });
@@ -421,37 +415,42 @@ namespace qc {
 		name = filename.substr(slash+1, dot-slash-1);
 
 		auto ifs = std::ifstream(filename);
-		if (!ifs.good()) {
-			std::cerr << "Error opening/reading from file: " << filename << std::endl;
+		import(ifs, format);
+		ifs.close();
+	}
+
+	void QuantumComputation::import(std::istream& is, Format format) {
+		if (!is.good()) {
+			std::cerr << "Error processing input stream: " << name << std::endl;
 			exit(3);
 		}
 
+		// reset circuit before importing
+		reset();
+
 		switch (format) {
-			case Real: 
-				importReal(ifs);
+			case Real:
+				importReal(is);
 				break;
 			case OpenQASM:
 				updateMaxControls(2);
-				importOpenQASM(ifs);
+				importOpenQASM(is);
 				// try to parse initial layout from qasm file
-				ifs.clear();
-				ifs.seekg(0, std::ios::beg);
-				if (!lookForOpenQASM_IO_Layout(ifs)) {
+				is.clear();
+				is.seekg(0, std::ios::beg);
+				if (!lookForOpenQASM_IO_Layout(is)) {
 					for (unsigned short i = 0; i < nqubits; ++i) {
 						initialLayout.insert({ i, i});
 						outputPermutation.insert({ i, i});
 					}
 				}
 				break;
-			case GRCS: 
-				importGRCS(ifs, filename);
+			case GRCS: importGRCS(is);
 				break;
-			default: 
-				ifs.close();
+			default:
 				std::cerr << "Format " << format << " not yet supported." << std::endl;
 				exit(1);
 		}
-		ifs.close();
 	}
 
 	void QuantumComputation::addQubitRegister(unsigned short nq, const char* reg_name) {
@@ -1243,7 +1242,7 @@ namespace qc {
 		return os;
 	}
 
-	bool QuantumComputation::lookForOpenQASM_IO_Layout(std::ifstream& ifs) {
+	bool QuantumComputation::lookForOpenQASM_IO_Layout(std::istream& ifs) {
 		std::string line;
 		while (std::getline(ifs,line)) {
 			/*

@@ -58,7 +58,7 @@ namespace qc {
 
 		void importOpenQASM(std::istream& is);
 
-		void importGRCS(std::istream& is, const std::string& filename);
+		void importGRCS(std::istream& is);
 
 		static void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, const char* defaultname);
 
@@ -98,11 +98,12 @@ namespace qc {
 
 		void import(const std::string& filename);
 		void import(const std::string& filename, Format format);
+		void import(std::istream& is, Format format);
 
 		// search through .qasm file and look for IO layout information of the form
 		//      'i Q_i Q_j ... Q_k' meaning, e.g. q_0 is mapped to Q_i, q_1 to Q_j, etc.
 		//      'o Q_i Q_j ... Q_k' meaning, e.g. q_0 is found at Q_i, q_1 at Q_j, etc.
-		bool lookForOpenQASM_IO_Layout(std::ifstream& ifs);
+		bool lookForOpenQASM_IO_Layout(std::istream& ifs);
 
 		// optimize circuit by fusing CX-CX-CX gates
 		void fuseCXtoSwap();

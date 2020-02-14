@@ -76,3 +76,15 @@ TEST_P(IO, importAndDump) {
 
     compare_files(output, output2);
 }
+
+TEST_F(IO, importFromString) {
+	std::string bell_circuit_qasm = "OPENQASM 2.0;\nqreg q[2];\nU(pi/2,0,pi) q[0];\nCX q[0],q[1];\n";
+	std::stringstream ss{bell_circuit_qasm};
+	ASSERT_NO_THROW(qc->import(ss, qc::OpenQASM));
+	std::cout << *qc << std::endl;
+	std::string bell_circuit_real = ".numvars 2\n.variables q0 q1\n.begin\nh1 q0\nt2 q0 q1\n.end\n";
+	ss.clear();
+	ss.str(bell_circuit_real);
+	ASSERT_NO_THROW(qc->import(ss, qc::Real));
+	std::cout << *qc << std::endl;
+}
