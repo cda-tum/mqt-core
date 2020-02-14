@@ -96,7 +96,6 @@ before_script:
       cmake .. -G Ninja -LA -DCMAKE_BUILD_TYPE=${BUILD} -DCOVERAGE=${COVERAGE}
     fi
   - cmake --build . --config ${BUILD}
-  - cmake --build . --config ${BUILD} --target QFR_test
 
 script:
   - ctest -C ${BUILD} --jobs 2

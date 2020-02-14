@@ -40,7 +40,7 @@ add_subdirectory(src)
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 	if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git" AND GIT_SUBMODULE)
 		message(STATUS "googletest update")
-		execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive -- extern/googletest
+		execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --remote -- extern/googletest
 		                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		                RESULT_VARIABLE GIT_SUBMOD_RESULT)
 		if(NOT GIT_SUBMOD_RESULT EQUAL "0")
