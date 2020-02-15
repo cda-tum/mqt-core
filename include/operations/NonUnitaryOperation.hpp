@@ -38,19 +38,16 @@ namespace qc {
 			exit(1);
 		}
 
-		dd::Edge getInverseDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&) const override {
-			std::cerr << "DD for non-unitary operation not available!" << std::endl;
-			exit(1);
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
+			return getDD(dd, line);
 		}
 
-		dd::Edge getDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&, std::map<unsigned short, unsigned short>&) const override {
-			std::cerr << "DD for non-unitary operation not available!" << std::endl;
-			exit(1);
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>&) const override {
+			return getDD(dd, line);
 		}
 
-		dd::Edge getInverseDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&, std::map<unsigned short, unsigned short>&) const override {
-			std::cerr << "DD for non-unitary operation not available!" << std::endl;
-			exit(1);
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>&) const override {
+			return getInverseDD(dd, line);
 		}
 
 		bool isUnitary() const override {
@@ -75,8 +72,12 @@ namespace qc {
 		std::ostream& print(std::ostream& os) const override;
 		
 		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override;
-
 		void dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const override;
+		void dumpReal(std::ofstream& of) const override {
+			// these ops do not exist in .real
+		};
+
+		std::ostream& print(std::ostream& os, const std::map<unsigned short, unsigned short>& permutation) const override;
 	};
 }
 #endif //INTERMEDIATEREPRESENTATION_NONUNITARYOPERATION_H

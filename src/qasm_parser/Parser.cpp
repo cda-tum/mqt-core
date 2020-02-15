@@ -374,9 +374,17 @@
 
         } else if (sym == Token::Kind::identifier) {
             scan();
-            auto gateIt = compoundGates.find(t.str);
-            if (gateIt != compoundGates.end()) {
-                auto gateName = t.str;
+	        auto gateName = t.str;
+	        auto cGateName = gateName;
+	        unsigned int ncontrols = 0;
+	        while (cGateName.front() == 'c') {
+		        cGateName = cGateName.substr(1);
+		        ncontrols++;
+	        }
+
+	        auto gateIt = compoundGates.find(gateName);
+	        auto cGateIt = compoundGates.find(cGateName);
+            if (gateIt != compoundGates.end() || cGateIt != compoundGates.end()) {
                 std::vector<Expr*> parameters;
                 std::vector<std::pair<unsigned short , unsigned short>> arguments;
                 if (sym == Token::Kind::lpar) {
@@ -392,38 +400,51 @@
                 registerMap argMap;
                 std::map<std::string, Expr*> paramMap;
                 unsigned short size = 1;
-                for (size_t i = 0; i < arguments.size(); ++i) {
-                    argMap[gateIt->second.argumentNames[i]] = arguments[i];
-                    if (arguments[i].second > 1 && size != 1 && arguments[i].second != size)
-                        error("Register sizes do not match!", 1);
+                if (gateIt != compoundGates.end()) {
+	                for (size_t i = 0; i < arguments.size(); ++i) {
+		                argMap[gateIt->second.argumentNames[i]] = arguments[i];
+		                if (arguments[i].second > 1 && size != 1 && arguments[i].second != size)
+			                error("Register sizes do not match!", 1);
 
-                    if (arguments[i].second > 1)
-                        size = arguments[i].second;
+		                if (arguments[i].second > 1)
+			                size = arguments[i].second;
+	                }
+
+	                for (size_t i = 0; i < parameters.size(); ++i)
+		                paramMap[gateIt->second.parameterNames[i]] = parameters[i];
+                } else { // controlled Gate treatment
+                	if (arguments.size() > ncontrols + 1) {
+                		error("Too many arguments for controlled gate! Expected " + std::to_string(ncontrols) + "+1, but got " + std::to_string(arguments.size()),1);
+                	}
+
+	                for (size_t i = 0; i < arguments.size(); ++i) {
+		                argMap["q"+std::to_string(i)] = arguments[i];
+		                if (arguments[i].second > 1 && size != 1 && arguments[i].second != size)
+			                error("Register sizes do not match!", 1);
+
+		                if (arguments[i].second > 1)
+			                size = arguments[i].second;
+	                }
+
+	                for (size_t i = 0; i < parameters.size(); ++i)
+		                paramMap[cGateIt->second.parameterNames[i]] = parameters[i];
                 }
 
-                for (size_t i = 0; i < parameters.size(); ++i)
-                    paramMap[gateIt->second.parameterNames[i]] = parameters[i];
-
                 // check if single controlled gate
-                if (gateName.front() == 'c' && size == 1) {
-                    auto cGateName = gateName;
-                    std::map<std::string, CompoundGate>::iterator cGateIt;
-                    int cCount = 0;
-                    while (cGateName.front() == 'c') {
-                        cGateName = cGateName.substr(1);
-                        cGateIt = compoundGates.find(cGateName);
-                        if (cGateIt != compoundGates.end())
-                            cCount++;
-                    }
+                if (ncontrols > 0 && size == 1) {
                     // TODO: this could be enhanced for the case that any argument is a register
                     if (cGateIt->second.gates.size() == 1) {
-                        std::vector<qc::Control> controls;
-                        for (int j = 0; j < cCount; ++j)
-                            controls.emplace_back(argMap[gateIt->second.argumentNames[j]].first);
+                        std::vector<qc::Control> controls{};
+                        for (unsigned int j = 0; j < ncontrols; ++j) {
+	                        auto arg = (gateIt != compoundGates.end())? gateIt->second.argumentNames[j]: ("q"+std::to_string(j));
+	                        controls.emplace_back(argMap[arg].first);
+                        }
 
-                        // special treatment for Toffoli
-                        if (cGateName == "x" && cCount > 1) {
-                            return std::make_unique<qc::StandardOperation>(nqubits, controls, argMap[gateIt->second.argumentNames.back()].first);
+	                    auto targ = (gateIt != compoundGates.end())? gateIt->second.argumentNames.back(): ("q"+std::to_string(ncontrols));
+
+	                    // special treatment for Toffoli
+                        if (cGateName == "x" && ncontrols > 1) {
+	                        return std::make_unique<qc::StandardOperation>(nqubits, controls, argMap[targ].first);
                         }
 
                         auto cGate = cGateIt->second.gates.front();
@@ -435,11 +456,13 @@
                             std::unique_ptr<Expr> phi(RewriteExpr(cu->phi, paramMap));
                             std::unique_ptr<Expr> lambda(RewriteExpr(cu->lambda, paramMap));
 
-                            return std::make_unique<qc::StandardOperation>(nqubits, controls, argMap[gateIt->second.argumentNames.back()].first, qc::U3, lambda->num, phi->num, theta->num);
+                            return std::make_unique<qc::StandardOperation>(nqubits, controls, argMap[targ].first, qc::U3, lambda->num, phi->num, theta->num);
                         } else {
                             error("Cast to u-Gate not possible for controlled operation.", 1);
                         }
                     }
+                } else if (gateIt == compoundGates.end()) {
+                	error("Controlled operation for which no definition could be found or which acts on whole qubit register.", 1);
                 }
 
                 // identifier specifies just a single operation (U3 or CX)

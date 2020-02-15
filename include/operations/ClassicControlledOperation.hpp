@@ -43,6 +43,21 @@ namespace qc {
 		bool isUnitary() const override {
 			return false;
 		}
+
+		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override {
+			std::cerr << "Dumping of classically controlled gates currently not supported for qasm" << std::endl;
+			exit(1);
+		}
+
+		void dumpReal(std::ofstream& of) const override {
+			std::cerr << "Dumping of classically controlled gates not possible in real format" << std::endl;
+			exit(1);
+		}
+
+		void dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const override {
+			std::cerr << "Dumping of classically controlled gates currently not supported for qiskit" << std::endl;
+			exit(1);
+		}
 	};
 }
 #endif //INTERMEDIATEREPRESENTATION_CLASSICCONTROLLEDOPERATION_H

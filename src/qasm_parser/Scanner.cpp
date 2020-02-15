@@ -275,8 +275,34 @@ namespace qasm {
 
     void Scanner::addFileInput(const std::string& filename) {
         auto in = new std::ifstream(filename, std::ifstream::in);
-        if (in->fail()) {
-            std::cerr << "Failes to open file '" << filename << "'!" << std::endl;
+
+	    if (in->fail() && filename == "qelib1.inc") {
+			// internal qelib1.inc
+			// parser can also read multiple-control versions of each gate
+	    	auto ss = new std::stringstream{};
+	    	*ss << "gate u3(theta,phi,lambda) q { U(theta,phi,lambda) q; }" << std::endl;
+		    *ss << "gate u2(phi,lambda) q { U(pi/2,phi,lambda) q; }" << std::endl;
+		    *ss << "gate u1(lambda) q { U(0,0,lambda) q; }" << std::endl;
+		    *ss << "gate cx c, t { CX c, t; }" << std::endl;
+		    *ss << "gate id t { U(0,0,0) t; }" << std::endl;
+		    *ss << "gate x t { u3(pi,0,pi) t; }" << std::endl;
+	    	*ss << "gate y t { u3(pi,pi/2,pi/2) t; }" << std::endl;
+		    *ss << "gate z t { u1(pi) t; }" << std::endl;
+		    *ss << "gate h t { u2(0,pi) t; }" << std::endl;
+		    *ss << "gate s t { u1(pi/2) t; }" << std::endl;
+		    *ss << "gate sdg t { u1(-pi/2) t; }" << std::endl;
+		    *ss << "gate t t { u1(pi/4) t; }" << std::endl;
+		    *ss << "gate tdg t { u1(-pi/4) t; }" << std::endl;
+		    *ss << "gate rx(theta) t { u3(theta,-pi/2,pi/2) t; }" << std::endl;
+		    *ss << "gate ry(theta) t { u3(theta,0,0) t; }" << std::endl;
+		    *ss << "gate rz(phi) t { u1(phi) t; }" << std::endl;
+
+		    streams.push(ss);
+		    lines.push(LineInfo(ch, line, col));
+		    line = 0;
+		    col = 0;
+	    } else if (in->fail()) {
+            std::cerr << "Failed to open file '" << filename << "'!" << std::endl;
         } else {
             streams.push(in);
             lines.push(LineInfo(ch, line, col));

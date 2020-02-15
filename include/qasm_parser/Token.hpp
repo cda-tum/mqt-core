@@ -34,8 +34,6 @@ namespace qasm {
 			real,
 			qreg,
 			creg,
-			ugate,
-			cxgate,
 			gate,
 			pi,
 			measure,
@@ -57,7 +55,9 @@ namespace qasm {
 			eq,
 			reset,
 			snapshot,
-			swap
+			swap,
+			ugate,
+			cxgate
 		};
 		
 		Kind        kind    = Kind::none;

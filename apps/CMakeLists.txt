@@ -9,7 +9,4 @@ else()
 	target_compile_options(${PROJECT_NAME}_app PUBLIC -Wall -pipe -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-mtune=native -march=native>)
 endif()
 
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../extern/qelib1.inc
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
 execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_app ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_app)

@@ -32,14 +32,18 @@ namespace qc {
 	}
 
     std::ostream& NonUnitaryOperation::print(std::ostream& os) const {
-	    std::array<short, MAX_QUBITS> line{};
-	    line.fill(LINE_DEFAULT);
+	    return print(os, standardPermutation);
+	}
+
+	std::ostream& NonUnitaryOperation::print(std::ostream& os, const std::map<unsigned short, unsigned short>& permutation) const {
+		std::array<short, MAX_QUBITS> line{};
+		line.fill(LINE_DEFAULT);
 
 		switch (op) {
-			case Measure: 
+			case Measure:
 				os << "Meas\t";
 				for (unsigned int q = 0; q < controls.size(); ++q) {
-					line[controls[q].qubit] = targets[q];
+					line[permutation.at(controls[q].qubit)] = targets[q];
 				}
 				for (int i = 0; i < nqubits; ++i) {
 					if (line[i] >= 0) {
@@ -49,9 +53,9 @@ namespace qc {
 					}
 				}
 				break;
-			case Reset: 
+			case Reset:
 				os << "Rst \t";
-				setLine(line);
+				setLine(line, permutation);
 				for (int i = 0; i < nqubits; ++i) {
 					if (line[i] == LINE_TARGET) {
 						os << "\033[31m" << "r\t" << "\033[0m";
@@ -62,7 +66,7 @@ namespace qc {
 				break;
 			case Snapshot:
 				os << "Snap\t";
-				setLine(line);
+				setLine(line, permutation);
 				for (int i = 0; i < nqubits; ++i) {
 					if (line[i] == LINE_TARGET) {
 						os << "\033[33m" << "s\t" << "\033[0m";
@@ -70,17 +74,17 @@ namespace qc {
 						os << "|\t";
 					}
 				}
-				os << "\tp: " << targets.size() << " " << parameter[1];
+				os << "\tp: (" << targets.size() << ") (" << parameter[1] << ")";
 				break;
-			case ShowProbabilities: 
+			case ShowProbabilities:
 				os << "Show probabilities";
 				break;
-			case Barrier: 
+			case Barrier:
 				os << "Barr\t";
-				setLine(line);
+				setLine(line, permutation);
 				for (int i = 0; i < nqubits; ++i) {
 					if (line[i] == LINE_TARGET) {
-						os << "\033[31m" << "b\t" << "\033[0m";
+						os << "\033[32m" << "b\t" << "\033[0m";
 					} else {
 						os << "|\t";
 					}

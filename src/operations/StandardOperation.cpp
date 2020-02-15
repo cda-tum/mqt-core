@@ -227,90 +227,42 @@ namespace qc {
 	dd::Edge StandardOperation::getSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
 		dd::Edge e{ };
 
-		if (permutation.empty()) {
-			line[targets[0]] = LINE_CONTROL_POS;
-		} else {
-			line[permutation.at(targets[0])] = LINE_CONTROL_POS;
-		}
-
+		line[permutation.at(targets[0])] = LINE_CONTROL_POS;
 		e = dd->makeGateDD(Xmat, nqubits, line);
 
-		if(permutation.empty()) {
-			line[targets[0]] = LINE_TARGET;
-			line[targets[1]] = LINE_CONTROL_POS;
-		} else {
-			line[permutation.at(targets[0])] = LINE_TARGET;
-			line[permutation.at(targets[1])] = LINE_CONTROL_POS;
-		}
-
+		line[permutation.at(targets[0])] = LINE_TARGET;
+		line[permutation.at(targets[1])] = LINE_CONTROL_POS;
 		e = dd->multiply(e, dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e));
 
-		if(permutation.empty()) {
-			line[targets[1]] = LINE_TARGET;
-		} else {
-			line[permutation.at(targets[1])] = LINE_TARGET;
-		}
-
+		line[permutation.at(targets[1])] = LINE_TARGET;
 		return e;
     }
 
 	dd::Edge StandardOperation::getPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
 		dd::Edge e{ };
 
-		if (permutation.empty()) {
-			line[targets[1]] = LINE_CONTROL_POS;
-		} else {
-			line[permutation.at(targets[1])] = LINE_CONTROL_POS;
-		}
-
+		line[permutation.at(targets[1])] = LINE_CONTROL_POS;
 		e = dd->makeGateDD(Xmat, nqubits, line);
 
-		if(permutation.empty()) {
-			line[targets[0]] = LINE_DEFAULT;
-			line[targets[1]] = LINE_TARGET;
-		} else {
-			line[permutation.at(targets[0])] = LINE_DEFAULT;
-			line[permutation.at(targets[1])] = LINE_TARGET;
-		}
-
+		line[permutation.at(targets[0])] = LINE_DEFAULT;
+		line[permutation.at(targets[1])] = LINE_TARGET;
 		e = dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e);
 
-		if(permutation.empty()) {
-			line[targets[0]] = LINE_TARGET;
-		} else {
-			line[permutation.at(targets[0])] = LINE_TARGET;
-		}
-
+		line[permutation.at(targets[0])] = LINE_TARGET;
 		return e;
 	}
 
 	dd::Edge StandardOperation::getPdagDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
 		dd::Edge e{ };
 
-		if (permutation.empty()) {
-			line[targets[0]] = LINE_DEFAULT;
-		} else {
-			line[permutation.at(targets[0])] = LINE_DEFAULT;
-		}
-
+		line[permutation.at(targets[0])] = LINE_DEFAULT;
 		e = dd->makeGateDD(Xmat, nqubits, line);
 
-		if(permutation.empty()) {
-			line[targets[0]] = LINE_TARGET;
-			line[targets[1]] = LINE_CONTROL_POS;
-		} else {
-			line[permutation.at(targets[0])] = LINE_TARGET;
-			line[permutation.at(targets[1])] = LINE_CONTROL_POS;
-		}
-
+		line[permutation.at(targets[0])] = LINE_TARGET;
+		line[permutation.at(targets[1])] = LINE_CONTROL_POS;
 		e = dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e);
 
-		if(permutation.empty()) {
-			line[targets[1]] = LINE_TARGET;
-		} else {
-			line[permutation.at(targets[1])] = LINE_TARGET;
-		}
-
+		line[permutation.at(targets[1])] = LINE_TARGET;
 		return e;
     }
 
@@ -321,47 +273,22 @@ namespace qc {
 
 		e = getSWAPDD(dd, line, permutation);
 
-		if(permutation.empty()) {
-			line[targets[1]] = LINE_DEFAULT;
-		} else {
-			line[permutation.at(targets[1])] = LINE_DEFAULT;
-		}
 
+		line[permutation.at(targets[1])] = LINE_DEFAULT;
 		e = dd->multiply(e, dd->makeGateDD(Smat, nqubits, line));
 
-		if(permutation.empty()) {
-			line[targets[0]] = LINE_DEFAULT;
-			line[targets[1]] = LINE_TARGET;
-		} else {
-			line[permutation.at(targets[0])] = LINE_DEFAULT;
-			line[permutation.at(targets[1])] = LINE_TARGET;
-		}
-
+		line[permutation.at(targets[0])] = LINE_DEFAULT;
+		line[permutation.at(targets[1])] = LINE_TARGET;
 		e = dd->multiply(e, dd->makeGateDD(Smat, nqubits, line));
 		e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line));
 
-		if (permutation.empty()) {
-			line[targets[0]] = LINE_CONTROL_POS;
-		} else {
-			line[permutation.at(targets[0])] = LINE_CONTROL_POS;
-		}
-
+		line[permutation.at(targets[0])] = LINE_CONTROL_POS;
 		e = dd->multiply(e, dd->makeGateDD(Xmat, nqubits, line));
 
-		if(permutation.empty()) {
-			line[targets[0]] = LINE_DEFAULT;
-		} else {
-			line[permutation.at(targets[0])] = LINE_DEFAULT;
-		}
-
+		line[permutation.at(targets[0])] = LINE_DEFAULT;
 		e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line));
 
-		if(permutation.empty()) {
-			line[targets[0]] = LINE_TARGET;
-		} else {
-			line[permutation.at(targets[0])] = LINE_TARGET;
-		}
-
+		line[permutation.at(targets[0])] = LINE_TARGET;
 		return e;
     }
 
@@ -370,47 +297,21 @@ namespace qc {
 
 		dd::Edge e{ };
 
-		if(permutation.empty()) {
-			line[targets[0]] = LINE_DEFAULT;
-		} else {
-			line[permutation.at(targets[0])] = LINE_DEFAULT;
-		}
-
+		line[permutation.at(targets[0])] = LINE_DEFAULT;
 		e = dd->makeGateDD(Hmat, nqubits, line);
 
-		if (permutation.empty()) {
-			line[targets[0]] = LINE_CONTROL_POS;
-		} else {
-			line[permutation.at(targets[0])] = LINE_CONTROL_POS;
-		}
-
+		line[permutation.at(targets[0])] = LINE_CONTROL_POS;
 		e = dd->multiply(e, dd->makeGateDD(Xmat, nqubits, line));
 
-		if(permutation.empty()) {
-			line[targets[0]] = LINE_DEFAULT;
-		} else {
-			line[permutation.at(targets[0])] = LINE_DEFAULT;
-		}
-
+		line[permutation.at(targets[0])] = LINE_DEFAULT;
 		e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line));
 		e = dd->multiply(e, dd->makeGateDD(Sdagmat, nqubits, line));
 
-		if(permutation.empty()) {
-			line[targets[0]] = LINE_TARGET;
-			line[targets[1]] = LINE_DEFAULT;
-		} else {
-			line[permutation.at(targets[0])] = LINE_TARGET;
-			line[permutation.at(targets[1])] = LINE_DEFAULT;
-		}
-
+		line[permutation.at(targets[0])] = LINE_TARGET;
+		line[permutation.at(targets[1])] = LINE_DEFAULT;
 		e = dd->multiply(e, dd->makeGateDD(Sdagmat, nqubits, line));
 
-		if(permutation.empty()) {
-			line[targets[1]] = LINE_TARGET;
-		} else {
-			line[permutation.at(targets[1])] = LINE_TARGET;
-		}
-
+		line[permutation.at(targets[1])] = LINE_TARGET;
 		e = dd->multiply(e, getSWAPDD(dd, line, permutation));
 
 		return e;
@@ -959,5 +860,57 @@ namespace qc {
 				std::cerr << "gate type (index) " << (int) gate << " could not be converted to qiskit" << std::endl;
 		}
 		of << name.str() << qreg[targets[0]].second << ")" << std::endl;
+	}
+
+
+
+	dd::Edge StandardOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const {
+		setLine(line);
+		dd::Edge e = getDD(dd, line, false);
+		resetLine(line);
+		return e;
+	}
+
+	dd::Edge StandardOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const {
+
+		if(gate == SWAP && controls.empty()) {
+			auto target0 = targets.at(0);
+			auto target1 = targets.at(1);
+			// update permutation
+			auto tmp = permutation.at(target0);
+			permutation.at(target0) = permutation.at(target1);
+			permutation.at(target1) = tmp;
+			return dd->makeIdent(0, short(nqubits-1));
+		}
+
+		setLine(line, permutation);
+		dd::Edge e = getDD(dd, line, false, permutation);
+		resetLine(line, permutation);
+		return e;
+	}
+
+	dd::Edge StandardOperation::getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const {
+		setLine(line);
+		dd::Edge e = getDD(dd, line, true);
+		resetLine(line);
+		return e;
+	}
+
+	dd::Edge StandardOperation::getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const {
+
+		if(gate == SWAP && controls.empty()) {
+			auto target0 = targets.at(0);
+			auto target1 = targets.at(1);
+			// update permutation
+			auto tmp = permutation.at(target0);
+			permutation.at(target0) = permutation.at(target1);
+			permutation.at(target1) = tmp;
+			return dd->makeIdent(0, short(nqubits-1));
+		}
+
+		setLine(line, permutation);
+		dd::Edge e = getDD(dd, line, true, permutation);
+		resetLine(line, permutation);
+		return e;
 	}
 }

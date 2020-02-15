@@ -286,7 +286,9 @@ namespace qc {
 
 				std::vector<unsigned short> qubits{};
 				for (auto& arg: args) {
-					qubits.emplace_back(arg.first);
+					for (unsigned short q=0; q < arg.second; ++q) {
+						qubits.emplace_back(arg.first+q);
+					}
 				}
 
 				emplace_back<NonUnitaryOperation>(nqubits, qubits, Barrier);
@@ -1207,7 +1209,7 @@ namespace qc {
 		} else {
 			auto it_anc = ancregs.find(reg_name);
 			if (it_anc != ancregs.end()) {
-				index = physical_qubit_index - it->second.first;
+				index = physical_qubit_index - it_anc->second.first;
 			}
 			// no else branch needed here, since error would have already shown in getQubitRegister(physical_qubit_index)
 		}
@@ -1369,5 +1371,13 @@ namespace qc {
 			}
 		}
 		return max_index;
+	}
+
+	bool QuantumComputation::isAncilla(unsigned short i) {
+		for (const auto& ancreg: ancregs) {
+			if (ancreg.second.first <= i && i < ancreg.second.first+ancreg.second.second)
+				return true;
+		}
+		return false;
 	}
 }

@@ -20,6 +20,10 @@ add_executable(${PROJECT_NAME}_example main.cpp)
 target_compile_features(${PROJECT_NAME}_example PUBLIC cxx_std_14)
 set_target_properties(${PROJECT_NAME}_example PROPERTIES CXX_EXTENSIONS OFF)
 target_link_libraries(${PROJECT_NAME}_example PUBLIC ${PROJECT_NAME})
+if (COVERAGE)
+	target_compile_options(${PROJECT_NAME}_example PRIVATE --coverage)
+	target_link_libraries(${PROJECT_NAME}_example PRIVATE --coverage)
+endif()
 if(MSVC)
 	target_compile_options(${PROJECT_NAME}_example PUBLIC "/W4" "$<$<CONFIG:RELEASE>:/O2 /GL>")
 	target_link_options(${PROJECT_NAME}_example PUBLIC "$<$<CONFIG:Release>:/LTCG>")
@@ -31,10 +35,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINAR
 
 file(COPY        ${CMAKE_CURRENT_SOURCE_DIR}/circuits
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/extern/qelib1.inc
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/qelib1.inc ${CMAKE_BINARY_DIR}/qelib1.inc)
 execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/circuits ${CMAKE_BINARY_DIR}/circuits)
 
 macro(package_add_test TESTNAME)
@@ -69,4 +70,6 @@ package_add_test(${PROJECT_NAME}_test ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/tes
 							${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_grover.cpp 
 							${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_entanglement.cpp
 							${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_io.cpp
-							${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_ddfunctionality.cpp)
+							${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_ddfunctionality.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_qfr_functionality.cpp)
+add_test(NAME ${PROJECT_NAME}_example COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_example)

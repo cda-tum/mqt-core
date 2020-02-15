@@ -135,7 +135,7 @@ namespace qc {
 		void checkUgate();
 		void setup(unsigned short nq, fp par0, fp par1, fp par2);	
 		
-		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, bool inverse, const std::map<unsigned short, unsigned short>& permutation = {}) const;
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, bool inverse, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
 
 	public:
 		StandardOperation() = default;
@@ -166,61 +166,17 @@ namespace qc {
 			setName();
 		}
 
-		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-			setLine(line);
-			dd::Edge e = getDD(dd, line, false);
-			resetLine(line);
-			return e;
-		}
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override;
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override;
 
-		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override;
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override;
 
-			if(gate == SWAP && controls.empty()) {
-				auto target0 = targets.at(0);
-				auto target1 = targets.at(1);
-				// update permutation
-				auto tmp = permutation.at(target0);
-				permutation.at(target0) = permutation.at(target1);
-				permutation.at(target1) = tmp;
-				return dd->makeIdent(0, short(nqubits-1));
-			}
-
-			setLine(line, permutation);
-			dd::Edge e = getDD(dd, line, false, permutation);
-			resetLine(line, permutation);
-			return e;
-		}
-
-		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-			setLine(line);
-			dd::Edge e = getDD(dd, line, true);
-			resetLine(line);
-			return e;
-		}
-
-		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
-
-			if(gate == SWAP && controls.empty()) {
-				auto target0 = targets.at(0);
-				auto target1 = targets.at(1);
-				// update permutation
-				auto tmp = permutation.at(target0);
-				permutation.at(target0) = permutation.at(target1);
-				permutation.at(target1) = tmp;
-				return dd->makeIdent(0, short(nqubits-1));
-			}
-
-			setLine(line, permutation);
-			dd::Edge e = getDD(dd, line, true, permutation);
-			resetLine(line, permutation);
-			return e;
-		}
-
-		dd::Edge getSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = {}) const;
-		dd::Edge getPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = {}) const;
-		dd::Edge getPdagDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = {}) const;
-		dd::Edge getiSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = {}) const;
-		dd::Edge getiSWAPinvDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = {}) const;
+		dd::Edge getSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
+		dd::Edge getPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
+		dd::Edge getPdagDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
+		dd::Edge getiSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
+		dd::Edge getiSWAPinvDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
 
 		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override;
 		void dumpReal(std::ofstream& of) const override;

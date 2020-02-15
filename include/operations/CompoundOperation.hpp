@@ -15,7 +15,7 @@ namespace qc {
 		std::vector<std::shared_ptr<Operation>> ops{ };
 	public:
 		explicit CompoundOperation(unsigned short nq) {
-			std::strcpy(name, "Compound");
+			std::strcpy(name, "Compound operation:");
 			nqubits = nq;
 		}
 
@@ -65,10 +65,15 @@ namespace qc {
 		}
 
 		std::ostream& print(std::ostream& os) const override {
-			for (unsigned long i = 0; i < ops.size() - 1; ++i) {
-				os << *(ops[i]) << std::endl << "\t";
+			return print(os, standardPermutation);
+		}
+
+		std::ostream& print(std::ostream& os, const std::map<unsigned short, unsigned short>& permutation) const override {
+			os << name;
+			for (const auto & op : ops) {
+				os << std::endl << "\t\t";
+				op->print(os, permutation);
 			}
-			os << *(ops.back());
 
 			return os;
 		}
@@ -84,6 +89,12 @@ namespace qc {
 		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override {
 			for (auto& op: ops) { 
 				op->dumpOpenQASM(of, qreg, creg);
+			}
+		}
+
+		void dumpReal(std::ofstream& of) const override {
+			for (auto& op: ops) {
+				op->dumpReal(of);
 			}
 		}
 

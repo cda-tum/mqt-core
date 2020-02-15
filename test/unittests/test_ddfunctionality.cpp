@@ -4,10 +4,11 @@
  */
 
 #include "gtest/gtest.h"
+#include <random>
 
 #include "QuantumComputation.hpp"
 
-class DDFunctionality : public testing::Test {
+class DDFunctionality : public testing::TestWithParam<unsigned short> {
     protected:
         void TearDown() override {
             if (!dd->isTerminal(e))
@@ -29,44 +30,45 @@ class DDFunctionality : public testing::Test {
 
             // initial state preparation
             line.fill(qc::LINE_DEFAULT);
-            ASSERT_NO_THROW({
-                qc::StandardOperation op(nqubits, 0, qc::X);
-                e     = op.getDD(dd, line);
-                ident = dd->multiply(dd->makeIdent(0, 3), e);
-                dd->incRef(ident);
-            });
+            e = ident = dd->makeIdent(0, (short)(nqubits-1));
+            dd->incRef(ident);
+
+	        std::array<std::mt19937_64::result_type , std::mt19937_64::state_size> random_data{};
+	        std::random_device rd;
+	        std::generate(begin(random_data), end(random_data), [&](){return rd();});
+	        std::seed_seq seeds(begin(random_data), end(random_data));
+	        mt.seed(seeds);
+	        dist = std::uniform_real_distribution<fp> (0.0, 2 * qc::PI);
         }
 
         unsigned short                          nqubits             = 4;
         long                                    initialCacheCount   = 0;
         long                                    initialComplexCount = 0;
         std::array<short, qc::MAX_QUBITS>       line{};
-        dd::Edge                                e{}, ident{}, state_preparation{};
+        dd::Edge                                e{}, ident{};
         std::unique_ptr<dd::Package>            dd;
+		std::mt19937_64                         mt;
+		std::uniform_real_distribution<fp>      dist;
 };
 
-class DDFunctionalityParameters : public DDFunctionality,
-                                  public testing::WithParamInterface<unsigned short> {
-};
-
-INSTANTIATE_TEST_SUITE_P(DDFunctionalityParameters,
-                         DDFunctionalityParameters,
+INSTANTIATE_TEST_SUITE_P(Parameters,
+                         DDFunctionality,
                          testing::Values(qc::I, qc::H, qc::X, qc::Y, qc::Z, qc::S, qc::Sdag, qc::T, qc::Tdag, qc::V, 
                                          qc::Vdag, qc::U3, qc::U2, qc::U1, qc::RX, qc::RY, qc::RZ, qc::P, qc::Pdag, 
                                          qc::SWAP, qc::iSWAP),
-                         [](const testing::TestParamInfo<DDFunctionalityParameters::ParamType>& info) {
+                         [](const testing::TestParamInfo<DDFunctionality::ParamType>& info) {
                              auto gate = (qc::Gate)info.param;
 	                         switch (gate) {
-                                case qc::I:     return "I";
-                                case qc::H:     return "H";
-                                case qc::X:     return "X";
-                                case qc::Y:     return "U3";
-                                case qc::Z:     return "Z";
-                                case qc::S:     return "S";
+                                case qc::I:     return "i";
+                                case qc::H:     return "h";
+                                case qc::X:     return "x";
+                                case qc::Y:     return "y";
+                                case qc::Z:     return "z";
+                                case qc::S:     return "s";
                                 case qc::Sdag:  return "sdg";
-                                case qc::T:     return "T";
+                                case qc::T:     return "t";
                                 case qc::Tdag:  return "tdg";
-                                case qc::V:     return "V";
+                                case qc::V:     return "v";
                                 case qc::Vdag:  return "vdg";
                                 case qc::U3:    return "u3";
                                 case qc::U2:    return "u2";
@@ -76,26 +78,29 @@ INSTANTIATE_TEST_SUITE_P(DDFunctionalityParameters,
                                 case qc::RZ:    return "rz";
                                 case qc::SWAP:  return "swap";
                                 case qc::iSWAP: return "iswap";
-                                case qc::P:     return "P";
+                                case qc::P:     return "p";
                                 case qc::Pdag:  return "pdag";
                                 default:        return "unknownGate";
-                            }       
+                            }
                          }); 
 
 
-TEST_P(DDFunctionalityParameters, standard_op_build_inverse_build) {
+TEST_P(DDFunctionality, standard_op_build_inverse_build) {
     auto gate = (qc::Gate)GetParam();
     
-    qc::StandardOperation             op;
+    qc::StandardOperation op;
     switch(gate) {
+    	case qc::U3:
+		    op = qc::StandardOperation(nqubits, 0,  gate, dist(mt), dist(mt), dist(mt));
+		    break;
         case qc::U2: 
-            op = qc::StandardOperation(nqubits, 0,  gate, 1);
+            op = qc::StandardOperation(nqubits, 0,  gate, dist(mt), dist(mt));
 			break;
         case qc::RX:
 		case qc::RY:
         case qc::RZ:
 		case qc::U1:
-            op = qc::StandardOperation(nqubits, 0,  gate, qc::PI);
+            op = qc::StandardOperation(nqubits, 0,  gate, dist(mt));
             break;
 
         case qc::SWAP:
@@ -104,18 +109,14 @@ TEST_P(DDFunctionalityParameters, standard_op_build_inverse_build) {
             break;
         case qc::P:
 		case qc::Pdag: 
-            op = qc::StandardOperation(nqubits, std::vector<qc::Control>{qc::Control(0), qc::Control(1)}, 2, 3, gate);
+            op = qc::StandardOperation(nqubits, std::vector<qc::Control>{qc::Control(0)}, 1, 2, gate);
             break;
         default:
             op = qc::StandardOperation(nqubits, 0,  gate);
     }
 
-    ASSERT_NO_THROW({e = dd->multiply(op.getDD(dd, line), e);});
-    ASSERT_NO_THROW({e = dd->multiply(op.getInverseDD(dd, line), e);});
+    ASSERT_NO_THROW({e = dd->multiply(op.getDD(dd, line), op.getInverseDD(dd, line));});
     dd->incRef(e);
-   
-    //dd->printVector(e);
-    //dd->printVector(ident);
 
     EXPECT_TRUE(dd::Package::equals(ident, e));
 }
@@ -160,4 +161,17 @@ TEST_F(DDFunctionality, build_circuit) {
     EXPECT_FALSE(dd::Package::equals(ident, e));
 }
 
+TEST_F(DDFunctionality, non_unitary) {
+	qc::QuantumComputation qc;
+	auto dummy_map = std::map<unsigned short, unsigned short>{};
+	auto op = qc::NonUnitaryOperation(nqubits, {0,1,2,3}, {0,1,2,3});
+	EXPECT_FALSE(op.isUnitary());
+	EXPECT_EXIT(op.getDD(dd, line), ::testing::ExitedWithCode(1), "DD for non-unitary operation not available!");
+	EXPECT_EXIT(op.getInverseDD(dd, line), ::testing::ExitedWithCode(1), "DD for non-unitary operation not available!");
+	EXPECT_EXIT(op.getDD(dd, line, dummy_map), ::testing::ExitedWithCode(1), "DD for non-unitary operation not available!");
+	EXPECT_EXIT(op.getInverseDD(dd, line, dummy_map), ::testing::ExitedWithCode(1), "DD for non-unitary operation not available!");
+	EXPECT_TRUE(op.actsOn(0));
+	op = qc::NonUnitaryOperation(nqubits, {0,1,2,3});
+	EXPECT_TRUE(op.actsOn(0));
 
+}

@@ -67,7 +67,8 @@ namespace qc {
 	public:
 		QuantumComputation() = default;
 		explicit QuantumComputation(unsigned short nqubits) {
-			addQubitRegister(nqubits, DEFAULT_QREG);
+			addQubitRegister(nqubits);
+			addClassicalRegister(nqubits);
 		}
 		explicit QuantumComputation(const std::string& filename) {
 			import(filename);
@@ -77,8 +78,12 @@ namespace qc {
 
 		virtual  size_t getNops()                   const { return ops.size();	}
 		unsigned short  getNqubits()                const { return nqubits + nancillae;	}
+		unsigned short getNancillae()               const { return nancillae; }
 		unsigned short getNqubitsWithoutAncillae()  const { return nqubits; }
 		std::string     getName()                   const { return name;       }
+		const registerMap& getQregs()               const { return qregs; }
+		const registerMap& getCregs()               const { return cregs; }
+		const registerMap& getANCregs()               const { return ancregs; }
 
 		// initialLayout[physical_qubit] = logical_qubit
 		permutationMap initialLayout{ };
@@ -89,7 +94,7 @@ namespace qc {
 		std::string getQubitRegister(unsigned short physical_qubit_index);
 		unsigned short getHighestLogicalQubitIndex();
 		std::pair<std::string, unsigned short> getQubitRegisterAndIndex(unsigned short physical_qubit_index);
-		bool isAncilla(unsigned short i) { return i >= nqubits; }
+		bool isAncilla(unsigned short i);
 		void reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd);
 		void reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd);
 		dd::Edge createInitialMatrix(std::unique_ptr<dd::Package>& dd); // creates identity matrix, which is reduced with respect to the ancillary qubits
@@ -105,7 +110,7 @@ namespace qc {
 		//      'o Q_i Q_j ... Q_k' meaning, e.g. q_0 is found at Q_i, q_1 at Q_j, etc.
 		bool lookForOpenQASM_IO_Layout(std::istream& ifs);
 
-		// optimize circuit by fusing CX-CX-CX gates
+		// optimize circuit by fusing CX-CX(-CX) gates
 		void fuseCXtoSwap();
 
 		// this function augments a given circuit by additional registers
@@ -209,7 +214,7 @@ namespace qc {
 		
 		template<class T>
 		void push_back(const T& op) {
-			if (ops.size() >= 1 && !op.isControlled() && !ops.back()->isControlled()) {
+			if (!ops.empty() && !op.isControlled() && !ops.back()->isControlled()) {
 				std::cerr << op.getName() << std::endl;
 			}
 

@@ -1,13 +1,10 @@
 add_library(${PROJECT_NAME} STATIC
-            ${CMAKE_CURRENT_SOURCE_DIR}/qasm_parser/Token.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/qasm_parser/Scanner.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/qasm_parser/Parser.cpp
 
             ${CMAKE_CURRENT_SOURCE_DIR}/operations/Operation.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/operations/StandardOperation.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/operations/NonUnitaryOperation.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/operations/CompoundOperation.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/operations/ClassicControlledOperation.cpp
 
             ${CMAKE_CURRENT_SOURCE_DIR}/QuantumComputation.cpp
 

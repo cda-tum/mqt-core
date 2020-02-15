@@ -69,6 +69,14 @@ namespace qc {
 					&& (end   == reg.size() -1 || reg[end].first != reg[end   + 1].first);
 		}
 
+		static std::map<unsigned short, unsigned short> create_standard_permutation() {
+			std::map<unsigned short, unsigned short> permutation{};
+			for (unsigned short i=0; i < MAX_QUBITS; ++i)
+				permutation.insert({i, i});
+			return permutation;
+		}
+		static std::map<unsigned short, unsigned short> standardPermutation;
+
 	public:
 		Operation() = default;
 
@@ -137,10 +145,8 @@ namespace qc {
 		// The methods with a permutation parameter apply these operations according to the mapping specified by the permutation, e.g.
 		//      if perm[0] = 1 and perm[1] = 0
 		//      then cx 0 1 will be translated to cx perm[0] perm[1] == cx 1 0
-		void setLine(std::array<short, MAX_QUBITS>& line) const;
-		void setLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const;
-		void resetLine(std::array<short, MAX_QUBITS>& line) const;
-		void resetLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const;
+		void setLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
+		void resetLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
 
 		virtual dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const = 0;
 		virtual dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const = 0;
@@ -180,15 +186,9 @@ namespace qc {
 			return op.print(os);
 		}
 
-		virtual void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const { UNUSED(of); UNUSED(qreg); UNUSED(creg);
-			std::cerr << "Dump of " << name << " operation to OpenQASM not yet supported" << std::endl;
-		}
-		virtual void dumpReal(std::ofstream& of) const { UNUSED(of);
-			std::cerr << "Dump of " << name << " operation to Real not yet supported" << std::endl;
-		}
-		virtual void dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char* anc_reg_name) const { UNUSED(of); UNUSED(qreg); UNUSED(creg); UNUSED(anc_reg_name);
-			std::cerr << "Dump of " << name << " operation to Qiskit not yet supported" << std::endl;
-		}
+		virtual void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const = 0;
+		virtual void dumpReal(std::ofstream& of) const = 0;
+		virtual void dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char* anc_reg_name) const = 0;
 	};
 }
 #endif //INTERMEDIATEREPRESENTATION_OPERATION_H

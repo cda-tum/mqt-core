@@ -98,3 +98,34 @@ TEST_P(QFT, Reference) {
 		EXPECT_NEAR(CN::val(c.i), 0, CN::TOLERANCE);
 	}
 }
+
+TEST_P(QFT, ReferenceSim) {
+	nqubits = GetParam();
+
+	// there should be no error constructing the circuit
+	ASSERT_NO_THROW({qc = std::make_unique<qc::QFT>(nqubits);});
+
+	// there should be no error building the functionality
+	ASSERT_NO_THROW({
+		dd::Edge in = dd->makeZeroState(nqubits);
+        e = qc->simulate(in, dd);
+	});
+	qc->printStatistics();
+
+	// QFT DD |0...0> sim should consist of n nodes
+	ASSERT_EQ(dd->size(e), nqubits+1);
+
+	// Force garbage collection of compute table and complex table
+	dd->garbageCollect(true);
+
+	// top edge weight should equal sqrt(0.5)^n
+	EXPECT_NEAR(CN::val(e.w.r), 1, CN::TOLERANCE);
+	EXPECT_NEAR(CN::val(e.w.i), 0, CN::TOLERANCE);
+
+	// first column should consist only of 1's
+	for (int i = 0; i < std::pow(2, nqubits); ++i) {
+		auto c = qc->getEntry(dd, e, i, 0);
+		EXPECT_NEAR(CN::val(c.r), std::pow(1.L/std::sqrt(2.L), nqubits), CN::TOLERANCE);
+		EXPECT_NEAR(CN::val(c.i), 0, CN::TOLERANCE);
+	}
+}
