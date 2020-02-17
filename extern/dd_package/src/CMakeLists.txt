@@ -1,23 +1,79 @@
-add_library(${PROJECT_NAME}_lib STATIC DDpackage.cpp DDcomplex.cpp DDpackage.h DDcomplex.h)
-target_compile_features(${PROJECT_NAME}_lib PUBLIC cxx_std_11)
-set_property(TARGET ${PROJECT_NAME}_lib PROPERTY CXX_EXTENSIONS OFF)
-set_property(TARGET ${PROJECT_NAME}_lib PROPERTY CMAKE_CXX_STANDARD_REQUIRED ON)
+add_library(${PROJECT_NAME}
+            ${CMAKE_CURRENT_SOURCE_DIR}/DDpackage.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/DDcomplex.cpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/DDpackage.h
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/DDcomplex.h)
+add_library(DD::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+target_include_directories(${PROJECT_NAME} PUBLIC
+                           $<INSTALL_INTERFACE:include>
+                           $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_EXTENSIONS OFF)
+set_property(TARGET ${PROJECT_NAME} PROPERTY CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# check if interprocedural optimization is supported
 include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported)
 if(ipo_supported)
-	set_target_properties(${PROJECT_NAME}_lib PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+	set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
+
+# add coverage compiler and linker flag if COVERAGE is set
 if (COVERAGE)
-	target_compile_options(${PROJECT_NAME}_lib PRIVATE --coverage)
-	target_link_libraries(${PROJECT_NAME}_lib PRIVATE --coverage)
+	target_compile_options(${PROJECT_NAME} PRIVATE --coverage)
+	target_link_libraries(${PROJECT_NAME} PRIVATE --coverage)
 endif()
 
+# set compiler flags depending on compiler
 if(MSVC)
-	target_compile_options(${PROJECT_NAME}_lib PRIVATE "/W4" "/utf-8" "$<$<CONFIG:RELEASE>:/O2 /GL>")
-	target_link_options(${PROJECT_NAME}_lib PRIVATE "$<$<CONFIG:Release>:/LTCG>")
+	target_compile_options(${PROJECT_NAME} PRIVATE "/W4" "/utf-8" "$<$<CONFIG:RELEASE>:/O2 /GL>")
+	target_link_options(${PROJECT_NAME} PRIVATE "$<$<CONFIG:Release>:/LTCG>")
 else()
-	target_compile_options(${PROJECT_NAME}_lib PRIVATE -Wall -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native>)
+	target_compile_options(${PROJECT_NAME} PRIVATE -Wall -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native>)
 endif()
 
-target_include_directories(${PROJECT_NAME}_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/)
+# installation instructions
+
+include(GNUInstallDirs)
+set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/DDpackage)
+
+install(TARGETS ${PROJECT_NAME}
+        EXPORT ddpackage-targets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES EXPORT_NAME DDpackage)
+
+install(DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+install(EXPORT ddpackage-targets
+        FILE DDpackageTargets.cmake
+        NAMESPACE DD::
+        DESTINATION ${INSTALL_CONFIGDIR}
+        )
+
+#Create a ConfigVersion.cmake file
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+		${CMAKE_CURRENT_BINARY_DIR}/DDpackageConfigVersion.cmake
+		VERSION ${PROJECT_VERSION}
+		COMPATIBILITY AnyNewerVersion
+)
+
+configure_package_config_file(${${PROJECT_NAME}_SOURCE_DIR}/cmake/DDpackageConfig.cmake.in
+                              ${CMAKE_CURRENT_BINARY_DIR}/DDpackageConfig.cmake
+                              INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+                              )
+
+install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/DDpackageConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/DDpackageConfigVersion.cmake
+        DESTINATION ${INSTALL_CONFIGDIR}
+        )
+
+# exporting from the build tree
+export(EXPORT ddpackage-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/DDpackageTargets.cmake NAMESPACE DD::)
+
+#Register package in user's package registry
+export(PACKAGE DDpackage)

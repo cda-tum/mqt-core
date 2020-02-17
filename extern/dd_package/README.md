@@ -119,6 +119,21 @@ Running main() from [...]/extern/googletest/googletest/src/gtest_main.cc
 [  PASSED  ] 4 tests.
 ```
 
+The DD package may be installed on the system by executing
+
+```commandline
+$ mkdir build && cd build
+$ cmake .. -DCMAKE_BUILD_TYPE=Release
+$ cmake --build . --config Release --target install
+```
+
+It can then be included in other projects using the following CMake snippet
+
+```cmake
+find_package(DDpackage)
+target_link_libraries(${TARGET_NAME} PRIVATE DD::DDpackage)
+```
+
 ## Reference
 
 If you use the DD package for your research, we will be thankful if you refer to it by citing the following publication:

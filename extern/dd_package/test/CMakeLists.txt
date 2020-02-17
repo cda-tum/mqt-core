@@ -1,7 +1,10 @@
-# Prevent overriding the parent project's compiler/linker
-# settings on Windows
+# fix cmake warnings for googletest when building shared libs
+if (APPLE AND BUILD_SHARED_LIBS)
+	set(CMAKE_MACOSX_RPATH ON)
+endif ()
+# Prevent overriding the parent project's compiler/linker settings on Windows
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest" "extern/googletest")
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest" "extern/googletest" EXCLUDE_FROM_ALL)
 mark_as_advanced(
 		BUILD_GMOCK BUILD_GTEST BUILD_SHARED_LIBS
 		gmock_build_tests gtest_build_samples gtest_build_tests
@@ -14,8 +17,8 @@ set_target_properties(gmock_main PROPERTIES FOLDER extern)
 target_compile_features(gtest PUBLIC cxx_std_14)
 target_compile_features(gtest_main PUBLIC cxx_std_14)
 
-add_executable(${PROJECT_NAME}_example main.cpp)
-target_link_libraries(${PROJECT_NAME}_example PRIVATE dd_package_lib)
+add_executable(${PROJECT_NAME}_example ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+target_link_libraries(${PROJECT_NAME}_example PRIVATE ${PROJECT_NAME})
 target_compile_features(${PROJECT_NAME}_example PUBLIC cxx_std_11)
 set_property(TARGET ${PROJECT_NAME}_example PROPERTY CXX_EXTENSIONS OFF)
 if (COVERAGE)
@@ -34,7 +37,7 @@ macro(package_add_test TESTNAME)
 	add_executable(${TESTNAME} ${ARGN})
 	# link the Google test infrastructure, mocking library, and a default main fuction to
 	# the test executable.  Remove g_test_main if writing your own main function.
-	target_link_libraries(${TESTNAME} PRIVATE ${PROJECT_NAME}_lib gtest gtest_main)
+	target_link_libraries(${TESTNAME} PRIVATE ${PROJECT_NAME} gtest gtest_main)
 	target_compile_features(${TESTNAME} PUBLIC cxx_std_14)
 	set_property(TARGET ${TESTNAME} PROPERTY CXX_EXTENSIONS OFF)
 	if (COVERAGE)

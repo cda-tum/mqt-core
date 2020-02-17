@@ -1,12 +1,16 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.10...3.16)
+if(${CMAKE_VERSION} VERSION_LESS 3.12)
+	cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+endif()
+
 project( dd_package
          LANGUAGES CXX
          VERSION 1.1
-         DESCRIPTION "Library to handle the decisions diagrams and corresponding operations")
+         DESCRIPTION "Library to handle decisions diagrams and corresponding operations")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
 SET(COVERAGE OFF CACHE BOOL "Coverage")
+option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" OFF)
 
 set(default_build_type "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -44,3 +48,4 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 	include(GoogleTest)
 	add_subdirectory(test)
 endif()
+
