@@ -8,6 +8,7 @@
 
 #include <map>
 #include <string>
+#include "DDcomplex.h"
 
 namespace qasm {
 
@@ -64,7 +65,7 @@ namespace qasm {
 		int         line    = 0;
 		int         col     = 0;
 		int         val     = 0;
-		double      valReal = 0.0;
+		fp          valReal = 0.0;
 		std::string str;
 
 		Token() = default;

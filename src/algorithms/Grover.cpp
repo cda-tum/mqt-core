@@ -11,7 +11,7 @@ namespace qc {
      * Private Methods
      ***/
 	void Grover::setup(QuantumComputation& qc) {
-        qc.emplace_back<StandardOperation>(nqubits, nqubits-1, X);
+        qc.emplace_back<StandardOperation>(nqubits, static_cast<unsigned short>(nqubits-1), X);
         for (unsigned short i = 0; i < nqubits; ++i)
             qc.emplace_back<StandardOperation>(nqubits, i, H);
     }
@@ -39,7 +39,7 @@ namespace qc {
         //qc.emplace_back<StandardOperation>(nqubits, targets, H);
         //qc.emplace_back<StandardOperation>(nqubits, targets, X);
 
-        unsigned short target = std::max(nqubits-2, 0);
+        auto target = static_cast<unsigned short>(std::max(nqubits-2, 0));
         qc.emplace_back<StandardOperation>(nqubits, target, H);
         std::vector<Control> controls{};
         for (unsigned short j = 0; j < nqubits-2; ++j) {
@@ -48,10 +48,10 @@ namespace qc {
         qc.emplace_back<StandardOperation>(nqubits, controls, target);
         qc.emplace_back<StandardOperation>(nqubits, target, H);
 
-        for (int i = nqubits-2; i >= 0; --i) {
+        for (auto i = static_cast<short>(nqubits-2); i >= 0; --i) {
             qc.emplace_back<StandardOperation>(nqubits, i, X);
         }
-        for (int i = nqubits-2; i >= 0; --i) {
+        for (auto i = static_cast<short>(nqubits-2); i >= 0; --i) {
             qc.emplace_back<StandardOperation>(nqubits, i, H);
         }
 
@@ -80,13 +80,13 @@ namespace qc {
             initialLayout.insert({ i, i});
             outputPermutation.insert({ i, i});
         }
-	    qregs.insert({"q", {0, nq}});
-        qregs.insert({"anc", {nq, 1}});
-	    cregs.insert({"c", {0, nq}});
-	    cregs.insert({"c_anc", {nq, 1}});
+	    qregs.insert({"q", std::pair<unsigned short, unsigned short>{0, nq}});
+        qregs.insert({"anc", std::pair<unsigned short, unsigned short>{nq, 1}});
+	    cregs.insert({"c", std::pair<unsigned short, unsigned short>{0, nq}});
+	    cregs.insert({"c_anc", std::pair<unsigned short, unsigned short>{nq, 1}});
 
         std::mt19937_64 generator(this->seed);
-        std::uniform_int_distribution<unsigned long long> distribution(0, (unsigned long long) (std::pow((long double)2, std::max(0,nqubits-1)) - 1));
+        std::uniform_int_distribution<unsigned long long> distribution(0, static_cast<unsigned long long>(std::pow((long double)2, std::max(0,nqubits-1)) - 1));
         oracleGenerator = bind(distribution, ref(generator));
         x = oracleGenerator();
 

@@ -327,10 +327,10 @@ namespace qc {
 			case H: gm = Hmat; break;
 			case X:
 				if (controls.size() > 1) { //Toffoli //TODO > 0 (include CNOT?)
-					e = dd->TTlookup(nqubits, controls.size(), targets[0], line.data());
+					e = dd->TTlookup(nqubits, static_cast<unsigned short>(controls.size()), targets[0], line.data());
 					if (e.p == nullptr) {
 						e = dd->makeGateDD(Xmat, nqubits, line);
-						dd->TTinsert(nqubits, controls.size(), targets[0], line.data(), e);
+						dd->TTinsert(nqubits, static_cast<unsigned short>(controls.size()), targets[0], line.data(), e);
 					}
 					return e;
 				}
@@ -448,31 +448,31 @@ namespace qc {
     ***/	
 	void StandardOperation::dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t&) const {
 		//TODO handle multiple controls
-		std::ostringstream name;
+		std::ostringstream op;
 		if((controls.size() > 1 && gate != X) || controls.size() > 2) {
 			std::cerr << "Dumping of multiple controls for other gates than toffoli not supported" << std::endl;
 		}
 		switch (gate) {
 			case I: 
-               	name << "id";
+               	op << "id";
 				break;
 			case H: 
 				if(!controls.empty()) {
-					name << "ch " << qreg[controls[0].qubit].second << ",";
+					op << "ch " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "h";
+					op << "h";
 				}
 				break;
 			case X: 
 				switch(controls.size()) {
 					case 0:
-                		name << "x";
+                		op << "x";
 						break;
 					case 1:
-               			name << "cx " << qreg[controls[0].qubit].second << ",";
+               			op << "cx " << qreg[controls[0].qubit].second << ",";
 						break;
 					case 2:
-               			name << "ccx " << qreg[controls[0].qubit].second << ", " << qreg[controls[1].qubit].second << ",";
+               			op << "ccx " << qreg[controls[0].qubit].second << ", " << qreg[controls[1].qubit].second << ",";
 						break;
 					default:
 						std::cerr << "MCT not yet supported" << std::endl;
@@ -480,100 +480,100 @@ namespace qc {
 				break;
 			case Y:
 				if(!controls.empty()) {
-					name << "cy " << qreg[controls[0].qubit].second << ",";
+					op << "cy " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "y";
+					op << "y";
 				}
 				break;
 			case Z: 
 				if(!controls.empty()) {
-					name << "cz " << qreg[controls[0].qubit].second << ",";
+					op << "cz " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "z";
+					op << "z";
 				}
 				break;
 			case S:
 				if(!controls.empty()) {
-					name << "cu1(pi/2) " << qreg[controls[0].qubit].second << ",";
+					op << "cu1(pi/2) " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "s";
+					op << "s";
 				}
 				break;
 			case Sdag:
 				if(!controls.empty()) {
-					name << "cu1(-pi/2) " << qreg[controls[0].qubit].second << ",";
+					op << "cu1(-pi/2) " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "sdg";
+					op << "sdg";
 				}
 				break;
 			case T:
 				if(!controls.empty()) {
-					name << "cu1(pi/4) " << qreg[controls[0].qubit].second << ",";
+					op << "cu1(pi/4) " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "t";
+					op << "t";
 				}
 				break;
 			case Tdag:
 				if(!controls.empty()) {
-					name << "cu1(-pi/4) " << qreg[controls[0].qubit].second << ",";
+					op << "cu1(-pi/4) " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "tdg";
+					op << "tdg";
 				}
 				break;
 			case V:
 				if(!controls.empty()) {
-					name << "cu3(pi/2, -pi/2, pi/2) " << qreg[controls[0].qubit].second << ",";
+					op << "cu3(pi/2, -pi/2, pi/2) " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "u3(pi/2, -pi/2, pi/2)";
+					op << "u3(pi/2, -pi/2, pi/2)";
 				}
 				break;
 			case Vdag:
 				if(!controls.empty()) {
-					name << "cu3(pi/2, pi/2, -pi/2) " << qreg[controls[0].qubit].second << ",";
+					op << "cu3(pi/2, pi/2, -pi/2) " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "u3(pi/2, pi/2, -pi/2)";
+					op << "u3(pi/2, pi/2, -pi/2)";
 				}
 				break;
 			case U3: 
 				if(!controls.empty()) {
-					name << "cu3(" << parameter[2] << "," << parameter[1] << "," << parameter[0] << ") " << qreg[controls[0].qubit].second << ",";
+					op << "cu3(" << parameter[2] << "," << parameter[1] << "," << parameter[0] << ") " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "u3(" << parameter[2] << "," << parameter[1] << "," << parameter[0] << ")";
+					op << "u3(" << parameter[2] << "," << parameter[1] << "," << parameter[0] << ")";
 				}
 				break;
 			case U2:
 				if(!controls.empty()) {
-					name << "cu3(pi/2," << parameter[1] << "," << parameter[0] << ") " << qreg[controls[0].qubit].second << ",";
+					op << "cu3(pi/2," << parameter[1] << "," << parameter[0] << ") " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "u2(" << parameter[1] << "," << parameter[0] << ")";
+					op << "u2(" << parameter[1] << "," << parameter[0] << ")";
 				}
 				break;
 			case U1: 
 				if(!controls.empty()) {
-					name << "cu1(" << parameter[0] << ") " << qreg[controls[0].qubit].second << ",";
+					op << "cu1(" << parameter[0] << ") " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "u1(" << parameter[0] << ")";
+					op << "u1(" << parameter[0] << ")";
 				}
 				break;
 			case RX:
 				if(!controls.empty()) {
-					name << "crx(" << parameter[0] << ") " << qreg[controls[0].qubit].second << ",";
+					op << "crx(" << parameter[0] << ") " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "rx(" << parameter[0] << ")";
+					op << "rx(" << parameter[0] << ")";
 				}
 				break;
 			case RY:
 				if(!controls.empty()) {
-					name << "cry(" << parameter[0] << ") " << qreg[controls[0].qubit].second << ",";
+					op << "cry(" << parameter[0] << ") " << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "ry(" << parameter[0] << ")";
+					op << "ry(" << parameter[0] << ")";
 				}
 				break;
 			case RZ: 
 				if(!controls.empty()) {
-					name << "crz(" << parameter[0] << ")" << qreg[controls[0].qubit].second << ",";
+					op << "crz(" << parameter[0] << ")" << qreg[controls[0].qubit].second << ",";
 				} else {
-					name << "rz(" << parameter[0] << ")";
+					op << "rz(" << parameter[0] << ")";
 				}
 				break;
 			case SWAP:
@@ -602,30 +602,31 @@ namespace qc {
                 std::cerr << "gate type (index) " << (int) gate << " could not be converted to OpenQASM" << std::endl;
 		}
         for(auto target: targets) {
-			of << name.str() << " " << qreg[target].second << ";" << std::endl;
+			of << op.str() << " " << qreg[target].second << ";" << std::endl;
 		}
 	}
 
 	void StandardOperation::dumpReal(std::ofstream& of) const {
-
+		UNUSED(of)
 	}
 
 	void StandardOperation::dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char* anc_reg_name) const {
-		std::ostringstream name;
+		UNUSED(creg)
+		std::ostringstream op;
 		if (targets.size() > 2 || (targets.size() > 1 && gate != SWAP && gate != iSWAP && gate != P && gate != Pdag)) {
 			std::cerr << "Multiple targets are not supported in general at the moment" << std::endl;
 		}
 		switch (gate) {
 			case I:
-				name << "qc.iden(";
+				op << "qc.iden(";
 				break;
 			case H:
 				switch(controls.size()) {
 					case 0:
-						name << "qc.h(";
+						op << "qc.h(";
 						break;
 					case 1:
-						name << "qc.ch(" << qreg[controls[0].qubit].second << ", ";
+						op << "qc.ch(" << qreg[controls[0].qubit].second << ", ";
 						break;
 					default:
 						std::cerr << "Multi-controlled H gate currently not supported" << std::endl;
@@ -634,31 +635,31 @@ namespace qc {
 			case X:
 				switch(controls.size()) {
 					case 0:
-						name << "qc.x(";
+						op << "qc.x(";
 						break;
 					case 1:
-						name << "qc.cx(" << qreg[controls[0].qubit].second << ", ";
+						op << "qc.cx(" << qreg[controls[0].qubit].second << ", ";
 						break;
 					case 2:
-						name << "qc.ccx(" << qreg[controls[0].qubit].second << ", " << qreg[controls[1].qubit].second << ", ";
+						op << "qc.ccx(" << qreg[controls[0].qubit].second << ", " << qreg[controls[1].qubit].second << ", ";
 						break;
 					default:
-						name << "qc.mct([";
+						op << "qc.mct([";
 						for (const auto& control:controls) {
-							name << qreg[control.qubit].second << ", ";
+							op << qreg[control.qubit].second << ", ";
 						}
-						name << "], " << qreg[targets[0]].second << ", " << anc_reg_name << ", mode='basic')" << std::endl;
-						of << name.str();
+						op << "], " << qreg[targets[0]].second << ", " << anc_reg_name << ", mode='basic')" << std::endl;
+						of << op.str();
 						return;
 				}
 				break;
 			case Y:
 				switch(controls.size()) {
 					case 0:
-						name << "qc.y(";
+						op << "qc.y(";
 						break;
 					case 1:
-						name << "qc.cy(" << qreg[controls[0].qubit].second << ", ";
+						op << "qc.cy(" << qreg[controls[0].qubit].second << ", ";
 						break;
 					default:
 						std::cerr << "Multi-controlled Y gate currently not supported" << std::endl;
@@ -666,66 +667,66 @@ namespace qc {
 				break;
 			case Z:
 				if (!controls.empty()) {
-					name << "qc.mcu1(pi, [";
+					op << "qc.mcu1(pi, [";
 					for (const auto& control:controls) {
-						name << qreg[control.qubit].second << ", ";
+						op << qreg[control.qubit].second << ", ";
 					}
-					name << "], ";
+					op << "], ";
 				} else {
-					name << "qc.z(";
+					op << "qc.z(";
 				}
 				break;
 			case S:
 				if (!controls.empty()) {
-					name << "qc.mcu1(pi/2, [";
+					op << "qc.mcu1(pi/2, [";
 					for (const auto& control:controls) {
-						name << qreg[control.qubit].second << ", ";
+						op << qreg[control.qubit].second << ", ";
 					}
-					name << "], ";
+					op << "], ";
 				} else {
-					name << "qc.s(";
+					op << "qc.s(";
 				}
 				break;
 			case Sdag:
 				if (!controls.empty()) {
-					name << "qc.mcu1(-pi/2, [";
+					op << "qc.mcu1(-pi/2, [";
 					for (const auto& control:controls) {
-						name << qreg[control.qubit].second << ", ";
+						op << qreg[control.qubit].second << ", ";
 					}
-					name << "], ";
+					op << "], ";
 				} else {
-					name << "qc.sdg(";
+					op << "qc.sdg(";
 				}
 				break;
 			case T:
 				if (!controls.empty()) {
-					name << "qc.mcu1(pi/4, [";
+					op << "qc.mcu1(pi/4, [";
 					for (const auto& control:controls) {
-						name << qreg[control.qubit].second << ", ";
+						op << qreg[control.qubit].second << ", ";
 					}
-					name << "], ";
+					op << "], ";
 				} else {
-					name << "qc.t(";
+					op << "qc.t(";
 				}
 				break;
 			case Tdag:
 				if (!controls.empty()) {
-					name << "qc.mcu1(-pi/4, [";
+					op << "qc.mcu1(-pi/4, [";
 					for (const auto& control:controls) {
-						name << qreg[control.qubit].second << ", ";
+						op << qreg[control.qubit].second << ", ";
 					}
-					name << "], ";
+					op << "], ";
 				} else {
-					name << "qc.tdg(";
+					op << "qc.tdg(";
 				}
 				break;
 			case V:
 				switch(controls.size()) {
 					case 0:
-						name << "qc.u3(pi/2, -pi/2, pi/2, ";
+						op << "qc.u3(pi/2, -pi/2, pi/2, ";
 						break;
 					case 1:
-						name << "qc.cu3(pi/2, -pi/2, pi/2, " << qreg[controls[0].qubit].second << ", ";
+						op << "qc.cu3(pi/2, -pi/2, pi/2, " << qreg[controls[0].qubit].second << ", ";
 						break;
 					default:
 						std::cerr << "Multi-controlled V gate currently not supported" << std::endl;
@@ -734,10 +735,10 @@ namespace qc {
 			case Vdag:
 				switch(controls.size()) {
 					case 0:
-						name << "qc.u3(pi/2, pi/2, -pi/2, ";
+						op << "qc.u3(pi/2, pi/2, -pi/2, ";
 						break;
 					case 1:
-						name << "qc.cu3(pi/2, pi/2, -pi/2, " << qreg[controls[0].qubit].second << ", ";
+						op << "qc.cu3(pi/2, pi/2, -pi/2, " << qreg[controls[0].qubit].second << ", ";
 						break;
 					default:
 						std::cerr << "Multi-controlled Vdag gate currently not supported" << std::endl;
@@ -746,10 +747,10 @@ namespace qc {
 			case U3:
 				switch(controls.size()) {
 					case 0:
-						name << "qc.u3(" << parameter[2] << ", " << parameter[1] << ", " << parameter[0] << ", ";
+						op << "qc.u3(" << parameter[2] << ", " << parameter[1] << ", " << parameter[0] << ", ";
 						break;
 					case 1:
-						name << "qc.cu3(" << parameter[2] << ", " << parameter[1] << ", " << parameter[0] << ", " << qreg[controls[0].qubit].second << ", ";
+						op << "qc.cu3(" << parameter[2] << ", " << parameter[1] << ", " << parameter[0] << ", " << qreg[controls[0].qubit].second << ", ";
 						break;
 					default:
 						std::cerr << "Multi-controlled U3 gate currently not supported" << std::endl;
@@ -758,10 +759,10 @@ namespace qc {
 			case U2:
 				switch(controls.size()) {
 					case 0:
-						name << "qc.u3(pi/2, " << parameter[1] << ", " << parameter[0] << ", ";
+						op << "qc.u3(pi/2, " << parameter[1] << ", " << parameter[0] << ", ";
 						break;
 					case 1:
-						name << "qc.cu3(pi/2, " << parameter[1] << ", " << parameter[0] << ", " << qreg[controls[0].qubit].second << ", ";
+						op << "qc.cu3(pi/2, " << parameter[1] << ", " << parameter[0] << ", " << qreg[controls[0].qubit].second << ", ";
 						break;
 					default:
 						std::cerr << "Multi-controlled U2 gate currently not supported" << std::endl;
@@ -769,46 +770,46 @@ namespace qc {
 				break;
 			case U1:
 				if (!controls.empty()) {
-					name << "qc.mcu1(" << parameter[0] << ", [";
+					op << "qc.mcu1(" << parameter[0] << ", [";
 					for (const auto& control:controls) {
-						name << qreg[control.qubit].second << ", ";
+						op << qreg[control.qubit].second << ", ";
 					}
-					name << "], ";
+					op << "], ";
 				} else {
-					name << "qc.u1(" << parameter[0] << ", ";
+					op << "qc.u1(" << parameter[0] << ", ";
 				}
 				break;
 			case RX:
 				if (!controls.empty()) {
-					name << "qc.mcrx(" << parameter[0] << ", [";
+					op << "qc.mcrx(" << parameter[0] << ", [";
 					for (const auto& control:controls) {
-						name << qreg[control.qubit].second << ", ";
+						op << qreg[control.qubit].second << ", ";
 					}
-					name << "], ";
+					op << "], ";
 				} else {
-					name << "qc.rx(" << parameter[0] << ", ";
+					op << "qc.rx(" << parameter[0] << ", ";
 				}
 				break;
 			case RY:
 				if (!controls.empty()) {
-					name << "qc.mcry(" << parameter[0] << ", [";
+					op << "qc.mcry(" << parameter[0] << ", [";
 					for (const auto& control:controls) {
-						name << qreg[control.qubit].second << ", ";
+						op << qreg[control.qubit].second << ", ";
 					}
-					name << "], ";
+					op << "], ";
 				} else {
-					name << "qc.ry(" << parameter[0] << ", ";
+					op << "qc.ry(" << parameter[0] << ", ";
 				}
 				break;
 			case RZ:
 				if (!controls.empty()) {
-					name << "qc.mcrz(" << parameter[0] << ", [";
+					op << "qc.mcrz(" << parameter[0] << ", [";
 					for (const auto& control:controls) {
-						name << qreg[control.qubit].second << ", ";
+						op << qreg[control.qubit].second << ", ";
 					}
-					name << "], ";
+					op << "], ";
 				} else {
-					name << "qc.rz(" << parameter[0] << ", ";
+					op << "qc.rz(" << parameter[0] << ", ";
 				}
 				break;
 			case SWAP:
@@ -859,7 +860,7 @@ namespace qc {
 			default:
 				std::cerr << "gate type (index) " << (int) gate << " could not be converted to qiskit" << std::endl;
 		}
-		of << name.str() << qreg[targets[0]].second << ")" << std::endl;
+		of << op.str() << qreg[targets[0]].second << ")" << std::endl;
 	}
 
 

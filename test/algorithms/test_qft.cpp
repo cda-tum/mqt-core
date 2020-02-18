@@ -33,7 +33,7 @@ protected:
 	std::unique_ptr<dd::Package> dd;
 	std::unique_ptr<qc::QFT> qc;
 	long initialCacheCount = 0;
-	long initialComplexCount = 0;
+	unsigned int initialComplexCount = 0;
 	dd::Edge e{};
 };
 
@@ -83,13 +83,13 @@ TEST_P(QFT, Reference) {
 	// since only positive real values are stored in the complex table
 	// this number has to be divided by 4
 	// the (+3) accounts for the fact that the table is pre-filled with some values {0,0.5,sqrt(0.5)}
-	ASSERT_EQ(dd->cn.count, (unsigned int)(std::ceil(std::pow(2,nqubits)/4))+3);
+	ASSERT_EQ(dd->cn.count, static_cast<unsigned int>(std::ceil(std::pow(2,nqubits)/4))+3);
 
 	// top edge weight should equal sqrt(0.5)^n
-	EXPECT_NEAR(CN::val(e.w.r), std::pow(1.L/std::sqrt(2.L), nqubits), CN::TOLERANCE);
+	EXPECT_NEAR(CN::val(e.w.r), static_cast<fp>(std::pow(1.L/std::sqrt(2.L), nqubits)), CN::TOLERANCE);
 
 	// first row and first column should consist only of 1's
-	for (int i = 0; i < std::pow(2, nqubits); ++i) {
+	for (unsigned long long i = 0; i < std::pow(static_cast<long double>(2), nqubits); ++i) {
 		auto c = qc->getEntry(dd, e, 0, i);
 		EXPECT_NEAR(CN::val(c.r), 1, CN::TOLERANCE);
 		EXPECT_NEAR(CN::val(c.i), 0, CN::TOLERANCE);
@@ -123,9 +123,9 @@ TEST_P(QFT, ReferenceSim) {
 	EXPECT_NEAR(CN::val(e.w.i), 0, CN::TOLERANCE);
 
 	// first column should consist only of 1's
-	for (int i = 0; i < std::pow(2, nqubits); ++i) {
+	for (unsigned long long i = 0; i < std::pow(static_cast<long double>(2), nqubits); ++i) {
 		auto c = qc->getEntry(dd, e, i, 0);
-		EXPECT_NEAR(CN::val(c.r), std::pow(1.L/std::sqrt(2.L), nqubits), CN::TOLERANCE);
+		EXPECT_NEAR(CN::val(c.r), static_cast<fp>(std::pow(1.L/std::sqrt(2.L), nqubits)), CN::TOLERANCE);
 		EXPECT_NEAR(CN::val(c.i), 0, CN::TOLERANCE);
 	}
 }

@@ -258,7 +258,7 @@
         if (sym == Token::Kind::lbrack) {
             scan();
             check(Token::Kind::nninteger);
-            unsigned short offset = t.val;
+            auto offset = static_cast<unsigned short>(t.val);
             check(Token::Kind::rbrack);
             return std::make_pair(qregs[s].first + offset, 1);
         }
@@ -274,7 +274,7 @@
         if (sym == Token::Kind::lbrack) {
             scan();
             check(Token::Kind::nninteger);
-            unsigned short offset = t.val;
+            auto offset = static_cast<unsigned short>(t.val);
             check(Token::Kind::rbrack);
             return std::make_pair(cregs[s].first+offset, 1);
         }
@@ -361,10 +361,10 @@
                         gate.emplace_back<qc::StandardOperation>(nqubits, qc::Control(control.first + i), target.first+i, qc::X);
                 } else if (control.second == 1) {
                     // TODO: multiple targets could be useful here
-                    for (int i = 0; i < target.second; ++i)
+                    for (unsigned short i = 0; i < target.second; ++i)
                         gate.emplace_back<qc::StandardOperation>(nqubits, qc::Control(control.first), target.first + i, qc::X);
                 } else if (target.second == 1) {
-                    for (int i = 0; i < control.second; ++i)
+                    for (unsigned short i = 0; i < control.second; ++i)
                         gate.emplace_back<qc::StandardOperation>(nqubits, qc::Control(control.first + i), target.first, qc::X);
                 } else {
                     error("Register size does not match for CX gate!", 1);
@@ -502,14 +502,14 @@
                         if (argMap[cx->control].second == 1 && argMap[cx->target].second == 1) {
                             op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap[cx->control].first), argMap[cx->target].first, qc::X);
                         } else if (argMap[cx->control].second == argMap[cx->target].second) {
-                            for (int j = 0; j < argMap[cx->target].second; ++j)
+                            for (unsigned short j = 0; j < argMap[cx->target].second; ++j)
                                 op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap[cx->control].first + j), argMap[cx->target].first + j, qc::X);
                         } else if (argMap[cx->control].second == 1) {
                             // TODO: multiple targets could be useful here
-                            for (int k = 0; k < argMap[cx->target].second; ++k)
+                            for (unsigned short k = 0; k < argMap[cx->target].second; ++k)
                                 op.emplace_back<qc::StandardOperation>(nqubits,qc::Control(argMap[cx->control].first), argMap[cx->target].first + k, qc::X);
                         } else if (argMap[cx->target].second == 1) {
-                            for (int l = 0; l < argMap[cx->control].second; ++l)
+                            for (unsigned short l = 0; l < argMap[cx->control].second; ++l)
                                 op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap[cx->control].first + l), argMap[cx->target].first, qc::X);
                         } else {
                             error("Register size does not match for CX gate!",1);

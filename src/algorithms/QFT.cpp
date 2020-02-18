@@ -14,14 +14,14 @@ namespace qc {
         	initialLayout.insert({i, i});
         	outputPermutation.insert({i, i});
         }
-        qregs.insert({"q", {0, nqubits}});
-        cregs.insert({"c", {0, nqubits}});
+        qregs.insert({"q", std::pair<unsigned short, unsigned short>{0, nqubits}});
+        cregs.insert({"c", std::pair<unsigned short, unsigned short>{0, nqubits}});
 
         for (unsigned short i = 0; i < nqubits; ++i) {
             emplace_back<StandardOperation>(nqubits, i, H);
-            for (int j = 1; j < nqubits-i; ++j) {
+            for (unsigned short j = 1; j < nqubits-i; ++j) {
                 long double powerOfTwo = std::pow(2.L, j);
-                long double lambda = qc::PI / powerOfTwo;
+                auto lambda = static_cast<fp>(qc::PI / powerOfTwo);
                 if(j == 1) {
                     emplace_back<StandardOperation>(nqubits, Control(i+1), i, S);
                 } else if (j == 2) {
@@ -34,7 +34,7 @@ namespace qc {
 
         if (performSwaps) {
             for (unsigned short i = 0; i < nqubits/2; ++i) {
-                emplace_back<StandardOperation>(nqubits, std::vector<Control>{}, i, (unsigned short)(nqubits-1-i), SWAP);
+                emplace_back<StandardOperation>(nqubits, std::vector<Control>{}, i, static_cast<unsigned short>(nqubits-1-i), SWAP);
             }
         }
     }

@@ -43,7 +43,7 @@ class DDFunctionality : public testing::TestWithParam<unsigned short> {
 
         unsigned short                          nqubits             = 4;
         long                                    initialCacheCount   = 0;
-        long                                    initialComplexCount = 0;
+        unsigned int                            initialComplexCount = 0;
         std::array<short, qc::MAX_QUBITS>       line{};
         dd::Edge                                e{}, ident{};
         std::unique_ptr<dd::Package>            dd;

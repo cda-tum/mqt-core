@@ -43,7 +43,7 @@ namespace qc {
 				is >> nqubits;
 				nclassics = nqubits;
 			} else if (cmd == ".VARIABLES") {
-				for (int i = 0; i < nqubits; ++i) {
+				for (unsigned short i = 0; i < nqubits; ++i) {
 					is >> variable;
 					qregs.insert({ variable, { i, 1 }});
 					cregs.insert({ "c_" + variable, { i, 1 }});
@@ -52,7 +52,7 @@ namespace qc {
 				}
 			} else if (cmd == ".CONSTANTS") {
                 is >> std::ws;
-                for (int i = 0; i < nqubits; ++i) {
+                for (unsigned short i = 0; i < nqubits; ++i) {
                     const auto value = is.get();
                     if (!is.good()) {
                         std::cerr << "[ERROR] Failed read in '.constants' line.\n";
@@ -122,8 +122,8 @@ namespace qc {
 					}
 					gate = (*it).second;
 				}
-				int ncontrols = m.str(2).empty() ? 0 : std::stoi(m.str(2)) - 1;
-				fp lambda = m.str(3).empty() ? 0L : std::stold(m.str(3));
+				unsigned short ncontrols = m.str(2).empty() ? 0 : static_cast<unsigned short>(std::stoul(m.str(2), nullptr, 0)) - 1;
+				fp lambda = m.str(3).empty() ? static_cast<fp>(0L) : static_cast<fp>(std::stold(m.str(3)));
 
 				if (gate == V || gate == Vdag || m.str(1) == "c") ncontrols = 1;
 				else if (gate == P || gate == Pdag) ncontrols = 2;
@@ -246,7 +246,7 @@ namespace qc {
 				std::string s = p.t.str;
 				p.check(Token::Kind::lbrack);
 				p.check(Token::Kind::nninteger);
-				int n = p.t.val;
+				auto n = static_cast<unsigned short>(p.t.val);
 				p.check(Token::Kind::rbrack);
 				p.check(Token::Kind::semicolon);
 
@@ -264,7 +264,7 @@ namespace qc {
 				std::string s = p.t.str;
 				p.check(Token::Kind::lbrack);
 				p.check(Token::Kind::nninteger);
-				int n = p.t.val;
+				auto n = static_cast<unsigned short>(p.t.val);
 				p.check(Token::Kind::rbrack);
 				p.check(Token::Kind::semicolon);
 				p.cregs[s] = std::make_pair(nclassics, n);
@@ -301,7 +301,7 @@ namespace qc {
 				std::string creg = p.t.str;
 				p.check(Token::Kind::eq);
 				p.check(Token::Kind::nninteger);
-				int n = p.t.val;
+				auto n = static_cast<unsigned short>(p.t.val);
 				p.check(Token::Kind::rpar);
 
 				auto it = p.cregs.find(creg);
@@ -314,7 +314,7 @@ namespace qc {
 				p.scan();
 				p.check(Token::Kind::lpar);
 				p.check(Token::Kind::nninteger);
-				int n = p.t.val;
+				auto n = static_cast<unsigned short>(p.t.val);
 				p.check(Token::Kind::rpar);
 
 				std::vector<std::pair<unsigned short, unsigned short>> arguments;
@@ -537,7 +537,7 @@ namespace qc {
 		#endif
 
 		// Find index of the physical qubit i is assigned to
-		auto physical_qubit_index = 0;
+		unsigned short physical_qubit_index = 0;
 		for (const auto& Q:initialLayout) {
 			if (Q.second == logical_qubit_index)
 				physical_qubit_index = Q.first;
@@ -1153,16 +1153,18 @@ namespace qc {
 	}
 
 	void QuantumComputation::stripTrailingIdleQubits() {
-		for (int physical_qubit_index= nqubits + nancillae - 1; physical_qubit_index >= 0; physical_qubit_index--) {
+		for (auto physical_qubit_index=static_cast<short>(nqubits + nancillae - 1); physical_qubit_index >= 0; physical_qubit_index--) {
 			if(isIdleQubit(physical_qubit_index)) {
 				unsigned short logical_qubit_index = initialLayout[physical_qubit_index];
 				#if DEBUG_MODE_QC
 				std::cout << "Trying to strip away idle qubit: " << physical_qubit_index
 						  << ", which corresponds to logical qubit: " << logical_qubit_index << std::endl;
 				print(std::cout);
-				#endif
 				auto check = removeQubit(logical_qubit_index);
 				assert(check.first == physical_qubit_index);
+				#else
+				removeQubit(logical_qubit_index);
+				#endif
 
 				#if DEBUG_MODE_QC
 				std::cout << "Resulting in: " << std::endl;

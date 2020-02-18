@@ -34,7 +34,7 @@ protected:
 	std::unique_ptr<dd::Package> dd;
 	std::unique_ptr<qc::Grover> qc;
 	long initialCacheCount = 0;
-	long initialComplexCount = 0;
+	unsigned int initialComplexCount = 0;
 	dd::Edge e{};
 };
 

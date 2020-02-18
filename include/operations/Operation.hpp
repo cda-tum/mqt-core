@@ -20,7 +20,6 @@
 #define DEBUG_MODE_OPERATIONS 0
 #define UNUSED(x) {(void) x;}
 
-
 namespace qc {
 	using regnames_t=std::vector<std::pair<std::string, std::string>>;
 	enum Format {
@@ -53,10 +52,9 @@ namespace qc {
 
 	class Operation {
 	protected:
-		//std::array<short, MAX_QUBITS>     line{ };
-		std::vector<unsigned short>       targets;
-		std::vector<Control>              controls;
-		std::array<fp,    MAX_PARAMETERS> parameter{ };
+		std::vector<unsigned short>       targets{};
+		std::vector<Control>              controls{};
+		std::array<fp, MAX_PARAMETERS>    parameter{ };
 		
 		unsigned short nqubits     = 0;
 		bool           multiTarget = false; // flag to distinguish multi target operations

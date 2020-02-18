@@ -34,8 +34,8 @@ namespace qc {
             initialLayout.insert({ i, i});
             outputPermutation.insert({ i, i});
         }
-        qregs.insert({"q", {0, nqubits}});
-	    cregs.insert({"c", {0, nqubits}});
+        qregs.insert({"q", std::pair<unsigned short, unsigned short>{0, nqubits}});
+	    cregs.insert({"c", std::pair<unsigned short, unsigned short>{0, nqubits}});
     }
 
     GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& pathPrefix, unsigned short x, unsigned short y, unsigned short depth, unsigned short instance): pathPrefix(pathPrefix) {
