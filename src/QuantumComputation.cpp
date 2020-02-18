@@ -1162,7 +1162,7 @@ namespace qc {
 				print(std::cout);
 				#endif
 				auto check = removeQubit(logical_qubit_index);
-				assert(check.first == physical_qubit_index && check.second == -1);
+				assert(check.first == physical_qubit_index);
 
 				#if DEBUG_MODE_QC
 				std::cout << "Resulting in: " << std::endl;
