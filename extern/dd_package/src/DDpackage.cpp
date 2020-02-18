@@ -46,15 +46,13 @@ namespace dd {
     // a slightly better DD print utility
     void Package::printDD(Edge e, unsigned int limit) {
         ListElementPtr first, q, lastq, pnext;
-        uint64_t n, i;
+        unsigned short n = 0, i = 0;
 
         first = newListElement();
         first->p = e.p;
         first->next = nullptr;
-
         first->w = 0;
-        n = 0;
-        i = 0;
+
         std::cout << "top edge weight " << e.w << "\n";
         pnext = first;
 
@@ -149,7 +147,7 @@ namespace dd {
         first->next = nullptr;
         first->w = 0;
 
-        uint64_t n=0, i=0;
+        unsigned short n=0, i=0;
 
         nodes << "\"R\"";
         //füge Kante zwischen helper node und neuem Knoten hinzu
@@ -424,7 +422,7 @@ namespace dd {
 
         for (int j = 0; j < NEDGE; j++) {
 	        if (j == argmax) {
-		        e.p->e[j].w = cn.lookup(1.0L / sum, 0);
+		        e.p->e[j].w = cn.lookup((fp)1.0L / sum, 0);
 		        if (e.p->e[j].w == CN::ZERO)
 		        	e.p->e[j] = DDzero;
 	        } else if (e.p->e[j].p != nullptr && !zero[j]) {
@@ -850,7 +848,7 @@ namespace dd {
         currentNodeGCLimit = GCLIMIT1; // set initial garbage collection limit
 	    currentComplexGCLimit = ComplexNumbers::GCLIMIT1;
 
-        for (int i = 0; i < MAXN; i++) //  set initial variable order to 0,1,2... from bottom up
+        for (unsigned short i = 0; i < MAXN; i++) //  set initial variable order to 0,1,2... from bottom up
         {
 	        varOrder[i] = invVarOrder[i] = i;
         }
