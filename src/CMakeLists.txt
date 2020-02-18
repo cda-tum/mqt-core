@@ -53,16 +53,12 @@ option(TRY_USING_INSTALLED_DD_PACKAGE "Attempt searching for installed version o
 find_package(DDpackage QUIET)
 if (DDpackage_FOUND AND TRY_USING_INSTALLED_DD_PACKAGE)
 	message(STATUS "using installed DD package")
-elseif (NOT TARGET dd_package)
+elseif (NOT TARGET DD::DDpackage)
 	message(STATUS "using DD package submodule")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
 endif ()
 
-if (DDpackage_FOUND AND TRY_USING_INSTALLED_DD_PACKAGE)
-	target_link_libraries(${PROJECT_NAME} PUBLIC DD::DDpackage)
-else()
-	target_link_libraries(${PROJECT_NAME} PUBLIC dd_package)
-endif ()
+target_link_libraries(${PROJECT_NAME} PUBLIC DD::DDpackage)
 
 # add coverage compiler and linker flag if COVERAGE is set
 if (COVERAGE)
