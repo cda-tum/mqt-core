@@ -6,7 +6,7 @@ if(MSVC)
 	target_compile_options(${PROJECT_NAME}_app PUBLIC "/W4" "$<$<CONFIG:RELEASE>:/O2 /GL>")
 	target_link_options(${PROJECT_NAME}_app PUBLIC "$<$<CONFIG:Release>:/LTCG>")
 else()
-	target_compile_options(${PROJECT_NAME}_app PUBLIC -Wall -pipe -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-mtune=native -march=native>)
+	target_compile_options(${PROJECT_NAME}_app PUBLIC -Wall $<$<CONFIG:DEBUG>:-g3 -Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native -DNDEBUG -g0>)
 endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_app ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_app)
