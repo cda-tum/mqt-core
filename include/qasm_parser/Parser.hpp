@@ -12,10 +12,10 @@
 #include <cmath>
 #include <iostream>
 
-#include "Scanner.hpp"
-#include "StandardOperation.hpp"
-#include "NonUnitaryOperation.hpp"
-#include "CompoundOperation.hpp"
+#include "qasm_parser/Scanner.hpp"
+#include "operations/StandardOperation.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/CompoundOperation.hpp"
 
 namespace qasm {
 	static constexpr long double PI = 3.14159265358979323846264338327950288419716939937510L;

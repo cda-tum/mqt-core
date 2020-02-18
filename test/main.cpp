@@ -4,9 +4,9 @@
  */
 
 #include "QuantumComputation.hpp"
-#include "QFT.hpp"
-#include "Grover.hpp"
-#include "GoogleRandomCircuitSampling.hpp"
+#include "algorithms/QFT.hpp"
+#include "algorithms/Grover.hpp"
+#include "algorithms/GoogleRandomCircuitSampling.hpp"
 
 using namespace std;
 using namespace chrono;

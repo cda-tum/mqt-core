@@ -3,7 +3,7 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "Operation.hpp"
+#include "operations/Operation.hpp"
 
 namespace qc {
 	std::map<unsigned short, unsigned short> Operation::standardPermutation = Operation::create_standard_permutation();

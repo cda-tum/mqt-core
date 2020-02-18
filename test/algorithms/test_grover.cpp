@@ -7,7 +7,7 @@
 #include <iostream>
 #include <cmath>
 
-#include "Grover.hpp"
+#include "algorithms/Grover.hpp"
 
 class Grover : public testing::TestWithParam<std::tuple<unsigned short, unsigned int>> {
 

@@ -1,0 +1,9 @@
+get_filename_component(QFR_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+list(APPEND CMAKE_MODULE_PATH ${QFR_CMAKE_DIR})
+
+if(NOT TARGET QC::QFR)
+	include("${QFR_CMAKE_DIR}/QFRTargets.cmake")
+endif()
+
+set(QFR_LIBRARIES QC::QFR)

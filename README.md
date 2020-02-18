@@ -43,7 +43,7 @@ The package can be used for a multitude of tasks, as illustrated in the followin
           qc::Entanglement entanglement(n); // generates bell circuit
           ```
     
-      Generates the circuit for fully-entangling *n* qubits. Primarily used as a simple test case. 
+      Generates the circuit for preparing an *n* qubit GHZ state. Primarily used as a simple test case. 
     
     * Quantum Fourier Transform (QFT)
   
@@ -200,34 +200,50 @@ However, the implementation should be compatible with any current C++ compiler s
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
 ## Build and Run
-For building the library alone the CMake target `QFR` is available, i.e.,
+The library (target **QFR**) itself can be built by executing
 ```commandline
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --target QFR --config Release
+cmake --build . --config Release
 ```
 
-Windows users need to configure CMake by calling 
-
-`cmake .. -G "Visual Studio 15 2017" -A x64 -DCMAKE_BUILD_TYPE=Release`
-
-instead.
+Windows users using Visual Studio and the MSVC compiler need to build the project with
+```commandline
+mkdir build && cd build
+cmake .. -G "Visual Studio 15 2017" -A x64 -DCMAKE_BUILD_TYPE=Release
+cmake --build . --config Release
+```
 
 To build the library and run a small demo, showcasing the library's features, just build the `QFR_example` CMake target and run the resulting executable (*.dot files will be created in the working directory which will be automatically converted to SVG if GraphViz is installed), i.e.,
 
 ```commandline
-cmake --build . --target QFR_example --config Release
+cmake --build . --config Release --target QFR_example
 cd test
 ./QFR_example
 ```
 
 The command line application `QFR_app` can be built via the identically named CMake target, i.e., 
 ```commandline
-cmake --build . --target QFR_app --config Release
+cmake --build . --config Release --target QFR_app
 ```
 
-The repository also includes some (at the moment very basic) unit tests (using GoogleTest), which aim to ensure the correct behaviour of the library. They can be built and executed in the following way:
+The repository also includes some unit tests (using GoogleTest), which aim to ensure the correct behaviour of the library. They can be built and executed in the following way:
 ```commandline
-cmake --build . --target GoogleTest --config Release
+cmake --build . --config Release --target QFR_test
 ctest -C Release
+```
+
+The QFR library may be installed on the system by executing
+
+```commandline
+$ mkdir build && cd build
+$ cmake .. -DCMAKE_BUILD_TYPE=Release
+$ cmake --build . --config Release --target install
+```
+
+It can then be included in other projects using the following CMake snippet
+
+```cmake
+find_package(QFR)
+target_link_libraries(${TARGET_NAME} PRIVATE QC::QFR)
 ```

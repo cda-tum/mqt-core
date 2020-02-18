@@ -1,7 +1,10 @@
-# Prevent overriding the parent project's compiler/linker
-# settings on Windows
+# fix cmake warnings for googletest when building shared libs
+if (APPLE AND BUILD_SHARED_LIBS)
+	set(CMAKE_MACOSX_RPATH ON)
+endif ()
+# Prevent overriding the parent project's compiler/linker settings on Windows
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest" "extern/googletest")
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest" "extern/googletest" EXCLUDE_FROM_ALL)
 mark_as_advanced(
 		BUILD_GMOCK BUILD_GTEST BUILD_SHARED_LIBS
 		gmock_build_tests gtest_build_samples gtest_build_tests
@@ -16,7 +19,7 @@ target_compile_features(gtest_main PUBLIC cxx_std_14)
 target_compile_features(gmock PUBLIC cxx_std_14)
 target_compile_features(gmock_main PUBLIC cxx_std_14)
 
-add_executable(${PROJECT_NAME}_example main.cpp)
+add_executable(${PROJECT_NAME}_example ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 target_compile_features(${PROJECT_NAME}_example PUBLIC cxx_std_14)
 set_target_properties(${PROJECT_NAME}_example PROPERTIES CXX_EXTENSIONS OFF)
 target_link_libraries(${PROJECT_NAME}_example PUBLIC ${PROJECT_NAME})
@@ -44,6 +47,7 @@ macro(package_add_test TESTNAME)
 	# link the Google test infrastructure, mocking library, and a default main fuction to
 	# the test executable.  Remove g_test_main if writing your own main function.
 	target_link_libraries(${TESTNAME} PRIVATE ${PROJECT_NAME} gtest gmock gtest_main)
+	target_compile_features(${TESTNAME} PUBLIC cxx_std_14)
 	set_property(TARGET ${TESTNAME} PROPERTY CXX_EXTENSIONS OFF)
 	if (COVERAGE)
 		target_compile_options(${TESTNAME} PRIVATE --coverage)
@@ -72,4 +76,3 @@ package_add_test(${PROJECT_NAME}_test ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/tes
 							${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_io.cpp
 							${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_ddfunctionality.cpp
                             ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_qfr_functionality.cpp)
-add_test(NAME ${PROJECT_NAME}_example COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_example)

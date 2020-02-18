@@ -6,10 +6,10 @@
 #ifndef INTERMEDIATEREPRESENTATION_QUANTUMCOMPUTATION_H
 #define INTERMEDIATEREPRESENTATION_QUANTUMCOMPUTATION_H
 
-#include "StandardOperation.hpp"
-#include "NonUnitaryOperation.hpp"
-#include "ClassicControlledOperation.hpp"
-#include "Parser.hpp"
+#include "operations/StandardOperation.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/ClassicControlledOperation.hpp"
+#include "qasm_parser/Parser.hpp"
 
 #include <vector>
 #include <memory>

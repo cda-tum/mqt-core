@@ -7,7 +7,7 @@
 #include <iostream>
 #include <cmath>
 
-#include "QFT.hpp"
+#include "algorithms/QFT.hpp"
 
 class QFT : public testing::TestWithParam<unsigned short> {
 

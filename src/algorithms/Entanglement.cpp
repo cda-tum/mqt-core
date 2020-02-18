@@ -1,4 +1,4 @@
-#include "Entanglement.hpp"
+#include "algorithms/Entanglement.hpp"
 
 namespace qc {
     Entanglement::Entanglement(unsigned short nq) : QuantumComputation(nq) {

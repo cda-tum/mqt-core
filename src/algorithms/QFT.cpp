@@ -3,7 +3,7 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "QFT.hpp"
+#include "algorithms/QFT.hpp"
 
 
 namespace qc {

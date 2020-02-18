@@ -3,7 +3,7 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "GoogleRandomCircuitSampling.hpp"
+#include "algorithms/GoogleRandomCircuitSampling.hpp"
 
 namespace qc {
 	GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& filename) {

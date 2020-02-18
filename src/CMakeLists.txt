@@ -1,4 +1,17 @@
-add_library(${PROJECT_NAME} STATIC
+# allow loader to find lib
+if(APPLE)
+	set(basePoint @loader_path)
+else()
+	set(basePoint $ORIGIN)
+endif()
+include(GNUInstallDirs)
+file(RELATIVE_PATH relDir
+     ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}
+     ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}
+     )
+set(CMAKE_INSTALL_RPATH ${basePoint} ${basePoint}/${relDir})
+
+add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/qasm_parser/Scanner.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/qasm_parser/Parser.cpp
 
@@ -13,43 +26,108 @@ add_library(${PROJECT_NAME} STATIC
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/GoogleRandomCircuitSampling.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Entanglement.cpp
 
-            ${PROJECT_SOURCE_DIR}/include/qasm_parser/Token.hpp
-            ${PROJECT_SOURCE_DIR}/include/qasm_parser/Scanner.hpp
-            ${PROJECT_SOURCE_DIR}/include/qasm_parser/Parser.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/qasm_parser/Token.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/qasm_parser/Scanner.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/qasm_parser/Parser.hpp
 
-            ${PROJECT_SOURCE_DIR}/include/operations/Operation.hpp
-            ${PROJECT_SOURCE_DIR}/include/operations/StandardOperation.hpp
-            ${PROJECT_SOURCE_DIR}/include/operations/NonUnitaryOperation.hpp
-            ${PROJECT_SOURCE_DIR}/include/operations/CompoundOperation.hpp
-            ${PROJECT_SOURCE_DIR}/include/operations/ClassicControlledOperation.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/Operation.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/StandardOperation.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/NonUnitaryOperation.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/CompoundOperation.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/ClassicControlledOperation.hpp
 
-            ${PROJECT_SOURCE_DIR}/include/QuantumComputation.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/QuantumComputation.hpp
 
-            ${PROJECT_SOURCE_DIR}/include/algorithms/QFT.hpp
-            ${PROJECT_SOURCE_DIR}/include/algorithms/Grover.hpp
-            ${PROJECT_SOURCE_DIR}/include/algorithms/GoogleRandomCircuitSampling.hpp
-            ${PROJECT_SOURCE_DIR}/include/algorithms/Entanglement.hpp)
-
-target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/include/qasm_parser/ ${PROJECT_SOURCE_DIR}/include/operations/ ${PROJECT_SOURCE_DIR}/include/algorithms/)
-
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QFT.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Grover.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/GoogleRandomCircuitSampling.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Entanglement.hpp)
+add_library(QC::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+target_include_directories(${PROJECT_NAME} PUBLIC
+                           $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_14)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
-target_link_libraries(${PROJECT_NAME} PUBLIC dd_package_lib)
+
+option(TRY_USING_INSTALLED_DD_PACKAGE "Attempt searching for installed version of DD package and use it if found" ON)
+
+find_package(DDpackage QUIET)
+if (DDpackage_FOUND AND TRY_USING_INSTALLED_DD_PACKAGE)
+	message(STATUS "using installed DD package")
+elseif (NOT TARGET dd_package)
+	message(STATUS "using DD package submodule")
+	add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
+endif ()
+
+if (DDpackage_FOUND AND TRY_USING_INSTALLED_DD_PACKAGE)
+	target_link_libraries(${PROJECT_NAME} PUBLIC DD::DDpackage)
+else()
+	target_link_libraries(${PROJECT_NAME} PUBLIC dd_package)
+endif ()
+
+# add coverage compiler and linker flag if COVERAGE is set
 if (COVERAGE)
 	target_compile_options(${PROJECT_NAME} PRIVATE --coverage)
 	target_link_libraries(${PROJECT_NAME} PRIVATE --coverage)
 endif()
 
+# check if interprocedural optimization is supported
 include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported)
 if(ipo_supported)
 	set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
+# set compiler flags depending on compiler
 if(MSVC)
-	target_compile_options(${PROJECT_NAME} PRIVATE "/W4" "$<$<CONFIG:RELEASE>:/O2 /GL>")
+	target_compile_options(${PROJECT_NAME} PRIVATE "/W4" "/GR" "$<$<CONFIG:RELEASE>:/O2 /GL>")
 	target_link_options(${PROJECT_NAME} PRIVATE "$<$<CONFIG:Release>:/LTCG>")
 else()
 	target_compile_options(${PROJECT_NAME} PRIVATE -Wall -DNDEBUG -g0 $<$<CONFIG:DEBUG>:-Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native>)
 endif()
+
+# installation instructions
+
+include(GNUInstallDirs)
+set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/QFR)
+
+install(TARGETS ${PROJECT_NAME}
+        EXPORT qfr-targets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES EXPORT_NAME QFR)
+
+install(DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+install(EXPORT qfr-targets
+        FILE QFRTargets.cmake
+        NAMESPACE QC::
+        DESTINATION ${INSTALL_CONFIGDIR}
+        )
+
+#Create a ConfigVersion.cmake file
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+		${CMAKE_CURRENT_BINARY_DIR}/QFRConfigVersion.cmake
+		VERSION ${PROJECT_VERSION}
+		COMPATIBILITY AnyNewerVersion
+)
+
+configure_package_config_file(${${PROJECT_NAME}_SOURCE_DIR}/cmake/QFRConfig.cmake.in
+                              ${CMAKE_CURRENT_BINARY_DIR}/QFRConfig.cmake
+                              INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+                              )
+
+install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/QFRConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/QFRConfigVersion.cmake
+        DESTINATION ${INSTALL_CONFIGDIR}
+        )
+
+# exporting from the build tree
+export(EXPORT qfr-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/QFRTargets.cmake NAMESPACE QC::)
+
+# Register package in user's package registry
+export(PACKAGE QFR)

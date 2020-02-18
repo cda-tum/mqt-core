@@ -1,4 +1,4 @@
-#include "Entanglement.hpp"
+#include "algorithms/Entanglement.hpp"
 #include "gtest/gtest.h"
 
 #include <string>
