@@ -1,6 +1,7 @@
 get_filename_component(QFR_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
 
-list(APPEND CMAKE_MODULE_PATH ${QFR_CMAKE_DIR})
+find_dependency(DDpackage 1.1 REQUIRED CONFIG)
 
 if(NOT TARGET QC::QFR)
 	include("${QFR_CMAKE_DIR}/QFRTargets.cmake")
