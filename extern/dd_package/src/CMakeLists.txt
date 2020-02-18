@@ -3,7 +3,7 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/DDcomplex.cpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/DDpackage.h
             ${${PROJECT_NAME}_SOURCE_DIR}/include/DDcomplex.h)
-add_library(DD::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+add_library(DD::DDpackage ALIAS ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PUBLIC
                            $<INSTALL_INTERFACE:include>
                            $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
