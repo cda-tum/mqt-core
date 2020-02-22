@@ -61,7 +61,7 @@ INSTANTIATE_TEST_SUITE_P(Grover,
 	                         ss << seed;
 	                         return ss.str();});
 
-TEST_P(Grover, Reference) {
+TEST_P(Grover, Functionality) {
 	std::tie(nqubits, seed) = GetParam();
 
 	// there should be no error constructing the circuit
@@ -84,5 +84,22 @@ TEST_P(Grover, Reference) {
 
 	CN::mul(c, c, e.w);
 	auto prob = 2*CN::mag2(c);
+	EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
+}
+
+TEST_P(Grover, Simulation) {
+	std::tie(nqubits, seed) = GetParam();
+
+	// there should be no error constructing the circuit
+	ASSERT_NO_THROW({qc = std::make_unique<qc::Grover>(nqubits, seed);});
+
+	qc->printStatistics();
+	unsigned long long x = dynamic_cast<qc::Grover*>(qc.get())->x;
+	dd::Edge in = dd->makeZeroState(nqubits+1);
+	// there should be no error simulating the circuit
+	ASSERT_NO_THROW({e = qc->simulate(in, dd);});
+
+	auto c = qc->getEntry(dd, e, x, 0);
+	auto prob = CN::mag2(c);
 	EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }

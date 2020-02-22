@@ -31,7 +31,7 @@ namespace qc {
 		unsigned long long iterations   = 1;
 		bool               includeSetup = true;
 
-		explicit Grover(unsigned short nq, unsigned int seed = 0, bool includeSetup = true);
+		explicit Grover(unsigned short nq, unsigned int seed = 0);
 
 		~Grover() override = default;
 

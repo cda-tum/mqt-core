@@ -62,7 +62,7 @@ INSTANTIATE_TEST_SUITE_P(QFT, QFT,
 			}
 			return ss.str();});
 
-TEST_P(QFT, Reference) {
+TEST_P(QFT, Functionality) {
 	nqubits = GetParam();
 
 	// there should be no error constructing the circuit
@@ -99,7 +99,7 @@ TEST_P(QFT, Reference) {
 	}
 }
 
-TEST_P(QFT, ReferenceSim) {
+TEST_P(QFT, Simulation) {
 	nqubits = GetParam();
 
 	// there should be no error constructing the circuit

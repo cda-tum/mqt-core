@@ -683,21 +683,35 @@ namespace qc {
 				  << " as ancillary with output qubit index: " << output_qubit_index << std::endl;
 		#endif
 
-		// index of logical qubit
-		unsigned short logical_qubit_index = 0;
-		// TODO: here it could be checked if an ancillary register already exists in the surrounding of physical_qubit_index and then it could be fused
-		auto new_reg_name = std::string(DEFAULT_ANCREG) + "_" + std::to_string(physical_qubit_index);
-
-		// check if register already exists
-		if(ancregs.count(new_reg_name)) {
-			std::cerr << "Register " << new_reg_name << " should not exist" << std::endl;
-			exit(1);
-		} else {
-			// create new register
-			ancregs.insert({new_reg_name, { physical_qubit_index, 1}});
-			logical_qubit_index = nqubits + nancillae;
-
+		bool fusionPossible = false;
+		for( auto& ancreg : ancregs) {
+			auto& anc_start_index = ancreg.second.first;
+			auto& anc_count = ancreg.second.second;
+			// 1st case: can append to start of existing register
+			if (anc_start_index == physical_qubit_index + 1) {
+				anc_start_index--;
+				anc_count++;
+				fusionPossible = true;
+				break;
+			}
+			// 2nd case: can append to end of existing register
+			else if (anc_start_index + anc_count == physical_qubit_index) {
+				anc_count++;
+				fusionPossible = true;
+				break;
+			}
 		}
+
+		if (ancregs.empty()) {
+			ancregs.insert({DEFAULT_ANCREG, {physical_qubit_index, 1}});
+		} else if(!fusionPossible) {
+			auto new_reg_name = std::string(DEFAULT_ANCREG) + "_" + std::to_string(physical_qubit_index);
+			ancregs.insert({new_reg_name, { physical_qubit_index, 1}});
+		}
+
+		// index of logical qubit
+		unsigned short logical_qubit_index = nqubits + nancillae;
+
 		// increase ancillae count
 		nancillae++;
 
@@ -729,6 +743,7 @@ namespace qc {
 		}
 	}
 
+	/*
 	void QuantumComputation::addQubit(unsigned short logical_qubit_index, unsigned short physical_qubit_index, short output_qubit_index) {
 		if (initialLayout.count(physical_qubit_index) || outputPermutation.count(physical_qubit_index)) {
 			std::cerr << "Attempting to insert physical qubit that is already assigned" << std::endl;
@@ -763,7 +778,7 @@ namespace qc {
 			op->setNqubits(nqubits + nancillae);
 		}
 	}
-
+	*/
 
 	void QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd) {
 		if (e.p->v < nqubits) return;
@@ -772,18 +787,41 @@ namespace qc {
 
 		auto saved = e;
 		e = dd->makeNonterminal(e.p->v, {e.p->e[0], dd::Package::DDzero, e.p->e[2], dd::Package::DDzero });
+		auto c = dd->cn.mulCached(e.w, saved.w);
+		e.w = dd->cn.lookup(c);
+		dd->cn.releaseCached(c);
 		dd->incRef(e);
 		dd->decRef(saved);
 		dd->garbageCollect();
 	}
 
 	void QuantumComputation::reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd) {
+		#if DEBUG_MODE_QC
+		std::cout << "Reducing garbage output. nqubits: " << nqubits << ", nancillae: " << nancillae << std::endl;
+		std::cout << "Top level variable index: " << e.p->v << std::endl;
+		#endif
 		if (e.p->v < nqubits) return;
 		for(auto& edge: e.p->e)
 			reduceGarbage(edge, dd);
 
+		#if DEBUG_MODE_QC
+		std::cout << "Actually reducing garbage output for variable index " << e.p->v << std::endl;
+		std::cout << "e[0]: " << e.p->e[0].p << std::endl;
+		std::cout << "e[1]: " << e.p->e[1].p << std::endl;
+		std::cout << "e[2]: " << e.p->e[2].p << std::endl;
+		std::cout << "e[3]: " << e.p->e[3].p << std::endl;
+		#endif
 		auto saved = e;
+		for (auto& edge: e.p->e) {
+			// not quite sure if this works in all situations
+			auto c = dd->cn.lookup(std::sqrt(CN::mag2(edge.w)),0);
+			edge.w = c;
+		}
+
 		e = dd->makeNonterminal(e.p->v, { dd->add(e.p->e[0], e.p->e[2]), dd->add(e.p->e[1], e.p->e[3]), dd::Package::DDzero, dd::Package::DDzero });
+		auto c = dd->cn.mulCached(e.w, saved.w);
+		e.w = dd->cn.lookup(c);
+		dd->cn.releaseCached(c);
 		dd->incRef(e);
 		dd->decRef(saved);
 	}
@@ -823,6 +861,11 @@ namespace qc {
 
 			dd->garbageCollect();
 		}
+		// correct permutation if necessary
+		changePermutation(e, map, outputPermutation, line, dd);
+		reduceAncillae(e, dd);
+		reduceGarbage(e, dd);
+
 		dd->useMatrixNormalization(false);
 		return e;
 	}
@@ -850,6 +893,11 @@ namespace qc {
 
 			dd->garbageCollect();
 		}
+
+		// correct permutation if necessary
+		changePermutation(e, map, outputPermutation, line, dd);
+		reduceAncillae(e, dd);
+		reduceGarbage(e, dd);
 
 		return e;
 	}
@@ -1152,34 +1200,127 @@ namespace qc {
 		return true;
 	}
 
-	void QuantumComputation::stripTrailingIdleQubits() {
-		for (auto physical_qubit_index=static_cast<short>(nqubits + nancillae - 1); physical_qubit_index >= 0; physical_qubit_index--) {
+	void QuantumComputation::stripIdleQubits() {
+		for (auto physical_qubit_it = initialLayout.rbegin(); physical_qubit_it != initialLayout.rend(); ++physical_qubit_it) {
+			auto physical_qubit_index = physical_qubit_it->first;
 			if(isIdleQubit(physical_qubit_index)) {
+				auto it = outputPermutation.find(physical_qubit_index);
+				if(it != outputPermutation.end()) {
+					short output_index = it->second;
+					if (output_index >= 0) continue;
+				}
+
 				unsigned short logical_qubit_index = initialLayout[physical_qubit_index];
 				#if DEBUG_MODE_QC
 				std::cout << "Trying to strip away idle qubit: " << physical_qubit_index
 						  << ", which corresponds to logical qubit: " << logical_qubit_index << std::endl;
 				print(std::cout);
-				auto check = removeQubit(logical_qubit_index);
-				assert(check.first == physical_qubit_index);
-				#else
-				removeQubit(logical_qubit_index);
 				#endif
+				removeQubit(logical_qubit_index);
+
+				if (logical_qubit_index < nqubits+nancillae) {
+					#if DEBUG_MODE_QC
+					std::cout << "Qubit " << logical_qubit_index << " is inner qubit. Need to adjust permutations." << std::endl;
+					#endif
+
+					for (auto& q: initialLayout) {
+						if (q.second > logical_qubit_index)
+							q.second--;
+					}
+
+					for (auto& q: outputPermutation) {
+						if (q.second > logical_qubit_index)
+							q.second--;
+					}
+
+					#if DEBUG_MODE_QC
+					std::cout << "Changed initial layout" << std::endl;
+					printPermutationMap(initialLayout);
+					std::cout << "Changed output permutation" << std::endl;
+					printPermutationMap(outputPermutation);
+					#endif
+				}
 
 				#if DEBUG_MODE_QC
 				std::cout << "Resulting in: " << std::endl;
 				print(std::cout);
 				#endif
-			} else {
-				break;
-				// TODO: in principle it should be possible to remove qubits not only from the end, but also somewhere in the middle
-				// However this currently results in some errors (4gt11_84, 4gt11-v1_85, dk27_225, sqr6_259) from O0-O3
 			}
 		}
 		for(auto& op:ops) {
 			op->setNqubits(nqubits + nancillae);
 		}
 	}
+
+	void QuantumComputation::changePermutation(dd::Edge& on, qc::permutationMap& from, const qc::permutationMap& to, std::array<short, qc::MAX_QUBITS>& line, std::unique_ptr<dd::Package>& dd, bool regular) {
+		assert(from.size() >= to.size());
+
+		#if DEBUG_MODE_QC
+		std::cout << "Trying to change: " << std::endl;
+		printPermutationMap(from);
+		std::cout << "to: " << std::endl;
+		printPermutationMap(to);
+		#endif
+
+		auto n = (short)(on.p->v + 1);
+
+		// iterate over (k,v) pairs of second permutation
+		for (const auto& kv: to) {
+			unsigned short i = kv.first;
+			unsigned short goal = kv.second;
+
+			// search for key in the first map
+			auto it = from.find(i);
+			if (it == from.end()) {
+				std::cerr << "Key " << it->first << " was not found in first permutation. This should never happen." << std::endl;
+				exit(1);
+			}
+			unsigned short current = it->second;
+
+			// permutations agree for this key value
+			if(current == goal) continue;
+
+			// search for goal value in first permutation
+			unsigned short j = 0;
+			for(const auto& pair: from) {
+				unsigned short value = pair.second;
+				if (value == goal) {
+					j = pair.first;
+					break;
+				}
+			}
+
+			// swap i and j
+			auto op = qc::StandardOperation(n, {i, j}, qc::SWAP);
+
+			#if DEBUG_MODE_QC
+			std::cout << "Apply SWAP: " << i << " " << j << std::endl;
+			#endif
+
+			op.setLine(line, from);
+			auto saved = on;
+			if (regular) {
+				on = dd->multiply(op.getSWAPDD(dd, line, from), on);
+			} else {
+				on = dd->multiply(on, op.getSWAPDD(dd, line, from));
+			}
+			op.resetLine(line, from);
+			dd->incRef(on);
+			dd->decRef(saved);
+			dd->garbageCollect();
+
+			// update permutation
+			from.at(i) = goal;
+			from.at(j) = current;
+
+			#if DEBUG_MODE_QC
+			std::cout << "Changed permutation" << std::endl;
+			printPermutationMap(from);
+			#endif
+		}
+
+	}
+
 
 	std::string QuantumComputation::getQubitRegister(unsigned short physical_qubit_index) {
 

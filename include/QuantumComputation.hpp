@@ -62,7 +62,6 @@ namespace qc {
 
 		static void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, const char* defaultname);
 
-		bool isIdleQubit(unsigned short i);
 
 	public:
 		QuantumComputation() = default;
@@ -94,12 +93,17 @@ namespace qc {
 		std::string getQubitRegister(unsigned short physical_qubit_index);
 		unsigned short getHighestLogicalQubitIndex();
 		std::pair<std::string, unsigned short> getQubitRegisterAndIndex(unsigned short physical_qubit_index);
+		bool isIdleQubit(unsigned short i);
 		bool isAncilla(unsigned short i);
 		void reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd);
 		void reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd);
 		dd::Edge createInitialMatrix(std::unique_ptr<dd::Package>& dd); // creates identity matrix, which is reduced with respect to the ancillary qubits
 
-		void stripTrailingIdleQubits();
+		// strip away qubits with no operations applied to them and which do not pop up in the output permutation
+		void stripIdleQubits();
+		// apply swaps 'on' DD in order to change 'from' to 'to'
+		// where |from| >= |to|
+		static void changePermutation(dd::Edge& on, qc::permutationMap& from, const qc::permutationMap& to, std::array<short, qc::MAX_QUBITS>& line, std::unique_ptr<dd::Package>& dd, bool regular = true);
 
 		void import(const std::string& filename);
 		void import(const std::string& filename, Format format);
@@ -125,8 +129,8 @@ namespace qc {
 
 		// adds physical qubit as ancillary qubit and gives it the appropriate output mapping
 		void addAncillaryQubit(unsigned short physical_qubit_index, short output_qubit_index);
-		// try to add logical qubit to circuit and assign it to physical qubit with certain output permutation value
-		void addQubit(unsigned short logical_qubit_index, unsigned short physical_qubit_index, short output_qubit_index);
+		// try to add logical qubit to circuit and assign it to physical qubit with certain output permutation value TODO: implement correctly
+		//void addQubit(unsigned short logical_qubit_index, unsigned short physical_qubit_index, short output_qubit_index);
 
 		void updateMaxControls(unsigned short ncontrols) {
 			max_controls = std::max(ncontrols, max_controls);
@@ -211,6 +215,8 @@ namespace qc {
 		void clear()              noexcept { ops.clear();           }
 		void pop_back()                    { return ops.pop_back(); }
 		void resize(size_t count)          { ops.resize(count);     }
+		std::vector<std::unique_ptr<Operation>>::iterator erase( std::vector<std::unique_ptr<Operation>>::const_iterator pos ) { return ops.erase(pos); }
+		std::vector<std::unique_ptr<Operation>>::iterator erase( std::vector<std::unique_ptr<Operation>>::const_iterator first, std::vector<std::unique_ptr<Operation>>::const_iterator last ) { return ops.erase(first, last); }
 		
 		template<class T>
 		void push_back(const T& op) {

@@ -7,12 +7,11 @@
 
 
 namespace qc {
-	QFT::QFT(unsigned short nq, bool performSwaps) {
+	QFT::QFT(unsigned short nq) {
         nqubits = nq;
-        this->performSwaps = performSwaps;
         for (unsigned short i = 0; i < nqubits; ++i) {
         	initialLayout.insert({i, i});
-        	outputPermutation.insert({i, i});
+        	outputPermutation.insert({i, nqubits - 1 - i});
         }
         qregs.insert({"q", std::pair<unsigned short, unsigned short>{0, nqubits}});
         cregs.insert({"c", std::pair<unsigned short, unsigned short>{0, nqubits}});
@@ -32,38 +31,23 @@ namespace qc {
             }
         }
 
-        if (performSwaps) {
-            for (unsigned short i = 0; i < nqubits/2; ++i) {
-                emplace_back<StandardOperation>(nqubits, std::vector<Control>{}, i, static_cast<unsigned short>(nqubits-1-i), SWAP);
-            }
+        for (unsigned short i = 0; i < nqubits/2; ++i) {
+            emplace_back<StandardOperation>(nqubits, std::vector<Control>{}, i, static_cast<unsigned short>(nqubits-1-i), SWAP);
         }
     }
 
 	dd::Edge QFT::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
-		auto e = QuantumComputation::buildFunctionality(dd);
-		if (!performSwaps) {
-			for (unsigned short i = 0; i < nqubits; ++i) {
-				outputPermutation.at(i) = nqubits - 1 - i;
-			}
-		}
-		return e;
+		return QuantumComputation::buildFunctionality(dd);
 	}
 
 	dd::Edge QFT::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
-		auto e = QuantumComputation::simulate(in, dd);
-		if (!performSwaps) {
-			for (unsigned short i = 0; i < nqubits; ++i) {
-				outputPermutation.at(i) = nqubits - 1 - i;
-			}
-		}
-		return e;
+		return QuantumComputation::simulate(in, dd);
 	}
 
 	std::ostream& QFT::printStatistics(std::ostream& os) {
         os << "QFT (" << nqubits << ") Statistics:\n";
         os << "\tn: " << nqubits << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;
-        os << "\tswaps: " << (performSwaps? "yes" : "no") << std::endl;
         os << "--------------" << std::endl;
         return os;
     }

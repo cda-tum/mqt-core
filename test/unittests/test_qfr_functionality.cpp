@@ -99,10 +99,26 @@ TEST_F(QFRFunctionality, remove_trailing_idle_qubits) {
 	QuantumComputation qc(nqubits);
 	qc.emplace_back<StandardOperation>(nqubits, 0, X);
 	qc.emplace_back<StandardOperation>(nqubits, 2, X);
-	qc.stripTrailingIdleQubits();
-	EXPECT_EQ(qc.getNqubits(), 3);
+	std::cout << qc;
+	qc::QuantumComputation::printPermutationMap(qc.outputPermutation);
+	qc.printRegisters();
+
+	qc.outputPermutation.erase(1);
+	qc.outputPermutation.erase(3);
+
+	qc.stripIdleQubits();
+	EXPECT_EQ(qc.getNqubits(), 2);
+	std::cout << qc;
+	qc::QuantumComputation::printPermutationMap(qc.outputPermutation);
+	qc.printRegisters();
+
 	qc.pop_back();
-	qc.stripTrailingIdleQubits();
+	qc.outputPermutation.erase(2);
+	std::cout << qc;
+	qc::QuantumComputation::printPermutationMap(qc.outputPermutation);
+	qc.printRegisters();
+
+	qc.stripIdleQubits();
 	EXPECT_EQ(qc.getNqubits(), 1);
 }
 

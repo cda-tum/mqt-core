@@ -10,9 +10,9 @@
 
 namespace qc {
 	class QFT : public QuantumComputation {
-		bool performSwaps = false;
+
 	public:
-		explicit QFT(unsigned short nq, bool performSwaps = false);
+		explicit QFT(unsigned short nq);
 
 		std::ostream& printStatistics(std::ostream& os = std::cout) override;
 

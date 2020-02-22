@@ -4,7 +4,7 @@ if(${CMAKE_VERSION} VERSION_LESS 3.12)
 endif()
 
 project(QFR
-        VERSION 1.0
+        VERSION 1.0.1
         DESCRIPTION "QFR  - A library for the representation of quantum functionality"
         LANGUAGES CXX)
 
@@ -44,7 +44,8 @@ handle_submodule(dd_package)
 
 add_subdirectory(src)
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+option(BUILD_TESTS "Also build tests for QFR project" OFF)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR BUILD_TESTS)
 	handle_submodule(googletest)
 
 	enable_testing()
