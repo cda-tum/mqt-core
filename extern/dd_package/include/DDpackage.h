@@ -201,6 +201,7 @@ namespace dd {
 	    	return makeNonterminal(v, edge.data(), cached);
 	    };
 	    Edge makeZeroState(unsigned short n);
+	    Edge makeBasisState(unsigned short n, const std::bitset<64>& state);
 	    Edge makeIdent(short x, short y);
 	    Edge makeGateDD(const Matrix2x2& mat, unsigned short n, const short *line);
 	    Edge makeGateDD(const std::array<ComplexValue,NEDGE>& mat, unsigned short n, const std::array<short,MAXN>& line);

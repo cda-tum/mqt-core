@@ -2,20 +2,23 @@
 if (APPLE AND BUILD_SHARED_LIBS)
 	set(CMAKE_MACOSX_RPATH ON)
 endif ()
-# Prevent overriding the parent project's compiler/linker settings on Windows
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest" "extern/googletest" EXCLUDE_FROM_ALL)
-mark_as_advanced(
-		BUILD_GMOCK BUILD_GTEST BUILD_SHARED_LIBS
-		gmock_build_tests gtest_build_samples gtest_build_tests
-		gtest_disable_pthreads gtest_force_shared_crt gtest_hide_internal_symbols
-)
-set_target_properties(gtest PROPERTIES FOLDER extern)
-set_target_properties(gtest_main PROPERTIES FOLDER extern)
-set_target_properties(gmock PROPERTIES FOLDER extern)
-set_target_properties(gmock_main PROPERTIES FOLDER extern)
-target_compile_features(gtest PUBLIC cxx_std_14)
-target_compile_features(gtest_main PUBLIC cxx_std_14)
+
+if (NOT TARGET gtest OR NOT TARGET gmock)
+	# Prevent overriding the parent project's compiler/linker settings on Windows
+	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+	add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest" "extern/googletest" EXCLUDE_FROM_ALL)
+	mark_as_advanced(
+			BUILD_GMOCK BUILD_GTEST BUILD_SHARED_LIBS
+			gmock_build_tests gtest_build_samples gtest_build_tests
+			gtest_disable_pthreads gtest_force_shared_crt gtest_hide_internal_symbols
+	)
+	set_target_properties(gtest PROPERTIES FOLDER extern)
+	set_target_properties(gtest_main PROPERTIES FOLDER extern)
+	set_target_properties(gmock PROPERTIES FOLDER extern)
+	set_target_properties(gmock_main PROPERTIES FOLDER extern)
+	target_compile_features(gtest PUBLIC cxx_std_14)
+	target_compile_features(gtest_main PUBLIC cxx_std_14)
+endif()
 
 add_executable(${PROJECT_NAME}_example ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 target_link_libraries(${PROJECT_NAME}_example PRIVATE ${PROJECT_NAME})

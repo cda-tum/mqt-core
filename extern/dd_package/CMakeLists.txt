@@ -24,7 +24,8 @@ endif()
 
 add_subdirectory(src)
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+option(BUILD_TESTS "Also build tests for DD package" OFF)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR BUILD_TESTS)
 	find_package(Git QUIET)
 	if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 		# Update submodules as needed

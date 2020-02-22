@@ -293,6 +293,25 @@ namespace dd {
         return f;
     }
 
+    // create DD for basis state |q_n-1 q_n-2 ... q1 q0>
+    Edge Package::makeBasisState(unsigned short n, const std::bitset<64>& state) {
+	    Edge f = DDone;
+	    Edge edges[4];
+	    edges[1] = edges[3] = DDzero;
+
+	    for (short p = 0; p < n; ++p) {
+	    	if (state[p] == 0) {
+	    		edges[0] = f;
+	    		edges[2] = DDzero;
+	    	} else {
+	    		edges[0] = DDzero;
+	    		edges[2] = f;
+	    	}
+	    	f = makeNonterminal(p, edges);
+	    }
+	    return f;
+    }
+
     Edge Package::normalize(Edge& e, bool cached) {
         int argmax = -1;
 
@@ -1442,15 +1461,6 @@ namespace dd {
         if(invVarOrder.at(y.p->v) > w) {
             w = invVarOrder[y.p->v];
         }
-
-	    Complex c = cn.getTempCachedComplex(ComplexNumbers::val(y.w.r), ComplexNumbers::val(y.w.i));
-
-	    const fp norm = ComplexNumbers::mag2(c);
-
-        c.r->val /= std::sqrt(norm);
-        c.i->val /= std::sqrt(norm);
-
-        y.w = dd::ComplexNumbers::conj(cn.lookup(c));
         const ComplexValue fid = fidelity(x, y, w + 1);
         return fid.r*fid.r + fid.i*fid.i;
     }
