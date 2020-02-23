@@ -67,7 +67,7 @@
                 }
             }
         } else {
-            std::cerr << "Invalid Expression" << std::endl;
+        	error("Invalid Expression");
         }
 
         return nullptr;
@@ -245,7 +245,7 @@
         if (sym == expected)
             scan();
         else
-            error("ERROR while parsing QASM file: expected '" + qasm::KindNames[expected] + "' but found '" + qasm::KindNames[sym] + "' in line " + std::to_string(la.line) + ", column " + std::to_string(la.col), 1);
+	        error("ERROR while parsing QASM file: expected '" + qasm::KindNames[expected] + "' but found '" + qasm::KindNames[sym] + "' in line " + std::to_string(la.line) + ", column " + std::to_string(la.col));
     }
 
 
@@ -253,7 +253,7 @@
         check(Token::Kind::identifier);
         std::string s = t.str;
         if (qregs.find(s) == qregs.end())
-            error("Argument is not a qreg: " + s, 1);
+	        error("Argument is not a qreg: " + s);
 
         if (sym == Token::Kind::lbrack) {
             scan();
@@ -269,7 +269,7 @@
         check(Token::Kind::identifier);
         std::string s = t.str;
         if (cregs.find(s) == cregs.end())
-            error("Argument is not a creg: " + s, 1);
+	        error("Argument is not a creg: " + s);
 
         if (sym == Token::Kind::lbrack) {
             scan();
@@ -342,7 +342,7 @@
 	        if (first_target.second == 1 && second_target.second == 1) {
 		        return std::make_unique<qc::StandardOperation>(nqubits, std::vector<qc::Control>{}, first_target.first, second_target.first, qc::SWAP);
 	        } else {
-	        	error("SWAP for whole qubit registers not yet implemented", 1);
+		        error("SWAP for whole qubit registers not yet implemented");
 	        }
         } else if (sym == Token::Kind::cxgate) {
             scan();
@@ -367,7 +367,7 @@
                     for (unsigned short i = 0; i < control.second; ++i)
                         gate.emplace_back<qc::StandardOperation>(nqubits, qc::Control(control.first + i), target.first, qc::X);
                 } else {
-                    error("Register size does not match for CX gate!", 1);
+	                error("Register size does not match for CX gate!");
                 }
                 return std::make_unique<qc::CompoundOperation>(gate);
             }
@@ -404,7 +404,7 @@
 	                for (size_t i = 0; i < arguments.size(); ++i) {
 		                argMap[gateIt->second.argumentNames[i]] = arguments[i];
 		                if (arguments[i].second > 1 && size != 1 && arguments[i].second != size)
-			                error("Register sizes do not match!", 1);
+			                error("Register sizes do not match!");
 
 		                if (arguments[i].second > 1)
 			                size = arguments[i].second;
@@ -414,13 +414,13 @@
 		                paramMap[gateIt->second.parameterNames[i]] = parameters[i];
                 } else { // controlled Gate treatment
                 	if (arguments.size() > ncontrols + 1) {
-                		error("Too many arguments for controlled gate! Expected " + std::to_string(ncontrols) + "+1, but got " + std::to_string(arguments.size()),1);
+		                error("Too many arguments for controlled gate! Expected " + std::to_string(ncontrols) + "+1, but got " + std::to_string(arguments.size()));
                 	}
 
 	                for (size_t i = 0; i < arguments.size(); ++i) {
 		                argMap["q"+std::to_string(i)] = arguments[i];
 		                if (arguments[i].second > 1 && size != 1 && arguments[i].second != size)
-			                error("Register sizes do not match!", 1);
+			                error("Register sizes do not match!");
 
 		                if (arguments[i].second > 1)
 			                size = arguments[i].second;
@@ -458,11 +458,11 @@
 
                             return std::make_unique<qc::StandardOperation>(nqubits, controls, argMap[targ].first, qc::U3, lambda->num, phi->num, theta->num);
                         } else {
-                            error("Cast to u-Gate not possible for controlled operation.", 1);
+	                        error("Cast to u-Gate not possible for controlled operation.");
                         }
                     }
                 } else if (gateIt == compoundGates.end()) {
-                	error("Controlled operation for which no definition could be found or which acts on whole qubit register.", 1);
+	                error("Controlled operation for which no definition could be found or which acts on whole qubit register.");
                 }
 
                 // identifier specifies just a single operation (U3 or CX)
@@ -512,16 +512,16 @@
                             for (unsigned short l = 0; l < argMap[cx->control].second; ++l)
                                 op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap[cx->control].first + l), argMap[cx->target].first, qc::X);
                         } else {
-                            error("Register size does not match for CX gate!",1);
+	                        error("Register size does not match for CX gate!");
                         }
                     }
                 }
                 return std::make_unique<qc::CompoundOperation>(op);
             } else {
-                error("Undefined gate " + t.str, 1);
+	            error("Undefined gate " + t.str);
             }
         } else {
-            error("Symbol " + qasm::KindNames[sym] + " not expected in Gate() routine!", 1);
+	        error("Symbol " + qasm::KindNames[sym] + " not expected in Gate() routine!");
         }
     }
 
@@ -615,7 +615,7 @@
                     } else if (auto cx = dynamic_cast<CXgate *>(it)) {
                         gate.gates.push_back(new CXgate(argsMap[cx->control], argsMap[cx->target]));
                     } else {
-                        error("Unexpected gate in GateDecl!", 1);
+	                    error("Unexpected gate in GateDecl!");
                     }
                 }
 
@@ -629,7 +629,7 @@
                 check(Token::Kind::semicolon);
                 //Nothing to do here for the simulator
             } else {
-                error("Error in gate declaration!", 1);
+	            error("Error in gate declaration!");
             }
         }
         compoundGates[gateName] = gate;
@@ -655,7 +655,7 @@
                 }
                 return std::make_unique<qc::NonUnitaryOperation>(nqubits, qubits, classics);
             } else {
-                error("Mismatch of qreg and creg size in measurement", 1);
+	            error("Mismatch of qreg and creg size in measurement");
             }
         } else if (sym == Token::Kind::reset) {
             scan();
@@ -668,7 +668,7 @@
             }
             return std::make_unique<qc::NonUnitaryOperation>(nqubits, qubits);
         } else {
-            error("No valid Qop: " + t.str, 1);
+	        error("No valid Qop: " + t.str);
         }
     }
  }

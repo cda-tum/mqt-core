@@ -91,18 +91,17 @@ TEST_F(IO, importFromString) {
 TEST_F(IO, controlled_op_acting_on_whole_register) {
 	std::string circuit_qasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[3];\nccx q,q[1];\n";
 	std::stringstream ss{circuit_qasm};
-	EXPECT_EXIT(qc->import(ss, qc::OpenQASM), ::testing::ExitedWithCode(1),
-			"Controlled operation for which no definition could be found or which acts on whole qubit register.");
+	EXPECT_THROW(qc->import(ss, qc::OpenQASM), qasm::QASMParserException);
 }
 
 TEST_F(IO, invalid_real_header) {
 	std::string circuit_real = ".numvars 2\nvariables q0 q1\n.begin\nh1 q0\nt2 q0 q1\n.end\n";
 	std::stringstream ss{circuit_real};
-	EXPECT_EXIT(qc->import(ss, qc::Real), ::testing::ExitedWithCode(1),"Invalid file header!");
+	EXPECT_THROW(qc->import(ss, qc::Real), qc::QFRException);
 }
 
 TEST_F(IO, invalid_real_command) {
 	std::string circuit_real = ".numvars 2\n.var q0 q1\n.begin\nh1 q0\n# test comment\nt2 q0 q1\n.end\n";
 	std::stringstream ss{circuit_real};
-	EXPECT_EXIT(qc->import(ss, qc::Real), ::testing::ExitedWithCode(1),"Unknown command: .VAR");
+	EXPECT_THROW(qc->import(ss, qc::Real), qc::QFRException);
 }

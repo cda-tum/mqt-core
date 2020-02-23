@@ -34,8 +34,7 @@ namespace qc {
 
 			// valid header commands start with '.'
 			if (cmd.front() != '.') {
-				std::cerr << "Invalid file header!" << std::endl;
-				exit(1);
+				throw QFRException("[real parser] Invalid file header");
 			}
 
 			if (cmd == ".BEGIN") return; // header read complete
@@ -55,14 +54,12 @@ namespace qc {
                 for (unsigned short i = 0; i < nqubits; ++i) {
                     const auto value = is.get();
                     if (!is.good()) {
-                        std::cerr << "[ERROR] Failed read in '.constants' line.\n";
-                        std::exit(1);
+                    	throw QFRException("[real parser] Failed read in '.constants' line");
                     }
                     if (value == '1') {
                         emplace_back<StandardOperation>(nqubits, i, X);
                     } else if (value != '-' && value != '0') {
-                        std::cerr << "[ERROR] Invalid value in '.constants' header: '" << value << "'\n";
-                        std::exit(1);
+                    	throw QFRException("[real parser] Invalid value in '.constants' header: '" + std::to_string(value) + "'");
                     }
                 }
                 is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -74,15 +71,14 @@ namespace qc {
 				continue;
 			} else if (cmd == ".DEFINE") {
 				// TODO: Defines currently not supported
-				std::cerr << "Warning: File contains 'define' statement, which is currently not supported and thus simply skipped." << std::endl;
+				std::cerr << "[WARN] File contains 'define' statement, which is currently not supported and thus simply skipped." << std::endl;
 				while (cmd != ".ENDDEFINE") {
 					is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 					is >> cmd;
                     std::transform(cmd.begin(), cmd.end(), cmd.begin(), [](const unsigned char c) { return ::toupper(c);});
 				}
 			} else {
-				std::cerr << "Unknown command: " << cmd << std::endl;
-				exit(1);
+				throw QFRException("[real parser] Unknown command: " + cmd);
 			}
 
 		}
@@ -106,8 +102,7 @@ namespace qc {
 			else {
 				// match gate declaration
 				if (!std::regex_match(cmd, m, gateRegex)) {
-					std::cerr << "Unsupported gate detected: " << cmd << std::endl;
-					exit(1);
+					throw QFRException("[real parser] Unsupported gate detected: " + cmd);
 				}
 
 				// extract gate information (identifier, #controls, divisor)
@@ -117,8 +112,7 @@ namespace qc {
 				} else {
 					auto it = identifierMap.find(m.str(1));
 					if (it == identifierMap.end()) {
-						std::cerr << "Unknown gate identifier: " << m.str(1) << std::endl;
-						exit(1);
+						throw QFRException("[real parser] Unknown gate identifier: " + m.str(1));
 					}
 					gate = (*it).second;
 				}
@@ -129,8 +123,7 @@ namespace qc {
 				else if (gate == P || gate == Pdag) ncontrols = 2;
 
 				if (ncontrols >= nqubits) {
-					std::cerr << "Gate acts on " << ncontrols + 1 << " qubits, but only " << nqubits << " qubits are available." << std::endl;
-					exit(1);
+					throw QFRException("[real parser] Gate acts on " + std::to_string(ncontrols + 1) + " qubits, but only " + std::to_string(nqubits) + " qubits are available.");
 				}
 
 				std::string qubits, label;
@@ -142,8 +135,7 @@ namespace qc {
 				// get controls and target
 				for (int i = 0; i < ncontrols; ++i) {
 					if (!(iss >> label)) {
-						std::cerr << "Too few variables for gate " << m.str(1) << std::endl;
-						exit(1);
+						throw QFRException("[real parser] Too few variables for gate " + m.str(1));
 					}
 
 					bool negativeControl = (label.at(0) == '-');
@@ -152,28 +144,25 @@ namespace qc {
 
 					auto iter = qregs.find(label);
 					if (iter == qregs.end()) {
-						std::cerr << "Label " << label << " not found!" << std::endl;
-						exit(1);
+						throw QFRException("[real parser] Label " + label + " not found!");
 					}
 					controls.emplace_back(iter->second.first, negativeControl? qc::Control::neg: qc::Control::pos);
 				}
 
 				if (!(iss >> label)) {
-					std::cerr << "Too few variables (no target) for gate " << m.str(1) << std::endl;
-					exit(1);
+					throw QFRException("[real parser] Too few variables (no target) for gate " + m.str(1));
 				}
 				auto iter = qregs.find(label);
 				if (iter == qregs.end()) {
-					std::cerr << "Label " << label << " not found!" << std::endl;
-					exit(1);
+					throw QFRException("[real parser] Label " + label + " not found!");
 				}
 
 				updateMaxControls(ncontrols);
 				unsigned short target = iter->second.first;
 				auto x = nearbyint(lambda);
 				switch (gate) {
-					case None: std::cerr << "'None' operation detected." << std::endl;
-						exit(1);
+					case None:
+						throw QFRException("[real parser] 'None' operation detected.");
 					case I:
 					case H:
 					case Y:
@@ -306,7 +295,7 @@ namespace qc {
 
 				auto it = p.cregs.find(creg);
 				if (it == p.cregs.end()) {
-					std::cerr << "Error in if statement: " << creg << " is not a creg!" << std::endl;
+					Parser::error("Error in if statement: " + creg + " is not a creg!");
 				} else {
 					emplace_back<ClassicControlledOperation>(p.Qop(), it->second.first + n);
 				}
@@ -323,8 +312,9 @@ namespace qc {
 				p.check(Token::Kind::semicolon);
 
 				for (auto& arg: arguments) {
-					if (arg.second != 1)
-						std::cerr << "ERROR in snapshot: arguments must be qubits" << std::endl;
+					if (arg.second != 1) {
+						Parser::error("ERROR in snapshot: arguments must be qubits");
+					}
 				}
 
 				std::vector<unsigned short> qubits{ };
@@ -338,8 +328,7 @@ namespace qc {
 				p.scan();
 				p.check(Token::Kind::semicolon);
 			} else {
-				std::cerr << "ERROR: unexpected statement: started with " << qasm::KindNames[p.sym] << "!" << std::endl;
-				exit(1);
+				Parser::error("ERROR: unexpected statement: started with " + qasm::KindNames[p.sym] + "!");
 			}
 		} while (p.sym != Token::Kind::eof);
 	}
@@ -371,8 +360,7 @@ namespace qc {
 				else if (identifier == "y_1_2")
 					emplace_back<StandardOperation>(nqubits, target, RY, PI_2);
 				else {
-					std::cerr << "Unknown gate '" << identifier << "'\n";
-					exit(1);
+					throw QFRException("[grcs parser] unknown gate '" + identifier + "'");
 				}
 			}
 		}
@@ -406,8 +394,7 @@ namespace qc {
 		} else if(extension == "txt") {
 			import(filename, GRCS);
 		} else {
-			std::cerr << "Extension " << extension << " not recognized." << std::endl;
-			std::exit(1);
+			throw QFRException("[import] extension " + extension + " not recognized");
 		}
 	}
 
@@ -423,8 +410,7 @@ namespace qc {
 
 	void QuantumComputation::import(std::istream& is, Format format) {
 		if (!is.good()) {
-			std::cerr << "Error processing input stream: " << name << std::endl;
-			exit(3);
+			throw QFRException("[import] Error processing input stream: " + name);
 		}
 
 		// reset circuit before importing
@@ -450,15 +436,13 @@ namespace qc {
 			case GRCS: importGRCS(is);
 				break;
 			default:
-				std::cerr << "Format " << format << " not yet supported." << std::endl;
-				exit(1);
+				throw QFRException("[import] Format " + std::to_string(format) + " not yet supported");
 		}
 	}
 
 	void QuantumComputation::addQubitRegister(unsigned short nq, const char* reg_name) {
 		if (nqubits + nancillae + nq > dd::MAXN) {
-			std::cerr << "Adding additional qubits results in too many qubits. " << nqubits + nancillae + nq << " vs. " << dd::MAXN << std::endl;
-			exit(1);
+			throw QFRException("[addQubitRegister] Adding additional qubits results in too many qubits " + std::to_string(nqubits + nancillae + nq) + " vs. " + std::to_string(dd::MAXN));
 		}
 
 		if (qregs.count(reg_name)) {
@@ -466,8 +450,7 @@ namespace qc {
 			if(reg.first+reg.second == nqubits+nancillae) {
 				reg.second+=nq;
 			} else {
-				std::cerr << "Augmenting existing qubit registers is only supported for the last register in a circuit" << std::endl;
-				exit(1);
+				throw QFRException("[addQubitRegister] Augmenting existing qubit registers is only supported for the last register in a circuit");
 			}
 		} else {
 			qregs.insert({reg_name, {nqubits, nq}});
@@ -489,8 +472,7 @@ namespace qc {
 	void QuantumComputation::addClassicalRegister(unsigned short nc, const char* reg_name) {
 
 		if (cregs.count(reg_name)) {
-			std::cerr << "Augmenting existing classical registers is currently not supported" << std::endl;
-			exit(1);
+			throw QFRException("[addClassicalRegister] Augmenting existing classical registers is currently not supported");
 		}
 
 		cregs.insert({reg_name, {nclassics, nc}});
@@ -499,8 +481,7 @@ namespace qc {
 
 	void QuantumComputation::addAncillaryRegister(unsigned short nq, const char* reg_name) {
 		if (nqubits + nancillae + nq > dd::MAXN) {
-			std::cerr << "Adding additional ancillaries results in too many qubits. " << nqubits + nancillae + nq << " vs. " << dd::MAXN << std::endl;
-			exit(1);
+			throw QFRException("[addAncillaryQubitRegister] Adding additional qubits results in too many qubits " + std::to_string(nqubits + nancillae + nq) + " vs. " + std::to_string(dd::MAXN));
 		}
 
 		unsigned short totalqubits = nqubits + nancillae;
@@ -510,8 +491,7 @@ namespace qc {
 			if(reg.first+reg.second == totalqubits) {
 				reg.second+=nq;
 			} else {
-				std::cerr << "Augmenting existing ancillary registers is only supported for the last register in a circuit" << std::endl;
-				exit(1);
+				throw QFRException("[addAncillaryRegister] Augmenting existing ancillary registers is only supported for the last register in a circuit");
 			}
 		} else {
 			ancregs.insert({reg_name, {totalqubits, nq}});
@@ -674,8 +654,7 @@ namespace qc {
 	// adds j-th physical qubit as ancilla to the end of reg or creates the register if necessary
 	void QuantumComputation::addAncillaryQubit(unsigned short physical_qubit_index, short output_qubit_index) {
 		if(initialLayout.count(physical_qubit_index) || outputPermutation.count(physical_qubit_index)) {
-			std::cerr << "Attempting to insert physical qubit that is already assigned" << std::endl;
-			exit(1);
+			throw QFRException("[addAncillaryQubit] Attempting to insert physical qubit that is already assigned");
 		}
 
 		#if DEBUG_MODE_QC
@@ -849,8 +828,7 @@ namespace qc {
 
 		for (auto & op : ops) {
 			if (!op->isUnitary()) {
-				std::cerr << "Functionality not unitary." << std::endl;
-				exit(1);
+				throw QFRException("[buildFunctionality] Functionality not unitary.");
 			}
 
 			auto tmp = dd->multiply(op->getDD(dd, line, map), e);
@@ -881,8 +859,7 @@ namespace qc {
 
 		for (auto& op : ops) {
 			if (!op->isUnitary()) {
-				std::cerr << "Functionality not unitary." << std::endl;
-				exit(1);
+				throw QFRException("[simulate] Functionality not unitary.");
 			}
 
 			auto tmp = dd->multiply(op->getDD(dd, line, map), e);
@@ -1021,16 +998,14 @@ namespace qc {
 		} else if(extension == "py") {
 			dump(filename, Qiskit);
 		} else {
-			std::cerr << "Extension " << extension << " not recognized/supported for dumping." << std::endl;
-			std::exit(1);
+			throw QFRException("[dump] Extension " + extension + " not recognized/supported for dumping.");
 		}
 	}
 
 	void QuantumComputation::dump(const std::string& filename, Format format) {
 		auto of = std::ofstream(filename);
 		if (!of.good()) {
-			std::cerr << "Error opening file: " << filename << std::endl;
-			exit(3);
+			throw QFRException("[dump] Error opening file: " + filename);
 		}
 
 		switch(format) {
@@ -1272,8 +1247,7 @@ namespace qc {
 			// search for key in the first map
 			auto it = from.find(i);
 			if (it == from.end()) {
-				std::cerr << "Key " << it->first << " was not found in first permutation. This should never happen." << std::endl;
-				exit(1);
+				throw QFRException("[changePermutation] Key " + std::to_string(it->first) + " was not found in first permutation. This should never happen.");
 			}
 			unsigned short current = it->second;
 
@@ -1339,8 +1313,7 @@ namespace qc {
 			return reg.first;
 		}
 
-		std::cerr << "Qubit index " << physical_qubit_index << " not found in any register" << std::endl;
-		exit(1);
+		throw QFRException("[getQubitRegister] Qubit index " + std::to_string(physical_qubit_index) + " not found in any register");
 	}
 
 	std::pair<std::string, unsigned short> QuantumComputation::getQubitRegisterAndIndex(unsigned short physical_qubit_index) {

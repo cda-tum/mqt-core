@@ -11,6 +11,8 @@
 #include <set>
 #include <cmath>
 #include <iostream>
+#include <stdexcept>
+#include <sstream>
 
 #include "qasm_parser/Scanner.hpp"
 #include "operations/StandardOperation.hpp"
@@ -21,6 +23,18 @@ namespace qasm {
 	static constexpr long double PI = 3.14159265358979323846264338327950288419716939937510L;
 
 	using registerMap = std::map<std::string, std::pair<unsigned short, unsigned short>>;
+
+	class QASMParserException : public std::runtime_error {
+		std::string msg;
+	public:
+		explicit QASMParserException(std::string  msg) : std::runtime_error("QASM Parser Exception"), msg(std::move(msg)) { }
+
+		const char *what() const noexcept override {
+			std::stringstream ss{};
+			ss << "[qasm parser] " << msg;
+			return ss.str().c_str();
+		}
+	};
 
 	class Parser {
 
@@ -91,11 +105,6 @@ namespace qasm {
 
 		static Expr *RewriteExpr(Expr *expr, std::map<std::string, Expr *>& exprMap);
 
-		static void error [[ noreturn ]] (const std::string& msg, int code) {
-			std::cerr << msg << std::endl;
-			std::exit(code);
-		}
-
 	public:
 		Token          la, t;
 		Token::Kind    sym = Token::Kind::none;
@@ -137,6 +146,10 @@ namespace qasm {
 		void GateDecl();
 
 		std::unique_ptr<qc::Operation> Qop();
+
+		static void error [[ noreturn ]](const std::string& msg) {
+			throw QASMParserException(msg);
+		}
 	};
 
 }
