@@ -1182,7 +1182,8 @@ namespace qc {
 	}
 
 	void QuantumComputation::stripIdleQubits() {
-		for (auto physical_qubit_it = initialLayout.rbegin(); physical_qubit_it != initialLayout.rend(); ++physical_qubit_it) {
+		auto layout_copy = initialLayout;
+		for (auto physical_qubit_it = layout_copy.rbegin(); physical_qubit_it != layout_copy.rend(); ++physical_qubit_it) {
 			auto physical_qubit_index = physical_qubit_it->first;
 			if(isIdleQubit(physical_qubit_index)) {
 				auto it = outputPermutation.find(physical_qubit_index);
@@ -1191,7 +1192,7 @@ namespace qc {
 					if (output_index >= 0) continue;
 				}
 
-				unsigned short logical_qubit_index = initialLayout[physical_qubit_index];
+				unsigned short logical_qubit_index = initialLayout.at(physical_qubit_index);
 				#if DEBUG_MODE_QC
 				std::cout << "Trying to strip away idle qubit: " << physical_qubit_index
 						  << ", which corresponds to logical qubit: " << logical_qubit_index << std::endl;
