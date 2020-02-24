@@ -1457,6 +1457,9 @@ namespace dd {
     }
 
     fp Package::fidelity(Edge x, Edge y) {
+	    if (x.p == nullptr || y.p == nullptr || CN::equalsZero(x.w) || CN::equalsZero(y.w))  // the 0 case
+	    { return static_cast<fp>(0.L); }
+
         short w = invVarOrder[x.p->v];
         if(invVarOrder.at(y.p->v) > w) {
             w = invVarOrder[y.p->v];
