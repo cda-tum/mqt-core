@@ -791,13 +791,19 @@ namespace qc {
 		std::cout << "e[3]: " << e.p->e[3].p << std::endl;
 		#endif
 		auto saved = e;
+
+		auto norm0 = std::sqrt((long double)CN::mag2(e.p->e[0].w) + CN::mag2(e.p->e[2].w));
+		auto norm1 = std::sqrt((long double)CN::mag2(e.p->e[1].w) + CN::mag2(e.p->e[3].w));
 		for (auto& edge: e.p->e) {
-			// not quite sure if this works in all situations
-			auto c = dd->cn.lookup(std::sqrt(CN::mag2(edge.w)),0);
-			edge.w = c;
+			if (edge.p != dd::Package::DDzero.p) {
+				edge.w = CN::ONE;
+			}
 		}
 
 		e = dd->makeNonterminal(e.p->v, { dd->add(e.p->e[0], e.p->e[2]), dd->add(e.p->e[1], e.p->e[3]), dd::Package::DDzero, dd::Package::DDzero });
+		e.p->e[0].w = dd->cn.lookup(norm0, 0);
+		e.p->e[1].w = dd->cn.lookup(norm1, 0);
+		e = dd->normalize(e, false);
 		auto c = dd->cn.mulCached(e.w, saved.w);
 		e.w = dd->cn.lookup(c);
 		dd->cn.releaseCached(c);
