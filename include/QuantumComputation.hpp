@@ -238,8 +238,8 @@ namespace qc {
 		}
 
 		template<class T, class... Args>
-		auto emplace_back(Args&& ... args) { 
-			return ops.emplace_back(std::make_unique<T>(args ...)); 
+		void emplace_back(Args&& ... args) {
+			ops.emplace_back(std::make_unique<T>(args ...));
 		}
 		
 	};

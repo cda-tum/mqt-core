@@ -7,22 +7,25 @@
 #include <string>
 #include <locale>
 #include <algorithm>
+#include <random>
+#include <functional>
+#include <set>
 
 #include "QuantumComputation.hpp"
 
 void show_usage(const std::string& name) {
-	std::cerr << "Usage: " << name << "<PATH_INPUT_FILE> <PATH_TO_OUTPUT_FILE>" << std::endl;
+	std::cerr << "Usage: " << name << "<PATH_INPUT_FILE> <PATH_TO_OUTPUT_FILE> (--remove_gates X)" << std::endl;
 	std::cerr << "Supported input file formats:" << std::endl;
 	std::cerr << "  .real                       " << std::endl;
 	std::cerr << "  .qasm                       " << std::endl;
 	std::cerr << "Supported output file formats:" << std::endl;
 	std::cerr << "  .qasm                       " << std::endl;
 	std::cerr << "  .py (qiskit)                " << std::endl;
-
+	std::cerr << "If '--remove_gates X' is specified, X gates are randomly removed" << std::endl;
 }
 
 int main(int argc, char** argv){
-	if (argc != 3) {
+	if (argc != 3 && argc != 5) {
 		show_usage(argv[0]);
 		return 1;
 	}
@@ -65,6 +68,33 @@ int main(int argc, char** argv){
 	// read circuit
 	qc::QuantumComputation qc;
 	qc.import(infile, informat);
+
+	if (argc > 3) {
+		unsigned long long gates_to_remove = std::stoull(argv[4]);
+
+		std::array<std::mt19937_64::result_type , std::mt19937_64::state_size> random_data{};
+		std::random_device rd;
+		std::generate(begin(random_data), end(random_data), [&](){return rd();});
+		std::seed_seq seeds(begin(random_data), end(random_data));
+		std::mt19937_64 mt(seeds);
+		std::uniform_int_distribution<unsigned long long> distribution(0, qc.getNops()-1);
+		std::function<unsigned long long()> rng = bind(distribution, ref(mt));
+
+		std::set<unsigned long long> already_removed{};
+
+		for (unsigned long long j=0; j < gates_to_remove; ++j) {
+			auto gate_to_remove = rng() % qc.getNops();
+			while (already_removed.count(gate_to_remove)) {
+				gate_to_remove = rng() % qc.getNops();
+			}
+			already_removed.insert(gate_to_remove);
+			auto it = qc.begin();
+			if (it == qc.end()) continue;
+			std::advance(it, gate_to_remove);
+
+			qc.erase(it);
+		}
+	}
 
 	qc.dump(outfile, outformat);
 

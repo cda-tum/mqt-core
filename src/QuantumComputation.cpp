@@ -1016,6 +1016,26 @@ namespace qc {
 
 		switch(format) {
 			case  OpenQASM: {
+					// dump initial layout and output permutation
+					permutationMap inverseInitialLayout {};
+					for (const auto& q: initialLayout)
+						inverseInitialLayout.insert({q.second, q.first});
+					of << "// i";
+					for (const auto& q: inverseInitialLayout) {
+						of << " " << q.second;
+					}
+					of << std::endl;
+
+					permutationMap inverseOutputPermutation {};
+					for (const auto& q: outputPermutation) {
+						inverseOutputPermutation.insert({q.second, q.first});
+					}
+					of << "// o";
+					for (const auto& q: inverseOutputPermutation) {
+						of << " " << q.second;
+					}
+					of << std::endl;
+
 					of << "OPENQASM 2.0;"                << std::endl;
 					of << "include \"qelib1.inc\";"      << std::endl;
 					if(!qregs.empty()) {
