@@ -1418,7 +1418,9 @@ namespace dd {
 
         Edge r = CTlookup(x, y, fid);
         if (r.p != nullptr) {
-	        cn.releaseCached(r.w);
+        	if (r.w != CN::ZERO && r.w != CN::ONE) {
+		        cn.releaseCached(r.w);
+	        }
             CN::mul(r.w, r.w, xweight);
             CN::mul(r.w, r.w, yweight);
             return {r.w.r->val, r.w.i->val};
