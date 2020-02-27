@@ -96,9 +96,9 @@ before_script:
       cmake .. -G Ninja -LA -DCMAKE_BUILD_TYPE=${BUILD} -DCOVERAGE=${COVERAGE}
     fi
   - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cmake --build . --config ${BUILD} --target INSTALL; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cmake --build . --config ${BUILD} --target QFR; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cmake --build . --config ${BUILD} --target QFR_example; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cmake --build . --config ${BUILD} --target QFR_test; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cmake --build . --config ${BUILD} --target qfr; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cmake --build . --config ${BUILD} --target qfr_example; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cmake --build . --config ${BUILD} --target qfr_test; fi
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then sudo cmake --build . --config ${BUILD} --target install; fi
 
 script:

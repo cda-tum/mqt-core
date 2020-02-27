@@ -188,7 +188,7 @@ The package can be used for a multitude of tasks, as illustrated in the followin
     The project also includes a small command line application `QFR_app` which can be used to transcribe circuits from one format into another format, e.g.
     
     ```commandline
-    QFR_app circuit.real circuit.py
+    qfr_app circuit.real circuit.py
     ```
     can be used to transcribe a circuit from `real` format to a qiskit realization
 
@@ -200,40 +200,40 @@ However, the implementation should be compatible with any current C++ compiler s
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
 ## Build and Run
-The library (target **QFR**) itself can be built by executing
+The library (target **qfr**) itself can be built by executing
 ```commandline
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release
+cmake --build . --config Release --target qfr
 ```
 
 Windows users using Visual Studio and the MSVC compiler need to build the project with
 ```commandline
 mkdir build && cd build
 cmake .. -G "Visual Studio 15 2017" -A x64 -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release
+cmake --build . --config Release --target qfr
 ```
 
-To build the library and run a small demo, showcasing the library's features, just build the `QFR_example` CMake target and run the resulting executable (*.dot files will be created in the working directory which will be automatically converted to SVG if GraphViz is installed), i.e.,
+To build the library and run a small demo, showcasing the library's features, just build the `qfr_example` CMake target and run the resulting executable (*.dot files will be created in the working directory which will be automatically converted to SVG if GraphViz is installed), i.e.,
 
 ```commandline
-cmake --build . --config Release --target QFR_example
+cmake --build . --config Release --target qfr_example
 cd test
-./QFR_example
+./qfr_example
 ```
 
-The command line application `QFR_app` can be built via the identically named CMake target, i.e., 
+The command line application `qfr_app` can be built via the identically named CMake target, i.e., 
 ```commandline
-cmake --build . --config Release --target QFR_app
+cmake --build . --config Release --target qfr_app
 ```
 
 The repository also includes some unit tests (using GoogleTest), which aim to ensure the correct behaviour of the library. They can be built and executed in the following way:
 ```commandline
-cmake --build . --config Release --target QFR_test
+cmake --build . --config Release --target qfr_test
 ctest -C Release
 ```
 
-The QFR library may be installed on the system by executing
+The QFR library and tool may be installed on the system by executing
 
 ```commandline
 $ mkdir build && cd build
@@ -244,6 +244,6 @@ $ cmake --build . --config Release --target install
 It can then be included in other projects using the following CMake snippet
 
 ```cmake
-find_package(QFR)
-target_link_libraries(${TARGET_NAME} PRIVATE JKQ::QFR)
+find_package(qfr)
+target_link_libraries(${TARGET_NAME} PRIVATE JKQ::qfr)
 ```

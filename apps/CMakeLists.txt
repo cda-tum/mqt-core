@@ -10,3 +10,8 @@ else()
 endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_app ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_app)
+
+include(GNUInstallDirs)
+install(TARGETS ${PROJECT_NAME}_app
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+set_target_properties(${PROJECT_NAME}_app PROPERTIES EXPORT_NAME ${PROJECT_NAME}_app)

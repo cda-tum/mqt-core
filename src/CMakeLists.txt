@@ -90,7 +90,7 @@ endif()
 # installation instructions
 
 include(GNUInstallDirs)
-set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/QFR)
+set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
 install(TARGETS ${PROJECT_NAME}
         EXPORT qfr-targets
@@ -99,12 +99,12 @@ install(TARGETS ${PROJECT_NAME}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES EXPORT_NAME QFR)
+set_target_properties(${PROJECT_NAME} PROPERTIES EXPORT_NAME qfr)
 
 install(DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(EXPORT qfr-targets
-        FILE QFRTargets.cmake
+        FILE qfrTargets.cmake
         NAMESPACE JKQ::
         DESTINATION ${INSTALL_CONFIGDIR}
         )
@@ -112,24 +112,24 @@ install(EXPORT qfr-targets
 #Create a ConfigVersion.cmake file
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-		${CMAKE_CURRENT_BINARY_DIR}/QFRConfigVersion.cmake
+		${CMAKE_CURRENT_BINARY_DIR}/qfrConfigVersion.cmake
 		VERSION ${PROJECT_VERSION}
 		COMPATIBILITY AnyNewerVersion
 )
 
-configure_package_config_file(${${PROJECT_NAME}_SOURCE_DIR}/cmake/QFRConfig.cmake.in
-                              ${CMAKE_CURRENT_BINARY_DIR}/QFRConfig.cmake
+configure_package_config_file(${${PROJECT_NAME}_SOURCE_DIR}/cmake/qfrConfig.cmake.in
+                              ${CMAKE_CURRENT_BINARY_DIR}/qfrConfig.cmake
                               INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
                               )
 
 install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/QFRConfig.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/QFRConfigVersion.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/qfrConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/qfrConfigVersion.cmake
         DESTINATION ${INSTALL_CONFIGDIR}
         )
 
 # exporting from the build tree
-export(EXPORT qfr-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/QFRTargets.cmake NAMESPACE JKQ::)
+export(EXPORT qfr-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/qfrTargets.cmake NAMESPACE JKQ::)
 
 # Register package in user's package registry
-export(PACKAGE QFR)
+export(PACKAGE qfr)
