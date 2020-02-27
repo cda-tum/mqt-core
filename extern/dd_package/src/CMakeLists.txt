@@ -3,7 +3,7 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/DDcomplex.cpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/DDpackage.h
             ${${PROJECT_NAME}_SOURCE_DIR}/include/DDcomplex.h)
-add_library(DD::DDpackage ALIAS ${PROJECT_NAME})
+add_library(JKQ::DDpackage ALIAS ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PUBLIC
                            $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
@@ -49,7 +49,7 @@ install(DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INS
 
 install(EXPORT ddpackage-targets
         FILE DDpackageTargets.cmake
-        NAMESPACE DD::
+        NAMESPACE JKQ::
         DESTINATION ${INSTALL_CONFIGDIR}
         )
 
@@ -73,7 +73,7 @@ install(FILES
         )
 
 # exporting from the build tree
-export(EXPORT ddpackage-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/DDpackageTargets.cmake NAMESPACE DD::)
+export(EXPORT ddpackage-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/DDpackageTargets.cmake NAMESPACE JKQ::)
 
 #Register package in user's package registry
 export(PACKAGE DDpackage)

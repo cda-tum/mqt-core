@@ -131,7 +131,7 @@ It can then be included in other projects using the following CMake snippet
 
 ```cmake
 find_package(DDpackage)
-target_link_libraries(${TARGET_NAME} PRIVATE DD::DDpackage)
+target_link_libraries(${TARGET_NAME} PRIVATE JKQ::DDpackage)
 ```
 
 ## Reference
