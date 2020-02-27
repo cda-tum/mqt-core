@@ -42,7 +42,7 @@ add_library(${PROJECT_NAME}
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Grover.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/GoogleRandomCircuitSampling.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Entanglement.hpp)
-add_library(QC::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+add_library(JKQ::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PUBLIC
                            $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_14)
@@ -63,7 +63,7 @@ else()
 	add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
 endif ()
 
-target_link_libraries(${PROJECT_NAME} PUBLIC DD::DDpackage)
+target_link_libraries(${PROJECT_NAME} PUBLIC JKQ::DDpackage)
 
 # add coverage compiler and linker flag if COVERAGE is set
 if (COVERAGE)
@@ -105,7 +105,7 @@ install(DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INS
 
 install(EXPORT qfr-targets
         FILE QFRTargets.cmake
-        NAMESPACE QC::
+        NAMESPACE JKQ::
         DESTINATION ${INSTALL_CONFIGDIR}
         )
 
@@ -129,7 +129,7 @@ install(FILES
         )
 
 # exporting from the build tree
-export(EXPORT qfr-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/QFRTargets.cmake NAMESPACE QC::)
+export(EXPORT qfr-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/QFRTargets.cmake NAMESPACE JKQ::)
 
 # Register package in user's package registry
 export(PACKAGE QFR)

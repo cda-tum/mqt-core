@@ -3,8 +3,8 @@ include(CMakeFindDependencyMacro)
 
 find_dependency(DDpackage 1.1 REQUIRED CONFIG)
 
-if(NOT TARGET QC::QFR)
+if(NOT TARGET JKQ::QFR)
 	include("${QFR_CMAKE_DIR}/QFRTargets.cmake")
 endif()
 
-set(QFR_LIBRARIES QC::QFR)
+set(QFR_LIBRARIES JKQ::QFR)
