@@ -245,5 +245,5 @@ It can then be included in other projects using the following CMake snippet
 
 ```cmake
 find_package(QFR)
-target_link_libraries(${TARGET_NAME} PRIVATE QC::QFR)
+target_link_libraries(${TARGET_NAME} PRIVATE JKQ::QFR)
 ```
