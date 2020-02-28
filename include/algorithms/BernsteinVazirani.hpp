@@ -29,5 +29,3 @@ namespace qc {
 
 	};
 }
-
-#endif //QUANTUMFUNCTIONALITYBUILDER_GROVER_H
