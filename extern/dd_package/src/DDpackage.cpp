@@ -475,13 +475,13 @@ namespace dd {
         }
         UTlookups++;
 
-        uintptr_t key = 0;
+        std::uintptr_t key = 0;
         // note hash function shifts pointer values so that order is important
         // suggested by Dr. Nigel Horspool and helps significantly
         for (unsigned int i = 0; i < NEDGE; i++) {
-            key += ((uintptr_t) (e.p->e[i].p) >> i)
-                   + ((uintptr_t) (e.p->e[i].w.r) >> i)
-                   + ((uintptr_t) (e.p->e[i].w.i) >> (i + 1));
+            key += ((std::uintptr_t) (e.p->e[i].p) >> i)
+                   + ((std::uintptr_t) (e.p->e[i].w.r) >> i)
+                   + ((std::uintptr_t) (e.p->e[i].w.i) >> (i + 1));
         }
         key = key & HASHMASK;
 
@@ -489,7 +489,7 @@ namespace dd {
         NodePtr p = Unique[v][key]; // find pointer to appropriate collision chain
         while (p != nullptr)    // search for a match
         {
-            if (memcmp(e.p->e, p->e, NEDGE * sizeof(Edge)) == 0) {
+            if (std::memcmp(e.p->e, p->e, NEDGE * sizeof(Edge)) == 0) {
                 // Match found
                 e.p->next = nodeAvail;    // put node pointed to by e.p on avail chain
                 nodeAvail = e.p;
@@ -697,8 +697,7 @@ namespace dd {
 	Edge Package::CTlookup(const Edge& a, const Edge& b, const CTkind which) {
     // Lookup a computation in the compute table
     // return NULL if not a match else returns result of prior computation
-        Edge r{};
-        r.p = nullptr;
+        Edge r{nullptr, {nullptr, nullptr}};
         CTlook[which]++;
 
         if (which == mult || which == fid || which == kron) {
@@ -756,9 +755,10 @@ namespace dd {
     // put an entry into the compute table
     void Package::CTinsert(const Edge& a, const Edge& b, const Edge& r, const CTkind which) {
         if (which == mult || which == fid || which == kron) {
-            if (CN::equalsZero(a.w)) {
-                std::cerr << "[WARN] CTinsert: Edge with near zero weight" << a.w << "\n";
+            if (CN::equalsZero(a.w) || CN::equalsZero(b.w)) {
+                std::cerr << "[WARN] CTinsert: Edge with near zero weight a.w=" << a.w << "  b.w=" << b.w << "\n";
             }
+            assert(((std::uintptr_t)r.w.r & 1u) == 0 && ((std::uintptr_t)r.w.i & 1u) == 0);
             const unsigned long i = CThash(a, b, which);
 
             CTable2[i].a = a;
@@ -771,6 +771,8 @@ namespace dd {
 	        ComplexValue aw{ a.w.r->val, a.w.i->val };
 	        ComplexValue bw{ b.w.r->val, b.w.i->val };
             const unsigned long i = CThash2(a.p, aw, b.p, bw, which);
+
+            assert(((std::uintptr_t)r.w.r & 1u) == 0 && ((std::uintptr_t)r.w.i & 1u) == 0);
 
             CTable3[i].a = a.p;
             CTable3[i].aw = aw;
@@ -812,7 +814,7 @@ namespace dd {
         if (TTable[i].e.p == nullptr || TTable[i].t != t || TTable[i].m != m || TTable[i].n != n) {
             return r;
         }
-        if (0 == memcmp(TTable[i].line, line, n * sizeof(short))) {
+        if (0 == std::memcmp(TTable[i].line, line, n * sizeof(short))) {
             return TTable[i].e;
         }
         return r;
@@ -823,7 +825,7 @@ namespace dd {
         TTable[i].n = n;
         TTable[i].m = m;
         TTable[i].t = t;
-        memcpy(TTable[i].line, line, n * sizeof(short));
+        std::memcpy(TTable[i].line, line, n * sizeof(short));
         TTable[i].e = e;
     }
 
@@ -833,7 +835,7 @@ namespace dd {
     	Edge e{ getNode(), CN::ONE};
         e.p->v = v;
 
-        memcpy(e.p->e, edge, NEDGE * sizeof(Edge));
+        std::memcpy(e.p->e, edge, NEDGE * sizeof(Edge));
         e = normalize(e, cached); // normalize it
         e = UTlookup(e);  // look it up in the unique tables
         return e;          // return result
@@ -1421,6 +1423,7 @@ namespace dd {
         	if (r.w != CN::ZERO && r.w != CN::ONE) {
 		        cn.releaseCached(r.w);
 	        }
+
             CN::mul(r.w, r.w, xweight);
             CN::mul(r.w, r.w, yweight);
             return {r.w.r->val, r.w.i->val};
@@ -1438,7 +1441,7 @@ namespace dd {
             }
             if (!isTerminal(y) && y.p->v == w) {
                 e2 = y.p->e[i];
-                e2.w = dd::ComplexNumbers::conj(e2.w);
+                e2.w = CN::conj(e2.w);
             } else {
                 e2 = y;
             }
@@ -1459,14 +1462,19 @@ namespace dd {
     }
 
     fp Package::fidelity(Edge x, Edge y) {
-	    if (x.p == nullptr || y.p == nullptr || CN::equalsZero(x.w) || CN::equalsZero(y.w))  // the 0 case
-	    { return static_cast<fp>(0.L); }
+	    if (x.p == nullptr || y.p == nullptr || CN::equalsZero(x.w) || CN::equalsZero(y.w)) { // the 0 case
+	        return 0;
+	    }
 
+        const auto before = cn.cacheCount;
         short w = invVarOrder[x.p->v];
         if(invVarOrder.at(y.p->v) > w) {
             w = invVarOrder[y.p->v];
         }
         const ComplexValue fid = fidelity(x, y, w + 1);
+
+        const auto after = cn.cacheCount;
+        assert(after == before);
         return fid.r*fid.r + fid.i*fid.i;
     }
 

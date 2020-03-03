@@ -383,7 +383,10 @@ namespace dd {
 	}
 
 	void ComplexNumbers::printFormattedReal(std::ostream& os, fp r, bool imaginary) {
-		assert(r != 0.L);
+		if(r == 0.L) {
+		    os << (std::signbit(r) ? "-" : "+") << "0" << (imaginary ? "i" : "");
+		    return;
+		}
     	auto n = std::log2(std::abs(r));
 		auto m = std::log2(std::abs(r) / SQRT_2);
 		auto o = std::log2(std::abs(r) / PI);

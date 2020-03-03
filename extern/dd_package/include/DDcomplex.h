@@ -161,7 +161,8 @@ namespace dd {
 	    }
 
 	    inline void releaseCached(const Complex& c) {
-	        assert(c != ZERO && c != ONE);
+	        assert(c != ZERO);
+	        assert(c != ONE);
 		    c.i->next = Cache_Avail;
 		    Cache_Avail = c.r;
             cacheCount += 2;
@@ -181,10 +182,12 @@ namespace dd {
 
         // provide (temporary) cached complex number
         inline Complex getTempCachedComplex() {
+            assert(cacheCount >= 2);
         	return { Cache_Avail, Cache_Avail->next};
         }
 
 	    inline Complex getTempCachedComplex(const fp& r, const fp& i) {
+            assert(cacheCount >= 2);
 		    Cache_Avail->val = r;
 		    Cache_Avail->next->val = i;
         	return { Cache_Avail, Cache_Avail->next };
