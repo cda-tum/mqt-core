@@ -18,6 +18,6 @@ TEST_F(BernsteinVazirani, FunctionTest) {
 	dd::Edge r = dd->multiply(e, dd->makeZeroState(qc->size));
 	
 	// Test the Values
-	ASSERT_EQ(dd->getValueByPath(r, std::string(qc->size, '0')), (dd::ComplexValue{ 1, 0 }));
-	ASSERT_EQ(dd->getValueByPath(r, std::string(qc->size, '1')), (dd::ComplexValue{ 0, 0 }));
+	ASSERT_EQ(dd->getValueByPath(r, std::string(qc->size, '1')), (dd::ComplexValue{ 1, 0 }));
+	ASSERT_EQ(dd->getValueByPath(r, std::string(qc->size, '0')), (dd::ComplexValue{ 0, 0 }));
 }

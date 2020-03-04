@@ -60,3 +60,16 @@
 8	2971	605043362	test/CMakeFiles/qfr_test.dir/algorithms/test_bernsteinvazirani.cpp.obj	5e28ad2474285f06
 8	4626	605043551	test/CMakeFiles/qfr_test.dir/algorithms/test_bernsteinvazirani.cpp.obj	5e28ad2474285f06
 5	3432	605043843	test/CMakeFiles/qfr_test.dir/algorithms/test_bernsteinvazirani.cpp.obj	5e28ad2474285f06
+9	5952	605044216	test/CMakeFiles/qfr_test.dir/algorithms/test_bernsteinvazirani.cpp.obj	5e28ad2474285f06
+5953	12310	605044223	test/qfr_test.exe	b1755b1f6e939e6e
+5953	12310	605044223	test/qfr_test[1]_tests.cmake	b1755b1f6e939e6e
+9	6783	605044242	test/CMakeFiles/qfr_test.dir/algorithms/test_bernsteinvazirani.cpp.obj	5e28ad2474285f06
+4	3131	605044361	test/CMakeFiles/qfr_test.dir/algorithms/test_bernsteinvazirani.cpp.obj	5e28ad2474285f06
+13	4795	605044408	test/CMakeFiles/qfr_test.dir/algorithms/test_bernsteinvazirani.cpp.obj	5e28ad2474285f06
+5	2883	605044578	test/CMakeFiles/qfr_test.dir/algorithms/test_bernsteinvazirani.cpp.obj	5e28ad2474285f06
+6	3539	605044834	src/CMakeFiles/qfr.dir/algorithms/BernsteinVazirani.cpp.obj	f1f539321a95bc6b
+3542	6975	605044838	src/qfr.lib	2cdaee6d6cbfa96c
+6992	13219	605044844	apps/qfr_app.exe	6422dda62463a60c
+6975	13452	605044844	test/qfr_example.exe	fe61f7f9b65b4556
+6983	14490	605044845	test/qfr_test.exe	b1755b1f6e939e6e
+6983	14490	605044845	test/qfr_test[1]_tests.cmake	b1755b1f6e939e6e

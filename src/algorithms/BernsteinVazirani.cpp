@@ -61,7 +61,6 @@ namespace qc {
 		os << "\tn: " << nqubits + 1 << std::endl;
 		os << "\tm: " << getNindividualOps() << std::endl;
 		os << "\tHiddenInteger: " << hiddenInteger << std::endl;
-		os << "\tx: " << x << std::endl;
 		os << "--------------" << std::endl;
 		return os;
 	}

@@ -23,6 +23,7 @@ add_library(${PROJECT_NAME}
 
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/QFT.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Grover.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/BernsteinVazirani.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/GoogleRandomCircuitSampling.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Entanglement.cpp
 
@@ -40,6 +41,7 @@ add_library(${PROJECT_NAME}
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QFT.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Grover.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/BernsteinVazirani.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/GoogleRandomCircuitSampling.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Entanglement.hpp)
 add_library(JKQ::${PROJECT_NAME} ALIAS ${PROJECT_NAME})

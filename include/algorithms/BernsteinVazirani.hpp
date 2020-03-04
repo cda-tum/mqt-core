@@ -1,3 +1,6 @@
+#ifndef QFR_BV_H
+#define QFR_BV_H
+
 #include <QuantumComputation.hpp>
 
 namespace qc {
@@ -25,3 +28,4 @@ namespace qc {
 
 	};
 }
+#endif //QFR_BV_H
