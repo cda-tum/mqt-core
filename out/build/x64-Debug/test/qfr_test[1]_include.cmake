@@ -1,0 +1,5 @@
+if(EXISTS "C:/Users/TobiasPriewasser/source/repos/qfr/out/build/x64-Debug/test/qfr_test[1]_tests.cmake")
+  include("C:/Users/TobiasPriewasser/source/repos/qfr/out/build/x64-Debug/test/qfr_test[1]_tests.cmake")
+else()
+  add_test(qfr_test_NOT_BUILT qfr_test_NOT_BUILT)
+endif()

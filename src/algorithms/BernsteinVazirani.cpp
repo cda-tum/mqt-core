@@ -48,23 +48,21 @@ namespace qc {
 		
 		// Circuite
 		full_BernsteinVazirani(*this);
-
 	}
 
 	// Copy & Paste
-	/*dd::Edge BernsteinVazirani::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
+	dd::Edge BernsteinVazirani::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
 		//TODO: Enhance this simulation routine // delegate to simulator
 		return QuantumComputation::simulate(in, dd);
 	}
 
 	std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) {
-		os << "Grover (" << nqubits << ") Statistics:\n";
+		os << "BernsteinVazirani (" << nqubits << ") Statistics:\n";
 		os << "\tn: " << nqubits + 1 << std::endl;
 		os << "\tm: " << getNindividualOps() << std::endl;
-		os << "\tseed: " << seed << std::endl;
+		os << "\tHiddenInteger: " << hiddenInteger << std::endl;
 		os << "\tx: " << x << std::endl;
-		os << "\ti: " << iterations << std::endl;
 		os << "--------------" << std::endl;
 		return os;
-	}*/
+	}
 }

@@ -1,6 +1,3 @@
-#include <bitset>
-#include <functional>
-
 #include <QuantumComputation.hpp>
 
 namespace qc {
@@ -17,7 +14,6 @@ namespace qc {
 	public:
 		unsigned int       hiddenInteger = 0;
 		unsigned int	   size = -1;
-		bool               includeSetup = true;
 
 		explicit BernsteinVazirani(unsigned int hiddenInt);
 

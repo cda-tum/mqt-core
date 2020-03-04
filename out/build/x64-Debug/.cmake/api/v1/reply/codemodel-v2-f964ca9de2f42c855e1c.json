@@ -1,0 +1,319 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						4,
+						8
+					],
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"projectIndex" : 0,
+					"source" : "."
+				},
+				{
+					"build" : "src",
+					"childIndexes" : 
+					[
+						2
+					],
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "src",
+					"targetIndexes" : 
+					[
+						5
+					]
+				},
+				{
+					"build" : "src/extern/dd_package",
+					"childIndexes" : 
+					[
+						3
+					],
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 1,
+					"source" : "extern/dd_package"
+				},
+				{
+					"build" : "src/extern/dd_package/src",
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"parentIndex" : 2,
+					"projectIndex" : 1,
+					"source" : "extern/dd_package/src",
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"build" : "test",
+					"childIndexes" : 
+					[
+						5
+					],
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "test",
+					"targetIndexes" : 
+					[
+						7,
+						8
+					]
+				},
+				{
+					"build" : "test/extern/googletest",
+					"childIndexes" : 
+					[
+						6
+					],
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.8"
+					},
+					"parentIndex" : 4,
+					"projectIndex" : 2,
+					"source" : "extern/googletest"
+				},
+				{
+					"build" : "test/extern/googletest/googlemock",
+					"childIndexes" : 
+					[
+						7
+					],
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.6.4"
+					},
+					"parentIndex" : 5,
+					"projectIndex" : 3,
+					"source" : "extern/googletest/googlemock",
+					"targetIndexes" : 
+					[
+						1,
+						2
+					]
+				},
+				{
+					"build" : "test/extern/googletest/googletest",
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.6.4"
+					},
+					"parentIndex" : 6,
+					"projectIndex" : 4,
+					"source" : "extern/googletest/googletest",
+					"targetIndexes" : 
+					[
+						3,
+						4
+					]
+				},
+				{
+					"build" : "apps",
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "apps",
+					"targetIndexes" : 
+					[
+						6
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1,
+						2
+					],
+					"directoryIndexes" : 
+					[
+						0,
+						1,
+						4,
+						8
+					],
+					"name" : "qfr",
+					"targetIndexes" : 
+					[
+						5,
+						6,
+						7,
+						8
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						2,
+						3
+					],
+					"name" : "dd_package",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"childIndexes" : 
+					[
+						3
+					],
+					"directoryIndexes" : 
+					[
+						5
+					],
+					"name" : "googletest-distribution",
+					"parentIndex" : 0
+				},
+				{
+					"childIndexes" : 
+					[
+						4
+					],
+					"directoryIndexes" : 
+					[
+						6
+					],
+					"name" : "gmock",
+					"parentIndex" : 2,
+					"targetIndexes" : 
+					[
+						1,
+						2
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						7
+					],
+					"name" : "gtest",
+					"parentIndex" : 3,
+					"targetIndexes" : 
+					[
+						3,
+						4
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 3,
+					"id" : "dd_package::@dfb6755f52b48fe73ccf",
+					"jsonFile" : "target-dd_package-Debug-667b9d2fa56646c7e85e.json",
+					"name" : "dd_package",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 6,
+					"id" : "gmock::@3181491992ecdb74c426",
+					"jsonFile" : "target-gmock-Debug-c5fe7d87a4c852e63e0b.json",
+					"name" : "gmock",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 6,
+					"id" : "gmock_main::@3181491992ecdb74c426",
+					"jsonFile" : "target-gmock_main-Debug-563c78882d56106ad4a7.json",
+					"name" : "gmock_main",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 7,
+					"id" : "gtest::@d8e8c9dd527d354978de",
+					"jsonFile" : "target-gtest-Debug-8deebf2e83120f4a2418.json",
+					"name" : "gtest",
+					"projectIndex" : 4
+				},
+				{
+					"directoryIndex" : 7,
+					"id" : "gtest_main::@d8e8c9dd527d354978de",
+					"jsonFile" : "target-gtest_main-Debug-c2dd243de8788878380b.json",
+					"name" : "gtest_main",
+					"projectIndex" : 4
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "qfr::@145eef247bfb46b6828c",
+					"jsonFile" : "target-qfr-Debug-ec845c66bb20f415b270.json",
+					"name" : "qfr",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 8,
+					"id" : "qfr_app::@9e189ee61a034fc9b705",
+					"jsonFile" : "target-qfr_app-Debug-9228c71a1fb65da6b1c7.json",
+					"name" : "qfr_app",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 4,
+					"id" : "qfr_example::@36f028580bb02cc8272a",
+					"jsonFile" : "target-qfr_example-Debug-978ec9cfdba6528e6f11.json",
+					"name" : "qfr_example",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 4,
+					"id" : "qfr_test::@36f028580bb02cc8272a",
+					"jsonFile" : "target-qfr_test-Debug-a699b8fa8aef4c57c6cf.json",
+					"name" : "qfr_test",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Users/TobiasPriewasser/source/repos/qfr/out/build/x64-Debug",
+		"source" : "C:/Users/TobiasPriewasser/source/repos/qfr"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 0
+	}
+}

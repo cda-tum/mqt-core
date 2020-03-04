@@ -1,38 +1,23 @@
-#include "algorithms/BernsteinBazirani.hpp"
+#include "algorithms/BernsteinVazirani.hpp"
 #include "gtest/gtest.h"
 
-#include <string>
-
-/* Copy & Paste*/
-class BernsteinVazirani : public testing::TestWithParam<unsigned int> {
+class BernsteinVazirani : public testing::Test {
 protected:
-	void TearDown() override {}
-	void SetUp() override {}
+
+	const unsigned int hInt = 2;
 };
 
-INSTANTIATE_TEST_SUITE_P(BernsteinVazirani, BernsteinVazirani,
-	testing::Range((unsigned int)6, (unsigned int)256, 10),
-	[](const testing::TestParamInfo<BernsteinVazirani::ParamType>& info) {
-		// Generate names for test cases
-		unsigned short nqubits = info.param;
-		std::stringstream ss{};
-		ss << nqubits << "_qubits";
-		return ss.str();
-	});
-
-TEST_P(Entanglement, FunctionTest) {
-	const unsigned short nq = GetParam();
-
+TEST_F(BernsteinVazirani, FunctionTest) {
 	auto dd = std::make_unique<dd::Package>();
 	std::unique_ptr<qc::BernsteinVazirani> qc;
 	dd::Edge e{};
 
-	ASSERT_NO_THROW({ qc = std::make_unique<qc::BernsteinVazirani>(nq); });
-	ASSERT_NO_THROW({ e = qc->buildFunctionality(dd); });
+	// Create the QuantumCircuite with the hidden integer
+	qc = std::make_unique<qc::BernsteinVazirani>(hInt);
 
-	ASSERT_EQ(qc->getNops(), nq);
-	dd::Edge r = dd->multiply(e, dd->makeZeroState(nq));
-
-	ASSERT_EQ(dd->getValueByPath(r, std::string(nq, '0')), (dd::ComplexValue{ dd::SQRT_2, 0 }));
-	ASSERT_EQ(dd->getValueByPath(r, std::string(nq, '2')), (dd::ComplexValue{ dd::SQRT_2, 0 }));
+	dd::Edge r = dd->multiply(e, dd->makeZeroState(qc->size));
+	
+	// Test the Values
+	ASSERT_EQ(dd->getValueByPath(r, std::string(qc->size, '0')), (dd::ComplexValue{ 1, 0 }));
+	ASSERT_EQ(dd->getValueByPath(r, std::string(qc->size, '1')), (dd::ComplexValue{ 0, 0 }));
 }

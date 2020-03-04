@@ -1,0 +1,15 @@
+# declare number of variables
+.numvars 2
+# declare variable names
+.variables a b
+
+# begin circuit description
+.begin
+t1 a
+h1 a
+t1 b
+h1 b
+q1:-4 a
+q1:4 b
+t2 a b
+.end
