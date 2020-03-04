@@ -102,7 +102,8 @@ before_script:
   - if [ "$TRAVIS_OS_NAME" != "windows" ]; then sudo cmake --build . --config ${BUILD} --target install; fi
 
 script:
-  - ctest -C ${BUILD} --jobs 2
+  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cd test/${BUILD} && ./qfr_test.exe; fi
+  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cd test && ./qfr_test; fi
 
 after_success:
   - |

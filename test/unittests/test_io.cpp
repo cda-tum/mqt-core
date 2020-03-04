@@ -45,7 +45,7 @@ void compare_files(const std::string& file1, const std::string& file2, bool stri
 
 INSTANTIATE_TEST_SUITE_P(IO,
                          IO,
-                         testing::Values(std::make_tuple("circuits/test.qasm", qc::OpenQASM)), //std::make_tuple("circuits/test.real", qc::Real
+                         testing::Values(std::make_tuple("./circuits/test.qasm", qc::OpenQASM)), //std::make_tuple("circuits/test.real", qc::Real
                          [](const testing::TestParamInfo<IO::ParamType>& info) {
                              qc::Format format = std::get<1>(info.param);
 	                         
