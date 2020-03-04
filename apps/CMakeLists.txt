@@ -9,7 +9,11 @@ else()
 	target_compile_options(${PROJECT_NAME}_app PUBLIC -Wall $<$<CONFIG:DEBUG>:-g3 -Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native -DNDEBUG -g0>)
 endif()
 
-execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_app ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_app)
+add_custom_command(TARGET ${PROJECT_NAME}_app
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_app ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_app
+                   COMMENT "Creating symlink for ${PROJECT_NAME}_app"
+                   VERBATIM)
 
 include(GNUInstallDirs)
 install(TARGETS ${PROJECT_NAME}_app

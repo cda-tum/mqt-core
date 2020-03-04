@@ -61,13 +61,9 @@ namespace qc {
 		registerMap ancregs{ };
 
 		void importReal(std::istream& is);
-
 		void readRealHeader(std::istream& is);
-
 		void readRealGateDescriptions(std::istream& is);
-
 		void importOpenQASM(std::istream& is);
-
 		void importGRCS(std::istream& is);
 
 		static void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, const char* defaultname);
@@ -110,14 +106,17 @@ namespace qc {
 		dd::Edge createInitialMatrix(std::unique_ptr<dd::Package>& dd); // creates identity matrix, which is reduced with respect to the ancillary qubits
 
 		// strip away qubits with no operations applied to them and which do not pop up in the output permutation
-		void stripIdleQubits();
+		void stripIdleQubits(bool force = false);
 		// apply swaps 'on' DD in order to change 'from' to 'to'
 		// where |from| >= |to|
 		static void changePermutation(dd::Edge& on, qc::permutationMap& from, const qc::permutationMap& to, std::array<short, qc::MAX_QUBITS>& line, std::unique_ptr<dd::Package>& dd, bool regular = true);
 
 		void import(const std::string& filename);
 		void import(const std::string& filename, Format format);
-		void import(std::istream& is, Format format);
+		void import(std::istream& is, Format format) {
+			import(std::move(is), format);
+		}
+		void import(std::istream&& is, Format format);
 
 		// search through .qasm file and look for IO layout information of the form
 		//      'i Q_i Q_j ... Q_k' meaning, e.g. q_0 is mapped to Q_i, q_1 to Q_j, etc.

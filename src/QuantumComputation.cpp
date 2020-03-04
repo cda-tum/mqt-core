@@ -404,15 +404,14 @@ namespace qc {
 		name = filename.substr(slash+1, dot-slash-1);
 
 		auto ifs = std::ifstream(filename);
-		import(ifs, format);
-		ifs.close();
-	}
-
-	void QuantumComputation::import(std::istream& is, Format format) {
-		if (!is.good()) {
+		if (ifs.good()) {
+			import(ifs, format);
+		} else {
 			throw QFRException("[import] Error processing input stream: " + name);
 		}
+	}
 
+	void QuantumComputation::import(std::istream&& is, Format format) {
 		// reset circuit before importing
 		reset();
 
@@ -1190,7 +1189,6 @@ namespace qc {
 				of << "f.close()" << std::endl;
 				break;
 		}
-		of.close();
 	}
 
 	bool QuantumComputation::isIdleQubit(unsigned short i) {
@@ -1201,7 +1199,7 @@ namespace qc {
 		return true;
 	}
 
-	void QuantumComputation::stripIdleQubits() {
+	void QuantumComputation::stripIdleQubits(bool force) {
 		auto layout_copy = initialLayout;
 		for (auto physical_qubit_it = layout_copy.rbegin(); physical_qubit_it != layout_copy.rend(); ++physical_qubit_it) {
 			auto physical_qubit_index = physical_qubit_it->first;
@@ -1209,7 +1207,7 @@ namespace qc {
 				auto it = outputPermutation.find(physical_qubit_index);
 				if(it != outputPermutation.end()) {
 					short output_index = it->second;
-					if (output_index >= 0) continue;
+					if (!force && output_index >= 0) continue;
 				}
 
 				unsigned short logical_qubit_index = initialLayout.at(physical_qubit_index);

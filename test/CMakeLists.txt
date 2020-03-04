@@ -38,12 +38,13 @@ else()
 	target_compile_options(${PROJECT_NAME}_example PRIVATE -Wall $<$<CONFIG:DEBUG>:-g3 -Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native -DNDEBUG -g0>)
 endif()
 
-execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_example ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_example)
-
-file(COPY        ${CMAKE_CURRENT_SOURCE_DIR}/circuits
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
-execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/circuits ${CMAKE_BINARY_DIR}/circuits)
+add_custom_command(TARGET ${PROJECT_NAME}_example
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE_DIR:${PROJECT_NAME}_example>/${PROJECT_NAME}_example ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_example
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/circuits/ $<TARGET_FILE_DIR:${PROJECT_NAME}_example>/circuits
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE_DIR:${PROJECT_NAME}_example>/circuits ${CMAKE_BINARY_DIR}/circuits
+                   COMMENT "Copying circuits and creating symlinks for ${PROJECT_NAME}_example"
+                   VERBATIM)
 
 macro(package_add_test TESTNAME)
 	# create an exectuable in which the tests will be stored
@@ -80,3 +81,11 @@ package_add_test(${PROJECT_NAME}_test ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/tes
 							${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_io.cpp
 							${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_ddfunctionality.cpp
                             ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_qfr_functionality.cpp)
+
+add_custom_command(TARGET ${PROJECT_NAME}_test
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE_DIR:${PROJECT_NAME}_test>/${PROJECT_NAME}_test ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_test
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/circuits $<TARGET_FILE_DIR:${PROJECT_NAME}_test>/circuits
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE_DIR:${PROJECT_NAME}_test>/circuits ${CMAKE_BINARY_DIR}/circuits
+                   COMMENT "Copying circuits and creating symlinks for ${PROJECT_NAME}_test"
+                   VERBATIM)
