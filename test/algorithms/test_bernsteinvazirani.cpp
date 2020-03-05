@@ -14,10 +14,11 @@ TEST_F(BernsteinVazirani, FunctionTest) {
 
 	// Create the QuantumCircuite with the hidden integer
 	qc = std::make_unique<qc::BernsteinVazirani>(hInt);
+	e = qc->buildFunctionality(dd);
 
 	dd::Edge r = dd->multiply(e, dd->makeZeroState(qc->size));
-	
+
 	// Test the Values
-	ASSERT_EQ(dd->getValueByPath(r, std::string(qc->size, '1')), (dd::ComplexValue{ 1, 0 }));
-	ASSERT_EQ(dd->getValueByPath(r, std::string(qc->size, '0')), (dd::ComplexValue{ 0, 0 }));
+	EXPECT_EQ(dd->getValueByPath(r, std::string(qc->size, '0')), (dd::ComplexValue{ 0, 0 }));
+	EXPECT_EQ(dd->getValueByPath(r, std::string(qc->size, '1')), (dd::ComplexValue{ 1, 0 }));
 }
