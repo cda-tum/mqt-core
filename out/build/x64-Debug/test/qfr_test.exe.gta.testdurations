@@ -2,7 +2,7 @@
 <GtaTestDurations xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <Executable>C:\Users\TobiasPriewasser\source\repos\qfr\out\build\x64-Debug\test\qfr_test.exe</Executable>
   <TestDurations>
-    <TestDuration Test="BernsteinVazirani.FunctionTest" Duration="91" />
+    <TestDuration Test="BernsteinVazirani.FunctionTest" Duration="70" />
     <TestDuration Test="Grover/Grover.Functionality/3_qubits_0" Duration="105" />
     <TestDuration Test="Entanglement/Entanglement.FunctionTest/2_qubits" Duration="124" />
   </TestDurations>
