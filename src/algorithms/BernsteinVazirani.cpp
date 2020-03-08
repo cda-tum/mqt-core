@@ -1,6 +1,6 @@
 #include "algorithms/BernsteinVazirani.hpp"
 
-
+// BernsteinVazirani without Entanglement
 namespace qc {
 	/***
 	 * Private Methods
@@ -12,7 +12,7 @@ namespace qc {
 
 	void BernsteinVazirani::oracle(QuantumComputation& qc) {
 		for (unsigned short i = 0; i < nqubits; ++i) {
-			if ((hiddenInteger >> i) & 1 == 1) {
+			if (((hiddenInteger >> i) & 1) == 1) {
 				emplace_back<StandardOperation>(nqubits, i, Z);
 			}
 		}
@@ -34,13 +34,18 @@ namespace qc {
 	/***
 	 * Public Methods
 	 ***/
-	BernsteinVazirani::BernsteinVazirani(unsigned int hiddenInt) {
+	BernsteinVazirani::BernsteinVazirani(unsigned long hiddenInt) {
 		
 		// Save the hidden integer
 		hiddenInteger = hiddenInt;
 		
 		// Determine the bitsize of the hidden integer
 		while (hiddenInteger >> ++(size) > 0);
+
+		// Prevents a ciruite with 0 qubits
+		if (size == 0) {
+			size = 1;
+		}
 
 		// Set nr of Qubits/ClassicalBits
 		addQubitRegister(size);

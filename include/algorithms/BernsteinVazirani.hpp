@@ -15,10 +15,10 @@ namespace qc {
 		void full_BernsteinVazirani(QuantumComputation& qc);
 
 	public:
-		unsigned int       hiddenInteger = 0;
+		unsigned long       hiddenInteger = 0;
 		unsigned int	   size = -1;
 
-		explicit BernsteinVazirani(unsigned int hiddenInt);
+		explicit BernsteinVazirani(unsigned long hiddenInt);
 
 		~BernsteinVazirani() override = default;
 
