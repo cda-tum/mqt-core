@@ -7,7 +7,11 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(BernsteinVazirani, BernsteinVazirani,
-	testing::Range(0, 1000, 50),
+	testing::Values(0ull,						// Zero-Value
+		3ull, 63ull, 170ull,					// 0-bit < hInt <= 8-bit
+		819ull, 4032ull, 33153ull,				// 8-bit < hInt <= 16-bit
+		87381ull, 16777215ull, 1234567891011ull	// 16-bit < hInt <= 32-bit
+		),
 	[](const testing::TestParamInfo<BernsteinVazirani::ParamType>& info) {
 
 		// Generate names for test cases

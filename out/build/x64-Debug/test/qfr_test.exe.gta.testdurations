@@ -30,7 +30,7 @@
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/226_HiddenInteger" Duration="86" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/236_HiddenInteger" Duration="81" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/246_HiddenInteger" Duration="80" />
-    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/10_HiddenInteger" Duration="75" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/10_HiddenInteger" Duration="108" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/1321_HiddenInteger" Duration="73" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/2632_HiddenInteger" Duration="73" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/3943_HiddenInteger" Duration="74" />
@@ -80,9 +80,9 @@
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/61627_HiddenInteger" Duration="85" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/62938_HiddenInteger" Duration="77" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/64249_HiddenInteger" Duration="77" />
-    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/0_HiddenInteger" Duration="85" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/0_HiddenInteger" Duration="51" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/50_HiddenInteger" Duration="95" />
-    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/100_HiddenInteger" Duration="104" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/100_HiddenInteger" Duration="122" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/150_HiddenInteger" Duration="85" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/200_HiddenInteger" Duration="91" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/250_HiddenInteger" Duration="92" />
@@ -100,5 +100,21 @@
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/850_HiddenInteger" Duration="70" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/900_HiddenInteger" Duration="81" />
     <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/950_HiddenInteger" Duration="67" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/1000_HiddenInteger" Duration="117" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/10000_HiddenInteger" Duration="99" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/100000_HiddenInteger" Duration="92" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/1000000_HiddenInteger" Duration="85" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/10000000_HiddenInteger" Duration="96" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/100000000_HiddenInteger" Duration="96" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/1000000000_HiddenInteger" Duration="112" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/3_HiddenInteger" Duration="53" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/63_HiddenInteger" Duration="58" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/170_HiddenInteger" Duration="55" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/819_HiddenInteger" Duration="57" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/4032_HiddenInteger" Duration="68" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/33153_HiddenInteger" Duration="59" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/87381_HiddenInteger" Duration="56" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/16777215_HiddenInteger" Duration="77" />
+    <TestDuration Test="BernsteinVazirani/BernsteinVazirani.FunctionTest/1912277059_HiddenInteger" Duration="87" />
   </TestDurations>
 </GtaTestDurations>
