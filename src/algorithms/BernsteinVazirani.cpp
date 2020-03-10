@@ -34,15 +34,12 @@ namespace qc {
 	/***
 	 * Public Methods
 	 ***/
-	BernsteinVazirani::BernsteinVazirani(unsigned long hiddenInt) {
-		
-		// Save the hidden integer
-		hiddenInteger = hiddenInt;
+	BernsteinVazirani::BernsteinVazirani(unsigned long hiddenInteger) : hiddenInteger(hiddenInteger) {
 		
 		// Determine the bitsize of the hidden integer
 		while (hiddenInteger >> ++(size) > 0);
 
-		// Prevents a ciruite with 0 qubits
+		// Prevents a circuit with 0 qubits
 		if (size == 0) {
 			size = 1;
 		}
@@ -53,12 +50,6 @@ namespace qc {
 		
 		// Circuite
 		full_BernsteinVazirani(*this);
-	}
-
-	// Copy & Paste
-	dd::Edge BernsteinVazirani::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
-		//TODO: Enhance this simulation routine // delegate to simulator
-		return QuantumComputation::simulate(in, dd);
 	}
 
 	std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) {
