@@ -22,8 +22,6 @@ namespace qc {
 
 		~BernsteinVazirani() override = default;
 
-		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) override;
-
 		std::ostream& printStatistics(std::ostream& os = std::cout) override;
 
 	};
