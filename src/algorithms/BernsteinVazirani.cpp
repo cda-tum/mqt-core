@@ -48,7 +48,7 @@ namespace qc {
 		addQubitRegister(size);
 		addClassicalRegister(size);
 		
-		// Circuite
+		// Circuit
 		full_BernsteinVazirani(*this);
 	}
 
