@@ -23,12 +23,12 @@ The package can be used for a multitude of tasks, as illustrated in the followin
       
   Importing a circuit from a file in either of those formats is done via:
   ```c++
-      std::string filename = "PATH_TO_FILE";
-      qc::QuantumComputation qc(filename);
+  std::string filename = "PATH_TO_FILE";
+  qc::QuantumComputation qc(filename);
   ```
   or by calling
   ```c++
-        qc.import(filename);
+  qc.import(filename);
   ```  
   which first resets the `qc` object before importing the new file.
 
@@ -38,12 +38,20 @@ The package can be used for a multitude of tasks, as illustrated in the followin
     Currently available algorithms are:
     * Entanglement
     
-          ```c++
-          unsigned short n = 2;
-          qc::Entanglement entanglement(n); // generates bell circuit
-          ```
+        ```c++
+      unsigned short n = 2;
+      qc::Entanglement entanglement(n); // generates bell circuit
+      ```
     
       Generates the circuit for preparing an *n* qubit GHZ state. Primarily used as a simple test case. 
+    
+    * Bernstein-Vazirani
+        ```c++
+      unsigned long long hiddenInteger = 16777215ull;
+      qc::BernsteinVazirani bv(hiddenInteger); // generates Bernstein-Vazirani circuit for given hiddenInteger
+         ```
+    
+        Generates the circuit for the Berstein-Vazirani algorithm using the provided *hiddenInteger*
     
     * Quantum Fourier Transform (QFT)
   
@@ -52,12 +60,12 @@ The package can be used for a multitude of tasks, as illustrated in the followin
       qc::QFT qft(n); // generates the QFT circuit for n qubits
       ```
   
-      An optional `bool` parameter controls whether *SWAP* operations at the end are included in the computation or not (default: `false`). In the case that no SWAPs are included, the consequently reversed order of amplitudes is additionally stored in the representation's `permutation`.
+        Generates the circuit for the *n* qubit Quantum Fourier Transform.
   * Grover's search algorithm
   
        ```c++
-          unsigned short n = 2;
-          qc::Grover grover(n); // generates Grover's algorithm for a random n-bit oracle
+      unsigned short n = 2;
+      qc::Grover grover(n); // generates Grover's algorithm for a random n-bit oracle
       ```
     
        The algorithm performs ~ &#960;/4 &#8730;2&#8319; Grover iterations. An optional `unsigned int` parameter controls the *seed* of the random number generation for the oracle generation. 
@@ -119,11 +127,11 @@ The package can be used for a multitude of tasks, as illustrated in the followin
   which results in the following output
   ```commandline
   Common Factor: -1
-    0: √½
+    0: 1
     1: 0
    10: 0
    11: 0
-  100: -√½
+  100: 0
   101: 0
   110: 0
   111: 0
@@ -149,22 +157,21 @@ The package can be used for a multitude of tasks, as illustrated in the followin
   yields
   ```commandline
      i: 		0	1	2	
-     1: X   	|	|	X 	
-     2: H   	H 	|	|	
-     3: H   	|	H 	|	
-     4: H   	|	|	H 	
-     5: X   	c	c	X 	
-     6: H   	H 	|	|	
-     7: H   	|	H 	|	
-     8: X   	X 	|	|	
-     9: X   	|	X 	|	
-    10: H   	|	H 	|	
-    11: X   	c	X 	|	
-    12: H   	|	H 	|	
-    13: X   	|	X 	|	
-    14: X   	X 	|	|	
-    15: H   	|	H 	|	
-    16: H   	H 	|	|	
+     1: 	X   	|	|	X 	
+     2: 	H   	H 	|	|	
+     3: 	H   	|	H 	|	
+     4: 	Z   	c	c	Z 	
+     5: 	H   	H 	|	|	
+     6: 	H   	|	H 	|	
+     7: 	X   	X 	|	|	
+     8: 	X   	|	X 	|	
+     9: 	H   	|	H 	|	
+    10: 	X   	c	X 	|	
+    11: 	H   	|	H 	|	
+    12: 	X   	|	X 	|	
+    13: 	X   	X 	|	|	
+    14: 	H   	|	H 	|	
+    15: 	H   	H 	|	|	
      o: 		0	1	2	
     ```
 

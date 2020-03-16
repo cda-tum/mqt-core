@@ -12,7 +12,7 @@ namespace qc {
      ***/
 	void Grover::setup(QuantumComputation& qc) {
         qc.emplace_back<StandardOperation>(nqubits+nancillae, nqubits, X);
-        for (unsigned short i = 0; i <= nqubits; ++i)
+        for (unsigned short i = 0; i < nqubits; ++i)
             qc.emplace_back<StandardOperation>(nqubits+nancillae, i, H);
     }
 
@@ -23,7 +23,7 @@ namespace qc {
             controls.emplace_back(i, xBits[i]? Control::pos: Control::neg);
         }
         unsigned short target = nqubits;
-        qc.emplace_back<StandardOperation>(nqubits+nancillae, controls, target);
+        qc.emplace_back<StandardOperation>(nqubits+nancillae, controls, target, qc::Z);
     }
 
     void Grover::diffusion(QuantumComputation& qc) {
@@ -86,7 +86,7 @@ namespace qc {
 
         std::mt19937_64 generator(this->seed);
         std::uniform_int_distribution<unsigned long long> distribution(0, static_cast<unsigned long long>(std::pow((long double)2, std::max(static_cast<unsigned short>(0),nqubits)) - 1));
-        oracleGenerator = bind(distribution, ref(generator));
+        oracleGenerator = [&]() { return distribution(generator); };
         x = oracleGenerator();
 
         if (nqubits <= 3) {
