@@ -180,7 +180,8 @@ namespace dd {
         constexpr static Edge DDzero{ terminalNode, ComplexNumbers::ZERO };            // edges pointing to zero and one DD constants
         unsigned long activeNodeCount = 0;             // number of active nodes
 		unsigned long maxActive = 0;
-
+        unsigned long gc_calls{};
+        unsigned long gc_runs{};
         ComplexNumbers cn;
         std::array<unsigned short, MAXN> varOrder{ };    // variable order initially 0,1,... from bottom up | Usage: varOrder[level] := varible at a certain level
         std::array<unsigned short, MAXN> invVarOrder{ };// inverse of variable order (inverse permutation) | Usage: invVarOrder[variable] := level of a certain variable

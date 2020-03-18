@@ -101,8 +101,8 @@ namespace dd {
 	    // operations on complex numbers
 	    // meanings are self-evident from the names
 	    static inline fp val(const ComplexTableEntry *x) {
-            if (((uintptr_t) x) & (uintptr_t) 1) {
-	            return -((ComplexTableEntry *) (((uintptr_t) x) ^ (uintptr_t) 1))->val;
+            if (((std::uintptr_t) x) & 1u) {
+	            return -((ComplexTableEntry *) (((std::uintptr_t) x) ^ 1u))->val;
             }
             return x->val;
         }

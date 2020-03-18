@@ -541,9 +541,12 @@ namespace dd {
 	// tables placing them on the available space chain
 	void Package::garbageCollect(bool force)
     {
+        gc_calls++;
 	    if (!force && nodecount < currentNodeGCLimit && cn.count < currentComplexGCLimit) {
-		    return;
-	    } // do not collect if below current limits
+		    return; // do not collect if below current limits
+	    }
+        gc_runs++;
+
 	    int count = 0;
         int counta = 0;
         for (auto & variable : Unique) {
@@ -553,7 +556,7 @@ namespace dd {
                 while (p != nullptr) {
                     if (p->ref == 0) {
                         if (p == terminalNode){
-                            std::cerr << "[ERROR] Tried to collect \n";
+                            std::cerr << "[ERROR] Tried to collect a terminal node\n";
                         }
                         count++;
                         NodePtr nextp = p->next;

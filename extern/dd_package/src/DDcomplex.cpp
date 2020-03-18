@@ -112,7 +112,7 @@ namespace dd {
 	    std::cout << "CN statistics:\n";
 
 	    int max = -1;
-	    for (auto & p : ComplexTable) {
+	    for (auto p : ComplexTable) {
 		    int num = 0;
 		    while (p != nullptr) {
 			    num++;
