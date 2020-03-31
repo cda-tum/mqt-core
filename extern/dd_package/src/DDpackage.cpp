@@ -1621,4 +1621,60 @@ namespace dd {
 		if(!(e.p->e[0].p->ident) || (e.p->e[1].w) != CN::ZERO || (e.p->e[2].w) != CN::ZERO || (e.p->e[0].w) != CN::ONE || (e.p->e[3].w) != CN::ONE || !(e.p->e[3].p->ident)) return;
 		e.p->ident = true;
 	}
+
+	/// exchange levels i and j of a decision diagram by pointer manipulation.
+	/// base case: j = i +/- 1 -> exchange pointers accordingly
+	/// general case: perform successive nearest-neighbour exchanges until i and j are swapped.
+	/// \param in decision diagram to operate on
+	/// \param i first index
+	/// \param j second index
+	/// \return decision diagram with level i and j exchanged
+	/// 		note that the nodes in the resulting decision diagram shall still follow the original ordering
+	/// 		n-1 > n-2 > ... > 1 > 0 from top to bottom.
+	///			the caller of this function is responsible for keeping track of the variable exchanges (cf. dynamicReorder(...))
+	Edge Package::exchange(Edge in, unsigned short i, unsigned short j) {
+		if (i == j) {
+			return in;
+		} else if (i > j){
+			return exchange(in, j, i);
+		}
+		// => i < j
+
+		// TODO: implement variable exchange (note that this has to work for vectors as well as matrices represented by the DD)
+
+		return in;
+	}
+
+	/// Dynamically reorder a given decision diagram with the current variable map using the specific strategy
+	/// \param in decision diagram to reorder
+	/// \param varMap stores the variable mapping. varMap[circuit qubit] = corresponding DD qubit, e.g.
+	///			given the varMap (reversed var. order):
+	/// 			0->2,
+	/// 			1->1,
+	/// 			2->0
+	/// 		the circuit operation "H q[0]" leads to the DD equivalent to "H q[varMap[0]]" = "H q[2]".
+	///			the qubits in the decision diagram are always ordered as n-1 > n-2 > ... > 1 > 0
+	/// \param strat strategy to apply
+	/// \return the resulting decision diagram (and the changed variable map, which is returned as reference)
+	Edge Package::dynamicReorder(Edge in, std::map<unsigned short, unsigned short>& varMap, DynamicReorderingStrategy strat) {
+    	switch (strat) {
+			case None:
+				return in;
+			case Sifting:
+				return sifting(in, varMap);
+		}
+
+		return in;
+	}
+
+	/// Apply sifting dynamic reordering to a decision diagram given the current variable map
+	/// \param in decision diagram to apply sifting to
+	/// \param varMap stores the variable mapping (cf. dynamicReorder(...))
+	/// \return the resulting decision diagram (and the changed variable map, which is returned as reference)
+	Edge Package::sifting(Edge in, std::map<unsigned short, unsigned short>& varMap) {
+
+    	// TODO: implement sifting technique (using the exchange(...) function)
+
+    	return in;
+	}
 }
