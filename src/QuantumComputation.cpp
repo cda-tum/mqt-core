@@ -853,6 +853,56 @@ namespace qc {
 		return e;
 	}
 
+	dd::Edge QuantumComputation::buildFunctionality(std::unique_ptr<dd::Package>& dd, dd::DynamicReorderingStrategy strat) {
+		if (nqubits + nancillae == 0)
+			return dd->DDone;
+
+		std::array<short, MAX_QUBITS> line{};
+		line.fill(LINE_DEFAULT);
+		permutationMap map = initialLayout;
+
+		dd->useMatrixNormalization(true);
+		dd::Edge e = createInitialMatrix(dd);
+		dd->incRef(e);
+
+		for (auto & op : ops) {
+			if (!op->isUnitary()) {
+				throw QFRException("[buildFunctionality] Functionality not unitary.");
+			}
+
+			auto tmp = dd->multiply(op->getDD(dd, line, map), e);
+			// call the dynamic reordering routine
+			// TODO: currently this performs the reordering after every operation. this may be changed
+			tmp = dd->dynamicReorder(tmp, map, strat);
+
+			dd->incRef(tmp);
+			dd->decRef(e);
+			e = tmp;
+
+			dd->garbageCollect();
+		}
+
+		// TODO: this call (probably) has to be adapted
+		// output permutation stores the expected variable mapping at the end of the computation, i.e. from which line to read which qubit
+		// if "map" does not match this particular variable mapping it has to be adapted (currently by applying swaps)
+		// however, especially when considering dynamic variable reordering one may want to avoid applying extra operations at the end
+		// accordingly one has to solve the following assignment correctly (possibly by changing the output permutation appropriately)
+		//  initial layout            end of circuit              output mapping
+		//      0: a           ->           0: u            ->          0:x
+		//      1: b           ->           1: v            ->          1:y
+		//      2: c           ->           2: w            ->          2:z
+		//                                  .
+		//                                  .
+		// correct permutation if necessary
+		changePermutation(e, map, outputPermutation, line, dd);
+
+		reduceAncillae(e, dd);
+		reduceGarbage(e, dd);
+
+		dd->useMatrixNormalization(false);
+		return e;
+	}
+
 	dd::Edge QuantumComputation::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
 		// measurements are currently not supported here
 		std::array<short, MAX_QUBITS> line{};
@@ -878,6 +928,54 @@ namespace qc {
 
 		// correct permutation if necessary
 		changePermutation(e, map, outputPermutation, line, dd);
+		reduceAncillae(e, dd);
+		reduceGarbage(e, dd);
+
+		return e;
+	}
+
+
+	dd::Edge QuantumComputation::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, dd::DynamicReorderingStrategy strat) {
+		// measurements are currently not supported here
+		std::array<short, MAX_QUBITS> line{};
+		line.fill(LINE_DEFAULT);
+		permutationMap map = initialLayout;
+
+		dd::Edge e = in;
+		dd->incRef(e);
+
+		for (auto& op : ops) {
+			if (!op->isUnitary()) {
+				throw QFRException("[simulate] Functionality not unitary.");
+			}
+
+			auto tmp = dd->multiply(op->getDD(dd, line, map), e);
+
+			// call the dynamic reordering routine
+			// TODO: currently this performs the reordering after every operation. this may be changed
+			tmp = dd->dynamicReorder(tmp, map, strat);
+
+			dd->incRef(tmp);
+			dd->decRef(e);
+			e = tmp;
+
+			dd->garbageCollect();
+		}
+
+		// TODO: this call (probably) has to be adapted
+		// output permutation stores the expected variable mapping at the end of the computation, i.e. from which line to read which qubit
+		// if "map" does not match this particular variable mapping it has to be adapted (currently by applying swaps)
+		// however, especially when considering dynamic variable reordering one may want to avoid applying extra operations at the end
+		// accordingly one has to solve the following assignment correctly (possibly by changing the output permutation appropriately)
+		//  initial layout            end of circuit              output mapping
+		//      0: a           ->           0: u            ->          0:x
+		//      1: b           ->           1: v            ->          1:y
+		//      2: c           ->           2: w            ->          2:z
+		//                                  .
+		//                                  .
+		// correct permutation if necessary
+		changePermutation(e, map, outputPermutation, line, dd);
+
 		reduceAncillae(e, dd);
 		reduceGarbage(e, dd);
 
