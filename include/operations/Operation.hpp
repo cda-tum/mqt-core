@@ -90,12 +90,20 @@ namespace qc {
 			return targets;
 		}
 
+		size_t getNtargets() const {
+			return targets.size();
+		}
+
 		const std::vector<Control>& getControls() const {
 			return controls;
 		}
 		
 		std::vector<Control>& getControls() {
 			return controls;
+		}
+
+		size_t getNcontrols() const {
+			return controls.size();
 		}
 
 		unsigned short getNqubits() const { 

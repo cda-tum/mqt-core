@@ -7,6 +7,7 @@
 #include <random>
 
 #include "QuantumComputation.hpp"
+#include "CircuitOptimizer.hpp"
 
 using namespace qc;
 
@@ -40,12 +41,12 @@ TEST_F(QFRFunctionality, fuse_cx_to_swap) {
 	qc.emplace_back<StandardOperation>(nqubits, Control(0), 1, X);
 	qc.emplace_back<StandardOperation>(nqubits, Control(1), 0, X);
 	qc.emplace_back<StandardOperation>(nqubits, Control(0), 1, X);
-	qc.fuseCXtoSwap();
+	CircuitOptimizer::swapGateFusion(qc);
 	ASSERT_NO_THROW({
 		auto op = dynamic_cast<StandardOperation*>((qc.begin()->get()));
         EXPECT_EQ(op->getGate(), SWAP);
-        EXPECT_EQ(op->getTargets().at(0), 1);
-        EXPECT_EQ(op->getTargets().at(1), 0);
+        EXPECT_EQ(op->getTargets().at(0), 0);
+        EXPECT_EQ(op->getTargets().at(1), 1);
 	});
 }
 
@@ -54,13 +55,13 @@ TEST_F(QFRFunctionality, replace_cx_to_swap_at_end) {
 	QuantumComputation qc(nqubits);
 	qc.emplace_back<StandardOperation>(nqubits, Control(0), 1, X);
 	qc.emplace_back<StandardOperation>(nqubits, Control(1), 0, X);
-	qc.fuseCXtoSwap();
+	CircuitOptimizer::swapGateFusion(qc);
 	auto it = qc.begin();
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
 		                EXPECT_EQ(op->getGate(), SWAP);
-		                EXPECT_EQ(op->getTargets().at(0), 1);
-		                EXPECT_EQ(op->getTargets().at(1), 0);
+		                EXPECT_EQ(op->getTargets().at(0), 0);
+		                EXPECT_EQ(op->getTargets().at(1), 1);
 	                });
 	++it;
 	ASSERT_NO_THROW({
@@ -77,13 +78,13 @@ TEST_F(QFRFunctionality, replace_cx_to_swap) {
 	qc.emplace_back<StandardOperation>(nqubits, Control(0), 1, X);
 	qc.emplace_back<StandardOperation>(nqubits, Control(1), 0, X);
 	qc.emplace_back<StandardOperation>(nqubits, 0, H);
-	qc.fuseCXtoSwap();
+	CircuitOptimizer::swapGateFusion(qc);
 	auto it = qc.begin();
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
 		                EXPECT_EQ(op->getGate(), SWAP);
-		                EXPECT_EQ(op->getTargets().at(0), 1);
-		                EXPECT_EQ(op->getTargets().at(1), 0);
+		                EXPECT_EQ(op->getTargets().at(0), 0);
+		                EXPECT_EQ(op->getTargets().at(1), 1);
 	                });
 	++it;
 	ASSERT_NO_THROW({

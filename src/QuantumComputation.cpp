@@ -1046,7 +1046,7 @@ namespace qc {
 			unsigned short col = (j >> initialLayout.at(e.p->v)) & 1u;
 			e = e.p->e[dd::RADIX * row + col];
 			CN::mul(c, c, e.w);
-		} while (!dd->isTerminal(e));
+		} while (!dd::Package::isTerminal(e));
 		return c;
 	}
 
@@ -1513,93 +1513,6 @@ namespace qc {
 			}
 		}
 		return false;
-	}
-
-	void QuantumComputation::fuseCXtoSwap() {
-		// search for
-		//      cx a b
-		//      cx b a      (could also be mct ... b a in general)
-		//      cx a b
-		for (auto it=ops.begin(); it != ops.end(); ++it ) {
-			auto op0 = dynamic_cast<StandardOperation*>((*it).get());
-			if (op0) {
-				// search for CX a b
-				if (op0->getGate() == X &&
-				    op0->getControls().size() == 1 &&
-				    op0->getControls().at(0).type == Control::pos) {
-
-					unsigned short control = op0->getControls().at(0).qubit;
-					assert(op0->getTargets().size() == 1);
-					unsigned short target = op0->getTargets().at(0);
-
-					auto it1 = it;
-					it1++;
-					if(it1 != ops.end()) {
-						auto op1 = dynamic_cast<StandardOperation*>((*it1).get());
-						if (op1) {
-							// search for CX b a (or mct ... b a)
-							if (op1->getGate() == X &&
-							    op1->getTargets().at(0) == control &&
-							    std::any_of(op1->getControls().begin(), op1->getControls().end(), [target](qc::Control c)  -> bool {return c.qubit == target;})) {
-								assert(op1->getTargets().size() == 1);
-
-								auto it2 = it1;
-								it2++;
-								if (it2 != ops.end()) {
-									auto op2 = dynamic_cast<StandardOperation*>((*it2).get());
-									if (op2) {
-										// search for CX a b
-										if (op2->getGate() == X &&
-										    op2->getTargets().at(0) == target &&
-										    op2->getControls().size() == 1 &&
-										    op2->getControls().at(0).qubit == control) {
-
-											assert(op2->getTargets().size() == 1);
-
-											op0->setGate(SWAP);
-											op0->setTargets({target, control});
-											op0->setControls({});
-											for (const auto& c: op1->getControls()) {
-												if (c.qubit != target)
-													op0->getControls().push_back(c);
-											}
-											ops.erase(it2);
-											ops.erase(it1);
-										} else {
-											//continue;
-											// try replacing
-											//  CX a b
-											//  CX b a
-											// with
-											//  SWAP a b
-											//  CX   a b
-											// in order to enable more efficient swap reduction
-											if(op1->getControls().size() != 1) continue;
-
-											op0->setGate(SWAP);
-											op0->setTargets({target, control});
-											op0->setControls({});
-
-											op1->setTargets({target});
-											op1->setControls({Control(control)});
-										}
-									}
-								} else {
-									if(op1->getControls().size() != 1) continue;
-
-									op0->setGate(SWAP);
-									op0->setTargets({target, control});
-									op0->setControls({});
-
-									op1->setTargets({target});
-									op1->setControls({Control(control)});
-								}
-							}
-						}
-					}
-				}
-			}
-		}
 	}
 
 	unsigned short QuantumComputation::getHighestLogicalQubitIndex() {

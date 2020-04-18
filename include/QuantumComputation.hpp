@@ -44,8 +44,10 @@ namespace qc {
 			return msg.c_str();
 		}
 	};
+	class CircuitOptimizer;
 
 	class QuantumComputation {
+		friend class CircuitOptimizer;
 
 	protected:
 		std::vector<std::unique_ptr<Operation>> ops{ };
@@ -122,9 +124,6 @@ namespace qc {
 		//      'i Q_i Q_j ... Q_k' meaning, e.g. q_0 is mapped to Q_i, q_1 to Q_j, etc.
 		//      'o Q_i Q_j ... Q_k' meaning, e.g. q_0 is found at Q_i, q_1 at Q_j, etc.
 		bool lookForOpenQASM_IO_Layout(std::istream& ifs);
-
-		// optimize circuit by fusing CX-CX(-CX) gates
-		void fuseCXtoSwap();
 
 		// this function augments a given circuit by additional registers
 		void addQubitRegister(unsigned short nq, const char* reg_name = DEFAULT_QREG);
