@@ -76,17 +76,13 @@ TEST_P(Grover, Functionality) {
 	// there should be no error building the functionality
 	ASSERT_NO_THROW({e = qc->buildFunctionality(dd);});
 
-	// amplitudes of the searched-for entry should be 1 (up to a common factor)
-	// two checks due to the ancillary qubit used (which can be either 0 or 1)
-	auto c = qc->getEntry(dd, e, x, 0);
-	EXPECT_NEAR(std::abs(CN::val(c.r)), 1, GROVER_ACCURACY);
-	EXPECT_NEAR(CN::val(c.i), 0, GROVER_ACCURACY);
-	c = qc->getEntry(dd, e, x + (1 << (nqubits + 1)), 0);
+	// amplitude of the searched-for entry should be 1
+	auto c = qc->getEntry(dd, e, x + (1 << nqubits), 0);
 	EXPECT_NEAR(std::abs(CN::val(c.r)), 1, GROVER_ACCURACY);
 	EXPECT_NEAR(CN::val(c.i), 0, GROVER_ACCURACY);
 
 	CN::mul(c, c, e.w);
-	auto prob = 2*CN::mag2(c);
+	auto prob = CN::mag2(c);
 	EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }
 
@@ -102,7 +98,7 @@ TEST_P(Grover, Simulation) {
 	// there should be no error simulating the circuit
 	ASSERT_NO_THROW({e = qc->simulate(in, dd);});
 
-	auto c = qc->getEntry(dd, e, x, 0);
+	auto c = qc->getEntry(dd, e, x + (1 << nqubits), 0);
 	auto prob = CN::mag2(c);
 	EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }

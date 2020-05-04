@@ -847,7 +847,6 @@ namespace qc {
 		// correct permutation if necessary
 		changePermutation(e, map, outputPermutation, line, dd);
 		reduceAncillae(e, dd);
-		reduceGarbage(e, dd);
 
 		dd->useMatrixNormalization(false);
 		return e;
@@ -897,7 +896,6 @@ namespace qc {
 		changePermutation(e, map, outputPermutation, line, dd);
 
 		reduceAncillae(e, dd);
-		reduceGarbage(e, dd);
 
 		dd->useMatrixNormalization(false);
 		return e;
@@ -929,7 +927,6 @@ namespace qc {
 		// correct permutation if necessary
 		changePermutation(e, map, outputPermutation, line, dd);
 		reduceAncillae(e, dd);
-		reduceGarbage(e, dd);
 
 		return e;
 	}
@@ -977,7 +974,6 @@ namespace qc {
 		changePermutation(e, map, outputPermutation, line, dd);
 
 		reduceAncillae(e, dd);
-		reduceGarbage(e, dd);
 
 		return e;
 	}
