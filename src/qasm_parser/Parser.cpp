@@ -330,7 +330,7 @@
             for (unsigned short i = 0; i < target.second; ++i) {
                 gate.emplace_back<qc::StandardOperation>(nqubits, target.first + i, qc::U3, lambda->num, phi->num, theta->num);
             }
-            return std::make_unique<qc::CompoundOperation>(gate);
+            return std::make_unique<qc::CompoundOperation>(std::move(gate));
         } else if (sym == Token::Kind::swap) {
         	scan();
         	auto first_target = ArgumentQreg();
@@ -369,7 +369,7 @@
                 } else {
 	                error("Register size does not match for CX gate!");
                 }
-                return std::make_unique<qc::CompoundOperation>(gate);
+                return std::make_unique<qc::CompoundOperation>(std::move(gate));
             }
 
         } else if (sym == Token::Kind::identifier) {
@@ -516,7 +516,7 @@
                         }
                     }
                 }
-                return std::make_unique<qc::CompoundOperation>(op);
+                return std::make_unique<qc::CompoundOperation>(std::move(op));
             } else {
 	            error("Undefined gate " + t.str);
             }

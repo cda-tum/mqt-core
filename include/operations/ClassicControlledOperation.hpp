@@ -22,6 +22,7 @@ namespace qc {
 			name[1] = '_';
 			std::strcpy(name + 2, op->getName());
 			parameter[0] = control;
+			type = ClassicControlled;
 		}
 
 		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
@@ -42,6 +43,10 @@ namespace qc {
 
 		bool isUnitary() const override {
 			return false;
+		}
+
+		bool isClassicControlledOperation() const override {
+			return true;
 		}
 
 		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override {

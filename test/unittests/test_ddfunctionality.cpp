@@ -57,7 +57,7 @@ INSTANTIATE_TEST_SUITE_P(Parameters,
                                          qc::Vdag, qc::U3, qc::U2, qc::U1, qc::RX, qc::RY, qc::RZ, qc::P, qc::Pdag, 
                                          qc::SWAP, qc::iSWAP),
                          [](const testing::TestParamInfo<DDFunctionality::ParamType>& info) {
-                             auto gate = (qc::Gate)info.param;
+                             auto gate = (qc::OpType)info.param;
 	                         switch (gate) {
                                 case qc::I:     return "i";
                                 case qc::H:     return "h";
@@ -86,7 +86,7 @@ INSTANTIATE_TEST_SUITE_P(Parameters,
 
 
 TEST_P(DDFunctionality, standard_op_build_inverse_build) {
-    auto gate = (qc::Gate)GetParam();
+    auto gate = (qc::OpType)GetParam();
     
     qc::StandardOperation op;
     switch(gate) {

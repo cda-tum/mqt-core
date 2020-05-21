@@ -24,11 +24,11 @@ namespace qc {
 	}	
 
 	// Snapshot constructor
-	NonUnitaryOperation::NonUnitaryOperation(const unsigned short nq, const std::vector<unsigned short>& qubitRegister, Op op) {
-		this->op = op;
+	NonUnitaryOperation::NonUnitaryOperation(const unsigned short nq, const std::vector<unsigned short>& qubitRegister, OpType op) {
+		type = op;
 		nqubits  = nq;
 		targets  = qubitRegister;
-		std::strcpy(name, opNames[op].c_str());
+		Operation::setName();
 	}
 
     std::ostream& NonUnitaryOperation::print(std::ostream& os) const {
@@ -39,9 +39,9 @@ namespace qc {
 		std::array<short, MAX_QUBITS> line{};
 		line.fill(LINE_DEFAULT);
 
-		switch (op) {
+		switch (type) {
 			case Measure:
-				os << "Meas\t";
+				os << name << "\t";
 				for (unsigned int q = 0; q < controls.size(); ++q) {
 					line[permutation.at(controls[q].qubit)] = targets[q];
 				}
@@ -54,7 +54,7 @@ namespace qc {
 				}
 				break;
 			case Reset:
-				os << "Rst \t";
+				os << name << "\t";
 				setLine(line, permutation);
 				for (int i = 0; i < nqubits; ++i) {
 					if (line[i] == LINE_TARGET) {
@@ -65,7 +65,7 @@ namespace qc {
 				}
 				break;
 			case Snapshot:
-				os << "Snap\t";
+				os << name << "\t";
 				setLine(line, permutation);
 				for (int i = 0; i < nqubits; ++i) {
 					if (line[i] == LINE_TARGET) {
@@ -77,10 +77,10 @@ namespace qc {
 				os << "\tp: (" << targets.size() << ") (" << parameter[1] << ")";
 				break;
 			case ShowProbabilities:
-				os << "Show probabilities";
+				os << name;
 				break;
 			case Barrier:
-				os << "Barr\t";
+				os << name << "\t";
 				setLine(line, permutation);
 				for (int i = 0; i < nqubits; ++i) {
 					if (line[i] == LINE_TARGET) {
@@ -90,12 +90,15 @@ namespace qc {
 					}
 				}
 				break;
+			default:
+				std::cerr << "Non-unitary operation with invalid type " << type << " detected. Proceed with caution!" << std::endl;
+				break;
 		}
 		return os;
 	}
 
 	void NonUnitaryOperation::dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const {
-		switch (op) {
+		switch (type) {
 			case Measure: 
 				if(isWholeQubitRegister(qreg, controls[0].qubit, controls.back().qubit) && 
 				   isWholeQubitRegister(qreg, targets[0],        targets.back())) {
@@ -140,11 +143,14 @@ namespace qc {
 					}
 				}
 				break;
+			default:
+				std::cerr << "Non-unitary operation with invalid type " << type << " detected. Proceed with caution!" << std::endl;
+				break;
 		}
 	}
 
 	void NonUnitaryOperation::dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char *) const {
-		switch (op) {
+		switch (type) {
 			case Measure:
 				if(isWholeQubitRegister(qreg, controls[0].qubit, controls.back().qubit) &&
 				   isWholeQubitRegister(qreg, targets[0],        targets.back())) {
@@ -194,6 +200,9 @@ namespace qc {
 					}
 					of << "])" << std::endl;
 				}
+				break;
+			default:
+				std::cerr << "Non-unitary operation with invalid type " << type << " detected. Proceed with caution!" << std::endl;
 				break;
 		}
 	}

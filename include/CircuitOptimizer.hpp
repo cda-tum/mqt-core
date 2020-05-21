@@ -10,18 +10,19 @@
 #include <forward_list>
 
 namespace qc {
-	using DAG = std::vector<std::forward_list<Operation*>>;
+	using DAG = std::vector<std::forward_list<std::unique_ptr<Operation>*>>;
 
 	class CircuitOptimizer {
 
 	protected:
-		static void addToDag(DAG& dag, Operation* op);
+		static void addToDag(DAG& dag, std::unique_ptr<Operation> *op);
 	public:
 		CircuitOptimizer() = default;
 
 		static DAG constructDAG(QuantumComputation& qc);
 		static void swapGateFusion(QuantumComputation& qc);
-
+		static void singleGateFusion(QuantumComputation& qc);
+		static void removeIdentities(QuantumComputation& qc);
 	};
 }
 #endif //QCEC_CIRCUITOPTIMIZER_HPP

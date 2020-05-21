@@ -106,7 +106,7 @@ namespace qc {
 				}
 
 				// extract gate information (identifier, #controls, divisor)
-				Gate gate;
+				OpType gate;
 				if (m.str(1) == "t") { // special treatment of t(offoli) for real format
 					gate = X;
 				} else {
@@ -159,6 +159,7 @@ namespace qc {
 
 				updateMaxControls(ncontrols);
 				unsigned short target = iter->second.first;
+				unsigned short target1 = 0;
 				auto x = nearbyint(lambda);
 				switch (gate) {
 					case None:
@@ -208,11 +209,19 @@ namespace qc {
 					case P:
 					case Pdag:
 					case iSWAP:
-						unsigned short target1 = controls.back().qubit;
+						target1 = controls.back().qubit;
 						controls.pop_back();
 						emplace_back<StandardOperation>(nqubits, controls, target, target1, gate);
 						break;
-
+					case Compound:
+					case Measure:
+					case Reset:
+					case Snapshot:
+					case ShowProbabilities:
+					case Barrier:
+					case ClassicControlled:
+						std::cerr << "Operation with invalid type " << gate << " read from real file. Proceed with caution!" << std::endl;
+						break;
 				}
 			}
 		}

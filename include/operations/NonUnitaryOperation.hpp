@@ -10,14 +10,8 @@
 
 namespace qc {
 
-	enum Op : short {
-		Measure = 0, Reset, Snapshot, ShowProbabilities, Barrier
-	};
-	static std::vector<std::string> opNames = {"Measure", "Reset", "Snapshot", "ShowProbabilities", "Barrier"};
-
 	class NonUnitaryOperation : public Operation {
-	protected:
-		Op op = ShowProbabilities;
+
 	public:
 		// Measurement constructor
 		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister, const std::vector<unsigned short>& classicalRegister);
@@ -26,12 +20,13 @@ namespace qc {
 		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister, int n);
 
 		// ShowProbabilities constructor
-		explicit NonUnitaryOperation(const unsigned short nq) : op(ShowProbabilities) {
+		explicit NonUnitaryOperation(const unsigned short nq) {
 			nqubits = nq;
+			type = ShowProbabilities;
 		}
 
 		// General constructor
-		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister, Op op = Reset);
+		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister, OpType op = Reset);
 
 		dd::Edge getDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&) const override {
 			std::cerr << "DD for non-unitary operation not available!" << std::endl;
@@ -54,8 +49,12 @@ namespace qc {
 			return false;
 		}
 
+		bool isNonUnitaryOperation() const override {
+			return true;
+		}
+
 		bool actsOn(unsigned short i) override {
-			if (op != Measure) {
+			if (type != Measure) {
 				for (const auto t:targets) {
 					if (t == i)
 						return true;

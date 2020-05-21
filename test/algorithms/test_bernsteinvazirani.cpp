@@ -39,7 +39,7 @@ TEST_P(BernsteinVazirani, FunctionTest) {
 	std::string hIntPath = std::string(qc->size, '0');
 
 	// Create the path-string
-	for (int i = 0; i < qc->size; i++)
+	for (unsigned int i = 0; i < qc->size; i++)
 	{
 		if (hInt[i] == 1) {
 			hIntPath[i] = '2';

@@ -8,6 +8,98 @@
 namespace qc {
 	std::map<unsigned short, unsigned short> Operation::standardPermutation = Operation::create_standard_permutation();
 
+	void Operation::setName() {
+		switch (type) {
+			case I:
+				strcpy(name, "I   ");
+				break;
+			case H:
+				strcpy(name, "H   ");
+				break;
+			case X:
+				strcpy(name, "X   ");
+				break;
+			case Y:
+				strcpy(name, "Y   ");
+				break;
+			case Z:
+				strcpy(name, "Z   ");
+				break;
+			case S:
+				strcpy(name, "S   ");
+				break;
+			case Sdag:
+				strcpy(name, "Sdag");
+				break;
+			case T:
+				strcpy(name, "T   ");
+				break;
+			case Tdag:
+				strcpy(name, "Tdag");
+				break;
+			case V:
+				strcpy(name, "V   ");
+				break;
+			case Vdag:
+				strcpy(name, "Vdag");
+				break;
+			case U3:
+				strcpy(name, "U3  ");
+				break;
+			case U2:
+				strcpy(name, "U2  ");
+				break;
+			case U1:
+				strcpy(name, "U1  ");
+				break;
+			case RX:
+				strcpy(name, "RX  ");
+				break;
+			case RY:
+				strcpy(name, "RY  ");
+				break;
+			case RZ:
+				strcpy(name, "RZ  ");
+				break;
+			case SWAP:
+				strcpy(name, "SWAP");
+				break;
+			case iSWAP:
+				strcpy(name, "iSWP");
+				break;
+			case P:
+				strcpy(name, "P   ");
+				break;
+			case Pdag:
+				strcpy(name, "Pdag");
+				break;
+			case Compound:
+				strcpy(name, "Comp");
+				break;
+			case Measure:
+				strcpy(name, "Meas");
+				break;
+			case Reset:
+				strcpy(name, "Rst ");
+				break;
+			case Snapshot:
+				strcpy(name, "Snap");
+				break;
+			case ShowProbabilities:
+				strcpy(name, "Show probabilities");
+				break;
+			case Barrier:
+				strcpy(name, "c_");
+				break;
+			case ClassicControlled:
+
+				break;
+			default:
+				std::cerr << "This constructor shall not be called for gate type (index) " << (int) type << std::endl;
+				exit(1);
+		}
+	}
+
 	void Operation::setLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
 		for(auto target: targets) {
 			#if DEBUG_MODE_OPERATIONS

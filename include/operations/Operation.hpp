@@ -50,6 +50,50 @@ namespace qc {
 	static constexpr short LINE_CONTROL_NEG = 0;
 	static constexpr short LINE_DEFAULT     = -1;
 
+	// Supported Operations
+	enum OpType : short {
+		None,
+		// Standard Operations
+		I, H, X, Y, Z, S, Sdag, T, Tdag, V, Vdag, U3, U2, U1, RX, RY, RZ, SWAP, iSWAP, P, Pdag,
+		// Compound Operation
+		Compound,
+		// Non Unitary Operations
+		Measure, Reset, Snapshot, ShowProbabilities, Barrier,
+		// Classically-controlled Operation
+		ClassicControlled
+	};
+
+	static const std::map<std::string, OpType> identifierMap {
+			{ "0",   I    },
+			{ "id",  I    },
+			{ "h",   H    },
+			{ "n",   X    },
+			{ "c",   X    },
+			{ "x",   X    },
+			{ "y",   Y    },
+			{ "z",   Z    },
+			{ "s",   S    },
+			{ "si",  Sdag },
+			{ "sp",  Sdag },
+			{ "s+",  Sdag },
+			{ "sdg", Sdag },
+			{ "v",   V    },
+			{ "vi",  Vdag },
+			{ "vp",  Vdag },
+			{ "v+",  Vdag },
+			{ "rx",  RX   },
+			{ "ry",  RY   },
+			{ "rz",  RZ   },
+			{ "f",   SWAP },
+			{ "if",  SWAP },
+			{ "p",   P    },
+			{ "pi",  Pdag },
+			{ "p+",  Pdag },
+			{ "q",   RZ   },
+			{ "t",   T    },
+			{ "tdg", Tdag }
+	};
+
 	class Operation {
 	protected:
 		std::vector<unsigned short>       targets{};
@@ -57,6 +101,7 @@ namespace qc {
 		std::array<fp, MAX_PARAMETERS>    parameter{ };
 		
 		unsigned short nqubits     = 0;
+		OpType         type = None;         // Op type
 		bool           multiTarget = false; // flag to distinguish multi target operations
 		bool           controlled  = false; // flag to distinguish multi control operations
 		char           name[MAX_STRING_LENGTH]{ };
@@ -122,6 +167,10 @@ namespace qc {
 			return name;
 		}
 
+		virtual OpType getType() const {
+			return type;
+		}
+
 		// Setter
 		virtual void setNqubits(unsigned short nq) {
 			nqubits = nq;
@@ -133,6 +182,13 @@ namespace qc {
 
 		virtual void setControls(const std::vector<Control>& c) {
 			Operation::controls = c;
+		}
+
+		virtual void setName();
+
+		virtual void setGate(OpType g) {
+			type = g;
+			setName();
 		}
 
 		virtual void setParameter(const std::array<fp, MAX_PARAMETERS>& p) {
@@ -162,6 +218,22 @@ namespace qc {
 
 		inline virtual bool isUnitary() const { 
 			return true; 
+		}
+
+		inline virtual bool isStandardOperation() const {
+			return false;
+		}
+
+		inline virtual bool isCompoundOperation() const {
+			return false;
+		}
+
+		inline virtual bool isNonUnitaryOperation() const {
+			return false;
+		}
+
+		inline virtual bool isClassicControlledOperation() const {
+			return false;
 		}
 
 		inline virtual bool isControlled() const  { 
