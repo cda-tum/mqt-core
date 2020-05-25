@@ -215,7 +215,7 @@ namespace dd {
         void printComplexTable();
         void statistics();
 
-	    int cacheSize();
+	    int cacheSize() const;
     };
 
 	std::ostream& operator<<(std::ostream& os, const Complex& c);

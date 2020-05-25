@@ -331,7 +331,7 @@ namespace dd {
         }
     }
 
-	int ComplexNumbers::cacheSize() {
+	int ComplexNumbers::cacheSize() const {
 		ComplexTableEntry *p = Cache_Avail;
 		int size = 0;
 
@@ -399,7 +399,7 @@ namespace dd {
 			return;
 		}
 
-		if (m == 0) { // +- sqrt(2)
+		if (m == 0) { // +- 1/sqrt(2)
 			if (imaginary) {
 				os << (std::signbit(r) ? "-" : "+") << u8"\u221a\u00bdi";
 			} else {

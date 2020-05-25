@@ -127,6 +127,91 @@ namespace dd {
         std::cout << std::flush;
     }
 
+	void Package::toDot2(const Edge& e, std::ostream& oss, bool isVector, bool edgeLabels) {
+		// header, root and terminal declaration
+		oss << "digraph \"DD\" { node[shape=none, center=true, margin=0]\n";
+		oss << "root [label=\"\", shape=point, style=invis]\n";
+		oss << "t [label=\"1\", shape=box, tooltip=\"1\", width=0.4, height=0.4]\n";
+		oss << "root -> \"" << e.p << "\" [tooltip=\"" << e.w << "\"";
+		if (!CN::equalsOne(e.w)) {
+			oss << ", color=blue, style=dashed, label=\" " << e.w << "\"";
+		}
+		oss << "]\n\n";
+
+		// node set (comparator)
+		auto cmp = [](const NodeSetElement& left, const NodeSetElement& right) {
+			return left.v < right.v || (left.v == right.v && (unsigned long) left.id < (unsigned long) right.id);
+		};
+		std::set<NodeSetElement, decltype(cmp)> nodes(cmp);
+
+		// priority queue (comparator)
+		auto priocmp = [] (const dd::Edge* left, const dd::Edge* right) { return left->p->v < right->p->v; };
+		std::priority_queue<const dd::Edge*, std::vector<const dd::Edge*>, decltype(priocmp)> q(priocmp);
+		q.push(&e);
+		
+		// bfs until finished
+		while (!q.empty()) {
+			auto node = q.top();
+			q.pop();
+
+			// base case
+			if (isTerminal(*node))
+				continue;
+
+			// check if node has already been processed
+			auto ret = nodes.emplace((intptr_t)node->p, node->p->v);
+			if (!ret.second) continue;
+
+			// node definition as HTML-like label (href=" " is used as workaround to make tooltips work)
+			oss << "\"" << node->p << "\" [label=<\n\t";
+			if (isVector) {
+				oss << R"(<table border="0" cellborder="1" cellspacing="0" cellpadding="1">)";
+				oss << "\n\t\t<tr><td colspan=\"2\" bgcolor=\"lightgray\">q" << node->p->v << "</td></tr>\n";
+				oss << "\t\t<tr>";
+				oss << R"(<td port="0" tooltip=")" << node->p->e[0].w << R"(" href=" ">0</td>)";
+				oss << R"(<td port="2" tooltip=")" << node->p->e[2].w << R"(" href=" ">1</td>)";
+			} else {
+				oss << R"(<table border="0" cellborder="1" cellspacing="0" cellpadding="0">)";
+				oss << "\n\t\t<tr><td colspan=\"4\" bgcolor=\"lightgray\">q" << node->p->v << "</td></tr>\n";
+				oss << "\t\t<tr>";
+				oss << R"(<td port="0" tooltip=")" << node->p->e[0].w << R"(" href=" ">00</td>)";
+				oss << R"(<td port="1" tooltip=")" << node->p->e[1].w << R"(" href=" ">10</td>)";
+				oss << R"(<td port="2" tooltip=")" << node->p->e[2].w << R"(" href=" ">01</td>)";
+				oss << R"(<td port="3" tooltip=")" << node->p->e[3].w << R"(" href=" ">11</td>)";
+			}
+			oss << "</tr>\n\t</table>>, tooltip=\"q" << node->p->v << "\"]\n\n";
+
+			// iterate over edges in reverse to guarantee correct processing order
+			for (short i=dd::NEDGE-1; i >= 0; --i) {
+				if (isVector && i%2 != 0)
+					continue;
+
+				auto& edge = node->p->e[i];
+				if (CN::equalsZero(edge.w))
+					continue;
+
+				// non-zero edge to be included
+				q.push(&edge);
+				if (isVector) {
+					oss << "\"" << node->p << "\":" << i << ":";
+					oss << (i==0? "sw" : "se") << " -> ";
+				} else {
+					oss << "\"" << node->p << "\":" << i << ":s -> ";
+				}
+				dd::Package::isTerminal(edge)?	oss << "t": oss << "\"" << edge.p << "\"";
+				oss << " [tooltip=\"" << edge.w << "\"";
+				if (!CN::equalsOne(edge.w)) {
+					oss << ", color=blue, style=dashed";
+					if (edgeLabels) {
+						oss << ", label=\"" << edge.w << "\"";
+					}
+				}
+				oss << "]\n";
+			}
+			oss << "\n";
+		}
+		oss << "}\n" << std::flush;
+	}
 
     void Package::toDot(Edge e, std::ostream& oss, bool isVector) {
         /* first part of dot file*/
@@ -268,20 +353,34 @@ namespace dd {
 
     // export a DD in .dot format to the file specified by outputFilename
     // and call DOT->SVG export (optional, requires dot package)
-    void Package::export2Dot(Edge basic, const char *outputFilename, bool isVector, bool show) {
+    void Package::export2Dot(Edge basic, const std::string& outputFilename, bool isVector, bool show) {
         std::ofstream init(outputFilename);
 	    toDot(basic, init, isVector);
         init.close();
 
         if (show) {
             std::ostringstream oss;
-            oss << "dot -Tsvg " << outputFilename << " -o " << outputFilename << ".svg";
+            oss << "dot -Tsvg " << outputFilename << " -o " << outputFilename.substr(0, outputFilename.find_last_of('.')) << ".svg";
             auto str = oss.str(); // required to avoid immediate deallocation of temporary
             static_cast<void>(!std::system(str.c_str())); // cast and ! just to suppress the unused result warning
         }
     }
 
-    Edge Package::makeZeroState(unsigned short n) {
+	void Package::export2Dot2(Edge basic, const std::string& outputFilename, bool isVector, bool edgeLabels, bool show) {
+		std::ofstream init(outputFilename);
+		toDot2(basic, init, isVector, edgeLabels);
+		init.close();
+
+		if (show) {
+			std::ostringstream oss;
+			oss << "dot -Tsvg " << outputFilename << " -o " << outputFilename.substr(0, outputFilename.find_last_of('.')) << ".svg";
+			auto str = oss.str(); // required to avoid immediate deallocation of temporary
+			static_cast<void>(!std::system(str.c_str())); // cast and ! just to suppress the unused result warning
+		}
+    }
+
+
+	Edge Package::makeZeroState(unsigned short n) {
         Edge f = DDone;
         Edge edges[4];
         edges[1] = edges[2] = edges[3] = DDzero;
@@ -447,14 +546,14 @@ namespace dd {
 	        } else if (e.p->e[j].p != nullptr && !zero[j]) {
 		        if (cached) {
 			        cn.releaseCached(e.p->e[j].w);
-                    cn.div(e.p->e[j].w, e.p->e[j].w, e.w);
+                    CN::div(e.p->e[j].w, e.p->e[j].w, e.w);
                     e.p->e[j].w = cn.lookup(e.p->e[j].w);
                     if (e.p->e[j].w == CN::ZERO) {
                         e.p->e[j] = DDzero;
                     }
                 } else {
        	            Complex c = cn.getTempCachedComplex();
-                    cn.div(c, e.p->e[j].w, e.w);
+                    CN::div(c, e.p->e[j].w, e.w);
                     e.p->e[j].w = cn.lookup(c);
                     if (e.p->e[j].w == CN::ZERO) {
                         e.p->e[j] = DDzero;
@@ -1295,7 +1394,7 @@ namespace dd {
 	    e = makeNonterminal(varOrder[z], em);  // target line
         for (z++; z < n; z++) { // go through lines above target
             if (line[w = varOrder[z]] >= 0) { //  control line above target in DD
-                Edge temp = makeIdent(0, z - 1);
+                Edge temp = makeIdent(0, static_cast<short>(z - 1));
                 for (int i = 0; i < RADIX; i++) {
                     for (int j = 0; j < RADIX; j++) {
                         if (i == j) {
@@ -1344,9 +1443,9 @@ namespace dd {
 				for (int i2 = 0; i2 < RADIX; i2++) {
 					int i = i1 * RADIX + i2;
 					if (line[w] == 0) { // neg. control
-						em[i] = makeNonterminal(w, { em[i], DDzero, DDzero, (i1 == i2) ? makeIdent(0, z - 1) : DDzero });
+						em[i] = makeNonterminal(w, { em[i], DDzero, DDzero, (i1 == i2) ? makeIdent(0, static_cast<short>(z - 1)) : DDzero });
 					} else if (line[w] == 1) { // pos. control
-						em[i] = makeNonterminal(w, { (i1 == i2) ? makeIdent(0, z - 1) : DDzero, DDzero, DDzero, em[i] });
+						em[i] = makeNonterminal(w, { (i1 == i2) ? makeIdent(0, static_cast<short>(z - 1)) : DDzero, DDzero, DDzero, em[i] });
 					} else { // not connected
 						em[i] = makeNonterminal(w, { em[i], DDzero, DDzero, em[i] });
 					}
@@ -1361,9 +1460,9 @@ namespace dd {
 		for (z++; z < n; z++) {
 			w = varOrder[z];
 			if (line[w] == 0) { //  neg. control
-				e = makeNonterminal(w, { e, DDzero, DDzero, makeIdent(0, z - 1) });
+				e = makeNonterminal(w, { e, DDzero, DDzero, makeIdent(0, static_cast<short>(z - 1)) });
 			} else if (line[w] == 1) { // pos. control
-				e = makeNonterminal(w, { makeIdent(0, z - 1), DDzero, DDzero, e });
+				e = makeNonterminal(w, { makeIdent(0, static_cast<short>(z - 1)), DDzero, DDzero, e });
 			} else { // not connected
 				e = makeNonterminal(w, { e, DDzero, DDzero, e });
 			}
@@ -1510,9 +1609,9 @@ namespace dd {
 		    return r;
 
     	if (x.p->ident) {
-			r = makeNonterminal(y.p->v+1, {y, DDzero, DDzero, y});
+			r = makeNonterminal(static_cast<short>(y.p->v+1), {y, DDzero, DDzero, y});
 			for (int i = 0; i < x.p->v; ++i) {
-				r = makeNonterminal(r.p->v+1, {r, DDzero, DDzero, r});
+				r = makeNonterminal(static_cast<short>(r.p->v+1), {r, DDzero, DDzero, r});
 			}
 
 			r.w = cn.getCachedComplex(CN::val(y.w.r),CN::val(y.w.i));
@@ -1525,15 +1624,15 @@ namespace dd {
 		Edge e2 = kronecker2(x.p->e[2],y);
 		Edge e3 = kronecker2(x.p->e[3],y);
 
-		r = makeNonterminal(y.p->v+x.p->v+1, {e0, e1, e2, e3}, true);
+		r = makeNonterminal(static_cast<short>(y.p->v+x.p->v+1), {e0, e1, e2, e3}, true);
 	    CN::mul(r.w, r.w, x.w);
 		CTinsert(x,y,r,kron);
 		return r;
     }
 
 	Edge Package::extend(Edge e, unsigned short h, unsigned short l) {
-  	    Edge f = (l>0)? kronecker(e, makeIdent(0,l-1)) : e;
-  	    Edge g = (h>0)? kronecker(makeIdent(0, h-1), f): f;
+  	    Edge f = (l>0)? kronecker(e, makeIdent(0,static_cast<short>(l-1))) : e;
+  	    Edge g = (h>0)? kronecker(makeIdent(0, static_cast<short>(h-1)), f): f;
   	    return g;
     }
 
@@ -1554,11 +1653,11 @@ namespace dd {
     		if (v == w) {
 			    Edge r = DDzero;
 			    //std::cout << cn.cacheCount << " ";
-			    auto t0 = trace(a.p->e[0], v - 1, eliminate);
+			    auto t0 = trace(a.p->e[0], static_cast<short>(v - 1), eliminate);
 			    r = add2(r, t0);
 			    auto r1 = r;
 			    //std::cout << "-> " << cn.cacheCount << " ";
-			    auto t1 = trace(a.p->e[3], v - 1, eliminate);
+			    auto t1 = trace(a.p->e[3], static_cast<short>(v - 1), eliminate);
 			    r = add2(r, t1);
 			    auto r2 = r;
 			    //std::cout << "-> " << cn.cacheCount << std::endl;
@@ -1573,20 +1672,20 @@ namespace dd {
 
 			    return r;
     		} else {
-			    Edge r = trace(a, v - 1, eliminate);
+			    Edge r = trace(a, static_cast<short>(v - 1), eliminate);
                 CN::mul(r.w, r.w, cn.getTempCachedComplex(RADIX, 0));
 			    return r;
     		}
     	} else {
     		if (v == w) {
-			    Edge r = makeNonterminal(a.p->v, { trace(a.p->e[0], v - 1, eliminate),
-			                                       trace(a.p->e[1], v - 1, eliminate),
-			                                       trace(a.p->e[2], v - 1, eliminate),
-			                                       trace(a.p->e[3], v - 1, eliminate) }, false);
+			    Edge r = makeNonterminal(a.p->v, { trace(a.p->e[0], static_cast<short>(v - 1), eliminate),
+			                                       trace(a.p->e[1], static_cast<short>(v - 1), eliminate),
+			                                       trace(a.p->e[2], static_cast<short>(v - 1), eliminate),
+			                                       trace(a.p->e[3], static_cast<short>(v - 1), eliminate) }, false);
                 CN::mul(r.w, r.w, a.w);
 			    return r;
 		    } else {
-			    return trace(a,v-1,eliminate);
+			    return trace(a,static_cast<short>(v-1),eliminate);
     		}
     	}
     }

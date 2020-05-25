@@ -16,6 +16,8 @@
 #include <cstring>
 #include <iostream>
 #include <map>
+#include <queue>
+#include <set>
 
 #include "DDcomplex.h"
 
@@ -63,6 +65,12 @@ namespace dd {
 	    ListElementPtr next;
 	    int w;
     };
+
+	struct NodeSetElement {
+		intptr_t id = 0;
+		short v = -1;
+		NodeSetElement(intptr_t id, short v): id(id), v(v) {};
+	};
 
     // computed table definitions
     // compute table entry kinds
@@ -178,7 +186,6 @@ namespace dd {
 	    unsigned int nodeCount(Edge e, std::unordered_set<NodePtr>& visited) const;
 	    ComplexValue getVectorElement(Edge e, unsigned long long int element);
 	    ListElementPtr newListElement();
-	    void toDot(Edge e, std::ostream& oss, bool isVector = false);
 
     public:
         constexpr static Edge DDone{ terminalNode, ComplexNumbers::ONE };
@@ -289,7 +296,11 @@ namespace dd {
 	    void printVector(Edge e);
 	    void printActive(int n);
 	    void printDD(Edge e, unsigned int limit);
-	    void export2Dot(Edge basic, const char *outputFilename, bool isVector = false, bool show = true);
+
+	    void toDot(Edge e, std::ostream& oss, bool isVector = false);
+	    static void toDot2(const Edge& e, std::ostream& oss, bool isVector = false, bool edgeLabels=false);
+	    void export2Dot(Edge basic, const std::string& outputFilename, bool isVector = false, bool show = true);
+	    static void export2Dot2(Edge basic, const std::string& outputFilename, bool isVector = false, bool edgeLabels=false, bool show = true);
 
 	    // statistics and info
 	    void statistics();
