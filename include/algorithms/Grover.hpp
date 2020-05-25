@@ -25,11 +25,12 @@ namespace qc {
 
 		void full_grover(QuantumComputation& qc);
 
+		std::array<short, MAX_QUBITS> line{};
+
 	public:
 		unsigned int       seed         = 0;
 		unsigned long long x            = 0;
 		unsigned long long iterations   = 1;
-		bool               includeSetup = true;
 
 		explicit Grover(unsigned short nq, unsigned int seed = 0);
 
