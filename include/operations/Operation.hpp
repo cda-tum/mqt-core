@@ -51,7 +51,7 @@ namespace qc {
 	static constexpr short LINE_DEFAULT     = -1;
 
 	// Supported Operations
-	enum OpType : short {
+	enum OpType {
 		None,
 		// Standard Operations
 		I, H, X, Y, Z, S, Sdag, T, Tdag, V, Vdag, U3, U2, U1, RX, RY, RZ, SWAP, iSWAP, P, Pdag,

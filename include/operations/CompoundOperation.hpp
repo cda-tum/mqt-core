@@ -21,15 +21,15 @@ namespace qc {
 		}
 
 		template<class T>
-		auto emplace_back(std::unique_ptr<T>& op) {
+		void emplace_back(std::unique_ptr<T>& op) {
 			parameter[0]++;
-			return ops.emplace_back(std::move(op));
+			ops.emplace_back(std::move(op));
 		}
 
 		template<class T, class... Args>
-		auto emplace_back(Args&& ... args) {
+		void emplace_back(Args&& ... args) {
 			parameter[0]++;
-			return ops.emplace_back(std::make_unique<T>(args ...));
+			ops.emplace_back(std::make_unique<T>(args ...));
 		}
 
 		void setNqubits(unsigned short nq) override {
