@@ -340,6 +340,9 @@
 
 	        // return corresponding operation
 	        if (first_target.second == 1 && second_target.second == 1) {
+	        	if (first_target.first == second_target.first) {
+	        		error("SWAP with two identical targets");
+	        	}
 		        return std::make_unique<qc::StandardOperation>(nqubits, std::vector<qc::Control>{}, first_target.first, second_target.first, qc::SWAP);
 	        } else {
 		        error("SWAP for whole qubit registers not yet implemented");
@@ -350,6 +353,17 @@
             check(Token::Kind::comma);
             auto target = ArgumentQreg();
             check(Token::Kind::semicolon);
+
+            // valid check
+            for (int i=0; i<control.second; ++i) {
+            	for (int j=0; j<target.second; ++j) {
+            		if (control.first+i == target.first+j) {
+            			std::ostringstream oss{};
+            			oss <<"Qubit " << control.first+i << " cannot be control and target at the same time";
+            			error(oss.str());
+            		}
+            	}
+            }
 
             // return corresponding operation
             if (control.second == 1 && target.second == 1) {

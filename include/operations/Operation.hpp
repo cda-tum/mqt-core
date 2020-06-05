@@ -16,6 +16,7 @@
 #include <cstring>
 
 #include "DDpackage.h"
+#include "DDexport.h"
 
 #define DEBUG_MODE_OPERATIONS 0
 #define UNUSED(x) {(void) x;}

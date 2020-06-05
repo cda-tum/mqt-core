@@ -35,10 +35,10 @@ namespace qc {
 	static constexpr char DEFAULT_ANCREG[4]{"anc"};
 	static constexpr char DEFAULT_MCTREG[4]{"mct"};
 
-	class QFRException : public std::runtime_error {
+	class QFRException : public std::invalid_argument {
 		std::string msg;
 	public:
-		explicit QFRException(std::string  msg) : std::runtime_error("QFR Exception"), msg(std::move(msg)) { }
+		explicit QFRException(std::string  msg) : std::invalid_argument("QFR Exception"), msg(std::move(msg)) { }
 
 		const char *what() const noexcept override {
 			return msg.c_str();
@@ -63,8 +63,8 @@ namespace qc {
 		registerMap ancregs{ };
 
 		void importReal(std::istream& is);
-		void readRealHeader(std::istream& is);
-		void readRealGateDescriptions(std::istream& is);
+		int readRealHeader(std::istream& is);
+		void readRealGateDescriptions(std::istream& is, int line);
 		void importOpenQASM(std::istream& is);
 		void importGRCS(std::istream& is);
 

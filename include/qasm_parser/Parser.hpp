@@ -24,15 +24,17 @@ namespace qasm {
 
 	using registerMap = std::map<std::string, std::pair<unsigned short, unsigned short>>;
 
-	class QASMParserException : public std::runtime_error {
+	class QASMParserException : public std::invalid_argument {
 		std::string msg;
 	public:
-		explicit QASMParserException(std::string  msg) : std::runtime_error("QASM Parser Exception"), msg(std::move(msg)) { }
-
-		const char *what() const noexcept override {
+		explicit QASMParserException(std::string  msg) : std::invalid_argument("QASM Parser Exception") {
 			std::stringstream ss{};
 			ss << "[qasm parser] " << msg;
-			return ss.str().c_str();
+			msg = ss.str();
+		}
+
+		const char *what() const noexcept override {
+			return msg.c_str();
 		}
 	};
 
@@ -147,8 +149,10 @@ namespace qasm {
 
 		std::unique_ptr<qc::Operation> Qop();
 
-		static void error [[ noreturn ]](const std::string& msg) {
-			throw QASMParserException(msg);
+		void error [[ noreturn ]](const std::string& msg) const {
+			std::ostringstream oss{};
+			oss << "l:" << scanner->getLine() << "c:" << scanner->getCol() << " msg: " << msg;
+			throw QASMParserException(oss.str());
 		}
 	};
 

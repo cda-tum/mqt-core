@@ -12,19 +12,23 @@ namespace qc {
      * Protected Methods
      ***/
 	void QuantumComputation::importReal(std::istream& is) {
-		readRealHeader(is);
-		readRealGateDescriptions(is);
+		auto line = readRealHeader(is);
+		readRealGateDescriptions(is, line);
 	}
 
-	void QuantumComputation::readRealHeader(std::istream& is) {
+	int QuantumComputation::readRealHeader(std::istream& is) {
 		std::string cmd;
 		std::string variable;
+		int line = 0;
 
 		while (true) {
-			is >> cmd;
+			if(!static_cast<bool>(is >> cmd)) {
+				throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Invalid file header");
+			}
 			std::transform(cmd.begin(), cmd.end(), cmd.begin(),
 			        [] (unsigned char ch) { return ::toupper(ch); }
 			        );
+			++line;
 
 			// skip comments
 			if (cmd.front() == '#') {
@@ -34,16 +38,21 @@ namespace qc {
 
 			// valid header commands start with '.'
 			if (cmd.front() != '.') {
-				throw QFRException("[real parser] Invalid file header");
+				throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Invalid file header");
 			}
 
-			if (cmd == ".BEGIN") return; // header read complete
+			if (cmd == ".BEGIN") return line; // header read complete
 			else if (cmd == ".NUMVARS") {
-				is >> nqubits;
+				if(!static_cast<bool>(is >> nqubits)) {
+					nqubits = 0;
+				}
 				nclassics = nqubits;
 			} else if (cmd == ".VARIABLES") {
 				for (unsigned short i = 0; i < nqubits; ++i) {
-					is >> variable;
+					if(!static_cast<bool>(is >> variable) || variable.at(0) == '.') {
+						throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Invalid or insufficient variables declared");
+					}
+
 					qregs.insert({ variable, { i, 1 }});
 					cregs.insert({ "c_" + variable, { i, 1 }});
 					initialLayout.insert({ i, i });
@@ -54,12 +63,12 @@ namespace qc {
                 for (unsigned short i = 0; i < nqubits; ++i) {
                     const auto value = is.get();
                     if (!is.good()) {
-                    	throw QFRException("[real parser] Failed read in '.constants' line");
+                    	throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Failed read in '.constants' line");
                     }
                     if (value == '1') {
                         emplace_back<StandardOperation>(nqubits, i, X);
                     } else if (value != '-' && value != '0') {
-                    	throw QFRException("[real parser] Invalid value in '.constants' header: '" + std::to_string(value) + "'");
+                    	throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Invalid value in '.constants' header: '" + std::to_string(value) + "'");
                     }
                 }
                 is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -78,20 +87,23 @@ namespace qc {
                     std::transform(cmd.begin(), cmd.end(), cmd.begin(), [](const unsigned char c) { return ::toupper(c);});
 				}
 			} else {
-				throw QFRException("[real parser] Unknown command: " + cmd);
+				throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Unknown command: " + cmd);
 			}
 
 		}
 	}
 
-	void QuantumComputation::readRealGateDescriptions(std::istream& is) {
+	void QuantumComputation::readRealGateDescriptions(std::istream& is, int line) {
 		std::regex gateRegex = std::regex("(r[xyz]|q|[0a-z](?:[+i])?)(\\d+)?(?::([-+]?[0-9]+[.]?[0-9]*(?:[eE][-+]?[0-9]+)?))?");
 		std::smatch m;
 		std::string cmd;
 
 		while (!is.eof()) {
-			is >> cmd;
+			if(!static_cast<bool>(is >> cmd)) {
+				throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Failed to read command");
+			}
 			std::transform(cmd.begin(), cmd.end(), cmd.begin(), [](const unsigned char c) { return ::tolower(c);});
+			++line;
 
 			if (cmd.front() == '#') {
 				is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -102,7 +114,7 @@ namespace qc {
 			else {
 				// match gate declaration
 				if (!std::regex_match(cmd, m, gateRegex)) {
-					throw QFRException("[real parser] Unsupported gate detected: " + cmd);
+					throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Unsupported gate detected: " + cmd);
 				}
 
 				// extract gate information (identifier, #controls, divisor)
@@ -112,7 +124,7 @@ namespace qc {
 				} else {
 					auto it = identifierMap.find(m.str(1));
 					if (it == identifierMap.end()) {
-						throw QFRException("[real parser] Unknown gate identifier: " + m.str(1));
+						throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Unknown gate identifier: " + m.str(1));
 					}
 					gate = (*it).second;
 				}
@@ -123,7 +135,7 @@ namespace qc {
 				else if (gate == P || gate == Pdag) ncontrols = 2;
 
 				if (ncontrols >= nqubits) {
-					throw QFRException("[real parser] Gate acts on " + std::to_string(ncontrols + 1) + " qubits, but only " + std::to_string(nqubits) + " qubits are available.");
+					throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Gate acts on " + std::to_string(ncontrols + 1) + " qubits, but only " + std::to_string(nqubits) + " qubits are available.");
 				}
 
 				std::string qubits, label;
@@ -135,7 +147,7 @@ namespace qc {
 				// get controls and target
 				for (int i = 0; i < ncontrols; ++i) {
 					if (!(iss >> label)) {
-						throw QFRException("[real parser] Too few variables for gate " + m.str(1));
+						throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Too few variables for gate " + m.str(1));
 					}
 
 					bool negativeControl = (label.at(0) == '-');
@@ -144,17 +156,17 @@ namespace qc {
 
 					auto iter = qregs.find(label);
 					if (iter == qregs.end()) {
-						throw QFRException("[real parser] Label " + label + " not found!");
+						throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Label " + label + " not found!");
 					}
 					controls.emplace_back(iter->second.first, negativeControl? qc::Control::neg: qc::Control::pos);
 				}
 
 				if (!(iss >> label)) {
-					throw QFRException("[real parser] Too few variables (no target) for gate " + m.str(1));
+					throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Too few variables (no target) for gate " + m.str(1));
 				}
 				auto iter = qregs.find(label);
 				if (iter == qregs.end()) {
-					throw QFRException("[real parser] Label " + label + " not found!");
+					throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Label " + label + " not found!");
 				}
 
 				updateMaxControls(ncontrols);
@@ -163,7 +175,7 @@ namespace qc {
 				auto x = nearbyint(lambda);
 				switch (gate) {
 					case None:
-						throw QFRException("[real parser] 'None' operation detected.");
+						throw QFRException("[real parser] l:" + std::to_string(line) + " msg: 'None' operation detected.");
 					case I:
 					case H:
 					case Y:
@@ -304,7 +316,7 @@ namespace qc {
 
 				auto it = p.cregs.find(creg);
 				if (it == p.cregs.end()) {
-					Parser::error("Error in if statement: " + creg + " is not a creg!");
+					p.error("Error in if statement: " + creg + " is not a creg!");
 				} else {
 					emplace_back<ClassicControlledOperation>(p.Qop(), it->second.first + n);
 				}
@@ -322,7 +334,7 @@ namespace qc {
 
 				for (auto& arg: arguments) {
 					if (arg.second != 1) {
-						Parser::error("ERROR in snapshot: arguments must be qubits");
+						p.error("Error in snapshot: arguments must be qubits");
 					}
 				}
 
@@ -337,7 +349,7 @@ namespace qc {
 				p.scan();
 				p.check(Token::Kind::semicolon);
 			} else {
-				Parser::error("ERROR: unexpected statement: started with " + qasm::KindNames[p.sym] + "!");
+				p.error("Unexpected statement: started with " + qasm::KindNames[p.sym] + "!");
 			}
 		} while (p.sym != Token::Kind::eof);
 	}
@@ -838,7 +850,6 @@ namespace qc {
 
 		dd->useMatrixNormalization(true);
 		dd::Edge e = createInitialMatrix(dd);
-		dd->incRef(e);
 
 		for (auto & op : ops) {
 			if (!op->isUnitary()) {
@@ -871,7 +882,6 @@ namespace qc {
 
 		dd->useMatrixNormalization(true);
 		dd::Edge e = createInitialMatrix(dd);
-		dd->incRef(e);
 
 		for (auto & op : ops) {
 			if (!op->isUnitary()) {

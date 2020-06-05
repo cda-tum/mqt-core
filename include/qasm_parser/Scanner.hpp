@@ -50,6 +50,13 @@ namespace qasm {
 		Token next();
 
 		void addFileInput(const std::string& filename);
+
+		int getLine() const {
+			return line;
+		}
+		int getCol() const {
+			return col;
+		}
 	};
 }
 

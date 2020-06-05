@@ -52,7 +52,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_14)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
 
-option(TRY_USING_INSTALLED_DD_PACKAGE "Attempt searching for installed version of DD package and use it if found" ON)
+option(TRY_USING_INSTALLED_DD_PACKAGE "Attempt searching for installed version of DD package and use it if found" OFF)
 
 if (TRY_USING_INSTALLED_DD_PACKAGE)
 	find_package(DDpackage QUIET)
