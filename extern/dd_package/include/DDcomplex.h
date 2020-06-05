@@ -133,6 +133,14 @@ namespace dd {
 
 		    return ar * ar + ai * ai;
 	    }
+	    static inline fp mag(const Complex& a) {
+	    	return std::sqrt(mag2(a));
+	    }
+	    static inline fp arg(const Complex& a) {
+		    auto ar = val(a.r);
+		    auto ai = val(a.i);
+		    return std::atan2(ai, ar);
+	    }
 	    static Complex conj(const Complex& a);
 	    static Complex neg(const Complex& a);
 

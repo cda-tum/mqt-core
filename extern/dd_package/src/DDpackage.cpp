@@ -44,7 +44,7 @@ namespace dd {
     }
 
     // a slightly better DD print utility
-    void Package::printDD(Edge e, unsigned int limit) {
+    void Package::printDD(const Edge& e, unsigned int limit) {
         ListElementPtr first, q, lastq, pnext;
         unsigned short n = 0, i = 0;
 
@@ -115,7 +115,7 @@ namespace dd {
         return {l.r->val, l.i->val};
     }
 
-    void Package::printVector(Edge e) {
+    void Package::printVector(const Edge& e) {
         unsigned long long element = 2u << invVarOrder[e.p->v];
         for (unsigned long long i = 0; i < element; i++) {
             ComplexValue amplitude = getVectorElement(e, i);
@@ -126,92 +126,6 @@ namespace dd {
         }
         std::cout << std::flush;
     }
-
-	void Package::toDot2(const Edge& e, std::ostream& oss, bool isVector, bool edgeLabels) {
-		// header, root and terminal declaration
-		oss << "digraph \"DD\" { node[shape=none, center=true, margin=0]\n";
-		oss << "root [label=\"\", shape=point, style=invis]\n";
-		oss << "t [label=\"1\", shape=box, tooltip=\"1\", width=0.4, height=0.4]\n";
-		oss << "root -> \"" << e.p << "\" [tooltip=\"" << e.w << "\"";
-		if (!CN::equalsOne(e.w)) {
-			oss << ", color=blue, style=dashed, label=\" " << e.w << "\"";
-		}
-		oss << "]\n\n";
-
-		// node set (comparator)
-		auto cmp = [](const NodeSetElement& left, const NodeSetElement& right) {
-			return left.v < right.v || (left.v == right.v && (unsigned long) left.id < (unsigned long) right.id);
-		};
-		std::set<NodeSetElement, decltype(cmp)> nodes(cmp);
-
-		// priority queue (comparator)
-		auto priocmp = [] (const dd::Edge* left, const dd::Edge* right) { return left->p->v < right->p->v; };
-		std::priority_queue<const dd::Edge*, std::vector<const dd::Edge*>, decltype(priocmp)> q(priocmp);
-		q.push(&e);
-		
-		// bfs until finished
-		while (!q.empty()) {
-			auto node = q.top();
-			q.pop();
-
-			// base case
-			if (isTerminal(*node))
-				continue;
-
-			// check if node has already been processed
-			auto ret = nodes.emplace((intptr_t)node->p, node->p->v);
-			if (!ret.second) continue;
-
-			// node definition as HTML-like label (href=" " is used as workaround to make tooltips work)
-			oss << "\"" << node->p << "\" [label=<\n\t";
-			if (isVector) {
-				oss << R"(<table border="0" cellborder="1" cellspacing="0" cellpadding="1">)";
-				oss << "\n\t\t<tr><td colspan=\"2\" bgcolor=\"lightgray\">q" << node->p->v << "</td></tr>\n";
-				oss << "\t\t<tr>";
-				oss << R"(<td port="0" tooltip=")" << node->p->e[0].w << R"(" href=" ">0</td>)";
-				oss << R"(<td port="2" tooltip=")" << node->p->e[2].w << R"(" href=" ">1</td>)";
-			} else {
-				oss << R"(<table border="0" cellborder="1" cellspacing="0" cellpadding="0">)";
-				oss << "\n\t\t<tr><td colspan=\"4\" bgcolor=\"lightgray\">q" << node->p->v << "</td></tr>\n";
-				oss << "\t\t<tr>";
-				oss << R"(<td port="0" tooltip=")" << node->p->e[0].w << R"(" href=" ">00</td>)";
-				oss << R"(<td port="1" tooltip=")" << node->p->e[1].w << R"(" href=" ">10</td>)";
-				oss << R"(<td port="2" tooltip=")" << node->p->e[2].w << R"(" href=" ">01</td>)";
-				oss << R"(<td port="3" tooltip=")" << node->p->e[3].w << R"(" href=" ">11</td>)";
-			}
-			oss << "</tr>\n\t</table>>, tooltip=\"q" << node->p->v << "\"]\n\n";
-
-			// iterate over edges in reverse to guarantee correct processing order
-			for (short i=dd::NEDGE-1; i >= 0; --i) {
-				if (isVector && i%2 != 0)
-					continue;
-
-				auto& edge = node->p->e[i];
-				if (CN::equalsZero(edge.w))
-					continue;
-
-				// non-zero edge to be included
-				q.push(&edge);
-				if (isVector) {
-					oss << "\"" << node->p << "\":" << i << ":";
-					oss << (i==0? "sw" : "se") << " -> ";
-				} else {
-					oss << "\"" << node->p << "\":" << i << ":s -> ";
-				}
-				dd::Package::isTerminal(edge)?	oss << "t": oss << "\"" << edge.p << "\"";
-				oss << " [tooltip=\"" << edge.w << "\"";
-				if (!CN::equalsOne(edge.w)) {
-					oss << ", color=blue, style=dashed";
-					if (edgeLabels) {
-						oss << ", label=\"" << edge.w << "\"";
-					}
-				}
-				oss << "]\n";
-			}
-			oss << "\n";
-		}
-		oss << "}\n" << std::flush;
-	}
 
     void Package::toDot(Edge e, std::ostream& oss, bool isVector) {
         /* first part of dot file*/
@@ -365,20 +279,6 @@ namespace dd {
             static_cast<void>(!std::system(str.c_str())); // cast and ! just to suppress the unused result warning
         }
     }
-
-	void Package::export2Dot2(Edge basic, const std::string& outputFilename, bool isVector, bool edgeLabels, bool show) {
-		std::ofstream init(outputFilename);
-		toDot2(basic, init, isVector, edgeLabels);
-		init.close();
-
-		if (show) {
-			std::ostringstream oss;
-			oss << "dot -Tsvg " << outputFilename << " -o " << outputFilename.substr(0, outputFilename.find_last_of('.')) << ".svg";
-			auto str = oss.str(); // required to avoid immediate deallocation of temporary
-			static_cast<void>(!std::system(str.c_str())); // cast and ! just to suppress the unused result warning
-		}
-    }
-
 
 	Edge Package::makeZeroState(unsigned short n) {
         Edge f = DDone;
@@ -566,10 +466,9 @@ namespace dd {
 
 	//  lookup a node in the unique table for the appropriate variable - if not found insert it
 	//  only normalized nodes shall be stored.
-	Edge Package::UTlookup(Edge& e) {
+	Edge& Package::UTlookup(Edge& e) {
 		// there is a unique terminal node
 		if (isTerminal(e)) {
-            e.p = DDzero.p;
             return e;
         }
         UTlookups++;
@@ -610,8 +509,7 @@ namespace dd {
         if (nodecount > peaknodecount)
 	        peaknodecount = nodecount;
 
-        if (!isTerminal(e))
-        	checkSpecialMatrices(e);
+        checkSpecialMatrices(e.p);
 
         return e;                // and return
     }
@@ -724,12 +622,11 @@ namespace dd {
         e.p->ref++;
 
         if (e.p->ref == 1) {
-            if (!isTerminal(e)) {
-	            for (auto& edge : e.p->e)
-		            if (edge.p != nullptr) {
-			            incRef(edge);
-                    }
-            }
+            for (auto& edge : e.p->e)
+	            if (edge.p != nullptr) {
+		            incRef(edge);
+                }
+
             active[e.p->v]++;
             activeNodeCount++;
             maxActive = std::max(maxActive, activeNodeCount);
@@ -757,13 +654,12 @@ namespace dd {
         e.p->ref--;
 
         if (e.p->ref == 0) {
-            if (!isTerminal(e)) {
-	            for (auto& edge : e.p->e) {
-		            if (edge.p != nullptr) {
-			            decRef(edge);
-                    }
-                }
-            }
+	        for (auto& edge : e.p->e) {
+	            if (edge.p != nullptr) {
+		            decRef(edge);
+	            }
+	        }
+
             active[e.p->v]--;
             if (active[e.p->v] < 0) {
                 std::cerr << "ERROR in decref\n";
@@ -774,7 +670,7 @@ namespace dd {
     }
 
     // counting number of unique nodes in a DD
-    unsigned int Package::nodeCount(const Edge e, std::unordered_set<NodePtr>& visited) const {
+    unsigned int Package::nodeCount(const Edge& e, std::unordered_set<NodePtr>& visited) const {
         visited.insert(e.p);
 
         unsigned int sum = 1;
@@ -789,9 +685,7 @@ namespace dd {
     }
 
     // counts number of unique nodes in a DD
-    unsigned int Package::size(const Edge e) const {
-        std::unordered_set<NodePtr> visited(NODECOUNT_BUCKETS); // 2e6
-        visited.max_load_factor(10);
+    unsigned int Package::size(const Edge& e) {
         visited.clear();
         return nodeCount(e, visited);
     }
@@ -970,6 +864,7 @@ namespace dd {
 	    initComputeTable();  // init computed table to empty
         currentNodeGCLimit = GCLIMIT1; // set initial garbage collection limit
 	    currentComplexGCLimit = ComplexNumbers::GCLIMIT1;
+	    visited.max_load_factor(10);
 
         for (unsigned short i = 0; i < MAXN; i++) //  set initial variable order to 0,1,2... from bottom up
         {
@@ -1707,18 +1602,18 @@ namespace dd {
         return {dd::ComplexNumbers::val(c.r), dd::ComplexNumbers::val(c.i)};
     }
 
-	void Package::checkSpecialMatrices(Edge &e) {
-		e.p->ident = false;       // assume not identity
-		e.p->symm = false;           // assume symmetric
+	void Package::checkSpecialMatrices(NodePtr p) {
+		p->ident = false;       // assume not identity
+		p->symm = false;           // assume symmetric
 
 		/****************** CHECK IF Symmetric MATRIX *****************/
-		if (!e.p->e[0].p->symm || !e.p->e[3].p->symm) return;
-		if (!equals(transpose(e.p->e[1]), e.p->e[2])) return;
-		e.p->symm = true;
+		if (!p->e[0].p->symm || !p->e[3].p->symm) return;
+		if (!equals(transpose(p->e[1]), p->e[2])) return;
+		p->symm = true;
 
 		/****************** CHECK IF Identity MATRIX ***********************/
-		if(!(e.p->e[0].p->ident) || (e.p->e[1].w) != CN::ZERO || (e.p->e[2].w) != CN::ZERO || (e.p->e[0].w) != CN::ONE || (e.p->e[3].w) != CN::ONE || !(e.p->e[3].p->ident)) return;
-		e.p->ident = true;
+		if(!(p->e[0].p->ident) || (p->e[1].w) != CN::ZERO || (p->e[2].w) != CN::ZERO || (p->e[0].w) != CN::ONE || (p->e[3].w) != CN::ONE || !(p->e[3].p->ident)) return;
+		p->ident = true;
 	}
 
 	/// exchange levels i and j of a decision diagram by pointer manipulation.
@@ -1775,5 +1670,22 @@ namespace dd {
     	// TODO: implement sifting technique (using the exchange(...) function)
 
     	return in;
+	}
+
+	void Package::printUniqueTable(unsigned short n) {
+		std::cout << "Unique Table: " << std::endl;
+		for (int i = n-1; i >=0; --i) {
+			auto& unique = Unique[i];
+			std::cout << "\t" << i << ":" << std::endl;
+			for (const auto& node: unique) {
+				auto p = node;
+				while (p != nullptr) {
+					std::cout << "\t\t" << (uintptr_t)p << " " << p->ref << "\t";
+					p = p->next;
+				}
+				if (node != nullptr)
+					std::cout << std::endl;
+			}
+		}
 	}
 }

@@ -32,7 +32,7 @@ namespace dd {
 	constexpr unsigned int GCLIMIT1 = 250000;                // first garbage collection limit
 	constexpr unsigned int GCLIMIT_INC = 0;                  // garbage collection limit increment
 	constexpr unsigned int MAXREFCNT = 4000000;     // max reference count (saturates at this value)
-	constexpr unsigned int NODECOUNT_BUCKETS = 2000000;
+	constexpr unsigned int NODECOUNT_BUCKETS = 200000;
 	constexpr unsigned short NBUCKET = 32768;                  // no. of hash table buckets; must be a power of 2
 	constexpr unsigned short HASHMASK = NBUCKET - 1;  // must be nbuckets-1
 	constexpr unsigned short CTSLOTS = 16384;         // no. of computed table slots
@@ -40,7 +40,7 @@ namespace dd {
 	constexpr unsigned short TTSLOTS = 2048;          // Toffoli table slots
 	constexpr unsigned short TTMASK = TTSLOTS - 1;    // must be TTSLOTS-1
 	constexpr unsigned short CHUNK_SIZE = 2000;
-	constexpr unsigned short MAXN = 225;                       // max no. of inputs
+	constexpr unsigned short MAXN = 128;                       // max no. of inputs
 
     typedef struct Node *NodePtr;
 
@@ -154,6 +154,7 @@ namespace dd {
 	    std::vector<NodePtr> allocated_node_chunks;
 
 	    bool forceMatrixNormalization = false;
+	    std::unordered_set<NodePtr> visited{NODECOUNT_BUCKETS}; // 2e6
 
 	    /// private helper routines
 	    void initComputeTable();
@@ -165,8 +166,8 @@ namespace dd {
 	    Edge trace(Edge a, short v, const std::bitset<MAXN>& eliminate);
 	    Edge kronecker2(Edge x, Edge y);
 
-	    void checkSpecialMatrices(Edge &e);
-	    Edge UTlookup(Edge& e);
+	    void checkSpecialMatrices(NodePtr p);
+	    Edge& UTlookup(Edge& e);
 	    Edge CTlookup(const Edge& a, const Edge& b, CTkind which);
 	    void CTinsert(const Edge& a, const Edge& b, const Edge& r, CTkind which);
 
@@ -183,7 +184,7 @@ namespace dd {
 	    }
 	    static unsigned short TThash(unsigned short n, unsigned short t, const short line[]);
 
-	    unsigned int nodeCount(Edge e, std::unordered_set<NodePtr>& visited) const;
+	    unsigned int nodeCount(const Edge& e, std::unordered_set<NodePtr>& visited) const;
 	    ComplexValue getVectorElement(Edge e, unsigned long long int element);
 	    ListElementPtr newListElement();
 
@@ -262,7 +263,7 @@ namespace dd {
 	    /// \return the resulting decision diagram (and the changed variable map, which is returned as reference)
 	    Edge sifting(Edge in, std::map<unsigned short, unsigned short>& varMap);
 
-	    unsigned int size(Edge e) const;
+	    unsigned int size(const Edge& e);
 
 		/**
 		 * Get a single element of the vector or matrix represented by the dd with root edge e
@@ -293,14 +294,13 @@ namespace dd {
 	    Edge TTlookup(unsigned short n, unsigned short m, unsigned short t, const short line[]);
 
 	    // printing
-	    void printVector(Edge e);
+	    void printVector(const Edge& e);
 	    void printActive(int n);
-	    void printDD(Edge e, unsigned int limit);
+	    void printDD(const Edge& e, unsigned int limit);
+	    void printUniqueTable(unsigned short n);
 
 	    void toDot(Edge e, std::ostream& oss, bool isVector = false);
-	    static void toDot2(const Edge& e, std::ostream& oss, bool isVector = false, bool edgeLabels=false);
 	    void export2Dot(Edge basic, const std::string& outputFilename, bool isVector = false, bool show = true);
-	    static void export2Dot2(Edge basic, const std::string& outputFilename, bool isVector = false, bool edgeLabels=false, bool show = true);
 
 	    // statistics and info
 	    void statistics();

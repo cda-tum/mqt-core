@@ -298,7 +298,7 @@ namespace dd {
         auto cmag = br * br + bi * bi;
 
         r.r->val = (ar * br + ai * bi) / cmag;
-        r.i->val = (-ar * bi + ai * br) / cmag;
+        r.i->val = (ai * br - ar * bi) / cmag;
     }
 
     void ComplexNumbers::garbageCollect() {

@@ -1,8 +1,10 @@
 add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/DDpackage.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/DDcomplex.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/DDexport.cpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/DDpackage.h
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/DDcomplex.h)
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/DDcomplex.h
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/DDexport.h)
 add_library(JKQ::DDpackage ALIAS ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PUBLIC
                            $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
