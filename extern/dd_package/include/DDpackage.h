@@ -162,7 +162,7 @@ namespace dd {
 
         Edge add2(Edge x, Edge y);
 	    Edge multiply2(Edge& x, Edge& y, unsigned short var);
-	    ComplexValue fidelity(Edge x, Edge y, int var);
+	    ComplexValue innerProduct(Edge x, Edge y, int var);
 	    Edge trace(Edge a, short v, const std::bitset<MAXN>& eliminate);
 	    Edge kronecker2(Edge x, Edge y);
 
@@ -228,6 +228,7 @@ namespace dd {
 	    Edge normalize(Edge& e, bool cached);
 	    Edge partialTrace(Edge a, const std::bitset<MAXN>& eliminate);
 	    ComplexValue trace(Edge a);
+		ComplexValue innerProduct(Edge x, Edge y);
 	    fp fidelity(Edge x, Edge y);
 	    Edge kronecker(Edge x, Edge y);
 	    Edge extend(Edge e, unsigned short h = 0, unsigned short l = 0);

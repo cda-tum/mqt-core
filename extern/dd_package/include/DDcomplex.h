@@ -200,6 +200,7 @@ namespace dd {
 		    Cache_Avail->next->val = i;
         	return { Cache_Avail, Cache_Avail->next };
         }
+		
         inline Complex getCachedComplex() {
             assert(cacheCount >= 2);
             cacheCount -= 2;

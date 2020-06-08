@@ -1398,9 +1398,8 @@ namespace dd {
         std::cout << "\n";
     }
 
-    ComplexValue Package::fidelity(Edge x, Edge y, int var) {
-        if (x.p == nullptr || y.p == nullptr || CN::equalsZero(x.w) || CN::equalsZero(y.w))  // the 0 case
-        {
+    ComplexValue Package::innerProduct(Edge x, Edge y, int var) {
+        if (x.p == nullptr || y.p == nullptr || CN::equalsZero(x.w) || CN::equalsZero(y.w))  { // the 0 case
             return {0.0,0.0};
         }
 
@@ -1427,7 +1426,7 @@ namespace dd {
         }
 
         short w = varOrder[var - 1];
-        ComplexValue sum{ 0.0, 0.0};
+        ComplexValue sum{ 0.0, 0.0 };
 
         Edge e1{}, e2{};
         for (int i = 0; i < NEDGE; i++) {
@@ -1442,7 +1441,7 @@ namespace dd {
             } else {
                 e2 = y;
             }
-            ComplexValue cv = fidelity(e1, e2, var - 1);
+            ComplexValue cv = innerProduct(e1, e2, var - 1);
 
             sum.r += cv.r;
             sum.i += cv.i;
@@ -1458,9 +1457,9 @@ namespace dd {
         return {r.w.r->val, r.w.i->val};
     }
 
-    fp Package::fidelity(Edge x, Edge y) {
+    ComplexValue Package::innerProduct(Edge x, Edge y) {
 	    if (x.p == nullptr || y.p == nullptr || CN::equalsZero(x.w) || CN::equalsZero(y.w)) { // the 0 case
-	        return 0;
+	        return {0, 0};
 	    }
 
         const auto before = cn.cacheCount;
@@ -1468,10 +1467,15 @@ namespace dd {
         if(invVarOrder.at(y.p->v) > w) {
             w = invVarOrder[y.p->v];
         }
-        const ComplexValue fid = fidelity(x, y, w + 1);
+        const ComplexValue fid = innerProduct(x, y, w + 1);
 
         const auto after = cn.cacheCount;
         assert(after == before);
+        return fid;
+    }
+
+    fp Package::fidelity(Edge x, Edge y) {
+        const ComplexValue fid = innerProduct(x, y);
         return fid.r*fid.r + fid.i*fid.i;
     }
 
