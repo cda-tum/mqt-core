@@ -184,7 +184,7 @@ namespace dd {
 	    }
 	    static unsigned short TThash(unsigned short n, unsigned short t, const short line[]);
 
-	    unsigned int nodeCount(const Edge& e, std::unordered_set<NodePtr>& visited) const;
+	    unsigned int nodeCount(const Edge& e, std::unordered_set<NodePtr>& v) const;
 	    ComplexValue getVectorElement(Edge e, unsigned long long int element);
 	    ListElementPtr newListElement();
 

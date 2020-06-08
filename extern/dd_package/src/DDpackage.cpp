@@ -670,14 +670,14 @@ namespace dd {
     }
 
     // counting number of unique nodes in a DD
-    unsigned int Package::nodeCount(const Edge& e, std::unordered_set<NodePtr>& visited) const {
-        visited.insert(e.p);
+    unsigned int Package::nodeCount(const Edge& e, std::unordered_set<NodePtr>& v) const {
+        v.insert(e.p);
 
         unsigned int sum = 1;
         if (!isTerminal(e)) {
             for (const auto & edge : e.p->e) {
-                if (edge.p != nullptr && !visited.count(edge.p)) {
-                    sum += nodeCount(edge, visited);
+                if (edge.p != nullptr && !v.count(edge.p)) {
+                    sum += nodeCount(edge, v);
                 }
             }
         }
@@ -1467,11 +1467,11 @@ namespace dd {
         if(invVarOrder.at(y.p->v) > w) {
             w = invVarOrder[y.p->v];
         }
-        const ComplexValue fid = innerProduct(x, y, w + 1);
+        const ComplexValue ip = innerProduct(x, y, w + 1);
 
         const auto after = cn.cacheCount;
         assert(after == before);
-        return fid;
+        return ip;
     }
 
     fp Package::fidelity(Edge x, Edge y) {

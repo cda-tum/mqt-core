@@ -59,6 +59,7 @@ namespace dd {
 
         static ComplexTableEntry zeroEntry;
         static ComplexTableEntry oneEntry;
+        static ComplexTableEntry* moneEntryPointer;
 
         static constexpr unsigned short NBUCKET = 32768;
         static constexpr unsigned short CHUNK_SIZE = 2000;
