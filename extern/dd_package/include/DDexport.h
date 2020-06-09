@@ -34,8 +34,8 @@ namespace dd {
 	RGB colorFromPhase(const Complex& a);
 	fp thicknessFromMagnitude (const Complex& a);
 
-	std::ostream& header(const Edge& e, std::ostream& os);
-	std::ostream& coloredHeader(const Edge& e, std::ostream& os);
+	std::ostream& header(const Edge& e, std::ostream& os, bool edgeLabels);
+	std::ostream& coloredHeader(const Edge& e, std::ostream& os, bool edgeLabels);
 
 	std::ostream& matrixNodeMatrixAndXlabel(const Edge& e, std::ostream& os);
 	std::ostream& matrixNodeMiddleVar(const Edge& e, std::ostream& os);

@@ -6,7 +6,7 @@
 #include "DDexport.h"
 
 namespace dd {
-	std::ostream& header(const Edge& e, std::ostream& os) {
+	std::ostream& header(const Edge& e, std::ostream& os, bool edgeLabels) {
 		os << "digraph \"DD\" {graph[];node[shape=plain];edge[arrowhead=none]\n";
 		os << "root [label=\"\",shape=point,style=invis]\n";
 		os << "t [label=<<font point-size=\"20\">1</font>>,shape=box,tooltip=\"1\",width=0.3,height=0.3]\n";
@@ -15,20 +15,27 @@ namespace dd {
 		os << "root->" << toplabel << "[penwidth=\"" << mag <<  "\",tooltip=\"" << e.w << "\"";
 		if (!CN::equalsOne(e.w)) {
 			os << ",style=dashed";
+		    if (edgeLabels) {
+			    os << ",label=<<font point-size=\"8\">&nbsp;" << e.w << "</font>>";
+		    }
 		}
 		os << "]\n";
 
 		return os;
 	}
 
-	std::ostream& coloredHeader(const Edge& e, std::ostream& os) {
+	std::ostream& coloredHeader(const Edge& e, std::ostream& os, bool edgeLabels) {
 		os << "digraph \"DD\" {graph[];node[shape=plain];edge[arrowhead=none]\n";
 		os << "root [label=\"\",shape=point,style=invis]\n";
 		os << "t [label=<<font point-size=\"20\">1</font>>,shape=box,tooltip=\"1\",width=0.3,height=0.3]\n";
 		auto toplabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u;
 		auto mag = thicknessFromMagnitude(e.w);
 		auto color = colorFromPhase(e.w);
-		os << "root->" << toplabel << "[penwidth=\"" << mag << "\",tooltip=\"" << e.w << "\" color=\"#" << color << "\"]\n";
+		os << "root->" << toplabel << "[penwidth=\"" << mag << "\",tooltip=\"" << e.w << "\" color=\"#" << color << "\"";
+		if (edgeLabels) {
+			os << ",label=<<font point-size=\"8\">&nbsp;" << e.w << "</font>>";
+		}
+		os << "]\n";
 		return os;
 	}
 
@@ -81,7 +88,7 @@ namespace dd {
 		auto nodelabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
 		os << nodelabel << "[label=<";
 		os << R"(<font point-size="8"><table border="1" cellspacing="0" cellpadding="0" style="rounded">)";
-		os << R"(<tr><td colspan="2" border="0"><font point-size="20">q<sub><font point-size="12">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
+		os << R"(<tr><td colspan="2" border="0" cellpadding="1"><font point-size="20">q<sub><font point-size="12">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
 		os << R"(<td height="6" width="14" port="0" tooltip=")" << e.p->e[0].w << R"(" href=" " sides="RT">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
 		os << R"(<td height="6" width="14" port="2" tooltip=")" << e.p->e[2].w << R"(" href=" " sides="LT">)" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
 		os << "</tr></table></font>>,tooltip=\"q" << e.p->v << "\"]\n";
@@ -237,9 +244,9 @@ namespace dd {
 		// header, root and terminal declaration
 
 		if (colored) {
-			coloredHeader(e, oss);
+			coloredHeader(e, oss, false);
 		} else {
-			header(e, oss);
+			header(e, oss, false);
 		}
 
 		std::unordered_set<NodePtr> nodes{};
