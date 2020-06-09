@@ -245,7 +245,7 @@
         if (sym == expected)
             scan();
         else
-	        error("ERROR while parsing QASM file: expected '" + qasm::KindNames[expected] + "' but found '" + qasm::KindNames[sym] + "' in line " + std::to_string(la.line) + ", column " + std::to_string(la.col));
+	        error("Expected '" + qasm::KindNames[expected] + "' but found '" + qasm::KindNames[sym] + "' in line " + std::to_string(la.line) + ", column " + std::to_string(la.col));
     }
 
 
@@ -415,6 +415,17 @@
                 std::map<std::string, Expr*> paramMap;
                 unsigned short size = 1;
                 if (gateIt != compoundGates.end()) {
+                	if ((*gateIt).second.argumentNames.size() != arguments.size()) {
+                		std::ostringstream oss{};
+		                if ((*gateIt).second.argumentNames.size() < arguments.size()) {
+			                oss << "Too many arguments for ";
+		                } else {
+			                oss << "Too few arguments for ";
+		                }
+		                oss << (*gateIt).first << " gate! Expected " << (*gateIt).second.argumentNames.size() << ", but got " << arguments.size();
+                		error(oss.str());
+                	}
+
 	                for (size_t i = 0; i < arguments.size(); ++i) {
 		                argMap[gateIt->second.argumentNames[i]] = arguments[i];
 		                if (arguments[i].second > 1 && size != 1 && arguments[i].second != size)
@@ -427,8 +438,21 @@
 	                for (size_t i = 0; i < parameters.size(); ++i)
 		                paramMap[gateIt->second.parameterNames[i]] = parameters[i];
                 } else { // controlled Gate treatment
-                	if (arguments.size() > ncontrols + 1) {
-		                error("Too many arguments for controlled gate! Expected " + std::to_string(ncontrols) + "+1, but got " + std::to_string(arguments.size()));
+                	if (arguments.size() != ncontrols + 1) {
+		                std::ostringstream oss{};
+		                if (arguments.size() > ncontrols + 1) {
+			                oss << "Too many arguments for ";
+		                } else {
+			                oss << "Too few arguments for ";
+		                }
+		                if (ncontrols > 1) {
+		                    oss << ncontrols << "-";
+		                }
+		                oss << "controlled ";
+		                oss << (*cGateIt).first << "-";
+		                oss << "gate! Expected " << ncontrols << "+1, but got " << arguments.size();
+
+		                error(oss.str());
                 	}
 
 	                for (size_t i = 0; i < arguments.size(); ++i) {
