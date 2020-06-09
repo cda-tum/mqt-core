@@ -299,14 +299,14 @@ namespace qasm {
 
 		    streams.push(ss);
 		    lines.push(LineInfo(ch, line, col));
-		    line = 0;
+		    line = 1;
 		    col = 0;
 	    } else if (in->fail()) {
             std::cerr << "Failed to open file '" << filename << "'!" << std::endl;
         } else {
             streams.push(in);
             lines.push(LineInfo(ch, line, col));
-            line = 0;
+            line = 1;
             col = 0;
         }
         nextCh();

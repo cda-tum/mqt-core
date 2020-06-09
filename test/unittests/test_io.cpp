@@ -89,9 +89,17 @@ TEST_F(IO, importFromString) {
 }
 
 TEST_F(IO, controlled_op_acting_on_whole_register) {
-	std::string circuit_qasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[3];\nccx q,q[1];\n";
+	std::string circuit_qasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncx q,q[1];\n";
 	std::stringstream ss{circuit_qasm};
-	EXPECT_THROW(qc->import(ss, qc::OpenQASM), qasm::QASMParserException);
+	try {
+		qc->import(ss, qc::OpenQASM);
+		FAIL() << "Nothing thrown. Expected qasm::QASMParserException";
+	} catch (qasm::QASMParserException const & err) {
+		std::cout << err.what() << std::endl;
+		SUCCEED();
+	} catch (...) {
+		FAIL() << "Expected qasm::QASMParserException";
+	}
 }
 
 TEST_F(IO, invalid_real_header) {

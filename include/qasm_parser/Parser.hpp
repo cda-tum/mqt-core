@@ -151,7 +151,7 @@ namespace qasm {
 
 		void error [[ noreturn ]](const std::string& msg) const {
 			std::ostringstream oss{};
-			oss << "l:" << scanner->getLine() << "c:" << scanner->getCol() << " msg: " << msg;
+			oss << "l:" << t.line << " c:" << t.col << " msg: " << msg;
 			throw QASMParserException(oss.str());
 		}
 	};

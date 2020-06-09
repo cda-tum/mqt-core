@@ -513,6 +513,16 @@
                             }
                         }
                     } else if (auto cx = dynamic_cast<CXgate*>(gate)) {
+	                    // valid check
+	                    for (int i=0; i<argMap[cx->control].second; ++i) {
+		                    for (int j=0; j<argMap[cx->target].second; ++j) {
+			                    if (argMap[cx->control].first+i == argMap[cx->target].first+j) {
+				                    std::ostringstream oss{};
+				                    oss <<"Qubit " << argMap[cx->control].first+i << " cannot be control and target at the same time";
+				                    error(oss.str());
+			                    }
+		                    }
+	                    }
                         if (argMap[cx->control].second == 1 && argMap[cx->target].second == 1) {
                             op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap[cx->control].first), argMap[cx->target].first, qc::X);
                         } else if (argMap[cx->control].second == argMap[cx->target].second) {
