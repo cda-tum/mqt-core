@@ -80,10 +80,10 @@ namespace dd {
 	std::ostream& vectorNode(const Edge& e, std::ostream& os) {
 		auto nodelabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
 		os << nodelabel << "[label=<";
-		os << R"(<font point-size="10"><table border="1" cellspacing="0" cellpadding="0" style="rounded">)";
-		os << R"(<tr><td colspan="2" border="0" cellpadding="2"><font point-size="20">q<sub><font point-size="12">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
-		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href=" " sides="RT">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
-		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href=" " sides="LT">)" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
+		os << R"(<font point-size="8"><table border="1" cellspacing="0" cellpadding="0" style="rounded">)";
+		os << R"(<tr><td colspan="2" border="0"><font point-size="20">q<sub><font point-size="12">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
+		os << R"(<td height="6" width="14" port="0" tooltip=")" << e.p->e[0].w << R"(" href=" " sides="RT">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
+		os << R"(<td height="6" width="14" port="2" tooltip=")" << e.p->e[2].w << R"(" href=" " sides="LT">)" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
 		os << "</tr></table></font>>,tooltip=\"q" << e.p->v << "\"]\n";
 		return os;
 	}
