@@ -29,24 +29,30 @@ namespace dd {
 	};
 
 	fp hueToRGB(fp hue);
+	RGB hlsToRGB(const fp& h, const fp& l, const fp& s);
 
 	RGB colorFromPhase(const Complex& a);
 	fp thicknessFromMagnitude (const Complex& a);
 
 	std::ostream& header(const Edge& e, std::ostream& os);
 	std::ostream& coloredHeader(const Edge& e, std::ostream& os);
+
 	std::ostream& matrixNodeMatrixAndXlabel(const Edge& e, std::ostream& os);
 	std::ostream& matrixNodeMiddleVar(const Edge& e, std::ostream& os);
-
+	std::ostream& classicMatrixNode(const Edge& e, std::ostream& os);
 
 	std::ostream& vectorNode(const Edge& e, std::ostream& os);
-	std::ostream& matrixEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels=false);
-	std::ostream& coloredMatrixEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels=false);
-	std::ostream& vectorEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels=false);
-	std::ostream& coloredVectorEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels=false);
+	std::ostream& vectorNodeVectorLook(const Edge& e, std::ostream& os);
+	std::ostream& classicVectorNode(const Edge& e, std::ostream& os);
 
-	void toDot(const Edge& e, std::ostream& os, bool isVector = false, bool colored=true, bool edgeLabels=false);
-	void export2Dot(Edge basic, const std::string& outputFilename, bool isVector = false, bool colored=true, bool edgeLabels=false, bool show = true);
+	std::ostream& matrixEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels=false, bool classic=false);
+	std::ostream& coloredMatrixEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels=false, bool classic=false);
+
+	std::ostream& vectorEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels=false, bool classic=false);
+	std::ostream& coloredVectorEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels=false, bool classic=false);
+
+	void toDot(const Edge& e, std::ostream& os, bool isVector = false, bool colored=true, bool edgeLabels=false, bool classic=false);
+	void export2Dot(Edge basic, const std::string& outputFilename, bool isVector = false, bool colored=true, bool edgeLabels=false, bool classic=false, bool show = true);
 }
 
 
