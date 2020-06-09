@@ -27,10 +27,10 @@ namespace qasm {
 	class QASMParserException : public std::invalid_argument {
 		std::string msg;
 	public:
-		explicit QASMParserException(std::string  msg) : std::invalid_argument("QASM Parser Exception") {
+		explicit QASMParserException(const std::string& msg) : std::invalid_argument("QASM Parser Exception") {
 			std::stringstream ss{};
 			ss << "[qasm parser] " << msg;
-			msg = ss.str();
+			this->msg = ss.str();
 		}
 
 		const char *what() const noexcept override {
