@@ -81,6 +81,8 @@ namespace dd {
         transp,
         conjTransp,
         kron,
+        noise,
+        noNoise,
         none
     };
 
@@ -160,7 +162,7 @@ namespace dd {
 	    void initComputeTable();
 	    NodePtr getNode();
 
-        Edge add2(Edge x, Edge y);
+
 	    Edge multiply2(Edge& x, Edge& y, unsigned short var);
 	    ComplexValue innerProduct(Edge x, Edge y, int var);
 	    Edge trace(Edge a, short v, const std::bitset<MAXN>& eliminate);
@@ -168,8 +170,7 @@ namespace dd {
 
 	    void checkSpecialMatrices(NodePtr p);
 	    Edge& UTlookup(Edge& e);
-	    Edge CTlookup(const Edge& a, const Edge& b, CTkind which);
-	    void CTinsert(const Edge& a, const Edge& b, const Edge& r, CTkind which);
+
 
 	    static inline unsigned long CThash(const Edge& a, const Edge& b, const CTkind which) {
 		    const uintptr_t node_pointer = ((uintptr_t) a.p + (uintptr_t) b.p) >> 3u;
@@ -220,9 +221,13 @@ namespace dd {
 	    Edge makeGateDD(const Matrix2x2& mat, unsigned short n, const short *line);
 	    Edge makeGateDD(const std::array<ComplexValue,NEDGE>& mat, unsigned short n, const std::array<short,MAXN>& line);
 
+        Edge CTlookup(const Edge& a, const Edge& b, CTkind which);
+        void CTinsert(const Edge& a, const Edge& b, const Edge& r, CTkind which);
+
 	    // operations on DDs
 	    Edge multiply(Edge x, Edge y);
 	    Edge add(Edge x, Edge y);
+        Edge add2(Edge x, Edge y);
 	    Edge transpose(const Edge& a);
 	    Edge conjugateTranspose(Edge a);
 	    Edge normalize(Edge& e, bool cached);

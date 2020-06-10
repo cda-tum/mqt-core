@@ -713,7 +713,7 @@ namespace dd {
             }
 
             return r;
-        } else if (which == ad) {
+        } else if (which == ad || which == noise || which == noNoise) {
             ComplexValue aw{ a.w.r->val, a.w.i->val};
             ComplexValue bw{ b.w.r->val, b.w.i->val };
             const unsigned long i = CThash2(a.p, aw, b.p, bw, which);
@@ -741,7 +741,6 @@ namespace dd {
 
             CThit[which]++;
             return CTable1[i].r;
-
         } else {
             std::cerr << "Undefined kind in CTlookup: " << which << "\n";
             std::exit(1);
@@ -763,7 +762,7 @@ namespace dd {
             CTable2[i].r = r.p;
             CTable2[i].rw.r = r.w.r->val;
             CTable2[i].rw.i = r.w.i->val;
-        } else if (which == ad) {
+        } else if (which == ad || which == noise || which == noNoise) {
 	        ComplexValue aw{ a.w.r->val, a.w.i->val };
 	        ComplexValue bw{ b.w.r->val, b.w.i->val };
             const unsigned long i = CThash2(a.p, aw, b.p, bw, which);
