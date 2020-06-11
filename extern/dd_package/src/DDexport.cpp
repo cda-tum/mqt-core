@@ -12,7 +12,13 @@ namespace dd {
 		os << "t [label=<<font point-size=\"20\">1</font>>,shape=box,tooltip=\"1\",width=0.3,height=0.3]\n";
 		auto toplabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u;
 		auto mag = thicknessFromMagnitude(e.w);
-		os << "root->" << toplabel << "[penwidth=\"" << mag <<  "\",tooltip=\"" << e.w << "\"";
+		os << "root->";
+		if (dd::Package::isTerminal(e)) {
+			os << "t";
+		} else {
+			os << toplabel;
+		}
+		os<< "[penwidth=\"" << mag <<  "\",tooltip=\"" << e.w << "\"";
 		if (!CN::equalsOne(e.w)) {
 			os << ",style=dashed";
 		    if (edgeLabels) {
@@ -31,7 +37,13 @@ namespace dd {
 		auto toplabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u;
 		auto mag = thicknessFromMagnitude(e.w);
 		auto color = colorFromPhase(e.w);
-		os << "root->" << toplabel << "[penwidth=\"" << mag << "\",tooltip=\"" << e.w << "\" color=\"#" << color << "\"";
+		os << "root->";
+		if (dd::Package::isTerminal(e)) {
+			os << "t";
+		} else {
+			os << toplabel;
+		}
+		os << "[penwidth=\"" << mag << "\",tooltip=\"" << e.w << "\" color=\"#" << color << "\"";
 		if (edgeLabels) {
 			os << ",label=<<font point-size=\"8\">&nbsp;" << e.w << "</font>>";
 		}
