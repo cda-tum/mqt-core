@@ -16,7 +16,7 @@ namespace qc {
 		short control;
 	public:
 
-		ClassicControlledOperation(std::unique_ptr<Operation>& op, short control) : op(std::move(op)), control(control) {
+		ClassicControlledOperation(std::unique_ptr<Operation>& _op, short control) : op(std::move(_op)), control(control) {
 			nqubits = op->getNqubits();
 			name[0] = 'c';
 			name[1] = '_';
