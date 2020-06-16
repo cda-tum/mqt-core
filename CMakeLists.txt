@@ -46,8 +46,6 @@ add_subdirectory(src)
 
 option(BUILD_TESTS "Also build tests for QFR project" OFF)
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR BUILD_TESTS)
-	handle_submodule(googletest)
-
 	enable_testing()
 	include(GoogleTest)
 	add_subdirectory(test)
