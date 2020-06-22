@@ -21,10 +21,11 @@ namespace dd {
 		os<< "[penwidth=\"" << mag <<  "\",tooltip=\"" << e.w << "\"";
 		if (!CN::equalsOne(e.w)) {
 			os << ",style=dashed";
-		    if (edgeLabels) {
-			    os << ",label=<<font point-size=\"8\">&nbsp;" << e.w << "</font>>";
-		    }
 		}
+		if (edgeLabels) {
+		    os << ",label=<<font point-size=\"8\">&nbsp;" << e.w << "</font>>";
+		}
+
 		os << "]\n";
 
 		return os;
@@ -43,7 +44,7 @@ namespace dd {
 		} else {
 			os << toplabel;
 		}
-		os << "[penwidth=\"" << mag << "\",tooltip=\"" << e.w << "\" color=\"#" << color << "\"";
+		os << "[penwidth=\"" << mag << "\",tooltip=\"" << e.w << "\",color=\"#" << color << "\"";
 		if (edgeLabels) {
 			os << ",label=<<font point-size=\"8\">&nbsp;" << e.w << "</font>>";
 		}
@@ -55,10 +56,10 @@ namespace dd {
 		auto nodelabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
 		os << nodelabel << "[label=<";
 		os << R"(<font point-size="6"><table border="1" cellspacing="0" style="rounded"><tr>)";
-		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href=" " sides="RB">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td>";
-		os << R"(<td port="1" tooltip=")" << e.p->e[1].w << R"(" href=" " sides="LB">)" << (CN::equalsZero(e.p->e[1].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td></tr><tr>";
-		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href=" " sides="RT">)" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td>";
-		os << R"(<td port="3" tooltip=")" << e.p->e[3].w << R"(" href=" " sides="LT">)" << (CN::equalsZero(e.p->e[3].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td>";
+		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;" sides="RB">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td>";
+		os << R"(<td port="1" tooltip=")" << e.p->e[1].w << R"(" href="javascript:;" sides="LB">)" << (CN::equalsZero(e.p->e[1].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td></tr><tr>";
+		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href="javascript:;" sides="RT">)" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td>";
+		os << R"(<td port="3" tooltip=")" << e.p->e[3].w << R"(" href="javascript:;" sides="LT">)" << (CN::equalsZero(e.p->e[3].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td>";
 		os << "</tr></table></font>>,tooltip=\"q" << e.p->v << "\"" << R"(,xlabel=<<font point-size="8">q<sub><font point-size="6">)" << e.p->v << "</font></sub></font>>]\n";
 		return os;
 	}
@@ -67,15 +68,15 @@ namespace dd {
 		auto nodelabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
 		os << nodelabel << "[label=<";
 		os << R"(<font point-size="10"><table border="1" cellspacing="0" cellpadding="2" style="rounded">)";
-		os << R"(<tr><td colspan="2" rowspan="2" port="0" href=" " border="0" tooltip=")" << e.p->e[0].w << "\">" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>")
+		os << R"(<tr><td colspan="2" rowspan="2" port="0" href="javascript:;" border="0" tooltip=")" << e.p->e[0].w << "\">" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>")
 		<< R"(</td><td sides="R"></td><td sides="L"></td>)"
-		<< R"(<td colspan="2" rowspan="2" port="1" href=" " border="0" tooltip=")" << e.p->e[1].w << "\">" << (CN::equalsZero(e.p->e[1].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>")<< R"(</td></tr>)";
+		<< R"(<td colspan="2" rowspan="2" port="1" href="javascript:;" border="0" tooltip=")" << e.p->e[1].w << "\">" << (CN::equalsZero(e.p->e[1].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>")<< R"(</td></tr>)";
 		os << R"(<tr><td sides="R"></td><td sides="L"></td></tr>)";
 		os << R"(<tr><td colspan="2" sides="B"></td><td colspan="2" rowspan="2" border="0"><font point-size="24">q<sub><font point-size="16">)" << e.p->v << R"(</font></sub></font></td><td colspan="2" sides="B"></td></tr>)";
 		os << R"(<tr><td sides="T" colspan="2"></td><td sides="T" colspan="2"></td></tr>)";
-		os << R"(<tr><td colspan="2" rowspan="2" port="2" href=" " border="0" tooltip=")" << e.p->e[2].w << "\">" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>")
+		os << R"(<tr><td colspan="2" rowspan="2" port="2" href="javascript:;" border="0" tooltip=")" << e.p->e[2].w << "\">" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>")
 		   << R"(</td><td sides="R"></td><td sides="L"></td>)"
-		   << R"(<td colspan="2" rowspan="2" port="3" href=" " border="0" tooltip=")" << e.p->e[3].w << "\">" << (CN::equalsZero(e.p->e[3].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>")<< "</td></tr>";
+		   << R"(<td colspan="2" rowspan="2" port="3" href="javascript:;" border="0" tooltip=")" << e.p->e[3].w << "\">" << (CN::equalsZero(e.p->e[3].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>")<< "</td></tr>";
 		os << R"(<tr><td sides="R"></td><td sides="L"></td></tr>)";
 		os << "</table></font>>,tooltip=\"q" << e.p->v << "\"]\n";
 		return os;
@@ -86,12 +87,12 @@ namespace dd {
 		os << nodelabel << "[shape=circle, width=0.50, fixedsize=true, label=<";
 		os << R"(<font point-size="6"><table border="0" cellspacing="0" cellpadding="0">)";
 		os << R"(<tr><td colspan="4"><font point-size="18">q<sub><font point-size="10">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
-		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href=" ">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
+		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
 		os << "<td></td><td></td>";
-		os << R"(<td port="3" tooltip=")" << e.p->e[3].w << R"(" href=" ">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
+		os << R"(<td port="3" tooltip=")" << e.p->e[3].w << R"(" href="javascript:;">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
 		os << "</tr><tr><td></td>";
-		os << R"(<td port="1" tooltip=")" << e.p->e[1].w << R"(" href=" ">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
-		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href=" ">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
+		os << R"(<td port="1" tooltip=")" << e.p->e[1].w << R"(" href="javascript:;">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
+		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href="javascript:;">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
 		os << "<td></td></tr></table></font>>,tooltip=\"q" << e.p->v << "\"]\n";
 		return os;
 	}
@@ -101,8 +102,8 @@ namespace dd {
 		os << nodelabel << "[label=<";
 		os << R"(<font point-size="8"><table border="1" cellspacing="0" cellpadding="0" style="rounded">)";
 		os << R"(<tr><td colspan="2" border="0" cellpadding="1"><font point-size="20">q<sub><font point-size="12">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
-		os << R"(<td height="6" width="14" port="0" tooltip=")" << e.p->e[0].w << R"(" href=" " sides="RT">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
-		os << R"(<td height="6" width="14" port="2" tooltip=")" << e.p->e[2].w << R"(" href=" " sides="LT">)" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
+		os << R"(<td height="6" width="14" port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;" sides="RT">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
+		os << R"(<td height="6" width="14" port="2" tooltip=")" << e.p->e[2].w << R"(" href="javascript:;" sides="LT">)" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
 		os << "</tr></table></font>>,tooltip=\"q" << e.p->v << "\"]\n";
 		return os;
 	}
@@ -112,8 +113,8 @@ namespace dd {
 		os << nodelabel << "[label=<";
 		os << R"(<font point-size="10"><table border="1" cellspacing="0" cellpadding="2" style="rounded">)";
 		os << R"(<tr><td rowspan="2" sides="R" cellpadding="2"><font point-size="18">q<sub><font point-size="12">)" << e.p->v << "</font></sub></font></td>";
-		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href=" " sides="LB">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td></tr><tr>";
-		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href=" " sides="LT">)" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
+		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;" sides="LB">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td></tr><tr>";
+		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href="javascript:;" sides="LT">)" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
 		os << "</tr></table></font>>,tooltip=\"q" << e.p->v << "\"]\n";
 		return os;
 	}
@@ -123,8 +124,8 @@ namespace dd {
 		os << nodelabel << "[shape=circle, width=0.46, fixedsize=true, label=<";
 		os << R"(<font point-size="6"><table border="0" cellspacing="0" cellpadding="0">)";
 		os << R"(<tr><td colspan="2"><font point-size="18">q<sub><font point-size="10">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
-		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href=" ">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
-		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href=" ">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
+		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
+		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href="javascript:;">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
 		os << "</tr></table></font>>,tooltip=\"q" << e.p->v << "\"]\n";
 		return os;
 	}
@@ -156,9 +157,9 @@ namespace dd {
 		os << "[penwidth=\"" << mag << "\",tooltip=\"" << to.w << "\"";
 		if (!CN::equalsOne(to.w)) {
 			os << ",style=dashed";
-			if (edgeLabels) {
-				os << ",label=<<font point-size=\"8\">&nbsp;" << to.w << "</font>>";
-			}
+		}
+		if (edgeLabels) {
+			os << ",label=<<font point-size=\"8\">&nbsp;" << to.w << "</font>>";
 		}
 		os << "]\n";
 
@@ -191,10 +192,8 @@ namespace dd {
 		auto mag = thicknessFromMagnitude(to.w);
 		auto color = colorFromPhase(to.w);
 		os << "[penwidth=\"" << mag << "\",tooltip=\"" << to.w << "\" color=\"#" << color << "\"";
-		if (!CN::equalsOne(to.w)) {
-			if (edgeLabels) {
-				os << ",label=<<font point-size=\"8\">&nbsp;" << to.w << "</font>>";
-			}
+		if (edgeLabels) {
+			os << ",label=<<font point-size=\"8\">&nbsp;" << to.w << "</font>>";
 		}
 		os << "]\n";
 
@@ -217,9 +216,9 @@ namespace dd {
 		os << "[penwidth=\"" << mag << "\",tooltip=\"" << to.w << "\"";
 		if (!CN::equalsOne(to.w)) {
 			os << ",style=dashed";
-			if (edgeLabels) {
-				os << ",label=<<font point-size=\"8\">&nbsp;" << to.w << "</font>>";
-			}
+		}
+		if (edgeLabels) {
+			os << ",label=<<font point-size=\"8\">&nbsp;" << to.w << "</font>>";
 		}
 		os << "]\n";
 
@@ -241,10 +240,8 @@ namespace dd {
 		auto mag = thicknessFromMagnitude(to.w);
 		auto color = colorFromPhase(to.w);
 		os << "[penwidth=\"" << mag << "\",tooltip=\"" << to.w << "\" color=\"#" << color << "\"";
-		if (!CN::equalsOne(to.w)) {
-			if (edgeLabels) {
-				os << ",label=<<font point-size=\"8\">&nbsp;" << to.w << "</font>>";
-			}
+		if (edgeLabels) {
+			os << ",label=<<font point-size=\"8\">&nbsp;" << to.w << "</font>>";
 		}
 		os << "]\n";
 
@@ -256,9 +253,9 @@ namespace dd {
 		// header, root and terminal declaration
 
 		if (colored) {
-			coloredHeader(e, oss, false);
+			coloredHeader(e, oss, edgeLabels);
 		} else {
-			header(e, oss, false);
+			header(e, oss, edgeLabels);
 		}
 
 		std::unordered_set<NodePtr> nodes{};
@@ -279,7 +276,7 @@ namespace dd {
 			auto ret = nodes.emplace(node->p);
 			if (!ret.second) continue;
 
-			// node definition as HTML-like label (href=" " is used as workaround to make tooltips work)
+			// node definition as HTML-like label (href="javascript:;" is used as workaround to make tooltips work)
 			if (isVector) {
 				if (classic)
 					classicVectorNode(*node, oss);
