@@ -95,8 +95,7 @@ namespace qc {
 
 				break;
 			default:
-				std::cerr << "This constructor shall not be called for gate type (index) " << (int) type << std::endl;
-				exit(1);
+				throw QFRException("This constructor shall not be called for gate type (index) " + std::to_string((int)type));
 		}
 	}
 

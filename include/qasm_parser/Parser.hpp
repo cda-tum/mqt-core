@@ -83,11 +83,34 @@ namespace qasm {
 			}
 		};
 
+		struct CUgate : public BasisGate {
+			Expr *theta = nullptr;
+			Expr *phi = nullptr;
+			Expr *lambda = nullptr;
+			std::vector<std::string> controls;
+			std::string target;
+
+			CUgate(Expr *theta, Expr *phi, Expr *lambda, std::vector<std::string> controls, std::string  target) : theta(theta), phi(phi), lambda(lambda), controls(std::move(controls)), target(std::move(target)) { }
+
+			~CUgate() override {
+				delete theta;
+				delete phi;
+				delete lambda;
+			}
+		};
+
 		struct CXgate : public BasisGate {
 			std::string control;
 			std::string target;
 
 			CXgate(std::string  control, std::string  target) : control(std::move(control)), target(std::move(target)) { }
+		};
+
+		struct MCXgate : public BasisGate {
+			std::vector<std::string> controls;
+			std::string target;
+
+			MCXgate(std::vector<std::string> controls, std::string target) : controls(std::move(controls)), target(std::move(target)) { }
 		};
 		
 		struct CompoundGate {

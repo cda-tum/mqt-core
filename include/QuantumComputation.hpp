@@ -35,15 +35,6 @@ namespace qc {
 	static constexpr char DEFAULT_ANCREG[4]{"anc"};
 	static constexpr char DEFAULT_MCTREG[4]{"mct"};
 
-	class QFRException : public std::invalid_argument {
-		std::string msg;
-	public:
-		explicit QFRException(std::string  msg) : std::invalid_argument("QFR Exception"), msg(std::move(msg)) { }
-
-		const char *what() const noexcept override {
-			return msg.c_str();
-		}
-	};
 	class CircuitOptimizer;
 
 	class QuantumComputation {

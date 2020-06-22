@@ -166,12 +166,43 @@ TEST_F(DDFunctionality, non_unitary) {
 	auto dummy_map = std::map<unsigned short, unsigned short>{};
 	auto op = qc::NonUnitaryOperation(nqubits, {0,1,2,3}, {0,1,2,3});
 	EXPECT_FALSE(op.isUnitary());
-	EXPECT_EXIT(op.getDD(dd, line), ::testing::ExitedWithCode(1), "DD for non-unitary operation not available!");
-	EXPECT_EXIT(op.getInverseDD(dd, line), ::testing::ExitedWithCode(1), "DD for non-unitary operation not available!");
-	EXPECT_EXIT(op.getDD(dd, line, dummy_map), ::testing::ExitedWithCode(1), "DD for non-unitary operation not available!");
-	EXPECT_EXIT(op.getInverseDD(dd, line, dummy_map), ::testing::ExitedWithCode(1), "DD for non-unitary operation not available!");
+	try {
+		op.getDD(dd, line);
+		FAIL() << "Nothing thrown. Expected qc::QFRException";
+	} catch (qc::QFRException const & err) {
+		std::cout << err.what() << std::endl;
+		SUCCEED();
+	} catch (...) {
+		FAIL() << "Expected qc::QFRException";
+	}
+	try {
+		op.getInverseDD(dd, line);
+		FAIL() << "Nothing thrown. Expected qc::QFRException";
+	} catch (qc::QFRException const & err) {
+		std::cout << err.what() << std::endl;
+		SUCCEED();
+	} catch (...) {
+		FAIL() << "Expected qc::QFRException";
+	}
+	try {
+		op.getDD(dd, line, dummy_map);
+		FAIL() << "Nothing thrown. Expected qc::QFRException";
+	} catch (qc::QFRException const & err) {
+		std::cout << err.what() << std::endl;
+		SUCCEED();
+	} catch (...) {
+		FAIL() << "Expected qc::QFRException";
+	}
+	try {
+		op.getInverseDD(dd, line, dummy_map);
+		FAIL() << "Nothing thrown. Expected qc::QFRException";
+	} catch (qc::QFRException const & err) {
+		std::cout << err.what() << std::endl;
+		SUCCEED();
+	} catch (...) {
+		FAIL() << "Expected qc::QFRException";
+	}
 	EXPECT_TRUE(op.actsOn(0));
 	op = qc::NonUnitaryOperation(nqubits, {0,1,2,3});
 	EXPECT_TRUE(op.actsOn(0));
-
 }

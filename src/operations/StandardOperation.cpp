@@ -302,12 +302,12 @@ namespace qc {
 					return getPdagDD(dd, line, permutation);
 				}
 			default:
-				std::cerr << "DD for gate" << name << " not available!" << std::endl;
-				exit(1);
+				std::ostringstream oss{};
+				oss << "DD for gate" << name << " not available!";
+				throw QFRException(oss.str());
 		}
 		if (multiTarget && !controlled) {
-			std::cerr << "Multi target gates not implemented yet!" << std::endl;
-			exit(1);
+			throw QFRException("Multi target gates not implemented yet!");
 		} else {
 			return dd->makeGateDD(gm, nqubits, line);
 		}

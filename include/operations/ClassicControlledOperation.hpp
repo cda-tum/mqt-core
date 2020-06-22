@@ -53,14 +53,12 @@ namespace qc {
 			UNUSED(of)
 			UNUSED(qreg)
 			UNUSED(creg)
-			std::cerr << "Dumping of classically controlled gates currently not supported for qasm" << std::endl;
-			exit(1);
+			throw QFRException("Dumping of classically controlled gates currently not supported for qasm");
 		}
 
 		void dumpReal(std::ofstream& of) const override {
 			UNUSED(of)
-			std::cerr << "Dumping of classically controlled gates not possible in real format" << std::endl;
-			exit(1);
+			throw QFRException("Dumping of classically controlled gates not possible in real format");
 		}
 
 		void dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const override {
@@ -68,8 +66,7 @@ namespace qc {
 			UNUSED(qreg)
 			UNUSED(creg)
 			UNUSED(anc_reg_name)
-			std::cerr << "Dumping of classically controlled gates currently not supported for qiskit" << std::endl;
-			exit(1);
+			throw QFRException("Dumping of classically controlled gates currently not supported for qiskit");
 		}
 	};
 }

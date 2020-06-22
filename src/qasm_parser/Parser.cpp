@@ -438,9 +438,15 @@
 	                for (size_t i = 0; i < parameters.size(); ++i)
 		                paramMap[gateIt->second.parameterNames[i]] = parameters[i];
                 } else { // controlled Gate treatment
-                	if (arguments.size() != ncontrols + 1) {
+                	if (cGateIt->second.gates.size() > 1) {
 		                std::ostringstream oss{};
-		                if (arguments.size() > ncontrols + 1) {
+						oss << "Controlled operation '" << gateName << "' for which no definition was found, but a definition of a non-controlled gate '" << cGateName << "' was found. Arbitrary controlled gates without definition are currently not supported.";
+		                error(oss.str());
+                	}
+
+                	if (arguments.size() != ncontrols + cGateIt->second.argumentNames.size()) {
+		                std::ostringstream oss{};
+		                if (arguments.size() > ncontrols + cGateIt->second.argumentNames.size()) {
 			                oss << "Too many arguments for ";
 		                } else {
 			                oss << "Too few arguments for ";
@@ -450,7 +456,7 @@
 		                }
 		                oss << "controlled ";
 		                oss << (*cGateIt).first << "-";
-		                oss << "gate! Expected " << ncontrols << "+1, but got " << arguments.size();
+		                oss << "gate! Expected " << ncontrols << "+" << cGateIt->second.argumentNames.size() << ", but got " << arguments.size();
 
 		                error(oss.str());
                 	}
@@ -504,19 +510,19 @@
                 }
 
                 // identifier specifies just a single operation (U3 or CX)
-                if (gateIt->second.gates.size() == 1) {
+                if (gateIt != compoundGates.end() && gateIt->second.gates.size() == 1) {
                     auto gate = gateIt->second.gates.front();
                     if (auto u = dynamic_cast<Ugate *>(gate)) {
                         std::unique_ptr<Expr> theta(RewriteExpr(u->theta, paramMap));
                         std::unique_ptr<Expr> phi(RewriteExpr(u->phi, paramMap));
                         std::unique_ptr<Expr> lambda(RewriteExpr(u->lambda, paramMap));
 
-                        if (argMap[u->target].second == 1) {
-                            return std::make_unique<qc::StandardOperation>(nqubits, argMap[u->target].first, qc::U3, lambda->num, phi->num, theta->num);
+                        if (argMap.at(u->target).second == 1) {
+                            return std::make_unique<qc::StandardOperation>(nqubits, argMap.at(u->target).first, qc::U3, lambda->num, phi->num, theta->num);
                         }
                     } else if (auto cx = dynamic_cast<CXgate *>(gate)) {
-                        if (argMap[cx->control].second == 1 && argMap[cx->target].second == 1) {
-                            return std::make_unique<qc::StandardOperation>(nqubits, qc::Control(argMap[cx->control].first), argMap[cx->target].first, qc::X);
+                        if (argMap.at(cx->control).second == 1 && argMap.at(cx->target).second == 1) {
+                            return std::make_unique<qc::StandardOperation>(nqubits, qc::Control(argMap.at(cx->control).first), argMap.at(cx->target).first, qc::X);
                         }
                     }
                 }
@@ -528,40 +534,98 @@
                         std::unique_ptr<Expr> phi(RewriteExpr(u->phi, paramMap));
                         std::unique_ptr<Expr> lambda(RewriteExpr(u->lambda, paramMap));
 
-                        if (argMap[u->target].second == 1) {
-                            op.emplace_back<qc::StandardOperation>(nqubits, argMap[u->target].first, qc::U3, lambda->num, phi->num, theta->num);
+                        if (argMap.at(u->target).second == 1) {
+                            op.emplace_back<qc::StandardOperation>(nqubits, argMap.at(u->target).first, qc::U3, lambda->num, phi->num, theta->num);
                         } else {
                             // TODO: multiple targets could be useful here
-                            for (unsigned short j = 0; j < argMap[u->target].second; ++j) {
-                                op.emplace_back<qc::StandardOperation>(nqubits, argMap[u->target].first + j, qc::U3, lambda->num, phi->num, theta->num);
+                            for (unsigned short j = 0; j < argMap.at(u->target).second; ++j) {
+                                op.emplace_back<qc::StandardOperation>(nqubits, argMap.at(u->target).first + j, qc::U3, lambda->num, phi->num, theta->num);
                             }
                         }
                     } else if (auto cx = dynamic_cast<CXgate*>(gate)) {
 	                    // valid check
-	                    for (int i=0; i<argMap[cx->control].second; ++i) {
-		                    for (int j=0; j<argMap[cx->target].second; ++j) {
-			                    if (argMap[cx->control].first+i == argMap[cx->target].first+j) {
+	                    for (int i=0; i<argMap.at(cx->control).second; ++i) {
+		                    for (int j=0; j<argMap.at(cx->target).second; ++j) {
+			                    if (argMap.at(cx->control).first+i == argMap.at(cx->target).first+j) {
 				                    std::ostringstream oss{};
-				                    oss <<"Qubit " << argMap[cx->control].first+i << " cannot be control and target at the same time";
+				                    oss <<"Qubit " << argMap.at(cx->control).first+i << " cannot be control and target at the same time";
 				                    error(oss.str());
 			                    }
 		                    }
 	                    }
-                        if (argMap[cx->control].second == 1 && argMap[cx->target].second == 1) {
-                            op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap[cx->control].first), argMap[cx->target].first, qc::X);
-                        } else if (argMap[cx->control].second == argMap[cx->target].second) {
-                            for (unsigned short j = 0; j < argMap[cx->target].second; ++j)
-                                op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap[cx->control].first + j), argMap[cx->target].first + j, qc::X);
-                        } else if (argMap[cx->control].second == 1) {
+                        if (argMap.at(cx->control).second == 1 && argMap.at(cx->target).second == 1) {
+                            op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap.at(cx->control).first), argMap.at(cx->target).first, qc::X);
+                        } else if (argMap.at(cx->control).second == argMap.at(cx->target).second) {
+                            for (unsigned short j = 0; j < argMap.at(cx->target).second; ++j)
+                                op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap.at(cx->control).first + j), argMap.at(cx->target).first + j, qc::X);
+                        } else if (argMap.at(cx->control).second == 1) {
                             // TODO: multiple targets could be useful here
-                            for (unsigned short k = 0; k < argMap[cx->target].second; ++k)
-                                op.emplace_back<qc::StandardOperation>(nqubits,qc::Control(argMap[cx->control].first), argMap[cx->target].first + k, qc::X);
-                        } else if (argMap[cx->target].second == 1) {
-                            for (unsigned short l = 0; l < argMap[cx->control].second; ++l)
-                                op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap[cx->control].first + l), argMap[cx->target].first, qc::X);
+                            for (unsigned short k = 0; k < argMap.at(cx->target).second; ++k)
+                                op.emplace_back<qc::StandardOperation>(nqubits,qc::Control(argMap.at(cx->control).first), argMap.at(cx->target).first + k, qc::X);
+                        } else if (argMap.at(cx->target).second == 1) {
+                            for (unsigned short l = 0; l < argMap.at(cx->control).second; ++l)
+                                op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap.at(cx->control).first + l), argMap.at(cx->target).first, qc::X);
                         } else {
 	                        error("Register size does not match for CX gate!");
                         }
+                    } else if (	auto mcx = dynamic_cast<MCXgate*>(gate)) {
+                    	// valid check
+                    	for (const auto& control: mcx->controls) {
+                    		if (argMap.at(control).second != 1) {
+                    			error("Multi-controlled gates with whole qubit registers not supported");
+                    		}
+                    		if (argMap.at(control) == argMap.at(mcx->target)) {
+			                    std::ostringstream oss{};
+			                    oss <<"Qubit " << argMap.at(mcx->target).first << " cannot be control and target at the same time";
+			                    error(oss.str());
+                    		}
+                    		if (std::count(mcx->controls.begin(), mcx->controls.end(), control) > 1) {
+			                    std::ostringstream oss{};
+			                    oss <<"Qubit " << argMap.at(control).first << " cannot be control more than once";
+			                    error(oss.str());
+                    		}
+                    	}
+                    	if (argMap.at(mcx->target).second != 1) {
+		                    error("Multi-controlled gates with whole qubit registers not supported");
+	                    }
+
+                    	std::vector<qc::Control> controls{};
+                    	for (const auto& control: mcx->controls)
+                    		controls.emplace_back(argMap.at(control).first);
+                    	op.emplace_back<qc::StandardOperation>(nqubits, controls, argMap.at(mcx->target).first);
+                    } else if ( auto cu = dynamic_cast<CUgate*>(gate)) {
+	                    // valid check
+	                    for (const auto& control: cu->controls) {
+		                    if (argMap.at(control).second != 1) {
+			                    error("Multi-controlled gates with whole qubit registers not supported");
+		                    }
+		                    if (argMap.at(control) == argMap.at(cu->target)) {
+			                    std::ostringstream oss{};
+			                    oss <<"Qubit " << argMap.at(cu->target).first << " cannot be control and target at the same time";
+			                    error(oss.str());
+		                    }
+		                    if (std::count(cu->controls.begin(), cu->controls.end(), control) > 1) {
+			                    std::ostringstream oss{};
+			                    oss <<"Qubit " << argMap.at(control).first << " cannot be control more than once";
+			                    error(oss.str());
+		                    }
+	                    }
+
+	                    std::unique_ptr<Expr> theta(RewriteExpr(cu->theta, paramMap));
+	                    std::unique_ptr<Expr> phi(RewriteExpr(cu->phi, paramMap));
+	                    std::unique_ptr<Expr> lambda(RewriteExpr(cu->lambda, paramMap));
+
+	                    std::vector<qc::Control> controls{};
+	                    for (const auto& control: cu->controls)
+		                    controls.emplace_back(argMap.at(control).first);
+
+	                    if (argMap.at(cu->target).second == 1) {
+		                    op.emplace_back<qc::StandardOperation>(nqubits, controls, argMap.at(cu->target).first, qc::U3, lambda->num, phi->num, theta->num);
+	                    } else {
+		                    error("Multi-controlled gates with whole qubit registers not supported");
+	                    }
+                    } else {
+                    	error("Could not cast to any known gate type");
                     }
                 }
                 return std::make_unique<qc::CompoundOperation>(std::move(op));
@@ -607,6 +671,21 @@
         IdList(gate.argumentNames);
         check(Token::Kind::lbrace);
 
+	    auto cGateName = gateName;
+	    unsigned int ncontrols = 0;
+	    while (cGateName.front() == 'c') {
+		    cGateName = cGateName.substr(1);
+		    ncontrols++;
+	    }
+	    // see if non-controlled version (consisting of a single gate) already available
+	    auto controlledGateIt = compoundGates.find(cGateName);
+	    if (controlledGateIt != compoundGates.end() && controlledGateIt->second.gates.size() <= 1) {
+		    // skip over gate declaration
+	    	while (sym != Token::Kind::rbrace) scan();
+	    	scan();
+	    	return;
+	    }
+
         while (sym != Token::Kind::rbrace) {
             if (sym == Token::Kind::ugate) {
                 scan();
@@ -634,42 +713,118 @@
                 scan();
                 std::string name = t.str;
 
-                std::vector<Expr *> parameters;
-                std::vector<std::string> arguments;
-                if (sym == Token::Kind::lpar) {
-                    scan();
-                    if (sym != Token::Kind::rpar) {
-                        ExpList(parameters);
-                    }
-                    check(Token::Kind::rpar);
-                }
-                IdList(arguments);
-                check(Token::Kind::semicolon);
+	            cGateName = name;
+	            ncontrols = 0;
+	            while (cGateName.front() == 'c') {
+		            cGateName = cGateName.substr(1);
+		            ncontrols++;
+	            }
 
-                CompoundGate g = compoundGates[name];
-                std::map<std::string, std::string> argsMap;
-                for (unsigned long i = 0; i < arguments.size(); i++) {
-                    argsMap[g.argumentNames[i]] = arguments[i];
-                }
+	            // see if non-controlled version already available
+	            auto gateIt = compoundGates.find(name);
+	            auto cGateIt = compoundGates.find(cGateName);
+	            if (gateIt != compoundGates.end() || cGateIt != compoundGates.end()) {
+		            std::vector<Expr *> parameters;
+		            std::vector<std::string> arguments;
+		            if (sym == Token::Kind::lpar) {
+			            scan();
+			            if (sym != Token::Kind::rpar) {
+				            ExpList(parameters);
+			            }
+			            check(Token::Kind::rpar);
+		            }
+		            IdList(arguments);
+		            check(Token::Kind::semicolon);
 
-                std::map<std::string, Expr *> paramsMap;
-                for (unsigned long i = 0; i < parameters.size(); i++) {
-                    paramsMap[g.parameterNames[i]] = parameters[i];
-                }
+		            std::map<std::string, std::string> argMap;
+		            std::map<std::string, Expr *> paramMap;
+		            if (gateIt != compoundGates.end()) {
+			            if ((*gateIt).second.argumentNames.size() != arguments.size()) {
+				            std::ostringstream oss{};
+				            if ((*gateIt).second.argumentNames.size() < arguments.size()) {
+					            oss << "Too many arguments for ";
+				            } else {
+					            oss << "Too few arguments for ";
+				            }
+				            oss << (*gateIt).first << " gate! Expected " << (*gateIt).second.argumentNames.size() << ", but got " << arguments.size();
+				            error(oss.str());
+			            }
 
-                for (auto & it : g.gates) {
-                    if (auto u = dynamic_cast<Ugate *>(it)) {
-                        gate.gates.push_back(new Ugate(RewriteExpr(u->theta, paramsMap), RewriteExpr(u->phi, paramsMap), RewriteExpr(u->lambda, paramsMap), argsMap[u->target]));
-                    } else if (auto cx = dynamic_cast<CXgate *>(it)) {
-                        gate.gates.push_back(new CXgate(argsMap[cx->control], argsMap[cx->target]));
-                    } else {
-	                    error("Unexpected gate in GateDecl!");
-                    }
-                }
+			            for (size_t i = 0; i < arguments.size(); ++i) {
+				            argMap[gateIt->second.argumentNames[i]] = arguments[i];
+			            }
+			            for (size_t i = 0; i < parameters.size(); ++i)
+				            paramMap[gateIt->second.parameterNames[i]] = parameters[i];
 
-                for (auto & parameter : parameters) {
-                    delete parameter;
-                }
+			            for (auto & it : gateIt->second.gates) {
+				            if (auto u = dynamic_cast<Ugate *>(it)) {
+					            gate.gates.push_back(new Ugate(RewriteExpr(u->theta, paramMap), RewriteExpr(u->phi, paramMap), RewriteExpr(u->lambda, paramMap), argMap.at(u->target)));
+				            } else if (auto cx = dynamic_cast<CXgate *>(it)) {
+					            gate.gates.push_back(new CXgate(argMap.at(cx->control), argMap.at(cx->target)));
+				            } else if (auto cu = dynamic_cast<CUgate *>(it)) {
+				            	std::vector<std::string> controls{};
+				            	for (const auto& control:cu->controls)
+				            		controls.emplace_back(argMap.at(control));
+					            gate.gates.push_back(new CUgate(RewriteExpr(cu->theta, paramMap), RewriteExpr(cu->phi, paramMap), RewriteExpr(cu->lambda, paramMap), controls, argMap.at(cu->target)));
+				            } else if (auto mcx = dynamic_cast<MCXgate *>(it)) {
+					            std::vector<std::string> controls{};
+					            for (const auto& control:mcx->controls)
+						            controls.emplace_back(argMap.at(control));
+					            gate.gates.push_back(new MCXgate(controls, argMap.at(mcx->target)));
+				            } else {
+					            error("Unexpected gate in GateDecl!");
+				            }
+			            }
+		            } else {
+		            	if (cGateIt->second.gates.size() != 1) {
+				            throw QASMParserException("Gate declaration with controlled gates inferred from internal qelib1.inc not yet implemented.");
+			            }
+
+			            if (arguments.size() != ncontrols + 1) {
+				            std::ostringstream oss{};
+				            if (arguments.size() > ncontrols + 1) {
+					            oss << "Too many arguments for ";
+				            } else {
+					            oss << "Too few arguments for ";
+				            }
+				            if (ncontrols > 1) {
+					            oss << ncontrols << "-";
+				            }
+				            oss << "controlled ";
+				            oss << (*cGateIt).first << "-";
+				            oss << "gate! Expected " << ncontrols << "+1, but got " << arguments.size();
+
+				            error(oss.str());
+			            }
+
+			            for (size_t i = 0; i < arguments.size(); ++i)
+				            argMap["q"+std::to_string(i)] = arguments[i];
+
+			            for (size_t i = 0; i < parameters.size(); ++i)
+				            paramMap[cGateIt->second.parameterNames[i]] = parameters[i];
+
+			            if (cGateName == "x" || cGateName == "X") {
+				            std::vector<std::string> controls{};
+				            for (size_t i = 0; i < arguments.size()-1; ++i)
+					            controls.emplace_back(arguments[i]);
+				            gate.gates.push_back(new MCXgate(controls, arguments.back()));
+			            } else {
+				            std::vector<std::string> controls{};
+				            for (size_t i = 0; i < arguments.size()-1; ++i)
+					            controls.emplace_back(arguments[i]);
+				            if (auto u = dynamic_cast<Ugate *>(cGateIt->second.gates.at(0))) {
+					            gate.gates.push_back(new CUgate(RewriteExpr(u->theta, paramMap), RewriteExpr(u->phi, paramMap), RewriteExpr(u->lambda, paramMap), controls, arguments.back()));
+				            } else {
+				            	throw QASMParserException("Could not cast to UGate in gate declaration.");
+				            }
+			            }
+		            }
+		            for (auto & parameter : parameters) {
+			            delete parameter;
+		            }
+	            } else {
+		            error("Undefined gate " + t.str);
+	            }
             } else if (sym == Token::Kind::barrier) {
                 scan();
                 std::vector<std::string> arguments;

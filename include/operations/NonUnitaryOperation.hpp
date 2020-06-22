@@ -29,8 +29,7 @@ namespace qc {
 		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister, OpType op = Reset);
 
 		dd::Edge getDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&) const override {
-			std::cerr << "DD for non-unitary operation not available!" << std::endl;
-			exit(1);
+			throw QFRException("DD for non-unitary operation not available!");
 		}
 
 		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {

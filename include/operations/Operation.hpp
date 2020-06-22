@@ -22,6 +22,16 @@
 #define UNUSED(x) {(void) x;}
 
 namespace qc {
+	class QFRException : public std::invalid_argument {
+		std::string msg;
+	public:
+		explicit QFRException(std::string  msg) : std::invalid_argument("QFR Exception"), msg(std::move(msg)) { }
+
+		const char *what() const noexcept override {
+			return msg.c_str();
+		}
+	};
+
 	using regnames_t=std::vector<std::pair<std::string, std::string>>;
 	enum Format {
 		Real, OpenQASM, GRCS, Qiskit
