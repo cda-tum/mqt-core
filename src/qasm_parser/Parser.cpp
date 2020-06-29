@@ -13,6 +13,16 @@
      ***/
     Parser::Expr* Parser::Exponentiation() {
         Expr* x;
+	    if (sym == Token::Kind::minus) {
+		    scan();
+		    x = Exponentiation();
+		    if (x->kind == Expr::Kind::number)
+			    x->num= -x->num;
+		    else
+			    x = new Expr(Expr::Kind::sign, 0, x);
+		    return x;
+	    }
+
         if(sym == Token::Kind::real) {
             scan();
             return new Expr(Expr::Kind::number, t.valReal);
@@ -396,6 +406,46 @@
 		        ncontrols++;
 	        }
 
+	        // special treatment for controlled swap
+	        if (cGateName == "swap") {
+		        std::vector<std::pair<unsigned short , unsigned short>> arguments;
+		        ArgList(arguments);
+		        check(Token::Kind::semicolon);
+		        registerMap argMap;
+		        if (arguments.size() != ncontrols + 2) {
+			        std::ostringstream oss{};
+			        if (arguments.size() > ncontrols + 2) {
+				        oss << "Too many arguments for ";
+			        } else {
+				        oss << "Too few arguments for ";
+			        }
+			        if (ncontrols > 1) {
+				        oss << ncontrols << "-";
+			        }
+			        oss << "controlled swap-gate! Expected " << ncontrols << "+" << 2 << ", but got " << arguments.size();
+			        error(oss.str());
+		        }
+
+		        for (size_t i = 0; i < arguments.size(); ++i) {
+			        argMap["q"+std::to_string(i)] = arguments[i];
+			        if (arguments[i].second > 1 )
+				        error("cSWAP with whole qubit registers not yet implemented");
+		        }
+
+		        std::vector<qc::Control> controls{};
+		        for (unsigned int j = 0; j < ncontrols; ++j) {
+			        auto arg = "q"+std::to_string(j);
+			        controls.emplace_back(argMap.at(arg).first);
+		        }
+
+		        auto targ = "q"+std::to_string(ncontrols);
+		        auto targ2 = "q"+std::to_string(ncontrols+1);
+		        return std::make_unique<qc::StandardOperation>(nqubits, controls,
+		                                                       argMap.at(targ).first,
+		                                                       argMap.at(targ2).first,
+		                                                       qc::SWAP);
+	        }
+
 	        auto gateIt = compoundGates.find(gateName);
 	        auto cGateIt = compoundGates.find(cGateName);
             if (gateIt != compoundGates.end() || cGateIt != compoundGates.end()) {
@@ -481,14 +531,14 @@
                         std::vector<qc::Control> controls{};
                         for (unsigned int j = 0; j < ncontrols; ++j) {
 	                        auto arg = (gateIt != compoundGates.end())? gateIt->second.argumentNames[j]: ("q"+std::to_string(j));
-	                        controls.emplace_back(argMap[arg].first);
+	                        controls.emplace_back(argMap.at(arg).first);
                         }
 
 	                    auto targ = (gateIt != compoundGates.end())? gateIt->second.argumentNames.back(): ("q"+std::to_string(ncontrols));
 
 	                    // special treatment for Toffoli
                         if (cGateName == "x" && ncontrols > 1) {
-	                        return std::make_unique<qc::StandardOperation>(nqubits, controls, argMap[targ].first);
+	                        return std::make_unique<qc::StandardOperation>(nqubits, controls, argMap.at(targ).first);
                         }
 
                         auto cGate = cGateIt->second.gates.front();
@@ -500,7 +550,7 @@
                             std::unique_ptr<Expr> phi(RewriteExpr(cu->phi, paramMap));
                             std::unique_ptr<Expr> lambda(RewriteExpr(cu->lambda, paramMap));
 
-                            return std::make_unique<qc::StandardOperation>(nqubits, controls, argMap[targ].first, qc::U3, lambda->num, phi->num, theta->num);
+                            return std::make_unique<qc::StandardOperation>(nqubits, controls, argMap.at(targ).first, qc::U3, lambda->num, phi->num, theta->num);
                         } else {
 	                        error("Cast to u-Gate not possible for controlled operation.");
                         }

@@ -28,18 +28,9 @@ namespace qc {
 		// General constructor
 		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister, OpType op = Reset);
 
-		dd::Edge getDD(std::unique_ptr<dd::Package>&, std::array<short, MAX_QUBITS>&) const override {
-			throw QFRException("DD for non-unitary operation not available!");
-		}
-
-		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-			return getDD(dd, line);
-		}
-
-		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>&) const override {
-			return getDD(dd, line);
-		}
-
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override;
+		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override;
+		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>&) const override;
 		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>&) const override {
 			return getInverseDD(dd, line);
 		}
@@ -52,20 +43,7 @@ namespace qc {
 			return true;
 		}
 
-		bool actsOn(unsigned short i) override {
-			if (type != Measure) {
-				for (const auto t:targets) {
-					if (t == i)
-						return true;
-				}
-			} else {
-				for (const auto c:controls) {
-					if (c.qubit == i)
-						return true;
-				}
-			}
-			return false;
-		}
+		bool actsOn(unsigned short i) override;
 
 		std::ostream& print(std::ostream& os) const override;
 		

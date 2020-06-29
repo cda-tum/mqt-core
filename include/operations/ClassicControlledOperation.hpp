@@ -13,15 +13,19 @@ namespace qc {
 	class ClassicControlledOperation : public Operation {
 	protected:
 		std::unique_ptr<Operation> op;
-		short control;
+		std::pair<unsigned short, unsigned short> controlRegister{};
+		unsigned int expectedValue = 1u;
 	public:
 
-		ClassicControlledOperation(std::unique_ptr<Operation>& _op, short control) : op(std::move(_op)), control(control) {
+		// Applies operation `_op` if the creg starting at index `control` has the expected value
+		ClassicControlledOperation(std::unique_ptr<Operation>& _op, std::pair<unsigned short, unsigned short>& controlRegister, unsigned int expectedValue = 1u) : op(std::move(_op)), controlRegister(controlRegister), expectedValue(expectedValue) {
 			nqubits = op->getNqubits();
 			name[0] = 'c';
 			name[1] = '_';
 			std::strcpy(name + 2, op->getName());
-			parameter[0] = control;
+			parameter[0] = controlRegister.first;
+			parameter[1] = controlRegister.second;
+			parameter[2] = expectedValue;
 			type = ClassicControlled;
 		}
 
@@ -39,6 +43,18 @@ namespace qc {
 
 		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
 			return op->getInverseDD(dd, line, permutation);
+		}
+
+		auto getControlRegister() const {
+			return controlRegister;
+		}
+
+		auto getExpectedValue() const {
+			return expectedValue;
+		}
+
+		auto getOperation() const {
+			return op.get();
 		}
 
 		bool isUnitary() const override {

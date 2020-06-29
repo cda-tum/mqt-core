@@ -43,6 +43,14 @@ namespace qc {
 			return true;
 		}
 
+		bool isNonUnitaryOperation() const override {
+			bool isNonUnitary = false;
+			for (const auto& op: ops) {
+				isNonUnitary |= op->isNonUnitaryOperation();
+			}
+			return isNonUnitary;
+		}
+
 		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
 			dd::Edge e = dd->makeIdent(0, short(nqubits - 1));
 			for (auto& op: ops) {

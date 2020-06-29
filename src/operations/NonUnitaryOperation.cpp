@@ -23,7 +23,7 @@ namespace qc {
 		parameter[0] = n;
 	}	
 
-	// Snapshot constructor
+	// General constructor
 	NonUnitaryOperation::NonUnitaryOperation(const unsigned short nq, const std::vector<unsigned short>& qubitRegister, OpType op) {
 		type = op;
 		nqubits  = nq;
@@ -205,5 +205,47 @@ namespace qc {
 				std::cerr << "Non-unitary operation with invalid type " << type << " detected. Proceed with caution!" << std::endl;
 				break;
 		}
+	}
+
+	dd::Edge NonUnitaryOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const {
+		// these operations do not alter the current state
+		if (type == ShowProbabilities || type == Barrier || type == Snapshot) {
+			return dd->makeIdent(0, static_cast<short>(nqubits-1));
+		}
+
+		throw QFRException("DD for non-unitary operation not available!");
+	}
+
+	dd::Edge NonUnitaryOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& perm) const {
+		// these operations do not alter the current state
+		if (type == ShowProbabilities || type == Barrier || type == Snapshot) {
+			return dd->makeIdent(0, static_cast<short>(nqubits-1));
+		}
+
+		throw QFRException("DD for non-unitary operation not available!");
+	}
+
+	dd::Edge NonUnitaryOperation::getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const {
+		// these operations do not alter the current state
+		if (type == ShowProbabilities || type == Barrier || type == Snapshot) {
+			return dd->makeIdent(0, static_cast<short>(nqubits-1));
+		}
+
+		throw QFRException("Non-unitary operation is not reversible! No inverse DD is available.");
+	}
+
+	bool NonUnitaryOperation::actsOn(unsigned short i) {
+		if (type != Measure) {
+			for (const auto t:targets) {
+				if (t == i)
+					return true;
+			}
+		} else {
+			for (const auto c:controls) {
+				if (c.qubit == i)
+					return true;
+			}
+		}
+		return false;
 	}
 }

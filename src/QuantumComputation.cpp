@@ -307,7 +307,7 @@ namespace qc {
 			} else if (p.sym == Token::Kind::_if) {
 				p.scan();
 				p.check(Token::Kind::lpar);
-				p.check(Token::Kind::nninteger);
+				p.check(Token::Kind::identifier);
 				std::string creg = p.t.str;
 				p.check(Token::Kind::eq);
 				p.check(Token::Kind::nninteger);
@@ -318,7 +318,7 @@ namespace qc {
 				if (it == p.cregs.end()) {
 					p.error("Error in if statement: " + creg + " is not a creg!");
 				} else {
-					emplace_back<ClassicControlledOperation>(p.Qop(), it->second.first + n);
+					emplace_back<ClassicControlledOperation>(p.Qop(), it->second, n);
 				}
 			} else if (p.sym == Token::Kind::snapshot) {
 				p.scan();
@@ -852,10 +852,6 @@ namespace qc {
 		dd::Edge e = createInitialMatrix(dd);
 
 		for (auto & op : ops) {
-			if (!op->isUnitary()) {
-				throw QFRException("[buildFunctionality] Functionality not unitary.");
-			}
-
 			auto tmp = dd->multiply(op->getDD(dd, line, map), e);
 
 			dd->incRef(tmp);
@@ -884,10 +880,6 @@ namespace qc {
 		dd::Edge e = createInitialMatrix(dd);
 
 		for (auto & op : ops) {
-			if (!op->isUnitary()) {
-				throw QFRException("[buildFunctionality] Functionality not unitary.");
-			}
-
 			auto tmp = dd->multiply(op->getDD(dd, line, map), e);
 			// call the dynamic reordering routine
 			// TODO: currently this performs the reordering after every operation. this may be changed
@@ -930,10 +922,6 @@ namespace qc {
 		dd->incRef(e);
 
 		for (auto& op : ops) {
-			if (!op->isUnitary()) {
-				throw QFRException("[simulate] Functionality not unitary.");
-			}
-
 			auto tmp = dd->multiply(op->getDD(dd, line, map), e);
 
 			dd->incRef(tmp);
@@ -961,10 +949,6 @@ namespace qc {
 		dd->incRef(e);
 
 		for (auto& op : ops) {
-			if (!op->isUnitary()) {
-				throw QFRException("[simulate] Functionality not unitary.");
-			}
-
 			auto tmp = dd->multiply(op->getDD(dd, line, map), e);
 
 			// call the dynamic reordering routine
