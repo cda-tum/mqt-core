@@ -35,6 +35,7 @@ namespace dd {
 		os << "digraph \"DD\" {graph[];node[shape=plain];edge[arrowhead=none]\n";
 		os << "root [label=\"\",shape=point,style=invis]\n";
 		os << "t [label=<<font point-size=\"20\">1</font>>,shape=box,tooltip=\"1\",width=0.3,height=0.3]\n";
+
 		auto toplabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u;
 		auto mag = thicknessFromMagnitude(e.w);
 		auto color = colorFromPhase(e.w);
@@ -84,15 +85,36 @@ namespace dd {
 
 	std::ostream& classicMatrixNode(const Edge& e, std::ostream& os) {
 		auto nodelabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
-		os << nodelabel << "[shape=circle, width=0.50, fixedsize=true, label=<";
+		os << nodelabel << "[shape=circle, width=0.53, fixedsize=true, label=<";
 		os << R"(<font point-size="6"><table border="0" cellspacing="0" cellpadding="0">)";
 		os << R"(<tr><td colspan="4"><font point-size="18">q<sub><font point-size="10">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
-		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
+		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;">)";
+		if (CN::equalsZero(e.p->e[0].w)) {
+			os << R"(<font point-size="8">&nbsp;0 </font>)";
+		} else {
+			os << R"(<font color="white">&nbsp;0 </font>)";
+		}
+		os << "</td>";
 		os << "<td></td><td></td>";
-		os << R"(<td port="3" tooltip=")" << e.p->e[3].w << R"(" href="javascript:;">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
+		os << R"(<td port="3" tooltip=")" << e.p->e[3].w << R"(" href="javascript:;">)";
+		if (CN::equalsZero(e.p->e[3].w)) {
+			os << R"(<font point-size="8">&nbsp;0 </font>)";
+		} else {
+			os << R"(<font color="white">&nbsp;0 </font>)";
+		}		os << "</td>";
 		os << "</tr><tr><td></td>";
-		os << R"(<td port="1" tooltip=")" << e.p->e[1].w << R"(" href="javascript:;">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
-		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href="javascript:;">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
+		os << R"(<td port="1" tooltip=")" << e.p->e[1].w << R"(" href="javascript:;">)";
+		if (CN::equalsZero(e.p->e[1].w)) {
+			os << R"(<font point-size="8">&nbsp;0 </font>)";
+		} else {
+			os << R"(<font color="white">&nbsp;0 </font>)";
+		}		os << "</td>";
+		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href="javascript:;">)";
+		if (CN::equalsZero(e.p->e[2].w)) {
+			os << R"(<font point-size="8">&nbsp;0 </font>)";
+		} else {
+			os << R"(<font color="white">&nbsp;0 </font>)";
+		}		os << "</td>";
 		os << "<td></td></tr></table></font>>,tooltip=\"q" << e.p->v << "\"]\n";
 		return os;
 	}
@@ -124,8 +146,20 @@ namespace dd {
 		os << nodelabel << "[shape=circle, width=0.46, fixedsize=true, label=<";
 		os << R"(<font point-size="6"><table border="0" cellspacing="0" cellpadding="0">)";
 		os << R"(<tr><td colspan="2"><font point-size="18">q<sub><font point-size="10">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
-		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
-		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href="javascript:;">)" << R"(<font color="white">&nbsp;0 </font>)" << "</td>";
+		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;">)";
+		if (CN::equalsZero(e.p->e[0].w)) {
+			os << R"(<font point-size="10">&nbsp;0 </font>)";
+		} else {
+			os << R"(<font color="white">&nbsp;0 </font>)";
+		}
+		os << "</td>";
+		os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href="javascript:;">)";
+		if (CN::equalsZero(e.p->e[2].w)) {
+			os << R"(<font point-size="10">&nbsp;0 </font>)";
+		} else {
+			os << R"(<font color="white">&nbsp;0 </font>)";
+		}
+		os << "</td>";
 		os << "</tr></table></font>>,tooltip=\"q" << e.p->v << "\"]\n";
 		return os;
 	}
@@ -298,6 +332,9 @@ namespace dd {
 				if (CN::equalsZero(edge.w)) {
 					if (classic) {
 						// potentially add zero stubs here
+//						auto nodelabel = ((uintptr_t)node->p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
+//						oss << nodelabel << "0" << i << "[label=<<font point-size=\"6\">0</font>>]\n";
+//						oss << nodelabel << ":" << i << "->" << nodelabel << "0" << i << ":n\n";
 						continue;
 					} else {
 						continue;
@@ -370,7 +407,7 @@ namespace dd {
 	RGB colorFromPhase(const Complex& a) {
 		auto phase = CN::arg(a);
 		auto twopi = 2*PI;
-		phase = (phase + PI) / twopi;
+		phase = (phase) / twopi;
 		return hlsToRGB(phase, 0.5, 0.5);
 	}
 

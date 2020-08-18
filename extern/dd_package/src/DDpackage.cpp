@@ -1180,14 +1180,10 @@ namespace dd {
 
         Edge e[NEDGE];
 	    // conjugate transpose submatrices and rearrange as required
-        for (int i = 0; i < RADIX; i++) {
-            for (int j = i; j < RADIX; j++) {
-                e[i * RADIX + j] = conjugateTranspose(a.p->e[j * RADIX + i]);
-                if (i != j)
-                    e[j * RADIX + i] = conjugateTranspose(
-		                    a.p->e[i * RADIX + j]);
-            }
-        }
+	    e[0] = conjugateTranspose(a.p->e[0]);
+	    e[1] = conjugateTranspose(a.p->e[2]);
+	    e[2] = conjugateTranspose(a.p->e[1]);
+	    e[3] = conjugateTranspose(a.p->e[3]);
 	    r = makeNonterminal(a.p->v, e);    // create new top node
 
 	    Complex c = cn.getTempCachedComplex();
