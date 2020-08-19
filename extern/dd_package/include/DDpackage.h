@@ -119,6 +119,10 @@ namespace dd {
 		None, Sifting
 	};
 
+	enum Mode {
+		Vector, Matrix, ModeCount
+	};
+
     class Package {
 
     	static Node terminal;
@@ -132,11 +136,14 @@ namespace dd {
 	    std::array<std::array<NodePtr, NBUCKET>, MAXN> Unique{ };
 	    // Three types since different possibilities for complex numbers  (caused by caching)
 	    // weights of operands and result are from complex table (e.g., transpose, conjugateTranspose)
-	    std::array<CTentry1, CTSLOTS> CTable1{ };
+		std::array<std::array<CTentry1, CTSLOTS>, static_cast<int>(Mode::ModeCount)> CTable1; // TODO using map insertion causes segfault on windows
+
 	    // weights of operands are from complex table, weight of result from cache/ZERO (e.g., mult)
-	    std::array<CTentry2, CTSLOTS> CTable2{ };
+		std::array<std::array<CTentry2, CTSLOTS>, static_cast<int>(Mode::ModeCount)> CTable2;
+
 	    // weights of operands and result are from cache/ZERO (e.g., add)
-	    std::array<CTentry3, CTSLOTS> CTable3{ };
+		std::array<std::array<CTentry3, CTSLOTS>, static_cast<int>(Mode::ModeCount)> CTable3;
+
 	    // Toffoli gate table
 	    std::array<TTentry, TTSLOTS> TTable{ };
 	    // Identity matrix table
@@ -155,7 +162,7 @@ namespace dd {
 	    std::vector<ListElementPtr> allocated_list_chunks;
 	    std::vector<NodePtr> allocated_node_chunks;
 
-	    bool forceMatrixNormalization = false;
+		Mode mode;
 	    std::unordered_set<NodePtr> visited{NODECOUNT_BUCKETS}; // 2e6
 
 	    /// private helper routines
@@ -205,7 +212,7 @@ namespace dd {
         Package();
         ~Package();
 
-        void useMatrixNormalization(bool use) { forceMatrixNormalization = use; }
+        void setMode(Mode mode) { this->mode = mode; }
 
         // DD creation
         static inline Edge makeTerminal(const Complex& w) { return { terminalNode, w }; }
@@ -310,7 +317,11 @@ namespace dd {
 
 	    // statistics and info
 	    void statistics();
-	    static void printInformation();
+	    static void printInformation();		
+	    unsigned int nodeCount(const Edge& e) const {
+			std::unordered_set<NodePtr> v;
+			return nodeCount(e, v);
+		}
 
 	    // debugging - not normally used
 	    void debugnode(NodePtr p) const;
