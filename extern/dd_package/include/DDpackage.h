@@ -136,13 +136,13 @@ namespace dd {
 	    std::array<std::array<NodePtr, NBUCKET>, MAXN> Unique{ };
 	    // Three types since different possibilities for complex numbers  (caused by caching)
 	    // weights of operands and result are from complex table (e.g., transpose, conjugateTranspose)
-		std::array<std::array<CTentry1, CTSLOTS>, static_cast<int>(Mode::ModeCount)> CTable1; // TODO using map insertion causes segfault on windows
+		std::array<std::array<CTentry1, CTSLOTS>, static_cast<int>(Mode::ModeCount)> CTable1{};
 
 	    // weights of operands are from complex table, weight of result from cache/ZERO (e.g., mult)
-		std::array<std::array<CTentry2, CTSLOTS>, static_cast<int>(Mode::ModeCount)> CTable2;
+		std::array<std::array<CTentry2, CTSLOTS>, static_cast<int>(Mode::ModeCount)> CTable2{};
 
 	    // weights of operands and result are from cache/ZERO (e.g., add)
-		std::array<std::array<CTentry3, CTSLOTS>, static_cast<int>(Mode::ModeCount)> CTable3;
+		std::array<std::array<CTentry3, CTSLOTS>, static_cast<int>(Mode::ModeCount)> CTable3{};
 
 	    // Toffoli gate table
 	    std::array<TTentry, TTSLOTS> TTable{ };
@@ -212,7 +212,7 @@ namespace dd {
         Package();
         ~Package();
 
-        void setMode(Mode mode) { this->mode = mode; }
+        void setMode(Mode m) { mode = m; }
 
         // DD creation
         static inline Edge makeTerminal(const Complex& w) { return { terminalNode, w }; }
