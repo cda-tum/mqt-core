@@ -26,7 +26,7 @@ class DDFunctionality : public testing::TestWithParam<unsigned short> {
             dd                  = std::make_unique<dd::Package>();
             initialCacheCount   = dd->cn.cacheCount;
             initialComplexCount = dd->cn.count;
-            dd->useMatrixNormalization(true);
+			dd->setMode(dd::Matrix);
 
             // initial state preparation
             line.fill(qc::LINE_DEFAULT);

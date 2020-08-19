@@ -144,6 +144,7 @@ namespace qc {
 		std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
         permutationMap map{};
+        dd->setMode(dd::Matrix);
 
         dd::Edge e = dd->makeIdent(0, short(nqubits-1));
         dd->incRef(e);
@@ -169,6 +170,7 @@ namespace qc {
 		std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
 	    permutationMap map{};
+	    dd->setMode(dd::Vector);
 
 	    dd::Edge e = in;
         dd->incRef(e);

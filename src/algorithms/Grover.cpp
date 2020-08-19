@@ -105,7 +105,7 @@ namespace qc {
     }
 
     dd::Edge Grover::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
-        dd->useMatrixNormalization(true);
+        dd->setMode(dd::Matrix);
 
         QuantumComputation groverIteration(nqubits+1);
         oracle(groverIteration);
@@ -145,7 +145,6 @@ namespace qc {
 
         dd->decRef(iteration);
         dd->garbageCollect(true);
-        dd->useMatrixNormalization(false);
         return e;
     }
 

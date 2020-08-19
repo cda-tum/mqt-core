@@ -847,8 +847,7 @@ namespace qc {
 		std::array<short, MAX_QUBITS> line{};
 		line.fill(LINE_DEFAULT);
 		permutationMap map = initialLayout;
-
-		dd->useMatrixNormalization(true);
+		dd->setMode(dd::Matrix);
 		dd::Edge e = createInitialMatrix(dd);
 
 		for (auto & op : ops) {
@@ -864,7 +863,6 @@ namespace qc {
 		changePermutation(e, map, outputPermutation, line, dd);
 		reduceAncillae(e, dd);
 
-		dd->useMatrixNormalization(false);
 		return e;
 	}
 
@@ -875,8 +873,7 @@ namespace qc {
 		std::array<short, MAX_QUBITS> line{};
 		line.fill(LINE_DEFAULT);
 		permutationMap map = initialLayout;
-
-		dd->useMatrixNormalization(true);
+		dd->setMode(dd::Matrix);
 		dd::Edge e = createInitialMatrix(dd);
 
 		for (auto & op : ops) {
@@ -908,7 +905,6 @@ namespace qc {
 
 		reduceAncillae(e, dd);
 
-		dd->useMatrixNormalization(false);
 		return e;
 	}
 
@@ -917,7 +913,7 @@ namespace qc {
 		std::array<short, MAX_QUBITS> line{};
 		line.fill(LINE_DEFAULT);
 		permutationMap map = initialLayout;
-
+		dd->setMode(dd::Vector);
 		dd::Edge e = in;
 		dd->incRef(e);
 
@@ -944,7 +940,7 @@ namespace qc {
 		std::array<short, MAX_QUBITS> line{};
 		line.fill(LINE_DEFAULT);
 		permutationMap map = initialLayout;
-
+		dd->setMode(dd::Vector);
 		dd::Edge e = in;
 		dd->incRef(e);
 
