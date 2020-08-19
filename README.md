@@ -84,7 +84,7 @@ The package can be used for a multitude of tasks, as illustrated in the followin
   ``` 
   The matrix representation of the constructed functionality can be printed by calling
   ```c++
-  qft.printMatrix(dd, functionality);
+  qft.printMatrix(dd, functionality, std::cout);
   ```
   which results in the following output
   ```commandline
@@ -102,11 +102,13 @@ The package can be used for a multitude of tasks, as illustrated in the followin
   
   The (much more compact) DD representation that was actually constructed can be visualized as a *\*.dot* file (which is automatically converted to SVG if GraphViz is installed) by calling
   ```c++
-  dd->export2Dot(functionality, "functionality.dot");
+  dd::export2Dot(functionality, "functionality.dot");
   ```
   which produces
   
-  ![](extern/functionality.dot.svg "Functionality")
+  ![](extern/functionality.svg "Functionality")
+  
+  See below for a description of the visualization options and their interpretation.
   
 * **Basic support for DD-based simulation of quantum algorithms.**
  
@@ -122,7 +124,7 @@ The package can be used for a multitude of tasks, as illustrated in the followin
   
     The vector representation of the resulting state vector can be printed by calling
     ```c++
-    grover.printVector(dd, state_vector);
+    grover.printVector(dd, state_vector, std::cout);
   ```
   which results in the following output
   ```commandline
@@ -140,12 +142,12 @@ The package can be used for a multitude of tasks, as illustrated in the followin
     
     The (much more compact) DD representation, that was actually produced by the simulation, can again be visualized as SVG file by calling
    ```c++
-   dd->export2Dot(state_vector, "state_vector.dot", true);
+   dd::export2Dot(state_vector, "state_vector.dot", true);
    ```
                                                                                                
   which produces
   
-  ![](extern/state_vector.dot.svg "State Vector")
+  ![](extern/state_vector.svg "State Vector")
     
 * **Visualization and output of functional representations.**
 
@@ -176,9 +178,13 @@ The package can be used for a multitude of tasks, as illustrated in the followin
      o: 		0	1	2	
     ```
 
-    It was already shown above how to visualize the constructed vectors and matrices, as well as the resulting decision diagrams.
-    
-    The library also supports the output of circuits in various formats by calling
+    As already demonstrated above, the function `dd::exportDD(...)` can be used to create visualizations of DDs representing vectors as well as matrices. To this end, the thickness of each edge indicates the edge weight's magnitude, while a color code indicates its phase. We use the HSV color wheel (at 50% lightness and 50% saturation) given below
+  
+  ![](extern/dd_package/extern/hls_colorwheel.svg "Color Wheel")
+  
+  Furthermore, the export function has several options to tune the look and feel of the resulting DDs, e.g., **enabling**/disabling color, enabling/**disabling** edge weights, enabling/**disabling** classic mode. 
+   
+  The library also supports the output of circuits in various formats by calling
     
   ```c++
   std::string filename = "PATH_TO_DESTINATION_FILE.{real | qasm | py}";

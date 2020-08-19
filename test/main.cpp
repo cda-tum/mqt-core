@@ -30,15 +30,15 @@ int main() {
 
 	auto dd = make_unique<dd::Package>(); // create an instance of the DD package
 	auto functionality = qft.buildFunctionality(dd);
-	qft.printMatrix(dd, functionality);
-	dd->export2Dot(functionality, "functionality.dot");
+	qft.printMatrix(dd, functionality, std::cout);
+	dd::export2Dot(functionality, "functionality.dot");
 	std::cout << std::endl;
 
 	auto initial_state = dd->makeZeroState(n+1); // create initial state |0...0>
 	auto state_vector = grover.simulate(initial_state, dd);
-	grover.printVector(dd, state_vector);
-	dd->export2Dot(state_vector, "state_vector.dot", true);
+	grover.printVector(dd, state_vector, std::cout);
+	dd::export2Dot(state_vector, "state_vector.dot", true);
 	std::cout << std::endl << grover << std::endl;
-	
+
 	return 0;
 }
