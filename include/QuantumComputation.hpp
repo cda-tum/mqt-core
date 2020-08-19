@@ -61,7 +61,6 @@ namespace qc {
 
 		static void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, const char* defaultname);
 
-
 	public:
 		QuantumComputation() = default;
 		explicit QuantumComputation(unsigned short nqubits) {
@@ -71,7 +70,10 @@ namespace qc {
 		explicit QuantumComputation(const std::string& filename) {
 			import(filename);
 		}
-
+		QuantumComputation(const QuantumComputation& qc) = delete;
+		QuantumComputation(QuantumComputation&& qc) noexcept = default;
+		QuantumComputation& operator=(const QuantumComputation& qc) = delete;
+		QuantumComputation& operator=(QuantumComputation&& qc) noexcept = default;
 		virtual ~QuantumComputation() = default;
 
 		virtual  size_t getNops()                   const { return ops.size();	}
@@ -147,24 +149,24 @@ namespace qc {
 		/// \param i row index
 		/// \param j column index
 		/// \return temporary complex value representing the vector/matrix entry
-		virtual dd::Complex getEntry(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long i, unsigned long long j=0);
+		virtual dd::Complex getEntry(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long i, unsigned long long j);
 
 		/**
 		 * printing
 		 */ 
-		virtual std::ostream& print(std::ostream& os = std::cout) const;
+		virtual std::ostream& print(std::ostream& os) const;
 
 		friend std::ostream& operator<<(std::ostream& os, const QuantumComputation& qc) { return qc.print(os); }
 
-		virtual std::ostream& printMatrix(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os = std::cout);
+		virtual std::ostream& printMatrix(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os);
 
 		static void printBin(unsigned long long n, std::stringstream& ss);
 
-		virtual std::ostream& printCol(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long j=0, std::ostream& os = std::cout);
+		virtual std::ostream& printCol(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long j, std::ostream& os);
 
-		virtual std::ostream& printVector(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os = std::cout);
+		virtual std::ostream& printVector(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os);
 
-		virtual std::ostream& printStatistics(std::ostream& os = std::cout);
+		virtual std::ostream& printStatistics(std::ostream& os);
 
 		std::ostream& printRegisters(std::ostream& os = std::cout);
 
@@ -232,7 +234,10 @@ namespace qc {
 		void emplace_back(Args&& ... args) {
 			ops.emplace_back(std::make_unique<T>(args ...));
 		}
-		
+
+		template<class T>
+		std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator pos, T&& op) { return ops.insert(pos, std::forward<T>(op)); }
+
 	};
 }
 #endif //INTERMEDIATEREPRESENTATION_QUANTUMCOMPUTATION_H

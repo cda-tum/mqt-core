@@ -9,7 +9,6 @@ namespace qc {
 
     public:
         explicit Entanglement(unsigned short nq);
-        ~Entanglement() override = default;
     };
 }
 

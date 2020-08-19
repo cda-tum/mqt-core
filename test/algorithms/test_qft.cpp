@@ -71,7 +71,7 @@ TEST_P(QFT, Functionality) {
 	// there should be no error building the functionality
 	ASSERT_NO_THROW({e = qc->buildFunctionality(dd);});
 
-	qc->printStatistics();
+	qc->printStatistics(std::cout);
 
 	// QFT DD should consist of 2^n nodes
 	ASSERT_EQ(dd->size(e), std::pow(2, nqubits));
@@ -110,7 +110,7 @@ TEST_P(QFT, Simulation) {
 		dd::Edge in = dd->makeZeroState(nqubits);
         e = qc->simulate(in, dd);
 	});
-	qc->printStatistics();
+	qc->printStatistics(std::cout);
 
 	// QFT DD |0...0> sim should consist of n nodes
 	ASSERT_EQ(dd->size(e), nqubits+1);

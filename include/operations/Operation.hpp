@@ -133,7 +133,10 @@ namespace qc {
 
 	public:
 		Operation() = default;
-
+		Operation(const Operation& op) = delete;
+		Operation(Operation&& op) noexcept = default;
+		Operation& operator=(const Operation& op) = delete;
+		Operation& operator=(Operation&& op) noexcept = default;
 		// Virtual Destructor
 		virtual ~Operation() = default;
 
@@ -261,10 +264,9 @@ namespace qc {
 					return true;
 			}
 
-			for (const auto c:controls) {
-				if (c.qubit == i)
-					return true;
-			}
+			if (std::any_of(controls.begin(), controls.end(), [&i](Control c) { return c.qubit == i; }))
+				return true;
+
 			return false;
 		}
 

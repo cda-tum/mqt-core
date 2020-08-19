@@ -34,13 +34,11 @@ namespace qc {
 
 		explicit Grover(unsigned short nq, unsigned int seed = 0);
 
-		~Grover() override = default;
-
 		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) override;
 
 		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) override;
 
-		std::ostream& printStatistics(std::ostream& os = std::cout) override;
+		std::ostream& printStatistics(std::ostream& os) override;
 
 	};
 }

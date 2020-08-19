@@ -70,7 +70,7 @@ TEST_P(Grover, Functionality) {
 	// there should be no error constructing the circuit
 	ASSERT_NO_THROW({qc = std::make_unique<qc::Grover>(nqubits, seed);});
 
-	qc->printStatistics();
+	qc->printStatistics(std::cout);
 	unsigned long long x = dynamic_cast<qc::Grover*>(qc.get())->x;
 
 	// there should be no error building the functionality
@@ -92,7 +92,7 @@ TEST_P(Grover, Simulation) {
 	// there should be no error constructing the circuit
 	ASSERT_NO_THROW({qc = std::make_unique<qc::Grover>(nqubits, seed);});
 
-	qc->printStatistics();
+	qc->printStatistics(std::cout);
 	unsigned long long x = dynamic_cast<qc::Grover*>(qc.get())->x;
 	dd::Edge in = dd->makeZeroState(nqubits+1);
 	// there should be no error simulating the circuit

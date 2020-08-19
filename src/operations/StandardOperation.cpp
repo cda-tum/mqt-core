@@ -384,22 +384,20 @@ namespace qc {
 			<< "Thus, while not valid vanilla OpenQASM, the dumped file will work with this library. " << std::endl;
 		}
 
-		for (const auto& c: controls) {
-			of << "c";
-		}
+		op << std::string(controls.size(), 'c');
 
 		switch (type) {
 			case I: 
                	op << "id";
 				break;
 			case H:
-				of << "h";
+				op << "h";
 				break;
 			case X:
-				of << "x";
+				op << "x";
 				break;
 			case Y:
-				of << "y";
+				op << "y";
 				break;
 			case Z:
 				op << "z";
@@ -457,67 +455,80 @@ namespace qc {
 				op << "rz(" << parameter[0] << ")";
 				break;
 			case SWAP:
-				of << "swap";
-				for (const auto& c: controls)
-					of << " " << qreg[c.qubit].second << ",";
-				of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
-				return;
-			case iSWAP:
-				of << "swap";
+				for (const auto& c: controls) {
+					if (c.type == Control::neg)
+						of << "x " << qreg[c.qubit].second << ";" << std::endl;
+				}
+
+				of << op.str() <<  "swap";
 				for (const auto& c: controls)
 					of << " " << qreg[c.qubit].second << ",";
 				of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
 
+				for (const auto& c: controls) {
+					if (c.type == Control::neg)
+						of << "x " << qreg[c.qubit].second << ";" << std::endl;
+				}
+				return;
+			case iSWAP:
+				for (const auto& c: controls) {
+					if (c.type == Control::neg)
+						of << "x " << qreg[c.qubit].second << ";" << std::endl;
+				}
+				of << op.str() << "swap";
 				for (const auto& c: controls)
-					of << "c";
-				of << "s";
+					of << " " << qreg[c.qubit].second << ",";
+				of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
+
+				of << op.str() << "s";
 				for (const auto& c: controls)
 					of << " " << qreg[c.qubit].second << ",";
 				of << " " << qreg[targets[0]].second << ";"  << std::endl;
 
-
-				for (const auto& c: controls)
-					of << "c";
-				of << "s";
+				of << op.str() << "s";
 				for (const auto& c: controls)
 					of << " " << qreg[c.qubit].second << ",";
 				of << " " << qreg[targets[1]].second << ";"  << std::endl;
 
-				for (const auto& c: controls)
-					of << "c";
-                of << "cz";
+                of << op.str() << "cz";
 				for (const auto& c: controls)
 					of << " " << qreg[c.qubit].second << ",";
                 of << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
-				return;
-			case P: 
-                of << "ccx";
-				for (const auto& c: controls)
-					of << " " << qreg[c.qubit].second << ",";
-                of << " " << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
 
-				for (const auto& c: controls)
-					of << "c";
-                of << "cx";
+				for (const auto& c: controls) {
+					if (c.type == Control::neg)
+						of << "x " << qreg[c.qubit].second << ";" << std::endl;
+				}
+                return;
+			case P: 
+                of << op.str() << "cx";
 				for (const auto& c: controls)
 					of << " " << qreg[c.qubit].second << ",";
-                of << " " << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ";" << std::endl;
+                of << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
+
+                of << op.str() << "x";
+				for (const auto& c: controls)
+					of << " " << qreg[c.qubit].second << ",";
+                of << qreg[targets[1]].second << ";" << std::endl;
 				return;
 			case Pdag:
-				of << "cx";
+				of << op.str() << "x";
 				for (const auto& c: controls)
 					of << " " << qreg[c.qubit].second << ",";
-				of << " " << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ";" << std::endl;
+				of << qreg[targets[1]].second << ";" << std::endl;
 
-				for (const auto& c: controls)
-					of << "c";
-				of << "ccx";
+				of << op.str() << "cx";
 				for (const auto& c: controls)
 					of << " " << qreg[c.qubit].second << ",";
-				of << " " << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
+				of << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
 				return;
 			default: 
                 std::cerr << "gate type (index) " << (int) type << " could not be converted to OpenQASM" << std::endl;
+		}
+
+		for (const auto& c: controls) {
+			if (c.type == Control::neg)
+				of << "x " << qreg[c.qubit].second << ";" << std::endl;
 		}
 		of << op.str();
 		for (const auto& c: controls) {
@@ -525,6 +536,10 @@ namespace qc {
 		}
         for(auto target: targets) {
 			of << " " << qreg[target].second << ";" << std::endl;
+		}
+		for (const auto& c: controls) {
+			if (c.type == Control::neg)
+				of << "x " << qreg[c.qubit].second << ";" << std::endl;
 		}
 	}
 

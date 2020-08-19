@@ -78,7 +78,7 @@ int main(int argc, char** argv){
 		std::seed_seq seeds(begin(random_data), end(random_data));
 		std::mt19937_64 mt(seeds);
 		std::uniform_int_distribution<unsigned long long> distribution(0, qc.getNops()-1);
-		std::function<unsigned long long()> rng = bind(distribution, ref(mt));
+		std::function<unsigned long long()> rng = [&]() { return distribution(mt); };
 
 		std::set<unsigned long long> already_removed{};
 

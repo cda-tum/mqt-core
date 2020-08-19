@@ -180,7 +180,7 @@ TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
 	EXPECT_EQ(qc.getNqubits(), 0);
 	EXPECT_TRUE(qc.getQregs().empty());
 	qc.printRegisters();
-	qc.printStatistics();
+	qc.printStatistics(std::cout);
 }
 
 TEST_F(QFRFunctionality, ancillary_qubit_remove_middle) {

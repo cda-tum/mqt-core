@@ -14,7 +14,7 @@ namespace qc {
 	public:
 		explicit QFT(unsigned short nq);
 
-		std::ostream& printStatistics(std::ostream& os = std::cout) override;
+		std::ostream& printStatistics(std::ostream& os) override;
 
 		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) override;
 

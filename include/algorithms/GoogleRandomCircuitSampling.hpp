@@ -24,15 +24,13 @@ namespace qc {
 
 		GoogleRandomCircuitSampling(const std::string& pathPrefix, unsigned short x, unsigned short y, unsigned short depth, unsigned short instance);
 
-		~GoogleRandomCircuitSampling() override = default;
-
 		void importGRCS(const std::string& filename);
 
 		size_t getNops() const override;
 
-		std::ostream& print(std::ostream& os = std::cout) const override;
+		std::ostream& print(std::ostream& os) const override;
 
-		std::ostream& printStatistics(std::ostream& os = std::cout) override;
+		std::ostream& printStatistics(std::ostream& os) override;
 
 		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) override;
 

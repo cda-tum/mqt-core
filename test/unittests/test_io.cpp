@@ -169,3 +169,21 @@ TEST_F(IO, superfluous_registers_enhanced_qelib) {
 		FAIL() << "Expected qasm::QASMParserException";
 	}
 }
+
+TEST_F(IO, dump_negative_control) {
+	std::string circuit_real = ".numvars 2\n.variables a b\n.begin\nt2 -a b\n.end";
+	std::stringstream ss{circuit_real};
+	qc->import(ss, qc::Real);
+	qc->dump("testdump.qasm");
+	qc->import("testdump.qasm");
+	ASSERT_EQ(qc->getNops(), 3);
+	auto it = qc->begin();
+	EXPECT_EQ((*it)->getType(), qc::X);
+	EXPECT_EQ((*it)->getControls().size(), 0);
+	++it;
+	EXPECT_EQ((*it)->getType(), qc::X);
+	EXPECT_EQ((*it)->getControls().size(), 1);
+	++it;
+	EXPECT_EQ((*it)->getType(), qc::X);
+	EXPECT_EQ((*it)->getControls().size(), 0);
+}
