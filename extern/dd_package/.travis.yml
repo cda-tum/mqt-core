@@ -26,8 +26,8 @@ jobs:
 
     - os: linux
       dist: bionic
-      compiler: "gcc-9"
-      env: BUILD='Release' CC=gcc-9 CXX=g++-9 COVERAGE=0
+      compiler: "gcc-10"
+      env: BUILD='Release' CC=gcc-10 CXX=g++-10 COVERAGE=0
       addons:
         apt:
           sources:
@@ -35,8 +35,8 @@ jobs:
           packages:
             - cmake
             - ninja-build
-            - gcc-9
-            - g++-9
+            - gcc-10
+            - g++-10
 
     - os: linux
       dist: bionic
@@ -53,7 +53,7 @@ jobs:
             - clang-9
 
     - os: osx
-      osx_image: xcode11.3
+      osx_image: xcode12
       compiler: "clang"
       env: BUILD='Release' CC=clang CXX=clang++ COVERAGE=0
       addons:
@@ -64,15 +64,15 @@ jobs:
           update: true
 
     - os: osx
-      osx_image: xcode11.3
-      compiler: "gcc-9"
-      env: BUILD='Release' CC=gcc-9 CXX=g++-9 COVERAGE=0
+      osx_image: xcode12
+      compiler: "gcc-10"
+      env: BUILD='Release' CC=gcc-10 CXX=g++-10 COVERAGE=0
       addons:
         homebrew:
           packages:
             - cmake
             - ninja
-            - gcc@9
+            - gcc@10
           update: true
 
     - os: windows
