@@ -89,10 +89,10 @@ namespace qc {
 				strcpy(name, "Show probabilities");
 				break;
 			case Barrier:
-				strcpy(name, "c_");
+				strcpy(name, "Barr");
 				break;
 			case ClassicControlled:
-
+				strcpy(name, "clc_");
 				break;
 			default:
 				throw QFRException("This constructor shall not be called for gate type (index) " + std::to_string((int)type));

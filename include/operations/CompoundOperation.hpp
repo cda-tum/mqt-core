@@ -105,19 +105,19 @@ namespace qc {
 			return false;
 		}
 
-		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override {
-			for (auto& op: ops) { 
+		void dumpOpenQASM(std::ostream& of, const regnames_t& qreg, const regnames_t& creg) const override {
+			for (auto& op: ops) {
 				op->dumpOpenQASM(of, qreg, creg);
 			}
 		}
 
-		void dumpReal(std::ofstream& of) const override {
+		void dumpReal(std::ostream& of) const override {
 			for (auto& op: ops) {
 				op->dumpReal(of);
 			}
 		}
 
-		void dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const override {
+		void dumpQiskit(std::ostream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const override {
 			for (auto& op: ops) {
 				op->dumpQiskit(of, qreg, creg, anc_reg_name);
 			}

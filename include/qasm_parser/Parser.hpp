@@ -22,7 +22,7 @@
 namespace qasm {
 	static constexpr long double PI = 3.14159265358979323846264338327950288419716939937510L;
 
-	using registerMap = std::map<std::string, std::pair<unsigned short, unsigned short>>;
+	using registerMap = std::map<std::string, std::pair<unsigned short, unsigned short>, std::greater<>>;
 
 	class QASMParserException : public std::invalid_argument {
 		std::string msg;

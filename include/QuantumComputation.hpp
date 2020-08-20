@@ -27,7 +27,7 @@
 
 namespace qc {
 	using reg            = std::pair<unsigned short, unsigned short>;
-	using registerMap    = std::map<std::string, reg>;
+	using registerMap    = std::map<std::string, reg, std::greater<>>;
 	using permutationMap = std::map<unsigned short, unsigned short>;
 
 	static constexpr char DEFAULT_QREG[2]{"q"};
@@ -58,6 +58,8 @@ namespace qc {
 		void readRealGateDescriptions(std::istream& is, int line);
 		void importOpenQASM(std::istream& is);
 		void importGRCS(std::istream& is);
+		static void printSortedRegisters(const registerMap& regmap, const std::string& identifier, std::ostream& of);
+		static void consolidateRegister(registerMap& regs, permutationMap& in, permutationMap& out);
 
 		static void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, const char* defaultname);
 
@@ -92,15 +94,19 @@ namespace qc {
 		unsigned long long getNindividualOps() const;
 
 		std::string getQubitRegister(unsigned short physical_qubit_index);
-		unsigned short getHighestLogicalQubitIndex();
+		std::string getClassicalRegister(unsigned short classical_index);
+		static unsigned short getHighestLogicalQubitIndex(const permutationMap& map);
+		unsigned short getHighestLogicalQubitIndex() const { return getHighestLogicalQubitIndex(initialLayout); };
 		std::pair<std::string, unsigned short> getQubitRegisterAndIndex(unsigned short physical_qubit_index);
+		std::pair<std::string, unsigned short> getClassicalRegisterAndIndex(unsigned short classical_index);
 		bool isIdleQubit(unsigned short i);
 		bool isAncilla(unsigned short i);
 		void reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd);
 		void reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd);
 		dd::Edge createInitialMatrix(std::unique_ptr<dd::Package>& dd); // creates identity matrix, which is reduced with respect to the ancillary qubits
 
-		// strip away qubits with no operations applied to them and which do not pop up in the output permutation
+		/// strip away qubits with no operations applied to them and which do not pop up in the output permutation
+		/// \param force if true, also strip away idle qubits occurring in the output permutation
 		void stripIdleQubits(bool force = false);
 		// apply swaps 'on' DD in order to change 'from' to 'to'
 		// where |from| >= |to|
@@ -130,8 +136,8 @@ namespace qc {
 
 		// adds physical qubit as ancillary qubit and gives it the appropriate output mapping
 		void addAncillaryQubit(unsigned short physical_qubit_index, short output_qubit_index);
-		// try to add logical qubit to circuit and assign it to physical qubit with certain output permutation value TODO: implement correctly
-		//void addQubit(unsigned short logical_qubit_index, unsigned short physical_qubit_index, short output_qubit_index);
+		// try to add logical qubit to circuit and assign it to physical qubit with certain output permutation value
+		void addQubit(unsigned short logical_qubit_index, unsigned short physical_qubit_index, short output_qubit_index);
 
 		void updateMaxControls(unsigned short ncontrols) {
 			max_controls = std::max(ncontrols, max_controls);
@@ -174,6 +180,11 @@ namespace qc {
 
 		virtual void dump(const std::string& filename, Format format);
 		virtual void dump(const std::string& filename);
+		virtual void dump(std::ostream& of, Format format) {
+			dump(std::move(of), format);
+		}
+		virtual void dump(std::ostream&& of, Format format);
+		virtual void dumpOpenQASM(std::ostream& of);
 
 		virtual void reset() {
 			ops.clear();

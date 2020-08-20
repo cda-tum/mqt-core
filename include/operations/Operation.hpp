@@ -277,9 +277,9 @@ namespace qc {
 			return op.print(os);
 		}
 
-		virtual void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const = 0;
-		virtual void dumpReal(std::ofstream& of) const = 0;
-		virtual void dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char* anc_reg_name) const = 0;
+		virtual void dumpOpenQASM(std::ostream& of, const regnames_t& qreg, const regnames_t& creg) const = 0;
+		virtual void dumpReal(std::ostream& of) const = 0;
+		virtual void dumpQiskit(std::ostream& of, const regnames_t& qreg, const regnames_t& creg, const char* anc_reg_name) const = 0;
 	};
 }
 #endif //INTERMEDIATEREPRESENTATION_OPERATION_H

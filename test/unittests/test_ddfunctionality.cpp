@@ -202,7 +202,4 @@ TEST_F(DDFunctionality, non_unitary) {
 	} catch (...) {
 		FAIL() << "Expected qc::QFRException";
 	}
-	EXPECT_TRUE(op.actsOn(0));
-	op = qc::NonUnitaryOperation(nqubits, {0,1,2,3});
-	EXPECT_TRUE(op.actsOn(0));
 }

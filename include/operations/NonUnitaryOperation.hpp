@@ -47,9 +47,9 @@ namespace qc {
 
 		std::ostream& print(std::ostream& os) const override;
 		
-		void dumpOpenQASM(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg) const override;
-		void dumpQiskit(std::ofstream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const override;
-		void dumpReal(std::ofstream& of) const override {
+		void dumpOpenQASM(std::ostream& of, const regnames_t& qreg, const regnames_t& creg) const override;
+		void dumpQiskit(std::ostream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const override;
+		void dumpReal(std::ostream& of) const override {
 			UNUSED(of)// these ops do not exist in .real
 		};
 

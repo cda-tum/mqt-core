@@ -281,3 +281,39 @@ TEST_F(QFRFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
 	EXPECT_EQ(qc.getNops(), 2);
 	EXPECT_TRUE(dd::Package::equals(e, f));
 }
+
+TEST_F(QFRFunctionality, StripIdleAndDump) {
+	std::stringstream ss{};
+	auto testfile =
+	                "OPENQASM 2.0;\n"
+	                "include \"qelib1.inc\";\n"
+	                "qreg q[5];\n"
+	                "creg c[3];\n"
+	                "x q[0];\n"
+	                "x q[2];\n"
+				    "barrier q;\n"
+	                "barrier q[0];\n"
+	                "reset q;\n"
+	                "reset q[2];\n"
+	                "cx q[0],q[4];\n";
+
+	ss << testfile;
+	auto qc = qc::QuantumComputation();
+	qc.import(ss, qc::OpenQASM);
+	qc.print(std::cout);
+	qc.stripIdleQubits();
+	qc.print(std::cout);
+	std::stringstream goal{};
+	qc.print(goal);
+	std::stringstream testss{};
+	qc.dump(testss, OpenQASM);
+	std::cout << testss.str() << std::endl;
+	qc.reset();
+	qc.import(testss, OpenQASM);
+	qc.print(std::cout);
+	qc.stripIdleQubits();
+	qc.print(std::cout);
+	std::stringstream actual{};
+	qc.print(actual);
+	EXPECT_EQ(goal.str(), actual.str());
+}
