@@ -1050,8 +1050,10 @@ namespace qc {
 		if (!ancillary.any() || e.p == nullptr) return e;
 		unsigned short firstAncillary = 0;
 		for (auto i=0; i<ancillary.size(); ++i) {
-			if (ancillary.test(i))
+			if (ancillary.test(i)) {
 				firstAncillary = i;
+				break;
+			}
 		}
 		if(e.p->v < firstAncillary) return e;
 
@@ -1087,8 +1089,10 @@ namespace qc {
 		if (!garbage.any() || e.p == nullptr) return e;
 		unsigned short firstGarbage = 0;
 		for (auto i=0; i<garbage.size(); ++i) {
-			if (garbage.test(i))
+			if (garbage.test(i)) {
 				firstGarbage = i;
+				break;
+			}
 		}
 		if(e.p->v < firstGarbage) return e;
 
