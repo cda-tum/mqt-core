@@ -1047,7 +1047,13 @@ namespace qc {
 
 	dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular) {
 		// return if no more ancillaries left
-		if (!ancillary.any() || e.p == nullptr || e.p->v < static_cast<unsigned short>(ancillary._Find_first())) return e;
+		if (!ancillary.any() || e.p == nullptr) return e;
+		unsigned short firstAncillary = 0;
+		for (auto i=0; i<ancillary.size(); ++i) {
+			if (ancillary.test(i))
+				firstAncillary = i;
+		}
+		if(e.p->v < firstAncillary) return e;
 
 		dd::Edge f = e;
 
@@ -1078,7 +1084,13 @@ namespace qc {
 
 	dd::Edge QuantumComputation::reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular) {
 		// return if no more garbage left
-		if (!garbage.any() || e.p == nullptr || e.p->v < static_cast<unsigned short>(garbage._Find_first())) return e;
+		if (!garbage.any() || e.p == nullptr) return e;
+		unsigned short firstGarbage = 0;
+		for (auto i=0; i<garbage.size(); ++i) {
+			if (garbage.test(i))
+				firstGarbage = i;
+		}
+		if(e.p->v < firstGarbage) return e;
 
 		dd::Edge f = e;
 

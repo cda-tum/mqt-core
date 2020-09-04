@@ -67,12 +67,20 @@ namespace qc {
 
 		static void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, const char* defaultname);
 
-		unsigned short getSmallestAncillary() {
-			return ancillary._Find_first();
+		unsigned short getSmallestAncillary() const {
+			for (auto i=0; i<ancillary.size(); ++i) {
+				if (ancillary.test(i))
+					return i;
+			}
+			return ancillary.size();
 		}
 
-		unsigned short getSmallestGarbage() {
-			return garbage._Find_first();
+		unsigned short getSmallestGarbage() const {
+			for (auto i=0; i<garbage.size(); ++i) {
+				if (garbage.test(i))
+					return i;
+			}
+			return garbage.size();
 		}
 
 
