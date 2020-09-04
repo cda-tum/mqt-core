@@ -123,6 +123,10 @@ namespace dd {
 		Vector, Matrix, ModeCount
 	};
 
+	enum class BasisStates {
+		zero, one, plus, minus, right, left
+	};
+
     class Package {
 
     	static Node terminal;
@@ -223,7 +227,8 @@ namespace dd {
 	    	return makeNonterminal(v, edge.data(), cached);
 	    };
 	    Edge makeZeroState(unsigned short n);
-	    Edge makeBasisState(unsigned short n, const std::bitset<64>& state);
+	    Edge makeBasisState(unsigned short n, const std::bitset<MAXN>& state);
+	    Edge makeBasisState(unsigned short n, const std::vector<BasisStates>& state);
 	    Edge makeIdent(short x, short y);
 	    Edge makeGateDD(const Matrix2x2& mat, unsigned short n, const short *line);
 	    Edge makeGateDD(const std::array<ComplexValue,NEDGE>& mat, unsigned short n, const std::array<short,MAXN>& line);

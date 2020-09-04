@@ -293,7 +293,7 @@ namespace dd {
     }
 
     // create DD for basis state |q_n-1 q_n-2 ... q1 q0>
-    Edge Package::makeBasisState(unsigned short n, const std::bitset<64>& state) {
+    Edge Package::makeBasisState(unsigned short n, const std::bitset<MAXN>& state) {
 	    Edge f = DDone;
 	    Edge edges[4];
 	    edges[1] = edges[3] = DDzero;
@@ -309,6 +309,57 @@ namespace dd {
 	    	f = makeNonterminal(p, edges);
 	    }
 	    return f;
+    }
+
+	Edge Package::makeBasisState(unsigned short n, const std::vector<BasisStates>& state) {
+		if (state.size() < n) {
+			std::cerr << "Insufficient qubit states provided. Requested " << n << ", but received " << state.size() << std::endl;
+			exit(1);
+		}
+
+    	Edge f = DDone;
+		Edge edges[4];
+		edges[1] = edges[3] = DDzero;
+
+		for (unsigned short p = 0; p < n; ++p) {
+			switch (state[p]) {
+				case BasisStates::zero:
+					edges[0] = f;
+					edges[2] = DDzero;
+					break;
+				case BasisStates::one:
+					edges[0] = DDzero;
+					edges[2] = f;
+					break;
+				case BasisStates::plus:
+					edges[0].p = f.p;
+					edges[0].w = cn.lookup(SQRT_2, 0);
+					edges[2].p = f.p;
+					edges[2].w = cn.lookup(SQRT_2, 0);
+					break;
+				case BasisStates::minus:
+					edges[0].p = f.p;
+					edges[0].w = cn.lookup(SQRT_2, 0);
+					edges[2].p = f.p;
+					edges[2].w = cn.lookup(-SQRT_2, 0);
+					break;
+				case BasisStates::right:
+					edges[0].p = f.p;
+					edges[0].w = cn.lookup(SQRT_2, 0);
+					edges[2].p = f.p;
+					edges[2].w = cn.lookup(0, SQRT_2);
+					break;
+				case BasisStates::left:
+					edges[0].p = f.p;
+					edges[0].w = cn.lookup(SQRT_2, 0);
+					edges[2].p = f.p;
+					edges[2].w = cn.lookup(0, -SQRT_2);
+					break;
+			}
+
+			f = makeNonterminal(static_cast<short>(p), edges);
+		}
+		return f;
     }
 
     Edge Package::normalize(Edge& e, bool cached) {
