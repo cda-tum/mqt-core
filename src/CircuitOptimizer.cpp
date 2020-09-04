@@ -28,8 +28,13 @@ namespace qc {
 		// print incoming circuit
 		//qc.print(std::cout );
 		//std::cout << std::endl;
+		unsigned short highest_physical_qubit = 0;
+		for (const auto& q: qc.initialLayout) {
+			if (q.first > highest_physical_qubit)
+				highest_physical_qubit = q.first;
+		}
 
-		auto dag = DAG(qc.nqubits + qc.nancillae);
+		auto dag = DAG(highest_physical_qubit + 1);
 
 		for (auto & it : qc.ops) {
 			if (!it->isUnitary()) {
@@ -64,8 +69,8 @@ namespace qc {
 			auto opT = dag.at(target).front();
 
 			// previous operation is not a CNOT
-			if ((*opC)->getType() != qc::X || (*opC)->getNcontrols() != 1 ||
-					(*opT)->getType() != qc::X || (*opT)->getNcontrols() != 1) {
+			if ((*opC)->getType() != qc::X || (*opC)->getNcontrols() != 1 || (*opC)->getControls().at(0).type != Control::pos ||
+			(*opT)->getType() != qc::X || (*opT)->getNcontrols() != 1 || (*opT)->getControls().at(0).type != Control::pos) {
 				addToDag(dag, &it);
 				continue;
 			}
@@ -114,7 +119,13 @@ namespace qc {
 	}
 
 	DAG CircuitOptimizer::constructDAG(QuantumComputation& qc) {
-		auto dag = DAG(qc.nqubits + qc.nancillae);
+		unsigned short highest_physical_qubit = 0;
+		for (const auto& q: qc.initialLayout) {
+			if (q.first > highest_physical_qubit)
+				highest_physical_qubit = q.first;
+		}
+
+		auto dag = DAG(highest_physical_qubit + 1);
 
 		for (auto & it : qc.ops) {
 			if (!it->isUnitary()) {
@@ -158,7 +169,13 @@ namespace qc {
 	}
 
 	void CircuitOptimizer::singleGateFusion(QuantumComputation& qc) {
-		auto dag = DAG(qc.nqubits + qc.nancillae);
+		unsigned short highest_physical_qubit = 0;
+		for (const auto& q: qc.initialLayout) {
+			if (q.first > highest_physical_qubit)
+				highest_physical_qubit = q.first;
+		}
+
+		auto dag = DAG(highest_physical_qubit + 1);
 
 		for (auto & it : qc.ops) {
 			if (!it->isStandardOperation() && !it->isCompoundOperation()) {

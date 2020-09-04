@@ -20,6 +20,7 @@ The package can be used for a multitude of tasks, as illustrated in the followin
   * `Real` (e.g. from [RevLib](http://revlib.org))
   * `OpenQASM` (e.g. used by [Qiskit](https://github.com/Qiskit/qiskit))
   * `GRCS` Google Random Circuit Sampling Benchmarks (see [GRCS](https://github.com/sboixo/GRCS))
+  * `TFC` (e.g. from [Reversible Logic Synthesis Benchmarks Page](http://webhome.cs.uvic.ca/~dmaslov/mach-read.html))
       
   Importing a circuit from a file in either of those formats is done via:
   ```c++
@@ -193,7 +194,6 @@ The package can be used for a multitude of tasks, as illustrated in the followin
   
   Currently available file formats are:
         
-    * `Real` (.real)
     * `OpenQASM` (.qasm)
     * `Qiskit` (.py) Qiskit export generates a python file, which can be used to transpile a respective circuit to a suitable architecture using the Qiskit toolset (specifically Qiskit Terra 0.12.0).
   
@@ -204,7 +204,7 @@ The package can be used for a multitude of tasks, as illustrated in the followin
     ```commandline
     qfr_app circuit.real circuit.py
     ```
-    can be used to transcribe a circuit from `real` format to a qiskit realization
+    can be used to transcribe a circuit from `real` format to a Qiskit realization
 
 ### System Requirements
 

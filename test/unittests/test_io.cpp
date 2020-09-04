@@ -187,3 +187,8 @@ TEST_F(IO, dump_negative_control) {
 	EXPECT_EQ((*it)->getType(), qc::X);
 	EXPECT_EQ((*it)->getControls().size(), 0);
 }
+
+TEST_F(IO, tfc_input) {
+	qc->import("./circuits/test.tfc");
+	std::cout << *qc << std::endl;
+}

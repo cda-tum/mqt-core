@@ -141,7 +141,7 @@ namespace qc {
 
         auto q = removeQubit(nqubits);
         addAncillaryQubit(q.first, q.second);
-        reduceAncillae(e, dd);
+        e = reduceAncillae(e, dd);
 
         dd->decRef(iteration);
         dd->garbageCollect(true);

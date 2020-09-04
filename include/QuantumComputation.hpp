@@ -58,10 +58,23 @@ namespace qc {
 		void readRealGateDescriptions(std::istream& is, int line);
 		void importOpenQASM(std::istream& is);
 		void importGRCS(std::istream& is);
+		void importTFC(std::istream& is);
+		int readTFCHeader(std::istream& is, std::map<std::string, unsigned short>& varMap);
+		void readTFCGateDescriptions(std::istream& is, int line, std::map<std::string, unsigned short>& varMap);
+
 		static void printSortedRegisters(const registerMap& regmap, const std::string& identifier, std::ostream& of);
-		static void consolidateRegister(registerMap& regs, permutationMap& in, permutationMap& out);
+		static void consolidateRegister(registerMap& regs);
 
 		static void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, const char* defaultname);
+
+		unsigned short getSmallestAncillary() {
+			return ancillary._Find_first();
+		}
+
+		unsigned short getSmallestGarbage() {
+			return garbage._Find_first();
+		}
+
 
 	public:
 		QuantumComputation() = default;
@@ -90,7 +103,10 @@ namespace qc {
 		// initialLayout[physical_qubit] = logical_qubit
 		permutationMap initialLayout{ };
 		permutationMap outputPermutation{ };
-		
+
+		std::bitset<MAX_QUBITS> ancillary{};
+		std::bitset<MAX_QUBITS> garbage{};
+
 		unsigned long long getNindividualOps() const;
 
 		std::string getQubitRegister(unsigned short physical_qubit_index);
@@ -99,10 +115,15 @@ namespace qc {
 		unsigned short getHighestLogicalQubitIndex() const { return getHighestLogicalQubitIndex(initialLayout); };
 		std::pair<std::string, unsigned short> getQubitRegisterAndIndex(unsigned short physical_qubit_index);
 		std::pair<std::string, unsigned short> getClassicalRegisterAndIndex(unsigned short classical_index);
-		bool isIdleQubit(unsigned short i);
-		bool isAncilla(unsigned short i);
-		void reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd);
-		void reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd);
+		bool isIdleQubit(unsigned short physical_qubit);
+		bool physicalQubitIsAncillary(unsigned short physical_qubit_index);
+		bool logicalQubitIsAncillary(unsigned short logical_qubit_index) const { return ancillary.test(logical_qubit_index); }
+		void setLogicalQubitAncillary(unsigned short logical_qubit_index) { ancillary.set(logical_qubit_index); }
+		dd::Edge reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular = true);
+		bool logicalQubitIsGarbage(unsigned short logical_qubit_index) const { return garbage.test(logical_qubit_index); }
+		void setLogicalQubitGarbage(unsigned short logical_qubit_index) { garbage.set(logical_qubit_index); }
+		// works for reversible circuits --- to be tested for quantum circuits
+		dd::Edge reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular = true);
 		dd::Edge createInitialMatrix(std::unique_ptr<dd::Package>& dd); // creates identity matrix, which is reduced with respect to the ancillary qubits
 
 		/// strip away qubits with no operations applied to them and which do not pop up in the output permutation

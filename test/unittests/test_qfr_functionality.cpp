@@ -139,8 +139,8 @@ TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
 	EXPECT_TRUE(dd->equals(e.p->e[3], dd->DDzero));
 	auto f = dd->makeIdent(0, (short)nqubits);
 	dd->incRef(f);
-	qc.reduceAncillae(f, dd);
-	qc.reduceGarbage(f, dd);
+	f = qc.reduceAncillae(f, dd);
+	f = qc.reduceGarbage(f, dd);
 	EXPECT_TRUE(dd->equals(e, f));
 	qc.printRegisters();
 	auto p = qc.removeQubit(2);

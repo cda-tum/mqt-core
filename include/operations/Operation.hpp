@@ -34,7 +34,7 @@ namespace qc {
 
 	using regnames_t=std::vector<std::pair<std::string, std::string>>;
 	enum Format {
-		Real, OpenQASM, GRCS, Qiskit
+		Real, OpenQASM, GRCS, Qiskit, TFC
 	};	
 
 	struct Control {
