@@ -192,3 +192,8 @@ TEST_F(IO, tfc_input) {
 	qc->import("./circuits/test.tfc");
 	std::cout << *qc << std::endl;
 }
+
+TEST_F(IO, qc_input) {
+	qc->import("./circuits/test.qc");
+	std::cout << *qc << std::endl;
+}

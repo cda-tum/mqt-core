@@ -14,7 +14,7 @@
 #include <stdexcept>
 #include <sstream>
 
-#include "qasm_parser/Scanner.hpp"
+#include "Scanner.hpp"
 #include "operations/StandardOperation.hpp"
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/CompoundOperation.hpp"

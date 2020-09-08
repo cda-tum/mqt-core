@@ -12,8 +12,8 @@ file(RELATIVE_PATH relDir
 set(CMAKE_INSTALL_RPATH ${basePoint} ${basePoint}/${relDir})
 
 add_library(${PROJECT_NAME}
-            ${CMAKE_CURRENT_SOURCE_DIR}/qasm_parser/Scanner.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/qasm_parser/Parser.cpp
+            parsers/qasm_parser/Scanner.cpp
+            parsers/qasm_parser/Parser.cpp
 
             ${CMAKE_CURRENT_SOURCE_DIR}/operations/Operation.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/operations/StandardOperation.cpp
@@ -28,9 +28,15 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/GoogleRandomCircuitSampling.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Entanglement.cpp
 
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/qasm_parser/Token.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/qasm_parser/Scanner.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/qasm_parser/Parser.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/parsers/RealParser.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/parsers/GRCSParser.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QASMParser.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/parsers/TFCParser.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QCParser.cpp
+
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Parser.hpp
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/Operation.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/StandardOperation.hpp

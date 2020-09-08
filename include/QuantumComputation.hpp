@@ -9,7 +9,7 @@
 #include "operations/StandardOperation.hpp"
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/ClassicControlledOperation.hpp"
-#include "qasm_parser/Parser.hpp"
+#include "parsers/qasm_parser/Parser.hpp"
 
 #include <vector>
 #include <memory>
@@ -22,6 +22,7 @@
 #include <regex>
 #include <limits>
 #include <string>
+#include <locale>
 
 #define DEBUG_MODE_QC 0
 
@@ -53,14 +54,17 @@ namespace qc {
 		registerMap cregs{ };
 		registerMap ancregs{ };
 
+		void importOpenQASM(std::istream& is);
 		void importReal(std::istream& is);
 		int readRealHeader(std::istream& is);
 		void readRealGateDescriptions(std::istream& is, int line);
-		void importOpenQASM(std::istream& is);
-		void importGRCS(std::istream& is);
 		void importTFC(std::istream& is);
 		int readTFCHeader(std::istream& is, std::map<std::string, unsigned short>& varMap);
 		void readTFCGateDescriptions(std::istream& is, int line, std::map<std::string, unsigned short>& varMap);
+		void importQC(std::istream& is);
+		int readQCHeader(std::istream& is, std::map<std::string, unsigned short>& varMap);
+		void readQCGateDescriptions(std::istream& is, int line, std::map<std::string, unsigned short>& varMap);
+		void importGRCS(std::istream& is);
 
 		static void printSortedRegisters(const registerMap& regmap, const std::string& identifier, std::ostream& of);
 		static void consolidateRegister(registerMap& regs);
@@ -68,7 +72,7 @@ namespace qc {
 		static void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, const char* defaultname);
 
 		unsigned short getSmallestAncillary() const {
-			for (auto i=0; i<ancillary.size(); ++i) {
+			for (size_t i=0; i<ancillary.size(); ++i) {
 				if (ancillary.test(i))
 					return i;
 			}
@@ -76,7 +80,7 @@ namespace qc {
 		}
 
 		unsigned short getSmallestGarbage() const {
-			for (auto i=0; i<garbage.size(); ++i) {
+			for (size_t i=0; i<garbage.size(); ++i) {
 				if (garbage.test(i))
 					return i;
 			}

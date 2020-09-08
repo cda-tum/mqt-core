@@ -3,7 +3,7 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "qasm_parser/Scanner.hpp"
+#include "parsers/qasm_parser/Scanner.hpp"
 
 #include <locale>
 
