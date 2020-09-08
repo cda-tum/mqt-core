@@ -124,9 +124,13 @@ namespace dd {
 	    }
 	    std::cout << "\tComplex table has " << nentries << " entries\n";
 	    std::cout << "\tLargest number of entries in bucket: " << max << "\n";
+	    std::cout << "\tCT Lookups (total): " << ct_calls << "\n";
+	    std::cout << "\tCT Lookups (misses): " << ct_miss << "\n";
+
     }
 
 	ComplexTableEntry *ComplexNumbers::lookupVal(const fp& val) {
+        ct_calls++;
         assert(!std::isnan(val));
 
         const auto key = getKey(val);
@@ -161,6 +165,7 @@ namespace dd {
             }
         }
 
+        ct_miss++;
 		auto r = getComplexTableEntry();
 		r->val = val;
         r->next = ComplexTable[key];

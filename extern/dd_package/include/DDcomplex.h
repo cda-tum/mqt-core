@@ -95,6 +95,8 @@ namespace dd {
 	    ComplexChunk *chunks = nullptr;
 
 	    unsigned int count;
+	    unsigned long ct_calls = 0;
+	    unsigned long ct_miss = 0;
 
 	    ComplexNumbers();
 	    ~ComplexNumbers();
