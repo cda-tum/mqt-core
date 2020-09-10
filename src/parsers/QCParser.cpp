@@ -233,7 +233,7 @@ void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, 
 
 			std::vector<Control> controls{ };
 
-			std::string delimiter = " ";
+			auto delimiter = ' ';
 			size_t pos = 0;
 
 			while ((pos = qubits.find(delimiter)) != std::string::npos) {
@@ -246,6 +246,8 @@ void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, 
 				}
 				qubits.erase(0, pos+1);
 			}
+			// delete whitespace at the end
+			qubits.erase(std::remove(qubits.begin(), qubits.end(), delimiter), qubits.end());
 			controls.emplace_back(varMap.at(qubits));
 
 			if (controls.size() > nqubits+nancillae) {

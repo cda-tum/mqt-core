@@ -454,33 +454,53 @@ namespace qc {
 		garbage.reset(logical_qubit_index);
 	}
 
-	dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular) {
-		// return if no more ancillaries left
+dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular) {
+		// return if no more garbage left
 		if (!ancillary.any() || e.p == nullptr) return e;
-		unsigned short firstAncillary = 0;
-		for (size_t i=0; i<ancillary.size(); ++i) {
+		unsigned short lowerbound = 0;
+		for (size_t i = 0; i < ancillary.size(); ++i) {
 			if (ancillary.test(i)) {
-				firstAncillary = i;
+				lowerbound = i;
 				break;
 			}
 		}
-		if(e.p->v < firstAncillary) return e;
+		if (e.p->v < lowerbound) return e;
+		return reduceAncillaeRecursion(e, dd, lowerbound, regular);
+	}
+
+	dd::Edge QuantumComputation::reduceAncillaeRecursion(dd::Edge& e, std::unique_ptr<dd::Package>& dd, unsigned short lowerbound, bool regular) {
+		if(e.p->v < lowerbound) return e;
 
 		dd::Edge f = e;
 
 		std::array<dd::Edge, 4> edges{ };
+		std::bitset<4> handled{};
 		for (int i = 0; i < 4; ++i) {
-			edges[i] = reduceAncillae(f.p->e[i], dd, regular);
+			if (!handled.test(i)) {
+				if (dd->isTerminal(e.p->e[i])) {
+					edges[i] = e.p->e[i];
+				} else {
+					edges[i] = reduceAncillaeRecursion(f.p->e[i], dd, lowerbound, regular);
+					for (int j = i+1; j < 4; ++j) {
+						if (e.p->e[i].p == e.p->e[j].p) {
+							edges[j] = edges[i];
+							handled.set(j);
+						}
+					}
+				}
+				handled.set(i);
+			}
 		}
 		f = dd->makeNonterminal(f.p->v, edges);
 
 		// something to reduce for this qubit
-		if (ancillary.test(f.p->v)) {
-			if ((regular && (!CN::equalsZero(f.p->e[1].w) || !CN::equalsZero(f.p->e[3].w))) ||
-			    (!regular && (!CN::equalsZero(f.p->e[2].w) || !CN::equalsZero(f.p->e[3].w)))) {
-				if (regular) {
+		if (f.p->v >= 0 && ancillary.test(f.p->v)) {
+			if (regular) {
+				if (f.p->e[1].w != CN::ZERO || f.p->e[3].w != CN::ZERO){
 					f = dd->makeNonterminal(f.p->v, { f.p->e[0], dd::Package::DDzero, f.p->e[2], dd::Package::DDzero });
-				} else {
+				}
+			} else {
+				if (f.p->e[2].w != CN::ZERO || f.p->e[3].w != CN::ZERO) {
 					f = dd->makeNonterminal(f.p->v, { f.p->e[0], f.p->e[1], dd::Package::DDzero, dd::Package::DDzero });
 				}
 			}
@@ -496,69 +516,82 @@ namespace qc {
 	dd::Edge QuantumComputation::reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular) {
 		// return if no more garbage left
 		if (!garbage.any() || e.p == nullptr) return e;
-		unsigned short firstGarbage = 0;
+		unsigned short lowerbound = 0;
 		for (size_t i=0; i<garbage.size(); ++i) {
 			if (garbage.test(i)) {
-				firstGarbage = i;
+				lowerbound = i;
 				break;
 			}
 		}
-		if(e.p->v < firstGarbage) return e;
+		if(e.p->v < lowerbound) return e;
+		return reduceGarbageRecursion(e, dd, lowerbound, regular);
+	}
+
+	dd::Edge QuantumComputation::reduceGarbageRecursion(dd::Edge& e, std::unique_ptr<dd::Package>& dd, unsigned short lowerbound, bool regular) {
+		if(e.p->v < lowerbound) return e;
 
 		dd::Edge f = e;
 
 		std::array<dd::Edge, 4> edges{ };
+		std::bitset<4> handled{};
 		for (int i = 0; i < 4; ++i) {
-			edges[i] = reduceGarbage(f.p->e[i], dd, regular);
+			if (!handled.test(i)) {
+				if (dd->isTerminal(e.p->e[i])) {
+					edges[i] = e.p->e[i];
+				} else {
+					edges[i] = reduceGarbageRecursion(f.p->e[i], dd, lowerbound, regular);
+					for (int j = i+1; j < 4; ++j) {
+						if (e.p->e[i].p == e.p->e[j].p) {
+							edges[j] = edges[i];
+							handled.set(j);
+						}
+					}
+				}
+				handled.set(i);
+			}
 		}
 		f = dd->makeNonterminal(f.p->v, edges);
 
 		// something to reduce for this qubit
-		if (garbage.test(f.p->v)) {
-			if ((regular && (!CN::equalsZero(f.p->e[2].w) || !CN::equalsZero(f.p->e[3].w))) ||
-			    (!regular && (!CN::equalsZero(f.p->e[1].w) || !CN::equalsZero(f.p->e[3].w)))) {
-
-				dd::Edge g{ };
-				if (regular) {
-					if (CN::equalsZero(f.p->e[0].w) && !CN::equalsZero(f.p->e[2].w)) {
+		if (f.p->v >= 0 && garbage.test(f.p->v)) {
+			if (regular) {
+				if (f.p->e[2].w != CN::ZERO || f.p->e[3].w != CN::ZERO) {
+					dd::Edge g{ };
+					if (f.p->e[0].w == CN::ZERO && f.p->e[2].w != CN::ZERO) {
 						g = f.p->e[2];
-					} else if (!CN::equalsZero(f.p->e[2].w)) {
+					} else if (f.p->e[2].w != CN::ZERO) {
 						g = dd->add(f.p->e[0], f.p->e[2]);
 					} else {
 						g = f.p->e[0];
 					}
-				} else {
-					if (CN::equalsZero(f.p->e[0].w) && !CN::equalsZero(f.p->e[1].w)) {
-						g = f.p->e[1];
-					} else if (!CN::equalsZero(f.p->e[1].w)) {
-						g = dd->add(f.p->e[0], f.p->e[1]);
-					} else {
-						g = f.p->e[0];
-					}
-				}
-
-				dd::Edge h{ };
-				if (regular) {
-					if (CN::equalsZero(f.p->e[1].w) && !CN::equalsZero(f.p->e[3].w)) {
+					dd::Edge h{ };
+					if (f.p->e[1].w == CN::ZERO && f.p->e[3].w != CN::ZERO) {
 						h = f.p->e[3];
-					} else if (!CN::equalsZero(f.p->e[3].w)) {
+					} else if (f.p->e[3].w != CN::ZERO) {
 						h = dd->add(f.p->e[1], f.p->e[3]);
 					} else {
 						h = f.p->e[1];
 					}
-				} else {
-					if (CN::equalsZero(f.p->e[2].w) && !CN::equalsZero(f.p->e[3].w)) {
+					f = dd->makeNonterminal(e.p->v, { g, h, dd::Package::DDzero, dd::Package::DDzero });
+				}
+			} else {
+				if (f.p->e[1].w != CN::ZERO || f.p->e[3].w != CN::ZERO) {
+					dd::Edge g{ };
+					if (f.p->e[0].w == CN::ZERO && f.p->e[1].w != CN::ZERO) {
+						g = f.p->e[1];
+					} else if (f.p->e[1].w != CN::ZERO) {
+						g = dd->add(f.p->e[0], f.p->e[1]);
+					} else {
+						g = f.p->e[0];
+					}
+					dd::Edge h{ };
+					if (f.p->e[2].w == CN::ZERO && f.p->e[3].w != CN::ZERO) {
 						h = f.p->e[3];
-					} else if (!CN::equalsZero(f.p->e[3].w)) {
+					} else if (f.p->e[3].w != CN::ZERO) {
 						h = dd->add(f.p->e[2], f.p->e[3]);
 					} else {
 						h = f.p->e[2];
 					}
-				}
-
-				if (regular) {
-					f = dd->makeNonterminal(e.p->v, { g, h, dd::Package::DDzero, dd::Package::DDzero });
-				} else {
 					f = dd->makeNonterminal(e.p->v, { g, dd::Package::DDzero, h, dd::Package::DDzero });
 				}
 			}
@@ -567,6 +600,9 @@ namespace qc {
 		auto c = dd->cn.mulCached(f.w, e.w);
 		f.w = dd->cn.lookup(c);
 		dd->cn.releaseCached(c);
+		// Quick-fix for normalization bug
+		if (CN::mag2(f.w) > 1.0)
+			f.w = CN::ONE;
 		dd->incRef(f);
 		return f;
 	}

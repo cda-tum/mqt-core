@@ -132,10 +132,12 @@ namespace qc {
 		bool logicalQubitIsAncillary(unsigned short logical_qubit_index) const { return ancillary.test(logical_qubit_index); }
 		void setLogicalQubitAncillary(unsigned short logical_qubit_index) { ancillary.set(logical_qubit_index); }
 		dd::Edge reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular = true);
+		dd::Edge reduceAncillaeRecursion(dd::Edge& e, std::unique_ptr<dd::Package>& dd, unsigned short lowerbound, bool regular = true);
 		bool logicalQubitIsGarbage(unsigned short logical_qubit_index) const { return garbage.test(logical_qubit_index); }
 		void setLogicalQubitGarbage(unsigned short logical_qubit_index) { garbage.set(logical_qubit_index); }
 		// works for reversible circuits --- to be tested for quantum circuits
 		dd::Edge reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular = true);
+		dd::Edge reduceGarbageRecursion(dd::Edge& e, std::unique_ptr<dd::Package>& dd, unsigned short lowerbound, bool regular = true);
 		dd::Edge createInitialMatrix(std::unique_ptr<dd::Package>& dd); // creates identity matrix, which is reduced with respect to the ancillary qubits
 
 		/// strip away qubits with no operations applied to them and which do not pop up in the output permutation
