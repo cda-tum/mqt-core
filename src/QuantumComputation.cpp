@@ -1361,10 +1361,10 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		while (std::getline(ifs,line)) {
 			/*
 			 * check all comment lines in header for layout information in the following form:
-			        // i Q0 Q1 ... Qn
-					// o q0 q1 ... qn
-		        where i describes the initial layout, e.g. 'i 2 1 0' means q2 -> Q0, q1 -> Q1, q0 -> Q2
-		        and j describes the output permutation, e.g. 'o 2 1 0' means q0 -> Q2, q1 -> Q1, q2 -> Q0
+		      'i Q_i Q_j ... Q_k' meaning, e.g. q_0 is mapped to Q_i, q_1 to Q_j, etc.
+		      'o Q_i Q_j ... Q_k' meaning, e.g. q_0 is found at Q_i, q_1 at Q_j, etc.
+		        where i describes the initial layout, e.g. 'i 2 1 0' means q0 -> Q2, q1 -> Q1, q2 -> Q0
+		        and o describes the output permutation, e.g. 'o 2 1 0' means  q0 is expected at Q2, q1 at Q1, and q2 at Q0
 			 */
 			if(line.rfind("//", 0) == 0) {
 				if (line.find('i') != std::string::npos) {
