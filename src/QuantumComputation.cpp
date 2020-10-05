@@ -62,17 +62,6 @@ namespace qc {
 			case OpenQASM:
 				updateMaxControls(2);
 				importOpenQASM(is);
-				// try to parse initial layout from qasm file
-				is.clear();
-				is.seekg(0, std::ios::beg);
-				if (!lookForOpenQASM_IO_Layout(is)) {
-					for (unsigned short i = 0; i < nqubits; ++i) {
-						initialLayout.insert({ i, i});
-						// only add to output permutation if the qubit is actually acted upon
-						if (!isIdleQubit(i))
-							outputPermutation.insert({ i, i});
-					}
-				}
 				break;
 			case GRCS:
 				importGRCS(is);
@@ -85,6 +74,23 @@ namespace qc {
 				break;
 			default:
 				throw QFRException("[import] Format " + std::to_string(format) + " not yet supported");
+		}
+
+		// try to parse initial layout from file
+		is.clear();
+		is.seekg(0, std::ios::beg);
+		lookForIOInformation(is);
+		if (initialLayout.empty()) {
+			for (unsigned short i = 0; i < nqubits; ++i)
+				initialLayout.insert({ i, i});
+		}
+
+		if (outputPermutation.empty()) {
+			for (unsigned short i = 0; i < nqubits; ++i) {
+				// only add to output permutation if the qubit is actually acted upon
+				if (!isIdleQubit(i))
+					outputPermutation.insert({ i, initialLayout.at(i)});
+			}
 		}
 	}
 
@@ -1356,7 +1362,8 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return os;
 	}
 
-	bool QuantumComputation::lookForOpenQASM_IO_Layout(std::istream& ifs) {
+	bool QuantumComputation::lookForIOInformation(std::istream& ifs) {
+		bool foundInitialLayout = false;
 		std::string line;
 		while (std::getline(ifs,line)) {
 			/*
@@ -1374,6 +1381,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 						if (!(ss >> physical_qubit)) return false;
 						initialLayout.insert({physical_qubit, logical_qubit});
 					}
+					foundInitialLayout = true;
 				} else if (line.find('o') != std::string::npos) {
 					unsigned short physical_qubit = 0;
 					auto ss = std::stringstream(line.substr(4));
@@ -1401,7 +1409,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 				}
 			}
 		}
-		return false;
+		return foundInitialLayout;
 	}
 
 	unsigned short QuantumComputation::getHighestLogicalQubitIndex(const permutationMap& map) {
