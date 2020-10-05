@@ -27,6 +27,7 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/BernsteinVazirani.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/GoogleRandomCircuitSampling.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Entanglement.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/RandomCliffordCircuit.cpp
 
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/RealParser.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/GRCSParser.cpp
