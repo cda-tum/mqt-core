@@ -11,8 +11,9 @@ namespace dd {
 	ComplexTableEntry* ComplexNumbers::moneEntryPointer{(ComplexTableEntry *) (((uintptr_t) (&oneEntry)) | 1u)};
 	constexpr Complex ComplexNumbers::ONE;
 	constexpr Complex ComplexNumbers::ZERO;
+	fp ComplexNumbers::TOLERANCE = 1e-13l;
 
-    ComplexNumbers::ComplexNumbers() {
+	ComplexNumbers::ComplexNumbers() {
         Cache_Avail_Initial_Pointer = new ComplexTableEntry[INIT_SIZE * 6];
 	    Cache_Avail = Cache_Avail_Initial_Pointer;
 

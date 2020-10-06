@@ -217,6 +217,7 @@ namespace dd {
         ~Package();
 
         void setMode(Mode m) { mode = m; }
+        static void setComplexNumberTolerance(fp tol) { CN::setTolerance(tol); }
 
         // DD creation
         static inline Edge makeTerminal(const Complex& w) { return { terminalNode, w }; }
