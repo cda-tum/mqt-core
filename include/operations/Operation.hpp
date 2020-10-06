@@ -259,7 +259,7 @@ namespace qc {
 		}
 
 		inline virtual bool actsOn(unsigned short i) {
-			for (const auto t:targets) {
+			for (const auto& t:targets) {
 				if (t == i)
 					return true;
 			}

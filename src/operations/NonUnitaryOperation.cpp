@@ -122,7 +122,7 @@ namespace qc {
 				if(isWholeQubitRegister(qreg, targets[0], targets.back())) {
 					of << "reset " << qreg[targets[0]].first << ";" << std::endl;
 				} else {
-					for (auto target: targets) {
+					for (const auto& target: targets) {
 						of << "reset " << qreg[target].second << ";" << std::endl;
 					}
 				}
@@ -147,7 +147,7 @@ namespace qc {
 				if(isWholeQubitRegister(qreg, targets[0],        targets.back())) {
 					of << "barrier " << qreg[targets[0]].first << ";" << std::endl;
 				} else {
-					for (auto target: targets) {
+					for (const auto& target: targets) {
 						of << "barrier " << qreg[target].second << ";" << std::endl;
 					}
 				}
@@ -166,7 +166,7 @@ namespace qc {
 					of << "qc.measure(" << qreg[controls[0].qubit].first << ", " << creg[targets[0]].first << ")" << std::endl;
 				} else {
 					of << "qc.measure([";
-					for (auto control : controls) {
+					for (const auto& control : controls) {
 						of << qreg[control.qubit].second << ", ";
 					}
 					of << "], [";
@@ -181,7 +181,7 @@ namespace qc {
 					of << "append(Reset(), " << qreg[targets[0]].first << ", [])" << std::endl;
 				} else {
 					of << "append(Reset(), [";
-					for (auto target: targets) {
+					for (const auto& target: targets) {
 						of << qreg[target].second << ", " << std::endl;
 					}
 					of << "], [])" << std::endl;
@@ -204,7 +204,7 @@ namespace qc {
 					of << "qc.barrier(" << qreg[targets[0]].first << ")" << std::endl;
 				} else {
 					of << "qc.barrier([";
-					for (auto target: targets) {
+					for (const auto& target: targets) {
 						of  << qreg[target].first << ", ";
 					}
 					of << "])" << std::endl;

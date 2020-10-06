@@ -534,7 +534,7 @@ namespace qc {
 		for (const auto& c: controls) {
 			of << " " << qreg[c.qubit].second << ",";
 		}
-        for(auto target: targets) {
+        for(const auto& target: targets) {
 			of << " " << qreg[target].second << ";" << std::endl;
 		}
 		for (const auto& c: controls) {

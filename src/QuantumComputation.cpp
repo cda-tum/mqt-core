@@ -987,7 +987,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		create_reg_array(cregs, cregnames, nclassics, DEFAULT_CREG);
 		create_reg_array(ancregs, ancregnames, nancillae, DEFAULT_ANCREG);
 
-		for (auto& ancregname: ancregnames)
+		for (const auto& ancregname: ancregnames)
 			qregnames.push_back(ancregname);
 
 		for (const auto& op: ops) {
@@ -1002,7 +1002,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 			sortedRegs.insert({reg.second.first, reg});
 		}
 
-		for (auto const& reg : sortedRegs) {
+		for (const auto& reg : sortedRegs) {
 			of << identifier << " " << reg.second.first << "[" << reg.second.second.second << "];" << std::endl;
 		}
 	}
@@ -1091,7 +1091,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 				create_reg_array({}, cregnames, nclassics, DEFAULT_CREG);
 				create_reg_array({}, ancregnames, nancillae, DEFAULT_ANCREG);
 
-				for (auto& ancregname: ancregnames)
+				for (const auto& ancregname: ancregnames)
 					qregnames.push_back(ancregname);
 
 				for (const auto& op: ops) {

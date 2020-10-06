@@ -100,14 +100,14 @@ namespace qc {
 	}
 
 	void Operation::setLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
-		for(auto target: targets) {
+		for(const auto& target: targets) {
 			#if DEBUG_MODE_OPERATIONS
 			std::cout << "target = " << target << ", perm[target] = " << permutation.at(target) << std::endl;
 			#endif
 
 			line[permutation.at(target)] = LINE_TARGET;
 		}
-		for(auto control: controls) {
+		for(const auto& control: controls) {
 			#if DEBUG_MODE_OPERATIONS
 			std::cout << "control = " << control.qubit << ", perm[control] = " << permutation.at(control.qubit) << std::endl;
 			#endif
@@ -117,10 +117,10 @@ namespace qc {
 	}
 
 	void Operation::resetLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
-		for(auto target: targets) {
+		for(const auto& target: targets) {
 			line[permutation.at(target)] = LINE_DEFAULT;
 		}
-		for(auto control: controls) {
+		for(const auto& control: controls) {
 			line[permutation.at(control.qubit)] = LINE_DEFAULT;
 		}
 	}

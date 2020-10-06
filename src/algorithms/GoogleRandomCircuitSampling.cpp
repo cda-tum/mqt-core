@@ -114,7 +114,7 @@ namespace qc {
 
     size_t GoogleRandomCircuitSampling::getNops() const {
         size_t nops = 0;
-        for (auto& cycle: cycles)
+        for (const auto& cycle: cycles)
             nops += cycle.size();
         return nops;
     }
