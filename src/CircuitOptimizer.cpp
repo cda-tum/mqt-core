@@ -37,14 +37,35 @@ namespace qc {
 		auto dag = DAG(highest_physical_qubit + 1);
 
 		for (auto & it : qc.ops) {
-			if (!it->isUnitary()) {
-				std::cerr << "Non unitary operation detected. This is currently not supported. Proceed with caution!" << std::endl;
-				continue;
-			}
-			if(!it->isStandardOperation()) {
+			if (!it->isStandardOperation()) {
+				// compound operations are added "as-is"
 				if (it->isCompoundOperation()) {
 					std::cerr << "Compound operation detected. This is currently not supported. Proceed with caution!" << std::endl;
-					return;
+					for (int i = 0; i < it->getNqubits(); ++i) {
+						if (it->actsOn(i)) {
+							dag.at(i).push_front(&it);
+						}
+					}
+					continue;
+				} else if (it->getType() == qc::Measure) {
+					for (const auto& c: it->getControls()) {
+						dag.at(c.qubit).push_front(&it);
+					}
+					continue;
+				} else if (it->getType() == qc::Barrier || it->getType() == qc::Reset) {
+					for (const auto& b: it->getTargets()) {
+						dag.at(b).push_front(&it);
+					}
+					continue;
+				} else if (it->isClassicControlledOperation()) {
+					auto op = dynamic_cast<ClassicControlledOperation *>(it.get())->getOperation();
+					for (const auto& control: op->getControls()) {
+						dag.at(control.qubit).push_front(&it);
+					}
+					for (const auto& target: op->getTargets()) {
+						dag.at(target).push_front(&it);
+					}
+					continue;
 				} else {
 					throw QFRException("Unexpected operation encountered");
 				}
@@ -128,11 +149,40 @@ namespace qc {
 		auto dag = DAG(highest_physical_qubit + 1);
 
 		for (auto & it : qc.ops) {
-			if (!it->isUnitary()) {
-				std::cerr << "Non unitary operation detected. This is currently not supported. Proceed with caution!" << std::endl;
-				continue;
+			if (!it->isStandardOperation()) {
+				// compound operations are added "as-is"
+				if (it->isCompoundOperation()) {
+					for (int i = 0; i < it->getNqubits(); ++i) {
+						if (it->actsOn(i)) {
+							dag.at(i).push_front(&it);
+						}
+					}
+					continue;
+				} else if (it->getType() == qc::Measure) {
+					for (const auto& c: it->getControls()) {
+						dag.at(c.qubit).push_front(&it);
+					}
+					continue;
+				} else if (it->getType() == qc::Barrier || it->getType() == qc::Reset) {
+					for (const auto& b: it->getTargets()) {
+						dag.at(b).push_front(&it);
+					}
+					continue;
+				} else if (it->isClassicControlledOperation()) {
+					auto op = dynamic_cast<ClassicControlledOperation *>(it.get())->getOperation();
+					for (const auto& control: op->getControls()) {
+						dag.at(control.qubit).push_front(&it);
+					}
+					for (const auto& target: op->getTargets()) {
+						dag.at(target).push_front(&it);
+					}
+					continue;
+				} else {
+					throw QFRException("Unexpected operation encountered");
+				}
+			} else {
+				addToDag(dag, &it);
 			}
-			addToDag(dag, &it);
 		}
 
 		bool allEmpty = false;
@@ -178,18 +228,37 @@ namespace qc {
 		auto dag = DAG(highest_physical_qubit + 1);
 
 		for (auto & it : qc.ops) {
-			if (!it->isStandardOperation() && !it->isCompoundOperation()) {
-				throw QFRException("Unexpected operation encountered");
-			}
-
-			// compound operations are added "as-is"
-			if (it->isCompoundOperation()) {
-				for (int i = 0; i < it->getNqubits(); ++i) {
-					if (it->actsOn(i)) {
-						dag.at(i).push_front(&it);
+			if (!it->isStandardOperation()) {
+				// compound operations are added "as-is"
+				if (it->isCompoundOperation()) {
+					for (int i = 0; i < it->getNqubits(); ++i) {
+						if (it->actsOn(i)) {
+							dag.at(i).push_front(&it);
+						}
 					}
+					continue;
+				} else if (it->getType() == qc::Measure) {
+					for (const auto& c: it->getControls()) {
+						dag.at(c.qubit).push_front(&it);
+					}
+					continue;
+				} else if (it->getType() == qc::Barrier || it->getType() == qc::Reset) {
+					for (const auto& b: it->getTargets()) {
+						dag.at(b).push_front(&it);
+					}
+					continue;
+				} else if (it->isClassicControlledOperation()) {
+					auto op = dynamic_cast<ClassicControlledOperation *>(it.get())->getOperation();
+					for (const auto& control: op->getControls()) {
+						dag.at(control.qubit).push_front(&it);
+					}
+					for (const auto& target: op->getTargets()) {
+						dag.at(target).push_front(&it);
+					}
+					continue;
+				} else {
+					throw QFRException("Unexpected operation encountered");
 				}
-				continue;
 			}
 
 			// not a single qubit operation
