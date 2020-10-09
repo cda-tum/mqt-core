@@ -1,10 +1,12 @@
 [![Build Status](https://travis-ci.com/iic-jku/dd_package.svg?branch=master)](https://travis-ci.com/iic-jku/dd_package)
 [![codecov](https://codecov.io/gh/iic-jku/dd_package/branch/master/graph/badge.svg)](https://codecov.io/gh/iic-jku/dd_package)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![toolset: JKQ](https://img.shields.io/badge/toolset-JKQ-blue)](https://github.com/iic-jku/jkq)
 
-# A Package for Decision Diagrams Written in C++
 
-A DD package tailored to quantum computing by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at).
+# JKQ DD Package - A Package for Decision Diagrams Written in C++
+
+A DD package tailored to quantum computing by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at). This package is part of the [JKQ toolset](https://github.com/iic-jku/jkq).
 
 Developers: Alwin Zulehner, Stefan Hillmich, Lukas Burgholzer, and Robert Wille
 
