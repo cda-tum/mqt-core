@@ -1,10 +1,12 @@
 [![Build Status](https://travis-ci.com/iic-jku/qfr.svg?branch=master)](https://travis-ci.com/iic-jku/qfr)
 [![codecov](https://codecov.io/gh/iic-jku/qfr/branch/master/graph/badge.svg)](https://codecov.io/gh/iic-jku/qfr)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![toolset: JKQ](https://img.shields.io/badge/toolset-JKQ-blue)](https://github.com/iic-jku/jkq)
 
-# QFR - A Library for Quantum Functionality Representation Written in C++
 
-A library for the representation of quantum functionality by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at).
+# JKQ QFR - A Library for Quantum Functionality Representation Written in C++
+
+A library for the representation of quantum functionality by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at). This package is part of the [JKQ toolset](https://github.com/iic-jku/jkq).
 
 Developers: Lukas Burgholzer, Hartwig Bauer, Stefan Hillmich and Robert Wille.
 
