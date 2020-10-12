@@ -142,7 +142,7 @@ namespace qc {
 
 		/// strip away qubits with no operations applied to them and which do not pop up in the output permutation
 		/// \param force if true, also strip away idle qubits occurring in the output permutation
-		void stripIdleQubits(bool force = false);
+		void stripIdleQubits(bool force = false, bool reduceIOpermutations = true);
 		// apply swaps 'on' DD in order to change 'from' to 'to'
 		// where |from| >= |to|
 		static void changePermutation(dd::Edge& on, qc::permutationMap& from, const qc::permutationMap& to, std::array<short, qc::MAX_QUBITS>& line, std::unique_ptr<dd::Package>& dd, bool regular = true);

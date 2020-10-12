@@ -1153,7 +1153,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return true;
 	}
 
-	void QuantumComputation::stripIdleQubits(bool force) {
+	void QuantumComputation::stripIdleQubits(bool force, bool reduceIOpermutations) {
 		auto layout_copy = initialLayout;
 		for (auto physical_qubit_it = layout_copy.rbegin(); physical_qubit_it != layout_copy.rend(); ++physical_qubit_it) {
 			auto physical_qubit_index = physical_qubit_it->first;
@@ -1172,7 +1172,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 				#endif
 				removeQubit(logical_qubit_index);
 
-				if (logical_qubit_index < nqubits+nancillae) {
+				if (reduceIOpermutations && (logical_qubit_index < nqubits+nancillae)) {
 					#if DEBUG_MODE_QC
 					std::cout << "Qubit " << logical_qubit_index << " is inner qubit. Need to adjust permutations." << std::endl;
 					#endif
