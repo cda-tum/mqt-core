@@ -1,10 +1,11 @@
 language: cpp
 os: linux
+dist: focal
 
 jobs:
   include:
     - os: linux
-      dist: bionic
+      dist: focal
       compiler: "gcc"
       env: BUILD='Debug' CC=gcc CXX=g++ COVERAGE=1 COV_EXE=gcov
       addons:
@@ -15,7 +16,7 @@ jobs:
             - lcov
 
     - os: linux
-      dist: bionic
+      dist: focal
       compiler: "gcc"
       env: BUILD='Release' CC=gcc CXX=g++ COVERAGE=0
       addons:
@@ -25,8 +26,8 @@ jobs:
             - ninja-build
 
     - os: linux
-      dist: bionic
-      compiler: "gcc-10"
+      dist: focal
+      compiler: "gcc"
       env: BUILD='Release' CC=gcc-10 CXX=g++-10 COVERAGE=0
       addons:
         apt:
@@ -39,18 +40,18 @@ jobs:
             - g++-10
 
     - os: linux
-      dist: bionic
-      compiler: "clang-9"
-      env: BUILD='Release' CC=clang-9 CXX=clang++-9 COVERAGE=0
+      dist: focal
+      compiler: "clang"
+      env: BUILD='Release' CC=clang-11 CXX=clang++-11 COVERAGE=0
       addons:
         apt:
           sources:
-            - sourceline: 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main'
+            - sourceline: 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main'
               key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
           packages:
             - cmake
             - ninja-build
-            - clang-9
+            - clang-11
 
     - os: osx
       osx_image: xcode12
@@ -65,7 +66,7 @@ jobs:
 
     - os: osx
       osx_image: xcode12
-      compiler: "gcc-10"
+      compiler: "gcc"
       env: BUILD='Release' CC=gcc-10 CXX=g++-10 COVERAGE=0
       addons:
         homebrew:
@@ -73,7 +74,7 @@ jobs:
             - cmake
             - ninja
             - gcc@10
-          update: true
+          update: false
 
     - os: windows
       env: BUILD='Release' CC=gcc CXX=g++ COVERAGE=0
@@ -95,15 +96,25 @@ before_script:
     else
       cmake .. -G Ninja -LA -DCMAKE_BUILD_TYPE=${BUILD} -DCOVERAGE=${COVERAGE}
     fi
-  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cmake --build . --config ${BUILD} --target INSTALL; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cmake --build . --config ${BUILD} --target qfr; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cmake --build . --config ${BUILD} --target qfr_example; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cmake --build . --config ${BUILD} --target qfr_test; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then sudo cmake --build . --config ${BUILD} --target install; fi
+  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then
+      cmake --build . --config ${BUILD} --target INSTALL;
+    else
+      cmake --build . --config ${BUILD} --target qfr;
+      cmake --build . --config ${BUILD} --target qfr_example;
+      cmake --build . --config ${BUILD} --target qfr_test;
+      sudo cmake --build . --config ${BUILD} --target install;
+    fi
 
 script:
-  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cd test/${BUILD} && ./qfr_test.exe; fi
-  - if [ "$TRAVIS_OS_NAME" != "windows" ]; then cd test && ./qfr_test; fi
+  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then
+      cd test/${BUILD};
+      ./qfr_test.exe;
+      cd ../../;
+    else
+      cd test;
+      ./qfr_test;
+      cd ..;
+    fi
 
 after_success:
   - |
