@@ -49,8 +49,8 @@ For implementing more complex functionality which requires garbage collection, b
 
 ### System Requirements
 
-Building (and running) is continuously tested under Linux (Ubuntu 18.04) using gcc-7.4, gcc-10 and clang-9, MacOS (Catalina 10.15) using AppleClang and gcc-10, and Windows using MSVC 15.9. 
-However, the implementation should be compatible with any current C++ compiler supporting C++11 and a minimum CMake version of 3.10.
+Building (and running) is continuously tested under Linux (Ubuntu 20.04) using gcc-9.3, gcc-10 and clang-11, MacOS (Catalina 10.15) using AppleClang and gcc-10, and Windows using MSVC 15.9. 
+However, the implementation should be compatible with any current C++ compiler supporting C++14 and a minimum CMake version of 3.10.
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
   

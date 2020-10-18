@@ -22,7 +22,7 @@ endif()
 
 add_executable(${PROJECT_NAME}_example ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 target_link_libraries(${PROJECT_NAME}_example PRIVATE ${PROJECT_NAME})
-target_compile_features(${PROJECT_NAME}_example PUBLIC cxx_std_11)
+target_compile_features(${PROJECT_NAME}_example PUBLIC cxx_std_14)
 set_property(TARGET ${PROJECT_NAME}_example PROPERTY CXX_EXTENSIONS OFF)
 if (COVERAGE)
 	target_compile_options(${PROJECT_NAME}_example PRIVATE --coverage)

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10...3.16)
+cmake_minimum_required(VERSION 3.10...3.19)
 if(${CMAKE_VERSION} VERSION_LESS 3.12)
 	cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
 endif()
@@ -24,15 +24,15 @@ endif()
 
 add_subdirectory(src)
 
-option(BUILD_TESTS "Also build tests for DD package" OFF)
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR BUILD_TESTS)
+option(BUILD_DD_PACKAGE_TESTS "Also build tests for DD package" OFF)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR BUILD_DD_PACKAGE_TESTS)
 	find_package(Git QUIET)
 	if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 		# Update submodules as needed
 		option(GIT_SUBMODULE "Check submodules during build" ON)
 		if(GIT_SUBMODULE)
 			message(STATUS "Submodule update")
-			execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --remote
+			execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
 			                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 			                RESULT_VARIABLE GIT_SUBMOD_RESULT)
 			if(NOT GIT_SUBMOD_RESULT EQUAL "0")

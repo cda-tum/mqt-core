@@ -944,18 +944,18 @@ namespace dd {
     }
 
     Edge Package::partialTrace(const Edge a, const std::bitset<MAXN>& eliminate) {
-        auto before = cn.cacheCount;
+        [[maybe_unused]] const auto before = cn.cacheCount;
         const auto result = trace(a, a.p->v, eliminate);
-        auto after = cn.cacheCount;
+	    [[maybe_unused]] const auto after = cn.cacheCount;
         assert(before == after);
         return result;
     }
 
     ComplexValue Package::trace(const Edge a) {
         auto eliminate = std::bitset<MAXN>{}.set();
-        auto before = cn.cacheCount;
+	    [[maybe_unused]] const auto before = cn.cacheCount;
         Edge res = partialTrace(a, eliminate);
-        auto after = cn.cacheCount;
+	    [[maybe_unused]] const auto after = cn.cacheCount;
         assert(before == after);
         return { ComplexNumbers::val(res.w.r), ComplexNumbers::val(res.w.i)};
     }
@@ -1053,14 +1053,14 @@ namespace dd {
     }
 
     Edge Package::add(Edge x, Edge y) {
-        const auto before = cn.cacheCount;
+	    [[maybe_unused]] const auto before = cn.cacheCount;
         Edge result = add2(x, y);
 
         if (result.w != CN::ZERO) {
 	        cn.releaseCached(result.w);
 	        result.w = cn.lookup(result.w);
         }
-        const auto after = cn.cacheCount;
+	    [[maybe_unused]] const auto after = cn.cacheCount;
         assert(after == before);
         return result;
     }
@@ -1183,9 +1183,9 @@ namespace dd {
     }
 
     Edge Package::multiply(Edge x, Edge y) {
-        const auto before = cn.cacheCount;
+	    [[maybe_unused]] const auto before = cn.cacheCount;
         unsigned short var = 0;
-        if (!isTerminal(x) && (invVarOrder[x.p->v] + 1) > var) {
+        if (!isTerminal(x)) {
             var = invVarOrder[x.p->v] + 1;
         }
         if (!isTerminal(y) && (invVarOrder[y.p->v] + 1) > var) {
@@ -1198,7 +1198,7 @@ namespace dd {
 	        cn.releaseCached(e.w);
 	        e.w = cn.lookup(e.w);
         }
-        const auto after = cn.cacheCount;
+	    [[maybe_unused]] const auto after = cn.cacheCount;
         assert(before == after);
 
         return e;
@@ -1520,14 +1520,14 @@ namespace dd {
 	        return {0, 0};
 	    }
 
-        const auto before = cn.cacheCount;
+	    [[maybe_unused]] const auto before = cn.cacheCount;
         short w = invVarOrder[x.p->v];
         if(invVarOrder.at(y.p->v) > w) {
             w = invVarOrder[y.p->v];
         }
         const ComplexValue ip = innerProduct(x, y, w + 1);
 
-        const auto after = cn.cacheCount;
+	    [[maybe_unused]] const auto after = cn.cacheCount;
         assert(after == before);
         return ip;
     }

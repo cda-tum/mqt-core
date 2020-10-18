@@ -38,12 +38,40 @@ TEST(DDPackageTest, BellState) {
     ASSERT_EQ(dd->getValueByPath(bell_state, "22"), (dd::ComplexValue{dd::SQRT_2, 0}));
 
     ASSERT_DOUBLE_EQ(dd->fidelity(zero_state, bell_state), 0.5);
+
+    dd->printDD(bell_state, 64);
 }
 
-TEST(DDPackageTest, IdentifyTrace) {
+TEST(DDPackageTest, IdentityTrace) {
     auto dd = std::make_unique<dd::Package>();
     auto fullTrace = dd->trace(dd->makeIdent(0, 3));
 
     ASSERT_EQ(fullTrace, (dd::ComplexValue{16,0}));
+}
+
+TEST(DDPackageTest, StateGenerationManipulation) {
+	auto dd = std::make_unique<dd::Package>();
+
+	auto b = std::bitset<dd::MAXN>{2};
+	auto e = dd->makeBasisState(6, b);
+	auto f = dd->makeBasisState(6, {dd::BasisStates::zero,
+								            dd::BasisStates::one,
+								            dd::BasisStates::plus,
+								            dd::BasisStates::minus,
+								            dd::BasisStates::left,
+								            dd::BasisStates::right});
+	dd->incRef(e);
+	dd->incRef(f);
+	dd->incRef(e);
+	auto g = dd->add(e, f);
+	auto h = dd->transpose(g);
+	auto i = dd->conjugateTranspose(f);
+	dd->decRef(e);
+	dd->decRef(f);
+	auto j = dd->kronecker(h, i);
+	dd->incRef(j);
+	dd->printActive(6);
+	dd->printUniqueTable(6);
+	dd->printInformation();
 }
 
