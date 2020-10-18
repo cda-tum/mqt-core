@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.10...3.16)
+cmake_minimum_required(VERSION 3.10...3.19)
 if(${CMAKE_VERSION} VERSION_LESS 3.12)
 	cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
 endif()
 
 project(qfr
-        VERSION 1.0.8
+        VERSION 1.1.0
         DESCRIPTION "QFR  - A library for the representation of quantum functionality"
         LANGUAGES CXX)
 
@@ -27,11 +27,11 @@ macro(handle_submodule MODULENAME)
 	find_package(Git QUIET)
 	if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git" AND GIT_SUBMODULE)
 		message(STATUS "${MODULENAME} update")
-		execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --remote -- extern/${MODULENAME}
+		execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive -- extern/${MODULENAME}
 		                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		                RESULT_VARIABLE GIT_SUBMOD_RESULT)
 		if(NOT GIT_SUBMOD_RESULT EQUAL "0")
-			message(FATAL_ERROR "git submodule update --init --recursive --remote -- extern/${MODULENAME} failed with ${GIT_SUBMOD_RESULT}.")
+			message(FATAL_ERROR "git submodule update --init --recursive -- extern/${MODULENAME} failed with ${GIT_SUBMOD_RESULT}.")
 		endif()
 	endif()
 

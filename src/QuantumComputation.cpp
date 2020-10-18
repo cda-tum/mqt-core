@@ -299,19 +299,20 @@ namespace qc {
 		}
 
 		// update all operations
+		auto totalQubits = static_cast<unsigned short>(nqubits+nancillae);
 		for (auto& op:ops) {
-			op->setNqubits(nqubits + nancillae);
+			op->setNqubits(totalQubits);
 		}
 
 		// update ancillary and garbage tracking
-		if (nqubits+nancillae < qc::MAX_QUBITS) {
-			for (unsigned short i=logical_qubit_index; i<nqubits+nancillae; ++i) {
+		if (totalQubits < qc::MAX_QUBITS) {
+			for (unsigned short i=logical_qubit_index; i<totalQubits; ++i) {
 				ancillary[i] = ancillary[i+1];
 				garbage[i] = garbage[i+1];
 			}
 			// unset last entry
-			ancillary.reset(nqubits+nancillae);
-			garbage.reset(nqubits+nancillae);
+			ancillary.reset(totalQubits);
+			garbage.reset(totalQubits);
 		}
 
 		return { physical_qubit_index, output_qubit_index};
@@ -1052,7 +1053,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 				} else if (totalQubits <= 20) {
 					of << "FakeBoeblingen";
 					narchitecture = 20;
-				} else if (totalQubits <= 53) {
+				} else {
 					of << "FakeRochester";
 					narchitecture = 53;
 				}
@@ -1105,7 +1106,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 					of << "FakeBurlington";
 				} else if (totalQubits <= 20) {
 					of << "FakeBoeblingen";
-				} else if (totalQubits <= 53) {
+				} else {
 					of << "FakeRochester";
 				}
 				of << "(), optimization_level=1)" << std::endl << std::endl;

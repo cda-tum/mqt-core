@@ -48,7 +48,7 @@ namespace qasm {
 			Kind kind;
 			Expr* op1 = nullptr;
 			Expr* op2 = nullptr;
-			std::string id = "";
+			std::string id;
 
 			explicit Expr(Kind kind, fp num = 0L, Expr *op1 = nullptr, Expr *op2 = nullptr, std::string id = "") : num(num), kind(kind), op1(op1), op2(op2), id(std::move(id)) { }
 			Expr(const Expr& expr): num(expr.num), kind(expr.kind), id(expr.id) {
@@ -56,6 +56,28 @@ namespace qasm {
 					op1 = new Expr(*expr.op1);
 				if (expr.op2 != nullptr)
 					op2 = new Expr(*expr.op2);
+			}
+			Expr& operator=(const Expr& expr) {
+				if (&expr == this)
+					return *this;
+
+				num = expr.num;
+				kind = expr.kind;
+				id = expr.id;
+				delete op1;
+				delete op2;
+
+				if (expr.op1 != nullptr)
+					op1 = new Expr(*expr.op1);
+				else
+					op1 = nullptr;
+
+				if (expr.op2 != nullptr)
+					op2 = new Expr(*expr.op2);
+				else
+					op2 = nullptr;
+
+				return *this;
 			}
 
 			virtual ~Expr() {
