@@ -27,7 +27,7 @@ endif()
 
 # set compiler flags depending on compiler
 if(MSVC)
-	target_compile_options(${PROJECT_NAME} PRIVATE "/W4" "/utf-8" "/std:c17" "$<$<CONFIG:RELEASE>:/O2 /GL>")
+	target_compile_options(${PROJECT_NAME} PRIVATE "/W4" "/utf-8" "/std:c++17" "$<$<CONFIG:RELEASE>:/O2 /GL>")
 	target_link_options(${PROJECT_NAME} PRIVATE "$<$<CONFIG:Release>:/LTCG>")
 else()
 	target_compile_options(${PROJECT_NAME} PRIVATE -Wall $<$<CONFIG:DEBUG>:-g3 -Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native -DNDEBUG -g0>)
