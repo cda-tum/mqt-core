@@ -227,7 +227,7 @@ namespace qc {
 		}
 	}
 
-	void CircuitOptimizer::singleGateFusion(QuantumComputation& qc) {
+	void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
 		unsigned short highest_physical_qubit = 0;
 		for (const auto& q: qc.initialLayout) {
 			if (q.first > highest_physical_qubit)

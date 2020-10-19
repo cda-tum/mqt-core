@@ -218,7 +218,7 @@ TEST_F(QFRFunctionality, FuseTwoSingleQubitGates) {
 
 	qc.print(std::cout);
 	dd::Edge e = qc.buildFunctionality(dd);
-	CircuitOptimizer::singleGateFusion(qc);
+	CircuitOptimizer::singleQubitGateFusion(qc);
 	dd::Edge f = qc.buildFunctionality(dd);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
@@ -236,7 +236,7 @@ TEST_F(QFRFunctionality, FuseThreeSingleQubitGates) {
 	dd::Edge e = qc.buildFunctionality(dd);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
-	CircuitOptimizer::singleGateFusion(qc);
+	CircuitOptimizer::singleQubitGateFusion(qc);
 	dd::Edge f = qc.buildFunctionality(dd);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
@@ -253,7 +253,7 @@ TEST_F(QFRFunctionality, FuseNoSingleQubitGates) {
 	dd::Edge e = qc.buildFunctionality(dd);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
-	CircuitOptimizer::singleGateFusion(qc);
+	CircuitOptimizer::singleQubitGateFusion(qc);
 	dd::Edge f = qc.buildFunctionality(dd);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
@@ -270,7 +270,7 @@ TEST_F(QFRFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
 	auto e = qc.buildFunctionality(dd);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
-	CircuitOptimizer::singleGateFusion(qc);
+	CircuitOptimizer::singleQubitGateFusion(qc);
 	auto f = qc.buildFunctionality(dd);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
@@ -321,7 +321,7 @@ TEST_F(QFRFunctionality, CollapseCompoundOperationToStandard) {
 	qc.emplace_back<StandardOperation>(nqubits, 0, I);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
-	CircuitOptimizer::singleGateFusion(qc);
+	CircuitOptimizer::singleQubitGateFusion(qc);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
 	EXPECT_EQ(qc.getNops(), 1);
@@ -335,7 +335,7 @@ TEST_F(QFRFunctionality, eliminateCompoundOperation) {
 	qc.emplace_back<StandardOperation>(nqubits, 0, I);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
-	CircuitOptimizer::singleGateFusion(qc);
+	CircuitOptimizer::singleQubitGateFusion(qc);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
 	EXPECT_EQ(qc.getNops(), 0);
@@ -349,7 +349,7 @@ TEST_F(QFRFunctionality, eliminateInverseInCompoundOperation) {
 	qc.emplace_back<StandardOperation>(nqubits, 0, Sdag);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
-	CircuitOptimizer::singleGateFusion(qc);
+	CircuitOptimizer::singleQubitGateFusion(qc);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
 	EXPECT_EQ(qc.getNops(), 0);
@@ -363,7 +363,7 @@ TEST_F(QFRFunctionality, unknownInverseInCompoundOperation) {
 	qc.emplace_back<StandardOperation>(nqubits, 0, U1, -1.);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
-	CircuitOptimizer::singleGateFusion(qc);
+	CircuitOptimizer::singleQubitGateFusion(qc);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
 	EXPECT_EQ(qc.getNops(), 1);
@@ -391,7 +391,7 @@ TEST_F(QFRFunctionality, removeDiagonalCompoundOpBeforeMeasure) {
 	qc.emplace_back<NonUnitaryOperation>(nqubits, std::vector<unsigned short>{0}, std::vector<unsigned short>{0});
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
-	CircuitOptimizer::singleGateFusion(qc);
+	CircuitOptimizer::singleQubitGateFusion(qc);
 	CircuitOptimizer::removeDiagonalGatesBeforeMeasure(qc);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
@@ -457,7 +457,7 @@ TEST_F(QFRFunctionality, removeSimpleCompoundOpBeforeMeasure) {
 	qc.emplace_back<NonUnitaryOperation>(nqubits, std::vector<unsigned short>{0}, std::vector<unsigned short>{0});
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
-	CircuitOptimizer::singleGateFusion(qc);
+	CircuitOptimizer::singleQubitGateFusion(qc);
 	CircuitOptimizer::removeDiagonalGatesBeforeMeasure(qc);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
@@ -473,7 +473,7 @@ TEST_F(QFRFunctionality, removePartOfCompoundOpBeforeMeasure) {
 	qc.emplace_back<NonUnitaryOperation>(nqubits, std::vector<unsigned short>{0}, std::vector<unsigned short>{0});
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
-	CircuitOptimizer::singleGateFusion(qc);
+	CircuitOptimizer::singleQubitGateFusion(qc);
 	CircuitOptimizer::removeDiagonalGatesBeforeMeasure(qc);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);

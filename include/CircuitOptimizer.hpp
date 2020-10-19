@@ -31,7 +31,7 @@ namespace qc {
 
 		static void swapGateFusion(QuantumComputation& qc);
 
-		static void singleGateFusion(QuantumComputation& qc);
+		static void singleQubitGateFusion(QuantumComputation& qc);
 
 		static void removeIdentities(QuantumComputation& qc);
 
