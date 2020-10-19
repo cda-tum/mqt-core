@@ -4,10 +4,7 @@ dist: focal
 
 jobs:
   include:
-    - os: linux
-      dist: focal
-      compiler: "gcc"
-      env: BUILD='Debug' CC=gcc CXX=g++ COVERAGE=1 COV_EXE=gcov
+    - env: BUILD='Debug' CC=gcc CXX=g++ COVERAGE=1 COV_EXE=gcov
       addons:
         apt:
           packages:
@@ -15,20 +12,14 @@ jobs:
             - ninja-build
             - lcov
 
-    - os: linux
-      dist: focal
-      compiler: "gcc"
-      env: BUILD='Release' CC=gcc CXX=g++ COVERAGE=0
+    - env: BUILD='Release' CC=gcc CXX=g++ COVERAGE=0
       addons:
         apt:
           packages:
             - cmake
             - ninja-build
 
-    - os: linux
-      dist: focal
-      compiler: "gcc"
-      env: BUILD='Release' CC=gcc-10 CXX=g++-10 COVERAGE=0
+    - env: BUILD='Release' CC=gcc-10 CXX=g++-10 COVERAGE=0
       addons:
         apt:
           sources:
@@ -39,10 +30,7 @@ jobs:
             - gcc-10
             - g++-10
 
-    - os: linux
-      dist: focal
-      compiler: "clang"
-      env: BUILD='Release' CC=clang-11 CXX=clang++-11 COVERAGE=0
+    - env: BUILD='Release' CC=clang-11 CXX=clang++-11 COVERAGE=0
       addons:
         apt:
           sources:
@@ -55,7 +43,6 @@ jobs:
 
     - os: osx
       osx_image: xcode12
-      compiler: "clang"
       env: BUILD='Release' CC=clang CXX=clang++ COVERAGE=0
       addons:
         homebrew:
@@ -66,7 +53,6 @@ jobs:
 
     - os: osx
       osx_image: xcode12
-      compiler: "gcc"
       env: BUILD='Release' CC=gcc-10 CXX=g++-10 COVERAGE=0
       addons:
         homebrew:
@@ -79,16 +65,7 @@ jobs:
     - os: windows
       env: BUILD='Release' CC=gcc CXX=g++ COVERAGE=0
 
-install:
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then
-    export PATH="$(brew --prefix llvm)/bin:$PATH";
-    fi
-  - echo ${CC}
-  - echo ${CXX}
-  - ${CXX} --version
-  - cmake --version
-
-before_script:
+script:
   - mkdir -p build && cd build
   - |
     if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
@@ -104,8 +81,6 @@ before_script:
       cmake --build . --config ${BUILD} --target qfr_test;
       sudo cmake --build . --config ${BUILD} --target install;
     fi
-
-script:
   - if [ "$TRAVIS_OS_NAME" == "windows" ]; then
       cd test/${BUILD};
       ./qfr_test.exe;

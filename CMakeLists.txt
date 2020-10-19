@@ -44,8 +44,8 @@ handle_submodule(dd_package)
 
 add_subdirectory(src)
 
-option(BUILD_TESTS "Also build tests for QFR project" OFF)
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR BUILD_TESTS)
+option(BUILD_QFR_TESTS "Also build tests for QFR project" OFF)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR BUILD_QFR_TESTS)
 	enable_testing()
 	include(GoogleTest)
 	add_subdirectory(test)

@@ -6,6 +6,17 @@
 #include "CircuitOptimizer.hpp"
 
 namespace qc {
+	const std::map<qc::OpType, qc::OpType> CircuitOptimizer::inverseMap = {
+			{qc::I, qc::I},
+			{qc::X, qc::X},
+			{qc::Y, qc::Y},
+			{qc::Z, qc::Z},
+			{qc::H, qc::H},
+			{qc::S, qc::Sdag},
+			{qc::Sdag, qc::S},
+			{qc::T, qc::Tdag},
+			{qc::Tdag, qc::T}
+	};
 
 	void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
 		// delete the identities from circuit
@@ -15,6 +26,26 @@ namespace qc {
 				if ((*it)->getType() == I) {
 					it = qc.ops.erase(it);
 				} else {
+					++it;
+				}
+			} else if ((*it)->isCompoundOperation()) {
+				auto compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
+				auto cit=compOp->cbegin();
+				while (cit != compOp->cend()) {
+					auto cop = cit->get();
+					if (cop->getType()== qc::I) {
+						cit = compOp->erase(cit);
+					} else {
+						++cit;
+					}
+				}
+				if (compOp->empty()) {
+					it = qc.ops.erase(it);
+				} else {
+					if (compOp->size() == 1) {
+						// CompoundOperation has degraded to single Operation
+						(*it) = std::move(*(compOp->begin()));
+					}
 					++it;
 				}
 			} else {
@@ -184,28 +215,6 @@ namespace qc {
 				addToDag(dag, &it);
 			}
 		}
-
-		bool allEmpty = false;
-		while (!allEmpty) {
-			allEmpty = true;
-			for (int i = 0; i < qc.nqubits + qc.nancillae; ++i) {
-				if(!dag.at(i).empty()) {
-					allEmpty = false;
-					for (const auto& c: dag.at(i).front()->get()->getControls()){
-						std::cout << c.qubit;
-					}
-					for (const auto& t: dag.at(i).front()->get()->getTargets()){
-						std::cout << t;
-					}
-					std::cout << dag.at(i).front()->get()->getName();
-					dag.at(i).pop_front();
-					std::cout << "\t";
-				} else {
-					std::cout << "\t\t";
-				}
-			}
-			std::cout << std::endl;
-		}
 		return dag;
 	}
 
@@ -261,7 +270,7 @@ namespace qc {
 				}
 			}
 
-			// not a single qubit operation
+			// not a single qubit operation TODO: multiple targets could also be considered here
 			if (!it->getControls().empty() || it->getTargets().size() > 1) {
 				addToDag(dag, &it);
 				continue;
@@ -278,7 +287,7 @@ namespace qc {
 			auto dagQubit = dag.at(target);
 			auto op = dagQubit.front();
 
-			// no single qubit op to fuse with operation to fuse with
+			// no single qubit op to fuse with operation
 			if (!(*op)->isCompoundOperation() && (!(*op)->getControls().empty() || (*op)->getTargets().size() > 1)) {
 				addToDag(dag, &it);
 				continue;
@@ -287,14 +296,55 @@ namespace qc {
 			// compound operation
 			if ((*op)->isCompoundOperation()) {
 				auto compop = dynamic_cast<CompoundOperation*>(op->get());
-				auto lastop = (--(compop->end()));
 
-				// compound operation does contain non single-qubit gates
-				if (!(*lastop)->getControls().empty() || (*lastop)->getTargets().size() > 1) {
+				// check if compound operation contains non-single-qubit gates
+				unsigned short involvedQubits = 0;
+				for (size_t q=0; q<dag.size(); ++q) {
+					if (compop->actsOn(q))
+						++involvedQubits;
+				}
+				if (involvedQubits>1) {
 					addToDag(dag, &it);
 					continue;
 				}
 
+				// check if inverse
+				auto lastop = (--(compop->end()));
+				auto inverseIt = inverseMap.find((*lastop)->getType());
+				// check if current operation is the inverse of the previous operation
+				if (inverseIt != inverseMap.end() && it->getType() == inverseIt->second) {
+					compop->pop_back();
+					it->setGate(qc::I);
+				} else {
+					compop->emplace_back<StandardOperation>(
+							it->getNqubits(),
+							it->getTargets().at(0),
+							it->getType(),
+							it->getParameter().at(0),
+							it->getParameter().at(1),
+							it->getParameter().at(2));
+					it->setGate(I);
+				}
+
+				continue;
+			}
+
+			// single qubit op
+
+			// check if current operation is the inverse of the previous operation
+			auto inverseIt = inverseMap.find((*op)->getType());
+			if (inverseIt != inverseMap.end() && it->getType() == inverseIt->second) {
+				(*op)->setGate(qc::I);
+				it->setGate(qc::I);
+			} else {
+				auto compop = std::make_unique<CompoundOperation>(it->getNqubits());
+				compop->emplace_back<StandardOperation>(
+						(*op)->getNqubits(),
+						(*op)->getTargets().at(0),
+						(*op)->getType(),
+						(*op)->getParameter().at(0),
+						(*op)->getParameter().at(1),
+						(*op)->getParameter().at(2));
 				compop->emplace_back<StandardOperation>(
 						it->getNqubits(),
 						it->getTargets().at(0),
@@ -303,31 +353,177 @@ namespace qc {
 						it->getParameter().at(1),
 						it->getParameter().at(2));
 				it->setGate(I);
-				continue;
+				(*op) = std::move(compop);
+				dag.at(target).push_front(op);
 			}
-
-			// single qubit op
-			auto compop = std::make_unique<CompoundOperation>(it->getNqubits());
-			compop->emplace_back<StandardOperation>(
-					(*op)->getNqubits(),
-					(*op)->getTargets().at(0),
-					(*op)->getType(),
-					(*op)->getParameter().at(0),
-					(*op)->getParameter().at(1),
-					(*op)->getParameter().at(2));
-			compop->emplace_back<StandardOperation>(
-					it->getNqubits(),
-					it->getTargets().at(0),
-					it->getType(),
-					it->getParameter().at(0),
-					it->getParameter().at(1),
-					it->getParameter().at(2));
-			it->setGate(I);
-			(*op) = std::move(compop);
-			dag.at(target).push_front(op);
 		}
 
 		removeIdentities(qc);
 	}
 
+	bool CircuitOptimizer::removeDiagonalGate(DAG& dag, DAGIterators& dagIterators, unsigned short idx, DAGIterator& it, qc::Operation* op) {
+		// not a diagonal gate
+		if (std::find(diagonalGates.begin(), diagonalGates.end(), op->getType()) == diagonalGates.end()) {
+			it = dag.at(idx).end();
+			return false;
+		}
+
+		if (op->getNcontrols()!=0) {
+			// need to check all controls and targets
+			bool onlyDiagonalGates = true;
+			for (const auto& control: op->getControls()) {
+				auto controlQubit = control.qubit;
+				if (controlQubit == idx)
+					continue;
+				if (control.type == Control::neg) {
+					dagIterators.at(controlQubit) = dag.at(controlQubit).end();
+					onlyDiagonalGates = false;
+					break;
+				}
+				if (dagIterators.at(controlQubit) == dag.at(controlQubit).end()) {
+					onlyDiagonalGates = false;
+					break;
+				}
+				// recursive call at control with this operation as goal
+				removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, controlQubit, it);
+				// check if iteration of control qubit was successful
+				if (*dagIterators.at(controlQubit) != *it) {
+					onlyDiagonalGates = false;
+					break;
+				}
+			}
+			for (const auto& target: op->getTargets()) {
+				if (target == idx)
+					continue;
+				if (dagIterators.at(target) == dag.at(target).end()) {
+					onlyDiagonalGates = false;
+					break;
+				}
+				// recursive call at target with this operation as goal
+				removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, target, it);
+				// check if iteration of target qubit was successful
+				if (*dagIterators.at(target) != *it) {
+					onlyDiagonalGates = false;
+					break;
+				}
+			}
+			if (!onlyDiagonalGates) {
+				// end qubit
+				dagIterators.at(idx) = dag.at(idx).end();
+			} else {
+				// set operation to identity so that it can be collected by the removeIdentities pass
+				op->setGate(qc::I);
+			}
+			return onlyDiagonalGates;
+		} else {
+			// set operation to identity so that it can be collected by the removeIdentities pass
+			op->setGate(qc::I);
+			return true;
+		}
+	}
+
+	void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(DAG& dag, DAGIterators& dagIterators, unsigned short idx, const DAGIterator& until) {
+		// qubit is finished -> consider next qubit
+		if (dagIterators.at(idx) == dag.at(idx).end()) {
+			if(idx < dag.size()-1) {
+				removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, idx + 1, dag.at(idx + 1).end());
+			}
+			return;
+		}
+		// check if desired operation was reached
+		if (until != dag.at(idx).end()) {
+			if (*dagIterators.at(idx) == *until) {
+				return;
+			}
+		}
+
+		auto& it = dagIterators.at(idx);
+		while (it != dag.at(idx).end()) {
+			// check if desired operation was reached
+			if (until != dag.at(idx).end()) {
+				if (*dagIterators.at(idx) == *until) {
+					break;
+				}
+			}
+			auto op = (*it)->get();
+			if (op->getType() == Barrier) {
+				// either ignore barrier statement here or end for this qubit;
+				++it;
+			} else if (op->isStandardOperation()) {
+				// try removing gate and upon success increase all corresponding iterators
+				auto onlyDiagonalGates = removeDiagonalGate(dag, dagIterators, idx, it, op);
+				if (onlyDiagonalGates) {
+					for (const auto& control: op->getControls()){
+						++(dagIterators.at(control.qubit));
+					}
+					for (const auto& target: op->getTargets()) {
+						++(dagIterators.at(target));
+					}
+				}
+
+			} else if (op->isCompoundOperation()) {
+				// iterate over all gates of compound operation and upon success increase all corresponding iterators
+				auto compOp = dynamic_cast<qc::CompoundOperation *>(op);
+				bool onlyDiagonalGates = true;
+				auto cit = compOp->rbegin();
+				while (cit != compOp->rend()) {
+					auto cop = (*cit).get();
+					onlyDiagonalGates = removeDiagonalGate(dag, dagIterators, idx, it, cop);
+					if (!onlyDiagonalGates)
+						break;
+					++cit;
+				}
+				if (onlyDiagonalGates) {
+					for (size_t q=0; q<dag.size(); ++q) {
+						if (compOp->actsOn(q))
+							++(dagIterators.at(q));
+					}
+				}
+			} else if (op->isClassicControlledOperation()) {
+				// consider the operation that is classically controlled and proceed as above
+				auto cop = dynamic_cast<ClassicControlledOperation *>(op)->getOperation();
+				bool onlyDiagonalGates = removeDiagonalGate(dag, dagIterators, idx, it, cop);
+				if (onlyDiagonalGates) {
+					for (const auto& control: cop->getControls()){
+						++(dagIterators.at(control.qubit));
+					}
+					for (const auto& target: cop->getTargets()) {
+						++(dagIterators.at(target));
+					}
+				}
+			} else if (op->isNonUnitaryOperation()) {
+				// non-unitary operation is not diagonal
+				it = dag.at(idx).end();
+			} else {
+				throw QFRException("Unexpected operation encountered");
+			}
+		}
+
+		// qubit is finished -> consider next qubit
+		if (dagIterators.at(idx) == dag.at(idx).end() && idx < dag.size()-1) {
+			removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, idx + 1, dag.at(idx + 1).end());
+		}
+	}
+
+	void CircuitOptimizer::removeDiagonalGatesBeforeMeasure(QuantumComputation& qc) {
+
+		auto dag = constructDAG(qc);
+
+		// initialize iterators
+		DAGIterators dagIterators{dag.size()};
+		for (size_t q=0; q<dag.size(); ++q) {
+			if (dag.at(q).empty() || dag.at(q).front()->get()->getType() != qc::Measure) {
+				// qubit is not measured and thus does not have to be considered
+				dagIterators.at(q) = dag.at(q).end();
+			} else {
+				// point to operation before measurement
+				dagIterators.at(q) = ++(dag.at(q).begin());
+			}
+		}
+		// iterate over DAG in depth-first fashion
+		removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, 0, dag.at(0).end());
+
+		// remove resulting identities from circuit
+		removeIdentities(qc);
+	}
 }
