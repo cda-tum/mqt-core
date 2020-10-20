@@ -3,11 +3,12 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
+#ifndef QUANTUMFUNCTIONALITYBUILDER_GRCS_H
+#define QUANTUMFUNCTIONALITYBUILDER_GRCS_H
+
 #include <chrono>
 
 #include <QuantumComputation.hpp>
-
-#ifndef QUANTUMFUNCTIONALITYBUILDER_GRCS_H
 
 namespace qc {
 	enum Layout {Rectangular, Bristlecone};
@@ -38,7 +39,5 @@ namespace qc {
 
 	};
 }
-
-#define QUANTUMFUNCTIONALITYBUILDER_GRCS_H
 
 #endif //QUANTUMFUNCTIONALITYBUILDER_GRCS_H
