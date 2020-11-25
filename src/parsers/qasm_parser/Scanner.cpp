@@ -280,9 +280,11 @@ namespace qasm {
 			// internal qelib1.inc
 			// parser can also read multiple-control versions of each gate
 	    	auto ss = new std::stringstream{};
-	    	*ss << "gate u3(theta,phi,lambda) q { U(theta,phi,lambda) q; }" << std::endl;
+		    *ss << "gate u(theta,phi,lambda) q { U(theta,phi,lambda) q; }" << std::endl;
+		    *ss << "gate u3(theta,phi,lambda) q { U(theta,phi,lambda) q; }" << std::endl;
 		    *ss << "gate u2(phi,lambda) q { U(pi/2,phi,lambda) q; }" << std::endl;
 		    *ss << "gate u1(lambda) q { U(0,0,lambda) q; }" << std::endl;
+		    *ss << "gate p(lambda) q { U(0,0,lambda) q; }" << std::endl;
 		    *ss << "gate cx c, t { CX c, t; }" << std::endl;
 		    *ss << "gate id t { U(0,0,0) t; }" << std::endl;
 		    *ss << "gate x t { u3(pi,0,pi) t; }" << std::endl;
@@ -296,6 +298,74 @@ namespace qasm {
 		    *ss << "gate rx(theta) t { u3(theta,-pi/2,pi/2) t; }" << std::endl;
 		    *ss << "gate ry(theta) t { u3(theta,0,0) t; }" << std::endl;
 		    *ss << "gate rz(phi) t { u1(phi) t; }" << std::endl;
+		    *ss << "gate sx t { sdg t; h t; sdg t; }" << std::endl;
+		    *ss << "gate sxdg t { s t; h t; s t; }" << std::endl;
+		    *ss << "gate rxx(theta) a, b { "
+			            "u3(pi/2, theta, 0) a; h b; "
+		                "cx a,b; u1(-theta) b; "
+			            "cx a,b; h b; "
+			            "u2(-pi, pi-theta) a; "
+			        "}" << std::endl;
+		    *ss << "gate rzz(theta) a, b { "
+			            "cx a,b; "
+			            "u1(theta) b; "
+			            "cx a,b; "
+		            "}" << std::endl;
+		    *ss << "gate rccx a, b, c { "
+                        "u2(0, pi) c; u1(pi/4) c; "
+                        "cx b, c; u1(-pi/4) c; "
+					    "cx a, c; u1(pi/4) c; "
+                        "cx b, c; u1(-pi/4) c; "
+				        "u2(0, pi) c; "
+                   "}" << std::endl;
+		    *ss << "gate rc3x a,b,c,d { "
+			            "u2(0,pi) d; u1(pi/4) d; "
+			            "cx c,d; u1(-pi/4) d; u2(0,pi) d; "
+			            "cx a,d; u1(pi/4) d; "
+		                "cx b,d; u1(-pi/4) d; "
+				        "cx a,d; u1(pi/4) d; "
+						"cx b,d; u1(-pi/4) d; "
+                        "u2(0,pi) d; u1(pi/4) d; "
+						"cx c,d; u1(-pi/4) d; "
+	                    "u2(0,pi) d; "
+					"}" << std::endl;
+			*ss << "gate c3x a,b,c,d { "
+	                    "h d; cu1(-pi/4) a,d; h d; "
+				        "cx a,b; "
+		                "h d; cu1(pi/4) b,d; h d; "
+			            "cx a,b; "
+						"h d; cu1(-pi/4) b,d; h d; "
+                        "cx b,c; "
+					    "h d; cu1(pi/4) c,d; h d; "
+	                    "cx a,c; "
+				        "h d; cu1(-pi/4) c,d; h d; "
+		                "cx b,c; "
+		                "h d; cu1(pi/4) c,d; h d; "
+			            "cx a,c; "
+						"h d; cu1(-pi/4) c,d; h d; "
+	                "}" << std::endl;
+			*ss << "gate c3sqrtx a,b,c,d { "
+			            "h d; cu1(-pi/8) a,d; h d; "
+			            "cx a,b; "
+			            "h d; cu1(pi/8) b,d; h d; "
+			            "cx a,b; "
+				        "h d; cu1(-pi/8) b,d; h d; "
+				        "cx b,c; "
+				        "h d; cu1(pi/8) c,d; h d; "
+				        "cx a,c; "
+				        "h d; cu1(-pi/8) c,d; h d; "
+			            "cx b,c; "
+				        "h d; cu1(pi/8) c,d; h d; "
+				        "cx a,c; "
+				        "h d; cu1(-pi/8) c,d; h d; "
+			        "}" << std::endl;
+			*ss << "gate c4x a,b,c,d,e { "
+			            "h e; cu1(-pi/2) d,e; h e; "
+			            "c3x a,b,c,d; "
+			            "h e; cu1(pi/2) d,e; h e; "
+			            "c3x a,b,c,d; "
+			            "c3sqrtx a,b,c,e; "
+			       "}" << std::endl;
 
 		    streams.push(ss);
 		    lines.push(LineInfo(ch, line, col));
