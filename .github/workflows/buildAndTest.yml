@@ -77,7 +77,6 @@ jobs:
         else
           ./qfr_test
         fi
-        ctest -C $BUILD_TYPE
     
   coverage:
     needs: test
