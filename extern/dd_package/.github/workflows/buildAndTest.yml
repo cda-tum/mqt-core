@@ -20,12 +20,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Configure CMake
       shell: bash
       run: |
          if [ "$RUNNER_OS" == "Windows" ]; then
-           cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G "Visual Studio 16 2019" -T "ClangCl" -DCMAKE_GENERATOR_PLATFORM=x64
+           cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl"
          else
            cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE
          fi  
@@ -43,12 +45,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Configure CMake
       shell: bash
       run: |
          if [ "$RUNNER_OS" == "Windows" ]; then
-           cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G "Visual Studio 16 2019" -T "ClangCl" -DCMAKE_GENERATOR_PLATFORM=x64
+           cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl"
          else
            cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE
          fi  
@@ -68,6 +72,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Configure CMake
       shell: bash
