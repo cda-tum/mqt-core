@@ -1,4 +1,4 @@
-[![Build and Test](https://github.com/iic-jku/dd_package/workflows/Build%20and%20Test/badge.svg)](https://github.com/iic-jku/dd_package/actions?query=workflow%3A%22Build+and+Test%22)
+[![Build and Test](https://github.com/iic-jku/dd_package/workflows/CI/badge.svg)](https://github.com/iic-jku/dd_package/actions?query=workflow%3A%22CI%22)
 [![codecov](https://codecov.io/gh/iic-jku/dd_package/branch/master/graph/badge.svg)](https://codecov.io/gh/iic-jku/dd_package)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![toolset: JKQ](https://img.shields.io/badge/toolset-JKQ-blue)](https://github.com/iic-jku/jkq)
@@ -49,7 +49,7 @@ For implementing more complex functionality which requires garbage collection, b
 
 ### System Requirements
 
-Building (and running) is continuously tested under Linux (Ubuntu 20.04) using gcc-9.3, gcc-10 and clang-11, MacOS (Catalina 10.15) using AppleClang and gcc-10, and Windows using MSVC 15.9. 
+Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments). 
 However, the implementation should be compatible with any current C++ compiler supporting C++14 and a minimum CMake version of 3.10.
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
