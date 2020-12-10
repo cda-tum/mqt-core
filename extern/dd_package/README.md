@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/iic-jku/dd_package.svg?branch=master)](https://travis-ci.com/iic-jku/dd_package)
+[![Build and Test](https://github.com/iic-jku/dd_package/workflows/Build%20and%20Test/badge.svg)](https://github.com/iic-jku/dd_package/actions?query=workflow%3A%22Build+and+Test%22)
 [![codecov](https://codecov.io/gh/iic-jku/dd_package/branch/master/graph/badge.svg)](https://codecov.io/gh/iic-jku/dd_package)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![toolset: JKQ](https://img.shields.io/badge/toolset-JKQ-blue)](https://github.com/iic-jku/jkq)
