@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/iic-jku/qfr.svg?branch=master)](https://travis-ci.com/iic-jku/qfr)
+[![Build and Test](https://github.com/iic-jku/qfr/workflows/Build%20and%20Test/badge.svg)](https://github.com/iic-jku/qfr/actions?query=workflow%3A%22Build+and+Test%22)
 [![codecov](https://codecov.io/gh/iic-jku/qfr/branch/master/graph/badge.svg)](https://codecov.io/gh/iic-jku/qfr)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![toolset: JKQ](https://img.shields.io/badge/toolset-JKQ-blue)](https://github.com/iic-jku/jkq)
