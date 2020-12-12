@@ -108,10 +108,19 @@ namespace dd {
 	    // operations on complex numbers
 	    // meanings are self-evident from the names
 	    static inline fp val(const ComplexTableEntry *x) {
-            if (((std::uintptr_t) x) & 1u) {
-	            return -((ComplexTableEntry *) (((std::uintptr_t) x) ^ 1u))->val;
+            if (reinterpret_cast<std::uintptr_t>(x) & 1u) {
+	            return -get_sane_pointer(x)->val;
             }
             return x->val;
+        }
+        /**
+         * The pointer to ComplexTableEntry may encode the sign in the least significant bit, causing mis-aligned access
+         * if not handled properly.
+         * @param entry pointer to ComplexTableEntry possibly unsafe to deference
+         * @return safe pointer for deferencing
+         */
+        static inline ComplexTableEntry* get_sane_pointer(const ComplexTableEntry* entry) {
+            return reinterpret_cast<ComplexTableEntry *>(reinterpret_cast<std::uintptr_t>(entry) & (~1ull));
         }
 
 	    static inline bool equals(const Complex& a, const Complex& b) {

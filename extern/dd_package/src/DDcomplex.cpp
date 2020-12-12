@@ -8,7 +8,7 @@
 namespace dd {
 	ComplexTableEntry ComplexNumbers::zeroEntry{0L, nullptr, 1};
 	ComplexTableEntry ComplexNumbers::oneEntry{1L, nullptr, 1 };
-	ComplexTableEntry* ComplexNumbers::moneEntryPointer{(ComplexTableEntry *) (((uintptr_t) (&oneEntry)) | 1u)};
+	ComplexTableEntry* ComplexNumbers::moneEntryPointer{(ComplexTableEntry *) (((std::uintptr_t) (&oneEntry)) | 1u)};
 	constexpr Complex ComplexNumbers::ONE;
 	constexpr Complex ComplexNumbers::ZERO;
 	fp ComplexNumbers::TOLERANCE = 1e-13l;
@@ -57,7 +57,7 @@ namespace dd {
         {
             r = Avail;
 	        Avail = Avail->next;
-        } else {            // otherwise allocate CHUNK_SIZE new nodes
+        } else {            // otherwise allocate NODE_CHUNK_SIZE new nodes
 	        r = new ComplexTableEntry[CHUNK_SIZE];
             auto *c = new ComplexChunk;
             c->next = chunks;
@@ -138,8 +138,9 @@ namespace dd {
 
 		auto p = ComplexTable[key];
         while (p != nullptr) {
-            if (std::fabs(p->val - val) < TOLERANCE)
+            if (std::fabs(p->val - val) < TOLERANCE) {
                 return p;
+            }
             p = p->next;
         }
 
@@ -148,8 +149,9 @@ namespace dd {
             if (key2 != key) {
                 p = ComplexTable[key2];
                 while (p != nullptr) {
-                    if (std::fabs(p->val - val) < TOLERANCE)
+                    if (std::fabs(p->val - val) < TOLERANCE) {
                         return p;
+                    }
                     p = p->next;
                 }
             }
@@ -160,14 +162,15 @@ namespace dd {
         if (key3 != key) {
             p = ComplexTable[key3];
             while (p != nullptr) {
-                if (std::fabs(p->val - val) < TOLERANCE)
+                if (std::fabs(p->val - val) < TOLERANCE) {
                     return p;
+                }
                 p = p->next;
             }
         }
 
         ct_miss++;
-		auto r = getComplexTableEntry();
+		auto* r = getComplexTableEntry();
 		r->val = val;
         r->next = ComplexTable[key];
 	    ComplexTable[key] = r;
@@ -316,6 +319,8 @@ namespace dd {
     }
 
 	void ComplexNumbers::add(Complex& r, const Complex& a, const Complex& b) {
+        assert(r != ZERO);
+        assert(r != ONE);
         r.r->val = val(a.r) + val(b.r);
         r.i->val = val(a.i) + val(b.i);
     }
@@ -326,6 +331,8 @@ namespace dd {
     }
 
 	void ComplexNumbers::mul(Complex& r, const Complex& a, const Complex& b) {
+        assert(r != ZERO);
+        assert(r != ONE);
         if (equalsOne(a)) {
             r.r->val = val(b.r);
             r.i->val = val(b.i);
@@ -438,8 +445,8 @@ namespace dd {
 
 	void ComplexNumbers::incRef(const Complex& c) {
 		if (c != ZERO && c != ONE) {
-		    auto* ptr_r = ((ComplexTableEntry *) ((uintptr_t) c.r & (~1ull)));
-		    auto* ptr_i = ((ComplexTableEntry *) ((uintptr_t) c.i & (~1ull)));
+            auto* ptr_r = get_sane_pointer(c.r);
+            auto* ptr_i = get_sane_pointer(c.i);
 			ptr_r->ref++;
 			ptr_i->ref++;
 		}
@@ -447,8 +454,8 @@ namespace dd {
 
 	void ComplexNumbers::decRef(const Complex& c) {
         if (c != ZERO && c != ONE) {
-            auto* ptr_r = ((ComplexTableEntry *) ((uintptr_t) c.r & (~1ull)));
-            auto* ptr_i = ((ComplexTableEntry *) ((uintptr_t) c.i & (~1ull)));
+            auto* ptr_r = get_sane_pointer(c.r);
+            auto* ptr_i = get_sane_pointer(c.i);
             assert(ptr_r->ref > 0);
             assert(ptr_i->ref > 0);
             ptr_r->ref--;

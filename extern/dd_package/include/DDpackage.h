@@ -6,6 +6,8 @@
 #ifndef DDpackage_H
 #define DDpackage_H
 
+#include "DDcomplex.h"
+
 #include <unordered_set>
 #include <vector>
 #include <array>
@@ -18,8 +20,10 @@
 #include <map>
 #include <queue>
 #include <set>
+#include <random>
+#include <tuple>
 
-#include "DDcomplex.h"
+
 
 using CN = dd::ComplexNumbers;
 
@@ -39,8 +43,13 @@ namespace dd {
 	constexpr unsigned short CTMASK = CTSLOTS - 1;    // must be CTSLOTS-1
 	constexpr unsigned short TTSLOTS = 2048;          // Toffoli table slots
 	constexpr unsigned short TTMASK = TTSLOTS - 1;    // must be TTSLOTS-1
-	constexpr unsigned short CHUNK_SIZE = 2000;
+	constexpr unsigned int NODE_CHUNK_SIZE = 10 * 1000 * 1000;
+	constexpr unsigned int LIST_CHUNK_SIZE = 2000;
 	constexpr unsigned short MAXN = 128;                       // max no. of inputs
+
+	enum ComputeMatrixPropertiesMode {
+		Disabled, Enabled, Recompute
+	};
 
     typedef struct Node *NodePtr;
 
@@ -52,9 +61,12 @@ namespace dd {
     struct Node {
 	    NodePtr next;         // link for unique table and available space chain
 	    Edge e[NEDGE];     // edges out of this node
+	    Complex normalizationFactor; // stores normalization factor
 	    unsigned int ref;       // reference count
 	    short v;        // variable index (nonterminal) value (-1 for terminal)
 	    bool ident, symm; // special matrices flags
+	    ComputeMatrixPropertiesMode computeMatrixProperties; // indicates whether to compute matrix properties
+	    unsigned int reuseCount;
     };
 
     // list definitions for breadth first traversals (e.g. printing)
@@ -81,6 +93,7 @@ namespace dd {
         transp,
         conjTransp,
         kron,
+        renormalize,
         noise,
         noNoise,
         none
@@ -116,7 +129,7 @@ namespace dd {
     };
 
 	enum DynamicReorderingStrategy {
-		None, Sifting
+		None, Sifting, Random, Window3
 	};
 
 	enum Mode {
@@ -153,21 +166,22 @@ namespace dd {
 	    // Identity matrix table
 	    std::array<Edge, MAXN> IdTable{ };
 
-	    unsigned int currentNodeGCLimit;              // current garbage collection limit
-	    unsigned int currentComplexGCLimit;         // current complex garbage collection limit
-	    std::array<int, MAXN> active{ };              // number of active nodes for each variable
-	    unsigned long nodecount = 0;                // node count in unique table
-	    unsigned long peaknodecount = 0;            // records peak node count in unique table
+	    unsigned int currentNodeGCLimit = GCLIMIT1;        // current garbage collection limit
+	    unsigned int currentComplexGCLimit = CN::GCLIMIT1; // current complex garbage collection limit
+		std::array<int, MAXN> active{ };                   // number of active nodes for each variable
+	    unsigned long nodecount = 0;                       // node count in unique table
+	    unsigned long peaknodecount = 0;                   // records peak node count in unique table
+        // mostly for debugging in reordering
 
-	    std::array<unsigned long, 7> nOps{};                     // operation counters
-	    std::array<unsigned long, 7> CTlook{}, CThit{};      // counters for gathering compute table hit stats
-        unsigned long UTcol=0, UTmatch=0, UTlookups=0;  // counter for collisions / matches in hash tables
+        std::array<unsigned long, 10> nOps{};              // operation counters
+	    std::array<unsigned long, 10> CTlook{}, CThit{};   // counters for gathering compute table hit stats
 
 	    std::vector<ListElementPtr> allocated_list_chunks;
 	    std::vector<NodePtr> allocated_node_chunks;
 
-		Mode mode;
+		Mode mode{Mode::Vector};
 	    std::unordered_set<NodePtr> visited{NODECOUNT_BUCKETS}; // 2e6
+	    ComputeMatrixPropertiesMode computeMatrixProperties = Enabled; // enable/disable computation of matrix properties
 
 	    /// private helper routines
 	    void initComputeTable();
@@ -180,53 +194,67 @@ namespace dd {
 	    Edge kronecker2(Edge x, Edge y);
 
 	    void checkSpecialMatrices(NodePtr p);
-	    Edge& UTlookup(Edge& e);
+
+        static uintptr_t UThash(NodePtr p);
+	    Edge UTlookup(Edge e, bool keep_node = false);
+        std::string UTcheck(Edge e) const;
 
 
-	    static inline unsigned long CThash(const Edge& a, const Edge& b, const CTkind which) {
-		    const uintptr_t node_pointer = ((uintptr_t) a.p + (uintptr_t) b.p) >> 3u;
-		    const uintptr_t weights = (uintptr_t) a.w.i + (uintptr_t) a.w.r + (uintptr_t) b.w.i + (uintptr_t) b.w.r;
-		    return (node_pointer + weights + (uintptr_t) which) & CTMASK;
-	    }
+        Edge UT_update_node(Edge e, std::size_t previous_hash, Edge in);
 
-	    static inline unsigned long CThash2(NodePtr a, const ComplexValue& aw, NodePtr b, const ComplexValue& bw, const CTkind which) {
-		    const uintptr_t node_pointer = ((uintptr_t) a + (uintptr_t) b) >> 3u;
-		    const uintptr_t weights = (uintptr_t) (aw.r * 1000) + (uintptr_t) (aw.i * 2000) + (uintptr_t) (bw.r * 3000) + (uintptr_t) (bw.i * 4000);
-		    return (node_pointer + weights + (uintptr_t) which) & CTMASK;
-	    }
-	    static unsigned short TThash(unsigned short n, unsigned short t, const short line[]);
+	    static inline unsigned long CThash(const Edge& a, const Edge& b, CTkind which);
+	    static inline unsigned long CThash2(NodePtr a, const ComplexValue& aw, NodePtr b, const ComplexValue& bw, CTkind which);
+	    static inline unsigned short TThash(unsigned short n, unsigned short t, const short line[]);
 
 	    unsigned int nodeCount(const Edge& e, std::unordered_set<NodePtr>& v) const;
 	    ComplexValue getVectorElement(Edge e, unsigned long long int element);
 	    ListElementPtr newListElement();
 
     public:
+        // edges pointing to zero and one DD constants
         constexpr static Edge DDone{ terminalNode, ComplexNumbers::ONE };
-        constexpr static Edge DDzero{ terminalNode, ComplexNumbers::ZERO };            // edges pointing to zero and one DD constants
+        constexpr static Edge DDzero{ terminalNode, ComplexNumbers::ZERO };
+
+        // The following variables are supposed to be read only. Tread carefully if you change them!
+
+        unsigned long long node_allocations = 0;       // Number of nodes allocated by getNode()
         unsigned long activeNodeCount = 0;             // number of active nodes
-		unsigned long maxActive = 0;
-        unsigned long gc_calls{};
-        unsigned long gc_runs{};
-        ComplexNumbers cn;
-        std::array<unsigned short, MAXN> varOrder{ };    // variable order initially 0,1,... from bottom up | Usage: varOrder[level] := varible at a certain level
+        unsigned long unnormalizedNodes = 0;           // active nodes that need renormalization
+        unsigned int node_substitutions = 0;           // number of nodes substituted during reordering
+        unsigned int node_collapses = 0;               // number of nodes collapses during reordering
+        unsigned int exchange_base_cases = 0;          // number of nodes substituted during reordering
+        unsigned long maxActive = 0;                   // maximum number of active nodes
+        unsigned long gc_calls{};                      // number of calls to the garbage collector
+        unsigned long gc_runs{};                       // number of times the GC actually ran
+        unsigned long UTcol{}, UTmatch{}, UTlookups{}; // counter for collisions / matches in hash tables
+        ComplexNumbers cn;                             // instance of the complex number handler
+        std::array<unsigned short, MAXN> varOrder{ };  // variable order initially 0,1,... from bottom up | Usage: varOrder[level] := varible at a certain level
         std::array<unsigned short, MAXN> invVarOrder{ };// inverse of variable order (inverse permutation) | Usage: invVarOrder[variable] := level of a certain variable
-
-
 
         Package();
         ~Package();
 
-        void setMode(Mode m) { mode = m; }
-        static void setComplexNumberTolerance(fp tol) { CN::setTolerance(tol); }
+
+        // Package setup and reset
+        /// Set normalization mode
+        void setMode(const Mode m) {
+            mode = m;
+        }
+        /// Change the tolerance till which numbers are considered equal
+        static void setComplexNumberTolerance(const fp tol) {
+            CN::setTolerance(tol);
+        }
+        /// Reset package state (probably leaks memory)
+        void reset();
 
         // DD creation
-        static inline Edge makeTerminal(const Complex& w) { return { terminalNode, w }; }
-
+        static inline Edge makeTerminal(const Complex& w) {
+            return { terminalNode, w };
+        }
 	    Edge makeNonterminal(short v, const Edge *edge, bool cached = false);
-
 	    inline Edge makeNonterminal(const short v, const std::array<Edge, NEDGE>& edge, bool cached = false) {
 	    	return makeNonterminal(v, edge.data(), cached);
-	    };
+	    }
 	    Edge makeZeroState(unsigned short n);
 	    Edge makeBasisState(unsigned short n, const std::bitset<MAXN>& state);
 	    Edge makeBasisState(unsigned short n, const std::vector<BasisStates>& state);
@@ -251,53 +279,32 @@ namespace dd {
 	    Edge kronecker(Edge x, Edge y);
 	    Edge extend(Edge e, unsigned short h = 0, unsigned short l = 0);
 
-	    /// exchange levels i and j of a decision diagram by pointer manipulation.
-	    /// base case: j = i +/- 1 -> exchange pointers accordingly
-	    /// general case: perform successive nearest-neighbour exchanges until i and j are swapped.
-	    /// \param in decision diagram to operate on
-	    /// \param i first index
-	    /// \param j second index
-	    /// \return decision diagram with level i and j exchanged
-	    /// 		note that the nodes in the resulting decision diagram shall still follow the original ordering
-	    /// 		n-1 > n-2 > ... > 1 > 0 from top to bottom.
-	    ///			the caller of this function is responsible for keeping track of the variable exchanges (cf. dynamicReorder(...))
-	    Edge exchange(Edge in, unsigned short i, unsigned short j);
-
-	    /// Dynamically reorder a given decision diagram with the current variable map using the specific strategy
-	    /// \param in decision diagram to reorder
-	    /// \param varMap stores the variable mapping. varMap[circuit qubit] = corresponding DD qubit, e.g.
-	    ///			given the varMap (reversed var. order):
-	    /// 			0->2,
-	    /// 			1->1,
-	    /// 			2->0
-	    /// 		the circuit operation "H q[0]" leads to the DD equivalent to "H q[varMap[0]]" = "H q[2]".
-	    ///			the qubits in the decision diagram are always ordered as n-1 > n-2 > ... > 1 > 0
-	    /// \param strat strategy to apply
-	    /// \return the resulting decision diagram (and the changed variable map, which is returned as reference)
+		// functions for dynamic reordering
+		void recomputeMatrixProperties(Edge in);
+		void markForMatrixPropertyRecomputation(Edge in);
+		void resetNormalizationFactor(Edge in, Complex defaultValue);
+		Edge renormalize(Edge in);
+		Edge renormalize2(Edge in);
+	    void reuseNonterminal(short v, const Edge *edge, NodePtr p, Edge in);
+	    void exchange(unsigned short i, unsigned short j);
+        dd::Edge exchange2(unsigned short i, unsigned short j, std::map<unsigned short, unsigned short> &varMap, Edge in);
+	    void exchangeBaseCase(unsigned short i, Edge in);
+	    void exchangeBaseCase2(NodePtr p, unsigned short index, Edge in);
 	    Edge dynamicReorder(Edge in, std::map<unsigned short, unsigned short>& varMap, DynamicReorderingStrategy strat = None);
+	    std::tuple<Edge, unsigned int, unsigned int> sifting(Edge in, std::map<unsigned short, unsigned short>& varMap);
+		Edge random(Edge in, std::map<unsigned short, unsigned short> &varMap, std::mt19937_64 &mt);
+		Edge window3(Edge in, std::map<unsigned short, unsigned short>& varMap);
 
-	    /// Apply sifting dynamic reordering to a decision diagram given the current variable map
-	    /// \param in decision diagram to apply sifting to
-	    /// \param varMap stores the variable mapping (cf. dynamicReorder(...))
-	    /// \return the resulting decision diagram (and the changed variable map, which is returned as reference)
-	    Edge sifting(Edge in, std::map<unsigned short, unsigned short>& varMap);
 
-	    unsigned int size(const Edge& e);
-
-		/**
-		 * Get a single element of the vector or matrix represented by the dd with root edge e
-		 * @param dd package where the dd lives
-		 * @param e edge pointing to the root node
-		 * @param elements string {0, 1, 2, 3}^n describing which outgoing edge should be followed
-		 *                 (for vectors 0 is the 0-successor and 2 is the 1-successor due to the shared representation)
-		 *                 If string is longer than required, the additional characters are ignored.
-		 * @return the complex value of the specified element
-		 */
+		// utility
+        /// Traverse DD and return product of edge weights along the way
 		ComplexValue getValueByPath(Edge e, std::string elements);
+        /// Calculate the size of the DD pointed to by e
+        unsigned int size(const Edge& e);
 
 	    // reference counting and garbage collection
-	    void incRef(Edge& e);
-	    void decRef(Edge& e);
+        void incRef(Edge &e);
+	    void decRef(Edge &e);
 	    void garbageCollect(bool force = false);
 
 	    // checks
@@ -312,25 +319,34 @@ namespace dd {
 	    void TTinsert(unsigned short n, unsigned short m, unsigned short t, const short line[], const Edge& e);
 	    Edge TTlookup(unsigned short n, unsigned short m, unsigned short t, const short line[]);
 
-	    // printing
-	    void printVector(const Edge& e);
-	    void printActive(int n);
-	    void printDD(const Edge& e, unsigned int limit);
-	    void printUniqueTable(unsigned short n);
+	    // statistics
+        void statistics();
+        static void printInformation();
 
-	    void toDot(Edge e, std::ostream& oss, bool isVector = false);
-	    void export2Dot(Edge basic, const std::string& outputFilename, bool isVector = false, bool show = true);
+        // printing and GraphViz(dot) export
+        void printVector(const Edge& e);
+        void printActive(int n);
+        void printDD(const Edge& e, unsigned int limit);
+        void printUniqueTable(unsigned short n);
 
-	    // statistics and info
-	    void statistics();
-	    static void printInformation();		
-	    unsigned int nodeCount(const Edge& e) const {
-			std::unordered_set<NodePtr> v;
-			return nodeCount(e, v);
-		}
+        void toDot(Edge e, std::ostream& oss, bool isVector = false);
+        void export2Dot(Edge basic, const std::string& outputFilename, bool isVector = false, bool show = true);
 
-	    // debugging - not normally used
-	    void debugnode(NodePtr p) const;
-	};
+        // debugging
+        void debugnode(NodePtr p) const;
+        std::string debugnode_line(NodePtr p) const;
+        bool is_locally_consistent_dd(Edge e);
+        bool is_locally_consistent_dd2(Edge e);
+        bool is_globally_consistent_dd(Edge e);
+
+        void fill_consistency_counter(Edge edge, std::map<ComplexTableEntry*, long>& weight_map, std::map<NodePtr , unsigned long>& node_map);
+        void check_consistency_counter(Edge edge, const std::map<ComplexTableEntry*, long>& weight_map, const std::map<NodePtr , unsigned long>& node_map);
+
+        void substitute_node(short index, Edge original, Edge substitute, Edge in);
+        void substitute_node_ut(short index, Edge original, Edge substitute, Edge in);
+        void substitute_node_dd(short index, Edge parent, Edge original, Edge substitute, Edge in);
+
+        void check_node_is_really_gone(NodePtr pNode, Edge in);
+    };
 }
 #endif
