@@ -35,7 +35,7 @@ namespace qc {
 	 * Public Methods
 	 ***/
 	BernsteinVazirani::BernsteinVazirani(unsigned long hiddenInteger) : hiddenInteger(hiddenInteger) {
-		
+        name = "bv_" + std::to_string(hiddenInteger);
 		// Determine the bitsize of the hidden integer
 		while (hiddenInteger >> ++(size) > 0);
 

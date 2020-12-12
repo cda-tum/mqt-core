@@ -74,6 +74,7 @@ namespace qc {
         size_t slash = filename.find_last_of('/');
         size_t dot = filename.find_last_of('.');
         std::string benchmark = filename.substr(slash+1, dot-slash-1);
+        name = benchmark;
         layout = (benchmark[0] == 'b')? Bristlecone: Rectangular;
         ifs >> nqubits;
         std::string line;

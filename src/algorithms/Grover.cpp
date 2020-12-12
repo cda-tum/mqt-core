@@ -74,8 +74,8 @@ namespace qc {
     /***
      * Public Methods
      ***/
-    Grover::Grover(unsigned short nq, unsigned int seed) {
-        this->seed = seed;
+    Grover::Grover(unsigned short nq, unsigned int seed) : seed(seed) {
+        name = "grover_" + std::to_string(nq);
 
         addQubitRegister(nq);
         addAncillaryRegister(1);
