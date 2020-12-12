@@ -660,11 +660,10 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		dd::Edge e = createInitialMatrix(dd);
 
 		for (auto & op : ops) {
-			auto tmp = dd->multiply(op->getDD(dd, line, map), e);
 			// call the dynamic reordering routine
-			// TODO: currently this performs the reordering after every operation. this may be changed
-			tmp = dd->dynamicReorder(tmp, map, strat);
-
+			// TODO: currently this performs the reordering before every operation. this may be changed
+			auto tmp = dd->dynamicReorder(e, map, strat);
+            tmp = dd->multiply(op->getDD(dd, line, map), tmp);
 			dd->incRef(tmp);
 			dd->decRef(e);
 			e = tmp;
@@ -728,16 +727,14 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		dd->incRef(e);
 
 		for (auto& op : ops) {
-			auto tmp = dd->multiply(op->getDD(dd, line, map), e);
-
-			// call the dynamic reordering routine
-			// TODO: currently this performs the reordering after every operation. this may be changed
-			tmp = dd->dynamicReorder(tmp, map, strat);
+		    // call the dynamic reordering routine
+            // TODO: currently this performs the reordering before every operation. this may be changed
+            auto tmp = dd->dynamicReorder(e, map, strat);
+			tmp = dd->multiply(op->getDD(dd, line, map), tmp);
 
 			dd->incRef(tmp);
 			dd->decRef(e);
 			e = tmp;
-
 			dd->garbageCollect();
 		}
 
