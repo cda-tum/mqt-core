@@ -188,6 +188,96 @@ TEST_F(IO, dump_negative_control) {
 	EXPECT_EQ((*it)->getControls().size(), 0);
 }
 
+TEST_F(IO, qiskit_mcx_gray) {
+	std::stringstream ss{};
+	ss << "OPENQASM 2.0;"
+	   << "include \"qelib1.inc\";"
+	   << "qreg q[4];"
+	   << "mcx_gray q[0], q[1], q[2], q[3];"
+	   << std::endl;
+	qc->import(ss, qc::OpenQASM);
+	auto& gate = *(qc->begin());
+	std::cout << *qc << std::endl;
+	EXPECT_EQ(gate->getType(), qc::X);
+	EXPECT_EQ(gate->getNcontrols(), 3);
+	EXPECT_EQ(gate->getTargets().at(0), 3);
+}
+
+TEST_F(IO, qiskit_mcx_recursive) {
+	std::stringstream ss{};
+	ss << "OPENQASM 2.0;"
+	   << "include \"qelib1.inc\";"
+	   << "qreg q[6];"
+	   << "qreg anc[1];"
+	   << "mcx_recursive q[0], q[1], q[2], q[3], q[4];"
+	   << "mcx_recursive q[0], q[1], q[2], q[3], q[4], q[5], anc[0];"
+	   << std::endl;
+	qc->import(ss, qc::OpenQASM);
+	auto& gate = *(qc->begin());
+	std::cout << *qc << std::endl;
+	EXPECT_EQ(gate->getType(), qc::X);
+	EXPECT_EQ(gate->getNcontrols(), 4);
+	EXPECT_EQ(gate->getTargets().at(0), 4);
+	auto& second = *(++qc->begin());
+	EXPECT_EQ(second->getType(), qc::X);
+	EXPECT_EQ(second->getNcontrols(), 5);
+	EXPECT_EQ(second->getTargets().at(0), 5);
+}
+
+TEST_F(IO, qiskit_mcx_vchain) {
+	std::stringstream ss{};
+	ss << "OPENQASM 2.0;"
+	   << "include \"qelib1.inc\";"
+	   << "qreg q[4];"
+	   << "qreg anc[1];"
+	   << "mcx_vchain q[0], q[1], q[2], q[3], anc[0];"
+	   << std::endl;
+	qc->import(ss, qc::OpenQASM);
+	auto& gate = *(qc->begin());
+	std::cout << *qc << std::endl;
+	EXPECT_EQ(gate->getType(), qc::X);
+	EXPECT_EQ(gate->getNcontrols(), 3);
+	EXPECT_EQ(gate->getTargets().at(0), 3);
+}
+
+TEST_F(IO, qiskit_mcx_duplicate_qubit) {
+	std::stringstream ss{};
+	ss << "OPENQASM 2.0;"
+	   << "include \"qelib1.inc\";"
+	   << "qreg q[4];"
+	   << "qreg anc[1];"
+	   << "mcx_vchain q[0], q[0], q[2], q[3], anc[0];"
+	   << std::endl;
+	try {
+		qc->import(ss, qc::OpenQASM);
+		FAIL() << "Nothing thrown. Expected qasm::QASMParserException";
+	} catch (qasm::QASMParserException const & err) {
+		std::cout << err.what() << std::endl;
+		SUCCEED();
+	} catch (...) {
+		FAIL() << "Expected qasm::QASMParserException";
+	}
+}
+
+TEST_F(IO, qiskit_mcx_qubit_register) {
+	std::stringstream ss{};
+	ss << "OPENQASM 2.0;"
+	   << "include \"qelib1.inc\";"
+	   << "qreg q[4];"
+	   << "qreg anc[1];"
+	   << "mcx_vchain q, q[0], q[2], q[3], anc[0];"
+	   << std::endl;
+	try {
+		qc->import(ss, qc::OpenQASM);
+		FAIL() << "Nothing thrown. Expected qasm::QASMParserException";
+	} catch (qasm::QASMParserException const & err) {
+		std::cout << err.what() << std::endl;
+		SUCCEED();
+	} catch (...) {
+		FAIL() << "Expected qasm::QASMParserException";
+	}
+}
+
 TEST_F(IO, tfc_input) {
 	qc->import("./circuits/test.tfc");
 	std::cout << *qc << std::endl;

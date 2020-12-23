@@ -341,6 +341,47 @@
                 gate.emplace_back<qc::StandardOperation>(nqubits, target.first + i, qc::U3, lambda->num, phi->num, theta->num);
             }
             return std::make_unique<qc::CompoundOperation>(std::move(gate));
+        } else if (sym == Token::Kind::mcx_gray || sym == Token::Kind::mcx_recursive || sym == Token::Kind::mcx_vchain) {
+        	auto type = sym;
+        	scan();
+        	std::vector<std::pair<unsigned short, unsigned short>> registers{};
+	        registers.emplace_back(ArgumentQreg());
+	        while (sym != Token::Kind::semicolon) {
+		        check(Token::Kind::comma);
+		        registers.emplace_back(ArgumentQreg());
+	        }
+	        scan();
+
+	        std::vector<qc::Control> qubits{ };
+	        for (const auto& reg: registers) {
+		        if (reg.second != 1) {
+		        	error("MCX for whole qubit registers not yet implemented");
+		        }
+
+		        if (std::count(registers.begin(), registers.end(), reg) > 1) {
+			        std::ostringstream oss{};
+			        oss <<"Duplicate qubit " << reg.first << " in mcx definition";
+			        error(oss.str());
+		        }
+
+		        qubits.emplace_back(reg.first);
+	        }
+
+	        // drop ancillaries since our library can natively work with MCTs
+	        if (type == Token::Kind::mcx_vchain) {
+		        // n controls, 1 target, n-2 ancillaries = 2n-1 qubits
+		        unsigned short ancillaries = (qubits.size() + 1) / 2 - 2;
+		        for (int i=0; i<ancillaries; ++i)
+		        	qubits.pop_back();
+	        } else if (type == Token::Kind::mcx_recursive) {
+	        	// 1 ancillary if more than 4 controls
+		        if (qubits.size() > 5) {
+		        	qubits.pop_back();
+		        }
+	        }
+	        auto target = qubits.back().qubit;
+	        qubits.pop_back();
+	        return std::make_unique<qc::StandardOperation>(nqubits, qubits, target);
         } else if (sym == Token::Kind::swap) {
         	scan();
         	auto first_target = ArgumentQreg();
@@ -890,7 +931,9 @@
     }
 
     std::unique_ptr<qc::Operation> Parser::Qop() {
-        if (sym == Token::Kind::ugate || sym == Token::Kind::cxgate || sym == Token::Kind::swap || sym == Token::Kind::identifier)
+        if (sym == Token::Kind::ugate || sym == Token::Kind::cxgate ||
+            sym == Token::Kind::swap || sym == Token::Kind::identifier ||
+            sym == Token::Kind::mcx_gray || sym == Token::Kind::mcx_recursive || sym == Token::Kind::mcx_vchain)
             return Gate();
         else if (sym == Token::Kind::measure) {
             scan();
