@@ -128,6 +128,13 @@ namespace qasm {
 			CXgate(std::string  control, std::string  target) : control(std::move(control)), target(std::move(target)) { }
 		};
 
+		struct SWAPgate : public BasisGate {
+			std::string target0;
+			std::string target1;
+
+			SWAPgate(std::string target0, std::string target1) : target0(std::move(target0)), target1(std::move(target1)) { }
+		};
+
 		struct MCXgate : public BasisGate {
 			std::vector<std::string> controls;
 			std::string target;
@@ -159,6 +166,7 @@ namespace qasm {
 		registerMap&   qregs;
 		registerMap&   cregs;
 		unsigned short nqubits = 0;
+		unsigned short nclassics = 0;
 
 		explicit Parser(std::istream& is, registerMap& qregs, registerMap& cregs) :in(is), qregs(qregs), cregs(cregs) {
 			scanner = new Scanner(in);

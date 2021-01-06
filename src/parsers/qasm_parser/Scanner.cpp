@@ -114,6 +114,8 @@ namespace qasm {
         keywords["U"]                  = Token::Kind::ugate;
         keywords["CX"]                 = Token::Kind::cxgate;
 	    keywords["swap"]               = Token::Kind::swap;
+	    keywords["mct"]                = Token::Kind::mcx_gray;
+	    keywords["mcx"]                = Token::Kind::mcx_gray;
 	    keywords["mcx_gray"]           = Token::Kind::mcx_gray;
 	    keywords["mcx_recursive"]      = Token::Kind::mcx_recursive;
 	    keywords["mcx_vchain"]         = Token::Kind::mcx_vchain;
