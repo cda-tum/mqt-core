@@ -53,8 +53,8 @@ class DDFunctionality : public testing::TestWithParam<unsigned short> {
 
 INSTANTIATE_TEST_SUITE_P(Parameters,
                          DDFunctionality,
-                         testing::Values(qc::I, qc::H, qc::X, qc::Y, qc::Z, qc::S, qc::Sdag, qc::T, qc::Tdag, qc::V, 
-                                         qc::Vdag, qc::U3, qc::U2, qc::U1, qc::RX, qc::RY, qc::RZ, qc::P, qc::Pdag, 
+                         testing::Values(qc::I, qc::H, qc::X, qc::Y, qc::Z, qc::S, qc::Sdag, qc::T, qc::Tdag, qc::V,
+                                         qc::Vdag, qc::U3, qc::U2, qc::Phase, qc::RX, qc::RY, qc::RZ, qc::Peres, qc::Peresdag,
                                          qc::SWAP, qc::iSWAP),
                          [](const testing::TestParamInfo<DDFunctionality::ParamType>& info) {
                              auto gate = (qc::OpType)info.param;
@@ -72,14 +72,14 @@ INSTANTIATE_TEST_SUITE_P(Parameters,
                                 case qc::Vdag:  return "vdg";
                                 case qc::U3:    return "u3";
                                 case qc::U2:    return "u2";
-                                case qc::U1:    return "u1";
+                                case qc::Phase: return "u1";
                                 case qc::RX:    return "rx";
                                 case qc::RY:    return "ry";
                                 case qc::RZ:    return "rz";
                                 case qc::SWAP:  return "swap";
                                 case qc::iSWAP: return "iswap";
-                                case qc::P:     return "p";
-                                case qc::Pdag:  return "pdag";
+                                case qc::Peres: return "p";
+                                case qc::Peresdag:  return "pdag";
                                 default:        return "unknownGate";
                             }
                          }); 
@@ -99,7 +99,7 @@ TEST_P(DDFunctionality, standard_op_build_inverse_build) {
         case qc::RX:
 		case qc::RY:
         case qc::RZ:
-		case qc::U1:
+		case qc::Phase:
             op = qc::StandardOperation(nqubits, 0,  gate, dist(mt));
             break;
 
@@ -107,8 +107,8 @@ TEST_P(DDFunctionality, standard_op_build_inverse_build) {
         case qc::iSWAP:
             op = qc::StandardOperation(nqubits, std::vector<unsigned short>{0, 1},  gate);
             break;
-        case qc::P:
-		case qc::Pdag: 
+        case qc::Peres:
+		case qc::Peresdag:
             op = qc::StandardOperation(nqubits, std::vector<qc::Control>{qc::Control(0)}, 1, 2, gate);
             break;
         default:

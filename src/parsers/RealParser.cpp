@@ -125,7 +125,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
 			fp lambda = m.str(3).empty() ? static_cast<fp>(0L) : static_cast<fp>(std::stold(m.str(3)));
 
 			if (gate == V || gate == Vdag || m.str(1) == "c") ncontrols = 1;
-			else if (gate == P || gate == Pdag) ncontrols = 2;
+			else if (gate == Peres || gate == Peresdag) ncontrols = 2;
 
 			if (ncontrols >= nqubits) {
 				throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Gate acts on " + std::to_string(ncontrols + 1) + " qubits, but only " + std::to_string(nqubits) + " qubits are available.");
@@ -191,7 +191,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
 					break;
 
 				case RZ:
-				case U1:
+				case Phase:
 					if (std::abs(lambda - x) < dd::ComplexNumbers::TOLERANCE) {
 						if (x == 1.0 || x == -1.0) {
 							emplace_back<StandardOperation>(nqubits, controls, target, Z);
@@ -211,8 +211,8 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
 					}
 					break;
 				case SWAP:
-				case P:
-				case Pdag:
+				case Peres:
+				case Peresdag:
 				case iSWAP:
 					target1 = controls.back().qubit;
 					controls.pop_back();
@@ -225,6 +225,8 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
 				case ShowProbabilities:
 				case Barrier:
 				case ClassicControlled:
+				case SX:
+				case SXdag:
 					std::cerr << "Operation with invalid type " << gate << " read from real file. Proceed with caution!" << std::endl;
 					break;
 			}

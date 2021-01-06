@@ -359,8 +359,8 @@ TEST_F(QFRFunctionality, eliminateInverseInCompoundOperation) {
 TEST_F(QFRFunctionality, unknownInverseInCompoundOperation) {
 	unsigned short nqubits = 1;
 	QuantumComputation qc(nqubits);
-	qc.emplace_back<StandardOperation>(nqubits, 0, U1, 1.);
-	qc.emplace_back<StandardOperation>(nqubits, 0, U1, -1.);
+	qc.emplace_back<StandardOperation>(nqubits, 0, Phase, 1.);
+	qc.emplace_back<StandardOperation>(nqubits, 0, Phase, -1.);
 	std::cout << "-----------------------------" << std::endl;
 	qc.print(std::cout);
 	CircuitOptimizer::singleQubitGateFusion(qc);

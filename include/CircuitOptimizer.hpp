@@ -15,7 +15,7 @@ namespace qc {
 	using DAGIterator = std::forward_list<std::unique_ptr<Operation>*>::iterator;
 	using DAGIterators = std::vector<DAGIterator>;
 
-	static constexpr std::array<qc::OpType, 8> diagonalGates = {qc::I, qc::Z, qc::S, qc::Sdag, qc::T, qc::Tdag, qc::U1, qc::RZ};
+	static constexpr std::array<qc::OpType, 8> diagonalGates = { qc::I, qc::Z, qc::S, qc::Sdag, qc::T, qc::Tdag, qc::Phase, qc::RZ};
 
 	class CircuitOptimizer {
 

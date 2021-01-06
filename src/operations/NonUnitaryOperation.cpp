@@ -16,6 +16,13 @@ namespace qc {
 		for (const auto& qubit: qubitRegister)
 			controls.emplace_back(qubit);
 	}
+	NonUnitaryOperation::NonUnitaryOperation(unsigned short nq, unsigned short qubit, unsigned short clbit) {
+		type = Measure;
+		nqubits = nq;
+		controls.emplace_back(qubit);
+		targets.emplace_back(clbit);
+		Operation::setName();
+	}
 
 	// Snapshot constructor
 	NonUnitaryOperation::NonUnitaryOperation(const unsigned short nq, const std::vector<unsigned short>& qubitRegister, int n) 

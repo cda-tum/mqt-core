@@ -127,6 +127,9 @@ namespace qc {
 		unsigned short getHighestLogicalQubitIndex() const { return getHighestLogicalQubitIndex(initialLayout); };
 		std::pair<std::string, unsigned short> getQubitRegisterAndIndex(unsigned short physical_qubit_index);
 		std::pair<std::string, unsigned short> getClassicalRegisterAndIndex(unsigned short classical_index);
+
+		unsigned short getIndexFromQubitRegister(const std::pair<std::string, unsigned short>& qubit);
+		unsigned short getIndexFromClassicalRegister(const std::pair<std::string, unsigned short>& clbit);
 		bool isIdleQubit(unsigned short physical_qubit);
 		bool physicalQubitIsAncillary(unsigned short physical_qubit_index);
 		bool logicalQubitIsAncillary(unsigned short logical_qubit_index) const { return ancillary.test(logical_qubit_index); }

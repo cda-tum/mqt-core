@@ -44,13 +44,19 @@ namespace qc {
 				strcpy(name, "Vdag");
 				break;
 			case U3:
-				strcpy(name, "U3  ");
+				strcpy(name, "U   ");
 				break;
 			case U2:
 				strcpy(name, "U2  ");
 				break;
-			case U1:
-				strcpy(name, "U1  ");
+			case Phase:
+				strcpy(name, "P   ");
+				break;
+			case SX:
+				strcpy(name, "SX  ");
+				break;
+			case SXdag:
+				strcpy(name, "SXdg");
 				break;
 			case RX:
 				strcpy(name, "RX  ");
@@ -67,11 +73,11 @@ namespace qc {
 			case iSWAP:
 				strcpy(name, "iSWP");
 				break;
-			case P:
-				strcpy(name, "P   ");
+			case Peres:
+				strcpy(name, "Pres");
 				break;
-			case Pdag:
-				strcpy(name, "Pdag");
+			case Peresdag:
+				strcpy(name, "Prdg");
 				break;
 			case Compound:
 				strcpy(name, "Comp");

@@ -15,6 +15,7 @@ namespace qc {
 	public:
 		// Measurement constructor
 		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister, const std::vector<unsigned short>& classicalRegister);
+		NonUnitaryOperation(unsigned short nq, unsigned short qubit, unsigned short clbit);
 
 		// Snapshot constructor
 		NonUnitaryOperation(unsigned short nq, const std::vector<unsigned short>& qubitRegister, int n);

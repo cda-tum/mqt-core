@@ -53,6 +53,15 @@ namespace qc {
 		                    dd::ComplexValue{  std::cos(lambda + phi) * dd::SQRT_2,  std::sin(lambda + phi) * dd::SQRT_2 }});
 	}
 
+	inline GateMatrix Phasemat(fp lambda) {
+		return GateMatrix({ complex_one,  complex_zero,
+		                    complex_zero, dd::ComplexValue{ std::cos(lambda), std::sin(lambda) }});
+	}
+
+	constexpr GateMatrix SXmat{dd::ComplexValue{0.5, 0.5}, dd::ComplexValue{0.5, -0.5}, dd::ComplexValue{0.5, -0.5}, dd::ComplexValue{0.5, 0.5}};
+
+	constexpr GateMatrix SXdagmat{dd::ComplexValue{0.5, -0.5}, dd::ComplexValue{0.5, 0.5}, dd::ComplexValue{0.5, 0.5}, dd::ComplexValue{0.5, -0.5}};
+
 	inline GateMatrix RXmat(fp lambda) {
 		return GateMatrix({ dd::ComplexValue{ std::cos(lambda / 2), 0 }, 
 		                    dd::ComplexValue{ 0, -std::sin(lambda / 2) },
@@ -68,8 +77,8 @@ namespace qc {
 	}
 
 	inline GateMatrix RZmat(fp lambda) {
-		return GateMatrix({ complex_one,  complex_zero,
-		                    complex_zero, dd::ComplexValue{ std::cos(lambda), std::sin(lambda) }});
+		return GateMatrix({ dd::ComplexValue{ -std::cos(lambda/2.), -std::sin(lambda/2.) },  complex_zero,
+		                    complex_zero, dd::ComplexValue{ std::cos(lambda/2.), std::sin(lambda/2.) }});
 	}
 
 	class StandardOperation : public Operation {
@@ -114,8 +123,8 @@ namespace qc {
 		// MCT Constructor
 		StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short target);
 
-		// MCF (cSWAP) and Peres Constructor
-		StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short target0, unsigned short target1, OpType g);
+		// MCF (cSWAP), Peres, paramterized two target Constructor
+		StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short target0, unsigned short target1, OpType g, fp lambda = 0, fp phi = 0, fp theta = 0);
 
 		bool isStandardOperation() const override {
 			return true;
@@ -128,8 +137,8 @@ namespace qc {
 		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override;
 
 		dd::Edge getSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
-		dd::Edge getPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
-		dd::Edge getPdagDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
+		dd::Edge getPeresDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
+		dd::Edge getPeresdagDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
 		dd::Edge getiSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
 		dd::Edge getiSWAPinvDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
 

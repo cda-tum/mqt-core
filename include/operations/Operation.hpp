@@ -65,7 +65,7 @@ namespace qc {
 	enum OpType {
 		None,
 		// Standard Operations
-		I, H, X, Y, Z, S, Sdag, T, Tdag, V, Vdag, U3, U2, U1, RX, RY, RZ, SWAP, iSWAP, P, Pdag,
+		I, H, X, Y, Z, S, Sdag, T, Tdag, V, Vdag, U3, U2, Phase, SX, SXdag, RX, RY, RZ, SWAP, iSWAP, Peres, Peresdag,
 		// Compound Operation
 		Compound,
 		// Non Unitary Operations
@@ -97,10 +97,10 @@ namespace qc {
 			{ "rz",  RZ   },
 			{ "f",   SWAP },
 			{ "if",  SWAP },
-			{ "p",   P    },
-			{ "pi",  Pdag },
-			{ "p+",  Pdag },
-			{ "q",   RZ   },
+			{ "p",   Peres},
+			{ "pi",  Peresdag },
+			{ "p+",  Peresdag },
+			{ "q",   Phase},
 			{ "t",   T    },
 			{ "tdg", Tdag }
 	};

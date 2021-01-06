@@ -1332,6 +1332,15 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return {reg_name, index};
 	}
 
+	unsigned short QuantumComputation::getIndexFromQubitRegister(const std::pair<std::string, unsigned short>& qubit) {
+		// no range check is performed here!
+		return static_cast<unsigned short>(qregs.at(qubit.first).first + qubit.second);
+	}
+	unsigned short QuantumComputation::getIndexFromClassicalRegister(const std::pair<std::string, unsigned short>& clbit) {
+		// no range check is performed here!
+		return static_cast<unsigned short>(cregs.at(clbit.first).first + clbit.second);
+	}
+
 	std::ostream& QuantumComputation::printPermutationMap(const permutationMap &map, std::ostream &os) {
 		for(const auto& Q: map) {
 			os <<"\t" << Q.first << ": " << Q.second << std::endl;
