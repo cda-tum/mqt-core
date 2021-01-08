@@ -43,7 +43,7 @@ namespace dd {
 	constexpr unsigned short CTMASK = CTSLOTS - 1;    // must be CTSLOTS-1
 	constexpr unsigned short TTSLOTS = 2048;          // Toffoli table slots
 	constexpr unsigned short TTMASK = TTSLOTS - 1;    // must be TTSLOTS-1
-	constexpr unsigned int NODE_CHUNK_SIZE = 10 * 1000 * 1000;
+	constexpr unsigned int NODE_CHUNK_SIZE = 2000;    // this parameter may be increased for larger benchmarks to minimize the number of allocations
 	constexpr unsigned int LIST_CHUNK_SIZE = 2000;
 	constexpr unsigned short MAXN = 128;                       // max no. of inputs
 

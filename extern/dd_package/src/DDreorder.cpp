@@ -485,9 +485,9 @@ namespace dd {
 		Edge root{in};
 
 		//std::clog << "  Start Sifting. n=" << std::setw(2) << n << " -- ";
-		for (auto &entry: varMap) {
+//		for (auto &entry: varMap) {
 		    //std::clog << entry.second << " ";
-		}
+//		}
 		//std::clog << "\n";
 
 		unsigned int total_max = size(in);
