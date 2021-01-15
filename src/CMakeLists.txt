@@ -77,6 +77,11 @@ endif ()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC JKQ::DDpackage)
 
+# add nlohmann::json library
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json")
+target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json::nlohmann_json)
+
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11" "extern/pybind11" EXCLUDE_FROM_ALL)
 add_library(pybind11 ALIAS pybind11::pybind11)
 
@@ -110,7 +115,7 @@ endif()
 include(GNUInstallDirs)
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
-install(TARGETS ${PROJECT_NAME} pybind11_headers
+install(TARGETS ${PROJECT_NAME} pybind11_headers nlohmann_json
         EXPORT qfr-targets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
