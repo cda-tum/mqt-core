@@ -41,6 +41,9 @@ macro(handle_submodule MODULENAME)
 endmacro()
 
 handle_submodule(dd_package)
+handle_submodule(json)
+handle_submodule(pybind11)
+handle_submodule(pybind11_json)
 
 add_subdirectory(src)
 

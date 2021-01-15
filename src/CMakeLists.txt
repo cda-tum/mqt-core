@@ -77,6 +77,12 @@ endif ()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC JKQ::DDpackage)
 
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11" "extern/pybind11" EXCLUDE_FROM_ALL)
+add_library(pybind11 ALIAS pybind11::pybind11)
+
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11_json" "extern/pybind11_json" EXCLUDE_FROM_ALL)
+target_link_libraries(${PROJECT_NAME} PUBLIC pybind11::headers pybind11_json)
+
 # add coverage compiler and linker flag if COVERAGE is set
 if (COVERAGE)
 	target_compile_options(${PROJECT_NAME} PRIVATE --coverage)
@@ -104,7 +110,7 @@ endif()
 include(GNUInstallDirs)
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${PROJECT_NAME} pybind11_headers
         EXPORT qfr-targets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
