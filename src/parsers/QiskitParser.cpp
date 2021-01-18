@@ -21,7 +21,7 @@ namespace qc {
 			emplace_back<qc::NonUnitaryOperation>(getNqubits(), control, target);
 		} else if (instructionName == "barrier") {
 			std::vector<unsigned short> targets{};
-			for (const auto& qubit: qargs) {
+			for (const auto qubit: qargs) {
 				auto&& qreg = qubit.attr("register").attr("name").cast<std::string>();
 				auto&& qidx = qubit.attr("index").cast<unsigned short>();
 				unsigned short target = getIndexFromQubitRegister({qreg, qidx});
@@ -110,7 +110,7 @@ namespace qc {
 		}
 
 		auto&& data = circ.attr("data");
-		for (const auto& pyinst: data) {
+		for (const auto pyinst: data) {
 			auto&& inst = pyinst.cast<std::tuple<py::object, py::list, py::list>>();
 			auto&& instruction = std::get<0>(inst);
 
@@ -134,7 +134,7 @@ namespace qc {
 
 	void QuantumComputation::addQiskitOperation(qc::OpType type, const py::list& qargs, const py::list& params) {
 		std::vector<qc::Control> qubits{};
-		for (const auto& qubit: qargs) {
+		for (const auto qubit: qargs) {
 			auto&& qreg = qubit.attr("register").attr("name").cast<std::string>();
 			auto&& qidx = qubit.attr("index").cast<unsigned short>();
 			unsigned short target = getIndexFromQubitRegister({qreg, qidx});
@@ -158,7 +158,7 @@ namespace qc {
 
 	void QuantumComputation::addTwoTargetQiskitOperation(qc::OpType type, const py::list& qargs, const py::list& params) {
 		std::vector<qc::Control> qubits{};
-		for (const auto& qubit: qargs) {
+		for (const auto qubit: qargs) {
 			auto&& qreg = qubit.attr("register").attr("name").cast<std::string>();
 			auto&& qidx = qubit.attr("index").cast<unsigned short>();
 			unsigned short target = getIndexFromQubitRegister({qreg, qidx});
