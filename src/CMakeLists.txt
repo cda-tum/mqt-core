@@ -86,8 +86,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json::nlohmann_json)
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11" "extern/pybind11" EXCLUDE_FROM_ALL)
 add_library(pybind11 ALIAS pybind11::pybind11)
 
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11_json" "extern/pybind11_json" EXCLUDE_FROM_ALL)
-target_link_libraries(${PROJECT_NAME} PUBLIC pybind11::pybind11 pybind11_json)
+target_link_libraries(${PROJECT_NAME} PUBLIC pybind11::headers pybind11_json)
 
 # add coverage compiler and linker flag if COVERAGE is set
 if (COVERAGE)
