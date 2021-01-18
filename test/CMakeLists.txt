@@ -35,7 +35,7 @@ if(MSVC)
 	target_compile_options(${PROJECT_NAME}_example PUBLIC "/W4" "$<$<CONFIG:RELEASE>:/O2 /GL>")
 	target_link_options(${PROJECT_NAME}_example PUBLIC "$<$<CONFIG:Release>:/LTCG>")
 else()
-	target_compile_options(${PROJECT_NAME}_example PRIVATE -Wall $<$<CONFIG:DEBUG>:-g3 -Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native -DNDEBUG -g0>)
+	target_compile_options(${PROJECT_NAME}_example PRIVATE -Wall $<$<CONFIG:DEBUG>:-g3 -Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native -g>)
 endif()
 
 add_custom_command(TARGET ${PROJECT_NAME}_example
@@ -62,7 +62,7 @@ macro(package_add_test TESTNAME)
 		target_compile_options(${TESTNAME} PUBLIC "/W4" "$<$<CONFIG:RELEASE>:/O2 /GL>")
 		target_link_options(${TESTNAME} PUBLIC "$<$<CONFIG:Release>:/LTCG>")
 	else()
-		target_compile_options(${TESTNAME} PUBLIC -Wall $<$<CONFIG:DEBUG>:-g3 -Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native -DNDEBUG -g0>)
+		target_compile_options(${TESTNAME} PUBLIC -Wall $<$<CONFIG:DEBUG>:-g3 -Og -Wextra -Wpedantic -pedantic> $<$<CONFIG:RELEASE>:-O3 -mtune=native -march=native -g>)
 	endif()
 
 	# gtest_discover_tests replaces gtest_add_tests,

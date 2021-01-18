@@ -101,17 +101,17 @@ namespace qc {
 		}
 
 		auto&& circQregs = circ.attr("qregs");
-		for (const auto& qreg: circQregs) {
+		for (const auto qreg: circQregs) {
 			addQubitRegister(qreg.attr("size").cast<unsigned short>(), qreg.attr("name").cast<std::string>().c_str());
 		}
 
 		auto&& circCregs = circ.attr("cregs");
-		for (const auto& creg: circCregs) {
+		for (const auto creg: circCregs) {
 			addClassicalRegister(creg.attr("size").cast<unsigned short>(), creg.attr("name").cast<std::string>().c_str());
 		}
 
 		auto&& data = circ.attr("data");
-		for (const auto& pyinst: data) {
+		for (const auto pyinst: data) {
 			auto&& inst = pyinst.cast<std::tuple<py::object, py::list, py::list>>();
 			auto&& instruction = std::get<0>(inst);
 			auto&& qargs = std::get<1>(inst);
