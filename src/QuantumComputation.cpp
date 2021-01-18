@@ -94,6 +94,34 @@ namespace qc {
 		}
 	}
 
+	void QuantumComputation::import(const py::object& circ) {
+		py::object QuantumCircuit = py::module::import("qiskit").attr("QuantumCircuit");
+		if (!py::isinstance(circ, QuantumCircuit)) {
+			throw QFRException("[import] Python object needs to be a Qiskit QuantumCircuit");
+		}
+
+		auto&& circQregs = circ.attr("qregs");
+		for (const auto& qreg: circQregs) {
+			addQubitRegister(qreg.attr("size").cast<unsigned short>(), qreg.attr("name").cast<std::string>().c_str());
+		}
+
+		auto&& circCregs = circ.attr("cregs");
+		for (const auto& creg: circCregs) {
+			addClassicalRegister(creg.attr("size").cast<unsigned short>(), creg.attr("name").cast<std::string>().c_str());
+		}
+
+		auto&& data = circ.attr("data");
+		for (const auto& pyinst: data) {
+			auto&& inst = pyinst.cast<std::tuple<py::object, py::list, py::list>>();
+			auto&& instruction = std::get<0>(inst);
+			auto&& qargs = std::get<1>(inst);
+			auto&& cargs = std::get<2>(inst);
+			auto&& params = instruction.attr("params");
+
+			emplaceQiskitOperation(instruction, qargs, cargs, params);
+		}
+	}
+
 	void QuantumComputation::addQubitRegister(unsigned short nq, const char* reg_name) {
 		if (nqubits + nancillae + nq > dd::MAXN) {
 			throw QFRException("[addQubitRegister] Adding additional qubits results in too many qubits " + std::to_string(nqubits + nancillae + nq) + " vs. " + std::to_string(dd::MAXN));

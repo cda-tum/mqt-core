@@ -34,6 +34,7 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QASMParser.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/TFCParser.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QCParser.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QiskitParser.cpp
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
