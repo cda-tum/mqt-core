@@ -45,6 +45,7 @@ handle_submodule(json)
 handle_submodule(pybind11)
 handle_submodule(pybind11_json)
 
+SET(PYBIND11_FINDPYTHON ON CACHE BOOL "Allow pybind11 to find Python libraries")
 add_subdirectory(src)
 
 option(BUILD_QFR_TESTS "Also build tests for QFR project" OFF)
