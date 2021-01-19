@@ -6,13 +6,10 @@
 namespace qc {
 	class BernsteinVazirani : public QuantumComputation {
 	protected:
-		void setup(QuantumComputation& qc);
-
-		void oracle(QuantumComputation& qc);
-
-		void postProcessing(QuantumComputation& qc);
-
-		void full_BernsteinVazirani(QuantumComputation& qc);
+		void setup();
+		void oracle();
+		void postProcessing();
+		void full_BernsteinVazirani();
 
 	public:
 		unsigned long       hiddenInteger = 0;

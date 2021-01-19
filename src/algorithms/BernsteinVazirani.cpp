@@ -5,12 +5,12 @@ namespace qc {
 	/***
 	 * Private Methods
 	 ***/
-	void BernsteinVazirani::setup(QuantumComputation& qc) {
+	void BernsteinVazirani::setup() {
 		for (unsigned short i = 0; i < nqubits; ++i)
 			emplace_back<StandardOperation>(nqubits, i, H);
 	}
 
-	void BernsteinVazirani::oracle(QuantumComputation& qc) {
+	void BernsteinVazirani::oracle() {
 		for (unsigned short i = 0; i < nqubits; ++i) {
 			if (((hiddenInteger >> i) & 1) == 1) {
 				emplace_back<StandardOperation>(nqubits, i, Z);
@@ -18,17 +18,16 @@ namespace qc {
 		}
 	}
 
-	void BernsteinVazirani::postProcessing(QuantumComputation& qc) {
+	void BernsteinVazirani::postProcessing() {
 		for (unsigned short i = 0; i < nqubits; ++i)
 			emplace_back<StandardOperation>(nqubits, i, H);
 	}
 
-	void BernsteinVazirani::full_BernsteinVazirani(QuantumComputation& qc) {
-		
+	void BernsteinVazirani::full_BernsteinVazirani() {
 		// Generate circuit
-		setup(qc);
-		oracle(qc);
-		postProcessing(qc);
+		setup();
+		oracle();
+		postProcessing();
 	}
 
 	/***
@@ -49,7 +48,7 @@ namespace qc {
 		addClassicalRegister(size);
 		
 		// Circuit
-		full_BernsteinVazirani(*this);
+		full_BernsteinVazirani();
 	}
 
 	std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) {
