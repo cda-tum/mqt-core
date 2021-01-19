@@ -45,7 +45,6 @@ handle_submodule(json)
 handle_submodule(pybind11)
 handle_submodule(pybind11_json)
 
-SET(PYBIND11_FINDPYTHON ON CACHE BOOL "Allow pybind11 to find Python libraries")
 add_subdirectory(src)
 
 option(BUILD_QFR_TESTS "Also build tests for QFR project" OFF)
@@ -55,4 +54,9 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR BUILD_QFR_TESTS)
 	add_subdirectory(test)
 
 	add_subdirectory(apps)
+endif()
+
+option(BUILD_QFR_BINDINGS "Also build Python bindings for QFR project" OFF)
+if(BUILD_QFR_BINDINGS)
+	add_subdirectory(jkq/qfr)
 endif()

@@ -11,8 +11,6 @@
 #include "operations/ClassicControlledOperation.hpp"
 #include "parsers/qasm_parser/Parser.hpp"
 
-#include "pybind11/pybind11.h"
-
 #include <vector>
 #include <memory>
 #include <iostream>
@@ -27,9 +25,6 @@
 #include <locale>
 
 #define DEBUG_MODE_QC 0
-
-namespace py = pybind11;
-using namespace pybind11::literals;
 
 namespace qc {
 	using reg            = std::pair<unsigned short, unsigned short>;
@@ -70,11 +65,6 @@ namespace qc {
 		int readQCHeader(std::istream& is, std::map<std::string, unsigned short>& varMap);
 		void readQCGateDescriptions(std::istream& is, int line, std::map<std::string, unsigned short>& varMap);
 		void importGRCS(std::istream& is);
-
-		void emplaceQiskitOperation(const py::object& instruction, const py::list& qargs, const py::list& cargs, const py::list& params);
-		void importQiskitDefinition(const py::object& circ, const py::list& qargs, const py::list& cargs);
-		void addQiskitOperation(qc::OpType type, const py::list& qargs, const py::list& params);
-		void addTwoTargetQiskitOperation(qc::OpType type, const py::list& qargs, const py::list& params);
 
 		static void printSortedRegisters(const registerMap& regmap, const std::string& identifier, std::ostream& of);
 		static void consolidateRegister(registerMap& regs);
@@ -166,7 +156,6 @@ namespace qc {
 			import(std::move(is), format);
 		}
 		void import(std::istream&& is, Format format);
-		void import(const py::object& circ);
 
 		// search through .qasm file and look for IO layout information of the form
 		//      'i Q_i Q_j ... Q_k' meaning, e.g. q_0 is mapped to Q_i, q_1 to Q_j, etc.

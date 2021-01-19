@@ -34,7 +34,6 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QASMParser.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/TFCParser.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QCParser.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QiskitParser.cpp
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
@@ -81,14 +80,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC JKQ::DDpackage)
 # add nlohmann::json library
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json" EXCLUDE_FROM_ALL)
-target_compile_options(nlohmann_json INTERFACE -fvisibility=hidden)
 target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json)
-
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11" "extern/pybind11" EXCLUDE_FROM_ALL)
-add_library(pybind11 ALIAS pybind11::pybind11)
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11_json" "extern/pybind11_json" EXCLUDE_FROM_ALL)
-target_link_libraries(${PROJECT_NAME} PUBLIC pybind11::embed pybind11_json)
-target_compile_options(${PROJECT_NAME} PUBLIC -fvisibility=hidden)
 
 # add coverage compiler and linker flag if COVERAGE is set
 if (COVERAGE)
@@ -117,7 +109,7 @@ endif()
 include(GNUInstallDirs)
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
-install(TARGETS ${PROJECT_NAME} pybind11_headers nlohmann_json
+install(TARGETS ${PROJECT_NAME} nlohmann_json
         EXPORT qfr-targets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
