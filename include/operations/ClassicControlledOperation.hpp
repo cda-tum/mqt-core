@@ -65,6 +65,10 @@ namespace qc {
 			return true;
 		}
 
+		bool actsOn(unsigned short i) override {
+			return op->actsOn(i);
+		}
+
 		void dumpOpenQASM(std::ostream& of, const regnames_t& qreg, const regnames_t& creg) const override {
 			UNUSED(of)
 			UNUSED(qreg)

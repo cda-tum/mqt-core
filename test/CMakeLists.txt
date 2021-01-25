@@ -81,8 +81,7 @@ package_add_test(${PROJECT_NAME}_test ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/tes
 							${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_entanglement.cpp
 							${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_io.cpp
 							${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_ddfunctionality.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_qfr_functionality.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_dynamicreordering.cpp)
+                            ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_qfr_functionality.cpp)
 
 add_custom_command(TARGET ${PROJECT_NAME}_test
                    POST_BUILD

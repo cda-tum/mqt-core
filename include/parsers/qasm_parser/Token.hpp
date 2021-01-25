@@ -61,7 +61,8 @@ namespace qasm {
 			cxgate,
 			mcx_gray,
 			mcx_recursive,
-			mcx_vchain
+			mcx_vchain,
+			comment
 		};
 
 		Kind        kind    = Kind::none;
@@ -121,7 +122,8 @@ namespace qasm {
 			{ Token::Kind::barrier,       "barrier" },
 			{ Token::Kind::_if,           "if" },
 			{ Token::Kind::eq,            "==" },
-			{ Token::Kind::reset,         "reset" }
+			{ Token::Kind::reset,         "reset" },
+			{ Token::Kind::comment,       "//"}
 	};
 
 }

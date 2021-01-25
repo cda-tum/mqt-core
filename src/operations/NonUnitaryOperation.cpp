@@ -251,18 +251,17 @@ namespace qc {
 	}
 
 	bool NonUnitaryOperation::actsOn(unsigned short i) {
-		return false; // non-unitary operations on idle qubits may be ignored. as such they do not "act" on the qubits
-//		if (type != Measure) {
-//			for (const auto t:targets) {
-//				if (t == i)
-//					return true;
-//			}
-//		} else {
-//			for (const auto c:controls) {
-//				if (c.qubit == i)
-//					return true;
-//			}
-//		}
-//		return false;
+		if (type == Measure) {
+			for (const auto c:controls) {
+				if (c.qubit == i)
+					return true;
+			}
+		} else if (type == Reset) {
+			for (const auto t:targets) {
+				if (t == i)
+					return true;
+			}
+		}
+		return false; // other non-unitary operations (e.g., barrier statements) may be ignored
 	}
 }

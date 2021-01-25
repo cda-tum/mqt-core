@@ -96,10 +96,14 @@ namespace qasm {
         t.kind = Token::Kind::string;
     }
 
-    void Scanner::skipComment() {
-        while (ch != '\n' && ch != (char) -1) {
-            nextCh();
+    void Scanner::readComment(Token& t) {
+	    std::stringstream ss;
+	    while (ch != '\n' && ch != (char) -1) {
+            ss << ch;
+	    	nextCh();
         }
+        t.str = ss.str();
+        t.kind = Token::Kind::comment;
     }
 
 
@@ -247,8 +251,9 @@ namespace qasm {
                 break;
             case '/': nextCh();
                 if (ch == '/') {
-                    skipComment();
-                    t = next();
+                	nextCh();
+                	readComment(t);
+                    nextCh();
                 } else {
                     t.kind = Token::Kind::div;
                 }

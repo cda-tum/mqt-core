@@ -190,6 +190,8 @@ namespace qc {
 	}
 
 	void import(QuantumComputation& qc, const py::object& circ) {
+		qc.reset();
+
 		py::object QuantumCircuit = py::module::import("qiskit").attr("QuantumCircuit");
 		if (!py::isinstance(circ, QuantumCircuit)) {
 			throw QFRException("[import] Python object needs to be a Qiskit QuantumCircuit");
@@ -205,6 +207,21 @@ namespace qc {
 			qc.addClassicalRegister(creg.attr("size").cast<unsigned short>(), creg.attr("name").cast<std::string>().c_str());
 		}
 
+		// import initial layout in case it is available
+		if (!circ.attr("_layout").is_none()) {
+			auto&& virtual_bits = circ.attr("_layout").attr("get_virtual_bits")().cast<py::dict>();
+			unsigned short logical_qubit_index = 0;
+			for (auto qubit: virtual_bits) {
+				auto&& logical_qubit = qubit.first;
+				auto&& register_name = logical_qubit.attr("register").attr("name").cast<std::string>();
+				auto&& register_index = logical_qubit.attr("index").cast<unsigned short>();
+				if (register_name != "ancilla") {
+					qc.initialLayout[qubit.second.cast<unsigned short>()] = logical_qubit_index;
+					++logical_qubit_index;
+				}
+			}
+		}
+
 		auto&& data = circ.attr("data");
 		for (const auto pyinst: data) {
 			auto&& inst = pyinst.cast<std::tuple<py::object, py::list, py::list>>();
@@ -215,5 +232,7 @@ namespace qc {
 
 			emplaceQiskitOperation(qc, instruction, qargs, cargs, params);
 		}
+
+		qc.initializeIOMapping();
 	}
 }

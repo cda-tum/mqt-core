@@ -86,6 +86,10 @@ namespace qc {
 			}
 			return garbage.size();
 		}
+		bool isLastOperationOnQubit(decltype(ops.begin())& opIt) {
+			auto end = ops.end();
+			return isLastOperationOnQubit(opIt, end);
+		}
 
 
 	public:
@@ -131,6 +135,7 @@ namespace qc {
 		unsigned short getIndexFromQubitRegister(const std::pair<std::string, unsigned short>& qubit);
 		unsigned short getIndexFromClassicalRegister(const std::pair<std::string, unsigned short>& clbit);
 		bool isIdleQubit(unsigned short physical_qubit);
+		static bool isLastOperationOnQubit(decltype(ops.begin())& opIt, decltype(ops.end())& end);
 		bool physicalQubitIsAncillary(unsigned short physical_qubit_index);
 		bool logicalQubitIsAncillary(unsigned short logical_qubit_index) const { return ancillary.test(logical_qubit_index); }
 		void setLogicalQubitAncillary(unsigned short logical_qubit_index) { ancillary.set(logical_qubit_index); }
@@ -156,11 +161,7 @@ namespace qc {
 			import(std::move(is), format);
 		}
 		void import(std::istream&& is, Format format);
-
-		// search through .qasm file and look for IO layout information of the form
-		//      'i Q_i Q_j ... Q_k' meaning, e.g. q_0 is mapped to Q_i, q_1 to Q_j, etc.
-		//      'o Q_i Q_j ... Q_k' meaning, e.g. q_0 is found at Q_i, q_1 at Q_j, etc.
-		bool lookForIOInformation(std::istream& ifs);
+		void initializeIOMapping();
 
 		// this function augments a given circuit by additional registers
 		void addQubitRegister(unsigned short nq, const char* reg_name = DEFAULT_QREG);
@@ -182,10 +183,7 @@ namespace qc {
 		}
 
 		virtual dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd);
-		virtual dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd, dd::DynamicReorderingStrategy strat);
-
 		virtual dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd);
-		virtual dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, dd::DynamicReorderingStrategy strat);
 
 		/// Obtain vector/matrix entry for row i (and column j). Does not include common factor e.w!
 		/// \param dd package to use

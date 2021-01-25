@@ -40,7 +40,7 @@ namespace qasm {
 
 		void readString(Token& t);
 
-		void skipComment();
+		void readComment(Token& t);
 
 		std::stack<LineInfo> lines{ };
 

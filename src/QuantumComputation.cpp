@@ -76,20 +76,71 @@ namespace qc {
 				throw QFRException("[import] Format " + std::to_string(format) + " not yet supported");
 		}
 
-		// try to parse initial layout from file
-		is.clear();
-		is.seekg(0, std::ios::beg);
-		lookForIOInformation(is);
+		// initialize the initial layout and output permutation
+		initializeIOMapping();
+	}
+
+	void QuantumComputation::initializeIOMapping() {
+		// if no initial layout was found during parsing the identity mapping is assumed
 		if (initialLayout.empty()) {
 			for (unsigned short i = 0; i < nqubits; ++i)
 				initialLayout.insert({ i, i});
 		}
 
+		// try gathering (additional) output permutation information from measurements, e.g., a measurement
+		//      `measure q[i] -> c[j];`
+		// implies that the j-th (logical) output is obtained from measuring the i-th physical qubit.
+		bool outputPermutationFound = !outputPermutation.empty();
+		for (auto opIt=ops.begin(); opIt != ops.end(); ++opIt) {
+			if ((*opIt)->getType() == qc::Measure) {
+				if (!isLastOperationOnQubit(opIt))
+					continue;
+
+				auto&& op = (*opIt);
+				for (size_t i=0; i<op->getNcontrols(); ++i) {
+					auto qubitidx = op->getControls().at(i).qubit;
+					auto bitidx = op->getTargets().at(i);
+
+					if (outputPermutationFound) {
+						// output permutation was already set before -> permute existing values
+						auto current = outputPermutation.at(qubitidx);
+						if (qubitidx != bitidx && current != bitidx) {
+							for (auto& p: outputPermutation) {
+								if (p.second == bitidx) {
+									p.second = current;
+									break;
+								}
+							}
+							outputPermutation.at(qubitidx) = bitidx;
+						}
+					} else {
+						// directly set permutation if none was set beforehand
+						outputPermutation[qubitidx] = bitidx;
+					}
+				}
+			}
+		}
+
+		// if the output permutation is still empty, we assume the identity (i.e., it is equal to the initial layout)
 		if (outputPermutation.empty()) {
 			for (unsigned short i = 0; i < nqubits; ++i) {
 				// only add to output permutation if the qubit is actually acted upon
 				if (!isIdleQubit(i))
 					outputPermutation.insert({ i, initialLayout.at(i)});
+			}
+		}
+
+		// allow for incomplete output permutation -> mark rest as garbage
+		for (const auto& in: initialLayout) {
+			bool isOutput = false;
+			for (const auto& out: outputPermutation) {
+				if (in.second == out.second) {
+					isOutput = true;
+					break;
+				}
+			}
+			if (!isOutput) {
+				setLogicalQubitGarbage(in.second);
 			}
 		}
 	}
@@ -649,47 +700,6 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return e;
 	}
 
-	dd::Edge QuantumComputation::buildFunctionality(std::unique_ptr<dd::Package>& dd, dd::DynamicReorderingStrategy strat) {
-		if (nqubits + nancillae == 0)
-			return dd->DDone;
-
-		std::array<short, MAX_QUBITS> line{};
-		line.fill(LINE_DEFAULT);
-		permutationMap map = initialLayout;
-		dd->setMode(dd::Matrix);
-		dd::Edge e = createInitialMatrix(dd);
-
-		for (auto & op : ops) {
-			// call the dynamic reordering routine
-			// TODO: currently this performs the reordering before every operation. this may be changed
-			auto tmp = dd->dynamicReorder(e, map, strat);
-            tmp = dd->multiply(op->getDD(dd, line, map), tmp);
-			dd->incRef(tmp);
-			dd->decRef(e);
-			e = tmp;
-
-			dd->garbageCollect();
-		}
-
-		// TODO: this call (probably) has to be adapted
-		// output permutation stores the expected variable mapping at the end of the computation, i.e. from which line to read which qubit
-		// if "map" does not match this particular variable mapping it has to be adapted (currently by applying swaps)
-		// however, especially when considering dynamic variable reordering one may want to avoid applying extra operations at the end
-		// accordingly one has to solve the following assignment correctly (possibly by changing the output permutation appropriately)
-		//  initial layout            end of circuit              output mapping
-		//      0: a           ->           0: u            ->          0:x
-		//      1: b           ->           1: v            ->          1:y
-		//      2: c           ->           2: w            ->          2:z
-		//                                  .
-		//                                  .
-		// correct permutation if necessary
-		changePermutation(e, map, outputPermutation, line, dd);
-
-		e = reduceAncillae(e, dd);
-
-		return e;
-	}
-
 	dd::Edge QuantumComputation::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
 		// measurements are currently not supported here
 		std::array<short, MAX_QUBITS> line{};
@@ -711,47 +721,6 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 
 		// correct permutation if necessary
 		changePermutation(e, map, outputPermutation, line, dd);
-		e = reduceAncillae(e, dd);
-
-		return e;
-	}
-
-
-	dd::Edge QuantumComputation::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, dd::DynamicReorderingStrategy strat) {
-		// measurements are currently not supported here
-		std::array<short, MAX_QUBITS> line{};
-		line.fill(LINE_DEFAULT);
-		permutationMap map = initialLayout;
-		dd->setMode(dd::Vector);
-		dd::Edge e = in;
-		dd->incRef(e);
-
-		for (auto& op : ops) {
-		    // call the dynamic reordering routine
-            // TODO: currently this performs the reordering before every operation. this may be changed
-            auto tmp = dd->dynamicReorder(e, map, strat);
-			tmp = dd->multiply(op->getDD(dd, line, map), tmp);
-
-			dd->incRef(tmp);
-			dd->decRef(e);
-			e = tmp;
-			dd->garbageCollect();
-		}
-
-		// TODO: this call (probably) has to be adapted
-		// output permutation stores the expected variable mapping at the end of the computation, i.e. from which line to read which qubit
-		// if "map" does not match this particular variable mapping it has to be adapted (currently by applying swaps)
-		// however, especially when considering dynamic variable reordering one may want to avoid applying extra operations at the end
-		// accordingly one has to solve the following assignment correctly (possibly by changing the output permutation appropriately)
-		//  initial layout            end of circuit              output mapping
-		//      0: a           ->           0: u            ->          0:x
-		//      1: b           ->           1: v            ->          1:y
-		//      2: c           ->           2: w            ->          2:z
-		//                                  .
-		//                                  .
-		// correct permutation if necessary
-		changePermutation(e, map, outputPermutation, line, dd);
-
 		e = reduceAncillae(e, dd);
 
 		return e;
@@ -1369,56 +1338,6 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return os;
 	}
 
-	bool QuantumComputation::lookForIOInformation(std::istream& ifs) {
-		bool foundInitialLayout = false;
-		std::string line;
-		while (std::getline(ifs,line)) {
-			/*
-			 * check all comment lines in header for layout information in the following form:
-		      'i Q_i Q_j ... Q_k' meaning, e.g. q_0 is mapped to Q_i, q_1 to Q_j, etc.
-		      'o Q_i Q_j ... Q_k' meaning, e.g. q_0 is found at Q_i, q_1 at Q_j, etc.
-		        where i describes the initial layout, e.g. 'i 2 1 0' means q0 -> Q2, q1 -> Q1, q2 -> Q0
-		        and o describes the output permutation, e.g. 'o 2 1 0' means  q0 is expected at Q2, q1 at Q1, and q2 at Q0
-			 */
-			if(line.rfind("//", 0) == 0) {
-				if (line.find('i') != std::string::npos) {
-					unsigned short physical_qubit = 0;
-					auto ss = std::stringstream(line.substr(4));
-					for (unsigned short logical_qubit=0; logical_qubit < getNqubits(); ++logical_qubit) {
-						if (!(ss >> physical_qubit)) return false;
-						initialLayout.insert({physical_qubit, logical_qubit});
-					}
-					foundInitialLayout = true;
-				} else if (line.find('o') != std::string::npos) {
-					unsigned short physical_qubit = 0;
-					auto ss = std::stringstream(line.substr(4));
-					for (unsigned short logical_qubit=0; logical_qubit < getNqubits(); ++logical_qubit) {
-						if (!(ss >> physical_qubit)) {
-							// allow for incomplete output permutation
-							// mark rest as garbage
-							for (const auto& in: initialLayout) {
-								bool isOutput = false;
-								for (const auto& out: outputPermutation) {
-									if (in.second == out.second) {
-										isOutput = true;
-										break;
-									}
-								}
-								if (!isOutput) {
-									setLogicalQubitGarbage(in.second);
-								}
-							}
-							return true;
-						}
-						outputPermutation.insert({physical_qubit, logical_qubit});
-					}
-					return true;
-				}
-			}
-		}
-		return foundInitialLayout;
-	}
-
 	unsigned short QuantumComputation::getHighestLogicalQubitIndex(const permutationMap& map) {
 		unsigned short max_index = 0;
 		for (const auto& physical_qubit: map) {
@@ -1431,5 +1350,28 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 
 	bool QuantumComputation::physicalQubitIsAncillary(unsigned short physical_qubit_index) {
 		return std::any_of(ancregs.begin(), ancregs.end(), [&physical_qubit_index](registerMap::value_type& ancreg) { return ancreg.second.first <= physical_qubit_index && physical_qubit_index < ancreg.second.first + ancreg.second.second; });
+	}
+
+	bool QuantumComputation::isLastOperationOnQubit(decltype(ops.begin())& opIt, decltype(ops.end())& end) {
+		if (opIt == end)
+			return true;
+
+		// determine which qubits the gate acts on
+		std::bitset<MAX_QUBITS> actson{};
+		for (unsigned short i = 0; i < MAX_QUBITS; ++i) {
+			if ((*opIt)->actsOn(i))
+				actson.set(i);
+		}
+
+		// iterate over remaining gates and check if any act on qubits overlapping with the target gate
+		auto atEnd = opIt;
+		std::advance(atEnd, 1);
+		while (atEnd != end) {
+			for (unsigned short i = 0; i < MAX_QUBITS; ++i) {
+				if (actson[i] && (*atEnd)->actsOn(i)) return false;
+			}
+			++atEnd;
+		}
+		return true;
 	}
 }

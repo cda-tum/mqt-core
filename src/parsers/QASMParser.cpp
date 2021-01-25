@@ -114,8 +114,17 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
 			emplace_back<NonUnitaryOperation>(nqubits);
 			p.scan();
 			p.check(Token::Kind::semicolon);
+		} else if (p.sym == Token::Kind::comment) {
+			p.scan();
+			p.handleComment();
 		} else {
 			p.error("Unexpected statement: started with " + KindNames[p.sym] + "!");
 		}
 	} while (p.sym != Token::Kind::eof);
+
+	// if any I/O information was gathered during parsing, transfer it to the QuantumComputation
+	if (!p.initialLayout.empty())
+		initialLayout = std::move(p.initialLayout);
+	if (!p.outputPermutation.empty())
+		outputPermutation = std::move(p.outputPermutation);
 }

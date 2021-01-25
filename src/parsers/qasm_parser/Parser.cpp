@@ -239,8 +239,59 @@
         return new Expr(expr->kind, expr->num, op1, op2, expr->id);
     }
 
+	void Parser::handleComment() {
+//    	std::cout << "Encountered comment: " << t.str << std::endl;
 
+        // check if this comment provides any I/O mapping information
+        auto&& initial = checkForInitialLayout(t.str);
+		if (!initial.empty()) {
+			if (!initialLayout.empty()) {
+				error("Multiple initial layout specifications found.");
+			} else {
+				initialLayout = initial;
+			}
+		}
+        auto&& output = checkForOutputPermutation(t.str);
+		if (!output.empty()) {
+			if (!outputPermutation.empty()) {
+				error("Multiple output permutation specifications found.");
+			} else {
+				outputPermutation = output;
+			}
+		}
+    }
 
+	permutationMap Parser::checkForInitialLayout(std::string comment) {
+		static auto initialLayoutRegex = std::regex("i (\\d+ )*(\\d+)");
+		static auto qubitRegex = std::regex("\\d+");
+    	permutationMap initial{};
+		if (std::regex_search(comment, initialLayoutRegex)) {
+			unsigned short logical_qubit = 0;
+			for (std::smatch m; std::regex_search(comment, m, qubitRegex); comment = m.suffix()) {
+				unsigned short physical_qubit = static_cast<unsigned short>(std::stoul(m.str()));
+//				std::cout << "Inserting " << physical_qubit << "->" << logical_qubit << std::endl;
+				initial.insert({physical_qubit, logical_qubit});
+				++logical_qubit;
+			}
+		}
+		return initial;
+    }
+
+    permutationMap Parser::checkForOutputPermutation(std::string comment) {
+	    static auto outputPermutationRegex = std::regex("o (\\d+ )*(\\d+)");
+	    static auto qubitRegex = std::regex("\\d+");
+	    permutationMap output{};
+	    if (std::regex_search(comment, outputPermutationRegex)) {
+		    unsigned short logical_qubit = 0;
+		    for (std::smatch m; std::regex_search(comment, m, qubitRegex); comment = m.suffix()) {
+			    unsigned short physical_qubit = static_cast<unsigned short>(std::stoul(m.str()));
+//			    std::cout << "Inserting " << physical_qubit << "->" << logical_qubit << std::endl;
+			    output.insert({physical_qubit, logical_qubit});
+			    ++logical_qubit;
+		    }
+	    }
+		return output;
+    }
 
     /***
      * Public Methods
@@ -252,10 +303,16 @@
     }
 
     void Parser::check(Token::Kind expected) {
-        if (sym == expected)
+        while (sym == Token::Kind::comment) {
+	        scan();
+	        handleComment();
+        }
+
+    	if (sym == expected) {
             scan();
-        else
-	        error("Expected '" + qasm::KindNames[expected] + "' but found '" + qasm::KindNames[sym] + "' in line " + std::to_string(la.line) + ", column " + std::to_string(la.col));
+    	} else {
+        	error("Expected '" + qasm::KindNames[expected] + "' but found '" + qasm::KindNames[sym] + "' in line " + std::to_string(la.line) + ", column " + std::to_string(la.col));
+    	}
     }
 
 
