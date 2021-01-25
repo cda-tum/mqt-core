@@ -152,7 +152,12 @@ namespace qc {
 			} else if (line[physical_qubit_index] == LINE_CONTROL_POS) {
 				os << "\033[32m" << "c\t" << "\033[0m";
 			} else {
-				os << "\033[1m\033[36m" << name[0] << name[1] << "\t\033[0m";
+				if (type == ClassicControlled) {
+					os << "\033[1m\033[35m" << name[2] << name[3];
+				} else {
+					os << "\033[1m\033[36m" << name[0] << name[1];
+				}
+				os << "\t\033[0m";
 			}
 		}
 

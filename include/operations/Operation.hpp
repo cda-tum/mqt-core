@@ -221,8 +221,14 @@ namespace qc {
 		// The methods with a permutation parameter apply these operations according to the mapping specified by the permutation, e.g.
 		//      if perm[0] = 1 and perm[1] = 0
 		//      then cx 0 1 will be translated to cx perm[0] perm[1] == cx 1 0
-		void setLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
-		void resetLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation = standardPermutation) const;
+		virtual void setLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const;
+		void setLine(std::array<short, MAX_QUBITS>& line) const {
+			setLine(line, standardPermutation);
+		}
+		virtual void resetLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const;
+		void resetLine(std::array<short, MAX_QUBITS>& line) const {
+			resetLine(line, standardPermutation);
+		}
 
 		virtual dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const = 0;
 		virtual dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const = 0;

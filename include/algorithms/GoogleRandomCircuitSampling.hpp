@@ -34,8 +34,33 @@ namespace qc {
 		std::ostream& printStatistics(std::ostream& os) override;
 
 		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) override;
-
+		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd, unsigned short ncycles) {
+			if (ncycles < cycles.size()-2) {
+				removeCycles(cycles.size()-2-ncycles);
+			}
+			return buildFunctionality(dd);
+		}
 		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) override;
+		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, unsigned short ncycles) {
+			if (ncycles < cycles.size()-2) {
+				removeCycles(cycles.size()-2-ncycles);
+			}
+			return simulate(in, dd);
+		}
+
+		void removeCycles(unsigned short ncycles) {
+			if (ncycles > cycles.size()-2) {
+				std::stringstream ss{};
+				ss << "Cannot remove " << ncycles << " cycles out of a circuit containing 1+" << cycles.size()-2 << "+1 cycles.";
+				throw QFRException(ss.str());
+			}
+			auto last = std::move(cycles.back());
+			cycles.pop_back();
+			for (int i = 0; i < ncycles; ++i) {
+				cycles.pop_back();
+			}
+			cycles.emplace_back(std::move(last));
+		}
 
 	};
 }

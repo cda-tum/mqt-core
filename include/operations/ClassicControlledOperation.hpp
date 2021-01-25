@@ -69,6 +69,14 @@ namespace qc {
 			return op->actsOn(i);
 		}
 
+		void setLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const override {
+			op->setLine(line, permutation);
+		}
+
+		void resetLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const override {
+			op->resetLine(line, permutation);
+		}
+
 		void dumpOpenQASM(std::ostream& of, const regnames_t& qreg, const regnames_t& creg) const override {
 			UNUSED(of)
 			UNUSED(qreg)

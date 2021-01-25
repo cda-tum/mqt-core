@@ -287,3 +287,25 @@ TEST_F(IO, qc_input) {
 	qc->import("./circuits/test.qc");
 	std::cout << *qc << std::endl;
 }
+
+TEST_F(IO, grcs_input) {
+	qc->import("./circuits/grcs/bris_4_40_9_v2.txt");
+	std::cout << *qc << std::endl;
+	qc->import("./circuits/grcs/inst_4x4_80_9_v2.txt");
+	std::cout << *qc << std::endl;
+}
+
+TEST_F(IO, classic_controlled) {
+	std::stringstream ss{};
+	ss << "OPENQASM 2.0;"
+	   << "include \"qelib1.inc\";"
+	   << "qreg q[1];"
+	   << "creg c[1];"
+	   << "h q[0];"
+	   << "measure q->c;"
+	   << "// test classic controlled operation\n"
+	   << "if (c==1) x q[0];"
+	   << std::endl;
+	EXPECT_NO_THROW(qc->import(ss, qc::OpenQASM););
+	std::cout << *qc << std::endl;
+}

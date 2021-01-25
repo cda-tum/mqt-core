@@ -29,6 +29,7 @@ TEST_P(BernsteinVazirani, FunctionTest) {
 
 	// Create the QuantumCircuite with the hidden integer
 	ASSERT_NO_THROW({ qc = std::make_unique<qc::BernsteinVazirani>(hInt.to_ulong()); });
+	qc->printStatistics(std::cout);
 	ASSERT_NO_THROW({ e = qc->buildFunctionality(dd); });
 	
 	// Test the Number of Operations & the number of Qubits

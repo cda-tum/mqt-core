@@ -25,10 +25,6 @@ namespace qc {
 
 		explicit RandomCliffordCircuit(unsigned short nq, unsigned int depth = 1, unsigned int seed = 0);
 
-		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) override;
-
-		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) override;
-
 		std::ostream& printStatistics(std::ostream& os) override;
 
 	};

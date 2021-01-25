@@ -125,8 +125,11 @@ namespace qc {
         size_t j = 0;
         for (const auto& cycle:cycles) {
             os << "Cycle " << i++ << ":\n";
-            for (const auto& op: cycle)
-                os << std::setw((int)std::log10(getNops())+1) << ++j << ": " << *op << "\n";
+            for (const auto& op: cycle) {
+                os << std::setw((int)std::log10(getNops())+1) << ++j << ": ";
+                op->print(os, initialLayout);
+                os << std::endl;
+            }
         }
         return os;
     }
@@ -144,25 +147,20 @@ namespace qc {
     dd::Edge GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
 		std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
-        permutationMap map{};
+        permutationMap map = initialLayout;
         dd->setMode(dd::Matrix);
 
         dd::Edge e = dd->makeIdent(0, short(nqubits-1));
         dd->incRef(e);
-        //size_t i = 0;
         for(const auto& cycle:cycles) {
             dd::Edge f = dd->makeIdent(0, short(nqubits-1));
             for(const auto& op: cycle)
                 f = dd->multiply(op->getDD(dd, line, map), f);
-            //auto start = std::chrono::high_resolution_clock::now();
             dd::Edge g = dd->multiply(f, e);
             dd->decRef(e);
             dd->incRef(g);
             e = g;
             dd->garbageCollect();
-            //auto end = std::chrono::high_resolution_clock::now();
-            //std::chrono::duration<double> elapsed = (end - start);
-            //std::cout << "Applied cycle " << i++ << " (took : " << elapsed.count() << "s)" << std::endl;
         }
         return e;
     }
@@ -170,7 +168,7 @@ namespace qc {
     dd::Edge GoogleRandomCircuitSampling::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
 		std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
-	    permutationMap map{};
+	    permutationMap map = initialLayout;
 	    dd->setMode(dd::Vector);
 
 	    dd::Edge e = in;

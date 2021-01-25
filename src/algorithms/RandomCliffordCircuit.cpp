@@ -35,24 +35,22 @@ namespace qc {
 		cliffordGenerator = [&]() { return distribution(generator); };
 
 		for (unsigned int l=0; l<depth; ++l) {
-			if (l%2) {
-				for (int i=1; i<nqubits-1; i+=2) {
-					append2QClifford(cliffordGenerator(), i, i+1);
-				}
+			if (nqubits == 1) {
+				append1QClifford(cliffordGenerator(), 0);
+			} else if (nqubits == 2) {
+				append2QClifford(cliffordGenerator(), 0, 1);
 			} else {
-				for (int i=0; i<nqubits-1; i+=2) {
-					append2QClifford(cliffordGenerator(), i, i+1);
+				if (l%2) {
+					for (int i=1; i<nqubits-1; i+=2) {
+						append2QClifford(cliffordGenerator(), i, i+1);
+					}
+				} else {
+					for (int i=0; i<nqubits-1; i+=2) {
+						append2QClifford(cliffordGenerator(), i, i+1);
+					}
 				}
 			}
 		}
-	}
-
-	dd::Edge RandomCliffordCircuit::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
-		return QuantumComputation::buildFunctionality(dd);
-	}
-
-	dd::Edge RandomCliffordCircuit::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
-		return QuantumComputation::simulate(in, dd);
 	}
 
 	std::ostream& RandomCliffordCircuit::printStatistics(std::ostream& os) {
@@ -67,31 +65,29 @@ namespace qc {
 
 	void RandomCliffordCircuit::append1QClifford(unsigned int idx, unsigned short target) {
 		unsigned short id = idx % 24;
+		emplace_back<CompoundOperation>(nqubits);
+		auto comp = dynamic_cast<CompoundOperation*>(ops.back().get());
 		// Hadamard
 		if (id / 12 % 2) {
-			emplace_back<StandardOperation>(nqubits, target, H);
+			comp->emplace_back<StandardOperation>(nqubits, target, H);
 		}
 
 		// Rotation
 		if (id / 4 % 3 == 1) {
-			emplace_back<CompoundOperation>(nqubits);
-			auto comp = dynamic_cast<CompoundOperation*>(ops.back().get());
 			comp->emplace_back<StandardOperation>(nqubits, target, H);
 			comp->emplace_back<StandardOperation>(nqubits, target, S);
 		} else if (id / 4 % 3 == 2) {
-			emplace_back<CompoundOperation>(nqubits);
-			auto comp = dynamic_cast<CompoundOperation*>(ops.back().get());
 			comp->emplace_back<StandardOperation>(nqubits, target, Sdag);
 			comp->emplace_back<StandardOperation>(nqubits, target, H);
 		}
 
 		// Pauli
 		if (id % 4 == 1) {
-			emplace_back<StandardOperation>(nqubits, target, Z);
+			comp->emplace_back<StandardOperation>(nqubits, target, Z);
 		} else if (id % 4 == 2) {
-			emplace_back<StandardOperation>(nqubits, target, X);
+			comp->emplace_back<StandardOperation>(nqubits, target, X);
 		} else if (id % 4 == 3) {
-			emplace_back<StandardOperation>(nqubits, target, Y);
+			comp->emplace_back<StandardOperation>(nqubits, target, Y);
 		}
 	}
 

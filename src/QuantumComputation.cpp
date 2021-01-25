@@ -13,7 +13,12 @@ namespace qc {
 	unsigned long long QuantumComputation::getNindividualOps() const {
 		unsigned long long nops = 0;
 		for (const auto& op: ops) {
-			nops += op->getTargets().size(); // TODO: this needs fixing
+			if (op->isCompoundOperation()) {
+				auto&& comp = dynamic_cast<CompoundOperation*>(op.get());
+				nops += comp->size();
+			} else {
+				++nops;
+			}
 		}
 
 		return nops;
