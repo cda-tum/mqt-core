@@ -1042,6 +1042,9 @@
                 IdList(arguments);
                 check(Token::Kind::semicolon);
                 //Nothing to do here for the simulator
+            } else if (sym == Token::Kind::comment) {
+	            scan();
+	            handleComment();
             } else {
 	            error("Error in gate declaration!");
             }
