@@ -41,6 +41,8 @@ namespace dd {
 	constexpr unsigned short HASHMASK = NBUCKET - 1;  // must be nbuckets-1
 	constexpr unsigned short CTSLOTS = 16384;         // no. of computed table slots
 	constexpr unsigned short CTMASK = CTSLOTS - 1;    // must be CTSLOTS-1
+    constexpr unsigned short OperationSLOTS = 16384;
+    constexpr unsigned short OperationMASK = OperationSLOTS - 1;
 	constexpr unsigned short TTSLOTS = 2048;          // Toffoli table slots
 	constexpr unsigned short TTMASK = TTSLOTS - 1;    // must be TTSLOTS-1
 	constexpr unsigned int NODE_CHUNK_SIZE = 2000;    // this parameter may be increased for larger benchmarks to minimize the number of allocations
@@ -87,6 +89,12 @@ namespace dd {
     // computed table definitions
     // compute table entry kinds
     enum CTkind {
+        I,
+        X,
+        Y,
+        Z,
+        ATrue,
+        AFalse,
         ad,
         mult,
         fid,
@@ -94,9 +102,9 @@ namespace dd {
         conjTransp,
         kron,
         renormalize,
-        noise,
-        noNoise,
-        none
+        none,
+        ct_count //ct_count must be the final element
+
     };
 
     //computed table entry
@@ -126,6 +134,14 @@ namespace dd {
 	    unsigned short n, m, t;
 	    short line[MAXN];
 	    Edge e;
+    };
+
+    struct OperationEntry
+    {
+        NodePtr r;
+        ComplexValue rw;
+        unsigned int operationType;
+        short line[MAXN];
     };
 
 	enum DynamicReorderingStrategy {
@@ -166,6 +182,9 @@ namespace dd {
 	    // Identity matrix table
 	    std::array<Edge, MAXN> IdTable{ };
 
+        // Operation operations table
+        std::array<OperationEntry, OperationSLOTS> OperationTable{ };
+
 	    unsigned int currentNodeGCLimit = GCLIMIT1;        // current garbage collection limit
 	    unsigned int currentComplexGCLimit = CN::GCLIMIT1; // current complex garbage collection limit
 		std::array<int, MAXN> active{ };                   // number of active nodes for each variable
@@ -173,8 +192,8 @@ namespace dd {
 	    unsigned long peaknodecount = 0;                   // records peak node count in unique table
         // mostly for debugging in reordering
 
-        std::array<unsigned long, 10> nOps{};              // operation counters
-	    std::array<unsigned long, 10> CTlook{}, CThit{};   // counters for gathering compute table hit stats
+        std::array<unsigned long, ct_count> nOps{};              // operation counters
+	    std::array<unsigned long, ct_count> CTlook{}, CThit{};   // counters for gathering compute table hit stats
 
 	    std::vector<ListElementPtr> allocated_list_chunks;
 	    std::vector<NodePtr> allocated_node_chunks;
@@ -264,6 +283,14 @@ namespace dd {
 
         Edge CTlookup(const Edge& a, const Edge& b, CTkind which);
         void CTinsert(const Edge& a, const Edge& b, const Edge& r, CTkind which);
+
+        long operationCThit = 0;
+        long operationLook = 0;
+
+        Edge OperationLookup(unsigned int operationType, const short *line, unsigned short nQubits);
+        void OperationInsert(unsigned int operationType, const short *line, const Edge &result, unsigned short nQubits);
+        unsigned long OperationHash(unsigned int operationType, const short *line, unsigned short nQubits);
+
 
 	    // operations on DDs
 	    Edge multiply(Edge x, Edge y);

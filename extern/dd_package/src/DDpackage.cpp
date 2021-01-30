@@ -11,15 +11,15 @@
 namespace dd {
 
     Node Package::terminal{
-        nullptr,
-        {{nullptr, CN::ZERO}, {nullptr, CN::ZERO}, {nullptr, CN::ZERO}, {nullptr, CN::ZERO}},
-        CN::ONE,
-        0,
-        -1,
-        true,
-        true,
-        Disabled,
-        0
+            nullptr,
+            {{nullptr, CN::ZERO}, {nullptr, CN::ZERO}, {nullptr, CN::ZERO}, {nullptr, CN::ZERO}},
+            CN::ONE,
+            0,
+            -1,
+            true,
+            true,
+            Disabled,
+            0
     };
     constexpr Edge Package::DDzero;
     constexpr Edge Package::DDone;
@@ -362,6 +362,10 @@ namespace dd {
                             cn.releaseCached(i.w);
                         }
                     }
+                } else if (&e.p != &DDzero.p) {
+                    // If it is not a cached variable, I have to put it pack into the chain
+                    e.p->next = nodeAvail;
+                    nodeAvail = e.p;
                 }
                 return DDzero;
             }
@@ -428,6 +432,10 @@ namespace dd {
                         cn.releaseCached(i.w);
                     }
                 }
+            } else if (&e.p != &DDzero.p) {
+                // If it is not a cached variable, I have to put it pack into the chain
+                e.p->next = nodeAvail;
+                nodeAvail = e.p;
             }
             return DDzero;
         }
@@ -500,17 +508,17 @@ namespace dd {
         std::size_t key = UThash(e.p);
 
         unsigned short v = e.p->v;
-        assert(v-1 == e.p->e[0].p->v || isTerminal(e.p->e[0]));
-        assert(v-1 == e.p->e[1].p->v || isTerminal(e.p->e[1]));
-        assert(v-1 == e.p->e[2].p->v || isTerminal(e.p->e[2]));
-        assert(v-1 == e.p->e[3].p->v || isTerminal(e.p->e[3]));
+        assert(v - 1 == e.p->e[0].p->v || isTerminal(e.p->e[0]));
+        assert(v - 1 == e.p->e[1].p->v || isTerminal(e.p->e[1]));
+        assert(v - 1 == e.p->e[2].p->v || isTerminal(e.p->e[2]));
+        assert(v - 1 == e.p->e[3].p->v || isTerminal(e.p->e[3]));
 
         NodePtr p = Unique[v][key]; // find pointer to appropriate collision chain
         while (p != nullptr)    // search for a match
         {
             if (std::memcmp(e.p->e, p->e, NEDGE * sizeof(Edge)) == 0) {
                 // Match found
-                if(e.p != p && !keep_node) {
+                if (e.p != p && !keep_node) {
                     e.p->next = nodeAvail;    // put node pointed to by e.p on avail chain
                     nodeAvail = e.p;
                 }
@@ -524,10 +532,10 @@ namespace dd {
                 assert(CN::ONE.r->val == 1);
                 assert(CN::ONE.i->val == 0);
                 assert(p->v == e.p->v);
-                assert(v-1 == e.p->e[0].p->v || isTerminal(e.p->e[0]));
-                assert(v-1 == e.p->e[1].p->v || isTerminal(e.p->e[1]));
-                assert(v-1 == e.p->e[2].p->v || isTerminal(e.p->e[2]));
-                assert(v-1 == e.p->e[3].p->v || isTerminal(e.p->e[3]));
+                assert(v - 1 == e.p->e[0].p->v || isTerminal(e.p->e[0]));
+                assert(v - 1 == e.p->e[1].p->v || isTerminal(e.p->e[1]));
+                assert(v - 1 == e.p->e[2].p->v || isTerminal(e.p->e[2]));
+                assert(v - 1 == e.p->e[3].p->v || isTerminal(e.p->e[3]));
                 if (p->normalizationFactor != e.p->normalizationFactor) {
                     std::cerr << "\nnf  (in) = " << CN::val(e.p->normalizationFactor.r) << " " << CN::val(e.p->normalizationFactor.i) << "i\n";
                     std::cerr << "nf  (in) = " << std::hexfloat << CN::val(e.p->normalizationFactor.r) << " " << CN::val(e.p->normalizationFactor.i) << std::defaultfloat << "i\n";
@@ -569,7 +577,7 @@ namespace dd {
                     if (UThash(p) == key) {
                         return std::to_string(key); // correct bucket
                     } else {
-                        return "!"+std::to_string(key); // wrong bucket
+                        return "!" + std::to_string(key); // wrong bucket
                     }
                 }
                 p = p->next;
@@ -596,6 +604,10 @@ namespace dd {
                 table[i].which = none;
             }
         }
+        for (auto &table : OperationTable) {
+            table.r = nullptr;
+        }
+
         for (auto &i : TTable) {
             i.e.p = nullptr;
         }
@@ -651,13 +663,12 @@ namespace dd {
     // get memory space for a node
     NodePtr Package::getNode() {
         NodePtr r;
-
         if (nodeAvail != nullptr)    // get node from avail chain if possible
         {
             r = nodeAvail;
             nodeAvail = nodeAvail->next;
         } else {            // otherwise allocate new nodes
-            r = new Node[NODE_CHUNK_SIZE]{};
+            r = new Node[NODE_CHUNK_SIZE];
             node_allocations += NODE_CHUNK_SIZE;
             allocated_node_chunks.push_back(r);
             r->reuseCount = 0;
@@ -769,7 +780,7 @@ namespace dd {
     }
 
 
-    inline unsigned long Package::CThash(const Edge& a, const Edge& b, const CTkind which) {
+    inline unsigned long Package::CThash(const Edge &a, const Edge &b, const CTkind which) {
         const std::uintptr_t node_pointer = (reinterpret_cast<std::uintptr_t>(a.p) + reinterpret_cast<std::uintptr_t>(b.p)) >> 3u;
 
         const std::uintptr_t weights = reinterpret_cast<std::uintptr_t>(a.w.i)
@@ -780,10 +791,49 @@ namespace dd {
         return (node_pointer + weights + which) & CTMASK;
     }
 
-    inline unsigned long Package::CThash2(NodePtr a, const ComplexValue& aw, NodePtr b, const ComplexValue& bw, const CTkind which) {
+    inline unsigned long Package::CThash2(NodePtr a, const ComplexValue &aw, NodePtr b, const ComplexValue &bw, const CTkind which) {
         const unsigned long node_pointer = (reinterpret_cast<std::uintptr_t>(a) + reinterpret_cast<std::uintptr_t>(b)) >> 3u;
         const auto weights = static_cast<unsigned long>(aw.r * 1000 + aw.i * 2000 + bw.r * 3000 + bw.i * 4000);
         return (node_pointer + weights + which) & CTMASK;
+    }
+
+    Edge Package::OperationLookup(const unsigned int operationType, const short *line, const unsigned short nQubits) {
+        operationLook++;
+        Edge r{nullptr, {nullptr, nullptr}};
+        r.p = nullptr;
+        const unsigned long i = OperationHash(operationType, line, nQubits);
+        if (OperationTable[i].r == nullptr) return r;
+        if (OperationTable[i].operationType != operationType) return r;
+        if (OperationTable[i].r->v != nQubits - 1) return r;
+
+        if (std::memcmp(OperationTable[i].line, line, (nQubits) * sizeof(short)) != 0) return r;
+
+        r.p = OperationTable[i].r;
+        if (std::fabs(OperationTable[i].rw.r) < CN::TOLERANCE && std::fabs(OperationTable[i].rw.i) < CN::TOLERANCE) {
+            return DDzero;
+        } else {
+            r.w = cn.lookup(OperationTable[i].rw.r, OperationTable[i].rw.i);
+        }
+        operationCThit++;
+        return r;
+    }
+
+    void Package::OperationInsert(const unsigned int operationType, const short *line, const Edge &result, const unsigned short nQubits) {
+        const unsigned long i = OperationHash(operationType, line, nQubits);
+        std::memcpy(OperationTable[i].line, line, (nQubits) * sizeof(short));
+        OperationTable[i].operationType = operationType;
+        OperationTable[i].r = result.p;
+        OperationTable[i].rw.r = result.w.r->val;
+        OperationTable[i].rw.i = result.w.i->val;
+    }
+
+    unsigned long Package::OperationHash(const unsigned int operationType, const short *line, const unsigned short nQubits) {
+        unsigned long i = operationType;
+        for (unsigned short j = 0; j <= nQubits; j++) {
+//            i = (i << 5u) + (4 * j) + (line[j] * 4);
+            i = (i << 3u) + i * j + line[j];
+        }
+        return i & OperationMASK;
     }
 
     Edge Package::CTlookup(const Edge &a, const Edge &b, const CTkind which) {
@@ -810,7 +860,7 @@ namespace dd {
             }
 
             return r;
-        } else if (which == ad || which == noise || which == noNoise) {
+        } else if (which == ad) {
             std::array<CTentry3, CTSLOTS> &table = CTable3.at(mode);
             ComplexValue aw{a.w.r->val, a.w.i->val};
             ComplexValue bw{b.w.r->val, b.w.i->val};
@@ -861,7 +911,7 @@ namespace dd {
             table[i].r = r.p;
             table[i].rw.r = r.w.r->val;
             table[i].rw.i = r.w.i->val;
-        } else if (which == ad || which == noise || which == noNoise) {
+        } else if (which == ad) {
             std::array<CTentry3, CTSLOTS> &table = CTable3.at(mode);
             ComplexValue aw{a.w.r->val, a.w.i->val};
             ComplexValue bw{b.w.r->val, b.w.i->val};
@@ -933,16 +983,18 @@ namespace dd {
         e.p->normalizationFactor = CN::ONE;
         e.p->computeMatrixProperties = computeMatrixProperties;
         assert(e.p->v == v);
-        assert(v-1 == edge[0].p->v || isTerminal(edge[0]));
-        assert(v-1 == edge[1].p->v || isTerminal(edge[1]));
-        assert(v-1 == edge[2].p->v || isTerminal(edge[2]));
-        assert(v-1 == edge[3].p->v || isTerminal(edge[3]));
+        assert(v - 1 == edge[0].p->v || isTerminal(edge[0]));
+        assert(v - 1 == edge[1].p->v || isTerminal(edge[1]));
+        assert(v - 1 == edge[2].p->v || isTerminal(edge[2]));
+        assert(v - 1 == edge[3].p->v || isTerminal(edge[3]));
 
         std::memcpy(e.p->e, edge, NEDGE * sizeof(Edge));
         assert(e.p->v == v);
         e = normalize(e, cached); // normalize it
         assert(e.p->v == v || isTerminal(e));
-        e = UTlookup(e, true);  // look it up in the unique tables
+//        e = UTlookup(e, true);  // why do you keep the node? This generates a memory leak!
+        e = UTlookup(e, false);  // look it up in the unique tables
+
         assert(e.p->v == v || isTerminal(e));
         return e;          // return result
     }
@@ -1679,10 +1731,10 @@ namespace dd {
         }
 
         unsigned short v = e.p->v;
-        assert(v-1 == e.p->e[0].p->v || isTerminal(e.p->e[0]));
-        assert(v-1 == e.p->e[1].p->v || isTerminal(e.p->e[1]));
-        assert(v-1 == e.p->e[2].p->v || isTerminal(e.p->e[2]));
-        assert(v-1 == e.p->e[3].p->v || isTerminal(e.p->e[3]));
+        assert(v - 1 == e.p->e[0].p->v || isTerminal(e.p->e[0]));
+        assert(v - 1 == e.p->e[1].p->v || isTerminal(e.p->e[1]));
+        assert(v - 1 == e.p->e[2].p->v || isTerminal(e.p->e[2]));
+        assert(v - 1 == e.p->e[3].p->v || isTerminal(e.p->e[3]));
 
         NodePtr p = Unique[v][previous_hash]; // find pointer to appropriate collision chain
         bool success = false;
@@ -1691,7 +1743,7 @@ namespace dd {
         {
             if (p == e.p) {
                 // Match found of node in old bucket
-                if(lastp != nullptr) {
+                if (lastp != nullptr) {
                     lastp->next = p->next;
                 } else {
                     Unique[v][previous_hash] = p->next;
@@ -1703,7 +1755,7 @@ namespace dd {
             lastp = p;
             p = p->next;
         }
-        if(!success) {
+        if (!success) {
             std::clog << "Previous hash was " << previous_hash << " but node " << debugnode_line(e.p) << " wasn't there\n";
             debugnode(e.p);
             throw std::runtime_error("UT_update_node failed.");
@@ -1715,7 +1767,7 @@ namespace dd {
         Unique = {}; // TODO: Return nodes from Unique to NodeAvail
         activeNodeCount = 0;
         maxActive = 0;
-        for (unsigned short q=0; q<MAXN; ++q)
+        for (unsigned short q = 0; q < MAXN; ++q)
             active[q] = 0;
         initComputeTable();
     }

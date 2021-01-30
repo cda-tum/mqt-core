@@ -4,6 +4,32 @@
 #include "util.h"
 #include "gtest/gtest.h"
 
+
+TEST(DDPackageTest, OperationLookupTest) {
+    auto dd = std::make_unique<dd::Package>();
+    short line[2] = {2};
+
+    // dd::ATrue is not the operation that is being stored, but for the test it doesn't matter
+    auto tmp_op = dd->OperationLookup(dd::ATrue, line, 1);
+    EXPECT_TRUE(tmp_op.p == nullptr);
+
+    dd::Edge x_gate = dd->makeGateDD(Xmat, 1, line);
+    dd->OperationInsert(dd::ATrue, line, x_gate, 1);
+    tmp_op = dd->OperationLookup(dd::ATrue, line, 1);
+    EXPECT_TRUE(tmp_op.p == x_gate.p);
+
+    tmp_op = dd->multiply(tmp_op, x_gate);
+
+    // I only check this, so that the above test is evaluated when compiled using release mode
+    EXPECT_TRUE(tmp_op.p != nullptr);
+
+    dd->garbageCollect(true);
+    tmp_op = dd->OperationLookup(dd::ATrue, line, 1);
+    EXPECT_TRUE(tmp_op.p == nullptr);
+}
+
+
+
 TEST(DDPackageTest, TrivialTest) {
     auto dd = std::make_unique<dd::Package>();
 
