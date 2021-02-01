@@ -1499,8 +1499,11 @@ namespace dd {
         if (r.p != nullptr) {
             if (r.w != CN::ZERO && r.w != CN::ONE) {
                 cn.releaseCached(r.w);
+            } else {
+                // r.w == CN::ZERO/CN::ONE
+                // In the mul statement below, the result is written to r.w
+                r.w = cn.getTempCachedComplex(0,0);
             }
-
             CN::mul(r.w, r.w, xweight);
             CN::mul(r.w, r.w, yweight);
             return {r.w.r->val, r.w.i->val};
