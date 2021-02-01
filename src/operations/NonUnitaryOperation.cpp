@@ -252,12 +252,12 @@ namespace qc {
 
 	bool NonUnitaryOperation::actsOn(unsigned short i) {
 		if (type == Measure) {
-			for (const auto c:controls) {
+			for (const auto& c:controls) {
 				if (c.qubit == i)
 					return true;
 			}
 		} else if (type == Reset) {
-			for (const auto t:targets) {
+			for (const auto& t:targets) {
 				if (t == i)
 					return true;
 			}
