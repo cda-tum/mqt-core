@@ -356,7 +356,8 @@ namespace dd {
     }
 
     void ComplexNumbers::div(Complex &r, const Complex &a, const Complex &b) {
-        if (equals(a, b)) {
+	    assert(r != ZERO && r != ONE);
+	   	if (equals(a, b)) {
             r.r->val = 1;
             r.i->val = 0;
             return;

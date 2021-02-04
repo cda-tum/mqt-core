@@ -33,11 +33,11 @@ namespace dd {
 	constexpr unsigned short NEDGE = RADIX * RADIX;   // max no. of edges = RADIX^2
 
 	// General package configuration parameters
-	constexpr unsigned int GCLIMIT1 = 250000;                // first garbage collection limit
-	constexpr unsigned int GCLIMIT_INC = 0;                  // garbage collection limit increment
-	constexpr unsigned int MAXREFCNT = 4000000;     // max reference count (saturates at this value)
+	constexpr unsigned int GCLIMIT1 = 250000;         // first garbage collection limit
+	constexpr unsigned int GCLIMIT_INC = 0;           // garbage collection limit increment
+	constexpr unsigned int MAXREFCNT = 4000000;       // max reference count (saturates at this value)
 	constexpr unsigned int NODECOUNT_BUCKETS = 200000;
-	constexpr unsigned short NBUCKET = 32768;                  // no. of hash table buckets; must be a power of 2
+	constexpr unsigned short NBUCKET = 32768;         // no. of hash table buckets; must be a power of 2
 	constexpr unsigned short HASHMASK = NBUCKET - 1;  // must be nbuckets-1
 	constexpr unsigned short CTSLOTS = 16384;         // no. of computed table slots
 	constexpr unsigned short CTMASK = CTSLOTS - 1;    // must be CTSLOTS-1
@@ -47,7 +47,7 @@ namespace dd {
 	constexpr unsigned short TTMASK = TTSLOTS - 1;    // must be TTSLOTS-1
 	constexpr unsigned int NODE_CHUNK_SIZE = 2000;    // this parameter may be increased for larger benchmarks to minimize the number of allocations
 	constexpr unsigned int LIST_CHUNK_SIZE = 2000;
-	constexpr unsigned short MAXN = 128;                       // max no. of inputs
+	constexpr unsigned short MAXN = 128;              // max no. of inputs
 
 	enum ComputeMatrixPropertiesMode {
 		Disabled, Enabled, Recompute
@@ -199,7 +199,6 @@ namespace dd {
 	    std::vector<NodePtr> allocated_node_chunks;
 
 		Mode mode{Mode::Vector};
-	    std::unordered_set<NodePtr> visited{NODECOUNT_BUCKETS}; // 2e6
 	    ComputeMatrixPropertiesMode computeMatrixProperties = Enabled; // enable/disable computation of matrix properties
 
 	    /// private helper routines
@@ -247,8 +246,6 @@ namespace dd {
         unsigned long gc_runs{};                       // number of times the GC actually ran
         unsigned long UTcol{}, UTmatch{}, UTlookups{}; // counter for collisions / matches in hash tables
         ComplexNumbers cn;                             // instance of the complex number handler
-        std::array<unsigned short, MAXN> varOrder{ };  // variable order initially 0,1,... from bottom up | Usage: varOrder[level] := varible at a certain level
-        std::array<unsigned short, MAXN> invVarOrder{ };// inverse of variable order (inverse permutation) | Usage: invVarOrder[variable] := level of a certain variable
 
         Package();
         ~Package();
@@ -289,7 +286,7 @@ namespace dd {
 
         Edge OperationLookup(unsigned int operationType, const short *line, unsigned short nQubits);
         void OperationInsert(unsigned int operationType, const short *line, const Edge &result, unsigned short nQubits);
-        unsigned long OperationHash(unsigned int operationType, const short *line, unsigned short nQubits);
+        static unsigned long OperationHash(unsigned int operationType, const short *line, unsigned short nQubits);
 
 
 	    // operations on DDs

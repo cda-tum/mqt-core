@@ -25,12 +25,8 @@ namespace dd {
     constexpr Edge Package::DDone;
 
     Package::Package() : cn(ComplexNumbers()) {
-        initComputeTable();  // init computed table to empty
-        visited.max_load_factor(10);
-
-        for (unsigned short i = 0; i < MAXN; i++) { //  set initial variable order to 0,1,2... from bottom up
-            varOrder[i] = invVarOrder[i] = i;
-        }
+		// Initialization of the compute table during construction should not be necessary as it is default initialized
+		// initComputeTable();  // init computed table to empty
     }
 
     Package::~Package() {
@@ -68,7 +64,7 @@ namespace dd {
         Complex l = cn.getTempCachedComplex(1, 0);
         do {
             CN::mul(l, l, e.w);
-            auto tmp = (element >> invVarOrder[e.p->v]) & 1u;
+            auto tmp = (element >> e.p->v) & 1u;
             e = e.p->e[2 * tmp];
         } while (!isTerminal(e));
         CN::mul(l, l, e.w);
@@ -775,6 +771,8 @@ namespace dd {
 
     // counts number of unique nodes in a DD
     unsigned int Package::size(const Edge &e) {
+		static std::unordered_set<NodePtr> visited{NODECOUNT_BUCKETS}; // 2e6
+	    visited.max_load_factor(10);
         visited.clear();
         return nodeCount(e, visited);
     }
@@ -800,7 +798,6 @@ namespace dd {
     Edge Package::OperationLookup(const unsigned int operationType, const short *line, const unsigned short nQubits) {
         operationLook++;
         Edge r{nullptr, {nullptr, nullptr}};
-        r.p = nullptr;
         const unsigned long i = OperationHash(operationType, line, nQubits);
         if (OperationTable[i].r == nullptr) return r;
         if (OperationTable[i].operationType != operationType) return r;
@@ -823,8 +820,8 @@ namespace dd {
         std::memcpy(OperationTable[i].line, line, (nQubits) * sizeof(short));
         OperationTable[i].operationType = operationType;
         OperationTable[i].r = result.p;
-        OperationTable[i].rw.r = result.w.r->val;
-        OperationTable[i].rw.i = result.w.i->val;
+        OperationTable[i].rw.r = CN::val(result.w.r);
+        OperationTable[i].rw.i = CN::val(result.w.i);
     }
 
     unsigned long Package::OperationHash(const unsigned int operationType, const short *line, const unsigned short nQubits) {
@@ -1058,7 +1055,7 @@ namespace dd {
             w = y.p->v;
         } else {
             w = x.p->v;
-            if (!isTerminal(y) && invVarOrder[y.p->v] > invVarOrder[w]) {
+            if (!isTerminal(y) && y.p->v > w) {
                 w = y.p->v;
             }
         }
@@ -1157,7 +1154,7 @@ namespace dd {
             return r;
         }
 
-        const short w = varOrder[var - 1];
+        const short w = var - 1;
 
         if (x.p->v == w && x.p->v == y.p->v) {
             if (x.p->ident) {
@@ -1242,10 +1239,10 @@ namespace dd {
         [[maybe_unused]] const auto before = cn.cacheCount;
         unsigned short var = 0;
         if (!isTerminal(x)) {
-            var = invVarOrder[x.p->v] + 1;
+            var = x.p->v + 1;
         }
-        if (!isTerminal(y) && (invVarOrder[y.p->v] + 1) > var) {
-            var = invVarOrder[y.p->v] + 1;
+        if (!isTerminal(y) && (y.p->v + 1) > var) {
+            var = y.p->v + 1;
         }
 
         Edge e = multiply2(x, y, var);
@@ -1320,13 +1317,13 @@ namespace dd {
             return IdTable[y];
         }
         if (y >= 1 && (IdTable[y - 1]).p != nullptr) {
-            IdTable[y] = makeNonterminal(varOrder[y], {IdTable[y - 1], DDzero, DDzero, IdTable[y - 1]});
+            IdTable[y] = makeNonterminal(y, {IdTable[y - 1], DDzero, DDzero, IdTable[y - 1]});
             return IdTable[y];
         }
 
-        Edge e = makeNonterminal(varOrder[x], {DDone, DDzero, DDzero, DDone});
+        Edge e = makeNonterminal(x, {DDone, DDzero, DDzero, DDone});
         for (int k = x + 1; k <= y; k++) {
-            e = makeNonterminal(varOrder[k], {e, DDzero, DDzero, e});
+            e = makeNonterminal(k, {e, DDzero, DDzero, e});
         }
         if (x == 0)
             IdTable[y] = e;
@@ -1340,7 +1337,7 @@ namespace dd {
     // 2 indicates the line is the target
     Edge Package::makeGateDD(const Matrix2x2 &mat, unsigned short n, const short *line) {
         Edge em[NEDGE], fm[NEDGE];
-        short w = 0, z = 0;
+        short z = 0;
 
         for (int i = 0; i < RADIX; i++) {
             for (int j = 0; j < RADIX; j++) {
@@ -1354,8 +1351,8 @@ namespace dd {
 
         Edge e = DDone;
         Edge f{};
-        for (z = 0; line[w = varOrder[z]] < RADIX; z++) { //process lines below target
-            if (line[w] >= 0) { //  control line below target in DD
+        for (z = 0; line[z] < RADIX; z++) { //process lines below target
+            if (line[z] >= 0) { //  control line below target in DD
                 for (int i1 = 0; i1 < RADIX; i1++) {
                     for (int i2 = 0; i2 < RADIX; i2++) {
                         int i = i1 * RADIX + i2;
@@ -1368,7 +1365,7 @@ namespace dd {
                             for (int j = 0; j < RADIX; j++) {
                                 int t = k * RADIX + j;
                                 if (k == j) {
-                                    if (k == line[w]) {
+                                    if (k == line[z]) {
                                         fm[t] = em[i];
                                     } else {
                                         fm[t] = f;
@@ -1378,7 +1375,7 @@ namespace dd {
                                 }
                             }
                         }
-                        em[i] = makeNonterminal(w, fm);
+                        em[i] = makeNonterminal(z, fm);
                     }
                 }
             } else { // not connected
@@ -1392,19 +1389,19 @@ namespace dd {
                             }
                         }
                     }
-                    edge = makeNonterminal(w, fm);
+                    edge = makeNonterminal(z, fm);
                 }
             }
             e = makeIdent(0, z);
         }
-        e = makeNonterminal(varOrder[z], em);  // target line
+        e = makeNonterminal(z, em);  // target line
         for (z++; z < n; z++) { // go through lines above target
-            if (line[w = varOrder[z]] >= 0) { //  control line above target in DD
+            if (line[z] >= 0) { //  control line above target in DD
                 Edge temp = makeIdent(0, static_cast<short>(z - 1));
                 for (int i = 0; i < RADIX; i++) {
                     for (int j = 0; j < RADIX; j++) {
                         if (i == j) {
-                            if (i == line[w]) {
+                            if (i == line[z]) {
                                 em[i * RADIX + j] = e;
                             } else {
                                 em[i * RADIX + j] = temp;
@@ -1414,7 +1411,7 @@ namespace dd {
                         }
                     }
                 }
-                e = makeNonterminal(w, em);
+                e = makeNonterminal(z, em);
             } else { // not connected
                 for (int i1 = 0; i1 < RADIX; i1++) {
                     for (int i2 = 0; i2 < RADIX; i2++) {
@@ -1425,7 +1422,7 @@ namespace dd {
                         }
                     }
                 }
-                e = makeNonterminal(w, fm);
+                e = makeNonterminal(z, fm);
             }
         }
         return e;
@@ -1434,7 +1431,7 @@ namespace dd {
     Edge Package::makeGateDD(const std::array<ComplexValue, NEDGE> &mat, unsigned short n,
                              const std::array<short, MAXN> &line) {
         std::array<Edge, NEDGE> em{};
-        short w = 0, z = 0;
+        short z = 0;
 
         for (int i = 0; i < NEDGE; ++i) {
             if (mat[i].r == 0 && mat[i].i == 0) {
@@ -1445,35 +1442,34 @@ namespace dd {
         }
 
         //process lines below target
-        for (z = 0; line[w = varOrder.at(z)] < RADIX; z++) {
+        for (z = 0; line[z] < RADIX; z++) {
             for (int i1 = 0; i1 < RADIX; i1++) {
                 for (int i2 = 0; i2 < RADIX; i2++) {
                     int i = i1 * RADIX + i2;
-                    if (line[w] == 0) { // neg. control
-                        em[i] = makeNonterminal(w, {em[i], DDzero, DDzero,
+                    if (line[z] == 0) { // neg. control
+                        em[i] = makeNonterminal(z, {em[i], DDzero, DDzero,
                                                     (i1 == i2) ? makeIdent(0, static_cast<short>(z - 1)) : DDzero});
-                    } else if (line[w] == 1) { // pos. control
-                        em[i] = makeNonterminal(w,
+                    } else if (line[z] == 1) { // pos. control
+                        em[i] = makeNonterminal(z,
                                                 {(i1 == i2) ? makeIdent(0, static_cast<short>(z - 1)) : DDzero, DDzero, DDzero, em[i]});
                     } else { // not connected
-                        em[i] = makeNonterminal(w, {em[i], DDzero, DDzero, em[i]});
+                        em[i] = makeNonterminal(z, {em[i], DDzero, DDzero, em[i]});
                     }
                 }
             }
         }
 
         // target line
-        Edge e = makeNonterminal(varOrder[z], em);
+        Edge e = makeNonterminal(z, em);
 
         //process lines above target
         for (z++; z < n; z++) {
-            w = varOrder[z];
-            if (line[w] == 0) { //  neg. control
-                e = makeNonterminal(w, {e, DDzero, DDzero, makeIdent(0, static_cast<short>(z - 1))});
-            } else if (line[w] == 1) { // pos. control
-                e = makeNonterminal(w, {makeIdent(0, static_cast<short>(z - 1)), DDzero, DDzero, e});
+            if (line[z] == 0) { //  neg. control
+                e = makeNonterminal(z, {e, DDzero, DDzero, makeIdent(0, static_cast<short>(z - 1))});
+            } else if (line[z] == 1) { // pos. control
+                e = makeNonterminal(z, {makeIdent(0, static_cast<short>(z - 1)), DDzero, DDzero, e});
             } else { // not connected
-                e = makeNonterminal(w, {e, DDzero, DDzero, e});
+                e = makeNonterminal(z, {e, DDzero, DDzero, e});
             }
         }
         return e;
@@ -1509,7 +1505,7 @@ namespace dd {
             return {r.w.r->val, r.w.i->val};
         }
 
-        short w = varOrder[var - 1];
+        short w = var - 1;
         ComplexValue sum{0.0, 0.0};
 
         Edge e1{}, e2{};
@@ -1547,9 +1543,9 @@ namespace dd {
         }
 
         [[maybe_unused]] const auto before = cn.cacheCount;
-        short w = invVarOrder[x.p->v];
-        if (invVarOrder.at(y.p->v) > w) {
-            w = invVarOrder[y.p->v];
+        short w = x.p->v;
+        if (y.p->v > w) {
+            w = y.p->v;
         }
         const ComplexValue ip = innerProduct(x, y, w + 1);
 
@@ -1621,7 +1617,7 @@ namespace dd {
 
 
     Edge Package::trace(Edge a, short v, const std::bitset<MAXN> &eliminate) {
-        short w = invVarOrder[a.p->v];
+        short w = a.p->v;
 
         if (CN::equalsZero(a.w)) return DDzero;
 
@@ -1690,7 +1686,7 @@ namespace dd {
         dd::Complex c = cn.getTempCachedComplex(1, 0);
         do {
             dd::ComplexNumbers::mul(c, c, e.w);
-            int tmp = elements.at(invVarOrder.at(e.p->v)) - '0';
+            int tmp = elements.at(e.p->v) - '0';
             assert(tmp >= 0 && tmp <= dd::NEDGE);
             e = e.p->e[tmp];
         } while (!dd::Package::isTerminal(e));

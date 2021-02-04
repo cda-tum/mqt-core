@@ -655,6 +655,7 @@ namespace dd {
 		unsigned long min = activeNodeCount;
 		std::queue<Edge> q{ };
 		int nodeCount = 0;
+		static std::unordered_set<NodePtr> visited{NODECOUNT_BUCKETS}; // 2e6
 
 		visited.clear();
 		q.push(in);

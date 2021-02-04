@@ -19,8 +19,8 @@ namespace dd {
         }
         std::stringstream sst;
         sst << "0x" << std::hex << reinterpret_cast<std::uintptr_t>(p) << std::dec
-            << "[v=" << p->v << "(" << varOrder[p->v]
-            << ") nf=" << p->normalizationFactor
+            << "[v=" << p->v
+            << " nf=" << p->normalizationFactor
             << " uc=" << p->reuseCount
             << " ref=" << p->ref
             << " hash=" << UThash(p)
@@ -266,10 +266,10 @@ namespace dd {
     }
 
     void Package::printVector(const Edge &e) {
-        unsigned long long element = 2u << invVarOrder[e.p->v];
+        unsigned long long element = 2u << e.p->v;
         for (unsigned long long i = 0; i < element; i++) {
             ComplexValue amplitude = getVectorElement(e, i);
-            for (int j = invVarOrder[e.p->v]; j >= 0; j--) {
+            for (int j = e.p->v; j >= 0; j--) {
                 std::cout << ((i >> j) & 1u);
             }
             std::cout << ": " << amplitude << "\n";
