@@ -75,6 +75,13 @@ TEST(DDPackageTest, IdentityTrace) {
     ASSERT_EQ(fullTrace, (dd::ComplexValue{16,0}));
 }
 
+TEST(DDPackageTest, PartialIdentityTrace) {
+	auto dd = std::make_unique<dd::Package>();
+	auto tr = dd->partialTrace(dd->makeIdent(0, 1), std::bitset<dd::MAXN>(1));
+	auto mul = dd->multiply(tr, tr);
+	EXPECT_EQ(CN::val(mul.w.r), 4.0);
+}
+
 TEST(DDPackageTest, StateGenerationManipulation) {
 	auto dd = std::make_unique<dd::Package>();
 

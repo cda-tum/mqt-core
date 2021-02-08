@@ -208,7 +208,7 @@ namespace dd {
 
 	    Edge multiply2(Edge& x, Edge& y, unsigned short var);
 	    ComplexValue innerProduct(Edge x, Edge y, int var);
-	    Edge trace(Edge a, short v, const std::bitset<MAXN>& eliminate);
+	    Edge trace(const Edge& a, const std::bitset<MAXN>& eliminate, unsigned short alreadyEliminated = 0);
 	    Edge kronecker2(Edge x, Edge y);
 
 	    void checkSpecialMatrices(NodePtr p);
@@ -296,8 +296,8 @@ namespace dd {
 	    Edge transpose(const Edge& a);
 	    Edge conjugateTranspose(Edge a);
 	    Edge normalize(Edge& e, bool cached);
-	    Edge partialTrace(Edge a, const std::bitset<MAXN>& eliminate);
-	    ComplexValue trace(Edge a);
+	    Edge partialTrace(const Edge& a, const std::bitset<MAXN>& eliminate);
+	    ComplexValue trace(const Edge& a);
 		ComplexValue innerProduct(Edge x, Edge y);
 	    fp fidelity(Edge x, Edge y);
 	    Edge kronecker(Edge x, Edge y);

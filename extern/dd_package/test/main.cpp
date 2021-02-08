@@ -92,16 +92,16 @@ int main() {
     dd::Edge my_z_gate = dd->makeGateDD(m, 1, line);
 	std::cout << "DD of my gate has size " << dd->size(my_z_gate) << std::endl;
 
-//	// compute (partial) traces
-//	dd::Edge partTrace = dd->partialTrace(dd->makeIdent(0, 1), std::bitset<dd::MAXN>(2));
-//	auto fullTrace = dd->trace(dd->makeIdent(0, 3));
-//	std::cout << "Identity function for 4 qubits has trace: " << fullTrace << std::endl;
+	// compute (partial) traces
+	dd::Edge partTrace = dd->partialTrace(dd->makeIdent(0, 1), std::bitset<dd::MAXN>(2));
+	auto fullTrace = dd->trace(dd->makeIdent(0, 3));
+	std::cout << "Identity function for 4 qubits has trace: " << fullTrace << std::endl;
 
     /***** print DDs as SVG file *****/
 	dd->export2Dot(bell_circuit1, "bell_circuit1.dot", false);
 	dd->export2Dot(bell_circuit2, "bell_circuit2.dot");
 	dd->export2Dot(bell_state, "bell_state.dot", true);
-//	dd->export2Dot(partTrace, "partial_trace.dot");
+	dd->export2Dot(partTrace, "partial_trace.dot");
 
 	/***** print statistics *****/
 	dd->statistics();

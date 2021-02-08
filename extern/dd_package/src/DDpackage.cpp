@@ -996,15 +996,15 @@ namespace dd {
         return e;          // return result
     }
 
-    Edge Package::partialTrace(const Edge a, const std::bitset<MAXN> &eliminate) {
+    Edge Package::partialTrace(const Edge& a, const std::bitset<MAXN> &eliminate) {
         [[maybe_unused]] const auto before = cn.cacheCount;
-        const auto result = trace(a, a.p->v, eliminate);
+        const auto result = trace(a, eliminate);
         [[maybe_unused]] const auto after = cn.cacheCount;
         assert(before == after);
         return result;
     }
 
-    ComplexValue Package::trace(const Edge a) {
+    ComplexValue Package::trace(const Edge& a) {
         auto eliminate = std::bitset<MAXN>{}.set();
         [[maybe_unused]] const auto before = cn.cacheCount;
         Edge res = partialTrace(a, eliminate);
@@ -1616,12 +1616,14 @@ namespace dd {
     }
 
 
-    Edge Package::trace(Edge a, short v, const std::bitset<MAXN> &eliminate) {
-        short w = a.p->v;
+    Edge Package::trace(const Edge& a, const std::bitset<MAXN> &eliminate, unsigned short alreadyEliminated) {
+        short v = a.p->v;
 
         if (CN::equalsZero(a.w)) return DDzero;
 
-        // Base case
+	    if (eliminate.none()) return a;
+
+	    // Base case
         if (v == -1) {
             if (isTerminal(a)) return a;
             std::cerr << "Expected terminal node in trace." << std::endl;
@@ -1629,43 +1631,48 @@ namespace dd {
         }
 
         if (eliminate[v]) {
-            if (v == w) {
-                Edge r = DDzero;
-                //std::cout << cn.cacheCount << " ";
-                auto t0 = trace(a.p->e[0], static_cast<short>(v - 1), eliminate);
-                r = add2(r, t0);
-                auto r1 = r;
-                //std::cout << "-> " << cn.cacheCount << " ";
-                auto t1 = trace(a.p->e[3], static_cast<short>(v - 1), eliminate);
-                r = add2(r, t1);
-                auto r2 = r;
-                //std::cout << "-> " << cn.cacheCount << std::endl;
-                CN::mul(r.w, r.w, a.w);
-                if (r1.w != CN::ZERO)
-                    cn.releaseCached(r1.w);
+	        auto elims = alreadyEliminated+1;
+	        Edge r = DDzero;
 
-                if (r2.w != CN::ZERO) {
-                    cn.releaseCached(r2.w);
-                }
-                //cn.lookup(r.w);
+            auto t0 = trace(a.p->e[0], eliminate, elims);
+            r = add2(r, t0);
+            auto r1 = r;
 
-                return r;
-            } else {
-                Edge r = trace(a, static_cast<short>(v - 1), eliminate);
-                CN::mul(r.w, r.w, cn.getTempCachedComplex(RADIX, 0));
-                return r;
+            auto t1 = trace(a.p->e[3], eliminate, elims);
+            r = add2(r, t1);
+            auto r2 = r;
+
+            if (r.w == CN::ONE) {
+		        r.w = a.w;
+	        } else {
+		        auto c = cn.getTempCachedComplex();
+		        CN::mul(c, r.w, a.w);
+		        r.w = cn.lookup(c); // better safe than sorry. this may result in complex values with magnitude > 1 in the complex table
+	        }
+
+	        if (r1.w != CN::ZERO) {
+                cn.releaseCached(r1.w);
+	        }
+
+            if (r2.w != CN::ZERO) {
+                cn.releaseCached(r2.w);
             }
+
+            return r;
         } else {
-            if (v == w) {
-                Edge r = makeNonterminal(a.p->v, {trace(a.p->e[0], static_cast<short>(v - 1), eliminate),
-                                                  trace(a.p->e[1], static_cast<short>(v - 1), eliminate),
-                                                  trace(a.p->e[2], static_cast<short>(v - 1), eliminate),
-                                                  trace(a.p->e[3], static_cast<short>(v - 1), eliminate)}, false);
-                CN::mul(r.w, r.w, a.w);
-                return r;
+        	auto adjustedV = static_cast<short>(a.p->v - (eliminate.count() - alreadyEliminated));
+            Edge r = makeNonterminal(adjustedV, {trace(a.p->e[0], eliminate, alreadyEliminated),
+                                              trace(a.p->e[1], eliminate, alreadyEliminated),
+                                              trace(a.p->e[2], eliminate, alreadyEliminated),
+                                              trace(a.p->e[3], eliminate, alreadyEliminated)}, false);
+            if (r.w == CN::ONE) {
+	            r.w = a.w;
             } else {
-                return trace(a, static_cast<short>(v - 1), eliminate);
+	            auto c = cn.getTempCachedComplex();
+	            CN::mul(c, r.w, a.w);
+	            r.w = cn.lookup(c);
             }
+            return r;
         }
     }
 
