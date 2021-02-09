@@ -109,8 +109,9 @@ namespace qc {
 
 		virtual  size_t getNops()                   const { return ops.size();	}
 		unsigned short  getNqubits()                const { return nqubits + nancillae;	}
-		unsigned short getNancillae()               const { return nancillae; }
-		unsigned short getNqubitsWithoutAncillae()  const { return nqubits; }
+		unsigned short  getNancillae()              const { return nancillae; }
+		unsigned short  getNqubitsWithoutAncillae() const { return nqubits; }
+		unsigned short  getNcbits()                 const { return nclassics;	}
 		std::string     getName()                   const { return name;       }
 		const registerMap& getQregs()               const { return qregs; }
 		const registerMap& getCregs()               const { return cregs; }

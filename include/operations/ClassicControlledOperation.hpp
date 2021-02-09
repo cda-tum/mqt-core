@@ -18,7 +18,7 @@ namespace qc {
 	public:
 
 		// Applies operation `_op` if the creg starting at index `control` has the expected value
-		ClassicControlledOperation(std::unique_ptr<Operation>& _op, std::pair<unsigned short, unsigned short>& controlRegister, unsigned int expectedValue = 1u) : op(std::move(_op)), controlRegister(controlRegister), expectedValue(expectedValue) {
+		ClassicControlledOperation(std::unique_ptr<Operation>& _op, const std::pair<unsigned short, unsigned short>& controlRegister, unsigned int expectedValue = 1u) : op(std::move(_op)), controlRegister(controlRegister), expectedValue(expectedValue) {
 			nqubits = op->getNqubits();
 			name[0] = 'c';
 			name[1] = '_';
