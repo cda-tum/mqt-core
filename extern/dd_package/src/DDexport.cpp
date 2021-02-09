@@ -234,7 +234,7 @@ namespace dd {
 		return os;
 	}
 
-	std::ostream& vectorEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels, bool classic) {
+	std::ostream& vectorEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels) {
 		auto fromlabel = ((uintptr_t)from.p & 0x001fffffu) >> 1u;
 		auto tolabel = ((uintptr_t)to.p & 0x001fffffu) >> 1u;
 
@@ -259,7 +259,7 @@ namespace dd {
 		return os;
 	}
 
-	std::ostream& coloredVectorEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels, bool classic) {
+	std::ostream& coloredVectorEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels) {
 		auto fromlabel = ((uintptr_t)from.p & 0x001fffffu) >> 1u;
 		auto tolabel = ((uintptr_t)to.p & 0x001fffffu) >> 1u;
 
@@ -346,9 +346,9 @@ namespace dd {
 
 				if (isVector) {
 					if (colored) {
-						coloredVectorEdge(*node, edge, i, oss, edgeLabels, classic);
+						coloredVectorEdge(*node, edge, i, oss, edgeLabels);
 					} else {
-						vectorEdge(*node, edge, i, oss, edgeLabels, classic);
+						vectorEdge(*node, edge, i, oss, edgeLabels);
 					}
 				} else {
 					if (colored) {

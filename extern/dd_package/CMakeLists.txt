@@ -5,7 +5,7 @@ endif()
 
 project( dd_package
          LANGUAGES CXX
-         VERSION 1.1.1
+         VERSION 1.2.0
          DESCRIPTION "Library to handle decisions diagrams and corresponding operations")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)

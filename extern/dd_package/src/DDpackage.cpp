@@ -13,13 +13,10 @@ namespace dd {
     Node Package::terminal{
             nullptr,
             {{nullptr, CN::ZERO}, {nullptr, CN::ZERO}, {nullptr, CN::ZERO}, {nullptr, CN::ZERO}},
-            CN::ONE,
             0,
             -1,
             true,
             true,
-            Disabled,
-            0
     };
     constexpr Edge Package::DDzero;
     constexpr Edge Package::DDone;
@@ -57,22 +54,23 @@ namespace dd {
         return r;
     }
 
-    ComplexValue Package::getVectorElement(Edge e, const unsigned long long element) {
+    ComplexValue Package::getVectorElement(const Edge& e, const unsigned long long element) {
         if (isTerminal(e)) {
             return {0, 0};
         }
         Complex l = cn.getTempCachedComplex(1, 0);
+        auto r = e;
         do {
-            CN::mul(l, l, e.w);
-            auto tmp = (element >> e.p->v) & 1u;
-            e = e.p->e[2 * tmp];
-        } while (!isTerminal(e));
-        CN::mul(l, l, e.w);
+            CN::mul(l, l, r.w);
+            auto tmp = (element >> r.p->v) & 1u;
+            r = r.p->e[2 * tmp];
+        } while (!isTerminal(r));
+        CN::mul(l, l, r.w);
 
-        return {l.r->val, l.i->val};
+        return {CN::val(l.r), CN::val(l.i)};
     }
 
-    void Package::toDot(Edge e, std::ostream &oss, bool isVector) {
+    void Package::toDot(const Edge& e, std::ostream &oss, bool isVector) {
         /* first part of dot file*/
         std::ostringstream nodes;
         /*second part of dot file*/
@@ -217,7 +215,7 @@ namespace dd {
 
     // export a DD in .dot format to the file specified by outputFilename
     // and call DOT->SVG export (optional, requires dot package)
-    void Package::export2Dot(Edge basic, const std::string &outputFilename, bool isVector, bool show) {
+    void Package::export2Dot(const Edge& basic, const std::string &outputFilename, bool isVector, bool show) {
         std::ofstream init(outputFilename);
         toDot(basic, init, isVector);
         init.close();
@@ -314,7 +312,7 @@ namespace dd {
         return f;
     }
 
-    Edge Package::normalize(Edge &e, bool cached) {
+    Edge Package::normalize(const Edge &e, bool cached) {
         int argmax = -1;
 
         bool zero[] = {CN::equalsZero(e.p->e[0].w),
@@ -366,42 +364,43 @@ namespace dd {
                 return DDzero;
             }
 
+            auto r = e;
             // divide each entry by max
             for (int i = 0; i < NEDGE; ++i) {
                 if (i == argmax) {
                     if (cached) {
-                        if (e.w == ComplexNumbers::ONE)
-                            e.w = maxc;
+                        if (r.w == ComplexNumbers::ONE)
+                            r.w = maxc;
                         else
-                            CN::mul(e.w, e.w, maxc);
+                            CN::mul(r.w, r.w, maxc);
                     } else {
-                        if (e.w == ComplexNumbers::ONE) {
-                            e.w = maxc;
+                        if (r.w == ComplexNumbers::ONE) {
+                            r.w = maxc;
                         } else {
                             auto c = cn.getTempCachedComplex();
-                            CN::mul(c, e.w, maxc);
-                            e.w = cn.lookup(c);
+                            CN::mul(c, r.w, maxc);
+                            r.w = cn.lookup(c);
                         }
                     }
-                    e.p->e[i].w = ComplexNumbers::ONE;
+                    r.p->e[i].w = ComplexNumbers::ONE;
                 } else {
                     if (zero[i]) {
-                        if (cached && e.p->e[i].w != ComplexNumbers::ZERO)
-                            cn.releaseCached(e.p->e[i].w);
-                        e.p->e[i] = DDzero;
+                        if (cached && r.p->e[i].w != ComplexNumbers::ZERO)
+                            cn.releaseCached(r.p->e[i].w);
+                        r.p->e[i] = DDzero;
                         continue;
                     }
-                    if (cached && !zero[i] && e.p->e[i].w != ComplexNumbers::ONE) {
-                        cn.releaseCached(e.p->e[i].w);
+                    if (cached && !zero[i] && r.p->e[i].w != ComplexNumbers::ONE) {
+                        cn.releaseCached(r.p->e[i].w);
                     }
-                    if (CN::equalsOne(e.p->e[i].w))
-                        e.p->e[i].w = ComplexNumbers::ONE;
+                    if (CN::equalsOne(r.p->e[i].w))
+                        r.p->e[i].w = ComplexNumbers::ONE;
                     auto c = cn.getTempCachedComplex();
-                    CN::div(c, e.p->e[i].w, maxc);
-                    e.p->e[i].w = cn.lookup(c);
+                    CN::div(c, r.p->e[i].w, maxc);
+                    r.p->e[i].w = cn.lookup(c);
                 }
             }
-            return e;
+            return r;
         }
 
         /// --- Vector treatment ---
@@ -438,44 +437,45 @@ namespace dd {
 
         sum = std::sqrt(sum / div);
 
-        if (cached && e.p->e[argmax].w != CN::ONE) {
-            e.w = e.p->e[argmax].w;
-            e.w.r->val *= sum;
-            e.w.i->val *= sum;
+        auto r = e;
+        if (cached && r.p->e[argmax].w != CN::ONE) {
+            r.w = r.p->e[argmax].w;
+            r.w.r->val *= sum;
+            r.w.i->val *= sum;
         } else {
-            e.w = cn.lookup(ComplexNumbers::val(e.p->e[argmax].w.r) * sum, ComplexNumbers::val(e.p->e[argmax].w.i) * sum);
-            CN::incRef(e.w);
-            if (CN::equalsZero(e.w)) {
+            r.w = cn.lookup(ComplexNumbers::val(r.p->e[argmax].w.r) * sum, ComplexNumbers::val(r.p->e[argmax].w.i) * sum);
+            CN::incRef(r.w);
+            if (CN::equalsZero(r.w)) {
                 return DDzero;
             }
         }
 
         for (int j = 0; j < NEDGE; j++) {
             if (j == argmax) {
-                e.p->e[j].w = cn.lookup((fp) 1.0L / sum, 0);
-                CN::incRef(e.p->e[j].w);
-                if (e.p->e[j].w == CN::ZERO)
-                    e.p->e[j] = DDzero;
-            } else if (e.p->e[j].p != nullptr && !zero[j]) {
+                r.p->e[j].w = cn.lookup((fp) 1.0L / sum, 0);
+                CN::incRef(r.p->e[j].w);
+                if (r.p->e[j].w == CN::ZERO)
+                    r.p->e[j] = DDzero;
+            } else if (r.p->e[j].p != nullptr && !zero[j]) {
                 if (cached) {
-                    cn.releaseCached(e.p->e[j].w);
-                    CN::div(e.p->e[j].w, e.p->e[j].w, e.w);
-                    e.p->e[j].w = cn.lookup(e.p->e[j].w);
-                    if (e.p->e[j].w == CN::ZERO) {
-                        e.p->e[j] = DDzero;
+                    cn.releaseCached(r.p->e[j].w);
+                    CN::div(r.p->e[j].w, r.p->e[j].w, r.w);
+                    r.p->e[j].w = cn.lookup(r.p->e[j].w);
+                    if (r.p->e[j].w == CN::ZERO) {
+                        r.p->e[j] = DDzero;
                     }
                 } else {
                     Complex c = cn.getTempCachedComplex();
-                    CN::div(c, e.p->e[j].w, e.w);
-                    e.p->e[j].w = cn.lookup(c);
-                    CN::incRef(e.p->e[j].w);
-                    if (e.p->e[j].w == CN::ZERO) {
-                        e.p->e[j] = DDzero;
+                    CN::div(c, r.p->e[j].w, r.w);
+                    r.p->e[j].w = cn.lookup(c);
+                    CN::incRef(r.p->e[j].w);
+                    if (r.p->e[j].w == CN::ZERO) {
+                        r.p->e[j] = DDzero;
                     }
                 }
             }
         }
-        return e;
+        return r;
     }
 
 
@@ -494,7 +494,7 @@ namespace dd {
 
     //  lookup a node in the unique table for the appropriate variable - if not found insert it
     //  only normalized nodes shall be stored.
-    Edge Package::UTlookup(Edge e, bool keep_node) {
+    Edge Package::UTlookup(const Edge& e, bool keep_node) {
         // there is a unique terminal node
         if (isTerminal(e)) {
             return e;
@@ -519,12 +519,8 @@ namespace dd {
                     nodeAvail = e.p;
                 }
 
-
                 // NOTE: reference counting is to be adjusted by function invoking the table lookup
                 UTmatch++;        // record hash table match
-                assert(p->v == e.p->v);
-                e.p = p;// and set it to point to node found (with weight unchanged)
-
                 assert(CN::ONE.r->val == 1);
                 assert(CN::ONE.i->val == 0);
                 assert(p->v == e.p->v);
@@ -532,17 +528,10 @@ namespace dd {
                 assert(v - 1 == e.p->e[1].p->v || isTerminal(e.p->e[1]));
                 assert(v - 1 == e.p->e[2].p->v || isTerminal(e.p->e[2]));
                 assert(v - 1 == e.p->e[3].p->v || isTerminal(e.p->e[3]));
-                if (p->normalizationFactor != e.p->normalizationFactor) {
-                    std::cerr << "\nnf  (in) = " << CN::val(e.p->normalizationFactor.r) << " " << CN::val(e.p->normalizationFactor.i) << "i\n";
-                    std::cerr << "nf  (in) = " << std::hexfloat << CN::val(e.p->normalizationFactor.r) << " " << CN::val(e.p->normalizationFactor.i) << std::defaultfloat << "i\n";
-                    std::cerr << "nf (out) = " << CN::val(p->normalizationFactor.r) << " " << CN::val(p->normalizationFactor.i) << "i\n";
-                    std::cerr << "nf (out) = " << std::hexfloat << CN::val(p->normalizationFactor.r) << " " << CN::val(p->normalizationFactor.i) << std::defaultfloat << "i\n";
-                    std::cerr << "unormalizedNodes=" << unnormalizedNodes << "\n";
-                    debugnode(p);
-                    throw std::runtime_error("Normalization factor != CN::ONE for a node found in UTlookup");
-                }
 
-                return e;
+	            auto r = e;
+	            r.p = p;// and set it to point to node found (with weight unchanged)
+                return r;
             }
 
             UTcol++;        // record hash collision
@@ -559,7 +548,7 @@ namespace dd {
         return e;                // and return
     }
 
-    std::string Package::UTcheck(Edge e) const {
+    std::string Package::UTcheck(const Edge& e) const {
         if (isTerminal(e)) {
             return "terminal";
         }
@@ -667,19 +656,15 @@ namespace dd {
             r = new Node[NODE_CHUNK_SIZE];
             node_allocations += NODE_CHUNK_SIZE;
             allocated_node_chunks.push_back(r);
-            r->reuseCount = 0;
             NodePtr r2 = r + 1;
             nodeAvail = r2;
             for (unsigned int i = 0; i < NODE_CHUNK_SIZE - 2; i++, r2++) {
                 r2->next = r2 + 1;
-                r2->reuseCount = 0;
             }
             r2->next = nullptr;
-            r2->reuseCount = 0;
         }
         r->next = nullptr;
         r->ref = 0; // nodes in nodeAvailable may have non-zero ref count
-        r->reuseCount++;
         r->ident = r->symm = false; // mark as not identity or symmetric
         return r;
     }
@@ -690,7 +675,7 @@ namespace dd {
     //
     // a ref count saturates and remains unchanged if it has reached
     // MAXREFCNT
-    void Package::incRef(Edge &e) {
+    void Package::incRef(const Edge &e) {
         dd::ComplexNumbers::incRef(e.w);
         if (isTerminal(e))
             return;
@@ -722,7 +707,7 @@ namespace dd {
     //
     // a ref count saturates and remains unchanged if it has reached
     // MAXREFCNT
-    void Package::decRef(Edge &e) {
+    void Package::decRef(const Edge &e) {
         dd::ComplexNumbers::decRef(e.w);
 
         if (isTerminal(e)) return;
@@ -747,10 +732,6 @@ namespace dd {
                 throw std::runtime_error("In decRef: active[e.p->v] < 0");
             }
             activeNodeCount--;
-            if (e.p->normalizationFactor != CN::ONE) {
-                unnormalizedNodes--;
-                e.p->normalizationFactor = CN::ONE;
-            }
         }
     }
 
@@ -877,7 +858,7 @@ namespace dd {
             }
 
             return r;
-        } else if (which == conjTransp || which == transp || which == CTkind::renormalize) {
+        } else if (which == conjTransp || which == transp) {
             std::array<CTentry1, CTSLOTS> &table = CTable1.at(mode);
             const unsigned long i = CThash(a, b, which);
 
@@ -925,7 +906,7 @@ namespace dd {
             table[i].rw.i = r.w.i->val;
             table[i].which = which;
 
-        } else if (which == conjTransp || which == transp || which == CTkind::renormalize) {
+        } else if (which == conjTransp || which == transp) {
             std::array<CTentry1, CTSLOTS> &table = CTable1.at(mode);
             const unsigned long i = CThash(a, b, which);
 
@@ -977,8 +958,6 @@ namespace dd {
         Edge e{getNode(), CN::ONE};
         assert(e.p->ref == 0);
         e.p->v = v;
-        e.p->normalizationFactor = CN::ONE;
-        e.p->computeMatrixProperties = computeMatrixProperties;
         assert(e.p->v == v);
         assert(v - 1 == edge[0].p->v || isTerminal(edge[0]));
         assert(v - 1 == edge[1].p->v || isTerminal(edge[1]));
@@ -1015,7 +994,7 @@ namespace dd {
 
     // adds two matrices represented by DD
     // the two DD should have the same variable set and ordering
-    Edge Package::add2(Edge x, Edge y) {
+    Edge Package::add2(const Edge& x, const Edge& y) {
         if (x.p == nullptr) {
             return y;  // handles partial matrices i.e.
         }
@@ -1028,12 +1007,14 @@ namespace dd {
             if (y.w == CN::ZERO) {
                 return y;
             }
-            y.w = cn.getCachedComplex(y.w.r->val, y.w.i->val);
-            return y;
+            auto r = y;
+            r.w = cn.getCachedComplex(CN::val(y.w.r), CN::val(y.w.i));
+            return r;
         }
         if (y.w == CN::ZERO) {
-            x.w = cn.getCachedComplex(x.w.r->val, x.w.i->val);
-            return x;
+            auto r = x;
+        	r.w = cn.getCachedComplex(CN::val(x.w.r), CN::val(x.w.i));
+            return r;
         }
         if (x.p == y.p) {
             Edge r = y;
@@ -1105,7 +1086,7 @@ namespace dd {
         return r;
     }
 
-    Edge Package::add(Edge x, Edge y) {
+    Edge Package::add(const Edge& x, const Edge& y) {
         [[maybe_unused]] const auto before = cn.cacheCount;
         Edge result = add2(x, y);
 
@@ -1120,7 +1101,7 @@ namespace dd {
 
     // new multiply routine designed to handle missing variables properly
     // var is number of variables
-    Edge Package::multiply2(Edge &x, Edge &y, unsigned short var) {
+    Edge Package::multiply2(const Edge& x, const Edge& y, unsigned short var) {
         if (x.p == nullptr)
             return x;
         if (y.p == nullptr)
@@ -1136,16 +1117,16 @@ namespace dd {
             return makeTerminal(cn.mulCached(x.w, y.w));
         }
 
-        const Complex xweight = x.w;
-        const Complex yweight = y.w;
-        x.w = CN::ONE;
-        y.w = CN::ONE;
+        auto xCopy = x;
+        xCopy.w = CN::ONE;
+        auto yCopy = y;
+        yCopy.w = CN::ONE;
 
-        Edge r = CTlookup(x, y, mult);
+        Edge r = CTlookup(xCopy, yCopy, mult);
         if (r.p != nullptr) {
             if (r.w != CN::ZERO) {
-                CN::mul(r.w, r.w, xweight);
-                CN::mul(r.w, r.w, yweight);
+                CN::mul(r.w, r.w, x.w);
+                CN::mul(r.w, r.w, y.w);
                 if (CN::equalsZero(r.w)) {
                     cn.releaseCached(r.w);
                     return DDzero;
@@ -1154,17 +1135,17 @@ namespace dd {
             return r;
         }
 
-        const short w = var - 1;
+        const auto w = static_cast<short>(var - 1);
 
         if (x.p->v == w && x.p->v == y.p->v) {
             if (x.p->ident) {
                 if (y.p->ident) {
                     r = makeIdent(0, w);
                 } else {
-                    r = y;
+                    r = yCopy;
                 }
-                CTinsert(x, y, r, mult);
-                r.w = cn.mulCached(xweight, yweight);
+                CTinsert(xCopy, yCopy, r, mult);
+                r.w = cn.mulCached(x.w, y.w);
                 if (CN::equalsZero(r.w)) {
                     cn.releaseCached(r.w);
                     return DDzero;
@@ -1172,9 +1153,9 @@ namespace dd {
                 return r;
             }
             if (y.p->ident) {
-                r = x;
-                CTinsert(x, y, r, mult);
-                r.w = cn.mulCached(xweight, yweight);
+                r = xCopy;
+                CTinsert(xCopy, yCopy, r, mult);
+                r.w = cn.mulCached(x.w, y.w);
 
                 if (dd::ComplexNumbers::equalsZero(r.w)) {
                     cn.releaseCached(r.w);
@@ -1192,12 +1173,12 @@ namespace dd {
                     if (!isTerminal(x) && x.p->v == w) {
                         e1 = x.p->e[i + k];
                     } else {
-                        e1 = x;
+                        e1 = xCopy;
                     }
                     if (!isTerminal(y) && y.p->v == w) {
                         e2 = y.p->e[j + RADIX * k];
                     } else {
-                        e2 = y;
+                        e2 = yCopy;
                     }
 
                     Edge m = multiply2(e1, e2, var - 1);
@@ -1217,25 +1198,24 @@ namespace dd {
         }
         r = makeNonterminal(w, e, true);
 
-        CTinsert(x, y, r, mult);
+        CTinsert(xCopy, yCopy, r, mult);
 
-        if (r.w != CN::ZERO && (xweight != CN::ONE || yweight != CN::ONE)) {
+        if (r.w != CN::ZERO && (x.w != CN::ONE || y.w != CN::ONE)) {
             if (r.w == CN::ONE) {
-                r.w = cn.mulCached(xweight, yweight);
+                r.w = cn.mulCached(x.w, y.w);
             } else {
-                CN::mul(r.w, r.w, xweight);
-                CN::mul(r.w, r.w, yweight);
+                CN::mul(r.w, r.w, x.w);
+                CN::mul(r.w, r.w, y.w);
             }
             if (CN::equalsZero(r.w)) {
                 cn.releaseCached(r.w);
                 return DDzero;
             }
-
         }
         return r;
     }
 
-    Edge Package::multiply(Edge x, Edge y) {
+    Edge Package::multiply(const Edge& x, const Edge& y) {
         [[maybe_unused]] const auto before = cn.cacheCount;
         unsigned short var = 0;
         if (!isTerminal(x)) {
@@ -1279,12 +1259,13 @@ namespace dd {
     }
 
     // returns a pointer to the conjugate transpose of the matrix pointed to by a
-    Edge Package::conjugateTranspose(Edge a) {
+    Edge Package::conjugateTranspose(const Edge& a) {
         if (a.p == nullptr)
             return a;          // NULL pointer
         if (isTerminal(a)) {              // terminal case
-            a.w = dd::ComplexNumbers::conj(a.w);
-            return a;
+            auto r = a;
+        	r.w = dd::ComplexNumbers::conj(a.w);
+            return r;
         }
 
         Edge r = CTlookup(a, a, conjTransp);  // check if in compute table
@@ -1475,7 +1456,7 @@ namespace dd {
         return e;
     }
 
-    ComplexValue Package::innerProduct(Edge x, Edge y, int var) {
+    ComplexValue Package::innerProduct(const Edge& x, const Edge& y, int var) {
         if (x.p == nullptr || y.p == nullptr || CN::equalsZero(x.w) || CN::equalsZero(y.w)) { // the 0 case
             return {0.0, 0.0};
         }
@@ -1486,12 +1467,12 @@ namespace dd {
             return {c.r->val, c.i->val};
         }
 
-        Complex xweight = x.w;
-        Complex yweight = y.w;
-        x.w = CN::ONE;
-        y.w = CN::ONE;
+        auto xCopy = x;
+        xCopy.w = CN::ONE;
+        auto yCopy = y;
+        yCopy.w = CN::ONE;
 
-        Edge r = CTlookup(x, y, fid);
+        Edge r = CTlookup(xCopy, yCopy, fid);
         if (r.p != nullptr) {
             if (r.w != CN::ZERO && r.w != CN::ONE) {
                 cn.releaseCached(r.w);
@@ -1500,9 +1481,9 @@ namespace dd {
                 // In the mul statement below, the result is written to r.w
                 r.w = cn.getTempCachedComplex(0,0);
             }
-            CN::mul(r.w, r.w, xweight);
-            CN::mul(r.w, r.w, yweight);
-            return {r.w.r->val, r.w.i->val};
+            CN::mul(r.w, r.w, x.w);
+            CN::mul(r.w, r.w, y.w);
+            return {CN::val(r.w.r), CN::val(r.w.i)};
         }
 
         short w = var - 1;
@@ -1513,13 +1494,13 @@ namespace dd {
             if (!isTerminal(x) && x.p->v == w) {
                 e1 = x.p->e[i];
             } else {
-                e1 = x;
+                e1 = xCopy;
             }
             if (!isTerminal(y) && y.p->v == w) {
                 e2 = y.p->e[i];
                 e2.w = CN::conj(e2.w);
             } else {
-                e2 = y;
+                e2 = yCopy;
             }
             ComplexValue cv = innerProduct(e1, e2, var - 1);
 
@@ -1530,14 +1511,14 @@ namespace dd {
         r = DDzero;
         r.w = cn.getTempCachedComplex(sum.r, sum.i);
 
-        CTinsert(x, y, r, fid);
-        CN::mul(r.w, r.w, xweight);
-        CN::mul(r.w, r.w, yweight);
+        CTinsert(xCopy, yCopy, r, fid);
+        CN::mul(r.w, r.w, x.w);
+        CN::mul(r.w, r.w, y.w);
 
-        return {r.w.r->val, r.w.i->val};
+        return {CN::val(r.w.r), CN::val(r.w.i)};
     }
 
-    ComplexValue Package::innerProduct(Edge x, Edge y) {
+    ComplexValue Package::innerProduct(const Edge& x, const Edge& y) {
         if (x.p == nullptr || y.p == nullptr || CN::equalsZero(x.w) || CN::equalsZero(y.w)) { // the 0 case
             return {0, 0};
         }
@@ -1554,12 +1535,12 @@ namespace dd {
         return ip;
     }
 
-    fp Package::fidelity(Edge x, Edge y) {
+    fp Package::fidelity(const Edge& x, const Edge& y) {
         const ComplexValue fid = innerProduct(x, y);
         return fid.r * fid.r + fid.i * fid.i;
     }
 
-    Edge Package::kronecker(Edge x, Edge y) {
+    Edge Package::kronecker(const Edge& x, const Edge& y) {
         Edge e = kronecker2(x, y);
 
         if (e.w != CN::ZERO && e.w != CN::ONE) {
@@ -1570,7 +1551,7 @@ namespace dd {
         return e;
     }
 
-    Edge Package::kronecker2(Edge x, Edge y) {
+    Edge Package::kronecker2(const Edge& x, const Edge& y) {
 
         if (CN::equalsZero(x.w))
             return DDzero;
@@ -1609,7 +1590,7 @@ namespace dd {
         return r;
     }
 
-    Edge Package::extend(Edge e, unsigned short h, unsigned short l) {
+    Edge Package::extend(const Edge& e, unsigned short h, unsigned short l) {
         Edge f = (l > 0) ? kronecker(e, makeIdent(0, static_cast<short>(l - 1))) : e;
         Edge g = (h > 0) ? kronecker(makeIdent(0, static_cast<short>(h - 1)), f) : f;
         return g;
@@ -1685,27 +1666,25 @@ namespace dd {
      *                 If string is longer than required, the additional characters are ignored.
      * @return the complex value of the specified element
      */
-    ComplexValue Package::getValueByPath(dd::Edge e, std::string elements) {
+    ComplexValue Package::getValueByPath(const Edge& e, std::string elements) {
         if (dd::Package::isTerminal(e)) {
             return {dd::ComplexNumbers::val(e.w.r), dd::ComplexNumbers::val(e.w.i)};
         }
 
         dd::Complex c = cn.getTempCachedComplex(1, 0);
+        auto r = e;
         do {
-            dd::ComplexNumbers::mul(c, c, e.w);
-            int tmp = elements.at(e.p->v) - '0';
+            dd::ComplexNumbers::mul(c, c, r.w);
+            int tmp = elements.at(r.p->v) - '0';
             assert(tmp >= 0 && tmp <= dd::NEDGE);
-            e = e.p->e[tmp];
-        } while (!dd::Package::isTerminal(e));
-        dd::ComplexNumbers::mul(c, c, e.w);
+            r = r.p->e[tmp];
+        } while (!dd::Package::isTerminal(r));
+        dd::ComplexNumbers::mul(c, c, r.w);
 
         return {dd::ComplexNumbers::val(c.r), dd::ComplexNumbers::val(c.i)};
     }
 
     void Package::checkSpecialMatrices(NodePtr p) {
-        if (p->computeMatrixProperties == Disabled)
-            return;
-
         p->ident = false;       // assume not identity
         p->symm = false;           // assume symmetric
 
@@ -1719,54 +1698,6 @@ namespace dd {
             (p->e[3].w) != CN::ONE || !(p->e[3].p->ident))
             return;
         p->ident = true;
-    }
-
-
-    /**
-     * Update a node in the UT after its weights or children changed. Node e.p will be removed from bucket UT[e.p->V][previous_hash]
-     * and reinserted at the appropriate position.
-     * @param e Edge to node that will be re-inserted
-     * @param previous_hash previous hash of that node
-     * @throws if node is not found at previous hash bucket
-     */
-    Edge Package::UT_update_node(Edge e, std::size_t previous_hash, Edge in) {
-        //std::clog << "UT_update_node(" << debugnode_line(e.p) << ", " << previous_hash << ")\n";
-        if (isTerminal(e)) {
-            std::clog << "UT_update_node called on terminal node.\n";
-            return e;
-        }
-
-        unsigned short v = e.p->v;
-        assert(v - 1 == e.p->e[0].p->v || isTerminal(e.p->e[0]));
-        assert(v - 1 == e.p->e[1].p->v || isTerminal(e.p->e[1]));
-        assert(v - 1 == e.p->e[2].p->v || isTerminal(e.p->e[2]));
-        assert(v - 1 == e.p->e[3].p->v || isTerminal(e.p->e[3]));
-
-        NodePtr p = Unique[v][previous_hash]; // find pointer to appropriate collision chain
-        bool success = false;
-        NodePtr lastp = nullptr;
-        while (p != nullptr)    // search for a match
-        {
-            if (p == e.p) {
-                // Match found of node in old bucket
-                if (lastp != nullptr) {
-                    lastp->next = p->next;
-                } else {
-                    Unique[v][previous_hash] = p->next;
-                }
-                success = true;
-                break;
-            }
-
-            lastp = p;
-            p = p->next;
-        }
-        if (!success) {
-            std::clog << "Previous hash was " << previous_hash << " but node " << debugnode_line(e.p) << " wasn't there\n";
-            debugnode(e.p);
-            throw std::runtime_error("UT_update_node failed.");
-        }
-        return UTlookup(e, true);
     }
 
     void Package::reset() {

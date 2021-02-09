@@ -20,8 +20,6 @@ namespace dd {
         std::stringstream sst;
         sst << "0x" << std::hex << reinterpret_cast<std::uintptr_t>(p) << std::dec
             << "[v=" << p->v
-            << " nf=" << p->normalizationFactor
-            << " uc=" << p->reuseCount
             << " ref=" << p->ref
             << " hash=" << UThash(p)
             << " UT=" << UTcheck({p, CN::ZERO})
@@ -42,20 +40,7 @@ namespace dd {
         std::clog << std::flush;
     }
 
-    void Package::check_node_is_really_gone(NodePtr pNode, Edge in) {
-        if(isTerminal(in)) {
-            return;
-        }
-        if(in.p == pNode) {
-            throw std::runtime_error("Found forbidden node");
-        }
-
-        for(const auto& child: in.p->e) {
-            check_node_is_really_gone(pNode, child);
-        }
-    }
-
-    bool Package::is_locally_consistent_dd(Edge e) {
+    bool Package::is_locally_consistent_dd(const Edge& e) {
         assert(CN::ONE.r->val == 1 && CN::ONE.i->val == 0);
         assert(CN::ZERO.r->val == 0 && CN::ZERO.i->val == 0);
 
@@ -68,7 +53,7 @@ namespace dd {
         return result;
     }
 
-    bool Package::is_locally_consistent_dd2(Edge e) {
+    bool Package::is_locally_consistent_dd2(const Edge& e) {
         auto *ptr_r = CN::get_sane_pointer(e.w.r);
         auto *ptr_i = CN::get_sane_pointer(e.w.i);
 
@@ -106,7 +91,7 @@ namespace dd {
         return true;
     }
 
-    bool Package::is_globally_consistent_dd(Edge e) {
+    bool Package::is_globally_consistent_dd(const Edge& e) {
         std::map<ComplexTableEntry *, long> weight_counter;
         std::map<NodePtr, unsigned long> node_counter;
         //std::clog << "CHECKING GLOBAL CONSISTENCY\n";
@@ -128,7 +113,7 @@ namespace dd {
         return true;
     }
 
-    void Package::fill_consistency_counter(Edge edge, std::map<ComplexTableEntry *, long> &weight_map, std::map<NodePtr, unsigned long> &node_map) {
+    void Package::fill_consistency_counter(const Edge& edge, std::map<ComplexTableEntry *, long> &weight_map, std::map<NodePtr, unsigned long> &node_map) {
         weight_map[CN::get_sane_pointer(edge.w.r)]++;
         weight_map[CN::get_sane_pointer(edge.w.i)]++;
 
@@ -148,11 +133,9 @@ namespace dd {
     }
 
 
-    void Package::check_consistency_counter(Edge edge, const std::map<ComplexTableEntry *, long> &weight_map, const std::map<NodePtr, unsigned long> &node_map) {
+    void Package::check_consistency_counter(const Edge& edge, const std::map<ComplexTableEntry *, long> &weight_map, const std::map<NodePtr, unsigned long> &node_map) {
         auto* r_ptr = CN::get_sane_pointer(edge.w.r);
         auto* i_ptr = CN::get_sane_pointer(edge.w.i);
-
-        assert(edge.p->normalizationFactor == CN::ONE);
 
         if(weight_map.at(r_ptr) > r_ptr->ref && r_ptr != CN::ONE.r && r_ptr != CN::ZERO.i) {
             std::clog << "\nOffending weight: " <<  edge.w << "\n";
@@ -220,7 +203,6 @@ namespace dd {
         auto hitRatioAdd = CTlook[ad] == 0 ? 0 : (double) CThit[ad] / (double) CTlook[ad];
         auto hitRatioMul = CTlook[mult] == 0 ? 0 : (double) CThit[mult] / (double) CTlook[mult];
         auto hitRatioKron = ((CTlook[kron] == 0) ? 0 : (double) CThit[kron] / (double) CTlook[kron]);
-        auto hitRatioRenormalize = ((CTlook[CTkind::renormalize] == 0) ? 0 : (double) CThit[CTkind::renormalize] / (double) CTlook[CTkind::renormalize]);
 
 
         std::cout << "\nDD statistics:"
@@ -230,12 +212,10 @@ namespace dd {
                   << "\n    add:  " << nOps[ad]
                   << "\n    mult: " << nOps[mult]
                   << "\n    kron: " << nOps[kron]
-                  << "\n    renormalize: " << nOps[CTkind::renormalize]
                   << "\n  Compute table hit ratios (hits/looks/ratio):"
                   << "\n    adds: " << CThit[ad] << " / " << CTlook[ad] << " / " << hitRatioAdd
                   << "\n    mult: " << CThit[mult] << " / " << CTlook[mult] << " / " << hitRatioMul
                   << "\n    kron: " << CThit[kron] << " / " << CTlook[kron] << " / " << hitRatioKron
-                  << "\n    renormalize: " << CThit[CTkind::renormalize] << " / " << CTlook[CTkind::renormalize] << " / " << hitRatioRenormalize
                   << "\n  UniqueTable:"
                   << "\n    Collisions: " << UTcol
                   << "\n    Matches:    " << UTmatch
