@@ -1,7 +1,7 @@
 [submodule "extern/dd_package"]
 	path = extern/dd_package
 	url = https://github.com/iic-jku/dd_package.git
-	branch = master
+	branch = reordering
 [submodule "extern/json"]
 	path = extern/json
 	url = https://github.com/nlohmann/json.git
