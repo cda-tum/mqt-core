@@ -163,6 +163,15 @@ namespace qc {
 		}
 		void import(std::istream&& is, Format format);
 		void initializeIOMapping();
+		// search for current position of target value in map and afterwards exchange it with the value at new position
+		static void findAndSWAP(unsigned short targetValue, unsigned short newPosition, permutationMap& map) {
+			for (const auto& q: map) {
+				if (q.second == targetValue) {
+					std::swap(map.at(newPosition), map.at(q.first));
+					break;
+				}
+			}
+		}
 
 		// this function augments a given circuit by additional registers
 		void addQubitRegister(unsigned short nq, const char* reg_name = DEFAULT_QREG);
