@@ -728,9 +728,6 @@ namespace dd {
                 }
             }
             active[e.p->v]--;
-            if (active[e.p->v] < 0) {
-                throw std::runtime_error("In decRef: active[e.p->v] < 0");
-            }
             activeNodeCount--;
         }
     }
