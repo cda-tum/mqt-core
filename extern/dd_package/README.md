@@ -15,7 +15,7 @@ and Philipp Niemann (University of Bremen, Germany).
 
 For more information, please visit [iic.jku.at/eda/research/quantum_dd](http://iic.jku.at/eda/research/quantum_dd).
 
-If you have any questions feel free to contact us using [iic_quantum@jku.at](mailto:iic_quantum@jku.at) or opening an issue.
+If you have any questions, feel free to contact us via [iic-quantum@jku.at](mailto:iic-quantum@jku.at) or by creating an issue on [GitHub](https://github.com/iic-jku/dd_package/issues).
 
 The old version of this package which does not use namespaces or classes can be found in the branch `non-oop`.
 
@@ -26,8 +26,10 @@ This package caters primarily to our requirements regarding quantum-related func
 A small example shows how to create set a single qubit in superposition.
 
 ```c++
-auto* dd = std::make_new dd::Package; // Create new package instance
-dd::Edge zero_state = dd->makeZeroState(1) ; // zero_state = |0>
+#include "DDpackage.h"
+
+auto dd = std::make_unique<dd::Package>(); // Create new package instance
+auto zero_state = dd->makeZeroState(1) ; // zero_state = |0>
 
 /* Creating a DD requires three inputs:
  * 1. A 2x2 matrix describing a single qubits operation (here: the Hadamard matrix)
@@ -37,12 +39,10 @@ dd::Edge zero_state = dd->makeZeroState(1) ; // zero_state = |0>
  *    In this example we only have a target.
  */
 int line[1] = {2};
-dd::Edge h_op = dd->makeGateDD(Hmat, 1, line);
+auto h_op = dd->makeGateDD(Hmat, 1, line);
 
-// Multiplying the operation and the state results in a new state, here a single qubit in super position
-dd::Edge superposition = dd->multiply(h_op, zero_state); 
-
-delete dd; // alternatively use smart pointers ;)
+// Multiplying the operation and the state results in a new state, here a single qubit in superposition
+auto superposition = dd->multiply(h_op, zero_state); 
 ```
 
 For implementing more complex functionality which requires garbage collection, be advised that you have to do the reference counting by hand. 
@@ -50,91 +50,38 @@ For implementing more complex functionality which requires garbage collection, b
 ### System Requirements
 
 Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments). 
-However, the implementation should be compatible with any current C++ compiler supporting C++14 and a minimum CMake version of 3.10.
+However, the implementation should be compatible with any current C++ compiler supporting C++17 and a minimum CMake version of 3.13.
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
   
-### Build and Run 
+### Setup, Build, and Run 
 
-To build the package and run a small demo execute the following 
-(several *.dot files will be created in the working directory which will be automatically converted to SVG if GraphViz is installed).
-```commandline
-$ mkdir build && cd build
-$ cmake .. -DCMAKE_BUILD_TYPE=Release
-$ cmake --build . --config Release
-$ ./test/dd_package_example
-Circuits are equal!
-00: √½
-01: 0
-10: 0
-11: √½
-Bell states have a fidelity of 1
-Bell state and zero state have a fidelity of 0.5
-DD of my gate has size 2
-Identity function for 4 qubits has trace: 16
-
-DD statistics:
-  Current # nodes in UniqueTable: 22
-  Total compute table lookups: 37
-  Number of operations:
-    add:  44
-    mult: 86
-    kron: 0
-  Compute table hit ratios (hits/looks/ratio):
-    adds: 2 / 4 / 0.5
-    mult: 14 / 28 / 0.5
-    kron: 0 / 0 / 0
-  UniqueTable:
-    Collisions: 5
-    Matches:    17
+To start off, clone this repository using
+```shell
+git clone --recurse-submodules -j8 https://github.com/iic-jku/dd_package 
 ```
-**Windows users** using Visual Studio and the MSVC compiler need to build the project with 
-```commandline
-$ mkdir build && cd build
-$ cmake .. -G "Visual Studio 15 2017" -A x64 -DCMAKE_BUILD_TYPE=Release
-$ cmake --build . --config Release
+Note the `--recurse-submodules` flag. It is required to also clone all the required submodules. If you happen to forget passing the flag on your initial clone, you can initialize all the submodules by executing `git submodule update --init --recursive` in the main project directory.
+
+Our projects use CMake as the main build configuration tool. Building a project using CMake is a two-stage process. First, CMake needs to be *configured* by calling
+```shell 
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 ```
+This tells CMake to search the current directory `.` (passed via `-S`) for a *CMakeLists.txt* file and process it into a directory `build` (passed via `-B`). 
+The flag `-DCMAKE_BUILD_TYPE=Release` tells CMake to configure a *Release* build (as opposed to, e.g., a *Debug* build).
 
-As of now, a small set of unit tests is included as well which you can execute as follows (after performing the build steps described above).
-
+After configuring with CMake, the project can be built by calling
+```shell
+ cmake --build build --config Release
 ```
-$ ./test/dd_package_test
-Running main() from [...]/extern/googletest/googletest/src/gtest_main.cc
-[==========] Running 4 tests from 2 test suites.
-[----------] Global test environment set-up.
-[----------] 1 test from DDComplexTest
-[ RUN      ] DDComplexTest.TrivialTest
-[       OK ] DDComplexTest.TrivialTest (1 ms)
-[----------] 1 test from DDComplexTest (1 ms total)
+This tries to build the project in the `build` directory (passed via `--build`). 
+Some operating systems and developer environments explicitly require a configuration to be set, which is why the `--config` flag is also passed to the build command. The flag `--parallel <NUMBER_OF_THREADS>` may be added to trigger a parallel build.
 
-[----------] 3 tests from DDPackageTest
-[ RUN      ] DDPackageTest.TrivialTest
-[       OK ] DDPackageTest.TrivialTest (31 ms)
-[ RUN      ] DDPackageTest.BellState
-[       OK ] DDPackageTest.BellState (21 ms)
-[ RUN      ] DDPackageTest.IdentifyTrace
-[       OK ] DDPackageTest.IdentifyTrace (18 ms)
-[----------] 3 tests from DDPackageTest (70 ms total)
+Building the project this way generates 
+ - the library `libdd_package` in the `build/src` folder
+ - a test executable `dd_package_test` containing a small set of unit tests in the `build/test` folder
+ - a small demo example executable `dd_package_example` in the `build/test` directory.
 
-[----------] Global test environment tear-down
-[==========] 4 tests from 2 test suites ran. (71 ms total)
-[  PASSED  ] 4 tests.
-```
-
-The DD package may be installed on the system by executing
-
-```commandline
-$ mkdir build && cd build
-$ cmake .. -DCMAKE_BUILD_TYPE=Release
-$ cmake --build . --config Release --target install
-```
-
-It can then be included in other projects using the following CMake snippet
-
-```cmake
-find_package(DDpackage)
-target_link_libraries(${TARGET_NAME} PRIVATE JKQ::DDpackage)
-```
+You can link against the library built by this project in other CMake project using the `JKQ::DDpackage` target.
 
 ## Reference
 

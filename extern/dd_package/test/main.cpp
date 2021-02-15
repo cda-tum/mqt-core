@@ -1,13 +1,8 @@
-#include "DDpackage.h"
 #include <iostream>
+#include "DDpackage.h"
+#include "util.h"
 
-// X gate matrix
-constexpr dd::Matrix2x2 Xmat = {{{ 0, 0 }, { 1, 0 } }, {{ 1, 0 }, { 0, 0 } }};
-// Hadamard gate matrix
-constexpr dd::Matrix2x2 Hmat = {{{ dd::SQRT_2, 0 }, { dd::SQRT_2,  0 }},
-                                {{ dd::SQRT_2, 0 }, { -dd::SQRT_2, 0 }}};
-
-dd::Edge BellCicuit1(dd::Package* dd) {
+dd::Edge BellCicuit1(std::unique_ptr<dd::Package>& dd) {
     /***** define Hadamard gate acting on q0 *****/
 
     // set control/target:
@@ -28,7 +23,7 @@ dd::Edge BellCicuit1(dd::Package* dd) {
     return dd->multiply(cx_gate, h_gate);
 }
 
-dd::Edge BellCicuit2(dd::Package* dd) {
+dd::Edge BellCicuit2(std::unique_ptr<dd::Package>& dd) {
     /***** define Hadamard gate acting on q1 *****/
     short line[2] = {-1,2};
     dd::Edge h_gate_q1 = dd->makeGateDD(Hmat, 2, line);
@@ -50,7 +45,7 @@ dd::Edge BellCicuit2(dd::Package* dd) {
 int main() {
     //dd::Package::printInformation(); // uncomment to print various sizes of structs and arrays
     //Initialize package
-    auto* dd = new dd::Package;
+    auto dd = std::make_unique<dd::Package>();
 
     // create Bell circuit 1
     dd::Edge bell_circuit1 = BellCicuit1(dd);
@@ -82,10 +77,10 @@ int main() {
     /***** Custom gates *****/
     // define, e.g., Pauli-Z matrix
     dd::Matrix2x2 m;
-    m[0][0] = { 1, 0 };
-    m[0][1] = { 0, 0 };
-    m[1][0] = { 0, 0 };
-    m[1][1] = { -1, 0 };
+    m[0][0] = { 1., 0. };
+    m[0][1] = { 0., 0. };
+    m[1][0] = { 0., 0. };
+    m[1][1] = { -1., 0. };
 
     short line[1] = {2}; // target on first line
 
@@ -106,6 +101,4 @@ int main() {
 	/***** print statistics *****/
 	dd->statistics();
 	dd->garbageCollect(true);
-
-    delete dd;
 }
