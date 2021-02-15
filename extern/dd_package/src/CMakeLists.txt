@@ -30,6 +30,7 @@ else()
 	if (BINDINGS)
 		# adjust visibility settings for building Python bindings
 		target_compile_options(${PROJECT_NAME} PUBLIC -fvisibility=hidden)
+		set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 	endif()
 	if(NOT DEPLOY)
 		# only include machine-specific optimizations when building for the host machine
