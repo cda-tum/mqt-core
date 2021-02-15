@@ -223,7 +223,7 @@ namespace qc {
 		}
 	}
 
-	dd::Edge NonUnitaryOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const {
+	dd::Edge NonUnitaryOperation::getDD(std::unique_ptr<dd::Package>& dd, [[maybe_unused]] std::array<short, MAX_QUBITS>& line) const {
 		// these operations do not alter the current state
 		if (type == ShowProbabilities || type == Barrier || type == Snapshot) {
 			return dd->makeIdent(0, static_cast<short>(nqubits-1));
@@ -232,7 +232,7 @@ namespace qc {
 		throw QFRException("DD for non-unitary operation not available!");
 	}
 
-	dd::Edge NonUnitaryOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& perm) const {
+	dd::Edge NonUnitaryOperation::getDD(std::unique_ptr<dd::Package>& dd, [[maybe_unused]] std::array<short, MAX_QUBITS>& line, [[maybe_unused]] std::map<unsigned short, unsigned short>& perm) const {
 		// these operations do not alter the current state
 		if (type == ShowProbabilities || type == Barrier || type == Snapshot) {
 			return dd->makeIdent(0, static_cast<short>(nqubits-1));
@@ -241,7 +241,7 @@ namespace qc {
 		throw QFRException("DD for non-unitary operation not available!");
 	}
 
-	dd::Edge NonUnitaryOperation::getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line ) const {
+	dd::Edge NonUnitaryOperation::getInverseDD(std::unique_ptr<dd::Package>& dd, [[maybe_unused]] std::array<short, MAX_QUBITS>& line ) const {
 		// these operations do not alter the current state
 		if (type == ShowProbabilities || type == Barrier || type == Snapshot) {
 			return dd->makeIdent(0, static_cast<short>(nqubits-1));

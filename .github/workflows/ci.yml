@@ -20,6 +20,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
@@ -35,13 +37,7 @@ jobs:
         
     - name: Build
       shell: bash
-      run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE --target INSTALL        
-        else
-          cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE
-          sudo cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE --target install
-        fi 
+      run: cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE
 
   test:
     needs: build
@@ -52,6 +48,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
@@ -67,12 +65,7 @@ jobs:
 
     - name: Build
       shell: bash
-      run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE      
-        else
-          cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE --target qfr_test
-        fi  
+      run: cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE --target qfr_test
 
     - name: Test
       working-directory: ${{github.workspace}}/build/test
@@ -91,6 +84,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - name: Set up Python
       uses: actions/setup-python@v2
       with:

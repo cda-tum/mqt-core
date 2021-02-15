@@ -374,7 +374,7 @@ namespace qc {
 	/***
      * Public Methods
     ***/
-	void StandardOperation::dumpOpenQASM(std::ostream& of, const regnames_t& qreg, const regnames_t& creg) const {
+	void StandardOperation::dumpOpenQASM(std::ostream& of, const regnames_t& qreg, [[maybe_unused]] const regnames_t& creg) const {
 		std::ostringstream op;
 		op << std::setprecision(std::numeric_limits<fp>::digits10);
 		if((controls.size() > 1 && type != X) || controls.size() > 2) {

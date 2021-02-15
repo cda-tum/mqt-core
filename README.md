@@ -19,8 +19,8 @@ The package can be used for a multitude of tasks, as illustrated in the followin
   
     Currently available file formats are:
       
-  * `Real` (e.g. from [RevLib](http://revlib.org))
   * `OpenQASM` (e.g. used by [Qiskit](https://github.com/Qiskit/qiskit))
+  * `Real` (e.g. from [RevLib](http://revlib.org))
   * `GRCS` Google Random Circuit Sampling Benchmarks (see [GRCS](https://github.com/sboixo/GRCS))
   * `TFC` (e.g. from [Reversible Logic Synthesis Benchmarks Page](http://webhome.cs.uvic.ca/~dmaslov/mach-read.html))
   * `QC` (e.g. from [Feynman](https://github.com/meamy/feynman))
@@ -102,7 +102,7 @@ The package can be used for a multitude of tasks, as illustrated in the followin
          1	      -1	      -i	      +i	      -√½(1-i)	       √½(1-i)	       √½(1+i)	      -√½(1+i)	
          1	      -1	      -i	      +i	       √½(1-i)	      -√½(1-i)	      -√½(1+i)	       √½(1+i)	
   ```
-  Note that matrix output factors in initial assignments as well as output permutations of the system (i.e. `initialLayout` and `permutation`). 
+  Note that matrix output factors in initial assignments as well as output permutations of the system (i.e. `initialLayout` and `outputPermutation`). 
   
   The (much more compact) DD representation that was actually constructed can be visualized as a *\*.dot* file (which is automatically converted to SVG if GraphViz is installed) by calling
   ```c++
@@ -214,45 +214,36 @@ The package can be used for a multitude of tasks, as illustrated in the followin
 ### System Requirements
 
 Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments).
-However, the implementation should be compatible with any current C++ compiler supporting C++14 and a minimum CMake version of 3.10.
+However, the implementation should be compatible with any current C++ compiler supporting C++17 and a minimum CMake version of 3.13.
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
 ### Configure, Build, and Install
 
-In order to build the library execute the following in the project's main directory
-1) Configure CMake
-    ```commandline
-    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-    ```
-   Windows users using Visual Studio and the MSVC compiler may try
-   ```commandline
-   cmake -S . -B build -G "Visual Studio 15 2017" -A x64 -DCMAKE_BUILD_TYPE=Release
-   ```
-   Older CMake versions not supporting the above syntax (< 3.13) may be used with
-   ```commandline
-   mkdir build && cd build
-   cmake .. -DCMAKE_BUILD_TYPE=Release
-   ```
-2) Build the respective target. 
-    ```commandline
-   cmake --build ./build --config Release --target <target>
-   ```
-    The following CMake targets are available
-    - `qfr`: The standalone library
-    - `qfr_example`: A small commandline demo example (*.dot files will be created in the working directory which will be automatically converted to SVG if GraphViz is installed)
-    - `qfr_app`: The commandline transcription executable
-    - `qfr_test`: Unit tests using GoogleTest
+To start off, clone this repository using
+```shell
+git clone --recurse-submodules -j8 https://github.com/iic-jku/qfr 
+```
+Note the `--recurse-submodules` flag. It is required to also clone all the required submodules. If you happen to forget passing the flag on your initial clone, you can initialize all the submodules by executing `git submodule update --init --recursive` in the main project directory.
 
-3) Optional: The QFR library and app may be installed on the system by executing
-   
-    ```commandline
-    cmake --build ./build --config Release --target install
-    ```
+Our projects use CMake as the main build configuration tool. Building a project using CMake is a two-stage process. First, CMake needs to be *configured* by calling
+```shell 
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+```
+This tells CMake to search the current directory `.` (passed via `-S`) for a *CMakeLists.txt* file and process it into a directory `build` (passed via `-B`).
+The flag `-DCMAKE_BUILD_TYPE=Release` tells CMake to configure a *Release* build (as opposed to, e.g., a *Debug* build).
 
-    It can then also be included in other projects using the following CMake snippet
-    
-    ```cmake
-    find_package(qfr)
-    target_link_libraries(${TARGET_NAME} PRIVATE JKQ::qfr)
-    ```
+After configuring with CMake, the project can be built by calling
+```shell
+ cmake --build build --config Release
+```
+This tries to build the project in the `build` directory (passed via `--build`).
+Some operating systems and developer environments explicitly require a configuration to be set, which is why the `--config` flag is also passed to the build command. The flag `--parallel <NUMBER_OF_THREADS>` may be added to trigger a parallel build.
+
+Building the project this way generates
+- the library `libqfr.a` (Unix) / `qfr.lib` (Windows) in the `build/src` folder
+- a test executable `qfr_test` containing a small set of unit tests in the `build/test` folder
+- a small demo example executable `qfr_example` in the `build/test` directory.
+- the commandline transcription executable `qfr_app` in the `build/apps` directory. 
+
+You can link against the library built by this project in other CMake project using the `JKQ::qfr` target.
