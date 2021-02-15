@@ -26,6 +26,7 @@ This package caters primarily to our requirements regarding quantum-related func
 A small example shows how to create set a single qubit in superposition.
 
 ```c++
+#include <memory>
 #include "DDpackage.h"
 
 auto dd = std::make_unique<dd::Package>(); // Create new package instance

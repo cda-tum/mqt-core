@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 #include "DDpackage.h"
 #include "util.h"
 
