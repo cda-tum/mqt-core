@@ -78,7 +78,7 @@ This tries to build the project in the `build` directory (passed via `--build`).
 Some operating systems and developer environments explicitly require a configuration to be set, which is why the `--config` flag is also passed to the build command. The flag `--parallel <NUMBER_OF_THREADS>` may be added to trigger a parallel build.
 
 Building the project this way generates 
- - the library `libdd_package` in the `build/src` folder
+ - the library `libdd_package.a` (Unix) / `dd_package.lib` (Windows) in the `build/src` folder
  - a test executable `dd_package_test` containing a small set of unit tests in the `build/test` folder
  - a small demo example executable `dd_package_example` in the `build/test` directory.
 
