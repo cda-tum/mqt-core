@@ -214,7 +214,7 @@ The package can be used for a multitude of tasks, as illustrated in the followin
 ### System Requirements
 
 Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments).
-However, the implementation should be compatible with any current C++ compiler supporting C++17 and a minimum CMake version of 3.13.
+However, the implementation should be compatible with any current C++ compiler supporting C++17 and a minimum CMake version of 3.14.
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
