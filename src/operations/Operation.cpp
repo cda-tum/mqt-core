@@ -85,6 +85,9 @@ namespace qc {
 			case Measure:
 				strcpy(name, "Meas");
 				break;
+            case Teleportation:
+                strcpy(name, "Tele");
+                break;
 			case Reset:
 				strcpy(name, "Rst ");
 				break;

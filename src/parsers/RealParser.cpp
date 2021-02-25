@@ -227,6 +227,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
 				case ClassicControlled:
 				case SX:
 				case SXdag:
+				case Teleportation:
 					std::cerr << "Operation with invalid type " << gate << " read from real file. Proceed with caution!" << std::endl;
 					break;
 			}
