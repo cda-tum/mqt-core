@@ -40,6 +40,10 @@ namespace qc {
 		static void removeDiagonalGatesBeforeMeasureRecursive(DAG& dag, DAGIterators& dagIterators, unsigned short idx, const DAGIterator& until);
 
 		static bool removeDiagonalGate(DAG& dag, DAGIterators& dagIterators, unsigned short idx, DAGIterator& it, qc::Operation* op);
+
+		static void removeFinalMeasurements(QuantumComputation& qc);
+
+		static void decomposeSWAP(QuantumComputation& qc, bool isDirectedArchitecture);
 	};
 }
 #endif //QCEC_CIRCUITOPTIMIZER_HPP
