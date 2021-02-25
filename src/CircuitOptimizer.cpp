@@ -703,12 +703,13 @@ namespace qc
 
 	void CircuitOptimizer::decomposeSWAP(QuantumComputation &qc, bool isDirectedArchitecture)
 	{
-		//decompose SWAPS in three cnot and optinally in four H
+		//decompose SWAPS in three cnot and optionally in four H
 		auto it=qc.ops.begin();
 		while(it != qc.ops.end()) {
 			if ((*it)->isStandardOperation()) {
-				if ((*it)->getType() == SWAP) {
+				if ((*it)->getType() == qc::SWAP) {
 					std::vector<unsigned short> targets = (*it)->getTargets();
+					qc.ops.erase(it);
 					it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[0], targets[1], qc::X));
 					if (isDirectedArchitecture){
 						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[0], qc::H));
@@ -723,7 +724,49 @@ namespace qc
 				} else {
 					++it;
 				}
-			} else {  //TODO what about compound operations
+			} else if ((*it)->isCompoundOperation()) //TODO testing..
+			{
+				auto compOp = dynamic_cast<qc::CompoundOperation *>((*it).get());
+				auto cit = compOp->begin();
+				while (cit != compOp->end())
+				{
+					auto cop = cit->get();
+					if (cop->isStandardOperation() && cop->getType() == qc::SWAP)
+					{
+						std::vector<unsigned short> targets = cop->getTargets();
+						compOp->erase(cit);
+						cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[0], targets[1], qc::X));
+						if (isDirectedArchitecture){
+							cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[0], qc::H));
+							cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[1], qc::H));
+						}
+						cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[0], targets[1], qc::X));
+						if (isDirectedArchitecture){
+							cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[0], qc::H));
+							cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[1], qc::H));
+						}
+						cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[0], targets[1], qc::X));
+					}
+					else
+					{
+						++cit;
+					}
+				}
+				if (compOp->empty())
+				{
+					it = qc.ops.erase(it);
+				}
+				else
+				{
+					if (compOp->size() == 1)
+					{
+						// CompoundOperation has degraded to single Operation
+						(*it) = std::move(*(compOp->begin()));
+					}
+					++it;
+				}
+			}
+			 else {  //TODO what about compound operations
 				++it;
 			}
 		}

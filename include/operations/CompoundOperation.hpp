@@ -156,6 +156,8 @@ namespace qc {
 		void resize(size_t count)          { ops.resize(count);     }
 		std::vector<std::unique_ptr<Operation>>::iterator erase( std::vector<std::unique_ptr<Operation>>::const_iterator pos ) { return ops.erase(pos); }
 		std::vector<std::unique_ptr<Operation>>::iterator erase( std::vector<std::unique_ptr<Operation>>::const_iterator first, std::vector<std::unique_ptr<Operation>>::const_iterator last ) { return ops.erase(first, last); }
+
+		std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator it, std::unique_ptr<Operation> x ) {return ops.insert(it, x);}
 	};
 }
 #endif //INTERMEDIATEREPRESENTATION_COMPOUNDOPERATION_H
