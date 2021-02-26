@@ -710,17 +710,17 @@ namespace qc
 				if ((*it)->getType() == qc::SWAP) {
 					std::vector<unsigned short> targets = (*it)->getTargets();
 					qc.ops.erase(it);
-					it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[0], targets[1], qc::X));
+					it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), Control(targets[0]), targets[1], qc::X));
 					if (isDirectedArchitecture){
 						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[0], qc::H));
 						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[1], qc::H));
 					}
-					it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[0], targets[1], qc::X));
+					it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), Control(targets[0]), targets[1], qc::X));
 					if (isDirectedArchitecture){
 						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[0], qc::H));
 						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[1], qc::H));
 					}
-					it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[0], targets[1], qc::X));
+					it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), Control(targets[0]), targets[1], qc::X));
 				} else {
 					++it;
 				}
@@ -730,43 +730,31 @@ namespace qc
 				auto cit = compOp->begin();
 				while (cit != compOp->end())
 				{
-					auto cop = cit->get();
+					auto cop = dynamic_cast<CompoundOperation*>(cit->get());
 					if (cop->isStandardOperation() && cop->getType() == qc::SWAP)
 					{
 						std::vector<unsigned short> targets = cop->getTargets();
-						compOp->erase(cit);
-						cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[0], targets[1], qc::X));
+						cop->erase(cit);
+						cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), Control(targets[0]), targets[1], qc::X);
 						if (isDirectedArchitecture){
-							cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[0], qc::H));
-							cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[1], qc::H));
+							cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), targets[0], qc::H);
+							cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), targets[1], qc::H);
 						}
-						cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[0], targets[1], qc::X));
+						cit = compOp->insert<StandardOperation>(cit, compOp->getNqubits(), Control(targets[0]), targets[1], qc::X);
 						if (isDirectedArchitecture){
-							cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[0], qc::H));
-							cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[1], qc::H));
+							cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), targets[0], qc::H);
+							cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), targets[1], qc::H);
 						}
-						cit = compOp->insert(cit, std::make_unique<StandardOperation>(compOp->getNqubits(), targets[0], targets[1], qc::X));
+						cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), Control(targets[0]), targets[1], qc::X);
 					}
 					else
 					{
 						++cit;
 					}
 				}
-				if (compOp->empty())
-				{
-					it = qc.ops.erase(it);
-				}
-				else
-				{
-					if (compOp->size() == 1)
-					{
-						// CompoundOperation has degraded to single Operation
-						(*it) = std::move(*(compOp->begin()));
-					}
-					++it;
-				}
+				++it;
 			}
-			 else {  //TODO what about compound operations
+			 else {  
 				++it;
 			}
 		}

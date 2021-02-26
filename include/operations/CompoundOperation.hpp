@@ -32,6 +32,17 @@ namespace qc {
 			ops.emplace_back(std::make_unique<T>(args ...));
 		}
 
+		template<class T, class... Args>
+		std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator iterator ,Args&& ... args) {
+			return ops.insert(iterator, std::make_unique<T>(args ...));
+		}
+
+
+		template<class T>
+		std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator iterator ,std::unique_ptr<T>& op) {
+			return ops.insert(iterator, std::move(op));
+		}
+
 		void setNqubits(unsigned short nq) override {
 			nqubits = nq;
 			for (auto& op:ops) {
@@ -157,7 +168,7 @@ namespace qc {
 		std::vector<std::unique_ptr<Operation>>::iterator erase( std::vector<std::unique_ptr<Operation>>::const_iterator pos ) { return ops.erase(pos); }
 		std::vector<std::unique_ptr<Operation>>::iterator erase( std::vector<std::unique_ptr<Operation>>::const_iterator first, std::vector<std::unique_ptr<Operation>>::const_iterator last ) { return ops.erase(first, last); }
 
-		std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator it, std::unique_ptr<Operation> x ) {return ops.insert(it, x);}
+		//std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator it, std::unique_ptr<Operation>&& x ) {return ops.insert(it, x);}
 	};
 }
 #endif //INTERMEDIATEREPRESENTATION_COMPOUNDOPERATION_H
