@@ -678,15 +678,14 @@ namespace qc
 	void CircuitOptimizer::removeFinalMeasurements(QuantumComputation &qc)
 	{
 		//remove final measurements in the circuit (for use in mapping tool)
-		auto it = qc.ops.end();
-		while (it != qc.ops.begin())
+		auto it = qc.ops.rbegin();
+		while (it != qc.ops.rend())
 		{
-			if ((*it)->isStandardOperation())
+			if ((*it)->isNonUnitaryOperation())
 			{
 				if ((*it)->getType() == Measure)
 				{
-					it = qc.ops.erase(it);
-					it = qc.ops.end();
+					qc.ops.erase((++it).base());
 				}
 				else
 				{
@@ -695,7 +694,7 @@ namespace qc
 				}
 			}
 			else
-			{	//not a measurement
+			{ //not a measurement
 				break;
 			}
 		}
@@ -704,46 +703,59 @@ namespace qc
 	void CircuitOptimizer::decomposeSWAP(QuantumComputation &qc, bool isDirectedArchitecture)
 	{
 		//decompose SWAPS in three cnot and optionally in four H
-		auto it=qc.ops.begin();
-		while(it != qc.ops.end()) {
-			if ((*it)->isStandardOperation()) {
-				if ((*it)->getType() == qc::SWAP) {
+		auto it = qc.ops.begin();
+		while (it != qc.ops.end())
+		{
+			if ((*it)->isStandardOperation())
+			{
+				if ((*it)->getType() == qc::SWAP)
+				{
 					std::vector<unsigned short> targets = (*it)->getTargets();
-					qc.ops.erase(it);
+					it = qc.ops.erase(it);
 					it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), Control(targets[0]), targets[1], qc::X));
-					if (isDirectedArchitecture){
+					if (isDirectedArchitecture)
+					{
+						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[0], qc::H));
+						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[1], qc::H));
+						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), Control(targets[0]), targets[1], qc::X));
 						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[0], qc::H));
 						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[1], qc::H));
 					}
-					it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), Control(targets[0]), targets[1], qc::X));
-					if (isDirectedArchitecture){
-						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[0], qc::H));
-						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[1], qc::H));
+					else
+					{
+						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), Control(targets[1]), targets[0], qc::X));
 					}
 					it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), Control(targets[0]), targets[1], qc::X));
-				} else {
+				}
+				else
+				{
 					++it;
 				}
-			} else if ((*it)->isCompoundOperation()) //TODO testing..
+			}
+			else if ((*it)->isCompoundOperation())
 			{
 				auto compOp = dynamic_cast<qc::CompoundOperation *>((*it).get());
 				auto cit = compOp->begin();
 				while (cit != compOp->end())
 				{
-					auto cop = dynamic_cast<CompoundOperation*>(cit->get());
+					auto cop = dynamic_cast<CompoundOperation *>(cit->get());
 					if (cop->isStandardOperation() && cop->getType() == qc::SWAP)
 					{
 						std::vector<unsigned short> targets = cop->getTargets();
-						cop->erase(cit);
+						cit = cop->erase(cit);
 						cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), Control(targets[0]), targets[1], qc::X);
-						if (isDirectedArchitecture){
+						if (isDirectedArchitecture)
+						{
+							cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), targets[0], qc::H);
+							cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), targets[1], qc::H);
+							cit = compOp->insert<StandardOperation>(cit, compOp->getNqubits(), Control(targets[0]), targets[1], qc::X);
 							cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), targets[0], qc::H);
 							cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), targets[1], qc::H);
 						}
-						cit = compOp->insert<StandardOperation>(cit, compOp->getNqubits(), Control(targets[0]), targets[1], qc::X);
-						if (isDirectedArchitecture){
-							cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), targets[0], qc::H);
-							cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), targets[1], qc::H);
+						else
+						{
+
+							cit = compOp->insert<StandardOperation>(cit, compOp->getNqubits(), Control(targets[0]), targets[1], qc::X);
 						}
 						cit = cop->insert<StandardOperation>(cit, compOp->getNqubits(), Control(targets[0]), targets[1], qc::X);
 					}
@@ -754,7 +766,8 @@ namespace qc
 				}
 				++it;
 			}
-			 else {  
+			else
+			{
 				++it;
 			}
 		}
