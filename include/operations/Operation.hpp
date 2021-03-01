@@ -69,7 +69,7 @@ namespace qc {
 		// Compound Operation
 		Compound,
 		// Non Unitary Operations
-		Measure, Reset, Snapshot, ShowProbabilities, Barrier,
+		Measure, Reset, Snapshot, ShowProbabilities, Barrier, Teleportation,
 		// Classically-controlled Operation
 		ClassicControlled
 	};
