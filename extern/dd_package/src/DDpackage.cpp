@@ -440,7 +440,6 @@ namespace dd {
             r.w.i->val *= sum;
         } else {
             r.w = cn.lookup(ComplexNumbers::val(r.p->e[argmax].w.r) * sum, ComplexNumbers::val(r.p->e[argmax].w.i) * sum);
-            CN::incRef(r.w);
             if (CN::equalsZero(r.w)) {
                 return DDzero;
             }
@@ -448,8 +447,7 @@ namespace dd {
 
         for (int j = 0; j < NEDGE; j++) {
             if (j == argmax) {
-                r.p->e[j].w = cn.lookup((fp) 1.0L / sum, 0);
-                CN::incRef(r.p->e[j].w);
+                r.p->e[j].w = cn.lookup(static_cast<fp>(1.0) / sum, 0.);
                 if (r.p->e[j].w == CN::ZERO)
                     r.p->e[j] = DDzero;
             } else if (r.p->e[j].p != nullptr && !zero[j]) {
@@ -464,7 +462,6 @@ namespace dd {
                     Complex c = cn.getTempCachedComplex();
                     CN::div(c, r.p->e[j].w, r.w);
                     r.p->e[j].w = cn.lookup(c);
-                    CN::incRef(r.p->e[j].w);
                     if (r.p->e[j].w == CN::ZERO) {
                         r.p->e[j] = DDzero;
                     }
