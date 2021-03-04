@@ -98,8 +98,8 @@ namespace dd {
             edges << "\"R\" -> \"0\"\n";
         } else {
             nodes << " [label=\"\", shape=point];\n";
-            auto ref_r = CN::get_sane_pointer(e.w.r)->ref;
-            auto ref_i = CN::get_sane_pointer(e.w.i)->ref;
+            auto ref_r = CN::getAlignedPointer(e.w.r)->ref;
+            auto ref_i = CN::getAlignedPointer(e.w.i)->ref;
             edges << R"("R" -> "0" [label="()" << e.w << ") " << ref_r << " " << ref_i << "\" ];\n";
         }
 
@@ -166,8 +166,8 @@ namespace dd {
                                 edges << "\"" << i << "h" << j << "\" -> \"" << q->w << "\";\n";
                             } else {
                                 nodes << " [label=\"\", shape=point];\n";
-                                auto ref_r = CN::get_sane_pointer(pnext->p->e[j].w.r)->ref;
-                                auto ref_i = CN::get_sane_pointer(pnext->p->e[j].w.i)->ref;
+                                auto ref_r = CN::getAlignedPointer(pnext->p->e[j].w.r)->ref;
+                                auto ref_i = CN::getAlignedPointer(pnext->p->e[j].w.i)->ref;
                                 edges << "\"" << i << "h" << j << "\" -> \"" << q->w
                                       << "\" [label=\" (" << pnext->p->e[j].w << ") " << ref_r << " " << ref_i << "\" ];\n";
                             }

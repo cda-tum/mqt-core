@@ -108,8 +108,8 @@ namespace dd {
 	    // operations on complex numbers
 	    // meanings are self-evident from the names
 	    static inline fp val(const ComplexTableEntry *x) {
-            if (reinterpret_cast<std::uintptr_t>(x) & 1u) {
-	            return -get_sane_pointer(x)->val;
+            if (isNegativePointer(x)) {
+	            return -getAlignedPointer(x)->val;
             }
             return x->val;
         }
@@ -119,8 +119,20 @@ namespace dd {
          * @param entry pointer to ComplexTableEntry possibly unsafe to deference
          * @return safe pointer for deferencing
          */
-        static inline ComplexTableEntry* get_sane_pointer(const ComplexTableEntry* entry) {
-            return reinterpret_cast<ComplexTableEntry *>(reinterpret_cast<std::uintptr_t>(entry) & (~1ull));
+        static inline ComplexTableEntry* getAlignedPointer(const ComplexTableEntry* entry) {
+            return reinterpret_cast<ComplexTableEntry *>(reinterpret_cast<std::uintptr_t>(entry) & (~1ULL));
+        }
+        static inline ComplexTableEntry* getNegativePointer(const ComplexTableEntry* entry) {
+	        return reinterpret_cast<ComplexTableEntry *>(reinterpret_cast<std::uintptr_t>(entry) | 1ULL);
+        }
+        static inline ComplexTableEntry* flipPointerSign(const ComplexTableEntry* entry) {
+	        return reinterpret_cast<ComplexTableEntry *>(reinterpret_cast<std::uintptr_t>(entry) ^ 1ULL);
+        }
+	    static inline void setNegativePointer(ComplexTableEntry*& entry) {
+		    entry = reinterpret_cast<ComplexTableEntry *>(reinterpret_cast<std::uintptr_t>(entry) | 1ULL);
+	    }
+        static inline bool isNegativePointer(const ComplexTableEntry* entry) {
+        	return reinterpret_cast<std::uintptr_t>(entry) & 1ULL;
         }
 
 	    static inline bool equals(const Complex& a, const Complex& b) {

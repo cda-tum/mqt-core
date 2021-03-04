@@ -54,8 +54,8 @@ namespace dd {
     }
 
     bool Package::is_locally_consistent_dd2(const Edge& e) {
-        auto *ptr_r = CN::get_sane_pointer(e.w.r);
-        auto *ptr_i = CN::get_sane_pointer(e.w.i);
+        auto *ptr_r = CN::getAlignedPointer(e.w.r);
+        auto *ptr_i = CN::getAlignedPointer(e.w.i);
 
         if ((ptr_r->ref == 0 || ptr_i->ref == 0) && e.w != CN::ONE && e.w != CN::ZERO) {
             std::clog << "\nLOCAL INCONSISTENCY FOUND\nOffending Number: " << e.w << " (" << ptr_r->ref << ", " << ptr_i->ref << ")\n\n";
@@ -114,8 +114,8 @@ namespace dd {
     }
 
     void Package::fill_consistency_counter(const Edge& edge, std::map<ComplexTableEntry *, long> &weight_map, std::map<NodePtr, unsigned long> &node_map) {
-        weight_map[CN::get_sane_pointer(edge.w.r)]++;
-        weight_map[CN::get_sane_pointer(edge.w.i)]++;
+        weight_map[CN::getAlignedPointer(edge.w.r)]++;
+        weight_map[CN::getAlignedPointer(edge.w.i)]++;
 
         if (isTerminal(edge)) {
             return;
@@ -126,16 +126,16 @@ namespace dd {
                 fill_consistency_counter(child, weight_map, node_map);
             } else {
                 node_map[child.p]++;
-                weight_map[CN::get_sane_pointer(child.w.r)]++;
-                weight_map[CN::get_sane_pointer(child.w.i)]++;
+                weight_map[CN::getAlignedPointer(child.w.r)]++;
+                weight_map[CN::getAlignedPointer(child.w.i)]++;
             }
         }
     }
 
 
     void Package::check_consistency_counter(const Edge& edge, const std::map<ComplexTableEntry *, long> &weight_map, const std::map<NodePtr, unsigned long> &node_map) {
-        auto* r_ptr = CN::get_sane_pointer(edge.w.r);
-        auto* i_ptr = CN::get_sane_pointer(edge.w.i);
+        auto* r_ptr = CN::getAlignedPointer(edge.w.r);
+        auto* i_ptr = CN::getAlignedPointer(edge.w.i);
 
         if(weight_map.at(r_ptr) > r_ptr->ref && r_ptr != CN::ONE.r && r_ptr != CN::ZERO.i) {
             std::clog << "\nOffending weight: " <<  edge.w << "\n";

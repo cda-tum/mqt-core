@@ -6,12 +6,10 @@
 #include "DDcomplex.h"
 
 namespace dd {
-    ComplexTableEntry ComplexNumbers::zeroEntry{0L, nullptr, 1};
-    ComplexTableEntry ComplexNumbers::oneEntry{1L, nullptr, 1};
-    ComplexTableEntry *ComplexNumbers::moneEntryPointer{(ComplexTableEntry *) (((std::uintptr_t) (&oneEntry)) | 1u)};
-    constexpr Complex ComplexNumbers::ONE;
-    constexpr Complex ComplexNumbers::ZERO;
-    fp ComplexNumbers::TOLERANCE = 1e-13l;
+    ComplexTableEntry ComplexNumbers::zeroEntry{0., nullptr, 1};
+    ComplexTableEntry ComplexNumbers::oneEntry{1., nullptr, 1};
+    ComplexTableEntry *ComplexNumbers::moneEntryPointer{getNegativePointer(&oneEntry)};
+    fp ComplexNumbers::TOLERANCE = 1e-13;
 
     ComplexNumbers::ComplexNumbers() {
         Cache_Avail_Initial_Pointer = new ComplexTableEntry[INIT_SIZE * 6];
@@ -204,8 +202,9 @@ namespace dd {
             ret.i = &zeroEntry;
             bool sign_r = std::signbit(valr);
             ret.r = lookupVal(absr);
-            if (sign_r)
-                ret.r = (ComplexTableEntry *) (((uintptr_t) (ret.r)) | 1u);
+            if (sign_r) {
+	            setNegativePointer(ret.r);
+            }
             return ret;
         }
 
@@ -219,8 +218,9 @@ namespace dd {
             ret.r = &zeroEntry;
             bool sign_i = std::signbit(vali);
             ret.i = lookupVal(absi);
-            if (sign_i)
-                ret.i = (ComplexTableEntry *) (((uintptr_t) (ret.i)) | 1u);
+            if (sign_i) {
+	            setNegativePointer(ret.i);
+            }
             return ret;
         }
 
@@ -232,10 +232,10 @@ namespace dd {
 
         //Store sign bit in pointers
         if (sign_r) {
-            ret.r = (ComplexTableEntry *) (((uintptr_t) (ret.r)) | 1u);
+	        setNegativePointer(ret.r);
         }
         if (sign_i) {
-            ret.i = (ComplexTableEntry *) (((uintptr_t) (ret.i)) | 1u);
+	        setNegativePointer(ret.i);
         }
 
         return ret;
@@ -258,8 +258,9 @@ namespace dd {
             ret.i = &zeroEntry;
             bool sign_r = std::signbit(r);
             ret.r = lookupVal(absr);
-            if (sign_r)
-                ret.r = (ComplexTableEntry *) (((uintptr_t) (ret.r)) | 1u);
+            if (sign_r) {
+	            setNegativePointer(ret.r);
+            }
             return ret;
         }
 
@@ -273,8 +274,9 @@ namespace dd {
             ret.r = &zeroEntry;
             bool sign_i = std::signbit(i);
             ret.i = lookupVal(absi);
-            if (sign_i)
-                ret.i = (ComplexTableEntry *) (((uintptr_t) (ret.i)) | 1u);
+            if (sign_i) {
+	            setNegativePointer(ret.i);
+            }
             return ret;
         }
 
@@ -286,10 +288,10 @@ namespace dd {
 
         //Store sign bit in pointers
         if (sign_r) {
-            ret.r = (ComplexTableEntry *) (((uintptr_t) (ret.r)) | 1u);
+	        setNegativePointer(ret.r);
         }
         if (sign_i) {
-            ret.i = (ComplexTableEntry *) (((uintptr_t) (ret.i)) | 1u);
+	        setNegativePointer(ret.i);
         }
 
         return ret;
@@ -300,7 +302,7 @@ namespace dd {
     Complex ComplexNumbers::conj(const Complex &a) {
         Complex ret = a;
         if (a.i != ZERO.i) {
-            ret.i = (ComplexTableEntry *) (((uintptr_t) a.i) ^ 1u);
+            ret.i = flipPointerSign(a.i);
         }
         return ret;
     }
@@ -308,10 +310,10 @@ namespace dd {
     Complex ComplexNumbers::neg(const Complex &a) {
         auto ret = a;
         if (a.i != ZERO.i) {
-            ret.i = (ComplexTableEntry *) (((uintptr_t) a.i) ^ 1u);
+            ret.i = flipPointerSign(a.i);
         }
         if (a.r != ZERO.r) {
-            ret.r = (ComplexTableEntry *) (((uintptr_t) a.r) ^ 1u);
+            ret.r = flipPointerSign(a.r);
         }
         return ret;
     }
@@ -448,8 +450,8 @@ namespace dd {
         // the reference counter of 0/1 leads to problems for concurrent
         // execution
         if (c != ZERO && c != ONE) {
-            auto *ptr_r = get_sane_pointer(c.r);
-            auto *ptr_i = get_sane_pointer(c.i);
+            auto *ptr_r = getAlignedPointer(c.r);
+            auto *ptr_i = getAlignedPointer(c.i);
             if (ptr_r != &oneEntry && ptr_r != &zeroEntry) {
                 ptr_r->ref++;
             }
@@ -466,8 +468,8 @@ namespace dd {
         // the reference counter of 0/1 leads to problems for concurrent
         // execution
         if (c != ZERO && c != ONE) {
-            auto *ptr_r = get_sane_pointer(c.r);
-            auto *ptr_i = get_sane_pointer(c.i);
+            auto *ptr_r = getAlignedPointer(c.r);
+            auto *ptr_i = getAlignedPointer(c.i);
             if (ptr_r != &oneEntry && ptr_r != &zeroEntry) {
                 assert(ptr_r->ref > 0);
                 ptr_r->ref--;
