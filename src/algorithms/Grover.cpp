@@ -10,13 +10,13 @@ namespace qc {
     /***
      * Private Methods
      ***/
-	void Grover::setup(QuantumComputation& qc) {
+	void Grover::setup(QuantumComputation& qc) const {
         qc.emplace_back<StandardOperation>(nqubits+nancillae, nqubits, X);
         for (unsigned short i = 0; i < nqubits; ++i)
             qc.emplace_back<StandardOperation>(nqubits+nancillae, i, H);
     }
 
-    void Grover::oracle(QuantumComputation& qc) {
+    void Grover::oracle(QuantumComputation& qc) const {
         const std::bitset<64> xBits(x);
         std::vector<Control> controls{};
         for (unsigned short i = 0; i < nqubits; ++i) {
@@ -26,7 +26,7 @@ namespace qc {
         qc.emplace_back<StandardOperation>(nqubits+nancillae, controls, target, qc::Z);
     }
 
-    void Grover::diffusion(QuantumComputation& qc) {
+    void Grover::diffusion(QuantumComputation& qc) const {
         //std::vector<unsigned short> targets{};
         for (unsigned short i = 0; i < nqubits; ++i) {
             //targets.push_back(i);
@@ -59,7 +59,7 @@ namespace qc {
         //qc.emplace_back<StandardOperation>(nqubits+nancillae, targets, H);
     }
 
-    void Grover::full_grover(QuantumComputation& qc) {
+    void Grover::full_grover(QuantumComputation& qc) const {
         // Generate circuit
         setup(qc);
 
@@ -101,10 +101,10 @@ namespace qc {
         }
 
         full_grover(*this);
-
+	    setLogicalQubitGarbage(nqubits);
     }
 
-    dd::Edge Grover::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
+    dd::Edge Grover::buildFunctionality(std::unique_ptr<dd::Package>& dd) const {
         dd->setMode(dd::Matrix);
 
         QuantumComputation groverIteration(nqubits+1);
@@ -133,22 +133,16 @@ namespace qc {
         dd->incRef(f);
         e = f;
 
-        // properly uncompute ancillary qubit
-	    f = dd->multiply(StandardOperation(nqubits+nancillae, nqubits, X).getDD(dd, line), e);
-	    dd->decRef(e);
-	    dd->incRef(f);
-	    e = f;
-
-        auto q = removeQubit(nqubits);
-        addAncillaryQubit(q.first, q.second);
-        e = reduceAncillae(e, dd);
+	    // properly handle ancillary qubit
+	    e = reduceAncillae(e, dd);
+	    e = reduceGarbage(e, dd);
 
         dd->decRef(iteration);
         dd->garbageCollect(true);
         return e;
     }
 
-    dd::Edge Grover::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
+    dd::Edge Grover::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const {
         //TODO: Enhance this simulation routine // delegate to simulator
 
         // initial state too small
@@ -159,7 +153,7 @@ namespace qc {
         return QuantumComputation::simulate(initialState, dd);
     }
 
-    std::ostream& Grover::printStatistics(std::ostream& os) {
+    std::ostream& Grover::printStatistics(std::ostream& os) const {
         os << "Grover (" << nqubits << ") Statistics:\n";
         os << "\tn: " << nqubits+1 << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;

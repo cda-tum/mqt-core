@@ -51,7 +51,7 @@ namespace qc {
 		full_BernsteinVazirani();
 	}
 
-	std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) {
+	std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) const {
 		os << "BernsteinVazirani (" << nqubits << ") Statistics:\n";
 		os << "\tn: " << nqubits + 1 << std::endl;
 		os << "\tm: " << getNindividualOps() << std::endl;

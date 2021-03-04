@@ -97,7 +97,7 @@ namespace qc {
 			return os;
 		}
 
-		bool actsOn(unsigned short i) override {
+		[[nodiscard]] bool actsOn(unsigned short i) const override {
 			for (const auto& op: ops) {
 				if(op->actsOn(i))
 					return true;

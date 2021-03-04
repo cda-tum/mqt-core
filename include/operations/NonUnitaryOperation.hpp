@@ -44,7 +44,7 @@ namespace qc {
 			return true;
 		}
 
-		bool actsOn(unsigned short i) override;
+		[[nodiscard]] bool actsOn(unsigned short i) const override;
 
 		std::ostream& print(std::ostream& os) const override;
 		

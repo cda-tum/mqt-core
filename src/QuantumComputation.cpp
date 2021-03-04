@@ -517,7 +517,7 @@ namespace qc {
 		garbage.reset(logical_qubit_index);
 	}
 
-dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular) {
+dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular) const {
 		// return if no more garbage left
 		if (!ancillary.any() || e.p == nullptr) return e;
 		unsigned short lowerbound = 0;
@@ -531,7 +531,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return reduceAncillaeRecursion(e, dd, lowerbound, regular);
 	}
 
-	dd::Edge QuantumComputation::reduceAncillaeRecursion(dd::Edge& e, std::unique_ptr<dd::Package>& dd, unsigned short lowerbound, bool regular) {
+	dd::Edge QuantumComputation::reduceAncillaeRecursion(dd::Edge& e, std::unique_ptr<dd::Package>& dd, unsigned short lowerbound, bool regular) const {
 		if(e.p->v < lowerbound) return e;
 
 		dd::Edge f = e;
@@ -576,7 +576,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return f;
 	}
 
-	dd::Edge QuantumComputation::reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular) {
+	dd::Edge QuantumComputation::reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular) const {
 		// return if no more garbage left
 		if (!garbage.any() || e.p == nullptr) return e;
 		unsigned short lowerbound = 0;
@@ -590,7 +590,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return reduceGarbageRecursion(e, dd, lowerbound, regular);
 	}
 
-	dd::Edge QuantumComputation::reduceGarbageRecursion(dd::Edge& e, std::unique_ptr<dd::Package>& dd, unsigned short lowerbound, bool regular) {
+	dd::Edge QuantumComputation::reduceGarbageRecursion(dd::Edge& e, std::unique_ptr<dd::Package>& dd, unsigned short lowerbound, bool regular) const {
 		if(e.p->v < lowerbound) return e;
 
 		dd::Edge f = e;
@@ -671,7 +671,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 	}
 
 
-	dd::Edge QuantumComputation::createInitialMatrix(std::unique_ptr<dd::Package>& dd) {
+	dd::Edge QuantumComputation::createInitialMatrix(std::unique_ptr<dd::Package>& dd) const {
 		dd::Edge e = dd->makeIdent(0, short(nqubits+nancillae-1));
 		dd->incRef(e);
 		e = reduceAncillae(e, dd);
@@ -679,7 +679,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 	}
 
 
-	dd::Edge QuantumComputation::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
+	dd::Edge QuantumComputation::buildFunctionality(std::unique_ptr<dd::Package>& dd) const {
 		if (nqubits + nancillae == 0)
 			return dd->DDone;
 		
@@ -705,7 +705,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return e;
 	}
 
-	dd::Edge QuantumComputation::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
+	dd::Edge QuantumComputation::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const {
 		// measurements are currently not supported here
 		std::array<short, MAX_QUBITS> line{};
 		line.fill(LINE_DEFAULT);
@@ -797,7 +797,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return os;
 	}
 
-	dd::Complex QuantumComputation::getEntry(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long i, unsigned long long j) {
+	dd::Complex QuantumComputation::getEntry(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long i, unsigned long long j) const {
 		if (dd->isTerminal(e))
 			return e.w;
 
@@ -811,7 +811,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return c;
 	}
 
-	std::ostream& QuantumComputation::printMatrix(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os) {
+	std::ostream& QuantumComputation::printMatrix(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os) const {
 		os << "Common Factor: " << e.w << "\n";
 		for (unsigned long long i = 0; i < (1ull << (unsigned int)(nqubits+nancillae)); ++i) {
 			for (unsigned long long j = 0; j < (1ull << (unsigned int)(nqubits+nancillae)); ++j) {
@@ -828,7 +828,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		ss << n%2;
 	}
 
-	std::ostream& QuantumComputation::printCol(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long j, std::ostream& os) {
+	std::ostream& QuantumComputation::printCol(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long j, std::ostream& os) const {
 		os << "Common Factor: " << e.w << "\n";
 		for (unsigned long long i = 0; i < (1ull << (unsigned int)(nqubits+nancillae)); ++i) {
 			std::stringstream ss{};
@@ -838,11 +838,11 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return os;
 	}
 
-	std::ostream& QuantumComputation::printVector(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os) {
+	std::ostream& QuantumComputation::printVector(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os) const {
 		return printCol(dd, e, 0, os);
 	}
 
-	std::ostream& QuantumComputation::printStatistics(std::ostream& os) {
+	std::ostream& QuantumComputation::printStatistics(std::ostream& os) const {
 		os << "QC Statistics:\n";
 		os << "\tn: " << nqubits << std::endl;
 		os << "\tanc: " << nancillae << std::endl;
@@ -1117,7 +1117,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		}
 	}
 
-	bool QuantumComputation::isIdleQubit(unsigned short physical_qubit) {
+	bool QuantumComputation::isIdleQubit(unsigned short physical_qubit) const {
 		for(const auto& op:ops) {
 			if (op->actsOn(physical_qubit))
 				return false;
@@ -1247,7 +1247,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 	}
 
 
-	std::string QuantumComputation::getQubitRegister(unsigned short physical_qubit_index) {
+	std::string QuantumComputation::getQubitRegister(unsigned short physical_qubit_index) const {
 
 		for (const auto& reg:qregs) {
 			unsigned short start_idx = reg.second.first;
@@ -1267,7 +1267,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		throw QFRException("[getQubitRegister] Qubit index " + std::to_string(physical_qubit_index) + " not found in any register");
 	}
 
-	std::pair<std::string, unsigned short> QuantumComputation::getQubitRegisterAndIndex(unsigned short physical_qubit_index) {
+	std::pair<std::string, unsigned short> QuantumComputation::getQubitRegisterAndIndex(unsigned short physical_qubit_index) const {
 		std::string reg_name = getQubitRegister(physical_qubit_index);
 		unsigned short index = 0;
 		auto it = qregs.find(reg_name);
@@ -1283,7 +1283,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return {reg_name, index};
 	}
 
-	std::string QuantumComputation::getClassicalRegister(unsigned short classical_index) {
+	std::string QuantumComputation::getClassicalRegister(unsigned short classical_index) const {
 
 		for (const auto& reg:cregs) {
 			unsigned short start_idx = reg.second.first;
@@ -1296,7 +1296,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		throw QFRException("[getClassicalRegister] Classical index " + std::to_string(classical_index) + " not found in any register");
 	}
 
-	std::pair<std::string, unsigned short> QuantumComputation::getClassicalRegisterAndIndex(unsigned short classical_index) {
+	std::pair<std::string, unsigned short> QuantumComputation::getClassicalRegisterAndIndex(unsigned short classical_index) const {
 		std::string reg_name = getClassicalRegister(classical_index);
 		unsigned short index = 0;
 		auto it = cregs.find(reg_name);
@@ -1306,11 +1306,11 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return {reg_name, index};
 	}
 
-	unsigned short QuantumComputation::getIndexFromQubitRegister(const std::pair<std::string, unsigned short>& qubit) {
+	unsigned short QuantumComputation::getIndexFromQubitRegister(const std::pair<std::string, unsigned short>& qubit) const {
 		// no range check is performed here!
 		return static_cast<unsigned short>(qregs.at(qubit.first).first + qubit.second);
 	}
-	unsigned short QuantumComputation::getIndexFromClassicalRegister(const std::pair<std::string, unsigned short>& clbit) {
+	unsigned short QuantumComputation::getIndexFromClassicalRegister(const std::pair<std::string, unsigned short>& clbit) const {
 		// no range check is performed here!
 		return static_cast<unsigned short>(cregs.at(clbit.first).first + clbit.second);
 	}
@@ -1322,7 +1322,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return os;
 	}
 
-	std::ostream& QuantumComputation::printRegisters(std::ostream& os) {
+	std::ostream& QuantumComputation::printRegisters(std::ostream& os) const {
 		os << "qregs:";
 		for(const auto& qreg: qregs) {
 			os << " {" << qreg.first << ", {" << qreg.second.first << ", " << qreg.second.second << "}}";
@@ -1353,11 +1353,11 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return max_index;
 	}
 
-	bool QuantumComputation::physicalQubitIsAncillary(unsigned short physical_qubit_index) {
-		return std::any_of(ancregs.begin(), ancregs.end(), [&physical_qubit_index](registerMap::value_type& ancreg) { return ancreg.second.first <= physical_qubit_index && physical_qubit_index < ancreg.second.first + ancreg.second.second; });
+	bool QuantumComputation::physicalQubitIsAncillary(unsigned short physical_qubit_index) const {
+		return std::any_of(ancregs.cbegin(), ancregs.cend(), [&physical_qubit_index](const registerMap::value_type& ancreg) { return ancreg.second.first <= physical_qubit_index && physical_qubit_index < ancreg.second.first + ancreg.second.second; });
 	}
 
-	bool QuantumComputation::isLastOperationOnQubit(decltype(ops.begin())& opIt, decltype(ops.end())& end) {
+	bool QuantumComputation::isLastOperationOnQubit(const decltype(ops.begin())& opIt, const decltype(ops.cend())& end) {
 		if (opIt == end)
 			return true;
 

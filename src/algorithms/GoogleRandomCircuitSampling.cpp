@@ -134,7 +134,7 @@ namespace qc {
         return os;
     }
 
-    std::ostream& GoogleRandomCircuitSampling::printStatistics(std::ostream& os) {
+    std::ostream& GoogleRandomCircuitSampling::printStatistics(std::ostream& os) const {
         os << "GoogleRandomCircuitSampling Statistics:\n";
         os << "\tLayout: " << ((layout == Rectangular)? "Rectangular": "Bristlecone") << std::endl;
         os << "\tn: " << nqubits << std::endl;
@@ -144,7 +144,7 @@ namespace qc {
         return os;
     }
 
-    dd::Edge GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
+    dd::Edge GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd) const {
 		std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
         permutationMap map = initialLayout;
@@ -165,7 +165,7 @@ namespace qc {
         return e;
     }
 
-    dd::Edge GoogleRandomCircuitSampling::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
+    dd::Edge GoogleRandomCircuitSampling::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const {
 		std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
 	    permutationMap map = initialLayout;

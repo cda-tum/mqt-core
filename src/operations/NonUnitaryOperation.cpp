@@ -250,7 +250,7 @@ namespace qc {
 		throw QFRException("Non-unitary operation is not reversible! No inverse DD is available.");
 	}
 
-	bool NonUnitaryOperation::actsOn(unsigned short i) {
+	bool NonUnitaryOperation::actsOn(unsigned short i) const {
 		if (type == Measure) {
 			for (const auto& c:controls) {
 				if (c.qubit == i)

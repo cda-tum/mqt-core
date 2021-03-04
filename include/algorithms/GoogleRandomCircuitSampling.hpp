@@ -31,16 +31,16 @@ namespace qc {
 
 		std::ostream& print(std::ostream& os) const override;
 
-		std::ostream& printStatistics(std::ostream& os) override;
+		std::ostream& printStatistics(std::ostream& os) const override;
 
-		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) override;
+		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) const override;
 		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd, unsigned short ncycles) {
 			if (ncycles < cycles.size()-2) {
 				removeCycles(cycles.size()-2-ncycles);
 			}
 			return buildFunctionality(dd);
 		}
-		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) override;
+		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const override;
 		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, unsigned short ncycles) {
 			if (ncycles < cycles.size()-2) {
 				removeCycles(cycles.size()-2-ncycles);

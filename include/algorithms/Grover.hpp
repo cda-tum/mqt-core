@@ -17,13 +17,13 @@ namespace qc {
 	protected:
 		std::function<unsigned long long()> oracleGenerator;
 
-		void setup(QuantumComputation& qc);
+		void setup(QuantumComputation& qc) const;
 
-		void oracle(QuantumComputation& qc);
+		void oracle(QuantumComputation& qc) const;
 
-		void diffusion(QuantumComputation& qc);
+		void diffusion(QuantumComputation& qc) const;
 
-		void full_grover(QuantumComputation& qc);
+		void full_grover(QuantumComputation& qc) const;
 
 		std::array<short, MAX_QUBITS> line{};
 
@@ -34,11 +34,11 @@ namespace qc {
 
 		explicit Grover(unsigned short nq, unsigned int seed = 0);
 
-		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) override;
+		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) const override;
 
-		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) override;
+		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const override;
 
-		std::ostream& printStatistics(std::ostream& os) override;
+		std::ostream& printStatistics(std::ostream& os) const override;
 
 	};
 }

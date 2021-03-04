@@ -264,13 +264,13 @@ namespace qc {
 			return multiTarget; 
 		}
 
-		inline virtual bool actsOn(unsigned short i) {
+		[[nodiscard]] inline virtual bool actsOn(unsigned short i) const {
 			for (const auto& t:targets) {
 				if (t == i)
 					return true;
 			}
 
-			if (std::any_of(controls.begin(), controls.end(), [&i](Control c) { return c.qubit == i; }))
+			if (std::any_of(controls.cbegin(), controls.cend(), [&i](const Control& c) { return c.qubit == i; }))
 				return true;
 
 			return false;
