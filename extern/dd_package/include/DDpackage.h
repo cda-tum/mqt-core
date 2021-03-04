@@ -203,7 +203,7 @@ namespace dd {
 
         static uintptr_t UThash(NodePtr p);
 	    Edge UTlookup(const Edge& e, bool keep_node = false);
-        std::string UTcheck(const Edge& e) const;
+        [[nodiscard]] std::string UTcheck(const Edge& e) const;
 
 	    static inline unsigned long CThash(const Edge& a, const Edge& b, CTkind which);
 	    static inline unsigned long CThash2(NodePtr a, const ComplexValue& aw, NodePtr b, const ComplexValue& bw, CTkind which);

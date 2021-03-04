@@ -64,7 +64,7 @@ TEST(DDComplexTest, ComplexNumberCreation) {
 	std::cout << dd::ComplexValue{1., -0.5} << std::endl;
 	cn.printComplexTable();
 	cn.statistics();
-	cn.cacheSize();
+	std::cout << "Cache size: " << cn.cacheSize() << std::endl;
 }
 
 TEST(DDComplexTest, ComplexNumberArithmetic) {
