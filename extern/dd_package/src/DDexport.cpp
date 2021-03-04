@@ -330,15 +330,8 @@ namespace dd {
 
 				auto& edge = node->p->e[i];
 				if (CN::equalsZero(edge.w)) {
-					if (classic) {
-						// potentially add zero stubs here
-//						auto nodelabel = ((uintptr_t)node->p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
-//						oss << nodelabel << "0" << i << "[label=<<font point-size=\"6\">0</font>>]\n";
-//						oss << nodelabel << ":" << i << "->" << nodelabel << "0" << i << ":n\n";
-						continue;
-					} else {
-						continue;
-					}
+					// potentially add zero stubs here
+					continue;
 				}
 
 				// non-zero edge to be included

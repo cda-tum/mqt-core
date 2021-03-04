@@ -57,7 +57,7 @@ TEST(DDComplexTest, ComplexNumberCreation) {
 	EXPECT_EQ(cn.val(cn.lookup(c).i), -1.);
 	std::cout << c << std::endl;
 
-	auto e = cn.lookup(1., -1);
+	auto e = cn.lookup(1., -1.);
 	std::cout << e << std::endl;
 	std::cout << dd::ComplexValue{1., 1.} << std::endl;
 	std::cout << dd::ComplexValue{1., -1.} << std::endl;

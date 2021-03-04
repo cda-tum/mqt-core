@@ -73,12 +73,6 @@ namespace dd {
 	    int w;
     };
 
-	struct NodeSetElement {
-		intptr_t id = 0;
-		short v = -1;
-		NodeSetElement(intptr_t id, short v): id(id), v(v) {};
-	};
-
     // computed table definitions
     // compute table entry kinds
     enum CTkind {
@@ -207,7 +201,7 @@ namespace dd {
 
 	    static inline unsigned long CThash(const Edge& a, const Edge& b, CTkind which);
 	    static inline unsigned long CThash2(NodePtr a, const ComplexValue& aw, NodePtr b, const ComplexValue& bw, CTkind which);
-	    static inline unsigned short TThash(unsigned short n, unsigned short t, const short line[]);
+	    static inline unsigned short TThash(unsigned short n, unsigned short t, const short line[MAXN]);
 
 	    unsigned int nodeCount(const Edge& e, std::unordered_set<NodePtr>& v) const;
 	    ComplexValue getVectorElement(const Edge& e, unsigned long long int element);
@@ -227,7 +221,7 @@ namespace dd {
         unsigned long UTcol{}, UTmatch{}, UTlookups{}; // counter for collisions / matches in hash tables
         ComplexNumbers cn;                             // instance of the complex number handler
 
-        Package();
+        Package(): cn(ComplexNumbers()){};
         ~Package();
 
 
@@ -251,8 +245,8 @@ namespace dd {
 	    inline Edge makeNonterminal(const short v, const std::array<Edge, NEDGE>& edge, bool cached = false) {
 	    	return makeNonterminal(v, edge.data(), cached);
 	    }
-	    Edge makeZeroState(unsigned short n);
-	    Edge makeBasisState(unsigned short n, const std::bitset<MAXN>& state);
+	    Edge makeZeroState(short n);
+	    Edge makeBasisState(short n, const std::bitset<MAXN>& state);
 	    Edge makeBasisState(unsigned short n, const std::vector<BasisStates>& state);
 	    Edge makeIdent(short x, short y);
 	    Edge makeGateDD(const Matrix2x2& mat, unsigned short n, const short *line);
@@ -303,8 +297,8 @@ namespace dd {
 	    }
 
 	    // Toffoli table insertion and lookup
-	    void TTinsert(unsigned short n, unsigned short m, unsigned short t, const short line[], const Edge& e);
-	    Edge TTlookup(unsigned short n, unsigned short m, unsigned short t, const short line[]);
+	    void TTinsert(unsigned short n, unsigned short m, unsigned short t, const short line[MAXN], const Edge& e);
+	    Edge TTlookup(unsigned short n, unsigned short m, unsigned short t, const short line[MAXN]);
 
 	    // statistics
         void statistics();

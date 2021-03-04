@@ -18,13 +18,6 @@ namespace dd {
             true,
             true,
     };
-    constexpr Edge Package::DDzero;
-    constexpr Edge Package::DDone;
-
-    Package::Package() : cn(ComplexNumbers()) {
-		// Initialization of the compute table during construction should not be necessary as it is default initialized
-		// initComputeTable();  // init computed table to empty
-    }
 
     Package::~Package() {
         for (auto chunk : allocated_list_chunks) {
@@ -46,8 +39,9 @@ namespace dd {
             allocated_list_chunks.push_back(r);
             ListElementPtr r2 = r + 1;
             listAvail = r2;
-            for (unsigned int i = 0; i < LIST_CHUNK_SIZE - 2; i++, r2++) {
+            for (unsigned int i = 0; i < LIST_CHUNK_SIZE - 2; i++) {
                 r2->next = r2 + 1;
+                ++r2;
             }
             r2->next = nullptr;
         }
@@ -62,7 +56,7 @@ namespace dd {
         auto r = e;
         do {
             CN::mul(l, l, r.w);
-            auto tmp = (element >> r.p->v) & 1u;
+            auto tmp = (element >> r.p->v) & 1U;
             r = r.p->e[2 * tmp];
         } while (!isTerminal(r));
         CN::mul(l, l, r.w);
@@ -134,7 +128,8 @@ namespace dd {
                                 q = newListElement();
                                 q->p = pnext->p->e[j].p;
                                 q->next = nullptr;
-                                q->w = n = n + 1;
+                                ++n;
+                                q->w = n;
                                 lastq->next = q;
                             }
                             nodes << "\"" << i << "h" << j << "\" ";
@@ -229,7 +224,7 @@ namespace dd {
         }
     }
 
-    Edge Package::makeZeroState(unsigned short n) {
+    Edge Package::makeZeroState(short n) {
         Edge f = DDone;
         Edge edges[4];
         edges[1] = edges[2] = edges[3] = DDzero;
@@ -242,7 +237,7 @@ namespace dd {
     }
 
     // create DD for basis state |q_n-1 q_n-2 ... q1 q0>
-    Edge Package::makeBasisState(unsigned short n, const std::bitset<MAXN> &state) {
+    Edge Package::makeBasisState(short n, const std::bitset<MAXN> &state) {
         Edge f = DDone;
         Edge edges[4];
         edges[1] = edges[3] = DDzero;
@@ -414,7 +409,8 @@ namespace dd {
 
             if (argmax == -1) {
                 argmax = i;
-                sum = div = ComplexNumbers::mag2(e.p->e[i].w);
+                div = ComplexNumbers::mag2(e.p->e[i].w);
+                sum = div;
             } else {
                 sum += ComplexNumbers::mag2(e.p->e[i].w);
             }
@@ -658,14 +654,17 @@ namespace dd {
             allocated_node_chunks.push_back(r);
             NodePtr r2 = r + 1;
             nodeAvail = r2;
-            for (unsigned int i = 0; i < NODE_CHUNK_SIZE - 2; i++, r2++) {
+            for (unsigned int i = 0; i < NODE_CHUNK_SIZE - 2; i++) {
                 r2->next = r2 + 1;
+                ++r2;
             }
             r2->next = nullptr;
         }
         r->next = nullptr;
         r->ref = 0; // nodes in nodeAvailable may have non-zero ref count
-        r->ident = r->symm = false; // mark as not identity or symmetric
+        // mark as not identity or symmetric
+        r->ident = false;
+        r->symm = false;
         return r;
     }
 
@@ -757,7 +756,7 @@ namespace dd {
 
 
     inline unsigned long Package::CThash(const Edge &a, const Edge &b, const CTkind which) {
-        const std::uintptr_t node_pointer = (reinterpret_cast<std::uintptr_t>(a.p) + reinterpret_cast<std::uintptr_t>(b.p)) >> 3u;
+        const std::uintptr_t node_pointer = (reinterpret_cast<std::uintptr_t>(a.p) + reinterpret_cast<std::uintptr_t>(b.p)) >> 3U;
 
         const std::uintptr_t weights = reinterpret_cast<std::uintptr_t>(a.w.i)
                                        + reinterpret_cast<std::uintptr_t>(a.w.r)
@@ -768,7 +767,7 @@ namespace dd {
     }
 
     inline unsigned long Package::CThash2(NodePtr a, const ComplexValue &aw, NodePtr b, const ComplexValue &bw, const CTkind which) {
-        const unsigned long node_pointer = (reinterpret_cast<std::uintptr_t>(a) + reinterpret_cast<std::uintptr_t>(b)) >> 3u;
+        const unsigned long node_pointer = (reinterpret_cast<std::uintptr_t>(a) + reinterpret_cast<std::uintptr_t>(b)) >> 3U;
         const auto weights = static_cast<unsigned long>(aw.r * 1000 + aw.i * 2000 + bw.r * 3000 + bw.i * 4000);
         return (node_pointer + weights + which) & CTMASK;
     }
@@ -806,7 +805,7 @@ namespace dd {
         unsigned long i = operationType;
         for (unsigned short j = 0; j <= nQubits; j++) {
 //            i = (i << 5u) + (4 * j) + (line[j] * 4);
-            i = (i << 3u) + i * j + line[j];
+            i = (i << 3U) + i * j + line[j];
         }
         return i & OperationMASK;
     }
@@ -916,17 +915,17 @@ namespace dd {
         }
     }
 
-    inline unsigned short Package::TThash(const unsigned short n, const unsigned short t, const short line[]) {
+    inline unsigned short Package::TThash(const unsigned short n, const unsigned short t, const short line[MAXN]) {
         unsigned long i = t;
         for (unsigned short j = 0; j < n; j++) {
             if (line[j] == 1) {
-                i = i << (3u + j);
+                i = i << (3U + j);
             }
         }
         return i & TTMASK;
     }
 
-    Edge Package::TTlookup(const unsigned short n, const unsigned short m, const unsigned short t, const short line[]) {
+    Edge Package::TTlookup(const unsigned short n, const unsigned short m, const unsigned short t, const short line[MAXN]) {
         Edge r{};
         r.p = nullptr;
         const unsigned short i = TThash(n, t, line);
@@ -1300,7 +1299,7 @@ namespace dd {
         }
 
         Edge e = makeNonterminal(x, {DDone, DDzero, DDzero, DDone});
-        for (int k = x + 1; k <= y; k++) {
+        for (auto k = static_cast<short>(x+1); k <= y; k++) {
             e = makeNonterminal(k, {e, DDzero, DDzero, e});
         }
         if (x == 0)
@@ -1483,7 +1482,7 @@ namespace dd {
             return {CN::val(r.w.r), CN::val(r.w.i)};
         }
 
-        short w = var - 1;
+        auto w = static_cast<short>(var-1);
         ComplexValue sum{0.0, 0.0};
 
         Edge e1{}, e2{};

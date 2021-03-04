@@ -16,16 +16,16 @@ namespace dd {
         Cache_Avail = Cache_Avail_Initial_Pointer;
 
         ComplexTableEntry *r = Cache_Avail;
-        for (unsigned int i = 0; i < INIT_SIZE * 6 - 1; i++, r++) {
+        for (unsigned int i = 0; i < INIT_SIZE * 6 - 1; i++) {
             r->next = r + 1;
             r->ref = 0;
+            ++r;
         }
         r->next = nullptr;
 
         for (auto &entry : ComplexTable) {
             entry = nullptr;
         }
-        //count = 0;
 
         ComplexTable[0] = ZERO.r;
         ComplexTable[NBUCKET - 1] = ONE.r;
@@ -64,8 +64,9 @@ namespace dd {
 
             r2 = r + 1;
             Avail = r2;
-            for (unsigned int i = 0; i < CHUNK_SIZE - 2; i++, r2++) {
+            for (unsigned int i = 0; i < CHUNK_SIZE - 2; i++) {
                 r2->next = r2 + 1;
+                ++r2;
             }
             r2->next = nullptr;
         }
@@ -200,7 +201,7 @@ namespace dd {
                 return {moneEntryPointer, &zeroEntry};
             }
             ret.i = &zeroEntry;
-            bool sign_r = std::signbit(valr);
+            auto sign_r = std::signbit(valr);
             ret.r = lookupVal(absr);
             if (sign_r) {
 	            setNegativePointer(ret.r);
@@ -216,7 +217,7 @@ namespace dd {
                 return {&zeroEntry, moneEntryPointer};
             }
             ret.r = &zeroEntry;
-            bool sign_i = std::signbit(vali);
+            auto sign_i = std::signbit(vali);
             ret.i = lookupVal(absi);
             if (sign_i) {
 	            setNegativePointer(ret.i);
@@ -224,8 +225,8 @@ namespace dd {
             return ret;
         }
 
-        bool sign_r = std::signbit(valr);
-        bool sign_i = std::signbit(vali);
+        auto sign_r = std::signbit(valr);
+        auto sign_i = std::signbit(vali);
 
         ret.r = lookupVal(absr);
         ret.i = lookupVal(absi);
@@ -256,7 +257,7 @@ namespace dd {
                 return {moneEntryPointer, &zeroEntry};
             }
             ret.i = &zeroEntry;
-            bool sign_r = std::signbit(r);
+            auto sign_r = std::signbit(r);
             ret.r = lookupVal(absr);
             if (sign_r) {
 	            setNegativePointer(ret.r);
@@ -272,7 +273,7 @@ namespace dd {
                 return {&zeroEntry, moneEntryPointer};
             }
             ret.r = &zeroEntry;
-            bool sign_i = std::signbit(i);
+            auto sign_i = std::signbit(i);
             ret.i = lookupVal(absi);
             if (sign_i) {
 	            setNegativePointer(ret.i);
@@ -280,8 +281,8 @@ namespace dd {
             return ret;
         }
 
-        bool sign_r = std::signbit(r);
-        bool sign_i = std::signbit(i);
+        auto sign_r = std::signbit(r);
+        auto sign_i = std::signbit(i);
 
         ret.r = lookupVal(absr);
         ret.i = lookupVal(absi);
@@ -300,7 +301,7 @@ namespace dd {
 
     // return complex conjugate
     Complex ComplexNumbers::conj(const Complex &a) {
-        Complex ret = a;
+        auto ret = a;
         if (a.i != ZERO.i) {
             ret.i = flipPointerSign(a.i);
         }
@@ -336,51 +337,45 @@ namespace dd {
         if (equalsOne(a)) {
             r.r->val = val(b.r);
             r.i->val = val(b.i);
-            return;
         } else if (equalsOne(b)) {
             r.r->val = val(a.r);
             r.i->val = val(a.i);
-            return;
         } else if (equalsZero(a) || equalsZero(b)) {
-            r.r->val = 0.L;
-            r.i->val = 0.L;
-            return;
+            r.r->val = 0.;
+            r.i->val = 0.;
+        } else {
+	        auto ar = val(a.r);
+	        auto ai = val(a.i);
+	        auto br = val(b.r);
+	        auto bi = val(b.i);
+
+	        r.r->val = ar * br - ai * bi;
+	        r.i->val = ar * bi + ai * br;
         }
-
-        auto ar = val(a.r);
-        auto ai = val(a.i);
-        auto br = val(b.r);
-        auto bi = val(b.i);
-
-        r.r->val = ar * br - ai * bi;
-        r.i->val = ar * bi + ai * br;
     }
 
     void ComplexNumbers::div(Complex &r, const Complex &a, const Complex &b) {
 	    assert(r != ZERO && r != ONE);
 	   	if (equals(a, b)) {
-            r.r->val = 1;
-            r.i->val = 0;
-            return;
+            r.r->val = 1.;
+            r.i->val = 0.;
         } else if (equalsZero(a)) {
-            r.r->val = 0;
-            r.i->val = 0;
-            return;
+            r.r->val = 0.;
+            r.i->val = 0.;
         } else if (equalsOne(b)) {
             r.r->val = val(a.r);
             r.i->val = val(a.i);
-            return;
-        }
+        } else {
+	        auto ar = val(a.r);
+	        auto ai = val(a.i);
+	        auto br = val(b.r);
+	        auto bi = val(b.i);
 
-        auto ar = val(a.r);
-        auto ai = val(a.i);
-        auto br = val(b.r);
-        auto bi = val(b.i);
+	        auto cmag = br * br + bi * bi;
 
-        auto cmag = br * br + bi * bi;
-
-        r.r->val = (ar * br + ai * bi) / cmag;
-        r.i->val = (ai * br - ar * bi) / cmag;
+	        r.r->val = (ar * br + ai * bi) / cmag;
+	        r.i->val = (ai * br - ar * bi) / cmag;
+	   	}
     }
 
     void ComplexNumbers::garbageCollect() {
