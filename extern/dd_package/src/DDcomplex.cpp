@@ -78,7 +78,7 @@ namespace dd {
 
     void ComplexNumbers::printComplexTable()
     // print the complex value table entries
-    {
+    void ComplexNumbers::printComplexTable() const {
         int nentries = 0;
 
         std::cout << "Complex value table\n";
@@ -109,7 +109,7 @@ namespace dd {
         std::cout << "Largest number of entries in bucket: " << max << "\n";
     }
 
-    void ComplexNumbers::statistics() {
+    void ComplexNumbers::statistics() const {
         int nentries = 0;
         std::cout << "CN statistics:\n";
 

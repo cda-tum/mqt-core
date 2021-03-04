@@ -237,10 +237,10 @@ namespace dd {
 
 	    // printing
 	    static void printFormattedReal(std::ostream& os, fp r, bool imaginary=false);
-        void printComplexTable();
-        void statistics();
+        void printComplexTable() const;
+        void statistics() const;
 
-	    int cacheSize() const;
+	    [[nodiscard]] int cacheSize() const;
     };
 
 	std::ostream& operator<<(std::ostream& os, const Complex& c);
