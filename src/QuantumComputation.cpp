@@ -830,7 +830,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 
 	std::ostream& QuantumComputation::printCol(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long j, std::ostream& os) const {
 		os << "Common Factor: " << e.w << "\n";
-		for (unsigned long long i = 0; i < (1ull << (unsigned int)(nqubits+nancillae)); ++i) {
+		for (unsigned long long i = 0; i < (1ULL << static_cast<unsigned int>(nqubits+nancillae)); ++i) {
 			std::stringstream ss{};
 			printBin(i, ss);
 			os << std::setw(nqubits + nancillae) << ss.str() << ": " << getEntry(dd, e, i, j) << "\n";
@@ -1188,7 +1188,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		printPermutationMap(to);
 		#endif
 
-		auto n = (short)(on.p->v + 1);
+		auto n = static_cast<short>(on.p->v + 1);
 
 		// iterate over (k,v) pairs of second permutation
 		for (const auto& kv: to) {

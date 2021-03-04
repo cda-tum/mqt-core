@@ -126,7 +126,7 @@ namespace qc {
         for (const auto& cycle:cycles) {
             os << "Cycle " << i++ << ":\n";
             for (const auto& op: cycle) {
-                os << std::setw((int)std::log10(getNops())+1) << ++j << ": ";
+                os << std::setw(static_cast<int>(std::log10(getNops())+1.)) << ++j << ": ";
                 op->print(os, initialLayout);
                 os << std::endl;
             }
@@ -150,10 +150,10 @@ namespace qc {
         permutationMap map = initialLayout;
         dd->setMode(dd::Matrix);
 
-        dd::Edge e = dd->makeIdent(0, short(nqubits-1));
+        dd::Edge e = dd->makeIdent(0, static_cast<short>(nqubits-1));
         dd->incRef(e);
         for(const auto& cycle:cycles) {
-            dd::Edge f = dd->makeIdent(0, short(nqubits-1));
+            dd::Edge f = dd->makeIdent(0, static_cast<short>(nqubits-1));
             for(const auto& op: cycle)
                 f = dd->multiply(op->getDD(dd, line, map), f);
             dd::Edge g = dd->multiply(f, e);

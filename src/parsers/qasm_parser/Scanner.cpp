@@ -30,7 +30,7 @@ namespace qasm {
                 col++;
                 is.get(ch);
             } else {
-                ch = (char) -1;
+                ch = static_cast<char>(-1);
             }
         }
         if (ch == '\n') {
@@ -98,7 +98,7 @@ namespace qasm {
 
     void Scanner::readComment(Token& t) {
 	    std::stringstream ss;
-	    while (ch != '\n' && ch != (char) -1) {
+	    while (ch != '\n' && ch != static_cast<char>(-1)) {
             ss << ch;
 	    	nextCh();
         }
@@ -217,7 +217,7 @@ namespace qasm {
             case ';': t.kind = Token::Kind::semicolon;
                 nextCh();
                 break;
-            case (char) -1: t.kind = Token::Kind::eof;
+            case static_cast<char>(-1): t.kind = Token::Kind::eof;
                 break;
             case '(': t.kind = Token::Kind::lpar;
                 nextCh();

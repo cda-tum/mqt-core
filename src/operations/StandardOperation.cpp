@@ -564,7 +564,7 @@ namespace qc {
 
                 return;
 			default: 
-                std::cerr << "gate type (index) " << (int) type << " could not be converted to OpenQASM" << std::endl;
+                std::cerr << "gate type (index) " << static_cast<const int>(type) << " could not be converted to OpenQASM" << std::endl;
 		}
 
 		for (const auto& c: controls) {
@@ -833,7 +833,7 @@ namespace qc {
 				of << "qc.ccx(" << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ")" << std::endl;
 				return;
 			default:
-				std::cerr << "gate type (index) " << (int) type << " could not be converted to qiskit" << std::endl;
+				std::cerr << "gate type (index) " << static_cast<const int>(type) << " could not be converted to qiskit" << std::endl;
 		}
 		of << op.str() << qreg[targets[0]].second << ")" << std::endl;
 	}
@@ -855,7 +855,7 @@ namespace qc {
 			auto tmp = permutation.at(target0);
 			permutation.at(target0) = permutation.at(target1);
 			permutation.at(target1) = tmp;
-			return dd->makeIdent(0, short(nqubits-1));
+			return dd->makeIdent(0, static_cast<short>(nqubits-1));
 		}
 
 		setLine(line, permutation);
@@ -880,7 +880,7 @@ namespace qc {
 			auto tmp = permutation.at(target0);
 			permutation.at(target0) = permutation.at(target1);
 			permutation.at(target1) = tmp;
-			return dd->makeIdent(0, short(nqubits-1));
+			return dd->makeIdent(0, static_cast<short>(nqubits-1));
 		}
 
 		setLine(line, permutation);

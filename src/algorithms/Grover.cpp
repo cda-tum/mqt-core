@@ -88,16 +88,16 @@ namespace qc {
 	    line.fill(LINE_DEFAULT);
 
         std::mt19937_64 generator(this->seed);
-        std::uniform_int_distribution<unsigned long long> distribution(0, static_cast<unsigned long long>(std::pow((long double)2, std::max(static_cast<unsigned short>(0),nqubits)) - 1));
+        std::uniform_int_distribution<unsigned long long> distribution(0, static_cast<unsigned long long>(std::pow(2.L, std::max(static_cast<unsigned short>(0),nqubits)) - 1.));
         oracleGenerator = [&]() { return distribution(generator); };
         x = oracleGenerator();
 
         if (nqubits <= 3) {
             iterations = 1;
         } else if (nqubits%2 == 0) {
-            iterations = (unsigned long long)std::round(PI_4 * std::pow(2.L, (nqubits+1)/2.L-1) * std::sqrt(2));
+            iterations = static_cast<unsigned long long>(std::round(PI_4 * std::pow(2.L, (nqubits+1.)/2.L-1.) * std::sqrt(2)));
         } else {
-            iterations = (unsigned long long)std::round(PI_4 * std::pow(2.L, (nqubits)/2.L));
+            iterations = static_cast<unsigned long long>(std::round(PI_4 * std::pow(2.L, (nqubits)/2.L)));
         }
 
         full_grover(*this);

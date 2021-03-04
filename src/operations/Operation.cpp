@@ -104,7 +104,7 @@ namespace qc {
 				strcpy(name, "clc_");
 				break;
 			default:
-				throw QFRException("This constructor shall not be called for gate type (index) " + std::to_string((int)type));
+				throw QFRException("This constructor shall not be called for gate type (index) " + std::to_string(static_cast<int>(type)));
 		}
 	}
 
