@@ -52,7 +52,7 @@ namespace qasm {
 			Expr* op2 = nullptr;
 			std::string id;
 
-			explicit Expr(Kind kind, fp num = 0L, Expr *op1 = nullptr, Expr *op2 = nullptr, std::string id = "") : num(num), kind(kind), op1(op1), op2(op2), id(std::move(id)) { }
+			explicit Expr(Kind kind, fp num = 0., Expr *op1 = nullptr, Expr *op2 = nullptr, std::string id = "") : num(num), kind(kind), op1(op1), op2(op2), id(std::move(id)) { }
 			Expr(const Expr& expr): num(expr.num), kind(expr.kind), id(expr.id) {
 				if (expr.op1 != nullptr)
 					op1 = new Expr(*expr.op1);

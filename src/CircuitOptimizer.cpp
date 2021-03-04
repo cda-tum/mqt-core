@@ -6,18 +6,6 @@
 #include "CircuitOptimizer.hpp"
 
 namespace qc {
-	const std::map<qc::OpType, qc::OpType> CircuitOptimizer::inverseMap = {
-			{qc::I, qc::I},
-			{qc::X, qc::X},
-			{qc::Y, qc::Y},
-			{qc::Z, qc::Z},
-			{qc::H, qc::H},
-			{qc::S, qc::Sdag},
-			{qc::Sdag, qc::S},
-			{qc::T, qc::Tdag},
-			{qc::Tdag, qc::T}
-	};
-
 	void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
 		// delete the identities from circuit
 		auto it=qc.ops.begin();
@@ -228,6 +216,19 @@ namespace qc {
 	}
 
 	void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
+
+		static const std::map<qc::OpType, qc::OpType> inverseMap = {
+				{qc::I, qc::I},
+				{qc::X, qc::X},
+				{qc::Y, qc::Y},
+				{qc::Z, qc::Z},
+				{qc::H, qc::H},
+				{qc::S, qc::Sdag},
+				{qc::Sdag, qc::S},
+				{qc::T, qc::Tdag},
+				{qc::Tdag, qc::T}
+		};
+
 		unsigned short highest_physical_qubit = 0;
 		for (const auto& q: qc.initialLayout) {
 			if (q.first > highest_physical_qubit)

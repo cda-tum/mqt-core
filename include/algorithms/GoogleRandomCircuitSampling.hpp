@@ -16,7 +16,7 @@ namespace qc {
 	class GoogleRandomCircuitSampling : public QuantumComputation {
 	public:
 		std::vector<std::vector<std::unique_ptr<Operation>>> cycles{};
-		Layout layout;
+		Layout layout = Rectangular;
 		std::string pathPrefix = "../../../Benchmarks/GoogleRandomCircuitSampling/inst/";
 
 		explicit GoogleRandomCircuitSampling(const std::string& filename);

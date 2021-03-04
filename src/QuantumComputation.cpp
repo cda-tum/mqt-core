@@ -345,7 +345,7 @@ namespace qc {
 		short output_qubit_index = -1;
 		auto it = outputPermutation.find(physical_qubit_index);
 		if (it != outputPermutation.end()) {
-			output_qubit_index = it->second;
+			output_qubit_index = static_cast<short>(it->second);
 			// erasing entry
 			outputPermutation.erase(physical_qubit_index);
 			#if DEBUG_MODE_QC
@@ -1132,7 +1132,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 			if(isIdleQubit(physical_qubit_index)) {
 				auto it = outputPermutation.find(physical_qubit_index);
 				if(it != outputPermutation.end()) {
-					short output_index = it->second;
+					auto output_index = static_cast<short>(it->second);
 					if (!force && output_index >= 0) continue;
 				}
 

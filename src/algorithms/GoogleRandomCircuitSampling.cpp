@@ -95,6 +95,10 @@ namespace qc {
                 ss >> control;
                 ss >> target;
                 cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, Control(control), target, Z));
+            } else if (identifier == "is") {
+	            ss >> control;
+	            ss >> target;
+	            cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, std::vector<qc::Control>{ }, control, target, iSWAP));
             } else {
                 ss >> target;
                 if (identifier == "h")
@@ -106,8 +110,7 @@ namespace qc {
                 else if (identifier == "y_1_2")
                     cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, target, RY, PI_2));
                 else {
-                    std::cerr << "Unknown gate '" << identifier << "'\n";
-                    exit(1);
+                    throw QFRException("Unknown gate '" + identifier);
                 }
             }
         }

@@ -11,7 +11,8 @@ namespace qc {
      ***/
     OpType StandardOperation::parseU3(fp& lambda, fp& phi, fp& theta) {
 		if (std::abs(theta) < PARAMETER_TOLERANCE && std::abs(phi) < PARAMETER_TOLERANCE) {
-			phi = theta = 0.L;
+			phi = 0.L;
+			theta = 0.L;
 			return parseU1(lambda);
 		}
 
@@ -49,7 +50,9 @@ namespace qc {
 			if (std::abs(phi - qc::PI_2) < PARAMETER_TOLERANCE) {
 				phi = qc::PI_2;
 				if (std::abs(theta - qc::PI) < PARAMETER_TOLERANCE) {
-					lambda = phi = theta = 0.L;
+					lambda = 0.L;
+					phi = 0.L;
+					theta = 0.L;
 					return Y;
 				}
 			}
@@ -60,7 +63,8 @@ namespace qc {
 			if (std::abs(phi) < PARAMETER_TOLERANCE) {
 				phi = 0.L;
 				if (std::abs(theta - qc::PI) < PARAMETER_TOLERANCE) {
-					theta = lambda = 0.L;
+					theta = 0.L;
+					lambda = 0.L;
 					return X;
 				}
 			}

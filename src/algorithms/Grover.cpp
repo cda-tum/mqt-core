@@ -81,10 +81,6 @@ namespace qc {
         addAncillaryRegister(1);
         addClassicalRegister(nq+1);
 
-	    for (unsigned short i = 0; i <= nqubits; ++i) {
-		    initialLayout.insert({ i, i});
-		    outputPermutation.insert({ i, i});
-	    }
 	    line.fill(LINE_DEFAULT);
 
         std::mt19937_64 generator(this->seed);

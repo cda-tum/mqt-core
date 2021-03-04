@@ -73,37 +73,6 @@ namespace qc {
 		ClassicControlled
 	};
 
-	static const std::map<std::string, OpType> identifierMap {
-			{ "0",   I    },
-			{ "id",  I    },
-			{ "h",   H    },
-			{ "n",   X    },
-			{ "c",   X    },
-			{ "x",   X    },
-			{ "y",   Y    },
-			{ "z",   Z    },
-			{ "s",   S    },
-			{ "si",  Sdag },
-			{ "sp",  Sdag },
-			{ "s+",  Sdag },
-			{ "sdg", Sdag },
-			{ "v",   V    },
-			{ "vi",  Vdag },
-			{ "vp",  Vdag },
-			{ "v+",  Vdag },
-			{ "rx",  RX   },
-			{ "ry",  RY   },
-			{ "rz",  RZ   },
-			{ "f",   SWAP },
-			{ "if",  SWAP },
-			{ "p",   Peres},
-			{ "pi",  Peresdag },
-			{ "p+",  Peresdag },
-			{ "q",   Phase},
-			{ "t",   T    },
-			{ "tdg", Tdag }
-	};
-
 	class Operation {
 	protected:
 		std::vector<unsigned short>       targets{};

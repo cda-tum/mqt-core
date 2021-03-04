@@ -105,6 +105,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
 			}
 
 			std::vector<unsigned short> qubits{ };
+			qubits.reserve(arguments.size());
 			for (auto& arg: arguments) {
 				qubits.emplace_back(arg.first);
 			}

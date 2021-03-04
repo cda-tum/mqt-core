@@ -20,8 +20,6 @@ namespace qc {
 	class CircuitOptimizer {
 
 	protected:
-		static const std::map<qc::OpType, qc::OpType> inverseMap;
-
 		static void addToDag(DAG& dag, std::unique_ptr<Operation> *op);
 
 	public:

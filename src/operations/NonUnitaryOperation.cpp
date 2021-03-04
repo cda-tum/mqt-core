@@ -50,7 +50,7 @@ namespace qc {
 			case Measure:
 				os << name << "\t";
 				for (unsigned int q = 0; q < controls.size(); ++q) {
-					line[permutation.at(controls[q].qubit)] = targets[q];
+					line[permutation.at(controls[q].qubit)] = static_cast<short>(targets[q]);
 				}
 				for (int i = 0; i < nqubits; ++i) {
 					if (line[i] >= 0) {

@@ -58,7 +58,7 @@ namespace qc {
 		}
 		auto target = qubits.back().qubit;
 		qubits.pop_back();
-		fp theta=0, phi=0, lambda = 0;
+		fp theta=0., phi=0., lambda = 0.;
 		if (params.size() == 1) {
 			lambda = params[0].cast<fp>();
 		} else if (params.size() == 2) {
@@ -84,7 +84,7 @@ namespace qc {
 		qubits.pop_back();
 		auto target0 = qubits.back().qubit;
 		qubits.pop_back();
-		fp theta=0, phi=0, lambda = 0;
+		fp theta=0., phi=0., lambda = 0.;
 		if (params.size() == 1) {
 			lambda = params[0].cast<fp>();
 		} else if (params.size() == 2) {
@@ -101,7 +101,7 @@ namespace qc {
 	void emplaceQiskitOperation(QuantumComputation& qc, const py::object& instruction, const py::list& qargs, const py::list& cargs, const py::list& params) {
 		static const auto nativelySupportedGates = std::set<std::string>{"i", "id", "iden", "x", "y", "z", "h", "s", "sdg", "t", "tdg", "p", "u1", "rx", "ry", "rz", "u2", "u", "u3", "cx", "cy", "cz", "cp", "cu1", "ch", "crx", "cry", "crz", "cu3", "ccx", "swap", "cswap", "iswap", "sx", "sxdg", "csx", "mcx_gray", "mcx_recursive", "mcx_vchain", "mcphase", "mcrx", "mcry", "mcrz"};
 
-		std::string instructionName = instruction.attr("name").cast<std::string>();
+		auto instructionName = instruction.attr("name").cast<std::string>();
 		if (instructionName == "measure") {
 			auto&& qubit = qargs[0];
 			auto&& clbit = cargs[0];
