@@ -69,7 +69,7 @@ namespace dd {
             assert(val >= 0);
             //const fp hash = 4*val*val*val - 6*val*val + 3*val; // cubic
             const fp hash = val; // linear
-            auto key = (unsigned long) (hash * (NBUCKET - 1));
+            auto key = static_cast<unsigned long>(hash * (NBUCKET - 1));
             if (key > NBUCKET - 1) {
                 key = NBUCKET - 1;
             }

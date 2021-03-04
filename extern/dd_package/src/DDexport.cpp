@@ -10,7 +10,7 @@ namespace dd {
 		os << "digraph \"DD\" {graph[];node[shape=plain];edge[arrowhead=none]\n";
 		os << "root [label=\"\",shape=point,style=invis]\n";
 		os << "t [label=<<font point-size=\"20\">1</font>>,shape=box,tooltip=\"1\",width=0.3,height=0.3]\n";
-		auto toplabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u;
+		auto toplabel = (reinterpret_cast<uintptr_t>(e.p) & 0x001fffffU) >> 1U;
 		auto mag = thicknessFromMagnitude(e.w);
 		os << "root->";
 		if (dd::Package::isTerminal(e)) {
@@ -36,7 +36,7 @@ namespace dd {
 		os << "root [label=\"\",shape=point,style=invis]\n";
 		os << "t [label=<<font point-size=\"20\">1</font>>,shape=box,tooltip=\"1\",width=0.3,height=0.3]\n";
 
-		auto toplabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u;
+		auto toplabel = (reinterpret_cast<uintptr_t>(e.p) & 0x001fffffU) >> 1U;
 		auto mag = thicknessFromMagnitude(e.w);
 		auto color = colorFromPhase(e.w);
 		os << "root->";
@@ -54,7 +54,7 @@ namespace dd {
 	}
 
 	std::ostream& matrixNodeMatrixAndXlabel(const Edge& e, std::ostream& os) {
-		auto nodelabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
+		auto nodelabel = (reinterpret_cast<uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
 		os << nodelabel << "[label=<";
 		os << R"(<font point-size="6"><table border="1" cellspacing="0" style="rounded"><tr>)";
 		os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;" sides="RB">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td>";
@@ -66,7 +66,7 @@ namespace dd {
 	}
 
 	std::ostream& matrixNodeMiddleVar(const Edge& e, std::ostream& os) {
-		auto nodelabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
+		auto nodelabel = (reinterpret_cast<uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
 		os << nodelabel << "[label=<";
 		os << R"(<font point-size="10"><table border="1" cellspacing="0" cellpadding="2" style="rounded">)";
 		os << R"(<tr><td colspan="2" rowspan="2" port="0" href="javascript:;" border="0" tooltip=")" << e.p->e[0].w << "\">" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>")
@@ -84,7 +84,7 @@ namespace dd {
 	}
 
 	std::ostream& classicMatrixNode(const Edge& e, std::ostream& os) {
-		auto nodelabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
+		auto nodelabel = (reinterpret_cast<uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
 		os << nodelabel << "[shape=circle, width=0.53, fixedsize=true, label=<";
 		os << R"(<font point-size="6"><table border="0" cellspacing="0" cellpadding="0">)";
 		os << R"(<tr><td colspan="4"><font point-size="18">q<sub><font point-size="10">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
@@ -120,7 +120,7 @@ namespace dd {
 	}
 
 	std::ostream& vectorNode(const Edge& e, std::ostream& os) {
-		auto nodelabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
+		auto nodelabel = (reinterpret_cast<uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
 		os << nodelabel << "[label=<";
 		os << R"(<font point-size="8"><table border="1" cellspacing="0" cellpadding="0" style="rounded">)";
 		os << R"(<tr><td colspan="2" border="0" cellpadding="1"><font point-size="20">q<sub><font point-size="12">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
@@ -131,7 +131,7 @@ namespace dd {
 	}
 
 	std::ostream& vectorNodeVectorLook(const Edge& e, std::ostream& os) {
-		auto nodelabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
+		auto nodelabel = (reinterpret_cast<uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
 		os << nodelabel << "[label=<";
 		os << R"(<font point-size="10"><table border="1" cellspacing="0" cellpadding="2" style="rounded">)";
 		os << R"(<tr><td rowspan="2" sides="R" cellpadding="2"><font point-size="18">q<sub><font point-size="12">)" << e.p->v << "</font></sub></font></td>";
@@ -142,7 +142,7 @@ namespace dd {
 	}
 
 	std::ostream& classicVectorNode(const Edge& e, std::ostream& os) {
-		auto nodelabel = ((uintptr_t)e.p & 0x001fffffu) >> 1u; // this allows for 2^20 (roughly 1e6) unique nodes
+		auto nodelabel = (reinterpret_cast<uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
 		os << nodelabel << "[shape=circle, width=0.46, fixedsize=true, label=<";
 		os << R"(<font point-size="6"><table border="0" cellspacing="0" cellpadding="0">)";
 		os << R"(<tr><td colspan="2"><font point-size="18">q<sub><font point-size="10">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
@@ -165,8 +165,8 @@ namespace dd {
 	}
 
 	std::ostream& matrixEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels, bool classic) {
-		auto fromlabel = ((uintptr_t)from.p & 0x001fffffu) >> 1u;
-		auto tolabel = ((uintptr_t)to.p & 0x001fffffu) >> 1u;
+		auto fromlabel = (reinterpret_cast<uintptr_t>(from.p) & 0x001fffffU) >> 1U;
+		auto tolabel = (reinterpret_cast<uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
 		os << fromlabel << ":" << idx << ":";
 		if (classic) {
@@ -201,8 +201,8 @@ namespace dd {
 	}
 
 	std::ostream& coloredMatrixEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels, bool classic) {
-		auto fromlabel = ((uintptr_t)from.p & 0x001fffffu) >> 1u;
-		auto tolabel = ((uintptr_t)to.p & 0x001fffffu) >> 1u;
+		auto fromlabel = (reinterpret_cast<uintptr_t>(from.p) & 0x001fffffU) >> 1U;
+		auto tolabel = (reinterpret_cast<uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
 		os << fromlabel << ":" << idx << ":";
 		if (classic) {
@@ -235,8 +235,8 @@ namespace dd {
 	}
 
 	std::ostream& vectorEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels) {
-		auto fromlabel = ((uintptr_t)from.p & 0x001fffffu) >> 1u;
-		auto tolabel = ((uintptr_t)to.p & 0x001fffffu) >> 1u;
+		auto fromlabel = (reinterpret_cast<uintptr_t>(from.p) & 0x001fffffU) >> 1U;
+		auto tolabel = (reinterpret_cast<uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
 		os << fromlabel << ":" << idx << ":";
 		os << (idx == 0 ? "sw" : "se") << "->";
@@ -260,8 +260,8 @@ namespace dd {
 	}
 
 	std::ostream& coloredVectorEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels) {
-		auto fromlabel = ((uintptr_t)from.p & 0x001fffffu) >> 1u;
-		auto tolabel = ((uintptr_t)to.p & 0x001fffffu) >> 1u;
+		auto fromlabel = (reinterpret_cast<uintptr_t>(from.p) & 0x001fffffU) >> 1U;
+		auto tolabel = (reinterpret_cast<uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
 		os << fromlabel << ":" << idx << ":";
 		os << (idx == 0 ? "sw" : "se") << "->";

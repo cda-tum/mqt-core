@@ -76,7 +76,6 @@ namespace dd {
         return r;
     }
 
-    void ComplexNumbers::printComplexTable()
     // print the complex value table entries
     void ComplexNumbers::printComplexTable() const {
         int nentries = 0;
@@ -94,7 +93,7 @@ namespace dd {
 
             int num = 0;
             while (p != nullptr) {
-                std::cout << "  " << (intptr_t) p << ": ";
+                std::cout << "  " << reinterpret_cast<intptr_t>(p) << ": ";
                 printFormattedReal(std::cout, p->val);
                 std::cout << " " << p->ref;
                 std::cout << std::endl;
@@ -422,10 +421,10 @@ namespace dd {
         while (p != nullptr && size <= 0.9 * CHUNK_SIZE) {
             if (p->ref != 0) {
                 std::cerr << "Entry with refcount != 0 in Cache!\n";
-                std::cerr << (intptr_t) p << " " << p->ref << " " << p->val << " " << (intptr_t) p->next << "\n";
+                std::cerr << reinterpret_cast<intptr_t>(p) << " " << p->ref << " " << p->val << " " << reinterpret_cast<intptr_t>(p->next) << "\n";
             }
-            if (((intptr_t) p) < min) { min = (intptr_t) p; }
-            if (((intptr_t) p) > max) { max = (intptr_t) p; }
+            if ((reinterpret_cast<intptr_t>(p)) < min) { min = reinterpret_cast<intptr_t>(p); }
+            if ((reinterpret_cast<intptr_t>(p)) > max) { max = reinterpret_cast<intptr_t>(p); }
 
             p = p->next;
             size++;
@@ -433,7 +432,7 @@ namespace dd {
         if (size > 0.9 * CHUNK_SIZE) {
             p = Cache_Avail;
             for (int i = 0; i < 10; i++) {
-                std::cout << i << ": " << (uintptr_t) p << "\n";
+                std::cout << i << ": " << reinterpret_cast<intptr_t>(p) << "\n";
                 p = p->next;
             }
             std::cerr << "Error in Cache!\n" << std::flush;

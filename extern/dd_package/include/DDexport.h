@@ -18,7 +18,7 @@ namespace dd {
 			std::ostringstream oss{};
 			oss.flags(std::ios_base::hex);
 			oss.fill('0');
-			oss << std::setw(2) << short(R*255) << std::setw(2) << short(G*255) << std::setw(2) << short(B*255);
+			oss << std::setw(2) << static_cast<short>(R*255.) << std::setw(2) << static_cast<short>(G*255.) << std::setw(2) << static_cast<short>(B*255.);
 			os << oss.str();
 			return os;
 		}
