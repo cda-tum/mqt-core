@@ -126,7 +126,7 @@ namespace qc {
 		// MCF (cSWAP), Peres, paramterized two target Constructor
 		StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short target0, unsigned short target1, OpType g, fp lambda = 0, fp phi = 0, fp theta = 0);
 
-		bool isStandardOperation() const override {
+		[[nodiscard]] bool isStandardOperation() const override {
 			return true;
 		}
 

@@ -36,11 +36,11 @@ namespace qc {
 			return getInverseDD(dd, line);
 		}
 
-		bool isUnitary() const override {
+		[[nodiscard]] bool isUnitary() const override {
 			return false;
 		}
 
-		bool isNonUnitaryOperation() const override {
+		[[nodiscard]] bool isNonUnitaryOperation() const override {
 			return true;
 		}
 
@@ -50,9 +50,7 @@ namespace qc {
 		
 		void dumpOpenQASM(std::ostream& of, const regnames_t& qreg, const regnames_t& creg) const override;
 		void dumpQiskit(std::ostream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const override;
-		void dumpReal(std::ostream& of) const override {
-			UNUSED(of)// these ops do not exist in .real
-		};
+		void dumpReal([[maybe_unused]] std::ostream& of) const override {};
 
 		std::ostream& print(std::ostream& os, const std::map<unsigned short, unsigned short>& permutation) const override;
 	};

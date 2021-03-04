@@ -51,10 +51,10 @@ namespace qasm {
 
 		void addFileInput(const std::string& filename);
 
-		int getLine() const {
+		[[nodiscard]] int getLine() const {
 			return line;
 		}
-		int getCol() const {
+		[[nodiscard]] int getCol() const {
 			return col;
 		}
 	};

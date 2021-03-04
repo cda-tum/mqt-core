@@ -71,7 +71,7 @@ namespace qc {
 
 		static void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, const char* defaultname);
 
-		unsigned short getSmallestAncillary() const {
+		[[nodiscard]] unsigned short getSmallestAncillary() const {
 			for (size_t i=0; i<ancillary.size(); ++i) {
 				if (ancillary.test(i))
 					return i;
@@ -79,15 +79,15 @@ namespace qc {
 			return ancillary.size();
 		}
 
-		unsigned short getSmallestGarbage() const {
+		[[nodiscard]] unsigned short getSmallestGarbage() const {
 			for (size_t i=0; i<garbage.size(); ++i) {
 				if (garbage.test(i))
 					return i;
 			}
 			return garbage.size();
 		}
-		bool isLastOperationOnQubit(decltype(ops.begin())& opIt) {
-			auto end = ops.end();
+		[[nodiscard]] bool isLastOperationOnQubit(const decltype(ops.begin())& opIt) const {
+			const auto end = ops.cend();
 			return isLastOperationOnQubit(opIt, end);
 		}
 
@@ -107,15 +107,15 @@ namespace qc {
 		QuantumComputation& operator=(QuantumComputation&& qc) noexcept = default;
 		virtual ~QuantumComputation() = default;
 
-		virtual  size_t getNops()                   const { return ops.size();	}
-		unsigned short  getNqubits()                const { return nqubits + nancillae;	}
-		unsigned short  getNancillae()              const { return nancillae; }
-		unsigned short  getNqubitsWithoutAncillae() const { return nqubits; }
-		unsigned short  getNcbits()                 const { return nclassics;	}
-		std::string     getName()                   const { return name;       }
-		const registerMap& getQregs()               const { return qregs; }
-		const registerMap& getCregs()               const { return cregs; }
-		const registerMap& getANCregs()               const { return ancregs; }
+		[[nodiscard]] virtual  size_t getNops()                   const { return ops.size();	}
+		[[nodiscard]] unsigned short  getNqubits()                const { return nqubits + nancillae;	}
+		[[nodiscard]] unsigned short  getNancillae()              const { return nancillae; }
+		[[nodiscard]] unsigned short  getNqubitsWithoutAncillae() const { return nqubits; }
+		[[nodiscard]] unsigned short  getNcbits()                 const { return nclassics;	}
+		[[nodiscard]] std::string     getName()                   const { return name;       }
+		[[nodiscard]] const registerMap& getQregs()               const { return qregs; }
+		[[nodiscard]] const registerMap& getCregs()               const { return cregs; }
+		[[nodiscard]] const registerMap& getANCregs()             const { return ancregs; }
 
 		// initialLayout[physical_qubit] = logical_qubit
 		permutationMap initialLayout{ };
@@ -250,23 +250,23 @@ namespace qc {
 		
 		// Iterators (pass-through)
 		auto begin()            noexcept { return ops.begin();   }
-		auto begin()      const noexcept { return ops.begin();   }
-		auto cbegin()     const noexcept { return ops.cbegin();  }
+		[[nodiscard]] auto begin()      const noexcept { return ops.begin();   }
+		[[nodiscard]] auto cbegin()     const noexcept { return ops.cbegin();  }
 		auto end()              noexcept { return ops.end();     }
-		auto end()        const noexcept { return ops.end();	  }
-		auto cend()       const noexcept { return ops.cend();	  }
+		[[nodiscard]] auto end()        const noexcept { return ops.end();	  }
+		[[nodiscard]] auto cend()       const noexcept { return ops.cend();	  }
 		auto rbegin()           noexcept { return ops.rbegin();  }
-		auto rbegin()     const noexcept { return ops.rbegin();  }
-		auto crbegin()    const noexcept { return ops.crbegin(); }
+		[[nodiscard]] auto rbegin()     const noexcept { return ops.rbegin();  }
+		[[nodiscard]] auto crbegin()    const noexcept { return ops.crbegin(); }
 		auto rend()             noexcept { return ops.rend();    }
-		auto rend()       const noexcept {	return ops.rend();    }
-		auto crend()      const noexcept { return ops.crend();   }
+		[[nodiscard]] auto rend()       const noexcept {	return ops.rend();    }
+		[[nodiscard]] auto crend()      const noexcept { return ops.crend();   }
 		
 		// Capacity (pass-through)
-		bool   empty()    const noexcept { return ops.empty();    }
-		size_t size()     const noexcept { return ops.size();     }
-		size_t max_size() const noexcept { return ops.max_size(); }
-		size_t capacity() const noexcept { return ops.capacity(); }
+		[[nodiscard]] bool   empty()    const noexcept { return ops.empty();    }
+		[[nodiscard]] size_t size()     const noexcept { return ops.size();     }
+		[[nodiscard]] size_t max_size() const noexcept { return ops.max_size(); }
+		[[nodiscard]] size_t capacity() const noexcept { return ops.capacity(); }
 		
 		void reserve(size_t new_cap)     { ops.reserve(new_cap);  }
 		void shrink_to_fit()             { ops.shrink_to_fit();   }
