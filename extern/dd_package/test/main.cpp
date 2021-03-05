@@ -6,20 +6,15 @@
 
 dd::Edge BellCicuit1(std::unique_ptr<dd::Package>& dd) {
     /***** define Hadamard gate acting on q0 *****/
-
     // set control/target:
     //    -1 don't care
     //    0 neg. control
     //    1 pos. control
     //    2 target
-    short line[2] = {2,-1};
-    dd::Edge h_gate = dd->makeGateDD(Hmat, 2, line);
+    dd::Edge h_gate = dd->makeGateDD(Hmat, 2, {2,-1});
 
     /***** define cx gate with control q0 and target q1 *****/
-    line[0] = 1;
-    line[1] = 2;
-
-    dd::Edge cx_gate = dd->makeGateDD(Xmat, 2, line);
+    dd::Edge cx_gate = dd->makeGateDD(Xmat, 2, {1,2});
 
     //Multiply matrices to get functionality of circuit
     return dd->multiply(cx_gate, h_gate);
@@ -27,18 +22,13 @@ dd::Edge BellCicuit1(std::unique_ptr<dd::Package>& dd) {
 
 dd::Edge BellCicuit2(std::unique_ptr<dd::Package>& dd) {
     /***** define Hadamard gate acting on q1 *****/
-    short line[2] = {-1,2};
-    dd::Edge h_gate_q1 = dd->makeGateDD(Hmat, 2, line);
+    dd::Edge h_gate_q1 = dd->makeGateDD(Hmat, 2, {-1,2});
 
 	/***** define Hadamard gate acting on q0 *****/
-	line[0] = 2;
-    line[1] = -1;
-    dd::Edge h_gate_q0 = dd->makeGateDD(Hmat, 2, line);
+    dd::Edge h_gate_q0 = dd->makeGateDD(Hmat, 2, {2,-1});
 
     /***** define cx gate with control q1 and target q0 *****/
-    line[0] = 2;
-    line[1] = 1;
-    dd::Edge cx_gate = dd->makeGateDD(Xmat, 2, line);
+    dd::Edge cx_gate = dd->makeGateDD(Xmat, 2, {2,1});
 
     //Multiply matrices to get functionality of circuit
     return dd->multiply(dd->multiply(h_gate_q1, h_gate_q0), dd->multiply(cx_gate, h_gate_q1));
@@ -84,9 +74,7 @@ int main() {
     m[1][0] = { 0., 0. };
     m[1][1] = { -1., 0. };
 
-    short line[1] = {2}; // target on first line
-
-    dd::Edge my_z_gate = dd->makeGateDD(m, 1, line);
+    dd::Edge my_z_gate = dd->makeGateDD(m, 1, {2});
 	std::cout << "DD of my gate has size " << dd->size(my_z_gate) << std::endl;
 
 	// compute (partial) traces

@@ -28,7 +28,8 @@
 using CN = dd::ComplexNumbers;
 
 namespace dd {
-	const std::string DDversion = "IIC-DD package v1.1";
+	const std::string DDversion = "IIC-DD package v1.2.2";
+	constexpr double SERIALIZATION_VERSION = 0.1;
 	constexpr unsigned short RADIX = 2;                     // logic radix
 	constexpr unsigned short NEDGE = RADIX * RADIX;   // max no. of edges = RADIX^2
 

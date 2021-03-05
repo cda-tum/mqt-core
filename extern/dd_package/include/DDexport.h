@@ -7,6 +7,7 @@
 #define DDexport_H
 
 #include <iomanip>
+#include <unordered_map>
 #include "DDpackage.h"
 
 namespace dd {
@@ -53,6 +54,20 @@ namespace dd {
 
 	void toDot(const Edge& e, std::ostream& os, bool isVector = false, bool colored=true, bool edgeLabels=false, bool classic=false);
 	void export2Dot(Edge basic, const std::string& outputFilename, bool isVector = false, bool colored=true, bool edgeLabels=false, bool classic=false, bool show = true);
+
+	ComplexValue toComplexValue(const std::string& real_str, std::string imag_str);
+	ComplexValue readBinaryAmplitude(std::istream& ifs);
+	void writeBinaryAmplitude(std::ostream& oss, const Complex& w);
+	void writeBinaryAmplitude(std::ostream& oss, const ComplexValue& w);
+
+	void serialize(const Edge& basic, const std::string& outputFilename, bool isVector = false, bool writeBinary = false);
+	void serializeVector(const Edge& basic, std::ostream& oss, bool writeBinary = false);
+	void serializeMatrix(const Edge& basic, int& idx, std::unordered_map<NodePtr, int>& node_index, std::unordered_set<NodePtr>& visited, std::ostream& oss, bool writeBinary = false);
+	Edge create_deserialized_node(std::unique_ptr<Package>& dd, int index, short v, std::array<int, NEDGE>& edge_idx,
+	                              std::array<ComplexValue, NEDGE>& edge_weight, std::unordered_map<int, NodePtr>& nodes);
+	// isVector only used if readBinary is true
+	dd::Edge deserialize(std::unique_ptr<dd::Package>& dd, const std::string& inputFilename, bool isVector = false, bool readBinary = false);
+	dd::Edge deserialize(std::unique_ptr<dd::Package>& dd, std::istream& ifs, bool isVector = false, bool readBinary = false);
 }
 
 

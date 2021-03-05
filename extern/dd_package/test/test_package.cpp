@@ -34,9 +34,8 @@ TEST(DDPackageTest, OperationLookupTest) {
 TEST(DDPackageTest, TrivialTest) {
     auto dd = std::make_unique<dd::Package>();
 
-    short line[2] = {2};
-    dd::Edge x_gate = dd->makeGateDD(Xmat, 1, line);
-    dd::Edge h_gate = dd->makeGateDD(Hmat, 1, line);
+    dd::Edge x_gate = dd->makeGateDD(Xmat, 1, {2});
+    dd::Edge h_gate = dd->makeGateDD(Hmat, 1, {2});
 
     ASSERT_EQ(dd->getValueByPath(h_gate, "0"), (dd::ComplexValue{dd::SQRT_2, 0}));
 
@@ -52,8 +51,7 @@ TEST(DDPackageTest, TrivialTest) {
 TEST(DDPackageTest, BellState) {
     auto dd = std::make_unique<dd::Package>();
 
-    short line[2] = {-1,2};
-    dd::Edge h_gate = dd->makeGateDD(Hmat, 2, line);
+    dd::Edge h_gate = dd->makeGateDD(Hmat, 2, {-1,2});
     dd::Edge cx_gate = dd->makeGateDD({Xmat[0][0], Xmat[0][1], Xmat[1][0], Xmat[1][1]}, 2, {2,1});
     dd::Edge zero_state = dd->makeZeroState(2);
 
@@ -123,5 +121,115 @@ TEST(DDPackageTest, StateGenerationManipulation) {
 	dd->printActive(6);
 	dd->printUniqueTable(6);
 	dd->printInformation();
+}
+
+TEST(DDPackageTest, VectorSerializationTest) {
+	auto dd = std::make_unique<dd::Package>();
+
+	dd::Edge h_gate = dd->makeGateDD(Hmat, 2, {-1,2});
+	dd::Edge cx_gate = dd->makeGateDD({Xmat[0][0], Xmat[0][1], Xmat[1][0], Xmat[1][1]}, 2, {2,1});
+	dd::Edge zero_state = dd->makeZeroState(2);
+
+	dd::Edge bell_state = dd->multiply(dd->multiply(cx_gate, h_gate), zero_state);
+
+	dd::serialize(bell_state, "bell_state.dd", true, false);
+	auto deserialized_bell_state = dd::deserialize(dd, "bell_state.dd", true, false);
+	EXPECT_TRUE(dd->equals(bell_state, deserialized_bell_state));
+
+	dd::serialize(bell_state, "bell_state_binary.dd", true, true);
+	deserialized_bell_state = dd::deserialize(dd, "bell_state_binary.dd", true, true);
+	EXPECT_TRUE(dd->equals(bell_state, deserialized_bell_state));
+}
+
+TEST(DDPackageTest, BellMatrix) {
+	auto dd = std::make_unique<dd::Package>();
+
+	dd::Edge h_gate = dd->makeGateDD(Hmat, 2, {-1,2});
+	dd::Edge cx_gate = dd->makeGateDD({Xmat[0][0], Xmat[0][1], Xmat[1][0], Xmat[1][1]}, 2, {2,1});
+
+	dd::Edge bell_matrix = dd->multiply(cx_gate, h_gate);
+
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, "00"), (dd::ComplexValue{dd::SQRT_2, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, "02"), (dd::ComplexValue{0, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, "20"), (dd::ComplexValue{0, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, "22"), (dd::ComplexValue{dd::SQRT_2, 0}));
+
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 0, 0), (dd::ComplexValue{dd::SQRT_2, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 1, 0), (dd::ComplexValue{0, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 2, 0), (dd::ComplexValue{0, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 3, 0), (dd::ComplexValue{dd::SQRT_2, 0}));
+
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 0, 1), (dd::ComplexValue{0, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 1, 1), (dd::ComplexValue{dd::SQRT_2, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 2, 1), (dd::ComplexValue{dd::SQRT_2, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 3, 1), (dd::ComplexValue{0, 0}));
+
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 0, 2), (dd::ComplexValue{dd::SQRT_2, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 1, 2), (dd::ComplexValue{0, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 2, 2), (dd::ComplexValue{0, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 3, 2), (dd::ComplexValue{-dd::SQRT_2, 0}));
+
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 0, 3), (dd::ComplexValue{0, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 1, 3), (dd::ComplexValue{dd::SQRT_2, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 2, 3), (dd::ComplexValue{-dd::SQRT_2, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_matrix, 3, 3), (dd::ComplexValue{0, 0}));
+
+	auto goal_row_0 = dd::Package::CVec{{dd::SQRT_2, 0.}, {0., 0.}, {dd::SQRT_2, 0.}, {0., 0.}};
+	auto goal_row_1 = dd::Package::CVec{{0., 0.}, {dd::SQRT_2, 0.}, {0., 0.}, {dd::SQRT_2, 0.}};
+	auto goal_row_2 = dd::Package::CVec{{0., 0.}, {dd::SQRT_2, 0.}, {0., 0.}, {-dd::SQRT_2, 0.}};
+	auto goal_row_3 = dd::Package::CVec{{dd::SQRT_2, 0.}, {0., 0.}, {-dd::SQRT_2, 0.}, {0., 0.}};
+	auto goal_matrix = dd::Package::CMat{goal_row_0, goal_row_1, goal_row_2, goal_row_3};
+	ASSERT_EQ(dd->getMatrix(bell_matrix), goal_matrix);
+
+	dd->printDD(bell_matrix, 64);
+	dd::export2Dot(bell_matrix, "bell_matrix_colored_labels.dot", false, true, true, false, false);
+	dd::export2Dot(bell_matrix, "bell_matrix_colored_labels_classic.dot", false, true, true, true, false);
+	dd::export2Dot(bell_matrix, "bell_matrix_mono_labels.dot", false, false, true, false, false);
+	dd::export2Dot(bell_matrix, "bell_matrix_mono_labels_classic.dot", false, false, true, true, false);
+	dd::export2Dot(bell_matrix, "bell_matrix_colored.dot", false, true, false, false, false);
+	dd::export2Dot(bell_matrix, "bell_matrix_colored_classic.dot", false, true, false, true, false);
+	dd::export2Dot(bell_matrix, "bell_matrix_mono.dot", false, false, false, false, false);
+	dd::export2Dot(bell_matrix, "bell_matrix_mono_classic.dot", false, false, false, true, false);
+}
+
+TEST(DDPackageTest, MatrixSerializationTest) {
+	auto dd = std::make_unique<dd::Package>();
+
+	dd::Edge h_gate = dd->makeGateDD(Hmat, 2, {-1,2});
+	dd::Edge cx_gate = dd->makeGateDD({Xmat[0][0], Xmat[0][1], Xmat[1][0], Xmat[1][1]}, 2, {2,1});
+
+	dd::Edge bell_matrix = dd->multiply(cx_gate, h_gate);
+
+	dd::serialize(bell_matrix, "bell_matrix.dd", false, false);
+	auto deserialized_bell_matrix = dd::deserialize(dd, "bell_matrix.dd", false, false);
+	EXPECT_TRUE(dd->equals(bell_matrix, deserialized_bell_matrix));
+
+	dd::serialize(bell_matrix, "bell_matrix_binary.dd", false, true);
+	deserialized_bell_matrix = dd::deserialize(dd, "bell_matrix_binary.dd", false, true);
+	EXPECT_TRUE(dd->equals(bell_matrix, deserialized_bell_matrix));
+}
+
+TEST(DDPackageTest, TestConsistency) {
+	auto dd = std::make_unique<dd::Package>();
+
+	dd::Edge h_gate = dd->makeGateDD(Hmat, 2, {2,-1});
+	dd::Edge cx_gate = dd->makeGateDD(Xmat, 2, {1,2});
+	dd::Edge zero_state = dd->makeZeroState(2);
+
+	dd::Edge bell_matrix = dd->multiply(cx_gate, h_gate);
+	dd->incRef(bell_matrix);
+	auto local = dd->is_locally_consistent_dd(bell_matrix);
+	EXPECT_TRUE(local);
+	auto global = dd->is_globally_consistent_dd(bell_matrix);
+	EXPECT_TRUE(global);
+	dd->debugnode(bell_matrix.p);
+
+	dd::Edge bell_state = dd->multiply(bell_matrix, zero_state);
+	dd->incRef(bell_state);
+	local = dd->is_locally_consistent_dd(bell_state);
+	EXPECT_TRUE(local);
+	global = dd->is_globally_consistent_dd(bell_state);
+	EXPECT_TRUE(global);
+	dd->debugnode(bell_state.p);
 }
 
