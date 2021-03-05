@@ -48,25 +48,25 @@ namespace dd {
         return r;
     }
 
-    Edge Package::makeZeroState(short n) {
+    Edge Package::makeZeroState(unsigned short n) {
         Edge f = DDone;
         Edge edges[4];
         edges[1] = edges[2] = edges[3] = DDzero;
 
-        for (short p = 0; p < n; p++) {
+        for (unsigned short p = 0; p < n; p++) {
             edges[0] = f;
-            f = makeNonterminal(p, edges);
+            f = makeNonterminal(static_cast<short>(p), edges);
         }
         return f;
     }
 
     // create DD for basis state |q_n-1 q_n-2 ... q1 q0>
-    Edge Package::makeBasisState(short n, const std::bitset<MAXN> &state) {
+    Edge Package::makeBasisState(unsigned short n, const std::bitset<MAXN> &state) {
         Edge f = DDone;
         Edge edges[4];
         edges[1] = edges[3] = DDzero;
 
-        for (short p = 0; p < n; ++p) {
+        for (unsigned short p = 0; p < n; ++p) {
             if (state[p] == 0) {
                 edges[0] = f;
                 edges[2] = DDzero;
@@ -74,7 +74,7 @@ namespace dd {
                 edges[0] = DDzero;
                 edges[2] = f;
             }
-            f = makeNonterminal(p, edges);
+            f = makeNonterminal(static_cast<short>(p), edges);
         }
         return f;
     }
@@ -1428,7 +1428,6 @@ namespace dd {
         return g;
     }
 
-
     Edge Package::trace(const Edge& a, const std::bitset<MAXN> &eliminate, unsigned short alreadyEliminated) {
         short v = a.p->v;
 
@@ -1488,6 +1487,164 @@ namespace dd {
             return r;
         }
     }
+
+	Edge Package::reduceAncillae(dd::Edge& e, const std::bitset<MAXN>& ancilary, bool regular) {
+		// return if no more garbage left
+		if (!ancilary.any() || e.p == nullptr) return e;
+		unsigned short lowerbound = 0;
+		for (size_t i = 0; i < ancilary.size(); ++i) {
+			if (ancilary.test(i)) {
+				lowerbound = i;
+				break;
+			}
+		}
+		if (e.p->v < lowerbound) return e;
+		return reduceAncillaeRecursion(e, ancilary, lowerbound, regular);
+	}
+
+	Edge Package::reduceAncillaeRecursion(dd::Edge& e, const std::bitset<MAXN>& ancillary, unsigned short lowerbound, bool regular) {
+		if(e.p->v < lowerbound) return e;
+
+		dd::Edge f = e;
+
+		std::array<dd::Edge, 4> edges{ };
+		std::bitset<4> handled{};
+		for (int i = 0; i < 4; ++i) {
+			if (!handled.test(i)) {
+				if (isTerminal(e.p->e[i])) {
+					edges[i] = e.p->e[i];
+				} else {
+					edges[i] = reduceAncillaeRecursion(f.p->e[i], ancillary, lowerbound, regular);
+					for (int j = i+1; j < 4; ++j) {
+						if (e.p->e[i].p == e.p->e[j].p) {
+							edges[j] = edges[i];
+							handled.set(j);
+						}
+					}
+				}
+				handled.set(i);
+			}
+		}
+		f = makeNonterminal(f.p->v, edges);
+
+		// something to reduce for this qubit
+		if (f.p->v >= 0 && ancillary.test(f.p->v)) {
+			if (regular) {
+				if (f.p->e[1].w != CN::ZERO || f.p->e[3].w != CN::ZERO){
+					f = makeNonterminal(f.p->v, { f.p->e[0], dd::Package::DDzero, f.p->e[2], dd::Package::DDzero });
+				}
+			} else {
+				if (f.p->e[2].w != CN::ZERO || f.p->e[3].w != CN::ZERO) {
+					f = makeNonterminal(f.p->v, { f.p->e[0], f.p->e[1], dd::Package::DDzero, dd::Package::DDzero });
+				}
+			}
+		}
+
+		auto c = cn.mulCached(f.w, e.w);
+		f.w = cn.lookup(c);
+		cn.releaseCached(c);
+
+		// increasing the ref count for safety. TODO: find out if this is necessary
+		incRef(f);
+		return f;
+	}
+
+	Edge Package::reduceGarbage(dd::Edge& e, const std::bitset<MAXN>& garbage, bool regular) {
+		// return if no more garbage left
+		if (!garbage.any() || e.p == nullptr) return e;
+		unsigned short lowerbound = 0;
+		for (size_t i=0; i<garbage.size(); ++i) {
+			if (garbage.test(i)) {
+				lowerbound = i;
+				break;
+			}
+		}
+		if(e.p->v < lowerbound) return e;
+		return reduceGarbageRecursion(e, garbage, lowerbound, regular);
+	}
+
+	Edge Package::reduceGarbageRecursion(dd::Edge& e, const std::bitset<MAXN>& garbage, unsigned short lowerbound, bool regular) {
+		if(e.p->v < lowerbound) return e;
+
+		dd::Edge f = e;
+
+		std::array<dd::Edge, 4> edges{ };
+		std::bitset<4> handled{};
+		for (int i = 0; i < 4; ++i) {
+			if (!handled.test(i)) {
+				if (isTerminal(e.p->e[i])) {
+					edges[i] = e.p->e[i];
+				} else {
+					edges[i] = reduceGarbageRecursion(f.p->e[i], garbage, lowerbound, regular);
+					for (int j = i+1; j < 4; ++j) {
+						if (e.p->e[i].p == e.p->e[j].p) {
+							edges[j] = edges[i];
+							handled.set(j);
+						}
+					}
+				}
+				handled.set(i);
+			}
+		}
+		f = makeNonterminal(f.p->v, edges);
+
+		// something to reduce for this qubit
+		if (f.p->v >= 0 && garbage.test(f.p->v)) {
+			if (regular) {
+				if (f.p->e[2].w != CN::ZERO || f.p->e[3].w != CN::ZERO) {
+					dd::Edge g{ };
+					if (f.p->e[0].w == CN::ZERO && f.p->e[2].w != CN::ZERO) {
+						g = f.p->e[2];
+					} else if (f.p->e[2].w != CN::ZERO) {
+						g = add(f.p->e[0], f.p->e[2]);
+					} else {
+						g = f.p->e[0];
+					}
+					dd::Edge h{ };
+					if (f.p->e[1].w == CN::ZERO && f.p->e[3].w != CN::ZERO) {
+						h = f.p->e[3];
+					} else if (f.p->e[3].w != CN::ZERO) {
+						h = add(f.p->e[1], f.p->e[3]);
+					} else {
+						h = f.p->e[1];
+					}
+					f = makeNonterminal(e.p->v, { g, h, dd::Package::DDzero, dd::Package::DDzero });
+				}
+			} else {
+				if (f.p->e[1].w != CN::ZERO || f.p->e[3].w != CN::ZERO) {
+					dd::Edge g{ };
+					if (f.p->e[0].w == CN::ZERO && f.p->e[1].w != CN::ZERO) {
+						g = f.p->e[1];
+					} else if (f.p->e[1].w != CN::ZERO) {
+						g = add(f.p->e[0], f.p->e[1]);
+					} else {
+						g = f.p->e[0];
+					}
+					dd::Edge h{ };
+					if (f.p->e[2].w == CN::ZERO && f.p->e[3].w != CN::ZERO) {
+						h = f.p->e[3];
+					} else if (f.p->e[3].w != CN::ZERO) {
+						h = add(f.p->e[2], f.p->e[3]);
+					} else {
+						h = f.p->e[2];
+					}
+					f = makeNonterminal(e.p->v, { g, dd::Package::DDzero, h, dd::Package::DDzero });
+				}
+			}
+		}
+
+		auto c = cn.mulCached(f.w, e.w);
+		f.w = cn.lookup(c);
+		cn.releaseCached(c);
+
+		// Quick-fix for normalization bug
+		if (CN::mag2(f.w) > 1.0)
+			f.w = CN::ONE;
+
+		// increasing the ref count for safety. TODO: find out if this is necessary
+		incRef(f);
+		return f;
+	}
 
     /**
      * Get a single element of the vector or matrix represented by the dd with root edge e

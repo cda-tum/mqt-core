@@ -313,3 +313,63 @@ TEST(DDPackageTest, TestLocalInconsistency) {
 	EXPECT_FALSE(local);
 	bell_state.p->e[0].w.r->ref=1;
 }
+
+TEST(DDPackageTest, Ancillaries) {
+	auto dd = std::make_unique<dd::Package>();
+	auto h_gate = dd->makeGateDD(Hmat, 2, {2,-1});
+	auto cx_gate = dd->makeGateDD(Xmat, 2, {1,2});
+	auto bell_matrix = dd->multiply(cx_gate, h_gate);
+
+	auto reduced_bell_matrix = dd->reduceAncillae(bell_matrix, {0b00});
+	EXPECT_EQ(bell_matrix, reduced_bell_matrix);
+	reduced_bell_matrix = dd->reduceAncillae(bell_matrix, {0b100});
+	EXPECT_EQ(bell_matrix, reduced_bell_matrix);
+
+	auto extended_bell_matrix = dd->extend(bell_matrix, 2);
+	reduced_bell_matrix = dd->reduceAncillae(extended_bell_matrix, {0b1100});
+	EXPECT_EQ(reduced_bell_matrix.p->e[1], dd::Package::DDzero);
+	EXPECT_EQ(reduced_bell_matrix.p->e[2], dd::Package::DDzero);
+	EXPECT_EQ(reduced_bell_matrix.p->e[3], dd::Package::DDzero);
+
+	EXPECT_EQ(reduced_bell_matrix.p->e[0].p->e[0].p, bell_matrix.p);
+	EXPECT_EQ(reduced_bell_matrix.p->e[0].p->e[1], dd::Package::DDzero);
+	EXPECT_EQ(reduced_bell_matrix.p->e[0].p->e[2], dd::Package::DDzero);
+	EXPECT_EQ(reduced_bell_matrix.p->e[0].p->e[3], dd::Package::DDzero);
+
+	reduced_bell_matrix = dd->reduceAncillae(extended_bell_matrix, {0b1100}, false);
+	EXPECT_EQ(reduced_bell_matrix.p->e[1], dd::Package::DDzero);
+	EXPECT_EQ(reduced_bell_matrix.p->e[2], dd::Package::DDzero);
+	EXPECT_EQ(reduced_bell_matrix.p->e[3], dd::Package::DDzero);
+
+	EXPECT_EQ(reduced_bell_matrix.p->e[0].p->e[0].p, bell_matrix.p);
+	EXPECT_EQ(reduced_bell_matrix.p->e[0].p->e[1], dd::Package::DDzero);
+	EXPECT_EQ(reduced_bell_matrix.p->e[0].p->e[2], dd::Package::DDzero);
+	EXPECT_EQ(reduced_bell_matrix.p->e[0].p->e[3], dd::Package::DDzero);
+}
+
+TEST(DDPackageTest, Garbage) {
+	auto dd = std::make_unique<dd::Package>();
+	auto h_gate = dd->makeGateDD(Hmat, 2, {2,-1});
+	auto cx_gate = dd->makeGateDD(Xmat, 2, {1,2});
+	auto bell_matrix = dd->multiply(cx_gate, h_gate);
+
+	auto reduced_bell_matrix = dd->reduceGarbage(bell_matrix, {0b00});
+	EXPECT_EQ(bell_matrix, reduced_bell_matrix);
+	reduced_bell_matrix = dd->reduceGarbage(bell_matrix, {0b100});
+	EXPECT_EQ(bell_matrix, reduced_bell_matrix);
+
+	reduced_bell_matrix = dd->reduceGarbage(bell_matrix, {0b10});
+	auto mat = dd->getMatrix(reduced_bell_matrix);
+	auto zero = dd::Package::CVec{{0., 0.}, {0., 0.}, {0., 0.}, {0., 0.}};
+	EXPECT_EQ(mat[2], zero);
+	EXPECT_EQ(mat[3], zero);
+
+	reduced_bell_matrix = dd->reduceGarbage(bell_matrix, {0b01});
+	mat = dd->getMatrix(reduced_bell_matrix);
+	EXPECT_EQ(mat[1], zero);
+	EXPECT_EQ(mat[3], zero);
+
+	reduced_bell_matrix = dd->reduceGarbage(bell_matrix, {0b10}, false);
+	EXPECT_EQ(reduced_bell_matrix.p->e[1], dd::Package::DDzero);
+	EXPECT_EQ(reduced_bell_matrix.p->e[3], dd::Package::DDzero);
+}

@@ -245,8 +245,8 @@ namespace dd {
 	    inline Edge makeNonterminal(const short v, const std::array<Edge, NEDGE>& edge, bool cached = false) {
 	    	return makeNonterminal(v, edge.data(), cached);
 	    }
-	    Edge makeZeroState(short n);
-	    Edge makeBasisState(short n, const std::bitset<MAXN>& state);
+	    Edge makeZeroState(unsigned short n);
+	    Edge makeBasisState(unsigned short n, const std::bitset<MAXN>& state);
 	    Edge makeBasisState(unsigned short n, const std::vector<BasisStates>& state);
 	    Edge makeIdent(unsigned short n);
 	    Edge makeIdent(short x, short y);
@@ -280,6 +280,16 @@ namespace dd {
 	    fp fidelity(const Edge& x, const Edge& y);
 	    Edge kronecker(const Edge& x, const Edge& y);
 	    Edge extend(const Edge& e, unsigned short h = 0, unsigned short l = 0);
+
+	    // handling of ancillary and garbage qubits
+	    dd::Edge reduceAncillae(dd::Edge& e, const std::bitset<dd::MAXN>& ancillary, bool regular = true);
+	    dd::Edge reduceAncillaeRecursion(dd::Edge& e, const std::bitset<dd::MAXN>& ancillary, unsigned short lowerbound, bool regular = true);
+	    // garbage reduction works for reversible circuits --- to be thoroughly tested for quantum circuits
+	    dd::Edge reduceGarbage(dd::Edge& e, const std::bitset<dd::MAXN>& garbage, bool regular = true);
+	    dd::Edge reduceGarbageRecursion(dd::Edge& e, const std::bitset<dd::MAXN>& garb, unsigned short lowerbound, bool regular = true);
+
+	    // calculates E_s F(W|s>, |s>), where the expectation is taken over the set of local quantum stimuli
+		fp localStimuliExpectation(const Edge& W);
 
 		// utility
         /// Traverse DD and return product of edge weights along the way
@@ -339,5 +349,8 @@ namespace dd {
         void check_consistency_counter(const Edge& edge, const std::map<ComplexTableEntry*, long>& weight_map, const std::map<NodePtr , unsigned long>& node_map);
 
     };
+
+	inline bool operator==(const Edge& lhs, const Edge& rhs){ return Package::equals(lhs, rhs); }
+	inline bool operator!=(const Edge& lhs, const Edge& rhs){ return !(lhs == rhs); }
 }
 #endif
