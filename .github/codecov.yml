@@ -1,7 +1,6 @@
 ignore:
-  - "test/**/*"
   - "extern/**/*"
 
 coverage:
-  range: 60..95
+  range: 60..90
   precision: 1
