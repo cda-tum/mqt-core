@@ -52,7 +52,7 @@ namespace qc {
 		}
 
 		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-			dd::Edge e = dd->makeIdent(0, static_cast<short>(nqubits - 1));
+			dd::Edge e = dd->makeIdent(nqubits);
 			for (auto& op: ops) {
 				e = dd->multiply(op->getDD(dd, line), e);
 			}
@@ -60,7 +60,7 @@ namespace qc {
 		}
 
 		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-			dd::Edge e = dd->makeIdent(0, static_cast<short>(nqubits - 1));
+			dd::Edge e = dd->makeIdent(nqubits);
 			for (auto& op: ops) { 
 				e = dd->multiply(e, op->getInverseDD(dd, line));
 			}
@@ -68,7 +68,7 @@ namespace qc {
 		}
 
 		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
-			dd::Edge e = dd->makeIdent(0, static_cast<short>(nqubits - 1));
+			dd::Edge e = dd->makeIdent(nqubits);
 			for (auto& op: ops) {
 				e = dd->multiply(op->getDD(dd, line, permutation), e);
 			}
@@ -76,7 +76,7 @@ namespace qc {
 		}
 
 		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
-			dd::Edge e = dd->makeIdent(0, static_cast<short>(nqubits - 1));
+			dd::Edge e = dd->makeIdent(nqubits);
 			for (auto& op: ops) {
 				e = dd->multiply(e, op->getInverseDD(dd, line, permutation));
 			}

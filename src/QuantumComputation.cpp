@@ -672,7 +672,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 
 
 	dd::Edge QuantumComputation::createInitialMatrix(std::unique_ptr<dd::Package>& dd) const {
-		dd::Edge e = dd->makeIdent(0, short(nqubits+nancillae-1));
+		dd::Edge e = dd->makeIdent(nqubits+nancillae);
 		dd->incRef(e);
 		e = reduceAncillae(e, dd);
 		return e;

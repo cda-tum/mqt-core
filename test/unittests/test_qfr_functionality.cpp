@@ -133,11 +133,11 @@ TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
 	EXPECT_EQ(qc.getNqubits(), 3);
 	qc.emplace_back<StandardOperation>(nqubits, 2, X);
 	auto e = qc.createInitialMatrix(dd);
-	EXPECT_TRUE(dd->equals(e.p->e[0], dd->makeIdent(0,nqubits-1)));
+	EXPECT_TRUE(dd->equals(e.p->e[0], dd->makeIdent(nqubits)));
 	EXPECT_TRUE(dd->equals(e.p->e[1], dd->DDzero));
 	EXPECT_TRUE(dd->equals(e.p->e[2], dd->DDzero));
 	EXPECT_TRUE(dd->equals(e.p->e[3], dd->DDzero));
-	auto f = dd->makeIdent(0, (short)nqubits);
+	auto f = dd->makeIdent(nqubits+1);
 	dd->incRef(f);
 	f = qc.reduceAncillae(f, dd);
 	f = qc.reduceGarbage(f, dd);

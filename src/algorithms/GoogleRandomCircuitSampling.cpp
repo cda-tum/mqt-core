@@ -153,10 +153,10 @@ namespace qc {
         permutationMap map = initialLayout;
         dd->setMode(dd::Matrix);
 
-        dd::Edge e = dd->makeIdent(0, static_cast<short>(nqubits-1));
+        dd::Edge e = dd->makeIdent(nqubits);
         dd->incRef(e);
         for(const auto& cycle:cycles) {
-            dd::Edge f = dd->makeIdent(0, static_cast<short>(nqubits-1));
+            dd::Edge f = dd->makeIdent(nqubits);
             for(const auto& op: cycle)
                 f = dd->multiply(op->getDD(dd, line, map), f);
             dd::Edge g = dd->multiply(f, e);
