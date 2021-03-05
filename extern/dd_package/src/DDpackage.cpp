@@ -957,7 +957,7 @@ namespace dd {
         if (x.p->v == w && x.p->v == y.p->v) {
             if (x.p->ident) {
                 if (y.p->ident) {
-                    r = makeIdent(0, w);
+                    r = makeIdent(var);
                 } else {
                     r = yCopy;
                 }
@@ -1128,6 +1128,21 @@ namespace dd {
         return e;
     }
 
+	Edge Package::makeIdent(unsigned short n) {
+		if (n == 0)
+			return DDone;
+
+		unsigned short qidx = n-1;
+		if (IdTable[qidx].p != nullptr) {
+			return IdTable[qidx];
+		}
+
+		Edge e = makeNonterminal(0, {DDone, DDzero, DDzero, DDone});
+		IdTable[qidx] = extend(e, qidx);
+
+		return IdTable[qidx];
+	}
+
     // build matrix representation for a single gate on a circuit with n lines
     // line is the vector of connections
     // -1 not connected
@@ -1190,12 +1205,12 @@ namespace dd {
                     edge = makeNonterminal(z, fm);
                 }
             }
-            e = makeIdent(0, z);
+            e = makeIdent(z+1);
         }
         e = makeNonterminal(z, em);  // target line
         for (z++; z < n; z++) { // go through lines above target
             if (line[z] >= 0) { //  control line above target in DD
-                Edge temp = makeIdent(0, static_cast<short>(z - 1));
+                Edge temp = makeIdent(z);
                 for (int i = 0; i < RADIX; i++) {
                     for (int j = 0; j < RADIX; j++) {
                         if (i == j) {
@@ -1246,10 +1261,10 @@ namespace dd {
                     int i = i1 * RADIX + i2;
                     if (line[z] == 0) { // neg. control
                         em[i] = makeNonterminal(z, {em[i], DDzero, DDzero,
-                                                    (i1 == i2) ? makeIdent(0, static_cast<short>(z - 1)) : DDzero});
+                                                    (i1 == i2) ? makeIdent(z) : DDzero});
                     } else if (line[z] == 1) { // pos. control
                         em[i] = makeNonterminal(z,
-                                                {(i1 == i2) ? makeIdent(0, static_cast<short>(z - 1)) : DDzero, DDzero, DDzero, em[i]});
+                                                {(i1 == i2) ? makeIdent(z) : DDzero, DDzero, DDzero, em[i]});
                     } else { // not connected
                         em[i] = makeNonterminal(z, {em[i], DDzero, DDzero, em[i]});
                     }
@@ -1263,9 +1278,9 @@ namespace dd {
         //process lines above target
         for (z++; z < n; z++) {
             if (line[z] == 0) { //  neg. control
-                e = makeNonterminal(z, {e, DDzero, DDzero, makeIdent(0, static_cast<short>(z - 1))});
+                e = makeNonterminal(z, {e, DDzero, DDzero, makeIdent(z)});
             } else if (line[z] == 1) { // pos. control
-                e = makeNonterminal(z, {makeIdent(0, static_cast<short>(z - 1)), DDzero, DDzero, e});
+                e = makeNonterminal(z, {makeIdent(z), DDzero, DDzero, e});
             } else { // not connected
                 e = makeNonterminal(z, {e, DDzero, DDzero, e});
             }
@@ -1408,8 +1423,8 @@ namespace dd {
     }
 
     Edge Package::extend(const Edge& e, unsigned short h, unsigned short l) {
-        Edge f = (l > 0) ? kronecker(e, makeIdent(0, static_cast<short>(l - 1))) : e;
-        Edge g = (h > 0) ? kronecker(makeIdent(0, static_cast<short>(h - 1)), f) : f;
+        Edge f = (l > 0) ? kronecker(e, makeIdent(l)) : e;
+        Edge g = (h > 0) ? kronecker(makeIdent(h), f) : f;
         return g;
     }
 

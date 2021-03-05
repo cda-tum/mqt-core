@@ -85,14 +85,14 @@ TEST(DDPackageTest, BellState) {
 
 TEST(DDPackageTest, IdentityTrace) {
     auto dd = std::make_unique<dd::Package>();
-    auto fullTrace = dd->trace(dd->makeIdent(0, 3));
+    auto fullTrace = dd->trace(dd->makeIdent(4));
 
     ASSERT_EQ(fullTrace, (dd::ComplexValue{16,0}));
 }
 
 TEST(DDPackageTest, PartialIdentityTrace) {
 	auto dd = std::make_unique<dd::Package>();
-	auto tr = dd->partialTrace(dd->makeIdent(0, 1), std::bitset<dd::MAXN>(1));
+	auto tr = dd->partialTrace(dd->makeIdent(2), std::bitset<dd::MAXN>(1));
 	auto mul = dd->multiply(tr, tr);
 	EXPECT_EQ(CN::val(mul.w.r), 4.0);
 }
@@ -233,3 +233,83 @@ TEST(DDPackageTest, TestConsistency) {
 	dd->debugnode(bell_state.p);
 }
 
+TEST(DDPackageTest, ToffoliTable) {
+	auto dd = std::make_unique<dd::Package>();
+
+	// try to search for a toffoli in an empty table
+	auto toffoli = dd->TTlookup(3, static_cast<unsigned short>(2), 2, {0, 1, 2});
+	EXPECT_EQ(toffoli.p, nullptr);
+	if (toffoli.p == nullptr) {
+		toffoli = dd->makeGateDD(Xmat, 3, {0, 1, 2});
+		dd->TTinsert(3, static_cast<unsigned short>(2), 2, {0, 1, 2}, toffoli);
+	}
+
+	// try again with same toffoli
+	auto toffoliTableEntry = dd->TTlookup(3, static_cast<unsigned short>(2), 2, {0, 1, 2});
+	EXPECT_NE(toffoliTableEntry.p, nullptr);
+	EXPECT_TRUE(dd->equals(toffoli, toffoliTableEntry));
+
+	// try again with different controlled toffoli
+	toffoliTableEntry = dd->TTlookup(3, static_cast<unsigned short>(2), 2, {1, 1, 2});
+	EXPECT_EQ(toffoliTableEntry.p, nullptr);
+
+	// try again with different qubit toffoli
+	toffoliTableEntry = dd->TTlookup(4, static_cast<unsigned short>(3), 3, {1, 1, 1, 2});
+	EXPECT_EQ(toffoliTableEntry.p, nullptr);
+}
+
+TEST(DDPackageTest, Extend) {
+	auto dd = std::make_unique<dd::Package>();
+
+	auto id = dd->makeIdent(3);
+	dd->printDD(id, 64);
+	EXPECT_EQ(id.p->v, 2);
+	EXPECT_TRUE(dd->equals(id.p->e[0], id.p->e[3]));
+	EXPECT_TRUE(dd->equals(id.p->e[1], id.p->e[2]));
+	EXPECT_TRUE(id.p->ident);
+	
+	auto ext = dd->extend(id, 0, 1);
+	EXPECT_EQ(ext.p->v, 3);
+	EXPECT_TRUE(dd->equals(ext.p->e[0], ext.p->e[3]));
+	EXPECT_TRUE(dd->equals(ext.p->e[1], ext.p->e[2]));
+	EXPECT_TRUE(ext.p->ident);
+}
+
+TEST(DDPackageTest, Identity) {
+	auto dd = std::make_unique<dd::Package>();
+	EXPECT_TRUE(dd->equals(dd->makeIdent(0), dd->DDone));
+	EXPECT_TRUE(dd->equals(dd->makeIdent(0, -1), dd->DDone));
+	auto id3 = dd->makeIdent(0, 2);
+	EXPECT_TRUE(dd->equals(dd->makeIdent(3), id3));
+	auto id2 = dd->makeIdent(0, 1); // should be found in IdTable
+	EXPECT_TRUE(dd->equals(dd->makeIdent(2), id2));
+	auto id4 = dd->makeIdent(0, 3); // should use id3 and extend it
+	EXPECT_TRUE(dd->equals(dd->makeIdent(4), id4));
+}
+
+TEST(DDPackageTest, TestLocalInconsistency) {
+	auto dd = std::make_unique<dd::Package>();
+
+	dd::Edge h_gate = dd->makeGateDD(Hmat, 2, {2,-1});
+	dd::Edge cx_gate = dd->makeGateDD(Xmat, 2, {1,2});
+	dd::Edge zero_state = dd->makeZeroState(2);
+
+	dd::Edge bell_state = dd->multiply(dd->multiply(cx_gate, h_gate), zero_state);
+	auto local = dd->is_locally_consistent_dd(bell_state);
+	EXPECT_FALSE(local);
+	bell_state.p->ref=1;
+	local = dd->is_locally_consistent_dd(bell_state);
+	EXPECT_FALSE(local);
+	bell_state.p->ref=0;
+	dd->incRef(bell_state);
+
+	bell_state.p->v = 2;
+	local = dd->is_locally_consistent_dd(bell_state);
+	EXPECT_FALSE(local);
+	bell_state.p->v = 1;
+
+	bell_state.p->e[0].w.r->ref=0;
+	local = dd->is_locally_consistent_dd(bell_state);
+	EXPECT_FALSE(local);
+	bell_state.p->e[0].w.r->ref=1;
+}

@@ -248,6 +248,7 @@ namespace dd {
 	    Edge makeZeroState(short n);
 	    Edge makeBasisState(short n, const std::bitset<MAXN>& state);
 	    Edge makeBasisState(unsigned short n, const std::vector<BasisStates>& state);
+	    Edge makeIdent(unsigned short n);
 	    Edge makeIdent(short x, short y);
 	    Edge makeGateDD(const Matrix2x2& mat, unsigned short n, const short *line);
 	    Edge makeGateDD(const std::array<ComplexValue,NEDGE>& mat, unsigned short n, const std::array<short,MAXN>& line);
@@ -309,7 +310,13 @@ namespace dd {
 
 	    // Toffoli table insertion and lookup
 	    void TTinsert(unsigned short n, unsigned short m, unsigned short t, const short line[MAXN], const Edge& e);
+	    void TTinsert(unsigned short n, unsigned short m, unsigned short t, const std::array<short, MAXN>& line, const Edge& e) {
+		    TTinsert(n, m, t, line.data(), e);
+	    }
 	    Edge TTlookup(unsigned short n, unsigned short m, unsigned short t, const short line[MAXN]);
+	    Edge TTlookup(unsigned short n, unsigned short m, unsigned short t, const std::array<short, MAXN>& line) {
+		    return TTlookup(n, m, t, line.data());
+	    }
 
 	    // statistics
         void statistics();

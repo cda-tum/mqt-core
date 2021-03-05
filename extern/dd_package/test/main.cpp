@@ -78,8 +78,8 @@ int main() {
 	std::cout << "DD of my gate has size " << dd->size(my_z_gate) << std::endl;
 
 	// compute (partial) traces
-	dd::Edge partTrace = dd->partialTrace(dd->makeIdent(0, 1), std::bitset<dd::MAXN>(2));
-	auto fullTrace = dd->trace(dd->makeIdent(0, 3));
+	dd::Edge partTrace = dd->partialTrace(dd->makeIdent(2), std::bitset<dd::MAXN>(2));
+	auto fullTrace = dd->trace(dd->makeIdent(4));
 	std::cout << "Identity function for 4 qubits has trace: " << fullTrace << std::endl;
 
     /***** print DDs as SVG file *****/
