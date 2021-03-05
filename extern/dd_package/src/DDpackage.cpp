@@ -48,182 +48,6 @@ namespace dd {
         return r;
     }
 
-    ComplexValue Package::getVectorElement(const Edge& e, const unsigned long long element) {
-        if (isTerminal(e)) {
-            return {0, 0};
-        }
-        Complex l = cn.getTempCachedComplex(1, 0);
-        auto r = e;
-        do {
-            CN::mul(l, l, r.w);
-            auto tmp = (element >> r.p->v) & 1U;
-            r = r.p->e[2 * tmp];
-        } while (!isTerminal(r));
-        CN::mul(l, l, r.w);
-
-        return {CN::val(l.r), CN::val(l.i)};
-    }
-
-    void Package::toDot(const Edge& e, std::ostream &oss, bool isVector) {
-        /* first part of dot file*/
-        std::ostringstream nodes;
-        /*second part of dot file*/
-        std::ostringstream edges;
-
-        edges << "\n";
-        /*Initialize Graph*/
-        nodes << "digraph \"DD\" {\n"
-              << "graph [center=true, ordering=out];\n"
-              << "node [shape=oval, center=true];\n"
-              << "\"T\" [ shape = box, label=\"1\" ];\n";
-        /* Define Nodes */
-        ListElementPtr first, q, lastq, pnext;
-        first = newListElement();
-        first->p = e.p;
-        first->next = nullptr;
-        first->w = 0;
-
-        unsigned short n = 0, i = 0;
-
-        nodes << "\"R\"";
-        //füge Kante zwischen helper node und neuem Knoten hinzu
-        if (CN::equalsOne(e.w)) {
-            nodes << " [label=\"\", shape=point];\n";
-            edges << "\"R\" -> \"0\"\n";
-        } else {
-            nodes << " [label=\"\", shape=point];\n";
-            auto ref_r = CN::getAlignedPointer(e.w.r)->ref;
-            auto ref_i = CN::getAlignedPointer(e.w.i)->ref;
-            edges << R"("R" -> "0" [label="()" << e.w << ") " << ref_r << " " << ref_i << "\" ];\n";
-        }
-
-
-        pnext = first;
-        while (pnext != nullptr) {
-            /* Zeichne Knoten*/
-            nodes << "\"" << i << "\" " << "[ label=\""
-                  << "q" << pnext->p->v << " " << pnext->p->ref
-                  << "\" ,style=filled, fillcolor=lightgray ];\n";
-
-            if (pnext->p != DDzero.p) {
-                edges << "{rank=same;";
-                for (unsigned int k = 0; k < NEDGE; k++) {
-                    if (isVector && k % RADIX != 0) continue;
-                    edges << " \"" << i << "h" << k << "\"";
-                }
-                edges << "}\n";
-
-                for (int j = 0; j < NEDGE; j++) {
-                    if (isVector && j % RADIX != 0) continue;
-                    if (pnext->p->e[j].p == nullptr);
-                    else {
-                        if (!isTerminal(pnext->p->e[j])) {
-                            q = first->next;
-                            lastq = first;
-                            while (q != nullptr && pnext->p->e[j].p != q->p) {
-                                lastq = q;
-                                q = q->next;
-                            }
-                            if (q == nullptr) {
-                                q = newListElement();
-                                q->p = pnext->p->e[j].p;
-                                q->next = nullptr;
-                                ++n;
-                                q->w = n;
-                                lastq->next = q;
-                            }
-                            nodes << "\"" << i << "h" << j << "\" ";
-
-                            //connect helper node
-
-                            edges << "\"" << i << "\" -> \"" << i << "h" << j << "\" [arrowhead=none";
-
-                            switch (j) {
-                                case 0:
-                                    edges << ",color=darkgreen";
-                                    break;
-                                case 1:
-                                    edges << ",color=blue";
-                                    break;
-                                case 2:
-                                    edges << ",color=red";
-                                    break;
-                                case 3:
-                                    edges << ",color=gold";
-                                    break;
-                                default:
-                                    break;
-                            }
-                            edges << "];\n";
-                            //füge Kante zwischen helper node und neuem Knoten hinzu
-                            if (CN::equalsOne(pnext->p->e[j].w)) {
-                                nodes << " [label=\"\", shape=point];\n";
-                                edges << "\"" << i << "h" << j << "\" -> \"" << q->w << "\";\n";
-                            } else {
-                                nodes << " [label=\"\", shape=point];\n";
-                                auto ref_r = CN::getAlignedPointer(pnext->p->e[j].w.r)->ref;
-                                auto ref_i = CN::getAlignedPointer(pnext->p->e[j].w.i)->ref;
-                                edges << "\"" << i << "h" << j << "\" -> \"" << q->w
-                                      << "\" [label=\" (" << pnext->p->e[j].w << ") " << ref_r << " " << ref_i << "\" ];\n";
-                            }
-
-                        } else {
-                            nodes << "\"" << i << "h" << j << "\" " << " [label=\"\", shape=point ";
-                            edges << "\"" << i << "\" -> \"" << i << "h" << j << "\" [arrowhead=none";
-                            switch (j) {
-                                case 0:
-                                    edges << ",color=darkgreen";
-                                    break;
-                                case 1:
-                                    edges << ",color=blue";
-                                    break;
-                                case 2:
-                                    edges << ",color=red";
-                                    break;
-                                case 3:
-                                    edges << ",color=gold";
-                                    break;
-                                default:
-                                    break;
-                            }
-                            edges << "];\n";
-                            //connect helper node
-                            if (CN::equalsZero(pnext->p->e[j].w)) {
-                                nodes << ", fillcolor=red, color=red";
-                            } else if (CN::equalsOne(pnext->p->e[j].w)) {
-                                edges << "\"" << i << "h" << j << "\"-> \"T\";\n";
-                            } else {
-                                edges << "\"" << i << "h" << j << R"("-> "T" [label= "()" << pnext->p->e[j].w
-                                      << ")\", ];\n";
-                            }
-                            nodes << "];\n";
-
-                        }
-                    }
-                }
-            }
-            i++;
-            pnext = pnext->next;
-        }
-        oss << nodes.str() << edges.str() << "\n}\n" << std::flush;
-    }
-
-    // export a DD in .dot format to the file specified by outputFilename
-    // and call DOT->SVG export (optional, requires dot package)
-    void Package::export2Dot(const Edge& basic, const std::string &outputFilename, bool isVector, bool show) {
-        std::ofstream init(outputFilename);
-        toDot(basic, init, isVector);
-        init.close();
-
-        if (show) {
-            std::ostringstream oss;
-            oss << "dot -Tsvg " << outputFilename << " -o "
-                << outputFilename.substr(0, outputFilename.find_last_of('.')) << ".svg";
-            auto str = oss.str(); // required to avoid immediate deallocation of temporary
-            static_cast<void>(!std::system(str.c_str())); // cast and ! just to suppress the unused result warning
-        }
-    }
-
     Edge Package::makeZeroState(short n) {
         Edge f = DDone;
         Edge edges[4];
@@ -1675,6 +1499,101 @@ namespace dd {
         dd::ComplexNumbers::mul(c, c, r.w);
 
         return {dd::ComplexNumbers::val(c.r), dd::ComplexNumbers::val(c.i)};
+    }
+
+	ComplexValue Package::getValueByPath(const Edge& e, size_t i, size_t j) {
+		if (dd::Package::isTerminal(e)) {
+			return {dd::ComplexNumbers::val(e.w.r), dd::ComplexNumbers::val(e.w.i)};
+		}
+		return getValueByPath(e, CN::ONE, i, j);
+    }
+
+	ComplexValue Package::getValueByPath(const Edge& e, const Complex& amp, size_t i, size_t j) {
+		auto c = cn.mulCached(e.w, amp);
+
+		if (isTerminal(e)) {
+			cn.releaseCached(c);
+			return {CN::val(c.r), CN::val(c.i)};
+		}
+
+		bool row = i & (1 << e.p->v);
+		bool col = j & (1 << e.p->v);
+
+		ComplexValue r{};
+		if (!row && !col && !CN::equalsZero(e.p->e[0].w)) {
+			r = getValueByPath(e.p->e[0], c, i, j);
+		} else if (!row && col && !CN::equalsZero(e.p->e[1].w)) {
+			r = getValueByPath(e.p->e[1], c, i, j);
+		} else if (row && !col && !CN::equalsZero(e.p->e[2].w)) {
+			r = getValueByPath(e.p->e[2], c, i, j);
+		} else if (row && col && !CN::equalsZero(e.p->e[3].w)){
+			r = getValueByPath(e.p->e[3], c, i, j);
+		}
+		cn.releaseCached(c);
+		return r;
+	}
+
+	Package::CVec Package::getVector(const Edge& e) {
+		size_t dim = 1 << (e.p->v+1);
+		// allocate resulting vector
+		auto vec = CVec(dim, {0.0, 0.0});
+		getVector(e, CN::ONE, 0, vec);
+		return vec;
+    }
+
+	void Package::getVector(const Edge& e, const Complex& amp, size_t i, Package::CVec& vec){
+		// calculate new accumulated amplitude
+		auto c = cn.mulCached(e.w, amp);
+
+		// base case
+		if (isTerminal(e)) {
+			vec.at(i) = {CN::val(c.r), CN::val(c.i)};
+			cn.releaseCached(c);
+			return;
+		}
+
+		size_t x = i | (1 << e.p->v);
+
+		// recursive case
+		if (!CN::equalsZero(e.p->e[0].w))
+			getVector(e.p->e[0], c, i, vec);
+		if (!CN::equalsZero(e.p->e[2].w))
+			getVector(e.p->e[2], c, x, vec);
+		cn.releaseCached(c);
+	}
+
+	Package::CMat Package::getMatrix(const Edge& e) {
+		size_t dim = 1 << (e.p->v+1);
+		// allocate resulting matrix
+    	auto mat = CMat(dim, CVec(dim, {0.0, 0.0}));
+		getMatrix(e, CN::ONE, 0, 0, mat);
+    	return mat;
+    }
+
+	void Package::getMatrix(const Edge& e, const Complex& amp, size_t i, size_t j, CMat& mat) {
+		// calculate new accumulated amplitude
+    	auto c = cn.mulCached(e.w, amp);
+
+		// base case
+		if (isTerminal(e)) {
+			mat.at(i).at(j) = {CN::val(c.r), CN::val(c.i)};
+			cn.releaseCached(c);
+			return;
+		}
+
+		size_t x = i | (1 << e.p->v);
+		size_t y = j | (1 << e.p->v);
+
+		// recursive case
+		if (!CN::equalsZero(e.p->e[0].w))
+			getMatrix(e.p->e[0], c, i, j, mat);
+		if (!CN::equalsZero(e.p->e[1].w))
+			getMatrix(e.p->e[1], c, i, y, mat);
+		if (!CN::equalsZero(e.p->e[2].w))
+			getMatrix(e.p->e[2], c, x, j, mat);
+		if (!CN::equalsZero(e.p->e[3].w))
+			getMatrix(e.p->e[3], c, x, y, mat);
+		cn.releaseCached(c);
     }
 
     void Package::checkSpecialMatrices(NodePtr p) {

@@ -204,7 +204,6 @@ namespace dd {
 	    static inline unsigned short TThash(unsigned short n, unsigned short t, const short line[MAXN]);
 
 	    unsigned int nodeCount(const Edge& e, std::unordered_set<NodePtr>& v) const;
-	    ComplexValue getVectorElement(const Edge& e, unsigned long long int element);
 	    ListElementPtr newListElement();
 
     public:
@@ -251,6 +250,9 @@ namespace dd {
 	    Edge makeIdent(short x, short y);
 	    Edge makeGateDD(const Matrix2x2& mat, unsigned short n, const short *line);
 	    Edge makeGateDD(const std::array<ComplexValue,NEDGE>& mat, unsigned short n, const std::array<short,MAXN>& line);
+	    Edge makeGateDD(const Matrix2x2& mat, unsigned short n, const std::array<short,MAXN>& line) {
+		    return makeGateDD(mat, n, line.data());
+	    }
 
         Edge CTlookup(const Edge& a, const Edge& b, CTkind which);
         void CTinsert(const Edge& a, const Edge& b, const Edge& r, CTkind which);
@@ -280,7 +282,15 @@ namespace dd {
 		// utility
         /// Traverse DD and return product of edge weights along the way
 		ComplexValue getValueByPath(const Edge& e, std::string elements);
-        /// Calculate the size of the DD pointed to by e
+	    ComplexValue getValueByPath(const Edge& e, size_t i, size_t j=0);
+	    ComplexValue getValueByPath(const Edge& e, const Complex& amp, size_t i, size_t j);
+		using CVec = std::vector<std::pair<float, float>>;
+		using CMat = std::vector<CVec>;
+		CVec getVector(const Edge& e);
+		void getVector(const Edge& e, const Complex& amp, size_t i, CVec& vec);
+		CMat getMatrix(const Edge& e);
+	    void getMatrix(const Edge& e, const Complex& amp, size_t i, size_t j, CMat& mat);
+	    /// Calculate the size of the DD pointed to by e
         unsigned int size(const Edge& e);
 
 	    // reference counting and garbage collection
@@ -309,9 +319,6 @@ namespace dd {
         void printActive(int n);
         void printDD(const Edge& e, unsigned int limit);
         void printUniqueTable(unsigned short n);
-
-        void toDot(const Edge& e, std::ostream& oss, bool isVector = false);
-        void export2Dot(const Edge& basic, const std::string& outputFilename, bool isVector = false, bool show = true);
 
         // debugging
         void debugnode(NodePtr p) const;

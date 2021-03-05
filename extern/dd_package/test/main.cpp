@@ -1,6 +1,7 @@
 #include <iostream>
 #include <memory>
 #include "DDpackage.h"
+#include "DDexport.h"
 #include "util.h"
 
 dd::Edge BellCicuit1(std::unique_ptr<dd::Package>& dd) {
@@ -94,10 +95,10 @@ int main() {
 	std::cout << "Identity function for 4 qubits has trace: " << fullTrace << std::endl;
 
     /***** print DDs as SVG file *****/
-	dd->export2Dot(bell_circuit1, "bell_circuit1.dot", false);
-	dd->export2Dot(bell_circuit2, "bell_circuit2.dot");
-	dd->export2Dot(bell_state, "bell_state.dot", true);
-	dd->export2Dot(partTrace, "partial_trace.dot");
+	dd::export2Dot(bell_circuit1, "bell_circuit1.dot", false);
+	dd::export2Dot(bell_circuit2, "bell_circuit2.dot");
+	dd::export2Dot(bell_state, "bell_state.dot", true);
+	dd::export2Dot(partTrace, "partial_trace.dot");
 
 	/***** print statistics *****/
 	dd->statistics();

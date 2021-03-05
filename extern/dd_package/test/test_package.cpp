@@ -1,6 +1,7 @@
 #include <memory>
 
 #include "DDpackage.h"
+#include "DDexport.h"
 #include "util.h"
 #include "gtest/gtest.h"
 
@@ -63,9 +64,25 @@ TEST(DDPackageTest, BellState) {
     ASSERT_EQ(dd->getValueByPath(bell_state, "20"), (dd::ComplexValue{0, 0}));
     ASSERT_EQ(dd->getValueByPath(bell_state, "22"), (dd::ComplexValue{dd::SQRT_2, 0}));
 
+	ASSERT_EQ(dd->getValueByPath(bell_state, 0, 0), (dd::ComplexValue{dd::SQRT_2, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_state, 1, 0), (dd::ComplexValue{0, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_state, 2, 0), (dd::ComplexValue{0, 0}));
+	ASSERT_EQ(dd->getValueByPath(bell_state, 3, 0), (dd::ComplexValue{dd::SQRT_2, 0}));
+
+	auto goal_state = std::vector<std::pair<float, float>>{{dd::SQRT_2, 0.}, {0., 0.}, {0., 0.}, {dd::SQRT_2, 0.}};
+	ASSERT_EQ(dd->getVector(bell_state), goal_state);
+
     ASSERT_DOUBLE_EQ(dd->fidelity(zero_state, bell_state), 0.5);
 
     dd->printDD(bell_state, 64);
+	dd::export2Dot(bell_state, "bell_state_colored_labels.dot", true, true, true, false, false);
+	dd::export2Dot(bell_state, "bell_state_colored_labels_classic.dot", true, true, true, true, false);
+	dd::export2Dot(bell_state, "bell_state_mono_labels.dot", true, false, true, false, false);
+	dd::export2Dot(bell_state, "bell_state_mono_labels_classic.dot", true, false, true, true, false);
+	dd::export2Dot(bell_state, "bell_state_colored.dot", true, true, false, false, false);
+	dd::export2Dot(bell_state, "bell_state_colored_classic.dot", true, true, false, true, false);
+	dd::export2Dot(bell_state, "bell_state_mono.dot", true, false, false, false, false);
+	dd::export2Dot(bell_state, "bell_state_mono_classic.dot", true, false, false, true, false);
 }
 
 TEST(DDPackageTest, IdentityTrace) {

@@ -4,6 +4,7 @@
  */
 
 #include "DDpackage.h"
+#include "DDexport.h"
 #include <iomanip>
 
 
@@ -47,7 +48,7 @@ namespace dd {
         const bool result = is_locally_consistent_dd2(e);
 
         if (!result) {
-            export2Dot(e, "locally_inconsistent.dot", true, false);
+            dd::export2Dot(e, "locally_inconsistent.dot", true);
         }
 
         return result;
@@ -248,7 +249,7 @@ namespace dd {
     void Package::printVector(const Edge &e) {
         unsigned long long element = 2u << e.p->v;
         for (unsigned long long i = 0; i < element; i++) {
-            ComplexValue amplitude = getVectorElement(e, i);
+            ComplexValue amplitude = getValueByPath(e, i);
             for (int j = e.p->v; j >= 0; j--) {
                 std::cout << ((i >> j) & 1u);
             }
