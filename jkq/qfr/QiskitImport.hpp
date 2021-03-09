@@ -214,7 +214,7 @@ namespace qc {
 			for (auto qubit: virtual_bits) {
 				auto&& logical_qubit = qubit.first;
 				auto&& register_name = logical_qubit.attr("register").attr("name").cast<std::string>();
-				auto&& register_index = logical_qubit.attr("index").cast<unsigned short>();
+//				auto&& register_index = logical_qubit.attr("index").cast<unsigned short>();
 				if (register_name != "ancilla") {
 					qc.initialLayout[qubit.second.cast<unsigned short>()] = logical_qubit_index;
 					++logical_qubit_index;
