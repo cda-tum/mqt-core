@@ -43,7 +43,7 @@ namespace qc {
 	}
 
 
-	void CircuitOptimizer::swapGateFusion(QuantumComputation& qc) {
+	void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
 		// print incoming circuit
 		//qc.print(std::cout );
 		//std::cout << std::endl;
@@ -59,7 +59,7 @@ namespace qc {
 			if (!it->isStandardOperation()) {
 				// compound operations are added "as-is"
 				if (it->isCompoundOperation()) {
-					std::cerr << "Compound operation detected. This is currently not supported. Proceed with caution!" << std::endl;
+					std::clog << "Skipping compound operation during SWAP reconstruction!" << std::endl;
 					for (int i = 0; i < it->getNqubits(); ++i) {
 						if (it->actsOn(i)) {
 							dag.at(i).push_front(&it);

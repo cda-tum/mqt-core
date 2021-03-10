@@ -27,7 +27,7 @@ namespace qc {
 
 		static DAG constructDAG(QuantumComputation& qc);
 
-		static void swapGateFusion(QuantumComputation& qc);
+		static void swapReconstruction(QuantumComputation& qc);
 
 		static void singleQubitGateFusion(QuantumComputation& qc);
 

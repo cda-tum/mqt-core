@@ -41,7 +41,7 @@ TEST_F(QFRFunctionality, fuse_cx_to_swap) {
 	qc.emplace_back<StandardOperation>(nqubits, Control(0), 1, X);
 	qc.emplace_back<StandardOperation>(nqubits, Control(1), 0, X);
 	qc.emplace_back<StandardOperation>(nqubits, Control(0), 1, X);
-	CircuitOptimizer::swapGateFusion(qc);
+	CircuitOptimizer::swapReconstruction(qc);
 	ASSERT_NO_THROW({
 		auto op = dynamic_cast<StandardOperation*>((qc.begin()->get()));
         EXPECT_EQ(op->getType(), SWAP);
@@ -55,7 +55,7 @@ TEST_F(QFRFunctionality, replace_cx_to_swap_at_end) {
 	QuantumComputation qc(nqubits);
 	qc.emplace_back<StandardOperation>(nqubits, Control(0), 1, X);
 	qc.emplace_back<StandardOperation>(nqubits, Control(1), 0, X);
-	CircuitOptimizer::swapGateFusion(qc);
+	CircuitOptimizer::swapReconstruction(qc);
 	auto it = qc.begin();
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
@@ -78,7 +78,7 @@ TEST_F(QFRFunctionality, replace_cx_to_swap) {
 	qc.emplace_back<StandardOperation>(nqubits, Control(0), 1, X);
 	qc.emplace_back<StandardOperation>(nqubits, Control(1), 0, X);
 	qc.emplace_back<StandardOperation>(nqubits, 0, H);
-	CircuitOptimizer::swapGateFusion(qc);
+	CircuitOptimizer::swapReconstruction(qc);
 	auto it = qc.begin();
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
