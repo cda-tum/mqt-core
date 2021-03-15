@@ -550,6 +550,68 @@ namespace qc {
 		return e;
 	}
 
+	dd::Edge QuantumComputation::buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const {
+		if (nqubits + nancillae == 0)
+			return dd->DDone;
+
+		std::array<short, MAX_QUBITS> line{};
+		line.fill(LINE_DEFAULT);
+		permutationMap map = initialLayout;
+		dd->setMode(dd::Matrix);
+
+		if (ops.size() == 1) {
+			auto e = ops.front()->getDD(dd, line, map);
+			dd->incRef(e);
+			return e;
+		}
+
+		std::stack<dd::Edge> s{};
+		auto depth = static_cast<unsigned int>(std::ceil(std::log2(ops.size())));
+		buildFunctionalityRecursive(depth, 0, s, line, map, dd);
+		auto e = s.top();
+		s.pop();
+		return e;
+	}
+
+	bool QuantumComputation::buildFunctionalityRecursive(unsigned int depth, size_t opIdx, std::stack<dd::Edge>& s, std::array<short, MAX_QUBITS>& line, permutationMap& map, std::unique_ptr<dd::Package>& dd) const {
+		// base case
+		if(depth == 1) {
+			auto e = ops[opIdx]->getDD(dd, line, map);
+			++opIdx;
+			if (opIdx == ops.size()) { // only one element was left
+				s.push(e);
+				dd->incRef(e);
+				return false;
+			}
+			auto f = ops[opIdx]->getDD(dd, line, map);
+			s.push(dd->multiply(f, e)); // ! reverse multiplication
+			dd->incRef(s.top());
+			return (opIdx != ops.size()-1);
+		}
+
+		// in case no operations are left after the first recursive call nothing has to be done
+		size_t leftIdx = opIdx & ~(1UL << (depth-1));
+		if(!buildFunctionalityRecursive(depth-1, leftIdx, s, line, map, dd)) return false;
+
+		size_t rightIdx = opIdx | (1UL << (depth-1));
+		auto success = buildFunctionalityRecursive(depth-1, rightIdx, s, line, map, dd);
+
+		// get latest two results from stack and push their product on the stack
+		auto e = s.top();
+		s.pop();
+		auto f = s.top();
+		s.pop();
+		s.push(dd->multiply(e,f)); // ordering because of stack structure
+
+		// reference counting
+		dd->decRef(e);
+		dd->decRef(f);
+		dd->incRef(s.top());
+		dd->garbageCollect();
+
+		return success;
+	}
+
 	dd::Edge QuantumComputation::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const {
 		// measurements are currently not supported here
 		std::array<short, MAX_QUBITS> line{};

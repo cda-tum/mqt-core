@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.14...3.19)
 
 project(qfr
         LANGUAGES CXX
-        VERSION 1.2.2
-        DESCRIPTION "QFR  - A JKQ library for the representation of quantum functionality"
+        VERSION 1.3.0
+        DESCRIPTION "QFR  - A JKQ library for Quantum Functionality Representation"
         )
 
 # enable organization of targets into folders

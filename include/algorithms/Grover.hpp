@@ -35,6 +35,7 @@ namespace qc {
 		explicit Grover(unsigned short nq, unsigned int seed = 0);
 
 		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) const override;
+		dd::Edge buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const override;
 
 		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const override;
 

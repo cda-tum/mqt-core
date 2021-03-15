@@ -159,4 +159,54 @@ namespace qc {
         os << "--------------" << std::endl;
         return os;
     }
+
+	dd::Edge Grover::buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const {
+		dd->setMode(dd::Matrix);
+
+		QuantumComputation groverIteration(nqubits+1);
+		oracle(groverIteration);
+		diffusion(groverIteration);
+
+		auto iter = groverIteration.buildFunctionalityRecursive(dd);
+		auto e = iter;
+		std::bitset<64> iterBits(iterations);
+		auto msb = static_cast<unsigned short>(std::floor(std::log2(iterations)));
+		dd::Edge f = iter;
+		dd->incRef(f);
+		bool zero = !iterBits[0];
+		for (unsigned int j=1; j <= msb; ++j) {
+			auto tmp = dd->multiply(f,f);
+			dd->incRef(tmp);
+			dd->decRef(f);
+			f = tmp;
+			if (iterBits[j]) {
+				if (zero) {
+					e = f;
+					dd->incRef(e);
+					zero = false;
+				} else {
+					auto g = dd->multiply(e,f);
+					dd->incRef(g);
+					dd->decRef(e);
+					e = g;
+					dd->garbageCollect();
+				}
+			}
+		}
+
+		// apply state preparation setup
+		qc::QuantumComputation statePrep(nqubits+1);
+		setup(statePrep);
+		auto s = statePrep.buildFunctionality(dd);
+		auto tmp = dd->multiply(e, s);
+		dd->incRef(tmp);
+		dd->decRef(e);
+		e = tmp;
+
+		// properly handle ancillary qubit
+		e = reduceAncillae(e, dd);
+		e = reduceGarbage(e, dd);
+
+		return e;
+	}
 }

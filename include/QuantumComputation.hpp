@@ -193,8 +193,10 @@ namespace qc {
 			max_controls = std::max(ncontrols, max_controls);
 		}
 
-		virtual dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) const;
 		virtual dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const;
+		virtual dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) const;
+		virtual dd::Edge buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const;
+		virtual bool buildFunctionalityRecursive(unsigned int depth, size_t opIdx, std::stack<dd::Edge>& s, std::array<short, MAX_QUBITS>& line, permutationMap& map, std::unique_ptr<dd::Package>& dd) const;
 
 		/// Obtain vector/matrix entry for row i (and column j). Does not include common factor e.w!
 		/// \param dd package to use
