@@ -411,43 +411,48 @@ namespace dd {
 	}
 
 	void serialize(const Edge& basic, const std::string& outputFilename, bool isVector, bool writeBinary) {
-		std::ofstream init(outputFilename);
-		std::ostringstream oss{};
+		std::ofstream ofs(outputFilename);
 
+		if(!ofs.good()) {
+			std::cerr << "Cannot open file: " << outputFilename << std::endl;
+			return;
+		}
+
+		serialize(basic, ofs, isVector, writeBinary);
+	}
+
+	void serialize(const Edge& basic, std::ostream& os, bool isVector, bool writeBinary) {
 		if(writeBinary) {
-			oss.write(reinterpret_cast<const char*>(&SERIALIZATION_VERSION), sizeof(fp));
-			writeBinaryAmplitude(oss, basic.w);
+			os.write(reinterpret_cast<const char*>(&SERIALIZATION_VERSION), sizeof(fp));
+			writeBinaryAmplitude(os, basic.w);
 		} else {
-			oss << SERIALIZATION_VERSION << "\n";
-			oss << CN::toString(basic.w, false, 16) << "\n";
+			os << SERIALIZATION_VERSION << "\n";
+			os << CN::toString(basic.w, false, 16) << "\n";
 		}
 
 		if (isVector) {
-			serializeVector(basic, oss, writeBinary);
+			serializeVector(basic, os, writeBinary);
 		} else {
 			auto idx = 0;
 			std::unordered_map<NodePtr, int> node_index{};
 			std::unordered_set<NodePtr> visited{};
-			serializeMatrix(basic, idx, node_index, visited, oss, writeBinary);
+			serializeMatrix(basic, idx, node_index, visited, os, writeBinary);
 		}
-
-		init << oss.str() << std::flush;
-		init.close();
 	}
 
-	void writeBinaryAmplitude(std::ostream& oss, const Complex& w) {
+	void writeBinaryAmplitude(std::ostream& os, const Complex& w) {
 		fp temp = CN::val(w.r);
-		oss.write(reinterpret_cast<const char*>(&temp), sizeof(fp));
+		os.write(reinterpret_cast<const char*>(&temp), sizeof(fp));
 		temp = CN::val(w.i);
-		oss.write(reinterpret_cast<const char*>(&temp), sizeof(fp));
+		os.write(reinterpret_cast<const char*>(&temp), sizeof(fp));
 	}
 
-	void writeBinaryAmplitude(std::ostream& oss, const ComplexValue& w) {
-		oss.write(reinterpret_cast<const char*>(&w.r), sizeof(fp));
-		oss.write(reinterpret_cast<const char*>(&w.i), sizeof(fp));
+	void writeBinaryAmplitude(std::ostream& os, const ComplexValue& w) {
+		os.write(reinterpret_cast<const char*>(&w.r), sizeof(fp));
+		os.write(reinterpret_cast<const char*>(&w.i), sizeof(fp));
 	}
 
-	void serializeVector(const Edge& basic, std::ostream& oss, bool writeBinary) {
+	void serializeVector(const Edge& basic, std::ostream& os, bool writeBinary) {
 		int next_index = 0;
 		std::unordered_map<NodePtr, int> node_index{};
 
@@ -498,32 +503,32 @@ namespace dd {
 					next_index++;
 
 					if(writeBinary) {
-						oss.write(reinterpret_cast<const char*>(&node_index[node->p]), sizeof(int));
-						oss.write(reinterpret_cast<const char*>(&node->p->v), sizeof(short));
+						os.write(reinterpret_cast<const char*>(&node_index[node->p]), sizeof(int));
+						os.write(reinterpret_cast<const char*>(&node->p->v), sizeof(short));
 
 						// iterate over edges in reverse to guarantee correct processing order
 						for (short i = 0; i < NEDGE; i += 2) {
 							auto& edge = node->p->e[i];
 							int edge_idx = Package::isTerminal(edge) ? -1 : node_index[edge.p];
-							oss.write(reinterpret_cast<const char*>(&edge_idx), sizeof(int));
-							writeBinaryAmplitude(oss, edge.w);
+							os.write(reinterpret_cast<const char*>(&edge_idx), sizeof(int));
+							writeBinaryAmplitude(os, edge.w);
 						}
 					} else {
-						oss << node_index[node->p] << " " << node->p->v;
+						os << node_index[node->p] << " " << node->p->v;
 
 						// iterate over edges in reverse to guarantee correct processing order
 						for (short i = 0; i < NEDGE; ++i) {
-							oss << " (";
+							os << " (";
 							if (i % 2 == 0) {
 								auto& edge = node->p->e[i];
 								if (!CN::equalsZero(edge.w)) {
 									int edge_idx = Package::isTerminal(edge) ? -1 : node_index[edge.p];
-									oss << edge_idx << " " << CN::toString(edge.w, false, 16);
+									os << edge_idx << " " << CN::toString(edge.w, false, 16);
 								}
 							}
-							oss << ")";
+							os << ")";
 						}
-						oss << "\n";
+						os << "\n";
 					}
 					node = nullptr;
 				}
@@ -531,11 +536,11 @@ namespace dd {
 		}
 	}
 
-	void serializeMatrix(const Edge& basic, int& idx, std::unordered_map<NodePtr, int>& node_index, std::unordered_set<NodePtr>& visited, std::ostream& oss, bool writeBinary) {
+	void serializeMatrix(const Edge& basic, int& idx, std::unordered_map<NodePtr, int>& node_index, std::unordered_set<NodePtr>& visited, std::ostream& os, bool writeBinary) {
 		if (!dd::Package::isTerminal(basic)) {
 			for (auto& e : basic.p->e) {
 				if (auto[iter, success] = visited.insert(e.p); success) {
-					serializeMatrix(e, idx, node_index, visited, oss, writeBinary);
+					serializeMatrix(e, idx, node_index, visited, os, writeBinary);
 				}
 			}
 
@@ -546,28 +551,28 @@ namespace dd {
 			}
 
 			if (writeBinary) {
-				oss.write(reinterpret_cast<const char *>(&node_index[basic.p]), sizeof(int));
-				oss.write(reinterpret_cast<const char *>(&basic.p->v), sizeof(short));
+				os.write(reinterpret_cast<const char *>(&node_index[basic.p]), sizeof(int));
+				os.write(reinterpret_cast<const char *>(&basic.p->v), sizeof(short));
 
 				// iterate over edges in reverse to guarantee correct processing order
 				for (auto& edge : basic.p->e) {
 					int edge_idx = Package::isTerminal(edge) ? -1 : node_index[edge.p];
-					oss.write(reinterpret_cast<const char *>(&edge_idx), sizeof(int));
-					writeBinaryAmplitude(oss, edge.w);
+					os.write(reinterpret_cast<const char *>(&edge_idx), sizeof(int));
+					writeBinaryAmplitude(os, edge.w);
 				}
 			} else {
-				oss << node_index[basic.p] << " " << basic.p->v;
+				os << node_index[basic.p] << " " << basic.p->v;
 
 				// iterate over edges in reverse to guarantee correct processing order
 				for (auto& edge : basic.p->e) {
-					oss << " (";
+					os << " (";
 					if (!CN::equalsZero(edge.w)) {
 						int edge_idx = Package::isTerminal(edge) ? -1 : node_index[edge.p];
-						oss << edge_idx << " " << CN::toString(edge.w, false, 16);
+						os << edge_idx << " " << CN::toString(edge.w, false, 16);
 					}
-					oss << ")";
+					os << ")";
 				}
-				oss << "\n";
+				os << "\n";
 			}
 		}
 	}
@@ -612,20 +617,20 @@ namespace dd {
 
 		if(!ifs.good()) {
 			std::cerr << "Cannot open serialized file: " << inputFilename << std::endl;
-			exit(1);
+			return dd::Package::DDzero;
 		}
 
 		return deserialize(dd, ifs, isVector, readBinary);
 	}
 
-	ComplexValue readBinaryAmplitude(std::istream& ifs) {
+	ComplexValue readBinaryAmplitude(std::istream& is) {
 		ComplexValue temp{};
-		ifs.read(reinterpret_cast<char*>(&temp.r), sizeof(fp));
-		ifs.read(reinterpret_cast<char*>(&temp.i), sizeof(fp));
+		is.read(reinterpret_cast<char*>(&temp.r), sizeof(fp));
+		is.read(reinterpret_cast<char*>(&temp.i), sizeof(fp));
 		return temp;
 	}
 
-	dd::Edge deserialize(std::unique_ptr<dd::Package>& dd, std::istream& ifs, bool isVector, bool readBinary) {
+	dd::Edge deserialize(std::unique_ptr<dd::Package>& dd, std::istream& is, bool isVector, bool readBinary) {
 		Edge result = Package::DDzero;
 		ComplexValue rootweight{};
 
@@ -638,28 +643,28 @@ namespace dd {
 
 		if(readBinary) {
 			double version;
-			ifs.read(reinterpret_cast<char*>(&version), sizeof(double));
+			is.read(reinterpret_cast<char*>(&version), sizeof(double));
 			if(version != SERIALIZATION_VERSION) {
 				std::cerr << "Wrong Version of serialization file version: " << version << std::endl;
 				exit(1);
 			}
 
-			if(!ifs.eof()) {
-				rootweight = readBinaryAmplitude(ifs);
+			if(!is.eof()) {
+				rootweight = readBinaryAmplitude(is);
 			}
 
 
-			while (ifs.read(reinterpret_cast<char*>(&node_index), sizeof(int))) {
-				ifs.read(reinterpret_cast<char*>(&v), sizeof(short));
+			while (is.read(reinterpret_cast<char*>(&node_index), sizeof(int))) {
+				is.read(reinterpret_cast<char*>(&v), sizeof(short));
 				for(int i = 0; i < NEDGE; i += isVector ? 2 : 1) {
-					ifs.read(reinterpret_cast<char*>(&edge_indices[i]), sizeof(int));
-					edge_weights[i] = readBinaryAmplitude(ifs);
+					is.read(reinterpret_cast<char*>(&edge_indices[i]), sizeof(int));
+					edge_weights[i] = readBinaryAmplitude(is);
 				}
 				result = create_deserialized_node(dd, node_index, v, edge_indices, edge_weights, nodes);
 			}
 		} else {
 			std::string version;
-			std::getline(ifs, version);
+			std::getline(is, version);
 			// ifs >> version;
 			if(std::stod(version) != SERIALIZATION_VERSION) {
 				std::cerr << "Wrong Version of serialization file. version of file: " << version << "; current version: " << SERIALIZATION_VERSION << std::endl;
@@ -675,7 +680,7 @@ namespace dd {
 			// std::regex e ("(\\d+) (\\d+)(?:" + edge_regex + "){4} *#.*"); // TODO {4} overwrites groups
 			std::smatch m;
 
-			if(std::getline(ifs, line)) {
+			if(std::getline(is, line)) {
 				if(!std::regex_match(line, m, complex_weight_regex)) {
 					std::cerr << "Regex did not match second line: " << line << std::endl;
 					exit(1);
@@ -684,7 +689,7 @@ namespace dd {
 			}
 			// std::cout << "rootweight = " << rootweight << std::endl;
 
-			while (std::getline(ifs, line)) {
+			while (std::getline(is, line)) {
 				if (line.empty() || line.size() == 1) continue;
 
 				if(!std::regex_match(line, m, line_regex)) {
