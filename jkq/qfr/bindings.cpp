@@ -1,7 +1,9 @@
 /*
- * This file is part of JKQ QQFR library which is released under the MIT license.
+ * This file is part of JKQ QFR library which is released under the MIT license.
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
+
+#include <chrono>
 
 #include "nlohmann/json.hpp"
 #include "pybind11/pybind11.h"
