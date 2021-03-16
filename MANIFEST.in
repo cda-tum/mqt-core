@@ -1,6 +1,6 @@
 include README.md LICENSE.md CMakeLists.txt
-include src/*
-include include/*
+graft src
+graft include
 include apps/*
 graft jkq/*
 include extern/dd_package/CMakeLists.txt
