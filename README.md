@@ -1,7 +1,9 @@
-[![CI](https://github.com/iic-jku/qfr/workflows/CI/badge.svg)](https://github.com/iic-jku/qfr/actions?query=workflow%3A%22CI%22)
-[![codecov](https://codecov.io/gh/iic-jku/qfr/branch/master/graph/badge.svg)](https://codecov.io/gh/iic-jku/qfr)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![toolset: JKQ](https://img.shields.io/badge/toolset-JKQ-blue)](https://github.com/iic-jku/jkq)
+[![PyPI](https://img.shields.io/pypi/v/jkq.qfr?logo=pypi&style=plastic)](https://pypi.org/project/jkq.qfr/)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/iic-jku/qfr/CI?logo=github&style=plastic)](https://github.com/iic-jku/qfr/actions?query=workflow%3A%22CI%22)
+[![Codecov branch](https://img.shields.io/codecov/c/github/iic-jku/qfr/master?label=codecov&logo=codecov&style=plastic)](https://codecov.io/gh/iic-jku/qfr)
+![GitHub](https://img.shields.io/github/license/iic-jku/qcec?style=plastic)
+[![toolset: JKQ](https://img.shields.io/badge/toolset-JKQ-blue?style=plastic)](https://github.com/iic-jku/jkq)
+[![arXiv](https://img.shields.io/static/v1?label=arXiv&message=2103.08281&color=inactive&style=plastic)](https://arxiv.org/abs/2103.08281)
 
 # QFR - A JKQ Library for Quantum Functionality Representation Written in C++
 
@@ -11,7 +13,35 @@ Developers: Lukas Burgholzer, Hartwig Bauer, Stefan Hillmich, Thomas Grurl and R
 
 If you have any questions feel free to contact us using [iic-quantum@jku.at](mailto:iic-quantum@jku.at) or by creating an issue on [GitHub](https://github.com/iic-jku/qfr/issues).
 
-## Usage
+## Efficient Construction of Functional Representations for Quantum Algorithms
+The QFR library provides the means for constructing the functionality of a given quantum circuit using [decision diagrams](https://iic.jku.at/eda/research/quantum_dd) in the form of the `jkq.qfr` Python package. 
+It includes a traditional, sequential approach (`qfr.ConstructionMethod.sequential`) and the efficient, recursive method proposed in [[1]](https://arxiv.org/abs/2103.08281) (`qfr.ConstructionMethod.recursive`).
+
+[[1]](https://arxiv.org/abs/2103.08281) L. Burgholzer, R. Raymond, I. Sengupta, and R. Wille. **"Efficient Construction of Functional Representations for Quantum Algorithms"**. [arXiv:2103.08281](https://arxiv.org/abs/2103.08281), 2021
+
+In order to start using it, install the package using
+```bash
+pip install jkq.qfr
+```
+Then, in Python, the functionality of a given circuit (provided, e.g., as Qiskit QuantumCircuit) can be constructed with:
+```python
+from jkq import qfr
+from qiskit import QuantumCircuit
+
+# create your quantum circuit
+qc = <...>
+
+# construct the functionality of the circuit
+results = qfr.construct(qc)
+
+# print the results
+print(results)
+```
+The `construct` function additionally provides the options `store_decision_diagram` and `store_matrix` that allow to store the resulting decision diagram or matrix, respectively. Note that storing the resulting matrix takes considerable amounts of memory in comparison to the typical memory footprint incurred by the corresponding decision diagram. At least `2^(2n+1)*sizeof(float)` byte are required for storing the matrix representing an n-qubit quantum circuit.
+
+Special routines are available for constructing the functionality of the Quantum Fourier Transform (`construct_qft(nqubits, ...)`) or Grover's algorithm (`construct_grover(nqubits, seed, ...)`). For details on the method employed for Grover's search we refer to [[1, Section 4.2]](https://arxiv.org/abs/2103.08281).
+
+## JKQ Toolset
 
 The QFR library is the backbone of the quantum software tools in [JKQ: JKU Tools for Quantum Computing](https://iic.jku.at/files/eda/2020_iccad_jku_tools_for_quantum_computing.pdf):
 - [JKQ DDSIM](https://github.com/iic-jku/ddsim): a decision diagram-based simulator for quantum circuits.
@@ -128,3 +158,15 @@ Building the project this way generates
 - a small demo example executable `qfr_example` in the `build/test` directory.
 
 You can link against the library built by this project in other CMake project using the `JKQ::qfr` target.
+
+### Extending the Python Package
+
+To extend the Python package you can locally install the package in edit mode, so that changes in the Python code are instantly available.
+The following example assumes you have a [virtual environment](https://docs.python.org/3/library/venv.html) set up and activated.
+
+```commandline
+(venv) $ pip install cmake
+(venv) $ pip install --editable .
+```
+
+If you change parts of the C++ code, you have to run the second line to make the changes visible in Python.
