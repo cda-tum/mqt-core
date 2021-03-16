@@ -1128,6 +1128,7 @@ namespace dd {
         return e;
     }
 
+    // build a DD for the n-qubit identity matrix. makeIdent(n) === makeIdent(0, n-1)
 	Edge Package::makeIdent(unsigned short n) {
 		if (n == 0)
 			return DDone;
