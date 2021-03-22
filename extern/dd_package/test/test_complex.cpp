@@ -1,3 +1,8 @@
+/*
+ * This file is part of the JKQ DD Package which is released under the MIT license.
+ * See file README.md or go to http://iic.jku.at/eda/research/quantum_dd/ for more information.
+ */
+
 #include "DDcomplex.h"
 
 #include "gtest/gtest.h"

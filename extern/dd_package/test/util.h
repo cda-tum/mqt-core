@@ -1,6 +1,7 @@
-//
-// Created by stefan on 04.12.19.
-//
+/*
+ * This file is part of the JKQ DD Package which is released under the MIT license.
+ * See file README.md or go to http://iic.jku.at/eda/research/quantum_dd/ for more information.
+ */
 
 #ifndef DD_PACKAGE_UTIL_H
 #define DD_PACKAGE_UTIL_H
