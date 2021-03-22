@@ -773,4 +773,8 @@ namespace qc
 		}
 	}
 
+	void CircuitOptimizer::decomposeTeleport(QuantumComputation &qc){
+
+	}
+
 }

@@ -44,6 +44,8 @@ namespace qc {
 		static void removeFinalMeasurements(QuantumComputation& qc);
 
 		static void decomposeSWAP(QuantumComputation& qc, bool isDirectedArchitecture);
+
+		static void decomposeTeleport(QuantumComputation& qc);
 	};
 }
 #endif //QCEC_CIRCUITOPTIMIZER_HPP
