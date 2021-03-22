@@ -30,7 +30,7 @@ class DDFunctionality : public testing::TestWithParam<unsigned short> {
 
             // initial state preparation
             line.fill(qc::LINE_DEFAULT);
-            e = ident = dd->makeIdent(0, (short)(nqubits-1));
+            e = ident = dd->makeIdent(nqubits);
             dd->incRef(ident);
 
 	        std::array<std::mt19937_64::result_type , std::mt19937_64::state_size> random_data{};

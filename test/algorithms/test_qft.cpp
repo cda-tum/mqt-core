@@ -13,8 +13,7 @@ class QFT : public testing::TestWithParam<unsigned short> {
 
 protected:
 	void TearDown() override {
-		if (!dd->isTerminal(e))
-			dd->decRef(e);
+		dd->decRef(e);
 		dd->garbageCollect(true);
 
 		// number of complex table entries after clean-up should equal initial number of entries
@@ -128,4 +127,22 @@ TEST_P(QFT, Simulation) {
 		EXPECT_NEAR(CN::val(c.r), static_cast<fp>(std::pow(1.L/std::sqrt(2.L), nqubits)), CN::TOLERANCE);
 		EXPECT_NEAR(CN::val(c.i), 0, CN::TOLERANCE);
 	}
+}
+
+TEST_P(QFT, FunctionalityRecursiveEquality) {
+	nqubits = GetParam();
+
+	// there should be no error constructing the circuit
+	ASSERT_NO_THROW({qc = std::make_unique<qc::QFT>(nqubits);});
+	std::cout << *qc << std::endl;
+
+	// there should be no error building the functionality recursively
+	ASSERT_NO_THROW({e = qc->buildFunctionalityRecursive(dd);});
+
+	// there should be no error building the functionality regularly
+	dd::Edge f{};
+	ASSERT_NO_THROW({f = qc->buildFunctionality(dd);});
+
+	ASSERT_TRUE(dd->equals(e, f));
+	dd->decRef(f);
 }

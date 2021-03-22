@@ -16,7 +16,7 @@ namespace qc {
 	class GoogleRandomCircuitSampling : public QuantumComputation {
 	public:
 		std::vector<std::vector<std::unique_ptr<Operation>>> cycles{};
-		Layout layout;
+		Layout layout = Rectangular;
 		std::string pathPrefix = "../../../Benchmarks/GoogleRandomCircuitSampling/inst/";
 
 		explicit GoogleRandomCircuitSampling(const std::string& filename);
@@ -27,20 +27,20 @@ namespace qc {
 
 		void importGRCS(const std::string& filename);
 
-		size_t getNops() const override;
+		[[nodiscard]] size_t getNops() const override;
 
 		std::ostream& print(std::ostream& os) const override;
 
-		std::ostream& printStatistics(std::ostream& os) override;
+		std::ostream& printStatistics(std::ostream& os) const override;
 
-		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) override;
+		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) const override;
 		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd, unsigned short ncycles) {
 			if (ncycles < cycles.size()-2) {
 				removeCycles(cycles.size()-2-ncycles);
 			}
 			return buildFunctionality(dd);
 		}
-		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) override;
+		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const override;
 		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, unsigned short ncycles) {
 			if (ncycles < cycles.size()-2) {
 				removeCycles(cycles.size()-2-ncycles);

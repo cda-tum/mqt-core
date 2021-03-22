@@ -85,6 +85,9 @@ namespace qc {
 			case Measure:
 				strcpy(name, "Meas");
 				break;
+            case Teleportation:
+                strcpy(name, "Tele");
+                break;
 			case Reset:
 				strcpy(name, "Rst ");
 				break;
@@ -101,7 +104,7 @@ namespace qc {
 				strcpy(name, "clc_");
 				break;
 			default:
-				throw QFRException("This constructor shall not be called for gate type (index) " + std::to_string((int)type));
+				throw QFRException("This constructor shall not be called for gate type (index) " + std::to_string(static_cast<int>(type)));
 		}
 	}
 

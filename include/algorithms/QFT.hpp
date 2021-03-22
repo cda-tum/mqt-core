@@ -14,11 +14,11 @@ namespace qc {
 	public:
 		explicit QFT(unsigned short nq);
 
-		std::ostream& printStatistics(std::ostream& os) override;
+		std::ostream& printStatistics(std::ostream& os) const override;
 
-		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) override;
+		dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) const override;
 
-		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) override;
+		dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const override;
 	};
 }
 

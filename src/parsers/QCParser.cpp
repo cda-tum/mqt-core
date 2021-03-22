@@ -17,7 +17,7 @@ int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string,
 	int line = 0;
 
 	std::string delimiter = " ";
-	size_t pos = 0;
+	size_t pos;
 
 	std::vector<std::string> variables{};
 	std::vector<std::string> inputs{};
@@ -213,14 +213,14 @@ void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, 
 				} else if (!m.str(2).empty()){
 					// pi/2^x definition
 					auto power = std::stoul(m.str(3));
-					if (power == 0ul) {
+					if (power == 0UL) {
 						lambda = PI;
-					} else if (power == 1ul) {
+					} else if (power == 1UL) {
 						lambda = PI_2;
-					} else if (power == 2ul) {
+					} else if (power == 2UL) {
 						lambda = PI_4;
 					} else {
-						lambda = PI_4 / (std::pow(static_cast<fp>(2), power-2ul));
+						lambda = PI_4 / (std::pow(static_cast<fp>(2), power-2UL));
 					}
 				} else {
 					throw QFRException("Rotation gate without angle detected");
@@ -234,7 +234,7 @@ void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, 
 			std::vector<Control> controls{ };
 
 			auto delimiter = ' ';
-			size_t pos = 0;
+			size_t pos;
 
 			while ((pos = qubits.find(delimiter)) != std::string::npos) {
 				label = qubits.substr(0, pos);

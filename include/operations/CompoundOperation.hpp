@@ -50,11 +50,11 @@ namespace qc {
 			}
 		}
 
-		bool isCompoundOperation() const override {
+		[[nodiscard]] bool isCompoundOperation() const override {
 			return true;
 		}
 
-		bool isNonUnitaryOperation() const override {
+		[[nodiscard]] bool isNonUnitaryOperation() const override {
 			bool isNonUnitary = false;
 			for (const auto& op: ops) {
 				isNonUnitary |= op->isNonUnitaryOperation();
@@ -63,7 +63,7 @@ namespace qc {
 		}
 
 		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-			dd::Edge e = dd->makeIdent(0, short(nqubits - 1));
+			dd::Edge e = dd->makeIdent(nqubits);
 			for (auto& op: ops) {
 				e = dd->multiply(op->getDD(dd, line), e);
 			}
@@ -71,7 +71,7 @@ namespace qc {
 		}
 
 		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-			dd::Edge e = dd->makeIdent(0, short(nqubits - 1));
+			dd::Edge e = dd->makeIdent(nqubits);
 			for (auto& op: ops) { 
 				e = dd->multiply(e, op->getInverseDD(dd, line));
 			}
@@ -79,7 +79,7 @@ namespace qc {
 		}
 
 		dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
-			dd::Edge e = dd->makeIdent(0, short(nqubits - 1));
+			dd::Edge e = dd->makeIdent(nqubits);
 			for (auto& op: ops) {
 				e = dd->multiply(op->getDD(dd, line, permutation), e);
 			}
@@ -87,7 +87,7 @@ namespace qc {
 		}
 
 		dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
-			dd::Edge e = dd->makeIdent(0, short(nqubits - 1));
+			dd::Edge e = dd->makeIdent(nqubits);
 			for (auto& op: ops) {
 				e = dd->multiply(e, op->getInverseDD(dd, line, permutation));
 			}
@@ -108,7 +108,7 @@ namespace qc {
 			return os;
 		}
 
-		bool actsOn(unsigned short i) override {
+		[[nodiscard]] bool actsOn(unsigned short i) const override {
 			for (const auto& op: ops) {
 				if(op->actsOn(i))
 					return true;
@@ -140,23 +140,23 @@ namespace qc {
 
 		// Iterators (pass-through)
 		auto begin()            noexcept { return ops.begin();   }
-		auto begin()      const noexcept { return ops.begin();   }
-		auto cbegin()     const noexcept { return ops.cbegin();  }
+		[[nodiscard]] auto begin()      const noexcept { return ops.begin();   }
+		[[nodiscard]] auto cbegin()     const noexcept { return ops.cbegin();  }
 		auto end()              noexcept { return ops.end();     }
-		auto end()        const noexcept { return ops.end();	  }
-		auto cend()       const noexcept { return ops.cend();	  }
+		[[nodiscard]] auto end()        const noexcept { return ops.end();	  }
+		[[nodiscard]] auto cend()       const noexcept { return ops.cend();	  }
 		auto rbegin()           noexcept { return ops.rbegin();  }
-		auto rbegin()     const noexcept { return ops.rbegin();  }
-		auto crbegin()    const noexcept { return ops.crbegin(); }
+		[[nodiscard]] auto rbegin()     const noexcept { return ops.rbegin();  }
+		[[nodiscard]] auto crbegin()    const noexcept { return ops.crbegin(); }
 		auto rend()             noexcept { return ops.rend();    }
-		auto rend()       const noexcept {	return ops.rend();    }
-		auto crend()      const noexcept { return ops.crend();   }
+		[[nodiscard]] auto rend()       const noexcept {	return ops.rend();    }
+		[[nodiscard]] auto crend()      const noexcept { return ops.crend();   }
 
 		// Capacity (pass-through)
-		bool   empty()    const noexcept { return ops.empty();    }
-		size_t size()     const noexcept { return ops.size();     }
-		size_t max_size() const noexcept { return ops.max_size(); }
-		size_t capacity() const noexcept { return ops.capacity(); }
+		[[nodiscard]] bool   empty()    const noexcept { return ops.empty();    }
+		[[nodiscard]] size_t size()     const noexcept { return ops.size();     }
+		[[nodiscard]] size_t max_size() const noexcept { return ops.max_size(); }
+		[[nodiscard]] size_t capacity() const noexcept { return ops.capacity(); }
 
 		void reserve(size_t new_cap)     { ops.reserve(new_cap);  }
 		void shrink_to_fit()             { ops.shrink_to_fit();   }

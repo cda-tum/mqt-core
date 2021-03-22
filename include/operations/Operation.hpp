@@ -19,7 +19,6 @@
 #include "DDexport.h"
 
 #define DEBUG_MODE_OPERATIONS 0
-#define UNUSED(x) {(void) x;}
 
 namespace qc {
 	class QFRException : public std::invalid_argument {
@@ -27,7 +26,7 @@ namespace qc {
 	public:
 		explicit QFRException(std::string  msg) : std::invalid_argument("QFR Exception"), msg(std::move(msg)) { }
 
-		const char *what() const noexcept override {
+		[[nodiscard]] const char *what() const noexcept override {
 			return msg.c_str();
 		}
 	};
@@ -69,40 +68,9 @@ namespace qc {
 		// Compound Operation
 		Compound,
 		// Non Unitary Operations
-		Measure, Reset, Snapshot, ShowProbabilities, Barrier,
+		Measure, Reset, Snapshot, ShowProbabilities, Barrier, Teleportation,
 		// Classically-controlled Operation
 		ClassicControlled
-	};
-
-	static const std::map<std::string, OpType> identifierMap {
-			{ "0",   I    },
-			{ "id",  I    },
-			{ "h",   H    },
-			{ "n",   X    },
-			{ "c",   X    },
-			{ "x",   X    },
-			{ "y",   Y    },
-			{ "z",   Z    },
-			{ "s",   S    },
-			{ "si",  Sdag },
-			{ "sp",  Sdag },
-			{ "s+",  Sdag },
-			{ "sdg", Sdag },
-			{ "v",   V    },
-			{ "vi",  Vdag },
-			{ "vp",  Vdag },
-			{ "v+",  Vdag },
-			{ "rx",  RX   },
-			{ "ry",  RY   },
-			{ "rz",  RZ   },
-			{ "f",   SWAP },
-			{ "if",  SWAP },
-			{ "p",   Peres},
-			{ "pi",  Peresdag },
-			{ "p+",  Peresdag },
-			{ "q",   Phase},
-			{ "t",   T    },
-			{ "tdg", Tdag }
 	};
 
 	class Operation {
@@ -141,47 +109,41 @@ namespace qc {
 		virtual ~Operation() = default;
 
 		// Getters
-		const std::vector<unsigned short>& getTargets() const {
+		[[nodiscard]] const std::vector<unsigned short>& getTargets() const {
 			return targets;
 		}
-		
 		std::vector<unsigned short>& getTargets() {
 			return targets;
 		}
-
-		size_t getNtargets() const {
+		[[nodiscard]] size_t getNtargets() const {
 			return targets.size();
 		}
 
-		const std::vector<Control>& getControls() const {
+		[[nodiscard]] const std::vector<Control>& getControls() const {
 			return controls;
 		}
-		
 		std::vector<Control>& getControls() {
 			return controls;
 		}
-
-		size_t getNcontrols() const {
+		[[nodiscard]] size_t getNcontrols() const {
 			return controls.size();
 		}
 
-		unsigned short getNqubits() const { 
+		[[nodiscard]] unsigned short getNqubits() const {
 			return nqubits; 
 		}
 
-		const std::array<fp, MAX_PARAMETERS>& getParameter() const {
+		[[nodiscard]] const std::array<fp, MAX_PARAMETERS>& getParameter() const {
 			return parameter;
 		}
-		
 		std::array<fp, MAX_PARAMETERS>& getParameter() {
 			return parameter;
 		}
 
-		const char *getName() const {
+		[[nodiscard]] const char *getName() const {
 			return name;
 		}
-
-		virtual OpType getType() const {
+		[[nodiscard]] virtual OpType getType() const {
 			return type;
 		}
 
@@ -236,41 +198,41 @@ namespace qc {
 		virtual dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const = 0;
 		virtual dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const = 0;
 
-		inline virtual bool isUnitary() const { 
+		[[nodiscard]] inline virtual bool isUnitary() const {
 			return true; 
 		}
 
-		inline virtual bool isStandardOperation() const {
+		[[nodiscard]] inline virtual bool isStandardOperation() const {
 			return false;
 		}
 
-		inline virtual bool isCompoundOperation() const {
+		[[nodiscard]] inline virtual bool isCompoundOperation() const {
 			return false;
 		}
 
-		inline virtual bool isNonUnitaryOperation() const {
+		[[nodiscard]] inline virtual bool isNonUnitaryOperation() const {
 			return false;
 		}
 
-		inline virtual bool isClassicControlledOperation() const {
+		[[nodiscard]] inline virtual bool isClassicControlledOperation() const {
 			return false;
 		}
 
-		inline virtual bool isControlled() const  { 
+		[[nodiscard]] inline virtual bool isControlled() const  {
 			return controlled; 
 		}
 
-		inline virtual bool isMultiTarget() const { 
+		[[nodiscard]] inline virtual bool isMultiTarget() const {
 			return multiTarget; 
 		}
 
-		inline virtual bool actsOn(unsigned short i) {
+		[[nodiscard]] inline virtual bool actsOn(unsigned short i) const {
 			for (const auto& t:targets) {
 				if (t == i)
 					return true;
 			}
 
-			if (std::any_of(controls.begin(), controls.end(), [&i](Control c) { return c.qubit == i; }))
+			if (std::any_of(controls.cbegin(), controls.cend(), [&i](const Control& c) { return c.qubit == i; }))
 				return true;
 
 			return false;

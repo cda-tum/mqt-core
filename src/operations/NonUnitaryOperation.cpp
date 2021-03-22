@@ -50,7 +50,7 @@ namespace qc {
 			case Measure:
 				os << name << "\t";
 				for (unsigned int q = 0; q < controls.size(); ++q) {
-					line[permutation.at(controls[q].qubit)] = targets[q];
+					line[permutation.at(controls[q].qubit)] = static_cast<short>(targets[q]);
 				}
 				for (int i = 0; i < nqubits; ++i) {
 					if (line[i] >= 0) {
@@ -226,7 +226,7 @@ namespace qc {
 	dd::Edge NonUnitaryOperation::getDD(std::unique_ptr<dd::Package>& dd, [[maybe_unused]] std::array<short, MAX_QUBITS>& line) const {
 		// these operations do not alter the current state
 		if (type == ShowProbabilities || type == Barrier || type == Snapshot) {
-			return dd->makeIdent(0, static_cast<short>(nqubits-1));
+			return dd->makeIdent(nqubits);
 		}
 
 		throw QFRException("DD for non-unitary operation not available!");
@@ -235,7 +235,7 @@ namespace qc {
 	dd::Edge NonUnitaryOperation::getDD(std::unique_ptr<dd::Package>& dd, [[maybe_unused]] std::array<short, MAX_QUBITS>& line, [[maybe_unused]] std::map<unsigned short, unsigned short>& perm) const {
 		// these operations do not alter the current state
 		if (type == ShowProbabilities || type == Barrier || type == Snapshot) {
-			return dd->makeIdent(0, static_cast<short>(nqubits-1));
+			return dd->makeIdent(nqubits);
 		}
 
 		throw QFRException("DD for non-unitary operation not available!");
@@ -244,13 +244,13 @@ namespace qc {
 	dd::Edge NonUnitaryOperation::getInverseDD(std::unique_ptr<dd::Package>& dd, [[maybe_unused]] std::array<short, MAX_QUBITS>& line ) const {
 		// these operations do not alter the current state
 		if (type == ShowProbabilities || type == Barrier || type == Snapshot) {
-			return dd->makeIdent(0, static_cast<short>(nqubits-1));
+			return dd->makeIdent(nqubits);
 		}
 
 		throw QFRException("Non-unitary operation is not reversible! No inverse DD is available.");
 	}
 
-	bool NonUnitaryOperation::actsOn(unsigned short i) {
+	bool NonUnitaryOperation::actsOn(unsigned short i) const {
 		if (type == Measure) {
 			for (const auto& c:controls) {
 				if (c.qubit == i)

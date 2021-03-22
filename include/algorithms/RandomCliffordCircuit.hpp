@@ -25,7 +25,7 @@ namespace qc {
 
 		explicit RandomCliffordCircuit(unsigned short nq, unsigned int depth = 1, unsigned int seed = 0);
 
-		std::ostream& printStatistics(std::ostream& os) override;
+		std::ostream& printStatistics(std::ostream& os) const override;
 
 	};
 }

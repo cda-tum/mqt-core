@@ -19,7 +19,7 @@
 		    if (x->kind == Expr::Kind::number)
 			    x->num= -x->num;
 		    else
-			    x = new Expr(Expr::Kind::sign, 0, x);
+			    x = new Expr(Expr::Kind::sign, 0., x);
 		    return x;
 	    }
 
@@ -34,7 +34,7 @@
             return new Expr(Expr::Kind::number, PI);
         } else if (sym == Token::Kind::identifier) {
             scan();
-            return new Expr(Expr::Kind::id, 0, nullptr, nullptr, t.str);
+            return new Expr(Expr::Kind::id, 0., nullptr, nullptr, t.str);
         } else if (sym == Token::Kind::lpar) {
             scan();
             x = Exp();
@@ -63,17 +63,17 @@
                 return x;
             } else {
                 if (op == Token::Kind::sin) {
-                    return new Expr(Expr::Kind::sin, 0, x);
+                    return new Expr(Expr::Kind::sin, 0., x);
                 } else if (op == Token::Kind::cos) {
-                    return new Expr(Expr::Kind::cos, 0, x);
+                    return new Expr(Expr::Kind::cos, 0., x);
                 } else if (op == Token::Kind::tan) {
-                    return new Expr(Expr::Kind::tan, 0, x);
+                    return new Expr(Expr::Kind::tan, 0., x);
                 } else if (op == Token::Kind::exp) {
-                    return new Expr(Expr::Kind::exp, 0, x);
+                    return new Expr(Expr::Kind::exp, 0., x);
                 } else if (op == Token::Kind::ln) {
-                    return new Expr(Expr::Kind::ln, 0, x);
+                    return new Expr(Expr::Kind::ln, 0., x);
                 } else if (op == Token::Kind::sqrt) {
-                    return new Expr(Expr::Kind::sqrt, 0, x);
+                    return new Expr(Expr::Kind::sqrt, 0., x);
                 }
             }
         } else {
@@ -94,7 +94,7 @@
                 x->num = std::pow(x->num, y->num);
                 delete y;
             } else {
-                x = new Expr(Expr::Kind::power, 0, x, y);
+                x = new Expr(Expr::Kind::power, 0., x, y);
             }
         }
         return x;
@@ -113,14 +113,14 @@
                     x->num = x->num * y->num;
                     delete y;
                 } else {
-                    x = new Expr(Expr::Kind::times, 0, x, y);
+                    x = new Expr(Expr::Kind::times, 0., x, y);
                 }
             } else {
                 if (x->kind == Expr::Kind::number && y->kind == Expr::Kind::number) {
                     x->num = x->num / y->num;
                     delete y;
                 } else {
-                    x = new Expr(Expr::Kind::div, 0, x, y);
+                    x = new Expr(Expr::Kind::div, 0., x, y);
                 }
             }
         }
@@ -136,7 +136,7 @@
             if (x->kind == Expr::Kind::number)
                 x->num= -x->num;
             else
-                x = new Expr(Expr::Kind::sign, 0, x);
+                x = new Expr(Expr::Kind::sign, 0., x);
         } else {
             x = Term();
         }
@@ -149,12 +149,12 @@
                 if (x->kind == Expr::Kind::number && y->kind == Expr::Kind::number)
                     x->num += y->num;
                 else
-                    x = new Expr(Expr::Kind::plus, 0, x, y);
+                    x = new Expr(Expr::Kind::plus, 0., x, y);
             } else {
                 if (x->kind == Expr::Kind::number && y->kind == Expr::Kind::number)
                     x->num -= y->num;
                 else
-                    x = new Expr(Expr::Kind::minus, 0, x, y);
+                    x = new Expr(Expr::Kind::minus, 0., x, y);
             }
         }
         return x;
