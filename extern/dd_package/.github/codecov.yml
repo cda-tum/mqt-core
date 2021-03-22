@@ -1,5 +1,6 @@
 ignore:
   - "extern/**/*"
+  - "test/bench_package.cpp"
 
 coverage:
   range: 60..90
