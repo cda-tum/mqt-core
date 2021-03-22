@@ -14,7 +14,7 @@ static void BM_PackageCreation(benchmark::State& state) {
         // in the future, the maximum number of qubits can be set at construction time
         // until then, each creation takes equally long
         [[maybe_unused]] unsigned short nqubits = state.range(0);
-        auto dd = std::make_unique<dd::Package>();
+        auto                            dd      = std::make_unique<dd::Package>();
     }
 }
 BENCHMARK(BM_PackageCreation)->Unit(benchmark::kMillisecond)->RangeMultiplier(2)->Range(1, 128);
