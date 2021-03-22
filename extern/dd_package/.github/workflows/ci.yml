@@ -114,6 +114,7 @@ jobs:
   benchmark:
     needs: test
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -131,12 +132,6 @@ jobs:
         shell: bash
         run: ./dd_package_bench --benchmark_format=json | tee benchmark_result.json
 
-      - name: Download previous benchmark data
-        uses: actions/cache@v1
-        with:
-          path: ./cache
-          key: ${{ runner.os }}-benchmark
-
       - name: Store benchmark result
         uses: rhysd/github-action-benchmark@v1
         with:
@@ -144,8 +139,6 @@ jobs:
           tool: 'googlecpp'
           # Where the output from the benchmark tool is stored
           output-file-path: build/benchmark_result.json
-          # Where the previous data file is stored
-          external-data-json-path: ./cache/benchmark-data.json
           # Workflow will fail when an alert happens
           fail-on-alert: true
           # GitHub API token to make a commit comment
@@ -154,10 +147,5 @@ jobs:
           comment-on-alert: true
           # Mention @burgholzer in the commit comment
           alert-comment-cc-users: '@burgholzer'
-          # Do not push and deploy GitHub pages branch automatically
-          auto-push: false
-
-      # Push to gh-pages branch only on pushes to master
-      - name: Push benchmark result
-        run: git push 'https://iic-jku:${{ secrets.GITHUB_TOKEN }}@github.com/iic-jku/dd_package.git' gh-pages:gh-pages
-        if: github.event_name == 'push'
+          # Push and deploy GitHub pages branch automatically
+          auto-push: true

@@ -43,6 +43,12 @@ endmacro()
 # add unit tests
 package_add_test(${PROJECT_NAME}_test ${CMAKE_CURRENT_SOURCE_DIR}/test_complex.cpp ${CMAKE_CURRENT_SOURCE_DIR}/test_package.cpp)
 
+add_custom_command(TARGET ${PROJECT_NAME}_test
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE_DIR:${PROJECT_NAME}_test>/${PROJECT_NAME}_test ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_test
+                   COMMENT "Creating symlink for ${PROJECT_NAME}_test"
+                   VERBATIM)
+
 # include dd_example in test suite
 add_test(NAME ${PROJECT_NAME}_example COMMAND ${CMAKE_CURRENT_BINARY_DIR}/dd_package_example)
 
@@ -51,3 +57,9 @@ add_executable(${PROJECT_NAME}_bench ${CMAKE_CURRENT_SOURCE_DIR}/bench_package.c
 # link the Google benchmark infrastructure and a default main fuction to the benchmark executable.
 target_link_libraries(${PROJECT_NAME}_bench PRIVATE ${PROJECT_NAME} benchmark::benchmark_main Threads::Threads)
 set_target_properties(${PROJECT_NAME}_bench PROPERTIES FOLDER tests)
+
+add_custom_command(TARGET ${PROJECT_NAME}_bench
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE_DIR:${PROJECT_NAME}_bench>/${PROJECT_NAME}_bench ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_bench
+                   COMMENT "Creating symlink for ${PROJECT_NAME}_bench"
+                   VERBATIM)
