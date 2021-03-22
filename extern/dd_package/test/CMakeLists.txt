@@ -23,7 +23,7 @@ if (NOT TARGET benchmark::benchmark)
 	set_target_properties(benchmark benchmark_main PROPERTIES FOLDER extern)
 	if (BINDINGS)
 		# adjust visibility settings for building Python bindings
-		target_compile_options(benchmark::benchmark PUBLIC -fvisibility=hidden)
+		target_compile_options(benchmark PUBLIC -fvisibility=hidden)
 	endif()
 endif()
 
