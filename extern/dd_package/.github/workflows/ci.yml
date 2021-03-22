@@ -92,3 +92,21 @@ jobs:
       uses: codecov/codecov-action@v1
       with:
         fail_ci_if_error: true
+
+  codestyle:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - uses: DoozyX/clang-format-lint-action@v0.11
+        with:
+          source: 'src include test'
+          clangFormatVersion: 11
+          inplace: True
+      - uses: EndBug/add-and-commit@v4
+        with:
+          author_name: github-actions
+          author_email: 41898282+github-actions[bot]@users.noreply.github.com
+          message: '🎨 clang-format changes'
