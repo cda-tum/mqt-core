@@ -149,23 +149,3 @@ jobs:
           alert-comment-cc-users: '@burgholzer'
           # Push and deploy GitHub pages branch automatically
           auto-push: true
-
-      - name: Store benchmark result for pushes and pull requests
-        uses: rhysd/github-action-benchmark@v1
-        with:
-          # What benchmark tool the output.txt came from
-          tool: 'googlecpp'
-          # Where the output from the benchmark tool is stored
-          output-file-path: build/benchmark_result.json
-          # Workflow will fail when an alert happens
-          fail-on-alert: true
-          # GitHub API token to make a commit comment
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          # Enable alert commit comment
-          comment-on-alert: true
-          # Mention @burgholzer in the commit comment
-          alert-comment-cc-users: '@burgholzer'
-          # Set data dir path
-          benchmark-data-dir-path: 'dev/bench_pr'
-          # Push and deploy GitHub pages branch automatically
-          auto-push: true
