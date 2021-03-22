@@ -493,21 +493,21 @@ TEST_F(QFRFunctionality, decomposeSWAPsUndirectedArchitecture) {
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
 		                EXPECT_EQ(op->getType(), X);
-		                EXPECT_EQ(op->getControls().at(0), 0);
+		                EXPECT_EQ(op->getControls().at(0).qubit, 0);
 		                EXPECT_EQ(op->getTargets().at(0), 1);
 	                });
 	++it;
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
 		                EXPECT_EQ(op->getType(), X);
-		                EXPECT_EQ(op->getControls().at(0), 1);
+		                EXPECT_EQ(op->getControls().at(0).qubit, 1);
 		                EXPECT_EQ(op->getTargets().at(0), 0);
 	                });
 	++it;
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
 		                EXPECT_EQ(op->getType(), X);
-		                EXPECT_EQ(op->getControls().at(0), 0);
+		                EXPECT_EQ(op->getControls().at(0).qubit, 0);
 		                EXPECT_EQ(op->getTargets().at(0), 1);
 	                });
 }
@@ -523,6 +523,13 @@ TEST_F(QFRFunctionality, decomposeSWAPsDirectedArchitecture) {
 	auto it = qc.begin();
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), X);
+		                EXPECT_EQ(op->getControls().at(0).qubit 0);
+		                EXPECT_EQ(op->getTargets().at(0), 1);
+	                });
+	++it;
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<StandardOperation*>(it->get());
 		                EXPECT_EQ(op->getType(), H);
 		                EXPECT_EQ(op->getTargets().at(0), 0);
 	                });
@@ -536,14 +543,13 @@ TEST_F(QFRFunctionality, decomposeSWAPsDirectedArchitecture) {
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
 		                EXPECT_EQ(op->getType(), X);
-		                EXPECT_EQ(op->getControls().at(0), 0);
-		                EXPECT_EQ(op->getTargets().at(0), 1);
+		                EXPECT_EQ(op->getControls().at(0).qubit, 1);
+		                EXPECT_EQ(op->getTargets().at(0), 0);
 	                });
 	++it;
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
-		                EXPECT_EQ(op->getType(), X);
-		                EXPECT_EQ(op->getControls().at(0), 1);
+		                EXPECT_EQ(op->getType(), H);
 		                EXPECT_EQ(op->getTargets().at(0), 0);
 	                });
 	++it;
@@ -556,14 +562,7 @@ TEST_F(QFRFunctionality, decomposeSWAPsDirectedArchitecture) {
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
 		                EXPECT_EQ(op->getType(), X);
-		                EXPECT_EQ(op->getControls().at(0), 0);
-		                EXPECT_EQ(op->getTargets().at(0), 1);
-	                });
-	++it;
-	ASSERT_NO_THROW({
-		                auto op = dynamic_cast<StandardOperation*>(it->get());
-		                EXPECT_EQ(op->getType(), X);
-		                EXPECT_EQ(op->getControls().at(0), 0);
+		                EXPECT_EQ(op->getControls().at(0).qubit, 0);
 		                EXPECT_EQ(op->getTargets().at(0), 1);
 	                });
 }
