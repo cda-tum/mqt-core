@@ -3,3 +3,8 @@
 	url = https://github.com/google/googletest.git
 	branch = master
 	shallow = true
+[submodule "extern/benchmark"]
+	path = extern/benchmark
+	url = https://github.com/google/benchmark.git
+	branch = master
+	shallow = true

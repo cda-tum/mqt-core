@@ -110,3 +110,54 @@ jobs:
           author_name: github-actions
           author_email: 41898282+github-actions[bot]@users.noreply.github.com
           message: '🎨 clang-format changes'
+
+  benchmark:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Configure CMake
+        shell: bash
+        run: cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        shell: bash
+        run: cmake --build "${{github.workspace}}/build" --config Release --target dd_package_bench
+
+      - name: Run Benchmarks
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: ./dd_package_bench --benchmark_format=json | tee benchmark_result.json
+
+      - name: Download previous benchmark data
+        uses: actions/cache@v1
+        with:
+          path: ./cache
+          key: ${{ runner.os }}-benchmark
+
+      - name: Store benchmark result
+        uses: rhysd/github-action-benchmark@v1
+        with:
+          # What benchmark tool the output.txt came from
+          tool: 'googlecpp'
+          # Where the output from the benchmark tool is stored
+          output-file-path: build/benchmark_result.json
+          # Where the previous data file is stored
+          external-data-json-path: ./cache/benchmark-data.json
+          # Workflow will fail when an alert happens
+          fail-on-alert: true
+          # GitHub API token to make a commit comment
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Enable alert commit comment
+          comment-on-alert: true
+          # Mention @burgholzer in the commit comment
+          alert-comment-cc-users: '@burgholzer'
+          # Do not push and deploy GitHub pages branch automatically
+          auto-push: false
+
+      # Push to gh-pages branch only on pushes to master
+      - name: Push benchmark result
+        run: git push 'https://iic-jku:${{ secrets.GITHUB_TOKEN }}@github.com/iic-jku/dd_package.git' gh-pages:gh-pages
+        if: github.event_name == 'push'
