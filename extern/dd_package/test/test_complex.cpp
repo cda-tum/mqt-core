@@ -1,10 +1,10 @@
+#include "DDcomplex.h"
+
+#include "gtest/gtest.h"
 #include <memory>
 
-#include "DDcomplex.h"
-#include "gtest/gtest.h"
-
 TEST(DDComplexTest, TrivialTest) {
-    auto cn = std::make_unique<dd::ComplexNumbers>();
+    auto         cn           = std::make_unique<dd::ComplexNumbers>();
     unsigned int before_count = cn->count;
 
     auto a = cn->getCachedComplex(2, -3);
@@ -31,62 +31,62 @@ TEST(DDComplexTest, TrivialTest) {
 }
 
 TEST(DDComplexTest, ComplexNumberCreation) {
-	auto cn = dd::ComplexNumbers();
-	EXPECT_EQ(cn.lookup(cn.ZERO), cn.ZERO);
-	EXPECT_EQ(cn.lookup(cn.ONE), cn.ONE);
-	EXPECT_EQ(cn.lookup(1e-14, 0.), cn.ZERO);
-	EXPECT_EQ(cn.val(cn.lookup(1e-14, 1.).r), 0.);
-	EXPECT_EQ(cn.val(cn.lookup(1e-14, 1.).i), 1.);
-	EXPECT_EQ(cn.val(cn.lookup(1e-14, -1.).r), 0.);
-	EXPECT_EQ(cn.val(cn.lookup(1e-14, -1.).i), -1.);
-	EXPECT_EQ(cn.val(cn.lookup(-1., -1.).r), -1.);
-	EXPECT_EQ(cn.val(cn.lookup(-1., -1.).i), -1.);
-	auto c = cn.lookup(0., -1.);
-	std::cout << c << std::endl;
-	EXPECT_EQ(cn.val(cn.lookup(c).r), 0.);
-	EXPECT_EQ(cn.val(cn.lookup(c).i), -1.);
-	c = cn.lookup(0., 1.);
-	EXPECT_EQ(cn.val(cn.lookup(c).r), 0.);
-	EXPECT_EQ(cn.val(cn.lookup(c).i), 1.);
-	c = cn.lookup(0., -0.5);
-	std::cout << c << std::endl;
-	EXPECT_EQ(cn.val(cn.lookup(c).r), 0.);
-	EXPECT_EQ(cn.val(cn.lookup(c).i), -0.5);
-	c = cn.lookup(-1., -1.);
-	EXPECT_EQ(cn.val(cn.lookup(c).r), -1.);
-	EXPECT_EQ(cn.val(cn.lookup(c).i), -1.);
-	std::cout << c << std::endl;
+    auto cn = dd::ComplexNumbers();
+    EXPECT_EQ(cn.lookup(cn.ZERO), cn.ZERO);
+    EXPECT_EQ(cn.lookup(cn.ONE), cn.ONE);
+    EXPECT_EQ(cn.lookup(1e-14, 0.), cn.ZERO);
+    EXPECT_EQ(cn.val(cn.lookup(1e-14, 1.).r), 0.);
+    EXPECT_EQ(cn.val(cn.lookup(1e-14, 1.).i), 1.);
+    EXPECT_EQ(cn.val(cn.lookup(1e-14, -1.).r), 0.);
+    EXPECT_EQ(cn.val(cn.lookup(1e-14, -1.).i), -1.);
+    EXPECT_EQ(cn.val(cn.lookup(-1., -1.).r), -1.);
+    EXPECT_EQ(cn.val(cn.lookup(-1., -1.).i), -1.);
+    auto c = cn.lookup(0., -1.);
+    std::cout << c << std::endl;
+    EXPECT_EQ(cn.val(cn.lookup(c).r), 0.);
+    EXPECT_EQ(cn.val(cn.lookup(c).i), -1.);
+    c = cn.lookup(0., 1.);
+    EXPECT_EQ(cn.val(cn.lookup(c).r), 0.);
+    EXPECT_EQ(cn.val(cn.lookup(c).i), 1.);
+    c = cn.lookup(0., -0.5);
+    std::cout << c << std::endl;
+    EXPECT_EQ(cn.val(cn.lookup(c).r), 0.);
+    EXPECT_EQ(cn.val(cn.lookup(c).i), -0.5);
+    c = cn.lookup(-1., -1.);
+    EXPECT_EQ(cn.val(cn.lookup(c).r), -1.);
+    EXPECT_EQ(cn.val(cn.lookup(c).i), -1.);
+    std::cout << c << std::endl;
 
-	auto e = cn.lookup(1., -1.);
-	std::cout << e << std::endl;
-	std::cout << dd::ComplexValue{1., 1.} << std::endl;
-	std::cout << dd::ComplexValue{1., -1.} << std::endl;
-	std::cout << dd::ComplexValue{1., -0.5} << std::endl;
-	cn.printComplexTable();
-	cn.statistics();
-	std::cout << "Cache size: " << cn.cacheSize() << std::endl;
+    auto e = cn.lookup(1., -1.);
+    std::cout << e << std::endl;
+    std::cout << dd::ComplexValue{1., 1.} << std::endl;
+    std::cout << dd::ComplexValue{1., -1.} << std::endl;
+    std::cout << dd::ComplexValue{1., -0.5} << std::endl;
+    cn.printComplexTable();
+    cn.statistics();
+    std::cout << "Cache size: " << cn.cacheSize() << std::endl;
 }
 
 TEST(DDComplexTest, ComplexNumberArithmetic) {
-	auto cn = dd::ComplexNumbers();
-	auto c = cn.lookup(0., 1.);
-	auto d = dd::ComplexNumbers::conj(c);
-	EXPECT_EQ(cn.val(d.r), 0.);
-	EXPECT_EQ(cn.val(d.i), -1.);
-	c = cn.lookup(-1., -1.);
-	d = dd::ComplexNumbers::neg(c);
-	EXPECT_EQ(cn.val(d.r), 1.);
-	EXPECT_EQ(cn.val(d.i), 1.);
-	c = cn.lookup(0.5, 0.5);
-	dd::ComplexNumbers::incRef(c);
-	d = cn.lookup(-0.5, 0.5);
-	dd::ComplexNumbers::incRef(d);
-	auto e = cn.getTempCachedComplex();
-	dd::ComplexNumbers::sub(e, c, d);
-	dd::ComplexNumbers::decRef(c);
-	dd::ComplexNumbers::decRef(d);
-	e = cn.lookup(e);
-	EXPECT_EQ(e, cn.ONE);
-	auto f = cn.getTempCachedComplex();
-	dd::ComplexNumbers::div(f, dd::ComplexNumbers::ZERO, dd::ComplexNumbers::ONE);
+    auto cn = dd::ComplexNumbers();
+    auto c  = cn.lookup(0., 1.);
+    auto d  = dd::ComplexNumbers::conj(c);
+    EXPECT_EQ(cn.val(d.r), 0.);
+    EXPECT_EQ(cn.val(d.i), -1.);
+    c = cn.lookup(-1., -1.);
+    d = dd::ComplexNumbers::neg(c);
+    EXPECT_EQ(cn.val(d.r), 1.);
+    EXPECT_EQ(cn.val(d.i), 1.);
+    c = cn.lookup(0.5, 0.5);
+    dd::ComplexNumbers::incRef(c);
+    d = cn.lookup(-0.5, 0.5);
+    dd::ComplexNumbers::incRef(d);
+    auto e = cn.getTempCachedComplex();
+    dd::ComplexNumbers::sub(e, c, d);
+    dd::ComplexNumbers::decRef(c);
+    dd::ComplexNumbers::decRef(d);
+    e = cn.lookup(e);
+    EXPECT_EQ(e, cn.ONE);
+    auto f = cn.getTempCachedComplex();
+    dd::ComplexNumbers::div(f, dd::ComplexNumbers::ZERO, dd::ComplexNumbers::ONE);
 }

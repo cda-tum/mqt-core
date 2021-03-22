@@ -3,10 +3,10 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum_dd/ for more information.
  */
 
-#include "DDpackage.h"
 #include "DDexport.h"
-#include <iomanip>
+#include "DDpackage.h"
 
+#include <iomanip>
 
 namespace dd {
     /**
@@ -34,7 +34,7 @@ namespace dd {
             return;
         }
         std::clog << "Debug node: " << debugnode_line(p) << "\n";
-        for (auto const &edge : p->e) {
+        for (auto const& edge: p->e) {
             std::clog << "  " << std::hexfloat << std::setw(22) << CN::val(edge.w.r) << " " << std::setw(22) << CN::val(edge.w.i) << std::defaultfloat
                       << "i --> " << debugnode_line(edge.p) << "\n";
         }
@@ -55,8 +55,8 @@ namespace dd {
     }
 
     bool Package::is_locally_consistent_dd2(const Edge& e) {
-        auto *ptr_r = CN::getAlignedPointer(e.w.r);
-        auto *ptr_i = CN::getAlignedPointer(e.w.i);
+        auto* ptr_r = CN::getAlignedPointer(e.w.r);
+        auto* ptr_i = CN::getAlignedPointer(e.w.i);
 
         if ((ptr_r->ref == 0 || ptr_i->ref == 0) && e.w != CN::ONE && e.w != CN::ZERO) {
             std::clog << "\nLOCAL INCONSISTENCY FOUND\nOffending Number: " << e.w << " (" << ptr_r->ref << ", " << ptr_i->ref << ")\n\n";
@@ -74,8 +74,8 @@ namespace dd {
             return false;
         }
 
-        for (Edge &child : e.p->e) {
-            if(child.p->v + 1 != e.p->v && !isTerminal(child)) {
+        for (Edge& child: e.p->e) {
+            if (child.p->v + 1 != e.p->v && !isTerminal(child)) {
                 std::clog << "\nLOCAL INCONSISTENCY FOUND: Wrong V\n";
                 debugnode(e.p);
                 return false;
@@ -93,8 +93,8 @@ namespace dd {
     }
 
     bool Package::is_globally_consistent_dd(const Edge& e) {
-        std::map<ComplexTableEntry *, long> weight_counter;
-        std::map<NodePtr, unsigned long> node_counter;
+        std::map<ComplexTableEntry*, long> weight_counter;
+        std::map<NodePtr, unsigned long>   node_counter;
         //std::clog << "CHECKING GLOBAL CONSISTENCY\n";
         //export2Dot(e, "globalc.dot", true, false);
         fill_consistency_counter(e, weight_counter, node_counter);
@@ -114,7 +114,7 @@ namespace dd {
         return true;
     }
 
-    void Package::fill_consistency_counter(const Edge& edge, std::map<ComplexTableEntry *, long> &weight_map, std::map<NodePtr, unsigned long> &node_map) {
+    void Package::fill_consistency_counter(const Edge& edge, std::map<ComplexTableEntry*, long>& weight_map, std::map<NodePtr, unsigned long>& node_map) {
         weight_map[CN::getAlignedPointer(edge.w.r)]++;
         weight_map[CN::getAlignedPointer(edge.w.i)]++;
 
@@ -122,7 +122,7 @@ namespace dd {
             return;
         }
         node_map[edge.p]++;
-        for (Edge child : edge.p->e) {
+        for (Edge child: edge.p->e) {
             if (node_map[child.p] == 0) {
                 fill_consistency_counter(child, weight_map, node_map);
             } else {
@@ -133,19 +133,18 @@ namespace dd {
         }
     }
 
-
-    void Package::check_consistency_counter(const Edge& edge, const std::map<ComplexTableEntry *, long> &weight_map, const std::map<NodePtr, unsigned long> &node_map) {
+    void Package::check_consistency_counter(const Edge& edge, const std::map<ComplexTableEntry*, long>& weight_map, const std::map<NodePtr, unsigned long>& node_map) {
         auto* r_ptr = CN::getAlignedPointer(edge.w.r);
         auto* i_ptr = CN::getAlignedPointer(edge.w.i);
 
-        if(weight_map.at(r_ptr) > r_ptr->ref && r_ptr != CN::ONE.r && r_ptr != CN::ZERO.i) {
-            std::clog << "\nOffending weight: " <<  edge.w << "\n";
+        if (weight_map.at(r_ptr) > r_ptr->ref && r_ptr != CN::ONE.r && r_ptr != CN::ZERO.i) {
+            std::clog << "\nOffending weight: " << edge.w << "\n";
             std::clog << "Bits: " << std::hexfloat << CN::val(edge.w.r) << " " << CN::val(edge.w.i) << std::defaultfloat << "\n";
             debugnode(edge.p);
             throw std::runtime_error("Ref-Count mismatch for " + std::to_string(r_ptr->val) + "(r): " + std::to_string(weight_map.at(r_ptr)) + " occurences in DD but Ref-Count is only " + std::to_string(r_ptr->ref));
         }
 
-        if(weight_map.at(i_ptr) > i_ptr->ref && i_ptr != CN::ZERO.i && i_ptr != CN::ONE.r) {
+        if (weight_map.at(i_ptr) > i_ptr->ref && i_ptr != CN::ZERO.i && i_ptr != CN::ONE.r) {
             std::clog << edge.w << "\n";
             debugnode(edge.p);
             throw std::runtime_error("Ref-Count mismatch for " + std::to_string(i_ptr->val) + "(i): " + std::to_string(weight_map.at(i_ptr)) + " occurences in DD but Ref-Count is only " + std::to_string(i_ptr->ref));
@@ -159,8 +158,8 @@ namespace dd {
             debugnode(edge.p);
             throw std::runtime_error("Ref-Count mismatch for node: " + std::to_string(node_map.at(edge.p)) + " occurences in DD but Ref-Count is " + std::to_string(edge.p->ref));
         }
-        for (Edge child : edge.p->e) {
-            if(!isTerminal(child) && child.p->v != edge.p->v - 1) {
+        for (Edge child: edge.p->e) {
+            if (!isTerminal(child) && child.p->v != edge.p->v - 1) {
                 std::clog << "child.p->v == " << child.p->v << "\n";
                 std::clog << " edge.p->v == " << edge.p->v << "\n";
                 debugnode(child.p);
@@ -174,14 +173,14 @@ namespace dd {
     void Package::printUniqueTable(unsigned short n) {
         std::cout << "Unique Table: " << std::endl;
         for (int i = n - 1; i >= 0; --i) {
-            auto &unique = Unique[i];
+            auto& unique = Unique[i];
             std::cout << "\t" << i << ":" << std::endl;
             for (size_t key = 0; key < unique.size(); ++key) {
                 auto p = unique[key];
                 if (unique[key] != nullptr)
                     std::cout << key << ": ";
                 while (p != nullptr) {
-                    std::cout << "\t\t" << (uintptr_t) p << " " << p->ref << "\t";
+                    std::cout << "\t\t" << (uintptr_t)p << " " << p->ref << "\t";
                     p = p->next;
                 }
                 if (unique[key] != nullptr)
@@ -201,10 +200,9 @@ namespace dd {
 
     // displays DD package statistics
     void Package::statistics() {
-        auto hitRatioAdd = CTlook[ad] == 0 ? 0 : (double) CThit[ad] / (double) CTlook[ad];
-        auto hitRatioMul = CTlook[mult] == 0 ? 0 : (double) CThit[mult] / (double) CTlook[mult];
-        auto hitRatioKron = ((CTlook[kron] == 0) ? 0 : (double) CThit[kron] / (double) CTlook[kron]);
-
+        auto hitRatioAdd  = CTlook[ad] == 0 ? 0 : (double)CThit[ad] / (double)CTlook[ad];
+        auto hitRatioMul  = CTlook[mult] == 0 ? 0 : (double)CThit[mult] / (double)CTlook[mult];
+        auto hitRatioKron = ((CTlook[kron] == 0) ? 0 : (double)CThit[kron] / (double)CTlook[kron]);
 
         std::cout << "\nDD statistics:"
                   << "\n  Current # nodes in UniqueTable: " << nodecount
@@ -220,7 +218,8 @@ namespace dd {
                   << "\n  UniqueTable:"
                   << "\n    Collisions: " << UTcol
                   << "\n    Matches:    " << UTmatch
-                  << "\n" << std::flush;
+                  << "\n"
+                  << std::flush;
     }
 
     void Package::printInformation() {
@@ -243,10 +242,11 @@ namespace dd {
                   << "\n  ToffoliTable slots: " << TTSLOTS
                   << "\n  garbage collection limit: " << GCLIMIT1
                   << "\n  garbage collection increment: " << GCLIMIT_INC
-                  << "\n" << std::flush;
+                  << "\n"
+                  << std::flush;
     }
 
-    void Package::printVector(const Edge &e) {
+    void Package::printVector(const Edge& e) {
         unsigned long long element = 2u << e.p->v;
         for (unsigned long long i = 0; i < element; i++) {
             ComplexValue amplitude = getValueByPath(e, i);
@@ -258,15 +258,14 @@ namespace dd {
         std::cout << std::flush;
     }
 
-
     // a slightly better DD print utility
-    void Package::printDD(const Edge &e, unsigned int limit) {
+    void Package::printDD(const Edge& e, unsigned int limit) {
         unsigned short n = 0, i = 0;
 
         ListElementPtr first = newListElement();
-        first->p = e.p;
-        first->next = nullptr;
-        first->w = 0;
+        first->p             = e.p;
+        first->next          = nullptr;
+        first->w             = 0;
 
         std::cout << "top edge weight " << e.w << "\n";
         ListElementPtr pnext = first;
@@ -278,22 +277,22 @@ namespace dd {
 
             std::cout << "[";
             if (pnext->p != DDzero.p) {
-                for (auto const&edge : pnext->p->e) {
+                for (auto const& edge: pnext->p->e) {
                     if (edge.p == nullptr) {
                         std::cout << "NULL ";
                     } else {
                         if (!isTerminal(edge)) {
-                            ListElementPtr q = first->next;
+                            ListElementPtr q     = first->next;
                             ListElementPtr lastq = first;
                             while (q != nullptr && edge.p != q->p) {
                                 lastq = q;
-                                q = q->next;
+                                q     = q->next;
                             }
                             if (q == nullptr) {
-                                q = newListElement();
-                                q->p = edge.p;
+                                q       = newListElement();
+                                q->p    = edge.p;
                                 q->next = nullptr;
-                                q->w = n = n + 1;
+                                q->w = n    = n + 1;
                                 lastq->next = q;
                             }
                             std::cout << " " << q->w << ":\t";
@@ -314,4 +313,4 @@ namespace dd {
             pnext = pnext->next;
         }
     }
-}
+} // namespace dd
