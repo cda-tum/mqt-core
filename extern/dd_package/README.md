@@ -1,7 +1,8 @@
-[![Build and Test](https://github.com/iic-jku/dd_package/workflows/CI/badge.svg)](https://github.com/iic-jku/dd_package/actions?query=workflow%3A%22CI%22)
-[![codecov](https://codecov.io/gh/iic-jku/dd_package/branch/master/graph/badge.svg)](https://codecov.io/gh/iic-jku/dd_package)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![toolset: JKQ](https://img.shields.io/badge/toolset-JKQ-blue)](https://github.com/iic-jku/jkq)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/iic-jku/dd_package/CI?logo=github&style=plastic)](https://github.com/iic-jku/dd_package/actions?query=workflow%3A%22CI%22)
+[![Codecov branch](https://img.shields.io/codecov/c/github/iic-jku/dd_package/master?label=codecov&logo=codecov&style=plastic)](https://codecov.io/gh/iic-jku/dd_package)
+[![bench](https://img.shields.io/badge/Continuous%20Benchmark-master-blue?logo=github&style=plastic)](https://iic-jku.github.io/dd_package/dev/bench/)
+![GitHub](https://img.shields.io/github/license/iic-jku/dd_package?style=plastic)
+[![toolset: JKQ](https://img.shields.io/badge/toolset-JKQ-blue?style=plastic)](https://github.com/iic-jku/jkq)
 
 
 # JKQ DD Package - A Package for Decision Diagrams Written in C++
