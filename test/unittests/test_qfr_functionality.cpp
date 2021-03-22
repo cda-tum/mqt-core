@@ -41,7 +41,7 @@ TEST_F(QFRFunctionality, fuse_cx_to_swap) {
 	qc.emplace_back<StandardOperation>(nqubits, Control(0), 1, X);
 	qc.emplace_back<StandardOperation>(nqubits, Control(1), 0, X);
 	qc.emplace_back<StandardOperation>(nqubits, Control(0), 1, X);
-	CircuitOptimizer::swapGateFusion(qc);
+	CircuitOptimizer::swapReconstruction(qc);
 	ASSERT_NO_THROW({
 		auto op = dynamic_cast<StandardOperation*>((qc.begin()->get()));
         EXPECT_EQ(op->getType(), SWAP);
@@ -55,7 +55,7 @@ TEST_F(QFRFunctionality, replace_cx_to_swap_at_end) {
 	QuantumComputation qc(nqubits);
 	qc.emplace_back<StandardOperation>(nqubits, Control(0), 1, X);
 	qc.emplace_back<StandardOperation>(nqubits, Control(1), 0, X);
-	CircuitOptimizer::swapGateFusion(qc);
+	CircuitOptimizer::swapReconstruction(qc);
 	auto it = qc.begin();
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
@@ -78,7 +78,7 @@ TEST_F(QFRFunctionality, replace_cx_to_swap) {
 	qc.emplace_back<StandardOperation>(nqubits, Control(0), 1, X);
 	qc.emplace_back<StandardOperation>(nqubits, Control(1), 0, X);
 	qc.emplace_back<StandardOperation>(nqubits, 0, H);
-	CircuitOptimizer::swapGateFusion(qc);
+	CircuitOptimizer::swapReconstruction(qc);
 	auto it = qc.begin();
 	ASSERT_NO_THROW({
 		                auto op = dynamic_cast<StandardOperation*>(it->get());
@@ -133,11 +133,11 @@ TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
 	EXPECT_EQ(qc.getNqubits(), 3);
 	qc.emplace_back<StandardOperation>(nqubits, 2, X);
 	auto e = qc.createInitialMatrix(dd);
-	EXPECT_TRUE(dd->equals(e.p->e[0], dd->makeIdent(0,nqubits-1)));
+	EXPECT_TRUE(dd->equals(e.p->e[0], dd->makeIdent(nqubits)));
 	EXPECT_TRUE(dd->equals(e.p->e[1], dd->DDzero));
 	EXPECT_TRUE(dd->equals(e.p->e[2], dd->DDzero));
 	EXPECT_TRUE(dd->equals(e.p->e[3], dd->DDzero));
-	auto f = dd->makeIdent(0, (short)nqubits);
+	auto f = dd->makeIdent(nqubits+1);
 	dd->incRef(f);
 	f = qc.reduceAncillae(f, dd);
 	f = qc.reduceGarbage(f, dd);

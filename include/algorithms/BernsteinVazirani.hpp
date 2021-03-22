@@ -17,7 +17,7 @@ namespace qc {
 
 		explicit BernsteinVazirani(unsigned long hiddenInt);
 
-		std::ostream& printStatistics(std::ostream& os) override;
+		std::ostream& printStatistics(std::ostream& os) const override;
 
 	};
 }

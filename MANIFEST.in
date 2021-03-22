@@ -1,0 +1,11 @@
+include README.md LICENSE.md CMakeLists.txt
+graft src
+graft include
+include apps/*
+graft jkq/*
+include extern/dd_package/CMakeLists.txt
+graft extern/dd_package/src
+graft extern/dd_package/include
+graft extern/json
+graft extern/pybind11
+graft extern/pybind11_json

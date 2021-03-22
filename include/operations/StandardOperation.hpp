@@ -16,15 +16,15 @@ namespace qc {
 	inline bool fp_equals(const fp a, const fp b) { return (std::abs(a-b) <PARAMETER_TOLERANCE); }
 
 	// Complex constants
-	constexpr dd::ComplexValue complex_one        = { 1, 0 };
-	constexpr dd::ComplexValue complex_mone       = { -1, 0 };
-	constexpr dd::ComplexValue complex_zero       = { 0, 0 };
-	constexpr dd::ComplexValue complex_i          = { 0, 1 };
-	constexpr dd::ComplexValue complex_mi         = { 0, -1 };
-	constexpr dd::ComplexValue complex_SQRT_2     = {  dd::SQRT_2, 0 };
-	constexpr dd::ComplexValue complex_mSQRT_2    = { -dd::SQRT_2, 0 };
-	constexpr dd::ComplexValue complex_iSQRT_2     = {  0, dd::SQRT_2 };
-	constexpr dd::ComplexValue complex_miSQRT_2    = { 0, -dd::SQRT_2 };
+	constexpr dd::ComplexValue complex_one        = { 1., 0. };
+	constexpr dd::ComplexValue complex_mone       = { -1., 0. };
+	constexpr dd::ComplexValue complex_zero       = { 0., 0. };
+	constexpr dd::ComplexValue complex_i          = { 0., 1. };
+	constexpr dd::ComplexValue complex_mi         = { 0., -1. };
+	constexpr dd::ComplexValue complex_SQRT_2     = {  dd::SQRT_2, 0. };
+	constexpr dd::ComplexValue complex_mSQRT_2    = { -dd::SQRT_2, 0. };
+	constexpr dd::ComplexValue complex_iSQRT_2     = {  0., dd::SQRT_2 };
+	constexpr dd::ComplexValue complex_miSQRT_2    = { 0., -dd::SQRT_2 };
 
 	// Gate matrices
 	constexpr GateMatrix Imat({    complex_one,        complex_zero,       complex_zero,       complex_one });
@@ -40,22 +40,22 @@ namespace qc {
 	constexpr GateMatrix Vdagmat({    complex_SQRT_2,  complex_iSQRT_2, complex_iSQRT_2, complex_SQRT_2 });
 
 	inline GateMatrix U3mat(fp lambda, fp phi, fp theta) {
-		return GateMatrix({ dd::ComplexValue{  std::cos(theta / 2), 0 },
-		                    dd::ComplexValue{ -std::cos(lambda)       * std::sin(theta / 2), -std::sin(lambda)      * std::sin(theta / 2) },
-		                    dd::ComplexValue{  std::cos(phi)          * std::sin(theta / 2), std::sin(phi)          * std::sin(theta / 2) },
-		                    dd::ComplexValue{  std::cos(lambda + phi) * std::cos(theta / 2), std::sin(lambda + phi) * std::cos(theta / 2) }});
+		return GateMatrix{ dd::ComplexValue{  std::cos(theta / 2.), 0. },
+		                    dd::ComplexValue{ -std::cos(lambda)       * std::sin(theta / 2.), -std::sin(lambda)      * std::sin(theta / 2.) },
+		                    dd::ComplexValue{  std::cos(phi)          * std::sin(theta / 2.), std::sin(phi)          * std::sin(theta / 2.) },
+		                    dd::ComplexValue{  std::cos(lambda + phi) * std::cos(theta / 2.), std::sin(lambda + phi) * std::cos(theta / 2.) }};
 	}
 
 	inline GateMatrix U2mat(fp lambda, fp phi) {
-		return GateMatrix({ complex_SQRT_2,
+		return GateMatrix{ complex_SQRT_2,
 		                    dd::ComplexValue{ -std::cos(lambda)       * dd::SQRT_2, -std::sin(lambda)       * dd::SQRT_2 },
 		                    dd::ComplexValue{  std::cos(phi)          * dd::SQRT_2,  std::sin(phi)          * dd::SQRT_2 },
-		                    dd::ComplexValue{  std::cos(lambda + phi) * dd::SQRT_2,  std::sin(lambda + phi) * dd::SQRT_2 }});
+		                    dd::ComplexValue{  std::cos(lambda + phi) * dd::SQRT_2,  std::sin(lambda + phi) * dd::SQRT_2 }};
 	}
 
 	inline GateMatrix Phasemat(fp lambda) {
-		return GateMatrix({ complex_one,  complex_zero,
-		                    complex_zero, dd::ComplexValue{ std::cos(lambda), std::sin(lambda) }});
+		return GateMatrix{ complex_one,  complex_zero,
+		                    complex_zero, dd::ComplexValue{ std::cos(lambda), std::sin(lambda) }};
 	}
 
 	constexpr GateMatrix SXmat{dd::ComplexValue{0.5, 0.5}, dd::ComplexValue{0.5, -0.5}, dd::ComplexValue{0.5, -0.5}, dd::ComplexValue{0.5, 0.5}};
@@ -63,22 +63,22 @@ namespace qc {
 	constexpr GateMatrix SXdagmat{dd::ComplexValue{0.5, -0.5}, dd::ComplexValue{0.5, 0.5}, dd::ComplexValue{0.5, 0.5}, dd::ComplexValue{0.5, -0.5}};
 
 	inline GateMatrix RXmat(fp lambda) {
-		return GateMatrix({ dd::ComplexValue{ std::cos(lambda / 2), 0 }, 
-		                    dd::ComplexValue{ 0, -std::sin(lambda / 2) },
-		                    dd::ComplexValue{ 0, -std::sin(lambda / 2) }, 
-							dd::ComplexValue{ std::cos(lambda / 2), 0 }});
+		return GateMatrix{ dd::ComplexValue{ std::cos(lambda / 2.), 0. },
+		                    dd::ComplexValue{ 0., -std::sin(lambda / 2.) },
+		                    dd::ComplexValue{ 0., -std::sin(lambda / 2.) },
+							dd::ComplexValue{ std::cos(lambda / 2.), 0. }};
 	}
 
 	inline GateMatrix RYmat(fp lambda) {
-		return GateMatrix({ dd::ComplexValue{  std::cos(lambda / 2), 0 },
-		                    dd::ComplexValue{ -std::sin(lambda / 2), 0 },
-		                    dd::ComplexValue{  std::sin(lambda / 2), 0 },
-		                    dd::ComplexValue{  std::cos(lambda / 2), 0 }});
+		return GateMatrix{ dd::ComplexValue{  std::cos(lambda / 2.), 0. },
+		                    dd::ComplexValue{ -std::sin(lambda / 2.), 0. },
+		                    dd::ComplexValue{  std::sin(lambda / 2.), 0. },
+		                    dd::ComplexValue{  std::cos(lambda / 2.), 0. }};
 	}
 
 	inline GateMatrix RZmat(fp lambda) {
-		return GateMatrix({ dd::ComplexValue{ -std::cos(lambda/2.), -std::sin(lambda/2.) },  complex_zero,
-		                    complex_zero, dd::ComplexValue{ std::cos(lambda/2.), std::sin(lambda/2.) }});
+		return GateMatrix{ dd::ComplexValue{ -std::cos(lambda/2.), -std::sin(lambda/2.) },  complex_zero,
+		                    complex_zero, dd::ComplexValue{ std::cos(lambda/2.), std::sin(lambda/2.) }};
 	}
 
 	class StandardOperation : public Operation {
@@ -111,22 +111,22 @@ namespace qc {
 		StandardOperation() = default;
 
 		// Standard Constructors
-		StandardOperation(unsigned short nq, unsigned short                     target, OpType g, fp lambda = 0, fp phi = 0, fp theta = 0);
-		StandardOperation(unsigned short nq, const std::vector<unsigned short>& targets, OpType g, fp lambda = 0, fp phi = 0, fp theta = 0);
+		StandardOperation(unsigned short nq, unsigned short                     target, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0.);
+		StandardOperation(unsigned short nq, const std::vector<unsigned short>& targets, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0.);
 
-		StandardOperation(unsigned short nq, Control control, unsigned short                     target, OpType g, fp lambda = 0, fp phi = 0, fp theta = 0);
-		StandardOperation(unsigned short nq, Control control, const std::vector<unsigned short>& targets, OpType g, fp lambda = 0, fp phi = 0, fp theta = 0);
+		StandardOperation(unsigned short nq, Control control, unsigned short                     target, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0.);
+		StandardOperation(unsigned short nq, Control control, const std::vector<unsigned short>& targets, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0.);
 
-		StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short                     target, OpType g, fp lambda = 0, fp phi = 0, fp theta = 0);
-		StandardOperation(unsigned short nq, const std::vector<Control>& controls, const std::vector<unsigned short>& targets, OpType g, fp lambda = 0, fp phi = 0, fp theta = 0);
+		StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short                     target, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0.);
+		StandardOperation(unsigned short nq, const std::vector<Control>& controls, const std::vector<unsigned short>& targets, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0.);
 
 		// MCT Constructor
 		StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short target);
 
 		// MCF (cSWAP), Peres, paramterized two target Constructor
-		StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short target0, unsigned short target1, OpType g, fp lambda = 0, fp phi = 0, fp theta = 0);
+		StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short target0, unsigned short target1, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0.);
 
-		bool isStandardOperation() const override {
+		[[nodiscard]] bool isStandardOperation() const override {
 			return true;
 		}
 

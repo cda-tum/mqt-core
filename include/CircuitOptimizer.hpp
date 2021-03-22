@@ -20,8 +20,6 @@ namespace qc {
 	class CircuitOptimizer {
 
 	protected:
-		static const std::map<qc::OpType, qc::OpType> inverseMap;
-
 		static void addToDag(DAG& dag, std::unique_ptr<Operation> *op);
 
 	public:
@@ -29,7 +27,7 @@ namespace qc {
 
 		static DAG constructDAG(QuantumComputation& qc);
 
-		static void swapGateFusion(QuantumComputation& qc);
+		static void swapReconstruction(QuantumComputation& qc);
 
 		static void singleQubitGateFusion(QuantumComputation& qc);
 

@@ -53,7 +53,7 @@ namespace qc {
 		}
 	}
 
-	std::ostream& RandomCliffordCircuit::printStatistics(std::ostream& os) {
+	std::ostream& RandomCliffordCircuit::printStatistics(std::ostream& os) const {
 		os << "Random Clifford circuit statistics:\n";
 		os << "\tn: " << nqubits << std::endl;
 		os << "\tm: " << getNindividualOps() << std::endl;

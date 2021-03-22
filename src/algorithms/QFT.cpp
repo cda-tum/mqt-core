@@ -37,15 +37,15 @@ namespace qc {
         }
     }
 
-	dd::Edge QFT::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
+	dd::Edge QFT::buildFunctionality(std::unique_ptr<dd::Package>& dd) const {
 		return QuantumComputation::buildFunctionality(dd);
 	}
 
-	dd::Edge QFT::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
+	dd::Edge QFT::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const {
 		return QuantumComputation::simulate(in, dd);
 	}
 
-	std::ostream& QFT::printStatistics(std::ostream& os) {
+	std::ostream& QFT::printStatistics(std::ostream& os) const {
         os << "QFT (" << nqubits << ") Statistics:\n";
         os << "\tn: " << nqubits << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;

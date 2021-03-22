@@ -91,6 +91,37 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
 	std::smatch m;
 	std::string cmd;
 
+	static const std::map<std::string, OpType> identifierMap {
+			{ "0",   I    },
+			{ "id",  I    },
+			{ "h",   H    },
+			{ "n",   X    },
+			{ "c",   X    },
+			{ "x",   X    },
+			{ "y",   Y    },
+			{ "z",   Z    },
+			{ "s",   S    },
+			{ "si",  Sdag },
+			{ "sp",  Sdag },
+			{ "s+",  Sdag },
+			{ "sdg", Sdag },
+			{ "v",   V    },
+			{ "vi",  Vdag },
+			{ "vp",  Vdag },
+			{ "v+",  Vdag },
+			{ "rx",  RX   },
+			{ "ry",  RY   },
+			{ "rz",  RZ   },
+			{ "f",   SWAP },
+			{ "if",  SWAP },
+			{ "p",   Peres},
+			{ "pi",  Peresdag },
+			{ "p+",  Peresdag },
+			{ "q",   Phase},
+			{ "t",   T    },
+			{ "tdg", Tdag }
+	};
+
 	while (!is.eof()) {
 		if(!static_cast<bool>(is >> cmd)) {
 			throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Failed to read command");
@@ -227,6 +258,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
 				case ClassicControlled:
 				case SX:
 				case SXdag:
+				case Teleportation:
 					std::cerr << "Operation with invalid type " << gate << " read from real file. Proceed with caution!" << std::endl;
 					break;
 			}

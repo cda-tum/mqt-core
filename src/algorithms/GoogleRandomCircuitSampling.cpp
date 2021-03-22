@@ -95,6 +95,10 @@ namespace qc {
                 ss >> control;
                 ss >> target;
                 cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, Control(control), target, Z));
+            } else if (identifier == "is") {
+	            ss >> control;
+	            ss >> target;
+	            cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, std::vector<qc::Control>{ }, control, target, iSWAP));
             } else {
                 ss >> target;
                 if (identifier == "h")
@@ -106,8 +110,7 @@ namespace qc {
                 else if (identifier == "y_1_2")
                     cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, target, RY, PI_2));
                 else {
-                    std::cerr << "Unknown gate '" << identifier << "'\n";
-                    exit(1);
+                    throw QFRException("Unknown gate '" + identifier);
                 }
             }
         }
@@ -126,7 +129,7 @@ namespace qc {
         for (const auto& cycle:cycles) {
             os << "Cycle " << i++ << ":\n";
             for (const auto& op: cycle) {
-                os << std::setw((int)std::log10(getNops())+1) << ++j << ": ";
+                os << std::setw(static_cast<int>(std::log10(getNops())+1.)) << ++j << ": ";
                 op->print(os, initialLayout);
                 os << std::endl;
             }
@@ -134,7 +137,7 @@ namespace qc {
         return os;
     }
 
-    std::ostream& GoogleRandomCircuitSampling::printStatistics(std::ostream& os) {
+    std::ostream& GoogleRandomCircuitSampling::printStatistics(std::ostream& os) const {
         os << "GoogleRandomCircuitSampling Statistics:\n";
         os << "\tLayout: " << ((layout == Rectangular)? "Rectangular": "Bristlecone") << std::endl;
         os << "\tn: " << nqubits << std::endl;
@@ -144,16 +147,16 @@ namespace qc {
         return os;
     }
 
-    dd::Edge GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
+    dd::Edge GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd) const {
 		std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
         permutationMap map = initialLayout;
         dd->setMode(dd::Matrix);
 
-        dd::Edge e = dd->makeIdent(0, short(nqubits-1));
+        dd::Edge e = dd->makeIdent(nqubits);
         dd->incRef(e);
         for(const auto& cycle:cycles) {
-            dd::Edge f = dd->makeIdent(0, short(nqubits-1));
+            dd::Edge f = dd->makeIdent(nqubits);
             for(const auto& op: cycle)
                 f = dd->multiply(op->getDD(dd, line, map), f);
             dd::Edge g = dd->multiply(f, e);
@@ -165,7 +168,7 @@ namespace qc {
         return e;
     }
 
-    dd::Edge GoogleRandomCircuitSampling::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
+    dd::Edge GoogleRandomCircuitSampling::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const {
 		std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
 	    permutationMap map = initialLayout;

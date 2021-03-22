@@ -71,7 +71,7 @@ namespace qc {
 
 		static void create_reg_array(const registerMap& regs, regnames_t& regnames, unsigned short defaultnumber, const char* defaultname);
 
-		unsigned short getSmallestAncillary() const {
+		[[nodiscard]] unsigned short getSmallestAncillary() const {
 			for (size_t i=0; i<ancillary.size(); ++i) {
 				if (ancillary.test(i))
 					return i;
@@ -79,15 +79,15 @@ namespace qc {
 			return ancillary.size();
 		}
 
-		unsigned short getSmallestGarbage() const {
+		[[nodiscard]] unsigned short getSmallestGarbage() const {
 			for (size_t i=0; i<garbage.size(); ++i) {
 				if (garbage.test(i))
 					return i;
 			}
 			return garbage.size();
 		}
-		bool isLastOperationOnQubit(decltype(ops.begin())& opIt) {
-			auto end = ops.end();
+		[[nodiscard]] bool isLastOperationOnQubit(const decltype(ops.begin())& opIt) const {
+			const auto end = ops.cend();
 			return isLastOperationOnQubit(opIt, end);
 		}
 
@@ -107,15 +107,15 @@ namespace qc {
 		QuantumComputation& operator=(QuantumComputation&& qc) noexcept = default;
 		virtual ~QuantumComputation() = default;
 
-		virtual  size_t getNops()                   const { return ops.size();	}
-		unsigned short  getNqubits()                const { return nqubits + nancillae;	}
-		unsigned short  getNancillae()              const { return nancillae; }
-		unsigned short  getNqubitsWithoutAncillae() const { return nqubits; }
-		unsigned short  getNcbits()                 const { return nclassics;	}
-		std::string     getName()                   const { return name;       }
-		const registerMap& getQregs()               const { return qregs; }
-		const registerMap& getCregs()               const { return cregs; }
-		const registerMap& getANCregs()               const { return ancregs; }
+		[[nodiscard]] virtual  size_t getNops()                   const { return ops.size();	}
+		[[nodiscard]] unsigned short  getNqubits()                const { return nqubits + nancillae;	}
+		[[nodiscard]] unsigned short  getNancillae()              const { return nancillae; }
+		[[nodiscard]] unsigned short  getNqubitsWithoutAncillae() const { return nqubits; }
+		[[nodiscard]] unsigned short  getNcbits()                 const { return nclassics;	}
+		[[nodiscard]] std::string     getName()                   const { return name;       }
+		[[nodiscard]] const registerMap& getQregs()               const { return qregs; }
+		[[nodiscard]] const registerMap& getCregs()               const { return cregs; }
+		[[nodiscard]] const registerMap& getANCregs()             const { return ancregs; }
 
 		// initialLayout[physical_qubit] = logical_qubit
 		permutationMap initialLayout{ };
@@ -124,30 +124,31 @@ namespace qc {
 		std::bitset<MAX_QUBITS> ancillary{};
 		std::bitset<MAX_QUBITS> garbage{};
 
-		unsigned long long getNindividualOps() const;
+		[[nodiscard]] unsigned long long getNindividualOps() const;
 
-		std::string getQubitRegister(unsigned short physical_qubit_index);
-		std::string getClassicalRegister(unsigned short classical_index);
+		[[nodiscard]] std::string getQubitRegister(unsigned short physical_qubit_index) const;
+		[[nodiscard]] std::string getClassicalRegister(unsigned short classical_index) const;
 		static unsigned short getHighestLogicalQubitIndex(const permutationMap& map);
-		unsigned short getHighestLogicalQubitIndex() const { return getHighestLogicalQubitIndex(initialLayout); };
-		std::pair<std::string, unsigned short> getQubitRegisterAndIndex(unsigned short physical_qubit_index);
-		std::pair<std::string, unsigned short> getClassicalRegisterAndIndex(unsigned short classical_index);
+		[[nodiscard]] unsigned short getHighestLogicalQubitIndex() const { return getHighestLogicalQubitIndex(initialLayout); };
+		[[nodiscard]] std::pair<std::string, unsigned short> getQubitRegisterAndIndex(unsigned short physical_qubit_index) const;
+		[[nodiscard]] std::pair<std::string, unsigned short> getClassicalRegisterAndIndex(unsigned short classical_index) const;
 
-		unsigned short getIndexFromQubitRegister(const std::pair<std::string, unsigned short>& qubit);
-		unsigned short getIndexFromClassicalRegister(const std::pair<std::string, unsigned short>& clbit);
-		bool isIdleQubit(unsigned short physical_qubit);
-		static bool isLastOperationOnQubit(decltype(ops.begin())& opIt, decltype(ops.end())& end);
-		bool physicalQubitIsAncillary(unsigned short physical_qubit_index);
-		bool logicalQubitIsAncillary(unsigned short logical_qubit_index) const { return ancillary.test(logical_qubit_index); }
+		[[nodiscard]] unsigned short getIndexFromQubitRegister(const std::pair<std::string, unsigned short>& qubit) const;
+		[[nodiscard]] unsigned short getIndexFromClassicalRegister(const std::pair<std::string, unsigned short>& clbit) const;
+		[[nodiscard]] bool isIdleQubit(unsigned short physical_qubit) const;
+		static bool isLastOperationOnQubit(const decltype(ops.begin())& opIt, const decltype(ops.cend())& end);
+		[[nodiscard]] bool physicalQubitIsAncillary(unsigned short physical_qubit_index) const;
+		[[nodiscard]] bool logicalQubitIsAncillary(unsigned short logical_qubit_index) const { return ancillary.test(logical_qubit_index); }
 		void setLogicalQubitAncillary(unsigned short logical_qubit_index) { ancillary.set(logical_qubit_index); }
-		dd::Edge reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular = true);
-		dd::Edge reduceAncillaeRecursion(dd::Edge& e, std::unique_ptr<dd::Package>& dd, unsigned short lowerbound, bool regular = true);
-		bool logicalQubitIsGarbage(unsigned short logical_qubit_index) const { return garbage.test(logical_qubit_index); }
+		dd::Edge reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular = true) const {
+			return dd->reduceAncillae(e, ancillary, regular);
+		}
+		[[nodiscard]] bool logicalQubitIsGarbage(unsigned short logical_qubit_index) const { return garbage.test(logical_qubit_index); }
 		void setLogicalQubitGarbage(unsigned short logical_qubit_index) { garbage.set(logical_qubit_index); }
-		// works for reversible circuits --- to be tested for quantum circuits
-		dd::Edge reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular = true);
-		dd::Edge reduceGarbageRecursion(dd::Edge& e, std::unique_ptr<dd::Package>& dd, unsigned short lowerbound, bool regular = true);
-		dd::Edge createInitialMatrix(std::unique_ptr<dd::Package>& dd); // creates identity matrix, which is reduced with respect to the ancillary qubits
+		dd::Edge reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular = true) const {
+			return dd->reduceGarbage(e, garbage, regular);
+		}
+		dd::Edge createInitialMatrix(std::unique_ptr<dd::Package>& dd) const; // creates identity matrix, which is reduced with respect to the ancillary qubits
 
 		/// strip away qubits with no operations applied to them and which do not pop up in the output permutation
 		/// \param force if true, also strip away idle qubits occurring in the output permutation
@@ -192,8 +193,10 @@ namespace qc {
 			max_controls = std::max(ncontrols, max_controls);
 		}
 
-		virtual dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd);
-		virtual dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd);
+		virtual dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const;
+		virtual dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) const;
+		virtual dd::Edge buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const;
+		virtual bool buildFunctionalityRecursive(unsigned int depth, size_t opIdx, std::stack<dd::Edge>& s, std::array<short, MAX_QUBITS>& line, permutationMap& map, std::unique_ptr<dd::Package>& dd) const;
 
 		/// Obtain vector/matrix entry for row i (and column j). Does not include common factor e.w!
 		/// \param dd package to use
@@ -201,7 +204,7 @@ namespace qc {
 		/// \param i row index
 		/// \param j column index
 		/// \return temporary complex value representing the vector/matrix entry
-		virtual dd::Complex getEntry(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long i, unsigned long long j);
+		virtual dd::Complex getEntry(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long i, unsigned long long j) const;
 
 		/**
 		 * printing
@@ -210,17 +213,17 @@ namespace qc {
 
 		friend std::ostream& operator<<(std::ostream& os, const QuantumComputation& qc) { return qc.print(os); }
 
-		virtual std::ostream& printMatrix(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os);
+		virtual std::ostream& printMatrix(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os) const;
 
 		static void printBin(unsigned long long n, std::stringstream& ss);
 
-		virtual std::ostream& printCol(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long j, std::ostream& os);
+		virtual std::ostream& printCol(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long j, std::ostream& os) const;
 
-		virtual std::ostream& printVector(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os);
+		virtual std::ostream& printVector(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os) const;
 
-		virtual std::ostream& printStatistics(std::ostream& os);
+		virtual std::ostream& printStatistics(std::ostream& os) const;
 
-		std::ostream& printRegisters(std::ostream& os = std::cout);
+		std::ostream& printRegisters(std::ostream& os = std::cout) const;
 
 		static std::ostream& printPermutationMap(const permutationMap& map, std::ostream& os = std::cout);
 
@@ -250,23 +253,23 @@ namespace qc {
 		
 		// Iterators (pass-through)
 		auto begin()            noexcept { return ops.begin();   }
-		auto begin()      const noexcept { return ops.begin();   }
-		auto cbegin()     const noexcept { return ops.cbegin();  }
+		[[nodiscard]] auto begin()      const noexcept { return ops.begin();   }
+		[[nodiscard]] auto cbegin()     const noexcept { return ops.cbegin();  }
 		auto end()              noexcept { return ops.end();     }
-		auto end()        const noexcept { return ops.end();	  }
-		auto cend()       const noexcept { return ops.cend();	  }
+		[[nodiscard]] auto end()        const noexcept { return ops.end();	  }
+		[[nodiscard]] auto cend()       const noexcept { return ops.cend();	  }
 		auto rbegin()           noexcept { return ops.rbegin();  }
-		auto rbegin()     const noexcept { return ops.rbegin();  }
-		auto crbegin()    const noexcept { return ops.crbegin(); }
+		[[nodiscard]] auto rbegin()     const noexcept { return ops.rbegin();  }
+		[[nodiscard]] auto crbegin()    const noexcept { return ops.crbegin(); }
 		auto rend()             noexcept { return ops.rend();    }
-		auto rend()       const noexcept {	return ops.rend();    }
-		auto crend()      const noexcept { return ops.crend();   }
+		[[nodiscard]] auto rend()       const noexcept {	return ops.rend();    }
+		[[nodiscard]] auto crend()      const noexcept { return ops.crend();   }
 		
 		// Capacity (pass-through)
-		bool   empty()    const noexcept { return ops.empty();    }
-		size_t size()     const noexcept { return ops.size();     }
-		size_t max_size() const noexcept { return ops.max_size(); }
-		size_t capacity() const noexcept { return ops.capacity(); }
+		[[nodiscard]] bool   empty()    const noexcept { return ops.empty();    }
+		[[nodiscard]] size_t size()     const noexcept { return ops.size();     }
+		[[nodiscard]] size_t max_size() const noexcept { return ops.max_size(); }
+		[[nodiscard]] size_t capacity() const noexcept { return ops.capacity(); }
 		
 		void reserve(size_t new_cap)     { ops.reserve(new_cap);  }
 		void shrink_to_fit()             { ops.shrink_to_fit();   }

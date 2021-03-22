@@ -14,11 +14,11 @@ namespace qc {
 	protected:
 		std::unique_ptr<Operation> op;
 		std::pair<unsigned short, unsigned short> controlRegister{};
-		unsigned int expectedValue = 1u;
+		unsigned int expectedValue = 1U;
 	public:
 
 		// Applies operation `_op` if the creg starting at index `control` has the expected value
-		ClassicControlledOperation(std::unique_ptr<Operation>& _op, const std::pair<unsigned short, unsigned short>& controlRegister, unsigned int expectedValue = 1u) : op(std::move(_op)), controlRegister(controlRegister), expectedValue(expectedValue) {
+		ClassicControlledOperation(std::unique_ptr<Operation>& _op, const std::pair<unsigned short, unsigned short>& controlRegister, unsigned int expectedValue = 1U) : op(std::move(_op)), controlRegister(controlRegister), expectedValue(expectedValue) {
 			nqubits = op->getNqubits();
 			name[0] = 'c';
 			name[1] = '_';
@@ -45,27 +45,27 @@ namespace qc {
 			return op->getInverseDD(dd, line, permutation);
 		}
 
-		auto getControlRegister() const {
+		[[nodiscard]] auto getControlRegister() const {
 			return controlRegister;
 		}
 
-		auto getExpectedValue() const {
+		[[nodiscard]] auto getExpectedValue() const {
 			return expectedValue;
 		}
 
-		auto getOperation() const {
+		[[nodiscard]] auto getOperation() const {
 			return op.get();
 		}
 
-		bool isUnitary() const override {
+		[[nodiscard]] bool isUnitary() const override {
 			return false;
 		}
 
-		bool isClassicControlledOperation() const override {
+		[[nodiscard]] bool isClassicControlledOperation() const override {
 			return true;
 		}
 
-		bool actsOn(unsigned short i) override {
+		[[nodiscard]] bool actsOn(unsigned short i) const override {
 			return op->actsOn(i);
 		}
 
@@ -77,23 +77,15 @@ namespace qc {
 			op->resetLine(line, permutation);
 		}
 
-		void dumpOpenQASM(std::ostream& of, const regnames_t& qreg, const regnames_t& creg) const override {
-			UNUSED(of)
-			UNUSED(qreg)
-			UNUSED(creg)
+		void dumpOpenQASM([[maybe_unused]] std::ostream& of, [[maybe_unused]] const regnames_t& qreg, [[maybe_unused]] const regnames_t& creg) const override {
 			throw QFRException("Dumping of classically controlled gates currently not supported for qasm");
 		}
 
-		void dumpReal(std::ostream& of) const override {
-			UNUSED(of)
+		void dumpReal([[maybe_unused]] std::ostream& of) const override {
 			throw QFRException("Dumping of classically controlled gates not possible in real format");
 		}
 
-		void dumpQiskit(std::ostream& of, const regnames_t& qreg, const regnames_t& creg, const char *anc_reg_name) const override {
-			UNUSED(of)
-			UNUSED(qreg)
-			UNUSED(creg)
-			UNUSED(anc_reg_name)
+		void dumpQiskit([[maybe_unused]] std::ostream& of, [[maybe_unused]] const regnames_t& qreg, [[maybe_unused]] const regnames_t& creg, [[maybe_unused]] const char *anc_reg_name) const override {
 			throw QFRException("Dumping of classically controlled gates currently not supported for qiskit");
 		}
 	};

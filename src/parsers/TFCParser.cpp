@@ -17,7 +17,7 @@ int qc::QuantumComputation::readTFCHeader(std::istream& is, std::map<std::string
 	int line = 0;
 
 	std::string delimiter = ",";
-	size_t pos = 0;
+	size_t pos;
 
 	std::vector<std::string> variables{};
 	std::vector<std::string> inputs{};
@@ -196,7 +196,7 @@ void qc::QuantumComputation::readTFCGateDescriptions(std::istream& is, int line,
 			std::vector<Control> controls{ };
 
 			std::string delimiter = ",";
-			size_t pos = 0;
+			size_t pos;
 
 			while ((pos = qubits.find(delimiter)) != std::string::npos) {
 				label = qubits.substr(0, pos);

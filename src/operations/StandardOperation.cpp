@@ -11,7 +11,8 @@ namespace qc {
      ***/
     OpType StandardOperation::parseU3(fp& lambda, fp& phi, fp& theta) {
 		if (std::abs(theta) < PARAMETER_TOLERANCE && std::abs(phi) < PARAMETER_TOLERANCE) {
-			phi = theta = 0.L;
+			phi = 0.L;
+			theta = 0.L;
 			return parseU1(lambda);
 		}
 
@@ -49,7 +50,9 @@ namespace qc {
 			if (std::abs(phi - qc::PI_2) < PARAMETER_TOLERANCE) {
 				phi = qc::PI_2;
 				if (std::abs(theta - qc::PI) < PARAMETER_TOLERANCE) {
-					lambda = phi = theta = 0.L;
+					lambda = 0.L;
+					phi = 0.L;
+					theta = 0.L;
 					return Y;
 				}
 			}
@@ -60,7 +63,8 @@ namespace qc {
 			if (std::abs(phi) < PARAMETER_TOLERANCE) {
 				phi = 0.L;
 				if (std::abs(theta - qc::PI) < PARAMETER_TOLERANCE) {
-					theta = lambda = 0.L;
+					theta = 0.L;
+					lambda = 0.L;
 					return X;
 				}
 			}
@@ -378,7 +382,7 @@ namespace qc {
 		std::ostringstream op;
 		op << std::setprecision(std::numeric_limits<fp>::digits10);
 		if((controls.size() > 1 && type != X) || controls.size() > 2) {
-			std::cout << "[WARNING] Multiple controlled gates are not natively suppported by OpenQASM. "
+			std::cout << "[WARNING] Multiple controlled gates are not natively supported by OpenQASM. "
 			<< "However, this library can parse .qasm files with multiple controlled gates (e.g., cccx) correctly. "
 			<< "Thus, while not valid vanilla OpenQASM, the dumped file will work with this library. " << std::endl;
 		}
@@ -527,8 +531,44 @@ namespace qc {
 					of << " " << qreg[c.qubit].second << ",";
 				of << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
 				return;
+            case Teleportation:
+                if (!controls.empty() || targets.size() != 3) {
+                    std::cerr << "controls = ";
+                    for (const auto& c: controls) {
+                        std::cerr << qreg.at(c.qubit).second << " ";
+                    }
+                    std::cerr << "\ntargets = ";
+                    for (const auto& t: targets) {
+                        std::cerr << qreg.at(t).second << " ";
+                    }
+                    std::cerr << "\n";
+
+                    throw QFRException("Teleportation needs three targets");
+                }
+                /*
+                                            ░      ┌───┐ ░ ┌─┐    ░
+                        |ψ⟩ q_0: ───────────░───■──┤ H ├─░─┤M├────░─────────────── |0⟩ or |1⟩
+                                 ┌───┐      ░ ┌─┴─┐└───┘ ░ └╥┘┌─┐ ░
+                        |0⟩ a_0: ┤ H ├──■───░─┤ X ├──────░──╫─┤M├─░─────────────── |0⟩ or |1⟩
+                                 └───┘┌─┴─┐ ░ └───┘      ░  ║ └╥┘ ░  ┌───┐  ┌───┐
+                        |0⟩ a_1: ─────┤ X ├─░────────────░──╫──╫──░──┤ X ├──┤ Z ├─ |ψ⟩
+                                      └───┘ ░            ░  ║  ║  ░  └─┬─┘  └─┬─┘
+                                                            ║  ║    ┌──┴──┐   │
+                      bitflip: 1/═══════════════════════════╩══╬════╡ = 1 ╞═══╪═══
+                                                            0  ║    └─────┘┌──┴──┐
+                    phaseflip: 1/══════════════════════════════╩═══════════╡ = 1 ╞
+                                                               0           └─────┘
+                */
+                of << "// teleport q_0, a_0, a_1; q_0 --> a_1  via a_0\n";
+                of << "teleport "
+                    << qreg[targets[0]].second <<  ", "
+                    << qreg[targets[1]].second <<  ", "
+                    << qreg[targets[2]].second << ";"
+                    << std::endl;
+
+                return;
 			default: 
-                std::cerr << "gate type (index) " << (int) type << " could not be converted to OpenQASM" << std::endl;
+                std::cerr << "gate type (index) " << static_cast<int>(type) << " could not be converted to OpenQASM" << std::endl;
 		}
 
 		for (const auto& c: controls) {
@@ -797,7 +837,7 @@ namespace qc {
 				of << "qc.ccx(" << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ")" << std::endl;
 				return;
 			default:
-				std::cerr << "gate type (index) " << (int) type << " could not be converted to qiskit" << std::endl;
+				std::cerr << "gate type (index) " << static_cast<int>(type) << " could not be converted to qiskit" << std::endl;
 		}
 		of << op.str() << qreg[targets[0]].second << ")" << std::endl;
 	}
@@ -819,7 +859,7 @@ namespace qc {
 			auto tmp = permutation.at(target0);
 			permutation.at(target0) = permutation.at(target1);
 			permutation.at(target1) = tmp;
-			return dd->makeIdent(0, short(nqubits-1));
+			return dd->makeIdent(nqubits);
 		}
 
 		setLine(line, permutation);
@@ -844,7 +884,7 @@ namespace qc {
 			auto tmp = permutation.at(target0);
 			permutation.at(target0) = permutation.at(target1);
 			permutation.at(target1) = tmp;
-			return dd->makeIdent(0, short(nqubits-1));
+			return dd->makeIdent(nqubits);
 		}
 
 		setLine(line, permutation);

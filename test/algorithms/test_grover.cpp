@@ -86,6 +86,28 @@ TEST_P(Grover, Functionality) {
 	EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }
 
+TEST_P(Grover, FunctionalityRecursive) {
+	std::tie(nqubits, seed) = GetParam();
+
+	// there should be no error constructing the circuit
+	ASSERT_NO_THROW({qc = std::make_unique<qc::Grover>(nqubits, seed);});
+
+	qc->printStatistics(std::cout);
+	unsigned long long x = dynamic_cast<qc::Grover*>(qc.get())->x;
+
+	// there should be no error building the functionality
+	ASSERT_NO_THROW({e = qc->buildFunctionalityRecursive(dd);});
+
+	// amplitude of the searched-for entry should be 1
+	auto c = qc->getEntry(dd, e, x, 0);
+	EXPECT_NEAR(std::abs(CN::val(c.r)), 1, GROVER_ACCURACY);
+	EXPECT_NEAR(CN::val(c.i), 0, GROVER_ACCURACY);
+
+	CN::mul(c, c, e.w);
+	auto prob = CN::mag2(c);
+	EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
+}
+
 TEST_P(Grover, Simulation) {
 	std::tie(nqubits, seed) = GetParam();
 

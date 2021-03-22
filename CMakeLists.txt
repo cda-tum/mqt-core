@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.14...3.19)
 
 project(qfr
         LANGUAGES CXX
-        VERSION 1.2.2
-        DESCRIPTION "QFR  - A JKQ library for the representation of quantum functionality"
+        VERSION 1.3.0
+        DESCRIPTION "QFR  - A JKQ library for Quantum Functionality Representation"
         )
 
 # enable organization of targets into folders
@@ -39,11 +39,13 @@ check_submodule_present(pybind11_json)
 add_subdirectory(src)
 
 # add test code
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR BUILD_QFR_TESTS)
+if(BUILD_QFR_TESTS)
 	enable_testing()
 	include(GoogleTest)
 	add_subdirectory(test)
+endif()
 
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 	add_subdirectory(apps)
 endif()
 

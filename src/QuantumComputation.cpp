@@ -345,7 +345,7 @@ namespace qc {
 		short output_qubit_index = -1;
 		auto it = outputPermutation.find(physical_qubit_index);
 		if (it != outputPermutation.end()) {
-			output_qubit_index = it->second;
+			output_qubit_index = static_cast<short>(it->second);
 			// erasing entry
 			outputPermutation.erase(physical_qubit_index);
 			#if DEBUG_MODE_QC
@@ -517,169 +517,14 @@ namespace qc {
 		garbage.reset(logical_qubit_index);
 	}
 
-dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular) {
-		// return if no more garbage left
-		if (!ancillary.any() || e.p == nullptr) return e;
-		unsigned short lowerbound = 0;
-		for (size_t i = 0; i < ancillary.size(); ++i) {
-			if (ancillary.test(i)) {
-				lowerbound = i;
-				break;
-			}
-		}
-		if (e.p->v < lowerbound) return e;
-		return reduceAncillaeRecursion(e, dd, lowerbound, regular);
-	}
-
-	dd::Edge QuantumComputation::reduceAncillaeRecursion(dd::Edge& e, std::unique_ptr<dd::Package>& dd, unsigned short lowerbound, bool regular) {
-		if(e.p->v < lowerbound) return e;
-
-		dd::Edge f = e;
-
-		std::array<dd::Edge, 4> edges{ };
-		std::bitset<4> handled{};
-		for (int i = 0; i < 4; ++i) {
-			if (!handled.test(i)) {
-				if (dd->isTerminal(e.p->e[i])) {
-					edges[i] = e.p->e[i];
-				} else {
-					edges[i] = reduceAncillaeRecursion(f.p->e[i], dd, lowerbound, regular);
-					for (int j = i+1; j < 4; ++j) {
-						if (e.p->e[i].p == e.p->e[j].p) {
-							edges[j] = edges[i];
-							handled.set(j);
-						}
-					}
-				}
-				handled.set(i);
-			}
-		}
-		f = dd->makeNonterminal(f.p->v, edges);
-
-		// something to reduce for this qubit
-		if (f.p->v >= 0 && ancillary.test(f.p->v)) {
-			if (regular) {
-				if (f.p->e[1].w != CN::ZERO || f.p->e[3].w != CN::ZERO){
-					f = dd->makeNonterminal(f.p->v, { f.p->e[0], dd::Package::DDzero, f.p->e[2], dd::Package::DDzero });
-				}
-			} else {
-				if (f.p->e[2].w != CN::ZERO || f.p->e[3].w != CN::ZERO) {
-					f = dd->makeNonterminal(f.p->v, { f.p->e[0], f.p->e[1], dd::Package::DDzero, dd::Package::DDzero });
-				}
-			}
-		}
-
-		auto c = dd->cn.mulCached(f.w, e.w);
-		f.w = dd->cn.lookup(c);
-		dd->cn.releaseCached(c);
-		dd->incRef(f);
-		return f;
-	}
-
-	dd::Edge QuantumComputation::reduceGarbage(dd::Edge& e, std::unique_ptr<dd::Package>& dd, bool regular) {
-		// return if no more garbage left
-		if (!garbage.any() || e.p == nullptr) return e;
-		unsigned short lowerbound = 0;
-		for (size_t i=0; i<garbage.size(); ++i) {
-			if (garbage.test(i)) {
-				lowerbound = i;
-				break;
-			}
-		}
-		if(e.p->v < lowerbound) return e;
-		return reduceGarbageRecursion(e, dd, lowerbound, regular);
-	}
-
-	dd::Edge QuantumComputation::reduceGarbageRecursion(dd::Edge& e, std::unique_ptr<dd::Package>& dd, unsigned short lowerbound, bool regular) {
-		if(e.p->v < lowerbound) return e;
-
-		dd::Edge f = e;
-
-		std::array<dd::Edge, 4> edges{ };
-		std::bitset<4> handled{};
-		for (int i = 0; i < 4; ++i) {
-			if (!handled.test(i)) {
-				if (dd->isTerminal(e.p->e[i])) {
-					edges[i] = e.p->e[i];
-				} else {
-					edges[i] = reduceGarbageRecursion(f.p->e[i], dd, lowerbound, regular);
-					for (int j = i+1; j < 4; ++j) {
-						if (e.p->e[i].p == e.p->e[j].p) {
-							edges[j] = edges[i];
-							handled.set(j);
-						}
-					}
-				}
-				handled.set(i);
-			}
-		}
-		f = dd->makeNonterminal(f.p->v, edges);
-
-		// something to reduce for this qubit
-		if (f.p->v >= 0 && garbage.test(f.p->v)) {
-			if (regular) {
-				if (f.p->e[2].w != CN::ZERO || f.p->e[3].w != CN::ZERO) {
-					dd::Edge g{ };
-					if (f.p->e[0].w == CN::ZERO && f.p->e[2].w != CN::ZERO) {
-						g = f.p->e[2];
-					} else if (f.p->e[2].w != CN::ZERO) {
-						g = dd->add(f.p->e[0], f.p->e[2]);
-					} else {
-						g = f.p->e[0];
-					}
-					dd::Edge h{ };
-					if (f.p->e[1].w == CN::ZERO && f.p->e[3].w != CN::ZERO) {
-						h = f.p->e[3];
-					} else if (f.p->e[3].w != CN::ZERO) {
-						h = dd->add(f.p->e[1], f.p->e[3]);
-					} else {
-						h = f.p->e[1];
-					}
-					f = dd->makeNonterminal(e.p->v, { g, h, dd::Package::DDzero, dd::Package::DDzero });
-				}
-			} else {
-				if (f.p->e[1].w != CN::ZERO || f.p->e[3].w != CN::ZERO) {
-					dd::Edge g{ };
-					if (f.p->e[0].w == CN::ZERO && f.p->e[1].w != CN::ZERO) {
-						g = f.p->e[1];
-					} else if (f.p->e[1].w != CN::ZERO) {
-						g = dd->add(f.p->e[0], f.p->e[1]);
-					} else {
-						g = f.p->e[0];
-					}
-					dd::Edge h{ };
-					if (f.p->e[2].w == CN::ZERO && f.p->e[3].w != CN::ZERO) {
-						h = f.p->e[3];
-					} else if (f.p->e[3].w != CN::ZERO) {
-						h = dd->add(f.p->e[2], f.p->e[3]);
-					} else {
-						h = f.p->e[2];
-					}
-					f = dd->makeNonterminal(e.p->v, { g, dd::Package::DDzero, h, dd::Package::DDzero });
-				}
-			}
-		}
-
-		auto c = dd->cn.mulCached(f.w, e.w);
-		f.w = dd->cn.lookup(c);
-		dd->cn.releaseCached(c);
-		// Quick-fix for normalization bug
-		if (CN::mag2(f.w) > 1.0)
-			f.w = CN::ONE;
-		dd->incRef(f);
-		return f;
-	}
-
-
-	dd::Edge QuantumComputation::createInitialMatrix(std::unique_ptr<dd::Package>& dd) {
-		dd::Edge e = dd->makeIdent(0, short(nqubits+nancillae-1));
+	dd::Edge QuantumComputation::createInitialMatrix(std::unique_ptr<dd::Package>& dd) const {
+		dd::Edge e = dd->makeIdent(nqubits+nancillae);
 		dd->incRef(e);
 		e = reduceAncillae(e, dd);
 		return e;
 	}
 
-
-	dd::Edge QuantumComputation::buildFunctionality(std::unique_ptr<dd::Package>& dd) {
+	dd::Edge QuantumComputation::buildFunctionality(std::unique_ptr<dd::Package>& dd) const {
 		if (nqubits + nancillae == 0)
 			return dd->DDone;
 		
@@ -705,7 +550,69 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return e;
 	}
 
-	dd::Edge QuantumComputation::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) {
+	dd::Edge QuantumComputation::buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const {
+		if (nqubits + nancillae == 0)
+			return dd->DDone;
+
+		std::array<short, MAX_QUBITS> line{};
+		line.fill(LINE_DEFAULT);
+		permutationMap map = initialLayout;
+		dd->setMode(dd::Matrix);
+
+		if (ops.size() == 1) {
+			auto e = ops.front()->getDD(dd, line, map);
+			dd->incRef(e);
+			return e;
+		}
+
+		std::stack<dd::Edge> s{};
+		auto depth = static_cast<unsigned int>(std::ceil(std::log2(ops.size())));
+		buildFunctionalityRecursive(depth, 0, s, line, map, dd);
+		auto e = s.top();
+		s.pop();
+		return e;
+	}
+
+	bool QuantumComputation::buildFunctionalityRecursive(unsigned int depth, size_t opIdx, std::stack<dd::Edge>& s, std::array<short, MAX_QUBITS>& line, permutationMap& map, std::unique_ptr<dd::Package>& dd) const {
+		// base case
+		if(depth == 1) {
+			auto e = ops[opIdx]->getDD(dd, line, map);
+			++opIdx;
+			if (opIdx == ops.size()) { // only one element was left
+				s.push(e);
+				dd->incRef(e);
+				return false;
+			}
+			auto f = ops[opIdx]->getDD(dd, line, map);
+			s.push(dd->multiply(f, e)); // ! reverse multiplication
+			dd->incRef(s.top());
+			return (opIdx != ops.size()-1);
+		}
+
+		// in case no operations are left after the first recursive call nothing has to be done
+		size_t leftIdx = opIdx & ~(1UL << (depth-1));
+		if(!buildFunctionalityRecursive(depth-1, leftIdx, s, line, map, dd)) return false;
+
+		size_t rightIdx = opIdx | (1UL << (depth-1));
+		auto success = buildFunctionalityRecursive(depth-1, rightIdx, s, line, map, dd);
+
+		// get latest two results from stack and push their product on the stack
+		auto e = s.top();
+		s.pop();
+		auto f = s.top();
+		s.pop();
+		s.push(dd->multiply(e,f)); // ordering because of stack structure
+
+		// reference counting
+		dd->decRef(e);
+		dd->decRef(f);
+		dd->incRef(s.top());
+		dd->garbageCollect();
+
+		return success;
+	}
+
+	dd::Edge QuantumComputation::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const {
 		// measurements are currently not supported here
 		std::array<short, MAX_QUBITS> line{};
 		line.fill(LINE_DEFAULT);
@@ -797,7 +704,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return os;
 	}
 
-	dd::Complex QuantumComputation::getEntry(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long i, unsigned long long j) {
+	dd::Complex QuantumComputation::getEntry(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long i, unsigned long long j) const {
 		if (dd->isTerminal(e))
 			return e.w;
 
@@ -811,7 +718,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return c;
 	}
 
-	std::ostream& QuantumComputation::printMatrix(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os) {
+	std::ostream& QuantumComputation::printMatrix(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os) const {
 		os << "Common Factor: " << e.w << "\n";
 		for (unsigned long long i = 0; i < (1ull << (unsigned int)(nqubits+nancillae)); ++i) {
 			for (unsigned long long j = 0; j < (1ull << (unsigned int)(nqubits+nancillae)); ++j) {
@@ -828,9 +735,9 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		ss << n%2;
 	}
 
-	std::ostream& QuantumComputation::printCol(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long j, std::ostream& os) {
+	std::ostream& QuantumComputation::printCol(std::unique_ptr<dd::Package>& dd, dd::Edge e, unsigned long long j, std::ostream& os) const {
 		os << "Common Factor: " << e.w << "\n";
-		for (unsigned long long i = 0; i < (1ull << (unsigned int)(nqubits+nancillae)); ++i) {
+		for (unsigned long long i = 0; i < (1ULL << static_cast<unsigned int>(nqubits+nancillae)); ++i) {
 			std::stringstream ss{};
 			printBin(i, ss);
 			os << std::setw(nqubits + nancillae) << ss.str() << ": " << getEntry(dd, e, i, j) << "\n";
@@ -838,11 +745,11 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return os;
 	}
 
-	std::ostream& QuantumComputation::printVector(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os) {
+	std::ostream& QuantumComputation::printVector(std::unique_ptr<dd::Package>& dd, dd::Edge e, std::ostream& os) const {
 		return printCol(dd, e, 0, os);
 	}
 
-	std::ostream& QuantumComputation::printStatistics(std::ostream& os) {
+	std::ostream& QuantumComputation::printStatistics(std::ostream& os) const {
 		os << "QC Statistics:\n";
 		os << "\tn: " << nqubits << std::endl;
 		os << "\tanc: " << nancillae << std::endl;
@@ -1117,7 +1024,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		}
 	}
 
-	bool QuantumComputation::isIdleQubit(unsigned short physical_qubit) {
+	bool QuantumComputation::isIdleQubit(unsigned short physical_qubit) const {
 		for(const auto& op:ops) {
 			if (op->actsOn(physical_qubit))
 				return false;
@@ -1132,7 +1039,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 			if(isIdleQubit(physical_qubit_index)) {
 				auto it = outputPermutation.find(physical_qubit_index);
 				if(it != outputPermutation.end()) {
-					short output_index = it->second;
+					auto output_index = static_cast<short>(it->second);
 					if (!force && output_index >= 0) continue;
 				}
 
@@ -1188,7 +1095,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		printPermutationMap(to);
 		#endif
 
-		auto n = (short)(on.p->v + 1);
+		auto n = static_cast<short>(on.p->v + 1);
 
 		// iterate over (k,v) pairs of second permutation
 		for (const auto& kv: to) {
@@ -1247,7 +1154,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 	}
 
 
-	std::string QuantumComputation::getQubitRegister(unsigned short physical_qubit_index) {
+	std::string QuantumComputation::getQubitRegister(unsigned short physical_qubit_index) const {
 
 		for (const auto& reg:qregs) {
 			unsigned short start_idx = reg.second.first;
@@ -1267,7 +1174,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		throw QFRException("[getQubitRegister] Qubit index " + std::to_string(physical_qubit_index) + " not found in any register");
 	}
 
-	std::pair<std::string, unsigned short> QuantumComputation::getQubitRegisterAndIndex(unsigned short physical_qubit_index) {
+	std::pair<std::string, unsigned short> QuantumComputation::getQubitRegisterAndIndex(unsigned short physical_qubit_index) const {
 		std::string reg_name = getQubitRegister(physical_qubit_index);
 		unsigned short index = 0;
 		auto it = qregs.find(reg_name);
@@ -1283,7 +1190,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return {reg_name, index};
 	}
 
-	std::string QuantumComputation::getClassicalRegister(unsigned short classical_index) {
+	std::string QuantumComputation::getClassicalRegister(unsigned short classical_index) const {
 
 		for (const auto& reg:cregs) {
 			unsigned short start_idx = reg.second.first;
@@ -1296,7 +1203,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		throw QFRException("[getClassicalRegister] Classical index " + std::to_string(classical_index) + " not found in any register");
 	}
 
-	std::pair<std::string, unsigned short> QuantumComputation::getClassicalRegisterAndIndex(unsigned short classical_index) {
+	std::pair<std::string, unsigned short> QuantumComputation::getClassicalRegisterAndIndex(unsigned short classical_index) const {
 		std::string reg_name = getClassicalRegister(classical_index);
 		unsigned short index = 0;
 		auto it = cregs.find(reg_name);
@@ -1306,11 +1213,11 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return {reg_name, index};
 	}
 
-	unsigned short QuantumComputation::getIndexFromQubitRegister(const std::pair<std::string, unsigned short>& qubit) {
+	unsigned short QuantumComputation::getIndexFromQubitRegister(const std::pair<std::string, unsigned short>& qubit) const {
 		// no range check is performed here!
 		return static_cast<unsigned short>(qregs.at(qubit.first).first + qubit.second);
 	}
-	unsigned short QuantumComputation::getIndexFromClassicalRegister(const std::pair<std::string, unsigned short>& clbit) {
+	unsigned short QuantumComputation::getIndexFromClassicalRegister(const std::pair<std::string, unsigned short>& clbit) const {
 		// no range check is performed here!
 		return static_cast<unsigned short>(cregs.at(clbit.first).first + clbit.second);
 	}
@@ -1322,7 +1229,7 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return os;
 	}
 
-	std::ostream& QuantumComputation::printRegisters(std::ostream& os) {
+	std::ostream& QuantumComputation::printRegisters(std::ostream& os) const {
 		os << "qregs:";
 		for(const auto& qreg: qregs) {
 			os << " {" << qreg.first << ", {" << qreg.second.first << ", " << qreg.second.second << "}}";
@@ -1353,11 +1260,11 @@ dd::Edge QuantumComputation::reduceAncillae(dd::Edge& e, std::unique_ptr<dd::Pac
 		return max_index;
 	}
 
-	bool QuantumComputation::physicalQubitIsAncillary(unsigned short physical_qubit_index) {
-		return std::any_of(ancregs.begin(), ancregs.end(), [&physical_qubit_index](registerMap::value_type& ancreg) { return ancreg.second.first <= physical_qubit_index && physical_qubit_index < ancreg.second.first + ancreg.second.second; });
+	bool QuantumComputation::physicalQubitIsAncillary(unsigned short physical_qubit_index) const {
+		return std::any_of(ancregs.cbegin(), ancregs.cend(), [&physical_qubit_index](const registerMap::value_type& ancreg) { return ancreg.second.first <= physical_qubit_index && physical_qubit_index < ancreg.second.first + ancreg.second.second; });
 	}
 
-	bool QuantumComputation::isLastOperationOnQubit(decltype(ops.begin())& opIt, decltype(ops.end())& end) {
+	bool QuantumComputation::isLastOperationOnQubit(const decltype(ops.begin())& opIt, const decltype(ops.cend())& end) {
 		if (opIt == end)
 			return true;
 

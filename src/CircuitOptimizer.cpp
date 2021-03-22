@@ -5,21 +5,8 @@
 
 #include "CircuitOptimizer.hpp"
 
-namespace qc
-{
-	const std::map<qc::OpType, qc::OpType> CircuitOptimizer::inverseMap = {
-		{qc::I, qc::I},
-		{qc::X, qc::X},
-		{qc::Y, qc::Y},
-		{qc::Z, qc::Z},
-		{qc::H, qc::H},
-		{qc::S, qc::Sdag},
-		{qc::Sdag, qc::S},
-		{qc::T, qc::Tdag},
-		{qc::Tdag, qc::T}};
-
-	void CircuitOptimizer::removeIdentities(QuantumComputation &qc)
-	{
+namespace qc {
+	void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
 		// delete the identities from circuit
 		auto it = qc.ops.begin();
 		while (it != qc.ops.end())
@@ -72,8 +59,8 @@ namespace qc
 		}
 	}
 
-	void CircuitOptimizer::swapGateFusion(QuantumComputation &qc)
-	{
+
+	void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
 		// print incoming circuit
 		//qc.print(std::cout );
 		//std::cout << std::endl;
@@ -91,13 +78,10 @@ namespace qc
 			if (!it->isStandardOperation())
 			{
 				// compound operations are added "as-is"
-				if (it->isCompoundOperation())
-				{
-					std::cerr << "Compound operation detected. This is currently not supported. Proceed with caution!" << std::endl;
-					for (int i = 0; i < it->getNqubits(); ++i)
-					{
-						if (it->actsOn(i))
-						{
+				if (it->isCompoundOperation()) {
+					std::clog << "Skipping compound operation during SWAP reconstruction!" << std::endl;
+					for (int i = 0; i < it->getNqubits(); ++i) {
+						if (it->actsOn(i)) {
 							dag.at(i).push_front(&it);
 						}
 					}
@@ -296,8 +280,20 @@ namespace qc
 		}
 	}
 
-	void CircuitOptimizer::singleQubitGateFusion(QuantumComputation &qc)
-	{
+	void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
+
+		static const std::map<qc::OpType, qc::OpType> inverseMap = {
+				{qc::I, qc::I},
+				{qc::X, qc::X},
+				{qc::Y, qc::Y},
+				{qc::Z, qc::Z},
+				{qc::H, qc::H},
+				{qc::S, qc::Sdag},
+				{qc::Sdag, qc::S},
+				{qc::T, qc::Tdag},
+				{qc::Tdag, qc::T}
+		};
+
 		unsigned short highest_physical_qubit = 0;
 		for (const auto &q : qc.initialLayout)
 		{
