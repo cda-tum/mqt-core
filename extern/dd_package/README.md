@@ -1,6 +1,6 @@
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/iic-jku/dd_package/CI?logo=github&style=plastic)](https://github.com/iic-jku/dd_package/actions?query=workflow%3A%22CI%22)
 [![Codecov branch](https://img.shields.io/codecov/c/github/iic-jku/dd_package/master?label=codecov&logo=codecov&style=plastic)](https://codecov.io/gh/iic-jku/dd_package)
-[![bench](https://img.shields.io/badge/Continuous%20Benchmark-master-blue?logo=github&style=plastic)](https://iic-jku.github.io/dd_package/dev/bench/)
+[![bench](https://img.shields.io/badge/benchmark-master-blue?logo=github&style=plastic)](https://iic-jku.github.io/dd_package/dev/bench/)
 ![GitHub](https://img.shields.io/github/license/iic-jku/dd_package?style=plastic)
 [![toolset: JKQ](https://img.shields.io/badge/toolset-JKQ-blue?style=plastic)](https://github.com/iic-jku/jkq)
 
