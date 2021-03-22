@@ -479,3 +479,104 @@ TEST_F(QFRFunctionality, removePartOfCompoundOpBeforeMeasure) {
 	qc.print(std::cout);
 	EXPECT_EQ(qc.getNops(), 2);
 }
+
+TEST_F(QFRFunctionality, decomposeSWAPsUndirectedArchitecture) {
+	unsigned short nqubits = 2;
+	QuantumComputation qc(nqubits);
+	qc.emplace_back<StandardOperation>(nqubits, std::vector<qc::Control>{}, 0,1, SWAP);
+	std::cout << "-----------------------------" << std::endl;
+	qc.print(std::cout);
+	CircuitOptimizer::decomposeSWAP(qc, false);
+	std::cout << "-----------------------------" << std::endl;
+	qc.print(std::cout);
+	auto it = qc.begin();
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<StandardOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), X);
+		                EXPECT_EQ(op->getControls().at(0), 0);
+		                EXPECT_EQ(op->getTargets().at(0), 1);
+	                });
+	++it;
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<StandardOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), X);
+		                EXPECT_EQ(op->getControls().at(0), 1);
+		                EXPECT_EQ(op->getTargets().at(0), 0);
+	                });
+	++it;
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<StandardOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), X);
+		                EXPECT_EQ(op->getControls().at(0), 0);
+		                EXPECT_EQ(op->getTargets().at(0), 1);
+	                });
+}
+TEST_F(QFRFunctionality, decomposeSWAPsDirectedArchitecture) {
+	unsigned short nqubits = 2;
+	QuantumComputation qc(nqubits);
+	qc.emplace_back<StandardOperation>(nqubits, std::vector<qc::Control>{}, 0,1, SWAP);
+	std::cout << "-----------------------------" << std::endl;
+	qc.print(std::cout);
+	CircuitOptimizer::decomposeSWAP(qc, true);
+	std::cout << "-----------------------------" << std::endl;
+	qc.print(std::cout);
+	auto it = qc.begin();
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<StandardOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), H);
+		                EXPECT_EQ(op->getTargets().at(0), 0);
+	                });
+	++it;
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<StandardOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), H);
+		                EXPECT_EQ(op->getTargets().at(0), 1);
+	                });
+	++it;
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<StandardOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), X);
+		                EXPECT_EQ(op->getControls().at(0), 0);
+		                EXPECT_EQ(op->getTargets().at(0), 1);
+	                });
+	++it;
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<StandardOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), X);
+		                EXPECT_EQ(op->getControls().at(0), 1);
+		                EXPECT_EQ(op->getTargets().at(0), 0);
+	                });
+	++it;
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<StandardOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), H);
+		                EXPECT_EQ(op->getTargets().at(0), 1);
+	                });
+	++it;
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<StandardOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), X);
+		                EXPECT_EQ(op->getControls().at(0), 0);
+		                EXPECT_EQ(op->getTargets().at(0), 1);
+	                });
+	++it;
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<StandardOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), X);
+		                EXPECT_EQ(op->getControls().at(0), 0);
+		                EXPECT_EQ(op->getTargets().at(0), 1);
+	                });
+}
+
+TEST_F(QFRFunctionality, removeFinalMeasurements) {
+	unsigned short nqubits = 1;
+	QuantumComputation qc(nqubits);
+	qc.emplace_back<StandardOperation>(nqubits, 0, H);
+	qc.emplace_back<NonUnitaryOperation>(nqubits, std::vector<unsigned short>{0}, std::vector<unsigned short>{0});
+	std::cout << "-----------------------------" << std::endl;
+	qc.print(std::cout);
+	CircuitOptimizer::removeFinalMeasurements(qc);
+	std::cout << "-----------------------------" << std::endl;
+	qc.print(std::cout);
+	EXPECT_EQ(qc.getNops(), 1);
+}

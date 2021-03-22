@@ -4,7 +4,6 @@
  */
 
 #include "QuantumComputation.hpp"
-#include "CircuitOptimizer.hpp"
 #include "algorithms/QFT.hpp"
 #include "algorithms/Grover.hpp"
 #include "algorithms/GoogleRandomCircuitSampling.hpp"
@@ -19,15 +18,6 @@ int main() {
 	filename = "./circuits/test.qasm";
 	qc.import(filename);
 	qc.dump("test_dump.qasm");
-
-	qc.import("./circuits/measurement_test.qasm");
-	
-	qc::CircuitOptimizer::removeFinalMeasurements(qc);
-
-	qc.dump("measurement_result.qasm");
-	qc.import("./circuits/swap_test.qasm");
-	qc::CircuitOptimizer::decomposeSWAP(qc, true);
-	qc.dump("swap_result.qasm");
 
 	filename = "./circuits/grcs/bris_4_40_9_v2.txt";
 	qc.import(filename);
