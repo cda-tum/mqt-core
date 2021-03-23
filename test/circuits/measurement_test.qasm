@@ -35,3 +35,4 @@ u1(1) q[0];
 measure q -> c;
 measure r[0] -> d[0];
 measure q -> d;
+x q[1];

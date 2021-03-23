@@ -39,7 +39,13 @@ namespace qc {
 
 		static bool removeDiagonalGate(DAG& dag, DAGIterators& dagIterators, unsigned short idx, DAGIterator& it, qc::Operation* op);
 
+		static void removeMarkedMeasurments(QuantumComputation& qc);
+
 		static void removeFinalMeasurements(QuantumComputation& qc);
+
+		static void removeFinalMeasurementsRecursive(DAG& dag, DAGIterators& DAGIterators, unsigned short idx, const DAGIterator& until);
+
+		static bool removeFinalMeasurement(DAG& dag, DAGIterators& dagIterators, unsigned short idx, DAGIterator& it, qc::Operation* op);
 
 		static void decomposeSWAP(QuantumComputation& qc, bool isDirectedArchitecture);
 
