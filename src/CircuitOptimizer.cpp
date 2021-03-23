@@ -563,21 +563,22 @@ namespace qc {
 				if ((*it)->getType() == qc::SWAP)
 				{
 					std::vector<unsigned short> targets = (*it)->getTargets();
+					unsigned short nqubits = (*it)->getNqubits();
 					it = qc.ops.erase(it);
-					it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), Control(targets[0]), targets[1], qc::X));
+					it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, Control(targets[0]), targets[1], qc::X));
 					if (isDirectedArchitecture)
 					{
-						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[0], qc::H));
-						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[1], qc::H));
-						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), Control(targets[0]), targets[1], qc::X));
-						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[0], qc::H));
-						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), targets[1], qc::H));
+						it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, targets[0], qc::H));
+						it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, targets[1], qc::H));
+						it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, Control(targets[0]), targets[1], qc::X));
+						it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, targets[0], qc::H));
+						it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, targets[1], qc::H));
 					}
 					else
 					{
-						it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), Control(targets[1]), targets[0], qc::X));
+						it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, Control(targets[1]), targets[0], qc::X));
 					}
-					it = qc.ops.insert(it, std::make_unique<StandardOperation>((*it)->getNqubits(), Control(targets[0]), targets[1], qc::X));
+					it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, Control(targets[0]), targets[1], qc::X));
 				}
 				else
 				{
