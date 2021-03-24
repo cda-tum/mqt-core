@@ -56,19 +56,6 @@ namespace dd {
         return os;
     }
 
-    std::ostream& matrixNodeMatrixAndXlabel(const Edge& e, std::ostream& os) {
-        auto nodelabel = (reinterpret_cast<uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
-        os << nodelabel << "[label=<";
-        os << R"(<font point-size="6"><table border="1" cellspacing="0" style="rounded"><tr>)";
-        os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;" sides="RB">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td>";
-        os << R"(<td port="1" tooltip=")" << e.p->e[1].w << R"(" href="javascript:;" sides="LB">)" << (CN::equalsZero(e.p->e[1].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td></tr><tr>";
-        os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href="javascript:;" sides="RT">)" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td>";
-        os << R"(<td port="3" tooltip=")" << e.p->e[3].w << R"(" href="javascript:;" sides="LT">)" << (CN::equalsZero(e.p->e[3].w) ? "&nbsp;0 " : "<font color=\"white\">&nbsp;0 </font>") << "</td>";
-        os << "</tr></table></font>>,tooltip=\"q" << e.p->v << "\""
-           << R"(,xlabel=<<font point-size="8">q<sub><font point-size="6">)" << e.p->v << "</font></sub></font>>]\n";
-        return os;
-    }
-
     std::ostream& matrixNodeMiddleVar(const Edge& e, std::ostream& os) {
         auto nodelabel = (reinterpret_cast<uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
         os << nodelabel << "[label=<";
@@ -133,17 +120,6 @@ namespace dd {
         os << R"(<tr><td colspan="2" border="0" cellpadding="1"><font point-size="20">q<sub><font point-size="12">)" << e.p->v << R"(</font></sub></font></td></tr><tr>)";
         os << R"(<td height="6" width="14" port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;" sides="RT">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
         os << R"(<td height="6" width="14" port="2" tooltip=")" << e.p->e[2].w << R"(" href="javascript:;" sides="LT">)" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
-        os << "</tr></table></font>>,tooltip=\"q" << e.p->v << "\"]\n";
-        return os;
-    }
-
-    std::ostream& vectorNodeVectorLook(const Edge& e, std::ostream& os) {
-        auto nodelabel = (reinterpret_cast<uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
-        os << nodelabel << "[label=<";
-        os << R"(<font point-size="10"><table border="1" cellspacing="0" cellpadding="2" style="rounded">)";
-        os << R"(<tr><td rowspan="2" sides="R" cellpadding="2"><font point-size="18">q<sub><font point-size="12">)" << e.p->v << "</font></sub></font></td>";
-        os << R"(<td port="0" tooltip=")" << e.p->e[0].w << R"(" href="javascript:;" sides="LB">)" << (CN::equalsZero(e.p->e[0].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td></tr><tr>";
-        os << R"(<td port="2" tooltip=")" << e.p->e[2].w << R"(" href="javascript:;" sides="LT">)" << (CN::equalsZero(e.p->e[2].w) ? "&nbsp;0 " : R"(<font color="white">&nbsp;0 </font>)") << "</td>";
         os << "</tr></table></font>>,tooltip=\"q" << e.p->v << "\"]\n";
         return os;
     }
@@ -462,11 +438,6 @@ namespace dd {
         os.write(reinterpret_cast<const char*>(&temp), sizeof(fp));
         temp = CN::val(w.i);
         os.write(reinterpret_cast<const char*>(&temp), sizeof(fp));
-    }
-
-    void writeBinaryAmplitude(std::ostream& os, const ComplexValue& w) {
-        os.write(reinterpret_cast<const char*>(&w.r), sizeof(fp));
-        os.write(reinterpret_cast<const char*>(&w.i), sizeof(fp));
     }
 
     void serializeVector(const Edge& basic, std::ostream& os, bool writeBinary) {

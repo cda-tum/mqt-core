@@ -40,12 +40,10 @@ namespace dd {
     std::ostream& header(const Edge& e, std::ostream& os, bool edgeLabels);
     std::ostream& coloredHeader(const Edge& e, std::ostream& os, bool edgeLabels);
 
-    std::ostream& matrixNodeMatrixAndXlabel(const Edge& e, std::ostream& os);
     std::ostream& matrixNodeMiddleVar(const Edge& e, std::ostream& os);
     std::ostream& classicMatrixNode(const Edge& e, std::ostream& os);
 
     std::ostream& vectorNode(const Edge& e, std::ostream& os);
-    std::ostream& vectorNodeVectorLook(const Edge& e, std::ostream& os);
     std::ostream& classicVectorNode(const Edge& e, std::ostream& os);
 
     std::ostream& matrixEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels = false, bool classic = false);
@@ -60,7 +58,6 @@ namespace dd {
     ComplexValue toComplexValue(const std::string& real_str, std::string imag_str);
     ComplexValue readBinaryAmplitude(std::istream& is);
     void         writeBinaryAmplitude(std::ostream& os, const Complex& w);
-    void         writeBinaryAmplitude(std::ostream& os, const ComplexValue& w);
 
     void serialize(const Edge& basic, std::ostream& os, bool isVector = false, bool writeBinary = false);
     void serialize(const Edge& basic, const std::string& outputFilename, bool isVector = false, bool writeBinary = false);
