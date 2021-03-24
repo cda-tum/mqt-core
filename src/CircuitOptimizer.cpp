@@ -592,10 +592,6 @@ namespace qc {
 				op->setGate(qc::I);
 			}
 			return onlyMeasurments;
-		} else if (op->getType() == Measure) {
-			// set operation to identity so that it can be collected by the removeIdentities pass
-			op->setGate(qc::I);
-			return true;
 		} else {
 			return false;
 		}

@@ -633,6 +633,32 @@ TEST_F(QFRFunctionality, removeFinalMeasurements) {
 	                });
 }
 
+TEST_F(QFRFunctionality, removeFinalMeasurementsTwoQubitMeasurement) {
+	unsigned short nqubits = 2;
+	QuantumComputation qc(nqubits);
+	qc.emplace_back<StandardOperation>(nqubits, 0, H);
+	qc.emplace_back<StandardOperation>(nqubits, 1, H);
+	qc.emplace_back<NonUnitaryOperation>(nqubits, std::vector<unsigned short>{0,1}, std::vector<unsigned short>{0,1});
+	qc.emplace_back<StandardOperation>(nqubits, 1, H);
+	std::cout << "-----------------------------" << std::endl;
+	qc.print(std::cout);
+	CircuitOptimizer::removeFinalMeasurements(qc);
+	std::cout << "-----------------------------" << std::endl;
+	qc.print(std::cout);
+	auto it = qc.begin();
+	++it;++it; //skip first two H
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<NonUnitaryOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), Measure);
+	                });
+	++it;
+	ASSERT_NO_THROW({
+		                auto op = dynamic_cast<StandardOperation*>(it->get());
+		                EXPECT_EQ(op->getType(), H);
+						EXPECT_EQ(op->getTargets().at(0), 1);
+	                });
+}
+
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompound) {
 	unsigned short nqubits = 2;
 	QuantumComputation qc(nqubits);
