@@ -632,8 +632,7 @@ namespace dd {
             double version;
             is.read(reinterpret_cast<char*>(&version), sizeof(double));
             if (version != SERIALIZATION_VERSION) {
-                std::cerr << "Wrong Version of serialization file version: " << version << std::endl;
-                exit(1);
+                throw std::runtime_error("Wrong Version of serialization file version. version of file: " + std::to_string(version) + "; current version: " + std::to_string(SERIALIZATION_VERSION));
             }
 
             if (!is.eof()) {
@@ -653,8 +652,7 @@ namespace dd {
             std::getline(is, version);
             // ifs >> version;
             if (std::stod(version) != SERIALIZATION_VERSION) {
-                std::cerr << "Wrong Version of serialization file. version of file: " << version << "; current version: " << SERIALIZATION_VERSION << std::endl;
-                exit(1);
+                throw std::runtime_error("Wrong Version of serialization file version. version of file: " + version + "; current version: " + std::to_string(SERIALIZATION_VERSION));
             }
 
             std::string line;
@@ -668,8 +666,7 @@ namespace dd {
 
             if (std::getline(is, line)) {
                 if (!std::regex_match(line, m, complex_weight_regex)) {
-                    std::cerr << "Regex did not match second line: " << line << std::endl;
-                    exit(1);
+                    throw std::runtime_error("Regex did not match second line: " + line);
                 }
                 rootweight = toComplexValue(m.str(1), m.str(2));
             }
@@ -679,8 +676,7 @@ namespace dd {
                 if (line.empty() || line.size() == 1) continue;
 
                 if (!std::regex_match(line, m, line_regex)) {
-                    std::cerr << "Regex did not match line: " << line << std::endl;
-                    exit(1);
+                    throw std::runtime_error("Regex did not match line: " + line);
                 }
 
                 // match 1: node_idx

@@ -81,9 +81,7 @@ namespace dd {
 
     Edge Package::makeBasisState(unsigned short n, const std::vector<BasisStates>& state) {
         if (state.size() < n) {
-            std::cerr << "Insufficient qubit states provided. Requested " << n << ", but received " << state.size()
-                      << std::endl;
-            exit(1);
+            throw std::invalid_argument("Insufficient qubit states provided. Requested " + std::to_string(n) + ", but received " + std::to_string(state.size()));
         }
 
         Edge f = DDone;
@@ -1431,8 +1429,7 @@ namespace dd {
         // Base case
         if (v == -1) {
             if (isTerminal(a)) return a;
-            std::cerr << "Expected terminal node in trace." << std::endl;
-            exit(1);
+            throw std::runtime_error("Expected terminal node in trace.");
         }
 
         if (eliminate[v]) {
