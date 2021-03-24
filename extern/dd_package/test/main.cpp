@@ -75,10 +75,10 @@ int main() {
     /***** Custom gates *****/
     // define, e.g., Pauli-Z matrix
     dd::Matrix2x2 m;
-    m[0][0] = {1., 0.};
-    m[0][1] = {0., 0.};
-    m[1][0] = {0., 0.};
-    m[1][1] = {-1., 0.};
+    m[0] = {1., 0.};
+    m[1] = {0., 0.};
+    m[2] = {0., 0.};
+    m[3] = {-1., 0.};
 
     dd::Edge my_z_gate = dd->makeGateDD(m, 1, {2});
     std::cout << "DD of my gate has size " << dd->size(my_z_gate) << std::endl;
