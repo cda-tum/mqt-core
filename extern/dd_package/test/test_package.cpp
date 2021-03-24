@@ -322,6 +322,8 @@ TEST(DDPackageTest, Identity) {
     EXPECT_TRUE(dd->equals(dd->makeIdent(2), id2));
     auto id4 = dd->makeIdent(0, 3); // should use id3 and extend it
     EXPECT_TRUE(dd->equals(dd->makeIdent(4), id4));
+    auto idCached = dd->makeIdent(0, 3);
+    EXPECT_TRUE(dd::Package::equals(id4, idCached));
 }
 
 TEST(DDPackageTest, TestLocalInconsistency) {
@@ -416,4 +418,10 @@ TEST(DDPackageTest, InvalidMakeBasisState) {
     auto basisState = std::vector<dd::BasisStates>{dd::BasisStates::zero};
     auto nqubits    = 2;
     EXPECT_THROW(dd->makeBasisState(nqubits, basisState), std::invalid_argument);
+}
+
+TEST(DDPackageTest, InvalidDecRef) {
+    auto dd = std::make_unique<dd::Package>();
+    auto e  = dd->makeIdent(2);
+    EXPECT_THROW(dd->decRef(e), std::runtime_error);
 }
