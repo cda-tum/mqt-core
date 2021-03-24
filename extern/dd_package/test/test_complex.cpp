@@ -126,24 +126,24 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
     auto cn = dd::ComplexNumbers();
 
     fp bucketBorder = 0.25 * dd::ComplexNumbers::NBUCKET / (dd::ComplexNumbers::NBUCKET - 1);
-    fp num = bucketBorder + 2*dd::ComplexNumbers::TOLERANCE;
+    fp num          = bucketBorder + 2 * dd::ComplexNumbers::TOLERANCE;
     cn.lookup(num, 0.0);
     auto key = dd::ComplexNumbers::getKey(num);
     EXPECT_EQ(key, dd::ComplexNumbers::NBUCKET / 4);
 
-    fp num2 = bucketBorder - dd::ComplexNumbers::TOLERANCE/10;
+    fp num2 = bucketBorder - dd::ComplexNumbers::TOLERANCE / 10;
     cn.lookup(num2, 0.0);
     auto key2 = dd::ComplexNumbers::getKey(num2);
     EXPECT_EQ(key2, dd::ComplexNumbers::NBUCKET / 4 - 1);
 
-    fp num3 = bucketBorder - 2*dd::ComplexNumbers::TOLERANCE;
+    fp num3 = bucketBorder - 2 * dd::ComplexNumbers::TOLERANCE;
     cn.lookup(num3, 0.0);
     auto key3 = dd::ComplexNumbers::getKey(num3);
     EXPECT_EQ(key3, dd::ComplexNumbers::NBUCKET / 4 - 1);
 
-    fp num4 = bucketBorder;
-    auto c = cn.lookup(num4, 0.0);
-    auto key4 = dd::ComplexNumbers::getKey(num4-dd::ComplexNumbers::TOLERANCE);
+    fp   num4 = bucketBorder;
+    auto c    = cn.lookup(num4, 0.0);
+    auto key4 = dd::ComplexNumbers::getKey(num4 - dd::ComplexNumbers::TOLERANCE);
     EXPECT_EQ(key2, key4);
     EXPECT_NEAR(c.r->val, num2, dd::ComplexNumbers::TOLERANCE);
 }
