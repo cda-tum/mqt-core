@@ -12,9 +12,8 @@
 #include <string>
 
 // X gate matrix
-constexpr dd::Matrix2x2 Xmat = {{{0., 0.}, {1., 0.}}, {{1., 0.}, {0., 0.}}};
+constexpr dd::Matrix2x2 Xmat = {{{0., 0.}, {1., 0.}, {1., 0.}, {0., 0.}}};
 // Hadamard gate matrix
-constexpr dd::Matrix2x2 Hmat = {{{dd::SQRT_2, 0.}, {dd::SQRT_2, 0.}},
-                                {{dd::SQRT_2, 0.}, {-dd::SQRT_2, 0.}}};
+constexpr dd::Matrix2x2 Hmat = {{{dd::SQRT_2, 0.}, {dd::SQRT_2, 0.}, {dd::SQRT_2, 0.}, {-dd::SQRT_2, 0.}}};
 
 #endif //DD_PACKAGE_UTIL_H

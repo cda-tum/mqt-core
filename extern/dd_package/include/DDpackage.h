@@ -48,7 +48,8 @@ namespace dd {
     constexpr unsigned int   LIST_CHUNK_SIZE   = 2000;
     constexpr unsigned short MAXN              = 128; // max no. of inputs
 
-    typedef struct Node* NodePtr;
+    typedef std::array<ComplexValue, NEDGE> Matrix2x2;
+    typedef struct Node*                    NodePtr;
 
     struct Edge {
         NodePtr p;
@@ -251,11 +252,7 @@ namespace dd {
         Edge makeBasisState(unsigned short n, const std::vector<BasisStates>& state);
         Edge makeIdent(unsigned short n);
         Edge makeIdent(short x, short y);
-        Edge makeGateDD(const Matrix2x2& mat, unsigned short n, const short* line);
         Edge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, unsigned short n, const std::array<short, MAXN>& line);
-        Edge makeGateDD(const Matrix2x2& mat, unsigned short n, const std::array<short, MAXN>& line) {
-            return makeGateDD(mat, n, line.data());
-        }
 
         Edge CTlookup(const Edge& a, const Edge& b, CTkind which);
         void CTinsert(const Edge& a, const Edge& b, const Edge& r, CTkind which);
@@ -263,9 +260,9 @@ namespace dd {
         long operationCThit = 0;
         long operationLook  = 0;
 
-        Edge                 OperationLookup(unsigned int operationType, const short* line, unsigned short nQubits);
-        void                 OperationInsert(unsigned int operationType, const short* line, const Edge& result, unsigned short nQubits);
-        static unsigned long OperationHash(unsigned int operationType, const short* line, unsigned short nQubits);
+        Edge                 OperationLookup(unsigned int operationType, const std::array<short, dd::MAXN>& line, unsigned short nQubits);
+        void                 OperationInsert(unsigned int operationType, const std::array<short, dd::MAXN>& line, const Edge& result, unsigned short nQubits);
+        static unsigned long OperationHash(unsigned int operationType, const std::array<short, dd::MAXN>& line, unsigned short nQubits);
 
         // operations on DDs
         Edge         multiply(const Edge& x, const Edge& y);
@@ -287,9 +284,6 @@ namespace dd {
         // garbage reduction works for reversible circuits --- to be thoroughly tested for quantum circuits
         dd::Edge reduceGarbage(dd::Edge& e, const std::bitset<dd::MAXN>& garbage, bool regular = true);
         dd::Edge reduceGarbageRecursion(dd::Edge& e, const std::bitset<dd::MAXN>& garb, unsigned short lowerbound, bool regular = true);
-
-        // calculates E_s F(W|s>, |s>), where the expectation is taken over the set of local quantum stimuli
-        fp localStimuliExpectation(const Edge& W);
 
         // utility
         /// Traverse DD and return product of edge weights along the way

@@ -49,8 +49,6 @@ namespace dd {
         return lhs.r != rhs.r || lhs.i != rhs.i;
     }
 
-    typedef ComplexValue Matrix2x2[2][2];
-
     class ComplexNumbers {
         struct ComplexChunk {
             ComplexTableEntry* entry;
