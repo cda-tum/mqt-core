@@ -131,9 +131,9 @@ jobs:
         shell: bash
         run: ./dd_package_bench --benchmark_format=json | tee benchmark_result.json
 
-      - name: Store benchmark result for pushes
+      - name: Store benchmark result # for pushes
         uses: rhysd/github-action-benchmark@v1
-        if: github.event_name == 'push'
+        #        if: github.event_name == 'push'
         with:
           # What benchmark tool the output.txt came from
           tool: 'googlecpp'
