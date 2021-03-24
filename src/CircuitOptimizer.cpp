@@ -577,7 +577,7 @@ namespace qc {
 					break;
 				}
 				// recursive call at target with this operation as goal
-				removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, controlQubit, it);
+				removeFinalMeasurementsRecursive(dag, dagIterators, controlQubit, it);
 				// check if iteration of target qubit was successful
 				if (*dagIterators.at(controlQubit) != *it) {
 					onlyMeasurments = false;
@@ -641,16 +641,17 @@ namespace qc {
 				auto cit = compOp->rbegin();
 				while (cit != compOp->rend()) {
 					auto cop = (*cit).get();
+					if (cop->getNtargets()>0 && cop->getTargets()[0]!=idx){
+						++cit;
+						continue;
+					}
 					onlyMeasurment = removeFinalMeasurement(dag, dagIterators, idx, it, cop);
 					if (!onlyMeasurment)
 						break;
 					++cit;
 				}
 				if (onlyMeasurment) {
-					for (size_t q=0; q<dag.size(); ++q) {
-						if (compOp->actsOn(q))
-							++(dagIterators.at(q));
-					}
+						++(dagIterators.at(idx));
 				}
 			} else {
 				//Not a Measurment, we are done
@@ -670,13 +671,8 @@ namespace qc {
 		auto dag = constructDAG(qc);
 		DAGIterators dagIterators{dag.size()};
 		for (size_t q=0; q<dag.size(); ++q) {
-			if (dag.at(q).empty() || dag.at(q).front()->get()->getType() != qc::Measure) {
-				// qubit is not measured and thus does not have to be considered
-				dagIterators.at(q) = dag.at(q).end();
-			} else {
 				//qubit is measured, remove measurements
 				dagIterators.at(q) = (dag.at(q).begin());
-			}
 		}
 
 		removeFinalMeasurementsRecursive(dag, dagIterators, 0, dag.at(0).end());
@@ -719,7 +715,6 @@ namespace qc {
 			}
 			else if ((*it)->isCompoundOperation())
 			{
-				std::cout<< "HERE"<<std::endl;
 				auto compOp = dynamic_cast<qc::CompoundOperation *>((*it).get());
 				auto cit = compOp->begin();
 				while (cit != compOp->end())
