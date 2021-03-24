@@ -125,27 +125,47 @@ TEST(DDComplexTest, GarbageCollectSomeInBucket) {
 TEST(DDComplexTest, LookupInNeighbouringBuckets) {
     auto cn = dd::ComplexNumbers();
 
+    // lower border of a bucket
     fp bucketBorder = 0.25 * dd::ComplexNumbers::NBUCKET / (dd::ComplexNumbers::NBUCKET - 1);
-    fp num          = bucketBorder + 2 * dd::ComplexNumbers::TOLERANCE;
+
+    // insert a number slightly away from the border
+    fp num = bucketBorder + 2 * dd::ComplexNumbers::TOLERANCE;
     cn.lookup(num, 0.0);
     auto key = dd::ComplexNumbers::getKey(num);
     EXPECT_EQ(key, dd::ComplexNumbers::NBUCKET / 4);
 
+    // insert a number barely in the bucket below
     fp num2 = bucketBorder - dd::ComplexNumbers::TOLERANCE / 10;
     cn.lookup(num2, 0.0);
     auto key2 = dd::ComplexNumbers::getKey(num2);
     EXPECT_EQ(key2, dd::ComplexNumbers::NBUCKET / 4 - 1);
 
+    // insert another number in the bucket below a bit farther away from the border
     fp num3 = bucketBorder - 2 * dd::ComplexNumbers::TOLERANCE;
     cn.lookup(num3, 0.0);
     auto key3 = dd::ComplexNumbers::getKey(num3);
     EXPECT_EQ(key3, dd::ComplexNumbers::NBUCKET / 4 - 1);
 
+    // insert border number that is too far away from the number in the bucket, but is close enough to a number in the bucket below
     fp   num4 = bucketBorder;
     auto c    = cn.lookup(num4, 0.0);
     auto key4 = dd::ComplexNumbers::getKey(num4 - dd::ComplexNumbers::TOLERANCE);
     EXPECT_EQ(key2, key4);
     EXPECT_NEAR(c.r->val, num2, dd::ComplexNumbers::TOLERANCE);
+
+    // insert a number in the higher bucket
+    fp nextBorder = bucketBorder + 1.0 / (dd::ComplexNumbers::NBUCKET - 1);
+    fp num5       = nextBorder;
+    cn.lookup(num5, 0.0);
+    auto key5 = dd::ComplexNumbers::getKey(num5);
+    EXPECT_EQ(key5, dd::ComplexNumbers::NBUCKET / 4 + 1);
+
+    // search for a number in the lower bucket that is ultimately close enough to a number in the upper bucket
+    fp   num6 = nextBorder - dd::ComplexNumbers::TOLERANCE / 10;
+    auto d    = cn.lookup(num6, 0.0);
+    auto key6 = dd::ComplexNumbers::getKey(num6 + dd::ComplexNumbers::TOLERANCE);
+    EXPECT_EQ(key5, key6);
+    EXPECT_NEAR(d.r->val, num5, dd::ComplexNumbers::TOLERANCE);
 }
 
 TEST(DDComplexTest, ComplexValueEquals) {
