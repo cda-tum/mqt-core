@@ -61,21 +61,6 @@ namespace dd {
         static ComplexTableEntry  oneEntry;
         static ComplexTableEntry* moneEntryPointer;
 
-        static constexpr unsigned short NBUCKET    = 32768;
-        static constexpr unsigned short CHUNK_SIZE = 2000;
-        static constexpr unsigned short INIT_SIZE  = 300;
-
-        static inline unsigned long getKey(const fp& val) {
-            assert(val >= 0);
-            //const fp hash = 4*val*val*val - 6*val*val + 3*val; // cubic
-            const fp hash = val; // linear
-            auto     key  = static_cast<unsigned long>(hash * (NBUCKET - 1));
-            if (key > NBUCKET - 1) {
-                key = NBUCKET - 1;
-            }
-            return key;
-        };
-
         ComplexTableEntry* lookupVal(const fp& val);
         ComplexTableEntry* getComplexTableEntry();
 
@@ -83,10 +68,12 @@ namespace dd {
         constexpr static Complex ZERO{(&zeroEntry), (&zeroEntry)};
         constexpr static Complex ONE{(&oneEntry), (&zeroEntry)};
 
-        long                          cacheCount = INIT_SIZE * 6;
-        static fp                     TOLERANCE;
-        static constexpr unsigned int GCLIMIT1    = 100000;
-        static constexpr unsigned int GCLIMIT_INC = 0;
+        static constexpr unsigned short CACHE_SIZE  = 1800;
+        static constexpr unsigned short CHUNK_SIZE  = 2000;
+        static constexpr unsigned short NBUCKET     = 32768;
+        static constexpr unsigned int   GCLIMIT1    = 100000;
+        static constexpr unsigned int   GCLIMIT_INC = 0;
+        static fp                       TOLERANCE;
 
         ComplexTableEntry* ComplexTable[NBUCKET]{};
         ComplexTableEntry* Avail                       = nullptr;
@@ -94,9 +81,10 @@ namespace dd {
         ComplexTableEntry* Cache_Avail_Initial_Pointer = nullptr;
         ComplexChunk*      chunks                      = nullptr;
 
-        unsigned int  count;
-        unsigned long ct_calls = 0;
-        unsigned long ct_miss  = 0;
+        unsigned int  count      = 0;
+        long          cacheCount = CACHE_SIZE;
+        unsigned long ct_calls   = 0;
+        unsigned long ct_miss    = 0;
 
         ComplexNumbers();
         ~ComplexNumbers();
@@ -199,10 +187,24 @@ namespace dd {
         inline void releaseCached(const Complex& c) {
             assert(c != ZERO);
             assert(c != ONE);
+            assert(c.r->ref == 0);
+            assert(c.i->ref == 0);
             c.i->next   = Cache_Avail;
             Cache_Avail = c.r;
             cacheCount += 2;
+            assert(cacheCount <= CACHE_SIZE);
         }
+
+        static inline unsigned long getKey(const fp& val) {
+            assert(val >= 0);
+            //const fp hash = 4*val*val*val - 6*val*val + 3*val; // cubic
+            const fp hash = val; // linear
+            auto     key  = static_cast<unsigned long>(hash * (NBUCKET - 1));
+            if (key > NBUCKET - 1) {
+                key = NBUCKET - 1;
+            }
+            return key;
+        };
 
         // lookup a complex value in the complex value table; if not found add it
         Complex lookup(const Complex& c);

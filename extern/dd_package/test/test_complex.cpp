@@ -95,3 +95,145 @@ TEST(DDComplexTest, ComplexNumberArithmetic) {
     auto f = cn.getTempCachedComplex();
     dd::ComplexNumbers::div(f, dd::ComplexNumbers::ZERO, dd::ComplexNumbers::ONE);
 }
+
+TEST(DDComplexTest, NearZeroLookup) {
+    auto cn = dd::ComplexNumbers();
+    auto c  = cn.getTempCachedComplex(dd::ComplexNumbers::TOLERANCE / 10., dd::ComplexNumbers::TOLERANCE / 10.);
+    auto d  = cn.lookup(c);
+    EXPECT_EQ(d.r, cn.ZERO.r);
+    EXPECT_EQ(d.i, cn.ZERO.i);
+}
+
+TEST(DDComplexTest, GarbageCollectSomeInBucket) {
+    auto cn = dd::ComplexNumbers();
+
+    fp num = 0.25;
+    cn.lookup(num, 0.0);
+
+    fp num2 = num + 2. * dd::ComplexNumbers::TOLERANCE;
+    dd::ComplexNumbers::incRef(cn.lookup(num2, 0.0)); // num2 should be placed in same bucket as num
+
+    auto key = dd::ComplexNumbers::getKey(num);
+    EXPECT_NEAR(cn.ComplexTable[key]->val, num2, dd::ComplexNumbers::TOLERANCE);
+    EXPECT_NEAR(cn.ComplexTable[key]->next->val, num, dd::ComplexNumbers::TOLERANCE);
+
+    cn.garbageCollect(); // num should be collected
+    EXPECT_NEAR(cn.ComplexTable[key]->val, num2, dd::ComplexNumbers::TOLERANCE);
+    EXPECT_EQ(cn.ComplexTable[key]->next, nullptr);
+}
+
+TEST(DDComplexTest, LookupInNeighbouringBuckets) {
+    auto cn = dd::ComplexNumbers();
+
+    fp bucketBorder = 0.25 * dd::ComplexNumbers::NBUCKET / (dd::ComplexNumbers::NBUCKET - 1);
+    fp num = bucketBorder + 2*dd::ComplexNumbers::TOLERANCE;
+    cn.lookup(num, 0.0);
+    auto key = dd::ComplexNumbers::getKey(num);
+    EXPECT_EQ(key, dd::ComplexNumbers::NBUCKET / 4);
+
+    fp num2 = bucketBorder - dd::ComplexNumbers::TOLERANCE/10;
+    cn.lookup(num2, 0.0);
+    auto key2 = dd::ComplexNumbers::getKey(num2);
+    EXPECT_EQ(key2, dd::ComplexNumbers::NBUCKET / 4 - 1);
+
+    fp num3 = bucketBorder - 2*dd::ComplexNumbers::TOLERANCE;
+    cn.lookup(num3, 0.0);
+    auto key3 = dd::ComplexNumbers::getKey(num3);
+    EXPECT_EQ(key3, dd::ComplexNumbers::NBUCKET / 4 - 1);
+
+    fp num4 = bucketBorder;
+    auto c = cn.lookup(num4, 0.0);
+    auto key4 = dd::ComplexNumbers::getKey(num4-dd::ComplexNumbers::TOLERANCE);
+    EXPECT_EQ(key2, key4);
+    EXPECT_NEAR(c.r->val, num2, dd::ComplexNumbers::TOLERANCE);
+}
+
+TEST(DDComplexTest, ComplexValueEquals) {
+    dd::ComplexValue a{1.0, 0.0};
+    dd::ComplexValue a_tol{1.0 + dd::ComplexNumbers::TOLERANCE / 10, 0.0};
+    dd::ComplexValue b{0.0, 1.0};
+    EXPECT_TRUE(dd::ComplexNumbers::equals(a, a_tol));
+    EXPECT_FALSE(dd::ComplexNumbers::equals(a, b));
+}
+
+TEST(DDComplexTest, NumberPrinting) {
+    auto cn       = dd::ComplexNumbers();
+    auto imag     = cn.lookup(0., 1.);
+    auto imag_str = dd::ComplexNumbers::toString(imag, false);
+    EXPECT_STREQ(imag_str.c_str(), "1i");
+    auto imag_str_formatted = dd::ComplexNumbers::toString(imag, true);
+    EXPECT_STREQ(imag_str_formatted.c_str(), "+i");
+
+    auto superposition     = cn.lookup(dd::SQRT_2, dd::SQRT_2);
+    auto superposition_str = dd::ComplexNumbers::toString(superposition, false, 3);
+    EXPECT_STREQ(superposition_str.c_str(), "0.707+0.707i");
+    auto superposition_str_formatted = dd::ComplexNumbers::toString(superposition, true, 3);
+    EXPECT_STREQ(superposition_str_formatted.c_str(), "√½(1+i)");
+    auto neg_superposition               = cn.lookup(dd::SQRT_2, -dd::SQRT_2);
+    auto neg_superposition_str_formatted = dd::ComplexNumbers::toString(neg_superposition, true, 3);
+    EXPECT_STREQ(neg_superposition_str_formatted.c_str(), "√½(1-i)");
+
+    std::stringstream ss{};
+    dd::ComplexNumbers::printFormattedReal(ss, dd::SQRT_2, false);
+    EXPECT_STREQ(ss.str().c_str(), "√½");
+    ss.str("");
+    dd::ComplexNumbers::printFormattedReal(ss, dd::SQRT_2, true);
+    EXPECT_STREQ(ss.str().c_str(), "+√½i");
+    ss.str("");
+
+    dd::ComplexNumbers::printFormattedReal(ss, 0.5, false);
+    EXPECT_STREQ(ss.str().c_str(), "½");
+    ss.str("");
+    dd::ComplexNumbers::printFormattedReal(ss, 0.5, true);
+    EXPECT_STREQ(ss.str().c_str(), "+½i");
+    ss.str("");
+
+    dd::ComplexNumbers::printFormattedReal(ss, 0.5 * dd::SQRT_2, false);
+    EXPECT_STREQ(ss.str().c_str(), "√½ ½");
+    ss.str("");
+    dd::ComplexNumbers::printFormattedReal(ss, 0.5 * dd::SQRT_2, true);
+    EXPECT_STREQ(ss.str().c_str(), "+√½ ½i");
+    ss.str("");
+
+    dd::ComplexNumbers::printFormattedReal(ss, 0.25, false);
+    EXPECT_STREQ(ss.str().c_str(), "½**2");
+    ss.str("");
+    dd::ComplexNumbers::printFormattedReal(ss, 0.25, true);
+    EXPECT_STREQ(ss.str().c_str(), "+½**2i");
+    ss.str("");
+
+    dd::ComplexNumbers::printFormattedReal(ss, 0.25 * dd::SQRT_2, false);
+    EXPECT_STREQ(ss.str().c_str(), "√½ ½**2");
+    ss.str("");
+    dd::ComplexNumbers::printFormattedReal(ss, 0.25 * dd::SQRT_2, true);
+    EXPECT_STREQ(ss.str().c_str(), "+√½ ½**2i");
+    ss.str("");
+
+    dd::ComplexNumbers::printFormattedReal(ss, dd::PI, false);
+    EXPECT_STREQ(ss.str().c_str(), "π");
+    ss.str("");
+    dd::ComplexNumbers::printFormattedReal(ss, dd::PI, true);
+    EXPECT_STREQ(ss.str().c_str(), "+πi");
+    ss.str("");
+
+    dd::ComplexNumbers::printFormattedReal(ss, 0.5 * dd::PI, false);
+    EXPECT_STREQ(ss.str().c_str(), "½ π");
+    ss.str("");
+    dd::ComplexNumbers::printFormattedReal(ss, 0.5 * dd::PI, true);
+    EXPECT_STREQ(ss.str().c_str(), "+½ πi");
+    ss.str("");
+
+    dd::ComplexNumbers::printFormattedReal(ss, 0.25 * dd::PI, false);
+    EXPECT_STREQ(ss.str().c_str(), "½**2 π");
+    ss.str("");
+    dd::ComplexNumbers::printFormattedReal(ss, 0.25 * dd::PI, true);
+    EXPECT_STREQ(ss.str().c_str(), "+½**2 πi");
+    ss.str("");
+
+    dd::ComplexNumbers::printFormattedReal(ss, 0.1234, false);
+    EXPECT_STREQ(ss.str().c_str(), "0.1234");
+    ss.str("");
+    dd::ComplexNumbers::printFormattedReal(ss, 0.1234, true);
+    EXPECT_STREQ(ss.str().c_str(), "+0.1234i");
+    ss.str("");
+}

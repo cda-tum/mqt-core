@@ -15,11 +15,11 @@ namespace dd {
     fp                 ComplexNumbers::TOLERANCE = 1e-13;
 
     ComplexNumbers::ComplexNumbers() {
-        Cache_Avail_Initial_Pointer = new ComplexTableEntry[INIT_SIZE * 6];
+        Cache_Avail_Initial_Pointer = new ComplexTableEntry[CACHE_SIZE];
         Cache_Avail                 = Cache_Avail_Initial_Pointer;
 
         ComplexTableEntry* r = Cache_Avail;
-        for (unsigned int i = 0; i < INIT_SIZE * 6 - 1; i++) {
+        for (unsigned int i = 0; i < CACHE_SIZE - 1; i++) {
             r->next = r + 1;
             r->ref  = 0;
             ++r;
@@ -410,32 +410,18 @@ namespace dd {
     }
 
     int ComplexNumbers::cacheSize() const {
-        ComplexTableEntry* p    = Cache_Avail;
-        int                size = 0;
+        auto* p    = Cache_Avail;
+        int   size = 0;
 
-        intptr_t min = std::numeric_limits<intptr_t>::max();
-        intptr_t max = std::numeric_limits<intptr_t>::min();
+        auto min = std::numeric_limits<intptr_t>::max();
+        auto max = std::numeric_limits<intptr_t>::min();
 
-        while (p != nullptr && size <= 0.9 * CHUNK_SIZE) {
-            if (p->ref != 0) {
-                std::cerr << "Entry with refcount != 0 in Cache!\n";
-                std::cerr << reinterpret_cast<intptr_t>(p) << " " << p->ref << " " << p->val << " " << reinterpret_cast<intptr_t>(p->next) << "\n";
-            }
+        while (p != nullptr && size <= CACHE_SIZE) {
             if ((reinterpret_cast<intptr_t>(p)) < min) { min = reinterpret_cast<intptr_t>(p); }
             if ((reinterpret_cast<intptr_t>(p)) > max) { max = reinterpret_cast<intptr_t>(p); }
 
             p = p->next;
             size++;
-        }
-        if (size > 0.9 * CHUNK_SIZE) {
-            p = Cache_Avail;
-            for (int i = 0; i < 10; i++) {
-                std::cout << i << ": " << reinterpret_cast<intptr_t>(p) << "\n";
-                p = p->next;
-            }
-            std::cerr << "Error in Cache!\n"
-                      << std::flush;
-            exit(1);
         }
         std::cout << "Min ptr in cache: " << min << ", max ptr in cache: " << max << "\n";
         return size;
