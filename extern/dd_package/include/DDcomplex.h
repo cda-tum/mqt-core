@@ -15,9 +15,6 @@
 using fp = double;
 
 namespace dd {
-    static constexpr fp SQRT_2 = 0.707106781186547524400844362104849039284835937688474036588L;
-    static constexpr fp PI     = 3.141592653589793238462643383279502884197169399375105820974L;
-
     struct ComplexTableEntry {
         fp                 val;
         ComplexTableEntry* next;
@@ -65,6 +62,8 @@ namespace dd {
     public:
         constexpr static Complex ZERO{(&zeroEntry), (&zeroEntry)};
         constexpr static Complex ONE{(&oneEntry), (&zeroEntry)};
+        static constexpr fp      SQRT_2 = 0.707106781186547524400844362104849039284835937688474036588L;
+        static constexpr fp      PI     = 3.141592653589793238462643383279502884197169399375105820974L;
 
         static constexpr unsigned short CACHE_SIZE  = 1800;
         static constexpr unsigned short CHUNK_SIZE  = 2000;

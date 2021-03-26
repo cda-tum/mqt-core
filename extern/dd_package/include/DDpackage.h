@@ -32,9 +32,9 @@ namespace dd {
     constexpr unsigned short NEDGE                 = RADIX * RADIX; // max no. of edges = RADIX^2
 
     // General package configuration parameters
-    constexpr unsigned int   GCLIMIT1          = 250000;  // first garbage collection limit
-    constexpr unsigned int   GCLIMIT_INC       = 0;       // garbage collection limit increment
-    constexpr unsigned int   MAXREFCNT         = 4000000; // max reference count (saturates at this value)
+    constexpr unsigned int   GCLIMIT1          = 250000;                                   // first garbage collection limit
+    constexpr unsigned int   GCLIMIT_INC       = 0;                                        // garbage collection limit increment
+    constexpr unsigned int   MAXREFCNT         = std::numeric_limits<unsigned int>::max(); // max reference count (saturates at this value)
     constexpr unsigned int   NODECOUNT_BUCKETS = 200000;
     constexpr unsigned short NBUCKET           = 32768;       // no. of hash table buckets; must be a power of 2
     constexpr unsigned short HASHMASK          = NBUCKET - 1; // must be nbuckets-1
@@ -48,8 +48,7 @@ namespace dd {
     constexpr unsigned int   LIST_CHUNK_SIZE   = 2000;
     constexpr unsigned short MAXN              = 128; // max no. of inputs
 
-    typedef std::array<ComplexValue, NEDGE> Matrix2x2;
-    typedef struct Node*                    NodePtr;
+    typedef struct Node* NodePtr;
 
     struct Edge {
         NodePtr p;
@@ -76,6 +75,7 @@ namespace dd {
     // computed table definitions
     // compute table entry kinds
     enum CTkind {
+        none,
         I,
         X,
         Y,
@@ -88,9 +88,7 @@ namespace dd {
         transp,
         conjTransp,
         kron,
-        none,
         ct_count //ct_count must be the final element
-
     };
 
     //computed table entry
@@ -181,6 +179,8 @@ namespace dd {
 
         std::array<unsigned long, ct_count> nOps{};            // operation counters
         std::array<unsigned long, ct_count> CTlook{}, CThit{}; // counters for gathering compute table hit stats
+        unsigned long                       operationLook  = 0;
+        unsigned long                       operationCThit = 0;
 
         std::vector<ListElementPtr> allocated_list_chunks;
         std::vector<NodePtr>        allocated_node_chunks;
@@ -188,23 +188,15 @@ namespace dd {
         Mode mode{Mode::Vector};
 
         /// private helper routines
-        void    initComputeTable();
         NodePtr getNode();
 
+        Edge         add2(const Edge& x, const Edge& y);
         Edge         multiply2(const Edge& x, const Edge& y, unsigned short var);
         ComplexValue innerProduct(const Edge& x, const Edge& y, int var);
         Edge         trace(const Edge& a, const std::bitset<MAXN>& eliminate, unsigned short alreadyEliminated = 0);
         Edge         kronecker2(const Edge& x, const Edge& y);
 
         void checkSpecialMatrices(NodePtr p);
-
-        static uintptr_t          UThash(NodePtr p);
-        Edge                      UTlookup(const Edge& e, bool keep_node = false);
-        [[nodiscard]] std::string UTcheck(const Edge& e) const;
-
-        static inline unsigned long  CThash(const Edge& a, const Edge& b, CTkind which);
-        static inline unsigned long  CThash2(NodePtr a, const ComplexValue& aw, NodePtr b, const ComplexValue& bw, CTkind which);
-        static inline unsigned short TThash(unsigned short n, unsigned short t, const short line[MAXN]);
 
         unsigned int   nodeCount(const Edge& e, std::unordered_set<NodePtr>& v) const;
         ListElementPtr newListElement();
@@ -227,47 +219,85 @@ namespace dd {
             cn(ComplexNumbers()){};
         ~Package();
 
-        // Package setup and reset
         /// Set normalization mode
         void setMode(const Mode m) {
             mode = m;
         }
-        /// Change the tolerance till which numbers are considered equal
+        /// Change the tolerance used to decide the equivalence of numbers
         static void setComplexNumberTolerance(const fp tol) {
             CN::setTolerance(tol);
         }
-        /// Reset package state (probably leaks memory)
+
+        /// Reset package state
         void reset();
 
-        // DD creation
-        static inline Edge makeTerminal(const Complex& w) {
-            return {terminalNode, w};
-        }
+        /// DD build up
+        static Edge makeTerminal(const Complex& w) { return {terminalNode, w}; }
         Edge        makeNonterminal(short v, const Edge* edge, bool cached = false);
-        inline Edge makeNonterminal(const short v, const std::array<Edge, NEDGE>& edge, bool cached = false) {
+        Edge        makeNonterminal(const short v, const std::array<Edge, NEDGE>& edge, bool cached = false) {
             return makeNonterminal(v, edge.data(), cached);
         }
+
+        /// State DD generation
         Edge makeZeroState(unsigned short n);
         Edge makeBasisState(unsigned short n, const std::bitset<MAXN>& state);
         Edge makeBasisState(unsigned short n, const std::vector<BasisStates>& state);
+
+        /// Matrix DD generation
+        Edge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, unsigned short n, const std::array<short, MAXN>& line);
         Edge makeIdent(unsigned short n);
         Edge makeIdent(short x, short y);
-        Edge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, unsigned short n, const std::array<short, MAXN>& line);
 
-        Edge CTlookup(const Edge& a, const Edge& b, CTkind which);
-        void CTinsert(const Edge& a, const Edge& b, const Edge& r, CTkind which);
+        /// Unique table functions
+        Edge                      UTlookup(const Edge& e, bool keep_node = false);
+        [[nodiscard]] std::string UTcheck(const Edge& e) const;
+        static std::size_t        UThash(NodePtr p);
+        void                      clearUniqueTable();
+        [[nodiscard]] const auto& getUniqueTable() const { return Unique; }
 
-        long operationCThit = 0;
-        long operationLook  = 0;
+        /// Compute table functions
+        Edge                      CTlookup(const Edge& a, const Edge& b, CTkind which);
+        void                      CTinsert(const Edge& a, const Edge& b, const Edge& r, CTkind which);
+        static unsigned long      CThash(const Edge& a, const Edge& b, CTkind which);
+        static unsigned long      CThash2(NodePtr a, const ComplexValue& aw, NodePtr b, const ComplexValue& bw, CTkind which);
+        void                      clearComputeTables();
+        [[nodiscard]] const auto& getComputeTable1() const { return CTable1; }
+        [[nodiscard]] const auto& getComputeTable2() const { return CTable2; }
+        [[nodiscard]] const auto& getComputeTable3() const { return CTable3; }
 
+        /// Identity table functions
+        inline void clearIdentityTable() {
+            for (auto& entry: IdTable) entry.p = nullptr;
+        }
+        [[nodiscard]] const auto& getIdentityTable() const { return IdTable; }
+
+        /// Toffoli table functions
+        void TTinsert(unsigned short n, unsigned short m, unsigned short t, const short line[MAXN], const Edge& e);
+        void TTinsert(unsigned short n, unsigned short m, unsigned short t, const std::array<short, MAXN>& line, const Edge& e) {
+            TTinsert(n, m, t, line.data(), e);
+        }
+        Edge TTlookup(unsigned short n, unsigned short m, unsigned short t, const short line[MAXN]);
+        Edge TTlookup(unsigned short n, unsigned short m, unsigned short t, const std::array<short, MAXN>& line) {
+            return TTlookup(n, m, t, line.data());
+        }
+        static unsigned short TThash(unsigned short n, unsigned short t, const short line[MAXN]);
+        inline void           clearToffoliTable() {
+            for (auto& entry: TTable) entry.e.p = nullptr;
+        }
+        [[nodiscard]] const auto& getToffoliTable() const { return TTable; }
+
+        /// Operation table functions
         Edge                 OperationLookup(unsigned int operationType, const std::array<short, dd::MAXN>& line, unsigned short nQubits);
         void                 OperationInsert(unsigned int operationType, const std::array<short, dd::MAXN>& line, const Edge& result, unsigned short nQubits);
         static unsigned long OperationHash(unsigned int operationType, const std::array<short, dd::MAXN>& line, unsigned short nQubits);
+        inline void          clearOperationTable() {
+            for (auto& entry: OperationTable) entry.r = nullptr;
+        }
+        [[nodiscard]] const auto& getOperationTable() const { return OperationTable; }
 
-        // operations on DDs
+        /// Operations on DDs
         Edge         multiply(const Edge& x, const Edge& y);
         Edge         add(const Edge& x, const Edge& y);
-        Edge         add2(const Edge& x, const Edge& y);
         Edge         transpose(const Edge& a);
         Edge         conjugateTranspose(const Edge& a);
         Edge         normalize(const Edge& e, bool cached);
@@ -278,15 +308,28 @@ namespace dd {
         Edge         kronecker(const Edge& x, const Edge& y);
         Edge         extend(const Edge& e, unsigned short h = 0, unsigned short l = 0);
 
-        // handling of ancillary and garbage qubits
+        /// Handling of ancillary and garbage qubits
         dd::Edge reduceAncillae(dd::Edge& e, const std::bitset<dd::MAXN>& ancillary, bool regular = true);
         dd::Edge reduceAncillaeRecursion(dd::Edge& e, const std::bitset<dd::MAXN>& ancillary, unsigned short lowerbound, bool regular = true);
-        // garbage reduction works for reversible circuits --- to be thoroughly tested for quantum circuits
+        // Garbage reduction works for reversible circuits --- to be thoroughly tested for quantum circuits
         dd::Edge reduceGarbage(dd::Edge& e, const std::bitset<dd::MAXN>& garbage, bool regular = true);
         dd::Edge reduceGarbageRecursion(dd::Edge& e, const std::bitset<dd::MAXN>& garb, unsigned short lowerbound, bool regular = true);
 
-        // utility
-        /// Traverse DD and return product of edge weights along the way
+        /// Reference counting and garbage collection
+        void incRef(const Edge& e);
+        void decRef(const Edge& e);
+        void garbageCollect(bool force = false);
+
+        /// Checks
+        static inline bool isTerminal(const Edge& e) {
+            return e.p == terminalNode;
+        }
+        static inline bool equals(const Edge& a, const Edge& b) {
+            return a.p == b.p && ComplexNumbers::equals(a.w, b.w);
+        }
+
+        /// Utility
+        // Traverse DD and return product of edge weights along the way
         ComplexValue getValueByPath(const Edge& e, std::string elements);
         ComplexValue getValueByPath(const Edge& e, size_t i, size_t j = 0);
         ComplexValue getValueByPath(const Edge& e, const Complex& amp, size_t i, size_t j);
@@ -296,43 +339,20 @@ namespace dd {
         void getVector(const Edge& e, const Complex& amp, size_t i, CVec& vec);
         CMat getMatrix(const Edge& e);
         void getMatrix(const Edge& e, const Complex& amp, size_t i, size_t j, CMat& mat);
-        /// Calculate the size of the DD pointed to by e
+        // Calculate the size of the DD pointed to by e
         unsigned int size(const Edge& e);
 
-        // reference counting and garbage collection
-        void incRef(const Edge& e);
-        void decRef(const Edge& e);
-        void garbageCollect(bool force = false);
-
-        // checks
-        static inline bool isTerminal(const Edge& e) {
-            return e.p == terminalNode;
-        }
-        static inline bool equals(const Edge& a, const Edge& b) {
-            return a.p == b.p && ComplexNumbers::equals(a.w, b.w);
-        }
-
-        // Toffoli table insertion and lookup
-        void TTinsert(unsigned short n, unsigned short m, unsigned short t, const short line[MAXN], const Edge& e);
-        void TTinsert(unsigned short n, unsigned short m, unsigned short t, const std::array<short, MAXN>& line, const Edge& e) {
-            TTinsert(n, m, t, line.data(), e);
-        }
-        Edge TTlookup(unsigned short n, unsigned short m, unsigned short t, const short line[MAXN]);
-        Edge TTlookup(unsigned short n, unsigned short m, unsigned short t, const std::array<short, MAXN>& line) {
-            return TTlookup(n, m, t, line.data());
-        }
-
-        // statistics
+        /// Statistics
         void        statistics();
         static void printInformation();
 
-        // printing and GraphViz(dot) export
+        /// Printing and GraphViz(dot) export
         void printVector(const Edge& e);
         void printActive(int n);
         void printDD(const Edge& e, unsigned int limit);
         void printUniqueTable(unsigned short n);
 
-        // debugging
+        /// Debugging
         void        debugnode(NodePtr p) const;
         std::string debugnode_line(NodePtr p) const;
         bool        is_locally_consistent_dd(const Edge& e);

@@ -29,6 +29,7 @@ A small example shows how to create set a single qubit in superposition.
 ```c++
 #include <memory>
 #include "DDpackage.h"
+#include "GateMatrixDefinitions.h"
 
 auto dd = std::make_unique<dd::Package>(); // Create new package instance
 auto zero_state = dd->makeZeroState(1) ; // zero_state = |0>
@@ -40,8 +41,7 @@ auto zero_state = dd->makeZeroState(1) ; // zero_state = |0>
  *    -1 -> don't care; 0 -> negative control; 1 -> positive control; 2 -> target qubit
  *    In this example we only have a target.
  */
-short line[1] = {2};
-auto h_op = dd->makeGateDD(Hmat, 1, line);
+auto h_op = dd->makeGateDD(dd::Hmat, 1, {2});
 
 // Multiplying the operation and the state results in a new state, here a single qubit in superposition
 auto superposition = dd->multiply(h_op, zero_state); 

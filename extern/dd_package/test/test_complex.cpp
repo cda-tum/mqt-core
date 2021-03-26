@@ -8,6 +8,8 @@
 #include "gtest/gtest.h"
 #include <memory>
 
+using CN = dd::ComplexNumbers;
+
 TEST(DDComplexTest, TrivialTest) {
     auto         cn           = std::make_unique<dd::ComplexNumbers>();
     unsigned int before_count = cn->count;
@@ -184,20 +186,20 @@ TEST(DDComplexTest, NumberPrinting) {
     auto imag_str_formatted = dd::ComplexNumbers::toString(imag, true);
     EXPECT_STREQ(imag_str_formatted.c_str(), "+i");
 
-    auto superposition     = cn.lookup(dd::SQRT_2, dd::SQRT_2);
+    auto superposition     = cn.lookup(CN::SQRT_2, CN::SQRT_2);
     auto superposition_str = dd::ComplexNumbers::toString(superposition, false, 3);
     EXPECT_STREQ(superposition_str.c_str(), "0.707+0.707i");
     auto superposition_str_formatted = dd::ComplexNumbers::toString(superposition, true, 3);
     EXPECT_STREQ(superposition_str_formatted.c_str(), "√½(1+i)");
-    auto neg_superposition               = cn.lookup(dd::SQRT_2, -dd::SQRT_2);
+    auto neg_superposition               = cn.lookup(CN::SQRT_2, -CN::SQRT_2);
     auto neg_superposition_str_formatted = dd::ComplexNumbers::toString(neg_superposition, true, 3);
     EXPECT_STREQ(neg_superposition_str_formatted.c_str(), "√½(1-i)");
 
     std::stringstream ss{};
-    dd::ComplexNumbers::printFormattedReal(ss, dd::SQRT_2, false);
+    dd::ComplexNumbers::printFormattedReal(ss, CN::SQRT_2, false);
     EXPECT_STREQ(ss.str().c_str(), "√½");
     ss.str("");
-    dd::ComplexNumbers::printFormattedReal(ss, dd::SQRT_2, true);
+    dd::ComplexNumbers::printFormattedReal(ss, CN::SQRT_2, true);
     EXPECT_STREQ(ss.str().c_str(), "+√½i");
     ss.str("");
 
@@ -208,10 +210,10 @@ TEST(DDComplexTest, NumberPrinting) {
     EXPECT_STREQ(ss.str().c_str(), "+½i");
     ss.str("");
 
-    dd::ComplexNumbers::printFormattedReal(ss, 0.5 * dd::SQRT_2, false);
+    dd::ComplexNumbers::printFormattedReal(ss, 0.5 * CN::SQRT_2, false);
     EXPECT_STREQ(ss.str().c_str(), "√½ ½");
     ss.str("");
-    dd::ComplexNumbers::printFormattedReal(ss, 0.5 * dd::SQRT_2, true);
+    dd::ComplexNumbers::printFormattedReal(ss, 0.5 * CN::SQRT_2, true);
     EXPECT_STREQ(ss.str().c_str(), "+√½ ½i");
     ss.str("");
 
@@ -222,31 +224,31 @@ TEST(DDComplexTest, NumberPrinting) {
     EXPECT_STREQ(ss.str().c_str(), "+½**2i");
     ss.str("");
 
-    dd::ComplexNumbers::printFormattedReal(ss, 0.25 * dd::SQRT_2, false);
+    dd::ComplexNumbers::printFormattedReal(ss, 0.25 * CN::SQRT_2, false);
     EXPECT_STREQ(ss.str().c_str(), "√½ ½**2");
     ss.str("");
-    dd::ComplexNumbers::printFormattedReal(ss, 0.25 * dd::SQRT_2, true);
+    dd::ComplexNumbers::printFormattedReal(ss, 0.25 * CN::SQRT_2, true);
     EXPECT_STREQ(ss.str().c_str(), "+√½ ½**2i");
     ss.str("");
 
-    dd::ComplexNumbers::printFormattedReal(ss, dd::PI, false);
+    dd::ComplexNumbers::printFormattedReal(ss, CN::PI, false);
     EXPECT_STREQ(ss.str().c_str(), "π");
     ss.str("");
-    dd::ComplexNumbers::printFormattedReal(ss, dd::PI, true);
+    dd::ComplexNumbers::printFormattedReal(ss, CN::PI, true);
     EXPECT_STREQ(ss.str().c_str(), "+πi");
     ss.str("");
 
-    dd::ComplexNumbers::printFormattedReal(ss, 0.5 * dd::PI, false);
+    dd::ComplexNumbers::printFormattedReal(ss, 0.5 * CN::PI, false);
     EXPECT_STREQ(ss.str().c_str(), "½ π");
     ss.str("");
-    dd::ComplexNumbers::printFormattedReal(ss, 0.5 * dd::PI, true);
+    dd::ComplexNumbers::printFormattedReal(ss, 0.5 * CN::PI, true);
     EXPECT_STREQ(ss.str().c_str(), "+½ πi");
     ss.str("");
 
-    dd::ComplexNumbers::printFormattedReal(ss, 0.25 * dd::PI, false);
+    dd::ComplexNumbers::printFormattedReal(ss, 0.25 * CN::PI, false);
     EXPECT_STREQ(ss.str().c_str(), "½**2 π");
     ss.str("");
-    dd::ComplexNumbers::printFormattedReal(ss, 0.25 * dd::PI, true);
+    dd::ComplexNumbers::printFormattedReal(ss, 0.25 * CN::PI, true);
     EXPECT_STREQ(ss.str().c_str(), "+½**2 πi");
     ss.str("");
 

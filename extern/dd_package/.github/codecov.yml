@@ -1,5 +1,6 @@
 ignore:
   - "extern/**/*"
+  - "include/GateMatrixDefinitions.h"
   - "test/bench_package.cpp"
 
 coverage:

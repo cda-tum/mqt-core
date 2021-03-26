@@ -394,7 +394,7 @@ namespace dd {
 
     RGB colorFromPhase(const Complex& a) {
         auto phase = CN::arg(a);
-        auto twopi = 2 * PI;
+        auto twopi = 2 * CN::PI;
         phase      = (phase) / twopi;
         return hlsToRGB(phase, 0.5, 0.5);
     }
