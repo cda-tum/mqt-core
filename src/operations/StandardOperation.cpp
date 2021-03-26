@@ -163,11 +163,11 @@ namespace qc {
 		dd::Edge e{ };
 
 		line[permutation.at(targets[0])] = LINE_CONTROL_POS;
-		e = dd->makeGateDD(Xmat, nqubits, line);
+		e = dd->makeGateDD(dd::Xmat, nqubits, line);
 
 		line[permutation.at(targets[0])] = LINE_TARGET;
 		line[permutation.at(targets[1])] = LINE_CONTROL_POS;
-		e = dd->multiply(e, dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e));
+		e = dd->multiply(e, dd->multiply(dd->makeGateDD(dd::Xmat, nqubits, line), e));
 
 		line[permutation.at(targets[1])] = LINE_TARGET;
 		return e;
@@ -177,11 +177,11 @@ namespace qc {
 		dd::Edge e{ };
 
 		line[permutation.at(targets[1])] = LINE_CONTROL_POS;
-		e = dd->makeGateDD(Xmat, nqubits, line);
+		e = dd->makeGateDD(dd::Xmat, nqubits, line);
 
 		line[permutation.at(targets[0])] = LINE_DEFAULT;
 		line[permutation.at(targets[1])] = LINE_TARGET;
-		e = dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e);
+		e = dd->multiply(dd->makeGateDD(dd::Xmat, nqubits, line), e);
 
 		line[permutation.at(targets[0])] = LINE_TARGET;
 		return e;
@@ -191,11 +191,11 @@ namespace qc {
 		dd::Edge e{ };
 
 		line[permutation.at(targets[0])] = LINE_DEFAULT;
-		e = dd->makeGateDD(Xmat, nqubits, line);
+		e = dd->makeGateDD(dd::Xmat, nqubits, line);
 
 		line[permutation.at(targets[0])] = LINE_TARGET;
 		line[permutation.at(targets[1])] = LINE_CONTROL_POS;
-		e = dd->multiply(dd->makeGateDD(Xmat, nqubits, line), e);
+		e = dd->multiply(dd->makeGateDD(dd::Xmat, nqubits, line), e);
 
 		line[permutation.at(targets[1])] = LINE_TARGET;
 		return e;
@@ -203,23 +203,23 @@ namespace qc {
 
 	dd::Edge StandardOperation::getiSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
 		line[permutation.at(targets[0])] = LINE_DEFAULT;
-		dd::Edge e = dd->makeGateDD(Smat, nqubits, line); // S q[1]
+		dd::Edge e = dd->makeGateDD(dd::Smat, nqubits, line); // S q[1]
 
 		line[permutation.at(targets[1])] = LINE_DEFAULT;
 		line[permutation.at(targets[0])] = LINE_TARGET;
-		e = dd->multiply(e, dd->makeGateDD(Smat, nqubits, line)); // S q[0]
-		e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line)); // H q[0]
+		e = dd->multiply(e, dd->makeGateDD(dd::Smat, nqubits, line)); // S q[0]
+		e = dd->multiply(e, dd->makeGateDD(dd::Hmat, nqubits, line)); // H q[0]
 
 		line[permutation.at(targets[0])] = LINE_CONTROL_POS;
 		line[permutation.at(targets[1])] = LINE_TARGET;
-		e = dd->multiply(e, dd->makeGateDD(Xmat, nqubits, line)); // CX q[0], q[1]
+		e = dd->multiply(e, dd->makeGateDD(dd::Xmat, nqubits, line)); // CX q[0], q[1]
 		line[permutation.at(targets[1])] = LINE_CONTROL_POS;
 		line[permutation.at(targets[0])] = LINE_TARGET;
-		e = dd->multiply(e, dd->makeGateDD(Xmat, nqubits, line)); // CX q[1], q[0]
+		e = dd->multiply(e, dd->makeGateDD(dd::Xmat, nqubits, line)); // CX q[1], q[0]
 
 		line[permutation.at(targets[0])] = LINE_DEFAULT;
 		line[permutation.at(targets[1])] = LINE_TARGET;
-		e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line)); // H q[1]
+		e = dd->multiply(e, dd->makeGateDD(dd::Hmat, nqubits, line)); // H q[1]
 
 		line[permutation.at(targets[0])] = LINE_TARGET;
 		return e;
@@ -227,23 +227,23 @@ namespace qc {
 
 	dd::Edge StandardOperation::getiSWAPinvDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
 		line[permutation.at(targets[0])] = LINE_DEFAULT;
-		dd::Edge e = dd->makeGateDD(Hmat, nqubits, line); // H q[1]
+		dd::Edge e = dd->makeGateDD(dd::Hmat, nqubits, line); // H q[1]
 
 		line[permutation.at(targets[1])] = LINE_CONTROL_POS;
 		line[permutation.at(targets[0])] = LINE_TARGET;
-		e = dd->multiply(e, dd->makeGateDD(Xmat, nqubits, line)); // CX q[1], q[0]
+		e = dd->multiply(e, dd->makeGateDD(dd::Xmat, nqubits, line)); // CX q[1], q[0]
 		line[permutation.at(targets[0])] = LINE_CONTROL_POS;
 		line[permutation.at(targets[1])] = LINE_TARGET;
-		e = dd->multiply(e, dd->makeGateDD(Xmat, nqubits, line)); // CX q[0], q[1]
+		e = dd->multiply(e, dd->makeGateDD(dd::Xmat, nqubits, line)); // CX q[0], q[1]
 
 		line[permutation.at(targets[1])] = LINE_DEFAULT;
 		line[permutation.at(targets[0])] = LINE_TARGET;
-		e = dd->multiply(e, dd->makeGateDD(Hmat, nqubits, line)); // H q[0]
-		e = dd->multiply(e, dd->makeGateDD(Sdagmat, nqubits, line)); // Sdag q[0]
+		e = dd->multiply(e, dd->makeGateDD(dd::Hmat, nqubits, line)); // H q[0]
+		e = dd->multiply(e, dd->makeGateDD(dd::Sdagmat, nqubits, line)); // Sdag q[0]
 
 		line[permutation.at(targets[1])] = LINE_TARGET;
 		line[permutation.at(targets[0])] = LINE_DEFAULT;
-		e = dd->multiply(e, dd->makeGateDD(Sdagmat, nqubits, line)); // Sdag q[1]
+		e = dd->multiply(e, dd->makeGateDD(dd::Sdagmat, nqubits, line)); // Sdag q[1]
 
 		line[permutation.at(targets[0])] = LINE_TARGET;
 
@@ -256,35 +256,35 @@ namespace qc {
 		GateMatrix gm;
 		//TODO add assertions ?
 		switch (type) {
-			case I:	gm = Imat; break;
-			case H: gm = Hmat; break;
+			case I:	gm = dd::Imat; break;
+			case H: gm = dd::Hmat; break;
 			case X:
 				if (controls.size() > 1) { //Toffoli //TODO > 0 (include CNOT?)
 					e = dd->TTlookup(nqubits, static_cast<unsigned short>(controls.size()), targets[0], line.data());
 					if (e.p == nullptr) {
-						e = dd->makeGateDD(Xmat, nqubits, line);
+						e = dd->makeGateDD(dd::Xmat, nqubits, line);
 						dd->TTinsert(nqubits, static_cast<unsigned short>(controls.size()), targets[0], line.data(), e);
 					}
 					return e;
 				}
-				gm = Xmat;
+				gm = dd::Xmat;
 				break;
-			case Y:    gm = Ymat; break;
-			case Z:    gm = Zmat; break;
-			case S:    gm = inverse? Sdagmat: Smat; break;
-			case Sdag: gm = inverse? Smat: Sdagmat; break;
-			case T:    gm = inverse? Tdagmat: Tmat; break;
-			case Tdag: gm = inverse? Tmat: Tdagmat; break;
-			case V:    gm = inverse? Vdagmat: Vmat; break;
-			case Vdag: gm = inverse? Vmat: Vdagmat; break;
-			case U3:   gm = inverse? U3mat(-parameter[1], -parameter[0], -parameter[2]): U3mat(parameter[0], parameter[1], parameter[2]); break;
-			case U2:   gm = inverse? U2mat(-parameter[1]+PI, -parameter[0]-PI): U2mat(parameter[0], parameter[1]); break;
-			case Phase: gm = inverse ? Phasemat(-parameter[0]) : Phasemat(parameter[0]); break;
-			case SX:   gm = inverse? SXdagmat: SXmat; break;
-			case SXdag:gm = inverse? SXmat: SXdagmat; break;
-			case RX:   gm = inverse? RXmat(-parameter[0]): RXmat(parameter[0]); break;
-			case RY:   gm = inverse? RYmat(-parameter[0]): RYmat(parameter[0]); break;
-			case RZ:   gm = inverse? RZmat(-parameter[0]): RZmat(parameter[0]); break;
+			case Y:    gm = dd::Ymat; break;
+			case Z:    gm = dd::Zmat; break;
+			case S:    gm = inverse? dd::Sdagmat: dd::Smat; break;
+			case Sdag: gm = inverse? dd::Smat: dd::Sdagmat; break;
+			case T:    gm = inverse? dd::Tdagmat: dd::Tmat; break;
+			case Tdag: gm = inverse? dd::Tmat: dd::Tdagmat; break;
+			case V:    gm = inverse? dd::Vdagmat: dd::Vmat; break;
+			case Vdag: gm = inverse? dd::Vmat: dd::Vdagmat; break;
+			case U3:   gm = inverse? dd::U3mat(-parameter[1], -parameter[0], -parameter[2]): dd::U3mat(parameter[0], parameter[1], parameter[2]); break;
+			case U2:   gm = inverse? dd::U2mat(-parameter[1]+PI, -parameter[0]-PI): dd::U2mat(parameter[0], parameter[1]); break;
+			case Phase: gm = inverse ? dd::Phasemat(-parameter[0]) : dd::Phasemat(parameter[0]); break;
+			case SX:   gm = inverse? dd::SXdagmat: dd::SXmat; break;
+			case SXdag:gm = inverse? dd::SXmat: dd::SXdagmat; break;
+			case RX:   gm = inverse? dd::RXmat(-parameter[0]): dd::RXmat(parameter[0]); break;
+			case RY:   gm = inverse? dd::RYmat(-parameter[0]): dd::RYmat(parameter[0]); break;
+			case RZ:   gm = inverse? dd::RZmat(-parameter[0]): dd::RZmat(parameter[0]); break;
 			case SWAP:
 				return getSWAPDD(dd, line, permutation);
 			case iSWAP:
