@@ -218,6 +218,7 @@ namespace dd {
                   << "\n  UniqueTable:"
                   << "\n    Collisions: " << UTcol
                   << "\n    Matches:    " << UTmatch
+                  << "\n    Looks:      " << UTlookups
                   << "\n"
                   << std::flush;
     }

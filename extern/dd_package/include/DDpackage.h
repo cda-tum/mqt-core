@@ -156,12 +156,15 @@ namespace dd {
         // Three types since different possibilities for complex numbers  (caused by caching)
         // weights of operands and result are from complex table (e.g., transpose, conjugateTranspose)
         std::array<std::array<CTentry1, CTSLOTS>, modeCount> CTable1{};
+        std::array<std::size_t, modeCount> CT1count{};
 
         // weights of operands are from complex table, weight of result from cache/ZERO (e.g., mult)
         std::array<std::array<CTentry2, CTSLOTS>, modeCount> CTable2{};
+        std::array<std::size_t, modeCount> CT2count{};
 
         // weights of operands and result are from cache/ZERO (e.g., add)
         std::array<std::array<CTentry3, CTSLOTS>, modeCount> CTable3{};
+        std::array<std::size_t, modeCount> CT3count{};
 
         // Toffoli gate table
         std::array<TTentry, TTSLOTS> TTable{};
