@@ -363,10 +363,10 @@ static void BM_MxV_GHZ(benchmark::State& state) {
         sv                = dd->multiply(h, sv);
         line[nqubits - 1] = 1;
         for (int i = nqubits - 2; i >= 0; --i) {
-            line[std::min(nqubits-2, i+1)] = -1;
-            line[i] = 2;
-            auto cx = dd->makeGateDD(dd::Xmat, nqubits, line);
-            sv      = dd->multiply(cx, sv);
+            line[std::min(nqubits - 2, i + 1)] = -1;
+            line[i]                            = 2;
+            auto cx                            = dd->makeGateDD(dd::Xmat, nqubits, line);
+            sv                                 = dd->multiply(cx, sv);
         }
         // clear compute table so the next iteration does not find the result cached
         dd->clearComputeTables();
@@ -405,10 +405,10 @@ static void BM_MxM_GHZ(benchmark::State& state) {
         auto func         = dd->makeGateDD(dd::Hmat, nqubits, line);
         line[nqubits - 1] = 1;
         for (int i = nqubits - 2; i >= 0; --i) {
-            line[std::min(nqubits-2, i+1)] = -1;
-            line[i] = 2;
-            auto cx = dd->makeGateDD(dd::Xmat, nqubits, line);
-            func    = dd->multiply(cx, func);
+            line[std::min(nqubits - 2, i + 1)] = -1;
+            line[i]                            = 2;
+            auto cx                            = dd->makeGateDD(dd::Xmat, nqubits, line);
+            func                               = dd->multiply(cx, func);
         }
         // clear compute table so the next iteration does not find the result cached
         dd->clearComputeTables();
