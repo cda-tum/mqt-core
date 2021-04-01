@@ -221,8 +221,8 @@ static void BM_MakeSWAPDD(benchmark::State& state) {
         line[nqubits - 1] = 1;
         line[0]           = 2;
         auto sv           = dd->makeGateDD(dd::Xmat, nqubits, line);
-        line[nqubits - 1] = 1;
-        line[0]           = 2;
+        line[nqubits - 1] = 2;
+        line[0]           = 1;
         sv                = dd->multiply(sv, dd->multiply(dd->makeGateDD(dd::Xmat, nqubits, line), sv));
         benchmark::DoNotOptimize(sv);
         dd->clearComputeTables();
@@ -363,6 +363,7 @@ static void BM_MxV_GHZ(benchmark::State& state) {
         sv                = dd->multiply(h, sv);
         line[nqubits - 1] = 1;
         for (int i = nqubits - 2; i >= 0; --i) {
+            line[std::min(nqubits-2, i+1)] = -1;
             line[i] = 2;
             auto cx = dd->makeGateDD(dd::Xmat, nqubits, line);
             sv      = dd->multiply(cx, sv);
@@ -404,6 +405,7 @@ static void BM_MxM_GHZ(benchmark::State& state) {
         auto func         = dd->makeGateDD(dd::Hmat, nqubits, line);
         line[nqubits - 1] = 1;
         for (int i = nqubits - 2; i >= 0; --i) {
+            line[std::min(nqubits-2, i+1)] = -1;
             line[i] = 2;
             auto cx = dd->makeGateDD(dd::Xmat, nqubits, line);
             func    = dd->multiply(cx, func);
