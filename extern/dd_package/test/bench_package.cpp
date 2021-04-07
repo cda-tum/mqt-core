@@ -75,9 +75,9 @@ static void BM_MakeIdent(benchmark::State& state) {
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    line.fill(-1);
+    line[0] = 2;
     for (auto _: state) {
-        line.fill(-1);
-        line[0] = 2;
         benchmark::DoNotOptimize(dd->makeGateDD(dd::Imat, nqubits, line));
     }
 }
@@ -91,9 +91,9 @@ static void BM_MakeSingleQubitGateDD_TargetTop(benchmark::State& state) {
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    line.fill(-1);
+    line[nqubits - 1] = 2;
     for (auto _: state) {
-        line.fill(-1);
-        line[nqubits - 1] = 2;
         benchmark::DoNotOptimize(dd->makeGateDD(dd::Xmat, nqubits, line));
     }
 }
@@ -103,9 +103,9 @@ static void BM_MakeSingleQubitGateDD_TargetMiddle(benchmark::State& state) {
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    line.fill(-1);
+    line[nqubits / 2] = 2;
     for (auto _: state) {
-        line.fill(-1);
-        line[nqubits / 2] = 2;
         benchmark::DoNotOptimize(dd->makeGateDD(dd::Xmat, nqubits, line));
     }
 }
@@ -115,9 +115,9 @@ static void BM_MakeSingleQubitGateDD_TargetBottom(benchmark::State& state) {
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    line.fill(-1);
+    line[0] = 2;
     for (auto _: state) {
-        line.fill(-1);
-        line[0] = 2;
         benchmark::DoNotOptimize(dd->makeGateDD(dd::Xmat, nqubits, line));
     }
 }
@@ -127,10 +127,10 @@ static void BM_MakeControlledQubitGateDD_ControlBottom_TargetTop(benchmark::Stat
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    line.fill(-1);
+    line[0]           = 1;
+    line[nqubits - 1] = 2;
     for (auto _: state) {
-        line.fill(-1);
-        line[0]           = 1;
-        line[nqubits - 1] = 2;
         benchmark::DoNotOptimize(dd->makeGateDD(dd::Xmat, nqubits, line));
     }
 }
@@ -140,10 +140,10 @@ static void BM_MakeControlledQubitGateDD_ControlBottom_TargetMiddle(benchmark::S
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    line.fill(-1);
+    line[0]           = 1;
+    line[nqubits / 2] = 2;
     for (auto _: state) {
-        line.fill(-1);
-        line[0]           = 1;
-        line[nqubits / 2] = 2;
         benchmark::DoNotOptimize(dd->makeGateDD(dd::Xmat, nqubits, line));
     }
 }
@@ -153,10 +153,10 @@ static void BM_MakeControlledQubitGateDD_ControlTop_TargetMiddle(benchmark::Stat
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    line.fill(-1);
+    line[nqubits - 1] = 1;
+    line[nqubits / 2] = 2;
     for (auto _: state) {
-        line.fill(-1);
-        line[nqubits - 1] = 1;
-        line[nqubits / 2] = 2;
         benchmark::DoNotOptimize(dd->makeGateDD(dd::Xmat, nqubits, line));
     }
 }
@@ -166,10 +166,10 @@ static void BM_MakeControlledQubitGateDD_ControlTop_TargetBottom(benchmark::Stat
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    line.fill(-1);
+    line[nqubits - 1] = 1;
+    line[0]           = 2;
     for (auto _: state) {
-        line.fill(-1);
-        line[nqubits - 1] = 1;
-        line[0]           = 2;
         benchmark::DoNotOptimize(dd->makeGateDD(dd::Xmat, nqubits, line));
     }
 }
@@ -179,9 +179,9 @@ static void BM_MakeFullControlledToffoliDD_TargetTop(benchmark::State& state) {
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    line.fill(1);
+    line[nqubits - 1] = 2;
     for (auto _: state) {
-        line.fill(1);
-        line[nqubits - 1] = 2;
         benchmark::DoNotOptimize(dd->makeGateDD(dd::Xmat, nqubits, line));
     }
 }
@@ -191,9 +191,9 @@ static void BM_MakeFullControlledToffoliDD_TargetMiddle(benchmark::State& state)
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    line.fill(1);
+    line[nqubits / 2] = 2;
     for (auto _: state) {
-        line.fill(1);
-        line[nqubits / 2] = 2;
         benchmark::DoNotOptimize(dd->makeGateDD(dd::Xmat, nqubits, line));
     }
 }
@@ -203,9 +203,9 @@ static void BM_MakeFullControlledToffoliDD_TargetBottom(benchmark::State& state)
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    line.fill(1);
+    line[0] = 2;
     for (auto _: state) {
-        line.fill(1);
-        line[0] = 2;
         benchmark::DoNotOptimize(dd->makeGateDD(dd::Xmat, nqubits, line));
     }
 }
@@ -238,12 +238,12 @@ static void BM_MxV_X(benchmark::State& state) {
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    auto           zero    = dd->makeZeroState(nqubits);
+    line.fill(-1);
+    line[0] = 2;
+    auto x  = dd->makeGateDD(dd::Xmat, nqubits, line);
 
     for (auto _: state) {
-        auto zero = dd->makeZeroState(nqubits);
-        line.fill(-1);
-        line[0]  = 2;
-        auto x   = dd->makeGateDD(dd::Xmat, nqubits, line);
         auto sim = dd->multiply(x, zero);
         benchmark::DoNotOptimize(sim);
         // clear compute table so the next iteration does not find the result cached
@@ -256,12 +256,12 @@ static void BM_MxV_H(benchmark::State& state) {
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    auto           zero    = dd->makeZeroState(nqubits);
+    line.fill(-1);
+    line[0] = 2;
+    auto h  = dd->makeGateDD(dd::Hmat, nqubits, line);
 
     for (auto _: state) {
-        auto zero = dd->makeZeroState(nqubits);
-        line.fill(-1);
-        line[0]  = 2;
-        auto h   = dd->makeGateDD(dd::Hmat, nqubits, line);
         auto sim = dd->multiply(h, zero);
         benchmark::DoNotOptimize(sim);
         // clear compute table so the next iteration does not find the result cached
@@ -274,12 +274,12 @@ static void BM_MxV_T(benchmark::State& state) {
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    auto           zero    = dd->makeZeroState(nqubits);
+    line.fill(-1);
+    line[0] = 2;
+    auto t  = dd->makeGateDD(dd::Tmat, nqubits, line);
 
     for (auto _: state) {
-        auto zero = dd->makeZeroState(nqubits);
-        line.fill(-1);
-        line[0]  = 2;
-        auto t   = dd->makeGateDD(dd::Tmat, nqubits, line);
         auto sim = dd->multiply(t, zero);
         benchmark::DoNotOptimize(sim);
         // clear compute table so the next iteration does not find the result cached
@@ -294,14 +294,14 @@ static void BM_MxV_CX_ControlTop_TargetBottom(benchmark::State& state) {
     auto           line        = std::array<short, dd::MAXN>{};
     auto           basisStates = std::vector<dd::BasisStates>{nqubits, dd::BasisStates::zero};
     basisStates[nqubits - 1]   = dd::BasisStates::plus;
+    auto plus                  = dd->makeBasisState(nqubits, basisStates);
+    line.fill(-1);
+    line[0]           = 2;
+    line[nqubits - 1] = 1;
+    auto cx           = dd->makeGateDD(dd::Xmat, nqubits, line);
 
     for (auto _: state) {
-        auto plus = dd->makeBasisState(nqubits, basisStates);
-        line.fill(-1);
-        line[0]           = 2;
-        line[nqubits - 1] = 1;
-        auto cx           = dd->makeGateDD(dd::Xmat, nqubits, line);
-        auto sim          = dd->multiply(cx, plus);
+        auto sim = dd->multiply(cx, plus);
         benchmark::DoNotOptimize(sim);
         // clear compute table so the next iteration does not find the result cached
         dd->clearComputeTables();
@@ -315,14 +315,14 @@ static void BM_MxV_CX_ControlBottom_TargetTop(benchmark::State& state) {
     auto           line        = std::array<short, dd::MAXN>{};
     auto           basisStates = std::vector<dd::BasisStates>{nqubits, dd::BasisStates::zero};
     basisStates[0]             = dd::BasisStates::plus;
+    auto plus                  = dd->makeBasisState(nqubits, basisStates);
+    line.fill(-1);
+    line[nqubits - 1] = 2;
+    line[0]           = 1;
+    auto cx           = dd->makeGateDD(dd::Xmat, nqubits, line);
 
     for (auto _: state) {
-        auto plus = dd->makeBasisState(nqubits, basisStates);
-        line.fill(-1);
-        line[nqubits - 1] = 2;
-        line[0]           = 1;
-        auto cx           = dd->makeGateDD(dd::Xmat, nqubits, line);
-        auto sim          = dd->multiply(cx, plus);
+        auto sim = dd->multiply(cx, plus);
         benchmark::DoNotOptimize(sim);
         // clear compute table so the next iteration does not find the result cached
         dd->clearComputeTables();
@@ -335,8 +335,9 @@ static void BM_MxV_HadamardLayer(benchmark::State& state) {
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
 
+    auto zero = dd->makeZeroState(nqubits);
     for (auto _: state) {
-        auto sv = dd->makeZeroState(nqubits);
+        auto sv = zero;
         line.fill(-1);
         for (int i = 0; i < nqubits; ++i) {
             line[std::max(0, i - 1)] = -1;
@@ -355,8 +356,9 @@ static void BM_MxV_GHZ(benchmark::State& state) {
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
 
+    auto zero = dd->makeZeroState(nqubits);
     for (auto _: state) {
-        auto sv = dd->makeZeroState(nqubits);
+        auto sv = zero;
         line.fill(-1);
         line[nqubits - 1] = 2;
         auto h            = dd->makeGateDD(dd::Hmat, nqubits, line);
@@ -378,15 +380,15 @@ static void BM_MxM_Bell(benchmark::State& state) {
     unsigned short nqubits = state.range(0);
     auto           dd      = std::make_unique<dd::Package>();
     auto           line    = std::array<short, dd::MAXN>{};
+    line.fill(-1);
+    line[nqubits - 1] = 2;
+    auto h            = dd->makeGateDD(dd::Hmat, nqubits, line);
+    line[nqubits - 1] = 1;
+    line[0]           = 2;
+    auto cx           = dd->makeGateDD(dd::Xmat, nqubits, line);
 
     for (auto _: state) {
-        line.fill(-1);
-        line[nqubits - 1] = 2;
-        auto h            = dd->makeGateDD(dd::Hmat, nqubits, line);
-        line[nqubits - 1] = 1;
-        line[0]           = 2;
-        auto cx           = dd->makeGateDD(dd::Xmat, nqubits, line);
-        auto bell         = dd->multiply(cx, h);
+        auto bell = dd->multiply(cx, h);
         benchmark::DoNotOptimize(bell);
         // clear compute table so the next iteration does not find the result cached
         dd->clearComputeTables();
