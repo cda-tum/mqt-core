@@ -424,7 +424,6 @@ namespace dd {
         nodecount = counta;
         cn.garbageCollect(); // NOTE: this cleans all complex values with ref-count 0
         currentComplexGCLimit += ComplexNumbers::GCLIMIT_INC;
-
         // IMPORTANT reset tables
         // TODO: should the unique table be relieved of entries no longer necessary?
         clearComputeTables();
@@ -560,15 +559,22 @@ namespace dd {
         return (node_pointer + weights + which) & CTMASK;
     }
 
-    Edge Package::OperationLookup(const unsigned int operationType, const std::array<short, dd::MAXN>& line, const unsigned short nQubits) {
+    Edge Package::OperationLookup(unsigned int operationType, unsigned short nQubits, const std::set<Control>& controls, unsigned short target) {
         operationLook++;
         Edge                r{nullptr, {nullptr, nullptr}};
-        const unsigned long i = OperationHash(operationType, line, nQubits);
+        const unsigned long i = OperationHash(operationType, nQubits, controls, target);
         if (OperationTable[i].r == nullptr) return r;
         if (OperationTable[i].operationType != operationType) return r;
         if (OperationTable[i].r->v != nQubits - 1) return r;
 
-        if (std::memcmp(OperationTable[i].line, line.data(), (nQubits) * sizeof(short)) != 0) return r;
+        const auto& opcontrols = OperationTable[i].controls;
+        if (controls.size() != opcontrols.size()) {
+            return r;
+        }
+        if (controls != opcontrols) {
+            return r;
+        }
+        // if (std::memcmp(OperationTable[i].line, line, (nQubits) * sizeof(short)) != 0) return r;
 
         r.p = OperationTable[i].r;
         if (std::fabs(OperationTable[i].rw.r) < CN::TOLERANCE && std::fabs(OperationTable[i].rw.i) < CN::TOLERANCE) {
@@ -580,20 +586,29 @@ namespace dd {
         return r;
     }
 
-    void Package::OperationInsert(const unsigned int operationType, const std::array<short, dd::MAXN>& line, const Edge& result, const unsigned short nQubits) {
-        const unsigned long i = OperationHash(operationType, line, nQubits);
-        std::memcpy(OperationTable[i].line, line.data(), (nQubits) * sizeof(short));
+    void Package::OperationInsert(unsigned int operationType, const Edge& result, unsigned short nQubits, const std::set<Control>& controls, unsigned short target) {
+        const unsigned long i = OperationHash(operationType, nQubits, controls, target);
+        // std::memcpy(OperationTable[i].line, line, (nQubits) * sizeof(short));
         OperationTable[i].operationType = operationType;
         OperationTable[i].r             = result.p;
         OperationTable[i].rw.r          = CN::val(result.w.r);
         OperationTable[i].rw.i          = CN::val(result.w.i);
+        OperationTable[i].controls      = controls;
+        OperationTable[i].target        = target;
     }
 
-    unsigned long Package::OperationHash(const unsigned int operationType, const std::array<short, dd::MAXN>& line, const unsigned short nQubits) {
-        unsigned long i = operationType;
+    unsigned long Package::OperationHash(unsigned int operationType, unsigned short nQubits, const std::set<Control>& controls, unsigned short target) {
+        unsigned long i  = operationType;
+        auto          it = controls.begin();
         for (unsigned short j = 0; j <= nQubits; j++) {
-            //            i = (i << 5u) + (4 * j) + (line[j] * 4);
-            i = (i << 3U) + i * j + line[j];
+            int line = -1;
+            if (it != controls.end() && it->qubit == j) {
+                line = it->type == Control::Type::pos ? 1 : 0;
+                it++;
+            } else if (j == target) {
+                line = 2;
+            }
+            i = (i << 3U) + i * j + line;
         }
         return i & OperationMASK;
     }
@@ -705,37 +720,41 @@ namespace dd {
         }
     }
 
-    inline unsigned short Package::TThash(const unsigned short n, const unsigned short t, const short line[MAXN]) {
-        unsigned long i = t;
-        for (unsigned short j = 0; j < n; j++) {
-            if (line[j] == 1) {
-                i = i << (3U + j);
+    inline unsigned short Package::TThash(const std::set<Control>& controls, const unsigned short target) {
+        unsigned long i = target;
+        for (const auto& control: controls) {
+            if (control.type == Control::Type::pos) {
+                i *= 29u * control.qubit;
+            } else {
+                i *= 71u * control.qubit;
             }
         }
         return i & TTMASK;
     }
 
-    Edge Package::TTlookup(const unsigned short n, const unsigned short m, const unsigned short t, const short line[MAXN]) {
+    Edge Package::TTlookup(const unsigned short n, const std::set<Control>& controls, const unsigned short target) {
         Edge r{};
-        r.p                    = nullptr;
-        const unsigned short i = TThash(n, t, line);
+        r.p                   = nullptr;
+        const auto  i         = TThash(controls, target);
+        const auto& tcontrols = TTable[i].controls;
 
-        if (TTable[i].e.p == nullptr || TTable[i].t != t || TTable[i].m != m || TTable[i].n != n) {
+        if (TTable[i].e.p == nullptr || TTable[i].target != target || TTable[i].n != n || controls.size() != tcontrols.size()) {
             return r;
         }
-        if (0 == std::memcmp(TTable[i].line, line, n * sizeof(short))) {
-            return TTable[i].e;
+
+        if (controls != tcontrols) {
+            return r;
         }
-        return r;
+
+        return TTable[i].e;
     }
 
-    void Package::TTinsert(unsigned short n, unsigned short m, unsigned short t, const short* line, const Edge& e) {
-        const unsigned short i = TThash(n, t, line);
-        TTable[i].n            = n;
-        TTable[i].m            = m;
-        TTable[i].t            = t;
-        std::memcpy(TTable[i].line, line, n * sizeof(short));
-        TTable[i].e = e;
+    void Package::TTinsert(const unsigned short n, const std::set<Control>& controls, const unsigned short target, const Edge& e) {
+        const auto i       = TThash(controls, target);
+        TTable[i].n        = n;
+        TTable[i].target   = target;
+        TTable[i].controls = controls;
+        TTable[i].e        = e;
     }
 
     // make a DD nonterminal node and return an edge pointing to it
@@ -1113,16 +1132,10 @@ namespace dd {
         return IdTable[qidx];
     }
 
-    // build matrix representation for a single gate on a circuit with n lines
-    // line is the vector of connections
-    // -1 not connected
-    // 0...1 indicates a control by that value
-    // 2 indicates the line is the target
-    Edge Package::makeGateDD(const std::array<ComplexValue, NEDGE>& mat, unsigned short n,
-                             const std::array<short, MAXN>& line) {
+    Edge Package::makeGateDD(const std::array<ComplexValue, NEDGE>& mat, unsigned short n, const std::set<Control>& controls, unsigned short target) {
         std::array<Edge, NEDGE> em{};
-        short                   z = 0;
-
+        short                   z  = 0;
+        auto                    it = controls.begin();
         for (int i = 0; i < NEDGE; ++i) {
             if (mat[i].r == 0 && mat[i].i == 0) {
                 em[i] = DDzero;
@@ -1132,20 +1145,25 @@ namespace dd {
         }
 
         //process lines below target
-        for (z = 0; line[z] < RADIX; z++) {
+        for (z = 0; static_cast<unsigned short>(z) < target; z++) {
             for (int i1 = 0; i1 < RADIX; i1++) {
                 for (int i2 = 0; i2 < RADIX; i2++) {
                     int i = i1 * RADIX + i2;
-                    if (line[z] == 0) { // neg. control
-                        em[i] = makeNonterminal(z, {em[i], DDzero, DDzero,
-                                                    (i1 == i2) ? makeIdent(z) : DDzero});
-                    } else if (line[z] == 1) { // pos. control
-                        em[i] = makeNonterminal(z,
-                                                {(i1 == i2) ? makeIdent(z) : DDzero, DDzero, DDzero, em[i]});
+                    if (it != controls.end() && it->qubit == z) {
+                        if (it->type == Control::Type::neg) { // neg. control
+                            em[i] = makeNonterminal(z, {em[i], DDzero,
+                                                        DDzero, (i1 == i2) ? makeIdent(z) : DDzero});
+                        } else { // pos. control
+                            em[i] = makeNonterminal(z, {(i1 == i2) ? makeIdent(z) : DDzero, DDzero,
+                                                        DDzero, em[i]});
+                        }
                     } else { // not connected
                         em[i] = makeNonterminal(z, {em[i], DDzero, DDzero, em[i]});
                     }
                 }
+            }
+            if (it != controls.end() && it->qubit == z) {
+                it++;
             }
         }
 
@@ -1154,10 +1172,13 @@ namespace dd {
 
         //process lines above target
         for (z++; z < n; z++) {
-            if (line[z] == 0) { //  neg. control
-                e = makeNonterminal(z, {e, DDzero, DDzero, makeIdent(z)});
-            } else if (line[z] == 1) { // pos. control
-                e = makeNonterminal(z, {makeIdent(z), DDzero, DDzero, e});
+            if (it != controls.end() && it->qubit == z) {
+                if (it->type == Control::Type::neg) { // neg. control
+                    e = makeNonterminal(z, {e, DDzero, DDzero, makeIdent(z)});
+                } else {
+                    e = makeNonterminal(z, {makeIdent(z), DDzero, DDzero, e});
+                }
+                it++;
             } else { // not connected
                 e = makeNonterminal(z, {e, DDzero, DDzero, e});
             }
@@ -1713,4 +1734,8 @@ namespace dd {
         active.fill(0);
     }
 
+    inline namespace literals {
+        Control operator""_pc(unsigned long long int q) { return {static_cast<unsigned short>(q)}; }
+        Control operator""_nc(unsigned long long int q) { return {static_cast<unsigned short>(q), Control::Type::neg}; }
+    } // namespace literals
 } // namespace dd

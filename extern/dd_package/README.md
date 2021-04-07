@@ -34,14 +34,13 @@ A small example shows how to create set a single qubit in superposition.
 auto dd = std::make_unique<dd::Package>(); // Create new package instance
 auto zero_state = dd->makeZeroState(1) ; // zero_state = |0>
 
-/* Creating a DD requires three inputs:
+/* Creating a DD requires the following inputs:
  * 1. A 2x2 matrix describing a single-qubit operation (here: the Hadamard matrix)
  * 2. The number of qubits the DD will operate on (here: one qubit)
- * 3. A short array the length of the the number of qubits where the index is the qubit and the value is either
- *    -1 -> don't care; 0 -> negative control; 1 -> positive control; 2 -> target qubit
- *    In this example we only have a target.
+ * 3. The qubit the operation is applied to (here: q0) 
+ * (4. Controlled operations can be created by additionally specifying a list of control qubits before the target declaration)
  */
-auto h_op = dd->makeGateDD(dd::Hmat, 1, {2});
+auto h_op = dd->makeGateDD(dd::Hmat, 1, 0);
 
 // Multiplying the operation and the state results in a new state, here a single qubit in superposition
 auto superposition = dd->multiply(h_op, zero_state); 
