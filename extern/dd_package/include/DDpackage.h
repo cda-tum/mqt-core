@@ -46,7 +46,6 @@ namespace dd {
     constexpr unsigned short TTMASK            = TTSLOTS - 1; // must be TTSLOTS-1
     constexpr unsigned int   NODE_CHUNK_SIZE   = 2000;        // this parameter may be increased for larger benchmarks to minimize the number of allocations
     constexpr unsigned int   LIST_CHUNK_SIZE   = 2000;
-    constexpr unsigned short MAXN              = 128; // max no. of inputs
 
     typedef struct Node* NodePtr;
 
@@ -114,7 +113,6 @@ namespace dd {
         conjTransp,
         kron,
         ct_count //ct_count must be the final element
-
     };
 
     //computed table entry
@@ -176,8 +174,10 @@ namespace dd {
         NodePtr        nodeAvail{}; // pointer to available space chain
         ListElementPtr listAvail{}; // pointer to available list elements for breadth first searches
 
+        unsigned short nqubits;
+
         // Unique Tables (one per input variable)
-        std::array<std::array<NodePtr, NBUCKET>, MAXN> Unique{};
+        std::vector<std::array<NodePtr, NBUCKET>> Unique{};
 
         static constexpr int modeCount = static_cast<int>(Mode::ModeCount);
         // Three types since different possibilities for complex numbers  (caused by caching)
@@ -200,7 +200,7 @@ namespace dd {
         /// TODO: revisit this in the future
         std::vector<TTentry> TTable{TTSLOTS};
         // Identity matrix table
-        std::array<Edge, MAXN> IdTable{};
+        std::vector<Edge> IdTable{};
 
         // Operation operations table
         //std::array<OperationEntry, OperationSLOTS> OperationTable{};
@@ -209,11 +209,11 @@ namespace dd {
         /// TODO: revisit this in the future
         std::vector<OperationEntry> OperationTable{OperationSLOTS};
 
-        unsigned int                   currentNodeGCLimit    = GCLIMIT1;     // current garbage collection limit
-        unsigned int                   currentComplexGCLimit = CN::GCLIMIT1; // current complex garbage collection limit
-        std::array<unsigned int, MAXN> active{};                             // number of active nodes for each variable
-        unsigned long                  nodecount     = 0;                    // node count in unique table
-        unsigned long                  peaknodecount = 0;                    // records peak node count in unique table
+        unsigned int              currentNodeGCLimit    = GCLIMIT1;     // current garbage collection limit
+        unsigned int              currentComplexGCLimit = CN::GCLIMIT1; // current complex garbage collection limit
+        std::vector<unsigned int> active{};                             // number of active nodes for each variable
+        unsigned long             nodecount     = 0;                    // node count in unique table
+        unsigned long             peaknodecount = 0;                    // records peak node count in unique table
 
         std::array<unsigned long, ct_count> nOps{};            // operation counters
         std::array<unsigned long, ct_count> CTlook{}, CThit{}; // counters for gathering compute table hit stats
@@ -231,7 +231,7 @@ namespace dd {
         Edge         add2(const Edge& x, const Edge& y);
         Edge         multiply2(const Edge& x, const Edge& y, unsigned short var);
         ComplexValue innerProduct(const Edge& x, const Edge& y, int var);
-        Edge         trace(const Edge& a, const std::bitset<MAXN>& eliminate, unsigned short alreadyEliminated = 0);
+        Edge         trace(const Edge& a, const std::vector<bool>& eliminate, unsigned short alreadyEliminated = 0);
         Edge         kronecker2(const Edge& x, const Edge& y);
 
         void checkSpecialMatrices(NodePtr p);
@@ -253,9 +253,22 @@ namespace dd {
         unsigned long      UTcol{}, UTmatch{}, UTlookups{}; // counter for collisions / matches in hash tables
         ComplexNumbers     cn;                              // instance of the complex number handler
 
-        Package():
-            cn(ComplexNumbers()){};
+        explicit Package(unsigned short nqubits = 128):
+            nqubits(nqubits), cn(ComplexNumbers()) {
+            IdTable.resize(nqubits);
+            Unique.resize(nqubits);
+            active.resize(nqubits);
+        };
         ~Package();
+
+        [[nodiscard]] unsigned short qubits() const { return nqubits; }
+        void                         resize(unsigned short nq) {
+            nqubits = nq;
+            IdTable.resize(nqubits);
+            Unique.resize(nqubits);
+            active.resize(nqubits);
+        }
+
         /// Set normalization mode
         void setMode(const Mode m) {
             mode = m;
@@ -264,6 +277,7 @@ namespace dd {
         static void setComplexNumberTolerance(const fp tol) {
             CN::setTolerance(tol);
         }
+
         /// Reset package state
         void reset();
 
@@ -273,9 +287,13 @@ namespace dd {
         Edge        makeNonterminal(const short v, const std::array<Edge, NEDGE>& edge, bool cached = false) {
             return makeNonterminal(v, edge.data(), cached);
         }
+
+        /// State DD generation
         Edge makeZeroState(unsigned short n);
-        Edge makeBasisState(unsigned short n, const std::bitset<MAXN>& state);
+        Edge makeBasisState(unsigned short n, const std::vector<bool>& state);
         Edge makeBasisState(unsigned short n, const std::vector<BasisStates>& state);
+
+        /// Matrix DD generation
         Edge makeIdent(unsigned short n);
         Edge makeIdent(short x, short y);
         Edge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, unsigned short n, unsigned short target) {
@@ -346,7 +364,7 @@ namespace dd {
         Edge         transpose(const Edge& a);
         Edge         conjugateTranspose(const Edge& a);
         Edge         normalize(const Edge& e, bool cached);
-        Edge         partialTrace(const Edge& a, const std::bitset<MAXN>& eliminate);
+        Edge         partialTrace(const Edge& a, const std::vector<bool>& eliminate);
         ComplexValue trace(const Edge& a);
         ComplexValue innerProduct(const Edge& x, const Edge& y);
         fp           fidelity(const Edge& x, const Edge& y);
@@ -354,11 +372,11 @@ namespace dd {
         Edge         extend(const Edge& e, unsigned short h = 0, unsigned short l = 0);
 
         /// Handling of ancillary and garbage qubits
-        dd::Edge reduceAncillae(dd::Edge& e, const std::bitset<dd::MAXN>& ancillary, bool regular = true);
-        dd::Edge reduceAncillaeRecursion(dd::Edge& e, const std::bitset<dd::MAXN>& ancillary, unsigned short lowerbound, bool regular = true);
+        dd::Edge reduceAncillae(dd::Edge& e, const std::vector<bool>& ancillary, bool regular = true);
+        dd::Edge reduceAncillaeRecursion(dd::Edge& e, const std::vector<bool>& ancillary, unsigned short lowerbound, bool regular = true);
         // Garbage reduction works for reversible circuits --- to be thoroughly tested for quantum circuits
-        dd::Edge reduceGarbage(dd::Edge& e, const std::bitset<dd::MAXN>& garbage, bool regular = true);
-        dd::Edge reduceGarbageRecursion(dd::Edge& e, const std::bitset<dd::MAXN>& garb, unsigned short lowerbound, bool regular = true);
+        dd::Edge reduceGarbage(dd::Edge& e, const std::vector<bool>& garbage, bool regular = true);
+        dd::Edge reduceGarbageRecursion(dd::Edge& e, const std::vector<bool>& garb, unsigned short lowerbound, bool regular = true);
 
         /// Reference counting and garbage collection
         void incRef(const Edge& e);

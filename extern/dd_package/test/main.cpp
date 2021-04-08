@@ -43,7 +43,7 @@ dd::Edge BellCicuit2(std::unique_ptr<dd::Package>& dd) {
 int main() {
     //dd::Package::printInformation(); // uncomment to print various sizes of structs and arrays
     //Initialize package
-    auto dd = std::make_unique<dd::Package>();
+    auto dd = std::make_unique<dd::Package>(4);
 
     // create Bell circuit 1
     dd::Edge bell_circuit1 = BellCicuit1(dd);
@@ -84,7 +84,7 @@ int main() {
     std::cout << "DD of my gate has size " << dd->size(my_z_gate) << std::endl;
 
     // compute (partial) traces
-    dd::Edge partTrace = dd->partialTrace(dd->makeIdent(2), std::bitset<dd::MAXN>(2));
+    dd::Edge partTrace = dd->partialTrace(dd->makeIdent(2), {true, true});
     auto     fullTrace = dd->trace(dd->makeIdent(4));
     std::cout << "Identity function for 4 qubits has trace: " << fullTrace << std::endl;
 

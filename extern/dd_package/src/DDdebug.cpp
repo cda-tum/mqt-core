@@ -237,7 +237,6 @@ namespace dd {
                   << "\n  CTentry3 size: " << sizeof(CTentry3) << " bytes (aligned " << alignof(CTentry3) << " bytes)"
                   << "\n  TTentry size: " << sizeof(TTentry) << " bytes (aligned " << alignof(TTentry) << " bytes)"
                   << "\n  Package size: " << sizeof(Package) << " bytes (aligned " << alignof(Package) << " bytes)"
-                  << "\n  max variables: " << MAXN
                   << "\n  UniqueTable buckets: " << NBUCKET
                   << "\n  ComputeTable slots: " << CTSLOTS
                   << "\n  ToffoliTable slots: " << TTSLOTS
