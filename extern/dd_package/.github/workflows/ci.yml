@@ -81,12 +81,12 @@ jobs:
 
     - name: Build
       shell: bash
-      run: cmake --build "${{github.workspace}}/build" --config Release
+      run: cmake --build "${{github.workspace}}/build" --config Release --target DDPackage_test
 
     - name: Test
-      working-directory: ${{github.workspace}}/build
+      working-directory: ${{github.workspace}}/build/test
       shell: bash
-      run: ctest -C Debug
+      run: ./DDPackage_test
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
@@ -102,7 +102,7 @@ jobs:
           submodules: recursive
       - uses: DoozyX/clang-format-lint-action@v0.11
         with:
-          source: 'src include test'
+          source: 'include test'
           clangFormatVersion: 11
           inplace: True
       - uses: EndBug/add-and-commit@v4
@@ -124,12 +124,12 @@ jobs:
 
       - name: Build
         shell: bash
-        run: cmake --build "${{github.workspace}}/build" --config Release --target dd_package_bench
+        run: cmake --build "${{github.workspace}}/build" --config Release --target DDPackage_bench
 
       - name: Run Benchmarks
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: ./dd_package_bench --benchmark_format=json | tee benchmark_result.json
+        run: ./DDPackage_bench --benchmark_format=json | tee benchmark_result.json
 
       - name: Store benchmark result # for pushes
         uses: rhysd/github-action-benchmark@v1

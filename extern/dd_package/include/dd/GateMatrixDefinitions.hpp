@@ -6,32 +6,32 @@
 #ifndef DD_PACKAGE_GATEMATRIXDEFINITIONS_H
 #define DD_PACKAGE_GATEMATRIXDEFINITIONS_H
 
-#include "DDcomplex.h"
+#include "ComplexValue.hpp"
+#include "Definitions.hpp"
 
 #include <array>
+#include <cmath>
 
 namespace dd {
-    using GateMatrix           = std::array<ComplexValue, NEDGE>;
-    static constexpr fp SQRT_2 = 0.707106781186547524400844362104849039284835937688474036588L;
-
     // Complex constants
     constexpr ComplexValue complex_one       = {1., 0.};
     constexpr ComplexValue complex_mone      = {-1., 0.};
     constexpr ComplexValue complex_zero      = {0., 0.};
     constexpr ComplexValue complex_i         = {0., 1.};
     constexpr ComplexValue complex_mi        = {0., -1.};
-    constexpr ComplexValue complex_SQRT_2    = {SQRT_2, 0.};
-    constexpr ComplexValue complex_mSQRT_2   = {-SQRT_2, 0.};
-    constexpr ComplexValue complex_iSQRT_2   = {0., SQRT_2};
-    constexpr ComplexValue complex_miSQRT_2  = {0., -SQRT_2};
-    constexpr ComplexValue complex_1plusi    = {SQRT_2, SQRT_2};
-    constexpr ComplexValue complex_1minusi   = {SQRT_2, -SQRT_2};
+    constexpr ComplexValue complex_SQRT2_2   = {SQRT2_2, 0.};
+    constexpr ComplexValue complex_mSQRT2_2  = {-SQRT2_2, 0.};
+    constexpr ComplexValue complex_iSQRT2_2  = {0., SQRT2_2};
+    constexpr ComplexValue complex_miSQRT2_2 = {0., -SQRT2_2};
+    constexpr ComplexValue complex_1plusi    = {SQRT2_2, SQRT2_2};
+    constexpr ComplexValue complex_1minusi   = {SQRT2_2, -SQRT2_2};
     constexpr ComplexValue complex_1plusi_2  = {0.5, 0.5};
     constexpr ComplexValue complex_1minusi_2 = {0.5, -0.5};
 
     // Gate matrices
+    using GateMatrix = std::array<ComplexValue, NEDGE>;
     constexpr GateMatrix Imat{complex_one, complex_zero, complex_zero, complex_one};
-    constexpr GateMatrix Hmat{complex_SQRT_2, complex_SQRT_2, complex_SQRT_2, complex_mSQRT_2};
+    constexpr GateMatrix Hmat{complex_SQRT2_2, complex_SQRT2_2, complex_SQRT2_2, complex_mSQRT2_2};
     constexpr GateMatrix Xmat{complex_zero, complex_one, complex_one, complex_zero};
     constexpr GateMatrix Ymat{complex_zero, complex_mi, complex_i, complex_zero};
     constexpr GateMatrix Zmat{complex_one, complex_zero, complex_zero, complex_mone};
@@ -41,8 +41,8 @@ namespace dd {
     constexpr GateMatrix Tdagmat{complex_one, complex_zero, complex_zero, complex_1minusi};
     constexpr GateMatrix SXmat{complex_1plusi_2, complex_1minusi_2, complex_1minusi_2, complex_1plusi_2};
     constexpr GateMatrix SXdagmat{complex_1minusi_2, complex_1plusi_2, complex_1plusi_2, complex_1minusi_2};
-    constexpr GateMatrix Vmat{complex_SQRT_2, complex_miSQRT_2, complex_miSQRT_2, complex_SQRT_2};
-    constexpr GateMatrix Vdagmat{complex_SQRT_2, complex_iSQRT_2, complex_iSQRT_2, complex_SQRT_2};
+    constexpr GateMatrix Vmat{complex_SQRT2_2, complex_miSQRT2_2, complex_miSQRT2_2, complex_SQRT2_2};
+    constexpr GateMatrix Vdagmat{complex_SQRT2_2, complex_iSQRT2_2, complex_iSQRT2_2, complex_SQRT2_2};
 
     inline GateMatrix U3mat(fp lambda, fp phi, fp theta) {
         return GateMatrix{{{std::cos(theta / 2.), 0.},
@@ -52,10 +52,10 @@ namespace dd {
     }
 
     inline GateMatrix U2mat(fp lambda, fp phi) {
-        return GateMatrix{complex_SQRT_2,
-                          {-std::cos(lambda) * SQRT_2, -std::sin(lambda) * SQRT_2},
-                          {std::cos(phi) * SQRT_2, std::sin(phi) * SQRT_2},
-                          {std::cos(lambda + phi) * SQRT_2, std::sin(lambda + phi) * SQRT_2}};
+        return GateMatrix{complex_SQRT2_2,
+                          {-std::cos(lambda) * SQRT2_2, -std::sin(lambda) * SQRT2_2},
+                          {std::cos(phi) * SQRT2_2, std::sin(phi) * SQRT2_2},
+                          {std::cos(lambda + phi) * SQRT2_2, std::sin(lambda + phi) * SQRT2_2}};
     }
 
     inline GateMatrix Phasemat(fp lambda) {
