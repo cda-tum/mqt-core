@@ -104,12 +104,12 @@ jobs:
         with:
           source: 'include test'
           clangFormatVersion: 11
-          inplace: True
-      - uses: EndBug/add-and-commit@v4
-        with:
-          author_name: github-actions
-          author_email: 41898282+github-actions[bot]@users.noreply.github.com
-          message: '🎨 clang-format changes'
+#          inplace: True
+#      - uses: EndBug/add-and-commit@v4
+#        with:
+#          author_name: github-actions
+#          author_email: 41898282+github-actions[bot]@users.noreply.github.com
+#          message: '🎨 clang-format changes'
 
   benchmark:
     needs: test
