@@ -6,6 +6,7 @@
 #ifndef QFR_STANDARDOPERATION_H
 #define QFR_STANDARDOPERATION_H
 
+#include "DDpackage.h"
 #include "GateMatrixDefinitions.h"
 #include "Operation.hpp"
 
