@@ -1,21 +1,22 @@
 /*
- * This file is part of IIC-JKU QFR library which is released under the MIT license.
+ * This file is part of JKQ QFR library which is released under the MIT license.
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
 #include "algorithms/GoogleRandomCircuitSampling.hpp"
 
 namespace qc {
-	GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& filename) {
+    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& filename) {
         importGRCS(filename);
 
         for (unsigned short i = 0; i < nqubits; ++i) {
-            initialLayout.insert({ i, i});
-            outputPermutation.insert({ i, i});
+            initialLayout.insert({i, i});
+            outputPermutation.insert({i, i});
         }
     }
 
-    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& pathPrefix, unsigned short device, unsigned short depth, unsigned short instance): pathPrefix(pathPrefix) {
+    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& pathPrefix, unsigned short device, unsigned short depth, unsigned short instance):
+        pathPrefix(pathPrefix) {
         std::stringstream ss;
         ss << pathPrefix;
         ss << "bristlecone/cz_v2/bris_";
@@ -31,14 +32,15 @@ namespace qc {
         importGRCS(ss.str());
 
         for (unsigned short i = 0; i < nqubits; ++i) {
-            initialLayout.insert({ i, i});
-            outputPermutation.insert({ i, i});
+            initialLayout.insert({i, i});
+            outputPermutation.insert({i, i});
         }
         qregs.insert({"q", std::pair<unsigned short, unsigned short>{0, nqubits}});
-	    cregs.insert({"c", std::pair<unsigned short, unsigned short>{0, nqubits}});
+        cregs.insert({"c", std::pair<unsigned short, unsigned short>{0, nqubits}});
     }
 
-    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& pathPrefix, unsigned short x, unsigned short y, unsigned short depth, unsigned short instance): pathPrefix(pathPrefix) {
+    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& pathPrefix, unsigned short x, unsigned short y, unsigned short depth, unsigned short instance):
+        pathPrefix(pathPrefix) {
         std::stringstream ss;
         ss << pathPrefix;
         ss << "rectangular/cz_v2/";
@@ -58,11 +60,11 @@ namespace qc {
         importGRCS(ss.str());
 
         for (unsigned short i = 0; i < nqubits; ++i) {
-            initialLayout.insert({ i, i});
-            outputPermutation.insert({ i, i});
+            initialLayout.insert({i, i});
+            outputPermutation.insert({i, i});
         }
-	    qregs.insert({"q", {0, nqubits}});
-	    cregs.insert({"c", {0, nqubits}});
+        qregs.insert({"q", {0, nqubits}});
+        cregs.insert({"c", {0, nqubits}});
     }
 
     void GoogleRandomCircuitSampling::importGRCS(const std::string& filename) {
@@ -71,17 +73,17 @@ namespace qc {
             std::cerr << "Error opening/reading from file: " << filename << std::endl;
             exit(3);
         }
-        size_t slash = filename.find_last_of('/');
-        size_t dot = filename.find_last_of('.');
-        std::string benchmark = filename.substr(slash+1, dot-slash-1);
-        name = benchmark;
-        layout = (benchmark[0] == 'b')? Bristlecone: Rectangular;
+        size_t      slash     = filename.find_last_of('/');
+        size_t      dot       = filename.find_last_of('.');
+        std::string benchmark = filename.substr(slash + 1, dot - slash - 1);
+        name                  = benchmark;
+        layout                = (benchmark[0] == 'b') ? Bristlecone : Rectangular;
         ifs >> nqubits;
-        std::string line;
-        std::string identifier;
+        std::string    line;
+        std::string    identifier;
         unsigned short control = 0;
-        unsigned short target = 0;
-        unsigned int cycle = 0;
+        unsigned short target  = 0;
+        unsigned int   cycle   = 0;
         while (std::getline(ifs, line)) {
             if (line.empty()) continue;
             std::stringstream ss(line);
@@ -96,9 +98,9 @@ namespace qc {
                 ss >> target;
                 cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, Control(control), target, Z));
             } else if (identifier == "is") {
-	            ss >> control;
-	            ss >> target;
-	            cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, std::vector<qc::Control>{ }, control, target, iSWAP));
+                ss >> control;
+                ss >> target;
+                cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, std::vector<qc::Control>{}, control, target, iSWAP));
             } else {
                 ss >> target;
                 if (identifier == "h")
@@ -126,10 +128,10 @@ namespace qc {
     std::ostream& GoogleRandomCircuitSampling::print(std::ostream& os) const {
         size_t i = 0;
         size_t j = 0;
-        for (const auto& cycle:cycles) {
+        for (const auto& cycle: cycles) {
             os << "Cycle " << i++ << ":\n";
             for (const auto& op: cycle) {
-                os << std::setw(static_cast<int>(std::log10(getNops())+1.)) << ++j << ": ";
+                os << std::setw(static_cast<int>(std::log10(getNops()) + 1.)) << ++j << ": ";
                 op->print(os, initialLayout);
                 os << std::endl;
             }
@@ -139,25 +141,25 @@ namespace qc {
 
     std::ostream& GoogleRandomCircuitSampling::printStatistics(std::ostream& os) const {
         os << "GoogleRandomCircuitSampling Statistics:\n";
-        os << "\tLayout: " << ((layout == Rectangular)? "Rectangular": "Bristlecone") << std::endl;
+        os << "\tLayout: " << ((layout == Rectangular) ? "Rectangular" : "Bristlecone") << std::endl;
         os << "\tn: " << nqubits << std::endl;
         os << "\tm: " << getNops() << std::endl;
-        os << "\tc: 1 + " << cycles.size()-2 << " + 1" << std::endl;
+        os << "\tc: 1 + " << cycles.size() - 2 << " + 1" << std::endl;
         os << "--------------" << std::endl;
         return os;
     }
 
     dd::Edge GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd) const {
-		std::array<short, MAX_QUBITS> line{};
+        std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
         permutationMap map = initialLayout;
         dd->setMode(dd::Matrix);
 
         dd::Edge e = dd->makeIdent(nqubits);
         dd->incRef(e);
-        for(const auto& cycle:cycles) {
+        for (const auto& cycle: cycles) {
             dd::Edge f = dd->makeIdent(nqubits);
-            for(const auto& op: cycle)
+            for (const auto& op: cycle)
                 f = dd->multiply(op->getDD(dd, line, map), f);
             dd::Edge g = dd->multiply(f, e);
             dd->decRef(e);
@@ -169,12 +171,12 @@ namespace qc {
     }
 
     dd::Edge GoogleRandomCircuitSampling::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const {
-		std::array<short, MAX_QUBITS> line{};
+        std::array<short, MAX_QUBITS> line{};
         line.fill(LINE_DEFAULT);
-	    permutationMap map = initialLayout;
-	    dd->setMode(dd::Vector);
+        permutationMap map = initialLayout;
+        dd->setMode(dd::Vector);
 
-	    dd::Edge e = in;
+        dd::Edge e = in;
         dd->incRef(e);
 
         for (const auto& cycle: cycles) {
@@ -189,4 +191,4 @@ namespace qc {
         }
         return e;
     }
-}
+} // namespace qc

@@ -1,62 +1,69 @@
+/*
+ * This file is part of JKQ QFR library which is released under the MIT license.
+ * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ */
+
 #include "algorithms/BernsteinVazirani.hpp"
 
 // BernsteinVazirani without Entanglement
 namespace qc {
-	/***
+    /***
 	 * Private Methods
 	 ***/
-	void BernsteinVazirani::setup() {
-		for (unsigned short i = 0; i < nqubits; ++i)
-			emplace_back<StandardOperation>(nqubits, i, H);
-	}
+    void BernsteinVazirani::setup() {
+        for (unsigned short i = 0; i < nqubits; ++i)
+            emplace_back<StandardOperation>(nqubits, i, H);
+    }
 
-	void BernsteinVazirani::oracle() {
-		for (unsigned short i = 0; i < nqubits; ++i) {
-			if (((hiddenInteger >> i) & 1) == 1) {
-				emplace_back<StandardOperation>(nqubits, i, Z);
-			}
-		}
-	}
+    void BernsteinVazirani::oracle() {
+        for (unsigned short i = 0; i < nqubits; ++i) {
+            if (((hiddenInteger >> i) & 1) == 1) {
+                emplace_back<StandardOperation>(nqubits, i, Z);
+            }
+        }
+    }
 
-	void BernsteinVazirani::postProcessing() {
-		for (unsigned short i = 0; i < nqubits; ++i)
-			emplace_back<StandardOperation>(nqubits, i, H);
-	}
+    void BernsteinVazirani::postProcessing() {
+        for (unsigned short i = 0; i < nqubits; ++i)
+            emplace_back<StandardOperation>(nqubits, i, H);
+    }
 
-	void BernsteinVazirani::full_BernsteinVazirani() {
-		// Generate circuit
-		setup();
-		oracle();
-		postProcessing();
-	}
+    void BernsteinVazirani::full_BernsteinVazirani() {
+        // Generate circuit
+        setup();
+        oracle();
+        postProcessing();
+    }
 
-	/***
+    /***
 	 * Public Methods
 	 ***/
-	BernsteinVazirani::BernsteinVazirani(unsigned long hiddenInteger) : hiddenInteger(hiddenInteger) {
+    BernsteinVazirani::BernsteinVazirani(unsigned long hiddenInteger):
+        hiddenInteger(hiddenInteger) {
         name = "bv_" + std::to_string(hiddenInteger);
-		// Determine the bitsize of the hidden integer
-		while (hiddenInteger >> ++(size) > 0);
+        // Determine the bitsize of the hidden integer
+        while (hiddenInteger >> ++(size) > 0)
+            ;
 
-		// Prevents a circuit with 0 qubits
-		if (size == 0) {
-			size = 1;
-		}
+        // Prevents a circuit with 0 qubits
+        if (size == 0) {
+            size = 1;
+        }
 
-		// Set nr of Qubits/ClassicalBits
-		addQubitRegister(size);
-		addClassicalRegister(size);
-		
-		// Circuit
-		full_BernsteinVazirani();
-	}
+        // Set nr of Qubits/ClassicalBits
+        addQubitRegister(size);
+        addClassicalRegister(size);
 
-	std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) const {
-		os << "BernsteinVazirani (" << nqubits << ") Statistics:\n";
-		os << "\tn: " << nqubits + 1 << std::endl;
-		os << "\tm: " << getNindividualOps() << std::endl;
-		os << "\tHiddenInteger: " << hiddenInteger << std::endl;
-		os << "--------------" << std::endl;
-		return os;
-	}
-}
+        // Circuit
+        full_BernsteinVazirani();
+    }
+
+    std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) const {
+        os << "BernsteinVazirani (" << nqubits << ") Statistics:\n";
+        os << "\tn: " << nqubits + 1 << std::endl;
+        os << "\tm: " << getNindividualOps() << std::endl;
+        os << "\tHiddenInteger: " << hiddenInteger << std::endl;
+        os << "--------------" << std::endl;
+        return os;
+    }
+} // namespace qc

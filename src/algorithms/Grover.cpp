@@ -1,58 +1,57 @@
 /*
- * This file is part of IIC-JKU QFR library which is released under the MIT license.
+ * This file is part of JKQ QFR library which is released under the MIT license.
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
 #include "algorithms/Grover.hpp"
 
-
 namespace qc {
     /***
      * Private Methods
      ***/
-	void Grover::setup(QuantumComputation& qc) const {
-        qc.emplace_back<StandardOperation>(nqubits+nancillae, nqubits, X);
+    void Grover::setup(QuantumComputation& qc) const {
+        qc.emplace_back<StandardOperation>(nqubits + nancillae, nqubits, X);
         for (unsigned short i = 0; i < nqubits; ++i)
-            qc.emplace_back<StandardOperation>(nqubits+nancillae, i, H);
+            qc.emplace_back<StandardOperation>(nqubits + nancillae, i, H);
     }
 
     void Grover::oracle(QuantumComputation& qc) const {
         const std::bitset<64> xBits(x);
-        std::vector<Control> controls{};
+        std::vector<Control>  controls{};
         for (unsigned short i = 0; i < nqubits; ++i) {
-            controls.emplace_back(i, xBits[i]? Control::pos: Control::neg);
+            controls.emplace_back(i, xBits[i] ? Control::pos : Control::neg);
         }
         unsigned short target = nqubits;
-        qc.emplace_back<StandardOperation>(nqubits+nancillae, controls, target, qc::Z);
+        qc.emplace_back<StandardOperation>(nqubits + nancillae, controls, target, qc::Z);
     }
 
     void Grover::diffusion(QuantumComputation& qc) const {
         //std::vector<unsigned short> targets{};
         for (unsigned short i = 0; i < nqubits; ++i) {
             //targets.push_back(i);
-            qc.emplace_back<StandardOperation>(nqubits+nancillae, i, H);
+            qc.emplace_back<StandardOperation>(nqubits + nancillae, i, H);
         }
         for (unsigned short i = 0; i < nqubits; ++i) {
-            qc.emplace_back<StandardOperation>(nqubits+nancillae, i, X);
+            qc.emplace_back<StandardOperation>(nqubits + nancillae, i, X);
         }
 
         //qc.emplace_back<StandardOperation>(nqubits+nancillae, targets, H);
         //qc.emplace_back<StandardOperation>(nqubits+nancillae, targets, X);
 
-        auto target = static_cast<unsigned short>(std::max(nqubits-1, 0));
-        qc.emplace_back<StandardOperation>(nqubits+nancillae, target, H);
+        auto target = static_cast<unsigned short>(std::max(nqubits - 1, 0));
+        qc.emplace_back<StandardOperation>(nqubits + nancillae, target, H);
         std::vector<Control> controls{};
-        for (unsigned short j = 0; j < nqubits-1; ++j) {
+        for (unsigned short j = 0; j < nqubits - 1; ++j) {
             controls.emplace_back(j);
         }
-        qc.emplace_back<StandardOperation>(nqubits+nancillae, controls, target);
-        qc.emplace_back<StandardOperation>(nqubits+nancillae, target, H);
+        qc.emplace_back<StandardOperation>(nqubits + nancillae, controls, target);
+        qc.emplace_back<StandardOperation>(nqubits + nancillae, target, H);
 
-        for (auto i = static_cast<short>(nqubits-1); i >= 0; --i) {
-            qc.emplace_back<StandardOperation>(nqubits+nancillae, i, X);
+        for (auto i = static_cast<short>(nqubits - 1); i >= 0; --i) {
+            qc.emplace_back<StandardOperation>(nqubits + nancillae, i, X);
         }
-        for (auto i = static_cast<short>(nqubits-1); i >= 0; --i) {
-            qc.emplace_back<StandardOperation>(nqubits+nancillae, i, H);
+        for (auto i = static_cast<short>(nqubits - 1); i >= 0; --i) {
+            qc.emplace_back<StandardOperation>(nqubits + nancillae, i, H);
         }
 
         //qc.emplace_back<StandardOperation>(nqubits+nancillae, targets, X);
@@ -67,43 +66,44 @@ namespace qc {
             oracle(qc);
             diffusion(qc);
         }
-	    // properly uncompute ancillary qubit
-	    qc.emplace_back<StandardOperation>(nqubits+nancillae, nqubits, X);
+        // properly uncompute ancillary qubit
+        qc.emplace_back<StandardOperation>(nqubits + nancillae, nqubits, X);
     }
 
     /***
      * Public Methods
      ***/
-    Grover::Grover(unsigned short nq, unsigned int seed) : seed(seed) {
+    Grover::Grover(unsigned short nq, unsigned int seed):
+        seed(seed) {
         name = "grover_" + std::to_string(nq);
 
         addQubitRegister(nq);
         addAncillaryRegister(1);
-        addClassicalRegister(nq+1);
+        addClassicalRegister(nq + 1);
 
-	    line.fill(LINE_DEFAULT);
+        line.fill(LINE_DEFAULT);
 
-        std::mt19937_64 generator(this->seed);
-        std::uniform_int_distribution<unsigned long long> distribution(0, static_cast<unsigned long long>(std::pow(2.L, std::max(static_cast<unsigned short>(0),nqubits)) - 1.));
+        std::mt19937_64                                   generator(this->seed);
+        std::uniform_int_distribution<unsigned long long> distribution(0, static_cast<unsigned long long>(std::pow(2.L, std::max(static_cast<unsigned short>(0), nqubits)) - 1.));
         oracleGenerator = [&]() { return distribution(generator); };
-        x = oracleGenerator();
+        x               = oracleGenerator();
 
         if (nqubits <= 3) {
             iterations = 1;
-        } else if (nqubits%2 == 0) {
-            iterations = static_cast<unsigned long long>(std::round(PI_4 * std::pow(2.L, (nqubits+1.)/2.L-1.) * std::sqrt(2)));
+        } else if (nqubits % 2 == 0) {
+            iterations = static_cast<unsigned long long>(std::round(PI_4 * std::pow(2.L, (nqubits + 1.) / 2.L - 1.) * std::sqrt(2)));
         } else {
-            iterations = static_cast<unsigned long long>(std::round(PI_4 * std::pow(2.L, (nqubits)/2.L)));
+            iterations = static_cast<unsigned long long>(std::round(PI_4 * std::pow(2.L, (nqubits) / 2.L)));
         }
 
         full_grover(*this);
-	    setLogicalQubitGarbage(nqubits);
+        setLogicalQubitGarbage(nqubits);
     }
 
     dd::Edge Grover::buildFunctionality(std::unique_ptr<dd::Package>& dd) const {
         dd->setMode(dd::Matrix);
 
-        QuantumComputation groverIteration(nqubits+1);
+        QuantumComputation groverIteration(nqubits + 1);
         oracle(groverIteration);
         diffusion(groverIteration);
 
@@ -112,7 +112,7 @@ namespace qc {
         dd::Edge e = iteration;
         dd->incRef(e);
 
-        for (unsigned long long i = 0; i < iterations-1; ++i) {
+        for (unsigned long long i = 0; i < iterations - 1; ++i) {
             dd::Edge f = dd->multiply(iteration, e);
             dd->decRef(e);
             e = f;
@@ -120,18 +120,18 @@ namespace qc {
             dd->garbageCollect();
         }
 
-        QuantumComputation qc(nqubits+nancillae);
+        QuantumComputation qc(nqubits + nancillae);
         setup(qc);
-        auto g = qc.buildFunctionality(dd);
+        auto     g = qc.buildFunctionality(dd);
         dd::Edge f = dd->multiply(e, g);
         dd->decRef(e);
         dd->decRef(g);
         dd->incRef(f);
         e = f;
 
-	    // properly handle ancillary qubit
-	    e = reduceAncillae(e, dd);
-	    e = reduceGarbage(e, dd);
+        // properly handle ancillary qubit
+        e = reduceAncillae(e, dd);
+        e = reduceGarbage(e, dd);
 
         dd->decRef(iteration);
         dd->garbageCollect(true);
@@ -143,15 +143,15 @@ namespace qc {
 
         // initial state too small
         dd::Edge initialState = in;
-        if (in.p->v == nqubits-1) {
-        	initialState = dd->extend(in, 1);
+        if (in.p->v == nqubits - 1) {
+            initialState = dd->extend(in, 1);
         }
         return QuantumComputation::simulate(initialState, dd);
     }
 
     std::ostream& Grover::printStatistics(std::ostream& os) const {
         os << "Grover (" << nqubits << ") Statistics:\n";
-        os << "\tn: " << nqubits+1 << std::endl;
+        os << "\tn: " << nqubits + 1 << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;
         os << "\tseed: " << seed << std::endl;
         os << "\tx: " << x << std::endl;
@@ -160,53 +160,53 @@ namespace qc {
         return os;
     }
 
-	dd::Edge Grover::buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const {
-		dd->setMode(dd::Matrix);
+    dd::Edge Grover::buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const {
+        dd->setMode(dd::Matrix);
 
-		QuantumComputation groverIteration(nqubits+1);
-		oracle(groverIteration);
-		diffusion(groverIteration);
+        QuantumComputation groverIteration(nqubits + 1);
+        oracle(groverIteration);
+        diffusion(groverIteration);
 
-		auto iter = groverIteration.buildFunctionalityRecursive(dd);
-		auto e = iter;
-		std::bitset<64> iterBits(iterations);
-		auto msb = static_cast<unsigned short>(std::floor(std::log2(iterations)));
-		dd::Edge f = iter;
-		dd->incRef(f);
-		bool zero = !iterBits[0];
-		for (unsigned int j=1; j <= msb; ++j) {
-			auto tmp = dd->multiply(f,f);
-			dd->incRef(tmp);
-			dd->decRef(f);
-			f = tmp;
-			if (iterBits[j]) {
-				if (zero) {
-					e = f;
-					dd->incRef(e);
-					zero = false;
-				} else {
-					auto g = dd->multiply(e,f);
-					dd->incRef(g);
-					dd->decRef(e);
-					e = g;
-					dd->garbageCollect();
-				}
-			}
-		}
+        auto            iter = groverIteration.buildFunctionalityRecursive(dd);
+        auto            e    = iter;
+        std::bitset<64> iterBits(iterations);
+        auto            msb = static_cast<unsigned short>(std::floor(std::log2(iterations)));
+        dd::Edge        f   = iter;
+        dd->incRef(f);
+        bool zero = !iterBits[0];
+        for (unsigned int j = 1; j <= msb; ++j) {
+            auto tmp = dd->multiply(f, f);
+            dd->incRef(tmp);
+            dd->decRef(f);
+            f = tmp;
+            if (iterBits[j]) {
+                if (zero) {
+                    e = f;
+                    dd->incRef(e);
+                    zero = false;
+                } else {
+                    auto g = dd->multiply(e, f);
+                    dd->incRef(g);
+                    dd->decRef(e);
+                    e = g;
+                    dd->garbageCollect();
+                }
+            }
+        }
 
-		// apply state preparation setup
-		qc::QuantumComputation statePrep(nqubits+1);
-		setup(statePrep);
-		auto s = statePrep.buildFunctionality(dd);
-		auto tmp = dd->multiply(e, s);
-		dd->incRef(tmp);
-		dd->decRef(e);
-		e = tmp;
+        // apply state preparation setup
+        qc::QuantumComputation statePrep(nqubits + 1);
+        setup(statePrep);
+        auto s   = statePrep.buildFunctionality(dd);
+        auto tmp = dd->multiply(e, s);
+        dd->incRef(tmp);
+        dd->decRef(e);
+        e = tmp;
 
-		// properly handle ancillary qubit
-		e = reduceAncillae(e, dd);
-		e = reduceGarbage(e, dd);
+        // properly handle ancillary qubit
+        e = reduceAncillae(e, dd);
+        e = reduceGarbage(e, dd);
 
-		return e;
-	}
-}
+        return e;
+    }
+} // namespace qc

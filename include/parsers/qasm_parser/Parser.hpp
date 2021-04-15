@@ -1,226 +1,248 @@
 /*
- * This file is part of IIC-JKU QFR library which is released under the MIT license.
+ * This file is part of JKQ QFR library which is released under the MIT license.
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#ifndef INTERMEDIATEREPRESENTATION_PARSER_H
-#define INTERMEDIATEREPRESENTATION_PARSER_H
-
-#include <utility>
-#include <vector>
-#include <set>
-#include <cmath>
-#include <iostream>
-#include <stdexcept>
-#include <sstream>
-#include <regex>
+#ifndef QFR_PARSER_H
+#define QFR_PARSER_H
 
 #include "Scanner.hpp"
-#include "operations/StandardOperation.hpp"
-#include "operations/NonUnitaryOperation.hpp"
 #include "operations/CompoundOperation.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/StandardOperation.hpp"
+
+#include <cmath>
+#include <iostream>
+#include <regex>
+#include <set>
+#include <sstream>
+#include <stdexcept>
+#include <utility>
+#include <vector>
 
 namespace qasm {
-	static constexpr long double PI = 3.14159265358979323846264338327950288419716939937510L;
+    static constexpr long double PI = 3.14159265358979323846264338327950288419716939937510L;
 
-	using registerMap = std::map<std::string, std::pair<unsigned short, unsigned short>, std::greater<>>;
-	using permutationMap = std::map<unsigned short, unsigned short>;
+    using registerMap    = std::map<std::string, std::pair<unsigned short, unsigned short>, std::greater<>>;
+    using permutationMap = std::map<unsigned short, unsigned short>;
 
-	class QASMParserException : public std::invalid_argument {
-		std::string msg;
-	public:
-		explicit QASMParserException(const std::string& msg) : std::invalid_argument("QASM Parser Exception") {
-			std::stringstream ss{};
-			ss << "[qasm parser] " << msg;
-			this->msg = ss.str();
-		}
+    class QASMParserException: public std::invalid_argument {
+        std::string msg;
 
-		[[nodiscard]] const char *what() const noexcept override {
-			return msg.c_str();
-		}
-	};
+    public:
+        explicit QASMParserException(const std::string& msg):
+            std::invalid_argument("QASM Parser Exception") {
+            std::stringstream ss{};
+            ss << "[qasm parser] " << msg;
+            this->msg = ss.str();
+        }
 
-	class Parser {
+        [[nodiscard]] const char* what() const noexcept override {
+            return msg.c_str();
+        }
+    };
 
-		struct Expr {
-			enum class Kind {
-				number, plus, minus, sign, times, sin, cos, tan, exp, ln, sqrt, div, power, id
-			};
-			fp num;
-			Kind kind;
-			Expr* op1 = nullptr;
-			Expr* op2 = nullptr;
-			std::string id;
+    class Parser {
+        struct Expr {
+            enum class Kind {
+                number,
+                plus,
+                minus,
+                sign,
+                times,
+                sin,
+                cos,
+                tan,
+                exp,
+                ln,
+                sqrt,
+                div,
+                power,
+                id
+            };
+            fp          num;
+            Kind        kind;
+            Expr*       op1 = nullptr;
+            Expr*       op2 = nullptr;
+            std::string id;
 
-			explicit Expr(Kind kind, fp num = 0., Expr *op1 = nullptr, Expr *op2 = nullptr, std::string id = "") : num(num), kind(kind), op1(op1), op2(op2), id(std::move(id)) { }
-			Expr(const Expr& expr): num(expr.num), kind(expr.kind), id(expr.id) {
-				if (expr.op1 != nullptr)
-					op1 = new Expr(*expr.op1);
-				if (expr.op2 != nullptr)
-					op2 = new Expr(*expr.op2);
-			}
-			Expr& operator=(const Expr& expr) {
-				if (&expr == this)
-					return *this;
+            explicit Expr(Kind kind, fp num = 0., Expr* op1 = nullptr, Expr* op2 = nullptr, std::string id = ""):
+                num(num), kind(kind), op1(op1), op2(op2), id(std::move(id)) {}
+            Expr(const Expr& expr):
+                num(expr.num), kind(expr.kind), id(expr.id) {
+                if (expr.op1 != nullptr)
+                    op1 = new Expr(*expr.op1);
+                if (expr.op2 != nullptr)
+                    op2 = new Expr(*expr.op2);
+            }
+            Expr& operator=(const Expr& expr) {
+                if (&expr == this)
+                    return *this;
 
-				num = expr.num;
-				kind = expr.kind;
-				id = expr.id;
-				delete op1;
-				delete op2;
+                num  = expr.num;
+                kind = expr.kind;
+                id   = expr.id;
+                delete op1;
+                delete op2;
 
-				if (expr.op1 != nullptr)
-					op1 = new Expr(*expr.op1);
-				else
-					op1 = nullptr;
+                if (expr.op1 != nullptr)
+                    op1 = new Expr(*expr.op1);
+                else
+                    op1 = nullptr;
 
-				if (expr.op2 != nullptr)
-					op2 = new Expr(*expr.op2);
-				else
-					op2 = nullptr;
+                if (expr.op2 != nullptr)
+                    op2 = new Expr(*expr.op2);
+                else
+                    op2 = nullptr;
 
-				return *this;
-			}
+                return *this;
+            }
 
-			virtual ~Expr() {
-				delete op1;
-				delete op2;
-			}
-		};
+            virtual ~Expr() {
+                delete op1;
+                delete op2;
+            }
+        };
 
-		struct BasisGate {
-			virtual ~BasisGate() = default;
-		};
-		
-		struct Ugate : public BasisGate {
-			Expr *theta = nullptr;
-			Expr *phi = nullptr;
-			Expr *lambda = nullptr;
-			std::string target;
+        struct BasisGate {
+            virtual ~BasisGate() = default;
+        };
 
-			Ugate(Expr *theta, Expr *phi, Expr *lambda, std::string  target) : theta(theta), phi(phi), lambda(lambda), target(std::move(target)) { }
+        struct Ugate: public BasisGate {
+            Expr*       theta  = nullptr;
+            Expr*       phi    = nullptr;
+            Expr*       lambda = nullptr;
+            std::string target;
 
-			~Ugate() override {
-				delete theta;
-				delete phi;
-				delete lambda;
-			}
-		};
+            Ugate(Expr* theta, Expr* phi, Expr* lambda, std::string target):
+                theta(theta), phi(phi), lambda(lambda), target(std::move(target)) {}
 
-		struct CUgate : public BasisGate {
-			Expr *theta = nullptr;
-			Expr *phi = nullptr;
-			Expr *lambda = nullptr;
-			std::vector<std::string> controls;
-			std::string target;
+            ~Ugate() override {
+                delete theta;
+                delete phi;
+                delete lambda;
+            }
+        };
 
-			CUgate(Expr *theta, Expr *phi, Expr *lambda, std::vector<std::string> controls, std::string  target) : theta(theta), phi(phi), lambda(lambda), controls(std::move(controls)), target(std::move(target)) { }
+        struct CUgate: public BasisGate {
+            Expr*                    theta  = nullptr;
+            Expr*                    phi    = nullptr;
+            Expr*                    lambda = nullptr;
+            std::vector<std::string> controls;
+            std::string              target;
 
-			~CUgate() override {
-				delete theta;
-				delete phi;
-				delete lambda;
-			}
-		};
+            CUgate(Expr* theta, Expr* phi, Expr* lambda, std::vector<std::string> controls, std::string target):
+                theta(theta), phi(phi), lambda(lambda), controls(std::move(controls)), target(std::move(target)) {}
 
-		struct CXgate : public BasisGate {
-			std::string control;
-			std::string target;
+            ~CUgate() override {
+                delete theta;
+                delete phi;
+                delete lambda;
+            }
+        };
 
-			CXgate(std::string  control, std::string  target) : control(std::move(control)), target(std::move(target)) { }
-		};
+        struct CXgate: public BasisGate {
+            std::string control;
+            std::string target;
 
-		struct SWAPgate : public BasisGate {
-			std::string target0;
-			std::string target1;
+            CXgate(std::string control, std::string target):
+                control(std::move(control)), target(std::move(target)) {}
+        };
 
-			SWAPgate(std::string target0, std::string target1) : target0(std::move(target0)), target1(std::move(target1)) { }
-		};
+        struct SWAPgate: public BasisGate {
+            std::string target0;
+            std::string target1;
 
-		struct MCXgate : public BasisGate {
-			std::vector<std::string> controls;
-			std::string target;
+            SWAPgate(std::string target0, std::string target1):
+                target0(std::move(target0)), target1(std::move(target1)) {}
+        };
 
-			MCXgate(std::vector<std::string> controls, std::string target) : controls(std::move(controls)), target(std::move(target)) { }
-		};
-		
-		struct CompoundGate {
-			std::vector<std::string> parameterNames;
-			std::vector<std::string> argumentNames;
-			std::vector<BasisGate*>  gates;
-		};
+        struct MCXgate: public BasisGate {
+            std::vector<std::string> controls;
+            std::string              target;
 
-		std::istream&                       in;
-		std::set<Token::Kind>               unaryops{ Token::Kind::sin, Token::Kind::cos, Token::Kind::tan, Token::Kind::exp, Token::Kind::ln, Token::Kind::sqrt };
-		std::map<std::string, CompoundGate> compoundGates;
+            MCXgate(std::vector<std::string> controls, std::string target):
+                controls(std::move(controls)), target(std::move(target)) {}
+        };
 
-		Expr* Exponentiation();
-		Expr* Factor();
-		Expr* Term();
-		Expr* Exp();
+        struct CompoundGate {
+            std::vector<std::string> parameterNames;
+            std::vector<std::string> argumentNames;
+            std::vector<BasisGate*>  gates;
+        };
 
-		static Expr *RewriteExpr(Expr *expr, std::map<std::string, Expr *>& exprMap);
+        std::istream&                       in;
+        std::set<Token::Kind>               unaryops{Token::Kind::sin, Token::Kind::cos, Token::Kind::tan, Token::Kind::exp, Token::Kind::ln, Token::Kind::sqrt};
+        std::map<std::string, CompoundGate> compoundGates;
 
-	public:
-		Token          la, t;
-		Token::Kind    sym = Token::Kind::none;
-		Scanner       *scanner;
-		registerMap&   qregs;
-		registerMap&   cregs;
-		unsigned short nqubits = 0;
-		unsigned short nclassics = 0;
-		permutationMap initialLayout{ };
-		permutationMap outputPermutation{ };
+        Expr* Exponentiation();
+        Expr* Factor();
+        Expr* Term();
+        Expr* Exp();
 
-		explicit Parser(std::istream& is, registerMap& qregs, registerMap& cregs) :in(is), qregs(qregs), cregs(cregs) {
-			scanner = new Scanner(in);
-		}
+        static Expr* RewriteExpr(Expr* expr, std::map<std::string, Expr*>& exprMap);
 
-		virtual ~Parser() {
-			delete scanner;
+    public:
+        Token          la, t;
+        Token::Kind    sym = Token::Kind::none;
+        Scanner*       scanner;
+        registerMap&   qregs;
+        registerMap&   cregs;
+        unsigned short nqubits   = 0;
+        unsigned short nclassics = 0;
+        permutationMap initialLayout{};
+        permutationMap outputPermutation{};
 
-			for (auto& cGate:compoundGates)
-				for (auto& gate: cGate.second.gates)
-					delete gate;
-		}
+        explicit Parser(std::istream& is, registerMap& qregs, registerMap& cregs):
+            in(is), qregs(qregs), cregs(cregs) {
+            scanner = new Scanner(in);
+        }
 
-		void scan();
+        virtual ~Parser() {
+            delete scanner;
 
-		void check(Token::Kind expected);
+            for (auto& cGate: compoundGates)
+                for (auto& gate: cGate.second.gates)
+                    delete gate;
+        }
 
-		std::pair<unsigned short , unsigned short> ArgumentQreg();
+        void scan();
 
-		std::pair<unsigned short, unsigned short> ArgumentCreg();
+        void check(Token::Kind expected);
 
-		void ExpList(std::vector<Expr*>& expressions);
+        std::pair<unsigned short, unsigned short> ArgumentQreg();
 
-		void ArgList(std::vector<std::pair<unsigned short, unsigned short>>& arguments);
+        std::pair<unsigned short, unsigned short> ArgumentCreg();
 
-		void IdList(std::vector<std::string>& identifiers);
+        void ExpList(std::vector<Expr*>& expressions);
 
-		std::unique_ptr<qc::Operation> Gate();
+        void ArgList(std::vector<std::pair<unsigned short, unsigned short>>& arguments);
 
-		void OpaqueGateDecl();
+        void IdList(std::vector<std::string>& identifiers);
 
-		void GateDecl();
+        std::unique_ptr<qc::Operation> Gate();
 
-		std::unique_ptr<qc::Operation> Qop();
+        void OpaqueGateDecl();
 
-		void error [[ noreturn ]](const std::string& msg) const {
-			std::ostringstream oss{};
-			oss << "l:" << t.line << " c:" << t.col << " msg: " << msg;
-			throw QASMParserException(oss.str());
-		}
+        void GateDecl();
 
-		void handleComment();
-		// check string for I/O layout information of the form
-		//      'i Q_i Q_j ... Q_k' meaning, e.g. q_0 is mapped to Q_i, q_1 to Q_j, etc.
-		//      'o Q_i Q_j ... Q_k' meaning, e.g. q_0 is found at Q_i, q_1 at Q_j, etc.
-		// where i describes the initial layout, e.g. 'i 2 1 0' means q0 -> Q2, q1 -> Q1, q2 -> Q0
-		// and o describes the output permutation, e.g. 'o 2 1 0' means  q0 is expected at Q2, q1 at Q1, and q2 at Q0
-		static permutationMap checkForInitialLayout(std::string comment);
-		static permutationMap checkForOutputPermutation(std::string comment);
-	};
+        std::unique_ptr<qc::Operation> Qop();
 
-}
-#endif //INTERMEDIATEREPRESENTATION_PARSER_H
+        void error [[noreturn]] (const std::string& msg) const {
+            std::ostringstream oss{};
+            oss << "l:" << t.line << " c:" << t.col << " msg: " << msg;
+            throw QASMParserException(oss.str());
+        }
+
+        void handleComment();
+        // check string for I/O layout information of the form
+        //      'i Q_i Q_j ... Q_k' meaning, e.g. q_0 is mapped to Q_i, q_1 to Q_j, etc.
+        //      'o Q_i Q_j ... Q_k' meaning, e.g. q_0 is found at Q_i, q_1 at Q_j, etc.
+        // where i describes the initial layout, e.g. 'i 2 1 0' means q0 -> Q2, q1 -> Q1, q2 -> Q0
+        // and o describes the output permutation, e.g. 'o 2 1 0' means  q0 is expected at Q2, q1 at Q1, and q2 at Q0
+        static permutationMap checkForInitialLayout(std::string comment);
+        static permutationMap checkForOutputPermutation(std::string comment);
+    };
+
+} // namespace qasm
+#endif //QFR_PARSER_H
