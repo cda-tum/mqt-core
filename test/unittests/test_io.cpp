@@ -20,7 +20,7 @@ protected:
         qc = std::make_unique<qc::QuantumComputation>();
     }
 
-    unsigned short                          nqubits = 0;
+    dd::QubitCount                          nqubits = 0;
     unsigned int                            seed    = 0;
     std::string                             output  = "tmp.txt";
     std::string                             output2 = "tmp2.txt";

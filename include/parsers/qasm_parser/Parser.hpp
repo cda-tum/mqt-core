@@ -6,6 +6,7 @@
 #ifndef QFR_PARSER_H
 #define QFR_PARSER_H
 
+#include "Definitions.hpp"
 #include "Scanner.hpp"
 #include "operations/CompoundOperation.hpp"
 #include "operations/NonUnitaryOperation.hpp"
@@ -21,11 +22,6 @@
 #include <vector>
 
 namespace qasm {
-    static constexpr long double PI = 3.14159265358979323846264338327950288419716939937510L;
-
-    using registerMap    = std::map<std::string, std::pair<unsigned short, unsigned short>, std::greater<>>;
-    using permutationMap = std::map<unsigned short, unsigned short>;
-
     class QASMParserException: public std::invalid_argument {
         std::string msg;
 
@@ -60,13 +56,13 @@ namespace qasm {
                 power,
                 id
             };
-            fp          num;
+            dd::fp      num;
             Kind        kind;
             Expr*       op1 = nullptr;
             Expr*       op2 = nullptr;
             std::string id;
 
-            explicit Expr(Kind kind, fp num = 0., Expr* op1 = nullptr, Expr* op2 = nullptr, std::string id = ""):
+            explicit Expr(Kind kind, dd::fp num = 0., Expr* op1 = nullptr, Expr* op2 = nullptr, std::string id = ""):
                 num(num), kind(kind), op1(op1), op2(op2), id(std::move(id)) {}
             Expr(const Expr& expr):
                 num(expr.num), kind(expr.kind), id(expr.id) {
@@ -183,17 +179,17 @@ namespace qasm {
         static Expr* RewriteExpr(Expr* expr, std::map<std::string, Expr*>& exprMap);
 
     public:
-        Token          la, t;
-        Token::Kind    sym = Token::Kind::none;
-        Scanner*       scanner;
-        registerMap&   qregs;
-        registerMap&   cregs;
-        unsigned short nqubits   = 0;
-        unsigned short nclassics = 0;
-        permutationMap initialLayout{};
-        permutationMap outputPermutation{};
+        Token                     la, t;
+        Token::Kind               sym = Token::Kind::none;
+        Scanner*                  scanner;
+        qc::QuantumRegisterMap&   qregs;
+        qc::ClassicalRegisterMap& cregs;
+        dd::QubitCount            nqubits   = 0;
+        std::size_t               nclassics = 0;
+        qc::Permutation           initialLayout{};
+        qc::Permutation           outputPermutation{};
 
-        explicit Parser(std::istream& is, registerMap& qregs, registerMap& cregs):
+        explicit Parser(std::istream& is, qc::QuantumRegisterMap& qregs, qc::ClassicalRegisterMap& cregs):
             in(is), qregs(qregs), cregs(cregs) {
             scanner = new Scanner(in);
         }
@@ -210,13 +206,13 @@ namespace qasm {
 
         void check(Token::Kind expected);
 
-        std::pair<unsigned short, unsigned short> ArgumentQreg();
+        qc::QuantumRegister ArgumentQreg();
 
-        std::pair<unsigned short, unsigned short> ArgumentCreg();
+        qc::ClassicalRegister ArgumentCreg();
 
         void ExpList(std::vector<Expr*>& expressions);
 
-        void ArgList(std::vector<std::pair<unsigned short, unsigned short>>& arguments);
+        void ArgList(std::vector<qc::QuantumRegister>& arguments);
 
         void IdList(std::vector<std::string>& identifiers);
 
@@ -240,8 +236,8 @@ namespace qasm {
         //      'o Q_i Q_j ... Q_k' meaning, e.g. q_0 is found at Q_i, q_1 at Q_j, etc.
         // where i describes the initial layout, e.g. 'i 2 1 0' means q0 -> Q2, q1 -> Q1, q2 -> Q0
         // and o describes the output permutation, e.g. 'o 2 1 0' means  q0 is expected at Q2, q1 at Q1, and q2 at Q0
-        static permutationMap checkForInitialLayout(std::string comment);
-        static permutationMap checkForOutputPermutation(std::string comment);
+        static qc::Permutation checkForInitialLayout(std::string comment);
+        static qc::Permutation checkForOutputPermutation(std::string comment);
     };
 
 } // namespace qasm

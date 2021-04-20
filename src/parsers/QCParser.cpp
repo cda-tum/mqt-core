@@ -6,12 +6,12 @@
 #include "QuantumComputation.hpp"
 
 void qc::QuantumComputation::importQC(std::istream& is) {
-    std::map<std::string, unsigned short> varMap{};
-    auto                                  line = readQCHeader(is, varMap);
+    std::map<std::string, dd::Qubit> varMap{};
+    auto                             line = readQCHeader(is, varMap);
     readQCGateDescriptions(is, line, varMap);
 }
 
-int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string, unsigned short>& varMap) {
+int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string, dd::Qubit>& varMap) {
     std::string cmd;
     std::string variable;
     std::string identifier;
@@ -135,15 +135,15 @@ int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string,
     }
 
     for (size_t q = 0; q < variables.size(); ++q) {
-        variable         = variables.at(q);
-        auto p           = varMap.at(variable);
-        initialLayout[q] = p;
+        variable                                 = variables.at(q);
+        auto p                                   = varMap.at(variable);
+        initialLayout[static_cast<dd::Qubit>(q)] = p;
         if (!outputs.empty()) {
             if (std::count(outputs.begin(), outputs.end(), variable)) {
-                outputPermutation[q] = p;
+                outputPermutation[static_cast<dd::Qubit>(q)] = p;
             } else {
-                outputPermutation.erase(q);
-                garbage.set(p);
+                outputPermutation.erase(static_cast<dd::Qubit>(q));
+                garbage.at(p) = true;
             }
         } else {
             // no output statement given --> assume all outputs are relevant
@@ -154,7 +154,7 @@ int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string,
     return line;
 }
 
-void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, std::map<std::string, unsigned short>& varMap) {
+void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, std::map<std::string, dd::Qubit>& varMap) {
     std::regex  gateRegex = std::regex(R"((H|X|Y|Zd?|[SPT]\*?|tof|cnot|swap|R[xyz])(?:\((pi\/2\^(\d+)|(?:[-+]?[0-9]+[.]?[0-9]*(?:[eE][-+]?[0-9]+)?))\))?)");
     std::smatch m;
     std::string cmd;
@@ -179,7 +179,7 @@ void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, 
             }
 
             // extract gate information (identifier, #controls, divisor)
-            fp          lambda   = static_cast<fp>(0L);
+            auto        lambda   = static_cast<dd::fp>(0L);
             OpType      gate     = None;
             std::string gateType = m.str(1);
             if (gateType == "H") {
@@ -211,18 +211,18 @@ void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, 
             if (gate == RX || gate == RY || gate == RZ) {
                 if (m.str(3).empty()) {
                     // float definition
-                    lambda = static_cast<fp>(std::stold(m.str(2)));
+                    lambda = static_cast<dd::fp>(std::stold(m.str(2)));
                 } else if (!m.str(2).empty()) {
                     // pi/2^x definition
                     auto power = std::stoul(m.str(3));
                     if (power == 0UL) {
-                        lambda = PI;
+                        lambda = dd::PI;
                     } else if (power == 1UL) {
-                        lambda = PI_2;
+                        lambda = dd::PI_2;
                     } else if (power == 2UL) {
-                        lambda = PI_4;
+                        lambda = dd::PI_4;
                     } else {
-                        lambda = PI_4 / (std::pow(static_cast<fp>(2), power - 2UL));
+                        lambda = dd::PI_4 / (std::pow(static_cast<dd::fp>(2), power - 2UL));
                     }
                 } else {
                     throw QFRException("Rotation gate without angle detected");
@@ -233,7 +233,7 @@ void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, 
             is >> std::ws;
             getline(is, qubits);
 
-            std::vector<Control> controls{};
+            std::vector<dd::Control> controls{};
 
             auto   delimiter = ' ';
             size_t pos;
@@ -242,38 +242,38 @@ void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, 
                 label = qubits.substr(0, pos);
                 if (label.back() == '\'') {
                     label.erase(label.size() - 1);
-                    controls.emplace_back(varMap.at(label), Control::neg);
+                    controls.emplace_back(dd::Control{varMap.at(label), dd::Control::Type::neg});
                 } else {
-                    controls.emplace_back(varMap.at(label));
+                    controls.emplace_back(dd::Control{varMap.at(label)});
                 }
                 qubits.erase(0, pos + 1);
             }
             // delete whitespace at the end
             qubits.erase(std::remove(qubits.begin(), qubits.end(), delimiter), qubits.end());
-            controls.emplace_back(varMap.at(qubits));
+            controls.emplace_back(dd::Control{varMap.at(qubits)});
 
             if (controls.size() > nqubits + nancillae) {
                 throw QFRException("[qc parser] l:" + std::to_string(line) + " msg: Gate acts on " + std::to_string(controls.size()) + " qubits, but only " + std::to_string(nqubits + nancillae) + " qubits are available.");
             }
 
             if (gate == X) {
-                unsigned short target = controls.back().qubit;
+                dd::Qubit target = controls.back().qubit;
                 controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, controls, target);
+                emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target);
             } else if (gate == H || gate == Y || gate == Z || gate == S || gate == Sdag || gate == T || gate == Tdag) {
-                unsigned short target = controls.back().qubit;
+                dd::Qubit target = controls.back().qubit;
                 controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, controls, target, gate);
+                emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, gate);
             } else if (gate == SWAP) {
-                unsigned short target0 = controls.back().qubit;
+                dd::Qubit target0 = controls.back().qubit;
                 controls.pop_back();
-                unsigned short target1 = controls.back().qubit;
+                dd::Qubit target1 = controls.back().qubit;
                 controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, controls, target0, target1, gate);
+                emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target0, target1, gate);
             } else if (gate == RX || gate == RY || gate == RZ) {
-                unsigned short target = controls.back().qubit;
+                dd::Qubit target = controls.back().qubit;
                 controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, controls, target, gate, lambda);
+                emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, gate, lambda);
             }
         }
     }

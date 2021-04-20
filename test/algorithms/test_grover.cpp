@@ -9,11 +9,13 @@
 #include <cmath>
 #include <iostream>
 
-class Grover: public testing::TestWithParam<std::tuple<unsigned short, unsigned int>> {
+class Grover: public testing::TestWithParam<std::tuple<dd::QubitCount, std::size_t>> {
 protected:
     void TearDown() override {
-        if (!dd->isTerminal(e))
-            dd->decRef(e);
+        if (!sim.isTerminal())
+            dd->decRef(sim);
+        if (!func.isTerminal())
+            dd->decRef(func);
         dd->garbageCollect(true);
 
         // number of complex table entries after clean-up should equal initial number of entries
@@ -22,39 +24,41 @@ protected:
         //	dd->cn.printComplexTable();
         //}
         // number of available cache entries after clean-up should equal initial number of entries
-        EXPECT_EQ(dd->cn.cacheCount, initialCacheCount);
+        EXPECT_EQ(dd->cn.complexCache.getCount(), initialCacheCount);
     }
 
     void SetUp() override {
-        dd                  = std::make_unique<dd::Package>();
-        initialCacheCount   = dd->cn.cacheCount;
-        initialComplexCount = dd->cn.count;
+        std::tie(nqubits, seed) = GetParam();
+        dd                      = std::make_unique<dd::Package>(nqubits + 1);
+        initialCacheCount       = dd->cn.complexCache.getCount();
+        initialComplexCount     = dd->cn.complexTable.getCount();
     }
 
-    unsigned short               nqubits = 0;
-    unsigned int                 seed    = 0;
+    dd::QubitCount               nqubits = 0;
+    std::size_t                  seed    = 0;
     std::unique_ptr<dd::Package> dd;
     std::unique_ptr<qc::Grover>  qc;
-    long                         initialCacheCount   = 0;
-    unsigned int                 initialComplexCount = 0;
-    dd::Edge                     e{};
+    std::size_t                  initialCacheCount   = 0;
+    std::size_t                  initialComplexCount = 0;
+    qc::VectorDD                 sim{};
+    qc::MatrixDD                 func{};
 };
 
-constexpr unsigned short GROVER_MAX_QUBITS       = 14;
-constexpr unsigned int   GROVER_NUM_SEEDS        = 5;
-constexpr fp             GROVER_ACCURACY         = 1e-8;
-constexpr fp             GROVER_GOAL_PROBABILITY = 0.9;
+constexpr dd::QubitCount GROVER_MAX_QUBITS       = 23;
+constexpr std::size_t    GROVER_NUM_SEEDS        = 5;
+constexpr dd::fp         GROVER_ACCURACY         = 1e-2;
+constexpr dd::fp         GROVER_GOAL_PROBABILITY = 0.9;
 
 INSTANTIATE_TEST_SUITE_P(Grover,
                          Grover,
                          testing::Combine(
-                                 testing::Range((unsigned short)2, (unsigned short)(GROVER_MAX_QUBITS + 1), 3),
-                                 testing::Range((unsigned int)0, GROVER_NUM_SEEDS)),
+                                 testing::Range(static_cast<dd::QubitCount>(2), static_cast<dd::QubitCount>(GROVER_MAX_QUBITS + 1), 3),
+                                 testing::Range(static_cast<std::size_t>(0), GROVER_NUM_SEEDS)),
                          [](const testing::TestParamInfo<Grover::ParamType>& info) {
-	                         unsigned short nqubits = std::get<0>(info.param);
-	                         unsigned int seed = std::get<1>(info.param);
+	                         dd::QubitCount nqubits = std::get<0>(info.param);
+	                         std::size_t seed = std::get<1>(info.param);
 	                         std::stringstream ss{};
-	                         ss << nqubits+1;
+	                         ss << static_cast<std::size_t>(nqubits+1);
 	                         if (nqubits == 0) {
 		                         ss << "_qubit_";
 	                         } else {
@@ -64,8 +68,6 @@ INSTANTIATE_TEST_SUITE_P(Grover,
 	                         return ss.str(); });
 
 TEST_P(Grover, Functionality) {
-    std::tie(nqubits, seed) = GetParam();
-
     // there should be no error constructing the circuit
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
@@ -73,21 +75,17 @@ TEST_P(Grover, Functionality) {
     unsigned long long x = dynamic_cast<qc::Grover*>(qc.get())->x;
 
     // there should be no error building the functionality
-    ASSERT_NO_THROW({ e = qc->buildFunctionality(dd); });
+    ASSERT_NO_THROW({ func = qc->buildFunctionality(dd); });
 
     // amplitude of the searched-for entry should be 1
-    auto c = qc->getEntry(dd, e, x, 0);
-    EXPECT_NEAR(std::abs(CN::val(c.r)), 1, GROVER_ACCURACY);
-    EXPECT_NEAR(CN::val(c.i), 0, GROVER_ACCURACY);
-
-    CN::mul(c, c, e.w);
-    auto prob = CN::mag2(c);
+    auto c = dd->getValueByPath(func, x, 0);
+    EXPECT_NEAR(std::abs(c.r), 1, GROVER_ACCURACY);
+    EXPECT_NEAR(std::abs(c.i), 0, GROVER_ACCURACY);
+    auto prob = c.r * c.r + c.i * c.i;
     EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }
 
 TEST_P(Grover, FunctionalityRecursive) {
-    std::tie(nqubits, seed) = GetParam();
-
     // there should be no error constructing the circuit
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
@@ -95,31 +93,27 @@ TEST_P(Grover, FunctionalityRecursive) {
     unsigned long long x = dynamic_cast<qc::Grover*>(qc.get())->x;
 
     // there should be no error building the functionality
-    ASSERT_NO_THROW({ e = qc->buildFunctionalityRecursive(dd); });
+    ASSERT_NO_THROW({ func = qc->buildFunctionalityRecursive(dd); });
 
     // amplitude of the searched-for entry should be 1
-    auto c = qc->getEntry(dd, e, x, 0);
-    EXPECT_NEAR(std::abs(CN::val(c.r)), 1, GROVER_ACCURACY);
-    EXPECT_NEAR(CN::val(c.i), 0, GROVER_ACCURACY);
-
-    CN::mul(c, c, e.w);
-    auto prob = CN::mag2(c);
+    auto c = dd->getValueByPath(func, x, 0);
+    EXPECT_NEAR(std::abs(c.r), 1, GROVER_ACCURACY);
+    EXPECT_NEAR(std::abs(c.i), 0, GROVER_ACCURACY);
+    auto prob = c.r * c.r + c.i * c.i;
     EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }
 
 TEST_P(Grover, Simulation) {
-    std::tie(nqubits, seed) = GetParam();
-
     // there should be no error constructing the circuit
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
     qc->printStatistics(std::cout);
-    unsigned long long x  = dynamic_cast<qc::Grover*>(qc.get())->x;
-    dd::Edge           in = dd->makeZeroState(nqubits + 1);
+    std::size_t x  = dynamic_cast<qc::Grover*>(qc.get())->x;
+    auto        in = dd->makeZeroState(nqubits + 1);
     // there should be no error simulating the circuit
-    ASSERT_NO_THROW({ e = qc->simulate(in, dd); });
+    ASSERT_NO_THROW({ sim = qc->simulate(in, dd); });
 
-    auto c    = qc->getEntry(dd, e, x, 0);
-    auto prob = CN::mag2(c);
+    auto c    = dd->getValueByPath(sim, x);
+    auto prob = c.r * c.r + c.i * c.i;
     EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }

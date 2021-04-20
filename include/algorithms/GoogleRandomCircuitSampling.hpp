@@ -33,15 +33,15 @@ namespace qc {
 
         std::ostream& printStatistics(std::ostream& os) const override;
 
-        dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) const override;
-        dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd, unsigned short ncycles) {
+        MatrixDD buildFunctionality(std::unique_ptr<dd::Package>& dd) const override;
+        MatrixDD buildFunctionality(std::unique_ptr<dd::Package>& dd, unsigned short ncycles) {
             if (ncycles < cycles.size() - 2) {
                 removeCycles(cycles.size() - 2 - ncycles);
             }
             return buildFunctionality(dd);
         }
-        dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const override;
-        dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd, unsigned short ncycles) {
+        VectorDD simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd) const override;
+        VectorDD simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd, unsigned short ncycles) {
             if (ncycles < cycles.size() - 2) {
                 removeCycles(cycles.size() - 2 - ncycles);
             }

@@ -35,6 +35,7 @@ add_library(${PROJECT_NAME}
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/QuantumComputation.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/CircuitOptimizer.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/Definitions.hpp
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QFT.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Grover.hpp
@@ -52,7 +53,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON 
 
 # add JKQ::DDpackage library
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
-target_link_libraries(${PROJECT_NAME} PUBLIC JKQ::DDpackage)
+target_link_libraries(${PROJECT_NAME} PUBLIC JKQ::DDPackage)
 
 # add nlohmann::json library
 set(JSON_BuildTests OFF CACHE INTERNAL "")

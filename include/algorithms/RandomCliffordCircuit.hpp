@@ -13,16 +13,16 @@
 namespace qc {
     class RandomCliffordCircuit: public QuantumComputation {
     protected:
-        std::function<unsigned short()> cliffordGenerator;
+        std::function<std::uint_fast16_t()> cliffordGenerator;
 
-        void append1QClifford(unsigned int idx, unsigned short target);
-        void append2QClifford(unsigned int idx, unsigned short control, unsigned short target);
+        void append1QClifford(std::uint_fast16_t idx, dd::Qubit target);
+        void append2QClifford(std::uint_fast16_t, dd::Qubit control, dd::Qubit target);
 
     public:
-        unsigned int depth = 1;
-        unsigned int seed  = 0;
+        std::size_t depth = 1;
+        std::size_t seed  = 0;
 
-        explicit RandomCliffordCircuit(unsigned short nq, unsigned int depth = 1, unsigned int seed = 0);
+        explicit RandomCliffordCircuit(dd::QubitCount nq, std::size_t depth = 1, std::size_t seed = 0);
 
         std::ostream& printStatistics(std::ostream& os) const override;
     };

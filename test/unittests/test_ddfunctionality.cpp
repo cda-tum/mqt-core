@@ -8,28 +8,29 @@
 #include "gtest/gtest.h"
 #include <random>
 
-class DDFunctionality: public testing::TestWithParam<unsigned short> {
+using namespace qc;
+using namespace dd;
+
+class DDFunctionality: public testing::TestWithParam<qc::OpType> {
 protected:
     void TearDown() override {
-        if (!dd->isTerminal(e))
+        if (!e.isTerminal())
             dd->decRef(e);
         dd->garbageCollect(true);
 
         // number of complex table entries after clean-up should equal initial number of entries
-        EXPECT_EQ(dd->cn.count, initialComplexCount);
+        EXPECT_EQ(dd->cn.complexTable.getCount(), initialComplexCount);
         // number of available cache entries after clean-up should equal initial number of entries
-        EXPECT_EQ(dd->cn.cacheCount, initialCacheCount);
+        EXPECT_EQ(dd->cn.complexCache.getCount(), initialCacheCount);
     }
 
     void SetUp() override {
         // dd
-        dd                  = std::make_unique<dd::Package>();
-        initialCacheCount   = dd->cn.cacheCount;
-        initialComplexCount = dd->cn.count;
-        dd->setMode(dd::Matrix);
+        dd                  = std::make_unique<dd::Package>(nqubits);
+        initialCacheCount   = dd->cn.complexCache.getCount();
+        initialComplexCount = dd->cn.complexTable.getCount();
 
         // initial state preparation
-        line.fill(qc::LINE_DEFAULT);
         e = ident = dd->makeIdent(nqubits);
         dd->incRef(ident);
 
@@ -38,22 +39,21 @@ protected:
         std::generate(begin(random_data), end(random_data), [&]() { return rd(); });
         std::seed_seq seeds(begin(random_data), end(random_data));
         mt.seed(seeds);
-        dist = std::uniform_real_distribution<fp>(0.0, 2 * qc::PI);
+        dist = std::uniform_real_distribution<dd::fp>(0.0, 2 * dd::PI);
     }
 
-    unsigned short                     nqubits             = 4;
-    long                               initialCacheCount   = 0;
-    unsigned int                       initialComplexCount = 0;
-    std::array<short, qc::MAX_QUBITS>  line{};
-    dd::Edge                           e{}, ident{};
-    std::unique_ptr<dd::Package>       dd;
-    std::mt19937_64                    mt;
-    std::uniform_real_distribution<fp> dist;
+    dd::QubitCount                         nqubits             = 4;
+    std::size_t                            initialCacheCount   = 0;
+    std::size_t                            initialComplexCount = 0;
+    qc::MatrixDD                           e{}, ident{};
+    std::unique_ptr<dd::Package>           dd;
+    std::mt19937_64                        mt;
+    std::uniform_real_distribution<dd::fp> dist;
 };
 
 INSTANTIATE_TEST_SUITE_P(Parameters,
                          DDFunctionality,
-                         testing::Values(qc::I, qc::H, qc::X, qc::Y, qc::Z, qc::S, qc::Sdag, qc::T, qc::Tdag, qc::V,
+                         testing::Values(qc::I, qc::H, qc::X, qc::Y, qc::Z, qc::S, qc::Sdag, qc::T, qc::Tdag, qc::SX, qc::SXdag, qc::V,
                                          qc::Vdag, qc::U3, qc::U2, qc::Phase, qc::RX, qc::RY, qc::RZ, qc::Peres, qc::Peresdag,
                                          qc::SWAP, qc::iSWAP),
                          [](const testing::TestParamInfo<DDFunctionality::ParamType>& info) {
@@ -68,6 +68,8 @@ INSTANTIATE_TEST_SUITE_P(Parameters,
                                  case qc::Sdag: return "sdg";
                                  case qc::T: return "t";
                                  case qc::Tdag: return "tdg";
+                                 case qc::SX: return "sx";
+                                 case qc::SXdag: return "sxdg";
                                  case qc::V: return "v";
                                  case qc::Vdag: return "vdg";
                                  case qc::U3: return "u3";
@@ -104,68 +106,65 @@ TEST_P(DDFunctionality, standard_op_build_inverse_build) {
 
         case qc::SWAP:
         case qc::iSWAP:
-            op = qc::StandardOperation(nqubits, std::vector<unsigned short>{0, 1}, gate);
+            op = qc::StandardOperation(nqubits, dd::Controls{}, 0, 1, gate);
             break;
         case qc::Peres:
         case qc::Peresdag:
-            op = qc::StandardOperation(nqubits, std::vector<qc::Control>{qc::Control(0)}, 1, 2, gate);
+            op = qc::StandardOperation(nqubits, {0_pc}, 1, 2, gate);
             break;
         default:
             op = qc::StandardOperation(nqubits, 0, gate);
     }
 
-    ASSERT_NO_THROW({ e = dd->multiply(op.getDD(dd, line), op.getInverseDD(dd, line)); });
+    ASSERT_NO_THROW({ e = dd->multiply(op.getDD(dd), op.getInverseDD(dd)); });
     dd->incRef(e);
 
-    EXPECT_TRUE(dd::Package::equals(ident, e));
+    EXPECT_EQ(ident, e);
 }
 
 TEST_F(DDFunctionality, build_circuit) {
     qc::QuantumComputation qc(nqubits);
 
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
-    qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<unsigned short>{0, 1}, qc::SWAP);
+    qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<dd::Qubit>{0, 1}, qc::SWAP);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<qc::StandardOperation>(nqubits, 3, qc::S);
     qc.emplace_back<qc::StandardOperation>(nqubits, 2, qc::Sdag);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::V);
     qc.emplace_back<qc::StandardOperation>(nqubits, 1, qc::T);
-    qc.emplace_back<qc::StandardOperation>(nqubits, qc::Control(0), 1, qc::X);
-    qc.emplace_back<qc::StandardOperation>(nqubits, qc::Control(3), 2, qc::X);
-    qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<qc::Control>({qc::Control(3), qc::Control(2)}), 0, qc::X);
+    qc.emplace_back<qc::StandardOperation>(nqubits, 0_pc, 1, qc::X);
+    qc.emplace_back<qc::StandardOperation>(nqubits, 3_pc, 2, qc::X);
+    qc.emplace_back<qc::StandardOperation>(nqubits, Controls{2_pc, 3_pc}, 0, qc::X);
 
-    qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<qc::Control>({qc::Control(3), qc::Control(2)}), 0, qc::X);
-    qc.emplace_back<qc::StandardOperation>(nqubits, qc::Control(3), 2, qc::X);
-    qc.emplace_back<qc::StandardOperation>(nqubits, qc::Control(0), 1, qc::X);
+    qc.emplace_back<qc::StandardOperation>(nqubits, Controls{2_pc, 3_pc}, 0, qc::X);
+    qc.emplace_back<qc::StandardOperation>(nqubits, 3_pc, 2, qc::X);
+    qc.emplace_back<qc::StandardOperation>(nqubits, 0_pc, 1, qc::X);
     qc.emplace_back<qc::StandardOperation>(nqubits, 1, qc::Tdag);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::Vdag);
     qc.emplace_back<qc::StandardOperation>(nqubits, 2, qc::S);
     qc.emplace_back<qc::StandardOperation>(nqubits, 3, qc::Sdag);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::H);
-    qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<unsigned short>{0, 1}, qc::SWAP);
+    qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<dd::Qubit>{0, 1}, qc::SWAP);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
 
     e = dd->multiply(qc.buildFunctionality(dd), e);
 
-    //dd->printVector(e);
-    //dd->printVector(ident);
-
-    EXPECT_TRUE(dd::Package::equals(ident, e));
+    EXPECT_EQ(ident, e);
 
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
     e = dd->multiply(qc.buildFunctionality(dd), e);
     dd->incRef(e);
 
-    EXPECT_FALSE(dd::Package::equals(ident, e));
+    EXPECT_NE(ident, e);
 }
 
 TEST_F(DDFunctionality, non_unitary) {
     qc::QuantumComputation qc;
-    auto                   dummy_map = std::map<unsigned short, unsigned short>{};
+    auto                   dummy_map = Permutation{};
     auto                   op        = qc::NonUnitaryOperation(nqubits, {0, 1, 2, 3}, {0, 1, 2, 3});
     EXPECT_FALSE(op.isUnitary());
     try {
-        op.getDD(dd, line);
+        op.getDD(dd);
         FAIL() << "Nothing thrown. Expected qc::QFRException";
     } catch (qc::QFRException const& err) {
         std::cout << err.what() << std::endl;
@@ -174,7 +173,7 @@ TEST_F(DDFunctionality, non_unitary) {
         FAIL() << "Expected qc::QFRException";
     }
     try {
-        op.getInverseDD(dd, line);
+        op.getInverseDD(dd);
         FAIL() << "Nothing thrown. Expected qc::QFRException";
     } catch (qc::QFRException const& err) {
         std::cout << err.what() << std::endl;
@@ -183,7 +182,7 @@ TEST_F(DDFunctionality, non_unitary) {
         FAIL() << "Expected qc::QFRException";
     }
     try {
-        op.getDD(dd, line, dummy_map);
+        op.getDD(dd, dummy_map);
         FAIL() << "Nothing thrown. Expected qc::QFRException";
     } catch (qc::QFRException const& err) {
         std::cout << err.what() << std::endl;
@@ -192,7 +191,7 @@ TEST_F(DDFunctionality, non_unitary) {
         FAIL() << "Expected qc::QFRException";
     }
     try {
-        op.getInverseDD(dd, line, dummy_map);
+        op.getInverseDD(dd, dummy_map);
         FAIL() << "Nothing thrown. Expected qc::QFRException";
     } catch (qc::QFRException const& err) {
         std::cout << err.what() << std::endl;

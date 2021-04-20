@@ -6,6 +6,7 @@
 #include "QiskitImport.hpp"
 #include "algorithms/Grover.hpp"
 #include "algorithms/QFT.hpp"
+#include "dd/Export.hpp"
 #include "nlohmann/json.hpp"
 #include "pybind11/pybind11.h"
 #include "pybind11_json/pybind11_json.hpp"
@@ -24,19 +25,19 @@ enum class ConstructionMethod {
 NLOHMANN_JSON_SERIALIZE_ENUM(ConstructionMethod, {{ConstructionMethod::Sequential, "sequential"},
                                                   {ConstructionMethod::Recursive, "recursive"}})
 
-void to_json(nlohmann::json& j, dd::Package::CMat& mat) {
+void to_json(nlohmann::json& j, dd::CMat& mat) {
     j = nlohmann::json::array();
     for (const auto& row: mat) {
         j.emplace_back(nl::json::array());
         for (const auto& elem: row)
-            j.back().emplace_back(std::array<fp, 2>{elem.first, elem.second});
+            j.back().emplace_back(std::array<dd::fp, 2>{elem.first, elem.second});
     }
 }
-void from_json(const nlohmann::json& j, dd::Package::CMat& mat) {
-    for (unsigned long long i = 0; i < j.size(); ++i) {
+void from_json(const nlohmann::json& j, dd::CMat& mat) {
+    for (std::size_t i = 0; i < j.size(); ++i) {
         auto& row = j.at(i);
-        for (unsigned long long y = 0; y < row.size(); ++y) {
-            auto amplitude  = row.at(y).get<std::pair<fp, fp>>();
+        for (std::size_t y = 0; y < row.size(); ++y) {
+            auto amplitude  = row.at(y).get<std::pair<dd::fp, dd::fp>>();
             mat.at(i).at(y) = amplitude;
         }
     }
@@ -44,9 +45,9 @@ void from_json(const nlohmann::json& j, dd::Package::CMat& mat) {
 
 nl::json construct(const std::unique_ptr<qc::QuantumComputation>& qc, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
     // carry out actual computation
-    auto     start_construction = std::chrono::high_resolution_clock::now();
-    auto     dd                 = std::make_unique<dd::Package>();
-    dd::Edge e{};
+    auto         dd                 = std::make_unique<dd::Package>(qc->getNqubits());
+    auto         start_construction = std::chrono::high_resolution_clock::now();
+    qc::MatrixDD e{};
     if (method == ConstructionMethod::Sequential) {
         e = qc->buildFunctionality(dd);
     } else if (method == ConstructionMethod::Recursive) {
@@ -68,7 +69,7 @@ nl::json construct(const std::unique_ptr<qc::QuantumComputation>& qc, const Cons
     auto& statistics                = results["statistics"];
     statistics["construction_time"] = construction_duration.count();
     statistics["final_nodecount"]   = dd->size(e);
-    statistics["max_nodecount"]     = dd->maxActive;
+    statistics["max_nodecount"]     = dd->mUniqueTable.getPeakNodeCount();
     statistics["method"]            = method;
 
     if (storeDD) {
@@ -109,7 +110,7 @@ nl::json construct_circuit(const py::object& circ, const ConstructionMethod& met
     return construct(qc, method, storeDD, storeMatrix);
 }
 
-nl::json construct_grover(unsigned short nqubits, unsigned int seed = 0, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
+nl::json construct_grover(dd::QubitCount nqubits, unsigned int seed = 0, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
     std::unique_ptr<qc::QuantumComputation> qc     = std::make_unique<qc::Grover>(nqubits, seed);
     auto                                    grover = dynamic_cast<qc::Grover*>(qc.get());
 
@@ -122,7 +123,7 @@ nl::json construct_grover(unsigned short nqubits, unsigned int seed = 0, const C
     return results;
 }
 
-nl::json construct_qft(unsigned short nqubits, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
+nl::json construct_qft(dd::QubitCount nqubits, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
     std::unique_ptr<qc::QuantumComputation> qc      = std::make_unique<qc::QFT>(nqubits);
     auto                                    results = construct(qc, method, storeDD, storeMatrix);
     auto&                                   circuit = results["circuit"];
@@ -136,7 +137,7 @@ nl::json matrix_from_dd(const std::string& serializedDD) {
     auto               dd                    = std::make_unique<dd::Package>();
     auto               start_deserialization = std::chrono::high_resolution_clock::now();
     std::istringstream iss{serializedDD};
-    auto               e                        = dd::deserialize(dd, iss);
+    auto               e                        = dd->deserialize<dd::Package::mNode>(iss);
     auto               end_deserialization      = std::chrono::high_resolution_clock::now();
     auto               deserialization_duration = std::chrono::duration<float>(end_deserialization - start_deserialization);
     results["deserialization_time"]             = deserialization_duration.count();

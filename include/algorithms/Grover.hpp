@@ -14,7 +14,7 @@
 namespace qc {
     class Grover: public QuantumComputation {
     protected:
-        std::function<unsigned long long()> oracleGenerator;
+        std::function<std::size_t()> oracleGenerator;
 
         void setup(QuantumComputation& qc) const;
 
@@ -24,19 +24,15 @@ namespace qc {
 
         void full_grover(QuantumComputation& qc) const;
 
-        std::array<short, MAX_QUBITS> line{};
-
     public:
-        unsigned int       seed       = 0;
-        unsigned long long x          = 0;
-        unsigned long long iterations = 1;
+        std::size_t seed       = 0;
+        std::size_t x          = 0;
+        std::size_t iterations = 1;
 
-        explicit Grover(unsigned short nq, unsigned int seed = 0);
+        explicit Grover(dd::QubitCount nq, std::size_t seed = 0);
 
-        dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) const override;
-        dd::Edge buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const override;
-
-        dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const override;
+        MatrixDD buildFunctionality(std::unique_ptr<dd::Package>& dd) const override;
+        MatrixDD buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const override;
 
         std::ostream& printStatistics(std::ostream& os) const override;
     };

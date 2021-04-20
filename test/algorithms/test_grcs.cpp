@@ -26,7 +26,7 @@ TEST_F(GRCS, import) {
 TEST_F(GRCS, simulate) {
     auto qc_bris = qc::GoogleRandomCircuitSampling("./circuits/grcs/bris_4_40_9_v2.txt");
 
-    auto dd = std::make_unique<dd::Package>();
+    auto dd = std::make_unique<dd::Package>(qc_bris.getNqubits());
     auto in = dd->makeZeroState(qc_bris.getNqubits());
     ASSERT_NO_THROW({
         qc_bris.simulate(in, dd, 4);
@@ -38,7 +38,7 @@ TEST_F(GRCS, simulate) {
 TEST_F(GRCS, buildFunctionality) {
     auto qc_bris = qc::GoogleRandomCircuitSampling("./circuits/grcs/bris_4_40_9_v2.txt");
 
-    auto dd = std::make_unique<dd::Package>();
+    auto dd = std::make_unique<dd::Package>(qc_bris.getNqubits());
     ASSERT_NO_THROW({
         qc_bris.buildFunctionality(dd, 4);
     });

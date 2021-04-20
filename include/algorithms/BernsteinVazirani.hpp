@@ -17,10 +17,10 @@ namespace qc {
         void full_BernsteinVazirani();
 
     public:
-        unsigned long hiddenInteger = 0;
-        unsigned int  size          = -1;
+        std::size_t    hiddenInteger = 0;
+        dd::QubitCount size          = 0;
 
-        explicit BernsteinVazirani(unsigned long hiddenInt);
+        explicit BernsteinVazirani(std::size_t hiddenInt);
 
         std::ostream& printStatistics(std::ostream& os) const override;
     };

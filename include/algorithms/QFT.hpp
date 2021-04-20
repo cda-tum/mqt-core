@@ -11,13 +11,9 @@
 namespace qc {
     class QFT: public QuantumComputation {
     public:
-        explicit QFT(unsigned short nq);
+        explicit QFT(dd::QubitCount nq);
 
         std::ostream& printStatistics(std::ostream& os) const override;
-
-        dd::Edge buildFunctionality(std::unique_ptr<dd::Package>& dd) const override;
-
-        dd::Edge simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const override;
     };
 } // namespace qc
 

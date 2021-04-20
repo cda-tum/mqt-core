@@ -30,7 +30,7 @@ namespace qasm {
             return new Expr(Expr::Kind::number, t.val);
         } else if (sym == Token::Kind::pi) {
             scan();
-            return new Expr(Expr::Kind::number, PI);
+            return new Expr(Expr::Kind::number, dd::PI);
         } else if (sym == Token::Kind::identifier) {
             scan();
             return new Expr(Expr::Kind::id, 0., nullptr, nullptr, t.str);
@@ -260,14 +260,14 @@ namespace qasm {
         }
     }
 
-    permutationMap Parser::checkForInitialLayout(std::string comment) {
-        static auto    initialLayoutRegex = std::regex("i (\\d+ )*(\\d+)");
-        static auto    qubitRegex         = std::regex("\\d+");
-        permutationMap initial{};
+    qc::Permutation Parser::checkForInitialLayout(std::string comment) {
+        static auto     initialLayoutRegex = std::regex("i (\\d+ )*(\\d+)");
+        static auto     qubitRegex         = std::regex("\\d+");
+        qc::Permutation initial{};
         if (std::regex_search(comment, initialLayoutRegex)) {
-            unsigned short logical_qubit = 0;
+            dd::Qubit logical_qubit = 0;
             for (std::smatch m; std::regex_search(comment, m, qubitRegex); comment = m.suffix()) {
-                unsigned short physical_qubit = static_cast<unsigned short>(std::stoul(m.str()));
+                auto physical_qubit = static_cast<dd::Qubit>(std::stoul(m.str()));
                 //				std::cout << "Inserting " << physical_qubit << "->" << logical_qubit << std::endl;
                 initial.insert({physical_qubit, logical_qubit});
                 ++logical_qubit;
@@ -276,14 +276,14 @@ namespace qasm {
         return initial;
     }
 
-    permutationMap Parser::checkForOutputPermutation(std::string comment) {
-        static auto    outputPermutationRegex = std::regex("o (\\d+ )*(\\d+)");
-        static auto    qubitRegex             = std::regex("\\d+");
-        permutationMap output{};
+    qc::Permutation Parser::checkForOutputPermutation(std::string comment) {
+        static auto     outputPermutationRegex = std::regex("o (\\d+ )*(\\d+)");
+        static auto     qubitRegex             = std::regex("\\d+");
+        qc::Permutation output{};
         if (std::regex_search(comment, outputPermutationRegex)) {
-            unsigned short logical_qubit = 0;
+            dd::Qubit logical_qubit = 0;
             for (std::smatch m; std::regex_search(comment, m, qubitRegex); comment = m.suffix()) {
-                unsigned short physical_qubit = static_cast<unsigned short>(std::stoul(m.str()));
+                auto physical_qubit = static_cast<dd::Qubit>(std::stoul(m.str()));
                 //			    std::cout << "Inserting " << physical_qubit << "->" << logical_qubit << std::endl;
                 output.insert({physical_qubit, logical_qubit});
                 ++logical_qubit;
@@ -314,7 +314,7 @@ namespace qasm {
         }
     }
 
-    std::pair<unsigned short, unsigned short> Parser::ArgumentQreg() {
+    qc::QuantumRegister Parser::ArgumentQreg() {
         check(Token::Kind::identifier);
         std::string s = t.str;
         if (qregs.find(s) == qregs.end())
@@ -323,14 +323,14 @@ namespace qasm {
         if (sym == Token::Kind::lbrack) {
             scan();
             check(Token::Kind::nninteger);
-            auto offset = static_cast<unsigned short>(t.val);
+            auto offset = static_cast<dd::QubitCount>(t.val);
             check(Token::Kind::rbrack);
             return std::make_pair(qregs[s].first + offset, 1);
         }
         return std::make_pair(qregs[s].first, qregs[s].second);
     }
 
-    std::pair<unsigned short, unsigned short> Parser::ArgumentCreg() {
+    qc::ClassicalRegister Parser::ArgumentCreg() {
         check(Token::Kind::identifier);
         std::string s = t.str;
         if (cregs.find(s) == cregs.end())
@@ -339,7 +339,7 @@ namespace qasm {
         if (sym == Token::Kind::lbrack) {
             scan();
             check(Token::Kind::nninteger);
-            auto offset = static_cast<unsigned short>(t.val);
+            auto offset = static_cast<std::size_t>(t.val);
             check(Token::Kind::rbrack);
             return std::make_pair(cregs[s].first + offset, 1);
         }
@@ -355,7 +355,7 @@ namespace qasm {
         }
     }
 
-    void Parser::ArgList(std::vector<std::pair<unsigned short, unsigned short>>& arguments) {
+    void Parser::ArgList(std::vector<qc::QuantumRegister>& arguments) {
         arguments.emplace_back(ArgumentQreg());
         while (sym == Token::Kind::comma) {
             scan();
@@ -392,14 +392,14 @@ namespace qasm {
 
             // TODO: multiple targets could be useful here
             auto gate = qc::CompoundOperation(nqubits);
-            for (unsigned short i = 0; i < target.second; ++i) {
-                gate.emplace_back<qc::StandardOperation>(nqubits, target.first + i, qc::U3, lambda->num, phi->num, theta->num);
+            for (dd::QubitCount i = 0; i < target.second; ++i) {
+                gate.emplace_back<qc::StandardOperation>(nqubits, static_cast<dd::Qubit>(target.first + i), qc::U3, lambda->num, phi->num, theta->num);
             }
             return std::make_unique<qc::CompoundOperation>(std::move(gate));
         } else if (sym == Token::Kind::mcx_gray || sym == Token::Kind::mcx_recursive || sym == Token::Kind::mcx_vchain) {
             auto type = sym;
             scan();
-            std::vector<std::pair<unsigned short, unsigned short>> registers{};
+            std::vector<qc::QuantumRegister> registers{};
             registers.emplace_back(ArgumentQreg());
             while (sym != Token::Kind::semicolon) {
                 check(Token::Kind::comma);
@@ -407,7 +407,7 @@ namespace qasm {
             }
             scan();
 
-            std::vector<qc::Control> qubits{};
+            std::vector<dd::Control> qubits{};
             for (const auto& reg: registers) {
                 if (reg.second != 1) {
                     error("MCX for whole qubit registers not yet implemented");
@@ -419,13 +419,13 @@ namespace qasm {
                     error(oss.str());
                 }
 
-                qubits.emplace_back(reg.first);
+                qubits.emplace_back(dd::Control{reg.first});
             }
 
             // drop ancillaries since our library can natively work with MCTs
             if (type == Token::Kind::mcx_vchain) {
                 // n controls, 1 target, n-2 ancillaries = 2n-1 qubits
-                unsigned short ancillaries = (qubits.size() + 1) / 2 - 2;
+                dd::QubitCount ancillaries = (qubits.size() + 1) / 2 - 2;
                 for (int i = 0; i < ancillaries; ++i)
                     qubits.pop_back();
             } else if (type == Token::Kind::mcx_recursive) {
@@ -436,7 +436,7 @@ namespace qasm {
             }
             auto target = qubits.back().qubit;
             qubits.pop_back();
-            return std::make_unique<qc::StandardOperation>(nqubits, qubits, target);
+            return std::make_unique<qc::StandardOperation>(nqubits, dd::Controls{qubits.cbegin(), qubits.cend()}, target);
         } else if (sym == Token::Kind::swap) {
             scan();
             auto first_target = ArgumentQreg();
@@ -449,7 +449,7 @@ namespace qasm {
                 if (first_target.first == second_target.first) {
                     error("SWAP with two identical targets");
                 }
-                return std::make_unique<qc::StandardOperation>(nqubits, std::vector<qc::Control>{}, first_target.first, second_target.first, qc::SWAP);
+                return std::make_unique<qc::StandardOperation>(nqubits, dd::Controls{}, first_target.first, second_target.first, qc::SWAP);
             } else {
                 error("SWAP for whole qubit registers not yet implemented");
             }
@@ -473,19 +473,19 @@ namespace qasm {
 
             // return corresponding operation
             if (control.second == 1 && target.second == 1) {
-                return std::make_unique<qc::StandardOperation>(nqubits, qc::Control(control.first), target.first, qc::X);
+                return std::make_unique<qc::StandardOperation>(nqubits, dd::Control{control.first}, target.first, qc::X);
             } else {
                 auto gate = qc::CompoundOperation(nqubits);
                 if (control.second == target.second) {
-                    for (unsigned short i = 0; i < target.second; ++i)
-                        gate.emplace_back<qc::StandardOperation>(nqubits, qc::Control(control.first + i), target.first + i, qc::X);
+                    for (dd::QubitCount i = 0; i < target.second; ++i)
+                        gate.emplace_back<qc::StandardOperation>(nqubits, dd::Control{static_cast<dd::Qubit>(control.first + i)}, target.first + i, qc::X);
                 } else if (control.second == 1) {
                     // TODO: multiple targets could be useful here
-                    for (unsigned short i = 0; i < target.second; ++i)
-                        gate.emplace_back<qc::StandardOperation>(nqubits, qc::Control(control.first), target.first + i, qc::X);
+                    for (dd::QubitCount i = 0; i < target.second; ++i)
+                        gate.emplace_back<qc::StandardOperation>(nqubits, dd::Control{control.first}, target.first + i, qc::X);
                 } else if (target.second == 1) {
-                    for (unsigned short i = 0; i < control.second; ++i)
-                        gate.emplace_back<qc::StandardOperation>(nqubits, qc::Control(control.first + i), target.first, qc::X);
+                    for (dd::QubitCount i = 0; i < control.second; ++i)
+                        gate.emplace_back<qc::StandardOperation>(nqubits, dd::Control{static_cast<dd::Qubit>(control.first + i)}, target.first, qc::X);
                 } else {
                     error("Register size does not match for CX gate!");
                 }
@@ -494,9 +494,9 @@ namespace qasm {
 
         } else if (sym == Token::Kind::identifier) {
             scan();
-            auto         gateName  = t.str;
-            auto         cGateName = gateName;
-            unsigned int ncontrols = 0;
+            auto           gateName  = t.str;
+            auto           cGateName = gateName;
+            dd::QubitCount ncontrols = 0;
             while (cGateName.front() == 'c') {
                 cGateName = cGateName.substr(1);
                 ncontrols++;
@@ -504,13 +504,13 @@ namespace qasm {
 
             // special treatment for controlled swap
             if (cGateName == "swap") {
-                std::vector<std::pair<unsigned short, unsigned short>> arguments;
+                std::vector<qc::QuantumRegister> arguments;
                 ArgList(arguments);
                 check(Token::Kind::semicolon);
-                registerMap argMap;
-                if (arguments.size() != ncontrols + 2) {
+                qc::QuantumRegisterMap argMap;
+                if (arguments.size() != static_cast<std::size_t>(ncontrols + 2)) {
                     std::ostringstream oss{};
-                    if (arguments.size() > ncontrols + 2) {
+                    if (arguments.size() > static_cast<std::size_t>(ncontrols + 2)) {
                         oss << "Too many arguments for ";
                     } else {
                         oss << "Too few arguments for ";
@@ -528,10 +528,10 @@ namespace qasm {
                         error("cSWAP with whole qubit registers not yet implemented");
                 }
 
-                std::vector<qc::Control> controls{};
-                for (unsigned int j = 0; j < ncontrols; ++j) {
+                dd::Controls controls{};
+                for (dd::QubitCount j = 0; j < ncontrols; ++j) {
                     auto arg = "q" + std::to_string(j);
-                    controls.emplace_back(argMap.at(arg).first);
+                    controls.emplace(dd::Control{argMap.at(arg).first});
                 }
 
                 auto targ  = "q" + std::to_string(ncontrols);
@@ -545,8 +545,8 @@ namespace qasm {
             auto gateIt  = compoundGates.find(gateName);
             auto cGateIt = compoundGates.find(cGateName);
             if (gateIt != compoundGates.end() || cGateIt != compoundGates.end()) {
-                std::vector<Expr*>                                     parameters;
-                std::vector<std::pair<unsigned short, unsigned short>> arguments;
+                std::vector<Expr*>               parameters;
+                std::vector<qc::QuantumRegister> arguments;
                 if (sym == Token::Kind::lpar) {
                     scan();
                     if (sym != Token::Kind::rpar)
@@ -557,9 +557,9 @@ namespace qasm {
                 check(Token::Kind::semicolon);
 
                 // return corresponding operation
-                registerMap                  argMap;
+                qc::QuantumRegisterMap       argMap;
                 std::map<std::string, Expr*> paramMap;
-                unsigned short               size = 1;
+                dd::QubitCount               size = 1;
                 if (gateIt != compoundGates.end()) {
                     if ((*gateIt).second.argumentNames.size() != arguments.size()) {
                         std::ostringstream oss{};
@@ -624,10 +624,10 @@ namespace qasm {
                 if (ncontrols > 0 && size == 1) {
                     // TODO: this could be enhanced for the case that any argument is a register
                     if (cGateIt->second.gates.size() == 1) {
-                        std::vector<qc::Control> controls{};
-                        for (unsigned int j = 0; j < ncontrols; ++j) {
+                        dd::Controls controls{};
+                        for (dd::QubitCount j = 0; j < ncontrols; ++j) {
                             auto arg = (gateIt != compoundGates.end()) ? gateIt->second.argumentNames[j] : ("q" + std::to_string(j));
-                            controls.emplace_back(argMap.at(arg).first);
+                            controls.emplace(dd::Control{argMap.at(arg).first});
                         }
 
                         auto targ = (gateIt != compoundGates.end()) ? gateIt->second.argumentNames.back() : ("q" + std::to_string(ncontrols));
@@ -668,7 +668,7 @@ namespace qasm {
                         }
                     } else if (auto cx = dynamic_cast<CXgate*>(gate)) {
                         if (argMap.at(cx->control).second == 1 && argMap.at(cx->target).second == 1) {
-                            return std::make_unique<qc::StandardOperation>(nqubits, qc::Control(argMap.at(cx->control).first), argMap.at(cx->target).first, qc::X);
+                            return std::make_unique<qc::StandardOperation>(nqubits, dd::Control{argMap.at(cx->control).first}, argMap.at(cx->target).first, qc::X);
                         }
                     }
                 }
@@ -684,8 +684,8 @@ namespace qasm {
                             op.emplace_back<qc::StandardOperation>(nqubits, argMap.at(u->target).first, qc::U3, lambda->num, phi->num, theta->num);
                         } else {
                             // TODO: multiple targets could be useful here
-                            for (unsigned short j = 0; j < argMap.at(u->target).second; ++j) {
-                                op.emplace_back<qc::StandardOperation>(nqubits, argMap.at(u->target).first + j, qc::U3, lambda->num, phi->num, theta->num);
+                            for (dd::QubitCount j = 0; j < argMap.at(u->target).second; ++j) {
+                                op.emplace_back<qc::StandardOperation>(nqubits, static_cast<dd::Qubit>(argMap.at(u->target).first + j), qc::U3, lambda->num, phi->num, theta->num);
                             }
                         }
                     } else if (auto cx = dynamic_cast<CXgate*>(gate)) {
@@ -700,17 +700,17 @@ namespace qasm {
                             }
                         }
                         if (argMap.at(cx->control).second == 1 && argMap.at(cx->target).second == 1) {
-                            op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap.at(cx->control).first), argMap.at(cx->target).first, qc::X);
+                            op.emplace_back<qc::StandardOperation>(nqubits, dd::Control{argMap.at(cx->control).first}, argMap.at(cx->target).first, qc::X);
                         } else if (argMap.at(cx->control).second == argMap.at(cx->target).second) {
-                            for (unsigned short j = 0; j < argMap.at(cx->target).second; ++j)
-                                op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap.at(cx->control).first + j), argMap.at(cx->target).first + j, qc::X);
+                            for (dd::QubitCount j = 0; j < argMap.at(cx->target).second; ++j)
+                                op.emplace_back<qc::StandardOperation>(nqubits, dd::Control{static_cast<dd::Qubit>(argMap.at(cx->control).first + j)}, argMap.at(cx->target).first + j, qc::X);
                         } else if (argMap.at(cx->control).second == 1) {
                             // TODO: multiple targets could be useful here
-                            for (unsigned short k = 0; k < argMap.at(cx->target).second; ++k)
-                                op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap.at(cx->control).first), argMap.at(cx->target).first + k, qc::X);
+                            for (dd::QubitCount k = 0; k < argMap.at(cx->target).second; ++k)
+                                op.emplace_back<qc::StandardOperation>(nqubits, dd::Control{argMap.at(cx->control).first}, argMap.at(cx->target).first + k, qc::X);
                         } else if (argMap.at(cx->target).second == 1) {
-                            for (unsigned short l = 0; l < argMap.at(cx->control).second; ++l)
-                                op.emplace_back<qc::StandardOperation>(nqubits, qc::Control(argMap.at(cx->control).first + l), argMap.at(cx->target).first, qc::X);
+                            for (dd::QubitCount l = 0; l < argMap.at(cx->control).second; ++l)
+                                op.emplace_back<qc::StandardOperation>(nqubits, dd::Control{static_cast<dd::Qubit>(argMap.at(cx->control).first + l)}, argMap.at(cx->target).first, qc::X);
                         } else {
                             error("Register size does not match for CX gate!");
                         }
@@ -735,9 +735,9 @@ namespace qasm {
                             error("Multi-controlled gates with whole qubit registers not supported");
                         }
 
-                        std::vector<qc::Control> controls{};
+                        dd::Controls controls{};
                         for (const auto& control: mcx->controls)
-                            controls.emplace_back(argMap.at(control).first);
+                            controls.emplace(dd::Control{argMap.at(control).first});
                         op.emplace_back<qc::StandardOperation>(nqubits, controls, argMap.at(mcx->target).first);
                     } else if (auto cu = dynamic_cast<CUgate*>(gate)) {
                         // valid check
@@ -761,9 +761,9 @@ namespace qasm {
                         std::unique_ptr<Expr> phi(RewriteExpr(cu->phi, paramMap));
                         std::unique_ptr<Expr> lambda(RewriteExpr(cu->lambda, paramMap));
 
-                        std::vector<qc::Control> controls{};
+                        dd::Controls controls{};
                         for (const auto& control: cu->controls)
-                            controls.emplace_back(argMap.at(control).first);
+                            controls.emplace(dd::Control{argMap.at(control).first});
 
                         if (argMap.at(cu->target).second == 1) {
                             op.emplace_back<qc::StandardOperation>(nqubits, controls, argMap.at(cu->target).first, qc::U3, lambda->num, phi->num, theta->num);
@@ -779,17 +779,17 @@ namespace qasm {
                                 }
                             }
                             if (argMap.at(sw->target0).second == 1 && argMap.at(sw->target1).second == 1) {
-                                op.emplace_back<qc::StandardOperation>(nqubits, std::vector<qc::Control>{}, argMap.at(sw->target1).first, argMap.at(sw->target1).first, qc::SWAP);
+                                op.emplace_back<qc::StandardOperation>(nqubits, dd::Controls{}, argMap.at(sw->target1).first, argMap.at(sw->target1).first, qc::SWAP);
                             } else if (argMap.at(sw->target0).second == argMap.at(sw->target1).second) {
                                 for (unsigned short j = 0; j < argMap.at(sw->target1).second; ++j)
-                                    op.emplace_back<qc::StandardOperation>(nqubits, std::vector<qc::Control>{}, argMap.at(sw->target0).first + j, argMap.at(sw->target1).first + j, qc::SWAP);
+                                    op.emplace_back<qc::StandardOperation>(nqubits, dd::Controls{}, argMap.at(sw->target0).first + j, argMap.at(sw->target1).first + j, qc::SWAP);
                             } else if (argMap.at(sw->target0).second == 1) {
                                 // TODO: multiple targets could be useful here
                                 for (unsigned short k = 0; k < argMap.at(sw->target1).second; ++k)
-                                    op.emplace_back<qc::StandardOperation>(nqubits, std::vector<qc::Control>{}, argMap.at(sw->target0).first, argMap.at(sw->target1).first + k, qc::SWAP);
+                                    op.emplace_back<qc::StandardOperation>(nqubits, dd::Controls{}, argMap.at(sw->target0).first, argMap.at(sw->target1).first + k, qc::SWAP);
                             } else if (argMap.at(sw->target1).second == 1) {
                                 for (unsigned short l = 0; l < argMap.at(sw->target0).second; ++l)
-                                    op.emplace_back<qc::StandardOperation>(nqubits, std::vector<qc::Control>{}, argMap.at(sw->target0).first + l, argMap.at(sw->target1).first, qc::SWAP);
+                                    op.emplace_back<qc::StandardOperation>(nqubits, dd::Controls{}, argMap.at(sw->target0).first + l, argMap.at(sw->target1).first, qc::SWAP);
                             } else {
                                 error("Register size does not match for SWAP gate!");
                             }
@@ -844,7 +844,7 @@ namespace qasm {
         check(Token::Kind::lbrace);
 
         auto         cGateName = gateName;
-        unsigned int ncontrols = 0;
+        dd::QubitCount ncontrols = 0;
         while (cGateName.front() == 'c') {
             cGateName = cGateName.substr(1);
             ncontrols++;
@@ -905,7 +905,7 @@ namespace qasm {
 
                 // drop ancillaries since our library can natively work with MCTs
                 if (type == Token::Kind::mcx_vchain) {
-                    unsigned short ancillaries = (arguments.size() + 1) / 2 - 2;
+                    dd::QubitCount ancillaries = (arguments.size() + 1) / 2 - 2;
                     for (int i = 0; i < ancillaries; ++i)
                         arguments.pop_back();
                 } else if (type == Token::Kind::mcx_recursive) {
@@ -989,9 +989,9 @@ namespace qasm {
                             throw QASMParserException("Gate declaration with controlled gates inferred from internal qelib1.inc not yet implemented.");
                         }
 
-                        if (arguments.size() != ncontrols + 1) {
+                        if (arguments.size() != static_cast<std::size_t>(ncontrols + 1)) {
                             std::ostringstream oss{};
-                            if (arguments.size() > ncontrols + 1) {
+                            if (arguments.size() > static_cast<std::size_t>(ncontrols + 1)) {
                                 oss << "Too many arguments for ";
                             } else {
                                 oss << "Too few arguments for ";
@@ -1065,10 +1065,11 @@ namespace qasm {
             check(Token::Kind::semicolon);
 
             if (qreg.second == creg.second) {
-                std::vector<unsigned short> qubits, classics;
+                std::vector<dd::Qubit> qubits{};
+                std::vector<std::size_t> classics{};
                 for (int i = 0; i < qreg.second; ++i) {
-                    unsigned short qubit = qreg.first + i;
-                    unsigned short clbit = creg.first + i;
+                    auto qubit = static_cast<dd::Qubit>(qreg.first + i);
+                    std::size_t clbit = creg.first + i;
                     if (qubit >= nqubits) {
                         std::stringstream ss{};
                         ss << "Qubit " << qubit << " cannot be measured since the circuit only contains " << nqubits << " qubits";
@@ -1091,9 +1092,9 @@ namespace qasm {
             auto qreg = ArgumentQreg();
             check(Token::Kind::semicolon);
 
-            std::vector<unsigned short> qubits;
+            std::vector<dd::Qubit> qubits;
             for (int i = 0; i < qreg.second; ++i) {
-                unsigned short qubit = qreg.first + i;
+                auto qubit = static_cast<dd::Qubit>(qreg.first + i);
                 if (qubit >= nqubits) {
                     std::stringstream ss{};
                     ss << "Qubit " << qubit << " cannot be reset since the circuit only contains " << nqubits << " qubits";

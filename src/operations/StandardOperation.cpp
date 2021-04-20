@@ -9,15 +9,15 @@ namespace qc {
     /***
      * Protected Methods
      ***/
-    OpType StandardOperation::parseU3(fp& lambda, fp& phi, fp& theta) {
+    OpType StandardOperation::parseU3(dd::fp& lambda, dd::fp& phi, dd::fp& theta) {
         if (std::abs(theta) < PARAMETER_TOLERANCE && std::abs(phi) < PARAMETER_TOLERANCE) {
             phi   = 0.L;
             theta = 0.L;
             return parseU1(lambda);
         }
 
-        if (std::abs(theta - qc::PI_2) < PARAMETER_TOLERANCE) {
-            theta    = qc::PI_2;
+        if (std::abs(theta - dd::PI_2) < PARAMETER_TOLERANCE) {
+            theta    = dd::PI_2;
             auto res = parseU2(lambda, phi);
             if (res != U2)
                 theta = 0.L;
@@ -36,9 +36,9 @@ namespace qc {
             }
         }
 
-        if (std::abs(lambda - qc::PI_2) < PARAMETER_TOLERANCE) {
-            lambda = qc::PI_2;
-            if (std::abs(phi + qc::PI_2) < PARAMETER_TOLERANCE) {
+        if (std::abs(lambda - dd::PI_2) < PARAMETER_TOLERANCE) {
+            lambda = dd::PI_2;
+            if (std::abs(phi + dd::PI_2) < PARAMETER_TOLERANCE) {
                 phi = 0.L;
                 checkInteger(theta);
                 checkFractionPi(theta);
@@ -47,9 +47,9 @@ namespace qc {
                 return RX;
             }
 
-            if (std::abs(phi - qc::PI_2) < PARAMETER_TOLERANCE) {
-                phi = qc::PI_2;
-                if (std::abs(theta - qc::PI) < PARAMETER_TOLERANCE) {
+            if (std::abs(phi - dd::PI_2) < PARAMETER_TOLERANCE) {
+                phi = dd::PI_2;
+                if (std::abs(theta - dd::PI) < PARAMETER_TOLERANCE) {
                     lambda = 0.L;
                     phi    = 0.L;
                     theta  = 0.L;
@@ -58,11 +58,11 @@ namespace qc {
             }
         }
 
-        if (std::abs(lambda - qc::PI) < PARAMETER_TOLERANCE) {
-            lambda = qc::PI;
+        if (std::abs(lambda - dd::PI) < PARAMETER_TOLERANCE) {
+            lambda = dd::PI;
             if (std::abs(phi) < PARAMETER_TOLERANCE) {
                 phi = 0.L;
-                if (std::abs(theta - qc::PI) < PARAMETER_TOLERANCE) {
+                if (std::abs(theta - dd::PI) < PARAMETER_TOLERANCE) {
                     theta  = 0.L;
                     lambda = 0.L;
                     return X;
@@ -81,22 +81,22 @@ namespace qc {
         return U3;
     }
 
-    OpType StandardOperation::parseU2(fp& lambda, fp& phi) {
+    OpType StandardOperation::parseU2(dd::fp& lambda, dd::fp& phi) {
         if (std::abs(phi) < PARAMETER_TOLERANCE) {
             phi = 0.L;
-            if (std::abs(std::abs(lambda) - qc::PI) < PARAMETER_TOLERANCE) {
+            if (std::abs(std::abs(lambda) - dd::PI) < PARAMETER_TOLERANCE) {
                 lambda = 0.L;
                 return H;
             }
             if (std::abs(lambda) < PARAMETER_TOLERANCE) {
-                lambda = qc::PI_2;
+                lambda = dd::PI_2;
                 return RY;
             }
         }
 
-        if (std::abs(lambda - qc::PI_2) < PARAMETER_TOLERANCE) {
-            lambda = qc::PI_2;
-            if (std::abs(phi + qc::PI_2) < PARAMETER_TOLERANCE) {
+        if (std::abs(lambda - dd::PI_2) < PARAMETER_TOLERANCE) {
+            lambda = dd::PI_2;
+            if (std::abs(phi + dd::PI_2) < PARAMETER_TOLERANCE) {
                 phi = 0.L;
                 return RX;
             }
@@ -110,24 +110,24 @@ namespace qc {
         return U2;
     }
 
-    OpType StandardOperation::parseU1(fp& lambda) {
+    OpType StandardOperation::parseU1(dd::fp& lambda) {
         if (std::abs(lambda) < PARAMETER_TOLERANCE) {
             lambda = 0.L;
             return I;
         }
         bool sign = std::signbit(lambda);
 
-        if (std::abs(std::abs(lambda) - qc::PI) < PARAMETER_TOLERANCE) {
+        if (std::abs(std::abs(lambda) - dd::PI) < PARAMETER_TOLERANCE) {
             lambda = 0.L;
             return Z;
         }
 
-        if (std::abs(std::abs(lambda) - qc::PI_2) < PARAMETER_TOLERANCE) {
+        if (std::abs(std::abs(lambda) - dd::PI_2) < PARAMETER_TOLERANCE) {
             lambda = 0.L;
             return sign ? Sdag : S;
         }
 
-        if (std::abs(std::abs(lambda) - qc::PI_4) < PARAMETER_TOLERANCE) {
+        if (std::abs(std::abs(lambda) - dd::PI_4) < PARAMETER_TOLERANCE) {
             lambda = 0.L;
             return sign ? Tdag : T;
         }
@@ -148,7 +148,7 @@ namespace qc {
         }
     }
 
-    void StandardOperation::setup(unsigned short nq, fp par0, fp par1, fp par2) {
+    void StandardOperation::setup(dd::QubitCount nq, dd::fp par0, dd::fp par1, dd::fp par2) {
         nqubits      = nq;
         parameter[0] = par0;
         parameter[1] = par1;
@@ -157,110 +157,19 @@ namespace qc {
         setName();
     }
 
-    dd::Edge StandardOperation::getSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
-        dd::Edge e{};
+    MatrixDD StandardOperation::getStandardOperationDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, dd::Qubit target, bool inverse) const {
+        MatrixDD       e{};
+        dd::GateMatrix gm;
 
-        line[permutation.at(targets[0])] = LINE_CONTROL_POS;
-        e                                = dd->makeGateDD(dd::Xmat, nqubits, line);
-
-        line[permutation.at(targets[0])] = LINE_TARGET;
-        line[permutation.at(targets[1])] = LINE_CONTROL_POS;
-        e                                = dd->multiply(e, dd->multiply(dd->makeGateDD(dd::Xmat, nqubits, line), e));
-
-        line[permutation.at(targets[1])] = LINE_TARGET;
-        return e;
-    }
-
-    dd::Edge StandardOperation::getPeresDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
-        dd::Edge e{};
-
-        line[permutation.at(targets[1])] = LINE_CONTROL_POS;
-        e                                = dd->makeGateDD(dd::Xmat, nqubits, line);
-
-        line[permutation.at(targets[0])] = LINE_DEFAULT;
-        line[permutation.at(targets[1])] = LINE_TARGET;
-        e                                = dd->multiply(dd->makeGateDD(dd::Xmat, nqubits, line), e);
-
-        line[permutation.at(targets[0])] = LINE_TARGET;
-        return e;
-    }
-
-    dd::Edge StandardOperation::getPeresdagDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
-        dd::Edge e{};
-
-        line[permutation.at(targets[0])] = LINE_DEFAULT;
-        e                                = dd->makeGateDD(dd::Xmat, nqubits, line);
-
-        line[permutation.at(targets[0])] = LINE_TARGET;
-        line[permutation.at(targets[1])] = LINE_CONTROL_POS;
-        e                                = dd->multiply(dd->makeGateDD(dd::Xmat, nqubits, line), e);
-
-        line[permutation.at(targets[1])] = LINE_TARGET;
-        return e;
-    }
-
-    dd::Edge StandardOperation::getiSWAPDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
-        line[permutation.at(targets[0])] = LINE_DEFAULT;
-        dd::Edge e                       = dd->makeGateDD(dd::Smat, nqubits, line); // S q[1]
-
-        line[permutation.at(targets[1])] = LINE_DEFAULT;
-        line[permutation.at(targets[0])] = LINE_TARGET;
-        e                                = dd->multiply(e, dd->makeGateDD(dd::Smat, nqubits, line)); // S q[0]
-        e                                = dd->multiply(e, dd->makeGateDD(dd::Hmat, nqubits, line)); // H q[0]
-
-        line[permutation.at(targets[0])] = LINE_CONTROL_POS;
-        line[permutation.at(targets[1])] = LINE_TARGET;
-        e                                = dd->multiply(e, dd->makeGateDD(dd::Xmat, nqubits, line)); // CX q[0], q[1]
-        line[permutation.at(targets[1])] = LINE_CONTROL_POS;
-        line[permutation.at(targets[0])] = LINE_TARGET;
-        e                                = dd->multiply(e, dd->makeGateDD(dd::Xmat, nqubits, line)); // CX q[1], q[0]
-
-        line[permutation.at(targets[0])] = LINE_DEFAULT;
-        line[permutation.at(targets[1])] = LINE_TARGET;
-        e                                = dd->multiply(e, dd->makeGateDD(dd::Hmat, nqubits, line)); // H q[1]
-
-        line[permutation.at(targets[0])] = LINE_TARGET;
-        return e;
-    }
-
-    dd::Edge StandardOperation::getiSWAPinvDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const {
-        line[permutation.at(targets[0])] = LINE_DEFAULT;
-        dd::Edge e                       = dd->makeGateDD(dd::Hmat, nqubits, line); // H q[1]
-
-        line[permutation.at(targets[1])] = LINE_CONTROL_POS;
-        line[permutation.at(targets[0])] = LINE_TARGET;
-        e                                = dd->multiply(e, dd->makeGateDD(dd::Xmat, nqubits, line)); // CX q[1], q[0]
-        line[permutation.at(targets[0])] = LINE_CONTROL_POS;
-        line[permutation.at(targets[1])] = LINE_TARGET;
-        e                                = dd->multiply(e, dd->makeGateDD(dd::Xmat, nqubits, line)); // CX q[0], q[1]
-
-        line[permutation.at(targets[1])] = LINE_DEFAULT;
-        line[permutation.at(targets[0])] = LINE_TARGET;
-        e                                = dd->multiply(e, dd->makeGateDD(dd::Hmat, nqubits, line));    // H q[0]
-        e                                = dd->multiply(e, dd->makeGateDD(dd::Sdagmat, nqubits, line)); // Sdag q[0]
-
-        line[permutation.at(targets[1])] = LINE_TARGET;
-        line[permutation.at(targets[0])] = LINE_DEFAULT;
-        e                                = dd->multiply(e, dd->makeGateDD(dd::Sdagmat, nqubits, line)); // Sdag q[1]
-
-        line[permutation.at(targets[0])] = LINE_TARGET;
-
-        return e;
-    }
-
-    dd::Edge StandardOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, bool inverse, const std::map<unsigned short, unsigned short>& permutation) const {
-        dd::Edge   e{};
-        GateMatrix gm;
-        //TODO add assertions ?
         switch (type) {
             case I: gm = dd::Imat; break;
             case H: gm = dd::Hmat; break;
             case X:
-                if (controls.size() > 1) { //Toffoli //TODO > 0 (include CNOT?)
-                    e = dd->TTlookup(nqubits, static_cast<unsigned short>(controls.size()), targets[0], line.data());
+                if (controls.size() > 1) { // Toffoli
+                    e = dd->toffoliTable.lookup(nqubits, controls, targets[0]);
                     if (e.p == nullptr) {
-                        e = dd->makeGateDD(dd::Xmat, nqubits, line);
-                        dd->TTinsert(nqubits, static_cast<unsigned short>(controls.size()), targets[0], line.data(), e);
+                        e = dd->makeGateDD(dd::Xmat, nqubits, controls, targets[0]);
+                        dd->toffoliTable.insert(nqubits, controls, targets[0], e);
                     }
                     return e;
                 }
@@ -275,84 +184,85 @@ namespace qc {
             case V: gm = inverse ? dd::Vdagmat : dd::Vmat; break;
             case Vdag: gm = inverse ? dd::Vmat : dd::Vdagmat; break;
             case U3: gm = inverse ? dd::U3mat(-parameter[1], -parameter[0], -parameter[2]) : dd::U3mat(parameter[0], parameter[1], parameter[2]); break;
-            case U2: gm = inverse ? dd::U2mat(-parameter[1] + PI, -parameter[0] - PI) : dd::U2mat(parameter[0], parameter[1]); break;
+            case U2: gm = inverse ? dd::U2mat(-parameter[1] + dd::PI, -parameter[0] - dd::PI) : dd::U2mat(parameter[0], parameter[1]); break;
             case Phase: gm = inverse ? dd::Phasemat(-parameter[0]) : dd::Phasemat(parameter[0]); break;
             case SX: gm = inverse ? dd::SXdagmat : dd::SXmat; break;
             case SXdag: gm = inverse ? dd::SXmat : dd::SXdagmat; break;
             case RX: gm = inverse ? dd::RXmat(-parameter[0]) : dd::RXmat(parameter[0]); break;
             case RY: gm = inverse ? dd::RYmat(-parameter[0]) : dd::RYmat(parameter[0]); break;
             case RZ: gm = inverse ? dd::RZmat(-parameter[0]) : dd::RZmat(parameter[0]); break;
+            default:
+                std::ostringstream oss{};
+                oss << "DD for gate" << name << " not available!";
+                throw QFRException(oss.str());
+        }
+        return dd->makeGateDD(gm, nqubits, controls, target);
+    }
+
+    MatrixDD StandardOperation::getStandardOperationDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, bool inverse) const {
+        switch (type) {
             case SWAP:
-                return getSWAPDD(dd, line, permutation);
+                return dd->makeSWAPDD(nqubits, controls, target0, target1);
             case iSWAP:
                 if (inverse) {
-                    return getiSWAPinvDD(dd, line, permutation);
+                    return dd->makeiSWAPinvDD(nqubits, controls, target0, target1);
                 } else {
-                    return getiSWAPDD(dd, line, permutation);
+                    return dd->makeiSWAPDD(nqubits, controls, target0, target1);
                 }
             case Peres:
                 if (inverse) {
-                    return getPeresdagDD(dd, line, permutation);
+                    return dd->makePeresdagDD(nqubits, controls, target0, target1);
                 } else {
-                    return getPeresDD(dd, line, permutation);
+                    return dd->makePeresDD(nqubits, controls, target0, target1);
                 }
             case Peresdag:
                 if (inverse) {
-                    return getPeresDD(dd, line, permutation);
+                    return dd->makePeresDD(nqubits, controls, target0, target1);
                 } else {
-                    return getPeresdagDD(dd, line, permutation);
+                    return dd->makePeresdagDD(nqubits, controls, target0, target1);
                 }
             default:
                 std::ostringstream oss{};
                 oss << "DD for gate" << name << " not available!";
                 throw QFRException(oss.str());
         }
-        if (multiTarget && !controlled) {
-            throw QFRException("Multi target gates not implemented yet!");
-        } else {
-            return dd->makeGateDD(gm, nqubits, line);
-        }
     }
 
     /***
      * Constructors
      ***/
-    StandardOperation::StandardOperation(unsigned short nq, unsigned short target, OpType g, fp lambda, fp phi, fp theta) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta) {
         type = g;
         setup(nq, lambda, phi, theta);
-        targets.push_back(target);
+        targets.emplace_back(target);
     }
 
-    StandardOperation::StandardOperation(unsigned short nq, const std::vector<unsigned short>& targets, OpType g, fp lambda, fp phi, fp theta) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta) {
         type = g;
         setup(nq, lambda, phi, theta);
         this->targets = targets;
-        if (targets.size() > 1)
-            multiTarget = true;
     }
 
-    StandardOperation::StandardOperation(unsigned short nq, Control control, unsigned short target, OpType g, fp lambda, fp phi, fp theta):
+    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
         StandardOperation(nq, target, g, lambda, phi, theta) {
-        //line[control.qubit] = control.type == Control::pos? LINE_CONTROL_POS: LINE_CONTROL_NEG;
         controlled = true;
-        controls.push_back(control);
+        controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(unsigned short nq, Control control, const std::vector<unsigned short>& targets, OpType g, fp lambda, fp phi, fp theta):
+    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
         StandardOperation(nq, targets, g, lambda, phi, theta) {
-        //line[control.qubit] = control.type == Control::pos? LINE_CONTROL_POS: LINE_CONTROL_NEG;
         controlled = true;
-        controls.push_back(control);
+        controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short target, OpType g, fp lambda, fp phi, fp theta):
+    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
         StandardOperation(nq, target, g, lambda, phi, theta) {
         this->controls = controls;
         if (!controls.empty())
             controlled = true;
     }
 
-    StandardOperation::StandardOperation(unsigned short nq, const std::vector<Control>& controls, const std::vector<unsigned short>& targets, OpType g, fp lambda, fp phi, fp theta):
+    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
         StandardOperation(nq, targets, g, lambda, phi, theta) {
         this->controls = controls;
         if (!controls.empty())
@@ -360,21 +270,21 @@ namespace qc {
     }
 
     // MCT Constructor
-    StandardOperation::StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short target):
+    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target):
         StandardOperation(nq, controls, target, X) {
     }
 
     // MCF (cSWAP), Peres, paramterized two target Constructor
-    StandardOperation::StandardOperation(unsigned short nq, const std::vector<Control>& controls, unsigned short target0, unsigned short target1, OpType g, fp lambda, fp phi, fp theta):
+    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
         StandardOperation(nq, controls, {target0, target1}, g, lambda, phi, theta) {
     }
 
     /***
      * Public Methods
     ***/
-    void StandardOperation::dumpOpenQASM(std::ostream& of, const regnames_t& qreg, [[maybe_unused]] const regnames_t& creg) const {
+    void StandardOperation::dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg) const {
         std::ostringstream op;
-        op << std::setprecision(std::numeric_limits<fp>::digits10);
+        op << std::setprecision(std::numeric_limits<dd::fp>::digits10);
         if ((controls.size() > 1 && type != X) || controls.size() > 2) {
             std::cout << "[WARNING] Multiple controlled gates are not natively supported by OpenQASM. "
                       << "However, this library can parse .qasm files with multiple controlled gates (e.g., cccx) correctly. "
@@ -459,7 +369,7 @@ namespace qc {
                 break;
             case SWAP:
                 for (const auto& c: controls) {
-                    if (c.type == Control::neg)
+                    if (c.type == dd::Control::Type::neg)
                         of << "x " << qreg[c.qubit].second << ";" << std::endl;
                 }
 
@@ -469,13 +379,13 @@ namespace qc {
                 of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
 
                 for (const auto& c: controls) {
-                    if (c.type == Control::neg)
+                    if (c.type == dd::Control::Type::neg)
                         of << "x " << qreg[c.qubit].second << ";" << std::endl;
                 }
                 return;
             case iSWAP:
                 for (const auto& c: controls) {
-                    if (c.type == Control::neg)
+                    if (c.type == dd::Control::Type::neg)
                         of << "x " << qreg[c.qubit].second << ";" << std::endl;
                 }
                 of << op.str() << "swap";
@@ -499,7 +409,7 @@ namespace qc {
                 of << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
 
                 for (const auto& c: controls) {
-                    if (c.type == Control::neg)
+                    if (c.type == dd::Control::Type::neg)
                         of << "x " << qreg[c.qubit].second << ";" << std::endl;
                 }
                 return;
@@ -566,7 +476,7 @@ namespace qc {
         }
 
         for (const auto& c: controls) {
-            if (c.type == Control::neg)
+            if (c.type == dd::Control::Type::neg)
                 of << "x " << qreg[c.qubit].second << ";" << std::endl;
         }
         of << op.str();
@@ -577,14 +487,12 @@ namespace qc {
             of << " " << qreg[target].second << ";" << std::endl;
         }
         for (const auto& c: controls) {
-            if (c.type == Control::neg)
+            if (c.type == dd::Control::Type::neg)
                 of << "x " << qreg[c.qubit].second << ";" << std::endl;
         }
     }
 
-    void StandardOperation::dumpReal([[maybe_unused]] std::ostream& of) const {}
-
-    void StandardOperation::dumpQiskit(std::ostream& of, const regnames_t& qreg, [[maybe_unused]] const regnames_t& creg, const char* anc_reg_name) const {
+    void StandardOperation::dumpQiskit(std::ostream& of, const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg, const char* anc_reg_name) const {
         std::ostringstream op;
         if (targets.size() > 2 || (targets.size() > 1 && type != SWAP && type != iSWAP && type != Peres && type != Peresdag)) {
             std::cerr << "Multiple targets are not supported in general at the moment" << std::endl;
@@ -599,7 +507,7 @@ namespace qc {
                         op << "qc.h(";
                         break;
                     case 1:
-                        op << "qc.ch(" << qreg[controls[0].qubit].second << ", ";
+                        op << "qc.ch(" << qreg[controls.begin()->qubit].second << ", ";
                         break;
                     default:
                         std::cerr << "Multi-controlled H gate currently not supported" << std::endl;
@@ -611,10 +519,10 @@ namespace qc {
                         op << "qc.x(";
                         break;
                     case 1:
-                        op << "qc.cx(" << qreg[controls[0].qubit].second << ", ";
+                        op << "qc.cx(" << qreg[controls.begin()->qubit].second << ", ";
                         break;
                     case 2:
-                        op << "qc.ccx(" << qreg[controls[0].qubit].second << ", " << qreg[controls[1].qubit].second << ", ";
+                        op << "qc.ccx(" << qreg[controls.begin()->qubit].second << ", " << qreg[(++controls.begin())->qubit].second << ", ";
                         break;
                     default:
                         op << "qc.mct([";
@@ -632,7 +540,7 @@ namespace qc {
                         op << "qc.y(";
                         break;
                     case 1:
-                        op << "qc.cy(" << qreg[controls[0].qubit].second << ", ";
+                        op << "qc.cy(" << qreg[controls.begin()->qubit].second << ", ";
                         break;
                     default:
                         std::cerr << "Multi-controlled Y gate currently not supported" << std::endl;
@@ -699,7 +607,7 @@ namespace qc {
                         op << "qc.u3(pi/2, -pi/2, pi/2, ";
                         break;
                     case 1:
-                        op << "qc.cu3(pi/2, -pi/2, pi/2, " << qreg[controls[0].qubit].second << ", ";
+                        op << "qc.cu3(pi/2, -pi/2, pi/2, " << qreg[controls.begin()->qubit].second << ", ";
                         break;
                     default:
                         std::cerr << "Multi-controlled V gate currently not supported" << std::endl;
@@ -711,7 +619,7 @@ namespace qc {
                         op << "qc.u3(pi/2, pi/2, -pi/2, ";
                         break;
                     case 1:
-                        op << "qc.cu3(pi/2, pi/2, -pi/2, " << qreg[controls[0].qubit].second << ", ";
+                        op << "qc.cu3(pi/2, pi/2, -pi/2, " << qreg[controls.begin()->qubit].second << ", ";
                         break;
                     default:
                         std::cerr << "Multi-controlled Vdag gate currently not supported" << std::endl;
@@ -723,7 +631,7 @@ namespace qc {
                         op << "qc.u3(" << parameter[2] << ", " << parameter[1] << ", " << parameter[0] << ", ";
                         break;
                     case 1:
-                        op << "qc.cu3(" << parameter[2] << ", " << parameter[1] << ", " << parameter[0] << ", " << qreg[controls[0].qubit].second << ", ";
+                        op << "qc.cu3(" << parameter[2] << ", " << parameter[1] << ", " << parameter[0] << ", " << qreg[controls.begin()->qubit].second << ", ";
                         break;
                     default:
                         std::cerr << "Multi-controlled U3 gate currently not supported" << std::endl;
@@ -735,7 +643,7 @@ namespace qc {
                         op << "qc.u3(pi/2, " << parameter[1] << ", " << parameter[0] << ", ";
                         break;
                     case 1:
-                        op << "qc.cu3(pi/2, " << parameter[1] << ", " << parameter[0] << ", " << qreg[controls[0].qubit].second << ", ";
+                        op << "qc.cu3(pi/2, " << parameter[1] << ", " << parameter[0] << ", " << qreg[controls.begin()->qubit].second << ", ";
                         break;
                     default:
                         std::cerr << "Multi-controlled U2 gate currently not supported" << std::endl;
@@ -791,7 +699,7 @@ namespace qc {
                         of << "qc.swap(" << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ")" << std::endl;
                         break;
                     case 1:
-                        of << "qc.cswap(" << qreg[controls[0].qubit].second << ", " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ")" << std::endl;
+                        of << "qc.cswap(" << qreg[controls.begin()->qubit].second << ", " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ")" << std::endl;
                         break;
                     default:
                         of << "qc.cx(" << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ")" << std::endl;
@@ -813,22 +721,22 @@ namespace qc {
                         of << "qc.cz(" << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ")" << std::endl;
                         break;
                     case 1:
-                        of << "qc.cswap(" << qreg[controls[0].qubit].second << ", " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ")" << std::endl;
-                        of << "qc.cu1(pi/2, " << qreg[controls[0].qubit].second << ", " << qreg[targets[0]].second << ")" << std::endl;
-                        of << "qc.cu1(pi/2, " << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ")" << std::endl;
-                        of << "qc.mcu1(pi, [" << qreg[controls[0].qubit].second << ", " << qreg[targets[0]].second << "], " << qreg[targets[1]].second << ")" << std::endl;
+                        of << "qc.cswap(" << qreg[controls.begin()->qubit].second << ", " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ")" << std::endl;
+                        of << "qc.cu1(pi/2, " << qreg[controls.begin()->qubit].second << ", " << qreg[targets[0]].second << ")" << std::endl;
+                        of << "qc.cu1(pi/2, " << qreg[controls.begin()->qubit].second << ", " << qreg[targets[1]].second << ")" << std::endl;
+                        of << "qc.mcu1(pi, [" << qreg[controls.begin()->qubit].second << ", " << qreg[targets[0]].second << "], " << qreg[targets[1]].second << ")" << std::endl;
                         break;
                     default:
                         std::cerr << "Multi-controlled iSWAP gate currently not supported" << std::endl;
                 }
                 return;
             case Peres:
-                of << "qc.ccx(" << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ")" << std::endl;
-                of << "qc.cx(" << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ")" << std::endl;
+                of << "qc.ccx(" << qreg[controls.begin()->qubit].second << ", " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ")" << std::endl;
+                of << "qc.cx(" << qreg[controls.begin()->qubit].second << ", " << qreg[targets[1]].second << ")" << std::endl;
                 return;
             case Peresdag:
-                of << "qc.cx(" << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ")" << std::endl;
-                of << "qc.ccx(" << qreg[controls[0].qubit].second << ", " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ")" << std::endl;
+                of << "qc.cx(" << qreg[controls.begin()->qubit].second << ", " << qreg[targets[1]].second << ")" << std::endl;
+                of << "qc.ccx(" << qreg[controls.begin()->qubit].second << ", " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ")" << std::endl;
                 return;
             default:
                 std::cerr << "gate type (index) " << static_cast<int>(type) << " could not be converted to qiskit" << std::endl;
@@ -836,51 +744,25 @@ namespace qc {
         of << op.str() << qreg[targets[0]].second << ")" << std::endl;
     }
 
-    dd::Edge StandardOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const {
-        setLine(line);
-        dd::Edge e = getDD(dd, line, false);
-        resetLine(line);
-        return e;
-    }
-
-    dd::Edge StandardOperation::getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const {
+    MatrixDD StandardOperation::getDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const {
         if (type == SWAP && controls.empty()) {
             auto target0 = targets.at(0);
             auto target1 = targets.at(1);
             // update permutation
-            auto tmp                = permutation.at(target0);
-            permutation.at(target0) = permutation.at(target1);
-            permutation.at(target1) = tmp;
+            std::swap(permutation.at(target0), permutation.at(target1));
             return dd->makeIdent(nqubits);
         }
-
-        setLine(line, permutation);
-        dd::Edge e = getDD(dd, line, false, permutation);
-        resetLine(line, permutation);
-        return e;
+        return Operation::getDD(dd, permutation);
     }
 
-    dd::Edge StandardOperation::getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const {
-        setLine(line);
-        dd::Edge e = getDD(dd, line, true);
-        resetLine(line);
-        return e;
-    }
-
-    dd::Edge StandardOperation::getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const {
+    MatrixDD StandardOperation::getInverseDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const {
         if (type == SWAP && controls.empty()) {
             auto target0 = targets.at(0);
             auto target1 = targets.at(1);
             // update permutation
-            auto tmp                = permutation.at(target0);
-            permutation.at(target0) = permutation.at(target1);
-            permutation.at(target1) = tmp;
+            std::swap(permutation.at(target0), permutation.at(target1));
             return dd->makeIdent(nqubits);
         }
-
-        setLine(line, permutation);
-        dd::Edge e = getDD(dd, line, true, permutation);
-        resetLine(line, permutation);
-        return e;
+        return Operation::getInverseDD(dd, permutation);
     }
 } // namespace qc
