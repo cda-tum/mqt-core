@@ -9,7 +9,6 @@
 #include "dd/Export.hpp"
 
 using namespace std;
-using namespace chrono;
 
 int main() {
     std::string            filename = "./circuits/test.real";
