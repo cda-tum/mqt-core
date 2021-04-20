@@ -44,7 +44,7 @@ protected:
     qc::MatrixDD                 func{};
 };
 
-constexpr dd::QubitCount GROVER_MAX_QUBITS       = 23;
+constexpr dd::QubitCount GROVER_MAX_QUBITS       = 18;
 constexpr std::size_t    GROVER_NUM_SEEDS        = 5;
 constexpr dd::fp         GROVER_ACCURACY         = 1e-2;
 constexpr dd::fp         GROVER_GOAL_PROBABILITY = 0.9;
