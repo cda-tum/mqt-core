@@ -12,7 +12,7 @@ namespace qc {
 
     class NonUnitaryOperation final: public Operation {
     protected:
-        std::vector<dd::Qubit> qubits{}; // vector for the qubits to measure (necessary since std::set does not preserve the order of inserted elements)
+        std::vector<dd::Qubit>   qubits{};   // vector for the qubits to measure (necessary since std::set does not preserve the order of inserted elements)
         std::vector<std::size_t> classics{}; // vector for the classical bits to measure into
 
         std::ostream& printNonUnitary(std::ostream& os, const std::vector<dd::Qubit>& q, const std::vector<std::size_t>& c = {}) const;

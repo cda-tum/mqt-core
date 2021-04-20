@@ -7,10 +7,11 @@
 
 namespace qc {
     // Measurement constructor
-    NonUnitaryOperation::NonUnitaryOperation(const dd::QubitCount nq, const std::vector<dd::Qubit>& qubitRegister, const std::vector<std::size_t>& classicalRegister): qubits(qubitRegister), classics(classicalRegister) {
+    NonUnitaryOperation::NonUnitaryOperation(const dd::QubitCount nq, const std::vector<dd::Qubit>& qubitRegister, const std::vector<std::size_t>& classicalRegister):
+        qubits(qubitRegister), classics(classicalRegister) {
         assert(qubitRegister.size() == classicalRegister.size());
         // i-th qubit to be measured shall be measured into i-th classical register
-        type = Measure;
+        type    = Measure;
         nqubits = nq;
         Operation::setName();
     }
@@ -37,7 +38,7 @@ namespace qc {
     }
 
     std::ostream& NonUnitaryOperation::printNonUnitary(std::ostream& os, const std::vector<dd::Qubit>& q, const std::vector<std::size_t>& c) const {
-        auto qubitIt = q.cbegin();
+        auto qubitIt   = q.cbegin();
         auto classicIt = c.cbegin();
         switch (type) {
             case Measure:
@@ -104,7 +105,7 @@ namespace qc {
     }
 
     void NonUnitaryOperation::dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const {
-        auto classicsIt  = classics.cbegin();
+        auto classicsIt = classics.cbegin();
         switch (type) {
             case Measure:
                 if (isWholeQubitRegister(qreg, qubits.front(), qubits.back()) &&
@@ -217,9 +218,9 @@ namespace qc {
 
     bool NonUnitaryOperation::actsOn(dd::Qubit i) const {
         if (type == Measure) {
-            return std::any_of(qubits.cbegin(), qubits.cend(), [&i] (const auto& q) { return q == i; });
+            return std::any_of(qubits.cbegin(), qubits.cend(), [&i](const auto& q) { return q == i; });
         } else if (type == Reset) {
-            return std::any_of(targets.cbegin(), targets.cend(), [&i] (const auto& t) { return t == i; });
+            return std::any_of(targets.cbegin(), targets.cend(), [&i](const auto& t) { return t == i; });
         }
         return false; // other non-unitary operations (e.g., barrier statements) may be ignored
     }

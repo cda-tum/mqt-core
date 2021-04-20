@@ -20,7 +20,7 @@ namespace qc {
 
     public:
         explicit QFRException(std::string msg):
-                std::invalid_argument("QFR Exception"), msg(std::move(msg)) {}
+            std::invalid_argument("QFR Exception"), msg(std::move(msg)) {}
 
         [[nodiscard]] const char* what() const noexcept override {
             return msg.c_str();
@@ -35,12 +35,12 @@ namespace qc {
     using RegisterMap          = std::map<std::string, RegisterType, std::greater<>>;
     using QuantumRegisterMap   = RegisterMap<QuantumRegister>;
     using ClassicalRegisterMap = RegisterMap<ClassicalRegister>;
-    using RegisterNames = std::vector<std::pair<std::string, std::string>>;
+    using RegisterNames        = std::vector<std::pair<std::string, std::string>>;
 
     using VectorDD = dd::Package::vEdge;
     using MatrixDD = dd::Package::mEdge;
 
-    using Targets  = std::vector<dd::Qubit>;
+    using Targets = std::vector<dd::Qubit>;
 
     struct Permutation: public std::map<dd::Qubit, dd::Qubit> {
         [[nodiscard]] inline dd::Controls apply(const dd::Controls& controls) const {

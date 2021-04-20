@@ -240,13 +240,13 @@ namespace qc {
                 // swap i and j
                 auto saved = on;
                 if constexpr (std::is_same_v<DD, VectorDD>) {
-                    on = dd->multiply(dd->makeSWAPDD(on.p->v+1, {}, from.at(i), from.at(j)), on);
+                    on = dd->multiply(dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)), on);
                 } else {
                     // the regular flag only has an effect on matrix DDs
                     if (regular) {
-                        on = dd->multiply(dd->makeSWAPDD(on.p->v+1, {}, from.at(i), from.at(j)), on);
+                        on = dd->multiply(dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)), on);
                     } else {
-                        on = dd->multiply(on, dd->makeSWAPDD(on.p->v+1, {}, from.at(i), from.at(j)));
+                        on = dd->multiply(on, dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)));
                     }
                 }
 

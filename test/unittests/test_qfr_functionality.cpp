@@ -28,13 +28,13 @@ protected:
         dist = std::uniform_real_distribution<dd::fp>(0.0, 2 * dd::PI);
     }
 
-    std::unique_ptr<dd::Package>       dd;
-    std::mt19937_64                    mt;
+    std::unique_ptr<dd::Package>           dd;
+    std::mt19937_64                        mt;
     std::uniform_real_distribution<dd::fp> dist;
 };
 
 TEST_F(QFRFunctionality, fuse_cx_to_swap) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0_pc, 1, qc::X);
     qc.emplace_back<StandardOperation>(nqubits, 1_pc, 0, qc::X);
@@ -49,7 +49,7 @@ TEST_F(QFRFunctionality, fuse_cx_to_swap) {
 }
 
 TEST_F(QFRFunctionality, replace_cx_to_swap_at_end) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0_pc, 1, qc::X);
     qc.emplace_back<StandardOperation>(nqubits, 1_pc, 0, qc::X);
@@ -71,7 +71,7 @@ TEST_F(QFRFunctionality, replace_cx_to_swap_at_end) {
 }
 
 TEST_F(QFRFunctionality, replace_cx_to_swap) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0_pc, 1, qc::X);
     qc.emplace_back<StandardOperation>(nqubits, 1_pc, 0, qc::X);
@@ -94,7 +94,7 @@ TEST_F(QFRFunctionality, replace_cx_to_swap) {
 }
 
 TEST_F(QFRFunctionality, remove_trailing_idle_qubits) {
-    QubitCount nqubits = 4;
+    QubitCount         nqubits = 4;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::X);
     qc.emplace_back<StandardOperation>(nqubits, 2, qc::X);
@@ -122,7 +122,7 @@ TEST_F(QFRFunctionality, remove_trailing_idle_qubits) {
 }
 
 TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::X);
     qc.addAncillaryRegister(1);
@@ -182,7 +182,7 @@ TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
 }
 
 TEST_F(QFRFunctionality, ancillary_qubit_remove_middle) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::X);
     qc.addAncillaryRegister(3);
@@ -196,7 +196,7 @@ TEST_F(QFRFunctionality, ancillary_qubit_remove_middle) {
 }
 
 TEST_F(QFRFunctionality, split_qreg) {
-    QubitCount nqubits = 3;
+    QubitCount         nqubits = 3;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::X);
     auto p = qc.removeQubit(1);
@@ -209,7 +209,7 @@ TEST_F(QFRFunctionality, split_qreg) {
 }
 
 TEST_F(QFRFunctionality, FuseTwoSingleQubitGates) {
-    QubitCount nqubits = 1;
+    QubitCount         nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::X);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
@@ -225,7 +225,7 @@ TEST_F(QFRFunctionality, FuseTwoSingleQubitGates) {
 }
 
 TEST_F(QFRFunctionality, FuseThreeSingleQubitGates) {
-    QubitCount nqubits = 1;
+    QubitCount         nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::X);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
@@ -243,7 +243,7 @@ TEST_F(QFRFunctionality, FuseThreeSingleQubitGates) {
 }
 
 TEST_F(QFRFunctionality, FuseNoSingleQubitGates) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 0_pc, 1, qc::X);
@@ -260,7 +260,7 @@ TEST_F(QFRFunctionality, FuseNoSingleQubitGates) {
 }
 
 TEST_F(QFRFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 1, qc::Z);
@@ -313,7 +313,7 @@ TEST_F(QFRFunctionality, StripIdleAndDump) {
 }
 
 TEST_F(QFRFunctionality, CollapseCompoundOperationToStandard) {
-    QubitCount nqubits = 1;
+    QubitCount         nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::X);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::I);
@@ -327,7 +327,7 @@ TEST_F(QFRFunctionality, CollapseCompoundOperationToStandard) {
 }
 
 TEST_F(QFRFunctionality, eliminateCompoundOperation) {
-    QubitCount nqubits = 1;
+    QubitCount         nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::I);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::I);
@@ -341,7 +341,7 @@ TEST_F(QFRFunctionality, eliminateCompoundOperation) {
 }
 
 TEST_F(QFRFunctionality, eliminateInverseInCompoundOperation) {
-    QubitCount nqubits = 1;
+    QubitCount         nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, S);
     qc.emplace_back<StandardOperation>(nqubits, 0, Sdag);
@@ -355,7 +355,7 @@ TEST_F(QFRFunctionality, eliminateInverseInCompoundOperation) {
 }
 
 TEST_F(QFRFunctionality, unknownInverseInCompoundOperation) {
-    QubitCount nqubits = 1;
+    QubitCount         nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, Phase, 1.);
     qc.emplace_back<StandardOperation>(nqubits, 0, Phase, -1.);
@@ -368,7 +368,7 @@ TEST_F(QFRFunctionality, unknownInverseInCompoundOperation) {
 }
 
 TEST_F(QFRFunctionality, removeDiagonalSingleQubitBeforeMeasure) {
-    QubitCount nqubits = 1;
+    QubitCount         nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::Z);
     qc.emplace_back<NonUnitaryOperation>(nqubits, std::vector<dd::Qubit>{0}, std::vector<std::size_t>{0});
@@ -382,7 +382,7 @@ TEST_F(QFRFunctionality, removeDiagonalSingleQubitBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, removeDiagonalCompoundOpBeforeMeasure) {
-    QubitCount nqubits = 1;
+    QubitCount         nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::Z);
     qc.emplace_back<StandardOperation>(nqubits, 0, T);
@@ -398,7 +398,7 @@ TEST_F(QFRFunctionality, removeDiagonalCompoundOpBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, removeDiagonalTwoQubitGateBeforeMeasure) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0_pc, 1, qc::Z);
     qc.emplace_back<NonUnitaryOperation>(nqubits, std::vector<dd::Qubit>{0, 1}, std::vector<std::size_t>{0, 1});
@@ -412,7 +412,7 @@ TEST_F(QFRFunctionality, removeDiagonalTwoQubitGateBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, leaveGateBeforeMeasure) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0_pc, 1, qc::Z);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::X);
@@ -426,7 +426,7 @@ TEST_F(QFRFunctionality, leaveGateBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, removeComplexGateBeforeMeasure) {
-    QubitCount nqubits = 4;
+    QubitCount         nqubits = 4;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0_pc, 1, qc::Z);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::X);
@@ -448,7 +448,7 @@ TEST_F(QFRFunctionality, removeComplexGateBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, removeSimpleCompoundOpBeforeMeasure) {
-    QubitCount nqubits = 1;
+    QubitCount         nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::X);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::T);
@@ -463,7 +463,7 @@ TEST_F(QFRFunctionality, removeSimpleCompoundOpBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, removePartOfCompoundOpBeforeMeasure) {
-    QubitCount nqubits = 1;
+    QubitCount         nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::T);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::X);
@@ -479,7 +479,7 @@ TEST_F(QFRFunctionality, removePartOfCompoundOpBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, decomposeSWAPsUndirectedArchitecture) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, Controls{}, 0, 1, SWAP);
     std::cout << "-----------------------------" << std::endl;
@@ -510,7 +510,7 @@ TEST_F(QFRFunctionality, decomposeSWAPsUndirectedArchitecture) {
     });
 }
 TEST_F(QFRFunctionality, decomposeSWAPsDirectedArchitecture) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, Controls{}, 0, 1, SWAP);
     std::cout << "-----------------------------" << std::endl;
@@ -566,7 +566,7 @@ TEST_F(QFRFunctionality, decomposeSWAPsDirectedArchitecture) {
 }
 
 TEST_F(QFRFunctionality, decomposeSWAPsCompound) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X); //We need something to replace with compound
     auto gate = std::make_unique<qc::CompoundOperation>(nqubits);
@@ -585,7 +585,7 @@ TEST_F(QFRFunctionality, decomposeSWAPsCompound) {
     EXPECT_EQ(dynamic_cast<qc::CompoundOperation*>(it->get())->size(), 9);
 }
 TEST_F(QFRFunctionality, decomposeSWAPsCompoundDirected) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X); //We need something to replace with compound
     auto gate = std::make_unique<qc::CompoundOperation>(nqubits);
@@ -605,7 +605,7 @@ TEST_F(QFRFunctionality, decomposeSWAPsCompoundDirected) {
 }
 
 TEST_F(QFRFunctionality, removeFinalMeasurements) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 1, qc::H);
@@ -633,7 +633,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurements) {
 }
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsTwoQubitMeasurement) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 1, qc::H);
@@ -660,7 +660,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsTwoQubitMeasurement) {
 }
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompound) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X); //We need something to replace with compound
     auto gate = std::make_unique<qc::CompoundOperation>(nqubits);
@@ -687,7 +687,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsCompound) {
 }
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundDegraded) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X); //We need something to replace with compound
     auto gate = std::make_unique<qc::CompoundOperation>(nqubits);
@@ -715,7 +715,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundDegraded) {
 }
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundEmpty) {
-    QubitCount nqubits = 2;
+    QubitCount         nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X); //We need something to replace with compound
     auto gate = std::make_unique<qc::CompoundOperation>(nqubits);

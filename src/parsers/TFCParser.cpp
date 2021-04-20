@@ -7,7 +7,7 @@
 
 void qc::QuantumComputation::importTFC(std::istream& is) {
     std::map<std::string, dd::Qubit> varMap{};
-    auto                                  line = readTFCHeader(is, varMap);
+    auto                             line = readTFCHeader(is, varMap);
     readTFCGateDescriptions(is, line, varMap);
 }
 
@@ -135,8 +135,8 @@ int qc::QuantumComputation::readTFCHeader(std::istream& is, std::map<std::string
     }
 
     for (size_t q = 0; q < variables.size(); ++q) {
-        variable         = variables.at(q);
-        auto p           = varMap.at(variable);
+        variable                                 = variables.at(q);
+        auto p                                   = varMap.at(variable);
         initialLayout[static_cast<dd::Qubit>(q)] = p;
         if (!outputs.empty()) {
             if (std::count(outputs.begin(), outputs.end(), variable)) {

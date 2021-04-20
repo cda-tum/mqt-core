@@ -215,7 +215,7 @@ namespace qc {
 
         // import initial layout in case it is available
         if (!circ.attr("_layout").is_none()) {
-            auto&&         virtual_bits        = circ.attr("_layout").attr("get_virtual_bits")().cast<py::dict>();
+            auto&&    virtual_bits        = circ.attr("_layout").attr("get_virtual_bits")().cast<py::dict>();
             dd::Qubit logical_qubit_index = 0;
             for (auto qubit: virtual_bits) {
                 auto&& logical_qubit = qubit.first;

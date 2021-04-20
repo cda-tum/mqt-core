@@ -7,7 +7,8 @@
 
 namespace qc {
 
-    RandomCliffordCircuit::RandomCliffordCircuit(dd::QubitCount nq, std::size_t depth, std::size_t seed): depth(depth), seed(seed) {
+    RandomCliffordCircuit::RandomCliffordCircuit(dd::QubitCount nq, std::size_t depth, std::size_t seed):
+        depth(depth), seed(seed) {
         addQubitRegister(nq);
         addClassicalRegister(nq);
 
@@ -89,7 +90,7 @@ namespace qc {
 
     void RandomCliffordCircuit::append2QClifford(std::uint_fast16_t idx, dd::Qubit control, dd::Qubit target) {
         std::uint_fast16_t id       = idx % 11520;
-        std::uint_fast8_t pauliIdx = id % 16;
+        std::uint_fast8_t  pauliIdx = id % 16;
         id /= 16;
 
         emplace_back<CompoundOperation>(nqubits);

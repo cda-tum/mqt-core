@@ -25,7 +25,7 @@ protected:
     }
 
     void SetUp() override {
-        nqubits = GetParam();
+        nqubits             = GetParam();
         dd                  = std::make_unique<dd::Package>(nqubits);
         initialCacheCount   = dd->cn.complexCache.getCount();
         initialComplexCount = dd->cn.complexTable.getCount();

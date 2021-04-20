@@ -843,7 +843,7 @@ namespace qasm {
         IdList(gate.argumentNames);
         check(Token::Kind::lbrace);
 
-        auto         cGateName = gateName;
+        auto           cGateName = gateName;
         dd::QubitCount ncontrols = 0;
         while (cGateName.front() == 'c') {
             cGateName = cGateName.substr(1);
@@ -1065,10 +1065,10 @@ namespace qasm {
             check(Token::Kind::semicolon);
 
             if (qreg.second == creg.second) {
-                std::vector<dd::Qubit> qubits{};
+                std::vector<dd::Qubit>   qubits{};
                 std::vector<std::size_t> classics{};
                 for (int i = 0; i < qreg.second; ++i) {
-                    auto qubit = static_cast<dd::Qubit>(qreg.first + i);
+                    auto        qubit = static_cast<dd::Qubit>(qreg.first + i);
                     std::size_t clbit = creg.first + i;
                     if (qubit >= nqubits) {
                         std::stringstream ss{};

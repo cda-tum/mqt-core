@@ -40,7 +40,7 @@ namespace qc {
         }
 
         [[nodiscard]] bool isNonUnitaryOperation() const override {
-            return std::any_of(ops.cbegin(), ops.cend(), [] (const auto& op) { return op->isNonUnitaryOperation(); });
+            return std::any_of(ops.cbegin(), ops.cend(), [](const auto& op) { return op->isNonUnitaryOperation(); });
         }
 
         MatrixDD getDD(std::unique_ptr<dd::Package>& dd) const override {
@@ -83,7 +83,8 @@ namespace qc {
                 op->print(os);
             }
 
-            return os;        }
+            return os;
+        }
 
         std::ostream& print(std::ostream& os, const Permutation& permutation) const override {
             os << name;
@@ -97,7 +98,7 @@ namespace qc {
         }
 
         [[nodiscard]] bool actsOn(dd::Qubit i) const override {
-            return std::any_of(ops.cbegin(), ops.cend(), [&i] (const auto& op) { return op->actsOn(i);});
+            return std::any_of(ops.cbegin(), ops.cend(), [&i](const auto& op) { return op->actsOn(i); });
         }
 
         void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override {
