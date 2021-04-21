@@ -86,7 +86,7 @@ TEST_P(QFT, Functionality) {
     ASSERT_EQ(dd->cn.complexTable.getCount(), static_cast<unsigned int>(std::ceil(std::pow(2, nqubits) / 4)) + 3);
 
     // top edge weight should equal sqrt(0.5)^n
-    EXPECT_NEAR(func.w.r->val(), static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)), dd->cn.complexTable.tolerance());
+    EXPECT_NEAR(dd::ComplexTable<>::Entry::val(func.w.r), static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)), dd->cn.complexTable.tolerance());
 
     // first row and first column should consist only of (1/sqrt(2))**nqubits
     for (unsigned long long i = 0; i < std::pow(static_cast<long double>(2), nqubits); ++i) {
@@ -117,8 +117,8 @@ TEST_P(QFT, Simulation) {
     dd->garbageCollect(true);
 
     // top edge weight should equal 1
-    EXPECT_NEAR(sim.w.r->val(), 1, dd->cn.complexTable.tolerance());
-    EXPECT_NEAR(sim.w.i->val(), 0, dd->cn.complexTable.tolerance());
+    EXPECT_NEAR(dd::ComplexTable<>::Entry::val(sim.w.r), 1, dd->cn.complexTable.tolerance());
+    EXPECT_NEAR(dd::ComplexTable<>::Entry::val(sim.w.i), 0, dd->cn.complexTable.tolerance());
 
     // first column should consist only of sqrt(0.5)^n's
     for (unsigned long long i = 0; i < std::pow(static_cast<long double>(2), nqubits); ++i) {
