@@ -17,6 +17,7 @@ endif ()
 
 add_executable(${PROJECT_NAME}_example ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 target_link_libraries(${PROJECT_NAME}_example PRIVATE ${PROJECT_NAME})
+set_target_properties(${PROJECT_NAME}_example PROPERTIES FOLDER tests CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 
 add_custom_command(TARGET ${PROJECT_NAME}_example
                    POST_BUILD
@@ -33,7 +34,7 @@ macro(package_add_test TESTNAME)
 	target_link_libraries(${TESTNAME} PRIVATE ${PROJECT_NAME} gmock gtest_main)
 	# discover tests
 	gtest_discover_tests(${TESTNAME} WORKING_DIRECTORY ${PROJECT_DIR} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}")
-	set_target_properties(${TESTNAME} PROPERTIES FOLDER tests)
+	set_target_properties(${TESTNAME} PROPERTIES FOLDER tests CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 endmacro()
 
 # add unit tests
