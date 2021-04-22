@@ -22,7 +22,7 @@ namespace qc {
 
     public:
         // Measurement constructor
-        NonUnitaryOperation(dd::QubitCount nq, const std::vector<dd::Qubit>& qubitRegister, const std::vector<std::size_t>& classicalRegister);
+        NonUnitaryOperation(dd::QubitCount nq, std::vector<dd::Qubit> qubitRegister, std::vector<std::size_t> classicalRegister);
         NonUnitaryOperation(dd::QubitCount nq, dd::Qubit qubit, std::size_t cbit);
 
         // Snapshot constructor

@@ -5,10 +5,12 @@
 
 #include "operations/NonUnitaryOperation.hpp"
 
+#include <utility>
+
 namespace qc {
     // Measurement constructor
-    NonUnitaryOperation::NonUnitaryOperation(const dd::QubitCount nq, const std::vector<dd::Qubit>& qubitRegister, const std::vector<std::size_t>& classicalRegister):
-        qubits(qubitRegister), classics(classicalRegister) {
+    NonUnitaryOperation::NonUnitaryOperation(const dd::QubitCount nq, std::vector<dd::Qubit> qubitRegister, std::vector<std::size_t> classicalRegister):
+        qubits(std::move(qubitRegister)), classics(std::move(classicalRegister)) {
         assert(qubitRegister.size() == classicalRegister.size());
         // i-th qubit to be measured shall be measured into i-th classical register
         type    = Measure;
