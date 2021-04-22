@@ -19,9 +19,4 @@ add_library(JKQ::${PROJECT_NAME}_python ALIAS ${PROJECT_NAME}_python)
 # add pyqfr module
 pybind11_add_module(py${PROJECT_NAME} bindings.cpp)
 target_link_libraries(py${PROJECT_NAME} PUBLIC ${PROJECT_NAME} JKQ::${PROJECT_NAME}_python pybind11_json)
-# enable interprocedural optimization if it is supported
-include(CheckIPOSupported)
-check_ipo_supported(RESULT ipo_supported)
-if (ipo_supported)
-	set_target_properties(py${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-endif ()
+enable_lto(py${PROJECT_NAME})

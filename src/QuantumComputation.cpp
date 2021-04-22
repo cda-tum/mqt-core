@@ -595,7 +595,7 @@ namespace qc {
             os << std::endl;
         }
         if (!ops.empty()) {
-            os << std::setw((int) std::log10(ops.size()) + 1) << "o: \t\t\t";
+            os << std::setw((int)std::log10(ops.size()) + 1) << "o: \t\t\t";
         } else {
             os << "o: \t\t\t";
         }

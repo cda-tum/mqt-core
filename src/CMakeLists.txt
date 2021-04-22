@@ -61,11 +61,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json" EXCLUDE_FROM_
 target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json)
 
 # enable interprocedural optimization if it is supported
-include(CheckIPOSupported)
-check_ipo_supported(RESULT ipo_supported)
-if (ipo_supported)
-	set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-endif ()
+enable_lto(${PROJECT_NAME})
 
 # set compiler flags depending on compiler
 if(MSVC)

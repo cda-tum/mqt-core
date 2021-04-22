@@ -5,11 +5,7 @@ add_executable(${PROJECT_NAME}_app ${CMAKE_CURRENT_SOURCE_DIR}/app.cpp)
 target_link_libraries(${PROJECT_NAME}_app PRIVATE ${PROJECT_NAME})
 
 # enable interprocedural optimization if it is supported
-include(CheckIPOSupported)
-check_ipo_supported(RESULT ipo_supported)
-if (ipo_supported)
-	set_target_properties(${PROJECT_NAME}_app PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-endif ()
+enable_lto(${PROJECT_NAME}_app)
 
 # create symlinks
 add_custom_command(TARGET ${PROJECT_NAME}_app
