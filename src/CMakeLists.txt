@@ -63,10 +63,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json)
 # enable interprocedural optimization if it is supported
 include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported)
-if(ipo_supported)
-	# LTO causes problems when compiling with clang without a ThinLTO aware linker
-	#set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-endif()
+if (ipo_supported)
+	set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif ()
 
 # set compiler flags depending on compiler
 if(MSVC)

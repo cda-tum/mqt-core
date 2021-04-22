@@ -99,6 +99,40 @@ TEST_P(QFT, Functionality) {
     }
 }
 
+TEST_P(QFT, FunctionalityRecursive) {
+    // there should be no error constructing the circuit
+    ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits); });
+
+    // there should be no error building the functionality
+    ASSERT_NO_THROW({ func = qc->buildFunctionalityRecursive(dd); });
+
+    qc->printStatistics(std::cout);
+    // QFT DD should consist of 2^n nodes
+    ASSERT_EQ(dd->size(func), std::pow(2, nqubits));
+
+    // Force garbage collection of compute table and complex table
+    dd->garbageCollect(true);
+
+    // the final DD should store all 2^n different amplitudes
+    // since only positive real values are stored in the complex table
+    // this number has to be divided by 4
+    // the (+3) accounts for the fact that the table is pre-filled with some values {0,0.5,sqrt(0.5)}
+    ASSERT_EQ(dd->cn.complexTable.getCount(), static_cast<unsigned int>(std::ceil(std::pow(2, nqubits) / 4)) + 3);
+
+    // top edge weight should equal sqrt(0.5)^n
+    EXPECT_NEAR(dd::ComplexTable<>::Entry::val(func.w.r), static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)), dd->cn.complexTable.tolerance());
+
+    // first row and first column should consist only of (1/sqrt(2))**nqubits
+    for (unsigned long long i = 0; i < std::pow(static_cast<long double>(2), nqubits); ++i) {
+        auto c = dd->getValueByPath(func, 0, i);
+        EXPECT_NEAR(c.r, static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)), dd->cn.complexTable.tolerance());
+        EXPECT_NEAR(c.i, 0, dd->cn.complexTable.tolerance());
+        c = dd->getValueByPath(func, i, 0);
+        EXPECT_NEAR(c.r, static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)), dd->cn.complexTable.tolerance());
+        EXPECT_NEAR(c.i, 0, dd->cn.complexTable.tolerance());
+    }
+}
+
 TEST_P(QFT, Simulation) {
     // there should be no error constructing the circuit
     ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits); });
