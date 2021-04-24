@@ -12,7 +12,6 @@ env:
   CIBW_BUILD_VERBOSITY: 3
   CIBW_TEST_COMMAND: "python -c \"from jkq import qfr\""
   CIBW_BEFORE_BUILD: "pip install cmake"
-  CIBW_ENVIRONMENT_MACOS: "CC='gcc-10' CXX='g++-10'"
 
 jobs:
   build_wheels:

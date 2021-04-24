@@ -128,8 +128,6 @@ It acts as an intermediate representation and provides the facilitites to
 Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments). However, the implementation should be compatible
 with any current C++ compiler supporting C++17 and a minimum CMake version of 3.14.
 
-Note that using (Apple)Clang to compile the library under macOS might lead to severe performance degradation. Consider using gcc to compile the project!
-
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
 ### Configure, Build, and Install
