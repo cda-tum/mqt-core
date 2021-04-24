@@ -1,10 +1,10 @@
 name: CI
 
-on: 
+on:
   push:
-    branches: [master]
+    branches: [ master ]
   pull_request:
-    branches: [master]
+    branches: [ master ]
   workflow_dispatch:
 
 env:
@@ -16,97 +16,101 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
-    - name: Configure CMake
-      shell: bash
-      run: |
-         if [ "$RUNNER_OS" == "Windows" ]; then
-           cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl" -DBUILD_QFR_TESTS=ON
-         else
-           cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON
-         fi  
-        
-    - name: Build
-      shell: bash
-      run: cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name:  Configure CMake
+        shell: bash
+        run:   |
+               if [ "$RUNNER_OS" == "Windows" ]; then
+                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl" -DBUILD_QFR_TESTS=ON
+               elif [ "$RUNNER_OS" == "macOS" ]; then
+                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10
+               else
+                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON
+               fi
+
+      - name:  Build
+        shell: bash
+        run:   cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE
 
   test:
     needs: build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
-    - name: Configure CMake
-      shell: bash
-      run: |
-         if [ "$RUNNER_OS" == "Windows" ]; then
-           cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl" -DBUILD_QFR_TESTS=ON
-         else
-           cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON
-         fi  
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name:  Configure CMake
+        shell: bash
+        run:   |
+               if [ "$RUNNER_OS" == "Windows" ]; then
+                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl" -DBUILD_QFR_TESTS=ON
+               elif [ "$RUNNER_OS" == "macOS" ]; then
+                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10
+               else
+                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON
+               fi
 
-    - name: Build
-      shell: bash
-      run: cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE --target qfr_test
+      - name:  Build
+        shell: bash
+        run:   cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE --target qfr_test
 
-    - name: Test
-      working-directory: ${{github.workspace}}/build/test
-      shell: bash
-      run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          cd $BUILD_TYPE
-          ./qfr_test.exe
-        else
-          ./qfr_test
-        fi
-    
+      - name:              Test
+        working-directory: ${{github.workspace}}/build/test
+        shell:             bash
+        run:               |
+                           if [ "$RUNNER_OS" == "Windows" ]; then
+                             cd $BUILD_TYPE
+                             ./qfr_test.exe
+                           else
+                             ./qfr_test
+                           fi
+
   coverage:
     needs: test
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
-    - name: Configure CMake
-      shell: bash
-      run: cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Release -DCOVERAGE=1 -DBUILD_QFR_TESTS=ON
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name:  Configure CMake
+        shell: bash
+        run:   cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Release -DCOVERAGE=1 -DBUILD_QFR_TESTS=ON
 
-    - name: Build
-      shell: bash
-      run: cmake --build "${{github.workspace}}/build" --config Release --target qfr_test
+      - name:  Build
+        shell: bash
+        run:   cmake --build "${{github.workspace}}/build" --config Release --target qfr_test
 
-    - name: Test
-      working-directory: ${{github.workspace}}/build/test
-      shell: bash
-      run: ./qfr_test
-        
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
-      with:
-        fail_ci_if_error: true
+      - name:              Test
+        working-directory: ${{github.workspace}}/build/test
+        shell:             bash
+        run:               ./qfr_test
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          fail_ci_if_error: true
 
   codestyle:
     runs-on: ubuntu-latest
