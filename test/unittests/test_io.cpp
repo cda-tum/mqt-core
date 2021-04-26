@@ -88,15 +88,7 @@ TEST_F(IO, importFromString) {
 TEST_F(IO, controlled_op_acting_on_whole_register) {
     std::string       circuit_qasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncx q,q[1];\n";
     std::stringstream ss{circuit_qasm};
-    try {
-        qc->import(ss, qc::OpenQASM);
-        FAIL() << "Nothing thrown. Expected qasm::QASMParserException";
-    } catch (qasm::QASMParserException const& err) {
-        std::cout << err.what() << std::endl;
-        SUCCEED();
-    } catch (...) {
-        FAIL() << "Expected qasm::QASMParserException";
-    }
+    EXPECT_THROW(qc->import(ss, qc::OpenQASM), qasm::QASMParserException);
 }
 
 TEST_F(IO, invalid_real_header) {
@@ -114,57 +106,25 @@ TEST_F(IO, invalid_real_command) {
 TEST_F(IO, insufficient_registers_qelib) {
     std::string       circuit_qasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncx q[0];\n";
     std::stringstream ss{circuit_qasm};
-    try {
-        qc->import(ss, qc::OpenQASM);
-        FAIL() << "Nothing thrown. Expected qasm::QASMParserException";
-    } catch (qasm::QASMParserException const& err) {
-        std::cout << err.what() << std::endl;
-        SUCCEED();
-    } catch (...) {
-        FAIL() << "Expected qasm::QASMParserException";
-    }
+    EXPECT_THROW(qc->import(ss, qc::OpenQASM), qasm::QASMParserException);
 }
 
 TEST_F(IO, insufficient_registers_enhanced_qelib) {
     std::string       circuit_qasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[4];\ncccz q[0], q[1], q[2];\n";
     std::stringstream ss{circuit_qasm};
-    try {
-        qc->import(ss, qc::OpenQASM);
-        FAIL() << "Nothing thrown. Expected qasm::QASMParserException";
-    } catch (qasm::QASMParserException const& err) {
-        std::cout << err.what() << std::endl;
-        SUCCEED();
-    } catch (...) {
-        FAIL() << "Expected qasm::QASMParserException";
-    }
+    EXPECT_THROW(qc->import(ss, qc::OpenQASM), qasm::QASMParserException);
 }
 
 TEST_F(IO, superfluous_registers_qelib) {
     std::string       circuit_qasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[3];\ncx q[0], q[1], q[2];\n";
     std::stringstream ss{circuit_qasm};
-    try {
-        qc->import(ss, qc::OpenQASM);
-        FAIL() << "Nothing thrown. Expected qasm::QASMParserException";
-    } catch (qasm::QASMParserException const& err) {
-        std::cout << err.what() << std::endl;
-        SUCCEED();
-    } catch (...) {
-        FAIL() << "Expected qasm::QASMParserException";
-    }
+    EXPECT_THROW(qc->import(ss, qc::OpenQASM), qasm::QASMParserException);
 }
 
 TEST_F(IO, superfluous_registers_enhanced_qelib) {
     std::string       circuit_qasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[5];\ncccz q[0], q[1], q[2], q[3], q[4];\n";
     std::stringstream ss{circuit_qasm};
-    try {
-        qc->import(ss, qc::OpenQASM);
-        FAIL() << "Nothing thrown. Expected qasm::QASMParserException";
-    } catch (qasm::QASMParserException const& err) {
-        std::cout << err.what() << std::endl;
-        SUCCEED();
-    } catch (...) {
-        FAIL() << "Expected qasm::QASMParserException";
-    }
+    EXPECT_THROW(qc->import(ss, qc::OpenQASM), qasm::QASMParserException);
 }
 
 TEST_F(IO, dump_negative_control) {
@@ -245,15 +205,7 @@ TEST_F(IO, qiskit_mcx_duplicate_qubit) {
        << "qreg anc[1];"
        << "mcx_vchain q[0], q[0], q[2], q[3], anc[0];"
        << std::endl;
-    try {
-        qc->import(ss, qc::OpenQASM);
-        FAIL() << "Nothing thrown. Expected qasm::QASMParserException";
-    } catch (qasm::QASMParserException const& err) {
-        std::cout << err.what() << std::endl;
-        SUCCEED();
-    } catch (...) {
-        FAIL() << "Expected qasm::QASMParserException";
-    }
+    EXPECT_THROW(qc->import(ss, qc::OpenQASM), qasm::QASMParserException);
 }
 
 TEST_F(IO, qiskit_mcx_qubit_register) {
@@ -264,15 +216,7 @@ TEST_F(IO, qiskit_mcx_qubit_register) {
        << "qreg anc[1];"
        << "mcx_vchain q, q[0], q[2], q[3], anc[0];"
        << std::endl;
-    try {
-        qc->import(ss, qc::OpenQASM);
-        FAIL() << "Nothing thrown. Expected qasm::QASMParserException";
-    } catch (qasm::QASMParserException const& err) {
-        std::cout << err.what() << std::endl;
-        SUCCEED();
-    } catch (...) {
-        FAIL() << "Expected qasm::QASMParserException";
-    }
+    EXPECT_THROW(qc->import(ss, qc::OpenQASM), qasm::QASMParserException);
 }
 
 TEST_F(IO, tfc_input) {

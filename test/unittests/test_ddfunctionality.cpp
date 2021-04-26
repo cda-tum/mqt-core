@@ -163,40 +163,8 @@ TEST_F(DDFunctionality, non_unitary) {
     auto                   dummy_map = Permutation{};
     auto                   op        = qc::NonUnitaryOperation(nqubits, {0, 1, 2, 3}, {0, 1, 2, 3});
     EXPECT_FALSE(op.isUnitary());
-    try {
-        op.getDD(dd);
-        FAIL() << "Nothing thrown. Expected qc::QFRException";
-    } catch (qc::QFRException const& err) {
-        std::cout << err.what() << std::endl;
-        SUCCEED();
-    } catch (...) {
-        FAIL() << "Expected qc::QFRException";
-    }
-    try {
-        op.getInverseDD(dd);
-        FAIL() << "Nothing thrown. Expected qc::QFRException";
-    } catch (qc::QFRException const& err) {
-        std::cout << err.what() << std::endl;
-        SUCCEED();
-    } catch (...) {
-        FAIL() << "Expected qc::QFRException";
-    }
-    try {
-        op.getDD(dd, dummy_map);
-        FAIL() << "Nothing thrown. Expected qc::QFRException";
-    } catch (qc::QFRException const& err) {
-        std::cout << err.what() << std::endl;
-        SUCCEED();
-    } catch (...) {
-        FAIL() << "Expected qc::QFRException";
-    }
-    try {
-        op.getInverseDD(dd, dummy_map);
-        FAIL() << "Nothing thrown. Expected qc::QFRException";
-    } catch (qc::QFRException const& err) {
-        std::cout << err.what() << std::endl;
-        SUCCEED();
-    } catch (...) {
-        FAIL() << "Expected qc::QFRException";
-    }
+    EXPECT_THROW(op.getDD(dd), qc::QFRException);
+    EXPECT_THROW(op.getInverseDD(dd), qc::QFRException);
+    EXPECT_THROW(op.getDD(dd, dummy_map), qc::QFRException);
+    EXPECT_THROW(op.getInverseDD(dd, dummy_map), qc::QFRException);
 }
