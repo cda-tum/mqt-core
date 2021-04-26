@@ -70,8 +70,8 @@ namespace qc {
         Targets                            targets{};
         std::array<dd::fp, MAX_PARAMETERS> parameter{};
 
-        dd::QubitCount nqubits    = 0;
-        OpType         type       = None;  // Op type
+        dd::QubitCount nqubits = 0;
+        OpType         type    = None; // Op type
         char           name[MAX_STRING_LENGTH]{};
 
         static bool isWholeQubitRegister(const RegisterNames& reg, std::size_t start, std::size_t end) {
