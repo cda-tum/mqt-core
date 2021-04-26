@@ -20,9 +20,10 @@ protected:
 
         // number of complex table entries after clean-up should equal initial number of entries
         EXPECT_EQ(dd->cn.complexTable.getCount(), initialComplexCount);
-        if (dd->cn.complexTable.getCount() != initialComplexCount) {
-            dd->cn.complexTable.print();
-        }
+        // if (dd->cn.complexTable.getCount() != initialComplexCount) {
+        //     dd->cn.complexTable.print();
+        // }
+
         // number of available cache entries after clean-up should equal initial number of entries
         EXPECT_EQ(dd->cn.complexCache.getCount(), initialCacheCount);
     }
