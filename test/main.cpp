@@ -28,7 +28,7 @@ int main() {
     n = 2;
     qc::Grover grover(n); // generates Grover's algorithm for a random n-bit oracle
 
-    auto dd            = make_unique<dd::Package>(); // create an instance of the DD package
+    auto dd            = make_unique<dd::Package>(n + 1); // create an instance of the DD package
     auto functionality = qft.buildFunctionality(dd);
     dd->printMatrix(functionality);
     dd::export2Dot(functionality, "functionality.dot");

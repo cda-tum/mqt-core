@@ -130,7 +130,6 @@ namespace qc {
         e = dd->reduceGarbage(e, garbage);
 
         dd->decRef(iteration);
-        dd->garbageCollect(true);
         return e;
     }
 
@@ -164,6 +163,7 @@ namespace qc {
             f = tmp;
             if (iterBits[j]) {
                 if (zero) {
+                    dd->decRef(e);
                     e = f;
                     dd->incRef(e);
                     zero = false;
@@ -176,6 +176,7 @@ namespace qc {
                 }
             }
         }
+        dd->decRef(f);
 
         // apply state preparation setup
         qc::QuantumComputation statePrep(nqubits + 1);
@@ -183,6 +184,7 @@ namespace qc {
         auto s   = statePrep.buildFunctionality(dd);
         auto tmp = dd->multiply(e, s);
         dd->incRef(tmp);
+        dd->decRef(s);
         dd->decRef(e);
         e = tmp;
 

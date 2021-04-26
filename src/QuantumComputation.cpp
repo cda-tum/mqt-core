@@ -511,6 +511,12 @@ namespace qc {
         buildFunctionalityRecursive(depth, 0, s, permutation, dd);
         auto e = s.top();
         s.pop();
+
+        // correct permutation if necessary
+        changePermutation(e, permutation, outputPermutation, dd);
+        e = dd->reduceAncillae(e, ancillary);
+        e = dd->reduceGarbage(e, garbage);
+
         return e;
     }
 
