@@ -10,10 +10,6 @@
 #include "dd/GateMatrixDefinitions.hpp"
 
 namespace qc {
-
-    constexpr dd::fp PARAMETER_TOLERANCE = 10e-6;
-    inline bool      fp_equals(const dd::fp a, const dd::fp b) { return (std::abs(a - b) < PARAMETER_TOLERANCE); }
-
     class StandardOperation final: public Operation {
     protected:
         static void checkInteger(dd::fp& ld) {

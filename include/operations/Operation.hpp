@@ -72,7 +72,6 @@ namespace qc {
 
         dd::QubitCount nqubits    = 0;
         OpType         type       = None;  // Op type
-        bool           controlled = false; // flag to distinguish multi control operations
         char           name[MAX_STRING_LENGTH]{};
 
         static bool isWholeQubitRegister(const RegisterNames& reg, std::size_t start, std::size_t end) {
@@ -155,10 +154,6 @@ namespace qc {
             Operation::parameter = p;
         }
 
-        virtual void setControlled(bool contr) {
-            controlled = contr;
-        }
-
         // Public Methods
         // The methods with a permutation parameter apply these operations according to the mapping specified by the permutation, e.g.
         //      if perm[0] = 1 and perm[1] = 0
@@ -198,7 +193,7 @@ namespace qc {
         }
 
         [[nodiscard]] inline virtual bool isControlled() const {
-            return controlled;
+            return !controls.empty();
         }
 
         [[nodiscard]] inline virtual bool actsOn(dd::Qubit i) const {

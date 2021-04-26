@@ -245,28 +245,22 @@ namespace qc {
 
     StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
         StandardOperation(nq, target, g, lambda, phi, theta) {
-        controlled = true;
         controls.insert(control);
     }
 
     StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
         StandardOperation(nq, targets, g, lambda, phi, theta) {
-        controlled = true;
         controls.insert(control);
     }
 
     StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
         StandardOperation(nq, target, g, lambda, phi, theta) {
         this->controls = controls;
-        if (!controls.empty())
-            controlled = true;
     }
 
     StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
         StandardOperation(nq, targets, g, lambda, phi, theta) {
         this->controls = controls;
-        if (!controls.empty())
-            controlled = true;
     }
 
     // MCT Constructor
