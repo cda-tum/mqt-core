@@ -82,8 +82,7 @@ TEST_P(QFT, Functionality) {
     // the final DD should store all 2^n different amplitudes
     // since only positive real values are stored in the complex table
     // this number has to be divided by 4
-    // the (+3) accounts for the fact that the table is pre-filled with some values {0,0.5,sqrt(0.5)}
-    ASSERT_EQ(dd->cn.complexTable.getCount(), static_cast<unsigned int>(std::ceil(std::pow(2, nqubits) / 4)) + 3);
+    ASSERT_EQ(dd->cn.complexTable.getCount(), static_cast<unsigned int>(std::ceil(std::pow(2, nqubits) / 4)));
 
     // top edge weight should equal sqrt(0.5)^n
     EXPECT_NEAR(dd::ComplexTable<>::Entry::val(func.w.r), static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)), dd->cn.complexTable.tolerance());
@@ -116,8 +115,7 @@ TEST_P(QFT, FunctionalityRecursive) {
     // the final DD should store all 2^n different amplitudes
     // since only positive real values are stored in the complex table
     // this number has to be divided by 4
-    // the (+3) accounts for the fact that the table is pre-filled with some values {0,0.5,sqrt(0.5)}
-    ASSERT_EQ(dd->cn.complexTable.getCount(), static_cast<unsigned int>(std::ceil(std::pow(2, nqubits) / 4)) + 3);
+    ASSERT_EQ(dd->cn.complexTable.getCount(), static_cast<unsigned int>(std::ceil(std::pow(2, nqubits) / 4)));
 
     // top edge weight should equal sqrt(0.5)^n
     EXPECT_NEAR(dd::ComplexTable<>::Entry::val(func.w.r), static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)), dd->cn.complexTable.tolerance());
