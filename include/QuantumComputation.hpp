@@ -212,8 +212,8 @@ namespace qc {
         void stripIdleQubits(bool force = false, bool reduceIOpermutations = true);
         // apply swaps 'on' DD in order to change 'from' to 'to'
         // where |from| >= |to|
-        template<class DD>
-        static void changePermutation(DD& on, Permutation& from, const Permutation& to, std::unique_ptr<dd::Package>& dd, bool regular = true) {
+        template<class DDType>
+        static void changePermutation(DDType& on, Permutation& from, const Permutation& to, std::unique_ptr<dd::Package>& dd, bool regular = true) {
             assert(from.size() >= to.size());
 
             // iterate over (k,v) pairs of second permutation
@@ -239,7 +239,7 @@ namespace qc {
 
                 // swap i and j
                 auto saved = on;
-                if constexpr (std::is_same_v<DD, VectorDD>) {
+                if constexpr (std::is_same_v<DDType, VectorDD>) {
                     on = dd->multiply(dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)), on);
                 } else {
                     // the regular flag only has an effect on matrix DDs

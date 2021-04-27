@@ -13,15 +13,15 @@ namespace qc {
     class StandardOperation final: public Operation {
     protected:
         static void checkInteger(dd::fp& ld) {
-            auto nearest = std::nearbyint(ld);
+            dd::fp nearest = std::nearbyint(ld);
             if (std::abs(ld - nearest) < PARAMETER_TOLERANCE) {
                 ld = nearest;
             }
         }
 
         static void checkFractionPi(dd::fp& ld) {
-            auto div     = dd::PI / ld;
-            auto nearest = std::nearbyint(div);
+            dd::fp div     = dd::PI / ld;
+            dd::fp nearest = std::nearbyint(div);
             if (std::abs(div - nearest) < PARAMETER_TOLERANCE) {
                 ld = dd::PI / nearest;
             }
