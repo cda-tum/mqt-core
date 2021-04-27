@@ -90,13 +90,6 @@ namespace dd {
             chunkIt    = chunks[0].begin();
             chunkEndIt = chunks[0].end();
 
-            // emplace static zero, 1/sqrt(2), and one in the table
-            table[0]           = &zero;
-            table[sqrt2_2Key]  = &sqrt2_2;
-            table[NBUCKET - 1] = &one;
-            count              = 3;
-            peakCount          = 3;
-
             // add 1/2 to the complex table and increase its ref count (so that it is not collected)
             lookup(0.5L)->refCount++;
         }
@@ -279,9 +272,9 @@ namespace dd {
 
         std::size_t garbageCollect(bool force = false) {
             gcCalls++;
-            // nothing to be done if garbage collection is not forced and the limit has not been reached
-            // or the current count is minimal (the complex table always contains at least 0, 0.5, 1/sqrt(2), and 1)
-            if ((!force && count < gcLimit) || count <= 4)
+            // nothing to be done if garbage collection is not forced, and the limit has not been reached,
+            // or the current count is minimal (the complex table always contains at least 0.5)
+            if ((!force && count < gcLimit) || count <= 1)
                 return 0;
 
             gcRuns++;
