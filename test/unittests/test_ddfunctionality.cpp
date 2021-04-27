@@ -167,4 +167,19 @@ TEST_F(DDFunctionality, non_unitary) {
     EXPECT_THROW(op.getInverseDD(dd), qc::QFRException);
     EXPECT_THROW(op.getDD(dd, dummy_map), qc::QFRException);
     EXPECT_THROW(op.getInverseDD(dd, dummy_map), qc::QFRException);
+    for (dd::Qubit i = 0; i < static_cast<dd::Qubit>(nqubits); ++i) {
+        EXPECT_TRUE(op.actsOn(i));
+    }
+
+    for (dd::Qubit i = 0; i < static_cast<dd::Qubit>(nqubits); ++i) {
+        dummy_map[i] = i;
+    }
+    auto barrier = qc::NonUnitaryOperation(nqubits, {0, 1, 2, 3}, qc::OpType::Barrier);
+    EXPECT_EQ(barrier.getDD(dd), dd->makeIdent(nqubits));
+    EXPECT_EQ(barrier.getInverseDD(dd), dd->makeIdent(nqubits));
+    EXPECT_EQ(barrier.getDD(dd, dummy_map), dd->makeIdent(nqubits));
+    EXPECT_EQ(barrier.getInverseDD(dd, dummy_map), dd->makeIdent(nqubits));
+    for (dd::Qubit i = 0; i < static_cast<dd::Qubit>(nqubits); ++i) {
+        EXPECT_FALSE(barrier.actsOn(i));
+    }
 }
