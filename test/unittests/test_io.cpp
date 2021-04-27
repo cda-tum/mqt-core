@@ -250,3 +250,29 @@ TEST_F(IO, classic_controlled) {
     EXPECT_NO_THROW(qc->import(ss, qc::OpenQASM););
     std::cout << *qc << std::endl;
 }
+
+TEST_F(IO, changePermutation) {
+    std::stringstream ss{};
+    ss << "// o 1 0\n"
+       << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[2];"
+       << "x q[0];"
+       << std::endl;
+    qc->import(ss, qc::OpenQASM);
+    auto dd  = std::make_unique<dd::Package>();
+    auto sim = qc->simulate(dd->makeZeroState(qc->getNqubits()), dd);
+    EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
+    EXPECT_TRUE(sim.p->e[1].w.approximatelyOne());
+    EXPECT_TRUE(sim.p->e[1].p->e[1].isZeroTerminal());
+    EXPECT_TRUE(sim.p->e[1].p->e[0].w.approximatelyOne());
+    auto func = qc->buildFunctionality(dd);
+    EXPECT_FALSE(func.p->e[0].isZeroTerminal());
+    EXPECT_FALSE(func.p->e[1].isZeroTerminal());
+    EXPECT_FALSE(func.p->e[2].isZeroTerminal());
+    EXPECT_FALSE(func.p->e[3].isZeroTerminal());
+    EXPECT_TRUE(func.p->e[0].p->e[1].w.approximatelyOne());
+    EXPECT_TRUE(func.p->e[1].p->e[3].w.approximatelyOne());
+    EXPECT_TRUE(func.p->e[2].p->e[0].w.approximatelyOne());
+    EXPECT_TRUE(func.p->e[3].p->e[2].w.approximatelyOne());
+}
