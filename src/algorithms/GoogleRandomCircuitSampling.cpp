@@ -8,11 +8,6 @@
 namespace qc {
     GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& filename) {
         importGRCS(filename);
-
-        for (unsigned short i = 0; i < nqubits; ++i) {
-            initialLayout.insert({i, i});
-            outputPermutation.insert({i, i});
-        }
     }
 
     GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& pathPrefix, unsigned short device, unsigned short depth, unsigned short instance):
@@ -30,13 +25,6 @@ namespace qc {
         ss << ".txt";
         layout = Bristlecone;
         importGRCS(ss.str());
-
-        for (unsigned short i = 0; i < nqubits; ++i) {
-            initialLayout.insert({i, i});
-            outputPermutation.insert({i, i});
-        }
-        qregs.insert({"q", std::pair<unsigned short, unsigned short>{0, nqubits}});
-        cregs.insert({"c", std::pair<unsigned short, unsigned short>{0, nqubits}});
     }
 
     GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& pathPrefix, unsigned short x, unsigned short y, unsigned short depth, unsigned short instance):
@@ -58,13 +46,6 @@ namespace qc {
         ss << ".txt";
         layout = Rectangular;
         importGRCS(ss.str());
-
-        for (unsigned short i = 0; i < nqubits; ++i) {
-            initialLayout.insert({i, i});
-            outputPermutation.insert({i, i});
-        }
-        qregs.insert({"q", {0, nqubits}});
-        cregs.insert({"c", {0, nqubits}});
     }
 
     void GoogleRandomCircuitSampling::importGRCS(const std::string& filename) {
@@ -78,12 +59,17 @@ namespace qc {
         std::string benchmark = filename.substr(slash + 1, dot - slash - 1);
         name                  = benchmark;
         layout                = (benchmark[0] == 'b') ? Bristlecone : Rectangular;
-        ifs >> nqubits;
-        std::string    line;
-        std::string    identifier;
-        unsigned short control = 0;
-        unsigned short target  = 0;
-        unsigned int   cycle   = 0;
+        std::size_t nq;
+        ifs >> nq;
+
+        addQubitRegister(nq);
+        addClassicalRegister(nq);
+
+        std::string line;
+        std::string identifier;
+        std::size_t control = 0;
+        std::size_t target  = 0;
+        std::size_t cycle   = 0;
         while (std::getline(ifs, line)) {
             if (line.empty()) continue;
             std::stringstream ss(line);
@@ -96,11 +82,11 @@ namespace qc {
             if (identifier == "cz") {
                 ss >> control;
                 ss >> target;
-                cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, Control(control), target, Z));
+                cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, dd::Control{static_cast<dd::Qubit>(control)}, target, Z));
             } else if (identifier == "is") {
                 ss >> control;
                 ss >> target;
-                cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, std::vector<qc::Control>{}, control, target, iSWAP));
+                cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, dd::Controls{}, control, target, iSWAP));
             } else {
                 ss >> target;
                 if (identifier == "h")
@@ -108,9 +94,9 @@ namespace qc {
                 else if (identifier == "t")
                     cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, target, T));
                 else if (identifier == "x_1_2")
-                    cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, target, RX, PI_2));
+                    cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, target, RX, dd::PI_2));
                 else if (identifier == "y_1_2")
-                    cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, target, RY, PI_2));
+                    cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, target, RY, dd::PI_2));
                 else {
                     throw QFRException("Unknown gate '" + identifier);
                 }
@@ -142,26 +128,22 @@ namespace qc {
     std::ostream& GoogleRandomCircuitSampling::printStatistics(std::ostream& os) const {
         os << "GoogleRandomCircuitSampling Statistics:\n";
         os << "\tLayout: " << ((layout == Rectangular) ? "Rectangular" : "Bristlecone") << std::endl;
-        os << "\tn: " << nqubits << std::endl;
+        os << "\tn: " << static_cast<std::size_t>(nqubits) << std::endl;
         os << "\tm: " << getNops() << std::endl;
         os << "\tc: 1 + " << cycles.size() - 2 << " + 1" << std::endl;
         os << "--------------" << std::endl;
         return os;
     }
 
-    dd::Edge GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd) const {
-        std::array<short, MAX_QUBITS> line{};
-        line.fill(LINE_DEFAULT);
-        permutationMap map = initialLayout;
-        dd->setMode(dd::Matrix);
-
-        dd::Edge e = dd->makeIdent(nqubits);
+    MatrixDD GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd) const {
+        Permutation permutation = initialLayout;
+        auto        e           = dd->makeIdent(nqubits);
         dd->incRef(e);
         for (const auto& cycle: cycles) {
-            dd::Edge f = dd->makeIdent(nqubits);
+            auto f = dd->makeIdent(nqubits);
             for (const auto& op: cycle)
-                f = dd->multiply(op->getDD(dd, line, map), f);
-            dd::Edge g = dd->multiply(f, e);
+                f = dd->multiply(op->getDD(dd, permutation), f);
+            auto g = dd->multiply(f, e);
             dd->decRef(e);
             dd->incRef(g);
             e = g;
@@ -170,22 +152,16 @@ namespace qc {
         return e;
     }
 
-    dd::Edge GoogleRandomCircuitSampling::simulate(const dd::Edge& in, std::unique_ptr<dd::Package>& dd) const {
-        std::array<short, MAX_QUBITS> line{};
-        line.fill(LINE_DEFAULT);
-        permutationMap map = initialLayout;
-        dd->setMode(dd::Vector);
-
-        dd::Edge e = in;
+    VectorDD GoogleRandomCircuitSampling::simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd) const {
+        Permutation permutation = initialLayout;
+        auto        e           = in;
         dd->incRef(e);
-
         for (const auto& cycle: cycles) {
             for (const auto& op: cycle) {
-                auto tmp = dd->multiply(op->getDD(dd, line, map), e);
+                auto tmp = dd->multiply(op->getDD(dd, permutation), e);
                 dd->incRef(tmp);
                 dd->decRef(e);
                 e = tmp;
-
                 dd->garbageCollect();
             }
         }

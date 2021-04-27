@@ -22,29 +22,21 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             std::string s = p.t.str;
             p.check(Token::Kind::lbrack);
             p.check(Token::Kind::nninteger);
-            auto n = static_cast<unsigned short>(p.t.val);
+            auto n = static_cast<dd::QubitCount>(p.t.val);
             p.check(Token::Kind::rbrack);
             p.check(Token::Kind::semicolon);
-
-            p.qregs[s] = std::make_pair(nqubits, n);
-            nqubits += n;
+            addQubitRegister(n, s.c_str());
             p.nqubits = nqubits;
-
-            // update operation descriptions
-            for (auto& op: ops)
-                op->setNqubits(nqubits);
-
         } else if (p.sym == Token::Kind::creg) {
             p.scan();
             p.check(Token::Kind::identifier);
             std::string s = p.t.str;
             p.check(Token::Kind::lbrack);
             p.check(Token::Kind::nninteger);
-            auto n = static_cast<unsigned short>(p.t.val);
+            auto n = static_cast<std::size_t>(p.t.val);
             p.check(Token::Kind::rbrack);
             p.check(Token::Kind::semicolon);
-            p.cregs[s] = std::make_pair(nclassics, n);
-            nclassics += n;
+            addClassicalRegister(n, s.c_str());
             p.nclassics = nclassics;
         } else if (p.sym == Token::Kind::ugate || p.sym == Token::Kind::cxgate || p.sym == Token::Kind::swap || p.sym == Token::Kind::identifier || p.sym == Token::Kind::measure || p.sym == Token::Kind::reset || p.sym == Token::Kind::mcx_gray || p.sym == Token::Kind::mcx_recursive || p.sym == Token::Kind::mcx_vchain) {
             ops.emplace_back(p.Qop());
@@ -57,14 +49,14 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             p.check(Token::Kind::semicolon);
         } else if (p.sym == Token::Kind::barrier) {
             p.scan();
-            std::vector<std::pair<unsigned short, unsigned short>> args;
+            std::vector<qc::QuantumRegister> args;
             p.ArgList(args);
             p.check(Token::Kind::semicolon);
 
-            std::vector<unsigned short> qubits{};
+            std::vector<dd::Qubit> qubits{};
             for (auto& arg: args) {
-                for (unsigned short q = 0; q < arg.second; ++q) {
-                    qubits.emplace_back(arg.first + q);
+                for (dd::QubitCount q = 0; q < arg.second; ++q) {
+                    qubits.emplace_back(static_cast<dd::Qubit>(arg.first + q));
                 }
             }
 
@@ -78,7 +70,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             std::string creg = p.t.str;
             p.check(Token::Kind::eq);
             p.check(Token::Kind::nninteger);
-            auto n = static_cast<unsigned short>(p.t.val);
+            auto n = static_cast<dd::QubitCount>(p.t.val);
             p.check(Token::Kind::rpar);
 
             auto it = p.cregs.find(creg);
@@ -91,10 +83,10 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             p.scan();
             p.check(Token::Kind::lpar);
             p.check(Token::Kind::nninteger);
-            auto n = static_cast<unsigned short>(p.t.val);
+            auto n = static_cast<std::size_t>(p.t.val);
             p.check(Token::Kind::rpar);
 
-            std::vector<std::pair<unsigned short, unsigned short>> arguments;
+            std::vector<qc::QuantumRegister> arguments{};
             p.ArgList(arguments);
 
             p.check(Token::Kind::semicolon);
@@ -105,7 +97,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
                 }
             }
 
-            std::vector<unsigned short> qubits{};
+            Targets qubits{};
             qubits.reserve(arguments.size());
             for (auto& arg: arguments) {
                 qubits.emplace_back(arg.first);

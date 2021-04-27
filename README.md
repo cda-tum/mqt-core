@@ -117,7 +117,7 @@ It acts as an intermediate representation and provides the facilitites to
   std::string filename = "PATH_TO_DESTINATION_FILE.qasm";
   qc.dump(filename);
   ```
-  
+
   Currently available file formats are:
     * `OpenQASM` (.qasm)
 
@@ -125,18 +125,21 @@ It acts as an intermediate representation and provides the facilitites to
 
 ### System Requirements
 
-Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments).
-However, the implementation should be compatible with any current C++ compiler supporting C++17 and a minimum CMake version of 3.14.
+Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments). However, the implementation should be compatible
+with any current C++ compiler supporting C++17 and a minimum CMake version of 3.14.
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
 ### Configure, Build, and Install
 
 To start off, clone this repository using
+
 ```shell
 git clone --recurse-submodules -j8 https://github.com/iic-jku/qfr 
 ```
-Note the `--recurse-submodules` flag. It is required to also clone all the required submodules. If you happen to forget passing the flag on your initial clone, you can initialize all the submodules by executing `git submodule update --init --recursive` in the main project directory.
+
+Note the `--recurse-submodules` flag. It is required to also clone all the required submodules. If you happen to forget passing the flag on your initial clone, you can initialize all the submodules by
+executing `git submodule update --init --recursive` in the main project directory.
 
 Our projects use CMake as the main build configuration tool. Building a project using CMake is a two-stage process. First, CMake needs to be *configured* by calling
 ```shell 

@@ -6,12 +6,12 @@
 #include "QuantumComputation.hpp"
 
 void qc::QuantumComputation::importTFC(std::istream& is) {
-    std::map<std::string, unsigned short> varMap{};
-    auto                                  line = readTFCHeader(is, varMap);
+    std::map<std::string, dd::Qubit> varMap{};
+    auto                             line = readTFCHeader(is, varMap);
     readTFCGateDescriptions(is, line, varMap);
 }
 
-int qc::QuantumComputation::readTFCHeader(std::istream& is, std::map<std::string, unsigned short>& varMap) {
+int qc::QuantumComputation::readTFCHeader(std::istream& is, std::map<std::string, dd::Qubit>& varMap) {
     std::string cmd;
     std::string variable;
     std::string identifier;
@@ -135,26 +135,26 @@ int qc::QuantumComputation::readTFCHeader(std::istream& is, std::map<std::string
     }
 
     for (size_t q = 0; q < variables.size(); ++q) {
-        variable         = variables.at(q);
-        auto p           = varMap.at(variable);
-        initialLayout[q] = p;
+        variable                                 = variables.at(q);
+        auto p                                   = varMap.at(variable);
+        initialLayout[static_cast<dd::Qubit>(q)] = p;
         if (!outputs.empty()) {
             if (std::count(outputs.begin(), outputs.end(), variable)) {
-                outputPermutation[q] = p;
+                outputPermutation[static_cast<dd::Qubit>(q)] = p;
             } else {
-                outputPermutation.erase(q);
-                garbage.set(p);
+                outputPermutation.erase(static_cast<dd::Qubit>(q));
+                garbage.at(p) = true;
             }
         } else {
             // no output statement given --> assume all outputs are relevant
-            outputPermutation[q] = p;
+            outputPermutation[static_cast<dd::Qubit>(q)] = p;
         }
     }
 
     return line;
 }
 
-void qc::QuantumComputation::readTFCGateDescriptions(std::istream& is, int line, std::map<std::string, unsigned short>& varMap) {
+void qc::QuantumComputation::readTFCGateDescriptions(std::istream& is, int line, std::map<std::string, dd::Qubit>& varMap) {
     std::regex  gateRegex = std::regex("([tTfF])(\\d+)");
     std::smatch m;
     std::string cmd;
@@ -185,7 +185,7 @@ void qc::QuantumComputation::readTFCGateDescriptions(std::istream& is, int line,
             } else {
                 gate = SWAP;
             }
-            unsigned short ncontrols = m.str(2).empty() ? 0 : static_cast<unsigned short>(std::stoul(m.str(2), nullptr, 0)) - 1;
+            dd::QubitCount ncontrols = m.str(2).empty() ? 0 : static_cast<dd::QubitCount>(std::stoul(m.str(2), nullptr, 0)) - 1;
 
             if (ncontrols >= nqubits + nancillae) {
                 throw QFRException("[tfc parser] l:" + std::to_string(line) + " msg: Gate acts on " + std::to_string(ncontrols + 1) + " qubits, but only " + std::to_string(nqubits + nancillae) + " qubits are available.");
@@ -195,7 +195,7 @@ void qc::QuantumComputation::readTFCGateDescriptions(std::istream& is, int line,
             is >> std::ws;
             getline(is, qubits);
 
-            std::vector<Control> controls{};
+            std::vector<dd::Control> controls{};
 
             std::string delimiter = ",";
             size_t      pos;
@@ -204,24 +204,24 @@ void qc::QuantumComputation::readTFCGateDescriptions(std::istream& is, int line,
                 label = qubits.substr(0, pos);
                 if (label.back() == '\'') {
                     label.erase(label.size() - 1);
-                    controls.emplace_back(varMap.at(label), Control::neg);
+                    controls.emplace_back(dd::Control{varMap.at(label), dd::Control::Type::neg});
                 } else {
-                    controls.emplace_back(varMap.at(label));
+                    controls.emplace_back(dd::Control{varMap.at(label)});
                 }
                 qubits.erase(0, pos + 1);
             }
-            controls.emplace_back(varMap.at(qubits));
+            controls.emplace_back(dd::Control{varMap.at(qubits)});
 
             if (gate == X) {
-                unsigned short target = controls.back().qubit;
+                dd::Qubit target = controls.back().qubit;
                 controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, controls, target);
+                emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target);
             } else {
-                unsigned short target0 = controls.back().qubit;
+                dd::Qubit target0 = controls.back().qubit;
                 controls.pop_back();
-                unsigned short target1 = controls.back().qubit;
+                dd::Qubit target1 = controls.back().qubit;
                 controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, controls, target0, target1, gate);
+                emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target0, target1, gate);
             }
         }
     }

@@ -11,7 +11,7 @@
 namespace qc {
     class Entanglement: public QuantumComputation {
     public:
-        explicit Entanglement(unsigned short nq);
+        explicit Entanglement(dd::QubitCount nq);
     };
 } // namespace qc
 

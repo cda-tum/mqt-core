@@ -29,26 +29,26 @@ INSTANTIATE_TEST_SUITE_P(BernsteinVazirani, BernsteinVazirani,
 
 TEST_P(BernsteinVazirani, FunctionTest) {
     std::bitset<64>                        hInt = GetParam();
-    auto                                   dd   = std::make_unique<dd::Package>();
     std::unique_ptr<qc::BernsteinVazirani> qc;
-    dd::Edge                               e{};
+    qc::MatrixDD                           e{};
 
     // Create the QuantumCircuite with the hidden integer
     ASSERT_NO_THROW({ qc = std::make_unique<qc::BernsteinVazirani>(hInt.to_ulong()); });
     qc->printStatistics(std::cout);
+    auto dd = std::make_unique<dd::Package>(qc->size);
     ASSERT_NO_THROW({ e = qc->buildFunctionality(dd); });
 
     // Test the Number of Operations & the number of Qubits
     ASSERT_EQ(qc->getNops(), qc->size * 2 + hInt.count());
     ASSERT_EQ(qc->getNqubits(), qc->size);
 
-    dd::Edge    r        = dd->multiply(e, dd->makeZeroState(qc->size));
-    std::string hIntPath = std::string(qc->size, '0');
+    auto r        = dd->multiply(e, dd->makeZeroState(qc->size));
+    auto hIntPath = std::string(qc->size, '0');
 
     // Create the path-string
-    for (unsigned int i = 0; i < qc->size; i++) {
+    for (dd::QubitCount i = 0; i < qc->size; i++) {
         if (hInt[i] == 1) {
-            hIntPath[i] = '2';
+            hIntPath[i] = '1';
         }
     }
 

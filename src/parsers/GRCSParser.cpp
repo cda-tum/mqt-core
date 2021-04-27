@@ -6,12 +6,16 @@
 #include "QuantumComputation.hpp"
 
 void qc::QuantumComputation::importGRCS(std::istream& is) {
-    is >> nqubits;
-    std::string    line;
-    std::string    identifier;
-    unsigned short control = 0;
-    unsigned short target  = 0;
-    unsigned int   cycle   = 0;
+    std::size_t nq;
+    is >> nq;
+    addQubitRegister(nq);
+    addClassicalRegister(nq);
+
+    std::string line;
+    std::string identifier;
+    std::size_t control = 0;
+    std::size_t target  = 0;
+    std::size_t cycle   = 0;
     while (std::getline(is, line)) {
         if (line.empty()) continue;
         std::stringstream ss(line);
@@ -20,11 +24,11 @@ void qc::QuantumComputation::importGRCS(std::istream& is) {
         if (identifier == "cz") {
             ss >> control;
             ss >> target;
-            emplace_back<StandardOperation>(nqubits, Control(control), target, Z);
+            emplace_back<StandardOperation>(nqubits, dd::Control{static_cast<dd::Qubit>(control)}, target, Z);
         } else if (identifier == "is") {
             ss >> control;
             ss >> target;
-            emplace_back<StandardOperation>(nqubits, std::vector<qc::Control>{}, control, target, iSWAP);
+            emplace_back<StandardOperation>(nqubits, dd::Controls{}, control, target, iSWAP);
         } else {
             ss >> target;
             if (identifier == "h")
@@ -32,17 +36,12 @@ void qc::QuantumComputation::importGRCS(std::istream& is) {
             else if (identifier == "t")
                 emplace_back<StandardOperation>(nqubits, target, T);
             else if (identifier == "x_1_2")
-                emplace_back<StandardOperation>(nqubits, target, RX, PI_2);
+                emplace_back<StandardOperation>(nqubits, target, RX, dd::PI_2);
             else if (identifier == "y_1_2")
-                emplace_back<StandardOperation>(nqubits, target, RY, PI_2);
+                emplace_back<StandardOperation>(nqubits, target, RY, dd::PI_2);
             else {
                 throw QFRException("[grcs parser] unknown gate '" + identifier + "'");
             }
         }
-    }
-
-    for (unsigned short i = 0; i < nqubits; ++i) {
-        initialLayout.insert({i, i});
-        outputPermutation.insert({i, i});
     }
 }

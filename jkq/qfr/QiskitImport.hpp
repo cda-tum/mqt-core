@@ -53,53 +53,55 @@ namespace qc {
     }
 
     void addQiskitOperation(QuantumComputation& qc, qc::OpType type, const py::list& qargs, const py::list& params) {
-        std::vector<qc::Control> qubits{};
+        std::vector<dd::Control> qubits{};
         for (const auto qubit: qargs) {
-            auto&&         qreg   = qubit.attr("register").attr("name").cast<std::string>();
-            auto&&         qidx   = qubit.attr("index").cast<unsigned short>();
-            unsigned short target = qc.getIndexFromQubitRegister({qreg, qidx});
-            qubits.emplace_back(target);
+            auto&&    qreg   = qubit.attr("register").attr("name").cast<std::string>();
+            auto&&    qidx   = qubit.attr("index").cast<dd::Qubit>();
+            dd::Qubit target = qc.getIndexFromQubitRegister({qreg, qidx});
+            qubits.emplace_back(dd::Control{target});
         }
         auto target = qubits.back().qubit;
         qubits.pop_back();
-        fp theta = 0., phi = 0., lambda = 0.;
+        dd::fp theta = 0., phi = 0., lambda = 0.;
         if (params.size() == 1) {
-            lambda = params[0].cast<fp>();
+            lambda = params[0].cast<dd::fp>();
         } else if (params.size() == 2) {
-            phi    = params[0].cast<fp>();
-            lambda = params[1].cast<fp>();
+            phi    = params[0].cast<dd::fp>();
+            lambda = params[1].cast<dd::fp>();
         } else if (params.size() == 3) {
-            theta  = params[0].cast<fp>();
-            phi    = params[1].cast<fp>();
-            lambda = params[2].cast<fp>();
+            theta  = params[0].cast<dd::fp>();
+            phi    = params[1].cast<dd::fp>();
+            lambda = params[2].cast<dd::fp>();
         }
-        qc.emplace_back<qc::StandardOperation>(qc.getNqubits(), qubits, target, type, lambda, phi, theta);
+        dd::Controls controls(qubits.cbegin(), qubits.cend());
+        qc.emplace_back<qc::StandardOperation>(qc.getNqubits(), controls, target, type, lambda, phi, theta);
     }
 
     void addTwoTargetQiskitOperation(QuantumComputation& qc, qc::OpType type, const py::list& qargs, const py::list& params) {
-        std::vector<qc::Control> qubits{};
+        std::vector<dd::Control> qubits{};
         for (const auto qubit: qargs) {
-            auto&&         qreg   = qubit.attr("register").attr("name").cast<std::string>();
-            auto&&         qidx   = qubit.attr("index").cast<unsigned short>();
-            unsigned short target = qc.getIndexFromQubitRegister({qreg, qidx});
-            qubits.emplace_back(target);
+            auto&&    qreg   = qubit.attr("register").attr("name").cast<std::string>();
+            auto&&    qidx   = qubit.attr("index").cast<dd::Qubit>();
+            dd::Qubit target = qc.getIndexFromQubitRegister({qreg, qidx});
+            qubits.emplace_back(dd::Control{target});
         }
         auto target1 = qubits.back().qubit;
         qubits.pop_back();
         auto target0 = qubits.back().qubit;
         qubits.pop_back();
-        fp theta = 0., phi = 0., lambda = 0.;
+        dd::fp theta = 0., phi = 0., lambda = 0.;
         if (params.size() == 1) {
-            lambda = params[0].cast<fp>();
+            lambda = params[0].cast<dd::fp>();
         } else if (params.size() == 2) {
-            phi    = params[0].cast<fp>();
-            lambda = params[1].cast<fp>();
+            phi    = params[0].cast<dd::fp>();
+            lambda = params[1].cast<dd::fp>();
         } else if (params.size() == 3) {
-            theta  = params[0].cast<fp>();
-            phi    = params[1].cast<fp>();
-            lambda = params[2].cast<fp>();
+            theta  = params[0].cast<dd::fp>();
+            phi    = params[1].cast<dd::fp>();
+            lambda = params[2].cast<dd::fp>();
         }
-        qc.emplace_back<qc::StandardOperation>(qc.getNqubits(), qubits, target0, target1, type, lambda, phi, theta);
+        dd::Controls controls(qubits.cbegin(), qubits.cend());
+        qc.emplace_back<qc::StandardOperation>(qc.getNqubits(), controls, target0, target1, type, lambda, phi, theta);
     }
 
     void emplaceQiskitOperation(QuantumComputation& qc, const py::object& instruction, const py::list& qargs, const py::list& cargs, const py::list& params) {
@@ -107,21 +109,21 @@ namespace qc {
 
         auto instructionName = instruction.attr("name").cast<std::string>();
         if (instructionName == "measure") {
-            auto&&         qubit   = qargs[0];
-            auto&&         clbit   = cargs[0];
-            auto&&         qreg    = qubit.attr("register").attr("name").cast<std::string>();
-            auto&&         creg    = clbit.attr("register").attr("name").cast<std::string>();
-            auto&&         qidx    = qubit.attr("index").cast<unsigned short>();
-            auto&&         cidx    = clbit.attr("index").cast<unsigned short>();
-            unsigned short control = qc.getIndexFromQubitRegister({qreg, qidx});
-            unsigned short target  = qc.getIndexFromClassicalRegister({creg, cidx});
+            auto&&      qubit   = qargs[0];
+            auto&&      clbit   = cargs[0];
+            auto&&      qreg    = qubit.attr("register").attr("name").cast<std::string>();
+            auto&&      creg    = clbit.attr("register").attr("name").cast<std::string>();
+            auto&&      qidx    = qubit.attr("index").cast<dd::Qubit>();
+            auto&&      cidx    = clbit.attr("index").cast<std::size_t>();
+            dd::Qubit   control = qc.getIndexFromQubitRegister({qreg, qidx});
+            std::size_t target  = qc.getIndexFromClassicalRegister({creg, cidx});
             qc.emplace_back<qc::NonUnitaryOperation>(qc.getNqubits(), control, target);
         } else if (instructionName == "barrier") {
-            std::vector<unsigned short> targets{};
+            Targets targets{};
             for (const auto qubit: qargs) {
-                auto&&         qreg   = qubit.attr("register").attr("name").cast<std::string>();
-                auto&&         qidx   = qubit.attr("index").cast<unsigned short>();
-                unsigned short target = qc.getIndexFromQubitRegister({qreg, qidx});
+                auto&&    qreg   = qubit.attr("register").attr("name").cast<std::string>();
+                auto&&    qidx   = qubit.attr("index").cast<dd::Qubit>();
+                dd::Qubit target = qc.getIndexFromQubitRegister({qreg, qidx});
                 targets.emplace_back(target);
             }
             qc.emplace_back<qc::NonUnitaryOperation>(qc.getNqubits(), targets, qc::Barrier);
@@ -174,11 +176,11 @@ namespace qc {
                     addQiskitOperation(qc, qc::X, qargs_copy, params);
                 }
             } else if (instructionName == "mcx_vchain") {
-                unsigned short size       = qargs.size();
-                unsigned short ncontrols  = (size + 1) / 2;
-                auto           qargs_copy = qargs.attr("copy")();
+                auto        size       = qargs.size();
+                std::size_t ncontrols  = (size + 1) / 2;
+                auto        qargs_copy = qargs.attr("copy")();
                 // discard ancillaries
-                for (int i = 0; i < ncontrols - 2; ++i) {
+                for (std::size_t i = 0; i < ncontrols - 2; ++i) {
                     qargs_copy.attr("pop")();
                 }
                 addQiskitOperation(qc, qc::X, qargs_copy, params);
@@ -203,24 +205,24 @@ namespace qc {
 
         auto&& circQregs = circ.attr("qregs");
         for (const auto qreg: circQregs) {
-            qc.addQubitRegister(qreg.attr("size").cast<unsigned short>(), qreg.attr("name").cast<std::string>().c_str());
+            qc.addQubitRegister(qreg.attr("size").cast<dd::QubitCount>(), qreg.attr("name").cast<std::string>().c_str());
         }
 
         auto&& circCregs = circ.attr("cregs");
         for (const auto creg: circCregs) {
-            qc.addClassicalRegister(creg.attr("size").cast<unsigned short>(), creg.attr("name").cast<std::string>().c_str());
+            qc.addClassicalRegister(creg.attr("size").cast<std::size_t>(), creg.attr("name").cast<std::string>().c_str());
         }
 
         // import initial layout in case it is available
         if (!circ.attr("_layout").is_none()) {
-            auto&&         virtual_bits        = circ.attr("_layout").attr("get_virtual_bits")().cast<py::dict>();
-            unsigned short logical_qubit_index = 0;
+            auto&&    virtual_bits        = circ.attr("_layout").attr("get_virtual_bits")().cast<py::dict>();
+            dd::Qubit logical_qubit_index = 0;
             for (auto qubit: virtual_bits) {
                 auto&& logical_qubit = qubit.first;
                 auto&& register_name = logical_qubit.attr("register").attr("name").cast<std::string>();
                 //				auto&& register_index = logical_qubit.attr("index").cast<unsigned short>();
                 if (register_name != "ancilla") {
-                    qc.initialLayout[qubit.second.cast<unsigned short>()] = logical_qubit_index;
+                    qc.initialLayout[qubit.second.cast<dd::Qubit>()] = logical_qubit_index;
                     ++logical_qubit_index;
                 }
             }

@@ -35,6 +35,7 @@ add_library(${PROJECT_NAME}
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/QuantumComputation.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/CircuitOptimizer.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/Definitions.hpp
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QFT.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Grover.hpp
@@ -52,7 +53,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON 
 
 # add JKQ::DDpackage library
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
-target_link_libraries(${PROJECT_NAME} PUBLIC JKQ::DDpackage)
+target_link_libraries(${PROJECT_NAME} PUBLIC JKQ::DDPackage)
 
 # add nlohmann::json library
 set(JSON_BuildTests OFF CACHE INTERNAL "")
@@ -60,11 +61,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json" EXCLUDE_FROM_
 target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json)
 
 # enable interprocedural optimization if it is supported
-include(CheckIPOSupported)
-check_ipo_supported(RESULT ipo_supported)
-if(ipo_supported)
-	set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-endif()
+enable_lto(${PROJECT_NAME})
 
 # set compiler flags depending on compiler
 if(MSVC)

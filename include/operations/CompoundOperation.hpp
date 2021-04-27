@@ -10,9 +10,16 @@
 
 namespace qc {
 
-    class CompoundOperation: public Operation {
+    class CompoundOperation final: public Operation {
     protected:
         std::vector<std::unique_ptr<Operation>> ops{};
+
+        MatrixDD getDD([[maybe_unused]] std::unique_ptr<dd::Package>& dd, [[maybe_unused]] const dd::Controls& controls, [[maybe_unused]] const Targets& targets) const override {
+            throw QFRException("[CompoundOperation] protected getDD called which should not happen.");
+        }
+        MatrixDD getInverseDD([[maybe_unused]] std::unique_ptr<dd::Package>& dd, [[maybe_unused]] const dd::Controls& controls, [[maybe_unused]] const Targets& targets) const override {
+            throw QFRException("[CompoundOperation] protected getInverseDD called which should not happen.");
+        }
 
     public:
         explicit CompoundOperation(unsigned short nq) {
@@ -21,29 +28,7 @@ namespace qc {
             type    = Compound;
         }
 
-        template<class T>
-        void emplace_back(std::unique_ptr<T>& op) {
-            parameter[0]++;
-            ops.emplace_back(std::move(op));
-        }
-
-        template<class T, class... Args>
-        void emplace_back(Args&&... args) {
-            parameter[0]++;
-            ops.emplace_back(std::make_unique<T>(args...));
-        }
-
-        template<class T, class... Args>
-        std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator iterator, Args&&... args) {
-            return ops.insert(iterator, std::make_unique<T>(args...));
-        }
-
-        template<class T>
-        std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator iterator, std::unique_ptr<T>& op) {
-            return ops.insert(iterator, std::move(op));
-        }
-
-        void setNqubits(unsigned short nq) override {
+        void setNqubits(dd::QubitCount nq) override {
             nqubits = nq;
             for (auto& op: ops) {
                 op->setNqubits(nq);
@@ -55,50 +40,53 @@ namespace qc {
         }
 
         [[nodiscard]] bool isNonUnitaryOperation() const override {
-            bool isNonUnitary = false;
-            for (const auto& op: ops) {
-                isNonUnitary |= op->isNonUnitaryOperation();
-            }
-            return isNonUnitary;
+            return std::any_of(ops.cbegin(), ops.cend(), [](const auto& op) { return op->isNonUnitaryOperation(); });
         }
 
-        dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-            dd::Edge e = dd->makeIdent(nqubits);
+        MatrixDD getDD(std::unique_ptr<dd::Package>& dd) const override {
+            MatrixDD e = dd->makeIdent(nqubits);
             for (auto& op: ops) {
-                e = dd->multiply(op->getDD(dd, line), e);
+                e = dd->multiply(op->getDD(dd), e);
             }
             return e;
         }
 
-        dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-            dd::Edge e = dd->makeIdent(nqubits);
+        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd) const override {
+            MatrixDD e = dd->makeIdent(nqubits);
             for (auto& op: ops) {
-                e = dd->multiply(e, op->getInverseDD(dd, line));
+                e = dd->multiply(e, op->getInverseDD(dd));
             }
             return e;
         }
 
-        dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
-            dd::Edge e = dd->makeIdent(nqubits);
+        MatrixDD getDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override {
+            MatrixDD e = dd->makeIdent(nqubits);
             for (auto& op: ops) {
-                e = dd->multiply(op->getDD(dd, line, permutation), e);
+                e = dd->multiply(op->getDD(dd, permutation), e);
             }
             return e;
         }
 
-        dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
-            dd::Edge e = dd->makeIdent(nqubits);
+        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override {
+            MatrixDD e = dd->makeIdent(nqubits);
             for (auto& op: ops) {
-                e = dd->multiply(e, op->getInverseDD(dd, line, permutation));
+                e = dd->multiply(e, op->getInverseDD(dd, permutation));
             }
             return e;
         }
 
         std::ostream& print(std::ostream& os) const override {
-            return print(os, standardPermutation);
+            os << name;
+            for (const auto& op: ops) {
+                os << std::endl
+                   << "\t";
+                op->print(os);
+            }
+
+            return os;
         }
 
-        std::ostream& print(std::ostream& os, const std::map<unsigned short, unsigned short>& permutation) const override {
+        std::ostream& print(std::ostream& os, const Permutation& permutation) const override {
             os << name;
             for (const auto& op: ops) {
                 os << std::endl
@@ -109,27 +97,17 @@ namespace qc {
             return os;
         }
 
-        [[nodiscard]] bool actsOn(unsigned short i) const override {
-            for (const auto& op: ops) {
-                if (op->actsOn(i))
-                    return true;
-            }
-            return false;
+        [[nodiscard]] bool actsOn(dd::Qubit i) const override {
+            return std::any_of(ops.cbegin(), ops.cend(), [&i](const auto& op) { return op->actsOn(i); });
         }
 
-        void dumpOpenQASM(std::ostream& of, const regnames_t& qreg, const regnames_t& creg) const override {
+        void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override {
             for (auto& op: ops) {
                 op->dumpOpenQASM(of, qreg, creg);
             }
         }
 
-        void dumpReal(std::ostream& of) const override {
-            for (auto& op: ops) {
-                op->dumpReal(of);
-            }
-        }
-
-        void dumpQiskit(std::ostream& of, const regnames_t& qreg, const regnames_t& creg, const char* anc_reg_name) const override {
+        void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const override {
             for (auto& op: ops) {
                 op->dumpQiskit(of, qreg, creg, anc_reg_name);
             }
@@ -168,6 +146,24 @@ namespace qc {
         void                                              resize(size_t count) { ops.resize(count); }
         std::vector<std::unique_ptr<Operation>>::iterator erase(std::vector<std::unique_ptr<Operation>>::const_iterator pos) { return ops.erase(pos); }
         std::vector<std::unique_ptr<Operation>>::iterator erase(std::vector<std::unique_ptr<Operation>>::const_iterator first, std::vector<std::unique_ptr<Operation>>::const_iterator last) { return ops.erase(first, last); }
+        template<class T>
+        void emplace_back(std::unique_ptr<T>& op) {
+            parameter[0]++;
+            ops.emplace_back(std::move(op));
+        }
+        template<class T, class... Args>
+        void emplace_back(Args&&... args) {
+            parameter[0]++;
+            ops.emplace_back(std::make_unique<T>(args...));
+        }
+        template<class T, class... Args>
+        std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator iterator, Args&&... args) {
+            return ops.insert(iterator, std::make_unique<T>(args...));
+        }
+        template<class T>
+        std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator iterator, std::unique_ptr<T>& op) {
+            return ops.insert(iterator, std::move(op));
+        }
     };
 } // namespace qc
 #endif //QFR_COMPOUNDOPERATION_H

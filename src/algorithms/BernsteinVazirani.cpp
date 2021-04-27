@@ -11,12 +11,12 @@ namespace qc {
 	 * Private Methods
 	 ***/
     void BernsteinVazirani::setup() {
-        for (unsigned short i = 0; i < nqubits; ++i)
+        for (dd::QubitCount i = 0; i < nqubits; ++i)
             emplace_back<StandardOperation>(nqubits, i, H);
     }
 
     void BernsteinVazirani::oracle() {
-        for (unsigned short i = 0; i < nqubits; ++i) {
+        for (dd::QubitCount i = 0; i < nqubits; ++i) {
             if (((hiddenInteger >> i) & 1) == 1) {
                 emplace_back<StandardOperation>(nqubits, i, Z);
             }
@@ -24,7 +24,7 @@ namespace qc {
     }
 
     void BernsteinVazirani::postProcessing() {
-        for (unsigned short i = 0; i < nqubits; ++i)
+        for (dd::QubitCount i = 0; i < nqubits; ++i)
             emplace_back<StandardOperation>(nqubits, i, H);
     }
 
@@ -38,15 +38,13 @@ namespace qc {
     /***
 	 * Public Methods
 	 ***/
-    BernsteinVazirani::BernsteinVazirani(unsigned long hiddenInteger):
+    BernsteinVazirani::BernsteinVazirani(std::size_t hiddenInteger):
         hiddenInteger(hiddenInteger) {
         name = "bv_" + std::to_string(hiddenInteger);
-        // Determine the bitsize of the hidden integer
-        while (hiddenInteger >> ++(size) > 0)
-            ;
 
-        // Prevents a circuit with 0 qubits
-        if (size == 0) {
+        if (hiddenInteger > 0) {
+            size = static_cast<dd::QubitCount>(std::ceil(std::log2(hiddenInteger)));
+        } else {
             size = 1;
         }
 
@@ -59,8 +57,8 @@ namespace qc {
     }
 
     std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) const {
-        os << "BernsteinVazirani (" << nqubits << ") Statistics:\n";
-        os << "\tn: " << nqubits + 1 << std::endl;
+        os << "BernsteinVazirani (" << static_cast<std::size_t>(nqubits) << ") Statistics:\n";
+        os << "\tn: " << static_cast<std::size_t>(nqubits + 1) << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;
         os << "\tHiddenInteger: " << hiddenInteger << std::endl;
         os << "--------------" << std::endl;

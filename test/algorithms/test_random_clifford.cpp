@@ -8,26 +8,26 @@
 #include "gtest/gtest.h"
 #include <string>
 
-class RandomClifford: public testing::TestWithParam<unsigned short> {
+class RandomClifford: public testing::TestWithParam<dd::QubitCount> {
 protected:
     void TearDown() override {}
     void SetUp() override {}
 };
 
 INSTANTIATE_TEST_SUITE_P(RandomClifford, RandomClifford,
-                         testing::Range((unsigned short)1, (unsigned short)9),
+                         testing::Range(static_cast<dd::QubitCount>(1), static_cast<dd::QubitCount>(9)),
                          [](const testing::TestParamInfo<RandomClifford::ParamType>& info) {
                              // Generate names for test cases
-                             unsigned short    nqubits = info.param;
+                             dd::QubitCount    nqubits = info.param;
                              std::stringstream ss{};
-                             ss << nqubits << "_qubits";
+                             ss << static_cast<std::size_t>(nqubits) << "_qubits";
                              return ss.str();
                          });
 
 TEST_P(RandomClifford, simulate) {
-    const unsigned short nq = GetParam();
+    const dd::QubitCount nq = GetParam();
 
-    auto dd = std::make_unique<dd::Package>();
+    auto dd = std::make_unique<dd::Package>(nq);
     auto qc = qc::RandomCliffordCircuit(nq, nq * nq);
     auto in = dd->makeZeroState(nq);
 
@@ -37,9 +37,9 @@ TEST_P(RandomClifford, simulate) {
 }
 
 TEST_P(RandomClifford, buildFunctionality) {
-    const unsigned short nq = GetParam();
+    const dd::QubitCount nq = GetParam();
 
-    auto dd = std::make_unique<dd::Package>();
+    auto dd = std::make_unique<dd::Package>(nq);
     auto qc = qc::RandomCliffordCircuit(nq, nq * nq);
     std::cout << qc << std::endl;
     ASSERT_NO_THROW({ qc.buildFunctionality(dd); });

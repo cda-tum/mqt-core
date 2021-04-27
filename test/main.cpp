@@ -4,12 +4,11 @@
  */
 
 #include "QuantumComputation.hpp"
-#include "algorithms/GoogleRandomCircuitSampling.hpp"
 #include "algorithms/Grover.hpp"
 #include "algorithms/QFT.hpp"
+#include "dd/Export.hpp"
 
 using namespace std;
-using namespace chrono;
 
 int main() {
     std::string            filename = "./circuits/test.real";
@@ -22,21 +21,22 @@ int main() {
     filename = "./circuits/grcs/bris_4_40_9_v2.txt";
     qc.import(filename);
 
-    unsigned short n = 3;
+    dd::QubitCount n = 3;
     qc::QFT        qft(n); // generates the QFT for n qubits
+    std::cout << qft << std::endl;
 
     n = 2;
     qc::Grover grover(n); // generates Grover's algorithm for a random n-bit oracle
 
-    auto dd            = make_unique<dd::Package>(); // create an instance of the DD package
+    auto dd            = make_unique<dd::Package>(n + 1); // create an instance of the DD package
     auto functionality = qft.buildFunctionality(dd);
-    qft.printMatrix(dd, functionality, std::cout);
+    dd->printMatrix(functionality);
     dd::export2Dot(functionality, "functionality.dot");
     std::cout << std::endl;
 
     auto initial_state = dd->makeZeroState(n + 1); // create initial state |0...0>
     auto state_vector  = grover.simulate(initial_state, dd);
-    grover.printVector(dd, state_vector, std::cout);
+    dd->printVector(state_vector);
     dd::export2Dot(state_vector, "state_vector.dot", true);
     std::cout << std::endl
               << grover << std::endl;

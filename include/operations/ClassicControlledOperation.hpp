@@ -10,15 +10,22 @@
 
 namespace qc {
 
-    class ClassicControlledOperation: public Operation {
+    class ClassicControlledOperation final: public Operation {
     protected:
-        std::unique_ptr<Operation>                op;
-        std::pair<unsigned short, unsigned short> controlRegister{};
-        unsigned int                              expectedValue = 1U;
+        std::unique_ptr<Operation>           op;
+        std::pair<dd::Qubit, dd::QubitCount> controlRegister{};
+        unsigned int                         expectedValue = 1U;
+
+        MatrixDD getDD([[maybe_unused]] std::unique_ptr<dd::Package>& dd, [[maybe_unused]] const dd::Controls& controls, [[maybe_unused]] const Targets& targets) const override {
+            throw QFRException("[ClassicControlledOperation] protected getDD called which should not happen.");
+        }
+        MatrixDD getInverseDD([[maybe_unused]] std::unique_ptr<dd::Package>& dd, [[maybe_unused]] const dd::Controls& controls, [[maybe_unused]] const Targets& targets) const override {
+            throw QFRException("[ClassicControlledOperation] protected getInverseDD called which should not happen.");
+        }
 
     public:
         // Applies operation `_op` if the creg starting at index `control` has the expected value
-        ClassicControlledOperation(std::unique_ptr<Operation>& _op, const std::pair<unsigned short, unsigned short>& controlRegister, unsigned int expectedValue = 1U):
+        ClassicControlledOperation(std::unique_ptr<Operation>& _op, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, unsigned int expectedValue = 1U):
             op(std::move(_op)), controlRegister(controlRegister), expectedValue(expectedValue) {
             nqubits = op->getNqubits();
             name[0] = 'c';
@@ -30,20 +37,20 @@ namespace qc {
             type         = ClassicControlled;
         }
 
-        dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-            return op->getDD(dd, line);
+        MatrixDD getDD(std::unique_ptr<dd::Package>& dd) const override {
+            return op->getDD(dd);
         }
 
-        dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line) const override {
-            return op->getInverseDD(dd, line);
+        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd) const override {
+            return op->getInverseDD(dd);
         }
 
-        dd::Edge getDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
-            return op->getDD(dd, line, permutation);
+        MatrixDD getDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override {
+            return op->getDD(dd, permutation);
         }
 
-        dd::Edge getInverseDD(std::unique_ptr<dd::Package>& dd, std::array<short, MAX_QUBITS>& line, std::map<unsigned short, unsigned short>& permutation) const override {
-            return op->getInverseDD(dd, line, permutation);
+        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override {
+            return op->getInverseDD(dd, permutation);
         }
 
         [[nodiscard]] auto getControlRegister() const {
@@ -66,27 +73,15 @@ namespace qc {
             return true;
         }
 
-        [[nodiscard]] bool actsOn(unsigned short i) const override {
+        [[nodiscard]] bool actsOn(dd::Qubit i) const override {
             return op->actsOn(i);
         }
 
-        void setLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const override {
-            op->setLine(line, permutation);
-        }
-
-        void resetLine(std::array<short, MAX_QUBITS>& line, const std::map<unsigned short, unsigned short>& permutation) const override {
-            op->resetLine(line, permutation);
-        }
-
-        void dumpOpenQASM([[maybe_unused]] std::ostream& of, [[maybe_unused]] const regnames_t& qreg, [[maybe_unused]] const regnames_t& creg) const override {
+        void dumpOpenQASM([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg) const override {
             throw QFRException("Dumping of classically controlled gates currently not supported for qasm");
         }
 
-        void dumpReal([[maybe_unused]] std::ostream& of) const override {
-            throw QFRException("Dumping of classically controlled gates not possible in real format");
-        }
-
-        void dumpQiskit([[maybe_unused]] std::ostream& of, [[maybe_unused]] const regnames_t& qreg, [[maybe_unused]] const regnames_t& creg, [[maybe_unused]] const char* anc_reg_name) const override {
+        void dumpQiskit([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg, [[maybe_unused]] const char* anc_reg_name) const override {
             throw QFRException("Dumping of classically controlled gates currently not supported for qiskit");
         }
     };

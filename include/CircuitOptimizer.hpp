@@ -6,16 +6,15 @@
 #ifndef QFR_CIRCUITOPTIMIZER_HPP
 #define QFR_CIRCUITOPTIMIZER_HPP
 
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+#include "dd/Package.hpp"
+#include "operations/Operation.hpp"
 
-#include <forward_list>
-#include <map>
+#include <array>
+#include <memory>
 
 namespace qc {
-    using DAG          = std::vector<std::forward_list<std::unique_ptr<Operation>*>>;
-    using DAGIterator  = std::forward_list<std::unique_ptr<Operation>*>::iterator;
-    using DAGIterators = std::vector<DAGIterator>;
-
     static constexpr std::array<qc::OpType, 8> diagonalGates = {qc::I, qc::Z, qc::S, qc::Sdag, qc::T, qc::Tdag, qc::Phase, qc::RZ};
 
     class CircuitOptimizer {
@@ -35,17 +34,17 @@ namespace qc {
 
         static void removeDiagonalGatesBeforeMeasure(QuantumComputation& qc);
 
-        static void removeDiagonalGatesBeforeMeasureRecursive(DAG& dag, DAGIterators& dagIterators, unsigned short idx, const DAGIterator& until);
+        static void removeDiagonalGatesBeforeMeasureRecursive(DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, const DAGIterator& until);
 
-        static bool removeDiagonalGate(DAG& dag, DAGIterators& dagIterators, unsigned short idx, DAGIterator& it, qc::Operation* op);
+        static bool removeDiagonalGate(DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, DAGIterator& it, qc::Operation* op);
 
-        static void removeMarkedMeasurments(QuantumComputation& qc);
+        static void removeMarkedMeasurements(QuantumComputation& qc);
 
         static void removeFinalMeasurements(QuantumComputation& qc);
 
-        static void removeFinalMeasurementsRecursive(DAG& dag, DAGIterators& DAGIterators, unsigned short idx, const DAGIterator& until);
+        static void removeFinalMeasurementsRecursive(DAG& dag, DAGIterators& DAGIterators, dd::Qubit idx, const DAGIterator& until);
 
-        static bool removeFinalMeasurement(DAG& dag, DAGIterators& dagIterators, unsigned short idx, DAGIterator& it, qc::Operation* op);
+        static bool removeFinalMeasurement(DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, DAGIterator& it, qc::Operation* op);
 
         static void decomposeSWAP(QuantumComputation& qc, bool isDirectedArchitecture);
 
