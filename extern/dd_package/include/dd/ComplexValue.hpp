@@ -220,8 +220,8 @@ namespace std {
     template<>
     struct hash<dd::ComplexValue> {
         std::size_t operator()(dd::ComplexValue const& c) const noexcept {
-            auto h1 = dd::murmur64(static_cast<std::size_t>(std::round(c.r * 1000)));
-            auto h2 = dd::murmur64(static_cast<std::size_t>(std::round(c.i * 1000)));
+            auto h1 = dd::murmur64(static_cast<std::size_t>(std::round(c.r / dd::ComplexTable<>::tolerance())));
+            auto h2 = dd::murmur64(static_cast<std::size_t>(std::round(c.i / dd::ComplexTable<>::tolerance())));
             return dd::combineHash(h1, h2);
         }
     };
