@@ -9,8 +9,6 @@
 
 A JKQ library for the representation of quantum functionality by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at). This package is part of the [JKQ toolset](https://github.com/iic-jku/jkq).
 
-Developers: Lukas Burgholzer, Hartwig Bauer, Stefan Hillmich, Thomas Grurl and Robert Wille.
-
 If you have any questions feel free to contact us using [iic-quantum@jku.at](mailto:iic-quantum@jku.at) or by creating an issue on [GitHub](https://github.com/iic-jku/qfr/issues).
 
 ## Efficient Construction of Functional Representations for Quantum Algorithms
