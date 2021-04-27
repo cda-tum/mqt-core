@@ -92,11 +92,11 @@ jobs:
           python-version: '3.8'
       - name:  Configure CMake
         shell: bash
-        run:   cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Release -DCOVERAGE=1 -DBUILD_QFR_TESTS=ON
+        run: cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=1 -DBUILD_QFR_TESTS=ON
 
       - name:  Build
         shell: bash
-        run:   cmake --build "${{github.workspace}}/build" --config Release --target qfr_test
+        run: cmake --build "${{github.workspace}}/build" --config Debug --target qfr_test
 
       - name:              Test
         working-directory: ${{github.workspace}}/build/test
