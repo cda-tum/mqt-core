@@ -9,11 +9,6 @@
 
 A DD package tailored to quantum computing by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at). This package is part of the [JKQ toolset](https://github.com/iic-jku/jkq).
 
-Developers: Alwin Zulehner, Stefan Hillmich, Lukas Burgholzer, and Robert Wille
-
-With code from the QMDD implementation provided by Michael Miller (University of Victoria, Canada)
-and Philipp Niemann (University of Bremen, Germany).
-
 For more information, please visit [iic.jku.at/eda/research/quantum_dd](http://iic.jku.at/eda/research/quantum_dd).
 
 If you have any questions, feel free to contact us via [iic-quantum@jku.at](mailto:iic-quantum@jku.at) or by creating an issue on [GitHub](https://github.com/iic-jku/dd_package/issues).
@@ -46,22 +41,25 @@ auto h_op = dd->makeGateDD(dd::Hmat, 1, 0);
 auto superposition = dd->multiply(h_op, zero_state); 
 ```
 
-For implementing more complex functionality which requires garbage collection, be advised that you have to do the reference counting by hand. 
+For implementing more complex functionality which requires garbage collection, be advised that you have to do the reference counting by hand.
 
 ### System Requirements
 
-Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments). 
-However, the implementation should be compatible with any current C++ compiler supporting C++17 and a minimum CMake version of 3.14.
+Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments). However, the implementation should be compatible
+with any current C++ compiler supporting C++17 and a minimum CMake version of 3.14.
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
-  
-### Setup, Build, and Run 
+
+### Setup, Build, and Run
 
 To start off, clone this repository using
+
 ```shell
 git clone --recurse-submodules -j8 https://github.com/iic-jku/dd_package 
 ```
-Note the `--recurse-submodules` flag. It is required to also clone all the required submodules. If you happen to forget passing the flag on your initial clone, you can initialize all the submodules by executing `git submodule update --init --recursive` in the main project directory.
+
+Note the `--recurse-submodules` flag. It is required to also clone all the required submodules. If you happen to forget passing the flag on your initial clone, you can initialize all the submodules by
+executing `git submodule update --init --recursive` in the main project directory.
 
 Our projects use CMake as the main build configuration tool. Building a project using CMake is a two-stage process. First, CMake needs to be *configured* by calling
 ```shell 

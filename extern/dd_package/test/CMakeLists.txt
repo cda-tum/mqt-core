@@ -24,11 +24,13 @@ if (NOT TARGET benchmark::benchmark)
 	if (BINDINGS)
 		# adjust visibility settings for building Python bindings
 		target_compile_options(benchmark PUBLIC -fvisibility=hidden)
-	endif()
-endif()
+	endif ()
+endif ()
 
 add_executable(${PROJECT_NAME}_example ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 target_link_libraries(${PROJECT_NAME}_example PRIVATE ${PROJECT_NAME})
+set_target_properties(${PROJECT_NAME}_example PROPERTIES FOLDER tests CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+enable_lto(${PROJECT_NAME}_example)
 
 macro(package_add_test TESTNAME)
 	# create an exectuable in which the tests will be stored
@@ -37,15 +39,8 @@ macro(package_add_test TESTNAME)
 	target_link_libraries(${TESTNAME} PRIVATE ${PROJECT_NAME} gtest_main)
 	# discover tests
 	gtest_discover_tests(${TESTNAME} WORKING_DIRECTORY ${PROJECT_DIR} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}")
-	set_target_properties(${TESTNAME} PROPERTIES FOLDER tests)
-
-	# enable interprocedural optimization if it is supported
-	include(CheckIPOSupported)
-	check_ipo_supported(RESULT ipo_supported)
-	if (ipo_supported)
-		set_target_properties(${TESTNAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-	endif ()
-
+	set_target_properties(${TESTNAME} PROPERTIES FOLDER tests CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+	enable_lto(${TESTNAME})
 endmacro()
 
 # add unit tests
@@ -64,14 +59,8 @@ add_test(NAME ${PROJECT_NAME}_example COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${PROJ
 add_executable(${PROJECT_NAME}_bench EXCLUDE_FROM_ALL ${CMAKE_CURRENT_SOURCE_DIR}/bench_package.cpp)
 # link the Google benchmark infrastructure and a default main fuction to the benchmark executable.
 target_link_libraries(${PROJECT_NAME}_bench PRIVATE ${PROJECT_NAME} benchmark::benchmark_main Threads::Threads)
-set_target_properties(${PROJECT_NAME}_bench PROPERTIES FOLDER tests)
-
-# enable interprocedural optimization if it is supported
-include(CheckIPOSupported)
-check_ipo_supported(RESULT ipo_supported)
-if (ipo_supported)
-	set_target_properties(${PROJECT_NAME}_bench PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-endif ()
+set_target_properties(${PROJECT_NAME}_bench PROPERTIES FOLDER tests CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+enable_lto(${PROJECT_NAME}_bench)
 
 add_custom_command(TARGET ${PROJECT_NAME}_bench
                    POST_BUILD

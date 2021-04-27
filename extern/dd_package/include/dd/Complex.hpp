@@ -10,95 +10,57 @@
 #include "ComplexValue.hpp"
 
 #include <cstddef>
-#include <iomanip>
 #include <iostream>
-#include <sstream>
 #include <utility>
 
 namespace dd {
+    using CTEntry = ComplexTable<>::Entry;
+
     struct Complex {
-        ComplexTable<>::Entry* r;
-        ComplexTable<>::Entry* i;
+        CTEntry* r;
+        CTEntry* i;
 
         static Complex zero;
         static Complex one;
 
         void setVal(const Complex& c) const {
-            r->value = c.r->val();
-            i->value = c.i->val();
+            r->value = CTEntry::val(c.r);
+            i->value = CTEntry::val(c.i);
         }
 
-        [[nodiscard]] bool approximatelyEquals(const Complex& c) const {
-            return r->approximatelyEquals(c.r) && i->approximatelyEquals(c.i);
+        [[nodiscard]] inline bool approximatelyEquals(const Complex& c) const {
+            return CTEntry::approximatelyEquals(r, c.r) && CTEntry::approximatelyEquals(i, c.i);
         };
 
-        [[nodiscard]] bool approximatelyZero() const {
-            return r->approximatelyZero() && i->approximatelyZero();
+        [[nodiscard]] inline bool approximatelyZero() const {
+            return CTEntry::approximatelyZero(r) && CTEntry::approximatelyZero(i);
         }
 
-        [[nodiscard]] bool approximatelyOne() const {
-            return r->approximatelyOne() && i->approximatelyZero();
+        [[nodiscard]] inline bool approximatelyOne() const {
+            return CTEntry::approximatelyOne(r) && CTEntry::approximatelyZero(i);
         }
 
-        bool operator==(const Complex& other) const {
+        inline bool operator==(const Complex& other) const {
             return r == other.r && i == other.i;
         }
 
-        bool operator!=(const Complex& other) const {
+        inline bool operator!=(const Complex& other) const {
             return !operator==(other);
         }
 
         [[nodiscard]] std::string toString(bool formatted = true, int precision = -1) const {
-            std::ostringstream ss{};
-
-            if (precision >= 0) ss << std::setprecision(precision);
-
-            auto real = r->val();
-            auto imag = i->val();
-
-            if (real != 0.) {
-                if (formatted) {
-                    ComplexValue::printFormatted(ss, real);
-                } else {
-                    ss << real;
-                }
-            }
-            if (imag != 0.) {
-                if (formatted) {
-                    if (real == imag) {
-                        ss << "(1+i)";
-                        return ss.str();
-                    } else if (imag == -real) {
-                        ss << "(1-i)";
-                        return ss.str();
-                    }
-                    ComplexValue::printFormatted(ss, imag, true);
-                } else {
-                    if (real == 0.) {
-                        ss << imag;
-                    } else {
-                        if (imag > 0.) {
-                            ss << "+";
-                        }
-                        ss << imag;
-                    }
-                    ss << "i";
-                }
-            }
-            if (real == 0. && imag == 0.) return "0";
-
-            return ss.str();
+            return ComplexValue::toString(CTEntry::val(r), CTEntry::val(i), formatted, precision);
         }
 
         void writeBinary(std::ostream& os) const {
-            r->writeBinary(os);
-            i->writeBinary(os);
+            CTEntry::writeBinary(r, os);
+            CTEntry::writeBinary(i, os);
         }
     };
 
     inline std::ostream& operator<<(std::ostream& os, const Complex& c) {
-        auto r = c.r->val();
-        auto i = c.i->val();
+        auto r = CTEntry::val(c.r);
+        auto i = CTEntry::val(c.i);
 
         if (r != 0) {
             ComplexValue::printFormatted(os, r);
@@ -126,9 +88,9 @@ namespace std {
     template<>
     struct hash<dd::Complex> {
         std::size_t operator()(dd::Complex const& c) const noexcept {
-            auto h1 = std::hash<dd::ComplexTable<>::Entry*>{}(c.r);
-            auto h2 = std::hash<dd::ComplexTable<>::Entry*>{}(c.i);
-            return h1 ^ (h2 << 1);
+            auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(c.r));
+            auto h2 = dd::murmur64(reinterpret_cast<std::size_t>(c.i));
+            return dd::combineHash(h1, h2);
         }
     };
 } // namespace std

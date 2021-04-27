@@ -22,10 +22,10 @@ namespace dd {
         ToffoliTable() = default;
 
         struct Entry {
-            QubitCount        n = 0;
-            std::set<Control> controls{};
-            Qubit             target = 0;
-            Edge              e;
+            QubitCount n = 0;
+            Controls   controls{};
+            Qubit      target = 0;
+            Edge       e;
         };
 
         static constexpr std::size_t MASK = NBUCKET - 1;
@@ -33,13 +33,13 @@ namespace dd {
         // access functions
         [[nodiscard]] const auto& getTable() const { return table; }
 
-        void insert(QubitCount n, const std::set<Control>& controls, Qubit target, const Edge& e) {
+        void insert(QubitCount n, const Controls& controls, Qubit target, const Edge& e) {
             const auto key = hash(controls, target);
             table[key]     = {n, controls, target, e};
             ++count;
         }
 
-        Edge lookup(QubitCount n, const std::set<Control>& controls, Qubit target) {
+        Edge lookup(QubitCount n, const Controls& controls, Qubit target) {
             lookups++;
             Edge        r{};
             const auto  key   = hash(controls, target);
@@ -52,7 +52,7 @@ namespace dd {
             return entry.e;
         }
 
-        static std::size_t hash(const std::set<Control>& controls, Qubit target) {
+        static std::size_t hash(const Controls& controls, Qubit target) {
             auto key = static_cast<std::size_t>(std::make_unsigned<Qubit>::type(target));
             for (const auto& control: controls) {
                 if (control.type == dd::Control::Type::pos) {

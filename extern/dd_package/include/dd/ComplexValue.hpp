@@ -13,7 +13,9 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <utility>
 
@@ -21,26 +23,26 @@ namespace dd {
     struct ComplexValue {
         fp r, i;
 
-        [[nodiscard]] bool approximatelyEquals(const ComplexValue& c) const {
+        [[nodiscard]] inline bool approximatelyEquals(const ComplexValue& c) const {
             return std::abs(r - c.r) < ComplexTable<>::tolerance() &&
                    std::abs(i - c.i) < ComplexTable<>::tolerance();
         }
 
-        [[nodiscard]] bool approximatelyZero() const {
+        [[nodiscard]] inline bool approximatelyZero() const {
             return std::abs(r) < ComplexTable<>::tolerance() &&
                    std::abs(i) < ComplexTable<>::tolerance();
         }
 
-        [[nodiscard]] bool approximatelyOne() const {
+        [[nodiscard]] inline bool approximatelyOne() const {
             return std::abs(r - 1.) < ComplexTable<>::tolerance() &&
                    std::abs(i) < ComplexTable<>::tolerance();
         }
 
-        bool operator==(const ComplexValue& other) const {
+        inline bool operator==(const ComplexValue& other) const {
             return r == other.r && i == other.i;
         }
 
-        bool operator!=(const ComplexValue& other) const {
+        inline bool operator!=(const ComplexValue& other) const {
             return !operator==(other);
         }
 
@@ -153,6 +155,45 @@ namespace dd {
             } else
                 os << r;
         }
+
+        static std::string toString(const fp& real, const fp& imag, bool formatted = true, int precision = -1) {
+            std::ostringstream ss{};
+
+            if (precision >= 0) ss << std::setprecision(precision);
+
+            if (real != 0.) {
+                if (formatted) {
+                    printFormatted(ss, real);
+                } else {
+                    ss << real;
+                }
+            }
+            if (imag != 0.) {
+                if (formatted) {
+                    if (real == imag) {
+                        ss << "(1+i)";
+                        return ss.str();
+                    } else if (imag == -real) {
+                        ss << "(1-i)";
+                        return ss.str();
+                    }
+                    printFormatted(ss, imag, true);
+                } else {
+                    if (real == 0.) {
+                        ss << imag;
+                    } else {
+                        if (imag > 0.) {
+                            ss << "+";
+                        }
+                        ss << imag;
+                    }
+                    ss << "i";
+                }
+            }
+            if (real == 0. && imag == 0.) return "0";
+
+            return ss.str();
+        }
     };
 
     inline std::ostream& operator<<(std::ostream& os, const ComplexValue& c) {
@@ -179,9 +220,9 @@ namespace std {
     template<>
     struct hash<dd::ComplexValue> {
         std::size_t operator()(dd::ComplexValue const& c) const noexcept {
-            auto h1 = std::hash<dd::fp>{}(c.r);
-            auto h2 = std::hash<dd::fp>{}(c.i);
-            return h1 ^ (h2 << 1);
+            auto h1 = dd::murmur64(static_cast<std::size_t>(std::round(c.r * 1000)));
+            auto h2 = dd::murmur64(static_cast<std::size_t>(std::round(c.i * 1000)));
+            return dd::combineHash(h1, h2);
         }
     };
 } // namespace std

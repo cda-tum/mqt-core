@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.14...3.19)
 # project definition
 project(DDPackage
         LANGUAGES CXX
-        VERSION 2.0.0
+        VERSION 2.0.1
         DESCRIPTION "JKQ decision diagram package tailored to quantum computing")
 
 # enable organization of targets into folders
@@ -14,7 +14,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(DEPLOY "Configure for deployment")
 option(BINDINGS "Configure for building Python bindings")
 option(COVERAGE "Configure for coverage report generation")
-option(BUILD_DD_PACKAGE_TESTS "Also build tests for DD package" )
+option(BUILD_DD_PACKAGE_TESTS "Also build tests for DD package")
 
 # build type settings
 set(default_build_type "Release")
@@ -70,6 +70,15 @@ endif ()
 
 # add JKQ alias
 add_library(JKQ::DDPackage ALIAS ${PROJECT_NAME})
+
+macro(enable_lto TARGET_NAME)
+	# enable interprocedural optimization if it is supported (Clang's ThinLTO does not work with Ubuntu 20.04's default linker at the moment)
+	include(CheckIPOSupported)
+	check_ipo_supported(RESULT ipo_supported)
+	if (ipo_supported AND NOT ((${CMAKE_SYSTEM_NAME} MATCHES "Linux") AND (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")))
+		set_target_properties(${TARGETNAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+	endif ()
+endmacro()
 
 # add test code
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR BUILD_DD_PACKAGE_TESTS)

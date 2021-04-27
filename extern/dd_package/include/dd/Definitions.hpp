@@ -46,11 +46,40 @@ namespace dd {
 
     static constexpr fp SQRT2_2 = 0.707106781186547524400844362104849039284835937688474036588L;
     static constexpr fp PI      = 3.141592653589793238462643383279502884197169399375105820974L;
+    static constexpr fp PI_2    = 1.570796326794896619231321691639751442098584699687552910487L;
+    static constexpr fp PI_4    = 0.785398163397448309615660845819875721049292349843776455243L;
 
     using CVec = std::vector<std::pair<float, float>>;
     using CMat = std::vector<CVec>;
 
     static constexpr std::uint_least64_t SERIALIZATION_VERSION = 1;
+
+    // 64bit mixing hash (from MurmurHash3, https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp)
+    constexpr std::size_t murmur64(std::size_t k) {
+        k ^= k >> 33;
+        k *= 0xff51afd7ed558ccdULL;
+        k ^= k >> 33;
+        k *= 0xc4ceb9fe1a85ec53ULL;
+        k ^= k >> 33;
+        return k;
+    }
+
+    // combine two 64bit hashes into one 64bit hash (boost::hash_combine, https://www.boost.org/LICENSE_1_0.txt)
+    constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) {
+        lhs ^= rhs + 0x9e3779b97f4a7c15ULL + (lhs << 6) + (lhs >> 2);
+        return lhs;
+    }
+
+    // alternative hash combinator (from Google's city hash, https://github.com/google/cityhash/blob/master/COPYING)
+    //    constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) {
+    //        const std::size_t kMul = 0x9ddfea08eb382d69ULL;
+    //        std::size_t a = (lhs ^ rhs) * kMul;
+    //        a ^= (a >> 47);
+    //        std::size_t b = (rhs ^ a) * kMul;
+    //        b ^= (b >> 47);
+    //        b *= kMul;
+    //        return b;
+    //    }
 
 } // namespace dd
 #endif //DDpackage_DATATYPES_HPP

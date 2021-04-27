@@ -14,18 +14,17 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <forward_list>
 #include <iostream>
 #include <limits>
-#include <stack>
 #include <vector>
 
 namespace dd {
-    template<std::size_t NBUCKET = 32768, std::size_t INITIAL_ALLOCATION_SIZE = 2048, std::size_t GROWTH_FACTOR = 2, std::size_t INITIAL_GC_LIMIT = 100000, std::size_t GC_INCREMENT = 0>
+    template<std::size_t NBUCKET = 32768, std::size_t INITIAL_ALLOCATION_SIZE = 2048, std::size_t GROWTH_FACTOR = 2, std::size_t INITIAL_GC_LIMIT = 65536>
     class ComplexTable {
     public:
         struct Entry {
             fp       value{};
+            Entry*   next{};
             RefCount refCount{};
 
             ///
@@ -33,53 +32,54 @@ namespace dd {
             /// If not handled properly, this causes misaligned access
             /// These routines allow to obtain safe pointers
             ///
-            [[nodiscard]] inline Entry* getAlignedPointer() const {
-                return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(this) & (~1ULL));
+            [[nodiscard]] static inline Entry* getAlignedPointer(const Entry* e) {
+                return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) & (~1ULL));
             }
-            [[nodiscard]] inline Entry* getNegativePointer() const {
-                return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(this) | 1ULL);
+            [[nodiscard]] static inline Entry* getNegativePointer(const Entry* e) {
+                return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) | 1ULL);
             }
-            [[nodiscard]] inline Entry* flipPointerSign() const {
-                return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(this) ^ 1ULL);
+            [[nodiscard]] static inline Entry* flipPointerSign(const Entry* e) {
+                return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) ^ 1ULL);
             }
-            [[nodiscard]] inline bool isNegativePointer() const {
-                return reinterpret_cast<std::uintptr_t>(this) & 1ULL;
+            [[nodiscard]] static inline bool isNegativePointer(const Entry* e) {
+                return reinterpret_cast<std::uintptr_t>(e) & 1ULL;
             }
 
-            [[nodiscard]] inline fp val() const {
-                if (isNegativePointer()) {
-                    return -getAlignedPointer()->value;
+            [[nodiscard]] static inline fp val(const Entry* e) {
+                if (isNegativePointer(e)) {
+                    return -getAlignedPointer(e)->value;
                 }
-                return value;
+                return e->value;
             }
 
-            [[nodiscard]] inline RefCount ref() const {
-                if (isNegativePointer()) {
-                    return -getAlignedPointer()->refCount;
+            [[nodiscard]] static inline RefCount ref(const Entry* e) {
+                if (isNegativePointer(e)) {
+                    return -getAlignedPointer(e)->refCount;
                 }
-                return refCount;
+                return e->refCount;
             }
 
-            [[nodiscard]] inline bool approximatelyEquals(const Entry* entry) const {
-                return std::abs(val() - entry->val()) < TOLERANCE;
+            [[nodiscard]] static inline bool approximatelyEquals(const Entry* left, const Entry* right) {
+                return std::abs(val(left) - val(right)) < TOLERANCE;
             }
 
-            [[nodiscard]] inline bool approximatelyZero() const {
-                return this == &zero || std::abs(val()) < TOLERANCE;
+            [[nodiscard]] static inline bool approximatelyZero(const Entry* e) {
+                return e == &zero || std::abs(val(e)) < TOLERANCE;
             }
 
-            [[nodiscard]] inline bool approximatelyOne() const {
-                return this == &one || std::abs(val() - 1) < TOLERANCE;
+            [[nodiscard]] static inline bool approximatelyOne(const Entry* e) {
+                return e == &one || std::abs(val(e) - 1) < TOLERANCE;
             }
 
-            void writeBinary(std::ostream& os) const {
-                auto temp = val();
-                os.write(reinterpret_cast<const char*>(&temp), sizeof(decltype(value)));
+            static void writeBinary(const Entry* e, std::ostream& os) {
+                auto temp = val(e);
+                os.write(reinterpret_cast<const char*>(&temp), sizeof(decltype(temp)));
             }
         };
 
-        static inline Entry zero{0., 1};
-        static inline Entry one{1., 1};
+        static inline Entry zero{0., nullptr, 1};
+        static inline Entry sqrt2_2{SQRT2_2, nullptr, 1};
+        static inline Entry one{1., nullptr, 1};
 
         ComplexTable():
             chunkID(0), allocationSize(INITIAL_ALLOCATION_SIZE), gcLimit(INITIAL_GC_LIMIT) {
@@ -90,15 +90,15 @@ namespace dd {
             chunkIt    = chunks[0].begin();
             chunkEndIt = chunks[0].end();
 
-            // emplace static zero and one in the table
-            table[0].push_front(&zero);
-            table[NBUCKET - 1].push_front(&one);
-            count     = 2;
-            peakCount = 2;
+            // emplace static zero, 1/sqrt(2), and one in the table
+            table[0]           = &zero;
+            table[sqrt2_2Key]  = &sqrt2_2;
+            table[NBUCKET - 1] = &one;
+            count              = 3;
+            peakCount          = 3;
 
-            // add 1/2 and 1/sqrt(2) to the complex table and increase their ref count (so that they are not collected)
+            // add 1/2 to the complex table and increase its ref count (so that it is not collected)
             lookup(0.5L)->refCount++;
-            lookup(SQRT2_2)->refCount++;
         }
 
         ~ComplexTable() = default;
@@ -113,11 +113,15 @@ namespace dd {
         static constexpr std::size_t MASK = NBUCKET - 1;
 
         // linear (clipped) hash function
-        static std::size_t hash(const fp val) {
+        static constexpr std::size_t hash(const fp val) {
             assert(val >= 0);
-            auto key = static_cast<std::size_t>(val * MASK);
+            auto key = static_cast<std::size_t>(val * MASK + 0.5L);
             return std::min(key, MASK);
         }
+
+        static constexpr std::size_t zeroKey    = hash(0.);
+        static constexpr std::size_t sqrt2_2Key = hash(SQRT2_2);
+        static constexpr std::size_t oneKey     = hash(1.);
 
         // access functions
         [[nodiscard]] std::size_t getCount() const { return count; }
@@ -125,6 +129,7 @@ namespace dd {
         [[nodiscard]] std::size_t getAllocations() const { return allocations; }
         [[nodiscard]] std::size_t getGrowthFactor() const { return GROWTH_FACTOR; }
         [[nodiscard]] const auto& getTable() const { return table; }
+        [[nodiscard]] bool        availableEmpty() const { return available == nullptr; };
 
         Entry* lookup(const fp& val) {
             assert(!std::isnan(val));
@@ -139,11 +144,36 @@ namespace dd {
             lookups++;
 
             // search in intended bucket
-            const auto  key    = hash(val);
+            const auto key = hash(val);
+
+            // ensure that the exact value of important constants is checked first on all occasions
+            if (key == zeroKey) {
+                if (std::abs(val) < TOLERANCE) {
+                    ++hits;
+                    return &zero;
+                } else {
+                    ++collisions;
+                }
+            } else if (key == oneKey) {
+                if (std::abs(val - 1.) < TOLERANCE) {
+                    ++hits;
+                    return &one;
+                } else {
+                    ++collisions;
+                }
+            } else if (key == sqrt2_2Key) {
+                if (std::abs(val - SQRT2_2) < TOLERANCE) {
+                    ++hits;
+                    return &sqrt2_2;
+                } else {
+                    ++collisions;
+                }
+            }
+
             const auto& bucket = table[key];
-            auto        it     = find(bucket, val);
-            if (it != bucket.end()) {
-                return (*it);
+            auto        p      = find(bucket, val);
+            if (p != nullptr) {
+                return p;
             }
 
             // search in (potentially) lower bucket
@@ -151,9 +181,9 @@ namespace dd {
                 const auto lowerKey = hash(val - TOLERANCE);
                 if (lowerKey != key) {
                     const auto& lowerBucket = table[lowerKey];
-                    it                      = find(lowerBucket, val);
-                    if (it != lowerBucket.end()) {
-                        return (*it);
+                    p                       = find(lowerBucket, val);
+                    if (p != nullptr) {
+                        return p;
                     }
                 }
             }
@@ -162,16 +192,17 @@ namespace dd {
             const auto upperKey = hash(val - TOLERANCE);
             if (upperKey != key) {
                 const auto& upperBucket = table[upperKey];
-                it                      = find(upperBucket, val);
-                if (it != upperBucket.end()) {
-                    return (*it);
+                p                       = find(upperBucket, val);
+                if (p != nullptr) {
+                    return p;
                 }
             }
 
             // value was not found in the table -> get a new entry and add it to the central bucket
-            auto entry   = getEntry();
+            Entry* entry = getEntry();
             entry->value = val;
-            table[key].push_front(entry);
+            entry->next  = table[key];
+            table[key]   = entry;
             count++;
             peakCount = std::max(peakCount, count);
             return entry;
@@ -179,9 +210,9 @@ namespace dd {
 
         [[nodiscard]] Entry* getEntry() {
             // an entry is available on the stack
-            if (!available.empty()) {
-                auto entry = available.top();
-                available.pop();
+            if (!availableEmpty()) {
+                Entry* entry = available;
+                available    = entry->next;
                 // returned entries could have a ref count != 0
                 entry->refCount = 0;
                 return entry;
@@ -203,16 +234,20 @@ namespace dd {
         }
 
         void returnEntry(Entry* entry) {
-            available.push(entry);
+            entry->next = available;
+            available   = entry;
         }
 
         // increment reference count for corresponding entry
         static void incRef(Entry* entry) {
-            // get valid pointer
-            auto entryPtr = entry->getAlignedPointer();
+            if (entry == nullptr)
+                return;
 
-            // `zero` and `one` are static and never altered
-            if (entryPtr != &one && entryPtr != &zero) {
+            // get valid pointer
+            auto entryPtr = Entry::getAlignedPointer(entry);
+
+            // important (static) numbers are never altered
+            if (entryPtr != &one && entryPtr != &zero && entryPtr != &sqrt2_2) {
                 if (entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
                     std::clog << "[WARN] MAXREFCNT reached for " << entryPtr->value << ". Number will never be collected." << std::endl;
                     return;
@@ -225,11 +260,14 @@ namespace dd {
 
         // decrement reference count for corresponding entry
         static void decRef(Entry* entry) {
-            // get valid pointer
-            auto entryPtr = entry->getAlignedPointer();
+            if (entry == nullptr)
+                return;
 
-            // `zero` and `one` are static and never altered
-            if (entryPtr != &one && entryPtr != &zero) {
+            // get valid pointer
+            auto entryPtr = Entry::getAlignedPointer(entry);
+
+            // important (static) numbers are never altered
+            if (entryPtr != &one && entryPtr != &zero && entryPtr != &sqrt2_2) {
                 assert(entryPtr->refCount > 0);
 
                 // decrease reference count
@@ -237,38 +275,49 @@ namespace dd {
             }
         }
 
+        [[nodiscard]] bool possiblyNeedsCollection() const { return count >= gcLimit; }
+
         std::size_t garbageCollect(bool force = false) {
             gcCalls++;
-            if (!force && count < gcLimit)
+            // nothing to be done if garbage collection is not forced and the limit has not been reached
+            // or the current count is minimal (the complex table always contains at least 0, 0.5, 1/sqrt(2), and 1)
+            if ((!force && count < gcLimit) || count <= 4)
                 return 0;
 
             gcRuns++;
             std::size_t collected = 0;
             std::size_t remaining = 0;
             for (auto& bucket: table) {
-                auto it     = bucket.begin();
-                auto lastit = bucket.before_begin();
-                while (it != bucket.end()) {
-                    if ((*it)->refCount == 0) {
-                        auto entry = (*it);
-                        bucket.erase_after(lastit); // erases the element at `it`
-                        returnEntry(entry);
-                        if (lastit == bucket.before_begin()) {
-                            // first entry was removed
-                            it = bucket.begin();
+                Entry* p     = bucket;
+                Entry* lastp = nullptr;
+                while (p != nullptr) {
+                    if (p->refCount == 0) {
+                        Entry* next = p->next;
+                        if (lastp == nullptr) {
+                            bucket = next;
                         } else {
-                            // entry in middle of list was removed
-                            it = ++lastit;
+                            lastp->next = next;
                         }
+                        returnEntry(p);
+                        p = next;
                         collected++;
                     } else {
-                        ++it;
-                        ++lastit;
+                        lastp = p;
+                        p     = p->next;
                         remaining++;
                     }
                 }
             }
-            gcLimit += GC_INCREMENT;
+            // The garbage collection limit changes dynamically depending on the number of remaining (active) nodes.
+            // If it were not changed, garbage collection would run through the complete table on each successive call
+            // once the number of remaining entries reaches the garbage collection limit. It is increased whenever the
+            // number of remaining entries is rather close to the garbage collection threshold and decreased if the
+            // number of remaining entries is much lower than the current limit.
+            if (remaining > gcLimit / 10 * 9) {
+                gcLimit = remaining + INITIAL_GC_LIMIT;
+            } else if (remaining < gcLimit / 128) {
+                gcLimit /= 2;
+            }
             count = remaining;
             return collected;
         }
@@ -276,12 +325,11 @@ namespace dd {
         void clear() {
             // clear table buckets
             for (auto& bucket: table) {
-                bucket.clear();
+                bucket = nullptr;
             }
 
             // clear available stack
-            while (!available.empty())
-                available.pop();
+            available = nullptr;
 
             // release memory of all but the first chunk TODO: it could be desirable to keep the memory
             while (chunkID > 0) {
@@ -308,14 +356,17 @@ namespace dd {
 
         void print() {
             for (std::size_t key = 0; key < table.size(); ++key) {
-                auto& bucket = table[key];
-                if (!bucket.empty())
-                    std::cout << key << ": ";
+                auto p = table[key];
+                if (p != nullptr)
+                    std::cout << key << ": "
+                              << "\n";
 
-                for (const auto& node: bucket)
-                    std::cout << "\t\t" << reinterpret_cast<std::uintptr_t>(node) << " " << node->refCount << "\t";
+                while (p != nullptr) {
+                    std::cout << "\t\t" << p->value << " " << reinterpret_cast<std::uintptr_t>(p) << " " << p->refCount << "\n";
+                    p = p->next;
+                }
 
-                if (!bucket.empty())
+                if (table[key] != nullptr)
                     std::cout << "\n";
             }
         }
@@ -329,7 +380,7 @@ namespace dd {
         }
 
     private:
-        using Bucket = std::forward_list<Entry*>;
+        using Bucket = Entry*;
         using Table  = std::array<Bucket, NBUCKET>;
 
         Table table{};
@@ -337,7 +388,7 @@ namespace dd {
         // numerical tolerance to be used for floating point values
         static inline fp TOLERANCE = 1e-13;
 
-        std::stack<Entry*>                    available{};
+        Entry*                                available{};
         std::vector<std::vector<Entry>>       chunks{};
         std::size_t                           chunkID;
         typename std::vector<Entry>::iterator chunkIt;
@@ -356,19 +407,19 @@ namespace dd {
         // garbage collection
         std::size_t gcCalls = 0;
         std::size_t gcRuns  = 0;
-        std::size_t gcLimit = 250000;
+        std::size_t gcLimit = 100000;
 
-        typename Bucket::const_iterator find(const Bucket& bucket, const fp& val) {
-            auto it = bucket.cbegin();
-            while (it != bucket.cend()) {
-                if (std::abs((*it)->value - val) < TOLERANCE) {
+        inline Entry* find(const Bucket& bucket, const fp& val) {
+            auto p = bucket;
+            while (p != nullptr) {
+                if (std::abs(p->value - val) < TOLERANCE) {
                     ++hits;
-                    return it;
+                    return p;
                 }
                 ++collisions;
-                ++it;
+                p = p->next;
             }
-            return it;
+            return p;
         }
     };
 } // namespace dd

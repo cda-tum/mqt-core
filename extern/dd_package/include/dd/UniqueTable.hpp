@@ -15,11 +15,9 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <forward_list>
 #include <iostream>
 #include <limits>
 #include <numeric>
-#include <stack>
 #include <stdexcept>
 #include <vector>
 
@@ -32,7 +30,7 @@ namespace dd {
     /// \tparam GROWTH_PERCENTAGE percentage that the allocations' size shall grow over time
     /// \tparam INITIAL_GC_LIMIT number of nodes initially used as garbage collection threshold
     /// \tparam GC_INCREMENT absolute number of nodes to increase the garbage collection threshold after garbage collection has been performed
-    template<class Node, std::size_t NBUCKET = 32768, std::size_t INITIAL_ALLOCATION_SIZE = 2048, std::size_t GROWTH_FACTOR = 2, std::size_t INITIAL_GC_LIMIT = 250000, std::size_t GC_INCREMENT = 0>
+    template<class Node, std::size_t NBUCKET = 32768, std::size_t INITIAL_ALLOCATION_SIZE = 2048, std::size_t GROWTH_FACTOR = 2, std::size_t INITIAL_GC_LIMIT = 131072>
     class UniqueTable {
     public:
         explicit UniqueTable(std::size_t nvars):
@@ -58,14 +56,15 @@ namespace dd {
         }
 
         static std::size_t hash(const Node* p) {
-            std::uintptr_t key = 0;
+            std::size_t key = 0;
             for (std::size_t i = 0; i < p->e.size(); ++i) {
-                key += ((reinterpret_cast<std::uintptr_t>(p->e[i].p) >> i) +
-                        (reinterpret_cast<std::uintptr_t>(p->e[i].w.r) >> i) +
-                        (reinterpret_cast<std::uintptr_t>(p->e[i].w.i) >> (i + 1))) &
-                       MASK;
-                key &= MASK;
+                key = dd::combineHash(key, std::hash<Edge<Node>>{}(p->e[i]));
+                // old hash function:
+                //     key += ((reinterpret_cast<std::size_t>(p->e[i].p)   >>  i) +
+                //             (reinterpret_cast<std::size_t>(p->e[i].w.r) >>  i) +
+                //             (reinterpret_cast<std::size_t>(p->e[i].w.i) >> (i + 1))) & MASK;
             }
+            key &= MASK;
             return key;
         }
 
@@ -91,32 +90,32 @@ namespace dd {
             for ([[maybe_unused]] const auto& edge: e.p->e)
                 assert(edge.p->v == v - 1 || edge.isTerminal());
 
-            auto& bucket = tables[v][key];
-            auto  it     = bucket.begin();
-            while (it != bucket.end()) {
-                if (e.p->e == (*it)->e) {
+            Node* p = tables[v][key];
+            while (p != nullptr) {
+                if (e.p->e == p->e) {
                     // Match found
-                    if (e.p != (*it) && !keepNode) {
+                    if (e.p != p && !keepNode) {
                         // put node pointed to by e.p on available chain
                         returnNode(e.p);
                     }
                     hits++;
 
                     // variables should stay the same
-                    assert((*it)->v == e.p->v);
+                    assert(p->v == e.p->v);
 
                     // successors of a node shall either have successive variable numbers or be terminals
                     for ([[maybe_unused]] const auto& edge: e.p->e)
                         assert(edge.p->v == v - 1 || edge.isTerminal());
 
-                    return {(*it), e.w};
+                    return {p, e.w};
                 }
                 collisions++;
-                ++it;
+                p = p->next;
             }
 
             // node was not found -> add it to front of unique table bucket
-            bucket.push_front(e.p);
+            e.p->next      = tables[v][key];
+            tables[v][key] = e.p;
             nodeCount++;
             peakNodeCount = std::max(peakNodeCount, nodeCount);
 
@@ -125,9 +124,9 @@ namespace dd {
 
         [[nodiscard]] Node* getNode() {
             // a node is available on the stack
-            if (!available.empty()) {
-                auto p = available.top();
-                available.pop();
+            if (available != nullptr) {
+                Node* p   = available;
+                available = p->next;
                 // returned nodes could have a ref count != 0
                 p->ref = 0;
                 return p;
@@ -149,7 +148,8 @@ namespace dd {
         }
 
         void returnNode(Node* p) {
-            available.push(p);
+            p->next   = available;
+            available = p;
         }
 
         // increment reference counter for node e points to
@@ -157,7 +157,7 @@ namespace dd {
         // each child if this is the first reference
         void incRef(const Edge<Node>& e) {
             dd::ComplexNumbers::incRef(e.w);
-            if (e.isTerminal())
+            if (e.p == nullptr || e.isTerminal())
                 return;
 
             if (e.p->ref == std::numeric_limits<decltype(e.p->ref)>::max()) {
@@ -184,7 +184,7 @@ namespace dd {
         // each child if this is the last reference
         void decRef(const Edge<Node>& e) {
             dd::ComplexNumbers::decRef(e.w);
-            if (e.isTerminal()) return;
+            if (e.p == nullptr || e.isTerminal()) return;
             if (e.p->ref == std::numeric_limits<decltype(e.p->ref)>::max()) return;
 
             if (e.p->ref == 0) {
@@ -204,9 +204,11 @@ namespace dd {
             }
         }
 
+        [[nodiscard]] bool possiblyNeedsCollection() const { return nodeCount >= gcLimit; }
+
         std::size_t garbageCollect(bool force = false) {
             gcCalls++;
-            if (!force && nodeCount < gcLimit)
+            if ((!force && nodeCount < gcLimit) || nodeCount == 0)
                 return 0;
 
             gcRuns++;
@@ -214,32 +216,38 @@ namespace dd {
             std::size_t remaining = 0;
             for (auto& table: tables) {
                 for (auto& bucket: table) {
-                    auto it     = bucket.begin();
-                    auto lastit = bucket.before_begin();
-                    while (it != bucket.end()) {
-                        if ((*it)->ref == 0) {
-                            assert(!Node::isTerminal(*it));
-
-                            auto node = (*it);
-                            bucket.erase_after(lastit); // erases the element at `it`
-                            returnNode(node);
-                            if (lastit == bucket.before_begin()) {
-                                // first entry was removed
-                                it = bucket.begin();
+                    Node* p     = bucket;
+                    Node* lastp = nullptr;
+                    while (p != nullptr) {
+                        if (p->ref == 0) {
+                            assert(!Node::isTerminal(p));
+                            Node* next = p->next;
+                            if (lastp == nullptr) {
+                                bucket = next;
                             } else {
-                                // entry in middle of list was removed
-                                it = ++lastit;
+                                lastp->next = next;
                             }
+                            returnNode(p);
+                            p = next;
                             collected++;
                         } else {
-                            ++it;
-                            ++lastit;
+                            lastp = p;
+                            p     = p->next;
                             remaining++;
                         }
                     }
                 }
             }
-            gcLimit += GC_INCREMENT;
+            // The garbage collection limit changes dynamically depending on the number of remaining (active) nodes.
+            // If it were not changed, garbage collection would run through the complete table on each successive call
+            // once the number of remaining entries reaches the garbage collection limit. It is increased whenever the
+            // number of remaining entries is rather close to the garbage collection threshold and decreased if the
+            // number of remaining entries is much lower than the current limit.
+            if (remaining > gcLimit / 10 * 9) {
+                gcLimit = remaining + INITIAL_GC_LIMIT;
+            } else if (remaining < gcLimit / 32) {
+                gcLimit /= 4;
+            }
             nodeCount = remaining;
             return collected;
         }
@@ -248,12 +256,11 @@ namespace dd {
             // clear unique table buckets
             for (auto& table: tables) {
                 for (auto& bucket: table) {
-                    bucket.clear();
+                    bucket = nullptr;
                 }
             }
             // clear available stack
-            while (!available.empty())
-                available.pop();
+            available = nullptr;
 
             // release memory of all but the first chunk TODO: it could be desirable to keep the memory
             while (chunkID > 0) {
@@ -289,14 +296,16 @@ namespace dd {
                 std::cout << "\t" << static_cast<std::size_t>(q) << ":"
                           << "\n";
                 for (std::size_t key = 0; key < table.size(); ++key) {
-                    auto& bucket = table[key];
-                    if (!bucket.empty())
+                    auto p = table[key];
+                    if (p != nullptr)
                         std::cout << key << ": ";
 
-                    for (const auto& node: bucket)
-                        std::cout << "\t\t" << reinterpret_cast<std::uintptr_t>(node) << " " << node->ref << "\t";
+                    while (p != nullptr) {
+                        std::cout << "\t\t" << reinterpret_cast<std::uintptr_t>(p) << " " << p->ref << "\t";
+                        p = p->next;
+                    }
 
-                    if (!bucket.empty())
+                    if (table[key] != nullptr)
                         std::cout << "\n";
                 }
                 --q;
@@ -324,14 +333,14 @@ namespace dd {
         }
 
     private:
-        using NodeBucket = std::forward_list<Node*>;
+        using NodeBucket = Node*;
         using Table      = std::array<NodeBucket, NBUCKET>;
 
         // unique tables (one per input variable)
         std::size_t        nvars = 0;
         std::vector<Table> tables{nvars};
 
-        std::stack<Node*>                    available{};
+        Node*                                available{};
         std::vector<std::vector<Node>>       chunks{};
         std::size_t                          chunkID;
         typename std::vector<Node>::iterator chunkIt;

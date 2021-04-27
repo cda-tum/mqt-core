@@ -38,14 +38,14 @@ namespace dd {
         static void add(Complex& r, const Complex& a, const Complex& b) {
             assert(r != Complex::zero);
             assert(r != Complex::one);
-            r.r->value = a.r->val() + b.r->val();
-            r.i->value = a.i->val() + b.i->val();
+            r.r->value = CTEntry::val(a.r) + CTEntry::val(b.r);
+            r.i->value = CTEntry::val(a.i) + CTEntry::val(b.i);
         }
         static void sub(Complex& r, const Complex& a, const Complex& b) {
             assert(r != Complex::zero);
             assert(r != Complex::one);
-            r.r->value = a.r->val() - b.r->val();
-            r.i->value = a.i->val() - b.i->val();
+            r.r->value = CTEntry::val(a.r) - CTEntry::val(b.r);
+            r.i->value = CTEntry::val(a.i) - CTEntry::val(b.i);
         }
         static void mul(Complex& r, const Complex& a, const Complex& b) {
             assert(r != Complex::zero);
@@ -58,10 +58,10 @@ namespace dd {
                 r.r->value = 0.;
                 r.i->value = 0.;
             } else {
-                auto ar = a.r->val();
-                auto ai = a.i->val();
-                auto br = b.r->val();
-                auto bi = b.i->val();
+                auto ar = CTEntry::val(a.r);
+                auto ai = CTEntry::val(a.i);
+                auto br = CTEntry::val(b.r);
+                auto bi = CTEntry::val(b.i);
 
                 r.r->value = ar * br - ai * bi;
                 r.i->value = ar * bi + ai * br;
@@ -79,10 +79,10 @@ namespace dd {
             } else if (b.approximatelyOne()) {
                 r.setVal(a);
             } else {
-                auto ar = a.r->val();
-                auto ai = a.i->val();
-                auto br = b.r->val();
-                auto bi = b.i->val();
+                auto ar = CTEntry::val(a.r);
+                auto ai = CTEntry::val(a.i);
+                auto br = CTEntry::val(b.r);
+                auto bi = CTEntry::val(b.i);
 
                 auto cmag = br * br + bi * bi;
 
@@ -91,8 +91,8 @@ namespace dd {
             }
         }
         static inline fp mag2(const Complex& a) {
-            auto ar = a.r->val();
-            auto ai = a.i->val();
+            auto ar = CTEntry::val(a.r);
+            auto ai = CTEntry::val(a.i);
 
             return ar * ar + ai * ai;
         }
@@ -100,24 +100,24 @@ namespace dd {
             return std::sqrt(mag2(a));
         }
         static inline fp arg(const Complex& a) {
-            auto ar = a.r->val();
-            auto ai = a.i->val();
+            auto ar = CTEntry::val(a.r);
+            auto ai = CTEntry::val(a.i);
             return std::atan2(ai, ar);
         }
         static Complex conj(const Complex& a) {
             auto ret = a;
             if (a.i != Complex::zero.i) {
-                ret.i = a.i->flipPointerSign();
+                ret.i = CTEntry::flipPointerSign(a.i);
             }
             return ret;
         }
         static Complex neg(const Complex& a) {
             auto ret = a;
             if (a.i != Complex::zero.i) {
-                ret.i = a.i->flipPointerSign();
+                ret.i = CTEntry::flipPointerSign(a.i);
             }
             if (a.r != Complex::zero.i) {
-                ret.r = a.r->flipPointerSign();
+                ret.r = CTEntry::flipPointerSign(a.r);
             }
             return ret;
         }
@@ -155,8 +155,8 @@ namespace dd {
                 return Complex::one;
             }
 
-            auto valr = c.r->val();
-            auto vali = c.i->val();
+            auto valr = CTEntry::val(c.r);
+            auto vali = CTEntry::val(c.i);
             return lookup(valr, vali);
         }
         Complex lookup(const fp& r, const fp& i) {
@@ -165,7 +165,7 @@ namespace dd {
             auto sign_r = std::signbit(r);
             if (sign_r) {
                 auto absr = std::abs(r);
-                ret.r     = complexTable.lookup(absr)->getNegativePointer();
+                ret.r     = CTEntry::getNegativePointer(complexTable.lookup(absr));
             } else {
                 ret.r = complexTable.lookup(r);
             }
@@ -173,7 +173,7 @@ namespace dd {
             auto sign_i = std::signbit(i);
             if (sign_i) {
                 auto absi = std::abs(i);
-                ret.i     = complexTable.lookup(absi)->getNegativePointer();
+                ret.i     = CTEntry::getNegativePointer(complexTable.lookup(absi));
             } else {
                 ret.i = complexTable.lookup(i);
             }

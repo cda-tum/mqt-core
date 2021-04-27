@@ -11,7 +11,6 @@
 
 #include <cassert>
 #include <cstddef>
-#include <stack>
 #include <vector>
 
 namespace dd {
@@ -41,9 +40,10 @@ namespace dd {
 
         [[nodiscard]] Complex getCachedComplex() {
             // an entry is available on the stack
-            if (!available.empty()) {
-                auto entry = available.top();
-                available.pop();
+            if (available != nullptr) {
+                assert(available->next != nullptr);
+                auto entry = Complex{available, available->next};
+                available  = entry.i->next;
                 count += 2;
                 return entry;
             }
@@ -69,8 +69,9 @@ namespace dd {
 
         [[nodiscard]] Complex getTemporaryComplex() {
             // an entry is available on the stack
-            if (!available.empty()) {
-                return available.top();
+            if (available != nullptr) {
+                assert(available->next != nullptr);
+                return {available, available->next};
             }
 
             // new chunk has to be allocated
@@ -82,11 +83,7 @@ namespace dd {
                 chunkIt    = chunks[chunkID].begin();
                 chunkEndIt = chunks[chunkID].end();
             }
-
-            Complex c{};
-            c.r = &(*chunkIt);
-            c.i = &(*(chunkIt + 1));
-            return c;
+            return {&(*chunkIt), &(*(chunkIt + 1))};
         }
 
         void returnToCache(Complex& c) {
@@ -95,14 +92,15 @@ namespace dd {
             assert(c != Complex::one);
             assert(c.r->refCount == 0);
             assert(c.i->refCount == 0);
-            available.push(c);
+            c.i->next = available;
+            c.r->next = c.i;
+            available = c.r;
             count -= 2;
         }
 
         void clear() {
             // clear available stack
-            while (!available.empty())
-                available.pop();
+            available = nullptr;
 
             // release memory of all but the first chunk TODO: it could be desirable to keep the memory
             while (chunkID > 0) {
@@ -120,7 +118,7 @@ namespace dd {
         };
 
     private:
-        std::stack<Complex>                   available{};
+        Entry*                                available{};
         std::vector<std::vector<Entry>>       chunks{};
         std::size_t                           chunkID;
         typename std::vector<Entry>::iterator chunkIt;

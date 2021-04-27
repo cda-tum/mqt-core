@@ -34,6 +34,9 @@ TEST(DDComplexTest, TrivialTest) {
     // since lookup does not increase the ref count, garbage collection removes the new values
     unsigned int end_count = cn->cacheCount();
     ASSERT_EQ(before_count, end_count);
+
+    EXPECT_NO_THROW(cn->incRef({nullptr, nullptr}));
+    EXPECT_NO_THROW(cn->decRef({nullptr, nullptr}));
 }
 
 TEST(DDComplexTest, ComplexNumberCreation) {
@@ -41,26 +44,26 @@ TEST(DDComplexTest, ComplexNumberCreation) {
     EXPECT_EQ(cn.lookup(Complex::zero), Complex::zero);
     EXPECT_EQ(cn.lookup(Complex::one), Complex::one);
     EXPECT_EQ(cn.lookup(1e-14, 0.), Complex::zero);
-    EXPECT_EQ(cn.lookup(1e-14, 1.).r->val(), 0.);
-    EXPECT_EQ(cn.lookup(1e-14, 1.).i->val(), 1.);
-    EXPECT_EQ(cn.lookup(1e-14, -1.).r->val(), 0.);
-    EXPECT_EQ(cn.lookup(1e-14, -1.).i->val(), -1.);
-    EXPECT_EQ(cn.lookup(-1., -1.).r->val(), -1.);
-    EXPECT_EQ(cn.lookup(-1., -1.).i->val(), -1.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(1e-14, 1.).r), 0.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(1e-14, 1.).i), 1.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(1e-14, -1.).r), 0.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(1e-14, -1.).i), -1.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(-1., -1.).r), -1.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(-1., -1.).i), -1.);
     auto c = cn.lookup(0., -1.);
     std::cout << c << std::endl;
-    EXPECT_EQ(cn.lookup(c).r->val(), 0.);
-    EXPECT_EQ(cn.lookup(c).i->val(), -1.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(c).r), 0.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(c).i), -1.);
     c = cn.lookup(0., 1.);
-    EXPECT_EQ(cn.lookup(c).r->val(), 0.);
-    EXPECT_EQ(cn.lookup(c).i->val(), 1.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(c).r), 0.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(c).i), 1.);
     c = cn.lookup(0., -0.5);
     std::cout << c << std::endl;
-    EXPECT_EQ(cn.lookup(c).r->val(), 0.);
-    EXPECT_EQ(cn.lookup(c).i->val(), -0.5);
+    EXPECT_EQ(CTEntry::val(cn.lookup(c).r), 0.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(c).i), -0.5);
     c = cn.lookup(-1., -1.);
-    EXPECT_EQ(cn.lookup(c).r->val(), -1.);
-    EXPECT_EQ(cn.lookup(c).i->val(), -1.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(c).r), -1.);
+    EXPECT_EQ(CTEntry::val(cn.lookup(c).i), -1.);
     std::cout << c << std::endl;
 
     auto e = cn.lookup(1., -1.);
@@ -76,12 +79,12 @@ TEST(DDComplexTest, ComplexNumberArithmetic) {
     auto cn = ComplexNumbers();
     auto c  = cn.lookup(0., 1.);
     auto d  = ComplexNumbers::conj(c);
-    EXPECT_EQ(d.r->val(), 0.);
-    EXPECT_EQ(d.i->val(), -1.);
+    EXPECT_EQ(CTEntry::val(d.r), 0.);
+    EXPECT_EQ(CTEntry::val(d.i), -1.);
     c = cn.lookup(-1., -1.);
     d = ComplexNumbers::neg(c);
-    EXPECT_EQ(d.r->val(), 1.);
-    EXPECT_EQ(d.i->val(), 1.);
+    EXPECT_EQ(CTEntry::val(d.r), 1.);
+    EXPECT_EQ(CTEntry::val(d.i), 1.);
     c = cn.lookup(0.5, 0.5);
     ComplexNumbers::incRef(c);
     d = cn.lookup(-0.5, 0.5);
@@ -106,6 +109,7 @@ TEST(DDComplexTest, NearZeroLookup) {
 
 TEST(DDComplexTest, GarbageCollectSomeInBucket) {
     auto cn = ComplexNumbers();
+    EXPECT_EQ(cn.garbageCollect(), 0);
 
     fp num = 0.25;
     cn.lookup(num, 0.0);
@@ -113,16 +117,13 @@ TEST(DDComplexTest, GarbageCollectSomeInBucket) {
     fp num2 = num + 2. * ComplexTable<>::tolerance();
     ComplexNumbers::incRef(cn.lookup(num2, 0.0)); // num2 should be placed in same bucket as num
 
-    auto  key    = ComplexTable<>::hash(num);
-    auto& bucket = cn.complexTable.getTable()[key];
-    auto  it     = bucket.begin();
-    EXPECT_NEAR((*it)->value, num2, ComplexTable<>::tolerance());
-    auto it1 = it;
-    it1++;
-    EXPECT_NEAR((*it1)->value, num, ComplexTable<>::tolerance());
+    auto  key = ComplexTable<>::hash(num);
+    auto* p   = cn.complexTable.getTable()[key];
+    EXPECT_NEAR(p->value, num2, ComplexTable<>::tolerance());
+    EXPECT_NEAR((p->next)->value, num, ComplexTable<>::tolerance());
 
     cn.garbageCollect(true); // num should be collected
-    EXPECT_NEAR(bucket.front()->value, num2, ComplexTable<>::tolerance());
+    EXPECT_NEAR(cn.complexTable.getTable()[key]->value, num2, ComplexTable<>::tolerance());
 }
 
 TEST(DDComplexTest, LookupInNeighbouringBuckets) {
@@ -130,7 +131,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
     constexpr std::size_t NBUCKET = ComplexTable<>::MASK + 1;
 
     // lower border of a bucket
-    fp bucketBorder = 0.25 * NBUCKET / (NBUCKET - 1);
+    fp bucketBorder = (0.25 * NBUCKET - 0.5) / (NBUCKET - 1);
 
     // insert a number slightly away from the border
     fp num = bucketBorder + 2 * ComplexTable<>::tolerance();
@@ -289,6 +290,16 @@ TEST(DDComplexTest, ComplexTableAllocation) {
     // clearing the complex table should reduce the allocated size to the original size
     cn.complexTable.clear();
     EXPECT_EQ(cn.complexTable.getAllocations(), allocs);
+
+    EXPECT_TRUE(cn.complexTable.availableEmpty());
+    // obtain entry
+    auto entry = cn.complexTable.getEntry();
+    // immediately return entry
+    cn.complexTable.returnEntry(entry);
+    EXPECT_FALSE(cn.complexTable.availableEmpty());
+    // obtain the same entry again, but this time from the available stack
+    auto entry2 = cn.complexTable.getEntry();
+    EXPECT_EQ(entry, entry2);
 }
 
 TEST(DDComplexTest, ComplexCacheAllocation) {

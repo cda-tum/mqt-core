@@ -15,14 +15,17 @@
 #include "Control.hpp"
 #include "Definitions.hpp"
 #include "Edge.hpp"
+#include "GateMatrixDefinitions.hpp"
 #include "NoiseOperationTable.hpp"
 #include "ToffoliTable.hpp"
 #include "UnaryComputeTable.hpp"
 #include "UniqueTable.hpp"
 
+#include <algorithm>
 #include <array>
 #include <bitset>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
@@ -92,9 +95,10 @@ namespace dd {
         ///
     public:
         struct vNode {
-            std::array<Edge<vNode>, RADIX> e{};   // edges out of this node
-            RefCount                       ref{}; // reference count
-            Qubit                          v{};   // variable index (nonterminal) value (-1 for terminal)
+            std::array<Edge<vNode>, RADIX> e{};    // edges out of this node
+            vNode*                         next{}; // used to link nodes in unique table
+            RefCount                       ref{};  // reference count
+            Qubit                          v{};    // variable index (nonterminal) value (-1 for terminal)
 
             static vNode            terminalNode;
             constexpr static vNode* terminal{&terminalNode};
@@ -151,7 +155,7 @@ namespace dd {
                 r.w.r->value *= sum;
                 r.w.i->value *= sum;
             } else {
-                r.w = cn.lookup(max.w.r->val() * sum, max.w.i->val() * sum);
+                r.w = cn.lookup(CTEntry::val(max.w.r) * sum, CTEntry::val(max.w.i) * sum);
                 if (r.w.approximatelyZero()) {
                     return vEdge::zero;
                 }
@@ -247,6 +251,7 @@ namespace dd {
     public:
         struct mNode {
             std::array<Edge<mNode>, NEDGE> e{};           // edges out of this node
+            mNode*                         next{};        // used to link nodes in unique table
             RefCount                       ref{};         // reference count
             Qubit                          v{};           // variable index (nonterminal) value (-1 for terminal)
             bool                           symm  = false; // node is symmetric
@@ -345,15 +350,15 @@ namespace dd {
 
         // build matrix representation for a single gate on an n-qubit circuit
         mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n, Qubit target) {
-            return makeGateDD(mat, n, std::set<Control>{}, target);
+            return makeGateDD(mat, n, Controls{}, target);
         }
         mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n, const Control& control, Qubit target) {
-            return makeGateDD(mat, n, std::set{control}, target);
+            return makeGateDD(mat, n, Controls{control}, target);
         }
         mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n, Qubit control, Qubit target) {
-            return makeGateDD(mat, n, std::set<Control>{{control}}, target);
+            return makeGateDD(mat, n, Controls{{control}}, target);
         }
-        mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n, const std::set<Control>& controls, Qubit target) {
+        mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n, const Controls& controls, Qubit target) {
             assert(n <= nqubits);
 
             std::array<mEdge, NEDGE> em{};
@@ -408,6 +413,60 @@ namespace dd {
             return e;
         }
 
+        mEdge makeSWAPDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1) {
+            auto c = controls;
+            c.insert(Control{target0});
+            mEdge e = makeGateDD(Xmat, n, c, target1);
+            c.erase(Control{target0});
+            c.insert(Control{target1});
+            e = multiply(e, multiply(makeGateDD(Xmat, n, c, target0), e));
+            return e;
+        }
+
+        mEdge makePeresDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1) {
+            auto c = controls;
+            c.insert(Control{target1});
+            mEdge e = makeGateDD(Xmat, n, c, target0);
+            e       = multiply(makeGateDD(Xmat, n, controls, target1), e);
+            return e;
+        }
+
+        mEdge makePeresdagDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1) {
+            mEdge e = makeGateDD(Xmat, n, controls, target1);
+            auto  c = controls;
+            c.insert(Control{target1});
+            e = multiply(makeGateDD(Xmat, n, c, target0), e);
+            return e;
+        }
+
+        mEdge makeiSWAPDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1) {
+            mEdge e = makeGateDD(Smat, n, controls, target1);              // S q[1]
+            e       = multiply(e, makeGateDD(Smat, n, controls, target0)); // S q[0]
+            e       = multiply(e, makeGateDD(Hmat, n, controls, target0)); // H q[0]
+            auto c  = controls;
+            c.insert(Control{target0});
+            e = multiply(e, makeGateDD(Xmat, n, c, target1)); // CX q[0], q[1]
+            c.erase(Control{target0});
+            c.insert(Control{target1});
+            e = multiply(e, makeGateDD(Xmat, n, c, target0));        // CX q[1], q[0]
+            e = multiply(e, makeGateDD(Hmat, n, controls, target1)); // H q[1]
+            return e;
+        }
+
+        mEdge makeiSWAPinvDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1) {
+            mEdge e = makeGateDD(Hmat, n, controls, target1); // H q[1]
+            auto  c = controls;
+            c.insert(Control{target1});
+            e = multiply(e, makeGateDD(Xmat, n, c, target0)); // CX q[1], q[0]
+            c.erase(Control{target1});
+            c.insert(Control{target0});
+            e = multiply(e, makeGateDD(Xmat, n, c, target1));           // CX q[0], q[1]
+            e = multiply(e, makeGateDD(Hmat, n, controls, target0));    // H q[0]
+            e = multiply(e, makeGateDD(Sdagmat, n, controls, target0)); // Sdag q[0]
+            e = multiply(e, makeGateDD(Sdagmat, n, controls, target1)); // Sdag q[1]
+            return e;
+        }
+
     private:
         // check whether node represents a symmetric matrix or the identity
         void checkSpecialMatrices(mNode* p) {
@@ -450,12 +509,48 @@ namespace dd {
         UniqueTable<mNode> mUniqueTable{nqubits};
 
         void garbageCollect(bool force = false) {
-            [[maybe_unused]] auto vCollect = vUniqueTable.garbageCollect(force);
-            [[maybe_unused]] auto mCollect = mUniqueTable.garbageCollect(force);
-            [[maybe_unused]] auto cCollect = cn.garbageCollect(force);
+            // return immediately if no table needs collection
+            if (!force &&
+                !vUniqueTable.possiblyNeedsCollection() &&
+                !mUniqueTable.possiblyNeedsCollection() &&
+                !cn.complexTable.possiblyNeedsCollection()) {
+                return;
+            }
 
-            // IMPORTANT clear all compute tables
-            clearComputeTables();
+            auto vCollect = vUniqueTable.garbageCollect(force);
+            auto mCollect = mUniqueTable.garbageCollect(force);
+            auto cCollect = cn.garbageCollect(force);
+
+            // invalidate all compute tables involving vectors if any vector node has been collected
+            if (vCollect > 0) {
+                vectorAdd.clear();
+                vectorInnerProduct.clear();
+                vectorKronecker.clear();
+                matrixVectorMultiplication.clear();
+            }
+            // invalidate all compute tables involving matrices if any matrix node has been collected
+            if (mCollect > 0) {
+                matrixAdd.clear();
+                matrixTranspose.clear();
+                conjugateMatrixTranspose.clear();
+                matrixKronecker.clear();
+                matrixVectorMultiplication.clear();
+                matrixMatrixMultiplication.clear();
+                toffoliTable.clear();
+                clearIdentityTable();
+                noiseOperationTable.clear();
+            }
+            // invalidate all compute tables where any component of the entry contains numbers from the complex table if any complex numbers were collected
+            if (cCollect > 0) {
+                matrixVectorMultiplication.clear();
+                matrixMatrixMultiplication.clear();
+                matrixTranspose.clear();
+                conjugateMatrixTranspose.clear();
+                vectorInnerProduct.clear();
+                vectorKronecker.clear();
+                matrixKronecker.clear();
+                noiseOperationTable.clear();
+            }
         }
 
         void clearUniqueTables() {
@@ -550,12 +645,12 @@ namespace dd {
             if (x.w == Complex::zero) {
                 if (y.w == Complex::zero) return y;
                 auto r = y;
-                r.w    = cn.getCached(y.w.r->val(), y.w.i->val());
+                r.w    = cn.getCached(CTEntry::val(y.w.r), CTEntry::val(y.w.i));
                 return r;
             }
             if (y.w == Complex::zero) {
                 auto r = x;
-                r.w    = cn.getCached(x.w.r->val(), x.w.i->val());
+                r.w    = cn.getCached(CTEntry::val(x.w.r), CTEntry::val(x.w.i));
                 return r;
             }
             if (x.p == y.p) {
@@ -638,8 +733,8 @@ namespace dd {
         /// Matrix (conjugate) transpose
         ///
     public:
-        UnaryComputeTable<mEdge, mEdge> matrixTranspose{};
-        UnaryComputeTable<mEdge, mEdge> conjugateMatrixTranspose{};
+        UnaryComputeTable<mEdge, mEdge, 4096> matrixTranspose{};
+        UnaryComputeTable<mEdge, mEdge, 4096> conjugateMatrixTranspose{};
 
         mEdge transpose(const mEdge& a) {
             if (a.p == nullptr || a.isTerminal() || a.p->symm) {
@@ -879,7 +974,7 @@ namespace dd {
         /// Inner product and fidelity
         ///
     public:
-        ComputeTable<vEdge, vEdge, vCachedEdge> vectorInnerProduct{};
+        ComputeTable<vEdge, vEdge, vCachedEdge, 4096> vectorInnerProduct{};
 
         ComplexValue innerProduct(const vEdge& x, const vEdge& y) {
             if (x.p == nullptr || y.p == nullptr || x.w.approximatelyZero() || y.w.approximatelyZero()) { // the 0 case
@@ -926,7 +1021,7 @@ namespace dd {
                 auto c = cn.getTemporary(r.w);
                 ComplexNumbers::mul(c, c, x.w);
                 ComplexNumbers::mul(c, c, y.w);
-                return {c.r->val(), c.i->val()};
+                return {CTEntry::val(c.r), CTEntry::val(c.i)};
             }
 
             auto w = static_cast<Qubit>(var - 1);
@@ -957,18 +1052,18 @@ namespace dd {
             auto c = cn.getTemporary(sum);
             ComplexNumbers::mul(c, c, x.w);
             ComplexNumbers::mul(c, c, y.w);
-            return {c.r->val(), c.i->val()};
+            return {CTEntry::val(c.r), CTEntry::val(c.i)};
         }
 
         ///
         /// Kronecker/tensor product
         ///
     public:
-        ComputeTable<vEdge, vEdge, vCachedEdge> vectorKronecker{};
-        ComputeTable<mEdge, mEdge, mCachedEdge> matrixKronecker{};
+        ComputeTable<vEdge, vEdge, vCachedEdge, 4096> vectorKronecker{};
+        ComputeTable<mEdge, mEdge, mCachedEdge, 4096> matrixKronecker{};
 
         template<class Node>
-        [[nodiscard]] ComputeTable<Edge<Node>, Edge<Node>, CachedEdge<Node>>& getKroneckerComputeTable();
+        [[nodiscard]] ComputeTable<Edge<Node>, Edge<Node>, CachedEdge<Node>, 4096>& getKroneckerComputeTable();
 
         template<class Edge>
         Edge kronecker(const Edge& x, const Edge& y) {
@@ -1020,7 +1115,7 @@ namespace dd {
                         e = makeDDNode(static_cast<Qubit>(e.p->v + 1), std::array{e, Edge<Node>::zero, Edge<Node>::zero, e});
                     }
 
-                    e.w = cn.getCached(y.w.r->val(), y.w.i->val());
+                    e.w = cn.getCached(CTEntry::val(y.w.r), CTEntry::val(y.w.i));
                     computeTable.insert(x, y, {e.p, e.w});
                     return e;
                 }
@@ -1054,7 +1149,7 @@ namespace dd {
             const auto                  res       = partialTrace(a, eliminate);
             [[maybe_unused]] const auto after     = cn.cacheCount();
             assert(before == after);
-            return {res.w.r->val(), res.w.i->val()};
+            return {CTEntry::val(res.w.r), CTEntry::val(res.w.i)};
         }
 
     private:
@@ -1217,7 +1312,10 @@ namespace dd {
                 }
             }
             if (e.p->v < lowerbound) return e;
-            return reduceAncillaeRecursion(e, ancillary, lowerbound, regular);
+            auto f = reduceAncillaeRecursion(e, ancillary, lowerbound, regular);
+            decRef(e);
+            incRef(f);
+            return f;
         }
 
         // Garbage reduction works for reversible circuits --- to be thoroughly tested for quantum circuits
@@ -1232,7 +1330,10 @@ namespace dd {
                 }
             }
             if (e.p->v < lowerbound) return e;
-            return reduceGarbageRecursion(e, garbage, lowerbound);
+            auto f = reduceGarbageRecursion(e, garbage, lowerbound);
+            decRef(e);
+            incRef(f);
+            return f;
         }
         mEdge reduceGarbage(mEdge& e, const std::vector<bool>& garbage, bool regular = true) {
             // return if no more garbage left
@@ -1245,7 +1346,10 @@ namespace dd {
                 }
             }
             if (e.p->v < lowerbound) return e;
-            return reduceGarbageRecursion(e, garbage, lowerbound, regular);
+            auto f = reduceGarbageRecursion(e, garbage, lowerbound, regular);
+            decRef(e);
+            incRef(f);
+            return f;
         }
 
     private:
@@ -1290,9 +1394,6 @@ namespace dd {
             auto c = cn.mulCached(f.w, e.w);
             f.w    = cn.lookup(c);
             cn.returnToCache(c);
-
-            // increasing the ref count for safety. TODO: find out if this is necessary
-            incRef(f);
             return f;
         }
 
@@ -1344,8 +1445,6 @@ namespace dd {
             if (ComplexNumbers::mag2(f.w) > 1.0)
                 f.w = Complex::one;
 
-            // increasing the ref count for safety. TODO: find out if this is necessary
-            incRef(f);
             return f;
         }
         mEdge reduceGarbageRecursion(mEdge& e, const std::vector<bool>& garbage, Qubit lowerbound, bool regular = true) {
@@ -1426,8 +1525,6 @@ namespace dd {
             if (ComplexNumbers::mag2(f.w) > 1.0)
                 f.w = Complex::one;
 
-            // increasing the ref count for safety. TODO: find out if this is necessary
-            incRef(f);
             return f;
         }
 
@@ -1445,7 +1542,7 @@ namespace dd {
         template<class Edge>
         ComplexValue getValueByPath(const Edge& e, const std::string& elements) {
             if (e.isTerminal()) {
-                return {e.w.r->val(), e.w.i->val()};
+                return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
             }
 
             auto c = cn.getTemporary(1, 0);
@@ -1458,11 +1555,11 @@ namespace dd {
             } while (!r.isTerminal());
             ComplexNumbers::mul(c, c, r.w);
 
-            return {c.r->val(), c.i->val()};
+            return {CTEntry::val(c.r), CTEntry::val(c.i)};
         }
         ComplexValue getValueByPath(const vEdge& e, std::size_t i) {
             if (e.isTerminal()) {
-                return {e.w.r->val(), e.w.i->val()};
+                return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
             }
             return getValueByPath(e, Complex::one, i);
         }
@@ -1471,7 +1568,7 @@ namespace dd {
 
             if (e.isTerminal()) {
                 cn.returnToCache(c);
-                return {c.r->val(), c.i->val()};
+                return {CTEntry::val(c.r), CTEntry::val(c.i)};
             }
 
             bool one = i & (1 << e.p->v);
@@ -1487,7 +1584,7 @@ namespace dd {
         }
         ComplexValue getValueByPath(const mEdge& e, std::size_t i, std::size_t j) {
             if (e.isTerminal()) {
-                return {e.w.r->val(), e.w.i->val()};
+                return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
             }
             return getValueByPath(e, Complex::one, i, j);
         }
@@ -1496,7 +1593,7 @@ namespace dd {
 
             if (e.isTerminal()) {
                 cn.returnToCache(c);
-                return {c.r->val(), c.i->val()};
+                return {CTEntry::val(c.r), CTEntry::val(c.i)};
             }
 
             bool row = i & (1 << e.p->v);
@@ -1529,7 +1626,7 @@ namespace dd {
 
             // base case
             if (e.isTerminal()) {
-                vec.at(i) = {c.r->val(), c.i->val()};
+                vec.at(i) = {CTEntry::val(c.r), CTEntry::val(c.i)};
                 cn.returnToCache(c);
                 return;
             }
@@ -1550,7 +1647,27 @@ namespace dd {
                 for (Qubit j = e.p->v; j >= 0; j--) {
                     std::cout << ((i >> j) & 1u);
                 }
-                std::cout << ": " << amplitude << "\n";
+                constexpr auto precision = 3;
+                // set fixed width to maximum of a printed number
+                // (-) 0.precision plus/minus 0.precision i
+                constexpr auto width = 1 + 2 + precision + 1 + 2 + precision + 1;
+                std::cout << ": " << std::setw(width) << ComplexValue::toString(amplitude.r, amplitude.i, false, precision) << "\n";
+            }
+            std::cout << std::flush;
+        }
+
+        void printMatrix(const mEdge& e) {
+            unsigned long long element = 2u << e.p->v;
+            for (unsigned long long i = 0; i < element; i++) {
+                for (unsigned long long j = 0; j < element; j++) {
+                    auto           amplitude = getValueByPath(e, i, j);
+                    constexpr auto precision = 3;
+                    // set fixed width to maximum of a printed number
+                    // (-) 0.precision plus/minus 0.precision i
+                    constexpr auto width = 1 + 2 + precision + 1 + 2 + precision + 1;
+                    std::cout << std::setw(width) << ComplexValue::toString(amplitude.r, amplitude.i, false, precision) << " ";
+                }
+                std::cout << "\n";
             }
             std::cout << std::flush;
         }
@@ -1568,7 +1685,7 @@ namespace dd {
 
             // base case
             if (e.isTerminal()) {
-                mat.at(i).at(j) = {c.r->val(), c.i->val()};
+                mat.at(i).at(j) = {CTEntry::val(c.r), CTEntry::val(c.i)};
                 cn.returnToCache(c);
                 return;
             }
@@ -1743,8 +1860,8 @@ namespace dd {
             std::clog << "Debug node: " << debugnode_line(p) << "\n";
             for (const auto& edge: p->e) {
                 std::clog << "  " << std::hexfloat
-                          << std::setw(22) << edge.w.r->val() << " "
-                          << std::setw(22) << edge.w.i->val() << std::defaultfloat
+                          << std::setw(22) << CTEntry::val(edge.w.r) << " "
+                          << std::setw(22) << CTEntry::val(edge.w.i) << std::defaultfloat
                           << "i --> " << debugnode_line(edge.p) << "\n";
             }
             std::clog << std::flush;
@@ -1790,8 +1907,8 @@ namespace dd {
     private:
         template<class Edge>
         bool isLocallyConsistent2(const Edge& e) {
-            const auto ptr_r = e.w.r->getAlignedPointer();
-            const auto ptr_i = e.w.i->getAlignedPointer();
+            const auto ptr_r = CTEntry::getAlignedPointer(e.w.r);
+            const auto ptr_i = CTEntry::getAlignedPointer(e.w.i);
 
             if ((ptr_r->refCount == 0 || ptr_i->refCount == 0) && e.w != Complex::one && e.w != Complex::zero) {
                 std::clog << "\nLOCAL INCONSISTENCY FOUND\nOffending Number: " << e.w << " (" << ptr_r->refCount << ", " << ptr_i->refCount << ")\n\n";
@@ -1829,8 +1946,8 @@ namespace dd {
 
         template<class Edge>
         void fillConsistencyCounter(const Edge& edge, std::map<ComplexTable<>::Entry*, std::size_t>& weight_map, std::map<decltype(edge.p), std::size_t>& node_map) {
-            weight_map[edge.w.r->getAlignedPointer()]++;
-            weight_map[edge.w.i->getAlignedPointer()]++;
+            weight_map[CTEntry::getAlignedPointer(edge.w.r)]++;
+            weight_map[CTEntry::getAlignedPointer(edge.w.i)]++;
 
             if (edge.isTerminal()) {
                 return;
@@ -1841,25 +1958,25 @@ namespace dd {
                     fillConsistencyCounter(child, weight_map, node_map);
                 } else {
                     node_map[child.p]++;
-                    weight_map[child.w.r->getAlignedPointer()]++;
-                    weight_map[child.w.i->getAlignedPointer()]++;
+                    weight_map[CTEntry::getAlignedPointer(child.w.r)]++;
+                    weight_map[CTEntry::getAlignedPointer(child.w.i)]++;
                 }
             }
         }
 
         template<class Edge>
         void checkConsistencyCounter(const Edge& edge, const std::map<ComplexTable<>::Entry*, std::size_t>& weight_map, const std::map<decltype(edge.p), std::size_t>& node_map) {
-            auto* r_ptr = edge.w.r->getAlignedPointer();
-            auto* i_ptr = edge.w.i->getAlignedPointer();
+            auto* r_ptr = CTEntry::getAlignedPointer(edge.w.r);
+            auto* i_ptr = CTEntry::getAlignedPointer(edge.w.i);
 
-            if (weight_map.at(r_ptr) > r_ptr->refCount && r_ptr != Complex::one.r && r_ptr != Complex::zero.i) {
+            if (weight_map.at(r_ptr) > r_ptr->refCount && r_ptr != Complex::one.r && r_ptr != Complex::zero.i && r_ptr != &ComplexTable<>::sqrt2_2) {
                 std::clog << "\nOffending weight: " << edge.w << "\n";
-                std::clog << "Bits: " << std::hexfloat << edge.w.r->val() << " " << edge.w.i->val() << std::defaultfloat << "\n";
+                std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << " " << CTEntry::val(edge.w.i) << std::defaultfloat << "\n";
                 debugnode(edge.p);
                 throw std::runtime_error("Ref-Count mismatch for " + std::to_string(r_ptr->value) + "(r): " + std::to_string(weight_map.at(r_ptr)) + " occurences in DD but Ref-Count is only " + std::to_string(r_ptr->refCount));
             }
 
-            if (weight_map.at(i_ptr) > i_ptr->refCount && i_ptr != Complex::zero.i && i_ptr != Complex::one.r) {
+            if (weight_map.at(i_ptr) > i_ptr->refCount && i_ptr != Complex::zero.i && i_ptr != Complex::one.r && r_ptr != &ComplexTable<>::sqrt2_2) {
                 std::clog << edge.w << "\n";
                 debugnode(edge.p);
                 throw std::runtime_error("Ref-Count mismatch for " + std::to_string(i_ptr->value) + "(i): " + std::to_string(weight_map.at(i_ptr)) + " occurences in DD but Ref-Count is only " + std::to_string(i_ptr->refCount));
@@ -1949,11 +2066,13 @@ namespace dd {
     };
 
     inline Package::vNode Package::vNode::terminalNode{{{{nullptr, Complex::zero}, {nullptr, Complex::zero}}},
+                                                       nullptr,
                                                        0,
                                                        -1};
 
     inline Package::mNode Package::mNode::terminalNode{
             {{{nullptr, Complex::zero}, {nullptr, Complex::zero}, {nullptr, Complex::zero}, {nullptr, Complex::zero}}},
+            nullptr,
             0,
             -1,
             true,
@@ -1978,9 +2097,9 @@ namespace dd {
     [[nodiscard]] inline ComputeTable<Package::mEdge, Package::mEdge, Package::mCachedEdge>& Package::getMultiplicationComputeTable() { return matrixMatrixMultiplication; }
 
     template<>
-    [[nodiscard]] inline ComputeTable<Package::vEdge, Package::vEdge, Package::vCachedEdge>& Package::getKroneckerComputeTable() { return vectorKronecker; }
+    [[nodiscard]] inline ComputeTable<Package::vEdge, Package::vEdge, Package::vCachedEdge, 4096>& Package::getKroneckerComputeTable() { return vectorKronecker; }
 
     template<>
-    [[nodiscard]] inline ComputeTable<Package::mEdge, Package::mEdge, Package::mCachedEdge>& Package::getKroneckerComputeTable() { return matrixKronecker; }
+    [[nodiscard]] inline ComputeTable<Package::mEdge, Package::mEdge, Package::mCachedEdge, 4096>& Package::getKroneckerComputeTable() { return matrixKronecker; }
 } // namespace dd
 #endif

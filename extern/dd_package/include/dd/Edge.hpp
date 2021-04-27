@@ -7,7 +7,6 @@
 #define DD_PACKAGE_EDGE_HPP
 
 #include "Complex.hpp"
-#include "ComplexTable.hpp"
 #include "ComplexValue.hpp"
 
 #include <cstddef>
@@ -50,8 +49,8 @@ namespace dd {
             p(p), w(w) {}
         CachedEdge(Node* p, const Complex& c):
             p(p) {
-            w.r = c.r->val();
-            w.i = c.i->val();
+            w.r = CTEntry::val(c.r);
+            w.i = CTEntry::val(c.i);
         }
 
         /// Comparing two DD edges with another involves comparing the respective pointers
@@ -70,18 +69,18 @@ namespace std {
     template<class Node>
     struct hash<dd::Edge<Node>> {
         std::size_t operator()(dd::Edge<Node> const& e) const noexcept {
-            auto h1 = std::hash<Node*>{}(e.p);
+            auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(e.p));
             auto h2 = std::hash<dd::Complex>{}(e.w);
-            return h1 ^ (h2 << 1);
+            return dd::combineHash(h1, h2);
         }
     };
 
     template<class Node>
     struct hash<dd::CachedEdge<Node>> {
         std::size_t operator()(dd::CachedEdge<Node> const& e) const noexcept {
-            auto h1 = std::hash<Node*>{}(e.p);
+            auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(e.p));
             auto h2 = std::hash<dd::ComplexValue>{}(e.w);
-            return h1 ^ (h2 << 1);
+            return dd::combineHash(h1, h2);
         }
     };
 } // namespace std
