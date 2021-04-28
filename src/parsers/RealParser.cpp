@@ -60,6 +60,8 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                 cregs.insert({"c_" + variable, {i, 1}});
                 initialLayout.insert({i, i});
                 outputPermutation.insert({i, i});
+                ancillary.resize(nqubits);
+                garbage.resize(nqubits);
             }
         } else if (cmd == ".CONSTANTS") {
             is >> std::ws;

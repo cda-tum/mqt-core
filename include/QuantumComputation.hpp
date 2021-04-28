@@ -278,9 +278,9 @@ namespace qc {
         }
 
         // this function augments a given circuit by additional registers
-        void addQubitRegister(dd::QubitCount nq, const char* reg_name = DEFAULT_QREG);
+        void addQubitRegister(std::size_t, const char* reg_name = DEFAULT_QREG);
         void addClassicalRegister(std::size_t nc, const char* reg_name = DEFAULT_CREG);
-        void addAncillaryRegister(dd::QubitCount nq, const char* reg_name = DEFAULT_ANCREG);
+        void addAncillaryRegister(std::size_t nq, const char* reg_name = DEFAULT_ANCREG);
 
         // removes the a specific logical qubit and returns the index of the physical qubit in the initial layout
         // as well as the index of the removed physical qubit's output permutation

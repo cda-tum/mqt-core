@@ -101,30 +101,30 @@ namespace qc {
                 if (!isLastOperationOnQubit(opIt))
                     continue;
 
-                auto&& op = (*opIt);
-                assert(op->getTargets().size() == op->getControls().size());
-                auto targetIt = op->getTargets().cbegin();
-                for (const auto& c: op->getControls()) {
-                    auto qubitidx = c.qubit;
-                    auto bitidx   = *targetIt;
+                auto op = dynamic_cast<NonUnitaryOperation*>(opIt->get());
+                assert(op->getTargets().size() == op->getClassics().size());
+                auto classicIt = op->getClassics().cbegin();
+                for (const auto& q: op->getTargets()) {
+                    auto qubitidx = q;
+                    auto bitidx   = *classicIt;
 
                     if (outputPermutationFound) {
                         // output permutation was already set before -> permute existing values
                         auto current = outputPermutation.at(qubitidx);
-                        if (qubitidx != bitidx && current != bitidx) {
+                        if (static_cast<std::size_t>(qubitidx) != bitidx && static_cast<std::size_t>(current) != bitidx) {
                             for (auto& p: outputPermutation) {
-                                if (p.second == bitidx) {
+                                if (static_cast<std::size_t>(p.second) == bitidx) {
                                     p.second = current;
                                     break;
                                 }
                             }
-                            outputPermutation.at(qubitidx) = bitidx;
+                            outputPermutation.at(qubitidx) = static_cast<dd::Qubit>(bitidx);
                         }
                     } else {
                         // directly set permutation if none was set beforehand
-                        outputPermutation[qubitidx] = bitidx;
+                        outputPermutation[qubitidx] = static_cast<dd::Qubit>(bitidx);
                     }
-                    ++targetIt;
+                    ++classicIt;
                 }
             }
         }
@@ -153,7 +153,7 @@ namespace qc {
         }
     }
 
-    void QuantumComputation::addQubitRegister(dd::QubitCount nq, const char* reg_name) {
+    void QuantumComputation::addQubitRegister(std::size_t nq, const char* reg_name) {
         if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package::maxPossibleQubits) {
             throw QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
                                std::to_string(dd::Package::maxPossibleQubits) + " qubits, while " +
@@ -169,16 +169,16 @@ namespace qc {
                 throw QFRException("[addQubitRegister] Augmenting existing qubit registers is only supported for the last register in a circuit");
             }
         } else {
-            qregs.insert({reg_name, {nqubits, nq}});
+            qregs.insert({reg_name, {nqubits, static_cast<dd::QubitCount>(nq)}});
         }
         assert(nancillae == 0); // should only reach this point if no ancillae are present
 
-        for (dd::QubitCount i = 0; i < nq; ++i) {
+        for (dd::QubitCount i = 0; i < static_cast<dd::QubitCount>(nq); ++i) {
             auto j = static_cast<dd::Qubit>(nqubits + i);
             initialLayout.insert({j, j});
             outputPermutation.insert({j, j});
         }
-        nqubits += nq;
+        nqubits += static_cast<dd::QubitCount>(nq);
 
         for (auto& op: ops) {
             op->setNqubits(nqubits + nancillae);
@@ -197,7 +197,7 @@ namespace qc {
         nclassics += nc;
     }
 
-    void QuantumComputation::addAncillaryRegister(dd::QubitCount nq, const char* reg_name) {
+    void QuantumComputation::addAncillaryRegister(std::size_t nq, const char* reg_name) {
         if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package::maxPossibleQubits) {
             throw QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
                                std::to_string(dd::Package::maxPossibleQubits) + " qubits, while " +
@@ -214,18 +214,18 @@ namespace qc {
                 throw QFRException("[addAncillaryRegister] Augmenting existing ancillary registers is only supported for the last register in a circuit");
             }
         } else {
-            ancregs.insert({reg_name, {totalqubits, nq}});
+            ancregs.insert({reg_name, {totalqubits, static_cast<dd::QubitCount>(nq)}});
         }
 
         ancillary.resize(totalqubits + nq);
         garbage.resize(totalqubits + nq);
-        for (dd::QubitCount i = 0; i < nq; ++i) {
+        for (dd::QubitCount i = 0; i < static_cast<dd::QubitCount>(nq); ++i) {
             auto j = static_cast<dd::Qubit>(totalqubits + i);
             initialLayout.insert({j, j});
             outputPermutation.insert({j, j});
             ancillary[j] = true;
         }
-        nancillae += nq;
+        nancillae += static_cast<dd::QubitCount>(nq);
 
         for (auto& op: ops) {
             op->setNqubits(nqubits + nancillae);
