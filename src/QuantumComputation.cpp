@@ -173,7 +173,7 @@ namespace qc {
         }
         assert(nancillae == 0); // should only reach this point if no ancillae are present
 
-        for (dd::QubitCount i = 0; i < static_cast<dd::QubitCount>(nq); ++i) {
+        for (std::size_t i = 0; i < nq; ++i) {
             auto j = static_cast<dd::Qubit>(nqubits + i);
             initialLayout.insert({j, j});
             outputPermutation.insert({j, j});
@@ -219,7 +219,7 @@ namespace qc {
 
         ancillary.resize(totalqubits + nq);
         garbage.resize(totalqubits + nq);
-        for (dd::QubitCount i = 0; i < static_cast<dd::QubitCount>(nq); ++i) {
+        for (std::size_t i = 0; i < nq; ++i) {
             auto j = static_cast<dd::Qubit>(totalqubits + i);
             initialLayout.insert({j, j});
             outputPermutation.insert({j, j});
@@ -459,8 +459,8 @@ namespace qc {
             garbage[i]   = garbage[i - 1];
         }
         // unset new entry
-        ancillary[logical_qubit_index];
-        garbage[logical_qubit_index];
+        ancillary[logical_qubit_index] = false;
+        garbage[logical_qubit_index] = false;
     }
 
     MatrixDD QuantumComputation::createInitialMatrix(std::unique_ptr<dd::Package>& dd) const {
