@@ -113,11 +113,13 @@ namespace dd {
 
             auto zero = std::array{e.p->e[0].w.approximatelyZero(), e.p->e[1].w.approximatelyZero()};
 
-            for (auto i = 0U; i < RADIX; i++) {
-                // make sure to release cached numbers approximately zero, but not exactly zero
-                if (zero[i] && e.p->e[i].w != Complex::zero) {
-                    cn.returnToCache(e.p->e[i].w);
-                    e.p->e[i] = vEdge::zero;
+            // make sure to release cached numbers approximately zero, but not exactly zero
+            if (cached) {
+                for (auto i = 0U; i < RADIX; i++) {
+                    if (zero[i] && e.p->e[i].w != Complex::zero) {
+                        cn.returnToCache(e.p->e[i].w);
+                        e.p->e[i] = vEdge::zero;
+                    }
                 }
             }
 
@@ -273,11 +275,13 @@ namespace dd {
                                    e.p->e[2].w.approximatelyZero(),
                                    e.p->e[3].w.approximatelyZero()};
 
-            for (auto i = 0U; i < NEDGE; i++) {
-                // make sure to release cached numbers approximately zero, but not exactly zero
-                if (zero[i] && e.p->e[i].w != Complex::zero) {
-                    cn.returnToCache(e.p->e[i].w);
-                    e.p->e[i] = mEdge::zero;
+            // make sure to release cached numbers approximately zero, but not exactly zero
+            if (cached) {
+                for (auto i = 0U; i < NEDGE; i++) {
+                    if (zero[i] && e.p->e[i].w != Complex::zero) {
+                        cn.returnToCache(e.p->e[i].w);
+                        e.p->e[i] = mEdge::zero;
+                    }
                 }
             }
 
