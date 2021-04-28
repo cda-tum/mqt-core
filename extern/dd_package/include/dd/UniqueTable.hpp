@@ -71,6 +71,7 @@ namespace dd {
         // access functions
         [[nodiscard]] std::size_t getNodeCount() const { return nodeCount; }
         [[nodiscard]] std::size_t getPeakNodeCount() const { return peakNodeCount; }
+        [[nodiscard]] std::size_t getMaxActiveNodes() const { return maxActive; }
         [[nodiscard]] std::size_t getAllocations() const { return allocations; }
         [[nodiscard]] float       getGrowthFactor() const { return GROWTH_FACTOR; }
         [[nodiscard]] const auto& getTables() const { return tables; }
