@@ -460,7 +460,7 @@ namespace qc {
         }
         // unset new entry
         ancillary[logical_qubit_index] = false;
-        garbage[logical_qubit_index] = false;
+        garbage[logical_qubit_index]   = false;
     }
 
     MatrixDD QuantumComputation::createInitialMatrix(std::unique_ptr<dd::Package>& dd) const {
