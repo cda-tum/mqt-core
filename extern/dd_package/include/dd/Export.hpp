@@ -89,6 +89,54 @@ namespace dd {
         os << "]\n";
         return os;
     }
+    template<class Edge>
+    std::ostream& memoryHeader(const Edge& e, std::ostream& os, bool edgeLabels) {
+        os << "digraph \"DD\" {graph[];node[shape=plain];edge[arrowhead=none]\n";
+        os << "root [label=\"\",shape=point,style=invis]\n";
+        os << "t [label=<<font point-size=\"20\">1</font>>,shape=box,tooltip=\"1\",width=0.3,height=0.3]\n";
+
+        auto toplabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U;
+        auto mag      = thicknessFromMagnitude(e.w);
+        auto color    = colorFromPhase(e.w);
+        os << "root->";
+        if (e.isTerminal()) {
+            os << "t";
+        } else {
+            os << toplabel;
+        }
+        os << "[penwidth=\"" << mag << "\",tooltip=\"" << e.w.toString(false, 4) << "\" color=\"" << color << "\"";
+        if (edgeLabels) {
+            os << ",label=<<font point-size=\"8\">&nbsp;[";
+            if (e.w == Complex::zero) {
+                os << "0";
+            } else if (e.w == Complex::one) {
+                os << "1";
+            } else {
+                if (e.w.r == &ComplexTable<>::zero) {
+                    os << "0";
+                } else if (e.w.r == &ComplexTable<>::sqrt2_2) {
+                    os << u8"\u221a\u00bd";
+                } else if (e.w.r == &ComplexTable<>::one) {
+                    os << "1";
+                } else {
+                    os << std::hex << reinterpret_cast<std::uintptr_t>(e.w.r) << std::dec;
+                }
+                os << " ";
+                if (e.w.i == &ComplexTable<>::zero) {
+                    os << "0";
+                } else if (e.w.i == &ComplexTable<>::sqrt2_2) {
+                    os << u8"\u221a\u00bd";
+                } else if (e.w.i == &ComplexTable<>::one) {
+                    os << "1";
+                } else {
+                    os << std::hex << reinterpret_cast<std::uintptr_t>(e.w.i) << std::dec;
+                }
+            }
+            os << "]</font>>";
+        }
+        os << "]\n";
+        return os;
+    }
 
     std::ostream& modernNode(const Package::mEdge& e, std::ostream& os) {
         auto nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
@@ -175,6 +223,28 @@ namespace dd {
         }
         os << "</td>";
         os << "</tr></table></font>>,tooltip=\"q" << static_cast<std::size_t>(e.p->v) << "\"]\n";
+        return os;
+    }
+    template<class Edge>
+    std::ostream& memoryNode(const Edge& e, std::ostream& os) {
+        constexpr std::size_t N = std::tuple_size_v<decltype(e.p->e)>;
+        auto nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
+        os << nodelabel << "[label=<";
+        os << R"(<font point-size="10"><table border="1" cellspacing="0" cellpadding="2" style="rounded">)";
+        os << R"(<tr><td colspan=")" << N << R"(" border="1" sides="B">)" << std::hex << reinterpret_cast<std::uintptr_t>(e.p) << std::dec << " ref: " << e.p->ref << "</td></tr>";
+        os << "<tr>";
+        for (std::size_t i = 0; i < N; ++i) {
+            os << "<td port=\"" << i << R"(" href="javascript:;" border="0" tooltip=")" << e.p->e[i].w.toString(false, 4) << "\">";
+            if (e.p->e[i] == Edge::zero) {
+                os << "&nbsp;0 "
+                      "";
+            } else {
+                os << "<font color=\"white\">&nbsp;0 </font>";
+            }
+            os << "</td>";
+        }
+        os << "</tr>";
+        os << "</table></font>>,tooltip=\"" << std::hex << reinterpret_cast<std::uintptr_t>(e.p) << "\"]\n" << std::dec;
         return os;
     }
 
@@ -300,13 +370,61 @@ namespace dd {
 
         return os;
     }
+    template<class Edge>
+    std::ostream& memoryEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels = false) {
+        auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
+        auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
+
+        os << fromlabel << ":" << idx << ":s->";
+        if (to.isTerminal()) {
+            os << "t";
+        } else {
+            os << tolabel;
+        }
+
+        auto mag   = thicknessFromMagnitude(to.w);
+        auto color = colorFromPhase(to.w);
+        os << "[penwidth=\"" << mag << "\",tooltip=\"" << to.w.toString(false, 4) << "\" color=\"" << color << "\"";
+        if (edgeLabels) {
+            os << ",label=<<font point-size=\"8\">&nbsp;[";
+            if (to.w == Complex::one) {
+                os << "1";
+            } else {
+                if (to.w.r == &ComplexTable<>::zero) {
+                    os << "0";
+                } else if (to.w.r == &ComplexTable<>::sqrt2_2) {
+                    os << u8"\u221a\u00bd";
+                } else if (to.w.r == &ComplexTable<>::one) {
+                    os << "1";
+                } else {
+                    os << std::hex << reinterpret_cast<std::uintptr_t>(to.w.r) << std::dec;
+                }
+                os << " ";
+                if (to.w.i == &ComplexTable<>::zero) {
+                    os << "0";
+                } else if (to.w.i == &ComplexTable<>::sqrt2_2) {
+                    os << u8"\u221a\u00bd";
+                } else if (to.w.i == &ComplexTable<>::one) {
+                    os << "1";
+                } else {
+                    os << std::hex << reinterpret_cast<std::uintptr_t>(to.w.i) << std::dec;
+                }
+            }
+            os << "]</font>>";
+        }
+        os << "]\n";
+
+        return os;
+    }
 
     template<class Edge>
-    void toDot(const Edge& e, std::ostream& os, bool colored = true, bool edgeLabels = false, bool classic = false) {
+    void toDot(const Edge& e, std::ostream& os, bool colored = true, bool edgeLabels = false, bool classic = false, bool memory = false) {
         std::ostringstream oss{};
         // header, root and terminal declaration
 
-        if (colored) {
+        if (memory) {
+            memoryHeader(e, oss, edgeLabels);
+        } else if (colored) {
             coloredHeader(e, oss, edgeLabels);
         } else {
             header(e, oss, edgeLabels);
@@ -333,7 +451,9 @@ namespace dd {
             if (!ret.second) continue;
 
             // node definition as HTML-like label (href="javascript:;" is used as workaround to make tooltips work)
-            if (classic) {
+            if (memory) {
+                memoryNode(*node, oss);
+            } else if (classic) {
                 classicNode(*node, oss);
             } else {
                 modernNode(*node, oss);
@@ -342,7 +462,7 @@ namespace dd {
             // iterate over edges in reverse to guarantee correct proceossing order
             for (auto i = static_cast<Qubit>(node->p->e.size() - 1); i >= 0; --i) {
                 auto& edge = node->p->e[i];
-                if (edge.w.approximatelyZero()) {
+                if ((!memory && edge.w.approximatelyZero()) || edge.w == Complex::zero) {
                     // potentially add zero stubs here
                     continue;
                 }
@@ -350,7 +470,9 @@ namespace dd {
                 // non-zero edge to be included
                 q.push(&edge);
 
-                if (colored) {
+                if(memory) {
+                    memoryEdge(*node, edge, i, oss, edgeLabels);
+                } else if (colored) {
                     coloredEdge(*node, edge, i, oss, edgeLabels, classic);
                 } else {
                     bwEdge(*node, edge, i, oss, edgeLabels, classic);
@@ -363,9 +485,9 @@ namespace dd {
     }
 
     template<class Edge>
-    void export2Dot(Edge basic, const std::string& outputFilename, bool colored = true, bool edgeLabels = false, bool classic = false, bool show = true) {
+    void export2Dot(Edge basic, const std::string& outputFilename, bool colored = true, bool edgeLabels = false, bool classic = false, bool memory = false, bool show = true) {
         std::ofstream init(outputFilename);
-        toDot(basic, init, colored, edgeLabels, classic);
+        toDot(basic, init, colored, edgeLabels, classic, memory);
         init.close();
 
         if (show) {

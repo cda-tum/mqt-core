@@ -87,14 +87,15 @@ TEST(DDPackageTest, BellState) {
 
     ASSERT_DOUBLE_EQ(dd->fidelity(zero_state, bell_state), 0.5);
 
-    export2Dot(bell_state, "bell_state_colored_labels.dot", true, true, false, false);
-    export2Dot(bell_state, "bell_state_colored_labels_classic.dot", true, true, true, false);
-    export2Dot(bell_state, "bell_state_mono_labels.dot", false, true, false, false);
-    export2Dot(bell_state, "bell_state_mono_labels_classic.dot", false, true, true, false);
-    export2Dot(bell_state, "bell_state_colored.dot", true, false, false, false);
-    export2Dot(bell_state, "bell_state_colored_classic.dot", true, false, true, false);
-    export2Dot(bell_state, "bell_state_mono.dot", false, false, false, false);
-    export2Dot(bell_state, "bell_state_mono_classic.dot", false, false, true, false);
+    export2Dot(bell_state, "bell_state_colored_labels.dot", true, true, false, false, false);
+    export2Dot(bell_state, "bell_state_colored_labels_classic.dot", true, true, true, false, false);
+    export2Dot(bell_state, "bell_state_mono_labels.dot", false, true, false, false, false);
+    export2Dot(bell_state, "bell_state_mono_labels_classic.dot", false, true, true, false, false);
+    export2Dot(bell_state, "bell_state_colored.dot", true, false, false, false, false);
+    export2Dot(bell_state, "bell_state_colored_classic.dot", true, false, true, false, false);
+    export2Dot(bell_state, "bell_state_mono.dot", false, false, false, false, false);
+    export2Dot(bell_state, "bell_state_mono_classic.dot", false, false, true, false, false);
+    export2Dot(bell_state, "bell_state_memory.dot", false, true, true, true, true);
 
     dd->statistics();
 }
@@ -201,14 +202,15 @@ TEST(DDPackageTest, BellMatrix) {
     auto goal_matrix = dd::CMat{goal_row_0, goal_row_1, goal_row_2, goal_row_3};
     ASSERT_EQ(dd->getMatrix(bell_matrix), goal_matrix);
 
-    export2Dot(bell_matrix, "bell_matrix_colored_labels.dot", true, true, false, false);
-    export2Dot(bell_matrix, "bell_matrix_colored_labels_classic.dot", true, true, true, false);
-    export2Dot(bell_matrix, "bell_matrix_mono_labels.dot", false, true, false, false);
-    export2Dot(bell_matrix, "bell_matrix_mono_labels_classic.dot", false, true, true, false);
-    export2Dot(bell_matrix, "bell_matrix_colored.dot", true, false, false, false);
-    export2Dot(bell_matrix, "bell_matrix_colored_classic.dot", true, false, true, false);
-    export2Dot(bell_matrix, "bell_matrix_mono.dot", false, false, false, false);
-    export2Dot(bell_matrix, "bell_matrix_mono_classic.dot", false, false, true, false);
+    export2Dot(bell_matrix, "bell_matrix_colored_labels.dot", true, true, false, false, false);
+    export2Dot(bell_matrix, "bell_matrix_colored_labels_classic.dot", true, true, true, false, false);
+    export2Dot(bell_matrix, "bell_matrix_mono_labels.dot", false, true, false, false, false);
+    export2Dot(bell_matrix, "bell_matrix_mono_labels_classic.dot", false, true, true, false, false);
+    export2Dot(bell_matrix, "bell_matrix_colored.dot", true, false, false, false, false);
+    export2Dot(bell_matrix, "bell_matrix_colored_classic.dot", true, false, true, false, false);
+    export2Dot(bell_matrix, "bell_matrix_mono.dot", false, false, false, false, false);
+    export2Dot(bell_matrix, "bell_matrix_mono_classic.dot", false, false, true, false, false);
+    export2Dot(bell_matrix, "bell_matrix_memory.dot", false, true, true, true, true);
 
     dd->statistics();
 }
@@ -603,6 +605,7 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
     auto one = dd::Package::vEdge::one;
     dd::export2Dot(one, "oneColored.dot", true);
     dd::export2Dot(one, "oneClassic.dot", false);
+    dd::export2Dot(one, "oneMemory.dot", true, true, false, true);
 
     EXPECT_EQ(dd->vUniqueTable.lookup(one), one);
 
