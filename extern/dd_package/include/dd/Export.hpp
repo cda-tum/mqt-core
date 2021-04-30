@@ -227,8 +227,8 @@ namespace dd {
     }
     template<class Edge>
     std::ostream& memoryNode(const Edge& e, std::ostream& os) {
-        constexpr std::size_t N = std::tuple_size_v<decltype(e.p->e)>;
-        auto nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
+        constexpr std::size_t N         = std::tuple_size_v<decltype(e.p->e)>;
+        auto                  nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
         os << nodelabel << "[label=<";
         os << R"(<font point-size="10"><table border="1" cellspacing="0" cellpadding="2" style="rounded">)";
         os << R"(<tr><td colspan=")" << N << R"(" border="1" sides="B">)" << std::hex << reinterpret_cast<std::uintptr_t>(e.p) << std::dec << " ref: " << e.p->ref << "</td></tr>";
@@ -244,7 +244,8 @@ namespace dd {
             os << "</td>";
         }
         os << "</tr>";
-        os << "</table></font>>,tooltip=\"" << std::hex << reinterpret_cast<std::uintptr_t>(e.p) << "\"]\n" << std::dec;
+        os << "</table></font>>,tooltip=\"" << std::hex << reinterpret_cast<std::uintptr_t>(e.p) << "\"]\n"
+           << std::dec;
         return os;
     }
 
@@ -470,7 +471,7 @@ namespace dd {
                 // non-zero edge to be included
                 q.push(&edge);
 
-                if(memory) {
+                if (memory) {
                     memoryEdge(*node, edge, i, oss, edgeLabels);
                 } else if (colored) {
                     coloredEdge(*node, edge, i, oss, edgeLabels, classic);
