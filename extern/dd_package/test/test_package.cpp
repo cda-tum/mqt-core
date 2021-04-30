@@ -95,7 +95,7 @@ TEST(DDPackageTest, BellState) {
     export2Dot(bell_state, "bell_state_colored_classic.dot", true, false, true, false, false);
     export2Dot(bell_state, "bell_state_mono.dot", false, false, false, false, false);
     export2Dot(bell_state, "bell_state_mono_classic.dot", false, false, true, false, false);
-    export2Dot(bell_state, "bell_state_memory.dot", false, true, true, true, true);
+    export2Dot(bell_state, "bell_state_memory.dot", false, true, true, true, false);
 
     dd->statistics();
 }
@@ -210,7 +210,7 @@ TEST(DDPackageTest, BellMatrix) {
     export2Dot(bell_matrix, "bell_matrix_colored_classic.dot", true, false, true, false, false);
     export2Dot(bell_matrix, "bell_matrix_mono.dot", false, false, false, false, false);
     export2Dot(bell_matrix, "bell_matrix_mono_classic.dot", false, false, true, false, false);
-    export2Dot(bell_matrix, "bell_matrix_memory.dot", false, true, true, true, true);
+    export2Dot(bell_matrix, "bell_matrix_memory.dot", false, true, true, true, false);
 
     dd->statistics();
 }
