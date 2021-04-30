@@ -299,15 +299,16 @@ namespace dd {
                 for (std::size_t key = 0; key < table.size(); ++key) {
                     auto p = table[key];
                     if (p != nullptr)
-                        std::cout << key << ": ";
+                        std::cout << key << ": \n";
 
                     while (p != nullptr) {
-                        std::cout << "\t\t" << reinterpret_cast<std::uintptr_t>(p) << " " << p->ref << "\t";
+                        std::cout << "\t\t" << std::hex << reinterpret_cast<std::uintptr_t>(p) << std::dec << " " << p->ref << std::hex;
+                        for (const auto& e: p->e) {
+                            std::cout << " " << reinterpret_cast<std::uintptr_t>(e.p) << "(" << reinterpret_cast<std::uintptr_t>(e.w.r) << " " << reinterpret_cast<std::uintptr_t>(e.w.i) << ")";
+                        }
+                        std::cout << "\n\t\t" << std::dec;
                         p = p->next;
                     }
-
-                    if (table[key] != nullptr)
-                        std::cout << "\n";
                 }
                 --q;
             }
