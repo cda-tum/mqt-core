@@ -202,7 +202,7 @@ namespace dd {
         if (to.isTerminal()) {
             os << "t";
         } else {
-            os << tolabel << ":n";
+            os << tolabel;
         }
 
         auto mag = thicknessFromMagnitude(to.w);
@@ -265,7 +265,7 @@ namespace dd {
         if (to.isTerminal()) {
             os << "t";
         } else {
-            os << tolabel << ":n";
+            os << tolabel;
         }
 
         auto mag   = thicknessFromMagnitude(to.w);
