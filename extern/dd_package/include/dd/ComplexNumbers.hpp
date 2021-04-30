@@ -165,7 +165,12 @@ namespace dd {
             auto sign_r = std::signbit(r);
             if (sign_r) {
                 auto absr = std::abs(r);
-                ret.r     = CTEntry::getNegativePointer(complexTable.lookup(absr));
+                // if absolute value is close enough to zero, just return the zero entry (avoiding -0.0)
+                if (absr < decltype(complexTable)::tolerance()) {
+                    ret.r = &decltype(complexTable)::zero;
+                } else {
+                    ret.r = CTEntry::getNegativePointer(complexTable.lookup(absr));
+                }
             } else {
                 ret.r = complexTable.lookup(r);
             }
@@ -173,7 +178,12 @@ namespace dd {
             auto sign_i = std::signbit(i);
             if (sign_i) {
                 auto absi = std::abs(i);
-                ret.i     = CTEntry::getNegativePointer(complexTable.lookup(absi));
+                // if absolute value is close enough to zero, just return the zero entry (avoiding -0.0)
+                if (absi < decltype(complexTable)::tolerance()) {
+                    ret.i = &decltype(complexTable)::zero;
+                } else {
+                    ret.i = CTEntry::getNegativePointer(complexTable.lookup(absi));
+                }
             } else {
                 ret.i = complexTable.lookup(i);
             }
