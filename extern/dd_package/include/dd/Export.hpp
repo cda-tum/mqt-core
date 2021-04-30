@@ -28,7 +28,7 @@
 
 namespace dd {
 
-    std::string colorFromPhase(const Complex& a) {
+    inline std::string colorFromPhase(const Complex& a) {
         auto phase = dd::ComplexNumbers::arg(a);
         auto twopi = 2 * dd::PI;
         phase      = (phase) / twopi;
@@ -38,12 +38,12 @@ namespace dd {
         oss << std::fixed << std::setprecision(3) << phase << " " << 0.667 << " " << 0.75;
         return oss.str();
     }
-    fp thicknessFromMagnitude(const Complex& a) {
+    inline fp thicknessFromMagnitude(const Complex& a) {
         return 3.0 * std::max(dd::ComplexNumbers::mag(a), 0.10);
     }
 
     template<class Edge>
-    std::ostream& header(const Edge& e, std::ostream& os, bool edgeLabels) {
+    static std::ostream& header(const Edge& e, std::ostream& os, bool edgeLabels) {
         os << "digraph \"DD\" {graph[];node[shape=plain];edge[arrowhead=none]\n";
         os << "root [label=\"\",shape=point,style=invis]\n";
         os << "t [label=<<font point-size=\"20\">1</font>>,shape=box,tooltip=\"1\",width=0.3,height=0.3]\n";
@@ -68,7 +68,7 @@ namespace dd {
         return os;
     }
     template<class Edge>
-    std::ostream& coloredHeader(const Edge& e, std::ostream& os, bool edgeLabels) {
+    static std::ostream& coloredHeader(const Edge& e, std::ostream& os, bool edgeLabels) {
         os << "digraph \"DD\" {graph[];node[shape=plain];edge[arrowhead=none]\n";
         os << "root [label=\"\",shape=point,style=invis]\n";
         os << "t [label=<<font point-size=\"20\">1</font>>,shape=box,tooltip=\"1\",width=0.3,height=0.3]\n";
@@ -90,7 +90,7 @@ namespace dd {
         return os;
     }
     template<class Edge>
-    std::ostream& memoryHeader(const Edge& e, std::ostream& os, bool edgeLabels) {
+    static std::ostream& memoryHeader(const Edge& e, std::ostream& os, bool edgeLabels) {
         os << "digraph \"DD\" {graph[];node[shape=plain];edge[arrowhead=none]\n";
         os << "root [label=\"\",shape=point,style=invis]\n";
         os << "t [label=<<font point-size=\"20\">1</font>>,shape=box,tooltip=\"1\",width=0.3,height=0.3]\n";
@@ -138,7 +138,7 @@ namespace dd {
         return os;
     }
 
-    std::ostream& modernNode(const Package::mEdge& e, std::ostream& os) {
+    static std::ostream& modernNode(const Package::mEdge& e, std::ostream& os) {
         auto nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
         os << nodelabel << "[label=<";
         os << R"(<font point-size="10"><table border="1" cellspacing="0" cellpadding="2" style="rounded">)";
@@ -155,7 +155,7 @@ namespace dd {
         os << "</table></font>>,tooltip=\"q" << static_cast<std::size_t>(e.p->v) << "\"]\n";
         return os;
     }
-    std::ostream& modernNode(const Package::vEdge& e, std::ostream& os) {
+    static std::ostream& modernNode(const Package::vEdge& e, std::ostream& os) {
         auto nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
         os << nodelabel << "[label=<";
         os << R"(<font point-size="8"><table border="1" cellspacing="0" cellpadding="0" style="rounded">)";
@@ -165,7 +165,7 @@ namespace dd {
         os << "</tr></table></font>>,tooltip=\"q" << static_cast<std::size_t>(e.p->v) << "\"]\n";
         return os;
     }
-    std::ostream& classicNode(const Package::mEdge& e, std::ostream& os) {
+    static std::ostream& classicNode(const Package::mEdge& e, std::ostream& os) {
         auto nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
         os << nodelabel << "[shape=circle, width=0.53, fixedsize=true, label=<";
         os << R"(<font point-size="6"><table border="0" cellspacing="0" cellpadding="0">)";
@@ -203,7 +203,7 @@ namespace dd {
         os << "<td></td></tr></table></font>>,tooltip=\"q" << static_cast<std::size_t>(e.p->v) << "\"]\n";
         return os;
     }
-    std::ostream& classicNode(const Package::vEdge& e, std::ostream& os) {
+    static std::ostream& classicNode(const Package::vEdge& e, std::ostream& os) {
         auto nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
         os << nodelabel << "[shape=circle, width=0.46, fixedsize=true, label=<";
         os << R"(<font point-size="6"><table border="0" cellspacing="0" cellpadding="0">)";
@@ -226,7 +226,7 @@ namespace dd {
         return os;
     }
     template<class Edge>
-    std::ostream& memoryNode(const Edge& e, std::ostream& os) {
+    static std::ostream& memoryNode(const Edge& e, std::ostream& os) {
         constexpr std::size_t N         = std::tuple_size_v<decltype(e.p->e)>;
         auto                  nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
         os << nodelabel << "[label=<";
@@ -249,7 +249,7 @@ namespace dd {
         return os;
     }
 
-    std::ostream& bwEdge(const Package::mEdge& from, const Package::mEdge& to, short idx, std::ostream& os, bool edgeLabels = false, bool classic = false) {
+    static std::ostream& bwEdge(const Package::mEdge& from, const Package::mEdge& to, short idx, std::ostream& os, bool edgeLabels = false, bool classic = false) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -288,7 +288,7 @@ namespace dd {
 
         return os;
     }
-    std::ostream& bwEdge(const Package::vEdge& from, const Package::vEdge& to, short idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false) {
+    static std::ostream& bwEdge(const Package::vEdge& from, const Package::vEdge& to, short idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -312,7 +312,7 @@ namespace dd {
 
         return os;
     }
-    std::ostream& coloredEdge(const Package::mEdge& from, const Package::mEdge& to, short idx, std::ostream& os, bool edgeLabels = false, bool classic = false) {
+    static std::ostream& coloredEdge(const Package::mEdge& from, const Package::mEdge& to, short idx, std::ostream& os, bool edgeLabels = false, bool classic = false) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -349,7 +349,7 @@ namespace dd {
 
         return os;
     }
-    std::ostream& coloredEdge(const Package::vEdge& from, const Package::vEdge& to, short idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false) {
+    static std::ostream& coloredEdge(const Package::vEdge& from, const Package::vEdge& to, short idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -372,7 +372,7 @@ namespace dd {
         return os;
     }
     template<class Edge>
-    std::ostream& memoryEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels = false) {
+    static std::ostream& memoryEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels = false) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -419,7 +419,7 @@ namespace dd {
     }
 
     template<class Edge>
-    void toDot(const Edge& e, std::ostream& os, bool colored = true, bool edgeLabels = false, bool classic = false, bool memory = false) {
+    static void toDot(const Edge& e, std::ostream& os, bool colored = true, bool edgeLabels = false, bool classic = false, bool memory = false) {
         std::ostringstream oss{};
         // header, root and terminal declaration
 
@@ -486,7 +486,7 @@ namespace dd {
     }
 
     template<class Edge>
-    void export2Dot(Edge basic, const std::string& outputFilename, bool colored = true, bool edgeLabels = false, bool classic = false, bool memory = false, bool show = true) {
+    static void export2Dot(Edge basic, const std::string& outputFilename, bool colored = true, bool edgeLabels = false, bool classic = false, bool memory = false, bool show = true) {
         std::ofstream init(outputFilename);
         toDot(basic, init, colored, edgeLabels, classic, memory);
         init.close();
@@ -504,7 +504,7 @@ namespace dd {
     /// Note: do not rely on the binary format being portable across different architectures/platforms
     ///
 
-    void serialize(const Package::vEdge& basic, std::ostream& os, bool writeBinary = false) {
+    static void serialize(const Package::vEdge& basic, std::ostream& os, bool writeBinary = false) {
         if (writeBinary) {
             os.write(reinterpret_cast<const char*>(&SERIALIZATION_VERSION), sizeof(decltype(SERIALIZATION_VERSION)));
             basic.w.writeBinary(os);
@@ -590,7 +590,7 @@ namespace dd {
             } while (!stack.empty());
         }
     }
-    void serializeMatrix(const Package::mEdge& basic, std::int_least64_t& idx, std::unordered_map<Package::mNode*, std::int_least64_t>& node_index, std::unordered_set<Package::mNode*>& visited, std::ostream& os, bool writeBinary = false) {
+    static void serializeMatrix(const Package::mEdge& basic, std::int_least64_t& idx, std::unordered_map<Package::mNode*, std::int_least64_t>& node_index, std::unordered_set<Package::mNode*>& visited, std::ostream& os, bool writeBinary = false) {
         if (!basic.isTerminal()) {
             for (auto& e: basic.p->e) {
                 if (auto [iter, success] = visited.insert(e.p); success) {
@@ -629,7 +629,7 @@ namespace dd {
             }
         }
     }
-    void serialize(const Package::mEdge& basic, std::ostream& os, bool writeBinary = false) {
+    static void serialize(const Package::mEdge& basic, std::ostream& os, bool writeBinary = false) {
         if (writeBinary) {
             os.write(reinterpret_cast<const char*>(&SERIALIZATION_VERSION), sizeof(decltype(SERIALIZATION_VERSION)));
             basic.w.writeBinary(os);
@@ -643,7 +643,7 @@ namespace dd {
         serializeMatrix(basic, idx, node_index, visited, os, writeBinary);
     }
     template<class Edge>
-    void serialize(const Edge& basic, const std::string& outputFilename, bool writeBinary = false) {
+    static void serialize(const Edge& basic, const std::string& outputFilename, bool writeBinary = false) {
         std::ofstream ofs(outputFilename);
 
         if (!ofs.good()) {
