@@ -294,19 +294,19 @@ namespace dd {
             Qubit q = nvars - 1;
             for (auto it = tables.rbegin(); it != tables.rend(); ++it) {
                 auto& table = *it;
-                std::cout << "\t" << static_cast<std::size_t>(q) << ":"
+                std::cout << "\tq" << static_cast<std::size_t>(q) << ":"
                           << "\n";
                 for (std::size_t key = 0; key < table.size(); ++key) {
                     auto p = table[key];
                     if (p != nullptr)
-                        std::cout << key << ": \n";
+                        std::cout << "\tkey=" << key << ": ";
 
                     while (p != nullptr) {
                         std::cout << "\t\t" << std::hex << reinterpret_cast<std::uintptr_t>(p) << std::dec << " " << p->ref << std::hex;
                         for (const auto& e: p->e) {
-                            std::cout << " " << reinterpret_cast<std::uintptr_t>(e.p) << "(" << reinterpret_cast<std::uintptr_t>(e.w.r) << " " << reinterpret_cast<std::uintptr_t>(e.w.i) << ")";
+                            std::cout << " p" << reinterpret_cast<std::uintptr_t>(e.p) << "(r" << reinterpret_cast<std::uintptr_t>(e.w.r) << " i" << reinterpret_cast<std::uintptr_t>(e.w.i) << ")";
                         }
-                        std::cout << "\n\t\t" << std::dec;
+                        std::cout << std::dec << "\n";
                         p = p->next;
                     }
                 }
@@ -360,7 +360,7 @@ namespace dd {
 
         // (max) active nodes
         // number of active vector nodes for each variable
-        std::vector<std::size_t> active{nvars};
+        std::vector<std::size_t> active{std::vector<std::size_t>(nvars, 0)};
         std::size_t              activeNodeCount = 0;
         std::size_t              maxActive       = 0;
 
