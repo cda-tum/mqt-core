@@ -306,7 +306,7 @@ namespace dd {
                         for (const auto& e: p->e) {
                             std::cout << " p" << reinterpret_cast<std::uintptr_t>(e.p) << "(r" << reinterpret_cast<std::uintptr_t>(e.w.r) << " i" << reinterpret_cast<std::uintptr_t>(e.w.i) << ")";
                         }
-                        std::cout << "\n" << std::dec;
+                        std::cout << std::dec << "\n";
                         p = p->next;
                     }
                 }
