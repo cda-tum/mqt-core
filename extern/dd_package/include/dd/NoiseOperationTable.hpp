@@ -48,7 +48,7 @@ namespace dd {
 
         Edge lookup(QubitCount n, NoiseOperationKind kind, Qubit target) {
             lookups++;
-            Edge  r{};
+            Edge r{};
             auto entry = table.at(target).at(kind);
             if (entry.p == nullptr) return r;
             if (entry.p->v != static_cast<Qubit>(n - 1)) return r;
