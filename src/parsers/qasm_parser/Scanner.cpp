@@ -304,9 +304,10 @@ namespace qasm {
     }
 
     void Scanner::addFileInput(const std::string& filename) {
-        auto in = new std::ifstream(filename, std::ifstream::in);
+        auto* in = new std::ifstream(filename, std::ifstream::in);
 
         if (in->fail() && filename == "qelib1.inc") {
+            delete in;
             // internal qelib1.inc
             // parser can also read multiple-control versions of each gate
             auto ss = new std::stringstream{};
@@ -409,6 +410,7 @@ namespace qasm {
             line = 1;
             col  = 0;
         } else if (in->fail()) {
+            delete in;
             std::cerr << "Failed to open file '" << filename << "'!" << std::endl;
         } else {
             streams.push(in);
