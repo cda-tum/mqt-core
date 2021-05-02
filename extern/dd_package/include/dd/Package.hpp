@@ -512,13 +512,13 @@ namespace dd {
         UniqueTable<vNode> vUniqueTable{nqubits};
         UniqueTable<mNode> mUniqueTable{nqubits};
 
-        void garbageCollect(bool force = false) {
+        bool garbageCollect(bool force = false) {
             // return immediately if no table needs collection
             if (!force &&
                 !vUniqueTable.possiblyNeedsCollection() &&
                 !mUniqueTable.possiblyNeedsCollection() &&
                 !cn.complexTable.possiblyNeedsCollection()) {
-                return;
+                return false;
             }
 
             auto vCollect = vUniqueTable.garbageCollect(force);
@@ -555,6 +555,7 @@ namespace dd {
                 matrixKronecker.clear();
                 noiseOperationTable.clear();
             }
+            return vCollect > 0 || mCollect > 0 || cCollect > 0;
         }
 
         void clearUniqueTables() {

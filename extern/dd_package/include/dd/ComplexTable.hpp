@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <stdexcept>
 #include <vector>
 
 namespace dd {
@@ -233,11 +234,11 @@ namespace dd {
 
         // increment reference count for corresponding entry
         static void incRef(Entry* entry) {
-            if (entry == nullptr)
-                return;
-
             // get valid pointer
             auto entryPtr = Entry::getAlignedPointer(entry);
+
+            if (entryPtr == nullptr)
+                return;
 
             // important (static) numbers are never altered
             if (entryPtr != &one && entryPtr != &zero && entryPtr != &sqrt2_2) {
@@ -253,15 +254,20 @@ namespace dd {
 
         // decrement reference count for corresponding entry
         static void decRef(Entry* entry) {
-            if (entry == nullptr)
-                return;
-
             // get valid pointer
             auto entryPtr = Entry::getAlignedPointer(entry);
 
+            if (entryPtr == nullptr)
+                return;
+
             // important (static) numbers are never altered
             if (entryPtr != &one && entryPtr != &zero && entryPtr != &sqrt2_2) {
-                assert(entryPtr->refCount > 0);
+                if (entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
+                    return;
+                }
+                if (entryPtr->refCount == 0) {
+                    throw std::runtime_error("In ComplexTable: RefCount of entry " + std::to_string(entryPtr->value) + " is zero before decrement");
+                }
 
                 // decrease reference count
                 entryPtr->refCount--;
