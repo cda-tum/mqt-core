@@ -148,11 +148,12 @@ namespace qc {
         }
     }
 
-    void StandardOperation::setup(dd::QubitCount nq, dd::fp par0, dd::fp par1, dd::fp par2) {
+    void StandardOperation::setup(dd::QubitCount nq, dd::fp par0, dd::fp par1, dd::fp par2, dd::Qubit sq) {
         nqubits      = nq;
         parameter[0] = par0;
         parameter[1] = par1;
         parameter[2] = par2;
+        startQubit   = sq;
         checkUgate();
         setName();
     }
@@ -168,7 +169,7 @@ namespace qc {
                 if (controls.size() > 1) { // Toffoli
                     e = dd->toffoliTable.lookup(nqubits, controls, targets[0]);
                     if (e.p == nullptr) {
-                        e = dd->makeGateDD(dd::Xmat, nqubits, controls, targets[0]);
+                        e = dd->makeGateDD(dd::Xmat, nqubits, controls, targets[0], startQubit);
                         dd->toffoliTable.insert(nqubits, controls, targets[0], e);
                     }
                     return e;
@@ -196,30 +197,30 @@ namespace qc {
                 oss << "DD for gate" << name << " not available!";
                 throw QFRException(oss.str());
         }
-        return dd->makeGateDD(gm, nqubits, controls, target);
+        return dd->makeGateDD(gm, nqubits, controls, target, startQubit);
     }
 
     MatrixDD StandardOperation::getStandardOperationDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, bool inverse) const {
         switch (type) {
             case SWAP:
-                return dd->makeSWAPDD(nqubits, controls, target0, target1);
+                return dd->makeSWAPDD(nqubits, controls, target0, target1, startQubit);
             case iSWAP:
                 if (inverse) {
-                    return dd->makeiSWAPinvDD(nqubits, controls, target0, target1);
+                    return dd->makeiSWAPinvDD(nqubits, controls, target0, target1, startQubit);
                 } else {
-                    return dd->makeiSWAPDD(nqubits, controls, target0, target1);
+                    return dd->makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
                 }
             case Peres:
                 if (inverse) {
-                    return dd->makePeresdagDD(nqubits, controls, target0, target1);
+                    return dd->makePeresdagDD(nqubits, controls, target0, target1, startQubit);
                 } else {
-                    return dd->makePeresDD(nqubits, controls, target0, target1);
+                    return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
                 }
             case Peresdag:
                 if (inverse) {
-                    return dd->makePeresDD(nqubits, controls, target0, target1);
+                    return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
                 } else {
-                    return dd->makePeresdagDD(nqubits, controls, target0, target1);
+                    return dd->makePeresdagDD(nqubits, controls, target0, target1, startQubit);
                 }
             default:
                 std::ostringstream oss{};
@@ -231,46 +232,46 @@ namespace qc {
     /***
      * Constructors
      ***/
-    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq) {
         type = g;
-        setup(nq, lambda, phi, theta);
+        setup(nq, lambda, phi, theta, sq);
         targets.emplace_back(target);
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq) {
         type = g;
-        setup(nq, lambda, phi, theta);
+        setup(nq, lambda, phi, theta, sq);
         this->targets = targets;
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
-        StandardOperation(nq, target, g, lambda, phi, theta) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq):
+        StandardOperation(nq, target, g, lambda, phi, theta, sq) {
         controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
-        StandardOperation(nq, targets, g, lambda, phi, theta) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq):
+        StandardOperation(nq, targets, g, lambda, phi, theta, sq) {
         controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
-        StandardOperation(nq, target, g, lambda, phi, theta) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq):
+        StandardOperation(nq, target, g, lambda, phi, theta, sq) {
         this->controls = controls;
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
-        StandardOperation(nq, targets, g, lambda, phi, theta) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq):
+        StandardOperation(nq, targets, g, lambda, phi, theta, sq) {
         this->controls = controls;
     }
 
     // MCT Constructor
-    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target):
-        StandardOperation(nq, controls, target, X) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, dd::Qubit sq):
+        StandardOperation(nq, controls, target, X, 0., 0., 0., sq) {
     }
 
     // MCF (cSWAP), Peres, paramterized two target Constructor
-    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta):
-        StandardOperation(nq, controls, {target0, target1}, g, lambda, phi, theta) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq):
+        StandardOperation(nq, controls, {target0, target1}, g, lambda, phi, theta, sq) {
     }
 
     /***

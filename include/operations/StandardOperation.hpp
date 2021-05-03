@@ -32,7 +32,7 @@ namespace qc {
         static OpType parseU1(dd::fp& lambda);
 
         void checkUgate();
-        void setup(dd::QubitCount nq, dd::fp par0, dd::fp par1, dd::fp par2);
+        void setup(dd::QubitCount nq, dd::fp par0, dd::fp par1, dd::fp par2, dd::Qubit startQubit = 0);
 
         // single-target operations
         MatrixDD getStandardOperationDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, dd::Qubit target, bool inverse) const;
@@ -62,20 +62,20 @@ namespace qc {
         StandardOperation() = default;
 
         // Standard Constructors
-        StandardOperation(dd::QubitCount nq, dd::Qubit target, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0.);
-        StandardOperation(dd::QubitCount nq, const Targets& targets, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0.);
+        StandardOperation(dd::QubitCount nq, dd::Qubit target, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startQubit = 0);
+        StandardOperation(dd::QubitCount nq, const Targets& targets, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startQubit = 0);
 
-        StandardOperation(dd::QubitCount nq, dd::Control control, dd::Qubit target, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0.);
-        StandardOperation(dd::QubitCount nq, dd::Control control, const Targets& targets, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0.);
+        StandardOperation(dd::QubitCount nq, dd::Control control, dd::Qubit target, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startQubit = 0);
+        StandardOperation(dd::QubitCount nq, dd::Control control, const Targets& targets, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startQubit = 0);
 
-        StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0.);
-        StandardOperation(dd::QubitCount nq, const dd::Controls& controls, const Targets& targets, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0.);
+        StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startQubit = 0);
+        StandardOperation(dd::QubitCount nq, const dd::Controls& controls, const Targets& targets, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startQubit = 0);
 
         // MCT Constructor
-        StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target);
+        StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, dd::Qubit startQubit = 0);
 
         // MCF (cSWAP), Peres, paramterized two target Constructor
-        StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0.);
+        StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startQubit = 0);
 
         [[nodiscard]] bool isStandardOperation() const override {
             return true;

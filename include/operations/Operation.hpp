@@ -25,7 +25,7 @@ namespace qc {
     constexpr std::size_t MAX_STRING_LENGTH = 20; // Ensure short-string-optimizations
 
     // Supported Operations
-    enum OpType {
+    enum OpType : std::uint8_t {
         None,
         // Standard Operations
         I,
@@ -70,8 +70,9 @@ namespace qc {
         Targets                            targets{};
         std::array<dd::fp, MAX_PARAMETERS> parameter{};
 
-        dd::QubitCount nqubits = 0;
-        OpType         type    = None; // Op type
+        dd::QubitCount nqubits    = 0;
+        dd::Qubit      startQubit = 0;
+        OpType         type       = None; // Op type
         char           name[MAX_STRING_LENGTH]{};
 
         static bool isWholeQubitRegister(const RegisterNames& reg, std::size_t start, std::size_t end) {
