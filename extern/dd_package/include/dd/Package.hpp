@@ -1892,11 +1892,6 @@ namespace dd {
             assert(Complex::zero.r->value == 0 && Complex::zero.i->value == 0);
 
             const bool result = isLocallyConsistent2(e);
-
-            if (!result) {
-                export2Dot(e, "locally_inconsistent.dot", true);
-            }
-
             return result;
         }
 
@@ -1976,13 +1971,14 @@ namespace dd {
 
             if (weight_map.at(r_ptr) > r_ptr->refCount && r_ptr != Complex::one.r && r_ptr != Complex::zero.i && r_ptr != &ComplexTable<>::sqrt2_2) {
                 std::clog << "\nOffending weight: " << edge.w << "\n";
-                std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << " " << CTEntry::val(edge.w.i) << std::defaultfloat << "\n";
+                std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << "r " << CTEntry::val(edge.w.i) << std::defaultfloat << "i\n";
                 debugnode(edge.p);
                 throw std::runtime_error("Ref-Count mismatch for " + std::to_string(r_ptr->value) + "(r): " + std::to_string(weight_map.at(r_ptr)) + " occurences in DD but Ref-Count is only " + std::to_string(r_ptr->refCount));
             }
 
-            if (weight_map.at(i_ptr) > i_ptr->refCount && i_ptr != Complex::zero.i && i_ptr != Complex::one.r && r_ptr != &ComplexTable<>::sqrt2_2) {
-                std::clog << edge.w << "\n";
+            if (weight_map.at(i_ptr) > i_ptr->refCount && i_ptr != Complex::zero.i && i_ptr != Complex::one.r && i_ptr != &ComplexTable<>::sqrt2_2) {
+                std::clog << "\nOffending weight: " << edge.w << "\n";
+                std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << "r " << CTEntry::val(edge.w.i) << std::defaultfloat << "i\n";
                 debugnode(edge.p);
                 throw std::runtime_error("Ref-Count mismatch for " + std::to_string(i_ptr->value) + "(i): " + std::to_string(weight_map.at(i_ptr)) + " occurences in DD but Ref-Count is only " + std::to_string(i_ptr->refCount));
             }

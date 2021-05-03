@@ -16,6 +16,7 @@
 #include <array>
 #include <cstdint>
 #include <cstdlib>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <queue>
