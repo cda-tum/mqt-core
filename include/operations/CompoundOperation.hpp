@@ -22,7 +22,7 @@ namespace qc {
         }
 
     public:
-        explicit CompoundOperation(unsigned short nq) {
+        explicit CompoundOperation(dd::QubitCount nq) {
             std::strcpy(name, "Compound operation:");
             nqubits = nq;
             type    = Compound;
