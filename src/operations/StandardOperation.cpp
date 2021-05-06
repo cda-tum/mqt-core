@@ -148,12 +148,12 @@ namespace qc {
         }
     }
 
-    void StandardOperation::setup(dd::QubitCount nq, dd::fp par0, dd::fp par1, dd::fp par2, dd::Qubit sq) {
+    void StandardOperation::setup(dd::QubitCount nq, dd::fp par0, dd::fp par1, dd::fp par2, dd::Qubit startingQubit) {
         nqubits      = nq;
         parameter[0] = par0;
         parameter[1] = par1;
         parameter[2] = par2;
-        startQubit   = sq;
+        startQubit   = startingQubit;
         checkUgate();
         setName();
     }
@@ -232,46 +232,46 @@ namespace qc {
     /***
      * Constructors
      ***/
-    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit) {
         type = g;
-        setup(nq, lambda, phi, theta, sq);
+        setup(nq, lambda, phi, theta, startingQubit);
         targets.emplace_back(target);
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit) {
         type = g;
-        setup(nq, lambda, phi, theta, sq);
+        setup(nq, lambda, phi, theta, startingQubit);
         this->targets = targets;
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq):
-        StandardOperation(nq, target, g, lambda, phi, theta, sq) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit):
+        StandardOperation(nq, target, g, lambda, phi, theta, startingQubit) {
         controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq):
-        StandardOperation(nq, targets, g, lambda, phi, theta, sq) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit):
+        StandardOperation(nq, targets, g, lambda, phi, theta, startingQubit) {
         controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq):
-        StandardOperation(nq, target, g, lambda, phi, theta, sq) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit):
+        StandardOperation(nq, target, g, lambda, phi, theta, startingQubit) {
         this->controls = controls;
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq):
-        StandardOperation(nq, targets, g, lambda, phi, theta, sq) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit):
+        StandardOperation(nq, targets, g, lambda, phi, theta, startingQubit) {
         this->controls = controls;
     }
 
     // MCT Constructor
-    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, dd::Qubit sq):
-        StandardOperation(nq, controls, target, X, 0., 0., 0., sq) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, dd::Qubit startingQubit):
+        StandardOperation(nq, controls, target, X, 0., 0., 0., startingQubit) {
     }
 
     // MCF (cSWAP), Peres, paramterized two target Constructor
-    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit sq):
-        StandardOperation(nq, controls, {target0, target1}, g, lambda, phi, theta, sq) {
+    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit):
+        StandardOperation(nq, controls, {target0, target1}, g, lambda, phi, theta, startingQubit) {
     }
 
     /***
