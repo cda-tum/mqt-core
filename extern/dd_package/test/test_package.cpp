@@ -62,7 +62,7 @@ TEST(DDPackageTest, BellState) {
     auto dd = std::make_unique<dd::Package>(2);
 
     auto h_gate     = dd->makeGateDD(dd::Hmat, 2, 1);
-    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 1, 0);
+    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
     auto zero_state = dd->makeZeroState(2);
 
     auto bell_state = dd->multiply(dd->multiply(cx_gate, h_gate), zero_state);
@@ -148,7 +148,7 @@ TEST(DDPackageTest, VectorSerializationTest) {
     auto dd = std::make_unique<dd::Package>(2);
 
     auto h_gate     = dd->makeGateDD(dd::Hmat, 2, 1);
-    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 1, 0);
+    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
     auto zero_state = dd->makeZeroState(2);
 
     auto bell_state = dd->multiply(dd->multiply(cx_gate, h_gate), zero_state);
@@ -166,7 +166,7 @@ TEST(DDPackageTest, BellMatrix) {
     auto dd = std::make_unique<dd::Package>(2);
 
     auto h_gate  = dd->makeGateDD(dd::Hmat, 2, 1);
-    auto cx_gate = dd->makeGateDD(dd::Xmat, 2, 1, 0);
+    auto cx_gate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
 
     auto bell_matrix = dd->multiply(cx_gate, h_gate);
 
@@ -219,7 +219,7 @@ TEST(DDPackageTest, MatrixSerializationTest) {
     auto dd = std::make_unique<dd::Package>(2);
 
     auto h_gate  = dd->makeGateDD(dd::Hmat, 2, 1);
-    auto cx_gate = dd->makeGateDD(dd::Xmat, 2, 1, 0);
+    auto cx_gate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
 
     auto bell_matrix = dd->multiply(cx_gate, h_gate);
 
@@ -236,7 +236,7 @@ TEST(DDPackageTest, SerializationErrors) {
     auto dd = std::make_unique<dd::Package>(2);
 
     auto h_gate     = dd->makeGateDD(dd::Hmat, 2, 1);
-    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 1, 0);
+    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
     auto zero_state = dd->makeZeroState(2);
     auto bell_state = dd->multiply(dd->multiply(cx_gate, h_gate), zero_state);
 
@@ -282,7 +282,7 @@ TEST(DDPackageTest, TestConsistency) {
     auto dd = std::make_unique<dd::Package>(2);
 
     auto h_gate     = dd->makeGateDD(dd::Hmat, 2, 1);
-    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 1, 0);
+    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
     auto zero_state = dd->makeZeroState(2);
 
     auto bell_matrix = dd->multiply(cx_gate, h_gate);
@@ -374,7 +374,7 @@ TEST(DDPackageTest, TestLocalInconsistency) {
     auto dd = std::make_unique<dd::Package>(3);
 
     auto h_gate     = dd->makeGateDD(dd::Hmat, 2, 0);
-    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 0, 1);
+    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 0_pc, 1);
     auto zero_state = dd->makeZeroState(2);
 
     auto bell_state = dd->multiply(dd->multiply(cx_gate, h_gate), zero_state);
@@ -400,7 +400,7 @@ TEST(DDPackageTest, TestLocalInconsistency) {
 TEST(DDPackageTest, Ancillaries) {
     auto dd          = std::make_unique<dd::Package>(4);
     auto h_gate      = dd->makeGateDD(dd::Hmat, 2, 0);
-    auto cx_gate     = dd->makeGateDD(dd::Xmat, 2, 0, 1);
+    auto cx_gate     = dd->makeGateDD(dd::Xmat, 2, 0_pc, 1);
     auto bell_matrix = dd->multiply(cx_gate, h_gate);
 
     dd->incRef(bell_matrix);
@@ -437,7 +437,7 @@ TEST(DDPackageTest, Ancillaries) {
 TEST(DDPackageTest, GarbageVector) {
     auto dd         = std::make_unique<dd::Package>(4);
     auto h_gate     = dd->makeGateDD(dd::Hmat, 2, 0);
-    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 0, 1);
+    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 0_pc, 1);
     auto zero_state = dd->makeZeroState(2);
     auto bell_state = dd->multiply(dd->multiply(cx_gate, h_gate), zero_state);
     dd->printVector(bell_state);
@@ -468,7 +468,7 @@ TEST(DDPackageTest, GarbageVector) {
 TEST(DDPackageTest, GarbageMatrix) {
     auto dd          = std::make_unique<dd::Package>(4);
     auto h_gate      = dd->makeGateDD(dd::Hmat, 2, 0);
-    auto cx_gate     = dd->makeGateDD(dd::Xmat, 2, 0, 1);
+    auto cx_gate     = dd->makeGateDD(dd::Xmat, 2, 0_pc, 1);
     auto bell_matrix = dd->multiply(cx_gate, h_gate);
 
     dd->incRef(bell_matrix);
@@ -497,11 +497,15 @@ TEST(DDPackageTest, GarbageMatrix) {
     EXPECT_TRUE(reduced_bell_matrix.p->e[3].isZeroTerminal());
 }
 
-TEST(DDPackageTest, InvalidMakeBasisState) {
+TEST(DDPackageTest, InvalidMakeBasisStateAndGate) {
     auto nqubits    = 2;
     auto dd         = std::make_unique<dd::Package>(nqubits);
     auto basisState = std::vector<dd::BasisStates>{dd::BasisStates::zero};
-    EXPECT_THROW(dd->makeBasisState(nqubits, basisState), std::invalid_argument);
+    EXPECT_THROW(dd->makeBasisState(nqubits, basisState), std::runtime_error);
+    EXPECT_THROW(dd->makeZeroState(3), std::runtime_error);
+    EXPECT_THROW(dd->makeBasisState(3, {true, true, true}), std::runtime_error);
+    EXPECT_THROW(dd->makeBasisState(3, {dd::BasisStates::one, dd::BasisStates::one, dd::BasisStates::one}), std::runtime_error);
+    EXPECT_THROW(dd->makeGateDD(dd::Xmat, 3, 0), std::runtime_error);
 }
 
 TEST(DDPackageTest, InvalidDecRef) {

@@ -97,6 +97,10 @@ TEST(DDComplexTest, ComplexNumberArithmetic) {
     EXPECT_EQ(e, Complex::one);
     auto f = cn.getTemporary();
     ComplexNumbers::div(f, Complex::zero, Complex::one);
+
+    dd::ComplexValue zero{0., 0.};
+    dd::ComplexValue one{1., 0.};
+    EXPECT_EQ(one + zero, one);
 }
 
 TEST(DDComplexTest, NearZeroLookup) {

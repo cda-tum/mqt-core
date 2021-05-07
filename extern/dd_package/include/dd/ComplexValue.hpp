@@ -194,6 +194,17 @@ namespace dd {
 
             return ss.str();
         }
+
+        ComplexValue& operator+=(const ComplexValue& rhs) {
+            r += rhs.r;
+            i += rhs.i;
+            return *this;
+        }
+
+        friend ComplexValue operator+(ComplexValue lhs, const ComplexValue& rhs) {
+            lhs += rhs;
+            return lhs;
+        }
     };
 
     inline std::ostream& operator<<(std::ostream& os, const ComplexValue& c) {

@@ -23,10 +23,9 @@ A small example shows how to create set a single qubit in superposition.
 
 ```c++
 #include <memory>
-#include "DDpackage.h"
-#include "GateMatrixDefinitions.h"
+#include "dd/Package.hpp"
 
-auto dd = std::make_unique<dd::Package>(); // Create new package instance
+auto dd = std::make_unique<dd::Package>(1); // Create new package instance capable of handling a single qubit
 auto zero_state = dd->makeZeroState(1) ; // zero_state = |0>
 
 /* Creating a DD requires the following inputs:

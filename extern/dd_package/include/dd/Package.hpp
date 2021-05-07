@@ -190,21 +190,31 @@ namespace dd {
         }
 
         // generate |0...0> with n qubits
-        vEdge makeZeroState(QubitCount n) {
-            assert(n <= nqubits);
-
+        vEdge makeZeroState(QubitCount n, std::size_t start = 0) {
+            if (n + start > nqubits) {
+                throw std::runtime_error("Requested state with " +
+                                         std::to_string(n + start) +
+                                         " qubits, but current package configuration only supports up to " +
+                                         std::to_string(nqubits) +
+                                         " qubits. Please allocate a larger package instance.");
+            }
             auto f = vEdge::one;
-            for (std::size_t p = 0; p < n; p++) {
+            for (std::size_t p = start; p < n + start; p++) {
                 f = makeDDNode(static_cast<Qubit>(p), std::array{f, vEdge::zero});
             }
             return f;
         }
         // generate computational basis state |i> with n qubits
-        vEdge makeBasisState(QubitCount n, const std::vector<bool>& state) {
-            assert(n <= nqubits);
-
+        vEdge makeBasisState(QubitCount n, const std::vector<bool>& state, std::size_t start = 0) {
+            if (n + start > nqubits) {
+                throw std::runtime_error("Requested state with " +
+                                         std::to_string(n + start) +
+                                         " qubits, but current package configuration only supports up to " +
+                                         std::to_string(nqubits) +
+                                         " qubits. Please allocate a larger package instance.");
+            }
             auto f = vEdge::one;
-            for (std::size_t p = 0; p < n; ++p) {
+            for (std::size_t p = start; p < n + start; ++p) {
                 if (state[p] == 0) {
                     f = makeDDNode(static_cast<Qubit>(p), std::array{f, vEdge::zero});
                 } else {
@@ -214,15 +224,20 @@ namespace dd {
             return f;
         }
         // generate general basis state with n qubits
-        vEdge makeBasisState(QubitCount n, const std::vector<BasisStates>& state) {
-            assert(n <= nqubits);
-
+        vEdge makeBasisState(QubitCount n, const std::vector<BasisStates>& state, std::size_t start = 0) {
+            if (n + start > nqubits) {
+                throw std::runtime_error("Requested state with " +
+                                         std::to_string(n + start) +
+                                         " qubits, but current package configuration only supports up to " +
+                                         std::to_string(nqubits) +
+                                         " qubits. Please allocate a larger package instance.");
+            }
             if (state.size() < n) {
-                throw std::invalid_argument("Insufficient qubit states provided. Requested " + std::to_string(n) + ", but received " + std::to_string(state.size()));
+                throw std::runtime_error("Insufficient qubit states provided. Requested " + std::to_string(n) + ", but received " + std::to_string(state.size()));
             }
 
             auto f = vEdge::one;
-            for (std::size_t p = 0; p < n; ++p) {
+            for (std::size_t p = start; p < n + start; ++p) {
                 switch (state[p]) {
                     case BasisStates::zero:
                         f = makeDDNode(static_cast<Qubit>(p), std::array{f, vEdge::zero});
@@ -353,18 +368,20 @@ namespace dd {
         }
 
         // build matrix representation for a single gate on an n-qubit circuit
-        mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n, Qubit target) {
-            return makeGateDD(mat, n, Controls{}, target);
+        mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n, Qubit target, std::size_t start = 0) {
+            return makeGateDD(mat, n, Controls{}, target, start);
         }
-        mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n, const Control& control, Qubit target) {
-            return makeGateDD(mat, n, Controls{control}, target);
+        mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n, const Control& control, Qubit target, std::size_t start = 0) {
+            return makeGateDD(mat, n, Controls{control}, target, start);
         }
-        mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n, Qubit control, Qubit target) {
-            return makeGateDD(mat, n, Controls{{control}}, target);
-        }
-        mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n, const Controls& controls, Qubit target) {
-            assert(n <= nqubits);
-
+        mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n, const Controls& controls, Qubit target, std::size_t start = 0) {
+            if (n + start > nqubits) {
+                throw std::runtime_error("Requested gate with " +
+                                         std::to_string(n + start) +
+                                         " qubits, but current package configuration only supports up to " +
+                                         std::to_string(nqubits) +
+                                         " qubits. Please allocate a larger package instance.");
+            }
             std::array<mEdge, NEDGE> em{};
             auto                     it = controls.begin();
             for (auto i = 0U; i < NEDGE; ++i) {
@@ -376,16 +393,16 @@ namespace dd {
             }
 
             //process lines below target
-            Qubit z = 0;
+            auto z = static_cast<Qubit>(start);
             for (; z < target; z++) {
                 for (auto i1 = 0U; i1 < RADIX; i1++) {
                     for (auto i2 = 0U; i2 < RADIX; i2++) {
                         auto i = i1 * RADIX + i2;
                         if (it != controls.end() && it->qubit == z) {
                             if (it->type == Control::Type::neg) { // neg. control
-                                em[i] = makeDDNode(z, std::array{em[i], mEdge::zero, mEdge::zero, (i1 == i2) ? makeIdent(z) : mEdge::zero});
+                                em[i] = makeDDNode(z, std::array{em[i], mEdge::zero, mEdge::zero, (i1 == i2) ? makeIdent(static_cast<Qubit>(start), static_cast<Qubit>(z - 1)) : mEdge::zero});
                             } else { // pos. control
-                                em[i] = makeDDNode(z, std::array{(i1 == i2) ? makeIdent(z) : mEdge::zero, mEdge::zero, mEdge::zero, em[i]});
+                                em[i] = makeDDNode(z, std::array{(i1 == i2) ? makeIdent(static_cast<Qubit>(start), static_cast<Qubit>(z - 1)) : mEdge::zero, mEdge::zero, mEdge::zero, em[i]});
                             }
                         } else { // not connected
                             em[i] = makeDDNode(z, std::array{em[i], mEdge::zero, mEdge::zero, em[i]});
@@ -401,13 +418,13 @@ namespace dd {
             auto e = makeDDNode(z, em);
 
             //process lines above target
-            for (; z < static_cast<Qubit>(n - 1); z++) {
+            for (; z < static_cast<Qubit>(n - 1 + start); z++) {
                 auto q = static_cast<Qubit>(z + 1);
                 if (it != controls.end() && it->qubit == q) {
                     if (it->type == Control::Type::neg) { // neg. control
-                        e = makeDDNode(q, std::array{e, mEdge::zero, mEdge::zero, makeIdent(q)});
+                        e = makeDDNode(q, std::array{e, mEdge::zero, mEdge::zero, makeIdent(static_cast<Qubit>(start), static_cast<Qubit>(q - 1))});
                     } else { // pos. control
-                        e = makeDDNode(q, std::array{makeIdent(q), mEdge::zero, mEdge::zero, e});
+                        e = makeDDNode(q, std::array{makeIdent(static_cast<Qubit>(start), static_cast<Qubit>(q - 1)), mEdge::zero, mEdge::zero, e});
                     }
                     ++it;
                 } else { // not connected
@@ -417,57 +434,57 @@ namespace dd {
             return e;
         }
 
-        mEdge makeSWAPDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1) {
+        mEdge makeSWAPDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1, std::size_t start = 0) {
             auto c = controls;
             c.insert(Control{target0});
-            mEdge e = makeGateDD(Xmat, n, c, target1);
+            mEdge e = makeGateDD(Xmat, n, c, target1, start);
             c.erase(Control{target0});
             c.insert(Control{target1});
-            e = multiply(e, multiply(makeGateDD(Xmat, n, c, target0), e));
+            e = multiply(e, multiply(makeGateDD(Xmat, n, c, target0, start), e));
             return e;
         }
 
-        mEdge makePeresDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1) {
+        mEdge makePeresDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1, std::size_t start = 0) {
             auto c = controls;
             c.insert(Control{target1});
-            mEdge e = makeGateDD(Xmat, n, c, target0);
-            e       = multiply(makeGateDD(Xmat, n, controls, target1), e);
+            mEdge e = makeGateDD(Xmat, n, c, target0, start);
+            e       = multiply(makeGateDD(Xmat, n, controls, target1, start), e);
             return e;
         }
 
-        mEdge makePeresdagDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1) {
-            mEdge e = makeGateDD(Xmat, n, controls, target1);
+        mEdge makePeresdagDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1, std::size_t start = 0) {
+            mEdge e = makeGateDD(Xmat, n, controls, target1, start);
             auto  c = controls;
             c.insert(Control{target1});
-            e = multiply(makeGateDD(Xmat, n, c, target0), e);
+            e = multiply(makeGateDD(Xmat, n, c, target0, start), e);
             return e;
         }
 
-        mEdge makeiSWAPDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1) {
-            mEdge e = makeGateDD(Smat, n, controls, target1);              // S q[1]
-            e       = multiply(e, makeGateDD(Smat, n, controls, target0)); // S q[0]
-            e       = multiply(e, makeGateDD(Hmat, n, controls, target0)); // H q[0]
+        mEdge makeiSWAPDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1, std::size_t start = 0) {
+            mEdge e = makeGateDD(Smat, n, controls, target1, start);              // S q[1]
+            e       = multiply(e, makeGateDD(Smat, n, controls, target0, start)); // S q[0]
+            e       = multiply(e, makeGateDD(Hmat, n, controls, target0, start)); // H q[0]
             auto c  = controls;
             c.insert(Control{target0});
-            e = multiply(e, makeGateDD(Xmat, n, c, target1)); // CX q[0], q[1]
+            e = multiply(e, makeGateDD(Xmat, n, c, target1, start)); // CX q[0], q[1]
             c.erase(Control{target0});
             c.insert(Control{target1});
-            e = multiply(e, makeGateDD(Xmat, n, c, target0));        // CX q[1], q[0]
-            e = multiply(e, makeGateDD(Hmat, n, controls, target1)); // H q[1]
+            e = multiply(e, makeGateDD(Xmat, n, c, target0, start));        // CX q[1], q[0]
+            e = multiply(e, makeGateDD(Hmat, n, controls, target1, start)); // H q[1]
             return e;
         }
 
-        mEdge makeiSWAPinvDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1) {
-            mEdge e = makeGateDD(Hmat, n, controls, target1); // H q[1]
+        mEdge makeiSWAPinvDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1, std::size_t start = 0) {
+            mEdge e = makeGateDD(Hmat, n, controls, target1, start); // H q[1]
             auto  c = controls;
             c.insert(Control{target1});
-            e = multiply(e, makeGateDD(Xmat, n, c, target0)); // CX q[1], q[0]
+            e = multiply(e, makeGateDD(Xmat, n, c, target0, start)); // CX q[1], q[0]
             c.erase(Control{target1});
             c.insert(Control{target0});
-            e = multiply(e, makeGateDD(Xmat, n, c, target1));           // CX q[0], q[1]
-            e = multiply(e, makeGateDD(Hmat, n, controls, target0));    // H q[0]
-            e = multiply(e, makeGateDD(Sdagmat, n, controls, target0)); // Sdag q[0]
-            e = multiply(e, makeGateDD(Sdagmat, n, controls, target1)); // Sdag q[1]
+            e = multiply(e, makeGateDD(Xmat, n, c, target1, start));           // CX q[0], q[1]
+            e = multiply(e, makeGateDD(Hmat, n, controls, target0, start));    // H q[0]
+            e = multiply(e, makeGateDD(Sdagmat, n, controls, target0, start)); // Sdag q[0]
+            e = multiply(e, makeGateDD(Sdagmat, n, controls, target1, start)); // Sdag q[1]
             return e;
         }
 
@@ -590,6 +607,51 @@ namespace dd {
             }
 
             return l;
+        }
+
+        template<class Node>
+        Edge<Node> deleteEdge(const Edge<Node>& e, dd::Qubit v, std::size_t edgeIdx) {
+            std::unordered_map<Node*, Edge<Node>> nodes{};
+            return deleteEdge(e, v, edgeIdx, nodes);
+        }
+
+    private:
+        template<class Node>
+        Edge<Node> deleteEdge(const Edge<Node>& e, dd::Qubit v, std::size_t edgeIdx, std::unordered_map<Node*, Edge<Node>>& nodes) {
+            if (e.p == nullptr || e.isTerminal()) {
+                return e;
+            }
+
+            const auto& nodeit = nodes.find(e.p);
+            Edge<Node>  newedge{};
+            if (nodeit != nodes.end()) {
+                newedge = nodeit->second;
+            } else {
+                constexpr std::size_t     N = std::tuple_size_v<decltype(e.p->e)>;
+                std::array<Edge<Node>, N> edges{};
+                if (e.p->v == v) {
+                    for (std::size_t i = 0; i < N; i++) {
+                        edges[i] = i == edgeIdx ? Edge<Node>::zero : e.p->e[i]; // optimization -> node cannot occur below again, since dd is assumed to be free
+                    }
+                } else {
+                    for (std::size_t i = 0; i < N; i++) {
+                        edges[i] = deleteEdge(e.p->e[i], v, edgeIdx, nodes);
+                    }
+                }
+
+                newedge    = makeDDNode(e.p->v, edges);
+                nodes[e.p] = newedge;
+            }
+
+            if (newedge.w.approximatelyOne()) {
+                newedge.w = e.w;
+            } else {
+                auto w = cn.getTemporary();
+                dd::ComplexNumbers::mul(w, newedge.w, e.w);
+                newedge.w = cn.lookup(w);
+            }
+
+            return newedge;
         }
 
         ///
@@ -816,7 +878,7 @@ namespace dd {
         [[nodiscard]] ComputeTable<Edge<LeftOperandNode>, Edge<RightOperandNode>, CachedEdge<RightOperandNode>>& getMultiplicationComputeTable();
 
         template<class LeftOperand, class RightOperand>
-        RightOperand multiply(const LeftOperand& x, const RightOperand& y) {
+        RightOperand multiply(const LeftOperand& x, const RightOperand& y, dd::Qubit start = 0) {
             [[maybe_unused]] const auto before = cn.cacheCount();
 
             Qubit var = -1;
@@ -827,7 +889,7 @@ namespace dd {
                 var = y.p->v;
             }
 
-            auto e = multiply2(x, y, var);
+            auto e = multiply2(x, y, var, start);
 
             if (e.w != Complex::zero && e.w != Complex::one) {
                 cn.returnToCache(e.w);
@@ -842,7 +904,7 @@ namespace dd {
 
     private:
         template<class LeftOperandNode, class RightOperandNode>
-        Edge<RightOperandNode> multiply2(const Edge<LeftOperandNode>& x, const Edge<RightOperandNode>& y, Qubit var) {
+        Edge<RightOperandNode> multiply2(const Edge<LeftOperandNode>& x, const Edge<RightOperandNode>& y, Qubit var, Qubit start = 0) {
             using LEdge      = Edge<LeftOperandNode>;
             using REdge      = Edge<RightOperandNode>;
             using ResultEdge = Edge<RightOperandNode>;
@@ -854,7 +916,7 @@ namespace dd {
                 return ResultEdge::zero;
             }
 
-            if (var == -1) {
+            if (var == start - 1) {
                 return ResultEdge::terminal(cn.mulCached(x.w, y.w));
             }
 
@@ -888,7 +950,7 @@ namespace dd {
                     if constexpr (N == NEDGE) {
                         // additionally check if y is the identity in case of matrix multiplication
                         if (y.p->ident) {
-                            e = makeIdent(0, var);
+                            e = makeIdent(start, var);
                         } else {
                             e = yCopy;
                         }
@@ -943,7 +1005,7 @@ namespace dd {
                             e2 = yCopy;
                         }
 
-                        auto m = multiply2(e1, e2, static_cast<Qubit>(var - 1));
+                        auto m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start);
 
                         if (k == 0 || edge[idx].w == Complex::zero) {
                             edge[idx] = m;
@@ -1071,8 +1133,8 @@ namespace dd {
         [[nodiscard]] ComputeTable<Edge<Node>, Edge<Node>, CachedEdge<Node>, 4096>& getKroneckerComputeTable();
 
         template<class Edge>
-        Edge kronecker(const Edge& x, const Edge& y) {
-            auto e = kronecker2(x, y);
+        Edge kronecker(const Edge& x, const Edge& y, bool incIdx = true) {
+            auto e = kronecker2(x, y, incIdx);
 
             if (e.w != Complex::zero && e.w != Complex::one) {
                 cn.returnToCache(e.w);
@@ -1091,8 +1153,8 @@ namespace dd {
 
     private:
         template<class Node>
-        Edge<Node> kronecker2(const Edge<Node>& x, const Edge<Node>& y) {
-            if (x.w.approximatelyZero())
+        Edge<Node> kronecker2(const Edge<Node>& x, const Edge<Node>& y, bool incIdx = true) {
+            if (x.w.approximatelyZero() || y.w.approximatelyZero())
                 return Edge<Node>::zero;
 
             if (x.isTerminal()) {
@@ -1115,9 +1177,11 @@ namespace dd {
             // special case handling for matrices
             if constexpr (N == NEDGE) {
                 if (x.p->ident) {
-                    auto e = makeDDNode(static_cast<Qubit>(y.p->v + 1), std::array{y, Edge<Node>::zero, Edge<Node>::zero, y});
+                    auto idx = incIdx ? static_cast<Qubit>(y.p->v + 1) : y.p->v;
+                    auto e   = makeDDNode(idx, std::array{y, Edge<Node>::zero, Edge<Node>::zero, y});
                     for (auto i = 0; i < x.p->v; ++i) {
-                        e = makeDDNode(static_cast<Qubit>(e.p->v + 1), std::array{e, Edge<Node>::zero, Edge<Node>::zero, e});
+                        idx = incIdx ? static_cast<Qubit>(e.p->v + 1) : e.p->v;
+                        e   = makeDDNode(idx, std::array{e, Edge<Node>::zero, Edge<Node>::zero, e});
                     }
 
                     e.w = cn.getCached(CTEntry::val(y.w.r), CTEntry::val(y.w.i));
@@ -1128,10 +1192,11 @@ namespace dd {
 
             std::array<Edge<Node>, N> edge{};
             for (auto i = 0U; i < N; ++i) {
-                edge[i] = kronecker2(x.p->e[i], y);
+                edge[i] = kronecker2(x.p->e[i], y, incIdx);
             }
 
-            auto e = makeDDNode(static_cast<Qubit>(y.p->v + x.p->v + 1), edge, true);
+            auto idx = incIdx ? static_cast<Qubit>(y.p->v + x.p->v + 1) : x.p->v;
+            auto e   = makeDDNode(idx, edge, true);
             ComplexNumbers::mul(e.w, e.w, x.w);
             computeTable.insert(x, y, {e.p, e.w});
             return e;
@@ -1234,7 +1299,7 @@ namespace dd {
         // create n-qubit identity DD. makeIdent(n) === makeIdent(0, n-1)
         mEdge makeIdent(QubitCount n) { return makeIdent(0, static_cast<Qubit>(n - 1)); }
         mEdge makeIdent(Qubit leastSignificantQubit, Qubit mostSignificantQubit) {
-            if (mostSignificantQubit < 0)
+            if (mostSignificantQubit < leastSignificantQubit)
                 return mEdge::one;
 
             if (leastSignificantQubit == 0 && IdTable[mostSignificantQubit].p != nullptr) {
@@ -1710,6 +1775,182 @@ namespace dd {
             cn.returnToCache(c);
         }
 
+        void exportAmplitudesRec(const dd::Package::vEdge& edge, std::ostream& oss, const std::string& path, Complex& amplitude, dd::QubitCount level, bool binary = false) {
+            if (edge.isTerminal()) {
+                auto amp = cn.getTemporary();
+                dd::ComplexNumbers::mul(amp, amplitude, edge.w);
+                for (std::size_t i = 0; i < (1UL << level); i++) {
+                    if (binary) {
+                        amp.writeBinary(oss);
+                    } else {
+                        oss << amp.toString(false, 16) << "\n";
+                    }
+                }
+
+                return;
+            }
+
+            auto a = cn.mulCached(amplitude, edge.w);
+            exportAmplitudesRec(edge.p->e[0], oss, path + "0", a, level - 1, binary);
+            exportAmplitudesRec(edge.p->e[1], oss, path + "1", a, level - 1, binary);
+            cn.returnToCache(a);
+        }
+        void exportAmplitudes(const dd::Package::vEdge& edge, std::ostream& oss, dd::QubitCount nq, bool binary = false) {
+            if (edge.isTerminal()) {
+                // TODO special treatment
+                return;
+            }
+            auto weight = cn.getCached(1., 0.);
+            exportAmplitudesRec(edge, oss, "", weight, nq, binary);
+            cn.returnToCache(weight);
+        }
+        void exportAmplitudes(const dd::Package::vEdge& edge, const std::string& outputFilename, dd::QubitCount nq, bool binary = false) {
+            std::ofstream      init(outputFilename);
+            std::ostringstream oss{};
+
+            exportAmplitudes(edge, oss, nq, binary);
+
+            init << oss.str() << std::flush;
+            init.close();
+        }
+
+        void exportAmplitudesRec(const dd::Package::vEdge& edge, std::vector<ComplexValue>& amplitudes, Complex& amplitude, dd::QubitCount level, std::size_t idx) {
+            if (edge.isTerminal()) {
+                auto amp = cn.getTemporary();
+                dd::ComplexNumbers::mul(amp, amplitude, edge.w);
+                idx <<= level;
+                for (std::size_t i = 0; i < (1UL << level); i++) {
+                    amplitudes[idx++] = dd::ComplexValue{dd::ComplexTable<>::Entry::val(amp.r), dd::ComplexTable<>::Entry::val(amp.i)};
+                }
+
+                return;
+            }
+
+            auto a = cn.mulCached(amplitude, edge.w);
+            exportAmplitudesRec(edge.p->e[0], amplitudes, a, level - 1, idx << 1);
+            exportAmplitudesRec(edge.p->e[1], amplitudes, a, level - 1, (idx << 1) | 1);
+            cn.returnToCache(a);
+        }
+        void exportAmplitudes(const dd::Package::vEdge& edge, std::vector<ComplexValue>& amplitudes, dd::QubitCount nq) {
+            if (edge.isTerminal()) {
+                // TODO special treatment
+                return;
+            }
+            auto weight = cn.getCached(1., 0.);
+            exportAmplitudesRec(edge, amplitudes, weight, nq, 0);
+            cn.returnToCache(weight);
+        }
+
+        void addAmplitudesRec(const dd::Package::vEdge& edge, std::vector<ComplexValue>& amplitudes, ComplexValue& amplitude, dd::QubitCount level, std::size_t idx) {
+            auto         ar = dd::ComplexTable<>::Entry::val(edge.w.r);
+            auto         ai = dd::ComplexTable<>::Entry::val(edge.w.i);
+            ComplexValue amp{ar * amplitude.r - ai * amplitude.i, ar * amplitude.i + ai * amplitude.r};
+
+            if (edge.isTerminal()) {
+                idx <<= level;
+                for (std::size_t i = 0; i < (1UL << level); i++) {
+                    auto temp         = dd::ComplexValue{amp.r + amplitudes[idx].r, amp.i + amplitudes[idx].i};
+                    amplitudes[idx++] = temp;
+                }
+
+                return;
+            }
+
+            addAmplitudesRec(edge.p->e[0], amplitudes, amp, level - 1, idx << 1);
+            addAmplitudesRec(edge.p->e[1], amplitudes, amp, level - 1, idx << 1 | 1);
+        }
+        void addAmplitudes(const dd::Package::vEdge& edge, std::vector<ComplexValue>& amplitudes, dd::QubitCount nq) {
+            if (edge.isTerminal()) {
+                // TODO special treatment
+                return;
+            }
+            ComplexValue a{1., 0.};
+            addAmplitudesRec(edge, amplitudes, a, nq, 0);
+        }
+
+        // transfers a decision diagram from another package to this package
+        template<class Edge>
+        Edge transfer(Edge& original) {
+            // POST ORDER TRAVERSAL USING ONE STACK   https://www.geeksforgeeks.org/iterative-postorder-traversal-using-stack/
+            Edge              root{};
+            std::stack<Edge*> stack;
+
+            std::unordered_map<decltype(original.p), decltype(original.p)> mapped_node{};
+
+            Edge* currentEdge = &original;
+            if (!currentEdge->isTerminal()) {
+                constexpr std::size_t N = std::tuple_size_v<decltype(original.p->e)>;
+                do {
+                    while (currentEdge != nullptr && !currentEdge->isTerminal()) {
+                        for (short i = N - 1; i > 0; --i) {
+                            auto& edge = currentEdge->p->e[i];
+                            if (edge.isTerminal()) {
+                                continue;
+                            }
+                            if (edge.w.approximatelyZero()) {
+                                continue;
+                            }
+                            if (mapped_node.find(edge.p) != mapped_node.end()) {
+                                continue;
+                            }
+
+                            // non-zero edge to be included
+                            stack.push(&edge);
+                        }
+                        stack.push(currentEdge);
+                        currentEdge = &currentEdge->p->e[0];
+                    }
+                    currentEdge = stack.top();
+                    stack.pop();
+
+                    bool hasChild = false;
+                    for (std::size_t i = 1; i < N && !hasChild; ++i) {
+                        auto& edge = currentEdge->p->e[i];
+                        if (edge.w.approximatelyZero()) {
+                            continue;
+                        }
+                        if (mapped_node.find(edge.p) != mapped_node.end()) {
+                            continue;
+                        }
+                        hasChild = edge.p == stack.top()->p;
+                    }
+
+                    if (hasChild) {
+                        Edge* temp = stack.top();
+                        stack.pop();
+                        stack.push(currentEdge);
+                        currentEdge = temp;
+                    } else {
+                        if (mapped_node.find(currentEdge->p) != mapped_node.end()) {
+                            currentEdge = nullptr;
+                            continue;
+                        }
+                        std::array<Edge, N> edges{};
+                        for (std::size_t i = 0; i < N; i++) {
+                            if (currentEdge->p->e[i].isTerminal()) {
+                                edges[i].p = currentEdge->p->e[i].p;
+                            } else {
+                                edges[i].p = mapped_node[currentEdge->p->e[i].p];
+                            }
+                            edges[i].w = cn.lookup(currentEdge->p->e[i].w);
+                        }
+                        root                        = makeDDNode(currentEdge->p->v, edges);
+                        mapped_node[currentEdge->p] = root.p;
+                        currentEdge                 = nullptr;
+                    }
+                } while (!stack.empty());
+
+                auto w = cn.getCached(dd::ComplexTable<>::Entry::val(original.w.r), dd::ComplexTable<>::Entry::val(original.w.i));
+                dd::ComplexNumbers::mul(w, root.w, w);
+                root.w = cn.lookup(w);
+                cn.returnToCache(w);
+            } else {
+                root.p = original.p; // terminal -> static
+                root.w = cn.lookup(original.w);
+            }
+            return root;
+        }
+
         ///
         /// Deserialization
         /// Note: do not rely on the binary format being portable across different architectures/platforms
@@ -1813,7 +2054,7 @@ namespace dd {
 
         template<class Node, class Edge = Edge<Node>>
         Edge deserialize(const std::string& inputFilename, bool readBinary) {
-            auto ifs = std::ifstream(inputFilename);
+            auto ifs = std::ifstream(inputFilename, std::ios::binary);
 
             if (!ifs.good()) {
                 throw std::invalid_argument("Cannot open serialized file: " + inputFilename);

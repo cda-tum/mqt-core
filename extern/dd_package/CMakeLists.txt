@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.14...3.19)
 # project definition
 project(DDPackage
         LANGUAGES CXX
-        VERSION 2.0.1
+        VERSION 2.0.2
         DESCRIPTION "JKQ decision diagram package tailored to quantum computing")
 
 # enable organization of targets into folders
