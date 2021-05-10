@@ -703,7 +703,7 @@ namespace dd {
             return result;
         }
 
-    private:
+    public:
         template<class Node>
         Edge<Node> add2(const Edge<Node>& x, const Edge<Node>& y) {
             if (x.p == nullptr) return y;
