@@ -274,6 +274,10 @@ namespace dd {
             allocationSize = INITIAL_ALLOCATION_SIZE * GROWTH_FACTOR;
             allocations    = INITIAL_ALLOCATION_SIZE;
 
+            for (auto& node: chunks[0]) {
+                node.ref = 0;
+            }
+
             nodeCount     = 0;
             peakNodeCount = 0;
 
