@@ -10,29 +10,29 @@ on:
 env:
   BUILD_TYPE: Release
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
-
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-
       - name:  Configure CMake
-        shell: bash
         run:   |
                if [ "$RUNNER_OS" == "Windows" ]; then
                  cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl"
                else
                  cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE
                fi
-
       - name:  Build
-        shell: bash
         run:   cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE
 
   test:
@@ -42,52 +42,39 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
-
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-
       - name:  Configure CMake
-        shell: bash
         run:   |
                if [ "$RUNNER_OS" == "Windows" ]; then
                  cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl"
                else
                  cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE
                fi
-
       - name:  Build
-        shell: bash
         run:   cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE
 
       - name:              Test
         working-directory: ${{github.workspace}}/build
         shell:             bash
-        run:               ctest -C $BUILD_TYPE
+        run:               ctest -C $BUILD_TYPE --output-on-failure
 
   coverage:
     needs:   test
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-
       - name:  Configure CMake
-        shell: bash
         run:   cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Release -DCOVERAGE=1
-
       - name:  Build
-        shell: bash
         run:   cmake --build "${{github.workspace}}/build" --config Release --target DDPackage_test
-
       - name:              Test
         working-directory: ${{github.workspace}}/build/test
-        shell:             bash
         run:               ./DDPackage_test
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
@@ -119,18 +106,12 @@ jobs:
         with:
           submodules: recursive
       - name:  Configure CMake
-        shell: bash
         run:   cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Release
-
       - name:  Build
-        shell: bash
         run:   cmake --build "${{github.workspace}}/build" --config Release --target DDPackage_bench
-
       - name:              Run Benchmarks
         working-directory: ${{github.workspace}}/build
-        shell:             bash
         run:               ./DDPackage_bench --benchmark_format=json | tee benchmark_result.json
-
       - name: Store benchmark result # for pushes
         uses: rhysd/github-action-benchmark@v1
         #        if: github.event_name == 'push'

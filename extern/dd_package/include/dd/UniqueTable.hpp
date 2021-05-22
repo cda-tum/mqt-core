@@ -70,10 +70,15 @@ namespace dd {
 
         // access functions
         [[nodiscard]] std::size_t getNodeCount() const { return nodeCount; }
+
         [[nodiscard]] std::size_t getPeakNodeCount() const { return peakNodeCount; }
+
         [[nodiscard]] std::size_t getMaxActiveNodes() const { return maxActive; }
+
         [[nodiscard]] std::size_t getAllocations() const { return allocations; }
-        [[nodiscard]] float       getGrowthFactor() const { return GROWTH_FACTOR; }
+
+        [[nodiscard]] float getGrowthFactor() const { return GROWTH_FACTOR; }
+
         [[nodiscard]] const auto& getTables() const { return tables; }
 
         // lookup a node in the unique table for the appropriate variable; insert it, if it has not been found
@@ -162,7 +167,8 @@ namespace dd {
                 return;
 
             if (e.p->ref == std::numeric_limits<decltype(e.p->ref)>::max()) {
-                std::clog << "[WARN] MAXREFCNT reached for p=" << reinterpret_cast<std::uintptr_t>(e.p) << ". Node will never be collected." << std::endl;
+                std::clog << "[WARN] MAXREFCNT reached for p=" << reinterpret_cast<std::uintptr_t>(e.p)
+                          << ". Node will never be collected." << std::endl;
                 return;
             }
 
@@ -306,9 +312,12 @@ namespace dd {
                         std::cout << "\tkey=" << key << ": ";
 
                     while (p != nullptr) {
-                        std::cout << "\t\t" << std::hex << reinterpret_cast<std::uintptr_t>(p) << std::dec << " " << p->ref << std::hex;
+                        std::cout << "\t\t" << std::hex << reinterpret_cast<std::uintptr_t>(p) << std::dec << " "
+                                  << p->ref << std::hex;
                         for (const auto& e: p->e) {
-                            std::cout << " p" << reinterpret_cast<std::uintptr_t>(e.p) << "(r" << reinterpret_cast<std::uintptr_t>(e.w.r) << " i" << reinterpret_cast<std::uintptr_t>(e.w.i) << ")";
+                            std::cout << " p" << reinterpret_cast<std::uintptr_t>(e.p) << "(r"
+                                      << reinterpret_cast<std::uintptr_t>(e.w.r) << " i"
+                                      << reinterpret_cast<std::uintptr_t>(e.w.i) << ")";
                         }
                         std::cout << std::dec << "\n";
                         p = p->next;
@@ -326,15 +335,19 @@ namespace dd {
         }
 
         [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / lookups; }
+
         [[nodiscard]] fp colRatio() const { return static_cast<fp>(collisions) / lookups; }
 
         [[nodiscard]] std::size_t getActiveNodeCount() const {
             return activeNodeCount;
         }
+
         [[nodiscard]] std::size_t getActiveNodeCount(Qubit var) { return active.at(var); }
 
         std::ostream& printStatistics(std::ostream& os = std::cout) {
-            os << "hits: " << hits << ", collisions: " << collisions << ", looks: " << lookups << ", hitRatio: " << hitRatio() << ", colRatio: " << colRatio() << ", gc calls: " << gcCalls << ", gc runs: " << gcRuns << "\n";
+            os << "hits: " << hits << ", collisions: " << collisions << ", looks: " << lookups << ", hitRatio: "
+               << hitRatio() << ", colRatio: " << colRatio() << ", gc calls: " << gcCalls << ", gc runs: " << gcRuns
+               << "\n";
             return os;
         }
 

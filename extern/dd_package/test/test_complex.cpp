@@ -111,23 +111,64 @@ TEST(DDComplexTest, NearZeroLookup) {
     EXPECT_EQ(d.i, Complex::zero.i);
 }
 
+TEST(DDComplexTest, SortedBuckets) {
+    auto     ct  = ComplexTable<>{};
+    const fp num = 0.25;
+
+    const std::array<dd::fp, 7> numbers = {
+            num + 2. * ComplexTable<>::tolerance(),
+            num - 2. * ComplexTable<>::tolerance(),
+            num + 4. * ComplexTable<>::tolerance(),
+            num,
+            num - 4. * ComplexTable<>::tolerance(),
+            num + 6. * ComplexTable<>::tolerance(),
+            num + 8. * ComplexTable<>::tolerance()};
+
+    const std::size_t the_bucket = ct.hash(num);
+
+    for (auto const& number: numbers) {
+        ASSERT_EQ(the_bucket, ct.hash(number));
+        ct.lookup(number);
+    }
+
+    CTEntry* p = ct.getTable().at(the_bucket);
+    ASSERT_NE(p, nullptr);
+
+    dd::fp      last    = std::numeric_limits<dd::fp>::min();
+    std::size_t counter = 0;
+    while (p != nullptr) {
+        ASSERT_LT(last, p->value);
+        p = p->next;
+        ++counter;
+    }
+    ct.printStatistics(std::cout);
+    EXPECT_EQ(ct.getStatistics().at("lowerNeighbors"), 1); // default insertion of 0.5 is close to lower bucket
+    EXPECT_EQ(counter, numbers.size());
+}
+
 TEST(DDComplexTest, GarbageCollectSomeInBucket) {
     auto cn = ComplexNumbers();
     EXPECT_EQ(cn.garbageCollect(), 0);
 
-    fp num = 0.25;
+    const fp num = 0.25;
     cn.lookup(num, 0.0);
 
-    fp num2 = num + 2. * ComplexTable<>::tolerance();
+    const fp num2 = num + 2. * ComplexTable<>::tolerance();
     ComplexNumbers::incRef(cn.lookup(num2, 0.0)); // num2 should be placed in same bucket as num
 
-    auto  key = ComplexTable<>::hash(num);
-    auto* p   = cn.complexTable.getTable()[key];
-    EXPECT_NEAR(p->value, num2, ComplexTable<>::tolerance());
-    EXPECT_NEAR((p->next)->value, num, ComplexTable<>::tolerance());
+    auto key  = ComplexTable<>::hash(num);
+    auto key2 = ComplexTable<>::hash(num2);
+    ASSERT_EQ(key, key2);
+
+    auto* p = cn.complexTable.getTable()[key];
+    EXPECT_NEAR(p->value, num, ComplexTable<>::tolerance());
+
+    ASSERT_NE(p->next, nullptr);
+    EXPECT_NEAR((p->next)->value, num2, ComplexTable<>::tolerance());
 
     cn.garbageCollect(true); // num should be collected
     EXPECT_NEAR(cn.complexTable.getTable()[key]->value, num2, ComplexTable<>::tolerance());
+    EXPECT_EQ(cn.complexTable.getTable()[key]->next, nullptr);
 }
 
 TEST(DDComplexTest, LookupInNeighbouringBuckets) {

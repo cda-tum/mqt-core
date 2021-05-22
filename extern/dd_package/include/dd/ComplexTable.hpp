@@ -16,7 +16,9 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace dd {
@@ -36,12 +38,15 @@ namespace dd {
             [[nodiscard]] static inline Entry* getAlignedPointer(const Entry* e) {
                 return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) & (~1ULL));
             }
+
             [[nodiscard]] static inline Entry* getNegativePointer(const Entry* e) {
                 return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) | 1ULL);
             }
+
             [[nodiscard]] static inline Entry* flipPointerSign(const Entry* e) {
                 return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) ^ 1ULL);
             }
+
             [[nodiscard]] static inline bool isNegativePointer(const Entry* e) {
                 return reinterpret_cast<std::uintptr_t>(e) & 1ULL;
             }
@@ -100,6 +105,7 @@ namespace dd {
         static fp tolerance() {
             return TOLERANCE;
         }
+
         static void setTolerance(fp tol) {
             TOLERANCE = tol;
         }
@@ -109,96 +115,85 @@ namespace dd {
         // linear (clipped) hash function
         static constexpr std::size_t hash(const fp val) {
             assert(val >= 0);
-            auto key = static_cast<std::size_t>(val * MASK + 0.5L);
-            return std::min(key, MASK);
+            auto key = static_cast<std::size_t>(val * MASK + static_cast<dd::fp>(0.5));
+            return std::min<std::size_t>(key, MASK);
         }
-
-        static constexpr std::size_t zeroKey    = hash(0.);
-        static constexpr std::size_t sqrt2_2Key = hash(SQRT2_2);
-        static constexpr std::size_t oneKey     = hash(1.);
 
         // access functions
         [[nodiscard]] std::size_t getCount() const { return count; }
+
         [[nodiscard]] std::size_t getPeakCount() const { return peakCount; }
+
         [[nodiscard]] std::size_t getAllocations() const { return allocations; }
+
         [[nodiscard]] std::size_t getGrowthFactor() const { return GROWTH_FACTOR; }
+
         [[nodiscard]] const auto& getTable() const { return table; }
-        [[nodiscard]] bool        availableEmpty() const { return available == nullptr; };
+
+        [[nodiscard]] bool availableEmpty() const { return available == nullptr; };
 
         Entry* lookup(const fp& val) {
             assert(!std::isnan(val));
-
-            // special treatment of zero and one (these are not counted as lookups)
-            if (std::abs(val) < TOLERANCE)
+            assert(val >= 0); // required anyway for the hash function
+            ++lookups;
+            if (std::abs(val) < TOLERANCE) {
+                ++hits;
                 return &zero;
-
-            if (std::abs(val - 1.) < TOLERANCE)
-                return &one;
-
-            lookups++;
-
-            // search in intended bucket
-            const auto key = hash(val);
-
-            // ensure that the exact value of important constants is checked first on all occasions
-            if (key == zeroKey) {
-                if (std::abs(val) < TOLERANCE) {
-                    ++hits;
-                    return &zero;
-                } else {
-                    ++collisions;
-                }
-            } else if (key == oneKey) {
-                if (std::abs(val - 1.) < TOLERANCE) {
-                    ++hits;
-                    return &one;
-                } else {
-                    ++collisions;
-                }
-            } else if (key == sqrt2_2Key) {
-                if (std::abs(val - SQRT2_2) < TOLERANCE) {
-                    ++hits;
-                    return &sqrt2_2;
-                } else {
-                    ++collisions;
-                }
             }
 
-            const auto& bucket = table[key];
-            auto        p      = find(bucket, val);
+            if (std::abs(val - 1.) < TOLERANCE) {
+                ++hits;
+                return &one;
+            }
+
+            if (std::abs(val - SQRT2_2) < TOLERANCE) {
+                ++hits;
+                return &sqrt2_2;
+            }
+
+            assert(val - TOLERANCE >= 0); // should be handle above as special case
+
+            const std::size_t lowerKey = hash(val - TOLERANCE);
+            const std::size_t upperKey = hash(val + TOLERANCE);
+
+            if (upperKey == lowerKey) {
+                ++findOrInserts;
+                return findOrInsert(lowerKey, val);
+            }
+
+            // code below is to handle cases where the looked up value
+            // could be in the lower or upper buckets and we have to go through them
+
+            const std::size_t key = hash(val);
+
+            Entry* p = find(table[key], val);
             if (p != nullptr) {
                 return p;
             }
 
             // search in (potentially) lower bucket
-            if (val - TOLERANCE >= 0) {
-                const auto lowerKey = hash(val - TOLERANCE);
-                if (lowerKey != key) {
-                    const auto& lowerBucket = table[lowerKey];
-                    p                       = find(lowerBucket, val);
-                    if (p != nullptr) {
-                        return p;
-                    }
+            if (lowerKey != key) {
+                ++lowerNeighbors;
+                // buckets are sorted so we only have to look into the last entry of the lower bucket
+                Entry* p_lower = tailTable[lowerKey];
+                if (p_lower != nullptr && val - p_lower->value < TOLERANCE) {
+                    return p_lower;
                 }
             }
 
             // search in (potentially) higher bucket
-            const auto upperKey = hash(val - TOLERANCE);
             if (upperKey != key) {
-                const auto& upperBucket = table[upperKey];
-                p                       = find(upperBucket, val);
-                if (p != nullptr) {
-                    return p;
+                ++upperNeighbors;
+                // buckets are sorted, we only have to look at the first element
+
+                Entry* p_upper = table[upperKey];
+                if (p_upper != nullptr && p_upper->value - val < TOLERANCE) {
+                    return p_upper;
                 }
             }
 
             // value was not found in the table -> get a new entry and add it to the central bucket
-            Entry* entry = getEntry();
-            entry->value = val;
-            entry->next  = table[key];
-            table[key]   = entry;
-            count++;
-            peakCount = std::max(peakCount, count);
+            Entry* entry = insert(key, val);
             return entry;
         }
 
@@ -243,7 +238,8 @@ namespace dd {
             // important (static) numbers are never altered
             if (entryPtr != &one && entryPtr != &zero && entryPtr != &sqrt2_2) {
                 if (entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
-                    std::clog << "[WARN] MAXREFCNT reached for " << entryPtr->value << ". Number will never be collected." << std::endl;
+                    std::clog << "[WARN] MAXREFCNT reached for " << entryPtr->value
+                              << ". Number will never be collected." << std::endl;
                     return;
                 }
 
@@ -266,7 +262,8 @@ namespace dd {
                     return;
                 }
                 if (entryPtr->refCount == 0) {
-                    throw std::runtime_error("In ComplexTable: RefCount of entry " + std::to_string(entryPtr->value) + " is zero before decrement");
+                    throw std::runtime_error("In ComplexTable: RefCount of entry " + std::to_string(entryPtr->value) +
+                                             " is zero before decrement");
                 }
 
                 // decrease reference count
@@ -286,14 +283,14 @@ namespace dd {
             gcRuns++;
             std::size_t collected = 0;
             std::size_t remaining = 0;
-            for (auto& bucket: table) {
-                Entry* p     = bucket;
+            for (std::size_t key = 0; key < table.size(); ++key) {
+                Entry* p     = table[key];
                 Entry* lastp = nullptr;
                 while (p != nullptr) {
                     if (p->refCount == 0) {
                         Entry* next = p->next;
                         if (lastp == nullptr) {
-                            bucket = next;
+                            table[key] = next;
                         } else {
                             lastp->next = next;
                         }
@@ -305,6 +302,7 @@ namespace dd {
                         p     = p->next;
                         remaining++;
                     }
+                    tailTable[key] = lastp;
                 }
             }
             // The garbage collection limit changes dynamically depending on the number of remaining (active) nodes.
@@ -326,6 +324,9 @@ namespace dd {
             for (auto& bucket: table) {
                 bucket = nullptr;
             }
+            for (auto& entry: tailTable) {
+                entry = nullptr;
+            }
 
             // clear available stack
             available = nullptr;
@@ -341,12 +342,21 @@ namespace dd {
             allocationSize = INITIAL_ALLOCATION_SIZE * GROWTH_FACTOR;
             allocations    = INITIAL_ALLOCATION_SIZE;
 
+            for (auto& entry: chunks[0]) {
+                entry.refCount = 0;
+            }
+
             count     = 0;
             peakCount = 0;
 
-            collisions = 0;
-            hits       = 0;
-            lookups    = 0;
+            collisions       = 0;
+            insertCollisions = 0;
+            hits             = 0;
+            findOrInserts    = 0;
+            lookups          = 0;
+            inserts          = 0;
+            lowerNeighbors   = 0;
+            upperNeighbors   = 0;
 
             gcCalls = 0;
             gcRuns  = 0;
@@ -361,7 +371,8 @@ namespace dd {
                               << "\n";
 
                 while (p != nullptr) {
-                    std::cout << "\t\t" << p->value << " " << reinterpret_cast<std::uintptr_t>(p) << " " << p->refCount << "\n";
+                    std::cout << "\t\t" << p->value << " " << reinterpret_cast<std::uintptr_t>(p) << " " << p->refCount
+                              << "\n";
                     p = p->next;
                 }
 
@@ -371,10 +382,40 @@ namespace dd {
         }
 
         [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / lookups; }
+
         [[nodiscard]] fp colRatio() const { return static_cast<fp>(collisions) / lookups; }
 
+        std::map<std::string, std::size_t> getStatistics() {
+            return {
+                    {"hits", hits},
+                    {"collisions", collisions},
+                    {"lookups", lookups},
+                    {"inserts", inserts},
+                    {"insertCollisions", insertCollisions},
+                    {"findOrInserts", findOrInserts},
+                    {"upperNeighbors", upperNeighbors},
+                    {"lowerNeighbors", lowerNeighbors},
+                    {"gcCalls", gcCalls},
+                    {"gcRuns", gcRuns},
+            };
+        }
+
         std::ostream& printStatistics(std::ostream& os = std::cout) {
-            os << "hits: " << hits << ", collisions: " << collisions << ", looks: " << lookups << ", hitRatio: " << hitRatio() << ", colRatio: " << colRatio() << ", gc calls: " << gcCalls << ", gc runs: " << gcRuns << "\n";
+            // clang-format off
+            os << "hits: " << hits
+               << ", collisions: " << collisions
+               << ", looks: " << lookups
+               << ", inserts: " << inserts
+               << ", insertCollisions: " << insertCollisions
+               << ", findOrInserts: " << findOrInserts
+               << ", upperNeighbors: " << upperNeighbors
+               << ", lowerNeighbors: " << lowerNeighbors
+               << ", hitRatio: " << hitRatio()
+               << ", colRatio: " << colRatio()
+               << ", gc calls: " << gcCalls
+               << ", gc runs: " << gcRuns
+               << "\n";
+            // clang-format on
             return os;
         }
 
@@ -383,6 +424,18 @@ namespace dd {
         using Table  = std::array<Bucket, NBUCKET>;
 
         Table table{};
+
+        std::array<Entry*, NBUCKET> tailTable{};
+
+        // table lookup statistics
+        std::size_t collisions       = 0;
+        std::size_t insertCollisions = 0;
+        std::size_t hits             = 0;
+        std::size_t findOrInserts    = 0;
+        std::size_t lookups          = 0;
+        std::size_t inserts          = 0;
+        std::size_t lowerNeighbors   = 0;
+        std::size_t upperNeighbors   = 0;
 
         // numerical tolerance to be used for floating point values
         static inline fp TOLERANCE = 1e-13;
@@ -398,27 +451,94 @@ namespace dd {
         std::size_t count       = 0;
         std::size_t peakCount   = 0;
 
-        // table lookup statistics
-        std::size_t collisions = 0;
-        std::size_t hits       = 0;
-        std::size_t lookups    = 0;
-
         // garbage collection
         std::size_t gcCalls = 0;
         std::size_t gcRuns  = 0;
         std::size_t gcLimit = 100000;
 
+        inline Entry* findOrInsert(const std::size_t key, const fp val) {
+            [[maybe_unused]] const fp val_tol = val + TOLERANCE;
+
+            Entry* curr = table[key];
+            Entry* prev = nullptr;
+
+            while (curr != nullptr && val_tol > curr->value) {
+                if (std::abs(curr->value - val) < TOLERANCE) {
+                    ++hits;
+                    return curr;
+                }
+                ++collisions;
+                prev = curr;
+                curr = curr->next;
+            }
+
+            ++inserts;
+            Entry* entry = getEntry();
+            entry->value = val;
+
+            if (prev == nullptr) {
+                // table bucket is empty
+                table[key] = entry;
+            } else {
+                prev->next = entry;
+            }
+            entry->next = curr;
+            if (curr == nullptr) {
+                tailTable[key] = entry;
+            }
+            count++;
+            peakCount = std::max(peakCount, count);
+            return entry;
+        }
+
+        /**
+         * Inserts a value into the bucket indexed by key. This function assumes no element within TOLERANCE is
+         * present in the bucket.
+         * @param key index to the bucket
+         * @param val value to be inserted
+         * @return pointer to the inserted entry
+         */
+        inline Entry* insert(const std::size_t key, const fp val) {
+            ++inserts;
+            Entry* entry = getEntry();
+            entry->value = val;
+
+            Entry* curr = table[key];
+            Entry* prev = nullptr;
+
+            while (curr != nullptr && val < curr->value) {
+                ++insertCollisions;
+                prev = curr;
+                curr = curr->next;
+            }
+
+            if (prev == nullptr) {
+                // table bucket is empty
+                table[key] = entry;
+            } else {
+                prev->next = entry;
+            }
+            entry->next = curr;
+            if (curr == nullptr) {
+                tailTable[key] = entry;
+            }
+            count++;
+            peakCount = std::max(peakCount, count);
+            return entry;
+        }
+
         inline Entry* find(const Bucket& bucket, const fp& val) {
-            auto p = bucket;
-            while (p != nullptr) {
-                if (std::abs(p->value - val) < TOLERANCE) {
+            Entry*   p       = bucket;
+            const fp val_tol = val - TOLERANCE;
+            while (p != nullptr && val_tol <= p->value) {
+                if (p->value - val < TOLERANCE) {
                     ++hits;
                     return p;
                 }
                 ++collisions;
                 p = p->next;
             }
-            return p;
+            return nullptr;
         }
     };
 } // namespace dd
