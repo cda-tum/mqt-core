@@ -6,16 +6,16 @@
 #ifndef QFR_QASMQOBJEXPERIMENT_HPP
 #define QFR_QASMQOBJEXPERIMENT_HPP
 
-namespace qiskit {
+namespace qc::qiskit {
     class QasmQobjExperiment {
     public:
-        static void import(qc::QuantumComputation& qc, const py::object& circ) {
+        static void import(QuantumComputation& qc, const py::object& circ) {
             qc.reset();
 
             py::object pyQasmQobjExperiment = py::module::import("qiskit.qobj").attr("QasmQobjExperiment");
 
             if (!py::isinstance(circ, pyQasmQobjExperiment)) {
-                throw qc::QFRException("[import] Python object needs to be a Qiskit QasmQobjExperiment");
+                throw QFRException("[import] Python object needs to be a Qiskit QasmQobjExperiment");
             }
 
             auto&& header = circ.attr("header");
@@ -39,76 +39,76 @@ namespace qiskit {
         }
 
     protected:
-        static void emplaceInstruction(qc::QuantumComputation& qc, const py::object& instruction) {
+        static void emplaceInstruction(QuantumComputation& qc, const py::object& instruction) {
             static const auto nativelySupportedGates = std::set<std::string>{"i", "id", "iden", "x", "y", "z", "h", "s", "sdg", "t", "tdg", "p", "u1", "rx", "ry", "rz", "u2", "u", "u3", "cx", "cy", "cz", "cp", "cu1", "ch", "crx", "cry", "crz", "cu3", "ccx", "swap", "cswap", "iswap", "sx", "sxdg", "csx", "mcx_gray", "mcx_recursive", "mcx_vchain", "mcphase", "mcrx", "mcry", "mcrz"};
 
             auto instructionName = instruction.attr("name").cast<std::string>();
             if (instructionName == "measure") {
                 auto qubit = instruction.attr("qubits").cast<py::list>()[0].cast<dd::Qubit>();
                 auto clbit = instruction.attr("memory").cast<py::list>()[0].cast<std::size_t>();
-                qc.emplace_back<qc::NonUnitaryOperation>(qc.getNqubits(), qubit, clbit);
+                qc.emplace_back<NonUnitaryOperation>(qc.getNqubits(), qubit, clbit);
             } else if (instructionName == "barrier") {
-                qc::Targets targets{};
+                Targets targets{};
                 for (const auto qubit: instruction.attr("qubits")) {
                     auto target = qubit.cast<dd::Qubit>();
                     targets.emplace_back(target);
                 }
-                qc.emplace_back<qc::NonUnitaryOperation>(qc.getNqubits(), targets, qc::Barrier);
+                qc.emplace_back<NonUnitaryOperation>(qc.getNqubits(), targets, Barrier);
             } else if (nativelySupportedGates.count(instructionName)) {
                 auto&&   qubits = instruction.attr("qubits").cast<py::list>();
                 py::list params{};
                 // natively supported operations
                 if (instructionName == "i" || instructionName == "id" || instructionName == "iden") {
-                    addOperation(qc, qc::I, qubits, params);
+                    addOperation(qc, I, qubits, params);
                 } else if (instructionName == "x" || instructionName == "cx" || instructionName == "ccx" || instructionName == "mcx_gray") {
-                    addOperation(qc, qc::X, qubits, params);
+                    addOperation(qc, X, qubits, params);
                 } else if (instructionName == "y" || instructionName == "cy") {
-                    addOperation(qc, qc::Y, qubits, params);
+                    addOperation(qc, Y, qubits, params);
                 } else if (instructionName == "z" || instructionName == "cz") {
-                    addOperation(qc, qc::Z, qubits, params);
+                    addOperation(qc, Z, qubits, params);
                 } else if (instructionName == "h" || instructionName == "ch") {
-                    addOperation(qc, qc::H, qubits, params);
+                    addOperation(qc, H, qubits, params);
                 } else if (instructionName == "s") {
-                    addOperation(qc, qc::S, qubits, params);
+                    addOperation(qc, S, qubits, params);
                 } else if (instructionName == "sdg") {
-                    addOperation(qc, qc::Sdag, qubits, params);
+                    addOperation(qc, Sdag, qubits, params);
                 } else if (instructionName == "t") {
-                    addOperation(qc, qc::T, qubits, params);
+                    addOperation(qc, T, qubits, params);
                 } else if (instructionName == "tdg") {
-                    addOperation(qc, qc::Tdag, qubits, params);
+                    addOperation(qc, Tdag, qubits, params);
                 } else if (instructionName == "rx" || instructionName == "crx" || instructionName == "mcrx") {
                     params = instruction.attr("params").cast<py::list>();
-                    addOperation(qc, qc::RX, qubits, params);
+                    addOperation(qc, RX, qubits, params);
                 } else if (instructionName == "ry" || instructionName == "cry" || instructionName == "mcry") {
                     params = instruction.attr("params").cast<py::list>();
-                    addOperation(qc, qc::RY, qubits, params);
+                    addOperation(qc, RY, qubits, params);
                 } else if (instructionName == "rz" || instructionName == "crz" || instructionName == "mcrz") {
                     params = instruction.attr("params").cast<py::list>();
-                    addOperation(qc, qc::RZ, qubits, params);
+                    addOperation(qc, RZ, qubits, params);
                 } else if (instructionName == "p" || instructionName == "u1" || instructionName == "cp" || instructionName == "cu1" || instructionName == "mcphase") {
                     params = instruction.attr("params").cast<py::list>();
-                    addOperation(qc, qc::Phase, qubits, params);
+                    addOperation(qc, Phase, qubits, params);
                 } else if (instructionName == "sx" || instructionName == "csx") {
-                    addOperation(qc, qc::SX, qubits, params);
+                    addOperation(qc, SX, qubits, params);
                 } else if (instructionName == "sxdg") {
-                    addOperation(qc, qc::SXdag, qubits, params);
+                    addOperation(qc, SXdag, qubits, params);
                 } else if (instructionName == "u2") {
                     params = instruction.attr("params").cast<py::list>();
-                    addOperation(qc, qc::U2, qubits, params);
+                    addOperation(qc, U2, qubits, params);
                 } else if (instructionName == "u" || instructionName == "u3" || instructionName == "cu3") {
                     params = instruction.attr("params").cast<py::list>();
-                    addOperation(qc, qc::U3, qubits, params);
+                    addOperation(qc, U3, qubits, params);
                 } else if (instructionName == "swap" || instructionName == "cswap") {
-                    addTwoTargetOperation(qc, qc::SWAP, qubits, params);
+                    addTwoTargetOperation(qc, SWAP, qubits, params);
                 } else if (instructionName == "iswap") {
-                    addTwoTargetOperation(qc, qc::iSWAP, qubits, params);
+                    addTwoTargetOperation(qc, iSWAP, qubits, params);
                 } else if (instructionName == "mcx_recursive") {
                     if (qubits.size() <= 5) {
-                        addOperation(qc, qc::X, qubits, params);
+                        addOperation(qc, X, qubits, params);
                     } else {
                         auto qubitsCopy = qubits.attr("copy")();
                         qubitsCopy.attr("pop")(); // discard ancillaries
-                        addOperation(qc, qc::X, qubitsCopy, params);
+                        addOperation(qc, X, qubitsCopy, params);
                     }
                 } else if (instructionName == "mcx_vchain") {
                     auto        size       = qubits.size();
@@ -118,14 +118,14 @@ namespace qiskit {
                     for (std::size_t i = 0; i < ncontrols - 2; ++i) {
                         qubitsCopy.attr("pop")();
                     }
-                    addOperation(qc, qc::X, qubitsCopy, params);
+                    addOperation(qc, X, qubitsCopy, params);
                 }
             } else {
                 std::cerr << "Failed to import instruction " << instructionName << " from Qiskit QasmQobjExperiment" << std::endl;
             }
         }
 
-        static void addOperation(qc::QuantumComputation& qc, qc::OpType type, const py::list& qubits, const py::list& params) {
+        static void addOperation(QuantumComputation& qc, OpType type, const py::list& qubits, const py::list& params) {
             std::vector<dd::Control> qargs{};
             for (const auto& qubit: qubits) {
                 auto target = qubit.cast<dd::Qubit>();
@@ -146,10 +146,10 @@ namespace qiskit {
                 lambda = params[2].cast<dd::fp>();
             }
             dd::Controls controls(qargs.cbegin(), qargs.cend());
-            qc.emplace_back<qc::StandardOperation>(qc.getNqubits(), controls, target, type, lambda, phi, theta);
+            qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target, type, lambda, phi, theta);
         }
 
-        static void addTwoTargetOperation(qc::QuantumComputation& qc, qc::OpType type, const py::list& qubits, const py::list& params) {
+        static void addTwoTargetOperation(QuantumComputation& qc, OpType type, const py::list& qubits, const py::list& params) {
             std::vector<dd::Control> qargs{};
             for (const auto& qubit: qubits) {
                 auto target = qubit.cast<dd::Qubit>();
@@ -171,8 +171,8 @@ namespace qiskit {
                 lambda = params[2].cast<dd::fp>();
             }
             dd::Controls controls(qargs.cbegin(), qargs.cend());
-            qc.emplace_back<qc::StandardOperation>(qc.getNqubits(), controls, target0, target1, type, lambda, phi, theta);
+            qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0, target1, type, lambda, phi, theta);
         }
     };
-} // namespace qiskit
+} // namespace qc::qiskit
 #endif //QFR_QASMQOBJEXPERIMENT_HPP
