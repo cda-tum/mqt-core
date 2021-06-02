@@ -28,7 +28,7 @@ TEST_P(RandomClifford, simulate) {
     const dd::QubitCount nq = GetParam();
 
     auto dd = std::make_unique<dd::Package>(nq);
-    auto qc = qc::RandomCliffordCircuit(nq, nq * nq);
+    auto qc = qc::RandomCliffordCircuit(nq, nq * nq, 12345);
     auto in = dd->makeZeroState(nq);
 
     std::cout << qc << std::endl;
@@ -40,7 +40,7 @@ TEST_P(RandomClifford, buildFunctionality) {
     const dd::QubitCount nq = GetParam();
 
     auto dd = std::make_unique<dd::Package>(nq);
-    auto qc = qc::RandomCliffordCircuit(nq, nq * nq);
+    auto qc = qc::RandomCliffordCircuit(nq, nq * nq, 12345);
     std::cout << qc << std::endl;
     ASSERT_NO_THROW({ qc.buildFunctionality(dd); });
     qc.printStatistics(std::cout);
