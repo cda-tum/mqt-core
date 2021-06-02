@@ -104,9 +104,9 @@ nl::json construct_circuit(const py::object& circ, const ConstructionMethod& met
             py::object QuantumCircuit       = py::module::import("qiskit").attr("QuantumCircuit");
             py::object pyQasmQobjExperiment = py::module::import("qiskit.qobj").attr("QasmQobjExperiment");
             if (py::isinstance(circ, QuantumCircuit)) {
-                qiskit::QuantumCircuit::import(*qc, circ);
+                qc::qiskit::QuantumCircuit::import(*qc, circ);
             } else if (py::isinstance(circ, pyQasmQobjExperiment)) {
-                qiskit::QasmQobjExperiment::import(*qc, circ);
+                qc::qiskit::QasmQobjExperiment::import(*qc, circ);
             }
             std::cout << *qc << std::endl;
         }
