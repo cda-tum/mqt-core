@@ -3,13 +3,14 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "QiskitImport.hpp"
 #include "algorithms/Grover.hpp"
 #include "algorithms/QFT.hpp"
 #include "dd/Export.hpp"
 #include "nlohmann/json.hpp"
 #include "pybind11/pybind11.h"
 #include "pybind11_json/pybind11_json.hpp"
+#include "qiskit/QasmQobjExperiment.hpp"
+#include "qiskit/QuantumCircuit.hpp"
 
 #include <chrono>
 
@@ -100,7 +101,14 @@ nl::json construct_circuit(const py::object& circ, const ConstructionMethod& met
             auto&& file = circ.cast<std::string>();
             qc->import(file);
         } else {
-            import(*qc, circ);
+            py::object QuantumCircuit       = py::module::import("qiskit").attr("QuantumCircuit");
+            py::object pyQasmQobjExperiment = py::module::import("qiskit.qobj").attr("QasmQobjExperiment");
+            if (py::isinstance(circ, QuantumCircuit)) {
+                qc::qiskit::QuantumCircuit::import(*qc, circ);
+            } else if (py::isinstance(circ, pyQasmQobjExperiment)) {
+                qc::qiskit::QasmQobjExperiment::import(*qc, circ);
+            }
+            std::cout << *qc << std::endl;
         }
     } catch (std::exception const& e) {
         std::stringstream ss{};
