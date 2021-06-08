@@ -138,9 +138,9 @@ TEST_P(QPE, QPETest) {
 }
 
 TEST_P(QPE, IQPETest) {
-    auto                     dd = std::make_unique<dd::Package>(precision + 1);
+    auto                      dd = std::make_unique<dd::Package>(precision + 1);
     std::unique_ptr<qc::IQPE> qc;
-    qc::VectorDD             e{};
+    qc::VectorDD              e{};
 
     ASSERT_NO_THROW({ qc = std::make_unique<qc::IQPE>(lambda, precision); });
 

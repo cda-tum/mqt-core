@@ -10,7 +10,7 @@
 namespace qc {
     class IQPE: public QuantumComputation {
     public:
-        dd::fp         lambda     = 0.;
+        dd::fp         lambda    = 0.;
         dd::QubitCount precision = 0;
 
         IQPE(dd::fp lambda, dd::QubitCount precision);
