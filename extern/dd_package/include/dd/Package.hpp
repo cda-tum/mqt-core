@@ -2038,13 +2038,13 @@ namespace dd {
             init.close();
         }
 
-        void exportAmplitudesRec(const dd::Package::vEdge& edge, std::vector<ComplexValue>& amplitudes, Complex& amplitude, dd::QubitCount level, std::size_t idx) {
+        void exportAmplitudesRec(const dd::Package::vEdge& edge, std::vector<std::complex<dd::fp>>& amplitudes, Complex& amplitude, dd::QubitCount level, std::size_t idx) {
             if (edge.isTerminal()) {
                 auto amp = cn.getTemporary();
                 dd::ComplexNumbers::mul(amp, amplitude, edge.w);
                 idx <<= level;
                 for (std::size_t i = 0; i < (1UL << level); i++) {
-                    amplitudes[idx++] = dd::ComplexValue{dd::ComplexTable<>::Entry::val(amp.r), dd::ComplexTable<>::Entry::val(amp.i)};
+                    amplitudes[idx++] = std::complex<dd::fp>{dd::ComplexTable<>::Entry::val(amp.r), dd::ComplexTable<>::Entry::val(amp.i)};
                 }
 
                 return;
@@ -2055,7 +2055,7 @@ namespace dd {
             exportAmplitudesRec(edge.p->e[1], amplitudes, a, level - 1, (idx << 1) | 1);
             cn.returnToCache(a);
         }
-        void exportAmplitudes(const dd::Package::vEdge& edge, std::vector<ComplexValue>& amplitudes, dd::QubitCount nq) {
+        void exportAmplitudes(const dd::Package::vEdge& edge, std::vector<std::complex<dd::fp>>& amplitudes, dd::QubitCount nq) {
             if (edge.isTerminal()) {
                 // TODO special treatment
                 return;
@@ -2065,7 +2065,7 @@ namespace dd {
             cn.returnToCache(weight);
         }
 
-        void addAmplitudesRec(const dd::Package::vEdge& edge, std::vector<ComplexValue>& amplitudes, ComplexValue& amplitude, dd::QubitCount level, std::size_t idx) {
+        void addAmplitudesRec(const dd::Package::vEdge& edge, std::vector<std::complex<dd::fp>>& amplitudes, ComplexValue& amplitude, dd::QubitCount level, std::size_t idx) {
             auto         ar = dd::ComplexTable<>::Entry::val(edge.w.r);
             auto         ai = dd::ComplexTable<>::Entry::val(edge.w.i);
             ComplexValue amp{ar * amplitude.r - ai * amplitude.i, ar * amplitude.i + ai * amplitude.r};
@@ -2073,7 +2073,7 @@ namespace dd {
             if (edge.isTerminal()) {
                 idx <<= level;
                 for (std::size_t i = 0; i < (1UL << level); i++) {
-                    auto temp         = dd::ComplexValue{amp.r + amplitudes[idx].r, amp.i + amplitudes[idx].i};
+                    auto temp         = std::complex<dd::fp>{amp.r + amplitudes[idx].real(), amp.i + amplitudes[idx].imag()};
                     amplitudes[idx++] = temp;
                 }
 
@@ -2083,7 +2083,7 @@ namespace dd {
             addAmplitudesRec(edge.p->e[0], amplitudes, amp, level - 1, idx << 1);
             addAmplitudesRec(edge.p->e[1], amplitudes, amp, level - 1, idx << 1 | 1);
         }
-        void addAmplitudes(const dd::Package::vEdge& edge, std::vector<ComplexValue>& amplitudes, dd::QubitCount nq) {
+        void addAmplitudes(const dd::Package::vEdge& edge, std::vector<std::complex<dd::fp>>& amplitudes, dd::QubitCount nq) {
             if (edge.isTerminal()) {
                 // TODO special treatment
                 return;
