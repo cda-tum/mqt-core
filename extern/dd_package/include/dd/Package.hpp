@@ -26,6 +26,7 @@
 #include <bitset>
 #include <cassert>
 #include <cmath>
+#include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
@@ -33,6 +34,8 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <queue>
+#include <random>
 #include <regex>
 #include <set>
 #include <stdexcept>
@@ -674,6 +677,198 @@ namespace dd {
             clearIdentityTable();
 
             noiseOperationTable.clear();
+        }
+
+        ///
+        /// Measurements from state decision diagrams
+        ///
+    public:
+        std::string measureAll(vEdge& rootEdge, const bool collapse, std::mt19937_64& mt, fp epsilon = 0.001) {
+            if (std::abs(ComplexNumbers::mag2(rootEdge.w) - 1.0L) > epsilon) {
+                if (rootEdge.w.approximatelyZero()) {
+                    throw std::runtime_error("Numerical instabilities led to a 0-vector! Abort simulation!");
+                }
+                std::cerr << "WARNING in MAll: numerical instability occurred during simulation: |alpha|^2 + |beta|^2 = "
+                          << ComplexNumbers::mag2(rootEdge.w) << ", but should be 1!\n";
+            }
+
+            vEdge      cur            = rootEdge;
+            const auto numberOfQubits = static_cast<QubitCount>(rootEdge.p->v + 1);
+
+            std::string result(numberOfQubits, '0');
+
+            std::uniform_real_distribution<fp> dist(0.0, 1.0L);
+
+            for (Qubit i = rootEdge.p->v; i >= 0; --i) {
+                fp p0  = ComplexNumbers::mag2(cur.p->e.at(0).w);
+                fp p1  = ComplexNumbers::mag2(cur.p->e.at(1).w);
+                fp tmp = p0 + p1;
+
+                if (std::abs(tmp - 1.0L) > epsilon) {
+                    throw std::runtime_error("Added probabilities differ from 1 by " + std::to_string(std::abs(tmp - 1.0L)));
+                }
+                p0 /= tmp;
+
+                const fp threshold = dist(mt);
+                if (threshold < p0) {
+                    cur = cur.p->e.at(0);
+                } else {
+                    result[cur.p->v] = '1';
+                    cur              = cur.p->e.at(1);
+                }
+            }
+
+            if (collapse) {
+                decRef(rootEdge);
+
+                vEdge                e = vEdge::one;
+                std::array<vEdge, 2> edges{};
+
+                for (Qubit p = 0; p < numberOfQubits; p++) {
+                    if (result[p] == '0') {
+                        edges[0] = e;
+                        edges[1] = vEdge::zero;
+                    } else {
+                        edges[0] = vEdge::zero;
+                        edges[1] = e;
+                    }
+                    e = makeDDNode(p, edges, false);
+                }
+                incRef(e);
+                rootEdge = e;
+                garbageCollect();
+            }
+
+            return std::string{result.rbegin(), result.rend()};
+        }
+
+    private:
+        double assignProbabilities(const vEdge& edge, std::unordered_map<vNode*, double>& probs) {
+            auto it = probs.find(edge.p);
+            if (it != probs.end()) {
+                return ComplexNumbers::mag2(edge.w) * it->second;
+            }
+            double sum;
+            if (edge.isTerminal()) {
+                sum = 1.0;
+            } else {
+                sum = assignProbabilities(edge.p->e.at(0), probs) + assignProbabilities(edge.p->e.at(1), probs);
+            }
+
+            probs.insert({edge.p, sum});
+
+            return ComplexNumbers::mag2(edge.w) * sum;
+        }
+
+    public:
+        char measureOneCollapsing(vEdge& root_edge, const Qubit index, const bool assumeProbabilityNormalization, std::mt19937_64& mt, fp epsilon = 0.001) {
+            std::map<vNode*, fp> probsMone;
+            std::set<vNode*>     visited;
+            std::queue<vNode*>   q;
+
+            probsMone[root_edge.p] = ComplexNumbers::mag2(root_edge.w);
+            visited.insert(root_edge.p);
+            q.push(root_edge.p);
+
+            while (q.front()->v != index) {
+                vNode* ptr = q.front();
+                q.pop();
+                fp prob = probsMone[ptr];
+
+                if (!ptr->e.at(0).w.approximatelyZero()) {
+                    const fp tmp1 = prob * ComplexNumbers::mag2(ptr->e.at(0).w);
+
+                    if (visited.find(ptr->e.at(0).p) != visited.end()) {
+                        probsMone[ptr->e.at(0).p] = probsMone[ptr->e.at(0).p] + tmp1;
+                    } else {
+                        probsMone[ptr->e.at(0).p] = tmp1;
+                        visited.insert(ptr->e.at(0).p);
+                        q.push(ptr->e.at(0).p);
+                    }
+                }
+
+                if (!ptr->e.at(1).w.approximatelyZero()) {
+                    const fp tmp1 = prob * ComplexNumbers::mag2(ptr->e.at(1).w);
+
+                    if (visited.find(ptr->e.at(1).p) != visited.end()) {
+                        probsMone[ptr->e.at(1).p] = probsMone[ptr->e.at(1).p] + tmp1;
+                    } else {
+                        probsMone[ptr->e.at(1).p] = tmp1;
+                        visited.insert(ptr->e.at(1).p);
+                        q.push(ptr->e.at(1).p);
+                    }
+                }
+            }
+
+            fp pzero{0}, pone{0};
+
+            if (assumeProbabilityNormalization) {
+                while (!q.empty()) {
+                    vNode* ptr = q.front();
+                    q.pop();
+
+                    if (!ptr->e.at(0).w.approximatelyZero()) {
+                        pzero += probsMone[ptr] * ComplexNumbers::mag2(ptr->e.at(0).w);
+                    }
+
+                    if (!ptr->e.at(1).w.approximatelyZero()) {
+                        pone += probsMone[ptr] * ComplexNumbers::mag2(ptr->e.at(1).w);
+                    }
+                }
+            } else {
+                std::unordered_map<vNode*, fp> probs;
+                assignProbabilities(root_edge, probs);
+
+                while (!q.empty()) {
+                    vNode* ptr = q.front();
+                    q.pop();
+
+                    if (!ptr->e.at(0).w.approximatelyZero()) {
+                        pzero += probsMone[ptr] * probs[ptr->e.at(0).p] * ComplexNumbers::mag2(ptr->e.at(0).w);
+                    }
+
+                    if (!ptr->e.at(1).w.approximatelyZero()) {
+                        pone += probsMone[ptr] * probs[ptr->e.at(1).p] * ComplexNumbers::mag2(ptr->e.at(1).w);
+                    }
+                }
+            }
+            const fp sum = pzero + pone;
+            if (std::abs(sum - 1) > epsilon) {
+                throw std::runtime_error("Numerical instability occurred during measurement: |alpha|^2 + |beta|^2 = " + std::to_string(pzero) + " + " + std::to_string(pone) + " = " +
+                                         std::to_string(pzero + pone) + ", but should be 1!");
+            }
+            GateMatrix measurementMatrix{
+                    complex_zero, complex_zero,
+                    complex_zero, complex_zero};
+
+            std::uniform_real_distribution<fp> dist(0.0, 1.0L);
+
+            fp   threshold = dist(mt);
+            fp   normalizationFactor;
+            char result;
+
+            if (threshold < pzero / sum) {
+                measurementMatrix[0] = complex_one;
+                normalizationFactor  = pzero;
+                result               = '0';
+            } else {
+                measurementMatrix[3] = complex_one;
+                normalizationFactor  = pone;
+                result               = '1';
+            }
+
+            mEdge measurementGate = makeGateDD(measurementMatrix, root_edge.p->v + 1, index);
+
+            vEdge e = multiply(measurementGate, root_edge);
+
+            Complex c = cn.getTemporary(std::sqrt(1.0 / normalizationFactor), 0);
+            ComplexNumbers::mul(c, e.w, c);
+            e.w = cn.lookup(c);
+            incRef(e);
+            decRef(root_edge);
+            root_edge = e;
+
+            return result;
         }
 
         ///
@@ -1606,7 +1801,7 @@ namespace dd {
         /// \tparam Edge type of edge to use (vector or matrix)
         /// \param e edge to traverse
         /// \param elements string {0, 1, 2, 3}^n describing which outgoing edge should be followed
-        ///        (for vectors entries are limitted to 0 and 1)
+        ///        (for vectors entries are limited to 0 and 1)
         ///        If string is longer than required, the additional characters are ignored.
         /// \return the complex amplitude of the specified element
         template<class Edge>
@@ -1710,6 +1905,35 @@ namespace dd {
                 getVector(e.p->e[1], c, x, vec);
             cn.returnToCache(c);
         }
+
+        std::vector<std::complex<fp>> getVectorStdComplex(const vEdge& e) {
+            std::size_t dim = 1 << (e.p->v + 1);
+            // allocate resulting vector
+            auto vec = std::vector<std::complex<fp>>(dim, {0.0, 0.0});
+            getVectorStdComplex(e, Complex::one, 0, vec);
+            return vec;
+        }
+        void getVectorStdComplex(const vEdge& e, const Complex& amp, std::size_t i, std::vector<std::complex<fp>>& vec) {
+            // calculate new accumulated amplitude
+            auto c = cn.mulCached(e.w, amp);
+
+            // base case
+            if (e.isTerminal()) {
+                vec.at(i) = {CTEntry::val(c.r), CTEntry::val(c.i)};
+                cn.returnToCache(c);
+                return;
+            }
+
+            std::size_t x = i | (1 << e.p->v);
+
+            // recursive case
+            if (!e.p->e[0].w.approximatelyZero())
+                getVectorStdComplex(e.p->e[0], c, i, vec);
+            if (!e.p->e[1].w.approximatelyZero())
+                getVectorStdComplex(e.p->e[1], c, x, vec);
+            cn.returnToCache(c);
+        }
+
         void printVector(const vEdge& e) {
             unsigned long long element = 2u << e.p->v;
             for (unsigned long long i = 0; i < element; i++) {

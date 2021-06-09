@@ -654,6 +654,48 @@ namespace dd {
         serialize(basic, ofs, writeBinary);
     }
 
+    template<typename Edge>
+    static void exportEdgeWeights(const Edge& edge, std::ostream& stream) {
+        struct priocmp {
+            bool operator()(const Edge* left, const Edge* right) {
+                return left->p->v < right->p->v;
+            }
+        };
+        stream << std::showpos << CTEntry::val(edge.w.r) << CTEntry::val(edge.w.i) << std::noshowpos << "i\n";
+
+        std::unordered_set<decltype(edge.p)> nodes{};
+
+        std::priority_queue<const Edge*, std::vector<const Edge*>, priocmp> q;
+        q.push(&edge);
+
+        // bfs until finished
+        while (!q.empty()) {
+            auto edgePtr = q.top();
+            q.pop();
+
+            // base case
+            if (edgePtr->isTerminal())
+                continue;
+
+            // check if edgePtr has already been processed
+            auto ret = nodes.emplace(edgePtr->p);
+            if (!ret.second) continue;
+
+            // iterate over edges in reverse to guarantee correct proceossing order
+            for (auto i = static_cast<Qubit>(edgePtr->p->e.size() - 1); i >= 0; --i) {
+                auto& child = edgePtr->p->e[i];
+                if (child.w.approximatelyZero()) {
+                    // potentially add zero stubs here
+                    continue;
+                }
+
+                // non-zero child to be included
+                q.push(&child);
+                stream << std::showpos << CTEntry::val(child.w.r) << CTEntry::val(child.w.i) << std::noshowpos << "i\n";
+            }
+        }
+    }
+
 } // namespace dd
 
 #endif //DDexport_H

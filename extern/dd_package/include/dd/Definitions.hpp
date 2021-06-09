@@ -49,7 +49,8 @@ namespace dd {
     static constexpr fp PI_2    = 1.570796326794896619231321691639751442098584699687552910487L;
     static constexpr fp PI_4    = 0.785398163397448309615660845819875721049292349843776455243L;
 
-    using CVec = std::vector<std::pair<float, float>>;
+    struct ComplexValue;
+    using CVec = std::vector<ComplexValue>;
     using CMat = std::vector<CVec>;
 
     static constexpr std::uint_least64_t SERIALIZATION_VERSION = 1;

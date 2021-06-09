@@ -9,6 +9,7 @@
 
 #include "gtest/gtest.h"
 #include <memory>
+#include <random>
 
 using namespace dd::literals;
 
@@ -82,7 +83,7 @@ TEST(DDPackageTest, BellState) {
     ASSERT_EQ(dd->getValueByPath(bell_state, 2), (dd::ComplexValue{0, 0}));
     ASSERT_EQ(dd->getValueByPath(bell_state, 3), (dd::ComplexValue{dd::SQRT2_2, 0}));
 
-    auto goal_state = std::vector<std::pair<float, float>>{{dd::SQRT2_2, 0.}, {0., 0.}, {0., 0.}, {dd::SQRT2_2, 0.}};
+    auto goal_state = dd::CVec{{dd::SQRT2_2, 0.}, {0., 0.}, {0., 0.}, {dd::SQRT2_2, 0.}};
     ASSERT_EQ(dd->getVector(bell_state), goal_state);
 
     ASSERT_DOUBLE_EQ(dd->fidelity(zero_state, bell_state), 0.5);
@@ -96,8 +97,30 @@ TEST(DDPackageTest, BellState) {
     export2Dot(bell_state, "bell_state_mono.dot", false, false, false, false, false);
     export2Dot(bell_state, "bell_state_mono_classic.dot", false, false, true, false, false);
     export2Dot(bell_state, "bell_state_memory.dot", false, true, true, true, false);
+    dd::exportEdgeWeights(bell_state, std::cout);
 
     dd->statistics();
+}
+
+TEST(DDPackageTest, CorruptedBellState) {
+    auto dd = std::make_unique<dd::Package>(2);
+
+    auto h_gate     = dd->makeGateDD(dd::Hmat, 2, 1);
+    auto cx_gate    = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
+    auto zero_state = dd->makeZeroState(2);
+
+    auto bell_state = dd->multiply(dd->multiply(cx_gate, h_gate), zero_state);
+
+    bell_state.w = dd->cn.getTemporary(0.5, 0);
+    // prints a warning
+    std::mt19937_64 mt;
+    std::cout << dd->measureAll(bell_state, false, mt) << "\n";
+
+    bell_state.w = dd::Complex::zero;
+
+    ASSERT_THROW(dd->measureAll(bell_state, false, mt), std::runtime_error);
+
+    ASSERT_THROW(dd->measureOneCollapsing(bell_state, 0, true, mt), std::runtime_error);
 }
 
 TEST(DDPackageTest, NegativeControl) {
@@ -453,16 +476,15 @@ TEST(DDPackageTest, GarbageVector) {
     reduced_bell_state = dd->reduceGarbage(bell_state, {false, true, false, false});
     auto vec           = dd->getVector(reduced_bell_state);
     dd->printVector(reduced_bell_state);
-    auto zero = std::pair{0.f, 0.f};
-    EXPECT_EQ(vec[2], zero);
-    EXPECT_EQ(vec[3], zero);
+    EXPECT_EQ(vec[2], dd::complex_zero);
+    EXPECT_EQ(vec[3], dd::complex_zero);
 
     dd->incRef(bell_state);
     reduced_bell_state = dd->reduceGarbage(bell_state, {true, false, false, false});
     dd->printVector(reduced_bell_state);
     vec = dd->getVector(reduced_bell_state);
-    EXPECT_EQ(vec[1], zero);
-    EXPECT_EQ(vec[3], zero);
+    EXPECT_EQ(vec[1], dd::complex_zero);
+    EXPECT_EQ(vec[3], dd::complex_zero);
 }
 
 TEST(DDPackageTest, GarbageMatrix) {
@@ -731,4 +753,87 @@ TEST(DDPackageTest, Controls) {
     controls.insert(cneg);
     EXPECT_EQ(controls.begin()->type, dd::Control::Type::neg);
     EXPECT_EQ(controls.count(0), 2);
+}
+
+TEST(DDPackageTest, DestructiveMeasurementAll) {
+    auto dd         = std::make_unique<dd::Package>(4);
+    auto hGate0     = dd->makeGateDD(dd::Hmat, 2, 0);
+    auto hGate1     = dd->makeGateDD(dd::Hmat, 2, 1);
+    auto plusMatrix = dd->multiply(hGate0, hGate1);
+    auto zeroState  = dd->makeZeroState(2);
+    auto plusState  = dd->multiply(plusMatrix, zeroState);
+    dd->incRef(plusState);
+
+    std::mt19937_64 mt{0};
+
+    const dd::CVec vBefore = dd->getVector(plusState);
+
+    ASSERT_EQ(vBefore[0], vBefore[1]);
+    ASSERT_EQ(vBefore[0], vBefore[2]);
+    ASSERT_EQ(vBefore[0], vBefore[3]);
+
+    const std::string m = dd->measureAll(plusState, true, mt);
+
+    const dd::CVec vAfter = dd->getVector(plusState);
+    const int      i      = std::stoi(m, nullptr, 2);
+
+    ASSERT_EQ(vAfter[i], dd::complex_one);
+}
+
+TEST(DDPackageTest, DestructiveMeasurementOne) {
+    auto dd         = std::make_unique<dd::Package>(4);
+    auto hGate0     = dd->makeGateDD(dd::Hmat, 2, 0);
+    auto hGate1     = dd->makeGateDD(dd::Hmat, 2, 1);
+    auto plusMatrix = dd->multiply(hGate0, hGate1);
+    auto zeroState  = dd->makeZeroState(2);
+    auto plusState  = dd->multiply(plusMatrix, zeroState);
+    dd->incRef(plusState);
+
+    std::mt19937_64 mt{0};
+
+    const char     m      = dd->measureOneCollapsing(plusState, 0, true, mt);
+    const dd::CVec vAfter = dd->getVector(plusState);
+
+    ASSERT_EQ(m, '0');
+    ASSERT_EQ(vAfter[0], dd::complex_SQRT2_2);
+    ASSERT_EQ(vAfter[2], dd::complex_SQRT2_2);
+    ASSERT_EQ(vAfter[1], dd::complex_zero);
+    ASSERT_EQ(vAfter[3], dd::complex_zero);
+
+    const auto vAfterCompl = dd->getVectorStdComplex(plusState);
+
+    assert(vAfter.size() == vAfterCompl.size());
+    for (std::size_t i = 0; i < vAfter.size(); i++) {
+        ASSERT_DOUBLE_EQ(vAfter.at(i).r, vAfterCompl.at(i).real());
+        ASSERT_DOUBLE_EQ(vAfter.at(i).i, vAfterCompl.at(i).imag());
+    }
+}
+
+TEST(DDPackageTest, DestructiveMeasurementOneArbitraryNormalization) {
+    auto dd         = std::make_unique<dd::Package>(4);
+    auto hGate0     = dd->makeGateDD(dd::Hmat, 2, 0);
+    auto hGate1     = dd->makeGateDD(dd::Hmat, 2, 1);
+    auto plusMatrix = dd->multiply(hGate0, hGate1);
+    auto zeroState  = dd->makeZeroState(2);
+    auto plusState  = dd->multiply(plusMatrix, zeroState);
+    dd->incRef(plusState);
+
+    std::mt19937_64 mt{0};
+
+    const char     m      = dd->measureOneCollapsing(plusState, 0, false, mt);
+    const dd::CVec vAfter = dd->getVector(plusState);
+
+    ASSERT_EQ(m, '0');
+    ASSERT_EQ(vAfter[0], dd::complex_SQRT2_2);
+    ASSERT_EQ(vAfter[2], dd::complex_SQRT2_2);
+    ASSERT_EQ(vAfter[1], dd::complex_zero);
+    ASSERT_EQ(vAfter[3], dd::complex_zero);
+
+    const auto vAfterCompl = dd->getVectorStdComplex(plusState);
+
+    assert(vAfter.size() == vAfterCompl.size());
+    for (std::size_t i = 0; i < vAfter.size(); i++) {
+        ASSERT_DOUBLE_EQ(vAfter.at(i).r, vAfterCompl.at(i).real());
+        ASSERT_DOUBLE_EQ(vAfter.at(i).i, vAfterCompl.at(i).imag());
+    }
 }
