@@ -725,4 +725,28 @@ namespace qc {
     void CircuitOptimizer::decomposeTeleport([[maybe_unused]] QuantumComputation& qc) {
     }
 
+    void CircuitOptimizer::eliminateResets(QuantumComputation& qc) {
+        /// TODO: substitute reset operations with new qubits and shift subsequent operations
+
+        //      ┌───┐┌─┐     ┌───┐┌─┐            ┌───┐┌─┐ ░
+        // q_0: ┤ H ├┤M├─|0>─┤ H ├┤M├       q_0: ┤ H ├┤M├─░─────────
+        //      └───┘└╥┘     └───┘└╥┘   -->      └───┘└╥┘ ░ ┌───┐┌─┐
+        // c: 2/══════╩════════════╩═       q_1: ──────╫──░─┤ H ├┤M├
+        //            0            1                   ║  ░ └───┘└╥┘
+        //                                  c: 2/══════╩══════════╩═
+        //                                             0          1
+    }
+
+    void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
+        /// TODO: move measurements to end of circuit by applying deferred measurement principle
+
+        //      ┌───┐┌─┐                         ┌───┐     ┌─┐
+        // q_0: ┤ H ├┤M├───────             q_0: ┤ H ├──■──┤M├
+        //      └───┘└╥┘ ┌───┐                   └───┘┌─┴─┐└╥┘
+        // q_1: ──────╫──┤ X ├─     -->     q_1: ─────┤ X ├─╫─
+        //            ║  └─╥─┘                        └───┘ ║
+        //            ║ ┌──╨──┐             c: 2/═══════════╩═
+        // c: 2/══════╩═╡ = 1 ╞                             0
+        //            0 └─────┘
+    }
 } // namespace qc
