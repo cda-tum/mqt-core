@@ -10,12 +10,8 @@ namespace qc {
         // delete the identities from circuit
         auto it = qc.ops.begin();
         while (it != qc.ops.end()) {
-            if ((*it)->isStandardOperation()) {
-                if ((*it)->getType() == I) {
-                    it = qc.ops.erase(it);
-                } else {
-                    ++it;
-                }
+            if ((*it)->getType() == I) {
+                it = qc.ops.erase(it);
             } else if ((*it)->isCompoundOperation()) {
                 auto compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
                 auto cit    = compOp->cbegin();
@@ -526,42 +522,6 @@ namespace qc {
         removeIdentities(qc);
     }
 
-    void CircuitOptimizer::removeMarkedMeasurements(QuantumComputation& qc) {
-        // delete the identities from circuit
-        auto it = qc.ops.begin();
-        while (it != qc.ops.end()) {
-            if (!(*it)->isCompoundOperation()) {
-                if ((*it)->getType() == I) {
-                    it = qc.ops.erase(it);
-                } else {
-                    ++it;
-                }
-            } else if ((*it)->isCompoundOperation()) {
-                auto compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
-                auto cit    = compOp->cbegin();
-                while (cit != compOp->cend()) {
-                    auto cop = cit->get();
-                    if (cop->getType() == qc::I) {
-                        cit = compOp->erase(cit);
-                    } else {
-                        ++cit;
-                    }
-                }
-                if (compOp->empty()) {
-                    it = qc.ops.erase(it);
-                } else {
-                    if (compOp->size() == 1) {
-                        // CompoundOperation has degraded to single Operation
-                        (*it) = std::move(*(compOp->begin()));
-                    }
-                    ++it;
-                }
-            } else {
-                ++it;
-            }
-        }
-    }
-
     bool CircuitOptimizer::removeFinalMeasurement(DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, DAGIterator& it, qc::Operation* op) {
         if (op->getNtargets() != 0) {
             // need to check all targets
@@ -669,7 +629,7 @@ namespace qc {
 
         removeFinalMeasurementsRecursive(dag, dagIterators, 0, dag.at(0).end());
 
-        removeMarkedMeasurements(qc);
+        removeIdentities(qc);
     }
 
     void CircuitOptimizer::decomposeSWAP(QuantumComputation& qc, bool isDirectedArchitecture) {
