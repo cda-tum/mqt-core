@@ -30,9 +30,9 @@ jobs:
         shell: bash
         run:   |
                if [ "$RUNNER_OS" == "Windows" ]; then
-                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl" -DBUILD_QFR_TESTS=ON
+                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl" -DBUILD_QFR_TESTS=ON -DBINDINGS=ON
                else
-                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON
+                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON -DBINDINGS=ON
                fi
 
       - name:  Build
