@@ -421,7 +421,7 @@ namespace qc {
                 }
             }
             auto op = (*it)->get();
-            if (op->getType() == Barrier) {
+            if (op->getType() == Barrier || op->getType() == Snapshot || op->getType() == ShowProbabilities) {
                 // either ignore barrier statement here or end for this qubit;
                 ++it;
             } else if (op->isStandardOperation()) {
