@@ -6,16 +6,15 @@
 #include "algorithms/Grover.hpp"
 #include "algorithms/QFT.hpp"
 #include "dd/Export.hpp"
-#include "nlohmann/json.hpp"
-#include "pybind11/pybind11.h"
-#include "pybind11_json/pybind11_json.hpp"
 #include "qiskit/QasmQobjExperiment.hpp"
 #include "qiskit/QuantumCircuit.hpp"
 
 #include <chrono>
+#include <pybind11/complex.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 namespace py = pybind11;
-namespace nl = nlohmann;
 using namespace pybind11::literals;
 
 enum class ConstructionMethod {
@@ -23,28 +22,16 @@ enum class ConstructionMethod {
     Recursive
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(ConstructionMethod, {{ConstructionMethod::Sequential, "sequential"},
-                                                  {ConstructionMethod::Recursive, "recursive"}})
-
-void to_json(nlohmann::json& j, dd::CMat& mat) {
-    j = nlohmann::json::array();
-    for (const auto& row: mat) {
-        j.emplace_back(nl::json::array());
-        for (const auto& elem: row)
-            j.back().emplace_back(std::array<dd::fp, 2>{elem.first, elem.second});
-    }
-}
-void from_json(const nlohmann::json& j, dd::CMat& mat) {
-    for (std::size_t i = 0; i < j.size(); ++i) {
-        auto& row = j.at(i);
-        for (std::size_t y = 0; y < row.size(); ++y) {
-            auto amplitude  = row.at(y).get<std::pair<dd::fp, dd::fp>>();
-            mat.at(i).at(y) = amplitude;
-        }
+inline std::string toString(ConstructionMethod method) {
+    switch (method) {
+        case ConstructionMethod::Sequential:
+            return "sequential";
+        case ConstructionMethod::Recursive:
+            return "recursive";
     }
 }
 
-nl::json construct(const std::unique_ptr<qc::QuantumComputation>& qc, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
+py::dict construct(const std::unique_ptr<qc::QuantumComputation>& qc, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
     // carry out actual computation
     auto         dd                 = std::make_unique<dd::Package>(qc->getNqubits());
     auto         start_construction = std::chrono::high_resolution_clock::now();
@@ -58,20 +45,23 @@ nl::json construct(const std::unique_ptr<qc::QuantumComputation>& qc, const Cons
     auto construction_duration = std::chrono::duration<float>(end_construction - start_construction);
 
     // populate results
-    nl::json results{};
-
-    results["circuit"]  = {};
-    auto& circuit       = results["circuit"];
+    py::dict results{};
+    auto     circuit    = py::dict{};
     circuit["name"]     = qc->getName();
-    circuit["n_qubits"] = qc->getNqubits();
+    circuit["n_qubits"] = static_cast<std::size_t>(qc->getNqubits());
     circuit["n_gates"]  = qc->getNops();
+    results["circuit"]  = circuit;
 
-    results["statistics"]           = {};
-    auto& statistics                = results["statistics"];
+    auto statistics                 = py::dict{};
     statistics["construction_time"] = construction_duration.count();
     statistics["final_nodecount"]   = dd->size(e);
     statistics["max_nodecount"]     = dd->mUniqueTable.getPeakNodeCount();
-    statistics["method"]            = method;
+    statistics["method"]            = toString(method);
+    results["statistics"]           = statistics;
+
+    if (storeDD || storeMatrix) {
+        results["functionality"] = py::dict{};
+    }
 
     if (storeDD) {
         auto               start_dd_dump = std::chrono::high_resolution_clock::now();
@@ -94,7 +84,7 @@ nl::json construct(const std::unique_ptr<qc::QuantumComputation>& qc, const Cons
     return results;
 }
 
-nl::json construct_circuit(const py::object& circ, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
+py::dict construct_circuit(const py::object& circ, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
     auto qc = std::make_unique<qc::QuantumComputation>();
     try {
         if (py::isinstance<py::str>(circ)) {
@@ -108,39 +98,36 @@ nl::json construct_circuit(const py::object& circ, const ConstructionMethod& met
             } else if (py::isinstance(circ, pyQasmQobjExperiment)) {
                 qc::qiskit::QasmQobjExperiment::import(*qc, circ);
             }
-            std::cout << *qc << std::endl;
         }
     } catch (std::exception const& e) {
         std::stringstream ss{};
         ss << "Could not import circuit: " << e.what();
-        return {{"error", ss.str()}};
+        return py::dict("error"_a = ss.str());
     }
     return construct(qc, method, storeDD, storeMatrix);
 }
 
-nl::json construct_grover(dd::QubitCount nqubits, unsigned int seed = 0, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
+py::dict construct_grover(dd::QubitCount nqubits, unsigned int seed = 0, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
     std::unique_ptr<qc::QuantumComputation> qc     = std::make_unique<qc::Grover>(nqubits, seed);
     auto                                    grover = dynamic_cast<qc::Grover*>(qc.get());
 
-    auto  results           = construct(qc, method, storeDD, storeMatrix);
-    auto& circuit           = results["circuit"];
-    circuit["name"]         = "Grover's algorithm";
-    circuit["seed"]         = seed;
-    circuit["n_iterations"] = grover->iterations;
-    circuit["target_state"] = grover->x;
+    auto results                       = construct(qc, method, storeDD, storeMatrix);
+    results["circuit"]["name"]         = "Grover's algorithm";
+    results["circuit"]["seed"]         = seed;
+    results["circuit"]["n_iterations"] = grover->iterations;
+    results["circuit"]["target_state"] = grover->x;
     return results;
 }
 
-nl::json construct_qft(dd::QubitCount nqubits, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
+py::dict construct_qft(dd::QubitCount nqubits, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
     std::unique_ptr<qc::QuantumComputation> qc      = std::make_unique<qc::QFT>(nqubits);
     auto                                    results = construct(qc, method, storeDD, storeMatrix);
-    auto&                                   circuit = results["circuit"];
-    circuit["name"]                                 = "Quantum Fourier Transform";
+    results["circuit"]["name"]                      = "Quantum Fourier Transform";
     return results;
 }
 
-nl::json matrix_from_dd(const std::string& serializedDD) {
-    nl::json results{};
+py::dict matrix_from_dd(const std::string& serializedDD) {
+    py::dict results{};
 
     auto               dd                    = std::make_unique<dd::Package>();
     auto               start_deserialization = std::chrono::high_resolution_clock::now();
