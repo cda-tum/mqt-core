@@ -1906,34 +1906,6 @@ namespace dd {
             cn.returnToCache(c);
         }
 
-        std::vector<std::complex<fp>> getVectorStdComplex(const vEdge& e) {
-            std::size_t dim = 1 << (e.p->v + 1);
-            // allocate resulting vector
-            auto vec = std::vector<std::complex<fp>>(dim, {0.0, 0.0});
-            getVectorStdComplex(e, Complex::one, 0, vec);
-            return vec;
-        }
-        void getVectorStdComplex(const vEdge& e, const Complex& amp, std::size_t i, std::vector<std::complex<fp>>& vec) {
-            // calculate new accumulated amplitude
-            auto c = cn.mulCached(e.w, amp);
-
-            // base case
-            if (e.isTerminal()) {
-                vec.at(i) = {CTEntry::val(c.r), CTEntry::val(c.i)};
-                cn.returnToCache(c);
-                return;
-            }
-
-            std::size_t x = i | (1 << e.p->v);
-
-            // recursive case
-            if (!e.p->e[0].w.approximatelyZero())
-                getVectorStdComplex(e.p->e[0], c, i, vec);
-            if (!e.p->e[1].w.approximatelyZero())
-                getVectorStdComplex(e.p->e[1], c, x, vec);
-            cn.returnToCache(c);
-        }
-
         void printVector(const vEdge& e) {
             unsigned long long element = 2u << e.p->v;
             for (unsigned long long i = 0; i < element; i++) {

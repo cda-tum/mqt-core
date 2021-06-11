@@ -476,15 +476,15 @@ TEST(DDPackageTest, GarbageVector) {
     reduced_bell_state = dd->reduceGarbage(bell_state, {false, true, false, false});
     auto vec           = dd->getVector(reduced_bell_state);
     dd->printVector(reduced_bell_state);
-    EXPECT_EQ(vec[2], dd::complex_zero);
-    EXPECT_EQ(vec[3], dd::complex_zero);
+    EXPECT_EQ(vec[2], static_cast<std::complex<dd::fp>>(dd::complex_zero));
+    EXPECT_EQ(vec[3], static_cast<std::complex<dd::fp>>(dd::complex_zero));
 
     dd->incRef(bell_state);
     reduced_bell_state = dd->reduceGarbage(bell_state, {true, false, false, false});
     dd->printVector(reduced_bell_state);
     vec = dd->getVector(reduced_bell_state);
-    EXPECT_EQ(vec[1], dd::complex_zero);
-    EXPECT_EQ(vec[3], dd::complex_zero);
+    EXPECT_EQ(vec[1], static_cast<std::complex<dd::fp>>(dd::complex_zero));
+    EXPECT_EQ(vec[3], static_cast<std::complex<dd::fp>>(dd::complex_zero));
 }
 
 TEST(DDPackageTest, GarbageMatrix) {
@@ -777,7 +777,7 @@ TEST(DDPackageTest, DestructiveMeasurementAll) {
     const dd::CVec vAfter = dd->getVector(plusState);
     const int      i      = std::stoi(m, nullptr, 2);
 
-    ASSERT_EQ(vAfter[i], dd::complex_one);
+    ASSERT_EQ(vAfter[i], static_cast<std::complex<dd::fp>>(dd::complex_one));
 }
 
 TEST(DDPackageTest, DestructiveMeasurementOne) {
@@ -795,18 +795,10 @@ TEST(DDPackageTest, DestructiveMeasurementOne) {
     const dd::CVec vAfter = dd->getVector(plusState);
 
     ASSERT_EQ(m, '0');
-    ASSERT_EQ(vAfter[0], dd::complex_SQRT2_2);
-    ASSERT_EQ(vAfter[2], dd::complex_SQRT2_2);
-    ASSERT_EQ(vAfter[1], dd::complex_zero);
-    ASSERT_EQ(vAfter[3], dd::complex_zero);
-
-    const auto vAfterCompl = dd->getVectorStdComplex(plusState);
-
-    assert(vAfter.size() == vAfterCompl.size());
-    for (std::size_t i = 0; i < vAfter.size(); i++) {
-        ASSERT_DOUBLE_EQ(vAfter.at(i).r, vAfterCompl.at(i).real());
-        ASSERT_DOUBLE_EQ(vAfter.at(i).i, vAfterCompl.at(i).imag());
-    }
+    ASSERT_EQ(vAfter[0], static_cast<std::complex<dd::fp>>(dd::complex_SQRT2_2));
+    ASSERT_EQ(vAfter[2], static_cast<std::complex<dd::fp>>(dd::complex_SQRT2_2));
+    ASSERT_EQ(vAfter[1], static_cast<std::complex<dd::fp>>(dd::complex_zero));
+    ASSERT_EQ(vAfter[3], static_cast<std::complex<dd::fp>>(dd::complex_zero));
 }
 
 TEST(DDPackageTest, DestructiveMeasurementOneArbitraryNormalization) {
@@ -824,16 +816,8 @@ TEST(DDPackageTest, DestructiveMeasurementOneArbitraryNormalization) {
     const dd::CVec vAfter = dd->getVector(plusState);
 
     ASSERT_EQ(m, '0');
-    ASSERT_EQ(vAfter[0], dd::complex_SQRT2_2);
-    ASSERT_EQ(vAfter[2], dd::complex_SQRT2_2);
-    ASSERT_EQ(vAfter[1], dd::complex_zero);
-    ASSERT_EQ(vAfter[3], dd::complex_zero);
-
-    const auto vAfterCompl = dd->getVectorStdComplex(plusState);
-
-    assert(vAfter.size() == vAfterCompl.size());
-    for (std::size_t i = 0; i < vAfter.size(); i++) {
-        ASSERT_DOUBLE_EQ(vAfter.at(i).r, vAfterCompl.at(i).real());
-        ASSERT_DOUBLE_EQ(vAfter.at(i).i, vAfterCompl.at(i).imag());
-    }
+    ASSERT_EQ(vAfter[0], static_cast<std::complex<dd::fp>>(dd::complex_SQRT2_2));
+    ASSERT_EQ(vAfter[2], static_cast<std::complex<dd::fp>>(dd::complex_SQRT2_2));
+    ASSERT_EQ(vAfter[1], static_cast<std::complex<dd::fp>>(dd::complex_zero));
+    ASSERT_EQ(vAfter[3], static_cast<std::complex<dd::fp>>(dd::complex_zero));
 }

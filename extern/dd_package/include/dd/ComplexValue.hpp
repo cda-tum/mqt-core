@@ -195,6 +195,8 @@ namespace dd {
             return ss.str();
         }
 
+        explicit operator auto() const { return std::complex<dd::fp>{r, i}; }
+
         ComplexValue& operator+=(const ComplexValue& rhs) {
             r += rhs.r;
             i += rhs.i;
