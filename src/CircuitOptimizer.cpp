@@ -58,12 +58,7 @@ namespace qc {
                         }
                     }
                     continue;
-                } else if (it->getType() == qc::Measure) {
-                    for (const auto& c: it->getControls()) {
-                        dag.at(c.qubit).push_front(&it);
-                    }
-                    continue;
-                } else if (it->getType() == qc::Barrier || it->getType() == qc::Reset) {
+                } else if (it->isNonUnitaryOperation()) {
                     for (const auto& b: it->getTargets()) {
                         dag.at(b).push_front(&it);
                     }
@@ -231,12 +226,7 @@ namespace qc {
                         }
                     }
                     continue;
-                } else if (it->getType() == qc::Measure) {
-                    for (const auto& c: it->getControls()) {
-                        dag.at(c.qubit).push_front(&it);
-                    }
-                    continue;
-                } else if (it->getType() == qc::Barrier || it->getType() == qc::Reset) {
+                } else if (it->isNonUnitaryOperation()) {
                     for (const auto& b: it->getTargets()) {
                         dag.at(b).push_front(&it);
                     }
