@@ -39,9 +39,6 @@ namespace qc {
     }
 
     void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
-        // print incoming circuit
-        //qc.print(std::cout );
-        //std::cout << std::endl;
         dd::Qubit highest_physical_qubit = 0;
         for (const auto& q: qc.initialLayout) {
             if (q.first > highest_physical_qubit)
@@ -148,9 +145,6 @@ namespace qc {
         }
 
         removeIdentities(qc);
-
-        // print resulting circuit
-        //qc.print(std::cout );
     }
 
     DAG CircuitOptimizer::constructDAG(QuantumComputation& qc) {
@@ -172,12 +166,7 @@ namespace qc {
                         }
                     }
                     continue;
-                } else if (it->getType() == qc::Measure) {
-                    for (const auto& t: it->getTargets()) {
-                        dag.at(t).push_front(&it);
-                    }
-                    continue;
-                } else if (it->getType() == qc::Barrier || it->getType() == qc::Reset) {
+                } else if (it->isNonUnitaryOperation()) {
                     for (const auto& b: it->getTargets()) {
                         dag.at(b).push_front(&it);
                     }
