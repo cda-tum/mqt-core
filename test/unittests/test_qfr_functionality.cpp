@@ -734,3 +734,18 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundEmpty) {
         EXPECT_EQ(op->getTargets().at(0), 1);
     });
 }
+
+TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
+    auto              circ = "OPENQASM 2.0;include \"qelib1.inc\";qreg q[3];qreg r[3];h q;cx q, r;creg c[3];creg d[3];barrier q;measure q->c;measure r->d;\n";
+    std::stringstream ss{};
+    ss << circ;
+    QuantumComputation qc{};
+    qc.import(ss, qc::OpenQASM);
+    std::cout << "-----------------------------" << std::endl;
+    qc.print(std::cout);
+    CircuitOptimizer::removeFinalMeasurements(qc);
+    std::cout << "-----------------------------" << std::endl;
+    qc.print(std::cout);
+    ASSERT_EQ(qc.getNops(), 3);
+    ASSERT_EQ(qc.getNindividualOps(), 7);
+}
