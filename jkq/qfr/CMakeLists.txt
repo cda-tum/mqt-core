@@ -10,7 +10,7 @@ add_library(${PROJECT_NAME}_python INTERFACE)
 # set include directories
 target_include_directories(${PROJECT_NAME}_python INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
-# link with main project library amd pybind11 libraries
+# link with main project library and pybind11 libraries
 target_link_libraries(${PROJECT_NAME}_python INTERFACE ${PROJECT_NAME} pybind11::pybind11)
 
 # add JKQ alias

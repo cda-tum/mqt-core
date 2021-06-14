@@ -8,7 +8,7 @@ if (NOT TARGET gtest OR NOT TARGET gmock)
 			gtest_disable_pthreads gtest_force_shared_crt gtest_hide_internal_symbols
 	)
 	set_target_properties(gtest gtest_main gmock gmock_main PROPERTIES FOLDER extern)
-	if (BINDINGS)
+	if (BINDINGS AND NOT WIN32)
 		# adjust visibility settings for building Python bindings
 		target_compile_options(gtest PUBLIC -fvisibility=hidden)
 		target_compile_options(gmock PUBLIC -fvisibility=hidden)

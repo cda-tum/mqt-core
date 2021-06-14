@@ -65,7 +65,7 @@ with open(README_PATH) as readme_file:
 
 setup(
     name='jkq.qfr',
-    version='1.4.2',
+    version='1.5.0',
     author='Lukas Burgholzer',
     author_email='lukas.burgholzer@jku.at',
     description='QFR - A JKQ tool for Quantum Functionality Representation',
