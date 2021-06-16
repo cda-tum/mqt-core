@@ -9,10 +9,10 @@ namespace qc {
     Entanglement::Entanglement(dd::QubitCount nq):
         QuantumComputation(nq) {
         name = "entanglement_" + std::to_string(nq);
-        emplace_back<StandardOperation>(nqubits, 0, H);
+        h(0);
 
         for (unsigned short i = 1; i < nq; i++) {
-            emplace_back<StandardOperation>(nqubits, dd::Control{0}, i, X);
+            x(i, dd::Control{0});
         }
     }
 } // namespace qc
