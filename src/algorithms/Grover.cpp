@@ -77,7 +77,7 @@ namespace qc {
 
         std::mt19937_64                            generator(seed);
         std::uniform_int_distribution<std::size_t> distribution(0, static_cast<std::size_t>(std::pow(2.L, std::max(static_cast<dd::QubitCount>(0), nqubits)) - 1.));
-        targetValue     = distribution(generator);
+        targetValue = distribution(generator);
 
         if (nqubits <= 3) {
             iterations = 1;
