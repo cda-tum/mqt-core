@@ -15,7 +15,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Entanglement, Entanglement,
-                         testing::Range(static_cast<dd::QubitCount>(2), static_cast<dd::QubitCount>(129), 7),
+                         testing::Range(static_cast<dd::QubitCount>(2), static_cast<dd::QubitCount>(90), 7),
                          [](const testing::TestParamInfo<Entanglement::ParamType>& info) {
                              // Generate names for test cases
                              dd::QubitCount    nqubits = info.param;
