@@ -11,7 +11,7 @@ namespace qc {
     // Measurement constructor
     NonUnitaryOperation::NonUnitaryOperation(const dd::QubitCount nq, std::vector<dd::Qubit> qubitRegister, std::vector<std::size_t> classicalRegister):
         qubits(std::move(qubitRegister)), classics(std::move(classicalRegister)) {
-        if(qubitRegister.size() != classicalRegister.size()) {
+        if (qubitRegister.size() != classicalRegister.size()) {
             throw std::invalid_argument("Sizes of qubit register and classical register do not match.");
         }
         // i-th qubit to be measured shall be measured into i-th classical register

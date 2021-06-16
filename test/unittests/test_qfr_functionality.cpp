@@ -822,7 +822,7 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
     qc.peresdag(0, 1, 2_pc);
     qc.peresdag(0, 1, {2_pc, 3_nc});
     qc.measure(0, 0);
-    qc.measure({1,2}, {1,2});
+    qc.measure({1, 2}, {1, 2});
 
     auto qc_cloned = qc.clone();
     ASSERT_EQ(qc.size(), qc_cloned.size());

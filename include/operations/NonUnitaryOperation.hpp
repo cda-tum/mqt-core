@@ -39,7 +39,7 @@ namespace qc {
 
         std::unique_ptr<Operation> clone() override {
             if (getType() == qc::Measure) {
-               return std::make_unique<NonUnitaryOperation>(getNqubits(), getTargets(), getClassics());
+                return std::make_unique<NonUnitaryOperation>(getNqubits(), getTargets(), getClassics());
             } else if (getType() == qc::Snapshot) {
                 return std::make_unique<NonUnitaryOperation>(getNqubits(), getTargets(), getParameter().at(0));
             } else if (getType() == qc::ShowProbabilities) {

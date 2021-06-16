@@ -32,7 +32,7 @@ namespace qc {
             std::unique_ptr<CompoundOperation> cloned_ops;
             cloned_ops->reserve(ops.size());
 
-            for(auto const& op : ops) {
+            for (auto const& op: ops) {
                 cloned_ops->ops.emplace_back<>(op->clone());
             }
             return cloned_ops;
