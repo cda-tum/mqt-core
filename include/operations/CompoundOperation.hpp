@@ -142,7 +142,7 @@ namespace qc {
         [[nodiscard]] auto crend() const noexcept { return ops.crend(); }
 
         // Capacity (pass-through)
-        [[nodiscard]] bool   empty() const noexcept { return ops.empty(); }
+        [[nodiscard]] bool        empty() const noexcept { return ops.empty(); }
         [[nodiscard]] std::size_t size() const noexcept { return ops.size(); }
         [[nodiscard]] std::size_t max_size() const noexcept { return ops.max_size(); }
         [[nodiscard]] std::size_t capacity() const noexcept { return ops.capacity(); }
