@@ -77,6 +77,10 @@ namespace qc {
         // MCF (cSWAP), Peres, paramterized two target Constructor
         StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startingQubit = 0);
 
+        std::unique_ptr<Operation> clone() override {
+            return std::make_unique<StandardOperation>(getNqubits(), getControls(), getTargets(), getType(), getParameter().at(0), getParameter().at(1), getParameter().at(2), getStartingQubit());
+        }
+
         [[nodiscard]] bool isStandardOperation() const override {
             return true;
         }

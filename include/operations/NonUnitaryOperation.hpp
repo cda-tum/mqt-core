@@ -37,6 +37,18 @@ namespace qc {
         // General constructor
         NonUnitaryOperation(dd::QubitCount nq, const std::vector<dd::Qubit>& qubitRegister, OpType op = Reset);
 
+        std::unique_ptr<Operation> clone() override {
+            if (getType() == qc::Measure) {
+               return std::make_unique<NonUnitaryOperation>(getNqubits(), getTargets(), getClassics());
+            } else if (getType() == qc::Snapshot) {
+                return std::make_unique<NonUnitaryOperation>(getNqubits(), getTargets(), getParameter().at(0));
+            } else if (getType() == qc::ShowProbabilities) {
+                return std::make_unique<NonUnitaryOperation>(getNqubits());
+            } else {
+                return std::make_unique<NonUnitaryOperation>(getNqubits(), getTargets(), getType());
+            }
+        }
+
         [[nodiscard]] bool isUnitary() const override {
             return false;
         }

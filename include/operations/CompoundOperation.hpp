@@ -28,6 +28,16 @@ namespace qc {
             type    = Compound;
         }
 
+        std::unique_ptr<Operation> clone() override {
+            std::unique_ptr<CompoundOperation> cloned_ops;
+            cloned_ops->reserve(ops.size());
+
+            for(auto const& op : ops) {
+                cloned_ops->ops.emplace_back<>(op->clone());
+            }
+            return cloned_ops;
+        }
+
         void setNqubits(dd::QubitCount nq) override {
             nqubits = nq;
             for (auto& op: ops) {

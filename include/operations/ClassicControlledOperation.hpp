@@ -37,6 +37,11 @@ namespace qc {
             type         = ClassicControlled;
         }
 
+        std::unique_ptr<Operation> clone() override {
+            auto op_cloned = op->clone();
+            return std::make_unique<ClassicControlledOperation>(op_cloned, controlRegister, expectedValue);
+        }
+
         MatrixDD getDD(std::unique_ptr<dd::Package>& dd) const override {
             return op->getDD(dd);
         }
