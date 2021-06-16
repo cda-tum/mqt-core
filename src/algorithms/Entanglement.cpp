@@ -5,6 +5,8 @@
 
 #include "algorithms/Entanglement.hpp"
 
+using namespace dd::literals;
+
 namespace qc {
     Entanglement::Entanglement(dd::QubitCount nq):
         QuantumComputation(nq) {
@@ -12,7 +14,7 @@ namespace qc {
         h(0);
 
         for (unsigned short i = 1; i < nq; i++) {
-            x(i, dd::Control{0});
+            x(i, 0_pc);
         }
     }
 } // namespace qc

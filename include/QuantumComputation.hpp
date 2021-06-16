@@ -228,100 +228,100 @@ namespace qc {
         void                      setLogicalQubitGarbage(dd::Qubit logical_qubit_index) { garbage[logical_qubit_index] = true; }
         MatrixDD                  createInitialMatrix(std::unique_ptr<dd::Package>& dd) const; // creates identity matrix, which is reduced with respect to the ancillary qubits
 
-        void i(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::I); }
-        void i(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::I); }
-        void i(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::I); }
+        void i(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::I); }
+        void i(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::I); }
+        void i(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::I); }
 
-        void h(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::H); }
-        void h(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::H); }
-        void h(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::H); }
+        void h(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::H); }
+        void h(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::H); }
+        void h(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::H); }
 
-        void x(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::X); }
-        void x(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::X); }
-        void x(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::X); }
+        void x(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::X); }
+        void x(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::X); }
+        void x(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::X); }
 
-        void y(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::Y); }
-        void y(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::Y); }
-        void y(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::Y); }
+        void y(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::Y); }
+        void y(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::Y); }
+        void y(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Y); }
 
-        void z(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::Z); }
-        void z(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::Z); }
-        void z(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::Z); }
+        void z(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::Z); }
+        void z(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::Z); }
+        void z(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Z); }
 
-        void s(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::S); }
-        void s(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::S); }
-        void s(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::S); }
+        void s(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::S); }
+        void s(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::S); }
+        void s(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::S); }
 
-        void sdag(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::Sdag); }
-        void sdag(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::Sdag); }
-        void sdag(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::Sdag); }
+        void sdag(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::Sdag); }
+        void sdag(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::Sdag); }
+        void sdag(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Sdag); }
 
-        void t(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::T); }
-        void t(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::T); }
-        void t(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::T); }
+        void t(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::T); }
+        void t(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::T); }
+        void t(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::T); }
 
-        void tdag(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::Tdag); }
-        void tdag(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::Tdag); }
-        void tdag(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::Tdag); }
+        void tdag(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::Tdag); }
+        void tdag(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::Tdag); }
+        void tdag(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Tdag); }
 
-        void v(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::V); }
-        void v(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::V); }
-        void v(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::V); }
+        void v(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::V); }
+        void v(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::V); }
+        void v(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::V); }
 
-        void vdag(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::Vdag); }
-        void vdag(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::Vdag); }
-        void vdag(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::Vdag); }
+        void vdag(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::Vdag); }
+        void vdag(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::Vdag); }
+        void vdag(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Vdag); }
 
-        void u3(dd::Qubit target, dd::fp lambda, dd::fp phi, dd::fp theta) { emplace_back<StandardOperation>(nqubits, target, qc::U3, lambda, phi, theta); }
-        void u3(dd::Qubit target, const dd::Control& control, dd::fp lambda, dd::fp phi, dd::fp theta) { emplace_back<StandardOperation>(nqubits, control, target, qc::U3, lambda, phi, theta); }
-        void u3(dd::Qubit target, const dd::Controls& controls, dd::fp lambda, dd::fp phi, dd::fp theta) { emplace_back<StandardOperation>(nqubits, controls, target, qc::U3, lambda, phi, theta); }
+        void u3(dd::Qubit target, dd::fp lambda, dd::fp phi, dd::fp theta) { emplace_back<StandardOperation>(getNqubits(), target, qc::U3, lambda, phi, theta); }
+        void u3(dd::Qubit target, const dd::Control& control, dd::fp lambda, dd::fp phi, dd::fp theta) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::U3, lambda, phi, theta); }
+        void u3(dd::Qubit target, const dd::Controls& controls, dd::fp lambda, dd::fp phi, dd::fp theta) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::U3, lambda, phi, theta); }
 
-        void u2(dd::Qubit target, dd::fp lambda, dd::fp phi) { emplace_back<StandardOperation>(nqubits, target, qc::U2, lambda, phi); }
-        void u2(dd::Qubit target, const dd::Control& control, dd::fp lambda, dd::fp phi) { emplace_back<StandardOperation>(nqubits, control, target, qc::U2, lambda, phi); }
-        void u2(dd::Qubit target, const dd::Controls& controls, dd::fp lambda, dd::fp phi) { emplace_back<StandardOperation>(nqubits, controls, target, qc::U2, lambda, phi); }
+        void u2(dd::Qubit target, dd::fp lambda, dd::fp phi) { emplace_back<StandardOperation>(getNqubits(), target, qc::U2, lambda, phi); }
+        void u2(dd::Qubit target, const dd::Control& control, dd::fp lambda, dd::fp phi) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::U2, lambda, phi); }
+        void u2(dd::Qubit target, const dd::Controls& controls, dd::fp lambda, dd::fp phi) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::U2, lambda, phi); }
 
-        void phase(dd::Qubit target, dd::fp lambda) { emplace_back<StandardOperation>(nqubits, target, qc::Phase, lambda); }
-        void phase(dd::Qubit target, const dd::Control& control, dd::fp lambda) { emplace_back<StandardOperation>(nqubits, control, target, qc::Phase, lambda); }
-        void phase(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(nqubits, controls, target, qc::Phase, lambda); }
+        void phase(dd::Qubit target, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), target, qc::Phase, lambda); }
+        void phase(dd::Qubit target, const dd::Control& control, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::Phase, lambda); }
+        void phase(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Phase, lambda); }
 
-        void sx(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::SX); }
-        void sx(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::SX); }
-        void sx(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::SX); }
+        void sx(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::SX); }
+        void sx(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::SX); }
+        void sx(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::SX); }
 
-        void sxdag(dd::Qubit target) { emplace_back<StandardOperation>(nqubits, target, qc::SXdag); }
-        void sxdag(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, control, target, qc::SXdag); }
-        void sxdag(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target, qc::SXdag); }
+        void sxdag(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::SXdag); }
+        void sxdag(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::SXdag); }
+        void sxdag(dd::Qubit target, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::SXdag); }
 
-        void rx(dd::Qubit target, dd::fp lambda) { emplace_back<StandardOperation>(nqubits, target, qc::RX, lambda); }
-        void rx(dd::Qubit target, const dd::Control& control, dd::fp lambda) { emplace_back<StandardOperation>(nqubits, control, target, qc::RX, lambda); }
-        void rx(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(nqubits, controls, target, qc::RX, lambda); }
+        void rx(dd::Qubit target, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), target, qc::RX, lambda); }
+        void rx(dd::Qubit target, const dd::Control& control, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::RX, lambda); }
+        void rx(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RX, lambda); }
 
-        void ry(dd::Qubit target, dd::fp lambda) { emplace_back<StandardOperation>(nqubits, target, qc::RY, lambda); }
-        void ry(dd::Qubit target, const dd::Control& control, dd::fp lambda) { emplace_back<StandardOperation>(nqubits, control, target, qc::RY, lambda); }
-        void ry(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(nqubits, controls, target, qc::RY, lambda); }
+        void ry(dd::Qubit target, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), target, qc::RY, lambda); }
+        void ry(dd::Qubit target, const dd::Control& control, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::RY, lambda); }
+        void ry(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RY, lambda); }
 
-        void rz(dd::Qubit target, dd::fp lambda) { emplace_back<StandardOperation>(nqubits, target, qc::RZ, lambda); }
-        void rz(dd::Qubit target, const dd::Control& control, dd::fp lambda) { emplace_back<StandardOperation>(nqubits, control, target, qc::RZ, lambda); }
-        void rz(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(nqubits, controls, target, qc::RZ, lambda); }
+        void rz(dd::Qubit target, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), target, qc::RZ, lambda); }
+        void rz(dd::Qubit target, const dd::Control& control, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::RZ, lambda); }
+        void rz(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RZ, lambda); }
 
-        void swap(dd::Qubit target0, dd::Qubit target1) { emplace_back<StandardOperation>(nqubits, dd::Controls{}, target0, target1, qc::SWAP); }
-        void swap(dd::Qubit target0, dd::Qubit target1, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, dd::Controls{control}, target0, target1, qc::SWAP); }
-        void swap(dd::Qubit target0, dd::Qubit target1, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target0, target1, qc::SWAP); }
+        void swap(dd::Qubit target0, dd::Qubit target1) { emplace_back<StandardOperation>(getNqubits(), dd::Controls{}, target0, target1, qc::SWAP); }
+        void swap(dd::Qubit target0, dd::Qubit target1, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), dd::Controls{control}, target0, target1, qc::SWAP); }
+        void swap(dd::Qubit target0, dd::Qubit target1, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::SWAP); }
 
-        void iswap(dd::Qubit target0, dd::Qubit target1) { emplace_back<StandardOperation>(nqubits, dd::Controls{}, target0, target1, qc::iSWAP); }
-        void iswap(dd::Qubit target0, dd::Qubit target1, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, dd::Controls{control}, target0, target1, qc::iSWAP); }
-        void iswap(dd::Qubit target0, dd::Qubit target1, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target0, target1, qc::iSWAP); }
+        void iswap(dd::Qubit target0, dd::Qubit target1) { emplace_back<StandardOperation>(getNqubits(), dd::Controls{}, target0, target1, qc::iSWAP); }
+        void iswap(dd::Qubit target0, dd::Qubit target1, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), dd::Controls{control}, target0, target1, qc::iSWAP); }
+        void iswap(dd::Qubit target0, dd::Qubit target1, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::iSWAP); }
 
-        void peres(dd::Qubit target0, dd::Qubit target1) { emplace_back<StandardOperation>(nqubits, dd::Controls{}, target0, target1, qc::Peres); }
-        void peres(dd::Qubit target0, dd::Qubit target1, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, dd::Controls{control}, target0, target1, qc::Peres); }
-        void peres(dd::Qubit target0, dd::Qubit target1, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target0, target1, qc::Peres); }
+        void peres(dd::Qubit target0, dd::Qubit target1) { emplace_back<StandardOperation>(getNqubits(), dd::Controls{}, target0, target1, qc::Peres); }
+        void peres(dd::Qubit target0, dd::Qubit target1, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), dd::Controls{control}, target0, target1, qc::Peres); }
+        void peres(dd::Qubit target0, dd::Qubit target1, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::Peres); }
 
-        void peresdag(dd::Qubit target0, dd::Qubit target1) { emplace_back<StandardOperation>(nqubits, dd::Controls{}, target0, target1, qc::Peresdag); }
-        void peresdag(dd::Qubit target0, dd::Qubit target1, const dd::Control& control) { emplace_back<StandardOperation>(nqubits, dd::Controls{control}, target0, target1, qc::Peresdag); }
-        void peresdag(dd::Qubit target0, dd::Qubit target1, const dd::Controls& controls) { emplace_back<StandardOperation>(nqubits, controls, target0, target1, qc::Peresdag); }
+        void peresdag(dd::Qubit target0, dd::Qubit target1) { emplace_back<StandardOperation>(getNqubits(), dd::Controls{}, target0, target1, qc::Peresdag); }
+        void peresdag(dd::Qubit target0, dd::Qubit target1, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), dd::Controls{control}, target0, target1, qc::Peresdag); }
+        void peresdag(dd::Qubit target0, dd::Qubit target1, const dd::Controls& controls) { emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::Peresdag); }
 
-        void measure(dd::Qubit qubit, std::size_t clbit) { emplace_back<NonUnitaryOperation>(nqubits, qubit, clbit); }
-        void measure(std::vector<dd::Qubit> qubitRegister, std::vector<std::size_t> classicalRegister) { emplace_back<NonUnitaryOperation>(nqubits, qubitRegister, classicalRegister); }
+        void measure(dd::Qubit qubit, std::size_t clbit) { emplace_back<NonUnitaryOperation>(getNqubits(), qubit, clbit); }
+        void measure(const std::vector<dd::Qubit>& qubitRegister, const std::vector<std::size_t>& classicalRegister) { emplace_back<NonUnitaryOperation>(getNqubits(), qubitRegister, classicalRegister); }
 
         /// strip away qubits with no operations applied to them and which do not pop up in the output permutation
         /// \param force if true, also strip away idle qubits occurring in the output permutation
