@@ -37,7 +37,7 @@ namespace qc {
             type         = ClassicControlled;
         }
 
-        std::unique_ptr<Operation> clone() override {
+        [[nodiscard]] std::unique_ptr<Operation> clone() const override {
             auto op_cloned = op->clone();
             return std::make_unique<ClassicControlledOperation>(op_cloned, controlRegister, expectedValue);
         }

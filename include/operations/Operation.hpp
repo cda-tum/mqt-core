@@ -92,7 +92,7 @@ namespace qc {
         // Virtual Destructor
         virtual ~Operation() = default;
 
-        virtual std::unique_ptr<Operation> clone() = 0;
+        [[nodiscard]] virtual std::unique_ptr<Operation> clone() const = 0;
 
         // Getters
         [[nodiscard]] virtual const Targets& getTargets() const {

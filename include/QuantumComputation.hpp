@@ -323,6 +323,13 @@ namespace qc {
         void measure(dd::Qubit qubit, std::size_t clbit) { emplace_back<NonUnitaryOperation>(getNqubits(), qubit, clbit); }
         void measure(const std::vector<dd::Qubit>& qubitRegister, const std::vector<std::size_t>& classicalRegister) { emplace_back<NonUnitaryOperation>(getNqubits(), qubitRegister, classicalRegister); }
 
+        void reset(dd::Qubit target) {emplace_back<NonUnitaryOperation>(getNqubits(), std::vector<dd::Qubit>{target}, qc::Reset);}
+        void reset(const std::vector<dd::Qubit>& targets) {emplace_back<NonUnitaryOperation>(getNqubits(), targets, qc::Reset);}
+
+        void barrier(dd::Qubit target) {emplace_back<NonUnitaryOperation>(getNqubits(), std::vector<dd::Qubit>{target}, qc::Barrier);}
+        void barrier(const std::vector<dd::Qubit>& targets) {emplace_back<NonUnitaryOperation>(getNqubits(), targets, qc::Barrier);}
+
+
         /// strip away qubits with no operations applied to them and which do not pop up in the output permutation
         /// \param force if true, also strip away idle qubits occurring in the output permutation
         void stripIdleQubits(bool force = false, bool reduceIOpermutations = true);
@@ -498,6 +505,11 @@ namespace qc {
         template<class T, class... Args>
         void emplace_back(Args&&... args) {
             ops.emplace_back(std::make_unique<T>(args...));
+        }
+
+        template<class T>
+        void emplace_back(std::unique_ptr<T>& op) {
+            ops.emplace_back(std::move(op));
         }
 
         template<class T>

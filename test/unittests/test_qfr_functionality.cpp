@@ -823,7 +823,30 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
     qc.peresdag(0, 1, {2_pc, 3_nc});
     qc.measure(0, 0);
     qc.measure({1, 2}, {1, 2});
+    qc.barrier(0);
+    qc.barrier({1, 2});
+    qc.reset(0);
+    qc.reset({1, 2});
 
     auto qc_cloned = qc.clone();
     ASSERT_EQ(qc.size(), qc_cloned.size());
+}
+
+TEST_F(QFRFunctionality, cloningDifferentOperations) {
+    QuantumComputation qc(5);
+
+    auto co = std::make_unique<CompoundOperation>(qc.getNqubits());
+    co->emplace_back<NonUnitaryOperation>(co->getNqubits());
+    co->emplace_back<StandardOperation>(co->getNqubits(), 0, qc::H);
+    qc.emplace_back(co);
+    std::unique_ptr<qc::Operation> op = std::make_unique<StandardOperation>(qc.getNqubits(), 0, qc::X);
+    qc.emplace_back<ClassicControlledOperation>(op, qc.getCregs().at("c"), 1);
+
+    auto qc_cloned = qc.clone();
+    ASSERT_EQ(qc.size(), qc_cloned.size());
+}
+
+TEST_F(QFRFunctionality, wrongRegisterSizes) {
+    QuantumComputation qc(5);
+    ASSERT_THROW(qc.measure({0}, {1, 2}), std::invalid_argument);
 }
