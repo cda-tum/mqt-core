@@ -9,6 +9,11 @@ on:
 
 env:
   BUILD_TYPE: Release
+  MAKEFLAGS: "-j2"
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   build:
@@ -17,7 +22,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
-
     steps:
       - uses: actions/checkout@v2
         with:
@@ -27,16 +31,13 @@ jobs:
         with:
           python-version: '3.8'
       - name:  Configure CMake
-        shell: bash
         run:   |
                if [ "$RUNNER_OS" == "Windows" ]; then
-                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl" -DBUILD_QFR_TESTS=ON
+                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl" -DBUILD_QFR_TESTS=ON -DBINDINGS=ON
                else
-                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON
+                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON -DBINDINGS=ON
                fi
-
       - name:  Build
-        shell: bash
         run:   cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE
 
   test:
@@ -45,7 +46,6 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
-
     steps:
       - uses: actions/checkout@v2
         with:
@@ -54,34 +54,27 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: '3.8'
-      - name:  Configure CMake
-        shell: bash
-        run:   |
-               if [ "$RUNNER_OS" == "Windows" ]; then
-                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl" -DBUILD_QFR_TESTS=ON
-               else
-                 cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON
-               fi
-
-      - name:  Build
-        shell: bash
-        run:   cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE --target qfr_test
-
-      - name:              Test
+      - name: Configure CMake
+        run: |
+             if [ "$RUNNER_OS" == "Windows" ]; then
+               cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl" -DBUILD_QFR_TESTS=ON
+             else
+               cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON
+             fi
+      - name: Build
+        run: cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE --target qfr_test
+      - name: Test
         working-directory: ${{github.workspace}}/build/test
-        shell:             bash
-        run:               |
-                           if [ "$RUNNER_OS" == "Windows" ]; then
-                             cd $BUILD_TYPE
-                             ./qfr_test.exe
-                           else
-                             ./qfr_test
-                           fi
+        run: |
+             if [ "$RUNNER_OS" == "Windows" ]; then
+               cd $BUILD_TYPE && ./qfr_test.exe
+             else
+               ctest -C $BUILD_TYPE --output-on-failure
+             fi
 
   coverage:
     needs: test
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
         with:
@@ -91,18 +84,12 @@ jobs:
         with:
           python-version: '3.8'
       - name:  Configure CMake
-        shell: bash
-        run: cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=1 -DBUILD_QFR_TESTS=ON
-
+        run: cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON -DBUILD_QFR_TESTS=ON
       - name:  Build
-        shell: bash
         run: cmake --build "${{github.workspace}}/build" --config Debug --target qfr_test
-
-      - name:              Test
+      - name: Test
         working-directory: ${{github.workspace}}/build/test
-        shell:             bash
-        run:               ./qfr_test
-
+        run: ctest -C Debug --output-on-failure
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
@@ -116,6 +103,6 @@ jobs:
           submodules: recursive
       - uses: DoozyX/clang-format-lint-action@v0.12
         with:
-          source:             'include src test jkq/qfr'
+          source:             'apps include src test jkq/qfr'
           extensions:         'h,hpp,c,cpp'
           clangFormatVersion: 12

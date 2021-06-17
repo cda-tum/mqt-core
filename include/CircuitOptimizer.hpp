@@ -38,8 +38,6 @@ namespace qc {
 
         static bool removeDiagonalGate(DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, DAGIterator& it, qc::Operation* op);
 
-        static void removeMarkedMeasurements(QuantumComputation& qc);
-
         static void removeFinalMeasurements(QuantumComputation& qc);
 
         static void removeFinalMeasurementsRecursive(DAG& dag, DAGIterators& DAGIterators, dd::Qubit idx, const DAGIterator& until);

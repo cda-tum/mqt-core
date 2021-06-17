@@ -14,8 +14,6 @@
 namespace qc {
     class Grover: public QuantumComputation {
     protected:
-        std::function<std::size_t()> oracleGenerator;
-
         void setup(QuantumComputation& qc) const;
 
         void oracle(QuantumComputation& qc) const;
@@ -25,9 +23,9 @@ namespace qc {
         void full_grover(QuantumComputation& qc) const;
 
     public:
-        std::size_t seed       = 0;
-        std::size_t x          = 0;
-        std::size_t iterations = 1;
+        std::size_t seed        = 0;
+        std::size_t targetValue = 0;
+        std::size_t iterations  = 1;
 
         explicit Grover(dd::QubitCount nq, std::size_t seed = 0);
 

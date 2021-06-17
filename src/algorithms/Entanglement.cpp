@@ -5,14 +5,16 @@
 
 #include "algorithms/Entanglement.hpp"
 
+using namespace dd::literals;
+
 namespace qc {
     Entanglement::Entanglement(dd::QubitCount nq):
         QuantumComputation(nq) {
         name = "entanglement_" + std::to_string(nq);
-        emplace_back<StandardOperation>(nqubits, 0, H);
+        h(0);
 
         for (unsigned short i = 1; i < nq; i++) {
-            emplace_back<StandardOperation>(nqubits, dd::Control{0}, i, X);
+            x(i, 0_pc);
         }
     }
 } // namespace qc

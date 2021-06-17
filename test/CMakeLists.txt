@@ -8,7 +8,7 @@ if (NOT TARGET gtest OR NOT TARGET gmock)
 			gtest_disable_pthreads gtest_force_shared_crt gtest_hide_internal_symbols
 	)
 	set_target_properties(gtest gtest_main gmock gmock_main PROPERTIES FOLDER extern)
-	if (BINDINGS)
+	if (BINDINGS AND NOT WIN32)
 		# adjust visibility settings for building Python bindings
 		target_compile_options(gtest PUBLIC -fvisibility=hidden)
 		target_compile_options(gmock PUBLIC -fvisibility=hidden)
@@ -40,7 +40,8 @@ macro(package_add_test TESTNAME)
 endmacro()
 
 # add unit tests
-package_add_test(${PROJECT_NAME}_test ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_qft.cpp
+package_add_test(${PROJECT_NAME}_test
+				 ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_qft.cpp
                  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_grover.cpp
                  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_bernsteinvazirani.cpp
                  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_entanglement.cpp

@@ -10,12 +10,8 @@ namespace qc {
         // delete the identities from circuit
         auto it = qc.ops.begin();
         while (it != qc.ops.end()) {
-            if ((*it)->isStandardOperation()) {
-                if ((*it)->getType() == I) {
-                    it = qc.ops.erase(it);
-                } else {
-                    ++it;
-                }
+            if ((*it)->getType() == I) {
+                it = qc.ops.erase(it);
             } else if ((*it)->isCompoundOperation()) {
                 auto compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
                 auto cit    = compOp->cbegin();
@@ -43,9 +39,6 @@ namespace qc {
     }
 
     void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
-        // print incoming circuit
-        //qc.print(std::cout );
-        //std::cout << std::endl;
         dd::Qubit highest_physical_qubit = 0;
         for (const auto& q: qc.initialLayout) {
             if (q.first > highest_physical_qubit)
@@ -65,12 +58,7 @@ namespace qc {
                         }
                     }
                     continue;
-                } else if (it->getType() == qc::Measure) {
-                    for (const auto& c: it->getControls()) {
-                        dag.at(c.qubit).push_front(&it);
-                    }
-                    continue;
-                } else if (it->getType() == qc::Barrier || it->getType() == qc::Reset) {
+                } else if (it->isNonUnitaryOperation()) {
                     for (const auto& b: it->getTargets()) {
                         dag.at(b).push_front(&it);
                     }
@@ -152,9 +140,6 @@ namespace qc {
         }
 
         removeIdentities(qc);
-
-        // print resulting circuit
-        //qc.print(std::cout );
     }
 
     DAG CircuitOptimizer::constructDAG(QuantumComputation& qc) {
@@ -176,12 +161,7 @@ namespace qc {
                         }
                     }
                     continue;
-                } else if (it->getType() == qc::Measure) {
-                    for (const auto& t: it->getTargets()) {
-                        dag.at(t).push_front(&it);
-                    }
-                    continue;
-                } else if (it->getType() == qc::Barrier || it->getType() == qc::Reset) {
+                } else if (it->isNonUnitaryOperation()) {
                     for (const auto& b: it->getTargets()) {
                         dag.at(b).push_front(&it);
                     }
@@ -246,12 +226,7 @@ namespace qc {
                         }
                     }
                     continue;
-                } else if (it->getType() == qc::Measure) {
-                    for (const auto& c: it->getControls()) {
-                        dag.at(c.qubit).push_front(&it);
-                    }
-                    continue;
-                } else if (it->getType() == qc::Barrier || it->getType() == qc::Reset) {
+                } else if (it->isNonUnitaryOperation()) {
                     for (const auto& b: it->getTargets()) {
                         dag.at(b).push_front(&it);
                     }
@@ -446,7 +421,7 @@ namespace qc {
                 }
             }
             auto op = (*it)->get();
-            if (op->getType() == Barrier) {
+            if (op->getType() == Barrier || op->getType() == Snapshot || op->getType() == ShowProbabilities) {
                 // either ignore barrier statement here or end for this qubit;
                 ++it;
             } else if (op->isStandardOperation()) {
@@ -526,42 +501,6 @@ namespace qc {
         removeIdentities(qc);
     }
 
-    void CircuitOptimizer::removeMarkedMeasurements(QuantumComputation& qc) {
-        // delete the identities from circuit
-        auto it = qc.ops.begin();
-        while (it != qc.ops.end()) {
-            if (!(*it)->isCompoundOperation()) {
-                if ((*it)->getType() == I) {
-                    it = qc.ops.erase(it);
-                } else {
-                    ++it;
-                }
-            } else if ((*it)->isCompoundOperation()) {
-                auto compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
-                auto cit    = compOp->cbegin();
-                while (cit != compOp->cend()) {
-                    auto cop = cit->get();
-                    if (cop->getType() == qc::I) {
-                        cit = compOp->erase(cit);
-                    } else {
-                        ++cit;
-                    }
-                }
-                if (compOp->empty()) {
-                    it = qc.ops.erase(it);
-                } else {
-                    if (compOp->size() == 1) {
-                        // CompoundOperation has degraded to single Operation
-                        (*it) = std::move(*(compOp->begin()));
-                    }
-                    ++it;
-                }
-            } else {
-                ++it;
-            }
-        }
-    }
-
     bool CircuitOptimizer::removeFinalMeasurement(DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, DAGIterator& it, qc::Operation* op) {
         if (op->getNtargets() != 0) {
             // need to check all targets
@@ -576,7 +515,7 @@ namespace qc {
                 // recursive call at target with this operation as goal
                 removeFinalMeasurementsRecursive(dag, dagIterators, target, it);
                 // check if iteration of target qubit was successful
-                if (*dagIterators.at(target) != *it) {
+                if (dagIterators.at(target) == dag.at(target).end() || *dagIterators.at(target) != *it) {
                     onlyMeasurments = false;
                     break;
                 }
@@ -615,7 +554,7 @@ namespace qc {
                 }
             }
             auto op = (*it)->get();
-            if (op->isNonUnitaryOperation() && op->getType() == Measure) {
+            if (op->getType() == Measure) {
                 bool onlyMeasurment = removeFinalMeasurement(dag, dagIterators, idx, it, op);
                 if (onlyMeasurment) {
                     for (const auto& target: op->getTargets()) {
@@ -624,28 +563,34 @@ namespace qc {
                         ++(dagIterators.at(target));
                     }
                 }
-
-            } else if (op->isCompoundOperation()) {
+            } else if (op->getType() == Barrier || op->getType() == Snapshot || op->getType() == ShowProbabilities) {
+                for (const auto& target: op->getTargets()) {
+                    if (dagIterators.at(target) == dag.at(target).end())
+                        break;
+                    ++(dagIterators.at(target));
+                }
+            } else if (op->isCompoundOperation() && op->isNonUnitaryOperation()) {
                 // iterate over all gates of compound operation and upon success increase all corresponding iterators
-                auto compOp         = dynamic_cast<qc::CompoundOperation*>(op);
-                bool onlyMeasurment = true;
-                auto cit            = compOp->rbegin();
+                auto compOp          = dynamic_cast<qc::CompoundOperation*>(op);
+                bool onlyMeasurement = true;
+                auto cit             = compOp->rbegin();
                 while (cit != compOp->rend()) {
                     auto cop = (*cit).get();
                     if (cop->getNtargets() > 0 && cop->getTargets()[0] != idx) {
                         ++cit;
                         continue;
                     }
-                    onlyMeasurment = removeFinalMeasurement(dag, dagIterators, idx, it, cop);
-                    if (!onlyMeasurment)
+                    onlyMeasurement = removeFinalMeasurement(dag, dagIterators, idx, it, cop);
+                    if (!onlyMeasurement)
                         break;
                     ++cit;
                 }
-                if (onlyMeasurment) {
+                if (onlyMeasurement) {
                     ++(dagIterators.at(idx));
                 }
             } else {
-                //Not a Measurment, we are done
+                // not a measurement, we are done
+                dagIterators.at(idx) = dag.at(idx).end();
                 break;
             }
         }
@@ -655,18 +600,15 @@ namespace qc {
     }
 
     void CircuitOptimizer::removeFinalMeasurements(QuantumComputation& qc) {
-        //remove final measurements in the circuit (for use in mapping tool)
-
         auto         dag = constructDAG(qc);
         DAGIterators dagIterators{dag.size()};
         for (size_t q = 0; q < dag.size(); ++q) {
-            //qubit is measured, remove measurements
             dagIterators.at(q) = (dag.at(q).begin());
         }
 
         removeFinalMeasurementsRecursive(dag, dagIterators, 0, dag.at(0).end());
 
-        removeMarkedMeasurements(qc);
+        removeIdentities(qc);
     }
 
     void CircuitOptimizer::decomposeSWAP(QuantumComputation& qc, bool isDirectedArchitecture) {

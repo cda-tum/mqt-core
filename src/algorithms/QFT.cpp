@@ -20,17 +20,17 @@ namespace qc {
                 auto powerOfTwo = std::pow(2.L, j);
                 auto lambda     = static_cast<dd::fp>(dd::PI / powerOfTwo);
                 if (j == 1) {
-                    emplace_back<StandardOperation>(nqubits, dd::Control{static_cast<dd::Qubit>(i + 1)}, i, S);
+                    s(i, dd::Control{static_cast<dd::Qubit>(i + 1)});
                 } else if (j == 2) {
-                    emplace_back<StandardOperation>(nqubits, dd::Control{static_cast<dd::Qubit>(i + 2)}, i, T);
+                    t(i, dd::Control{static_cast<dd::Qubit>(i + 2)});
                 } else {
-                    emplace_back<StandardOperation>(nqubits, dd::Control{static_cast<dd::Qubit>(i + j)}, i, Phase, lambda);
+                    phase(i, dd::Control{static_cast<dd::Qubit>(i + j)}, lambda);
                 }
             }
         }
 
         for (dd::Qubit i = 0; i < static_cast<dd::Qubit>(nqubits / 2); ++i) {
-            emplace_back<StandardOperation>(nqubits, dd::Controls{}, i, static_cast<dd::Qubit>(nqubits - 1 - i), SWAP);
+            swap(i, static_cast<dd::Qubit>(nqubits - 1 - i));
         }
     }
 
