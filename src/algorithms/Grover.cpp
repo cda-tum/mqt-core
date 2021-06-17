@@ -10,52 +10,46 @@ namespace qc {
      * Private Methods
      ***/
     void Grover::setup(QuantumComputation& qc) const {
-        qc.emplace_back<StandardOperation>(nqubits + nancillae, nqubits, X);
+        qc.x(nqubits);
         for (dd::QubitCount i = 0; i < nqubits; ++i)
-            qc.emplace_back<StandardOperation>(nqubits + nancillae, i, H);
+            qc.h(i);
     }
 
     void Grover::oracle(QuantumComputation& qc) const {
-        const std::bitset<64> xBits(x);
+        const std::bitset<64> xBits(targetValue);
         dd::Controls          controls{};
         for (dd::QubitCount i = 0; i < nqubits; ++i) {
             controls.emplace(dd::Control{static_cast<dd::Qubit>(i), xBits[i] ? dd::Control::Type::pos : dd::Control::Type::neg});
         }
         auto target = static_cast<dd::Qubit>(nqubits);
-        qc.emplace_back<StandardOperation>(nqubits + nancillae, controls, target, qc::Z);
+        qc.z(target, controls);
     }
 
     void Grover::diffusion(QuantumComputation& qc) const {
         //std::vector<unsigned short> targets{};
         for (dd::QubitCount i = 0; i < nqubits; ++i) {
             //targets.push_back(i);
-            qc.emplace_back<StandardOperation>(nqubits + nancillae, i, H);
+            qc.h(i);
         }
         for (dd::QubitCount i = 0; i < nqubits; ++i) {
-            qc.emplace_back<StandardOperation>(nqubits + nancillae, i, X);
+            qc.x(i);
         }
 
-        //qc.emplace_back<StandardOperation>(nqubits+nancillae, targets, H);
-        //qc.emplace_back<StandardOperation>(nqubits+nancillae, targets, X);
-
         auto target = static_cast<dd::Qubit>(std::max(nqubits - 1, 0));
-        qc.emplace_back<StandardOperation>(nqubits + nancillae, target, H);
+        qc.h(target);
         dd::Controls controls{};
         for (dd::Qubit j = 0; j < nqubits - 1; ++j) {
             controls.emplace(dd::Control{j});
         }
-        qc.emplace_back<StandardOperation>(nqubits + nancillae, controls, target);
-        qc.emplace_back<StandardOperation>(nqubits + nancillae, target, H);
+        qc.x(target, controls);
+        qc.h(target);
 
         for (auto i = static_cast<dd::Qubit>(nqubits - 1); i >= 0; --i) {
-            qc.emplace_back<StandardOperation>(nqubits + nancillae, i, X);
+            qc.x(i);
         }
         for (auto i = static_cast<dd::Qubit>(nqubits - 1); i >= 0; --i) {
-            qc.emplace_back<StandardOperation>(nqubits + nancillae, i, H);
+            qc.h(i);
         }
-
-        //qc.emplace_back<StandardOperation>(nqubits+nancillae, targets, X);
-        //qc.emplace_back<StandardOperation>(nqubits+nancillae, targets, H);
     }
 
     void Grover::full_grover(QuantumComputation& qc) const {
@@ -81,10 +75,9 @@ namespace qc {
         addAncillaryRegister(1);
         addClassicalRegister(nq + 1);
 
-        std::mt19937_64                            generator(this->seed);
+        std::mt19937_64                            generator(seed);
         std::uniform_int_distribution<std::size_t> distribution(0, static_cast<std::size_t>(std::pow(2.L, std::max(static_cast<dd::QubitCount>(0), nqubits)) - 1.));
-        oracleGenerator = [&]() { return distribution(generator); };
-        x               = oracleGenerator();
+        targetValue = distribution(generator);
 
         if (nqubits <= 3) {
             iterations = 1;
@@ -138,7 +131,7 @@ namespace qc {
         os << "\tn: " << static_cast<std::size_t>(nqubits + 1) << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;
         os << "\tseed: " << seed << std::endl;
-        os << "\tx: " << x << std::endl;
+        os << "\tx: " << targetValue << std::endl;
         os << "\ti: " << iterations << std::endl;
         os << "--------------" << std::endl;
         return os;

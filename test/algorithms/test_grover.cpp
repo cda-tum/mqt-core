@@ -73,7 +73,7 @@ TEST_P(Grover, Functionality) {
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
     qc->printStatistics(std::cout);
-    unsigned long long x = dynamic_cast<qc::Grover*>(qc.get())->x;
+    unsigned long long x = dynamic_cast<qc::Grover*>(qc.get())->targetValue;
 
     // there should be no error building the functionality
     ASSERT_NO_THROW({ func = qc->buildFunctionality(dd); });
@@ -91,7 +91,7 @@ TEST_P(Grover, FunctionalityRecursive) {
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
     qc->printStatistics(std::cout);
-    unsigned long long x = dynamic_cast<qc::Grover*>(qc.get())->x;
+    unsigned long long x = dynamic_cast<qc::Grover*>(qc.get())->targetValue;
 
     // there should be no error building the functionality
     ASSERT_NO_THROW({ func = qc->buildFunctionalityRecursive(dd); });
@@ -109,7 +109,7 @@ TEST_P(Grover, Simulation) {
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
     qc->printStatistics(std::cout);
-    std::size_t x  = dynamic_cast<qc::Grover*>(qc.get())->x;
+    std::size_t x  = dynamic_cast<qc::Grover*>(qc.get())->targetValue;
     auto        in = dd->makeZeroState(nqubits + 1);
     // there should be no error simulating the circuit
     ASSERT_NO_THROW({ sim = qc->simulate(in, dd); });

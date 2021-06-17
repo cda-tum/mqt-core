@@ -749,3 +749,105 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
     ASSERT_EQ(qc.getNops(), 3);
     ASSERT_EQ(qc.getNindividualOps(), 7);
 }
+
+TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
+    QuantumComputation qc(5);
+    qc.i(0);
+    qc.i(0, 1_pc);
+    qc.i(0, {1_pc, 2_nc});
+    qc.h(0);
+    qc.h(0, 1_pc);
+    qc.h(0, {1_pc, 2_nc});
+    qc.x(0);
+    qc.x(0, 1_pc);
+    qc.x(0, {1_pc, 2_nc});
+    qc.y(0);
+    qc.y(0, 1_pc);
+    qc.y(0, {1_pc, 2_nc});
+    qc.z(0);
+    qc.z(0, 1_pc);
+    qc.z(0, {1_pc, 2_nc});
+    qc.s(0);
+    qc.s(0, 1_pc);
+    qc.s(0, {1_pc, 2_nc});
+    qc.sdag(0);
+    qc.sdag(0, 1_pc);
+    qc.sdag(0, {1_pc, 2_nc});
+    qc.t(0);
+    qc.t(0, 1_pc);
+    qc.t(0, {1_pc, 2_nc});
+    qc.tdag(0);
+    qc.tdag(0, 1_pc);
+    qc.tdag(0, {1_pc, 2_nc});
+    qc.v(0);
+    qc.v(0, 1_pc);
+    qc.v(0, {1_pc, 2_nc});
+    qc.vdag(0);
+    qc.vdag(0, 1_pc);
+    qc.vdag(0, {1_pc, 2_nc});
+    qc.u3(0, dd::PI, dd::PI, dd::PI);
+    qc.u3(0, 1_pc, dd::PI, dd::PI, dd::PI);
+    qc.u3(0, {1_pc, 2_nc}, dd::PI, dd::PI, dd::PI);
+    qc.u2(0, dd::PI, dd::PI);
+    qc.u2(0, 1_pc, dd::PI, dd::PI);
+    qc.u2(0, {1_pc, 2_nc}, dd::PI, dd::PI);
+    qc.phase(0, dd::PI);
+    qc.phase(0, 1_pc, dd::PI);
+    qc.phase(0, {1_pc, 2_nc}, dd::PI);
+    qc.sx(0);
+    qc.sx(0, 1_pc);
+    qc.sx(0, {1_pc, 2_nc});
+    qc.sxdag(0);
+    qc.sxdag(0, 1_pc);
+    qc.sxdag(0, {1_pc, 2_nc});
+    qc.rx(0, dd::PI);
+    qc.rx(0, 1_pc, dd::PI);
+    qc.rx(0, {1_pc, 2_nc}, dd::PI);
+    qc.ry(0, dd::PI);
+    qc.ry(0, 1_pc, dd::PI);
+    qc.ry(0, {1_pc, 2_nc}, dd::PI);
+    qc.rz(0, dd::PI);
+    qc.rz(0, 1_pc, dd::PI);
+    qc.rz(0, {1_pc, 2_nc}, dd::PI);
+    qc.swap(0, 1);
+    qc.swap(0, 1, 2_pc);
+    qc.swap(0, 1, {2_pc, 3_nc});
+    qc.iswap(0, 1);
+    qc.iswap(0, 1, 2_pc);
+    qc.iswap(0, 1, {2_pc, 3_nc});
+    qc.peres(0, 1);
+    qc.peres(0, 1, 2_pc);
+    qc.peres(0, 1, {2_pc, 3_nc});
+    qc.peresdag(0, 1);
+    qc.peresdag(0, 1, 2_pc);
+    qc.peresdag(0, 1, {2_pc, 3_nc});
+    qc.measure(0, 0);
+    qc.measure({1, 2}, {1, 2});
+    qc.barrier(0);
+    qc.barrier({1, 2});
+    qc.reset(0);
+    qc.reset({1, 2});
+
+    auto qc_cloned = qc.clone();
+    ASSERT_EQ(qc.size(), qc_cloned.size());
+}
+
+TEST_F(QFRFunctionality, cloningDifferentOperations) {
+    QuantumComputation qc(5);
+
+    auto co = std::make_unique<CompoundOperation>(qc.getNqubits());
+    co->emplace_back<NonUnitaryOperation>(co->getNqubits());
+    co->emplace_back<StandardOperation>(co->getNqubits(), 0, qc::H);
+    qc.emplace_back(co);
+    std::unique_ptr<qc::Operation> op = std::make_unique<StandardOperation>(qc.getNqubits(), 0, qc::X);
+    qc.emplace_back<ClassicControlledOperation>(op, qc.getCregs().at("c"), 1);
+    qc.emplace_back<NonUnitaryOperation>(qc.getNqubits(), std::vector<dd::Qubit>{0, 1}, 1);
+
+    auto qc_cloned = qc.clone();
+    ASSERT_EQ(qc.size(), qc_cloned.size());
+}
+
+TEST_F(QFRFunctionality, wrongRegisterSizes) {
+    QuantumComputation qc(5);
+    ASSERT_THROW(qc.measure({0}, {1, 2}), std::invalid_argument);
+}

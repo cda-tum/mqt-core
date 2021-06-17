@@ -115,7 +115,7 @@ py::dict construct_grover(dd::QubitCount nqubits, unsigned int seed = 0, const C
     results["circuit"]["name"]         = "Grover's algorithm";
     results["circuit"]["seed"]         = seed;
     results["circuit"]["n_iterations"] = grover->iterations;
-    results["circuit"]["target_state"] = grover->x;
+    results["circuit"]["target_state"] = grover->targetValue;
     return results;
 }
 

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.14...3.19)
 
 project(qfr
         LANGUAGES CXX
-        VERSION 1.5.0
+        VERSION 1.6.0
         DESCRIPTION "QFR  - A JKQ library for Quantum Functionality Representation"
         )
 

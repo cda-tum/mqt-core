@@ -12,20 +12,20 @@ namespace qc {
 	 ***/
     void BernsteinVazirani::setup() {
         for (dd::QubitCount i = 0; i < nqubits; ++i)
-            emplace_back<StandardOperation>(nqubits, i, H);
+            h(i);
     }
 
     void BernsteinVazirani::oracle() {
         for (dd::QubitCount i = 0; i < nqubits; ++i) {
             if (((hiddenInteger >> i) & 1) == 1) {
-                emplace_back<StandardOperation>(nqubits, i, Z);
+                z(i);
             }
         }
     }
 
     void BernsteinVazirani::postProcessing() {
         for (dd::QubitCount i = 0; i < nqubits; ++i)
-            emplace_back<StandardOperation>(nqubits, i, H);
+            h(i);
     }
 
     void BernsteinVazirani::full_BernsteinVazirani() {
