@@ -563,6 +563,8 @@ namespace dd {
             }
             // invalidate all compute tables where any component of the entry contains numbers from the complex table if any complex numbers were collected
             if (cCollect > 0) {
+                matrixAdd.clear();
+                vectorAdd.clear();
                 matrixVectorMultiplication.clear();
                 matrixMatrixMultiplication.clear();
                 matrixTranspose.clear();
