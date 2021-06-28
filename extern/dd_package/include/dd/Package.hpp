@@ -538,9 +538,13 @@ namespace dd {
                 return false;
             }
 
-            auto vCollect = vUniqueTable.garbageCollect(force);
-            auto mCollect = mUniqueTable.garbageCollect(force);
             auto cCollect = cn.garbageCollect(force);
+            if (cCollect > 0) {
+                // Collecting garbage in the complex numbers table requires collecting the node tables as well
+                force = true;
+            }
+            auto mCollect = mUniqueTable.garbageCollect(force);
+            auto vCollect = vUniqueTable.garbageCollect(force);
 
             // invalidate all compute tables involving vectors if any vector node has been collected
             if (vCollect > 0) {
@@ -563,8 +567,6 @@ namespace dd {
             }
             // invalidate all compute tables where any component of the entry contains numbers from the complex table if any complex numbers were collected
             if (cCollect > 0) {
-                matrixAdd.clear();
-                vectorAdd.clear();
                 matrixVectorMultiplication.clear();
                 matrixMatrixMultiplication.clear();
                 matrixTranspose.clear();
