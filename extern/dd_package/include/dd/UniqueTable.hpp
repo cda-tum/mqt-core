@@ -250,11 +250,11 @@ namespace dd {
             // once the number of remaining entries reaches the garbage collection limit. It is increased whenever the
             // number of remaining entries is rather close to the garbage collection threshold and decreased if the
             // number of remaining entries is much lower than the current limit.
-            if (remaining > gcLimit / 10 * 9) {
-                gcLimit = remaining + INITIAL_GC_LIMIT;
-            } else if (remaining < gcLimit / 32) {
-                gcLimit /= 4;
-            }
+            //if (remaining > gcLimit / 10 * 9) {
+            //    gcLimit = remaining + INITIAL_GC_LIMIT;
+            //} else if (remaining < gcLimit / 32) {
+            //    gcLimit /= 4;
+            //}
             nodeCount = remaining;
             return collected;
         }
