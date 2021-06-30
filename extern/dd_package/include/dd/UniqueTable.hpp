@@ -252,7 +252,7 @@ namespace dd {
             // number of remaining entries is much lower than the current limit.
             if (remaining > gcLimit / 10 * 9) {
                 gcLimit = remaining + INITIAL_GC_LIMIT;
-            } 
+            }
             //            else if (remaining < gcLimit / 32) {
             //                gcLimit /= 4;
             //            }
