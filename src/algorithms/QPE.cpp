@@ -20,11 +20,8 @@ namespace qc {
         x(0);
 
         //Controlled Phase Rotation
-        for (dd::QubitCount i = 0; i < nqubits; i++) {
-            auto powerOfTwo = std::pow(2.L, i);
-            for (int j = 0; j < powerOfTwo; j++) {
-                phase(0, dd::Control{static_cast<dd::Qubit>(i + 1)}, (powerOfTwo * lambda));
-            }
+        for (dd::QubitCount i = 0; i < precision; i++) {
+            phase(0, dd::Control{static_cast<dd::Qubit>(i + 1)}, ((1U << i) * lambda));
         }
 
         //Inverse QFT
