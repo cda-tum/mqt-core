@@ -32,14 +32,14 @@ namespace qc {
             for (dd::QubitCount j = 1; j < i; j++) {
                 auto iQFT_lambda = -dd::PI / (1U << j);
                 if (j == 1) {
-                    sdag((i - 1), dd::Control{static_cast<dd::Qubit>(i)});
+                    sdag(static_cast<dd::Qubit>(i - 1), dd::Control{static_cast<dd::Qubit>(i)});
                 } else if (j == 2) {
-                    tdag((i - 2), dd::Control{static_cast<dd::Qubit>(i)});
+                    tdag(static_cast<dd::Qubit>(i - 2), dd::Control{static_cast<dd::Qubit>(i)});
                 } else {
-                    phase((i - j), dd::Control{static_cast<dd::Qubit>(i)}, iQFT_lambda);
+                    phase(static_cast<dd::Qubit>(i - j), dd::Control{static_cast<dd::Qubit>(i)}, iQFT_lambda);
                 }
             }
-            emplace_back<StandardOperation>(nqubits, i, H);
+            h(static_cast<dd::Qubit>(i));
         }
 
         //Measure Results
