@@ -114,6 +114,8 @@ TEST_P(QPE, QPETest) {
 
     ASSERT_NO_THROW({ qc = std::make_unique<qc::QPE>(lambda, precision); });
 
+    //std::cout << *qc<<std::endl;
+
     ASSERT_EQ(static_cast<std::size_t>(qc->getNqubits()), precision + 1);
 
     ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(*qc); });
