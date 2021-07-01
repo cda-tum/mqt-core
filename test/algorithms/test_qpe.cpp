@@ -130,7 +130,7 @@ TEST_P(QPE, QPETest) {
     if (exactlyRepresentable) {
         EXPECT_NEAR(probability, 1.0, 1e-8);
     } else {
-        auto threshold         = 4. / (dd::PI * dd::PI);
+        auto threshold = 4. / (dd::PI * dd::PI);
         // account for the eigenstate qubit in the expected result by shifting and adding 1
         auto secondAmplitude   = dd->getValueByPath(e, (secondExpectedResult << 1) + 1);
         auto secondProbability = secondAmplitude.r * secondAmplitude.r + secondAmplitude.i * secondAmplitude.i;
