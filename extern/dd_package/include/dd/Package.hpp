@@ -541,9 +541,13 @@ namespace dd {
                 return false;
             }
 
-            auto vCollect = vUniqueTable.garbageCollect(force);
-            auto mCollect = mUniqueTable.garbageCollect(force);
             auto cCollect = cn.garbageCollect(force);
+            if (cCollect > 0) {
+                // Collecting garbage in the complex numbers table requires collecting the node tables as well
+                force = true;
+            }
+            auto mCollect = mUniqueTable.garbageCollect(force);
+            auto vCollect = vUniqueTable.garbageCollect(force);
 
             // invalidate all compute tables involving vectors if any vector node has been collected
             if (vCollect > 0) {
