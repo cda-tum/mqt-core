@@ -13,8 +13,8 @@ namespace qc {
         addClassicalRegister(precision, "c");
 
         //Hadamard Layer
-        for (dd::QubitCount i = 1; i <= nqubits; i++) {
-            h(i);
+        for (dd::QubitCount i = 1; i <= precision; i++) {
+            h(static_cast<dd::Qubit>(i));
         }
         //prepare eigenvalue
         x(0);
@@ -28,7 +28,7 @@ namespace qc {
         for (dd::Qubit i = 1; i <= static_cast<dd::Qubit>((nqubits - 1) / 2); ++i) {
             swap(i, static_cast<dd::Qubit>(nqubits - i));
         }
-        for (dd::QubitCount i = 1; i <= nqubits; ++i) {
+        for (dd::QubitCount i = 1; i <= precision; ++i) {
             for (dd::QubitCount j = 1; j < i; j++) {
                 auto powerOfTwo  = std::pow(2.L, j);
                 auto iQFT_lambda = -(static_cast<dd::fp>(dd::PI / powerOfTwo));
