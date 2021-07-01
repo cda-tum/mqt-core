@@ -30,8 +30,7 @@ namespace qc {
         }
         for (dd::QubitCount i = 1; i <= precision; ++i) {
             for (dd::QubitCount j = 1; j < i; j++) {
-                auto powerOfTwo  = std::pow(2.L, j);
-                auto iQFT_lambda = -(static_cast<dd::fp>(dd::PI / powerOfTwo));
+                auto iQFT_lambda = -dd::PI / (1U << j);
                 if (j == 1) {
                     sdag((i - 1), dd::Control{static_cast<dd::Qubit>(i)});
                 } else if (j == 2) {
