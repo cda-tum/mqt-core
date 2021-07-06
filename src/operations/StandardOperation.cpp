@@ -401,7 +401,7 @@ namespace qc {
                 of << op.str() << "cz";
                 for (const auto& c: controls)
                     of << " " << qreg[c.qubit].second << ",";
-                of << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
+                of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
 
                 for (const auto& c: controls) {
                     if (c.type == dd::Control::Type::neg)
@@ -412,23 +412,23 @@ namespace qc {
                 of << op.str() << "cx";
                 for (const auto& c: controls)
                     of << " " << qreg[c.qubit].second << ",";
-                of << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
+                of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
 
                 of << op.str() << "x";
                 for (const auto& c: controls)
                     of << " " << qreg[c.qubit].second << ",";
-                of << qreg[targets[1]].second << ";" << std::endl;
+                of << " " << qreg[targets[1]].second << ";" << std::endl;
                 return;
             case Peresdag:
                 of << op.str() << "x";
                 for (const auto& c: controls)
                     of << " " << qreg[c.qubit].second << ",";
-                of << qreg[targets[1]].second << ";" << std::endl;
+                of << " " << qreg[targets[1]].second << ";" << std::endl;
 
                 of << op.str() << "cx";
                 for (const auto& c: controls)
                     of << " " << qreg[c.qubit].second << ",";
-                of << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
+                of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
                 return;
             case Teleportation:
                 if (!controls.empty() || targets.size() != 3) {
