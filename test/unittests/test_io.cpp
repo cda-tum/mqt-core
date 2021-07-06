@@ -276,3 +276,33 @@ TEST_F(IO, changePermutation) {
     EXPECT_TRUE(func.p->e[2].p->e[0].w.approximatelyOne());
     EXPECT_TRUE(func.p->e[3].p->e[2].w.approximatelyOne());
 }
+
+TEST_F(IO, iSWAP_dump_is_valid) {
+    qc->addQubitRegister(2);
+    qc->iswap(0, 1);
+    std::cout << *qc << std::endl;
+    std::stringstream ss{};
+    qc->dumpOpenQASM(ss);
+    EXPECT_NO_THROW(qc->import(ss, qc::OpenQASM););
+    std::cout << *qc << std::endl;
+}
+
+TEST_F(IO, Peres_dump_is_valid) {
+    qc->addQubitRegister(2);
+    qc->peres(0, 1);
+    std::cout << *qc << std::endl;
+    std::stringstream ss{};
+    qc->dumpOpenQASM(ss);
+    EXPECT_NO_THROW(qc->import(ss, qc::OpenQASM););
+    std::cout << *qc << std::endl;
+}
+
+TEST_F(IO, Peresdag_dump_is_valid) {
+    qc->addQubitRegister(2);
+    qc->peresdag(0, 1);
+    std::cout << *qc << std::endl;
+    std::stringstream ss{};
+    qc->dumpOpenQASM(ss);
+    EXPECT_NO_THROW(qc->import(ss, qc::OpenQASM););
+    std::cout << *qc << std::endl;
+}
