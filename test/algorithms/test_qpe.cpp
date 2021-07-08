@@ -150,5 +150,6 @@ TEST_P(QPE, IQPETest) {
 
     ASSERT_EQ(static_cast<std::size_t>(qc->getNqubits()), 2U);
 
+    std::cout << *qc << std::endl;
     /// TODO: at the moment no further checks are here due to the QFR simulator not supporting measurements
 }

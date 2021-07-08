@@ -14,21 +14,18 @@ namespace qc {
 
         x(static_cast<dd::Qubit>(0));
 
-        for(dd::QubitCount i = 0; i < precision; i++){
-            h(static_cast<dd::Qubit>(1));
-            phase(static_cast<dd::Qubit>(0), dd::Control{static_cast<dd::Qubit>(1)}, (1U << (precision-1-i))*lambda);
-            for(dd::QubitCount j = 0; j < i; j++){
-                auto iQFT_lambda = -dd::PI / (1U << (i-j));
-                auto op = std::make_unique<StandardOperation>(nqubits, static_cast<dd::Qubit>(1), Phase, iQFT_lambda);
-                //emplace_back<ClassicControlledOperation>(op, (i-1), 1);
+        for (dd::QubitCount i = 0; i < precision; i++) {
+            h(1);
+            phase(0, 1_pc, (1U << (precision - 1 - i)) * lambda);
+            for (dd::QubitCount j = 0; j < i; j++) {
+                auto                           iQFT_lambda = -dd::PI / (1U << (i - j));
+                std::unique_ptr<qc::Operation> op          = std::make_unique<StandardOperation>(nqubits, 1, Phase, iQFT_lambda);
+                emplace_back<ClassicControlledOperation>(op, std::pair{static_cast<dd::Qubit>(i - 1), 1U}, 1);
             }
-            h(static_cast<dd::Qubit>(1));
-            measure(static_cast<dd::Qubit>(1), i);
-            reset(static_cast<dd::Qubit>(1));
+            h(1);
+            measure(1, i);
+            reset(1);
         }
-
-
-        /// TODO: Construct Iterative Quantum Phase Estimation circuit for U=p(theta) with the specified precision
     }
 
     std::ostream& IQPE::printStatistics(std::ostream& os) const {

@@ -7,6 +7,8 @@
 #define QFR_IQPE_HPP
 #include <QuantumComputation.hpp>
 
+using namespace dd::literals;
+
 namespace qc {
     class IQPE: public QuantumComputation {
     public:
