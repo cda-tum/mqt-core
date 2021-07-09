@@ -4,6 +4,7 @@
  */
 
 #include "algorithms/RandomCliffordCircuit.hpp"
+#include "dd/Export.hpp"
 
 #include "gtest/gtest.h"
 #include <string>

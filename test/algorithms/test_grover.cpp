@@ -19,8 +19,8 @@ protected:
         dd->garbageCollect(true);
 
         // number of complex table entries after clean-up should equal initial number of entries
-        EXPECT_EQ(dd->cn.complexTable.getCount(), initialComplexCount);
-        // if (dd->cn.complexTable.getCount() != initialComplexCount) {
+        EXPECT_EQ(dd->cn.magnitudeTable.getCount(), initialMagCount);
+        EXPECT_EQ(dd->cn.phaseTable.getCount(), initialPhaseCount); // if (dd->cn.complexTable.getCount() != initialComplexCount) {
         //     dd->cn.complexTable.print();
         // }
 
@@ -32,15 +32,17 @@ protected:
         std::tie(nqubits, seed) = GetParam();
         dd                      = std::make_unique<dd::Package>(nqubits + 1);
         initialCacheCount       = dd->cn.complexCache.getCount();
-        initialComplexCount     = dd->cn.complexTable.getCount();
+        initialMagCount         = dd->cn.magnitudeTable.getCount();
+        initialPhaseCount       = dd->cn.phaseTable.getCount();
     }
 
     dd::QubitCount               nqubits = 0;
     std::size_t                  seed    = 0;
     std::unique_ptr<dd::Package> dd;
     std::unique_ptr<qc::Grover>  qc;
-    std::size_t                  initialCacheCount   = 0;
-    std::size_t                  initialComplexCount = 0;
+    std::size_t                  initialCacheCount = 0;
+    std::size_t                  initialMagCount   = 0;
+    std::size_t                  initialPhaseCount = 0;
     qc::VectorDD                 sim{};
     qc::MatrixDD                 func{};
 };
@@ -80,9 +82,8 @@ TEST_P(Grover, Functionality) {
 
     // amplitude of the searched-for entry should be 1
     auto c = dd->getValueByPath(func, x, 0);
-    EXPECT_NEAR(std::abs(c.r), 1, GROVER_ACCURACY);
-    EXPECT_NEAR(std::abs(c.i), 0, GROVER_ACCURACY);
-    auto prob = c.r * c.r + c.i * c.i;
+    EXPECT_NEAR(c.mag, 1, GROVER_ACCURACY);
+    auto prob = c.mag * c.mag;
     EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }
 
@@ -98,9 +99,8 @@ TEST_P(Grover, FunctionalityRecursive) {
 
     // amplitude of the searched-for entry should be 1
     auto c = dd->getValueByPath(func, x, 0);
-    EXPECT_NEAR(std::abs(c.r), 1, GROVER_ACCURACY);
-    EXPECT_NEAR(std::abs(c.i), 0, GROVER_ACCURACY);
-    auto prob = c.r * c.r + c.i * c.i;
+    EXPECT_NEAR(c.mag, 1, GROVER_ACCURACY);
+    auto prob = c.mag * c.mag;
     EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }
 
@@ -115,6 +115,6 @@ TEST_P(Grover, Simulation) {
     ASSERT_NO_THROW({ sim = qc->simulate(in, dd); });
 
     auto c    = dd->getValueByPath(sim, x);
-    auto prob = c.r * c.r + c.i * c.i;
+    auto prob = c.mag * c.mag;
     EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }

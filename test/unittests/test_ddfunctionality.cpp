@@ -19,16 +19,18 @@ protected:
         dd->garbageCollect(true);
 
         // number of complex table entries after clean-up should equal initial number of entries
-        EXPECT_EQ(dd->cn.complexTable.getCount(), initialComplexCount);
+        EXPECT_EQ(dd->cn.magnitudeTable.getCount(), initialMagCount);
+        EXPECT_EQ(dd->cn.phaseTable.getCount(), initialPhaseCount);
         // number of available cache entries after clean-up should equal initial number of entries
         EXPECT_EQ(dd->cn.complexCache.getCount(), initialCacheCount);
     }
 
     void SetUp() override {
         // dd
-        dd                  = std::make_unique<dd::Package>(nqubits);
-        initialCacheCount   = dd->cn.complexCache.getCount();
-        initialComplexCount = dd->cn.complexTable.getCount();
+        dd                = std::make_unique<dd::Package>(nqubits);
+        initialCacheCount = dd->cn.complexCache.getCount();
+        initialMagCount   = dd->cn.magnitudeTable.getCount();
+        initialPhaseCount = dd->cn.phaseTable.getCount();
 
         // initial state preparation
         e = ident = dd->makeIdent(nqubits);
@@ -42,9 +44,10 @@ protected:
         dist = std::uniform_real_distribution<dd::fp>(0.0, 2 * dd::PI);
     }
 
-    dd::QubitCount                         nqubits             = 4;
-    std::size_t                            initialCacheCount   = 0;
-    std::size_t                            initialComplexCount = 0;
+    dd::QubitCount                         nqubits           = 4;
+    std::size_t                            initialCacheCount = 0;
+    std::size_t                            initialMagCount   = 0;
+    std::size_t                            initialPhaseCount = 0;
     qc::MatrixDD                           e{}, ident{};
     std::unique_ptr<dd::Package>           dd;
     std::mt19937_64                        mt;
