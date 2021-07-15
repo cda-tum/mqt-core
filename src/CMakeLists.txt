@@ -67,7 +67,7 @@ enable_lto(${PROJECT_NAME})
 if(MSVC)
 	target_compile_options(${PROJECT_NAME} PUBLIC /utf-8)
 else()
-	target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra $<$<CONFIG:DEBUG>:-Og>)
+	target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra $<$<CONFIG:DEBUG>:-Og> -fno-math-errno -ffinite-math-only -fno-trapping-math -fno-signed-zeros)
 	if (BINDINGS AND NOT WIN32)
 		# adjust visibility settings for building Python bindings
 		target_compile_options(${PROJECT_NAME} PUBLIC -fvisibility=hidden)
