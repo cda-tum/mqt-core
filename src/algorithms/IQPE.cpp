@@ -24,7 +24,8 @@ namespace qc {
             }
             h(1);
             measure(1, i);
-            reset(1);
+            if (i < precision - 1)
+                reset(1);
         }
     }
 
