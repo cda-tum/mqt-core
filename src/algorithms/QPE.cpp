@@ -46,7 +46,6 @@ namespace qc {
         for (dd::QubitCount i = 0; i < nqubits - 1; i++) {
             measure(static_cast<dd::Qubit>(i + 1), i);
         }
-        /// TODO: Construct Quantum Phase Estimation circuit for U=p(lambda) with the specified precision
     }
 
     std::ostream& QPE::printStatistics(std::ostream& os) const {
