@@ -445,6 +445,7 @@ namespace qc {
         }
 
         virtual VectorDD simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd) const;
+        virtual std::map<std::string, std::size_t> simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd, std::size_t shots);
         virtual MatrixDD buildFunctionality(std::unique_ptr<dd::Package>& dd) const;
         virtual MatrixDD buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const;
         virtual bool     buildFunctionalityRecursive(std::size_t depth, std::size_t opIdx, std::stack<MatrixDD>& s, Permutation& permutation, std::unique_ptr<dd::Package>& dd) const;

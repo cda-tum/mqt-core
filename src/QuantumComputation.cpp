@@ -581,6 +581,170 @@ namespace qc {
         return e;
     }
 
+    std::map<std::string, std::size_t> QuantumComputation::simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd, const std::size_t shots) {
+        bool isDynamicCircuit = false;
+        bool hasMeasurements  = false;
+        bool measurementsLast = true;
+
+        std::map<dd::Qubit, std::size_t> measurementMap{};
+
+        // rudimentary check whether circuit is dynamic
+        for (auto& op: ops) {
+            // if it contains any dynamic circuit primitives, it certainly is dynamic
+            if (op->isClassicControlledOperation() || op->getType() == qc::Reset) {
+                isDynamicCircuit = true;
+                break;
+            }
+
+            // once a measurement is encountered we store the corresponding mapping (qubit -> bit)
+            if (op->getType() == qc::Measure) {
+                auto measure    = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
+                hasMeasurements = true;
+
+                const auto& quantum = measure->getTargets();
+                const auto& classic = measure->getClassics();
+
+                for (std::size_t i = 0; i < quantum.size(); ++i) {
+                    measurementMap[quantum.at(i)] = classic.at(i);
+                }
+            }
+
+            // if an operation happens after a measurement, the resulting circuit can only be simulated in single shots
+            if (hasMeasurements && (op->isUnitary() || op->isClassicControlledOperation())) {
+                measurementsLast = false;
+            }
+        }
+
+        if (!measurementsLast)
+            isDynamicCircuit = true;
+
+        if (!isDynamicCircuit) {
+            // if all gates are unitary (besides measurements at the end), we just simulate once and measure all qubits repeatedly
+            auto permutation = initialLayout;
+            auto e           = in;
+            dd->incRef(e);
+
+            for (auto& op: ops) {
+                // simply skip any non-unitary
+                if (!op->isUnitary())
+                    continue;
+
+                auto tmp = dd->multiply(op->getDD(dd, permutation), e);
+                dd->incRef(tmp);
+                dd->decRef(e);
+                e = tmp;
+
+                dd->garbageCollect();
+            }
+
+            // correct permutation if necessary
+            changePermutation(e, permutation, outputPermutation, dd);
+            e = dd->reduceGarbage(e, garbage);
+
+            // measure all qubits
+            std::map<std::string, std::size_t> counts{};
+            for (std::size_t i = 0; i < shots; ++i) {
+                auto measurement = dd->measureAll(e, false, mt);
+                // reverse the order of the bits so that measurements follow big-endian convention
+                std::reverse(measurement.begin(), measurement.end());
+                counts[measurement]++;
+            }
+            std::map<std::string, std::size_t> actualCounts{};
+
+            for (const auto& [bitstring, count]: counts) {
+                std::string measurement(nclassics, '0');
+                if (hasMeasurements) {
+                    // if the circuit contains measurements, we only want to return the measured bits
+                    for (const auto& [qubit, bit]: measurementMap) {
+                        // measurement map specifies that the circuit `qubit` is measured into a certain `bit`
+                        measurement[bit] = bitstring[qubit];
+                    }
+                } else {
+                    // otherwise, we consider the output permutation for determining where to measure the qubits to
+                    for (const auto& [qubit, bit]: outputPermutation) {
+                        measurement[bit] = bitstring[qubit];
+                    }
+                }
+                actualCounts[measurement] += count;
+            }
+            return actualCounts;
+        } else {
+            std::map<std::string, std::size_t> counts{};
+
+            for (std::size_t i = 0; i < shots; i++) {
+
+                std::map<std::size_t, char> measurements{};
+
+                auto permutation = initialLayout;
+                auto e           = in;
+                dd->incRef(e);
+
+                for (auto& op: ops) {
+                    if (op->getType() == Measure) {
+                        auto* measure = dynamic_cast<NonUnitaryOperation*>(op.get());
+                        const auto& qubits = measure->getTargets();
+                        const auto& bits = measure->getClassics();
+                        for (std::size_t j = 0; j < qubits.size(); ++j) {
+                            measurements[bits.at(j)] = dd->measureOneCollapsing(e, permutation.at(qubits.at(j)), true, mt);
+                        }
+                        continue;
+                    }
+
+                    if (op->getType() == Reset) {
+                        auto* reset = dynamic_cast<NonUnitaryOperation*>(op.get());
+                        const auto& qubits = reset->getTargets();
+                        for (const auto& qubit: qubits) {
+                            auto bit = dd->measureOneCollapsing(e, permutation.at(qubit), true, mt);
+                            // apply an X operation whenever the measured result is one
+                            if (bit == '1') {
+                                auto tmp = dd->multiply(qc::StandardOperation(getNqubits(), qubit, qc::X).getDD(dd), e);
+                                dd->incRef(tmp);
+                                dd->decRef(e);
+                                e = tmp;
+                                dd->garbageCollect();
+                            }
+                        }
+                        continue;
+                    }
+
+                    if (op->getType() == ClassicControlled) {
+                        auto* classicControlled = dynamic_cast<ClassicControlledOperation*>(op.get());
+                        const auto& controlRegister = classicControlled->getControlRegister();
+                        const auto& expectedValue = classicControlled->getExpectedValue();
+                        auto actualValue = 0U;
+                        // determine the actual value from measurements
+                        for (std::size_t j=0; j< controlRegister.second; ++j) {
+                            actualValue |= (measurements[controlRegister.first + j] == '1')? (1U << j) : 0U;
+                        }
+
+                        // do not apply an operation if the value is not the expected one
+                        if (actualValue != expectedValue)
+                            continue;
+                    }
+
+                    auto tmp = dd->multiply(op->getDD(dd, permutation), e);
+                    dd->incRef(tmp);
+                    dd->decRef(e);
+                    e = tmp;
+
+                    dd->garbageCollect();
+                }
+
+                // correct permutation if necessary
+                changePermutation(e, permutation, outputPermutation, dd);
+                e = dd->reduceGarbage(e, garbage);
+
+                std::string shot(nclassics, '0');
+                for (const auto& [bit, value]: measurements) {
+                    shot[nclassics - bit - 1] = value;
+                }
+                counts[shot]++;
+            }
+
+            return counts;
+        }
+    }
+
     std::ostream& QuantumComputation::print(std::ostream& os) const {
         if (!ops.empty()) {
             os << std::setw((int)std::log10(ops.size()) + 1) << "i: \t\t\t";
