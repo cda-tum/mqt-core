@@ -144,12 +144,43 @@ TEST_P(QPE, QPETest) {
 TEST_P(QPE, IQPETest) {
     auto                      dd = std::make_unique<dd::Package>(precision + 1);
     std::unique_ptr<qc::IQPE> qc;
-    qc::VectorDD              e{};
 
     ASSERT_NO_THROW({ qc = std::make_unique<qc::IQPE>(lambda, precision); });
 
     ASSERT_EQ(static_cast<std::size_t>(qc->getNqubits()), 2U);
 
-    std::cout << *qc << std::endl;
-    /// TODO: at the moment no further checks are here due to the QFR simulator not supporting measurements
+    //    std::cout << *qc << std::endl;
+
+    constexpr auto shots        = 4096U;
+    auto           measurements = qc->simulate(dd->makeZeroState(qc->getNqubits()), dd, shots);
+
+    // sort the measurements
+    using Measurement = std::pair<std::string, std::size_t>;
+    auto comp         = [](const Measurement& a, const Measurement& b) -> bool {
+        if (a.second != b.second) {
+            return a.second > b.second;
+        }
+        return a.first > b.first;
+    };
+    std::set<Measurement, decltype(comp)> ordered(measurements.begin(), measurements.end(), comp);
+
+    std::cout << "Obtained measurements: " << std::endl;
+    for (const auto& measurement: ordered) {
+        std::cout << "\t" << measurement.first << ": " << measurement.second << " (" << (measurement.second * 100) / shots << "%)" << std::endl;
+    }
+
+    const auto& mostLikely = *ordered.begin();
+    if (exactlyRepresentable) {
+        EXPECT_EQ(mostLikely.first, expectedResultRepresentation);
+        EXPECT_EQ(mostLikely.second, shots);
+    } else {
+        auto it = ordered.begin();
+        std::advance(it, 1);
+        const auto& secondMostLikely = *(it);
+        EXPECT_TRUE((mostLikely.first == expectedResultRepresentation && secondMostLikely.first == secondExpectedResultRepresentation) ||
+                    (mostLikely.first == secondExpectedResultRepresentation && secondMostLikely.first == expectedResultRepresentation));
+        auto threshold = 4. / (dd::PI * dd::PI);
+        EXPECT_NEAR(static_cast<double>(mostLikely.second) / shots, threshold, 0.01);
+        EXPECT_NEAR(static_cast<double>(secondMostLikely.second) / shots, threshold, 0.01);
+    }
 }
