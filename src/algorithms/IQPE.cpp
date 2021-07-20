@@ -20,7 +20,7 @@ namespace qc {
             for (dd::QubitCount j = 0; j < i; j++) {
                 auto                           iQFT_lambda = -dd::PI / (1U << (i - j));
                 std::unique_ptr<qc::Operation> op          = std::make_unique<StandardOperation>(nqubits, 1, Phase, iQFT_lambda);
-                emplace_back<ClassicControlledOperation>(op, std::pair{static_cast<dd::Qubit>(i - 1), 1U}, 1);
+                emplace_back<ClassicControlledOperation>(op, std::pair{static_cast<dd::Qubit>(j), 1U}, 1);
             }
             h(1);
             measure(1, i);
