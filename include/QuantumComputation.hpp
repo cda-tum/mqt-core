@@ -51,7 +51,7 @@ namespace qc {
         QuantumRegisterMap   ancregs{};
 
         std::mt19937_64 mt;
-        std::size_t seed = 0;
+        std::size_t     seed = 0;
 
         void importOpenQASM(std::istream& is);
         void importReal(std::istream& is);
@@ -161,7 +161,8 @@ namespace qc {
 
     public:
         QuantumComputation() = default;
-        explicit QuantumComputation(std::size_t nqubits, std::size_t seed = 0): seed(seed) {
+        explicit QuantumComputation(std::size_t nqubits, std::size_t seed = 0):
+            seed(seed) {
             addQubitRegister(nqubits);
             addClassicalRegister(nqubits);
             if (seed == 0) {
@@ -171,11 +172,12 @@ namespace qc {
                 std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
                 std::random_device                                                    rd;
                 std::generate(std::begin(random_data), std::end(random_data), [&rd]() { return rd(); });
-                std::seed_seq   seeds(std::begin(random_data), std::end(random_data));
+                std::seed_seq seeds(std::begin(random_data), std::end(random_data));
                 mt.seed(seeds);
             }
         }
-        explicit QuantumComputation(const std::string& filename, std::size_t seed = 0): seed(seed) {
+        explicit QuantumComputation(const std::string& filename, std::size_t seed = 0):
+            seed(seed) {
             import(filename);
             if (seed == 0) {
                 mt.seed(seed);
@@ -184,7 +186,7 @@ namespace qc {
                 std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
                 std::random_device                                                    rd;
                 std::generate(std::begin(random_data), std::end(random_data), [&rd]() { return rd(); });
-                std::seed_seq   seeds(std::begin(random_data), std::end(random_data));
+                std::seed_seq seeds(std::begin(random_data), std::end(random_data));
                 mt.seed(seeds);
             }
         }
@@ -195,7 +197,7 @@ namespace qc {
         virtual ~QuantumComputation()                                   = default;
 
         QuantumComputation clone() {
-            auto qc           = QuantumComputation(nqubits);
+            auto qc              = QuantumComputation(nqubits);
             qc.nqubits           = nqubits;
             qc.nclassics         = nclassics;
             qc.nancillae         = nancillae;
@@ -444,11 +446,11 @@ namespace qc {
             max_controls = std::max(ncontrols, max_controls);
         }
 
-        virtual VectorDD simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd) const;
+        virtual VectorDD                           simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd) const;
         virtual std::map<std::string, std::size_t> simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd, std::size_t shots);
-        virtual MatrixDD buildFunctionality(std::unique_ptr<dd::Package>& dd) const;
-        virtual MatrixDD buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const;
-        virtual bool     buildFunctionalityRecursive(std::size_t depth, std::size_t opIdx, std::stack<MatrixDD>& s, Permutation& permutation, std::unique_ptr<dd::Package>& dd) const;
+        virtual MatrixDD                           buildFunctionality(std::unique_ptr<dd::Package>& dd) const;
+        virtual MatrixDD                           buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const;
+        virtual bool                               buildFunctionalityRecursive(std::size_t depth, std::size_t opIdx, std::stack<MatrixDD>& s, Permutation& permutation, std::unique_ptr<dd::Package>& dd) const;
 
         /**
 		 * printing

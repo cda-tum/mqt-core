@@ -672,7 +672,6 @@ namespace qc {
             std::map<std::string, std::size_t> counts{};
 
             for (std::size_t i = 0; i < shots; i++) {
-
                 std::map<std::size_t, char> measurements{};
 
                 auto permutation = initialLayout;
@@ -681,9 +680,9 @@ namespace qc {
 
                 for (auto& op: ops) {
                     if (op->getType() == Measure) {
-                        auto* measure = dynamic_cast<NonUnitaryOperation*>(op.get());
-                        const auto& qubits = measure->getTargets();
-                        const auto& bits = measure->getClassics();
+                        auto*       measure = dynamic_cast<NonUnitaryOperation*>(op.get());
+                        const auto& qubits  = measure->getTargets();
+                        const auto& bits    = measure->getClassics();
                         for (std::size_t j = 0; j < qubits.size(); ++j) {
                             measurements[bits.at(j)] = dd->measureOneCollapsing(e, permutation.at(qubits.at(j)), true, mt);
                         }
@@ -691,7 +690,7 @@ namespace qc {
                     }
 
                     if (op->getType() == Reset) {
-                        auto* reset = dynamic_cast<NonUnitaryOperation*>(op.get());
+                        auto*       reset  = dynamic_cast<NonUnitaryOperation*>(op.get());
                         const auto& qubits = reset->getTargets();
                         for (const auto& qubit: qubits) {
                             auto bit = dd->measureOneCollapsing(e, permutation.at(qubit), true, mt);
@@ -708,13 +707,13 @@ namespace qc {
                     }
 
                     if (op->getType() == ClassicControlled) {
-                        auto* classicControlled = dynamic_cast<ClassicControlledOperation*>(op.get());
-                        const auto& controlRegister = classicControlled->getControlRegister();
-                        const auto& expectedValue = classicControlled->getExpectedValue();
-                        auto actualValue = 0U;
+                        auto*       classicControlled = dynamic_cast<ClassicControlledOperation*>(op.get());
+                        const auto& controlRegister   = classicControlled->getControlRegister();
+                        const auto& expectedValue     = classicControlled->getExpectedValue();
+                        auto        actualValue       = 0U;
                         // determine the actual value from measurements
-                        for (std::size_t j=0; j< controlRegister.second; ++j) {
-                            actualValue |= (measurements[controlRegister.first + j] == '1')? (1U << j) : 0U;
+                        for (std::size_t j = 0; j < controlRegister.second; ++j) {
+                            actualValue |= (measurements[controlRegister.first + j] == '1') ? (1U << j) : 0U;
                         }
 
                         // do not apply an operation if the value is not the expected one
