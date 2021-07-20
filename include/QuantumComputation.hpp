@@ -20,6 +20,7 @@
 #include <locale>
 #include <map>
 #include <memory>
+#include <random>
 #include <regex>
 #include <sstream>
 #include <string>
@@ -48,6 +49,9 @@ namespace qc {
         QuantumRegisterMap   qregs{};
         ClassicalRegisterMap cregs{};
         QuantumRegisterMap   ancregs{};
+
+        std::mt19937_64 mt;
+        std::size_t seed = 0;
 
         void importOpenQASM(std::istream& is);
         void importReal(std::istream& is);
@@ -157,12 +161,32 @@ namespace qc {
 
     public:
         QuantumComputation() = default;
-        explicit QuantumComputation(std::size_t nqubits) {
+        explicit QuantumComputation(std::size_t nqubits, std::size_t seed = 0): seed(seed) {
             addQubitRegister(nqubits);
             addClassicalRegister(nqubits);
+            if (seed == 0) {
+                mt.seed(seed);
+            } else {
+                // create and properly seed rng
+                std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
+                std::random_device                                                    rd;
+                std::generate(std::begin(random_data), std::end(random_data), [&rd]() { return rd(); });
+                std::seed_seq   seeds(std::begin(random_data), std::end(random_data));
+                mt.seed(seeds);
+            }
         }
-        explicit QuantumComputation(const std::string& filename) {
+        explicit QuantumComputation(const std::string& filename, std::size_t seed = 0): seed(seed) {
             import(filename);
+            if (seed == 0) {
+                mt.seed(seed);
+            } else {
+                // create and properly seed rng
+                std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
+                std::random_device                                                    rd;
+                std::generate(std::begin(random_data), std::end(random_data), [&rd]() { return rd(); });
+                std::seed_seq   seeds(std::begin(random_data), std::end(random_data));
+                mt.seed(seeds);
+            }
         }
         QuantumComputation(const QuantumComputation& qc)     = delete;
         QuantumComputation(QuantumComputation&& qc) noexcept = default;
@@ -172,18 +196,20 @@ namespace qc {
 
         QuantumComputation clone() {
             auto qc           = QuantumComputation(nqubits);
-            nqubits           = qc.nqubits;
-            nclassics         = qc.nclassics;
-            nancillae         = qc.nancillae;
-            max_controls      = qc.max_controls;
-            name              = qc.name;
-            qregs             = qc.qregs;
-            cregs             = qc.cregs;
-            ancregs           = qc.ancregs;
-            initialLayout     = qc.initialLayout;
-            outputPermutation = qc.outputPermutation;
-            ancillary         = qc.ancillary;
-            garbage           = qc.garbage;
+            qc.nqubits           = nqubits;
+            qc.nclassics         = nclassics;
+            qc.nancillae         = nancillae;
+            qc.max_controls      = max_controls;
+            qc.name              = name;
+            qc.qregs             = qregs;
+            qc.cregs             = cregs;
+            qc.ancregs           = ancregs;
+            qc.initialLayout     = initialLayout;
+            qc.outputPermutation = outputPermutation;
+            qc.ancillary         = ancillary;
+            qc.garbage           = garbage;
+            qc.seed              = seed;
+            qc.mt                = mt;
 
             for (auto const& op: ops) {
                 qc.ops.emplace_back<>(op->clone());
