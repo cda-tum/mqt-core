@@ -160,6 +160,55 @@ TEST_F(IO, qiskit_mcx_gray) {
     EXPECT_EQ(gate->getTargets().at(0), 3);
 }
 
+TEST_F(IO, qiskit_mcx_skip_gate_definition) {
+    std::stringstream ss{};
+    ss << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[4];"
+       << "gate mcx q0,q1,q2,q3 { cccx q0,q1,q2,q3; }"
+       << "mcx q[0], q[1], q[2], q[3];"
+       << std::endl;
+    qc->import(ss, qc::OpenQASM);
+    auto& gate = *(qc->begin());
+    std::cout << *qc << std::endl;
+    EXPECT_EQ(gate->getType(), qc::X);
+    EXPECT_EQ(gate->getNcontrols(), 3);
+    EXPECT_EQ(gate->getTargets().at(0), 3);
+}
+
+TEST_F(IO, qiskit_mcphase) {
+    std::stringstream ss{};
+    ss << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[4];"
+       << "mcphase(pi) q[0], q[1], q[2], q[3];"
+       << std::endl;
+    qc->import(ss, qc::OpenQASM);
+    auto& gate = *(qc->begin());
+    std::cout << *qc << std::endl;
+    EXPECT_EQ(gate->getType(), qc::Z);
+    EXPECT_EQ(gate->getNcontrols(), 3);
+    EXPECT_EQ(gate->getTargets().at(0), 3);
+}
+
+TEST_F(IO, qiskit_mcphase_in_declaration) {
+    std::stringstream ss{};
+    ss << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[4];"
+       << "gate foo q0, q1, q2, q3 { mcphase(pi) q0, q1, q2, q3; }"
+       << "foo q[0], q[1], q[2], q[3];"
+       << std::endl;
+    qc->import(ss, qc::OpenQASM);
+    auto&       gate     = *(qc->begin());
+    auto*       compound = dynamic_cast<qc::CompoundOperation*>(gate.get());
+    const auto& op       = compound->at(0);
+    std::cout << *op << std::endl;
+    EXPECT_EQ(op->getType(), qc::Z);
+    EXPECT_EQ(op->getNcontrols(), 3);
+    EXPECT_EQ(op->getTargets().at(0), 3);
+}
+
 TEST_F(IO, qiskit_mcx_recursive) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
