@@ -40,7 +40,7 @@ namespace dd {
         return oss.str();
     }
     inline fp thicknessFromMagnitude(const Complex& a) {
-        return 3.0 * std::max(dd::ComplexNumbers::mag(a), 0.10);
+        return 3.0 * std::max(dd::ComplexNumbers::mag(a), static_cast<fp>(0.10));
     }
 
     template<class Edge>

@@ -747,7 +747,7 @@ namespace dd {
         }
 
     private:
-        double assignProbabilities(const vEdge& edge, std::unordered_map<vNode*, double>& probs) {
+        double assignProbabilities(const vEdge& edge, std::unordered_map<vNode*, fp>& probs) {
             auto it = probs.find(edge.p);
             if (it != probs.end()) {
                 return ComplexNumbers::mag2(edge.w) * it->second;
