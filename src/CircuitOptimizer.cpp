@@ -678,35 +678,22 @@ namespace qc {
         //                                  c: 2/══════╩══════════╩═
         //                                             0          1
         auto replacementMap = std::map<dd::Qubit, dd::Qubit>();
-        //auto i = 0;
         for(auto it = qc.ops.begin(); it != qc.ops.end(); it++){
             if(!replacementMap.empty()) {
                 if ((*it)->isStandardOperation()) {
-                    auto itControls = (*it)->getControls().begin();
-                    while(itControls != (*it)->getControls().end()){
-                        auto newControl = replacementMap.find((*itControls).qubit);
-                        if(newControl != replacementMap.end()) {
-                            //(*itControls).qubit = static_cast<dd::Qubit>(newControl->second);
-                            //(*it).setControls(dd::Controls{static_cast<dd::Control>(newControl->second), static_cast<dd::CompareControl>(newControl->second)});
-                        }
-                        itControls++;
-                    }
+                    changeTargets(reinterpret_cast<Operation&>(*it), replacementMap);
+                    changeControls(reinterpret_cast<Operation&>(*it), replacementMap);
                 }
                 if ((*it)->isNonUnitaryOperation()) {
-                    auto itTargets = (*it)->getTargets().begin();
-                    while(itTargets != (*it)->getTargets().end()){
-                        auto newTarget = replacementMap.find((static_cast<dd::Qubit>(*itTargets)));
-                        if(newTarget != replacementMap.end()) {
-                            (*it)->setTargets(static_cast<Targets>(newTarget->second));
-                        }
-                        itTargets++;
-                    }
+                    changeTargets(reinterpret_cast<Operation&>(*it), replacementMap);
                 }
                 if ((*it)->isCompoundOperation()) {
-
+                    changeTargets(reinterpret_cast<Operation&>(*it), replacementMap);
+                    changeControls(reinterpret_cast<Operation&>(*it), replacementMap);
                 }
                 if ((*it)->isClassicControlledOperation()) {
-
+                    changeTargets(reinterpret_cast<Operation&>(*it), replacementMap);
+                    changeControls(reinterpret_cast<Operation&>(*it), replacementMap);
                 }
             }
             if((*it)->getType() == qc::Reset){
@@ -719,6 +706,28 @@ namespace qc {
                 it = qc.erase(it);
             }
         }
+    }
+
+    void CircuitOptimizer::changeTargets(Operation& op, std::map<dd::Qubit, dd::Qubit> replacementMap){
+        auto targetIt = op.getTargets().begin();
+        while(targetIt != op.getTargets().end()){
+            auto newTarget = replacementMap.find((static_cast<dd::Qubit>(*targetIt)));
+            if(newTarget != replacementMap.end()) {
+                op.setTargets(static_cast<Targets>(newTarget->second));
+            }
+            targetIt++;
+        }
+    }
+
+    void CircuitOptimizer::changeControls(Operation& op, std::map<dd::Qubit, dd::Qubit> replacementMap){
+        auto controlIt = op.getControls().begin();
+        while(controlIt != op.getControls().end()){
+            auto newControl = replacementMap.find((*controlIt).qubit);
+            if(newControl != replacementMap.end()){
+                op.getControls().erase(controlIt);
+                op.getControls().insert(dd::Control{newControl->second});
+            }
+        controlIt++;
     }
 
     void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {

@@ -50,6 +50,10 @@ namespace qc {
 
         static void eliminateResets(QuantumComputation& qc);
 
+        static void changeTargets(Operation& op, std::map<dd::Qubit, dd::Qubit> replacementMap);
+
+        static void changeControls(Operation& op, std::map<dd::Qubit, dd::Qubit> replacementMap);
+
         static void deferMeasurements(QuantumComputation& qc);
     };
 } // namespace qc
