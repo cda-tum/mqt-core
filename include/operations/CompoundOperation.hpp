@@ -172,6 +172,8 @@ namespace qc {
         std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator iterator, std::unique_ptr<T>& op) {
             return ops.insert(iterator, std::move(op));
         }
+
+        [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }
     };
 } // namespace qc
 #endif //QFR_COMPOUNDOPERATION_H

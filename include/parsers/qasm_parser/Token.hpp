@@ -62,6 +62,7 @@ namespace qasm {
             mcx_gray,
             mcx_recursive,
             mcx_vchain,
+            mcphase,
             comment
         };
 
@@ -105,6 +106,7 @@ namespace qasm {
             {Token::Kind::mcx_gray, "mcx_gray"},
             {Token::Kind::mcx_recursive, "mcx_recursive"},
             {Token::Kind::mcx_vchain, "mcx_vchain"},
+            {Token::Kind::mcphase, "mcphase"},
             {Token::Kind::pi, "pi"},
             {Token::Kind::measure, "measure"},
             {Token::Kind::openqasm, "openqasm"},
