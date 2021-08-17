@@ -963,3 +963,47 @@ TEST_F(QFRFunctionality, eliminateResetsClassicControlled) {
     EXPECT_EQ(targets.at(0), 1);
     EXPECT_EQ(classicControlled->getNcontrols(), 0);
 }
+
+TEST_F(QFRFunctionality, eliminateResetsMultipleTargetReset) {
+    QuantumComputation qc{};
+    qc.addQubitRegister(2);
+    qc.reset({0, 1});
+    qc.x(0);
+    qc.z(1);
+    qc.x(0, 1_pc);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
+
+    std::cout << qc << std::endl;
+
+    ASSERT_EQ(qc.getNqubits(), 4);
+    ASSERT_EQ(qc.getNindividualOps(), 3);
+    auto& op0 = qc.at(0);
+    auto& op1 = qc.at(1);
+    auto& op2 = qc.at(2);
+
+    EXPECT_EQ(op0->getNqubits(), 4);
+    EXPECT_TRUE(op0->getType() == qc::X);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(2));
+    EXPECT_TRUE(op0->getControls().empty());
+
+    EXPECT_EQ(op1->getNqubits(), 4);
+    EXPECT_TRUE(op1->getType() == qc::Z);
+    const auto& targets1 = op1->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(3));
+    EXPECT_TRUE(op1->getControls().empty());
+
+    EXPECT_EQ(op2->getNqubits(), 4);
+    EXPECT_TRUE(op2->getType() == qc::X);
+    const auto& targets2 = op2->getTargets();
+    EXPECT_EQ(targets2.size(), 1);
+    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(2));
+    const auto& controls2 = op2->getControls();
+    EXPECT_EQ(controls2.size(), 1);
+    EXPECT_EQ(controls2.count(3), 1);
+}
