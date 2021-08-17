@@ -887,7 +887,7 @@ TEST_F(QFRFunctionality, eliminateResetsBasicTest) {
     const auto& targets1 = op1->getTargets();
     EXPECT_EQ(targets1.size(), 1);
     EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(0));
-    EXPECT_TRUE(op0->getControls().empty());
+    EXPECT_TRUE(op1->getControls().empty());
     auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
     const auto classics0 = measure0->getClassics();
     EXPECT_EQ(classics0.size(), 1);
@@ -946,7 +946,7 @@ TEST_F(QFRFunctionality, eliminateResetsClassicControlled) {
     const auto& targets1 = op1->getTargets();
     EXPECT_EQ(targets1.size(), 1);
     EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(0));
-    EXPECT_TRUE(op0->getControls().empty());
+    EXPECT_TRUE(op1->getControls().empty());
     auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
     const auto classics0 = measure0->getClassics();
     EXPECT_EQ(classics0.size(), 1);
@@ -1006,4 +1006,69 @@ TEST_F(QFRFunctionality, eliminateResetsMultipleTargetReset) {
     const auto& controls2 = op2->getControls();
     EXPECT_EQ(controls2.size(), 1);
     EXPECT_EQ(controls2.count(3), 1);
+}
+
+TEST_F(QFRFunctionality, eliminateResetsCompoundOperation) {
+    QuantumComputation qc(2U);
+
+    qc.reset(0);
+    qc.reset(1);
+
+    qc.emplace_back<qc::CompoundOperation>(qc.getNqubits());
+    auto compOp = dynamic_cast<qc::CompoundOperation*>(qc.at(2).get());
+    compOp->emplace_back<qc::StandardOperation>(2U, 1_pc, 0, qc::X);
+    compOp->emplace_back<qc::NonUnitaryOperation>(2U, std::vector<dd::Qubit>{0}, qc::Reset);
+    compOp->emplace_back<qc::NonUnitaryOperation>(2U, 0, 0U);
+    std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(2U, 0, qc::X);
+    compOp->emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
+
+    std::cout << qc << std::endl;
+
+    ASSERT_EQ(qc.getNqubits(), 5);
+    ASSERT_EQ(qc.getNindividualOps(), 3);
+
+    auto& op = qc.at(0);
+    EXPECT_TRUE(op->isCompoundOperation());
+    EXPECT_EQ(op->getNqubits(), 5);
+    auto compOp0 = dynamic_cast<qc::CompoundOperation*>(op.get());
+    EXPECT_EQ(compOp0->size(), 3);
+
+    auto& op0 = compOp0->at(0);
+    auto& op1 = compOp0->at(1);
+    auto& op2 = compOp0->at(2);
+
+    EXPECT_EQ(op0->getNqubits(), 5);
+    EXPECT_TRUE(op0->getType() == qc::X);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(2));
+    const auto& controls0 = op0->getControls();
+    EXPECT_EQ(controls0.size(), 1);
+    EXPECT_EQ(controls0.count(3), 1);
+
+    EXPECT_EQ(op1->getNqubits(), 5);
+    EXPECT_TRUE(op1->getType() == qc::Measure);
+    const auto& targets1 = op1->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(4));
+    EXPECT_TRUE(op1->getControls().empty());
+    auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
+    const auto classics0 = measure0->getClassics();
+    EXPECT_EQ(classics0.size(), 1);
+    EXPECT_EQ(classics0.at(0), 0);
+
+    EXPECT_EQ(op2->getNqubits(), 5);
+    EXPECT_TRUE(op2->isClassicControlledOperation());
+    auto       classicControlled = dynamic_cast<qc::ClassicControlledOperation*>(op2.get());
+    const auto operation         = classicControlled->getOperation();
+    EXPECT_EQ(operation->getNqubits(), 5);
+    EXPECT_TRUE(operation->getType() == qc::X);
+    EXPECT_EQ(classicControlled->getNtargets(), 1);
+    const auto& targets = classicControlled->getTargets();
+    EXPECT_EQ(targets.at(0), 1);
+    EXPECT_EQ(classicControlled->getNcontrols(), 0);
 }
