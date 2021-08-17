@@ -678,8 +678,8 @@ namespace qc {
         //                                  c: 2/══════╩══════════╩═
         //                                             0          1
         auto replacementMap = std::map<dd::Qubit, dd::Qubit>();
-        for(auto it = qc.ops.begin(); it != qc.ops.end(); it++){
-            if(!replacementMap.empty()) {
+        for (auto it = qc.ops.begin(); it != qc.ops.end(); it++) {
+            if (!replacementMap.empty()) {
                 if ((*it)->isStandardOperation()) {
                     changeTargets(reinterpret_cast<Operation&>(*it), replacementMap);
                     changeControls(reinterpret_cast<Operation&>(*it), replacementMap);
@@ -696,10 +696,10 @@ namespace qc {
                     changeControls(reinterpret_cast<Operation&>(*it), replacementMap);
                 }
             }
-            if((*it)->getType() == qc::Reset){
+            if ((*it)->getType() == qc::Reset) {
                 auto indexAddQubit = static_cast<dd::Qubit>(qc.getNqubits());
                 qc.addQubit(indexAddQubit, indexAddQubit, indexAddQubit);
-                for(const auto& target : (*it)->getTargets()){
+                for (const auto& target: (*it)->getTargets()) {
                     replacementMap.insert(std::pair(static_cast<dd::Qubit>(target), static_cast<dd::Qubit>(indexAddQubit)));
                 }
                 it = qc.erase(it);
@@ -707,11 +707,11 @@ namespace qc {
         }
     }
 
-    void CircuitOptimizer::changeTargets(Operation& op, std::map<dd::Qubit, dd::Qubit> replacementMap){
+    void CircuitOptimizer::changeTargets(Operation& op, std::map<dd::Qubit, dd::Qubit> replacementMap) {
         auto targetIt = op.getTargets().begin();
-        while(targetIt != op.getTargets().end()){
+        while (targetIt != op.getTargets().end()) {
             auto newTarget = replacementMap.find((static_cast<dd::Qubit>(*targetIt)));
-            if(newTarget != replacementMap.end()) {
+            if (newTarget != replacementMap.end()) {
                 op.setTargets(static_cast<Targets>(newTarget->second));
             }
             targetIt++;
