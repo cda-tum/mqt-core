@@ -35,7 +35,7 @@ namespace qc {
             qc.x(i);
         }
 
-        auto target = static_cast<dd::Qubit>(std::max(nqubits - 1, 0));
+        auto target = static_cast<dd::Qubit>(std::max(static_cast<dd::QubitCount>(nqubits - 1), static_cast<dd::QubitCount>(0)));
         qc.h(target);
         dd::Controls controls{};
         for (dd::Qubit j = 0; j < nqubits - 1; ++j) {
