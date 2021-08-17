@@ -911,3 +911,55 @@ TEST_F(QFRFunctionality, eliminateResetsBasicTest) {
     EXPECT_EQ(classics1.size(), 1);
     EXPECT_EQ(classics1.at(0), 1);
 }
+
+TEST_F(QFRFunctionality, eliminateResetsClassicControlled) {
+    QuantumComputation qc{};
+    qc.addQubitRegister(1);
+    qc.addClassicalRegister(2);
+    qc.h(0);
+    qc.measure(0, 0U);
+    qc.reset(0);
+    std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(1U, 0, qc::X);
+    qc.emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
+
+    std::cout << qc << std::endl;
+
+    ASSERT_EQ(qc.getNqubits(), 2);
+    ASSERT_EQ(qc.getNindividualOps(), 3);
+    auto& op0 = qc.at(0);
+    auto& op1 = qc.at(1);
+    auto& op2 = qc.at(2);
+
+    EXPECT_EQ(op0->getNqubits(), 2);
+    EXPECT_TRUE(op0->getType() == qc::H);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op0->getControls().empty());
+
+    EXPECT_EQ(op1->getNqubits(), 2);
+    EXPECT_TRUE(op1->getType() == qc::Measure);
+    const auto& targets1 = op1->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op0->getControls().empty());
+    auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
+    const auto classics0 = measure0->getClassics();
+    EXPECT_EQ(classics0.size(), 1);
+    EXPECT_EQ(classics0.at(0), 0);
+
+    EXPECT_EQ(op2->getNqubits(), 2);
+    EXPECT_TRUE(op2->isClassicControlledOperation());
+    auto       classicControlled = dynamic_cast<qc::ClassicControlledOperation*>(op2.get());
+    const auto operation         = classicControlled->getOperation();
+    EXPECT_EQ(operation->getNqubits(), 2);
+    EXPECT_TRUE(operation->getType() == qc::X);
+    EXPECT_EQ(classicControlled->getNtargets(), 1);
+    const auto& targets = classicControlled->getTargets();
+    EXPECT_EQ(targets.at(0), 1);
+    EXPECT_EQ(classicControlled->getNcontrols(), 0);
+}
