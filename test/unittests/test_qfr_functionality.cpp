@@ -851,3 +851,59 @@ TEST_F(QFRFunctionality, wrongRegisterSizes) {
     QuantumComputation qc(5);
     ASSERT_THROW(qc.measure({0}, {1, 2}), std::invalid_argument);
 }
+
+TEST_F(QFRFunctionality, eliminateResetsBasicTest) {
+    QuantumComputation qc{};
+    qc.addQubitRegister(1);
+    qc.addClassicalRegister(2);
+    qc.h(0);
+    qc.measure(0, 0U);
+    qc.reset(0);
+    qc.h(0);
+    qc.measure(0, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
+
+    std::cout << qc << std::endl;
+
+    ASSERT_EQ(qc.getNqubits(), 2);
+    ASSERT_EQ(qc.getNindividualOps(), 4);
+    auto& op0 = qc.at(0);
+    auto& op1 = qc.at(1);
+    auto& op2 = qc.at(2);
+    auto& op3 = qc.at(3);
+
+    EXPECT_TRUE(op0->getType() == qc::H);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op0->getControls().empty());
+
+    EXPECT_TRUE(op1->getType() == qc::Measure);
+    const auto& targets1 = op1->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op0->getControls().empty());
+    auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
+    const auto classics0 = measure0->getClassics();
+    EXPECT_EQ(classics0.size(), 1);
+    EXPECT_EQ(classics0.at(0), 0);
+
+    EXPECT_TRUE(op2->getType() == qc::H);
+    const auto& targets2 = op2->getTargets();
+    EXPECT_EQ(targets2.size(), 1);
+    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_TRUE(op0->getControls().empty());
+
+    EXPECT_TRUE(op3->getType() == qc::Measure);
+    const auto& targets3 = op3->getTargets();
+    EXPECT_EQ(targets3.size(), 1);
+    EXPECT_EQ(targets3.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_TRUE(op0->getControls().empty());
+    auto       measure1  = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
+    const auto classics1 = measure1->getClassics();
+    EXPECT_EQ(classics1.size(), 1);
+    EXPECT_EQ(classics1.at(0), 1);
+}
