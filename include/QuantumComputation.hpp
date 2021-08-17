@@ -542,6 +542,8 @@ namespace qc {
 
         template<class T>
         std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator pos, T&& op) { return ops.insert(pos, std::forward<T>(op)); }
+
+        [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }
     };
 } // namespace qc
 #endif //QFR_QUANTUMCOMPUTATION_H
