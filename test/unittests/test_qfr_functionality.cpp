@@ -875,12 +875,14 @@ TEST_F(QFRFunctionality, eliminateResetsBasicTest) {
     auto& op2 = qc.at(2);
     auto& op3 = qc.at(3);
 
+    EXPECT_EQ(op0->getNqubits(), 2);
     EXPECT_TRUE(op0->getType() == qc::H);
     const auto& targets0 = op0->getTargets();
     EXPECT_EQ(targets0.size(), 1);
     EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
     EXPECT_TRUE(op0->getControls().empty());
 
+    EXPECT_EQ(op1->getNqubits(), 2);
     EXPECT_TRUE(op1->getType() == qc::Measure);
     const auto& targets1 = op1->getTargets();
     EXPECT_EQ(targets1.size(), 1);
@@ -891,12 +893,14 @@ TEST_F(QFRFunctionality, eliminateResetsBasicTest) {
     EXPECT_EQ(classics0.size(), 1);
     EXPECT_EQ(classics0.at(0), 0);
 
+    EXPECT_EQ(op2->getNqubits(), 2);
     EXPECT_TRUE(op2->getType() == qc::H);
     const auto& targets2 = op2->getTargets();
     EXPECT_EQ(targets2.size(), 1);
     EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(1));
     EXPECT_TRUE(op0->getControls().empty());
 
+    EXPECT_EQ(op3->getNqubits(), 2);
     EXPECT_TRUE(op3->getType() == qc::Measure);
     const auto& targets3 = op3->getTargets();
     EXPECT_EQ(targets3.size(), 1);
