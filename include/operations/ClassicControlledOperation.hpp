@@ -70,6 +70,30 @@ namespace qc {
             return op.get();
         }
 
+        [[nodiscard]] const Targets& getTargets() const override {
+            return op->getTargets();
+        }
+
+        Targets& getTargets() override {
+            return op->getTargets();
+        }
+
+        [[nodiscard]] std::size_t getNtargets() const override {
+            return op->getNtargets();
+        }
+
+        [[nodiscard]] const dd::Controls& getControls() const override {
+            return op->getControls();
+        }
+
+        dd::Controls& getControls() override {
+            return op->getControls();
+        }
+
+        [[nodiscard]] std::size_t getNcontrols() const override {
+            return controls.size();
+        }
+
         [[nodiscard]] bool isUnitary() const override {
             return false;
         }

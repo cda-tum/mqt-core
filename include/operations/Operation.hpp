@@ -105,13 +105,13 @@ namespace qc {
             return targets.size();
         }
 
-        [[nodiscard]] const dd::Controls& getControls() const {
+        [[nodiscard]] virtual const dd::Controls& getControls() const {
             return controls;
         }
-        dd::Controls& getControls() {
+        virtual dd::Controls& getControls() {
             return controls;
         }
-        [[nodiscard]] std::size_t getNcontrols() const {
+        [[nodiscard]] virtual std::size_t getNcontrols() const {
             return controls.size();
         }
 
