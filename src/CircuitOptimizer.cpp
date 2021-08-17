@@ -697,11 +697,10 @@ namespace qc {
                 }
             }
             if((*it)->getType() == qc::Reset){
-                auto indexAddQubit = qc.getNqubits();
+                auto indexAddQubit = static_cast<dd::Qubit>(qc.getNqubits());
                 qc.addQubit(indexAddQubit, indexAddQubit, indexAddQubit);
-                auto qubitTargets = (*it)->getTargets();
-                for(auto targetsIt = qubitTargets.begin(); targetsIt != qubitTargets.end(); targetsIt++){
-                    replacementMap.insert(std::pair(static_cast<dd::Qubit>((*targetsIt)), static_cast<dd::Qubit>(indexAddQubit)));
+                for(const auto& target : (*it)->getTargets()){
+                    replacementMap.insert(std::pair(static_cast<dd::Qubit>(target), static_cast<dd::Qubit>(indexAddQubit)));
                 }
                 it = qc.erase(it);
             }
@@ -719,15 +718,16 @@ namespace qc {
         }
     }
 
-    void CircuitOptimizer::changeControls(Operation& op, std::map<dd::Qubit, dd::Qubit> replacementMap){
+    void CircuitOptimizer::changeControls(Operation& op, std::map<dd::Qubit, dd::Qubit> replacementMap) {
         auto controlIt = op.getControls().begin();
-        while(controlIt != op.getControls().end()){
+        while (controlIt != op.getControls().end()) {
             auto newControl = replacementMap.find((*controlIt).qubit);
-            if(newControl != replacementMap.end()){
+            if (newControl != replacementMap.end()) {
                 op.getControls().erase(controlIt);
                 op.getControls().insert(dd::Control{newControl->second});
             }
-        controlIt++;
+            controlIt++;
+        }
     }
 
     void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
