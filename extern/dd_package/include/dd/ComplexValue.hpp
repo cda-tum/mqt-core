@@ -67,119 +67,139 @@ namespace dd {
             i       = {imag};
         }
 
-        static void printFormatted(std::ostream& os, fp r, bool imaginary = false) {
-            if (r == 0.L) {
-                os << (std::signbit(r) ? "-" : "+") << "0" << (imaginary ? "i" : "");
-                return;
-            }
-            auto n = std::log2(std::abs(r));
-            auto m = std::log2(std::abs(r) / SQRT2_2);
-            auto o = std::log2(std::abs(r) / PI);
+        static auto getLowestFraction(const double x, const std::uint64_t maxDenominator = std::uint64_t(1) << 10, const fp tol = dd::ComplexTable<>::tolerance()) {
+            assert(x >= 0.);
 
-            if (n == 0) { // +-1
-                if (imaginary) {
-                    os << (std::signbit(r) ? "-" : "+") << "i";
-                } else
-                    os << (std::signbit(r) ? "-" : "") << 1;
-                return;
-            }
+            std::pair<std::uint64_t, std::uint64_t> lowerBound{0U, 1U};
+            std::pair<std::uint64_t, std::uint64_t> upperBound{1U, 0U};
 
-            if (m == 0) { // +- 1/sqrt(2)
-                if (imaginary) {
-                    os << (std::signbit(r) ? "-" : "+") << u8"\u221a\u00bdi";
+            while ((lowerBound.second <= maxDenominator) && (upperBound.second <= maxDenominator)) {
+                auto num    = lowerBound.first + upperBound.first;
+                auto den    = lowerBound.second + upperBound.second;
+                auto median = static_cast<fp>(num) / static_cast<fp>(den);
+                if (std::abs(x - median) < tol) {
+                    if (den <= maxDenominator) {
+                        return std::pair{num, den};
+                    } else if (upperBound.second > lowerBound.second) {
+                        return upperBound;
+                    } else {
+                        return lowerBound;
+                    }
+                } else if (x > median) {
+                    lowerBound = {num, den};
                 } else {
-                    os << (std::signbit(r) ? "-" : "") << u8"\u221a\u00bd";
+                    upperBound = {num, den};
+                }
+            }
+            if (lowerBound.second > maxDenominator) {
+                return upperBound;
+            } else {
+                return lowerBound;
+            }
+        }
+
+        static void printFormatted(std::ostream& os, fp num, bool imaginary = false) {
+            if (std::abs(num) < ComplexTable<>::tolerance()) {
+                os << (std::signbit(num) ? "-" : "+") << "0" << (imaginary ? "i" : "");
+                return;
+            }
+
+            const auto absnum   = std::abs(num);
+            auto       fraction = getLowestFraction(absnum);
+            auto       approx   = static_cast<fp>(fraction.first) / static_cast<fp>(fraction.second);
+            auto       error    = std::abs(absnum - approx);
+
+            if (error < ComplexTable<>::tolerance()) { // suitable fraction a/b found
+                const std::string sign = std::signbit(num) ? "-" : (imaginary ? "+" : "");
+
+                if (fraction.first == 1U && fraction.second == 1U) {
+                    os << sign << (imaginary ? "i" : "1");
+                } else if (fraction.second == 1U) {
+                    os << sign << fraction.first << (imaginary ? "i" : "");
+                } else if (fraction.first == 1U) {
+                    os << sign << (imaginary ? "i" : "1") << "/" << fraction.second;
+                } else {
+                    os << sign << fraction.first << (imaginary ? "i" : "") << "/" << fraction.second;
+                }
+
+                return;
+            }
+
+            const auto abssqrt = absnum / SQRT2_2;
+            fraction           = getLowestFraction(abssqrt);
+            approx             = static_cast<fp>(fraction.first) / static_cast<fp>(fraction.second);
+            error              = std::abs(abssqrt - approx);
+
+            if (error < ComplexTable<>::tolerance()) { // suitable fraction a/(b * sqrt(2)) found
+                const std::string sign = std::signbit(num) ? "-" : (imaginary ? "+" : "");
+
+                if (fraction.first == 1U && fraction.second == 1U) {
+                    os << sign << (imaginary ? "i" : "1") << "/√2";
+                } else if (fraction.second == 1U) {
+                    os << sign << fraction.first << (imaginary ? "i" : "") << "/√2";
+                } else if (fraction.first == 1U) {
+                    os << sign << (imaginary ? "i" : "1") << "/(" << fraction.second << "√2)";
+                } else {
+                    os << sign << fraction.first << (imaginary ? "i" : "") << "/(" << fraction.second << "√2)";
                 }
                 return;
             }
 
-            if (o == 0) { // +- pi
-                if (imaginary) {
-                    os << (std::signbit(r) ? "-" : "+") << u8"\u03c0i";
+            const auto abspi = absnum / PI;
+            fraction         = getLowestFraction(abspi);
+            approx           = static_cast<fp>(fraction.first) / static_cast<fp>(fraction.second);
+            error            = std::abs(abspi - approx);
+
+            if (error < ComplexTable<>::tolerance()) { // suitable fraction a/b π found
+                const std::string sign     = std::signbit(num) ? "-" : (imaginary ? "+" : "");
+                const std::string imagUnit = imaginary ? "i" : "";
+
+                if (fraction.first == 1U && fraction.second == 1U) {
+                    os << sign << "π" << imagUnit;
+                } else if (fraction.second == 1U) {
+                    os << sign << fraction.first << "π" << imagUnit;
+                } else if (fraction.first == 1U) {
+                    os << sign << "π" << imagUnit << "/" << fraction.second;
                 } else {
-                    os << (std::signbit(r) ? "-" : "") << u8"\u03c0";
+                    os << sign << fraction.first << "π" << imagUnit << "/" << fraction.second;
                 }
-                return;
-            }
-
-            if (std::abs(n + 1) < ComplexTable<>::tolerance()) { // 1/2
-                if (imaginary) {
-                    os << (std::signbit(r) ? "-" : "+") << u8"\u00bdi";
-                } else
-                    os << (std::signbit(r) ? "-" : "") << u8"\u00bd";
-                return;
-            }
-
-            if (std::abs(m + 1) < ComplexTable<>::tolerance()) { // 1/sqrt(2) 1/2
-                if (imaginary) {
-                    os << (std::signbit(r) ? "-" : "+") << u8"\u221a\u00bd \u00bdi";
-                } else
-                    os << (std::signbit(r) ? "-" : "") << u8"\u221a\u00bd \u00bd";
-                return;
-            }
-
-            if (std::abs(o + 1) < ComplexTable<>::tolerance()) { // +-pi/2
-                if (imaginary) {
-                    os << (std::signbit(r) ? "-" : "+") << u8"\u00bd \u03c0i";
-                } else
-                    os << (std::signbit(r) ? "-" : "") << u8"\u00bd \u03c0";
-                return;
-            }
-
-            if (std::abs(std::round(n) - n) < ComplexTable<>::tolerance() && n < 0) { // 1/2^n
-                if (imaginary) {
-                    os << (std::signbit(r) ? "-" : "+") << u8"\u00bd\u002a\u002a" << (int)std::round(-n) << "i";
-                } else
-                    os << (std::signbit(r) ? "-" : "") << u8"\u00bd\u002a\u002a" << (int)std::round(-n);
-                return;
-            }
-
-            if (std::abs(std::round(m) - m) < ComplexTable<>::tolerance() && m < 0) { // 1/sqrt(2) 1/2^m
-                if (imaginary) {
-                    os << (std::signbit(r) ? "-" : "+") << u8"\u221a\u00bd \u00bd\u002a\u002a" << (int)std::round(-m) << "i";
-                } else
-                    os << (std::signbit(r) ? "-" : "") << u8"\u221a\u00bd \u00bd\u002a\u002a" << (int)std::round(-m);
-                return;
-            }
-
-            if (std::abs(std::round(o) - o) < ComplexTable<>::tolerance() && o < 0) { // 1/2^o pi
-                if (imaginary) {
-                    os << (std::signbit(r) ? "-" : "+") << u8"\u00bd\u002a\u002a" << (int)std::round(-o) << u8" \u03c0i";
-                } else
-                    os << (std::signbit(r) ? "-" : "") << u8"\u00bd\u002a\u002a" << (int)std::round(-o) << u8" \u03c0";
                 return;
             }
 
             if (imaginary) { // default
-                os << (std::signbit(r) ? "" : "+") << r << "i";
-            } else
-                os << r;
+                os << (std::signbit(num) ? "" : "+") << num << "i";
+            } else {
+                os << num;
+            }
         }
 
         static std::string toString(const fp& real, const fp& imag, bool formatted = true, int precision = -1) {
             std::ostringstream ss{};
 
             if (precision >= 0) ss << std::setprecision(precision);
+            const auto tol = ComplexTable<>::tolerance();
 
-            if (real != 0.) {
+            if (std::abs(real) < tol && std::abs(imag) < tol) return "0";
+
+            if (std::abs(real) >= tol) {
                 if (formatted) {
                     printFormatted(ss, real);
                 } else {
                     ss << real;
                 }
             }
-            if (imag != 0.) {
+            if (std::abs(imag) >= tol) {
                 if (formatted) {
-                    if (real == imag) {
+                    if (std::abs(real - imag) < tol) {
                         ss << "(1+i)";
                         return ss.str();
-                    } else if (imag == -real) {
+                    } else if (std::abs(real + imag) < tol) {
                         ss << "(1-i)";
                         return ss.str();
                     }
                     printFormatted(ss, imag, true);
                 } else {
-                    if (real == 0.) {
+                    if (std::abs(real) < tol) {
                         ss << imag;
                     } else {
                         if (imag > 0.) {
@@ -190,7 +210,6 @@ namespace dd {
                     ss << "i";
                 }
             }
-            if (real == 0. && imag == 0.) return "0";
 
             return ss.str();
         }
@@ -210,22 +229,7 @@ namespace dd {
     };
 
     inline std::ostream& operator<<(std::ostream& os, const ComplexValue& c) {
-        if (c.r != 0) {
-            ComplexValue::printFormatted(os, c.r);
-        }
-        if (c.i != 0) {
-            if (c.r == c.i) {
-                os << "(1+i)";
-                return os;
-            } else if (c.i == -c.r) {
-                os << "(1-i)";
-                return os;
-            }
-            ComplexValue::printFormatted(os, c.i, true);
-        }
-        if (c.r == 0 && c.i == 0) os << 0;
-
-        return os;
+        return os << ComplexValue::toString(c.r, c.i);
     }
 } // namespace dd
 

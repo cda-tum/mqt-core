@@ -22,7 +22,7 @@
 #include <vector>
 
 namespace dd {
-    template<std::size_t NBUCKET = 32768, std::size_t INITIAL_ALLOCATION_SIZE = 2048, std::size_t GROWTH_FACTOR = 2, std::size_t INITIAL_GC_LIMIT = 65536>
+    template<std::size_t NBUCKET = 65537, std::size_t INITIAL_ALLOCATION_SIZE = 2048, std::size_t GROWTH_FACTOR = 2, std::size_t INITIAL_GC_LIMIT = 65536>
     class ComplexTable {
     public:
         struct Entry {
@@ -36,19 +36,19 @@ namespace dd {
             /// These routines allow to obtain safe pointers
             ///
             [[nodiscard]] static inline Entry* getAlignedPointer(const Entry* e) {
-                return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) & (~1ULL));
+                return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) & ~static_cast<std::uintptr_t>(1U));
             }
 
             [[nodiscard]] static inline Entry* getNegativePointer(const Entry* e) {
-                return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) | 1ULL);
+                return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) | static_cast<std::uintptr_t>(1U));
             }
 
             [[nodiscard]] static inline Entry* flipPointerSign(const Entry* e) {
-                return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) ^ 1ULL);
+                return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) ^ static_cast<std::uintptr_t>(1U));
             }
 
             [[nodiscard]] static inline bool isNegativePointer(const Entry* e) {
-                return reinterpret_cast<std::uintptr_t>(e) & 1ULL;
+                return reinterpret_cast<std::uintptr_t>(e) & static_cast<std::uintptr_t>(1U);
             }
 
             [[nodiscard]] static inline fp val(const Entry* e) {
@@ -110,13 +110,13 @@ namespace dd {
             TOLERANCE = tol;
         }
 
-        static constexpr std::size_t MASK = NBUCKET - 1;
+        static constexpr std::int64_t MASK = NBUCKET - 1;
 
         // linear (clipped) hash function
-        static constexpr std::size_t hash(const fp val) {
+        static constexpr std::int64_t hash(const fp val) {
             assert(val >= 0);
-            auto key = static_cast<std::size_t>(val * MASK + static_cast<dd::fp>(0.5));
-            return std::min<std::size_t>(key, MASK);
+            auto key = static_cast<std::int64_t>(std::nearbyint(val * MASK));
+            return std::min<std::int64_t>(key, MASK);
         }
 
         // access functions
@@ -153,8 +153,8 @@ namespace dd {
 
             assert(val - TOLERANCE >= 0); // should be handle above as special case
 
-            const std::size_t lowerKey = hash(val - TOLERANCE);
-            const std::size_t upperKey = hash(val + TOLERANCE);
+            const auto lowerKey = hash(val - TOLERANCE);
+            const auto upperKey = hash(val + TOLERANCE);
 
             if (upperKey == lowerKey) {
                 ++findOrInserts;
@@ -164,7 +164,7 @@ namespace dd {
             // code below is to handle cases where the looked up value
             // could be in the lower or upper buckets and we have to go through them
 
-            const std::size_t key = hash(val);
+            const auto key = hash(val);
 
             Entry* p = find(table[key], val);
             if (p != nullptr) {
@@ -179,10 +179,7 @@ namespace dd {
                 if (p_lower != nullptr && val - p_lower->value < TOLERANCE) {
                     return p_lower;
                 }
-            }
-
-            // search in (potentially) higher bucket
-            if (upperKey != key) {
+            } else if (upperKey != key) { // search in (potentially) higher bucket
                 ++upperNeighbors;
                 // buckets are sorted, we only have to look at the first element
 
@@ -238,8 +235,7 @@ namespace dd {
             // important (static) numbers are never altered
             if (entryPtr != &one && entryPtr != &zero && entryPtr != &sqrt2_2) {
                 if (entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
-                    std::clog << "[WARN] MAXREFCNT reached for " << entryPtr->value
-                              << ". Number will never be collected." << std::endl;
+                    std::clog << "[WARN] MAXREFCNT reached for " << entryPtr->value << ". Number will never be collected." << std::endl;
                     return;
                 }
 
@@ -262,8 +258,7 @@ namespace dd {
                     return;
                 }
                 if (entryPtr->refCount == 0) {
-                    throw std::runtime_error("In ComplexTable: RefCount of entry " + std::to_string(entryPtr->value) +
-                                             " is zero before decrement");
+                    throw std::runtime_error("In ComplexTable: RefCount of entry " + std::to_string(entryPtr->value) + " is zero before decrement");
                 }
 
                 // decrease reference count
@@ -371,8 +366,7 @@ namespace dd {
                               << "\n";
 
                 while (p != nullptr) {
-                    std::cout << "\t\t" << p->value << " " << reinterpret_cast<std::uintptr_t>(p) << " " << p->refCount
-                              << "\n";
+                    std::cout << "\t\t" << p->value << " " << reinterpret_cast<std::uintptr_t>(p) << " " << p->refCount << "\n";
                     p = p->next;
                 }
 
@@ -419,6 +413,23 @@ namespace dd {
             return os;
         }
 
+        std::ostream& printBucketDistribution(std::ostream& os = std::cout) {
+            for (auto bucket: table) {
+                if (bucket == nullptr) {
+                    os << "0\n";
+                    continue;
+                }
+                std::size_t bucketCount = 0;
+                while (bucket != nullptr) {
+                    ++bucketCount;
+                    bucket = bucket->next;
+                }
+                os << bucketCount << "\n";
+            }
+            os << std::endl;
+            return os;
+        }
+
     private:
         using Bucket = Entry*;
         using Table  = std::array<Bucket, NBUCKET>;
@@ -456,7 +467,7 @@ namespace dd {
         std::size_t gcRuns  = 0;
         std::size_t gcLimit = 100000;
 
-        inline Entry* findOrInsert(const std::size_t key, const fp val) {
+        inline Entry* findOrInsert(const std::int64_t key, const fp val) {
             [[maybe_unused]] const fp val_tol = val + TOLERANCE;
 
             Entry* curr = table[key];
@@ -498,7 +509,7 @@ namespace dd {
          * @param val value to be inserted
          * @return pointer to the inserted entry
          */
-        inline Entry* insert(const std::size_t key, const fp val) {
+        inline Entry* insert(const std::int64_t key, const fp val) {
             ++inserts;
             Entry* entry = getEntry();
             entry->value = val;

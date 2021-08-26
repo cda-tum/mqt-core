@@ -59,25 +59,7 @@ namespace dd {
     };
 
     inline std::ostream& operator<<(std::ostream& os, const Complex& c) {
-        auto r = CTEntry::val(c.r);
-        auto i = CTEntry::val(c.i);
-
-        if (r != 0) {
-            ComplexValue::printFormatted(os, r);
-        }
-        if (i != 0) {
-            if (r == i) {
-                os << "(1+i)";
-                return os;
-            } else if (i == -r) {
-                os << "(1-i)";
-                return os;
-            }
-            ComplexValue::printFormatted(os, i, true);
-        }
-        if (r == 0 && i == 0) os << 0;
-
-        return os;
+        return os << c.toString();
     }
 
     inline Complex Complex::zero{&ComplexTable<>::zero, &ComplexTable<>::zero};

@@ -36,7 +36,7 @@ macro(package_add_test TESTNAME)
 	# create an exectuable in which the tests will be stored
 	add_executable(${TESTNAME} ${ARGN})
 	# link the Google test infrastructure and a default main fuction to the test executable.
-	target_link_libraries(${TESTNAME} PRIVATE ${PROJECT_NAME} gtest_main)
+	target_link_libraries(${TESTNAME} PRIVATE ${PROJECT_NAME} gtest_main gmock_main)
 	# discover tests
 	gtest_discover_tests(${TESTNAME} WORKING_DIRECTORY ${PROJECT_DIR} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}")
 	set_target_properties(${TESTNAME} PROPERTIES FOLDER tests CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)

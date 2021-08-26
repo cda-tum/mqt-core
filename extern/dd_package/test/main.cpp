@@ -10,12 +10,14 @@
 #include <iostream>
 #include <memory>
 
+using namespace dd::literals;
+
 auto BellCicuit1(std::unique_ptr<dd::Package>& dd) {
     /***** define Hadamard gate acting on q0 *****/
     auto h_gate = dd->makeGateDD(dd::Hmat, 2, 0);
 
     /***** define cx gate with control q0 and target q1 *****/
-    auto cx_gate = dd->makeGateDD(dd::Xmat, 2, 0, 1);
+    auto cx_gate = dd->makeGateDD(dd::Xmat, 2, 0_pc, 1);
 
     //Multiply matrices to get functionality of circuit
     return dd->multiply(cx_gate, h_gate);
@@ -29,7 +31,7 @@ auto BellCicuit2(std::unique_ptr<dd::Package>& dd) {
     auto h_gate_q0 = dd->makeGateDD(dd::Hmat, 2, 0);
 
     /***** define cx gate with control q1 and target q0 *****/
-    auto cx_gate = dd->makeGateDD(dd::Xmat, 2, 1, 0);
+    auto cx_gate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
 
     //Multiply matrices to get functionality of circuit
     return dd->multiply(dd->multiply(h_gate_q1, h_gate_q0), dd->multiply(cx_gate, h_gate_q1));

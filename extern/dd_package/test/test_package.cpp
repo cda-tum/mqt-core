@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 #include <random>
+#include <sstream>
 
 using namespace dd::literals;
 
@@ -98,6 +99,67 @@ TEST(DDPackageTest, BellState) {
     export2Dot(bell_state, "bell_state_mono_classic.dot", false, false, true, false, false);
     export2Dot(bell_state, "bell_state_memory.dot", false, true, true, true, false);
     dd::exportEdgeWeights(bell_state, std::cout);
+
+    dd->statistics();
+}
+
+TEST(DDPackageTest, QFTState) {
+    auto dd = std::make_unique<dd::Package>(3);
+
+    auto h0_gate   = dd->makeGateDD(dd::Hmat, 3, 0);
+    auto s0_gate   = dd->makeGateDD(dd::Smat, 3, 1_pc, 0);
+    auto t0_gate   = dd->makeGateDD(dd::Tmat, 3, 2_pc, 0);
+    auto h1_gate   = dd->makeGateDD(dd::Hmat, 3, 1);
+    auto s1_gate   = dd->makeGateDD(dd::Smat, 3, 2_pc, 1);
+    auto h2_gate   = dd->makeGateDD(dd::Hmat, 3, 2);
+    auto swap_gate = dd->makeSWAPDD(3, {}, 0, 2);
+
+    auto qft_op = dd->multiply(s0_gate, h0_gate);
+    qft_op      = dd->multiply(t0_gate, qft_op);
+    qft_op      = dd->multiply(h1_gate, qft_op);
+    qft_op      = dd->multiply(s1_gate, qft_op);
+    qft_op      = dd->multiply(h2_gate, qft_op);
+
+    qft_op         = dd->multiply(swap_gate, qft_op);
+    auto qft_state = dd->multiply(qft_op, dd->makeZeroState(3));
+
+    dd->printVector(qft_state);
+
+    for (dd::Qubit qubit = 0; qubit < 7; ++qubit) {
+        ASSERT_NEAR(dd->getValueByPath(qft_state, qubit).r, static_cast<dd::fp>(0.5) * dd::SQRT2_2, dd->cn.complexTable.tolerance());
+        ASSERT_EQ(dd->getValueByPath(qft_state, qubit).i, 0);
+    }
+
+    export2Dot(qft_state, "qft_state_colored_labels.dot", true, true, false, false, false);
+    export2Dot(qft_state, "qft_state_colored_labels_classic.dot", true, true, true, false, false);
+    export2Dot(qft_state, "qft_state_mono_labels.dot", false, true, false, false, false);
+    export2Dot(qft_state, "qft_state_mono_labels_classic.dot", false, true, true, false, false);
+    export2Dot(qft_state, "qft_state_colored.dot", true, false, false, false, false);
+    export2Dot(qft_state, "qft_state_colored_classic.dot", true, false, true, false, false);
+    export2Dot(qft_state, "qft_state_mono.dot", false, false, false, false, false);
+    export2Dot(qft_state, "qft_state_mono_classic.dot", false, false, true, false, false);
+    export2Dot(qft_state, "qft_state_memory.dot", false, true, true, true, false);
+    dd::exportEdgeWeights(qft_state, std::cout);
+
+    export2Dot(qft_op, "qft_op_polar_colored_labels.dot", true, true, false, false, false, true);
+    export2Dot(qft_op, "qft_op_polar_colored_labels_classic.dot", true, true, true, false, false, true);
+    export2Dot(qft_op, "qft_op_polar_mono_labels.dot", false, true, false, false, false, true);
+    export2Dot(qft_op, "qft_op_polar_mono_labels_classic.dot", false, true, true, false, false, true);
+    export2Dot(qft_op, "qft_op_polar_colored.dot", true, false, false, false, false, true);
+    export2Dot(qft_op, "qft_op_polar_colored_classic.dot", true, false, true, false, false, true);
+    export2Dot(qft_op, "qft_op_polar_mono.dot", false, false, false, false, false, true);
+    export2Dot(qft_op, "qft_op_polar_mono_classic.dot", false, false, true, false, false, true);
+    export2Dot(qft_op, "qft_op_polar_memory.dot", false, true, true, true, false, true);
+
+    export2Dot(qft_op, "qft_op_rectangular_colored_labels.dot", true, true, false, false, false, false);
+    export2Dot(qft_op, "qft_op_rectangular_colored_labels_classic.dot", true, true, true, false, false, false);
+    export2Dot(qft_op, "qft_op_rectangular_mono_labels.dot", false, true, false, false, false, false);
+    export2Dot(qft_op, "qft_op_rectangular_mono_labels_classic.dot", false, true, true, false, false, false);
+    export2Dot(qft_op, "qft_op_rectangular_colored.dot", true, false, false, false, false, false);
+    export2Dot(qft_op, "qft_op_rectangular_colored_classic.dot", true, false, true, false, false, false);
+    export2Dot(qft_op, "qft_op_rectangular_mono.dot", false, false, false, false, false, false);
+    export2Dot(qft_op, "qft_op_rectangular_mono_classic.dot", false, false, true, false, false, false);
+    export2Dot(qft_op, "qft_op_rectangular_memory.dot", false, true, true, true, false, false);
 
     dd->statistics();
 }
@@ -820,4 +882,98 @@ TEST(DDPackageTest, DestructiveMeasurementOneArbitraryNormalization) {
     ASSERT_EQ(vAfter[2], static_cast<std::complex<dd::fp>>(dd::complex_SQRT2_2));
     ASSERT_EQ(vAfter[1], static_cast<std::complex<dd::fp>>(dd::complex_zero));
     ASSERT_EQ(vAfter[3], static_cast<std::complex<dd::fp>>(dd::complex_zero));
+}
+
+TEST(DDPackageTest, ExportPolarPhaseFormatted) {
+    std::ostringstream phaseString;
+
+    // zero case
+    dd::printPhaseFormatted(phaseString, 0);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 0)");
+    phaseString.str("");
+
+    // one cases
+    dd::printPhaseFormatted(phaseString, 0.5);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ/2)");
+    phaseString.str("");
+
+    dd::printPhaseFormatted(phaseString, -0.5);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(-iπ/2)");
+    phaseString.str("");
+
+    dd::printPhaseFormatted(phaseString, 1);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ)");
+    phaseString.str("");
+
+    dd::printPhaseFormatted(phaseString, -1);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(-iπ)");
+    phaseString.str("");
+
+    // a/b fractions
+    dd::printPhaseFormatted(phaseString, 2);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 2)");
+    phaseString.str("");
+
+    dd::printPhaseFormatted(phaseString, 0.25);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ/4)");
+    phaseString.str("");
+
+    dd::printPhaseFormatted(phaseString, 0.75);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 3/4)");
+    phaseString.str("");
+
+    // 1/sqrt(2) cases
+    dd::printPhaseFormatted(phaseString, dd::SQRT2_2);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ/√2)");
+    phaseString.str("");
+
+    dd::printPhaseFormatted(phaseString, 2 * dd::SQRT2_2);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 2/√2)");
+    phaseString.str("");
+
+    dd::printPhaseFormatted(phaseString, 0.5 * dd::SQRT2_2);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ/(2√2))");
+    phaseString.str("");
+
+    dd::printPhaseFormatted(phaseString, 0.75 * dd::SQRT2_2);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 3/(4√2))");
+    phaseString.str("");
+
+    // pi cases mhhh pie
+    dd::printPhaseFormatted(phaseString, dd::PI);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ π)");
+    phaseString.str("");
+
+    dd::printPhaseFormatted(phaseString, 2 * dd::PI);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 2π)");
+    phaseString.str("");
+
+    dd::printPhaseFormatted(phaseString, 0.5 * dd::PI);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ π/2)");
+    phaseString.str("");
+
+    dd::printPhaseFormatted(phaseString, 0.75 * dd::PI);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 3π/4)");
+    phaseString.str("");
+
+    // general case
+    dd::printPhaseFormatted(phaseString, 0.12345);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 0.12345)");
+    phaseString.str("");
+}
+
+TEST(DDPackageTest, ExportConditionalFormat) {
+    auto cn = std::make_unique<dd::ComplexNumbers>();
+
+    EXPECT_STREQ(dd::conditionalFormat(cn->getCached(1, 0)).c_str(), "1");
+    EXPECT_STREQ(dd::conditionalFormat(cn->getCached(0, 1)).c_str(), "i");
+    EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-1, 0)).c_str(), "-1");
+    EXPECT_STREQ(dd::conditionalFormat(cn->getCached(0, -1)).c_str(), "-i");
+
+    const auto num = cn->getCached(-dd::SQRT2_2, -dd::SQRT2_2);
+    EXPECT_STREQ(dd::conditionalFormat(num).c_str(), "ℯ(-iπ 3π/4)");
+    EXPECT_STREQ(dd::conditionalFormat(num, false).c_str(), "-1/√2(1+i)");
+
+    EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-1, -1)).c_str(), "2/√2 ℯ(-iπ 3π/4)");
+    EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-dd::SQRT2_2, 0)).c_str(), "-1/√2");
 }
