@@ -894,71 +894,62 @@ TEST(DDPackageTest, ExportPolarPhaseFormatted) {
     phaseString.str("");
 
     // one cases
-    dd::printPhaseFormatted(phaseString, 0.5);
+    dd::printPhaseFormatted(phaseString, 0.5 * dd::PI);
     EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ/2)");
     phaseString.str("");
 
-    dd::printPhaseFormatted(phaseString, -0.5);
+    dd::printPhaseFormatted(phaseString, -0.5 * dd::PI);
     EXPECT_STREQ(phaseString.str().c_str(), "ℯ(-iπ/2)");
     phaseString.str("");
 
-    dd::printPhaseFormatted(phaseString, 1);
+    dd::printPhaseFormatted(phaseString, dd::PI);
     EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ)");
     phaseString.str("");
 
-    dd::printPhaseFormatted(phaseString, -1);
+    dd::printPhaseFormatted(phaseString, -dd::PI);
     EXPECT_STREQ(phaseString.str().c_str(), "ℯ(-iπ)");
     phaseString.str("");
 
-    // a/b fractions
-    dd::printPhaseFormatted(phaseString, 2);
-    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 2)");
-    phaseString.str("");
-
-    dd::printPhaseFormatted(phaseString, 0.25);
-    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ/4)");
-    phaseString.str("");
-
-    dd::printPhaseFormatted(phaseString, 0.75);
-    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 3/4)");
-    phaseString.str("");
-
     // 1/sqrt(2) cases
-    dd::printPhaseFormatted(phaseString, dd::SQRT2_2);
+    dd::printPhaseFormatted(phaseString, dd::SQRT2_2 * dd::PI);
     EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ/√2)");
     phaseString.str("");
 
-    dd::printPhaseFormatted(phaseString, 2 * dd::SQRT2_2);
+    dd::printPhaseFormatted(phaseString, 2 * dd::SQRT2_2 * dd::PI);
     EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 2/√2)");
     phaseString.str("");
 
-    dd::printPhaseFormatted(phaseString, 0.5 * dd::SQRT2_2);
+    dd::printPhaseFormatted(phaseString, 0.5 * dd::SQRT2_2 * dd::PI);
     EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ/(2√2))");
     phaseString.str("");
 
-    dd::printPhaseFormatted(phaseString, 0.75 * dd::SQRT2_2);
+    dd::printPhaseFormatted(phaseString, 0.75 * dd::SQRT2_2 * dd::PI);
     EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 3/(4√2))");
     phaseString.str("");
 
     // pi cases mhhh pie
     dd::printPhaseFormatted(phaseString, dd::PI);
-    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ π)");
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ)");
     phaseString.str("");
 
     dd::printPhaseFormatted(phaseString, 2 * dd::PI);
-    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 2π)");
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 2)");
     phaseString.str("");
 
     dd::printPhaseFormatted(phaseString, 0.5 * dd::PI);
-    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ π/2)");
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ/2)");
     phaseString.str("");
 
     dd::printPhaseFormatted(phaseString, 0.75 * dd::PI);
-    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 3π/4)");
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 3/4)");
+    phaseString.str("");
+
+    dd::printPhaseFormatted(phaseString, 0.25 * dd::PI);
+    EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ/4)");
     phaseString.str("");
 
     // general case
-    dd::printPhaseFormatted(phaseString, 0.12345);
+    dd::printPhaseFormatted(phaseString, 0.12345 * dd::PI);
     EXPECT_STREQ(phaseString.str().c_str(), "ℯ(iπ 0.12345)");
     phaseString.str("");
 }
@@ -972,10 +963,10 @@ TEST(DDPackageTest, ExportConditionalFormat) {
     EXPECT_STREQ(dd::conditionalFormat(cn->getCached(0, -1)).c_str(), "-i");
 
     const auto num = cn->getCached(-dd::SQRT2_2, -dd::SQRT2_2);
-    EXPECT_STREQ(dd::conditionalFormat(num).c_str(), "ℯ(-iπ 3π/4)");
+    EXPECT_STREQ(dd::conditionalFormat(num).c_str(), "ℯ(-iπ 3/4)");
     EXPECT_STREQ(dd::conditionalFormat(num, false).c_str(), "-1/√2(1+i)");
 
-    EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-1, -1)).c_str(), "2/√2 ℯ(-iπ 3π/4)");
+    EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-1, -1)).c_str(), "2/√2 ℯ(-iπ 3/4)");
     EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-dd::SQRT2_2, 0)).c_str(), "-1/√2");
 }
 
