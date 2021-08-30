@@ -158,7 +158,7 @@ namespace qc {
                 if (zero) {
                     dd->incRef(f);
                     dd->decRef(e);
-                    e = f;
+                    e    = f;
                     zero = false;
                 } else {
                     auto g = dd->multiply(e, f);
