@@ -103,9 +103,9 @@ namespace qc {
 
         for (std::size_t i = 0; i < iterations - 1; ++i) {
             auto f = dd->multiply(iteration, e);
+            dd->incRef(f);
             dd->decRef(e);
             e = f;
-            dd->incRef(e);
             dd->garbageCollect();
         }
 
@@ -113,9 +113,9 @@ namespace qc {
         setup(qc);
         auto g = qc.buildFunctionality(dd);
         auto f = dd->multiply(e, g);
+        dd->incRef(f);
         dd->decRef(e);
         dd->decRef(g);
-        dd->incRef(f);
         e = f;
 
         // properly handle ancillary qubit
@@ -156,9 +156,9 @@ namespace qc {
             f = tmp;
             if (iterBits[j]) {
                 if (zero) {
+                    dd->incRef(f);
                     dd->decRef(e);
-                    e = f;
-                    dd->incRef(e);
+                    e    = f;
                     zero = false;
                 } else {
                     auto g = dd->multiply(e, f);
