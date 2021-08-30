@@ -47,6 +47,7 @@ namespace dd {
     static void printPhaseFormatted(std::ostream& os, fp r) {
         const auto tol = dd::ComplexTable<>::tolerance();
 
+		r /= dd::PI;
         // special case treatment for +-i
         os << "ℯ(" << (std::signbit(r) ? "-" : "") << "iπ";
 
