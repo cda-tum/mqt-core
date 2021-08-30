@@ -82,5 +82,19 @@ namespace dd {
     //        return b;
     //    }
 
+    // calculates the Units in Last Place (ULP) distance of two floating point numbers
+    [[maybe_unused]] static std::size_t ulpDistance(dd::fp a, dd::fp b) {
+        if (a == b)
+            return 0;
+
+        std::size_t ulps   = 1;
+        dd::fp      nextFP = std::nextafter(a, b);
+        while (nextFP != b) {
+            ulps++;
+            nextFP = std::nextafter(nextFP, b);
+        }
+        return ulps;
+    }
+
 } // namespace dd
 #endif //DDpackage_DATATYPES_HPP

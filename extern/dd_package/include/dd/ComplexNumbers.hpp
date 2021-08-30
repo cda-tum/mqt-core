@@ -58,10 +58,10 @@ namespace dd {
                 r.r->value = 0.;
                 r.i->value = 0.;
             } else {
-                auto ar = CTEntry::val(a.r);
-                auto ai = CTEntry::val(a.i);
-                auto br = CTEntry::val(b.r);
-                auto bi = CTEntry::val(b.i);
+                const auto ar = CTEntry::val(a.r);
+                const auto ai = CTEntry::val(a.i);
+                const auto br = CTEntry::val(b.r);
+                const auto bi = CTEntry::val(b.i);
 
                 r.r->value = ar * br - ai * bi;
                 r.i->value = ar * bi + ai * br;
@@ -73,18 +73,15 @@ namespace dd {
             if (a.approximatelyEquals(b)) {
                 r.r->value = 1.;
                 r.i->value = 0.;
-            } else if (a.approximatelyZero()) {
-                r.r->value = 0.;
-                r.i->value = 0.;
             } else if (b.approximatelyOne()) {
                 r.setVal(a);
             } else {
-                auto ar = CTEntry::val(a.r);
-                auto ai = CTEntry::val(a.i);
-                auto br = CTEntry::val(b.r);
-                auto bi = CTEntry::val(b.i);
+                const auto ar = CTEntry::val(a.r);
+                const auto ai = CTEntry::val(a.i);
+                const auto br = CTEntry::val(b.r);
+                const auto bi = CTEntry::val(b.i);
 
-                auto cmag = br * br + bi * bi;
+                const auto cmag = br * br + bi * bi;
 
                 r.r->value = (ar * br + ai * bi) / cmag;
                 r.i->value = (ai * br - ar * bi) / cmag;

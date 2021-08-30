@@ -85,6 +85,7 @@ namespace dd {
         void reset() {
             clearUniqueTables();
             clearComputeTables();
+            cn.clear();
         }
 
         // getter for qubits
@@ -112,8 +113,6 @@ namespace dd {
         using vCachedEdge = CachedEdge<vNode>;
 
         vEdge normalize(const vEdge& e, bool cached) {
-            auto argmax = -1;
-
             auto zero = std::array{e.p->e[0].w.approximatelyZero(), e.p->e[1].w.approximatelyZero()};
 
             // make sure to release cached numbers approximately zero, but not exactly zero
@@ -126,67 +125,78 @@ namespace dd {
                 }
             }
 
-            fp sum = 0.;
-            fp div = 0.;
-            for (auto i = 0U; i < RADIX; ++i) {
-                if (e.p->e[i].p == nullptr || zero[i]) {
-                    continue;
+            if (zero[0]) {
+                // all equal to zero
+                if (zero[1]) {
+                    if (!cached && !e.isTerminal()) {
+                        // If it is not a cached computation, the node has to be put back into the chain
+                        vUniqueTable.returnNode(e.p);
+                    }
+                    return vEdge::zero;
                 }
 
-                if (argmax == -1) {
-                    argmax = static_cast<decltype(argmax)>(i);
-                    div    = ComplexNumbers::mag2(e.p->e[i].w);
-                    sum    = div;
+                auto  r = e;
+                auto& w = r.p->e[1].w;
+                if (cached && w != Complex::one) {
+                    r.w = w;
                 } else {
-                    sum += ComplexNumbers::mag2(e.p->e[i].w);
+                    r.w = cn.lookup(w);
                 }
+                w = Complex::one;
+                return r;
             }
 
-            // all equal to zero
-            if (argmax == -1) {
-                if (!cached && !e.isTerminal()) {
-                    // If it is not a cached computation, the node has to be put back into the chain
-                    vUniqueTable.returnNode(e.p);
+            if (zero[1]) {
+                auto  r = e;
+                auto& w = r.p->e[0].w;
+                if (cached && w != Complex::one) {
+                    r.w = w;
+                } else {
+                    r.w = cn.lookup(w);
                 }
-                return vEdge::zero;
+                w = Complex::one;
+                return r;
             }
 
-            sum = std::sqrt(sum / div);
+            const auto mag0         = ComplexNumbers::mag2(e.p->e[0].w);
+            const auto mag1         = ComplexNumbers::mag2(e.p->e[1].w);
+            const auto norm2        = mag0 + mag1;
+            const auto mag2Max      = (mag0 >= mag1) ? mag0 : mag1;
+            const auto argMax       = (mag0 >= mag1) ? 0 : 1;
+            const auto norm         = std::sqrt(norm2);
+            const auto magMax       = std::sqrt(mag2Max);
+            const auto commonFactor = norm / magMax;
 
             auto  r   = e;
-            auto& max = r.p->e[argmax];
+            auto& max = r.p->e[argMax];
             if (cached && max.w != Complex::one) {
                 r.w = max.w;
-                r.w.r->value *= sum;
-                r.w.i->value *= sum;
+                r.w.r->value *= commonFactor;
+                r.w.i->value *= commonFactor;
             } else {
-                r.w = cn.lookup(CTEntry::val(max.w.r) * sum, CTEntry::val(max.w.i) * sum);
+                r.w = cn.lookup(CTEntry::val(max.w.r) * commonFactor, CTEntry::val(max.w.i) * commonFactor);
                 if (r.w.approximatelyZero()) {
                     return vEdge::zero;
                 }
             }
-            max.w = cn.lookup(static_cast<fp>(1.0) / sum, 0.);
+
+            max.w = cn.lookup(magMax / norm, 0.);
             if (max.w == Complex::zero)
                 max = vEdge::zero;
 
-            auto  argmin = (argmax + 1) % 2;
-            auto& min    = r.p->e[argmin];
-            if (!zero[argmin]) {
-                if (cached) {
-                    cn.returnToCache(min.w);
-                    ComplexNumbers::div(min.w, min.w, r.w);
-                    min.w = cn.lookup(min.w);
-                    if (min.w == Complex::zero) {
-                        min = vEdge::zero;
-                    }
-                } else {
-                    auto c = cn.getTemporary();
-                    ComplexNumbers::div(c, min.w, r.w);
-                    min.w = cn.lookup(c);
-                    if (min.w == Complex::zero) {
-                        min = vEdge::zero;
-                    }
-                }
+            const auto argMin = (argMax + 1) % 2;
+            auto&      min    = r.p->e[argMin];
+            if (cached) {
+                cn.returnToCache(min.w);
+                ComplexNumbers::div(min.w, min.w, r.w);
+                min.w = cn.lookup(min.w);
+            } else {
+                auto c = cn.getTemporary();
+                ComplexNumbers::div(c, min.w, r.w);
+                min.w = cn.lookup(c);
+            }
+            if (min.w == Complex::zero) {
+                min = vEdge::zero;
             }
 
             return r;
@@ -351,12 +361,6 @@ namespace dd {
                     }
                     r.p->e[i].w = Complex::one;
                 } else {
-                    if (zero[i]) {
-                        if (cached && r.p->e[i].w != Complex::zero)
-                            cn.returnToCache(r.p->e[i].w);
-                        r.p->e[i] = mEdge::zero;
-                        continue;
-                    }
                     if (cached && !zero[i] && r.p->e[i].w != Complex::one) {
                         cn.returnToCache(r.p->e[i].w);
                     }

@@ -8,6 +8,7 @@
 #include "dd/Package.hpp"
 
 #include "gtest/gtest.h"
+#include <iomanip>
 #include <memory>
 #include <random>
 #include <sstream>
@@ -976,4 +977,61 @@ TEST(DDPackageTest, ExportConditionalFormat) {
 
     EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-1, -1)).c_str(), "2/√2 ℯ(-iπ 3π/4)");
     EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-dd::SQRT2_2, 0)).c_str(), "-1/√2");
+}
+
+TEST(DDPackageTest, BasicNumericInstabilityTest) {
+    using limits = std::numeric_limits<dd::fp>;
+
+    std::cout << std::setprecision(limits::max_digits10);
+
+    std::cout << "The 1/sqrt(2) constant used in this package is " << dd::SQRT2_2 << ", which is the closest floating point value to the actual value of 1/sqrt(2)." << std::endl;
+    std::cout << "Computing std::sqrt(0.5) actually computes this value, i.e. " << std::sqrt(dd::fp(0.5)) << std::endl;
+    EXPECT_EQ(dd::SQRT2_2, std::sqrt(dd::fp(0.5)));
+    std::cout << "However, computing 1/std::sqrt(2.) leads to " << dd::fp(1.0) / std::sqrt(dd::fp(2.)) << ", which differs by 1 ULP from std::sqrt(0.5)" << std::endl;
+    EXPECT_EQ(dd::fp(1.0) / std::sqrt(dd::fp(2.)), std::nextafter(std::sqrt(dd::fp(0.5)), 0.));
+    std::cout << "In the same fashion, computing std::sqrt(2.) leads to " << std::sqrt(dd::fp(2.)) << ", while computing 1/std::sqrt(0.5) leads to " << dd::fp(1.) / std::sqrt(dd::fp(0.5)) << ", which differ by exactly 1 ULP" << std::endl;
+    EXPECT_EQ(std::sqrt(dd::fp(2.)), std::nextafter(dd::fp(1.) / std::sqrt(dd::fp(0.5)), 2.));
+    std::cout << "Another inaccuracy occurs when computing 1/sqrt(2) * 1/sqrt(2), which should equal to 0.5 but is off by 1 ULP: " << std::sqrt(dd::fp(0.5)) * std::sqrt(dd::fp(0.5)) << std::endl;
+    EXPECT_EQ(std::sqrt(dd::fp(0.5)) * std::sqrt(dd::fp(0.5)), std::nextafter(0.5, 1.));
+    std::cout << "This inaccuracy even persists when computing std::sqrt(0.5) * std::sqrt(0.5): " << std::sqrt(dd::fp(0.5)) * std::sqrt(dd::fp(0.5)) << std::endl;
+    EXPECT_EQ(std::sqrt(dd::fp(0.5)) * std::sqrt(dd::fp(0.5)), std::nextafter(dd::fp(0.5), 1.));
+
+    //    std::cout << "Interestingly, calculating powers of dd::SQRT2_2 can be conducted very precisely, i.e., with an error of only 1 ULP." << std::endl;
+    //    dd::fp      accumulator = dd::SQRT2_2 * dd::SQRT2_2;
+    //    std::size_t nq          = 64;
+    //    for (std::size_t i = 1; i < nq; i += 2) {
+    //        std::size_t power  = (i + 1) / 2;
+    //        std::size_t denom  = 1UL << power;
+    //        dd::fp      target = 1. / static_cast<double>(denom);
+    //        dd::fp      diff   = std::abs(target - accumulator);
+    //        const auto  ulps   = dd::ulpDistance(accumulator, target);
+    //        std::cout << accumulator << ", numerical error: " << diff << ", ulps: " << ulps << std::endl;
+    //        EXPECT_EQ(ulps, 1);
+    //        accumulator *= dd::SQRT2_2;
+    //        accumulator *= dd::SQRT2_2;
+    //    }
+}
+
+TEST(DDPackageTest, BasicNumericStabilityTest) {
+    using limits = std::numeric_limits<dd::fp>;
+
+    auto dd = std::make_unique<dd::Package>(1);
+    dd::ComplexNumbers::setTolerance(limits::epsilon());
+    auto state  = dd->makeZeroState(1);
+    auto h      = dd->makeGateDD(dd::Hmat, 1, 0);
+    auto state1 = dd->multiply(h, state);
+    auto z      = dd->makeGateDD(dd::Zmat, 1, 0);
+    auto result = dd->multiply(z, state1);
+
+    const auto topWeight   = result.w.toString(false, limits::max_digits10);
+    const auto leftWeight  = result.p->e[0].w.toString(false, limits::max_digits10);
+    const auto rightWeight = result.p->e[1].w.toString(false, limits::max_digits10);
+    std::cout << topWeight << " | " << leftWeight << " | " << rightWeight << std::endl;
+    EXPECT_EQ(topWeight, "1");
+    std::ostringstream oss{};
+    oss << std::setprecision(limits::max_digits10) << dd::SQRT2_2;
+    EXPECT_EQ(leftWeight, oss.str());
+    oss.str("");
+    oss << -dd::SQRT2_2;
+    EXPECT_EQ(rightWeight, oss.str());
 }
