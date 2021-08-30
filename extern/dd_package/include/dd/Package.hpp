@@ -161,8 +161,8 @@ namespace dd {
             const auto mag0         = ComplexNumbers::mag2(e.p->e[0].w);
             const auto mag1         = ComplexNumbers::mag2(e.p->e[1].w);
             const auto norm2        = mag0 + mag1;
-            const auto mag2Max      = (mag0 >= mag1) ? mag0 : mag1;
-            const auto argMax       = (mag0 >= mag1) ? 0 : 1;
+            const auto mag2Max      = (mag0 + ComplexTable<>::tolerance() >= mag1) ? mag0 : mag1;
+            const auto argMax       = (mag0 + ComplexTable<>::tolerance() >= mag1) ? 0 : 1;
             const auto norm         = std::sqrt(norm2);
             const auto magMax       = std::sqrt(mag2Max);
             const auto commonFactor = norm / magMax;
