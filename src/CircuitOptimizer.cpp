@@ -742,4 +742,80 @@ namespace qc {
         // c: 2/══════╩═╡ = 1 ╞                             0
         //            0 └─────┘
     }
+
+    bool CircuitOptimizer::isDynamicCircuit(QuantumComputation& qc) {
+        dd::Qubit highest_physical_qubit = 0;
+        for (const auto& q: qc.initialLayout) {
+            if (q.first > highest_physical_qubit)
+                highest_physical_qubit = q.first;
+        }
+
+        auto dag = DAG(highest_physical_qubit + 1);
+
+        bool hasMeasurements = false;
+
+        for (auto& it: qc.ops) {
+            if (!it->isStandardOperation()) {
+                if (it->isNonUnitaryOperation()) {
+                    // whenever a reset operation is encountered the circuit has to be dynamic
+                    if (it->getType() == Reset)
+                        return true;
+
+                    // record whether the circuit contains measurements
+                    if (it->getType() == Measure)
+                        hasMeasurements = true;
+
+                    for (const auto& b: it->getTargets()) {
+                        dag.at(b).push_front(&it);
+                    }
+                } else if (it->isClassicControlledOperation()) {
+                    // whenever a classic-controlled operation is encountered the circuit has to be dynamic
+                    return true;
+                } else if (it->isCompoundOperation()) {
+                    auto* comp_op = dynamic_cast<CompoundOperation*>(it.get());
+                    for (auto& op: *comp_op) {
+                        if (op->getType() == Reset || op->isClassicControlledOperation())
+                            return true;
+
+                        if (op->getType() == Measure)
+                            hasMeasurements = true;
+
+                        if (op->isNonUnitaryOperation()) {
+                            for (const auto& b: op->getTargets()) {
+                                dag.at(b).push_front(&op);
+                            }
+                        } else {
+                            addToDag(dag, &op);
+                        }
+                    }
+                }
+            } else {
+                addToDag(dag, &it);
+            }
+        }
+
+        if (!hasMeasurements)
+            return false;
+
+        for (const auto& qubitDAG: dag) {
+            bool operation   = false;
+            bool measurement = false;
+            for (const auto& op: qubitDAG) {
+                // once a measurement is encountered the iteration for this qubit can stop
+                if (op->get()->getType() == qc::Measure) {
+                    measurement = true;
+                    break;
+                }
+
+                if (op->get()->isStandardOperation() || op->get()->isClassicControlledOperation() || op->get()->isCompoundOperation() || op->get()->getType() == Reset) {
+                    operation = true;
+                }
+            }
+            // there was a measurement and then a non-trivial operation, so the circuit is dynamic
+            if (measurement && operation)
+                return true;
+        }
+
+        return false;
+    }
 } // namespace qc

@@ -864,6 +864,8 @@ TEST_F(QFRFunctionality, eliminateResetsBasicTest) {
 
     std::cout << qc << std::endl;
 
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
     EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
 
     std::cout << qc << std::endl;
@@ -924,6 +926,8 @@ TEST_F(QFRFunctionality, eliminateResetsClassicControlled) {
 
     std::cout << qc << std::endl;
 
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
     EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
 
     std::cout << qc << std::endl;
@@ -974,6 +978,8 @@ TEST_F(QFRFunctionality, eliminateResetsMultipleTargetReset) {
 
     std::cout << qc << std::endl;
 
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
     EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
 
     std::cout << qc << std::endl;
@@ -1023,6 +1029,8 @@ TEST_F(QFRFunctionality, eliminateResetsCompoundOperation) {
     compOp->emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
 
     std::cout << qc << std::endl;
+
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
 
     EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
 

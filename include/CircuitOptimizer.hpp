@@ -55,6 +55,8 @@ namespace qc {
         static void changeControls(Operation& op, std::map<dd::Qubit, dd::Qubit> replacementMap);
 
         static void deferMeasurements(QuantumComputation& qc);
+
+        static bool isDynamicCircuit(QuantumComputation& qc);
     };
 } // namespace qc
 #endif //QFR_CIRCUITOPTIMIZER_HPP
