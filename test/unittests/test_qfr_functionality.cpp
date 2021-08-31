@@ -1153,8 +1153,8 @@ TEST_F(QFRFunctionality, deferMeasurementsOperationBetweenMeasurementAndClassic)
     // i: 			0	1
     //1: 	H   	H 	|
     //2: 	Meas	0	|
-    //3: 	c_X   	|	X 		c[0] == 1
-    //4: 	H   	H 	|
+    //3: 	H   	H 	|
+    //4: 	c_X   	|	X 		c[0] == 1
     //o: 			0	1
 
     // Expected Output:
@@ -1172,9 +1172,9 @@ TEST_F(QFRFunctionality, deferMeasurementsOperationBetweenMeasurementAndClassic)
     qc.addClassicalRegister(1);
     qc.h(0);
     qc.measure(0, 0U);
+    qc.h(0);
     std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(2U, 1, qc::X);
     qc.emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
-    qc.h(0);
 
     std::cout << qc << std::endl;
 
@@ -1233,9 +1233,9 @@ TEST_F(QFRFunctionality, deferMeasurementsTwoClassic) {
     // i: 			0	1
     //1: 	H   	H 	|
     //2: 	Meas	0	|
-    //3: 	c_X   	|	X 		c[0] == 1
-    //4:    c_Z     |   Z       c[0] == 1
-    //5: 	H   	H 	|
+    //3: 	H   	H 	|
+    //4: 	c_X   	|	X 		c[0] == 1
+    //5:    c_Z     |   Z       c[0] == 1
     //o: 			0	1
 
     // Expected Output:
@@ -1254,11 +1254,11 @@ TEST_F(QFRFunctionality, deferMeasurementsTwoClassic) {
     qc.addClassicalRegister(1);
     qc.h(0);
     qc.measure(0, 0U);
+    qc.h(0);
     std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(2U, 1, qc::X);
     qc.emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
     std::unique_ptr<qc::Operation> zOp = std::make_unique<qc::StandardOperation>(2U, 1, qc::Z);
     qc.emplace_back<qc::ClassicControlledOperation>(zOp, std::pair{0, 1U}, 1U);
-    qc.h(0);
 
     std::cout << qc << std::endl;
 
