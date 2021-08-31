@@ -668,8 +668,6 @@ namespace qc {
     }
 
     void CircuitOptimizer::eliminateResets(QuantumComputation& qc) {
-        /// TODO: substitute reset operations with new qubits and shift subsequent operations
-
         //      ┌───┐┌─┐     ┌───┐┌─┐            ┌───┐┌─┐ ░
         // q_0: ┤ H ├┤M├─|0>─┤ H ├┤M├       q_0: ┤ H ├┤M├─░─────────
         //      └───┘└╥┘     └───┘└╥┘   -->      └───┘└╥┘ ░ ┌───┐┌─┐

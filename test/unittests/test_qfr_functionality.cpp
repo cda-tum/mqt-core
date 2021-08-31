@@ -1077,6 +1077,6 @@ TEST_F(QFRFunctionality, eliminateResetsCompoundOperation) {
     EXPECT_TRUE(operation->getType() == qc::X);
     EXPECT_EQ(classicControlled->getNtargets(), 1);
     const auto& targets = classicControlled->getTargets();
-    EXPECT_EQ(targets.at(0), 1);
+    EXPECT_EQ(targets.at(0), 4);
     EXPECT_EQ(classicControlled->getNcontrols(), 0);
 }
