@@ -1227,3 +1227,27 @@ TEST_F(QFRFunctionality, deferMeasurementsOperationBetweenMeasurementAndClassic)
     EXPECT_EQ(classics0.size(), 1);
     EXPECT_EQ(classics0.at(0), 0);
 }
+
+TEST_F(QFRFunctionality, deferMeasurementsErrorOnImplicitReset) {
+    // Input:
+    // i: 			0
+    //1: 	H   	H
+    //2: 	Meas	0
+    //3: 	c_X   	X	c[0] == 1
+    //o: 			0
+
+    // Expected Output:
+    // Error, since the classic-controlled operation targets the qubit being measured (this implicitly realizes a reset operation)
+
+    QuantumComputation qc{1};
+    qc.h(0);
+    qc.measure(0, 0U);
+    std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(1U, 0, qc::X);
+    qc.emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    EXPECT_THROW(CircuitOptimizer::deferMeasurements(qc), qc::QFRException);
+}
