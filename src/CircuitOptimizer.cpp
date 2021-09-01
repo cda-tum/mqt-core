@@ -780,8 +780,32 @@ namespace qc {
         auto replacementMap = std::map<dd::Qubit, dd::Qubit>();
         while (it != qc.ops.end()) {
             if ((*it)->getType() == qc::Measure) {
-                //replacementMap.insert((*it).get)
+                auto* measureOp = dynamic_cast<qc::NonUnitaryOperation*>((*it).get());
+                auto measureTargets= measureOp->getTargets();
+                auto measureClassics = measureOp->getClassics();
+                auto oldIt = it;
+                it = qc.erase(it);
+                auto q = oldIt++;
+                while(q != qc.ops.end()){
+                    if((*q)->getType() == qc::Reset){
+                        break; //Error
+                    }
+                    if((*q)->getType() == qc::Measure){
+
+                    }
+                    if((*q)->isClassicControlledOperation()){
+                        auto* classicOp = dynamic_cast<qc::ClassicControlledOperation*>((*q).get());
+                        auto controlRegister = classicOp->getControlRegister();
+                        auto expectedValue = classicOp->getExpectedValue();
+                        if(controlRegister ) // exactly matches
+                        {}
+                        if(controlRegister ) // partly matches
+                        {}
+                    }
+                    q++;
+                }
             }
+
             it++;
         }
     }
