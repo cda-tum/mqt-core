@@ -746,19 +746,19 @@ namespace qc {
         of << "[";
 
         // save tags including operation type, involved qubits, and gate index
-        of << "[" << name << ", ";
+        of << "[\"" << name << "\", ";
 
         // obtain an ordered map of involved qubits and add corresponding tags
         std::map<dd::Qubit, std::variant<dd::Qubit, dd::Control>> orderedQubits{};
         for (const auto& control: controls) {
             orderedQubits.emplace(control.qubit, control);
-            of << "Q" << static_cast<std::size_t>(control.qubit) << ", ";
+            of << "\"Q" << static_cast<std::size_t>(control.qubit) << "\", ";
         }
         for (const auto& target: targets) {
             orderedQubits.emplace(target, target);
-            of << "Q" << static_cast<std::size_t>(target) << ", ";
+            of << "\"Q" << static_cast<std::size_t>(target) << "\", ";
         }
-        of << "GATE" << gateIdx << "], ";
+        of << "\"GATE" << gateIdx << "\"], ";
         ++gateIdx;
 
         // generate indices
