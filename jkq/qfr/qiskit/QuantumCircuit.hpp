@@ -80,6 +80,13 @@ namespace qc::qiskit {
             qc.initializeIOMapping();
         }
 
+        static void dumpTensorNetwork(const py::object& circ, const std::string& filename) {
+            QuantumComputation qc{};
+            import(qc, circ);
+            std::ofstream ofs(filename);
+            qc.dump(ofs, qc::Tensor);
+        }
+
     protected:
         static void emplaceOperation(QuantumComputation& qc, const py::object& instruction, const py::list& qargs, const py::list& cargs, const py::list& params, const py::dict& qubitMap, const py::dict& clbitMap) {
             static const auto nativelySupportedGates = std::set<std::string>{"i", "id", "iden", "x", "y", "z", "h", "s", "sdg", "t", "tdg", "p", "u1", "rx", "ry", "rz", "u2", "u", "u3", "cx", "cy", "cz", "cp", "cu1", "ch", "crx", "cry", "crz", "cu3", "ccx", "swap", "cswap", "iswap", "sx", "sxdg", "csx", "mcx_gray", "mcx_recursive", "mcx_vchain", "mcphase", "mcrx", "mcry", "mcrz"};
