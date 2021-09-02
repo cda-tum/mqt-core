@@ -786,8 +786,13 @@ namespace qc {
         // write tensor dimensions
         std::size_t localQubits  = targets.size() + controls.size();
         std::size_t globalQubits = nqubits;
-        std::size_t dimension    = 1 << localQubits;
-        of << "[" << dimension << ", " << dimension << "], ";
+        of << "[";
+        for (std::size_t q = 0; q < localQubits; ++q) {
+            if (q != 0)
+                of << ", ";
+            of << 2 << ", " << 2;
+        }
+        of << "], ";
 
         // obtain a local representation of the underlying operation
         dd::Qubit    localIdx = 0;
