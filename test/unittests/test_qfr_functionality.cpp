@@ -883,3 +883,22 @@ TEST_F(QFRFunctionality, compoundTensorDumpTest) {
                      "]}\n";
     EXPECT_EQ(ss.str(), reference);
 }
+
+TEST_F(QFRFunctionality, errorTensorDumpTest) {
+    QuantumComputation             qc(2);
+    std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(2, 0, qc::X);
+    qc.emplace_back<qc::ClassicControlledOperation>(op, std::pair{0, 1U}, 1U);
+
+    std::stringstream ss{};
+    EXPECT_THROW(qc.dump(ss, qc::Tensor), qc::QFRException);
+
+    ss.str("");
+    qc.erase(qc.begin());
+    qc.barrier(0);
+    qc.measure(0, 0);
+    EXPECT_NO_THROW(qc.dump(ss, qc::Tensor));
+
+    ss.str("");
+    qc.reset(0);
+    EXPECT_THROW(qc.dump(ss, qc::Tensor), qc::QFRException);
+}
