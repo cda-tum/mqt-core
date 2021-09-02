@@ -797,8 +797,8 @@ namespace qc {
             if (std::holds_alternative<dd::Qubit>(var)) {
                 localTargets.emplace_back(localIdx);
             } else {
-                const auto& control = std::get<dd::Control>(var);
-                localControls.emplace(dd::Control{localIdx, control.type});
+                const auto* control = std::get_if<dd::Control>(&var);
+                localControls.emplace(dd::Control{localIdx, control->type});
             }
             ++localIdx;
         }
