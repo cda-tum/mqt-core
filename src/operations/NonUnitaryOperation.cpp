@@ -220,6 +220,19 @@ namespace qc {
         }
     }
 
+    void NonUnitaryOperation::dumpTensor([[maybe_unused]] std::ostream& of, [[maybe_unused]] std::vector<std::size_t>& inds, [[maybe_unused]] std::size_t& gateIdx, [[maybe_unused]] std::unique_ptr<dd::Package>& dd) {
+        if (type == Barrier || type == ShowProbabilities || type == Snapshot)
+            return;
+
+        if (type == Measure) {
+            std::clog << "Skipping measurement in tensor dump." << std::endl;
+        }
+
+        if (type == Reset) {
+            throw QFRException("Reset operation cannot be dumped to tensor");
+        }
+    }
+
     bool NonUnitaryOperation::actsOn(dd::Qubit i) const {
         if (type == Measure) {
             return std::any_of(qubits.cbegin(), qubits.cend(), [&i](const auto& q) { return q == i; });
