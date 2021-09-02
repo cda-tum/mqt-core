@@ -31,20 +31,30 @@ namespace qc::qiskit {
             }
 
             // handle qubit registers
-            py::object Qubit      = py::module::import("qiskit.circuit").attr("Qubit");
-            int        qubitIndex = 0;
+            py::object Qubit           = py::module::import("qiskit.circuit").attr("Qubit");
+            py::object AncillaQubit    = py::module::import("qiskit.circuit").attr("AncillaQubit");
+            py::object AncillaRegister = py::module::import("qiskit.circuit").attr("AncillaRegister");
+            int        qubitIndex      = 0;
             py::dict   qubitMap{};
             auto&&     circQregs = circ.attr("qregs");
             for (const auto qreg: circQregs) {
                 // create corresponding register in quantum computation
                 auto size = qreg.attr("size").cast<dd::QubitCount>();
                 auto name = qreg.attr("name").cast<std::string>();
-                qc.addQubitRegister(size, name.c_str());
-
-                // add qubits to qubit map
-                for (int i = 0; i < size; ++i) {
-                    qubitMap[Qubit(qreg, i)] = qubitIndex;
-                    qubitIndex++;
+                if (py::isinstance(qreg, AncillaRegister)) {
+                    qc.addAncillaryRegister(size, name.c_str());
+                    // add ancillas to qubit map
+                    for (int i = 0; i < size; ++i) {
+                        qubitMap[AncillaQubit(qreg, i)] = qubitIndex;
+                        qubitIndex++;
+                    }
+                } else {
+                    qc.addQubitRegister(size, name.c_str());
+                    // add qubits to qubit map
+                    for (int i = 0; i < size; ++i) {
+                        qubitMap[Qubit(qreg, i)] = qubitIndex;
+                        qubitIndex++;
+                    }
                 }
             }
 
@@ -89,7 +99,7 @@ namespace qc::qiskit {
 
     protected:
         static void emplaceOperation(QuantumComputation& qc, const py::object& instruction, const py::list& qargs, const py::list& cargs, const py::list& params, const py::dict& qubitMap, const py::dict& clbitMap) {
-            static const auto nativelySupportedGates = std::set<std::string>{"i", "id", "iden", "x", "y", "z", "h", "s", "sdg", "t", "tdg", "p", "u1", "rx", "ry", "rz", "u2", "u", "u3", "cx", "cy", "cz", "cp", "cu1", "ch", "crx", "cry", "crz", "cu3", "ccx", "swap", "cswap", "iswap", "sx", "sxdg", "csx", "mcx_gray", "mcx_recursive", "mcx_vchain", "mcphase", "mcrx", "mcry", "mcrz"};
+            static const auto nativelySupportedGates = std::set<std::string>{"i", "id", "iden", "x", "y", "z", "h", "s", "sdg", "t", "tdg", "p", "u1", "rx", "ry", "rz", "u2", "u", "u3", "cx", "cy", "cz", "cp", "cu1", "ch", "crx", "cry", "crz", "cu3", "ccx", "swap", "cswap", "iswap", "sx", "sxdg", "csx", "mcx", "mcx_gray", "mcx_recursive", "mcx_vchain", "mcphase", "mcrx", "mcry", "mcrz"};
 
             auto instructionName = instruction.attr("name").cast<std::string>();
             if (instructionName == "measure") {
@@ -107,7 +117,7 @@ namespace qc::qiskit {
                 // natively supported operations
                 if (instructionName == "i" || instructionName == "id" || instructionName == "iden") {
                     addOperation(qc, I, qargs, params, qubitMap);
-                } else if (instructionName == "x" || instructionName == "cx" || instructionName == "ccx" || instructionName == "mcx_gray") {
+                } else if (instructionName == "x" || instructionName == "cx" || instructionName == "ccx" || instructionName == "mcx_gray" || instructionName == "mcx") {
                     addOperation(qc, X, qargs, params, qubitMap);
                 } else if (instructionName == "y" || instructionName == "cy") {
                     addOperation(qc, Y, qargs, params, qubitMap);
