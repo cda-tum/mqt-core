@@ -125,6 +125,9 @@ namespace qc {
 
         void dumpTensor(std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<dd::Package>& dd) override {
             for (const auto& op: ops) {
+                if (op != (*ops.begin())) {
+                    of << ",\n";
+                }
                 op->dumpTensor(of, inds, gateIdx, dd);
             }
         }

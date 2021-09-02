@@ -851,3 +851,35 @@ TEST_F(QFRFunctionality, wrongRegisterSizes) {
     QuantumComputation qc(5);
     ASSERT_THROW(qc.measure({0}, {1, 2}), std::invalid_argument);
 }
+
+TEST_F(QFRFunctionality, basicTensorDumpTest) {
+    QuantumComputation qc(2);
+    qc.h(1);
+    qc.x(0, 1_pc);
+
+    std::stringstream ss{};
+    qc.dump(ss, qc::Tensor);
+
+    auto reference = "{\"tensors\": [\n"
+                     "[[H   , Q1, GATE0], [\"q1_0\", \"q1_1\"], [2, 2], [[0.70710678118654757, 0], [0.70710678118654757, 0], [0.70710678118654757, 0], [-0.70710678118654757, 0]]],\n"
+                     "[[X   , Q1, Q0, GATE1], [\"q1_1\", \"q0_0\", \"q1_2\", \"q0_1\"], [4, 4], [[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [1, 0], [0, 0]]]\n"
+                     "]}\n";
+    EXPECT_EQ(ss.str(), reference);
+}
+
+TEST_F(QFRFunctionality, compoundTensorDumpTest) {
+    QuantumComputation qc(2);
+    qc.emplace_back<qc::CompoundOperation>(3);
+    auto compop = dynamic_cast<qc::CompoundOperation*>(qc.begin()->get());
+    compop->emplace_back<qc::StandardOperation>(2, 1, qc::H);
+    compop->emplace_back<qc::StandardOperation>(2, 1_pc, 0, qc::X);
+
+    std::stringstream ss{};
+    qc.dump(ss, qc::Tensor);
+
+    auto reference = "{\"tensors\": [\n"
+                     "[[H   , Q1, GATE0], [\"q1_0\", \"q1_1\"], [2, 2], [[0.70710678118654757, 0], [0.70710678118654757, 0], [0.70710678118654757, 0], [-0.70710678118654757, 0]]],\n"
+                     "[[X   , Q1, Q0, GATE1], [\"q1_1\", \"q0_0\", \"q1_2\", \"q0_1\"], [4, 4], [[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [1, 0], [0, 0]]]\n"
+                     "]}\n";
+    EXPECT_EQ(ss.str(), reference);
+}
