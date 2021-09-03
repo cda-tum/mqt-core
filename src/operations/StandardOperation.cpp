@@ -5,6 +5,8 @@
 
 #include "operations/StandardOperation.hpp"
 
+#include <variant>
+
 namespace qc {
     /***
      * Protected Methods
@@ -737,6 +739,109 @@ namespace qc {
                 std::cerr << "gate type (index) " << static_cast<int>(type) << " could not be converted to qiskit" << std::endl;
         }
         of << op.str() << qreg[targets[0]].second << ")" << std::endl;
+    }
+
+    void StandardOperation::dumpTensor(std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<dd::Package>& dd) {
+        // start of tensor
+        of << "[";
+
+        // save tags including operation type, involved qubits, and gate index
+        of << "[\"" << name << "\", ";
+
+        // obtain an ordered map of involved qubits and add corresponding tags
+        std::map<dd::Qubit, std::variant<dd::Qubit, dd::Control>> orderedQubits{};
+        for (const auto& control: controls) {
+            orderedQubits.emplace(control.qubit, control);
+            of << "\"Q" << static_cast<std::size_t>(control.qubit) << "\", ";
+        }
+        for (const auto& target: targets) {
+            orderedQubits.emplace(target, target);
+            of << "\"Q" << static_cast<std::size_t>(target) << "\", ";
+        }
+        of << "\"GATE" << gateIdx << "\"], ";
+        ++gateIdx;
+
+        // generate indices
+        // in order to conform to the DD variable ordering that later provides the tensor data
+        // the ordered map has to be traversed in reverse order in order to correctly determine the indices
+        std::stringstream ssIn{};
+        std::stringstream ssOut{};
+        auto              iter  = orderedQubits.rbegin();
+        auto              qubit = iter->first;
+        auto&             idx   = inds[qubit];
+        ssIn << "\"q" << static_cast<std::size_t>(qubit) << "_" << idx << "\"";
+        ++idx;
+        ssOut << "\"q" << static_cast<std::size_t>(qubit) << "_" << idx << "\"";
+        ++iter;
+        while (iter != orderedQubits.rend()) {
+            qubit     = iter->first;
+            auto& ind = inds[qubit];
+            ssIn << ", \"q" << static_cast<std::size_t>(qubit) << "_" << ind << "\"";
+            ++ind;
+            ssOut << ", \"q" << static_cast<std::size_t>(qubit) << "_" << ind << "\"";
+            ++iter;
+        }
+        of << "[" << ssIn.str() << ", " << ssOut.str() << "], ";
+
+        // write tensor dimensions
+        std::size_t localQubits  = targets.size() + controls.size();
+        std::size_t globalQubits = nqubits;
+        of << "[";
+        for (std::size_t q = 0; q < localQubits; ++q) {
+            if (q != 0)
+                of << ", ";
+            of << 2 << ", " << 2;
+        }
+        of << "], ";
+
+        // obtain a local representation of the underlying operation
+        dd::Qubit    localIdx = 0;
+        dd::Controls localControls{};
+        qc::Targets  localTargets{};
+        for (const auto& [q, var]: orderedQubits) {
+            if (std::holds_alternative<dd::Qubit>(var)) {
+                localTargets.emplace_back(localIdx);
+            } else {
+                const auto* control = std::get_if<dd::Control>(&var);
+                localControls.emplace(dd::Control{localIdx, control->type});
+            }
+            ++localIdx;
+        }
+        // temporarily change nqubits
+        nqubits = localQubits;
+
+        // get DD for local operation
+        const auto localDD = getDD(dd, localControls, localTargets);
+
+        // translate local DD to matrix
+        const auto localMatrix = dd->getMatrix(localDD);
+
+        // restore nqubits
+        nqubits = globalQubits;
+
+        // set appropriate precision for dumping numbers
+        const auto precision = of.precision();
+        of.precision(std::numeric_limits<dd::fp>::max_digits10);
+
+        // write tensor data
+        of << "[";
+        for (std::size_t row = 0; row < localMatrix.size(); ++row) {
+            const auto& r = localMatrix[row];
+            for (std::size_t col = 0; col < r.size(); ++col) {
+                if (row != 0 || col != 0)
+                    of << ", ";
+
+                const auto& elem = r[col];
+                of << "[" << elem.real() << ", " << elem.imag() << "]";
+            }
+        }
+        of << "]";
+
+        // restore old precision
+        of.precision(precision);
+
+        // end of tensor
+        of << "]";
     }
 
     MatrixDD StandardOperation::getDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const {
