@@ -18,7 +18,6 @@ namespace qc {
                 nops += comp->size();
             } else {
                 ++nops;
-                ++nops;
             }
         }
 
