@@ -18,6 +18,7 @@ namespace qc {
                 nops += comp->size();
             } else {
                 ++nops;
+                ++nops;
             }
         }
 
@@ -728,7 +729,8 @@ namespace qc {
         std::size_t gateIdx = 0;
         auto        dd      = std::make_unique<dd::Package>(getNqubits());
         for (const auto& op: ops) {
-            if (op != ops.front())
+            const auto type = op->getType();
+            if (op != ops.front() && (type != Measure && type != Barrier && type != ShowProbabilities && type != Snapshot))
                 of << ",\n";
             op->dumpTensor(of, inds, gateIdx, dd);
         }
