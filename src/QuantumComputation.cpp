@@ -812,6 +812,8 @@ namespace qc {
             dump(filename, QC);
         } else if (extension == "tfc") {
             dump(filename, TFC);
+        } else if (extension == "tensor") {
+            dump(filename, Tensor);
         } else {
             throw QFRException("[dump] Extension " + extension + " not recognized/supported for dumping.");
         }
@@ -881,6 +883,22 @@ namespace qc {
         }
     }
 
+    void QuantumComputation::dumpTensorNetwork(std::ostream& of) const {
+        of << "{\"tensors\": [\n";
+
+        // initialize an index for every qubit
+        auto        inds    = std::vector<std::size_t>(getNqubits(), 0U);
+        std::size_t gateIdx = 0;
+        auto        dd      = std::make_unique<dd::Package>(getNqubits());
+        for (const auto& op: ops) {
+            const auto type = op->getType();
+            if (op != ops.front() && (type != Measure && type != Barrier && type != ShowProbabilities && type != Snapshot))
+                of << ",\n";
+            op->dumpTensor(of, inds, gateIdx, dd);
+        }
+        of << "\n]}\n";
+    }
+
     void QuantumComputation::dump(const std::string& filename, Format format) {
         auto of = std::ofstream(filename);
         if (!of.good()) {
@@ -893,6 +911,9 @@ namespace qc {
         switch (format) {
             case OpenQASM:
                 dumpOpenQASM(of);
+                break;
+            case Tensor:
+                dumpTensorNetwork(of);
                 break;
             case Real:
                 std::cerr << "Dumping in real format currently not supported\n";

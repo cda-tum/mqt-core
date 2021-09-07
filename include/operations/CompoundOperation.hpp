@@ -112,14 +112,23 @@ namespace qc {
         }
 
         void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override {
-            for (auto& op: ops) {
+            for (const auto& op: ops) {
                 op->dumpOpenQASM(of, qreg, creg);
             }
         }
 
         void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const override {
-            for (auto& op: ops) {
+            for (const auto& op: ops) {
                 op->dumpQiskit(of, qreg, creg, anc_reg_name);
+            }
+        }
+
+        void dumpTensor(std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<dd::Package>& dd) override {
+            for (const auto& op: ops) {
+                if (op != (*ops.begin())) {
+                    of << ",\n";
+                }
+                op->dumpTensor(of, inds, gateIdx, dd);
             }
         }
 
