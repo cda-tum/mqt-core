@@ -1276,7 +1276,7 @@ TEST_F(QFRFunctionality, deferMeasurementsTwoClassic) {
     auto& op1 = qc.at(1);
     auto& op2 = qc.at(2);
     auto& op3 = qc.at(3);
-    auto& op4 = qc.at(3);
+    auto& op4 = qc.at(4);
 
     EXPECT_EQ(op0->getNqubits(), 2);
     EXPECT_TRUE(op0->getType() == qc::H);
