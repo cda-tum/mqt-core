@@ -16,7 +16,9 @@ namespace qc {
 
         for (dd::QubitCount i = 0; i < precision; i++) {
             h(1);
-            phase(0, 1_pc, (1U << (precision - 1 - i)) * lambda);
+            // normalize angle
+            const auto angle = std::remainder((1U << (precision - 1 - i)) * lambda, 2.0 * dd::PI);
+            phase(0, 1_pc, angle);
             for (dd::QubitCount j = 0; j < i; j++) {
                 auto                           iQFT_lambda = -dd::PI / (1U << (i - j));
                 std::unique_ptr<qc::Operation> op          = std::make_unique<StandardOperation>(nqubits, 1, Phase, iQFT_lambda);

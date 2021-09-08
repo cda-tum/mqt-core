@@ -21,7 +21,9 @@ namespace qc {
 
         //Controlled Phase Rotation
         for (dd::QubitCount i = 0; i < precision; i++) {
-            phase(0, dd::Control{static_cast<dd::Qubit>(i + 1)}, ((1U << i) * lambda));
+            // normalize angle
+            const auto angle = std::remainder((1U << i) * lambda, 2.0 * dd::PI);
+            phase(0, dd::Control{static_cast<dd::Qubit>(i + 1)}, angle);
         }
 
         //Inverse QFT
@@ -30,13 +32,13 @@ namespace qc {
         }
         for (dd::QubitCount i = 1; i <= precision; ++i) {
             for (dd::QubitCount j = 1; j < i; j++) {
-                auto iQFT_lambda = -dd::PI / (1U << j);
-                if (j == 1) {
-                    sdag(static_cast<dd::Qubit>(i - 1), dd::Control{static_cast<dd::Qubit>(i)});
-                } else if (j == 2) {
-                    tdag(static_cast<dd::Qubit>(i - 2), dd::Control{static_cast<dd::Qubit>(i)});
+                auto iQFT_lambda = -dd::PI / (1U << (i - j));
+                if (j == i - 1) {
+                    sdag(static_cast<dd::Qubit>(i), dd::Control{static_cast<dd::Qubit>(i - 1)});
+                } else if (j == i - 2) {
+                    tdag(static_cast<dd::Qubit>(i), dd::Control{static_cast<dd::Qubit>(i - 2)});
                 } else {
-                    phase(static_cast<dd::Qubit>(i - j), dd::Control{static_cast<dd::Qubit>(i)}, iQFT_lambda);
+                    phase(static_cast<dd::Qubit>(i), dd::Control{static_cast<dd::Qubit>(j)}, iQFT_lambda);
                 }
             }
             h(static_cast<dd::Qubit>(i));
