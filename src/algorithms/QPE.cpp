@@ -23,13 +23,10 @@ namespace qc {
         for (dd::QubitCount i = 0; i < precision; i++) {
             // normalize angle
             const auto angle = std::remainder((1U << i) * lambda, 2.0 * dd::PI);
-            phase(0, dd::Control{static_cast<dd::Qubit>(i + 1)}, angle);
+            phase(0, dd::Control{static_cast<dd::Qubit>(precision - i)}, angle);
         }
 
         //Inverse QFT
-        for (dd::Qubit i = 1; i <= static_cast<dd::Qubit>((nqubits - 1) / 2); ++i) {
-            swap(i, static_cast<dd::Qubit>(nqubits - i));
-        }
         for (dd::QubitCount i = 1; i <= precision; ++i) {
             for (dd::QubitCount j = 1; j < i; j++) {
                 auto iQFT_lambda = -dd::PI / (1U << (i - j));
