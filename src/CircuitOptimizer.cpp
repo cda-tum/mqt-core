@@ -766,8 +766,6 @@ namespace qc {
     }
 
     void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
-        /// TODO: move measurements to end of circuit by applying deferred measurement principle
-
         //      ┌───┐┌─┐                         ┌───┐     ┌─┐
         // q_0: ┤ H ├┤M├───────             q_0: ┤ H ├──■──┤M├
         //      └───┘└╥┘ ┌───┐                   └───┘┌─┴─┐└╥┘
@@ -813,7 +811,7 @@ namespace qc {
                         if (controlRegister.second != 1 && expectedValue != 1) {
                             throw QFRException("Not implemented - hairy case");
                         }
-                        if (controlRegister.first == measureClassics.at(0)) {
+                        if (controlRegister.first == static_cast<dd::Qubit>(measureClassics.at(0))) {
                             auto standardOp  = dynamic_cast<qc::StandardOperation*>(classicOp->getOperation());
                             auto controls    = standardOp->getControls();
                             auto controlType = dd::Control::Type::pos;
@@ -837,8 +835,8 @@ namespace qc {
             }
             it++;
         }
-        for (auto stdOp = stdOps.begin(); stdOp != stdOps.end(); stdOp++) {
-            pos = qc.ops.insert(pos, std::make_unique<StandardOperation>((*stdOp)->getNqubits(), (*stdOp)->getControls(), (*stdOp)->getType()));
+        for (auto& stdOp: stdOps) {
+            pos = qc.ops.insert(pos, std::make_unique<StandardOperation>(stdOp->getNqubits(), stdOp->getControls(), stdOp->getType()));
         }
         it = qc.ops.insert(it, std::make_unique<NonUnitaryOperation>((*it)->getNqubits(), measureOp->getTargets(), measureOp->getClassics()));
     }
