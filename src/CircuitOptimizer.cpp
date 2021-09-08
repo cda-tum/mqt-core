@@ -784,20 +784,28 @@ namespace qc {
                     throw QFRException("Deferring measurements with more than 1 target is not yet supported. Try decomposing your measurements.");
                 }
 
+                // if this is the last operation, nothing has to be done
+                if (*it == qc.ops.back())
+                    break;
+
                 // remember q-> c for adding measurements later
                 qubitsToAddMeasurements[targets[0]] = classics[0];
 
                 // remove the measurement from the vector of operations
                 it = qc.erase(it);
 
-                std::vector<qc::StandardOperation> standardOperations{};
                 // starting from the next operation after the measurement (if there is any)
-                auto opIt = it;
+                auto opIt                  = it;
+                auto currentInsertionPoint = it;
 
                 // iterate over all subsequent operations
                 while (opIt != qc.end()) {
                     const auto operation = opIt->get();
                     if (operation->isUnitary()) {
+                        // if an operation does not act on the measured qubit, the insert location for potential operations has to be updated
+                        if (!operation->actsOn(targets.at(0))) {
+                            ++currentInsertionPoint;
+                        }
                         ++opIt;
                         continue;
                     }
@@ -815,6 +823,7 @@ namespace qc {
                         if (targets == targets2 && classics == classics2) {
                             break;
                         } else {
+                            ++currentInsertionPoint;
                             ++opIt;
                             continue;
                         }
@@ -851,21 +860,33 @@ namespace qc {
                             auto controlType  = (expectedValue == 1) ? dd::Control::Type::pos : dd::Control::Type::neg;
                             controls.emplace(dd::Control{controlQubit, controlType});
 
-                            // add the new operation to the list of operations to be added
-                            standardOperations.emplace_back(nqubits, controls, targs, type);
+                            const auto parameters = standardOp->getParameter();
 
                             // remove the classic-controlled operation
                             opIt = qc.erase(opIt);
+
+                            // insert the new operation (invalidated all pointer onwards)
+                            currentInsertionPoint = qc.insert(currentInsertionPoint,
+                                                              std::make_unique<qc::StandardOperation>(nqubits,
+                                                                                                      controls,
+                                                                                                      targs,
+                                                                                                      type,
+                                                                                                      parameters[0],
+                                                                                                      parameters[1],
+                                                                                                      parameters[2]));
+
+                            // advance just after the currently inserted operation
+                            ++currentInsertionPoint;
+                            // the inner loop also has to restart from here due to the invalidation of the iterators
+                            opIt = currentInsertionPoint;
                         } else {
+                            if (!operation->actsOn(targets[0])) {
+                                ++currentInsertionPoint;
+                            }
                             ++opIt;
                             continue;
                         }
                     }
-                }
-                // all potential classical-controlled operations have now been removed and the corresponding standard operations have been collected
-                // now insert all of them in sequence at the appropriate location where the measurement has been removed
-                for (auto revIt = standardOperations.rbegin(); revIt != standardOperations.rend(); ++revIt) {
-                    it = qc.insert(it, std::make_unique<qc::StandardOperation>(std::move(*revIt)));
                 }
             }
             ++it;
