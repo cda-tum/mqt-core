@@ -153,7 +153,7 @@ TEST_P(QPE, IQPETest) {
 
     //    std::cout << *qc << std::endl;
 
-    constexpr auto shots        = 4096U;
+    constexpr auto shots        = 8192U;
     auto           measurements = qc->simulate(dd->makeZeroState(qc->getNqubits()), dd, shots);
 
     // sort the measurements
@@ -182,8 +182,8 @@ TEST_P(QPE, IQPETest) {
         EXPECT_TRUE((mostLikely.first == expectedResultRepresentation && secondMostLikely.first == secondExpectedResultRepresentation) ||
                     (mostLikely.first == secondExpectedResultRepresentation && secondMostLikely.first == expectedResultRepresentation));
         auto threshold = 4. / (dd::PI * dd::PI);
-        EXPECT_NEAR(static_cast<double>(mostLikely.second) / shots, threshold, 0.01);
-        EXPECT_NEAR(static_cast<double>(secondMostLikely.second) / shots, threshold, 0.01);
+        EXPECT_NEAR(static_cast<double>(mostLikely.second) / shots, threshold, 0.02);
+        EXPECT_NEAR(static_cast<double>(secondMostLikely.second) / shots, threshold, 0.02);
     }
 }
 
