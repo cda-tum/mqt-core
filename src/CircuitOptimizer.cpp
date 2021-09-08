@@ -776,9 +776,11 @@ namespace qc {
         //            ║ ┌──╨──┐             c: 2/═══════════╩═
         // c: 2/══════╩═╡ = 1 ╞                             0
         //            0 └─────┘
-        auto it             = qc.ops.begin();
-        auto replacementMap = std::map<dd::Qubit, dd::Qubit>();
+        auto it = qc.ops.begin();
         qc::NonUnitaryOperation* measureOp;
+        std::vector<qc::StandardOperation*> stdOps;
+        auto pos = qc.ops.begin();
+        bool mainCase = false;
         while (it != qc.ops.end()) {
             if ((*it)->getType() == qc::Measure) {
                 measureOp = dynamic_cast<qc::NonUnitaryOperation*>((*it).get());
@@ -787,9 +789,9 @@ namespace qc {
                 if(measureTargets.size() != 1 && measureClassics.size() != 1){
                     throw QFRException("Not implemented - hairy case");
                 }
-                auto position = it;
                 it = qc.erase(it);
                 auto q = it;
+                pos = it;
                 while(q != qc.ops.end()){
                     if((*q)->isUnitary()){
                         continue;
@@ -806,14 +808,14 @@ namespace qc {
                         }
                     }
                     if((*q)->isClassicControlledOperation()){
-                        auto* classicOp = dynamic_cast<qc::ClassicControlledOperation*>((*q).get());
+                        auto classicOp = dynamic_cast<qc::ClassicControlledOperation*>((*q).get());
                         auto controlRegister = classicOp->getControlRegister();
                         auto expectedValue = classicOp->getExpectedValue();
                         if(controlRegister.second != 1 && expectedValue != 1){
-                            throw QFRException("Not implemented- hairy case");
+                            throw QFRException("Not implemented - hairy case");
                         }
                         if(controlRegister.first == measureClassics.at(0)){
-                            auto* standardOp = dynamic_cast<qc::StandardOperation*>(classicOp->getOperation());
+                            auto standardOp = dynamic_cast<qc::StandardOperation*>(classicOp->getOperation());
                             auto controls = standardOp->getControls();
                             auto controlType = dd::Control::Type::pos;
                             if(expectedValue == 0){
@@ -821,18 +823,27 @@ namespace qc {
                             }
                             controls.insert(dd::Control{measureTargets.at(0), controlType});
                             q = qc.erase(q);
-                            q = qc.ops.insert(position, static_cast<const std::unique_ptr<Operation>>(standardOp));
+                            mainCase = true;
+                            stdOps.push_back(standardOp);
                         }
                         else{
                             continue;
                         }
                     }
-                    q++;
+                    if(mainCase){
+                        mainCase = false;
+                    }
+                    else {
+                        q++;
+                    }
                 }
             }
             it++;
         }
-        it = qc.ops.insert(it, static_cast<const std::unique_ptr<Operation>>(measureOp));
+        for(auto stdOp = stdOps.begin(); stdOp != stdOps.end(); stdOp++){
+            pos = qc.ops.insert(pos, std::make_unique<StandardOperation>((*stdOp)->getNqubits(), (*stdOp)->getControls(), (*stdOp)->getType()));
+        }
+        it = qc.ops.insert(it, std::make_unique<NonUnitaryOperation>((*it)->getNqubits(), measureOp->getTargets(), measureOp->getClassics()));
     }
 
     bool CircuitOptimizer::isDynamicCircuit(QuantumComputation& qc) {
