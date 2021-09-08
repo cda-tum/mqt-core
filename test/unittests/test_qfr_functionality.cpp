@@ -1344,6 +1344,7 @@ TEST_F(QFRFunctionality, deferMeasurementsErrorOnImplicitReset) {
     EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
 
     EXPECT_THROW(CircuitOptimizer::deferMeasurements(qc), qc::QFRException);
+}
 
 TEST_F(QFRFunctionality, basicTensorDumpTest) {
     QuantumComputation qc(2);
