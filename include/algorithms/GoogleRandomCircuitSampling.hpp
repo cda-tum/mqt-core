@@ -41,7 +41,7 @@ namespace qc {
             return buildFunctionality(dd);
         }
         VectorDD simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd) const override;
-        VectorDD simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd, unsigned short ncycles) {
+        VectorDD simulate(unsigned short ncycles, const VectorDD& in, std::unique_ptr<dd::Package>& dd) {
             if (ncycles < cycles.size() - 2) {
                 removeCycles(cycles.size() - 2 - ncycles);
             }
