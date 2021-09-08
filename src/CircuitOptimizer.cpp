@@ -776,71 +776,68 @@ namespace qc {
         //            ║ ┌──╨──┐             c: 2/═══════════╩═
         // c: 2/══════╩═╡ = 1 ╞                             0
         //            0 └─────┘
-        auto it = qc.ops.begin();
-        qc::NonUnitaryOperation* measureOp;
+        auto                                it = qc.ops.begin();
+        qc::NonUnitaryOperation*            measureOp;
         std::vector<qc::StandardOperation*> stdOps;
-        auto pos = qc.ops.begin();
-        bool mainCase = false;
+        auto                                pos      = qc.ops.begin();
+        bool                                mainCase = false;
         while (it != qc.ops.end()) {
             if ((*it)->getType() == qc::Measure) {
-                measureOp = dynamic_cast<qc::NonUnitaryOperation*>((*it).get());
-                auto measureTargets = measureOp->getTargets();
+                measureOp            = dynamic_cast<qc::NonUnitaryOperation*>((*it).get());
+                auto measureTargets  = measureOp->getTargets();
                 auto measureClassics = measureOp->getClassics();
-                if(measureTargets.size() != 1 && measureClassics.size() != 1){
+                if (measureTargets.size() != 1 && measureClassics.size() != 1) {
                     throw QFRException("Not implemented - hairy case");
                 }
-                it = qc.erase(it);
+                it     = qc.erase(it);
                 auto q = it;
-                pos = it;
-                while(q != qc.ops.end()){
-                    if((*q)->isUnitary()){
+                pos    = it;
+                while (q != qc.ops.end()) {
+                    if ((*q)->isUnitary()) {
                         continue;
                     }
-                    if((*q)->getType() == qc::Reset){
+                    if ((*q)->getType() == qc::Reset) {
                         throw QFRException("No reset allowed after measurement");
                     }
-                    if((*q)->getType() == qc::Measure){
-                        if((*q)->getTargets().begin() == measureTargets.begin()){
+                    if ((*q)->getType() == qc::Measure) {
+                        if ((*q)->getTargets().begin() == measureTargets.begin()) {
                             break; //Error
-                        }
-                        else{
+                        } else {
                             continue;
                         }
                     }
-                    if((*q)->isClassicControlledOperation()){
-                        auto classicOp = dynamic_cast<qc::ClassicControlledOperation*>((*q).get());
+                    if ((*q)->isClassicControlledOperation()) {
+                        auto classicOp       = dynamic_cast<qc::ClassicControlledOperation*>((*q).get());
                         auto controlRegister = classicOp->getControlRegister();
-                        auto expectedValue = classicOp->getExpectedValue();
-                        if(controlRegister.second != 1 && expectedValue != 1){
+                        auto expectedValue   = classicOp->getExpectedValue();
+                        if (controlRegister.second != 1 && expectedValue != 1) {
                             throw QFRException("Not implemented - hairy case");
                         }
-                        if(controlRegister.first == measureClassics.at(0)){
-                            auto standardOp = dynamic_cast<qc::StandardOperation*>(classicOp->getOperation());
-                            auto controls = standardOp->getControls();
+                        if (controlRegister.first == measureClassics.at(0)) {
+                            auto standardOp  = dynamic_cast<qc::StandardOperation*>(classicOp->getOperation());
+                            auto controls    = standardOp->getControls();
                             auto controlType = dd::Control::Type::pos;
-                            if(expectedValue == 0){
+                            if (expectedValue == 0) {
                                 controlType = dd::Control::Type::neg;
                             }
                             controls.insert(dd::Control{measureTargets.at(0), controlType});
-                            q = qc.erase(q);
+                            q        = qc.erase(q);
                             mainCase = true;
                             stdOps.push_back(standardOp);
-                        }
-                        else{
+                        } else {
                             continue;
                         }
                     }
-                    if(mainCase){
+                    if (mainCase) {
                         mainCase = false;
-                    }
-                    else {
+                    } else {
                         q++;
                     }
                 }
             }
             it++;
         }
-        for(auto stdOp = stdOps.begin(); stdOp != stdOps.end(); stdOp++){
+        for (auto stdOp = stdOps.begin(); stdOp != stdOps.end(); stdOp++) {
             pos = qc.ops.insert(pos, std::make_unique<StandardOperation>((*stdOp)->getNqubits(), (*stdOp)->getControls(), (*stdOp)->getType()));
         }
         it = qc.ops.insert(it, std::make_unique<NonUnitaryOperation>((*it)->getNqubits(), measureOp->getTargets(), measureOp->getClassics()));
