@@ -219,3 +219,32 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
 
     EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }
+
+TEST_P(QPE, DynamicEquivalenceFunctionality) {
+    auto dd = std::make_unique<dd::Package>(precision + 1);
+
+    // create standard QPE circuit
+    auto qpe = std::make_unique<qc::QPE>(lambda, precision);
+
+    // remove final measurements to obtain statevector
+    qc::CircuitOptimizer::removeFinalMeasurements(*qpe);
+
+    // simulate circuit
+    auto e = qpe->buildFunctionality(dd);
+
+    // create standard QPE circuit
+    auto iqpe = std::make_unique<qc::IQPE>(lambda, precision);
+
+    // transform dynamic circuits by first eliminating reset operations and afterwards deferring measurements
+    qc::CircuitOptimizer::eliminateResets(*iqpe);
+
+    qc::CircuitOptimizer::deferMeasurements(*iqpe);
+
+    // remove final measurements to obtain statevector
+    qc::CircuitOptimizer::removeFinalMeasurements(*iqpe);
+
+    // simulate circuit
+    auto f = iqpe->buildFunctionality(dd);
+
+    EXPECT_EQ(e, f);
+}
