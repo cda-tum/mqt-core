@@ -113,6 +113,10 @@ namespace qc {
         void dumpQiskit([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg, [[maybe_unused]] const char* anc_reg_name) const override {
             throw QFRException("Dumping of classically controlled gates currently not supported for qiskit");
         }
+
+        void dumpTensor([[maybe_unused]] std::ostream& of, [[maybe_unused]] std::vector<std::size_t>& inds, [[maybe_unused]] std::size_t& gateIdx, [[maybe_unused]] std::unique_ptr<dd::Package>& dd) override {
+            throw QFRException("Dumping of classically controlled gates currently not supported for tensor");
+        }
     };
 } // namespace qc
 #endif //QFR_CLASSICCONTROLLEDOPERATION_H

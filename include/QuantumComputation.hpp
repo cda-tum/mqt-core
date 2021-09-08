@@ -474,6 +474,7 @@ namespace qc {
         }
         virtual void dump(std::ostream&& of, Format format);
         virtual void dumpOpenQASM(std::ostream& of);
+        virtual void dumpTensorNetwork(std::ostream& of) const;
 
         virtual void reset() {
             ops.clear();

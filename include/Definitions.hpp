@@ -71,7 +71,8 @@ namespace qc {
         GRCS,
         Qiskit,
         TFC,
-        QC
+        QC,
+        Tensor
     };
 
     using DAG          = std::vector<std::forward_list<std::unique_ptr<Operation>*>>;
