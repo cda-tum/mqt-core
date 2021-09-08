@@ -774,71 +774,107 @@ namespace qc {
         //            ║ ┌──╨──┐             c: 2/═══════════╩═
         // c: 2/══════╩═╡ = 1 ╞                             0
         //            0 └─────┘
-        auto                                it = qc.ops.begin();
-        qc::NonUnitaryOperation*            measureOp;
-        std::vector<qc::StandardOperation*> stdOps;
-        auto                                pos      = qc.ops.begin();
-        bool                                mainCase = false;
-        while (it != qc.ops.end()) {
+        std::unordered_map<dd::Qubit, std::size_t> qubitsToAddMeasurements{};
+        auto                                       it = qc.begin();
+        while (it != qc.end()) {
             if ((*it)->getType() == qc::Measure) {
-                measureOp            = dynamic_cast<qc::NonUnitaryOperation*>((*it).get());
-                auto measureTargets  = measureOp->getTargets();
-                auto measureClassics = measureOp->getClassics();
-                if (measureTargets.size() != 1 && measureClassics.size() != 1) {
-                    throw QFRException("Not implemented - hairy case");
+                auto*      measurement = dynamic_cast<qc::NonUnitaryOperation*>(it->get());
+                const auto targets     = measurement->getTargets();
+                const auto classics    = measurement->getClassics();
+
+                if (targets.size() != 1 && classics.size() != 1) {
+                    throw QFRException("Deferring measurements with more than 1 target is not yet supported. Try decomposing your measurements.");
                 }
-                it     = qc.erase(it);
-                auto q = it;
-                pos    = it;
-                while (q != qc.ops.end()) {
-                    if ((*q)->isUnitary()) {
+
+                // remember q-> c for adding measurements later
+                qubitsToAddMeasurements[targets[0]] = classics[0];
+
+                // remove the measurement from the vector of operations
+                it = qc.erase(it);
+
+                std::vector<qc::StandardOperation> standardOperations{};
+                // starting from the next operation after the measurement (if there is any)
+                auto opIt = it;
+
+                // iterate over all subsequent operations
+                while (opIt != qc.end()) {
+                    const auto operation = opIt->get();
+                    if (operation->isUnitary()) {
+                        ++opIt;
                         continue;
                     }
-                    if ((*q)->getType() == qc::Reset) {
-                        throw QFRException("No reset allowed after measurement");
+
+                    if (operation->getType() == qc::Reset) {
+                        throw QFRException("Reset encountered in deferMeasurements routine. Please use the eliminateResets method before deferring measurements.");
                     }
-                    if ((*q)->getType() == qc::Measure) {
-                        if ((*q)->getTargets().begin() == measureTargets.begin()) {
-                            break; //Error
+
+                    if (operation->getType() == qc::Measure) {
+                        const auto* measurement2 = dynamic_cast<qc::NonUnitaryOperation*>((*opIt).get());
+                        const auto& targets2     = measurement2->getTargets();
+                        const auto& classics2    = measurement2->getClassics();
+
+                        // if this is the same measurement a breakpoint has been reached
+                        if (targets == targets2 && classics == classics2) {
+                            break;
                         } else {
+                            ++opIt;
                             continue;
                         }
                     }
-                    if ((*q)->isClassicControlledOperation()) {
-                        auto classicOp       = dynamic_cast<qc::ClassicControlledOperation*>((*q).get());
-                        auto controlRegister = classicOp->getControlRegister();
-                        auto expectedValue   = classicOp->getExpectedValue();
-                        if (controlRegister.second != 1 && expectedValue != 1) {
-                            throw QFRException("Not implemented - hairy case");
+
+                    if (operation->isClassicControlledOperation()) {
+                        auto        classicOp       = dynamic_cast<qc::ClassicControlledOperation*>((*opIt).get());
+                        const auto& controlRegister = classicOp->getControlRegister();
+                        const auto& expectedValue   = classicOp->getExpectedValue();
+
+                        if (controlRegister.second != 1 && expectedValue <= 1) {
+                            throw QFRException("Classic-controlled operations targetted at more than one bit are currently not supported. Try decomposing the operation into individual contributions.");
                         }
-                        if (controlRegister.first == static_cast<dd::Qubit>(measureClassics.at(0))) {
-                            auto standardOp  = dynamic_cast<qc::StandardOperation*>(classicOp->getOperation());
-                            auto controls    = standardOp->getControls();
-                            auto controlType = dd::Control::Type::pos;
-                            if (expectedValue == 0) {
-                                controlType = dd::Control::Type::neg;
+
+                        // if this is not the classical bit that is measured, continue
+                        if (controlRegister.first == static_cast<dd::Qubit>(classics.at(0))) {
+                            // get the underlying operation
+                            const auto* standardOp = dynamic_cast<qc::StandardOperation*>(classicOp->getOperation());
+
+                            // get all the necessary information for reconstructing the operation
+                            const auto nqubits = standardOp->getNqubits();
+                            const auto type    = standardOp->getType();
+
+                            const auto targs = standardOp->getTargets();
+                            for (const auto& target: targs) {
+                                if (target == targets[0]) {
+                                    throw qc::QFRException("Implicit reset operation in circuit detected. Measuring a qubit and then targeting the same qubit with a classic-controlled operation is not allowed at the moment.");
+                                }
                             }
-                            controls.insert(dd::Control{measureTargets.at(0), controlType});
-                            q        = qc.erase(q);
-                            mainCase = true;
-                            stdOps.push_back(standardOp);
+
+                            // determine the appropriate control to add
+                            auto controls     = standardOp->getControls();
+                            auto controlQubit = targets.at(0);
+                            auto controlType  = (expectedValue == 1) ? dd::Control::Type::pos : dd::Control::Type::neg;
+                            controls.emplace(dd::Control{controlQubit, controlType});
+
+                            // add the new operation to the list of operations to be added
+                            standardOperations.emplace_back(nqubits, controls, targs, type);
+
+                            // remove the classic-controlled operation
+                            opIt = qc.erase(opIt);
                         } else {
+                            ++opIt;
                             continue;
                         }
-                    }
-                    if (mainCase) {
-                        mainCase = false;
-                    } else {
-                        q++;
                     }
                 }
+                // all potential classical-controlled operations have now been removed and the corresponding standard operations have been collected
+                // now insert all of them in sequence at the appropriate location where the measurement has been removed
+                for (auto revIt = standardOperations.rbegin(); revIt != standardOperations.rend(); ++revIt) {
+                    it = qc.insert(it, std::make_unique<qc::StandardOperation>(std::move(*revIt)));
+                }
             }
-            it++;
+            ++it;
         }
-        for (auto& stdOp: stdOps) {
-            pos = qc.ops.insert(pos, std::make_unique<StandardOperation>(stdOp->getNqubits(), stdOp->getControls(), stdOp->getType()));
+        for (const auto& [qubit, clbit]: qubitsToAddMeasurements) {
+            qc.measure(qubit, clbit);
         }
-        it = qc.ops.insert(it, std::make_unique<NonUnitaryOperation>((*it)->getNqubits(), measureOp->getTargets(), measureOp->getClassics()));
     }
 
     bool CircuitOptimizer::isDynamicCircuit(QuantumComputation& qc) {
