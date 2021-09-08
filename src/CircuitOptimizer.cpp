@@ -717,10 +717,6 @@ namespace qc {
                                 auto& targets = (*compOpIt)->getTargets();
                                 changeTargets(targets, replacementMap);
                             }
-                            if ((*compOpIt)->isClassicControlledOperation()) {
-                                auto* classicOp = dynamic_cast<qc::ClassicControlledOperation*>((*compOpIt).get())->getOperation();
-                                classicOp->setNqubits((*compOpIt)->getNqubits());
-                            }
                             compOpIt++;
                         }
                     }
@@ -734,13 +730,15 @@ namespace qc {
                     auto& targets = (*it)->getTargets();
                     changeTargets(targets, replacementMap);
                 }
-                if ((*it)->isClassicControlledOperation()) {
-                    auto* classicOp = dynamic_cast<qc::ClassicControlledOperation*>((*it).get())->getOperation();
-                    classicOp->setNqubits((*it)->getNqubits());
-                }
                 it++;
             } else {
                 it++;
+            }
+        }
+        // if anything has been modified the number of qubits of each gate has to be adjusted
+        if (!replacementMap.empty()) {
+            for (auto& op: qc.ops) {
+                op->setNqubits(qc.getNqubits());
             }
         }
     }
