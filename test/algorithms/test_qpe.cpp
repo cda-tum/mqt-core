@@ -97,7 +97,9 @@ INSTANTIATE_TEST_SUITE_P(QPE, QPE,
                                  std::pair{dd::PI_2, static_cast<dd::QubitCount>(2)},
                                  std::pair{dd::PI_4, static_cast<dd::QubitCount>(3)},
                                  std::pair{3 * dd::PI / 8, static_cast<dd::QubitCount>(3)},
-                                 std::pair{3 * dd::PI / 8, static_cast<dd::QubitCount>(4)}),
+                                 std::pair{3 * dd::PI / 8, static_cast<dd::QubitCount>(4)},
+                                 std::pair{3 * dd::PI / 32, static_cast<dd::QubitCount>(5)},
+                                 std::pair{3 * dd::PI / 32, static_cast<dd::QubitCount>(6)}),
                          [](const testing::TestParamInfo<QPE::ParamType>& info) {
                              // Generate names for test cases
                              dd::fp            lambda    = info.param.first;
@@ -183,4 +185,37 @@ TEST_P(QPE, IQPETest) {
         EXPECT_NEAR(static_cast<double>(mostLikely.second) / shots, threshold, 0.01);
         EXPECT_NEAR(static_cast<double>(secondMostLikely.second) / shots, threshold, 0.01);
     }
+}
+
+TEST_P(QPE, DynamicEquivalenceSimulation) {
+    auto dd = std::make_unique<dd::Package>(precision + 1);
+
+    // create standard QPE circuit
+    auto qpe = std::make_unique<qc::QPE>(lambda, precision);
+
+    // remove final measurements to obtain statevector
+    qc::CircuitOptimizer::removeFinalMeasurements(*qpe);
+
+    // simulate circuit
+    auto e = qpe->simulate(dd->makeZeroState(qpe->getNqubits()), dd);
+
+    // create standard QPE circuit
+    auto iqpe = std::make_unique<qc::IQPE>(lambda, precision);
+
+    // transform dynamic circuits by first eliminating reset operations and afterwards deferring measurements
+    qc::CircuitOptimizer::eliminateResets(*iqpe);
+
+    qc::CircuitOptimizer::deferMeasurements(*iqpe);
+
+    // remove final measurements to obtain statevector
+    qc::CircuitOptimizer::removeFinalMeasurements(*iqpe);
+
+    // simulate circuit
+    auto f = iqpe->simulate(dd->makeZeroState(iqpe->getNqubits()), dd);
+
+    // calculate fidelity between both results
+    auto fidelity = dd->fidelity(e, f);
+    std::cout << "Fidelity of both circuits: " << fidelity << std::endl;
+
+    EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }
