@@ -70,6 +70,11 @@ namespace qc {
             return op.get();
         }
 
+        void setNqubits(dd::QubitCount nq) override {
+            nqubits = nq;
+            op->setNqubits(nq);
+        }
+
         [[nodiscard]] const Targets& getTargets() const override {
             return op->getTargets();
         }
