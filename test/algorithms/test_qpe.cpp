@@ -199,7 +199,7 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
     // simulate circuit
     auto e = qpe->simulate(dd->makeZeroState(qpe->getNqubits()), dd);
 
-    // create standard QPE circuit
+    // create standard IQPE circuit
     auto iqpe = std::make_unique<qc::IQPE>(lambda, precision);
 
     // transform dynamic circuits by first eliminating reset operations and afterwards deferring measurements
@@ -232,7 +232,7 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
     // simulate circuit
     auto e = qpe->buildFunctionality(dd);
 
-    // create standard QPE circuit
+    // create standard IQPE circuit
     auto iqpe = std::make_unique<qc::IQPE>(lambda, precision);
 
     // transform dynamic circuits by first eliminating reset operations and afterwards deferring measurements
