@@ -753,12 +753,16 @@ namespace qc {
     }
 
     void CircuitOptimizer::changeControls(dd::Controls& controls, const std::map<dd::Qubit, dd::Qubit>& replacementMap) {
-        for (auto& control: controls) {
-            auto newControlIt = replacementMap.find(control.qubit);
-            if (newControlIt != replacementMap.end()) {
-                auto controlType = control.type;
-                controls.erase(control);
-                controls.insert(dd::Control{newControlIt->second, controlType});
+        if (controls.empty() || replacementMap.empty())
+            return;
+
+        // iterate over the replacement map and see if any control matches
+        for (const auto& [from, to]: replacementMap) {
+            auto controlIt = controls.find(from);
+            if (controlIt != controls.end()) {
+                const auto controlType = controlIt->type;
+                controls.erase(controlIt);
+                controls.insert(dd::Control{to, controlType});
             }
         }
     }
