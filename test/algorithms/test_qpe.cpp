@@ -29,9 +29,9 @@ protected:
         lambda    = GetParam().first;
         precision = GetParam().second;
 
-        std::cout << "Estimating lambda = " << lambda << " up to " << static_cast<std::size_t>(precision) << "-bit precision." << std::endl;
+        std::cout << "Estimating lambda = " << lambda << "π up to " << static_cast<std::size_t>(precision) << "-bit precision." << std::endl;
 
-        theta = lambda / (2 * dd::PI);
+        theta = lambda / 2;
 
         std::cout << "Expected theta=" << theta << std::endl;
         std::bitset<64> binaryExpansion{};
@@ -93,19 +93,19 @@ protected:
 
 INSTANTIATE_TEST_SUITE_P(QPE, QPE,
                          testing::Values(
-                                 std::pair{dd::PI, static_cast<dd::QubitCount>(1)},
-                                 std::pair{dd::PI_2, static_cast<dd::QubitCount>(2)},
-                                 std::pair{dd::PI_4, static_cast<dd::QubitCount>(3)},
-                                 std::pair{3 * dd::PI / 8, static_cast<dd::QubitCount>(3)},
-                                 std::pair{3 * dd::PI / 8, static_cast<dd::QubitCount>(4)},
-                                 std::pair{3 * dd::PI / 32, static_cast<dd::QubitCount>(5)},
-                                 std::pair{3 * dd::PI / 32, static_cast<dd::QubitCount>(6)}),
+                                 std::pair{1., static_cast<dd::QubitCount>(1)},
+                                 std::pair{0.5, static_cast<dd::QubitCount>(2)},
+                                 std::pair{0.25, static_cast<dd::QubitCount>(3)},
+                                 std::pair{3. / 8, static_cast<dd::QubitCount>(3)},
+                                 std::pair{3. / 8, static_cast<dd::QubitCount>(4)},
+                                 std::pair{3. / 32, static_cast<dd::QubitCount>(5)},
+                                 std::pair{3. / 32, static_cast<dd::QubitCount>(6)}),
                          [](const testing::TestParamInfo<QPE::ParamType>& info) {
                              // Generate names for test cases
                              dd::fp            lambda    = info.param.first;
                              dd::QubitCount    precision = info.param.second;
                              std::stringstream ss{};
-                             ss << static_cast<std::size_t>(lambda * 100) << "_" << static_cast<std::size_t>(precision);
+                             ss << static_cast<std::size_t>(lambda * 100) << "_pi_" << static_cast<std::size_t>(precision);
                              return ss.str();
                          });
 
@@ -237,7 +237,6 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
 
     // transform dynamic circuits by first eliminating reset operations and afterwards deferring measurements
     qc::CircuitOptimizer::eliminateResets(*iqpe);
-
     qc::CircuitOptimizer::deferMeasurements(*iqpe);
 
     // remove final measurements to obtain statevector

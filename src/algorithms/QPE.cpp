@@ -6,8 +6,57 @@
 #include "algorithms/QPE.hpp"
 
 namespace qc {
+    QPE::QPE(dd::QubitCount nq, bool exact):
+        precision(nq) {
+        if (exact) {
+            // if an exact solution is wanted, generate a random n-bit number and convert it to an appropriate phase
+            std::uint_least64_t max          = 1ULL << nq;
+            auto                distribution = std::uniform_int_distribution<std::uint_least64_t>(0, max - 1);
+            std::uint_least64_t theta        = 0;
+            while (theta == 0) {
+                theta = distribution(mt);
+            }
+            lambda = 0.;
+            for (std::size_t i = 0; i < nq; ++i) {
+                if (theta & (1 << (nq - i - 1))) {
+                    lambda += 1. / (1 << i);
+                }
+            }
+            createCircuit();
+        } else {
+            // if an inexact solution is wanted, generate a random n+1-bit number (that has its last bit set) and convert it to an appropriate phase
+            std::uint_least64_t max          = 1ULL << (nq + 1);
+            auto                distribution = std::uniform_int_distribution<std::uint_least64_t>(0, max - 1);
+            std::uint_least64_t theta        = 0;
+            while (theta == 0 && (theta & 1) == 0) {
+                theta = distribution(mt);
+            }
+            lambda = 0.;
+            for (std::size_t i = 0; i <= nq; ++i) {
+                if (theta & (1 << (nq - i))) {
+                    lambda += 1. / (1 << i);
+                }
+            }
+            createCircuit();
+        }
+    }
+
     QPE::QPE(dd::fp lambda, dd::QubitCount precision):
         lambda(lambda), precision(precision) {
+        createCircuit();
+    }
+
+    std::ostream& QPE::printStatistics(std::ostream& os) const {
+        os << "QPE Statistics:\n";
+        os << "\tn: " << static_cast<std::size_t>(nqubits + 1) << std::endl;
+        os << "\tm: " << getNindividualOps() << std::endl;
+        os << "\tlambda: " << lambda << "π" << std::endl;
+        os << "\tprecision: " << static_cast<std::size_t>(precision) << std::endl;
+        os << "--------------" << std::endl;
+        return os;
+    }
+
+    void QPE::createCircuit() {
         addQubitRegister(1, "psi");
         addQubitRegister(precision, "q");
         addClassicalRegister(precision, "c");
@@ -22,8 +71,8 @@ namespace qc {
         //Controlled Phase Rotation
         for (dd::QubitCount i = 0; i < precision; i++) {
             // normalize angle
-            const auto angle = std::remainder((1U << i) * lambda, 2.0 * dd::PI);
-            phase(0, dd::Control{static_cast<dd::Qubit>(precision - i)}, angle);
+            const auto angle = std::remainder((1U << i) * lambda, 2.0);
+            phase(0, dd::Control{static_cast<dd::Qubit>(precision - i)}, angle * dd::PI);
         }
 
         //Inverse QFT
@@ -45,15 +94,5 @@ namespace qc {
         for (dd::QubitCount i = 0; i < nqubits - 1; i++) {
             measure(static_cast<dd::Qubit>(i + 1), i);
         }
-    }
-
-    std::ostream& QPE::printStatistics(std::ostream& os) const {
-        os << "QPE Statistics:\n";
-        os << "\tn: " << static_cast<std::size_t>(nqubits + 1) << std::endl;
-        os << "\tm: " << getNindividualOps() << std::endl;
-        os << "\tlambda: " << lambda << std::endl;
-        os << "\tprecision: " << static_cast<std::size_t>(precision) << std::endl;
-        os << "--------------" << std::endl;
-        return os;
     }
 } // namespace qc
