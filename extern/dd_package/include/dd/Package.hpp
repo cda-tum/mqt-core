@@ -769,7 +769,7 @@ namespace dd {
         }
 
     public:
-        char measureOneCollapsing(vEdge& root_edge, const Qubit index, const bool assumeProbabilityNormalization, std::mt19937_64& mt, fp epsilon = 0.001) {
+        std::pair<dd::fp, dd::fp> determineMeasurementProbabilities(const vEdge& root_edge, const Qubit index, const bool assumeProbabilityNormalization) {
             std::map<vNode*, fp> probsMone;
             std::set<vNode*>     visited;
             std::queue<vNode*>   q;
@@ -840,7 +840,12 @@ namespace dd {
                     }
                 }
             }
-            const fp sum = pzero + pone;
+            return {pzero, pone};
+        }
+
+        char measureOneCollapsing(vEdge& root_edge, const Qubit index, const bool assumeProbabilityNormalization, std::mt19937_64& mt, fp epsilon = 0.001) {
+            const auto& [pzero, pone] = determineMeasurementProbabilities(root_edge, index, assumeProbabilityNormalization);
+            const fp sum              = pzero + pone;
             if (std::abs(sum - 1) > epsilon) {
                 throw std::runtime_error("Numerical instability occurred during measurement: |alpha|^2 + |beta|^2 = " + std::to_string(pzero) + " + " + std::to_string(pone) + " = " +
                                          std::to_string(pzero + pone) + ", but should be 1!");
@@ -1267,6 +1272,40 @@ namespace dd {
         fp fidelity(const vEdge& x, const vEdge& y) {
             const auto fid = innerProduct(x, y);
             return fid.r * fid.r + fid.i * fid.i;
+        }
+
+        dd::fp fidelityOfMeasurementOutcomes(const vEdge& e, const std::vector<dd::fp>& probs) {
+            if (e.w.approximatelyZero()) {
+                return 0.;
+            }
+            const auto nq = e.p->v + 1;
+            if (probs.size() != (1U << nq)) {
+                throw std::runtime_error("Mismatch in sizes of DD and probability vector in fidelity function.");
+            }
+
+            return fidelityOfMeasurementOutcomesRecursive(e, probs, 0);
+        }
+
+        dd::fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e, const std::vector<dd::fp>& probs, const std::size_t i) {
+            const auto topw = dd::ComplexNumbers::mag(e.w);
+            if (e.isTerminal()) {
+                return topw * std::sqrt(probs[i]);
+            }
+
+            std::size_t leftIdx          = i;
+            dd::fp      leftContribution = 0.;
+            if (!e.p->e[0].w.approximatelyZero()) {
+                leftContribution = fidelityOfMeasurementOutcomesRecursive(e.p->e[0], probs, leftIdx);
+            }
+
+            std::size_t rightIdx          = i | (1 << e.p->v);
+            auto        rightContribution = 0.;
+            if (!e.p->e[1].w.approximatelyZero()) {
+                rightContribution = fidelityOfMeasurementOutcomesRecursive(e.p->e[1], probs, rightIdx);
+            }
+
+            dd::fp fidelity = topw * (leftContribution + rightContribution);
+            return fidelity;
         }
 
     private:

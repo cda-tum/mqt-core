@@ -1026,3 +1026,18 @@ TEST(DDPackageTest, BasicNumericStabilityTest) {
     oss << -dd::SQRT2_2;
     EXPECT_EQ(rightWeight, oss.str());
 }
+
+TEST(DDPackageTest, FidelityOfMeasurementOutcomes) {
+    auto dd = std::make_unique<dd::Package>(3);
+
+    auto h_gate     = dd->makeGateDD(dd::Hmat, 3, 2);
+    auto cx_gate1   = dd->makeGateDD(dd::Xmat, 3, 2_pc, 1);
+    auto cx_gate2   = dd->makeGateDD(dd::Xmat, 3, 1_pc, 0);
+    auto zero_state = dd->makeZeroState(3);
+
+    auto ghz_state = dd->multiply(cx_gate2, dd->multiply(cx_gate1, dd->multiply(h_gate, zero_state)));
+
+    std::vector<dd::fp> probs    = {0.5, 0., 0., 0., 0., 0., 0., 0.5};
+    auto                fidelity = dd->fidelityOfMeasurementOutcomes(ghz_state, probs);
+    EXPECT_NEAR(fidelity, 1.0, dd::ComplexTable<>::tolerance());
+}
