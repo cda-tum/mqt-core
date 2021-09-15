@@ -744,6 +744,176 @@ namespace qc {
         }
     }
 
+    void QuantumComputation::extractProbabilityVector(const VectorDD& in, std::vector<dd::fp>& probVector, std::unique_ptr<dd::Package>& dd) {
+        // ! initial layout, output permutation and garbage qubits are currently not supported here
+
+        dd->incRef(in);
+        std::map<std::size_t, char> measurements{};
+        // the number of classics dictates the size of the resulting probability vector
+        probVector = std::vector<dd::fp>(1ULL << nclassics);
+
+        extractProbabilityVectorRecursive(in, ops.begin(), measurements, 1., probVector, dd);
+    }
+
+    void QuantumComputation::extractProbabilityVectorRecursive(const VectorDD& currentState, decltype(ops.begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, std::vector<dd::fp>& probVector, std::unique_ptr<dd::Package>& dd) {
+        auto state = currentState;
+        for (auto it = currentIt; it != ops.end(); ++it) {
+            auto& op = (*it);
+
+            // check whether a classic controlled operations can be applied
+            if (op->getType() == ClassicControlled) {
+                auto*       classicControlled = dynamic_cast<ClassicControlledOperation*>(op.get());
+                const auto& controlRegister   = classicControlled->getControlRegister();
+                const auto& expectedValue     = classicControlled->getExpectedValue();
+                auto        actualValue       = 0U;
+                // determine the actual value from measurements
+                for (std::size_t j = 0; j < controlRegister.second; ++j) {
+                    actualValue |= (measurements[controlRegister.first + j] == '1') ? (1U << j) : 0U;
+                }
+
+                // do not apply an operation if the value is not the expected one
+                if (actualValue != expectedValue)
+                    continue;
+            }
+
+            if (op->getType() == Reset) {
+                // a reset operation should only happen once a qubit has been measured, i.e., the qubit is in a basis state
+                // thus the probabilities for 0 and 1 need to be determined
+                // if p(1) = 1, an X operation has to be applied to the qubit
+                // if p(0) = 1, nothing has to be done
+                // if 0 < p(0), p(1) < 1, an error should be raised
+
+                const auto& targets = op->getTargets();
+                if (targets.size() != 1) {
+                    throw qc::QFRException("Resets on multiple qubits are currently not supported. Please split them into multiple single resets.");
+                }
+
+                const auto& [pzero, pone] = dd->determineMeasurementProbabilities(state, targets[0], true);
+
+                //                if (dd::ComplexTable<>::Entry::approximatelyOne(pone)) {
+                if (pone > 0.1) {
+                    qc::MatrixDD xGate      = dd->makeGateDD(dd::Xmat, state.p->v + 1, targets[0]);
+                    qc::VectorDD resetState = dd->multiply(xGate, state);
+                    dd->incRef(resetState);
+                    dd->decRef(state);
+                    state = resetState;
+                    continue;
+                }
+
+                //                if (!dd::ComplexTable<>::Entry::approximatelyOne(pzero)) {
+                if (pzero < 0.9) {
+                    throw qc::QFRException("Reset on non basis state encountered. This is not supported in this method.");
+                }
+
+                continue;
+            }
+
+            // measurements form splitting points in this extraction scheme
+            if (op->getType() == Measure) {
+                const auto* measurement = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
+                const auto& targets     = measurement->getTargets();
+                const auto& classics    = measurement->getClassics();
+                if (targets.size() != 1 || classics.size() != 1) {
+                    throw qc::QFRException("Measurements on multiple qubits are not supported right now. Split your measurements into individual operations.");
+                }
+
+                // determine probabilities for this measurement
+                const auto& [pzero, pone] = dd->determineMeasurementProbabilities(state, targets[0], true);
+
+                // base case -> determine the basis state from the measurement and safe the probability
+                if (measurements.size() == nclassics - 1) {
+                    std::size_t idx0 = 0;
+                    std::size_t idx1 = 0;
+                    for (std::size_t i = 0; i < nclassics; ++i) {
+                        // if this is the qubit being measured and the result is one
+                        if (i == static_cast<std::size_t>(classics[0])) {
+                            idx1 |= (1 << i);
+                        } else {
+                            // sanity check
+                            auto findIt = measurements.find(i);
+                            if (findIt == measurements.end()) {
+                                throw qc::QFRException("No information on classical bit " + std::to_string(i));
+                            }
+                            // if i-th bit is set increase the index appropriately
+                            if (findIt->second == '1') {
+                                idx0 |= (1 << i);
+                                idx1 |= (1 << i);
+                            }
+                        }
+                    }
+                    probVector.at(idx0) = commonFactor * pzero;
+                    probVector.at(idx1) = commonFactor * pone;
+                    // probabilities have been written -> this path is done
+                    dd->decRef(state);
+                    return;
+                }
+
+                bool nonZeroP0 = !dd::ComplexTable<>::Entry::approximatelyZero(pzero);
+                bool nonZeroP1 = !dd::ComplexTable<>::Entry::approximatelyZero(pone);
+
+                // in case both outcomes are non-zero the reference count of the state has to be increased once more in order to avoid reference counting errors
+                if (nonZeroP0 && nonZeroP1) {
+                    dd->incRef(state);
+                }
+
+                // recursive case -- outcome 0
+                if (nonZeroP0) {
+                    // save measurement result
+                    measurements[classics[0]] = '0';
+                    // determine accumulated probability
+                    auto probability = commonFactor * pzero;
+                    // determine the next iteration point
+                    auto nextIt = it + 1;
+                    // actually collapse the state
+                    dd::GateMatrix measurementMatrix{dd::complex_one, dd::complex_zero, dd::complex_zero, dd::complex_zero};
+                    qc::MatrixDD   measurementGate = dd->makeGateDD(measurementMatrix, state.p->v + 1, targets[0]);
+                    qc::VectorDD   measuredState   = dd->multiply(measurementGate, state);
+
+                    auto c = dd->cn.getTemporary(1. / std::sqrt(pzero), 0);
+                    dd::ComplexNumbers::mul(c, measuredState.w, c);
+                    measuredState.w = dd->cn.lookup(c);
+                    dd->incRef(measuredState);
+                    dd->decRef(state);
+                    // recursive call from here
+                    extractProbabilityVectorRecursive(measuredState, nextIt, measurements, probability, probVector, dd);
+                }
+
+                // recursive case -- outcome 1
+                if (nonZeroP1) {
+                    // save measurement result
+                    measurements[classics[0]] = '1';
+                    // determine accumulated probability
+                    auto probability = commonFactor * pone;
+                    // determine the next iteration point
+                    auto nextIt = it + 1;
+                    // actually collapse the state
+                    dd::GateMatrix measurementMatrix{dd::complex_zero, dd::complex_zero, dd::complex_zero, dd::complex_one};
+                    qc::MatrixDD   measurementGate = dd->makeGateDD(measurementMatrix, state.p->v + 1, targets[0]);
+                    qc::VectorDD   measuredState   = dd->multiply(measurementGate, state);
+
+                    auto c = dd->cn.getTemporary(1. / std::sqrt(pone), 0);
+                    dd::ComplexNumbers::mul(c, measuredState.w, c);
+                    measuredState.w = dd->cn.lookup(c);
+                    dd->incRef(measuredState);
+                    dd->decRef(state);
+                    // recursive call from here
+                    extractProbabilityVectorRecursive(measuredState, nextIt, measurements, probability, probVector, dd);
+                }
+
+                // everything is said and done
+                return;
+            }
+
+            // any standard operation or classic-controlled operation is applied here
+            auto tmp = dd->multiply(op->getDD(dd), state);
+            dd->incRef(tmp);
+            dd->decRef(state);
+            state = tmp;
+
+            dd->garbageCollect();
+        }
+    }
+
     std::ostream& QuantumComputation::print(std::ostream& os) const {
         if (!ops.empty()) {
             os << std::setw((int)std::log10(ops.size()) + 1) << "i: \t\t\t";

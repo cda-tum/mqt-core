@@ -247,3 +247,72 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
 
     EXPECT_EQ(e, f);
 }
+
+TEST_P(QPE, ProbabilityExtraction) {
+    auto dd = std::make_unique<dd::Package>(precision + 1);
+
+    // create standard QPE circuit
+    auto iqpe = std::make_unique<qc::IQPE>(lambda, precision);
+
+    std::cout << *iqpe << std::endl;
+    std::vector<dd::fp> probs{};
+    iqpe->extractProbabilityVector(dd->makeZeroState(iqpe->getNqubits()), probs, dd);
+
+    std::size_t i = 0;
+    for (const auto& prob: probs) {
+        std::stringstream ss{};
+        qc::QuantumComputation::printBin(i, ss);
+        std::cout << ss.str() << ": " << prob << std::endl;
+        ++i;
+    }
+
+    if (exactlyRepresentable) {
+        EXPECT_NEAR(probs.at(expectedResult), 1.0, 1e-6);
+    } else {
+        auto threshold = 4. / (dd::PI * dd::PI);
+        EXPECT_NEAR(probs.at(expectedResult), threshold, 0.02);
+        EXPECT_NEAR(probs.at(secondExpectedResult), threshold, 0.02);
+    }
+}
+
+TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
+    auto dd = std::make_unique<dd::Package>(precision + 1);
+
+    // create standard QPE circuit
+    auto qpe = std::make_unique<qc::QPE>(lambda, precision);
+
+    // remove final measurements to obtain statevector
+    qc::CircuitOptimizer::removeFinalMeasurements(*qpe);
+
+    // simulate circuit
+    auto       e   = qpe->simulate(dd->makeZeroState(qpe->getNqubits()), dd);
+    const auto vec = dd->getVector(e);
+    std::cout << "QPE: " << std::endl;
+    for (const auto& amp: vec) {
+        std::cout << std::norm(amp) << std::endl;
+    }
+
+    // create standard IQPE circuit
+    auto iqpe = std::make_unique<qc::IQPE>(lambda, precision);
+
+    // extract measurement probabilities from IQPE simulations
+    std::vector<dd::fp> probs{};
+    iqpe->extractProbabilityVector(dd->makeZeroState(iqpe->getNqubits()), probs, dd);
+
+    // interleave with zeros to account for 0 qubit
+    auto stub = std::vector<dd::fp>(1 << (qpe->getNqubits()));
+    for (std::size_t i = 1; i < stub.size(); i += 2) {
+        stub.at(i) = probs.at((i - 1) / 2);
+    }
+
+    std::cout << "IQPE: " << std::endl;
+    for (const auto& amp: stub) {
+        std::cout << amp << std::endl;
+    }
+
+    // calculate fidelity between both results
+    auto fidelity = dd->fidelityOfMeasurementOutcomes(e, stub);
+    std::cout << "Fidelity of both circuits' measurement outcomes: " << fidelity << std::endl;
+
+    EXPECT_NEAR(fidelity, 1.0, 1e-4);
+}
