@@ -15,7 +15,6 @@ public:
     unsigned long nOutputQubits;
     unsigned long nOutputGates;
 
-    std::string inputName;
     std::string outputName;
 
     bool success;
