@@ -24,6 +24,11 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QASMParser.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/TFCParser.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QCParser.cpp
+            
+            ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Ecc.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/eccs/IdEcc.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Q3ShorEcc.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Q9ShorEcc.cpp
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
@@ -46,7 +51,13 @@ add_library(${PROJECT_NAME}
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Entanglement.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QPE.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/IQPE.hpp)
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/IQPE.hpp
+            
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/EccStatistics.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Ecc.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/IdEcc.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q3ShorEcc.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q9ShorEcc.hpp)
 
 # set include directories
 target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
