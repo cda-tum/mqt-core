@@ -26,7 +26,7 @@ public:
 	Ecc(struct EccInfo ecc_type, qc::QuantumComputation& qc);
 	virtual ~Ecc() = default;
 
-	void map();
+	qc::QuantumComputation& applyEcc();
 
     virtual std::ostream& printResult(std::ostream& out);
 
@@ -49,8 +49,6 @@ protected:
     qc::QuantumComputation& qc;
 	qc::QuantumComputation qcMapped;
 	EccStatistics statistics{};
-
-	void initResults();
 
 	virtual void writeEccEncoding()=0;
 

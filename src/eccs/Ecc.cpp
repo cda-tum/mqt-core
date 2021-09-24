@@ -1,6 +1,6 @@
 /*
- * This file is part of the JKQ QMAP library which is released under the MIT license.
- * See file README.md or go to https://iic.jku.at/eda/research/ibm_qx_mapping/ for more information.
+ * This file is part of JKQ QFR library which is released under the MIT license.
+ * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
 #include "eccs/Ecc.hpp"
@@ -10,22 +10,22 @@
 Ecc::Ecc(struct EccInfo eccInfo, qc::QuantumComputation& quantumcomputation): ecc(eccInfo), qc(quantumcomputation) {
 }
 
-void Ecc::map() {
+qc::QuantumComputation& Ecc::applyEcc() {
     qc.stripIdleQubits(true, false);
-	long nInputGates = 0;
-
-	initResults();
+    statistics.nInputQubits = qc.getNqubits();
+	statistics.nOutputQubits = qc.getNqubits()*ecc.nRedundantQubits;	//TODO remove if error case (no ECC) is handled correclty
+	qcMapped.addQubitRegister(statistics.nOutputQubits);
 
 	writeEccEncoding();
 
+	long nInputGates = 0;
     for(auto& gate: qc) {
         nInputGates++;
         mapGate(gate);
     }
+    statistics.nInputGates = nInputGates;
 
     writeEccDecoding();
-
-	statistics.nInputGates = nInputGates;
 
 	long nOutputGates = 0;
 	for(auto& gate: qcMapped) {
@@ -33,6 +33,8 @@ void Ecc::map() {
     }
     statistics.nOutputGates = nOutputGates;
     statistics.success = true;
+
+    return qcMapped;
 }
 
 std::ostream& Ecc::printResult(std::ostream& out) {
@@ -81,15 +83,6 @@ void Ecc::writeToffoli(unsigned short c1, unsigned short c2, unsigned short targ
     writeCnot(c1, c2);
     qcMapped.emplace_back<qc::StandardOperation>(nQubitsMapped, c2, qc::S);
     qcMapped.emplace_back<qc::StandardOperation>(nQubitsMapped, c1, qc::T);
-}
-
-void Ecc::initResults() {
-
-	statistics.nInputQubits = qc.getNqubits();
-
-	statistics.nOutputQubits = qc.getNqubits()*ecc.nRedundantQubits;	//TODO remove if error case (no ECC) is handled correclty
-
-	qcMapped.addQubitRegister(statistics.nOutputQubits);
 }
 
 void Ecc::writeCnot(unsigned short control, unsigned short target) {
