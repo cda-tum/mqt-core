@@ -13,8 +13,10 @@ Ecc::Ecc(struct EccInfo eccInfo, qc::QuantumComputation& quantumcomputation): ec
 qc::QuantumComputation& Ecc::applyEcc() {
     qc.stripIdleQubits(true, false);
     statistics.nInputQubits = qc.getNqubits();
-	statistics.nOutputQubits = qc.getNqubits()*ecc.nRedundantQubits;	//TODO remove if error case (no ECC) is handled correclty
+	statistics.nOutputQubits = qc.getNqubits()*ecc.nRedundantQubits;
+	statistics.nOutputClassicalBits = qc.getNqubits()*ecc.nClassicalBits;
 	qcMapped.addQubitRegister(statistics.nOutputQubits);
+	qcMapped.addClassicalRegister(statistics.nOutputClassicalBits);
 
 	writeEccEncoding();
 
@@ -24,6 +26,8 @@ qc::QuantumComputation& Ecc::applyEcc() {
         mapGate(gate);
     }
     statistics.nInputGates = nInputGates;
+
+    measureAndCorrect();
 
     writeEccDecoding();
 
@@ -66,28 +70,20 @@ void Ecc::dumpResult(const std::string& outputFilename) {
 	}
 
 void Ecc::writeToffoli(unsigned short c1, unsigned short c2, unsigned short target) {
-    const int nQubitsMapped = qcMapped.getNqubits();
-    qcMapped.emplace_back<qc::StandardOperation>(nQubitsMapped, target, qc::H);
-    writeCnot(c2, target);
-    qcMapped.emplace_back<qc::StandardOperation>(nQubitsMapped, target, qc::Tdag);
-    writeCnot(c1, target);
-    qcMapped.emplace_back<qc::StandardOperation>(nQubitsMapped, target, qc::T);
-    writeCnot(c2, target);
-    qcMapped.emplace_back<qc::StandardOperation>(nQubitsMapped, target, qc::Tdag);
-    writeCnot(c1, target);
-    qcMapped.emplace_back<qc::StandardOperation>(nQubitsMapped, target, qc::T);
-    qcMapped.emplace_back<qc::StandardOperation>(nQubitsMapped, target, qc::H);
-    qcMapped.emplace_back<qc::StandardOperation>(nQubitsMapped, c2, qc::Tdag);
-    writeCnot(c1, c2);
-    qcMapped.emplace_back<qc::StandardOperation>(nQubitsMapped, c2, qc::Tdag);
-    writeCnot(c1, c2);
-    qcMapped.emplace_back<qc::StandardOperation>(nQubitsMapped, c2, qc::S);
-    qcMapped.emplace_back<qc::StandardOperation>(nQubitsMapped, c1, qc::T);
+    dd::Controls controls;
+    controls.insert(createControl(c1, true));
+    controls.insert(createControl(c2, true));
+    qcMapped.x(target, controls);
 }
 
 void Ecc::writeCnot(unsigned short control, unsigned short target) {
+    qcMapped.x(target, createControl(control, true));
+}
+
+dd::Control Ecc::createControl(unsigned short qubit, bool pos) {
     dd::Control ctrl;
-    ctrl.qubit = control;
-    qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), ctrl, target, qc::X);
+    ctrl.qubit = qubit;
+    ctrl.type = pos ? dd::Control::Type::pos : dd::Control::Type::neg;
+    return ctrl;
 }
 
