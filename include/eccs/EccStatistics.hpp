@@ -13,6 +13,7 @@ public:
     unsigned long nInputQubits;
     unsigned long nInputGates;
     unsigned long nOutputQubits;
+    unsigned long nOutputClassicalBits;
     unsigned long nOutputGates;
 
     std::string outputName;

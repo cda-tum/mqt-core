@@ -18,6 +18,7 @@ public:
     struct EccInfo {
         EccID enumID;
         int nRedundantQubits;
+        int nClassicalBits;
         std::string name;
     };
 
@@ -52,12 +53,16 @@ protected:
 
 	virtual void writeEccEncoding()=0;
 
+	virtual void measureAndCorrect()=0;
+
 	virtual void writeEccDecoding()=0;
 
 	virtual void mapGate(std::unique_ptr<qc::Operation> &gate)=0;
 
     void writeToffoli(unsigned short c1, unsigned short c2, unsigned short target);
     void writeCnot(unsigned short control, unsigned short target);
+
+    dd::Control createControl(unsigned short qubit, bool pos);
 
 };
 

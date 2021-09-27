@@ -20,6 +20,8 @@ public:
 protected:
     void writeEccEncoding() override;
 
+    void measureAndCorrect() override;
+
 	void writeEccDecoding() override;
 
 	void mapGate(std::unique_ptr<qc::Operation> &gate) override;

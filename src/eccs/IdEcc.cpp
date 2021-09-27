@@ -8,11 +8,13 @@
 #include <chrono>
 //#include <stdlib.h>
 
-IdEcc::IdEcc(qc::QuantumComputation& qc) : Ecc({EccID::Id, 1, IdEcc::getEccName()}, qc) {
+IdEcc::IdEcc(qc::QuantumComputation& qc) : Ecc({EccID::Id, 1, 0, IdEcc::getEccName()}, qc) {
 }
 
 
 void IdEcc::writeEccEncoding() {}
+
+void IdEcc::measureAndCorrect() {}
 
 void IdEcc::writeEccDecoding() {}
 

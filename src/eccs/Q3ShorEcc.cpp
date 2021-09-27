@@ -8,8 +8,8 @@
 #include <chrono>
 //#include <stdlib.h>
 
-
-Q3ShorEcc::Q3ShorEcc(qc::QuantumComputation& qc): Ecc({EccID::Q3Shor, 3, Q3ShorEcc::getEccName()}, qc) {}
+//3 data qubits, 2 for measuring -> 5 qubits per physical qubit
+Q3ShorEcc::Q3ShorEcc(qc::QuantumComputation& qc): Ecc({EccID::Q3Shor, 5, 2, Q3ShorEcc::getEccName()}, qc) {}
 
 void Q3ShorEcc::writeEccEncoding() {
 	const int nQubits = qc.getNqubits();
@@ -17,6 +17,39 @@ void Q3ShorEcc::writeEccEncoding() {
     for(int i=0;i<nQubits;i++) {
         writeCnot(i, i+nQubits);
         writeCnot(i, i+2*nQubits);
+    }
+}
+
+void Q3ShorEcc::measureAndCorrect() {
+    const int nQubits = qc.getNqubits();
+    for(int i=0;i<nQubits;i++) {
+
+        qcMapped.h(i+3*nQubits);
+        qcMapped.h(i+4*nQubits);
+        dd::Control c3 = createControl(i+3*nQubits, true);
+        dd::Control c4 = createControl(i+4*nQubits, true);
+        qcMapped.z(i,           c3);
+        qcMapped.z(i+nQubits,   c3);
+        qcMapped.z(i+nQubits,   c4);
+        qcMapped.z(i+2*nQubits, c4);
+        qcMapped.h(i+3*nQubits);
+        qcMapped.h(i+4*nQubits);
+
+        qcMapped.measure(i+3*nQubits, i);
+        qcMapped.measure(i+4*nQubits, i+nQubits);
+
+        dd::Control cn3 = createControl(i+3*nQubits, false);
+        dd::Control cn4 = createControl(i+4*nQubits, false);
+        dd::Controls cp3n4;
+        cp3n4.insert(c3);cp3n4.insert(cn4);
+        dd::Controls cp3p4;
+        cp3p4.insert(c3);cp3p4.insert(c4);
+        dd::Controls cn3p4;
+        cn3p4.insert(cn3);cn3p4.insert(c4);
+
+        qcMapped.x(i, cp3n4);
+        qcMapped.x(i+nQubits, cp3p4);
+        qcMapped.x(i+2*nQubits, cn3p4);
     }
 }
 
@@ -43,15 +76,15 @@ void Q3ShorEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
     case qc::Sdag:
     case qc::T:
     case qc::Tdag:
-    case qc::V:
-    case qc::Vdag:
+
         //TODO controlled/multitarget check
         i = gate.get()->getTargets()[0];
         qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i, gate.get()->getType());
         qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+nQubits, gate.get()->getType());
         qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+2*nQubits, gate.get()->getType());
         break;
-
+    case qc::V:
+    case qc::Vdag:
     case qc::U3:
     case qc::U2:
     case qc::Phase:
