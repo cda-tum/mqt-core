@@ -30,16 +30,16 @@ namespace qc::qiskit {
             auto&& instructions = circ.attr("instructions");
 
             auto&& circQregs = header.attr("qreg_sizes");
-            for (const auto& qreg: circQregs) {
+            for (const auto qreg: circQregs) {
                 qc.addQubitRegister(qreg.cast<py::list>()[1].cast<dd::QubitCount>(), qreg.cast<py::list>()[0].cast<std::string>().c_str());
             }
 
             auto&& circCregs = header.attr("creg_sizes");
-            for (const auto& creg: circCregs) {
+            for (const auto creg: circCregs) {
                 qc.addClassicalRegister(creg.cast<py::list>()[1].cast<std::size_t>(), creg.cast<py::list>()[0].cast<std::string>().c_str());
             }
 
-            for (const auto& instruction: instructions) {
+            for (const auto instruction: instructions) {
                 emplaceInstruction(qc, instruction.cast<py::object>());
             }
             qc.initializeIOMapping();
@@ -141,7 +141,7 @@ namespace qc::qiskit {
 
         static void addOperation(QuantumComputation& qc, OpType type, const py::list& qubits, const py::list& params) {
             std::vector<dd::Control> qargs{};
-            for (const auto& qubit: qubits) {
+            for (const auto qubit: qubits) {
                 auto target = qubit.cast<dd::Qubit>();
                 qargs.emplace_back(dd::Control{target});
             }
@@ -165,7 +165,7 @@ namespace qc::qiskit {
 
         static void addTwoTargetOperation(QuantumComputation& qc, OpType type, const py::list& qubits, const py::list& params) {
             std::vector<dd::Control> qargs{};
-            for (const auto& qubit: qubits) {
+            for (const auto qubit: qubits) {
                 auto target = qubit.cast<dd::Qubit>();
                 qargs.emplace_back(dd::Control{target});
             }
