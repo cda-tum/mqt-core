@@ -276,7 +276,7 @@ namespace qc::qiskit {
             auto&&   registers         = layout.attr("get_registers")().cast<py::set>();
             int      logicalQubitIndex = 0;
             py::dict logicalQubitIndices{};
-            for (const auto& qreg: registers) {
+            for (const auto qreg: registers) {
                 auto qregName = qreg.attr("name").cast<std::string>();
                 // skip ancillary register
                 if (qregName == "ancilla")
