@@ -779,8 +779,8 @@ namespace qc {
             if (op->getType() == Reset) {
                 // a reset operation should only happen once a qubit has been measured, i.e., the qubit is in a basis state
                 // thus the probabilities for 0 and 1 need to be determined
-                // if p(1) = 1, an X operation has to be applied to the qubit
-                // if p(0) = 1, nothing has to be done
+                // if p(1) ~= 1, an X operation has to be applied to the qubit
+                // if p(0) ~= 1, nothing has to be done
                 // if 0 < p(0), p(1) < 1, an error should be raised
 
                 const auto& targets = op->getTargets();
@@ -788,10 +788,14 @@ namespace qc {
                     throw qc::QFRException("Resets on multiple qubits are currently not supported. Please split them into multiple single resets.");
                 }
 
-                const auto& [pzero, pone] = dd->determineMeasurementProbabilities(state, targets[0], true);
+                auto [pzero, pone] = dd->determineMeasurementProbabilities(state, targets[0], true);
 
-                //                if (dd::ComplexTable<>::Entry::approximatelyOne(pone)) {
-                if (pone > 0.1) {
+                // normalize probabilities
+                const auto norm = pzero + pone;
+                pzero /= norm;
+                pone /= norm;
+
+                if (dd::ComplexTable<>::Entry::approximatelyOne(pone)) {
                     qc::MatrixDD xGate      = dd->makeGateDD(dd::Xmat, state.p->v + 1, targets[0]);
                     qc::VectorDD resetState = dd->multiply(xGate, state);
                     dd->incRef(resetState);
@@ -800,8 +804,7 @@ namespace qc {
                     continue;
                 }
 
-                //                if (!dd::ComplexTable<>::Entry::approximatelyOne(pzero)) {
-                if (pzero < 0.9) {
+                if (!dd::ComplexTable<>::Entry::approximatelyOne(pzero)) {
                     throw qc::QFRException("Reset on non basis state encountered. This is not supported in this method.");
                 }
 
@@ -818,7 +821,12 @@ namespace qc {
                 }
 
                 // determine probabilities for this measurement
-                const auto& [pzero, pone] = dd->determineMeasurementProbabilities(state, targets[0], true);
+                auto [pzero, pone] = dd->determineMeasurementProbabilities(state, targets[0], true);
+
+                // normalize probabilities
+                const auto norm = pzero + pone;
+                pzero /= norm;
+                pone /= norm;
 
                 // base case -> determine the basis state from the measurement and safe the probability
                 if (measurements.size() == nclassics - 1) {
