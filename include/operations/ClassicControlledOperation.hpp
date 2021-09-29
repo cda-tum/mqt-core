@@ -25,7 +25,7 @@ namespace qc {
 
     public:
         // Applies operation `_op` if the creg starting at index `control` has the expected value
-        ClassicControlledOperation(std::unique_ptr<Operation>& _op, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, unsigned int expectedValue = 1U):
+        ClassicControlledOperation(std::unique_ptr<qc::Operation>& _op, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, unsigned int expectedValue = 1U):
             op(std::move(_op)), controlRegister(controlRegister), expectedValue(expectedValue) {
             nqubits = op->getNqubits();
             name[0] = 'c';
@@ -68,6 +68,35 @@ namespace qc {
 
         [[nodiscard]] auto getOperation() const {
             return op.get();
+        }
+
+        void setNqubits(dd::QubitCount nq) override {
+            nqubits = nq;
+            op->setNqubits(nq);
+        }
+
+        [[nodiscard]] const Targets& getTargets() const override {
+            return op->getTargets();
+        }
+
+        Targets& getTargets() override {
+            return op->getTargets();
+        }
+
+        [[nodiscard]] std::size_t getNtargets() const override {
+            return op->getNtargets();
+        }
+
+        [[nodiscard]] const dd::Controls& getControls() const override {
+            return op->getControls();
+        }
+
+        dd::Controls& getControls() override {
+            return op->getControls();
+        }
+
+        [[nodiscard]] std::size_t getNcontrols() const override {
+            return controls.size();
         }
 
         [[nodiscard]] bool isUnitary() const override {

@@ -47,6 +47,16 @@ namespace qc {
         static void decomposeSWAP(QuantumComputation& qc, bool isDirectedArchitecture);
 
         static void decomposeTeleport(QuantumComputation& qc);
+
+        static void eliminateResets(QuantumComputation& qc);
+
+        static void changeTargets(Targets& targets, const std::map<dd::Qubit, dd::Qubit>& replacementMap);
+
+        static void changeControls(dd::Controls& controls, const std::map<dd::Qubit, dd::Qubit>& replacementMap);
+
+        static void deferMeasurements(QuantumComputation& qc);
+
+        static bool isDynamicCircuit(QuantumComputation& qc);
     };
 } // namespace qc
 #endif //QFR_CIRCUITOPTIMIZER_HPP

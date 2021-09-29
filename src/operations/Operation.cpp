@@ -107,6 +107,15 @@ namespace qc {
     }
 
     std::ostream& Operation::printParameters(std::ostream& os) const {
+        if (isClassicControlledOperation()) {
+            os << "\tc[" << parameter[0];
+            if (parameter[1] != 1) {
+                os << " ... " << (parameter[0] + parameter[1] - 1);
+            }
+            os << "] == " << parameter[2];
+            return os;
+        }
+
         bool isZero = true;
         for (size_t i = 0; i < MAX_PARAMETERS; ++i) {
             if (parameter[i] != 0.L)
@@ -173,9 +182,10 @@ namespace qc {
         const auto prec_before = std::cout.precision(20);
 
         os << std::setw(4) << name << "\t";
-
-        auto controlIt = controls.cbegin();
-        auto targetIt  = targets.cbegin();
+        const auto& actualControls = getControls();
+        const auto& actualTargets  = getTargets();
+        auto        controlIt      = actualControls.cbegin();
+        auto        targetIt       = actualTargets.cbegin();
         for (const auto& [physical, logical]: permutation) {
             //            std::cout << static_cast<std::size_t>(physical) << " ";
             //            if (targetIt != targets.cend())
@@ -189,7 +199,7 @@ namespace qc {
             //                std::cout << "x ";
             //            std::cout << std::endl;
 
-            if (targetIt != targets.cend() && *targetIt == physical) {
+            if (targetIt != actualTargets.cend() && *targetIt == physical) {
                 if (type == ClassicControlled) {
                     os << "\033[1m\033[35m" << name[2] << name[3];
                 } else {
@@ -197,7 +207,7 @@ namespace qc {
                 }
                 os << "\t\033[0m";
                 ++targetIt;
-            } else if (controlIt != controls.cend() && controlIt->qubit == physical) {
+            } else if (controlIt != actualControls.cend() && controlIt->qubit == physical) {
                 if (controlIt->type == dd::Control::Type::pos) {
                     os << "\033[32m";
                 } else {
