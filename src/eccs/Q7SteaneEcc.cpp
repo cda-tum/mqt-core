@@ -3,22 +3,30 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "eccs/IdEcc.hpp"
+#include "eccs/Q7SteaneEcc.hpp"
 
-#include <chrono>
-//#include <stdlib.h>
+//7 data qubits, 6 for measuring -> 13 qubits per physical qubit
+Q7SteaneEcc::Q7SteaneEcc(qc::QuantumComputation& qc): Ecc({EccID::Q3Shor, 13, 6, Q7SteaneEcc::getEccName()}, qc) {}
 
-IdEcc::IdEcc(qc::QuantumComputation& qc) : Ecc({EccID::Id, 1, 0, IdEcc::getEccName()}, qc) {
+void Q7SteaneEcc::writeEccEncoding() {
+	measureAndCorrect();
 }
 
+void Q7SteaneEcc::measureAndCorrect() {
+    const int nQubits = qc.getNqubits();
+    for(int i=0;i<nQubits;i++) {
+        //
+    }
+}
 
-void IdEcc::writeEccEncoding() {}
+void Q7SteaneEcc::writeEccDecoding() {
+    const int nQubits = qc.getNqubits();
+    for(int i=0;i<nQubits;i++) {
+        //TODO
+    }
+}
 
-void IdEcc::measureAndCorrect() {}
-
-void IdEcc::writeEccDecoding() {}
-
-void IdEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
+void Q7SteaneEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
     const int nQubits = qc.getNqubits();
     int i;
     switch(gate.get()->getType()) {
@@ -33,16 +41,6 @@ void IdEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
     case qc::Tdag:
     case qc::V:
     case qc::Vdag:
-        for(std::size_t j=0;j<gate.get()->getNtargets();j++) {
-            i = gate.get()->getTargets()[j];
-            if(gate.get()->getNcontrols()) {
-                auto& ctrls = gate.get()->getControls();
-                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls, i, gate.get()->getType());
-            } else {
-                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i, gate.get()->getType());
-            }
-        }
-
     case qc::U3:
     case qc::U2:
     case qc::Phase:
@@ -63,4 +61,3 @@ void IdEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
         throw qc::QFRException("Gate not possible to encode in error code!");
     }
 }
-
