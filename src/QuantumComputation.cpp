@@ -134,7 +134,7 @@ namespace qc {
             for (dd::QubitCount i = 0; i < nqubits; ++i) {
                 // only add to output permutation if the qubit is actually acted upon
                 if (!isIdleQubit(static_cast<dd::Qubit>(i)))
-                    outputPermutation.insert({static_cast<dd::Qubit>(i), initialLayout.at(i)});
+                    outputPermutation.insert({static_cast<dd::Qubit>(i), initialLayout.at(static_cast<dd::Qubit>(i))});
             }
         }
 
