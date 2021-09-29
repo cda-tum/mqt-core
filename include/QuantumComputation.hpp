@@ -165,7 +165,7 @@ namespace qc {
             seed(seed) {
             addQubitRegister(nqubits);
             addClassicalRegister(nqubits);
-            if (seed == 0) {
+            if (seed != 0) {
                 mt.seed(seed);
             } else {
                 // create and properly seed rng
@@ -179,7 +179,7 @@ namespace qc {
         explicit QuantumComputation(const std::string& filename, std::size_t seed = 0):
             seed(seed) {
             import(filename);
-            if (seed == 0) {
+            if (seed != 0) {
                 mt.seed(seed);
             } else {
                 // create and properly seed rng
