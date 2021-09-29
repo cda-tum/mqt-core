@@ -71,17 +71,28 @@ void Q3ShorEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
     case qc::H:
     case qc::Y:
     case qc::Z:
-    //TODO check S, T, V
     case qc::S:
     case qc::Sdag:
     case qc::T:
     case qc::Tdag:
-
-        //TODO controlled/multitarget check
-        i = gate.get()->getTargets()[0];
-        qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i, gate.get()->getType());
-        qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+nQubits, gate.get()->getType());
-        qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+2*nQubits, gate.get()->getType());
+        for(std::size_t j=0;j<gate.get()->getNtargets();j++) {
+            i = gate.get()->getTargets()[j];
+            if(gate.get()->getNcontrols()) {
+                auto& ctrls = gate.get()->getControls();
+                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls, i, gate.get()->getType());
+                dd::Controls ctrls2, ctrls3;
+                for(const auto &ct: ctrls) {
+                    ctrls2.insert(createControl(ct.qubit+nQubits, ct.type==dd::Control::Type::pos));
+                    ctrls3.insert(createControl(ct.qubit+2*nQubits, ct.type==dd::Control::Type::pos));
+                }
+                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls2, i+nQubits, gate.get()->getType());
+                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls3, i+2*nQubits, gate.get()->getType());
+            } else {
+                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i, gate.get()->getType());
+                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+nQubits, gate.get()->getType());
+                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+2*nQubits, gate.get()->getType());
+            }
+        }
         break;
     case qc::V:
     case qc::Vdag:
