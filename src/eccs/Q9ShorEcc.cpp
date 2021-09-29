@@ -191,24 +191,26 @@ void Q9ShorEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
         statistics.nOutputQubits = -1;
         throw qc::QFRException("Gate not possible to encode in error code!");
     }
-    i = gate.get()->getTargets()[0];
-    if(gate.get()->getNcontrols()) {
-        //Q9Shor code: put H gate before and after each control point, i.e. "cx 0,1" becomes "h0; cz 0,1; h0"
-        auto& ctrls = gate.get()->getControls();
-        for(int j=0;j<9;j++) {
-            dd::Controls ctrls2;
-            for(const auto &ct: ctrls) {
-                ctrls2.insert(createControl(ct.qubit+j*nQubits, ct.type==dd::Control::Type::pos));
-                qcMapped.h(ct.qubit+j*nQubits);
+    for(std::size_t t=0;t<gate.get()->getNtargets();t++) {
+        i = gate.get()->getTargets()[t];
+        if(gate.get()->getNcontrols()) {
+            //Q9Shor code: put H gate before and after each control point, i.e. "cx 0,1" becomes "h0; cz 0,1; h0"
+            auto& ctrls = gate.get()->getControls();
+            for(int j=0;j<9;j++) {
+                dd::Controls ctrls2;
+                for(const auto &ct: ctrls) {
+                    ctrls2.insert(createControl(ct.qubit+j*nQubits, ct.type==dd::Control::Type::pos));
+                    qcMapped.h(ct.qubit+j*nQubits);
+                }
+                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls2, i+j*nQubits, type);
+                for(const auto &ct: ctrls) {
+                    qcMapped.h(ct.qubit+j*nQubits);
+                }
             }
-            qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls2, i+j*nQubits, type);
-            for(const auto &ct: ctrls) {
-                qcMapped.h(ct.qubit+j*nQubits);
+        } else {
+            for(int j=0;j<9;j++) {
+                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+j*nQubits, type);
             }
-        }
-    } else {
-        for(int j=0;j<9;j++) {
-            qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+j*nQubits, type);
         }
     }
 }
