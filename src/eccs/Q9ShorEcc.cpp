@@ -166,7 +166,6 @@ void Q9ShorEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
     case qc::Z:
         type = qc::X; break;
 
-    //TODO check S, T, V
     case qc::S:
     case qc::Sdag:
     case qc::T:
@@ -192,9 +191,24 @@ void Q9ShorEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
         statistics.nOutputQubits = -1;
         throw qc::QFRException("Gate not possible to encode in error code!");
     }
-    //TODO controlled/multitarget check
     i = gate.get()->getTargets()[0];
-    for(int j=0;j<9;j++) {
-        qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+j*nQubits, type);
+    if(gate.get()->getNcontrols()) {
+        //Q9Shor code: put H gate before and after each control point, i.e. "cx 0,1" becomes "h0; cz 0,1; h0"
+        auto& ctrls = gate.get()->getControls();
+        for(int j=0;j<9;j++) {
+            dd::Controls ctrls2;
+            for(const auto &ct: ctrls) {
+                ctrls2.insert(createControl(ct.qubit+j*nQubits, ct.type==dd::Control::Type::pos));
+                qcMapped.h(ct.qubit+j*nQubits);
+            }
+            qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls2, i+j*nQubits, type);
+            for(const auto &ct: ctrls) {
+                qcMapped.h(ct.qubit+j*nQubits);
+            }
+        }
+    } else {
+        for(int j=0;j<9;j++) {
+            qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+j*nQubits, type);
+        }
     }
 }
