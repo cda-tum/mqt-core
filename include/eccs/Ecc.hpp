@@ -16,18 +16,18 @@ public:
 		Id, Q3Shor, Q9Shor, Q7Steane, QxCustom
 	};
     struct Info {
-        EccID enumID;
+        EccID id;
         int nRedundantQubits;
         int nClassicalBits;
         std::string name;
     };
 
-    const struct EccInfo ecc;
+    const EccInfo ecc;
 
-	Ecc(struct EccInfo ecc_type, qc::QuantumComputation& qc);
+	Ecc(EccInfo ecc, qc::QuantumComputation& qc);
 	virtual ~Ecc() = default;
 
-	qc::QuantumComputation& applyEcc();
+	qc::QuantumComputation& apply();
 
     virtual std::ostream& printResult(std::ostream& out);
 
@@ -51,13 +51,13 @@ protected:
 	qc::QuantumComputation qcMapped;
 	EccStatistics statistics{};
 
-	virtual void writeEccEncoding()=0;
+	virtual void writeEncoding()=0;
 
 	virtual void measureAndCorrect()=0;
 
-	virtual void writeEccDecoding()=0;
+	virtual void writeDecoding()=0;
 
-	virtual void mapGate(std::unique_ptr<qc::Operation> &gate)=0;
+	virtual void mapGate(const std::unique_ptr<qc::Operation> &gate)=0;
 
     void writeToffoli(unsigned short c1, unsigned short c2, unsigned short target);
     void writeCnot(unsigned short control, unsigned short target);
