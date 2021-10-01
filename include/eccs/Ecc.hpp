@@ -15,7 +15,7 @@ public:
     enum ID {
 		Id, Q3Shor, Q9Shor, Q7Steane, QxCustom
 	};
-    struct EccInfo {
+    struct Info {
         EccID enumID;
         int nRedundantQubits;
         int nClassicalBits;
