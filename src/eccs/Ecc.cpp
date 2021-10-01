@@ -21,7 +21,7 @@ qc::QuantumComputation& Ecc::applyEcc() {
 	writeEccEncoding();
 
 	long nInputGates = 0;
-    for(auto& gate: qc) {
+    for(const auto& gate: qc) {
         nInputGates++;
         mapGate(gate);
     }
