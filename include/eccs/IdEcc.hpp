@@ -14,7 +14,7 @@ class IdEcc: public Ecc {
 public:
     IdEcc(qc::QuantumComputation& qc);
 
-    static const std::string getEccName() {
+    static const std::string getName() {
         return "Id";
     }
 

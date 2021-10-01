@@ -33,13 +33,11 @@ void IdEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
     case qc::Tdag:
     case qc::V:
     case qc::Vdag:
-        for(std::size_t j=0;j<gate.get()->getNtargets();j++) {
-            i = gate.get()->getTargets()[j];
-            if(gate.get()->getNcontrols()) {
-                auto& ctrls = gate.get()->getControls();
-                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls, i, gate.get()->getType());
+        for (const auto& target: gate->getTargets()) {
+            if(!gate->getControls().empty()) {
+                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, gate->getControls(), target, gate->getType());
             } else {
-                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i, gate.get()->getType());
+                qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, target, gate->getType());
             }
         }
 
