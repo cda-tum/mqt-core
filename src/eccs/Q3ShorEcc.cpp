@@ -26,8 +26,8 @@ void Q3ShorEcc::measureAndCorrect() {
 
         qcMapped.h(i+3*nQubits);
         qcMapped.h(i+4*nQubits);
-        dd::Control c3 = createControl(i+3*nQubits, true);
-        dd::Control c4 = createControl(i+4*nQubits, true);
+        auto c3 = createControl(i+3*nQubits, true);
+        auto c4 = createControl(i+4*nQubits, true);
         qcMapped.z(i,           c3);
         qcMapped.z(i+nQubits,   c3);
         qcMapped.z(i+nQubits,   c4);
