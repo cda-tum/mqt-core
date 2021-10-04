@@ -30,7 +30,6 @@ qc::QuantumComputation& Ecc::apply() {
     writeDecoding();
 
     statistics.nOutputGates = qcMapped.getNindividualOps();
-    statistics.success = true;
 
     return qcMapped;
 }
