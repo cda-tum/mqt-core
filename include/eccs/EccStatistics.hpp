@@ -18,8 +18,6 @@ public:
 
     std::string outputName;
 
-    bool success;
-
     double getGateOverhead() {
         return (double)nOutputGates/(double)nInputGates;
     }
