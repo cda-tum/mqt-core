@@ -3,11 +3,11 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "QuantumComputation.hpp"
-#include "EccStatistics.hpp"
-
 #ifndef QFR_Ecc_HPP
 #define QFR_Ecc_HPP
+
+#include "QuantumComputation.hpp"
+#include "EccStatistics.hpp"
 
 class Ecc {
 public:
@@ -16,15 +16,15 @@ public:
 		Id, Q3Shor, Q9Shor, Q7Steane, QxCustom
 	};
     struct Info {
-        EccID id;
+        ID id;
         int nRedundantQubits;
-        int nClassicalBits;
+        int nClassicalBitsPerQubit;
         std::string name;
     };
 
-    const EccInfo ecc;
+    const Info ecc;
 
-	Ecc(EccInfo ecc, qc::QuantumComputation& qc);
+	Ecc(Info ecc, qc::QuantumComputation& qc);
 	virtual ~Ecc() = default;
 
 	qc::QuantumComputation& apply();
@@ -59,10 +59,7 @@ protected:
 
 	virtual void mapGate(const std::unique_ptr<qc::Operation> &gate)=0;
 
-    void writeToffoli(unsigned short c1, unsigned short c2, unsigned short target);
-    void writeCnot(unsigned short control, unsigned short target);
-
-    dd::Control createControl(unsigned short qubit, bool pos);
+	void gateNotAvailableError(const std::unique_ptr<qc::Operation> &gate);
 
 };
 
