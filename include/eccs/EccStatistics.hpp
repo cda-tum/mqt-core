@@ -3,10 +3,10 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include <stdlib.h>
-
 #ifndef QFR_EccStatistics_HPP
 #define QFR_EccStatistics_HPP
+
+#include <stdlib.h>
 
 class EccStatistics {
 public:

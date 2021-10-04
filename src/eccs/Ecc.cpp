@@ -5,20 +5,18 @@
 
 #include "eccs/Ecc.hpp"
 
-//#include <stdlib.h>
-
-Ecc::Ecc(struct EccInfo eccInfo, qc::QuantumComputation& quantumcomputation): ecc(eccInfo), qc(quantumcomputation) {
+Ecc::Ecc(struct Info eccInfo, qc::QuantumComputation& quantumcomputation): ecc(eccInfo), qc(quantumcomputation) {
 }
 
-qc::QuantumComputation& Ecc::applyEcc() {
+qc::QuantumComputation& Ecc::apply() {
     qc.stripIdleQubits(true, false);
     statistics.nInputQubits = qc.getNqubits();
 	statistics.nOutputQubits = qc.getNqubits()*ecc.nRedundantQubits;
-	statistics.nOutputClassicalBits = qc.getNqubits()*ecc.nClassicalBits;
+	statistics.nOutputClassicalBits = qc.getNqubits()*ecc.nClassicalBitsPerQubit;
 	qcMapped.addQubitRegister(statistics.nOutputQubits);
 	qcMapped.addClassicalRegister(statistics.nOutputClassicalBits);
 
-	writeEccEncoding();
+	writeEncoding();
 
 	long nInputGates = 0;
     for(const auto& gate: qc) {
@@ -29,7 +27,7 @@ qc::QuantumComputation& Ecc::applyEcc() {
 
     measureAndCorrect();
 
-    writeEccDecoding();
+    writeDecoding();
 
     statistics.nOutputGates = qcMapped.getNindividualOps();
     statistics.success = true;
@@ -56,30 +54,14 @@ void Ecc::dumpResult(const std::string& outputFilename) {
 		size_t dot = outputFilename.find_last_of('.');
 		std::string extension = outputFilename.substr(dot + 1);
 		std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return ::tolower(c); });
-		if (extension == "real") {
-			dumpResult(outputFilename, qc::Real);
-		} else if (extension == "qasm") {
+		if (extension == "qasm") {
 			dumpResult(outputFilename, qc::OpenQASM);
 		} else {
 			throw qc::QFRException("[dump] Extension " + extension + " not recognized/supported for dumping.");
 		}
 	}
 
-void Ecc::writeToffoli(unsigned short c1, unsigned short c2, unsigned short target) {
-    dd::Controls controls;
-    controls.insert(createControl(c1, true));
-    controls.insert(createControl(c2, true));
-    qcMapped.x(target, controls);
-}
-
-void Ecc::writeCnot(unsigned short control, unsigned short target) {
-    qcMapped.x(target, createControl(control, true));
-}
-
-dd::Control Ecc::createControl(unsigned short qubit, bool pos) {
-    dd::Control ctrl;
-    ctrl.qubit = qubit;
-    ctrl.type = pos ? dd::Control::Type::pos : dd::Control::Type::neg;
-    return ctrl;
+void Ecc::gateNotAvailableError(const std::unique_ptr<qc::Operation> &gate) {
+    throw qc::QFRException(std::string("Gate ") + gate.get()->getName() + " not possible to encode in error code " + ecc.name + "!");
 }
 

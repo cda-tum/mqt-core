@@ -5,18 +5,16 @@
 
 #include "eccs/Q3ShorEcc.hpp"
 
-#include <chrono>
-//#include <stdlib.h>
-
 //3 data qubits, 2 for measuring -> 5 qubits per physical qubit
-Q3ShorEcc::Q3ShorEcc(qc::QuantumComputation& qc): Ecc({EccID::Q3Shor, 5, 2, Q3ShorEcc::getEccName()}, qc) {}
+Q3ShorEcc::Q3ShorEcc(qc::QuantumComputation& qc): Ecc({ID::Q3Shor, 5, 2, Q3ShorEcc::getName()}, qc) {}
 
-void Q3ShorEcc::writeEccEncoding() {
+void Q3ShorEcc::writeEncoding() {
 	const int nQubits = qc.getNqubits();
 
     for(int i=0;i<nQubits;i++) {
-        writeCnot(i, i+nQubits);
-        writeCnot(i, i+2*nQubits);
+        auto ctrl = dd::Control{dd::Qubit(i), dd::Control::Type::pos};
+        qcMapped.x(i+nQubits, ctrl);
+        qcMapped.x(i+2*nQubits, ctrl);
     }
 }
 
@@ -26,8 +24,8 @@ void Q3ShorEcc::measureAndCorrect() {
 
         qcMapped.h(i+3*nQubits);
         qcMapped.h(i+4*nQubits);
-        auto c3 = createControl(i+3*nQubits, true);
-        auto c4 = createControl(i+4*nQubits, true);
+        auto c3 = dd::Control{dd::Qubit(i+3*nQubits), dd::Control::Type::pos};
+        auto c4 = dd::Control{dd::Qubit(i+4*nQubits), dd::Control::Type::pos};
         qcMapped.z(i,           c3);
         qcMapped.z(i+nQubits,   c3);
         qcMapped.z(i+nQubits,   c4);
@@ -38,14 +36,17 @@ void Q3ShorEcc::measureAndCorrect() {
         qcMapped.measure(i+3*nQubits, i);
         qcMapped.measure(i+4*nQubits, i+nQubits);
 
-        dd::Control cn3 = createControl(i+3*nQubits, false);
-        dd::Control cn4 = createControl(i+4*nQubits, false);
+        auto cn3 = dd::Control{dd::Qubit(i+3*nQubits), dd::Control::Type::neg};
+        auto cn4 = dd::Control{dd::Qubit(i+4*nQubits), dd::Control::Type::neg};
         dd::Controls cp3n4;
-        cp3n4.insert(c3);cp3n4.insert(cn4);
+        cp3n4.insert(c3);
+        cp3n4.insert(cn4);
         dd::Controls cp3p4;
-        cp3p4.insert(c3);cp3p4.insert(c4);
+        cp3p4.insert(c3);
+        cp3p4.insert(c4);
         dd::Controls cn3p4;
-        cn3p4.insert(cn3);cn3p4.insert(c4);
+        cn3p4.insert(cn3);
+        cn3p4.insert(c4);
 
         qcMapped.x(i, cp3n4);
         qcMapped.x(i+nQubits, cp3p4);
@@ -53,18 +54,22 @@ void Q3ShorEcc::measureAndCorrect() {
     }
 }
 
-void Q3ShorEcc::writeEccDecoding() {
+void Q3ShorEcc::writeDecoding() {
     const int nQubits = qc.getNqubits();
     for(int i=0;i<nQubits;i++) {
-        writeCnot(i, i+nQubits);
-        writeCnot(i, i+2*nQubits);
-        writeToffoli(i+nQubits, i+2*nQubits, i);
+        auto ctrl = dd::Control{dd::Qubit(i), dd::Control::Type::pos};
+        qcMapped.x(i+nQubits, ctrl);
+        qcMapped.x(i+2*nQubits, ctrl);
+
+        dd::Controls ctrls;
+        ctrls.insert(dd::Control{dd::Qubit(i+nQubits), dd::Control::Type::pos});
+        ctrls.insert(dd::Control{dd::Qubit(i+2*nQubits)});
+        qcMapped.x(i, ctrls);
     }
 }
 
-void Q3ShorEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
+void Q3ShorEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
     const int nQubits = qc.getNqubits();
-    int i;
     switch(gate.get()->getType()) {
     case qc::I: break;
     case qc::X:
@@ -76,14 +81,14 @@ void Q3ShorEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
     case qc::T:
     case qc::Tdag:
         for(std::size_t j=0;j<gate.get()->getNtargets();j++) {
-            i = gate.get()->getTargets()[j];
+            auto i = gate.get()->getTargets()[j];
             if(gate.get()->getNcontrols()) {
                 auto& ctrls = gate.get()->getControls();
                 qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls, i, gate.get()->getType());
                 dd::Controls ctrls2, ctrls3;
                 for(const auto &ct: ctrls) {
-                    ctrls2.insert(createControl(ct.qubit+nQubits, ct.type==dd::Control::Type::pos));
-                    ctrls3.insert(createControl(ct.qubit+2*nQubits, ct.type==dd::Control::Type::pos));
+                    ctrls2.insert(dd::Control{dd::Qubit(ct.qubit+nQubits), ct.type});
+                    ctrls3.insert(dd::Control{dd::Qubit(ct.qubit+2*nQubits), ct.type});
                 }
                 qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls2, i+nQubits, gate.get()->getType());
                 qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls3, i+2*nQubits, gate.get()->getType());
@@ -111,8 +116,7 @@ void Q3ShorEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
     case qc::Compound:
     case qc::ClassicControlled:
     default:
-        statistics.nOutputGates = -1;
-        statistics.nOutputQubits = -1;
-        throw qc::QFRException("Gate not possible to encode in error code!");
+        gateNotAvailableError(gate);
+        break;
     }
 }

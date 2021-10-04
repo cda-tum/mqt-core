@@ -5,22 +5,18 @@
 
 #include "eccs/IdEcc.hpp"
 
-#include <chrono>
-//#include <stdlib.h>
-
-IdEcc::IdEcc(qc::QuantumComputation& qc) : Ecc({EccID::Id, 1, 0, IdEcc::getEccName()}, qc) {
+IdEcc::IdEcc(qc::QuantumComputation& qc) : Ecc({ID::Id, 1, 0, IdEcc::getName()}, qc) {
 }
 
 
-void IdEcc::writeEccEncoding() {}
+void IdEcc::writeEncoding() {}
 
 void IdEcc::measureAndCorrect() {}
 
-void IdEcc::writeEccDecoding() {}
+void IdEcc::writeDecoding() {}
 
-void IdEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
+void IdEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
     const int nQubits = qc.getNqubits();
-    int i;
     switch(gate.get()->getType()) {
     case qc::I: break;
     case qc::X:
@@ -40,7 +36,7 @@ void IdEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
                 qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, target, gate->getType());
             }
         }
-
+        break;
     case qc::U3:
     case qc::U2:
     case qc::Phase:
@@ -56,8 +52,6 @@ void IdEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
     case qc::Compound:
     case qc::ClassicControlled:
     default:
-        statistics.nOutputGates = -1;
-        statistics.nOutputQubits = -1;
         throw qc::QFRException("Gate not possible to encode in error code!");
     }
 }

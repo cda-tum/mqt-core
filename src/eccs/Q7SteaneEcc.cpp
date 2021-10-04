@@ -6,29 +6,28 @@
 #include "eccs/Q7SteaneEcc.hpp"
 
 //7 data qubits, 6 for measuring -> 13 qubits per physical qubit
-Q7SteaneEcc::Q7SteaneEcc(qc::QuantumComputation& qc): Ecc({EccID::Q3Shor, 13, 6, Q7SteaneEcc::getEccName()}, qc) {}
+Q7SteaneEcc::Q7SteaneEcc(qc::QuantumComputation& qc): Ecc({ID::Q3Shor, 13, 6, Q7SteaneEcc::getName()}, qc) {}
 
-void Q7SteaneEcc::writeEccEncoding() {
+void Q7SteaneEcc::writeEncoding() {
 	measureAndCorrect();
 }
 
 void Q7SteaneEcc::measureAndCorrect() {
     const int nQubits = qc.getNqubits();
     for(int i=0;i<nQubits;i++) {
-        //
+        //TODO
     }
 }
 
-void Q7SteaneEcc::writeEccDecoding() {
+void Q7SteaneEcc::writeDecoding() {
     const int nQubits = qc.getNqubits();
     for(int i=0;i<nQubits;i++) {
         //TODO
     }
 }
 
-void Q7SteaneEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
+void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
     const int nQubits = qc.getNqubits();
-    int i;
     switch(gate.get()->getType()) {
     case qc::I: break;
     case qc::X:
@@ -56,8 +55,6 @@ void Q7SteaneEcc::mapGate(std::unique_ptr<qc::Operation> &gate) {
     case qc::Compound:
     case qc::ClassicControlled:
     default:
-        statistics.nOutputGates = -1;
-        statistics.nOutputQubits = -1;
-        throw qc::QFRException("Gate not possible to encode in error code!");
+        gateNotAvailableError(gate);
     }
 }
