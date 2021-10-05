@@ -37,10 +37,12 @@ void Q9ShorEcc::measureAndCorrect() {
         unsigned int q[9];//qubits
         unsigned int a[8];//ancilla qubits
         dd::Control ca[8];//ancilla controls
+        dd::Control cna[8];//negative ancilla controls
         unsigned int m[8];
         for(int j=0;j<9;j++) { q[j] = i+j*nQubits;}
         for(int j=0;j<8;j++) { a[j] = i+(j+9)*nQubits; m[j] = i+j*nQubits;}
         for(int j=0;j<8;j++) { ca[j] = dd::Control{dd::Qubit(a[j]), dd::Control::Type::pos}; }
+        for(int j=0;j<8;j++) { cna[j] = dd::Control{dd::Qubit(a[j]), dd::Control::Type::neg}; }
 
 
         // PREPARE measurements --------------------------------------------------------
@@ -87,59 +89,22 @@ void Q9ShorEcc::measureAndCorrect() {
 
         //CORRECT
         //x, i.e. bit flip errors
-        dd::Controls cp0n1;
-        cp0n1.insert(ca[0]);
-        cp0n1.insert(dd::Control{dd::Qubit(a[1]), dd::Control::Type::neg});
-        dd::Controls cp0p1;
-        cp0p1.insert(ca[0]);
-        cp0p1.insert(ca[1]);
-        dd::Controls cn0p1;
-        cn0p1.insert(dd::Control{dd::Qubit(a[0]), dd::Control::Type::neg});
-        cn0p1.insert(ca[1]);
-        qcMapped.x(q[0], cp0n1);
-        qcMapped.x(q[1], cp0p1);
-        qcMapped.x(q[2], cn0p1);
+        qcMapped.x(q[0], {ca[0], cna[1]});
+        qcMapped.x(q[1], {ca[0], ca[1]});
+        qcMapped.x(q[2], {cna[0], ca[1]});
 
-        dd::Controls cp2n3;
-        cp2n3.insert(ca[2]);
-        cp2n3.insert(dd::Control{dd::Qubit(a[3]), dd::Control::Type::neg});
-        dd::Controls cp2p3;
-        cp2p3.insert(ca[2]);
-        cp2p3.insert(ca[3]);
-        dd::Controls cn2p3;
-        cn2p3.insert(dd::Control{dd::Qubit(a[2]), dd::Control::Type::neg});
-        cn2p3.insert(ca[3]);
-        qcMapped.x(q[3], cp2n3);
-        qcMapped.x(q[4], cp2p3);
-        qcMapped.x(q[5], cn2p3);
+        qcMapped.x(q[3], {ca[2], cna[3]});
+        qcMapped.x(q[4], {ca[2], ca[3]});
+        qcMapped.x(q[5], {cna[2], ca[3]});
 
-        dd::Controls cp4n5;
-        cp4n5.insert(ca[4]);
-        cp4n5.insert(dd::Control{dd::Qubit(a[5]), dd::Control::Type::neg});
-        dd::Controls cp4p5;
-        cp4p5.insert(ca[4]);
-        cp4p5.insert(ca[5]);
-        dd::Controls cn4p5;
-        cn4p5.insert(dd::Control{dd::Qubit(a[4]), dd::Control::Type::neg});
-        cn4p5.insert(ca[5]);
-        qcMapped.x(q[6], cp4n5);
-        qcMapped.x(q[7], cp4p5);
-        qcMapped.x(q[8], cn4p5);
-
+        qcMapped.x(q[6], {ca[4], cna[5]});
+        qcMapped.x(q[7], {ca[4], ca[5]});
+        qcMapped.x(q[8], {cna[4], ca[5]});
 
         //z, i.e. phase flip errors
-        dd::Controls cp6n7;
-        cp6n7.insert(ca[6]);
-        cp6n7.insert(dd::Control{dd::Qubit(a[7]), dd::Control::Type::neg});
-        dd::Controls cp6p7;
-        cp6p7.insert(ca[6]);
-        cp6p7.insert(ca[7]);
-        dd::Controls cn6p7;
-        cn6p7.insert(dd::Control{dd::Qubit(a[6]), dd::Control::Type::neg});
-        cn6p7.insert(ca[7]);
-        qcMapped.z(q[0], cp6n7);
-        qcMapped.z(q[3], cp6p7);
-        qcMapped.z(q[6], cn6p7);
+        qcMapped.z(q[0], {ca[6], cna[7]});
+        qcMapped.z(q[3], {ca[6], ca[7]});
+        qcMapped.z(q[6], {cna[6], ca[7]});
 
     }
 }
@@ -161,20 +126,9 @@ void Q9ShorEcc::writeDecoding() {
         qcMapped.x(i+7*nQubits, ci[6]);
         qcMapped.x(i+8*nQubits, ci[6]);
 
-        dd::Controls c12;
-        c12.insert(ci[1]);
-        c12.insert(ci[2]);
-        qcMapped.x(i, c12);
-
-        dd::Controls c45;
-        c45.insert(ci[4]);
-        c45.insert(ci[5]);
-        qcMapped.x(i+3*nQubits, c45);
-
-        dd::Controls c78;
-        c78.insert(ci[7]);
-        c78.insert(ci[8]);
-        qcMapped.x(i+6*nQubits, c78);
+        qcMapped.x(i, {ci[1], ci[2]});
+        qcMapped.x(i+3*nQubits, {ci[4], ci[5]});
+        qcMapped.x(i+6*nQubits, {ci[7], ci[8]});
 
         qcMapped.h(i);
         qcMapped.h(i+3*nQubits);
@@ -182,11 +136,7 @@ void Q9ShorEcc::writeDecoding() {
 
         qcMapped.x(i+3*nQubits, ci[0]);
         qcMapped.x(i+6*nQubits, ci[0]);
-
-        dd::Controls c36;
-        c36.insert(ci[3]);
-        c36.insert(ci[6]);
-        qcMapped.x(i, c36);
+        qcMapped.x(i, {ci[3], ci[6]});
     }
 }
 
