@@ -38,19 +38,10 @@ void Q3ShorEcc::measureAndCorrect() {
 
         auto cn3 = dd::Control{dd::Qubit(i+3*nQubits), dd::Control::Type::neg};
         auto cn4 = dd::Control{dd::Qubit(i+4*nQubits), dd::Control::Type::neg};
-        dd::Controls cp3n4;
-        cp3n4.insert(c3);
-        cp3n4.insert(cn4);
-        dd::Controls cp3p4;
-        cp3p4.insert(c3);
-        cp3p4.insert(c4);
-        dd::Controls cn3p4;
-        cn3p4.insert(cn3);
-        cn3p4.insert(c4);
 
-        qcMapped.x(i, cp3n4);
-        qcMapped.x(i+nQubits, cp3p4);
-        qcMapped.x(i+2*nQubits, cn3p4);
+        qcMapped.x(i, {c3, cn4});
+        qcMapped.x(i+nQubits, {c3, c4});
+        qcMapped.x(i+2*nQubits, {cn3, c4});
     }
 }
 
