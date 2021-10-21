@@ -49,7 +49,7 @@ class CMakeBuild(build_ext):
             cpus = os.cpu_count()
             if cpus is None:
                 cpus = 2
-            build_args += ['-- -j{}'.format(cpus)]
+            build_args += ['--', '-j{}'.format(cpus)]
 
         env = os.environ.copy()
         env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
