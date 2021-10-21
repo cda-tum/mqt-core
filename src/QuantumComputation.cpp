@@ -1228,8 +1228,8 @@ namespace qc {
         }
     }
 
-    bool QuantumComputation::isIdleQubit(dd::Qubit physical_qubit) const {
-        return !std::any_of(ops.cbegin(), ops.cend(), [&physical_qubit](const auto& op) { return op->actsOn(physical_qubit); });
+    bool QuantumComputation::isIdleQubit(dd::Qubit physicalQubit) const {
+        return !std::any_of(ops.cbegin(), ops.cend(), [&physicalQubit](const auto& op) { return op->actsOn(physicalQubit); });
     }
 
     void QuantumComputation::stripIdleQubits(bool force, bool reduceIOpermutations) {
@@ -1264,59 +1264,59 @@ namespace qc {
         }
     }
 
-    std::string QuantumComputation::getQubitRegister(dd::Qubit physical_qubit_index) const {
+    std::string QuantumComputation::getQubitRegister(dd::Qubit physicalQubitIndex) const {
         for (const auto& reg: qregs) {
             auto start_idx = reg.second.first;
             auto count     = reg.second.second;
-            if (physical_qubit_index < start_idx) continue;
-            if (physical_qubit_index >= start_idx + count) continue;
+            if (physicalQubitIndex < start_idx) continue;
+            if (physicalQubitIndex >= start_idx + count) continue;
             return reg.first;
         }
         for (const auto& reg: ancregs) {
             auto start_idx = reg.second.first;
             auto count     = reg.second.second;
-            if (physical_qubit_index < start_idx) continue;
-            if (physical_qubit_index >= start_idx + count) continue;
+            if (physicalQubitIndex < start_idx) continue;
+            if (physicalQubitIndex >= start_idx + count) continue;
             return reg.first;
         }
 
-        throw QFRException("[getQubitRegister] Qubit index " + std::to_string(physical_qubit_index) + " not found in any register");
+        throw QFRException("[getQubitRegister] Qubit index " + std::to_string(physicalQubitIndex) + " not found in any register");
     }
 
-    std::pair<std::string, dd::Qubit> QuantumComputation::getQubitRegisterAndIndex(dd::Qubit physical_qubit_index) const {
-        std::string reg_name = getQubitRegister(physical_qubit_index);
+    std::pair<std::string, dd::Qubit> QuantumComputation::getQubitRegisterAndIndex(dd::Qubit physicalQubitIndex) const {
+        std::string reg_name = getQubitRegister(physicalQubitIndex);
         dd::Qubit   index    = 0;
         auto        it       = qregs.find(reg_name);
         if (it != qregs.end()) {
-            index = static_cast<dd::Qubit>(physical_qubit_index - it->second.first);
+            index = static_cast<dd::Qubit>(physicalQubitIndex - it->second.first);
         } else {
             auto it_anc = ancregs.find(reg_name);
             if (it_anc != ancregs.end()) {
-                index = static_cast<dd::Qubit>(physical_qubit_index - it_anc->second.first);
+                index = static_cast<dd::Qubit>(physicalQubitIndex - it_anc->second.first);
             }
-            // no else branch needed here, since error would have already shown in getQubitRegister(physical_qubit_index)
+            // no else branch needed here, since error would have already shown in getQubitRegister(physicalQubitIndex)
         }
         return {reg_name, index};
     }
 
-    std::string QuantumComputation::getClassicalRegister(std::size_t classical_index) const {
+    std::string QuantumComputation::getClassicalRegister(std::size_t classicalIndex) const {
         for (const auto& reg: cregs) {
             auto start_idx = reg.second.first;
             auto count     = reg.second.second;
-            if (classical_index < start_idx) continue;
-            if (classical_index >= start_idx + count) continue;
+            if (classicalIndex < start_idx) continue;
+            if (classicalIndex >= start_idx + count) continue;
             return reg.first;
         }
 
-        throw QFRException("[getClassicalRegister] Classical index " + std::to_string(classical_index) + " not found in any register");
+        throw QFRException("[getClassicalRegister] Classical index " + std::to_string(classicalIndex) + " not found in any register");
     }
 
-    std::pair<std::string, std::size_t> QuantumComputation::getClassicalRegisterAndIndex(std::size_t classical_index) const {
-        std::string reg_name = getClassicalRegister(classical_index);
+    std::pair<std::string, std::size_t> QuantumComputation::getClassicalRegisterAndIndex(std::size_t classicalIndex) const {
+        std::string reg_name = getClassicalRegister(classicalIndex);
         std::size_t index    = 0;
         auto        it       = cregs.find(reg_name);
         if (it != cregs.end()) {
-            index = classical_index - it->second.first;
+            index = classicalIndex - it->second.first;
         } // else branch not needed since getClassicalRegister already covers this case
         return {reg_name, index};
     }
@@ -1366,8 +1366,19 @@ namespace qc {
         return max_index;
     }
 
-    bool QuantumComputation::physicalQubitIsAncillary(dd::Qubit physical_qubit_index) const {
-        return std::any_of(ancregs.cbegin(), ancregs.cend(), [&physical_qubit_index](const auto& ancreg) { return ancreg.second.first <= physical_qubit_index && physical_qubit_index < ancreg.second.first + ancreg.second.second; });
+    bool QuantumComputation::physicalQubitIsAncillary(dd::Qubit physicalQubitIndex) const {
+        return std::any_of(ancregs.cbegin(), ancregs.cend(), [&physicalQubitIndex](const auto& ancreg) { return ancreg.second.first <= physicalQubitIndex && physicalQubitIndex < ancreg.second.first + ancreg.second.second; });
+    }
+
+    void QuantumComputation::setLogicalQubitGarbage(dd::Qubit logicalQubitIndex) {
+        garbage[logicalQubitIndex] = true;
+        // setting a logical qubit garbage also means removing it from the output permutation if it was present before
+        for (auto it = outputPermutation.begin(); it != outputPermutation.end(); ++it) {
+            if (it->second == logicalQubitIndex) {
+                outputPermutation.erase(it);
+                break;
+            }
+        }
     }
 
     bool QuantumComputation::isLastOperationOnQubit(const decltype(ops.cbegin())& opIt, const decltype(ops.cend())& end) const {
