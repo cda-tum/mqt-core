@@ -7,6 +7,7 @@
 #define QFR_OPERATION_H
 
 #include "Definitions.hpp"
+#include "OpType.hpp"
 #include "dd/Package.hpp"
 
 #include <array>
@@ -23,46 +24,6 @@ namespace qc {
     // Operation Constants
     constexpr std::size_t MAX_PARAMETERS    = 3;  // Max. parameters of an operation
     constexpr std::size_t MAX_STRING_LENGTH = 20; // Ensure short-string-optimizations
-
-    // Supported Operations
-    enum OpType : std::uint8_t {
-        None,
-        // Standard Operations
-        I,
-        H,
-        X,
-        Y,
-        Z,
-        S,
-        Sdag,
-        T,
-        Tdag,
-        V,
-        Vdag,
-        U3,
-        U2,
-        Phase,
-        SX,
-        SXdag,
-        RX,
-        RY,
-        RZ,
-        SWAP,
-        iSWAP,
-        Peres,
-        Peresdag,
-        // Compound Operation
-        Compound,
-        // Non Unitary Operations
-        Measure,
-        Reset,
-        Snapshot,
-        ShowProbabilities,
-        Barrier,
-        Teleportation,
-        // Classically-controlled Operation
-        ClassicControlled
-    };
 
     class Operation {
     protected:
