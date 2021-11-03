@@ -77,7 +77,7 @@ namespace dd {
     }
 
     inline GateMatrix RZmat(fp lambda) {
-        return GateMatrix{{{-std::cos(lambda / 2.), -std::sin(lambda / 2.)},
+        return GateMatrix{{{std::cos(lambda / 2.), -std::sin(lambda / 2.)},
                            complex_zero,
                            complex_zero,
                            {std::cos(lambda / 2.), std::sin(lambda / 2.)}}};
