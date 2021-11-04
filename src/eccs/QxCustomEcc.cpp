@@ -12,7 +12,7 @@
  * Assume your ECC needs p physical qubits to encode 1 logical qubit, a ancilla qubits and m measurements.
  * >>then q = p+a and c=m.
  */
-QxCustomEcc::QxCustomEcc(qc::QuantumComputation& qc): Ecc({ID::QxCustom, /*q*/-1, /*c*/-1, QxCustomEcc::getName()}, qc) {}
+QxCustomEcc::QxCustomEcc(qc::QuantumComputation& qc, int measureFq): Ecc({ID::QxCustom, /*q*/-1, /*c*/-1, QxCustomEcc::getName()}, qc, measureFq) {}
 
 void QxCustomEcc::writeEncoding() {
     const int nQubits = qc.getNqubits();

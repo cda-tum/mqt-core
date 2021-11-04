@@ -5,7 +5,7 @@
 
 #include "eccs/IdEcc.hpp"
 
-IdEcc::IdEcc(qc::QuantumComputation& qc) : Ecc({ID::Id, 1, 0, IdEcc::getName()}, qc) {
+IdEcc::IdEcc(qc::QuantumComputation& qc, int measureFq) : Ecc({ID::Id, 1, 0, IdEcc::getName()}, qc, measureFq) {
 }
 
 

@@ -5,14 +5,14 @@
 
 #include "eccs/Ecc.hpp"
 
-Ecc::Ecc(struct Info eccInfo, qc::QuantumComputation& quantumcomputation): ecc(eccInfo), qc(quantumcomputation) {
+Ecc::Ecc(struct Info eccInfo, qc::QuantumComputation& quantumcomputation, int measFreq): ecc(eccInfo), qc(quantumcomputation), measureFrequency(measFreq) {
 }
 
 qc::QuantumComputation& Ecc::apply() {
     qc.stripIdleQubits(true, false);
     statistics.nInputQubits = qc.getNqubits();
 	statistics.nOutputQubits = qc.getNqubits()*ecc.nRedundantQubits;
-	statistics.nOutputClassicalBits = qc.getNqubits()*ecc.nClassicalBitsPerQubit;
+	statistics.nOutputClassicalBits = (int)qc.getNqubits()*ecc.nClassicalBitsPerQubit;
 	qcMapped.addQubitRegister(statistics.nOutputQubits);
 	qcMapped.addClassicalRegister(statistics.nOutputClassicalBits);
 
@@ -22,6 +22,9 @@ qc::QuantumComputation& Ecc::apply() {
     for(const auto& gate: qc) {
         nInputGates++;
         mapGate(gate);
+        if(measureFrequency>0 && nInputGates%measureFrequency==0) {
+            measureAndCorrect();
+        }
     }
     statistics.nInputGates = nInputGates;
 

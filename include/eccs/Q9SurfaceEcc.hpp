@@ -3,18 +3,18 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#ifndef QFR_QxCustomEcc_HPP
-#define QFR_QxCustomEcc_HPP
+#ifndef QFR_Q9SurfaceEcc_HPP
+#define QFR_Q9SurfaceEcc_HPP
 
 #include "QuantumComputation.hpp"
 #include "Ecc.hpp"
 
-class QxCustomEcc: public Ecc {
+class Q9SurfaceEcc: public Ecc {
 public:
-    QxCustomEcc(qc::QuantumComputation& qc, int measureFq);
+    Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq);
 
     static const std::string getName() {
-        return "QxCustom";
+        return "Q9Surface";
     }
 
 protected:
@@ -27,4 +27,4 @@ protected:
 	void mapGate(const std::unique_ptr<qc::Operation> &gate) override;
 };
 
-#endif //QFR_QxCustomEcc_HPP
+#endif //QFR_Q9SurfaceEcc_HPP
