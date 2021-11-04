@@ -13,7 +13,7 @@ class Ecc {
 public:
 
     enum ID {
-		Id, Q3Shor, Q9Shor, Q7Steane, QxCustom
+		Id, Q3Shor, Q9Shor, Q7Steane, Q9Surface, QxCustom
 	};
     struct Info {
         ID id;
@@ -24,7 +24,7 @@ public:
 
     const Info ecc;
 
-	Ecc(Info ecc, qc::QuantumComputation& qc);
+	Ecc(Info ecc, qc::QuantumComputation& qc, int measureFrequency);
 	virtual ~Ecc() = default;
 
 	qc::QuantumComputation& apply();
@@ -50,6 +50,7 @@ protected:
     qc::QuantumComputation& qc;
 	qc::QuantumComputation qcMapped;
 	EccStatistics statistics{};
+	const int measureFrequency;
 
 	virtual void writeEncoding()=0;
 

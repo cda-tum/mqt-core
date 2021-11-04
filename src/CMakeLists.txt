@@ -30,6 +30,7 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Q3ShorEcc.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Q7SteaneEcc.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Q9ShorEcc.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Q9SurfaceEcc.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/eccs/QxCustomEcc.cpp
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
@@ -61,6 +62,7 @@ add_library(${PROJECT_NAME}
             ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q3ShorEcc.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q7SteaneEcc.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q9ShorEcc.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q9SurfaceEcc.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/QxCustomEcc.hpp)
 
 # set include directories

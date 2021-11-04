@@ -11,7 +11,7 @@
 
 class Q7SteaneEcc: public Ecc {
 public:
-    Q7SteaneEcc(qc::QuantumComputation& qc);
+    Q7SteaneEcc(qc::QuantumComputation& qc, int measureFq);
 
     static const std::string getName() {
         return "Q7Steane";

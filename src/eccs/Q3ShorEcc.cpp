@@ -6,7 +6,7 @@
 #include "eccs/Q3ShorEcc.hpp"
 
 //3 data qubits, 2 for measuring -> 5 qubits per physical qubit
-Q3ShorEcc::Q3ShorEcc(qc::QuantumComputation& qc): Ecc({ID::Q3Shor, 5, 2, Q3ShorEcc::getName()}, qc) {}
+Q3ShorEcc::Q3ShorEcc(qc::QuantumComputation& qc, int measureFq): Ecc({ID::Q3Shor, 5, 2, Q3ShorEcc::getName()}, qc, measureFq) {}
 
 void Q3ShorEcc::writeEncoding() {
 	const int nQubits = qc.getNqubits();

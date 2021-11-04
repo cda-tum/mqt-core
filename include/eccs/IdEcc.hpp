@@ -11,7 +11,7 @@
 
 class IdEcc: public Ecc {
 public:
-    IdEcc(qc::QuantumComputation& qc);
+    IdEcc(qc::QuantumComputation& qc, int measureFq);
 
     static const std::string getName() {
         return "Id";
