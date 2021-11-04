@@ -22,6 +22,8 @@ void Q3ShorEcc::measureAndCorrect() {
     const int nQubits = qc.getNqubits();
     for(int i=0;i<nQubits;i++) {
 
+		qcMapped.reset(i+3*nQubits);
+        qcMapped.reset(i+4*nQubits);
         qcMapped.h(i+3*nQubits);
         qcMapped.h(i+4*nQubits);
         auto c3 = dd::Control{dd::Qubit(i+3*nQubits), dd::Control::Type::pos};
