@@ -89,22 +89,22 @@ void Q9ShorEcc::measureAndCorrect() {
 
         //CORRECT
         //x, i.e. bit flip errors
-        qcMapped.x(q[0], {ca[0], cna[1]});
-        qcMapped.x(q[1], {ca[0], ca[1]});
-        qcMapped.x(q[2], {cna[0], ca[1]});
+        writeToffoli(i, a[0], true, a[1], false);
+        writeToffoli(i+1*nQubits, a[0], true, a[1], true);
+        writeToffoli(i+2*nQubits, a[0], false, a[1], true);
 
-        qcMapped.x(q[3], {ca[2], cna[3]});
-        qcMapped.x(q[4], {ca[2], ca[3]});
-        qcMapped.x(q[5], {cna[2], ca[3]});
+        writeToffoli(i+3*nQubits, a[2], true, a[3], false);
+        writeToffoli(i+4*nQubits, a[2], true, a[3], true);
+        writeToffoli(i+5*nQubits, a[2], false, a[3], true);
 
-        qcMapped.x(q[6], {ca[4], cna[5]});
-        qcMapped.x(q[7], {ca[4], ca[5]});
-        qcMapped.x(q[8], {cna[4], ca[5]});
+        writeToffoli(i+6*nQubits, a[4], true, a[5], false);
+        writeToffoli(i+7*nQubits, a[4], true, a[5], true);
+        writeToffoli(i+8*nQubits, a[4], false, a[5], true);
 
         //z, i.e. phase flip errors
-        qcMapped.z(q[0], {ca[6], cna[7]});
-        qcMapped.z(q[3], {ca[6], ca[7]});
-        qcMapped.z(q[6], {cna[6], ca[7]});
+        writeZToffoli(i, a[6], true, a[7], false);
+        writeZToffoli(i+3*nQubits, a[6], true, a[7], true);
+        writeZToffoli(i+6*nQubits, a[6], false, a[7], true);
 
     }
 }
@@ -126,9 +126,9 @@ void Q9ShorEcc::writeDecoding() {
         qcMapped.x(i+7*nQubits, ci[6]);
         qcMapped.x(i+8*nQubits, ci[6]);
 
-        qcMapped.x(i, {ci[1], ci[2]});
-        qcMapped.x(i+3*nQubits, {ci[4], ci[5]});
-        qcMapped.x(i+6*nQubits, {ci[7], ci[8]});
+        writeToffoli(i, i+nQubits, true, i+2*nQubits, true);
+        writeToffoli(i+3*nQubits, i+4*nQubits, true, i+5*nQubits, true);
+        writeToffoli(i+6*nQubits, i+7*nQubits, true, i+8*nQubits, true);
 
         qcMapped.h(i);
         qcMapped.h(i+3*nQubits);
@@ -136,12 +136,13 @@ void Q9ShorEcc::writeDecoding() {
 
         qcMapped.x(i+3*nQubits, ci[0]);
         qcMapped.x(i+6*nQubits, ci[0]);
-        qcMapped.x(i, {ci[3], ci[6]});
+        writeToffoli(i, i+3*nQubits, true, i+6*nQubits, true);
     }
 }
 
 void Q9ShorEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
     const int nQubits = qc.getNqubits();
+    qc::NonUnitaryOperation *measureGate=nullptr;
     int i;
     auto type = qc::I;
     switch(gate.get()->getType()) {
@@ -154,7 +155,17 @@ void Q9ShorEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
         type = qc::Y; break;
     case qc::Z:
         type = qc::X; break;
-
+    case qc::Measure:
+        if(!decodingDone) {
+            measureAndCorrect();
+            writeDecoding();
+            decodingDone = true;
+        }
+        measureGate = (qc::NonUnitaryOperation*)gate.get();
+        for(std::size_t j=0;j<measureGate->getNclassics();j++) {
+            qcMapped.measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
+        }
+        break;
     case qc::S:
     case qc::Sdag:
     case qc::T:
