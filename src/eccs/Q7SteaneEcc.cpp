@@ -135,6 +135,7 @@ void Q7SteaneEcc::writeDecoding() {
 
 void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
     const int nQubits = qc.getNqubits();
+    qc::NonUnitaryOperation *measureGate=nullptr;
     switch(gate.get()->getType()) {
     case qc::I: break;
     case qc::X:
@@ -184,6 +185,17 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
             }
         }
         break;
+    case qc::Measure:
+        if(!decodingDone) {
+            measureAndCorrect();
+            writeDecoding();
+            decodingDone = true;
+        }
+        measureGate = (qc::NonUnitaryOperation*)gate.get();
+        for(std::size_t j=0;j<measureGate->getNclassics();j++) {
+            qcMapped.measure(measureGate->getClassics()[j], measureGate->getTargets()[j]);
+        }
+        break;
     case qc::T:
     case qc::Tdag:
     case qc::V:
@@ -204,8 +216,6 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
     case qc::ClassicControlled:
     default:
         gateNotAvailableError(gate);
-    case qc::Measure:
-    break;
     }
 }
 

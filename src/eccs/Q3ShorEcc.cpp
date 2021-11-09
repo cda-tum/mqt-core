@@ -21,8 +21,7 @@ void Q3ShorEcc::writeEncoding() {
 void Q3ShorEcc::measureAndCorrect() {
     const int nQubits = qc.getNqubits();
     for(int i=0;i<nQubits;i++) {
-
-		qcMapped.reset(i+3*nQubits);
+        qcMapped.reset(i+3*nQubits);
         qcMapped.reset(i+4*nQubits);
         qcMapped.h(i+3*nQubits);
         qcMapped.h(i+4*nQubits);
@@ -41,9 +40,9 @@ void Q3ShorEcc::measureAndCorrect() {
         auto cn3 = dd::Control{dd::Qubit(i+3*nQubits), dd::Control::Type::neg};
         auto cn4 = dd::Control{dd::Qubit(i+4*nQubits), dd::Control::Type::neg};
 
-        qcMapped.x(i, {c3, cn4});
-        qcMapped.x(i+nQubits, {c3, c4});
-        qcMapped.x(i+2*nQubits, {cn3, c4});
+        writeToffoli(i, i+3*nQubits, true, i+4*nQubits, false);
+        writeToffoli(i+nQubits, i+3*nQubits, true, i+4*nQubits, true);
+        writeToffoli(i+2*nQubits, i+3*nQubits, false, i+4*nQubits, true);
     }
 }
 
@@ -54,15 +53,13 @@ void Q3ShorEcc::writeDecoding() {
         qcMapped.x(i+nQubits, ctrl);
         qcMapped.x(i+2*nQubits, ctrl);
 
-        dd::Controls ctrls;
-        ctrls.insert(dd::Control{dd::Qubit(i+nQubits), dd::Control::Type::pos});
-        ctrls.insert(dd::Control{dd::Qubit(i+2*nQubits)});
-        qcMapped.x(i, ctrls);
+        writeToffoli(i, i+nQubits, true, i+2*nQubits, true);
     }
 }
 
 void Q3ShorEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
     const int nQubits = qc.getNqubits();
+    qc::NonUnitaryOperation *measureGate=nullptr;
     switch(gate.get()->getType()) {
     case qc::I: break;
     case qc::X:
@@ -90,6 +87,17 @@ void Q3ShorEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
                 qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+nQubits, gate.get()->getType());
                 qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+2*nQubits, gate.get()->getType());
             }
+        }
+        break;
+    case qc::Measure:
+        if(!decodingDone) {
+            measureAndCorrect();
+            writeDecoding();
+            decodingDone = true;
+        }
+        measureGate = (qc::NonUnitaryOperation*)gate.get();
+        for(std::size_t j=0;j<measureGate->getNclassics();j++) {
+            qcMapped.measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
         }
         break;
     case qc::V:

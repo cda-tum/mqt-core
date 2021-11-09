@@ -51,6 +51,7 @@ protected:
 	qc::QuantumComputation qcMapped;
 	EccStatistics statistics{};
 	const int measureFrequency;
+	bool decodingDone;
 
 	virtual void writeEncoding()=0;
 
@@ -61,6 +62,9 @@ protected:
 	virtual void mapGate(const std::unique_ptr<qc::Operation> &gate)=0;
 
 	void gateNotAvailableError(const std::unique_ptr<qc::Operation> &gate);
+
+	void writeToffoli(int target, int c1, bool p1, int c2, bool p2);
+	void writeZToffoli(int target, int c1, bool p1, int c2, bool p2);
 
 };
 

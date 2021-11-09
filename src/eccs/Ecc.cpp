@@ -6,6 +6,7 @@
 #include "eccs/Ecc.hpp"
 
 Ecc::Ecc(struct Info eccInfo, qc::QuantumComputation& quantumcomputation, int measFreq): ecc(eccInfo), qc(quantumcomputation), measureFrequency(measFreq) {
+    decodingDone=false;
 }
 
 qc::QuantumComputation& Ecc::apply() {
@@ -28,9 +29,12 @@ qc::QuantumComputation& Ecc::apply() {
     }
     statistics.nInputGates = nInputGates;
 
-    measureAndCorrect();
+    if(!decodingDone) {
+        measureAndCorrect();
+        writeDecoding();
+        decodingDone = true;
+    }
 
-    writeDecoding();
 
     statistics.nOutputGates = qcMapped.getNindividualOps();
 
@@ -65,5 +69,35 @@ void Ecc::dumpResult(const std::string& outputFilename) {
 
 void Ecc::gateNotAvailableError(const std::unique_ptr<qc::Operation> &gate) {
     throw qc::QFRException(std::string("Gate ") + gate.get()->getName() + " not possible to encode in error code " + ecc.name + "!");
+}
+
+void Ecc::writeToffoli(int target, int c1, bool p1, int c2, bool p2) {
+    if(!p1) { qcMapped.x(c1);    }
+    if(!p2) { qcMapped.x(c2);    }
+
+    qcMapped.h(target);
+    qcMapped.x(target, dd::Control{c2});
+    qcMapped.tdag(target);
+    qcMapped.x(target, dd::Control{c1});
+    qcMapped.t(target);
+    qcMapped.x(target, dd::Control{c2});
+    qcMapped.tdag(target);
+    qcMapped.x(target, dd::Control{c1});
+    qcMapped.t(target);
+    qcMapped.t(c2);
+    qcMapped.h(target);
+    qcMapped.x(c2, dd::Control{c1});
+    qcMapped.t(c1);
+    qcMapped.tdag(c2);
+    qcMapped.x(c2, dd::Control{c1});
+
+    if(!p1) { qcMapped.x(c1);    }
+    if(!p2) { qcMapped.x(c2);    }
+}
+
+void Ecc::writeZToffoli(int target, int c1, bool p1, int c2, bool p2) {
+    qcMapped.h(target);
+    writeToffoli(target, c1, p1, c2, p2);
+    qcMapped.h(target);
 }
 
