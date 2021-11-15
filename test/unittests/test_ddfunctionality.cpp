@@ -183,3 +183,19 @@ TEST_F(DDFunctionality, non_unitary) {
         EXPECT_FALSE(barrier.actsOn(i));
     }
 }
+
+TEST_F(DDFunctionality, CircuitEquivalence) {
+    // verify that the IBM decomposition of the H gate into RZ-SX-RZ works as expected (i.e., realizes H up to a global phase)
+    qc::QuantumComputation qc1(1);
+    qc1.h(0);
+
+    qc::QuantumComputation qc2(1);
+    qc2.rz(0, dd::PI_2);
+    qc2.sx(0);
+    qc2.rz(0, dd::PI_2);
+
+    qc::MatrixDD dd1 = qc1.buildFunctionality(dd);
+    qc::MatrixDD dd2 = qc2.buildFunctionality(dd);
+
+    EXPECT_EQ(dd1.p, dd2.p);
+}

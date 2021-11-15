@@ -11,11 +11,14 @@ on:
 
 env:
   CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-  CIBW_BUILD: cp3?-*
-  CIBW_SKIP: "*-win32 *-manylinux_i686 cp35-*"
-  CIBW_BUILD_VERBOSITY: 3
-  CIBW_TEST_COMMAND: "python -c \"from jkq import qfr\""
-  CIBW_BEFORE_BUILD: "pip install cmake"
+  CIBW_BUILD:                  cp3*
+  CIBW_ENVIRONMENT:            "DEPLOY=ON"
+  CIBW_ARCHS_MACOS:            "x86_64 arm64"
+  CIBW_TEST_SKIP:              "*_arm64"
+  CIBW_SKIP:                   "*-win32 *-musllinux_i686 *-manylinux_i686"
+  CIBW_BUILD_VERBOSITY:        3
+  CIBW_TEST_COMMAND:           "python -c \"from jkq import qfr\""
+  CIBW_BEFORE_BUILD:           "pip install cmake"
 
 jobs:
   build_wheels:
@@ -32,7 +35,7 @@ jobs:
           submodules: recursive
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Build wheels
-        uses: pypa/cibuildwheel@v1.11.1
+        uses: pypa/cibuildwheel@v2.2.2
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
@@ -48,7 +51,7 @@ jobs:
       - uses: actions/setup-python@v2
         name: Install Python
         with:
-          python-version: '3.8'
+          python-version: '3.9'
 
       - name: Install dependencies
         run: |
