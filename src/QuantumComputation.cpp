@@ -744,18 +744,13 @@ namespace qc {
         }
     }
 
-    void QuantumComputation::extractProbabilityVector(const VectorDD& in, std::vector<dd::fp>& probVector, std::unique_ptr<dd::Package>& dd) {
+    void QuantumComputation::extractProbabilityVector(const VectorDD& in, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package>& dd) {
         // ! initial layout, output permutation and garbage qubits are currently not supported here
-
         dd->incRef(in);
-        std::map<std::size_t, char> measurements{};
-        // the number of classics dictates the size of the resulting probability vector
-        probVector = std::vector<dd::fp>(1ULL << nclassics);
-
-        extractProbabilityVectorRecursive(in, ops.begin(), measurements, 1., probVector, dd);
+        extractProbabilityVectorRecursive(in, ops.begin(), std::map<std::size_t, char>{}, 1., probVector, dd);
     }
 
-    void QuantumComputation::extractProbabilityVectorRecursive(const VectorDD& currentState, decltype(ops.begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, std::vector<dd::fp>& probVector, std::unique_ptr<dd::Package>& dd) {
+    void QuantumComputation::extractProbabilityVectorRecursive(const VectorDD& currentState, decltype(ops.begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package>& dd) {
         auto state = currentState;
         for (auto it = currentIt; it != ops.end(); ++it) {
             auto& op = (*it);

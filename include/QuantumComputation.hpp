@@ -452,8 +452,8 @@ namespace qc {
         virtual MatrixDD                           buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const;
         virtual bool                               buildFunctionalityRecursive(std::size_t depth, std::size_t opIdx, std::stack<MatrixDD>& s, Permutation& permutation, std::unique_ptr<dd::Package>& dd) const;
 
-        virtual void extractProbabilityVector(const VectorDD& in, std::vector<dd::fp>& probVector, std::unique_ptr<dd::Package>& dd);
-        virtual void extractProbabilityVectorRecursive(const VectorDD& currentState, decltype(ops.begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, std::vector<dd::fp>& probVector, std::unique_ptr<dd::Package>& dd);
+        virtual void extractProbabilityVector(const VectorDD& in, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package>& dd);
+        virtual void extractProbabilityVectorRecursive(const VectorDD& currentState, decltype(ops.begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package>& dd);
         /**
 		 * printing
 		 */
