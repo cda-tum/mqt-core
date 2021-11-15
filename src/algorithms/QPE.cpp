@@ -6,8 +6,8 @@
 #include "algorithms/QPE.hpp"
 
 namespace qc {
-    QPE::QPE(dd::QubitCount nq, bool exact):
-        precision(nq) {
+    QPE::QPE(dd::QubitCount nq, bool exact, bool iterative):
+        precision(nq), iterative(iterative) {
         if (exact) {
             // if an exact solution is wanted, generate a random n-bit number and convert it to an appropriate phase
             std::uint_least64_t max          = 1ULL << nq;
@@ -18,11 +18,10 @@ namespace qc {
             }
             lambda = 0.;
             for (std::size_t i = 0; i < nq; ++i) {
-                if (theta & (1 << (nq - i - 1))) {
-                    lambda += 1. / (1 << i);
+                if (theta & (1ULL << (nq - i - 1))) {
+                    lambda += 1. / static_cast<double>(1ULL << i);
                 }
             }
-            createCircuit();
         } else {
             // if an inexact solution is wanted, generate a random n+1-bit number (that has its last bit set) and convert it to an appropriate phase
             std::uint_least64_t max          = 1ULL << (nq + 1);
@@ -33,16 +32,16 @@ namespace qc {
             }
             lambda = 0.;
             for (std::size_t i = 0; i <= nq; ++i) {
-                if (theta & (1 << (nq - i))) {
-                    lambda += 1. / (1 << i);
+                if (theta & (1ULL << (nq - i))) {
+                    lambda += 1. / static_cast<double>(1ULL << i);
                 }
             }
-            createCircuit();
         }
+        createCircuit();
     }
 
-    QPE::QPE(dd::fp lambda, dd::QubitCount precision):
-        lambda(lambda), precision(precision) {
+    QPE::QPE(dd::fp lambda, dd::QubitCount precision, bool iterative):
+        lambda(lambda), precision(precision), iterative(iterative) {
         createCircuit();
     }
 
@@ -52,47 +51,82 @@ namespace qc {
         os << "\tm: " << getNindividualOps() << std::endl;
         os << "\tlambda: " << lambda << "π" << std::endl;
         os << "\tprecision: " << static_cast<std::size_t>(precision) << std::endl;
+        os << "\titerative: " << iterative << std::endl;
         os << "--------------" << std::endl;
         return os;
     }
 
     void QPE::createCircuit() {
         addQubitRegister(1, "psi");
-        addQubitRegister(precision, "q");
+
+        if (iterative) {
+            addQubitRegister(1, "q");
+        } else {
+            addQubitRegister(precision, "q");
+        }
+
         addClassicalRegister(precision, "c");
 
-        //Hadamard Layer
-        for (dd::QubitCount i = 1; i <= precision; i++) {
-            h(static_cast<dd::Qubit>(i));
-        }
-        //prepare eigenvalue
+        // prepare eigenvalue
         x(0);
 
-        //Controlled Phase Rotation
-        for (dd::QubitCount i = 0; i < precision; i++) {
-            // normalize angle
-            const auto angle = std::remainder((1U << i) * lambda, 2.0);
-            phase(0, dd::Control{static_cast<dd::Qubit>(precision - i)}, angle * dd::PI);
-        }
+        if (iterative) {
+            for (dd::QubitCount i = 0; i < precision; i++) {
+                // Hadamard
+                h(1);
 
-        //Inverse QFT
-        for (dd::QubitCount i = 1; i <= precision; ++i) {
-            for (dd::QubitCount j = 1; j < i; j++) {
-                auto iQFT_lambda = -dd::PI / (1U << (i - j));
-                if (j == i - 1) {
-                    sdag(static_cast<dd::Qubit>(i), dd::Control{static_cast<dd::Qubit>(i - 1)});
-                } else if (j == i - 2) {
-                    tdag(static_cast<dd::Qubit>(i), dd::Control{static_cast<dd::Qubit>(i - 2)});
-                } else {
-                    phase(static_cast<dd::Qubit>(i), dd::Control{static_cast<dd::Qubit>(j)}, iQFT_lambda);
+                // normalize angle
+                const auto angle = std::remainder(static_cast<double>(1ULL << (precision - 1 - i)) * lambda, 2.0);
+
+                // controlled phase rotation
+                phase(0, 1_pc, angle * dd::PI);
+
+                // hybrid quantum-classical inverse QFT
+                for (dd::QubitCount j = 0; j < i; j++) {
+                    auto                           iQFT_lambda = -dd::PI / static_cast<double>(1ULL << (i - j));
+                    std::unique_ptr<qc::Operation> op          = std::make_unique<StandardOperation>(nqubits, 1, Phase, iQFT_lambda);
+                    emplace_back<ClassicControlledOperation>(op, std::pair{static_cast<dd::Qubit>(j), 1U}, 1);
                 }
-            }
-            h(static_cast<dd::Qubit>(i));
-        }
+                h(1);
 
-        //Measure Results
-        for (dd::QubitCount i = 0; i < nqubits - 1; i++) {
-            measure(static_cast<dd::Qubit>(i + 1), i);
+                // measure result
+                measure(1, i);
+
+                // reset qubit if not finished
+                if (i < precision - 1)
+                    reset(1);
+            }
+        } else {
+            // Hadamard Layer
+            for (dd::QubitCount i = 1; i <= precision; i++) {
+                h(static_cast<dd::Qubit>(i));
+            }
+
+            for (dd::QubitCount i = 0; i < precision; i++) {
+                // normalize angle
+                const auto angle = std::remainder(static_cast<double>(1ULL << (precision - 1 - i)) * lambda, 2.0);
+
+                // controlled phase rotation
+                phase(0, dd::Control{static_cast<dd::Qubit>(1 + i)}, angle * dd::PI);
+
+                // inverse QFT
+                for (dd::QubitCount j = 1; j < 1 + i; j++) {
+                    auto iQFT_lambda = -dd::PI / static_cast<double>(2ULL << (i - j));
+                    if (j == i) {
+                        sdag(static_cast<dd::Qubit>(1 + i), dd::Control{static_cast<dd::Qubit>(i)});
+                    } else if (j == i - 1) {
+                        tdag(static_cast<dd::Qubit>(1 + i), dd::Control{static_cast<dd::Qubit>(i - 1)});
+                    } else {
+                        phase(static_cast<dd::Qubit>(1 + i), dd::Control{static_cast<dd::Qubit>(j)}, iQFT_lambda);
+                    }
+                }
+                h(static_cast<dd::Qubit>(1 + i));
+            }
+
+            // measure results
+            for (dd::QubitCount i = 0; i < nqubits - 1; i++) {
+                measure(static_cast<dd::Qubit>(i + 1), i);
+            }
         }
     }
 } // namespace qc

@@ -4,7 +4,6 @@
 */
 
 #include "CircuitOptimizer.hpp"
-#include "algorithms/IQPE.hpp"
 #include "algorithms/QPE.hpp"
 
 #include "gtest/gtest.h"
@@ -39,7 +38,7 @@ protected:
         qpeNgates = qpe->getNindividualOps();
 
         const auto lambda = dynamic_cast<qc::QPE*>(qpe.get())->lambda;
-        iqpe              = std::make_unique<qc::IQPE>(lambda, precision);
+        iqpe              = std::make_unique<qc::QPE>(lambda, precision, true);
         iqpeNgates        = iqpe->getNindividualOps();
 
         std::cout << "Estimating lambda = " << lambda << "π up to " << static_cast<std::size_t>(precision) << "-bit precision." << std::endl;
@@ -59,15 +58,15 @@ protected:
             expansion *= 2;
         }
 
-        expectedResult = 0U;
+        expectedResult = 0ULL;
         for (std::size_t i = 0; i < precision; ++i) {
             if (binaryExpansion.test(i)) {
-                expectedResult |= (1U << (precision - 1 - i));
+                expectedResult |= (1ULL << (precision - 1 - i));
             }
         }
         std::stringstream ss{};
         for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
-            if (expectedResult & (1U << i)) {
+            if (expectedResult & (1ULL << i)) {
                 ss << 1;
             } else {
                 ss << 0;
@@ -81,7 +80,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalExactQPE,
-                         testing::Range<std::size_t>(1U, 10U),
+                         testing::Range<std::size_t>(1U, 40U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
                              dd::QubitCount nqubits = info.param;
                              std::stringstream ss{};
@@ -164,15 +163,17 @@ TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
     const auto simulation_end = std::chrono::steady_clock::now();
 
     // extract measurement probabilities from IQPE simulations
-    std::vector<dd::fp> probs{};
+    dd::ProbabilityVector probs{};
     iqpe->extractProbabilityVector(dd->makeZeroState(iqpe->getNqubits()), probs, dd);
     const auto extraction_end = std::chrono::steady_clock::now();
 
-    // interleave with zeros to account for 0 qubit
-    auto stub = std::vector<dd::fp>(1 << (qpe->getNqubits()));
-    for (std::size_t i = 1; i < stub.size(); i += 2) {
-        stub.at(i) = probs.at((i - 1) / 2);
+    // extend to account for 0 qubit
+    auto stub = dd::ProbabilityVector{};
+    stub.reserve(probs.size());
+    for (const auto& [state, prob]: probs) {
+        stub[2ULL * state + 1] = prob;
     }
+
     // compare outcomes
     auto       fidelity       = dd->fidelityOfMeasurementOutcomes(e, stub);
     const auto comparison_end = std::chrono::steady_clock::now();
@@ -218,7 +219,7 @@ protected:
         qpeNgates = qpe->getNindividualOps();
 
         const auto lambda = dynamic_cast<qc::QPE*>(qpe.get())->lambda;
-        iqpe              = std::make_unique<qc::IQPE>(lambda, precision);
+        iqpe              = std::make_unique<qc::QPE>(lambda, precision, true);
         iqpeNgates        = iqpe->getNindividualOps();
 
         std::cout << "Estimating lambda = " << lambda << "π up to " << static_cast<std::size_t>(precision) << "-bit precision." << std::endl;
@@ -238,15 +239,15 @@ protected:
             expansion *= 2;
         }
 
-        expectedResult = 0U;
+        expectedResult = 0ULL;
         for (std::size_t i = 0; i < precision; ++i) {
             if (binaryExpansion.test(i)) {
-                expectedResult |= (1U << (precision - 1 - i));
+                expectedResult |= (1ULL << (precision - 1 - i));
             }
         }
         std::stringstream ss{};
         for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
-            if (expectedResult & (1U << i)) {
+            if (expectedResult & (1ULL << i)) {
                 ss << 1;
             } else {
                 ss << 0;
@@ -257,7 +258,7 @@ protected:
         secondExpectedResult = expectedResult + 1;
         ss.str("");
         for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
-            if (secondExpectedResult & (1U << i)) {
+            if (secondExpectedResult & (1ULL << i)) {
                 ss << 1;
             } else {
                 ss << 0;
@@ -271,7 +272,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalInexactQPE,
-                         testing::Range<std::size_t>(1U, 10U),
+                         testing::Range<std::size_t>(1U, 15U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalInexactQPE::ParamType>& info) {
             dd::QubitCount nqubits = info.param;
             std::stringstream ss{};
@@ -350,7 +351,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
     const auto start = std::chrono::steady_clock::now();
     // extract measurement probabilities from IQPE simulations
-    std::vector<dd::fp> probs{};
+    dd::ProbabilityVector probs{};
     iqpe->extractProbabilityVector(dd->makeZeroState(iqpe->getNqubits()), probs, dd);
     const auto extraction_end = std::chrono::steady_clock::now();
     std::cout << "---- extraction done ----" << std::endl;
@@ -360,11 +361,13 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
     const auto simulation_end = std::chrono::steady_clock::now();
     std::cout << "---- sim done ----" << std::endl;
 
-    // interleave with zeros to account for 0 qubit
-    auto stub = std::vector<dd::fp>(1 << (qpe->getNqubits()));
-    for (std::size_t i = 1; i < stub.size(); i += 2) {
-        stub.at(i) = probs.at((i - 1) / 2);
+    // extend to account for 0 qubit
+    auto stub = dd::ProbabilityVector{};
+    stub.reserve(probs.size());
+    for (const auto& [state, prob]: probs) {
+        stub[2 * state + 1] = prob;
     }
+
     // compare outcomes
     auto       fidelity       = dd->fidelityOfMeasurementOutcomes(e, stub);
     const auto comparison_end = std::chrono::steady_clock::now();
