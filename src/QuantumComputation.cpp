@@ -763,7 +763,7 @@ namespace qc {
                 auto        actualValue       = 0U;
                 // determine the actual value from measurements
                 for (std::size_t j = 0; j < controlRegister.second; ++j) {
-                    actualValue |= (measurements[controlRegister.first + j] == '1') ? (1U << j) : 0U;
+                    actualValue |= (measurements[controlRegister.first + j] == '1') ? (1ULL << j) : 0U;
                 }
 
                 // do not apply an operation if the value is not the expected one
@@ -825,12 +825,12 @@ namespace qc {
 
                 // base case -> determine the basis state from the measurement and safe the probability
                 if (measurements.size() == nclassics - 1) {
-                    std::size_t idx0 = 0;
-                    std::size_t idx1 = 0;
+                    std::uint_least64_t idx0 = 0;
+                    std::uint_least64_t idx1 = 0;
                     for (std::size_t i = 0; i < nclassics; ++i) {
                         // if this is the qubit being measured and the result is one
                         if (i == static_cast<std::size_t>(classics[0])) {
-                            idx1 |= (1 << i);
+                            idx1 |= (1ULL << i);
                         } else {
                             // sanity check
                             auto findIt = measurements.find(i);
@@ -839,13 +839,20 @@ namespace qc {
                             }
                             // if i-th bit is set increase the index appropriately
                             if (findIt->second == '1') {
-                                idx0 |= (1 << i);
-                                idx1 |= (1 << i);
+                                idx0 |= (1ULL << i);
+                                idx1 |= (1ULL << i);
                             }
                         }
                     }
-                    probVector.at(idx0) = commonFactor * pzero;
-                    probVector.at(idx1) = commonFactor * pone;
+                    const auto prob0 = commonFactor * pzero;
+                    if (!dd::ComplexTable<>::Entry::approximatelyZero(prob0)) {
+                        probVector[idx0] = prob0;
+                    }
+                    const auto prob1 = commonFactor * pone;
+                    if (!dd::ComplexTable<>::Entry::approximatelyZero(prob1)) {
+                        probVector[idx1] = prob1;
+                    }
+
                     // probabilities have been written -> this path is done
                     dd->decRef(state);
                     return;
