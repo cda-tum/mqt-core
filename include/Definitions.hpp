@@ -59,7 +59,7 @@ namespace qc {
         }
     };
 
-    constexpr dd::fp PARAMETER_TOLERANCE = 10e-6;
+    constexpr dd::fp PARAMETER_TOLERANCE = 1e-13;
 
     // forward declaration
     class Operation;
