@@ -649,6 +649,8 @@ namespace qc {
                 // reverse the order of the bits so that measurements follow big-endian convention
                 counts[measurement]++;
             }
+            // reduce reference count of measured state
+            dd->decRef(e);
 
             std::map<std::string, std::size_t> actualCounts{};
             for (const auto& [bitstring, count]: counts) {
@@ -731,9 +733,8 @@ namespace qc {
                     dd->garbageCollect();
                 }
 
-                // correct permutation if necessary
-                changePermutation(e, permutation, outputPermutation, dd);
-                e = dd->reduceGarbage(e, garbage);
+                // reduce reference count of measured state
+                dd->decRef(e);
 
                 std::string shot(nclassics, '0');
                 for (const auto& [bit, value]: measurements) {
