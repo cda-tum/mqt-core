@@ -23,9 +23,11 @@ namespace qc {
         void full_grover(QuantumComputation& qc) const;
 
     public:
-        std::size_t seed        = 0;
-        std::size_t targetValue = 0;
-        std::size_t iterations  = 1;
+        std::size_t    seed        = 0;
+        BitString      targetValue = 0;
+        std::size_t    iterations  = 1;
+        std::string    expected{};
+        dd::QubitCount nDataQubits{};
 
         explicit Grover(dd::QubitCount nq, std::size_t seed = 0);
 
