@@ -6,23 +6,29 @@
 #ifndef QFR_BV_H
 #define QFR_BV_H
 
+#include <bitset>
+
 #include <QuantumComputation.hpp>
+
+using namespace dd::literals;
 
 namespace qc {
     class BernsteinVazirani: public QuantumComputation {
-    protected:
-        void setup();
-        void oracle();
-        void postProcessing();
-        void full_BernsteinVazirani();
-
     public:
-        std::size_t    hiddenInteger = 0;
-        dd::QubitCount size          = 0;
+        using BitString = std::bitset<std::numeric_limits<dd::QubitCount>::max()>;
 
-        explicit BernsteinVazirani(std::size_t hiddenInt);
+        BitString      s        = 0;
+        dd::QubitCount bitwidth = 1;
+        bool           dynamic  = false;
+        std::string    expected{};
+
+        explicit BernsteinVazirani(const BitString& s, bool dynamic = false);
+        explicit BernsteinVazirani(dd::QubitCount nq, bool dynamic = false);
 
         std::ostream& printStatistics(std::ostream& os) const override;
+
+    protected:
+        void createCircuit();
     };
 } // namespace qc
 #endif //QFR_BV_H
