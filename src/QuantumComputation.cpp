@@ -644,25 +644,25 @@ namespace qc {
             // measure all qubits
             std::map<std::string, std::size_t> counts{};
             for (std::size_t i = 0; i < shots; ++i) {
+                // measure all returns a string of the form "q(n-1) ... q(0)"
                 auto measurement = dd->measureAll(e, false, mt);
                 // reverse the order of the bits so that measurements follow big-endian convention
-                std::reverse(measurement.begin(), measurement.end());
                 counts[measurement]++;
             }
-            std::map<std::string, std::size_t> actualCounts{};
 
+            std::map<std::string, std::size_t> actualCounts{};
             for (const auto& [bitstring, count]: counts) {
                 std::string measurement(nclassics, '0');
                 if (hasMeasurements) {
                     // if the circuit contains measurements, we only want to return the measured bits
                     for (const auto& [qubit, bit]: measurementMap) {
                         // measurement map specifies that the circuit `qubit` is measured into a certain `bit`
-                        measurement[bit] = bitstring[qubit];
+                        measurement[nclassics - 1 - bit] = bitstring[bitstring.size() - 1 - qubit];
                     }
                 } else {
                     // otherwise, we consider the output permutation for determining where to measure the qubits to
                     for (const auto& [qubit, bit]: outputPermutation) {
-                        measurement[bit] = bitstring[qubit];
+                        measurement[nclassics - 1 - bit] = bitstring[bitstring.size() - 1 - qubit];
                     }
                 }
                 actualCounts[measurement] += count;
