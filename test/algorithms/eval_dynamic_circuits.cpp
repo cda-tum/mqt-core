@@ -418,7 +418,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalBV,
-                         testing::Range<std::size_t>(1U, 128U),
+                         testing::Range<std::size_t>(1U, 64U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
                              dd::QubitCount nqubits = info.param;
                              std::stringstream ss{};
