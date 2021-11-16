@@ -14,8 +14,6 @@ using namespace dd::literals;
 namespace qc {
     class BernsteinVazirani: public QuantumComputation {
     public:
-        using BitString = std::bitset<std::numeric_limits<dd::QubitCount>::max()>;
-
         BitString      s        = 0;
         dd::QubitCount bitwidth = 1;
         bool           dynamic  = false;
