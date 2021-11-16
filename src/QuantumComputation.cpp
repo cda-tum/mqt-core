@@ -710,10 +710,12 @@ namespace qc {
                         auto*       classicControlled = dynamic_cast<ClassicControlledOperation*>(op.get());
                         const auto& controlRegister   = classicControlled->getControlRegister();
                         const auto& expectedValue     = classicControlled->getExpectedValue();
-                        auto        actualValue       = 0U;
+                        auto        actualValue       = 0ULL;
                         // determine the actual value from measurements
                         for (std::size_t j = 0; j < controlRegister.second; ++j) {
-                            actualValue |= (measurements[controlRegister.first + j] == '1') ? (1U << j) : 0U;
+                            if (measurements[controlRegister.first + j] == '1') {
+                                actualValue |= 1ULL << j;
+                            }
                         }
 
                         // do not apply an operation if the value is not the expected one
