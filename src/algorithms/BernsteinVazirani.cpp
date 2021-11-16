@@ -27,6 +27,11 @@ namespace qc {
         createCircuit();
     }
 
+    BernsteinVazirani::BernsteinVazirani(const BitString& s, dd::QubitCount nq, bool dynamic):
+        s(s), bitwidth(nq), dynamic(dynamic) {
+        createCircuit();
+    }
+
     std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) const {
         os << "BernsteinVazirani (" << static_cast<std::size_t>(bitwidth) << ") Statistics:\n";
         os << "\tn: " << static_cast<std::size_t>(bitwidth + 1) << std::endl;
@@ -44,12 +49,6 @@ namespace qc {
         while (expected.length() > bitwidth)
             expected.pop_back();
         std::reverse(expected.begin(), expected.end());
-
-        std::cout << "Input bitstring: ";
-        for (std::size_t i = 0; i < bitwidth; ++i) {
-            std::cout << (s.test(i) ? 1 : 0);
-        }
-        std::cout << std::endl;
 
         addQubitRegister(1, "flag");
 

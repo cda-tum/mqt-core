@@ -5,6 +5,7 @@
 
 #include "CircuitOptimizer.hpp"
 #include "algorithms/QPE.hpp"
+#include "algorithms/BernsteinVazirani.hpp"
 
 #include "gtest/gtest.h"
 #include <bitset>
@@ -381,6 +382,149 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
     ss << "qpe_inexact,extraction," << static_cast<std::size_t>(qpe->getNqubits()) << "," << qpeNgates << ",2," << iqpeNgates << "," << simulation << "," << extraction << "," << comparison << "," << total;
     std::cout << ss.str() << std::endl;
     ofs.open("results_inexact_prob.csv", std::ios_base::app);
+    ofs << ss.str() << std::endl;
+
+    EXPECT_NEAR(fidelity, 1.0, 1e-4);
+}
+
+class DynamicCircuitEvalBV: public testing::TestWithParam<std::size_t> {
+protected:
+    std::size_t                             bitwidth{};
+    std::unique_ptr<qc::QuantumComputation> bv;
+    std::unique_ptr<qc::QuantumComputation> dbv;
+    std::size_t                             bvNgates{};
+    std::size_t                             dbvNgates{};
+    std::unique_ptr<dd::Package>            dd;
+    std::ofstream                           ofs;
+
+    void TearDown() override {}
+    void SetUp() override {
+        bitwidth = GetParam();
+
+        dd = std::make_unique<dd::Package>(bitwidth + 1);
+
+        bv = std::make_unique<qc::BernsteinVazirani>(bitwidth);
+        // remove final measurements so that the functionality is unitary
+        qc::CircuitOptimizer::removeFinalMeasurements(*bv);
+        bvNgates = bv->getNindividualOps();
+
+        const auto s = dynamic_cast<qc::BernsteinVazirani*>(bv.get())->s;
+        dbv          = std::make_unique<qc::BernsteinVazirani>(s, bitwidth, true);
+        dbvNgates    = dbv->getNindividualOps();
+
+        const auto expected = dynamic_cast<qc::BernsteinVazirani*>(bv.get())->expected;
+        std::cout << "Hidden bitstring: " << expected << " (" << static_cast<std::size_t>(bitwidth) << " qubits)" << std::endl;
+    }
+};
+
+INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalBV,
+                         testing::Range<std::size_t>(1U, 128U),
+                         [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
+                             dd::QubitCount nqubits = info.param;
+                             std::stringstream ss{};
+                             ss << static_cast<std::size_t>(nqubits);
+                             if (nqubits == 1) {
+                                 ss << "_qubit";
+                             } else {
+                                 ss << "_qubits";
+                             }
+                             return ss.str(); });
+
+TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
+    const auto start = std::chrono::steady_clock::now();
+    // transform dynamic circuit to unitary circuit by first eliminating reset operations and afterwards deferring measurements to the end of the circuit
+    qc::CircuitOptimizer::eliminateResets(*dbv);
+    qc::CircuitOptimizer::deferMeasurements(*dbv);
+
+    // remove final measurements in order to just obtain the unitary functionality
+    qc::CircuitOptimizer::removeFinalMeasurements(*dbv);
+    const auto finishedTransformation = std::chrono::steady_clock::now();
+
+    qc::MatrixDD e = dd->makeIdent(bitwidth + 1);
+    dd->incRef(e);
+
+    auto leftIt  = bv->begin();
+    auto rightIt = dbv->begin();
+
+    while (leftIt != bv->end() && rightIt != dbv->end()) {
+        auto multLeft  = dd->multiply((*leftIt)->getDD(dd), e);
+        auto multRight = dd->multiply(multLeft, (*rightIt)->getInverseDD(dd));
+        dd->incRef(multRight);
+        dd->decRef(e);
+        e = multRight;
+
+        dd->garbageCollect();
+
+        ++leftIt;
+        ++rightIt;
+    }
+
+    while (leftIt != bv->end()) {
+        auto multLeft = dd->multiply((*leftIt)->getDD(dd), e);
+        dd->incRef(multLeft);
+        dd->decRef(e);
+        e = multLeft;
+
+        dd->garbageCollect();
+
+        ++leftIt;
+    }
+
+    while (rightIt != dbv->end()) {
+        auto multRight = dd->multiply(e, (*rightIt)->getInverseDD(dd));
+        dd->incRef(multRight);
+        dd->decRef(e);
+        e = multRight;
+
+        dd->garbageCollect();
+
+        ++rightIt;
+    }
+    const auto finishedEC = std::chrono::steady_clock::now();
+
+    const auto preprocessing = std::chrono::duration<double>(finishedTransformation - start).count();
+    const auto verification  = std::chrono::duration<double>(finishedEC - finishedTransformation).count();
+
+    std::stringstream ss{};
+    ss << "bv,transformation," << static_cast<std::size_t>(bv->getNqubits()) << "," << bvNgates << ",2," << dbvNgates << "," << preprocessing << "," << verification;
+    std::cout << ss.str() << std::endl;
+    ofs.open("results_bv.csv", std::ios_base::app);
+    ofs << ss.str() << std::endl;
+
+    EXPECT_TRUE(e.p->ident);
+}
+
+TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
+    // generate DD of QPE circuit via simulation
+    const auto start          = std::chrono::steady_clock::now();
+    auto       e              = bv->simulate(dd->makeZeroState(bv->getNqubits()), dd);
+    const auto simulation_end = std::chrono::steady_clock::now();
+
+    // extract measurement probabilities from IQPE simulations
+    dd::ProbabilityVector probs{};
+    dbv->extractProbabilityVector(dd->makeZeroState(dbv->getNqubits()), probs, dd);
+    const auto extraction_end = std::chrono::steady_clock::now();
+
+    // extend to account for 0 qubit
+    auto stub = dd::ProbabilityVector{};
+    stub.reserve(probs.size());
+    for (const auto& [state, prob]: probs) {
+        stub[2ULL * state + 1] = prob;
+    }
+
+    // compare outcomes
+    auto       fidelity       = dd->fidelityOfMeasurementOutcomes(e, stub);
+    const auto comparison_end = std::chrono::steady_clock::now();
+
+    const auto simulation = std::chrono::duration<double>(simulation_end - start).count();
+    const auto extraction = std::chrono::duration<double>(extraction_end - simulation_end).count();
+    const auto comparison = std::chrono::duration<double>(comparison_end - extraction_end).count();
+    const auto total      = std::chrono::duration<double>(comparison_end - start).count();
+
+    std::stringstream ss{};
+    ss << "bv,extraction," << static_cast<std::size_t>(bv->getNqubits()) << "," << bvNgates << ",2," << dbvNgates << "," << simulation << "," << extraction << "," << comparison << "," << total;
+    std::cout << ss.str() << std::endl;
+    ofs.open("results_bv_prob.csv", std::ios_base::app);
     ofs << ss.str() << std::endl;
 
     EXPECT_NEAR(fidelity, 1.0, 1e-4);

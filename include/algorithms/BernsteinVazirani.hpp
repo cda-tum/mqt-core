@@ -21,6 +21,7 @@ namespace qc {
 
         explicit BernsteinVazirani(const BitString& s, bool dynamic = false);
         explicit BernsteinVazirani(dd::QubitCount nq, bool dynamic = false);
+        BernsteinVazirani(const BitString& s, dd::QubitCount nq, bool dynamic = false);
 
         std::ostream& printStatistics(std::ostream& os) const override;
 
