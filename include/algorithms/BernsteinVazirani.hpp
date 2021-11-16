@@ -6,9 +6,8 @@
 #ifndef QFR_BV_H
 #define QFR_BV_H
 
-#include <bitset>
-
 #include <QuantumComputation.hpp>
+#include <bitset>
 
 using namespace dd::literals;
 

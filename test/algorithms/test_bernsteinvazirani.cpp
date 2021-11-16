@@ -3,8 +3,8 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "algorithms/BernsteinVazirani.hpp"
 #include "CircuitOptimizer.hpp"
+#include "algorithms/BernsteinVazirani.hpp"
 
 #include "gtest/gtest.h"
 
