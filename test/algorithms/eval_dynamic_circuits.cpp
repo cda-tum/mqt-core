@@ -4,8 +4,8 @@
 */
 
 #include "CircuitOptimizer.hpp"
-#include "algorithms/QPE.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
+#include "algorithms/QPE.hpp"
 
 #include "gtest/gtest.h"
 #include <bitset>

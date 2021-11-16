@@ -112,8 +112,6 @@ TEST_P(Grover, Simulation) {
     // there should be no error constructing the circuit
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
-    std::cout << *qc << std::endl;
-
     qc->printStatistics(std::cout);
     auto in = dd->makeZeroState(nqubits + 1);
     // there should be no error simulating the circuit
