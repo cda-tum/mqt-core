@@ -11,9 +11,16 @@
 namespace qc {
     class QFT: public QuantumComputation {
     public:
-        explicit QFT(dd::QubitCount nq);
+        explicit QFT(dd::QubitCount nq, bool includeMeasurements = true, bool dynamic = false);
 
         std::ostream& printStatistics(std::ostream& os) const override;
+
+        dd::QubitCount precision{};
+        bool           includeMeasurements = true;
+        bool           dynamic             = false;
+
+    protected:
+        void createCircuit();
     };
 } // namespace qc
 

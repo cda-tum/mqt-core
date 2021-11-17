@@ -6,6 +6,7 @@
 #include "CircuitOptimizer.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
 #include "algorithms/QPE.hpp"
+#include "algorithms/QFT.hpp"
 
 #include "gtest/gtest.h"
 #include <bitset>
@@ -528,4 +529,140 @@ TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
     ofs << ss.str() << std::endl;
 
     EXPECT_NEAR(fidelity, 1.0, 1e-4);
+}
+
+class DynamicCircuitEvalQFT: public testing::TestWithParam<std::size_t> {
+protected:
+    std::size_t                             precision{};
+    std::unique_ptr<qc::QuantumComputation> qft;
+    std::unique_ptr<qc::QuantumComputation> dqft;
+    std::size_t                             qftNgates{};
+    std::size_t                             dqftNgates{};
+    std::unique_ptr<dd::Package>            dd;
+    std::ofstream                           ofs;
+
+    void TearDown() override {}
+    void SetUp() override {
+        precision = GetParam();
+
+        dd = std::make_unique<dd::Package>(precision);
+
+        qft = std::make_unique<qc::QFT>(precision);
+        // remove final measurements so that the functionality is unitary
+        qc::CircuitOptimizer::removeFinalMeasurements(*qft);
+        qftNgates = qft->getNindividualOps();
+
+        dqft       = std::make_unique<qc::QFT>(precision, true, true);
+        dqftNgates = dqft->getNindividualOps();
+    }
+};
+
+INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalQFT,
+                         testing::Range<std::size_t>(1U, 129U),
+                         [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
+                             dd::QubitCount nqubits = info.param;
+                             std::stringstream ss{};
+                             ss << static_cast<std::size_t>(nqubits);
+                             if (nqubits == 1) {
+                                 ss << "_qubit";
+                             } else {
+                                 ss << "_qubits";
+                             }
+                             return ss.str(); });
+
+TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
+    const auto start = std::chrono::steady_clock::now();
+    // transform dynamic circuit to unitary circuit by first eliminating reset operations and afterwards deferring measurements to the end of the circuit
+    qc::CircuitOptimizer::eliminateResets(*dqft);
+    qc::CircuitOptimizer::deferMeasurements(*dqft);
+
+    // remove final measurements in order to just obtain the unitary functionality
+    qc::CircuitOptimizer::removeFinalMeasurements(*dqft);
+    const auto finishedTransformation = std::chrono::steady_clock::now();
+
+    qc::MatrixDD e = dd->makeIdent(precision);
+    dd->incRef(e);
+
+    auto leftIt  = qft->begin();
+    auto rightIt = dqft->begin();
+
+    while (leftIt != qft->end() && rightIt != dqft->end()) {
+        auto multLeft  = dd->multiply((*leftIt)->getDD(dd), e);
+        auto multRight = dd->multiply(multLeft, (*rightIt)->getInverseDD(dd));
+        dd->incRef(multRight);
+        dd->decRef(e);
+        e = multRight;
+
+        dd->garbageCollect();
+
+        ++leftIt;
+        ++rightIt;
+    }
+
+    while (leftIt != qft->end()) {
+        auto multLeft = dd->multiply((*leftIt)->getDD(dd), e);
+        dd->incRef(multLeft);
+        dd->decRef(e);
+        e = multLeft;
+
+        dd->garbageCollect();
+
+        ++leftIt;
+    }
+
+    while (rightIt != dqft->end()) {
+        auto multRight = dd->multiply(e, (*rightIt)->getInverseDD(dd));
+        dd->incRef(multRight);
+        dd->decRef(e);
+        e = multRight;
+
+        dd->garbageCollect();
+
+        ++rightIt;
+    }
+    const auto finishedEC = std::chrono::steady_clock::now();
+
+    const auto preprocessing = std::chrono::duration<double>(finishedTransformation - start).count();
+    const auto verification  = std::chrono::duration<double>(finishedEC - finishedTransformation).count();
+
+    std::stringstream ss{};
+    ss << "qft,transformation," << static_cast<std::size_t>(qft->getNqubits()) << "," << qftNgates << ",1," << dqftNgates << "," << preprocessing << "," << verification;
+    std::cout << ss.str() << std::endl;
+    ofs.open("results_qft.csv", std::ios_base::app);
+    ofs << ss.str() << std::endl;
+
+    EXPECT_TRUE(e.p->ident);
+}
+
+TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
+    // generate DD of QPE circuit via simulation
+    const auto start          = std::chrono::steady_clock::now();
+    auto       e              = qft->simulate(dd->makeZeroState(qft->getNqubits()), dd);
+    const auto simulation_end = std::chrono::steady_clock::now();
+    const auto simulation     = std::chrono::duration<double>(simulation_end - start).count();
+
+    std::stringstream ss{};
+    // extract measurement probabilities from IQPE simulations
+    if (qft->getNqubits() <= 15) {
+        dd::ProbabilityVector probs{};
+        dqft->extractProbabilityVector(dd->makeZeroState(dqft->getNqubits()), probs, dd);
+        const auto extraction_end = std::chrono::steady_clock::now();
+
+        // compare outcomes
+        auto       fidelity       = dd->fidelityOfMeasurementOutcomes(e, probs);
+        const auto comparison_end = std::chrono::steady_clock::now();
+        const auto extraction     = std::chrono::duration<double>(extraction_end - simulation_end).count();
+        const auto comparison     = std::chrono::duration<double>(comparison_end - extraction_end).count();
+        const auto total          = std::chrono::duration<double>(comparison_end - start).count();
+        EXPECT_NEAR(fidelity, 1.0, 1e-4);
+        ss << "qft,extraction," << static_cast<std::size_t>(qft->getNqubits()) << "," << qftNgates << ",1," << dqftNgates << "," << extraction << "," << simulation << "," << comparison << "," << total;
+        std::cout << ss.str() << std::endl;
+
+    } else {
+        ss << "qft,extraction," << static_cast<std::size_t>(qft->getNqubits()) << "," << qftNgates << ",1," << dqftNgates << ",," << simulation << ",,,";
+        std::cout << ss.str() << std::endl;
+    }
+
+    ofs.open("results_qft_prob.csv", std::ios_base::app);
+    ofs << ss.str() << std::endl;
 }
