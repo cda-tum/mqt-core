@@ -37,6 +37,7 @@ namespace qc {
         os << "\tn: " << static_cast<std::size_t>(bitwidth + 1) << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;
         os << "\ts: " << expected << std::endl;
+        os << "\tdynamic: " << dynamic << std::endl;
         os << "--------------" << std::endl;
         return os;
     }

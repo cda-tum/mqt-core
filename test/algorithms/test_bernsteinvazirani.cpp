@@ -38,7 +38,7 @@ TEST_P(BernsteinVazirani, FunctionTest) {
 
     // simulate the circuit
     auto        dd           = std::make_unique<dd::Package>(qc->getNqubits());
-    std::size_t shots        = 1;
+    std::size_t shots        = 1024;
     auto        measurements = qc->simulate(dd->makeZeroState(qc->getNqubits()), dd, shots);
 
     for (const auto& [state, count]: measurements) {
@@ -59,7 +59,7 @@ TEST_P(BernsteinVazirani, FunctionTestDynamic) {
 
     // simulate the circuit
     auto        dd           = std::make_unique<dd::Package>(qc->getNqubits());
-    std::size_t shots        = 1;
+    std::size_t shots        = 1024;
     auto        measurements = qc->simulate(dd->makeZeroState(qc->getNqubits()), dd, shots);
 
     for (const auto& [state, count]: measurements) {
