@@ -8,7 +8,7 @@
 
 #include "dd/Package.hpp"
 
-#include <forward_list>
+#include <deque>
 #include <map>
 #include <memory>
 #include <utility>
@@ -77,9 +77,11 @@ namespace qc {
         Tensor
     };
 
-    using DAG          = std::vector<std::forward_list<std::unique_ptr<Operation>*>>;
-    using DAGIterator  = std::forward_list<std::unique_ptr<Operation>*>::iterator;
-    using DAGIterators = std::vector<DAGIterator>;
+    using DAG                 = std::vector<std::deque<std::unique_ptr<Operation>*>>;
+    using DAGIterator         = std::deque<std::unique_ptr<Operation>*>::iterator;
+    using DAGReverseIterator  = std::deque<std::unique_ptr<Operation>*>::reverse_iterator;
+    using DAGIterators        = std::vector<DAGIterator>;
+    using DAGReverseIterators = std::vector<DAGReverseIterator>;
 } // namespace qc
 
 #endif //QFR_DEFINITIONS_HPP

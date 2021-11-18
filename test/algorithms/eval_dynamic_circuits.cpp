@@ -7,6 +7,7 @@
 #include "algorithms/BernsteinVazirani.hpp"
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
+#include "dd/Export.hpp"
 
 #include "gtest/gtest.h"
 #include <bitset>
@@ -37,6 +38,7 @@ protected:
         qpe = std::make_unique<qc::QPE>(precision);
         // remove final measurements so that the functionality is unitary
         qc::CircuitOptimizer::removeFinalMeasurements(*qpe);
+        qc::CircuitOptimizer::reorderOperations(*qpe);
         qpeNgates = qpe->getNindividualOps();
 
         const auto lambda = dynamic_cast<qc::QPE*>(qpe.get())->lambda;
@@ -102,7 +104,11 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
 
     // remove final measurements in order to just obtain the unitary functionality
     qc::CircuitOptimizer::removeFinalMeasurements(*iqpe);
+    qc::CircuitOptimizer::reorderOperations(*iqpe);
     const auto finishedTransformation = std::chrono::steady_clock::now();
+
+    std::cout << *qpe << std::endl;
+    std::cout << *iqpe << std::endl;
 
     qc::MatrixDD e = dd->makeIdent(precision + 1);
     dd->incRef(e);
@@ -111,6 +117,9 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
     auto rightIt = iqpe->begin();
 
     while (leftIt != qpe->end() && rightIt != iqpe->end()) {
+        std::cout << "L: " << **leftIt << std::endl;
+        std::cout << "R: " << **rightIt << std::endl;
+
         auto multLeft  = dd->multiply((*leftIt)->getDD(dd), e);
         auto multRight = dd->multiply(multLeft, (*rightIt)->getInverseDD(dd));
         dd->incRef(multRight);
@@ -118,6 +127,12 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
         e = multRight;
 
         dd->garbageCollect();
+
+        std::cout << e.p->ident << std::endl;
+        if (!e.p->ident) {
+            dd::export2Dot(e, "e.dot", true, true, true, true);
+            return;
+        }
 
         ++leftIt;
         ++rightIt;
