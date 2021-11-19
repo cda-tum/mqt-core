@@ -979,6 +979,7 @@ namespace qc {
 
     /// this method can be used to reorder the operations of a given quantum computation in order to get a canonical ordering
     void CircuitOptimizer::reorderOperations(QuantumComputation& qc) {
+        std::cout << qc << std::endl;
         auto dag = constructDAG(qc);
 
         // initialize iterators
@@ -1028,6 +1029,7 @@ namespace qc {
             }
             // iterate over the operations on the qubit and add them to the ops list
             auto& op = **it;
+            std::cout << *op << std::endl;
 
             if (op->getType() == ClassicControlled) {
                 std::cerr << "Caution! Reordering operations might not work if the circuit contains classically controlled operations" << std::endl;

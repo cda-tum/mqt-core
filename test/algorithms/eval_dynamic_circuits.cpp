@@ -83,7 +83,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalExactQPE,
-                         testing::Range<std::size_t>(1U, 64U),
+                         testing::Range<std::size_t>(1U, 5U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
                              dd::QubitCount nqubits = info.param;
                              std::stringstream ss{};
@@ -155,8 +155,8 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
     std::stringstream ss{};
     ss << "qpe_exact,transformation," << static_cast<std::size_t>(qpe->getNqubits()) << "," << qpeNgates << ",2," << iqpeNgates << "," << preprocessing << "," << verification;
     std::cout << ss.str() << std::endl;
-    //    ofs.open("results_exact.csv", std::ios_base::app);
-    //    ofs << ss.str() << std::endl;
+    ofs.open("results_exact.csv", std::ios_base::app);
+    ofs << ss.str() << std::endl;
 
     EXPECT_TRUE(e.p->ident);
 }
@@ -191,8 +191,8 @@ TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
     std::stringstream ss{};
     ss << "qpe_exact,extraction," << static_cast<std::size_t>(qpe->getNqubits()) << "," << qpeNgates << ",2," << iqpeNgates << "," << simulation << "," << extraction << "," << comparison << "," << total;
     std::cout << ss.str() << std::endl;
-    //    ofs.open("results_exact_prob.csv", std::ios_base::app);
-    //    ofs << ss.str() << std::endl;
+    ofs.open("results_exact_prob.csv", std::ios_base::app);
+    ofs << ss.str() << std::endl;
 
     EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }
@@ -349,8 +349,8 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
     std::stringstream ss{};
     ss << "qpe_inexact,transformation," << static_cast<std::size_t>(qpe->getNqubits()) << "," << qpeNgates << ",2," << iqpeNgates << "," << preprocessing << "," << verification;
     std::cout << ss.str() << std::endl;
-    //    ofs.open("results_inexact.csv", std::ios_base::app);
-    //    ofs << ss.str() << std::endl;
+    ofs.open("results_inexact.csv", std::ios_base::app);
+    ofs << ss.str() << std::endl;
 
     EXPECT_TRUE(e.p->ident);
 }
@@ -387,8 +387,8 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
     std::stringstream ss{};
     ss << "qpe_inexact,extraction," << static_cast<std::size_t>(qpe->getNqubits()) << "," << qpeNgates << ",2," << iqpeNgates << "," << simulation << "," << extraction << "," << comparison << "," << total;
     std::cout << ss.str() << std::endl;
-    //    ofs.open("results_inexact_prob.csv", std::ios_base::app);
-    //    ofs << ss.str() << std::endl;
+    ofs.open("results_inexact_prob.csv", std::ios_base::app);
+    ofs << ss.str() << std::endl;
 
     EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }
@@ -424,7 +424,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalBV,
-                         testing::Range<std::size_t>(1U, 64U),
+                         testing::Range<std::size_t>(1U, 10U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
                              dd::QubitCount nqubits = info.param;
                              std::stringstream ss{};
@@ -496,8 +496,8 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
     std::stringstream ss{};
     ss << "bv,transformation," << static_cast<std::size_t>(bv->getNqubits()) << "," << bvNgates << ",2," << dbvNgates << "," << preprocessing << "," << verification;
     std::cout << ss.str() << std::endl;
-    //    ofs.open("results_bv.csv", std::ios_base::app);
-    //    ofs << ss.str() << std::endl;
+    ofs.open("results_bv.csv", std::ios_base::app);
+    ofs << ss.str() << std::endl;
 
     EXPECT_TRUE(e.p->ident);
 }
@@ -532,8 +532,8 @@ TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
     std::stringstream ss{};
     ss << "bv,extraction," << static_cast<std::size_t>(bv->getNqubits()) << "," << bvNgates << ",2," << dbvNgates << "," << simulation << "," << extraction << "," << comparison << "," << total;
     std::cout << ss.str() << std::endl;
-    //    ofs.open("results_bv_prob.csv", std::ios_base::app);
-    //    ofs << ss.str() << std::endl;
+    ofs.open("results_bv_prob.csv", std::ios_base::app);
+    ofs << ss.str() << std::endl;
 
     EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }
@@ -565,7 +565,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalQFT,
-                         testing::Range<std::size_t>(1U, 65U),
+                         testing::Range<std::size_t>(1U, 5U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
                              dd::QubitCount nqubits = info.param;
                              std::stringstream ss{};
@@ -637,8 +637,8 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
     std::stringstream ss{};
     ss << "qft,transformation," << static_cast<std::size_t>(qft->getNqubits()) << "," << qftNgates << ",1," << dqftNgates << "," << preprocessing << "," << verification;
     std::cout << ss.str() << std::endl;
-    //    ofs.open("results_qft.csv", std::ios_base::app);
-    //    ofs << ss.str() << std::endl;
+    ofs.open("results_qft.csv", std::ios_base::app);
+    ofs << ss.str() << std::endl;
 
     EXPECT_TRUE(e.p->ident);
 }
@@ -672,6 +672,6 @@ TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
         std::cout << ss.str() << std::endl;
     }
 
-    //    ofs.open("results_qft_prob.csv", std::ios_base::app);
-    //    ofs << ss.str() << std::endl;
+    ofs.open("results_qft_prob.csv", std::ios_base::app);
+    ofs << ss.str() << std::endl;
 }
