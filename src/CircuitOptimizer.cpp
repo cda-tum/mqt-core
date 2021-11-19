@@ -127,7 +127,11 @@ namespace qc {
 
                 // replace with SWAP + CNOT
                 (*opC)->setGate(SWAP);
-                (*opC)->setTargets({target, control});
+                if (target > control) {
+                    (*opC)->setTargets({control, target});
+                } else {
+                    (*opC)->setTargets({target, control});
+                }
                 (*opC)->setControls({});
                 addToDag(dag, opC);
 
