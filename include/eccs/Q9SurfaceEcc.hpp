@@ -9,15 +9,19 @@
 #include "QuantumComputation.hpp"
 #include "Ecc.hpp"
 
+//This code has been described in https://arxiv.org/pdf/1608.05053.pdf
+
 class Q9SurfaceEcc: public Ecc {
 public:
-    Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq);
+    Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC);
 
     static const std::string getName() {
         return "Q9Surface";
     }
 
 protected:
+    void initMappedCircuit() override;
+
     void writeEncoding() override;
 
     void measureAndCorrect() override;
@@ -25,6 +29,9 @@ protected:
 	void writeDecoding() override;
 
 	void mapGate(const std::unique_ptr<qc::Operation> &gate) override;
+
+private:
+    void writeClassicalControl(int control, unsigned int value, qc::OpType optype, int target);
 };
 
 #endif //QFR_Q9SurfaceEcc_HPP

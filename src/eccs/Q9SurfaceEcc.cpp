@@ -5,29 +5,38 @@
 
 #include "eccs/Q9SurfaceEcc.hpp"
 
-//TODO parameters q and c:
-/*
- * q = #qubits
- * c = #classical bits
- * Assume your ECC needs p physical qubits to encode 1 logical qubit, a ancilla qubits and m measurements.
- * >>then q = p+a and c=m.
- */
-Q9SurfaceEcc::Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq): Ecc({ID::Q9Surface, 17, 8, Q9SurfaceEcc::getName()}, qc, measureFq) {}
+//This code has been described in https://arxiv.org/pdf/1608.05053.pdf
+Q9SurfaceEcc::Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC): Ecc({ID::Q9Surface, 9, 8, Q9SurfaceEcc::getName()}, qc, measureFq, decomposeMC) {}
+
+void Q9SurfaceEcc::initMappedCircuit() {
+//method is overridden because we need 2 kinds of classical measurement output registers
+    qc.stripIdleQubits(true, false);
+    statistics.nInputQubits = qc.getNqubits();
+    statistics.nInputClassicalBits = (int)qc.getNcbits();
+	statistics.nOutputQubits = qc.getNqubits()*ecc.nRedundantQubits+ecc.nCorrectingBits;
+	statistics.nOutputClassicalBits = statistics.nInputClassicalBits+ecc.nCorrectingBits;
+	qcMapped.addQubitRegister(statistics.nOutputQubits);
+	qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
+	qcMapped.addClassicalRegister(4, "qeccX");
+	qcMapped.addClassicalRegister(4, "qeccZ");
+}
 
 void Q9SurfaceEcc::writeEncoding() {
     measureAndCorrect();
+    decodingDone = false;
 }
 
 void Q9SurfaceEcc::measureAndCorrect() {
     const int nQubits = qc.getNqubits();
+    const int ancStart = qc.getNqubits()*ecc.nRedundantQubits;
+    const int clAncStart = qc.getNcbits();
     for(int i=0;i<nQubits;i++) {
         unsigned int q[9];//qubits
         unsigned int a[8];//ancilla qubits
         dd::Control ca[8];//ancilla controls
         dd::Control cq[9];//qubit controls
-        unsigned int m[8];
         for(int j=0;j<9;j++) { q[j] = i+j*nQubits;}
-        for(int j=0;j<8;j++) { a[j] = i+(j+9)*nQubits; m[j] = i+j*nQubits; qcMapped.reset(a[j]);}
+        for(int j=0;j<8;j++) { a[j] = ancStart+j; qcMapped.reset(a[j]);}
         for(int j=0;j<8;j++) { ca[j] = dd::Control{dd::Qubit(a[j]), dd::Control::Type::pos}; }
         for(int j=0;j<9;j++) { cq[j] = dd::Control{dd::Qubit(q[j]), dd::Control::Type::pos}; }
 
@@ -72,11 +81,32 @@ void Q9SurfaceEcc::measureAndCorrect() {
         qcMapped.h(a[5]);
         qcMapped.h(a[7]);
 
-        for(int j=0;j<8;j++) {
-            qcMapped.measure(a[j], m[j]);
-        }
+        qcMapped.measure(a[0], clAncStart);
+        qcMapped.measure(a[2], clAncStart+1);
+        qcMapped.measure(a[5], clAncStart+2);
+        qcMapped.measure(a[7], clAncStart+3);
 
-        //TODO logic
+        qcMapped.measure(a[1], clAncStart+4);
+        qcMapped.measure(a[3], clAncStart+5);
+        qcMapped.measure(a[4], clAncStart+6);
+        qcMapped.measure(a[6], clAncStart+7);
+
+        //logic
+        writeClassicalControl(clAncStart, 1, qc::Z, q[2]); //a[0]
+        writeClassicalControl(clAncStart, 2, qc::Z, q[3]); //a[2] (or q[0])
+        writeClassicalControl(clAncStart, 3, qc::Z, q[1]); //a[0,2]
+        writeClassicalControl(clAncStart, 4, qc::Z, q[5]); //a[5] (or q[8])
+        writeClassicalControl(clAncStart, 6, qc::Z, q[4]); //a[2,5]
+        writeClassicalControl(clAncStart, 8, qc::Z, q[6]); //a[7]
+        writeClassicalControl(clAncStart, 12, qc::Z, q[7]); //a[5,7]
+
+        writeClassicalControl(clAncStart+4, 1, qc::X, q[0]); //a[1]
+        writeClassicalControl(clAncStart+4, 2, qc::X, q[1]); //a[3] (or q[2])
+        writeClassicalControl(clAncStart+4, 4, qc::X, q[7]); //a[4] (or q[6])
+        writeClassicalControl(clAncStart+4, 5, qc::X, q[3]); //a[1,4]
+        writeClassicalControl(clAncStart+4, 6, qc::X, q[4]); //a[3,4]
+        writeClassicalControl(clAncStart+4, 8, qc::X, q[8]); //a[6]
+        writeClassicalControl(clAncStart+4, 10, qc::X, q[5]); //a[3,6]
 
 
     }
@@ -87,25 +117,34 @@ void Q9SurfaceEcc::writeDecoding() {
     for(int i=0;i<nQubits;i++) {
         //measure 0, 4, 8. state = m0*m4*m8
         qcMapped.measure(i, i);
-        qcMapped.measure(i+4*nQubits, i+nQubits);
-        qcMapped.measure(i+8*nQubits, i+2*nQubits);
+        qcMapped.measure(i+4*nQubits, i);
+        qcMapped.measure(i+8*nQubits, i);
         qcMapped.x(i, dd::Control{i+4*nQubits, dd::Control::Type::pos});
         qcMapped.x(i, dd::Control{i+8*nQubits, dd::Control::Type::pos});
         qcMapped.measure(i, i);
     }
+    decodingDone = true;
+}
+
+void Q9SurfaceEcc::writeClassicalControl(int control, unsigned int value, qc::OpType optype, int target) {
+    std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), dd::Qubit(target), optype);
+    const auto pair_ = std::make_pair(dd::Qubit(control), dd::QubitCount(4));
+    qcMapped.emplace_back<qc::ClassicControlledOperation>(op, pair_, value);
 }
 
 void Q9SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
-
+    if(decodingDone && gate.get()->getType()!=qc::Measure) {
+        writeEncoding();
+    }
     const int nQubits = qc.getNqubits();
     int i;
 
     //currently, no control gates are supported
-    if(gate.get()->getNcontrols()) {
+    if(gate.get()->getNcontrols() && gate.get()->getType() != qc::Measure) {
         gateNotAvailableError(gate);
     }
 
-
+    qc::NonUnitaryOperation *measureGate=nullptr;
     switch(gate.get()->getType()) {
     case qc::I: break;
     case qc::X:
@@ -146,6 +185,16 @@ void Q9SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
             qcMapped.z(i+8*nQubits);
         }
         break;
+    case qc::Measure:
+        if(!decodingDone) {
+            measureAndCorrect();
+            writeDecoding();
+        }
+        measureGate = (qc::NonUnitaryOperation*)gate.get();
+        for(std::size_t j=0;j<measureGate->getNclassics();j++) {
+            qcMapped.measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
+        }
+        break;
     case qc::S:
     case qc::Sdag:
     case qc::T:
@@ -173,7 +222,4 @@ void Q9SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
         i = gate.get()->getTargets()[t];
 
     }
-
-    //for error cases, use the following line
-    gateNotAvailableError(gate);
 }

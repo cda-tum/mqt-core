@@ -3,21 +3,23 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#ifndef QFR_IdEcc_HPP
-#define QFR_IdEcc_HPP
+#ifndef QFR_Q5LaflammeEcc_HPP
+#define QFR_Q5LaflammeEcc_HPP
 
 #include "QuantumComputation.hpp"
 #include "Ecc.hpp"
 
-class IdEcc: public Ecc {
+class Q5LaflammeEcc: public Ecc {
 public:
-    IdEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC);
+    Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC);
 
     static const std::string getName() {
-        return "Id";
+        return "Q5Laflamme";
     }
 
 protected:
+    void initMappedCircuit() override;
+
     void writeEncoding() override;
 
     void measureAndCorrect() override;
@@ -25,8 +27,9 @@ protected:
 	void writeDecoding() override;
 
 	void mapGate(const std::unique_ptr<qc::Operation> &gate) override;
+
+private:
+    void writeClassicalControlled(const unsigned int value, int target, qc::OpType optype);
 };
 
-#endif //QFR_IdEcc_HPP
-
-
+#endif //QFR_Q5LaflammeEcc_HPP

@@ -11,6 +11,7 @@
 class EccStatistics {
 public:
     unsigned long nInputQubits;
+    unsigned long nInputClassicalBits;
     unsigned long nInputGates;
     unsigned long nOutputQubits;
     unsigned long nOutputClassicalBits;

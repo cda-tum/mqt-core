@@ -11,13 +11,15 @@
 
 class Q3ShorEcc: public Ecc {
 public:
-    Q3ShorEcc(qc::QuantumComputation& qc, int measureFq);
+    Q3ShorEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC);
 
     static const std::string getName() {
         return "Q3Shor";
     }
 
 protected:
+    void initMappedCircuit() override;
+
     void writeEncoding() override;
 
     void measureAndCorrect() override;
