@@ -10,14 +10,14 @@ namespace qc {
         // delete the identities from circuit
         auto it = qc.ops.begin();
         while (it != qc.ops.end()) {
-            if ((*it)->getType() == I) {
+            if ((*it)->getType() == I || (*it)->getType() == Barrier) {
                 it = qc.ops.erase(it);
             } else if ((*it)->isCompoundOperation()) {
                 auto compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
                 auto cit    = compOp->cbegin();
                 while (cit != compOp->cend()) {
                     auto cop = cit->get();
-                    if (cop->getType() == qc::I) {
+                    if (cop->getType() == qc::I || cop->getType() == Barrier) {
                         cit = compOp->erase(cit);
                     } else {
                         ++cit;
@@ -59,6 +59,9 @@ namespace qc {
                     }
                     continue;
                 } else if (it->isNonUnitaryOperation()) {
+                    if (it->getType() == Barrier)
+                        continue;
+
                     for (const auto& b: it->getTargets()) {
                         dag.at(b).push_back(&it);
                     }
@@ -983,9 +986,9 @@ namespace qc {
 
     /// this method can be used to reorder the operations of a given quantum computation in order to get a canonical ordering
     void CircuitOptimizer::reorderOperations(QuantumComputation& qc) {
-        std::cout << qc << std::endl;
+        //        std::cout << qc << std::endl;
         auto dag = constructDAG(qc);
-        printDAG(dag);
+        //        printDAG(dag);
 
         // initialize iterators
         DAGIterators dagIterators{dag.size()};
@@ -1012,8 +1015,8 @@ namespace qc {
     }
 
     void CircuitOptimizer::reorderOperationsRecursive(std::vector<std::unique_ptr<qc::Operation>>& ops, DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, const DAGIterator& until) {
-        std::cout << "Current iterator status:" << std::endl;
-        printDAG(dag, dagIterators);
+        //        std::cout << "Current iterator status:" << std::endl;
+        //        printDAG(dag, dagIterators);
 
         // check if this qubit is finished
         if (dagIterators.at(idx) == dag.at(idx).end()) {
@@ -1038,7 +1041,7 @@ namespace qc {
 
             // iterate over the operations on the qubit and add them to the ops list
             auto& op = **it;
-            std::cout << *op << std::endl;
+            //            std::cout << *op << std::endl;
 
             if (op->getType() == ClassicControlled) {
                 std::cerr << "Caution! Reordering operations might not work if the circuit contains classically controlled operations" << std::endl;
@@ -1058,12 +1061,12 @@ namespace qc {
                 auto q = static_cast<dd::Qubit>(dag.size() - 1 - i);
                 if (q != idx && op->actsOn(static_cast<dd::Qubit>(q))) {
                     actsOn.set(q);
-                    std::cout << "Recursive call at q" << static_cast<std::size_t>(q) << " with goal: " << *op << std::endl;
+                    //                    std::cout << "Recursive call at q" << static_cast<std::size_t>(q) << " with goal: " << *op << std::endl;
                     reorderOperationsRecursive(ops, dag, dagIterators, q, it);
                 }
             }
 
-            std::cout << "All requirements fulfilled to execute: " << *op << std::endl;
+            //            std::cout << "All requirements fulfilled to execute: " << *op << std::endl;
             // it's time to add the operation to the newly constructed vector
             ops.emplace_back(std::move(op));
 
@@ -1073,8 +1076,8 @@ namespace qc {
                     ++(dagIterators.at(i));
                 }
             }
-            std::cout << "New iterator status:" << std::endl;
-            printDAG(dag, dagIterators);
+            //            std::cout << "New iterator status:" << std::endl;
+            //            printDAG(dag, dagIterators);
         }
         if (dagIterators.at(idx) == dag.at(idx).end() && idx > 0) {
             reorderOperationsRecursive(ops, dag, dagIterators, static_cast<dd::Qubit>(idx - 1), dag.at(idx - 1).end());
