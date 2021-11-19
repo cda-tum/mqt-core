@@ -1570,7 +1570,7 @@ TEST_F(QFRFunctionality, trivialOperationReordering) {
     std::cout << qc << std::endl;
     qc::CircuitOptimizer::reorderOperations(qc);
     std::cout << qc << std::endl;
-    auto it = qc.begin();
+    auto       it     = qc.begin();
     const auto target = (*it)->getTargets().at(0);
     EXPECT_EQ(target, 1);
     ++it;
