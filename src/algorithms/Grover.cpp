@@ -88,9 +88,9 @@ namespace qc {
             expected.pop_back();
         std::reverse(expected.begin(), expected.end());
 
-        if (nDataQubits <= 3) {
+        if (nDataQubits <= 2) {
             iterations = 1;
-        } else if (nDataQubits % 2 == 0) {
+        } else if (nDataQubits % 2 == 1) {
             iterations = static_cast<std::size_t>(std::round(dd::PI_4 * std::pow(2.L, (nDataQubits + 1.) / 2.L - 1.) * std::sqrt(2)));
         } else {
             iterations = static_cast<std::size_t>(std::round(dd::PI_4 * std::pow(2.L, (nDataQubits) / 2.L)));
