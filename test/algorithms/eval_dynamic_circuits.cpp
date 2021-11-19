@@ -83,7 +83,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalExactQPE,
-                         testing::Range<std::size_t>(1U, 5U),
+                         testing::Range<std::size_t>(1U, 64U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
                              dd::QubitCount nqubits = info.param;
                              std::stringstream ss{};
@@ -424,7 +424,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalBV,
-                         testing::Range<std::size_t>(1U, 10U),
+                         testing::Range<std::size_t>(1U, 65U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
                              dd::QubitCount nqubits = info.param;
                              std::stringstream ss{};
@@ -565,7 +565,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalQFT,
-                         testing::Range<std::size_t>(1U, 5U),
+                         testing::Range<std::size_t>(1U, 65U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
                              dd::QubitCount nqubits = info.param;
                              std::stringstream ss{};
