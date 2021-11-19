@@ -13,18 +13,18 @@ class Ecc {
 public:
 
     enum ID {
-		Id, Q3Shor, Q9Shor, Q7Steane, Q9Surface, QxCustom
+		Id, Q3Shor, Q9Shor, Q5Laflamme, Q7Steane, Q9Surface, QxCustom
 	};
     struct Info {
         ID id;
         int nRedundantQubits;
-        int nClassicalBitsPerQubit;
+        int nCorrectingBits; //in total (not per qubit); usually number of clbits needed for correcting one qubit
         std::string name;
     };
 
     const Info ecc;
 
-	Ecc(Info ecc, qc::QuantumComputation& qc, int measureFrequency);
+	Ecc(Info ecc, qc::QuantumComputation& qc, int measureFrequency, bool decomposeMC);
 	virtual ~Ecc() = default;
 
 	qc::QuantumComputation& apply();
@@ -52,6 +52,9 @@ protected:
 	EccStatistics statistics{};
 	const int measureFrequency;
 	bool decodingDone;
+	bool decomposeMultiControlledGates;
+
+	virtual void initMappedCircuit();
 
 	virtual void writeEncoding()=0;
 

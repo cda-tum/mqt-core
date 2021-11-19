@@ -11,13 +11,15 @@
 
 class Q7SteaneEcc: public Ecc {
 public:
-    Q7SteaneEcc(qc::QuantumComputation& qc, int measureFq);
+    Q7SteaneEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC);
 
     static const std::string getName() {
         return "Q7Steane";
     }
 
 protected:
+    void initMappedCircuit() override;
+
     void writeEncoding() override;
 
     void measureAndCorrect() override;

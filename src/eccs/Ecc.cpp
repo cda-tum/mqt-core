@@ -5,17 +5,23 @@
 
 #include "eccs/Ecc.hpp"
 
-Ecc::Ecc(struct Info eccInfo, qc::QuantumComputation& quantumcomputation, int measFreq): ecc(eccInfo), qc(quantumcomputation), measureFrequency(measFreq) {
+Ecc::Ecc(struct Info eccInfo, qc::QuantumComputation& quantumcomputation, int measFreq, bool decomposeMC): ecc(eccInfo), qc(quantumcomputation), measureFrequency(measFreq), decomposeMultiControlledGates(decomposeMC) {
     decodingDone=false;
 }
 
-qc::QuantumComputation& Ecc::apply() {
+void Ecc::initMappedCircuit() {
     qc.stripIdleQubits(true, false);
     statistics.nInputQubits = qc.getNqubits();
-	statistics.nOutputQubits = qc.getNqubits()*ecc.nRedundantQubits;
-	statistics.nOutputClassicalBits = (int)qc.getNqubits()*ecc.nClassicalBitsPerQubit;
+    statistics.nInputClassicalBits = (int)qc.getNcbits();
+	statistics.nOutputQubits = qc.getNqubits()*ecc.nRedundantQubits+ecc.nCorrectingBits;
+	statistics.nOutputClassicalBits = statistics.nInputClassicalBits+ecc.nCorrectingBits;
 	qcMapped.addQubitRegister(statistics.nOutputQubits);
-	qcMapped.addClassicalRegister(statistics.nOutputClassicalBits);
+	qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
+	qcMapped.addClassicalRegister(ecc.nCorrectingBits, "qecc");
+}
+
+qc::QuantumComputation& Ecc::apply() {
+    initMappedCircuit();
 
 	writeEncoding();
 
@@ -76,20 +82,20 @@ void Ecc::writeToffoli(int target, int c1, bool p1, int c2, bool p2) {
     if(!p2) { qcMapped.x(c2);    }
 
     qcMapped.h(target);
-    qcMapped.x(target, dd::Control{c2});
+    qcMapped.x(target, dd::Control{dd::Qubit(c2)});
     qcMapped.tdag(target);
-    qcMapped.x(target, dd::Control{c1});
+    qcMapped.x(target, dd::Control{dd::Qubit(c1)});
     qcMapped.t(target);
-    qcMapped.x(target, dd::Control{c2});
+    qcMapped.x(target, dd::Control{dd::Qubit(c2)});
     qcMapped.tdag(target);
-    qcMapped.x(target, dd::Control{c1});
+    qcMapped.x(target, dd::Control{dd::Qubit(c1)});
     qcMapped.t(target);
     qcMapped.t(c2);
     qcMapped.h(target);
-    qcMapped.x(c2, dd::Control{c1});
+    qcMapped.x(c2, dd::Control{dd::Qubit(c1)});
     qcMapped.t(c1);
     qcMapped.tdag(c2);
-    qcMapped.x(c2, dd::Control{c1});
+    qcMapped.x(c2, dd::Control{dd::Qubit(c1)});
 
     if(!p1) { qcMapped.x(c1);    }
     if(!p2) { qcMapped.x(c2);    }

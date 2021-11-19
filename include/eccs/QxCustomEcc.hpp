@@ -11,7 +11,7 @@
 
 class QxCustomEcc: public Ecc {
 public:
-    QxCustomEcc(qc::QuantumComputation& qc, int measureFq);
+    QxCustomEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC);
 
     static const std::string getName() {
         return "QxCustom";

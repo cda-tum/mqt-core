@@ -11,13 +11,15 @@
 
 class Q9ShorEcc: public Ecc {
 public:
-    Q9ShorEcc(qc::QuantumComputation& qc, int measureFq);
+    Q9ShorEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC);
 
     static const std::string getName() {
         return "Q9Shor";
     }
 
 protected:
+    void initMappedCircuit() override;
+
     void writeEncoding() override;
 
     void measureAndCorrect() override;
@@ -25,6 +27,9 @@ protected:
 	void writeDecoding() override;
 
 	void mapGate(const std::unique_ptr<qc::Operation> &gate) override;
+
+private:
+    void writeClassicalControl(int control, unsigned int value, qc::OpType optype, int target);
 };
 
 #endif //QFR_Q9ShorEcc_HPP
