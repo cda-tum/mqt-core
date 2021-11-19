@@ -1049,10 +1049,12 @@ namespace qc {
                 auto q = static_cast<dd::Qubit>(dag.size() - 1 - i);
                 if (q != idx && op->actsOn(static_cast<dd::Qubit>(q))) {
                     actsOn.set(q);
+                    std::cout << "Recursive call at q" << static_cast<std::size_t>(q) << " with goal: " << *op << std::endl;
                     reorderOperationsRecursive(ops, dag, dagIterators, q, it);
                 }
             }
 
+            std::cout << "All requirements fulfilled to execute: " << *op << std::endl;
             // it's time to add the operation to the newly constructed vector
             ops.emplace_back(std::move(op));
 
