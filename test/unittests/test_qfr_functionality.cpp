@@ -746,8 +746,8 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
     CircuitOptimizer::removeFinalMeasurements(qc);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
-    ASSERT_EQ(qc.getNops(), 3);
-    ASSERT_EQ(qc.getNindividualOps(), 7);
+    ASSERT_EQ(qc.getNops(), 2);
+    ASSERT_EQ(qc.getNindividualOps(), 6);
 }
 
 TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
