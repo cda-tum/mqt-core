@@ -38,7 +38,6 @@ protected:
         qpe = std::make_unique<qc::QPE>(precision);
         // remove final measurements so that the functionality is unitary
         qc::CircuitOptimizer::removeFinalMeasurements(*qpe);
-        qc::CircuitOptimizer::reorderOperations(*qpe);
         qpeNgates = qpe->getNindividualOps();
 
         const auto lambda = dynamic_cast<qc::QPE*>(qpe.get())->lambda;
@@ -84,7 +83,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalExactQPE,
-                         testing::Range<std::size_t>(1U, 40U),
+                         testing::Range<std::size_t>(1U, 64U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
                              dd::QubitCount nqubits = info.param;
                              std::stringstream ss{};
@@ -97,6 +96,7 @@ INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalExactQPE,
                              return ss.str(); });
 
 TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
+    qc::CircuitOptimizer::reorderOperations(*qpe);
     const auto start = std::chrono::steady_clock::now();
     // transform dynamic circuit to unitary circuit by first eliminating reset operations and afterwards deferring measurements to the end of the circuit
     qc::CircuitOptimizer::eliminateResets(*iqpe);
@@ -107,9 +107,6 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
     qc::CircuitOptimizer::reorderOperations(*iqpe);
     const auto finishedTransformation = std::chrono::steady_clock::now();
 
-    std::cout << *qpe << std::endl;
-    std::cout << *iqpe << std::endl;
-
     qc::MatrixDD e = dd->makeIdent(precision + 1);
     dd->incRef(e);
 
@@ -117,9 +114,6 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
     auto rightIt = iqpe->begin();
 
     while (leftIt != qpe->end() && rightIt != iqpe->end()) {
-        std::cout << "L: " << **leftIt << std::endl;
-        std::cout << "R: " << **rightIt << std::endl;
-
         auto multLeft  = dd->multiply((*leftIt)->getDD(dd), e);
         auto multRight = dd->multiply(multLeft, (*rightIt)->getInverseDD(dd));
         dd->incRef(multRight);
@@ -127,12 +121,6 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
         e = multRight;
 
         dd->garbageCollect();
-
-        std::cout << e.p->ident << std::endl;
-        if (!e.p->ident) {
-            dd::export2Dot(e, "e.dot", true, true, true, true);
-            return;
-        }
 
         ++leftIt;
         ++rightIt;
@@ -302,6 +290,7 @@ INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalInexactQPE,
             return ss.str(); });
 
 TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
+    qc::CircuitOptimizer::reorderOperations(*qpe);
     const auto start = std::chrono::steady_clock::now();
     // transform dynamic circuit to unitary circuit by first eliminating reset operations and afterwards deferring measurements to the end of the circuit
     qc::CircuitOptimizer::eliminateResets(*iqpe);
@@ -309,6 +298,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
 
     // remove final measurements in order to just obtain the unitary functionality
     qc::CircuitOptimizer::removeFinalMeasurements(*iqpe);
+    qc::CircuitOptimizer::reorderOperations(*iqpe);
     const auto finishedTransformation = std::chrono::steady_clock::now();
 
     qc::MatrixDD e = dd->makeIdent(precision + 1);
@@ -447,6 +437,7 @@ INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalBV,
                              return ss.str(); });
 
 TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
+    qc::CircuitOptimizer::reorderOperations(*bv);
     const auto start = std::chrono::steady_clock::now();
     // transform dynamic circuit to unitary circuit by first eliminating reset operations and afterwards deferring measurements to the end of the circuit
     qc::CircuitOptimizer::eliminateResets(*dbv);
@@ -454,6 +445,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
 
     // remove final measurements in order to just obtain the unitary functionality
     qc::CircuitOptimizer::removeFinalMeasurements(*dbv);
+    qc::CircuitOptimizer::reorderOperations(*dbv);
     const auto finishedTransformation = std::chrono::steady_clock::now();
 
     qc::MatrixDD e = dd->makeIdent(bitwidth + 1);
@@ -586,6 +578,7 @@ INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalQFT,
                              return ss.str(); });
 
 TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
+    qc::CircuitOptimizer::reorderOperations(*qft);
     const auto start = std::chrono::steady_clock::now();
     // transform dynamic circuit to unitary circuit by first eliminating reset operations and afterwards deferring measurements to the end of the circuit
     qc::CircuitOptimizer::eliminateResets(*dqft);
@@ -593,6 +586,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
 
     // remove final measurements in order to just obtain the unitary functionality
     qc::CircuitOptimizer::removeFinalMeasurements(*dqft);
+    qc::CircuitOptimizer::reorderOperations(*dqft);
     const auto finishedTransformation = std::chrono::steady_clock::now();
 
     qc::MatrixDD e = dd->makeIdent(precision);
