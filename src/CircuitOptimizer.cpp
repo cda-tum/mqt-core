@@ -1035,8 +1035,7 @@ namespace qc {
 
             // ignore barrier, snapshot and probabilities statements;
             if (op->getType() == Barrier || op->getType() == Snapshot || op->getType() == ShowProbabilities) {
-                for (const auto& target: op->getTargets())
-                    ++(dagIterators.at(target));
+                ++it;
                 continue;
             }
 
