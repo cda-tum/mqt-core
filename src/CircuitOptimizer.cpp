@@ -985,6 +985,7 @@ namespace qc {
     }
 
     /// this method can be used to reorder the operations of a given quantum computation in order to get a canonical ordering
+    /// it uses iterative breadth-first search starting from the topmost qubit
     void CircuitOptimizer::reorderOperations(QuantumComputation& qc) {
         //        std::cout << qc << std::endl;
         auto dag = constructDAG(qc);
@@ -1005,83 +1006,74 @@ namespace qc {
         std::vector<std::unique_ptr<qc::Operation>> ops{};
 
         // iterate over DAG in depth-first fashion starting from the top-most qubit
-        const auto msq = static_cast<dd::Qubit>(dag.size() - 1);
-        reorderOperationsRecursive(ops, dag, dagIterators, msq, dag.at(msq).end());
+        const auto msq  = static_cast<dd::Qubit>(dag.size() - 1);
+        bool       done = false;
+        while (!done) {
+            // assume that everything is done
+            done = true;
+
+            // iterate over qubits in reverse order
+            for (dd::Qubit q = msq; q >= 0; --q) {
+                // nothing to be done for this qubit
+                if (dagIterators.at(q) == dag.at(q).end()) {
+                    continue;
+                }
+                done = false;
+
+                // get the current operation on the qubit
+                auto& it = dagIterators.at(q);
+                auto& op = **it;
+
+                // warning for classically controlled operations
+                if (op->getType() == ClassicControlled) {
+                    std::cerr << "Caution! Reordering operations might not work if the circuit contains classically controlled operations" << std::endl;
+                }
+
+                // ignore barrier, snapshot and probabilities statements;
+                if (op->getType() == Barrier || op->getType() == Snapshot || op->getType() == ShowProbabilities) {
+                    ++it;
+                    continue;
+                }
+
+                // check whether the gate can be scheduled, i.e. whether all qubits it acts on are at this operation
+                bool                                                    executable = true;
+                std::bitset<std::numeric_limits<dd::QubitCount>::max()> actsOn{};
+                actsOn.set(q);
+                for (std::size_t i = 0; i < dag.size(); ++i) {
+                    // actually check in reverse order
+                    auto qb = static_cast<dd::Qubit>(dag.size() - 1 - i);
+                    if (qb != q && op->actsOn(static_cast<dd::Qubit>(qb))) {
+                        actsOn.set(qb);
+
+                        assert(dagIterators.at(qb) != dag.at(qb).end());
+                        // check whether operation is executable for the currently considered qubit
+                        if (*dagIterators.at(qb) != *it) {
+                            executable = false;
+                            break;
+                        }
+                    }
+                }
+
+                // continue, if this gate is not yet executable
+                if (!executable)
+                    continue;
+
+                // gate is executable, move it to the new vector
+                ops.emplace_back(std::move(op));
+
+                // now increase all corresponding iterators
+                for (std::size_t i = 0; i < dag.size(); ++i) {
+                    if (actsOn.test(i)) {
+                        ++(dagIterators.at(i));
+                    }
+                }
+            }
+        }
 
         // clear all the operations from the quantum circuit
         qc.ops.clear();
         // move all operations from the newly created vector to the original one
         std::move(ops.begin(), ops.end(), std::back_inserter(qc.ops));
-    }
-
-    void CircuitOptimizer::reorderOperationsRecursive(std::vector<std::unique_ptr<qc::Operation>>& ops, DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, const DAGIterator& until) {
-        //        std::cout << "Current iterator status:" << std::endl;
-        //        printDAG(dag, dagIterators);
-
-        // check if this qubit is finished
-        if (dagIterators.at(idx) == dag.at(idx).end()) {
-            if (idx > 0) {
-                reorderOperationsRecursive(ops, dag, dagIterators, static_cast<dd::Qubit>(idx - 1), dag.at(idx - 1).end());
-            }
-            return;
-        }
-        // check if desired operation was reached
-        if (until != dag.at(idx).end()) {
-            if (*dagIterators.at(idx) == *until) {
-                return;
-            }
-        }
-        auto& it = dagIterators.at(idx);
-        while (it != dag.at(idx).end()) {
-            if (until != dag.at(idx).end()) {
-                if (*dagIterators.at(idx) == *until) {
-                    break;
-                }
-            }
-
-            // iterate over the operations on the qubit and add them to the ops list
-            auto& op = **it;
-            //            std::cout << *op << std::endl;
-
-            if (op->getType() == ClassicControlled) {
-                std::cerr << "Caution! Reordering operations might not work if the circuit contains classically controlled operations" << std::endl;
-            }
-
-            // ignore barrier, snapshot and probabilities statements;
-            if (op->getType() == Barrier || op->getType() == Snapshot || op->getType() == ShowProbabilities) {
-                ++it;
-                continue;
-            }
-
-            // start recursive calls that ensure that the iterator of every involved qubit is at this operation
-            std::bitset<std::numeric_limits<dd::QubitCount>::max()> actsOn{};
-            actsOn.set(idx);
-            for (std::size_t i = 0; i < dag.size(); ++i) {
-                // actually check in reverse order
-                auto q = static_cast<dd::Qubit>(dag.size() - 1 - i);
-                if (q != idx && op->actsOn(static_cast<dd::Qubit>(q))) {
-                    actsOn.set(q);
-                    //                    std::cout << "Recursive call at q" << static_cast<std::size_t>(q) << " with goal: " << *op << std::endl;
-                    reorderOperationsRecursive(ops, dag, dagIterators, q, it);
-                }
-            }
-
-            //            std::cout << "All requirements fulfilled to execute: " << *op << std::endl;
-            // it's time to add the operation to the newly constructed vector
-            ops.emplace_back(std::move(op));
-
-            // now increase all corresponding iterators
-            for (std::size_t i = 0; i < dag.size(); ++i) {
-                if (actsOn.test(i)) {
-                    ++(dagIterators.at(i));
-                }
-            }
-            //            std::cout << "New iterator status:" << std::endl;
-            //            printDAG(dag, dagIterators);
-        }
-        if (dagIterators.at(idx) == dag.at(idx).end() && idx > 0) {
-            reorderOperationsRecursive(ops, dag, dagIterators, static_cast<dd::Qubit>(idx - 1), dag.at(idx - 1).end());
-        }
     }
 
     void CircuitOptimizer::printDAG(const DAG& dag) {

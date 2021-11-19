@@ -59,8 +59,6 @@ namespace qc {
 
         static void changeTargets(Targets& targets, const std::map<dd::Qubit, dd::Qubit>& replacementMap);
         static void changeControls(dd::Controls& controls, const std::map<dd::Qubit, dd::Qubit>& replacementMap);
-
-        static void reorderOperationsRecursive(std::vector<std::unique_ptr<qc::Operation>>& ops, DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, const DAGIterator& until);
     };
 } // namespace qc
 #endif //QFR_CIRCUITOPTIMIZER_HPP
