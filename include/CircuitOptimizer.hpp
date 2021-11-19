@@ -24,7 +24,9 @@ namespace qc {
     public:
         CircuitOptimizer() = default;
 
-        static DAG constructDAG(QuantumComputation& qc);
+        static DAG  constructDAG(QuantumComputation& qc);
+        static void printDAG(const DAG& dag);
+        static void printDAG(const DAG& dag, const DAGIterators& iterators);
 
         static void swapReconstruction(QuantumComputation& qc);
 

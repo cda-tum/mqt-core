@@ -981,6 +981,7 @@ namespace qc {
     void CircuitOptimizer::reorderOperations(QuantumComputation& qc) {
         std::cout << qc << std::endl;
         auto dag = constructDAG(qc);
+        printDAG(dag);
 
         // initialize iterators
         DAGIterators dagIterators{dag.size()};
@@ -1007,6 +1008,9 @@ namespace qc {
     }
 
     void CircuitOptimizer::reorderOperationsRecursive(std::vector<std::unique_ptr<qc::Operation>>& ops, DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, const DAGIterator& until) {
+        std::cout << "Current iterator status:" << std::endl;
+        printDAG(dag, dagIterators);
+
         // check if this qubit is finished
         if (dagIterators.at(idx) == dag.at(idx).end()) {
             if (idx > 0) {
@@ -1027,6 +1031,7 @@ namespace qc {
                     break;
                 }
             }
+
             // iterate over the operations on the qubit and add them to the ops list
             auto& op = **it;
             std::cout << *op << std::endl;
@@ -1064,9 +1069,30 @@ namespace qc {
                     ++(dagIterators.at(i));
                 }
             }
+            std::cout << "New iterator status:" << std::endl;
+            printDAG(dag, dagIterators);
         }
         if (dagIterators.at(idx) == dag.at(idx).end() && idx > 0) {
             reorderOperationsRecursive(ops, dag, dagIterators, static_cast<dd::Qubit>(idx - 1), dag.at(idx - 1).end());
+        }
+    }
+
+    void CircuitOptimizer::printDAG(const DAG& dag) {
+        for (const auto& qubitDag: dag) {
+            std::cout << " - ";
+            for (const auto& op: qubitDag) {
+                std::cout << std::hex << (*op).get() << std::dec << "(" << toString((*op)->getType()) << ") - ";
+            }
+            std::cout << std::endl;
+        }
+    }
+    void CircuitOptimizer::printDAG(const DAG& dag, const DAGIterators& iterators) {
+        for (std::size_t i = 0; i < dag.size(); ++i) {
+            std::cout << " - ";
+            for (auto it = iterators.at(i); it != dag.at(i).end(); ++it) {
+                std::cout << std::hex << (**it).get() << std::dec << "(" << toString((**it)->getType()) << ") - ";
+            }
+            std::cout << std::endl;
         }
     }
 } // namespace qc
