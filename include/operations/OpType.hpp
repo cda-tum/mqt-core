@@ -163,14 +163,14 @@ namespace qc {
         }
     }
 
-    std::istream& operator>>(std::istream& in, OpType& opType) {
+    inline std::istream& operator>>(std::istream& in, OpType& opType) {
         std::string token;
         in >> token;
         opType = opTypeFromString(token);
         return in;
     }
 
-    std::ostream& operator<<(std::ostream& out, OpType& opType) {
+    inline std::ostream& operator<<(std::ostream& out, OpType& opType) {
         out << toString(opType);
         return out;
     }
