@@ -96,7 +96,5 @@ setup(
         'Source': 'https://github.com/iic-jku/qfr/',
         'Tracker': 'https://github.com/iic-jku/qfr/issues',
         'Research': 'https://iic.jku.at/eda/research/quantum_dd',
-    },
-    python_requires='>=3.6',
-    setup_requires=['cmake>=3.14']
+    }
 )
