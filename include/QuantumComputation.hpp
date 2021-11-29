@@ -229,6 +229,8 @@ namespace qc {
         [[nodiscard]] const ClassicalRegisterMap& getCregs() const { return cregs; }
         [[nodiscard]] const QuantumRegisterMap&   getANCregs() const { return ancregs; }
 
+        void setName(const std::string& n) { name = n; }
+
         // initialLayout[physical_qubit] = logical_qubit
         Permutation initialLayout{};
         Permutation outputPermutation{};
