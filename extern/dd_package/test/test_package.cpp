@@ -1006,7 +1006,8 @@ TEST(DDPackageTest, BasicNumericInstabilityTest) {
 TEST(DDPackageTest, BasicNumericStabilityTest) {
     using limits = std::numeric_limits<dd::fp>;
 
-    auto dd = std::make_unique<dd::Package>(1);
+    auto dd  = std::make_unique<dd::Package>(1);
+    auto tol = dd::ComplexTable<>::tolerance();
     dd::ComplexNumbers::setTolerance(limits::epsilon());
     auto state  = dd->makeZeroState(1);
     auto h      = dd->makeGateDD(dd::Hmat, 1, 0);
@@ -1025,6 +1026,21 @@ TEST(DDPackageTest, BasicNumericStabilityTest) {
     oss.str("");
     oss << -dd::SQRT2_2;
     EXPECT_EQ(rightWeight, oss.str());
+    // restore tolerance
+    dd::ComplexNumbers::setTolerance(tol);
+}
+
+TEST(DDPackageTest, NormalizationNumericStabilityTest) {
+    auto dd = std::make_unique<dd::Package>(1);
+    for (std::size_t x = 23; x <= 50; ++x) {
+        const auto lambda = dd::PI / static_cast<dd::fp>(1ULL << x);
+        std::cout << std::setprecision(17) << "x: " << x << " | lambda: " << lambda << " | cos(lambda): " << std::cos(lambda) << " | sin(lambda): " << std::sin(lambda) << std::endl;
+        auto p      = dd->makeGateDD(dd::Phasemat(lambda), 1, 0);
+        auto pdag   = dd->makeGateDD(dd::Phasemat(-lambda), 1, 0);
+        auto result = dd->multiply(p, pdag);
+        EXPECT_TRUE(result.p->ident);
+        dd->cn.complexTable.clear();
+    }
 }
 
 TEST(DDPackageTest, FidelityOfMeasurementOutcomes) {
@@ -1037,7 +1053,36 @@ TEST(DDPackageTest, FidelityOfMeasurementOutcomes) {
 
     auto ghz_state = dd->multiply(cx_gate2, dd->multiply(cx_gate1, dd->multiply(h_gate, zero_state)));
 
-    std::vector<dd::fp> probs    = {0.5, 0., 0., 0., 0., 0., 0., 0.5};
-    auto                fidelity = dd->fidelityOfMeasurementOutcomes(ghz_state, probs);
+    dd::ProbabilityVector probs{};
+    probs[0]      = 0.5;
+    probs[7]      = 0.5;
+    auto fidelity = dd->fidelityOfMeasurementOutcomes(ghz_state, probs);
     EXPECT_NEAR(fidelity, 1.0, dd::ComplexTable<>::tolerance());
+}
+
+TEST(DDPackageTest, CloseToIdentity) {
+    auto dd = std::make_unique<dd::Package>(3);
+    auto id = dd->makeIdent(1);
+    EXPECT_TRUE(dd->isCloseToIdentity(id));
+    dd::Package::mEdge close{};
+    close.p  = id.p;
+    close.w  = dd->cn.lookup(1e-11, 0);
+    auto id2 = dd->makeDDNode(1, std::array{id, dd::Package::mEdge::zero, dd::Package::mEdge::zero, close});
+    EXPECT_TRUE(dd->isCloseToIdentity(id2));
+
+    auto noId = dd->makeDDNode(1, std::array{dd::Package::mEdge::zero, id, dd::Package::mEdge::zero, close});
+    EXPECT_FALSE(dd->isCloseToIdentity(noId));
+
+    dd::Package::mEdge notClose{};
+    notClose.p = id.p;
+    notClose.w = dd->cn.lookup(1e-9, 0);
+    auto noId2 = dd->makeDDNode(1, std::array{notClose, dd::Package::mEdge::zero, dd::Package::mEdge::zero, close});
+    EXPECT_FALSE(dd->isCloseToIdentity(noId2));
+
+    auto noId3 = dd->makeDDNode(1, std::array{close, dd::Package::mEdge::zero, dd::Package::mEdge::zero, notClose});
+    EXPECT_FALSE(dd->isCloseToIdentity(noId3));
+
+    auto notClose2 = dd->makeDDNode(0, std::array{dd::Package::mEdge::zero, dd::Package::mEdge::one, dd::Package::mEdge::one, dd::Package::mEdge::zero});
+    auto notClose3 = dd->makeDDNode(1, std::array{notClose2, dd::Package::mEdge::zero, dd::Package::mEdge::zero, notClose2});
+    EXPECT_FALSE(dd->isCloseToIdentity(notClose3));
 }

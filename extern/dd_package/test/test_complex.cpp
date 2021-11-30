@@ -45,11 +45,11 @@ TEST(DDComplexTest, ComplexNumberCreation) {
     auto cn = std::make_unique<ComplexNumbers>();
     EXPECT_EQ(cn->lookup(Complex::zero), Complex::zero);
     EXPECT_EQ(cn->lookup(Complex::one), Complex::one);
-    EXPECT_EQ(cn->lookup(1e-14, 0.), Complex::zero);
-    EXPECT_EQ(CTEntry::val(cn->lookup(1e-14, 1.).r), 0.);
-    EXPECT_EQ(CTEntry::val(cn->lookup(1e-14, 1.).i), 1.);
-    EXPECT_EQ(CTEntry::val(cn->lookup(1e-14, -1.).r), 0.);
-    EXPECT_EQ(CTEntry::val(cn->lookup(1e-14, -1.).i), -1.);
+    EXPECT_EQ(cn->lookup(1e-16, 0.), Complex::zero);
+    EXPECT_EQ(CTEntry::val(cn->lookup(1e-16, 1.).r), 0.);
+    EXPECT_EQ(CTEntry::val(cn->lookup(1e-16, 1.).i), 1.);
+    EXPECT_EQ(CTEntry::val(cn->lookup(1e-16, -1.).r), 0.);
+    EXPECT_EQ(CTEntry::val(cn->lookup(1e-16, -1.).i), -1.);
     EXPECT_EQ(CTEntry::val(cn->lookup(-1., -1.).r), -1.);
     EXPECT_EQ(CTEntry::val(cn->lookup(-1., -1.).i), -1.);
     auto c = cn->lookup(0., -1.);
@@ -534,12 +534,12 @@ TEST(DDComplexTest, DoubleHitInFindOrInsert) {
     EXPECT_EQ(tnum1->value, num1);
 
     // insert a second number that is farther away than the tolerance, but closer than twice the tolerance
-    fp   num2  = num1 + 1.5 * dd::ComplexTable<>::tolerance();
+    fp   num2  = num1 + 2.1 * dd::ComplexTable<>::tolerance();
     auto tnum2 = cn->complexTable.lookup(num2);
     EXPECT_EQ(tnum2->value, num2);
 
     // insert a third number that is close to both previously inserted numbers, but closer to the second
-    fp   num3  = num1 + 0.9 * dd::ComplexTable<>::tolerance();
+    fp   num3  = num1 + 2.2 * dd::ComplexTable<>::tolerance();
     auto tnum3 = cn->complexTable.lookup(num3);
     EXPECT_EQ(tnum3->value, num2);
 }

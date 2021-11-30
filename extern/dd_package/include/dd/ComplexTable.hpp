@@ -484,7 +484,7 @@ namespace dd {
         std::size_t upperNeighbors   = 0;
 
         // numerical tolerance to be used for floating point values
-        static inline fp TOLERANCE = 1e-13;
+        static inline fp TOLERANCE = std::numeric_limits<dd::fp>::epsilon() * 1024;
 
         Entry*                                available{};
         std::vector<std::vector<Entry>>       chunks{};

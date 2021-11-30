@@ -1274,22 +1274,21 @@ namespace dd {
             return fid.r * fid.r + fid.i * fid.i;
         }
 
-        dd::fp fidelityOfMeasurementOutcomes(const vEdge& e, const std::vector<dd::fp>& probs) {
+        dd::fp fidelityOfMeasurementOutcomes(const vEdge& e, const ProbabilityVector& probs) {
             if (e.w.approximatelyZero()) {
                 return 0.;
             }
-            const auto nq = e.p->v + 1;
-            if (probs.size() != (1U << nq)) {
-                throw std::runtime_error("Mismatch in sizes of DD and probability vector in fidelity function.");
-            }
-
             return fidelityOfMeasurementOutcomesRecursive(e, probs, 0);
         }
 
-        dd::fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e, const std::vector<dd::fp>& probs, const std::size_t i) {
+        dd::fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e, const ProbabilityVector& probs, const std::size_t i) {
             const auto topw = dd::ComplexNumbers::mag(e.w);
             if (e.isTerminal()) {
-                return topw * std::sqrt(probs[i]);
+                if (auto it = probs.find(i); it != probs.end()) {
+                    return topw * std::sqrt(it->second);
+                } else {
+                    return 0.;
+                }
             }
 
             std::size_t leftIdx          = i;
@@ -1298,7 +1297,7 @@ namespace dd {
                 leftContribution = fidelityOfMeasurementOutcomesRecursive(e.p->e[0], probs, leftIdx);
             }
 
-            std::size_t rightIdx          = i | (1 << e.p->v);
+            std::size_t rightIdx          = i | (1ULL << e.p->v);
             auto        rightContribution = 0.;
             if (!e.p->e[1].w.approximatelyZero()) {
                 rightContribution = fidelityOfMeasurementOutcomesRecursive(e.p->e[1], probs, rightIdx);
@@ -1463,6 +1462,11 @@ namespace dd {
             assert(before == after);
             return {CTEntry::val(res.w.r), CTEntry::val(res.w.i)};
         }
+        bool isCloseToIdentity(const mEdge& m, dd::fp tol = 1e-10) {
+            std::unordered_set<decltype(m.p)> visited{};
+            visited.reserve(mUniqueTable.getActiveNodeCount());
+            return isCloseToIdentityRecursive(m, visited, tol);
+        }
 
     private:
         /// TODO: introduce a compute table for the trace?
@@ -1526,6 +1530,50 @@ namespace dd {
                 }
                 return r;
             }
+        }
+
+        bool isCloseToIdentityRecursive(const mEdge& m, std::unordered_set<decltype(m.p)>& visited, dd::fp tol) {
+            // immediately return if this node has already been visited
+            if (visited.find(m.p) != visited.end())
+                return true;
+
+            // immediately return of this node is identical to the identity
+            if (m.p->ident)
+                return true;
+
+            // check whether any of the middle successors is non-zero, i.e., m = [ x 0 0 y ]
+            const auto mag1 = dd::ComplexNumbers::mag2(m.p->e[1].w);
+            const auto mag2 = dd::ComplexNumbers::mag2(m.p->e[2].w);
+            if (mag1 > tol || mag2 > tol) {
+                visited.insert(m.p);
+                return false;
+            }
+
+            // check whether  m = [ ~1 0 0 y ]
+            const auto mag0 = dd::ComplexNumbers::mag2(m.p->e[0].w);
+            if (std::abs(mag0 - 1.0) > tol) {
+                visited.insert(m.p);
+                return false;
+            }
+
+            // check whether m = [ x 0 0 ~1 ] or m = [ x 0 0 ~0 ] (the last case is true for an ancillary qubit)
+            const auto mag3 = dd::ComplexNumbers::mag2(m.p->e[3].w);
+            if (std::abs(mag3 - 1.0) > tol && mag3 > tol) {
+                visited.insert(m.p);
+                return false;
+            }
+
+            // m either has the form [ ~1 0 0 ~1 ] or [ ~1 0 0 ~0 ]
+            const auto ident0 = isCloseToIdentityRecursive(m.p->e[0], visited, tol);
+            if (!ident0) {
+                visited.insert(m.p);
+                return false;
+            }
+
+            // m either has the form [ I 0 0 ~1 ] or [ I 0 0 ~0 ]
+            const auto ident3 = isCloseToIdentityRecursive(m.p->e[3], visited, tol);
+            visited.insert(m.p);
+            return ident3;
         }
 
         ///
@@ -1883,7 +1931,7 @@ namespace dd {
                 return {CTEntry::val(c.r), CTEntry::val(c.i)};
             }
 
-            bool one = i & (1 << e.p->v);
+            const bool one = i & (1ULL << e.p->v);
 
             ComplexValue r{};
             if (!one && !e.p->e[0].w.approximatelyZero()) {
@@ -1908,8 +1956,8 @@ namespace dd {
                 return {CTEntry::val(c.r), CTEntry::val(c.i)};
             }
 
-            bool row = i & (1 << e.p->v);
-            bool col = j & (1 << e.p->v);
+            const bool row = i & (1ULL << e.p->v);
+            const bool col = j & (1ULL << e.p->v);
 
             ComplexValue r{};
             if (!row && !col && !e.p->e[0].w.approximatelyZero()) {
@@ -1926,7 +1974,7 @@ namespace dd {
         }
 
         CVec getVector(const vEdge& e) {
-            std::size_t dim = 1 << (e.p->v + 1);
+            const std::size_t dim = 2ULL << e.p->v;
             // allocate resulting vector
             auto vec = CVec(dim, {0.0, 0.0});
             getVector(e, Complex::one, 0, vec);
@@ -1943,7 +1991,7 @@ namespace dd {
                 return;
             }
 
-            std::size_t x = i | (1 << e.p->v);
+            const std::size_t x = i | (1ULL << e.p->v);
 
             // recursive case
             if (!e.p->e[0].w.approximatelyZero())
@@ -1954,11 +2002,11 @@ namespace dd {
         }
 
         void printVector(const vEdge& e) {
-            unsigned long long element = 2u << e.p->v;
-            for (unsigned long long i = 0; i < element; i++) {
-                auto amplitude = getValueByPath(e, i);
+            const unsigned long long element = 2ULL << e.p->v;
+            for (auto i = 0ULL; i < element; i++) {
+                const auto amplitude = getValueByPath(e, i);
                 for (Qubit j = e.p->v; j >= 0; j--) {
-                    std::cout << ((i >> j) & 1u);
+                    std::cout << ((i >> j) & 1ULL);
                 }
                 constexpr auto precision = 3;
                 // set fixed width to maximum of a printed number
@@ -1970,10 +2018,10 @@ namespace dd {
         }
 
         void printMatrix(const mEdge& e) {
-            unsigned long long element = 2u << e.p->v;
-            for (unsigned long long i = 0; i < element; i++) {
-                for (unsigned long long j = 0; j < element; j++) {
-                    auto           amplitude = getValueByPath(e, i, j);
+            const unsigned long long element = 2ULL << e.p->v;
+            for (auto i = 0ULL; i < element; i++) {
+                for (auto j = 0ULL; j < element; j++) {
+                    const auto     amplitude = getValueByPath(e, i, j);
                     constexpr auto precision = 3;
                     // set fixed width to maximum of a printed number
                     // (-) 0.precision plus/minus 0.precision i
@@ -1986,7 +2034,7 @@ namespace dd {
         }
 
         CMat getMatrix(const mEdge& e) {
-            std::size_t dim = 1 << (e.p->v + 1);
+            const unsigned long long dim = 2ULL << e.p->v;
             // allocate resulting matrix
             auto mat = CMat(dim, CVec(dim, {0.0, 0.0}));
             getMatrix(e, Complex::one, 0, 0, mat);
@@ -2003,8 +2051,8 @@ namespace dd {
                 return;
             }
 
-            std::size_t x = i | (1 << e.p->v);
-            std::size_t y = j | (1 << e.p->v);
+            const std::size_t x = i | (1ULL << e.p->v);
+            const std::size_t y = j | (1ULL << e.p->v);
 
             // recursive case
             if (!e.p->e[0].w.approximatelyZero())
@@ -2022,7 +2070,7 @@ namespace dd {
             if (edge.isTerminal()) {
                 auto amp = cn.getTemporary();
                 dd::ComplexNumbers::mul(amp, amplitude, edge.w);
-                for (std::size_t i = 0; i < (1UL << level); i++) {
+                for (std::size_t i = 0; i < (1ULL << level); i++) {
                     if (binary) {
                         amp.writeBinary(oss);
                     } else {
@@ -2062,7 +2110,7 @@ namespace dd {
                 auto amp = cn.getTemporary();
                 dd::ComplexNumbers::mul(amp, amplitude, edge.w);
                 idx <<= level;
-                for (std::size_t i = 0; i < (1UL << level); i++) {
+                for (std::size_t i = 0; i < (1ULL << level); i++) {
                     amplitudes[idx++] = std::complex<dd::fp>{dd::ComplexTable<>::Entry::val(amp.r), dd::ComplexTable<>::Entry::val(amp.i)};
                 }
 
@@ -2071,7 +2119,7 @@ namespace dd {
 
             auto a = cn.mulCached(amplitude, edge.w);
             exportAmplitudesRec(edge.p->e[0], amplitudes, a, level - 1, idx << 1);
-            exportAmplitudesRec(edge.p->e[1], amplitudes, a, level - 1, (idx << 1) | 1);
+            exportAmplitudesRec(edge.p->e[1], amplitudes, a, level - 1, (idx << 1) | 1ULL);
             cn.returnToCache(a);
         }
         void exportAmplitudes(const dd::Package::vEdge& edge, std::vector<std::complex<dd::fp>>& amplitudes, dd::QubitCount nq) {
@@ -2091,7 +2139,7 @@ namespace dd {
 
             if (edge.isTerminal()) {
                 idx <<= level;
-                for (std::size_t i = 0; i < (1UL << level); i++) {
+                for (std::size_t i = 0; i < (1ULL << level); i++) {
                     auto temp         = std::complex<dd::fp>{amp.r + amplitudes[idx].real(), amp.i + amplitudes[idx].imag()};
                     amplitudes[idx++] = temp;
                 }
@@ -2100,7 +2148,7 @@ namespace dd {
             }
 
             addAmplitudesRec(edge.p->e[0], amplitudes, amp, level - 1, idx << 1);
-            addAmplitudesRec(edge.p->e[1], amplitudes, amp, level - 1, idx << 1 | 1);
+            addAmplitudesRec(edge.p->e[1], amplitudes, amp, level - 1, idx << 1 | 1ULL);
         }
         void addAmplitudes(const dd::Package::vEdge& edge, std::vector<std::complex<dd::fp>>& amplitudes, dd::QubitCount nq) {
             if (edge.isTerminal()) {
