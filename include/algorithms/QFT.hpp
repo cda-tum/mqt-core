@@ -15,9 +15,9 @@ namespace qc {
 
         std::ostream& printStatistics(std::ostream& os) const override;
 
-        dd::QubitCount precision{};
-        bool           includeMeasurements = true;
-        bool           dynamic             = false;
+        const dd::QubitCount precision{};
+        const bool           includeMeasurements;
+        const bool           dynamic;
 
     protected:
         void createCircuit();
