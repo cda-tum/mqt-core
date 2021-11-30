@@ -30,7 +30,7 @@ INSTANTIATE_TEST_SUITE_P(BernsteinVazirani, BernsteinVazirani,
 
 TEST_P(BernsteinVazirani, FunctionTest) {
     // get hidden bitstring
-    auto s = std::bitset<std::numeric_limits<dd::QubitCount>::max()>(GetParam());
+    auto s = qc::BitString(GetParam());
 
     // construct Bernstein Vazirani circuit
     auto qc = std::make_unique<qc::BernsteinVazirani>(s);
@@ -51,7 +51,7 @@ TEST_P(BernsteinVazirani, FunctionTest) {
 
 TEST_P(BernsteinVazirani, FunctionTestDynamic) {
     // get hidden bitstring
-    auto s = std::bitset<std::numeric_limits<dd::QubitCount>::max()>(GetParam());
+    auto s = qc::BitString(GetParam());
 
     // construct Bernstein Vazirani circuit
     auto qc = std::make_unique<qc::BernsteinVazirani>(s, true);
@@ -108,7 +108,7 @@ TEST_F(BernsteinVazirani, DynamicCircuit) {
 
 TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
     // get hidden bitstring
-    auto s = std::bitset<std::numeric_limits<dd::QubitCount>::max()>(GetParam());
+    auto s = qc::BitString(GetParam());
 
     // create standard BV circuit
     auto bv = std::make_unique<qc::BernsteinVazirani>(s);
