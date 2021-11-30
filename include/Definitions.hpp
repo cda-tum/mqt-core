@@ -42,7 +42,7 @@ namespace qc {
 
     using Targets = std::vector<dd::Qubit>;
 
-    using BitString = std::bitset<std::numeric_limits<dd::QubitCount>::max()>;
+    using BitString = std::bitset<std::numeric_limits<dd::Qubit>::max()+1>;
 
     struct Permutation: public std::map<dd::Qubit, dd::Qubit> {
         [[nodiscard]] inline dd::Controls apply(const dd::Controls& controls) const {
