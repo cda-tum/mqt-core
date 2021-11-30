@@ -89,7 +89,7 @@ namespace qc {
             case Teleportation: return "teleportation";
             case ClassicControlled: return "classic controlled";
             default:
-                return "";
+                throw std::invalid_argument("Invalid OpType!");
         }
     }
 
@@ -159,7 +159,7 @@ namespace qc {
         else if (opType == "classic controlled" || opType == "31")
             return OpType::ClassicControlled;
         else {
-            throw std::runtime_error("Unknown operation type: " + opType);
+            throw std::invalid_argument("Unknown operation type: " + opType);
         }
     }
 
