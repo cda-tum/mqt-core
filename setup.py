@@ -67,7 +67,7 @@ with open(README_PATH) as readme_file:
 
 setup(
     name='jkq.qfr',
-    version='1.7.2',
+    version='1.7.3',
     author='Lukas Burgholzer',
     author_email='lukas.burgholzer@jku.at',
     description='QFR - A JKQ tool for Quantum Functionality Representation',
@@ -96,7 +96,5 @@ setup(
         'Source': 'https://github.com/iic-jku/qfr/',
         'Tracker': 'https://github.com/iic-jku/qfr/issues',
         'Research': 'https://iic.jku.at/eda/research/quantum_dd',
-    },
-    python_requires='>=3.6',
-    setup_requires=['cmake>=3.14']
+    }
 )

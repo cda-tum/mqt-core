@@ -9,17 +9,6 @@ on:
     branches: [ master ]
   workflow_dispatch:
 
-env:
-  CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-  CIBW_BUILD:                  cp3*
-  CIBW_ENVIRONMENT:            "DEPLOY=ON"
-  CIBW_ARCHS_MACOS:            "x86_64 arm64"
-  CIBW_TEST_SKIP:              "*_arm64"
-  CIBW_SKIP:                   "*-win32 *-musllinux_i686 *-manylinux_i686"
-  CIBW_BUILD_VERBOSITY:        3
-  CIBW_TEST_COMMAND:           "python -c \"from jkq import qfr\""
-  CIBW_BEFORE_BUILD:           "pip install cmake"
-
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -28,14 +17,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.2.2
+        uses: pypa/cibuildwheel@v2.3.0
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
@@ -47,24 +35,19 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-
       - uses: actions/setup-python@v2
         name: Install Python
         with:
           python-version: '3.9'
-
       - name: Install dependencies
-        run: |
-              python -m pip install --upgrade pip setuptools wheel
+        run: pip install -q build
       - name: Build sdist
-        run: python setup.py sdist
-
+        run: python -m build --sdist
       - name: Test sdist
         run: pip install --verbose dist/*.tar.gz
         env:
           CC: "gcc-10"
           CXX: "g++-10"
-
       - uses: actions/upload-artifact@v2
         with:
           path: dist/*.tar.gz
@@ -78,7 +61,6 @@ jobs:
         with:
           name: artifact
           path: dist
-
       - uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__

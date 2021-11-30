@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.14...3.21)
+cmake_minimum_required(VERSION 3.14...3.22)
 
 project(qfr
         LANGUAGES CXX
-        VERSION 1.7.2
+        VERSION 1.7.3
         DESCRIPTION "QFR  - A JKQ library for Quantum Functionality Representation"
         )
 
@@ -19,6 +19,14 @@ option(BUILD_QFR_TESTS "Also build tests for QFR project")
 if (DEFINED ENV{DEPLOY})
 	set(DEPLOY $ENV{DEPLOY} CACHE BOOL "Use deployment configuration from environment" FORCE)
 	message(STATUS "Setting deployment configuration to '${DEPLOY}' from environment")
+endif ()
+
+# set deployment specific options
+if (DEPLOY)
+	# build a universal macOS binary in case this is a deployment build
+	set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "" FORCE)
+	# set the macOS deployment target appropriately
+	set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "" FORCE)
 endif ()
 
 # build type settings
