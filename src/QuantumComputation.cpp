@@ -828,8 +828,8 @@ namespace qc {
 
                 // base case -> determine the basis state from the measurement and safe the probability
                 if (measurements.size() == nclassics - 1) {
-                    std::uint_least64_t idx0 = 0;
-                    std::uint_least64_t idx1 = 0;
+                    std::size_t idx0 = 0;
+                    std::size_t idx1 = 0;
                     for (std::size_t i = 0; i < nclassics; ++i) {
                         // if this is the qubit being measured and the result is one
                         if (i == static_cast<std::size_t>(classics[0])) {
