@@ -67,8 +67,7 @@ INSTANTIATE_TEST_SUITE_P(QFT, QFT,
 
 TEST_P(QFT, Functionality) {
     // there should be no error constructing the circuit
-    ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits); });
-
+    ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
     // there should be no error building the functionality
     ASSERT_NO_THROW({ func = qc->buildFunctionality(dd); });
 
@@ -100,7 +99,7 @@ TEST_P(QFT, Functionality) {
 
 TEST_P(QFT, FunctionalityRecursive) {
     // there should be no error constructing the circuit
-    ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits); });
+    ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
     // there should be no error building the functionality
     ASSERT_NO_THROW({ func = qc->buildFunctionalityRecursive(dd); });
@@ -133,9 +132,9 @@ TEST_P(QFT, FunctionalityRecursive) {
 
 TEST_P(QFT, Simulation) {
     // there should be no error constructing the circuit
-    ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits); });
+    ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
-    // there should be no error building the functionality
+    // there should be no error simulating the circuit
     ASSERT_NO_THROW({
         auto in = dd->makeZeroState(nqubits);
         sim     = qc->simulate(in, dd);
@@ -162,8 +161,7 @@ TEST_P(QFT, Simulation) {
 
 TEST_P(QFT, FunctionalityRecursiveEquality) {
     // there should be no error constructing the circuit
-    ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits); });
-    std::cout << *qc << std::endl;
+    ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
     // there should be no error building the functionality recursively
     ASSERT_NO_THROW({ func = qc->buildFunctionalityRecursive(dd); });
@@ -174,4 +172,32 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
 
     ASSERT_EQ(func, funcRec);
     dd->decRef(funcRec);
+}
+
+TEST_P(QFT, DynamicSimulation) {
+    // there should be no error constructing the circuit
+    ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, true, true); });
+
+    qc->printStatistics(std::cout);
+
+    // simulate the circuit
+    auto        dd           = std::make_unique<dd::Package>(qc->getNqubits());
+    std::size_t shots        = 8192;
+    auto        measurements = qc->simulate(dd->makeZeroState(qc->getNqubits()), dd, shots);
+
+    for (const auto& [state, count]: measurements) {
+        std::cout << state << ": " << count << std::endl;
+    }
+    std::size_t unique = measurements.size();
+
+    const auto nqubits   = GetParam();
+    const auto maxUnique = 1ULL << nqubits;
+    if (maxUnique < shots) {
+        shots = maxUnique;
+    }
+    const auto ratio = static_cast<double>(unique) / static_cast<double>(shots);
+    std::cout << "Unique entries " << unique << " out of " << shots << " for a ratio of: " << ratio << std::endl;
+
+    // the number of unique entries should be close to the number of shots
+    EXPECT_GE(ratio, 0.7);
 }

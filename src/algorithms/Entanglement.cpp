@@ -10,11 +10,12 @@ using namespace dd::literals;
 namespace qc {
     Entanglement::Entanglement(dd::QubitCount nq):
         QuantumComputation(nq) {
-        name = "entanglement_" + std::to_string(nq);
-        h(0);
+        name           = "entanglement_" + std::to_string(nq);
+        const auto top = static_cast<dd::Qubit>(nq - 1);
 
-        for (unsigned short i = 1; i < nq; i++) {
-            x(i, 0_pc);
+        h(top);
+        for (dd::QubitCount i = 1; i < nq; i++) {
+            x(static_cast<dd::Qubit>(top - i), dd::Control{top});
         }
     }
 } // namespace qc

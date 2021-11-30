@@ -4,7 +4,6 @@
  */
 
 #include "CircuitOptimizer.hpp"
-#include "algorithms/IQPE.hpp"
 #include "algorithms/QPE.hpp"
 
 #include "gtest/gtest.h"
@@ -144,10 +143,10 @@ TEST_P(QPE, QPETest) {
 }
 
 TEST_P(QPE, IQPETest) {
-    auto                      dd = std::make_unique<dd::Package>(precision + 1);
-    std::unique_ptr<qc::IQPE> qc;
+    auto                     dd = std::make_unique<dd::Package>(precision + 1);
+    std::unique_ptr<qc::QPE> qc;
 
-    ASSERT_NO_THROW({ qc = std::make_unique<qc::IQPE>(lambda, precision); });
+    ASSERT_NO_THROW({ qc = std::make_unique<qc::QPE>(lambda, precision, true); });
 
     ASSERT_EQ(static_cast<std::size_t>(qc->getNqubits()), 2U);
 
@@ -200,7 +199,7 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
     auto e = qpe->simulate(dd->makeZeroState(qpe->getNqubits()), dd);
 
     // create standard IQPE circuit
-    auto iqpe = std::make_unique<qc::IQPE>(lambda, precision);
+    auto iqpe = std::make_unique<qc::QPE>(lambda, precision, true);
 
     // transform dynamic circuits by first eliminating reset operations and afterwards deferring measurements
     qc::CircuitOptimizer::eliminateResets(*iqpe);
@@ -233,7 +232,7 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
     auto e = qpe->buildFunctionality(dd);
 
     // create standard IQPE circuit
-    auto iqpe = std::make_unique<qc::IQPE>(lambda, precision);
+    auto iqpe = std::make_unique<qc::QPE>(lambda, precision, true);
 
     // transform dynamic circuits by first eliminating reset operations and afterwards deferring measurements
     qc::CircuitOptimizer::eliminateResets(*iqpe);
@@ -252,18 +251,16 @@ TEST_P(QPE, ProbabilityExtraction) {
     auto dd = std::make_unique<dd::Package>(precision + 1);
 
     // create standard QPE circuit
-    auto iqpe = std::make_unique<qc::IQPE>(lambda, precision);
+    auto iqpe = std::make_unique<qc::QPE>(lambda, precision, true);
 
     std::cout << *iqpe << std::endl;
-    std::vector<dd::fp> probs{};
+    dd::ProbabilityVector probs{};
     iqpe->extractProbabilityVector(dd->makeZeroState(iqpe->getNqubits()), probs, dd);
 
-    std::size_t i = 0;
-    for (const auto& prob: probs) {
+    for (const auto& [state, prob]: probs) {
         std::stringstream ss{};
-        qc::QuantumComputation::printBin(i, ss);
+        qc::QuantumComputation::printBin(state, ss);
         std::cout << ss.str() << ": " << prob << std::endl;
-        ++i;
     }
 
     if (exactlyRepresentable) {
@@ -293,21 +290,24 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
     }
 
     // create standard IQPE circuit
-    auto iqpe = std::make_unique<qc::IQPE>(lambda, precision);
+    auto iqpe = std::make_unique<qc::QPE>(lambda, precision, true);
 
     // extract measurement probabilities from IQPE simulations
-    std::vector<dd::fp> probs{};
+    dd::ProbabilityVector probs{};
     iqpe->extractProbabilityVector(dd->makeZeroState(iqpe->getNqubits()), probs, dd);
 
-    // interleave with zeros to account for 0 qubit
-    auto stub = std::vector<dd::fp>(1 << (qpe->getNqubits()));
-    for (std::size_t i = 1; i < stub.size(); i += 2) {
-        stub.at(i) = probs.at((i - 1) / 2);
+    // extend to account for 0 qubit
+    auto stub = dd::ProbabilityVector{};
+    stub.reserve(probs.size());
+    for (const auto& [state, prob]: probs) {
+        stub[2 * state + 1] = prob;
     }
 
     std::cout << "IQPE: " << std::endl;
-    for (const auto& amp: stub) {
-        std::cout << amp << std::endl;
+    for (const auto& [state, prob]: stub) {
+        std::stringstream ss{};
+        qc::QuantumComputation::printBin(state, ss);
+        std::cout << ss.str() << ": " << prob << std::endl;
     }
 
     // calculate fidelity between both results
