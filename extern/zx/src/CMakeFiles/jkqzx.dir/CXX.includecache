@@ -1,0 +1,16 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/tom/Dev/iic/jkqzx/src/Rational.cpp
+Rational.hpp
+/home/tom/Dev/iic/jkqzx/src/Rational.hpp
+
+include/Rational.hpp
+stdint.h
+-
+

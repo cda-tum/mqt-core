@@ -1,0 +1,2 @@
+/usr/bin/ar qc libjkqzx.a  CMakeFiles/jkqzx.dir/Rational.cpp.o CMakeFiles/jkqzx.dir/Graph.cpp.o CMakeFiles/jkqzx.dir/parsers/qasm_parser/Scanner.cpp.o
+/usr/bin/ranlib libjkqzx.a
