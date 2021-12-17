@@ -11,7 +11,7 @@
 
 class Q3ShorEcc: public Ecc {
 public:
-    Q3ShorEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC);
+    Q3ShorEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly);
 
     static const std::string getName() {
         return "Q3Shor";

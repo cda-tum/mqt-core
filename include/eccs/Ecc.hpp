@@ -24,7 +24,7 @@ public:
 
     const Info ecc;
 
-	Ecc(Info ecc, qc::QuantumComputation& qc, int measureFrequency, bool decomposeMC);
+	Ecc(Info ecc, qc::QuantumComputation& qc, int measureFrequency, bool decomposeMC, bool cliffOnly);
 	virtual ~Ecc() = default;
 
 	qc::QuantumComputation& apply();
@@ -53,6 +53,7 @@ protected:
 	const int measureFrequency;
 	bool decodingDone;
 	bool decomposeMultiControlledGates;
+	bool cliffordGatesOnly;
 
 	virtual void initMappedCircuit();
 
@@ -68,6 +69,26 @@ protected:
 
 	void writeToffoli(int target, int c1, bool p1, int c2, bool p2);
 	void writeZToffoli(int target, int c1, bool p1, int c2, bool p2);
+
+	void writeGeneric(dd::Qubit target, qc::OpType type);
+    void writeGeneric(dd::Qubit target, const dd::Control& control, qc::OpType type);
+    void writeGeneric(dd::Qubit target, const dd::Controls& controls, qc::OpType type);
+
+	void writeX(dd::Qubit target);
+    void writeX(dd::Qubit target, const dd::Control& control);
+    void writeX(dd::Qubit target, const dd::Controls& controls);
+
+    void writeY(dd::Qubit target);
+    void writeY(dd::Qubit target, const dd::Control& control);
+    void writeY(dd::Qubit target, const dd::Controls& controls);
+
+    void writeZ(dd::Qubit target);
+    void writeZ(dd::Qubit target, const dd::Control& control);
+    void writeZ(dd::Qubit target, const dd::Controls& controls);
+
+    void writeSdag(dd::Qubit target);
+    void writeSdag(dd::Qubit target, const dd::Control& control);
+    void writeSdag(dd::Qubit target, const dd::Controls& controls);
 
 };
 

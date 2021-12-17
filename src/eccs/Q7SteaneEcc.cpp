@@ -6,7 +6,7 @@
 #include "eccs/Q7SteaneEcc.hpp"
 
 //7 data qubits, 6 for measuring -> 13 qubits per physical qubit (6 classical for measuring at end)
-Q7SteaneEcc::Q7SteaneEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC): Ecc({ID::Q7Steane, 7, 6, Q7SteaneEcc::getName()}, qc, measureFq, decomposeMC) {}
+Q7SteaneEcc::Q7SteaneEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly): Ecc({ID::Q7Steane, 7, 6, Q7SteaneEcc::getName()}, qc, measureFq, decomposeMC, cliffOnly) {}
 
 void Q7SteaneEcc::initMappedCircuit() {
 //method is overridden because we need 2 kinds of classical measurement output registers
@@ -54,40 +54,40 @@ void Q7SteaneEcc::measureAndCorrect() {
         auto c5 = dd::Control{dd::Qubit(ancStart+5), dd::Control::Type::pos};
 
         //K1: XIXIXIX
-        qcMapped.x(i+nQubits*0, c0);
-        qcMapped.x(i+nQubits*2, c0);
-        qcMapped.x(i+nQubits*4, c0);
-        qcMapped.x(i+nQubits*6, c0);
+        writeX(i+nQubits*0, c0);
+        writeX(i+nQubits*2, c0);
+        writeX(i+nQubits*4, c0);
+        writeX(i+nQubits*6, c0);
 
         //K2: IXXIIXX
-        qcMapped.x(i+nQubits*1, c1);
-        qcMapped.x(i+nQubits*2, c1);
-        qcMapped.x(i+nQubits*5, c1);
-        qcMapped.x(i+nQubits*6, c1);
+        writeX(i+nQubits*1, c1);
+        writeX(i+nQubits*2, c1);
+        writeX(i+nQubits*5, c1);
+        writeX(i+nQubits*6, c1);
 
         //K3: IIIXXXX
-        qcMapped.x(i+nQubits*3, c2);
-        qcMapped.x(i+nQubits*4, c2);
-        qcMapped.x(i+nQubits*5, c2);
-        qcMapped.x(i+nQubits*6, c2);
+        writeX(i+nQubits*3, c2);
+        writeX(i+nQubits*4, c2);
+        writeX(i+nQubits*5, c2);
+        writeX(i+nQubits*6, c2);
 
         //K2: ZIZIZIZ
-        qcMapped.z(i+nQubits*0, c3);
-        qcMapped.z(i+nQubits*2, c3);
-        qcMapped.z(i+nQubits*4, c3);
-        qcMapped.z(i+nQubits*6, c3);
+        writeZ(i+nQubits*0, c3);
+        writeZ(i+nQubits*2, c3);
+        writeZ(i+nQubits*4, c3);
+        writeZ(i+nQubits*6, c3);
 
         //K3: IZZIIZZ
-        qcMapped.z(i+nQubits*1, c4);
-        qcMapped.z(i+nQubits*2, c4);
-        qcMapped.z(i+nQubits*5, c4);
-        qcMapped.z(i+nQubits*6, c4);
+        writeZ(i+nQubits*1, c4);
+        writeZ(i+nQubits*2, c4);
+        writeZ(i+nQubits*5, c4);
+        writeZ(i+nQubits*6, c4);
 
         //K1: IIIZZZZ
-        qcMapped.z(i+nQubits*3, c5);
-        qcMapped.z(i+nQubits*4, c5);
-        qcMapped.z(i+nQubits*5, c5);
-        qcMapped.z(i+nQubits*6, c5);
+        writeZ(i+nQubits*3, c5);
+        writeZ(i+nQubits*4, c5);
+        writeZ(i+nQubits*5, c5);
+        writeZ(i+nQubits*6, c5);
 
 
         qcMapped.h(ancStart);
@@ -107,13 +107,39 @@ void Q7SteaneEcc::measureAndCorrect() {
         //correct Z_i for i+1 = c0*1+c1*2+c2*4
         //correct X_i for i+1 = c3*1+c4*2+c5*4
         for(unsigned int j=0;j<7;j++) {
-            std::unique_ptr<qc::Operation> opZ = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i+j*nQubits, qc::Z);
-            const auto pairZ = std::make_pair(dd::Qubit(clAncStart), dd::QubitCount(3));
-            qcMapped.emplace_back<qc::ClassicControlledOperation>(opZ, pairZ, j+1U);
+            if(cliffordGatesOnly) {
+                std::unique_ptr<qc::Operation> opS0 = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i+j*nQubits, qc::S);
+                const auto pairZ0 = std::make_pair(dd::Qubit(clAncStart), dd::QubitCount(3));
+                qcMapped.emplace_back<qc::ClassicControlledOperation>(opS0, pairZ0, j+1U);
 
-            std::unique_ptr<qc::Operation> opX = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i+j*nQubits, qc::X);
-            const auto pairX = std::make_pair(dd::Qubit(clAncStart+3), dd::QubitCount(3));
-            qcMapped.emplace_back<qc::ClassicControlledOperation>(opX, pairX, j+1U);
+                std::unique_ptr<qc::Operation> opS1 = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i+j*nQubits, qc::S);
+                const auto pairZ1 = std::make_pair(dd::Qubit(clAncStart), dd::QubitCount(3));
+                qcMapped.emplace_back<qc::ClassicControlledOperation>(opS1, pairZ1, j+1U);
+
+                std::unique_ptr<qc::Operation> opH2 = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i+j*nQubits, qc::H);
+                const auto pairX2 = std::make_pair(dd::Qubit(clAncStart+3), dd::QubitCount(3));
+                qcMapped.emplace_back<qc::ClassicControlledOperation>(opH2, pairX2, j+1U);
+
+                std::unique_ptr<qc::Operation> opS3 = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i+j*nQubits, qc::S);
+                const auto pairX3 = std::make_pair(dd::Qubit(clAncStart+3), dd::QubitCount(3));
+                qcMapped.emplace_back<qc::ClassicControlledOperation>(opS3, pairX3, j+1U);
+
+                std::unique_ptr<qc::Operation> opS4 = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i+j*nQubits, qc::S);
+                const auto pairX4 = std::make_pair(dd::Qubit(clAncStart+3), dd::QubitCount(3));
+                qcMapped.emplace_back<qc::ClassicControlledOperation>(opS4, pairX4, j+1U);
+
+                std::unique_ptr<qc::Operation> opH5 = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i+j*nQubits, qc::H);
+                const auto pairX5 = std::make_pair(dd::Qubit(clAncStart+3), dd::QubitCount(3));
+                qcMapped.emplace_back<qc::ClassicControlledOperation>(opH5, pairX5, j+1U);
+            } else {
+                std::unique_ptr<qc::Operation> opZ = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i+j*nQubits, qc::Z);
+                const auto pairZ = std::make_pair(dd::Qubit(clAncStart), dd::QubitCount(3));
+                qcMapped.emplace_back<qc::ClassicControlledOperation>(opZ, pairZ, j+1U);
+
+                std::unique_ptr<qc::Operation> opX = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i+j*nQubits, qc::X);
+                const auto pairX = std::make_pair(dd::Qubit(clAncStart+3), dd::QubitCount(3));
+                qcMapped.emplace_back<qc::ClassicControlledOperation>(opX, pairX, j+1U);
+            }
         }
 
     }
@@ -129,12 +155,26 @@ void Q7SteaneEcc::writeDecoding() {
 
         auto c = dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos};
         for(int j=0;j<7;j++) {
-            qcMapped.z(i+j*nQubits, c);
+            if(cliffordGatesOnly) {
+                qcMapped.h(i+j*nQubits);
+                qcMapped.x(i+j*nQubits, c);
+                qcMapped.h(i+j*nQubits);
+            } else {
+                writeZ(i+j*nQubits, c);
+            }
+
         }
         qcMapped.h(ancStart);
 
         qcMapped.measure(ancStart, i);
-        qcMapped.swap(ancStart, i);
+        if(cliffordGatesOnly) {
+            qcMapped.x(ancStart, dd::Control{dd::Qubit(i)});
+            qcMapped.x(i, dd::Control{dd::Qubit(ancStart)});
+            qcMapped.x(ancStart, dd::Control{dd::Qubit(i)});
+        } else {
+            qcMapped.swap(ancStart, i);
+        }
+
     }
     decodingDone = true;
 }
@@ -193,11 +233,13 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
                     for(const auto &ct: ctrls) {
                         ctrls2.insert(dd::Control{dd::Qubit(ct.qubit+j*nQubits), ct.type});
                     }
-                    qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls2, i+j*nQubits, gate.get()->getType());
+                    //qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls2, i+j*nQubits, gate.get()->getType());
+                    writeGeneric(i+j*nQubits, ctrls2, gate.get()->getType());
                 }
             } else {
                 for(int j=0;j<7;j++) {
-                    qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+j*nQubits, gate.get()->getType());
+                    writeGeneric(i+j*nQubits, gate.get()->getType());
+                    //qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+j*nQubits, gate.get()->getType());
                 }
             }
         }
@@ -208,6 +250,8 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
         for(std::size_t t=0;t<gate.get()->getNtargets();t++) {
             int i = gate.get()->getTargets()[t];
             if(gate.get()->getNcontrols()>1 && decomposeMultiControlledGates) {
+                gateNotAvailableError(gate);
+            } else if(gate.get()->getNcontrols() && cliffordGatesOnly) {
                 gateNotAvailableError(gate);
             } else if(gate.get()->getNcontrols()) {
                 auto& ctrls = gate.get()->getControls();
@@ -221,10 +265,18 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
                     qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls2, i+j*nQubits, gate.get()->getType());
                 }
             } else {
-                for(int j=0;j<7;j++) {
-                    qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+j*nQubits, gate.get()->getType());
-                    qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+j*nQubits, gate.get()->getType());
-                    qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+j*nQubits, gate.get()->getType());
+                if(gate.get()->getType()==qc::S) {
+                    for(int j=0;j<7;j++) {
+                        qcMapped.s(i+j*nQubits);
+                        qcMapped.s(i+j*nQubits);
+                        qcMapped.s(i+j*nQubits);
+                    }
+                } else {
+                    for(int j=0;j<7;j++) {
+                        writeSdag(i+j*nQubits);
+                        writeSdag(i+j*nQubits);
+                        writeSdag(i+j*nQubits);
+                    }
                 }
             }
         }

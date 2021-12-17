@@ -11,7 +11,7 @@
 
 class Q5LaflammeEcc: public Ecc {
 public:
-    Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC);
+    Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly);
 
     static const std::string getName() {
         return "Q5Laflamme";
