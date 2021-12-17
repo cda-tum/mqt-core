@@ -6,7 +6,7 @@
 #include "eccs/Q5LaflammeEcc.hpp"
 
 //5 data qubits, 4 for measuring
-Q5LaflammeEcc::Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC): Ecc({ID::Q5Laflamme, 5, 4, Q5LaflammeEcc::getName()}, qc, measureFq, decomposeMC) {}
+Q5LaflammeEcc::Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly): Ecc({ID::Q5Laflamme, 5, 4, Q5LaflammeEcc::getName()}, qc, measureFq, decomposeMC, cliffOnly) {}
 
 void Q5LaflammeEcc::initMappedCircuit() {
 //method is overridden because we need 2 kinds of classical measurement output registers
@@ -140,7 +140,7 @@ void Q5LaflammeEcc::writeDecoding() {
 }
 
 void Q5LaflammeEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
-    if(decodingDone && gate.get()->getType()!=qc::Measure) {
+    if(decodingDone && gate.get()->getType()!=qc::Measure && gate.get()->getType()!=qc::H) {
         writeEncoding();
     }
     const int nQubits = qc.getNqubits();
@@ -148,7 +148,7 @@ void Q5LaflammeEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
     switch(gate.get()->getType()) {
     case qc::I: break;
     case qc::X:
-    case qc::H:
+    //case qc::H:
     case qc::Y:
     case qc::Z:
         for(std::size_t t=0;t<gate.get()->getNtargets();t++) {

@@ -13,7 +13,7 @@
 
 class Q9SurfaceEcc: public Ecc {
 public:
-    Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC);
+    Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly);
 
     static const std::string getName() {
         return "Q9Surface";

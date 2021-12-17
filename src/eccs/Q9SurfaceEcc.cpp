@@ -6,7 +6,7 @@
 #include "eccs/Q9SurfaceEcc.hpp"
 
 //This code has been described in https://arxiv.org/pdf/1608.05053.pdf
-Q9SurfaceEcc::Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC): Ecc({ID::Q9Surface, 9, 8, Q9SurfaceEcc::getName()}, qc, measureFq, decomposeMC) {}
+Q9SurfaceEcc::Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly): Ecc({ID::Q9Surface, 9, 8, Q9SurfaceEcc::getName()}, qc, measureFq, decomposeMC, cliffOnly) {}
 
 void Q9SurfaceEcc::initMappedCircuit() {
 //method is overridden because we need 2 kinds of classical measurement output registers

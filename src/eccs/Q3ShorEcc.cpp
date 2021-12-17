@@ -6,7 +6,7 @@
 #include "eccs/Q3ShorEcc.hpp"
 
 //3 data qubits, 2 for measuring -> 5 qubits per physical qubit
-Q3ShorEcc::Q3ShorEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC): Ecc({ID::Q3Shor, 3, 2, Q3ShorEcc::getName()}, qc, measureFq, decomposeMC) {}
+Q3ShorEcc::Q3ShorEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly): Ecc({ID::Q3Shor, 3, 2, Q3ShorEcc::getName()}, qc, measureFq, decomposeMC, cliffOnly) {}
 
 void Q3ShorEcc::initMappedCircuit() {
 //method is overridden because we need 2 kinds of classical measurement output registers
@@ -79,7 +79,7 @@ void Q3ShorEcc::writeDecoding() {
 }
 
 void Q3ShorEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
-    if(decodingDone && gate.get()->getType()!=qc::Measure) {
+    if(decodingDone && gate.get()->getType()!=qc::Measure && gate.get()->getType()!=qc::H) {
         writeEncoding();
     }
     const int nQubits = qc.getNqubits();
@@ -87,7 +87,7 @@ void Q3ShorEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
     switch(gate.get()->getType()) {
     case qc::I: break;
     case qc::X:
-    case qc::H:
+    //case qc::H:
     case qc::Y:
     case qc::Z:
     case qc::S:

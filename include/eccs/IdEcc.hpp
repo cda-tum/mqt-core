@@ -11,7 +11,7 @@
 
 class IdEcc: public Ecc {
 public:
-    IdEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC);
+    IdEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly);
 
     static const std::string getName() {
         return "Id";
