@@ -1,7 +1,9 @@
-#include "Definitions.hpp"
 #include "Rational.hpp"
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp" //TODO incorrect include
 #include <cmath>
 
+namespace zx {
 long gcd(long a, long b) {
   long r;
 
@@ -13,12 +15,19 @@ long gcd(long a, long b) {
   return a;
 }
 
-Rational::Rational(float val) : num(0), denom(1) {
+Rational::Rational(double val) : num(0), denom(1) {
+  double mult_pi = PI / val;
+  double nearest = std::round(mult_pi);
+  if (std::abs(nearest - mult_pi) < qc::PARAMETER_TOLERANCE) {
+    denom = static_cast<int>(nearest);
+    num = 1;
+    return;
+  }
+
   val /= PI;
-  
+
   double integral = std::floor(val);
   double frac = val - integral;
-
 
   long gcd_ = gcd(std::round(frac * MAX_DENOM), MAX_DENOM);
 
@@ -84,3 +93,4 @@ Rational &Rational::operator/=(const int32_t rhs) {
   this->normalize();
   return *this;
 }
+} // namespace zx

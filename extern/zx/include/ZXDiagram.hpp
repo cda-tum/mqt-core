@@ -15,7 +15,7 @@ namespace zx {
 enum class EdgeType { Simple, Hadamard };
 enum class VertexType { Boundary, Z, X };
 using Vertex = int32_t;
-using Col = dd::Qubit;
+using Col = int32_t;
 
 struct Edge {
   int32_t to;
@@ -60,6 +60,6 @@ private:
 
   std::vector<Vertex> init_graph(int nqubits);
   void close_graph(std::vector<Vertex> qubit_vertices);
-};
+  };
 } // namespace zx
 #endif /* JKQZX_INCLUDE_GRAPH_HPP_ */

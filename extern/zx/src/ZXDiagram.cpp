@@ -1,7 +1,7 @@
+#include "ZXDiagram.hpp"
 #include "Definitions.hpp"
 #include "QuantumComputation.hpp"
 #include "Rational.hpp"
-#include "ZXDiagram.hpp"
 #include "dd/Definitions.hpp"
 #include "operations/OpType.hpp"
 #include <vector>
@@ -106,6 +106,7 @@ ZXDiagram::ZXDiagram(std::string &filename) {
       }
     }
   }
+  close_graph(qubit_vertices);
 }
 
 void ZXDiagram::add_edge(Vertex from, Vertex to, EdgeType type) {
@@ -133,8 +134,9 @@ void ZXDiagram::add_z_spider(dd::Qubit qubit,
 void ZXDiagram::add_x_spider(dd::Qubit qubit,
                              std::vector<Vertex> qubit_vertices, Rational phase,
                              EdgeType type) {
-  auto new_vertex =
-      add_vertex({vertices[qubit].value().col, qubit, phase, VertexType::Z});
+  VertexType v_type = VertexType::X;
+  auto new_vertex = add_vertex(
+      {vertices[qubit].value().col + 1, qubit, phase, VertexType::X});
   add_edge(qubit, new_vertex, type);
   qubit_vertices[qubit] = new_vertex;
 }
@@ -150,17 +152,16 @@ std::vector<Vertex> ZXDiagram::init_graph(int nqubits) {
   std::vector<Vertex> qubit_vertices(nqubits);
   for (size_t i = 0; i < qubit_vertices.size(); i++) {
     auto v = add_vertex(
-        {1, static_cast<dd::Qubit>(i), Rational(0, 1), VertexType::Z});
+        {1, static_cast<dd::Qubit>(i), Rational(0, 1), VertexType::Boundary});
     qubit_vertices[i] = v;
   }
   return qubit_vertices;
 }
 
 void ZXDiagram::close_graph(std::vector<Vertex> qubit_vertices) {
-  for (Vertex vertex : qubit_vertices) {
-    if (edges[vertex].) {
-      add_vertex()
-    }
+  for (Vertex v : qubit_vertices) {
+    VertexData v_data = vertices[v].value();
+    add_vertex({v_data.col + 1, v_data.qubit, 0, VertexType::Boundary});
   }
 }
 } // namespace zx

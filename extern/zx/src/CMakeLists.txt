@@ -1,22 +1,11 @@
 # main project library
 add_library(${PROJECT_NAME}
   ${${PROJECT_NAME}_SOURCE_DIR}/include/Rational.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/Graph.hpp
+  ${${PROJECT_NAME}_SOURCE_DIR}/include/ZXDiagram.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/Definitions.hpp
-  
 
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Parser.hpp
-
-  
   ${CMAKE_CURRENT_SOURCE_DIR}/Rational.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/Graph.cpp
-
-  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/qasm_parser/Scanner.cpp
-#  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/qasm_parser/Parser.cpp
-  
-  
+  ${CMAKE_CURRENT_SOURCE_DIR}/ZXDiagram.cpp
 )
 
 # set include directories
@@ -25,6 +14,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_
 # set required C++ standard and disable compiler specific extensions
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+
+# add JKQ::QFR library
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/qfr" "extern/qfr")
+target_link_libraries(${PROJECT_NAME} PUBLIC JKQ::qfr)
 
 # enable interprocedural optimization if it is supported
 # enable_lto(${PROJECT_NAME})

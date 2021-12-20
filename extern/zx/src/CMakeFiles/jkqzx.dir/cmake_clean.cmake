@@ -1,7 +1,6 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/jkqzx.dir/Graph.cpp.o"
   "CMakeFiles/jkqzx.dir/Rational.cpp.o"
-  "CMakeFiles/jkqzx.dir/parsers/qasm_parser/Scanner.cpp.o"
+  "CMakeFiles/jkqzx.dir/ZXDiagram.cpp.o"
   "libjkqzx.a"
   "libjkqzx.pdb"
 )

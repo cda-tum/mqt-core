@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+namespace zx {
 class Rational {
   void normalize();
 
@@ -12,7 +13,7 @@ public:
   Rational() : num(0), denom(1){};
   Rational(int32_t num, int32_t denom) : num(num), denom(denom){};
   Rational(int32_t num) : num(num), denom(1){};
-  Rational(float val);
+  Rational(double val);
 
   Rational &operator+=(const Rational &rhs);
   Rational &operator+=(const int32_t rhs);
@@ -123,4 +124,6 @@ inline bool operator>=(const Rational &lhs, const Rational &rhs) {
 inline bool operator>=(const Rational &lhs, int32_t rhs) { return rhs <= lhs; }
 
 inline bool operator>=(int32_t lhs, const Rational &rhs) { return rhs <= lhs; }
+
+} // namespace zx
 #endif /* JKQZX_INCLUDE_RATIONAL_HPP_ */

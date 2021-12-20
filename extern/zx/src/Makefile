@@ -125,33 +125,6 @@ jkqzx/fast:
 	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/build
 .PHONY : jkqzx/fast
 
-Graph.o: Graph.cpp.o
-
-.PHONY : Graph.o
-
-# target to build an object file
-Graph.cpp.o:
-	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Graph.cpp.o
-.PHONY : Graph.cpp.o
-
-Graph.i: Graph.cpp.i
-
-.PHONY : Graph.i
-
-# target to preprocess a source file
-Graph.cpp.i:
-	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Graph.cpp.i
-.PHONY : Graph.cpp.i
-
-Graph.s: Graph.cpp.s
-
-.PHONY : Graph.s
-
-# target to generate assembly for a file
-Graph.cpp.s:
-	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Graph.cpp.s
-.PHONY : Graph.cpp.s
-
 Rational.o: Rational.cpp.o
 
 .PHONY : Rational.o
@@ -179,32 +152,32 @@ Rational.cpp.s:
 	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Rational.cpp.s
 .PHONY : Rational.cpp.s
 
-parsers/qasm_parser/Scanner.o: parsers/qasm_parser/Scanner.cpp.o
+ZXDiagram.o: ZXDiagram.cpp.o
 
-.PHONY : parsers/qasm_parser/Scanner.o
+.PHONY : ZXDiagram.o
 
 # target to build an object file
-parsers/qasm_parser/Scanner.cpp.o:
-	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/parsers/qasm_parser/Scanner.cpp.o
-.PHONY : parsers/qasm_parser/Scanner.cpp.o
+ZXDiagram.cpp.o:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/ZXDiagram.cpp.o
+.PHONY : ZXDiagram.cpp.o
 
-parsers/qasm_parser/Scanner.i: parsers/qasm_parser/Scanner.cpp.i
+ZXDiagram.i: ZXDiagram.cpp.i
 
-.PHONY : parsers/qasm_parser/Scanner.i
+.PHONY : ZXDiagram.i
 
 # target to preprocess a source file
-parsers/qasm_parser/Scanner.cpp.i:
-	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/parsers/qasm_parser/Scanner.cpp.i
-.PHONY : parsers/qasm_parser/Scanner.cpp.i
+ZXDiagram.cpp.i:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/ZXDiagram.cpp.i
+.PHONY : ZXDiagram.cpp.i
 
-parsers/qasm_parser/Scanner.s: parsers/qasm_parser/Scanner.cpp.s
+ZXDiagram.s: ZXDiagram.cpp.s
 
-.PHONY : parsers/qasm_parser/Scanner.s
+.PHONY : ZXDiagram.s
 
 # target to generate assembly for a file
-parsers/qasm_parser/Scanner.cpp.s:
-	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/parsers/qasm_parser/Scanner.cpp.s
-.PHONY : parsers/qasm_parser/Scanner.cpp.s
+ZXDiagram.cpp.s:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/ZXDiagram.cpp.s
+.PHONY : ZXDiagram.cpp.s
 
 # Help Target
 help:
@@ -215,15 +188,12 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... jkqzx"
-	@echo "... Graph.o"
-	@echo "... Graph.i"
-	@echo "... Graph.s"
 	@echo "... Rational.o"
 	@echo "... Rational.i"
 	@echo "... Rational.s"
-	@echo "... parsers/qasm_parser/Scanner.o"
-	@echo "... parsers/qasm_parser/Scanner.i"
-	@echo "... parsers/qasm_parser/Scanner.s"
+	@echo "... ZXDiagram.o"
+	@echo "... ZXDiagram.i"
+	@echo "... ZXDiagram.s"
 .PHONY : help
 
 
