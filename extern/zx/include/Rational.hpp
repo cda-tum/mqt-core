@@ -125,5 +125,14 @@ inline bool operator>=(const Rational &lhs, int32_t rhs) { return rhs <= lhs; }
 
 inline bool operator>=(int32_t lhs, const Rational &rhs) { return rhs <= lhs; }
 
+  inline bool operator==(const Rational &lhs, const Rational &rhs) {
+    return lhs.num == rhs.num && lhs.denom == rhs.denom;
+}
+
+inline bool operator==(const Rational &lhs, int32_t rhs) { return lhs.num == rhs && lhs.denom == 1; }
+
+inline bool operator==(int32_t lhs, const Rational &rhs) { return rhs == lhs; }
+
+
 } // namespace zx
 #endif /* JKQZX_INCLUDE_RATIONAL_HPP_ */
