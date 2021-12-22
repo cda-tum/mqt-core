@@ -29,7 +29,7 @@ public:
 
 	qc::QuantumComputation& apply();
 
-    virtual std::ostream& printResult(std::ostream& out);
+    [[maybe_unused]] virtual std::ostream& printResult(std::ostream& out);
 
     virtual void dumpResult(const std::string& outputFilename);
 
