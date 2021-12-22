@@ -5,8 +5,10 @@
 
 #include "eccs/Ecc.hpp"
 
+//#include <utility>
+
 Ecc::Ecc(struct Info eccInfo, qc::QuantumComputation &quantumcomputation, int measFreq, bool decomposeMC,
-         bool cliffOnly) : ecc(eccInfo), qc(quantumcomputation), measureFrequency(measFreq),
+         bool cliffOnly) : ecc(std::move(eccInfo)), qc(quantumcomputation), measureFrequency(measFreq),
                            decomposeMultiControlledGates(decomposeMC), cliffordGatesOnly(cliffOnly) {
     decodingDone = false;
 }
@@ -49,7 +51,7 @@ qc::QuantumComputation &Ecc::apply() {
     return qcMapped;
 }
 
-std::ostream &Ecc::printResult(std::ostream &out) {
+[[maybe_unused]] std::ostream &Ecc::printResult(std::ostream &out) {
     out << "\tused error correcting code: " << ecc.name << std::endl;
     out << "\tgate overhead: " << statistics.getGateOverhead() << std::endl;
     out << "\tinput qubits: " << statistics.nInputQubits << std::endl;
@@ -77,7 +79,7 @@ void Ecc::dumpResult(const std::string &outputFilename) {
 
 void Ecc::gateNotAvailableError(const std::unique_ptr<qc::Operation> &gate) {
     throw qc::QFRException(
-            std::string("Gate ") + gate.get()->getName() + " not supported to encode in error code " + ecc.name + "!");
+            std::string("Gate ") + gate->getName() + " not supported to encode in error code " + ecc.name + "!");
 }
 
 void Ecc::writeToffoli(int target, int c1, bool p1, int c2, bool p2) {
@@ -86,39 +88,39 @@ void Ecc::writeToffoli(int target, int c1, bool p1, int c2, bool p2) {
     }
     if (decomposeMultiControlledGates) {
 
-        if (!p1) { writeX(c1); }
-        if (!p2) { writeX(c2); }
+        if (!p1) { writeX(static_cast<dd::Qubit>(c1)); }
+        if (!p2) { writeX(static_cast<dd::Qubit>(c2)); }
 
-        qcMapped.h(target);
-        writeX(target, dd::Control{dd::Qubit(c2)});
-        qcMapped.tdag(target);
-        writeX(target, dd::Control{dd::Qubit(c1)});
-        qcMapped.t(target);
-        writeX(target, dd::Control{dd::Qubit(c2)});
-        qcMapped.tdag(target);
-        writeX(target, dd::Control{dd::Qubit(c1)});
-        qcMapped.t(target);
-        qcMapped.t(c2);
-        qcMapped.h(target);
-        writeX(c2, dd::Control{dd::Qubit(c1)});
-        qcMapped.t(c1);
-        qcMapped.tdag(c2);
-        writeX(c2, dd::Control{dd::Qubit(c1)});
+        qcMapped.h(static_cast<dd::Qubit>(target));
+        writeX(static_cast<dd::Qubit>(target), dd::Control{dd::Qubit(c2)});
+        qcMapped.tdag(static_cast<dd::Qubit>(target));
+        writeX(static_cast<dd::Qubit>(target), dd::Control{dd::Qubit(c1)});
+        qcMapped.t(static_cast<dd::Qubit>(target));
+        writeX(static_cast<dd::Qubit>(target), dd::Control{dd::Qubit(c2)});
+        qcMapped.tdag(static_cast<dd::Qubit>(target));
+        writeX(static_cast<dd::Qubit>(target), dd::Control{dd::Qubit(c1)});
+        qcMapped.t(static_cast<dd::Qubit>(target));
+        qcMapped.t(static_cast<dd::Qubit>(c2));
+        qcMapped.h(static_cast<dd::Qubit>(target));
+        writeX(static_cast<dd::Qubit>(c2), dd::Control{dd::Qubit(c1)});
+        qcMapped.t(static_cast<dd::Qubit>(c1));
+        qcMapped.tdag(static_cast<dd::Qubit>(c2));
+        writeX(static_cast<dd::Qubit>(c2), dd::Control{dd::Qubit(c1)});
 
-        if (!p1) { writeX(c1); }
-        if (!p2) { writeX(c2); }
+        if (!p1) { writeX(static_cast<dd::Qubit>(c1)); }
+        if (!p2) { writeX(static_cast<dd::Qubit>(c2)); }
     } else {
         dd::Controls ctrls;
         ctrls.insert(dd::Control{dd::Qubit(c1), p1 ? dd::Control::Type::pos : dd::Control::Type::neg});
         ctrls.insert(dd::Control{dd::Qubit(c2), p2 ? dd::Control::Type::pos : dd::Control::Type::neg});
-        writeX(target, ctrls);
+        writeX(static_cast<dd::Qubit>(target), ctrls);
     }
 }
 
-void Ecc::writeZToffoli(int target, int c1, bool p1, int c2, bool p2) {
-    qcMapped.h(target);
-    writeToffoli(target, c1, p1, c2, p2);
-    qcMapped.h(target);
+[[maybe_unused]] void Ecc::writeZToffoli(int target, int c1, bool p1, int c2, bool p2) {
+    qcMapped.h(static_cast<dd::Qubit>(target));
+    writeToffoli(static_cast<dd::Qubit>(target), c1, p1, c2, p2);
+    qcMapped.h(static_cast<dd::Qubit>(target));
 }
 
 void Ecc::writeGeneric(dd::Qubit target, qc::OpType type) {
@@ -142,7 +144,7 @@ void Ecc::writeGeneric(dd::Qubit target, qc::OpType type) {
     }
 }
 
-void Ecc::writeGeneric(dd::Qubit target, const dd::Control &control, qc::OpType type) {
+[[maybe_unused]] void Ecc::writeGeneric(dd::Qubit target, const dd::Control &control, qc::OpType type) {
     switch (type) {
         case qc::I:
             return;
@@ -191,9 +193,9 @@ void Ecc::writeX(dd::Qubit target, const dd::Control &control) {
 }
 
 void Ecc::writeX(dd::Qubit target, const dd::Controls &controls) {
-    if (controls.size() == 0) {
+    if (controls.empty()) {
         writeX(target);
-    } else if (controls.size() == 0) {
+    } else if (controls.empty()) {
         auto el(controls.begin());
         qcMapped.x(target, *el);
     } else if (decomposeMultiControlledGates || cliffordGatesOnly) {
