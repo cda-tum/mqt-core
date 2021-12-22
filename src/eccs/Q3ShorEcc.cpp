@@ -69,14 +69,13 @@ void Q3ShorEcc::measureAndCorrect() {
 }
 
 void Q3ShorEcc::writeDecoding() {
-//    const int nQubits = (int) qc.getNqubits();
-//    for (int i = 0; i < nQubits; i++) {
-//        auto ctrl = dd::Control{dd::Qubit(i), dd::Control::Type::pos};
-//        qcMapped.x(i + nQubits, ctrl);
-//        qcMapped.x(i + 2 * nQubits, ctrl);
-//
-//        writeToffoli(i, i + nQubits, true, i + 2 * nQubits, true);
-//    }
+    const int nQubits = (int) qc.getNqubits();
+    for (int i = 0; i < nQubits; i++) {
+        auto ctrl = dd::Control{dd::Qubit(i), dd::Control::Type::pos};
+        qcMapped.x(static_cast<dd::Qubit>(i + nQubits), ctrl);
+        qcMapped.x(static_cast<dd::Qubit>(i + 2 * nQubits), ctrl);
+        writeToffoli(i, i + nQubits, true, i + 2 * nQubits, true);
+    }
     decodingDone = true;
 }
 
