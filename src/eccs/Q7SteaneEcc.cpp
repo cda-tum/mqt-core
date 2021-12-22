@@ -30,22 +30,22 @@ void Q7SteaneEcc::writeEncoding() {
 void Q7SteaneEcc::measureAndCorrect() {
     const int nQubits = qc.getNqubits();
     const int ancStart = nQubits * ecc.nRedundantQubits;
-    const int clAncStart = qc.getNcbits();
+    const int clAncStart = static_cast<int>(qc.getNcbits());
 
     for (int i = 0; i < nQubits; i++) {
-        qcMapped.reset(ancStart);
-        qcMapped.reset(ancStart + 1);
-        qcMapped.reset(ancStart + 2);
-        qcMapped.reset(ancStart + 3);
-        qcMapped.reset(ancStart + 4);
-        qcMapped.reset(ancStart + 5);
+        qcMapped.reset(static_cast<dd::Qubit>(ancStart));
+        qcMapped.reset(static_cast<dd::Qubit>(ancStart + 1));
+        qcMapped.reset(static_cast<dd::Qubit>(ancStart + 2));
+        qcMapped.reset(static_cast<dd::Qubit>(ancStart + 3));
+        qcMapped.reset(static_cast<dd::Qubit>(ancStart + 4));
+        qcMapped.reset(static_cast<dd::Qubit>(ancStart + 5));
 
-        qcMapped.h(ancStart);
-        qcMapped.h(ancStart + 1);
-        qcMapped.h(ancStart + 2);
-        qcMapped.h(ancStart + 3);
-        qcMapped.h(ancStart + 4);
-        qcMapped.h(ancStart + 5);
+        qcMapped.h(static_cast<dd::Qubit>(ancStart));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 1));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 2));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 3));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 4));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 5));
 
         auto c0 = dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos};
         auto c1 = dd::Control{dd::Qubit(ancStart + 1), dd::Control::Type::pos};
@@ -55,55 +55,55 @@ void Q7SteaneEcc::measureAndCorrect() {
         auto c5 = dd::Control{dd::Qubit(ancStart + 5), dd::Control::Type::pos};
 
         //K1: XIXIXIX
-        writeX(i + nQubits * 0, c0);
-        writeX(i + nQubits * 2, c0);
-        writeX(i + nQubits * 4, c0);
-        writeX(i + nQubits * 6, c0);
+        writeX(static_cast<dd::Qubit>(i + nQubits * 0), c0);
+        writeX(static_cast<dd::Qubit>(i + nQubits * 2), c0);
+        writeX(static_cast<dd::Qubit>(i + nQubits * 4), c0);
+        writeX(static_cast<dd::Qubit>(i + nQubits * 6), c0);
 
         //K2: IXXIIXX
-        writeX(i + nQubits * 1, c1);
-        writeX(i + nQubits * 2, c1);
-        writeX(i + nQubits * 5, c1);
-        writeX(i + nQubits * 6, c1);
+        writeX(static_cast<dd::Qubit>(i + nQubits * 1), c1);
+        writeX(static_cast<dd::Qubit>(i + nQubits * 2), c1);
+        writeX(static_cast<dd::Qubit>(i + nQubits * 5), c1);
+        writeX(static_cast<dd::Qubit>(i + nQubits * 6), c1);
 
         //K3: IIIXXXX
-        writeX(i + nQubits * 3, c2);
-        writeX(i + nQubits * 4, c2);
-        writeX(i + nQubits * 5, c2);
-        writeX(i + nQubits * 6, c2);
+        writeX(static_cast<dd::Qubit>(i + nQubits * 3), c2);
+        writeX(static_cast<dd::Qubit>(i + nQubits * 4), c2);
+        writeX(static_cast<dd::Qubit>(i + nQubits * 5), c2);
+        writeX(static_cast<dd::Qubit>(i + nQubits * 6), c2);
 
         //K2: ZIZIZIZ
-        writeZ(i + nQubits * 0, c3);
-        writeZ(i + nQubits * 2, c3);
-        writeZ(i + nQubits * 4, c3);
-        writeZ(i + nQubits * 6, c3);
+        writeZ(static_cast<dd::Qubit>(i + nQubits * 0), c3);
+        writeZ(static_cast<dd::Qubit>(i + nQubits * 2), c3);
+        writeZ(static_cast<dd::Qubit>(i + nQubits * 4), c3);
+        writeZ(static_cast<dd::Qubit>(i + nQubits * 6), c3);
 
         //K3: IZZIIZZ
-        writeZ(i + nQubits * 1, c4);
-        writeZ(i + nQubits * 2, c4);
-        writeZ(i + nQubits * 5, c4);
-        writeZ(i + nQubits * 6, c4);
+        writeZ(static_cast<dd::Qubit>(i + nQubits * 1), c4);
+        writeZ(static_cast<dd::Qubit>(i + nQubits * 2), c4);
+        writeZ(static_cast<dd::Qubit>(i + nQubits * 5), c4);
+        writeZ(static_cast<dd::Qubit>(i + nQubits * 6), c4);
 
         //K1: IIIZZZZ
-        writeZ(i + nQubits * 3, c5);
-        writeZ(i + nQubits * 4, c5);
-        writeZ(i + nQubits * 5, c5);
-        writeZ(i + nQubits * 6, c5);
+        writeZ(static_cast<dd::Qubit>(i + nQubits * 3), c5);
+        writeZ(static_cast<dd::Qubit>(i + nQubits * 4), c5);
+        writeZ(static_cast<dd::Qubit>(i + nQubits * 5), c5);
+        writeZ(static_cast<dd::Qubit>(i + nQubits * 6), c5);
 
 
-        qcMapped.h(ancStart);
-        qcMapped.h(ancStart + 1);
-        qcMapped.h(ancStart + 2);
-        qcMapped.h(ancStart + 3);
-        qcMapped.h(ancStart + 4);
-        qcMapped.h(ancStart + 5);
+        qcMapped.h(static_cast<dd::Qubit>(ancStart));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 1));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 2));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 3));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 4));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 5));
 
-        qcMapped.measure(ancStart, clAncStart);
-        qcMapped.measure(ancStart + 1, clAncStart + 1);
-        qcMapped.measure(ancStart + 2, clAncStart + 2);
-        qcMapped.measure(ancStart + 3, clAncStart + 3);
-        qcMapped.measure(ancStart + 4, clAncStart + 4);
-        qcMapped.measure(ancStart + 5, clAncStart + 5);
+        qcMapped.measure(static_cast<dd::Qubit>(ancStart), clAncStart);
+        qcMapped.measure(static_cast<dd::Qubit>(ancStart + 1), clAncStart + 1);
+        qcMapped.measure(static_cast<dd::Qubit>(ancStart + 2), clAncStart + 2);
+        qcMapped.measure(static_cast<dd::Qubit>(ancStart + 3), clAncStart + 3);
+        qcMapped.measure(static_cast<dd::Qubit>(ancStart + 4), clAncStart + 4);
+        qcMapped.measure(static_cast<dd::Qubit>(ancStart + 5), clAncStart + 5);
 
         //correct Z_i for i+1 = c0*1+c1*2+c2*4
         //correct X_i for i+1 = c3*1+c4*2+c5*4
@@ -159,29 +159,29 @@ void Q7SteaneEcc::writeDecoding() {
     const int ancStart = nQubits * ecc.nRedundantQubits;
 
     for (int i = 0; i < nQubits; i++) {
-        qcMapped.reset(ancStart);
-        qcMapped.h(ancStart);
+        qcMapped.reset(static_cast<dd::Qubit>(ancStart));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart));
 
         auto c = dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos};
         for (int j = 0; j < 7; j++) {
             if (cliffordGatesOnly) {
-                qcMapped.h(i + j * nQubits);
-                qcMapped.x(i + j * nQubits, c);
-                qcMapped.h(i + j * nQubits);
+                qcMapped.h(static_cast<dd::Qubit>(i + j * nQubits));
+                qcMapped.x(static_cast<dd::Qubit>(i + j * nQubits), c);
+                qcMapped.h(static_cast<dd::Qubit>(i + j * nQubits));
             } else {
-                writeZ(i + j * nQubits, c);
+                writeZ(static_cast<dd::Qubit>(i + j * nQubits), c);
             }
 
         }
-        qcMapped.h(ancStart);
+        qcMapped.h(static_cast<dd::Qubit>(ancStart));
 
-        qcMapped.measure(ancStart, i);
+        qcMapped.measure(static_cast<dd::Qubit>(ancStart), i);
         if (cliffordGatesOnly) {
-            qcMapped.x(ancStart, dd::Control{dd::Qubit(i)});
-            qcMapped.x(i, dd::Control{dd::Qubit(ancStart)});
-            qcMapped.x(ancStart, dd::Control{dd::Qubit(i)});
+            qcMapped.x(static_cast<dd::Qubit>(ancStart), dd::Control{dd::Qubit(i)});
+            qcMapped.x(static_cast<dd::Qubit>(i), dd::Control{dd::Qubit(ancStart)});
+            qcMapped.x(static_cast<dd::Qubit>(ancStart), dd::Control{dd::Qubit(i)});
         } else {
-            qcMapped.swap(ancStart, i);
+            qcMapped.swap(static_cast<dd::Qubit>(ancStart), static_cast<dd::Qubit>(i));
         }
 
     }
@@ -189,71 +189,71 @@ void Q7SteaneEcc::writeDecoding() {
 }
 
 void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
-    if (decodingDone && gate.get()->getType() != qc::Measure) {
+    if (decodingDone && gate->getType() != qc::Measure) {
         writeEncoding();
     }
     const int nQubits = qc.getNqubits();
-    qc::NonUnitaryOperation *measureGate = nullptr;
-    switch (gate.get()->getType()) {
+    qc::NonUnitaryOperation *measureGate;
+    switch (gate->getType()) {
         case qc::I:
             break;
         case qc::X:
         case qc::H:
         case qc::Y:
         case qc::Z:
-            for (std::size_t t = 0; t < gate.get()->getNtargets(); t++) {
-                int i = gate.get()->getTargets()[t];
-                if (gate.get()->getNcontrols() == 2 && decomposeMultiControlledGates) {
+            for (std::size_t t = 0; t < gate->getNtargets(); t++) {
+                int i = static_cast<unsigned char>(gate->getTargets()[t]);
+                if (gate->getNcontrols() == 2 && decomposeMultiControlledGates) {
 
-                    auto &ctrls = gate.get()->getControls();
+                    auto &ctrls = gate->getControls();
                     int idx = 0;
                     int ctrl2[2] = {-1, -1};
                     bool ctrl2T[2] = {true, true};
                     for (const auto &ct: ctrls) {
-                        ctrl2[idx] = ct.qubit;
+                        ctrl2[idx] = static_cast<unsigned char>(ct.qubit);
                         ctrl2T[idx] = ct.type == dd::Control::Type::pos;
                         idx++;
                     }
-                    if (gate.get()->getType() == qc::X) {
+                    if (gate->getType() == qc::X) {
                         for (int j = 0; j < 7; j++) {
                             writeToffoli(i + j * nQubits, ctrl2[0] + j * nQubits, ctrl2T[0], ctrl2[1] + j * nQubits,
                                          ctrl2T[1]);
                         }
-                    } else if (gate.get()->getType() == qc::Z) {
+                    } else if (gate->getType() == qc::Z) {
                         for (int j = 0; j < 7; j++) {
-                            qcMapped.h(i + j * nQubits);
+                            qcMapped.h(static_cast<dd::Qubit>(i + j * nQubits));
                             writeToffoli(i + j * nQubits, ctrl2[0] + j * nQubits, ctrl2T[0], ctrl2[1] + j * nQubits,
                                          ctrl2T[1]);
-                            qcMapped.h(i + j * nQubits);
+                            qcMapped.h(static_cast<dd::Qubit>(i + j * nQubits));
                         }
-                    } else if (gate.get()->getType() == qc::Y) {
+                    } else if (gate->getType() == qc::Y) {
                         for (int j = 0; j < 7; j++) {
                             writeToffoli(i + j * nQubits, ctrl2[0] + j * nQubits, ctrl2T[0], ctrl2[1] + j * nQubits,
                                          ctrl2T[1]);
-                            qcMapped.h(i + j * nQubits);
+                            qcMapped.h(static_cast<dd::Qubit>(i + j * nQubits));
                             writeToffoli(i + j * nQubits, ctrl2[0] + j * nQubits, ctrl2T[0], ctrl2[1] + j * nQubits,
                                          ctrl2T[1]);
-                            qcMapped.h(i + j * nQubits);
+                            qcMapped.h(static_cast<dd::Qubit>(i + j * nQubits));
                         }
                     } else {
                         gateNotAvailableError(gate);
                     }
-                } else if (gate.get()->getNcontrols() > 2 && decomposeMultiControlledGates) {
+                } else if (gate->getNcontrols() > 2 && decomposeMultiControlledGates) {
                     gateNotAvailableError(gate);
-                } else if (gate.get()->getNcontrols()) {
-                    auto &ctrls = gate.get()->getControls();
+                } else if (gate->getNcontrols()) {
+                    auto &ctrls = gate->getControls();
                     for (int j = 0; j < 7; j++) {
                         dd::Controls ctrls2;
                         for (const auto &ct: ctrls) {
                             ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + j * nQubits), ct.type});
                         }
-                        //qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls2, i+j*nQubits, gate.get()->getType());
-                        writeGeneric(i + j * nQubits, ctrls2, gate.get()->getType());
+                        //qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, ctrls2, i+j*nQubits, gate->getType());
+                        writeGeneric(static_cast<dd::Qubit>(i + j * nQubits), ctrls2, gate->getType());
                     }
                 } else {
                     for (int j = 0; j < 7; j++) {
-                        writeGeneric(i + j * nQubits, gate.get()->getType());
-                        //qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+j*nQubits, gate.get()->getType());
+                        writeGeneric(static_cast<dd::Qubit>(i + j * nQubits), gate->getType());
+                        //qcMapped.emplace_back<qc::StandardOperation>(nQubits*ecc.nRedundantQubits, i+j*nQubits, gate->getType());
                     }
                 }
             }
@@ -261,38 +261,38 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
             //locigal S = 3 physical S's
         case qc::S:
         case qc::Sdag:
-            for (std::size_t t = 0; t < gate.get()->getNtargets(); t++) {
-                int i = gate.get()->getTargets()[t];
-                if (gate.get()->getNcontrols() > 1 && decomposeMultiControlledGates) {
+            for (std::size_t t = 0; t < gate->getNtargets(); t++) {
+                int i = static_cast<unsigned char>(gate->getTargets()[t]);
+                if (gate->getNcontrols() > 1 && decomposeMultiControlledGates) {
                     gateNotAvailableError(gate);
-                } else if (gate.get()->getNcontrols() && cliffordGatesOnly) {
+                } else if (gate->getNcontrols() && cliffordGatesOnly) {
                     gateNotAvailableError(gate);
-                } else if (gate.get()->getNcontrols()) {
-                    auto &ctrls = gate.get()->getControls();
+                } else if (gate->getNcontrols()) {
+                    auto &ctrls = gate->getControls();
                     for (int j = 0; j < 7; j++) {
                         dd::Controls ctrls2;
                         for (const auto &ct: ctrls) {
                             ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + j * nQubits), ct.type});
                         }
                         qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, ctrls2,
-                                                                     i + j * nQubits, gate.get()->getType());
+                                                                     i + j * nQubits, gate->getType());
                         qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, ctrls2,
-                                                                     i + j * nQubits, gate.get()->getType());
+                                                                     i + j * nQubits, gate->getType());
                         qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, ctrls2,
-                                                                     i + j * nQubits, gate.get()->getType());
+                                                                     i + j * nQubits, gate->getType());
                     }
                 } else {
-                    if (gate.get()->getType() == qc::S) {
+                    if (gate->getType() == qc::S) {
                         for (int j = 0; j < 7; j++) {
-                            qcMapped.s(i + j * nQubits);
-                            qcMapped.s(i + j * nQubits);
-                            qcMapped.s(i + j * nQubits);
+                            qcMapped.s(static_cast<dd::Qubit>(i + j * nQubits));
+                            qcMapped.s(static_cast<dd::Qubit>(i + j * nQubits));
+                            qcMapped.s(static_cast<dd::Qubit>(i + j * nQubits));
                         }
                     } else {
                         for (int j = 0; j < 7; j++) {
-                            writeSdag(i + j * nQubits);
-                            writeSdag(i + j * nQubits);
-                            writeSdag(i + j * nQubits);
+                            writeSdag(static_cast<dd::Qubit>(i + j * nQubits));
+                            writeSdag(static_cast<dd::Qubit>(i + j * nQubits));
+                            writeSdag(static_cast<dd::Qubit>(i + j * nQubits));
                         }
                     }
                 }
@@ -305,7 +305,7 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
             }
             measureGate = (qc::NonUnitaryOperation *) gate.get();
             for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
-                qcMapped.measure(measureGate->getClassics()[j], measureGate->getTargets()[j]);
+                qcMapped.measure(static_cast<dd::Qubit>(measureGate->getClassics()[j]), measureGate->getTargets()[j]);
             }
             break;
         case qc::T:
