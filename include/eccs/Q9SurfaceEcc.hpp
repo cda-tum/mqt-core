@@ -31,7 +31,7 @@ protected:
 	void mapGate(const std::unique_ptr<qc::Operation> &gate) override;
 
 private:
-    void writeClassicalControl(int control, unsigned int value, qc::OpType optype, int target);
+    void writeClassicalControl(dd::Qubit control, unsigned int value, qc::OpType optype, int target);
 };
 
 #endif //QFR_Q9SurfaceEcc_HPP
