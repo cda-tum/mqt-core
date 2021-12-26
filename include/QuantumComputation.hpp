@@ -196,7 +196,7 @@ namespace qc {
         QuantumComputation& operator=(QuantumComputation&& qc) noexcept = default;
         virtual ~QuantumComputation()                                   = default;
 
-        QuantumComputation clone() {
+        [[nodiscard]] QuantumComputation clone() const {
             auto qc              = QuantumComputation(nqubits);
             qc.nqubits           = nqubits;
             qc.nclassics         = nclassics;
@@ -229,6 +229,8 @@ namespace qc {
         [[nodiscard]] const ClassicalRegisterMap& getCregs() const { return cregs; }
         [[nodiscard]] const QuantumRegisterMap&   getANCregs() const { return ancregs; }
 
+        void setName(const std::string& n) { name = n; }
+
         // initialLayout[physical_qubit] = logical_qubit
         Permutation initialLayout{};
         Permutation outputPermutation{};
@@ -238,22 +240,22 @@ namespace qc {
 
         [[nodiscard]] std::size_t getNindividualOps() const;
 
-        [[nodiscard]] std::string                         getQubitRegister(dd::Qubit physical_qubit_index) const;
-        [[nodiscard]] std::string                         getClassicalRegister(std::size_t classical_index) const;
+        [[nodiscard]] std::string                         getQubitRegister(dd::Qubit physicalQubitIndex) const;
+        [[nodiscard]] std::string                         getClassicalRegister(std::size_t classicalIndex) const;
         static dd::Qubit                                  getHighestLogicalQubitIndex(const Permutation& map);
         [[nodiscard]] dd::Qubit                           getHighestLogicalQubitIndex() const { return getHighestLogicalQubitIndex(initialLayout); };
-        [[nodiscard]] std::pair<std::string, dd::Qubit>   getQubitRegisterAndIndex(dd::Qubit physical_qubit_index) const;
-        [[nodiscard]] std::pair<std::string, std::size_t> getClassicalRegisterAndIndex(std::size_t classical_index) const;
+        [[nodiscard]] std::pair<std::string, dd::Qubit>   getQubitRegisterAndIndex(dd::Qubit physicalQubitIndex) const;
+        [[nodiscard]] std::pair<std::string, std::size_t> getClassicalRegisterAndIndex(std::size_t classicalIndex) const;
 
         [[nodiscard]] dd::Qubit   getIndexFromQubitRegister(const std::pair<std::string, dd::Qubit>& qubit) const;
         [[nodiscard]] std::size_t getIndexFromClassicalRegister(const std::pair<std::string, std::size_t>& clbit) const;
-        [[nodiscard]] bool        isIdleQubit(dd::Qubit physical_qubit) const;
+        [[nodiscard]] bool        isIdleQubit(dd::Qubit physicalQubit) const;
         [[nodiscard]] bool        isLastOperationOnQubit(const decltype(ops.cbegin())& opIt, const decltype(ops.cend())& end) const;
-        [[nodiscard]] bool        physicalQubitIsAncillary(dd::Qubit physical_qubit_index) const;
-        [[nodiscard]] bool        logicalQubitIsAncillary(dd::Qubit logical_qubit_index) const { return ancillary[logical_qubit_index]; }
-        void                      setLogicalQubitAncillary(dd::Qubit logical_qubit_index) { ancillary[logical_qubit_index] = true; }
-        [[nodiscard]] bool        logicalQubitIsGarbage(dd::Qubit logical_qubit_index) const { return garbage[logical_qubit_index]; }
-        void                      setLogicalQubitGarbage(dd::Qubit logical_qubit_index) { garbage[logical_qubit_index] = true; }
+        [[nodiscard]] bool        physicalQubitIsAncillary(dd::Qubit physicalQubitIndex) const;
+        [[nodiscard]] bool        logicalQubitIsAncillary(dd::Qubit logicalQubitIndex) const { return ancillary[logicalQubitIndex]; }
+        void                      setLogicalQubitAncillary(dd::Qubit logicalQubitIndex) { ancillary[logicalQubitIndex] = true; }
+        [[nodiscard]] bool        logicalQubitIsGarbage(dd::Qubit logicalQubitIndex) const { return garbage[logicalQubitIndex]; }
+        void                      setLogicalQubitGarbage(dd::Qubit logicalQubitIndex);
         MatrixDD                  createInitialMatrix(std::unique_ptr<dd::Package>& dd) const; // creates identity matrix, which is reduced with respect to the ancillary qubits
 
         void i(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::I); }
@@ -452,8 +454,8 @@ namespace qc {
         virtual MatrixDD                           buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const;
         virtual bool                               buildFunctionalityRecursive(std::size_t depth, std::size_t opIdx, std::stack<MatrixDD>& s, Permutation& permutation, std::unique_ptr<dd::Package>& dd) const;
 
-        virtual void extractProbabilityVector(const VectorDD& in, std::vector<dd::fp>& probVector, std::unique_ptr<dd::Package>& dd);
-        virtual void extractProbabilityVectorRecursive(const VectorDD& currentState, decltype(ops.begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, std::vector<dd::fp>& probVector, std::unique_ptr<dd::Package>& dd);
+        virtual void extractProbabilityVector(const VectorDD& in, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package>& dd);
+        virtual void extractProbabilityVectorRecursive(const VectorDD& currentState, decltype(ops.begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package>& dd);
         /**
 		 * printing
 		 */

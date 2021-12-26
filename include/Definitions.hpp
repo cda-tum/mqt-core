@@ -8,7 +8,7 @@
 
 #include "dd/Package.hpp"
 
-#include <forward_list>
+#include <deque>
 #include <map>
 #include <memory>
 #include <utility>
@@ -42,6 +42,8 @@ namespace qc {
 
     using Targets = std::vector<dd::Qubit>;
 
+    using BitString = std::bitset<std::numeric_limits<dd::Qubit>::max() + 1>;
+
     struct Permutation: public std::map<dd::Qubit, dd::Qubit> {
         [[nodiscard]] inline dd::Controls apply(const dd::Controls& controls) const {
             dd::Controls c{};
@@ -59,7 +61,7 @@ namespace qc {
         }
     };
 
-    constexpr dd::fp PARAMETER_TOLERANCE = 10e-6;
+    constexpr dd::fp PARAMETER_TOLERANCE = 1e-13;
 
     // forward declaration
     class Operation;
@@ -75,9 +77,11 @@ namespace qc {
         Tensor
     };
 
-    using DAG          = std::vector<std::forward_list<std::unique_ptr<Operation>*>>;
-    using DAGIterator  = std::forward_list<std::unique_ptr<Operation>*>::iterator;
-    using DAGIterators = std::vector<DAGIterator>;
+    using DAG                 = std::vector<std::deque<std::unique_ptr<Operation>*>>;
+    using DAGIterator         = std::deque<std::unique_ptr<Operation>*>::iterator;
+    using DAGReverseIterator  = std::deque<std::unique_ptr<Operation>*>::reverse_iterator;
+    using DAGIterators        = std::vector<DAGIterator>;
+    using DAGReverseIterators = std::vector<DAGReverseIterator>;
 } // namespace qc
 
 #endif //QFR_DEFINITIONS_HPP

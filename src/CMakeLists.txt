@@ -17,7 +17,6 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Entanglement.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/RandomCliffordCircuit.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/QPE.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/IQPE.cpp
 
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/RealParser.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/GRCSParser.cpp
@@ -55,7 +54,6 @@ add_library(${PROJECT_NAME}
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Entanglement.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QPE.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/IQPE.hpp
             
             ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/EccStatistics.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Ecc.hpp

@@ -25,6 +25,10 @@ namespace qc::qiskit {
                 throw QFRException("[import] Python object needs to be a Qiskit QuantumCircuit");
             }
 
+            if (!circ.attr("name").is_none()) {
+                qc.setName(circ.attr("name").cast<std::string>());
+            }
+
             // import initial layout in case it is available
             if (!circ.attr("_layout").is_none()) {
                 importInitialLayout(qc, circ);

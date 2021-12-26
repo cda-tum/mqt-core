@@ -24,7 +24,9 @@ namespace qc {
     public:
         CircuitOptimizer() = default;
 
-        static DAG constructDAG(QuantumComputation& qc);
+        static DAG  constructDAG(QuantumComputation& qc);
+        static void printDAG(const DAG& dag);
+        static void printDAG(const DAG& dag, const DAGIterators& iterators);
 
         static void swapReconstruction(QuantumComputation& qc);
 
@@ -34,15 +36,7 @@ namespace qc {
 
         static void removeDiagonalGatesBeforeMeasure(QuantumComputation& qc);
 
-        static void removeDiagonalGatesBeforeMeasureRecursive(DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, const DAGIterator& until);
-
-        static bool removeDiagonalGate(DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, DAGIterator& it, qc::Operation* op);
-
         static void removeFinalMeasurements(QuantumComputation& qc);
-
-        static void removeFinalMeasurementsRecursive(DAG& dag, DAGIterators& DAGIterators, dd::Qubit idx, const DAGIterator& until);
-
-        static bool removeFinalMeasurement(DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, DAGIterator& it, qc::Operation* op);
 
         static void decomposeSWAP(QuantumComputation& qc, bool isDirectedArchitecture);
 
@@ -50,13 +44,21 @@ namespace qc {
 
         static void eliminateResets(QuantumComputation& qc);
 
-        static void changeTargets(Targets& targets, const std::map<dd::Qubit, dd::Qubit>& replacementMap);
-
-        static void changeControls(dd::Controls& controls, const std::map<dd::Qubit, dd::Qubit>& replacementMap);
-
         static void deferMeasurements(QuantumComputation& qc);
 
         static bool isDynamicCircuit(QuantumComputation& qc);
+
+        static void reorderOperations(QuantumComputation& qc);
+
+    protected:
+        static void removeDiagonalGatesBeforeMeasureRecursive(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, const DAGReverseIterator& until);
+        static bool removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, DAGReverseIterator& it, qc::Operation* op);
+
+        static void removeFinalMeasurementsRecursive(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, const DAGReverseIterator& until);
+        static bool removeFinalMeasurement(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, DAGReverseIterator& it, qc::Operation* op);
+
+        static void changeTargets(Targets& targets, const std::map<dd::Qubit, dd::Qubit>& replacementMap);
+        static void changeControls(dd::Controls& controls, const std::map<dd::Qubit, dd::Qubit>& replacementMap);
     };
 } // namespace qc
 #endif //QFR_CIRCUITOPTIMIZER_HPP

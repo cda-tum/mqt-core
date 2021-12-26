@@ -8,14 +8,17 @@
 
 #include <QuantumComputation.hpp>
 
+using namespace dd::literals;
+
 namespace qc {
     class QPE: public QuantumComputation {
     public:
-        dd::fp         lambda    = 0.;
-        dd::QubitCount precision = 0;
+        dd::fp               lambda = 0.;
+        const dd::QubitCount precision;
+        const bool           iterative;
 
-        explicit QPE(dd::QubitCount nq, bool exact = true);
-        QPE(dd::fp lambda, dd::QubitCount precision);
+        explicit QPE(dd::QubitCount nq, bool exact = true, bool iterative = false);
+        QPE(dd::fp lambda, dd::QubitCount precision, bool iterativ = false);
 
         std::ostream& printStatistics(std::ostream& os) const override;
 

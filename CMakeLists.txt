@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.14...3.19)
+cmake_minimum_required(VERSION 3.14...3.22)
 
 project(qfr
         LANGUAGES CXX
-        VERSION 1.7.0
+        VERSION 1.7.3
         DESCRIPTION "QFR  - A JKQ library for Quantum Functionality Representation"
         )
 
@@ -16,13 +16,26 @@ option(COVERAGE "Configure for coverage report generation")
 option(GENERATE_POSITION_INDEPENDENT_CODE "Generate position independent code")
 option(BUILD_QFR_TESTS "Also build tests for QFR project")
 
+if (DEFINED ENV{DEPLOY})
+	set(DEPLOY $ENV{DEPLOY} CACHE BOOL "Use deployment configuration from environment" FORCE)
+	message(STATUS "Setting deployment configuration to '${DEPLOY}' from environment")
+endif ()
+
+# set deployment specific options
+if (DEPLOY)
+	# build a universal macOS binary in case this is a deployment build
+	set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "" FORCE)
+	# set the macOS deployment target appropriately
+	set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "" FORCE)
+endif ()
+
 # build type settings
 set(default_build_type "Release")
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
 	set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-endif()
+endif ()
 
 macro(check_submodule_present MODULENAME)
 	if(NOT EXISTS "${PROJECT_SOURCE_DIR}/extern/${MODULENAME}/CMakeLists.txt")

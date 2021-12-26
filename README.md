@@ -12,22 +12,34 @@ A JKQ library for the representation of quantum functionality by the [Institute 
 If you have any questions feel free to contact us using [iic-quantum@jku.at](mailto:iic-quantum@jku.at) or by creating an issue on [GitHub](https://github.com/iic-jku/qfr/issues).
 
 ## Efficient Construction of Functional Representations for Quantum Algorithms
-The QFR library provides the means for constructing the functionality of a given quantum circuit using [decision diagrams](https://iic.jku.at/eda/research/quantum_dd) in the form of the `jkq.qfr` Python package. 
-It includes a traditional, sequential approach (`qfr.ConstructionMethod.sequential`) and the efficient, recursive method proposed in [[1]](https://arxiv.org/abs/2103.08281) (`qfr.ConstructionMethod.recursive`).
+
+The QFR library provides the means for constructing the functionality of a given quantum circuit using [decision diagrams](https://iic.jku.at/eda/research/quantum_dd) in the form of the `jkq.qfr` Python package. It includes a traditional,
+sequential approach (`qfr.ConstructionMethod.sequential`) and the efficient, recursive method proposed in [[1]](https://arxiv.org/abs/2103.08281) (`qfr.ConstructionMethod.recursive`).
 
 [[1]](https://arxiv.org/abs/2103.08281) L. Burgholzer, R. Raymond, I. Sengupta, and R. Wille. **"Efficient Construction of Functional Representations for Quantum Algorithms"**. [arXiv:2103.08281](https://arxiv.org/abs/2103.08281), 2021
 
-In order to start using it, install the package using
+In order to make the library as easy to use as possible (without compilation), we provide pre-built wheels for most common platforms (64-bit Linux, MacOS, Windows). These can be installed using
+
 ```bash
 pip install jkq.qfr
 ```
-Then, in Python, the functionality of a given circuit (provided, e.g., as Qiskit QuantumCircuit) can be constructed with:
+
+However, in order to get the best performance out of the QFR, it is recommended to build it locally from the source distribution (see [system requirements](#system-requirements)) via
+
+```bash
+pip install --no-binary jkq.qfr
+```
+
+This enables platform specific compiler optimizations that cannot be enabled on portable wheels.
+
+Once installed, in Python, the functionality of a given circuit (provided, e.g., as Qiskit QuantumCircuit) can be constructed with:
+
 ```python
 from jkq import qfr
 from qiskit import QuantumCircuit
 
 # create your quantum circuit
-qc = <...>
+qc = < ... >
 
 # construct the functionality of the circuit
 results = qfr.construct(qc)
@@ -76,7 +88,7 @@ It acts as an intermediate representation and provides the facilitites to
     * Entanglement
     
         ```c++
-      unsigned short n = 2;
+      dd::QubitCount n = 2;
       qc::Entanglement entanglement(n); // generates bell circuit
       ```
     
@@ -87,30 +99,41 @@ It acts as an intermediate representation and provides the facilitites to
       unsigned long long hiddenInteger = 16777215ull;
       qc::BernsteinVazirani bv(hiddenInteger); // generates Bernstein-Vazirani circuit for given hiddenInteger
          ```
-    
-        Generates the circuit for the Berstein-Vazirani algorithm using the provided *hiddenInteger*
-    
+
+      Generates the circuit for the Berstein-Vazirani algorithm using the provided *hiddenInteger*
+
     * Quantum Fourier Transform (QFT)
-  
+
         ```c++
-      unsigned short n = 3;
+      dd::QubitCount n = 3;
       qc::QFT qft(n); // generates the QFT circuit for n qubits
       ```
-  
-        Generates the circuit for the *n* qubit Quantum Fourier Transform.
-  * Grover's search algorithm
-  
-       ```c++
-      unsigned short n = 2;
+
+      Generates the circuit for the *n* qubit Quantum Fourier Transform.
+
+    * Grover's search algorithm
+
+         ```c++
+      dd::QubitCount n = 2;
       qc::Grover grover(n); // generates Grover's algorithm for a random n-bit oracle
       ```
-    
-       The algorithm performs ~ &#960;/4 &#8730;2&#8319; Grover iterations. An optional `unsigned int` parameter controls the *seed* of the random number generation for the oracle generation.
-    
+
+      The algorithm performs ~ &#960;/4 &#8730;2&#8319; Grover iterations. An optional `unsigned int` parameter controls the *seed* of the random number generation for the oracle generation.
+
+    * (Iterative) Quantum Phase Estimation
+        ```c++
+      dd::QubitCount n = 3;
+      bool exact = true; // whether to generate an exactly representable phase or not
+      qc::QPE qpe(n, exact);
+      qc::IQPE iqpe(n, exact);
+      ```
+      Generates a random bitstring of length `n` (`n+1` in the inexact case) and constructs the corresponding (iterative) Quantum Phase Estimation algorithm using *n+1* qubits. Alternatively, a specific `phase` and `precision` might be
+      passed to the constructor.
+
 * **Generate circuit descriptions from intermediate representations.**
-   
+
   The library also supports the output of circuits in various formats by calling
-    
+
   ```c++
   std::string filename = "PATH_TO_DESTINATION_FILE.qasm";
   qc.dump(filename);
@@ -125,6 +148,9 @@ It acts as an intermediate representation and provides the facilitites to
 
 Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments). However, the implementation should be compatible
 with any current C++ compiler supporting C++17 and a minimum CMake version of 3.14.
+
+*Disclaimer*: We noticed some issues when compiling with Microsoft's `MSVC` compiler toolchain. If you are developing under Windows, consider using the `clang` compiler toolchain. A detailed description of how to set this up can be
+found [here](https://docs.microsoft.com/en-us/cpp/build/clang-support-msbuild?view=msvc-160).
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 

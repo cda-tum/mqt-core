@@ -28,6 +28,8 @@ inline std::string toString(ConstructionMethod method) {
             return "sequential";
         case ConstructionMethod::Recursive:
             return "recursive";
+        default:
+            return "unknown";
     }
 }
 
