@@ -90,7 +90,7 @@ protected:
     void writeSdag(dd::Qubit target, const dd::Control& control);
     void writeSdag(dd::Qubit target, const dd::Controls& controls);
 
-    void writeClassicalControl(dd::Qubit control, unsigned int value, qc::OpType optype, int target);
+    void writeClassicalControl(dd::Qubit control, int qubitCount, unsigned int value, qc::OpType opType, int target);
 
 };
 

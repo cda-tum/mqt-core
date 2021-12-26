@@ -92,21 +92,21 @@ void Q9SurfaceEcc::measureAndCorrect() {
        qcMapped.measure(a[6], clAncStart+7);
 
        //logic
-       writeClassicalControl(dd::Qubit(clAncStart), 1, qc::Z, q[2]); //a[0]
-       writeClassicalControl(dd::Qubit(clAncStart), 2, qc::Z, q[3]); //a[2] (or q[0])
-       writeClassicalControl(dd::Qubit(clAncStart), 3, qc::Z, q[1]); //a[0,2]
-       writeClassicalControl(dd::Qubit(clAncStart), 4, qc::Z, q[5]); //a[5] (or q[8])
-       writeClassicalControl(dd::Qubit(clAncStart), 6, qc::Z, q[4]); //a[2,5]
-       writeClassicalControl(dd::Qubit(clAncStart), 8, qc::Z, q[6]); //a[7]
-       writeClassicalControl(dd::Qubit(clAncStart), 12, qc::Z, q[7]); //a[5,7]
+       writeClassicalControl(dd::Qubit(clAncStart), 4, 1, qc::Z, q[2]); //a[0]
+       writeClassicalControl(dd::Qubit(clAncStart), 4, 2, qc::Z, q[3]); //a[2] (or q[0])
+       writeClassicalControl(dd::Qubit(clAncStart), 4, 3, qc::Z, q[1]); //a[0,2]
+       writeClassicalControl(dd::Qubit(clAncStart), 4, 4, qc::Z, q[5]); //a[5] (or q[8])
+       writeClassicalControl(dd::Qubit(clAncStart), 4, 6, qc::Z, q[4]); //a[2,5]
+       writeClassicalControl(dd::Qubit(clAncStart), 4, 8, qc::Z, q[6]); //a[7]
+       writeClassicalControl(dd::Qubit(clAncStart), 4, 12, qc::Z, q[7]); //a[5,7]
 
-       writeClassicalControl(dd::Qubit(clAncStart+4), 1, qc::X, q[0]); //a[1]
-       writeClassicalControl(dd::Qubit(clAncStart+4), 2, qc::X, q[1]); //a[3] (or q[2])
-       writeClassicalControl(dd::Qubit(clAncStart+4), 4, qc::X, q[7]); //a[4] (or q[6])
-       writeClassicalControl(dd::Qubit(clAncStart+4), 5, qc::X, q[3]); //a[1,4]
-       writeClassicalControl(dd::Qubit(clAncStart+4), 6, qc::X, q[4]); //a[3,4]
-       writeClassicalControl(dd::Qubit(clAncStart+4), 8, qc::X, q[8]); //a[6]
-       writeClassicalControl(dd::Qubit(clAncStart+4), 10, qc::X, q[5]); //a[3,6]
+       writeClassicalControl(dd::Qubit(clAncStart+4), 4, 1, qc::X, q[0]); //a[1]
+       writeClassicalControl(dd::Qubit(clAncStart+4), 4, 2, qc::X, q[1]); //a[3] (or q[2])
+       writeClassicalControl(dd::Qubit(clAncStart+4), 4, 4, qc::X, q[7]); //a[4] (or q[6])
+       writeClassicalControl(dd::Qubit(clAncStart+4), 4, 5, qc::X, q[3]); //a[1,4]
+       writeClassicalControl(dd::Qubit(clAncStart+4), 4, 6, qc::X, q[4]); //a[3,4]
+       writeClassicalControl(dd::Qubit(clAncStart+4), 4, 8, qc::X, q[8]); //a[6]
+       writeClassicalControl(dd::Qubit(clAncStart+4), 4, 10, qc::X, q[5]); //a[3,6]
 
 
    }
