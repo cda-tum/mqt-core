@@ -27,21 +27,21 @@ void Q9ShorEcc::writeEncoding() {
 	const int nQubits = qc.getNqubits();
 	for(int i=0;i<nQubits;i++) {
         dd::Control ci = {dd::Qubit(i), dd::Control::Type::pos};
-        qcMapped.x(i+3*nQubits, ci);
-        qcMapped.x(i+6*nQubits, ci);
+        qcMapped.x(dd::Qubit(i+3*nQubits), ci);
+        qcMapped.x(dd::Qubit(i+6*nQubits), ci);
 
-        qcMapped.h(i);
-        qcMapped.h(i+3*nQubits);
-        qcMapped.h(i+6*nQubits);
+        qcMapped.h(dd::Qubit(i));
+        qcMapped.h(dd::Qubit(i+3*nQubits));
+        qcMapped.h(dd::Qubit(i+6*nQubits));
 
         dd::Control ci3 = {dd::Qubit(i+3*nQubits), dd::Control::Type::pos};
         dd::Control ci6 = {dd::Qubit(i+6*nQubits), dd::Control::Type::pos};
-        qcMapped.x(i+nQubits, ci);
-        qcMapped.x(i+2*nQubits, ci);
-        qcMapped.x(i+4*nQubits, ci3);
-        qcMapped.x(i+5*nQubits, ci3);
-        qcMapped.x(i+7*nQubits, ci6);
-        qcMapped.x(i+8*nQubits, ci6);
+        qcMapped.x(dd::Qubit(i+nQubits), ci);
+        qcMapped.x(dd::Qubit(i+2*nQubits), ci);
+        qcMapped.x(dd::Qubit(i+4*nQubits), ci3);
+        qcMapped.x(dd::Qubit(i+5*nQubits), ci3);
+        qcMapped.x(dd::Qubit(i+7*nQubits), ci6);
+        qcMapped.x(dd::Qubit(i+8*nQubits), ci6);
     }
     decodingDone = false;
 }
@@ -51,19 +51,19 @@ void Q9ShorEcc::measureAndCorrect() {
     const int clStart = statistics.nInputClassicalBits;
     for(int i=0;i<nQubits;i++) {
         //syntactic sugar for qubit indices
-        unsigned int q[9];//qubits
-        unsigned int a[8];//ancilla qubits
+        dd::Qubit q[9];//qubits
+        dd::Qubit a[8];//ancilla qubits
         dd::Control ca[8];//ancilla controls
         dd::Control cna[8];//negative ancilla controls
-        for(int j=0;j<9;j++) { q[j] = i+j*nQubits;}
-        for(int j=0;j<8;j++) { a[j] = ecc.nRedundantQubits*nQubits+j; qcMapped.reset(a[j]); }
+        for(int j=0;j<9;j++) { q[j] = dd::Qubit(i+j*nQubits);}
+        for(int j=0;j<8;j++) { a[j] =  dd::Qubit(ecc.nRedundantQubits*nQubits+j); qcMapped.reset(a[j]); }
         for(int j=0;j<8;j++) { ca[j] = dd::Control{dd::Qubit(a[j]), dd::Control::Type::pos}; }
         for(int j=0;j<8;j++) { cna[j] = dd::Control{dd::Qubit(a[j]), dd::Control::Type::neg}; }
 
 
         // PREPARE measurements --------------------------------------------------------
-        for(int j=0;j<8;j++) {
-            qcMapped.h(a[j]);
+        for(dd::Qubit j : a) {
+            qcMapped.h(j);
         }
         //x errors = indirectly via controlled z
         qcMapped.z(q[0], ca[0]);
@@ -96,7 +96,7 @@ void Q9ShorEcc::measureAndCorrect() {
         qcMapped.x(q[7], ca[7]);
         qcMapped.x(q[8], ca[7]);
 
-        for(int j=0;j<8;j++) {qcMapped.h(a[j]);}
+        for(dd::Qubit j : a) {qcMapped.h(j);}
 
         //MEASURE ancilla qubits
         for(int j=0;j<8;j++) {
@@ -105,22 +105,22 @@ void Q9ShorEcc::measureAndCorrect() {
 
         //CORRECT
         //x, i.e. bit flip errors
-        writeClassicalControl(clStart, 1, qc::X, i);
-        writeClassicalControl(clStart, 2, qc::X, i+2*nQubits);
-        writeClassicalControl(clStart, 3, qc::X, i+nQubits);
+        writeClassicalControl(dd::Qubit(clStart), 2, 1, qc::X, i);
+        writeClassicalControl(dd::Qubit(clStart), 2,2, qc::X, i+2*nQubits);
+        writeClassicalControl(dd::Qubit(clStart), 2,3, qc::X, i+nQubits);
 
-        writeClassicalControl(clStart+2, 1, qc::X, i+3*nQubits);
-        writeClassicalControl(clStart+2, 2, qc::X, i+5*nQubits);
-        writeClassicalControl(clStart+2, 3, qc::X, i+4*nQubits);
+        writeClassicalControl(dd::Qubit(clStart+2),2, 1, qc::X, i+3*nQubits);
+        writeClassicalControl(dd::Qubit(clStart+2), 2,2, qc::X, i+5*nQubits);
+        writeClassicalControl(dd::Qubit(clStart+2), 2,3, qc::X, i+4*nQubits);
 
-        writeClassicalControl(clStart+4, 1, qc::X, i+6*nQubits);
-        writeClassicalControl(clStart+4, 2, qc::X, i+8*nQubits);
-        writeClassicalControl(clStart+4, 3, qc::X, i+7*nQubits);
+        writeClassicalControl(dd::Qubit(clStart+4),2, 1, qc::X, i+6*nQubits);
+        writeClassicalControl(dd::Qubit(clStart+4),2, 2, qc::X, i+8*nQubits);
+        writeClassicalControl(dd::Qubit(clStart+4),2, 3, qc::X, i+7*nQubits);
 
         //z, i.e. phase flip errors
-        writeClassicalControl(clStart+6, 1, qc::Z, i);
-        writeClassicalControl(clStart+6, 2, qc::Z, i+6*nQubits);
-        writeClassicalControl(clStart+6, 3, qc::Z, i+3*nQubits);
+        writeClassicalControl(dd::Qubit(clStart+6),2, 1, qc::Z, i);
+        writeClassicalControl(dd::Qubit(clStart+6),2, 2, qc::Z, i+6*nQubits);
+        writeClassicalControl(dd::Qubit(clStart+6),2, 3, qc::Z, i+3*nQubits);
     }
 }
 

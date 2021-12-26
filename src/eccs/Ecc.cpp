@@ -198,13 +198,7 @@ void Ecc::writeX(dd::Qubit target, const dd::Controls &controls) {
     } else if (controls.empty()) {
         auto el(controls.begin());
         qcMapped.x(target, *el);
-    } else if (decomposeMultiControlledGates || cliffordGatesOnly) {
-        throw qc::QFRException(std::string("Multi-controlled X gate not possible to encode!"));
-    } else {
-        qcMapped.x(target, controls);
-    }
-
-    if (cliffordGatesOnly) {
+    } else if (cliffordGatesOnly) {
         qcMapped.h(target);
         writeZ(target, controls);
         qcMapped.h(target);
@@ -262,9 +256,9 @@ void Ecc::writeSdag(dd::Qubit target) {
     } else { qcMapped.sdag(target); }
 }
 
-void Ecc::writeClassicalControl(dd::Qubit control, unsigned int value, qc::OpType optype, int target) {
-    std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), dd::Qubit(target), optype);
-    const auto pair_ = std::make_pair(control, dd::QubitCount(4));
+void Ecc::writeClassicalControl(dd::Qubit control, int qubitCount, unsigned int value, qc::OpType opType, int target) {
+    std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), dd::Qubit(target), opType);
+    const auto pair_ = std::make_pair(control, dd::QubitCount(qubitCount));
     qcMapped.emplace_back<qc::ClassicControlledOperation>(op, pair_, value);
 }
 
