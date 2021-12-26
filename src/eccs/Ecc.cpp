@@ -262,4 +262,10 @@ void Ecc::writeSdag(dd::Qubit target) {
     } else { qcMapped.sdag(target); }
 }
 
+void Ecc::writeClassicalControl(dd::Qubit control, unsigned int value, qc::OpType optype, int target) {
+    std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), dd::Qubit(target), optype);
+    const auto pair_ = std::make_pair(control, dd::QubitCount(4));
+    qcMapped.emplace_back<qc::ClassicControlledOperation>(op, pair_, value);
+}
+
 

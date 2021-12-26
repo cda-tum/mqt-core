@@ -15,11 +15,12 @@ void Q7SteaneEcc::initMappedCircuit() {
     statistics.nInputQubits = qc.getNqubits();
     statistics.nInputClassicalBits = (int) qc.getNcbits();
     statistics.nOutputQubits = qc.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
-    statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits;
+    statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits+7;
     qcMapped.addQubitRegister(statistics.nOutputQubits);
     qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
     qcMapped.addClassicalRegister(3, "qeccX");
     qcMapped.addClassicalRegister(3, "qeccZ");
+    qcMapped.addClassicalRegister(7, "decodeReg");
 }
 
 void Q7SteaneEcc::writeEncoding() {
@@ -156,32 +157,16 @@ void Q7SteaneEcc::measureAndCorrect() {
 
 void Q7SteaneEcc::writeDecoding() {
     const int nQubits = qc.getNqubits();
-    const int ancStart = nQubits * ecc.nRedundantQubits;
+    const int clAncStart = statistics.nOutputClassicalBits-7;
+    unsigned int correction_needed[] = {1,2,4,7,8,11,13,14,16,19,21,22,25,26,28,31,32,35,37,38,41,42,44,47,49,50,52,55,56,59,61,62,64,67,69,70,73,74,76,79,81,82,84,87,88,91,93,94,97,98,100,103,104,107,109,110,112,115,117,118,121,122,124,127};
 
     for (int i = 0; i < nQubits; i++) {
-        qcMapped.reset(static_cast<dd::Qubit>(ancStart));
-        qcMapped.h(static_cast<dd::Qubit>(ancStart));
-
-        auto c = dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos};
         for (int j = 0; j < 7; j++) {
-            if (cliffordGatesOnly) {
-                qcMapped.h(static_cast<dd::Qubit>(i + j * nQubits));
-                qcMapped.x(static_cast<dd::Qubit>(i + j * nQubits), c);
-                qcMapped.h(static_cast<dd::Qubit>(i + j * nQubits));
-            } else {
-                writeZ(static_cast<dd::Qubit>(i + j * nQubits), c);
-            }
-
+            qcMapped.measure(static_cast<dd::Qubit>(i + j * nQubits), clAncStart+j);
         }
-        qcMapped.h(static_cast<dd::Qubit>(ancStart));
-
-        qcMapped.measure(static_cast<dd::Qubit>(ancStart), i);
-        if (cliffordGatesOnly) {
-            qcMapped.x(static_cast<dd::Qubit>(ancStart), dd::Control{dd::Qubit(i)});
-            qcMapped.x(static_cast<dd::Qubit>(i), dd::Control{dd::Qubit(ancStart)});
-            qcMapped.x(static_cast<dd::Qubit>(ancStart), dd::Control{dd::Qubit(i)});
-        } else {
-            qcMapped.swap(static_cast<dd::Qubit>(ancStart), static_cast<dd::Qubit>(i));
+        qcMapped.reset(dd::Qubit(i));
+        for(int j=0;j<64;j++) {
+            writeClassicalControl(clAncStart+1, correction_needed[j], qc::X, i);
         }
 
     }

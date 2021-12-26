@@ -124,12 +124,6 @@ void Q9ShorEcc::measureAndCorrect() {
     }
 }
 
-void Q9ShorEcc::writeClassicalControl(int control, unsigned int value, qc::OpType optype, int target) {
-    std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), dd::Qubit(target), optype);
-    const auto pair_ = std::make_pair(dd::Qubit(control), dd::QubitCount(2));
-    qcMapped.emplace_back<qc::ClassicControlledOperation>(op, pair_, value);
-}
-
 void Q9ShorEcc::writeDecoding() {
     const int nQubits = qc.getNqubits();
     for(int i=0;i<nQubits;i++) {
