@@ -27,7 +27,7 @@ pip install jkq.qfr
 However, in order to get the best performance out of the QFR, it is recommended to build it locally from the source distribution (see [system requirements](#system-requirements)) via
 
 ```bash
-pip install --no-binary jkq.qfr
+pip install jkq.qfr --no-binary jkq.qfr
 ```
 
 This enables platform specific compiler optimizations that cannot be enabled on portable wheels.
