@@ -7,3 +7,19 @@ updates:
     # Check the submodules for updates every month
     schedule:
       interval: "monthly"
+    assignees:
+      - "burgholzer"
+    reviewers:
+      - "burgholzer"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    # Look for `*.yml` files in the `.github/workflows` directory
+    directory: "/"
+    # Check for updates to GitHub Actions every week
+    schedule:
+      interval: "weekly"
+    assignees:
+      - "burgholzer"
+    reviewers:
+      - "burgholzer"
