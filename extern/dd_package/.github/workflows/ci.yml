@@ -69,15 +69,15 @@ jobs:
         with:
           submodules: recursive
       - name:  Configure CMake
-        run:   cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Release -DCOVERAGE=1
+        run:   cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=1
       - name:  Build
-        run:   cmake --build "${{github.workspace}}/build" --config Release --target DDPackage_test
+        run:   cmake --build "${{github.workspace}}/build" --config Debug --target DDPackage_test
       - name:              Test
         working-directory: ${{github.workspace}}/build/test
         run:               ./DDPackage_test
       - name: Run gcov
         run: |
-          find . -type f -name '*.gcno' -exec gcov -pb  {} +
+          find . -type f -name '*.gcno' -exec gcov -p  {} +
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2.1.0
         with:
