@@ -75,6 +75,9 @@ jobs:
       - name:              Test
         working-directory: ${{github.workspace}}/build/test
         run:               ./DDPackage_test
+      - name: Run gcov
+        run: |
+          find . -type f -name '*.gcno' -exec gcov -pb  {} +
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2.1.0
         with:
