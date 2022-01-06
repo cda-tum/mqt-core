@@ -6,7 +6,7 @@ updates:
     directory:         "/"
     # Check the submodules for updates every week
     schedule:
-      interval: "weakly"
+      interval: "weekly"
     assignees:
       - "burgholzer"
     reviewers:
