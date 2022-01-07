@@ -9,6 +9,14 @@
 #include "qiskit/QasmQobjExperiment.hpp"
 #include "qiskit/QuantumCircuit.hpp"
 
+#include <eccs/Ecc.hpp>
+#include <eccs/IdEcc.hpp>
+#include <eccs/Q3ShorEcc.hpp>
+#include <eccs/Q5LaflammeEcc.hpp>
+#include <eccs/Q7SteaneEcc.hpp>
+#include <eccs/Q9SurfaceEcc.hpp>
+#include <eccs/Q9ShorEcc.hpp>
+
 #include <chrono>
 #include <pybind11/complex.h>
 #include <pybind11/pybind11.h>
@@ -148,6 +156,67 @@ py::dict matrix_from_dd(const std::string& serializedDD) {
     return results;
 }
 
+py::dict apply_ecc(const py::object &circ, const std::string &eccString, const int ecc_frequency, const bool ecc_no_mc, const bool ecc_clifford_only) {
+
+    qc::QuantumComputation qc{};
+    std::string eccName{eccString};
+
+    try {
+        if (py::isinstance<py::str>(circ)) {
+            auto&& file = circ.cast<std::string>();
+            qc.import(file);
+        } else {
+            py::object QuantumCircuit       = py::module::import("qiskit").attr("QuantumCircuit");
+            py::object pyQasmQobjExperiment = py::module::import("qiskit.qobj").attr("QasmQobjExperiment");
+            if (py::isinstance(circ, QuantumCircuit)) {
+                qc::qiskit::QuantumCircuit::import(qc, circ);
+            } else if (py::isinstance(circ, pyQasmQobjExperiment)) {
+                qc::qiskit::QasmQobjExperiment::import(qc, circ);
+            }
+        }
+    } catch (std::exception const& e) {
+        std::stringstream ss{};
+        ss << "Could not import circuit: " << e.what();
+        return py::dict("error"_a = ss.str());
+    }
+
+
+    Ecc *mapper = nullptr;
+    bool decomposeMC = ecc_no_mc;
+    bool cliffOnly = ecc_clifford_only;
+    int measureFrequency = ecc_frequency;
+
+    if (eccName.compare(IdEcc::getName()) == 0) {
+        mapper = new IdEcc(qc, measureFrequency, decomposeMC, cliffOnly);
+    } else if (eccName.compare(Q3ShorEcc::getName()) == 0) {
+        mapper = new Q3ShorEcc(qc, measureFrequency, decomposeMC, cliffOnly);
+    } else if (eccName.compare(Q5LaflammeEcc::getName()) == 0) {
+        mapper = new Q5LaflammeEcc(qc, measureFrequency, decomposeMC, cliffOnly);
+    } else if (eccName.compare(Q7SteaneEcc::getName()) == 0) {
+        mapper = new Q7SteaneEcc(qc, measureFrequency, decomposeMC, cliffOnly);
+    } else if (eccName.compare(Q9ShorEcc::getName()) == 0) {
+        mapper = new Q9ShorEcc(qc, measureFrequency, decomposeMC, cliffOnly);
+    } else if (eccName.compare(Q9SurfaceEcc::getName()) == 0) {
+        mapper = new Q9SurfaceEcc(qc, measureFrequency, decomposeMC, cliffOnly);
+    } else {
+        std::stringstream ss{};
+        ss << "No ECC found for " << eccName << " ";
+        ss << "Available ECCs: ";
+        ss << IdEcc::getName() << ", ";
+        ss << Q3ShorEcc::getName() << ", ";
+        ss << Q7SteaneEcc::getName() << ", ";
+        ss << Q9ShorEcc::getName() << ", ";
+        ss << Q9SurfaceEcc::getName();
+        return py::dict("error"_a = ss.str());
+    }
+    mapper->apply();
+
+    std::ostringstream oss{};
+    mapper->dumpResult(oss, qc::OpenQASM);
+
+    return py::dict("circ"_a = oss.str());
+}
+
 PYBIND11_MODULE(pyqfr, m) {
     m.doc() = "Python interface for the JKQ QFR quantum functionality representation";
 
@@ -174,6 +243,13 @@ PYBIND11_MODULE(pyqfr, m) {
           "store_matrix"_a = false);
     m.def("matrix_from_dd", &matrix_from_dd, "construct matrix from serialized decision diagram",
           "serialized_dd"_a);
+    m.def("apply_ecc", &apply_ecc, "applying an ecc to a circuit an returning a openQasm dump",
+          "circ"_a,
+          "eccString"_a,
+          "ecc_frequency"_a = 100,
+          "ecc_no_mc"_a = false,
+          "ecc_clifford_only"_a = false);
+
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;
