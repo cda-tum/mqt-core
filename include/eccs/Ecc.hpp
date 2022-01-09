@@ -13,7 +13,7 @@ class Ecc {
 public:
 
     enum ID {
-		Id, Q3Shor, Q9Shor, Q5Laflamme, Q7Steane, Q9Surface, QxCustom
+		Id, Q3Shor, Q9Shor, Q5Laflamme, Q7Steane, Q9Surface, Q18Surface, QxCustom
 	};
     struct Info {
         ID id;
