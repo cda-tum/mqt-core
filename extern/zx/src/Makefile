@@ -152,6 +152,87 @@ Rational.cpp.s:
 	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Rational.cpp.s
 .PHONY : Rational.cpp.s
 
+Rules.o: Rules.cpp.o
+
+.PHONY : Rules.o
+
+# target to build an object file
+Rules.cpp.o:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Rules.cpp.o
+.PHONY : Rules.cpp.o
+
+Rules.i: Rules.cpp.i
+
+.PHONY : Rules.i
+
+# target to preprocess a source file
+Rules.cpp.i:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Rules.cpp.i
+.PHONY : Rules.cpp.i
+
+Rules.s: Rules.cpp.s
+
+.PHONY : Rules.s
+
+# target to generate assembly for a file
+Rules.cpp.s:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Rules.cpp.s
+.PHONY : Rules.cpp.s
+
+Simplify.o: Simplify.cpp.o
+
+.PHONY : Simplify.o
+
+# target to build an object file
+Simplify.cpp.o:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Simplify.cpp.o
+.PHONY : Simplify.cpp.o
+
+Simplify.i: Simplify.cpp.i
+
+.PHONY : Simplify.i
+
+# target to preprocess a source file
+Simplify.cpp.i:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Simplify.cpp.i
+.PHONY : Simplify.cpp.i
+
+Simplify.s: Simplify.cpp.s
+
+.PHONY : Simplify.s
+
+# target to generate assembly for a file
+Simplify.cpp.s:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Simplify.cpp.s
+.PHONY : Simplify.cpp.s
+
+Utils.o: Utils.cpp.o
+
+.PHONY : Utils.o
+
+# target to build an object file
+Utils.cpp.o:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Utils.cpp.o
+.PHONY : Utils.cpp.o
+
+Utils.i: Utils.cpp.i
+
+.PHONY : Utils.i
+
+# target to preprocess a source file
+Utils.cpp.i:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Utils.cpp.i
+.PHONY : Utils.cpp.i
+
+Utils.s: Utils.cpp.s
+
+.PHONY : Utils.s
+
+# target to generate assembly for a file
+Utils.cpp.s:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f src/CMakeFiles/jkqzx.dir/build.make src/CMakeFiles/jkqzx.dir/Utils.cpp.s
+.PHONY : Utils.cpp.s
+
 ZXDiagram.o: ZXDiagram.cpp.o
 
 .PHONY : ZXDiagram.o
@@ -191,6 +272,15 @@ help:
 	@echo "... Rational.o"
 	@echo "... Rational.i"
 	@echo "... Rational.s"
+	@echo "... Rules.o"
+	@echo "... Rules.i"
+	@echo "... Rules.s"
+	@echo "... Simplify.o"
+	@echo "... Simplify.i"
+	@echo "... Simplify.s"
+	@echo "... Utils.o"
+	@echo "... Utils.i"
+	@echo "... Utils.s"
 	@echo "... ZXDiagram.o"
 	@echo "... ZXDiagram.i"
 	@echo "... ZXDiagram.s"

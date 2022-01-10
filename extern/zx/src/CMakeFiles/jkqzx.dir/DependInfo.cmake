@@ -5,6 +5,9 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
   "/home/tom/Dev/iic/jkqzx/src/Rational.cpp" "/home/tom/Dev/iic/jkqzx/src/CMakeFiles/jkqzx.dir/Rational.cpp.o"
+  "/home/tom/Dev/iic/jkqzx/src/Rules.cpp" "/home/tom/Dev/iic/jkqzx/src/CMakeFiles/jkqzx.dir/Rules.cpp.o"
+  "/home/tom/Dev/iic/jkqzx/src/Simplify.cpp" "/home/tom/Dev/iic/jkqzx/src/CMakeFiles/jkqzx.dir/Simplify.cpp.o"
+  "/home/tom/Dev/iic/jkqzx/src/Utils.cpp" "/home/tom/Dev/iic/jkqzx/src/CMakeFiles/jkqzx.dir/Utils.cpp.o"
   "/home/tom/Dev/iic/jkqzx/src/ZXDiagram.cpp" "/home/tom/Dev/iic/jkqzx/src/CMakeFiles/jkqzx.dir/ZXDiagram.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")

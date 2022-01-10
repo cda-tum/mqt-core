@@ -1,5 +1,8 @@
 file(REMOVE_RECURSE
   "CMakeFiles/jkqzx.dir/Rational.cpp.o"
+  "CMakeFiles/jkqzx.dir/Rules.cpp.o"
+  "CMakeFiles/jkqzx.dir/Simplify.cpp.o"
+  "CMakeFiles/jkqzx.dir/Utils.cpp.o"
   "CMakeFiles/jkqzx.dir/ZXDiagram.cpp.o"
   "libjkqzx.a"
   "libjkqzx.pdb"

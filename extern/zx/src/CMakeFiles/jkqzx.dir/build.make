@@ -83,19 +83,64 @@ src/CMakeFiles/jkqzx.dir/ZXDiagram.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/jkqzx.dir/ZXDiagram.cpp.s"
 	cd /home/tom/Dev/iic/jkqzx/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tom/Dev/iic/jkqzx/src/ZXDiagram.cpp -o CMakeFiles/jkqzx.dir/ZXDiagram.cpp.s
 
+src/CMakeFiles/jkqzx.dir/Rules.cpp.o: src/CMakeFiles/jkqzx.dir/flags.make
+src/CMakeFiles/jkqzx.dir/Rules.cpp.o: src/Rules.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/tom/Dev/iic/jkqzx/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object src/CMakeFiles/jkqzx.dir/Rules.cpp.o"
+	cd /home/tom/Dev/iic/jkqzx/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/jkqzx.dir/Rules.cpp.o -c /home/tom/Dev/iic/jkqzx/src/Rules.cpp
+
+src/CMakeFiles/jkqzx.dir/Rules.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/jkqzx.dir/Rules.cpp.i"
+	cd /home/tom/Dev/iic/jkqzx/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/tom/Dev/iic/jkqzx/src/Rules.cpp > CMakeFiles/jkqzx.dir/Rules.cpp.i
+
+src/CMakeFiles/jkqzx.dir/Rules.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/jkqzx.dir/Rules.cpp.s"
+	cd /home/tom/Dev/iic/jkqzx/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tom/Dev/iic/jkqzx/src/Rules.cpp -o CMakeFiles/jkqzx.dir/Rules.cpp.s
+
+src/CMakeFiles/jkqzx.dir/Simplify.cpp.o: src/CMakeFiles/jkqzx.dir/flags.make
+src/CMakeFiles/jkqzx.dir/Simplify.cpp.o: src/Simplify.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/tom/Dev/iic/jkqzx/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object src/CMakeFiles/jkqzx.dir/Simplify.cpp.o"
+	cd /home/tom/Dev/iic/jkqzx/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/jkqzx.dir/Simplify.cpp.o -c /home/tom/Dev/iic/jkqzx/src/Simplify.cpp
+
+src/CMakeFiles/jkqzx.dir/Simplify.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/jkqzx.dir/Simplify.cpp.i"
+	cd /home/tom/Dev/iic/jkqzx/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/tom/Dev/iic/jkqzx/src/Simplify.cpp > CMakeFiles/jkqzx.dir/Simplify.cpp.i
+
+src/CMakeFiles/jkqzx.dir/Simplify.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/jkqzx.dir/Simplify.cpp.s"
+	cd /home/tom/Dev/iic/jkqzx/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tom/Dev/iic/jkqzx/src/Simplify.cpp -o CMakeFiles/jkqzx.dir/Simplify.cpp.s
+
+src/CMakeFiles/jkqzx.dir/Utils.cpp.o: src/CMakeFiles/jkqzx.dir/flags.make
+src/CMakeFiles/jkqzx.dir/Utils.cpp.o: src/Utils.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/tom/Dev/iic/jkqzx/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object src/CMakeFiles/jkqzx.dir/Utils.cpp.o"
+	cd /home/tom/Dev/iic/jkqzx/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/jkqzx.dir/Utils.cpp.o -c /home/tom/Dev/iic/jkqzx/src/Utils.cpp
+
+src/CMakeFiles/jkqzx.dir/Utils.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/jkqzx.dir/Utils.cpp.i"
+	cd /home/tom/Dev/iic/jkqzx/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/tom/Dev/iic/jkqzx/src/Utils.cpp > CMakeFiles/jkqzx.dir/Utils.cpp.i
+
+src/CMakeFiles/jkqzx.dir/Utils.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/jkqzx.dir/Utils.cpp.s"
+	cd /home/tom/Dev/iic/jkqzx/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tom/Dev/iic/jkqzx/src/Utils.cpp -o CMakeFiles/jkqzx.dir/Utils.cpp.s
+
 # Object files for target jkqzx
 jkqzx_OBJECTS = \
 "CMakeFiles/jkqzx.dir/Rational.cpp.o" \
-"CMakeFiles/jkqzx.dir/ZXDiagram.cpp.o"
+"CMakeFiles/jkqzx.dir/ZXDiagram.cpp.o" \
+"CMakeFiles/jkqzx.dir/Rules.cpp.o" \
+"CMakeFiles/jkqzx.dir/Simplify.cpp.o" \
+"CMakeFiles/jkqzx.dir/Utils.cpp.o"
 
 # External object files for target jkqzx
 jkqzx_EXTERNAL_OBJECTS =
 
 src/libjkqzx.a: src/CMakeFiles/jkqzx.dir/Rational.cpp.o
 src/libjkqzx.a: src/CMakeFiles/jkqzx.dir/ZXDiagram.cpp.o
+src/libjkqzx.a: src/CMakeFiles/jkqzx.dir/Rules.cpp.o
+src/libjkqzx.a: src/CMakeFiles/jkqzx.dir/Simplify.cpp.o
+src/libjkqzx.a: src/CMakeFiles/jkqzx.dir/Utils.cpp.o
 src/libjkqzx.a: src/CMakeFiles/jkqzx.dir/build.make
 src/libjkqzx.a: src/CMakeFiles/jkqzx.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/tom/Dev/iic/jkqzx/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX static library libjkqzx.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/tom/Dev/iic/jkqzx/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX static library libjkqzx.a"
 	cd /home/tom/Dev/iic/jkqzx/src && $(CMAKE_COMMAND) -P CMakeFiles/jkqzx.dir/cmake_clean_target.cmake
 	cd /home/tom/Dev/iic/jkqzx/src && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/jkqzx.dir/link.txt --verbose=$(VERBOSE)
 

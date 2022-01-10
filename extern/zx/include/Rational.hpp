@@ -4,16 +4,22 @@
 #include <stdint.h>
 
 namespace zx {
+
+/*
+ * Representation of fractions as multiples of pi
+ * Rationals can only have values in the half-open interval (-1,1],
+ * corresponding to the interval (-pi, pi]
+*/
 class Rational {
   void normalize();
 
 public:
   int32_t num, denom;
-
+  
   Rational() : num(0), denom(1){};
-  Rational(int32_t num, int32_t denom) : num(num), denom(denom){};
-  Rational(int32_t num) : num(num), denom(1){};
-  Rational(double val);
+  explicit Rational(int32_t num, int32_t denom) : num(num), denom(denom){normalize();}
+  explicit Rational(int32_t num) : num(num), denom(1){normalize();}
+  explicit Rational(double val);
 
   Rational &operator+=(const Rational &rhs);
   Rational &operator+=(const int32_t rhs);
@@ -27,7 +33,8 @@ public:
   Rational &operator/=(const Rational &rhs);
   Rational &operator/=(const int32_t rhs);
 
-  float to_float() const { return (static_cast<float>(num)) / denom; }
+  double to_double() const;
+  bool is_integer() const {return denom == 1;}
 };
 
 inline Rational operator-(const Rational &rhs) {
@@ -43,7 +50,7 @@ inline Rational operator+(Rational lhs, const int32_t rhs) {
 }
 inline Rational operator+(const int32_t lhs, Rational rhs) {
   rhs += lhs;
-  return lhs;
+  return rhs;
 }
 
 inline Rational operator-(Rational lhs, const Rational &rhs) {
@@ -56,7 +63,7 @@ inline Rational operator-(Rational lhs, const int32_t rhs) {
 }
 inline Rational operator-(const int32_t lhs, Rational rhs) {
   rhs -= lhs;
-  return lhs;
+  return rhs;
 }
 
 inline Rational operator*(Rational lhs, const Rational &rhs) {
@@ -69,7 +76,7 @@ inline Rational operator*(Rational lhs, const int32_t rhs) {
 }
 inline Rational operator*(const int32_t lhs, Rational rhs) {
   rhs *= lhs;
-  return lhs;
+  return rhs;
 }
 
 inline Rational operator/(Rational lhs, const Rational &rhs) {
@@ -82,7 +89,7 @@ inline Rational operator/(Rational lhs, const int32_t rhs) {
 }
 inline Rational operator/(const int32_t lhs, Rational rhs) {
   rhs /= lhs;
-  return lhs;
+  return rhs;
 }
 
 inline bool operator<(const Rational &lhs, const Rational &rhs) {

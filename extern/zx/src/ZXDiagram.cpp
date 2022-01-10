@@ -2,12 +2,19 @@
 #include "Definitions.hpp"
 #include "QuantumComputation.hpp"
 #include "Rational.hpp"
+#include "Utils.hpp"
 #include "dd/Definitions.hpp"
 #include "operations/OpType.hpp"
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 namespace zx {
+
+ZXDiagram::ZXDiagram(int32_t nqubits) {
+  auto qubit_vertices = init_graph(nqubits);
+  close_graph(qubit_vertices);
+}
 
 ZXDiagram::ZXDiagram(std::string filename) {
   qc::QuantumComputation qc(filename);
@@ -23,7 +30,7 @@ ZXDiagram::ZXDiagram(std::string filename) {
         break;
       }
       case qc::OpType::RZ: {
-        add_z_spider(target, qubit_vertices, op->getParameter()[0]);
+        add_z_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
         break;
       }
       case qc::OpType::X: {
@@ -31,7 +38,7 @@ ZXDiagram::ZXDiagram(std::string filename) {
         break;
       }
       case qc::OpType::RX: {
-        add_x_spider(target, qubit_vertices, op->getParameter()[0]);
+        add_x_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
         break;
       }
       case qc::OpType::T: {
@@ -59,7 +66,7 @@ ZXDiagram::ZXDiagram(std::string filename) {
         break;
       }
       case qc::OpType::U3: {
-        add_z_spider(target, qubit_vertices, op->getParameter()[2]);
+        add_z_spider(target, qubit_vertices, Rational(op->getParameter()[2]));
         add_x_spider(target, qubit_vertices, Rational(1, 2));
         add_z_spider(target, qubit_vertices,
                      op->getParameter()[0] + Rational(1, 1));
@@ -76,7 +83,8 @@ ZXDiagram::ZXDiagram(std::string filename) {
         break;
       }
       case qc::OpType::H: {
-        add_z_spider(target, qubit_vertices, 0, EdgeType::Hadamard);
+        add_z_spider(target, qubit_vertices, Rational(0, 1),
+                     EdgeType::Hadamard);
         break;
       }
       default: {
@@ -116,39 +124,118 @@ void ZXDiagram::add_edge(Vertex from, Vertex to, EdgeType type) {
   nedges++;
 }
 
+void ZXDiagram::add_edge_parallel_aware(Vertex from, Vertex to,
+                                        EdgeType etype) { // TODO: Scalars
+
+  if (from == to) {
+    if (type(from) != VertexType::Boundary && etype == EdgeType::Hadamard) {
+      add_phase(from, Rational(1, 1));
+    }
+    return;
+  }
+
+  auto edge_it = get_edge_ptr(from, to);
+
+  if (edge_it == edges[from].end()) {
+    add_edge(from, to, etype);
+    return;
+  }
+
+  if (type(from) == VertexType::Boundary || type(to) == VertexType::Boundary)
+    return;
+
+  if (type(from) == type(to)) {
+    if (edge_it->type == EdgeType::Hadamard && etype == EdgeType::Hadamard) {
+      edges[from].erase(edge_it);
+      remove_half_edge(to, from);
+      nedges--;
+    } else if (edge_it->type == EdgeType::Hadamard &&
+               etype == EdgeType::Simple) {
+      edge_it->type = EdgeType::Simple;
+      add_phase(from, Rational(1, 1));
+    } else if (edge_it->type == EdgeType::Simple &&
+               etype == EdgeType::Hadamard) {
+      add_phase(from, Rational(1, 1));
+    }
+  } else {
+    if (edge_it->type == EdgeType::Simple && etype == EdgeType::Simple) {
+      
+      edges[from].erase(edge_it);
+      remove_half_edge(to, from);
+      nedges--;
+    } else if (edge_it->type == EdgeType::Hadamard &&
+               etype == EdgeType::Simple) {
+      add_phase(from, Rational(1, 1));
+    } else if (edge_it->type == EdgeType::Simple &&
+               etype == EdgeType::Hadamard) {
+      edge_it->type = EdgeType::Hadamard;
+      add_phase(from, Rational(1, 1));
+    }
+  }
+}
+
 void ZXDiagram::remove_edge(Vertex from, Vertex to) {
   remove_half_edge(from, to);
   remove_half_edge(to, from);
   nedges--;
 }
 
-  void ZXDiagram::remove_half_edge(Vertex from, Vertex to) {
-      auto incident = incident_edges(from);
-  std::remove_if(incident.begin(), incident.end(),
-                 [&](auto &edge) { return edge.to == to; });
-  }
-  
-Vertex ZXDiagram::add_vertex(const VertexData &data) {
-  vertices.push_back(data);
-  edges.emplace_back();
-  return nvertices++;
+void ZXDiagram::remove_half_edge(Vertex from, Vertex to) {
+  auto &incident = edges[from];
+  incident.erase(std::remove_if(incident.begin(), incident.end(),
+                                [&](auto &edge) { return edge.to == to; }),
+                 incident.end());
 }
 
-  void ZXDiagram::remove_vertex(Vertex to_remove) {
-    deleted.push_back(to_remove);
-    vertices[to_remove].reset();
-    nvertices--;
-    
-    for(auto [to, _]: incident_edges(to_remove)) {
-      remove_half_edge(to, to_remove);
-      nedges--;
-    }
+Vertex ZXDiagram::add_vertex(const VertexData &data) {
+  nvertices++;
+  Vertex v = 0;
+  if (!deleted.empty()) {
+    v = deleted.back();
+    deleted.pop_back();
+    vertices[v] = data;
+    edges[v].clear();
+    return v;
+  } else {
+    v = nvertices;
+    vertices.push_back(data);
+    edges.emplace_back();
   }
+
+  return nvertices - 1;
+}
+
+Vertex ZXDiagram::add_vertex(dd::Qubit qubit, Col col, Rational phase,
+                             VertexType type) {
+
+  return add_vertex({col, qubit, phase, type});
+}
+
+void ZXDiagram::remove_vertex(Vertex to_remove) {
+  deleted.push_back(to_remove);
+  vertices[to_remove].reset();
+  nvertices--;
+
+  for (auto &[to, _] : incident_edges(to_remove)) {
+    remove_half_edge(to, to_remove);
+    nedges--;
+  }
+}
+
+[[nodiscard]] bool ZXDiagram::connected(Vertex from, Vertex to) const {
+  if (is_deleted(from) || is_deleted(to))
+    return false;
+
+  auto &incident = edges[from];
+  auto edge = std::find_if(incident.begin(), incident.end(),
+                           [&](auto &edge) { return edge.to == to; });
+  return edge != incident.end();
+}
 
 [[nodiscard]] std::optional<Edge> ZXDiagram::get_edge(Vertex from,
                                                       Vertex to) const {
   std::optional<Edge> ret;
-  auto incident = incident_edges(from);
+  auto &incident = edges[from];
   auto edge = std::find_if(incident.begin(), incident.end(),
                            [&](auto &edge) { return edge.to == to; });
   if (edge != incident.end())
@@ -156,13 +243,48 @@ Vertex ZXDiagram::add_vertex(const VertexData &data) {
   return ret;
 }
 
+std::vector<Edge>::iterator ZXDiagram::get_edge_ptr(Vertex from, Vertex to) {
+  auto &incident = edges[from];
+  auto edge = std::find_if(incident.begin(), incident.end(),
+                           [&](auto &edge) { return edge.to == to; });
+  return edge;
+}
+
+[[nodiscard]] std::vector<std::pair<Vertex, VertexData &>>
+ZXDiagram::get_vertices() {
+  Vertices verts(vertices);
+  return std::vector<std::pair<Vertex, VertexData &>>(verts.begin(),
+                                                      verts.end());
+}
+
+[[nodiscard]] std::vector<std::pair<Vertex, Vertex>> ZXDiagram::get_edges() {
+  Edges es(edges, vertices);
+  return std::vector<std::pair<Vertex, Vertex>>(es.begin(), es.end());
+}
+
+  
+void ZXDiagram::to_graph_like() {
+  for (Vertex v = 0; v < vertices.size(); v++) {
+    if (!vertices[v].has_value())
+      continue;
+    if (vertices[v].value().type == VertexType::X) {
+      for (auto& edge : edges[v]) {
+        edge.toggle();
+        get_edge_ptr(edge.to, v)->toggle(); //toggle corresponding edge in other direction
+      }
+
+      vertices[v].value().type = VertexType::Z;
+    }
+  }
+}
+
 void ZXDiagram::add_z_spider(dd::Qubit qubit,
                              std::vector<Vertex> &qubit_vertices,
                              Rational phase, EdgeType type) {
   auto new_vertex =
-      add_vertex({vertices[qubit].value().col, qubit, phase, VertexType::Z});
+      add_vertex({vertices[qubit].value().col+1, qubit, phase, VertexType::Z});
 
-  add_edge(qubit, new_vertex, type);
+  add_edge(qubit_vertices[qubit], new_vertex, type);
   qubit_vertices[qubit] = new_vertex;
 }
 
@@ -171,7 +293,7 @@ void ZXDiagram::add_x_spider(dd::Qubit qubit,
                              Rational phase, EdgeType type) {
   auto new_vertex = add_vertex(
       {vertices[qubit].value().col + 1, qubit, phase, VertexType::X});
-  add_edge(qubit, new_vertex, type);
+  add_edge(qubit_vertices[qubit], new_vertex, type);
   qubit_vertices[qubit] = new_vertex;
 }
 
@@ -197,8 +319,8 @@ std::vector<Vertex> ZXDiagram::init_graph(int nqubits) {
 void ZXDiagram::close_graph(std::vector<Vertex> &qubit_vertices) {
   for (Vertex v : qubit_vertices) {
     VertexData v_data = vertices[v].value();
-    Vertex new_v =
-        add_vertex({v_data.col + 1, v_data.qubit, 0, VertexType::Boundary});
+    Vertex new_v = add_vertex(
+        {v_data.col + 1, v_data.qubit, Rational(0, 1), VertexType::Boundary});
     add_edge(v, new_v);
     outputs.push_back(new_v);
   }

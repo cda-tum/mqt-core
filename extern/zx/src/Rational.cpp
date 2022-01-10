@@ -37,15 +37,23 @@ Rational::Rational(double val) : num(0), denom(1) {
 
 void Rational::normalize() {
   if (*this > 1) {
-    *this -= *this - 1;
+    num -= 2 * denom;
   } else if (*this <= -1) {
-    *this += -1 - *this;
+    num += 2 * denom;
   }
   int32_t g = gcd(num, denom);
   num /= g;
   denom /= g;
+  if (denom < 0) {
+    num = -num;
+    denom = -denom;
+  }
 }
 
+double Rational::to_double() const {
+  return zx::PI * (static_cast<float>(num)) / denom;
+}
+  
 Rational &Rational::operator+=(const Rational &rhs) {
   num = num * rhs.denom + rhs.num * denom;
   denom *= rhs.denom;

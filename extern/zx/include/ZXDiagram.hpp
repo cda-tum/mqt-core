@@ -2,62 +2,63 @@
 #define JKQZX_INCLUDE_GRAPH_HPP_
 
 #include <algorithm>
+#include <cstddef>
 #include <numeric>
 #include <optional>
 #include <stdint.h>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "Rational.hpp"
 #include "dd/Definitions.hpp"
+#include "Utils.hpp"
+#include "Definitions.hpp"
 
 namespace zx {
-
-enum class EdgeType { Simple, Hadamard };
-enum class VertexType { Boundary, Z, X };
-using Vertex = int32_t;
-using Col = int32_t;
-
-struct Edge {
-  int32_t to;
-  EdgeType type;
-
-  void toggle() {
-    type = (type == EdgeType::Simple) ? EdgeType::Hadamard : EdgeType::Simple;
-  }
-};
-
-struct VertexData {
-  Col col;
-  dd::Qubit qubit;
-  Rational phase;
-  VertexType type;
-};
-
+  
 class ZXDiagram {
 public:
   ZXDiagram() = default;
+  ZXDiagram(int32_t nqubits); // create n_qubit identity_diagram
   explicit ZXDiagram(std::string filename);
 
   void add_edge(Vertex from, Vertex to, EdgeType type = EdgeType::Simple);
+  void add_hadamard_edge(Vertex from, Vertex to) {
+    add_edge(from, to, EdgeType::Hadamard);
+  };
+  void add_edge_parallel_aware(Vertex from, Vertex to, EdgeType type = EdgeType::Simple);
   void remove_edge(Vertex from, Vertex to);
 
   Vertex add_vertex(const VertexData &data);
+  Vertex add_vertex(dd::Qubit qubit, Col col = 0, Rational phase = Rational(0,1),
+                    VertexType type = VertexType::Z);
   void remove_vertex(Vertex to_remove);
 
   [[nodiscard]] int32_t get_nvertices() const { return nvertices; }
   [[nodiscard]] int32_t get_nedges() const { return nedges; }
-
+  
+  [[nodiscard]] bool connected(Vertex from, Vertex to) const;
   [[nodiscard]] std::optional<Edge> get_edge(Vertex from, Vertex to) const;
+  [[nodiscard]] std::vector<Edge> &incident_edges(Vertex v) { return edges[v]; }
 
-  [[nodiscard]] const std::vector<Edge> &incident_edges(Vertex v) const {
-    return edges[v];
+  [[nodiscard]] int32_t degree(Vertex v) const { return edges[v].size(); }
+
+  [[nodiscard]] Rational phase(Vertex v) const {
+    return vertices[v].value().phase;
+  }
+
+  [[nodiscard]] VertexType type(Vertex v) const {
+    return vertices[v].value().type;
   }
 
   [[nodiscard]] std::optional<VertexData> get_vdata(Vertex v) const {
     return vertices[v];
   }
+
+  [[nodiscard]]std::vector<std::pair<Vertex, VertexData&>> get_vertices();
+  [[nodiscard]] std::vector<std::pair<Vertex, Vertex>> get_edges();
 
   [[nodiscard]] const std::vector<Vertex> &get_inputs() const { return inputs; }
 
@@ -71,6 +72,25 @@ public:
     return false;
   }
 
+  [[nodiscard]] bool is_boundary_vertex(Vertex v) const {
+    return vertices[v].value().type == VertexType::Boundary;
+  }
+
+  void add_phase(Vertex v, Rational phase) {
+    vertices[v].value().phase += phase;
+  }
+
+  void set_phase(Vertex v, Rational phase) {
+    vertices[v].value().phase = phase;
+  }
+
+  void set_type(Vertex v, VertexType type) {
+    vertices[v].value().type = type;
+  }
+
+  void to_graph_like();
+
+
 private:
   std::vector<std::vector<Edge>> edges;
   std::vector<std::optional<VertexData>> vertices;
@@ -81,9 +101,9 @@ private:
   int32_t nedges = 0;
 
   void add_z_spider(dd::Qubit qubit, std::vector<Vertex> &qubit_vertices,
-                    Rational phase = 0, EdgeType type = EdgeType::Simple);
+                    Rational phase = Rational(0,1), EdgeType type = EdgeType::Simple);
   void add_x_spider(dd::Qubit qubit, std::vector<Vertex> &qubit_vertices,
-                    Rational phase = 0, EdgeType type = EdgeType::Simple);
+                    Rational phase = Rational(0,1), EdgeType type = EdgeType::Simple);
   void add_cnot(dd::Qubit ctrl, dd::Qubit target,
                 std::vector<Vertex> &qubit_vertices);
 
@@ -91,6 +111,9 @@ private:
   void close_graph(std::vector<Vertex> &qubit_vertices);
 
   void remove_half_edge(Vertex from, Vertex to);
+
+  std::vector<Edge>::iterator get_edge_ptr(Vertex from, Vertex to);
+  
 };
 } // namespace zx
 #endif /* JKQZX_INCLUDE_GRAPH_HPP_ */
