@@ -16,6 +16,7 @@
 #include <eccs/Q7SteaneEcc.hpp>
 #include <eccs/Q9SurfaceEcc.hpp>
 #include <eccs/Q9ShorEcc.hpp>
+#include <eccs/Q18SurfaceEcc.hpp>
 
 #include <chrono>
 #include <pybind11/complex.h>
@@ -198,7 +199,9 @@ py::dict apply_ecc(const py::object &circ, const std::string &eccString, const i
         mapper = new Q9ShorEcc(qc, measureFrequency, decomposeMC, cliffOnly);
     } else if (eccName.compare(Q9SurfaceEcc::getName()) == 0) {
         mapper = new Q9SurfaceEcc(qc, measureFrequency, decomposeMC, cliffOnly);
-    } else {
+    } else if (eccName.compare(Q18SurfaceEcc::getName()) == 0) {
+        mapper = new Q18SurfaceEcc(qc, measureFrequency, decomposeMC, cliffOnly);
+    }else {
         std::stringstream ss{};
         ss << "No ECC found for " << eccName << " ";
         ss << "Available ECCs: ";
@@ -206,7 +209,8 @@ py::dict apply_ecc(const py::object &circ, const std::string &eccString, const i
         ss << Q3ShorEcc::getName() << ", ";
         ss << Q7SteaneEcc::getName() << ", ";
         ss << Q9ShorEcc::getName() << ", ";
-        ss << Q9SurfaceEcc::getName();
+        ss << Q9SurfaceEcc::getName() << ", ";
+        ss << Q18SurfaceEcc::getName();
         return py::dict("error"_a = ss.str());
     }
     mapper->apply();
