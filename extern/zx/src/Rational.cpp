@@ -16,23 +16,42 @@ long gcd(long a, long b) {
 }
 
 Rational::Rational(double val) : num(0), denom(1) {
+  if (std::abs(val) < qc::PARAMETER_TOLERANCE)
+    return;
+  
   double mult_pi = PI / val;
   double nearest = std::round(mult_pi);
   if (std::abs(nearest - mult_pi) < qc::PARAMETER_TOLERANCE) {
     denom = static_cast<int>(nearest);
     num = 1;
+    if(denom < 0) {
+      num = -1;
+      denom = - denom;
+    }
+
     return;
   }
 
   val /= PI;
+  val -= 2*static_cast<int>(val/2);
+  if (val > 1) {
+    val -= 2;
+  } else if (val <= -1) {
+    val += 2;
+  }
 
-  double integral = std::floor(val);
-  double frac = val - integral;
+  // double integral = val >= 0.0 ? std::floor(val) : std::ceil(val);
+  // double frac = val - integral;
+  double frac = val;
 
   long gcd_ = gcd(std::round(frac * MAX_DENOM), MAX_DENOM);
 
   denom = MAX_DENOM / gcd_;
   num = round(frac * MAX_DENOM) / gcd_;
+  if(denom < 0) {
+    num = -num;
+    denom = -denom;
+  }
 }
 
 void Rational::normalize() {
@@ -44,6 +63,7 @@ void Rational::normalize() {
   int32_t g = gcd(num, denom);
   num /= g;
   denom /= g;
+
   if (denom < 0) {
     num = -num;
     denom = -denom;

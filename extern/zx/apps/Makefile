@@ -110,6 +110,48 @@ depend:
 	cd /home/tom/Dev/iic/jkqzx && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
+# Convenience name for target.
+apps/CMakeFiles/jkqzx_app.dir/rule:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f CMakeFiles/Makefile2 apps/CMakeFiles/jkqzx_app.dir/rule
+.PHONY : apps/CMakeFiles/jkqzx_app.dir/rule
+
+# Convenience name for target.
+jkqzx_app: apps/CMakeFiles/jkqzx_app.dir/rule
+
+.PHONY : jkqzx_app
+
+# fast build rule for target.
+jkqzx_app/fast:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f apps/CMakeFiles/jkqzx_app.dir/build.make apps/CMakeFiles/jkqzx_app.dir/build
+.PHONY : jkqzx_app/fast
+
+zxequ.o: zxequ.cpp.o
+
+.PHONY : zxequ.o
+
+# target to build an object file
+zxequ.cpp.o:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f apps/CMakeFiles/jkqzx_app.dir/build.make apps/CMakeFiles/jkqzx_app.dir/zxequ.cpp.o
+.PHONY : zxequ.cpp.o
+
+zxequ.i: zxequ.cpp.i
+
+.PHONY : zxequ.i
+
+# target to preprocess a source file
+zxequ.cpp.i:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f apps/CMakeFiles/jkqzx_app.dir/build.make apps/CMakeFiles/jkqzx_app.dir/zxequ.cpp.i
+.PHONY : zxequ.cpp.i
+
+zxequ.s: zxequ.cpp.s
+
+.PHONY : zxequ.s
+
+# target to generate assembly for a file
+zxequ.cpp.s:
+	cd /home/tom/Dev/iic/jkqzx && $(MAKE) -f apps/CMakeFiles/jkqzx_app.dir/build.make apps/CMakeFiles/jkqzx_app.dir/zxequ.cpp.s
+.PHONY : zxequ.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -118,6 +160,10 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
+	@echo "... jkqzx_app"
+	@echo "... zxequ.o"
+	@echo "... zxequ.i"
+	@echo "... zxequ.s"
 .PHONY : help
 
 

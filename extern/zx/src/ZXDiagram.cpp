@@ -6,6 +6,7 @@
 #include "dd/Definitions.hpp"
 #include "operations/OpType.hpp"
 #include <algorithm>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -29,7 +30,9 @@ ZXDiagram::ZXDiagram(std::string filename) {
         add_z_spider(target, qubit_vertices, Rational(1, 1));
         break;
       }
-      case qc::OpType::RZ: {
+
+      case qc::OpType::RZ:
+      case qc::OpType::Phase: {
         add_z_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
         break;
       }
@@ -59,10 +62,10 @@ ZXDiagram::ZXDiagram(std::string filename) {
       }
       case qc::OpType::U2: {
         add_z_spider(target, qubit_vertices,
-                     op->getParameter()[1] - Rational(1, 2));
+                     Rational(op->getParameter()[0]) - Rational(1, 2));
         add_x_spider(target, qubit_vertices, Rational(1, 2));
         add_z_spider(target, qubit_vertices,
-                     op->getParameter()[0] + Rational(1, 2));
+                     Rational(op->getParameter()[1]) + Rational(1, 2));
         break;
       }
       case qc::OpType::U3: {
@@ -101,11 +104,21 @@ ZXDiagram::ZXDiagram(std::string filename) {
         break;
       }
       case qc::OpType::Z: {
-        auto phase = Rational(op->getParameter()[0]);
+        auto phase = Rational(1, 1);
         add_z_spider(target, qubit_vertices, phase / 2);
         add_cnot(ctrl, target, qubit_vertices);
         add_z_spider(target, qubit_vertices, -phase / 2);
         add_cnot(ctrl, target, qubit_vertices);
+        break;
+      }
+
+      case qc::OpType::Phase: {
+        auto phase = Rational(op->getParameter()[0]);
+        add_z_spider(ctrl, qubit_vertices, phase / 2);
+        add_cnot(ctrl, target, qubit_vertices);
+        add_z_spider(target, qubit_vertices, -phase / 2);
+        add_cnot(ctrl, target, qubit_vertices);
+        add_z_spider(target, qubit_vertices, phase / 2);
         break;
       }
       default: {
@@ -113,6 +126,8 @@ ZXDiagram::ZXDiagram(std::string filename) {
                           qc::toString(op->getType()));
       }
       }
+    } else if (op->getNcontrols() > 1) {
+      throw ZXException("Unsupported Multi-control operation");
     }
   }
   close_graph(qubit_vertices);
@@ -126,7 +141,6 @@ void ZXDiagram::add_edge(Vertex from, Vertex to, EdgeType type) {
 
 void ZXDiagram::add_edge_parallel_aware(Vertex from, Vertex to,
                                         EdgeType etype) { // TODO: Scalars
-
   if (from == to) {
     if (type(from) != VertexType::Boundary && etype == EdgeType::Hadamard) {
       add_phase(from, Rational(1, 1));
@@ -146,12 +160,14 @@ void ZXDiagram::add_edge_parallel_aware(Vertex from, Vertex to,
 
   if (type(from) == type(to)) {
     if (edge_it->type == EdgeType::Hadamard && etype == EdgeType::Hadamard) {
+
       edges[from].erase(edge_it);
       remove_half_edge(to, from);
       nedges--;
     } else if (edge_it->type == EdgeType::Hadamard &&
                etype == EdgeType::Simple) {
       edge_it->type = EdgeType::Simple;
+      get_edge_ptr(to, from)->toggle();
       add_phase(from, Rational(1, 1));
     } else if (edge_it->type == EdgeType::Simple &&
                etype == EdgeType::Hadamard) {
@@ -159,8 +175,9 @@ void ZXDiagram::add_edge_parallel_aware(Vertex from, Vertex to,
     }
   } else {
     if (edge_it->type == EdgeType::Simple && etype == EdgeType::Simple) {
-      
+
       edges[from].erase(edge_it);
+
       remove_half_edge(to, from);
       nedges--;
     } else if (edge_it->type == EdgeType::Hadamard &&
@@ -169,6 +186,7 @@ void ZXDiagram::add_edge_parallel_aware(Vertex from, Vertex to,
     } else if (edge_it->type == EdgeType::Simple &&
                etype == EdgeType::Hadamard) {
       edge_it->type = EdgeType::Hadamard;
+      get_edge_ptr(to, from)->toggle();
       add_phase(from, Rational(1, 1));
     }
   }
@@ -201,17 +219,16 @@ Vertex ZXDiagram::add_vertex(const VertexData &data) {
     vertices.push_back(data);
     edges.emplace_back();
   }
-
   return nvertices - 1;
 }
 
 Vertex ZXDiagram::add_vertex(dd::Qubit qubit, Col col, Rational phase,
                              VertexType type) {
-
   return add_vertex({col, qubit, phase, type});
 }
 
 void ZXDiagram::remove_vertex(Vertex to_remove) {
+
   deleted.push_back(to_remove);
   vertices[to_remove].reset();
   nvertices--;
@@ -262,15 +279,22 @@ ZXDiagram::get_vertices() {
   return std::vector<std::pair<Vertex, Vertex>>(es.begin(), es.end());
 }
 
-  
+bool ZXDiagram::is_input(Vertex v) const {
+  return std::find(inputs.begin(), inputs.end(), v) != inputs.end();
+}
+bool ZXDiagram::is_output(Vertex v) const {
+  return std::find(outputs.begin(), outputs.end(), v) != outputs.end();
+}
+
 void ZXDiagram::to_graph_like() {
   for (Vertex v = 0; v < vertices.size(); v++) {
     if (!vertices[v].has_value())
       continue;
     if (vertices[v].value().type == VertexType::X) {
-      for (auto& edge : edges[v]) {
+      for (auto &edge : edges[v]) {
         edge.toggle();
-        get_edge_ptr(edge.to, v)->toggle(); //toggle corresponding edge in other direction
+        get_edge_ptr(edge.to, v)
+            ->toggle(); // toggle corresponding edge in other direction
       }
 
       vertices[v].value().type = VertexType::Z;
@@ -278,11 +302,88 @@ void ZXDiagram::to_graph_like() {
   }
 }
 
+[[nodiscard]] ZXDiagram ZXDiagram::adjoint() const {
+  ZXDiagram copy = *this;
+  copy.invert();
+  return copy;
+}
+
+ZXDiagram &ZXDiagram::invert() {
+  auto h = inputs;
+  inputs = outputs;
+  outputs = h;
+
+  for (auto &data : vertices) {
+    if (data.has_value()) {
+      data.value().phase = -data.value().phase;
+    }
+  }
+  return *this;
+}
+
+ZXDiagram &ZXDiagram::concat(const ZXDiagram &rhs) {
+  if (rhs.get_nqubits() != this->get_nqubits())
+    throw ZXException(
+        "Cannot concatenate Diagrams with differing number of qubits!");
+
+  std::unordered_map<Vertex, Vertex> new_vs;
+  for (size_t i = 0; i < rhs.vertices.size(); i++) {
+    if (!rhs.vertices[i].has_value() || rhs.is_input(i))
+      continue;
+
+    auto new_v = add_vertex(rhs.vertices[i].value());
+    new_vs[i] = new_v;
+  }
+
+  for (size_t i = 0; i < rhs.vertices.size(); i++) { // add new edges
+    if (!rhs.vertices[i].has_value() || rhs.is_input(i))
+      continue;
+
+    for (auto &[to, type] : rhs.edges[i]) {
+      if (!rhs.is_input(to)) {
+        if (i < to) { // make sure not to add edge twice
+          add_edge(new_vs[i], new_vs[to], type);
+        }
+      } else {
+        auto out_v = outputs[rhs.qubit(i)];
+        for (auto [interior_v, interior_type] :
+             edges[out_v]) { // redirect edges going to outputs
+          // remove_half_edge(interior_v, out_v);
+          // nedges--;
+          if (interior_type == type) {
+            add_edge(interior_v, new_vs[i], EdgeType::Simple);
+          } else {
+            add_edge(interior_v, new_vs[i], EdgeType::Hadamard);
+          }
+        }
+      }
+    }
+  } // add new edges
+
+  for (size_t i = 0; i < outputs.size(); i++) {
+    remove_vertex(outputs[i]);
+    outputs[i] = new_vs[rhs.outputs[i]];
+  }
+
+  return *this;
+}
+
+bool ZXDiagram::is_identity() const {
+  if (nedges != inputs.size())
+    return false;
+
+  for (size_t i = 0; i < inputs.size(); i++) {
+    if (!connected(inputs[i], outputs[i]))
+      return false;
+  }
+  return true;
+}
+
 void ZXDiagram::add_z_spider(dd::Qubit qubit,
                              std::vector<Vertex> &qubit_vertices,
                              Rational phase, EdgeType type) {
-  auto new_vertex =
-      add_vertex({vertices[qubit].value().col+1, qubit, phase, VertexType::Z});
+  auto new_vertex = add_vertex(
+      {vertices[qubit].value().col + 1, qubit, phase, VertexType::Z});
 
   add_edge(qubit_vertices[qubit], new_vertex, type);
   qubit_vertices[qubit] = new_vertex;
@@ -307,12 +408,14 @@ void ZXDiagram::add_cnot(dd::Qubit ctrl, dd::Qubit target,
 std::vector<Vertex> ZXDiagram::init_graph(int nqubits) {
 
   std::vector<Vertex> qubit_vertices(nqubits);
+
   for (size_t i = 0; i < qubit_vertices.size(); i++) {
     auto v = add_vertex(
         {1, static_cast<dd::Qubit>(i), Rational(0, 1), VertexType::Boundary});
     qubit_vertices[i] = v;
     inputs.push_back(v);
   }
+
   return qubit_vertices;
 }
 

@@ -2,7 +2,101 @@
 //#include "..Hexagram.hpp"
 #include "../include/Simplify.hpp"
 #include "../include/ZXDiagram.hpp"
+#include "Definitions.hpp"
 #include "dd/Definitions.hpp"
+
+class RationalTest : public ::testing::Test {};
+
+TEST_F(RationalTest, normalize) {
+  zx::Rational r(-33, 16);
+  EXPECT_EQ(r, zx::Rational(-1, 16));
+}
+
+TEST_F(RationalTest, from_double) {
+  zx::Rational r(-dd::PI / 8);
+  EXPECT_EQ(r, zx::Rational(-1, 8));
+}
+
+TEST_F(RationalTest, from_double_2) {
+  zx::Rational r(-3*dd::PI / 4);
+  EXPECT_EQ(r, zx::Rational(-3, 4));
+}
+
+TEST_F(RationalTest, from_double_3) {
+  zx::Rational r(-7*dd::PI / 8);
+  EXPECT_EQ(r, zx::Rational(-7, 8));
+}
+
+TEST_F(RationalTest, from_double_4) {
+  zx::Rational r(-1*dd::PI / 32);
+  EXPECT_EQ(r, zx::Rational(-1, 32));
+}
+
+TEST_F(RationalTest, from_double_5) {
+  zx::Rational r(5000*dd::PI + dd::PI/4);
+  EXPECT_EQ(r, zx::Rational(1, 4));
+}
+
+TEST_F(RationalTest, from_double_6) {
+  zx::Rational r(-5000*dd::PI +5*dd::PI/4);
+  EXPECT_EQ(r, zx::Rational(-3, 4));
+}
+
+TEST_F(RationalTest, add) {
+  zx::Rational r0(1, 8);
+  zx::Rational r1(7, 8);
+  auto r = r0 + r1;
+
+  EXPECT_EQ(r, 1);
+}
+
+TEST_F(RationalTest, add_2) {
+  zx::Rational r0(9, 8);
+  zx::Rational r1(7, 8);
+  auto r = r0 + r1;
+
+  EXPECT_EQ(r, 0);
+}
+
+TEST_F(RationalTest, sub) {
+  zx::Rational r0(9, 8);
+  zx::Rational r1(-7, 8);
+  auto r = r0 - r1;
+
+  EXPECT_EQ(r, 0);
+}
+
+TEST_F(RationalTest, sub_2) {
+  zx::Rational r0(-1, 2);
+  zx::Rational r1(1, 2);
+  auto r = r0 - r1;
+
+  EXPECT_EQ(r, 1);
+}
+
+TEST_F(RationalTest, mul) {
+  zx::Rational r0(1, 8);
+  zx::Rational r1(1, 2);
+  auto r = r0 * r1;
+
+  EXPECT_EQ(r, zx::Rational(1, 16));
+}
+
+TEST_F(RationalTest, mul_2) {
+  zx::Rational r0(1, 8);
+  zx::Rational r1(0, 1);
+  auto r = r0 * r1;
+
+  EXPECT_EQ(r, 0);
+}
+
+TEST_F(RationalTest, div) {
+  zx::Rational r0(1, 2);
+  zx::Rational r1(1, 2);
+  auto r = r0 / r1;
+
+  EXPECT_EQ(r, 1);
+}
 
 class ZXDiagramTest : public ::testing::Test {
 public:
@@ -87,20 +181,56 @@ TEST_F(ZXDiagramTest, graph_like) {
     EXPECT_EQ(diag.get_vdata(6).value().phase, 0);
 }
 
-// TEST_F(ZXDiagramTest, vertex_iterator) {
-//   auto vertices = diag.get_vertices();
-//   diag.remove_vertex(3); //removing vertex should not invalidate Vertices
-//   for(auto [v, v_data]: vertices) {
-//     EXPECT_NE(v, 3);
-//   }
+TEST_F(ZXDiagramTest, concat) {
+  auto copy = diag;
+  diag.concat(copy);
 
-//   auto it = vertices.begin();
-//   ++it;
-//   ++it;
-//   EXPECT_EQ((*it).first, 2);
-//   ++it;
-//   EXPECT_EQ((*it).first, 4);
-// }
+  ASSERT_EQ(diag.get_nedges(), 10);
+  ASSERT_EQ(diag.get_nvertices(), 10);
+
+  EXPECT_EQ(diag.get_edge(0, 2).value().type, zx::EdgeType::Hadamard);
+  EXPECT_EQ(diag.get_edge(3, 4).value().type, zx::EdgeType::Simple);
+  EXPECT_EQ(diag.get_edge(1, 4).value().type, zx::EdgeType::Simple);
+  EXPECT_EQ(diag.get_edge(2, 3).value().type, zx::EdgeType::Simple);
+  EXPECT_EQ(diag.get_edge(3, 7).value().type, zx::EdgeType::Hadamard);
+  EXPECT_EQ(diag.get_edge(4, 9).value().type, zx::EdgeType::Simple);
+  EXPECT_EQ(diag.get_edge(7, 8).value().type, zx::EdgeType::Simple);
+  EXPECT_EQ(diag.get_edge(8, 10).value().type, zx::EdgeType::Simple);
+  EXPECT_EQ(diag.get_edge(9, 11).value().type, zx::EdgeType::Simple);
+
+  EXPECT_EQ(diag.get_vdata(0).value().type, zx::VertexType::Boundary);
+  EXPECT_EQ(diag.get_vdata(1).value().type, zx::VertexType::Boundary);
+  EXPECT_EQ(diag.get_vdata(2).value().type, zx::VertexType::Z);
+  EXPECT_EQ(diag.get_vdata(3).value().type, zx::VertexType::Z);
+  EXPECT_EQ(diag.get_vdata(4).value().type, zx::VertexType::X);
+  EXPECT_EQ(diag.get_vdata(7).value().type, zx::VertexType::Z);
+  EXPECT_EQ(diag.get_vdata(8).value().type, zx::VertexType::Z);
+  EXPECT_EQ(diag.get_vdata(9).value().type, zx::VertexType::X);
+  EXPECT_EQ(diag.get_vdata(10).value().type, zx::VertexType::Boundary);
+  EXPECT_EQ(diag.get_vdata(11).value().type, zx::VertexType::Boundary);
+
+  EXPECT_TRUE(diag.is_deleted(5));
+  EXPECT_TRUE(diag.is_deleted(6));
+}
+
+TEST_F(ZXDiagramTest, adjoint) {
+  diag = diag.adjoint();
+
+  EXPECT_EQ(diag.get_edge(0, 2).value().type, zx::EdgeType::Hadamard);
+  EXPECT_EQ(diag.get_edge(3, 4).value().type, zx::EdgeType::Simple);
+  EXPECT_EQ(diag.get_edge(1, 4).value().type, zx::EdgeType::Simple);
+  EXPECT_EQ(diag.get_edge(6, 4).value().type, zx::EdgeType::Simple);
+  EXPECT_EQ(diag.get_edge(2, 3).value().type, zx::EdgeType::Simple);
+  EXPECT_EQ(diag.get_edge(3, 5).value().type, zx::EdgeType::Simple);
+
+  EXPECT_EQ(diag.get_vdata(0).value().type, zx::VertexType::Boundary);
+  EXPECT_EQ(diag.get_vdata(1).value().type, zx::VertexType::Boundary);
+  EXPECT_EQ(diag.get_vdata(2).value().type, zx::VertexType::Z);
+  EXPECT_EQ(diag.get_vdata(3).value().type, zx::VertexType::Z);
+  EXPECT_EQ(diag.get_vdata(4).value().type, zx::VertexType::X);
+  EXPECT_EQ(diag.get_vdata(5).value().type, zx::VertexType::Boundary);
+  EXPECT_EQ(diag.get_vdata(6).value().type, zx::VertexType::Boundary);
+}
 
 class SimplifyTest : public ::testing::Test {
 public:
@@ -146,6 +276,7 @@ TEST_F(SimplifyTest, id_simp) {
   zx::ZXDiagram diag = make_identity_diagram(nqubits, spiders);
 
   int32_t removed = zx::id_simp(diag);
+
   EXPECT_EQ(removed, nqubits * spiders);
   EXPECT_EQ(diag.get_nvertices(), nqubits * 2);
   EXPECT_EQ(diag.get_nedges(), nqubits);
@@ -370,15 +501,14 @@ TEST_F(SimplifyTest, clifford) {
 
 TEST_F(SimplifyTest, clifford_2) {
   zx::ZXDiagram diag("./test/circuits/ghz_identity.qasm");
-  diag.to_graph_like();
-  zx::clifford_simp(diag);
 
-  for (auto [to, from] : diag.get_edges()) {
-    std::cout << to << "-" << from << "\n";
-  }
+  diag.to_graph_like();
+
+  zx::clifford_simp(diag);
 
   EXPECT_TRUE(diag.connected(diag.get_inputs()[0], diag.get_outputs()[0]));
   EXPECT_TRUE(diag.connected(diag.get_inputs()[1], diag.get_outputs()[1]));
+  EXPECT_TRUE(diag.connected(diag.get_inputs()[2], diag.get_outputs()[2]));
 }
 
 TEST_F(SimplifyTest, clifford_3) {
@@ -400,6 +530,180 @@ TEST_F(SimplifyTest, clifford_3) {
 
   //    zx::spider_simp(diag);
   zx::clifford_simp(diag);
+  EXPECT_TRUE(diag.connected(diag.get_inputs()[0], diag.get_outputs()[0]));
+  EXPECT_TRUE(diag.connected(diag.get_inputs()[1], diag.get_outputs()[1]));
+}
+
+// TEST_F(SimplifyTest, non_clifford) {
+//   zx::ZXDiagram diag("./test/circuits/ctrl_phase.qasm");
+
+//   for (auto [to, from] : diag.get_edges()) {
+//     std::cout << to << "-" << from << "\n";
+//   }
+//   std::cout << ""
+//             << "\n";
+
+//   diag.to_graph_like();
+//   zx::clifford_simp(diag);
+
+//  for (auto [to, from] : diag.get_edges()) {
+//    std::cout << to << "-" << from << "\n";
+//   }
+// }
+
+TEST_F(SimplifyTest, gadget_simp) {
+  zx::ZXDiagram diag = make_empty_diagram(1);
+
+  diag.add_vertex(0);                        // 2
+  diag.add_vertex(0);                        // 3
+  diag.add_vertex(0);                        // 4
+  diag.add_vertex(0, 0, zx::Rational(1, 1)); // 5
+  diag.add_vertex(0);                        // 6
+  diag.add_vertex(0, 0, zx::Rational(1, 1)); // 7
+
+  diag.add_edge(0, 2);
+  diag.add_edge(3, 1);
+  diag.add_edge(2, 4, zx::EdgeType::Hadamard);
+  diag.add_edge(2, 6, zx::EdgeType::Hadamard);
+  diag.add_edge(3, 4, zx::EdgeType::Hadamard);
+  diag.add_edge(3, 6, zx::EdgeType::Hadamard);
+  diag.add_edge(4, 5, zx::EdgeType::Hadamard);
+  diag.add_edge(6, 7, zx::EdgeType::Hadamard);
+
+  zx::gadget_simp(diag);
+
+  EXPECT_TRUE(diag.connected(0, 2));
+  EXPECT_TRUE(diag.connected(1, 3));
+  EXPECT_TRUE(diag.connected(2, 4));
+  EXPECT_TRUE(diag.connected(3, 4));
+  EXPECT_TRUE(diag.connected(4, 5));
+  EXPECT_EQ(diag.get_nedges(), 5);
+  ASSERT_FALSE(diag.is_deleted(5));
+  EXPECT_EQ(diag.phase(5), 0);
+}
+
+TEST_F(SimplifyTest, gadget_simp_2) {
+  zx::ZXDiagram diag = make_empty_diagram(1);
+  diag.add_vertex(0);                        // 2
+  diag.add_vertex(0);                        // 3
+  diag.add_vertex(0, 0, zx::Rational(1, 1)); // 4
+  diag.add_vertex(0);                        // 5
+  diag.add_vertex(0, 0, zx::Rational(1, 1)); // 6
+
+  diag.add_edge(0, 2);
+  diag.add_edge(2, 1);
+  diag.add_edge(2, 3, zx::EdgeType::Hadamard);
+  diag.add_edge(2, 5, zx::EdgeType::Hadamard);
+  diag.add_edge(3, 4, zx::EdgeType::Hadamard);
+  diag.add_edge(5, 6, zx::EdgeType::Hadamard);
+
+  zx::gadget_simp(diag);
+
+  ASSERT_FALSE(diag.is_deleted(2));
+  EXPECT_TRUE(diag.connected(0, 2));
+  EXPECT_TRUE(diag.connected(2, 1));
+  EXPECT_EQ(diag.get_nedges(), 2);
+  EXPECT_EQ(diag.phase(2), 0);
+}
+
+TEST_F(SimplifyTest, pivot_gadget_simp) {}
+TEST_F(SimplifyTest, full_reduce) {
+  zx::ZXDiagram diag("./test/circuits/ctrl_phase.qasm");
+
+  zx::full_reduce(diag);
+
+  EXPECT_TRUE(diag.is_identity());
+}
+
+TEST_F(SimplifyTest, full_reduce_2) {
+  zx::ZXDiagram diag = make_empty_diagram(2);
+
+  diag.add_vertex(0, 0, zx::Rational(1, 32), zx::VertexType::X);  // 4
+  diag.add_vertex(0, 0, zx::Rational(0, 1), zx::VertexType::Z);   // 5
+  diag.add_vertex(1, 0, zx::Rational(0, 1), zx::VertexType::X);   // 6
+  diag.add_vertex(0, 0, zx::Rational(0, 1), zx::VertexType::Z);   // 7
+  diag.add_vertex(1, 0, zx::Rational(0, 1), zx::VertexType::X);   // 8
+  diag.add_vertex(0, 0, zx::Rational(-1, 32), zx::VertexType::X); // 9
+
+  diag.add_edge(0, 4);
+  diag.add_edge(4, 5);
+  diag.add_edge(1, 6);
+  diag.add_edge(5, 6);
+  diag.add_edge(5, 7);
+  diag.add_edge(6, 8);
+  diag.add_edge(7, 8);
+  diag.add_edge(7, 9);
+  diag.add_edge(9, 2);
+  diag.add_edge(8, 3);
+
+  zx::clifford_simp(diag);
+  EXPECT_TRUE(diag.is_identity());
+}
+
+TEST_F(SimplifyTest, full_reduce_3) {
+  zx::ZXDiagram diag("./test/circuits/bell_state.qasm");
+  auto h = diag;
+  diag.invert();
+  diag.concat(h);
+
+  zx::full_reduce(diag);
+
+  EXPECT_TRUE(diag.is_identity());
+}
+
+TEST_F(SimplifyTest, full_reduce_4) {
+  zx::ZXDiagram d0("./test/circuits/C17_204_o0.qasm");
+  zx::ZXDiagram d1("./test/circuits/C17_204_o1.qasm");
+
+  d0.invert();
+  d0.concat(d1);
+
+  zx::full_reduce(d0);
+
+  for (auto [to, from] : d0.get_edges()) {
+    std::cout << to
+              << (d0.get_edge(from, to).value().type == zx::EdgeType::Hadamard
+                      ? "- -"
+                      : "--")
+              << from << " | " << from
+              << (d0.get_edge(to, from).value().type == zx::EdgeType::Hadamard
+                      ? "- -"
+                      : "--")
+              << to << "\n";
+  }
+  // for(auto [v, data]: d0.get_vertices())
+  // std::cout << v << " p: " <<data.phase << "\n";
+  // std::cout << ""
+  //           << "\n";
+  // for (auto [v, data] : d0.get_vertices()) {
+  //   std::cout << v << " p:" << data.phase << " boundary "
+  //             << (data.type == zx::VertexType::Boundary ? "True" : "False")
+  //             << " type " << (d0.type(v) == zx::VertexType::Z ? "Z" : "X")
+  //             << "\n";
+  // }
+  for (int i = 0; i < d0.get_inputs().size(); i++) {
+    std::cout << d0.get_inputs()[i] << "--" << d0.get_outputs()[i] << "\n";
+  }
+
+  // std::cout << "" << "\n";
+
+  std::cout << d0.get_nvertices() << "\n";
+  std::cout << d0.get_nedges() << "\n";
+
+  EXPECT_TRUE(d0.is_identity());
+}
+
+TEST_F(SimplifyTest, full_reduce_5) {
+  zx::ZXDiagram d0("./test/circuits/test0.qasm");
+  zx::ZXDiagram d1("./test/circuits/test1.qasm");
+
+  d0.invert();
+  d0.concat(d1);
+
+   zx::full_reduce(d0);
+
+   EXPECT_EQ(d0.get_nedges(), 3);
+   EXPECT_EQ(d0.get_nvertices(), 6);
 }
 
 int main(int argc, char **argv) {

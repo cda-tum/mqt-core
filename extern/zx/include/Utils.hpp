@@ -71,8 +71,8 @@ public:
     using reference = value_type &;
 
     EdgeIterator(std::vector<std::vector<Edge>>& edges,
-                 std::vector<std::optional<VertexData>>& vertices)
-      : v(0), current_pos(edges[0].begin()), edges(edges), vertices(vertices) {}
+                 std::vector<std::optional<VertexData>>& vertices);
+
     EdgeIterator(std::vector<std::vector<Edge>>& edges,
                  std::vector<std::optional<VertexData>>& vertices, Vertex v);
 

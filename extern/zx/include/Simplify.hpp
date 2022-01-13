@@ -15,6 +15,8 @@ int32_t simplify_vertices(ZXDiagram &diag, VertexCheckFun check,
 
 int32_t simplify_edges(ZXDiagram &diag, EdgeCheckFun check, EdgeRuleFun rule);
 
+int32_t gadget_simp(ZXDiagram &diag);
+
 int32_t id_simp(ZXDiagram &diag);
 
 int32_t spider_simp(ZXDiagram &diag);
@@ -28,6 +30,8 @@ int32_t pivot_simp(ZXDiagram &diag);
 int32_t interior_clifford_simp(ZXDiagram &diag);
 
 int32_t clifford_simp(ZXDiagram &diag);
+
+  int32_t pivot_gadget_simp(ZXDiagram &diag);
 
 int32_t full_reduce(ZXDiagram &diag);
 

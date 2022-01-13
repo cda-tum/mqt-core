@@ -47,6 +47,21 @@ void Vertices::VertexIterator::next_valid_vertex() {
 
 Edges::EdgeIterator::EdgeIterator(
     std::vector<std::vector<Edge>> &edges,
+    std::vector<std::optional<VertexData>> &vertices)
+    : v(0), current_pos(edges[0].begin()), edges(edges), vertices(vertices) {
+  if (vertices.size() != 0) {
+    while (v < edges.size() && !vertices[v].has_value())
+      v++;
+    current_pos = edges[v].begin();
+    check_next_vertex();
+  } else {
+    current_pos = edges.back().end();
+    v = edges.size();
+  }
+}
+
+Edges::EdgeIterator::EdgeIterator(
+    std::vector<std::vector<Edge>> &edges,
     std::vector<std::optional<VertexData>> &vertices, Vertex v)
     : v(v), edges(edges), vertices(vertices) {
   if (v >= edges.size()) {

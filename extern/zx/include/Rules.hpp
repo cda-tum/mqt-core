@@ -23,6 +23,12 @@ void pivot_pauli(ZXDiagram &diag, Vertex v0, Vertex v1);
 bool check_pivot(ZXDiagram &diag, Vertex v0, Vertex v1);
 
 void pivot(ZXDiagram &diag, Vertex v0, Vertex v1);
+
+bool check_pivot_gadget(ZXDiagram &diag, Vertex v0, Vertex v1);
+
+void pivot_gadget(ZXDiagram &diag, Vertex v0, Vertex v1);
+
+bool check_and_fuse_gadget(ZXDiagram &diag, Vertex v);
 } // namespace zx
 
 #endif /* JKQZX_INCLUDE_RULES_HPP_ */

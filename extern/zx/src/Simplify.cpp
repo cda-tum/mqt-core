@@ -30,11 +30,34 @@ int32_t simplify_edges(ZXDiagram &diag, EdgeCheckFun check, EdgeRuleFun rule) {
   while (new_matches) {
     new_matches = false;
     for (auto [v0, v1] : diag.get_edges()) {
-      if (diag.is_deleted(v0) || diag.is_deleted(v1) || !check(diag, v0, v1))
+      if (diag.is_deleted(v0) || diag.is_deleted(v1) || !check(diag, v0, v1)) {
         continue;
+      }
       rule(diag, v0, v1);
       new_matches = true;
       n_simplifications++;
+    }
+  }
+
+  return n_simplifications;
+}
+
+int32_t gadget_simp(ZXDiagram &diag) {
+  int32_t n_simplifications = 0;
+  bool new_matches = true;
+
+  while (new_matches) {
+    new_matches = false;
+    for (auto [v, _] : diag.get_vertices()) {
+
+      if (diag.is_deleted(v))
+        continue;
+
+      if (check_and_fuse_gadget(diag, v)) {
+
+        new_matches = true;
+        n_simplifications++;
+      }
     }
   }
   return n_simplifications;
@@ -59,8 +82,10 @@ int32_t pivot_pauli_simp(ZXDiagram &diag) {
 int32_t pivot_simp(ZXDiagram &diag) {
   return simplify_edges(diag, check_pivot, pivot);
 }
+
 int32_t interior_clifford_simp(ZXDiagram &diag) {
   spider_simp(diag);
+
   bool new_matches = true;
   int32_t n_simplifications = 0;
   int32_t n_id, n_spider, n_pivot, n_local_comp;
@@ -75,6 +100,9 @@ int32_t interior_clifford_simp(ZXDiagram &diag) {
       new_matches = true;
       n_simplifications++;
     }
+    std::cout << "Interior Clifford: "<< n_id << " | " << n_spider << " | " << n_pivot << " | " << n_local_comp << "\n";
+    std::cout << "DELETED " << diag.get_ndeleted() << "\n";
+
   }
   return n_simplifications;
 }
@@ -95,17 +123,33 @@ int32_t clifford_simp(ZXDiagram &diag) {
   return n_simplifications;
 }
 
+int32_t pivot_gadget_simp(ZXDiagram &diag) {
+  return simplify_edges(diag, check_pivot_gadget, pivot_gadget);
+}
+
 int32_t full_reduce(ZXDiagram &diag) {
-  // interior_clifford_simp(diag);
-  // pivot_gadget_simp(diag);
-  // while(true) {
-  //   //clifford_simp(diag);
-  //   //n_gadget = gadget_simp(diag);
-  //   //interior_clifford_simp(diag);
-  //   //n_pivot = pivot_gadget_simp(diag);
-  //   // if(n_gadged+n_pivot==0)
-  //   //   break;
-  // }
-  return 0;
+  diag.to_graph_like();
+  std::cout << "graph-like" << "\n";
+
+  interior_clifford_simp(diag);
+    std::cout << "int_clifford" << "\n";
+  pivot_gadget_simp(diag);
+    std::cout << "pivot_gadget" << "\n";
+
+  int32_t n_gadget, n_pivot;
+  int32_t n_simplifications = 0;
+  while (true) {
+    clifford_simp(diag);
+    n_gadget = gadget_simp(diag);
+    interior_clifford_simp(diag);
+    n_pivot = pivot_gadget_simp(diag);
+    if (n_gadget + n_pivot == 0)
+      break;
+    n_simplifications += n_gadget + n_pivot;
+    std::cout << "Main loop: " << n_gadget << " | " << n_pivot << "\n";
+
+  }
+  clifford_simp(diag);
+  return n_simplifications;
 }
 } // namespace zx
