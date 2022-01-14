@@ -207,6 +207,7 @@ py::dict apply_ecc(const py::object &circ, const std::string &eccString, const i
         ss << "Available ECCs: ";
         ss << IdEcc::getName() << ", ";
         ss << Q3ShorEcc::getName() << ", ";
+        ss << Q5LaflammeEcc::getName() << ", ";
         ss << Q7SteaneEcc::getName() << ", ";
         ss << Q9ShorEcc::getName() << ", ";
         ss << Q9SurfaceEcc::getName() << ", ";
