@@ -115,6 +115,8 @@ private:
   std::vector<Vertex> outputs;
   int32_t nvertices = 0;
   int32_t nedges = 0;
+  std::optional<qc::Permutation> initial_layout;
+  std::optional<qc::Permutation> output_permutation;
 
   void add_z_spider(dd::Qubit qubit, std::vector<Vertex> &qubit_vertices,
                     Rational phase = Rational(0, 1),
@@ -124,6 +126,8 @@ private:
                     EdgeType type = EdgeType::Simple);
   void add_cnot(dd::Qubit ctrl, dd::Qubit target,
                 std::vector<Vertex> &qubit_vertices);
+  void add_cphase(Rational phase, dd::Qubit ctrl, dd::Qubit target,
+                  std::vector<Vertex> &qubit_vertices);
 
   std::vector<Vertex> init_graph(int nqubits);
   void close_graph(std::vector<Vertex> &qubit_vertices);

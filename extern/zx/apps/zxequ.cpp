@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
   //           << "\n";
 
   // for (auto [v, data] : d0.get_vertices())
-  //   std::cout << v << " p: " << data.phase << "\n";
+  //   std::cout << v << " p: " << data.phase <<", q:" << ((int)data.qubit) <<"\n";
   // std::cout << ""
   //           << "\n";
   // for (auto [v, data] : d0.get_vertices()) {
@@ -45,7 +45,13 @@ int main(int argc, char **argv) {
   //             << " type " << (d0.type(v) == zx::VertexType::Z ? "Z" : "X")
   //             << "\n";
   // }
+
+
+  
   std::cout << static_cast<int>(c0.getNqubits()) << ", " << c0.getNops() << ", " << c1.getNops() << ", ";
+  
+  if(d0.is_identity())
+    std::cout << "IDENTITY " << "\n";
 
   if (d0.get_inputs().size() == d0.get_nedges()) {
     std::cout << "TRUE";

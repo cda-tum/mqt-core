@@ -23,10 +23,24 @@ ZXDiagram::ZXDiagram(std::string filename)
 ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
   auto qubit_vertices = init_graph(qc.getNqubits());
 
+  initial_layout = qc.initialLayout;
+  output_permutation = qc.outputPermutation;
+
+  std::vector<Vertex> new_qubit_vertices = qubit_vertices;
+  for(auto& [tar, src]: qc.initialLayout) { //reverse initial permutation 
+    if(src == tar)
+      continue;
+
+    auto v_tar = add_vertex(tar, 1);
+    add_edge(qubit_vertices[src], v_tar);
+    new_qubit_vertices[tar] = v_tar;
+  }
+  qubit_vertices = new_qubit_vertices;
+
   for (const auto &op : qc) {
     if (op->getNcontrols() == 0 && op->getNtargets() == 1) {
       auto target = op->getTargets()[0];
-
+      
       switch (op->getType()) {
       case qc::OpType::Z: {
         add_z_spider(target, qubit_vertices, Rational(1, 1));
@@ -80,11 +94,24 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
                      op->getParameter()[1] + Rational(3, 1));
         break;
       }
+        
       case qc::OpType::SWAP: {
         auto target2 = op->getTargets()[0];
-        add_cnot(target, target2, qubit_vertices);
-        add_cnot(target2, target, qubit_vertices);
-        add_cnot(target, target2, qubit_vertices);
+        auto s0 = qubit_vertices.back();
+        auto s1 = qubit_vertices.back();
+
+        auto t0 = add_vertex(target, vertices[target].value().col + 1);
+        auto t1 = add_vertex(target, vertices[target].value().col + 1);
+       
+        add_edge(s0, t1);
+        add_edge(s1, t0);
+
+        qubit_vertices[target] = t0;
+        qubit_vertices[target2] = t1;
+        
+        // add_cnot(target, target2, qubit_vertices);
+        // add_cnot(target2, target, qubit_vertices);
+        // add_cnot(target, target2, qubit_vertices);
         break;
       }
       case qc::OpType::H: {
@@ -116,13 +143,30 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
 
       case qc::OpType::Phase: {
         auto phase = Rational(op->getParameter()[0]);
-        add_z_spider(ctrl, qubit_vertices, phase / 2);
-        add_cnot(ctrl, target, qubit_vertices);
-        add_z_spider(target, qubit_vertices, -phase / 2);
-        add_cnot(ctrl, target, qubit_vertices);
-        add_z_spider(target, qubit_vertices, phase / 2);
+        add_cphase(phase, ctrl, target, qubit_vertices);
         break;
       }
+
+      case qc::OpType::T: {
+        add_cphase(Rational(1, 4), ctrl, target, qubit_vertices);
+        break;
+      }
+        
+      case qc::OpType::S: {
+        add_cphase(Rational(1, 2), ctrl, target, qubit_vertices);
+        break;
+      }
+
+      case qc::OpType::Tdag: {
+        add_cphase(Rational(-1,4), ctrl, target, qubit_vertices);
+        break;
+      }
+
+      case qc::OpType::Sdag: {
+        add_cphase(Rational(-1, 2), ctrl, target, qubit_vertices);
+        break;
+      }
+                
       default: {
         throw ZXException("Unsupported Controlled Operation: " +
                           qc::toString(op->getType()));
@@ -132,6 +176,20 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
       throw ZXException("Unsupported Multi-control operation");
     }
   }
+
+  new_qubit_vertices = qubit_vertices;
+  for(auto& [src, tar]: qc.outputPermutation) { //reverse output permutation
+    if(src == tar)
+      continue;
+    
+    auto v_tar = add_vertex(tar, 1);
+    add_edge(qubit_vertices[src], v_tar);
+    new_qubit_vertices[tar] = v_tar;
+  }
+
+
+  qubit_vertices = new_qubit_vertices;
+  
   close_graph(qubit_vertices);
 }
 
@@ -347,7 +405,7 @@ ZXDiagram &ZXDiagram::concat(const ZXDiagram &rhs) {
           add_edge(new_vs[i], new_vs[to], type);
         }
       } else {
-        auto out_v = outputs[rhs.qubit(i)];
+        auto out_v = outputs[rhs.qubit(to)];
         for (auto [interior_v, interior_type] :
              edges[out_v]) { // redirect edges going to outputs
           // remove_half_edge(interior_v, out_v);
@@ -405,6 +463,15 @@ void ZXDiagram::add_cnot(dd::Qubit ctrl, dd::Qubit target,
   add_z_spider(ctrl, qubit_vertices);
   add_x_spider(target, qubit_vertices);
   add_edge(qubit_vertices[ctrl], qubit_vertices[target]);
+}
+
+void ZXDiagram::add_cphase(Rational phase, dd::Qubit ctrl, dd::Qubit target,
+                           std::vector<Vertex> &qubit_vertices) {
+  add_z_spider(ctrl, qubit_vertices, phase / 2);
+  add_cnot(ctrl, target, qubit_vertices);
+  add_z_spider(target, qubit_vertices, -phase / 2);
+  add_cnot(ctrl, target, qubit_vertices);
+  add_z_spider(target, qubit_vertices, phase / 2);
 }
 
 std::vector<Vertex> ZXDiagram::init_graph(int nqubits) {
