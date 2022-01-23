@@ -320,7 +320,8 @@ bool check_and_fuse_gadget(ZXDiagram &diag, Vertex v) {
       continue;
 
     if (etype != zx::EdgeType::Hadamard || diag.is_deleted(n) ||
-        diag.phase(n) != 0 || diag.degree(n) != diag.degree(id0) || diag.connected(n, id0)) {
+        diag.phase(n) != 0 || diag.degree(n) != diag.degree(id0) ||
+        diag.connected(n, id0)) {
       continue;
     }
 

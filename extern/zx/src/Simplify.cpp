@@ -100,9 +100,6 @@ int32_t interior_clifford_simp(ZXDiagram &diag) {
       new_matches = true;
       n_simplifications++;
     }
-    std::cout << "Interior Clifford: "<< n_id << " | " << n_spider << " | " << n_pivot << " | " << n_local_comp << "\n";
-    std::cout << "DELETED " << diag.get_ndeleted() << "\n";
-
   }
   return n_simplifications;
 }
@@ -129,12 +126,10 @@ int32_t pivot_gadget_simp(ZXDiagram &diag) {
 
 int32_t full_reduce(ZXDiagram &diag) {
   diag.to_graph_like();
-  std::cout << "graph-like" << "\n";
+
 
   interior_clifford_simp(diag);
-    std::cout << "int_clifford" << "\n";
   pivot_gadget_simp(diag);
-    std::cout << "pivot_gadget" << "\n";
 
   int32_t n_gadget, n_pivot;
   int32_t n_simplifications = 0;
@@ -146,10 +141,8 @@ int32_t full_reduce(ZXDiagram &diag) {
     if (n_gadget + n_pivot == 0)
       break;
     n_simplifications += n_gadget + n_pivot;
-    std::cout << "Main loop: " << n_gadget << " | " << n_pivot << "\n";
-
   }
-  clifford_simp(diag);
+  // clifford_simp(diag);
   return n_simplifications;
 }
 } // namespace zx

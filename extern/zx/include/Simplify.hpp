@@ -31,7 +31,7 @@ int32_t interior_clifford_simp(ZXDiagram &diag);
 
 int32_t clifford_simp(ZXDiagram &diag);
 
-  int32_t pivot_gadget_simp(ZXDiagram &diag);
+int32_t pivot_gadget_simp(ZXDiagram &diag);
 
 int32_t full_reduce(ZXDiagram &diag);
 

@@ -17,8 +17,10 @@ ZXDiagram::ZXDiagram(int32_t nqubits) {
   close_graph(qubit_vertices);
 }
 
-ZXDiagram::ZXDiagram(std::string filename) {
-  qc::QuantumComputation qc(filename);
+ZXDiagram::ZXDiagram(std::string filename)
+    : ZXDiagram(qc::QuantumComputation(filename)) {}
+
+ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
   auto qubit_vertices = init_graph(qc.getNqubits());
 
   for (const auto &op : qc) {

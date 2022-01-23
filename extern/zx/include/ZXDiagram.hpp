@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include "QuantumComputation.hpp"
 
 #include "Definitions.hpp"
 #include "Rational.hpp"
@@ -23,6 +24,7 @@ public:
   ZXDiagram() = default;
   ZXDiagram(int32_t nqubits); // create n_qubit identity_diagram
   explicit ZXDiagram(std::string filename);
+  explicit ZXDiagram(const qc::QuantumComputation& circuit);
 
   void add_edge(Vertex from, Vertex to, EdgeType type = EdgeType::Simple);
   void add_hadamard_edge(Vertex from, Vertex to) {
@@ -75,7 +77,7 @@ public:
   }
 
   [[nodiscard]] bool is_deleted(Vertex v) const {
-    return std::find(deleted.begin(), deleted.end(), v) != deleted.end();
+    return !vertices[v].has_value();
   }
 
   [[nodiscard]] bool is_boundary_vertex(Vertex v) const {
