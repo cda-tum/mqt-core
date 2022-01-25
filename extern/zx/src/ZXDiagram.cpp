@@ -20,17 +20,18 @@ ZXDiagram::ZXDiagram(int32_t nqubits) {
 ZXDiagram::ZXDiagram(std::string filename)
     : ZXDiagram(qc::QuantumComputation(filename)) {}
 
+
 ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
   auto qubit_vertices = init_graph(qc.getNqubits());
 
   initial_layout = qc.initialLayout;
   output_permutation = qc.outputPermutation;
 
-  std::vector<Vertex> new_qubit_vertices = qubit_vertices;
-  for(auto& [tar, src]: qc.initialLayout) { //reverse initial permutation 
-    if(src == tar)
-      continue;
-
+  std::vector<Vertex> new_qubit_vertices(get_nqubits());
+  for (auto i = 0; i < get_nqubits(); i++) {
+    new_qubit_vertices[i] = qubit_vertices[i];
+  }
+  for (auto &[tar, src] : qc.initialLayout) { // reverse initial permutation
     auto v_tar = add_vertex(tar, 1);
     add_edge(qubit_vertices[src], v_tar);
     new_qubit_vertices[tar] = v_tar;
@@ -40,7 +41,6 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
   for (const auto &op : qc) {
     if (op->getNcontrols() == 0 && op->getNtargets() == 1) {
       auto target = op->getTargets()[0];
-      
       switch (op->getType()) {
       case qc::OpType::Z: {
         add_z_spider(target, qubit_vertices, Rational(1, 1));
@@ -49,6 +49,7 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
 
       case qc::OpType::RZ:
       case qc::OpType::Phase: {
+
         add_z_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
         break;
       }
@@ -56,8 +57,26 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
         add_x_spider(target, qubit_vertices, Rational(1, 1));
         break;
       }
+
       case qc::OpType::RX: {
         add_x_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
+        break;
+      }
+
+      case qc::OpType::Y: {
+        add_z_spider(target, qubit_vertices, Rational(1, 1));
+        add_x_spider(target, qubit_vertices, Rational(1, 1));
+        break;
+      }
+
+      case qc::OpType::RY: {
+        // add_z_spider(target, qubit_vertices,
+        // Rational(op->getParameter()[2]));
+        add_x_spider(target, qubit_vertices, Rational(1, 2));
+        add_z_spider(target, qubit_vertices,
+                     Rational(op->getParameter()[0]) + Rational(1, 1));
+        add_x_spider(target, qubit_vertices, Rational(1, 2));
+        add_z_spider(target, qubit_vertices, Rational(3, 1));
         break;
       }
       case qc::OpType::T: {
@@ -85,16 +104,16 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
         break;
       }
       case qc::OpType::U3: {
-        add_z_spider(target, qubit_vertices, Rational(op->getParameter()[2]));
+        add_z_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
         add_x_spider(target, qubit_vertices, Rational(1, 2));
         add_z_spider(target, qubit_vertices,
-                     op->getParameter()[0] + Rational(1, 1));
+                     Rational(op->getParameter()[2]) + Rational(1, 1));
         add_x_spider(target, qubit_vertices, Rational(1, 2));
         add_z_spider(target, qubit_vertices,
-                     op->getParameter()[1] + Rational(3, 1));
+                     Rational(op->getParameter()[1]) + Rational(3, 1));
         break;
       }
-        
+
       case qc::OpType::SWAP: {
         auto target2 = op->getTargets()[0];
         auto s0 = qubit_vertices.back();
@@ -102,13 +121,13 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
 
         auto t0 = add_vertex(target, vertices[target].value().col + 1);
         auto t1 = add_vertex(target, vertices[target].value().col + 1);
-       
+
         add_edge(s0, t1);
         add_edge(s1, t0);
 
         qubit_vertices[target] = t0;
         qubit_vertices[target2] = t1;
-        
+
         // add_cnot(target, target2, qubit_vertices);
         // add_cnot(target2, target, qubit_vertices);
         // add_cnot(target, target2, qubit_vertices);
@@ -117,6 +136,10 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
       case qc::OpType::H: {
         add_z_spider(target, qubit_vertices, Rational(0, 1),
                      EdgeType::Hadamard);
+        break;
+      }
+      case qc::OpType::Measure:
+      case qc::OpType::I: {
         break;
       }
       default: {
@@ -151,14 +174,14 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
         add_cphase(Rational(1, 4), ctrl, target, qubit_vertices);
         break;
       }
-        
+
       case qc::OpType::S: {
         add_cphase(Rational(1, 2), ctrl, target, qubit_vertices);
         break;
       }
 
       case qc::OpType::Tdag: {
-        add_cphase(Rational(-1,4), ctrl, target, qubit_vertices);
+        add_cphase(Rational(-1, 4), ctrl, target, qubit_vertices);
         break;
       }
 
@@ -166,30 +189,59 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
         add_cphase(Rational(-1, 2), ctrl, target, qubit_vertices);
         break;
       }
-                
+
       default: {
         throw ZXException("Unsupported Controlled Operation: " +
                           qc::toString(op->getType()));
       }
       }
-    } else if (op->getNcontrols() > 1) {
-      throw ZXException("Unsupported Multi-control operation");
+    } else if (op->getNcontrols() == 2) {
+
+      dd::Qubit ctrl_0 = 0;
+      dd::Qubit ctrl_1 = 0;
+      dd::Qubit target = op->getTargets()[0];
+      int i = 0;
+      for(auto& ctrl: op->getControls()) {
+        if (i++ == 0)
+          ctrl_0 = ctrl.qubit;
+        else
+          ctrl_1 = ctrl.qubit;
+      }
+      switch (op->getType()) {
+      case qc::OpType::X: {
+        add_z_spider(target, qubit_vertices, Rational(0, 1),
+                     EdgeType::Hadamard);
+        add_cnot(ctrl_1, target, qubit_vertices);
+        add_z_spider(target, qubit_vertices, Rational(-1,4));
+        add_cnot(ctrl_0, target, qubit_vertices);
+        add_z_spider(target, qubit_vertices, Rational(1,4));
+        add_cnot(ctrl_1, target, qubit_vertices);
+        add_z_spider(ctrl_1, qubit_vertices, Rational(1,4));
+        add_z_spider(target, qubit_vertices, Rational(-1,4));
+        add_cnot(ctrl_0, target, qubit_vertices);
+        add_z_spider(target, qubit_vertices, Rational(1,4));
+        add_cnot(ctrl_0, ctrl_1, qubit_vertices);
+        add_z_spider(ctrl_0, qubit_vertices, Rational(1,4));
+        add_z_spider(ctrl_1, qubit_vertices, Rational(-1,4));
+        add_z_spider(target, qubit_vertices, Rational(0, 1),
+                     EdgeType::Hadamard);
+        add_cnot(ctrl_0, ctrl_1, qubit_vertices);
+        break;
+      }
+      default: {
+              throw ZXException("Unsupported Multi-control operation");
+              break;
+      }
+      } 
+
+    } else {
+            throw ZXException("Unsupported Multi-control operation");
     }
   }
 
-  new_qubit_vertices = qubit_vertices;
-  for(auto& [src, tar]: qc.outputPermutation) { //reverse output permutation
-    if(src == tar)
-      continue;
-    
-    auto v_tar = add_vertex(tar, 1);
-    add_edge(qubit_vertices[src], v_tar);
-    new_qubit_vertices[tar] = v_tar;
-  }
+//   reverse_permutation(qc.outputPermutation, qubit_vertices);
+// std::cout << "" << "\n";
 
-
-  qubit_vertices = new_qubit_vertices;
-  
   close_graph(qubit_vertices);
 }
 
@@ -220,7 +272,6 @@ void ZXDiagram::add_edge_parallel_aware(Vertex from, Vertex to,
 
   if (type(from) == type(to)) {
     if (edge_it->type == EdgeType::Hadamard && etype == EdgeType::Hadamard) {
-
       edges[from].erase(edge_it);
       remove_half_edge(to, from);
       nedges--;
@@ -235,9 +286,7 @@ void ZXDiagram::add_edge_parallel_aware(Vertex from, Vertex to,
     }
   } else {
     if (edge_it->type == EdgeType::Simple && etype == EdgeType::Simple) {
-
       edges[from].erase(edge_it);
-
       remove_half_edge(to, from);
       nedges--;
     } else if (edge_it->type == EdgeType::Hadamard &&
@@ -438,6 +487,17 @@ bool ZXDiagram::is_identity() const {
   }
   return true;
 }
+
+  bool ZXDiagram::is_identity(const qc::Permutation& perm) const {
+    if (nedges != inputs.size())
+    return false;
+
+    for(auto& [in, out]: perm) {
+      if(!connected(inputs[in], outputs[out]))
+        return false;
+    }
+    return true;
+  }
 
 void ZXDiagram::add_z_spider(dd::Qubit qubit,
                              std::vector<Vertex> &qubit_vertices,

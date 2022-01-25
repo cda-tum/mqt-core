@@ -185,8 +185,8 @@ bool check_pivot(ZXDiagram &diag, Vertex v0, Vertex v1) {
 
 static void extract_gadget(ZXDiagram &diag, Vertex v) {
   auto v_data = diag.get_vdata(v).value();
-  Vertex phase_vert = diag.add_vertex(v_data.qubit, v_data.col, v_data.phase);
-  Vertex id_vert = diag.add_vertex(v_data.col, v_data.qubit);
+  Vertex phase_vert = diag.add_vertex(v_data.qubit, -2, v_data.phase);
+  Vertex id_vert = diag.add_vertex(v_data.qubit, -1);
   diag.set_phase(v, Rational(0, 1));
   diag.add_hadamard_edge(v, id_vert);
   diag.add_hadamard_edge(id_vert, phase_vert);
@@ -248,7 +248,6 @@ static void ensure_pauli_vertex(ZXDiagram &diag, Vertex v) {
 }
 
 void pivot(ZXDiagram &diag, Vertex v0, Vertex v1) {
-
   ensure_pauli_vertex(diag, v0);
   ensure_pauli_vertex(diag, v1);
 
@@ -285,15 +284,21 @@ bool check_and_fuse_gadget(ZXDiagram &diag, Vertex v) {
     return false;
 
   auto [id0, id0_etype] = diag.incident_edges(v)[0];
-  if (diag.phase(id0) != 0 || diag.degree(id0) < 2 ||
-      id0_etype != zx::EdgeType::Hadamard)
+  if (!is_pauli(diag, id0)  ||
+      diag.degree(id0) < 2 || id0_etype != zx::EdgeType::Hadamard)
     return false;
 
   if (diag.degree(id0) == 2) {
-    auto &[v0, _] = diag.incident_edges(id0)[0].to == v
-                        ? diag.incident_edges(id0)[1]
-                        : diag.incident_edges(id0)[0];
-    diag.add_phase(v0, diag.phase(v));
+    auto &[v0, v0_etype] = diag.incident_edges(id0)[0].to == v
+                               ? diag.incident_edges(id0)[1]
+                               : diag.incident_edges(id0)[0];
+    if (v0_etype != EdgeType::Hadamard)
+      return false;
+
+    if (diag.phase(id0) == 0)
+      diag.add_phase(v0, diag.phase(v));
+    else
+      diag.add_phase(v0, -diag.phase(v));
     diag.remove_vertex(v);
     diag.remove_vertex(id0);
     return true;
@@ -320,7 +325,7 @@ bool check_and_fuse_gadget(ZXDiagram &diag, Vertex v) {
       continue;
 
     if (etype != zx::EdgeType::Hadamard || diag.is_deleted(n) ||
-        diag.phase(n) != 0 || diag.degree(n) != diag.degree(id0) ||
+        !diag.phase(n).is_integer() || diag.degree(n) != diag.degree(id0) ||
         diag.connected(n, id0)) {
       continue;
     }
@@ -358,7 +363,14 @@ bool check_and_fuse_gadget(ZXDiagram &diag, Vertex v) {
   if (!found_gadget || phase_spider < 0)
     return false;
 
-  diag.add_phase(v, diag.phase(phase_spider));
+  if (diag.phase(id0) != 0){
+    diag.set_phase(v, -diag.phase(v));
+    diag.set_phase(id0, Rational(0,1));
+  }
+  if(diag.phase(id1) == 0)
+    diag.add_phase(v, diag.phase(phase_spider));
+  else
+    diag.add_phase(v, -diag.phase(phase_spider));
   diag.remove_vertex(phase_spider);
   diag.remove_vertex(id1);
   return true;

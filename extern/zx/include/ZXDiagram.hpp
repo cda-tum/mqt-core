@@ -100,6 +100,7 @@ public:
   void to_graph_like();
 
   [[nodiscard]] bool is_identity() const;
+  [[nodiscard]] bool is_identity(const qc::Permutation& perm) const;
 
   [[nodiscard]] ZXDiagram adjoint() const;
 
@@ -135,6 +136,7 @@ private:
   void remove_half_edge(Vertex from, Vertex to);
 
   std::vector<Edge>::iterator get_edge_ptr(Vertex from, Vertex to);
+  
 };
 } // namespace zx
 #endif /* JKQZX_INCLUDE_GRAPH_HPP_ */

@@ -17,8 +17,8 @@ option(GENERATE_POSITION_INDEPENDENT_CODE "Generate position independent code")
 option(BUILD_QFR_TESTS "Also build tests for QFR project")
 
 if (DEFINED ENV{DEPLOY})
-	set(DEPLOY $ENV{DEPLOY} CACHE BOOL "Use deployment configuration from environment" FORCE)
-	message(STATUS "Setting deployment configuration to '${DEPLOY}' from environment")
+  set(DEPLOY $ENV{DEPLOY} CACHE BOOL "Use deployment configuration from environment" FORCE)
+  message(STATUS "Setting deployment configuration to '${DEPLOY}' from environment")
 endif ()
 
 # set deployment specific options

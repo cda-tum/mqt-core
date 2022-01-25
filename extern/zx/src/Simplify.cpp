@@ -100,6 +100,10 @@ int32_t interior_clifford_simp(ZXDiagram &diag) {
       new_matches = true;
       n_simplifications++;
     }
+    // std::cout << "ID " << n_id << "\n";
+    // std::cout << "SPIDER " << n_spider << "\n";
+    // std::cout << "PIVOT PAULI" << n_pivot << "\n";
+    // std::cout << "LOCAL_COMP " << n_local_comp << "\n";
   }
   return n_simplifications;
 }
@@ -126,10 +130,9 @@ int32_t pivot_gadget_simp(ZXDiagram &diag) {
 
 int32_t full_reduce(ZXDiagram &diag) {
   diag.to_graph_like();
-
-
   interior_clifford_simp(diag);
-  pivot_gadget_simp(diag);
+
+  // pivot_gadget_simp(diag);
 
   int32_t n_gadget, n_pivot;
   int32_t n_simplifications = 0;
@@ -141,6 +144,9 @@ int32_t full_reduce(ZXDiagram &diag) {
     if (n_gadget + n_pivot == 0)
       break;
     n_simplifications += n_gadget + n_pivot;
+    // std::cout <<"Gadget: " << n_gadget << "\n";
+    // std::cout << "Pivot: " << n_pivot << "\n";
+    // std::cout << "\nSimps: " << n_simplifications << "\n\n";
   }
   // clifford_simp(diag);
   return n_simplifications;
