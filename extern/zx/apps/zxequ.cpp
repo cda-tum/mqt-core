@@ -46,9 +46,9 @@ void print_diag(zx::ZXDiagram d0) {
 int main(int argc, char **argv) {
   qc::QuantumComputation c0(argv[1]);
   qc::QuantumComputation c1(argv[2]);
+  // std::cout << "ANCILLAE: " << ((int)c1.getNancillae())<<"\n";
   zx::ZXDiagram d0(c0);
   zx::ZXDiagram d1(c1);
-  
   d0.invert();
   d0.concat(d1);
   // zx::clifford_simp(d0);
@@ -56,7 +56,6 @@ int main(int argc, char **argv) {
 
   std::clock_t c_start = std::clock();
   zx::full_reduce(d0);
-
   qc::Permutation& p0 = c0.outputPermutation;
   qc::Permutation& p1 = c1.outputPermutation;
   qc::Permutation p;

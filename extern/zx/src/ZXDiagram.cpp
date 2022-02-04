@@ -20,6 +20,22 @@ ZXDiagram::ZXDiagram(int32_t nqubits) {
 ZXDiagram::ZXDiagram(std::string filename)
     : ZXDiagram(qc::QuantumComputation(filename)) {}
 
+static bool check_swap(const qc::QuantumComputation &qc, size_t i,
+                       dd::Qubit ctrl, dd::Qubit target) {
+  if (i < qc.getNops() - 2) {
+    auto &op1 = *(qc.begin() + i + 1);
+    auto &op2 = *(qc.begin() + i + 2);
+    if (op1->getType() == qc::OpType::X && op2->getType() == qc::OpType::X &&
+        op1->getNcontrols() == 1 && op2->getNcontrols() == 1) {
+      auto tar1 = op1->getTargets()[0];
+      auto tar2 = op2->getTargets()[0];
+      auto ctrl1 = (*op1->getControls().begin()).qubit;
+      auto ctrl2 = (*op2->getControls().begin()).qubit;
+      return ctrl == tar1 && tar1 == ctrl2 && target == ctrl1 && ctrl1 == tar2;
+    }
+  }
+  return false;
+}
 
 ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
   auto qubit_vertices = init_graph(qc.getNqubits());
@@ -27,18 +43,26 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
   initial_layout = qc.initialLayout;
   output_permutation = qc.outputPermutation;
 
-  std::vector<Vertex> new_qubit_vertices(get_nqubits());
-  for (auto i = 0; i < get_nqubits(); i++) {
-    new_qubit_vertices[i] = qubit_vertices[i];
+  if (initial_layout.value().size() != 0) {
+    std::vector<Vertex> new_qubit_vertices(get_nqubits());
+    for (auto i = 0; i < get_nqubits(); i++) {
+      new_qubit_vertices[i] = qubit_vertices[i];
+    }
+    for (auto &[tar, src] : qc.initialLayout) { // reverse initial permutation
+      if (tar == src)
+        continue;
+      auto v_tar = add_vertex(tar, 1);
+      add_edge(qubit_vertices[src], v_tar);
+      new_qubit_vertices[tar] = v_tar;
+    }
+    qubit_vertices = new_qubit_vertices;
   }
-  for (auto &[tar, src] : qc.initialLayout) { // reverse initial permutation
-    auto v_tar = add_vertex(tar, 1);
-    add_edge(qubit_vertices[src], v_tar);
-    new_qubit_vertices[tar] = v_tar;
-  }
-  qubit_vertices = new_qubit_vertices;
 
-  for (const auto &op : qc) {
+  for (size_t i = 0; i < qc.getNops(); ++i) {
+    auto &op = *(qc.begin() + i);
+    if (op->getType() == qc::OpType::Barrier)
+      continue;
+
     if (op->getNcontrols() == 0 && op->getNtargets() == 1) {
       auto target = op->getTargets()[0];
       switch (op->getType()) {
@@ -116,17 +140,8 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
 
       case qc::OpType::SWAP: {
         auto target2 = op->getTargets()[0];
-        auto s0 = qubit_vertices.back();
-        auto s1 = qubit_vertices.back();
-
-        auto t0 = add_vertex(target, vertices[target].value().col + 1);
-        auto t1 = add_vertex(target, vertices[target].value().col + 1);
-
-        add_edge(s0, t1);
-        add_edge(s1, t0);
-
-        qubit_vertices[target] = t0;
-        qubit_vertices[target2] = t1;
+        add_swap(target, target2, qubit_vertices);
+        
 
         // add_cnot(target, target2, qubit_vertices);
         // add_cnot(target2, target, qubit_vertices);
@@ -152,7 +167,16 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
       auto ctrl = (*op->getControls().begin()).qubit;
       switch (op->getType()) { // TODO: any gate can be controlled
       case qc::OpType::X: {
-        add_cnot(ctrl, target, qubit_vertices);
+        // check if swap
+        if (check_swap(qc, i, ctrl, target)) {
+          add_swap(ctrl, target, qubit_vertices);
+          i += 2;
+          // std::cout << "SWAP" << "\n";
+
+        } else {
+          add_cnot(ctrl, target, qubit_vertices);
+        }
+
         break;
       }
       case qc::OpType::Z: {
@@ -201,7 +225,7 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
       dd::Qubit ctrl_1 = 0;
       dd::Qubit target = op->getTargets()[0];
       int i = 0;
-      for(auto& ctrl: op->getControls()) {
+      for (auto &ctrl : op->getControls()) {
         if (i++ == 0)
           ctrl_0 = ctrl.qubit;
         else
@@ -212,35 +236,37 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
         add_z_spider(target, qubit_vertices, Rational(0, 1),
                      EdgeType::Hadamard);
         add_cnot(ctrl_1, target, qubit_vertices);
-        add_z_spider(target, qubit_vertices, Rational(-1,4));
+        add_z_spider(target, qubit_vertices, Rational(-1, 4));
         add_cnot(ctrl_0, target, qubit_vertices);
-        add_z_spider(target, qubit_vertices, Rational(1,4));
+        add_z_spider(target, qubit_vertices, Rational(1, 4));
         add_cnot(ctrl_1, target, qubit_vertices);
-        add_z_spider(ctrl_1, qubit_vertices, Rational(1,4));
-        add_z_spider(target, qubit_vertices, Rational(-1,4));
+        add_z_spider(ctrl_1, qubit_vertices, Rational(1, 4));
+        add_z_spider(target, qubit_vertices, Rational(-1, 4));
         add_cnot(ctrl_0, target, qubit_vertices);
-        add_z_spider(target, qubit_vertices, Rational(1,4));
+        add_z_spider(target, qubit_vertices, Rational(1, 4));
         add_cnot(ctrl_0, ctrl_1, qubit_vertices);
-        add_z_spider(ctrl_0, qubit_vertices, Rational(1,4));
-        add_z_spider(ctrl_1, qubit_vertices, Rational(-1,4));
+        add_z_spider(ctrl_0, qubit_vertices, Rational(1, 4));
+        add_z_spider(ctrl_1, qubit_vertices, Rational(-1, 4));
         add_z_spider(target, qubit_vertices, Rational(0, 1),
                      EdgeType::Hadamard);
         add_cnot(ctrl_0, ctrl_1, qubit_vertices);
         break;
       }
       default: {
-              throw ZXException("Unsupported Multi-control operation");
-              break;
+        throw ZXException("Unsupported Multi-control operation: " +
+                          qc::toString(op->getType()));
+        break;
       }
-      } 
+      }
 
     } else {
-            throw ZXException("Unsupported Multi-control operation");
+      throw ZXException("Unsupported Multi-control operation" +
+                        qc::toString(op->getType()));
     }
   }
 
-//   reverse_permutation(qc.outputPermutation, qubit_vertices);
-// std::cout << "" << "\n";
+  //   reverse_permutation(qc.outputPermutation, qubit_vertices);
+  // std::cout << "" << "\n";
 
   close_graph(qubit_vertices);
 }
@@ -488,16 +514,16 @@ bool ZXDiagram::is_identity() const {
   return true;
 }
 
-  bool ZXDiagram::is_identity(const qc::Permutation& perm) const {
-    if (nedges != inputs.size())
+bool ZXDiagram::is_identity(const qc::Permutation &perm) const {
+  if (nedges != inputs.size())
     return false;
 
-    for(auto& [in, out]: perm) {
-      if(!connected(inputs[in], outputs[out]))
-        return false;
-    }
-    return true;
+  for (auto &[in, out] : perm) {
+    if (!connected(inputs[in], outputs[out]))
+      return false;
   }
+  return true;
+}
 
 void ZXDiagram::add_z_spider(dd::Qubit qubit,
                              std::vector<Vertex> &qubit_vertices,
@@ -534,6 +560,21 @@ void ZXDiagram::add_cphase(Rational phase, dd::Qubit ctrl, dd::Qubit target,
   add_z_spider(target, qubit_vertices, phase / 2);
 }
 
+void ZXDiagram::add_swap(dd::Qubit ctrl, dd::Qubit target,
+                         std::vector<Vertex> &qubit_vertices) {
+  auto s0 = qubit_vertices[target];
+  auto s1 = qubit_vertices[ctrl];
+
+  auto t0 = add_vertex(target, vertices[target].value().col + 1);
+  auto t1 = add_vertex(ctrl, vertices[ctrl].value().col + 1);
+
+  add_edge(s0, t1);
+  add_edge(s1, t0);
+
+  qubit_vertices[target] = t0;
+  qubit_vertices[ctrl] = t1;
+}
+
 std::vector<Vertex> ZXDiagram::init_graph(int nqubits) {
 
   std::vector<Vertex> qubit_vertices(nqubits);
@@ -556,5 +597,22 @@ void ZXDiagram::close_graph(std::vector<Vertex> &qubit_vertices) {
     add_edge(v, new_v);
     outputs.push_back(new_v);
   }
+}
+
+void ZXDiagram::make_ancilla(dd::Qubit qubit) {
+  auto in_v = inputs[qubit];
+  auto out_v = outputs[qubit];
+
+  // auto new_in = add_vertex(qubit, 0, Rational(0,1), VertexType::Boundary);
+  // auto new_out = add_vertex(qubit, 0, Rational(0,1), VertexType::Boundary);
+  // inputs[qubit] = new_in;
+  // outputs[qubit] = new_out;
+  inputs.erase(inputs.begin() + qubit);
+  outputs.erase(outputs.begin() + qubit);
+
+  set_type(in_v, VertexType::X);
+  set_type(in_v, VertexType::X);
+  remove_vertex(in_v);
+  remove_vertex(out_v);
 }
 } // namespace zx

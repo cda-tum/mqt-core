@@ -60,6 +60,11 @@ void Rational::normalize() {
   } else if (*this <= -1) {
     num += 2 * denom;
   }
+  if(num == 0) {
+    denom = 1;
+    return;
+  }
+    
   int32_t g = gcd(num, denom);
   num /= g;
   denom /= g;

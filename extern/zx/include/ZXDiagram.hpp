@@ -108,6 +108,10 @@ public:
 
   ZXDiagram &concat(const ZXDiagram &rhs);
 
+  //What about Swaps?
+  
+  void make_ancilla(dd::Qubit qubit);
+
 private:
   std::vector<std::vector<Edge>> edges;
   std::vector<std::optional<VertexData>> vertices;
@@ -129,6 +133,8 @@ private:
                 std::vector<Vertex> &qubit_vertices);
   void add_cphase(Rational phase, dd::Qubit ctrl, dd::Qubit target,
                   std::vector<Vertex> &qubit_vertices);
+  void add_swap(dd::Qubit ctrl, dd::Qubit target,
+                std::vector<Vertex> &qubit_vertices);
 
   std::vector<Vertex> init_graph(int nqubits);
   void close_graph(std::vector<Vertex> &qubit_vertices);
