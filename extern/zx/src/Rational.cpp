@@ -4,8 +4,8 @@
 #include <cmath>
 
 namespace zx {
-long gcd(long a, long b) {
-  long r;
+int64_t gcd(int64_t a, int64_t b) {
+  int64_t r;
 
   while (b != 0) {
     r = a % b;
@@ -44,7 +44,7 @@ Rational::Rational(double val) : num(0), denom(1) {
   // double frac = val - integral;
   double frac = val;
 
-  long gcd_ = gcd(std::round(frac * MAX_DENOM), MAX_DENOM);
+  int64_t gcd_ = gcd(std::round(frac * MAX_DENOM), MAX_DENOM);
 
   denom = MAX_DENOM / gcd_;
   num = round(frac * MAX_DENOM) / gcd_;
@@ -65,7 +65,7 @@ void Rational::normalize() {
     return;
   }
     
-  int32_t g = gcd(num, denom);
+  int64_t g = gcd(num, denom);
   num /= g;
   denom /= g;
 
@@ -85,7 +85,7 @@ Rational &Rational::operator+=(const Rational &rhs) {
   normalize();
   return *this;
 }
-Rational &Rational::operator+=(const int32_t rhs) {
+Rational &Rational::operator+=(const int64_t rhs) {
   num = num + rhs * denom;
   normalize();
   return *this;
@@ -97,7 +97,7 @@ Rational &Rational::operator-=(const Rational &rhs) {
   normalize();
   return *this;
 }
-Rational &Rational::operator-=(const int32_t rhs) {
+Rational &Rational::operator-=(const int64_t rhs) {
   num = num + rhs * denom;
   normalize();
   return *this;
@@ -109,7 +109,7 @@ Rational &Rational::operator*=(const Rational &rhs) {
   this->normalize();
   return *this;
 }
-Rational &Rational::operator*=(const int32_t rhs) {
+Rational &Rational::operator*=(const int64_t rhs) {
   num *= rhs;
   this->normalize();
   return *this;
@@ -121,7 +121,7 @@ Rational &Rational::operator/=(const Rational &rhs) {
   this->normalize();
   return *this;
 }
-Rational &Rational::operator/=(const int32_t rhs) {
+Rational &Rational::operator/=(const int64_t rhs) {
   denom *= rhs;
   this->normalize();
   return *this;

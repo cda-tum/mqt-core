@@ -43,8 +43,8 @@ TEST_F(RationalTest, from_double_6) {
 }
 
 TEST_F(RationalTest, from_double_7) {
-  zx::Rational r(dd::PI /262144);
-  EXPECT_EQ(r, zx::Rational(1, 262144));
+  zx::Rational r(dd::PI /524288);
+  EXPECT_EQ(r, zx::Rational(1, 524288));
 }
 
 TEST_F(RationalTest, add) {
@@ -58,6 +58,14 @@ TEST_F(RationalTest, add) {
 TEST_F(RationalTest, add_2) {
   zx::Rational r0(9, 8);
   zx::Rational r1(7, 8);
+  auto r = r0 + r1;
+
+  EXPECT_EQ(r, 0);
+}
+
+TEST_F(RationalTest, add_3) {
+  zx::Rational r0(1, 65536);
+  zx::Rational r1(1, 131072);
   auto r = r0 + r1;
 
   EXPECT_EQ(r, 0);
