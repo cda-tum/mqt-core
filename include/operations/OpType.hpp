@@ -166,6 +166,12 @@ namespace qc {
     inline std::istream& operator>>(std::istream& in, OpType& opType) {
         std::string token;
         in >> token;
+
+        if (token.empty()) {
+            in.setstate(std::istream::failbit);
+            return in;
+        }
+
         opType = opTypeFromString(token);
         return in;
     }
