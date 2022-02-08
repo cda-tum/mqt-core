@@ -1534,44 +1534,58 @@ namespace dd {
 
         bool isCloseToIdentityRecursive(const mEdge& m, std::unordered_set<decltype(m.p)>& visited, dd::fp tol) {
             // immediately return if this node has already been visited
-            if (visited.find(m.p) != visited.end())
+            if (visited.find(m.p) != visited.end()) {
                 return true;
+            }
 
             // immediately return of this node is identical to the identity
-            if (m.p->ident)
+            if (m.p->ident) {
                 return true;
+            }
 
             // check whether any of the middle successors is non-zero, i.e., m = [ x 0 0 y ]
-            const auto mag1 = dd::ComplexNumbers::mag2(m.p->e[1].w);
-            const auto mag2 = dd::ComplexNumbers::mag2(m.p->e[2].w);
+            const auto mag1 = dd::ComplexNumbers::mag2(m.p->e[1U].w);
+            const auto mag2 = dd::ComplexNumbers::mag2(m.p->e[2U].w);
             if (mag1 > tol || mag2 > tol) {
                 visited.insert(m.p);
                 return false;
             }
 
             // check whether  m = [ ~1 0 0 y ]
-            const auto mag0 = dd::ComplexNumbers::mag2(m.p->e[0].w);
+            const auto mag0 = dd::ComplexNumbers::mag2(m.p->e[0U].w);
             if (std::abs(mag0 - 1.0) > tol) {
+                visited.insert(m.p);
+                return false;
+            }
+            const auto arg0 = dd::ComplexNumbers::arg(m.p->e[0U].w);
+            if (std::abs(arg0) > tol) {
                 visited.insert(m.p);
                 return false;
             }
 
             // check whether m = [ x 0 0 ~1 ] or m = [ x 0 0 ~0 ] (the last case is true for an ancillary qubit)
-            const auto mag3 = dd::ComplexNumbers::mag2(m.p->e[3].w);
-            if (std::abs(mag3 - 1.0) > tol && mag3 > tol) {
-                visited.insert(m.p);
-                return false;
+            const auto mag3 = dd::ComplexNumbers::mag2(m.p->e[3U].w);
+            if (mag3 > tol) {
+                if (std::abs(mag3 - 1.0) > tol) {
+                    visited.insert(m.p);
+                    return false;
+                }
+                const auto arg3 = dd::ComplexNumbers::arg(m.p->e[3U].w);
+                if (std::abs(arg3) > tol) {
+                    visited.insert(m.p);
+                    return false;
+                }
             }
 
             // m either has the form [ ~1 0 0 ~1 ] or [ ~1 0 0 ~0 ]
-            const auto ident0 = isCloseToIdentityRecursive(m.p->e[0], visited, tol);
+            const auto ident0 = isCloseToIdentityRecursive(m.p->e[0U], visited, tol);
             if (!ident0) {
                 visited.insert(m.p);
                 return false;
             }
 
             // m either has the form [ I 0 0 ~1 ] or [ I 0 0 ~0 ]
-            const auto ident3 = isCloseToIdentityRecursive(m.p->e[3], visited, tol);
+            const auto ident3 = isCloseToIdentityRecursive(m.p->e[3U], visited, tol);
             visited.insert(m.p);
             return ident3;
         }
