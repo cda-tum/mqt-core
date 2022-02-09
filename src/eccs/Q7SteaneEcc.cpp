@@ -154,6 +154,10 @@ void Q7SteaneEcc::writeDecoding() {
    //use exiting registers qeccX and qeccZ for decoding
 
    for (int i = 0; i < nQubits; i++) {
+       //#|###|###
+       //0|111|111
+       //odd amount of 1's -> x[0] = 1
+       //measure from index 1 (not 0) to 6, =qubit 2 to 7
        for (int j = 1; j < 7; j++) { //skip q[0], since values are mapped onto q[0]
            qcMapped.measure(static_cast<dd::Qubit>(i + j * nQubits), clAncStart+j-1);
        }
