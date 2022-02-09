@@ -405,6 +405,14 @@ namespace qasm {
                    "c3sqrtx a,b,c,e; "
                    "}"
                 << std::endl;
+            *ss << "gate iswap a,b { "
+                   "s a; s b; "
+                   "h a; "
+                   "cx a,b; "
+                   "cx b,a; "
+                   "h b; "
+                   "}"
+                << std::endl;
 
             streams.push(ss);
             lines.push(LineInfo(ch, line, col));
