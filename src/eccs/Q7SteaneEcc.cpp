@@ -292,6 +292,24 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
            break;
        case qc::T:
        case qc::Tdag:
+           for (std::size_t t = 0; t < gate->getNtargets(); t++) {
+               int i = static_cast<unsigned char>(gate->getTargets()[t]);
+               if (gate->getControls().empty()) {
+                   //arXiv:1610.03309v1
+                   qcMapped.x(dd::Qubit(i + 5 * nQubits), dd::Control{dd::Qubit(i + 6 * nQubits), dd::Control::Type::pos});
+                   qcMapped.x(dd::Qubit(i + 0 * nQubits), dd::Control{dd::Qubit(i + 5 * nQubits), dd::Control::Type::pos});
+                   if (gate->getType() == qc::T) {
+                       qcMapped.t(dd::Qubit(i + 0 * nQubits));
+                   } else {
+                       qcMapped.tdag(dd::Qubit(i + 0 * nQubits));
+                   }
+                   qcMapped.x(dd::Qubit(i + 0 * nQubits), dd::Control{dd::Qubit(i + 5 * nQubits), dd::Control::Type::pos});
+                   qcMapped.x(dd::Qubit(i + 5 * nQubits), dd::Control{dd::Qubit(i + 6 * nQubits), dd::Control::Type::pos});
+               } else {
+                   gateNotAvailableError(gate);
+               }
+           }
+           break;
        case qc::V:
        case qc::Vdag:
        case qc::U3:
