@@ -1114,6 +1114,7 @@ namespace qc {
             if ((*opIt)->isCompoundOperation()) {
                 // recursively flatten compound operations
                 opIt = flattenCompoundOperation(op.getOps(), opIt);
+                --opIt;
             } else {
                 // move the operation from the compound operation in front of the compound operation in the flattened container.
                 // `it` then points to the newly inserted element
