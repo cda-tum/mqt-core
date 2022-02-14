@@ -1094,4 +1094,39 @@ namespace qc {
             std::cout << std::endl;
         }
     }
+
+    void CircuitOptimizer::flattenOperations(QuantumComputation& qc) {
+        auto it = qc.begin();
+        while (it != qc.end()) {
+            if ((*it)->isCompoundOperation()) {
+                it = flattenCompoundOperation(qc.ops, it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    CircuitOptimizer::Iterator CircuitOptimizer::flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops, CircuitOptimizer::Iterator it) {
+        assert((*it)->isCompoundOperation());
+        auto& op   = dynamic_cast<qc::CompoundOperation&>(**it);
+        auto  opIt = op.begin();
+        while (opIt != op.end()) {
+            if ((*opIt)->isCompoundOperation()) {
+                // recursively flatten compound operations
+                opIt = flattenCompoundOperation(op.getOps(), opIt);
+                --opIt;
+            } else {
+                // move the operation from the compound operation in front of the compound operation in the flattened container.
+                // `it` then points to the newly inserted element
+                it = ops.insert(it, std::move(*opIt));
+                // advance the operation iterator to point past the now moved-from element in the compound operation
+                ++opIt;
+                // advance the general iterator to again point to the compound operation
+                ++it;
+            }
+        }
+        // whenever all the operations have been processed, `it` points to the compound operation and `opIt` to `op.end()`
+        // the compound operation can now be deleted safely
+        return ops.erase(it);
+    }
 } // namespace qc

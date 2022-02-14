@@ -183,6 +183,8 @@ namespace qc {
         }
 
         [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }
+
+        std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
     };
 } // namespace qc
 #endif //QFR_COMPOUNDOPERATION_H

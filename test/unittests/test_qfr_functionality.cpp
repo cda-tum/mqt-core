@@ -5,6 +5,7 @@
 
 #include "CircuitOptimizer.hpp"
 #include "QuantumComputation.hpp"
+#include "algorithms/RandomCliffordCircuit.hpp"
 
 #include "gtest/gtest.h"
 #include <random>
@@ -1576,4 +1577,56 @@ TEST_F(QFRFunctionality, trivialOperationReordering) {
     ++it;
     const auto target2 = (*it)->getTargets().at(0);
     EXPECT_EQ(target2, 0);
+}
+
+TEST_F(QFRFunctionality, FlattenRandomClifford) {
+    qc::RandomCliffordCircuit rcs(2U, 3U, 0U);
+    std::cout << rcs << std::endl;
+
+    auto dd     = std::make_unique<dd::Package>(2U);
+    auto before = rcs.buildFunctionality(dd);
+
+    qc::CircuitOptimizer::flattenOperations(rcs);
+    std::cout << rcs << std::endl;
+
+    for (const auto& op: rcs) {
+        EXPECT_FALSE(op->isCompoundOperation());
+    }
+
+    auto after = rcs.buildFunctionality(dd);
+    EXPECT_EQ(before, after);
+}
+
+TEST_F(QFRFunctionality, FlattenRecursive) {
+    const dd::QubitCount nqubits = 1U;
+
+    // create a compound operation
+    auto op = std::make_unique<CompoundOperation>(nqubits);
+
+    // emplace an operation in the compound operation
+    op->emplace_back<StandardOperation>(1U, 0U, qc::X);
+
+    // create another compound operation
+    auto op2 = std::make_unique<CompoundOperation>(nqubits);
+
+    // emplace the first operation in the second
+    op2->emplace_back<qc::CompoundOperation>(op);
+
+    // create a quantum computation and emplace the operation
+    auto qc = QuantumComputation(nqubits);
+    qc.emplace_back<CompoundOperation>(op2);
+
+    std::cout << qc << std::endl;
+
+    qc::CircuitOptimizer::flattenOperations(qc);
+    std::cout << qc << std::endl;
+
+    for (const auto& g: qc) {
+        EXPECT_FALSE(g->isCompoundOperation());
+    }
+
+    auto& gate = **qc.begin();
+    EXPECT_EQ(gate.getType(), qc::X);
+    EXPECT_EQ(gate.getTargets().at(0), 0U);
+    EXPECT_TRUE(gate.getControls().empty());
 }
