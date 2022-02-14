@@ -63,7 +63,7 @@ namespace qc {
         static void changeControls(dd::Controls& controls, const std::map<dd::Qubit, dd::Qubit>& replacementMap);
 
         using Iterator = decltype(qc::QuantumComputation::ops.begin());
-        static Iterator flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops, Iterator& it);
+        static Iterator flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops, Iterator it);
     };
 } // namespace qc
 #endif //QFR_CIRCUITOPTIMIZER_HPP

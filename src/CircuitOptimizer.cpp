@@ -1106,7 +1106,7 @@ namespace qc {
         }
     }
 
-    CircuitOptimizer::Iterator CircuitOptimizer::flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops, CircuitOptimizer::Iterator& it) {
+    CircuitOptimizer::Iterator CircuitOptimizer::flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops, CircuitOptimizer::Iterator it) {
         assert((*it)->isCompoundOperation());
         auto& op   = dynamic_cast<qc::CompoundOperation&>(**it);
         auto  opIt = op.begin();
