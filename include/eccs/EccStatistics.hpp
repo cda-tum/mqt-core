@@ -7,6 +7,7 @@
 #define QFR_EccStatistics_HPP
 
 #include <stdlib.h>
+#include <string>
 
 class EccStatistics {
 public:
