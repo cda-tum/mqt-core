@@ -6,8 +6,8 @@
 #ifndef QFR_Q7SteaneEcc_HPP
 #define QFR_Q7SteaneEcc_HPP
 
-#include "QuantumComputation.hpp"
 #include "Ecc.hpp"
+#include "QuantumComputation.hpp"
 
 class Q7SteaneEcc: public Ecc {
 public:
@@ -23,10 +23,11 @@ protected:
     void writeEncoding() override;
 
     void measureAndCorrect() override;
+    void measureAndCorrectSingle(bool xSyndrome);
 
-	void writeDecoding() override;
+    void writeDecoding() override;
 
-	void mapGate(const std::unique_ptr<qc::Operation> &gate) override;
+    void mapGate(const std::unique_ptr<qc::Operation>& gate) override;
 };
 
 #endif //QFR_Q7SteaneEcc_HPP
