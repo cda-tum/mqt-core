@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.14...3.19)
 project(DDPackage
         LANGUAGES CXX
         VERSION 2.0.2
-        DESCRIPTION "JKQ decision diagram package tailored to quantum computing")
+        DESCRIPTION "MQT decision diagram package tailored to quantum computing")
 
 # enable organization of targets into folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -73,8 +73,8 @@ if (COVERAGE)
 	target_link_libraries(${PROJECT_NAME} INTERFACE --coverage)
 endif ()
 
-# add JKQ alias
-add_library(JKQ::DDPackage ALIAS ${PROJECT_NAME})
+# add MQT alias
+add_library(MQT::DDPackage ALIAS ${PROJECT_NAME})
 
 macro(enable_lto TARGET_NAME)
 	# enable interprocedural optimization if it is supported (Clang's ThinLTO does not work with Ubuntu 20.04's default linker at the moment)

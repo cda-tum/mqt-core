@@ -85,7 +85,6 @@ jobs:
           verbose: true
 
   codestyle:
-    #    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -95,12 +94,6 @@ jobs:
         with:
           source:             'include test'
           clangFormatVersion: 12
-  #          inplace: True
-  #      - uses: EndBug/add-and-commit@v4
-  #        with:
-  #          author_name: github-actions
-  #          author_email: 41898282+github-actions[bot]@users.noreply.github.com
-  #          message: '🎨 clang-format changes'
 
   benchmark:
     needs:   test

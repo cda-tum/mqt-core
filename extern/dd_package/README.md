@@ -1,17 +1,15 @@
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/iic-jku/dd_package/CI?logo=github&style=plastic)](https://github.com/iic-jku/dd_package/actions?query=workflow%3A%22CI%22)
-[![Codecov branch](https://img.shields.io/codecov/c/github/iic-jku/dd_package/master?label=codecov&logo=codecov&style=plastic)](https://codecov.io/gh/iic-jku/dd_package)
-[![bench](https://img.shields.io/badge/benchmark-master-blue?logo=github&style=plastic)](https://iic-jku.github.io/dd_package/dev/bench/)
-![GitHub](https://img.shields.io/github/license/iic-jku/dd_package?style=plastic)
-[![toolset: JKQ](https://img.shields.io/badge/toolset-JKQ-blue?style=plastic)](https://github.com/iic-jku/jkq)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/cda-tum/dd_package/CI?logo=github&style=plastic)](https://github.com/cda-tum/dd_package/actions?query=workflow%3A%22CI%22)
+[![Codecov branch](https://img.shields.io/codecov/c/github/cda-tum/dd_package/master?label=codecov&logo=codecov&style=plastic)](https://codecov.io/gh/cda-tum/dd_package)
+[![bench](https://img.shields.io/badge/benchmark-master-blue?logo=github&style=plastic)](https://cda-tum.github.io/dd_package/dev/bench/)
+![GitHub](https://img.shields.io/github/license/cda-tum/dd_package?style=plastic)
 
 
-# JKQ DD Package - A Package for Decision Diagrams Written in C++
+# MQT DD Package - A Package for Decision Diagrams Written in C++
 
-A DD package tailored to quantum computing by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at). This package is part of the [JKQ toolset](https://github.com/iic-jku/jkq).
+A DD package tailored to quantum computing by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at). 
 
 For more information, please visit [iic.jku.at/eda/research/quantum_dd](http://iic.jku.at/eda/research/quantum_dd).
-
-If you have any questions, feel free to contact us via [iic-quantum@jku.at](mailto:iic-quantum@jku.at) or by creating an issue on [GitHub](https://github.com/iic-jku/dd_package/issues).
+If you have any questions, feel free to contact us via [iic-quantum@jku.at](mailto:iic-quantum@jku.at) or by creating an issue on [GitHub](https://github.com/cda-tum/dd_package/issues).
 
 The old version of this package which does not use namespaces or classes can be found in the branch `non-oop`.
 
@@ -54,7 +52,7 @@ It is recommended (although not required) to have [GraphViz](https://www.graphvi
 To start off, clone this repository using
 
 ```shell
-git clone --recurse-submodules -j8 https://github.com/iic-jku/dd_package 
+git clone --recurse-submodules -j8 https://github.com/cda-tum/dd_package 
 ```
 
 Note the `--recurse-submodules` flag. It is required to also clone all the required submodules. If you happen to forget passing the flag on your initial clone, you can initialize all the submodules by
@@ -79,13 +77,13 @@ Building the project this way generates
  - a test executable `dd_package_test` containing a small set of unit tests in the `build/test` folder
  - a small demo example executable `dd_package_example` in the `build/test` directory.
 
-You can link against the library built by this project in other CMake project using the `JKQ::DDpackage` target.
+You can link against the library built by this project in other CMake project using the `MQT::DDpackage` target.
 
 ## Reference
 
 If you use the DD package for your research, we will be thankful if you refer to it by citing the following publication:
 
-```
+```bibtex
 @article{zulehner2019package,
     title={How to Efficiently Handle Complex Values? Implementing Decision Diagrams for Quantum Computing},
     author={Zulehner, Alwin and Hillmich, Stefan and Wille, Robert},
