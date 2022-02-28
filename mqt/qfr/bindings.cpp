@@ -1,5 +1,5 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
+ * This file is part of MQT QFR library which is released under the MIT license.
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
@@ -149,7 +149,7 @@ py::dict matrix_from_dd(const std::string& serializedDD) {
 }
 
 PYBIND11_MODULE(pyqfr, m) {
-    m.doc() = "Python interface for the JKQ QFR quantum functionality representation";
+    m.doc() = "Python interface for the MQT QFR quantum functionality representation";
 
     py::enum_<ConstructionMethod>(m, "ConstructionMethod")
             .value("sequential", ConstructionMethod::Sequential)

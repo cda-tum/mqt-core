@@ -75,19 +75,19 @@ with open(README_PATH) as readme_file:
     README = readme_file.read()
 
 setup(
-    name='jkq.qfr',
+    name='mqt.qfr',
     version='1.7.3',
     author='Lukas Burgholzer',
     author_email='lukas.burgholzer@jku.at',
-    description='QFR - A JKQ tool for Quantum Functionality Representation',
+    description='MQT QFR - A tool for Quantum Functionality Representation',
     long_description=README,
     long_description_content_type="text/markdown",
     license="MIT",
     url="https://iic.jku.at/eda/research/quantum_dd",
-    ext_modules=[CMakeExtension('pyqfr', namespace='jkq.qfr.')],
+    ext_modules=[CMakeExtension('pyqfr', namespace='mqt.qfr.')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
-    packages=find_namespace_packages(include=['jkq.*']),
+    packages=find_namespace_packages(include=['mqt.*']),
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         "Programming Language :: Python :: 3",
@@ -100,10 +100,10 @@ setup(
         "Natural Language :: English",
         "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
     ],
-    keywords="jkq quantum decision_diagrams",
+    keywords="mqt quantum decision_diagrams",
     project_urls={
-        'Source': 'https://github.com/iic-jku/qfr/',
-        'Tracker': 'https://github.com/iic-jku/qfr/issues',
+        'Source': 'https://github.com/cda-tum/qfr/',
+        'Tracker': 'https://github.com/cda-tum/qfr/issues',
         'Research': 'https://iic.jku.at/eda/research/quantum_dd',
     }
 )

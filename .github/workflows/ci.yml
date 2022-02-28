@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, main ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, main ]
   workflow_dispatch:
 
 env:
@@ -94,6 +94,6 @@ jobs:
           submodules: recursive
       - uses: DoozyX/clang-format-lint-action@v0.13
         with:
-          source:             'apps include src test jkq/qfr'
+          source:             'apps include src test mqt/qfr'
           extensions:         'h,hpp,c,cpp'
           clangFormatVersion: 12

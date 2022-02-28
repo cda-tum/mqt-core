@@ -3,6 +3,7 @@ graft src
 graft include
 include apps/*
 graft jkq/*
+graft mqt/*
 include extern/dd_package/CMakeLists.txt
 graft extern/dd_package/src
 graft extern/dd_package/include
