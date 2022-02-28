@@ -53,9 +53,9 @@ target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 
-# add JKQ::DDpackage library
+# add MQT::DDpackage library
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
-target_link_libraries(${PROJECT_NAME} PUBLIC JKQ::DDPackage)
+target_link_libraries(${PROJECT_NAME} PUBLIC MQT::DDPackage)
 
 # add nlohmann::json library
 set(JSON_BuildTests OFF CACHE INTERNAL "")
@@ -98,5 +98,5 @@ if (COVERAGE)
 	target_link_libraries(${PROJECT_NAME} PUBLIC --coverage)
 endif()
 
-# add JKQ alias
-add_library(JKQ::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+# add MQT alias
+add_library(MQT::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
