@@ -258,8 +258,8 @@ namespace qc {
 
         throw QFRException("Non-unitary operation is not reversible! No inverse DD is available.");
     }
-    bool NonUnitaryOperation::equals(const Operation& op2, const Permutation& perm1, const Permutation& perm2) const {
-        if (const auto* nonunitary = dynamic_cast<const NonUnitaryOperation*>(&op2)) {
+    bool NonUnitaryOperation::equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const {
+        if (const auto* nonunitary = dynamic_cast<const NonUnitaryOperation*>(&op)) {
             if (getType() != nonunitary->getType()) {
                 return false;
             }
@@ -304,7 +304,7 @@ namespace qc {
 
                 return measurements1 == measurements2;
             } else {
-                return Operation::equals(op2, perm1, perm2);
+                return Operation::equals(op, perm1, perm2);
             }
         } else {
             return false;

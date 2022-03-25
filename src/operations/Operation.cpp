@@ -228,22 +228,22 @@ namespace qc {
         return os;
     }
 
-    bool Operation::equals(const Operation& op2, const Permutation& perm1, const Permutation& perm2) const {
+    bool Operation::equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const {
         // check type
-        if (getType() != op2.getType()) {
+        if (getType() != op.getType()) {
             return false;
         }
 
         // check number of controls
         const auto nc1 = getNcontrols();
-        const auto nc2 = op2.getNcontrols();
+        const auto nc2 = op.getNcontrols();
         if (nc1 != nc2) {
             return false;
         }
 
         // check parameters
         const auto param1 = getParameter();
-        const auto param2 = op2.getParameter();
+        const auto param2 = op.getParameter();
         for (std::size_t p = 0U; p < qc::MAX_PARAMETERS; ++p) {
             // it might make sense to use fuzzy comparison here
             if (param1[p] != param2[p]) { return false; }
@@ -262,9 +262,9 @@ namespace qc {
 
             dd::Controls controls2{};
             if (perm2.empty()) {
-                controls2 = op2.getControls();
+                controls2 = op.getControls();
             } else {
-                for (const auto& control: op2.getControls()) {
+                for (const auto& control: op.getControls()) {
                     controls2.emplace(dd::Control{perm2.at(control.qubit), control.type});
                 }
             }
@@ -284,9 +284,9 @@ namespace qc {
 
         std::set<dd::Qubit> targets2{};
         if (perm2.empty()) {
-            targets2 = {op2.getTargets().begin(), op2.getTargets().end()};
+            targets2 = {op.getTargets().begin(), op.getTargets().end()};
         } else {
-            for (const auto& target: op2.getTargets()) {
+            for (const auto& target: op.getTargets()) {
                 targets2.emplace(perm2.at(target));
             }
         }

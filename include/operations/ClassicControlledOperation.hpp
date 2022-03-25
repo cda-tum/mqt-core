@@ -111,8 +111,8 @@ namespace qc {
             return op->actsOn(i);
         }
 
-        [[nodiscard]] bool equals(const Operation& op2, const Permutation& perm1, const Permutation& perm2) const override {
-            if (const auto* classic = dynamic_cast<const ClassicControlledOperation*>(&op2)) {
+        [[nodiscard]] bool equals(const Operation& operation, const Permutation& perm1, const Permutation& perm2) const override {
+            if (const auto* classic = dynamic_cast<const ClassicControlledOperation*>(&operation)) {
                 if (controlRegister != classic->controlRegister) {
                     return false;
                 }
@@ -126,7 +126,10 @@ namespace qc {
             } else {
                 return false;
             }
-            return Operation::equals(op2, perm1, perm2);
+            return Operation::equals(operation, perm1, perm2);
+        }
+        [[nodiscard]] bool equals(const Operation& operation) const override {
+            return equals(operation, {}, {});
         }
 
         void dumpOpenQASM([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg) const override {
