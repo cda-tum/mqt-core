@@ -176,6 +176,11 @@ namespace qc {
             return false;
         }
 
+        [[nodiscard]] virtual bool equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const;
+        [[nodiscard]] virtual bool equals(const Operation& op) const {
+            return equals(op, {}, {});
+        }
+
         virtual std::ostream& printParameters(std::ostream& os) const;
         virtual std::ostream& print(std::ostream& os) const;
         virtual std::ostream& print(std::ostream& os, const Permutation& permutation) const;

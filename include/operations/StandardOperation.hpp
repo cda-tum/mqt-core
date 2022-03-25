@@ -90,6 +90,13 @@ namespace qc {
         MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd) const override { return Operation::getInverseDD(dd); }
         MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override;
 
+        [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const override {
+            return Operation::equals(op, perm1, perm2);
+        }
+        [[nodiscard]] bool equals(const Operation& operation) const override {
+            return equals(operation, {}, {});
+        }
+
         void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override;
         void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const override;
         void dumpTensor(std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<dd::Package>& dd) override;

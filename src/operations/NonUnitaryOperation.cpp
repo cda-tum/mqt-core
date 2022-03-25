@@ -258,4 +258,56 @@ namespace qc {
 
         throw QFRException("Non-unitary operation is not reversible! No inverse DD is available.");
     }
+    bool NonUnitaryOperation::equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const {
+        if (const auto* nonunitary = dynamic_cast<const NonUnitaryOperation*>(&op)) {
+            if (getType() != nonunitary->getType()) {
+                return false;
+            }
+
+            if (getType() == Measure) {
+                // check number of qubits to be measured
+                const auto nq1 = qubits.size();
+                const auto nq2 = nonunitary->qubits.size();
+                if (nq1 != nq2) {
+                    return false;
+                }
+
+                // these are just sanity checks and should always be fulfilled
+                assert(qubits.size() == classics.size());
+                assert(nonunitary->qubits.size() == nonunitary->classics.size());
+
+                std::set<std::pair<dd::Qubit, std::size_t>> measurements1{};
+                auto                                        qubitIt1   = qubits.cbegin();
+                auto                                        classicIt1 = classics.cbegin();
+                while (qubitIt1 != qubits.cend()) {
+                    if (perm1.empty()) {
+                        measurements1.emplace(*qubitIt1, *classicIt1);
+                    } else {
+                        measurements1.emplace(perm1.at(*qubitIt1), *classicIt1);
+                    }
+                    ++qubitIt1;
+                    ++classicIt1;
+                }
+
+                std::set<std::pair<dd::Qubit, std::size_t>> measurements2{};
+                auto                                        qubitIt2   = nonunitary->qubits.cbegin();
+                auto                                        classicIt2 = nonunitary->classics.cbegin();
+                while (qubitIt2 != nonunitary->qubits.cend()) {
+                    if (perm2.empty()) {
+                        measurements2.emplace(*qubitIt2, *classicIt2);
+                    } else {
+                        measurements2.emplace(perm2.at(*qubitIt2), *classicIt2);
+                    }
+                    ++qubitIt2;
+                    ++classicIt2;
+                }
+
+                return measurements1 == measurements2;
+            } else {
+                return Operation::equals(op, perm1, perm2);
+            }
+        } else {
+            return false;
+        }
+    }
 } // namespace qc

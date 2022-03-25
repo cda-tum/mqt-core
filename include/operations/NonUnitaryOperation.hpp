@@ -85,6 +85,11 @@ namespace qc {
 
         [[nodiscard]] bool actsOn(dd::Qubit i) const override;
 
+        [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const override;
+        [[nodiscard]] bool equals(const Operation& operation) const override {
+            return equals(operation, {}, {});
+        }
+
         std::ostream& print(std::ostream& os) const override {
             if (type == Measure) {
                 return printNonUnitary(os, qubits, classics);

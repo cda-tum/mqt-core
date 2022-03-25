@@ -1630,3 +1630,72 @@ TEST_F(QFRFunctionality, FlattenRecursive) {
     EXPECT_EQ(gate.getTargets().at(0), 0U);
     EXPECT_TRUE(gate.getControls().empty());
 }
+
+TEST_F(QFRFunctionality, OperationEquality) {
+    const auto x = StandardOperation(1U, 0, qc::X);
+    const auto z = StandardOperation(1U, 0, qc::Z);
+    EXPECT_TRUE(x.equals(x));
+    EXPECT_FALSE(x.equals(z));
+
+    const auto x0 = StandardOperation(2U, 0, qc::X);
+    const auto x1 = StandardOperation(2U, 1, qc::X);
+    EXPECT_FALSE(x0.equals(x1));
+    Permutation perm0{};
+    perm0[0] = 1;
+    perm0[1] = 0;
+    EXPECT_TRUE(x0.equals(x1, perm0, {}));
+    EXPECT_TRUE(x0.equals(x1, {}, perm0));
+
+    const auto cx01 = StandardOperation(2U, 0_pc, 1, qc::X);
+    const auto cx10 = StandardOperation(2U, 1_pc, 0, qc::X);
+    EXPECT_FALSE(cx01.equals(cx10));
+    EXPECT_FALSE(x0.equals(cx01));
+
+    const auto p  = StandardOperation(1U, 0, qc::Phase, 2.0);
+    const auto pm = StandardOperation(1U, 0, qc::Phase, -2.0);
+    EXPECT_FALSE(p.equals(pm));
+
+    const auto measure0 = NonUnitaryOperation(2U, 0, 0U);
+    const auto measure1 = NonUnitaryOperation(2U, 0, 1U);
+    const auto measure2 = NonUnitaryOperation(2U, 1, 0U);
+    EXPECT_FALSE(measure0.equals(x0));
+    EXPECT_TRUE(measure0.equals(measure0));
+    EXPECT_FALSE(measure0.equals(measure1));
+    EXPECT_FALSE(measure0.equals(measure2));
+    EXPECT_TRUE(measure0.equals(measure2, perm0, {}));
+    EXPECT_TRUE(measure0.equals(measure2, {}, perm0));
+
+    const auto controlRegister0 = qc::QuantumRegister{0, 1U};
+    const auto controlRegister1 = qc::QuantumRegister{1, 1U};
+    const auto expectedValue0   = 0U;
+    const auto expectedValue1   = 1U;
+
+    std::unique_ptr<Operation> xp0      = std::make_unique<StandardOperation>(1U, 0, qc::X);
+    std::unique_ptr<Operation> xp1      = std::make_unique<StandardOperation>(1U, 0, qc::X);
+    std::unique_ptr<Operation> xp2      = std::make_unique<StandardOperation>(1U, 0, qc::X);
+    const auto                 classic0 = ClassicControlledOperation(xp0, controlRegister0, expectedValue0);
+    const auto                 classic1 = ClassicControlledOperation(xp1, controlRegister0, expectedValue1);
+    const auto                 classic2 = ClassicControlledOperation(xp2, controlRegister1, expectedValue0);
+    std::unique_ptr<Operation> zp       = std::make_unique<StandardOperation>(1U, 0, qc::Z);
+    const auto                 classic3 = ClassicControlledOperation(zp, controlRegister0, expectedValue0);
+    EXPECT_FALSE(classic0.equals(x));
+    EXPECT_TRUE(classic0.equals(classic0));
+    EXPECT_FALSE(classic0.equals(classic1));
+    EXPECT_FALSE(classic0.equals(classic2));
+    EXPECT_FALSE(classic0.equals(classic3));
+
+    auto compound0 = CompoundOperation(1U);
+    compound0.emplace_back<StandardOperation>(1U, 0, qc::X);
+
+    auto compound1 = CompoundOperation(1U);
+    compound1.emplace_back<StandardOperation>(1U, 0, qc::X);
+    compound1.emplace_back<StandardOperation>(1U, 0, qc::Z);
+
+    auto compound2 = CompoundOperation(1U);
+    compound2.emplace_back<StandardOperation>(1U, 0, qc::Z);
+
+    EXPECT_FALSE(compound0.equals(x));
+    EXPECT_TRUE(compound0.equals(compound0));
+    EXPECT_FALSE(compound0.equals(compound1));
+    EXPECT_FALSE(compound0.equals(compound2));
+}
