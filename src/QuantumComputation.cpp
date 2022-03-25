@@ -96,18 +96,25 @@ namespace qc {
         //      `measure q[i] -> c[j];`
         // implies that the j-th (logical) output is obtained from measuring the i-th physical qubit.
         bool outputPermutationFound = !outputPermutation.empty();
+
+        // track whether the circuit contains measurements at the end of the circuit
+        // if it does, then all qubits that are not measured shall be considered garbage outputs
+        bool                outputPermutationFromMeasurements = false;
+        std::set<dd::Qubit> measuredQubits{};
+
         for (auto opIt = ops.begin(); opIt != ops.end(); ++opIt) {
             if ((*opIt)->getType() == qc::Measure) {
-                if (!isLastOperationOnQubit(opIt))
+                if (!isLastOperationOnQubit(opIt)) {
                     continue;
+                }
 
-                auto op = dynamic_cast<NonUnitaryOperation*>(opIt->get());
+                outputPermutationFromMeasurements = true;
+                auto op                           = dynamic_cast<NonUnitaryOperation*>(opIt->get());
                 assert(op->getTargets().size() == op->getClassics().size());
                 auto classicIt = op->getClassics().cbegin();
                 for (const auto& q: op->getTargets()) {
                     auto qubitidx = q;
                     auto bitidx   = *classicIt;
-
                     if (outputPermutationFound) {
                         // output permutation was already set before -> permute existing values
                         auto current = outputPermutation.at(qubitidx);
@@ -124,7 +131,22 @@ namespace qc {
                         // directly set permutation if none was set beforehand
                         outputPermutation[qubitidx] = static_cast<dd::Qubit>(bitidx);
                     }
+                    measuredQubits.emplace(qubitidx);
                     ++classicIt;
+                }
+            }
+        }
+
+        // clear any qubits that were not measured from the output permutation
+        // these will be marked garbage further down below
+        if (outputPermutationFromMeasurements) {
+            auto it = outputPermutation.begin();
+            while (it != outputPermutation.end()) {
+                const auto [physical, logical] = *it;
+                if (measuredQubits.find(physical) == measuredQubits.end()) {
+                    it = outputPermutation.erase(it);
+                } else {
+                    ++it;
                 }
             }
         }
@@ -133,8 +155,9 @@ namespace qc {
         if (outputPermutation.empty()) {
             for (dd::QubitCount i = 0; i < nqubits; ++i) {
                 // only add to output permutation if the qubit is actually acted upon
-                if (!isIdleQubit(static_cast<dd::Qubit>(i)))
+                if (!isIdleQubit(static_cast<dd::Qubit>(i))) {
                     outputPermutation.insert({static_cast<dd::Qubit>(i), initialLayout.at(static_cast<dd::Qubit>(i))});
+                }
             }
         }
 
