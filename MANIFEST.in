@@ -7,6 +7,19 @@ graft mqt/*
 include extern/dd_package/CMakeLists.txt
 graft extern/dd_package/src
 graft extern/dd_package/include
+
 graft extern/json
+prune extern/json/benchmarks
+prune extern/json/doc
+prune extern/json/include
+prune extern/json/test
+prune extern/json/third_party
+
 graft extern/pybind11
+prune extern/pybind11/docs
+prune extern/pybind11/tests
+
 graft extern/pybind11_json
+prune extern/pybind11_json/test
+
+prune **/.github
