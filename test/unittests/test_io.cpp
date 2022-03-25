@@ -355,3 +355,24 @@ TEST_F(IO, Peresdag_dump_is_valid) {
     EXPECT_NO_THROW(qc->import(ss, qc::OpenQASM););
     std::cout << *qc << std::endl;
 }
+
+TEST_F(IO, printing_non_unitary) {
+    std::stringstream ss{};
+    ss << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[2];"
+       << "creg c[2];"
+       << "h q[0];"
+       << "reset q[0];"
+       << "h q[0];"
+       << "snapshot(1) q[0];"
+       << "barrier q;"
+       << "measure q -> c;"
+       << std::endl;
+    EXPECT_NO_THROW(qc->import(ss, qc::OpenQASM));
+    std::cout << *qc << std::endl;
+    for (const auto& op: *qc) {
+        op->print(std::cout);
+        std::cout << std::endl;
+    }
+}
