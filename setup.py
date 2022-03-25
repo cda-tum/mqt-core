@@ -76,7 +76,7 @@ with open(README_PATH) as readme_file:
 
 setup(
     name='mqt.qfr',
-    version='1.8.0',
+    version='1.9.0',
     author='Lukas Burgholzer',
     author_email='lukas.burgholzer@jku.at',
     description='MQT QFR - A tool for Quantum Functionality Representation',
