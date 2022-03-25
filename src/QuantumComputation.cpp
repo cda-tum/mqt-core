@@ -928,8 +928,10 @@ namespace qc {
     }
 
     std::ostream& QuantumComputation::print(std::ostream& os) const {
+        const auto width = ops.empty() ? 1 : static_cast<int>(std::log10(ops.size()) + 1.);
         if (!ops.empty()) {
-            os << std::setw((int)std::log10(ops.size()) + 1) << "i: \t\t\t";
+            os << std::setw(width) << "i"
+               << ": \t\t\t";
         } else {
             os << "i: \t\t\t";
         }
@@ -940,24 +942,26 @@ namespace qc {
                 os << static_cast<std::size_t>(Q.second) << "\t";
         }
         os << std::endl;
-        size_t i = 0;
+        size_t i = 0U;
         for (const auto& op: ops) {
-            os << std::setw((int)std::log10(ops.size()) + 1) << ++i << ": \t";
+            os << std::setw(width) << ++i << ": \t";
             op->print(os, initialLayout);
             os << std::endl;
         }
         if (!ops.empty()) {
-            os << std::setw((int)std::log10(ops.size()) + 1) << "o: \t\t\t";
+            os << std::setw(width) << "o"
+               << ": \t\t\t";
         } else {
             os << "o: \t\t\t";
         }
         for (const auto& physical_qubit: initialLayout) {
             auto it = outputPermutation.find(physical_qubit.first);
             if (it == outputPermutation.end()) {
-                if (garbage[physical_qubit.second])
+                if (garbage[physical_qubit.second]) {
                     os << "\033[31m|\t\033[0m";
-                else
+                } else {
                     os << "|\t";
+                }
             } else {
                 os << static_cast<std::size_t>(it->second) << "\t";
             }
