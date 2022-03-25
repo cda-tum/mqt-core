@@ -228,4 +228,72 @@ namespace qc {
         return os;
     }
 
+    bool Operation::equals(const Operation& op2, const Permutation& perm1, const Permutation& perm2) const {
+        // check type
+        if (getType() != op2.getType()) {
+            return false;
+        }
+
+        // check number of controls
+        const auto nc1 = getNcontrols();
+        const auto nc2 = op2.getNcontrols();
+        if (nc1 != nc2) {
+            return false;
+        }
+
+        // check parameters
+        const auto param1 = getParameter();
+        const auto param2 = op2.getParameter();
+        for (std::size_t p = 0U; p < qc::MAX_PARAMETERS; ++p) {
+            // it might make sense to use fuzzy comparison here
+            if (param1[p] != param2[p]) { return false; }
+        }
+
+        // check controls
+        if (nc1 != 0U) {
+            dd::Controls controls1{};
+            if (perm1.empty()) {
+                controls1 = getControls();
+            } else {
+                for (const auto& control: getControls()) {
+                    controls1.emplace(dd::Control{perm1.at(control.qubit), control.type});
+                }
+            }
+
+            dd::Controls controls2{};
+            if (perm2.empty()) {
+                controls2 = op2.getControls();
+            } else {
+                for (const auto& control: op2.getControls()) {
+                    controls2.emplace(dd::Control{perm2.at(control.qubit), control.type});
+                }
+            }
+
+            if (controls1 != controls2) { return false; }
+        }
+
+        // check targets
+        std::set<dd::Qubit> targets1{};
+        if (perm1.empty()) {
+            targets1 = {getTargets().begin(), getTargets().end()};
+        } else {
+            for (const auto& target: getTargets()) {
+                targets1.emplace(perm1.at(target));
+            }
+        }
+
+        std::set<dd::Qubit> targets2{};
+        if (perm2.empty()) {
+            targets2 = {op2.getTargets().begin(), op2.getTargets().end()};
+        } else {
+            for (const auto& target: op2.getTargets()) {
+                targets2.emplace(perm2.at(target));
+            }
+        }
+        if (targets1 != targets2) { return false; }
+
+        // operations are identical
+        return true;
+    }
+
 } // namespace qc

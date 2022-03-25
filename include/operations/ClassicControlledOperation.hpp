@@ -111,6 +111,24 @@ namespace qc {
             return op->actsOn(i);
         }
 
+        [[nodiscard]] bool equals(const Operation& op2, const Permutation& perm1, const Permutation& perm2) const override {
+            if (const auto* classic = dynamic_cast<const ClassicControlledOperation*>(&op2)) {
+                if (controlRegister != classic->controlRegister) {
+                    return false;
+                }
+
+                if (expectedValue != classic->expectedValue) {
+                    return false;
+                }
+
+                return op->equals(*classic->op, perm1, perm2);
+
+            } else {
+                return false;
+            }
+            return Operation::equals(op2, perm1, perm2);
+        }
+
         void dumpOpenQASM([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg) const override {
             throw QFRException("Dumping of classically controlled gates currently not supported for qasm");
         }

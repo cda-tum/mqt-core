@@ -85,6 +85,21 @@ namespace qc {
             return e;
         }
 
+        [[nodiscard]] bool equals(const Operation& op2, const Permutation& perm1, const Permutation& perm2) const override {
+            if (const auto* comp = dynamic_cast<const CompoundOperation*>(&op2)) {
+                auto it = comp->ops.cbegin();
+                for (const auto& op: ops) {
+                    if (!op->equals(**it, perm1, perm2)) {
+                        return false;
+                    }
+                    ++it;
+                }
+                return true;
+            } else {
+                return false;
+            }
+        }
+
         std::ostream& print(std::ostream& os) const override {
             os << name;
             for (const auto& op: ops) {
