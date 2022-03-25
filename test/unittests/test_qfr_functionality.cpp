@@ -1640,6 +1640,11 @@ TEST_F(QFRFunctionality, OperationEquality) {
     const auto x0 = StandardOperation(2U, 0, qc::X);
     const auto x1 = StandardOperation(2U, 1, qc::X);
     EXPECT_FALSE(x0.equals(x1));
+    Permutation perm0{};
+    perm0[0] = 1;
+    perm0[1] = 0;
+    EXPECT_TRUE(x0.equals(x1, perm0, {}));
+    EXPECT_TRUE(x0.equals(x1, {}, perm0));
 
     const auto cx01 = StandardOperation(2U, 0_pc, 1, qc::X);
     const auto cx10 = StandardOperation(2U, 1_pc, 0, qc::X);
@@ -1657,6 +1662,8 @@ TEST_F(QFRFunctionality, OperationEquality) {
     EXPECT_TRUE(measure0.equals(measure0));
     EXPECT_FALSE(measure0.equals(measure1));
     EXPECT_FALSE(measure0.equals(measure2));
+    EXPECT_TRUE(measure0.equals(measure2, perm0, {}));
+    EXPECT_TRUE(measure0.equals(measure2, {}, perm0));
 
     const auto controlRegister0 = qc::QuantumRegister{0, 1U};
     const auto controlRegister1 = qc::QuantumRegister{1, 1U};
