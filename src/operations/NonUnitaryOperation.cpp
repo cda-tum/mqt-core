@@ -5,6 +5,7 @@
 
 #include "operations/NonUnitaryOperation.hpp"
 
+#include <algorithm>
 #include <utility>
 
 namespace qc {
@@ -38,68 +39,93 @@ namespace qc {
         type    = op;
         nqubits = nq;
         targets = qubitRegister;
+        std::sort(targets.begin(), targets.end());
         Operation::setName();
     }
 
-    std::ostream& NonUnitaryOperation::printNonUnitary(std::ostream& os, const std::vector<dd::Qubit>& q, const std::vector<std::size_t>& c) const {
+    std::ostream& NonUnitaryOperation::printNonUnitary(std::ostream& os, const std::vector<dd::Qubit>& q, const std::vector<std::size_t>& c, const Permutation& permutation) const {
         auto qubitIt   = q.cbegin();
         auto classicIt = c.cbegin();
         switch (type) {
             case Measure:
                 os << name << "\t";
-                for (int i = 0; i < nqubits; ++i) {
-                    if (qubitIt != q.cend() && *qubitIt == i) {
-                        os << "\033[34m" << static_cast<std::size_t>(*classicIt) << "\t"
-                           << "\033[0m";
-                        ++qubitIt;
-                        ++classicIt;
-                    } else {
-                        os << "|\t";
+                if (permutation.empty()) {
+                    for (int i = 0; i < nqubits; ++i) {
+                        if (qubitIt != q.cend() && *qubitIt == i) {
+                            os << "\033[34m" << static_cast<std::size_t>(*classicIt) << "\t"
+                               << "\033[0m";
+                            ++qubitIt;
+                            ++classicIt;
+                        } else {
+                            os << "|\t";
+                        }
+                    }
+                } else {
+                    for (const auto& [physical, logical]: permutation) {
+                        if (qubitIt != q.cend() && *qubitIt == physical) {
+                            os << "\033[34m" << static_cast<std::size_t>(*classicIt) << "\t"
+                               << "\033[0m";
+                            ++qubitIt;
+                            ++classicIt;
+                        } else {
+                            os << "|\t";
+                        }
                     }
                 }
                 break;
             case Reset:
-                os << name << "\t";
-                for (int i = 0; i < nqubits; ++i) {
-                    if (qubitIt != q.cend() && *qubitIt == i) {
-                        os << "\033[31m"
-                           << "r\t"
-                           << "\033[0m";
-                        ++qubitIt;
-                    } else {
-                        os << "|\t";
-                    }
-                }
-                break;
+            case Barrier:
             case Snapshot:
                 os << name << "\t";
-                for (int i = 0; i < nqubits; ++i) {
-                    if (qubitIt != q.cend() && *qubitIt == i) {
-                        os << "\033[33m"
-                           << "s\t"
-                           << "\033[0m";
-                        ++qubitIt;
-                    } else {
-                        os << "|\t";
+                if (permutation.empty()) {
+                    for (int i = 0; i < nqubits; ++i) {
+                        if (qubitIt != q.cend() && *qubitIt == i) {
+                            if (type == Reset) {
+                                os << "\033[31m"
+                                   << "r\t"
+                                   << "\033[0m";
+                            } else if (type == Barrier) {
+                                os << "\033[32m"
+                                   << "b\t"
+                                   << "\033[0m";
+                            } else {
+                                os << "\033[33m"
+                                   << "s\t"
+                                   << "\033[0m";
+                            }
+                            ++qubitIt;
+                        } else {
+                            os << "|\t";
+                        }
+                    }
+                } else {
+                    for (const auto& [physical, logical]: permutation) {
+                        if (qubitIt != q.cend() && *qubitIt == physical) {
+                            if (type == Reset) {
+                                os << "\033[31m"
+                                   << "r\t"
+                                   << "\033[0m";
+                            } else if (type == Barrier) {
+                                os << "\033[32m"
+                                   << "b\t"
+                                   << "\033[0m";
+                            } else {
+                                os << "\033[33m"
+                                   << "s\t"
+                                   << "\033[0m";
+                            }
+                            ++qubitIt;
+                        } else {
+                            os << "|\t";
+                        }
                     }
                 }
-                os << "\tp: (" << q.size() << ") (" << parameter[1] << ")";
+                if (type == Snapshot) {
+                    os << "\tp: (" << q.size() << ") (" << parameter[1] << ")";
+                }
                 break;
             case ShowProbabilities:
                 os << name;
-                break;
-            case Barrier:
-                os << name << "\t";
-                for (int i = 0; i < nqubits; ++i) {
-                    if (qubitIt != q.cend() && *qubitIt == i) {
-                        os << "\033[32m"
-                           << "b\t"
-                           << "\033[0m";
-                        ++qubitIt;
-                    } else {
-                        os << "|\t";
-                    }
-                }
                 break;
             default:
                 std::cerr << "Non-unitary operation with invalid type " << type << " detected. Proceed with caution!" << std::endl;
