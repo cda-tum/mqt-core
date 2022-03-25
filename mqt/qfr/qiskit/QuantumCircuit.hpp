@@ -29,11 +29,6 @@ namespace qc::qiskit {
                 qc.setName(circ.attr("name").cast<std::string>());
             }
 
-            // import initial layout in case it is available
-            if (!circ.attr("_layout").is_none()) {
-                importInitialLayout(qc, circ);
-            }
-
             // handle qubit registers
             py::object Qubit           = py::module::import("qiskit.circuit").attr("Qubit");
             py::object AncillaQubit    = py::module::import("qiskit.circuit").attr("AncillaQubit");
@@ -90,6 +85,11 @@ namespace qc::qiskit {
                 auto&& params      = instruction.attr("params");
 
                 emplaceOperation(qc, instruction, qargs, cargs, params, qubitMap, clbitMap);
+            }
+
+            // import initial layout in case it is available
+            if (!circ.attr("_layout").is_none()) {
+                importInitialLayout(qc, circ);
             }
             qc.initializeIOMapping();
         }
@@ -280,15 +280,31 @@ namespace qc::qiskit {
             auto&&   registers         = layout.attr("get_registers")().cast<py::set>();
             int      logicalQubitIndex = 0;
             py::dict logicalQubitIndices{};
-            for (const auto qreg: registers) {
-                auto qregName = qreg.attr("name").cast<std::string>();
-                // skip ancillary register
-                if (qregName == "ancilla")
-                    continue;
 
-                auto size = qreg.attr("size").cast<dd::QubitCount>();
+            // the ancilla register
+            decltype(registers.get_type()) ancillaRegister{};
+
+            for (const auto qreg: registers) {
+                const auto qregName = qreg.attr("name").cast<std::string>();
+                // skip ancillary register since it is handled as the very last qubit register
+                if (qregName == "ancilla") {
+                    ancillaRegister = qreg;
+                    continue;
+                }
+
+                const auto size = qreg.attr("size").cast<dd::QubitCount>();
                 for (int i = 0; i < size; ++i) {
                     logicalQubitIndices[Qubit(qreg, i)] = logicalQubitIndex;
+                    logicalQubitIndex++;
+                }
+            }
+
+            // handle ancillary register, if there is one
+            if (!ancillaRegister.is_none()) {
+                const auto size = ancillaRegister.attr("size").cast<dd::QubitCount>();
+                for (int i = 0; i < size; ++i) {
+                    logicalQubitIndices[Qubit(ancillaRegister, i)] = logicalQubitIndex;
+                    qc.setLogicalQubitAncillary(static_cast<dd::Qubit>(logicalQubitIndex));
                     logicalQubitIndex++;
                 }
             }
