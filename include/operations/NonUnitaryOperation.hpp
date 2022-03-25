@@ -15,7 +15,7 @@ namespace qc {
         std::vector<dd::Qubit>   qubits{};   // vector for the qubits to measure (necessary since std::set does not preserve the order of inserted elements)
         std::vector<std::size_t> classics{}; // vector for the classical bits to measure into
 
-        std::ostream& printNonUnitary(std::ostream& os, const std::vector<dd::Qubit>& q, const std::vector<std::size_t>& c = {}) const;
+        std::ostream& printNonUnitary(std::ostream& os, const std::vector<dd::Qubit>& q, const std::vector<std::size_t>& c = {}, const Permutation& permutation = {}) const;
 
         MatrixDD getDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, const Targets& targets) const override;
         MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, const Targets& targets) const override;
@@ -99,9 +99,9 @@ namespace qc {
         }
         std::ostream& print(std::ostream& os, const Permutation& permutation) const override {
             if (type == Measure) {
-                return printNonUnitary(os, permutation.apply(qubits), classics);
+                return printNonUnitary(os, qubits, classics, permutation);
             } else {
-                return printNonUnitary(os, permutation.apply(targets));
+                return printNonUnitary(os, targets, {}, permutation);
             }
         }
 
