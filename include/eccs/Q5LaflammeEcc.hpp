@@ -6,8 +6,8 @@
 #ifndef QFR_Q5LaflammeEcc_HPP
 #define QFR_Q5LaflammeEcc_HPP
 
-#include "QuantumComputation.hpp"
 #include "Ecc.hpp"
+#include "QuantumComputation.hpp"
 
 class Q5LaflammeEcc: public Ecc {
 public:
@@ -24,12 +24,13 @@ protected:
 
     void measureAndCorrect() override;
 
-	void writeDecoding() override;
+    void writeDecoding() override;
 
-	void mapGate(const std::unique_ptr<qc::Operation> &gate) override;
+    void mapGate(const std::unique_ptr<qc::Operation>& gate) override;
 
 private:
-    void writeClassicalControlled(const unsigned int value, int target, qc::OpType optype);
+    void writeClassicalControlled(const unsigned int value, int target, qc::OpType optype, dd::Qubit clStart, dd::QubitCount clCount);
+    void writeClassicalControlledCorrect(const unsigned int value, int target, qc::OpType optype);
 };
 
 #endif //QFR_Q5LaflammeEcc_HPP
