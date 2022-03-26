@@ -23,7 +23,7 @@ void Q7SteaneEcc::initMappedCircuit() {
 }
 
 void Q7SteaneEcc::writeEncoding() {
-    measureAndCorrect();
+    measureAndCorrectSingle(true);
     decodingDone = false;
 }
 
