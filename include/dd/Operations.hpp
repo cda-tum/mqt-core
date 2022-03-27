@@ -164,11 +164,11 @@ namespace dd {
             MatrixDD e = dd->makeIdent(op->getNqubits());
             if (inverse) {
                 for (const auto& operation: *compoundOp) {
-                    e = dd->multiply(e, getInverseDD(operation, dd, permutation));
+                    e = dd->multiply(e, getInverseDD(operation.get(), dd, permutation));
                 }
             } else {
                 for (const auto& operation: *compoundOp) {
-                    e = dd->multiply(getDD(operation, dd, permutation), e);
+                    e = dd->multiply(getDD(operation.get(), dd, permutation), e);
                 }
             }
             return e;
@@ -184,7 +184,8 @@ namespace dd {
 
     template<class DDPackage>
     MatrixDD getDD(const Operation* op, std::unique_ptr<DDPackage>& dd, bool inverse = false) {
-        return getDD(op, dd, {}, inverse);
+        Permutation perm{};
+        return getDD(op, dd, perm, inverse);
     }
 
     template<class DDPackage>
@@ -311,7 +312,7 @@ namespace dd {
                 if (operation != (*compoundOp->begin())) {
                     of << ",\n";
                 }
-                dumpTensor(operation, of, inds, gateIdx, dd);
+                dumpTensor(operation.get(), of, inds, gateIdx, dd);
             }
         } else if (type == Barrier || type == ShowProbabilities || type == Snapshot) {
             return;
