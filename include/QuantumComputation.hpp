@@ -191,11 +191,13 @@ namespace qc {
                 mt.seed(seeds);
             }
         }
-        QuantumComputation(const QuantumComputation& qc)                = delete;
-        QuantumComputation(QuantumComputation&& qc) noexcept            = default;
+        QuantumComputation(const QuantumComputation& qc)     = delete;
+        QuantumComputation(QuantumComputation&& qc) noexcept = default;
+
         QuantumComputation& operator=(const QuantumComputation& qc)     = delete;
         QuantumComputation& operator=(QuantumComputation&& qc) noexcept = default;
-        virtual ~QuantumComputation()                                   = default;
+
+        virtual ~QuantumComputation() = default;
 
         [[nodiscard]] QuantumComputation clone() const {
             auto qc              = QuantumComputation(nqubits);
