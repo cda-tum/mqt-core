@@ -37,14 +37,14 @@ protected:
         initialComplexCount     = dd->cn.complexTable.getCount();
     }
 
-    dd::QubitCount               nqubits = 0;
+    dd::QubitCount                 nqubits = 0;
     std::size_t                    seed    = 0;
     std::unique_ptr<dd::Package<>> dd;
     std::unique_ptr<qc::Grover>    qc;
-    std::size_t                  initialCacheCount   = 0;
-    std::size_t                  initialComplexCount = 0;
-    qc::VectorDD                 sim{};
-    qc::MatrixDD                 func{};
+    std::size_t                    initialCacheCount   = 0;
+    std::size_t                    initialComplexCount = 0;
+    qc::VectorDD                   sim{};
+    qc::MatrixDD                   func{};
 };
 
 constexpr dd::QubitCount GROVER_MAX_QUBITS       = 18;
