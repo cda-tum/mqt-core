@@ -13,15 +13,6 @@
 
 namespace qc {
     class Grover: public QuantumComputation {
-    protected:
-        void setup(QuantumComputation& qc) const;
-
-        void oracle(QuantumComputation& qc) const;
-
-        void diffusion(QuantumComputation& qc) const;
-
-        void full_grover(QuantumComputation& qc) const;
-
     public:
         std::size_t    seed        = 0;
         BitString      targetValue = 0;
@@ -31,8 +22,13 @@ namespace qc {
 
         explicit Grover(dd::QubitCount nq, std::size_t seed = 0);
 
-        MatrixDD buildFunctionality(std::unique_ptr<dd::Package>& dd) const override;
-        MatrixDD buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const override;
+        void setup(QuantumComputation& qc) const;
+
+        void oracle(QuantumComputation& qc) const;
+
+        void diffusion(QuantumComputation& qc) const;
+
+        void full_grover(QuantumComputation& qc) const;
 
         std::ostream& printStatistics(std::ostream& os) const override;
     };

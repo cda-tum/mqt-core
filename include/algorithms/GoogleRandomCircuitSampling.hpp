@@ -33,22 +33,6 @@ namespace qc {
 
         std::ostream& printStatistics(std::ostream& os) const override;
 
-        MatrixDD buildFunctionality(std::unique_ptr<dd::Package>& dd) const override;
-        MatrixDD buildFunctionality(std::unique_ptr<dd::Package>& dd, unsigned short ncycles) {
-            if (ncycles < cycles.size() - 2) {
-                removeCycles(cycles.size() - 2 - ncycles);
-            }
-            return buildFunctionality(dd);
-        }
-        VectorDD simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd) const override;
-        using QuantumComputation::simulate;
-        VectorDD simulate(unsigned short ncycles, const VectorDD& in, std::unique_ptr<dd::Package>& dd) {
-            if (ncycles < cycles.size() - 2) {
-                removeCycles(cycles.size() - 2 - ncycles);
-            }
-            return simulate(in, dd);
-        }
-
         void removeCycles(unsigned short ncycles) {
             if (ncycles > cycles.size() - 2) {
                 std::stringstream ss{};

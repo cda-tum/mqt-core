@@ -134,37 +134,4 @@ namespace qc {
         os << "--------------" << std::endl;
         return os;
     }
-
-    MatrixDD GoogleRandomCircuitSampling::buildFunctionality(std::unique_ptr<dd::Package>& dd) const {
-        Permutation permutation = initialLayout;
-        auto        e           = dd->makeIdent(nqubits);
-        dd->incRef(e);
-        for (const auto& cycle: cycles) {
-            auto f = dd->makeIdent(nqubits);
-            for (const auto& op: cycle)
-                f = dd->multiply(op->getDD(dd, permutation), f);
-            auto g = dd->multiply(f, e);
-            dd->decRef(e);
-            dd->incRef(g);
-            e = g;
-            dd->garbageCollect();
-        }
-        return e;
-    }
-
-    VectorDD GoogleRandomCircuitSampling::simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd) const {
-        Permutation permutation = initialLayout;
-        auto        e           = in;
-        dd->incRef(e);
-        for (const auto& cycle: cycles) {
-            for (const auto& op: cycle) {
-                auto tmp = dd->multiply(op->getDD(dd, permutation), e);
-                dd->incRef(tmp);
-                dd->decRef(e);
-                e = tmp;
-                dd->garbageCollect();
-            }
-        }
-        return e;
-    }
 } // namespace qc

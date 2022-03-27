@@ -4,6 +4,8 @@
  */
 
 #include "algorithms/GoogleRandomCircuitSampling.hpp"
+#include "dd/FunctionalityConstruction.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 
@@ -26,10 +28,10 @@ TEST_F(GRCS, import) {
 TEST_F(GRCS, simulate) {
     auto qc_bris = qc::GoogleRandomCircuitSampling("./circuits/grcs/bris_4_40_9_v2.txt");
 
-    auto dd = std::make_unique<dd::Package>(qc_bris.getNqubits());
+    auto dd = std::make_unique<dd::Package<>>(qc_bris.getNqubits());
     auto in = dd->makeZeroState(qc_bris.getNqubits());
     ASSERT_NO_THROW({
-        qc_bris.simulate(4, in, dd);
+        simulate(&qc_bris, in, dd, 4);
     });
     std::cout << qc_bris << std::endl;
     qc_bris.printStatistics(std::cout);
@@ -38,9 +40,9 @@ TEST_F(GRCS, simulate) {
 TEST_F(GRCS, buildFunctionality) {
     auto qc_bris = qc::GoogleRandomCircuitSampling("./circuits/grcs/bris_4_40_9_v2.txt");
 
-    auto dd = std::make_unique<dd::Package>(qc_bris.getNqubits());
+    auto dd = std::make_unique<dd::Package<>>(qc_bris.getNqubits());
     ASSERT_NO_THROW({
-        qc_bris.buildFunctionality(dd, 4);
+        buildFunctionality(&qc_bris, dd, 4);
     });
     std::cout << qc_bris << std::endl;
     qc_bris.printStatistics(std::cout);

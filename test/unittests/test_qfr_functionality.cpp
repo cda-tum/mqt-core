@@ -6,6 +6,7 @@
 #include "CircuitOptimizer.hpp"
 #include "QuantumComputation.hpp"
 #include "algorithms/RandomCliffordCircuit.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
 #include <random>
@@ -19,7 +20,7 @@ protected:
     }
 
     void SetUp() override {
-        dd = std::make_unique<dd::Package>(5);
+        dd = std::make_unique<dd::Package<>>(5);
 
         std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
         std::random_device                                                    rd;
@@ -29,7 +30,7 @@ protected:
         dist = std::uniform_real_distribution<dd::fp>(0.0, 2 * dd::PI);
     }
 
-    std::unique_ptr<dd::Package>           dd;
+    std::unique_ptr<dd::Package<>>         dd;
     std::mt19937_64                        mt;
     std::uniform_real_distribution<dd::fp> dist;
 };
@@ -131,7 +132,7 @@ TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
     EXPECT_EQ(qc.getNqubitsWithoutAncillae(), nqubits);
     EXPECT_EQ(qc.getNqubits(), 3);
     qc.emplace_back<StandardOperation>(nqubits, 2, qc::X);
-    auto e = qc.createInitialMatrix(dd);
+    auto e = dd->createInitialMatrix(qc.getNqubits(), qc.ancillary);
     EXPECT_EQ(e.p->e[0], dd->makeIdent(nqubits));
     EXPECT_EQ(e.p->e[1], MatrixDD::zero);
     EXPECT_EQ(e.p->e[2], MatrixDD::zero);
@@ -216,9 +217,9 @@ TEST_F(QFRFunctionality, FuseTwoSingleQubitGates) {
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
 
     qc.print(std::cout);
-    dd::Edge e = qc.buildFunctionality(dd);
+    dd::Edge e = buildFunctionality(&qc, dd);
     CircuitOptimizer::singleQubitGateFusion(qc);
-    dd::Edge f = qc.buildFunctionality(dd);
+    dd::Edge f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     EXPECT_EQ(qc.getNops(), 1);
@@ -232,11 +233,11 @@ TEST_F(QFRFunctionality, FuseThreeSingleQubitGates) {
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::Y);
 
-    dd::Edge e = qc.buildFunctionality(dd);
+    dd::Edge e = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::singleQubitGateFusion(qc);
-    dd::Edge f = qc.buildFunctionality(dd);
+    dd::Edge f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     EXPECT_EQ(qc.getNops(), 1);
@@ -249,11 +250,11 @@ TEST_F(QFRFunctionality, FuseNoSingleQubitGates) {
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 0_pc, 1, qc::X);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::Y);
-    dd::Edge e = qc.buildFunctionality(dd);
+    dd::Edge e = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::singleQubitGateFusion(qc);
-    dd::Edge f = qc.buildFunctionality(dd);
+    dd::Edge f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     EXPECT_EQ(qc.getNops(), 3);
@@ -266,11 +267,11 @@ TEST_F(QFRFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 1, qc::Z);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::Y);
-    auto e = qc.buildFunctionality(dd);
+    auto e = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::singleQubitGateFusion(qc);
-    auto f = qc.buildFunctionality(dd);
+    auto f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     EXPECT_EQ(qc.getNops(), 2);
@@ -1583,8 +1584,8 @@ TEST_F(QFRFunctionality, FlattenRandomClifford) {
     qc::RandomCliffordCircuit rcs(2U, 3U, 0U);
     std::cout << rcs << std::endl;
 
-    auto dd     = std::make_unique<dd::Package>(2U);
-    auto before = rcs.buildFunctionality(dd);
+    auto dd     = std::make_unique<dd::Package<>>(2U);
+    auto before = buildFunctionality(&rcs, dd);
 
     qc::CircuitOptimizer::flattenOperations(rcs);
     std::cout << rcs << std::endl;
@@ -1593,7 +1594,7 @@ TEST_F(QFRFunctionality, FlattenRandomClifford) {
         EXPECT_FALSE(op->isCompoundOperation());
     }
 
-    auto after = rcs.buildFunctionality(dd);
+    auto after = buildFunctionality(&rcs, dd);
     EXPECT_EQ(before, after);
 }
 

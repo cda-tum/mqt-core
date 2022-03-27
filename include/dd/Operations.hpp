@@ -103,19 +103,6 @@ namespace dd {
         }
     }
 
-    template<class DDPackage>
-    MatrixDD getDD(const Operation* op, std::unique_ptr<DDPackage>& dd, const dd::Controls& controls, const Targets& targets, bool inverse = false) {
-        if (auto standardOp = dynamic_cast<const StandardOperation*>(op)) {
-            if (op->getType() == SWAP || op->getType() == iSWAP || op->getType() == Peres || op->getType() == Peresdag) {
-                assert(targets.size() == 2);
-                return getStandardOperationDD(standardOp, dd, controls, targets[0U], targets[1U], inverse);
-            } else {
-                assert(targets.size() == 1);
-                return getStandardOperationDD(standardOp, dd, controls, targets[0U], inverse);
-            }
-        }
-    }
-
     // The methods with a permutation parameter apply these Operations according to the mapping specified by the permutation, e.g.
     //      if perm[0] = 1 and perm[1] = 0
     //      then cx 0 1 will be translated to cx perm[0] perm[1] == cx 1 0
@@ -276,7 +263,10 @@ namespace dd {
             op->setNqubits(localQubits);
 
             // get DD for local operation
-            const auto localDD = getDD(op, dd, localControls, localTargets);
+            auto localOp = op->clone();
+            localOp->setControls(localControls);
+            localOp->setTargets(localTargets);
+            const auto localDD = getDD(localOp.get(), dd);
 
             // translate local DD to matrix
             const auto localMatrix = dd->getMatrix(localDD);
@@ -320,6 +310,56 @@ namespace dd {
             std::clog << "Skipping measurement in tensor dump." << std::endl;
         } else {
             throw QFRException("Dumping of tensors is currently only supported for StandardOperations.");
+        }
+    }
+
+    // apply swaps 'on' DD in order to change 'from' to 'to'
+    // where |from| >= |to|
+    template<class DDType, class DDPackage>
+    void changePermutation(DDType& on, Permutation& from, const Permutation& to, std::unique_ptr<DDPackage>& dd, bool regular = true) {
+        assert(from.size() >= to.size());
+
+        // iterate over (k,v) pairs of second permutation
+        for (const auto& [i, goal]: to) {
+            // search for key in the first map
+            auto it = from.find(i);
+            if (it == from.end()) {
+                throw QFRException("[changePermutation] Key " + std::to_string(it->first) + " was not found in first permutation. This should never happen.");
+            }
+            auto current = it->second;
+
+            // permutations agree for this key value
+            if (current == goal) continue;
+
+            // search for goal value in first permutation
+            dd::Qubit j = 0;
+            for (const auto& [key, value]: from) {
+                if (value == goal) {
+                    j = key;
+                    break;
+                }
+            }
+
+            // swap i and j
+            auto saved = on;
+            if constexpr (std::is_same_v<DDType, VectorDD>) {
+                on = dd->multiply(dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)), on);
+            } else {
+                // the regular flag only has an effect on matrix DDs
+                if (regular) {
+                    on = dd->multiply(dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)), on);
+                } else {
+                    on = dd->multiply(on, dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)));
+                }
+            }
+
+            dd->incRef(on);
+            dd->decRef(saved);
+            dd->garbageCollect();
+
+            // update permutation
+            from.at(i) = goal;
+            from.at(j) = current;
         }
     }
 

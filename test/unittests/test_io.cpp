@@ -4,6 +4,8 @@
  */
 
 #include "QuantumComputation.hpp"
+#include "dd/FunctionalityConstruction.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <fstream>
@@ -309,13 +311,13 @@ TEST_F(IO, changePermutation) {
        << "x q[0];"
        << std::endl;
     qc->import(ss, qc::OpenQASM);
-    auto dd  = std::make_unique<dd::Package>();
-    auto sim = qc->simulate(dd->makeZeroState(qc->getNqubits()), dd);
+    auto dd  = std::make_unique<dd::Package<>>();
+    auto sim = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd);
     EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
     EXPECT_TRUE(sim.p->e[1].w.approximatelyOne());
     EXPECT_TRUE(sim.p->e[1].p->e[1].isZeroTerminal());
     EXPECT_TRUE(sim.p->e[1].p->e[0].w.approximatelyOne());
-    auto func = qc->buildFunctionality(dd);
+    auto func = buildFunctionality(qc.get(), dd);
     EXPECT_FALSE(func.p->e[0].isZeroTerminal());
     EXPECT_FALSE(func.p->e[1].isZeroTerminal());
     EXPECT_FALSE(func.p->e[2].isZeroTerminal());

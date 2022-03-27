@@ -4,6 +4,8 @@
  */
 
 #include "algorithms/QFT.hpp"
+#include "dd/FunctionalityConstruction.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <cmath>
@@ -26,18 +28,18 @@ protected:
 
     void SetUp() override {
         nqubits             = GetParam();
-        dd                  = std::make_unique<dd::Package>(nqubits);
+        dd                  = std::make_unique<dd::Package<>>(nqubits);
         initialCacheCount   = dd->cn.complexCache.getCount();
         initialComplexCount = dd->cn.complexTable.getCount();
     }
 
-    dd::QubitCount               nqubits = 0;
-    std::unique_ptr<dd::Package> dd;
-    std::unique_ptr<qc::QFT>     qc;
-    std::size_t                  initialCacheCount   = 0;
-    std::size_t                  initialComplexCount = 0;
-    qc::VectorDD                 sim{};
-    qc::MatrixDD                 func{};
+    dd::QubitCount                 nqubits = 0;
+    std::unique_ptr<dd::Package<>> dd;
+    std::unique_ptr<qc::QFT>       qc;
+    std::size_t                    initialCacheCount   = 0;
+    std::size_t                    initialComplexCount = 0;
+    qc::VectorDD                   sim{};
+    qc::MatrixDD                   func{};
 };
 
 /// Findings from the QFT Benchmarks:
@@ -69,7 +71,7 @@ TEST_P(QFT, Functionality) {
     // there should be no error constructing the circuit
     ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
     // there should be no error building the functionality
-    ASSERT_NO_THROW({ func = qc->buildFunctionality(dd); });
+    ASSERT_NO_THROW({ func = buildFunctionality(qc.get(), dd); });
 
     qc->printStatistics(std::cout);
     // QFT DD should consist of 2^n nodes
@@ -102,7 +104,7 @@ TEST_P(QFT, FunctionalityRecursive) {
     ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
     // there should be no error building the functionality
-    ASSERT_NO_THROW({ func = qc->buildFunctionalityRecursive(dd); });
+    ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), dd); });
 
     qc->printStatistics(std::cout);
     // QFT DD should consist of 2^n nodes
@@ -137,7 +139,7 @@ TEST_P(QFT, Simulation) {
     // there should be no error simulating the circuit
     ASSERT_NO_THROW({
         auto in = dd->makeZeroState(nqubits);
-        sim     = qc->simulate(in, dd);
+        sim     = simulate(qc.get(), in, dd);
     });
     qc->printStatistics(std::cout);
 
@@ -164,11 +166,11 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
     ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
     // there should be no error building the functionality recursively
-    ASSERT_NO_THROW({ func = qc->buildFunctionalityRecursive(dd); });
+    ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), dd); });
 
     // there should be no error building the functionality regularly
     qc::MatrixDD funcRec{};
-    ASSERT_NO_THROW({ funcRec = qc->buildFunctionality(dd); });
+    ASSERT_NO_THROW({ funcRec = buildFunctionality(qc.get(), dd); });
 
     ASSERT_EQ(func, funcRec);
     dd->decRef(funcRec);
@@ -181,9 +183,8 @@ TEST_P(QFT, DynamicSimulation) {
     qc->printStatistics(std::cout);
 
     // simulate the circuit
-    auto        dd           = std::make_unique<dd::Package>(qc->getNqubits());
-    std::size_t shots        = 8192;
-    auto        measurements = qc->simulate(dd->makeZeroState(qc->getNqubits()), dd, shots);
+    std::size_t shots        = 8192U;
+    auto        measurements = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd, shots);
 
     for (const auto& [state, count]: measurements) {
         std::cout << state << ": " << count << std::endl;

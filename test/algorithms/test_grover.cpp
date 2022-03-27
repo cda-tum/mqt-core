@@ -4,6 +4,8 @@
  */
 
 #include "algorithms/Grover.hpp"
+#include "dd/FunctionalityConstruction.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <cmath>
@@ -30,15 +32,15 @@ protected:
 
     void SetUp() override {
         std::tie(nqubits, seed) = GetParam();
-        dd                      = std::make_unique<dd::Package>(nqubits + 1);
+        dd                      = std::make_unique<dd::Package<>>(nqubits + 1);
         initialCacheCount       = dd->cn.complexCache.getCount();
         initialComplexCount     = dd->cn.complexTable.getCount();
     }
 
     dd::QubitCount               nqubits = 0;
-    std::size_t                  seed    = 0;
-    std::unique_ptr<dd::Package> dd;
-    std::unique_ptr<qc::Grover>  qc;
+    std::size_t                    seed    = 0;
+    std::unique_ptr<dd::Package<>> dd;
+    std::unique_ptr<qc::Grover>    qc;
     std::size_t                  initialCacheCount   = 0;
     std::size_t                  initialComplexCount = 0;
     qc::VectorDD                 sim{};
@@ -78,7 +80,7 @@ TEST_P(Grover, Functionality) {
     std::replace(x.begin(), x.end(), '1', '2');
 
     // there should be no error building the functionality
-    ASSERT_NO_THROW({ func = qc->buildFunctionality(dd); });
+    ASSERT_NO_THROW({ func = buildFunctionality(qc.get(), dd); });
 
     // amplitude of the searched-for entry should be 1
     auto c = dd->getValueByPath(func, x);
@@ -98,7 +100,7 @@ TEST_P(Grover, FunctionalityRecursive) {
     std::replace(x.begin(), x.end(), '1', '2');
 
     // there should be no error building the functionality
-    ASSERT_NO_THROW({ func = qc->buildFunctionalityRecursive(dd); });
+    ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), dd); });
 
     // amplitude of the searched-for entry should be 1
     auto c = dd->getValueByPath(func, x);
@@ -116,7 +118,7 @@ TEST_P(Grover, Simulation) {
     auto in = dd->makeZeroState(nqubits + 1);
     // there should be no error simulating the circuit
     std::size_t shots        = 1024;
-    auto        measurements = qc->simulate(in, dd, shots);
+    auto        measurements = simulate(qc.get(), in, dd, shots);
 
     for (const auto& [state, count]: measurements) {
         std::cout << state << ": " << count << std::endl;

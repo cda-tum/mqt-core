@@ -37,7 +37,10 @@ add_library(${PROJECT_NAME}
             ${${PROJECT_NAME}_SOURCE_DIR}/include/QuantumComputation.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/CircuitOptimizer.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/Definitions.hpp
+
             ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Operations.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/FunctionalityConstruction.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Simulation.hpp
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QFT.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Grover.hpp

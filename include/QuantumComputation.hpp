@@ -7,6 +7,7 @@
 #define QFR_QUANTUMCOMPUTATION_H
 
 #include "Definitions.hpp"
+#include "dd/Operations.hpp"
 #include "operations/ClassicControlledOperation.hpp"
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/StandardOperation.hpp"
@@ -176,10 +177,10 @@ namespace qc {
                 mt.seed(seeds);
             }
         }
-        explicit QuantumComputation(const std::string& filename, std::size_t seed = 0):
+        explicit QuantumComputation(const std::string& filename, std::size_t seed = 0U):
             seed(seed) {
             import(filename);
-            if (seed != 0) {
+            if (seed != 0U) {
                 mt.seed(seed);
             } else {
                 // create and properly seed rng
@@ -190,9 +191,9 @@ namespace qc {
                 mt.seed(seeds);
             }
         }
-        QuantumComputation(const QuantumComputation& qc)     = delete;
-        QuantumComputation(QuantumComputation&& qc) noexcept = default;
-        QuantumComputation& operator=(const QuantumComputation& qc) = delete;
+        QuantumComputation(const QuantumComputation& qc)                = delete;
+        QuantumComputation(QuantumComputation&& qc) noexcept            = default;
+        QuantumComputation& operator=(const QuantumComputation& qc)     = delete;
         QuantumComputation& operator=(QuantumComputation&& qc) noexcept = default;
         virtual ~QuantumComputation()                                   = default;
 
@@ -247,16 +248,17 @@ namespace qc {
         [[nodiscard]] std::pair<std::string, dd::Qubit>   getQubitRegisterAndIndex(dd::Qubit physicalQubitIndex) const;
         [[nodiscard]] std::pair<std::string, std::size_t> getClassicalRegisterAndIndex(std::size_t classicalIndex) const;
 
-        [[nodiscard]] dd::Qubit   getIndexFromQubitRegister(const std::pair<std::string, dd::Qubit>& qubit) const;
-        [[nodiscard]] std::size_t getIndexFromClassicalRegister(const std::pair<std::string, std::size_t>& clbit) const;
-        [[nodiscard]] bool        isIdleQubit(dd::Qubit physicalQubit) const;
-        [[nodiscard]] bool        isLastOperationOnQubit(const decltype(ops.cbegin())& opIt, const decltype(ops.cend())& end) const;
-        [[nodiscard]] bool        physicalQubitIsAncillary(dd::Qubit physicalQubitIndex) const;
-        [[nodiscard]] bool        logicalQubitIsAncillary(dd::Qubit logicalQubitIndex) const { return ancillary[logicalQubitIndex]; }
-        void                      setLogicalQubitAncillary(dd::Qubit logicalQubitIndex) { ancillary[logicalQubitIndex] = true; }
-        [[nodiscard]] bool        logicalQubitIsGarbage(dd::Qubit logicalQubitIndex) const { return garbage[logicalQubitIndex]; }
-        void                      setLogicalQubitGarbage(dd::Qubit logicalQubitIndex);
-        MatrixDD                  createInitialMatrix(std::unique_ptr<dd::Package>& dd) const; // creates identity matrix, which is reduced with respect to the ancillary qubits
+        [[nodiscard]] dd::Qubit                getIndexFromQubitRegister(const std::pair<std::string, dd::Qubit>& qubit) const;
+        [[nodiscard]] std::size_t              getIndexFromClassicalRegister(const std::pair<std::string, std::size_t>& clbit) const;
+        [[nodiscard]] bool                     isIdleQubit(dd::Qubit physicalQubit) const;
+        [[nodiscard]] bool                     isLastOperationOnQubit(const decltype(ops.cbegin())& opIt, const decltype(ops.cend())& end) const;
+        [[nodiscard]] bool                     physicalQubitIsAncillary(dd::Qubit physicalQubitIndex) const;
+        [[nodiscard]] bool                     logicalQubitIsAncillary(dd::Qubit logicalQubitIndex) const { return ancillary[logicalQubitIndex]; }
+        void                                   setLogicalQubitAncillary(dd::Qubit logicalQubitIndex) { ancillary[logicalQubitIndex] = true; }
+        [[nodiscard]] bool                     logicalQubitIsGarbage(dd::Qubit logicalQubitIndex) const { return garbage[logicalQubitIndex]; }
+        void                                   setLogicalQubitGarbage(dd::Qubit logicalQubitIndex);
+        [[nodiscard]] const std::vector<bool>& getAncillary() const { return ancillary; }
+        [[nodiscard]] const std::vector<bool>& getGarbage() const { return garbage; }
 
         void i(dd::Qubit target) { emplace_back<StandardOperation>(getNqubits(), target, qc::I); }
         void i(dd::Qubit target, const dd::Control& control) { emplace_back<StandardOperation>(getNqubits(), control, target, qc::I); }
@@ -362,55 +364,6 @@ namespace qc {
         /// strip away qubits with no operations applied to them and which do not pop up in the output permutation
         /// \param force if true, also strip away idle qubits occurring in the output permutation
         void stripIdleQubits(bool force = false, bool reduceIOpermutations = true);
-        // apply swaps 'on' DD in order to change 'from' to 'to'
-        // where |from| >= |to|
-        template<class DDType>
-        static void changePermutation(DDType& on, Permutation& from, const Permutation& to, std::unique_ptr<dd::Package>& dd, bool regular = true) {
-            assert(from.size() >= to.size());
-
-            // iterate over (k,v) pairs of second permutation
-            for (const auto& [i, goal]: to) {
-                // search for key in the first map
-                auto it = from.find(i);
-                if (it == from.end()) {
-                    throw QFRException("[changePermutation] Key " + std::to_string(it->first) + " was not found in first permutation. This should never happen.");
-                }
-                auto current = it->second;
-
-                // permutations agree for this key value
-                if (current == goal) continue;
-
-                // search for goal value in first permutation
-                dd::Qubit j = 0;
-                for (const auto& [key, value]: from) {
-                    if (value == goal) {
-                        j = key;
-                        break;
-                    }
-                }
-
-                // swap i and j
-                auto saved = on;
-                if constexpr (std::is_same_v<DDType, VectorDD>) {
-                    on = dd->multiply(dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)), on);
-                } else {
-                    // the regular flag only has an effect on matrix DDs
-                    if (regular) {
-                        on = dd->multiply(dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)), on);
-                    } else {
-                        on = dd->multiply(on, dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)));
-                    }
-                }
-
-                dd->incRef(on);
-                dd->decRef(saved);
-                dd->garbageCollect();
-
-                // update permutation
-                from.at(i) = goal;
-                from.at(j) = current;
-            }
-        }
 
         void import(const std::string& filename);
         void import(const std::string& filename, Format format);
@@ -448,14 +401,6 @@ namespace qc {
             max_controls = std::max(ncontrols, max_controls);
         }
 
-        virtual VectorDD                           simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd) const;
-        virtual std::map<std::string, std::size_t> simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd, std::size_t shots);
-        virtual MatrixDD                           buildFunctionality(std::unique_ptr<dd::Package>& dd) const;
-        virtual MatrixDD                           buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const;
-        virtual bool                               buildFunctionalityRecursive(std::size_t depth, std::size_t opIdx, std::stack<MatrixDD>& s, Permutation& permutation, std::unique_ptr<dd::Package>& dd) const;
-
-        virtual void extractProbabilityVector(const VectorDD& in, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package>& dd);
-        virtual void extractProbabilityVectorRecursive(const VectorDD& currentState, decltype(ops.begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package>& dd);
         /**
 		 * printing
 		 */
@@ -549,6 +494,7 @@ namespace qc {
         std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator pos, T&& op) { return ops.insert(pos, std::forward<T>(op)); }
 
         [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }
+        [[nodiscard]] const auto& front() const { return ops.front(); }
     };
 } // namespace qc
 #endif //QFR_QUANTUMCOMPUTATION_H
