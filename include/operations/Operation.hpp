@@ -8,6 +8,7 @@
 
 #include "Definitions.hpp"
 #include "OpType.hpp"
+#include "dd/ComplexValue.hpp"
 
 #include <array>
 #include <cstring>
@@ -40,11 +41,14 @@ namespace qc {
         }
 
     public:
-        Operation()                                   = default;
-        Operation(const Operation& op)                = delete;
-        Operation(Operation&& op) noexcept            = default;
+        Operation() = default;
+
+        Operation(const Operation& op)     = delete;
+        Operation(Operation&& op) noexcept = default;
+
         Operation& operator=(const Operation& op)     = delete;
         Operation& operator=(Operation&& op) noexcept = default;
+
         // Virtual Destructor
         virtual ~Operation() = default;
 

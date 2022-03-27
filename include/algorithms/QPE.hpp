@@ -6,7 +6,7 @@
 #ifndef QFR_QPE_HPP
 #define QFR_QPE_HPP
 
-#include <QuantumComputation.hpp>
+#include "QuantumComputation.hpp"
 
 using namespace dd::literals;
 

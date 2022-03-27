@@ -6,7 +6,8 @@
 #ifndef QFR_GROVER_H
 #define QFR_GROVER_H
 
-#include <QuantumComputation.hpp>
+#include "QuantumComputation.hpp"
+
 #include <bitset>
 #include <functional>
 #include <random>

@@ -6,8 +6,6 @@
 #ifndef QFR_OPTYPE_HPP
 #define QFR_OPTYPE_HPP
 
-#include "dd/Definitions.hpp"
-
 #include <cstdint>
 #include <functional>
 #include <iostream>

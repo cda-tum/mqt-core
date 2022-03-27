@@ -6,8 +6,10 @@
 #ifndef QFR_DEFINITIONS_HPP
 #define QFR_DEFINITIONS_HPP
 
-#include "dd/Package.hpp"
+#include "dd/Control.hpp"
+#include "dd/Definitions.hpp"
 
+#include <bitset>
 #include <deque>
 #include <map>
 #include <memory>
@@ -36,9 +38,6 @@ namespace qc {
     using QuantumRegisterMap   = RegisterMap<QuantumRegister>;
     using ClassicalRegisterMap = RegisterMap<ClassicalRegister>;
     using RegisterNames        = std::vector<std::pair<std::string, std::string>>;
-
-    using VectorDD = dd::vEdge;
-    using MatrixDD = dd::mEdge;
 
     using Targets = std::vector<dd::Qubit>;
 

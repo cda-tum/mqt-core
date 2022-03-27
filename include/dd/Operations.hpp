@@ -15,6 +15,11 @@
 
 #include <variant>
 
+namespace qc {
+    using VectorDD = dd::vEdge;
+    using MatrixDD = dd::mEdge;
+} // namespace qc
+
 namespace dd {
     using namespace qc;
 
