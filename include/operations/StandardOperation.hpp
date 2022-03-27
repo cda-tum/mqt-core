@@ -7,7 +7,6 @@
 #define QFR_STANDARDOPERATION_H
 
 #include "Operation.hpp"
-#include "dd/GateMatrixDefinitions.hpp"
 
 namespace qc {
     class StandardOperation final: public Operation {
@@ -33,30 +32,6 @@ namespace qc {
 
         void checkUgate();
         void setup(dd::QubitCount nq, dd::fp par0, dd::fp par1, dd::fp par2, dd::Qubit startingQubit = 0);
-
-        // single-target operations
-        MatrixDD getStandardOperationDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, dd::Qubit target, bool inverse) const;
-        // two-target operations
-        MatrixDD getStandardOperationDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, bool inverse) const;
-
-        MatrixDD getDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, const Targets& targets) const override {
-            if (type == SWAP || type == iSWAP || type == Peres || type == Peresdag) {
-                assert(targets.size() == 2);
-                return getStandardOperationDD(dd, controls, targets[0], targets[1], false);
-            } else {
-                assert(targets.size() == 1);
-                return getStandardOperationDD(dd, controls, targets[0], false);
-            }
-        }
-        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, const Targets& targets) const override {
-            if (type == SWAP || type == iSWAP || type == Peres || type == Peresdag) {
-                assert(targets.size() == 2);
-                return getStandardOperationDD(dd, controls, targets[0], targets[1], true);
-            } else {
-                assert(targets.size() == 1);
-                return getStandardOperationDD(dd, controls, targets[0], true);
-            }
-        }
 
     public:
         StandardOperation() = default;
@@ -85,11 +60,6 @@ namespace qc {
             return true;
         }
 
-        MatrixDD getDD(std::unique_ptr<dd::Package>& dd) const override { return Operation::getDD(dd); }
-        MatrixDD getDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override;
-        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd) const override { return Operation::getInverseDD(dd); }
-        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override;
-
         [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const override {
             return Operation::equals(op, perm1, perm2);
         }
@@ -99,7 +69,6 @@ namespace qc {
 
         void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override;
         void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const override;
-        void dumpTensor(std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<dd::Package>& dd) override;
     };
 
 } // namespace qc

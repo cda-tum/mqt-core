@@ -8,7 +8,6 @@
 
 #include "Definitions.hpp"
 #include "OpType.hpp"
-#include "dd/Package.hpp"
 
 #include <array>
 #include <cstring>
@@ -39,10 +38,6 @@ namespace qc {
         static bool isWholeQubitRegister(const RegisterNames& reg, std::size_t start, std::size_t end) {
             return !reg.empty() && reg[start].first == reg[end].first && (start == 0 || reg[start].first != reg[start - 1].first) && (end == reg.size() - 1 || reg[end].first != reg[end + 1].first);
         }
-
-        virtual MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, const Targets& targets) const = 0;
-
-        virtual MatrixDD getDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, const Targets& targets) const = 0;
 
     public:
         Operation()                        = default;
@@ -122,24 +117,6 @@ namespace qc {
             Operation::parameter = p;
         }
 
-        // Public Methods
-        // The methods with a permutation parameter apply these operations according to the mapping specified by the permutation, e.g.
-        //      if perm[0] = 1 and perm[1] = 0
-        //      then cx 0 1 will be translated to cx perm[0] perm[1] == cx 1 0
-        virtual MatrixDD getDD(std::unique_ptr<dd::Package>& dd) const {
-            return getDD(dd, controls, targets);
-        }
-        virtual MatrixDD getDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const {
-            return getDD(dd, permutation.apply(controls), permutation.apply(targets));
-        }
-
-        virtual MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd) const {
-            return getInverseDD(dd, controls, targets);
-        }
-        virtual MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const {
-            return getInverseDD(dd, permutation.apply(controls), permutation.apply(targets));
-        }
-
         [[nodiscard]] inline virtual bool isUnitary() const {
             return true;
         }
@@ -191,7 +168,6 @@ namespace qc {
 
         virtual void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const                           = 0;
         virtual void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const   = 0;
-        virtual void dumpTensor(std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<dd::Package>& dd) = 0;
     };
 } // namespace qc
 #endif //QFR_OPERATION_H

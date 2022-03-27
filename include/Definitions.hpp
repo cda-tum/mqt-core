@@ -37,8 +37,8 @@ namespace qc {
     using ClassicalRegisterMap = RegisterMap<ClassicalRegister>;
     using RegisterNames        = std::vector<std::pair<std::string, std::string>>;
 
-    using VectorDD = dd::Package::vEdge;
-    using MatrixDD = dd::Package::mEdge;
+    using VectorDD = dd::vEdge;
+    using MatrixDD = dd::mEdge;
 
     using Targets = std::vector<dd::Qubit>;
 

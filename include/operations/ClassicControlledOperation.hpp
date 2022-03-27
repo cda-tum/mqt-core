@@ -16,13 +16,6 @@ namespace qc {
         std::pair<dd::Qubit, dd::QubitCount> controlRegister{};
         unsigned int                         expectedValue = 1U;
 
-        MatrixDD getDD([[maybe_unused]] std::unique_ptr<dd::Package>& dd, [[maybe_unused]] const dd::Controls& controls, [[maybe_unused]] const Targets& targets) const override {
-            throw QFRException("[ClassicControlledOperation] protected getDD called which should not happen.");
-        }
-        MatrixDD getInverseDD([[maybe_unused]] std::unique_ptr<dd::Package>& dd, [[maybe_unused]] const dd::Controls& controls, [[maybe_unused]] const Targets& targets) const override {
-            throw QFRException("[ClassicControlledOperation] protected getInverseDD called which should not happen.");
-        }
-
     public:
         // Applies operation `_op` if the creg starting at index `control` has the expected value
         ClassicControlledOperation(std::unique_ptr<qc::Operation>& _op, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, unsigned int expectedValue = 1U):
@@ -40,22 +33,6 @@ namespace qc {
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {
             auto op_cloned = op->clone();
             return std::make_unique<ClassicControlledOperation>(op_cloned, controlRegister, expectedValue);
-        }
-
-        MatrixDD getDD(std::unique_ptr<dd::Package>& dd) const override {
-            return op->getDD(dd);
-        }
-
-        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd) const override {
-            return op->getInverseDD(dd);
-        }
-
-        MatrixDD getDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override {
-            return op->getDD(dd, permutation);
-        }
-
-        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override {
-            return op->getInverseDD(dd, permutation);
         }
 
         [[nodiscard]] auto getControlRegister() const {
@@ -138,10 +115,6 @@ namespace qc {
 
         void dumpQiskit([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg, [[maybe_unused]] const char* anc_reg_name) const override {
             throw QFRException("Dumping of classically controlled gates currently not supported for qiskit");
-        }
-
-        void dumpTensor([[maybe_unused]] std::ostream& of, [[maybe_unused]] std::vector<std::size_t>& inds, [[maybe_unused]] std::size_t& gateIdx, [[maybe_unused]] std::unique_ptr<dd::Package>& dd) override {
-            throw QFRException("Dumping of classically controlled gates currently not supported for tensor");
         }
     };
 } // namespace qc

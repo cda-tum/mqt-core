@@ -246,19 +246,6 @@ namespace qc {
         }
     }
 
-    void NonUnitaryOperation::dumpTensor([[maybe_unused]] std::ostream& of, [[maybe_unused]] std::vector<std::size_t>& inds, [[maybe_unused]] std::size_t& gateIdx, [[maybe_unused]] std::unique_ptr<dd::Package>& dd) {
-        if (type == Barrier || type == ShowProbabilities || type == Snapshot)
-            return;
-
-        if (type == Measure) {
-            std::clog << "Skipping measurement in tensor dump." << std::endl;
-        }
-
-        if (type == Reset) {
-            throw QFRException("Reset operation cannot be dumped to tensor");
-        }
-    }
-
     bool NonUnitaryOperation::actsOn(dd::Qubit i) const {
         if (type == Measure) {
             return std::any_of(qubits.cbegin(), qubits.cend(), [&i](const auto& q) { return q == i; });
@@ -268,22 +255,6 @@ namespace qc {
         return false; // other non-unitary operations (e.g., barrier statements) may be ignored
     }
 
-    MatrixDD NonUnitaryOperation::getDD(std::unique_ptr<dd::Package>& dd, [[maybe_unused]] const dd::Controls& controls, [[maybe_unused]] const Targets& targets) const {
-        // these operations do not alter the current state
-        if (type == ShowProbabilities || type == Barrier || type == Snapshot) {
-            return dd->makeIdent(nqubits);
-        }
-
-        throw QFRException("DD for non-unitary operation not available!");
-    }
-    MatrixDD NonUnitaryOperation::getInverseDD(std::unique_ptr<dd::Package>& dd, [[maybe_unused]] const dd::Controls& controls, [[maybe_unused]] const Targets& targets) const {
-        // these operations do not alter the current state
-        if (type == ShowProbabilities || type == Barrier || type == Snapshot) {
-            return dd->makeIdent(nqubits);
-        }
-
-        throw QFRException("Non-unitary operation is not reversible! No inverse DD is available.");
-    }
     bool NonUnitaryOperation::equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const {
         if (const auto* nonunitary = dynamic_cast<const NonUnitaryOperation*>(&op)) {
             if (getType() != nonunitary->getType()) {
