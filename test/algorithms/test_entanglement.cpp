@@ -1,9 +1,10 @@
 /*
  * This file is part of MQT QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "algorithms/Entanglement.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
 #include <string>
@@ -27,12 +28,12 @@ INSTANTIATE_TEST_SUITE_P(Entanglement, Entanglement,
 TEST_P(Entanglement, FunctionTest) {
     const dd::QubitCount nq = GetParam();
 
-    auto                              dd = std::make_unique<dd::Package>(nq);
+    auto                              dd = std::make_unique<dd::Package<>>(nq);
     std::unique_ptr<qc::Entanglement> qc;
     qc::MatrixDD                      e{};
 
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Entanglement>(nq); });
-    ASSERT_NO_THROW({ e = qc->buildFunctionality(dd); });
+    ASSERT_NO_THROW({ e = buildFunctionality(qc.get(), dd); });
 
     ASSERT_EQ(qc->getNops(), nq);
     qc::VectorDD r = dd->multiply(e, dd->makeZeroState(nq));

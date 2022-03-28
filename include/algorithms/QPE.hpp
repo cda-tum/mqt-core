@@ -1,12 +1,11 @@
 /*
  * This file is part of MQT QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_QPE_HPP
-#define QFR_QPE_HPP
+#pragma once
 
-#include <QuantumComputation.hpp>
+#include "QuantumComputation.hpp"
 
 using namespace dd::literals;
 
@@ -26,4 +25,3 @@ namespace qc {
         void createCircuit();
     };
 } // namespace qc
-#endif //QFR_QPE_HPP

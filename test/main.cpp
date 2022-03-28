@@ -1,12 +1,14 @@
 /*
  * This file is part of MQT QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "QuantumComputation.hpp"
 #include "algorithms/Grover.hpp"
 #include "algorithms/QFT.hpp"
 #include "dd/Export.hpp"
+#include "dd/FunctionalityConstruction.hpp"
+#include "dd/Simulation.hpp"
 
 using namespace std;
 
@@ -28,14 +30,14 @@ int main() {
     n = 2;
     qc::Grover grover(n); // generates Grover's algorithm for a random n-bit oracle
 
-    auto dd            = make_unique<dd::Package>(n + 1); // create an instance of the DD package
-    auto functionality = qft.buildFunctionality(dd);
+    auto dd            = make_unique<dd::Package<>>(n + 1); // create an instance of the DD package
+    auto functionality = buildFunctionality(&qft, dd);
     dd->printMatrix(functionality);
     dd::export2Dot(functionality, "functionality.dot");
     std::cout << std::endl;
 
     auto initial_state = dd->makeZeroState(n + 1); // create initial state |0...0>
-    auto state_vector  = grover.simulate(initial_state, dd);
+    auto state_vector  = simulate(&grover, initial_state, dd);
     dd->printVector(state_vector);
     dd::export2Dot(state_vector, "state_vector.dot", true);
     std::cout << std::endl

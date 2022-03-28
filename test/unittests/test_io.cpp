@@ -1,9 +1,11 @@
 /*
  * This file is part of MQT QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "QuantumComputation.hpp"
+#include "dd/FunctionalityConstruction.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <fstream>
@@ -30,10 +32,10 @@ protected:
 void compare_files(const std::string& file1, const std::string& file2, bool strip_whitespaces = false) {
     std::ifstream fstream1(file1);
     std::string   str1((std::istreambuf_iterator<char>(fstream1)),
-                     std::istreambuf_iterator<char>());
+                       std::istreambuf_iterator<char>());
     std::ifstream fstream2(file2);
     std::string   str2((std::istreambuf_iterator<char>(fstream2)),
-                     std::istreambuf_iterator<char>());
+                       std::istreambuf_iterator<char>());
     if (strip_whitespaces) {
         str1.erase(std::remove_if(str1.begin(), str1.end(), isspace), str1.end());
         str2.erase(std::remove_if(str2.begin(), str2.end(), isspace), str2.end());
@@ -309,13 +311,13 @@ TEST_F(IO, changePermutation) {
        << "x q[0];"
        << std::endl;
     qc->import(ss, qc::OpenQASM);
-    auto dd  = std::make_unique<dd::Package>();
-    auto sim = qc->simulate(dd->makeZeroState(qc->getNqubits()), dd);
+    auto dd  = std::make_unique<dd::Package<>>();
+    auto sim = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd);
     EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
     EXPECT_TRUE(sim.p->e[1].w.approximatelyOne());
     EXPECT_TRUE(sim.p->e[1].p->e[1].isZeroTerminal());
     EXPECT_TRUE(sim.p->e[1].p->e[0].w.approximatelyOne());
-    auto func = qc->buildFunctionality(dd);
+    auto func = buildFunctionality(qc.get(), dd);
     EXPECT_FALSE(func.p->e[0].isZeroTerminal());
     EXPECT_FALSE(func.p->e[1].isZeroTerminal());
     EXPECT_FALSE(func.p->e[2].isZeroTerminal());

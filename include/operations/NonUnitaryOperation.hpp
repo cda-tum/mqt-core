@@ -1,10 +1,9 @@
 /*
  * This file is part of MQT QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_NONUNITARYOPERATION_H
-#define QFR_NONUNITARYOPERATION_H
+#pragma once
 
 #include "Operation.hpp"
 
@@ -16,9 +15,6 @@ namespace qc {
         std::vector<std::size_t> classics{}; // vector for the classical bits to measure into
 
         std::ostream& printNonUnitary(std::ostream& os, const std::vector<dd::Qubit>& q, const std::vector<std::size_t>& c = {}, const Permutation& permutation = {}) const;
-
-        MatrixDD getDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, const Targets& targets) const override;
-        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, const Targets& targets) const override;
 
     public:
         // Measurement constructor
@@ -105,22 +101,7 @@ namespace qc {
             }
         }
 
-        MatrixDD getDD(std::unique_ptr<dd::Package>& dd) const override {
-            return Operation::getDD(dd);
-        }
-        MatrixDD getDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override {
-            return Operation::getDD(dd, permutation);
-        }
-        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd) const override {
-            return Operation::getInverseDD(dd);
-        }
-        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override {
-            return Operation::getInverseDD(dd, permutation);
-        }
-
         void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override;
         void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const override;
-        void dumpTensor(std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<dd::Package>& dd) override;
     };
 } // namespace qc
-#endif //QFR_NONUNITARYOPERATION_H

@@ -1,6 +1,6 @@
 /*
  * This file is part of MQT QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "QuantumComputation.hpp"
@@ -44,11 +44,11 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                 nqubits = static_cast<dd::QubitCount>(nq);
             }
             nclassics = nqubits;
-            if (nqubits + nancillae > dd::Package::maxPossibleQubits) {
+            if (nqubits + nancillae > dd::Package<>::maxPossibleQubits) {
                 throw QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
-                                   std::to_string(dd::Package::maxPossibleQubits) + " qubits, while " +
+                                   std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, while " +
                                    std::to_string(nqubits + nancillae) + " were requested. If you want to use more than " +
-                                   std::to_string(dd::Package::maxPossibleQubits) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
+                                   std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
             }
         } else if (cmd == ".VARIABLES") {
             for (dd::QubitCount i = 0; i < nqubits; ++i) {

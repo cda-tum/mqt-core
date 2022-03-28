@@ -1,13 +1,14 @@
 /*
  * This file is part of MQT QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_DEFINITIONS_HPP
-#define QFR_DEFINITIONS_HPP
+#pragma once
 
-#include "dd/Package.hpp"
+#include "dd/Control.hpp"
+#include "dd/Definitions.hpp"
 
+#include <bitset>
 #include <deque>
 #include <map>
 #include <memory>
@@ -36,9 +37,6 @@ namespace qc {
     using QuantumRegisterMap   = RegisterMap<QuantumRegister>;
     using ClassicalRegisterMap = RegisterMap<ClassicalRegister>;
     using RegisterNames        = std::vector<std::pair<std::string, std::string>>;
-
-    using VectorDD = dd::Package::vEdge;
-    using MatrixDD = dd::Package::mEdge;
 
     using Targets = std::vector<dd::Qubit>;
 
@@ -83,5 +81,3 @@ namespace qc {
     using DAGIterators        = std::vector<DAGIterator>;
     using DAGReverseIterators = std::vector<DAGReverseIterator>;
 } // namespace qc
-
-#endif //QFR_DEFINITIONS_HPP
