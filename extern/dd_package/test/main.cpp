@@ -1,6 +1,6 @@
 /*
  * This file is part of the MQT DD Package which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum_dd/ for more information.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum_dd/ for more information.
  */
 
 #include "dd/Export.hpp"
@@ -12,7 +12,7 @@
 
 using namespace dd::literals;
 
-auto BellCicuit1(std::unique_ptr<dd::Package>& dd) {
+auto BellCicuit1(std::unique_ptr<dd::Package<>>& dd) {
     /***** define Hadamard gate acting on q0 *****/
     auto h_gate = dd->makeGateDD(dd::Hmat, 2, 0);
 
@@ -23,7 +23,7 @@ auto BellCicuit1(std::unique_ptr<dd::Package>& dd) {
     return dd->multiply(cx_gate, h_gate);
 }
 
-auto BellCicuit2(std::unique_ptr<dd::Package>& dd) {
+auto BellCicuit2(std::unique_ptr<dd::Package<>>& dd) {
     /***** define Hadamard gate acting on q1 *****/
     auto h_gate_q1 = dd->makeGateDD(dd::Hmat, 2, 1);
 
@@ -38,9 +38,9 @@ auto BellCicuit2(std::unique_ptr<dd::Package>& dd) {
 }
 
 int main() {
-    dd::Package::printInformation(); // uncomment to print various sizes of structs and arrays
+    dd::Package<>::printInformation(); // uncomment to print various sizes of structs and arrays
     //Initialize package
-    auto dd = std::make_unique<dd::Package>(4);
+    auto dd = std::make_unique<dd::Package<>>(4);
 
     // create Bell circuit 1
     auto bell_circuit1 = BellCicuit1(dd);

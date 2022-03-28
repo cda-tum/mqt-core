@@ -1,6 +1,6 @@
 /*
  * This file is part of the MQT DD Package which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum_dd/ for more information.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum_dd/ for more information.
  */
 
 #ifndef DDexport_H
@@ -248,7 +248,7 @@ namespace dd {
         return os;
     }
 
-    [[maybe_unused]] static std::ostream& modernNode(const Package::mEdge& e, std::ostream& os, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& modernNode(const mEdge& e, std::ostream& os, bool formatAsPolar = true) {
         auto nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
         os << nodelabel << "[label=<";
         os << R"(<font point-size="10"><table border="1" cellspacing="0" cellpadding="2" style="rounded">)";
@@ -265,7 +265,7 @@ namespace dd {
         os << "</table></font>>,tooltip=\"q" << static_cast<std::size_t>(e.p->v) << "\"]\n";
         return os;
     }
-    [[maybe_unused]] static std::ostream& modernNode(const Package::vEdge& e, std::ostream& os, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& modernNode(const vEdge& e, std::ostream& os, bool formatAsPolar = true) {
         auto nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
         os << nodelabel << "[label=<";
         os << R"(<font point-size="8"><table border="1" cellspacing="0" cellpadding="0" style="rounded">)";
@@ -275,7 +275,7 @@ namespace dd {
         os << "</tr></table></font>>,tooltip=\"q" << static_cast<std::size_t>(e.p->v) << "\"]\n";
         return os;
     }
-    [[maybe_unused]] static std::ostream& classicNode(const Package::mEdge& e, std::ostream& os, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& classicNode(const mEdge& e, std::ostream& os, bool formatAsPolar = true) {
         auto nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
         os << nodelabel << "[shape=circle, width=0.53, fixedsize=true, label=<";
         os << R"(<font point-size="6"><table border="0" cellspacing="0" cellpadding="0">)";
@@ -313,7 +313,7 @@ namespace dd {
         os << "<td></td></tr></table></font>>,tooltip=\"q" << static_cast<std::size_t>(e.p->v) << "\"]\n";
         return os;
     }
-    [[maybe_unused]] static std::ostream& classicNode(const Package::vEdge& e, std::ostream& os, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& classicNode(const vEdge& e, std::ostream& os, bool formatAsPolar = true) {
         auto nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
         os << nodelabel << "[shape=circle, width=0.46, fixedsize=true, label=<";
         os << R"(<font point-size="6"><table border="0" cellspacing="0" cellpadding="0">)";
@@ -359,7 +359,7 @@ namespace dd {
         return os;
     }
 
-    [[maybe_unused]] static std::ostream& bwEdge(const Package::mEdge& from, const Package::mEdge& to, short idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& bwEdge(const mEdge& from, const mEdge& to, short idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -398,7 +398,7 @@ namespace dd {
 
         return os;
     }
-    [[maybe_unused]] static std::ostream& bwEdge(const Package::vEdge& from, const Package::vEdge& to, short idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& bwEdge(const vEdge& from, const vEdge& to, short idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -422,7 +422,7 @@ namespace dd {
 
         return os;
     }
-    [[maybe_unused]] static std::ostream& coloredEdge(const Package::mEdge& from, const Package::mEdge& to, short idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& coloredEdge(const mEdge& from, const mEdge& to, short idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -459,7 +459,7 @@ namespace dd {
 
         return os;
     }
-    [[maybe_unused]] static std::ostream& coloredEdge(const Package::vEdge& from, const Package::vEdge& to, short idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& coloredEdge(const vEdge& from, const vEdge& to, short idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -614,7 +614,7 @@ namespace dd {
     /// Note: do not rely on the binary format being portable across different architectures/platforms
     ///
 
-    [[maybe_unused]] static void serialize(const Package::vEdge& basic, std::ostream& os, bool writeBinary = false) {
+    [[maybe_unused]] static void serialize(const vEdge& basic, std::ostream& os, bool writeBinary = false) {
         if (writeBinary) {
             os.write(reinterpret_cast<const char*>(&SERIALIZATION_VERSION), sizeof(decltype(SERIALIZATION_VERSION)));
             basic.w.writeBinary(os);
@@ -622,11 +622,11 @@ namespace dd {
             os << SERIALIZATION_VERSION << "\n";
             os << basic.w.toString(false, 16) << "\n";
         }
-        std::int_least64_t                                      next_index = 0;
-        std::unordered_map<Package::vNode*, std::int_least64_t> node_index{};
+        std::int_least64_t                             next_index = 0;
+        std::unordered_map<vNode*, std::int_least64_t> node_index{};
 
         // POST ORDER TRAVERSAL USING ONE STACK   https://www.geeksforgeeks.org/iterative-postorder-traversal-using-stack/
-        std::stack<const Package::vEdge*> stack{};
+        std::stack<const vEdge*> stack{};
 
         auto node = &basic;
         if (!node->isTerminal()) {
@@ -700,7 +700,7 @@ namespace dd {
             } while (!stack.empty());
         }
     }
-    static void serializeMatrix(const Package::mEdge& basic, std::int_least64_t& idx, std::unordered_map<Package::mNode*, std::int_least64_t>& node_index, std::unordered_set<Package::mNode*>& visited, std::ostream& os, bool writeBinary = false) {
+    static void serializeMatrix(const mEdge& basic, std::int_least64_t& idx, std::unordered_map<mNode*, std::int_least64_t>& node_index, std::unordered_set<mNode*>& visited, std::ostream& os, bool writeBinary = false) {
         if (!basic.isTerminal()) {
             for (auto& e: basic.p->e) {
                 if (auto [iter, success] = visited.insert(e.p); success) {
@@ -739,7 +739,7 @@ namespace dd {
             }
         }
     }
-    [[maybe_unused]] static void serialize(const Package::mEdge& basic, std::ostream& os, bool writeBinary = false) {
+    [[maybe_unused]] static void serialize(const mEdge& basic, std::ostream& os, bool writeBinary = false) {
         if (writeBinary) {
             os.write(reinterpret_cast<const char*>(&SERIALIZATION_VERSION), sizeof(decltype(SERIALIZATION_VERSION)));
             basic.w.writeBinary(os);
@@ -747,9 +747,9 @@ namespace dd {
             os << SERIALIZATION_VERSION << "\n";
             os << basic.w.toString(false, std::numeric_limits<dd::fp>::max_digits10) << "\n";
         }
-        std::int_least64_t                                      idx = 0;
-        std::unordered_map<Package::mNode*, std::int_least64_t> node_index{};
-        std::unordered_set<Package::mNode*>                     visited{};
+        std::int_least64_t                             idx = 0;
+        std::unordered_map<mNode*, std::int_least64_t> node_index{};
+        std::unordered_set<mNode*>                     visited{};
         serializeMatrix(basic, idx, node_index, visited, os, writeBinary);
     }
     template<class Edge>

@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.14...3.19)
 # project definition
 project(DDPackage
         LANGUAGES CXX
-        VERSION 2.0.2
+        VERSION 2.1.0
         DESCRIPTION "MQT decision diagram package tailored to quantum computing")
 
 # enable organization of targets into folders
@@ -39,6 +39,7 @@ target_sources(${PROJECT_NAME} INTERFACE
                $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Edge.hpp>
                $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Export.hpp>
                $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/GateMatrixDefinitions.hpp>
+               $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Node.hpp>
                $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/NoiseOperationTable.hpp>
                $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Package.hpp>
                $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/ToffoliTable.hpp>
