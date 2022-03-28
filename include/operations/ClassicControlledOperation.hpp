@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_CLASSICCONTROLLEDOPERATION_H
-#define QFR_CLASSICCONTROLLEDOPERATION_H
+#pragma once
 
 #include "Operation.hpp"
 
@@ -118,4 +117,3 @@ namespace qc {
         }
     };
 } // namespace qc
-#endif //QFR_CLASSICCONTROLLEDOPERATION_H

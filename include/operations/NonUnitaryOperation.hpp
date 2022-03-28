@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_NONUNITARYOPERATION_H
-#define QFR_NONUNITARYOPERATION_H
+#pragma once
 
 #include "Operation.hpp"
 
@@ -106,4 +105,3 @@ namespace qc {
         void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const override;
     };
 } // namespace qc
-#endif //QFR_NONUNITARYOPERATION_H

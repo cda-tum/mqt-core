@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_PARSER_H
-#define QFR_PARSER_H
+#pragma once
 
 #include "Definitions.hpp"
 #include "Scanner.hpp"
@@ -241,4 +240,3 @@ namespace qasm {
     };
 
 } // namespace qasm
-#endif //QFR_PARSER_H

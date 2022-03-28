@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_ENTANGLEMENT_H
-#define QFR_ENTANGLEMENT_H
+#pragma once
 
 #include <QuantumComputation.hpp>
 
@@ -14,5 +13,3 @@ namespace qc {
         explicit Entanglement(dd::QubitCount nq);
     };
 } // namespace qc
-
-#endif //QFR_ENTANGLEMENT_H

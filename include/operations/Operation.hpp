@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_OPERATION_H
-#define QFR_OPERATION_H
+#pragma once
 
 #include "Definitions.hpp"
 #include "OpType.hpp"
@@ -174,4 +173,3 @@ namespace qc {
         virtual void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const = 0;
     };
 } // namespace qc
-#endif //QFR_OPERATION_H

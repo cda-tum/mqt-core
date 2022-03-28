@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_GRCS_H
-#define QFR_GRCS_H
+#pragma once
 
 #include <QuantumComputation.hpp>
 #include <chrono>
@@ -48,5 +47,3 @@ namespace qc {
         }
     };
 } // namespace qc
-
-#endif //QFR_GRCS_H

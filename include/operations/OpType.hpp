@@ -3,8 +3,7 @@
 * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
 */
 
-#ifndef QFR_OPTYPE_HPP
-#define QFR_OPTYPE_HPP
+#pragma once
 
 #include <cstdint>
 #include <functional>
@@ -179,5 +178,3 @@ namespace qc {
         return out;
     }
 } // namespace qc
-
-#endif //QFR_OPTYPE_HPP

@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_QFT_H
-#define QFR_QFT_H
+#pragma once
 
 #include "QuantumComputation.hpp"
 
@@ -23,5 +22,3 @@ namespace qc {
         void createCircuit();
     };
 } // namespace qc
-
-#endif //QFR_QFT_H

@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_TOKEN_H
-#define QFR_TOKEN_H
+#pragma once
 
 #include "dd/Definitions.hpp"
 
@@ -129,5 +128,3 @@ namespace qasm {
             {Token::Kind::comment, "//"}};
 
 } // namespace qasm
-
-#endif //QFR_TOKEN_H

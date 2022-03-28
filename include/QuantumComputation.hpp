@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_QUANTUMCOMPUTATION_H
-#define QFR_QUANTUMCOMPUTATION_H
+#pragma once
 
 #include "Definitions.hpp"
 #include "dd/Operations.hpp"
@@ -499,4 +498,3 @@ namespace qc {
         [[nodiscard]] const auto& front() const { return ops.front(); }
     };
 } // namespace qc
-#endif //QFR_QUANTUMCOMPUTATION_H

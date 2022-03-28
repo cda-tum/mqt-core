@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_GROVER_H
-#define QFR_GROVER_H
+#pragma once
 
 #include "QuantumComputation.hpp"
 
@@ -34,5 +33,3 @@ namespace qc {
         std::ostream& printStatistics(std::ostream& os) const override;
     };
 } // namespace qc
-
-#endif //QFR_GROVER_H

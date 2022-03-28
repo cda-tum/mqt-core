@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_COMPOUNDOPERATION_H
-#define QFR_COMPOUNDOPERATION_H
+#pragma once
 
 #include "Operation.hpp"
 
@@ -161,4 +160,3 @@ namespace qc {
         std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
     };
 } // namespace qc
-#endif //QFR_COMPOUNDOPERATION_H

@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_STANDARDOPERATION_H
-#define QFR_STANDARDOPERATION_H
+#pragma once
 
 #include "Operation.hpp"
 
@@ -72,4 +71,3 @@ namespace qc {
     };
 
 } // namespace qc
-#endif //QFR_STANDARDOPERATION_H

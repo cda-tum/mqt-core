@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_DEFINITIONS_HPP
-#define QFR_DEFINITIONS_HPP
+#pragma once
 
 #include "dd/Control.hpp"
 #include "dd/Definitions.hpp"
@@ -82,5 +81,3 @@ namespace qc {
     using DAGIterators        = std::vector<DAGIterator>;
     using DAGReverseIterators = std::vector<DAGReverseIterator>;
 } // namespace qc
-
-#endif //QFR_DEFINITIONS_HPP

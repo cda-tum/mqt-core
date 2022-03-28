@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_RANDOMCLIFFORDCIRCUIT_HPP
-#define QFR_RANDOMCLIFFORDCIRCUIT_HPP
+#pragma once
 
 #include <QuantumComputation.hpp>
 #include <functional>
@@ -27,5 +26,3 @@ namespace qc {
         std::ostream& printStatistics(std::ostream& os) const override;
     };
 } // namespace qc
-
-#endif //QFR_RANDOMCLIFFORDCIRCUIT_HPP

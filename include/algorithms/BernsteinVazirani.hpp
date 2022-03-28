@@ -3,8 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_BV_H
-#define QFR_BV_H
+#pragma once
 
 #include <QuantumComputation.hpp>
 #include <bitset>
@@ -29,4 +28,3 @@ namespace qc {
         void createCircuit();
     };
 } // namespace qc
-#endif //QFR_BV_H
