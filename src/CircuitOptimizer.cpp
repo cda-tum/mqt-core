@@ -86,8 +86,8 @@ namespace qc {
                 continue;
             }
 
-            dd::Qubit control = it->getControls().begin()->qubit;
-            dd::Qubit target  = it->getTargets().at(0);
+            const dd::Qubit control = it->getControls().begin()->qubit;
+            const dd::Qubit target  = it->getTargets().at(0);
 
             // first operation
             if (dag.at(control).empty() || dag.at(target).empty()) {
@@ -105,10 +105,10 @@ namespace qc {
                 continue;
             }
 
-            auto opCcontrol = (*opC)->getControls().begin()->qubit;
-            auto opCtarget  = (*opC)->getTargets().at(0);
-            auto opTcontrol = (*opT)->getControls().begin()->qubit;
-            auto opTtarget  = (*opT)->getTargets().at(0);
+            const auto opCcontrol = (*opC)->getControls().begin()->qubit;
+            const auto opCtarget  = (*opC)->getTargets().at(0);
+            const auto opTcontrol = (*opT)->getControls().begin()->qubit;
+            const auto opTtarget  = (*opT)->getTargets().at(0);
 
             // operation at control and target qubit are not the same
             if (opCcontrol != opTcontrol || opCtarget != opTtarget) {
@@ -258,7 +258,7 @@ namespace qc {
                 continue;
             }
 
-            auto target = it->getTargets().at(0);
+            const auto target = it->getTargets().at(0);
 
             // first operation
             if (dag.at(target).empty()) {
@@ -1041,7 +1041,7 @@ namespace qc {
                 actsOn.set(q);
                 for (std::size_t i = 0; i < dag.size(); ++i) {
                     // actually check in reverse order
-                    auto qb = static_cast<dd::Qubit>(dag.size() - 1 - i);
+                    const auto qb = static_cast<dd::Qubit>(dag.size() - 1 - i);
                     if (qb != q && op->actsOn(static_cast<dd::Qubit>(qb))) {
                         actsOn.set(qb);
 
