@@ -1,7 +1,7 @@
 [submodule "extern/dd_package"]
 	path = extern/dd_package
 	url = https://github.com/cda-tum/dd_package.git
-	branch = template_parameters
+	branch = main
 	shallow = true
 [submodule "extern/json"]
 	path = extern/json
