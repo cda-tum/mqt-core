@@ -19,6 +19,10 @@ namespace dd {
             return MatrixDD::one;
         }
 
+        if (auto grover = dynamic_cast<const Grover*>(qc)) {
+            return buildFunctionality(grover, dd);
+        }
+
         auto permutation = qc->initialLayout;
         auto e           = dd->createInitialMatrix(qc->getNqubits(), qc->ancillary);
 
@@ -43,6 +47,10 @@ namespace dd {
     MatrixDD buildFunctionalityRecursive(const QuantumComputation* qc, std::unique_ptr<DDPackage>& dd) {
         if (qc->getNqubits() == 0U) {
             return MatrixDD::one;
+        }
+
+        if (auto grover = dynamic_cast<const Grover*>(qc)) {
+            return buildFunctionalityRecursive(grover, dd);
         }
 
         auto permutation = qc->initialLayout;
@@ -110,7 +118,7 @@ namespace dd {
     }
 
     template<class DDPackage>
-    MatrixDD buildFunctionality(Grover* qc, std::unique_ptr<DDPackage>& dd) {
+    MatrixDD buildFunctionality(const Grover* qc, std::unique_ptr<DDPackage>& dd) {
         QuantumComputation groverIteration(qc->getNqubits());
         qc->oracle(groverIteration);
         qc->diffusion(groverIteration);
@@ -142,7 +150,7 @@ namespace dd {
     }
 
     template<class DDPackage>
-    MatrixDD buildFunctionalityRecursive(Grover* qc, std::unique_ptr<DDPackage>& dd) {
+    MatrixDD buildFunctionalityRecursive(const Grover* qc, std::unique_ptr<DDPackage>& dd) {
         QuantumComputation groverIteration(qc->getNqubits());
         qc->oracle(groverIteration);
         qc->diffusion(groverIteration);
