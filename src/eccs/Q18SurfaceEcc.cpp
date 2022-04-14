@@ -25,8 +25,8 @@ void Q18SurfaceEcc::writeEncoding() {
     if (!decodingDone) {
         return;
     }
-    measureAndCorrect();
     decodingDone = false;
+    measureAndCorrect();
 }
 
 void Q18SurfaceEcc::measureAndCorrect() {

@@ -26,8 +26,8 @@ void Q9SurfaceEcc::writeEncoding() {
     if (!decodingDone) {
         return;
     }
-    measureAndCorrect();
     decodingDone = false;
+    measureAndCorrect();
 }
 
 void Q9SurfaceEcc::measureAndCorrect() {

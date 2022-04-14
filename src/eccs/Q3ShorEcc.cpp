@@ -26,6 +26,7 @@ void Q3ShorEcc::writeEncoding() {
     if (!decodingDone) {
         return;
     }
+    decodingDone      = false;
     const int nQubits = (int)qc.getNqubits();
 
     for (int i = 0; i < nQubits; i++) {
@@ -33,7 +34,6 @@ void Q3ShorEcc::writeEncoding() {
         qcMapped.x(static_cast<dd::Qubit>(i + nQubits), ctrl);
         qcMapped.x(static_cast<dd::Qubit>(i + 2 * nQubits), ctrl);
     }
-    decodingDone = false;
 }
 
 void Q3ShorEcc::measureAndCorrect() {
