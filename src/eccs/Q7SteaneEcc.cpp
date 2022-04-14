@@ -26,6 +26,7 @@ void Q7SteaneEcc::writeEncoding() {
     if (!decodingDone) {
         return;
     }
+    decodingDone      = false;
     const int nQubits = qc.getNqubits();
     //reset data qubits
     for (int i = 0; i < nQubits; i++) {
@@ -34,7 +35,6 @@ void Q7SteaneEcc::writeEncoding() {
         }
     }
     measureAndCorrectSingle(true);
-    decodingDone = false;
 }
 
 void Q7SteaneEcc::measureAndCorrect() {

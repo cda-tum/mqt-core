@@ -28,6 +28,7 @@ void Q9ShorEcc::writeEncoding() {
     if (!decodingDone) {
         return;
     }
+    decodingDone      = false;
     const int nQubits = qc.getNqubits();
     for (int i = 0; i < nQubits; i++) {
         dd::Control ci = {dd::Qubit(i), dd::Control::Type::pos};
@@ -47,7 +48,6 @@ void Q9ShorEcc::writeEncoding() {
         qcMapped.x(dd::Qubit(i + 7 * nQubits), ci6);
         qcMapped.x(dd::Qubit(i + 8 * nQubits), ci6);
     }
-    decodingDone = false;
 }
 
 void Q9ShorEcc::measureAndCorrect() {

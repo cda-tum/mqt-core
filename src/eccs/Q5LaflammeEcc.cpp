@@ -26,6 +26,7 @@ void Q5LaflammeEcc::writeEncoding() {
     if (!decodingDone) {
         return;
     }
+    decodingDone = false;
     measureAndCorrect();
     const int nQubits  = qc.getNqubits();
     const int ancStart = nQubits * ecc.nRedundantQubits;
@@ -47,7 +48,6 @@ void Q5LaflammeEcc::writeEncoding() {
         writeClassicalControlled(1, i + 3 * nQubits, qc::OpType::X, dd::Qubit(clEncode), dd::QubitCount(1));
         writeClassicalControlled(1, i + 4 * nQubits, qc::OpType::X, dd::Qubit(clEncode), dd::QubitCount(1));
     }
-    decodingDone = false;
 }
 
 void Q5LaflammeEcc::measureAndCorrect() {
