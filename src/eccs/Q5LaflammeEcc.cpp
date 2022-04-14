@@ -23,6 +23,9 @@ void Q5LaflammeEcc::initMappedCircuit() {
 }
 
 void Q5LaflammeEcc::writeEncoding() {
+    if (!decodingDone) {
+        return;
+    }
     measureAndCorrect();
     const int nQubits  = qc.getNqubits();
     const int ancStart = nQubits * ecc.nRedundantQubits;
@@ -48,6 +51,9 @@ void Q5LaflammeEcc::writeEncoding() {
 }
 
 void Q5LaflammeEcc::measureAndCorrect() {
+    if (decodingDone) {
+        return;
+    }
     const int nQubits    = qc.getNqubits();
     const int ancStart   = nQubits * ecc.nRedundantQubits;
     const int clAncStart = qc.getNcbits();
@@ -144,6 +150,9 @@ void Q5LaflammeEcc::writeClassicalControlled(const unsigned int value, int targe
 }
 
 void Q5LaflammeEcc::writeDecoding() {
+    if (decodingDone) {
+        return;
+    }
     const int    nQubits             = qc.getNqubits();
     const int    clAncStart          = static_cast<int>(qc.getNcbits());
     unsigned int correction_needed[] = {1, 2, 4, 7, 8, 11, 13, 14}; //values with odd amount of '1' bits

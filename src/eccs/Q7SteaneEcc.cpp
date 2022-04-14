@@ -23,11 +23,24 @@ void Q7SteaneEcc::initMappedCircuit() {
 }
 
 void Q7SteaneEcc::writeEncoding() {
+    if (!decodingDone) {
+        return;
+    }
+    const int nQubits = qc.getNqubits();
+    //reset data qubits
+    for (int i = 0; i < nQubits; i++) {
+        for (int j = 1; j < 7; j++) {
+            qcMapped.reset(dd::Qubit(i + j * nQubits));
+        }
+    }
     measureAndCorrectSingle(true);
     decodingDone = false;
 }
 
 void Q7SteaneEcc::measureAndCorrect() {
+    if (decodingDone) {
+        return;
+    }
     measureAndCorrectSingle(true);
     measureAndCorrectSingle(false);
 }
@@ -109,6 +122,9 @@ void Q7SteaneEcc::measureAndCorrectSingle(bool xSyndrome) {
 }
 
 void Q7SteaneEcc::writeDecoding() {
+    if (decodingDone) {
+        return;
+    }
     const int    nQubits             = qc.getNqubits();
     const int    clAncStart          = static_cast<int>(qc.getNcbits());
     unsigned int correction_needed[] = {1, 2, 4, 7}; //values with odd amount of '1' bits
