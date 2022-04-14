@@ -12,7 +12,7 @@ Ecc::Ecc(struct Info eccInfo, qc::QuantumComputation& quantumcomputation, int me
     ecc(std::move(eccInfo)),
     qc(quantumcomputation), measureFrequency(measFreq),
     decomposeMultiControlledGates(decomposeMC), cliffordGatesOnly(cliffOnly) {
-    decodingDone = false;
+    decodingDone = true;
 }
 
 void Ecc::initMappedCircuit() {
@@ -30,6 +30,7 @@ qc::QuantumComputation& Ecc::apply() {
     initMappedCircuit();
 
     writeEncoding();
+    decodingDone=false;
 
     long nInputGates = 0;
     for (const auto& gate: qc) {
