@@ -30,7 +30,7 @@ qc::QuantumComputation& Ecc::apply() {
     initMappedCircuit();
 
     writeEncoding();
-    decodingDone=false;
+    decodingDone = false;
 
     long nInputGates = 0;
     for (const auto& gate: qc) {
@@ -131,6 +131,12 @@ void Ecc::writeGeneric(dd::Qubit target, qc::OpType type) {
         case qc::H:
             qcMapped.h(target);
             return;
+        case qc::S:
+            qcMapped.s(target);
+            return;
+        case qc::Sdag:
+            writeSdag(target);
+            return;
         case qc::X:
             writeX(target);
             return;
@@ -141,7 +147,12 @@ void Ecc::writeGeneric(dd::Qubit target, qc::OpType type) {
             writeZ(target);
             return;
         default:
-            throw qc::QFRException(std::string("Gate not possible to encode!"));
+            if (cliffordGatesOnly) {
+                throw qc::QFRException(std::string("Gate not possible to encode!"));
+            } else {
+                int nQubits = qc.getNqubits();
+                qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, target + 2 * nQubits, type);
+            }
     }
 }
 

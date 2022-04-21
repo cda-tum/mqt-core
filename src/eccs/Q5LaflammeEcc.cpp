@@ -34,11 +34,11 @@ void Q5LaflammeEcc::writeEncoding() {
     for (int i = 0; i < nQubits; i++) {
         qcMapped.reset(dd::Qubit(ancStart));
         qcMapped.h(dd::Qubit(ancStart));
-        qcMapped.z(dd::Qubit(i), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
-        qcMapped.z(dd::Qubit(i + nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
-        qcMapped.z(dd::Qubit(i + 2 * nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
-        qcMapped.z(dd::Qubit(i + 3 * nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
-        qcMapped.z(dd::Qubit(i + 4 * nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
+        writeZ(dd::Qubit(i), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
+        writeZ(dd::Qubit(i + nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
+        writeZ(dd::Qubit(i + 2 * nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
+        writeZ(dd::Qubit(i + 3 * nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
+        writeZ(dd::Qubit(i + 4 * nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
         qcMapped.h(dd::Qubit(ancStart));
         qcMapped.measure(dd::Qubit(ancStart), clEncode);
 
@@ -83,33 +83,33 @@ void Q5LaflammeEcc::measureAndCorrect() {
         //K3: XIXZZ
         //K4: ZXIXZ
 
-        qcMapped.x(q[0], c0);
+        writeX(q[0], c0);
 
-        qcMapped.z(q[1], c0);
+        writeZ(q[1], c0);
         //controlled-id(i, c1)
 
-        qcMapped.z(q[2], c0);
-        qcMapped.x(q[1], c1);
-        qcMapped.x(q[0], c2);
+        writeZ(q[2], c0);
+        writeX(q[1], c1);
+        writeX(q[0], c2);
 
-        qcMapped.x(q[3], c0);
-        qcMapped.z(q[2], c1);
+        writeX(q[3], c0);
+        writeZ(q[2], c1);
         //controlled-id(i+1, c2)
-        qcMapped.z(q[0], c3);
+        writeZ(q[0], c3);
 
         //controlled-id(i+4, c0)
-        qcMapped.z(q[3], c1);
-        qcMapped.x(q[2], c2);
-        qcMapped.x(q[1], c3);
+        writeZ(q[3], c1);
+        writeX(q[2], c2);
+        writeX(q[1], c3);
 
-        qcMapped.x(q[4], c1);
-        qcMapped.z(q[3], c2);
+        writeX(q[4], c1);
+        writeZ(q[3], c2);
         //controlled-id(i+2, c3)
 
-        qcMapped.z(q[4], c2);
-        qcMapped.x(q[3], c3);
+        writeZ(q[4], c2);
+        writeX(q[3], c3);
 
-        qcMapped.z(q[4], c3);
+        writeZ(q[4], c3);
 
         qcMapped.h(ancStart);
         qcMapped.h(ancStart + 1);
@@ -227,11 +227,11 @@ void Q5LaflammeEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
                         for (const auto& ct: ctrls) {
                             ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + j * nQubits), ct.type});
                         }
-                        qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, ctrls2, i + j * nQubits, gate.get()->getType());
+                        writeGeneric(dd::Qubit(i + j * nQubits), ctrls2, gate.get()->getType());
                     }
                 } else {
                     for (int j = 0; j < 5; j++) {
-                        qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, i + j * nQubits, gate.get()->getType());
+                        writeGeneric(i + j * nQubits, gate.get()->getType());
                     }
                 }
             }

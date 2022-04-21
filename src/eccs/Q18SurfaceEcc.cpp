@@ -46,39 +46,39 @@ void Q18SurfaceEcc::measureAndCorrect() {
         }
 
         //initialize ancillas: Z-check
-        qcMapped.x(q[0], cq[1]);
-        qcMapped.x(q[0], cq[6]);
+        writeX(q[0], cq[1]);
+        writeX(q[0], cq[6]);
 
-        qcMapped.x(q[2], cq[1]);
-        qcMapped.x(q[2], cq[8]);
-        qcMapped.x(q[2], cq[3]);
+        writeX(q[2], cq[1]);
+        writeX(q[2], cq[8]);
+        writeX(q[2], cq[3]);
 
-        qcMapped.x(q[4], cq[3]);
-        qcMapped.x(q[4], cq[10]);
-        qcMapped.x(q[4], cq[5]);
+        writeX(q[4], cq[3]);
+        writeX(q[4], cq[10]);
+        writeX(q[4], cq[5]);
 
-        qcMapped.x(q[12], cq[6]);
-        qcMapped.x(q[12], cq[18]);
-        qcMapped.x(q[12], cq[13]);
+        writeX(q[12], cq[6]);
+        writeX(q[12], cq[18]);
+        writeX(q[12], cq[13]);
 
-        qcMapped.x(q[16], cq[10]);
-        qcMapped.x(q[16], cq[15]);
-        qcMapped.x(q[16], cq[17]);
-        qcMapped.x(q[16], cq[22]);
+        writeX(q[16], cq[10]);
+        writeX(q[16], cq[15]);
+        writeX(q[16], cq[17]);
+        writeX(q[16], cq[22]);
 
-        qcMapped.x(q[24], cq[18]);
-        qcMapped.x(q[24], cq[25]);
-        qcMapped.x(q[24], cq[30]);
+        writeX(q[24], cq[18]);
+        writeX(q[24], cq[25]);
+        writeX(q[24], cq[30]);
 
-        qcMapped.x(q[26], cq[20]);
-        qcMapped.x(q[26], cq[25]);
-        qcMapped.x(q[26], cq[27]);
-        qcMapped.x(q[26], cq[32]);
+        writeX(q[26], cq[20]);
+        writeX(q[26], cq[25]);
+        writeX(q[26], cq[27]);
+        writeX(q[26], cq[32]);
 
-        qcMapped.x(q[28], cq[22]);
-        qcMapped.x(q[28], cq[27]);
-        qcMapped.x(q[28], cq[29]);
-        qcMapped.x(q[28], cq[34]);
+        writeX(q[28], cq[22]);
+        writeX(q[28], cq[27]);
+        writeX(q[28], cq[29]);
+        writeX(q[28], cq[34]);
 
         //initialize ancillas: X-check
         int x_checks[] = {7, 9, 11, 19, 23, 31, 33, 35};
@@ -86,39 +86,39 @@ void Q18SurfaceEcc::measureAndCorrect() {
             qcMapped.h(q[xc]);
         }
 
-        qcMapped.x(q[1], cq[7]);
-        qcMapped.x(q[6], cq[7]);
-        qcMapped.x(q[8], cq[7]);
-        qcMapped.x(q[13], cq[7]);
+        writeX(q[1], cq[7]);
+        writeX(q[6], cq[7]);
+        writeX(q[8], cq[7]);
+        writeX(q[13], cq[7]);
 
-        qcMapped.x(q[3], cq[9]);
-        qcMapped.x(q[8], cq[9]);
-        qcMapped.x(q[10], cq[9]);
-        qcMapped.x(q[15], cq[9]);
+        writeX(q[3], cq[9]);
+        writeX(q[8], cq[9]);
+        writeX(q[10], cq[9]);
+        writeX(q[15], cq[9]);
 
-        qcMapped.x(q[5], cq[11]);
-        qcMapped.x(q[10], cq[11]);
-        qcMapped.x(q[17], cq[11]);
+        writeX(q[5], cq[11]);
+        writeX(q[10], cq[11]);
+        writeX(q[17], cq[11]);
 
-        qcMapped.x(q[13], cq[19]);
-        qcMapped.x(q[18], cq[19]);
-        qcMapped.x(q[20], cq[19]);
-        qcMapped.x(q[25], cq[19]);
+        writeX(q[13], cq[19]);
+        writeX(q[18], cq[19]);
+        writeX(q[20], cq[19]);
+        writeX(q[25], cq[19]);
 
-        qcMapped.x(q[17], cq[23]);
-        qcMapped.x(q[22], cq[23]);
-        qcMapped.x(q[29], cq[23]);
+        writeX(q[17], cq[23]);
+        writeX(q[22], cq[23]);
+        writeX(q[29], cq[23]);
 
-        qcMapped.x(q[25], cq[31]);
-        qcMapped.x(q[30], cq[31]);
-        qcMapped.x(q[32], cq[31]);
+        writeX(q[25], cq[31]);
+        writeX(q[30], cq[31]);
+        writeX(q[32], cq[31]);
 
-        qcMapped.x(q[27], cq[33]);
-        qcMapped.x(q[32], cq[33]);
-        qcMapped.x(q[34], cq[33]);
+        writeX(q[27], cq[33]);
+        writeX(q[32], cq[33]);
+        writeX(q[34], cq[33]);
 
-        qcMapped.x(q[29], cq[35]);
-        qcMapped.x(q[34], cq[35]);
+        writeX(q[29], cq[35]);
+        writeX(q[34], cq[35]);
 
         for (int xc: x_checks) {
             qcMapped.h(q[xc]);
@@ -194,13 +194,13 @@ void Q18SurfaceEcc::writeDecoding() {
     }
     const int nQubits = qc.getNqubits();
     for (int i = 0; i < nQubits; i++) {
-        qcMapped.x(dd::Qubit(i + 14 * nQubits), dd::Control{dd::Qubit(i + 8 * nQubits), dd::Control::Type::pos});
-        qcMapped.x(dd::Qubit(i + 14 * nQubits), dd::Control{dd::Qubit(i + 13 * nQubits), dd::Control::Type::pos});
-        qcMapped.x(dd::Qubit(i + 14 * nQubits), dd::Control{dd::Qubit(i + 15 * nQubits), dd::Control::Type::pos});
-        qcMapped.x(dd::Qubit(i + 14 * nQubits), dd::Control{dd::Qubit(i + 20 * nQubits), dd::Control::Type::pos});
+        writeX(dd::Qubit(i + 14 * nQubits), dd::Control{dd::Qubit(i + 8 * nQubits), dd::Control::Type::pos});
+        writeX(dd::Qubit(i + 14 * nQubits), dd::Control{dd::Qubit(i + 13 * nQubits), dd::Control::Type::pos});
+        writeX(dd::Qubit(i + 14 * nQubits), dd::Control{dd::Qubit(i + 15 * nQubits), dd::Control::Type::pos});
+        writeX(dd::Qubit(i + 14 * nQubits), dd::Control{dd::Qubit(i + 20 * nQubits), dd::Control::Type::pos});
         qcMapped.measure(dd::Qubit(i + 14 * nQubits), i);
         qcMapped.reset(i);
-        qcMapped.x(dd::Qubit(i), dd::Control{dd::Qubit(i + 14 * nQubits), dd::Control::Type::pos});
+        writeX(dd::Qubit(i), dd::Control{dd::Qubit(i + 14 * nQubits), dd::Control::Type::pos});
     }
     decodingDone = true;
 }
@@ -226,8 +226,8 @@ void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
             case qc::X:
                 for (std::size_t t = 0; t < gate->getNtargets(); t++) {
                     i = gate->getTargets()[t];
-                    qcMapped.x(dd::Qubit(i + 15 * nQubits));
-                    qcMapped.x(dd::Qubit(i + 17 * nQubits));
+                    writeX(dd::Qubit(i + 15 * nQubits));
+                    writeX(dd::Qubit(i + 17 * nQubits));
                 }
                 break;
             case qc::H:
@@ -254,8 +254,8 @@ void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
                     i = gate->getTargets()[t];
                     qcMapped.z(dd::Qubit(i + 18 * nQubits));
                     qcMapped.z(dd::Qubit(i + 20 * nQubits));
-                    qcMapped.x(dd::Qubit(i + 15 * nQubits));
-                    qcMapped.x(dd::Qubit(i + 17 * nQubits));
+                    writeX(dd::Qubit(i + 15 * nQubits));
+                    writeX(dd::Qubit(i + 17 * nQubits));
                 }
                 break;
             case qc::Z:
