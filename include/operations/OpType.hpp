@@ -115,11 +115,11 @@ namespace qc {
             return OpType::V;
         else if (opType == "vdg" || opType == "11")
             return OpType::Vdag;
-        else if (opType == "u3" || opType == "12")
+        else if (opType == "u3" || opType == "u" || opType == "12")
             return OpType::U3;
         else if (opType == "u2" || opType == "13")
             return OpType::U2;
-        else if (opType == "p" || opType == "14")
+        else if (opType == "u1" || opType == "p" || opType == "14")
             return OpType::Phase;
         else if (opType == "sx" || opType == "15")
             return OpType::SX;
