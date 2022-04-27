@@ -103,22 +103,6 @@ namespace qasm {
             virtual ~BasisGate() = default;
         };
 
-        struct Ugate: public BasisGate {
-            Expr*       theta  = nullptr;
-            Expr*       phi    = nullptr;
-            Expr*       lambda = nullptr;
-            std::string target;
-
-            Ugate(Expr* theta, Expr* phi, Expr* lambda, std::string target):
-                theta(theta), phi(phi), lambda(lambda), target(std::move(target)) {}
-
-            ~Ugate() override {
-                delete theta;
-                delete phi;
-                delete lambda;
-            }
-        };
-
         struct CUgate: public BasisGate {
             Expr*                    theta  = nullptr;
             Expr*                    phi    = nullptr;
@@ -142,6 +126,22 @@ namespace qasm {
 
             CXgate(std::string control, std::string target):
                 control(std::move(control)), target(std::move(target)) {}
+        };
+
+        struct SingleQubitGate: public BasisGate {
+            std::string target;
+            qc::OpType  type;
+            Expr*       lambda;
+            Expr*       phi;
+            Expr*       theta;
+
+            explicit SingleQubitGate(std::string target, qc::OpType type = qc::U3, Expr* lambda = nullptr, Expr* phi = nullptr, Expr* theta = nullptr):
+                target(std::move(target)), type(type), lambda(lambda), phi(phi), theta(theta) {}
+            ~SingleQubitGate() override {
+                delete lambda;
+                delete phi;
+                delete theta;
+            }
         };
 
         struct SWAPgate: public BasisGate {
