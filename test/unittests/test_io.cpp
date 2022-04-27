@@ -378,3 +378,29 @@ TEST_F(IO, printing_non_unitary) {
         std::cout << std::endl;
     }
 }
+
+TEST_F(IO, sx_and_sxdag) {
+    std::stringstream ss{};
+    ss << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[1];"
+       << "creg c[1];"
+       << "gate test q0 { sx q0; sxdg q0;}"
+       << "sx q[0];"
+       << "sxdg q[0];"
+       << "test q[0];"
+       << std::endl;
+    EXPECT_NO_THROW(qc->import(ss, qc::OpenQASM));
+    std::cout << *qc << std::endl;
+    auto& op1 = *(qc->begin());
+    EXPECT_EQ(op1->getType(), qc::OpType::SX);
+    auto& op2 = *(++qc->begin());
+    EXPECT_EQ(op2->getType(), qc::OpType::SXdag);
+    auto& op3 = *(++(++qc->begin()));
+    ASSERT_TRUE(op3->isCompoundOperation());
+    auto  compOp  = dynamic_cast<qc::CompoundOperation*>(op3.get());
+    auto& compOp1 = *(compOp->begin());
+    EXPECT_EQ(compOp1->getType(), qc::OpType::SX);
+    auto& compOp2 = *(++compOp->begin());
+    EXPECT_EQ(compOp2->getType(), qc::OpType::SXdag);
+}
