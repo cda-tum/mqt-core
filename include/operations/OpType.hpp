@@ -1,12 +1,9 @@
 /*
-* This file is part of JKQ QFR library which is released under the MIT license.
-* See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+* This file is part of MQT QFR library which is released under the MIT license.
+* See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
 */
 
-#ifndef QFR_OPTYPE_HPP
-#define QFR_OPTYPE_HPP
-
-#include "dd/Definitions.hpp"
+#pragma once
 
 #include <cstdint>
 #include <functional>
@@ -118,11 +115,11 @@ namespace qc {
             return OpType::V;
         else if (opType == "vdg" || opType == "11")
             return OpType::Vdag;
-        else if (opType == "u3" || opType == "12")
+        else if (opType == "u3" || opType == "u" || opType == "12")
             return OpType::U3;
         else if (opType == "u2" || opType == "13")
             return OpType::U2;
-        else if (opType == "p" || opType == "14")
+        else if (opType == "u1" || opType == "p" || opType == "14")
             return OpType::Phase;
         else if (opType == "sx" || opType == "15")
             return OpType::SX;
@@ -166,6 +163,12 @@ namespace qc {
     inline std::istream& operator>>(std::istream& in, OpType& opType) {
         std::string token;
         in >> token;
+
+        if (token.empty()) {
+            in.setstate(std::istream::failbit);
+            return in;
+        }
+
         opType = opTypeFromString(token);
         return in;
     }
@@ -175,5 +178,3 @@ namespace qc {
         return out;
     }
 } // namespace qc
-
-#endif //QFR_OPTYPE_HPP

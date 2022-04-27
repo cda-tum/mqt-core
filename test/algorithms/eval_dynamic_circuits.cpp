@@ -1,6 +1,6 @@
 /*
-* This file is part of JKQ QFR library which is released under the MIT license.
-* See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+* This file is part of MQT QFR library which is released under the MIT license.
+* See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
 */
 
 #include "CircuitOptimizer.hpp"
@@ -8,6 +8,7 @@
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
 #include "dd/Export.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <bitset>
@@ -26,14 +27,14 @@ protected:
     std::unique_ptr<qc::QuantumComputation> iqpe;
     std::size_t                             qpeNgates{};
     std::size_t                             iqpeNgates{};
-    std::unique_ptr<dd::Package>            dd;
+    std::unique_ptr<dd::Package<>>          dd;
     std::ofstream                           ofs;
 
     void TearDown() override {}
     void SetUp() override {
         precision = GetParam();
 
-        dd = std::make_unique<dd::Package>(precision + 1);
+        dd = std::make_unique<dd::Package<>>(precision + 1);
 
         qpe = std::make_unique<qc::QPE>(precision);
         // remove final measurements so that the functionality is unitary
@@ -114,8 +115,8 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
     auto rightIt = iqpe->begin();
 
     while (leftIt != qpe->end() && rightIt != iqpe->end()) {
-        auto multLeft  = dd->multiply((*leftIt)->getDD(dd), e);
-        auto multRight = dd->multiply(multLeft, (*rightIt)->getInverseDD(dd));
+        auto multLeft  = dd->multiply(getDD((*leftIt).get(), dd), e);
+        auto multRight = dd->multiply(multLeft, getInverseDD((*rightIt).get(), dd));
         dd->incRef(multRight);
         dd->decRef(e);
         e = multRight;
@@ -127,7 +128,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
     }
 
     while (leftIt != qpe->end()) {
-        auto multLeft = dd->multiply((*leftIt)->getDD(dd), e);
+        auto multLeft = dd->multiply(getDD((*leftIt).get(), dd), e);
         dd->incRef(multLeft);
         dd->decRef(e);
         e = multLeft;
@@ -138,7 +139,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
     }
 
     while (rightIt != iqpe->end()) {
-        auto multRight = dd->multiply(e, (*rightIt)->getInverseDD(dd));
+        auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), dd));
         dd->incRef(multRight);
         dd->decRef(e);
         e = multRight;
@@ -164,12 +165,12 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
     // generate DD of QPE circuit via simulation
     const auto start          = std::chrono::steady_clock::now();
-    auto       e              = qpe->simulate(dd->makeZeroState(qpe->getNqubits()), dd);
+    auto       e              = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
     const auto simulation_end = std::chrono::steady_clock::now();
 
     // extract measurement probabilities from IQPE simulations
     dd::ProbabilityVector probs{};
-    iqpe->extractProbabilityVector(dd->makeZeroState(iqpe->getNqubits()), probs, dd);
+    extractProbabilityVector(iqpe.get(), dd->makeZeroState(iqpe->getNqubits()), probs, dd);
     const auto extraction_end = std::chrono::steady_clock::now();
 
     // extend to account for 0 qubit
@@ -209,14 +210,14 @@ protected:
     std::unique_ptr<qc::QuantumComputation> iqpe;
     std::size_t                             qpeNgates{};
     std::size_t                             iqpeNgates{};
-    std::unique_ptr<dd::Package>            dd;
+    std::unique_ptr<dd::Package<>>          dd;
     std::ofstream                           ofs;
 
     void TearDown() override {}
     void SetUp() override {
         precision = GetParam();
 
-        dd = std::make_unique<dd::Package>(precision + 1);
+        dd = std::make_unique<dd::Package<>>(precision + 1);
 
         qpe = std::make_unique<qc::QPE>(precision, false);
         // remove final measurements so that the functionality is unitary
@@ -308,8 +309,8 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
     auto rightIt = iqpe->begin();
 
     while (leftIt != qpe->end() && rightIt != iqpe->end()) {
-        auto multLeft  = dd->multiply((*leftIt)->getDD(dd), e);
-        auto multRight = dd->multiply(multLeft, (*rightIt)->getInverseDD(dd));
+        auto multLeft  = dd->multiply(getDD((*leftIt).get(), dd), e);
+        auto multRight = dd->multiply(multLeft, getInverseDD((*rightIt).get(), dd));
         dd->incRef(multRight);
         dd->decRef(e);
         e = multRight;
@@ -321,7 +322,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
     }
 
     while (leftIt != qpe->end()) {
-        auto multLeft = dd->multiply((*leftIt)->getDD(dd), e);
+        auto multLeft = dd->multiply(getDD((*leftIt).get(), dd), e);
         dd->incRef(multLeft);
         dd->decRef(e);
         e = multLeft;
@@ -332,7 +333,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
     }
 
     while (rightIt != iqpe->end()) {
-        auto multRight = dd->multiply(e, (*rightIt)->getInverseDD(dd));
+        auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), dd));
         dd->incRef(multRight);
         dd->decRef(e);
         e = multRight;
@@ -359,12 +360,12 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
     const auto start = std::chrono::steady_clock::now();
     // extract measurement probabilities from IQPE simulations
     dd::ProbabilityVector probs{};
-    iqpe->extractProbabilityVector(dd->makeZeroState(iqpe->getNqubits()), probs, dd);
+    extractProbabilityVector(iqpe.get(), dd->makeZeroState(iqpe->getNqubits()), probs, dd);
     const auto extraction_end = std::chrono::steady_clock::now();
     std::cout << "---- extraction done ----" << std::endl;
 
     // generate DD of QPE circuit via simulation
-    auto       e              = qpe->simulate(dd->makeZeroState(qpe->getNqubits()), dd);
+    auto       e              = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
     const auto simulation_end = std::chrono::steady_clock::now();
     std::cout << "---- sim done ----" << std::endl;
 
@@ -400,14 +401,14 @@ protected:
     std::unique_ptr<qc::QuantumComputation> dbv;
     std::size_t                             bvNgates{};
     std::size_t                             dbvNgates{};
-    std::unique_ptr<dd::Package>            dd;
+    std::unique_ptr<dd::Package<>>          dd;
     std::ofstream                           ofs;
 
     void TearDown() override {}
     void SetUp() override {
         bitwidth = GetParam();
 
-        dd = std::make_unique<dd::Package>(bitwidth + 1);
+        dd = std::make_unique<dd::Package<>>(bitwidth + 1);
 
         bv = std::make_unique<qc::BernsteinVazirani>(bitwidth);
         // remove final measurements so that the functionality is unitary
@@ -455,8 +456,8 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
     auto rightIt = dbv->begin();
 
     while (leftIt != bv->end() && rightIt != dbv->end()) {
-        auto multLeft  = dd->multiply((*leftIt)->getDD(dd), e);
-        auto multRight = dd->multiply(multLeft, (*rightIt)->getInverseDD(dd));
+        auto multLeft  = dd->multiply(getDD((*leftIt).get(), dd), e);
+        auto multRight = dd->multiply(multLeft, getInverseDD((*rightIt).get(), dd));
         dd->incRef(multRight);
         dd->decRef(e);
         e = multRight;
@@ -468,7 +469,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
     }
 
     while (leftIt != bv->end()) {
-        auto multLeft = dd->multiply((*leftIt)->getDD(dd), e);
+        auto multLeft = dd->multiply(getDD((*leftIt).get(), dd), e);
         dd->incRef(multLeft);
         dd->decRef(e);
         e = multLeft;
@@ -479,7 +480,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
     }
 
     while (rightIt != dbv->end()) {
-        auto multRight = dd->multiply(e, (*rightIt)->getInverseDD(dd));
+        auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), dd));
         dd->incRef(multRight);
         dd->decRef(e);
         e = multRight;
@@ -505,12 +506,12 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
     // generate DD of QPE circuit via simulation
     const auto start          = std::chrono::steady_clock::now();
-    auto       e              = bv->simulate(dd->makeZeroState(bv->getNqubits()), dd);
+    auto       e              = simulate(bv.get(), dd->makeZeroState(bv->getNqubits()), dd);
     const auto simulation_end = std::chrono::steady_clock::now();
 
     // extract measurement probabilities from IQPE simulations
     dd::ProbabilityVector probs{};
-    dbv->extractProbabilityVector(dd->makeZeroState(dbv->getNqubits()), probs, dd);
+    extractProbabilityVector(dbv.get(), dd->makeZeroState(dbv->getNqubits()), probs, dd);
     const auto extraction_end = std::chrono::steady_clock::now();
 
     // extend to account for 0 qubit
@@ -545,14 +546,14 @@ protected:
     std::unique_ptr<qc::QuantumComputation> dqft;
     std::size_t                             qftNgates{};
     std::size_t                             dqftNgates{};
-    std::unique_ptr<dd::Package>            dd;
+    std::unique_ptr<dd::Package<>>          dd;
     std::ofstream                           ofs;
 
     void TearDown() override {}
     void SetUp() override {
         precision = GetParam();
 
-        dd = std::make_unique<dd::Package>(precision);
+        dd = std::make_unique<dd::Package<>>(precision);
 
         qft = std::make_unique<qc::QFT>(precision);
         // remove final measurements so that the functionality is unitary
@@ -596,8 +597,8 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
     auto rightIt = dqft->begin();
 
     while (leftIt != qft->end() && rightIt != dqft->end()) {
-        auto multLeft  = dd->multiply((*leftIt)->getDD(dd), e);
-        auto multRight = dd->multiply(multLeft, (*rightIt)->getInverseDD(dd));
+        auto multLeft  = dd->multiply(getDD((*leftIt).get(), dd), e);
+        auto multRight = dd->multiply(multLeft, getInverseDD((*rightIt).get(), dd));
         dd->incRef(multRight);
         dd->decRef(e);
         e = multRight;
@@ -609,7 +610,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
     }
 
     while (leftIt != qft->end()) {
-        auto multLeft = dd->multiply((*leftIt)->getDD(dd), e);
+        auto multLeft = dd->multiply(getDD((*leftIt).get(), dd), e);
         dd->incRef(multLeft);
         dd->decRef(e);
         e = multLeft;
@@ -620,7 +621,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
     }
 
     while (rightIt != dqft->end()) {
-        auto multRight = dd->multiply(e, (*rightIt)->getInverseDD(dd));
+        auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), dd));
         dd->incRef(multRight);
         dd->decRef(e);
         e = multRight;
@@ -646,7 +647,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
     // generate DD of QPE circuit via simulation
     const auto start          = std::chrono::steady_clock::now();
-    auto       e              = qft->simulate(dd->makeZeroState(qft->getNqubits()), dd);
+    auto       e              = simulate(qft.get(), dd->makeZeroState(qft->getNqubits()), dd);
     const auto simulation_end = std::chrono::steady_clock::now();
     const auto simulation     = std::chrono::duration<double>(simulation_end - start).count();
 
@@ -654,7 +655,7 @@ TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
     // extract measurement probabilities from IQPE simulations
     if (qft->getNqubits() <= 15) {
         dd::ProbabilityVector probs{};
-        dqft->extractProbabilityVector(dd->makeZeroState(dqft->getNqubits()), probs, dd);
+        extractProbabilityVector(dqft.get(), dd->makeZeroState(dqft->getNqubits()), probs, dd);
         const auto extraction_end = std::chrono::steady_clock::now();
 
         // compare outcomes
