@@ -729,7 +729,10 @@ namespace qasm {
                         std::unique_ptr<Expr> lambda(RewriteExpr(u->lambda, paramMap));
 
                         if (argMap.at(u->target).second == 1) {
-                            op.emplace_back<qc::StandardOperation>(nqubits, argMap.at(u->target).first, qc::U3, lambda->num, phi->num, theta->num);
+                            op.emplace_back<qc::StandardOperation>(nqubits, argMap.at(u->target).first, u->type,
+                                                                   lambda ? lambda->num : 0.,
+                                                                   phi ? phi->num : 0.,
+                                                                   theta ? theta->num : 0.);
                         } else {
                             // TODO: multiple targets could be useful here
                             for (dd::QubitCount j = 0; j < argMap.at(u->target).second; ++j) {
