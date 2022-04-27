@@ -1,11 +1,12 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "algorithms/Grover.hpp"
 #include "algorithms/QFT.hpp"
 #include "dd/Export.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 #include "qiskit/QasmQobjExperiment.hpp"
 #include "qiskit/QuantumCircuit.hpp"
 
@@ -44,13 +45,13 @@ inline std::string toString(ConstructionMethod method) {
 
 py::dict construct(const std::unique_ptr<qc::QuantumComputation>& qc, const ConstructionMethod& method = ConstructionMethod::Recursive, bool storeDD = false, bool storeMatrix = false) {
     // carry out actual computation
-    auto         dd                 = std::make_unique<dd::Package>(qc->getNqubits());
+    auto         dd                 = std::make_unique<dd::Package<>>(qc->getNqubits());
     auto         start_construction = std::chrono::high_resolution_clock::now();
     qc::MatrixDD e{};
     if (method == ConstructionMethod::Sequential) {
-        e = qc->buildFunctionality(dd);
+        e = buildFunctionality(qc.get(), dd);
     } else if (method == ConstructionMethod::Recursive) {
-        e = qc->buildFunctionalityRecursive(dd);
+        e = buildFunctionalityRecursive(qc.get(), dd);
     }
     auto end_construction      = std::chrono::high_resolution_clock::now();
     auto construction_duration = std::chrono::duration<float>(end_construction - start_construction);
@@ -140,10 +141,10 @@ py::dict construct_qft(dd::QubitCount nqubits, const ConstructionMethod& method 
 py::dict matrix_from_dd(const std::string& serializedDD) {
     py::dict results{};
 
-    auto               dd                    = std::make_unique<dd::Package>();
+    auto               dd                    = std::make_unique<dd::Package<>>();
     auto               start_deserialization = std::chrono::high_resolution_clock::now();
     std::istringstream iss{serializedDD};
-    auto               e                        = dd->deserialize<dd::Package::mNode>(iss);
+    auto               e                        = dd->deserialize<dd::mNode>(iss);
     auto               end_deserialization      = std::chrono::high_resolution_clock::now();
     auto               deserialization_duration = std::chrono::duration<float>(end_deserialization - start_deserialization);
     results["deserialization_time"]             = deserialization_duration.count();
@@ -223,7 +224,7 @@ py::dict apply_ecc(const py::object &circ, const std::string &eccString, const i
 }
 
 PYBIND11_MODULE(pyqfr, m) {
-    m.doc() = "Python interface for the JKQ QFR quantum functionality representation";
+    m.doc() = "Python interface for the MQT QFR quantum functionality representation";
 
     py::enum_<ConstructionMethod>(m, "ConstructionMethod")
             .value("sequential", ConstructionMethod::Sequential)

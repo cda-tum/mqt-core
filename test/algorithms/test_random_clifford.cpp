@@ -1,9 +1,11 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "algorithms/RandomCliffordCircuit.hpp"
+#include "dd/FunctionalityConstruction.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <string>
@@ -27,21 +29,21 @@ INSTANTIATE_TEST_SUITE_P(RandomClifford, RandomClifford,
 TEST_P(RandomClifford, simulate) {
     const dd::QubitCount nq = GetParam();
 
-    auto dd = std::make_unique<dd::Package>(nq);
+    auto dd = std::make_unique<dd::Package<>>(nq);
     auto qc = qc::RandomCliffordCircuit(nq, nq * nq, 12345);
     auto in = dd->makeZeroState(nq);
 
     std::cout << qc << std::endl;
-    ASSERT_NO_THROW({ qc.simulate(in, dd); });
+    ASSERT_NO_THROW({ simulate(&qc, in, dd); });
     qc.printStatistics(std::cout);
 }
 
 TEST_P(RandomClifford, buildFunctionality) {
     const dd::QubitCount nq = GetParam();
 
-    auto dd = std::make_unique<dd::Package>(nq);
+    auto dd = std::make_unique<dd::Package<>>(nq);
     auto qc = qc::RandomCliffordCircuit(nq, nq * nq, 12345);
     std::cout << qc << std::endl;
-    ASSERT_NO_THROW({ qc.buildFunctionality(dd); });
+    ASSERT_NO_THROW({ buildFunctionality(&qc, dd); });
     qc.printStatistics(std::cout);
 }

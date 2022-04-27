@@ -1,6 +1,6 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "CircuitOptimizer.hpp"
@@ -86,8 +86,8 @@ namespace qc {
                 continue;
             }
 
-            dd::Qubit control = it->getControls().begin()->qubit;
-            dd::Qubit target  = it->getTargets().at(0);
+            const dd::Qubit control = it->getControls().begin()->qubit;
+            const dd::Qubit target  = it->getTargets().at(0);
 
             // first operation
             if (dag.at(control).empty() || dag.at(target).empty()) {
@@ -105,10 +105,10 @@ namespace qc {
                 continue;
             }
 
-            auto opCcontrol = (*opC)->getControls().begin()->qubit;
-            auto opCtarget  = (*opC)->getTargets().at(0);
-            auto opTcontrol = (*opT)->getControls().begin()->qubit;
-            auto opTtarget  = (*opT)->getTargets().at(0);
+            const auto opCcontrol = (*opC)->getControls().begin()->qubit;
+            const auto opCtarget  = (*opC)->getTargets().at(0);
+            const auto opTcontrol = (*opT)->getControls().begin()->qubit;
+            const auto opTtarget  = (*opT)->getTargets().at(0);
 
             // operation at control and target qubit are not the same
             if (opCcontrol != opTcontrol || opCtarget != opTtarget) {
@@ -258,7 +258,7 @@ namespace qc {
                 continue;
             }
 
-            auto target = it->getTargets().at(0);
+            const auto target = it->getTargets().at(0);
 
             // first operation
             if (dag.at(target).empty()) {
@@ -1041,7 +1041,7 @@ namespace qc {
                 actsOn.set(q);
                 for (std::size_t i = 0; i < dag.size(); ++i) {
                     // actually check in reverse order
-                    auto qb = static_cast<dd::Qubit>(dag.size() - 1 - i);
+                    const auto qb = static_cast<dd::Qubit>(dag.size() - 1 - i);
                     if (qb != q && op->actsOn(static_cast<dd::Qubit>(qb))) {
                         actsOn.set(qb);
 
@@ -1093,5 +1093,40 @@ namespace qc {
             }
             std::cout << std::endl;
         }
+    }
+
+    void CircuitOptimizer::flattenOperations(QuantumComputation& qc) {
+        auto it = qc.begin();
+        while (it != qc.end()) {
+            if ((*it)->isCompoundOperation()) {
+                it = flattenCompoundOperation(qc.ops, it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    CircuitOptimizer::Iterator CircuitOptimizer::flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops, CircuitOptimizer::Iterator it) {
+        assert((*it)->isCompoundOperation());
+        auto& op   = dynamic_cast<qc::CompoundOperation&>(**it);
+        auto  opIt = op.begin();
+        while (opIt != op.end()) {
+            if ((*opIt)->isCompoundOperation()) {
+                // recursively flatten compound operations
+                opIt = flattenCompoundOperation(op.getOps(), opIt);
+                --opIt;
+            } else {
+                // move the operation from the compound operation in front of the compound operation in the flattened container.
+                // `it` then points to the newly inserted element
+                it = ops.insert(it, std::move(*opIt));
+                // advance the operation iterator to point past the now moved-from element in the compound operation
+                ++opIt;
+                // advance the general iterator to again point to the compound operation
+                ++it;
+            }
+        }
+        // whenever all the operations have been processed, `it` points to the compound operation and `opIt` to `op.end()`
+        // the compound operation can now be deleted safely
+        return ops.erase(it);
     }
 } // namespace qc

@@ -1,6 +1,6 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "parsers/qasm_parser/Scanner.hpp"
@@ -403,6 +403,14 @@ namespace qasm {
                    "h e; cu1(pi/2) d,e; h e; "
                    "c3x a,b,c,d; "
                    "c3sqrtx a,b,c,e; "
+                   "}"
+                << std::endl;
+            *ss << "gate iswap a,b { "
+                   "s a; s b; "
+                   "h a; "
+                   "cx a,b; "
+                   "cx b,a; "
+                   "h b; "
                    "}"
                 << std::endl;
 
