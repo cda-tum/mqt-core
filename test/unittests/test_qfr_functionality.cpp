@@ -1,10 +1,12 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "CircuitOptimizer.hpp"
 #include "QuantumComputation.hpp"
+#include "algorithms/RandomCliffordCircuit.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
 #include <random>
@@ -18,7 +20,7 @@ protected:
     }
 
     void SetUp() override {
-        dd = std::make_unique<dd::Package>(5);
+        dd = std::make_unique<dd::Package<>>(5);
 
         std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
         std::random_device                                                    rd;
@@ -28,7 +30,7 @@ protected:
         dist = std::uniform_real_distribution<dd::fp>(0.0, 2 * dd::PI);
     }
 
-    std::unique_ptr<dd::Package>           dd;
+    std::unique_ptr<dd::Package<>>         dd;
     std::mt19937_64                        mt;
     std::uniform_real_distribution<dd::fp> dist;
 };
@@ -130,7 +132,7 @@ TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
     EXPECT_EQ(qc.getNqubitsWithoutAncillae(), nqubits);
     EXPECT_EQ(qc.getNqubits(), 3);
     qc.emplace_back<StandardOperation>(nqubits, 2, qc::X);
-    auto e = qc.createInitialMatrix(dd);
+    auto e = dd->createInitialMatrix(qc.getNqubits(), qc.ancillary);
     EXPECT_EQ(e.p->e[0], dd->makeIdent(nqubits));
     EXPECT_EQ(e.p->e[1], MatrixDD::zero);
     EXPECT_EQ(e.p->e[2], MatrixDD::zero);
@@ -215,9 +217,9 @@ TEST_F(QFRFunctionality, FuseTwoSingleQubitGates) {
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
 
     qc.print(std::cout);
-    dd::Edge e = qc.buildFunctionality(dd);
+    dd::Edge e = buildFunctionality(&qc, dd);
     CircuitOptimizer::singleQubitGateFusion(qc);
-    dd::Edge f = qc.buildFunctionality(dd);
+    dd::Edge f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     EXPECT_EQ(qc.getNops(), 1);
@@ -231,11 +233,11 @@ TEST_F(QFRFunctionality, FuseThreeSingleQubitGates) {
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::Y);
 
-    dd::Edge e = qc.buildFunctionality(dd);
+    dd::Edge e = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::singleQubitGateFusion(qc);
-    dd::Edge f = qc.buildFunctionality(dd);
+    dd::Edge f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     EXPECT_EQ(qc.getNops(), 1);
@@ -248,11 +250,11 @@ TEST_F(QFRFunctionality, FuseNoSingleQubitGates) {
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 0_pc, 1, qc::X);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::Y);
-    dd::Edge e = qc.buildFunctionality(dd);
+    dd::Edge e = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::singleQubitGateFusion(qc);
-    dd::Edge f = qc.buildFunctionality(dd);
+    dd::Edge f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     EXPECT_EQ(qc.getNops(), 3);
@@ -265,11 +267,11 @@ TEST_F(QFRFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 1, qc::Z);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::Y);
-    auto e = qc.buildFunctionality(dd);
+    auto e = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::singleQubitGateFusion(qc);
-    auto f = qc.buildFunctionality(dd);
+    auto f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     EXPECT_EQ(qc.getNops(), 2);
@@ -1576,4 +1578,125 @@ TEST_F(QFRFunctionality, trivialOperationReordering) {
     ++it;
     const auto target2 = (*it)->getTargets().at(0);
     EXPECT_EQ(target2, 0);
+}
+
+TEST_F(QFRFunctionality, FlattenRandomClifford) {
+    qc::RandomCliffordCircuit rcs(2U, 3U, 0U);
+    std::cout << rcs << std::endl;
+
+    auto dd     = std::make_unique<dd::Package<>>(2U);
+    auto before = buildFunctionality(&rcs, dd);
+
+    qc::CircuitOptimizer::flattenOperations(rcs);
+    std::cout << rcs << std::endl;
+
+    for (const auto& op: rcs) {
+        EXPECT_FALSE(op->isCompoundOperation());
+    }
+
+    auto after = buildFunctionality(&rcs, dd);
+    EXPECT_EQ(before, after);
+}
+
+TEST_F(QFRFunctionality, FlattenRecursive) {
+    const dd::QubitCount nqubits = 1U;
+
+    // create a compound operation
+    auto op = std::make_unique<CompoundOperation>(nqubits);
+
+    // emplace an operation in the compound operation
+    op->emplace_back<StandardOperation>(1U, 0U, qc::X);
+
+    // create another compound operation
+    auto op2 = std::make_unique<CompoundOperation>(nqubits);
+
+    // emplace the first operation in the second
+    op2->emplace_back<qc::CompoundOperation>(op);
+
+    // create a quantum computation and emplace the operation
+    auto qc = QuantumComputation(nqubits);
+    qc.emplace_back<CompoundOperation>(op2);
+
+    std::cout << qc << std::endl;
+
+    qc::CircuitOptimizer::flattenOperations(qc);
+    std::cout << qc << std::endl;
+
+    for (const auto& g: qc) {
+        EXPECT_FALSE(g->isCompoundOperation());
+    }
+
+    auto& gate = **qc.begin();
+    EXPECT_EQ(gate.getType(), qc::X);
+    EXPECT_EQ(gate.getTargets().at(0), 0U);
+    EXPECT_TRUE(gate.getControls().empty());
+}
+
+TEST_F(QFRFunctionality, OperationEquality) {
+    const auto x = StandardOperation(1U, 0, qc::X);
+    const auto z = StandardOperation(1U, 0, qc::Z);
+    EXPECT_TRUE(x.equals(x));
+    EXPECT_FALSE(x.equals(z));
+
+    const auto x0 = StandardOperation(2U, 0, qc::X);
+    const auto x1 = StandardOperation(2U, 1, qc::X);
+    EXPECT_FALSE(x0.equals(x1));
+    Permutation perm0{};
+    perm0[0] = 1;
+    perm0[1] = 0;
+    EXPECT_TRUE(x0.equals(x1, perm0, {}));
+    EXPECT_TRUE(x0.equals(x1, {}, perm0));
+
+    const auto cx01 = StandardOperation(2U, 0_pc, 1, qc::X);
+    const auto cx10 = StandardOperation(2U, 1_pc, 0, qc::X);
+    EXPECT_FALSE(cx01.equals(cx10));
+    EXPECT_FALSE(x0.equals(cx01));
+
+    const auto p  = StandardOperation(1U, 0, qc::Phase, 2.0);
+    const auto pm = StandardOperation(1U, 0, qc::Phase, -2.0);
+    EXPECT_FALSE(p.equals(pm));
+
+    const auto measure0 = NonUnitaryOperation(2U, 0, 0U);
+    const auto measure1 = NonUnitaryOperation(2U, 0, 1U);
+    const auto measure2 = NonUnitaryOperation(2U, 1, 0U);
+    EXPECT_FALSE(measure0.equals(x0));
+    EXPECT_TRUE(measure0.equals(measure0));
+    EXPECT_FALSE(measure0.equals(measure1));
+    EXPECT_FALSE(measure0.equals(measure2));
+    EXPECT_TRUE(measure0.equals(measure2, perm0, {}));
+    EXPECT_TRUE(measure0.equals(measure2, {}, perm0));
+
+    const auto controlRegister0 = qc::QuantumRegister{0, 1U};
+    const auto controlRegister1 = qc::QuantumRegister{1, 1U};
+    const auto expectedValue0   = 0U;
+    const auto expectedValue1   = 1U;
+
+    std::unique_ptr<Operation> xp0      = std::make_unique<StandardOperation>(1U, 0, qc::X);
+    std::unique_ptr<Operation> xp1      = std::make_unique<StandardOperation>(1U, 0, qc::X);
+    std::unique_ptr<Operation> xp2      = std::make_unique<StandardOperation>(1U, 0, qc::X);
+    const auto                 classic0 = ClassicControlledOperation(xp0, controlRegister0, expectedValue0);
+    const auto                 classic1 = ClassicControlledOperation(xp1, controlRegister0, expectedValue1);
+    const auto                 classic2 = ClassicControlledOperation(xp2, controlRegister1, expectedValue0);
+    std::unique_ptr<Operation> zp       = std::make_unique<StandardOperation>(1U, 0, qc::Z);
+    const auto                 classic3 = ClassicControlledOperation(zp, controlRegister0, expectedValue0);
+    EXPECT_FALSE(classic0.equals(x));
+    EXPECT_TRUE(classic0.equals(classic0));
+    EXPECT_FALSE(classic0.equals(classic1));
+    EXPECT_FALSE(classic0.equals(classic2));
+    EXPECT_FALSE(classic0.equals(classic3));
+
+    auto compound0 = CompoundOperation(1U);
+    compound0.emplace_back<StandardOperation>(1U, 0, qc::X);
+
+    auto compound1 = CompoundOperation(1U);
+    compound1.emplace_back<StandardOperation>(1U, 0, qc::X);
+    compound1.emplace_back<StandardOperation>(1U, 0, qc::Z);
+
+    auto compound2 = CompoundOperation(1U);
+    compound2.emplace_back<StandardOperation>(1U, 0, qc::Z);
+
+    EXPECT_FALSE(compound0.equals(x));
+    EXPECT_TRUE(compound0.equals(compound0));
+    EXPECT_FALSE(compound0.equals(compound1));
+    EXPECT_FALSE(compound0.equals(compound2));
 }

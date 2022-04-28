@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.14...3.22)
 
 project(qfr
         LANGUAGES CXX
-        VERSION 1.7.3
-        DESCRIPTION "QFR  - A JKQ library for Quantum Functionality Representation"
+        VERSION 1.10.0
+        DESCRIPTION "MQT QFR  - A library for Quantum Functionality Representation"
         )
 
 # enable organization of targets into folders
@@ -23,8 +23,6 @@ endif ()
 
 # set deployment specific options
 if (DEPLOY)
-	# build a universal macOS binary in case this is a deployment build
-	set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "" FORCE)
 	# set the macOS deployment target appropriately
 	set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "" FORCE)
 endif ()
@@ -64,5 +62,5 @@ endif()
 
 # add Python binding code
 if(BINDINGS)
-	add_subdirectory(jkq/qfr)
+	add_subdirectory(mqt/qfr)
 endif()
