@@ -23,10 +23,10 @@ void Q7SteaneEcc::initMappedCircuit() {
 }
 
 void Q7SteaneEcc::writeEncoding() {
-    if (!decodingDone) {
+    if (!isDecoded) {
         return;
     }
-    decodingDone      = false;
+    isDecoded         = false;
     const int nQubits = qc.getNqubits();
     //reset data qubits
     for (int i = 0; i < nQubits; i++) {
@@ -38,7 +38,7 @@ void Q7SteaneEcc::writeEncoding() {
 }
 
 void Q7SteaneEcc::measureAndCorrect() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     measureAndCorrectSingle(true);
@@ -122,7 +122,7 @@ void Q7SteaneEcc::measureAndCorrectSingle(bool xSyndrome) {
 }
 
 void Q7SteaneEcc::writeDecoding() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int    nQubits             = qc.getNqubits();
@@ -149,11 +149,11 @@ void Q7SteaneEcc::writeDecoding() {
             writeClassicalControl(dd::Qubit(clAncStart), dd::QubitCount(3), value, qc::X, i);
         }
     }
-    decodingDone = true;
+    isDecoded = true;
 }
 
 void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
-    if (decodingDone && gate->getType() != qc::Measure) {
+    if (isDecoded && gate->getType() != qc::Measure) {
         writeEncoding();
     }
     const int                nQubits = qc.getNqubits();
@@ -259,7 +259,7 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
             }
             break;
         case qc::Measure:
-            if (!decodingDone) {
+            if (!isDecoded) {
                 measureAndCorrect();
                 writeDecoding();
             }

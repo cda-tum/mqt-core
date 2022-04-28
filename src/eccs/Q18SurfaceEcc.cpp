@@ -22,15 +22,15 @@ void Q18SurfaceEcc::initMappedCircuit() {
 }
 
 void Q18SurfaceEcc::writeEncoding() {
-    if (!decodingDone) {
+    if (!isDecoded) {
         return;
     }
-    decodingDone = false;
+    isDecoded = false;
     measureAndCorrect();
 }
 
 void Q18SurfaceEcc::measureAndCorrect() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int nQubits    = qc.getNqubits();
@@ -189,7 +189,7 @@ void Q18SurfaceEcc::measureAndCorrect() {
 }
 
 void Q18SurfaceEcc::writeDecoding() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int nQubits = qc.getNqubits();
@@ -202,21 +202,19 @@ void Q18SurfaceEcc::writeDecoding() {
         qcMapped.reset(i);
         writeX(dd::Qubit(i), dd::Control{dd::Qubit(i + 14 * nQubits), dd::Control::Type::pos});
     }
-    decodingDone = true;
+    isDecoded = true;
 }
 
 void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
-    if (decodingDone && gate->getType() != qc::Measure) {
+    if (isDecoded && gate->getType() != qc::Measure) {
         writeEncoding();
     }
     const int nQubits = qc.getNqubits();
     dd::Qubit i;
 
     //no control gate decomposition is supported
-    if (gate->getNcontrols() > 2 && decomposeMultiControlledGates && gate->getType() != qc::Measure) {
-        gateNotAvailableError(gate);
-    } else if (gate->getNcontrols() && gate->getType() != qc::Measure) {
-        //TODO support later
+    if (gate->getNcontrols() && gate->getType() != qc::Measure) {
+        //multi-qubit gates are currently not supported
         gateNotAvailableError(gate);
     } else {
         qc::NonUnitaryOperation* measureGate;
@@ -239,12 +237,12 @@ void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
                     for (std::int_fast8_t j: data_qubits) {
                         qcMapped.h(dd::Qubit(i + j * nQubits));
                     }
-                    qcMapped.swap(dd::Qubit(i + 1 * nQubits), dd::Qubit(i + 29 * nQubits));
-                    qcMapped.swap(dd::Qubit(i + 3 * nQubits), dd::Qubit(i + 17 * nQubits));
-                    qcMapped.swap(dd::Qubit(i + 6 * nQubits), dd::Qubit(i + 34 * nQubits));
-                    qcMapped.swap(dd::Qubit(i + 8 * nQubits), dd::Qubit(i + 22 * nQubits));
-                    qcMapped.swap(dd::Qubit(i + 13 * nQubits), dd::Qubit(i + 27 * nQubits));
-                    qcMapped.swap(dd::Qubit(i + 18 * nQubits), dd::Qubit(i + 32 * nQubits));
+                    swap(dd::Qubit(i + 1 * nQubits), dd::Qubit(i + 29 * nQubits));
+                    swap(dd::Qubit(i + 3 * nQubits), dd::Qubit(i + 17 * nQubits));
+                    swap(dd::Qubit(i + 6 * nQubits), dd::Qubit(i + 34 * nQubits));
+                    swap(dd::Qubit(i + 8 * nQubits), dd::Qubit(i + 22 * nQubits));
+                    swap(dd::Qubit(i + 13 * nQubits), dd::Qubit(i + 27 * nQubits));
+                    swap(dd::Qubit(i + 18 * nQubits), dd::Qubit(i + 32 * nQubits));
                     //qubits 5, 10, 15, 20, 25, 30 are along axis
                 }
                 break;
@@ -252,8 +250,8 @@ void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
                 //Y = Z X
                 for (std::size_t t = 0; t < gate->getNtargets(); t++) {
                     i = gate->getTargets()[t];
-                    qcMapped.z(dd::Qubit(i + 18 * nQubits));
-                    qcMapped.z(dd::Qubit(i + 20 * nQubits));
+                    writeZ(dd::Qubit(i + 18 * nQubits));
+                    writeZ(dd::Qubit(i + 20 * nQubits));
                     writeX(dd::Qubit(i + 15 * nQubits));
                     writeX(dd::Qubit(i + 17 * nQubits));
                 }
@@ -261,12 +259,12 @@ void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
             case qc::Z:
                 for (std::size_t t = 0; t < gate->getNtargets(); t++) {
                     i = gate->getTargets()[t];
-                    qcMapped.z(dd::Qubit(i + 18 * nQubits));
-                    qcMapped.z(dd::Qubit(i + 20 * nQubits));
+                    writeZ(dd::Qubit(i + 18 * nQubits));
+                    writeZ(dd::Qubit(i + 20 * nQubits));
                 }
                 break;
             case qc::Measure:
-                if (!decodingDone) {
+                if (!isDecoded) {
                     measureAndCorrect();
                     writeDecoding();
                 }

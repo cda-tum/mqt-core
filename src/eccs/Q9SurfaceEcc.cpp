@@ -23,15 +23,15 @@ void Q9SurfaceEcc::initMappedCircuit() {
 }
 
 void Q9SurfaceEcc::writeEncoding() {
-    if (!decodingDone) {
+    if (!isDecoded) {
         return;
     }
-    decodingDone = false;
+    isDecoded = false;
     measureAndCorrect();
 }
 
 void Q9SurfaceEcc::measureAndCorrect() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int nQubits    = qc.getNqubits();
@@ -120,7 +120,7 @@ void Q9SurfaceEcc::measureAndCorrect() {
 }
 
 void Q9SurfaceEcc::writeDecoding() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int nQubits = qc.getNqubits();
@@ -133,11 +133,11 @@ void Q9SurfaceEcc::writeDecoding() {
         writeX(dd::Qubit(i), dd::Control{dd::Qubit(i + 8 * nQubits), dd::Control::Type::pos});
         qcMapped.measure(dd::Qubit(i), i);
     }
-    decodingDone = true;
+    isDecoded = true;
 }
 
 void Q9SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
-    if (decodingDone && gate->getType() != qc::Measure) {
+    if (isDecoded && gate->getType() != qc::Measure) {
         writeEncoding();
     }
     const int nQubits = qc.getNqubits();
@@ -169,9 +169,6 @@ void Q9SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
                     writeX(dd::Qubit(i + 4 * nQubits), ctrls3);
                     writeX(dd::Qubit(i + 6 * nQubits), ctrls3);
                 }
-                break;
-            case qc::H:
-                gateNotAvailableError(gate);
                 break;
             case qc::Y:
                 //Y = Z X
@@ -254,11 +251,11 @@ void Q9SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
                     for (int j = 0; j < 9; j++) {
                         qcMapped.h(dd::Qubit(i + j * nQubits));
                     }
-                    //TODO SWAP
-                    qcMapped.swap(dd::Qubit(i), dd::Qubit(i + 6 * nQubits));
-                    qcMapped.swap(dd::Qubit(i + 3 * nQubits), dd::Qubit(i + 7 * nQubits));
-                    qcMapped.swap(dd::Qubit(i + 2 * nQubits), dd::Qubit(i + 8 * nQubits));
-                    qcMapped.swap(dd::Qubit(i + nQubits), dd::Qubit(i + 5 * nQubits));
+
+                    swap(dd::Qubit(i), dd::Qubit(i + 6 * nQubits));
+                    swap(dd::Qubit(i + 3 * nQubits), dd::Qubit(i + 7 * nQubits));
+                    swap(dd::Qubit(i + 2 * nQubits), dd::Qubit(i + 8 * nQubits));
+                    swap(dd::Qubit(i + nQubits), dd::Qubit(i + 5 * nQubits));
                 }
                 break;
             case qc::Y:
@@ -282,7 +279,7 @@ void Q9SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
                 }
                 break;
             case qc::Measure:
-                if (!decodingDone) {
+                if (!isDecoded) {
                     measureAndCorrect();
                     writeDecoding();
                 }
