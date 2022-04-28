@@ -218,7 +218,7 @@ void Ecc::writeXstatic(dd::Qubit target, dd::Control control, qc::QuantumComputa
 
 void Ecc::writeX(dd::Qubit target, const dd::Controls& controls) {
     if(decomposeMultiControlledGates && controls.size()>2) {
-        throw new qc::QFRException("multi-controlled X-gate not possible")
+        throw new qc::QFRException("multi-controlled X-gate not possible");
     }
     qcMapped.x(target, controls);
 }
