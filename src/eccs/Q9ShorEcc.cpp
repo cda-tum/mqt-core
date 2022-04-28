@@ -25,10 +25,10 @@ void Q9ShorEcc::initMappedCircuit() {
 }
 
 void Q9ShorEcc::writeEncoding() {
-    if (!decodingDone) {
+    if (!isDecoded) {
         return;
     }
-    decodingDone      = false;
+    isDecoded         = false;
     const int nQubits = qc.getNqubits();
     for (int i = 0; i < nQubits; i++) {
         dd::Control ci = {dd::Qubit(i), dd::Control::Type::pos};
@@ -51,7 +51,7 @@ void Q9ShorEcc::writeEncoding() {
 }
 
 void Q9ShorEcc::measureAndCorrect() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int nQubits = qc.getNqubits();
@@ -134,7 +134,7 @@ void Q9ShorEcc::measureAndCorrect() {
 }
 
 void Q9ShorEcc::writeDecoding() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int nQubits = qc.getNqubits();
@@ -165,11 +165,11 @@ void Q9ShorEcc::writeDecoding() {
         writeX(i + 6 * nQubits, ci[0]);
         writeToffoli(i, i + 3 * nQubits, true, i + 6 * nQubits, true);
     }
-    decodingDone = true;
+    isDecoded = true;
 }
 
 void Q9ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
-    if (decodingDone && gate.get()->getType() != qc::Measure && gate.get()->getType() != qc::H) {
+    if (isDecoded && gate.get()->getType() != qc::Measure && gate.get()->getType() != qc::H) {
         writeEncoding();
     }
     const int                nQubits     = qc.getNqubits();
@@ -188,7 +188,7 @@ void Q9ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
             type = qc::X;
             break;
         case qc::Measure:
-            if (!decodingDone) {
+            if (!isDecoded) {
                 measureAndCorrect();
                 writeDecoding();
             }

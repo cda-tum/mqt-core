@@ -55,7 +55,7 @@ protected:
     qc::QuantumComputation  qcMapped;
     EccStatistics           statistics{};
     const int               measureFrequency;
-    bool                    decodingDone;
+    bool                    isDecoded;
     bool                    decomposeMultiControlledGates;
     bool                    cliffordGatesOnly;
 
@@ -72,7 +72,6 @@ protected:
     void gateNotAvailableError(const std::unique_ptr<qc::Operation>& gate);
 
     void writeToffoli(int target, int c1, bool p1, int c2, bool p2);
-    void writeZToffoli(int target, int c1, bool p1, int c2, bool p2);
 
     void writeGeneric(dd::Qubit target, qc::OpType type);
     void writeGeneric(dd::Qubit target, const dd::Control& control, qc::OpType type);
@@ -93,6 +92,8 @@ protected:
     void writeSdag(dd::Qubit target);
     void writeSdag(dd::Qubit target, const dd::Control& control);
     void writeSdag(dd::Qubit target, const dd::Controls& controls);
+
+    void swap(dd::Qubit target1, dd::Qubit target2);
 
     void writeClassicalControl(dd::Qubit control, int qubitCount, unsigned int value, qc::OpType opType, int target);
 

@@ -23,10 +23,10 @@ void Q3ShorEcc::initMappedCircuit() {
 }
 
 void Q3ShorEcc::writeEncoding() {
-    if (!decodingDone) {
+    if (!isDecoded) {
         return;
     }
-    decodingDone      = false;
+    isDecoded         = false;
     const int nQubits = (int)qc.getNqubits();
 
     for (int i = 0; i < nQubits; i++) {
@@ -37,7 +37,7 @@ void Q3ShorEcc::writeEncoding() {
 }
 
 void Q3ShorEcc::measureAndCorrect() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int  nQubits  = qc.getNqubits();
@@ -47,17 +47,13 @@ void Q3ShorEcc::measureAndCorrect() {
         qcMapped.reset(ancStart);
         qcMapped.reset(static_cast<dd::Qubit>(ancStart + 1));
 
-        //        auto a0 = dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos};
-        //        auto a1 = dd::Control{dd::Qubit(ancStart + 1), dd::Control::Type::pos};
         writeX(ancStart, dd::Control{dd::Qubit(i), dd::Control::Type::pos});
         writeX(ancStart, dd::Control{dd::Qubit(i + nQubits), dd::Control::Type::pos});
-        writeX(static_cast<dd::Qubit>(ancStart + 1), dd::Control{dd::Qubit(i + nQubits), dd::Control::Type::pos});
-        writeX(static_cast<dd::Qubit>(ancStart + 1), dd::Control{dd::Qubit(i + 2 * nQubits), dd::Control::Type::pos});
+        writeX(dd::Qubit(ancStart + 1), dd::Control{dd::Qubit(i + nQubits), dd::Control::Type::pos});
+        writeX(dd::Qubit(ancStart + 1), dd::Control{dd::Qubit(i + 2 * nQubits), dd::Control::Type::pos});
 
         qcMapped.measure(ancStart, clStart);
         qcMapped.measure(static_cast<dd::Qubit>(ancStart + 1), clStart + 1);
-
-        //TODO X operations for clifford gates
 
         std::unique_ptr<qc::Operation> op1   = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(),
                                                                                      dd::Qubit(i), qc::X);
@@ -77,7 +73,7 @@ void Q3ShorEcc::measureAndCorrect() {
 }
 
 void Q3ShorEcc::writeDecoding() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int nQubits = (int)qc.getNqubits();
@@ -87,11 +83,11 @@ void Q3ShorEcc::writeDecoding() {
         writeX(dd::Qubit(i + 2 * nQubits), ctrl);
         writeToffoli(i, i + nQubits, true, i + 2 * nQubits, true);
     }
-    decodingDone = true;
+    isDecoded = true;
 }
 
 void Q3ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
-    if (decodingDone && gate->getType() != qc::Measure && gate->getType() != qc::H) {
+    if (isDecoded && gate->getType() != qc::Measure && gate->getType() != qc::H) {
         writeEncoding();
     }
     const int                nQubits = (int)qc.getNqubits();
@@ -181,7 +177,7 @@ void Q3ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
             }
             break;
         case qc::Measure:
-            if (!decodingDone) {
+            if (!isDecoded) {
                 measureAndCorrect();
                 writeDecoding();
             }
