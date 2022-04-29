@@ -49,6 +49,85 @@ The `construct` function additionally provides the options `store_decision_diagr
 
 Special routines are available for constructing the functionality of the Quantum Fourier Transform (`construct_qft(nqubits, ...)`) or Grover's algorithm (`construct_grover(nqubits, seed, ...)`). For details on the method employed for Grover's search we refer to [[1, Section 4.2]](https://arxiv.org/abs/2103.08281).
 
+## ECC Framework: Automatic Implementation and Evaluation of Error-Correcting Codes for Quantum Computing
+The QFR library offers means for automatic implementation and evaluation of error-correcting codes for quantum computing. More precisely, the library allows to automatically apply ...
+
+**Note: The ECC framework is only available within the current branch and can only be installed directly from source**
+
+### Installation
+
+If you have not done so already, clone the repository using:
+```bash
+git clone --recurse-submodules -j8 https://github.com/pichristoph/qfr.git
+```
+
+Make sure you are in the main project directory for the next steps, switch to the branch feature/ecc,
+```bash
+git switch feature/ecc
+```
+and (if necessary), update the submodules.
+
+```bash
+git submodule update --init --recursive
+```
+
+Then, the ECC framework can be installed using pip
+```bash
+(venv) pip install .
+```
+
+If you want to use Qiskit for quantum circuit simulation, you need to install it as well
+
+```bash
+(venv) pip install qiskit
+```
+
+### Usage
+
+Having the Python module installed, error correcting codes can be applied using apply_ecc of module qfr, like so
+
+```python
+from mqt import qfr
+
+file = "path/to/qasm/file.qasm"
+ecc = "Q7Steane"
+ecc_frequency = 100
+ecc_mc = False
+ecc_cf = True
+
+result = qfr.apply_ecc(file, ecc, ecc_frequency, ecc_mc, ecc_cf)
+
+# print the resulting circuit
+print(result["circ"])
+```
+Currently 
+
+
+Q3Shor, Q5Laflamme, Q7Steane, Q9Shor, Q9Surface, Q18Surface
+
+```bash
+$ /venv/ecc_qiskit_wrapper --help
+usage: ecc_qiskit_wrapper [-h] [-m M] [-p P] [-n N] [-s S] -f F [-e E] [-fs FS] [-ecc ECC] [-fq FQ] [-mc MC] [-cf CF]
+
+'QiskitWrapper interface with ecc support!'
+
+'optional arguments:'
+'  -h, --help  show this help message and exit'
+'  -m M        Define the noise model (AQYDP) (Default="D")'
+'  -p P        Set the noise probability (Default=0.001)'
+'  -n N        Set the number of shots. 0 for deterministic simulation (Default=2000)'
+'  -s S        Set a seed (Default=0)'
+'  -f F        Path to openqasm file'
+'  -e E        Export circuit with ecc as openqasm circuit instead of simulation it (provide name)'
+'  -fs FS      Specify a simulator (Default: "statevector_simulator" for simulation without noise, "aer_simulator_density_matrix", for deterministic noise-aware simulation"aer_simulator_statevector", for stochastic noise-aware
+               simulation).'
+'  -ecc ECC    Specify a ecc to be applied to the circuit (Default=none)'
+'  -fq FQ      Set the frequency for error correction (Default=100)'
+'  -mc MC      Only allow single controlled gates (Default=False)'
+'  -cf CF      Only allow clifford operations (Default=False)'
+
+```
+
 ## MQT Toolset
 
 The QFR library is the backbone of the quantum software tools in:
