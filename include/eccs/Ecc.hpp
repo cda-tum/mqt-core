@@ -35,9 +35,9 @@ public:
 
     qc::QuantumComputation& apply();
 
-    [[maybe_unused]] virtual std::ostream& printResult(std::ostream& out);
+    //[[maybe_unused]] virtual std::ostream& printResult(std::ostream& out);
 
-    virtual void dumpResult(const std::string& outputFilename);
+    //virtual void dumpResult(const std::string& outputFilename);
 
     virtual void dumpResult(const std::string& outputFilename, qc::Format format) {
         size_t slash          = outputFilename.find_last_of('/');
