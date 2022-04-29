@@ -63,6 +63,7 @@ git clone --recurse-submodules -j8 https://github.com/pichristoph/qfr.git
 
 Make sure you are in the main project directory for the next steps. Switch to the branch feature/ecc,
 ```bash
+cd qfr
 git switch feature/ecc
 ```
 and (if necessary), update the submodules.
@@ -73,7 +74,7 @@ git submodule update --init --recursive
 
 Then, the ECC framework can be installed using pip
 ```bash
-(venv) pip install .
+(venv) pip install --editable .
 ```
 
 If you want to use Qiskit for quantum circuit simulation, you need to install it as well
