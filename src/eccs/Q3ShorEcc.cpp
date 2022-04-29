@@ -23,21 +23,21 @@ void Q3ShorEcc::initMappedCircuit() {
 }
 
 void Q3ShorEcc::writeEncoding() {
-    if (!decodingDone) {
+    if (!isDecoded) {
         return;
     }
-    decodingDone      = false;
+    isDecoded         = false;
     const int nQubits = (int)qc.getNqubits();
 
     for (int i = 0; i < nQubits; i++) {
         auto ctrl = dd::Control{dd::Qubit(i), dd::Control::Type::pos};
-        qcMapped.x(static_cast<dd::Qubit>(i + nQubits), ctrl);
-        qcMapped.x(static_cast<dd::Qubit>(i + 2 * nQubits), ctrl);
+        writeX(dd::Qubit(i + nQubits), ctrl);
+        writeX(dd::Qubit(i + 2 * nQubits), ctrl);
     }
 }
 
 void Q3ShorEcc::measureAndCorrect() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int  nQubits  = qc.getNqubits();
@@ -47,12 +47,10 @@ void Q3ShorEcc::measureAndCorrect() {
         qcMapped.reset(ancStart);
         qcMapped.reset(static_cast<dd::Qubit>(ancStart + 1));
 
-        //        auto a0 = dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos};
-        //        auto a1 = dd::Control{dd::Qubit(ancStart + 1), dd::Control::Type::pos};
-        qcMapped.x(ancStart, dd::Control{dd::Qubit(i), dd::Control::Type::pos});
-        qcMapped.x(ancStart, dd::Control{dd::Qubit(i + nQubits), dd::Control::Type::pos});
-        qcMapped.x(static_cast<dd::Qubit>(ancStart + 1), dd::Control{dd::Qubit(i + nQubits), dd::Control::Type::pos});
-        qcMapped.x(static_cast<dd::Qubit>(ancStart + 1), dd::Control{dd::Qubit(i + 2 * nQubits), dd::Control::Type::pos});
+        writeX(ancStart, dd::Control{dd::Qubit(i), dd::Control::Type::pos});
+        writeX(ancStart, dd::Control{dd::Qubit(i + nQubits), dd::Control::Type::pos});
+        writeX(dd::Qubit(ancStart + 1), dd::Control{dd::Qubit(i + nQubits), dd::Control::Type::pos});
+        writeX(dd::Qubit(ancStart + 1), dd::Control{dd::Qubit(i + 2 * nQubits), dd::Control::Type::pos});
 
         qcMapped.measure(ancStart, clStart);
         qcMapped.measure(static_cast<dd::Qubit>(ancStart + 1), clStart + 1);
@@ -75,21 +73,21 @@ void Q3ShorEcc::measureAndCorrect() {
 }
 
 void Q3ShorEcc::writeDecoding() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int nQubits = (int)qc.getNqubits();
     for (int i = 0; i < nQubits; i++) {
         auto ctrl = dd::Control{dd::Qubit(i), dd::Control::Type::pos};
-        qcMapped.x(static_cast<dd::Qubit>(i + nQubits), ctrl);
-        qcMapped.x(static_cast<dd::Qubit>(i + 2 * nQubits), ctrl);
+        writeX(dd::Qubit(i + nQubits), ctrl);
+        writeX(dd::Qubit(i + 2 * nQubits), ctrl);
         writeToffoli(i, i + nQubits, true, i + 2 * nQubits, true);
     }
-    decodingDone = true;
+    isDecoded = true;
 }
 
 void Q3ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
-    if (decodingDone && gate->getType() != qc::Measure && gate->getType() != qc::H) {
+    if (isDecoded && gate->getType() != qc::Measure && gate->getType() != qc::H) {
         writeEncoding();
     }
     const int                nQubits = (int)qc.getNqubits();
@@ -155,37 +153,31 @@ void Q3ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
                     gateNotAvailableError(gate);
                 } else if (gate->getNcontrols()) {
                     auto& ctrls = gate->getControls();
-                    qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, ctrls, i,
-                                                                 gate->getType());
+                    writeGeneric(i, ctrls, gate->getType());
                     dd::Controls ctrls2, ctrls3;
                     for (const auto& ct: ctrls) {
                         ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + nQubits), ct.type});
                         ctrls3.insert(dd::Control{dd::Qubit(ct.qubit + 2 * nQubits), ct.type});
                     }
-                    qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, ctrls2, i + nQubits,
-                                                                 gate->getType());
-                    qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, ctrls3,
-                                                                 i + 2 * nQubits, gate->getType());
+                    writeGeneric(i + nQubits, ctrls2, gate->getType());
+                    writeGeneric(i + 2 * nQubits, ctrls3, gate->getType());
                 } else {
                     if (gate->getType() == qc::H) {
-                        qcMapped.x(static_cast<dd::Qubit>(i + 1), dd::Control{dd::Qubit(i)});
-                        qcMapped.x(static_cast<dd::Qubit>(i + 2), dd::Control{dd::Qubit(i)});
+                        writeX(dd::Qubit(i + 1), dd::Control{dd::Qubit(i)});
+                        writeX(dd::Qubit(i + 2), dd::Control{dd::Qubit(i)});
                         qcMapped.h(i);
-                        qcMapped.x(static_cast<dd::Qubit>(i + 1), dd::Control{dd::Qubit(i)});
-                        qcMapped.x(static_cast<dd::Qubit>(i + 2), dd::Control{dd::Qubit(i)});
+                        writeX(dd::Qubit(i + 1), dd::Control{dd::Qubit(i)});
+                        writeX(dd::Qubit(i + 2), dd::Control{dd::Qubit(i)});
                     } else {
-                        qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, i,
-                                                                     gate->getType());
-                        qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, i + nQubits,
-                                                                     gate->getType());
-                        qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, i + 2 * nQubits,
-                                                                     gate->getType());
+                        writeGeneric(i, gate->getType());
+                        writeGeneric(i + nQubits, gate->getType());
+                        writeGeneric(i + 2 * nQubits, gate->getType());
                     }
                 }
             }
             break;
         case qc::Measure:
-            if (!decodingDone) {
+            if (!isDecoded) {
                 measureAndCorrect();
                 writeDecoding();
             }

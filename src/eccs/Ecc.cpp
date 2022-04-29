@@ -5,14 +5,12 @@
 
 #include "eccs/Ecc.hpp"
 
-//#include <utility>
-
 Ecc::Ecc(struct Info eccInfo, qc::QuantumComputation& quantumcomputation, int measFreq, bool decomposeMC,
          bool cliffOnly):
     ecc(std::move(eccInfo)),
     qc(quantumcomputation), measureFrequency(measFreq),
     decomposeMultiControlledGates(decomposeMC), cliffordGatesOnly(cliffOnly) {
-    decodingDone = true;
+    isDecoded = true;
 }
 
 void Ecc::initMappedCircuit() {
@@ -30,7 +28,7 @@ qc::QuantumComputation& Ecc::apply() {
     initMappedCircuit();
 
     writeEncoding();
-    decodingDone=false;
+    isDecoded = false;
 
     long nInputGates = 0;
     for (const auto& gate: qc) {
@@ -42,18 +40,18 @@ qc::QuantumComputation& Ecc::apply() {
     }
     statistics.nInputGates = nInputGates;
 
-    if (!decodingDone) {
+    if (!isDecoded) {
         measureAndCorrect();
         writeDecoding();
-        decodingDone = true;
+        isDecoded = true;
     }
 
     statistics.nOutputGates = qcMapped.getNindividualOps();
 
     return qcMapped;
 }
-
-[[maybe_unused]] std::ostream& Ecc::printResult(std::ostream& out) {
+//currently not used - may be omitted
+/*std::ostream& Ecc::printResult(std::ostream& out) {
     out << "\tused error correcting code: " << ecc.name << std::endl;
     out << "\tgate overhead: " << statistics.getGateOverhead() << std::endl;
     out << "\tinput qubits: " << statistics.nInputQubits << std::endl;
@@ -77,11 +75,21 @@ void Ecc::dumpResult(const std::string& outputFilename) {
     } else {
         throw qc::QFRException("[dump] Extension " + extension + " not recognized/supported for dumping.");
     }
-}
+}*/
 
 void Ecc::gateNotAvailableError(const std::unique_ptr<qc::Operation>& gate) {
     throw qc::QFRException(
             std::string("Gate ") + gate->getName() + " not supported to encode in error code " + ecc.name + "!");
+}
+
+void Ecc::swap(dd::Qubit target1, dd::Qubit target2) {
+    if (cliffordGatesOnly) {
+        qcMapped.x(target1, dd::Control{target2});
+        qcMapped.x(target2, dd::Control{target1});
+        qcMapped.x(target1, dd::Control{target2});
+    } else {
+        qcMapped.swap(target1, target2);
+    }
 }
 
 void Ecc::writeToffoli(int target, int c1, bool p1, int c2, bool p2) {
@@ -118,18 +126,18 @@ void Ecc::writeToffoli(int target, int c1, bool p1, int c2, bool p2) {
     }
 }
 
-[[maybe_unused]] void Ecc::writeZToffoli(int target, int c1, bool p1, int c2, bool p2) {
-    qcMapped.h(static_cast<dd::Qubit>(target));
-    writeToffoli(static_cast<dd::Qubit>(target), c1, p1, c2, p2);
-    qcMapped.h(static_cast<dd::Qubit>(target));
-}
-
 void Ecc::writeGeneric(dd::Qubit target, qc::OpType type) {
     switch (type) {
         case qc::I:
             return;
         case qc::H:
             qcMapped.h(target);
+            return;
+        case qc::S:
+            qcMapped.s(target);
+            return;
+        case qc::Sdag:
+            writeSdag(target);
             return;
         case qc::X:
             writeX(target);
@@ -141,7 +149,12 @@ void Ecc::writeGeneric(dd::Qubit target, qc::OpType type) {
             writeZ(target);
             return;
         default:
-            throw qc::QFRException(std::string("Gate not possible to encode!"));
+            if (cliffordGatesOnly) {
+                throw qc::QFRException(std::string("Gate not possible to encode!"));
+            } else {
+                int nQubits = qc.getNqubits();
+                qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, target + 2 * nQubits, type);
+            }
     }
 }
 
@@ -159,7 +172,12 @@ void Ecc::writeGeneric(dd::Qubit target, qc::OpType type) {
             writeZ(target, control);
             return;
         default:
-            throw qc::QFRException(std::string("Gate not possible to encode!"));
+            if (cliffordGatesOnly) {
+                throw qc::QFRException(std::string("Gate not possible to encode!"));
+            } else {
+                qcMapped.emplace_back<qc::StandardOperation>(qc.getNqubits() * ecc.nRedundantQubits, control, target, type);
+                return;
+            }
     }
 }
 
@@ -177,22 +195,21 @@ void Ecc::writeGeneric(dd::Qubit target, const dd::Controls& controls, qc::OpTyp
             writeZ(target, controls);
             return;
         default:
-            throw qc::QFRException(std::string("Gate not possible to encode!"));
+            if (cliffordGatesOnly || decomposeMultiControlledGates) {
+                throw qc::QFRException(std::string("Gate not possible to encode!"));
+            } else {
+                qcMapped.emplace_back<qc::StandardOperation>(qc.getNqubits() * ecc.nRedundantQubits, controls, target, type);
+                return;
+            }
     }
 }
 
 void Ecc::writeX(dd::Qubit target) {
-    if (cliffordGatesOnly) {
-        qcMapped.h(target);
-        writeZ(target);
-        qcMapped.h(target);
-    } else {
-        qcMapped.x(target);
-    }
+    qcMapped.x(target);
 }
 
 void Ecc::writeX(dd::Qubit target, const dd::Control& control) {
-    writeXstatic(target, control, &qcMapped, cliffordGatesOnly);
+    qcMapped.x(target, control);
 }
 
 void Ecc::writeXstatic(dd::Qubit target, dd::Control control, qc::QuantumComputation* qcMapped, bool cliffordGatesOnly) {
@@ -200,27 +217,14 @@ void Ecc::writeXstatic(dd::Qubit target, dd::Control control, qc::QuantumComputa
 }
 
 void Ecc::writeX(dd::Qubit target, const dd::Controls& controls) {
-    if (controls.empty()) {
-        writeX(target);
-    } else if (controls.empty()) {
-        auto el(controls.begin());
-        qcMapped.x(target, *el);
-    } else if (cliffordGatesOnly) {
-        qcMapped.h(target);
-        writeZ(target, controls);
-        qcMapped.h(target);
-    } else {
-        qcMapped.x(target, controls);
+    if(decomposeMultiControlledGates && controls.size()>2) {
+        throw new qc::QFRException("multi-controlled X-gate not possible");
     }
+    qcMapped.x(target, controls);
 }
 
 void Ecc::writeY(dd::Qubit target) {
-    if (cliffordGatesOnly) {
-        writeZ(target);
-        writeX(target);
-    } else {
-        qcMapped.y(target);
-    }
+    qcMapped.y(target);
 }
 
 void Ecc::writeY(dd::Qubit target, const dd::Control& control) {
@@ -242,12 +246,7 @@ void Ecc::writeY(dd::Qubit target, const dd::Controls& controls) {
 }
 
 void Ecc::writeZ(dd::Qubit target) {
-    if (cliffordGatesOnly) {
-        qcMapped.s(target);
-        qcMapped.s(target);
-    } else {
-        qcMapped.z(target);
-    }
+    qcMapped.z(target);
 }
 
 void Ecc::writeZ(dd::Qubit target, const dd::Control& control) {
@@ -266,8 +265,9 @@ void Ecc::writeZstatic(dd::Qubit target, dd::Control control, qc::QuantumComputa
 
 void Ecc::writeZ(dd::Qubit target, const dd::Controls& controls) {
     if (cliffordGatesOnly) {
-        qcMapped.s(target, controls);
-        qcMapped.s(target, controls);
+        qcMapped.h(target);
+        writeX(target, controls);
+        qcMapped.h(target);
     } else {
         qcMapped.z(target, controls);
     }

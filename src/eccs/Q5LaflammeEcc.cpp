@@ -23,10 +23,10 @@ void Q5LaflammeEcc::initMappedCircuit() {
 }
 
 void Q5LaflammeEcc::writeEncoding() {
-    if (!decodingDone) {
+    if (!isDecoded) {
         return;
     }
-    decodingDone = false;
+    isDecoded = false;
     measureAndCorrect();
     const int nQubits  = qc.getNqubits();
     const int ancStart = nQubits * ecc.nRedundantQubits;
@@ -34,11 +34,11 @@ void Q5LaflammeEcc::writeEncoding() {
     for (int i = 0; i < nQubits; i++) {
         qcMapped.reset(dd::Qubit(ancStart));
         qcMapped.h(dd::Qubit(ancStart));
-        qcMapped.z(dd::Qubit(i), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
-        qcMapped.z(dd::Qubit(i + nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
-        qcMapped.z(dd::Qubit(i + 2 * nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
-        qcMapped.z(dd::Qubit(i + 3 * nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
-        qcMapped.z(dd::Qubit(i + 4 * nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
+        writeZ(dd::Qubit(i), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
+        writeZ(dd::Qubit(i + nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
+        writeZ(dd::Qubit(i + 2 * nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
+        writeZ(dd::Qubit(i + 3 * nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
+        writeZ(dd::Qubit(i + 4 * nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
         qcMapped.h(dd::Qubit(ancStart));
         qcMapped.measure(dd::Qubit(ancStart), clEncode);
 
@@ -51,7 +51,7 @@ void Q5LaflammeEcc::writeEncoding() {
 }
 
 void Q5LaflammeEcc::measureAndCorrect() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int nQubits    = qc.getNqubits();
@@ -83,33 +83,33 @@ void Q5LaflammeEcc::measureAndCorrect() {
         //K3: XIXZZ
         //K4: ZXIXZ
 
-        qcMapped.x(q[0], c0);
+        writeX(q[0], c0);
 
-        qcMapped.z(q[1], c0);
+        writeZ(q[1], c0);
         //controlled-id(i, c1)
 
-        qcMapped.z(q[2], c0);
-        qcMapped.x(q[1], c1);
-        qcMapped.x(q[0], c2);
+        writeZ(q[2], c0);
+        writeX(q[1], c1);
+        writeX(q[0], c2);
 
-        qcMapped.x(q[3], c0);
-        qcMapped.z(q[2], c1);
+        writeX(q[3], c0);
+        writeZ(q[2], c1);
         //controlled-id(i+1, c2)
-        qcMapped.z(q[0], c3);
+        writeZ(q[0], c3);
 
         //controlled-id(i+4, c0)
-        qcMapped.z(q[3], c1);
-        qcMapped.x(q[2], c2);
-        qcMapped.x(q[1], c3);
+        writeZ(q[3], c1);
+        writeX(q[2], c2);
+        writeX(q[1], c3);
 
-        qcMapped.x(q[4], c1);
-        qcMapped.z(q[3], c2);
+        writeX(q[4], c1);
+        writeZ(q[3], c2);
         //controlled-id(i+2, c3)
 
-        qcMapped.z(q[4], c2);
-        qcMapped.x(q[3], c3);
+        writeZ(q[4], c2);
+        writeX(q[3], c3);
 
-        qcMapped.z(q[4], c3);
+        writeZ(q[4], c3);
 
         qcMapped.h(ancStart);
         qcMapped.h(ancStart + 1);
@@ -150,7 +150,7 @@ void Q5LaflammeEcc::writeClassicalControlled(const unsigned int value, int targe
 }
 
 void Q5LaflammeEcc::writeDecoding() {
-    if (decodingDone) {
+    if (isDecoded) {
         return;
     }
     const int    nQubits             = qc.getNqubits();
@@ -171,11 +171,11 @@ void Q5LaflammeEcc::writeDecoding() {
             writeClassicalControl(dd::Qubit(clAncStart), dd::QubitCount(4), value, qc::X, i);
         }
     }
-    decodingDone = true;
+    isDecoded = true;
 }
 
 void Q5LaflammeEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
-    if (decodingDone && gate.get()->getType() != qc::Measure && gate.get()->getType() != qc::H) {
+    if (isDecoded && gate.get()->getType() != qc::Measure && gate.get()->getType() != qc::H) {
         writeEncoding();
     }
     const int                nQubits     = qc.getNqubits();
@@ -183,61 +183,22 @@ void Q5LaflammeEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
     switch (gate.get()->getType()) {
         case qc::I: break;
         case qc::X:
-        //case qc::H:
+        case qc::H:
         case qc::Y:
         case qc::Z:
             for (std::size_t t = 0; t < gate.get()->getNtargets(); t++) {
                 int i = gate.get()->getTargets()[t];
-                if (gate.get()->getNcontrols() == 2 && decomposeMultiControlledGates) {
-                    auto& ctrls     = gate.get()->getControls();
-                    int   idx       = 0;
-                    int   ctrl2[2]  = {-1, -1};
-                    bool  ctrl2T[2] = {true, true};
-                    for (const auto& ct: ctrls) {
-                        ctrl2[idx]  = ct.qubit;
-                        ctrl2T[idx] = ct.type == dd::Control::Type::pos;
-                        idx++;
-                    }
-                    if (gate.get()->getType() == qc::X) {
-                        for (int j = 0; j < 5; j++) {
-                            writeToffoli(i + j * nQubits, ctrl2[0] + j * nQubits, ctrl2T[0], ctrl2[1] + j * nQubits, ctrl2T[1]);
-                        }
-                    } else if (gate.get()->getType() == qc::Z) {
-                        for (int j = 0; j < 5; j++) {
-                            qcMapped.h(i + j * nQubits);
-                            writeToffoli(i + j * nQubits, ctrl2[0] + j * nQubits, ctrl2T[0], ctrl2[1] + j * nQubits, ctrl2T[1]);
-                            qcMapped.h(i + j * nQubits);
-                        }
-                    } else if (gate.get()->getType() == qc::Y) {
-                        for (int j = 0; j < 5; j++) {
-                            writeToffoli(i + j * nQubits, ctrl2[0] + j * nQubits, ctrl2T[0], ctrl2[1] + j * nQubits, ctrl2T[1]);
-                            qcMapped.h(i + j * nQubits);
-                            writeToffoli(i + j * nQubits, ctrl2[0] + j * nQubits, ctrl2T[0], ctrl2[1] + j * nQubits, ctrl2T[1]);
-                            qcMapped.h(i + j * nQubits);
-                        }
-                    } else {
-                        gateNotAvailableError(gate);
-                    }
-                } else if (gate.get()->getNcontrols() > 2 && decomposeMultiControlledGates) {
+                if (gate.get()->getNcontrols()) {
                     gateNotAvailableError(gate);
-                } else if (gate.get()->getNcontrols()) {
-                    auto& ctrls = gate.get()->getControls();
-                    for (int j = 0; j < 5; j++) {
-                        dd::Controls ctrls2;
-                        for (const auto& ct: ctrls) {
-                            ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + j * nQubits), ct.type});
-                        }
-                        qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, ctrls2, i + j * nQubits, gate.get()->getType());
-                    }
                 } else {
                     for (int j = 0; j < 5; j++) {
-                        qcMapped.emplace_back<qc::StandardOperation>(nQubits * ecc.nRedundantQubits, i + j * nQubits, gate.get()->getType());
+                        writeGeneric(i + j * nQubits, gate.get()->getType());
                     }
                 }
             }
             break;
         case qc::Measure:
-            if (!decodingDone) {
+            if (!isDecoded) {
                 measureAndCorrect();
                 writeDecoding();
             }
