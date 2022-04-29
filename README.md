@@ -101,7 +101,7 @@ result = qfr.apply_ecc(file, ecc, ecc_frequency, ecc_mc, ecc_cf)
 # print the resulting circuit
 print(result["circ"])
 ```
-Currently, the error correction schemes Q3Shor, Q5Laflamme, Q7Steane, Q9Shor, Q9Surface, Q18Surface are supported. 
+Currently, the error correction schemes Q3Shor, Q5Laflamme, Q7Steane, Q9Shor, Q9Surface, and Q18Surface are supported. 
 
 We provide a wrapper script for applying error correction to quantum circuits (provided as openQasm) and followed by a noise-aware quantum circuit simulation (using qiskit). The script can be used like this:
 
