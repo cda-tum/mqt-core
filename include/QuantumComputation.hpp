@@ -373,6 +373,8 @@ namespace qc {
         }
         void import(std::istream&& is, Format format);
         void initializeIOMapping();
+        // append measurements to the end of the circuit according to the tracked output permutation
+        void appendMeasurementsAccordingToOutputPermutation(const std::string& registerName = DEFAULT_CREG);
         // search for current position of target value in map and afterwards exchange it with the value at new position
         static void findAndSWAP(dd::Qubit targetValue, dd::Qubit newPosition, Permutation& map) {
             for (const auto& q: map) {
@@ -387,8 +389,10 @@ namespace qc {
         void addQubitRegister(std::size_t, const char* reg_name = DEFAULT_QREG);
         void addClassicalRegister(std::size_t nc, const char* reg_name = DEFAULT_CREG);
         void addAncillaryRegister(std::size_t nq, const char* reg_name = DEFAULT_ANCREG);
+        // a function to combine all quantum registers (qregs and ancregs) into a single register (useful for circuits mapped to a device)
+        void unifyQuantumRegisters(const std::string& regName = DEFAULT_QREG);
 
-        // removes the a specific logical qubit and returns the index of the physical qubit in the initial layout
+        // removes a specific logical qubit and returns the index of the physical qubit in the initial layout
         // as well as the index of the removed physical qubit's output permutation
         // i.e., initialLayout[physical_qubit] = logical_qubit and outputPermutation[physicalQubit] = output_qubit
         std::pair<dd::Qubit, dd::Qubit> removeQubit(dd::Qubit logical_qubit_index);
