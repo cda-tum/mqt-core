@@ -971,6 +971,7 @@ namespace qc {
         ancregs.clear();
         qregs.clear();
         qregs[regName] = {0, getNqubits()};
+        nancillae      = 0;
     }
 
     void QuantumComputation::appendMeasurementsAccordingToOutputPermutation(const std::string& registerName) {
