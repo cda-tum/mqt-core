@@ -408,6 +408,9 @@ namespace qc {
         // adjust output permutation
         if (output_qubit_index >= 0) {
             outputPermutation.insert({physical_qubit_index, output_qubit_index});
+        } else {
+            // if a qubit is not relevant for the output, it is considered garbage
+            garbage[logical_qubit_index] = true;
         }
 
         // update all operations
