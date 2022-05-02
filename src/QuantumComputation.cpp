@@ -966,4 +966,32 @@ namespace qc {
         }
         return true;
     }
+
+    void QuantumComputation::unifyQuantumRegisters(const std::string& regName) {
+        ancregs.clear();
+        qregs.clear();
+        qregs[regName] = {0, getNqubits()};
+    }
+
+    void QuantumComputation::appendMeasurementsAccordingToOutputPermutation(const std::string& registerName) {
+        // ensure that the circuit contains enough classical registers
+        if (cregs.empty()) {
+            // in case there are no registers, create a new one
+            addClassicalRegister(nqubits, registerName.c_str());
+        } else if (nclassics < outputPermutation.size()) {
+            if (cregs.find(registerName) == cregs.end()) {
+                // in case there are registers but not enough, add a new one
+                addClassicalRegister(outputPermutation.size() - nclassics, registerName.c_str());
+            } else {
+                // in case the register already exists, augment it
+                nclassics += outputPermutation.size() - nclassics;
+                cregs[registerName].second = outputPermutation.size();
+            }
+        }
+
+        // append measurements according to output permutation
+        for (const auto& [qubit, clbit]: outputPermutation) {
+            measure(qubit, clbit);
+        }
+    }
 } // namespace qc

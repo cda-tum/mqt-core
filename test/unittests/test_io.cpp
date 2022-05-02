@@ -404,3 +404,135 @@ TEST_F(IO, sx_and_sxdag) {
     auto& compOp2 = *(++compOp->begin());
     EXPECT_EQ(compOp2->getType(), qc::OpType::SXdag);
 }
+
+TEST_F(IO, unify_registers) {
+    std::stringstream ss{};
+    ss << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[1];"
+       << "qreg r[1];"
+       << "x q[0];"
+       << "x r[0];"
+       << std::endl;
+    qc->import(ss, qc::OpenQASM);
+    std::cout << *qc << std::endl;
+    qc->unifyQuantumRegisters();
+    std::cout << *qc << std::endl;
+    std::ostringstream oss{};
+    qc->dump(oss, qc::OpenQASM);
+    EXPECT_STREQ(oss.str().c_str(),
+                 "// i 0 1\n"
+                 "// o 0 1\n"
+                 "OPENQASM 2.0;\n"
+                 "include \"qelib1.inc\";\n"
+                 "qreg q[2];\n"
+                 "x q[0];\n"
+                 "x q[1];\n");
+}
+
+TEST_F(IO, append_measurements_according_to_output_permutation) {
+    std::stringstream ss{};
+    ss << "// o 1\n"
+       << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[2];"
+       << "x q[1];"
+       << std::endl;
+    qc->import(ss, qc::OpenQASM);
+    qc->appendMeasurementsAccordingToOutputPermutation();
+    std::cout << *qc << std::endl;
+    const auto& op = *(qc->rbegin());
+    ASSERT_EQ(op->getType(), qc::OpType::Measure);
+    const auto& meas = dynamic_cast<const qc::NonUnitaryOperation*>(op.get());
+    EXPECT_EQ(meas->getTargets().size(), 1U);
+    EXPECT_EQ(meas->getTargets().front(), 1U);
+    EXPECT_EQ(meas->getClassics().size(), 1U);
+    EXPECT_EQ(meas->getClassics().front(), 0U);
+}
+
+TEST_F(IO, append_measurements_according_to_output_permutation_augment_register) {
+    std::stringstream ss{};
+    ss << "// o 0 1\n"
+       << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[2];"
+       << "creg c[1];"
+       << "x q;"
+       << std::endl;
+    qc->import(ss, qc::OpenQASM);
+    qc->appendMeasurementsAccordingToOutputPermutation();
+    std::cout << *qc << std::endl;
+    EXPECT_EQ(qc->getNcbits(), 2U);
+    const auto& op = *(qc->rbegin());
+    ASSERT_EQ(op->getType(), qc::OpType::Measure);
+    const auto& meas = dynamic_cast<const qc::NonUnitaryOperation*>(op.get());
+    EXPECT_EQ(meas->getTargets().size(), 1U);
+    EXPECT_EQ(meas->getTargets().front(), 1U);
+    EXPECT_EQ(meas->getClassics().size(), 1U);
+    EXPECT_EQ(meas->getClassics().front(), 1U);
+    const auto& op2 = *(++qc->rbegin());
+    ASSERT_EQ(op2->getType(), qc::OpType::Measure);
+    const auto& meas2 = dynamic_cast<const qc::NonUnitaryOperation*>(op2.get());
+    EXPECT_EQ(meas2->getTargets().size(), 1U);
+    EXPECT_EQ(meas2->getTargets().front(), 0U);
+    EXPECT_EQ(meas2->getClassics().size(), 1U);
+    EXPECT_EQ(meas2->getClassics().front(), 0U);
+    std::ostringstream oss{};
+    qc->dump(oss, qc::OpenQASM);
+    std::cout << oss.str() << std::endl;
+    EXPECT_STREQ(oss.str().c_str(),
+                 "// i 0 1\n"
+                 "// o 0 1\n"
+                 "OPENQASM 2.0;\n"
+                 "include \"qelib1.inc\";\n"
+                 "qreg q[2];\n"
+                 "creg c[2];\n"
+                 "x q[0];\n"
+                 "x q[1];\n"
+                 "measure q[0] -> c[0];\n"
+                 "measure q[1] -> c[1];\n");
+}
+
+TEST_F(IO, append_measurements_according_to_output_permutation_add_register) {
+    std::stringstream ss{};
+    ss << "// o 0 1\n"
+       << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[2];"
+       << "creg d[1];"
+       << "x q;"
+       << std::endl;
+    qc->import(ss, qc::OpenQASM);
+    qc->appendMeasurementsAccordingToOutputPermutation();
+    std::cout << *qc << std::endl;
+    EXPECT_EQ(qc->getNcbits(), 2U);
+    const auto& op = *(qc->rbegin());
+    ASSERT_EQ(op->getType(), qc::OpType::Measure);
+    const auto& meas = dynamic_cast<const qc::NonUnitaryOperation*>(op.get());
+    EXPECT_EQ(meas->getTargets().size(), 1U);
+    EXPECT_EQ(meas->getTargets().front(), 1U);
+    EXPECT_EQ(meas->getClassics().size(), 1U);
+    EXPECT_EQ(meas->getClassics().front(), 1U);
+    const auto& op2 = *(++qc->rbegin());
+    ASSERT_EQ(op2->getType(), qc::OpType::Measure);
+    const auto& meas2 = dynamic_cast<const qc::NonUnitaryOperation*>(op2.get());
+    EXPECT_EQ(meas2->getTargets().size(), 1U);
+    EXPECT_EQ(meas2->getTargets().front(), 0U);
+    EXPECT_EQ(meas2->getClassics().size(), 1U);
+    EXPECT_EQ(meas2->getClassics().front(), 0U);
+    std::ostringstream oss{};
+    qc->dump(oss, qc::OpenQASM);
+    std::cout << oss.str() << std::endl;
+    EXPECT_STREQ(oss.str().c_str(),
+                 "// i 0 1\n"
+                 "// o 0 1\n"
+                 "OPENQASM 2.0;\n"
+                 "include \"qelib1.inc\";\n"
+                 "qreg q[2];\n"
+                 "creg d[1];\n"
+                 "creg c[1];\n"
+                 "x q[0];\n"
+                 "x q[1];\n"
+                 "measure q[0] -> d[0];\n"
+                 "measure q[1] -> c[0];\n");
+}
