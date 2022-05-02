@@ -981,7 +981,7 @@ namespace qc {
         // ensure that the circuit contains enough classical registers
         if (cregs.empty()) {
             // in case there are no registers, create a new one
-            addClassicalRegister(nqubits, registerName.c_str());
+            addClassicalRegister(outputPermutation.size(), registerName.c_str());
         } else if (nclassics < outputPermutation.size()) {
             if (cregs.find(registerName) == cregs.end()) {
                 // in case there are registers but not enough, add a new one
