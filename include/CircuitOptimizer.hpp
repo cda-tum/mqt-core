@@ -51,6 +51,8 @@ namespace qc {
 
         static void flattenOperations(QuantumComputation& qc);
 
+        static void cancelCNOTs(QuantumComputation& qc);
+
     protected:
         static void removeDiagonalGatesBeforeMeasureRecursive(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, const DAGReverseIterator& until);
         static bool removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, DAGReverseIterator& it, qc::Operation* op);
