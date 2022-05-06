@@ -41,43 +41,17 @@ namespace qc {
     void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
         dd::Qubit highest_physical_qubit = 0;
         for (const auto& q: qc.initialLayout) {
-            if (q.first > highest_physical_qubit)
+            if (q.first > highest_physical_qubit) {
                 highest_physical_qubit = q.first;
+            }
         }
 
         auto dag = DAG(highest_physical_qubit + 1);
 
         for (auto& it: qc.ops) {
             if (!it->isStandardOperation()) {
-                // compound operations are added "as-is"
-                if (it->isCompoundOperation()) {
-                    std::clog << "Skipping compound operation during SWAP reconstruction!" << std::endl;
-                    for (dd::QubitCount i = 0; i < it->getNqubits(); ++i) {
-                        if (it->actsOn(static_cast<dd::Qubit>(i))) {
-                            dag.at(i).push_back(&it);
-                        }
-                    }
-                    continue;
-                } else if (it->isNonUnitaryOperation()) {
-                    if (it->getType() == Barrier)
-                        continue;
-
-                    for (const auto& b: it->getTargets()) {
-                        dag.at(b).push_back(&it);
-                    }
-                    continue;
-                } else if (it->isClassicControlledOperation()) {
-                    auto op = dynamic_cast<ClassicControlledOperation*>(it.get())->getOperation();
-                    for (const auto& control: op->getControls()) {
-                        dag.at(control.qubit).push_back(&it);
-                    }
-                    for (const auto& target: op->getTargets()) {
-                        dag.at(target).push_back(&it);
-                    }
-                    continue;
-                } else {
-                    throw QFRException("Unexpected operation encountered");
-                }
+                addNonStandardOperationToDag(dag, &it);
+                continue;
             }
 
             // Operation is not a CNOT
@@ -160,31 +134,7 @@ namespace qc {
 
         for (auto& it: qc.ops) {
             if (!it->isStandardOperation()) {
-                // compound operations are added "as-is"
-                if (it->isCompoundOperation()) {
-                    for (dd::QubitCount i = 0; i < it->getNqubits(); ++i) {
-                        if (it->actsOn(static_cast<dd::Qubit>(i))) {
-                            dag.at(i).push_back(&it);
-                        }
-                    }
-                    continue;
-                } else if (it->isNonUnitaryOperation()) {
-                    for (const auto& b: it->getTargets()) {
-                        dag.at(b).push_back(&it);
-                    }
-                    continue;
-                } else if (it->isClassicControlledOperation()) {
-                    auto op = dynamic_cast<ClassicControlledOperation*>(it.get())->getOperation();
-                    for (const auto& control: op->getControls()) {
-                        dag.at(control.qubit).push_back(&it);
-                    }
-                    for (const auto& target: op->getTargets()) {
-                        dag.at(target).push_back(&it);
-                    }
-                    continue;
-                } else {
-                    throw QFRException("Unexpected operation encountered");
-                }
+                addNonStandardOperationToDag(dag, &it);
             } else {
                 addToDag(dag, &it);
             }
@@ -198,6 +148,37 @@ namespace qc {
         }
         for (const auto& target: (*op)->getTargets()) {
             dag.at(target).push_back(op);
+        }
+    }
+
+    void CircuitOptimizer::addNonStandardOperationToDag(DAG& dag, std::unique_ptr<Operation>* op) {
+        const auto& gate = *op;
+        // compound operations are added "as-is"
+        if (gate->isCompoundOperation()) {
+            for (dd::QubitCount i = 0U; i < gate->getNqubits(); ++i) {
+                if (gate->actsOn(static_cast<dd::Qubit>(i))) {
+                    dag.at(i).push_back(op);
+                }
+            }
+        } else if (gate->isNonUnitaryOperation()) {
+            // barriers are not added to a circuit DAG
+            if (gate->getType() == Barrier) {
+                return;
+            }
+
+            for (const auto& b: gate->getTargets()) {
+                dag.at(b).push_back(op);
+            }
+        } else if (gate->isClassicControlledOperation()) {
+            auto cop = dynamic_cast<ClassicControlledOperation*>(gate.get())->getOperation();
+            for (const auto& control: cop->getControls()) {
+                dag.at(control.qubit).push_back(op);
+            }
+            for (const auto& target: cop->getTargets()) {
+                dag.at(target).push_back(op);
+            }
+        } else {
+            throw QFRException("Unexpected operation encountered");
         }
     }
 
@@ -225,31 +206,8 @@ namespace qc {
 
         for (auto& it: qc.ops) {
             if (!it->isStandardOperation()) {
-                // compound operations are added "as-is"
-                if (it->isCompoundOperation()) {
-                    for (dd::QubitCount i = 0; i < it->getNqubits(); ++i) {
-                        if (it->actsOn(static_cast<dd::Qubit>(i))) {
-                            dag.at(i).push_back(&it);
-                        }
-                    }
-                    continue;
-                } else if (it->isNonUnitaryOperation()) {
-                    for (const auto& b: it->getTargets()) {
-                        dag.at(b).push_back(&it);
-                    }
-                    continue;
-                } else if (it->isClassicControlledOperation()) {
-                    auto op = dynamic_cast<ClassicControlledOperation*>(it.get())->getOperation();
-                    for (const auto& control: op->getControls()) {
-                        dag.at(control.qubit).push_back(&it);
-                    }
-                    for (const auto& target: op->getTargets()) {
-                        dag.at(target).push_back(&it);
-                    }
-                    continue;
-                } else {
-                    throw QFRException("Unexpected operation encountered");
-                }
+                addNonStandardOperationToDag(dag, &it);
+                continue;
             }
 
             // not a single qubit operation TODO: multiple targets could also be considered here
@@ -1141,35 +1099,8 @@ namespace qc {
 
         for (auto& it: qc.ops) {
             if (!it->isStandardOperation()) {
-                // compound operations are added "as-is"
-                if (it->isCompoundOperation()) {
-                    for (dd::QubitCount i = 0; i < it->getNqubits(); ++i) {
-                        if (it->actsOn(static_cast<dd::Qubit>(i))) {
-                            dag.at(i).push_back(&it);
-                        }
-                    }
-                    continue;
-                } else if (it->isNonUnitaryOperation()) {
-                    if (it->getType() == Barrier) {
-                        continue;
-                    }
-
-                    for (const auto& b: it->getTargets()) {
-                        dag.at(b).push_back(&it);
-                    }
-                    continue;
-                } else if (it->isClassicControlledOperation()) {
-                    auto op = dynamic_cast<ClassicControlledOperation*>(it.get())->getOperation();
-                    for (const auto& control: op->getControls()) {
-                        dag.at(control.qubit).push_back(&it);
-                    }
-                    for (const auto& target: op->getTargets()) {
-                        dag.at(target).push_back(&it);
-                    }
-                    continue;
-                } else {
-                    throw QFRException("Unexpected operation encountered");
-                }
+                addNonStandardOperationToDag(dag, &it);
+                continue;
             }
 
             // check whether the operation is a CNOT or SWAP gate

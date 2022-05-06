@@ -19,6 +19,7 @@ namespace qc {
     class CircuitOptimizer {
     protected:
         static void addToDag(DAG& dag, std::unique_ptr<Operation>* op);
+        static void addNonStandardOperationToDag(DAG& dag, std::unique_ptr<Operation>* op);
 
     public:
         CircuitOptimizer() = default;
