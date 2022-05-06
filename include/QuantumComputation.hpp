@@ -500,5 +500,6 @@ namespace qc {
 
         [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }
         [[nodiscard]] const auto& front() const { return ops.front(); }
+        [[nodiscard]] const auto& back() const { return ops.back(); }
     };
 } // namespace qc

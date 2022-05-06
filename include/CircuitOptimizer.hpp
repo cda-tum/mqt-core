@@ -19,6 +19,7 @@ namespace qc {
     class CircuitOptimizer {
     protected:
         static void addToDag(DAG& dag, std::unique_ptr<Operation>* op);
+        static void addNonStandardOperationToDag(DAG& dag, std::unique_ptr<Operation>* op);
 
     public:
         CircuitOptimizer() = default;
@@ -50,6 +51,8 @@ namespace qc {
         static void reorderOperations(QuantumComputation& qc);
 
         static void flattenOperations(QuantumComputation& qc);
+
+        static void cancelCNOTs(QuantumComputation& qc);
 
     protected:
         static void removeDiagonalGatesBeforeMeasureRecursive(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, const DAGReverseIterator& until);
