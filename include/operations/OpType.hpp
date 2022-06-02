@@ -48,7 +48,13 @@ namespace qc {
         Barrier,
         Teleportation,
         // Classically-controlled Operation
-        ClassicControlled
+        ClassicControlled,
+        // Noise operations
+        ATrue,
+        AFalse,
+        multiATrue,
+        multiAFalse,
+        opCount
     };
 
     inline std::string toString(const OpType& opType) {
