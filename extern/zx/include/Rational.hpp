@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <stdint.h>
+#include <gmpxx.h>
 
 namespace zx {
 
@@ -13,12 +14,15 @@ namespace zx {
  */
 class Rational {
   void normalize();
-
+  
 public:
-  int64_t num, denom;
+  mpz_class num, denom;
 
   Rational() : num(0), denom(1){};
   explicit Rational(int64_t num, int64_t denom) : num(num), denom(denom) {
+    normalize();
+  }
+  explicit Rational(mpz_class num, mpz_class denom) : num(num), denom(denom) {
     normalize();
   }
   explicit Rational(int64_t num) : num(num), denom(1) { normalize(); }
@@ -36,7 +40,7 @@ public:
   Rational &operator/=(const Rational &rhs);
   Rational &operator/=(const int64_t rhs);
 
-  double to_double() const;
+  // double to_double() const;
   bool is_integer() const { return denom == 1; }
 };
 

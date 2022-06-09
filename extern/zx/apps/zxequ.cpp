@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
   std::cout << static_cast<int>(c0.getNqubits()) << ", " << c0.getNops() <<
     ", " << c1.getNops() << ", " << time_elapsed_s << ", ";
 
-  // print_diag(d0);
+  print_diag(d0);
   // std::cout << "" << "\n";
 
   // if(d0.is_identity(p))

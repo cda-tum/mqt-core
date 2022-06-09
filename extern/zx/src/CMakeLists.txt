@@ -24,7 +24,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON 
 
 # add JKQ::QFR library
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/qfr" "extern/qfr")
-target_link_libraries(${PROJECT_NAME} PUBLIC JKQ::qfr)
+target_link_libraries(${PROJECT_NAME} PUBLIC JKQ::qfr gmpxx gmp::libgmpxx gmp gmp::libgmp)
 
 # enable interprocedural optimization if it is supported
 # enable_lto(${PROJECT_NAME})

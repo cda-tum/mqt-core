@@ -43,7 +43,14 @@ macro(check_submodule_present MODULENAME)
 	endif()
 endmacro()
 
+list (APPEND CMAKE_MODULE_PATH
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 check_submodule_present(qfr)
+find_package(GMP REQUIRED)
+add_library(gmp::gmpxx IMPORTED INTERFACE)
+add_library(gmp::libgmpxx IMPORTED INTERFACE)
+add_library(gmp::libgmp IMPORTED INTERFACE)
 # check_submodule_present(json)
 # check_submodule_present(pybind11)
 # check_submodule_present(pybind11_json)

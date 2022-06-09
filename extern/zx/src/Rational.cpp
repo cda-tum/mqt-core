@@ -2,13 +2,15 @@
 #include "Definitions.hpp"
 #include "QuantumComputation.hpp" //TODO incorrect include
 #include <cmath>
+#include <gmpxx.h>
 
 namespace zx {
-int64_t gcd(int64_t a, int64_t b) {
+mpz_class gcd(mpz_class a, mpz_class b) {
   int64_t r;
 
   while (b != 0) {
-    r = a % b;
+    mpz_class r = 0;
+    mpz_mod(r.get_mpz_t(), a.get_mpz_t(), b.get_mpz_t());
     a = b;
     b = r;
   }
@@ -31,7 +33,7 @@ Rational::Rational(double val) : num(0), denom(1) {
 
     return;
   }
-
+  
   val /= PI;
   val -= 2*static_cast<int>(val/2);
   if (val > 1) {
@@ -44,7 +46,7 @@ Rational::Rational(double val) : num(0), denom(1) {
   // double frac = val - integral;
   double frac = val;
 
-  int64_t gcd_ = gcd(std::round(frac * MAX_DENOM), MAX_DENOM);
+  mpz_class gcd_ = gcd(std::round(frac * MAX_DENOM), MAX_DENOM);
 
   denom = MAX_DENOM / gcd_;
   num = round(frac * MAX_DENOM) / gcd_;
@@ -65,7 +67,7 @@ void Rational::normalize() {
     return;
   }
     
-  int64_t g = gcd(num, denom);
+  mpz_class g = gcd(num, denom);
   num /= g;
   denom /= g;
 
@@ -75,9 +77,9 @@ void Rational::normalize() {
   }
 }
 
-double Rational::to_double() const {
-  return zx::PI * (static_cast<float>(num)) / denom;
-}
+// double Rational::to_double() const {
+//   return zx::PI * (static_cast<float>(num)) / denom;
+// }
   
 Rational &Rational::operator+=(const Rational &rhs) {
   num = num * rhs.denom + rhs.num * denom;

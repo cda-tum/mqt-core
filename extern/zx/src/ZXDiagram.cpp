@@ -4,6 +4,7 @@
 #include "Rational.hpp"
 #include "Utils.hpp"
 #include "dd/Definitions.hpp"
+#include "operations/CompoundOperation.hpp"
 #include "operations/OpType.hpp"
 #include <algorithm>
 #include <unordered_map>
@@ -20,11 +21,12 @@ ZXDiagram::ZXDiagram(int32_t nqubits) {
 ZXDiagram::ZXDiagram(std::string filename)
     : ZXDiagram(qc::QuantumComputation(filename)) {}
 
-static bool check_swap(const qc::QuantumComputation &qc, size_t i,
-                       dd::Qubit ctrl, dd::Qubit target) {
-  if (i < qc.getNops() - 2) {
-    auto &op1 = *(qc.begin() + i + 1);
-    auto &op2 = *(qc.begin() + i + 2);
+using op_it =
+    decltype(std::begin(std::vector<std::unique_ptr<qc::Operation>>()));
+static bool check_swap(op_it it, op_it end, dd::Qubit ctrl, dd::Qubit target) {
+  if (it + 1 != end && it + 2 != end) {
+    auto &op1 = *(it + 1);
+    auto &op2 = *(it + 2);
     if (op1->getType() == qc::OpType::X && op2->getType() == qc::OpType::X &&
         op1->getNcontrols() == 1 && op2->getNcontrols() == 1) {
       auto tar1 = op1->getTargets()[0];
@@ -58,210 +60,17 @@ ZXDiagram::ZXDiagram(const qc::QuantumComputation &qc) {
     qubit_vertices = new_qubit_vertices;
   }
 
-  for (size_t i = 0; i < qc.getNops(); ++i) {
-    auto &op = *(qc.begin() + i);
-    if (op->getType() == qc::OpType::Barrier)
-      continue;
+  for (auto it = qc.begin(); it != qc.end();) {
+    auto &op = *it;
 
-    if (op->getNcontrols() == 0 && op->getNtargets() == 1) {
-      auto target = op->getTargets()[0];
-      switch (op->getType()) {
-      case qc::OpType::Z: {
-        add_z_spider(target, qubit_vertices, Rational(1, 1));
-        break;
-      }
-
-      case qc::OpType::RZ:
-      case qc::OpType::Phase: {
-
-        add_z_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
-        break;
-      }
-      case qc::OpType::X: {
-        add_x_spider(target, qubit_vertices, Rational(1, 1));
-        break;
-      }
-
-      case qc::OpType::RX: {
-        add_x_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
-        break;
-      }
-
-      case qc::OpType::Y: {
-        add_z_spider(target, qubit_vertices, Rational(1, 1));
-        add_x_spider(target, qubit_vertices, Rational(1, 1));
-        break;
-      }
-
-      case qc::OpType::RY: {
-        // add_z_spider(target, qubit_vertices,
-        // Rational(op->getParameter()[2]));
-        add_x_spider(target, qubit_vertices, Rational(1, 2));
-        add_z_spider(target, qubit_vertices,
-                     Rational(op->getParameter()[0]) + Rational(1, 1));
-        add_x_spider(target, qubit_vertices, Rational(1, 2));
-        add_z_spider(target, qubit_vertices, Rational(3, 1));
-        break;
-      }
-      case qc::OpType::T: {
-        add_z_spider(target, qubit_vertices, Rational(1, 4));
-        break;
-      }
-      case qc::OpType::Tdag: {
-        add_z_spider(target, qubit_vertices, Rational(-1, 4));
-        break;
-      }
-      case qc::OpType::S: {
-        add_z_spider(target, qubit_vertices, Rational(1, 2));
-        break;
-      }
-      case qc::OpType::Sdag: {
-        add_z_spider(target, qubit_vertices, Rational(-1, 2));
-        break;
-      }
-      case qc::OpType::U2: {
-        add_z_spider(target, qubit_vertices,
-                     Rational(op->getParameter()[0]) - Rational(1, 2));
-        add_x_spider(target, qubit_vertices, Rational(1, 2));
-        add_z_spider(target, qubit_vertices,
-                     Rational(op->getParameter()[1]) + Rational(1, 2));
-        break;
-      }
-      case qc::OpType::U3: {
-        add_z_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
-        add_x_spider(target, qubit_vertices, Rational(1, 2));
-        add_z_spider(target, qubit_vertices,
-                     Rational(op->getParameter()[2]) + Rational(1, 1));
-        add_x_spider(target, qubit_vertices, Rational(1, 2));
-        add_z_spider(target, qubit_vertices,
-                     Rational(op->getParameter()[1]) + Rational(3, 1));
-        break;
-      }
-
-      case qc::OpType::SWAP: {
-        auto target2 = op->getTargets()[0];
-        add_swap(target, target2, qubit_vertices);
-        
-
-        // add_cnot(target, target2, qubit_vertices);
-        // add_cnot(target2, target, qubit_vertices);
-        // add_cnot(target, target2, qubit_vertices);
-        break;
-      }
-      case qc::OpType::H: {
-        add_z_spider(target, qubit_vertices, Rational(0, 1),
-                     EdgeType::Hadamard);
-        break;
-      }
-      case qc::OpType::Measure:
-      case qc::OpType::I: {
-        break;
-      }
-      default: {
-        throw ZXException("Unsupported Operation: " +
-                          qc::toString(op->getType()));
-      }
-      }
-    } else if (op->getNcontrols() == 1 && op->getNtargets() == 1) {
-      auto target = op->getTargets()[0];
-      auto ctrl = (*op->getControls().begin()).qubit;
-      switch (op->getType()) { // TODO: any gate can be controlled
-      case qc::OpType::X: {
-        // check if swap
-        if (check_swap(qc, i, ctrl, target)) {
-          add_swap(ctrl, target, qubit_vertices);
-          i += 2;
-          // std::cout << "SWAP" << "\n";
-
-        } else {
-          add_cnot(ctrl, target, qubit_vertices);
-        }
-
-        break;
-      }
-      case qc::OpType::Z: {
-        auto phase = Rational(1, 1);
-        add_z_spider(target, qubit_vertices, phase / 2);
-        add_cnot(ctrl, target, qubit_vertices);
-        add_z_spider(target, qubit_vertices, -phase / 2);
-        add_cnot(ctrl, target, qubit_vertices);
-        break;
-      }
-
-      case qc::OpType::Phase: {
-        auto phase = Rational(op->getParameter()[0]);
-        add_cphase(phase, ctrl, target, qubit_vertices);
-        break;
-      }
-
-      case qc::OpType::T: {
-        add_cphase(Rational(1, 4), ctrl, target, qubit_vertices);
-        break;
-      }
-
-      case qc::OpType::S: {
-        add_cphase(Rational(1, 2), ctrl, target, qubit_vertices);
-        break;
-      }
-
-      case qc::OpType::Tdag: {
-        add_cphase(Rational(-1, 4), ctrl, target, qubit_vertices);
-        break;
-      }
-
-      case qc::OpType::Sdag: {
-        add_cphase(Rational(-1, 2), ctrl, target, qubit_vertices);
-        break;
-      }
-
-      default: {
-        throw ZXException("Unsupported Controlled Operation: " +
-                          qc::toString(op->getType()));
-      }
-      }
-    } else if (op->getNcontrols() == 2) {
-
-      dd::Qubit ctrl_0 = 0;
-      dd::Qubit ctrl_1 = 0;
-      dd::Qubit target = op->getTargets()[0];
-      int i = 0;
-      for (auto &ctrl : op->getControls()) {
-        if (i++ == 0)
-          ctrl_0 = ctrl.qubit;
-        else
-          ctrl_1 = ctrl.qubit;
-      }
-      switch (op->getType()) {
-      case qc::OpType::X: {
-        add_z_spider(target, qubit_vertices, Rational(0, 1),
-                     EdgeType::Hadamard);
-        add_cnot(ctrl_1, target, qubit_vertices);
-        add_z_spider(target, qubit_vertices, Rational(-1, 4));
-        add_cnot(ctrl_0, target, qubit_vertices);
-        add_z_spider(target, qubit_vertices, Rational(1, 4));
-        add_cnot(ctrl_1, target, qubit_vertices);
-        add_z_spider(ctrl_1, qubit_vertices, Rational(1, 4));
-        add_z_spider(target, qubit_vertices, Rational(-1, 4));
-        add_cnot(ctrl_0, target, qubit_vertices);
-        add_z_spider(target, qubit_vertices, Rational(1, 4));
-        add_cnot(ctrl_0, ctrl_1, qubit_vertices);
-        add_z_spider(ctrl_0, qubit_vertices, Rational(1, 4));
-        add_z_spider(ctrl_1, qubit_vertices, Rational(-1, 4));
-        add_z_spider(target, qubit_vertices, Rational(0, 1),
-                     EdgeType::Hadamard);
-        add_cnot(ctrl_0, ctrl_1, qubit_vertices);
-        break;
-      }
-      default: {
-        throw ZXException("Unsupported Multi-control operation: " +
-                          qc::toString(op->getType()));
-        break;
-      }
-      }
-
+    if (op->getType() == qc::OpType::Compound) {
+      qc::CompoundOperation *comp_op =
+          static_cast<qc::CompoundOperation *>(op.get());
+      for (op_it sub_it = comp_op->begin(); sub_it != comp_op->end();)
+        sub_it = parse_op(sub_it, comp_op->end(), qubit_vertices);
+      ++it;
     } else {
-      throw ZXException("Unsupported Multi-control operation" +
-                        qc::toString(op->getType()));
+      it = parse_op(it, qc.end(), qubit_vertices);
     }
   }
 
@@ -575,6 +384,25 @@ void ZXDiagram::add_swap(dd::Qubit ctrl, dd::Qubit target,
   qubit_vertices[ctrl] = t1;
 }
 
+void ZXDiagram::add_ccx(dd::Qubit ctrl_0, dd::Qubit ctrl_1, dd::Qubit target,
+                        std::vector<Vertex> &qubit_vertices) {
+  add_z_spider(target, qubit_vertices, Rational(0, 1), EdgeType::Hadamard);
+  add_cnot(ctrl_1, target, qubit_vertices);
+  add_z_spider(target, qubit_vertices, Rational(-1, 4));
+  add_cnot(ctrl_0, target, qubit_vertices);
+  add_z_spider(target, qubit_vertices, Rational(1, 4));
+  add_cnot(ctrl_1, target, qubit_vertices);
+  add_z_spider(ctrl_1, qubit_vertices, Rational(1, 4));
+  add_z_spider(target, qubit_vertices, Rational(-1, 4));
+  add_cnot(ctrl_0, target, qubit_vertices);
+  add_z_spider(target, qubit_vertices, Rational(1, 4));
+  add_cnot(ctrl_0, ctrl_1, qubit_vertices);
+  add_z_spider(ctrl_0, qubit_vertices, Rational(1, 4));
+  add_z_spider(ctrl_1, qubit_vertices, Rational(-1, 4));
+  add_z_spider(target, qubit_vertices, Rational(0, 1), EdgeType::Hadamard);
+  add_cnot(ctrl_0, ctrl_1, qubit_vertices);
+}
+
 std::vector<Vertex> ZXDiagram::init_graph(int nqubits) {
 
   std::vector<Vertex> qubit_vertices(nqubits);
@@ -614,5 +442,207 @@ void ZXDiagram::make_ancilla(dd::Qubit qubit) {
   set_type(in_v, VertexType::X);
   remove_vertex(in_v);
   remove_vertex(out_v);
+}
+
+op_it ZXDiagram::parse_op(op_it it, op_it end,
+                          std::vector<Vertex> &qubit_vertices) {
+  auto &op = *it;
+
+  if (op->getType() == qc::OpType::Barrier) {
+    return it + 1;
+  }
+
+  if (op->getNcontrols() == 0 && op->getNtargets() == 1) {
+    auto target = op->getTargets()[0];
+    switch (op->getType()) {
+    case qc::OpType::Z: {
+      add_z_spider(target, qubit_vertices, Rational(1, 1));
+      break;
+    }
+
+    case qc::OpType::RZ:
+    case qc::OpType::Phase: {
+
+      add_z_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
+      break;
+    }
+    case qc::OpType::X: {
+      add_x_spider(target, qubit_vertices, Rational(1, 1));
+      break;
+    }
+
+    case qc::OpType::RX: {
+      add_x_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
+      break;
+    }
+
+    case qc::OpType::Y: {
+      add_z_spider(target, qubit_vertices, Rational(1, 1));
+      add_x_spider(target, qubit_vertices, Rational(1, 1));
+      break;
+    }
+
+    case qc::OpType::RY: {
+      // add_z_spider(target, qubit_vertices,
+      // Rational(op->getParameter()[2]));
+      add_x_spider(target, qubit_vertices, Rational(1, 2));
+      add_z_spider(target, qubit_vertices,
+                   Rational(op->getParameter()[0]) + Rational(1, 1));
+      add_x_spider(target, qubit_vertices, Rational(1, 2));
+      add_z_spider(target, qubit_vertices, Rational(3, 1));
+      break;
+    }
+    case qc::OpType::T: {
+      add_z_spider(target, qubit_vertices, Rational(1, 4));
+      break;
+    }
+    case qc::OpType::Tdag: {
+      add_z_spider(target, qubit_vertices, Rational(-1, 4));
+      break;
+    }
+    case qc::OpType::S: {
+      add_z_spider(target, qubit_vertices, Rational(1, 2));
+      break;
+    }
+    case qc::OpType::Sdag: {
+      add_z_spider(target, qubit_vertices, Rational(-1, 2));
+      break;
+    }
+    case qc::OpType::U2: {
+      add_z_spider(target, qubit_vertices,
+                   Rational(op->getParameter()[0]) - Rational(1, 2));
+      add_x_spider(target, qubit_vertices, Rational(1, 2));
+      add_z_spider(target, qubit_vertices,
+                   Rational(op->getParameter()[1]) + Rational(1, 2));
+      break;
+    }
+    case qc::OpType::U3: {
+      add_z_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
+      add_x_spider(target, qubit_vertices, Rational(1, 2));
+      add_z_spider(target, qubit_vertices,
+                   Rational(op->getParameter()[2]) + Rational(1, 1));
+      add_x_spider(target, qubit_vertices, Rational(1, 2));
+      add_z_spider(target, qubit_vertices,
+                   Rational(op->getParameter()[1]) + Rational(3, 1));
+      break;
+    }
+
+    case qc::OpType::SWAP: {
+      auto target2 = op->getTargets()[0];
+      add_swap(target, target2, qubit_vertices);
+
+      // add_cnot(target, target2, qubit_vertices);
+      // add_cnot(target2, target, qubit_vertices);
+      // add_cnot(target, target2, qubit_vertices);
+      break;
+    }
+    case qc::OpType::H: {
+      add_z_spider(target, qubit_vertices, Rational(0, 1), EdgeType::Hadamard);
+      break;
+    }
+    case qc::OpType::Measure:
+    case qc::OpType::I: {
+      break;
+    }
+    default: {
+      throw ZXException("Unsupported Operation: " +
+                        qc::toString(op->getType()));
+    }
+    }
+  } else if (op->getNcontrols() == 1 && op->getNtargets() == 1) {
+    auto target = op->getTargets()[0];
+    auto ctrl = (*op->getControls().begin()).qubit;
+    switch (op->getType()) { // TODO: any gate can be controlled
+    case qc::OpType::X: {
+      // check if swap
+      if (check_swap(it, end, ctrl, target)) {
+        add_swap(ctrl, target, qubit_vertices);
+        return it + 3;
+        // std::cout << "SWAP" << "\n";
+      } else {
+        add_cnot(ctrl, target, qubit_vertices);
+      }
+
+      break;
+    }
+    case qc::OpType::Z: {
+      auto phase = Rational(1, 1);
+      add_z_spider(target, qubit_vertices, phase / 2);
+      add_cnot(ctrl, target, qubit_vertices);
+      add_z_spider(target, qubit_vertices, -phase / 2);
+      add_cnot(ctrl, target, qubit_vertices);
+      break;
+    }
+
+    case qc::OpType::I: {
+      break;
+    }
+
+    case qc::OpType::Phase: {
+      auto phase = Rational(op->getParameter()[0]);
+      add_cphase(phase, ctrl, target, qubit_vertices);
+      break;
+    }
+
+    case qc::OpType::T: {
+      add_cphase(Rational(1, 4), ctrl, target, qubit_vertices);
+      break;
+    }
+
+    case qc::OpType::S: {
+      add_cphase(Rational(1, 2), ctrl, target, qubit_vertices);
+      break;
+    }
+
+    case qc::OpType::Tdag: {
+      add_cphase(Rational(-1, 4), ctrl, target, qubit_vertices);
+      break;
+    }
+
+    case qc::OpType::Sdag: {
+      add_cphase(Rational(-1, 2), ctrl, target, qubit_vertices);
+      break;
+    }
+
+    default: {
+      throw ZXException("Unsupported Controlled Operation: " +
+                        qc::toString(op->getType()));
+    }
+    }
+  } else if (op->getNcontrols() == 2) {
+    dd::Qubit ctrl_0 = 0;
+    dd::Qubit ctrl_1 = 0;
+    dd::Qubit target = op->getTargets()[0];
+    int i = 0;
+    for (auto &ctrl : op->getControls()) {
+      if (i++ == 0)
+        ctrl_0 = ctrl.qubit;
+      else
+        ctrl_1 = ctrl.qubit;
+    }
+    switch (op->getType()) {
+    case qc::OpType::X: {
+      add_ccx(ctrl_0, ctrl_1, target, qubit_vertices);
+      break;
+    }
+
+    case qc::OpType::Z: {
+      add_z_spider(target, qubit_vertices, Rational(0, 1), EdgeType::Hadamard);
+      add_ccx(ctrl_0, ctrl_1, target, qubit_vertices);
+      add_z_spider(target, qubit_vertices, Rational(0, 1), EdgeType::Hadamard);
+      break;
+    }
+    default: {
+      throw ZXException("Unsupported Multi-control operation: " +
+                        qc::toString(op->getType()));
+      break;
+    }
+    }
+
+  } else {
+    throw ZXException("Unsupported Multi-control operation (>2 ctrls)" +
+                      qc::toString(op->getType()));
+  }
+  return it + 1;
 }
 } // namespace zx

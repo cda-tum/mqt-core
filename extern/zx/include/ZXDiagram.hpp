@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <memory>
 #include <numeric>
 #include <optional>
 #include <stdint.h>
@@ -10,12 +11,13 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include "QuantumComputation.hpp"
 
 #include "Definitions.hpp"
+#include "QuantumComputation.hpp"
 #include "Rational.hpp"
 #include "Utils.hpp"
 #include "dd/Definitions.hpp"
+#include "operations/Operation.hpp"
 
 namespace zx {
 
@@ -24,7 +26,7 @@ public:
   ZXDiagram() = default;
   ZXDiagram(int32_t nqubits); // create n_qubit identity_diagram
   explicit ZXDiagram(std::string filename);
-  explicit ZXDiagram(const qc::QuantumComputation& circuit);
+  explicit ZXDiagram(const qc::QuantumComputation &circuit);
 
   void add_edge(Vertex from, Vertex to, EdgeType type = EdgeType::Simple);
   void add_hadamard_edge(Vertex from, Vertex to) {
@@ -40,7 +42,7 @@ public:
                     VertexType type = VertexType::Z);
   void remove_vertex(Vertex to_remove);
 
-  int32_t get_ndeleted()const { return deleted.size();}
+  int32_t get_ndeleted() const { return deleted.size(); }
   [[nodiscard]] int32_t get_nvertices() const { return nvertices; }
   [[nodiscard]] int32_t get_nedges() const { return nedges; }
   [[nodiscard]] int32_t get_nqubits() const { return inputs.size(); }
@@ -100,7 +102,7 @@ public:
   void to_graph_like();
 
   [[nodiscard]] bool is_identity() const;
-  [[nodiscard]] bool is_identity(const qc::Permutation& perm) const;
+  [[nodiscard]] bool is_identity(const qc::Permutation &perm) const;
 
   [[nodiscard]] ZXDiagram adjoint() const;
 
@@ -108,8 +110,8 @@ public:
 
   ZXDiagram &concat(const ZXDiagram &rhs);
 
-  //What about Swaps?
-  
+  // What about Swaps?
+
   void make_ancilla(dd::Qubit qubit);
 
 private:
@@ -135,6 +137,8 @@ private:
                   std::vector<Vertex> &qubit_vertices);
   void add_swap(dd::Qubit ctrl, dd::Qubit target,
                 std::vector<Vertex> &qubit_vertices);
+  void add_ccx(dd::Qubit ctrl_0, dd::Qubit ctrl_1, dd::Qubit target,
+               std::vector<Vertex> &qubit_vertices);
 
   std::vector<Vertex> init_graph(int nqubits);
   void close_graph(std::vector<Vertex> &qubit_vertices);
@@ -142,7 +146,11 @@ private:
   void remove_half_edge(Vertex from, Vertex to);
 
   std::vector<Edge>::iterator get_edge_ptr(Vertex from, Vertex to);
-  
+
+  using op_it =
+      decltype(std::begin(std::vector<std::unique_ptr<qc::Operation>>()));
+  op_it parse_op(op_it it, op_it end,
+                        std::vector<Vertex> &qubit_vertices);
 };
 } // namespace zx
 #endif /* JKQZX_INCLUDE_GRAPH_HPP_ */
