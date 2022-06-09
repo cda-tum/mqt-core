@@ -1,0 +1,10 @@
+[submodule "extern/googletest"]
+	path = extern/googletest
+	url = https://github.com/google/googletest.git
+	branch = main
+	shallow = true
+[submodule "extern/benchmark"]
+	path = extern/benchmark
+	url = https://github.com/google/benchmark.git
+	branch = main
+	shallow = true
