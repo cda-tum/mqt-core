@@ -6,12 +6,14 @@ add_library(${PROJECT_NAME}
   ${${PROJECT_NAME}_SOURCE_DIR}/include/Rules.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/Simplify.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/Utils.hpp
+  ${${PROJECT_NAME}_SOURCE_DIR}/include/Expression.hpp
 
   ${CMAKE_CURRENT_SOURCE_DIR}/Rational.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/ZXDiagram.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/Rules.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/Simplify.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/Utils.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/Expression.cpp
   
 )
 

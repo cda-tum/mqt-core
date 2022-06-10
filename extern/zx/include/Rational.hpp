@@ -42,6 +42,7 @@ public:
 
   // double to_double() const;
   bool is_integer() const { return denom == 1; }
+  bool is_zero() const {return num == 0;}
 };
 
 inline Rational operator-(const Rational &rhs) {
