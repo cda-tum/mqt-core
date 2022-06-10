@@ -17,7 +17,7 @@ mpz_class gcd(mpz_class a, mpz_class b) {
   return a;
 }
 
-Rational::Rational(double val) : num(0), denom(1) {
+PyRational::PyRational(double val) : num(0), denom(1) {
   if (std::abs(val) < qc::PARAMETER_TOLERANCE)
     return;
   
@@ -56,7 +56,7 @@ Rational::Rational(double val) : num(0), denom(1) {
   }
 }
 
-void Rational::normalize() {
+void PyRational::normalize() {
   if (*this > 1) {
     num -= 2 * denom;
   } else if (*this <= -1) {
@@ -77,53 +77,53 @@ void Rational::normalize() {
   }
 }
 
-// double Rational::to_double() const {
+// double PyRational::to_double() const {
 //   return zx::PI * (static_cast<float>(num)) / denom;
 // }
   
-Rational &Rational::operator+=(const Rational &rhs) {
+PyRational &PyRational::operator+=(const PyRational &rhs) {
   num = num * rhs.denom + rhs.num * denom;
   denom *= rhs.denom;
   normalize();
   return *this;
 }
-Rational &Rational::operator+=(const int64_t rhs) {
+PyRational &PyRational::operator+=(const int64_t rhs) {
   num = num + rhs * denom;
   normalize();
   return *this;
 }
 
-Rational &Rational::operator-=(const Rational &rhs) {
+PyRational &PyRational::operator-=(const PyRational &rhs) {
   num = num * rhs.denom - rhs.num * denom;
   denom *= rhs.denom;
   normalize();
   return *this;
 }
-Rational &Rational::operator-=(const int64_t rhs) {
+PyRational &PyRational::operator-=(const int64_t rhs) {
   num = num + rhs * denom;
   normalize();
   return *this;
 }
 
-Rational &Rational::operator*=(const Rational &rhs) {
+PyRational &PyRational::operator*=(const PyRational &rhs) {
   num *= rhs.num;
   denom *= rhs.denom;
   this->normalize();
   return *this;
 }
-Rational &Rational::operator*=(const int64_t rhs) {
+PyRational &PyRational::operator*=(const int64_t rhs) {
   num *= rhs;
   this->normalize();
   return *this;
 }
 
-Rational &Rational::operator/=(const Rational &rhs) {
+PyRational &PyRational::operator/=(const PyRational &rhs) {
   num *= rhs.denom;
   denom *= rhs.num;
   this->normalize();
   return *this;
 }
-Rational &Rational::operator/=(const int64_t rhs) {
+PyRational &PyRational::operator/=(const int64_t rhs) {
   denom *= rhs;
   this->normalize();
   return *this;

@@ -36,6 +36,13 @@ macro(package_add_test TESTNAME)
 	# discover tests
 	gtest_discover_tests(${TESTNAME} WORKING_DIRECTORY ${PROJECT_DIR} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}")
 	set_target_properties(${TESTNAME} PROPERTIES FOLDER tests CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+        add_custom_command(TARGET ${TESTNAME}
+	                   POST_BUILD
+	                   COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE_DIR:${TESTNAME}>/${TESTNAME} ${CMAKE_BINARY_DIR}/${TESTNAME}
+	                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/circuits $<TARGET_FILE_DIR:${TESTNAME}>/circuits
+	                   COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE_DIR:${TESTNAME}>/circuits ${CMAKE_BINARY_DIR}/circuits
+	                   COMMENT "Copying files and creating symlinks for ${TESTNAME}"
+	                   VERBATIM)
 	enable_lto(${TESTNAME})
 endmacro()
 

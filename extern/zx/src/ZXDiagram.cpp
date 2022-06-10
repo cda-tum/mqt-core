@@ -90,7 +90,7 @@ void ZXDiagram::add_edge_parallel_aware(Vertex from, Vertex to,
                                         EdgeType etype) { // TODO: Scalars
   if (from == to) {
     if (type(from) != VertexType::Boundary && etype == EdgeType::Hadamard) {
-      add_phase(from, Rational(1, 1));
+      add_phase(from, Expression(PyRational(1, 1)));
     }
     return;
   }
@@ -114,10 +114,10 @@ void ZXDiagram::add_edge_parallel_aware(Vertex from, Vertex to,
                etype == EdgeType::Simple) {
       edge_it->type = EdgeType::Simple;
       get_edge_ptr(to, from)->toggle();
-      add_phase(from, Rational(1, 1));
+      add_phase(from, Expression(PyRational(1, 1)));
     } else if (edge_it->type == EdgeType::Simple &&
                etype == EdgeType::Hadamard) {
-      add_phase(from, Rational(1, 1));
+      add_phase(from, Expression(PyRational(1, 1)));
     }
   } else {
     if (edge_it->type == EdgeType::Simple && etype == EdgeType::Simple) {
@@ -126,12 +126,12 @@ void ZXDiagram::add_edge_parallel_aware(Vertex from, Vertex to,
       nedges--;
     } else if (edge_it->type == EdgeType::Hadamard &&
                etype == EdgeType::Simple) {
-      add_phase(from, Rational(1, 1));
+      add_phase(from, Expression(PyRational(1, 1)));
     } else if (edge_it->type == EdgeType::Simple &&
                etype == EdgeType::Hadamard) {
       edge_it->type = EdgeType::Hadamard;
       get_edge_ptr(to, from)->toggle();
-      add_phase(from, Rational(1, 1));
+      add_phase(from, Expression(PyRational(1, 1)));
     }
   }
 }
@@ -166,7 +166,7 @@ Vertex ZXDiagram::add_vertex(const VertexData &data) {
   return nvertices - 1;
 }
 
-Vertex ZXDiagram::add_vertex(dd::Qubit qubit, Col col, Rational phase,
+Vertex ZXDiagram::add_vertex(dd::Qubit qubit, Col col, const Expression &phase,
                              VertexType type) {
   return add_vertex({col, qubit, phase, type});
 }
@@ -336,7 +336,7 @@ bool ZXDiagram::is_identity(const qc::Permutation &perm) const {
 
 void ZXDiagram::add_z_spider(dd::Qubit qubit,
                              std::vector<Vertex> &qubit_vertices,
-                             Rational phase, EdgeType type) {
+                             const Expression &phase, EdgeType type) {
   auto new_vertex = add_vertex(
       {vertices[qubit].value().col + 1, qubit, phase, VertexType::Z});
 
@@ -346,7 +346,7 @@ void ZXDiagram::add_z_spider(dd::Qubit qubit,
 
 void ZXDiagram::add_x_spider(dd::Qubit qubit,
                              std::vector<Vertex> &qubit_vertices,
-                             Rational phase, EdgeType type) {
+                             const Expression & phase, EdgeType type) {
   auto new_vertex = add_vertex(
       {vertices[qubit].value().col + 1, qubit, phase, VertexType::X});
   add_edge(qubit_vertices[qubit], new_vertex, type);
@@ -360,13 +360,13 @@ void ZXDiagram::add_cnot(dd::Qubit ctrl, dd::Qubit target,
   add_edge(qubit_vertices[ctrl], qubit_vertices[target]);
 }
 
-void ZXDiagram::add_cphase(Rational phase, dd::Qubit ctrl, dd::Qubit target,
+void ZXDiagram::add_cphase(PyRational phase, dd::Qubit ctrl, dd::Qubit target,
                            std::vector<Vertex> &qubit_vertices) {
-  add_z_spider(ctrl, qubit_vertices, phase / 2);
+  add_z_spider(ctrl, qubit_vertices, Expression(phase / 2));
   add_cnot(ctrl, target, qubit_vertices);
-  add_z_spider(target, qubit_vertices, -phase / 2);
+  add_z_spider(target, qubit_vertices, Expression(-phase / 2));
   add_cnot(ctrl, target, qubit_vertices);
-  add_z_spider(target, qubit_vertices, phase / 2);
+  add_z_spider(target, qubit_vertices, Expression(phase / 2));
 }
 
 void ZXDiagram::add_swap(dd::Qubit ctrl, dd::Qubit target,
@@ -386,20 +386,21 @@ void ZXDiagram::add_swap(dd::Qubit ctrl, dd::Qubit target,
 
 void ZXDiagram::add_ccx(dd::Qubit ctrl_0, dd::Qubit ctrl_1, dd::Qubit target,
                         std::vector<Vertex> &qubit_vertices) {
-  add_z_spider(target, qubit_vertices, Rational(0, 1), EdgeType::Hadamard);
+  add_z_spider(target, qubit_vertices, Expression(), EdgeType::Hadamard);
   add_cnot(ctrl_1, target, qubit_vertices);
-  add_z_spider(target, qubit_vertices, Rational(-1, 4));
+  add_z_spider(target, qubit_vertices, Expression(PyRational(-1, 4)));
   add_cnot(ctrl_0, target, qubit_vertices);
-  add_z_spider(target, qubit_vertices, Rational(1, 4));
+  add_z_spider(target, qubit_vertices, Expression(PyRational(1, 4)));
   add_cnot(ctrl_1, target, qubit_vertices);
-  add_z_spider(ctrl_1, qubit_vertices, Rational(1, 4));
-  add_z_spider(target, qubit_vertices, Rational(-1, 4));
+  add_z_spider(ctrl_1, qubit_vertices, Expression(PyRational(1, 4)));
+  add_z_spider(target, qubit_vertices, Expression(PyRational(-1, 4)));
   add_cnot(ctrl_0, target, qubit_vertices);
-  add_z_spider(target, qubit_vertices, Rational(1, 4));
+  add_z_spider(target, qubit_vertices, Expression(PyRational(1, 4)));
   add_cnot(ctrl_0, ctrl_1, qubit_vertices);
-  add_z_spider(ctrl_0, qubit_vertices, Rational(1, 4));
-  add_z_spider(ctrl_1, qubit_vertices, Rational(-1, 4));
-  add_z_spider(target, qubit_vertices, Rational(0, 1), EdgeType::Hadamard);
+  add_z_spider(ctrl_0, qubit_vertices, Expression(PyRational(1, 4)));
+  add_z_spider(ctrl_1, qubit_vertices, Expression(PyRational(-1, 4)));
+  add_z_spider(target, qubit_vertices, Expression(PyRational(0, 1)),
+               EdgeType::Hadamard);
   add_cnot(ctrl_0, ctrl_1, qubit_vertices);
 }
 
@@ -409,7 +410,7 @@ std::vector<Vertex> ZXDiagram::init_graph(int nqubits) {
 
   for (size_t i = 0; i < qubit_vertices.size(); i++) {
     auto v = add_vertex(
-        {1, static_cast<dd::Qubit>(i), Rational(0, 1), VertexType::Boundary});
+        {1, static_cast<dd::Qubit>(i), Expression(), VertexType::Boundary});
     qubit_vertices[i] = v;
     inputs.push_back(v);
   }
@@ -421,7 +422,7 @@ void ZXDiagram::close_graph(std::vector<Vertex> &qubit_vertices) {
   for (Vertex v : qubit_vertices) {
     VertexData v_data = vertices[v].value();
     Vertex new_v = add_vertex(
-        {v_data.col + 1, v_data.qubit, Rational(0, 1), VertexType::Boundary});
+        {v_data.col + 1, v_data.qubit, Expression(), VertexType::Boundary});
     add_edge(v, new_v);
     outputs.push_back(new_v);
   }
@@ -431,8 +432,8 @@ void ZXDiagram::make_ancilla(dd::Qubit qubit) {
   auto in_v = inputs[qubit];
   auto out_v = outputs[qubit];
 
-  // auto new_in = add_vertex(qubit, 0, Rational(0,1), VertexType::Boundary);
-  // auto new_out = add_vertex(qubit, 0, Rational(0,1), VertexType::Boundary);
+  // auto new_in = add_vertex(qubit, 0, PyRational(0,1), VertexType::Boundary);
+  // auto new_out = add_vertex(qubit, 0, PyRational(0,1), VertexType::Boundary);
   // inputs[qubit] = new_in;
   // outputs[qubit] = new_out;
   inputs.erase(inputs.begin() + qubit);
@@ -456,74 +457,74 @@ op_it ZXDiagram::parse_op(op_it it, op_it end,
     auto target = op->getTargets()[0];
     switch (op->getType()) {
     case qc::OpType::Z: {
-      add_z_spider(target, qubit_vertices, Rational(1, 1));
+      add_z_spider(target, qubit_vertices, Expression(PyRational(1, 1)));
       break;
     }
 
     case qc::OpType::RZ:
     case qc::OpType::Phase: {
 
-      add_z_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
+      add_z_spider(target, qubit_vertices, Expression(PyRational(op->getParameter()[0])));
       break;
     }
     case qc::OpType::X: {
-      add_x_spider(target, qubit_vertices, Rational(1, 1));
+      add_x_spider(target, qubit_vertices, Expression(PyRational(1, 1)));
       break;
     }
 
     case qc::OpType::RX: {
-      add_x_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
+      add_x_spider(target, qubit_vertices, Expression(PyRational(op->getParameter()[0])));
       break;
     }
 
     case qc::OpType::Y: {
-      add_z_spider(target, qubit_vertices, Rational(1, 1));
-      add_x_spider(target, qubit_vertices, Rational(1, 1));
+      add_z_spider(target, qubit_vertices, Expression(PyRational(1, 1)));
+      add_x_spider(target, qubit_vertices, Expression(PyRational(1, 1)));
       break;
     }
 
     case qc::OpType::RY: {
       // add_z_spider(target, qubit_vertices,
-      // Rational(op->getParameter()[2]));
-      add_x_spider(target, qubit_vertices, Rational(1, 2));
+      // PyRational(op->getParameter()[2]));
+      add_x_spider(target, qubit_vertices, Expression(PyRational(1, 2)));
       add_z_spider(target, qubit_vertices,
-                   Rational(op->getParameter()[0]) + Rational(1, 1));
-      add_x_spider(target, qubit_vertices, Rational(1, 2));
-      add_z_spider(target, qubit_vertices, Rational(3, 1));
+                   Expression(PyRational(op->getParameter()[0])) + PyRational(1, 1));
+      add_x_spider(target, qubit_vertices, Expression(PyRational(1, 2)));
+      add_z_spider(target, qubit_vertices, Expression(PyRational(3, 1)));
       break;
     }
     case qc::OpType::T: {
-      add_z_spider(target, qubit_vertices, Rational(1, 4));
+      add_z_spider(target, qubit_vertices, Expression(PyRational(1, 4)));
       break;
     }
     case qc::OpType::Tdag: {
-      add_z_spider(target, qubit_vertices, Rational(-1, 4));
+      add_z_spider(target, qubit_vertices, Expression(PyRational(-1, 4)));
       break;
     }
     case qc::OpType::S: {
-      add_z_spider(target, qubit_vertices, Rational(1, 2));
+      add_z_spider(target, qubit_vertices, Expression(PyRational(1, 2)));
       break;
     }
     case qc::OpType::Sdag: {
-      add_z_spider(target, qubit_vertices, Rational(-1, 2));
+      add_z_spider(target, qubit_vertices, Expression(PyRational(-1, 2)));
       break;
     }
     case qc::OpType::U2: {
       add_z_spider(target, qubit_vertices,
-                   Rational(op->getParameter()[0]) - Rational(1, 2));
-      add_x_spider(target, qubit_vertices, Rational(1, 2));
+                   Expression(PyRational(op->getParameter()[0])) - PyRational(1, 2));
+      add_x_spider(target, qubit_vertices, Expression(PyRational(1, 2)));
       add_z_spider(target, qubit_vertices,
-                   Rational(op->getParameter()[1]) + Rational(1, 2));
+                   Expression(PyRational(op->getParameter()[1])) + PyRational(1, 2));
       break;
     }
     case qc::OpType::U3: {
-      add_z_spider(target, qubit_vertices, Rational(op->getParameter()[0]));
-      add_x_spider(target, qubit_vertices, Rational(1, 2));
+      add_z_spider(target, qubit_vertices, Expression(PyRational(op->getParameter()[0])));
+      add_x_spider(target, qubit_vertices, Expression(PyRational(1, 2)));
       add_z_spider(target, qubit_vertices,
-                   Rational(op->getParameter()[2]) + Rational(1, 1));
-      add_x_spider(target, qubit_vertices, Rational(1, 2));
+                   Expression(PyRational(op->getParameter()[2])) + PyRational(1, 1));
+      add_x_spider(target, qubit_vertices, Expression(PyRational(1, 2)));
       add_z_spider(target, qubit_vertices,
-                   Rational(op->getParameter()[1]) + Rational(3, 1));
+                   Expression(PyRational(op->getParameter()[1])) + PyRational(3, 1));
       break;
     }
 
@@ -537,7 +538,8 @@ op_it ZXDiagram::parse_op(op_it it, op_it end,
       break;
     }
     case qc::OpType::H: {
-      add_z_spider(target, qubit_vertices, Rational(0, 1), EdgeType::Hadamard);
+      add_z_spider(target, qubit_vertices, Expression(),
+                   EdgeType::Hadamard);
       break;
     }
     case qc::OpType::Measure:
@@ -566,10 +568,10 @@ op_it ZXDiagram::parse_op(op_it it, op_it end,
       break;
     }
     case qc::OpType::Z: {
-      auto phase = Rational(1, 1);
-      add_z_spider(target, qubit_vertices, phase / 2);
+      auto phase = PyRational(1, 1);
+      add_z_spider(target, qubit_vertices, Expression(phase / 2));
       add_cnot(ctrl, target, qubit_vertices);
-      add_z_spider(target, qubit_vertices, -phase / 2);
+      add_z_spider(target, qubit_vertices, Expression(-phase / 2));
       add_cnot(ctrl, target, qubit_vertices);
       break;
     }
@@ -579,28 +581,28 @@ op_it ZXDiagram::parse_op(op_it it, op_it end,
     }
 
     case qc::OpType::Phase: {
-      auto phase = Rational(op->getParameter()[0]);
+      auto phase = PyRational(op->getParameter()[0]);
       add_cphase(phase, ctrl, target, qubit_vertices);
       break;
     }
 
     case qc::OpType::T: {
-      add_cphase(Rational(1, 4), ctrl, target, qubit_vertices);
+      add_cphase(PyRational(1, 4), ctrl, target, qubit_vertices);
       break;
     }
 
     case qc::OpType::S: {
-      add_cphase(Rational(1, 2), ctrl, target, qubit_vertices);
+      add_cphase(PyRational(1, 2), ctrl, target, qubit_vertices);
       break;
     }
 
     case qc::OpType::Tdag: {
-      add_cphase(Rational(-1, 4), ctrl, target, qubit_vertices);
+      add_cphase(PyRational(-1, 4), ctrl, target, qubit_vertices);
       break;
     }
 
     case qc::OpType::Sdag: {
-      add_cphase(Rational(-1, 2), ctrl, target, qubit_vertices);
+      add_cphase(PyRational(-1, 2), ctrl, target, qubit_vertices);
       break;
     }
 
@@ -627,9 +629,11 @@ op_it ZXDiagram::parse_op(op_it it, op_it end,
     }
 
     case qc::OpType::Z: {
-      add_z_spider(target, qubit_vertices, Rational(0, 1), EdgeType::Hadamard);
+      add_z_spider(target, qubit_vertices, Expression(),
+                   EdgeType::Hadamard);
       add_ccx(ctrl_0, ctrl_1, target, qubit_vertices);
-      add_z_spider(target, qubit_vertices, Rational(0, 1), EdgeType::Hadamard);
+      add_z_spider(target, qubit_vertices, Expression(),
+                   EdgeType::Hadamard);
       break;
     }
     default: {

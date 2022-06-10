@@ -3,7 +3,7 @@
 
 #include <stdexcept>
 #include "dd/Definitions.hpp"
-#include "Rational.hpp"
+#include "Expression.hpp"
 
 namespace zx {
   enum class EdgeType { Simple, Hadamard };
@@ -25,9 +25,10 @@ struct Edge {
 struct VertexData {
   Col col;
   dd::Qubit qubit;
-  Rational phase;
+  Expression phase;
   VertexType type;
 };
+
 constexpr double MAX_DENOM = 1e9; // TODO: maybe too high
 static constexpr double PI =
     3.141592653589793238462643383279502884197169399375105820974L;

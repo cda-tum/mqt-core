@@ -18,6 +18,7 @@
 #include "Utils.hpp"
 #include "dd/Definitions.hpp"
 #include "operations/Operation.hpp"
+#include "Expression.hpp"
 
 namespace zx {
 
@@ -38,7 +39,7 @@ public:
 
   Vertex add_vertex(const VertexData &data);
   Vertex add_vertex(dd::Qubit qubit, Col col = 0,
-                    Rational phase = Rational(0, 1),
+                    const Expression& phase = Expression(),
                     VertexType type = VertexType::Z);
   void remove_vertex(Vertex to_remove);
 
@@ -53,7 +54,7 @@ public:
 
   [[nodiscard]] int32_t degree(Vertex v) const { return edges[v].size(); }
 
-  [[nodiscard]] Rational phase(Vertex v) const {
+  [[nodiscard]] const Expression& phase(Vertex v) const {
     return vertices[v].value().phase;
   }
 
@@ -89,11 +90,11 @@ public:
   [[nodiscard]] bool is_input(Vertex v) const;
   [[nodiscard]] bool is_output(Vertex v) const;
 
-  void add_phase(Vertex v, Rational phase) {
+  void add_phase(Vertex v, const Expression& phase) {
     vertices[v].value().phase += phase;
   }
 
-  void set_phase(Vertex v, Rational phase) {
+  void set_phase(Vertex v, const Expression& phase) {
     vertices[v].value().phase = phase;
   }
 
@@ -126,14 +127,14 @@ private:
   std::optional<qc::Permutation> output_permutation;
 
   void add_z_spider(dd::Qubit qubit, std::vector<Vertex> &qubit_vertices,
-                    Rational phase = Rational(0, 1),
+                    const Expression& phase = Expression(),
                     EdgeType type = EdgeType::Simple);
   void add_x_spider(dd::Qubit qubit, std::vector<Vertex> &qubit_vertices,
-                    Rational phase = Rational(0, 1),
+const Expression& phase = Expression(),
                     EdgeType type = EdgeType::Simple);
   void add_cnot(dd::Qubit ctrl, dd::Qubit target,
                 std::vector<Vertex> &qubit_vertices);
-  void add_cphase(Rational phase, dd::Qubit ctrl, dd::Qubit target,
+  void add_cphase(PyRational phase, dd::Qubit ctrl, dd::Qubit target,
                   std::vector<Vertex> &qubit_vertices);
   void add_swap(dd::Qubit ctrl, dd::Qubit target,
                 std::vector<Vertex> &qubit_vertices);

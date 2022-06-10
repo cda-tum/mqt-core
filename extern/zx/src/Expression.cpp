@@ -1,10 +1,30 @@
 #include "Expression.hpp"
+#include "dd/Definitions.hpp"
+#include <cmath>
 
 namespace zx {
-void Term::add_coeff(Rational r) { coeff += r; }
+void Term::add_coeff(dd::fp r) { coeff += r; }
+Term &Term::operator*=(dd::fp rhs) {
+  coeff *= rhs;
+  return *this;
+}
+
+Term &Term::operator/=(dd::fp rhs) {
+  coeff /= rhs;
+  return *this;
+}
 
 bool Expression::is_zero() const { return terms.empty() && constant.is_zero(); }
 bool Expression::is_constant() const { return terms.empty(); }
+bool Expression::is_pauli() const {
+  return is_constant() && constant.is_integer();
+}
+bool Expression::is_clifford() const {
+  return is_constant() && (constant.is_integer() || constant.denom == 2);
+}
+bool Expression::is_proper_clifford() const {
+  return is_constant() && constant.denom == 2;
+}
 
 Expression &Expression::operator+=(const Expression &rhs) {
   if (this->is_zero()) {
@@ -32,7 +52,7 @@ Expression &Expression::operator+=(const Expression &rhs) {
       if (insert_pos->get_coeff() == -t->get_coeff()) {
         terms.erase(insert_pos);
       } else {
-        insert_pos->get_coeff() += t->get_coeff();
+        insert_pos->add_coeff(t->get_coeff());
       }
     } else {
       terms.insert(insert_pos, *t);
@@ -47,7 +67,7 @@ Expression &Expression::operator+=(const Term &rhs) {
   return *this += Expression(rhs);
 }
 
-Expression &Expression::operator+=(const Rational &rhs) {
+Expression &Expression::operator+=(const PyRational &rhs) {
   constant += rhs;
   return *this;
 }
@@ -58,7 +78,7 @@ Expression &Expression::operator-=(const Expression &rhs) {
 
 Expression &Expression::operator-=(const Term &rhs) { return *this += -rhs; }
 
-Expression &Expression::operator-=(const Rational &rhs) {
+Expression &Expression::operator-=(const PyRational &rhs) {
   return *this += -rhs;
 }
 
@@ -84,11 +104,22 @@ void Expression::aggregate_equal_terms() {
       t->add_coeff(next->get_coeff());
       next = terms.erase(next);
     }
-    if (t->get_coeff().is_zero()) {
+    if (t->has_zero_coeff()) {
       t = terms.erase(t);
     } else {
       t = next;
     }
   }
 }
+
+  bool operator==(const Expression& lhs, const Expression& rhs) {
+    if(lhs.num_terms() != rhs.num_terms() || lhs.get_constant() != rhs.get_constant())
+      return false;
+
+    for(size_t i = 0; i < lhs.num_terms(); ++i) {
+      if(std::abs(lhs[i].get_coeff() - rhs[i].get_coeff()) >= TOLERANCE)
+        return false;
+    }
+    return true;
+  }
 } // namespace zx

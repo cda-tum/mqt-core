@@ -1,105 +1,108 @@
+#include <cstdint>
 #include <gtest/gtest.h>
 //#include "..Hexagram.hpp"
 #include "../include/Simplify.hpp"
 #include "../include/ZXDiagram.hpp"
 #include "Definitions.hpp"
+#include "Expression.hpp"
+#include "Rational.hpp"
 #include "dd/Definitions.hpp"
+
+using zx::Expression;
 
 class RationalTest : public ::testing::Test {};
 
 TEST_F(RationalTest, normalize) {
-  zx::Rational r(-33, 16);
-  EXPECT_EQ(r, zx::Rational(-1, 16));
+  zx::PyRational r(-33, 16);
+  EXPECT_EQ(r, zx::PyRational(-1, 16));
 }
 
 TEST_F(RationalTest, from_double) {
-  zx::Rational r(-dd::PI / 8);
-  EXPECT_EQ(r, zx::Rational(-1, 8));
+  zx::PyRational r(-dd::PI / 8);
+  EXPECT_EQ(r, zx::PyRational(-1, 8));
 }
 
 TEST_F(RationalTest, from_double_2) {
-  zx::Rational r(-3*dd::PI / 4);
-  EXPECT_EQ(r, zx::Rational(-3, 4));
+  zx::PyRational r(-3 * dd::PI / 4);
+  EXPECT_EQ(r, zx::PyRational(-3, 4));
 }
 
 TEST_F(RationalTest, from_double_3) {
-  zx::Rational r(-7*dd::PI / 8);
-  EXPECT_EQ(r, zx::Rational(-7, 8));
+  zx::PyRational r(-7 * dd::PI / 8);
+  EXPECT_EQ(r, zx::PyRational(-7, 8));
 }
 
 TEST_F(RationalTest, from_double_4) {
-  zx::Rational r(-1*dd::PI / 32);
-  EXPECT_EQ(r, zx::Rational(-1, 32));
+  zx::PyRational r(-1 * dd::PI / 32);
+  EXPECT_EQ(r, zx::PyRational(-1, 32));
 }
 
 TEST_F(RationalTest, from_double_5) {
-  zx::Rational r(5000*dd::PI + dd::PI/4);
-  EXPECT_EQ(r, zx::Rational(1, 4));
+  zx::PyRational r(5000 * dd::PI + dd::PI / 4);
+  EXPECT_EQ(r, zx::PyRational(1, 4));
 }
 
 TEST_F(RationalTest, from_double_6) {
-  zx::Rational r(-5000*dd::PI +5*dd::PI/4);
-  EXPECT_EQ(r, zx::Rational(-3, 4));
+  zx::PyRational r(-5000 * dd::PI + 5 * dd::PI / 4);
+  EXPECT_EQ(r, zx::PyRational(-3, 4));
 }
 
 TEST_F(RationalTest, from_double_7) {
-  zx::Rational r(0.1);
+  zx::PyRational r(0.1);
   std::cout << r << "\n";
-
 }
 
 TEST_F(RationalTest, add) {
-  zx::Rational r0(1, 8);
-  zx::Rational r1(7, 8);
+  zx::PyRational r0(1, 8);
+  zx::PyRational r1(7, 8);
   auto r = r0 + r1;
 
   EXPECT_EQ(r, 1);
 }
 
 TEST_F(RationalTest, add_2) {
-  zx::Rational r0(9, 8);
-  zx::Rational r1(7, 8);
+  zx::PyRational r0(9, 8);
+  zx::PyRational r1(7, 8);
   auto r = r0 + r1;
 
   EXPECT_EQ(r, 0);
 }
 
-
 TEST_F(RationalTest, sub) {
-  zx::Rational r0(9, 8);
-  zx::Rational r1(-7, 8);
+  zx::PyRational r0(9, 8);
+  zx::PyRational r1(-7, 8);
   auto r = r0 - r1;
 
   EXPECT_EQ(r, 0);
 }
 
 TEST_F(RationalTest, sub_2) {
-  zx::Rational r0(-1, 2);
-  zx::Rational r1(1, 2);
+  zx::PyRational r0(-1, 2);
+  zx::PyRational r1(1, 2);
   auto r = r0 - r1;
 
   EXPECT_EQ(r, 1);
 }
 
 TEST_F(RationalTest, mul) {
-  zx::Rational r0(1, 8);
-  zx::Rational r1(1, 2);
+  zx::PyRational r0(1, 8);
+  zx::PyRational r1(1, 2);
   auto r = r0 * r1;
 
-  EXPECT_EQ(r, zx::Rational(1, 16));
+  EXPECT_EQ(r, zx::PyRational(1, 16));
 }
 
 TEST_F(RationalTest, mul_2) {
-  zx::Rational r0(1, 8);
-  zx::Rational r1(0, 1);
+  zx::PyRational r0(1, 8);
+  zx::PyRational r1(0, 1);
   auto r = r0 * r1;
 
   EXPECT_EQ(r, 0);
 }
 
 TEST_F(RationalTest, div) {
-  zx::Rational r0(1, 2);
-  zx::Rational r1(1, 2);
+  zx::PyRational r0(1, 2);
+  zx::PyRational r1(1, 2);
   auto r = r0 / r1;
 
   EXPECT_EQ(r, 1);
@@ -120,9 +123,7 @@ public:
    * ----- {6: (Boundary, Phase = 0)}
    */
 protected:
-  virtual void SetUp() {
-    diag = zx::ZXDiagram("./test/circuits/bell_state.qasm");
-  }
+  virtual void SetUp() { diag = zx::ZXDiagram("circuits/bell_state.qasm"); }
 };
 
 TEST_F(ZXDiagramTest, parse_qasm) {
@@ -153,7 +154,7 @@ TEST_F(ZXDiagramTest, parse_qasm) {
   EXPECT_EQ(diag.get_vdata(6).value().type, zx::VertexType::Boundary);
 
   for (auto i = 0; i < diag.get_nvertices(); i++)
-    EXPECT_EQ(diag.get_vdata(6).value().phase, 0);
+    EXPECT_TRUE(diag.get_vdata(6).value().phase.is_zero());
 }
 
 TEST_F(ZXDiagramTest, deletions) {
@@ -185,7 +186,7 @@ TEST_F(ZXDiagramTest, graph_like) {
   EXPECT_EQ(diag.get_vdata(5).value().type, zx::VertexType::Boundary);
   EXPECT_EQ(diag.get_vdata(6).value().type, zx::VertexType::Boundary);
   for (auto i = 0; i < diag.get_nvertices(); i++)
-    EXPECT_EQ(diag.get_vdata(6).value().phase, 0);
+    EXPECT_TRUE(diag.get_vdata(6).value().phase.is_zero());
 }
 
 TEST_F(ZXDiagramTest, concat) {
@@ -309,14 +310,14 @@ TEST_F(SimplifyTest, spider_fusion) {
   zx::ZXDiagram diag = make_identity_diagram(nqubits, nspiders);
 
   for (zx::Vertex v = 2; v < diag.get_nvertices(); v++)
-    diag.add_phase(v, zx::Rational(1, 1));
+    diag.add_phase(v, zx::Expression(zx::PyRational(1, 1)));
 
   int32_t removed = zx::spider_simp(diag);
 
   EXPECT_EQ(removed, nspiders - 1);
   EXPECT_EQ(3, diag.get_nvertices());
   EXPECT_EQ(2, diag.get_nedges());
-  EXPECT_EQ(diag.phase(2), 0);
+  EXPECT_TRUE(diag.phase(2).is_zero());
 }
 
 TEST_F(SimplifyTest, spider_fusion_2) {
@@ -360,11 +361,11 @@ TEST_F(SimplifyTest, local_comp) {
   diag.remove_edge(0, 2);
   diag.remove_edge(1, 3);
 
-  diag.add_vertex(0, 0, zx::Rational(1, 2), zx::VertexType::Z); // 4
-  diag.add_vertex(0, 0, zx::Rational(0, 1), zx::VertexType::Z); // 5
-  diag.add_vertex(0, 0, zx::Rational(0, 1), zx::VertexType::Z); // 6
-  diag.add_vertex(0, 0, zx::Rational(0, 1), zx::VertexType::Z); // 7
-  diag.add_vertex(0, 0, zx::Rational(0, 1), zx::VertexType::Z); // 8
+  diag.add_vertex(0, 0, zx::PyRational(1, 2), zx::VertexType::Z); // 4
+  diag.add_vertex(0, 0, zx::PyRational(0, 1), zx::VertexType::Z); // 5
+  diag.add_vertex(0, 0, zx::PyRational(0, 1), zx::VertexType::Z); // 6
+  diag.add_vertex(0, 0, zx::PyRational(0, 1), zx::VertexType::Z); // 7
+  diag.add_vertex(0, 0, zx::PyRational(0, 1), zx::VertexType::Z); // 8
 
   diag.add_edge(4, 5, zx::EdgeType::Hadamard);
   diag.add_edge(4, 6, zx::EdgeType::Hadamard);
@@ -381,7 +382,7 @@ TEST_F(SimplifyTest, local_comp) {
   EXPECT_EQ(removed, 1);
 
   for (zx::Vertex v = 5; v <= 8; v++) {
-    EXPECT_EQ(diag.phase(v), zx::Rational(-1, 2));
+    EXPECT_TRUE(diag.phase(v) == zx::Expression(zx::PyRational(-1, 2)));
     for (zx::Vertex w = 5; w <= 8; w++) {
       if (w != v) {
         ASSERT_TRUE(diag.connected(v, w));
@@ -398,13 +399,13 @@ TEST_F(SimplifyTest, pivot_pauli) {
   diag.remove_edge(0, 2);
   diag.remove_edge(1, 3);
 
-  diag.add_vertex(0, 0, zx::Rational(1, 1), zx::VertexType::Z); // 4
-  diag.add_vertex(0, 0, zx::Rational(0, 1), zx::VertexType::Z); // 5
-  diag.add_vertex(0, 0, zx::Rational(0, 1), zx::VertexType::Z); // 6
-  diag.add_vertex(1, 0, zx::Rational(0, 1), zx::VertexType::Z); // 7
-  diag.add_vertex(0, 0, zx::Rational(0, 1), zx::VertexType::Z); // 8
-  diag.add_vertex(1, 0, zx::Rational(0, 1), zx::VertexType::Z); // 9
-  diag.add_vertex(1, 0, zx::Rational(0, 1), zx::VertexType::Z); // 10
+  diag.add_vertex(0, 0, zx::PyRational(1, 1), zx::VertexType::Z); // 4
+  diag.add_vertex(0, 0, zx::PyRational(0, 1), zx::VertexType::Z); // 5
+  diag.add_vertex(0, 0, zx::PyRational(0, 1), zx::VertexType::Z); // 6
+  diag.add_vertex(1, 0, zx::PyRational(0, 1), zx::VertexType::Z); // 7
+  diag.add_vertex(0, 0, zx::PyRational(0, 1), zx::VertexType::Z); // 8
+  diag.add_vertex(1, 0, zx::PyRational(0, 1), zx::VertexType::Z); // 9
+  diag.add_vertex(1, 0, zx::PyRational(0, 1), zx::VertexType::Z); // 10
 
   // IO-Edges
   diag.add_edge(0, 6);
@@ -425,11 +426,11 @@ TEST_F(SimplifyTest, pivot_pauli) {
   EXPECT_EQ(removed, 1);
   EXPECT_EQ(diag.get_nedges(), 12);
   EXPECT_EQ(diag.get_nvertices(), 9);
-  EXPECT_EQ(diag.phase(8), zx::Rational(1, 1));
-  EXPECT_EQ(diag.phase(9), zx::Rational(1, 1));
-  EXPECT_EQ(diag.phase(10), zx::Rational(0, 1));
-  EXPECT_EQ(diag.phase(6), zx::Rational(0, 1));
-  EXPECT_EQ(diag.phase(7), zx::Rational(0, 1));
+  EXPECT_TRUE(diag.phase(8) == zx::Expression(zx::PyRational(1, 1)));
+  EXPECT_TRUE(diag.phase(9) == zx::PyRational(1, 1));
+  EXPECT_TRUE(diag.phase(10) == zx::PyRational(0, 1));
+  EXPECT_TRUE(diag.phase(6) == zx::PyRational(0, 1));
+  EXPECT_TRUE(diag.phase(7) == zx::PyRational(0, 1));
 }
 
 TEST_F(SimplifyTest, interior_clifford) {
@@ -450,9 +451,9 @@ TEST_F(SimplifyTest, interior_clifford_2) {
   zx::ZXDiagram diag(1);
   diag.remove_edge(0, 1);
 
-  diag.add_vertex(0, 0, zx::Rational(-1, 2), zx::VertexType::X); // 2
-  diag.add_vertex(0, 0, zx::Rational(1, 2), zx::VertexType::Z);  // 3
-  diag.add_vertex(0, 0, zx::Rational(-1, 2), zx::VertexType::X); // 4
+  diag.add_vertex(0, 0, zx::PyRational(-1, 2), zx::VertexType::X); // 2
+  diag.add_vertex(0, 0, zx::PyRational(1, 2), zx::VertexType::Z);  // 3
+  diag.add_vertex(0, 0, zx::PyRational(-1, 2), zx::VertexType::X); // 4
 
   diag.add_edge(2, 3);
   diag.add_edge(3, 4);
@@ -475,9 +476,9 @@ TEST_F(SimplifyTest, non_pauli_pivot) {
   zx::ZXDiagram diag(1);
   diag.remove_edge(0, 1);
 
-  diag.add_vertex(0, 0, zx::Rational(1, 4)); // 2
-  diag.add_vertex(0);                        // 3
-  diag.add_vertex(0);                        // 4
+  diag.add_vertex(0, 0, zx::PyRational(1, 4)); // 2
+  diag.add_vertex(0);                          // 3
+  diag.add_vertex(0);                          // 4
 
   diag.add_edge(0, 2);
   diag.add_edge(2, 3, zx::EdgeType::Hadamard);
@@ -499,7 +500,7 @@ TEST_F(SimplifyTest, non_pauli_pivot) {
 }
 
 TEST_F(SimplifyTest, clifford) {
-  zx::ZXDiagram diag("./test/circuits/clifford_identity_simple.qasm");
+  zx::ZXDiagram diag("circuits/clifford_identity_simple.qasm");
   diag.to_graph_like();
   zx::clifford_simp(diag);
 
@@ -507,7 +508,7 @@ TEST_F(SimplifyTest, clifford) {
 }
 
 TEST_F(SimplifyTest, clifford_2) {
-  zx::ZXDiagram diag("./test/circuits/ghz_identity.qasm");
+  zx::ZXDiagram diag("circuits/ghz_identity.qasm");
 
   diag.to_graph_like();
 
@@ -521,10 +522,10 @@ TEST_F(SimplifyTest, clifford_2) {
 TEST_F(SimplifyTest, clifford_3) {
   auto diag = make_empty_diagram(2);
   diag.add_vertex(0);
-  diag.add_vertex(0, 0, zx::Rational(0, 1), zx::VertexType::X);
+  diag.add_vertex(0, 0, zx::PyRational(0, 1), zx::VertexType::X);
 
   diag.add_vertex(0);
-  diag.add_vertex(1, 0, zx::Rational(0, 1), zx::VertexType::X);
+  diag.add_vertex(1, 0, zx::PyRational(0, 1), zx::VertexType::X);
 
   diag.add_edge(0, 4);
   diag.add_edge(1, 5);
@@ -542,7 +543,7 @@ TEST_F(SimplifyTest, clifford_3) {
 }
 
 // TEST_F(SimplifyTest, non_clifford) {
-//   zx::ZXDiagram diag("./test/circuits/ctrl_phase.qasm");
+//   zx::ZXDiagram diag("circuits/ctrl_phase.qasm");
 
 //   for (auto [to, from] : diag.get_edges()) {
 //     std::cout << to << "-" << from << "\n";
@@ -561,12 +562,12 @@ TEST_F(SimplifyTest, clifford_3) {
 TEST_F(SimplifyTest, gadget_simp) {
   zx::ZXDiagram diag = make_empty_diagram(1);
 
-  diag.add_vertex(0);                        // 2
-  diag.add_vertex(0);                        // 3
-  diag.add_vertex(0);                        // 4
-  diag.add_vertex(0, 0, zx::Rational(1, 1)); // 5
-  diag.add_vertex(0);                        // 6
-  diag.add_vertex(0, 0, zx::Rational(1, 1)); // 7
+  diag.add_vertex(0);                          // 2
+  diag.add_vertex(0);                          // 3
+  diag.add_vertex(0);                          // 4
+  diag.add_vertex(0, 0, zx::PyRational(1, 1)); // 5
+  diag.add_vertex(0);                          // 6
+  diag.add_vertex(0, 0, zx::PyRational(1, 1)); // 7
 
   diag.add_edge(0, 2);
   diag.add_edge(3, 1);
@@ -586,16 +587,16 @@ TEST_F(SimplifyTest, gadget_simp) {
   EXPECT_TRUE(diag.connected(4, 5));
   EXPECT_EQ(diag.get_nedges(), 5);
   ASSERT_FALSE(diag.is_deleted(5));
-  EXPECT_EQ(diag.phase(5), 0);
+  EXPECT_TRUE(diag.phase(5).is_zero());
 }
 
 TEST_F(SimplifyTest, gadget_simp_2) {
   zx::ZXDiagram diag = make_empty_diagram(1);
-  diag.add_vertex(0);                        // 2
-  diag.add_vertex(0);                        // 3
-  diag.add_vertex(0, 0, zx::Rational(1, 1)); // 4
-  diag.add_vertex(0);                        // 5
-  diag.add_vertex(0, 0, zx::Rational(1, 1)); // 6
+  diag.add_vertex(0);                          // 2
+  diag.add_vertex(0);                          // 3
+  diag.add_vertex(0, 0, zx::PyRational(1, 1)); // 4
+  diag.add_vertex(0);                          // 5
+  diag.add_vertex(0, 0, zx::PyRational(1, 1)); // 6
 
   diag.add_edge(0, 2);
   diag.add_edge(2, 1);
@@ -610,12 +611,12 @@ TEST_F(SimplifyTest, gadget_simp_2) {
   EXPECT_TRUE(diag.connected(0, 2));
   EXPECT_TRUE(diag.connected(2, 1));
   EXPECT_EQ(diag.get_nedges(), 2);
-  EXPECT_EQ(diag.phase(2), 0);
+  EXPECT_TRUE(diag.phase(2).is_zero());
 }
 
 TEST_F(SimplifyTest, pivot_gadget_simp) {}
 TEST_F(SimplifyTest, full_reduce) {
-  zx::ZXDiagram diag("./test/circuits/ctrl_phase.qasm");
+  zx::ZXDiagram diag("circuits/ctrl_phase.qasm");
 
   zx::full_reduce(diag);
 
@@ -625,12 +626,12 @@ TEST_F(SimplifyTest, full_reduce) {
 TEST_F(SimplifyTest, full_reduce_2) {
   zx::ZXDiagram diag = make_empty_diagram(2);
 
-  diag.add_vertex(0, 0, zx::Rational(1, 32), zx::VertexType::X);  // 4
-  diag.add_vertex(0, 0, zx::Rational(0, 1), zx::VertexType::Z);   // 5
-  diag.add_vertex(1, 0, zx::Rational(0, 1), zx::VertexType::X);   // 6
-  diag.add_vertex(0, 0, zx::Rational(0, 1), zx::VertexType::Z);   // 7
-  diag.add_vertex(1, 0, zx::Rational(0, 1), zx::VertexType::X);   // 8
-  diag.add_vertex(0, 0, zx::Rational(-1, 32), zx::VertexType::X); // 9
+  diag.add_vertex(0, 0, zx::PyRational(1, 32), zx::VertexType::X);  // 4
+  diag.add_vertex(0, 0, zx::PyRational(0, 1), zx::VertexType::Z);   // 5
+  diag.add_vertex(1, 0, zx::PyRational(0, 1), zx::VertexType::X);   // 6
+  diag.add_vertex(0, 0, zx::PyRational(0, 1), zx::VertexType::Z);   // 7
+  diag.add_vertex(1, 0, zx::PyRational(0, 1), zx::VertexType::X);   // 8
+  diag.add_vertex(0, 0, zx::PyRational(-1, 32), zx::VertexType::X); // 9
 
   diag.add_edge(0, 4);
   diag.add_edge(4, 5);
@@ -648,7 +649,7 @@ TEST_F(SimplifyTest, full_reduce_2) {
 }
 
 TEST_F(SimplifyTest, full_reduce_3) {
-  zx::ZXDiagram diag("./test/circuits/bell_state.qasm");
+  zx::ZXDiagram diag("circuits/bell_state.qasm");
   auto h = diag;
   diag.invert();
   diag.concat(h);
@@ -659,30 +660,203 @@ TEST_F(SimplifyTest, full_reduce_3) {
 }
 
 TEST_F(SimplifyTest, full_reduce_4) {
-  zx::ZXDiagram d0("./test/circuits/C17_204_o0.qasm");
-  zx::ZXDiagram d1("./test/circuits/C17_204_o1.qasm");
+  zx::ZXDiagram d0("circuits/C17_204_o0.qasm");
+  zx::ZXDiagram d1("circuits/C17_204_o1.qasm");
 
   d0.invert();
   d0.concat(d1);
 
   zx::full_reduce(d0);
 
-
-
-  EXPECT_TRUE(2*d0.get_nedges() == d0.get_nvertices());
+  EXPECT_TRUE(2 * d0.get_nedges() == d0.get_nvertices());
 }
 
 TEST_F(SimplifyTest, full_reduce_5) {
-  zx::ZXDiagram d0("./test/circuits/test0.qasm");
-  zx::ZXDiagram d1("./test/circuits/test1.qasm");
+  zx::ZXDiagram d0("circuits/test0.qasm");
+  zx::ZXDiagram d1("circuits/test1.qasm");
 
   d0.invert();
   d0.concat(d1);
 
-   zx::full_reduce(d0);
+  zx::full_reduce(d0);
 
-   EXPECT_EQ(d0.get_nedges(), 3);
-   EXPECT_EQ(d0.get_nvertices(), 6);
+  EXPECT_EQ(d0.get_nedges(), 3);
+  EXPECT_EQ(d0.get_nvertices(), 6);
+}
+
+class ExpressionTest : public ::testing::Test {
+public:
+  // const zx::Variable x_var{0, "x"};
+  // const zx::Variable y_var{1, "y"};
+  // const zx::Variable z_var{2, "z"};
+
+  zx::Term x{zx::Variable(0, "x")};
+  zx::Term y{zx::Variable(1, "y")};
+  zx::Term z{zx::Variable(2, "z")};
+
+protected:
+  virtual void SetUp() {}
+};
+
+TEST_F(ExpressionTest, basic_ops_1) {
+  zx::Expression e(x);
+
+  EXPECT_EQ(1, e.num_terms());
+  EXPECT_EQ(zx::PyRational(0, 1), e.get_constant());
+
+  e += x; // zx::Term(x);
+
+  EXPECT_EQ(1, e.num_terms());
+  EXPECT_EQ(zx::PyRational(0, 1), e.get_constant());
+  EXPECT_PRED_FORMAT2(testing::FloatLE, e[0].get_coeff(), 2.0);
+
+  e += y;
+  EXPECT_EQ(2, e.num_terms());
+  EXPECT_PRED_FORMAT2(testing::FloatLE, e[0].get_coeff(), 2.0);
+  EXPECT_PRED_FORMAT2(testing::FloatLE, e[1].get_coeff(), 1.0);
+  EXPECT_EQ(e[0].get_var().name, "x");
+  EXPECT_EQ(e[1].get_var().name, "y");
+}
+
+TEST_F(ExpressionTest, basic_ops_2) {
+  zx::Expression e1;
+  e1 += x;
+  e1 += 10.0 * y;
+  e1 += 5.0 * z;
+  e1 += zx::PyRational(1, 2);
+
+  zx::Expression e2;
+  e2 += -5.0 * x;
+  e2 += -10.0 * y;
+  e2 += -4.9 * z;
+  e2 += zx::PyRational(3, 2);
+
+  auto sum = e1 + e2;
+
+  EXPECT_EQ(2, sum.num_terms());
+  EXPECT_PRED_FORMAT2(testing::FloatLE, sum[0].get_coeff(), -4.0);
+  EXPECT_PRED_FORMAT2(testing::FloatLE, sum[1].get_coeff(), 0.1);
+  EXPECT_EQ(sum[0].get_var().name, "x");
+  EXPECT_EQ(sum[1].get_var().name, "z");
+  EXPECT_EQ(sum.get_constant(), zx::PyRational(0, 1));
+}
+
+class SymbolicTest : public ::testing::Test {
+public:
+  // const zx::Variable x_var{0, "x"};
+  // const zx::Variable y_var{1, "y"};
+  // const zx::Variable z_var{2, "z"};
+
+  zx::Term x{zx::Variable(0, "x")};
+  zx::Term y{zx::Variable(1, "y")};
+  zx::Term z{zx::Variable(2, "z")};
+
+protected:
+  virtual void SetUp() {}
+};
+
+TEST_F(SymbolicTest, id_simp) {
+  int32_t nqubits = 50;
+
+  zx::ZXDiagram diag = make_identity_diagram(nqubits, 100);
+  zx::Expression e;
+  e += x;
+  diag.set_phase(nqubits * 2 + 5, e);
+  EXPECT_EQ(e.num_terms(), 1);
+  EXPECT_EQ(diag.phase(nqubits * 2 + 5).num_terms(), 1);
+
+  zx::full_reduce(diag);
+
+  EXPECT_EQ(diag.get_nvertices(), 2 * nqubits + 1);
+  EXPECT_EQ(diag.get_nedges(), nqubits + 1);
+}
+
+TEST_F(SymbolicTest, equivalence) {
+  zx::ZXDiagram d1 = make_empty_diagram(3);
+
+  // first circuit
+  d1.add_vertex(0, 0); // 6
+  d1.add_hadamard_edge(0, 6);
+
+  d1.add_vertex(0, 0);                                      // 7
+  d1.add_vertex(1, 0, zx::Expression(), zx::VertexType::X); // 8
+  d1.add_edge(7, 8);
+  d1.add_edge(6, 7);
+  d1.add_edge(1, 8);
+
+  d1.add_vertex(0, 0);                                      // 9
+  d1.add_vertex(2, 0, zx::Expression(), zx::VertexType::X); // 10
+  d1.add_edge(9, 10);
+  d1.add_edge(7, 9);
+  d1.add_edge(2, 10);
+
+  d1.add_vertex(0, 0, zx::Expression(x), zx::VertexType::Z); // 11
+  d1.add_vertex(1, 0, zx::Expression(y), zx::VertexType::X); // 12
+  d1.add_vertex(2, 0, zx::Expression(z), zx::VertexType::X); // 13
+  d1.add_edge(9, 11);
+  d1.add_edge(8, 12);
+  d1.add_edge(10, 13);
+
+  d1.add_vertex(0, 0);                                      // 14
+  d1.add_vertex(1, 0, zx::Expression(), zx::VertexType::X); // 15
+  d1.add_edge(14, 15);
+  d1.add_edge(11, 14);
+  d1.add_edge(12, 15);
+
+  d1.add_vertex(0, 0);                                      // 16
+  d1.add_vertex(2, 0, zx::Expression(), zx::VertexType::X); // 17
+  d1.add_edge(16, 17);
+  d1.add_edge(14, 16);
+  d1.add_edge(13, 17);
+
+  d1.add_vertex(0, 0); // 18
+  d1.add_hadamard_edge(16, 18);
+
+  // second circuit
+  d1.add_vertex(0, 0); // 19
+  d1.add_hadamard_edge(18, 19);
+
+  d1.add_vertex(0, 0);                                      // 20
+  d1.add_vertex(1, 0, zx::Expression(), zx::VertexType::X); // 21
+  d1.add_edge(20, 21);
+  d1.add_edge(19, 20);
+  d1.add_edge(17, 21);
+
+  d1.add_vertex(0, 0);                                      // 22
+  d1.add_vertex(1, 0, zx::Expression(), zx::VertexType::X); // 23
+  d1.add_edge(22, 23);
+  d1.add_edge(20, 22);
+  d1.add_edge(15, 23);
+
+  d1.add_vertex(0, 0, -zx::Expression(x), zx::VertexType::Z); // 24
+  d1.add_vertex(1, 0, -zx::Expression(y), zx::VertexType::X); // 25
+  d1.add_vertex(2, 0, -zx::Expression(z), zx::VertexType::X); // 26
+  d1.add_edge(22, 24);
+  d1.add_edge(23, 25);
+  d1.add_edge(21, 26);
+
+  d1.add_vertex(0, 0);                                      // 27
+  d1.add_vertex(1, 0, zx::Expression(), zx::VertexType::X); // 28
+  d1.add_edge(24, 27);
+  d1.add_edge(26, 28);
+  d1.add_edge(28, 27);
+
+  d1.add_vertex(0, 0);                                      // 29
+  d1.add_vertex(1, 0, zx::Expression(), zx::VertexType::X); // 30
+  d1.add_edge(29, 30);
+  d1.add_edge(27, 29);
+  d1.add_edge(25, 30);
+
+  d1.add_hadamard_edge(29, 3);
+  d1.add_edge(30, 4);
+  d1.add_edge(28, 5);
+
+  zx::full_reduce(d1);
+
+  EXPECT_EQ(d1.get_nedges(), 3);
+  EXPECT_EQ(d1.get_nvertices(), 6);
+  EXPECT_TRUE(d1.is_identity());
+
 }
 
 int main(int argc, char **argv) {
@@ -691,8 +865,8 @@ int main(int argc, char **argv) {
 }
 
 // TEST_F(SimplifyTest, ancillaries) {
-//   zx::ZXDiagram d0("./test/circuits/mcx_no_ancilla.qasm");
-//   zx::ZXDiagram d1("./test/circuits/mcx_ancilla.qasm");
+//   zx::ZXDiagram d0("circuits/mcx_no_ancilla.qasm");
+//   zx::ZXDiagram d1("circuits/mcx_ancilla.qasm");
 
 //   d1.make_ancilla(4);
 
@@ -728,7 +902,7 @@ int main(int argc, char **argv) {
 //               << (data.type == zx::VertexType::Boundary ? "True" : "False")
 //               << " type " << (d0.type(v) == zx::VertexType::Z ? "Z" : "X")
 //               << "\n";
-//   }    
+//   }
 
 //   EXPECT_TRUE(d0.is_identity());
 // }
