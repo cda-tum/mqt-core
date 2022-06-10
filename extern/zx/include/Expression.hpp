@@ -4,12 +4,12 @@
 #include "Rational.hpp"
 #include "Definitions.hpp"
 
+
 #include <cmath>
 #include <string>
 #include <vector>
 
 namespace zx {
-
 struct Variable {
   Variable(int32_t id, std::string name) : id(id), name(name){};
   int32_t id;
@@ -26,6 +26,7 @@ public:
   [[nodiscard]] bool has_zero_coeff() const {
     return std::abs(coeff) < TOLERANCE;
   }
+
 
   void add_coeff(double r);
   Term(double coeff, Variable var) : coeff(coeff), var(var){};
@@ -94,7 +95,6 @@ public:
   Expression &operator-=(const Expression &rhs);
   Expression &operator-=(const Term &rhs);
   Expression &operator-=(const PiRational &rhs);
-
   [[nodiscard]] Expression operator-() const;
 
   [[nodiscard]] const Term &operator[](int i) const { return terms[i]; }
@@ -104,7 +104,6 @@ public:
 private:
   std::vector<Term> terms;
   PiRational constant;
-
   void sort_terms();
   void aggregate_equal_terms();
 };

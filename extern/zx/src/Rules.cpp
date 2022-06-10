@@ -187,6 +187,7 @@ static void extract_gadget(ZXDiagram &diag, Vertex v) {
   auto v_data = diag.get_vdata(v).value();
   Vertex phase_vert = diag.add_vertex(v_data.qubit, -2, v_data.phase);
   Vertex id_vert = diag.add_vertex(v_data.qubit, -1);
+
   diag.set_phase(v, Expression(PiRational(0, 1)));
   diag.add_hadamard_edge(v, id_vert);
   diag.add_hadamard_edge(id_vert, phase_vert);
@@ -204,6 +205,7 @@ static void ensure_interior(ZXDiagram &diag, Vertex v) {
   // auto v_data = diag.get_vdata(v).value();
   // for (auto &[to, type] : edges) {
   //   if (diag.is_boundary_vertex(to)) {
+
   //     Vertex new_v = diag.add_vertex(v_data.qubit, v_data.col, PiRational(0,
   //     1));
 

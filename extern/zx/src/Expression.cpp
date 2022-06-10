@@ -1,4 +1,5 @@
 #include "Expression.hpp"
+
 #include <cmath>
 
 namespace zx {
@@ -65,6 +66,7 @@ Expression &Expression::operator+=(const Expression &rhs) {
 Expression &Expression::operator+=(const Term &rhs) {
   return *this += Expression(rhs);
 }
+
 
 Expression &Expression::operator+=(const PiRational &rhs) {
   constant += rhs;

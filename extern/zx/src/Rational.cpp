@@ -74,6 +74,7 @@ void PiRational::normalize() {
   }
 }
 
+
 // double PiRational::to_double() const {
 //   return zx::PI * (static_cast<float>(num)) / denom;
 // }
@@ -84,6 +85,7 @@ PiRational &PiRational::operator+=(const PiRational &rhs) {
   normalize();
   return *this;
 }
+
 PiRational &PiRational::operator+=(const int64_t rhs) {
   num = num + rhs * denom;
   normalize();
@@ -96,6 +98,7 @@ PiRational &PiRational::operator-=(const PiRational &rhs) {
   normalize();
   return *this;
 }
+
 PiRational &PiRational::operator-=(const int64_t rhs) {
   num = num + rhs * denom;
   normalize();
@@ -108,6 +111,7 @@ PiRational &PiRational::operator*=(const PiRational &rhs) {
   this->normalize();
   return *this;
 }
+
 PiRational &PiRational::operator*=(const int64_t rhs) {
   num *= rhs;
   this->normalize();
@@ -120,6 +124,7 @@ PiRational &PiRational::operator/=(const PiRational &rhs) {
   this->normalize();
   return *this;
 }
+
 PiRational &PiRational::operator/=(const int64_t rhs) {
   denom *= rhs;
   this->normalize();

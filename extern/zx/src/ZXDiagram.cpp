@@ -430,7 +430,6 @@ void ZXDiagram::close_graph(std::vector<Vertex> &qubit_vertices) {
 void ZXDiagram::make_ancilla(Qubit qubit) {
   auto in_v = inputs[qubit];
   auto out_v = outputs[qubit];
-
   // auto new_in = add_vertex(qubit, 0, PiRational(0,1), VertexType::Boundary);
   // auto new_out = add_vertex(qubit, 0, PiRational(0,1), VertexType::Boundary);
   // inputs[qubit] = new_in;
@@ -451,6 +450,7 @@ void ZXDiagram::make_ancilla(Qubit qubit) {
 //   if (op->getType() == qc::OpType::Barrier) {
 //     return it + 1;
 //   }
+
 
 //   if (op->getNcontrols() == 0 && op->getNtargets() == 1) {
 //     auto target = op->getTargets()[0];
