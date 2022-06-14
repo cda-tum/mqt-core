@@ -41,8 +41,8 @@ public:
   PiRational &operator/=(const int64_t rhs);
 
   // double to_double() const;
-  bool is_integer() const { return denom == 1; }
-  bool is_zero() const {return num == 0;}
+  bool isInteger() const { return denom == 1; }
+  bool isZero() const {return num == 0;}
 };
 
 inline PiRational operator-(const PiRational &rhs) {

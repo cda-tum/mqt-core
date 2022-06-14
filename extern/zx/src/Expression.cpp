@@ -2,7 +2,7 @@
 #include <cmath>
 
 namespace zx {
-void Term::add_coeff(fp r) { coeff += r; }
+void Term::addCoeff(fp r) { coeff += r; }
 Term &Term::operator*=(fp rhs) {
   coeff *= rhs;
   return *this;
@@ -13,25 +13,25 @@ Term &Term::operator/=(fp rhs) {
   return *this;
 }
 
-bool Expression::is_zero() const { return terms.empty() && constant.is_zero(); }
-bool Expression::is_constant() const { return terms.empty(); }
-bool Expression::is_pauli() const {
-  return is_constant() && constant.is_integer();
+bool Expression::isZero() const { return terms.empty() && constant.isZero(); }
+bool Expression::isConstant() const { return terms.empty(); }
+bool Expression::isPauli() const {
+  return isConstant() && constant.isInteger();
 }
-bool Expression::is_clifford() const {
-  return is_constant() && (constant.is_integer() || constant.denom == 2);
+bool Expression::isClifford() const {
+  return isConstant() && (constant.isInteger() || constant.denom == 2);
 }
-bool Expression::is_proper_clifford() const {
-  return is_constant() && constant.denom == 2;
+bool Expression::isProperClifford() const {
+  return isConstant() && constant.denom == 2;
 }
 
 Expression &Expression::operator+=(const Expression &rhs) {
-  if (this->is_zero()) {
+  if (this->isZero()) {
     *this = rhs;
     return *this;
   }
 
-  if (rhs.is_zero())
+  if (rhs.isZero())
     return *this;
 
   auto t = rhs.begin();
@@ -45,13 +45,13 @@ Expression &Expression::operator+=(const Expression &rhs) {
   while (t != rhs.end()) {
     auto insert_pos = std::lower_bound(
         terms.begin(), terms.end(), *t, [&](const Term &lhs, const Term &rhs) {
-          return lhs.get_var().id < rhs.get_var().id;
+          return lhs.getVar().id < rhs.getVar().id;
         });
-    if (insert_pos != terms.end() && insert_pos->get_var() == t->get_var()) {
-      if (insert_pos->get_coeff() == -t->get_coeff()) {
+    if (insert_pos != terms.end() && insert_pos->getVar() == t->getVar()) {
+      if (insert_pos->getCoeff() == -t->getCoeff()) {
         terms.erase(insert_pos);
       } else {
-        insert_pos->add_coeff(t->get_coeff());
+        insert_pos->addCoeff(t->getCoeff());
       }
     } else {
       terms.insert(insert_pos, *t);
@@ -90,20 +90,20 @@ Expression Expression::operator-() const {
   return e;
 }
 
-void Expression::sort_terms() {
+void Expression::sortTerms() {
   std::sort(terms.begin(), terms.end(), [&](const Term &lhs, const Term &rhs) {
-    return lhs.get_var().id < rhs.get_var().id;
+    return lhs.getVar().id < rhs.getVar().id;
   });
 }
 
-void Expression::aggregate_equal_terms() {
+void Expression::aggregateEqualTerms() {
   for (auto t = terms.begin(); t != terms.end();) {
     auto next = std::next(t);
-    while (next != terms.end() && t->get_var() == next->get_var()) {
-      t->add_coeff(next->get_coeff());
+    while (next != terms.end() && t->getVar() == next->getVar()) {
+      t->addCoeff(next->getCoeff());
       next = terms.erase(next);
     }
-    if (t->has_zero_coeff()) {
+    if (t->hasZeroCoeff()) {
       t = terms.erase(t);
     } else {
       t = next;
@@ -112,11 +112,11 @@ void Expression::aggregate_equal_terms() {
 }
 
   bool operator==(const Expression& lhs, const Expression& rhs) {
-    if(lhs.num_terms() != rhs.num_terms() || lhs.get_constant() != rhs.get_constant())
+    if(lhs.numTerms() != rhs.numTerms() || lhs.getConst() != rhs.getConst())
       return false;
 
-    for(size_t i = 0; i < lhs.num_terms(); ++i) {
-      if(std::abs(lhs[i].get_coeff() - rhs[i].get_coeff()) >= TOLERANCE)
+    for(size_t i = 0; i < lhs.numTerms(); ++i) {
+      if(std::abs(lhs[i].getCoeff() - rhs[i].getCoeff()) >= TOLERANCE)
         return false;
     }
     return true;

@@ -5,35 +5,35 @@
 #include "ZXDiagram.hpp"
 
 namespace zx {
-using VertexCheckFun = decltype(check_id_simp);
-using VertexRuleFun = decltype(remove_id);
-using EdgeCheckFun = decltype(check_spider_fusion);
-using EdgeRuleFun = decltype(fuse_spiders);
+using VertexCheckFun = decltype(checkIdSimp);
+using VertexRuleFun = decltype(removeId);
+using EdgeCheckFun = decltype(checkSpiderFusion);
+using EdgeRuleFun = decltype(fuseSpiders);
 
-int32_t simplify_vertices(ZXDiagram &diag, VertexCheckFun check,
+int32_t simplifyVertices(ZXDiagram &diag, VertexCheckFun check,
                           VertexRuleFun rule);
 
-int32_t simplify_edges(ZXDiagram &diag, EdgeCheckFun check, EdgeRuleFun rule);
+int32_t simplifyEdges(ZXDiagram &diag, EdgeCheckFun check, EdgeRuleFun rule);
 
-int32_t gadget_simp(ZXDiagram &diag);
+int32_t gadgetSimp(ZXDiagram &diag);
 
-int32_t id_simp(ZXDiagram &diag);
+int32_t idSimp(ZXDiagram &diag);
 
-int32_t spider_simp(ZXDiagram &diag);
+int32_t spiderSimp(ZXDiagram &diag);
 
-int32_t local_comp_simp(ZXDiagram &diag);
+int32_t localCompSimp(ZXDiagram &diag);
 
-int32_t pivot_pauli_simp(ZXDiagram &diag);
+int32_t pivotPauliSimp(ZXDiagram &diag);
 
-int32_t pivot_simp(ZXDiagram &diag);
+int32_t pivotSimp(ZXDiagram &diag);
 
-int32_t interior_clifford_simp(ZXDiagram &diag);
+int32_t interiorCliffordSimp(ZXDiagram &diag);
 
-int32_t clifford_simp(ZXDiagram &diag);
+int32_t cliffordSimp(ZXDiagram &diag);
 
-int32_t pivot_gadget_simp(ZXDiagram &diag);
+int32_t pivotgadgetSimp(ZXDiagram &diag);
 
-int32_t full_reduce(ZXDiagram &diag);
+int32_t fullReduce(ZXDiagram &diag);
 
 } // namespace zx
 

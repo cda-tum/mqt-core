@@ -19,13 +19,13 @@ inline bool operator==(const Variable &lhs, const Variable &rhs) {
 }
 class Term {
 public:
-  [[nodiscard]] Variable get_var() const { return var; }
-  [[nodiscard]] double get_coeff() const { return coeff; }
-  [[nodiscard]] bool has_zero_coeff() const {
+  [[nodiscard]] Variable getVar() const { return var; }
+  [[nodiscard]] double getCoeff() const { return coeff; }
+  [[nodiscard]] bool hasZeroCoeff() const {
     return std::abs(coeff) < TOLERANCE;
   }
 
-  void add_coeff(double r);
+  void addCoeff(double r);
   Term(double coeff, Variable var) : coeff(coeff), var(var){};
   Term(Variable var) : coeff(1), var(var){};
 
@@ -58,15 +58,15 @@ public:
   template <typename... Args> Expression(Term t, Args... ms) {
     terms.emplace_back(t);
     (terms.emplace_back(std::forward<Args>(ms)), ...);
-    sort_terms();
-    aggregate_equal_terms();
+    sortTerms();
+    aggregateEqualTerms();
   }
 
   template <typename... Args> Expression(Variable v, Args... ms) {
     terms.emplace_back(Term(1, v));
     (terms.emplace_back(std::forward<Args>(ms)), ...);
-    sort_terms();
-    aggregate_equal_terms();
+    sortTerms();
+    aggregateEqualTerms();
   }
 
   Expression() : constant(PiRational(0, 1)){};
@@ -79,11 +79,11 @@ public:
   const_iterator cbegin() const { return terms.cbegin(); }
   const_iterator cend() const { return terms.cend(); }
 
-  [[nodiscard]] bool is_zero() const;
-  [[nodiscard]] bool is_constant() const;
-  [[nodiscard]] bool is_pauli() const;
-  [[nodiscard]] bool is_clifford() const;
-  [[nodiscard]] bool is_proper_clifford() const;
+  [[nodiscard]] bool isZero() const;
+  [[nodiscard]] bool isConstant() const;
+  [[nodiscard]] bool isPauli() const;
+  [[nodiscard]] bool isClifford() const;
+  [[nodiscard]] bool isProperClifford() const;
 
   Expression &operator+=(const Expression &rhs);
   Expression &operator+=(const Term &rhs);
@@ -95,14 +95,14 @@ public:
   [[nodiscard]] Expression operator-() const;
 
   [[nodiscard]] const Term &operator[](int i) const { return terms[i]; }
-  [[nodiscard]] PiRational get_constant() const { return constant; }
-  [[nodiscard]] auto num_terms() const { return terms.size(); }
+  [[nodiscard]] PiRational getConst() const { return constant; }
+  [[nodiscard]] auto numTerms() const { return terms.size(); }
 
 private:
   std::vector<Term> terms;
   PiRational constant;
-  void sort_terms();
-  void aggregate_equal_terms();
+  void sortTerms();
+  void aggregateEqualTerms();
 };
 
 inline Expression operator+(Expression lhs, const Expression &rhs) {
@@ -139,7 +139,7 @@ inline std::ostream &operator<<(std::ostream &os, const zx::Variable &rhs) {
 }
 
 inline std::ostream &operator<<(std::ostream &os, const zx::Term &rhs) {
-  os << rhs.get_coeff() << "*" << rhs.get_var();
+  os << rhs.getCoeff() << "*" << rhs.getVar();
   return os;
 }
 
@@ -147,7 +147,7 @@ inline std::ostream &operator<<(std::ostream &os, const zx::Expression &rhs) {
   for (auto &t : rhs) {
     os << t << " + ";
   }
-  os << rhs.get_constant();
+  os << rhs.getConst();
   return os;
 }
 #endif /* ZX_INCLUDE_EXPRESSION_HPP_ */

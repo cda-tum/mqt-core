@@ -3,19 +3,19 @@
 namespace zx {
 Vertices::VertexIterator::VertexIterator(
     std::vector<std::optional<VertexData>> &vertices, Vertex v)
-    : v(v), current_pos(vertices.begin()), vertices(vertices) {
+    : v(v), currentPos(vertices.begin()), vertices(vertices) {
   if ((size_t)v >= vertices.size()) {
-    current_pos = vertices.end();
+    currentPos = vertices.end();
     v = vertices.size();
   } else {
-    current_pos = vertices.begin() + v;
+    currentPos = vertices.begin() + v;
     next_valid_vertex();
   }
 }
 // Prefix increment
 Vertices::VertexIterator Vertices::VertexIterator::operator++() {
   Vertices::VertexIterator it = *this;
-  current_pos++;
+  currentPos++;
   v++;
   next_valid_vertex();
   return it;
@@ -23,7 +23,7 @@ Vertices::VertexIterator Vertices::VertexIterator::operator++() {
 
 // Postfix increment
 Vertices::VertexIterator Vertices::VertexIterator::operator++(int) {
-  current_pos++;
+  currentPos++;
   v++;
   next_valid_vertex();
   return *this;
@@ -31,7 +31,7 @@ Vertices::VertexIterator Vertices::VertexIterator::operator++(int) {
 
 bool operator==(const Vertices::VertexIterator &a,
                 const Vertices::VertexIterator &b) {
-  return a.current_pos == b.current_pos;
+  return a.currentPos == b.currentPos;
 }
 bool operator!=(const Vertices::VertexIterator &a,
                 const Vertices::VertexIterator &b) {
@@ -39,23 +39,23 @@ bool operator!=(const Vertices::VertexIterator &a,
 }
 
 void Vertices::VertexIterator::next_valid_vertex() {
-  while (current_pos != vertices.end() && !current_pos->has_value()) {
+  while (currentPos != vertices.end() && !currentPos->has_value()) {
     v++;
-    current_pos++;
+    currentPos++;
   }
 }
 
 Edges::EdgeIterator::EdgeIterator(
     std::vector<std::vector<Edge>> &edges,
     std::vector<std::optional<VertexData>> &vertices)
-    : v(0), current_pos(edges[0].begin()), edges(edges), vertices(vertices) {
+    : v(0), currentPos(edges[0].begin()), edges(edges), vertices(vertices) {
   if (vertices.size() != 0) {
     while ((size_t)v < edges.size() && !vertices[v].has_value())
       v++;
-    current_pos = edges[v].begin();
-    check_next_vertex();
+    currentPos = edges[v].begin();
+    checkNextVertex();
   } else {
-    current_pos = edges.back().end();
+    currentPos = edges.back().end();
     v = edges.size();
   }
 }
@@ -65,51 +65,51 @@ Edges::EdgeIterator::EdgeIterator(
     std::vector<std::optional<VertexData>> &vertices, Vertex v)
     : v(v), edges(edges), vertices(vertices) {
   if ((size_t)v >= edges.size()) {
-    current_pos = edges.back().end();
+    currentPos = edges.back().end();
     v = edges.size();
   } else {
-    current_pos = edges[v].begin();
+    currentPos = edges[v].begin();
   }
 }
 
 // Prefix increment
 Edges::EdgeIterator Edges::EdgeIterator::operator++() {
   Edges::EdgeIterator it = *this;
-  current_pos++;
-  check_next_vertex();
+  currentPos++;
+  checkNextVertex();
   return it;
 }
 
-void Edges::EdgeIterator::check_next_vertex() {
-  while (current_pos != edges[v].end() &&
-         current_pos->to < v) // make sure to not iterate over an edge twice
-    current_pos++;
+void Edges::EdgeIterator::checkNextVertex() {
+  while (currentPos != edges[v].end() &&
+         currentPos->to < v) // make sure to not iterate over an edge twice
+    currentPos++;
 
-  while (current_pos == edges[v].end() && (size_t)v < edges.size()) {
+  while (currentPos == edges[v].end() && (size_t)v < edges.size()) {
     v++;
     while ((size_t)v < edges.size() && !vertices[v].has_value())
       v++;
 
     if ((size_t)v == edges.size()) {
-      current_pos = edges.back().end();
+      currentPos = edges.back().end();
       v--;
       return;
     }
-    current_pos = edges[v].begin();
-    while (current_pos != edges[v].end() &&
-           current_pos->to < v) // make sure to not iterate over an edge twice
-      current_pos++;
+    currentPos = edges[v].begin();
+    while (currentPos != edges[v].end() &&
+           currentPos->to < v) // make sure to not iterate over an edge twice
+      currentPos++;
   }
 }
 // Postfix increment
 Edges::EdgeIterator Edges::EdgeIterator::operator++(int) {
-  current_pos++;
-  check_next_vertex();
+  currentPos++;
+  checkNextVertex();
   return *this;
 }
 
 bool operator==(const Edges::EdgeIterator &a, const Edges::EdgeIterator &b) {
-  return a.current_pos == b.current_pos;
+  return a.currentPos == b.currentPos;
 }
 bool operator!=(const Edges::EdgeIterator &a, const Edges::EdgeIterator &b) {
   return !(a == b);

@@ -42,12 +42,12 @@ public:
     using reference = value_type &;
 
     VertexIterator(std::vector<std::optional<VertexData>> &vertices)
-        : v(0), current_pos(vertices.begin()), vertices(vertices) {
+        : v(0), currentPos(vertices.begin()), vertices(vertices) {
       next_valid_vertex();
     }
     VertexIterator(std::vector<std::optional<VertexData>> &vertices, Vertex v);
 
-    value_type operator*() const { return {v, current_pos->value()}; }
+    value_type operator*() const { return {v, currentPos->value()}; }
     // pointer operator->() { return ptr; }
 
     // Prefix increment
@@ -61,7 +61,7 @@ public:
 
   private:
     Vertex v;
-    std::vector<std::optional<VertexData>>::iterator current_pos;
+    std::vector<std::optional<VertexData>>::iterator currentPos;
     std::vector<std::optional<VertexData>> &vertices;
 
     void next_valid_vertex();
@@ -96,7 +96,7 @@ public:
     EdgeIterator(std::vector<std::vector<Edge>>& edges,
                  std::vector<std::optional<VertexData>>& vertices, Vertex v);
 
-    value_type operator*() const { return {v, current_pos->to}; }
+    value_type operator*() const { return {v, currentPos->to}; }
     // pointer operator->() { return ptr; }
 
     // Prefix increment
@@ -110,11 +110,11 @@ public:
 
   private:
     Vertex v;
-    std::vector<Edge>::iterator current_pos;
+    std::vector<Edge>::iterator currentPos;
     std::vector<std::vector<Edge>> &edges;
     std::vector<std::optional<VertexData>> &vertices;
 
-    void check_next_vertex();
+    void checkNextVertex();
   };
 
   using iterator = EdgeIterator;

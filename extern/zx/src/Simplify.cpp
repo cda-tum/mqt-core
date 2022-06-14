@@ -4,14 +4,14 @@
 #include <iostream>
 
 namespace zx {
-int32_t simplify_vertices(ZXDiagram &diag, VertexCheckFun check,
+int32_t simplifyVertices(ZXDiagram &diag, VertexCheckFun check,
                           VertexRuleFun rule) {
   int32_t n_simplifications = 0;
   bool new_matches = true;
 
   while (new_matches) {
     new_matches = false;
-    for (auto [v, _] : diag.get_vertices()) {
+    for (auto [v, _] : diag.getVertices()) {
       if (check(diag, v)) {
         rule(diag, v);
         new_matches = true;
@@ -23,14 +23,14 @@ int32_t simplify_vertices(ZXDiagram &diag, VertexCheckFun check,
   return n_simplifications;
 }
 
-int32_t simplify_edges(ZXDiagram &diag, EdgeCheckFun check, EdgeRuleFun rule) {
+int32_t simplifyEdges(ZXDiagram &diag, EdgeCheckFun check, EdgeRuleFun rule) {
   int32_t n_simplifications = 0;
   bool new_matches = true;
 
   while (new_matches) {
     new_matches = false;
-    for (auto [v0, v1] : diag.get_edges()) {
-      if (diag.is_deleted(v0) || diag.is_deleted(v1) || !check(diag, v0, v1)) {
+    for (auto [v0, v1] : diag.getEdges()) {
+      if (diag.isDeleted(v0) || diag.isDeleted(v1) || !check(diag, v0, v1)) {
         continue;
       }
       rule(diag, v0, v1);
@@ -42,18 +42,18 @@ int32_t simplify_edges(ZXDiagram &diag, EdgeCheckFun check, EdgeRuleFun rule) {
   return n_simplifications;
 }
 
-int32_t gadget_simp(ZXDiagram &diag) {
+int32_t gadgetSimp(ZXDiagram &diag) {
   int32_t n_simplifications = 0;
   bool new_matches = true;
 
   while (new_matches) {
     new_matches = false;
-    for (auto [v, _] : diag.get_vertices()) {
+    for (auto [v, _] : diag.getVertices()) {
 
-      if (diag.is_deleted(v))
+      if (diag.isDeleted(v))
         continue;
 
-      if (check_and_fuse_gadget(diag, v)) {
+      if (checkAndFuseGadget(diag, v)) {
 
         new_matches = true;
         n_simplifications++;
@@ -63,59 +63,59 @@ int32_t gadget_simp(ZXDiagram &diag) {
   return n_simplifications;
 }
 
-int32_t id_simp(ZXDiagram &diag) {
-  return simplify_vertices(diag, check_id_simp, remove_id);
+int32_t idSimp(ZXDiagram &diag) {
+  return simplifyVertices(diag, checkIdSimp, removeId);
 }
 
-int32_t spider_simp(ZXDiagram &diag) {
-  return simplify_edges(diag, check_spider_fusion, fuse_spiders);
+int32_t spiderSimp(ZXDiagram &diag) {
+  return simplifyEdges(diag, checkSpiderFusion, fuseSpiders);
 }
 
-int32_t local_comp_simp(ZXDiagram &diag) {
-  return simplify_vertices(diag, check_local_comp, local_comp);
+int32_t localCompSimp(ZXDiagram &diag) {
+  return simplifyVertices(diag, checkLocalComp, localComp);
 }
 
-int32_t pivot_pauli_simp(ZXDiagram &diag) {
-  return simplify_edges(diag, check_pivot_pauli, pivot_pauli);
+int32_t pivotPauliSimp(ZXDiagram &diag) {
+  return simplifyEdges(diag, checkPivotPauli, pivotPauli);
 }
 
-int32_t pivot_simp(ZXDiagram &diag) {
-  return simplify_edges(diag, check_pivot, pivot);
+int32_t pivotSimp(ZXDiagram &diag) {
+  return simplifyEdges(diag, checkPivot, pivot);
 }
 
-int32_t interior_clifford_simp(ZXDiagram &diag) {
-  spider_simp(diag);
+int32_t interiorCliffordSimp(ZXDiagram &diag) {
+  spiderSimp(diag);
 
   bool new_matches = true;
   int32_t n_simplifications = 0;
-  int32_t n_id, n_spider, n_pivot, n_local_comp;
+  int32_t n_id, n_spider, n_pivot, n_localComp;
   while (new_matches) {
     new_matches = false;
-    n_id = id_simp(diag);
-    n_spider = spider_simp(diag);
-    n_pivot = pivot_pauli_simp(diag);
-    n_local_comp = local_comp_simp(diag);
+    n_id = idSimp(diag);
+    n_spider = spiderSimp(diag);
+    n_pivot = pivotPauliSimp(diag);
+    n_localComp = localCompSimp(diag);
 
-    if (n_id + n_spider + n_pivot + n_local_comp != 0) {
+    if (n_id + n_spider + n_pivot + n_localComp != 0) {
       new_matches = true;
       n_simplifications++;
     }
     // std::cout << "ID " << n_id << "\n";
     // std::cout << "SPIDER " << n_spider << "\n";
     // std::cout << "PIVOT PAULI" << n_pivot << "\n";
-    // std::cout << "LOCAL_COMP " << n_local_comp << "\n";
+    // std::cout << "LOCALCOMP " << n_localComp << "\n";
   }
   return n_simplifications;
 }
 
-int32_t clifford_simp(ZXDiagram &diag) {
+int32_t cliffordSimp(ZXDiagram &diag) {
   bool new_matches = true;
   int32_t n_simplifications = 0;
   int32_t n_clifford, n_pivot;
   while (new_matches) {
     new_matches = false;
-    n_clifford = interior_clifford_simp(diag);
-    n_pivot = pivot_simp(diag);
+    n_clifford = interiorCliffordSimp(diag);
+    n_pivot = pivotSimp(diag);
     if (n_clifford + n_pivot != 0) {
       new_matches = true;
       n_simplifications++;
@@ -124,23 +124,23 @@ int32_t clifford_simp(ZXDiagram &diag) {
   return n_simplifications;
 }
 
-int32_t pivot_gadget_simp(ZXDiagram &diag) {
-  return simplify_edges(diag, check_pivot_gadget, pivot_gadget);
+int32_t pivotgadgetSimp(ZXDiagram &diag) {
+  return simplifyEdges(diag, checkPivotGadget, pivotGadget);
 }
 
-int32_t full_reduce(ZXDiagram &diag) {
-  diag.to_graph_like();
-  interior_clifford_simp(diag);
+int32_t fullReduce(ZXDiagram &diag) {
+  diag.toGraphlike();
+  interiorCliffordSimp(diag);
 
-  // pivot_gadget_simp(diag);
+  // pivotgadgetSimp(diag);
 
   int32_t n_gadget, n_pivot;
   int32_t n_simplifications = 0;
   while (true) {
-    clifford_simp(diag);
-    n_gadget = gadget_simp(diag);
-    interior_clifford_simp(diag);
-    n_pivot = pivot_gadget_simp(diag);
+    cliffordSimp(diag);
+    n_gadget = gadgetSimp(diag);
+    interiorCliffordSimp(diag);
+    n_pivot = pivotgadgetSimp(diag);
     if (n_gadget + n_pivot == 0)
       break;
     n_simplifications += n_gadget + n_pivot;
@@ -148,7 +148,7 @@ int32_t full_reduce(ZXDiagram &diag) {
     // std::cout << "Pivot: " << n_pivot << "\n";
     // std::cout << "\nSimps: " << n_simplifications << "\n\n";
   }
-  // clifford_simp(diag);
+  // cliffordSimp(diag);
   return n_simplifications;
 }
 } // namespace zx
