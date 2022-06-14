@@ -105,7 +105,6 @@ namespace zx {
         void toGraphlike();
 
         [[nodiscard]] bool isIdentity() const;
-        // [[nodiscard]] bool isIdentity(const qc::Permutation &perm) const;
 
         [[nodiscard]] ZXDiagram adjoint() const;
 
@@ -125,8 +124,6 @@ namespace zx {
         std::vector<Vertex>                    outputs;
         int32_t                                nvertices = 0;
         int32_t                                nedges    = 0;
-        // std::optional<qc::Permutation> initial_layout;
-        // std::optional<qc::Permutation> output_permutation;
 
         void addZSpider(Qubit qubit, std::vector<Vertex>& qubit_vertices,
                         const Expression& phase = Expression(),
@@ -137,7 +134,7 @@ namespace zx {
                         EdgeType          type  = EdgeType::Simple);
         void addCnot(Qubit ctrl, Qubit target,
                      std::vector<Vertex>& qubit_vertices);
-
+      
         void addCphase(PiRational phase, Qubit ctrl, Qubit target,
                        std::vector<Vertex>& qubit_vertices);
         void addSwap(Qubit ctrl, Qubit target,
@@ -152,10 +149,6 @@ namespace zx {
 
         std::vector<Edge>::iterator getEdgePtr(Vertex from, Vertex to);
 
-        // using op_it =
-        //     decltype(std::begin(std::vector<std::unique_ptr<qc::Operation>>()));
-        // op_it parse_op(op_it it, op_it end,
-        //                       std::vector<Vertex> &qubit_vertices);
     };
 } // namespace zx
 #endif /* ZX_INCLUDE_GRAPH_HPP_ */
