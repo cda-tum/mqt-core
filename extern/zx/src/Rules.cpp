@@ -59,10 +59,10 @@ void local_comp(ZXDiagram &diag, Vertex v) { // TODO:scalars
   auto phase = -diag.phase(v);
   auto &edges = diag.incident_edges(v);
 
-  for (auto i = 0; i < edges.size(); i++) {
+  for (size_t i = 0; i < edges.size(); i++) {
     auto &[n0, _] = edges[i];
     diag.add_phase(n0, phase);
-    for (auto j = i + 1; j < edges.size(); j++) {
+    for (size_t j = i + 1; j < edges.size(); j++) {
       auto &[n1, _] = edges[j];
       diag.add_edge_parallel_aware(n0, n1, EdgeType::Hadamard);
     }
@@ -305,8 +305,8 @@ bool check_and_fuse_gadget(ZXDiagram &diag, Vertex v) {
     return true;
   }
 
-  Vertex n0;
-  EdgeType n0_etype;
+  Vertex n0 = -1;
+  // EdgeType n0_etype;
   for (auto &[n, etype] : diag.incident_edges(id0)) {
     if (n == v)
       continue;
@@ -314,10 +314,10 @@ bool check_and_fuse_gadget(ZXDiagram &diag, Vertex v) {
     if (etype != zx::EdgeType::Hadamard)
       return false;
     n0 = n;
-    n0_etype = etype;
+    // n0_etype = etype;
   }
 
-  Vertex id1;
+  Vertex id1 = -1;
   Vertex phase_spider = -1;
 
   bool found_gadget = false;
