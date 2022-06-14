@@ -74,10 +74,6 @@ void PiRational::normalize() {
   }
 }
 
-<<<<<<< HEAD
-
-=======
->>>>>>> ea18283 (Removed QFR as dependency)
 // double PiRational::to_double() const {
 //   return zx::PI * (static_cast<float>(num)) / denom;
 // }
@@ -88,10 +84,6 @@ PiRational &PiRational::operator+=(const PiRational &rhs) {
   normalize();
   return *this;
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> ea18283 (Removed QFR as dependency)
 PiRational &PiRational::operator+=(const int64_t rhs) {
   num = num + rhs * denom;
   normalize();

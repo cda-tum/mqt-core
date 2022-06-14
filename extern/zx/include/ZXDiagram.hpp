@@ -18,22 +18,12 @@
 #include "Expression.hpp"
 
     namespace zx {
-
-<<<<<<< HEAD
-  class ZXDiagram {
-  public:
-    ZXDiagram() = default;
-    ZXDiagram(int32_t nqubits); // create n_qubit identity_diagram
-    explicit ZXDiagram(std::string filename);
-    // explicit ZXDiagram(const qc::QuantumComputation &circuit);
-=======
 class ZXDiagram {
 public:
   ZXDiagram() = default;
   ZXDiagram(int32_t nqubits); // create n_qubit identity_diagram
   explicit ZXDiagram(std::string filename);
   // explicit ZXDiagram(const qc::QuantumComputation &circuit);
->>>>>>> ea18283 (Removed QFR as dependency)
 
     void add_edge(Vertex from, Vertex to, EdgeType type = EdgeType::Simple);
     void add_hadamard_edge(Vertex from, Vertex to) {
@@ -43,19 +33,11 @@ public:
                                  EdgeType type = EdgeType::Simple);
     void remove_edge(Vertex from, Vertex to);
 
-<<<<<<< HEAD
-    Vertex add_vertex(const VertexData &data);
-    Vertex add_vertex(Qubit qubit, Col col = 0,
-                      const Expression &phase = Expression(),
-                      VertexType type = VertexType::Z);
-    void remove_vertex(Vertex to_remove);
-=======
   Vertex add_vertex(const VertexData &data);
   Vertex add_vertex(Qubit qubit, Col col = 0,
                     const Expression& phase = Expression(),
                     VertexType type = VertexType::Z);
   void remove_vertex(Vertex to_remove);
->>>>>>> ea18283 (Removed QFR as dependency)
 
     int32_t get_ndeleted() const { return deleted.size(); }
     [[nodiscard]] int32_t get_nvertices() const { return nvertices; }
@@ -74,15 +56,10 @@ public:
       return vertices[v].value().phase;
     }
 
-<<<<<<< HEAD
-    [[nodiscard]] Qubit qubit(Vertex v) const {
-      return vertices[v].value().qubit;
-    }
-=======
+
   [[nodiscard]] Qubit qubit(Vertex v) const {
     return vertices[v].value().qubit;
   }
->>>>>>> ea18283 (Removed QFR as dependency)
 
     [[nodiscard]] VertexType type(Vertex v) const {
       return vertices[v].value().type;
@@ -128,13 +105,8 @@ public:
 
     void to_graph_like();
 
-<<<<<<< HEAD
-    [[nodiscard]] bool is_identity() const;
-    // [[nodiscard]] bool is_identity(const qc::Permutation &perm) const;
-=======
   [[nodiscard]] bool is_identity() const;
   // [[nodiscard]] bool is_identity(const qc::Permutation &perm) const;
->>>>>>> ea18283 (Removed QFR as dependency)
 
     [[nodiscard]] ZXDiagram adjoint() const;
 
@@ -144,7 +116,6 @@ public:
 
     // What about Swaps?
 
-<<<<<<< HEAD
     void make_ancilla(Qubit qubit);
 
   private:
@@ -167,35 +138,6 @@ public:
                       EdgeType type = EdgeType::Simple);
     void add_cnot(Qubit ctrl, Qubit target,
                   std::vector<Vertex> &qubit_vertices);
-=======
-  void make_ancilla(Qubit qubit);
-
-private:
-  std::vector<std::vector<Edge>> edges;
-  std::vector<std::optional<VertexData>> vertices;
-  std::vector<Vertex> deleted;
-  std::vector<Vertex> inputs;
-  std::vector<Vertex> outputs;
-  int32_t nvertices = 0;
-  int32_t nedges = 0;
-  // std::optional<qc::Permutation> initial_layout;
-  // std::optional<qc::Permutation> output_permutation;
-
-  void add_z_spider(Qubit qubit, std::vector<Vertex> &qubit_vertices,
-                    const Expression& phase = Expression(),
-                    EdgeType type = EdgeType::Simple);
-  void add_x_spider(Qubit qubit, std::vector<Vertex> &qubit_vertices,
-const Expression& phase = Expression(),
-                    EdgeType type = EdgeType::Simple);
-  void add_cnot(Qubit ctrl, Qubit target,
-                std::vector<Vertex> &qubit_vertices);
-  void add_cphase(PiRational phase, Qubit ctrl, Qubit target,
-                  std::vector<Vertex> &qubit_vertices);
-  void add_swap(Qubit ctrl, Qubit target,
-                std::vector<Vertex> &qubit_vertices);
-  void add_ccx(Qubit ctrl_0, Qubit ctrl_1, Qubit target,
-               std::vector<Vertex> &qubit_vertices);
->>>>>>> ea18283 (Removed QFR as dependency)
 
     void add_cphase(PiRational phase, Qubit ctrl, Qubit target,
                     std::vector<Vertex> &qubit_vertices);
