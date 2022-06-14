@@ -1,2 +1,0 @@
-/usr/bin/ar qc libjkqzx.a CMakeFiles/jkqzx.dir/Rational.cpp.o CMakeFiles/jkqzx.dir/ZXDiagram.cpp.o CMakeFiles/jkqzx.dir/Rules.cpp.o CMakeFiles/jkqzx.dir/Simplify.cpp.o CMakeFiles/jkqzx.dir/Utils.cpp.o CMakeFiles/jkqzx.dir/Expression.cpp.o
-/usr/bin/ranlib libjkqzx.a
