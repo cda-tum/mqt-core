@@ -1,3 +1,5 @@
-[submodule "qfr"]
-	path = qfr
-	url = https://github.com/iic-jku/qfr.git
+[submodule "extern/googletest"]
+	path = extern/googletest
+	url = https://github.com/google/googletest
+    branch = main
+    shallow = true
