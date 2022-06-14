@@ -1,131 +1,133 @@
 #ifndef ZX_INCLUDE_UTILS_HPP_
 #define ZX_INCLUDE_UTILS_HPP_
 
+#include "Definitions.hpp"
+#include "Expression.hpp"
+
 #include <iterator>
 #include <optional>
 #include <vector>
 
-#include "Definitions.hpp"
-#include "Expression.hpp"
-
 namespace zx {
-  
-  struct Edge {
-  int32_t to;
-  EdgeType type;
 
-  Edge() = default;
-  Edge(int32_t to, EdgeType type) : to(to), type(type){};
-  void toggle() {
-    type = (type == EdgeType::Simple) ? EdgeType::Hadamard : EdgeType::Simple;
-  }
-};
+    struct Edge {
+        int32_t  to;
+        EdgeType type;
 
-struct VertexData {
-  Col col;
-  Qubit qubit;
-  Expression phase;
-  VertexType type;
-};
-  
-class Vertices {
-public:
-  Vertices(std::vector<std::optional<VertexData>> &vertices)
-      : vertices(vertices){};
+        Edge() = default;
+        Edge(int32_t to, EdgeType type):
+            to(to), type(type){};
+        void toggle() {
+            type = (type == EdgeType::Simple) ? EdgeType::Hadamard : EdgeType::Simple;
+        }
+    };
 
-  class VertexIterator {
-  public:
-    using iterator_category = std::forward_iterator_tag;
-    using difference_type = int32_t;
-    using value_type = std::pair<Vertex, VertexData &>;
-    using pointer = value_type *;
-    using reference = value_type &;
+    struct VertexData {
+        Col        col;
+        Qubit      qubit;
+        Expression phase;
+        VertexType type;
+    };
 
-    VertexIterator(std::vector<std::optional<VertexData>> &vertices)
-        : v(0), currentPos(vertices.begin()), vertices(vertices) {
-      next_valid_vertex();
-    }
-    VertexIterator(std::vector<std::optional<VertexData>> &vertices, Vertex v);
+    class Vertices {
+    public:
+        Vertices(std::vector<std::optional<VertexData>>& vertices):
+            vertices(vertices){};
 
-    value_type operator*() const { return {v, currentPos->value()}; }
-    // pointer operator->() { return ptr; }
+        class VertexIterator {
+        public:
+            using iterator_category = std::forward_iterator_tag;
+            using difference_type   = int32_t;
+            using value_type        = std::pair<Vertex, VertexData&>;
+            using pointer           = value_type*;
+            using reference         = value_type&;
 
-    // Prefix increment
-    VertexIterator operator++();
+            VertexIterator(std::vector<std::optional<VertexData>>& vertices):
+                v(0), currentPos(vertices.begin()), vertices(vertices) {
+                next_valid_vertex();
+            }
+            VertexIterator(std::vector<std::optional<VertexData>>& vertices, Vertex v);
 
-    // Postfix increment
-    VertexIterator operator++(int);
+            value_type operator*() const { return {v, currentPos->value()}; }
+            // pointer operator->() { return ptr; }
 
-    friend bool operator==(const VertexIterator &a, const VertexIterator &b);
-    friend bool operator!=(const VertexIterator &a, const VertexIterator &b);
+            // Prefix increment
+            VertexIterator operator++();
 
-  private:
-    Vertex v;
-    std::vector<std::optional<VertexData>>::iterator currentPos;
-    std::vector<std::optional<VertexData>> &vertices;
+            // Postfix increment
+            VertexIterator operator++(int);
 
-    void next_valid_vertex();
-  };
+            friend bool operator==(const VertexIterator& a, const VertexIterator& b);
+            friend bool operator!=(const VertexIterator& a, const VertexIterator& b);
 
-  using iterator = VertexIterator;
+        private:
+            Vertex                                           v;
+            std::vector<std::optional<VertexData>>::iterator currentPos;
+            std::vector<std::optional<VertexData>>&          vertices;
 
-  iterator begin() { return VertexIterator(vertices); }
-  iterator end() { return VertexIterator(vertices, vertices.size()); }
+            void next_valid_vertex();
+        };
 
-private:
-  std::vector<std::optional<VertexData>> &vertices;
-};
+        using iterator = VertexIterator;
 
-class Edges {
-public:
-  Edges(std::vector<std::vector<Edge>>& edges,
-        std::vector<std::optional<VertexData>>& vertices)
-      : edges(edges), vertices(vertices){};
+        iterator begin() { return VertexIterator(vertices); }
+        iterator end() { return VertexIterator(vertices, vertices.size()); }
 
-  class EdgeIterator {
-  public:
-    using iterator_category = std::forward_iterator_tag;
-    using difference_type = int32_t;
-    using value_type = std::pair<Vertex, Vertex>;
-    using pointer = value_type *;
-    using reference = value_type &;
+    private:
+        std::vector<std::optional<VertexData>>& vertices;
+    };
 
-    EdgeIterator(std::vector<std::vector<Edge>>& edges,
-                 std::vector<std::optional<VertexData>>& vertices);
+    class Edges {
+    public:
+        Edges(std::vector<std::vector<Edge>>&         edges,
+              std::vector<std::optional<VertexData>>& vertices):
+            edges(edges),
+            vertices(vertices){};
 
-    EdgeIterator(std::vector<std::vector<Edge>>& edges,
-                 std::vector<std::optional<VertexData>>& vertices, Vertex v);
+        class EdgeIterator {
+        public:
+            using iterator_category = std::forward_iterator_tag;
+            using difference_type   = int32_t;
+            using value_type        = std::pair<Vertex, Vertex>;
+            using pointer           = value_type*;
+            using reference         = value_type&;
 
-    value_type operator*() const { return {v, currentPos->to}; }
-    // pointer operator->() { return ptr; }
+            EdgeIterator(std::vector<std::vector<Edge>>&         edges,
+                         std::vector<std::optional<VertexData>>& vertices);
 
-    // Prefix increment
-    EdgeIterator operator++();
+            EdgeIterator(std::vector<std::vector<Edge>>&         edges,
+                         std::vector<std::optional<VertexData>>& vertices, Vertex v);
 
-    // Postfix increment
-    EdgeIterator operator++(int);
+            value_type operator*() const { return {v, currentPos->to}; }
+            // pointer operator->() { return ptr; }
 
-    friend bool operator==(const EdgeIterator &a, const EdgeIterator &b);
-    friend bool operator!=(const EdgeIterator &a, const EdgeIterator &b);
+            // Prefix increment
+            EdgeIterator operator++();
 
-  private:
-    Vertex v;
-    std::vector<Edge>::iterator currentPos;
-    std::vector<std::vector<Edge>> &edges;
-    std::vector<std::optional<VertexData>> &vertices;
+            // Postfix increment
+            EdgeIterator operator++(int);
 
-    void checkNextVertex();
-  };
+            friend bool operator==(const EdgeIterator& a, const EdgeIterator& b);
+            friend bool operator!=(const EdgeIterator& a, const EdgeIterator& b);
 
-  using iterator = EdgeIterator;
+        private:
+            Vertex                                  v;
+            std::vector<Edge>::iterator             currentPos;
+            std::vector<std::vector<Edge>>&         edges;
+            std::vector<std::optional<VertexData>>& vertices;
 
-  iterator begin() { return EdgeIterator(edges, vertices); }
-  iterator end() { return EdgeIterator(edges, vertices, edges.size()); }
+            void checkNextVertex();
+        };
 
-private:
-  std::vector<std::vector<Edge>> &edges;
-  std::vector<std::optional<VertexData>> &vertices;
-};
+        using iterator = EdgeIterator;
+
+        iterator begin() { return EdgeIterator(edges, vertices); }
+        iterator end() { return EdgeIterator(edges, vertices, edges.size()); }
+
+    private:
+        std::vector<std::vector<Edge>>&         edges;
+        std::vector<std::optional<VertexData>>& vertices;
+    };
 } // namespace zx
 
 #endif /* JKQZX_INCLUDE_UTILS_HPP_ */
