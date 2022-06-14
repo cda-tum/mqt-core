@@ -6,11 +6,10 @@
 namespace zx {
 enum class EdgeType { Simple, Hadamard };
 enum class VertexType { Boundary, Z, X };
-using Vertex = int32_t;
-using Col = int32_t;
-using Qubit = std::int_fast8_t;
+using Vertex = std::int32_t;
+using Col = std::int32_t;
+using Qubit = std::int_fast32_t;
 using fp = double;
-
 
 constexpr double MAX_DENOM = 1e9; // TODO: maybe too high
 constexpr double PARAMETER_TOLERANCE = 1e-13;
