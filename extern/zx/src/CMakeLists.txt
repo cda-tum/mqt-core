@@ -60,4 +60,4 @@ if (COVERAGE)
 endif()
 
 # add JKQ alias
-add_library(JKQ::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+add_library(MQT::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
