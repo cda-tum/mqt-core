@@ -1,5 +1,5 @@
-#ifndef JKQZX_INCLUDE_RULES_HPP_
-#define JKQZX_INCLUDE_RULES_HPP_
+#ifndef ZX_INCLUDE_RULES_HPP_
+#define ZX_INCLUDE_RULES_HPP_
 
 #include "ZXDiagram.hpp"
 

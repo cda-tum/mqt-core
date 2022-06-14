@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.14...3.22)
 
-project(jkqzx
+project(zx
         LANGUAGES CXX
         VERSION 0.1
-        DESCRIPTION "JKQZX - A JKQ library for working with ZX-diagrams"
+        DESCRIPTION "ZX - An MQT library for working with ZX-diagrams"
         )
 
 # enable organization of targets into folders
@@ -46,7 +46,7 @@ endmacro()
 list (APPEND CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-check_submodule_present(qfr)
+# check_submodule_present(qfr)
 find_package(GMP REQUIRED)
 add_library(gmp::gmpxx IMPORTED INTERFACE)
 add_library(gmp::libgmpxx IMPORTED INTERFACE)
@@ -59,15 +59,15 @@ add_library(gmp::libgmp IMPORTED INTERFACE)
 add_subdirectory(src)
 
 # add test code
-if(BUILD_JKQZX_TESTS)
+if(BUILD_ZX_TESTS)
 	enable_testing()
 	include(GoogleTest)
 	add_subdirectory(test)
 endif()
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-	add_subdirectory(apps)
-endif()
+# if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+# 	add_subdirectory(apps)
+# endif()
 
 # add Python binding code
 # if(BINDINGS)

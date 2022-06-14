@@ -187,7 +187,7 @@ static void extract_gadget(ZXDiagram &diag, Vertex v) {
   auto v_data = diag.get_vdata(v).value();
   Vertex phase_vert = diag.add_vertex(v_data.qubit, -2, v_data.phase);
   Vertex id_vert = diag.add_vertex(v_data.qubit, -1);
-  diag.set_phase(v, Expression(PyRational(0, 1)));
+  diag.set_phase(v, Expression(PiRational(0, 1)));
   diag.add_hadamard_edge(v, id_vert);
   diag.add_hadamard_edge(id_vert, phase_vert);
 }
@@ -204,7 +204,7 @@ static void ensure_interior(ZXDiagram &diag, Vertex v) {
   // auto v_data = diag.get_vdata(v).value();
   // for (auto &[to, type] : edges) {
   //   if (diag.is_boundary_vertex(to)) {
-  //     Vertex new_v = diag.add_vertex(v_data.qubit, v_data.col, PyRational(0,
+  //     Vertex new_v = diag.add_vertex(v_data.qubit, v_data.col, PiRational(0,
   //     1));
 
   //     auto other_dir = diag.get_edge(to, v);
@@ -232,7 +232,7 @@ static void ensure_interior(ZXDiagram &diag, Vertex v) {
       continue;
 
     Vertex new_v =
-        diag.add_vertex(v_data.qubit, v_data.col, Expression(PyRational(0, 1)));
+        diag.add_vertex(v_data.qubit, v_data.col, Expression(PiRational(0, 1)));
     auto boundary_edge_type = type == zx::EdgeType::Simple
                                   ? zx::EdgeType::Hadamard
                                   : zx::EdgeType::Simple;
@@ -366,7 +366,7 @@ bool check_and_fuse_gadget(ZXDiagram &diag, Vertex v) {
 
   if (!diag.phase(id0).is_zero()) {
     diag.set_phase(v, -diag.phase(v));
-    diag.set_phase(id0, Expression(PyRational(0, 1)));
+    diag.set_phase(id0, Expression(PiRational(0, 1)));
   }
   if (diag.phase(id1).is_zero())
     diag.add_phase(v, diag.phase(phase_spider));

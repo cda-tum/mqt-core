@@ -1,5 +1,5 @@
-#ifndef JKQZX_INCLUDE_GRAPH_HPP_
-#define JKQZX_INCLUDE_GRAPH_HPP_
+#ifndef ZX_INCLUDE_GRAPH_HPP_
+#define ZX_INCLUDE_GRAPH_HPP_
 
 #include <algorithm>
 #include <cstddef>
@@ -13,11 +13,8 @@
 #include <vector>
 
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp"
 #include "Rational.hpp"
 #include "Utils.hpp"
-#include "dd/Definitions.hpp"
-#include "operations/Operation.hpp"
 #include "Expression.hpp"
 
 namespace zx {
@@ -27,7 +24,7 @@ public:
   ZXDiagram() = default;
   ZXDiagram(int32_t nqubits); // create n_qubit identity_diagram
   explicit ZXDiagram(std::string filename);
-  explicit ZXDiagram(const qc::QuantumComputation &circuit);
+  // explicit ZXDiagram(const qc::QuantumComputation &circuit);
 
   void add_edge(Vertex from, Vertex to, EdgeType type = EdgeType::Simple);
   void add_hadamard_edge(Vertex from, Vertex to) {
@@ -38,7 +35,7 @@ public:
   void remove_edge(Vertex from, Vertex to);
 
   Vertex add_vertex(const VertexData &data);
-  Vertex add_vertex(dd::Qubit qubit, Col col = 0,
+  Vertex add_vertex(Qubit qubit, Col col = 0,
                     const Expression& phase = Expression(),
                     VertexType type = VertexType::Z);
   void remove_vertex(Vertex to_remove);
@@ -58,7 +55,7 @@ public:
     return vertices[v].value().phase;
   }
 
-  [[nodiscard]] dd::Qubit qubit(Vertex v) const {
+  [[nodiscard]] Qubit qubit(Vertex v) const {
     return vertices[v].value().qubit;
   }
 
@@ -103,7 +100,7 @@ public:
   void to_graph_like();
 
   [[nodiscard]] bool is_identity() const;
-  [[nodiscard]] bool is_identity(const qc::Permutation &perm) const;
+  // [[nodiscard]] bool is_identity(const qc::Permutation &perm) const;
 
   [[nodiscard]] ZXDiagram adjoint() const;
 
@@ -113,7 +110,7 @@ public:
 
   // What about Swaps?
 
-  void make_ancilla(dd::Qubit qubit);
+  void make_ancilla(Qubit qubit);
 
 private:
   std::vector<std::vector<Edge>> edges;
@@ -123,22 +120,22 @@ private:
   std::vector<Vertex> outputs;
   int32_t nvertices = 0;
   int32_t nedges = 0;
-  std::optional<qc::Permutation> initial_layout;
-  std::optional<qc::Permutation> output_permutation;
+  // std::optional<qc::Permutation> initial_layout;
+  // std::optional<qc::Permutation> output_permutation;
 
-  void add_z_spider(dd::Qubit qubit, std::vector<Vertex> &qubit_vertices,
+  void add_z_spider(Qubit qubit, std::vector<Vertex> &qubit_vertices,
                     const Expression& phase = Expression(),
                     EdgeType type = EdgeType::Simple);
-  void add_x_spider(dd::Qubit qubit, std::vector<Vertex> &qubit_vertices,
+  void add_x_spider(Qubit qubit, std::vector<Vertex> &qubit_vertices,
 const Expression& phase = Expression(),
                     EdgeType type = EdgeType::Simple);
-  void add_cnot(dd::Qubit ctrl, dd::Qubit target,
+  void add_cnot(Qubit ctrl, Qubit target,
                 std::vector<Vertex> &qubit_vertices);
-  void add_cphase(PyRational phase, dd::Qubit ctrl, dd::Qubit target,
+  void add_cphase(PiRational phase, Qubit ctrl, Qubit target,
                   std::vector<Vertex> &qubit_vertices);
-  void add_swap(dd::Qubit ctrl, dd::Qubit target,
+  void add_swap(Qubit ctrl, Qubit target,
                 std::vector<Vertex> &qubit_vertices);
-  void add_ccx(dd::Qubit ctrl_0, dd::Qubit ctrl_1, dd::Qubit target,
+  void add_ccx(Qubit ctrl_0, Qubit ctrl_1, Qubit target,
                std::vector<Vertex> &qubit_vertices);
 
   std::vector<Vertex> init_graph(int nqubits);
@@ -148,10 +145,10 @@ const Expression& phase = Expression(),
 
   std::vector<Edge>::iterator get_edge_ptr(Vertex from, Vertex to);
 
-  using op_it =
-      decltype(std::begin(std::vector<std::unique_ptr<qc::Operation>>()));
-  op_it parse_op(op_it it, op_it end,
-                        std::vector<Vertex> &qubit_vertices);
+  // using op_it =
+  //     decltype(std::begin(std::vector<std::unique_ptr<qc::Operation>>()));
+  // op_it parse_op(op_it it, op_it end,
+  //                       std::vector<Vertex> &qubit_vertices);
 };
 } // namespace zx
-#endif /* JKQZX_INCLUDE_GRAPH_HPP_ */
+#endif /* ZX_INCLUDE_GRAPH_HPP_ */

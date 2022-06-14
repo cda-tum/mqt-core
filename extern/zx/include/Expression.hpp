@@ -2,14 +2,14 @@
 #define ZX_INCLUDE_EXPRESSION_HPP_
 
 #include "Rational.hpp"
-#include "dd/Definitions.hpp"
+#include "Definitions.hpp"
 
 #include <cmath>
 #include <string>
 #include <vector>
 
 namespace zx {
-constexpr double TOLERANCE = 1e-13;
+
 struct Variable {
   Variable(int32_t id, std::string name) : id(id), name(name){};
   int32_t id;
@@ -22,35 +22,35 @@ inline bool operator==(const Variable &lhs, const Variable &rhs) {
 class Term {
 public:
   [[nodiscard]] Variable get_var() const { return var; }
-  [[nodiscard]] dd::fp get_coeff() const { return coeff; }
+  [[nodiscard]] double get_coeff() const { return coeff; }
   [[nodiscard]] bool has_zero_coeff() const {
     return std::abs(coeff) < TOLERANCE;
   }
 
-  void add_coeff(dd::fp r);
-  Term(dd::fp coeff, Variable var) : coeff(coeff), var(var){};
+  void add_coeff(double r);
+  Term(double coeff, Variable var) : coeff(coeff), var(var){};
   Term(Variable var) : coeff(1), var(var){};
 
   Term operator-() const { return Term(-coeff, var); }
-  Term &operator*=(dd::fp rhs);
-  Term &operator/=(dd::fp rhs);
+  Term &operator*=(double rhs);
+  Term &operator/=(double rhs);
 
 private:
-  dd::fp coeff;
+  double coeff;
   Variable var;
 };
 
-inline Term operator*(Term lhs, dd::fp rhs) {
+inline Term operator*(Term lhs, double rhs) {
   lhs *= rhs;
   return lhs;
 }
-inline Term operator/(Term lhs, dd::fp rhs) {
+inline Term operator/(Term lhs, double rhs) {
   lhs /= rhs;
   return lhs;
 }
-inline Term operator*(dd::fp lhs, const Term &rhs) { return rhs * lhs; }
+inline Term operator*(double lhs, const Term &rhs) { return rhs * lhs; }
 
-inline Term operator/(dd::fp lhs, const Term &rhs) { return rhs / lhs; }
+inline Term operator/(double lhs, const Term &rhs) { return rhs / lhs; }
 
 class Expression {
 public:
@@ -71,8 +71,8 @@ public:
     aggregate_equal_terms();
   }
 
-  Expression() : constant(PyRational(0, 1)){};
-  Expression(PyRational r) : constant(r){};
+  Expression() : constant(PiRational(0, 1)){};
+  Expression(PiRational r) : constant(r){};
 
   iterator begin() { return terms.begin(); }
   iterator end() { return terms.end(); }
@@ -89,21 +89,21 @@ public:
 
   Expression &operator+=(const Expression &rhs);
   Expression &operator+=(const Term &rhs);
-  Expression &operator+=(const PyRational &rhs);
+  Expression &operator+=(const PiRational &rhs);
 
   Expression &operator-=(const Expression &rhs);
   Expression &operator-=(const Term &rhs);
-  Expression &operator-=(const PyRational &rhs);
+  Expression &operator-=(const PiRational &rhs);
 
   [[nodiscard]] Expression operator-() const;
 
   [[nodiscard]] const Term &operator[](int i) const { return terms[i]; }
-  [[nodiscard]] PyRational get_constant() const { return constant; }
+  [[nodiscard]] PiRational get_constant() const { return constant; }
   [[nodiscard]] auto num_terms() const { return terms.size(); }
 
 private:
   std::vector<Term> terms;
-  PyRational constant;
+  PiRational constant;
 
   void sort_terms();
   void aggregate_equal_terms();
@@ -117,7 +117,7 @@ inline Expression operator+(Expression lhs, const Term &rhs) {
   lhs += rhs;
   return lhs;
 }
-inline Expression operator+(Expression lhs, const PyRational &rhs) {
+inline Expression operator+(Expression lhs, const PiRational &rhs) {
   lhs += rhs;
   return lhs;
 }
@@ -129,7 +129,7 @@ inline Expression operator-(Expression lhs, const Term &rhs) {
   lhs -= rhs;
   return lhs;
 }
-inline Expression operator-(Expression lhs, const PyRational &rhs) {
+inline Expression operator-(Expression lhs, const PiRational &rhs) {
   lhs -= rhs;
   return lhs;
 }

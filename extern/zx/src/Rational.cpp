@@ -1,13 +1,10 @@
 #include "Rational.hpp"
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp" //TODO incorrect include
 #include <cmath>
 #include <gmpxx.h>
 
 namespace zx {
 mpz_class gcd(mpz_class a, mpz_class b) {
-  int64_t r;
-
   while (b != 0) {
     mpz_class r = 0;
     mpz_mod(r.get_mpz_t(), a.get_mpz_t(), b.get_mpz_t());
@@ -17,13 +14,13 @@ mpz_class gcd(mpz_class a, mpz_class b) {
   return a;
 }
 
-PyRational::PyRational(double val) : num(0), denom(1) {
-  if (std::abs(val) < qc::PARAMETER_TOLERANCE)
+PiRational::PiRational(double val) : num(0), denom(1) {
+  if (std::abs(val) < PARAMETER_TOLERANCE)
     return;
   
   double mult_pi = PI / val;
   double nearest = std::round(mult_pi);
-  if (std::abs(nearest - mult_pi) < qc::PARAMETER_TOLERANCE) {
+  if (std::abs(nearest - mult_pi) < PARAMETER_TOLERANCE) {
     denom = static_cast<int>(nearest);
     num = 1;
     if(denom < 0) {
@@ -56,7 +53,7 @@ PyRational::PyRational(double val) : num(0), denom(1) {
   }
 }
 
-void PyRational::normalize() {
+void PiRational::normalize() {
   if (*this > 1) {
     num -= 2 * denom;
   } else if (*this <= -1) {
@@ -77,53 +74,53 @@ void PyRational::normalize() {
   }
 }
 
-// double PyRational::to_double() const {
+// double PiRational::to_double() const {
 //   return zx::PI * (static_cast<float>(num)) / denom;
 // }
   
-PyRational &PyRational::operator+=(const PyRational &rhs) {
+PiRational &PiRational::operator+=(const PiRational &rhs) {
   num = num * rhs.denom + rhs.num * denom;
   denom *= rhs.denom;
   normalize();
   return *this;
 }
-PyRational &PyRational::operator+=(const int64_t rhs) {
+PiRational &PiRational::operator+=(const int64_t rhs) {
   num = num + rhs * denom;
   normalize();
   return *this;
 }
 
-PyRational &PyRational::operator-=(const PyRational &rhs) {
+PiRational &PiRational::operator-=(const PiRational &rhs) {
   num = num * rhs.denom - rhs.num * denom;
   denom *= rhs.denom;
   normalize();
   return *this;
 }
-PyRational &PyRational::operator-=(const int64_t rhs) {
+PiRational &PiRational::operator-=(const int64_t rhs) {
   num = num + rhs * denom;
   normalize();
   return *this;
 }
 
-PyRational &PyRational::operator*=(const PyRational &rhs) {
+PiRational &PiRational::operator*=(const PiRational &rhs) {
   num *= rhs.num;
   denom *= rhs.denom;
   this->normalize();
   return *this;
 }
-PyRational &PyRational::operator*=(const int64_t rhs) {
+PiRational &PiRational::operator*=(const int64_t rhs) {
   num *= rhs;
   this->normalize();
   return *this;
 }
 
-PyRational &PyRational::operator/=(const PyRational &rhs) {
+PiRational &PiRational::operator/=(const PiRational &rhs) {
   num *= rhs.denom;
   denom *= rhs.num;
   this->normalize();
   return *this;
 }
-PyRational &PyRational::operator/=(const int64_t rhs) {
+PiRational &PiRational::operator/=(const int64_t rhs) {
   denom *= rhs;
   this->normalize();
   return *this;

@@ -1,15 +1,14 @@
 #include "Expression.hpp"
-#include "dd/Definitions.hpp"
 #include <cmath>
 
 namespace zx {
-void Term::add_coeff(dd::fp r) { coeff += r; }
-Term &Term::operator*=(dd::fp rhs) {
+void Term::add_coeff(fp r) { coeff += r; }
+Term &Term::operator*=(fp rhs) {
   coeff *= rhs;
   return *this;
 }
 
-Term &Term::operator/=(dd::fp rhs) {
+Term &Term::operator/=(fp rhs) {
   coeff /= rhs;
   return *this;
 }
@@ -67,7 +66,7 @@ Expression &Expression::operator+=(const Term &rhs) {
   return *this += Expression(rhs);
 }
 
-Expression &Expression::operator+=(const PyRational &rhs) {
+Expression &Expression::operator+=(const PiRational &rhs) {
   constant += rhs;
   return *this;
 }
@@ -78,7 +77,7 @@ Expression &Expression::operator-=(const Expression &rhs) {
 
 Expression &Expression::operator-=(const Term &rhs) { return *this += -rhs; }
 
-Expression &Expression::operator-=(const PyRational &rhs) {
+Expression &Expression::operator-=(const PiRational &rhs) {
   return *this += -rhs;
 }
 

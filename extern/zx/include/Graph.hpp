@@ -1,5 +1,5 @@
-#ifndef JKQZX_INCLUDE_GRAPH_HPP_
-#define JKQZX_INCLUDE_GRAPH_HPP_
+#ifndef ZX_INCLUDE_GRAPH_HPP_
+#define ZX_INCLUDE_GRAPH_HPP_
 
 #include <optional>
 #include <stdint.h>

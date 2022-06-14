@@ -1,13 +1,33 @@
-#ifndef JKQZX_INCLUDE_UTILS_HPP_
-#define JKQZX_INCLUDE_UTILS_HPP_
+#ifndef ZX_INCLUDE_UTILS_HPP_
+#define ZX_INCLUDE_UTILS_HPP_
 
 #include <iterator>
 #include <optional>
 #include <vector>
 
 #include "Definitions.hpp"
+#include "Expression.hpp"
 
 namespace zx {
+  
+  struct Edge {
+  int32_t to;
+  EdgeType type;
+
+  Edge() = default;
+  Edge(int32_t to, EdgeType type) : to(to), type(type){};
+  void toggle() {
+    type = (type == EdgeType::Simple) ? EdgeType::Hadamard : EdgeType::Simple;
+  }
+};
+
+struct VertexData {
+  Col col;
+  Qubit qubit;
+  Expression phase;
+  VertexType type;
+};
+  
 class Vertices {
 public:
   Vertices(std::vector<std::optional<VertexData>> &vertices)
