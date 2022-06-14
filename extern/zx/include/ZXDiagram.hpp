@@ -134,7 +134,7 @@ namespace zx {
                         EdgeType          type  = EdgeType::Simple);
         void addCnot(Qubit ctrl, Qubit target,
                      std::vector<Vertex>& qubit_vertices);
-      
+
         void addCphase(PiRational phase, Qubit ctrl, Qubit target,
                        std::vector<Vertex>& qubit_vertices);
         void addSwap(Qubit ctrl, Qubit target,
@@ -148,7 +148,6 @@ namespace zx {
         void removeHalfEdge(Vertex from, Vertex to);
 
         std::vector<Edge>::iterator getEdgePtr(Vertex from, Vertex to);
-
     };
 } // namespace zx
 #endif /* ZX_INCLUDE_GRAPH_HPP_ */
