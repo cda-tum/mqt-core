@@ -3,8 +3,6 @@
 
 #include "Rational.hpp"
 #include "Definitions.hpp"
-
-
 #include <cmath>
 #include <string>
 #include <vector>
@@ -26,7 +24,6 @@ public:
   [[nodiscard]] bool has_zero_coeff() const {
     return std::abs(coeff) < TOLERANCE;
   }
-
 
   void add_coeff(double r);
   Term(double coeff, Variable var) : coeff(coeff), var(var){};

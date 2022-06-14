@@ -451,7 +451,6 @@ void ZXDiagram::make_ancilla(Qubit qubit) {
 //     return it + 1;
 //   }
 
-
 //   if (op->getNcontrols() == 0 && op->getNtargets() == 1) {
 //     auto target = op->getTargets()[0];
 //     switch (op->getType()) {
@@ -641,7 +640,6 @@ void ZXDiagram::make_ancilla(Qubit qubit) {
 //       break;
 //     }
 //     }
-
 //   } else {
 //     throw ZXException("Unsupported Multi-control operation (>2 ctrls)" +
 //                       qc::toString(op->getType()));
