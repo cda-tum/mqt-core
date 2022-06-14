@@ -36,7 +36,7 @@ macro(package_add_test TESTNAME)
 	# discover tests
 	gtest_discover_tests(${TESTNAME} WORKING_DIRECTORY ${PROJECT_DIR} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}")
 	set_target_properties(${TESTNAME} PROPERTIES FOLDER tests CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
-        add_custom_command(TARGET ${TESTNAME}
+	add_custom_command(TARGET ${TESTNAME}
 	                   POST_BUILD
 	                   COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE_DIR:${TESTNAME}>/${TESTNAME} ${CMAKE_BINARY_DIR}/${TESTNAME}
 	                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/circuits $<TARGET_FILE_DIR:${TESTNAME}>/circuits
@@ -48,7 +48,7 @@ endmacro()
 
 # add unit tests
 package_add_test(${PROJECT_NAME}_test
-  ${CMAKE_CURRENT_SOURCE_DIR}/test_zx.cpp)
+                 ${CMAKE_CURRENT_SOURCE_DIR}/test_zx.cpp)
 
 # add_custom_command(TARGET ${PROJECT_NAME}_test
 #                    POST_BUILD

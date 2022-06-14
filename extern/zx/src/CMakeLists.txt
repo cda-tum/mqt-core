@@ -1,21 +1,21 @@
 # main project library
 add_library(${PROJECT_NAME}
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/Rational.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/ZXDiagram.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/Definitions.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/Rules.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/Simplify.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/Utils.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/Expression.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/Rational.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/ZXDiagram.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/Definitions.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/Rules.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/Simplify.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/Utils.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/Expression.hpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/Rational.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/ZXDiagram.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/Rules.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/Simplify.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/Utils.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/Expression.cpp
-  
-)
+            ${CMAKE_CURRENT_SOURCE_DIR}/Rational.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/ZXDiagram.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/Rules.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/Simplify.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/Utils.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/Expression.cpp
+
+            )
 
 # set include directories
 target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
@@ -32,9 +32,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC gmpxx gmp::libgmpxx gmp gmp::libgmp
 # enable_lto(${PROJECT_NAME})
 
 # set compiler flags depending on compiler
-if(MSVC)
+if (MSVC)
 	target_compile_options(${PROJECT_NAME} PUBLIC /utf-8)
-else()
+else ()
 	target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra $<$<CONFIG:DEBUG>:-Og>)
 	# if (BINDINGS AND NOT WIN32)
 	# 	# adjust visibility settings for building Python bindings
@@ -45,7 +45,7 @@ else()
 		# only include machine-specific optimizations when building for the host machine
 		target_compile_options(${PROJECT_NAME} PUBLIC -mtune=native -march=native)
 	endif ()
-endif()
+endif ()
 
 # if(GENERATE_POSITION_INDEPENDENT_CODE OR BINDINGS)
 # 	include(CheckPIESupported)
@@ -57,7 +57,7 @@ endif()
 if (COVERAGE)
 	target_compile_options(${PROJECT_NAME} PUBLIC --coverage)
 	target_link_libraries(${PROJECT_NAME} PUBLIC --coverage)
-endif()
+endif ()
 
 # add JKQ alias
 add_library(MQT::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
