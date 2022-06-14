@@ -23,5 +23,5 @@ jobs:
           submodules: recursive
       - uses: DoozyX/clang-format-lint-action@v0.14
         with:
-          source:             'include src test apps'
+          source: 'include src test'
           clangFormatVersion: 14

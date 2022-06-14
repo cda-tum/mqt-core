@@ -13,21 +13,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(DEPLOY "Configure for deployment")
 option(BINDINGS "Configure for building Python bindings")
 option(COVERAGE "Configure for coverage report generation")
-option(GENERATE_POSITION_INDEPENDENT_CODE "Generate position independent code")
-option(BUILD_QFR_TESTS "Also build tests for QFR project")
-
-if (DEFINED ENV{DEPLOY})
-  set(DEPLOY $ENV{DEPLOY} CACHE BOOL "Use deployment configuration from environment" FORCE)
-  message(STATUS "Setting deployment configuration to '${DEPLOY}' from environment")
-endif ()
-
-# set deployment specific options
-if (DEPLOY)
-	# build a universal macOS binary in case this is a deployment build
-	set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "" FORCE)
-	# set the macOS deployment target appropriately
-	set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "" FORCE)
-endif ()
+option(BUILD_ZX_TESTS "Also build tests for ZX library")
 
 # build type settings
 set(default_build_type "Release")
@@ -43,17 +29,13 @@ macro(check_submodule_present MODULENAME)
 	endif()
 endmacro()
 
-list (APPEND CMAKE_MODULE_PATH
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # check_submodule_present(qfr)
 find_package(GMP REQUIRED)
 add_library(gmp::gmpxx IMPORTED INTERFACE)
 add_library(gmp::libgmpxx IMPORTED INTERFACE)
 add_library(gmp::libgmp IMPORTED INTERFACE)
-# check_submodule_present(json)
-# check_submodule_present(pybind11)
-# check_submodule_present(pybind11_json)
 
 # add main library code
 add_subdirectory(src)
@@ -64,12 +46,3 @@ if(BUILD_ZX_TESTS)
 	include(GoogleTest)
 	add_subdirectory(test)
 endif()
-
-# if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-# 	add_subdirectory(apps)
-# endif()
-
-# add Python binding code
-# if(BINDINGS)
-# 	add_subdirectory(jkq/qfr)
-# endif()
