@@ -1,5 +1,4 @@
-#ifndef ZX_INCLUDE_RULES_HPP_
-#define ZX_INCLUDE_RULES_HPP_
+#pragma once
 
 #include "ZXDiagram.hpp"
 
@@ -30,5 +29,3 @@ namespace zx {
 
     bool checkAndFuseGadget(ZXDiagram& diag, Vertex v);
 } // namespace zx
-
-#endif /* JKQZX_INCLUDE_RULES_HPP_ */

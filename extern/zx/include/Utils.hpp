@@ -1,5 +1,4 @@
-#ifndef ZX_INCLUDE_UTILS_HPP_
-#define ZX_INCLUDE_UTILS_HPP_
+#pragma once
 
 #include "Definitions.hpp"
 #include "Expression.hpp"
@@ -129,5 +128,3 @@ namespace zx {
         std::vector<std::optional<VertexData>>& vertices;
     };
 } // namespace zx
-
-#endif /* JKQZX_INCLUDE_UTILS_HPP_ */

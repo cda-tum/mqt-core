@@ -1,5 +1,4 @@
-#ifndef ZX_INCLUDE_GRAPH_HPP_
-#define ZX_INCLUDE_GRAPH_HPP_
+#pragma once
 
 #include "Definitions.hpp"
 #include "Expression.hpp"
@@ -150,4 +149,3 @@ namespace zx {
         std::vector<Edge>::iterator getEdgePtr(Vertex from, Vertex to);
     };
 } // namespace zx
-#endif /* ZX_INCLUDE_GRAPH_HPP_ */

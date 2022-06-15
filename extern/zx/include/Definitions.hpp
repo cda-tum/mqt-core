@@ -1,5 +1,4 @@
-#ifndef ZX_INCLUDE_DEFINITIONS_HPP_
-#define ZX_INCLUDE_DEFINITIONS_HPP_
+#pragma once
 
 #include <stdexcept>
 
@@ -32,4 +31,3 @@ namespace zx {
         }
     };
 } // namespace zx
-#endif /* JKQZX_INCLUDE_DEFINITIONS_HPP_ */

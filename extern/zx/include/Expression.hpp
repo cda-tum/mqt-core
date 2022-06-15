@@ -1,5 +1,4 @@
-#ifndef ZX_INCLUDE_EXPRESSION_HPP_
-#define ZX_INCLUDE_EXPRESSION_HPP_
+#pragma once
 
 #include "Definitions.hpp"
 #include "Rational.hpp"
@@ -162,4 +161,3 @@ inline std::ostream& operator<<(std::ostream& os, const zx::Expression& rhs) {
     os << rhs.getConst();
     return os;
 }
-#endif /* ZX_INCLUDE_EXPRESSION_HPP_ */

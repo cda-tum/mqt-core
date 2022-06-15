@@ -1,5 +1,4 @@
-#ifndef ZX_INCLUDE_RATIONAL_HPP_
-#define ZX_INCLUDE_RATIONAL_HPP_
+#pragma once
 
 #include <gmpxx.h>
 #include <iostream>
@@ -182,5 +181,3 @@ namespace zx {
     }
 
 } // namespace zx
-
-#endif /* JKQZX_INCLUDE_RATIONAL_HPP_ */

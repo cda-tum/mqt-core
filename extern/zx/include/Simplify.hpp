@@ -1,5 +1,4 @@
-#ifndef ZX_INCLUDE_SIMPLIFY_HPP_
-#define ZX_INCLUDE_SIMPLIFY_HPP_
+#pragma once
 
 #include "Rules.hpp"
 #include "ZXDiagram.hpp"
@@ -36,5 +35,3 @@ namespace zx {
     int32_t fullReduce(ZXDiagram& diag);
 
 } // namespace zx
-
-#endif /* JKQZX_INCLUDE_SIMPLIFY_HPP_ */
