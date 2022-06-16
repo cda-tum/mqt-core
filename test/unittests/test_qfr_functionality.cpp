@@ -1,10 +1,12 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "CircuitOptimizer.hpp"
 #include "QuantumComputation.hpp"
+#include "algorithms/RandomCliffordCircuit.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
 #include <random>
@@ -18,7 +20,7 @@ protected:
     }
 
     void SetUp() override {
-        dd = std::make_unique<dd::Package>(5);
+        dd = std::make_unique<dd::Package<>>(5);
 
         std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
         std::random_device                                                    rd;
@@ -28,7 +30,7 @@ protected:
         dist = std::uniform_real_distribution<dd::fp>(0.0, 2 * dd::PI);
     }
 
-    std::unique_ptr<dd::Package>           dd;
+    std::unique_ptr<dd::Package<>>         dd;
     std::mt19937_64                        mt;
     std::uniform_real_distribution<dd::fp> dist;
 };
@@ -130,7 +132,7 @@ TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
     EXPECT_EQ(qc.getNqubitsWithoutAncillae(), nqubits);
     EXPECT_EQ(qc.getNqubits(), 3);
     qc.emplace_back<StandardOperation>(nqubits, 2, qc::X);
-    auto e = qc.createInitialMatrix(dd);
+    auto e = dd->createInitialMatrix(qc.getNqubits(), qc.ancillary);
     EXPECT_EQ(e.p->e[0], dd->makeIdent(nqubits));
     EXPECT_EQ(e.p->e[1], MatrixDD::zero);
     EXPECT_EQ(e.p->e[2], MatrixDD::zero);
@@ -215,9 +217,9 @@ TEST_F(QFRFunctionality, FuseTwoSingleQubitGates) {
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
 
     qc.print(std::cout);
-    dd::Edge e = qc.buildFunctionality(dd);
+    dd::Edge e = buildFunctionality(&qc, dd);
     CircuitOptimizer::singleQubitGateFusion(qc);
-    dd::Edge f = qc.buildFunctionality(dd);
+    dd::Edge f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     EXPECT_EQ(qc.getNops(), 1);
@@ -231,11 +233,11 @@ TEST_F(QFRFunctionality, FuseThreeSingleQubitGates) {
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::Y);
 
-    dd::Edge e = qc.buildFunctionality(dd);
+    dd::Edge e = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::singleQubitGateFusion(qc);
-    dd::Edge f = qc.buildFunctionality(dd);
+    dd::Edge f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     EXPECT_EQ(qc.getNops(), 1);
@@ -248,11 +250,11 @@ TEST_F(QFRFunctionality, FuseNoSingleQubitGates) {
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 0_pc, 1, qc::X);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::Y);
-    dd::Edge e = qc.buildFunctionality(dd);
+    dd::Edge e = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::singleQubitGateFusion(qc);
-    dd::Edge f = qc.buildFunctionality(dd);
+    dd::Edge f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     EXPECT_EQ(qc.getNops(), 3);
@@ -265,11 +267,11 @@ TEST_F(QFRFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<StandardOperation>(nqubits, 1, qc::Z);
     qc.emplace_back<StandardOperation>(nqubits, 0, qc::Y);
-    auto e = qc.buildFunctionality(dd);
+    auto e = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::singleQubitGateFusion(qc);
-    auto f = qc.buildFunctionality(dd);
+    auto f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     EXPECT_EQ(qc.getNops(), 2);
@@ -746,8 +748,8 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
     CircuitOptimizer::removeFinalMeasurements(qc);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
-    ASSERT_EQ(qc.getNops(), 3);
-    ASSERT_EQ(qc.getNindividualOps(), 7);
+    ASSERT_EQ(qc.getNops(), 2);
+    ASSERT_EQ(qc.getNindividualOps(), 6);
 }
 
 TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
@@ -850,4 +852,919 @@ TEST_F(QFRFunctionality, cloningDifferentOperations) {
 TEST_F(QFRFunctionality, wrongRegisterSizes) {
     QuantumComputation qc(5);
     ASSERT_THROW(qc.measure({0}, {1, 2}), std::invalid_argument);
+}
+
+TEST_F(QFRFunctionality, eliminateResetsBasicTest) {
+    QuantumComputation qc{};
+    qc.addQubitRegister(1);
+    qc.addClassicalRegister(2);
+    qc.h(0);
+    qc.measure(0, 0U);
+    qc.reset(0);
+    qc.h(0);
+    qc.measure(0, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
+
+    std::cout << qc << std::endl;
+
+    ASSERT_EQ(qc.getNqubits(), 2);
+    ASSERT_EQ(qc.getNindividualOps(), 4);
+    auto& op0 = qc.at(0);
+    auto& op1 = qc.at(1);
+    auto& op2 = qc.at(2);
+    auto& op3 = qc.at(3);
+
+    EXPECT_EQ(op0->getNqubits(), 2);
+    EXPECT_TRUE(op0->getType() == qc::H);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op0->getControls().empty());
+
+    EXPECT_EQ(op1->getNqubits(), 2);
+    EXPECT_TRUE(op1->getType() == qc::Measure);
+    const auto& targets1 = op1->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op1->getControls().empty());
+    auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
+    const auto classics0 = measure0->getClassics();
+    EXPECT_EQ(classics0.size(), 1);
+    EXPECT_EQ(classics0.at(0), 0);
+
+    EXPECT_EQ(op2->getNqubits(), 2);
+    EXPECT_TRUE(op2->getType() == qc::H);
+    const auto& targets2 = op2->getTargets();
+    EXPECT_EQ(targets2.size(), 1);
+    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_TRUE(op2->getControls().empty());
+
+    EXPECT_EQ(op3->getNqubits(), 2);
+    EXPECT_TRUE(op3->getType() == qc::Measure);
+    const auto& targets3 = op3->getTargets();
+    EXPECT_EQ(targets3.size(), 1);
+    EXPECT_EQ(targets3.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_TRUE(op3->getControls().empty());
+    auto       measure1  = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
+    const auto classics1 = measure1->getClassics();
+    EXPECT_EQ(classics1.size(), 1);
+    EXPECT_EQ(classics1.at(0), 1);
+}
+
+TEST_F(QFRFunctionality, eliminateResetsClassicControlled) {
+    QuantumComputation qc{};
+    qc.addQubitRegister(1);
+    qc.addClassicalRegister(2);
+    qc.h(0);
+    qc.measure(0, 0U);
+    qc.reset(0);
+    std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(1U, 0, qc::X);
+    qc.emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
+
+    std::cout << qc << std::endl;
+
+    ASSERT_EQ(qc.getNqubits(), 2);
+    ASSERT_EQ(qc.getNindividualOps(), 3);
+    auto& op0 = qc.at(0);
+    auto& op1 = qc.at(1);
+    auto& op2 = qc.at(2);
+
+    EXPECT_EQ(op0->getNqubits(), 2);
+    EXPECT_TRUE(op0->getType() == qc::H);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op0->getControls().empty());
+
+    EXPECT_EQ(op1->getNqubits(), 2);
+    EXPECT_TRUE(op1->getType() == qc::Measure);
+    const auto& targets1 = op1->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op1->getControls().empty());
+    auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
+    const auto classics0 = measure0->getClassics();
+    EXPECT_EQ(classics0.size(), 1);
+    EXPECT_EQ(classics0.at(0), 0);
+
+    EXPECT_EQ(op2->getNqubits(), 2);
+    EXPECT_TRUE(op2->isClassicControlledOperation());
+    auto       classicControlled = dynamic_cast<qc::ClassicControlledOperation*>(op2.get());
+    const auto operation         = classicControlled->getOperation();
+    EXPECT_EQ(operation->getNqubits(), 2);
+    EXPECT_TRUE(operation->getType() == qc::X);
+    EXPECT_EQ(classicControlled->getNtargets(), 1);
+    const auto& targets = classicControlled->getTargets();
+    EXPECT_EQ(targets.at(0), 1);
+    EXPECT_EQ(classicControlled->getNcontrols(), 0);
+}
+
+TEST_F(QFRFunctionality, eliminateResetsMultipleTargetReset) {
+    QuantumComputation qc{};
+    qc.addQubitRegister(2);
+    qc.reset({0, 1});
+    qc.x(0);
+    qc.z(1);
+    qc.x(0, 1_pc);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
+
+    std::cout << qc << std::endl;
+
+    ASSERT_EQ(qc.getNqubits(), 4);
+    ASSERT_EQ(qc.getNindividualOps(), 3);
+    auto& op0 = qc.at(0);
+    auto& op1 = qc.at(1);
+    auto& op2 = qc.at(2);
+
+    EXPECT_EQ(op0->getNqubits(), 4);
+    EXPECT_TRUE(op0->getType() == qc::X);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(2));
+    EXPECT_TRUE(op0->getControls().empty());
+
+    EXPECT_EQ(op1->getNqubits(), 4);
+    EXPECT_TRUE(op1->getType() == qc::Z);
+    const auto& targets1 = op1->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(3));
+    EXPECT_TRUE(op1->getControls().empty());
+
+    EXPECT_EQ(op2->getNqubits(), 4);
+    EXPECT_TRUE(op2->getType() == qc::X);
+    const auto& targets2 = op2->getTargets();
+    EXPECT_EQ(targets2.size(), 1);
+    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(2));
+    const auto& controls2 = op2->getControls();
+    EXPECT_EQ(controls2.size(), 1);
+    EXPECT_EQ(controls2.count(3), 1);
+}
+
+TEST_F(QFRFunctionality, eliminateResetsCompoundOperation) {
+    QuantumComputation qc(2U);
+
+    qc.reset(0);
+    qc.reset(1);
+
+    qc.emplace_back<qc::CompoundOperation>(qc.getNqubits());
+    auto compOp = dynamic_cast<qc::CompoundOperation*>(qc.at(2).get());
+    compOp->emplace_back<qc::StandardOperation>(2U, 1_pc, 0, qc::X);
+    compOp->emplace_back<qc::NonUnitaryOperation>(2U, std::vector<dd::Qubit>{0}, qc::Reset);
+    compOp->emplace_back<qc::NonUnitaryOperation>(2U, 0, 0U);
+    std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(2U, 0, qc::X);
+    compOp->emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
+
+    std::cout << qc << std::endl;
+
+    ASSERT_EQ(qc.getNqubits(), 5);
+    ASSERT_EQ(qc.getNindividualOps(), 3);
+
+    auto& op = qc.at(0);
+    EXPECT_TRUE(op->isCompoundOperation());
+    EXPECT_EQ(op->getNqubits(), 5);
+    auto compOp0 = dynamic_cast<qc::CompoundOperation*>(op.get());
+    EXPECT_EQ(compOp0->size(), 3);
+
+    auto& op0 = compOp0->at(0);
+    auto& op1 = compOp0->at(1);
+    auto& op2 = compOp0->at(2);
+
+    EXPECT_EQ(op0->getNqubits(), 5);
+    EXPECT_TRUE(op0->getType() == qc::X);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(2));
+    const auto& controls0 = op0->getControls();
+    EXPECT_EQ(controls0.size(), 1);
+    EXPECT_EQ(controls0.count(3), 1);
+
+    EXPECT_EQ(op1->getNqubits(), 5);
+    EXPECT_TRUE(op1->getType() == qc::Measure);
+    const auto& targets1 = op1->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(4));
+    EXPECT_TRUE(op1->getControls().empty());
+    auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
+    const auto classics0 = measure0->getClassics();
+    EXPECT_EQ(classics0.size(), 1);
+    EXPECT_EQ(classics0.at(0), 0);
+
+    EXPECT_EQ(op2->getNqubits(), 5);
+    EXPECT_TRUE(op2->isClassicControlledOperation());
+    auto       classicControlled = dynamic_cast<qc::ClassicControlledOperation*>(op2.get());
+    const auto operation         = classicControlled->getOperation();
+    EXPECT_EQ(operation->getNqubits(), 5);
+    EXPECT_TRUE(operation->getType() == qc::X);
+    EXPECT_EQ(classicControlled->getNtargets(), 1);
+    const auto& targets = classicControlled->getTargets();
+    EXPECT_EQ(targets.at(0), 4);
+    EXPECT_EQ(classicControlled->getNcontrols(), 0);
+}
+
+TEST_F(QFRFunctionality, deferMeasurementsBasicTest) {
+    // Input:
+    // i: 			0	1
+    //1: 	H   	H 	|
+    //2: 	Meas	0	|
+    //3: 	c_X   	|	X 		c[0] == 1
+    //o: 			0	1
+
+    // Expected Output:
+    // i: 			0	1
+    //1: 	H   	H 	|
+    //3: 	X   	c	X
+    //2: 	Meas	0	|
+    //o: 			0	1
+
+    QuantumComputation qc{};
+    qc.addQubitRegister(2);
+    qc.addClassicalRegister(1);
+    qc.h(0);
+    qc.measure(0, 0U);
+    std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(2U, 1, qc::X);
+    qc.emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
+
+    std::cout << qc << std::endl;
+
+    EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    ASSERT_EQ(qc.getNqubits(), 2);
+    ASSERT_EQ(qc.getNindividualOps(), 3);
+    auto& op0 = qc.at(0);
+    auto& op1 = qc.at(1);
+    auto& op2 = qc.at(2);
+
+    EXPECT_EQ(op0->getNqubits(), 2);
+    EXPECT_TRUE(op0->getType() == qc::H);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op0->getControls().empty());
+
+    EXPECT_EQ(op1->getNqubits(), 2);
+    EXPECT_TRUE(op1->getType() == qc::X);
+    const auto& targets1 = op1->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(1));
+    const auto& controls1 = op1->getControls();
+    EXPECT_EQ(controls1.size(), 1);
+    EXPECT_EQ(controls1.count(0), 1);
+
+    EXPECT_EQ(op2->getNqubits(), 2);
+    ASSERT_TRUE(op2->getType() == qc::Measure);
+    const auto& targets2 = op2->getTargets();
+    EXPECT_EQ(targets2.size(), 1);
+    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op2->getControls().empty());
+    auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op2.get());
+    const auto classics0 = measure0->getClassics();
+    EXPECT_EQ(classics0.size(), 1);
+    EXPECT_EQ(classics0.at(0), 0);
+}
+
+TEST_F(QFRFunctionality, deferMeasurementsOperationBetweenMeasurementAndClassic) {
+    // Input:
+    // i: 			0	1
+    //1: 	H   	H 	|
+    //2: 	Meas	0	|
+    //3: 	H   	H 	|
+    //4: 	c_X   	|	X 		c[0] == 1
+    //o: 			0	1
+
+    // Expected Output:
+    // i: 			0	1
+    //1: 	H   	H 	|
+    //2: 	X   	c	X
+    //3: 	H   	H 	|
+    //4: 	Meas	0	|
+    //o: 			0	1
+
+    QuantumComputation qc{};
+    qc.addQubitRegister(2);
+    qc.addClassicalRegister(1);
+    qc.h(0);
+    qc.measure(0, 0U);
+    qc.h(0);
+    std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(2U, 1, qc::X);
+    qc.emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
+
+    std::cout << qc << std::endl;
+
+    EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    ASSERT_EQ(qc.getNqubits(), 2);
+    ASSERT_EQ(qc.getNindividualOps(), 4);
+    auto& op0 = qc.at(0);
+    auto& op1 = qc.at(1);
+    auto& op2 = qc.at(2);
+    auto& op3 = qc.at(3);
+
+    EXPECT_EQ(op0->getNqubits(), 2);
+    EXPECT_TRUE(op0->getType() == qc::H);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op0->getControls().empty());
+
+    EXPECT_EQ(op1->getNqubits(), 2);
+    EXPECT_TRUE(op1->getType() == qc::X);
+    const auto& targets1 = op1->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(1));
+    const auto& controls1 = op1->getControls();
+    EXPECT_EQ(controls1.size(), 1);
+    EXPECT_EQ(controls1.count(0), 1);
+
+    EXPECT_EQ(op2->getNqubits(), 2);
+    EXPECT_TRUE(op2->getType() == qc::H);
+    const auto& targets2 = op2->getTargets();
+    EXPECT_EQ(targets2.size(), 1);
+    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op2->getControls().empty());
+
+    EXPECT_EQ(op3->getNqubits(), 2);
+    ASSERT_TRUE(op3->getType() == qc::Measure);
+    const auto& targets3 = op3->getTargets();
+    EXPECT_EQ(targets3.size(), 1);
+    EXPECT_EQ(targets3.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op3->getControls().empty());
+    auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
+    const auto classics0 = measure0->getClassics();
+    EXPECT_EQ(classics0.size(), 1);
+    EXPECT_EQ(classics0.at(0), 0);
+}
+
+TEST_F(QFRFunctionality, deferMeasurementsTwoClassic) {
+    // Input:
+    // i: 			0	1
+    //1: 	H   	H 	|
+    //2: 	Meas	0	|
+    //3: 	H   	H 	|
+    //4: 	c_X   	|	X 		c[0] == 1
+    //5:    c_Z     |   Z       c[0] == 1
+    //o: 			0	1
+
+    // Expected Output:
+    // i: 			0	1
+    //1: 	H   	H 	|
+    //2: 	X   	c	X
+    //3: 	Z   	c	Z
+    //4: 	H   	H 	|
+    //5: 	Meas	0	|
+    //o: 			0	1
+
+    QuantumComputation qc{};
+    qc.addQubitRegister(2);
+    qc.addClassicalRegister(1);
+    qc.h(0);
+    qc.measure(0, 0U);
+    qc.h(0);
+    std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(2U, 1, qc::X);
+    qc.emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
+    std::unique_ptr<qc::Operation> zOp = std::make_unique<qc::StandardOperation>(2U, 1, qc::Z);
+    qc.emplace_back<qc::ClassicControlledOperation>(zOp, std::pair{0, 1U}, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
+
+    std::cout << qc << std::endl;
+
+    EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    ASSERT_EQ(qc.getNqubits(), 2);
+    ASSERT_EQ(qc.getNindividualOps(), 5);
+    auto& op0 = qc.at(0);
+    auto& op1 = qc.at(1);
+    auto& op2 = qc.at(2);
+    auto& op3 = qc.at(3);
+    auto& op4 = qc.at(4);
+
+    EXPECT_EQ(op0->getNqubits(), 2);
+    EXPECT_TRUE(op0->getType() == qc::H);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op0->getControls().empty());
+
+    EXPECT_EQ(op1->getNqubits(), 2);
+    EXPECT_TRUE(op1->getType() == qc::X);
+    const auto& targets1 = op1->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(1));
+    const auto& controls1 = op1->getControls();
+    EXPECT_EQ(controls1.size(), 1);
+    EXPECT_EQ(controls1.count(0), 1);
+
+    EXPECT_EQ(op2->getNqubits(), 2);
+    EXPECT_TRUE(op2->getType() == qc::Z);
+    const auto& targets2 = op2->getTargets();
+    EXPECT_EQ(targets2.size(), 1);
+    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(1));
+    const auto& controls2 = op2->getControls();
+    EXPECT_EQ(controls2.size(), 1);
+    EXPECT_EQ(controls2.count(0), 1);
+
+    EXPECT_EQ(op3->getNqubits(), 2);
+    EXPECT_TRUE(op3->getType() == qc::H);
+    const auto& targets3 = op3->getTargets();
+    EXPECT_EQ(targets3.size(), 1);
+    EXPECT_EQ(targets3.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op3->getControls().empty());
+
+    EXPECT_EQ(op4->getNqubits(), 2);
+    ASSERT_TRUE(op4->getType() == qc::Measure);
+    const auto& targets4 = op4->getTargets();
+    EXPECT_EQ(targets4.size(), 1);
+    EXPECT_EQ(targets4.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op4->getControls().empty());
+    auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op4.get());
+    const auto classics0 = measure0->getClassics();
+    EXPECT_EQ(classics0.size(), 1);
+    EXPECT_EQ(classics0.at(0), 0);
+}
+
+TEST_F(QFRFunctionality, deferMeasurementsCorrectOrder) {
+    // Input:
+    // i: 			0	1
+    //1: 	H   	H 	|
+    //2: 	Meas	0	|
+    //3: 	H   	| 	H
+    //4: 	c_X   	|	X 		c[0] == 1
+    //o: 			0	1
+
+    // Expected Output:
+    // i: 			0	1
+    //1: 	H   	H 	|
+    //2: 	H   	| 	H
+    //3: 	X   	c	X
+    //4: 	Meas	0	|
+    //o: 			0	1
+
+    QuantumComputation qc{};
+    qc.addQubitRegister(2);
+    qc.addClassicalRegister(1);
+    qc.h(0);
+    qc.measure(0, 0U);
+    qc.h(1);
+    std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(2U, 1, qc::X);
+    qc.emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
+
+    std::cout << qc << std::endl;
+
+    EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    ASSERT_EQ(qc.getNqubits(), 2);
+    ASSERT_EQ(qc.getNindividualOps(), 4);
+    auto& op0 = qc.at(0);
+    auto& op1 = qc.at(1);
+    auto& op2 = qc.at(2);
+    auto& op3 = qc.at(3);
+
+    EXPECT_EQ(op0->getNqubits(), 2);
+    EXPECT_TRUE(op0->getType() == qc::H);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op0->getControls().empty());
+
+    EXPECT_EQ(op1->getNqubits(), 2);
+    EXPECT_TRUE(op1->getType() == qc::H);
+    const auto& targets1 = op2->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_TRUE(op1->getControls().empty());
+
+    EXPECT_EQ(op2->getNqubits(), 2);
+    EXPECT_TRUE(op2->getType() == qc::X);
+    const auto& targets2 = op1->getTargets();
+    EXPECT_EQ(targets2.size(), 1);
+    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(1));
+    const auto& controls2 = op2->getControls();
+    EXPECT_EQ(controls2.size(), 1);
+    EXPECT_EQ(controls2.count(0), 1);
+
+    EXPECT_EQ(op3->getNqubits(), 2);
+    ASSERT_TRUE(op3->getType() == qc::Measure);
+    const auto& targets3 = op3->getTargets();
+    EXPECT_EQ(targets3.size(), 1);
+    EXPECT_EQ(targets3.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op3->getControls().empty());
+    auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
+    const auto classics0 = measure0->getClassics();
+    EXPECT_EQ(classics0.size(), 1);
+    EXPECT_EQ(classics0.at(0), 0);
+}
+
+TEST_F(QFRFunctionality, deferMeasurementsTwoClassicCorrectOrder) {
+    // Input:
+    // i: 			0	1
+    //1: 	H   	H 	|
+    //2: 	Meas	0	|
+    //3: 	H   	| 	H
+    //4: 	c_X   	|	X 		c[0] == 1
+    //5:    c_Z     |   Z       c[0] == 1
+    //o: 			0	1
+
+    // Expected Output:
+    // i: 			0	1
+    //1: 	H   	H 	|
+    //2: 	H   	| 	H
+    //3: 	X   	c	X
+    //4: 	Z   	c	Z
+    //5: 	Meas	0	|
+    //o: 			0	1
+
+    QuantumComputation qc{};
+    qc.addQubitRegister(2);
+    qc.addClassicalRegister(1);
+    qc.h(0);
+    qc.measure(0, 0U);
+    qc.h(1);
+    std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(2U, 1, qc::X);
+    qc.emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
+    std::unique_ptr<qc::Operation> zOp = std::make_unique<qc::StandardOperation>(2U, 1, qc::Z);
+    qc.emplace_back<qc::ClassicControlledOperation>(zOp, std::pair{0, 1U}, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
+
+    std::cout << qc << std::endl;
+
+    EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    ASSERT_EQ(qc.getNqubits(), 2);
+    ASSERT_EQ(qc.getNindividualOps(), 5);
+    auto& op0 = qc.at(0);
+    auto& op1 = qc.at(1);
+    auto& op2 = qc.at(2);
+    auto& op3 = qc.at(3);
+    auto& op4 = qc.at(4);
+
+    EXPECT_EQ(op0->getNqubits(), 2);
+    EXPECT_TRUE(op0->getType() == qc::H);
+    const auto& targets0 = op0->getTargets();
+    EXPECT_EQ(targets0.size(), 1);
+    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op0->getControls().empty());
+
+    EXPECT_EQ(op1->getNqubits(), 2);
+    EXPECT_TRUE(op1->getType() == qc::H);
+    const auto& targets1 = op1->getTargets();
+    EXPECT_EQ(targets1.size(), 1);
+    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_TRUE(op1->getControls().empty());
+
+    EXPECT_EQ(op2->getNqubits(), 2);
+    EXPECT_TRUE(op2->getType() == qc::X);
+    const auto& targets2 = op2->getTargets();
+    EXPECT_EQ(targets2.size(), 1);
+    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(1));
+    const auto& controls2 = op2->getControls();
+    EXPECT_EQ(controls2.size(), 1);
+    EXPECT_EQ(controls2.count(0), 1);
+
+    EXPECT_EQ(op3->getNqubits(), 2);
+    EXPECT_TRUE(op3->getType() == qc::Z);
+    const auto& targets3 = op3->getTargets();
+    EXPECT_EQ(targets3.size(), 1);
+    EXPECT_EQ(targets3.at(0), static_cast<dd::Qubit>(1));
+    const auto& controls3 = op3->getControls();
+    EXPECT_EQ(controls3.size(), 1);
+    EXPECT_EQ(controls3.count(0), 1);
+
+    EXPECT_EQ(op4->getNqubits(), 2);
+    ASSERT_TRUE(op4->getType() == qc::Measure);
+    const auto& targets4 = op4->getTargets();
+    EXPECT_EQ(targets4.size(), 1);
+    EXPECT_EQ(targets4.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_TRUE(op4->getControls().empty());
+    auto       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op4.get());
+    const auto classics0 = measure0->getClassics();
+    EXPECT_EQ(classics0.size(), 1);
+    EXPECT_EQ(classics0.at(0), 0);
+}
+
+TEST_F(QFRFunctionality, deferMeasurementsErrorOnImplicitReset) {
+    // Input:
+    // i: 			0
+    //1: 	H   	H
+    //2: 	Meas	0
+    //3: 	c_X   	X	c[0] == 1
+    //o: 			0
+
+    // Expected Output:
+    // Error, since the classic-controlled operation targets the qubit being measured (this implicitly realizes a reset operation)
+
+    QuantumComputation qc{1};
+    qc.h(0);
+    qc.measure(0, 0U);
+    std::unique_ptr<qc::Operation> xOp = std::make_unique<qc::StandardOperation>(1U, 0, qc::X);
+    qc.emplace_back<qc::ClassicControlledOperation>(xOp, std::pair{0, 1U}, 1U);
+
+    std::cout << qc << std::endl;
+
+    EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+
+    EXPECT_THROW(CircuitOptimizer::deferMeasurements(qc), qc::QFRException);
+}
+
+TEST_F(QFRFunctionality, basicTensorDumpTest) {
+    QuantumComputation qc(2);
+    qc.h(1);
+    qc.x(0, 1_pc);
+
+    std::stringstream ss{};
+    qc.dump(ss, qc::Tensor);
+
+    auto reference = "{\"tensors\": [\n"
+                     "[[\"H   \", \"Q1\", \"GATE0\"], [\"q1_0\", \"q1_1\"], [2, 2], [[0.70710678118654757, 0], [0.70710678118654757, 0], [0.70710678118654757, 0], [-0.70710678118654757, 0]]],\n"
+                     "[[\"X   \", \"Q1\", \"Q0\", \"GATE1\"], [\"q1_1\", \"q0_0\", \"q1_2\", \"q0_1\"], [2, 2, 2, 2], [[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [1, 0], [0, 0]]]\n"
+                     "]}\n";
+    EXPECT_EQ(ss.str(), reference);
+}
+
+TEST_F(QFRFunctionality, compoundTensorDumpTest) {
+    QuantumComputation qc(2);
+    qc.emplace_back<qc::CompoundOperation>(3);
+    auto compop = dynamic_cast<qc::CompoundOperation*>(qc.begin()->get());
+    compop->emplace_back<qc::StandardOperation>(2, 1, qc::H);
+    compop->emplace_back<qc::StandardOperation>(2, 1_pc, 0, qc::X);
+
+    std::stringstream ss{};
+    qc.dump(ss, qc::Tensor);
+
+    auto reference = "{\"tensors\": [\n"
+                     "[[\"H   \", \"Q1\", \"GATE0\"], [\"q1_0\", \"q1_1\"], [2, 2], [[0.70710678118654757, 0], [0.70710678118654757, 0], [0.70710678118654757, 0], [-0.70710678118654757, 0]]],\n"
+                     "[[\"X   \", \"Q1\", \"Q0\", \"GATE1\"], [\"q1_1\", \"q0_0\", \"q1_2\", \"q0_1\"], [2, 2, 2, 2], [[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [1, 0], [0, 0]]]\n"
+                     "]}\n";
+    EXPECT_EQ(ss.str(), reference);
+}
+
+TEST_F(QFRFunctionality, errorTensorDumpTest) {
+    QuantumComputation             qc(2);
+    std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(2, 0, qc::X);
+    qc.emplace_back<qc::ClassicControlledOperation>(op, std::pair{0, 1U}, 1U);
+
+    std::stringstream ss{};
+    EXPECT_THROW(qc.dump(ss, qc::Tensor), qc::QFRException);
+
+    ss.str("");
+    qc.erase(qc.begin());
+    qc.barrier(0);
+    qc.measure(0, 0);
+    EXPECT_NO_THROW(qc.dump(ss, qc::Tensor));
+
+    ss.str("");
+    qc.reset(0);
+    EXPECT_THROW(qc.dump(ss, qc::Tensor), qc::QFRException);
+}
+
+TEST_F(QFRFunctionality, trivialOperationReordering) {
+    QuantumComputation qc(2);
+    qc.h(0);
+    qc.h(1);
+    std::cout << qc << std::endl;
+    qc::CircuitOptimizer::reorderOperations(qc);
+    std::cout << qc << std::endl;
+    auto       it     = qc.begin();
+    const auto target = (*it)->getTargets().at(0);
+    EXPECT_EQ(target, 1);
+    ++it;
+    const auto target2 = (*it)->getTargets().at(0);
+    EXPECT_EQ(target2, 0);
+}
+
+TEST_F(QFRFunctionality, FlattenRandomClifford) {
+    qc::RandomCliffordCircuit rcs(2U, 3U, 0U);
+    std::cout << rcs << std::endl;
+
+    auto dd     = std::make_unique<dd::Package<>>(2U);
+    auto before = buildFunctionality(&rcs, dd);
+
+    qc::CircuitOptimizer::flattenOperations(rcs);
+    std::cout << rcs << std::endl;
+
+    for (const auto& op: rcs) {
+        EXPECT_FALSE(op->isCompoundOperation());
+    }
+
+    auto after = buildFunctionality(&rcs, dd);
+    EXPECT_EQ(before, after);
+}
+
+TEST_F(QFRFunctionality, FlattenRecursive) {
+    const dd::QubitCount nqubits = 1U;
+
+    // create a compound operation
+    auto op = std::make_unique<CompoundOperation>(nqubits);
+
+    // emplace an operation in the compound operation
+    op->emplace_back<StandardOperation>(1U, 0U, qc::X);
+
+    // create another compound operation
+    auto op2 = std::make_unique<CompoundOperation>(nqubits);
+
+    // emplace the first operation in the second
+    op2->emplace_back<qc::CompoundOperation>(op);
+
+    // create a quantum computation and emplace the operation
+    auto qc = QuantumComputation(nqubits);
+    qc.emplace_back<CompoundOperation>(op2);
+
+    std::cout << qc << std::endl;
+
+    qc::CircuitOptimizer::flattenOperations(qc);
+    std::cout << qc << std::endl;
+
+    for (const auto& g: qc) {
+        EXPECT_FALSE(g->isCompoundOperation());
+    }
+
+    auto& gate = **qc.begin();
+    EXPECT_EQ(gate.getType(), qc::X);
+    EXPECT_EQ(gate.getTargets().at(0), 0U);
+    EXPECT_TRUE(gate.getControls().empty());
+}
+
+TEST_F(QFRFunctionality, OperationEquality) {
+    const auto x = StandardOperation(1U, 0, qc::X);
+    const auto z = StandardOperation(1U, 0, qc::Z);
+    EXPECT_TRUE(x.equals(x));
+    EXPECT_FALSE(x.equals(z));
+
+    const auto x0 = StandardOperation(2U, 0, qc::X);
+    const auto x1 = StandardOperation(2U, 1, qc::X);
+    EXPECT_FALSE(x0.equals(x1));
+    Permutation perm0{};
+    perm0[0] = 1;
+    perm0[1] = 0;
+    EXPECT_TRUE(x0.equals(x1, perm0, {}));
+    EXPECT_TRUE(x0.equals(x1, {}, perm0));
+
+    const auto cx01 = StandardOperation(2U, 0_pc, 1, qc::X);
+    const auto cx10 = StandardOperation(2U, 1_pc, 0, qc::X);
+    EXPECT_FALSE(cx01.equals(cx10));
+    EXPECT_FALSE(x0.equals(cx01));
+
+    const auto p  = StandardOperation(1U, 0, qc::Phase, 2.0);
+    const auto pm = StandardOperation(1U, 0, qc::Phase, -2.0);
+    EXPECT_FALSE(p.equals(pm));
+
+    const auto measure0 = NonUnitaryOperation(2U, 0, 0U);
+    const auto measure1 = NonUnitaryOperation(2U, 0, 1U);
+    const auto measure2 = NonUnitaryOperation(2U, 1, 0U);
+    EXPECT_FALSE(measure0.equals(x0));
+    EXPECT_TRUE(measure0.equals(measure0));
+    EXPECT_FALSE(measure0.equals(measure1));
+    EXPECT_FALSE(measure0.equals(measure2));
+    EXPECT_TRUE(measure0.equals(measure2, perm0, {}));
+    EXPECT_TRUE(measure0.equals(measure2, {}, perm0));
+
+    const auto controlRegister0 = qc::QuantumRegister{0, 1U};
+    const auto controlRegister1 = qc::QuantumRegister{1, 1U};
+    const auto expectedValue0   = 0U;
+    const auto expectedValue1   = 1U;
+
+    std::unique_ptr<Operation> xp0      = std::make_unique<StandardOperation>(1U, 0, qc::X);
+    std::unique_ptr<Operation> xp1      = std::make_unique<StandardOperation>(1U, 0, qc::X);
+    std::unique_ptr<Operation> xp2      = std::make_unique<StandardOperation>(1U, 0, qc::X);
+    const auto                 classic0 = ClassicControlledOperation(xp0, controlRegister0, expectedValue0);
+    const auto                 classic1 = ClassicControlledOperation(xp1, controlRegister0, expectedValue1);
+    const auto                 classic2 = ClassicControlledOperation(xp2, controlRegister1, expectedValue0);
+    std::unique_ptr<Operation> zp       = std::make_unique<StandardOperation>(1U, 0, qc::Z);
+    const auto                 classic3 = ClassicControlledOperation(zp, controlRegister0, expectedValue0);
+    EXPECT_FALSE(classic0.equals(x));
+    EXPECT_TRUE(classic0.equals(classic0));
+    EXPECT_FALSE(classic0.equals(classic1));
+    EXPECT_FALSE(classic0.equals(classic2));
+    EXPECT_FALSE(classic0.equals(classic3));
+
+    auto compound0 = CompoundOperation(1U);
+    compound0.emplace_back<StandardOperation>(1U, 0, qc::X);
+
+    auto compound1 = CompoundOperation(1U);
+    compound1.emplace_back<StandardOperation>(1U, 0, qc::X);
+    compound1.emplace_back<StandardOperation>(1U, 0, qc::Z);
+
+    auto compound2 = CompoundOperation(1U);
+    compound2.emplace_back<StandardOperation>(1U, 0, qc::Z);
+
+    EXPECT_FALSE(compound0.equals(x));
+    EXPECT_TRUE(compound0.equals(compound0));
+    EXPECT_FALSE(compound0.equals(compound1));
+    EXPECT_FALSE(compound0.equals(compound2));
+}
+
+TEST_F(QFRFunctionality, CNOTCancellation1) {
+    QuantumComputation qc(2);
+    qc.x(0, 1_pc);
+    qc.x(0, 1_pc);
+
+    CircuitOptimizer::cancelCNOTs(qc);
+    EXPECT_TRUE(qc.empty());
+}
+
+TEST_F(QFRFunctionality, CNOTCancellation2) {
+    QuantumComputation qc(2);
+    qc.swap(0, 1);
+    qc.swap(0, 1);
+
+    CircuitOptimizer::cancelCNOTs(qc);
+    EXPECT_TRUE(qc.empty());
+}
+
+TEST_F(QFRFunctionality, CNOTCancellation3) {
+    QuantumComputation qc(2);
+    qc.swap(0, 1);
+    qc.x(0, 1_pc);
+
+    CircuitOptimizer::cancelCNOTs(qc);
+    EXPECT_TRUE(qc.size() == 2U);
+    auto& firstOperation = qc.front();
+    EXPECT_EQ(firstOperation->getType(), qc::X);
+    EXPECT_EQ(firstOperation->getTargets().front(), 0U);
+    EXPECT_EQ(firstOperation->getControls().begin()->qubit, 1U);
+
+    auto& secondOperation = qc.back();
+    EXPECT_EQ(secondOperation->getType(), qc::X);
+    EXPECT_EQ(secondOperation->getTargets().front(), 1U);
+    EXPECT_EQ(secondOperation->getControls().begin()->qubit, 0U);
+}
+
+TEST_F(QFRFunctionality, CNOTCancellation4) {
+    QuantumComputation qc(2);
+    qc.x(0, 1_pc);
+    qc.swap(0, 1);
+
+    CircuitOptimizer::cancelCNOTs(qc);
+    EXPECT_TRUE(qc.size() == 2U);
+    auto& firstOperation = qc.front();
+    EXPECT_EQ(firstOperation->getType(), qc::X);
+    EXPECT_EQ(firstOperation->getTargets().front(), 1U);
+    EXPECT_EQ(firstOperation->getControls().begin()->qubit, 0U);
+
+    auto& secondOperation = qc.back();
+    EXPECT_EQ(secondOperation->getType(), qc::X);
+    EXPECT_EQ(secondOperation->getTargets().front(), 0U);
+    EXPECT_EQ(secondOperation->getControls().begin()->qubit, 1U);
+}
+
+TEST_F(QFRFunctionality, CNOTCancellation5) {
+    QuantumComputation qc(2);
+    qc.x(0, 1_pc);
+    qc.x(1, 0_pc);
+    qc.x(0, 1_pc);
+
+    CircuitOptimizer::cancelCNOTs(qc);
+    EXPECT_TRUE(qc.size() == 1U);
+    auto& firstOperation = qc.front();
+    EXPECT_EQ(firstOperation->getType(), qc::SWAP);
+    EXPECT_EQ(firstOperation->getTargets().front(), 0U);
+    EXPECT_EQ(firstOperation->getTargets().back(), 1U);
 }

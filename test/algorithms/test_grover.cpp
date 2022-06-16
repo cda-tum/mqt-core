@@ -1,9 +1,11 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "algorithms/Grover.hpp"
+#include "dd/FunctionalityConstruction.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <cmath>
@@ -30,19 +32,19 @@ protected:
 
     void SetUp() override {
         std::tie(nqubits, seed) = GetParam();
-        dd                      = std::make_unique<dd::Package>(nqubits + 1);
+        dd                      = std::make_unique<dd::Package<>>(nqubits + 1);
         initialCacheCount       = dd->cn.complexCache.getCount();
         initialComplexCount     = dd->cn.complexTable.getCount();
     }
 
-    dd::QubitCount               nqubits = 0;
-    std::size_t                  seed    = 0;
-    std::unique_ptr<dd::Package> dd;
-    std::unique_ptr<qc::Grover>  qc;
-    std::size_t                  initialCacheCount   = 0;
-    std::size_t                  initialComplexCount = 0;
-    qc::VectorDD                 sim{};
-    qc::MatrixDD                 func{};
+    dd::QubitCount                 nqubits = 0;
+    std::size_t                    seed    = 0;
+    std::unique_ptr<dd::Package<>> dd;
+    std::unique_ptr<qc::Grover>    qc;
+    std::size_t                    initialCacheCount   = 0;
+    std::size_t                    initialComplexCount = 0;
+    qc::VectorDD                   sim{};
+    qc::MatrixDD                   func{};
 };
 
 constexpr dd::QubitCount GROVER_MAX_QUBITS       = 18;
@@ -73,13 +75,15 @@ TEST_P(Grover, Functionality) {
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
     qc->printStatistics(std::cout);
-    unsigned long long x = dynamic_cast<qc::Grover*>(qc.get())->targetValue;
+    auto x = '1' + dynamic_cast<qc::Grover*>(qc.get())->expected;
+    std::reverse(x.begin(), x.end());
+    std::replace(x.begin(), x.end(), '1', '2');
 
     // there should be no error building the functionality
-    ASSERT_NO_THROW({ func = qc->buildFunctionality(dd); });
+    ASSERT_NO_THROW({ func = buildFunctionality(qc.get(), dd); });
 
     // amplitude of the searched-for entry should be 1
-    auto c = dd->getValueByPath(func, x, 0);
+    auto c = dd->getValueByPath(func, x);
     EXPECT_NEAR(std::abs(c.r), 1, GROVER_ACCURACY);
     EXPECT_NEAR(std::abs(c.i), 0, GROVER_ACCURACY);
     auto prob = c.r * c.r + c.i * c.i;
@@ -91,13 +95,15 @@ TEST_P(Grover, FunctionalityRecursive) {
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
     qc->printStatistics(std::cout);
-    unsigned long long x = dynamic_cast<qc::Grover*>(qc.get())->targetValue;
+    auto x = '1' + dynamic_cast<qc::Grover*>(qc.get())->expected;
+    std::reverse(x.begin(), x.end());
+    std::replace(x.begin(), x.end(), '1', '2');
 
     // there should be no error building the functionality
-    ASSERT_NO_THROW({ func = qc->buildFunctionalityRecursive(dd); });
+    ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), dd); });
 
     // amplitude of the searched-for entry should be 1
-    auto c = dd->getValueByPath(func, x, 0);
+    auto c = dd->getValueByPath(func, x);
     EXPECT_NEAR(std::abs(c.r), 1, GROVER_ACCURACY);
     EXPECT_NEAR(std::abs(c.i), 0, GROVER_ACCURACY);
     auto prob = c.r * c.r + c.i * c.i;
@@ -109,12 +115,17 @@ TEST_P(Grover, Simulation) {
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
     qc->printStatistics(std::cout);
-    std::size_t x  = dynamic_cast<qc::Grover*>(qc.get())->targetValue;
-    auto        in = dd->makeZeroState(nqubits + 1);
+    auto in = dd->makeZeroState(nqubits + 1);
     // there should be no error simulating the circuit
-    ASSERT_NO_THROW({ sim = qc->simulate(in, dd); });
+    std::size_t shots        = 1024;
+    auto        measurements = simulate(qc.get(), in, dd, shots);
 
-    auto c    = dd->getValueByPath(sim, x);
-    auto prob = c.r * c.r + c.i * c.i;
-    EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
+    for (const auto& [state, count]: measurements) {
+        std::cout << state << ": " << count << std::endl;
+    }
+
+    auto correctShots = measurements[qc->expected];
+    auto probability  = static_cast<double>(correctShots) / static_cast<double>(shots);
+
+    EXPECT_GE(probability, GROVER_GOAL_PROBABILITY);
 }

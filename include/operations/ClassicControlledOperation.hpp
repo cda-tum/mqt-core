@@ -1,10 +1,9 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_CLASSICCONTROLLEDOPERATION_H
-#define QFR_CLASSICCONTROLLEDOPERATION_H
+#pragma once
 
 #include "Operation.hpp"
 
@@ -16,16 +15,9 @@ namespace qc {
         std::pair<dd::Qubit, dd::QubitCount> controlRegister{};
         unsigned int                         expectedValue = 1U;
 
-        MatrixDD getDD([[maybe_unused]] std::unique_ptr<dd::Package>& dd, [[maybe_unused]] const dd::Controls& controls, [[maybe_unused]] const Targets& targets) const override {
-            throw QFRException("[ClassicControlledOperation] protected getDD called which should not happen.");
-        }
-        MatrixDD getInverseDD([[maybe_unused]] std::unique_ptr<dd::Package>& dd, [[maybe_unused]] const dd::Controls& controls, [[maybe_unused]] const Targets& targets) const override {
-            throw QFRException("[ClassicControlledOperation] protected getInverseDD called which should not happen.");
-        }
-
     public:
         // Applies operation `_op` if the creg starting at index `control` has the expected value
-        ClassicControlledOperation(std::unique_ptr<Operation>& _op, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, unsigned int expectedValue = 1U):
+        ClassicControlledOperation(std::unique_ptr<qc::Operation>& _op, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, unsigned int expectedValue = 1U):
             op(std::move(_op)), controlRegister(controlRegister), expectedValue(expectedValue) {
             nqubits = op->getNqubits();
             name[0] = 'c';
@@ -42,22 +34,6 @@ namespace qc {
             return std::make_unique<ClassicControlledOperation>(op_cloned, controlRegister, expectedValue);
         }
 
-        MatrixDD getDD(std::unique_ptr<dd::Package>& dd) const override {
-            return op->getDD(dd);
-        }
-
-        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd) const override {
-            return op->getInverseDD(dd);
-        }
-
-        MatrixDD getDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override {
-            return op->getDD(dd, permutation);
-        }
-
-        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override {
-            return op->getInverseDD(dd, permutation);
-        }
-
         [[nodiscard]] auto getControlRegister() const {
             return controlRegister;
         }
@@ -68,6 +44,35 @@ namespace qc {
 
         [[nodiscard]] auto getOperation() const {
             return op.get();
+        }
+
+        void setNqubits(dd::QubitCount nq) override {
+            nqubits = nq;
+            op->setNqubits(nq);
+        }
+
+        [[nodiscard]] const Targets& getTargets() const override {
+            return op->getTargets();
+        }
+
+        Targets& getTargets() override {
+            return op->getTargets();
+        }
+
+        [[nodiscard]] std::size_t getNtargets() const override {
+            return op->getNtargets();
+        }
+
+        [[nodiscard]] const dd::Controls& getControls() const override {
+            return op->getControls();
+        }
+
+        dd::Controls& getControls() override {
+            return op->getControls();
+        }
+
+        [[nodiscard]] std::size_t getNcontrols() const override {
+            return controls.size();
         }
 
         [[nodiscard]] bool isUnitary() const override {
@@ -82,6 +87,27 @@ namespace qc {
             return op->actsOn(i);
         }
 
+        [[nodiscard]] bool equals(const Operation& operation, const Permutation& perm1, const Permutation& perm2) const override {
+            if (const auto* classic = dynamic_cast<const ClassicControlledOperation*>(&operation)) {
+                if (controlRegister != classic->controlRegister) {
+                    return false;
+                }
+
+                if (expectedValue != classic->expectedValue) {
+                    return false;
+                }
+
+                return op->equals(*classic->op, perm1, perm2);
+
+            } else {
+                return false;
+            }
+            return Operation::equals(operation, perm1, perm2);
+        }
+        [[nodiscard]] bool equals(const Operation& operation) const override {
+            return equals(operation, {}, {});
+        }
+
         void dumpOpenQASM([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg) const override {
             throw QFRException("Dumping of classically controlled gates currently not supported for qasm");
         }
@@ -91,4 +117,3 @@ namespace qc {
         }
     };
 } // namespace qc
-#endif //QFR_CLASSICCONTROLLEDOPERATION_H

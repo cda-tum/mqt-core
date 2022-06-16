@@ -1,9 +1,11 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "operations/StandardOperation.hpp"
+
+#include <variant>
 
 namespace qc {
     /***
@@ -156,77 +158,6 @@ namespace qc {
         startQubit   = startingQubit;
         checkUgate();
         setName();
-    }
-
-    MatrixDD StandardOperation::getStandardOperationDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, dd::Qubit target, bool inverse) const {
-        MatrixDD       e{};
-        dd::GateMatrix gm;
-
-        switch (type) {
-            case I: gm = dd::Imat; break;
-            case H: gm = dd::Hmat; break;
-            case X:
-                if (controls.size() > 1) { // Toffoli
-                    e = dd->toffoliTable.lookup(nqubits, controls, targets[0]);
-                    if (e.p == nullptr) {
-                        e = dd->makeGateDD(dd::Xmat, nqubits, controls, targets[0], startQubit);
-                        dd->toffoliTable.insert(nqubits, controls, targets[0], e);
-                    }
-                    return e;
-                }
-                gm = dd::Xmat;
-                break;
-            case Y: gm = dd::Ymat; break;
-            case Z: gm = dd::Zmat; break;
-            case S: gm = inverse ? dd::Sdagmat : dd::Smat; break;
-            case Sdag: gm = inverse ? dd::Smat : dd::Sdagmat; break;
-            case T: gm = inverse ? dd::Tdagmat : dd::Tmat; break;
-            case Tdag: gm = inverse ? dd::Tmat : dd::Tdagmat; break;
-            case V: gm = inverse ? dd::Vdagmat : dd::Vmat; break;
-            case Vdag: gm = inverse ? dd::Vmat : dd::Vdagmat; break;
-            case U3: gm = inverse ? dd::U3mat(-parameter[1], -parameter[0], -parameter[2]) : dd::U3mat(parameter[0], parameter[1], parameter[2]); break;
-            case U2: gm = inverse ? dd::U2mat(-parameter[1] + dd::PI, -parameter[0] - dd::PI) : dd::U2mat(parameter[0], parameter[1]); break;
-            case Phase: gm = inverse ? dd::Phasemat(-parameter[0]) : dd::Phasemat(parameter[0]); break;
-            case SX: gm = inverse ? dd::SXdagmat : dd::SXmat; break;
-            case SXdag: gm = inverse ? dd::SXmat : dd::SXdagmat; break;
-            case RX: gm = inverse ? dd::RXmat(-parameter[0]) : dd::RXmat(parameter[0]); break;
-            case RY: gm = inverse ? dd::RYmat(-parameter[0]) : dd::RYmat(parameter[0]); break;
-            case RZ: gm = inverse ? dd::RZmat(-parameter[0]) : dd::RZmat(parameter[0]); break;
-            default:
-                std::ostringstream oss{};
-                oss << "DD for gate" << name << " not available!";
-                throw QFRException(oss.str());
-        }
-        return dd->makeGateDD(gm, nqubits, controls, target, startQubit);
-    }
-
-    MatrixDD StandardOperation::getStandardOperationDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, bool inverse) const {
-        switch (type) {
-            case SWAP:
-                return dd->makeSWAPDD(nqubits, controls, target0, target1, startQubit);
-            case iSWAP:
-                if (inverse) {
-                    return dd->makeiSWAPinvDD(nqubits, controls, target0, target1, startQubit);
-                } else {
-                    return dd->makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
-                }
-            case Peres:
-                if (inverse) {
-                    return dd->makePeresdagDD(nqubits, controls, target0, target1, startQubit);
-                } else {
-                    return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
-                }
-            case Peresdag:
-                if (inverse) {
-                    return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
-                } else {
-                    return dd->makePeresdagDD(nqubits, controls, target0, target1, startQubit);
-                }
-            default:
-                std::ostringstream oss{};
-                oss << "DD for gate" << name << " not available!";
-                throw QFRException(oss.str());
-        }
     }
 
     /***
@@ -401,7 +332,7 @@ namespace qc {
                 of << op.str() << "cz";
                 for (const auto& c: controls)
                     of << " " << qreg[c.qubit].second << ",";
-                of << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
+                of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
 
                 for (const auto& c: controls) {
                     if (c.type == dd::Control::Type::neg)
@@ -412,23 +343,23 @@ namespace qc {
                 of << op.str() << "cx";
                 for (const auto& c: controls)
                     of << " " << qreg[c.qubit].second << ",";
-                of << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
+                of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
 
                 of << op.str() << "x";
                 for (const auto& c: controls)
                     of << " " << qreg[c.qubit].second << ",";
-                of << qreg[targets[1]].second << ";" << std::endl;
+                of << " " << qreg[targets[1]].second << ";" << std::endl;
                 return;
             case Peresdag:
                 of << op.str() << "x";
                 for (const auto& c: controls)
                     of << " " << qreg[c.qubit].second << ",";
-                of << qreg[targets[1]].second << ";" << std::endl;
+                of << " " << qreg[targets[1]].second << ";" << std::endl;
 
                 of << op.str() << "cx";
                 for (const auto& c: controls)
                     of << " " << qreg[c.qubit].second << ",";
-                of << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
+                of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
                 return;
             case Teleportation:
                 if (!controls.empty() || targets.size() != 3) {
@@ -737,27 +668,5 @@ namespace qc {
                 std::cerr << "gate type (index) " << static_cast<int>(type) << " could not be converted to qiskit" << std::endl;
         }
         of << op.str() << qreg[targets[0]].second << ")" << std::endl;
-    }
-
-    MatrixDD StandardOperation::getDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const {
-        if (type == SWAP && controls.empty()) {
-            auto target0 = targets.at(0);
-            auto target1 = targets.at(1);
-            // update permutation
-            std::swap(permutation.at(target0), permutation.at(target1));
-            return dd->makeIdent(nqubits);
-        }
-        return Operation::getDD(dd, permutation);
-    }
-
-    MatrixDD StandardOperation::getInverseDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const {
-        if (type == SWAP && controls.empty()) {
-            auto target0 = targets.at(0);
-            auto target1 = targets.at(1);
-            // update permutation
-            std::swap(permutation.at(target0), permutation.at(target1));
-            return dd->makeIdent(nqubits);
-        }
-        return Operation::getInverseDD(dd, permutation);
     }
 } // namespace qc

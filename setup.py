@@ -1,6 +1,7 @@
 import os
 import sys
 import platform
+import re
 import subprocess
 
 from setuptools import setup, Extension, find_namespace_packages
@@ -33,8 +34,7 @@ class CMakeBuild(build_ext):
 
         cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
                       '-DPYTHON_EXECUTABLE=' + sys.executable,
-                      '-DBINDINGS=ON',
-                      '-DDEPLOY=ON']
+                      '-DBINDINGS=ON']
 
         cfg = 'Debug' if self.debug else 'Release'
         build_args = ['--config', cfg]
@@ -42,12 +42,23 @@ class CMakeBuild(build_ext):
         if platform.system() == "Windows":
             cmake_args += ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir)]
             cmake_args += ['-T', 'ClangCl']
-            if sys.maxsize > 2**32:
+            if sys.maxsize > 2 ** 32:
                 cmake_args += ['-A', 'x64']
             build_args += ['--', '/m']
         else:
             cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
-            build_args += ['--', '-j2']
+            cpus = os.cpu_count()
+            if cpus is None:
+                cpus = 2
+            build_args += ['--', '-j{}'.format(cpus)]
+
+        # cross-compile support for macOS - respect ARCHFLAGS if set
+        if sys.platform.startswith("darwin"):
+            archs = re.findall(r"-arch (\S+)", os.environ.get("ARCHFLAGS", ""))
+            if archs:
+                arch_argument = "-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs))
+                print('macOS building with: ', arch_argument, flush=True)
+                cmake_args += [arch_argument]
 
         env = os.environ.copy()
         env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
@@ -64,19 +75,19 @@ with open(README_PATH) as readme_file:
     README = readme_file.read()
 
 setup(
-    name='jkq.qfr',
-    version='1.6.0',
+    name='mqt.qfr',
+    version='1.10.0',
     author='Lukas Burgholzer',
     author_email='lukas.burgholzer@jku.at',
-    description='QFR - A JKQ tool for Quantum Functionality Representation',
+    description='MQT QFR - A tool for Quantum Functionality Representation',
     long_description=README,
     long_description_content_type="text/markdown",
     license="MIT",
     url="https://iic.jku.at/eda/research/quantum_dd",
-    ext_modules=[CMakeExtension('pyqfr', namespace='jkq.qfr.')],
+    ext_modules=[CMakeExtension('pyqfr', namespace='mqt.qfr.')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
-    packages=find_namespace_packages(include=['jkq.*']),
+    packages=find_namespace_packages(include=['mqt.*']),
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         "Programming Language :: Python :: 3",
@@ -89,12 +100,10 @@ setup(
         "Natural Language :: English",
         "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
     ],
-    keywords="jkq quantum decision_diagrams",
+    keywords="mqt quantum decision_diagrams",
     project_urls={
-        'Source': 'https://github.com/iic-jku/qfr/',
-        'Tracker': 'https://github.com/iic-jku/qfr/issues',
+        'Source': 'https://github.com/cda-tum/qfr/',
+        'Tracker': 'https://github.com/cda-tum/qfr/issues',
         'Research': 'https://iic.jku.at/eda/research/quantum_dd',
-    },
-    python_requires='>=3.6',
-    setup_requires=['cmake>=3.14']
+    }
 )

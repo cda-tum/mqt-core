@@ -1,13 +1,13 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_OPERATION_H
-#define QFR_OPERATION_H
+#pragma once
 
 #include "Definitions.hpp"
-#include "dd/Package.hpp"
+#include "OpType.hpp"
+#include "dd/ComplexValue.hpp"
 
 #include <array>
 #include <cstring>
@@ -24,46 +24,6 @@ namespace qc {
     constexpr std::size_t MAX_PARAMETERS    = 3;  // Max. parameters of an operation
     constexpr std::size_t MAX_STRING_LENGTH = 20; // Ensure short-string-optimizations
 
-    // Supported Operations
-    enum OpType : std::uint8_t {
-        None,
-        // Standard Operations
-        I,
-        H,
-        X,
-        Y,
-        Z,
-        S,
-        Sdag,
-        T,
-        Tdag,
-        V,
-        Vdag,
-        U3,
-        U2,
-        Phase,
-        SX,
-        SXdag,
-        RX,
-        RY,
-        RZ,
-        SWAP,
-        iSWAP,
-        Peres,
-        Peresdag,
-        // Compound Operation
-        Compound,
-        // Non Unitary Operations
-        Measure,
-        Reset,
-        Snapshot,
-        ShowProbabilities,
-        Barrier,
-        Teleportation,
-        // Classically-controlled Operation
-        ClassicControlled
-    };
-
     class Operation {
     protected:
         dd::Controls                       controls{};
@@ -79,16 +39,15 @@ namespace qc {
             return !reg.empty() && reg[start].first == reg[end].first && (start == 0 || reg[start].first != reg[start - 1].first) && (end == reg.size() - 1 || reg[end].first != reg[end + 1].first);
         }
 
-        virtual MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, const Targets& targets) const = 0;
-
-        virtual MatrixDD getDD(std::unique_ptr<dd::Package>& dd, const dd::Controls& controls, const Targets& targets) const = 0;
-
     public:
-        Operation()                        = default;
+        Operation() = default;
+
         Operation(const Operation& op)     = delete;
         Operation(Operation&& op) noexcept = default;
+
         Operation& operator=(const Operation& op) = delete;
         Operation& operator=(Operation&& op) noexcept = default;
+
         // Virtual Destructor
         virtual ~Operation() = default;
 
@@ -105,13 +64,13 @@ namespace qc {
             return targets.size();
         }
 
-        [[nodiscard]] const dd::Controls& getControls() const {
+        [[nodiscard]] virtual const dd::Controls& getControls() const {
             return controls;
         }
-        dd::Controls& getControls() {
+        virtual dd::Controls& getControls() {
             return controls;
         }
-        [[nodiscard]] std::size_t getNcontrols() const {
+        [[nodiscard]] virtual std::size_t getNcontrols() const {
             return controls.size();
         }
 
@@ -161,24 +120,6 @@ namespace qc {
             Operation::parameter = p;
         }
 
-        // Public Methods
-        // The methods with a permutation parameter apply these operations according to the mapping specified by the permutation, e.g.
-        //      if perm[0] = 1 and perm[1] = 0
-        //      then cx 0 1 will be translated to cx perm[0] perm[1] == cx 1 0
-        virtual MatrixDD getDD(std::unique_ptr<dd::Package>& dd) const {
-            return getDD(dd, controls, targets);
-        }
-        virtual MatrixDD getDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const {
-            return getDD(dd, permutation.apply(controls), permutation.apply(targets));
-        }
-
-        virtual MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd) const {
-            return getInverseDD(dd, controls, targets);
-        }
-        virtual MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const {
-            return getInverseDD(dd, permutation.apply(controls), permutation.apply(targets));
-        }
-
         [[nodiscard]] inline virtual bool isUnitary() const {
             return true;
         }
@@ -215,6 +156,11 @@ namespace qc {
             return false;
         }
 
+        [[nodiscard]] virtual bool equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const;
+        [[nodiscard]] virtual bool equals(const Operation& op) const {
+            return equals(op, {}, {});
+        }
+
         virtual std::ostream& printParameters(std::ostream& os) const;
         virtual std::ostream& print(std::ostream& os) const;
         virtual std::ostream& print(std::ostream& os, const Permutation& permutation) const;
@@ -227,4 +173,3 @@ namespace qc {
         virtual void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const = 0;
     };
 } // namespace qc
-#endif //QFR_OPERATION_H

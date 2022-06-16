@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, main ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, main ]
   workflow_dispatch:
 
 env:
@@ -23,13 +23,9 @@ jobs:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
       - name:  Configure CMake
         run:   |
                if [ "$RUNNER_OS" == "Windows" ]; then
@@ -47,13 +43,9 @@ jobs:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
       - name: Configure CMake
         run: |
              if [ "$RUNNER_OS" == "Windows" ]; then
@@ -76,33 +68,32 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
-      - name:  Configure CMake
-        run: cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON -DBUILD_QFR_TESTS=ON
-      - name:  Build
-        run: cmake --build "${{github.workspace}}/build" --config Debug --target qfr_test
-      - name: Test
+      - name: Configure CMake
+        run:  cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON -DBUILD_QFR_TESTS=ON
+      - name: Build
+        run:  cmake --build "${{github.workspace}}/build" --config Debug --target qfr_test
+      - name:              Test
         working-directory: ${{github.workspace}}/build/test
-        run: ctest -C Debug --output-on-failure
+        run:               ctest -C Debug --output-on-failure
+      - name: Run gcov
+        run:  |
+              find . -type f -name '*.gcno' -exec gcov -p  {} +
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
 
   codestyle:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - uses: DoozyX/clang-format-lint-action@v0.12
+      - uses: DoozyX/clang-format-lint-action@v0.14
         with:
-          source:             'apps include src test jkq/qfr'
+          source:             'apps include src test mqt/qfr'
           extensions:         'h,hpp,c,cpp'
-          clangFormatVersion: 12
+          clangFormatVersion: 13

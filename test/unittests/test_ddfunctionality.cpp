@@ -1,9 +1,10 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "QuantumComputation.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
 #include <random>
@@ -26,7 +27,7 @@ protected:
 
     void SetUp() override {
         // dd
-        dd                  = std::make_unique<dd::Package>(nqubits);
+        dd                  = std::make_unique<dd::Package<>>(nqubits);
         initialCacheCount   = dd->cn.complexCache.getCount();
         initialComplexCount = dd->cn.complexTable.getCount();
 
@@ -39,14 +40,14 @@ protected:
         std::generate(begin(random_data), end(random_data), [&]() { return rd(); });
         std::seed_seq seeds(begin(random_data), end(random_data));
         mt.seed(seeds);
-        dist = std::uniform_real_distribution<dd::fp>(0.0, 2 * dd::PI);
+        dist = std::uniform_real_distribution<dd::fp>(0.0, 2. * dd::PI);
     }
 
-    dd::QubitCount                         nqubits             = 4;
-    std::size_t                            initialCacheCount   = 0;
-    std::size_t                            initialComplexCount = 0;
+    dd::QubitCount                         nqubits             = 4U;
+    std::size_t                            initialCacheCount   = 0U;
+    std::size_t                            initialComplexCount = 0U;
     qc::MatrixDD                           e{}, ident{};
-    std::unique_ptr<dd::Package>           dd;
+    std::unique_ptr<dd::Package<>>         dd;
     std::mt19937_64                        mt;
     std::uniform_real_distribution<dd::fp> dist;
 };
@@ -116,7 +117,7 @@ TEST_P(DDFunctionality, standard_op_build_inverse_build) {
             op = qc::StandardOperation(nqubits, 0, gate);
     }
 
-    ASSERT_NO_THROW({ e = dd->multiply(op.getDD(dd), op.getInverseDD(dd)); });
+    ASSERT_NO_THROW({ e = dd->multiply(getDD(&op, dd), getInverseDD(&op, dd)); });
     dd->incRef(e);
 
     EXPECT_EQ(ident, e);
@@ -147,12 +148,12 @@ TEST_F(DDFunctionality, build_circuit) {
     qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<dd::Qubit>{0, 1}, qc::SWAP);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
 
-    e = dd->multiply(qc.buildFunctionality(dd), e);
+    e = dd->multiply(buildFunctionality(&qc, dd), e);
 
     EXPECT_EQ(ident, e);
 
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
-    e = dd->multiply(qc.buildFunctionality(dd), e);
+    e = dd->multiply(buildFunctionality(&qc, dd), e);
     dd->incRef(e);
 
     EXPECT_NE(ident, e);
@@ -163,10 +164,10 @@ TEST_F(DDFunctionality, non_unitary) {
     auto                   dummy_map = Permutation{};
     auto                   op        = qc::NonUnitaryOperation(nqubits, {0, 1, 2, 3}, {0, 1, 2, 3});
     EXPECT_FALSE(op.isUnitary());
-    EXPECT_THROW(op.getDD(dd), qc::QFRException);
-    EXPECT_THROW(op.getInverseDD(dd), qc::QFRException);
-    EXPECT_THROW(op.getDD(dd, dummy_map), qc::QFRException);
-    EXPECT_THROW(op.getInverseDD(dd, dummy_map), qc::QFRException);
+    EXPECT_THROW(getDD(&op, dd), qc::QFRException);
+    EXPECT_THROW(getInverseDD(&op, dd), qc::QFRException);
+    EXPECT_THROW(getDD(&op, dd, dummy_map), qc::QFRException);
+    EXPECT_THROW(getInverseDD(&op, dd, dummy_map), qc::QFRException);
     for (dd::Qubit i = 0; i < static_cast<dd::Qubit>(nqubits); ++i) {
         EXPECT_TRUE(op.actsOn(i));
     }
@@ -175,11 +176,27 @@ TEST_F(DDFunctionality, non_unitary) {
         dummy_map[i] = i;
     }
     auto barrier = qc::NonUnitaryOperation(nqubits, {0, 1, 2, 3}, qc::OpType::Barrier);
-    EXPECT_EQ(barrier.getDD(dd), dd->makeIdent(nqubits));
-    EXPECT_EQ(barrier.getInverseDD(dd), dd->makeIdent(nqubits));
-    EXPECT_EQ(barrier.getDD(dd, dummy_map), dd->makeIdent(nqubits));
-    EXPECT_EQ(barrier.getInverseDD(dd, dummy_map), dd->makeIdent(nqubits));
+    EXPECT_EQ(getDD(&barrier, dd), dd->makeIdent(nqubits));
+    EXPECT_EQ(getInverseDD(&barrier, dd), dd->makeIdent(nqubits));
+    EXPECT_EQ(getDD(&barrier, dd, dummy_map), dd->makeIdent(nqubits));
+    EXPECT_EQ(getInverseDD(&barrier, dd, dummy_map), dd->makeIdent(nqubits));
     for (dd::Qubit i = 0; i < static_cast<dd::Qubit>(nqubits); ++i) {
         EXPECT_FALSE(barrier.actsOn(i));
     }
+}
+
+TEST_F(DDFunctionality, CircuitEquivalence) {
+    // verify that the IBM decomposition of the H gate into RZ-SX-RZ works as expected (i.e., realizes H up to a global phase)
+    qc::QuantumComputation qc1(1);
+    qc1.h(0);
+
+    qc::QuantumComputation qc2(1);
+    qc2.rz(0, dd::PI_2);
+    qc2.sx(0);
+    qc2.rz(0, dd::PI_2);
+
+    qc::MatrixDD dd1 = buildFunctionality(&qc1, dd);
+    qc::MatrixDD dd2 = buildFunctionality(&qc2, dd);
+
+    EXPECT_EQ(dd1.p, dd2.p);
 }

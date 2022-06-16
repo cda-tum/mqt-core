@@ -1,14 +1,15 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_DEFINITIONS_HPP
-#define QFR_DEFINITIONS_HPP
+#pragma once
 
-#include "dd/Package.hpp"
+#include "dd/Control.hpp"
+#include "dd/Definitions.hpp"
 
-#include <forward_list>
+#include <bitset>
+#include <deque>
 #include <map>
 #include <memory>
 #include <utility>
@@ -37,10 +38,9 @@ namespace qc {
     using ClassicalRegisterMap = RegisterMap<ClassicalRegister>;
     using RegisterNames        = std::vector<std::pair<std::string, std::string>>;
 
-    using VectorDD = dd::Package::vEdge;
-    using MatrixDD = dd::Package::mEdge;
-
     using Targets = std::vector<dd::Qubit>;
+
+    using BitString = std::bitset<std::numeric_limits<dd::Qubit>::max() + 1>;
 
     struct Permutation: public std::map<dd::Qubit, dd::Qubit> {
         [[nodiscard]] inline dd::Controls apply(const dd::Controls& controls) const {
@@ -59,7 +59,7 @@ namespace qc {
         }
     };
 
-    constexpr dd::fp PARAMETER_TOLERANCE = 10e-6;
+    constexpr dd::fp PARAMETER_TOLERANCE = 1e-13;
 
     // forward declaration
     class Operation;
@@ -71,12 +71,13 @@ namespace qc {
         GRCS,
         Qiskit,
         TFC,
-        QC
+        QC,
+        Tensor
     };
 
-    using DAG          = std::vector<std::forward_list<std::unique_ptr<Operation>*>>;
-    using DAGIterator  = std::forward_list<std::unique_ptr<Operation>*>::iterator;
-    using DAGIterators = std::vector<DAGIterator>;
+    using DAG                 = std::vector<std::deque<std::unique_ptr<Operation>*>>;
+    using DAGIterator         = std::deque<std::unique_ptr<Operation>*>::iterator;
+    using DAGReverseIterator  = std::deque<std::unique_ptr<Operation>*>::reverse_iterator;
+    using DAGIterators        = std::vector<DAGIterator>;
+    using DAGReverseIterators = std::vector<DAGReverseIterator>;
 } // namespace qc
-
-#endif //QFR_DEFINITIONS_HPP

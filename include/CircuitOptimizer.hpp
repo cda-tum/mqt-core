@@ -1,10 +1,9 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_CIRCUITOPTIMIZER_HPP
-#define QFR_CIRCUITOPTIMIZER_HPP
+#pragma once
 
 #include "Definitions.hpp"
 #include "QuantumComputation.hpp"
@@ -20,11 +19,14 @@ namespace qc {
     class CircuitOptimizer {
     protected:
         static void addToDag(DAG& dag, std::unique_ptr<Operation>* op);
+        static void addNonStandardOperationToDag(DAG& dag, std::unique_ptr<Operation>* op);
 
     public:
         CircuitOptimizer() = default;
 
-        static DAG constructDAG(QuantumComputation& qc);
+        static DAG  constructDAG(QuantumComputation& qc);
+        static void printDAG(const DAG& dag);
+        static void printDAG(const DAG& dag, const DAGIterators& iterators);
 
         static void swapReconstruction(QuantumComputation& qc);
 
@@ -34,19 +36,35 @@ namespace qc {
 
         static void removeDiagonalGatesBeforeMeasure(QuantumComputation& qc);
 
-        static void removeDiagonalGatesBeforeMeasureRecursive(DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, const DAGIterator& until);
-
-        static bool removeDiagonalGate(DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, DAGIterator& it, qc::Operation* op);
-
         static void removeFinalMeasurements(QuantumComputation& qc);
-
-        static void removeFinalMeasurementsRecursive(DAG& dag, DAGIterators& DAGIterators, dd::Qubit idx, const DAGIterator& until);
-
-        static bool removeFinalMeasurement(DAG& dag, DAGIterators& dagIterators, dd::Qubit idx, DAGIterator& it, qc::Operation* op);
 
         static void decomposeSWAP(QuantumComputation& qc, bool isDirectedArchitecture);
 
         static void decomposeTeleport(QuantumComputation& qc);
+
+        static void eliminateResets(QuantumComputation& qc);
+
+        static void deferMeasurements(QuantumComputation& qc);
+
+        static bool isDynamicCircuit(QuantumComputation& qc);
+
+        static void reorderOperations(QuantumComputation& qc);
+
+        static void flattenOperations(QuantumComputation& qc);
+
+        static void cancelCNOTs(QuantumComputation& qc);
+
+    protected:
+        static void removeDiagonalGatesBeforeMeasureRecursive(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, const DAGReverseIterator& until);
+        static bool removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, DAGReverseIterator& it, qc::Operation* op);
+
+        static void removeFinalMeasurementsRecursive(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, const DAGReverseIterator& until);
+        static bool removeFinalMeasurement(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, DAGReverseIterator& it, qc::Operation* op);
+
+        static void changeTargets(Targets& targets, const std::map<dd::Qubit, dd::Qubit>& replacementMap);
+        static void changeControls(dd::Controls& controls, const std::map<dd::Qubit, dd::Qubit>& replacementMap);
+
+        using Iterator = decltype(qc::QuantumComputation::ops.begin());
+        static Iterator flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops, Iterator it);
     };
 } // namespace qc
-#endif //QFR_CIRCUITOPTIMIZER_HPP

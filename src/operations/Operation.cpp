@@ -1,6 +1,6 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "operations/Operation.hpp"
@@ -107,6 +107,15 @@ namespace qc {
     }
 
     std::ostream& Operation::printParameters(std::ostream& os) const {
+        if (isClassicControlledOperation()) {
+            os << "\tc[" << parameter[0];
+            if (parameter[1] != 1) {
+                os << " ... " << (parameter[0] + parameter[1] - 1);
+            }
+            os << "] == " << parameter[2];
+            return os;
+        }
+
         bool isZero = true;
         for (size_t i = 0; i < MAX_PARAMETERS; ++i) {
             if (parameter[i] != 0.L)
@@ -173,9 +182,10 @@ namespace qc {
         const auto prec_before = std::cout.precision(20);
 
         os << std::setw(4) << name << "\t";
-
-        auto controlIt = controls.cbegin();
-        auto targetIt  = targets.cbegin();
+        const auto& actualControls = getControls();
+        const auto& actualTargets  = getTargets();
+        auto        controlIt      = actualControls.cbegin();
+        auto        targetIt       = actualTargets.cbegin();
         for (const auto& [physical, logical]: permutation) {
             //            std::cout << static_cast<std::size_t>(physical) << " ";
             //            if (targetIt != targets.cend())
@@ -189,7 +199,7 @@ namespace qc {
             //                std::cout << "x ";
             //            std::cout << std::endl;
 
-            if (targetIt != targets.cend() && *targetIt == physical) {
+            if (targetIt != actualTargets.cend() && *targetIt == physical) {
                 if (type == ClassicControlled) {
                     os << "\033[1m\033[35m" << name[2] << name[3];
                 } else {
@@ -197,7 +207,7 @@ namespace qc {
                 }
                 os << "\t\033[0m";
                 ++targetIt;
-            } else if (controlIt != controls.cend() && controlIt->qubit == physical) {
+            } else if (controlIt != actualControls.cend() && controlIt->qubit == physical) {
                 if (controlIt->type == dd::Control::Type::pos) {
                     os << "\033[32m";
                 } else {
@@ -216,6 +226,74 @@ namespace qc {
         std::cout.precision(prec_before);
 
         return os;
+    }
+
+    bool Operation::equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const {
+        // check type
+        if (getType() != op.getType()) {
+            return false;
+        }
+
+        // check number of controls
+        const auto nc1 = getNcontrols();
+        const auto nc2 = op.getNcontrols();
+        if (nc1 != nc2) {
+            return false;
+        }
+
+        // check parameters
+        const auto param1 = getParameter();
+        const auto param2 = op.getParameter();
+        for (std::size_t p = 0U; p < qc::MAX_PARAMETERS; ++p) {
+            // it might make sense to use fuzzy comparison here
+            if (param1[p] != param2[p]) { return false; }
+        }
+
+        // check controls
+        if (nc1 != 0U) {
+            dd::Controls controls1{};
+            if (perm1.empty()) {
+                controls1 = getControls();
+            } else {
+                for (const auto& control: getControls()) {
+                    controls1.emplace(dd::Control{perm1.at(control.qubit), control.type});
+                }
+            }
+
+            dd::Controls controls2{};
+            if (perm2.empty()) {
+                controls2 = op.getControls();
+            } else {
+                for (const auto& control: op.getControls()) {
+                    controls2.emplace(dd::Control{perm2.at(control.qubit), control.type});
+                }
+            }
+
+            if (controls1 != controls2) { return false; }
+        }
+
+        // check targets
+        std::set<dd::Qubit> targets1{};
+        if (perm1.empty()) {
+            targets1 = {getTargets().begin(), getTargets().end()};
+        } else {
+            for (const auto& target: getTargets()) {
+                targets1.emplace(perm1.at(target));
+            }
+        }
+
+        std::set<dd::Qubit> targets2{};
+        if (perm2.empty()) {
+            targets2 = {op.getTargets().begin(), op.getTargets().end()};
+        } else {
+            for (const auto& target: op.getTargets()) {
+                targets2.emplace(perm2.at(target));
+            }
+        }
+        if (targets1 != targets2) { return false; }
+
+        // operations are identical
+        return true;
     }
 
 } // namespace qc

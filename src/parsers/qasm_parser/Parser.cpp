@@ -1,6 +1,6 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "parsers/qasm_parser/Parser.hpp"
@@ -437,6 +437,37 @@ namespace qasm {
             auto target = qubits.back().qubit;
             qubits.pop_back();
             return std::make_unique<qc::StandardOperation>(nqubits, dd::Controls{qubits.cbegin(), qubits.cend()}, target);
+        } else if (sym == Token::Kind::mcphase) {
+            scan();
+            check(Token::Kind::lpar);
+            std::unique_ptr<Expr> lambda(Exp());
+            check(Token::Kind::rpar);
+
+            std::vector<qc::QuantumRegister> registers{};
+            registers.emplace_back(ArgumentQreg());
+            while (sym != Token::Kind::semicolon) {
+                check(Token::Kind::comma);
+                registers.emplace_back(ArgumentQreg());
+            }
+            scan();
+
+            std::vector<dd::Control> qubits{};
+            for (const auto& reg: registers) {
+                if (reg.second != 1) {
+                    error("MCPhase for whole qubit registers not yet implemented");
+                }
+
+                if (std::count(registers.begin(), registers.end(), reg) > 1) {
+                    std::ostringstream oss{};
+                    oss << "Duplicate qubit " << reg.first << " in mcphase definition";
+                    error(oss.str());
+                }
+
+                qubits.emplace_back(dd::Control{reg.first});
+            }
+            auto target = qubits.back().qubit;
+            qubits.pop_back();
+            return std::make_unique<qc::StandardOperation>(nqubits, dd::Controls{qubits.cbegin(), qubits.cend()}, target, qc::Phase, lambda->num);
         } else if (sym == Token::Kind::swap) {
             scan();
             auto first_target = ArgumentQreg();
@@ -492,6 +523,23 @@ namespace qasm {
                 return std::make_unique<qc::CompoundOperation>(std::move(gate));
             }
 
+        } else if (sym == Token::Kind::sxgate || sym == Token::Kind::sxdggate) {
+            const auto type = (sym == Token::Kind::sxgate) ? qc::SX : qc::SXdag;
+            scan();
+
+            auto target = ArgumentQreg();
+            check(Token::Kind::semicolon);
+
+            if (target.second == 1) {
+                return std::make_unique<qc::StandardOperation>(nqubits, target.first, type);
+            }
+
+            // TODO: multiple targets could be useful here
+            auto gate = qc::CompoundOperation(nqubits);
+            for (dd::QubitCount i = 0; i < target.second; ++i) {
+                gate.emplace_back<qc::StandardOperation>(nqubits, static_cast<dd::Qubit>(target.first + i), type);
+            }
+            return std::make_unique<qc::CompoundOperation>(std::move(gate));
         } else if (sym == Token::Kind::identifier) {
             scan();
             auto           gateName  = t.str;
@@ -641,7 +689,7 @@ namespace qasm {
                         for (size_t j = 0; j < parameters.size(); ++j)
                             paramMap[cGateIt->second.parameterNames[j]] = parameters[j];
 
-                        if (auto cu = dynamic_cast<Ugate*>(cGate)) {
+                        if (auto cu = dynamic_cast<SingleQubitGate*>(cGate)) {
                             std::unique_ptr<Expr> theta(RewriteExpr(cu->theta, paramMap));
                             std::unique_ptr<Expr> phi(RewriteExpr(cu->phi, paramMap));
                             std::unique_ptr<Expr> lambda(RewriteExpr(cu->lambda, paramMap));
@@ -658,7 +706,7 @@ namespace qasm {
                 // identifier specifies just a single operation (U3 or CX)
                 if (gateIt != compoundGates.end() && gateIt->second.gates.size() == 1) {
                     auto gate = gateIt->second.gates.front();
-                    if (auto u = dynamic_cast<Ugate*>(gate)) {
+                    if (auto u = dynamic_cast<SingleQubitGate*>(gate)) {
                         std::unique_ptr<Expr> theta(RewriteExpr(u->theta, paramMap));
                         std::unique_ptr<Expr> phi(RewriteExpr(u->phi, paramMap));
                         std::unique_ptr<Expr> lambda(RewriteExpr(u->lambda, paramMap));
@@ -675,13 +723,16 @@ namespace qasm {
 
                 qc::CompoundOperation op(nqubits);
                 for (auto& gate: gateIt->second.gates) {
-                    if (auto u = dynamic_cast<Ugate*>(gate)) {
+                    if (auto u = dynamic_cast<SingleQubitGate*>(gate)) {
                         std::unique_ptr<Expr> theta(RewriteExpr(u->theta, paramMap));
                         std::unique_ptr<Expr> phi(RewriteExpr(u->phi, paramMap));
                         std::unique_ptr<Expr> lambda(RewriteExpr(u->lambda, paramMap));
 
                         if (argMap.at(u->target).second == 1) {
-                            op.emplace_back<qc::StandardOperation>(nqubits, argMap.at(u->target).first, qc::U3, lambda->num, phi->num, theta->num);
+                            op.emplace_back<qc::StandardOperation>(nqubits, argMap.at(u->target).first, u->type,
+                                                                   lambda ? lambda->num : 0.,
+                                                                   phi ? phi->num : 0.,
+                                                                   theta ? theta->num : 0.);
                         } else {
                             // TODO: multiple targets could be useful here
                             for (dd::QubitCount j = 0; j < argMap.at(u->target).second; ++j) {
@@ -829,6 +880,14 @@ namespace qasm {
 
     void Parser::GateDecl() {
         check(Token::Kind::gate);
+        // skip declarations of known gates
+        if (sym == Token::Kind::mcx_gray || sym == Token::Kind::mcx_recursive || sym == Token::Kind::mcx_vchain || sym == Token::Kind::mcphase || sym == Token::Kind::swap || sym == Token::Kind::sxgate || sym == Token::Kind::sxdggate) {
+            while (sym != Token::Kind::rbrace)
+                scan();
+
+            check(Token::Kind::rbrace);
+            return;
+        }
         check(Token::Kind::identifier);
 
         CompoundGate gate;
@@ -870,7 +929,13 @@ namespace qasm {
                 check(Token::Kind::rpar);
                 check(Token::Kind::identifier);
 
-                gate.gates.push_back(new Ugate(theta, phi, lambda, t.str));
+                gate.gates.push_back(new SingleQubitGate(t.str, qc::U3, lambda, phi, theta));
+                check(Token::Kind::semicolon);
+            } else if (sym == Token::Kind::sxgate || sym == Token::Kind::sxdggate) {
+                const auto gateType = sym == Token::Kind::sxgate ? qc::SX : qc::SXdag;
+                scan();
+                check(Token::Kind::identifier);
+                gate.gates.push_back(new SingleQubitGate(t.str, gateType));
                 check(Token::Kind::semicolon);
             } else if (sym == Token::Kind::cxgate) {
                 scan();
@@ -918,6 +983,25 @@ namespace qasm {
                 auto target = arguments.back();
                 arguments.pop_back();
                 gate.gates.push_back(new MCXgate(arguments, target));
+            } else if (sym == Token::Kind::mcphase) {
+                scan();
+                check(Token::Kind::lpar);
+                Expr* lambda = Exp();
+                check(Token::Kind::rpar);
+                std::vector<std::string> arguments{};
+                check(Token::Kind::identifier);
+                arguments.emplace_back(t.str);
+                while (sym != Token::Kind::semicolon) {
+                    check(Token::Kind::comma);
+                    check(Token::Kind::identifier);
+                    arguments.emplace_back(t.str);
+                }
+                scan();
+                auto target = arguments.back();
+                arguments.pop_back();
+                auto* theta = new Expr(Expr::Kind::number);
+                auto* phi   = new Expr(Expr::Kind::number);
+                gate.gates.push_back(new CUgate(theta, phi, lambda, arguments, target));
             } else if (sym == Token::Kind::identifier) {
                 scan();
                 std::string name = t.str;
@@ -966,8 +1050,8 @@ namespace qasm {
                             paramMap[gateIt->second.parameterNames[i]] = parameters[i];
 
                         for (auto& it: gateIt->second.gates) {
-                            if (auto u = dynamic_cast<Ugate*>(it)) {
-                                gate.gates.push_back(new Ugate(RewriteExpr(u->theta, paramMap), RewriteExpr(u->phi, paramMap), RewriteExpr(u->lambda, paramMap), argMap.at(u->target)));
+                            if (auto u = dynamic_cast<SingleQubitGate*>(it)) {
+                                gate.gates.push_back(new SingleQubitGate(argMap.at(u->target), u->type, RewriteExpr(u->lambda, paramMap), RewriteExpr(u->phi, paramMap), RewriteExpr(u->theta, paramMap)));
                             } else if (auto cx = dynamic_cast<CXgate*>(it)) {
                                 gate.gates.push_back(new CXgate(argMap.at(cx->control), argMap.at(cx->target)));
                             } else if (auto cu = dynamic_cast<CUgate*>(it)) {
@@ -1021,7 +1105,7 @@ namespace qasm {
                             std::vector<std::string> controls{};
                             for (size_t i = 0; i < arguments.size() - 1; ++i)
                                 controls.emplace_back(arguments[i]);
-                            if (auto u = dynamic_cast<Ugate*>(cGateIt->second.gates.at(0))) {
+                            if (auto u = dynamic_cast<SingleQubitGate*>(cGateIt->second.gates.at(0))) {
                                 gate.gates.push_back(new CUgate(RewriteExpr(u->theta, paramMap), RewriteExpr(u->phi, paramMap), RewriteExpr(u->lambda, paramMap), controls, arguments.back()));
                             } else {
                                 throw QASMParserException("Could not cast to UGate in gate declaration.");
@@ -1054,7 +1138,8 @@ namespace qasm {
     std::unique_ptr<qc::Operation> Parser::Qop() {
         if (sym == Token::Kind::ugate || sym == Token::Kind::cxgate ||
             sym == Token::Kind::swap || sym == Token::Kind::identifier ||
-            sym == Token::Kind::mcx_gray || sym == Token::Kind::mcx_recursive || sym == Token::Kind::mcx_vchain)
+            sym == Token::Kind::sxgate || sym == Token::Kind::sxdggate ||
+            sym == Token::Kind::mcx_gray || sym == Token::Kind::mcx_recursive || sym == Token::Kind::mcx_vchain || sym == Token::Kind::mcphase)
             return Gate();
         else if (sym == Token::Kind::measure) {
             scan();
