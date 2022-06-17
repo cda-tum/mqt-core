@@ -277,6 +277,9 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
                 case Teleportation:
                     std::cerr << "Operation with invalid type " << gate << " read from real file. Proceed with caution!" << std::endl;
                     break;
+                default:
+                    std::cerr << "Unknown operation:  " << gate << "!" << std::endl;
+                    break;
             }
         }
     }
