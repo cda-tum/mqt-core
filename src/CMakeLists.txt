@@ -61,6 +61,15 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON 
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
 target_link_libraries(${PROJECT_NAME} PUBLIC MQT::DDPackage)
 
+if(BUILD_ZX)
+  target_sources(${PROJECT_NAME} PUBLIC
+    ${${PROJECT_NAME}_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/zx/FunctionalityConstruction.cpp
+  )
+  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx")
+  target_link_libraries(${PROJECT_NAME} PUBLIC MQT::zx)
+endif()
+
 # add nlohmann::json library
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json" EXCLUDE_FROM_ALL)

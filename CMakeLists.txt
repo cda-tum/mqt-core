@@ -46,6 +46,16 @@ check_submodule_present(json)
 check_submodule_present(pybind11)
 check_submodule_present(pybind11_json)
 
+list (APPEND CMAKE_MODULE_PATH
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+find_package(GMP)
+if(GMP_FOUND)
+  check_submodule_present(zx)
+  set(BUILD_ZX ON)
+else()
+  message(WARNING "Did not find GMP. ZX library and other depending target will not be available")
+endif()
+
 # add main library code
 add_subdirectory(src)
 
