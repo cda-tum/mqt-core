@@ -6,31 +6,19 @@
 #include <gmpxx.h>
 
 namespace zx {
-    mpz_class gcd(mpz_class a, mpz_class b) {
-        while (b != 0) {
-            mpz_class r = 0;
-            mpz_mod(r.get_mpz_t(), a.get_mpz_t(), b.get_mpz_t());
-            a = b;
-            b = r;
-        }
-        return a;
-    }
 
     PiRational::PiRational(double val):
-        num(0), denom(1) {
+        frac() {
         if (std::abs(val) < PARAMETER_TOLERANCE)
             return;
 
         double mult_pi = PI / val;
         double nearest = std::round(mult_pi);
         if (std::abs(nearest - mult_pi) < PARAMETER_TOLERANCE) {
-            denom = static_cast<int>(nearest);
-            num   = 1;
-            if (denom < 0) {
-                num   = -1;
-                denom = -denom;
-            }
-
+            auto denom = static_cast<int>(nearest);
+            frac       = Rational(1, denom);
+            normalize();
+            modPi();
             return;
         }
 
@@ -42,39 +30,9 @@ namespace zx {
             val += 2;
         }
 
-        // double integral = val >= 0.0 ? std::floor(val) : std::ceil(val);
-        // double frac = val - integral;
-        double frac = val;
-
-        mpz_class gcd_ = gcd(std::round(frac * MAX_DENOM), MAX_DENOM);
-
-        denom = MAX_DENOM / gcd_;
-        num   = round(frac * MAX_DENOM) / gcd_;
-        if (denom < 0) {
-            num   = -num;
-            denom = -denom;
-        }
-    }
-
-    void PiRational::normalize() {
-        if (*this > 1) {
-            num -= 2 * denom;
-        } else if (*this <= -1) {
-            num += 2 * denom;
-        }
-        if (num == 0) {
-            denom = 1;
-            return;
-        }
-
-        mpz_class g = gcd(num, denom);
-        num /= g;
-        denom /= g;
-
-        if (denom < 0) {
-            num   = -num;
-            denom = -denom;
-        }
+        frac = Rational(val * MAX_DENOM, MAX_DENOM);
+        normalize();
+        modPi();
     }
 
     // double PiRational::to_double() const {
@@ -82,53 +40,69 @@ namespace zx {
     // }
 
     PiRational& PiRational::operator+=(const PiRational& rhs) {
-        num = num * rhs.denom + rhs.num * denom;
-        denom *= rhs.denom;
-        normalize();
+        frac += rhs.frac;
+        modPi();
         return *this;
     }
     PiRational& PiRational::operator+=(const int64_t rhs) {
-        num = num + rhs * denom;
-        normalize();
+        frac += rhs;
+        modPi();
         return *this;
     }
 
     PiRational& PiRational::operator-=(const PiRational& rhs) {
-        num = num * rhs.denom - rhs.num * denom;
-        denom *= rhs.denom;
-        normalize();
+        frac -= rhs.frac;
+        modPi();
         return *this;
     }
 
     PiRational& PiRational::operator-=(const int64_t rhs) {
-        num = num + rhs * denom;
-        normalize();
+        frac -= rhs;
+        modPi();
         return *this;
     }
 
     PiRational& PiRational::operator*=(const PiRational& rhs) {
-        num *= rhs.num;
-        denom *= rhs.denom;
-        this->normalize();
+        frac *= rhs.frac;
+        modPi();
         return *this;
     }
 
     PiRational& PiRational::operator*=(const int64_t rhs) {
-        num *= rhs;
-        this->normalize();
+        frac *= rhs;
+        modPi();
         return *this;
     }
 
     PiRational& PiRational::operator/=(const PiRational& rhs) {
-        num *= rhs.denom;
-        denom *= rhs.num;
-        this->normalize();
+        frac /= rhs.frac;
+        modPi();
         return *this;
     }
 
     PiRational& PiRational::operator/=(const int64_t rhs) {
-        denom *= rhs;
-        this->normalize();
+        frac /= rhs;
+        modPi();
         return *this;
+    }
+
+    void PiRational::modPi() {
+        if (*this > 1) {
+#if defined(GMP)
+            getNumUnsafe() -= 2 * getDenomUnsafe();
+#else
+            frac = Rational(getNum() - 2 * getDenom(), getDenom());
+#endif
+        } else if (*this <= -1) {
+#if defined(GMP)
+            getNumUnsafe() += 2 * getDenomUnsafe();
+#else
+            frac = Rational(getNum() + 2 * getDenom(), getDenom());
+#endif
+        }
+        if (getNum() == 0) {
+            setDenom(1);
+            return;
+        }
     }
 } // namespace zx

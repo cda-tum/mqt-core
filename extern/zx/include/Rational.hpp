@@ -1,6 +1,15 @@
 #pragma once
 
-#include <gmpxx.h>
+#if defined(GMP)
+    #include <gmpxx.h>
+using Rational = mpq_class;
+using BigInt   = mpz_class;
+#else
+    #include "boost/multiprecision/cpp_int.hpp"
+using Rational = boost::multiprecision::cpp_rational;
+using BigInt   = boost::multiprecision::cpp_int;
+#endif
+
 #include <iostream>
 #include <stdint.h>
 
@@ -12,23 +21,22 @@ namespace zx {
  * corresponding to the interval (-pi, pi]
  */
     class PiRational {
-        void normalize();
-
+        // void normalize();
     public:
-        mpz_class num, denom;
-
         PiRational():
-            num(0), denom(1){};
+            frac(){};
         explicit PiRational(int64_t num, int64_t denom):
-            num(num), denom(denom) {
-            normalize();
+            frac(num, denom) {
+            modPi();
         }
-        explicit PiRational(mpz_class num, mpz_class denom):
-            num(num), denom(denom) {
-            normalize();
+        explicit PiRational(const BigInt& num, const BigInt& denom):
+            frac(num, denom) {
+            modPi();
         }
         explicit PiRational(int64_t num):
-            num(num), denom(1) { normalize(); }
+            frac(num, 1) {
+            modPi();
+        }
         explicit PiRational(double val);
 
         PiRational& operator+=(const PiRational& rhs);
@@ -44,12 +52,83 @@ namespace zx {
         PiRational& operator/=(const int64_t rhs);
 
         // double to_double() const;
-        bool isInteger() const { return denom == 1; }
-        bool isZero() const { return num == 0; }
+        [[nodiscard]] bool isInteger() const {
+#if defined(GMP)
+            return frac.get_den() == 1;
+#else
+            return boost::multiprecision::denominator(frac) == 1;
+#endif
+        }
+        bool isZero() const {
+#if defined(GMP)
+            return frac.get_num() == 0;
+#else
+            return boost::multiprecision::numerator(frac) == 0;
+#endif
+        }
+        BigInt getDenom() const {
+#if defined(GMP)
+            return frac.get_den();
+#else
+            return boost::multiprecision::denominator(frac);
+#endif
+        }
+
+        BigInt getNum() const {
+#if defined(GMP)
+            return frac.get_num();
+#else
+            return boost::multiprecision::numerator(frac);
+#endif
+        }
+
+    private:
+        Rational frac;
+
+        void normalize() {
+#if defined(GMP)
+            frac.canonicalize();
+#else
+            // frac.normalize();
+#endif
+        }
+
+        void modPi();
+
+        void setNum(const BigInt& num) {
+#if defined(GMP)
+            frac.get_num() = num;
+#else
+            boost::multiprecision::numerator(frac)   = num;
+#endif
+        }
+
+        void setDenom(const BigInt& denom) {
+#if defined(GMP)
+            frac.get_den() = denom;
+#else
+            boost::multiprecision::denominator(frac) = denom;
+#endif
+        }
+#if defined(GMP)
+        BigInt& getDenomUnsafe() {
+            return frac.get_den();
+            // #else
+            //             return boost::multiprecision::denominator(frac);
+        }
+#endif
+
+#if defined(GMP)
+        BigInt& getNumUnsafe() {
+            return frac.get_num();
+            // #else
+            //             return boost::multiprecision::numerator(frac);
+        }
+#endif
     };
 
     inline PiRational operator-(const PiRational& rhs) {
-        return PiRational(-rhs.num, rhs.denom);
+        return PiRational(-rhs.getNum(), rhs.getDenom());
     }
     inline PiRational operator+(PiRational lhs, const PiRational& rhs) {
         lhs += rhs;
@@ -104,27 +183,27 @@ namespace zx {
     }
 
     inline bool operator<(const PiRational& lhs, const PiRational& rhs) {
-        return lhs.num * rhs.denom < rhs.num * lhs.denom;
+        return lhs.getNum() * rhs.getDenom() < rhs.getNum() * lhs.getDenom();
     }
 
     inline bool operator<(const PiRational& lhs, int64_t rhs) {
-        return lhs.num < rhs * lhs.denom;
+        return lhs.getNum() < rhs * lhs.getDenom();
     }
 
     inline bool operator<(int64_t lhs, const PiRational& rhs) {
-        return lhs * rhs.denom < rhs.num;
+        return lhs * rhs.getDenom() < rhs.getNum();
     }
 
     inline bool operator<=(const PiRational& lhs, const PiRational& rhs) {
-        return lhs.num * rhs.denom <= rhs.num * lhs.denom;
+        return lhs.getNum() * rhs.getDenom() <= rhs.getNum() * lhs.getDenom();
     }
 
     inline bool operator<=(const PiRational& lhs, int64_t rhs) {
-        return lhs.num <= rhs * lhs.denom;
+        return lhs.getNum() <= rhs * lhs.getDenom();
     }
 
     inline bool operator<=(int64_t lhs, const PiRational& rhs) {
-        return lhs * rhs.denom <= rhs.num;
+        return lhs * rhs.getDenom() <= rhs.getNum();
     }
 
     inline bool operator>(const PiRational& lhs, const PiRational& rhs) {
@@ -152,11 +231,11 @@ namespace zx {
     }
 
     inline bool operator==(const PiRational& lhs, const PiRational& rhs) {
-        return lhs.num == rhs.num && lhs.denom == rhs.denom;
+        return lhs.getNum() == rhs.getNum() && lhs.getDenom() == rhs.getDenom();
     }
 
     inline bool operator==(const PiRational& lhs, int64_t rhs) {
-        return lhs.num == rhs && lhs.denom == 1;
+        return lhs.getNum() == rhs && lhs.getDenom() == 1;
     }
 
     inline bool operator==(int64_t lhs, const PiRational& rhs) {
@@ -176,7 +255,7 @@ namespace zx {
     }
 
     inline std::ostream& operator<<(std::ostream& os, const zx::PiRational& rhs) {
-        os << rhs.num << "/" << rhs.denom;
+        os << rhs.getNum() << "/" << rhs.getDenom();
         return os;
     }
 

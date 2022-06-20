@@ -26,10 +26,10 @@ namespace zx {
         return isConstant() && constant.isInteger();
     }
     bool Expression::isClifford() const {
-        return isConstant() && (constant.isInteger() || constant.denom == 2);
+        return isConstant() && (constant.isInteger() || constant.getDenom() == 2);
     }
     bool Expression::isProperClifford() const {
-        return isConstant() && constant.denom == 2;
+        return isConstant() && constant.getDenom() == 2;
     }
 
     Expression& Expression::operator+=(const Expression& rhs) {

@@ -36,6 +36,8 @@ namespace zx {
         Vertex addVertex(Qubit qubit, Col col = 0,
                          const Expression& phase = Expression(),
                          VertexType        type  = VertexType::Z);
+        void   addQubit();
+        void   addQubits(zx::Qubit n);
         void   removeVertex(Vertex to_remove);
 
         int32_t               get_ndeleted() const { return deleted.size(); }

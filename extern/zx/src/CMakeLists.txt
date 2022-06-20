@@ -16,14 +16,19 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/Expression.cpp)
 
 # set include directories
-target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
+target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include> $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/extern>)
 
 # set required C++ standard and disable compiler specific extensions
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 
-# link to GMP libraries
-target_link_libraries(${PROJECT_NAME} PUBLIC gmpxx gmp::libgmpxx gmp gmp::libgmp)
+# link to GMP libraries if present
+if(GMP_FOUND)
+  target_link_libraries(${PROJECT_NAME} PUBLIC gmpxx gmp::libgmpxx gmp gmp::libgmp)
+else()
+  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/multiprecision" "extern/multiprecision")
+  target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include> $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/extern/multiprecision/include> $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/extern/config/include>)
+endif()
 
 # set compiler flags depending on compiler
 if(MSVC)

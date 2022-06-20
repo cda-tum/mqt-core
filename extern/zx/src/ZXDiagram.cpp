@@ -1,6 +1,7 @@
 #include "ZXDiagram.hpp"
 
 #include "Definitions.hpp"
+#include "Expression.hpp"
 #include "Rational.hpp"
 #include "Utils.hpp"
 // #include "dd/Definitions.hpp"
@@ -107,6 +108,18 @@ namespace zx {
     Vertex ZXDiagram::addVertex(Qubit qubit, Col col, const Expression& phase,
                                 VertexType type) {
         return addVertex({col, qubit, phase, type});
+    }
+
+    void ZXDiagram::addQubit() {
+        auto in  = addVertex(getNQubits() + 1, 0, Expression(), VertexType::Boundary);
+        auto out = addVertex(getNQubits() + 1, 0, Expression(), VertexType::Boundary);
+        inputs.emplace_back(in);
+        outputs.emplace_back(out);
+    }
+    void ZXDiagram::addQubits(zx::Qubit n) {
+        for (zx::Qubit i = 0; i < n; ++i) {
+            addQubit();
+        }
     }
 
     void ZXDiagram::removeVertex(Vertex to_remove) {
