@@ -63,6 +63,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC MQT::DDPackage)
 
 # add nlohmann::json library
 set(JSON_BuildTests OFF CACHE INTERNAL "")
+set(JSON_MultipleHeaders OFF CACHE INTERNAL "")
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json" EXCLUDE_FROM_ALL)
 target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json)
 
