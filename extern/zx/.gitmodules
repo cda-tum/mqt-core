@@ -3,9 +3,9 @@
 	url = https://github.com/google/googletest
     branch = main
     shallow = true
-[submodule "extern/boost/multiprecision"]
-	path = extern/boost/multiprecision
-	url = https://github.com/boostorg/multiprecision
 [submodule "extern/boost/config"]
 	path = extern/boost/config
 	url = https://github.com/boostorg/config
+[submodule "extern/boost/multiprecision"]
+	path = extern/boost/multiprecision
+	url = git@github.com:boostorg/multiprecision.git
