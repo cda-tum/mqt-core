@@ -17,7 +17,6 @@ namespace zx {
         if (std::abs(nearest - mult_pi) < PARAMETER_TOLERANCE) {
             auto denom = static_cast<int>(nearest);
             frac       = Rational(1, denom);
-            normalize();
             modPi();
             return;
         }
@@ -31,7 +30,6 @@ namespace zx {
         }
 
         frac = Rational(val * MAX_DENOM, MAX_DENOM);
-        normalize();
         modPi();
     }
 
@@ -88,17 +86,9 @@ namespace zx {
 
     void PiRational::modPi() {
         if (*this > 1) {
-#if defined(GMP)
-            getNumUnsafe() -= 2 * getDenomUnsafe();
-#else
             frac = Rational(getNum() - 2 * getDenom(), getDenom());
-#endif
         } else if (*this <= -1) {
-#if defined(GMP)
-            getNumUnsafe() += 2 * getDenomUnsafe();
-#else
             frac = Rational(getNum() + 2 * getDenom(), getDenom());
-#endif
         }
         if (getNum() == 0) {
             setDenom(1);

@@ -22,12 +22,14 @@ target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 
-# link to GMP libraries if present
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/boost/multiprecision" "extern/boost/multiprecision")
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/boost/config" "extern/boost/config")
+target_link_libraries(${PROJECT_NAME} PUBLIC Boost::config Boost::multiprecision)
+target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
+
+#   # link to GMP libraries if present
 if(GMP_FOUND)
-  target_link_libraries(${PROJECT_NAME} PUBLIC gmpxx gmp::libgmpxx gmp gmp::libgmp)
-else()
-  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/multiprecision" "extern/multiprecision")
-  target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include> $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/extern/multiprecision/include> $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/extern/config/include>)
+  target_link_libraries(${PROJECT_NAME} PUBLIC GMP::gmp)
 endif()
 
 # set compiler flags depending on compiler

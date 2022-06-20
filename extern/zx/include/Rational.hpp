@@ -1,9 +1,10 @@
 #pragma once
 
 #if defined(GMP)
-    #include <gmpxx.h>
-using Rational = mpq_class;
-using BigInt   = mpz_class;
+    #include "boost/multiprecision/gmp.hpp"
+using Rational = boost::multiprecision::mpq_rational;
+using BigInt   = boost::multiprecision::mpz_int;
+
 #else
     #include "boost/multiprecision/cpp_int.hpp"
 using Rational = boost::multiprecision::cpp_rational;
@@ -53,78 +54,31 @@ namespace zx {
 
         // double to_double() const;
         [[nodiscard]] bool isInteger() const {
-#if defined(GMP)
-            return frac.get_den() == 1;
-#else
             return boost::multiprecision::denominator(frac) == 1;
-#endif
         }
         bool isZero() const {
-#if defined(GMP)
-            return frac.get_num() == 0;
-#else
             return boost::multiprecision::numerator(frac) == 0;
-#endif
         }
         BigInt getDenom() const {
-#if defined(GMP)
-            return frac.get_den();
-#else
             return boost::multiprecision::denominator(frac);
-#endif
         }
 
         BigInt getNum() const {
-#if defined(GMP)
-            return frac.get_num();
-#else
             return boost::multiprecision::numerator(frac);
-#endif
         }
 
     private:
         Rational frac;
 
-        void normalize() {
-#if defined(GMP)
-            frac.canonicalize();
-#else
-            // frac.normalize();
-#endif
-        }
-
         void modPi();
 
         void setNum(const BigInt& num) {
-#if defined(GMP)
-            frac.get_num() = num;
-#else
-            boost::multiprecision::numerator(frac)   = num;
-#endif
+            boost::multiprecision::numerator(frac) = num;
         }
 
         void setDenom(const BigInt& denom) {
-#if defined(GMP)
-            frac.get_den() = denom;
-#else
             boost::multiprecision::denominator(frac) = denom;
-#endif
         }
-#if defined(GMP)
-        BigInt& getDenomUnsafe() {
-            return frac.get_den();
-            // #else
-            //             return boost::multiprecision::denominator(frac);
-        }
-#endif
-
-#if defined(GMP)
-        BigInt& getNumUnsafe() {
-            return frac.get_num();
-            // #else
-            //             return boost::multiprecision::numerator(frac);
-        }
-#endif
     };
 
     inline PiRational operator-(const PiRational& rhs) {

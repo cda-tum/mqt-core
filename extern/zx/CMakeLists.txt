@@ -31,18 +31,15 @@ endmacro()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+check_submodule_present(boost/config)
+check_submodule_present(boost/multiprecision)
+set(BOOST_MP_STANDALONE ON)
+
 find_package(GMP)
 if(GMP_FOUND)
-  add_library(gmp::gmpxx IMPORTED INTERFACE)
-  add_library(gmp::libgmpxx IMPORTED INTERFACE)
-  add_library(gmp::libgmp IMPORTED INTERFACE)
   add_compile_definitions(GMP)
 else()
-  # message(WARNING "Did not find GMP. ZX library and other depending target will not be available")
-check_submodule_present(config)
-check_submodule_present(multiprecision)
-set(BOOST_MP_STANDALONE ON)
-add_compile_definitions(BOOST_MP_STANDALONE)
+  message(WARNING "Did not find GMP. Using Boost multiprecision library instead.")
 endif()
 
 
