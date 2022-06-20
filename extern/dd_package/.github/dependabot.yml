@@ -9,6 +9,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "06:00"
+      timezone: "Europe/Vienna"
     assignees:
       - "burgholzer"
 
@@ -21,5 +22,6 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "06:00"
+      timezone: "Europe/Vienna"
     assignees:
       - "burgholzer"
