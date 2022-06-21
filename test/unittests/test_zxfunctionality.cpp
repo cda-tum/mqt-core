@@ -112,6 +112,4 @@ TEST_F(ZXDiagramTest, many_gates) {
     EXPECT_EQ(diag.getNVertices(), 6);
     EXPECT_EQ(diag.getNEdges(), 3);
     EXPECT_TRUE(diag.isIdentity());
-
-    // EXPECT_EQ(diag.getEdge(0, 4).value().type, zx::EdgeType::Hadamard);
 }
