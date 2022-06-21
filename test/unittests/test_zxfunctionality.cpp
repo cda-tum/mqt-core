@@ -9,6 +9,7 @@
 #include "zx/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
+#include <iostream>
 
 class ZXDiagramTest: public ::testing::Test {
 public:
@@ -59,7 +60,7 @@ TEST_F(ZXDiagramTest, parse_qasm) {
     EXPECT_EQ(diag.getVData(2).value().type, zx::VertexType::Boundary);
     EXPECT_EQ(diag.getVData(3).value().type, zx::VertexType::Boundary);
 
-    for (auto i = 0; i < diag.getNVertices(); i++)
+    for (std::size_t i = 0; i < diag.getNVertices(); i++)
         EXPECT_TRUE(diag.getVData(i).value().phase.isZero());
 }
 
