@@ -3,7 +3,6 @@
 #include "Definitions.hpp"
 
 #include <cmath>
-#include <gmpxx.h>
 
 namespace zx {
 
