@@ -7,9 +7,9 @@
 
 namespace zx {
     std::size_t simplifyVertices(ZXDiagram& diag, VertexCheckFun check,
-                             VertexRuleFun rule) {
+                                 VertexRuleFun rule) {
         std::size_t n_simplifications = 0;
-        bool    new_matches       = true;
+        bool        new_matches       = true;
 
         while (new_matches) {
             new_matches = false;
@@ -27,7 +27,7 @@ namespace zx {
 
     std::size_t simplifyEdges(ZXDiagram& diag, EdgeCheckFun check, EdgeRuleFun rule) {
         std::size_t n_simplifications = 0;
-        bool    new_matches       = true;
+        bool        new_matches       = true;
 
         while (new_matches) {
             new_matches = false;
@@ -46,7 +46,7 @@ namespace zx {
 
     std::size_t gadgetSimp(ZXDiagram& diag) {
         std::size_t n_simplifications = 0;
-        bool    new_matches       = true;
+        bool        new_matches       = true;
 
         while (new_matches) {
             new_matches = false;
@@ -86,7 +86,7 @@ namespace zx {
     std::size_t interiorCliffordSimp(ZXDiagram& diag) {
         spiderSimp(diag);
 
-        bool    new_matches       = true;
+        bool        new_matches       = true;
         std::size_t n_simplifications = 0;
         std::size_t n_id, n_spider, n_pivot, n_localComp;
         while (new_matches) {
@@ -109,7 +109,7 @@ namespace zx {
     }
 
     std::size_t cliffordSimp(ZXDiagram& diag) {
-        bool    new_matches       = true;
+        bool        new_matches       = true;
         std::size_t n_simplifications = 0;
         std::size_t n_clifford, n_pivot;
         while (new_matches) {

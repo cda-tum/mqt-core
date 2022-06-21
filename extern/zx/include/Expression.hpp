@@ -11,8 +11,8 @@ namespace zx {
     struct Variable {
         Variable(std::int32_t id, std::string name):
             id(id), name(name){};
-        std::int32_t     id;
-        std::string name;
+        std::int32_t id;
+        std::string  name;
     };
 
     inline bool operator==(const Variable& lhs, const Variable& rhs) {

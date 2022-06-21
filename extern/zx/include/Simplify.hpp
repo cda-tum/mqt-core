@@ -10,7 +10,7 @@ namespace zx {
     using EdgeRuleFun    = decltype(fuseSpiders);
 
     std::size_t simplifyVertices(ZXDiagram& diag, VertexCheckFun check,
-                             VertexRuleFun rule);
+                                 VertexRuleFun rule);
 
     std::size_t simplifyEdges(ZXDiagram& diag, EdgeCheckFun check, EdgeRuleFun rule);
 

@@ -123,8 +123,8 @@ namespace zx {
         std::vector<Vertex>                    deleted;
         std::vector<Vertex>                    inputs;
         std::vector<Vertex>                    outputs;
-        std::size_t                                nvertices = 0;
-        std::size_t                                nedges    = 0;
+        std::size_t                            nvertices = 0;
+        std::size_t                            nedges    = 0;
 
         void addZSpider(Qubit qubit, std::vector<Vertex>& qubit_vertices,
                         const Expression& phase = Expression(),
