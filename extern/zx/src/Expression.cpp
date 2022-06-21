@@ -1,5 +1,6 @@
 #include "Expression.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 namespace zx {
