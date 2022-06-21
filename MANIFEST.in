@@ -22,4 +22,7 @@ prune extern/pybind11/tests
 graft extern/pybind11_json
 prune extern/pybind11_json/test
 
+graft extern/zx
+prune extern/zx/extern/googletest
+
 prune **/.github
