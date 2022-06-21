@@ -285,7 +285,8 @@ namespace zx {
         if (diag.degree(v) != 1 || diag.isBoundaryVertex(v))
             return false;
 
-        auto [id0, id0_etype] = diag.incidentEdges(v)[0];
+        auto id0       = diag.incidentEdges(v)[0].to;
+        auto id0_etype = diag.incidentEdges(v)[0].type;
         if (!isPauli(diag, id0) || diag.degree(id0) < 2 ||
             id0_etype != zx::EdgeType::Hadamard)
             return false;
