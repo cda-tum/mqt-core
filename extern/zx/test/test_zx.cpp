@@ -164,7 +164,7 @@ TEST_F(ZXDiagramTest, create_diagram) {
     EXPECT_EQ(diag.getVData(5).value().type, zx::VertexType::Z);
     EXPECT_EQ(diag.getVData(6).value().type, zx::VertexType::X);
 
-    for (auto i = 0; i < diag.getNVertices(); i++)
+    for (std::size_t i = 0; i < diag.getNVertices(); i++)
         EXPECT_TRUE(diag.getVData(6).value().phase.isZero());
 }
 
@@ -197,7 +197,7 @@ TEST_F(ZXDiagramTest, graph_like) {
     EXPECT_EQ(diag.getVData(5).value().type, zx::VertexType::Z);
     EXPECT_EQ(diag.getVData(6).value().type, zx::VertexType::Z);
 
-    for (auto i = 0; i < diag.getNVertices(); i++)
+    for (std::size_t i = 0; i < diag.getNVertices(); i++)
         EXPECT_TRUE(diag.getVData(i).value().phase.isZero());
 }
 

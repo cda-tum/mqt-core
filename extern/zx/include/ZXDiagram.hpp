@@ -20,7 +20,7 @@ namespace zx {
     class ZXDiagram {
     public:
         ZXDiagram() = default;
-        ZXDiagram(int32_t nqubits); // create n_qubit identity_diagram
+        ZXDiagram(std::size_t nqubits); // create n_qubit identity_diagram
         explicit ZXDiagram(std::string filename);
         // explicit ZXDiagram(const qc::QuantumComputation &circuit);
 
@@ -40,10 +40,10 @@ namespace zx {
         void   addQubits(zx::Qubit n);
         void   removeVertex(Vertex to_remove);
 
-        int32_t               get_ndeleted() const { return deleted.size(); }
-        [[nodiscard]] int32_t getNVertices() const { return nvertices; }
-        [[nodiscard]] int32_t getNEdges() const { return nedges; }
-        [[nodiscard]] int32_t getNQubits() const { return inputs.size(); }
+        std::size_t               get_ndeleted() const { return deleted.size(); }
+        [[nodiscard]] std::size_t getNVertices() const { return nvertices; }
+        [[nodiscard]] std::size_t getNEdges() const { return nedges; }
+        [[nodiscard]] std::size_t getNQubits() const { return inputs.size(); }
 
         [[nodiscard]] bool                connected(Vertex from, Vertex to) const;
         [[nodiscard]] std::optional<Edge> getEdge(Vertex from, Vertex to) const;
@@ -143,7 +143,7 @@ namespace zx {
         void addCcx(Qubit ctrl_0, Qubit ctrl_1, Qubit target,
                     std::vector<Vertex>& qubit_vertices);
 
-        std::vector<Vertex> initGraph(int nqubits);
+        std::vector<Vertex> initGraph(std::size_t nqubits);
         void                closeGraph(std::vector<Vertex>& qubit_vertices);
 
         void removeHalfEdge(Vertex from, Vertex to);

@@ -8,9 +8,9 @@ namespace zx {
     enum class VertexType { Boundary,
                             Z,
                             X };
-    using Vertex = std::int32_t;
-    using Col    = std::int32_t;
-    using Qubit  = std::int_fast32_t;
+    using Vertex = std::size_t;
+    using Col    = int;
+    using Qubit  = int;
     using fp     = double;
 
     constexpr double        MAX_DENOM           = 1e9; // TODO: maybe too high

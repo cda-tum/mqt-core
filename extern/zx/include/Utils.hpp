@@ -10,11 +10,11 @@
 namespace zx {
 
     struct Edge {
-        int32_t  to;
+        Vertex   to;
         EdgeType type;
 
         Edge() = default;
-        Edge(int32_t to, EdgeType type):
+        Edge(Vertex to, EdgeType type):
             to(to), type(type){};
         void toggle() {
             type = (type == EdgeType::Simple) ? EdgeType::Hadamard : EdgeType::Simple;

@@ -4,17 +4,16 @@
 #include "Expression.hpp"
 #include "Rational.hpp"
 #include "Utils.hpp"
-// #include "dd/Definitions.hpp"
-// #include "operations/CompoundOperation.hpp"
-// #include "operations/OpType.hpp"
+
 #include <algorithm>
+#include <cstddef>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace zx {
 
-    ZXDiagram::ZXDiagram(int32_t nqubits) {
+    ZXDiagram::ZXDiagram(std::size_t nqubits) {
         auto qubit_vertices = initGraph(nqubits);
         closeGraph(qubit_vertices);
     }
@@ -354,7 +353,7 @@ namespace zx {
         addCnot(ctrl_0, ctrl_1, qubit_vertices);
     }
 
-    std::vector<Vertex> ZXDiagram::initGraph(int nqubits) {
+    std::vector<Vertex> ZXDiagram::initGraph(std::size_t nqubits) {
         std::vector<Vertex> qubit_vertices(nqubits);
 
         for (size_t i = 0; i < qubit_vertices.size(); i++) {

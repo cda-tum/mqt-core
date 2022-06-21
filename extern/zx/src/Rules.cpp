@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <optional>
 
 namespace zx {
     bool checkIdSimp(ZXDiagram& diag, Vertex v) {
@@ -303,8 +304,7 @@ namespace zx {
             return true;
         }
 
-        Vertex n0 = -1;
-        // EdgeType n0_etype;
+        std::optional<Vertex> n0;
         for (auto& [n, etype]: diag.incidentEdges(id0)) {
             if (n == v)
                 continue;
@@ -315,11 +315,11 @@ namespace zx {
             // n0_etype = etype;
         }
 
-        Vertex id1          = -1;
-        Vertex phase_spider = -1;
+        std::optional<Vertex> id1;
+        std::optional<Vertex> phase_spider;
 
         bool found_gadget = false;
-        for (auto& [n, etype]: diag.incidentEdges(n0)) {
+        for (auto& [n, etype]: diag.incidentEdges(n0.value())) {
             if (n == id0)
                 continue;
 
@@ -333,8 +333,8 @@ namespace zx {
             id1          = n;
 
             for (auto& [nn, nn_etype]:
-                 diag.incidentEdges(id1)) { // Todo: maybe problem with parallel edge?
-                                            // There shouldnt be any
+                 diag.incidentEdges(id1.value())) { // Todo: maybe problem with parallel edge?
+                                                    // There shouldnt be any
                 if (nn_etype != zx::EdgeType::Hadamard || diag.isDeleted(nn)) {
                     found_gadget = false;
                     break; // not a phase gadget
@@ -359,19 +359,19 @@ namespace zx {
                 break;
         }
 
-        if (!found_gadget || phase_spider < 0)
+        if (!found_gadget || !phase_spider.has_value())
             return false;
 
         if (!diag.phase(id0).isZero()) {
             diag.setPhase(v, -diag.phase(v));
             diag.setPhase(id0, Expression(PiRational(0, 1)));
         }
-        if (diag.phase(id1).isZero())
-            diag.addPhase(v, diag.phase(phase_spider));
+        if (diag.phase(id1.value()).isZero())
+            diag.addPhase(v, diag.phase(phase_spider.value()));
         else
-            diag.addPhase(v, -diag.phase(phase_spider));
-        diag.removeVertex(phase_spider);
-        diag.removeVertex(id1);
+            diag.addPhase(v, -diag.phase(phase_spider.value()));
+        diag.removeVertex(phase_spider.value());
+        diag.removeVertex(id1.value());
         return true;
     }
 
