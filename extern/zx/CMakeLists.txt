@@ -36,9 +36,7 @@ check_submodule_present(boost/multiprecision)
 set(BOOST_MP_STANDALONE ON)
 
 find_package(GMP)
-if(GMP_FOUND)
-  add_compile_definitions(GMP)
-else()
+if(NOT GMP_FOUND)
   message(WARNING "Did not find GMP. Using Boost multiprecision library instead.")
 endif()
 

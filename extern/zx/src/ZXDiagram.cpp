@@ -354,7 +354,7 @@ namespace zx {
     }
 
     std::vector<Vertex> ZXDiagram::initGraph(std::size_t nqubits) {
-        std::vector<Vertex> qubit_vertices(nqubits);
+        std::vector<Vertex> qubit_vertices(nqubits, 0);
 
         for (size_t i = 0; i < qubit_vertices.size(); i++) {
             auto v = addVertex(

@@ -29,7 +29,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_
 
 #   # link to GMP libraries if present
 if(GMP_FOUND)
-  target_link_libraries(${PROJECT_NAME} PUBLIC GMP::gmp)
+  target_compile_definitions(${PROJECT_NAME} PUBLIC GMP)
+  target_link_libraries(${PROJECT_NAME} PUBLIC GMP::gmp GMP::gmpxx)
 endif()
 
 # set compiler flags depending on compiler
