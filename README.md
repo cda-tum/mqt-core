@@ -152,6 +152,23 @@ found [here](https://docs.microsoft.com/en-us/cpp/build/clang-support-msbuild?vi
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
+The QFR library also provides functionality to represent functionality of quantum circuits in the form of [ZX-diagrams](https://github.com/cda-tum/zx). At this point this feature is only used by [MQT QMAP](https://github.com/cda-tum/qmap) but is going to be extended further in future releases. If you want to use this feature it is recommended (although not strictly necessary) to have [GMP](https://gmplib.org/) installed in your system. 
+
+    * Ubuntu
+    ```
+    apt-get install libgmp3-dev
+    ```
+    
+    * MacOS
+    ```
+    brew install gmp
+    ```
+    
+    * Windows
+    ```
+    sudo apt-get install libgmp3-dev
+    ```
+
 ### Configure, Build, and Install
 
 To start off, clone this repository using

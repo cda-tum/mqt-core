@@ -51,12 +51,9 @@ package_add_test(${PROJECT_NAME}_test
                  ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_io.cpp
                  ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_ddfunctionality.cpp
                  ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_qfr_functionality.cpp
-                 ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/eval_dynamic_circuits.cpp)
-
-if(BUILD_ZX)
-  package_add_test(${PROJECT_NAME}_zx_test
-  ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_zxfunctionality.cpp)
-endif()
+                 ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/eval_dynamic_circuits.cpp
+                 ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_zxfunctionality.cpp)
+               
 
 add_custom_command(TARGET ${PROJECT_NAME}_test
                    POST_BUILD
