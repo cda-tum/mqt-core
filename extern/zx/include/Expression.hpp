@@ -9,9 +9,9 @@
 
 namespace zx {
     struct Variable {
-        Variable(int32_t id, std::string name):
+        Variable(std::int32_t id, std::string name):
             id(id), name(name){};
-        int32_t     id;
+        std::int32_t     id;
         std::string name;
     };
 

@@ -51,7 +51,7 @@ namespace zx {
              return edges[v];
         }
 
-        [[nodiscard]] int32_t degree(Vertex v) const { return edges[v].size(); }
+        [[nodiscard]] std::size_t degree(Vertex v) const { return edges[v].size(); }
 
         [[nodiscard]] const Expression& phase(Vertex v) const {
             return vertices[v].value().phase;
@@ -123,8 +123,8 @@ namespace zx {
         std::vector<Vertex>                    deleted;
         std::vector<Vertex>                    inputs;
         std::vector<Vertex>                    outputs;
-        int32_t                                nvertices = 0;
-        int32_t                                nedges    = 0;
+        std::size_t                                nvertices = 0;
+        std::size_t                                nedges    = 0;
 
         void addZSpider(Qubit qubit, std::vector<Vertex>& qubit_vertices,
                         const Expression& phase = Expression(),

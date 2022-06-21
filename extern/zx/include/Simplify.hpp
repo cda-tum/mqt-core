@@ -9,29 +9,29 @@ namespace zx {
     using EdgeCheckFun   = decltype(checkSpiderFusion);
     using EdgeRuleFun    = decltype(fuseSpiders);
 
-    int32_t simplifyVertices(ZXDiagram& diag, VertexCheckFun check,
+    std::size_t simplifyVertices(ZXDiagram& diag, VertexCheckFun check,
                              VertexRuleFun rule);
 
-    int32_t simplifyEdges(ZXDiagram& diag, EdgeCheckFun check, EdgeRuleFun rule);
+    std::size_t simplifyEdges(ZXDiagram& diag, EdgeCheckFun check, EdgeRuleFun rule);
 
-    int32_t gadgetSimp(ZXDiagram& diag);
+    std::size_t gadgetSimp(ZXDiagram& diag);
 
-    int32_t idSimp(ZXDiagram& diag);
+    std::size_t idSimp(ZXDiagram& diag);
 
-    int32_t spiderSimp(ZXDiagram& diag);
+    std::size_t spiderSimp(ZXDiagram& diag);
 
-    int32_t localCompSimp(ZXDiagram& diag);
+    std::size_t localCompSimp(ZXDiagram& diag);
 
-    int32_t pivotPauliSimp(ZXDiagram& diag);
+    std::size_t pivotPauliSimp(ZXDiagram& diag);
 
-    int32_t pivotSimp(ZXDiagram& diag);
+    std::size_t pivotSimp(ZXDiagram& diag);
 
-    int32_t interiorCliffordSimp(ZXDiagram& diag);
+    std::size_t interiorCliffordSimp(ZXDiagram& diag);
 
-    int32_t cliffordSimp(ZXDiagram& diag);
+    std::size_t cliffordSimp(ZXDiagram& diag);
 
-    int32_t pivotgadgetSimp(ZXDiagram& diag);
+    std::size_t pivotgadgetSimp(ZXDiagram& diag);
 
-    int32_t fullReduce(ZXDiagram& diag);
+    std::size_t fullReduce(ZXDiagram& diag);
 
 } // namespace zx

@@ -36,7 +36,7 @@ namespace zx {
         class VertexIterator {
         public:
             using iterator_category = std::forward_iterator_tag;
-            using difference_type   = int32_t;
+            using difference_type   = std::int32_t;
             using value_type        = std::pair<Vertex, VertexData&>;
             using pointer           = value_type*;
             using reference         = value_type&;
@@ -86,7 +86,7 @@ namespace zx {
         class EdgeIterator {
         public:
             using iterator_category = std::forward_iterator_tag;
-            using difference_type   = int32_t;
+            using difference_type   = std::int32_t;
             using value_type        = std::pair<Vertex, Vertex>;
             using pointer           = value_type*;
             using reference         = value_type&;

@@ -4,6 +4,7 @@
 #include "Simplify.hpp"
 #include "ZXDiagram.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <gtest/gtest.h>
 
@@ -258,44 +259,44 @@ protected:
     virtual void SetUp() {}
 };
 
-zx::ZXDiagram make_identity_diagram(int32_t nqubits,
-                                    int32_t spiders_per_qubit) {
+zx::ZXDiagram make_identity_diagram(std::size_t nqubits,
+                                    std::size_t spiders_per_qubit) {
     zx::ZXDiagram           diag(nqubits);
     std::vector<zx::Vertex> rightmost_vertices = diag.getInputs();
 
-    for (auto i = 0; i < nqubits; i++)
+    for (std::size_t i = 0; i < nqubits; i++)
         diag.remove_edge(i, i + nqubits);
 
     // add identity spiders
-    for (auto qubit = 0; qubit < nqubits; qubit++) {
-        for (auto j = 0; j < spiders_per_qubit; j++) {
+    for (zx::Qubit qubit = 0; static_cast<std::size_t>(qubit) < nqubits; qubit++) {
+        for (std::size_t j = 0; j < spiders_per_qubit; j++) {
             zx::Vertex v = diag.addVertex(qubit);
             diag.addEdge(rightmost_vertices[qubit], v);
             rightmost_vertices[qubit] = v;
         }
     }
 
-    for (auto qubit = 0; qubit < nqubits; qubit++) {
+    for (std::size_t qubit = 0; qubit < nqubits; qubit++) {
         diag.addEdge(rightmost_vertices[qubit], qubit + nqubits);
     }
 
     return diag;
 }
 
-zx::ZXDiagram make_empty_diagram(int32_t nqubits) {
+zx::ZXDiagram make_empty_diagram(std::size_t nqubits) {
     auto diag = make_identity_diagram(nqubits, 0);
-    for (auto i = 0; i < nqubits; i++) {
+    for (std::size_t i = 0; i < nqubits; i++) {
         diag.remove_edge(i, i + nqubits);
     }
     return diag;
 }
 
 TEST_F(SimplifyTest, idSimp) {
-    int32_t       nqubits = 3;
-    int32_t       spiders = 100;
+    std::size_t   nqubits = 3;
+    std::size_t   spiders = 100;
     zx::ZXDiagram diag    = make_identity_diagram(nqubits, spiders);
 
-    int32_t removed = zx::idSimp(diag);
+    std::size_t removed = zx::idSimp(diag);
 
     EXPECT_EQ(removed, nqubits * spiders);
     EXPECT_EQ(diag.getNVertices(), nqubits * 2);
@@ -303,27 +304,27 @@ TEST_F(SimplifyTest, idSimp) {
 }
 
 TEST_F(SimplifyTest, idSimp_2) {
-    int32_t       nqubits = 2;
-    int32_t       spiders = 100;
+    std::size_t   nqubits = 2;
+    std::size_t   spiders = 100;
     zx::ZXDiagram diag    = make_identity_diagram(nqubits, spiders);
 
     diag.addEdge(50, 150); // make vertices 50 and 150 non-removable
 
-    int32_t removed = zx::idSimp(diag);
+    std::size_t removed = zx::idSimp(diag);
     EXPECT_EQ(removed, nqubits * 100 - 2);
     EXPECT_EQ(diag.getNVertices(), nqubits * 2 + 2);
     EXPECT_EQ(diag.getNEdges(), 5);
 }
 
 TEST_F(SimplifyTest, spider_fusion) {
-    int32_t       nqubits  = 1;
-    int32_t       nspiders = 100;
+    std::size_t   nqubits  = 1;
+    std::size_t   nspiders = 100;
     zx::ZXDiagram diag     = make_identity_diagram(nqubits, nspiders);
 
     for (zx::Vertex v = 2; v < diag.getNVertices(); v++)
         diag.addPhase(v, zx::Expression(zx::PiRational(1, 1)));
 
-    int32_t removed = zx::spiderSimp(diag);
+    std::size_t removed = zx::spiderSimp(diag);
 
     EXPECT_EQ(removed, nspiders - 1);
     EXPECT_EQ(3, diag.getNVertices());
@@ -332,13 +333,13 @@ TEST_F(SimplifyTest, spider_fusion) {
 }
 
 TEST_F(SimplifyTest, spider_fusion_2) {
-    int32_t       nqubits  = 2;
-    int32_t       nspiders = 5;
+    std::size_t   nqubits  = 2;
+    std::size_t   nspiders = 5;
     zx::ZXDiagram diag     = make_identity_diagram(nqubits, nspiders);
 
     diag.addEdge(6, 11);
 
-    int32_t removed = zx::spiderSimp(diag);
+    std::size_t removed = zx::spiderSimp(diag);
 
     EXPECT_EQ(removed, 9);
     EXPECT_EQ(diag.getNVertices(), 5);
@@ -354,13 +355,13 @@ TEST_F(SimplifyTest, spider_fusion_2) {
 }
 
 TEST_F(SimplifyTest, spider_fusion_parallel_edges) {
-    int32_t       nqubits  = 1;
-    int32_t       nspiders = 3;
+    std::size_t   nqubits  = 1;
+    std::size_t   nspiders = 3;
     zx::ZXDiagram diag     = make_identity_diagram(nqubits, nspiders);
     diag.addEdge(2, 4);
     diag.setType(4, zx::VertexType::X);
 
-    int32_t removed = zx::spiderSimp(diag);
+    std::size_t removed = zx::spiderSimp(diag);
 
     EXPECT_EQ(removed, 1);
     EXPECT_EQ(diag.getNEdges(), 2);
@@ -388,7 +389,7 @@ TEST_F(SimplifyTest, localComp) {
     diag.addEdge(2, 7);
     diag.addEdge(3, 8);
 
-    int32_t removed = zx::localCompSimp(diag);
+    std::size_t removed = zx::localCompSimp(diag);
 
     EXPECT_EQ(removed, 1);
 
@@ -432,7 +433,7 @@ TEST_F(SimplifyTest, pivotPauli) {
     diag.addEdge(5, 8, zx::EdgeType::Hadamard);
     diag.addEdge(5, 9, zx::EdgeType::Hadamard);
 
-    int32_t removed = zx::pivotPauliSimp(diag);
+    std::size_t removed = zx::pivotPauliSimp(diag);
 
     EXPECT_EQ(removed, 1);
     EXPECT_EQ(diag.getNEdges(), 12);
@@ -445,15 +446,15 @@ TEST_F(SimplifyTest, pivotPauli) {
 }
 
 TEST_F(SimplifyTest, interior_clifford) {
-    int32_t       nqubits       = 100;
-    int32_t       qubit_spiders = 100;
+    std::size_t   nqubits       = 100;
+    std::size_t   qubit_spiders = 100;
     zx::ZXDiagram diag          = make_identity_diagram(nqubits, qubit_spiders);
 
     zx::interiorCliffordSimp(diag);
 
     EXPECT_EQ(diag.getNVertices(), nqubits * 2);
     EXPECT_EQ(diag.getNEdges(), nqubits);
-    for (auto v = 0; v < nqubits; v++) {
+    for (zx::Vertex v = 0; v < nqubits; v++) {
         EXPECT_TRUE(diag.connected(diag.getInputs()[v], diag.getOutputs()[v]));
     }
 }
@@ -767,7 +768,7 @@ protected:
 };
 
 TEST_F(SymbolicTest, idSimp) {
-    int32_t nqubits = 50;
+    std::size_t nqubits = 50;
 
     zx::ZXDiagram  diag = make_identity_diagram(nqubits, 100);
     zx::Expression e;
