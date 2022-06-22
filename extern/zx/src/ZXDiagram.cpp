@@ -220,7 +220,7 @@ namespace zx {
                     "Cannot concatenate Diagrams with differing number of qubits!");
 
         std::unordered_map<Vertex, Vertex> new_vs;
-        for (size_t i = 0; i < rhs.vertices.size(); i++) {
+        for (std::size_t i = 0; i < rhs.vertices.size(); i++) {
             if (!rhs.vertices[i].has_value() || rhs.isInput(i))
                 continue;
 
@@ -228,13 +228,13 @@ namespace zx {
             new_vs[i]  = new_v;
         }
 
-        for (size_t i = 0; i < rhs.vertices.size(); i++) { // add new edges
+        for (std::size_t i = 0; i < rhs.vertices.size(); i++) { // add new edges
             if (!rhs.vertices[i].has_value() || rhs.isInput(i))
                 continue;
 
             for (auto& [to, type]: rhs.edges[i]) {
                 if (!rhs.isInput(to)) {
-                    if (i < (size_t)to) { // make sure not to add edge twice
+                    if (i < to) { // make sure not to add edge twice
                         addEdge(new_vs[i], new_vs[to], type);
                     }
                 } else {
