@@ -40,7 +40,7 @@ namespace zx {
         void   addQubits(zx::Qubit n);
         void   removeVertex(Vertex to_remove);
 
-        std::size_t               get_ndeleted() const { return deleted.size(); }
+        std::size_t               getNdeleted() const { return deleted.size(); }
         [[nodiscard]] std::size_t getNVertices() const { return nvertices; }
         [[nodiscard]] std::size_t getNEdges() const { return nedges; }
         [[nodiscard]] std::size_t getNQubits() const { return inputs.size(); }
