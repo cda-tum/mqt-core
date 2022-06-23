@@ -10,13 +10,12 @@
 
 namespace zx {
     class FunctionalityConstruction {
-        using op_it =
-                decltype(std::begin(std::vector<std::unique_ptr<qc::Operation>>()));
+        using op_it = qc::QuantumComputation::const_iterator;
 
     public:
         static ZXDiagram buildFunctionality(const qc::QuantumComputation* qc);
 
-    private:
+    protected:
         static bool  checkSwap(op_it it, op_it end, Qubit ctrl, Qubit target);
         static void  addZSpider(ZXDiagram& diag, zx::Qubit qubit,
                                 std::vector<Vertex>& qubit_vertices,

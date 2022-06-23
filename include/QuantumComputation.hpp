@@ -35,6 +35,10 @@ namespace qc {
     class CircuitOptimizer;
 
     class QuantumComputation {
+    public:
+        using iterator       = typename std::vector<std::unique_ptr<Operation>>::iterator;
+        using const_iterator = typename std::vector<std::unique_ptr<Operation>>::const_iterator;
+
         friend class CircuitOptimizer;
 
     protected:
@@ -154,7 +158,7 @@ namespace qc {
             }
             return garbage.size();
         }
-        [[nodiscard]] bool isLastOperationOnQubit(const decltype(ops.cbegin())& opIt) const {
+        [[nodiscard]] bool isLastOperationOnQubit(const const_iterator& opIt) const {
             const auto end = ops.cend();
             return isLastOperationOnQubit(opIt, end);
         }
@@ -193,7 +197,7 @@ namespace qc {
         QuantumComputation(const QuantumComputation& qc)     = delete;
         QuantumComputation(QuantumComputation&& qc) noexcept = default;
 
-        QuantumComputation& operator=(const QuantumComputation& qc) = delete;
+        QuantumComputation& operator=(const QuantumComputation& qc)     = delete;
         QuantumComputation& operator=(QuantumComputation&& qc) noexcept = default;
 
         virtual ~QuantumComputation() = default;
@@ -252,7 +256,7 @@ namespace qc {
         [[nodiscard]] dd::Qubit                getIndexFromQubitRegister(const std::pair<std::string, dd::Qubit>& qubit) const;
         [[nodiscard]] std::size_t              getIndexFromClassicalRegister(const std::pair<std::string, std::size_t>& clbit) const;
         [[nodiscard]] bool                     isIdleQubit(dd::Qubit physicalQubit) const;
-        [[nodiscard]] bool                     isLastOperationOnQubit(const decltype(ops.cbegin())& opIt, const decltype(ops.cend())& end) const;
+        [[nodiscard]] bool                     isLastOperationOnQubit(const const_iterator& opIt, const const_iterator& end) const;
         [[nodiscard]] bool                     physicalQubitIsAncillary(dd::Qubit physicalQubitIndex) const;
         [[nodiscard]] bool                     logicalQubitIsAncillary(dd::Qubit logicalQubitIndex) const { return ancillary[logicalQubitIndex]; }
         void                                   setLogicalQubitAncillary(dd::Qubit logicalQubitIndex) { ancillary[logicalQubitIndex] = true; }
@@ -470,11 +474,11 @@ namespace qc {
         void shrink_to_fit() { ops.shrink_to_fit(); }
 
         // Modifiers (pass-through)
-        void                                              clear() noexcept { ops.clear(); }
-        void                                              pop_back() { return ops.pop_back(); }
-        void                                              resize(size_t count) { ops.resize(count); }
-        std::vector<std::unique_ptr<Operation>>::iterator erase(std::vector<std::unique_ptr<Operation>>::const_iterator pos) { return ops.erase(pos); }
-        std::vector<std::unique_ptr<Operation>>::iterator erase(std::vector<std::unique_ptr<Operation>>::const_iterator first, std::vector<std::unique_ptr<Operation>>::const_iterator last) { return ops.erase(first, last); }
+        void     clear() noexcept { ops.clear(); }
+        void     pop_back() { return ops.pop_back(); }
+        void     resize(size_t count) { ops.resize(count); }
+        iterator erase(const_iterator pos) { return ops.erase(pos); }
+        iterator erase(const_iterator first, const_iterator last) { return ops.erase(first, last); }
 
         template<class T>
         void push_back(const T& op) {
@@ -496,7 +500,7 @@ namespace qc {
         }
 
         template<class T>
-        std::vector<std::unique_ptr<Operation>>::iterator insert(std::vector<std::unique_ptr<Operation>>::const_iterator pos, T&& op) { return ops.insert(pos, std::forward<T>(op)); }
+        iterator insert(const_iterator pos, T&& op) { return ops.insert(pos, std::forward<T>(op)); }
 
         [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }
         [[nodiscard]] const auto& front() const { return ops.front(); }
