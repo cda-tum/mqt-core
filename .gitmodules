@@ -20,6 +20,6 @@
 	shallow = true
 [submodule "extern/zx"]
 	path = extern/zx
-	url = git@github.com:cda-tum/zx.git
+	url = https://github.com/cda-tum/zx.git
 	branch = main
 	shallow = true
