@@ -13,15 +13,7 @@
 
 class ZXDiagramTest: public ::testing::Test {
 public:
-    std::unique_ptr<qc::QuantumComputation> qc;
-
-protected:
-    void TearDown() override {
-    }
-
-    void SetUp() override {
-        qc = std::make_unique<qc::QuantumComputation>();
-    }
+    qc::QuantumComputation qc;
 };
 
 TEST_F(ZXDiagramTest, parse_qasm) {
@@ -32,8 +24,8 @@ TEST_F(ZXDiagramTest, parse_qasm) {
        << "h q[0];"
        << "cx q[0],q[1];"
        << std::endl;
-    qc->import(ss, qc::OpenQASM);
-    zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(qc.get());
+    qc.import(ss, qc::OpenQASM);
+    zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
     EXPECT_EQ(diag.getNVertices(), 7);
     EXPECT_EQ(diag.getNEdges(), 6);
 
@@ -64,7 +56,7 @@ TEST_F(ZXDiagramTest, parse_qasm) {
         EXPECT_TRUE(diag.getVData(i).value().phase.isZero());
 }
 
-TEST_F(ZXDiagramTest, many_gates) {
+TEST_F(ZXDiagramTest, complex_circuit) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -74,21 +66,21 @@ TEST_F(ZXDiagramTest, many_gates) {
        << "z q[1];"
        << "x q[2];"
        << "y q[0];"
-       << "rx(0.7853981633974483) q[0];"
-       << "rz(0.7853981633974483) q[1];"
-       << "ry(0.7853981633974483) q[2];"
+       << "rx(pi/4) q[0];"
+       << "rz(pi/4) q[1];"
+       << "ry(pi/4) q[2];"
        << "t q[0];"
        << "s q[2];"
-       << "u2(0.7853981633974483, 0.7853981633974483) q[1];"
-       << "u3(0.7853981633974483, 0.7853981633974483, 0.7853981633974483) q[2];"
+       << "u2(pi/4, pi/4) q[1];"
+       << "u3(pi/4, pi/4, pi/4) q[2];"
        << "swap q[0],q[1];"
        << "cz q[1],q[2];"
-       << "cp(0.7853981633974483) q[0],q[1];"
+       << "cp(pi/4) q[0],q[1];"
        << "ccx q[0],q[1],q[2];"
        << "ccz q[1],q[2],q[0];"
        << "ccz q[1],q[2],q[0];"
        << "ccx q[0],q[1],q[2];"
-       << "cp(-0.7853981633974483) q[0],q[1];"
+       << "cp(-pi/4) q[0],q[1];"
        << "cz q[1],q[2];"
        << "cx q[1],q[0];"
        << "cx q[0],q[1];"
@@ -97,17 +89,17 @@ TEST_F(ZXDiagramTest, many_gates) {
        << "u2(-5*pi/4,3*pi/4) q[1];"
        << "sdg q[2];"
        << "tdg q[0];"
-       << "ry(-0.7853981633974483) q[2];"
-       << "rz(-0.7853981633974483) q[1];"
-       << "rx(-0.7853981633974483) q[0];"
+       << "ry(-pi/4) q[2];"
+       << "rz(-pi/4) q[1];"
+       << "rx(-pi/4) q[0];"
        << "y q[0];"
        << "x q[2];"
        << "z q[1];"
        << "cx q[0],q[1];"
        << "h q[0];"
        << std::endl;
-    qc->import(ss, qc::OpenQASM);
-    zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(qc.get());
+    qc.import(ss, qc::OpenQASM);
+    zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
     zx::fullReduce(diag);
     EXPECT_EQ(diag.getNVertices(), 6);
     EXPECT_EQ(diag.getNEdges(), 3);
