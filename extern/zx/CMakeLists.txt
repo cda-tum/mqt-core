@@ -37,7 +37,7 @@ set(BOOST_MP_STANDALONE ON)
 
 find_package(GMP)
 if(NOT GMP_FOUND)
-  message(WARNING "Did not find GMP. Using Boost multiprecision library instead.")
+  message(NOTICE "Did not find GMP. Using Boost multiprecision library instead.")
 endif()
 
 

@@ -8,4 +8,4 @@
 	url = https://github.com/boostorg/config
 [submodule "extern/boost/multiprecision"]
 	path = extern/boost/multiprecision
-	url = git@github.com:boostorg/multiprecision.git
+	url = https://github.com/boostorg/multiprecision.git
