@@ -12,7 +12,8 @@ namespace zx {
     std::size_t simplifyVertices(ZXDiagram& diag, VertexCheckFun check,
                                  VertexRuleFun rule);
 
-    std::size_t simplifyEdges(ZXDiagram& diag, EdgeCheckFun check, EdgeRuleFun rule);
+    std::size_t simplifyEdges(ZXDiagram& diag, EdgeCheckFun check,
+                              EdgeRuleFun rule);
 
     std::size_t gadgetSimp(ZXDiagram& diag);
 
@@ -33,5 +34,6 @@ namespace zx {
     std::size_t pivotgadgetSimp(ZXDiagram& diag);
 
     std::size_t fullReduce(ZXDiagram& diag);
+    std::size_t fullReduceApproximate(ZXDiagram& diag, fp tolerance);
 
 } // namespace zx

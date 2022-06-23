@@ -32,6 +32,20 @@ namespace zx {
     bool Expression::isProperClifford() const {
         return isConstant() && constant.getDenom() == 2;
     }
+    void Expression::roundToClifford(fp tolerance) {
+        if (!isConstant())
+            return;
+
+        if (constant.isCloseDivPi(0, tolerance)) {
+            constant = PiRational(0, 1);
+        } else if (constant.isCloseDivPi(0.5, tolerance)) {
+            constant = PiRational(1, 2);
+        } else if (constant.isCloseDivPi(-0.5, tolerance)) {
+            constant = PiRational(-1, 2);
+        } else if (constant.isCloseDivPi(1, tolerance)) {
+            constant = PiRational(1, 1);
+        }
+    }
 
     Expression& Expression::operator+=(const Expression& rhs) {
         if (this->isZero()) {

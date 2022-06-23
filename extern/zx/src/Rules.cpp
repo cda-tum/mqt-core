@@ -240,7 +240,7 @@ namespace zx {
 
             diag.addEdge(v, new_v, EdgeType::Hadamard);
             diag.addEdge(to, new_v, boundary_edge_type);
-            diag.remove_edge(v, to);
+            diag.removeEdge(v, to);
         }
     }
 

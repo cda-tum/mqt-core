@@ -74,7 +74,7 @@ namespace zx {
         }
     }
 
-    void ZXDiagram::remove_edge(Vertex from, Vertex to) {
+    void ZXDiagram::removeEdge(Vertex from, Vertex to) {
         removeHalfEdge(from, to);
         removeHalfEdge(to, from);
         nedges--;
@@ -386,5 +386,13 @@ namespace zx {
         setType(in_v, VertexType::X);
         removeVertex(in_v);
         removeVertex(out_v);
+    }
+
+    void ZXDiagram::approximateCliffords(fp tolerance) {
+        for (auto& v: vertices) {
+            if (v.has_value()) {
+                v.value().phase.roundToClifford(tolerance);
+            }
+        }
     }
 } // namespace zx

@@ -30,7 +30,7 @@ namespace zx {
         };
         void addEdgeParallelAware(Vertex from, Vertex to,
                                   EdgeType type = EdgeType::Simple);
-        void remove_edge(Vertex from, Vertex to);
+        void removeEdge(Vertex from, Vertex to);
 
         Vertex addVertex(const VertexData& data);
         Vertex addVertex(Qubit qubit, Col col = 0,
@@ -112,10 +112,11 @@ namespace zx {
         ZXDiagram& invert();
 
         ZXDiagram& concat(const ZXDiagram& rhs);
-
-        // What about Swaps?
+        ZXDiagram& operator+=(const ZXDiagram& rhs) { return this->concat(rhs); }
 
         void makeAncilla(Qubit qubit);
+
+        void approximateCliffords(fp tolerance);
 
     private:
         std::vector<std::vector<Edge>>         edges;

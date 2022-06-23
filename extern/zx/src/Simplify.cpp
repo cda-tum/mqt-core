@@ -3,6 +3,7 @@
 #include "Definitions.hpp"
 #include "Rules.hpp"
 
+#include <cstddef>
 #include <iostream>
 
 namespace zx {
@@ -150,5 +151,16 @@ namespace zx {
         }
         // cliffordSimp(diag);
         return n_simplifications;
+    }
+
+    std::size_t fullReduceApproximate(ZXDiagram& diag, fp tolerance) {
+        auto        nSimplifications = fullReduce(diag);
+        std::size_t newSimps         = 0;
+        do {
+            diag.approximateCliffords(tolerance);
+            newSimps = fullReduce(diag);
+            nSimplifications += newSimps;
+        } while (newSimps);
+        return nSimplifications;
     }
 } // namespace zx

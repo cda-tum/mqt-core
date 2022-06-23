@@ -66,6 +66,20 @@ namespace zx {
             return boost::multiprecision::numerator(frac);
         }
 
+        [[nodiscard]] double toDouble() const;
+
+        [[nodiscard]] double toDoubleDivPi() const {
+            return frac.convert_to<double>();
+        }
+
+        bool isClose(double x, double tolerance) {
+            return std::abs(toDouble() - x) < tolerance;
+        }
+
+        bool isCloseDivPi(double x, double tolerance) {
+            return std::abs(toDoubleDivPi() - x) < tolerance;
+        }
+
     private:
         Rational frac;
 

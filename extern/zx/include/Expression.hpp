@@ -96,6 +96,7 @@ namespace zx {
         [[nodiscard]] bool isClifford() const;
         [[nodiscard]] bool isProperClifford() const;
 
+        void        roundToClifford(fp tolerance);
         Expression& operator+=(const Expression& rhs);
         Expression& operator+=(const Term& rhs);
         Expression& operator+=(const PiRational& rhs);

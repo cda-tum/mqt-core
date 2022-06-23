@@ -95,4 +95,8 @@ namespace zx {
             return;
         }
     }
+
+    double PiRational::toDouble() const {
+        return frac.convert_to<double>() * PI;
+    }
 } // namespace zx
