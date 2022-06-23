@@ -25,7 +25,7 @@ namespace zx {
                                 const Expression& phase = Expression(), EdgeType type = EdgeType::Simple);
         static void  addCnot(ZXDiagram& diag, Qubit ctrl, Qubit target,
                              std::vector<Vertex>& qubit_vertices);
-        static void  addCphase(ZXDiagram& diag, PiRational phase, Qubit ctrl, Qubit target,
+        static void  addCphase(ZXDiagram& diag, const PiRational& phase, Qubit ctrl, Qubit target,
                                std::vector<Vertex>& qubit_vertices);
         static void  addSwap(ZXDiagram& diag, Qubit ctrl, Qubit target,
                              std::vector<Vertex>& qubit_vertices);

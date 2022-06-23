@@ -16,10 +16,10 @@ namespace zx {
             auto& op2 = *(it + 2);
             if (op1->getType() == qc::OpType::X && op2->getType() == qc::OpType::X &&
                 op1->getNcontrols() == 1 && op2->getNcontrols() == 1) {
-                auto tar1  = op1->getTargets()[0];
-                auto tar2  = op2->getTargets()[0];
-                auto ctrl1 = (*op1->getControls().begin()).qubit;
-                auto ctrl2 = (*op2->getControls().begin()).qubit;
+                const auto tar1  = op1->getTargets().front();
+                const auto tar2  = op2->getTargets().front();
+                const auto ctrl1 = (*op1->getControls().begin()).qubit;
+                const auto ctrl2 = (*op2->getControls().begin()).qubit;
                 return ctrl == tar1 && tar1 == ctrl2 && target == ctrl1 && ctrl1 == tar2;
             }
         }
@@ -54,7 +54,7 @@ namespace zx {
         diag.addEdge(qubit_vertices[ctrl], qubit_vertices[target]);
     }
 
-    void FunctionalityConstruction::addCphase(ZXDiagram& diag, PiRational phase, Qubit ctrl, Qubit target,
+    void FunctionalityConstruction::addCphase(ZXDiagram& diag, const PiRational& phase, Qubit ctrl, Qubit target,
                                               std::vector<Vertex>& qubit_vertices) {
         addZSpider(diag, ctrl, qubit_vertices, Expression(phase / 2));
         addCnot(diag, ctrl, target, qubit_vertices);
@@ -65,11 +65,11 @@ namespace zx {
 
     void FunctionalityConstruction::addSwap(ZXDiagram& diag, Qubit ctrl, Qubit target,
                                             std::vector<Vertex>& qubit_vertices) {
-        auto s0 = qubit_vertices[target];
-        auto s1 = qubit_vertices[ctrl];
+        const auto s0 = qubit_vertices[target];
+        const auto s1 = qubit_vertices[ctrl];
 
-        auto t0 = diag.addVertex(target, diag.getVData(qubit_vertices[target]).value().col + 1);
-        auto t1 = diag.addVertex(ctrl, diag.getVData(qubit_vertices[target]).value().col + 1);
+        const auto t0 = diag.addVertex(target, diag.getVData(qubit_vertices[target]).value().col + 1);
+        const auto t1 = diag.addVertex(ctrl, diag.getVData(qubit_vertices[target]).value().col + 1);
 
         diag.addEdge(s0, t1);
         diag.addEdge(s1, t0);
@@ -106,8 +106,8 @@ namespace zx {
             return it + 1;
         }
 
-        if (op->getNcontrols() == 0) {
-            auto target = op->getTargets()[0];
+        if (!op->isControlled()) {
+            const auto target = op->getTargets().front();
             switch (op->getType()) {
                 case qc::OpType::Z: {
                     addZSpider(diag, target, qubit_vertices, Expression(PiRational(1, 1)));
@@ -116,7 +116,7 @@ namespace zx {
 
                 case qc::OpType::RZ:
                 case qc::OpType::Phase: {
-                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(op->getParameter()[0])));
+                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(op->getParameter().front())));
                     break;
                 }
                 case qc::OpType::X: {
@@ -125,7 +125,7 @@ namespace zx {
                 }
 
                 case qc::OpType::RX: {
-                    addXSpider(diag, target, qubit_vertices, Expression(PiRational(op->getParameter()[0])));
+                    addXSpider(diag, target, qubit_vertices, Expression(PiRational(op->getParameter().front())));
                     break;
                 }
 
@@ -168,7 +168,7 @@ namespace zx {
                     break;
                 }
                 case qc::OpType::U3: {
-                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(op->getParameter()[0])));
+                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(op->getParameter().front())));
                     addXSpider(diag, target, qubit_vertices, Expression(PiRational(1, 2)));
                     addZSpider(diag, target, qubit_vertices,
                                Expression(PiRational(op->getParameter()[2])) + PiRational(1, 1));
@@ -179,7 +179,7 @@ namespace zx {
                 }
 
                 case qc::OpType::SWAP: {
-                    auto target2 = op->getTargets()[1];
+                    const auto target2 = op->getTargets()[1];
                     addSwap(diag, target, target2, qubit_vertices);
                     break;
                 }
@@ -198,8 +198,8 @@ namespace zx {
                 }
             }
         } else if (op->getNcontrols() == 1 && op->getNtargets() == 1) {
-            auto target = op->getTargets()[0];
-            auto ctrl   = (*op->getControls().begin()).qubit;
+            const auto target = op->getTargets().front();
+            const auto ctrl   = (*op->getControls().begin()).qubit;
             switch (op->getType()) { // TODO: any gate can be controlled
                 case qc::OpType::X: {
                     // check if swap
@@ -227,7 +227,7 @@ namespace zx {
                 }
 
                 case qc::OpType::Phase: {
-                    auto phase = PiRational(op->getParameter()[0]);
+                    const auto phase = PiRational(op->getParameter().front());
                     addCphase(diag, phase, ctrl, target, qubit_vertices);
                     break;
                 }
@@ -258,10 +258,10 @@ namespace zx {
                 }
             }
         } else if (op->getNcontrols() == 2) {
-            Qubit ctrl_0 = 0;
-            Qubit ctrl_1 = 0;
-            Qubit target = op->getTargets()[0];
-            int   i      = 0;
+            Qubit       ctrl_0 = 0;
+            Qubit       ctrl_1 = 0;
+            const Qubit target = op->getTargets().front();
+            int         i      = 0;
             for (auto& ctrl: op->getControls()) {
                 if (i++ == 0)
                     ctrl_0 = ctrl.qubit;
@@ -305,7 +305,7 @@ namespace zx {
         auto initial_layout     = qc->initialLayout;
         auto output_permutation = qc->outputPermutation;
 
-        if (initial_layout.size() != 0) {
+        if (!initial_layout.empty()) {
             std::vector<Vertex> new_qubit_vertices(qc->getNqubits());
             for (auto i = 0; i < qc->getNqubits(); i++) {
                 new_qubit_vertices[i] = qubit_vertices[i];
@@ -322,13 +322,12 @@ namespace zx {
             qubit_vertices = new_qubit_vertices;
         }
 
-        for (auto it = qc->begin(); it != qc->end();) {
+        for (auto it = qc->cbegin(); it != qc->cend();) {
             auto& op = *it;
 
             if (op->getType() == qc::OpType::Compound) {
-                qc::CompoundOperation* comp_op =
-                        static_cast<qc::CompoundOperation*>(op.get());
-                for (op_it sub_it = comp_op->begin(); sub_it != comp_op->end();)
+                auto* comp_op = dynamic_cast<qc::CompoundOperation*>(op.get());
+                for (auto sub_it = comp_op->cbegin(); sub_it != comp_op->cend();)
                     sub_it = parse_op(diag, sub_it, comp_op->end(), qubit_vertices);
                 ++it;
             } else {
