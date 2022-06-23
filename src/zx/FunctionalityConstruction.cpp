@@ -298,7 +298,7 @@ namespace zx {
         ZXDiagram           diag(qc->getNqubits());
         std::vector<Vertex> qubit_vertices(qc->getNqubits());
         for (size_t i = 0; i < qc->getNqubits(); ++i) {
-            diag.remove_edge(i, i + qc->getNqubits());
+            diag.removeEdge(i, i + qc->getNqubits());
             qubit_vertices[i] = i;
         }
 
