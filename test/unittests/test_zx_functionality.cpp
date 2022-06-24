@@ -3,6 +3,7 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
 #include "Simplify.hpp"
 #include "ZXDiagram.hpp"
@@ -10,6 +11,7 @@
 
 #include "gtest/gtest.h"
 #include <iostream>
+#include <sstream>
 
 class ZXDiagramTest: public ::testing::Test {
 public:
@@ -58,7 +60,9 @@ TEST_F(ZXDiagramTest, parse_qasm) {
 
 TEST_F(ZXDiagramTest, complex_circuit) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
+    ss << "// i 1 0 2\n"
+       << "// o 0 1 2\n"
+       << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
        << "qreg q[3];"
        << "h q[0];"
@@ -67,17 +71,23 @@ TEST_F(ZXDiagramTest, complex_circuit) {
        << "x q[2];"
        << "y q[0];"
        << "rx(pi/4) q[0];"
-       << "rz(pi/4) q[1];"
+       << "rz(0.1) q[1];"
+       << "p(0.1) q[1];"
        << "ry(pi/4) q[2];"
        << "t q[0];"
        << "s q[2];"
        << "u2(pi/4, pi/4) q[1];"
        << "u3(pi/4, pi/4, pi/4) q[2];"
+       << "barrier q[0],q[1],q[2];"
        << "swap q[0],q[1];"
        << "cz q[1],q[2];"
        << "cp(pi/4) q[0],q[1];"
        << "ccx q[0],q[1],q[2];"
        << "ccz q[1],q[2],q[0];"
+       << "cp(pi/2) q[0], q[1];"
+       << "cp(pi/4) q[0], q[1];"
+       << "cp(-pi/4) q[0], q[1];"
+       << "cp(-pi/2) q[0], q[1];"
        << "ccz q[1],q[2],q[0];"
        << "ccx q[0],q[1],q[2];"
        << "cp(-pi/4) q[0],q[1];"
@@ -90,7 +100,8 @@ TEST_F(ZXDiagramTest, complex_circuit) {
        << "sdg q[2];"
        << "tdg q[0];"
        << "ry(-pi/4) q[2];"
-       << "rz(-pi/4) q[1];"
+       << "p(-0.1) q[1];"
+       << "rz(-0.1) q[1];"
        << "rx(-pi/4) q[0];"
        << "y q[0];"
        << "x q[2];"
@@ -103,5 +114,35 @@ TEST_F(ZXDiagramTest, complex_circuit) {
     zx::fullReduce(diag);
     EXPECT_EQ(diag.getNVertices(), 6);
     EXPECT_EQ(diag.getNEdges(), 3);
+    EXPECT_TRUE(diag.connected(diag.getInputs()[0], diag.getOutputs()[1]));
+    EXPECT_TRUE(diag.connected(diag.getInputs()[1], diag.getOutputs()[0]));
+    EXPECT_TRUE(diag.connected(diag.getInputs()[2], diag.getOutputs()[2]));
+}
+
+TEST_F(ZXDiagramTest, Compound) {
+    std::stringstream ss;
+    ss << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "gate toff q0,q1,q2 {h q2;cx q1,q2;p(-pi/4) q2;cx q0,q2;p(pi/4) q2;cx q1,q2;p(pi/4) q1;p(-pi/4) q2;cx q0,q2;cx q0,q1;p(pi/4) q0;p(-pi/4) q1;cx q0,q1;p(pi/4) q2;h q2;}"
+       << "qreg q[3];"
+       << "toff q[0],q[1],q[2];"
+       << "ccx q[0],q[1],q[2];"
+       << std::endl;
+
+    qc.import(ss, qc::OpenQASM);
+    zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
+    zx::fullReduce(diag);
+
     EXPECT_TRUE(diag.isIdentity());
+}
+
+TEST_F(ZXDiagramTest, Unsupported) {
+    std::stringstream ss;
+    ss << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[4];"
+       << "mcx q[0],q[1],q[2],q[3];"
+       << std::endl;
+    qc.import(ss, qc::OpenQASM);
+    EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
 }
