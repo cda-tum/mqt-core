@@ -15,7 +15,7 @@
 namespace dd {
 
     // noise operations available for deterministic noise aware quantum circuit simulation
-    enum noiseOperations : std::uint8_t {
+    enum NoiseOperations : std::uint8_t {
         amplitudeDamping,
         phaseFlip,
         depolarization
@@ -25,20 +25,26 @@ namespace dd {
     class StochasticNoiseFunctionality {
     public:
         StochasticNoiseFunctionality(const std::unique_ptr<DDPackage>& package,
-                                     dd::Qubit                         size,
+                                     dd::Qubit                         nQubits,
                                      double                            gateNoiseProbability,
                                      double                            amplitudeDampingProb,
                                      double                            multiQubitGateFactor,
-                                     std::vector<dd::noiseOperations>  noiseEffects,
-                                     size_t                            seed):
+                                     std::vector<dd::NoiseOperations>  noiseEffects):
             package(package),
-            nQubits(size),
+            nQubits(nQubits),
             dist(0.0, 1.0L),
-            noiseProbabilityMulti(gateNoiseProbability * multiQubitGateFactor),
             noiseProbability(gateNoiseProbability),
-            seed(seed),
+            noiseProbabilityMulti(gateNoiseProbability * multiQubitGateFactor),
+            sqrtAmplitudeDampingProbability({std::sqrt(amplitudeDampingProb), 0}),
+            oneMinusSqrtAmplitudeDampingProbability({std::sqrt(1 - amplitudeDampingProb), 0}),
+            sqrtAmplitudeDampingProbabilityMulti({std::sqrt(gateNoiseProbability) * multiQubitGateFactor, 0}),
+            oneMinusSqrtAmplitudeDampingProbabilityMulti({std::sqrt(1 - multiQubitGateFactor * amplitudeDampingProb), 0}),
             noiseEffects(std::move(noiseEffects)) {
-            identityDD = package->makeIdent(size);
+            ampDampingFalse      = dd::GateMatrix({dd::complex_one, dd::complex_zero, dd::complex_zero, oneMinusSqrtAmplitudeDampingProbability});
+            ampDampingFalseMulti = dd::GateMatrix({dd::complex_one, dd::complex_zero, dd::complex_zero, oneMinusSqrtAmplitudeDampingProbabilityMulti});
+            ampDampingTrue       = dd::GateMatrix({dd::complex_zero, sqrtAmplitudeDampingProbability, dd::complex_zero, dd::complex_zero});
+            ampDampingTrueMulti  = dd::GateMatrix({dd::complex_zero, sqrtAmplitudeDampingProbabilityMulti, dd::complex_zero, dd::complex_zero});
+            identityDD           = package->makeIdent(nQubits);
             package->incRef(identityDD);
         }
 
@@ -49,43 +55,58 @@ namespace dd {
     protected:
         const std::unique_ptr<DDPackage>&      package;
         dd::Qubit                              nQubits;
-        std::uniform_real_distribution<dd::fp> dist{};
+        std::uniform_real_distribution<dd::fp> dist;
 
-        double           noiseProbability;
-        double           noiseProbabilityMulti;
-        dd::ComplexValue sqrtAmplitudeDampingProbability;
-        dd::ComplexValue oneMinusSqrtAmplitudeDampingProbability;
-        dd::ComplexValue sqrtAmplitudeDampingProbabilityMulti;
-        dd::ComplexValue oneMinusSqrtAmplitudeDampingProbabilityMulti;
-        dd::GateMatrix   ampDampingTrue;
-        dd::GateMatrix   ampDampingTrueMulti;
-        dd::GateMatrix   ampDampingFalse;
-        dd::GateMatrix   ampDampingFalseMulti;
-
-        std::vector<dd::noiseOperations> noiseEffects;
-
-        size_t seed;
+        double                           noiseProbability;
+        double                           noiseProbabilityMulti;
+        dd::ComplexValue                 sqrtAmplitudeDampingProbability;
+        dd::ComplexValue                 oneMinusSqrtAmplitudeDampingProbability;
+        dd::ComplexValue                 sqrtAmplitudeDampingProbabilityMulti;
+        dd::ComplexValue                 oneMinusSqrtAmplitudeDampingProbabilityMulti;
+        dd::GateMatrix                   ampDampingTrue{};
+        dd::GateMatrix                   ampDampingTrueMulti{};
+        dd::GateMatrix                   ampDampingFalse{};
+        dd::GateMatrix                   ampDampingFalseMulti{};
+        std::vector<dd::NoiseOperations> noiseEffects;
 
         dd::mEdge identityDD;
 
-        dd::Qubit getNumberOfQubits() { return nQubits; }
+        [[nodiscard]] dd::Qubit getNumberOfQubits() const { return nQubits; }
+        [[nodiscard]] double    getNoiseProbability(bool multiQubitNoiseFlag) const { return multiQubitNoiseFlag ? noiseProbabilityMulti : noiseProbability; }
+
+        [[nodiscard]] OpType getAmplitudeDampingOperationType(bool multiQubitNoiseFlag, bool amplitudeDampingFlag) const {
+            if (amplitudeDampingFlag) {
+                return multiQubitNoiseFlag ? qc::MultiATrue : qc::ATrue;
+            } else {
+                return multiQubitNoiseFlag ? qc::MultiAFalse : qc::AFalse;
+            }
+        }
+
+        [[nodiscard]] dd::GateMatrix getAmplitudeDampingOperationMatrix(bool multiQubitNoiseFlag, bool amplitudeDampingFlag) const {
+            if (amplitudeDampingFlag) {
+                return multiQubitNoiseFlag ? ampDampingTrueMulti : ampDampingTrue;
+            } else {
+                return multiQubitNoiseFlag ? ampDampingFalseMulti : ampDampingFalse;
+            }
+        }
 
     public:
-        void applyNoiseOperation(const std::vector<dd::Qubit>& usedQubits, dd::mEdge operation, dd::vEdge& state, std::mt19937_64& generator) {
-            bool multiQubitOperation = usedQubits.size() > 1;
+        void applyNoiseOperation(const std::vector<dd::Qubit>& targets, dd::mEdge operation, dd::vEdge& state, std::mt19937_64& generator) {
+            const bool multiQubitOperation = targets.size() > 1;
 
-            for (auto& target: usedQubits) {
+            for (const auto& target: targets) {
                 auto stackedOperation = generateNoiseOperation(operation, target, generator, false, multiQubitOperation);
                 auto tmp              = package->multiply(stackedOperation, state);
 
                 if (dd::ComplexNumbers::mag2(tmp.w) < dist(generator)) {
+                    // The probability of amplitude damping does not only depend on the noise probability, but also the quantum state.
+                    // Due to the normalization constraint of decision diagrams the probability for applying amplitude damping stands in the root edge weight,
+                    // of the dd after the noise has been applied
                     stackedOperation = generateNoiseOperation(operation, target, generator, true, multiQubitOperation);
                     tmp              = package->multiply(stackedOperation, state);
                 }
+                tmp.w = dd::Complex::one;
 
-                if (tmp.w != dd::Complex::one) {
-                    tmp.w = dd::Complex::one;
-                }
                 package->incRef(tmp);
                 package->decRef(state);
                 state = tmp;
@@ -96,15 +117,15 @@ namespace dd {
         }
 
     protected:
-        dd::mEdge generateNoiseOperation(dd::mEdge        dd_operation,
-                                         signed char      target,
+        dd::mEdge generateNoiseOperation(dd::mEdge        operation,
+                                         dd::Qubit        target,
                                          std::mt19937_64& generator,
                                          bool             amplitudeDamping,
                                          bool             multiQubitOperation) {
             qc::OpType effect;
-            for (const auto& noise_type: noiseEffects) {
-                if (noise_type != dd::noiseOperations::amplitudeDamping) {
-                    effect = ReturnNoiseOperation(noise_type, dist(generator), multiQubitOperation);
+            for (const auto& noiseType: noiseEffects) {
+                if (noiseType != dd::NoiseOperations::amplitudeDamping) {
+                    effect = ReturnNoiseOperation(noiseType, dist(generator), multiQubitOperation);
                 } else {
                     if (amplitudeDamping) {
                         effect = qc::ATrue;
@@ -117,49 +138,48 @@ namespace dd {
                         continue;
                     }
                     case (qc::ATrue): {
-                        auto tmp_op = package->stochasticNoiseOperationCache.lookup(multiQubitOperation ? qc::multiATrue : qc::ATrue, target);
-                        if (tmp_op.p == nullptr) {
-                            tmp_op = package->makeGateDD(multiQubitOperation ? ampDampingTrueMulti : ampDampingTrue, getNumberOfQubits(), target);
-                            package->stochasticNoiseOperationCache.insert(multiQubitOperation ? qc::multiATrue : qc::ATrue, target, tmp_op);
+                        auto tmpOperation = package->stochasticNoiseOperationCache.lookup(getAmplitudeDampingOperationType(multiQubitOperation, true), target);
+                        if (tmpOperation.p == nullptr) {
+                            tmpOperation = package->makeGateDD(getAmplitudeDampingOperationMatrix(multiQubitOperation, true), getNumberOfQubits(), target);
+                            package->stochasticNoiseOperationCache.insert(getAmplitudeDampingOperationType(multiQubitOperation, true), target, tmpOperation);
                         }
-
-                        dd_operation = package->multiply(tmp_op, dd_operation);
+                        operation = package->multiply(tmpOperation, operation);
                         break;
                     }
                     case (qc::AFalse): {
-                        auto tmp_op = package->stochasticNoiseOperationCache.lookup(multiQubitOperation ? qc::multiAFalse : qc::AFalse, target);
-                        if (tmp_op.p == nullptr) {
-                            tmp_op = package->makeGateDD(multiQubitOperation ? ampDampingFalseMulti : ampDampingFalse, getNumberOfQubits(), target);
-                            package->stochasticNoiseOperationCache.insert(multiQubitOperation ? qc::multiAFalse : qc::AFalse, target, tmp_op);
+                        auto tmpOperation = package->stochasticNoiseOperationCache.lookup(getAmplitudeDampingOperationType(multiQubitOperation, false), target);
+                        if (tmpOperation.p == nullptr) {
+                            tmpOperation = package->makeGateDD(getAmplitudeDampingOperationMatrix(multiQubitOperation, false), getNumberOfQubits(), target);
+                            package->stochasticNoiseOperationCache.insert(getAmplitudeDampingOperationType(multiQubitOperation, false), target, tmpOperation);
                         }
-                        dd_operation = package->multiply(tmp_op, dd_operation);
+                        operation = package->multiply(tmpOperation, operation);
                         break;
                     }
                     case (qc::X): {
-                        auto tmp_op = package->stochasticNoiseOperationCache.lookup(effect, target);
-                        if (tmp_op.p == nullptr) {
-                            tmp_op = package->makeGateDD(dd::Xmat, getNumberOfQubits(), target);
-                            package->stochasticNoiseOperationCache.insert(effect, target, tmp_op);
+                        auto tmpOperation = package->stochasticNoiseOperationCache.lookup(effect, target);
+                        if (tmpOperation.p == nullptr) {
+                            tmpOperation = package->makeGateDD(dd::Xmat, getNumberOfQubits(), target);
+                            package->stochasticNoiseOperationCache.insert(effect, target, tmpOperation);
                         }
-                        dd_operation = package->multiply(tmp_op, dd_operation);
+                        operation = package->multiply(tmpOperation, operation);
                         break;
                     }
                     case (qc::Y): {
-                        auto tmp_op = package->stochasticNoiseOperationCache.lookup(effect, target);
-                        if (tmp_op.p == nullptr) {
-                            tmp_op = package->makeGateDD(dd::Ymat, getNumberOfQubits(), target);
-                            package->stochasticNoiseOperationCache.insert(effect, target, tmp_op);
+                        auto tmpOperation = package->stochasticNoiseOperationCache.lookup(effect, target);
+                        if (tmpOperation.p == nullptr) {
+                            tmpOperation = package->makeGateDD(dd::Ymat, getNumberOfQubits(), target);
+                            package->stochasticNoiseOperationCache.insert(effect, target, tmpOperation);
                         }
-                        dd_operation = package->multiply(tmp_op, dd_operation);
+                        operation = package->multiply(tmpOperation, operation);
                         break;
                     }
                     case (qc::Z): {
-                        auto tmp_op = package->stochasticNoiseOperationCache.lookup(effect, target);
-                        if (tmp_op.p == nullptr) {
-                            tmp_op = package->makeGateDD(dd::Zmat, getNumberOfQubits(), target);
-                            package->stochasticNoiseOperationCache.insert(effect, target, tmp_op);
+                        auto tmpOperation = package->stochasticNoiseOperationCache.lookup(effect, target);
+                        if (tmpOperation.p == nullptr) {
+                            tmpOperation = package->makeGateDD(dd::Zmat, getNumberOfQubits(), target);
+                            package->stochasticNoiseOperationCache.insert(effect, target, tmpOperation);
                         }
-                        dd_operation = package->multiply(tmp_op, dd_operation);
+                        operation = package->multiply(tmpOperation, operation);
                         break;
                     }
                     default: {
@@ -167,24 +187,28 @@ namespace dd {
                     }
                 }
             }
-            return dd_operation;
+            return operation;
         }
 
-        [[nodiscard]] qc::OpType ReturnNoiseOperation(dd::noiseOperations noiseOperation, double prob, bool multi_qubit_noise) const {
+        [[nodiscard]] qc::OpType ReturnNoiseOperation(dd::NoiseOperations noiseOperation, double prob, bool multiQubitNoiseFlag) const {
             switch (noiseOperation) {
-                case dd::noiseOperations::depolarization: {
-                    if (prob >= 3 * (multi_qubit_noise ? noiseProbabilityMulti : noiseProbability) / 4) {
+                case dd::NoiseOperations::depolarization: {
+                    if (prob >= (getNoiseProbability(multiQubitNoiseFlag) * 0.75)) {
+                        // prob > prob apply qc::I, also 25 % of the time when depolarization is applied nothing happens
                         return qc::I;
-                    } else if (prob < (multi_qubit_noise ? noiseProbabilityMulti : noiseProbability) / 4) {
+                    } else if (prob < (getNoiseProbability(multiQubitNoiseFlag) * 0.25)) {
+                        // if 0 < prob < 0.25 (25 % of the time when applying depolarization) apply qc::X
                         return qc::X;
-                    } else if (prob < (multi_qubit_noise ? noiseProbabilityMulti : noiseProbability) / 2) {
+                    } else if (prob < (getNoiseProbability(multiQubitNoiseFlag) * 0.5)) {
+                        // if 0.25 < prob < 0.5 (25 % of the time when applying depolarization) apply qc::Z
                         return qc::Y;
                     } else {
+                        // if 0.5 < prob < 0.75 (25 % of the time when applying depolarization) apply qc::Z
                         return qc::Z;
                     }
                 }
-                case dd::noiseOperations::phaseFlip: {
-                    if (prob > (multi_qubit_noise ? noiseProbabilityMulti : noiseProbability)) {
+                case dd::NoiseOperations::phaseFlip: {
+                    if (prob > getNoiseProbability(multiQubitNoiseFlag)) {
                         return dd::I;
                     } else {
                         return dd::Z;

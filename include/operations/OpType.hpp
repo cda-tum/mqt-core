@@ -52,9 +52,9 @@ namespace qc {
         // Noise operations
         ATrue,
         AFalse,
-        multiATrue,
-        multiAFalse,
-        opCount
+        MultiATrue,
+        MultiAFalse,
+        OpCount
     };
 
     inline std::string toString(const OpType& opType) {
