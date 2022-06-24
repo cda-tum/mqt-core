@@ -1713,7 +1713,7 @@ TEST_F(QFRFunctionality, CNOTCancellation1) {
 TEST_F(QFRFunctionality, CNOTCancellation2) {
     QuantumComputation qc(2);
     qc.swap(0, 1);
-    qc.swap(0, 1);
+    qc.swap(1, 0);
 
     CircuitOptimizer::cancelCNOTs(qc);
     EXPECT_TRUE(qc.empty());
