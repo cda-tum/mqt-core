@@ -8,7 +8,6 @@
 
 #include "dd/Definitions.hpp"
 #include "dd/Export.hpp"
-//#include "Package.hpp"
 #include <random>
 #include <utility>
 
@@ -128,7 +127,7 @@ namespace dd {
             qc::OpType effect;
             for (const auto& noiseType: noiseEffects) {
                 if (noiseType != dd::amplitudeDamping) {
-                    effect = ReturnNoiseOperation(noiseType, dist(generator), multiQubitOperation);
+                    effect = returnNoiseOperation(noiseType, dist(generator), multiQubitOperation);
                 } else {
                     if (amplitudeDamping) {
                         effect = qc::ATrue;
@@ -193,7 +192,7 @@ namespace dd {
             return operation;
         }
 
-        [[nodiscard]] qc::OpType ReturnNoiseOperation(dd::NoiseOperations noiseOperation, double prob, bool multiQubitNoiseFlag) const {
+        [[nodiscard]] qc::OpType returnNoiseOperation(dd::NoiseOperations noiseOperation, double prob, bool multiQubitNoiseFlag) const {
             switch (noiseOperation) {
                 case dd::NoiseOperations::depolarization: {
                     if (prob >= (getNoiseProbability(multiQubitNoiseFlag) * 0.75)) {
