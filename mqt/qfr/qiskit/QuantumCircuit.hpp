@@ -282,7 +282,7 @@ namespace qc::qiskit {
             py::dict logicalQubitIndices{};
 
             // the ancilla register
-            decltype(registers.get_type()) ancillaRegister{};
+            decltype(registers.get_type()) ancillaRegister = py::none();
 
             for (const auto qreg: registers) {
                 const auto qregName = qreg.attr("name").cast<std::string>();
