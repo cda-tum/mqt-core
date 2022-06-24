@@ -122,8 +122,10 @@ TEST_F(ZXDiagramTest, complex_circuit) {
 }
 
 TEST_F(ZXDiagramTest, Phase) {
-    qc = qc::QuantumComputation(1);
+    qc = qc::QuantumComputation(2);
     qc.phase(0, zx::PI / 4);
+    qc.phase(0, dd::Control{1, dd::Control::Type::pos}, zx::PI / 4);
+    qc.phase(0, dd::Control{1, dd::Control::Type::pos}, -zx::PI / 4);
     qc.phase(0, -zx::PI / 4);
 
     zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
@@ -160,5 +162,11 @@ TEST_F(ZXDiagramTest, UnsupportedMultiControl) {
 TEST_F(ZXDiagramTest, UnsupportedControl) {
     qc = qc::QuantumComputation(2);
     qc.y(0, dd::Control{1, dd::Control::Type::pos});
+    EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
+}
+
+TEST_F(ZXDiagramTest, UnsupportedControl2) {
+    qc = qc::QuantumComputation(3);
+    qc.y(0, {dd::Control{1, dd::Control::Type::pos}, dd::Control{2, dd::Control::Type::pos}});
     EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
 }
