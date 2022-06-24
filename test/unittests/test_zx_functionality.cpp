@@ -7,6 +7,7 @@
 #include "QuantumComputation.hpp"
 #include "Simplify.hpp"
 #include "ZXDiagram.hpp"
+#include "dd/Control.hpp"
 #include "zx/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
@@ -110,6 +111,7 @@ TEST_F(ZXDiagramTest, complex_circuit) {
        << "h q[0];"
        << std::endl;
     qc.import(ss, qc::OpenQASM);
+
     zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
     zx::fullReduce(diag);
     EXPECT_EQ(diag.getNVertices(), 6);
@@ -117,6 +119,17 @@ TEST_F(ZXDiagramTest, complex_circuit) {
     EXPECT_TRUE(diag.connected(diag.getInputs()[0], diag.getOutputs()[1]));
     EXPECT_TRUE(diag.connected(diag.getInputs()[1], diag.getOutputs()[0]));
     EXPECT_TRUE(diag.connected(diag.getInputs()[2], diag.getOutputs()[2]));
+}
+
+TEST_F(ZXDiagramTest, Phase) {
+    qc = qc::QuantumComputation(1);
+    qc.phase(0, zx::PI / 4);
+    qc.phase(0, -zx::PI / 4);
+
+    zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
+    zx::fullReduce(diag);
+
+    EXPECT_TRUE(diag.isIdentity());
 }
 
 TEST_F(ZXDiagramTest, Compound) {
@@ -136,13 +149,16 @@ TEST_F(ZXDiagramTest, Compound) {
     EXPECT_TRUE(diag.isIdentity());
 }
 
-TEST_F(ZXDiagramTest, Unsupported) {
-    std::stringstream ss;
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
-       << "qreg q[4];"
-       << "mcx q[0],q[1],q[2],q[3];"
-       << std::endl;
-    qc.import(ss, qc::OpenQASM);
+TEST_F(ZXDiagramTest, UnsupportedMultiControl) {
+    qc = qc::QuantumComputation(4);
+    qc.x(0, {dd::Control{1, dd::Control::Type::pos},
+             dd::Control{2, dd::Control::Type::pos},
+             dd::Control{3, dd::Control::Type::pos}});
+    EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
+}
+
+TEST_F(ZXDiagramTest, UnsupportedControl) {
+    qc = qc::QuantumComputation(2);
+    qc.y(0, dd::Control{1, dd::Control::Type::pos});
     EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
 }
