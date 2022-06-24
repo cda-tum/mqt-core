@@ -18,7 +18,8 @@ namespace dd {
     enum NoiseOperations : std::uint8_t {
         amplitudeDamping,
         phaseFlip,
-        depolarization
+        depolarization,
+        identity
     };
 
     template<class DDPackage>
@@ -69,8 +70,6 @@ namespace dd {
         dd::GateMatrix                   ampDampingFalseMulti{};
         std::vector<dd::NoiseOperations> noiseEffects;
 
-        dd::mEdge identityDD;
-
         [[nodiscard]] dd::Qubit getNumberOfQubits() const { return nQubits; }
         [[nodiscard]] double    getNoiseProbability(bool multiQubitNoiseFlag) const { return multiQubitNoiseFlag ? noiseProbabilityMulti : noiseProbability; }
 
@@ -91,6 +90,10 @@ namespace dd {
         }
 
     public:
+        dd::mEdge identityDD;
+
+        void setNoiseEffects(std::vector<dd::NoiseOperations> newNoiseEffects) { noiseEffects = std::move(newNoiseEffects); }
+
         void applyNoiseOperation(const std::vector<dd::Qubit>& targets, dd::mEdge operation, dd::vEdge& state, std::mt19937_64& generator) {
             const bool multiQubitOperation = targets.size() > 1;
 
@@ -124,7 +127,7 @@ namespace dd {
                                          bool             multiQubitOperation) {
             qc::OpType effect;
             for (const auto& noiseType: noiseEffects) {
-                if (noiseType != dd::NoiseOperations::amplitudeDamping) {
+                if (noiseType != dd::amplitudeDamping) {
                     effect = ReturnNoiseOperation(noiseType, dist(generator), multiQubitOperation);
                 } else {
                     if (amplitudeDamping) {
@@ -214,6 +217,10 @@ namespace dd {
                         return dd::Z;
                     }
                 }
+                case ::dd::identity: {
+                    return dd::I;
+                }
+
                 default:
                     throw std::runtime_error(std::string{"Unknown noise effect '"} + std::to_string(noiseOperation) + "'");
             }
