@@ -93,45 +93,45 @@ namespace qc {
     inline OpType opTypeFromString(const std::string& opType) {
         if (opType == "none" || opType == "0")
             return OpType::None;
-        else if (opType == "i" || opType == "1")
+        else if (opType == "i" || opType == "id" || opType == "1")
             return OpType::I;
-        else if (opType == "h" || opType == "2")
+        else if (opType == "h" || opType == "ch" || opType == "2")
             return OpType::H;
-        else if (opType == "x" || opType == "3")
+        else if (opType == "x" || opType == "cx" || opType == "cnot" || opType == "3")
             return OpType::X;
-        else if (opType == "y" || opType == "4")
+        else if (opType == "y" || opType == "cy" || opType == "4")
             return OpType::Y;
-        else if (opType == "z" || opType == "5")
+        else if (opType == "z" || opType == "cz" || opType == "5")
             return OpType::Z;
-        else if (opType == "s" || opType == "6")
+        else if (opType == "s" || opType == "cs" || opType == "6")
             return OpType::S;
-        else if (opType == "sdg" || opType == "7")
+        else if (opType == "sdg" || opType == "csdg" || opType == "7")
             return OpType::Sdag;
-        else if (opType == "t" || opType == "8")
+        else if (opType == "t" || opType == "ct" || opType == "8")
             return OpType::T;
-        else if (opType == "tdg" || opType == "9")
+        else if (opType == "tdg" || opType == "ctdg" || opType == "9")
             return OpType::Tdag;
         else if (opType == "v" || opType == "10")
             return OpType::V;
         else if (opType == "vdg" || opType == "11")
             return OpType::Vdag;
-        else if (opType == "u3" || opType == "u" || opType == "12")
+        else if (opType == "u3" || opType == "cu3" || opType == "u" || opType == "cu" || opType == "12")
             return OpType::U3;
-        else if (opType == "u2" || opType == "13")
+        else if (opType == "u2" || opType == "cu2" || opType == "13")
             return OpType::U2;
-        else if (opType == "u1" || opType == "p" || opType == "14")
+        else if (opType == "u1" || opType == "cu1" || opType == "p" || opType == "cp" || opType == "14")
             return OpType::Phase;
-        else if (opType == "sx" || opType == "15")
+        else if (opType == "sx" || opType == "csx" || opType == "15")
             return OpType::SX;
-        else if (opType == "sxdg" || opType == "16")
+        else if (opType == "sxdg" || opType == "csxdg" || opType == "16")
             return OpType::SXdag;
-        else if (opType == "rx" || opType == "17")
+        else if (opType == "rx" || opType == "crx" || opType == "17")
             return OpType::RX;
-        else if (opType == "ry" || opType == "18")
+        else if (opType == "ry" || opType == "cry" || opType == "18")
             return OpType::RY;
-        else if (opType == "rz" || opType == "19")
+        else if (opType == "rz" || opType == "crz" || opType == "19")
             return OpType::RZ;
-        else if (opType == "swap" || opType == "20")
+        else if (opType == "swap" || opType == "cswap" || opType == "20")
             return OpType::SWAP;
         else if (opType == "iswap" || opType == "21")
             return OpType::iSWAP;
