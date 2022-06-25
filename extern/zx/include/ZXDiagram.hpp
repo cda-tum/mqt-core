@@ -7,10 +7,10 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <numeric>
 #include <optional>
-#include <stdint.h>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -20,7 +20,7 @@ namespace zx {
     class ZXDiagram {
     public:
         ZXDiagram() = default;
-        ZXDiagram(std::size_t nqubits); // create n_qubit identity_diagram
+        explicit ZXDiagram(std::size_t nqubits); // create n_qubit identity_diagram
         explicit ZXDiagram(std::string filename);
         // explicit ZXDiagram(const qc::QuantumComputation &circuit);
 
@@ -40,7 +40,7 @@ namespace zx {
         void   addQubits(zx::Qubit n);
         void   removeVertex(Vertex to_remove);
 
-        std::size_t               getNdeleted() const { return deleted.size(); }
+        [[nodiscard]] std::size_t getNdeleted() const { return deleted.size(); }
         [[nodiscard]] std::size_t getNVertices() const { return nvertices; }
         [[nodiscard]] std::size_t getNEdges() const { return nedges; }
         [[nodiscard]] std::size_t getNQubits() const { return inputs.size(); }
@@ -126,23 +126,6 @@ namespace zx {
         std::vector<Vertex>                    outputs;
         std::size_t                            nvertices = 0;
         std::size_t                            nedges    = 0;
-
-        void addZSpider(Qubit qubit, std::vector<Vertex>& qubit_vertices,
-                        const Expression& phase = Expression(),
-                        EdgeType          type  = EdgeType::Simple);
-        void addXSpider(Qubit qubit, std::vector<Vertex>& qubit_vertices,
-
-                        const Expression& phase = Expression(),
-                        EdgeType          type  = EdgeType::Simple);
-        void addCnot(Qubit ctrl, Qubit target,
-                     std::vector<Vertex>& qubit_vertices);
-
-        void addCphase(PiRational phase, Qubit ctrl, Qubit target,
-                       std::vector<Vertex>& qubit_vertices);
-        void addSwap(Qubit ctrl, Qubit target,
-                     std::vector<Vertex>& qubit_vertices);
-        void addCcx(Qubit ctrl_0, Qubit ctrl_1, Qubit target,
-                    std::vector<Vertex>& qubit_vertices);
 
         std::vector<Vertex> initGraph(std::size_t nqubits);
         void                closeGraph(std::vector<Vertex>& qubit_vertices);

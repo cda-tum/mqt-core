@@ -30,7 +30,8 @@ namespace zx {
 
     class Vertices {
     public:
-        Vertices(std::vector<std::optional<VertexData>>& vertices):
+        explicit Vertices(
+                std::vector<std::optional<VertexData>>& vertices):
             vertices(vertices){};
 
         class VertexIterator {
@@ -41,11 +42,12 @@ namespace zx {
             using pointer           = value_type*;
             using reference         = value_type&;
 
-            VertexIterator(std::vector<std::optional<VertexData>>& vertices):
+            explicit VertexIterator(std::vector<std::optional<VertexData>>& vertices):
                 v(0), currentPos(vertices.begin()), vertices(vertices) {
                 next_valid_vertex();
             }
-            VertexIterator(std::vector<std::optional<VertexData>>& vertices, Vertex v);
+            VertexIterator(std::vector<std::optional<VertexData>>& vertices,
+                           Vertex                                  v);
 
             value_type operator*() const { return {v, currentPos->value()}; }
             // pointer operator->() { return ptr; }
@@ -54,10 +56,12 @@ namespace zx {
             VertexIterator operator++();
 
             // Postfix increment
-            VertexIterator operator++(int);
+            const VertexIterator operator++(int);
 
-            friend bool operator==(const VertexIterator& a, const VertexIterator& b);
-            friend bool operator!=(const VertexIterator& a, const VertexIterator& b);
+            friend bool operator==(const VertexIterator& a,
+                                   const VertexIterator& b);
+            friend bool operator!=(const VertexIterator& a,
+                                   const VertexIterator& b);
 
         private:
             Vertex                                           v;
@@ -104,7 +108,7 @@ namespace zx {
             EdgeIterator operator++();
 
             // Postfix increment
-            EdgeIterator operator++(int);
+            const EdgeIterator operator++(int);
 
             friend bool operator==(const EdgeIterator& a, const EdgeIterator& b);
             friend bool operator!=(const EdgeIterator& a, const EdgeIterator& b);

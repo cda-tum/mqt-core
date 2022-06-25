@@ -9,7 +9,7 @@ namespace zx {
             currentPos = vertices.end();
             v          = vertices.size();
         } else {
-            currentPos = vertices.begin() + v;
+            currentPos = vertices.begin() + static_cast<int>(v);
             next_valid_vertex();
         }
     }
@@ -23,7 +23,7 @@ namespace zx {
     }
 
     // Postfix increment
-    Vertices::VertexIterator Vertices::VertexIterator::operator++(int) {
+    const Vertices::VertexIterator Vertices::VertexIterator::operator++(int) {
         currentPos++;
         v++;
         next_valid_vertex();
@@ -51,7 +51,7 @@ namespace zx {
             std::vector<std::optional<VertexData>>& vertices):
         v(0),
         currentPos(edges[0].begin()), edges(edges), vertices(vertices) {
-        if (vertices.size() != 0) {
+        if (!vertices.empty()) {
             while ((size_t)v < edges.size() && !vertices[v].has_value())
                 v++;
             currentPos = edges[v].begin();
@@ -105,7 +105,7 @@ namespace zx {
         }
     }
     // Postfix increment
-    Edges::EdgeIterator Edges::EdgeIterator::operator++(int) {
+    const Edges::EdgeIterator Edges::EdgeIterator::operator++(int) {
         currentPos++;
         checkNextVertex();
         return *this;

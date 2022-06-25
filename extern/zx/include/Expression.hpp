@@ -5,12 +5,13 @@
 
 #include <cmath>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace zx {
     struct Variable {
         Variable(std::int32_t id, std::string name):
-            id(id), name(name){};
+            id(id), name(std::move(name)){};
         std::int32_t id;
         std::string  name;
     };
@@ -28,9 +29,9 @@ namespace zx {
 
         void addCoeff(double r);
         Term(double coeff, Variable var):
-            coeff(coeff), var(var){};
-        Term(Variable var):
-            coeff(1), var(var){};
+            coeff(coeff), var(std::move(var)){};
+        explicit Term(Variable var):
+            coeff(1), var(std::move(var)){};
 
         Term  operator-() const { return Term(-coeff, var); }
         Term& operator*=(double rhs);
@@ -63,7 +64,7 @@ namespace zx {
         using const_iterator = std::vector<Term>::const_iterator;
 
         template<typename... Args>
-        Expression(Term t, Args... ms) {
+        explicit Expression(Term t, Args... ms) {
             terms.emplace_back(t);
             (terms.emplace_back(std::forward<Args>(ms)), ...);
             sortTerms();
@@ -71,8 +72,8 @@ namespace zx {
         }
 
         template<typename... Args>
-        Expression(Variable v, Args... ms) {
-            terms.emplace_back(Term(1, v));
+        explicit Expression(Variable v, Args... ms) {
+            terms.emplace_back(Term(1, std::move(v)));
             (terms.emplace_back(std::forward<Args>(ms)), ...);
             sortTerms();
             aggregateEqualTerms();
@@ -80,15 +81,15 @@ namespace zx {
 
         Expression():
             constant(PiRational(0, 1)){};
-        Expression(PiRational r):
-            constant(r){};
+        explicit Expression(PiRational r):
+            constant(std::move(r)){};
 
-        iterator       begin() { return terms.begin(); }
-        iterator       end() { return terms.end(); }
-        const_iterator begin() const { return terms.cbegin(); }
-        const_iterator end() const { return terms.cend(); }
-        const_iterator cbegin() const { return terms.cbegin(); }
-        const_iterator cend() const { return terms.cend(); }
+        iterator                     begin() { return terms.begin(); }
+        iterator                     end() { return terms.end(); }
+        [[nodiscard]] const_iterator begin() const { return terms.cbegin(); }
+        [[nodiscard]] const_iterator end() const { return terms.cend(); }
+        [[nodiscard]] const_iterator cbegin() const { return terms.cbegin(); }
+        [[nodiscard]] const_iterator cend() const { return terms.cend(); }
 
         [[nodiscard]] bool isZero() const;
         [[nodiscard]] bool isConstant() const;
@@ -106,7 +107,7 @@ namespace zx {
         Expression&              operator-=(const PiRational& rhs);
         [[nodiscard]] Expression operator-() const;
 
-        [[nodiscard]] const Term& operator[](int i) const { return terms[i]; }
+        [[nodiscard]] const Term& operator[](std::size_t i) const { return terms[i]; }
         [[nodiscard]] PiRational  getConst() const { return constant; }
         [[nodiscard]] auto        numTerms() const { return terms.size(); }
 

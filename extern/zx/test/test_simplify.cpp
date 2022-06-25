@@ -125,11 +125,11 @@ TEST_F(SimplifyTest, localComp) {
     diag.removeEdge(0, 2);
     diag.removeEdge(1, 3);
 
-    diag.addVertex(0, 0, zx::PiRational(1, 2), zx::VertexType::Z); // 4
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z); // 5
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z); // 6
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z); // 7
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z); // 8
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 2)), zx::VertexType::Z); // 4
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z); // 5
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z); // 6
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z); // 7
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z); // 8
 
     diag.addEdge(4, 5, zx::EdgeType::Hadamard);
     diag.addEdge(4, 6, zx::EdgeType::Hadamard);
@@ -146,7 +146,7 @@ TEST_F(SimplifyTest, localComp) {
     EXPECT_EQ(removed, 1);
 
     for (zx::Vertex v = 5; v <= 8; v++) {
-        EXPECT_TRUE(diag.phase(v) == zx::Expression(zx::PiRational(-1, 2)));
+        EXPECT_TRUE(diag.phase(v) == zx::Expression(zx::Expression(zx::PiRational(-1, 2))));
         for (zx::Vertex w = 5; w <= 8; w++) {
             if (w != v) {
                 ASSERT_TRUE(diag.connected(v, w));
@@ -163,13 +163,13 @@ TEST_F(SimplifyTest, pivotPauli) {
     diag.removeEdge(0, 2);
     diag.removeEdge(1, 3);
 
-    diag.addVertex(0, 0, zx::PiRational(1, 1), zx::VertexType::Z); // 4
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z); // 5
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z); // 6
-    diag.addVertex(1, 0, zx::PiRational(0, 1), zx::VertexType::Z); // 7
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z); // 8
-    diag.addVertex(1, 0, zx::PiRational(0, 1), zx::VertexType::Z); // 9
-    diag.addVertex(1, 0, zx::PiRational(0, 1), zx::VertexType::Z); // 10
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 1)), zx::VertexType::Z); // 4
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z); // 5
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z); // 6
+    diag.addVertex(1, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z); // 7
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z); // 8
+    diag.addVertex(1, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z); // 9
+    diag.addVertex(1, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z); // 10
 
     // IO-Edges
     diag.addEdge(0, 6);
@@ -190,11 +190,11 @@ TEST_F(SimplifyTest, pivotPauli) {
     EXPECT_EQ(removed, 1);
     EXPECT_EQ(diag.getNEdges(), 12);
     EXPECT_EQ(diag.getNVertices(), 9);
-    EXPECT_TRUE(diag.phase(8) == zx::Expression(zx::PiRational(1, 1)));
-    EXPECT_TRUE(diag.phase(9) == zx::PiRational(1, 1));
-    EXPECT_TRUE(diag.phase(10) == zx::PiRational(0, 1));
-    EXPECT_TRUE(diag.phase(6) == zx::PiRational(0, 1));
-    EXPECT_TRUE(diag.phase(7) == zx::PiRational(0, 1));
+    EXPECT_TRUE(diag.phase(8) == zx::Expression(zx::Expression(zx::PiRational(1, 1))));
+    EXPECT_TRUE(diag.phase(9) == zx::Expression(zx::PiRational(1, 1)));
+    EXPECT_TRUE(diag.phase(10) == zx::Expression(zx::PiRational(0, 1)));
+    EXPECT_TRUE(diag.phase(6) == zx::Expression(zx::PiRational(0, 1)));
+    EXPECT_TRUE(diag.phase(7) == zx::Expression(zx::PiRational(0, 1)));
 }
 
 TEST_F(SimplifyTest, interior_clifford) {
@@ -215,9 +215,9 @@ TEST_F(SimplifyTest, interior_clifford_2) {
     zx::ZXDiagram diag(1);
     diag.removeEdge(0, 1);
 
-    diag.addVertex(0, 0, zx::PiRational(-1, 2), zx::VertexType::X); // 2
-    diag.addVertex(0, 0, zx::PiRational(1, 2), zx::VertexType::Z);  // 3
-    diag.addVertex(0, 0, zx::PiRational(-1, 2), zx::VertexType::X); // 4
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(-1, 2)), zx::VertexType::X); // 2
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 2)), zx::VertexType::Z);  // 3
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(-1, 2)), zx::VertexType::X); // 4
 
     diag.addEdge(2, 3);
     diag.addEdge(3, 4);
@@ -240,9 +240,9 @@ TEST_F(SimplifyTest, non_pauli_pivot) {
     zx::ZXDiagram diag(1);
     diag.removeEdge(0, 1);
 
-    diag.addVertex(0, 0, zx::PiRational(1, 4)); // 2
-    diag.addVertex(0);                          // 3
-    diag.addVertex(0);                          // 4
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 4))); // 2
+    diag.addVertex(0);                                          // 3
+    diag.addVertex(0);                                          // 4
 
     diag.addEdge(0, 2);
     diag.addEdge(2, 3, zx::EdgeType::Hadamard);
@@ -326,12 +326,12 @@ TEST_F(SimplifyTest, non_pauli_pivot) {
 TEST_F(SimplifyTest, gadgetSimp) {
     zx::ZXDiagram diag = make_empty_diagram(1);
 
-    diag.addVertex(0);                          // 2
-    diag.addVertex(0);                          // 3
-    diag.addVertex(0);                          // 4
-    diag.addVertex(0, 0, zx::PiRational(1, 1)); // 5
-    diag.addVertex(0);                          // 6
-    diag.addVertex(0, 0, zx::PiRational(1, 1)); // 7
+    diag.addVertex(0);                                          // 2
+    diag.addVertex(0);                                          // 3
+    diag.addVertex(0);                                          // 4
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 1))); // 5
+    diag.addVertex(0);                                          // 6
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 1))); // 7
 
     diag.addEdge(0, 2);
     diag.addEdge(3, 1);
@@ -356,11 +356,11 @@ TEST_F(SimplifyTest, gadgetSimp) {
 
 TEST_F(SimplifyTest, gadgetSimp_2) {
     zx::ZXDiagram diag = make_empty_diagram(1);
-    diag.addVertex(0);                          // 2
-    diag.addVertex(0);                          // 3
-    diag.addVertex(0, 0, zx::PiRational(1, 1)); // 4
-    diag.addVertex(0);                          // 5
-    diag.addVertex(0, 0, zx::PiRational(1, 1)); // 6
+    diag.addVertex(0);                                          // 2
+    diag.addVertex(0);                                          // 3
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 1))); // 4
+    diag.addVertex(0);                                          // 5
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 1))); // 6
 
     diag.addEdge(0, 2);
     diag.addEdge(2, 1);
@@ -390,12 +390,12 @@ TEST_F(SimplifyTest, gadgetSimp_2) {
 TEST_F(SimplifyTest, fullReduce_2) {
     zx::ZXDiagram diag = make_empty_diagram(2);
 
-    diag.addVertex(0, 0, zx::PiRational(1, 32), zx::VertexType::X);  // 4
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z);   // 5
-    diag.addVertex(1, 0, zx::PiRational(0, 1), zx::VertexType::X);   // 6
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z);   // 7
-    diag.addVertex(1, 0, zx::PiRational(0, 1), zx::VertexType::X);   // 8
-    diag.addVertex(0, 0, zx::PiRational(-1, 32), zx::VertexType::X); // 9
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 32)), zx::VertexType::X);  // 4
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z);   // 5
+    diag.addVertex(1, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::X);   // 6
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z);   // 7
+    diag.addVertex(1, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::X);   // 8
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(-1, 32)), zx::VertexType::X); // 9
 
     diag.addEdge(0, 4);
     diag.addEdge(4, 5);
@@ -415,12 +415,12 @@ TEST_F(SimplifyTest, fullReduce_2) {
 TEST_F(SimplifyTest, fullReduceApprox) {
     zx::ZXDiagram diag = make_empty_diagram(2);
 
-    diag.addVertex(0, 0, zx::PiRational(1, 32), zx::VertexType::X);  // 4
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z);   // 5
-    diag.addVertex(1, 0, zx::PiRational(1e-8), zx::VertexType::X);   // 6
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z);   // 7
-    diag.addVertex(1, 0, zx::PiRational(0, 1), zx::VertexType::X);   // 8
-    diag.addVertex(0, 0, zx::PiRational(-1, 32), zx::VertexType::X); // 9
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 32)), zx::VertexType::X);  // 4
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z);   // 5
+    diag.addVertex(1, 0, zx::Expression(zx::PiRational(1e-8)), zx::VertexType::X);   // 6
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z);   // 7
+    diag.addVertex(1, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::X);   // 8
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(-1, 32)), zx::VertexType::X); // 9
 
     diag.addEdge(0, 4);
     diag.addEdge(4, 5);
@@ -440,12 +440,12 @@ TEST_F(SimplifyTest, fullReduceApprox) {
 TEST_F(SimplifyTest, fullReduceNotApprox) {
     zx::ZXDiagram diag = make_empty_diagram(2);
 
-    diag.addVertex(0, 0, zx::PiRational(1, 32), zx::VertexType::X);  // 4
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z);   // 5
-    diag.addVertex(1, 0, zx::PiRational(1e-8), zx::VertexType::X);   // 6
-    diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::Z);   // 7
-    diag.addVertex(1, 0, zx::PiRational(0, 1), zx::VertexType::X);   // 8
-    diag.addVertex(0, 0, zx::PiRational(-1, 32), zx::VertexType::X); // 9
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 32)), zx::VertexType::X);  // 4
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z);   // 5
+    diag.addVertex(1, 0, zx::Expression(zx::PiRational(1e-8)), zx::VertexType::X);   // 6
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::Z);   // 7
+    diag.addVertex(1, 0, zx::Expression(zx::PiRational(0, 1)), zx::VertexType::X);   // 8
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(-1, 32)), zx::VertexType::X); // 9
 
     diag.addEdge(0, 4);
     diag.addEdge(4, 5);

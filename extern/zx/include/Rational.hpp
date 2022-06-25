@@ -10,8 +10,8 @@ using Rational = boost::multiprecision::cpp_rational;
 using BigInt   = boost::multiprecision::cpp_int;
 #endif
 
+#include <cstdint>
 #include <iostream>
-#include <stdint.h>
 
 namespace zx {
 
@@ -40,29 +40,29 @@ namespace zx {
         explicit PiRational(double val);
 
         PiRational& operator+=(const PiRational& rhs);
-        PiRational& operator+=(const int64_t rhs);
+        PiRational& operator+=(int64_t rhs);
 
         PiRational& operator-=(const PiRational& rhs);
-        PiRational& operator-=(const int64_t rhs);
+        PiRational& operator-=(int64_t rhs);
 
         PiRational& operator*=(const PiRational& rhs);
-        PiRational& operator*=(const int64_t rhs);
+        PiRational& operator*=(int64_t rhs);
 
         PiRational& operator/=(const PiRational& rhs);
-        PiRational& operator/=(const int64_t rhs);
+        PiRational& operator/=(int64_t rhs);
 
         // double to_double() const;
         [[nodiscard]] bool isInteger() const {
             return boost::multiprecision::denominator(frac) == 1;
         }
-        bool isZero() const {
+        [[nodiscard]] bool isZero() const {
             return boost::multiprecision::numerator(frac) == 0;
         }
-        BigInt getDenom() const {
+        [[nodiscard]] BigInt getDenom() const {
             return boost::multiprecision::denominator(frac);
         }
 
-        BigInt getNum() const {
+        [[nodiscard]] BigInt getNum() const {
             return boost::multiprecision::numerator(frac);
         }
 
@@ -72,11 +72,11 @@ namespace zx {
             return frac.convert_to<double>();
         }
 
-        bool isClose(double x, double tolerance) {
+        [[nodiscard]] bool isClose(double x, double tolerance) const {
             return std::abs(toDouble() - x) < tolerance;
         }
 
-        bool isCloseDivPi(double x, double tolerance) {
+        [[nodiscard]] bool isCloseDivPi(double x, double tolerance) const {
             return std::abs(toDoubleDivPi() - x) < tolerance;
         }
 

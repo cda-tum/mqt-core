@@ -98,7 +98,7 @@ namespace zx {
             return v;
         } else {
             v = nvertices;
-            vertices.push_back(data);
+            vertices.emplace_back(data);
             edges.emplace_back();
         }
         return nvertices - 1;
@@ -110,8 +110,8 @@ namespace zx {
     }
 
     void ZXDiagram::addQubit() {
-        auto in  = addVertex(getNQubits() + 1, 0, Expression(), VertexType::Boundary);
-        auto out = addVertex(getNQubits() + 1, 0, Expression(), VertexType::Boundary);
+        auto in  = addVertex(static_cast<zx::Qubit>(getNQubits()) + 1, 0, Expression(), VertexType::Boundary);
+        auto out = addVertex(static_cast<zx::Qubit>(getNQubits()) + 1, 0, Expression(), VertexType::Boundary);
         inputs.emplace_back(in);
         outputs.emplace_back(out);
     }
@@ -270,87 +270,6 @@ namespace zx {
                 return false;
         }
         return true;
-    }
-
-    // bool ZXDiagram::isIdentity(const qc::Permutation &perm) const {
-    //   if (nedges != inputs.size())
-    //     return false;
-
-    //   for (auto &[in, out] : perm) {
-    //     if (!connected(inputs[in], outputs[out]))
-    //       return false;
-    //   }
-    //   return true;
-    // }
-
-    void ZXDiagram::addZSpider(Qubit                qubit,
-                               std::vector<Vertex>& qubit_vertices,
-                               const Expression& phase, EdgeType type) {
-        auto new_vertex = addVertex(
-                {vertices[qubit].value().col + 1, qubit, phase, VertexType::Z});
-
-        addEdge(qubit_vertices[qubit], new_vertex, type);
-        qubit_vertices[qubit] = new_vertex;
-    }
-
-    void ZXDiagram::addXSpider(Qubit                qubit,
-                               std::vector<Vertex>& qubit_vertices,
-                               const Expression& phase, EdgeType type) {
-        auto new_vertex = addVertex(
-                {vertices[qubit].value().col + 1, qubit, phase, VertexType::X});
-        addEdge(qubit_vertices[qubit], new_vertex, type);
-        qubit_vertices[qubit] = new_vertex;
-    }
-
-    void ZXDiagram::addCnot(Qubit ctrl, Qubit target,
-                            std::vector<Vertex>& qubit_vertices) {
-        addZSpider(ctrl, qubit_vertices);
-        addXSpider(target, qubit_vertices);
-        addEdge(qubit_vertices[ctrl], qubit_vertices[target]);
-    }
-
-    void ZXDiagram::addCphase(PiRational phase, Qubit ctrl, Qubit target,
-                              std::vector<Vertex>& qubit_vertices) {
-        addZSpider(ctrl, qubit_vertices, Expression(phase / 2));
-        addCnot(ctrl, target, qubit_vertices);
-        addZSpider(target, qubit_vertices, Expression(-phase / 2));
-        addCnot(ctrl, target, qubit_vertices);
-        addZSpider(target, qubit_vertices, Expression(phase / 2));
-    }
-
-    void ZXDiagram::addSwap(Qubit ctrl, Qubit target,
-                            std::vector<Vertex>& qubit_vertices) {
-        auto s0 = qubit_vertices[target];
-        auto s1 = qubit_vertices[ctrl];
-
-        auto t0 = addVertex(target, vertices[target].value().col + 1);
-        auto t1 = addVertex(ctrl, vertices[ctrl].value().col + 1);
-
-        addEdge(s0, t1);
-        addEdge(s1, t0);
-
-        qubit_vertices[target] = t0;
-        qubit_vertices[ctrl]   = t1;
-    }
-
-    void ZXDiagram::addCcx(Qubit ctrl_0, Qubit ctrl_1, Qubit target,
-                           std::vector<Vertex>& qubit_vertices) {
-        addZSpider(target, qubit_vertices, Expression(), EdgeType::Hadamard);
-        addCnot(ctrl_1, target, qubit_vertices);
-        addZSpider(target, qubit_vertices, Expression(PiRational(-1, 4)));
-        addCnot(ctrl_0, target, qubit_vertices);
-        addZSpider(target, qubit_vertices, Expression(PiRational(1, 4)));
-        addCnot(ctrl_1, target, qubit_vertices);
-        addZSpider(ctrl_1, qubit_vertices, Expression(PiRational(1, 4)));
-        addZSpider(target, qubit_vertices, Expression(PiRational(-1, 4)));
-        addCnot(ctrl_0, target, qubit_vertices);
-        addZSpider(target, qubit_vertices, Expression(PiRational(1, 4)));
-        addCnot(ctrl_0, ctrl_1, qubit_vertices);
-        addZSpider(ctrl_0, qubit_vertices, Expression(PiRational(1, 4)));
-        addZSpider(ctrl_1, qubit_vertices, Expression(PiRational(-1, 4)));
-        addZSpider(target, qubit_vertices, Expression(PiRational(0, 1)),
-                   EdgeType::Hadamard);
-        addCnot(ctrl_0, ctrl_1, qubit_vertices);
     }
 
     std::vector<Vertex> ZXDiagram::initGraph(std::size_t nqubits) {
