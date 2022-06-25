@@ -1207,7 +1207,7 @@ namespace qc {
 
             if (isSWAP && prevOpIsSWAP) {
                 // two identical SWAP gates cancel each other
-                if (q0 == prevQ0 && q1 == prevQ1) {
+                if (std::set{q0, q1} == std::set{prevQ0, prevQ1}) {
                     dag.at(q0).pop_back();
                     dag.at(q1).pop_back();
                     op0->setGate(I);
@@ -1233,11 +1233,11 @@ namespace qc {
 
             if (isSWAP && prevOpIsCNOT) {
                 // CNOT followed by a SWAP is equivalent to two CNOTs
-                op0->setControls({dd::Control{q0}});
-                op0->setTargets({q1});
+                op0->setControls({dd::Control{prevQ0}});
+                op0->setTargets({prevQ1});
                 it->setGate(X);
-                it->setControls({dd::Control{q1}});
-                it->setTargets({q0});
+                it->setControls({dd::Control{prevQ1}});
+                it->setTargets({prevQ0});
                 addToDag(dag, &it);
                 continue;
             }
