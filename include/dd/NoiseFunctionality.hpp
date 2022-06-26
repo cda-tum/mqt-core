@@ -261,7 +261,8 @@ namespace dd {
         double ampDampingProbSingleQubit;
         double ampDampingProbMultiQubit;
 
-        bool useDensityMatrixType;
+        std::vector<dd::NoiseOperations> noiseEffects;
+        bool                             useDensityMatrixType;
         bool sequentiallyApplyNoise;
 
         const std::map<dd::NoiseOperations, int> sequentialNoiseMap = {
@@ -269,8 +270,6 @@ namespace dd {
                 {dd::amplitudeDamping, 2}, //Amplitude Damping
                 {dd::depolarization, 4},   //Depolarisation
         };
-
-        std::vector<dd::NoiseOperations> noiseEffects;
 
         [[nodiscard]] dd::Qubit getNumberOfQubits() const {
             return nQubits;
