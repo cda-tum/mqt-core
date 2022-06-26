@@ -263,7 +263,7 @@ namespace dd {
 
         std::vector<dd::NoiseOperations> noiseEffects;
         bool                             useDensityMatrixType;
-        bool sequentiallyApplyNoise;
+        bool                             sequentiallyApplyNoise;
 
         const std::map<dd::NoiseOperations, int> sequentialNoiseMap = {
                 {dd::phaseFlip, 2},        //Phase-flip
@@ -276,7 +276,7 @@ namespace dd {
         }
 
     public:
-        dEdge applyNoiseEffects(dEdge& originalEdge, const std::unique_ptr<Operation>& qcOperation) {
+        void applyNoiseEffects(dEdge& originalEdge, const std::unique_ptr<Operation>& qcOperation) {
             auto usedQubits = qcOperation->getTargets();
             for (auto control: qcOperation->getControls()) {
                 usedQubits.push_back(control.qubit);
@@ -291,9 +291,9 @@ namespace dd {
                 sort(usedQubits.begin(), usedQubits.end(), std::greater<>());
 
                 if (useDensityMatrixType) {
-                    dEdge::applyDmChangesToEdges(&originalEdge, nullptr);
+                    dEdge::applyDmChangesToEdge(&originalEdge);
                     nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, false);
-                    dEdge::revertDmChangesToEdges(&originalEdge, nullptr);
+                    dEdge::revertDmChangesToEdge(&originalEdge);
                 } else {
                     nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, true);
                 }
@@ -344,17 +344,17 @@ namespace dd {
             for (short i = 0; i < 4; i++) {
                 if (firstPathEdge || i == 1) {
                     // If I am to the useDensityMatrix I cannot minimize the necessary operations anymore
-                    dEdge::applyDmChangesToEdges(&originalCopy.p->e[i], nullptr);
+                    dEdge::applyDmChangesToEdge(&originalCopy.p->e[i]);
                     new_edges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, true);
-                    dEdge::revertDmChangesToEdges(&originalCopy.p->e[i], nullptr);
+                    dEdge::revertDmChangesToEdge(&originalCopy.p->e[i]);
                 } else if (i == 2) {
                     // Size e[1] == e[2] (due to density matrix representation), I can skip calculating e[2]
                     new_edges[2].p = new_edges[1].p;
                     new_edges[2].w = new_edges[1].w;
                 } else {
-                    dEdge::applyDmChangesToEdges(&originalCopy.p->e[i], nullptr);
+                    dEdge::applyDmChangesToEdge(&originalCopy.p->e[i]);
                     new_edges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, false);
-                    dEdge::revertDmChangesToEdges(&originalCopy.p->e[i], nullptr);
+                    dEdge::revertDmChangesToEdge(&originalCopy.p->e[i]);
                 }
             }
             dEdge e = {};
@@ -589,8 +589,8 @@ namespace dd {
 
         void applyDetNoiseSequential(dEdge& originalEdge, const qc::Targets& targets) {
             dd::dEdge tmp = {};
-            //    qc::MatrixDD ancillary_edge_1 = {};
-            qc::MatrixDD idleOperation[4];
+
+            std::array<mEdge, std::tuple_size_v<decltype(dd::dNode::e)>> idleOperation{};
 
             // Iterate over qubits and check if the qubit had been used
             for (auto targetQubit: targets) {
@@ -619,9 +619,9 @@ namespace dd {
             }
         }
 
-        void generateGate(qc::MatrixDD* pointerForMatrices, dd::NoiseOperations noiseType, dd::Qubit target, double probability) {
-            std::array<dd::GateMatrix, 4> idleNoiseGate{};
-            dd::ComplexValue              tmp = {};
+        void generateGate(std::array<mEdge, std::tuple_size_v<decltype(dd::dNode::e)>>& pointerForMatrices, dd::NoiseOperations noiseType, dd::Qubit target, double probability) {
+            std::array<dd::GateMatrix, std::tuple_size_v<decltype(dd::dNode::e)>> idleNoiseGate{};
+            dd::ComplexValue                                                      tmp = {};
 
             switch (noiseType) {
                 case dd::phaseFlip: {
