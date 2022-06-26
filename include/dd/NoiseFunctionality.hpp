@@ -28,7 +28,7 @@ namespace dd {
     class StochasticNoiseFunctionality {
     public:
         StochasticNoiseFunctionality(const std::unique_ptr<DDPackage>& package,
-                                     dd::Qubit                         nQubits,
+                                     dd::QubitCount                    nQubits,
                                      double                            gateNoiseProbability,
                                      double                            amplitudeDampingProb,
                                      double                            multiQubitGateFactor,
@@ -57,7 +57,7 @@ namespace dd {
 
     protected:
         const std::unique_ptr<DDPackage>&      package;
-        dd::Qubit                              nQubits;
+        dd::QubitCount                         nQubits;
         std::uniform_real_distribution<dd::fp> dist;
 
         double                           noiseProbability;
