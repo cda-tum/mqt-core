@@ -100,7 +100,7 @@ namespace zx {
     }
 
     FunctionalityConstruction::op_it FunctionalityConstruction::parse_op(ZXDiagram& diag, op_it it, op_it end,
-                                                                         std::vector<Vertex>& qubit_vertices) {
+                                                                         std::vector<Vertex>& qubit_vertices, const qc::Permutation& p) {
         auto& op = *it;
 
         if (op->getType() == qc::OpType::Barrier) {
@@ -108,10 +108,11 @@ namespace zx {
         }
 
         if (!op->isControlled()) {
-            const auto target = op->getTargets().front();
+            const auto target = p.at(op->getTargets().front());
             switch (op->getType()) {
                 case qc::OpType::Z: {
-                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(1, 1)));
+                    addZSpider(diag, target, qubit_vertices,
+                               Expression(PiRational(1, 1)));
                     break;
                 }
 
@@ -199,8 +200,8 @@ namespace zx {
                 }
             }
         } else if (op->getNcontrols() == 1 && op->getNtargets() == 1) {
-            const auto target = op->getTargets().front();
-            const auto ctrl   = (*op->getControls().begin()).qubit;
+            const auto target = p.at(op->getTargets().front());
+            const auto ctrl   = p.at((*op->getControls().begin()).qubit);
             switch (op->getType()) { // TODO: any gate can be controlled
                 case qc::OpType::X: {
                     // check if swap
@@ -261,13 +262,13 @@ namespace zx {
         } else if (op->getNcontrols() == 2) {
             Qubit       ctrl_0 = 0;
             Qubit       ctrl_1 = 0;
-            const Qubit target = op->getTargets().front();
+            const Qubit target = p.at(op->getTargets().front());
             int         i      = 0;
             for (auto& ctrl: op->getControls()) {
                 if (i++ == 0)
-                    ctrl_0 = ctrl.qubit;
+                    ctrl_0 = p.at(ctrl.qubit);
                 else
-                    ctrl_1 = ctrl.qubit;
+                    ctrl_1 = p.at(ctrl.qubit);
             }
             switch (op->getType()) {
                 case qc::OpType::X: {
@@ -303,25 +304,24 @@ namespace zx {
             qubit_vertices[i] = i;
         }
 
-        auto initial_layout     = qc->initialLayout;
-        auto output_permutation = qc->outputPermutation;
+        auto initial_layout = qc->initialLayout;
 
-        if (!initial_layout.empty()) {
-            std::vector<Vertex> new_qubit_vertices(qc->getNqubits());
-            for (auto i = 0; i < qc->getNqubits(); i++) {
-                new_qubit_vertices[i] = qubit_vertices[i];
-            }
-            for (auto& [tar, src]:
-                 qc->initialLayout) { // reverse initial permutation
-                if (tar == src)
-                    continue;
+        // if (!initial_layout.empty()) {
+        //     std::vector<Vertex> new_qubit_vertices(qc->getNqubits());
+        //     for (auto i = 0; i < qc->getNqubits(); i++) {
+        //         new_qubit_vertices[i] = qubit_vertices[i];
+        //     }
+        //     for (auto& [tar, src]:
+        //          qc->initialLayout) { // reverse initial permutation
+        //         if (tar == src)
+        //             continue;
 
-                auto v_tar = diag.addVertex(tar, 1);
-                diag.addEdge(qubit_vertices[src], v_tar);
-                new_qubit_vertices[tar] = v_tar;
-            }
-            qubit_vertices = new_qubit_vertices;
-        }
+        //         auto v_tar = diag.addVertex(tar, 1);
+        //         diag.addEdge(qubit_vertices[src], v_tar);
+        //         new_qubit_vertices[tar] = v_tar;
+        //     }
+        //     qubit_vertices = new_qubit_vertices;
+        // }
 
         for (auto it = qc->cbegin(); it != qc->cend();) {
             auto& op = *it;
@@ -329,10 +329,10 @@ namespace zx {
             if (op->getType() == qc::OpType::Compound) {
                 auto* compOp = dynamic_cast<qc::CompoundOperation*>(op.get());
                 for (auto subIt = compOp->cbegin(); subIt != compOp->cend();)
-                    subIt = parse_op(diag, subIt, compOp->end(), qubit_vertices);
+                    subIt = parse_op(diag, subIt, compOp->end(), qubit_vertices, qc->initialLayout);
                 ++it;
             } else {
-                it = parse_op(diag, it, qc->end(), qubit_vertices);
+                it = parse_op(diag, it, qc->end(), qubit_vertices, qc->initialLayout);
             }
         }
 

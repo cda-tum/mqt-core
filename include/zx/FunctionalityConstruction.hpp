@@ -38,7 +38,7 @@ namespace zx {
         static void  addCcx(ZXDiagram& diag, Qubit ctrl_0, Qubit ctrl_1, Qubit target,
                             std::vector<Vertex>& qubit_vertices);
         static op_it parse_op(ZXDiagram& diag, op_it it, op_it end,
-                              std::vector<Vertex>& qubit_vertices);
+                              std::vector<Vertex>& qubit_vertices, const qc::Permutation& p);
     };
 
 } // namespace zx
