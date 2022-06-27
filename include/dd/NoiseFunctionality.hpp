@@ -219,10 +219,9 @@ namespace dd {
                         return dd::Z;
                     }
                 }
-                case ::dd::identity: {
+                case dd::NoiseOperations::identity: {
                     return dd::I;
                 }
-
                 default:
                     throw std::runtime_error(std::string{"Unknown noise effect '"} + std::to_string(noiseOperation) + "'");
             }

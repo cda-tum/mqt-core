@@ -236,7 +236,12 @@ TEST(DDNoiseFunctionality, StochSimulateAdder4TrackAPD) {
             noiseEffects);
 
     for (size_t i = 0; i < stochRuns; i++) {
-        std::mt19937_64 generator(std::hash<size_t>{}(i));
+        std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
+        std::random_device                                                    rd;
+        std::generate(std::begin(random_data), std::end(random_data), [&rd]() { return rd(); });
+        std::seed_seq   seeds(std::begin(random_data), std::end(random_data));
+        std::mt19937_64 generator(seeds);
+
         dd::vEdge       rootEdge = dd->makeZeroState(quantumComputation->getNqubits());
         dd->incRef(rootEdge);
 
@@ -251,26 +256,114 @@ TEST(DDNoiseFunctionality, StochSimulateAdder4TrackAPD) {
 
         auto amplitudes = dd->getVector(rootEdge);
         for (size_t m = 0; m < amplitudes.size(); m++) {
-            std::string s1        = std::bitset<4>(m).to_string();
-            auto        amplitude = amplitudes[m];
-            auto        prob      = std::abs(std::pow(amplitude, 2));
-            measSummary[s1] += prob;
+            std::string s1                = std::bitset<4>(m).to_string();
+            std::string revertedBitString = {};
+            for (int n = (int)s1.length() - 1; n >= 0; n--) {
+                revertedBitString.push_back(s1[n]);
+            }
+
+            auto amplitude = amplitudes[m];
+            auto prob      = std::abs(std::pow(amplitude, 2));
+            measSummary[revertedBitString] += (prob / (double)stochRuns);
         }
     }
 
     double tolerance = 0.1;
-    EXPECT_NEAR(measSummary["0000"] / (double)stochRuns, 0.25574412296741467, tolerance);
-    EXPECT_NEAR(measSummary["0001"] / (double)stochRuns, 0.177720207953642, tolerance);
-    EXPECT_NEAR(measSummary["0010"] / (double)stochRuns, 0.06386485600556026, tolerance);
-    EXPECT_NEAR(measSummary["0011"] / (double)stochRuns, 0.04438060064535747, tolerance);
-    EXPECT_NEAR(measSummary["0100"] / (double)stochRuns, 0.0898482618504159, tolerance);
-    EXPECT_NEAR(measSummary["0101"] / (double)stochRuns, 0.062436925904517736, tolerance);
-    EXPECT_NEAR(measSummary["0110"] / (double)stochRuns, 0.022981537137908348, tolerance);
-    EXPECT_NEAR(measSummary["0111"] / (double)stochRuns, 0.015970195341710985, tolerance);
-    EXPECT_NEAR(measSummary["1000"] / (double)stochRuns, 0.08799481366902726, tolerance);
-    EXPECT_NEAR(measSummary["1001"] / (double)stochRuns, 0.061149120043750206, tolerance);
-    EXPECT_NEAR(measSummary["1010"] / (double)stochRuns, 0.02480081309590326, tolerance);
-    EXPECT_NEAR(measSummary["1011"] / (double)stochRuns, 0.017234499727102268, tolerance);
-    EXPECT_NEAR(measSummary["1100"] / (double)stochRuns, 0.03505400112419414, tolerance);
-    EXPECT_NEAR(measSummary["1101"] / (double)stochRuns, 0.024359601507422463, tolerance);
+    EXPECT_NEAR(measSummary["0000"], 0.09693321927412533, tolerance);
+    EXPECT_NEAR(measSummary["0001"], 0.09078880415385877, tolerance);
+    EXPECT_NEAR(measSummary["0010"], 0.01414096609854787, tolerance);
+    EXPECT_NEAR(measSummary["0100"], 0.02382034755245074, tolerance);
+    EXPECT_NEAR(measSummary["0101"], 0.023509799001774703, tolerance);
+    EXPECT_NEAR(measSummary["0110"], 0.02445760874001203, tolerance);
+    EXPECT_NEAR(measSummary["0111"], 0.011628281127642115, tolerance);
+    EXPECT_NEAR(measSummary["1000"], 0.1731941264570172, tolerance);
+    EXPECT_NEAR(measSummary["1001"], 0.41458550719988047, tolerance);
+    EXPECT_NEAR(measSummary["1010"], 0.013806211321349706, tolerance);
+    EXPECT_NEAR(measSummary["1011"], 0.01840334820660922, tolerance);
+    EXPECT_NEAR(measSummary["1100"], 0.024245433691737584, tolerance);
+    EXPECT_NEAR(measSummary["1101"], 0.026277984479993615, tolerance);
+    EXPECT_NEAR(measSummary["1110"], 0.023929692098939092, tolerance);
+    EXPECT_NEAR(measSummary["1111"], 0.011037316662706232, tolerance);
+}
+
+TEST(DDNoiseFunctionality, StochSimulateAdder4IdentiyError) {
+    size_t stochRuns          = 1000;
+    auto   quantumComputation = detGetAdder4Circuit();
+    auto   dd                 = std::make_unique<StochasticNoiseTestPackage>(quantumComputation->getNqubits());
+
+    std::map<std::string, double> measSummary = {
+            {"0000", 0},
+            {"0001", 0},
+            {"0010", 0},
+            {"0011", 0},
+            {"0100", 0},
+            {"0101", 0},
+            {"0110", 0},
+            {"0111", 0},
+            {"1000", 0},
+            {"1001", 0},
+            {"1010", 0},
+            {"1011", 0},
+            {"1100", 0},
+            {"1101", 0}};
+
+    std::vector<dd::NoiseOperations> noiseEffects = {dd::identity};
+
+    auto stochasticNoiseFunctionality = dd::StochasticNoiseFunctionality<StochasticNoiseTestPackage>(
+            dd,
+            quantumComputation->getNqubits(),
+            0.01,
+            0.02,
+            2,
+            noiseEffects);
+
+    for (size_t i = 0; i < stochRuns; i++) {
+        std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
+        std::random_device                                                    rd;
+        std::generate(std::begin(random_data), std::end(random_data), [&rd]() { return rd(); });
+        std::seed_seq   seeds(std::begin(random_data), std::end(random_data));
+        std::mt19937_64 generator(seeds);
+
+        dd::vEdge       rootEdge = dd->makeZeroState(quantumComputation->getNqubits());
+        dd->incRef(rootEdge);
+
+        for (auto const& op: *quantumComputation) {
+            auto        operation  = dd::getDD(op.get(), dd);
+            std::vector usedQubits = op->getTargets();
+            for (auto control: op->getControls()) {
+                usedQubits.push_back(control.qubit);
+            }
+            stochasticNoiseFunctionality.applyNoiseOperation(usedQubits, operation, rootEdge, generator);
+        }
+
+        auto amplitudes = dd->getVector(rootEdge);
+        for (size_t m = 0; m < amplitudes.size(); m++) {
+            std::string s1                = std::bitset<4>(m).to_string();
+            std::string revertedBitString = {};
+            for (int n = (int)s1.length() - 1; n >= 0; n--) {
+                revertedBitString.push_back(s1[n]);
+            }
+
+            auto amplitude = amplitudes[m];
+            auto prob      = std::abs(std::pow(amplitude, 2));
+            measSummary[revertedBitString] += (prob / (double)stochRuns);
+        }
+    }
+
+    double tolerance = 0.1;
+    EXPECT_NEAR(measSummary["0000"], 0, tolerance);
+    EXPECT_NEAR(measSummary["0001"], 0, tolerance);
+    EXPECT_NEAR(measSummary["0010"], 0, tolerance);
+    EXPECT_NEAR(measSummary["0100"], 0, tolerance);
+    EXPECT_NEAR(measSummary["0101"], 0, tolerance);
+    EXPECT_NEAR(measSummary["0110"], 0, tolerance);
+    EXPECT_NEAR(measSummary["0111"], 0, tolerance);
+    EXPECT_NEAR(measSummary["1000"], 0, tolerance);
+    EXPECT_NEAR(measSummary["1001"], 1, tolerance);
+    EXPECT_NEAR(measSummary["1010"], 0, tolerance);
+    EXPECT_NEAR(measSummary["1011"], 0, tolerance);
+    EXPECT_NEAR(measSummary["1100"], 0, tolerance);
+    EXPECT_NEAR(measSummary["1101"], 0, tolerance);
+    EXPECT_NEAR(measSummary["1110"], 0, tolerance);
+    EXPECT_NEAR(measSummary["1111"], 0, tolerance);
 }
