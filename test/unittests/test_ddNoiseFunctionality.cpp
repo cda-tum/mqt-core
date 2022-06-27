@@ -205,9 +205,9 @@ TEST(DDNoiseFunctionality, DetSimulateAdder4TrackAPD) {
 }
 
 TEST(DDNoiseFunctionality, StochSimulateAdder4TrackAPD) {
-    size_t          stochRuns          = 1000;
-    auto            quantumComputation = detGetAdder4Circuit();
-    auto            dd                 = std::make_unique<StochasticNoiseTestPackage>(quantumComputation->getNqubits());
+    size_t stochRuns          = 1000;
+    auto   quantumComputation = detGetAdder4Circuit();
+    auto   dd                 = std::make_unique<StochasticNoiseTestPackage>(quantumComputation->getNqubits());
 
     std::map<std::string, double> measSummary = {
             {"0000", 0},
@@ -237,12 +237,10 @@ TEST(DDNoiseFunctionality, StochSimulateAdder4TrackAPD) {
 
     for (size_t i = 0; i < stochRuns; i++) {
         std::mt19937_64 generator(std::hash<size_t>{}(i));
-        dd::vEdge rootEdge = dd->makeZeroState(quantumComputation->getNqubits());
+        dd::vEdge       rootEdge = dd->makeZeroState(quantumComputation->getNqubits());
         dd->incRef(rootEdge);
 
         for (auto const& op: *quantumComputation) {
-
-
             auto        operation  = dd::getDD(op.get(), dd);
             std::vector usedQubits = op->getTargets();
             for (auto control: op->getControls()) {
@@ -252,27 +250,27 @@ TEST(DDNoiseFunctionality, StochSimulateAdder4TrackAPD) {
         }
 
         auto amplitudes = dd->getVector(rootEdge);
-        for (size_t m = 0; m < amplitudes.size(); m++){
-            std::string s1 = std::bitset<4>(m).to_string();
-            auto amplitude = amplitudes[m];
-            auto prob      = std::abs(std::pow(amplitude,2));
+        for (size_t m = 0; m < amplitudes.size(); m++) {
+            std::string s1        = std::bitset<4>(m).to_string();
+            auto        amplitude = amplitudes[m];
+            auto        prob      = std::abs(std::pow(amplitude, 2));
             measSummary[s1] += prob;
         }
     }
 
     double tolerance = 0.1;
-    EXPECT_NEAR(measSummary["0000"]/(double)stochRuns, 0.25574412296741467, tolerance);
-    EXPECT_NEAR(measSummary["0001"]/(double)stochRuns, 0.177720207953642, tolerance);
-    EXPECT_NEAR(measSummary["0010"]/(double)stochRuns, 0.06386485600556026, tolerance);
-    EXPECT_NEAR(measSummary["0011"]/(double)stochRuns, 0.04438060064535747, tolerance);
-    EXPECT_NEAR(measSummary["0100"]/(double)stochRuns, 0.0898482618504159, tolerance);
-    EXPECT_NEAR(measSummary["0101"]/(double)stochRuns, 0.062436925904517736, tolerance);
-    EXPECT_NEAR(measSummary["0110"]/(double)stochRuns, 0.022981537137908348, tolerance);
-    EXPECT_NEAR(measSummary["0111"]/(double)stochRuns, 0.015970195341710985, tolerance);
-    EXPECT_NEAR(measSummary["1000"]/(double)stochRuns, 0.08799481366902726, tolerance);
-    EXPECT_NEAR(measSummary["1001"]/(double)stochRuns, 0.061149120043750206, tolerance);
-    EXPECT_NEAR(measSummary["1010"]/(double)stochRuns, 0.02480081309590326, tolerance);
-    EXPECT_NEAR(measSummary["1011"]/(double)stochRuns, 0.017234499727102268, tolerance);
-    EXPECT_NEAR(measSummary["1100"]/(double)stochRuns, 0.03505400112419414, tolerance);
-    EXPECT_NEAR(measSummary["1101"]/(double)stochRuns, 0.024359601507422463, tolerance);
+    EXPECT_NEAR(measSummary["0000"] / (double)stochRuns, 0.25574412296741467, tolerance);
+    EXPECT_NEAR(measSummary["0001"] / (double)stochRuns, 0.177720207953642, tolerance);
+    EXPECT_NEAR(measSummary["0010"] / (double)stochRuns, 0.06386485600556026, tolerance);
+    EXPECT_NEAR(measSummary["0011"] / (double)stochRuns, 0.04438060064535747, tolerance);
+    EXPECT_NEAR(measSummary["0100"] / (double)stochRuns, 0.0898482618504159, tolerance);
+    EXPECT_NEAR(measSummary["0101"] / (double)stochRuns, 0.062436925904517736, tolerance);
+    EXPECT_NEAR(measSummary["0110"] / (double)stochRuns, 0.022981537137908348, tolerance);
+    EXPECT_NEAR(measSummary["0111"] / (double)stochRuns, 0.015970195341710985, tolerance);
+    EXPECT_NEAR(measSummary["1000"] / (double)stochRuns, 0.08799481366902726, tolerance);
+    EXPECT_NEAR(measSummary["1001"] / (double)stochRuns, 0.061149120043750206, tolerance);
+    EXPECT_NEAR(measSummary["1010"] / (double)stochRuns, 0.02480081309590326, tolerance);
+    EXPECT_NEAR(measSummary["1011"] / (double)stochRuns, 0.017234499727102268, tolerance);
+    EXPECT_NEAR(measSummary["1100"] / (double)stochRuns, 0.03505400112419414, tolerance);
+    EXPECT_NEAR(measSummary["1101"] / (double)stochRuns, 0.024359601507422463, tolerance);
 }
