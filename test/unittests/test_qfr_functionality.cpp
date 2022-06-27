@@ -6,9 +6,11 @@
 #include "CircuitOptimizer.hpp"
 #include "QuantumComputation.hpp"
 #include "algorithms/RandomCliffordCircuit.hpp"
+#include "dd/Control.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
+#include <iostream>
 #include <random>
 
 using namespace qc;
@@ -1767,4 +1769,21 @@ TEST_F(QFRFunctionality, CNOTCancellation5) {
     EXPECT_EQ(firstOperation->getType(), qc::SWAP);
     EXPECT_EQ(firstOperation->getTargets().front(), 0U);
     EXPECT_EQ(firstOperation->getTargets().back(), 1U);
+}
+
+TEST_F(QFRFunctionality, IndexOutOfRange) {
+    QuantumComputation qc(2);
+    qc::Permutation    layout{};
+    layout[0]        = 0;
+    layout[2]        = 1;
+    qc.initialLayout = layout;
+    qc.x(0);
+
+    EXPECT_THROW(qc.x(1), QFRException);
+    EXPECT_THROW(qc.x(0, dd::Control{1, dd::Control::Type::neg}), QFRException);
+    EXPECT_THROW(qc.x(0, {dd::Control{2, dd::Control::Type::neg}, dd::Control{1, dd::Control::Type::neg}}), QFRException);
+    EXPECT_THROW(qc.swap(0, 1), QFRException);
+    EXPECT_THROW(qc.swap(0, 2, dd::Control{1, dd::Control::Type::neg}), QFRException);
+    EXPECT_THROW(qc.swap(0, 2, {dd::Control{1, dd::Control::Type::neg}}), QFRException);
+    EXPECT_THROW(qc.reset({0, 1, 2}), QFRException);
 }

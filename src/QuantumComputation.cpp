@@ -998,4 +998,37 @@ namespace qc {
             measure(qubit, clbit);
         }
     }
+
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit) const {
+        if (const auto it = initialLayout.find(qubit); it == initialLayout.end() || it->second >= getNqubits())
+            throw QFRException("Qubit index out of range: " +
+                               std::to_string(qubit));
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit0, dd::Qubit qubit1) const {
+        checkQubitRange(qubit0);
+        checkQubitRange(qubit1);
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit, const dd::Control& control) const {
+        checkQubitRange(qubit);
+        checkQubitRange(control.qubit);
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit0, dd::Qubit qubit1, const dd::Control& control) const {
+        checkQubitRange(qubit0, qubit1);
+        checkQubitRange(control.qubit);
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit, const dd::Controls& controls) const {
+        checkQubitRange(qubit);
+        for (auto& [ctrl, _]: controls)
+            checkQubitRange(ctrl);
+    }
+
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit0, dd::Qubit qubit1, const dd::Controls& controls) const {
+        checkQubitRange(qubit0, controls);
+        checkQubitRange(qubit1);
+    }
+
+    void QuantumComputation::checkQubitRange(const std::vector<dd::Qubit>& qubits) const {
+        std::for_each(qubits.begin(), qubits.end(), [&](auto q) { checkQubitRange(q); });
+    }
+
 } // namespace qc
