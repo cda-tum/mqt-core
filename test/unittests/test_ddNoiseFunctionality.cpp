@@ -242,7 +242,7 @@ TEST(DDNoiseFunctionality, StochSimulateAdder4TrackAPD) {
         std::seed_seq   seeds(std::begin(random_data), std::end(random_data));
         std::mt19937_64 generator(seeds);
 
-        dd::vEdge       rootEdge = dd->makeZeroState(quantumComputation->getNqubits());
+        dd::vEdge rootEdge = dd->makeZeroState(quantumComputation->getNqubits());
         dd->incRef(rootEdge);
 
         for (auto const& op: *quantumComputation) {
@@ -324,7 +324,7 @@ TEST(DDNoiseFunctionality, StochSimulateAdder4IdentiyError) {
         std::seed_seq   seeds(std::begin(random_data), std::end(random_data));
         std::mt19937_64 generator(seeds);
 
-        dd::vEdge       rootEdge = dd->makeZeroState(quantumComputation->getNqubits());
+        dd::vEdge rootEdge = dd->makeZeroState(quantumComputation->getNqubits());
         dd->incRef(rootEdge);
 
         for (auto const& op: *quantumComputation) {
