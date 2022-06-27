@@ -258,6 +258,7 @@ namespace qc {
     // removes the i-th logical qubit and returns the index j it was assigned to in the initial layout
     // i.e., initialLayout[j] = i
     std::pair<dd::Qubit, dd::Qubit> QuantumComputation::removeQubit(dd::Qubit logical_qubit_index) {
+        checkQubitRange(logical_qubit_index);
         // Find index of the physical qubit i is assigned to
         dd::Qubit physical_qubit_index = 0;
         for (const auto& Q: initialLayout) {
@@ -998,4 +999,37 @@ namespace qc {
             measure(qubit, clbit);
         }
     }
+
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit) const {
+        if (qubit >= getNqubits())
+            throw QFRException("Qubit index out of range: " +
+                               std::to_string(qubit));
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit0, dd::Qubit qubit1) const {
+        checkQubitRange(qubit0);
+        checkQubitRange(qubit1);
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit, const dd::Control& control) const {
+        checkQubitRange(qubit);
+        checkQubitRange(control.qubit);
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit0, dd::Qubit qubit1, const dd::Control& control) const {
+        checkQubitRange(qubit0, qubit1);
+        checkQubitRange(control.qubit);
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit, const dd::Controls& controls) const {
+        checkQubitRange(qubit);
+        for (auto& [ctrl, _]: controls)
+            checkQubitRange(ctrl);
+    }
+
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit0, dd::Qubit qubit1, const dd::Controls& controls) const {
+        checkQubitRange(qubit0, controls);
+        checkQubitRange(qubit1);
+    }
+
+    void QuantumComputation::checkQubitRange(const std::vector<dd::Qubit>& qubits) const {
+        std::for_each(qubits.begin(), qubits.end(), [&](auto q) { checkQubitRange(q); });
+    }
+
 } // namespace qc
