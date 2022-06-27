@@ -1000,8 +1000,7 @@ namespace qc {
     }
 
     void QuantumComputation::checkQubitRange(dd::Qubit qubit) const {
-        const auto it = initialLayout.find(qubit);
-        if (it == initialLayout.end() || it->second >= getNqubits())
+        if (const auto it = initialLayout.find(qubit); it == initialLayout.end() || it->second >= getNqubits())
             throw QFRException("Qubit index out of range: " +
                                std::to_string(qubit));
     }
