@@ -50,6 +50,7 @@ package_add_test(${PROJECT_NAME}_test
                  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_qpe.cpp
                  ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_io.cpp
                  ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_ddfunctionality.cpp
+                 ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_ddNoiseFunctionality.cpp
                  ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_qfr_functionality.cpp
                  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/eval_dynamic_circuits.cpp)
 
