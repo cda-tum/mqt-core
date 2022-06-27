@@ -1773,13 +1773,17 @@ TEST_F(QFRFunctionality, CNOTCancellation5) {
 
 TEST_F(QFRFunctionality, IndexOutOfRange) {
     QuantumComputation qc(2);
+    qc::Permutation    layout{};
+    layout[0]        = 0;
+    layout[2]        = 1;
+    qc.initialLayout = layout;
     qc.x(0);
 
-    EXPECT_THROW(qc.x(2), QFRException);
-    EXPECT_THROW(qc.x(0, dd::Control{2, dd::Control::Type::neg}), QFRException);
-    EXPECT_THROW(qc.x(0, {dd::Control{1, dd::Control::Type::neg}, dd::Control{2, dd::Control::Type::neg}}), QFRException);
-    EXPECT_THROW(qc.swap(0, 2), QFRException);
-    EXPECT_THROW(qc.swap(0, 1, dd::Control{2, dd::Control::Type::neg}), QFRException);
-    EXPECT_THROW(qc.swap(0, 1, {dd::Control{1, dd::Control::Type::neg}, dd::Control{2, dd::Control::Type::neg}}), QFRException);
+    EXPECT_THROW(qc.x(1), QFRException);
+    EXPECT_THROW(qc.x(0, dd::Control{1, dd::Control::Type::neg}), QFRException);
+    EXPECT_THROW(qc.x(0, {dd::Control{2, dd::Control::Type::neg}, dd::Control{1, dd::Control::Type::neg}}), QFRException);
+    EXPECT_THROW(qc.swap(0, 1), QFRException);
+    EXPECT_THROW(qc.swap(0, 2, dd::Control{1, dd::Control::Type::neg}), QFRException);
+    EXPECT_THROW(qc.swap(0, 2, {dd::Control{1, dd::Control::Type::neg}}), QFRException);
     EXPECT_THROW(qc.reset({0, 1, 2}), QFRException);
 }

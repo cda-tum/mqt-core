@@ -258,7 +258,6 @@ namespace qc {
     // removes the i-th logical qubit and returns the index j it was assigned to in the initial layout
     // i.e., initialLayout[j] = i
     std::pair<dd::Qubit, dd::Qubit> QuantumComputation::removeQubit(dd::Qubit logical_qubit_index) {
-        checkQubitRange(logical_qubit_index);
         // Find index of the physical qubit i is assigned to
         dd::Qubit physical_qubit_index = 0;
         for (const auto& Q: initialLayout) {
@@ -1001,7 +1000,7 @@ namespace qc {
     }
 
     void QuantumComputation::checkQubitRange(dd::Qubit qubit) const {
-        if (qubit >= getNqubits())
+        if (initialLayout.find(qubit) == initialLayout.end() || initialLayout.at(qubit) >= getNqubits())
             throw QFRException("Qubit index out of range: " +
                                std::to_string(qubit));
     }
