@@ -81,38 +81,45 @@ using DensityMatrixTestPackage = dd::Package<DensityMatrixSimulatorDDPackageConf
                                              DensityMatrixSimulatorDDPackageConfig::CT_DM_ADD_NBUCKET,
                                              DensityMatrixSimulatorDDPackageConfig::STOCHASTIC_CACHE_OPS>;
 
-static std::unique_ptr<qc::QuantumComputation> detGetAdder4Circuit() {
-    // circuit taken from https://github.com/pnnl/qasmbench
-    auto quantumComputation = std::make_unique<qc::QuantumComputation>(4);
-    quantumComputation->x(0);
-    quantumComputation->x(1);
-    quantumComputation->h(3);
-    quantumComputation->x(3, 2_pc);
-    quantumComputation->t(0);
-    quantumComputation->t(1);
-    quantumComputation->t(2);
-    quantumComputation->tdag(3);
-    quantumComputation->x(1, 0_pc);
-    quantumComputation->x(3, 2_pc);
-    quantumComputation->x(0, 3_pc);
-    quantumComputation->x(2, 1_pc);
-    quantumComputation->x(1, 0_pc);
-    quantumComputation->x(3, 2_pc);
-    quantumComputation->tdag(0);
-    quantumComputation->tdag(1);
-    quantumComputation->tdag(2);
-    quantumComputation->t(3);
-    quantumComputation->x(1, 0_pc);
-    quantumComputation->x(3, 2_pc);
-    quantumComputation->s(3);
-    quantumComputation->x(0, 3_pc);
-    quantumComputation->h(3);
-    return quantumComputation;
-}
+class DDNoiseFunctionalityTest: public ::testing::Test {
+protected:
+    void SetUp() override {
+        // circuit taken from https://github.com/pnnl/qasmbench
+        qc.addQubitRegister(4U);
+        qc.x(0);
+        qc.x(1);
+        qc.h(3);
+        qc.x(3, 2_pc);
+        qc.t(0);
+        qc.t(1);
+        qc.t(2);
+        qc.tdag(3);
+        qc.x(1, 0_pc);
+        qc.x(3, 2_pc);
+        qc.x(0, 3_pc);
+        qc.x(2, 1_pc);
+        qc.x(1, 0_pc);
+        qc.x(3, 2_pc);
+        qc.tdag(0);
+        qc.tdag(1);
+        qc.tdag(2);
+        qc.t(3);
+        qc.x(1, 0_pc);
+        qc.x(3, 2_pc);
+        qc.s(3);
+        qc.x(0, 3_pc);
+        qc.h(3);
+    }
 
-TEST(DDNoiseFunctionality, DetSimulateAdder4TrackAPDApplySequential) {
-    auto quantumComputation = detGetAdder4Circuit();
-    auto dd                 = std::make_unique<DensityMatrixTestPackage>(quantumComputation->getNqubits());
+    void TearDown() override {
+    }
+
+    qc::QuantumComputation qc{};
+    const size_t           stochRuns = 1000U;
+};
+
+TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPDApplySequential) {
+    auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
     auto rootEdge = dd->makeZeroDensityOperator();
     dd->incRef(rootEdge);
@@ -121,7 +128,7 @@ TEST(DDNoiseFunctionality, DetSimulateAdder4TrackAPDApplySequential) {
 
     auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality<DensityMatrixTestPackage>(
             dd,
-            quantumComputation->getNqubits(),
+            qc.getNqubits(),
             0.01,
             0.02,
             0.02,
@@ -130,14 +137,14 @@ TEST(DDNoiseFunctionality, DetSimulateAdder4TrackAPDApplySequential) {
             false,
             true);
 
-    for (auto const& op: *quantumComputation) {
+    for (auto const& op: qc) {
         auto operation = dd::getDD(op.get(), dd);
         dd->applyOperationToDensity(rootEdge, operation, false);
 
         deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
     }
 
-    auto m = dd->getProbVectorFromDensityMatrix(rootEdge, 0.001);
+    const auto m = dd->getProbVectorFromDensityMatrix(rootEdge, 0.001);
 
     double tolerance = 1e-10;
     EXPECT_NEAR(m.find("0000")->second, 0.0969332192741, tolerance);
@@ -157,9 +164,8 @@ TEST(DDNoiseFunctionality, DetSimulateAdder4TrackAPDApplySequential) {
     EXPECT_NEAR(m.find("1111")->second, 0.0110373166627, tolerance);
 }
 
-TEST(DDNoiseFunctionality, DetSimulateAdder4TrackAPD) {
-    auto quantumComputation = detGetAdder4Circuit();
-    auto dd                 = std::make_unique<DensityMatrixTestPackage>(quantumComputation->getNqubits());
+TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
+    auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
     auto rootEdge = dd->makeZeroDensityOperator();
     dd->incRef(rootEdge);
@@ -168,7 +174,7 @@ TEST(DDNoiseFunctionality, DetSimulateAdder4TrackAPD) {
 
     auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality<DensityMatrixTestPackage>(
             dd,
-            quantumComputation->getNqubits(),
+            qc.getNqubits(),
             0.01,
             0.02,
             0.02,
@@ -177,14 +183,14 @@ TEST(DDNoiseFunctionality, DetSimulateAdder4TrackAPD) {
             true,
             false);
 
-    for (auto const& op: *quantumComputation) {
+    for (auto const& op: qc) {
         auto operation = dd::getDD(op.get(), dd);
         dd->applyOperationToDensity(rootEdge, operation, true);
 
         deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
     }
 
-    auto m = dd->getProbVectorFromDensityMatrix(rootEdge, 0.001);
+    const auto m = dd->getProbVectorFromDensityMatrix(rootEdge, 0.001);
 
     double tolerance = 1e-10;
     EXPECT_NEAR(m.find("0000")->second, 0.0969332192741, tolerance);
@@ -204,67 +210,55 @@ TEST(DDNoiseFunctionality, DetSimulateAdder4TrackAPD) {
     EXPECT_NEAR(m.find("1111")->second, 0.0110373166627, tolerance);
 }
 
-TEST(DDNoiseFunctionality, StochSimulateAdder4TrackAPD) {
-    size_t stochRuns          = 1000;
-    auto   quantumComputation = detGetAdder4Circuit();
-    auto   dd                 = std::make_unique<StochasticNoiseTestPackage>(quantumComputation->getNqubits());
+TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
+    auto dd = std::make_unique<StochasticNoiseTestPackage>(qc.getNqubits());
 
-    std::map<std::string, double> measSummary = {
-            {"0000", 0},
-            {"0001", 0},
-            {"0010", 0},
-            {"0011", 0},
-            {"0100", 0},
-            {"0101", 0},
-            {"0110", 0},
-            {"0111", 0},
-            {"1000", 0},
-            {"1001", 0},
-            {"1010", 0},
-            {"1011", 0},
-            {"1100", 0},
-            {"1101", 0}};
+    std::map<std::string, double, std::less<>> measSummary = {
+            {"0000", 0.},
+            {"0001", 0.},
+            {"0010", 0.},
+            {"0011", 0.},
+            {"0100", 0.},
+            {"0101", 0.},
+            {"0110", 0.},
+            {"0111", 0.},
+            {"1000", 0.},
+            {"1001", 0.},
+            {"1010", 0.},
+            {"1011", 0.},
+            {"1100", 0.},
+            {"1101", 0.}};
 
-    std::vector<dd::NoiseOperations> noiseEffects = {dd::amplitudeDamping, dd::phaseFlip, dd::depolarization};
+    const auto noiseEffects = {dd::amplitudeDamping, dd::phaseFlip, dd::depolarization};
 
     auto stochasticNoiseFunctionality = dd::StochasticNoiseFunctionality<StochasticNoiseTestPackage>(
             dd,
-            quantumComputation->getNqubits(),
+            qc.getNqubits(),
             0.01,
             0.02,
-            2,
+            2.,
             noiseEffects);
 
-    for (size_t i = 0; i < stochRuns; i++) {
-        std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
-        std::random_device                                                    rd;
-        std::generate(std::begin(random_data), std::end(random_data), [&rd]() { return rd(); });
-        std::seed_seq   seeds(std::begin(random_data), std::end(random_data));
-        std::mt19937_64 generator(seeds);
-
-        dd::vEdge rootEdge = dd->makeZeroState(quantumComputation->getNqubits());
+    for (size_t i = 0U; i < stochRuns; i++) {
+        auto rootEdge = dd->makeZeroState(qc.getNqubits());
         dd->incRef(rootEdge);
 
-        for (auto const& op: *quantumComputation) {
+        for (auto const& op: qc) {
             auto        operation  = dd::getDD(op.get(), dd);
             std::vector usedQubits = op->getTargets();
             for (auto control: op->getControls()) {
                 usedQubits.push_back(control.qubit);
             }
-            stochasticNoiseFunctionality.applyNoiseOperation(usedQubits, operation, rootEdge, generator);
+            stochasticNoiseFunctionality.applyNoiseOperation(usedQubits, operation, rootEdge, qc.getGenerator());
         }
 
-        auto amplitudes = dd->getVector(rootEdge);
-        for (size_t m = 0; m < amplitudes.size(); m++) {
-            std::string s1                = std::bitset<4>(m).to_string();
-            std::string revertedBitString = {};
-            for (int n = (int)s1.length() - 1; n >= 0; n--) {
-                revertedBitString.push_back(s1[n]);
-            }
-
-            auto amplitude = amplitudes[m];
-            auto prob      = std::abs(std::pow(amplitude, 2));
-            measSummary[revertedBitString] += (prob / (double)stochRuns);
+        const auto amplitudes = dd->getVector(rootEdge);
+        for (size_t m = 0U; m < amplitudes.size(); m++) {
+            auto state = std::bitset<4U>(m).to_string();
+            std::reverse(state.begin(), state.end());
+            const auto amplitude = amplitudes[m];
+            const auto prob      = std::norm(amplitude);
+            measSummary[state] += prob / static_cast<double>(stochRuns);
         }
     }
 
@@ -286,84 +280,72 @@ TEST(DDNoiseFunctionality, StochSimulateAdder4TrackAPD) {
     EXPECT_NEAR(measSummary["1111"], 0.011037316662706232, tolerance);
 }
 
-TEST(DDNoiseFunctionality, StochSimulateAdder4IdentiyError) {
-    size_t stochRuns          = 1000;
-    auto   quantumComputation = detGetAdder4Circuit();
-    auto   dd                 = std::make_unique<StochasticNoiseTestPackage>(quantumComputation->getNqubits());
+TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
+    auto dd = std::make_unique<StochasticNoiseTestPackage>(qc.getNqubits());
 
-    std::map<std::string, double> measSummary = {
-            {"0000", 0},
-            {"0001", 0},
-            {"0010", 0},
-            {"0011", 0},
-            {"0100", 0},
-            {"0101", 0},
-            {"0110", 0},
-            {"0111", 0},
-            {"1000", 0},
-            {"1001", 0},
-            {"1010", 0},
-            {"1011", 0},
-            {"1100", 0},
-            {"1101", 0}};
+    std::map<std::string, double, std::less<>> measSummary = {
+            {"0000", 0.},
+            {"0001", 0.},
+            {"0010", 0.},
+            {"0011", 0.},
+            {"0100", 0.},
+            {"0101", 0.},
+            {"0110", 0.},
+            {"0111", 0.},
+            {"1000", 0.},
+            {"1001", 0.},
+            {"1010", 0.},
+            {"1011", 0.},
+            {"1100", 0.},
+            {"1101", 0.}};
 
-    std::vector<dd::NoiseOperations> noiseEffects = {dd::identity};
+    const auto noiseEffects = {dd::identity};
 
     auto stochasticNoiseFunctionality = dd::StochasticNoiseFunctionality<StochasticNoiseTestPackage>(
             dd,
-            quantumComputation->getNqubits(),
+            qc.getNqubits(),
             0.01,
             0.02,
-            2,
+            2.,
             noiseEffects);
 
-    for (size_t i = 0; i < stochRuns; i++) {
-        std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
-        std::random_device                                                    rd;
-        std::generate(std::begin(random_data), std::end(random_data), [&rd]() { return rd(); });
-        std::seed_seq   seeds(std::begin(random_data), std::end(random_data));
-        std::mt19937_64 generator(seeds);
-
-        dd::vEdge rootEdge = dd->makeZeroState(quantumComputation->getNqubits());
+    for (size_t i = 0U; i < stochRuns; i++) {
+        auto rootEdge = dd->makeZeroState(qc.getNqubits());
         dd->incRef(rootEdge);
 
-        for (auto const& op: *quantumComputation) {
+        for (auto const& op: qc) {
             auto        operation  = dd::getDD(op.get(), dd);
             std::vector usedQubits = op->getTargets();
             for (auto control: op->getControls()) {
                 usedQubits.push_back(control.qubit);
             }
-            stochasticNoiseFunctionality.applyNoiseOperation(usedQubits, operation, rootEdge, generator);
+            stochasticNoiseFunctionality.applyNoiseOperation(usedQubits, operation, rootEdge, qc.getGenerator());
         }
 
-        auto amplitudes = dd->getVector(rootEdge);
-        for (size_t m = 0; m < amplitudes.size(); m++) {
-            std::string s1                = std::bitset<4>(m).to_string();
-            std::string revertedBitString = {};
-            for (int n = (int)s1.length() - 1; n >= 0; n--) {
-                revertedBitString.push_back(s1[n]);
-            }
-
-            auto amplitude = amplitudes[m];
-            auto prob      = std::abs(std::pow(amplitude, 2));
-            measSummary[revertedBitString] += (prob / (double)stochRuns);
+        const auto amplitudes = dd->getVector(rootEdge);
+        for (size_t m = 0U; m < amplitudes.size(); m++) {
+            auto state = std::bitset<4U>(m).to_string();
+            std::reverse(state.begin(), state.end());
+            const auto amplitude = amplitudes[m];
+            const auto prob      = std::norm(amplitude);
+            measSummary[state] += prob / static_cast<double>(stochRuns);
         }
     }
 
     double tolerance = 0.1;
-    EXPECT_NEAR(measSummary["0000"], 0, tolerance);
-    EXPECT_NEAR(measSummary["0001"], 0, tolerance);
-    EXPECT_NEAR(measSummary["0010"], 0, tolerance);
-    EXPECT_NEAR(measSummary["0100"], 0, tolerance);
-    EXPECT_NEAR(measSummary["0101"], 0, tolerance);
-    EXPECT_NEAR(measSummary["0110"], 0, tolerance);
-    EXPECT_NEAR(measSummary["0111"], 0, tolerance);
-    EXPECT_NEAR(measSummary["1000"], 0, tolerance);
-    EXPECT_NEAR(measSummary["1001"], 1, tolerance);
-    EXPECT_NEAR(measSummary["1010"], 0, tolerance);
-    EXPECT_NEAR(measSummary["1011"], 0, tolerance);
-    EXPECT_NEAR(measSummary["1100"], 0, tolerance);
-    EXPECT_NEAR(measSummary["1101"], 0, tolerance);
-    EXPECT_NEAR(measSummary["1110"], 0, tolerance);
-    EXPECT_NEAR(measSummary["1111"], 0, tolerance);
+    EXPECT_NEAR(measSummary["0000"], 0., tolerance);
+    EXPECT_NEAR(measSummary["0001"], 0., tolerance);
+    EXPECT_NEAR(measSummary["0010"], 0., tolerance);
+    EXPECT_NEAR(measSummary["0100"], 0., tolerance);
+    EXPECT_NEAR(measSummary["0101"], 0., tolerance);
+    EXPECT_NEAR(measSummary["0110"], 0., tolerance);
+    EXPECT_NEAR(measSummary["0111"], 0., tolerance);
+    EXPECT_NEAR(measSummary["1000"], 0., tolerance);
+    EXPECT_NEAR(measSummary["1001"], 1., tolerance);
+    EXPECT_NEAR(measSummary["1010"], 0., tolerance);
+    EXPECT_NEAR(measSummary["1011"], 0., tolerance);
+    EXPECT_NEAR(measSummary["1100"], 0., tolerance);
+    EXPECT_NEAR(measSummary["1101"], 0., tolerance);
+    EXPECT_NEAR(measSummary["1110"], 0., tolerance);
+    EXPECT_NEAR(measSummary["1111"], 0., tolerance);
 }
