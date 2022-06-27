@@ -197,7 +197,7 @@ namespace qc {
         QuantumComputation(const QuantumComputation& qc)     = delete;
         QuantumComputation(QuantumComputation&& qc) noexcept = default;
 
-        QuantumComputation& operator=(const QuantumComputation& qc) = delete;
+        QuantumComputation& operator=(const QuantumComputation& qc)     = delete;
         QuantumComputation& operator=(QuantumComputation&& qc) noexcept = default;
 
         virtual ~QuantumComputation() = default;

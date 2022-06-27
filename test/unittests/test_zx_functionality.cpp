@@ -180,3 +180,13 @@ TEST_F(ZXDiagramTest, UnsupportedControl2) {
                          zx::FunctionalityConstruction::buildFunctionality(&qc),
                  zx::ZXException);
 }
+
+// TEST_F(ZXDiagramTest, NonConsecutiveQubits) {
+//     qc = qc::QuantumComputation(2);
+//     qc.x(0);
+//     qc.x(2);
+//     // qc.x(1);
+//     for (auto [src, tar]: qc.initialLayout)
+//         std::cout << static_cast<int>(src) << " - " << static_cast<int>(tar) << std::endl;
+//     EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
+// }
