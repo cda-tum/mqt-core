@@ -600,8 +600,8 @@ namespace dd {
                     //Apply all noise matrices of the current noise effect
                     for (int m = 0; m < sequentialNoiseMap.find(type)->second; m++) {
                         auto tmp0 = package->conjugateTranspose(idleOperation[m]);
-                        auto tmp1 = package->multiply(originalEdge, reinterpret_cast<dEdge&>(tmp0), 0, false);
-                        auto tmp2 = package->multiply(reinterpret_cast<dEdge&>(idleOperation[m]), tmp1, 0, useDensityMatrixType);
+                        auto tmp1 = package->multiply(originalEdge, dd::densityFromMatrixEdge(tmp0), 0, false);
+                        auto tmp2 = package->multiply(dd::densityFromMatrixEdge(idleOperation[m]), tmp1, 0, useDensityMatrixType);
                         if (tmp.p == nullptr) {
                             tmp = tmp2;
                         } else {
