@@ -28,6 +28,7 @@ TEST_F(ZXDiagramTest, parse_qasm) {
        << "cx q[0],q[1];"
        << std::endl;
     qc.import(ss, qc::OpenQASM);
+    EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
     zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
     EXPECT_EQ(diag.getNVertices(), 7);
     EXPECT_EQ(diag.getNEdges(), 6);
@@ -112,6 +113,7 @@ TEST_F(ZXDiagramTest, complex_circuit) {
        << std::endl;
     qc.import(ss, qc::OpenQASM);
 
+    EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
     zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
     zx::fullReduce(diag);
     EXPECT_EQ(diag.getNVertices(), 6);
@@ -128,6 +130,7 @@ TEST_F(ZXDiagramTest, Phase) {
     qc.phase(0, dd::Control{1, dd::Control::Type::pos}, -zx::PI / 4);
     qc.phase(0, -zx::PI / 4);
 
+    EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
     zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
     zx::fullReduce(diag);
 
@@ -145,6 +148,7 @@ TEST_F(ZXDiagramTest, Compound) {
        << std::endl;
 
     qc.import(ss, qc::OpenQASM);
+    EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
     zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
     zx::fullReduce(diag);
 
@@ -156,17 +160,23 @@ TEST_F(ZXDiagramTest, UnsupportedMultiControl) {
     qc.x(0, {dd::Control{1, dd::Control::Type::pos},
              dd::Control{2, dd::Control::Type::pos},
              dd::Control{3, dd::Control::Type::pos}});
+    EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
     EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
 }
 
 TEST_F(ZXDiagramTest, UnsupportedControl) {
     qc = qc::QuantumComputation(2);
     qc.y(0, dd::Control{1, dd::Control::Type::pos});
+    EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
     EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
 }
 
 TEST_F(ZXDiagramTest, UnsupportedControl2) {
     qc = qc::QuantumComputation(3);
-    qc.y(0, {dd::Control{1, dd::Control::Type::pos}, dd::Control{2, dd::Control::Type::pos}});
-    EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
+    qc.y(0, {dd::Control{1, dd::Control::Type::pos},
+             dd::Control{2, dd::Control::Type::pos}});
+    EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
+    EXPECT_THROW(zx::ZXDiagram diag =
+                         zx::FunctionalityConstruction::buildFunctionality(&qc),
+                 zx::ZXException);
 }

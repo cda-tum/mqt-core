@@ -7,6 +7,7 @@
 
 #include "QuantumComputation.hpp"
 #include "ZXDiagram.hpp"
+#include "operations/Operation.hpp"
 
 namespace zx {
     class FunctionalityConstruction {
@@ -15,8 +16,13 @@ namespace zx {
     public:
         static ZXDiagram buildFunctionality(const qc::QuantumComputation* qc);
 
+        static bool transformableToZX(const qc::QuantumComputation* qc);
+
+        static bool transformableToZX(qc::Operation* op);
+
     protected:
-        static bool  checkSwap(op_it it, op_it end, Qubit ctrl, Qubit target);
+        static bool
+                     checkSwap(op_it it, op_it end, Qubit ctrl, Qubit target);
         static void  addZSpider(ZXDiagram& diag, zx::Qubit qubit,
                                 std::vector<Vertex>& qubit_vertices,
                                 const Expression& phase = Expression(), EdgeType type = EdgeType::Simple);

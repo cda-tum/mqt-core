@@ -3,6 +3,7 @@
 #include "Definitions.hpp"
 #include "ZXDiagram.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -326,9 +327,9 @@ namespace zx {
             auto& op = *it;
 
             if (op->getType() == qc::OpType::Compound) {
-                auto* comp_op = dynamic_cast<qc::CompoundOperation*>(op.get());
-                for (auto sub_it = comp_op->cbegin(); sub_it != comp_op->cend();)
-                    sub_it = parse_op(diag, sub_it, comp_op->end(), qubit_vertices);
+                auto* compOp = dynamic_cast<qc::CompoundOperation*>(op.get());
+                for (auto subIt = compOp->cbegin(); subIt != compOp->cend();)
+                    subIt = parse_op(diag, subIt, compOp->end(), qubit_vertices);
                 ++it;
             } else {
                 it = parse_op(diag, it, qc->end(), qubit_vertices);
@@ -339,6 +340,87 @@ namespace zx {
             diag.addEdge(qubit_vertices[i], diag.getOutputs()[i]);
         }
         return diag;
+    }
+    bool FunctionalityConstruction::transformableToZX(const qc::QuantumComputation* qc) {
+        for (const auto& it: *qc) {
+            if (!transformableToZX(it.get()))
+                return false;
+        }
+        return true;
+    }
+
+    bool FunctionalityConstruction::transformableToZX(qc::Operation* op) {
+        if (op->getType() == qc::OpType::Compound) {
+            auto* compOp = dynamic_cast<qc::CompoundOperation*>(op);
+
+            for (const auto& it: *compOp) {
+                if (!transformableToZX(it.get()))
+                    return false;
+            }
+            return true;
+        }
+
+        if (op->getType() == qc::OpType::Barrier) {
+            return true;
+        }
+
+        if (!op->isControlled()) {
+            switch (op->getType()) {
+                case qc::OpType::Z:
+
+                case qc::OpType::RZ:
+                case qc::OpType::Phase:
+                case qc::OpType::X:
+                case qc::OpType::RX:
+                case qc::OpType::Y:
+                case qc::OpType::RY:
+                case qc::OpType::T:
+                case qc::OpType::Tdag:
+                case qc::OpType::S:
+                case qc::OpType::Sdag:
+                case qc::OpType::U2:
+                case qc::OpType::U3:
+                case qc::OpType::SWAP:
+                case qc::OpType::H:
+                case qc::OpType::Measure:
+                case qc::OpType::I: {
+                    return true;
+                }
+                default: {
+                    return false;
+                }
+            }
+        } else if (op->getNcontrols() == 1 && op->getNtargets() == 1) {
+            switch (op->getType()) { // TODO: any gate can be controlled
+                case qc::OpType::X:
+                case qc::OpType::Z:
+                case qc::OpType::I:
+                case qc::OpType::Phase:
+                case qc::OpType::T:
+                case qc::OpType::S:
+                case qc::OpType::Tdag:
+                case qc::OpType::Sdag: {
+                    return true;
+                }
+
+                default: {
+                    return false;
+                }
+            }
+        } else if (op->getNcontrols() == 2) {
+            switch (op->getType()) {
+                case qc::OpType::X:
+                case qc::OpType::Z: {
+                    return true;
+                }
+                default: {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
+        return false;
     }
 
 } // namespace zx
