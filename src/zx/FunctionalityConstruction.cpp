@@ -11,16 +11,16 @@
 namespace zx {
 
     bool FunctionalityConstruction::checkSwap(op_it it, op_it end, Qubit ctrl,
-                                              Qubit target) {
+                                              Qubit target, const qc::Permutation& p) {
         if (it + 1 != end && it + 2 != end) {
             auto& op1 = *(it + 1);
             auto& op2 = *(it + 2);
             if (op1->getType() == qc::OpType::X && op2->getType() == qc::OpType::X &&
                 op1->getNcontrols() == 1 && op2->getNcontrols() == 1) {
-                const auto tar1  = op1->getTargets().front();
-                const auto tar2  = op2->getTargets().front();
-                const auto ctrl1 = (*op1->getControls().begin()).qubit;
-                const auto ctrl2 = (*op2->getControls().begin()).qubit;
+                const auto tar1  = p.at(op1->getTargets().front());
+                const auto tar2  = p.at(op2->getTargets().front());
+                const auto ctrl1 = p.at((*op1->getControls().begin()).qubit);
+                const auto ctrl2 = p.at((*op2->getControls().begin()).qubit);
                 return ctrl == tar1 && tar1 == ctrl2 && target == ctrl1 && ctrl1 == tar2;
             }
         }
@@ -102,13 +102,15 @@ namespace zx {
     FunctionalityConstruction::op_it FunctionalityConstruction::parse_op(ZXDiagram& diag, op_it it, op_it end,
                                                                          std::vector<Vertex>& qubit_vertices, const qc::Permutation& p) {
         auto& op = *it;
-
+        std::cout << op->getName() << ": ";
         if (op->getType() == qc::OpType::Barrier) {
             return it + 1;
         }
 
         if (!op->isControlled()) {
             const auto target = p.at(op->getTargets().front());
+            std::cout << "Target " << static_cast<int>(target);
+            std::cout << std::endl;
             switch (op->getType()) {
                 case qc::OpType::Z: {
                     addZSpider(diag, target, qubit_vertices,
@@ -181,7 +183,7 @@ namespace zx {
                 }
 
                 case qc::OpType::SWAP: {
-                    const auto target2 = op->getTargets()[1];
+                    const auto target2 = p.at(op->getTargets()[1]);
                     addSwap(diag, target, target2, qubit_vertices);
                     break;
                 }
@@ -202,10 +204,13 @@ namespace zx {
         } else if (op->getNcontrols() == 1 && op->getNtargets() == 1) {
             const auto target = p.at(op->getTargets().front());
             const auto ctrl   = p.at((*op->getControls().begin()).qubit);
+            std::cout << "Target " << static_cast<int>(target);
+            std::cout << "Ctrl " << static_cast<int>(ctrl);
+            std::cout << std::endl;
             switch (op->getType()) { // TODO: any gate can be controlled
                 case qc::OpType::X: {
                     // check if swap
-                    if (checkSwap(it, end, ctrl, target)) {
+                    if (checkSwap(it, end, ctrl, target, p)) {
                         addSwap(diag, ctrl, target, qubit_vertices);
                         return it + 3;
                     } else {
@@ -270,6 +275,10 @@ namespace zx {
                 else
                     ctrl_1 = p.at(ctrl.qubit);
             }
+            std::cout << "Target " << static_cast<int>(target);
+            std::cout << "Ctrl1 " << static_cast<int>(ctrl_0);
+            std::cout << "Ctrl2 " << static_cast<int>(ctrl_1);
+            std::cout << std::endl;
             switch (op->getType()) {
                 case qc::OpType::X: {
                     addCcx(diag, ctrl_0, ctrl_1, target, qubit_vertices);
@@ -297,6 +306,8 @@ namespace zx {
     }
 
     ZXDiagram FunctionalityConstruction::buildFunctionality(const qc::QuantumComputation* qc) {
+        for (auto [v, w]: qc->initialLayout)
+            std::cout << static_cast<int>(v) << " - " << static_cast<int>(w) << std::endl;
         ZXDiagram           diag(qc->getNqubits());
         std::vector<Vertex> qubit_vertices(qc->getNqubits());
         for (size_t i = 0; i < qc->getNqubits(); ++i) {

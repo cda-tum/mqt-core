@@ -118,9 +118,7 @@ TEST_F(ZXDiagramTest, complex_circuit) {
     zx::fullReduce(diag);
     EXPECT_EQ(diag.getNVertices(), 6);
     EXPECT_EQ(diag.getNEdges(), 3);
-    EXPECT_TRUE(diag.connected(diag.getInputs()[0], diag.getOutputs()[1]));
-    EXPECT_TRUE(diag.connected(diag.getInputs()[1], diag.getOutputs()[0]));
-    EXPECT_TRUE(diag.connected(diag.getInputs()[2], diag.getOutputs()[2]));
+    EXPECT_TRUE(diag.isIdentity());
 }
 
 TEST_F(ZXDiagramTest, Phase) {
@@ -181,12 +179,24 @@ TEST_F(ZXDiagramTest, UnsupportedControl2) {
                  zx::ZXException);
 }
 
-// TEST_F(ZXDiagramTest, NonConsecutiveQubits) {
-//     qc = qc::QuantumComputation(2);
-//     qc.x(0);
-//     qc.x(2);
-//     // qc.x(1);
-//     for (auto [src, tar]: qc.initialLayout)
-//         std::cout << static_cast<int>(src) << " - " << static_cast<int>(tar) << std::endl;
-//     EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
-// }
+TEST_F(ZXDiagramTest, InitialLayout) {
+    qc = qc::QuantumComputation(2);
+    qc::Permutation layout{};
+    layout[0]        = 1;
+    layout[1]        = 0;
+    qc.initialLayout = layout;
+    qc.x(0);
+    qc.z(1);
+
+    auto qcPrime = qc::QuantumComputation(2);
+    qcPrime.x(1);
+    qcPrime.z(0);
+
+    auto d      = zx::FunctionalityConstruction::buildFunctionality(&qc);
+    auto dPrime = zx::FunctionalityConstruction::buildFunctionality(&qcPrime);
+
+    d.concat(dPrime);
+
+    zx::fullReduce(d);
+    EXPECT_TRUE(d.isIdentity());
+}

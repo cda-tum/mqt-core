@@ -22,7 +22,7 @@ namespace zx {
 
     protected:
         static bool
-                     checkSwap(op_it it, op_it end, Qubit ctrl, Qubit target);
+                     checkSwap(op_it it, op_it end, Qubit ctrl, Qubit target, const qc::Permutation& p);
         static void  addZSpider(ZXDiagram& diag, zx::Qubit qubit,
                                 std::vector<Vertex>& qubit_vertices,
                                 const Expression& phase = Expression(), EdgeType type = EdgeType::Simple);
