@@ -169,3 +169,34 @@ TEST_F(ZXDiagramTest, approximate) {
 
     EXPECT_TRUE(almostId.phase(v).isZero());
 }
+
+TEST_F(ZXDiagramTest, ancilla) {
+    zx::ZXDiagram cx(2);
+    cx.removeEdge(0, 2);
+    cx.removeEdge(1, 3);
+    auto tar  = cx.addVertex(0, 0, zx::Expression{}, zx::VertexType::X);
+    auto ctrl = cx.addVertex(1);
+
+    cx.addEdge(tar, ctrl);
+    cx.addEdge(0, tar);
+    cx.addEdge(tar, 2);
+    cx.addEdge(1, ctrl);
+    cx.addEdge(ctrl, 3);
+    EXPECT_EQ(cx.getInputs().size(), 2);
+    EXPECT_EQ(cx.getOutputs().size(), 2);
+    EXPECT_EQ(cx.getNVertices(), 6);
+
+    cx.makeAncilla(1);
+    EXPECT_EQ(cx.getInputs().size(), 1);
+    EXPECT_EQ(cx.getOutputs().size(), 1);
+    EXPECT_EQ(cx.getNVertices(), 6);
+
+    zx::fullReduce(cx);
+
+    EXPECT_EQ(cx.getNEdges(), 1);
+    for (auto [v, data]: cx.getVertices()) {
+        std::cout << v << " " << (data.type == zx::VertexType::Boundary) << std::endl;
+    }
+    EXPECT_EQ(cx.getNVertices(), 2);
+    EXPECT_TRUE(cx.isIdentity());
+}

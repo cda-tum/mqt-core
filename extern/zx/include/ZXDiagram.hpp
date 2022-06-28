@@ -118,6 +118,8 @@ namespace zx {
 
         void approximateCliffords(fp tolerance);
 
+        void removeDisconnectedSpiders();
+
     private:
         std::vector<std::vector<Edge>>         edges;
         std::vector<std::optional<VertexData>> vertices;

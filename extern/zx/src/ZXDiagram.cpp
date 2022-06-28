@@ -7,7 +7,9 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <pstl/glue_algorithm_defs.h>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -302,9 +304,9 @@ namespace zx {
         outputs.erase(outputs.begin() + qubit);
 
         setType(in_v, VertexType::X);
-        setType(in_v, VertexType::X);
-        removeVertex(in_v);
-        removeVertex(out_v);
+        setType(out_v, VertexType::X);
+        // removeVertex(in_v);
+        // removeVertex(out_v);
     }
 
     void ZXDiagram::approximateCliffords(fp tolerance) {
@@ -314,4 +316,12 @@ namespace zx {
             }
         }
     }
+
+    void ZXDiagram::removeDisconnectedSpiders() {
+        for (Vertex v = 0; v < vertices.size(); ++v) {
+            if (incidentEdges(v).empty())
+                removeVertex(v);
+        }
+    }
+
 } // namespace zx

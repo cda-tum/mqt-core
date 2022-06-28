@@ -145,11 +145,9 @@ namespace zx {
             if (n_gadget + n_pivot == 0)
                 break;
             n_simplifications += n_gadget + n_pivot;
-            // std::cout <<"Gadget: " << n_gadget << "\n";
-            // std::cout << "Pivot: " << n_pivot << "\n";
-            // std::cout << "\nSimps: " << n_simplifications << "\n\n";
         }
-        // cliffordSimp(diag);
+        diag.removeDisconnectedSpiders();
+
         return n_simplifications;
     }
 
