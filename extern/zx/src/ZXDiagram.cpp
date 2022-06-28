@@ -297,10 +297,14 @@ namespace zx {
     }
 
     void ZXDiagram::makeAncilla(Qubit qubit) {
-        auto in_v  = inputs[qubit];
-        auto out_v = outputs[qubit];
-        inputs.erase(inputs.begin() + qubit);
-        outputs.erase(outputs.begin() + qubit);
+        makeAncilla(qubit, qubit);
+    }
+
+    void ZXDiagram::makeAncilla(Qubit in, Qubit out) {
+        auto in_v  = inputs[in];
+        auto out_v = outputs[out];
+        inputs.erase(inputs.begin() + in);
+        outputs.erase(outputs.begin() + out);
 
         setType(in_v, VertexType::X);
         setType(out_v, VertexType::X);
