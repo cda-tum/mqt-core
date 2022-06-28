@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -316,8 +317,29 @@ namespace zx {
     }
 
     void ZXDiagram::removeDisconnectedSpiders() {
+        auto connectedToBoundary = [&](Vertex v) {
+            std::unordered_set<Vertex> visited{};
+            std::vector<Vertex>        stack{};
+            stack.push_back(v);
+
+            while (!stack.empty()) {
+                auto w = stack.back();
+                stack.pop_back();
+
+                if (visited.find(w) != visited.end())
+                    continue;
+
+                if (isInput(w) || isOutput(w))
+                    return true;
+
+                for (auto [to, _]: incidentEdges(w))
+                    stack.push_back(to);
+            }
+            return false;
+        };
+
         for (Vertex v = 0; v < vertices.size(); ++v) {
-            if (incidentEdges(v).empty())
+            if (!isDeleted(v) && !connectedToBoundary(v))
                 removeVertex(v);
         }
     }
