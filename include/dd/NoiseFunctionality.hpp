@@ -504,16 +504,16 @@ namespace dd {
                     helperEdge[0].w      = package->cn.getCached();
                     complexProb.r->value = (2 - probability) * 0.5;
                     CN::mul(helperEdge[0].w, complexProb, e[0].w);
-                    helperEdge[0].p = e[0].p;
                 }
+                helperEdge[0].p = e[0].p;
 
                 //helperEdge[1] = 0.5*p*e[3]
                 if (!e[3].w.exactlyZero()) {
                     helperEdge[1].w      = package->cn.getCached();
                     complexProb.r->value = probability * 0.5;
                     CN::mul(helperEdge[1].w, complexProb, e[3].w);
-                    helperEdge[1].p = e[3].p;
                 }
+                helperEdge[1].p = e[3].p;
 
                 //e[0] = helperEdge[0] + helperEdge[1]
                 if (!e[0].w.exactlyZero() && !e[0].w.exactlyOne()) {
@@ -530,7 +530,7 @@ namespace dd {
             }
 
             //e[1]=1-p*e[1]
-            if (!e[1].w.approximatelyZero()) {
+            if (!e[1].w.exactlyZero()) {
                 complexProb.r->value = 1 - probability;
                 if (e[1].w.exactlyOne()) {
                     e[1].w = package->cn.getCached(CTEntry::val(complexProb.r), CTEntry::val(complexProb.i));
@@ -539,9 +539,9 @@ namespace dd {
                 }
             }
             //e[2]=1-p*e[2]
-            if (!e[2].w.approximatelyZero()) {
-                if (e[1].w.approximatelyZero()) {
-                    complexProb.r->value = 1 - probability;
+            if (!e[2].w.exactlyZero()) {
+                if (e[1].w.exactlyZero()) {
+                    complexProb.r->value = std::sqrt(1 - probability);
                 }
                 if (e[2].w.exactlyOne()) {
                     e[2].w = package->cn.getCached(CTEntry::val(complexProb.r), CTEntry::val(complexProb.i));
@@ -556,20 +556,19 @@ namespace dd {
                 helperEdge[1].w = dd::Complex::zero;
 
                 //helperEdge[0] = 0.5*((2-p)*e[3])
-                if (!e[3].w.approximatelyZero()) {
+                if (!e[3].w.exactlyZero()) {
                     helperEdge[0].w      = package->cn.getCached();
                     complexProb.r->value = (2 - probability) * 0.5;
                     CN::mul(helperEdge[0].w, complexProb, e[3].w);
-                    helperEdge[0].p = e[3].p;
                 }
-
+                helperEdge[0].p = e[3].p;
                 //helperEdge[1] = 0.5*p*e[0]
-                if (!oldE0Edge.w.approximatelyZero()) {
+                if (!oldE0Edge.w.exactlyZero()) {
                     helperEdge[1].w      = package->cn.getCached();
                     complexProb.r->value = probability * 0.5;
                     CN::mul(helperEdge[1].w, complexProb, oldE0Edge.w);
-                    helperEdge[1].p = oldE0Edge.p;
                 }
+                helperEdge[1].p = oldE0Edge.p;
 
                 //e[3] = helperEdge[0] + helperEdge[1]
                 if (!e[3].w.exactlyZero() && !e[3].w.exactlyOne()) {
