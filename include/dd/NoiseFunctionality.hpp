@@ -296,6 +296,12 @@ namespace dd {
                 } else {
                     nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, true);
                 }
+                if (!nodeAfterNoise.w.exactlyZero() && !nodeAfterNoise.w.exactlyOne()) {
+                    auto tmpComplexValue = package->cn.getTemporary(CTEntry::val(nodeAfterNoise.w.r), CTEntry::val(nodeAfterNoise.w.i));
+                    package->cn.returnToCache(nodeAfterNoise.w);
+                    nodeAfterNoise.w = package->cn.lookup(tmpComplexValue);
+                }
+
                 package->incRef(nodeAfterNoise);
                 dEdge::alignDensityEdge(&originalEdge);
                 package->decRef(originalEdge);
@@ -312,10 +318,10 @@ namespace dd {
         dEdge applyNoiseEffects(dEdge& originalEdge, const std::vector<dd::Qubit>& usedQubits, bool firstPathEdge) {
             if (originalEdge.p->v < usedQubits.back() || originalEdge.isTerminal()) {
                 dEdge tmp{};
-                if (originalEdge.w.approximatelyZero()) {
-                    tmp.w = dd::Complex::zero;
-                } else {
+                if (originalEdge.w.exactlyZero() || originalEdge.w.exactlyOne()) {
                     tmp.w = originalEdge.w;
+                } else {
+                    tmp.w = package->cn.getCached(CTEntry::val(originalEdge.w.r), CTEntry::val(originalEdge.w.i));
                 }
                 if (originalEdge.isTerminal()) {
                     return dEdge::terminal(tmp.w);
@@ -338,7 +344,6 @@ namespace dd {
             //        dd->cn.returnToCache(tmpComplexValue);
             //        return noiseLookUpResult;
             //    }
-
             std::array<dEdge, std::tuple_size_v<decltype(dd::dNode::e)>> new_edges{};
             for (short i = 0; i < 4; i++) {
                 if (firstPathEdge || i == 1) {
@@ -349,7 +354,7 @@ namespace dd {
                 } else if (i == 2) {
                     // Size e[1] == e[2] (due to density matrix representation), I can skip calculating e[2]
                     new_edges[2].p = new_edges[1].p;
-                    new_edges[2].w = new_edges[1].w;
+                    new_edges[2].w = package->cn.getCached(CTEntry::val(new_edges[1].w.r), CTEntry::val(new_edges[1].w.i));
                 } else {
                     dEdge::applyDmChangesToEdge(&originalCopy.p->e[i]);
                     new_edges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, false);
@@ -358,14 +363,6 @@ namespace dd {
             }
             dEdge e = {};
             if (std::count(usedQubits.begin(), usedQubits.end(), originalCopy.p->v)) {
-                for (auto& new_edge: new_edges) {
-                    if (new_edge.w.approximatelyZero()) {
-                        new_edge.w = dd::Complex::zero;
-                    } else {
-                        new_edge.w = package->cn.getCached(dd::CTEntry::val(new_edge.w.r), dd::CTEntry::val(new_edge.w.i));
-                    }
-                }
-
                 for (auto const& type: noiseEffects) {
                     switch (type) {
                         case dd::amplitudeDamping:
@@ -381,41 +378,26 @@ namespace dd {
                             continue;
                     }
                 }
-
-                for (auto& new_edge: new_edges) {
-                    if (new_edge.w.approximatelyZero()) {
-                        if (!new_edge.w.exactlyZero()) {
-                            package->cn.returnToCache(new_edge.w);
-                            new_edge.w = dd::Complex::zero;
-                        }
-                    } else {
-                        dd::Complex c = package->cn.lookup(new_edge.w);
-                        package->cn.returnToCache(new_edge.w);
-                        new_edge.w = c;
-                    }
-                }
             }
 
-            e = package->makeDDNode(originalCopy.p->v, new_edges, false, firstPathEdge);
+            e = package->makeDDNode(originalCopy.p->v, new_edges, true, firstPathEdge);
 
             // Adding the noise operation to the cache, note that e.w is from the complex number table
             //    package->densityNoise.insert(originalCopy, e, usedQubits);
 
             // Multiplying the old edge weight with the new one and looking up in the complex numbers table
-            if (!e.w.approximatelyZero()) {
-                if (e.w.approximatelyOne()) {
-                    e.w = originalEdge.w;
+            if (!e.w.exactlyZero()) {
+                if (e.w.exactlyOne()) {
+                    e.w = package->cn.getCached(CTEntry::val(originalEdge.w.r), CTEntry::val(originalEdge.w.i));
                 } else {
-                    auto tmpComplexValue = package->cn.getCached();
-                    CN::mul(tmpComplexValue, e.w, originalEdge.w);
-                    e.w = package->cn.lookup(tmpComplexValue);
-                    package->cn.returnToCache(tmpComplexValue);
+                    CN::mul(e.w, e.w, originalEdge.w);
                 }
             }
             return e;
         }
 
-        void applyPhaseFlipToEdges(std::array<dEdge, std::tuple_size_v<decltype(dd::dNode::e)>>& e, double probability) {
+        void
+        applyPhaseFlipToEdges(std::array<dEdge, std::tuple_size_v<decltype(dd::dNode::e)>>& e, double probability) {
             dd::Complex complexProb = package->cn.getCached();
 
             //e[0] = e[0]
@@ -447,18 +429,19 @@ namespace dd {
             helperEdge.w = package->cn.getCached();
 
             // e[0] = e[0] + p*e[3]
-            if (!e[3].w.approximatelyZero()) {
+            if (!e[3].w.exactlyZero()) {
                 complexProb.r->value = probability;
                 complexProb.i->value = 0;
-                if (!e[0].w.approximatelyZero()) {
+                if (!e[0].w.exactlyZero()) {
                     CN::mul(helperEdge.w, complexProb, e[3].w);
                     helperEdge.p = e[3].p;
                     auto tmp     = package->add2(e[0], helperEdge);
-                    if (!e[0].w.exactlyZero()) {
+                    if (!e[0].w.exactlyZero() && !e[0].w.exactlyOne()) {
                         package->cn.returnToCache(e[0].w);
                     }
                     e[0] = tmp;
                 } else {
+                    // e[0].w is exactly zero therefore I need to get a new cached value
                     e[0].w = package->cn.getCached();
                     CN::mul(e[0].w, complexProb, e[3].w);
                     e[0].p = e[3].p;
@@ -466,27 +449,38 @@ namespace dd {
             }
 
             //e[1] = sqrt(1-p)*e[1]
-            if (!e[1].w.approximatelyZero()) {
+            if (!e[1].w.exactlyZero()) {
                 complexProb.r->value = std::sqrt(1 - probability);
                 complexProb.i->value = 0;
-                CN::mul(e[1].w, complexProb, e[1].w);
+                if (e[1].w.exactlyOne()) {
+                    e[1].w = package->cn.getCached(CTEntry::val(complexProb.r), CTEntry::val(complexProb.i));
+                } else {
+                    CN::mul(e[1].w, complexProb, e[1].w);
+                }
             }
 
             //e[2] = sqrt(1-p)*e[2]
-            if (!e[2].w.approximatelyZero()) {
-                if (e[1].w.approximatelyZero()) {
+            if (!e[2].w.exactlyZero()) {
+                if (e[1].w.exactlyZero()) {
                     complexProb.r->value = std::sqrt(1 - probability);
                     complexProb.i->value = 0;
                 }
-                CN::mul(e[2].w, complexProb, e[2].w);
+                if (e[2].w.exactlyOne()) {
+                    e[2].w = package->cn.getCached(CTEntry::val(complexProb.r), CTEntry::val(complexProb.i));
+                } else {
+                    CN::mul(e[2].w, complexProb, e[2].w);
+                }
             }
 
             //e[3] = (1-p)*e[3]
-            if (!e[3].w.approximatelyZero()) {
+            if (!e[3].w.exactlyZero()) {
                 complexProb.r->value = 1 - probability;
-                CN::mul(e[3].w, complexProb, e[3].w);
+                if (e[3].w.exactlyOne()) {
+                    e[3].w = package->cn.getCached(CTEntry::val(complexProb.r), CTEntry::val(complexProb.i));
+                } else {
+                    CN::mul(e[3].w, complexProb, e[3].w);
+                }
             }
-
             package->cn.returnToCache(helperEdge.w);
             package->cn.returnToCache(complexProb);
         }
@@ -506,7 +500,7 @@ namespace dd {
                 helperEdge[1].w = dd::Complex::zero;
 
                 //helperEdge[0] = 0.5*((2-p)*e[0]
-                if (!e[0].w.approximatelyZero()) {
+                if (!e[0].w.exactlyZero()) {
                     helperEdge[0].w      = package->cn.getCached();
                     complexProb.r->value = (2 - probability) * 0.5;
                     CN::mul(helperEdge[0].w, complexProb, e[0].w);
@@ -514,7 +508,7 @@ namespace dd {
                 }
 
                 //helperEdge[1] = 0.5*p*e[3]
-                if (!e[3].w.approximatelyZero()) {
+                if (!e[3].w.exactlyZero()) {
                     helperEdge[1].w      = package->cn.getCached();
                     complexProb.r->value = probability * 0.5;
                     CN::mul(helperEdge[1].w, complexProb, e[3].w);
@@ -522,15 +516,15 @@ namespace dd {
                 }
 
                 //e[0] = helperEdge[0] + helperEdge[1]
-                if (!e[0].w.exactlyZero()) {
+                if (!e[0].w.exactlyZero() && !e[0].w.exactlyOne()) {
                     package->cn.returnToCache(e[0].w);
                 }
                 e[0] = package->add2(helperEdge[0], helperEdge[1]);
 
-                if (!helperEdge[0].w.exactlyZero()) {
+                if (!helperEdge[0].w.exactlyZero() && !helperEdge[0].w.exactlyOne()) {
                     package->cn.returnToCache(helperEdge[0].w);
                 }
-                if (!helperEdge[1].w.exactlyZero()) {
+                if (!helperEdge[1].w.exactlyZero() && !helperEdge[1].w.exactlyOne()) {
                     package->cn.returnToCache(helperEdge[1].w);
                 }
             }
@@ -538,14 +532,22 @@ namespace dd {
             //e[1]=1-p*e[1]
             if (!e[1].w.approximatelyZero()) {
                 complexProb.r->value = 1 - probability;
-                CN::mul(e[1].w, e[1].w, complexProb);
+                if (e[1].w.exactlyOne()) {
+                    e[1].w = package->cn.getCached(CTEntry::val(complexProb.r), CTEntry::val(complexProb.i));
+                } else {
+                    CN::mul(e[1].w, e[1].w, complexProb);
+                }
             }
             //e[2]=1-p*e[2]
             if (!e[2].w.approximatelyZero()) {
                 if (e[1].w.approximatelyZero()) {
                     complexProb.r->value = 1 - probability;
                 }
-                CN::mul(e[2].w, e[2].w, complexProb);
+                if (e[2].w.exactlyOne()) {
+                    e[2].w = package->cn.getCached(CTEntry::val(complexProb.r), CTEntry::val(complexProb.i));
+                } else {
+                    CN::mul(e[2].w, e[2].w, complexProb);
+                }
             }
 
             //e[3] = 0.5*((2-p)*e[3]) + 0.5*(p*e[0])
@@ -570,15 +572,14 @@ namespace dd {
                 }
 
                 //e[3] = helperEdge[0] + helperEdge[1]
-                if (!e[3].w.exactlyZero()) {
+                if (!e[3].w.exactlyZero() && !e[3].w.exactlyOne()) {
                     package->cn.returnToCache(e[3].w);
                 }
                 e[3] = package->add2(helperEdge[0], helperEdge[1]);
-
-                if (!helperEdge[0].w.exactlyZero()) {
+                if (!helperEdge[0].w.exactlyZero() && !helperEdge[0].w.exactlyOne()) {
                     package->cn.returnToCache(helperEdge[0].w);
                 }
-                if (!helperEdge[1].w.exactlyZero()) {
+                if (!helperEdge[1].w.exactlyZero() && !helperEdge[1].w.exactlyOne()) {
                     package->cn.returnToCache(helperEdge[1].w);
                 }
             }
