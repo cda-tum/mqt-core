@@ -56,11 +56,11 @@ if (ipo_supported)
 	set_target_properties(${TARGETNAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif ()
 
-# if (GENERATE_POSITION_INDEPENDENT_CODE OR BINDINGS)
-# 	include(CheckPIESupported)
-# 	check_pie_supported()
-# 	set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-# endif ()
+if (GENERATE_POSITION_INDEPENDENT_CODE OR BINDINGS)
+	include(CheckPIESupported)
+	check_pie_supported()
+	set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+endif ()
 
 # add coverage compiler and linker flag to the library and all targets that link against it, if COVERAGE is set
 if (COVERAGE)

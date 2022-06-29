@@ -311,7 +311,7 @@ namespace zx {
     }
 
     void ZXDiagram::approximateCliffords(fp tolerance) {
-        for (auto& v: vertices) {
+        for (auto v: vertices) {
             if (v.has_value()) {
                 v.value().phase.roundToClifford(tolerance);
             }
