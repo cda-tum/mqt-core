@@ -308,8 +308,6 @@ namespace zx {
 
         setType(in_v, VertexType::X);
         setType(out_v, VertexType::X);
-        // removeVertex(in_v);
-        // removeVertex(out_v);
     }
 
     void ZXDiagram::approximateCliffords(fp tolerance) {

@@ -200,3 +200,18 @@ TEST_F(ZXDiagramTest, ancilla) {
     EXPECT_EQ(cx.getNVertices(), 2);
     EXPECT_TRUE(cx.isIdentity());
 }
+
+TEST_F(ZXDiagramTest, RemoveScalarSubDiagram) {
+    zx::ZXDiagram idWithScal(1);
+
+    auto v = idWithScal.addVertex(1);
+    auto w = idWithScal.addVertex(2);
+    idWithScal.addEdge(v, w);
+
+    zx::fullReduce(idWithScal);
+
+    EXPECT_EQ(idWithScal.getNVertices(), 2);
+    EXPECT_EQ(idWithScal.getNEdges(), 1);
+    EXPECT_TRUE(idWithScal.isDeleted(v));
+    EXPECT_TRUE(idWithScal.isDeleted(w));
+}
