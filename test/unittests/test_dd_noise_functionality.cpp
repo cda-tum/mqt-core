@@ -229,7 +229,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
             {"1100", 0.},
             {"1101", 0.}};
 
-    const auto noiseEffects = {dd::amplitudeDamping, dd::phaseFlip, dd::depolarization};
+    const auto noiseEffects = {dd::amplitudeDamping, dd::phaseFlip, dd::identity, dd::depolarization};
 
     auto stochasticNoiseFunctionality = dd::StochasticNoiseFunctionality<StochasticNoiseTestPackage>(
             dd,
@@ -244,11 +244,8 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
         dd->incRef(rootEdge);
 
         for (auto const& op: qc) {
-            auto        operation  = dd::getDD(op.get(), dd);
-            std::vector usedQubits = op->getTargets();
-            for (auto control: op->getControls()) {
-                usedQubits.push_back(control.qubit);
-            }
+            auto operation  = dd::getDD(op.get(), dd);
+            auto usedQubits = op->getUsedQubits();
             stochasticNoiseFunctionality.applyNoiseOperation(usedQubits, operation, rootEdge, qc.getGenerator());
         }
 
@@ -314,12 +311,9 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
         dd->incRef(rootEdge);
 
         for (auto const& op: qc) {
-            auto        operation  = dd::getDD(op.get(), dd);
-            std::vector usedQubits = op->getTargets();
-            for (auto control: op->getControls()) {
-                usedQubits.push_back(control.qubit);
-            }
-            stochasticNoiseFunctionality.applyNoiseOperation(usedQubits, operation, rootEdge, qc.getGenerator());
+            auto operation  = dd::getDD(op.get(), dd);
+            auto usedQubits = op->getUsedQubits();
+            stochasticNoiseFunctionality.applyNoiseOperation(op->getUsedQubits(), operation, rootEdge, qc.getGenerator());
         }
 
         const auto amplitudes = dd->getVector(rootEdge);

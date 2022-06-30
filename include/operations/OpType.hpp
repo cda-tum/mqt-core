@@ -54,6 +54,7 @@ namespace qc {
         AFalse,
         MultiATrue,
         MultiAFalse,
+        // Number of OpTypes
         OpCount
     };
 

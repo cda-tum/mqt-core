@@ -124,11 +124,11 @@ namespace dd {
         }
 
     protected:
-        dd::mEdge stackOperation(dd::mEdge  operation,
-                                 dd::Qubit  target,
-                                 bool       multiQubitOperation,
-                                 qc::OpType noiseOperation,
-                                 GateMatrix matrix) {
+        [[nodiscard]] dd::mEdge stackOperation(dd::mEdge  operation,
+                                               dd::Qubit  target,
+                                               bool       multiQubitOperation,
+                                               qc::OpType noiseOperation,
+                                               GateMatrix matrix) {
             if (noiseOperation == qc::ATrue || noiseOperation == qc::AFalse) {
                 noiseOperation = getAmplitudeDampingOperationType(multiQubitOperation, noiseOperation == qc::ATrue);
             }
@@ -138,7 +138,7 @@ namespace dd {
                 tmpOperation = package->makeGateDD(matrix, getNumberOfQubits(), target);
                 package->stochasticNoiseOperationCache.insert(noiseOperation, target, tmpOperation);
             }
-            return operation = package->multiply(tmpOperation, operation);
+            return package->multiply(tmpOperation, operation);
         }
 
         dd::mEdge generateNoiseOperation(dd::mEdge        operation,
