@@ -24,21 +24,21 @@ namespace zx {
         static bool
                      checkSwap(op_it it, op_it end, Qubit ctrl, Qubit target, const qc::Permutation& p);
         static void  addZSpider(ZXDiagram& diag, zx::Qubit qubit,
-                                std::vector<Vertex>& qubit_vertices,
+                                std::vector<Vertex>& qubits,
                                 const Expression& phase = Expression(), EdgeType type = EdgeType::Simple);
         static void  addXSpider(ZXDiagram& diag, Qubit qubit,
-                                std::vector<Vertex>& qubit_vertices,
+                                std::vector<Vertex>& qubits,
                                 const Expression& phase = Expression(), EdgeType type = EdgeType::Simple);
         static void  addCnot(ZXDiagram& diag, Qubit ctrl, Qubit target,
-                             std::vector<Vertex>& qubit_vertices);
+                             std::vector<Vertex>& qubits);
         static void  addCphase(ZXDiagram& diag, const PiRational& phase, Qubit ctrl, Qubit target,
-                               std::vector<Vertex>& qubit_vertices);
+                               std::vector<Vertex>& qubits);
         static void  addSwap(ZXDiagram& diag, Qubit ctrl, Qubit target,
-                             std::vector<Vertex>& qubit_vertices);
+                             std::vector<Vertex>& qubits);
         static void  addCcx(ZXDiagram& diag, Qubit ctrl_0, Qubit ctrl_1, Qubit target,
-                            std::vector<Vertex>& qubit_vertices);
+                            std::vector<Vertex>& qubits);
         static op_it parse_op(ZXDiagram& diag, op_it it, op_it end,
-                              std::vector<Vertex>& qubit_vertices, const qc::Permutation& p);
+                              std::vector<Vertex>& qubits, const qc::Permutation& p);
     };
 
 } // namespace zx

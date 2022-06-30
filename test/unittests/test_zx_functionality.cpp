@@ -14,6 +14,8 @@
 #include <iostream>
 #include <sstream>
 
+using namespace dd::literals;
+
 class ZXDiagramTest: public ::testing::Test {
 public:
     qc::QuantumComputation qc;
@@ -124,8 +126,8 @@ TEST_F(ZXDiagramTest, complex_circuit) {
 TEST_F(ZXDiagramTest, Phase) {
     qc = qc::QuantumComputation(2);
     qc.phase(0, zx::PI / 4);
-    qc.phase(0, dd::Control{1, dd::Control::Type::pos}, zx::PI / 4);
-    qc.phase(0, dd::Control{1, dd::Control::Type::pos}, -zx::PI / 4);
+    qc.phase(0, 1_pc, zx::PI / 4);
+    qc.phase(0, 1_pc, -zx::PI / 4);
     qc.phase(0, -zx::PI / 4);
 
     EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
@@ -155,24 +157,23 @@ TEST_F(ZXDiagramTest, Compound) {
 
 TEST_F(ZXDiagramTest, UnsupportedMultiControl) {
     qc = qc::QuantumComputation(4);
-    qc.x(0, {dd::Control{1, dd::Control::Type::pos},
-             dd::Control{2, dd::Control::Type::pos},
-             dd::Control{3, dd::Control::Type::pos}});
+    qc.x(0, {1_pc,
+             2_pc,
+             3_pc});
     EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
     EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
 }
 
 TEST_F(ZXDiagramTest, UnsupportedControl) {
     qc = qc::QuantumComputation(2);
-    qc.y(0, dd::Control{1, dd::Control::Type::pos});
+    qc.y(0, 1_pc);
     EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
     EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
 }
 
 TEST_F(ZXDiagramTest, UnsupportedControl2) {
     qc = qc::QuantumComputation(3);
-    qc.y(0, {dd::Control{1, dd::Control::Type::pos},
-             dd::Control{2, dd::Control::Type::pos}});
+    qc.y(0, {1_pc, 2_pc});
     EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
     EXPECT_THROW(zx::ZXDiagram diag =
                          zx::FunctionalityConstruction::buildFunctionality(&qc),
