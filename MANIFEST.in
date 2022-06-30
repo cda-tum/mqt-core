@@ -22,4 +22,20 @@ prune extern/pybind11/tests
 graft extern/pybind11_json
 prune extern/pybind11_json/test
 
+graft extern/zx
+prune extern/zx/extern/googletest
+prune extern/zx/extern/boost/config/checks
+prune extern/zx/extern/boost/config/doc
+prune extern/zx/extern/boost/config/meta
+prune extern/zx/extern/boost/config/test
+prune extern/zx/extern/boost/config/tools
+prune extern/zx/extern/boost/multiprecision/config
+prune extern/zx/extern/boost/multiprecision/doc
+prune extern/zx/extern/boost/multiprecision/example
+prune extern/zx/extern/boost/multiprecision/meta
+prune extern/zx/extern/boost/multiprecision/performance
+prune extern/zx/extern/boost/multiprecision/plots
+prune extern/zx/extern/boost/multiprecision/test
+prune extern/zx/extern/boost/multiprecision/tools
+
 prune **/.github

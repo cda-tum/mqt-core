@@ -45,6 +45,7 @@ check_submodule_present(dd_package)
 check_submodule_present(json)
 check_submodule_present(pybind11)
 check_submodule_present(pybind11_json)
+check_submodule_present(zx)
 
 # add main library code
 add_subdirectory(src)

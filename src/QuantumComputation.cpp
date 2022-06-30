@@ -947,7 +947,7 @@ namespace qc {
         }
     }
 
-    bool QuantumComputation::isLastOperationOnQubit(const decltype(ops.cbegin())& opIt, const decltype(ops.cend())& end) const {
+    bool QuantumComputation::isLastOperationOnQubit(const const_iterator& opIt, const const_iterator& end) const {
         if (opIt == end)
             return true;
 
