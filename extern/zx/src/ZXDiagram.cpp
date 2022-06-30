@@ -331,6 +331,8 @@ namespace zx {
                 if (visited.find(w) != visited.end())
                     continue;
 
+                visited.emplace(w);
+
                 if (isInput(w) || isOutput(w))
                     return true;
 
