@@ -121,7 +121,7 @@ protected:
 TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPDApplySequential) {
     auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
-    auto rootEdge = dd->makeZeroDensityOperator();
+    auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
     dd->incRef(rootEdge);
 
     std::vector<dd::NoiseOperations> noiseEffects = {amplitudeDamping, phaseFlip, depolarization};
@@ -167,7 +167,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPDApplySequential) {
 TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
     auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
-    auto rootEdge = dd->makeZeroDensityOperator();
+    auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
     dd->incRef(rootEdge);
 
     std::vector<dd::NoiseOperations> noiseEffects = {amplitudeDamping, phaseFlip, depolarization};

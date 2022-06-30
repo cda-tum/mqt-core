@@ -13,7 +13,8 @@
 #include <random>
 #include <utility>
 
-using CN = dd::ComplexNumbers;
+using CN           = dd::ComplexNumbers;
+using arrayOfEdges = std::array<dd::dEdge, std::tuple_size_v<decltype(dd::dNode::e)>>;
 
 namespace dd {
 
@@ -333,20 +334,20 @@ namespace dd {
             //        dd->cn.returnToCache(tmpComplexValue);
             //        return noiseLookUpResult;
             //    }
-            std::array<dEdge, std::tuple_size_v<decltype(dd::dNode::e)>> new_edges{};
-            for (short i = 0; i < 4; i++) {
+            arrayOfEdges newEdges{};
+            for (size_t i = 0; i < std::tuple_size_v<decltype(dd::dNode::e)>; i++) {
                 if (firstPathEdge || i == 1) {
-                    // If I am to the useDensityMatrix I cannot minimize the necessary operations anymore
+                    // If I am to the firstPathEdge I cannot minimize the necessary operations anymore
                     dEdge::applyDmChangesToEdge(originalCopy.p->e[i]);
-                    new_edges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, true);
+                    newEdges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, true);
                     dEdge::revertDmChangesToEdge(originalCopy.p->e[i]);
                 } else if (i == 2) {
-                    // Size e[1] == e[2] (due to density matrix representation), I can skip calculating e[2]
-                    new_edges[2].p = new_edges[1].p;
-                    new_edges[2].w = package->cn.getCached(CTEntry::val(new_edges[1].w.r), CTEntry::val(new_edges[1].w.i));
+                    // Since e[1] == e[2] (due to density matrix representation), I can skip calculating e[2]
+                    newEdges[2].p = newEdges[1].p;
+                    newEdges[2].w = package->cn.getCached(CTEntry::val(newEdges[1].w.r), CTEntry::val(newEdges[1].w.i));
                 } else {
                     dEdge::applyDmChangesToEdge(originalCopy.p->e[i]);
-                    new_edges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, false);
+                    newEdges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, false);
                     dEdge::revertDmChangesToEdge(originalCopy.p->e[i]);
                 }
             }
@@ -355,13 +356,13 @@ namespace dd {
                 for (auto const& type: noiseEffects) {
                     switch (type) {
                         case dd::amplitudeDamping:
-                            applyAmplitudeDampingToEdges(new_edges, (usedQubits.size() == 1) ? ampDampingProbSingleQubit : ampDampingProbMultiQubit);
+                            applyAmplitudeDampingToEdges(newEdges, (usedQubits.size() == 1) ? ampDampingProbSingleQubit : ampDampingProbMultiQubit);
                             break;
                         case dd::phaseFlip:
-                            applyPhaseFlipToEdges(new_edges, (usedQubits.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit);
+                            applyPhaseFlipToEdges(newEdges, (usedQubits.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit);
                             break;
                         case dd::depolarization:
-                            applyDepolarisationToEdges(new_edges, (usedQubits.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit);
+                            applyDepolarisationToEdges(newEdges, (usedQubits.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit);
                             break;
                         case dd::identity:
                             continue;
@@ -369,7 +370,7 @@ namespace dd {
                 }
             }
 
-            e = package->makeDDNode(originalCopy.p->v, new_edges, true, firstPathEdge);
+            e = package->makeDDNode(originalCopy.p->v, newEdges, true, firstPathEdge);
 
             // Adding the noise operation to the cache, note that e.w is from the complex number table
             //    package->densityNoise.insert(originalCopy, e, usedQubits);
@@ -386,7 +387,7 @@ namespace dd {
         }
 
         void
-        applyPhaseFlipToEdges(std::array<dEdge, std::tuple_size_v<decltype(dd::dNode::e)>>& e, double probability) {
+        applyPhaseFlipToEdges(arrayOfEdges& e, double probability) {
             dd::Complex complexProb = package->cn.getCached();
 
             //e[0] = e[0]
@@ -412,7 +413,7 @@ namespace dd {
             package->cn.returnToCache(complexProb);
         }
 
-        void applyAmplitudeDampingToEdges(std::array<dEdge, std::tuple_size_v<decltype(dd::dNode::e)>>& e, double probability) {
+        void applyAmplitudeDampingToEdges(arrayOfEdges& e, double probability) {
             dd::Complex complexProb = package->cn.getCached();
             dEdge       helperEdge;
             helperEdge.w = package->cn.getCached();
@@ -474,7 +475,7 @@ namespace dd {
             package->cn.returnToCache(complexProb);
         }
 
-        void applyDepolarisationToEdges(std::array<dEdge, std::tuple_size_v<decltype(dd::dNode::e)>>& e, double probability) {
+        void applyDepolarisationToEdges(arrayOfEdges& e, double probability) {
             dEdge       helperEdge[2];
             dd::Complex complexProb = package->cn.getCached();
             complexProb.i->value    = 0;
@@ -581,7 +582,7 @@ namespace dd {
             std::array<mEdge, std::tuple_size_v<decltype(dd::dNode::e)>> idleOperation{};
 
             // Iterate over qubits and check if the qubit had been used
-            for (auto targetQubit: targets) {
+            for (const auto targetQubit: targets) {
                 for (auto const& type: noiseEffects) {
                     generateGate(idleOperation, type, targetQubit, getNoiseProbability(type, targets));
                     tmp.p = nullptr;
@@ -612,6 +613,9 @@ namespace dd {
             dd::ComplexValue                                                      tmp = {};
 
             switch (noiseType) {
+                    // phase flip
+                    //                          (1  0)                         (1  0)
+                    //  e0= sqrt(1-probability)*(0  1), e1=  sqrt(probability)*(0 -1)
                 case dd::phaseFlip: {
                     tmp.r               = std::sqrt(1 - probability) * dd::complex_one.r;
                     idleNoiseGate[0][0] = idleNoiseGate[0][3] = tmp;
@@ -628,8 +632,8 @@ namespace dd {
                     break;
                 }
                     // amplitude damping
-                    //      (1      0           )       (0      sqrt(probability))
-                    //  e0= (0      sqrt(1-probability)   ), e1=  (0      0      )
+                    //      (1                  0)       (0      sqrt(probability))
+                    //  e0= (0 sqrt(1-probability), e1=  (0                      0)
                 case dd::amplitudeDamping: {
                     tmp.r               = std::sqrt(1 - probability) * dd::complex_one.r;
                     idleNoiseGate[0][0] = dd::complex_one;
@@ -654,7 +658,7 @@ namespace dd {
 
                     pointerForMatrices[0] = package->makeGateDD(idleNoiseGate[0], getNumberOfQubits(), target);
 
-                    //            (0 1)
+                    //                      (0 1)
                     // sqrt(probability/4))*(1 0)
                     tmp.r               = std::sqrt(probability / 4) * dd::complex_one.r;
                     idleNoiseGate[1][1] = idleNoiseGate[1][2] = tmp;
@@ -662,7 +666,7 @@ namespace dd {
 
                     pointerForMatrices[1] = package->makeGateDD(idleNoiseGate[1], getNumberOfQubits(), target);
 
-                    //            (1 0)
+                    //                      (1 0)
                     // sqrt(probability/4))*(0 -1)
                     tmp.r               = std::sqrt(probability / 4) * dd::complex_one.r;
                     idleNoiseGate[2][0] = tmp;
@@ -672,7 +676,7 @@ namespace dd {
 
                     pointerForMatrices[3] = package->makeGateDD(idleNoiseGate[2], getNumberOfQubits(), target);
 
-                    //            (0 -i)
+                    //                      (0 -i)
                     // sqrt(probability/4))*(i 0)
                     tmp.r               = dd::complex_zero.r;
                     tmp.i               = std::sqrt(probability / 4) * 1;
