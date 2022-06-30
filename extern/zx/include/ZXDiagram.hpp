@@ -75,10 +75,13 @@ namespace zx {
         [[nodiscard]] const std::vector<Vertex>& getInputs() const {
             return inputs;
         }
+        [[nodiscard]] Vertex getInput(std::size_t i) const { return inputs[i]; }
 
         [[nodiscard]] const std::vector<Vertex>& getOutputs() const {
             return outputs;
         }
+
+        [[nodiscard]] Vertex getOutput(std::size_t i) const { return outputs[i]; }
 
         [[nodiscard]] bool isDeleted(Vertex v) const {
             return !vertices[v].has_value();
