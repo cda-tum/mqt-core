@@ -10,6 +10,8 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/QuantumComputation.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/CircuitOptimizer.cpp
 
+            ${CMAKE_CURRENT_SOURCE_DIR}/zx/FunctionalityConstruction.cpp
+
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/QFT.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Grover.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/BernsteinVazirani.cpp
@@ -43,6 +45,8 @@ add_library(${PROJECT_NAME}
             ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Simulation.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/NoiseFunctionality.hpp
 
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
+
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QFT.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Grover.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/BernsteinVazirani.hpp
@@ -61,6 +65,9 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON 
 # add MQT::DDpackage library
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
 target_link_libraries(${PROJECT_NAME} PUBLIC MQT::DDPackage)
+
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx")
+target_link_libraries(${PROJECT_NAME} PUBLIC MQT::zx)
 
 # add nlohmann::json library
 set(JSON_BuildTests OFF CACHE INTERNAL "")
