@@ -6,8 +6,10 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/operations/Operation.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/operations/StandardOperation.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/operations/NonUnitaryOperation.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/operations/SymbolicOperation.cpp
 
             ${CMAKE_CURRENT_SOURCE_DIR}/QuantumComputation.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/SymbolicQuantumComputation.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/CircuitOptimizer.cpp
 
             ${CMAKE_CURRENT_SOURCE_DIR}/zx/FunctionalityConstruction.cpp
@@ -35,8 +37,10 @@ add_library(${PROJECT_NAME}
             ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/NonUnitaryOperation.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/CompoundOperation.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/ClassicControlledOperation.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/SymbolicOperation.hpp
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/QuantumComputation.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/SymbolicQuantumComputation.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/CircuitOptimizer.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/Definitions.hpp
 

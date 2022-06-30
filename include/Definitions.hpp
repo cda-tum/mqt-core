@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "Expression.hpp"
 #include "dd/Control.hpp"
 #include "dd/Definitions.hpp"
 
@@ -80,4 +81,6 @@ namespace qc {
     using DAGReverseIterator  = std::deque<std::unique_ptr<Operation>*>::reverse_iterator;
     using DAGIterators        = std::vector<DAGIterator>;
     using DAGReverseIterators = std::vector<DAGReverseIterator>;
+
+    using Symbolic = sym::Expression<double, double>;
 } // namespace qc
