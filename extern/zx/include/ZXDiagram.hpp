@@ -50,6 +50,9 @@ namespace zx {
         [[nodiscard]] std::vector<Edge>&  incidentEdges(Vertex v) {
              return edges[v];
         }
+        [[nodiscard]] const Edge& incidentEdge(Vertex v, std::size_t n) {
+            return edges[v][n];
+        }
 
         [[nodiscard]] std::size_t degree(Vertex v) const { return edges[v].size(); }
 
