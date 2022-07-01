@@ -7,7 +7,7 @@ namespace zx {
         currentPos(vertices.begin()), vertices(vertices) {
         if ((size_t)v >= vertices.size()) {
             currentPos = vertices.end();
-            v          = vertices.size();
+            this->v    = vertices.size();
         } else {
             currentPos = vertices.begin() + static_cast<int>(v);
             next_valid_vertex();
@@ -50,14 +50,16 @@ namespace zx {
             std::vector<std::vector<Edge>>&         edges,
             std::vector<std::optional<VertexData>>& vertices):
         v(0),
-        currentPos(edges[0].begin()), edges(edges), vertices(vertices) {
+        currentPos(edges[0].begin()), edgesPos(edges.begin()), edges(edges), vertices(vertices) {
         if (!vertices.empty()) {
             while ((size_t)v < edges.size() && !vertices[v].has_value())
                 v++;
             currentPos = edges[v].begin();
+            edgesPos   = edges.begin() + static_cast<int>(v);
             checkNextVertex();
         } else {
             currentPos = edges.back().end();
+            edgesPos   = edges.end();
             v          = edges.size();
         }
     }
@@ -69,9 +71,11 @@ namespace zx {
         edges(edges), vertices(vertices) {
         if ((size_t)v >= edges.size()) {
             currentPos = edges.back().end();
-            v          = edges.size();
+            edgesPos   = edges.end();
+            this->v    = edges.size();
         } else {
             currentPos = edges[v].begin();
+            edgesPos   = edges.begin() + static_cast<int>(v);
         }
     }
 
@@ -95,10 +99,12 @@ namespace zx {
 
             if ((size_t)v == edges.size()) {
                 currentPos = edges.back().end();
+                edgesPos   = edges.end();
                 v--;
                 return;
             }
             currentPos = edges[v].begin();
+            edgesPos   = edges.begin() + static_cast<int>(v);
             while (currentPos != edges[v].end() &&
                    currentPos->to < v) // make sure to not iterate over an edge twice
                 currentPos++;
@@ -112,7 +118,7 @@ namespace zx {
     }
 
     bool operator==(const Edges::EdgeIterator& a, const Edges::EdgeIterator& b) {
-        return a.currentPos == b.currentPos;
+        return a.edgesPos == b.edgesPos && a.currentPos == b.currentPos;
     }
     bool operator!=(const Edges::EdgeIterator& a, const Edges::EdgeIterator& b) {
         return !(a == b);

@@ -43,7 +43,7 @@ namespace zx {
             using reference         = value_type&;
 
             explicit VertexIterator(std::vector<std::optional<VertexData>>& vertices):
-                v(0), currentPos(vertices.begin()), vertices(vertices) {
+                currentPos(vertices.begin()), vertices(vertices) {
                 next_valid_vertex();
             }
             VertexIterator(std::vector<std::optional<VertexData>>& vertices,
@@ -64,7 +64,7 @@ namespace zx {
                                    const VertexIterator& b);
 
         private:
-            Vertex                                           v;
+            Vertex                                           v = 0;
             std::vector<std::optional<VertexData>>::iterator currentPos;
             std::vector<std::optional<VertexData>>&          vertices;
 
@@ -74,7 +74,7 @@ namespace zx {
         using iterator = VertexIterator;
 
         iterator begin() { return VertexIterator(vertices); }
-        iterator end() { return VertexIterator(vertices, vertices.size()); }
+        iterator end() { return {vertices, vertices.size()}; }
 
     private:
         std::vector<std::optional<VertexData>>& vertices;
@@ -114,18 +114,19 @@ namespace zx {
             friend bool operator!=(const EdgeIterator& a, const EdgeIterator& b);
 
         private:
-            Vertex                                  v;
-            std::vector<Edge>::iterator             currentPos;
-            std::vector<std::vector<Edge>>&         edges;
-            std::vector<std::optional<VertexData>>& vertices;
+            Vertex                                   v;
+            std::vector<Edge>::iterator              currentPos;
+            std::vector<std::vector<Edge>>::iterator edgesPos;
+            std::vector<std::vector<Edge>>&          edges;
+            std::vector<std::optional<VertexData>>&  vertices;
 
             void checkNextVertex();
         };
 
         using iterator = EdgeIterator;
 
-        iterator begin() { return EdgeIterator(edges, vertices); }
-        iterator end() { return EdgeIterator(edges, vertices, edges.size()); }
+        iterator begin() { return {edges, vertices}; }
+        iterator end() { return {edges, vertices, edges.size()}; }
 
     private:
         std::vector<std::vector<Edge>>&         edges;
