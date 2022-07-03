@@ -124,7 +124,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPDApplySequential) {
     auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
     dd->incRef(rootEdge);
 
-    std::vector<dd::NoiseOperations> noiseEffects = {amplitudeDamping, phaseFlip, depolarization};
+    std::vector<dd::NoiseOperations> noiseEffects = {amplitudeDamping, phaseFlip, depolarization, dd::identity};
 
     auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality<DensityMatrixTestPackage>(
             dd,
@@ -170,7 +170,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
     auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
     dd->incRef(rootEdge);
 
-    std::vector<dd::NoiseOperations> noiseEffects = {amplitudeDamping, phaseFlip, depolarization};
+    std::vector<dd::NoiseOperations> noiseEffects = {amplitudeDamping, dd::identity, phaseFlip, depolarization};
 
     auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality<DensityMatrixTestPackage>(
             dd,

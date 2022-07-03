@@ -124,15 +124,7 @@ namespace dd {
         }
 
     protected:
-        [[nodiscard]] dd::mEdge stackOperation(dd::mEdge  operation,
-                                               dd::Qubit  target,
-                                               bool       multiQubitOperation,
-                                               qc::OpType noiseOperation,
-                                               GateMatrix matrix) {
-            if (noiseOperation == qc::ATrue || noiseOperation == qc::AFalse) {
-                noiseOperation = getAmplitudeDampingOperationType(multiQubitOperation, noiseOperation == qc::ATrue);
-            }
-
+        [[nodiscard]] dd::mEdge stackOperation(dd::mEdge operation, const dd::Qubit target, const qc::OpType noiseOperation, const GateMatrix matrix) {
             auto tmpOperation = package->stochasticNoiseOperationCache.lookup(noiseOperation, target);
             if (tmpOperation.p == nullptr) {
                 tmpOperation = package->makeGateDD(matrix, getNumberOfQubits(), target);
@@ -146,35 +138,34 @@ namespace dd {
                                          std::mt19937_64& generator,
                                          bool             amplitudeDamping,
                                          bool             multiQubitOperation) {
-            qc::OpType effect;
             for (const auto& noiseType: noiseEffects) {
-                if (noiseType != dd::amplitudeDamping) {
-                    effect = returnNoiseOperation(noiseType, dist(generator), multiQubitOperation);
-                } else {
-                    effect = amplitudeDamping ? qc::ATrue : qc::AFalse;
-                }
+                const auto effect = noiseType == dd::amplitudeDamping ? getAmplitudeDampingOperationType(multiQubitOperation, amplitudeDamping) : returnNoiseOperation(noiseType, dist(generator), multiQubitOperation);
                 switch (effect) {
                     case (qc::I): {
                         continue;
                     }
+                    case (qc::MultiATrue):
                     case (qc::ATrue): {
-                        operation = stackOperation(operation, target, multiQubitOperation, effect, getAmplitudeDampingOperationMatrix(multiQubitOperation, true));
+                        const GateMatrix amplitudeDampingMatrix = getAmplitudeDampingOperationMatrix(multiQubitOperation, true);
+                        operation                               = stackOperation(operation, target, effect, amplitudeDampingMatrix);
                         break;
                     }
+                    case (qc::MultiAFalse):
                     case (qc::AFalse): {
-                        operation = stackOperation(operation, target, multiQubitOperation, effect, getAmplitudeDampingOperationMatrix(multiQubitOperation, false));
+                        const GateMatrix amplitudeDampingMatrix = getAmplitudeDampingOperationMatrix(multiQubitOperation, false);
+                        operation                               = stackOperation(operation, target, effect, amplitudeDampingMatrix);
                         break;
                     }
                     case (qc::X): {
-                        operation = stackOperation(operation, target, multiQubitOperation, effect, Xmat);
+                        operation = stackOperation(operation, target, effect, Xmat);
                         break;
                     }
                     case (qc::Y): {
-                        operation = stackOperation(operation, target, multiQubitOperation, effect, Ymat);
+                        operation = stackOperation(operation, target, effect, Ymat);
                         break;
                     }
                     case (qc::Z): {
-                        operation = stackOperation(operation, target, multiQubitOperation, effect, Zmat);
+                        operation = stackOperation(operation, target, effect, Zmat);
                         break;
                     }
                     default: {
@@ -255,6 +246,7 @@ namespace dd {
         const bool                             sequentiallyApplyNoise;
 
         const std::map<dd::NoiseOperations, int> sequentialNoiseMap = {
+                {dd::identity, 1},         //Identity Noise
                 {dd::phaseFlip, 2},        //Phase-flip
                 {dd::amplitudeDamping, 2}, //Amplitude Damping
                 {dd::depolarization, 4},   //Depolarisation
@@ -613,6 +605,17 @@ namespace dd {
             dd::ComplexValue                                                      tmp = {};
 
             switch (noiseType) {
+                    // identity noise (for testing)
+                    //                  (1  0)
+                    //                  (0  1),
+                case dd::identity: {
+                    idleNoiseGate[0][0] = idleNoiseGate[0][3] = dd::complex_one;
+                    idleNoiseGate[0][1] = idleNoiseGate[0][2] = dd::complex_zero;
+
+                    pointerForMatrices[0] = package->makeGateDD(idleNoiseGate[0], getNumberOfQubits(), target);
+
+                    break;
+                }
                     // phase flip
                     //                          (1  0)                         (1  0)
                     //  e0= sqrt(1-probability)*(0  1), e1=  sqrt(probability)*(0 -1)
