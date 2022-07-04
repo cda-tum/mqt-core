@@ -17,7 +17,8 @@
 
 namespace qc {
     using VectorDD = dd::vEdge;
-    using MatrixDD = dd::mEdge;
+    using MatrixDD        = dd::mEdge;
+    using DensityMatrixDD = dd::dEdge;
 } // namespace qc
 
 namespace dd {
