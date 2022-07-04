@@ -327,7 +327,7 @@ namespace dd {
             //        return noiseLookUpResult;
             //    }
             arrayOfEdges newEdges{};
-            for (size_t i = 0; i < std::tuple_size_v<decltype(dd::dNode::e)>; i++) {
+            for (size_t i = 0; i < newEdges.size(); i++) {
                 if (firstPathEdge || i == 1) {
                     // If I am to the firstPathEdge I cannot minimize the necessary operations anymore
                     DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e[i]);
