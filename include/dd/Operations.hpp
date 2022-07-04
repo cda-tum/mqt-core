@@ -16,7 +16,7 @@
 #include <variant>
 
 namespace qc {
-    using VectorDD = dd::vEdge;
+    using VectorDD        = dd::vEdge;
     using MatrixDD        = dd::mEdge;
     using DensityMatrixDD = dd::dEdge;
 } // namespace qc

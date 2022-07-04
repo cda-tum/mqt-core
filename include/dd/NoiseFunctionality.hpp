@@ -470,7 +470,7 @@ namespace dd {
         void applyDepolarisationToEdges(arrayOfEdges& e, double probability) {
             DensityMatrixDD helperEdge[2];
             dd::Complex     complexProb = package->cn.getCached();
-            complexProb.i->value    = 0;
+            complexProb.i->value        = 0;
 
             DensityMatrixDD oldE0Edge;
             oldE0Edge.w = package->cn.getCached(dd::CTEntry::val(e[0].w.r), dd::CTEntry::val(e[0].w.i));
