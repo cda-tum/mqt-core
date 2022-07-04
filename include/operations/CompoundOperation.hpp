@@ -158,5 +158,20 @@ namespace qc {
         [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }
 
         std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
+
+        [[nodiscard]] std::vector<dd::Qubit> getUsedQubits() const override {
+            std::vector<dd::Qubit> usedQubits{};
+            for (const auto& op: ops) {
+                for (auto target: op->getTargets()) {
+                    usedQubits.push_back(target);
+                }
+                for (auto control: op->getControls()) {
+                    usedQubits.push_back(control.qubit);
+                }
+            }
+            sort(usedQubits.begin(), usedQubits.end());
+            usedQubits.erase(unique(usedQubits.begin(), usedQubits.end()), usedQubits.end());
+            return usedQubits;
+        }
     };
 } // namespace qc
