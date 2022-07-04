@@ -14,7 +14,7 @@
 #include <utility>
 
 using CN           = dd::ComplexNumbers;
-using arrayOfEdges = std::array<dd::DensityMatrixDD, std::tuple_size_v<decltype(dd::dNode::e)>>;
+using ArrayOfEdges = std::array<dd::DensityMatrixDD, std::tuple_size_v<decltype(dd::dNode::e)>>;
 
 namespace dd {
 
@@ -326,7 +326,7 @@ namespace dd {
             //        dd->cn.returnToCache(tmpComplexValue);
             //        return noiseLookUpResult;
             //    }
-            arrayOfEdges newEdges{};
+            ArrayOfEdges newEdges{};
             for (size_t i = 0; i < newEdges.size(); i++) {
                 if (firstPathEdge || i == 1) {
                     // If I am to the firstPathEdge I cannot minimize the necessary operations anymore
@@ -379,7 +379,7 @@ namespace dd {
         }
 
         void
-        applyPhaseFlipToEdges(arrayOfEdges& e, double probability) {
+        applyPhaseFlipToEdges(ArrayOfEdges& e, double probability) {
             dd::Complex complexProb = package->cn.getCached();
 
             //e[0] = e[0]
@@ -405,7 +405,7 @@ namespace dd {
             package->cn.returnToCache(complexProb);
         }
 
-        void applyAmplitudeDampingToEdges(arrayOfEdges& e, double probability) {
+        void applyAmplitudeDampingToEdges(ArrayOfEdges& e, double probability) {
             dd::Complex     complexProb = package->cn.getCached();
             DensityMatrixDD helperEdge;
             helperEdge.w = package->cn.getCached();
@@ -467,7 +467,7 @@ namespace dd {
             package->cn.returnToCache(complexProb);
         }
 
-        void applyDepolarisationToEdges(arrayOfEdges& e, double probability) {
+        void applyDepolarisationToEdges(ArrayOfEdges& e, double probability) {
             DensityMatrixDD helperEdge[2];
             dd::Complex     complexProb = package->cn.getCached();
             complexProb.i->value        = 0;
