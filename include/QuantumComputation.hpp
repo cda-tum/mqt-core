@@ -11,6 +11,7 @@
 #include "operations/ClassicControlledOperation.hpp"
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/StandardOperation.hpp"
+#include "operations/SymbolicOperation.hpp"
 #include "parsers/qasm_parser/Parser.hpp"
 
 #include <algorithm>
@@ -58,6 +59,8 @@ namespace qc {
         std::mt19937_64 mt;
         std::size_t     seed = 0;
 
+        std::unordered_set<sym::Variable> occuringVariables;
+
         void importOpenQASM(std::istream& is);
         void importReal(std::istream& is);
         int  readRealHeader(std::istream& is);
@@ -69,6 +72,10 @@ namespace qc {
         int  readQCHeader(std::istream& is, std::map<std::string, dd::Qubit>& varMap);
         void readQCGateDescriptions(std::istream& is, int line, std::map<std::string, dd::Qubit>& varMap);
         void importGRCS(std::istream& is);
+
+        void addVariables(const SymbolOrNumber& expr);
+        void addVariables(const SymbolOrNumber& expr1, const SymbolOrNumber& expr2);
+        void addVariables(const SymbolOrNumber& expr1, const SymbolOrNumber& expr2, const SymbolOrNumber& expr3);
 
         template<class RegisterType>
         static void printSortedRegisters(const RegisterMap<RegisterType>& regmap, const std::string& identifier, std::ostream& of) {
@@ -429,6 +436,9 @@ namespace qc {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::U3, lambda, phi, theta);
         }
+        void u3(dd::Qubit target, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta);
+        void u3(dd::Qubit target, const dd::Control& control, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta);
+        void u3(dd::Qubit target, const dd::Controls& controls, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta);
 
         void u2(dd::Qubit target, dd::fp lambda, dd::fp phi) {
             checkQubitRange(target);
@@ -442,6 +452,9 @@ namespace qc {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::U2, lambda, phi);
         }
+        void u2(dd::Qubit target, const SymbolOrNumber& lambda, const SymbolOrNumber& phi);
+        void u2(dd::Qubit target, const dd::Control& control, const SymbolOrNumber& lambda, const SymbolOrNumber& phi);
+        void u2(dd::Qubit target, const dd::Controls& controls, const SymbolOrNumber& lambda, const SymbolOrNumber& phi);
 
         void phase(dd::Qubit target, dd::fp lambda) {
             checkQubitRange(target);
@@ -455,6 +468,9 @@ namespace qc {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Phase, lambda);
         }
+        void phase(dd::Qubit target, const SymbolOrNumber& lambda);
+        void phase(dd::Qubit target, const dd::Control& control, const SymbolOrNumber& lambda);
+        void phase(dd::Qubit target, const dd::Controls& controls, const SymbolOrNumber& lambda);
 
         void sx(dd::Qubit target) {
             checkQubitRange(target);
@@ -490,7 +506,13 @@ namespace qc {
             checkQubitRange(target, control);
             emplace_back<StandardOperation>(getNqubits(), control, target, qc::RX, lambda);
         }
-        void rx(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RX, lambda); }
+        void rx(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) {
+            checkQubitRange(target, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RX, lambda);
+        }
+        void rx(dd::Qubit target, const SymbolOrNumber& lambda);
+        void rx(dd::Qubit target, const dd::Control& control, const SymbolOrNumber& lambda);
+        void rx(dd::Qubit target, const dd::Controls& controls, const SymbolOrNumber& lambda);
 
         void ry(dd::Qubit target, dd::fp lambda) {
             checkQubitRange(target);
@@ -500,7 +522,14 @@ namespace qc {
             checkQubitRange(target, control);
             emplace_back<StandardOperation>(getNqubits(), control, target, qc::RY, lambda);
         }
-        void ry(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RY, lambda); }
+        void ry(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) {
+            checkQubitRange(target, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RY, lambda);
+        }
+
+        void ry(dd::Qubit target, const SymbolOrNumber& lambda);
+        void ry(dd::Qubit target, const dd::Control& control, const SymbolOrNumber& lambda);
+        void ry(dd::Qubit target, const dd::Controls& controls, const SymbolOrNumber& lambda);
 
         void rz(dd::Qubit target, dd::fp lambda) {
             checkQubitRange(target);
@@ -510,7 +539,14 @@ namespace qc {
             checkQubitRange(target, control);
             emplace_back<StandardOperation>(getNqubits(), control, target, qc::RZ, lambda);
         }
-        void rz(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RZ, lambda); }
+        void rz(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) {
+            checkQubitRange(target, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RZ, lambda);
+        }
+
+        void rz(dd::Qubit target, const SymbolOrNumber& lambda);
+        void rz(dd::Qubit target, const dd::Control& control, const SymbolOrNumber& lambda);
+        void rz(dd::Qubit target, const dd::Controls& controls, const SymbolOrNumber& lambda);
 
         void swap(dd::Qubit target0, dd::Qubit target1) {
             checkQubitRange(target0, target1);
@@ -635,6 +671,12 @@ namespace qc {
 
         void updateMaxControls(dd::QubitCount ncontrols) {
             max_controls = std::max(ncontrols, max_controls);
+        }
+
+        void instantiate(const VariableAssignment& assignment);
+
+        [[nodiscard]] bool isVariableFree() const {
+            return std::all_of(ops.begin(), ops.end(), [](const auto& op) { return op->isStandardOperation(); });
         }
 
         /**

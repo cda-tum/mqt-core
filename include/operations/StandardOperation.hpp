@@ -8,7 +8,7 @@
 #include "Operation.hpp"
 
 namespace qc {
-    class StandardOperation final: public Operation {
+    class StandardOperation: public Operation {
     protected:
         static void checkInteger(dd::fp& ld) {
             dd::fp nearest = std::nearbyint(ld);

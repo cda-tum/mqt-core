@@ -5,9 +5,13 @@
 
 #pragma once
 
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
 #include "ZXDiagram.hpp"
 #include "operations/Operation.hpp"
+#include "operations/SymbolicOperation.hpp"
+
+#include <cstddef>
 
 namespace zx {
     class FunctionalityConstruction {
@@ -25,13 +29,13 @@ namespace zx {
                      checkSwap(op_it it, op_it end, Qubit ctrl, Qubit target, const qc::Permutation& p);
         static void  addZSpider(ZXDiagram& diag, zx::Qubit qubit,
                                 std::vector<Vertex>& qubit_vertices,
-                                const Expression& phase = Expression(), EdgeType type = EdgeType::Simple);
+                                const PiExpression& phase = PiExpression(), EdgeType type = EdgeType::Simple);
         static void  addXSpider(ZXDiagram& diag, Qubit qubit,
                                 std::vector<Vertex>& qubit_vertices,
-                                const Expression& phase = Expression(), EdgeType type = EdgeType::Simple);
+                                const PiExpression& phase = PiExpression(), EdgeType type = EdgeType::Simple);
         static void  addCnot(ZXDiagram& diag, Qubit ctrl, Qubit target,
                              std::vector<Vertex>& qubit_vertices);
-        static void  addCphase(ZXDiagram& diag, const PiRational& phase, Qubit ctrl, Qubit target,
+        static void  addCphase(ZXDiagram& diag, const PiExpression& phase, Qubit ctrl, Qubit target,
                                std::vector<Vertex>& qubit_vertices);
         static void  addSwap(ZXDiagram& diag, Qubit ctrl, Qubit target,
                              std::vector<Vertex>& qubit_vertices);
@@ -39,6 +43,9 @@ namespace zx {
                             std::vector<Vertex>& qubit_vertices);
         static op_it parse_op(ZXDiagram& diag, op_it it, op_it end,
                               std::vector<Vertex>& qubit_vertices, const qc::Permutation& p);
+
+        static PiExpression toPiExpr(const qc::SymbolOrNumber& param);
+        static PiExpression parseParam(const qc::Operation* op, std::size_t i);
     };
 
 } // namespace zx

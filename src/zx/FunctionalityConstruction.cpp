@@ -1,17 +1,21 @@
 #include "zx/FunctionalityConstruction.hpp"
 
 #include "Definitions.hpp"
+#include "Rational.hpp"
 #include "ZXDiagram.hpp"
+#include "operations/SymbolicOperation.hpp"
 
 #include <algorithm>
 #include <iostream>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace zx {
 
     bool FunctionalityConstruction::checkSwap(op_it it, op_it end, Qubit ctrl,
-                                              Qubit target, const qc::Permutation& p) {
+                                              Qubit                  target,
+                                              const qc::Permutation& p) {
         if (it + 1 != end && it + 2 != end) {
             auto& op1 = *(it + 1);
             auto& op2 = *(it + 2);
@@ -29,7 +33,7 @@ namespace zx {
 
     void FunctionalityConstruction::addZSpider(ZXDiagram& diag, zx::Qubit qubit,
                                                std::vector<Vertex>& qubit_vertices,
-                                               const Expression& phase, EdgeType type) {
+                                               const PiExpression& phase, EdgeType type) {
         auto new_vertex = diag.addVertex(
                 qubit, diag.getVData(qubit_vertices[qubit]).value().col + 1, phase,
                 VertexType::Z);
@@ -40,7 +44,7 @@ namespace zx {
 
     void FunctionalityConstruction::addXSpider(ZXDiagram& diag, Qubit qubit,
                                                std::vector<Vertex>& qubit_vertices,
-                                               const Expression& phase, EdgeType type) {
+                                               const PiExpression& phase, EdgeType type) {
         auto new_vertex = diag.addVertex(
                 qubit, diag.getVData(qubit_vertices[qubit]).value().col + 1, phase,
                 VertexType::X);
@@ -55,13 +59,15 @@ namespace zx {
         diag.addEdge(qubit_vertices[ctrl], qubit_vertices[target]);
     }
 
-    void FunctionalityConstruction::addCphase(ZXDiagram& diag, const PiRational& phase, Qubit ctrl, Qubit target,
-                                              std::vector<Vertex>& qubit_vertices) {
-        addZSpider(diag, ctrl, qubit_vertices, Expression(phase / 2));
+    void
+    FunctionalityConstruction::addCphase(ZXDiagram& diag, const PiExpression& phase,
+                                         Qubit ctrl, Qubit target,
+                                         std::vector<Vertex>& qubit_vertices) {
+        addZSpider(diag, ctrl, qubit_vertices, PiExpression(phase / 2.0)); //todo maybe should provide a method for int division
         addCnot(diag, ctrl, target, qubit_vertices);
-        addZSpider(diag, target, qubit_vertices, Expression(-phase / 2));
+        addZSpider(diag, target, qubit_vertices, PiExpression(-phase / 2.0));
         addCnot(diag, ctrl, target, qubit_vertices);
-        addZSpider(diag, target, qubit_vertices, Expression(phase / 2));
+        addZSpider(diag, target, qubit_vertices, PiExpression(phase / 2.0));
     }
 
     void FunctionalityConstruction::addSwap(ZXDiagram& diag, Qubit ctrl, Qubit target,
@@ -81,20 +87,20 @@ namespace zx {
 
     void FunctionalityConstruction::addCcx(ZXDiagram& diag, Qubit ctrl_0, Qubit ctrl_1, Qubit target,
                                            std::vector<Vertex>& qubit_vertices) {
-        addZSpider(diag, target, qubit_vertices, Expression(), EdgeType::Hadamard);
+        addZSpider(diag, target, qubit_vertices, PiExpression(), EdgeType::Hadamard);
         addCnot(diag, ctrl_1, target, qubit_vertices);
-        addZSpider(diag, target, qubit_vertices, Expression(PiRational(-1, 4)));
+        addZSpider(diag, target, qubit_vertices, PiExpression(PiRational(-1, 4)));
         addCnot(diag, ctrl_0, target, qubit_vertices);
-        addZSpider(diag, target, qubit_vertices, Expression(PiRational(1, 4)));
+        addZSpider(diag, target, qubit_vertices, PiExpression(PiRational(1, 4)));
         addCnot(diag, ctrl_1, target, qubit_vertices);
-        addZSpider(diag, ctrl_1, qubit_vertices, Expression(PiRational(1, 4)));
-        addZSpider(diag, target, qubit_vertices, Expression(PiRational(-1, 4)));
+        addZSpider(diag, ctrl_1, qubit_vertices, PiExpression(PiRational(1, 4)));
+        addZSpider(diag, target, qubit_vertices, PiExpression(PiRational(-1, 4)));
         addCnot(diag, ctrl_0, target, qubit_vertices);
-        addZSpider(diag, target, qubit_vertices, Expression(PiRational(1, 4)));
+        addZSpider(diag, target, qubit_vertices, PiExpression(PiRational(1, 4)));
         addCnot(diag, ctrl_0, ctrl_1, qubit_vertices);
-        addZSpider(diag, ctrl_0, qubit_vertices, Expression(PiRational(1, 4)));
-        addZSpider(diag, ctrl_1, qubit_vertices, Expression(PiRational(-1, 4)));
-        addZSpider(diag, target, qubit_vertices, Expression(PiRational(0, 1)),
+        addZSpider(diag, ctrl_0, qubit_vertices, PiExpression(PiRational(1, 4)));
+        addZSpider(diag, ctrl_1, qubit_vertices, PiExpression(PiRational(-1, 4)));
+        addZSpider(diag, target, qubit_vertices, PiExpression(PiRational(0, 1)),
                    EdgeType::Hadamard);
         addCnot(diag, ctrl_0, ctrl_1, qubit_vertices);
     }
@@ -111,71 +117,71 @@ namespace zx {
             switch (op->getType()) {
                 case qc::OpType::Z: {
                     addZSpider(diag, target, qubit_vertices,
-                               Expression(PiRational(1, 1)));
+                               PiExpression(PiRational(1, 1)));
                     break;
                 }
 
                 case qc::OpType::RZ:
                 case qc::OpType::Phase: {
-                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(op->getParameter().front())));
+                    addZSpider(diag, target, qubit_vertices, parseParam(op.get(), 0));
                     break;
                 }
                 case qc::OpType::X: {
-                    addXSpider(diag, target, qubit_vertices, Expression(PiRational(1, 1)));
+                    addXSpider(diag, target, qubit_vertices, PiExpression(PiRational(1, 1)));
                     break;
                 }
 
                 case qc::OpType::RX: {
-                    addXSpider(diag, target, qubit_vertices, Expression(PiRational(op->getParameter().front())));
+                    addXSpider(diag, target, qubit_vertices, parseParam(op.get(), 0));
                     break;
                 }
 
                 case qc::OpType::Y: {
-                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(1, 1)));
-                    addXSpider(diag, target, qubit_vertices, Expression(PiRational(1, 1)));
+                    addZSpider(diag, target, qubit_vertices, PiExpression(PiRational(1, 1)));
+                    addXSpider(diag, target, qubit_vertices, PiExpression(PiRational(1, 1)));
                     break;
                 }
 
                 case qc::OpType::RY: {
-                    addXSpider(diag, target, qubit_vertices, Expression(PiRational(1, 2)));
+                    addXSpider(diag, target, qubit_vertices, PiExpression(PiRational(1, 2)));
                     addZSpider(diag, target, qubit_vertices,
-                               Expression(PiRational(op->getParameter()[0])) + PiRational(1, 1));
-                    addXSpider(diag, target, qubit_vertices, Expression(PiRational(1, 2)));
-                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(3, 1)));
+                               parseParam(op.get(), 0) + PiRational(1, 1));
+                    addXSpider(diag, target, qubit_vertices, PiExpression(PiRational(1, 2)));
+                    addZSpider(diag, target, qubit_vertices, PiExpression(PiRational(3, 1)));
                     break;
                 }
                 case qc::OpType::T: {
-                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(1, 4)));
+                    addZSpider(diag, target, qubit_vertices, PiExpression(PiRational(1, 4)));
                     break;
                 }
                 case qc::OpType::Tdag: {
-                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(-1, 4)));
+                    addZSpider(diag, target, qubit_vertices, PiExpression(PiRational(-1, 4)));
                     break;
                 }
                 case qc::OpType::S: {
-                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(1, 2)));
+                    addZSpider(diag, target, qubit_vertices, PiExpression(PiRational(1, 2)));
                     break;
                 }
                 case qc::OpType::Sdag: {
-                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(-1, 2)));
+                    addZSpider(diag, target, qubit_vertices, PiExpression(PiRational(-1, 2)));
                     break;
                 }
                 case qc::OpType::U2: {
                     addZSpider(diag, target, qubit_vertices,
-                               Expression(PiRational(op->getParameter()[0])) - PiRational(1, 2));
-                    addXSpider(diag, target, qubit_vertices, Expression(PiRational(1, 2)));
+                               parseParam(op.get(), 0) - PiRational(1, 2));
+                    addXSpider(diag, target, qubit_vertices, PiExpression(PiRational(1, 2)));
                     addZSpider(diag, target, qubit_vertices,
-                               Expression(PiRational(op->getParameter()[1])) + PiRational(1, 2));
+                               parseParam(op.get(), 1) + PiRational(1, 2));
                     break;
                 }
                 case qc::OpType::U3: {
-                    addZSpider(diag, target, qubit_vertices, Expression(PiRational(op->getParameter().front())));
-                    addXSpider(diag, target, qubit_vertices, Expression(PiRational(1, 2)));
+                    addZSpider(diag, target, qubit_vertices, parseParam(op.get(), 0));
+                    addXSpider(diag, target, qubit_vertices, PiExpression(PiRational(1, 2)));
                     addZSpider(diag, target, qubit_vertices,
-                               Expression(PiRational(op->getParameter()[2])) + PiRational(1, 1));
-                    addXSpider(diag, target, qubit_vertices, Expression(PiRational(1, 2)));
+                               parseParam(op.get(), 2) + PiRational(1, 1));
+                    addXSpider(diag, target, qubit_vertices, PiExpression(PiRational(1, 2)));
                     addZSpider(diag, target, qubit_vertices,
-                               Expression(PiRational(op->getParameter()[1])) + PiRational(3, 1));
+                               parseParam(op.get(), 1) + PiRational(3, 1));
                     break;
                 }
 
@@ -185,7 +191,7 @@ namespace zx {
                     break;
                 }
                 case qc::OpType::H: {
-                    addZSpider(diag, target, qubit_vertices, Expression(),
+                    addZSpider(diag, target, qubit_vertices, PiExpression(),
                                EdgeType::Hadamard);
                     break;
                 }
@@ -214,10 +220,10 @@ namespace zx {
                     break;
                 }
                 case qc::OpType::Z: {
-                    addZSpider(diag, target, qubit_vertices, Expression(),
+                    addZSpider(diag, target, qubit_vertices, PiExpression(),
                                EdgeType::Hadamard);
                     addCnot(diag, ctrl, target, qubit_vertices);
-                    addZSpider(diag, target, qubit_vertices, Expression(),
+                    addZSpider(diag, target, qubit_vertices, PiExpression(),
                                EdgeType::Hadamard);
 
                     break;
@@ -228,28 +234,27 @@ namespace zx {
                 }
 
                 case qc::OpType::Phase: {
-                    const auto phase = PiRational(op->getParameter().front());
-                    addCphase(diag, phase, ctrl, target, qubit_vertices);
+                    addCphase(diag, parseParam(op.get(), 0), ctrl, target, qubit_vertices);
                     break;
                 }
 
                 case qc::OpType::T: {
-                    addCphase(diag, PiRational(1, 4), ctrl, target, qubit_vertices);
+                    addCphase(diag, zx::PiExpression{PiRational(1, 4)}, ctrl, target, qubit_vertices);
                     break;
                 }
 
                 case qc::OpType::S: {
-                    addCphase(diag, PiRational(1, 2), ctrl, target, qubit_vertices);
+                    addCphase(diag, zx::PiExpression{PiRational(1, 2)}, ctrl, target, qubit_vertices);
                     break;
                 }
 
                 case qc::OpType::Tdag: {
-                    addCphase(diag, PiRational(-1, 4), ctrl, target, qubit_vertices);
+                    addCphase(diag, zx::PiExpression{PiRational(-1, 4)}, ctrl, target, qubit_vertices);
                     break;
                 }
 
                 case qc::OpType::Sdag: {
-                    addCphase(diag, PiRational(-1, 2), ctrl, target, qubit_vertices);
+                    addCphase(diag, zx::PiExpression{PiRational(-1, 2)}, ctrl, target, qubit_vertices);
                     break;
                 }
 
@@ -276,10 +281,10 @@ namespace zx {
                 }
 
                 case qc::OpType::Z: {
-                    addZSpider(diag, target, qubit_vertices, Expression(),
+                    addZSpider(diag, target, qubit_vertices, PiExpression(),
                                EdgeType::Hadamard);
                     addCcx(diag, ctrl_0, ctrl_1, target, qubit_vertices);
-                    addZSpider(diag, target, qubit_vertices, Expression(),
+                    addZSpider(diag, target, qubit_vertices, PiExpression(),
                                EdgeType::Hadamard);
                     break;
                 }
@@ -304,23 +309,6 @@ namespace zx {
         }
 
         auto initial_layout = qc->initialLayout;
-
-        // if (!initial_layout.empty()) {
-        //     std::vector<Vertex> new_qubit_vertices(qc->getNqubits());
-        //     for (auto i = 0; i < qc->getNqubits(); i++) {
-        //         new_qubit_vertices[i] = qubit_vertices[i];
-        //     }
-        //     for (auto& [tar, src]:
-        //          qc->initialLayout) { // reverse initial permutation
-        //         if (tar == src)
-        //             continue;
-
-        //         auto v_tar = diag.addVertex(tar, 1);
-        //         diag.addEdge(qubit_vertices[src], v_tar);
-        //         new_qubit_vertices[tar] = v_tar;
-        //     }
-        //     qubit_vertices = new_qubit_vertices;
-        // }
 
         for (auto it = qc->cbegin(); it != qc->cend();) {
             auto& op = *it;
@@ -422,4 +410,21 @@ namespace zx {
         return false;
     }
 
+    PiExpression FunctionalityConstruction::parseParam(const qc::Operation* op,
+                                                       std::size_t          i) {
+        const auto* symbOp = dynamic_cast<const qc::SymbolicOperation*>(op);
+        if (symbOp) {
+            return toPiExpr(symbOp->getParameter(i));
+        } else {
+            return PiExpression{zx::PiRational{op->getParameter()[i]}};
+        }
+    }
+    PiExpression FunctionalityConstruction::toPiExpr(const qc::SymbolOrNumber& param) {
+        if (std::holds_alternative<double>(param))
+            return zx::PiExpression{
+                    zx::PiRational{std::get<double>(param)}};
+        else {
+            return std::get<qc::Symbolic>(param).convert<zx::PiRational>();
+        }
+    }
 } // namespace zx
