@@ -12,6 +12,7 @@
 
 #include "gtest/gtest.h"
 #include <iostream>
+#include <memory>
 #include <sstream>
 
 class ZXDiagramTest: public ::testing::Test {
@@ -199,4 +200,17 @@ TEST_F(ZXDiagramTest, InitialLayout) {
 
     zx::fullReduce(d);
     EXPECT_TRUE(d.isIdentity());
+}
+
+TEST_F(ZXDiagramTest, FromSymbolic) {
+    sym::Variable x{"x"};
+    sym::Term     xTerm{1.0, x};
+    qc = qc::QuantumComputation{1};
+    qc.rz(0, qc::Symbolic(xTerm));
+    qc.rz(0, -qc::Symbolic(xTerm));
+
+    zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
+
+    zx::fullReduce(diag);
+    EXPECT_TRUE(diag.isIdentity());
 }
