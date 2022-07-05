@@ -243,6 +243,7 @@ namespace qc {
         [[nodiscard]] const QuantumRegisterMap&   getQregs() const { return qregs; }
         [[nodiscard]] const ClassicalRegisterMap& getCregs() const { return cregs; }
         [[nodiscard]] const QuantumRegisterMap&   getANCregs() const { return ancregs; }
+        [[nodiscard]] decltype(mt)&               getGenerator() { return mt; }
 
         void setName(const std::string& n) { name = n; }
 

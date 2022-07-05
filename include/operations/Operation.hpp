@@ -96,6 +96,16 @@ namespace qc {
             return startQubit;
         }
 
+        [[nodiscard]] virtual std::set<dd::Qubit> getUsedQubits() const {
+            const auto&         opTargets  = getTargets();
+            const auto&         opControls = getControls();
+            std::set<dd::Qubit> usedQubits = {opTargets.begin(), opTargets.end()};
+            for (const auto& control: opControls) {
+                usedQubits.insert(control.qubit);
+            }
+            return usedQubits;
+        }
+
         // Setter
         virtual void setNqubits(dd::QubitCount nq) {
             nqubits = nq;

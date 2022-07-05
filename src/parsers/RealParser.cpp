@@ -265,17 +265,8 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
                     controls.pop_back();
                     emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, target1, gate);
                     break;
-                case Compound:
-                case Measure:
-                case Reset:
-                case Snapshot:
-                case ShowProbabilities:
-                case Barrier:
-                case ClassicControlled:
-                case SX:
-                case SXdag:
-                case Teleportation:
-                    std::cerr << "Operation with invalid type " << gate << " read from real file. Proceed with caution!" << std::endl;
+                default:
+                    std::cerr << "Unsupported operation encountered:  " << gate << "!" << std::endl;
                     break;
             }
         }

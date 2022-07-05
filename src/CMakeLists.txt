@@ -43,6 +43,7 @@ add_library(${PROJECT_NAME}
             ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Operations.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/FunctionalityConstruction.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Simulation.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/NoiseFunctionality.hpp
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
 
