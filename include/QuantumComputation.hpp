@@ -679,6 +679,10 @@ namespace qc {
             return std::all_of(ops.begin(), ops.end(), [](const auto& op) { return op->isStandardOperation(); });
         }
 
+        [[nodiscard]] const std::unordered_set<sym::Variable>& getVariables() const {
+            return occuringVariables;
+        }
+
         /**
 		 * printing
 		 */
