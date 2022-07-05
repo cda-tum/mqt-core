@@ -6,8 +6,6 @@
 #ifndef DDpackage_NOISEOPERATIONTABLE_HPP
 #define DDpackage_NOISEOPERATIONTABLE_HPP
 
-#include "Definitions.hpp"
-
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -15,22 +13,10 @@
 #include <vector>
 
 namespace dd {
-    // noise operation kinds
-    enum NoiseOperationKind : std::uint_fast8_t {
-        none,
-        I,
-        X,
-        Y,
-        Z,
-        ATrue,
-        AFalse,
-        opCount
-    };
-
-    template<class Edge>
-    class NoiseOperationTable {
+    template<class Edge, std::size_t numberOfStochasticOperations = 64>
+    class StochasticNoiseOperationTable {
     public:
-        explicit NoiseOperationTable(std::size_t nvars):
+        explicit StochasticNoiseOperationTable(std::size_t nvars):
             nvars(nvars) { resize(nvars); };
 
         // access functions
@@ -41,17 +27,18 @@ namespace dd {
             table.resize(nvars);
         }
 
-        void insert(NoiseOperationKind kind, Qubit target, const Edge& r) {
+        void insert(std::uint_fast8_t kind, Qubit target, const Edge& r) {
+            assert(kind < numberOfStochasticOperations); // There are new operations in OpType. Increase the value of numberOfOperations accordingly
             table.at(target).at(kind) = r;
             ++count;
         }
 
-        Edge lookup(QubitCount n, NoiseOperationKind kind, Qubit target) {
+        Edge lookup(std::uint_fast8_t kind, Qubit target) {
+            assert(kind < numberOfStochasticOperations); // There are new operations in OpType. Increase the value of numberOfOperations accordingly
             lookups++;
             Edge r{};
             auto entry = table.at(target).at(kind);
             if (entry.p == nullptr) return r;
-            if (entry.p->v != static_cast<Qubit>(n - 1)) return r;
             hits++;
             return entry;
         }
@@ -65,8 +52,6 @@ namespace dd {
                 }
                 count = 0;
             }
-            hits    = 0;
-            lookups = 0;
         }
 
         [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / lookups; }
@@ -76,9 +61,8 @@ namespace dd {
         }
 
     private:
-        std::size_t                            nvars;
-        static constexpr auto                  opCount = static_cast<std::uint_fast8_t>(NoiseOperationKind::opCount);
-        std::vector<std::array<Edge, opCount>> table;
+        std::size_t                                                 nvars;
+        std::vector<std::array<Edge, numberOfStochasticOperations>> table;
 
         // operation table lookup statistics
         std::size_t hits    = 0;

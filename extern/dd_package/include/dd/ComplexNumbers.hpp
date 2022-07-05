@@ -103,19 +103,13 @@ namespace dd {
         }
         static Complex conj(const Complex& a) {
             auto ret = a;
-            if (a.i != Complex::zero.i) {
-                ret.i = CTEntry::flipPointerSign(a.i);
-            }
+            ret.i    = CTEntry::flipPointerSign(a.i);
             return ret;
         }
         static Complex neg(const Complex& a) {
             auto ret = a;
-            if (a.i != Complex::zero.i) {
-                ret.i = CTEntry::flipPointerSign(a.i);
-            }
-            if (a.r != Complex::zero.i) {
-                ret.r = CTEntry::flipPointerSign(a.r);
-            }
+            ret.i    = CTEntry::flipPointerSign(a.i);
+            ret.r    = CTEntry::flipPointerSign(a.r);
             return ret;
         }
 

@@ -32,6 +32,14 @@ namespace dd {
             return CTEntry::approximatelyEquals(r, c.r) && CTEntry::approximatelyEquals(i, c.i);
         };
 
+        [[nodiscard]] inline bool exactlyZero() const {
+            return CTEntry::exactlyZero(r) && CTEntry::exactlyZero(i);
+        };
+
+        [[nodiscard]] inline bool exactlyOne() const {
+            return CTEntry::exactlyOne(r) && CTEntry::exactlyZero(i);
+        };
+
         [[nodiscard]] inline bool approximatelyZero() const {
             return CTEntry::approximatelyZero(r) && CTEntry::approximatelyZero(i);
         }

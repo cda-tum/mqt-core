@@ -81,6 +81,14 @@ namespace dd {
 
         [[nodiscard]] const auto& getTables() const { return tables; }
 
+        static bool nodesAreEqual(const Node* p, const Node* q) {
+            if constexpr (std::is_same_v<Node, dNode>) {
+                return (p->e == q->e && (p->flags == q->flags));
+            } else {
+                return p->e == q->e;
+            }
+        }
+
         // lookup a node in the unique table for the appropriate variable; insert it, if it has not been found
         // NOTE: reference counting is to be adjusted by function invoking the table lookup and only normalized nodes shall be stored.
         Edge<Node> lookup(const Edge<Node>& e, bool keepNode = false) {
@@ -98,7 +106,7 @@ namespace dd {
 
             Node* p = tables[v][key];
             while (p != nullptr) {
-                if (e.p->e == p->e) {
+                if (nodesAreEqual(e.p, p)) {
                     // Match found
                     if (e.p != p && !keepNode) {
                         // put node pointed to by e.p on available chain

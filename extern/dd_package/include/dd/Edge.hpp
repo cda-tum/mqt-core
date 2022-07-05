@@ -8,7 +8,9 @@
 
 #include "Complex.hpp"
 #include "ComplexValue.hpp"
+#include "Definitions.hpp"
 
+#include <array>
 #include <cstddef>
 #include <utility>
 
@@ -37,6 +39,30 @@ namespace dd {
         [[nodiscard]] static constexpr Edge terminal(const Complex& w) { return {Node::terminal, w}; }
         [[nodiscard]] constexpr bool        isZeroTerminal() const { return Node::isTerminal(p) && w == Complex::zero; }
         [[nodiscard]] constexpr bool        isOneTerminal() const { return Node::isTerminal(p) && w == Complex::one; }
+
+        [[maybe_unused]] static inline void setDensityConjugateTrue(Edge& e) { Node::setConjugateTempFlagTrue(e.p); }
+        [[maybe_unused]] static inline void setFirstEdgeDensityPathTrue(Edge& e) { Node::setNonReduceTempFlagTrue(e.p); }
+        [[maybe_unused]] static inline void setDensityMatrixTrue(Edge& e) { Node::setDensityMatTempFlagTrue(e.p); }
+        [[maybe_unused]] static inline void alignDensityEdge(Edge& e) { Node::alignDensityNode(e.p); }
+
+        static inline void revertDmChangesToEdges(Edge& x, Edge& y) {
+            revertDmChangesToEdge(x);
+            revertDmChangesToEdge(y);
+        }
+        static inline void revertDmChangesToEdge(Edge& x) {
+            // Align the node pointer
+            Node::revertDmChangesToNode(x.p);
+        }
+
+        static inline void applyDmChangesToEdges(Edge& x, Edge& y) {
+            applyDmChangesToEdge(x);
+            applyDmChangesToEdge(y);
+        }
+
+        static inline void applyDmChangesToEdge(Edge& x) {
+            // Apply density matrix changes to node pointer
+            Node::applyDmChangesToNode(x.p);
+        }
     };
 
     template<typename Node>

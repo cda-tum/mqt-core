@@ -1,7 +1,7 @@
 /*
- * This file is part of the MQT DD Package which is released under the MIT license.
- * See file README.md or go to https://www.cda.cit.tum.de/research/quantum_dd/ for more information.
- */
+* This file is part of the MQT DD Package which is released under the MIT license.
+* See file README.md or go to https://www.cda.cit.tum.de/research/quantum_dd/ for more information.
+*/
 
 #ifndef DDpackage_H
 #define DDpackage_H
@@ -14,10 +14,11 @@
 #include "ComputeTable.hpp"
 #include "Control.hpp"
 #include "Definitions.hpp"
+#include "DensityNoiseTable.hpp"
 #include "Edge.hpp"
 #include "GateMatrixDefinitions.hpp"
 #include "Node.hpp"
-#include "NoiseOperationTable.hpp"
+#include "StochasticNoiseOperationTable.hpp"
 #include "ToffoliTable.hpp"
 #include "UnaryComputeTable.hpp"
 #include "UniqueTable.hpp"
@@ -48,6 +49,7 @@
 
 namespace dd {
     struct DDPackageConfig {
+        //Note the order of parameters here must be the *same* as in the template definition.
         static constexpr std::size_t UT_VEC_NBUCKET                 = 32768U;
         static constexpr std::size_t UT_VEC_INITIAL_ALLOCATION_SIZE = 2048U;
         static constexpr std::size_t UT_MAT_NBUCKET                 = 32768U;
@@ -61,6 +63,15 @@ namespace dd {
         static constexpr std::size_t CT_VEC_KRON_NBUCKET            = 4096U;
         static constexpr std::size_t CT_MAT_KRON_NBUCKET            = 4096U;
         static constexpr std::size_t CT_VEC_INNER_PROD_NBUCKET      = 4096U;
+        static constexpr std::size_t CT_DM_NOISE_NBUCKET            = 1U;
+        static constexpr std::size_t UT_DM_NBUCKET                  = 1U;
+        static constexpr std::size_t UT_DM_INITIAL_ALLOCATION_SIZE  = 1U;
+        static constexpr std::size_t CT_DM_DM_MULT_NBUCKET          = 1U;
+        static constexpr std::size_t CT_DM_ADD_NBUCKET              = 1U;
+
+        // The number of different quantum operations. I.e., the number of operations defined in the QFR OpType.hpp
+        // This parameter is required to initialize the StochasticNoiseOperationTable.hpp
+        static constexpr std::size_t STOCHASTIC_CACHE_OPS = 1;
     };
 
     template<std::size_t UT_VEC_NBUCKET                 = DDPackageConfig::UT_VEC_NBUCKET,
@@ -75,7 +86,13 @@ namespace dd {
              std::size_t CT_MAT_MAT_MULT_NBUCKET        = DDPackageConfig::CT_MAT_MAT_MULT_NBUCKET,
              std::size_t CT_VEC_KRON_NBUCKET            = DDPackageConfig::CT_VEC_KRON_NBUCKET,
              std::size_t CT_MAT_KRON_NBUCKET            = DDPackageConfig::CT_MAT_KRON_NBUCKET,
-             std::size_t CT_VEC_INNER_PROD_NBUCKET      = DDPackageConfig::CT_VEC_INNER_PROD_NBUCKET>
+             std::size_t CT_VEC_INNER_PROD_NBUCKET      = DDPackageConfig::CT_VEC_INNER_PROD_NBUCKET,
+             std::size_t CT_DM_NOISE_NBUCKET            = DDPackageConfig::CT_DM_NOISE_NBUCKET,
+             std::size_t UT_DM_NBUCKET                  = DDPackageConfig::UT_DM_NBUCKET,
+             std::size_t UT_DM_INITIAL_ALLOCATION_SIZE  = DDPackageConfig::UT_DM_INITIAL_ALLOCATION_SIZE,
+             std::size_t CT_DM_DM_MULT_NBUCKET          = DDPackageConfig::CT_DM_DM_MULT_NBUCKET,
+             std::size_t CT_DM_ADD_NBUCKET              = DDPackageConfig::CT_DM_ADD_NBUCKET,
+             std::size_t STOCHASTIC_CACHE_OPS           = DDPackageConfig::STOCHASTIC_CACHE_OPS>
     class Package {
         ///
         /// Complex number handling
@@ -108,7 +125,8 @@ namespace dd {
             nqubits = nq;
             vUniqueTable.resize(nqubits);
             mUniqueTable.resize(nqubits);
-            noiseOperationTable.resize(nqubits);
+            dUniqueTable.resize(nqubits);
+            stochasticNoiseOperationCache.resize(nqubits);
             IdTable.resize(nqubits);
         }
 
@@ -154,7 +172,7 @@ namespace dd {
 
                 auto  r = e;
                 auto& w = r.p->e[1].w;
-                if (cached && w != Complex::one) {
+                if (cached && !w.exactlyOne()) {
                     r.w = w;
                 } else {
                     r.w = cn.lookup(w);
@@ -166,7 +184,7 @@ namespace dd {
             if (zero[1]) {
                 auto  r = e;
                 auto& w = r.p->e[0].w;
-                if (cached && w != Complex::one) {
+                if (cached && !w.exactlyOne()) {
                     r.w = w;
                 } else {
                     r.w = cn.lookup(w);
@@ -186,7 +204,7 @@ namespace dd {
 
             auto  r   = e;
             auto& max = r.p->e[argMax];
-            if (cached && max.w != Complex::one) {
+            if (cached && !max.w.exactlyOne()) {
                 r.w = max.w;
                 r.w.r->value *= commonFactor;
                 r.w.i->value *= commonFactor;
@@ -217,6 +235,14 @@ namespace dd {
             }
 
             return r;
+        }
+
+        dEdge makeZeroDensityOperator(QubitCount n) {
+            auto f = dEdge::one;
+            for (size_t p = 0; p < n; p++) {
+                f = makeDDNode(p, std::array{f, dEdge::zero, dEdge::zero, dEdge::zero});
+            }
+            return f;
         }
 
         // generate |0...0> with n qubits
@@ -296,83 +322,92 @@ namespace dd {
         /// Matrix nodes, edges and quantum gates
         ///
     public:
-        mEdge normalize(const mEdge& e, bool cached) {
-            auto argmax = -1;
+        template<class Node>
+        Edge<Node> normalize(const Edge<Node>& e, bool cached) {
+            if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
+                auto argmax = -1;
 
-            auto zero = std::array{e.p->e[0].w.approximatelyZero(),
-                                   e.p->e[1].w.approximatelyZero(),
-                                   e.p->e[2].w.approximatelyZero(),
-                                   e.p->e[3].w.approximatelyZero()};
+                auto zero = std::array{e.p->e[0].w.approximatelyZero(),
+                                       e.p->e[1].w.approximatelyZero(),
+                                       e.p->e[2].w.approximatelyZero(),
+                                       e.p->e[3].w.approximatelyZero()};
 
-            // make sure to release cached numbers approximately zero, but not exactly zero
-            if (cached) {
-                for (auto i = 0U; i < NEDGE; i++) {
-                    if (zero[i] && e.p->e[i].w != Complex::zero) {
-                        cn.returnToCache(e.p->e[i].w);
-                        e.p->e[i] = mEdge::zero;
-                    }
-                }
-            }
-
-            fp   max  = 0;
-            auto maxc = Complex::one;
-            // determine max amplitude
-            for (auto i = 0U; i < NEDGE; ++i) {
-                if (zero[i]) continue;
-                if (argmax == -1) {
-                    argmax = static_cast<decltype(argmax)>(i);
-                    max    = ComplexNumbers::mag2(e.p->e[i].w);
-                    maxc   = e.p->e[i].w;
-                } else {
-                    auto mag = ComplexNumbers::mag2(e.p->e[i].w);
-                    if (mag - max > ComplexTable<>::tolerance()) {
-                        argmax = static_cast<decltype(argmax)>(i);
-                        max    = mag;
-                        maxc   = e.p->e[i].w;
-                    }
-                }
-            }
-
-            // all equal to zero
-            if (argmax == -1) {
-                if (!cached && !e.isTerminal()) {
-                    // If it is not a cached computation, the node has to be put back into the chain
-                    mUniqueTable.returnNode(e.p);
-                }
-                return mEdge::zero;
-            }
-
-            auto r = e;
-            // divide each entry by max
-            for (auto i = 0U; i < NEDGE; ++i) {
-                if (static_cast<decltype(argmax)>(i) == argmax) {
-                    if (cached) {
-                        if (r.w == Complex::one)
-                            r.w = maxc;
-                        else
-                            ComplexNumbers::mul(r.w, r.w, maxc);
-                    } else {
-                        if (r.w == Complex::one) {
-                            r.w = maxc;
-                        } else {
-                            auto c = cn.getTemporary();
-                            ComplexNumbers::mul(c, r.w, maxc);
-                            r.w = cn.lookup(c);
+                // make sure to release cached numbers approximately zero, but not exactly zero
+                if (cached) {
+                    for (auto i = 0U; i < NEDGE; i++) {
+                        if (zero[i] && e.p->e[i].w != Complex::zero) {
+                            cn.returnToCache(e.p->e[i].w);
+                            e.p->e[i] = Edge<Node>::zero;
                         }
                     }
-                    r.p->e[i].w = Complex::one;
-                } else {
-                    if (cached && !zero[i] && r.p->e[i].w != Complex::one) {
-                        cn.returnToCache(r.p->e[i].w);
-                    }
-                    if (r.p->e[i].w.approximatelyOne())
-                        r.p->e[i].w = Complex::one;
-                    auto c = cn.getTemporary();
-                    ComplexNumbers::div(c, r.p->e[i].w, maxc);
-                    r.p->e[i].w = cn.lookup(c);
                 }
+
+                fp   max  = 0;
+                auto maxc = Complex::one;
+                // determine max amplitude
+                for (auto i = 0U; i < NEDGE; ++i) {
+                    if (zero[i]) continue;
+                    if (argmax == -1) {
+                        argmax = static_cast<decltype(argmax)>(i);
+                        max    = ComplexNumbers::mag2(e.p->e[i].w);
+                        maxc   = e.p->e[i].w;
+                    } else {
+                        auto mag = ComplexNumbers::mag2(e.p->e[i].w);
+                        if (mag - max > ComplexTable<>::tolerance()) {
+                            argmax = static_cast<decltype(argmax)>(i);
+                            max    = mag;
+                            maxc   = e.p->e[i].w;
+                        }
+                    }
+                }
+
+                // all equal to zero
+                if (argmax == -1) {
+                    if (!cached && !e.isTerminal()) {
+                        // If it is not a cached computation, the node has to be put back into the chain
+                        getUniqueTable<Node>().returnNode(e.p);
+                    }
+                    return Edge<Node>::zero;
+                }
+
+                auto r = e;
+                // divide each entry by max
+                for (auto i = 0U; i < NEDGE; ++i) {
+                    if (static_cast<decltype(argmax)>(i) == argmax) {
+                        if (cached) {
+                            if (r.w.exactlyOne())
+                                r.w = maxc;
+                            else
+                                ComplexNumbers::mul(r.w, r.w, maxc);
+                        } else {
+                            if (r.w.exactlyOne()) {
+                                r.w = maxc;
+                            } else {
+                                auto c = cn.getTemporary();
+                                ComplexNumbers::mul(c, r.w, maxc);
+                                r.w = cn.lookup(c);
+                            }
+                        }
+                        r.p->e[i].w = Complex::one;
+                    } else {
+                        if (zero[i]) {
+                            if (cached && r.p->e[i].w != Complex::zero)
+                                cn.returnToCache(r.p->e[i].w);
+                            r.p->e[i] = Edge<Node>::zero;
+                            continue;
+                        }
+                        if (cached && !zero[i] && !r.p->e[i].w.exactlyOne()) {
+                            cn.returnToCache(r.p->e[i].w);
+                        }
+                        if (r.p->e[i].w.approximatelyOne())
+                            r.p->e[i].w = Complex::one;
+                        auto c = cn.getTemporary();
+                        ComplexNumbers::div(c, r.p->e[i].w, maxc);
+                        r.p->e[i].w = cn.lookup(c);
+                    }
+                }
+                return r;
             }
-            return r;
         }
 
         // build matrix representation for a single gate on an n-qubit circuit
@@ -502,19 +537,19 @@ namespace dd {
             if (p->v == -1)
                 return;
 
-            p->ident = false; // assume not identity
-            p->symm  = false; // assume symmetric
+            p->setIdentity(false);
+            p->setSymmetric(false);
 
             // check if matrix is symmetric
-            if (!p->e[0].p->symm || !p->e[3].p->symm) return;
+            if (!p->e[0].p->isSymmetric() || !p->e[3].p->isSymmetric()) return;
             if (transpose(p->e[1]) != p->e[2]) return;
-            p->symm = true;
+            p->setSymmetric(true);
 
             // check if matrix resembles identity
-            if (!(p->e[0].p->ident) || (p->e[1].w) != Complex::zero || (p->e[2].w) != Complex::zero || (p->e[0].w) != Complex::one ||
-                (p->e[3].w) != Complex::one || !(p->e[3].p->ident))
+            if (!(p->e[0].p->isIdentity()) || (p->e[1].w) != Complex::zero || (p->e[2].w) != Complex::zero || (p->e[0].w) != Complex::one ||
+                (p->e[3].w) != Complex::one || !(p->e[3].p->isIdentity()))
                 return;
-            p->ident = true;
+            p->setIdentity(true);
         }
 
         ///
@@ -526,8 +561,10 @@ namespace dd {
         [[nodiscard]] auto& getUniqueTable() {
             if constexpr (std::is_same_v<Node, vNode>) {
                 return vUniqueTable;
-            } else {
+            } else if constexpr (std::is_same_v<Node, mNode>) {
                 return mUniqueTable;
+            } else if constexpr (std::is_same_v<Node, dNode>) {
+                return dUniqueTable;
             }
         }
 
@@ -542,12 +579,14 @@ namespace dd {
 
         UniqueTable<vNode, UT_VEC_NBUCKET, UT_VEC_INITIAL_ALLOCATION_SIZE> vUniqueTable{nqubits};
         UniqueTable<mNode, UT_MAT_NBUCKET, UT_MAT_INITIAL_ALLOCATION_SIZE> mUniqueTable{nqubits};
+        UniqueTable<dNode, UT_DM_NBUCKET, UT_DM_INITIAL_ALLOCATION_SIZE>   dUniqueTable{nqubits};
 
         bool garbageCollect(bool force = false) {
             // return immediately if no table needs collection
             if (!force &&
                 !vUniqueTable.possiblyNeedsCollection() &&
                 !mUniqueTable.possiblyNeedsCollection() &&
+                !dUniqueTable.possiblyNeedsCollection() &&
                 !cn.complexTable.possiblyNeedsCollection()) {
                 return false;
             }
@@ -557,8 +596,9 @@ namespace dd {
                 // Collecting garbage in the complex numbers table requires collecting the node tables as well
                 force = true;
             }
-            auto mCollect = mUniqueTable.garbageCollect(force);
             auto vCollect = vUniqueTable.garbageCollect(force);
+            auto mCollect = mUniqueTable.garbageCollect(force);
+            auto dCollect = dUniqueTable.garbageCollect(force);
 
             // invalidate all compute tables involving vectors if any vector node has been collected
             if (vCollect > 0) {
@@ -568,7 +608,7 @@ namespace dd {
                 matrixVectorMultiplication.clear();
             }
             // invalidate all compute tables involving matrices if any matrix node has been collected
-            if (mCollect > 0) {
+            if (mCollect > 0 || dCollect > 0) {
                 matrixAdd.clear();
                 matrixTranspose.clear();
                 conjugateMatrixTranspose.clear();
@@ -577,7 +617,10 @@ namespace dd {
                 matrixMatrixMultiplication.clear();
                 toffoliTable.clear();
                 clearIdentityTable();
-                noiseOperationTable.clear();
+                stochasticNoiseOperationCache.clear();
+                densityAdd.clear();
+                densityDensityMultiplication.clear();
+                densityNoise.clear();
             }
             // invalidate all compute tables where any component of the entry contains numbers from the complex table if any complex numbers were collected
             if (cCollect > 0) {
@@ -588,7 +631,10 @@ namespace dd {
                 vectorInnerProduct.clear();
                 vectorKronecker.clear();
                 matrixKronecker.clear();
-                noiseOperationTable.clear();
+                stochasticNoiseOperationCache.clear();
+                densityAdd.clear();
+                densityDensityMultiplication.clear();
+                densityNoise.clear();
             }
             return vCollect > 0 || mCollect > 0 || cCollect > 0;
         }
@@ -596,18 +642,27 @@ namespace dd {
         void clearUniqueTables() {
             vUniqueTable.clear();
             mUniqueTable.clear();
+            dUniqueTable.clear();
         }
 
         // create a normalized DD node and return an edge pointing to it. The node is not recreated if it already exists.
         template<class Node>
-        Edge<Node> makeDDNode(Qubit var, const std::array<Edge<Node>, std::tuple_size_v<decltype(Node::e)>>& edges, bool cached = false) {
+        Edge<Node> makeDDNode(Qubit var, const std::array<Edge<Node>, std::tuple_size_v<decltype(Node::e)>>& edges, bool cached = false, [[maybe_unused]] const bool generateDensityMatrix = false) {
             auto&      uniqueTable = getUniqueTable<Node>();
             Edge<Node> e{uniqueTable.getNode(), Complex::one};
             e.p->v = var;
             e.p->e = edges;
 
+            if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
+                e.p->flags = 0;
+                if constexpr (std::is_same_v<Node, dNode>) {
+                    e.p->setDensityMatrixNodeFlag(generateDensityMatrix);
+                }
+            }
+
             assert(e.p->ref == 0);
             for ([[maybe_unused]] const auto& edge: edges)
+                // an error here indicates that cached nodes are assigned multiple times. Check if garbage collect correctly resets the cache tables!
                 assert(edge.p->v == var - 1 || edge.isTerminal());
 
             // normalize it
@@ -619,11 +674,10 @@ namespace dd {
             assert(l.p->v == var || l.isTerminal());
 
             // set specific node properties for matrices
-            if constexpr (std::tuple_size_v<decltype(Node::e)> == NEDGE) {
+            if constexpr (std::is_same_v<Node, mNode>) {
                 if (l.p == e.p)
                     checkSpecialMatrices(l.p);
             }
-
             return l;
         }
 
@@ -691,7 +745,10 @@ namespace dd {
 
             clearIdentityTable();
 
-            noiseOperationTable.clear();
+            stochasticNoiseOperationCache.clear();
+            densityAdd.clear();
+            densityDensityMultiplication.clear();
+            densityNoise.clear();
         }
 
         ///
@@ -897,13 +954,16 @@ namespace dd {
     public:
         ComputeTable<vCachedEdge, vCachedEdge, vCachedEdge, CT_VEC_ADD_NBUCKET> vectorAdd{};
         ComputeTable<mCachedEdge, mCachedEdge, mCachedEdge, CT_MAT_ADD_NBUCKET> matrixAdd{};
+        ComputeTable<dCachedEdge, dCachedEdge, dCachedEdge, CT_DM_ADD_NBUCKET>  densityAdd{};
 
         template<class Node>
         [[nodiscard]] auto& getAddComputeTable() {
             if constexpr (std::is_same_v<Node, vNode>) {
                 return vectorAdd;
-            } else {
+            } else if constexpr (std::is_same_v<Node, mNode>) {
                 return matrixAdd;
+            } else if constexpr (std::is_same_v<Node, dNode>) {
+                return densityAdd;
             }
         }
 
@@ -930,13 +990,15 @@ namespace dd {
             if (x.p == nullptr) return y;
             if (y.p == nullptr) return x;
 
-            if (x.w == Complex::zero) {
-                if (y.w == Complex::zero) return y;
+            if (x.w.exactlyZero()) {
+                if (y.w.exactlyZero()) {
+                    return Edge<Node>::zero;
+                }
                 auto r = y;
                 r.w    = cn.getCached(CTEntry::val(y.w.r), CTEntry::val(y.w.i));
                 return r;
             }
-            if (y.w == Complex::zero) {
+            if (y.w.exactlyZero()) {
                 auto r = x;
                 r.w    = cn.getCached(CTEntry::val(x.w.r), CTEntry::val(x.w.i));
                 return r;
@@ -953,6 +1015,7 @@ namespace dd {
 
             auto& computeTable = getAddComputeTable<Node>();
             auto  r            = computeTable.lookup({x.p, x.w}, {y.p, y.w});
+            //           if (r.p != nullptr && false) { // activate for debugging caching only
             if (r.p != nullptr) {
                 if (r.w.approximatelyZero()) {
                     return Edge<Node>::zero;
@@ -1001,7 +1064,13 @@ namespace dd {
                     }
                 }
 
-                edge[i] = add2(e1, e2);
+                if constexpr (std::is_same_v<Node, dNode>) {
+                    dEdge::applyDmChangesToEdges(e1, e2);
+                    edge[i] = add2(e1, e2);
+                    dEdge::revertDmChangesToEdges(e1, e2);
+                } else {
+                    edge[i] = add2(e1, e2);
+                }
 
                 if (!x.isTerminal() && x.p->v == w && e1.w != Complex::zero) {
                     cn.returnToCache(e1.w);
@@ -1013,6 +1082,11 @@ namespace dd {
             }
 
             auto e = makeDDNode(w, edge, true);
+
+            //           if (r.p != nullptr && e.p != r.p){ // activate for debugging caching only
+            //               std::cout << "Caching error detected in add" << std::endl;
+            //           }
+
             computeTable.insert({x.p, x.w}, {y.p, y.w}, {e.p, e.w});
             return e;
         }
@@ -1025,7 +1099,7 @@ namespace dd {
         UnaryComputeTable<mEdge, mEdge, CT_MAT_CONJ_TRANS_NBUCKET> conjugateMatrixTranspose{};
 
         mEdge transpose(const mEdge& a) {
-            if (a.p == nullptr || a.isTerminal() || a.p->symm) {
+            if (a.p == nullptr || a.isTerminal() || a.p->isSymmetric()) {
                 return a;
             }
 
@@ -1094,31 +1168,70 @@ namespace dd {
     public:
         ComputeTable<mEdge, vEdge, vCachedEdge, CT_MAT_VEC_MULT_NBUCKET> matrixVectorMultiplication{};
         ComputeTable<mEdge, mEdge, mCachedEdge, CT_MAT_MAT_MULT_NBUCKET> matrixMatrixMultiplication{};
+        ComputeTable<dEdge, dEdge, dCachedEdge, CT_DM_DM_MULT_NBUCKET>   densityDensityMultiplication{};
 
         template<class LeftOperandNode, class RightOperandNode>
         [[nodiscard]] auto& getMultiplicationComputeTable() {
             if constexpr (std::is_same_v<RightOperandNode, vNode>) {
                 return matrixVectorMultiplication;
-            } else {
+            } else if constexpr (std::is_same_v<RightOperandNode, mNode>) {
                 return matrixMatrixMultiplication;
+            } else if constexpr (std::is_same_v<RightOperandNode, dNode>) {
+                return densityDensityMultiplication;
             }
         }
 
+        dEdge applyOperationToDensity(dEdge& e, const mEdge& operation, bool generateDensityMatrix = false) {
+            [[maybe_unused]] const auto before = cn.cacheCount();
+            auto                        tmp0   = conjugateTranspose(operation);
+            auto                        tmp1   = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
+            auto                        tmp2   = multiply(densityFromMatrixEdge(operation), tmp1, 0, generateDensityMatrix);
+            incRef(tmp2);
+            dEdge::alignDensityEdge(e);
+            decRef(e);
+            e = tmp2;
+
+            if (generateDensityMatrix) {
+                dEdge::setDensityMatrixTrue(e);
+            }
+
+            return e;
+        }
+
         template<class LeftOperand, class RightOperand>
-        RightOperand multiply(const LeftOperand& x, const RightOperand& y, dd::Qubit start = 0) {
+        RightOperand multiply(const LeftOperand& x, const RightOperand& y, dd::Qubit start = 0, [[maybe_unused]] bool generateDensityMatrix = false) {
             [[maybe_unused]] const auto before = cn.cacheCount();
 
-            Qubit var = -1;
-            if (!x.isTerminal()) {
-                var = x.p->v;
-            }
-            if (!y.isTerminal() && (y.p->v) > var) {
-                var = y.p->v;
+            Qubit        var = -1;
+            RightOperand e;
+
+            if constexpr (std::is_same_v<LeftOperand, dEdge>) {
+                auto xCopy = x;
+                auto yCopy = y;
+                dEdge::applyDmChangesToEdges(xCopy, yCopy);
+
+                if (!xCopy.isTerminal()) {
+                    var = xCopy.p->v;
+                }
+                if (!y.isTerminal() && yCopy.p->v > var) {
+                    var = yCopy.p->v;
+                }
+
+                e = multiply2(xCopy, yCopy, var, start, generateDensityMatrix);
+
+                dEdge::revertDmChangesToEdges(xCopy, yCopy);
+
+            } else {
+                if (!x.isTerminal()) {
+                    var = x.p->v;
+                }
+                if (!y.isTerminal() && (y.p->v) > var) {
+                    var = y.p->v;
+                }
+                e = multiply2(x, y, var, start);
             }
 
-            auto e = multiply2(x, y, var, start);
-
-            if (e.w != Complex::zero && e.w != Complex::one) {
+            if (!e.w.exactlyZero() && !e.w.exactlyOne()) {
                 cn.returnToCache(e.w);
                 e.w = cn.lookup(e.w);
             }
@@ -1131,7 +1244,7 @@ namespace dd {
 
     private:
         template<class LeftOperandNode, class RightOperandNode>
-        Edge<RightOperandNode> multiply2(const Edge<LeftOperandNode>& x, const Edge<RightOperandNode>& y, Qubit var, Qubit start = 0) {
+        Edge<RightOperandNode> multiply2(const Edge<LeftOperandNode>& x, const Edge<RightOperandNode>& y, Qubit var, Qubit start = 0, [[maybe_unused]] bool generateDensityMatrix = false) {
             using LEdge      = Edge<LeftOperandNode>;
             using REdge      = Edge<RightOperandNode>;
             using ResultEdge = Edge<RightOperandNode>;
@@ -1139,7 +1252,7 @@ namespace dd {
             if (x.p == nullptr) return {nullptr, Complex::zero};
             if (y.p == nullptr) return y;
 
-            if (x.w == Complex::zero || y.w == Complex::zero) {
+            if (x.w.exactlyZero() || y.w.exactlyZero()) {
                 return ResultEdge::zero;
             }
 
@@ -1153,7 +1266,8 @@ namespace dd {
             yCopy.w    = Complex::one;
 
             auto& computeTable = getMultiplicationComputeTable<LeftOperandNode, RightOperandNode>();
-            auto  r            = computeTable.lookup(xCopy, yCopy);
+            auto  r            = computeTable.lookup(xCopy, yCopy, generateDensityMatrix);
+            //            if (r.p != nullptr && false) { // activate for debugging caching only
             if (r.p != nullptr) {
                 if (r.w.approximatelyZero()) {
                     return ResultEdge::zero;
@@ -1172,39 +1286,42 @@ namespace dd {
             constexpr std::size_t N = std::tuple_size_v<decltype(y.p->e)>;
 
             ResultEdge e{};
-            if (x.p->v == var && x.p->v == y.p->v) {
-                if (x.p->ident) {
-                    if constexpr (N == NEDGE) {
-                        // additionally check if y is the identity in case of matrix multiplication
-                        if (y.p->ident) {
-                            e = makeIdent(start, var);
+            if constexpr (std::is_same_v<RightOperandNode, mCachedEdge>) {
+                // This branch is only taken for matrices
+                if (x.p->v == var && x.p->v == y.p->v) {
+                    if (x.p->isIdentity()) {
+                        if constexpr (N == NEDGE) {
+                            // additionally check if y is the identity in case of matrix multiplication
+                            if (y.p->isIdentity()) {
+                                e = makeIdent(start, var);
+                            } else {
+                                e = yCopy;
+                            }
                         } else {
                             e = yCopy;
                         }
-                    } else {
-                        e = yCopy;
-                    }
-                    computeTable.insert(xCopy, yCopy, {e.p, e.w});
-                    e.w = cn.mulCached(x.w, y.w);
-                    if (e.w.approximatelyZero()) {
-                        cn.returnToCache(e.w);
-                        return ResultEdge::zero;
-                    }
-                    return e;
-                }
-
-                if constexpr (N == NEDGE) {
-                    // additionally check if y is the identity in case of matrix multiplication
-                    if (y.p->ident) {
-                        e = xCopy;
                         computeTable.insert(xCopy, yCopy, {e.p, e.w});
                         e.w = cn.mulCached(x.w, y.w);
-
                         if (e.w.approximatelyZero()) {
                             cn.returnToCache(e.w);
                             return ResultEdge::zero;
                         }
                         return e;
+                    }
+
+                    if constexpr (N == NEDGE) {
+                        // additionally check if y is the identity in case of matrix multiplication
+                        if (y.p->isIdentity()) {
+                            e = xCopy;
+                            computeTable.insert(xCopy, yCopy, {e.p, e.w});
+                            e.w = cn.mulCached(x.w, y.w);
+
+                            if (e.w.approximatelyZero()) {
+                                cn.returnToCache(e.w);
+                                return ResultEdge::zero;
+                            }
+                            return e;
+                        }
                     }
                 }
             }
@@ -1232,25 +1349,63 @@ namespace dd {
                             e2 = yCopy;
                         }
 
-                        auto m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start);
+                        if constexpr (std::is_same_v<LeftOperandNode, dNode>) {
+                            dEdge m;
+                            dEdge::applyDmChangesToEdges(e1, e2);
+                            if (!generateDensityMatrix || idx == 1) {
+                                // When generateDensityMatrix is false or I have the first edge I don't optimize anything and set generateDensityMatrix to false for all child edges
+                                m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start, false);
+                            } else if (idx == 2) {
+                                // When I have the second edge and generateDensityMatrix == false, then edge[2] == edge[1]
+                                if (k == 0) {
+                                    if (edge[1].w.approximatelyZero()) {
+                                        edge[2] = ResultEdge::zero;
+                                    } else {
+                                        edge[2] = ResultEdge{edge[1].p, cn.getCached(edge[1].w.r->value, edge[1].w.i->value)};
+                                    }
+                                }
+                                continue;
+                            } else {
+                                m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start, generateDensityMatrix);
+                            }
 
-                        if (k == 0 || edge[idx].w == Complex::zero) {
-                            edge[idx] = m;
-                        } else if (m.w != Complex::zero) {
-                            auto old_e = edge[idx];
-                            edge[idx]  = add2(edge[idx], m);
-                            cn.returnToCache(old_e.w);
-                            cn.returnToCache(m.w);
+                            if (k == 0 || edge[idx].w.exactlyZero()) {
+                                edge[idx] = m;
+                            } else if (!m.w.exactlyZero()) {
+                                dEdge::applyDmChangesToEdges(edge[idx], m);
+                                auto old_e = edge[idx];
+                                edge[idx]  = add2(edge[idx], m);
+                                dEdge::revertDmChangesToEdges(edge[idx], e2);
+                                cn.returnToCache(old_e.w);
+                                cn.returnToCache(m.w);
+                            }
+                            //Undo modifications on density matrices
+                            dEdge::revertDmChangesToEdges(e1, e2);
+                        } else {
+                            auto m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start);
+
+                            if (k == 0 || edge[idx].w.exactlyZero()) {
+                                edge[idx] = m;
+                            } else if (!m.w.exactlyZero()) {
+                                auto old_e = edge[idx];
+                                edge[idx]  = add2(edge[idx], m);
+                                cn.returnToCache(old_e.w);
+                                cn.returnToCache(m.w);
+                            }
                         }
                     }
                 }
             }
-            e = makeDDNode(var, edge, true);
+            e = makeDDNode(var, edge, true, generateDensityMatrix);
+
+            //            if (r.p != nullptr && e.p != r.p) { // activate for debugging caching
+            //                std::cout << "Caching error detected in mul" << std::endl;
+            //            }
 
             computeTable.insert(xCopy, yCopy, {e.p, e.w});
 
-            if (e.w != Complex::zero && (x.w != Complex::one || y.w != Complex::one)) {
-                if (e.w == Complex::one) {
+            if (!e.w.exactlyZero() && (x.w.exactlyOne() || !y.w.exactlyZero())) {
+                if (e.w.exactlyOne()) {
                     e.w = cn.mulCached(x.w, y.w);
                 } else {
                     ComplexNumbers::mul(e.w, e.w, x.w);
@@ -1400,9 +1555,13 @@ namespace dd {
 
         template<class Edge>
         Edge kronecker(const Edge& x, const Edge& y, bool incIdx = true) {
+            if constexpr (std::is_same_v<Edge, dEdge>) {
+                throw std::invalid_argument("Kronecker is currently not supported for density matrices");
+            }
+
             auto e = kronecker2(x, y, incIdx);
 
-            if (e.w != Complex::zero && e.w != Complex::one) {
+            if (e.w != Complex::zero && !e.w.exactlyOne()) {
                 cn.returnToCache(e.w);
                 e.w = cn.lookup(e.w);
             }
@@ -1442,7 +1601,7 @@ namespace dd {
             constexpr std::size_t N = std::tuple_size_v<decltype(x.p->e)>;
             // special case handling for matrices
             if constexpr (N == NEDGE) {
-                if (x.p->ident) {
+                if (x.p->isIdentity()) {
                     auto idx = incIdx ? static_cast<Qubit>(y.p->v + 1) : y.p->v;
                     auto e   = makeDDNode(idx, std::array{y, Edge<Node>::zero, Edge<Node>::zero, y});
                     for (auto i = 0; i < x.p->v; ++i) {
@@ -1520,7 +1679,7 @@ namespace dd {
                 r       = add2(r, t1);
                 auto r2 = r;
 
-                if (r.w == Complex::one) {
+                if (r.w.exactlyOne()) {
                     r.w = a.w;
                 } else {
                     auto c = cn.getTemporary();
@@ -1546,7 +1705,7 @@ namespace dd {
                                [&](const mEdge& e) -> mEdge { return trace(e, eliminate, alreadyEliminated); });
                 auto r = makeDDNode(adjustedV, edge);
 
-                if (r.w == Complex::one) {
+                if (r.w.exactlyOne()) {
                     r.w = a.w;
                 } else {
                     auto c = cn.getTemporary();
@@ -1564,7 +1723,7 @@ namespace dd {
             }
 
             // immediately return of this node is identical to the identity
-            if (m.p->ident) {
+            if (m.p->isIdentity()) {
                 return true;
             }
 
@@ -1672,7 +1831,8 @@ namespace dd {
         /// Noise Operations
         ///
     public:
-        NoiseOperationTable<mEdge> noiseOperationTable{nqubits};
+        StochasticNoiseOperationTable<mEdge, STOCHASTIC_CACHE_OPS> stochasticNoiseOperationCache{nqubits};
+        DensityNoiseTable<dEdge, dEdge, CT_DM_NOISE_NBUCKET>       densityNoise{};
 
         ///
         /// Decision diagram size
@@ -2018,6 +2178,58 @@ namespace dd {
             return r;
         }
 
+        std::map<std::string, dd::fp> getProbVectorFromDensityMatrix(dEdge e, double measurementThreshold) {
+            std::map<std::string, dd::fp> measuredResult = {};
+            dd::fp                        p0, p1, globalProbability;
+            dEdge::alignDensityEdge(e);
+            if (std::pow(2, e.p->v + 1) >= static_cast<double>(std::numeric_limits<unsigned long long>::max())) {
+                throw std::runtime_error(std::string{"Density matrix is too large to measure!"});
+            }
+
+            const unsigned long long statesToMeasure = 2ULL << e.p->v;
+
+            for (unsigned long long m = 0; m < statesToMeasure; m++) {
+                unsigned long long currentResult = m;
+                globalProbability                = dd::CTEntry::val(e.w.r);
+                auto  resultString               = intToString(m, '1', e.p->v + 1);
+                dEdge cur                        = e;
+                for (dd::Qubit i = 0; i < e.p->v + 1; ++i) {
+                    if (cur.p->v != -1 && globalProbability > measurementThreshold) {
+                        assert(dd::CTEntry::approximatelyZero(cur.p->e.at(0).w.i) && dd::CTEntry::approximatelyZero(cur.p->e.at(3).w.i));
+                        p0 = dd::CTEntry::val(cur.p->e.at(0).w.r);
+                        p1 = dd::CTEntry::val(cur.p->e.at(3).w.r);
+                    } else {
+                        globalProbability = 0;
+                        break;
+                    }
+
+                    if (currentResult % 2 == 0) {
+                        cur = cur.p->e.at(0);
+                        globalProbability *= p0;
+                    } else {
+                        cur = cur.p->e.at(3);
+                        globalProbability *= p1;
+                    }
+                    currentResult = currentResult >> 1;
+                }
+                if (globalProbability > 0) { // No need to track probabilities of 0
+                    measuredResult.insert({resultString, globalProbability});
+                }
+            }
+            return measuredResult;
+        }
+
+        [[nodiscard]] std::string intToString(unsigned long long targetNumber, char value, dd::Qubit size) const {
+            std::string path(size, '0');
+            for (auto i = 1; i <= size; i++) {
+                if (targetNumber % 2) {
+                    path[size - i] = value;
+                }
+                targetNumber = targetNumber >> 1u;
+            }
+            return path;
+        }
+
         CVec getVector(const vEdge& e) {
             const std::size_t dim = 2ULL << e.p->v;
             // allocate resulting vector
@@ -2108,6 +2320,55 @@ namespace dd {
                 getMatrix(e.p->e[2], c, x, j, mat);
             if (!e.p->e[3].w.approximatelyZero())
                 getMatrix(e.p->e[3], c, x, y, mat);
+            cn.returnToCache(c);
+        }
+
+        CMat getDensityMatrix(dEdge& e) {
+            dEdge::applyDmChangesToEdge(e);
+            const unsigned long long dim = 2ULL << e.p->v;
+            // allocate resulting matrix
+            auto mat = CMat(dim, CVec(dim, {0.0, 0.0}));
+            getDensityMatrix(e, Complex::one, 0, 0, mat);
+            dd::dEdge::revertDmChangesToEdge(e);
+            return mat;
+        }
+
+        void getDensityMatrix(dEdge& e, Complex& amp, std::size_t i, std::size_t j, CMat& mat) {
+            // calculate new accumulated amplitude
+            auto c = cn.mulCached(e.w, amp);
+
+            // base case
+            if (e.isTerminal()) {
+                mat.at(i).at(j) = {CTEntry::val(c.r), CTEntry::val(c.i)};
+                cn.returnToCache(c);
+                return;
+            }
+
+            const std::size_t x = i | (1ULL << e.p->v);
+            const std::size_t y = j | (1ULL << e.p->v);
+
+            // recursive case
+            if (!e.p->e[0].w.approximatelyZero()) {
+                dEdge::applyDmChangesToEdge(e.p->e[0]);
+                getDensityMatrix(e.p->e[0], c, i, j, mat);
+                dd::dEdge::revertDmChangesToEdge(e.p->e[0]);
+            }
+            if (!e.p->e[1].w.approximatelyZero()) {
+                dEdge::applyDmChangesToEdge(e.p->e[1]);
+                getDensityMatrix(e.p->e[1], c, i, y, mat);
+                dd::dEdge::revertDmChangesToEdge(e.p->e[1]);
+            }
+            if (!e.p->e[2].w.approximatelyZero()) {
+                dEdge::applyDmChangesToEdge(e.p->e[2]);
+                getDensityMatrix(e.p->e[2], c, x, j, mat);
+                dd::dEdge::revertDmChangesToEdge(e.p->e[2]);
+            }
+            if (!e.p->e[3].w.approximatelyZero()) {
+                dEdge::applyDmChangesToEdge(e.p->e[3]);
+                getDensityMatrix(e.p->e[3], c, x, y, mat);
+                dd::dEdge::revertDmChangesToEdge(e.p->e[3]);
+            }
+
             cn.returnToCache(c);
         }
 
@@ -2636,11 +2897,19 @@ namespace dd {
             matrixKronecker.printStatistics();
             std::cout << "[Toffoli Table] ";
             toffoliTable.printStatistics();
-            std::cout << "[Operation Table] ";
-            noiseOperationTable.printStatistics();
+            std::cout << "[Stochastic Noise Table] ";
+            stochasticNoiseOperationCache.printStatistics();
+            std::cout << "[CT Density Add] ";
+            densityAdd.printStatistics();
+            std::cout << "[CT Density Mul] ";
+            densityDensityMultiplication.printStatistics();
+            std::cout << "[CT Density Noise] ";
+            densityNoise.printStatistics();
             std::cout << "[ComplexTable] ";
             cn.complexTable.printStatistics();
         }
     };
+
 } // namespace dd
+
 #endif
