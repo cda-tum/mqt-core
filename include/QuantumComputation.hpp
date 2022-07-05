@@ -230,6 +230,7 @@ namespace qc {
             qc.garbage           = garbage;
             qc.seed              = seed;
             qc.mt                = mt;
+            qc.occuringVariables = occuringVariables;
 
             for (auto const& op: ops) {
                 qc.ops.emplace_back<>(op->clone());
