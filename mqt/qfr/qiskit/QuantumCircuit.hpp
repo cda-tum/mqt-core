@@ -288,6 +288,7 @@ namespace qc::qiskit {
                 qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target, type, std::get<dd::fp>(lambda), std::get<dd::fp>(phi), std::get<dd::fp>(theta));
             } else {
                 qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target, type, lambda, phi, theta);
+                qc.addVariables(lambda, phi, theta);
             }
         }
 
@@ -318,8 +319,8 @@ namespace qc::qiskit {
                 qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0, target1, type, std::get<dd::fp>(lambda), std::get<dd::fp>(phi), std::get<dd::fp>(theta));
             } else {
                 qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target0, target1, type, lambda, phi, theta);
+                qc.addVariables(lambda, phi, theta);
             }
-            // qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0, target1, type, lambda, phi, theta);
         }
 
         static void importDefinition(QuantumComputation& qc, const py::object& circ, const py::list& qargs, const py::list& cargs, const py::dict& qubitMap, const py::dict& clbitMap) {

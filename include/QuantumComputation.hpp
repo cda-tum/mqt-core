@@ -73,10 +73,6 @@ namespace qc {
         void readQCGateDescriptions(std::istream& is, int line, std::map<std::string, dd::Qubit>& varMap);
         void importGRCS(std::istream& is);
 
-        void addVariables(const SymbolOrNumber& expr);
-        void addVariables(const SymbolOrNumber& expr1, const SymbolOrNumber& expr2);
-        void addVariables(const SymbolOrNumber& expr1, const SymbolOrNumber& expr2, const SymbolOrNumber& expr3);
-
         template<class RegisterType>
         static void printSortedRegisters(const RegisterMap<RegisterType>& regmap, const std::string& identifier, std::ostream& of) {
             // sort regs by start index
@@ -674,6 +670,10 @@ namespace qc {
         }
 
         void instantiate(const VariableAssignment& assignment);
+
+        void addVariables(const SymbolOrNumber& expr);
+        void addVariables(const SymbolOrNumber& expr1, const SymbolOrNumber& expr2);
+        void addVariables(const SymbolOrNumber& expr1, const SymbolOrNumber& expr2, const SymbolOrNumber& expr3);
 
         [[nodiscard]] bool isVariableFree() const {
             return std::all_of(ops.begin(), ops.end(), [](const auto& op) { return op->isStandardOperation(); });
