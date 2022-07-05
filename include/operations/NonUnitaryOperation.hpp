@@ -104,8 +104,9 @@ namespace qc {
         void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override;
         void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const override;
 
-        [[nodiscard]] std::vector<dd::Qubit> getUsedQubits() const override {
-            return getTargets();
+        [[nodiscard]] std::set<dd::Qubit> getUsedQubits() const override {
+            const auto& targets = getTargets();
+            return std::set<dd::Qubit>{targets.begin(), targets.end()};
         }
     };
 } // namespace qc

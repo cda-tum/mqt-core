@@ -349,22 +349,22 @@ TEST_F(DDNoiseFunctionalityTest, testingUsedQubits) {
     QubitCount nqubits    = 1;
     auto       standardOp = StandardOperation(nqubits, 1, qc::Z);
     EXPECT_EQ(standardOp.getUsedQubits().size(), 1);
-    EXPECT_EQ(standardOp.getUsedQubits()[0], 1);
+    EXPECT_TRUE(standardOp.getUsedQubits().count(1));
 
     auto nonUnitaryOp = NonUnitaryOperation(nqubits, std::vector<dd::Qubit>{0}, std::vector<std::size_t>{0});
     EXPECT_EQ(nonUnitaryOp.getUsedQubits().size(), 1);
-    EXPECT_EQ(nonUnitaryOp.getUsedQubits()[0], 0);
+    EXPECT_TRUE(nonUnitaryOp.getUsedQubits().count(0));
 
     auto compoundOp = qc::CompoundOperation(nqubits);
     compoundOp.emplace_back<qc::StandardOperation>(nqubits, 0, qc::Z);
     compoundOp.emplace_back<qc::StandardOperation>(nqubits, 1, qc::H);
     compoundOp.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
     EXPECT_EQ(compoundOp.getUsedQubits().size(), 2);
-    EXPECT_EQ(compoundOp.getUsedQubits()[0], 0);
-    EXPECT_EQ(compoundOp.getUsedQubits()[1], 1);
+    EXPECT_TRUE(compoundOp.getUsedQubits().count(0));
+    EXPECT_TRUE(compoundOp.getUsedQubits().count(1));
 
     std::unique_ptr<qc::Operation> xOp                   = std::make_unique<qc::StandardOperation>(nqubits, 0, qc::X);
     auto                           classicalControlledOp = qc::ClassicControlledOperation(xOp, std::pair{0, nqubits}, 1U);
     EXPECT_EQ(nonUnitaryOp.getUsedQubits().size(), 1);
-    EXPECT_EQ(nonUnitaryOp.getUsedQubits()[0], 0);
+    EXPECT_TRUE(nonUnitaryOp.getUsedQubits().count(0));
 }

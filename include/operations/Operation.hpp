@@ -45,7 +45,7 @@ namespace qc {
         Operation(const Operation& op)     = delete;
         Operation(Operation&& op) noexcept = default;
 
-        Operation& operator=(const Operation& op)     = delete;
+        Operation& operator=(const Operation& op) = delete;
         Operation& operator=(Operation&& op) noexcept = default;
 
         // Virtual Destructor
@@ -96,10 +96,12 @@ namespace qc {
             return startQubit;
         }
 
-        [[nodiscard]] virtual std::vector<dd::Qubit> getUsedQubits() const {
-            auto usedQubits = getTargets();
-            for (auto control: getControls()) {
-                usedQubits.push_back(control.qubit);
+        [[nodiscard]] virtual std::set<dd::Qubit> getUsedQubits() const {
+            const auto&         opTargets  = getTargets();
+            const auto&         opControls = getControls();
+            std::set<dd::Qubit> usedQubits = {opTargets.begin(), opTargets.end()};
+            for (const auto& control: opControls) {
+                usedQubits.insert(control.qubit);
             }
             return usedQubits;
         }
