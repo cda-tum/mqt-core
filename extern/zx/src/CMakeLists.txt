@@ -34,10 +34,14 @@ if(GMP_FOUND)
 endif()
 
 # set compiler flags depending on compiler
-if(MSVC)
+if (MSVC)
 	target_compile_options(${PROJECT_NAME} PUBLIC /utf-8 /W4)
-else()
-	target_compile_options(${PROJECT_NAME} INTERFACE -Wall -Wextra -pedantic $<$<CONFIG:DEBUG>:-Og>$<$<CONFIG:RELEASE>:-fno-math-errno -ffinite-math-only -fno-trapping-math>) # if (BINDINGS AND NOT WIN32)
+else ()
+	target_compile_options(${PROJECT_NAME} INTERFACE -Wall -Wextra -pedantic $<$<CONFIG:DEBUG>:-Og>$<$<CONFIG:RELEASE>:-fno-math-errno -ffinite-math-only -fno-trapping-math>)
+	if (BINDINGS AND NOT WIN32)
+		# adjust visibility settings for building Python bindings
+		target_compile_options(${PROJECT_NAME} PUBLIC -fvisibility=hidden)
+	endif ()
 	if (NOT DEPLOY)
 		# only include machine-specific optimizations when building for the host machine
 		target_compile_options(${PROJECT_NAME} INTERFACE -mtune=native)
