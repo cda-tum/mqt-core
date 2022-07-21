@@ -188,6 +188,18 @@ namespace zx {
                     addSwap(diag, target, target2, qubits);
                     break;
                 }
+                case qc::OpType::iSwap: {
+                    const auto target2 = p.at(op->getTargets()[1]);
+                    addZSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
+                    addZSpider(diag, target2, qubits, PiExpression(PiRational(1, 2)));
+                    addZSpider(diag, target, qubits, PiExpression(),
+                               EdgeType::Hadamard);
+                    addCnot(diag, target, target2, qubits);
+                    addCnot(diag, target2, target, qubits);
+                    addZSpider(diag, target2, qubits, PiExpression(),
+                               EdgeType::Hadamard);
+                    break;
+                }
                 case qc::OpType::H:
                     addZSpider(diag, target, qubits, PiExpression(),
                                EdgeType::Hadamard);
@@ -195,6 +207,11 @@ namespace zx {
                 case qc::OpType::Measure:
                 case qc::OpType::I:
                     break;
+                case qc::OpType::SX:
+                    addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
+                    break;
+                case qc::OpType::SXdag:
+                    addXSpider(diag, target, qubits, PiExpression(PiRational(-1, 2)));
                 default:
                     throw ZXException("Unsupported Operation: " +
                                       qc::toString(op->getType()));
@@ -344,9 +361,12 @@ namespace zx {
                 case qc::OpType::U2:
                 case qc::OpType::U3:
                 case qc::OpType::SWAP:
+                case qc::OpType::iSwap:
                 case qc::OpType::H:
                 case qc::OpType::Measure:
                 case qc::OpType::I:
+                case qc::OpType::SX:
+                case qc::OpType::SXdag:
                     return true;
                 default:
                     return false;
