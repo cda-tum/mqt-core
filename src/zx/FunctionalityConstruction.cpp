@@ -188,7 +188,7 @@ namespace zx {
                     addSwap(diag, target, target2, qubits);
                     break;
                 }
-                case qc::OpType::iSwap: {
+                case qc::OpType::iSWAP: {
                     const auto target2 = p.at(op->getTargets()[1]);
                     addZSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
                     addZSpider(diag, target2, qubits, PiExpression(PiRational(1, 2)));
@@ -212,6 +212,7 @@ namespace zx {
                     break;
                 case qc::OpType::SXdag:
                     addXSpider(diag, target, qubits, PiExpression(PiRational(-1, 2)));
+                    break;
                 default:
                     throw ZXException("Unsupported Operation: " +
                                       qc::toString(op->getType()));
@@ -361,7 +362,7 @@ namespace zx {
                 case qc::OpType::U2:
                 case qc::OpType::U3:
                 case qc::OpType::SWAP:
-                case qc::OpType::iSwap:
+                case qc::OpType::iSWAP:
                 case qc::OpType::H:
                 case qc::OpType::Measure:
                 case qc::OpType::I:
