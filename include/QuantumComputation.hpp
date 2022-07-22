@@ -677,7 +677,7 @@ namespace qc {
         void addVariables(const SymbolOrNumber& expr1, const SymbolOrNumber& expr2, const SymbolOrNumber& expr3);
 
         [[nodiscard]] bool isVariableFree() const {
-            return std::all_of(ops.begin(), ops.end(), [](const auto& op) { return op->isStandardOperation(); });
+            return std::all_of(ops.begin(), ops.end(), [](const auto& op) { return !op->isSymbolicOperation(); });
         }
 
         [[nodiscard]] const std::unordered_set<sym::Variable>& getVariables() const {
