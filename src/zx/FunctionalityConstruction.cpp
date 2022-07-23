@@ -62,11 +62,14 @@ namespace zx {
     FunctionalityConstruction::addCphase(ZXDiagram& diag, const PiExpression& phase,
                                          Qubit ctrl, Qubit target,
                                          std::vector<Vertex>& qubits) {
-        addZSpider(diag, ctrl, qubits, PiExpression(phase / 2.0)); //todo maybe should provide a method for int division
+        auto new_const = phase.getConst() / 2;
+        auto new_phase = phase / 2.0;
+        new_phase.setConst(new_const);
+        addZSpider(diag, ctrl, qubits, new_phase); //todo maybe should provide a method for int division
         addCnot(diag, ctrl, target, qubits);
-        addZSpider(diag, target, qubits, PiExpression(-phase / 2.0));
+        addZSpider(diag, target, qubits, -new_phase);
         addCnot(diag, ctrl, target, qubits);
-        addZSpider(diag, target, qubits, PiExpression(phase / 2.0));
+        addZSpider(diag, target, qubits, new_phase);
     }
 
     void FunctionalityConstruction::addSwap(ZXDiagram& diag, Qubit ctrl, Qubit target,
