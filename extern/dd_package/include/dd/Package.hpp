@@ -40,6 +40,7 @@
 #include <random>
 #include <regex>
 #include <set>
+#include <stack>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
