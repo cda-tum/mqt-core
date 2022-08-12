@@ -200,3 +200,20 @@ TEST_F(ZXDiagramTest, InitialLayout) {
     zx::fullReduce(d);
     EXPECT_TRUE(d.isIdentity());
 }
+
+TEST_F(ZXDiagramTest, RZ) {
+    qc = qc::QuantumComputation(2);
+    qc.rz(0, zx::PI / 8);
+
+    auto qcPrime = qc::QuantumComputation(2);
+    qcPrime.phase(1, zx::PI / 8);
+
+    auto d      = zx::FunctionalityConstruction::buildFunctionality(&qc);
+    auto dPrime = zx::FunctionalityConstruction::buildFunctionality(&qcPrime);
+
+    d.concat(dPrime);
+
+    zx::fullReduce(d);
+    EXPECT_FALSE(d.isIdentity());
+    EXPECT_FALSE(d.globalPhaseIsZero());
+}
