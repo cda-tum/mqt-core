@@ -58,7 +58,6 @@ namespace zx {
 
     void FunctionalityConstruction::addCphase(ZXDiagram& diag, const PiRational& phase, Qubit ctrl, Qubit target,
                                               std::vector<Vertex>& qubits) {
-        // diag.addGlobalPhase(phase / 4);
         addZSpider(diag, ctrl, qubits, Expression(phase / 2));
         addCnot(diag, ctrl, target, qubits);
         addZSpider(diag, target, qubits, Expression(-phase / 2));

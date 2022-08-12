@@ -11,6 +11,7 @@
 #include "zx/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
+#include <cstddef>
 #include <iostream>
 #include <sstream>
 
@@ -120,6 +121,9 @@ TEST_F(ZXDiagramTest, complex_circuit) {
     zx::fullReduce(diag);
     EXPECT_EQ(diag.getNVertices(), 6);
     EXPECT_EQ(diag.getNEdges(), 3);
+    EXPECT_TRUE(diag.connected(diag.getInput(0), diag.getOutput(0)));
+    EXPECT_TRUE(diag.connected(diag.getInput(1), diag.getOutput(1)));
+    EXPECT_TRUE(diag.connected(diag.getInput(2), diag.getOutput(2)));
 }
 
 TEST_F(ZXDiagramTest, Phase) {
@@ -202,18 +206,19 @@ TEST_F(ZXDiagramTest, InitialLayout) {
 }
 
 TEST_F(ZXDiagramTest, RZ) {
-    qc = qc::QuantumComputation(2);
+    qc = qc::QuantumComputation(1);
     qc.rz(0, zx::PI / 8);
 
-    auto qcPrime = qc::QuantumComputation(2);
-    qcPrime.phase(1, zx::PI / 8);
+    auto qcPrime = qc::QuantumComputation(1);
+    qcPrime.phase(0, zx::PI / 8);
 
     auto d      = zx::FunctionalityConstruction::buildFunctionality(&qc);
     auto dPrime = zx::FunctionalityConstruction::buildFunctionality(&qcPrime);
 
-    d.concat(dPrime);
+    d.concat(dPrime.invert());
 
     zx::fullReduce(d);
     EXPECT_FALSE(d.isIdentity());
     EXPECT_FALSE(d.globalPhaseIsZero());
+    EXPECT_TRUE(d.connected(d.getInput(0), d.getOutput(0)));
 }
