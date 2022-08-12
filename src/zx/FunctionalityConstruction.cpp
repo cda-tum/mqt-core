@@ -1,6 +1,7 @@
 #include "zx/FunctionalityConstruction.hpp"
 
 #include "Definitions.hpp"
+#include "Rational.hpp"
 #include "ZXDiagram.hpp"
 
 #include <algorithm>
@@ -57,6 +58,7 @@ namespace zx {
 
     void FunctionalityConstruction::addCphase(ZXDiagram& diag, const PiRational& phase, Qubit ctrl, Qubit target,
                                               std::vector<Vertex>& qubits) {
+        // diag.addGlobalPhase(phase / 4);
         addZSpider(diag, ctrl, qubits, Expression(phase / 2));
         addCnot(diag, ctrl, target, qubits);
         addZSpider(diag, target, qubits, Expression(-phase / 2));
@@ -115,6 +117,7 @@ namespace zx {
                     break;
 
                 case qc::OpType::RZ:
+                    diag.addGlobalPhase(-PiRational(op->getParameter().front()) / 2);
                 case qc::OpType::Phase:
                     addZSpider(
                             diag, target, qubits,
@@ -132,6 +135,8 @@ namespace zx {
                     break;
 
                 case qc::OpType::Y:
+                    diag.addGlobalPhase(-PiRational(1, 2));
+
                     addZSpider(diag, target, qubits,
                                Expression(PiRational(1, 1)));
                     addXSpider(diag, target, qubits,
@@ -139,6 +144,9 @@ namespace zx {
                     break;
 
                 case qc::OpType::RY:
+                    diag.addGlobalPhase(-PiRational(op->getParameter().front()) / 2 +
+                                        PiRational(1, 2) + PiRational(3, 2));
+
                     addXSpider(diag, target, qubits,
                                Expression(PiRational(1, 2)));
                     addZSpider(diag, target, qubits,
