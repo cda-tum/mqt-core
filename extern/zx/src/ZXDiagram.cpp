@@ -259,11 +259,12 @@ namespace zx {
             outputs[i] = new_vs[rhs.outputs[i]];
         }
 
+        this->addGlobalPhase(-rhs.globalPhase);
         return *this;
     }
 
     bool ZXDiagram::isIdentity() const {
-        if ((size_t)nedges != inputs.size())
+        if ((size_t)nedges != inputs.size() || !globalPhase.isZero())
             return false;
 
         for (size_t i = 0; i < inputs.size(); i++) {
@@ -346,6 +347,10 @@ namespace zx {
             if (!isDeleted(v) && !connectedToBoundary(v))
                 removeVertex(v);
         }
+    }
+
+    void ZXDiagram::addGlobalPhase(const PiRational& phase) {
+        globalPhase += phase;
     }
 
 } // namespace zx

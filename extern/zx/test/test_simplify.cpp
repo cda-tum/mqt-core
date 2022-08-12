@@ -53,6 +53,7 @@ TEST_F(SimplifyTest, idSimp) {
     EXPECT_EQ(removed, nqubits * spiders);
     EXPECT_EQ(diag.getNVertices(), nqubits * 2);
     EXPECT_EQ(diag.getNEdges(), nqubits);
+    EXPECT_TRUE(diag.globalPhaseIsZero());
 }
 
 TEST_F(SimplifyTest, idSimp_2) {
@@ -66,6 +67,7 @@ TEST_F(SimplifyTest, idSimp_2) {
     EXPECT_EQ(removed, nqubits * 100 - 2);
     EXPECT_EQ(diag.getNVertices(), nqubits * 2 + 2);
     EXPECT_EQ(diag.getNEdges(), 5);
+    EXPECT_TRUE(diag.globalPhaseIsZero());
 }
 
 TEST_F(SimplifyTest, spider_fusion) {
@@ -82,6 +84,7 @@ TEST_F(SimplifyTest, spider_fusion) {
     EXPECT_EQ(3, diag.getNVertices());
     EXPECT_EQ(2, diag.getNEdges());
     EXPECT_TRUE(diag.phase(2).isZero());
+    EXPECT_TRUE(diag.globalPhaseIsZero());
 }
 
 TEST_F(SimplifyTest, spider_fusion_2) {
@@ -104,6 +107,7 @@ TEST_F(SimplifyTest, spider_fusion_2) {
     for (zx::Vertex v: diag.getOutputs()) {
         EXPECT_TRUE(diag.connected(v, interior));
     }
+    EXPECT_TRUE(diag.globalPhaseIsZero());
 }
 
 TEST_F(SimplifyTest, spider_fusion_parallel_edges) {
@@ -118,6 +122,7 @@ TEST_F(SimplifyTest, spider_fusion_parallel_edges) {
     EXPECT_EQ(removed, 1);
     EXPECT_EQ(diag.getNEdges(), 2);
     EXPECT_EQ(diag.incidentEdges(1).size(), 1);
+    EXPECT_TRUE(diag.globalPhaseIsZero());
 }
 
 TEST_F(SimplifyTest, localComp) {
@@ -195,6 +200,7 @@ TEST_F(SimplifyTest, pivotPauli) {
     EXPECT_TRUE(diag.phase(10) == zx::Expression(zx::PiRational(0, 1)));
     EXPECT_TRUE(diag.phase(6) == zx::Expression(zx::PiRational(0, 1)));
     EXPECT_TRUE(diag.phase(7) == zx::Expression(zx::PiRational(0, 1)));
+    EXPECT_TRUE(diag.globalPhaseIsZero());
 }
 
 TEST_F(SimplifyTest, interior_clifford) {
@@ -209,6 +215,7 @@ TEST_F(SimplifyTest, interior_clifford) {
     for (zx::Vertex v = 0; v < nqubits; v++) {
         EXPECT_TRUE(diag.connected(diag.getInputs()[v], diag.getOutputs()[v]));
     }
+    EXPECT_TRUE(diag.globalPhaseIsZero());
 }
 
 TEST_F(SimplifyTest, interior_clifford_2) {
@@ -234,6 +241,8 @@ TEST_F(SimplifyTest, interior_clifford_2) {
     EXPECT_FALSE(diag.isDeleted(2));
     EXPECT_FALSE(diag.isDeleted(4));
     EXPECT_TRUE(diag.isDeleted(3));
+    EXPECT_FALSE(diag.globalPhaseIsZero());
+    EXPECT_FALSE(diag.isIdentity());
 }
 
 TEST_F(SimplifyTest, non_pauli_pivot) {
@@ -261,6 +270,33 @@ TEST_F(SimplifyTest, non_pauli_pivot) {
     EXPECT_TRUE(diag.connected(1, 4));
     EXPECT_TRUE(diag.connected(6, 4));
     EXPECT_TRUE(diag.connected(5, 6));
+    EXPECT_TRUE(diag.globalPhaseIsZero());
+}
+
+TEST_F(SimplifyTest, pauli_pivot_2) {
+    zx::ZXDiagram diag(1);
+    diag.removeEdge(0, 1);
+
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 1))); // 2
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 1))); // 3
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 1))); // 4
+    diag.addVertex(0, 0, zx::Expression(zx::PiRational(1, 1))); // 5
+    diag.addEdge(0, 2);
+    diag.addEdge(2, 3, zx::EdgeType::Hadamard);
+    diag.addEdge(3, 4, zx::EdgeType::Hadamard);
+    diag.addEdge(4, 5, zx::EdgeType::Hadamard);
+    diag.addEdge(5, 1);
+
+    diag.toGraphlike();
+    auto res = zx::pivotPauliSimp(diag);
+
+    // EXPECT_TRUE(diag.connected(0, 7));
+    // EXPECT_TRUE(diag.connected(7, 4));
+    // EXPECT_TRUE(diag.connected(1, 4));
+    // EXPECT_TRUE(diag.connected(6, 4));
+    // EXPECT_TRUE(diag.connected(5, 6));
+    EXPECT_EQ(res, 1);
+    EXPECT_FALSE(diag.globalPhaseIsZero());
 }
 
 // TEST_F(SimplifyTest, clifford) {
@@ -352,6 +388,7 @@ TEST_F(SimplifyTest, gadgetSimp) {
     EXPECT_EQ(diag.getNEdges(), 5);
     ASSERT_FALSE(diag.isDeleted(5));
     EXPECT_TRUE(diag.phase(5).isZero());
+    EXPECT_TRUE(diag.globalPhaseIsZero());
 }
 
 TEST_F(SimplifyTest, gadgetSimp_2) {
@@ -376,6 +413,7 @@ TEST_F(SimplifyTest, gadgetSimp_2) {
     EXPECT_TRUE(diag.connected(2, 1));
     EXPECT_EQ(diag.getNEdges(), 2);
     EXPECT_TRUE(diag.phase(2).isZero());
+    EXPECT_TRUE(diag.globalPhaseIsZero());
 }
 
 // TEST_F(SimplifyTest, pivotgadgetSimp) {}
@@ -480,6 +518,7 @@ TEST_F(SimplifyTest, idSymbolic) {
 
     EXPECT_EQ(diag.getNVertices(), 2 * nqubits + 1);
     EXPECT_EQ(diag.getNEdges(), nqubits + 1);
+    EXPECT_TRUE(diag.globalPhaseIsZero());
 }
 
 TEST_F(SimplifyTest, equivalenceSymbolic) {
