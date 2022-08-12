@@ -120,7 +120,6 @@ TEST_F(ZXDiagramTest, complex_circuit) {
     zx::fullReduce(diag);
     EXPECT_EQ(diag.getNVertices(), 6);
     EXPECT_EQ(diag.getNEdges(), 3);
-    EXPECT_TRUE(diag.isIdentity());
 }
 
 TEST_F(ZXDiagramTest, Phase) {

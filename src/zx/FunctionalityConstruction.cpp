@@ -118,6 +118,10 @@ namespace zx {
 
                 case qc::OpType::RZ:
                     diag.addGlobalPhase(-PiRational(op->getParameter().front()) / 2);
+                    addZSpider(
+                            diag, target, qubits,
+                            Expression(PiRational(op->getParameter().front())));
+                    break;
                 case qc::OpType::Phase:
                     addZSpider(
                             diag, target, qubits,
