@@ -132,6 +132,7 @@ namespace zx {
                     break;
 
                 case qc::OpType::RX:
+                    diag.addGlobalPhase(-PiRational(op->getParameter().front()) / 2);
                     addXSpider(
                             diag, target, qubits,
                             Expression(PiRational(op->getParameter().front())));
