@@ -114,8 +114,6 @@ namespace zx {
         auto phase_v0 = diag.phase(v0);
         auto phase_v1 = diag.phase(v1);
 
-        std::cout << phase_v0.getConst() << std::endl;
-        std::cout << phase_v0.getConst() << std::endl;
         if (!phase_v0.isZero() && !phase_v1.isZero())
             diag.addGlobalPhase(PiRational(1, 1));
 
