@@ -68,6 +68,13 @@ namespace qc::qiskit {
                     targets.emplace_back(target);
                 }
                 qc.emplace_back<NonUnitaryOperation>(qc.getNqubits(), targets, Barrier);
+            } else if (instructionName == "reset") {
+                Targets targets{};
+                for (const auto qubit: instruction.attr("qubits")) {
+                    auto target = qubit.cast<dd::Qubit>();
+                    targets.emplace_back(target);
+                }
+                qc.reset(targets);
             } else if (nativelySupportedGates.count(instructionName)) {
                 auto&&   qubits = instruction.attr("qubits").cast<py::list>();
                 py::list params{};

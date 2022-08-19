@@ -117,6 +117,13 @@ namespace qc::qiskit {
                     targets.emplace_back(target);
                 }
                 qc.emplace_back<NonUnitaryOperation>(qc.getNqubits(), targets, Barrier);
+            } else if (instructionName == "reset") {
+                Targets targets{};
+                for (const auto qubit: qargs) {
+                    auto target = qubitMap[qubit].cast<dd::Qubit>();
+                    targets.emplace_back(target);
+                }
+                qc.reset(targets);
             } else if (nativelySupportedGates.count(instructionName)) {
                 // natively supported operations
                 if (instructionName == "i" || instructionName == "id" || instructionName == "iden") {
