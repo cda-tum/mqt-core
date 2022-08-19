@@ -705,6 +705,8 @@ namespace qc {
             for (auto& op: qc.ops) {
                 op->setNqubits(qc.getNqubits());
             }
+            qc.outputPermutation.clear();
+            qc.initializeIOMapping();
         }
     }
 
