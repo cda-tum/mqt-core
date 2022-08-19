@@ -770,7 +770,7 @@ namespace qc {
                 // iterate over all subsequent operations
                 while (opIt != qc.end()) {
                     const auto operation = opIt->get();
-                    if (operation->isUnitary()) {
+                    if (operation->isUnitary() || operation->getType() == qc::Barrier) {
                         // if an operation does not act on the measured qubit, the insert location for potential operations has to be updated
                         if (!operation->actsOn(targets.at(0))) {
                             ++currentInsertionPoint;

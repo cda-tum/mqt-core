@@ -104,20 +104,21 @@ namespace qc {
 
         for (auto opIt = ops.begin(); opIt != ops.end(); ++opIt) {
             if ((*opIt)->getType() == qc::Measure) {
-                if (!isLastOperationOnQubit(opIt)) {
-                    continue;
-                }
-
                 outputPermutationFromMeasurements = true;
                 auto op                           = dynamic_cast<NonUnitaryOperation*>(opIt->get());
                 assert(op->getTargets().size() == op->getClassics().size());
                 auto classicIt = op->getClassics().cbegin();
                 for (const auto& q: op->getTargets()) {
-                    auto qubitidx = q;
-                    auto bitidx   = *classicIt;
+                    const auto qubitidx = q;
+                    // only the first measurement of a qubit is used to determine the output permutation
+                    if (measuredQubits.count(qubitidx) != 0) {
+                        continue;
+                    }
+
+                    const auto bitidx = *classicIt;
                     if (outputPermutationFound) {
                         // output permutation was already set before -> permute existing values
-                        auto current = outputPermutation.at(qubitidx);
+                        const auto current = outputPermutation.at(qubitidx);
                         if (static_cast<std::size_t>(qubitidx) != bitidx && static_cast<std::size_t>(current) != bitidx) {
                             for (auto& p: outputPermutation) {
                                 if (static_cast<std::size_t>(p.second) == bitidx) {
