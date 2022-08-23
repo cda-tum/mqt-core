@@ -140,6 +140,29 @@ optional arguments:
   -cf CF      Only allow clifford operations (Default=False)
 ```
 
+### Available error-correcting codes and operations
+| Operation | Q3Shor | Q5Laflamme | Q7Steane | Q9Shor | Q9Surface | Q18Surface |
+| --- | --- | --- | --- | --- | --- | --- |
+| Pauli (X,Y,Z) | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| controlled Pauli (CX,CY,CZ) | :heavy_check_mark: | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_check_mark: | ? | :heavy_multiplication_x: |
+| Hadamard      | :warning: | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_multiplication_x: | :heavy_multiplication_x: | :heavy_check_mark: |
+| S, S&dagger;      | :heavy_check_mark: | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_multiplication_x: | :heavy_multiplication_x: | :heavy_multiplication_x: |
+| T, T&dagger;     | :heavy_check_mark: | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_multiplication_x: | :heavy_multiplication_x: | :heavy_multiplication_x: |
+
+:warning: = operation is applied without the scheme of the error-correcting code (i.e. decoding and encoding is performed before/afterwards, respectively, and the operation is encoded as-is)
+
+### Properties of the implemented error-correcting codes
+|  | Q3Shor | Q5Laflamme | Q7Steane | Q9Shor | Q9Surface | Q18Surface |
+| --- | --- | --- | --- | --- | --- | --- |
+| able to detect bit flips | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| able to detect phase flips | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| #physical data qubits per logical qubit | 3 | 5 | 7 | 9 | 9 | 18 |
+| #ancilla qubits (total) | 2 | 4 | 3 | 8 | 8 | 18 per qubit |
+| #qubits for n logical qubits | 3n+2 | 5n+4 | 7n+3 | 9n+8 | 9n+8 | 36n |
+| #classical bits (total) | 2 | 5 | 3 | 8 | 8 | 16 |
+
+More-detailed information about the error-correcting codes can be found in the README information [here](./include/eccs).
+
 ## MQT Toolset
 
 The QFR library is the backbone of the quantum software tools in:
