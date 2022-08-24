@@ -104,20 +104,21 @@ namespace qc {
 
         for (auto opIt = ops.begin(); opIt != ops.end(); ++opIt) {
             if ((*opIt)->getType() == qc::Measure) {
-                if (!isLastOperationOnQubit(opIt)) {
-                    continue;
-                }
-
                 outputPermutationFromMeasurements = true;
                 auto op                           = dynamic_cast<NonUnitaryOperation*>(opIt->get());
                 assert(op->getTargets().size() == op->getClassics().size());
                 auto classicIt = op->getClassics().cbegin();
                 for (const auto& q: op->getTargets()) {
-                    auto qubitidx = q;
-                    auto bitidx   = *classicIt;
+                    const auto qubitidx = q;
+                    // only the first measurement of a qubit is used to determine the output permutation
+                    if (measuredQubits.count(qubitidx) != 0) {
+                        continue;
+                    }
+
+                    const auto bitidx = *classicIt;
                     if (outputPermutationFound) {
                         // output permutation was already set before -> permute existing values
-                        auto current = outputPermutation.at(qubitidx);
+                        const auto current = outputPermutation.at(qubitidx);
                         if (static_cast<std::size_t>(qubitidx) != bitidx && static_cast<std::size_t>(current) != bitidx) {
                             for (auto& p: outputPermutation) {
                                 if (static_cast<std::size_t>(p.second) == bitidx) {
@@ -408,6 +409,9 @@ namespace qc {
         // adjust output permutation
         if (output_qubit_index >= 0) {
             outputPermutation.insert({physical_qubit_index, output_qubit_index});
+        } else {
+            // if a qubit is not relevant for the output, it is considered garbage
+            garbage[logical_qubit_index] = true;
         }
 
         // update all operations
@@ -944,7 +948,7 @@ namespace qc {
         }
     }
 
-    bool QuantumComputation::isLastOperationOnQubit(const decltype(ops.cbegin())& opIt, const decltype(ops.cend())& end) const {
+    bool QuantumComputation::isLastOperationOnQubit(const const_iterator& opIt, const const_iterator& end) const {
         if (opIt == end)
             return true;
 
@@ -966,4 +970,66 @@ namespace qc {
         }
         return true;
     }
+
+    void QuantumComputation::unifyQuantumRegisters(const std::string& regName) {
+        ancregs.clear();
+        qregs.clear();
+        qregs[regName] = {0, getNqubits()};
+        nancillae      = 0;
+    }
+
+    void QuantumComputation::appendMeasurementsAccordingToOutputPermutation(const std::string& registerName) {
+        // ensure that the circuit contains enough classical registers
+        if (cregs.empty()) {
+            // in case there are no registers, create a new one
+            addClassicalRegister(outputPermutation.size(), registerName.c_str());
+        } else if (nclassics < outputPermutation.size()) {
+            if (cregs.find(registerName) == cregs.end()) {
+                // in case there are registers but not enough, add a new one
+                addClassicalRegister(outputPermutation.size() - nclassics, registerName.c_str());
+            } else {
+                // in case the register already exists, augment it
+                nclassics += outputPermutation.size() - nclassics;
+                cregs[registerName].second = outputPermutation.size();
+            }
+        }
+
+        // append measurements according to output permutation
+        for (const auto& [qubit, clbit]: outputPermutation) {
+            measure(qubit, clbit);
+        }
+    }
+
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit) const {
+        if (const auto it = initialLayout.find(qubit); it == initialLayout.end() || it->second >= getNqubits())
+            throw QFRException("Qubit index out of range: " +
+                               std::to_string(qubit));
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit0, dd::Qubit qubit1) const {
+        checkQubitRange(qubit0);
+        checkQubitRange(qubit1);
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit, const dd::Control& control) const {
+        checkQubitRange(qubit);
+        checkQubitRange(control.qubit);
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit0, dd::Qubit qubit1, const dd::Control& control) const {
+        checkQubitRange(qubit0, qubit1);
+        checkQubitRange(control.qubit);
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit, const dd::Controls& controls) const {
+        checkQubitRange(qubit);
+        for (auto& [ctrl, _]: controls)
+            checkQubitRange(ctrl);
+    }
+
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit0, dd::Qubit qubit1, const dd::Controls& controls) const {
+        checkQubitRange(qubit0, controls);
+        checkQubitRange(qubit1);
+    }
+
+    void QuantumComputation::checkQubitRange(const std::vector<dd::Qubit>& qubits) const {
+        std::for_each(qubits.begin(), qubits.end(), [&](auto q) { checkQubitRange(q); });
+    }
+
 } // namespace qc

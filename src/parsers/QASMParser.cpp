@@ -38,7 +38,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             p.check(Token::Kind::semicolon);
             addClassicalRegister(n, s.c_str());
             p.nclassics = nclassics;
-        } else if (p.sym == Token::Kind::ugate || p.sym == Token::Kind::cxgate || p.sym == Token::Kind::swap || p.sym == Token::Kind::identifier || p.sym == Token::Kind::measure || p.sym == Token::Kind::reset || p.sym == Token::Kind::mcx_gray || p.sym == Token::Kind::mcx_recursive || p.sym == Token::Kind::mcx_vchain || p.sym == Token::Kind::mcphase) {
+        } else if (p.sym == Token::Kind::ugate || p.sym == Token::Kind::cxgate || p.sym == Token::Kind::swap || p.sym == Token::Kind::identifier || p.sym == Token::Kind::measure || p.sym == Token::Kind::reset || p.sym == Token::Kind::mcx_gray || p.sym == Token::Kind::mcx_recursive || p.sym == Token::Kind::mcx_vchain || p.sym == Token::Kind::mcphase || p.sym == Token::Kind::sxgate || p.sym == Token::Kind::sxdggate) {
             ops.emplace_back(p.Qop());
         } else if (p.sym == Token::Kind::gate) {
             p.GateDecl();
