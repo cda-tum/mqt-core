@@ -17,7 +17,7 @@
 using namespace qc;
 using namespace dd;
 
-class DDNoiseFunctionalityTest: public ::testing::Test {
+class DDECCFunctionalityTest: public ::testing::Test {
 protected:
     void SetUp() override {
         // circuit taken from https://github.com/pnnl/qasmbench
@@ -53,7 +53,7 @@ protected:
     qc::QuantumComputation qc{};
 };
 
-TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
+TEST_F(DDECCFunctionalityTest, StochSimulateAdder4IdentiyError) {
     Ecc* mapper           = nullptr;
     bool decomposeMC      = false;
     bool cliffOnly        = false;
