@@ -124,6 +124,8 @@ namespace qasm {
         keywords["mcx_recursive"]      = Token::Kind::mcx_recursive;
         keywords["mcx_vchain"]         = Token::Kind::mcx_vchain;
         keywords["mcphase"]            = Token::Kind::mcphase;
+        keywords["sx"]                 = Token::Kind::sxgate;
+        keywords["sxdg"]               = Token::Kind::sxdggate;
         keywords["pi"]                 = Token::Kind::pi;
         keywords["OPENQASM"]           = Token::Kind::openqasm;
         keywords["show_probabilities"] = Token::Kind::probabilities;

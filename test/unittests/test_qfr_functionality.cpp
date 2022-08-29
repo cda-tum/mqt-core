@@ -6,9 +6,11 @@
 #include "CircuitOptimizer.hpp"
 #include "QuantumComputation.hpp"
 #include "algorithms/RandomCliffordCircuit.hpp"
+#include "dd/Control.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
+#include <iostream>
 #include <random>
 
 using namespace qc;
@@ -1699,4 +1701,89 @@ TEST_F(QFRFunctionality, OperationEquality) {
     EXPECT_TRUE(compound0.equals(compound0));
     EXPECT_FALSE(compound0.equals(compound1));
     EXPECT_FALSE(compound0.equals(compound2));
+}
+
+TEST_F(QFRFunctionality, CNOTCancellation1) {
+    QuantumComputation qc(2);
+    qc.x(0, 1_pc);
+    qc.x(0, 1_pc);
+
+    CircuitOptimizer::cancelCNOTs(qc);
+    EXPECT_TRUE(qc.empty());
+}
+
+TEST_F(QFRFunctionality, CNOTCancellation2) {
+    QuantumComputation qc(2);
+    qc.swap(0, 1);
+    qc.swap(1, 0);
+
+    CircuitOptimizer::cancelCNOTs(qc);
+    EXPECT_TRUE(qc.empty());
+}
+
+TEST_F(QFRFunctionality, CNOTCancellation3) {
+    QuantumComputation qc(2);
+    qc.swap(0, 1);
+    qc.x(0, 1_pc);
+
+    CircuitOptimizer::cancelCNOTs(qc);
+    EXPECT_TRUE(qc.size() == 2U);
+    auto& firstOperation = qc.front();
+    EXPECT_EQ(firstOperation->getType(), qc::X);
+    EXPECT_EQ(firstOperation->getTargets().front(), 0U);
+    EXPECT_EQ(firstOperation->getControls().begin()->qubit, 1U);
+
+    auto& secondOperation = qc.back();
+    EXPECT_EQ(secondOperation->getType(), qc::X);
+    EXPECT_EQ(secondOperation->getTargets().front(), 1U);
+    EXPECT_EQ(secondOperation->getControls().begin()->qubit, 0U);
+}
+
+TEST_F(QFRFunctionality, CNOTCancellation4) {
+    QuantumComputation qc(2);
+    qc.x(0, 1_pc);
+    qc.swap(0, 1);
+
+    CircuitOptimizer::cancelCNOTs(qc);
+    EXPECT_TRUE(qc.size() == 2U);
+    auto& firstOperation = qc.front();
+    EXPECT_EQ(firstOperation->getType(), qc::X);
+    EXPECT_EQ(firstOperation->getTargets().front(), 1U);
+    EXPECT_EQ(firstOperation->getControls().begin()->qubit, 0U);
+
+    auto& secondOperation = qc.back();
+    EXPECT_EQ(secondOperation->getType(), qc::X);
+    EXPECT_EQ(secondOperation->getTargets().front(), 0U);
+    EXPECT_EQ(secondOperation->getControls().begin()->qubit, 1U);
+}
+
+TEST_F(QFRFunctionality, CNOTCancellation5) {
+    QuantumComputation qc(2);
+    qc.x(0, 1_pc);
+    qc.x(1, 0_pc);
+    qc.x(0, 1_pc);
+
+    CircuitOptimizer::cancelCNOTs(qc);
+    EXPECT_TRUE(qc.size() == 1U);
+    auto& firstOperation = qc.front();
+    EXPECT_EQ(firstOperation->getType(), qc::SWAP);
+    EXPECT_EQ(firstOperation->getTargets().front(), 0U);
+    EXPECT_EQ(firstOperation->getTargets().back(), 1U);
+}
+
+TEST_F(QFRFunctionality, IndexOutOfRange) {
+    QuantumComputation qc(2);
+    qc::Permutation    layout{};
+    layout[0]        = 0;
+    layout[2]        = 1;
+    qc.initialLayout = layout;
+    qc.x(0);
+
+    EXPECT_THROW(qc.x(1), QFRException);
+    EXPECT_THROW(qc.x(0, dd::Control{1, dd::Control::Type::neg}), QFRException);
+    EXPECT_THROW(qc.x(0, {dd::Control{2, dd::Control::Type::neg}, dd::Control{1, dd::Control::Type::neg}}), QFRException);
+    EXPECT_THROW(qc.swap(0, 1), QFRException);
+    EXPECT_THROW(qc.swap(0, 2, dd::Control{1, dd::Control::Type::neg}), QFRException);
+    EXPECT_THROW(qc.swap(0, 2, {dd::Control{1, dd::Control::Type::neg}}), QFRException);
+    EXPECT_THROW(qc.reset({0, 1, 2}), QFRException);
 }

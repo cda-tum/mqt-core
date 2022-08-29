@@ -110,9 +110,9 @@ namespace qc {
 
         void dumpOpenQASM([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg) const override {
             of << "if(";
-            of << creg[controlRegister.first].first;
+            of << creg[controlRegister.second].first;
             of << " == " << expectedValue << ") ";
-            op->dumpOpenQASM(of, qreg, creg);
+            op.get()->dumpOpenQASM(of, qreg, creg);
         }
 
         void dumpQiskit([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg, [[maybe_unused]] const char* anc_reg_name) const override {

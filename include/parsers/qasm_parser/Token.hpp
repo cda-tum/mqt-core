@@ -62,6 +62,8 @@ namespace qasm {
             mcx_recursive,
             mcx_vchain,
             mcphase,
+            sxgate,
+            sxdggate,
             comment
         };
 
@@ -106,6 +108,8 @@ namespace qasm {
             {Token::Kind::mcx_recursive, "mcx_recursive"},
             {Token::Kind::mcx_vchain, "mcx_vchain"},
             {Token::Kind::mcphase, "mcphase"},
+            {Token::Kind::sxgate, "sx"},
+            {Token::Kind::sxdggate, "sxdg"},
             {Token::Kind::pi, "pi"},
             {Token::Kind::measure, "measure"},
             {Token::Kind::openqasm, "openqasm"},

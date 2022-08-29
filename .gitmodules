@@ -18,3 +18,8 @@
 	url = https://github.com/pybind/pybind11_json.git
 	branch = master
 	shallow = true
+[submodule "extern/zx"]
+	path = extern/zx
+	url = https://github.com/cda-tum/zx.git
+	branch = main
+	shallow = true

@@ -158,5 +158,13 @@ namespace qc {
         [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }
 
         std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
+
+        [[nodiscard]] std::set<dd::Qubit> getUsedQubits() const override {
+            std::set<dd::Qubit> usedQubits{};
+            for (const auto& op: ops) {
+                usedQubits.merge(op->getUsedQubits());
+            }
+            return usedQubits;
+        }
     };
 } // namespace qc
