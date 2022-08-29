@@ -3,8 +3,10 @@
 #include "Definitions.hpp"
 #include "Expression.hpp"
 
+#include <cstdint>
 #include <iterator>
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace zx {

@@ -1,11 +1,13 @@
 #include "Utils.hpp"
 
+#include <cstddef>
+
 namespace zx {
     Vertices::VertexIterator::VertexIterator(
             std::vector<std::optional<VertexData>>& vertices, Vertex v):
         v(v),
         currentPos(vertices.begin()), vertices(vertices) {
-        if ((size_t)v >= vertices.size()) {
+        if ((std::size_t)v >= vertices.size()) {
             currentPos = vertices.end();
             this->v    = vertices.size();
         } else {
@@ -52,7 +54,7 @@ namespace zx {
         v(0),
         currentPos(edges[0].begin()), edgesPos(edges.begin()), edges(edges), vertices(vertices) {
         if (!vertices.empty()) {
-            while ((size_t)v < edges.size() && !vertices[v].has_value())
+            while ((std::size_t)v < edges.size() && !vertices[v].has_value())
                 v++;
             currentPos = edges[v].begin();
             edgesPos   = edges.begin() + static_cast<int>(v);
@@ -69,7 +71,7 @@ namespace zx {
             std::vector<std::optional<VertexData>>& vertices, Vertex v):
         v(v),
         edges(edges), vertices(vertices) {
-        if ((size_t)v >= edges.size()) {
+        if ((std::size_t)v >= edges.size()) {
             currentPos = edges.back().end();
             edgesPos   = edges.end();
             this->v    = edges.size();
@@ -92,12 +94,12 @@ namespace zx {
                currentPos->to < v) // make sure to not iterate over an edge twice
             currentPos++;
 
-        while (currentPos == edges[v].end() && (size_t)v < edges.size()) {
+        while (currentPos == edges[v].end() && (std::size_t)v < edges.size()) {
             v++;
-            while ((size_t)v < edges.size() && !vertices[v].has_value())
+            while ((std::size_t)v < edges.size() && !vertices[v].has_value())
                 v++;
 
-            if ((size_t)v == edges.size()) {
+            if ((std::size_t)v == edges.size()) {
                 currentPos = edges.back().end();
                 edgesPos   = edges.end();
                 v--;

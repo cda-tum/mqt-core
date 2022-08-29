@@ -1,9 +1,13 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "Rules.hpp"
-#include "ZXDiagram.hpp"
+
+#include <cstddef>
 
 namespace zx {
+    class ZXDiagram;
+
     using VertexCheckFun = decltype(checkIdSimp);
     using VertexRuleFun  = decltype(removeId);
     using EdgeCheckFun   = decltype(checkSpiderFusion);

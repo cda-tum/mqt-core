@@ -2,9 +2,10 @@
 
 #include "Definitions.hpp"
 #include "Rules.hpp"
+#include "ZXDiagram.hpp"
 
-#include <cstddef>
-#include <iostream>
+#include <utility>
+#include <vector>
 
 namespace zx {
     std::size_t simplifyVertices(ZXDiagram& diag, VertexCheckFun check,

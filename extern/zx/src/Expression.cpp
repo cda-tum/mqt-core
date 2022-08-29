@@ -139,7 +139,7 @@ namespace zx {
         if (lhs.numTerms() != rhs.numTerms() || lhs.getConst() != rhs.getConst())
             return false;
 
-        for (size_t i = 0; i < lhs.numTerms(); ++i) {
+        for (std::size_t i = 0; i < lhs.numTerms(); ++i) {
             if (std::abs(lhs[i].getCoeff() - rhs[i].getCoeff()) >= TOLERANCE)
                 return false;
         }

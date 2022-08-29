@@ -10,8 +10,12 @@ using Rational = boost::multiprecision::cpp_rational;
 using BigInt   = boost::multiprecision::cpp_int;
 #endif
 
+#include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
+#include <type_traits>
+#include <utility>
 
 namespace zx {
 

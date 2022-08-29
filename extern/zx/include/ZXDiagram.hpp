@@ -2,17 +2,11 @@
 
 #include "Definitions.hpp"
 #include "Expression.hpp"
-#include "Rational.hpp"
 #include "Utils.hpp"
 
-#include <algorithm>
 #include <cstddef>
-#include <cstdint>
-#include <memory>
-#include <numeric>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 

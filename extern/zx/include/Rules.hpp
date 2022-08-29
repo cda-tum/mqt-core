@@ -1,8 +1,10 @@
 #pragma once
 
-#include "ZXDiagram.hpp"
+#include "Definitions.hpp"
 
 namespace zx {
+    class ZXDiagram;
+
     bool checkIdSimp(ZXDiagram& diag, Vertex v);
 
     void removeId(ZXDiagram& diag, Vertex v);

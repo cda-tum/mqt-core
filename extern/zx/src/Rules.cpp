@@ -1,11 +1,13 @@
 #include "Rules.hpp"
 
 #include "Definitions.hpp"
+#include "Expression.hpp"
 #include "Rational.hpp"
+#include "Utils.hpp"
 #include "ZXDiagram.hpp"
 
 #include <algorithm>
-#include <iostream>
+#include <cstddef>
 #include <optional>
 
 namespace zx {
