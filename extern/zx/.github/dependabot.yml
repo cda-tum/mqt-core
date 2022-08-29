@@ -6,11 +6,11 @@ updates:
     directory:         "/"
     # Check the submodules for updates every month
     schedule:
-      interval: "weekly"
-      day:      "monday"
+      interval: "monthly"
       time:     "06:00"
+      timezone: "Europe/Vienna"
     assignees:
-      - "burgholzer"
+      - "pehamTom"
 
   # Enable version updates for GitHub Actions
   - package-ecosystem: "github-actions"
@@ -21,5 +21,6 @@ updates:
       interval: "weekly"
       day:      "monday"
       time:     "06:00"
+      timezone: "Europe/Vienna"
     assignees:
-      - "burgholzer"
+      - "pehamTom"
