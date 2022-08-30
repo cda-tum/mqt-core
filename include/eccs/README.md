@@ -18,4 +18,13 @@
 ### Q18Surface
 The Q18Surface code implemented here is based on the concept that unmeasured data qubits can be used to represent logical qubits, as described [here](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.052312). The basic properties and operations are shown and described below: 
 
-IMAGE
+![Image explaining the structure of the Q18Surface-Code](./q18.png)
+
+* red qubits = data qubits
+* green/blue qubits = ancilla qubits - measure X-/Z-parity of data qubits in green/blue area, respectively
+* black qubits = used as logical qubits
+* examples
+  * $X_L = X_{15}X_{17}$ (any set of operations that changes an even number of red data qubits in each green area, but triggers qubit 14)
+  * $Z_L = Z_{18}Z_{20}$ (any set of operations that changes an even number of red data qubits in each blue area, but triggers qubit 21)
+  * $H_L = H_{each red qubit}$, followed by mirroring along the axis $5-10-\ldots-30$, i.e. $swap(1,29), swap(3, 17), \ldots$
+* to measure the bit or phase of the logical qubit, measurements are performed on the qubit 14 or 21, respectively, as shown in the right-hand corner of the picture. 
