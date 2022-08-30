@@ -156,12 +156,10 @@ optional arguments:
 | --- | --- | --- | --- | --- | --- | --- |
 | able to detect bit flips | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | able to detect phase flips | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| #physical data qubits per logical qubit | 3 | 5 | 7 | 9 | 9 | 18 |
-| #ancilla qubits (total) | 2 | 4 | 3 | 8 | 8 | 18 per qubit |
 | #qubits for n logical qubits | 3n+2 | 5n+4 | 7n+3 | 9n+8 | 9n+8 | 36n |
 | #classical bits (total) | 2 | 5 | 3 | 8 | 8 | 16 |
 
-More-detailed information about the error-correcting codes can be found in the README information [here](./include/eccs).
+**More-detailed information about the error-correcting codes can be found in the README information [here](./include/eccs).**
 
 ## MQT Toolset
 
