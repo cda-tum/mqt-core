@@ -10,13 +10,9 @@
 | #qubits for n logical qubits | 3n+2 | 5n+4 | 7n+3 | 9n+8 | 9n+8 | 36n |
 | #classical bits (total) | 2 | 5 | 3 | 8 | 8 | 16 |
 
-[^1]: [Scheme for reducing decoherence in quantum computer memory](https://link.aps.org/doi/10.1103/PhysRevA.52.R2493))
-[^2]: [Perfect Quantum Error Correcting Code](https://link.aps.org/doi/10.1103/PhysRevLett.77.198)
-[^3]: [Error Correcting Codes in Quantum Theory](https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.77.793)
-[^4]: [A proposal for a minimal surface code experiment](https://link.aps.org/doi/10.1103/PhysRevA.96.032338))
 
 ### Q18Surface
-The Q18Surface code implemented here is based on the concept that unmeasured data qubits can be used to represent logical qubits, as described [here](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.052312). The basic properties and operations are shown and described below: 
+The Q18Surface code implemented here is based on the concept that unmeasured data qubits can be used to represent logical qubits, as described in [^5]. The basic properties and operations are shown and described below: 
 
 ![Image explaining the structure of the Q18Surface-Code](./q18.png)
 
@@ -28,3 +24,13 @@ The Q18Surface code implemented here is based on the concept that unmeasured dat
   * $Z_L = Z_{18}Z_{20}$ (any set of operations that changes an even number of red data qubits in each blue area, but triggers qubit 21)
   * $H_L = H_{each red qubit}$, followed by mirroring along the axis $5-10-\ldots-30$, i.e. $swap(1,29), swap(3, 17), \ldots$
 * to measure the bit or phase of the logical qubit, measurements are performed on the qubit 14 or 21, respectively, as shown in the right-hand corner of the picture. 
+
+[^1]: [P. W. Shor, ‘Scheme for reducing decoherence in quantum computer memory’, Phys. Rev. A, volume 52, pages R2493–R2496, October 1995.](https://link.aps.org/doi/10.1103/PhysRevA.52.R2493)
+
+[^2]: [R. Laflamme, C. Miquel, J. P. Paz, W. H. Zurek, ‘Perfect Quantum Error Correcting Code’, Phys. Rev. Lett., volume 77, pages 198–201, July 1996.](https://link.aps.org/doi/10.1103/PhysRevLett.77.198)
+
+[^3]: [A. M. Steane, ‘Error Correcting Codes in Quantum Theory’, Phys. Rev. Lett., volume 77, pages 793–797, July 1996.](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.77.793)
+
+[^4]: [J. R. Wootton, A. Peter, J. R. Winkler, D. Loss, ‘Proposal for a minimal surface code experiment’, Phys. Rev. A, volume 96, page 032338, September 2017.](https://link.aps.org/doi/10.1103/PhysRevA.96.032338)
+
+[^5]: [A. G. Fowler, A. M. Stephens, P. Groszkowski, ‘High-threshold universal quantum computation on the surface code’, Phys. Rev. A, volume 80, page 052312, November 2009.](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.052312)
