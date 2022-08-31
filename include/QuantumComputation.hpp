@@ -569,6 +569,24 @@ namespace qc {
             checkQubitRange(qubit);
             emplace_back<NonUnitaryOperation>(getNqubits(), qubit, clbit);
         }
+
+        void measure(dd::Qubit qubit, std::pair<std::string, std::size_t> clbit) {
+            checkQubitRange(qubit);
+            for (auto const& [first, second]: cregs) {
+                auto test = std::string(first);
+                if (clbit.first.compare(std::string(first)) == 0) {
+                    assert(clbit.second < second.second);
+                    emplace_back<NonUnitaryOperation>(getNqubits(), qubit, second.first + clbit.second);
+                }
+            }
+
+            //            for(int i=0; i < cregs.size(); i++){
+            //                if(clbit.first.compare(cregs[i].first)){
+            //                    emplace_back<NonUnitaryOperation>(getNqubits(), qubit, clbit.second);
+            //                }
+            //            }
+        }
+
         void measure(const std::vector<dd::Qubit>&   qubitRegister,
                      const std::vector<std::size_t>& classicalRegister) {
             checkQubitRange(qubitRegister);
