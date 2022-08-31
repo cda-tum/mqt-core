@@ -1,29 +1,30 @@
 # Error-correcting codes
-Below, every available error-correcting code is shortly explained. 
 
-*Draft version: currently only key notes!*
+### Properties of the implemented error-correcting codes
+|  | Q3Shor[^1] | Q5Laflamme[^2] | Q7Steane[^3] | Q9Shor[^1] | Q9Surface[^4] | Q18Surface |
+| --- | --- | --- | --- | --- | --- | --- |
+| able to detect bit flips | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| able to detect phase flips | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| #physical data qubits per logical qubit | 3 | 5 | 7 | 9 | 9 | 18 |
+| #ancilla qubits (total) | 2 | 4 | 3 | 8 | 8 | 18 per qubit |
+| #qubits for n logical qubits | 3n+2 | 5n+4 | 7n+3 | 9n+8 | 9n+8 | 36n |
+| #classical bits (total) | 2 | 5 | 3 | 8 | 8 | 16 |
 
-## Shor codes ([source](https://link.aps.org/doi/10.1103/PhysRevA.52.R2493))
-### Q3Shor
-chosen: The Q3Shor code was the first proposed quantum error-correcting code. Although it does not detect phase flips, it is relatively easy to understand. 
+[^1]: [Scheme for reducing decoherence in quantum computer memory](https://link.aps.org/doi/10.1103/PhysRevA.52.R2493))
+[^2]: [Perfect Quantum Error Correcting Code](https://link.aps.org/doi/10.1103/PhysRevLett.77.198)
+[^3]: [Error Correcting Codes in Quantum Theory](https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.77.793)
+[^4]: [A proposal for a minimal surface code experiment](https://link.aps.org/doi/10.1103/PhysRevA.96.032338))
 
-"repetition" code (no-cloning), logical 0/1 mapped to 000 / 111. Measuring via syndromes. 
-### Q9Shor
-chosen: The Q9Shor code can be seen as a "two-level Q3Shor code". In contrast to the basic Q3Shor code, it can also detect phase flips. Thus, arbitrary one-qubit errors can be detected.  
-
-## Stabilizer codes
-### Q5Laflamme ([source](https://link.aps.org/doi/10.1103/PhysRevLett.77.198))
-chosen: Although it is not easy to support more complicated operations for the Q5Laflamme code, it has been chosen as it is the smallest error-correcting code which can detect arbitrary one-qubit errors. 
-
-### Q7Steane ([source](https://link.aps.org/doi/10.1103/PhysRevLett.77.793))
-chosen: The Q7Steane code is structured in a way such that many qubit operations as well as simple detection and correction are well-supported.
-
-## Surface Codes ([source](https://doi.org/10.48550/arXiv.quant-ph/9811052), [source](https://doi.org/10.48550/arXiv.quant-ph/0110143))
-chosen: Surface codes are the state of the art in quantum circuit research. 
-In contrast to the previous kinds of ECCs, surface codes can be extended easily without changing the concept of the correction mechanism. 
-Moreover, the qubits only have to interact with few neighboring qubits, which makes these types of ECCs serializable in hardware more easily. 
-
-### Q9Surface
-chosen: The Q9Surface code is the smallest possible surface code which can detect and correct arbitrary one-qubit errors. 
 ### Q18Surface
-chosen: The Q18-Surface code is the smallest possible surface code we found that can easily support a Hadamard operation. 
+The Q18Surface code implemented here is based on the concept that unmeasured data qubits can be used to represent logical qubits, as described [here](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.052312). The basic properties and operations are shown and described below: 
+
+![Image explaining the structure of the Q18Surface-Code](./q18.png)
+
+* red qubits = data qubits
+* green/blue qubits = ancilla qubits - measure X-/Z-parity of data qubits in green/blue area, respectively
+* black qubits = used as logical qubits
+* examples
+  * $X_L = X_{15}X_{17}$ (any set of operations that changes an even number of red data qubits in each green area, but triggers qubit 14)
+  * $Z_L = Z_{18}Z_{20}$ (any set of operations that changes an even number of red data qubits in each blue area, but triggers qubit 21)
+  * $H_L = H_{each red qubit}$, followed by mirroring along the axis $5-10-\ldots-30$, i.e. $swap(1,29), swap(3, 17), \ldots$
+* to measure the bit or phase of the logical qubit, measurements are performed on the qubit 14 or 21, respectively, as shown in the right-hand corner of the picture. 
