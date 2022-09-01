@@ -15,7 +15,7 @@ void IdEcc::measureAndCorrect() {}
 
 void IdEcc::writeDecoding() {}
 
-void IdEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
+void IdEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) {
     const int nQubits = qc.getNqubits();
     switch(gate.get()->getType()) {
     case qc::I: break;

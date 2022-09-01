@@ -245,6 +245,17 @@ namespace qc {
         [[nodiscard]] const QuantumRegisterMap&   getANCregs() const { return ancregs; }
         [[nodiscard]] decltype(mt)&               getGenerator() { return mt; }
 
+        std::string returnClassicalRegisterName(size_t index){
+            for (auto const& [regName, regBits]: cregs) {
+                const auto regStart = regBits.first;
+                const auto regEnd = regStart + regBits.second;
+                if (index >= regStart && index < regEnd) {
+                    return {regName};
+                }
+            }
+            return {};
+        }
+
         void setName(const std::string& n) { name = n; }
 
         // initialLayout[physical_qubit] = logical_qubit
@@ -572,19 +583,14 @@ namespace qc {
 
         void measure(dd::Qubit qubit, std::pair<std::string, std::size_t> clbit) {
             checkQubitRange(qubit);
-            for (auto const& [first, second]: cregs) {
-                auto test = std::string(first);
-                if (clbit.first.compare(std::string(first)) == 0) {
-                    assert(clbit.second < second.second);
-                    emplace_back<NonUnitaryOperation>(getNqubits(), qubit, second.first + clbit.second);
+            for (auto const& [regName, regBits]: cregs) {
+                if (clbit.first.compare(regName) == 0) {
+                    assert(clbit.second < regBits.second);
+                    emplace_back<NonUnitaryOperation>(getNqubits(), qubit, regBits.first + clbit.second);
+                    return;
                 }
             }
-
-            //            for(int i=0; i < cregs.size(); i++){
-            //                if(clbit.first.compare(cregs[i].first)){
-            //                    emplace_back<NonUnitaryOperation>(getNqubits(), qubit, clbit.second);
-            //                }
-            //            }
+            std::cerr << "The classical register \"" << clbit.first << "\" does not exists!" << std::endl;
         }
 
         void measure(const std::vector<dd::Qubit>&   qubitRegister,
@@ -638,6 +644,7 @@ namespace qc {
         // this function augments a given circuit by additional registers
         void addQubitRegister(std::size_t, const char* reg_name = DEFAULT_QREG);
         void addClassicalRegister(std::size_t nc, const char* reg_name = DEFAULT_CREG);
+        void addClassicalRegister(std::size_t nc, std::string reg_name);
         void addAncillaryRegister(std::size_t nq, const char* reg_name = DEFAULT_ANCREG);
         // a function to combine all quantum registers (qregs and ancregs) into a single register (useful for circuits mapped to a device)
         void unifyQuantumRegisters(const std::string& regName = DEFAULT_QREG);

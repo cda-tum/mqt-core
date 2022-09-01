@@ -18,7 +18,11 @@ void Q7SteaneEcc::initMappedCircuit() {
     statistics.nOutputQubits        = qc.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
     statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits + 7;
     qcMapped.addQubitRegister(statistics.nOutputQubits);
-    qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
+//    qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
+    auto cRegs = qc.getCregs();
+    for (auto const& [regName, regBits]: cRegs) {
+        qcMapped.addClassicalRegister(regBits.second, regName);
+    }
     qcMapped.addClassicalRegister(3, "qecc");
 }
 
@@ -152,7 +156,7 @@ void Q7SteaneEcc::writeDecoding() {
     isDecoded = true;
 }
 
-void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
+void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) {
     if (isDecoded && gate->getType() != qc::Measure) {
         writeEncoding();
     }
@@ -265,7 +269,13 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
             }
             measureGate = (qc::NonUnitaryOperation*)gate.get();
             for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
-                qcMapped.measure(static_cast<dd::Qubit>(measureGate->getClassics()[j]), measureGate->getTargets()[j]);
+                auto classicalRegisterName = qc.returnClassicalRegisterName(measureGate->getTargets()[j]);
+                if (!classicalRegisterName.empty()){
+                    qcMapped.measure(static_cast<dd::Qubit>(measureGate->getClassics()[j]), {classicalRegisterName, measureGate->getTargets()[j]});
+                } else {
+                    qcMapped.measure(static_cast<dd::Qubit>(measureGate->getClassics()[j]), measureGate->getTargets()[j]);
+                }
+
             }
             break;
         case qc::T:

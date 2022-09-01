@@ -32,6 +32,9 @@ protected:
         std::map<std::size_t, bool> classicValuesECC;
         std::map<std::size_t, bool> classicValuesOriginal;
 
+        std::map<std::size_t, bool> finalClassicValuesECC{};
+        std::map<std::size_t, bool> finalClassicValuesOriginal{};
+
         auto ddECC      = std::make_unique<dd::Package<>>(qcECC.getNqubits());
         auto ddOriginal = std::make_unique<dd::Package<>>(qcOriginal.getNqubits());
 
@@ -48,6 +51,10 @@ protected:
                     auto result = ddECC->measureOneCollapsing(rootEdgeECC, quantum.at(i), false, mt);
                     assert(result == '0' || result == '1');
                     classicValuesECC[classic.at(i)] = (result == '1');
+                    auto regName                    = qcECC.returnClassicalRegisterName(quantum.at(i));
+                    if (regName == "resultReg") {
+                        finalClassicValuesECC[classic.at(i)] = (result == '1');
+                    }
                 }
             } else if (op->getType() == qc::Reset) {
                 auto* nu_op   = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
@@ -57,8 +64,8 @@ protected:
                     auto result = ddECC->measureOneCollapsing(rootEdgeECC, quantum.at(i), false, mt);
                     if (result == 1) {
                         auto flipOperation = StandardOperation(nu_op->getNqubits(), i, qc::X);
-                        auto operation = dd::getDD(&flipOperation, ddECC);
-                        rootEdgeECC    = ddECC->multiply(operation, rootEdgeECC);
+                        auto operation     = dd::getDD(&flipOperation, ddECC);
+                        rootEdgeECC        = ddECC->multiply(operation, rootEdgeECC);
                     }
                 }
             } else {
@@ -77,6 +84,10 @@ protected:
                     auto result = ddOriginal->measureOneCollapsing(rootEdgeOriginal, quantum.at(i), false, mt);
                     assert(result == '0' || result == '1');
                     classicValuesOriginal[classic.at(i)] = (result == '1');
+                    auto regName                         = qcOriginal.returnClassicalRegisterName(classic.at(i));
+                    if (regName == "resultReg") {
+                        finalClassicValuesOriginal[classic.at(i)] = (result == '1');
+                    }
                 }
             } else {
                 auto operation   = dd::getDD(op.get(), ddOriginal);
@@ -84,11 +95,8 @@ protected:
             }
         }
 
-        for (auto const& x: classicValuesOriginal) {
-            if (x.second != classicValuesECC[x.first]) return false;
-            std::cout << "first: " << x.first << " second: " << x.second << std::endl;
-            std::cout << "first: "
-                      << " second: " << classicValuesECC[x.first] << std::endl;
+        for (auto const& x: finalClassicValuesOriginal) {
+            if (x.second != finalClassicValuesECC[x.first]) return false;
         }
 
         return true;
@@ -97,25 +105,23 @@ protected:
     static void createXCircuit(qc::QuantumComputation& qc) {
         qc = {};
         qc.addQubitRegister(1U);
-        qc.addClassicalRegister(1U);
+        qc.addClassicalRegister(1U, "resultReg");
         qc.x(0);
-        qc.measure(0, 0);
+        qc.measure(0, {"resultReg", 0});
     }
 
-    void createYCircuit(qc::QuantumComputation &qc) {
-        qc = {};
-        qc.addQubitRegister(2U);
-        qc.addClassicalRegister(2U);
-        qc.addClassicalRegister(2U, "finalMeasure");
-        qc.addClassicalRegister(2U, "testReg");
-        qc.h(0);
-        qc.y(0);
-        qc.h(0);
-        qc.y(1);
-        qc.measure(0, {"finalMeasure", 0});
-        qc.measure(1, 1);
-    }
-
+    //    void createYCircuit(qc::QuantumComputation& qc) {
+    //        qc = {};
+    //        qc.addQubitRegister(2U);
+    //        qc.addClassicalRegister(2U, "resultReg");
+    //        qc.h(0);
+    //        qc.y(0);
+    //        qc.h(0);
+    //        qc.y(1);
+    //        qc.measure(0, {"resultReg", 0});
+    //        qc.measure(1, {"resultReg", 1});
+    //    }
+    //
     //void createHCircuit(qc::QuantumComputation &qc) {
     //    qc = {};
     //    qc.addQubitRegister(1U);
@@ -155,17 +161,17 @@ TEST_F(DDECCFunctionalityTest, StochSimulateAdder4IdentiyError) {
     bool cliffOnly        = false;
     int  measureFrequency = 1;
 
-//    {
-//        qc::QuantumComputation qcOriginal{};
-//        createXCircuit(qcOriginal);
-//        Ecc*                    mapper = new Q7SteaneEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
-//        qc::QuantumComputation& qcECC  = mapper->apply();
-//        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));
-//    }
+    //    {
+    //        qc::QuantumComputation qcOriginal{};
+    //        createXCircuit(qcOriginal);
+    //        Ecc*                    mapper = new Q7SteaneEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+    //        qc::QuantumComputation& qcECC  = mapper->apply();
+    //        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));
+    //    }
 
     {
         qc::QuantumComputation qcOriginal{};
-        createYCircuit(qcOriginal);
+        createXCircuit(qcOriginal);
         Ecc*                    mapper = new Q7SteaneEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
         qc::QuantumComputation& qcECC  = mapper->apply();
         EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));

@@ -67,7 +67,7 @@ protected:
 
     virtual void writeDecoding() = 0;
 
-    virtual void mapGate(const std::unique_ptr<qc::Operation>& gate) = 0;
+    virtual void mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) = 0;
 
     void gateNotAvailableError(const std::unique_ptr<qc::Operation>& gate);
 

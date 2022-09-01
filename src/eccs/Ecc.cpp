@@ -33,7 +33,7 @@ qc::QuantumComputation& Ecc::apply() {
     long nInputGates = 0;
     for (const auto& gate: qc) {
         nInputGates++;
-        mapGate(gate);
+        mapGate(gate, qc);
         if (measureFrequency > 0 && nInputGates % measureFrequency == 0) {
             measureAndCorrect();
         }

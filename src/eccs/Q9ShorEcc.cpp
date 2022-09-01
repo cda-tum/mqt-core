@@ -168,7 +168,7 @@ void Q9ShorEcc::writeDecoding() {
     isDecoded = true;
 }
 
-void Q9ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
+void Q9ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) {
     if (isDecoded && gate.get()->getType() != qc::Measure && gate.get()->getType() != qc::H) {
         writeEncoding();
     }

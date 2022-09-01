@@ -45,7 +45,7 @@ void QxCustomEcc::writeDecoding() {
     }
 }
 
-void QxCustomEcc::mapGate(const std::unique_ptr<qc::Operation> &gate) {
+void QxCustomEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) {
 
     //TODO make sure the parameter gate is written in 'encoded' form into the variable 'qcMapped'
 

@@ -26,7 +26,7 @@ protected:
 
 	void writeDecoding() override;
 
-	void mapGate(const std::unique_ptr<qc::Operation> &gate) override;
+    void mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) override;
 };
 
 #endif //QFR_Q3ShorEcc_HPP

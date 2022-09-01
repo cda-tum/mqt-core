@@ -174,7 +174,7 @@ void Q5LaflammeEcc::writeDecoding() {
     isDecoded = true;
 }
 
-void Q5LaflammeEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
+void Q5LaflammeEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) {
     if (isDecoded && gate.get()->getType() != qc::Measure && gate.get()->getType() != qc::H) {
         writeEncoding();
     }

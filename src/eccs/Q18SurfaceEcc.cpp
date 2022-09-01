@@ -205,7 +205,7 @@ void Q18SurfaceEcc::writeDecoding() {
     isDecoded = true;
 }
 
-void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate) {
+void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) {
     if (isDecoded && gate->getType() != qc::Measure) {
         writeEncoding();
     }
