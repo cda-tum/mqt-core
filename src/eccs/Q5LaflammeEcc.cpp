@@ -183,7 +183,6 @@ void Q5LaflammeEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quan
     switch (gate.get()->getType()) {
         case qc::I: break;
         case qc::X:
-        case qc::H:
         case qc::Y:
         case qc::Z:
             for (std::size_t t = 0; t < gate.get()->getNtargets(); t++) {
@@ -207,6 +206,7 @@ void Q5LaflammeEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quan
                 qcMapped.measure(measureGate->getClassics()[j], measureGate->getTargets()[j]);
             }
             break;
+        case qc::H:
         case qc::S:
         case qc::Sdag:
         case qc::T:
