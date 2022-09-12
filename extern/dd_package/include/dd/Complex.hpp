@@ -20,8 +20,8 @@ namespace dd {
         CTEntry* r;
         CTEntry* i;
 
-        static Complex zero;
-        static Complex one;
+        static Complex zero; // NOLINT(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables) automatic renaming does not work reliably, so skip linting
+        static Complex one;  // NOLINT(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables) automatic renaming does not work reliably, so skip linting
 
         void setVal(const Complex& c) const {
             r->value = CTEntry::val(c.r);
@@ -70,8 +70,8 @@ namespace dd {
         return os << c.toString();
     }
 
-    inline Complex Complex::zero{&ComplexTable<>::zero, &ComplexTable<>::zero};
-    inline Complex Complex::one{&ComplexTable<>::one, &ComplexTable<>::zero};
+    inline Complex Complex::zero{&ComplexTable<>::zero, &ComplexTable<>::zero}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    inline Complex Complex::one{&ComplexTable<>::one, &ComplexTable<>::zero};   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 } // namespace dd
 
 namespace std {

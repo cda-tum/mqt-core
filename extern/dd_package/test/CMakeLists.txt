@@ -30,6 +30,7 @@ endif ()
 add_executable(${PROJECT_NAME}_example ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 target_link_libraries(${PROJECT_NAME}_example PRIVATE ${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME}_example PROPERTIES FOLDER tests CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+target_compile_features(${PROJECT_NAME}_example PUBLIC cxx_std_17)
 enable_lto(${PROJECT_NAME}_example)
 
 macro(package_add_test TESTNAME)
@@ -40,6 +41,7 @@ macro(package_add_test TESTNAME)
 	# discover tests
 	gtest_discover_tests(${TESTNAME} WORKING_DIRECTORY ${PROJECT_DIR} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}")
 	set_target_properties(${TESTNAME} PROPERTIES FOLDER tests CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+	target_compile_features(${TESTNAME} PUBLIC cxx_std_17)
 	enable_lto(${TESTNAME})
 endmacro()
 
@@ -60,6 +62,7 @@ add_executable(${PROJECT_NAME}_bench EXCLUDE_FROM_ALL ${CMAKE_CURRENT_SOURCE_DIR
 # link the Google benchmark infrastructure and a default main fuction to the benchmark executable.
 target_link_libraries(${PROJECT_NAME}_bench PRIVATE ${PROJECT_NAME} benchmark::benchmark_main Threads::Threads)
 set_target_properties(${PROJECT_NAME}_bench PROPERTIES FOLDER tests CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+target_compile_features(${PROJECT_NAME}_bench PUBLIC cxx_std_17)
 enable_lto(${PROJECT_NAME}_bench)
 
 add_custom_command(TARGET ${PROJECT_NAME}_bench

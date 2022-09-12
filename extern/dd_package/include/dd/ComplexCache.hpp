@@ -21,7 +21,7 @@ namespace dd {
 
     public:
         ComplexCache():
-            chunkID(0), allocationSize(INITIAL_ALLOCATION_SIZE) {
+            allocationSize(INITIAL_ALLOCATION_SIZE) {
             // allocate first chunk of cache entries
             chunks.emplace_back(allocationSize);
             allocations += allocationSize;
@@ -120,7 +120,7 @@ namespace dd {
     private:
         Entry*                                available{};
         std::vector<std::vector<Entry>>       chunks{};
-        std::size_t                           chunkID;
+        std::size_t                           chunkID{0};
         typename std::vector<Entry>::iterator chunkIt;
         typename std::vector<Entry>::iterator chunkEndIt;
         std::size_t                           allocationSize;

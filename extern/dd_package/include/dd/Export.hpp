@@ -126,11 +126,14 @@ namespace dd {
         if (std::abs(mag - 1) < ComplexTable<>::tolerance()) {
             if (std::abs(phase) < ComplexTable<>::tolerance()) {
                 return "1";
-            } else if (std::abs(phase - dd::PI_2) < ComplexTable<>::tolerance()) {
+            }
+            if (std::abs(phase - dd::PI_2) < ComplexTable<>::tolerance()) {
                 return "i";
-            } else if (std::abs(phase + dd::PI_2) < ComplexTable<>::tolerance()) {
+            }
+            if (std::abs(phase + dd::PI_2) < ComplexTable<>::tolerance()) {
                 return "-i";
-            } else if (std::abs(std::abs(phase) - dd::PI) < ComplexTable<>::tolerance()) {
+            }
+            if (std::abs(std::abs(phase) - dd::PI) < ComplexTable<>::tolerance()) {
                 return "-1";
             }
             printPhaseFormatted(ss, phase);
@@ -141,7 +144,8 @@ namespace dd {
             ss << "-";
             dd::ComplexValue::printFormatted(ss, mag);
             return ss.str();
-        } else if (std::abs(phase) < ComplexTable<>::tolerance()) {
+        }
+        if (std::abs(phase) < ComplexTable<>::tolerance()) {
             dd::ComplexValue::printFormatted(ss, mag);
             return ss.str();
         }
@@ -337,13 +341,13 @@ namespace dd {
     }
     template<class Edge>
     static std::ostream& memoryNode(const Edge& e, std::ostream& os) {
-        constexpr std::size_t N         = std::tuple_size_v<decltype(e.p->e)>;
+        constexpr std::size_t n         = std::tuple_size_v<decltype(e.p->e)>;
         auto                  nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >> 1U; // this allows for 2^20 (roughly 1e6) unique nodes
         os << nodelabel << "[label=<";
         os << R"(<font point-size="10"><table border="1" cellspacing="0" cellpadding="2" style="rounded">)";
-        os << R"(<tr><td colspan=")" << N << R"(" border="1" sides="B">)" << std::hex << reinterpret_cast<std::uintptr_t>(e.p) << std::dec << " ref: " << e.p->ref << "</td></tr>";
+        os << R"(<tr><td colspan=")" << n << R"(" border="1" sides="B">)" << std::hex << reinterpret_cast<std::uintptr_t>(e.p) << std::dec << " ref: " << e.p->ref << "</td></tr>";
         os << "<tr>";
-        for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t i = 0; i < n; ++i) {
             os << "<td port=\"" << i << R"(" href="javascript:;" border="0" tooltip=")" << e.p->e[i].w.toString(false, 4) << "\">";
             if (e.p->e[i] == Edge::zero) {
                 os << "&nbsp;0 "
@@ -359,25 +363,27 @@ namespace dd {
         return os;
     }
 
-    [[maybe_unused]] static std::ostream& bwEdge(const mEdge& from, const mEdge& to, short idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& bwEdge(const mEdge& from, const mEdge& to, std::uint_fast8_t idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
         os << fromlabel << ":" << idx << ":";
         if (classic) {
-            if (idx == 0)
+            if (idx == 0) {
                 os << "sw";
-            else if (idx == 1 || idx == 2)
+            } else if (idx == 1 || idx == 2) {
                 os << "s";
-            else
+            } else {
                 os << "se";
+            }
         } else {
-            if (idx == 0)
+            if (idx == 0) {
                 os << "sw";
-            else if (idx == 1)
+            } else if (idx == 1) {
                 os << "se";
-            else
+            } else {
                 os << 's';
+            }
         }
         os << "->";
         if (to.isTerminal()) {
@@ -398,7 +404,7 @@ namespace dd {
 
         return os;
     }
-    [[maybe_unused]] static std::ostream& bwEdge(const vEdge& from, const vEdge& to, short idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& bwEdge(const vEdge& from, const vEdge& to, std::uint_fast8_t idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -422,25 +428,27 @@ namespace dd {
 
         return os;
     }
-    [[maybe_unused]] static std::ostream& coloredEdge(const mEdge& from, const mEdge& to, short idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& coloredEdge(const mEdge& from, const mEdge& to, std::uint_fast8_t idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
         os << fromlabel << ":" << idx << ":";
         if (classic) {
-            if (idx == 0)
+            if (idx == 0) {
                 os << "sw";
-            else if (idx == 1 || idx == 2)
+            } else if (idx == 1 || idx == 2) {
                 os << "s";
-            else
+            } else {
                 os << "se";
+            }
         } else {
-            if (idx == 0)
+            if (idx == 0) {
                 os << "sw";
-            else if (idx == 1)
+            } else if (idx == 1) {
                 os << "se";
-            else
+            } else {
                 os << 's';
+            }
         }
         os << "->";
         if (to.isTerminal()) {
@@ -459,7 +467,7 @@ namespace dd {
 
         return os;
     }
-    [[maybe_unused]] static std::ostream& coloredEdge(const vEdge& from, const vEdge& to, short idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& coloredEdge(const vEdge& from, const vEdge& to, std::uint_fast8_t idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -482,7 +490,7 @@ namespace dd {
         return os;
     }
     template<class Edge>
-    static std::ostream& memoryEdge(const Edge& from, const Edge& to, short idx, std::ostream& os, bool edgeLabels = false) {
+    static std::ostream& memoryEdge(const Edge& from, const Edge& to, std::uint_fast8_t idx, std::ostream& os, bool edgeLabels = false) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -554,12 +562,15 @@ namespace dd {
             q.pop();
 
             // base case
-            if (node->isTerminal())
+            if (node->isTerminal()) {
                 continue;
+            }
 
             // check if node has already been processed
             auto ret = nodes.emplace(node->p);
-            if (!ret.second) continue;
+            if (!ret.second) {
+                continue;
+            }
 
             // node definition as HTML-like label (href="javascript:;" is used as workaround to make tooltips work)
             if (memory) {
@@ -622,27 +633,33 @@ namespace dd {
             os << SERIALIZATION_VERSION << "\n";
             os << basic.w.toString(false, 16) << "\n";
         }
-        std::int_least64_t                             next_index = 0;
-        std::unordered_map<vNode*, std::int_least64_t> node_index{};
+        std::int_least64_t                             nextIndex = 0;
+        std::unordered_map<vNode*, std::int_least64_t> nodeIndex{};
 
         // POST ORDER TRAVERSAL USING ONE STACK   https://www.geeksforgeeks.org/iterative-postorder-traversal-using-stack/
         std::stack<const vEdge*> stack{};
 
-        auto node = &basic;
+        const auto* node = &basic;
         if (!node->isTerminal()) {
             do {
                 while (node != nullptr && !node->isTerminal()) {
-                    for (short i = RADIX - 1; i > 0; --i) {
+                    for (auto i = RADIX - 1; i > 0; --i) {
                         auto& edge = node->p->e[i];
-                        if (edge.isTerminal()) continue;
-                        if (edge.w.approximatelyZero()) continue;
-                        if (node_index.find(edge.p) != node_index.end()) continue;
+                        if (edge.isTerminal()) {
+                            continue;
+                        }
+                        if (edge.w.approximatelyZero()) {
+                            continue;
+                        }
+                        if (nodeIndex.find(edge.p) != nodeIndex.end()) {
+                            continue;
+                        }
 
                         // non-zero edge to be included
                         stack.push(&edge);
                     }
                     stack.push(node);
-                    node = &node->p->e[0];
+                    node = &node->p->e[0]; // NOLINT(readability-container-data-pointer)
                 }
                 node = stack.top();
                 stack.pop();
@@ -650,46 +667,51 @@ namespace dd {
                 bool hasChild = false;
                 for (auto i = 1U; i < RADIX && !hasChild; ++i) {
                     auto& edge = node->p->e[i];
-                    if (edge.w.approximatelyZero()) continue;
-                    if (node_index.find(edge.p) != node_index.end()) continue;
-                    if (!stack.empty())
+                    if (edge.w.approximatelyZero()) {
+                        continue;
+                    }
+                    if (nodeIndex.find(edge.p) != nodeIndex.end()) {
+                        continue;
+                    }
+                    if (!stack.empty()) {
                         hasChild = edge.p == stack.top()->p;
+                    }
                 }
 
                 if (hasChild) {
-                    const auto temp = stack.top();
+                    const auto* const temp = stack.top();
                     stack.pop();
                     stack.push(node);
                     node = temp;
                 } else {
-                    if (node_index.find(node->p) != node_index.end()) {
+                    if (nodeIndex.find(node->p) != nodeIndex.end()) {
                         node = nullptr;
                         continue;
                     }
-                    node_index[node->p] = next_index;
-                    next_index++;
+                    nodeIndex[node->p] = nextIndex;
+                    nextIndex++;
 
                     if (writeBinary) {
-                        os.write(reinterpret_cast<const char*>(&node_index[node->p]), sizeof(decltype(node_index[node->p])));
+                        os.write(reinterpret_cast<const char*>(&nodeIndex[node->p]), sizeof(decltype(nodeIndex[node->p])));
                         os.write(reinterpret_cast<const char*>(&node->p->v), sizeof(decltype(node->p->v)));
 
                         // iterate over edges in reverse to guarantee correct processing order
                         for (auto i = 0U; i < RADIX; ++i) {
-                            auto&              edge     = node->p->e[i];
-                            std::int_least64_t edge_idx = edge.isTerminal() ? -1 : node_index[edge.p];
-                            os.write(reinterpret_cast<const char*>(&edge_idx), sizeof(decltype(edge_idx)));
+                            auto&              edge    = node->p->e[i];
+                            std::int_least64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
+                            os.write(reinterpret_cast<const char*>(&edgeIdx), sizeof(decltype(edgeIdx)));
                             edge.w.writeBinary(os);
                         }
                     } else {
-                        os << node_index[node->p] << " " << static_cast<std::size_t>(node->p->v);
+                        os << nodeIndex[node->p] << " " << static_cast<std::size_t>(node->p->v);
 
                         // iterate over edges in reverse to guarantee correct processing order
                         for (auto i = 0U; i < RADIX; ++i) {
                             os << " (";
                             auto& edge = node->p->e[i];
                             if (!edge.w.approximatelyZero()) {
-                                std::int_least64_t edge_idx = edge.isTerminal() ? -1 : node_index[edge.p];
-                                os << edge_idx << " " << edge.w.toString(false, 16);
+                                std::int_least64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
+                                os << edgeIdx << " " << edge.w.toString(false, 16);
                             }
                             os << ")";
                         }
@@ -700,38 +722,39 @@ namespace dd {
             } while (!stack.empty());
         }
     }
-    static void serializeMatrix(const mEdge& basic, std::int_least64_t& idx, std::unordered_map<mNode*, std::int_least64_t>& node_index, std::unordered_set<mNode*>& visited, std::ostream& os, bool writeBinary = false) {
+
+    static void serializeMatrix(const mEdge& basic, std::int_least64_t& idx, std::unordered_map<mNode*, std::int_least64_t>& nodeIndex, std::unordered_set<mNode*>& visited, std::ostream& os, bool writeBinary = false) {
         if (!basic.isTerminal()) {
             for (auto& e: basic.p->e) {
                 if (auto [iter, success] = visited.insert(e.p); success) {
-                    serializeMatrix(e, idx, node_index, visited, os, writeBinary);
+                    serializeMatrix(e, idx, nodeIndex, visited, os, writeBinary);
                 }
             }
 
-            if (node_index.find(basic.p) == node_index.end()) {
-                node_index[basic.p] = idx;
+            if (nodeIndex.find(basic.p) == nodeIndex.end()) {
+                nodeIndex[basic.p] = idx;
                 ++idx;
             }
 
             if (writeBinary) {
-                os.write(reinterpret_cast<const char*>(&node_index[basic.p]), sizeof(decltype(node_index[basic.p])));
+                os.write(reinterpret_cast<const char*>(&nodeIndex[basic.p]), sizeof(decltype(nodeIndex[basic.p])));
                 os.write(reinterpret_cast<const char*>(&basic.p->v), sizeof(decltype(basic.p->v)));
 
                 // iterate over edges in reverse to guarantee correct processing order
                 for (auto& edge: basic.p->e) {
-                    std::int_least64_t edge_idx = edge.isTerminal() ? -1 : node_index[edge.p];
-                    os.write(reinterpret_cast<const char*>(&edge_idx), sizeof(decltype(edge_idx)));
+                    std::int_least64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
+                    os.write(reinterpret_cast<const char*>(&edgeIdx), sizeof(decltype(edgeIdx)));
                     edge.w.writeBinary(os);
                 }
             } else {
-                os << node_index[basic.p] << " " << static_cast<std::size_t>(basic.p->v);
+                os << nodeIndex[basic.p] << " " << static_cast<std::size_t>(basic.p->v);
 
                 // iterate over edges in reverse to guarantee correct processing order
                 for (auto& edge: basic.p->e) {
                     os << " (";
                     if (!edge.w.approximatelyZero()) {
-                        std::int_least64_t edge_idx = edge.isTerminal() ? -1 : node_index[edge.p];
-                        os << edge_idx << " " << edge.w.toString(false, 16);
+                        std::int_least64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
+                        os << edgeIdx << " " << edge.w.toString(false, 16);
                     }
                     os << ")";
                 }
@@ -748,9 +771,9 @@ namespace dd {
             os << basic.w.toString(false, std::numeric_limits<dd::fp>::max_digits10) << "\n";
         }
         std::int_least64_t                             idx = 0;
-        std::unordered_map<mNode*, std::int_least64_t> node_index{};
+        std::unordered_map<mNode*, std::int_least64_t> nodeIndex{};
         std::unordered_set<mNode*>                     visited{};
-        serializeMatrix(basic, idx, node_index, visited, os, writeBinary);
+        serializeMatrix(basic, idx, nodeIndex, visited, os, writeBinary);
     }
     template<class Edge>
     static void serialize(const Edge& basic, const std::string& outputFilename, bool writeBinary = false) {
@@ -765,7 +788,7 @@ namespace dd {
 
     template<typename Edge>
     static void exportEdgeWeights(const Edge& edge, std::ostream& stream) {
-        struct priocmp {
+        struct Priocmp {
             bool operator()(const Edge* left, const Edge* right) {
                 return left->p->v < right->p->v;
             }
@@ -774,7 +797,7 @@ namespace dd {
 
         std::unordered_set<decltype(edge.p)> nodes{};
 
-        std::priority_queue<const Edge*, std::vector<const Edge*>, priocmp> q;
+        std::priority_queue<const Edge*, std::vector<const Edge*>, Priocmp> q;
         q.push(&edge);
 
         // bfs until finished
@@ -783,12 +806,15 @@ namespace dd {
             q.pop();
 
             // base case
-            if (edgePtr->isTerminal())
+            if (edgePtr->isTerminal()) {
                 continue;
+            }
 
             // check if edgePtr has already been processed
             auto ret = nodes.emplace(edgePtr->p);
-            if (!ret.second) continue;
+            if (!ret.second) {
+                continue;
+            }
 
             // iterate over edges in reverse to guarantee correct proceossing order
             for (auto i = static_cast<Qubit>(edgePtr->p->e.size() - 1); i >= 0; --i) {

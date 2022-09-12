@@ -14,8 +14,8 @@ using namespace dd;
 using CN = ComplexNumbers;
 
 TEST(DDComplexTest, TrivialTest) {
-    auto         cn           = std::make_unique<ComplexNumbers>();
-    unsigned int before_count = cn->cacheCount();
+    auto       cn          = std::make_unique<ComplexNumbers>();
+    const auto beforeCount = cn->cacheCount();
 
     auto a = cn->getCached(2, -3);
     auto b = cn->getCached(3, 2);
@@ -25,17 +25,17 @@ TEST(DDComplexTest, TrivialTest) {
 
     cn->lookup(a);
     cn->lookup(b);
-    unsigned int between_count = cn->cacheCount();
+    const auto betweenCount = cn->cacheCount();
     // the lookup increases the count in the complex table
-    ASSERT_TRUE(before_count < between_count);
+    ASSERT_TRUE(beforeCount < betweenCount);
     cn->returnToCache(a);
     cn->returnToCache(b);
     cn->returnToCache(r0);
     cn->returnToCache(r1);
     cn->garbageCollect(true);
     // since lookup does not increase the ref count, garbage collection removes the new values
-    unsigned int end_count = cn->cacheCount();
-    ASSERT_EQ(before_count, end_count);
+    const auto endCount = cn->cacheCount();
+    ASSERT_EQ(beforeCount, endCount);
 
     EXPECT_NO_THROW(cn->incRef({nullptr, nullptr}));
     EXPECT_NO_THROW(cn->decRef({nullptr, nullptr}));
@@ -126,14 +126,14 @@ TEST(DDComplexTest, SortedBuckets) {
             num + 6. * ComplexTable<>::tolerance(),
             num + 8. * ComplexTable<>::tolerance()};
 
-    const std::size_t the_bucket = ct->hash(num);
+    const std::size_t theBucket = ct->hash(num);
 
     for (auto const& number: numbers) {
-        ASSERT_EQ(the_bucket, ct->hash(number));
+        ASSERT_EQ(theBucket, ct->hash(number));
         ct->lookup(number);
     }
 
-    CTEntry* p = ct->getTable().at(the_bucket);
+    CTEntry* p = ct->getTable().at(theBucket);
     ASSERT_NE(p, nullptr);
 
     dd::fp      last    = std::numeric_limits<dd::fp>::min();
@@ -176,7 +176,7 @@ TEST(DDComplexTest, GarbageCollectSomeInBucket) {
 TEST(DDComplexTest, LookupInNeighbouringBuckets) {
     std::clog << "Current rounding mode: " << std::numeric_limits<fp>::round_style << "\n";
     auto                  cn      = std::make_unique<ComplexNumbers>();
-    constexpr std::size_t NBUCKET = ComplexTable<>::MASK + 1;
+    constexpr std::size_t nbucket = ComplexTable<>::MASK + 1;
     auto                  preHash = [](const fp val) { return val * ComplexTable<>::MASK; };
 
     // lower border of a bucket
@@ -187,13 +187,13 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
     std::clog << "preHash(numBucketBorder) = " << preHash(numBucketBorder) << "\n";
     std::clog << "hashBucketBorder         = " << hashBucketBorder << "\n"
               << std::flush;
-    EXPECT_EQ(hashBucketBorder, NBUCKET / 4);
+    EXPECT_EQ(hashBucketBorder, nbucket / 4);
 
     // insert a number slightly away from the border
     const fp numAbove = numBucketBorder + 2 * ComplexTable<>::tolerance();
     cn->lookup(numAbove, 0.0);
     auto key = ComplexTable<>::hash(numAbove);
-    EXPECT_EQ(key, NBUCKET / 4);
+    EXPECT_EQ(key, nbucket / 4);
 
     // insert a number barely in the bucket below
     const fp numBarelyBelow = numBucketBorder - ComplexTable<>::tolerance() / 10;
@@ -204,7 +204,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
     std::clog << "preHash(numBarelyBelow) = " << preHash(numBarelyBelow) << "\n";
     std::clog << "hashBarelyBelow         = " << hashBarelyBelow << "\n"
               << std::flush;
-    EXPECT_EQ(hashBarelyBelow, NBUCKET / 4 - 1);
+    EXPECT_EQ(hashBarelyBelow, nbucket / 4 - 1);
 
     // insert another number in the bucket below a bit farther away from the border
     const fp numBelow = numBucketBorder - 2 * ComplexTable<>::tolerance();
@@ -215,7 +215,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
     std::clog << "preHash(numBelow) = " << preHash(numBelow) << "\n";
     std::clog << "hashBelow         = " << hashBelow << "\n"
               << std::flush;
-    EXPECT_EQ(hashBelow, NBUCKET / 4 - 1);
+    EXPECT_EQ(hashBelow, nbucket / 4 - 1);
 
     // insert border number that is too far away from the number in the bucket, but is close enough to a number in the bucket below
     fp   num4 = numBucketBorder;
@@ -225,7 +225,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
     EXPECT_NEAR(c.r->value, numBarelyBelow, ComplexTable<>::tolerance());
 
     // insert a number in the higher bucket
-    const fp numNextBorder = numBucketBorder + 1.0 / (NBUCKET - 1) + ComplexTable<>::tolerance();
+    const fp numNextBorder = numBucketBorder + 1.0 / (nbucket - 1) + ComplexTable<>::tolerance();
     cn->lookup(numNextBorder, 0.0);
     auto hashNextBorder = ComplexTable<>::hash(numNextBorder);
     std::cout.flush();
@@ -233,7 +233,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
     std::clog << "preHash(numNextBorder) = " << preHash(numNextBorder) << "\n";
     std::clog << "hashNextBorder         = " << hashNextBorder << "\n"
               << std::flush;
-    EXPECT_EQ(hashNextBorder, NBUCKET / 4 + 1);
+    EXPECT_EQ(hashNextBorder, nbucket / 4 + 1);
 
     // search for a number in the lower bucket that is ultimately close enough to a number in the upper bucket
     fp   num6 = numNextBorder - ComplexTable<>::tolerance() / 10;
@@ -245,9 +245,9 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
 
 TEST(DDComplexTest, ComplexValueEquals) {
     ComplexValue a{1.0, 0.0};
-    ComplexValue a_tol{1.0 + ComplexTable<>::tolerance() / 10, 0.0};
+    ComplexValue aTol{1.0 + ComplexTable<>::tolerance() / 10, 0.0};
     ComplexValue b{0.0, 1.0};
-    EXPECT_TRUE(a.approximatelyEquals(a_tol));
+    EXPECT_TRUE(a.approximatelyEquals(aTol));
     EXPECT_FALSE(a.approximatelyEquals(b));
 }
 
@@ -263,21 +263,21 @@ TEST(DDComplexTest, LowestFractions) {
 }
 
 TEST(DDComplexTest, NumberPrintingToString) {
-    auto cn       = std::make_unique<ComplexNumbers>();
-    auto imag     = cn->lookup(0., 1.);
-    auto imag_str = imag.toString(false);
-    EXPECT_STREQ(imag_str.c_str(), "1i");
-    auto imag_str_formatted = imag.toString(true);
-    EXPECT_STREQ(imag_str_formatted.c_str(), "+i");
+    auto cn      = std::make_unique<ComplexNumbers>();
+    auto imag    = cn->lookup(0., 1.);
+    auto imagStr = imag.toString(false);
+    EXPECT_STREQ(imagStr.c_str(), "1i");
+    auto imagStrFormatted = imag.toString(true);
+    EXPECT_STREQ(imagStrFormatted.c_str(), "+i");
 
-    auto superposition     = cn->lookup(dd::SQRT2_2, dd::SQRT2_2);
-    auto superposition_str = superposition.toString(false, 3);
-    EXPECT_STREQ(superposition_str.c_str(), "0.707+0.707i");
-    auto superposition_str_formatted = superposition.toString(true, 3);
-    EXPECT_STREQ(superposition_str_formatted.c_str(), "1/√2(1+i)");
-    auto neg_superposition               = cn->lookup(dd::SQRT2_2, -dd::SQRT2_2);
-    auto neg_superposition_str_formatted = neg_superposition.toString(true, 3);
-    EXPECT_STREQ(neg_superposition_str_formatted.c_str(), "1/√2(1-i)");
+    auto superposition    = cn->lookup(dd::SQRT2_2, dd::SQRT2_2);
+    auto superpositionStr = superposition.toString(false, 3);
+    EXPECT_STREQ(superpositionStr.c_str(), "0.707+0.707i");
+    auto superpositionStrFormatted = superposition.toString(true, 3);
+    EXPECT_STREQ(superpositionStrFormatted.c_str(), "1/√2(1+i)");
+    auto negSuperposition             = cn->lookup(dd::SQRT2_2, -dd::SQRT2_2);
+    auto negSuperpositionStrFormatted = negSuperposition.toString(true, 3);
+    EXPECT_STREQ(negSuperpositionStrFormatted.c_str(), "1/√2(1-i)");
 }
 
 TEST(DDComplexTest, NumberPrintingFormattedFractions) {
@@ -475,7 +475,7 @@ TEST(DDComplexTest, ComplexTableAllocation) {
     }
 
     // trigger new allocation
-    [[maybe_unused]] auto num = cn->complexTable.getEntry();
+    [[maybe_unused]] auto* num = cn->complexTable.getEntry();
     EXPECT_EQ(cn->complexTable.getAllocations(), (1. + cn->complexTable.getGrowthFactor()) * allocs);
 
     // clearing the complex table should reduce the allocated size to the original size
@@ -484,12 +484,12 @@ TEST(DDComplexTest, ComplexTableAllocation) {
 
     EXPECT_TRUE(cn->complexTable.availableEmpty());
     // obtain entry
-    auto entry = cn->complexTable.getEntry();
+    auto* entry = cn->complexTable.getEntry();
     // immediately return entry
     cn->complexTable.returnEntry(entry);
     EXPECT_FALSE(cn->complexTable.availableEmpty());
     // obtain the same entry again, but this time from the available stack
-    auto entry2 = cn->complexTable.getEntry();
+    auto* entry2 = cn->complexTable.getEntry();
     EXPECT_EQ(entry, entry2);
 }
 
@@ -529,18 +529,18 @@ TEST(DDComplexTest, DoubleHitInFindOrInsert) {
     auto cn = std::make_unique<ComplexNumbers>();
 
     // insert a number somewhere in a bucket
-    fp   num1  = 0.5;
-    auto tnum1 = cn->complexTable.lookup(num1);
+    fp    num1  = 0.5;
+    auto* tnum1 = cn->complexTable.lookup(num1);
     EXPECT_EQ(tnum1->value, num1);
 
     // insert a second number that is farther away than the tolerance, but closer than twice the tolerance
-    fp   num2  = num1 + 2.1 * dd::ComplexTable<>::tolerance();
-    auto tnum2 = cn->complexTable.lookup(num2);
+    fp    num2  = num1 + 2.1 * dd::ComplexTable<>::tolerance();
+    auto* tnum2 = cn->complexTable.lookup(num2);
     EXPECT_EQ(tnum2->value, num2);
 
     // insert a third number that is close to both previously inserted numbers, but closer to the second
-    fp   num3  = num1 + 2.2 * dd::ComplexTable<>::tolerance();
-    auto tnum3 = cn->complexTable.lookup(num3);
+    fp    num3  = num1 + 2.2 * dd::ComplexTable<>::tolerance();
+    auto* tnum3 = cn->complexTable.lookup(num3);
     EXPECT_EQ(tnum3->value, num2);
 }
 
@@ -549,22 +549,22 @@ TEST(DDComplexTest, DoubleHitAcrossBuckets) {
     std::cout << std::setprecision(std::numeric_limits<dd::fp>::max_digits10);
 
     // insert a number at a lower bucket border
-    fp   num1  = 8191.5 / (static_cast<dd::fp>(cn->complexTable.getTable().size()) - 1);
-    auto tnum1 = cn->complexTable.lookup(num1);
+    fp    num1  = 8191.5 / (static_cast<dd::fp>(cn->complexTable.getTable().size()) - 1);
+    auto* tnum1 = cn->complexTable.lookup(num1);
     EXPECT_EQ(tnum1->value, num1);
 
     // insert a second number that is farther away than the tolerance towards the lower bucket, but closer than twice the tolerance
-    fp   num2  = num1 - 1.5 * dd::ComplexTable<>::tolerance();
-    auto tnum2 = cn->complexTable.lookup(num2);
+    fp    num2  = num1 - 1.5 * dd::ComplexTable<>::tolerance();
+    auto* tnum2 = cn->complexTable.lookup(num2);
     EXPECT_EQ(tnum2->value, num2);
 
     // insert a third number that is close to both previously inserted numbers, but closer to the second
-    fp   num3  = num1 - 0.9 * dd::ComplexTable<>::tolerance();
-    auto tnum3 = cn->complexTable.lookup(num3);
+    fp    num3  = num1 - 0.9 * dd::ComplexTable<>::tolerance();
+    auto* tnum3 = cn->complexTable.lookup(num3);
     EXPECT_EQ(tnum3->value, num2);
 
     // insert a third number that is close to both previously inserted numbers, but closer to the first
-    fp   num4  = num1 - 0.6 * dd::ComplexTable<>::tolerance();
-    auto tnum4 = cn->complexTable.lookup(num4);
+    fp    num4  = num1 - 0.6 * dd::ComplexTable<>::tolerance();
+    auto* tnum4 = cn->complexTable.lookup(num4);
     EXPECT_EQ(tnum4->value, num1);
 }

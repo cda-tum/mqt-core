@@ -38,12 +38,12 @@ namespace dd {
     static constexpr std::uint_fast8_t NEDGE = RADIX * RADIX;
 
     enum class BasisStates {
-        zero,
-        one,
-        plus,
-        minus,
-        right,
-        left
+        zero,  // NOLINT(readability-identifier-naming)
+        one,   // NOLINT(readability-identifier-naming)
+        plus,  // NOLINT(readability-identifier-naming)
+        minus, // NOLINT(readability-identifier-naming)
+        right, // NOLINT(readability-identifier-naming)
+        left   // NOLINT(readability-identifier-naming)
     };
 
     static constexpr fp SQRT2_2 = 0.707106781186547524400844362104849039284835937688474036588L;
@@ -88,11 +88,14 @@ namespace dd {
 
     // calculates the Units in Last Place (ULP) distance of two floating point numbers
     [[maybe_unused]] static std::size_t ulpDistance(fp a, fp b) {
-        if (a == b)
+        // NOLINTNEXTLINE(clang-diagnostic-float-equal)
+        if (a == b) {
             return 0;
+        }
 
         std::size_t ulps   = 1;
         fp          nextFP = std::nextafter(a, b);
+        // NOLINTNEXTLINE(clang-diagnostic-float-equal)
         while (nextFP != b) {
             ulps++;
             nextFP = std::nextafter(nextFP, b);

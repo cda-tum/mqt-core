@@ -49,8 +49,12 @@ namespace dd {
             lookups++;
             const auto key   = hash(operand);
             auto&      entry = table[key];
-            if (entry.result.p == nullptr) return result;
-            if (entry.operand != operand) return result;
+            if (entry.result.p == nullptr) {
+                return result;
+            }
+            if (entry.operand != operand) {
+                return result;
+            }
 
             hits++;
             return entry.result;
@@ -58,8 +62,9 @@ namespace dd {
 
         void clear() {
             if (count > 0) {
-                for (auto& entry: table)
+                for (auto& entry: table) {
                     entry.result.p = nullptr;
+                }
                 count = 0;
             }
             hits    = 0;
@@ -67,7 +72,8 @@ namespace dd {
         }
 
         [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / lookups; }
-        std::ostream&    printStatistics(std::ostream& os = std::cout) {
+
+        std::ostream& printStatistics(std::ostream& os = std::cout) {
             os << "hits: " << hits << ", looks: " << lookups << ", ratio: " << hitRatio() << std::endl;
             return os;
         }

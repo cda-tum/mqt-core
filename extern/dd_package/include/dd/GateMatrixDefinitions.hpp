@@ -14,6 +14,7 @@
 
 namespace dd {
     // Complex constants
+    // NOLINTBEGIN(readability-identifier-naming) As these constants are used by other projects, we keep the naming
     constexpr ComplexValue complex_one       = {1., 0.};
     constexpr ComplexValue complex_mone      = {-1., 0.};
     constexpr ComplexValue complex_zero      = {0., 0.};
@@ -82,5 +83,6 @@ namespace dd {
                            complex_zero,
                            {std::cos(lambda / 2.), std::sin(lambda / 2.)}}};
     }
+    // NOLINTEND(readability-identifier-naming)
 } // namespace dd
 #endif //DD_PACKAGE_GATEMATRIXDEFINITIONS_H

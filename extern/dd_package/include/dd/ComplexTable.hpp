@@ -61,7 +61,7 @@ namespace dd {
             }
 
             [[nodiscard]] static inline bool isNegativePointer(const Entry* e) {
-                return reinterpret_cast<std::uintptr_t>(e) & static_cast<std::uintptr_t>(1U);
+                return (reinterpret_cast<std::uintptr_t>(e) & static_cast<std::uintptr_t>(1U)) != 0U;
             }
 
             [[nodiscard]] static inline fp val(const Entry* e) {
@@ -82,6 +82,7 @@ namespace dd {
                 return left == right || approximatelyEquals(val(left), val(right));
             }
             [[nodiscard]] static constexpr bool approximatelyEquals(const fp left, const fp right) {
+                // NOLINTNEXTLINE(clang-diagnostic-float-equal) equivalence check is a shortcut before check with tolerance
                 return left == right || std::abs(left - right) <= TOLERANCE;
             }
 
@@ -105,19 +106,11 @@ namespace dd {
             }
         };
 
-        static inline Entry zero{0., nullptr, 1};
-        static inline Entry sqrt2_2{SQRT2_2, nullptr, 1};
-        static inline Entry one{1., nullptr, 1};
+        static inline Entry zero{0., nullptr, 1};         // NOLINT(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables) automatic renaming does not work reliably, so skip linting
+        static inline Entry sqrt2_2{SQRT2_2, nullptr, 1}; // NOLINT(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables) automatic renaming does not work reliably, so skip linting
+        static inline Entry one{1., nullptr, 1};          // NOLINT(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables) automatic renaming does not work reliably, so skip linting
 
-        ComplexTable():
-            chunkID(0), allocationSize(INITIAL_ALLOCATION_SIZE), gcLimit(INITIAL_GC_LIMIT) {
-            // allocate first chunk of numbers
-            chunks.emplace_back(allocationSize);
-            allocations += allocationSize;
-            allocationSize *= GROWTH_FACTOR;
-            chunkIt    = chunks[0].begin();
-            chunkEndIt = chunks[0].end();
-
+        ComplexTable() {
             // add 1/2 to the complex table and increase its ref count (so that it is not collected)
             lookup(0.5L)->refCount++;
         }
@@ -189,48 +182,47 @@ namespace dd {
 
             const auto key = hash(val);
 
-            Entry* p_lower;
-            Entry* p_upper;
+            Entry* pLower; // NOLINT(cppcoreguidelines-init-variables)
+            Entry* pUpper; // NOLINT(cppcoreguidelines-init-variables)
             if (lowerKey != key) {
-                p_lower = tailTable[lowerKey];
-                p_upper = table[key];
+                pLower = tailTable[lowerKey];
+                pUpper = table[key];
                 ++lowerNeighbors;
-                //                std::cout << "Border case between lower bucket " << lowerKey << " and actual bucket " << key << ". ";
+                // std::cout << "Border case between lower bucket " << lowerKey << " and actual bucket " << key << ". ";
             } else {
-                p_lower = tailTable[key];
-                p_upper = table[upperKey];
+                pLower = tailTable[key];
+                pUpper = table[upperKey];
                 ++upperNeighbors;
-                //                std::cout << "Border case between actual bucket " << key << " and upper bucket " << upperKey << ". ";
+                // std::cout << "Border case between actual bucket " << key << " and upper bucket " << upperKey << ". ";
             }
 
-            bool lowerMatchFound = (p_lower != nullptr && Entry::approximatelyEquals(val, p_lower->value));
-            bool upperMatchFound = (p_upper != nullptr && Entry::approximatelyEquals(val, p_upper->value));
+            bool lowerMatchFound = (pLower != nullptr && Entry::approximatelyEquals(val, pLower->value));
+            bool upperMatchFound = (pUpper != nullptr && Entry::approximatelyEquals(val, pUpper->value));
 
             if (lowerMatchFound && upperMatchFound) {
                 //                std::cout << "Double match. ";
                 ++hits;
-                const auto diffToLower = std::abs(p_lower->value - val);
-                const auto diffToUpper = std::abs(p_upper->value - val);
+                const auto diffToLower = std::abs(pLower->value - val);
+                const auto diffToUpper = std::abs(pUpper->value - val);
                 // val is actually closer to p_lower than to p_upper
                 if (diffToLower < diffToUpper) {
-                    //                    std::cout << val << " is closer to lower val " << p_lower->value << " than to upper val " << p_upper->value << std::endl;
-                    return p_lower;
-                } else {
-                    //                    std::cout << val << " is closer to upper val " << p_upper->value << " than to lower val " << p_upper->value << std::endl;
-                    return p_upper;
+                    // std::cout << val << " is closer to lower val " << p_lower->value << " than to upper val " << p_upper->value << std::endl;
+                    return pLower;
                 }
+                // std::cout << val << " is closer to upper val " << p_upper->value << " than to lower val " << p_upper->value << std::endl;
+                return pUpper;
             }
 
             if (lowerMatchFound) {
                 ++hits;
                 //                std::cout << "Matched " << val << " in lower bucket to " << p_lower->value << std::endl;
-                return p_lower;
+                return pLower;
             }
 
             if (upperMatchFound) {
                 ++hits;
                 //                std::cout << "Matched " << val << " in upper bucket to " << p_upper->value << std::endl;
-                return p_upper;
+                return pUpper;
             }
 
             // value was not found in the table -> get a new entry and add it to the central bucket
@@ -273,8 +265,9 @@ namespace dd {
             // get valid pointer
             auto entryPtr = Entry::getAlignedPointer(entry);
 
-            if (entryPtr == nullptr)
+            if (entryPtr == nullptr) {
                 return;
+            }
 
             // important (static) numbers are never altered
             if (entryPtr != &one && entryPtr != &zero && entryPtr != &sqrt2_2) {
@@ -293,8 +286,9 @@ namespace dd {
             // get valid pointer
             auto entryPtr = Entry::getAlignedPointer(entry);
 
-            if (entryPtr == nullptr)
+            if (entryPtr == nullptr) {
                 return;
+            }
 
             // important (static) numbers are never altered
             if (entryPtr != &one && entryPtr != &zero && entryPtr != &sqrt2_2) {
@@ -316,8 +310,9 @@ namespace dd {
             gcCalls++;
             // nothing to be done if garbage collection is not forced, and the limit has not been reached,
             // or the current count is minimal (the complex table always contains at least 0.5)
-            if ((!force && count < gcLimit) || count <= 1)
+            if ((!force && count < gcLimit) || count <= 1) {
                 return 0;
+            }
 
             gcRuns++;
             std::size_t collected = 0;
@@ -407,17 +402,19 @@ namespace dd {
             std::cout.precision(std::numeric_limits<dd::fp>::max_digits10);
             for (std::size_t key = 0; key < table.size(); ++key) {
                 auto p = table[key];
-                if (p != nullptr)
+                if (p != nullptr) {
                     std::cout << key << ": "
                               << "\n";
+                }
 
                 while (p != nullptr) {
                     std::cout << "\t\t" << p->value << " " << reinterpret_cast<std::uintptr_t>(p) << " " << p->refCount << "\n";
                     p = p->next;
                 }
 
-                if (table[key] != nullptr)
+                if (table[key] != nullptr) {
                     std::cout << "\n";
+                }
             }
             std::cout.precision(precision);
         }
@@ -496,16 +493,16 @@ namespace dd {
         std::size_t upperNeighbors   = 0;
 
         // numerical tolerance to be used for floating point values
-        static inline fp TOLERANCE = std::numeric_limits<dd::fp>::epsilon() * 1024;
+        static inline fp TOLERANCE = std::numeric_limits<dd::fp>::epsilon() * 1024; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
 
         Entry*                                available{};
-        std::vector<std::vector<Entry>>       chunks{};
-        std::size_t                           chunkID;
-        typename std::vector<Entry>::iterator chunkIt;
-        typename std::vector<Entry>::iterator chunkEndIt;
-        std::size_t                           allocationSize;
+        std::vector<std::vector<Entry>>       chunks{1, std::vector<Entry>{INITIAL_ALLOCATION_SIZE}};
+        std::size_t                           chunkID{};
+        typename std::vector<Entry>::iterator chunkIt{chunks.at(0).begin()};
+        typename std::vector<Entry>::iterator chunkEndIt{chunks.at(0).end()};
+        std::size_t                           allocationSize{INITIAL_ALLOCATION_SIZE * GROWTH_FACTOR};
 
-        std::size_t allocations = 0;
+        std::size_t allocations = INITIAL_ALLOCATION_SIZE;
         std::size_t count       = 0;
         std::size_t peakCount   = 0;
 
@@ -515,18 +512,18 @@ namespace dd {
         std::size_t gcLimit = 100000;
 
         inline Entry* findOrInsert(const std::int64_t key, const fp val) {
-            [[maybe_unused]] const fp val_tol = val + TOLERANCE;
+            [[maybe_unused]] const fp valTol = val + TOLERANCE;
 
             Entry* curr = table[key];
             Entry* prev = nullptr;
 
-            while (curr != nullptr && curr->value <= val_tol) {
+            while (curr != nullptr && curr->value <= valTol) {
                 if (Entry::approximatelyEquals(curr->value, val)) {
                     // check if val is actually closer to the next element in the list (if there is one)
                     if (curr->next != nullptr) {
                         const auto& next = curr->next;
                         // potential candidate in range
-                        if (val_tol >= next->value) {
+                        if (valTol >= next->value) {
                             const auto diffToCurr = std::abs(curr->value - val);
                             const auto diffToNext = std::abs(next->value - val);
                             // val is actually closer to next than to curr

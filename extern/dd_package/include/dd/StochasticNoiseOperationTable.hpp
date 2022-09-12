@@ -6,7 +6,10 @@
 #ifndef DDpackage_NOISEOPERATIONTABLE_HPP
 #define DDpackage_NOISEOPERATIONTABLE_HPP
 
+#include "Definitions.hpp"
+
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -38,7 +41,9 @@ namespace dd {
             lookups++;
             Edge r{};
             auto entry = table.at(target).at(kind);
-            if (entry.p == nullptr) return r;
+            if (entry.p == nullptr) {
+                return r;
+            }
             hits++;
             return entry;
         }
@@ -55,7 +60,8 @@ namespace dd {
         }
 
         [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / lookups; }
-        std::ostream&    printStatistics(std::ostream& os = std::cout) {
+
+        std::ostream& printStatistics(std::ostream& os = std::cout) {
             os << "hits: " << hits << ", looks: " << lookups << ", ratio: " << hitRatio() << std::endl;
             return os;
         }

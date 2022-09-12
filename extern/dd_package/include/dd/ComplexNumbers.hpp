@@ -153,8 +153,8 @@ namespace dd {
         Complex lookup(const fp& r, const fp& i) {
             Complex ret{};
 
-            auto sign_r = std::signbit(r);
-            if (sign_r) {
+            auto signR = std::signbit(r);
+            if (signR) {
                 auto absr = std::abs(r);
                 // if absolute value is close enough to zero, just return the zero entry (avoiding -0.0)
                 if (absr < decltype(complexTable)::tolerance()) {
@@ -166,8 +166,8 @@ namespace dd {
                 ret.r = complexTable.lookup(r);
             }
 
-            auto sign_i = std::signbit(i);
-            if (sign_i) {
+            auto signI = std::signbit(i);
+            if (signI) {
                 auto absi = std::abs(i);
                 // if absolute value is close enough to zero, just return the zero entry (avoiding -0.0)
                 if (absi < decltype(complexTable)::tolerance()) {

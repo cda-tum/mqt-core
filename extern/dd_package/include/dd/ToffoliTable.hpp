@@ -44,21 +44,29 @@ namespace dd {
             Edge        r{};
             const auto  key   = hash(controls, target);
             const auto& entry = table[key];
-            if (entry.e.p == nullptr) return r;
-            if (entry.n != n) return r;
-            if (entry.target != target) return r;
-            if (entry.controls != controls) return r;
+            if (entry.e.p == nullptr) {
+                return r;
+            }
+            if (entry.n != n) {
+                return r;
+            }
+            if (entry.target != target) {
+                return r;
+            }
+            if (entry.controls != controls) {
+                return r;
+            }
             hits++;
             return entry.e;
         }
 
         static std::size_t hash(const Controls& controls, Qubit target) {
-            auto key = static_cast<std::size_t>(std::make_unsigned<Qubit>::type(target));
+            auto key = static_cast<std::size_t>(static_cast<std::make_unsigned<Qubit>::type>(target));
             for (const auto& control: controls) {
                 if (control.type == dd::Control::Type::pos) {
-                    key *= 29u * control.qubit;
+                    key *= 29UL * control.qubit;
                 } else {
-                    key *= 71u * control.qubit;
+                    key *= 71UL * control.qubit;
                 }
             }
             return key & MASK;
@@ -66,8 +74,9 @@ namespace dd {
 
         void clear() {
             if (count > 0) {
-                for (auto& entry: table)
+                for (auto& entry: table) {
                     entry.e.p = nullptr;
+                }
                 count = 0;
             }
             hits    = 0;
@@ -75,7 +84,8 @@ namespace dd {
         }
 
         [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / lookups; }
-        std::ostream&    printStatistics(std::ostream& os = std::cout) {
+
+        std::ostream& printStatistics(std::ostream& os = std::cout) {
             os << "hits: " << hits << ", looks: " << lookups << ", ratio: " << hitRatio() << std::endl;
             return os;
         }

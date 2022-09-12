@@ -8,7 +8,7 @@
 
 #include "ComplexNumbers.hpp"
 #include "Definitions.hpp"
-#include "Edge.hpp"
+#include "Node.hpp"
 
 #include <algorithm>
 #include <array>
@@ -34,13 +34,7 @@ namespace dd {
     class UniqueTable {
     public:
         explicit UniqueTable(std::size_t nvars):
-            nvars(nvars), chunkID(0), allocationSize(INITIAL_ALLOCATION_SIZE), gcLimit(INITIAL_GC_LIMIT) {
-            // allocate first chunk of nodes
-            chunks.emplace_back(allocationSize);
-            allocations += allocationSize;
-            allocationSize *= GROWTH_FACTOR;
-            chunkIt    = chunks[0].begin();
-            chunkEndIt = chunks[0].end();
+            nvars(nvars) {
         }
 
         ~UniqueTable() = default;
@@ -93,16 +87,18 @@ namespace dd {
         // NOTE: reference counting is to be adjusted by function invoking the table lookup and only normalized nodes shall be stored.
         Edge<Node> lookup(const Edge<Node>& e, bool keepNode = false) {
             // there are unique terminal nodes
-            if (e.isTerminal())
+            if (e.isTerminal()) {
                 return e;
+            }
 
             lookups++;
             const auto key = hash(e.p);
             const auto v   = e.p->v;
 
             // successors of a node shall either have successive variable numbers or be terminals
-            for ([[maybe_unused]] const auto& edge: e.p->e)
+            for ([[maybe_unused]] const auto& edge: e.p->e) {
                 assert(edge.p->v == v - 1 || edge.isTerminal());
+            }
 
             Node* p = tables[v][key];
             while (p != nullptr) {
@@ -118,8 +114,9 @@ namespace dd {
                     assert(p->v == e.p->v);
 
                     // successors of a node shall either have successive variable numbers or be terminals
-                    for ([[maybe_unused]] const auto& edge: e.p->e)
+                    for ([[maybe_unused]] const auto& edge: e.p->e) {
                         assert(edge.p->v == v - 1 || edge.isTerminal());
+                    }
 
                     return {p, e.w};
                 }
@@ -171,8 +168,9 @@ namespace dd {
         // each child if this is the first reference
         void incRef(const Edge<Node>& e) {
             dd::ComplexNumbers::incRef(e.w);
-            if (e.p == nullptr || e.isTerminal())
+            if (e.p == nullptr || e.isTerminal()) {
                 return;
+            }
 
             if (e.p->ref == std::numeric_limits<decltype(e.p->ref)>::max()) {
                 std::clog << "[WARN] MAXREFCNT reached for p=" << reinterpret_cast<std::uintptr_t>(e.p)
@@ -199,8 +197,12 @@ namespace dd {
         // each child if this is the last reference
         void decRef(const Edge<Node>& e) {
             dd::ComplexNumbers::decRef(e.w);
-            if (e.p == nullptr || e.isTerminal()) return;
-            if (e.p->ref == std::numeric_limits<decltype(e.p->ref)>::max()) return;
+            if (e.p == nullptr || e.isTerminal()) {
+                return;
+            }
+            if (e.p->ref == std::numeric_limits<decltype(e.p->ref)>::max()) {
+                return;
+            }
 
             if (e.p->ref == 0) {
                 throw std::runtime_error("In decref: ref==0 before decref\n");
@@ -223,8 +225,9 @@ namespace dd {
 
         std::size_t garbageCollect(bool force = false) {
             gcCalls++;
-            if ((!force && nodeCount < gcLimit) || nodeCount == 0)
+            if ((!force && nodeCount < gcLimit) || nodeCount == 0) {
                 return 0;
+            }
 
             gcRuns++;
             std::size_t collected = 0;
@@ -317,8 +320,9 @@ namespace dd {
                           << "\n";
                 for (std::size_t key = 0; key < table.size(); ++key) {
                     auto p = table[key];
-                    if (p != nullptr)
+                    if (p != nullptr) {
                         std::cout << "\tkey=" << key << ": ";
+                    }
 
                     while (p != nullptr) {
                         std::cout << "\t\t" << std::hex << reinterpret_cast<std::uintptr_t>(p) << std::dec << " "
@@ -338,8 +342,9 @@ namespace dd {
 
         void printActive() {
             std::cout << "#printActive: " << activeNodeCount << ", ";
-            for (const auto& a: active)
+            for (const auto& a: active) {
                 std::cout << a << " ";
+            }
             std::cout << "\n";
         }
 
@@ -369,13 +374,13 @@ namespace dd {
         std::vector<Table> tables{nvars};
 
         Node*                                available{};
-        std::vector<std::vector<Node>>       chunks{};
-        std::size_t                          chunkID;
-        typename std::vector<Node>::iterator chunkIt;
-        typename std::vector<Node>::iterator chunkEndIt;
-        std::size_t                          allocationSize;
+        std::vector<std::vector<Node>>       chunks{1, std::vector<Node>{INITIAL_ALLOCATION_SIZE}};
+        std::size_t                          chunkID{0};
+        typename std::vector<Node>::iterator chunkIt{chunks[0].begin()};
+        typename std::vector<Node>::iterator chunkEndIt{chunks[0].end()};
+        std::size_t                          allocationSize{INITIAL_ALLOCATION_SIZE * GROWTH_FACTOR};
 
-        std::size_t allocations   = 0;
+        std::size_t allocations   = INITIAL_ALLOCATION_SIZE;
         std::size_t nodeCount     = 0;
         std::size_t peakNodeCount = 0;
 
@@ -393,7 +398,7 @@ namespace dd {
         // garbage collection
         std::size_t gcCalls = 0;
         std::size_t gcRuns  = 0;
-        std::size_t gcLimit = 250000;
+        std::size_t gcLimit = INITIAL_GC_LIMIT;
     };
 
 } // namespace dd

@@ -35,15 +35,15 @@ namespace dd {
         // access functions
         [[nodiscard]] const auto& getTable() const { return table; }
 
-        static std::size_t hash(const OperandType& a, const std::vector<signed char>& usedQubits) {
+        static std::size_t hash(const OperandType& a, const std::vector<Qubit>& usedQubits) {
             std::size_t i = 0;
-            for (auto qubit: usedQubits) {
+            for (const auto qubit: usedQubits) {
                 i = (i << 3U) + i * qubit + qubit;
             }
             return (std::hash<OperandType>{}(a) + i) & MASK;
         }
 
-        void insert(const OperandType& operand, const ResultType& result, const std::vector<signed char>& usedQubits) {
+        void insert(const OperandType& operand, const ResultType& result, const std::vector<Qubit>& usedQubits) {
             const auto key   = hash(operand, usedQubits);
             auto&      entry = table[key];
             entry.result     = result;
@@ -52,28 +52,36 @@ namespace dd {
             ++count;
         }
 
-        ResultType lookup(const OperandType& operand, const std::vector<signed char>& usedQubits) {
+        ResultType lookup(const OperandType& operand, const std::vector<Qubit>& usedQubits) {
             ResultType result{};
             lookups++;
             const auto key   = hash(operand, usedQubits);
             auto&      entry = table[key];
-            if (entry.result.p == nullptr) return result;
-            if (entry.operand != operand) return result;
-            if (entry.usedQubits != usedQubits) return result;
+            if (entry.result.p == nullptr) {
+                return result;
+            }
+            if (entry.operand != operand) {
+                return result;
+            }
+            if (entry.usedQubits != usedQubits) {
+                return result;
+            }
             hits++;
             return entry.result;
         }
 
         void clear() {
             if (count > 0) {
-                for (auto& entry: table)
+                for (auto& entry: table) {
                     entry.result.p = nullptr;
+                }
                 count = 0;
             }
         }
 
         [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / lookups; }
-        std::ostream&    printStatistics(std::ostream& os = std::cout) {
+
+        std::ostream& printStatistics(std::ostream& os = std::cout) {
             os << "hits: " << hits << ", looks: " << lookups << ", ratio: " << hitRatio() << std::endl;
             return os;
         }

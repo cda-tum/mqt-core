@@ -15,22 +15,25 @@
 #include <utility>
 
 namespace dd {
+    // NOLINTNEXTLINE(readability-identifier-naming)
     struct vNode {
         std::array<Edge<vNode>, RADIX> e{};    // edges out of this node
         vNode*                         next{}; // used to link nodes in unique table
         RefCount                       ref{};  // reference count
         Qubit                          v{};    // variable index (nonterminal) value (-1 for terminal)
 
-        static vNode            terminalNode;
-        constexpr static vNode* terminal{&terminalNode};
+        static vNode            terminalNode;            // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+        constexpr static vNode* terminal{&terminalNode}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
 
         static constexpr bool isTerminal(const vNode* p) { return p == terminal; }
     };
     using vEdge       = Edge<vNode>;
     using vCachedEdge = CachedEdge<vNode>;
 
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     inline vNode vNode::terminalNode{{{{nullptr, Complex::zero}, {nullptr, Complex::zero}}}, nullptr, 0U, -1};
 
+    // NOLINTNEXTLINE(readability-identifier-naming)
     struct mNode {
         std::array<Edge<mNode>, NEDGE> e{};    // edges out of this node
         mNode*                         next{}; // used to link nodes in unique table
@@ -44,31 +47,36 @@ namespace dd {
         // 2 = mark first path edge (tmp flag),
         // 1 = mark path is conjugated (tmp flag))
 
-        static mNode            terminalNode;
-        constexpr static mNode* terminal{&terminalNode};
+        static mNode            terminalNode;            // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+        constexpr static mNode* terminal{&terminalNode}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
 
         static constexpr bool isTerminal(const mNode* p) { return p == terminal; }
 
-        [[nodiscard]] inline bool isIdentity() const { return flags & 16; }
-        [[nodiscard]] inline bool isSymmetric() const { return flags & 32; }
-        inline void               setIdentity(bool identity) {
-            if (identity)
+        [[nodiscard]] inline bool isIdentity() const { return (flags & 16U) != 0; }
+        [[nodiscard]] inline bool isSymmetric() const { return (flags & 32U) != 0; }
+
+        inline void setIdentity(bool identity) {
+            if (identity) {
                 flags = (flags | 16);
-            else
+            } else {
                 flags = (flags & (~16));
+            }
         }
         inline void setSymmetric(bool symmetric) {
-            if (symmetric)
+            if (symmetric) {
                 flags = (flags | 32);
-            else
+            } else {
                 flags = (flags & (~32));
+            }
         }
     };
     using mEdge       = Edge<mNode>;
     using mCachedEdge = CachedEdge<mNode>;
 
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     inline mNode mNode::terminalNode{{{{nullptr, Complex::zero}, {nullptr, Complex::zero}, {nullptr, Complex::zero}, {nullptr, Complex::zero}}}, nullptr, 0U, -1, 32 + 16};
 
+    // NOLINTNEXTLINE(readability-identifier-naming)
     struct dNode {
         std::array<Edge<dNode>, NEDGE> e{};    // edges out of this node
         dNode*                         next{}; // used to link nodes in unique table
@@ -82,16 +90,16 @@ namespace dd {
         // 2 = mark first path edge (tmp flag),
         // 1 = mark path is conjugated (tmp flag))
 
-        static dNode            terminalNode;
-        constexpr static dNode* terminal{&terminalNode};
+        static dNode            terminalNode;            // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+        constexpr static dNode* terminal{&terminalNode}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
         static constexpr bool   isTerminal(const dNode* p) { return p == terminal; }
 
         [[nodiscard]] [[maybe_unused]] static inline bool tempDensityMatrixFlagsEqual(const std::uint_least8_t a, const std::uint_least8_t b) { return getDensityMatrixTempFlags(a) == getDensityMatrixTempFlags(b); }
 
-        [[nodiscard]] static inline bool isConjugateTempFlagSet(const std::uintptr_t p) { return p & (1ULL << 0); }
-        [[nodiscard]] static inline bool isNonReduceTempFlagSet(const std::uintptr_t p) { return p & (1ULL << 1); }
-        [[nodiscard]] static inline bool isDensityMatrixTempFlagSet(const std::uintptr_t p) { return p & (1ULL << 2); }
-        [[nodiscard]] static inline bool isDensityMatrixNode(const std::uintptr_t p) { return p & (1ULL << 3); }
+        [[nodiscard]] static inline bool isConjugateTempFlagSet(const std::uintptr_t p) { return (p & (1ULL << 0)) != 0U; }
+        [[nodiscard]] static inline bool isNonReduceTempFlagSet(const std::uintptr_t p) { return (p & (1ULL << 1)) != 0U; }
+        [[nodiscard]] static inline bool isDensityMatrixTempFlagSet(const std::uintptr_t p) { return (p & (1ULL << 2)) != 0U; }
+        [[nodiscard]] static inline bool isDensityMatrixNode(const std::uintptr_t p) { return (p & (1ULL << 3)) != 0U; }
 
         [[nodiscard]] [[maybe_unused]] static inline bool isConjugateTempFlagSet(const dNode* p) { return isConjugateTempFlagSet(reinterpret_cast<std::uintptr_t>(p)); }
         [[nodiscard]] [[maybe_unused]] static inline bool isNonReduceTempFlagSet(const dNode* p) { return isNonReduceTempFlagSet(reinterpret_cast<std::uintptr_t>(p)); }
@@ -109,10 +117,11 @@ namespace dd {
         void unsetTempDensityMatrixFlags() { flags = flags & (~7U); }
 
         inline void setDensityMatrixNodeFlag(bool densityMatrix) {
-            if (densityMatrix)
+            if (densityMatrix) {
                 flags = (flags | 8);
-            else
+            } else {
                 flags = (flags & (~8));
+            }
         }
 
         static inline std::uint_least8_t alignDensityNodeNode(dNode*& p) {
@@ -126,7 +135,8 @@ namespace dd {
             if (isNonReduceTempFlagSet(flags) && !isConjugateTempFlagSet(flags)) {
                 // first edge paths are not modified and the property is inherited by all child paths
                 return flags;
-            } else if (!isConjugateTempFlagSet(flags)) {
+            }
+            if (!isConjugateTempFlagSet(flags)) {
                 // Conjugate the second edge (i.e. negate the complex part of the second edge)
                 p->e[2].w.i = dd::CTEntry::flipPointerSign(p->e[2].w.i);
                 setConjugateTempFlagTrue(p->e[2].p);
@@ -194,8 +204,10 @@ namespace dd {
     };
     using dEdge       = Edge<dNode>;
     using dCachedEdge = CachedEdge<dNode>;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     inline dNode dNode::terminalNode{{{{nullptr, Complex::zero}, {nullptr, Complex::zero}, {nullptr, Complex::zero}, {nullptr, Complex::zero}}}, nullptr, 0, -1, 0};
 
+    // NOLINTNEXTLINE(clang-diagnostic-unused-function) It's used but clang-tidy in our CI complains...
     static inline dEdge densityFromMatrixEdge(const mEdge& e) {
         return dEdge{reinterpret_cast<dNode*>(e.p), e.w};
     }

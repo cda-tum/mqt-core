@@ -39,6 +39,7 @@ namespace dd {
         }
 
         constexpr bool operator==(const ComplexValue& other) const {
+            // NOLINTNEXTLINE(clang-diagnostic-float-equal)
             return r == other.r && i == other.i;
         }
 
@@ -56,18 +57,20 @@ namespace dd {
             os.write(reinterpret_cast<const char*>(&i), sizeof(decltype(i)));
         }
 
-        void from_string(const std::string& real_str, std::string imag_str) {
-            fp real = real_str.empty() ? 0. : std::stod(real_str);
+        void fromString(const std::string& realStr, std::string imagStr) {
+            fp real = realStr.empty() ? 0. : std::stod(realStr);
 
-            imag_str.erase(remove(imag_str.begin(), imag_str.end(), ' '), imag_str.end());
-            imag_str.erase(remove(imag_str.begin(), imag_str.end(), 'i'), imag_str.end());
-            if (imag_str == "+" || imag_str == "-") imag_str = imag_str + "1";
-            fp imag = imag_str.empty() ? 0. : std::stod(imag_str);
+            imagStr.erase(remove(imagStr.begin(), imagStr.end(), ' '), imagStr.end());
+            imagStr.erase(remove(imagStr.begin(), imagStr.end(), 'i'), imagStr.end());
+            if (imagStr == "+" || imagStr == "-") {
+                imagStr = imagStr + "1";
+            }
+            fp imag = imagStr.empty() ? 0. : std::stod(imagStr);
             r       = {real};
             i       = {imag};
         }
 
-        static auto getLowestFraction(const double x, const std::uint64_t maxDenominator = std::uint64_t(1) << 10, const fp tol = dd::ComplexTable<>::tolerance()) {
+        static auto getLowestFraction(const double x, const std::uint64_t maxDenominator = 1U << 10, const fp tol = dd::ComplexTable<>::tolerance()) {
             assert(x >= 0.);
 
             std::pair<std::uint64_t, std::uint64_t> lowerBound{0U, 1U};
@@ -80,12 +83,13 @@ namespace dd {
                 if (std::abs(x - median) <= tol) {
                     if (den <= maxDenominator) {
                         return std::pair{num, den};
-                    } else if (upperBound.second > lowerBound.second) {
-                        return upperBound;
-                    } else {
-                        return lowerBound;
                     }
-                } else if (x > median) {
+                    if (upperBound.second > lowerBound.second) {
+                        return upperBound;
+                    }
+                    return lowerBound;
+                }
+                if (x > median) {
                     lowerBound = {num, den};
                 } else {
                     upperBound = {num, den};
@@ -93,9 +97,8 @@ namespace dd {
             }
             if (lowerBound.second > maxDenominator) {
                 return upperBound;
-            } else {
-                return lowerBound;
             }
+            return lowerBound;
         }
 
         static void printFormatted(std::ostream& os, fp num, bool imaginary = false) {
@@ -176,10 +179,14 @@ namespace dd {
         static std::string toString(const fp& real, const fp& imag, bool formatted = true, int precision = -1) {
             std::ostringstream ss{};
 
-            if (precision >= 0) ss << std::setprecision(precision);
+            if (precision >= 0) {
+                ss << std::setprecision(precision);
+            }
             const auto tol = ComplexTable<>::tolerance();
 
-            if (std::abs(real) <= tol && std::abs(imag) <= tol) return "0";
+            if (std::abs(real) <= tol && std::abs(imag) <= tol) {
+                return "0";
+            }
 
             if (std::abs(real) > tol) {
                 if (formatted) {
@@ -193,7 +200,8 @@ namespace dd {
                     if (std::abs(real - imag) <= tol) {
                         ss << "(1+i)";
                         return ss.str();
-                    } else if (std::abs(real + imag) <= tol) {
+                    }
+                    if (std::abs(real + imag) <= tol) {
                         ss << "(1-i)";
                         return ss.str();
                     }
