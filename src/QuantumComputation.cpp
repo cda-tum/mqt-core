@@ -178,11 +178,11 @@ namespace qc {
     }
 
     void QuantumComputation::addQubitRegister(std::size_t nq, const char* reg_name) {
-        if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package<>::maxPossibleQubits) {
+        if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package<>::MAX_POSSIBLE_QUBITS) {
             throw QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
-                               std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, while " +
+                               std::to_string(dd::Package<>::MAX_POSSIBLE_QUBITS) + " qubits, while " +
                                std::to_string(nqubits + nancillae + nq) + " were requested. If you want to use more than " +
-                               std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
+                               std::to_string(dd::Package<>::MAX_POSSIBLE_QUBITS) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
         }
 
         if (qregs.count(reg_name)) {
@@ -222,11 +222,11 @@ namespace qc {
     }
 
     void QuantumComputation::addAncillaryRegister(std::size_t nq, const char* reg_name) {
-        if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package<>::maxPossibleQubits) {
+        if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package<>::MAX_POSSIBLE_QUBITS) {
             throw QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
-                               std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, while " +
+                               std::to_string(dd::Package<>::MAX_POSSIBLE_QUBITS) + " qubits, while " +
                                std::to_string(nqubits + nancillae + nq) + " were requested. If you want to use more than " +
-                               std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
+                               std::to_string(dd::Package<>::MAX_POSSIBLE_QUBITS) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
         }
 
         dd::QubitCount totalqubits = nqubits + nancillae;
