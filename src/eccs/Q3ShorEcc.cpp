@@ -23,7 +23,8 @@ void Q3ShorEcc::initMappedCircuit() {
 }
 
 void Q3ShorEcc::writeEncoding() {
-    if (!isDecoded) {
+    if (!isDecoded || !gatesWritten) {
+        gatesWritten = true;
         return;
     }
     isDecoded         = false;
@@ -37,7 +38,7 @@ void Q3ShorEcc::writeEncoding() {
 }
 
 void Q3ShorEcc::measureAndCorrect() {
-    if (isDecoded) {
+    if (isDecoded || !gatesWritten) {
         return;
     }
     const int  nQubits  = qc.getNqubits();

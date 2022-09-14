@@ -10,7 +10,8 @@ Ecc::Ecc(struct Info eccInfo, qc::QuantumComputation& quantumcomputation, int me
     ecc(std::move(eccInfo)),
     qc(quantumcomputation), measureFrequency(measFreq),
     decomposeMultiControlledGates(decomposeMC), cliffordGatesOnly(cliffOnly) {
-    isDecoded = true;
+    isDecoded    = true;
+    gatesWritten = false;
 }
 
 void Ecc::initMappedCircuit() {
@@ -97,8 +98,12 @@ void Ecc::writeToffoli(int target, int c1, bool p1, int c2, bool p2) {
         throw qc::QFRException(std::string("Gate t not possible to encode with clifford gates only!"));
     }
     if (decomposeMultiControlledGates) {
-        if (!p1) { writeX(static_cast<dd::Qubit>(c1)); }
-        if (!p2) { writeX(static_cast<dd::Qubit>(c2)); }
+        if (!p1) {
+            writeX(static_cast<dd::Qubit>(c1));
+        }
+        if (!p2) {
+            writeX(static_cast<dd::Qubit>(c2));
+        }
 
         qcMapped.h(static_cast<dd::Qubit>(target));
         writeX(static_cast<dd::Qubit>(target), dd::Control{dd::Qubit(c2)});
@@ -116,8 +121,12 @@ void Ecc::writeToffoli(int target, int c1, bool p1, int c2, bool p2) {
         qcMapped.tdag(static_cast<dd::Qubit>(c2));
         writeX(static_cast<dd::Qubit>(c2), dd::Control{dd::Qubit(c1)});
 
-        if (!p1) { writeX(static_cast<dd::Qubit>(c1)); }
-        if (!p2) { writeX(static_cast<dd::Qubit>(c2)); }
+        if (!p1) {
+            writeX(static_cast<dd::Qubit>(c1));
+        }
+        if (!p2) {
+            writeX(static_cast<dd::Qubit>(c2));
+        }
     } else {
         dd::Controls ctrls;
         ctrls.insert(dd::Control{dd::Qubit(c1), p1 ? dd::Control::Type::pos : dd::Control::Type::neg});
@@ -217,7 +226,7 @@ void Ecc::writeXstatic(dd::Qubit target, dd::Control control, qc::QuantumComputa
 }
 
 void Ecc::writeX(dd::Qubit target, const dd::Controls& controls) {
-    if(decomposeMultiControlledGates && controls.size()>2) {
+    if (decomposeMultiControlledGates && controls.size() > 2) {
         throw new qc::QFRException("multi-controlled X-gate not possible");
     }
     qcMapped.x(target, controls);
@@ -237,6 +246,7 @@ void Ecc::writeY(dd::Qubit target, const dd::Control& control) {
 }
 
 void Ecc::writeY(dd::Qubit target, const dd::Controls& controls) {
+    gatesWritten = true;
     if (cliffordGatesOnly) {
         writeZ(target, controls);
         writeX(target, controls);

@@ -31,8 +31,12 @@ void Q5LaflammeEcc::writeEncoding() {
     const int nQubits  = qc.getNqubits();
     const int ancStart = nQubits * ecc.nRedundantQubits;
     const int clEncode = qc.getNcbits() + 4; //encode
+    if (gatesWritten) {
+        for (int i = 0; i < nQubits; i++) {
+            qcMapped.reset(dd::Qubit(ancStart));
+        }
+    }
     for (int i = 0; i < nQubits; i++) {
-        qcMapped.reset(dd::Qubit(ancStart));
         qcMapped.h(dd::Qubit(ancStart));
         writeZ(dd::Qubit(i), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
         writeZ(dd::Qubit(i + nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
@@ -48,6 +52,7 @@ void Q5LaflammeEcc::writeEncoding() {
         writeClassicalControlled(1, i + 3 * nQubits, qc::OpType::X, dd::Qubit(clEncode), dd::QubitCount(1));
         writeClassicalControlled(1, i + 4 * nQubits, qc::OpType::X, dd::Qubit(clEncode), dd::QubitCount(1));
     }
+    gatesWritten = true;
 }
 
 void Q5LaflammeEcc::measureAndCorrect() {
@@ -60,7 +65,9 @@ void Q5LaflammeEcc::measureAndCorrect() {
 
     for (int i = 0; i < nQubits; i++) {
         int q[5] = {};
-        for (int j = 0; j < 5; j++) { q[j] = i + j * nQubits; }
+        for (int j = 0; j < 5; j++) {
+            q[j] = i + j * nQubits;
+        }
 
         qcMapped.reset(ancStart);
         qcMapped.reset(ancStart + 1);

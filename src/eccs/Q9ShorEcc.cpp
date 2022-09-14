@@ -48,6 +48,7 @@ void Q9ShorEcc::writeEncoding() {
         writeX(dd::Qubit(i + 7 * nQubits), ci6);
         writeX(dd::Qubit(i + 8 * nQubits), ci6);
     }
+    gatesWritten = true;
 }
 
 void Q9ShorEcc::measureAndCorrect() {
@@ -62,13 +63,19 @@ void Q9ShorEcc::measureAndCorrect() {
         dd::Qubit   a[8];   //ancilla qubits
         dd::Control ca[8];  //ancilla controls
         dd::Control cna[8]; //negative ancilla controls
-        for (int j = 0; j < 9; j++) { q[j] = dd::Qubit(i + j * nQubits); }
+        for (int j = 0; j < 9; j++) {
+            q[j] = dd::Qubit(i + j * nQubits);
+        }
         for (int j = 0; j < 8; j++) {
             a[j] = dd::Qubit(ecc.nRedundantQubits * nQubits + j);
             qcMapped.reset(a[j]);
         }
-        for (int j = 0; j < 8; j++) { ca[j] = dd::Control{dd::Qubit(a[j]), dd::Control::Type::pos}; }
-        for (int j = 0; j < 8; j++) { cna[j] = dd::Control{dd::Qubit(a[j]), dd::Control::Type::neg}; }
+        for (int j = 0; j < 8; j++) {
+            ca[j] = dd::Control{dd::Qubit(a[j]), dd::Control::Type::pos};
+        }
+        for (int j = 0; j < 8; j++) {
+            cna[j] = dd::Control{dd::Qubit(a[j]), dd::Control::Type::neg};
+        }
 
         // PREPARE measurements --------------------------------------------------------
         for (dd::Qubit j: a) {
@@ -105,7 +112,9 @@ void Q9ShorEcc::measureAndCorrect() {
         writeX(q[7], ca[7]);
         writeX(q[8], ca[7]);
 
-        for (dd::Qubit j: a) { qcMapped.h(j); }
+        for (dd::Qubit j: a) {
+            qcMapped.h(j);
+        }
 
         //MEASURE ancilla qubits
         for (int j = 0; j < 8; j++) {

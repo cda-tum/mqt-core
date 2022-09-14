@@ -42,13 +42,23 @@ void Q9SurfaceEcc::measureAndCorrect() {
         dd::Qubit   a[8];  //ancilla qubits
         dd::Control ca[8]; //ancilla controls
         dd::Control cq[9]; //qubit controls
-        for (int j = 0; j < 9; j++) { q[j] = dd::Qubit(i + j * nQubits); }
+        for (int j = 0; j < 9; j++) {
+            q[j] = dd::Qubit(i + j * nQubits);
+        }
         for (int j = 0; j < 8; j++) {
             a[j] = dd::Qubit(ancStart + j);
-            qcMapped.reset(a[j]);
         }
-        for (int j = 0; j < 8; j++) { ca[j] = dd::Control{dd::Qubit(a[j]), dd::Control::Type::pos}; }
-        for (int j = 0; j < 9; j++) { cq[j] = dd::Control{dd::Qubit(q[j]), dd::Control::Type::pos}; }
+        if (gatesWritten) {
+            for (int j = 0; j < 8; j++) {
+                qcMapped.reset(a[j]);
+            }
+        }
+        for (int j = 0; j < 8; j++) {
+            ca[j] = dd::Control{dd::Qubit(a[j]), dd::Control::Type::pos};
+        }
+        for (int j = 0; j < 9; j++) {
+            cq[j] = dd::Control{dd::Qubit(q[j]), dd::Control::Type::pos};
+        }
 
         //X-type check on a0, a2, a5, a7: cx a->q
         //Z-type check on a1, a3, a4, a6: cz a->q = cx q->a, no hadamard gate
@@ -117,6 +127,7 @@ void Q9SurfaceEcc::measureAndCorrect() {
         writeClassicalControl(dd::Qubit(clAncStart + 4), 4, 8, qc::X, q[8]);  //a[6]
         writeClassicalControl(dd::Qubit(clAncStart + 4), 4, 10, qc::X, q[5]); //a[3,6]
     }
+    gatesWritten = true;
 }
 
 void Q9SurfaceEcc::writeDecoding() {

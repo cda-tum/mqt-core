@@ -18,7 +18,7 @@ void Q7SteaneEcc::initMappedCircuit() {
     statistics.nOutputQubits        = qc.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
     statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits + 7;
     qcMapped.addQubitRegister(statistics.nOutputQubits);
-//    qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
+    //    qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
     auto cRegs = qc.getCregs();
     for (auto const& [regName, regBits]: cRegs) {
         qcMapped.addClassicalRegister(regBits.second, regName);
@@ -32,10 +32,12 @@ void Q7SteaneEcc::writeEncoding() {
     }
     isDecoded         = false;
     const int nQubits = qc.getNqubits();
-    //reset data qubits
-    for (int i = 0; i < nQubits; i++) {
-        for (int j = 1; j < 7; j++) {
-            qcMapped.reset(dd::Qubit(i + j * nQubits));
+    //reset data qubits if necessary
+    if (gatesWritten) {
+        for (int i = 0; i < nQubits; i++) {
+            for (int j = 1; j < 7; j++) {
+                qcMapped.reset(dd::Qubit(i + j * nQubits));
+            }
         }
     }
     measureAndCorrectSingle(true);
@@ -53,12 +55,14 @@ void Q7SteaneEcc::measureAndCorrectSingle(bool xSyndrome) {
     const int nQubits    = qc.getNqubits();
     const int ancStart   = nQubits * ecc.nRedundantQubits;
     const int clAncStart = static_cast<int>(qc.getNcbits());
-
+    if (gatesWritten) {
+        for (int i = 0; i < nQubits; i++) {
+            qcMapped.reset(static_cast<dd::Qubit>(ancStart));
+            qcMapped.reset(static_cast<dd::Qubit>(ancStart + 1));
+            qcMapped.reset(static_cast<dd::Qubit>(ancStart + 2));
+        }
+    }
     for (int i = 0; i < nQubits; i++) {
-        qcMapped.reset(static_cast<dd::Qubit>(ancStart));
-        qcMapped.reset(static_cast<dd::Qubit>(ancStart + 1));
-        qcMapped.reset(static_cast<dd::Qubit>(ancStart + 2));
-
         qcMapped.h(static_cast<dd::Qubit>(ancStart));
         qcMapped.h(static_cast<dd::Qubit>(ancStart + 1));
         qcMapped.h(static_cast<dd::Qubit>(ancStart + 2));
@@ -123,6 +127,7 @@ void Q7SteaneEcc::measureAndCorrectSingle(bool xSyndrome) {
             }
         }
     }
+    gatesWritten = true;
 }
 
 void Q7SteaneEcc::writeDecoding() {
@@ -270,12 +275,11 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quantu
             measureGate = (qc::NonUnitaryOperation*)gate.get();
             for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
                 auto classicalRegisterName = qc.returnClassicalRegisterName(measureGate->getTargets()[j]);
-                if (!classicalRegisterName.empty()){
+                if (!classicalRegisterName.empty()) {
                     qcMapped.measure(static_cast<dd::Qubit>(measureGate->getClassics()[j]), {classicalRegisterName, measureGate->getTargets()[j]});
                 } else {
                     qcMapped.measure(static_cast<dd::Qubit>(measureGate->getClassics()[j]), measureGate->getTargets()[j]);
                 }
-
             }
             break;
         case qc::T:

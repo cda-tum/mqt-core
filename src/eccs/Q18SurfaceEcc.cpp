@@ -38,11 +38,17 @@ void Q18SurfaceEcc::measureAndCorrect() {
     for (int i = 0; i < nQubits; i++) {
         dd::Qubit   q[36];  //qubits
         dd::Control cq[36]; //qubit controls
-        for (int j = 0; j < 36; j++) { q[j] = dd::Qubit(i + j * nQubits); }
-        for (int j = 0; j < 36; j++) { cq[j] = dd::Control{dd::Qubit(q[j]), dd::Control::Type::pos}; }
+        for (int j = 0; j < 36; j++) {
+            q[j] = dd::Qubit(i + j * nQubits);
+        }
+        for (int j = 0; j < 36; j++) {
+            cq[j] = dd::Control{dd::Qubit(q[j]), dd::Control::Type::pos};
+        }
         int ancillaIndices[] = {0, 2, 4, 7, 9, 11, 12, 14, 16, 19, 21, 23, 24, 26, 28, 31, 33, 35};
-        for (int ai: ancillaIndices) {
-            qcMapped.reset(q[ai]);
+        if (gatesWritten) {
+            for (int ai: ancillaIndices) {
+                qcMapped.reset(q[ai]);
+            }
         }
 
         //initialize ancillas: Z-check
@@ -186,6 +192,7 @@ void Q18SurfaceEcc::measureAndCorrect() {
         writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b01100000, qc::Z, q[32]); //31+33
         writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b11000000, qc::Z, q[34]); //33+35
     }
+    gatesWritten = true;
 }
 
 void Q18SurfaceEcc::writeDecoding() {
