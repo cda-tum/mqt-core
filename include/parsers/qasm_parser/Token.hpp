@@ -1,10 +1,9 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_TOKEN_H
-#define QFR_TOKEN_H
+#pragma once
 
 #include "dd/Definitions.hpp"
 
@@ -63,6 +62,8 @@ namespace qasm {
             mcx_recursive,
             mcx_vchain,
             mcphase,
+            sxgate,
+            sxdggate,
             comment
         };
 
@@ -107,6 +108,8 @@ namespace qasm {
             {Token::Kind::mcx_recursive, "mcx_recursive"},
             {Token::Kind::mcx_vchain, "mcx_vchain"},
             {Token::Kind::mcphase, "mcphase"},
+            {Token::Kind::sxgate, "sx"},
+            {Token::Kind::sxdggate, "sxdg"},
             {Token::Kind::pi, "pi"},
             {Token::Kind::measure, "measure"},
             {Token::Kind::openqasm, "openqasm"},
@@ -129,5 +132,3 @@ namespace qasm {
             {Token::Kind::comment, "//"}};
 
 } // namespace qasm
-
-#endif //QFR_TOKEN_H

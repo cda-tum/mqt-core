@@ -1,6 +1,6 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "QuantumComputation.hpp"
@@ -96,18 +96,25 @@ namespace qc {
         //      `measure q[i] -> c[j];`
         // implies that the j-th (logical) output is obtained from measuring the i-th physical qubit.
         bool outputPermutationFound = !outputPermutation.empty();
+
+        // track whether the circuit contains measurements at the end of the circuit
+        // if it does, then all qubits that are not measured shall be considered garbage outputs
+        bool                outputPermutationFromMeasurements = false;
+        std::set<dd::Qubit> measuredQubits{};
+
         for (auto opIt = ops.begin(); opIt != ops.end(); ++opIt) {
             if ((*opIt)->getType() == qc::Measure) {
-                if (!isLastOperationOnQubit(opIt))
+                if (!isLastOperationOnQubit(opIt)) {
                     continue;
+                }
 
-                auto op = dynamic_cast<NonUnitaryOperation*>(opIt->get());
+                outputPermutationFromMeasurements = true;
+                auto op                           = dynamic_cast<NonUnitaryOperation*>(opIt->get());
                 assert(op->getTargets().size() == op->getClassics().size());
                 auto classicIt = op->getClassics().cbegin();
                 for (const auto& q: op->getTargets()) {
                     auto qubitidx = q;
                     auto bitidx   = *classicIt;
-
                     if (outputPermutationFound) {
                         // output permutation was already set before -> permute existing values
                         auto current = outputPermutation.at(qubitidx);
@@ -124,7 +131,22 @@ namespace qc {
                         // directly set permutation if none was set beforehand
                         outputPermutation[qubitidx] = static_cast<dd::Qubit>(bitidx);
                     }
+                    measuredQubits.emplace(qubitidx);
                     ++classicIt;
+                }
+            }
+        }
+
+        // clear any qubits that were not measured from the output permutation
+        // these will be marked garbage further down below
+        if (outputPermutationFromMeasurements) {
+            auto it = outputPermutation.begin();
+            while (it != outputPermutation.end()) {
+                const auto [physical, logical] = *it;
+                if (measuredQubits.find(physical) == measuredQubits.end()) {
+                    it = outputPermutation.erase(it);
+                } else {
+                    ++it;
                 }
             }
         }
@@ -133,8 +155,9 @@ namespace qc {
         if (outputPermutation.empty()) {
             for (dd::QubitCount i = 0; i < nqubits; ++i) {
                 // only add to output permutation if the qubit is actually acted upon
-                if (!isIdleQubit(static_cast<dd::Qubit>(i)))
+                if (!isIdleQubit(static_cast<dd::Qubit>(i))) {
                     outputPermutation.insert({static_cast<dd::Qubit>(i), initialLayout.at(static_cast<dd::Qubit>(i))});
+                }
             }
         }
 
@@ -154,11 +177,11 @@ namespace qc {
     }
 
     void QuantumComputation::addQubitRegister(std::size_t nq, const char* reg_name) {
-        if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package::maxPossibleQubits) {
+        if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package<>::maxPossibleQubits) {
             throw QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
-                               std::to_string(dd::Package::maxPossibleQubits) + " qubits, while " +
+                               std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, while " +
                                std::to_string(nqubits + nancillae + nq) + " were requested. If you want to use more than " +
-                               std::to_string(dd::Package::maxPossibleQubits) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
+                               std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
         }
 
         if (qregs.count(reg_name)) {
@@ -198,11 +221,11 @@ namespace qc {
     }
 
     void QuantumComputation::addAncillaryRegister(std::size_t nq, const char* reg_name) {
-        if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package::maxPossibleQubits) {
+        if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package<>::maxPossibleQubits) {
             throw QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
-                               std::to_string(dd::Package::maxPossibleQubits) + " qubits, while " +
+                               std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, while " +
                                std::to_string(nqubits + nancillae + nq) + " were requested. If you want to use more than " +
-                               std::to_string(dd::Package::maxPossibleQubits) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
+                               std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
         }
 
         dd::QubitCount totalqubits = nqubits + nancillae;
@@ -385,6 +408,9 @@ namespace qc {
         // adjust output permutation
         if (output_qubit_index >= 0) {
             outputPermutation.insert({physical_qubit_index, output_qubit_index});
+        } else {
+            // if a qubit is not relevant for the output, it is considered garbage
+            garbage[logical_qubit_index] = true;
         }
 
         // update all operations
@@ -463,473 +489,11 @@ namespace qc {
         garbage[logical_qubit_index]   = false;
     }
 
-    MatrixDD QuantumComputation::createInitialMatrix(std::unique_ptr<dd::Package>& dd) const {
-        auto e = dd->makeIdent(nqubits + nancillae);
-        dd->incRef(e);
-        e = dd->reduceAncillae(e, ancillary);
-        return e;
-    }
-
-    MatrixDD QuantumComputation::buildFunctionality(std::unique_ptr<dd::Package>& dd) const {
-        if (nqubits + nancillae == 0)
-            return MatrixDD::one;
-
-        auto permutation = initialLayout;
-        auto e           = createInitialMatrix(dd);
-
-        for (auto& op: ops) {
-            auto tmp = dd->multiply(op->getDD(dd, permutation), e);
-
-            dd->incRef(tmp);
-            dd->decRef(e);
-            e = tmp;
-
-            dd->garbageCollect();
-        }
-        // correct permutation if necessary
-        changePermutation(e, permutation, outputPermutation, dd);
-        e = dd->reduceAncillae(e, ancillary);
-        e = dd->reduceGarbage(e, garbage);
-
-        return e;
-    }
-
-    MatrixDD QuantumComputation::buildFunctionalityRecursive(std::unique_ptr<dd::Package>& dd) const {
-        if (nqubits + nancillae == 0)
-            return MatrixDD::one;
-
-        auto permutation = initialLayout;
-
-        if (ops.size() == 1) {
-            auto e = ops.front()->getDD(dd, permutation);
-            dd->incRef(e);
-            return e;
-        }
-
-        std::stack<MatrixDD> s{};
-        auto                 depth = static_cast<std::size_t>(std::ceil(std::log2(ops.size())));
-        buildFunctionalityRecursive(depth, 0, s, permutation, dd);
-        auto e = s.top();
-        s.pop();
-
-        // correct permutation if necessary
-        changePermutation(e, permutation, outputPermutation, dd);
-        e = dd->reduceAncillae(e, ancillary);
-        e = dd->reduceGarbage(e, garbage);
-
-        return e;
-    }
-
-    bool QuantumComputation::buildFunctionalityRecursive(std::size_t depth, std::size_t opIdx, std::stack<MatrixDD>& s, Permutation& permutation, std::unique_ptr<dd::Package>& dd) const {
-        // base case
-        if (depth == 1) {
-            auto e = ops[opIdx]->getDD(dd, permutation);
-            ++opIdx;
-            if (opIdx == ops.size()) { // only one element was left
-                s.push(e);
-                dd->incRef(e);
-                return false;
-            }
-            auto f = ops[opIdx]->getDD(dd, permutation);
-            s.push(dd->multiply(f, e)); // ! reverse multiplication
-            dd->incRef(s.top());
-            return (opIdx != ops.size() - 1);
-        }
-
-        // in case no operations are left after the first recursive call nothing has to be done
-        size_t leftIdx = opIdx & ~(1UL << (depth - 1));
-        if (!buildFunctionalityRecursive(depth - 1, leftIdx, s, permutation, dd)) return false;
-
-        size_t rightIdx = opIdx | (1UL << (depth - 1));
-        auto   success  = buildFunctionalityRecursive(depth - 1, rightIdx, s, permutation, dd);
-
-        // get latest two results from stack and push their product on the stack
-        auto e = s.top();
-        s.pop();
-        auto f = s.top();
-        s.pop();
-        s.push(dd->multiply(e, f)); // ordering because of stack structure
-
-        // reference counting
-        dd->decRef(e);
-        dd->decRef(f);
-        dd->incRef(s.top());
-        dd->garbageCollect();
-
-        return success;
-    }
-
-    VectorDD QuantumComputation::simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd) const {
-        // measurements are currently not supported here
-        auto permutation = initialLayout;
-        auto e           = in;
-        dd->incRef(e);
-
-        for (auto& op: ops) {
-            auto tmp = dd->multiply(op->getDD(dd, permutation), e);
-            dd->incRef(tmp);
-            dd->decRef(e);
-            e = tmp;
-
-            dd->garbageCollect();
-        }
-
-        // correct permutation if necessary
-        changePermutation(e, permutation, outputPermutation, dd);
-        e = dd->reduceGarbage(e, garbage);
-
-        return e;
-    }
-
-    std::map<std::string, std::size_t> QuantumComputation::simulate(const VectorDD& in, std::unique_ptr<dd::Package>& dd, const std::size_t shots) {
-        bool isDynamicCircuit = false;
-        bool hasMeasurements  = false;
-        bool measurementsLast = true;
-
-        std::map<dd::Qubit, std::size_t> measurementMap{};
-
-        // rudimentary check whether circuit is dynamic
-        for (auto& op: ops) {
-            // if it contains any dynamic circuit primitives, it certainly is dynamic
-            if (op->isClassicControlledOperation() || op->getType() == qc::Reset) {
-                isDynamicCircuit = true;
-                break;
-            }
-
-            // once a measurement is encountered we store the corresponding mapping (qubit -> bit)
-            if (op->getType() == qc::Measure) {
-                auto measure    = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
-                hasMeasurements = true;
-
-                const auto& quantum = measure->getTargets();
-                const auto& classic = measure->getClassics();
-
-                for (std::size_t i = 0; i < quantum.size(); ++i) {
-                    measurementMap[quantum.at(i)] = classic.at(i);
-                }
-            }
-
-            // if an operation happens after a measurement, the resulting circuit can only be simulated in single shots
-            if (hasMeasurements && (op->isUnitary() || op->isClassicControlledOperation())) {
-                measurementsLast = false;
-            }
-        }
-
-        if (!measurementsLast)
-            isDynamicCircuit = true;
-
-        if (!isDynamicCircuit) {
-            // if all gates are unitary (besides measurements at the end), we just simulate once and measure all qubits repeatedly
-            auto permutation = initialLayout;
-            auto e           = in;
-            dd->incRef(e);
-
-            for (auto& op: ops) {
-                // simply skip any non-unitary
-                if (!op->isUnitary())
-                    continue;
-
-                auto tmp = dd->multiply(op->getDD(dd, permutation), e);
-                dd->incRef(tmp);
-                dd->decRef(e);
-                e = tmp;
-
-                dd->garbageCollect();
-            }
-
-            // correct permutation if necessary
-            changePermutation(e, permutation, outputPermutation, dd);
-            e = dd->reduceGarbage(e, garbage);
-
-            // measure all qubits
-            std::map<std::string, std::size_t> counts{};
-            for (std::size_t i = 0; i < shots; ++i) {
-                // measure all returns a string of the form "q(n-1) ... q(0)"
-                auto measurement = dd->measureAll(e, false, mt);
-                // reverse the order of the bits so that measurements follow big-endian convention
-                counts[measurement]++;
-            }
-            // reduce reference count of measured state
-            dd->decRef(e);
-
-            std::map<std::string, std::size_t> actualCounts{};
-            for (const auto& [bitstring, count]: counts) {
-                std::string measurement(nclassics, '0');
-                if (hasMeasurements) {
-                    // if the circuit contains measurements, we only want to return the measured bits
-                    for (const auto& [qubit, bit]: measurementMap) {
-                        // measurement map specifies that the circuit `qubit` is measured into a certain `bit`
-                        measurement[nclassics - 1 - bit] = bitstring[bitstring.size() - 1 - qubit];
-                    }
-                } else {
-                    // otherwise, we consider the output permutation for determining where to measure the qubits to
-                    for (const auto& [qubit, bit]: outputPermutation) {
-                        measurement[nclassics - 1 - bit] = bitstring[bitstring.size() - 1 - qubit];
-                    }
-                }
-                actualCounts[measurement] += count;
-            }
-            return actualCounts;
-        } else {
-            std::map<std::string, std::size_t> counts{};
-
-            for (std::size_t i = 0; i < shots; i++) {
-                std::map<std::size_t, char> measurements{};
-
-                auto permutation = initialLayout;
-                auto e           = in;
-                dd->incRef(e);
-
-                for (auto& op: ops) {
-                    if (op->getType() == Measure) {
-                        auto*       measure = dynamic_cast<NonUnitaryOperation*>(op.get());
-                        const auto& qubits  = measure->getTargets();
-                        const auto& bits    = measure->getClassics();
-                        for (std::size_t j = 0; j < qubits.size(); ++j) {
-                            measurements[bits.at(j)] = dd->measureOneCollapsing(e, permutation.at(qubits.at(j)), true, mt);
-                        }
-                        continue;
-                    }
-
-                    if (op->getType() == Reset) {
-                        auto*       reset  = dynamic_cast<NonUnitaryOperation*>(op.get());
-                        const auto& qubits = reset->getTargets();
-                        for (const auto& qubit: qubits) {
-                            auto bit = dd->measureOneCollapsing(e, permutation.at(qubit), true, mt);
-                            // apply an X operation whenever the measured result is one
-                            if (bit == '1') {
-                                auto tmp = dd->multiply(qc::StandardOperation(getNqubits(), qubit, qc::X).getDD(dd), e);
-                                dd->incRef(tmp);
-                                dd->decRef(e);
-                                e = tmp;
-                                dd->garbageCollect();
-                            }
-                        }
-                        continue;
-                    }
-
-                    if (op->getType() == ClassicControlled) {
-                        auto*       classicControlled = dynamic_cast<ClassicControlledOperation*>(op.get());
-                        const auto& controlRegister   = classicControlled->getControlRegister();
-                        const auto& expectedValue     = classicControlled->getExpectedValue();
-                        auto        actualValue       = 0ULL;
-                        // determine the actual value from measurements
-                        for (std::size_t j = 0; j < controlRegister.second; ++j) {
-                            if (measurements[controlRegister.first + j] == '1') {
-                                actualValue |= 1ULL << j;
-                            }
-                        }
-
-                        // do not apply an operation if the value is not the expected one
-                        if (actualValue != expectedValue)
-                            continue;
-                    }
-
-                    auto tmp = dd->multiply(op->getDD(dd, permutation), e);
-                    dd->incRef(tmp);
-                    dd->decRef(e);
-                    e = tmp;
-
-                    dd->garbageCollect();
-                }
-
-                // reduce reference count of measured state
-                dd->decRef(e);
-
-                std::string shot(nclassics, '0');
-                for (const auto& [bit, value]: measurements) {
-                    shot[nclassics - bit - 1] = value;
-                }
-                counts[shot]++;
-            }
-
-            return counts;
-        }
-    }
-
-    void QuantumComputation::extractProbabilityVector(const VectorDD& in, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package>& dd) {
-        // ! initial layout, output permutation and garbage qubits are currently not supported here
-        dd->incRef(in);
-        extractProbabilityVectorRecursive(in, ops.begin(), std::map<std::size_t, char>{}, 1., probVector, dd);
-    }
-
-    void QuantumComputation::extractProbabilityVectorRecursive(const VectorDD& currentState, decltype(ops.begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package>& dd) {
-        auto state = currentState;
-        for (auto it = currentIt; it != ops.end(); ++it) {
-            auto& op = (*it);
-
-            // check whether a classic controlled operations can be applied
-            if (op->getType() == ClassicControlled) {
-                auto*       classicControlled = dynamic_cast<ClassicControlledOperation*>(op.get());
-                const auto& controlRegister   = classicControlled->getControlRegister();
-                const auto& expectedValue     = classicControlled->getExpectedValue();
-                auto        actualValue       = 0U;
-                // determine the actual value from measurements
-                for (std::size_t j = 0; j < controlRegister.second; ++j) {
-                    actualValue |= (measurements[controlRegister.first + j] == '1') ? (1ULL << j) : 0U;
-                }
-
-                // do not apply an operation if the value is not the expected one
-                if (actualValue != expectedValue)
-                    continue;
-            }
-
-            if (op->getType() == Reset) {
-                // a reset operation should only happen once a qubit has been measured, i.e., the qubit is in a basis state
-                // thus the probabilities for 0 and 1 need to be determined
-                // if p(1) ~= 1, an X operation has to be applied to the qubit
-                // if p(0) ~= 1, nothing has to be done
-                // if 0 < p(0), p(1) < 1, an error should be raised
-
-                const auto& targets = op->getTargets();
-                if (targets.size() != 1) {
-                    throw qc::QFRException("Resets on multiple qubits are currently not supported. Please split them into multiple single resets.");
-                }
-
-                auto [pzero, pone] = dd->determineMeasurementProbabilities(state, targets[0], true);
-
-                // normalize probabilities
-                const auto norm = pzero + pone;
-                pzero /= norm;
-                pone /= norm;
-
-                if (dd::ComplexTable<>::Entry::approximatelyOne(pone)) {
-                    qc::MatrixDD xGate      = dd->makeGateDD(dd::Xmat, state.p->v + 1, targets[0]);
-                    qc::VectorDD resetState = dd->multiply(xGate, state);
-                    dd->incRef(resetState);
-                    dd->decRef(state);
-                    state = resetState;
-                    continue;
-                }
-
-                if (!dd::ComplexTable<>::Entry::approximatelyOne(pzero)) {
-                    throw qc::QFRException("Reset on non basis state encountered. This is not supported in this method.");
-                }
-
-                continue;
-            }
-
-            // measurements form splitting points in this extraction scheme
-            if (op->getType() == Measure) {
-                const auto* measurement = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
-                const auto& targets     = measurement->getTargets();
-                const auto& classics    = measurement->getClassics();
-                if (targets.size() != 1 || classics.size() != 1) {
-                    throw qc::QFRException("Measurements on multiple qubits are not supported right now. Split your measurements into individual operations.");
-                }
-
-                // determine probabilities for this measurement
-                auto [pzero, pone] = dd->determineMeasurementProbabilities(state, targets[0], true);
-
-                // normalize probabilities
-                const auto norm = pzero + pone;
-                pzero /= norm;
-                pone /= norm;
-
-                // base case -> determine the basis state from the measurement and safe the probability
-                if (measurements.size() == nclassics - 1) {
-                    std::size_t idx0 = 0;
-                    std::size_t idx1 = 0;
-                    for (std::size_t i = 0; i < nclassics; ++i) {
-                        // if this is the qubit being measured and the result is one
-                        if (i == static_cast<std::size_t>(classics[0])) {
-                            idx1 |= (1ULL << i);
-                        } else {
-                            // sanity check
-                            auto findIt = measurements.find(i);
-                            if (findIt == measurements.end()) {
-                                throw qc::QFRException("No information on classical bit " + std::to_string(i));
-                            }
-                            // if i-th bit is set increase the index appropriately
-                            if (findIt->second == '1') {
-                                idx0 |= (1ULL << i);
-                                idx1 |= (1ULL << i);
-                            }
-                        }
-                    }
-                    const auto prob0 = commonFactor * pzero;
-                    if (!dd::ComplexTable<>::Entry::approximatelyZero(prob0)) {
-                        probVector[idx0] = prob0;
-                    }
-                    const auto prob1 = commonFactor * pone;
-                    if (!dd::ComplexTable<>::Entry::approximatelyZero(prob1)) {
-                        probVector[idx1] = prob1;
-                    }
-
-                    // probabilities have been written -> this path is done
-                    dd->decRef(state);
-                    return;
-                }
-
-                bool nonZeroP0 = !dd::ComplexTable<>::Entry::approximatelyZero(pzero);
-                bool nonZeroP1 = !dd::ComplexTable<>::Entry::approximatelyZero(pone);
-
-                // in case both outcomes are non-zero the reference count of the state has to be increased once more in order to avoid reference counting errors
-                if (nonZeroP0 && nonZeroP1) {
-                    dd->incRef(state);
-                }
-
-                // recursive case -- outcome 0
-                if (nonZeroP0) {
-                    // save measurement result
-                    measurements[classics[0]] = '0';
-                    // determine accumulated probability
-                    auto probability = commonFactor * pzero;
-                    // determine the next iteration point
-                    auto nextIt = it + 1;
-                    // actually collapse the state
-                    dd::GateMatrix measurementMatrix{dd::complex_one, dd::complex_zero, dd::complex_zero, dd::complex_zero};
-                    qc::MatrixDD   measurementGate = dd->makeGateDD(measurementMatrix, state.p->v + 1, targets[0]);
-                    qc::VectorDD   measuredState   = dd->multiply(measurementGate, state);
-
-                    auto c = dd->cn.getTemporary(1. / std::sqrt(pzero), 0);
-                    dd::ComplexNumbers::mul(c, measuredState.w, c);
-                    measuredState.w = dd->cn.lookup(c);
-                    dd->incRef(measuredState);
-                    dd->decRef(state);
-                    // recursive call from here
-                    extractProbabilityVectorRecursive(measuredState, nextIt, measurements, probability, probVector, dd);
-                }
-
-                // recursive case -- outcome 1
-                if (nonZeroP1) {
-                    // save measurement result
-                    measurements[classics[0]] = '1';
-                    // determine accumulated probability
-                    auto probability = commonFactor * pone;
-                    // determine the next iteration point
-                    auto nextIt = it + 1;
-                    // actually collapse the state
-                    dd::GateMatrix measurementMatrix{dd::complex_zero, dd::complex_zero, dd::complex_zero, dd::complex_one};
-                    qc::MatrixDD   measurementGate = dd->makeGateDD(measurementMatrix, state.p->v + 1, targets[0]);
-                    qc::VectorDD   measuredState   = dd->multiply(measurementGate, state);
-
-                    auto c = dd->cn.getTemporary(1. / std::sqrt(pone), 0);
-                    dd::ComplexNumbers::mul(c, measuredState.w, c);
-                    measuredState.w = dd->cn.lookup(c);
-                    dd->incRef(measuredState);
-                    dd->decRef(state);
-                    // recursive call from here
-                    extractProbabilityVectorRecursive(measuredState, nextIt, measurements, probability, probVector, dd);
-                }
-
-                // everything is said and done
-                return;
-            }
-
-            // any standard operation or classic-controlled operation is applied here
-            auto tmp = dd->multiply(op->getDD(dd), state);
-            dd->incRef(tmp);
-            dd->decRef(state);
-            state = tmp;
-
-            dd->garbageCollect();
-        }
-    }
-
     std::ostream& QuantumComputation::print(std::ostream& os) const {
+        const auto width = ops.empty() ? 1 : static_cast<int>(std::log10(ops.size()) + 1.);
         if (!ops.empty()) {
-            os << std::setw((int)std::log10(ops.size()) + 1) << "i: \t\t\t";
+            os << std::setw(width) << "i"
+               << ": \t\t\t";
         } else {
             os << "i: \t\t\t";
         }
@@ -940,24 +504,26 @@ namespace qc {
                 os << static_cast<std::size_t>(Q.second) << "\t";
         }
         os << std::endl;
-        size_t i = 0;
+        size_t i = 0U;
         for (const auto& op: ops) {
-            os << std::setw((int)std::log10(ops.size()) + 1) << ++i << ": \t";
+            os << std::setw(width) << ++i << ": \t";
             op->print(os, initialLayout);
             os << std::endl;
         }
         if (!ops.empty()) {
-            os << std::setw((int)std::log10(ops.size()) + 1) << "o: \t\t\t";
+            os << std::setw(width) << "o"
+               << ": \t\t\t";
         } else {
             os << "o: \t\t\t";
         }
         for (const auto& physical_qubit: initialLayout) {
             auto it = outputPermutation.find(physical_qubit.first);
             if (it == outputPermutation.end()) {
-                if (garbage[physical_qubit.second])
+                if (garbage[physical_qubit.second]) {
                     os << "\033[31m|\t\033[0m";
-                else
+                } else {
                     os << "|\t";
+                }
             } else {
                 os << static_cast<std::size_t>(it->second) << "\t";
             }
@@ -1071,13 +637,13 @@ namespace qc {
 
         // initialize an index for every qubit
         auto        inds    = std::vector<std::size_t>(getNqubits(), 0U);
-        std::size_t gateIdx = 0;
-        auto        dd      = std::make_unique<dd::Package>(getNqubits());
+        std::size_t gateIdx = 0U;
+        auto        dd      = std::make_unique<dd::Package<>>(getNqubits());
         for (const auto& op: ops) {
             const auto type = op->getType();
             if (op != ops.front() && (type != Measure && type != Barrier && type != ShowProbabilities && type != Snapshot))
                 of << ",\n";
-            op->dumpTensor(of, inds, gateIdx, dd);
+            dumpTensor(op.get(), of, inds, gateIdx, dd);
         }
         of << "\n]}\n";
     }
@@ -1381,7 +947,7 @@ namespace qc {
         }
     }
 
-    bool QuantumComputation::isLastOperationOnQubit(const decltype(ops.cbegin())& opIt, const decltype(ops.cend())& end) const {
+    bool QuantumComputation::isLastOperationOnQubit(const const_iterator& opIt, const const_iterator& end) const {
         if (opIt == end)
             return true;
 
@@ -1403,4 +969,66 @@ namespace qc {
         }
         return true;
     }
+
+    void QuantumComputation::unifyQuantumRegisters(const std::string& regName) {
+        ancregs.clear();
+        qregs.clear();
+        qregs[regName] = {0, getNqubits()};
+        nancillae      = 0;
+    }
+
+    void QuantumComputation::appendMeasurementsAccordingToOutputPermutation(const std::string& registerName) {
+        // ensure that the circuit contains enough classical registers
+        if (cregs.empty()) {
+            // in case there are no registers, create a new one
+            addClassicalRegister(outputPermutation.size(), registerName.c_str());
+        } else if (nclassics < outputPermutation.size()) {
+            if (cregs.find(registerName) == cregs.end()) {
+                // in case there are registers but not enough, add a new one
+                addClassicalRegister(outputPermutation.size() - nclassics, registerName.c_str());
+            } else {
+                // in case the register already exists, augment it
+                nclassics += outputPermutation.size() - nclassics;
+                cregs[registerName].second = outputPermutation.size();
+            }
+        }
+
+        // append measurements according to output permutation
+        for (const auto& [qubit, clbit]: outputPermutation) {
+            measure(qubit, clbit);
+        }
+    }
+
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit) const {
+        if (const auto it = initialLayout.find(qubit); it == initialLayout.end() || it->second >= getNqubits())
+            throw QFRException("Qubit index out of range: " +
+                               std::to_string(qubit));
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit0, dd::Qubit qubit1) const {
+        checkQubitRange(qubit0);
+        checkQubitRange(qubit1);
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit, const dd::Control& control) const {
+        checkQubitRange(qubit);
+        checkQubitRange(control.qubit);
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit0, dd::Qubit qubit1, const dd::Control& control) const {
+        checkQubitRange(qubit0, qubit1);
+        checkQubitRange(control.qubit);
+    }
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit, const dd::Controls& controls) const {
+        checkQubitRange(qubit);
+        for (auto& [ctrl, _]: controls)
+            checkQubitRange(ctrl);
+    }
+
+    void QuantumComputation::checkQubitRange(dd::Qubit qubit0, dd::Qubit qubit1, const dd::Controls& controls) const {
+        checkQubitRange(qubit0, controls);
+        checkQubitRange(qubit1);
+    }
+
+    void QuantumComputation::checkQubitRange(const std::vector<dd::Qubit>& qubits) const {
+        std::for_each(qubits.begin(), qubits.end(), [&](auto q) { checkQubitRange(q); });
+    }
+
 } // namespace qc

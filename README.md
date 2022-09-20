@@ -1,19 +1,17 @@
-[![PyPI](https://img.shields.io/pypi/v/jkq.qfr?logo=pypi&style=plastic)](https://pypi.org/project/jkq.qfr/)
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/iic-jku/qfr/CI?logo=github&style=plastic)](https://github.com/iic-jku/qfr/actions?query=workflow%3A%22CI%22)
-[![Codecov branch](https://img.shields.io/codecov/c/github/iic-jku/qfr/master?label=codecov&logo=codecov&style=plastic)](https://codecov.io/gh/iic-jku/qfr)
-![GitHub](https://img.shields.io/github/license/iic-jku/qcec?style=plastic)
-[![toolset: JKQ](https://img.shields.io/badge/toolset-JKQ-blue?style=plastic)](https://github.com/iic-jku/jkq)
+[![PyPI](https://img.shields.io/pypi/v/mqt.qfr?logo=pypi&style=plastic)](https://pypi.org/project/mqt.qfr/)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/cda-tum/qfr/CI?logo=github&style=plastic)](https://github.com/cda-tum/qfr/actions?query=workflow%3A%22CI%22)
+[![Codecov branch](https://img.shields.io/codecov/c/github/cda-tum/qfr/master?label=codecov&logo=codecov&style=plastic)](https://codecov.io/gh/cda-tum/qfr)
+![GitHub](https://img.shields.io/github/license/cda-tum/qfr?style=plastic)
 [![arXiv](https://img.shields.io/static/v1?label=arXiv&message=2103.08281&color=inactive&style=plastic)](https://arxiv.org/abs/2103.08281)
 
-# QFR - A JKQ Library for Quantum Functionality Representation Written in C++
+# MQT QFR - A Library for Quantum Functionality Representation Written in C++
 
-A JKQ library for the representation of quantum functionality by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at). This package is part of the [JKQ toolset](https://github.com/iic-jku/jkq).
-
-If you have any questions feel free to contact us using [iic-quantum@jku.at](mailto:iic-quantum@jku.at) or by creating an issue on [GitHub](https://github.com/iic-jku/qfr/issues).
+A library for the representation of quantum functionality by the [Institute for Integrated Circuits](http://iic.jku.at/eda/) at the [Johannes Kepler University Linz](https://jku.at). 
+If you have any questions feel free to contact us using [iic-quantum@jku.at](mailto:iic-quantum@jku.at) or by creating an issue on [GitHub](https://github.com/cda-tum/qfr/issues).
 
 ## Efficient Construction of Functional Representations for Quantum Algorithms
 
-The QFR library provides the means for constructing the functionality of a given quantum circuit using [decision diagrams](https://iic.jku.at/eda/research/quantum_dd) in the form of the `jkq.qfr` Python package. It includes a traditional,
+The QFR library provides the means for constructing the functionality of a given quantum circuit using [decision diagrams](https://iic.jku.at/eda/research/quantum_dd) in the form of the `mqt.qfr` Python package. It includes a traditional,
 sequential approach (`qfr.ConstructionMethod.sequential`) and the efficient, recursive method proposed in [[1]](https://arxiv.org/abs/2103.08281) (`qfr.ConstructionMethod.recursive`).
 
 [[1]](https://arxiv.org/abs/2103.08281) L. Burgholzer, R. Raymond, I. Sengupta, and R. Wille. **"Efficient Construction of Functional Representations for Quantum Algorithms"**. [arXiv:2103.08281](https://arxiv.org/abs/2103.08281), 2021
@@ -21,13 +19,13 @@ sequential approach (`qfr.ConstructionMethod.sequential`) and the efficient, rec
 In order to make the library as easy to use as possible (without compilation), we provide pre-built wheels for most common platforms (64-bit Linux, MacOS, Windows). These can be installed using
 
 ```bash
-pip install jkq.qfr
+pip install mqt.qfr
 ```
 
 However, in order to get the best performance out of the QFR, it is recommended to build it locally from the source distribution (see [system requirements](#system-requirements)) via
 
 ```bash
-pip install jkq.qfr --no-binary jkq.qfr
+pip install mqt.qfr --no-binary mqt.qfr
 ```
 
 This enables platform specific compiler optimizations that cannot be enabled on portable wheels.
@@ -35,7 +33,7 @@ This enables platform specific compiler optimizations that cannot be enabled on 
 Once installed, in Python, the functionality of a given circuit (provided, e.g., as Qiskit QuantumCircuit) can be constructed with:
 
 ```python
-from jkq import qfr
+from mqt import qfr
 from qiskit import QuantumCircuit
 
 # create your quantum circuit
@@ -51,13 +49,13 @@ The `construct` function additionally provides the options `store_decision_diagr
 
 Special routines are available for constructing the functionality of the Quantum Fourier Transform (`construct_qft(nqubits, ...)`) or Grover's algorithm (`construct_grover(nqubits, seed, ...)`). For details on the method employed for Grover's search we refer to [[1, Section 4.2]](https://arxiv.org/abs/2103.08281).
 
-## JKQ Toolset
+## MQT Toolset
 
-The QFR library is the backbone of the quantum software tools in [JKQ: JKU Tools for Quantum Computing](https://iic.jku.at/files/eda/2020_iccad_jku_tools_for_quantum_computing.pdf):
-- [JKQ DDSIM](https://github.com/iic-jku/ddsim): a decision diagram-based simulator for quantum circuits.
-- [JKQ QMAP](https://github.com/iic-jku/qmap): a tool for mapping/compiling quantum circuits to real quantum architectures.
-- [JKQ QCEC](https://github.com/iic-jku/qcec): a decision diagram-based equivalence checking tool for quantum circuits.
-- [JKQ DDVis](http://github.com/iic-jku/ddvis): a visualization tool for how decision diagrams are used in simulation and verification.
+The QFR library is the backbone of the quantum software tools in:
+- [MQT DDSIM](https://github.com/cda-tum/ddsim): a decision diagram-based simulator for quantum circuits.
+- [MQT QMAP](https://github.com/cda-tum/qmap): a tool for mapping/compiling quantum circuits to real quantum architectures.
+- [MQT QCEC](https://github.com/cda-tum/qcec): a decision diagram-based equivalence checking tool for quantum circuits.
+- [MQT DDVis](http://github.com/cda-tum/ddvis): a visualization tool for how decision diagrams are used in simulation and verification.
     - You can find an online instance of this tool at http://iic.jku.at/eda/research/quantum_dd/tool/
 
 It acts as an intermediate representation and provides the facilitites to
@@ -154,12 +152,14 @@ found [here](https://docs.microsoft.com/en-us/cpp/build/clang-support-msbuild?vi
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
+The QFR library also provides functionality to represent functionality of quantum circuits in the form of [ZX-diagrams](https://github.com/cda-tum/zx). At this point this feature is only used by [MQT QCEC](https://github.com/cda-tum/qcec) but is going to be extended further in future releases. If you want to use this feature it is recommended (although not strictly necessary) to have [GMP](https://gmplib.org/) installed in your system. 
+
 ### Configure, Build, and Install
 
 To start off, clone this repository using
 
 ```shell
-git clone --recurse-submodules -j8 https://github.com/iic-jku/qfr 
+git clone --recurse-submodules -j8 https://github.com/cda-tum/qfr 
 ```
 
 Note the `--recurse-submodules` flag. It is required to also clone all the required submodules. If you happen to forget passing the flag on your initial clone, you can initialize all the submodules by
@@ -184,7 +184,7 @@ Building the project this way generates
 - a test executable `qfr_test` containing a small set of unit tests in the `build/test` folder
 - a small demo example executable `qfr_example` in the `build/test` directory.
 
-You can link against the library built by this project in other CMake project using the `JKQ::qfr` target.
+You can link against the library built by this project in other CMake project using the `MQT::qfr` target.
 
 ### Extending the Python Package
 

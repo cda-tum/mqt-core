@@ -1,6 +1,6 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
 #include "CircuitOptimizer.hpp"
@@ -41,43 +41,17 @@ namespace qc {
     void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
         dd::Qubit highest_physical_qubit = 0;
         for (const auto& q: qc.initialLayout) {
-            if (q.first > highest_physical_qubit)
+            if (q.first > highest_physical_qubit) {
                 highest_physical_qubit = q.first;
+            }
         }
 
         auto dag = DAG(highest_physical_qubit + 1);
 
         for (auto& it: qc.ops) {
             if (!it->isStandardOperation()) {
-                // compound operations are added "as-is"
-                if (it->isCompoundOperation()) {
-                    std::clog << "Skipping compound operation during SWAP reconstruction!" << std::endl;
-                    for (dd::QubitCount i = 0; i < it->getNqubits(); ++i) {
-                        if (it->actsOn(static_cast<dd::Qubit>(i))) {
-                            dag.at(i).push_back(&it);
-                        }
-                    }
-                    continue;
-                } else if (it->isNonUnitaryOperation()) {
-                    if (it->getType() == Barrier)
-                        continue;
-
-                    for (const auto& b: it->getTargets()) {
-                        dag.at(b).push_back(&it);
-                    }
-                    continue;
-                } else if (it->isClassicControlledOperation()) {
-                    auto op = dynamic_cast<ClassicControlledOperation*>(it.get())->getOperation();
-                    for (const auto& control: op->getControls()) {
-                        dag.at(control.qubit).push_back(&it);
-                    }
-                    for (const auto& target: op->getTargets()) {
-                        dag.at(target).push_back(&it);
-                    }
-                    continue;
-                } else {
-                    throw QFRException("Unexpected operation encountered");
-                }
+                addNonStandardOperationToDag(dag, &it);
+                continue;
             }
 
             // Operation is not a CNOT
@@ -86,8 +60,8 @@ namespace qc {
                 continue;
             }
 
-            dd::Qubit control = it->getControls().begin()->qubit;
-            dd::Qubit target  = it->getTargets().at(0);
+            const dd::Qubit control = it->getControls().begin()->qubit;
+            const dd::Qubit target  = it->getTargets().at(0);
 
             // first operation
             if (dag.at(control).empty() || dag.at(target).empty()) {
@@ -105,10 +79,10 @@ namespace qc {
                 continue;
             }
 
-            auto opCcontrol = (*opC)->getControls().begin()->qubit;
-            auto opCtarget  = (*opC)->getTargets().at(0);
-            auto opTcontrol = (*opT)->getControls().begin()->qubit;
-            auto opTtarget  = (*opT)->getTargets().at(0);
+            const auto opCcontrol = (*opC)->getControls().begin()->qubit;
+            const auto opCtarget  = (*opC)->getTargets().at(0);
+            const auto opTcontrol = (*opT)->getControls().begin()->qubit;
+            const auto opTtarget  = (*opT)->getTargets().at(0);
 
             // operation at control and target qubit are not the same
             if (opCcontrol != opTcontrol || opCtarget != opTtarget) {
@@ -160,31 +134,7 @@ namespace qc {
 
         for (auto& it: qc.ops) {
             if (!it->isStandardOperation()) {
-                // compound operations are added "as-is"
-                if (it->isCompoundOperation()) {
-                    for (dd::QubitCount i = 0; i < it->getNqubits(); ++i) {
-                        if (it->actsOn(static_cast<dd::Qubit>(i))) {
-                            dag.at(i).push_back(&it);
-                        }
-                    }
-                    continue;
-                } else if (it->isNonUnitaryOperation()) {
-                    for (const auto& b: it->getTargets()) {
-                        dag.at(b).push_back(&it);
-                    }
-                    continue;
-                } else if (it->isClassicControlledOperation()) {
-                    auto op = dynamic_cast<ClassicControlledOperation*>(it.get())->getOperation();
-                    for (const auto& control: op->getControls()) {
-                        dag.at(control.qubit).push_back(&it);
-                    }
-                    for (const auto& target: op->getTargets()) {
-                        dag.at(target).push_back(&it);
-                    }
-                    continue;
-                } else {
-                    throw QFRException("Unexpected operation encountered");
-                }
+                addNonStandardOperationToDag(dag, &it);
             } else {
                 addToDag(dag, &it);
             }
@@ -198,6 +148,37 @@ namespace qc {
         }
         for (const auto& target: (*op)->getTargets()) {
             dag.at(target).push_back(op);
+        }
+    }
+
+    void CircuitOptimizer::addNonStandardOperationToDag(DAG& dag, std::unique_ptr<Operation>* op) {
+        const auto& gate = *op;
+        // compound operations are added "as-is"
+        if (gate->isCompoundOperation()) {
+            for (dd::QubitCount i = 0U; i < gate->getNqubits(); ++i) {
+                if (gate->actsOn(static_cast<dd::Qubit>(i))) {
+                    dag.at(i).push_back(op);
+                }
+            }
+        } else if (gate->isNonUnitaryOperation()) {
+            // barriers are not added to a circuit DAG
+            if (gate->getType() == Barrier) {
+                return;
+            }
+
+            for (const auto& b: gate->getTargets()) {
+                dag.at(b).push_back(op);
+            }
+        } else if (gate->isClassicControlledOperation()) {
+            auto cop = dynamic_cast<ClassicControlledOperation*>(gate.get())->getOperation();
+            for (const auto& control: cop->getControls()) {
+                dag.at(control.qubit).push_back(op);
+            }
+            for (const auto& target: cop->getTargets()) {
+                dag.at(target).push_back(op);
+            }
+        } else {
+            throw QFRException("Unexpected operation encountered");
         }
     }
 
@@ -225,31 +206,8 @@ namespace qc {
 
         for (auto& it: qc.ops) {
             if (!it->isStandardOperation()) {
-                // compound operations are added "as-is"
-                if (it->isCompoundOperation()) {
-                    for (dd::QubitCount i = 0; i < it->getNqubits(); ++i) {
-                        if (it->actsOn(static_cast<dd::Qubit>(i))) {
-                            dag.at(i).push_back(&it);
-                        }
-                    }
-                    continue;
-                } else if (it->isNonUnitaryOperation()) {
-                    for (const auto& b: it->getTargets()) {
-                        dag.at(b).push_back(&it);
-                    }
-                    continue;
-                } else if (it->isClassicControlledOperation()) {
-                    auto op = dynamic_cast<ClassicControlledOperation*>(it.get())->getOperation();
-                    for (const auto& control: op->getControls()) {
-                        dag.at(control.qubit).push_back(&it);
-                    }
-                    for (const auto& target: op->getTargets()) {
-                        dag.at(target).push_back(&it);
-                    }
-                    continue;
-                } else {
-                    throw QFRException("Unexpected operation encountered");
-                }
+                addNonStandardOperationToDag(dag, &it);
+                continue;
             }
 
             // not a single qubit operation TODO: multiple targets could also be considered here
@@ -258,7 +216,7 @@ namespace qc {
                 continue;
             }
 
-            auto target = it->getTargets().at(0);
+            const auto target = it->getTargets().at(0);
 
             // first operation
             if (dag.at(target).empty()) {
@@ -1041,7 +999,7 @@ namespace qc {
                 actsOn.set(q);
                 for (std::size_t i = 0; i < dag.size(); ++i) {
                     // actually check in reverse order
-                    auto qb = static_cast<dd::Qubit>(dag.size() - 1 - i);
+                    const auto qb = static_cast<dd::Qubit>(dag.size() - 1 - i);
                     if (qb != q && op->actsOn(static_cast<dd::Qubit>(qb))) {
                         actsOn.set(qb);
 
@@ -1128,5 +1086,163 @@ namespace qc {
         // whenever all the operations have been processed, `it` points to the compound operation and `opIt` to `op.end()`
         // the compound operation can now be deleted safely
         return ops.erase(it);
+    }
+
+    void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
+        dd::Qubit highest_physical_qubit = 0;
+        for (const auto& q: qc.initialLayout) {
+            if (q.first > highest_physical_qubit)
+                highest_physical_qubit = q.first;
+        }
+
+        auto dag = DAG(highest_physical_qubit + 1U);
+
+        for (auto& it: qc.ops) {
+            if (!it->isStandardOperation()) {
+                addNonStandardOperationToDag(dag, &it);
+                continue;
+            }
+
+            // check whether the operation is a CNOT or SWAP gate
+            const auto isCNOT = (it->getType() == X && it->getNcontrols() == 1U && it->getControls().begin()->type == dd::Control::Type::pos);
+            const auto isSWAP = (it->getType() == SWAP && it->getNcontrols() == 0U);
+
+            if (!isCNOT && !isSWAP) {
+                addToDag(dag, &it);
+                continue;
+            }
+
+            dd::Qubit q0 = it->getTargets().at(0);
+            dd::Qubit q1 = isSWAP ? it->getTargets().at(1) : it->getControls().begin()->qubit;
+
+            // first operation
+            if (dag.at(q0).empty() || dag.at(q1).empty()) {
+                addToDag(dag, &it);
+                continue;
+            }
+
+            auto op0 = dag.at(q0).back()->get();
+            auto op1 = dag.at(q1).back()->get();
+
+            // check whether it's the same operation at both qubits
+            if (op0 != op1) {
+                addToDag(dag, &it);
+                continue;
+            }
+
+            // check whether the operation is a CNOT or SWAP gate
+            const auto prevOpIsCNOT = (op0->getType() == X && op0->getNcontrols() == 1U && op0->getControls().begin()->type == dd::Control::Type::pos);
+            const auto prevOpIsSWAP = (op0->getType() == SWAP && op0->getNcontrols() == 0U);
+
+            if (!prevOpIsCNOT && !prevOpIsSWAP) {
+                addToDag(dag, &it);
+                continue;
+            }
+
+            dd::Qubit prevQ0 = op0->getTargets().at(0);
+            dd::Qubit prevQ1 = prevOpIsSWAP ? op0->getTargets().at(1) : op0->getControls().begin()->qubit;
+
+            if (isCNOT && prevOpIsCNOT) {
+                // two identical CNOT gates cancel each other
+                if (q0 == prevQ0 && q1 == prevQ1) {
+                    dag.at(q0).pop_back();
+                    dag.at(q1).pop_back();
+                    op0->setGate(I);
+                    op0->setControls({});
+                    it->setGate(I);
+                    it->setControls({});
+                } else {
+                    // two CNOTs with alternating controls and targets
+                    // check whether there is a third one which would make this a SWAP gate
+
+                    auto prevPrevOp0It = ++(dag.at(q0).rbegin());
+                    auto prevPrevOp1It = ++(dag.at(q1).rbegin());
+                    // check whether there is another operation
+                    if (prevPrevOp0It == dag.at(q0).rend() || prevPrevOp1It == dag.at(q1).rend()) {
+                        addToDag(dag, &it);
+                        continue;
+                    }
+
+                    auto prevPrevOp0 = (*prevPrevOp0It)->get();
+                    auto prevPrevOp1 = (*prevPrevOp1It)->get();
+
+                    if (prevPrevOp0 != prevPrevOp1) {
+                        addToDag(dag, &it);
+                        continue;
+                    }
+
+                    // check whether the operation is a CNOT
+                    const auto prevPrevOpIsCNOT = (prevPrevOp0->getType() == X && prevPrevOp0->getNcontrols() == 1U && prevPrevOp0->getControls().begin()->type == dd::Control::Type::pos);
+
+                    if (!prevPrevOpIsCNOT) {
+                        addToDag(dag, &it);
+                        continue;
+                    }
+
+                    dd::Qubit prevPrevQ0 = prevPrevOp0->getTargets().at(0);
+                    dd::Qubit prevPrevQ1 = prevPrevOp0->getControls().begin()->qubit;
+
+                    if (q0 == prevPrevQ0 && q1 == prevPrevQ1) {
+                        // SWAP gate identified
+                        prevPrevOp0->setGate(SWAP);
+                        prevPrevOp0->setControls({});
+                        if (prevQ0 > prevQ1) {
+                            prevPrevOp0->setTargets({prevQ1, prevQ0});
+                        } else {
+                            prevPrevOp0->setTargets({prevQ0, prevQ1});
+                        }
+                        op0->setGate(I);
+                        op0->setControls({});
+                        it->setGate(I);
+                        it->setControls({});
+                        dag.at(q0).pop_back();
+                        dag.at(q1).pop_back();
+                    } else {
+                        addToDag(dag, &it);
+                        continue;
+                    }
+                }
+                continue;
+            }
+
+            if (isSWAP && prevOpIsSWAP) {
+                // two identical SWAP gates cancel each other
+                if (std::set{q0, q1} == std::set{prevQ0, prevQ1}) {
+                    dag.at(q0).pop_back();
+                    dag.at(q1).pop_back();
+                    op0->setGate(I);
+                    op0->setControls({});
+                    it->setGate(I);
+                    it->setControls({});
+                } else {
+                    addToDag(dag, &it);
+                }
+                continue;
+            }
+
+            if (isCNOT && prevOpIsSWAP) {
+                // SWAP followed by a CNOT is equivalent to two CNOTs
+                op0->setGate(X);
+                op0->setControls({dd::Control{q1}});
+                op0->setTargets({q0});
+                it->setControls({dd::Control{q0}});
+                it->setTargets({q1});
+                addToDag(dag, &it);
+                continue;
+            }
+
+            if (isSWAP && prevOpIsCNOT) {
+                // CNOT followed by a SWAP is equivalent to two CNOTs
+                op0->setControls({dd::Control{prevQ0}});
+                op0->setTargets({prevQ1});
+                it->setGate(X);
+                it->setControls({dd::Control{prevQ1}});
+                it->setTargets({prevQ0});
+                addToDag(dag, &it);
+                continue;
+            }
+        }
+
+        removeIdentities(qc);
     }
 } // namespace qc

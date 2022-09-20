@@ -1,10 +1,9 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
+ * This file is part of MQT QFR library which is released under the MIT license.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#ifndef QFR_COMPOUNDOPERATION_H
-#define QFR_COMPOUNDOPERATION_H
+#pragma once
 
 #include "Operation.hpp"
 
@@ -14,13 +13,6 @@ namespace qc {
     protected:
         std::vector<std::unique_ptr<Operation>> ops{};
 
-        MatrixDD getDD([[maybe_unused]] std::unique_ptr<dd::Package>& dd, [[maybe_unused]] const dd::Controls& controls, [[maybe_unused]] const Targets& targets) const override {
-            throw QFRException("[CompoundOperation] protected getDD called which should not happen.");
-        }
-        MatrixDD getInverseDD([[maybe_unused]] std::unique_ptr<dd::Package>& dd, [[maybe_unused]] const dd::Controls& controls, [[maybe_unused]] const Targets& targets) const override {
-            throw QFRException("[CompoundOperation] protected getInverseDD called which should not happen.");
-        }
-
     public:
         explicit CompoundOperation(dd::QubitCount nq) {
             std::strcpy(name, "Compound operation:");
@@ -29,7 +21,7 @@ namespace qc {
         }
 
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {
-            std::unique_ptr<CompoundOperation> cloned_co = std::make_unique<CompoundOperation>(nqubits);
+            auto cloned_co = std::make_unique<CompoundOperation>(nqubits);
             cloned_co->reserve(ops.size());
 
             for (auto& op: ops) {
@@ -53,36 +45,26 @@ namespace qc {
             return std::any_of(ops.cbegin(), ops.cend(), [](const auto& op) { return op->isNonUnitaryOperation(); });
         }
 
-        MatrixDD getDD(std::unique_ptr<dd::Package>& dd) const override {
-            MatrixDD e = dd->makeIdent(nqubits);
-            for (auto& op: ops) {
-                e = dd->multiply(op->getDD(dd), e);
-            }
-            return e;
-        }
+        [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const override {
+            if (const auto* comp = dynamic_cast<const CompoundOperation*>(&op)) {
+                if (comp->ops.size() != ops.size()) {
+                    return false;
+                }
 
-        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd) const override {
-            MatrixDD e = dd->makeIdent(nqubits);
-            for (auto& op: ops) {
-                e = dd->multiply(e, op->getInverseDD(dd));
+                auto it = comp->ops.cbegin();
+                for (const auto& operation: ops) {
+                    if (!operation->equals(**it, perm1, perm2)) {
+                        return false;
+                    }
+                    ++it;
+                }
+                return true;
+            } else {
+                return false;
             }
-            return e;
         }
-
-        MatrixDD getDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override {
-            MatrixDD e = dd->makeIdent(nqubits);
-            for (auto& op: ops) {
-                e = dd->multiply(op->getDD(dd, permutation), e);
-            }
-            return e;
-        }
-
-        MatrixDD getInverseDD(std::unique_ptr<dd::Package>& dd, Permutation& permutation) const override {
-            MatrixDD e = dd->makeIdent(nqubits);
-            for (auto& op: ops) {
-                e = dd->multiply(e, op->getInverseDD(dd, permutation));
-            }
-            return e;
+        [[nodiscard]] bool equals(const Operation& operation) const override {
+            return equals(operation, {}, {});
         }
 
         std::ostream& print(std::ostream& os) const override {
@@ -120,15 +102,6 @@ namespace qc {
         void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const override {
             for (const auto& op: ops) {
                 op->dumpQiskit(of, qreg, creg, anc_reg_name);
-            }
-        }
-
-        void dumpTensor(std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<dd::Package>& dd) override {
-            for (const auto& op: ops) {
-                if (op != (*ops.begin())) {
-                    of << ",\n";
-                }
-                op->dumpTensor(of, inds, gateIdx, dd);
             }
         }
 
@@ -185,6 +158,13 @@ namespace qc {
         [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }
 
         std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
+
+        [[nodiscard]] std::set<dd::Qubit> getUsedQubits() const override {
+            std::set<dd::Qubit> usedQubits{};
+            for (const auto& op: ops) {
+                usedQubits.merge(op->getUsedQubits());
+            }
+            return usedQubits;
+        }
     };
 } // namespace qc
-#endif //QFR_COMPOUNDOPERATION_H

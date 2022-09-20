@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, main ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, main ]
   workflow_dispatch:
 
 env:
@@ -23,7 +23,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
       - name:  Configure CMake
@@ -43,7 +43,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Configure CMake
@@ -68,7 +68,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Configure CMake
@@ -82,18 +82,18 @@ jobs:
         run:  |
               find . -type f -name '*.gcno' -exec gcov -p  {} +
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2.1.0
+        uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
 
   codestyle:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - uses: DoozyX/clang-format-lint-action@v0.13
+      - uses: DoozyX/clang-format-lint-action@v0.14
         with:
-          source:             'apps include src test jkq/qfr'
+          source:             'apps include src test mqt/qfr'
           extensions:         'h,hpp,c,cpp'
-          clangFormatVersion: 12
+          clangFormatVersion: 13

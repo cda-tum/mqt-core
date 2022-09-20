@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.14...3.22)
 
 project(qfr
         LANGUAGES CXX
-        VERSION 1.7.3
-        DESCRIPTION "QFR  - A JKQ library for Quantum Functionality Representation"
+        VERSION 1.10.0
+        DESCRIPTION "MQT QFR  - A library for Quantum Functionality Representation"
         )
 
 # enable organization of targets into folders
@@ -45,6 +45,7 @@ check_submodule_present(dd_package)
 check_submodule_present(json)
 check_submodule_present(pybind11)
 check_submodule_present(pybind11_json)
+check_submodule_present(zx)
 
 # add main library code
 add_subdirectory(src)
@@ -62,5 +63,5 @@ endif()
 
 # add Python binding code
 if(BINDINGS)
-	add_subdirectory(jkq/qfr)
+	add_subdirectory(mqt/qfr)
 endif()
