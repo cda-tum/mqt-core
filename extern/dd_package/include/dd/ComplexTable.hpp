@@ -188,40 +188,33 @@ namespace dd {
                 pLower = tailTable[lowerKey];
                 pUpper = table[key];
                 ++lowerNeighbors;
-                // std::cout << "Border case between lower bucket " << lowerKey << " and actual bucket " << key << ". ";
             } else {
                 pLower = tailTable[key];
                 pUpper = table[upperKey];
                 ++upperNeighbors;
-                // std::cout << "Border case between actual bucket " << key << " and upper bucket " << upperKey << ". ";
             }
 
             bool lowerMatchFound = (pLower != nullptr && Entry::approximatelyEquals(val, pLower->value));
             bool upperMatchFound = (pUpper != nullptr && Entry::approximatelyEquals(val, pUpper->value));
 
             if (lowerMatchFound && upperMatchFound) {
-                //                std::cout << "Double match. ";
                 ++hits;
                 const auto diffToLower = std::abs(pLower->value - val);
                 const auto diffToUpper = std::abs(pUpper->value - val);
                 // val is actually closer to p_lower than to p_upper
                 if (diffToLower < diffToUpper) {
-                    // std::cout << val << " is closer to lower val " << p_lower->value << " than to upper val " << p_upper->value << std::endl;
                     return pLower;
                 }
-                // std::cout << val << " is closer to upper val " << p_upper->value << " than to lower val " << p_upper->value << std::endl;
                 return pUpper;
             }
 
             if (lowerMatchFound) {
                 ++hits;
-                //                std::cout << "Matched " << val << " in lower bucket to " << p_lower->value << std::endl;
                 return pLower;
             }
 
             if (upperMatchFound) {
                 ++hits;
-                //                std::cout << "Matched " << val << " in upper bucket to " << p_upper->value << std::endl;
                 return pUpper;
             }
 
@@ -528,13 +521,11 @@ namespace dd {
                             const auto diffToNext = std::abs(next->value - val);
                             // val is actually closer to next than to curr
                             if (diffToNext < diffToCurr) {
-                                //                                std::cout << "Second hit in bucket" << key << "! " << val << " is closer to " << next->value << " than to " << curr->value << std::endl;
                                 ++hits;
                                 return next;
                             }
                         }
                     }
-                    //                    std::cout << "General hit in bucket " << key << "! " << val << " matches " << curr->value << std::endl;
                     ++hits;
                     return curr;
                 }
@@ -546,8 +537,6 @@ namespace dd {
             ++inserts;
             Entry* entry = getEntry();
             entry->value = val;
-
-            //            std::cout << "Insert " << val << " in middle of bucket " << key << std::endl;
 
             if (prev == nullptr) {
                 // table bucket is empty
