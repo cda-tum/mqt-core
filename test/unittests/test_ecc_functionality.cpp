@@ -25,7 +25,7 @@ protected:
     void TearDown() override {
     }
 
-    bool verifyExecution(qc::QuantumComputation& qcOriginal, qc::QuantumComputation& qcECC) {
+    static bool verifyExecution(qc::QuantumComputation& qcOriginal, qc::QuantumComputation& qcECC) {
         std::mt19937_64 mt;
         mt.seed(1);
 
@@ -69,6 +69,23 @@ protected:
                     }
                 }
             } else {
+                if (op->getType() == qc::ClassicControlled) {
+                    auto*              cc_op          = dynamic_cast<qc::ClassicControlledOperation*>(op.get());
+                    const auto         start_index    = static_cast<unsigned short>(cc_op->getParameter().at(0));
+                    const auto         length         = static_cast<unsigned short>(cc_op->getParameter().at(1));
+                    const unsigned int expected_value = cc_op->getExpectedValue();
+                    unsigned int       actual_value   = 0;
+                    for (unsigned int i = 0; i < length; i++) {
+                        actual_value |= (classicValuesECC[start_index + i] ? 1u : 0u) << i;
+                    }
+
+                    //std::clog << "expected " << expected_value << " and actual value was " << actual_value << "\n";
+
+                    if (actual_value != expected_value) {
+                        continue;
+                    }
+                }
+
                 auto operation = dd::getDD(op.get(), ddECC);
                 rootEdgeECC    = ddECC->multiply(operation, rootEdgeECC);
             }
@@ -90,8 +107,25 @@ protected:
                     }
                 }
             } else {
-                auto operation   = dd::getDD(op.get(), ddOriginal);
-                rootEdgeOriginal = ddOriginal->multiply(operation, rootEdgeOriginal);
+                if (op->getType() == qc::ClassicControlled) {
+                    auto*              cc_op          = dynamic_cast<qc::ClassicControlledOperation*>(op.get());
+                    const auto         start_index    = static_cast<unsigned short>(cc_op->getParameter().at(0));
+                    const auto         length         = static_cast<unsigned short>(cc_op->getParameter().at(1));
+                    const unsigned int expected_value = cc_op->getExpectedValue();
+                    unsigned int       actual_value   = 0;
+                    for (unsigned int i = 0; i < length; i++) {
+                        actual_value |= (classicValuesOriginal[start_index + i] ? 1u : 0u) << i;
+                    }
+
+                    //std::clog << "expected " << expected_value << " and actual value was " << actual_value << "\n";
+
+                    if (actual_value != expected_value) {
+                        continue;
+                    }
+
+                    auto operation   = dd::getDD(op.get(), ddOriginal);
+                    rootEdgeOriginal = ddOriginal->multiply(operation, rootEdgeOriginal);
+                }
             }
         }
 
@@ -110,50 +144,43 @@ protected:
         qc.measure(0, {"resultReg", 0});
     }
 
-    //    void createYCircuit(qc::QuantumComputation& qc) {
-    //        qc = {};
-    //        qc.addQubitRegister(2U);
-    //        qc.addClassicalRegister(2U, "resultReg");
-    //        qc.h(0);
-    //        qc.y(0);
-    //        qc.h(0);
-    //        qc.y(1);
-    //        qc.measure(0, {"resultReg", 0});
-    //        qc.measure(1, {"resultReg", 1});
-    //    }
-    //
-    //void createHCircuit(qc::QuantumComputation &qc) {
-    //    qc = {};
-    //    qc.addQubitRegister(1U);
-    //    qc.h(0);
-    //}
-    //
-    //void createCXCircuit(qc::QuantumComputation &qc) {
-    //    qc = {};
-    //    qc.addQubitRegister(2U);
-    //    qc.x(0);
-    //    qc.x(1, 0_pc);
-    //}
-    //
-    //void createHTCircuit(qc::QuantumComputation &qc) {
-    //    qc = {};
-    //    qc.addQubitRegister(2U);
-    //    qc.h(0);
-    //    qc.t(0);
-    //    qc.h(1);
-    //    qc.t(1);
-    //    qc.tdag(1);
-    //    qc.h(1);
-    //}
-    //
-    //void createHZCircuit(qc::QuantumComputation &qc) {
-    //    qc = {};
-    //    qc.addQubitRegister(2U);
-    //    qc.h(0);
-    //    qc.z(0);
-    //    qc.h(0);
-    //    qc.h(0);
-    //}
+    static void createYCircuit(qc::QuantumComputation& qc) {
+        qc = {};
+        qc.addQubitRegister(2U);
+        qc.addClassicalRegister(2U, "resultReg");
+        qc.h(0);
+        qc.y(0);
+        qc.h(0);
+        qc.y(1);
+        qc.measure(0, {"resultReg", 0});
+        qc.measure(1, {"resultReg", 1});
+    }
+
+    static void createHCircuit(qc::QuantumComputation& qc) {
+        qc = {};
+        qc.addQubitRegister(1U);
+        qc.h(0);
+    }
+
+    static void createHTCircuit(qc::QuantumComputation& qc) {
+        qc = {};
+        qc.addQubitRegister(2U);
+        qc.h(0);
+        qc.t(0);
+        qc.h(1);
+        qc.t(1);
+        qc.tdag(1);
+        qc.h(1);
+    }
+
+    static void createHZCircuit(qc::QuantumComputation& qc) {
+        qc = {};
+        qc.addQubitRegister(2U);
+        qc.h(0);
+        qc.z(0);
+        qc.h(0);
+        qc.h(0);
+    }
 };
 
 TEST_F(DDECCFunctionalityTest, StochSimulateAdder4IdentiyError) {
@@ -161,21 +188,21 @@ TEST_F(DDECCFunctionalityTest, StochSimulateAdder4IdentiyError) {
     bool cliffOnly        = false;
     int  measureFrequency = 1;
 
-    //    {
-    //        qc::QuantumComputation qcOriginal{};
-    //        createXCircuit(qcOriginal);
-    //        Ecc*                    mapper = new Q7SteaneEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
-    //        qc::QuantumComputation& qcECC  = mapper->apply();
-    //        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));
-    //    }
-
     {
         qc::QuantumComputation qcOriginal{};
         createXCircuit(qcOriginal);
-        Ecc*                    mapper = new Q7SteaneEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        Ecc*                    mapper = new Q3ShorEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
         qc::QuantumComputation& qcECC  = mapper->apply();
         EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));
     }
+
+    //    {
+    //        qc::QuantumComputation qcOriginal{};
+    //        createHZCircuit(qcOriginal);
+    //        Ecc* mapper = new Q3ShorEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+    //        qc::QuantumComputation& qcECC = mapper->apply();
+    //        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));
+    //    }
 
     printf("\n");
 }
