@@ -44,11 +44,11 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                 nqubits = static_cast<dd::QubitCount>(nq);
             }
             nclassics = nqubits;
-            if (nqubits + nancillae > dd::Package<>::maxPossibleQubits) {
+            if (nqubits + nancillae > dd::Package<>::MAX_POSSIBLE_QUBITS) {
                 throw QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
-                                   std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, while " +
+                                   std::to_string(dd::Package<>::MAX_POSSIBLE_QUBITS) + " qubits, while " +
                                    std::to_string(nqubits + nancillae) + " were requested. If you want to use more than " +
-                                   std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
+                                   std::to_string(dd::Package<>::MAX_POSSIBLE_QUBITS) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
             }
         } else if (cmd == ".VARIABLES") {
             for (dd::QubitCount i = 0; i < nqubits; ++i) {
@@ -265,17 +265,8 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
                     controls.pop_back();
                     emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, target1, gate);
                     break;
-                case Compound:
-                case Measure:
-                case Reset:
-                case Snapshot:
-                case ShowProbabilities:
-                case Barrier:
-                case ClassicControlled:
-                case SX:
-                case SXdag:
-                case Teleportation:
-                    std::cerr << "Operation with invalid type " << gate << " read from real file. Proceed with caution!" << std::endl;
+                default:
+                    std::cerr << "Unsupported operation encountered:  " << gate << "!" << std::endl;
                     break;
             }
         }

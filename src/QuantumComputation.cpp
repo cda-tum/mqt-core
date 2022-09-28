@@ -104,20 +104,21 @@ namespace qc {
 
         for (auto opIt = ops.begin(); opIt != ops.end(); ++opIt) {
             if ((*opIt)->getType() == qc::Measure) {
-                if (!isLastOperationOnQubit(opIt)) {
-                    continue;
-                }
-
                 outputPermutationFromMeasurements = true;
                 auto op                           = dynamic_cast<NonUnitaryOperation*>(opIt->get());
                 assert(op->getTargets().size() == op->getClassics().size());
                 auto classicIt = op->getClassics().cbegin();
                 for (const auto& q: op->getTargets()) {
-                    auto qubitidx = q;
-                    auto bitidx   = *classicIt;
+                    const auto qubitidx = q;
+                    // only the first measurement of a qubit is used to determine the output permutation
+                    if (measuredQubits.count(qubitidx) != 0) {
+                        continue;
+                    }
+
+                    const auto bitidx = *classicIt;
                     if (outputPermutationFound) {
                         // output permutation was already set before -> permute existing values
-                        auto current = outputPermutation.at(qubitidx);
+                        const auto current = outputPermutation.at(qubitidx);
                         if (static_cast<std::size_t>(qubitidx) != bitidx && static_cast<std::size_t>(current) != bitidx) {
                             for (auto& p: outputPermutation) {
                                 if (static_cast<std::size_t>(p.second) == bitidx) {
@@ -177,11 +178,11 @@ namespace qc {
     }
 
     void QuantumComputation::addQubitRegister(std::size_t nq, const char* reg_name) {
-        if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package<>::maxPossibleQubits) {
+        if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package<>::MAX_POSSIBLE_QUBITS) {
             throw QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
-                               std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, while " +
+                               std::to_string(dd::Package<>::MAX_POSSIBLE_QUBITS) + " qubits, while " +
                                std::to_string(nqubits + nancillae + nq) + " were requested. If you want to use more than " +
-                               std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
+                               std::to_string(dd::Package<>::MAX_POSSIBLE_QUBITS) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
         }
 
         if (qregs.count(reg_name)) {
@@ -221,11 +222,11 @@ namespace qc {
     }
 
     void QuantumComputation::addAncillaryRegister(std::size_t nq, const char* reg_name) {
-        if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package<>::maxPossibleQubits) {
+        if (static_cast<std::size_t>(nqubits + nancillae + nq) > dd::Package<>::MAX_POSSIBLE_QUBITS) {
             throw QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
-                               std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, while " +
+                               std::to_string(dd::Package<>::MAX_POSSIBLE_QUBITS) + " qubits, while " +
                                std::to_string(nqubits + nancillae + nq) + " were requested. If you want to use more than " +
-                               std::to_string(dd::Package<>::maxPossibleQubits) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
+                               std::to_string(dd::Package<>::MAX_POSSIBLE_QUBITS) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
         }
 
         dd::QubitCount totalqubits = nqubits + nancillae;
