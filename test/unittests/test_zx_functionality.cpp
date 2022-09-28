@@ -219,7 +219,7 @@ TEST_F(ZXDiagramTest, FromSymbolic) {
     EXPECT_TRUE(diag.isIdentity());
 }
     
-Test_F(ZXDiagramTest, RZ) {
+TEST_F(ZXDiagramTest, RZ) {
     qc = qc::QuantumComputation(1);
     qc.rz(0, zx::PI / 8);
 
