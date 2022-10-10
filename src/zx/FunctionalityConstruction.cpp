@@ -120,20 +120,20 @@ namespace zx {
                                PiExpression(PiRational(1, 1)));
                     break;
 
-            case qc::OpType::RZ:{
-                  const auto& param = parseParam(op.get(), 0);
-                  diag.addGlobalPhase(-param / 2.0);
+                case qc::OpType::RZ: {
+                    const auto& param = parseParam(op.get(), 0);
+                    diag.addGlobalPhase(-param / 2.0);
 
                     addZSpider(
                             diag, target, qubits,
                             parseParam(op.get(), 0));
                     break;
-            }
-                    
+                }
+
                 case qc::OpType::Phase:
                     addZSpider(diag, target, qubits, parseParam(op.get(), 0));
                     break;
-                    
+
                 case qc::OpType::X:
                     addXSpider(diag, target, qubits,
                                PiExpression(PiRational(1, 1)));
@@ -144,7 +144,7 @@ namespace zx {
                     break;
 
                 case qc::OpType::Y:
-                  diag.addGlobalPhase(PiExpression{-PiRational(1, 2)});
+                    diag.addGlobalPhase(PiExpression{-PiRational(1, 2)});
 
                     addZSpider(diag, target, qubits,
                                PiExpression(PiRational(1, 1)));
@@ -153,8 +153,8 @@ namespace zx {
                     break;
 
                 case qc::OpType::RY:
-                                      diag.addGlobalPhase(PiExpression(-PiRational(op->getParameter().front()) / 2 +
-                                                                       PiRational(1, 2) + PiRational(3, 2)));
+                    diag.addGlobalPhase(PiExpression(-PiRational(op->getParameter().front()) / 2 +
+                                                     PiRational(1, 2) + PiRational(3, 2)));
 
                     addXSpider(diag, target, qubits,
                                PiExpression(PiRational(1, 2)));
