@@ -223,6 +223,7 @@ void Q9SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quant
                     writeZ(dd::Qubit(i + 8 * nQubits), ctrls3);
                 }
                 break;
+            case qc::H:
             case qc::Measure:
             case qc::S:
             case qc::Sdag:
@@ -260,7 +261,7 @@ void Q9SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quant
                     writeX(dd::Qubit(i + 6 * nQubits));
                 }
                 break;
-            case qc::H:
+            /*case qc::H:
                 for (std::size_t t = 0; t < gate->getNtargets(); t++) {
                     i = gate->getTargets()[t];
                     for (int j = 0; j < 9; j++) {
@@ -272,7 +273,7 @@ void Q9SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quant
                     swap(dd::Qubit(i + 2 * nQubits), dd::Qubit(i + 8 * nQubits));
                     swap(dd::Qubit(i + nQubits), dd::Qubit(i + 5 * nQubits));
                 }
-                break;
+                break;*/
             case qc::Y:
                 //Y = Z X
                 for (std::size_t t = 0; t < gate->getNtargets(); t++) {
@@ -303,6 +304,7 @@ void Q9SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quant
                     qcMapped.measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
                 }
                 break;
+            case qc::H:
             case qc::S:
             case qc::Sdag:
             case qc::T:

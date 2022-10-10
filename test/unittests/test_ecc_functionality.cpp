@@ -93,7 +93,7 @@ protected:
         simulateCircuit(qcECC, finalClassicValuesECC);
 
         for (auto const& x: finalClassicValuesOriginal) {
-            if (x.second != finalClassicValuesECC[x.first]){
+            if (x.second != finalClassicValuesECC[x.first]) {
                 return false;
             }
         }
@@ -176,7 +176,7 @@ TEST_F(DDECCFunctionalityTest, testQ3Shor) {
     for (auto& circuit: circuitsExpectToFail) {
         qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
-        Ecc*                    mapper = new Q3ShorEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        Ecc* mapper = new Q3ShorEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
         EXPECT_ANY_THROW(mapper->apply());
     }
 }
@@ -200,7 +200,7 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
     for (auto& circuit: circuitsExpectToFail) {
         qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
-        Ecc*                    mapper = new Q5LaflammeEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        Ecc* mapper = new Q5LaflammeEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
         EXPECT_ANY_THROW(mapper->apply());
     }
 }
@@ -240,7 +240,7 @@ TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
     for (auto& circuit: circuitsExpectToFail) {
         qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
-        Ecc*                    mapper = new Q9ShorEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        Ecc* mapper = new Q9ShorEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
         EXPECT_ANY_THROW(mapper->apply());
     }
 }
@@ -251,8 +251,7 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
     int  measureFrequency = 1;
 
     void (*circuitsExpectToPass[2])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit};
-    void (*circuitsExpectToFail[4])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit};
-
+    void (*circuitsExpectToFail[4])(qc::QuantumComputation & qc) = {createYCircuit, createHTCircuit, createHCircuit, createHZCircuit};
     for (auto& circuit: circuitsExpectToPass) {
         qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
@@ -264,7 +263,7 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
     for (auto& circuit: circuitsExpectToFail) {
         qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
-        Ecc*                    mapper = new Q9SurfaceEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        Ecc* mapper = new Q9SurfaceEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
         EXPECT_ANY_THROW(mapper->apply());
     }
 }
@@ -274,8 +273,8 @@ TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
     bool cliffOnly        = false;
     int  measureFrequency = 1;
 
-    void (*circuitsExpectToPass[2])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit};
-    void (*circuitsExpectToFail[4])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit};
+    void (*circuitsExpectToPass[5])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createYCircuit, createHCircuit, createHZCircuit};
+    void (*circuitsExpectToFail[1])(qc::QuantumComputation & qc) = {createHTCircuit};
 
     for (auto& circuit: circuitsExpectToPass) {
         qc::QuantumComputation qcOriginal{};
@@ -288,8 +287,7 @@ TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
     for (auto& circuit: circuitsExpectToFail) {
         qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
-        Ecc*                    mapper = new Q18SurfaceEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        Ecc* mapper = new Q18SurfaceEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
         EXPECT_ANY_THROW(mapper->apply());
     }
 }
-

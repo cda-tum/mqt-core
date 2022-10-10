@@ -210,6 +210,7 @@ void Q9ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumC
                 qcMapped.measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
             }
             return;
+        case qc::H:
         case qc::S:
         case qc::Sdag:
         case qc::T:
