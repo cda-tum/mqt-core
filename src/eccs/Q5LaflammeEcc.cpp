@@ -17,7 +17,11 @@ void Q5LaflammeEcc::initMappedCircuit() {
     statistics.nOutputQubits        = qc.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
     statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits;
     qcMapped.addQubitRegister(statistics.nOutputQubits);
-    qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
+    //    qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
+    auto cRegs = qc.getCregs();
+    for (auto const& [regName, regBits]: cRegs) {
+        qcMapped.addClassicalRegister(regBits.second, regName);
+    }
     qcMapped.addClassicalRegister(4, "qecc");
     qcMapped.addClassicalRegister(1, "encode");
 }

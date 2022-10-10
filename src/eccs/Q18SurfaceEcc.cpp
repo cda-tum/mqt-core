@@ -16,7 +16,11 @@ void Q18SurfaceEcc::initMappedCircuit() {
     statistics.nOutputQubits        = qc.getNqubits() * 36;
     statistics.nOutputClassicalBits = statistics.nInputClassicalBits;
     qcMapped.addQubitRegister(statistics.nOutputQubits);
-    qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
+    //    qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
+    auto cRegs = qc.getCregs();
+    for (auto const& [regName, regBits]: cRegs) {
+        qcMapped.addClassicalRegister(regBits.second, regName);
+    }
     qcMapped.addClassicalRegister(8, "qeccX");
     qcMapped.addClassicalRegister(8, "qeccZ");
 }
