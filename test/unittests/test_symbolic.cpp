@@ -1,6 +1,5 @@
 #include "Expression.hpp"
 #include "QuantumComputation.hpp"
-#include "SymbolicQuantumComputation.hpp"
 #include "dd/Definitions.hpp"
 #include "operations/SymbolicOperation.hpp"
 
@@ -40,6 +39,7 @@ TEST_F(SymbolicTest, Gates) {
             std::make_unique<QuantumComputation>(3);
 
     symQc->u3(0, {1_pc, 2_nc}, xMonom, yMonom, zMonom);
+
     symQc->u3(0, {1_pc}, xMonom, yMonom, zMonom);
     symQc->u3(0, xMonom, yMonom, zMonom);
 
@@ -63,7 +63,10 @@ TEST_F(SymbolicTest, Gates) {
     symQc->rz(0, {1_pc}, xMonom);
     symQc->rz(0, xMonom);
 
-    // EXPECT_FALSE(symQc->isVariableFree());
+    EXPECT_FALSE(symQc->isVariableFree());
+    for (const auto& symOp: *symQc) {
+        EXPECT_TRUE(symOp->isSymbolicOperation());
+    }
 
     // normal circuit
     qc->u3(0, {1_pc, 2_nc}, xVal, yVal, zVal);
@@ -118,8 +121,8 @@ TEST_F(SymbolicTest, Gates) {
     EXPECT_TRUE(noRealSymQc->isVariableFree());
 
     for (auto it1 = symQc->begin(), it2 = noRealSymQc->begin(); it1 != symQc->end() && it2 != noRealSymQc->end(); ++it1, ++it2) {
-        const auto* symOp1 = dynamic_cast<SymbolicOperation*>(it1->get());
-        const auto* symOp2 = dynamic_cast<SymbolicOperation*>(it2->get());
+        // const auto* symOp1 = dynamic_cast<SymbolicOperation*>(it1->get());
+        // const auto* symOp2 = dynamic_cast<SymbolicOperation*>(it2->get());
         // EXPECT_FALSE(symOp1->equalsSymbolic(*symOp1));
         EXPECT_FALSE((*it1)->equals(*(*it2)));
     }
@@ -129,9 +132,17 @@ TEST_F(SymbolicTest, Gates) {
     symQc->instantiate(assignment);
 
     for (auto it1 = symQc->begin(), it2 = noRealSymQc->begin(); it1 != symQc->end() && it2 != noRealSymQc->end(); ++it1, ++it2) {
-        const auto* symOp1 = dynamic_cast<SymbolicOperation*>(it1->get());
-        const auto* symOp2 = dynamic_cast<SymbolicOperation*>(it2->get());
+        // const auto* symOp1 = dynamic_cast<SymbolicOperation*>(it1->get());
+        // const auto* symOp2 = dynamic_cast<SymbolicOperation*>(it2->get());
         // EXPECT_TRUE(symOp1->equalsSymbolic(*symOp2));
         EXPECT_TRUE((*it1)->equals(*(*it2)));
     }
+}
+
+TEST_F(SymbolicTest, TestClone) {
+    symQc->u3(0, {1_pc, 2_nc}, xMonom, yMonom, zMonom);
+    const auto& clonedQc = symQc->clone();
+
+    symQc->u3(0, xMonom, yMonom, zMonom);
+    EXPECT_NE(symQc->getNops(), clonedQc.getNops());
 }

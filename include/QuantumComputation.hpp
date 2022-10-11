@@ -686,8 +686,8 @@ namespace qc {
         }
 
         /**
-		 * printing
-		 */
+                 * printing
+                 */
         virtual std::ostream& print(std::ostream& os) const;
 
         friend std::ostream& operator<<(std::ostream& os, const QuantumComputation& qc) { return qc.print(os); }
@@ -722,8 +722,8 @@ namespace qc {
         }
 
         /**
-		 * Pass-Through
-		 */
+                 * Pass-Through
+                 */
 
         // Iterators (pass-through)
         auto               begin() noexcept { return ops.begin(); }
