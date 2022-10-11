@@ -128,18 +128,6 @@ namespace qc {
     }
     OpType SymbolicOperation::parseU3(dd::fp& lambda, [[maybe_unused]] const Symbolic& phi,
                                       [[maybe_unused]] const Symbolic& theta) {
-        if (std::abs(lambda) < PARAMETER_TOLERANCE) {
-            lambda = 0.L;
-        }
-
-        if (std::abs(lambda - dd::PI_2) < PARAMETER_TOLERANCE) {
-            lambda = dd::PI_2;
-        }
-
-        if (std::abs(lambda - dd::PI) < PARAMETER_TOLERANCE) {
-            lambda = dd::PI;
-        }
-
         // parse a real u3 gate
         checkInteger(lambda);
         checkFractionPi(lambda);
@@ -152,19 +140,12 @@ namespace qc {
     }
 
     OpType SymbolicOperation::parseU2([[maybe_unused]] const Symbolic& lambda, dd::fp& phi) {
-        if (std::abs(phi) < PARAMETER_TOLERANCE) {
-            phi = 0.L;
-        }
         checkInteger(phi);
         checkFractionPi(phi);
 
         return U2;
     }
     OpType SymbolicOperation::parseU2(dd::fp& lambda, [[maybe_unused]] const Symbolic& phi) {
-        if (std::abs(lambda - dd::PI_2) < PARAMETER_TOLERANCE) {
-            lambda = dd::PI_2;
-        }
-
         checkInteger(lambda);
         checkFractionPi(lambda);
 
@@ -185,7 +166,7 @@ namespace qc {
             else if (isSymbolicParameter(0))
                 type = parseU2(symbolicParameter[0].value(), parameter[1]);
             else if (isSymbolicParameter(1))
-                type = parseU2(symbolicParameter[0].value(), symbolicParameter[1].value());
+                type = parseU2(parameter[1], symbolicParameter[1].value());
         } else if (type == U3) {
             if (!isSymbolicParameter(0) && !isSymbolicParameter(1) && !isSymbolicParameter(2))
                 type = StandardOperation::parseU3(parameter[0], parameter[1], parameter[2]);
