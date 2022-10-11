@@ -225,7 +225,7 @@ namespace qc {
         type = g;
         setup(nq, lambda, phi, theta, startingQubit);
         targets.emplace_back(target);
-    };
+    }
 
     SymbolicOperation::SymbolicOperation(dd::QubitCount nq, const Targets& targets, OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, dd::Qubit startingQubit) {
         type = g;

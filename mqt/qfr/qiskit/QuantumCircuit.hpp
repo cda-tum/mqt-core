@@ -17,7 +17,6 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 #include "QuantumComputation.hpp"
-#include "SymbolicQuantumComputation.hpp"
 
 namespace qc::qiskit {
     class QuantumCircuit {
