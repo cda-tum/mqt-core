@@ -260,8 +260,8 @@ namespace qc {
     void SymbolicOperation::dumpOpenQASM([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg) const {
         throw QFRException("OpenQasm2.0 doesn't support parametrized gates!");
     }
-    void SymbolicOperation::dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const {
-        //todo
+    void SymbolicOperation::dumpQiskit([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg, [[maybe_unused]] const char* anc_reg_name) const {
+        throw QFRException("Dumping Qiskit Circuit is not supported for parameterized gates.");
     }
 
     StandardOperation SymbolicOperation::getInstantiatedOperation(const VariableAssignment& assignment) const {
