@@ -12,8 +12,8 @@
 
 namespace zx {
 
-    bool FunctionalityConstruction::checkSwap(const op_it& it, const op_it& end, Qubit ctrl,
-                                              Qubit                  target,
+    bool FunctionalityConstruction::checkSwap(const op_it& it, const op_it& end, const Qubit ctrl,
+                                              const Qubit            target,
                                               const qc::Permutation& p) {
         if (it + 1 != end && it + 2 != end) {
             const auto& op1 = *(it + 1);
@@ -30,28 +30,28 @@ namespace zx {
         return false;
     }
 
-    void FunctionalityConstruction::addZSpider(ZXDiagram& diag, zx::Qubit qubit,
+    void FunctionalityConstruction::addZSpider(ZXDiagram& diag, const zx::Qubit qubit,
                                                std::vector<Vertex>& qubits,
-                                               const PiExpression& phase, EdgeType type) {
-        auto new_vertex = diag.addVertex(
+                                               const PiExpression& phase, const EdgeType type) {
+        auto newVertex = diag.addVertex(
                 qubit, diag.getVData(qubits[qubit]).value().col + 1, phase,
                 VertexType::Z);
 
-        diag.addEdge(qubits[qubit], new_vertex, type);
-        qubits[qubit] = new_vertex;
+        diag.addEdge(qubits[qubit], newVertex, type);
+        qubits[qubit] = newVertex;
     }
 
-    void FunctionalityConstruction::addXSpider(ZXDiagram& diag, Qubit qubit,
+    void FunctionalityConstruction::addXSpider(ZXDiagram& diag, const Qubit qubit,
                                                std::vector<Vertex>& qubits,
-                                               const PiExpression& phase, EdgeType type) {
-        const auto new_vertex = diag.addVertex(
+                                               const PiExpression& phase, const EdgeType type) {
+        const auto newVertex = diag.addVertex(
                 qubit, diag.getVData(qubits[qubit]).value().col + 1, phase,
                 VertexType::X);
-        diag.addEdge(qubits[qubit], new_vertex, type);
-        qubits[qubit] = new_vertex;
+        diag.addEdge(qubits[qubit], newVertex, type);
+        qubits[qubit] = newVertex;
     }
 
-    void FunctionalityConstruction::addCnot(ZXDiagram& diag, Qubit ctrl, Qubit target,
+    void FunctionalityConstruction::addCnot(ZXDiagram& diag, const Qubit ctrl, const Qubit target,
                                             std::vector<Vertex>& qubits) {
         addZSpider(diag, ctrl, qubits);
         addXSpider(diag, target, qubits);
@@ -60,19 +60,19 @@ namespace zx {
 
     void
     FunctionalityConstruction::addCphase(ZXDiagram& diag, const PiExpression& phase,
-                                         Qubit ctrl, Qubit target,
+                                         const Qubit ctrl, const Qubit target,
                                          std::vector<Vertex>& qubits) {
         auto new_const = phase.getConst() / 2;
-        auto new_phase = phase / 2.0;
-        new_phase.setConst(new_const);
-        addZSpider(diag, ctrl, qubits, new_phase); //todo maybe should provide a method for int division
+        auto newPhase  = phase / 2.0;
+        newPhase.setConst(new_const);
+        addZSpider(diag, ctrl, qubits, newPhase); //todo maybe should provide a method for int division
         addCnot(diag, ctrl, target, qubits);
-        addZSpider(diag, target, qubits, -new_phase);
+        addZSpider(diag, target, qubits, -newPhase);
         addCnot(diag, ctrl, target, qubits);
-        addZSpider(diag, target, qubits, new_phase);
+        addZSpider(diag, target, qubits, newPhase);
     }
 
-    void FunctionalityConstruction::addSwap(ZXDiagram& diag, Qubit ctrl, Qubit target,
+    void FunctionalityConstruction::addSwap(ZXDiagram& diag, const Qubit ctrl, const Qubit target,
                                             std::vector<Vertex>& qubits) {
         const auto s0 = qubits[target];
         const auto s1 = qubits[ctrl];
@@ -85,7 +85,7 @@ namespace zx {
         qubits[ctrl]   = t1;
     }
 
-    void FunctionalityConstruction::addCcx(ZXDiagram& diag, Qubit ctrl0, Qubit ctrl1, Qubit target,
+    void FunctionalityConstruction::addCcx(ZXDiagram& diag, const Qubit ctrl0, const Qubit ctrl1, const Qubit target,
                                            std::vector<Vertex>& qubits) {
         addZSpider(diag, target, qubits, PiExpression(), EdgeType::Hadamard);
         addCnot(diag, ctrl1, target, qubits);
@@ -335,7 +335,7 @@ namespace zx {
             const auto& op = *it;
 
             if (op->getType() == qc::OpType::Compound) {
-                auto* compOp = dynamic_cast<qc::CompoundOperation*>(op.get());
+                const auto* compOp = dynamic_cast<qc::CompoundOperation*>(op.get());
                 for (auto subIt = compOp->cbegin(); subIt != compOp->cend();)
                     subIt = parse_op(diag, subIt, compOp->cend(), qubits, qc->initialLayout);
                 ++it;
@@ -353,9 +353,9 @@ namespace zx {
         return std::all_of(qc->cbegin(), qc->cend(), [&](const auto& op) { return transformableToZX(op.get()); });
     }
 
-    bool FunctionalityConstruction::transformableToZX(qc::Operation* op) {
+    bool FunctionalityConstruction::transformableToZX(const qc::Operation* op) {
         if (op->getType() == qc::OpType::Compound) {
-            auto* compOp = dynamic_cast<qc::CompoundOperation*>(op);
+            const auto* compOp = dynamic_cast<const qc::CompoundOperation*>(op);
 
             return std::all_of(compOp->cbegin(), compOp->cend(), [&](const auto& op) { return transformableToZX(op.get()); });
         }
@@ -418,7 +418,7 @@ namespace zx {
     }
 
     PiExpression FunctionalityConstruction::parseParam(const qc::Operation* op,
-                                                       std::size_t          i) {
+                                                       const std::size_t    i) {
         const auto* symbOp = dynamic_cast<const qc::SymbolicOperation*>(op);
         if (symbOp) {
             return toPiExpr(symbOp->getParameter(i));

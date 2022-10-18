@@ -11,7 +11,6 @@ namespace qc {
     /***
      * Protected Methods
      ***/
-
     OpType StandardOperation::parseU3(dd::fp& lambda, dd::fp& phi, dd::fp& theta) {
         if (std::abs(theta) < PARAMETER_TOLERANCE && std::abs(phi) < PARAMETER_TOLERANCE) {
             phi   = 0.L;

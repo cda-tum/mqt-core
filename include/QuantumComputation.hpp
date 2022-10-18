@@ -23,7 +23,6 @@
 #include <map>
 #include <memory>
 #include <random>
-#include <regex>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -673,9 +672,12 @@ namespace qc {
 
         void instantiate(const VariableAssignment& assignment);
 
-        void addVariables(const SymbolOrNumber& expr);
-        void addVariables(const SymbolOrNumber& expr1, const SymbolOrNumber& expr2);
-        void addVariables(const SymbolOrNumber& expr1, const SymbolOrNumber& expr2, const SymbolOrNumber& expr3);
+        void addVariable(const SymbolOrNumber& expr);
+
+        template<typename... Vars>
+        void addVariables(const Vars&... vars) {
+            (addVariable(vars), ...);
+        }
 
         [[nodiscard]] bool isVariableFree() const {
             return std::all_of(ops.begin(), ops.end(), [](const auto& op) { return !op->isSymbolicOperation(); });
@@ -686,8 +688,8 @@ namespace qc {
         }
 
         /**
-                 * printing
-                 */
+         * printing
+         */
         virtual std::ostream& print(std::ostream& os) const;
 
         friend std::ostream& operator<<(std::ostream& os, const QuantumComputation& qc) { return qc.print(os); }
@@ -722,8 +724,8 @@ namespace qc {
         }
 
         /**
-                 * Pass-Through
-                 */
+         * Pass-Through
+         */
 
         // Iterators (pass-through)
         auto               begin() noexcept { return ops.begin(); }

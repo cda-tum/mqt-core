@@ -107,7 +107,6 @@ py::dict construct_circuit(const py::object& circ, const ConstructionMethod& met
         ss << "Could not import circuit: " << e.what();
         return py::dict("error"_a = ss.str());
     }
-
     return construct(qc, method, storeDD, storeMatrix);
 }
 

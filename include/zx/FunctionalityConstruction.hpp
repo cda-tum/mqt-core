@@ -19,7 +19,7 @@ namespace zx {
 
         static bool transformableToZX(const qc::QuantumComputation* qc);
 
-        static bool transformableToZX(qc::Operation* op);
+        static bool transformableToZX(const qc::Operation* op);
 
     protected:
         static bool

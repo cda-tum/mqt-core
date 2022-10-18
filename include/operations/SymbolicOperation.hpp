@@ -21,7 +21,7 @@ namespace qc {
 
     class SymbolicOperation final: public StandardOperation {
     protected:
-        std::array<std::optional<Symbolic>, MAX_PARAMETERS> symbolicParameter{{std::nullopt, std::nullopt, std::nullopt}};
+        std::array<std::optional<Symbolic>, MAX_PARAMETERS> symbolicParameter{};
 
         static OpType parseU3(const Symbolic& lambda, dd::fp& phi, dd::fp& theta);
         static OpType parseU3(dd::fp& lambda, const Symbolic& phi, dd::fp& theta);
@@ -38,9 +38,9 @@ namespace qc {
 
         void checkUgate();
 
-        void storeSymbolOrNumber(const SymbolOrNumber& param, std::size_t i);
+        void storeSymbolOrNumber(const SymbolOrNumber& param, const std::size_t i);
 
-        [[nodiscard]] bool isSymbolicParameter(std::size_t i) const {
+        [[nodiscard]] bool isSymbolicParameter(const std::size_t i) const {
             return symbolicParameter[i].has_value();
         }
 
@@ -63,20 +63,13 @@ namespace qc {
     public:
         SymbolicOperation() = default;
 
-        // [[nodiscard]] const std::array<Symbolic, MAX_PARAMETERS>& getSymbolicParameter() const {
-        //     return symbolicParameter;
-        // }
-
-        // std::array<Symbolic, MAX_PARAMETERS>& getSymbolicParameter() {
-        //     return symbolicParameter;
-        // }
-
-        [[nodiscard]] SymbolOrNumber getParameter(std::size_t i) const {
-            if (symbolicParameter[i].has_value()) return symbolicParameter[i].value();
+        [[nodiscard]] SymbolOrNumber getParameter(const std::size_t i) const {
+            if (symbolicParameter[i].has_value())
+                return symbolicParameter[i].value();
             return parameter[i];
         }
 
-        void setSymbolicParameter(const Symbolic& par, std::size_t i) {
+        void setSymbolicParameter(const Symbolic& par, const std::size_t i) {
             symbolicParameter[i] = par;
         }
 
@@ -104,13 +97,6 @@ namespace qc {
         [[nodiscard]] inline bool isStandardOperation() const override {
             return std::all_of(symbolicParameter.begin(), symbolicParameter.end(), [](const auto& sym) { return !sym.has_value(); });
         }
-
-        // [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const override {
-        //     return Operation::equals(op, perm1, perm2);
-        // }
-        // [[nodiscard]] bool equals(const Operation& operation) const override {
-        //     return equals(operation, {}, {});
-        // }
 
         [[nodiscard]] bool        equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const override;
         [[nodiscard]] inline bool equals(const Operation& op) const override {

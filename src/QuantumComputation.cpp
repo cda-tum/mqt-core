@@ -1032,21 +1032,12 @@ namespace qc {
         std::for_each(qubits.begin(), qubits.end(), [&](auto q) { checkQubitRange(q); });
     }
 
-    void QuantumComputation::addVariables(const SymbolOrNumber& expr) {
+    void QuantumComputation::addVariable(const SymbolOrNumber& expr) {
         if (std::holds_alternative<Symbolic>(expr)) {
             const auto& sym = std::get<Symbolic>(expr);
             for (const auto& term: sym)
                 occuringVariables.insert(term.getVar());
         }
-    }
-    void QuantumComputation::addVariables(const SymbolOrNumber& expr1, const SymbolOrNumber& expr2) {
-        addVariables(expr1);
-        addVariables(expr2);
-    }
-    void QuantumComputation::addVariables(const SymbolOrNumber& expr1, const SymbolOrNumber& expr2, const SymbolOrNumber& expr3) {
-        addVariables(expr1);
-        addVariables(expr2);
-        addVariables(expr3);
     }
 
     void QuantumComputation::u3(dd::Qubit target, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta) {
@@ -1145,27 +1136,10 @@ namespace qc {
         emplace_back<SymbolicOperation>(getNqubits(), controls, target, qc::RZ, lambda);
     }
 
-    // QuantumComputation QuantumComputation::getInstantiatedComputation(const VariableAssignment& assignment) const {
-    //     QuantumComputation qc;
-    //     for (const auto& op: *this) {
-    //         const auto* symOp = dynamic_cast<SymbolicOperation*>(op.get());
-
-    //         if (symOp) {
-    //             const auto stdOp = symOp->getInstantiatedOperation(assignment);
-    //             qc.emplace_back<StandardOperation>(stdOp.getNqubits(), stdOp.getControls(), stdOp.getTargets(), stdOp.getType(), stdOp.getParameter()[0], stdOp.getParameter()[1], stdOp.getParameter()[2], stdOp.getStartingQubit());
-    //         } else {
-    //             qc.emplace_back<Operation>(std::make_unique<Operation>(op->clone()));
-    //         }
-    //     }
-    //     return qc;
-    // }
-
     // Instantiates this computation
-    // Afterwards casting to QuantumComputation can be done if assignment is total
     void QuantumComputation::instantiate(const VariableAssignment& assignment) {
-        for (auto& op: *this) {
-            auto* symOp = dynamic_cast<SymbolicOperation*>(op.get());
-            if (symOp) {
+        for (auto& op: ops) {
+            if (auto* symOp = dynamic_cast<SymbolicOperation*>(op.get())) {
                 symOp->instantiate(assignment);
             }
         }

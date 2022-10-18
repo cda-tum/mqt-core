@@ -13,7 +13,6 @@
 #include "gtest/gtest.h"
 #include <cstddef>
 #include <iostream>
-#include <memory>
 #include <sstream>
 
 using namespace dd::literals;

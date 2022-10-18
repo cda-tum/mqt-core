@@ -197,12 +197,12 @@ namespace qc {
 
     [[nodiscard]] dd::fp SymbolicOperation::getInstantiation(const SymbolOrNumber& symOrNum, const VariableAssignment& assignment) {
         return std::visit(Overload{
-                                  [&](dd::fp num) { return num; },
+                                  [&](const dd::fp num) { return num; },
                                   [&](const Symbolic& sym) { return sym.evaluate(assignment); }},
                           symOrNum);
     }
 
-    SymbolicOperation::SymbolicOperation::SymbolicOperation(dd::QubitCount nq, dd::Qubit target, OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, dd::Qubit startingQubit) {
+    SymbolicOperation::SymbolicOperation(dd::QubitCount nq, dd::Qubit target, OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, dd::Qubit startingQubit) {
         type = g;
         setup(nq, lambda, phi, theta, startingQubit);
         targets.emplace_back(target);
@@ -274,13 +274,10 @@ namespace qc {
     // Instantiates this Operation
     // Afterwards casting to StandardOperation can be done if assignment is total
     void SymbolicOperation::instantiate(const VariableAssignment& assignment) {
-        parameter[0] = getInstantiation(getParameter(0), assignment);
-        symbolicParameter[0].reset();
-        parameter[1] = getInstantiation(getParameter(1), assignment);
-        symbolicParameter[1].reset();
-        parameter[2] = getInstantiation(getParameter(2), assignment);
-        symbolicParameter[2].reset();
-
+        for (std::size_t i = 0; i < symbolicParameter.size(); ++i) {
+            parameter[i] = getInstantiation(getParameter(i), assignment);
+            symbolicParameter[i].reset();
+        }
         checkUgate();
     }
 } // namespace qc

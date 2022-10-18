@@ -200,22 +200,21 @@ namespace qc::qiskit {
         static SymbolOrNumber parseSymbolicExpr(const py::object& pyExpr) {
             static const std::regex summands("[+|-]?[^+-]+");
             static const std::regex products("[\\*/]?[^\\*/]+");
-            // static const std::regex products(".*");
-            // static const products("")
+
             auto exprStr = pyExpr.attr("__str__")().cast<std::string>();
             exprStr.erase(std::remove(exprStr.begin(), exprStr.end(), ' '),
                           exprStr.end()); // strip whitespace
 
-            auto sumIt  = std::sregex_iterator(exprStr.begin(), exprStr.end(), summands);
-            auto sumEnd = std::sregex_iterator();
+            auto       sumIt  = std::sregex_iterator(exprStr.begin(), exprStr.end(), summands);
+            const auto sumEnd = std::sregex_iterator();
 
             qc::Symbolic sym;
             bool         isConst = true;
 
             while (sumIt != sumEnd) {
-                auto match    = *sumIt;
-                auto matchStr = match.str();
-                int  sign     = matchStr[0] == '-' ? -1 : 1;
+                auto      match    = *sumIt;
+                auto      matchStr = match.str();
+                const int sign     = matchStr[0] == '-' ? -1 : 1;
                 if (matchStr[0] == '+' || matchStr[0] == '-') {
                     matchStr.erase(0, 1);
                 }
@@ -230,7 +229,7 @@ namespace qc::qiskit {
                     auto prodMatch = *prodIt;
                     auto prodStr   = prodMatch.str();
 
-                    bool isDiv = prodStr[0] == '/';
+                    const bool isDiv = prodStr[0] == '/';
                     if (prodStr[0] == '*' || prodStr[0] == '/') {
                         prodStr.erase(0, 1);
                     }
@@ -238,15 +237,14 @@ namespace qc::qiskit {
                     std::istringstream iss(prodStr);
                     dd::fp             f;
                     iss >> f;
-                    bool isNum = iss.eof() && !iss.fail();
 
-                    if (isNum) {
+                    if (iss.eof() && !iss.fail();) {
                         coeff *= isDiv ? 1.0 / f : f;
                     } else {
                         var = prodStr;
                     }
 
-                    prodIt++;
+                    ++prodIt;
                 }
                 if (var.empty()) {
                     sym += coeff;
@@ -254,10 +252,13 @@ namespace qc::qiskit {
                     isConst = false;
                     sym += sym::Term(sign * coeff, sym::Variable{var});
                 }
-                sumIt++;
+                ++sumIt;
             }
 
-            return isConst ? SymbolOrNumber{sym.getConst()} : SymbolOrNumber{sym};
+            if (isConst) {
+                return {sym.getConst()};
+            }
+            return {sym};
         }
 
         static SymbolOrNumber parseParam(const py::object& param) {
@@ -276,7 +277,6 @@ namespace qc::qiskit {
             }
             auto target = qubits.back().qubit;
             qubits.pop_back();
-            // dd::fp theta = 0., phi = 0., lambda = 0.;
             qc::SymbolOrNumber theta = 0., phi = 0., lambda = 0.;
 
             if (params.size() == 1) {
@@ -308,7 +308,6 @@ namespace qc::qiskit {
             qubits.pop_back();
             auto target0 = qubits.back().qubit;
             qubits.pop_back();
-            // dd::fp             theta = 0., phi = 0., lambda = 0.;
             qc::SymbolOrNumber theta = 0., phi = 0., lambda = 0.;
             if (params.size() == 1) {
                 lambda = parseParam(params[0]);
