@@ -238,7 +238,7 @@ namespace qc::qiskit {
                     dd::fp             f;
                     iss >> f;
 
-                    if (iss.eof() && !iss.fail();) {
+                    if (iss.eof() && !iss.fail()) {
                         coeff *= isDiv ? 1.0 / f : f;
                     } else {
                         var = prodStr;
