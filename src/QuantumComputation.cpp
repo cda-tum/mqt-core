@@ -399,6 +399,10 @@ namespace qc {
         // index of logical qubit
         auto logical_qubit_index = static_cast<dd::Qubit>(nqubits + nancillae);
 
+        // resize ancillary and garbage tracking vectors
+        ancillary.resize(logical_qubit_index + 1U);
+        garbage.resize(logical_qubit_index + 1U);
+
         // increase ancillae count and mark as ancillary
         nancillae++;
         ancillary[logical_qubit_index] = true;
