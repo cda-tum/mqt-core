@@ -7,7 +7,6 @@
 #define QFR_QUANTUMCIRCUIT_HPP
 
 #include "pybind11/pybind11.h"
-#include "regex"
 
 #include <regex>
 #include <type_traits>
