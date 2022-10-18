@@ -1789,7 +1789,7 @@ TEST_F(QFRFunctionality, IndexOutOfRange) {
 }
 
 TEST_F(QFRFunctionality, ContainsLogicalQubit) {
-    QuantumComputation qc(2);
+    const QuantumComputation qc(2);
     const auto [contains0, index0] = qc.containsLogicalQubit(0);
     EXPECT_TRUE(contains0);
     EXPECT_EQ(*index0, 0);
@@ -1799,4 +1799,17 @@ TEST_F(QFRFunctionality, ContainsLogicalQubit) {
     const auto [contains2, index2] = qc.containsLogicalQubit(2);
     EXPECT_FALSE(contains2);
     EXPECT_FALSE(index2.has_value());
+}
+
+TEST_F(QFRFunctionality, AddAncillaryQubits) {
+    QuantumComputation qc(1);
+    qc.addAncillaryQubit(1, -1);
+    EXPECT_EQ(qc.getNqubits(), 2);
+    EXPECT_EQ(qc.getNancillae(), 1);
+    ASSERT_EQ(qc.ancillary.size(), 2U);
+    ASSERT_EQ(qc.garbage.size(), 2U);
+    EXPECT_FALSE(qc.ancillary[0]);
+    EXPECT_TRUE(qc.ancillary[1]);
+    EXPECT_FALSE(qc.garbage[0]);
+    EXPECT_TRUE(qc.garbage[1]);
 }
