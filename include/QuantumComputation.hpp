@@ -21,6 +21,7 @@
 #include <locale>
 #include <map>
 #include <memory>
+#include <optional>
 #include <random>
 #include <regex>
 #include <sstream>
@@ -263,17 +264,22 @@ namespace qc {
         [[nodiscard]] std::pair<std::string, dd::Qubit>   getQubitRegisterAndIndex(dd::Qubit physicalQubitIndex) const;
         [[nodiscard]] std::pair<std::string, std::size_t> getClassicalRegisterAndIndex(std::size_t classicalIndex) const;
 
-        [[nodiscard]] dd::Qubit                getIndexFromQubitRegister(const std::pair<std::string, dd::Qubit>& qubit) const;
-        [[nodiscard]] std::size_t              getIndexFromClassicalRegister(const std::pair<std::string, std::size_t>& clbit) const;
-        [[nodiscard]] bool                     isIdleQubit(dd::Qubit physicalQubit) const;
-        [[nodiscard]] bool                     isLastOperationOnQubit(const const_iterator& opIt, const const_iterator& end) const;
-        [[nodiscard]] bool                     physicalQubitIsAncillary(dd::Qubit physicalQubitIndex) const;
-        [[nodiscard]] bool                     logicalQubitIsAncillary(dd::Qubit logicalQubitIndex) const { return ancillary[logicalQubitIndex]; }
-        void                                   setLogicalQubitAncillary(dd::Qubit logicalQubitIndex) { ancillary[logicalQubitIndex] = true; }
-        [[nodiscard]] bool                     logicalQubitIsGarbage(dd::Qubit logicalQubitIndex) const { return garbage[logicalQubitIndex]; }
-        void                                   setLogicalQubitGarbage(dd::Qubit logicalQubitIndex);
-        [[nodiscard]] const std::vector<bool>& getAncillary() const { return ancillary; }
-        [[nodiscard]] const std::vector<bool>& getGarbage() const { return garbage; }
+        [[nodiscard]] dd::Qubit                  getIndexFromQubitRegister(const std::pair<std::string, dd::Qubit>& qubit) const;
+        [[nodiscard]] std::size_t                getIndexFromClassicalRegister(const std::pair<std::string, std::size_t>& clbit) const;
+        [[nodiscard]] bool                       isIdleQubit(dd::Qubit physicalQubit) const;
+        [[nodiscard]] bool                       isLastOperationOnQubit(const const_iterator& opIt, const const_iterator& end) const;
+        [[nodiscard]] bool                       physicalQubitIsAncillary(dd::Qubit physicalQubitIndex) const;
+        [[nodiscard]] bool                       logicalQubitIsAncillary(const dd::Qubit logicalQubitIndex) const { return ancillary[logicalQubitIndex]; }
+        void                                     setLogicalQubitAncillary(const dd::Qubit logicalQubitIndex) { ancillary[logicalQubitIndex] = true; }
+        [[nodiscard]] bool                       logicalQubitIsGarbage(const dd::Qubit logicalQubitIndex) const { return garbage[logicalQubitIndex]; }
+        void                                     setLogicalQubitGarbage(dd::Qubit logicalQubitIndex);
+        [[nodiscard]] const std::vector<bool>&   getAncillary() const { return ancillary; }
+        [[nodiscard]] const std::vector<bool>&   getGarbage() const { return garbage; }
+
+        /// checks whether the given logical qubit exists in the initial layout.
+        /// \param logicalQubitIndex the logical qubit index to check
+        /// \return whether the given logical qubit exists in the initial layout and to which physical qubit it is mapped
+        [[nodiscard]] std::pair<bool, std::optional<dd::Qubit>> containsLogicalQubit(dd::Qubit logicalQubitIndex) const;
 
         void i(dd::Qubit target) {
             checkQubitRange(target);
