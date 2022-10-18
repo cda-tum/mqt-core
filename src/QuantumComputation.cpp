@@ -948,6 +948,19 @@ namespace qc {
         }
     }
 
+    [[nodiscard]] std::pair<bool, std::optional<dd::Qubit>> QuantumComputation::containsLogicalQubit(const dd::Qubit logicalQubitIndex) const {
+        if (const auto it = std::find_if(
+                    initialLayout.cbegin(),
+                    initialLayout.cend(),
+                    [&logicalQubitIndex](const auto& mapping) {
+                        return mapping.second == logicalQubitIndex;
+                    });
+            it != initialLayout.cend()) {
+            return {true, it->first};
+        }
+        return {false, {}};
+    }
+
     bool QuantumComputation::isLastOperationOnQubit(const const_iterator& opIt, const const_iterator& end) const {
         if (opIt == end)
             return true;

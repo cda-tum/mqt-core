@@ -1787,3 +1787,16 @@ TEST_F(QFRFunctionality, IndexOutOfRange) {
     EXPECT_THROW(qc.swap(0, 2, {dd::Control{1, dd::Control::Type::neg}}), QFRException);
     EXPECT_THROW(qc.reset({0, 1, 2}), QFRException);
 }
+
+TEST_F(QFRFunctionality, ContainsLogicalQubit) {
+    QuantumComputation qc(2);
+    const auto [contains0, index0] = qc.containsLogicalQubit(0);
+    EXPECT_TRUE(contains0);
+    EXPECT_EQ(*index0, 0);
+    const auto [contains1, index1] = qc.containsLogicalQubit(1);
+    EXPECT_TRUE(contains1);
+    EXPECT_EQ(*index1, 1);
+    const auto [contains2, index2] = qc.containsLogicalQubit(2);
+    EXPECT_FALSE(contains2);
+    EXPECT_FALSE(index2.has_value());
+}
