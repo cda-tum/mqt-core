@@ -25,7 +25,7 @@ protected:
     void TearDown() override {
     }
 
-    static void simulateCircuit(qc::QuantumComputation& qc, std::map<std::size_t, bool>& finalClassicValues) {
+    static void simulateCircuit(qc::QuantumComputation& qc, std::map<std::size_t, bool>& finalClassicValues, bool simulateNoise = false, Qubit targetForNoise = 0, std::uint_fast32_t applyNoiseAfterNOperations = 0) {
         std::mt19937_64 mt;
         mt.seed(1);
 
@@ -34,6 +34,8 @@ protected:
         auto ddECC = std::make_unique<dd::Package<>>(qc.getNqubits());
 
         vEdge rootEdgeECC = ddECC->makeZeroState(qc.getNqubits());
+
+        std::uint_fast32_t operationCounter = 0;
 
         for (auto const& op: qc) {
             if (op->getType() == qc::Measure) {
@@ -82,23 +84,43 @@ protected:
                 auto operation = dd::getDD(op.get(), ddECC);
                 rootEdgeECC    = ddECC->multiply(operation, rootEdgeECC);
             }
+            if (simulateNoise && operationCounter == applyNoiseAfterNOperations) {
+                auto operation = ddECC->makeGateDD(Xmat, qc.getNqubits(), targetForNoise);
+                rootEdgeECC    = ddECC->multiply(operation, rootEdgeECC);
+            }
+            operationCounter++;
         }
     }
 
-    static bool verifyExecution(qc::QuantumComputation& qcOriginal, qc::QuantumComputation& qcECC) {
-        std::map<std::size_t, bool> finalClassicValuesECC{};
+    static bool verifyExecution(qc::QuantumComputation& qcOriginal, qc::QuantumComputation& qcECC, bool simulateWithErrors = true) {
         std::map<std::size_t, bool> finalClassicValuesOriginal{};
+        bool                        testingSuccessful = true;
 
         simulateCircuit(qcOriginal, finalClassicValuesOriginal);
-        simulateCircuit(qcECC, finalClassicValuesECC);
 
-        for (auto const& x: finalClassicValuesOriginal) {
-            if (x.second != finalClassicValuesECC[x.first]) {
-                return false;
+        if (!simulateWithErrors) {
+            std::map<std::size_t, bool> finalClassicValuesECC{};
+            simulateCircuit(qcECC, finalClassicValuesECC);
+            for (auto const& x: finalClassicValuesOriginal) {
+                if (x.second != finalClassicValuesECC[x.first]) {
+                    testingSuccessful = false;
+                }
+            }
+        } else {
+            auto nrQubits    = qcECC.getNqubits();
+            auto nrOperation = 50;
+            for (auto i = 0; i < nrQubits; i++) {
+                std::map<std::size_t, bool> finalClassicValuesECC{};
+                simulateCircuit(qcECC, finalClassicValuesECC, true, i, nrOperation);
+                for (auto const& x: finalClassicValuesOriginal) {
+                    if (x.second != finalClassicValuesECC[x.first]) {
+                        std::cout << "Simulation failed when applying error to qubit " << i << " after " << nrOperation << " gates." << std::endl;
+                        testingSuccessful = false;
+                    }
+                }
             }
         }
-
-        return true;
+        return testingSuccessful;
     }
 
     static void createIdentityCircuit(qc::QuantumComputation& qc) {
@@ -155,6 +177,13 @@ protected:
         qc.h(0);
         qc.h(0);
     }
+
+    static void createCXCircuit(qc::QuantumComputation& qc) {
+        qc = {};
+        qc.addQubitRegister(2U);
+        qc.x(0);
+        qc.x(1, 0_pc);
+    }
 };
 
 TEST_F(DDECCFunctionalityTest, testQ3Shor) {
@@ -162,7 +191,7 @@ TEST_F(DDECCFunctionalityTest, testQ3Shor) {
     bool cliffOnly        = false;
     int  measureFrequency = 1;
 
-    void (*circuitsExpectToPass[2])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit};
+    void (*circuitsExpectToPass[3])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit};
     void (*circuitsExpectToFail[4])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit};
 
     for (auto& circuit: circuitsExpectToPass) {
@@ -187,7 +216,7 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
     int  measureFrequency = 1;
 
     void (*circuitsExpectToPass[2])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit};
-    void (*circuitsExpectToFail[4])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit};
+    void (*circuitsExpectToFail[5])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit, createCXCircuit};
 
     for (auto& circuit: circuitsExpectToPass) {
         qc::QuantumComputation qcOriginal{};
@@ -210,7 +239,15 @@ TEST_F(DDECCFunctionalityTest, testQ7Steane) {
     bool cliffOnly        = false;
     int  measureFrequency = 1;
 
-    void (*circuitsExpectToPass[6])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createYCircuit, createHCircuit, createHTCircuit, createHZCircuit};
+    void (*circuitsExpectToPass[7])(qc::QuantumComputation & qc) = {
+            createIdentityCircuit,
+            createXCircuit,
+            createYCircuit,
+            createHCircuit,
+            createHTCircuit,
+            createHZCircuit,
+            createCXCircuit
+    };
 
     for (auto& circuit: circuitsExpectToPass) {
         qc::QuantumComputation qcOriginal{};
@@ -226,7 +263,7 @@ TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
     bool cliffOnly        = false;
     int  measureFrequency = 1;
 
-    void (*circuitsExpectToPass[2])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit};
+    void (*circuitsExpectToPass[3])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit};
     void (*circuitsExpectToFail[4])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit};
 
     for (auto& circuit: circuitsExpectToPass) {
@@ -250,7 +287,7 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
     bool cliffOnly        = false;
     int  measureFrequency = 1;
 
-    void (*circuitsExpectToPass[2])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit};
+    void (*circuitsExpectToPass[3])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit}; //todo @Christoph the circuit createCXCircuit should fail according to the github readme
     void (*circuitsExpectToFail[4])(qc::QuantumComputation & qc) = {createYCircuit, createHTCircuit, createHCircuit, createHZCircuit};
     for (auto& circuit: circuitsExpectToPass) {
         qc::QuantumComputation qcOriginal{};
@@ -274,7 +311,7 @@ TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
     int  measureFrequency = 1;
 
     void (*circuitsExpectToPass[5])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createYCircuit, createHCircuit, createHZCircuit};
-    void (*circuitsExpectToFail[1])(qc::QuantumComputation & qc) = {createHTCircuit};
+    void (*circuitsExpectToFail[2])(qc::QuantumComputation & qc) = {createHTCircuit, createCXCircuit};
 
     for (auto& circuit: circuitsExpectToPass) {
         qc::QuantumComputation qcOriginal{};
