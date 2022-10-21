@@ -25,10 +25,8 @@ namespace zx {
  * corresponding to the interval (-pi, pi]
  */
     class PiRational {
-        // void normalize();
     public:
-        PiRational():
-            frac(){};
+        PiRational() = default;
         explicit PiRational(int64_t num, int64_t denom):
             frac(num, denom) {
             modPi();
@@ -55,8 +53,8 @@ namespace zx {
         PiRational& operator/=(const PiRational& rhs);
         PiRational& operator/=(int64_t rhs);
 
-        // double to_double() const;
-        [[nodiscard]] bool isInteger() const {
+        [[nodiscard]] bool
+        isInteger() const {
             return boost::multiprecision::denominator(frac) == 1;
         }
         [[nodiscard]] bool isZero() const {
@@ -76,16 +74,18 @@ namespace zx {
             return frac.convert_to<double>();
         }
 
-        [[nodiscard]] bool isClose(double x, double tolerance) const {
+        [[nodiscard]] bool isClose(const double x, const double tolerance) const {
             return std::abs(toDouble() - x) < tolerance;
         }
 
-        [[nodiscard]] bool isCloseDivPi(double x, double tolerance) const {
+        [[nodiscard]] bool isCloseDivPi(const double x, const double tolerance) const {
             return std::abs(toDoubleDivPi() - x) < tolerance;
         }
 
+        explicit operator double() const { return this->toDouble(); }
+
     private:
-        Rational frac;
+        Rational frac{};
 
         void modPi();
 
@@ -93,7 +93,7 @@ namespace zx {
             boost::multiprecision::numerator(frac) = num;
         }
 
-        void setDenom(const BigInt& denom) {
+        void setDenom(const BigInt& denom) const {
             boost::multiprecision::denominator(frac) = denom;
         }
     };
@@ -154,38 +154,38 @@ namespace zx {
     }
 
     inline bool operator<(const PiRational& lhs, const PiRational& rhs) {
-        return lhs.getNum() * rhs.getDenom() < rhs.getNum() * lhs.getDenom();
+        return (lhs.getNum() * rhs.getDenom()) < (rhs.getNum() * lhs.getDenom());
     }
 
-    inline bool operator<(const PiRational& lhs, int64_t rhs) {
-        return lhs.getNum() < rhs * lhs.getDenom();
+    inline bool operator<(const PiRational& lhs, const int64_t rhs) {
+        return lhs.getNum() < (rhs * lhs.getDenom());
     }
 
-    inline bool operator<(int64_t lhs, const PiRational& rhs) {
-        return lhs * rhs.getDenom() < rhs.getNum();
+    inline bool operator<(const int64_t lhs, const PiRational& rhs) {
+        return (lhs * rhs.getDenom()) < rhs.getNum();
     }
 
     inline bool operator<=(const PiRational& lhs, const PiRational& rhs) {
-        return lhs.getNum() * rhs.getDenom() <= rhs.getNum() * lhs.getDenom();
+        return (lhs.getNum() * rhs.getDenom()) <= (rhs.getNum() * lhs.getDenom());
     }
 
-    inline bool operator<=(const PiRational& lhs, int64_t rhs) {
-        return lhs.getNum() <= rhs * lhs.getDenom();
+    inline bool operator<=(const PiRational& lhs, const int64_t rhs) {
+        return lhs.getNum() <= (rhs * lhs.getDenom());
     }
 
-    inline bool operator<=(int64_t lhs, const PiRational& rhs) {
-        return lhs * rhs.getDenom() <= rhs.getNum();
+    inline bool operator<=(const int64_t lhs, const PiRational& rhs) {
+        return (lhs * rhs.getDenom()) <= rhs.getNum();
     }
 
     inline bool operator>(const PiRational& lhs, const PiRational& rhs) {
         return rhs < lhs;
     }
 
-    inline bool operator>(const PiRational& lhs, int64_t rhs) {
+    inline bool operator>(const PiRational& lhs, const int64_t rhs) {
         return rhs < lhs;
     }
 
-    inline bool operator>(int64_t lhs, const PiRational& rhs) {
+    inline bool operator>(const int64_t lhs, const PiRational& rhs) {
         return rhs < lhs;
     }
 
@@ -193,11 +193,11 @@ namespace zx {
         return rhs <= lhs;
     }
 
-    inline bool operator>=(const PiRational& lhs, int64_t rhs) {
+    inline bool operator>=(const PiRational& lhs, const int64_t rhs) {
         return rhs <= lhs;
     }
 
-    inline bool operator>=(int64_t lhs, const PiRational& rhs) {
+    inline bool operator>=(const int64_t lhs, const PiRational& rhs) {
         return rhs <= lhs;
     }
 
@@ -205,11 +205,11 @@ namespace zx {
         return lhs.getNum() == rhs.getNum() && lhs.getDenom() == rhs.getDenom();
     }
 
-    inline bool operator==(const PiRational& lhs, int64_t rhs) {
+    inline bool operator==(const PiRational& lhs, const int64_t rhs) {
         return lhs.getNum() == rhs && lhs.getDenom() == 1;
     }
 
-    inline bool operator==(int64_t lhs, const PiRational& rhs) {
+    inline bool operator==(const int64_t lhs, const PiRational& rhs) {
         return rhs == lhs;
     }
 
@@ -217,11 +217,11 @@ namespace zx {
         return !(lhs == rhs);
     }
 
-    inline bool operator!=(const PiRational& lhs, int64_t rhs) {
+    inline bool operator!=(const PiRational& lhs, const int64_t rhs) {
         return !(lhs == rhs);
     }
 
-    inline bool operator!=(int64_t lhs, const PiRational& rhs) {
+    inline bool operator!=(const int64_t lhs, const PiRational& rhs) {
         return !(lhs == rhs);
     }
 

@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Expression.hpp"
+#include "Rational.hpp"
+
 #include <stdexcept>
 #include <string>
 
@@ -19,6 +22,8 @@ namespace zx {
     constexpr double        TOLERANCE           = 1e-13;
     static constexpr double PI =
             3.141592653589793238462643383279502884197169399375105820974L;
+
+    using PiExpression = sym::Expression<double, PiRational>;
 
     class ZXException: public std::invalid_argument {
         std::string msg;

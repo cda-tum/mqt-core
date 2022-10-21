@@ -1,5 +1,4 @@
 #include "Definitions.hpp"
-#include "Expression.hpp"
 #include "Rational.hpp"
 #include "Simplify.hpp"
 #include "ZXDiagram.hpp"
@@ -7,8 +6,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <gtest/gtest.h>
-
-using zx::Expression;
 
 class ZXDiagramTest: public ::testing::Test {
 public:
@@ -28,11 +25,11 @@ protected:
     virtual void SetUp() {
         diag = zx::ZXDiagram();
         diag.addQubits(2);
-        diag.addVertex(0, 0, zx::Expression(), zx::VertexType::Z);
+        diag.addVertex(0, 0, zx::PiExpression(), zx::VertexType::Z);
         diag.addEdge(0, 4, zx::EdgeType::Hadamard);
-        diag.addVertex(0, 0, zx::Expression(), zx::VertexType::Z);
+        diag.addVertex(0, 0, zx::PiExpression(), zx::VertexType::Z);
         diag.addEdge(4, 5);
-        diag.addVertex(0, 0, zx::Expression(), zx::VertexType::X);
+        diag.addVertex(0, 0, zx::PiExpression(), zx::VertexType::X);
         diag.addEdge(2, 6);
         diag.addEdge(5, 6);
         diag.addEdge(5, 1);
@@ -67,8 +64,10 @@ TEST_F(ZXDiagramTest, create_diagram) {
     EXPECT_EQ(diag.getVData(5).value().type, zx::VertexType::Z);
     EXPECT_EQ(diag.getVData(6).value().type, zx::VertexType::X);
 
-    for (std::size_t i = 0; i < diag.getNVertices(); i++)
+    const auto nVerts = diag.getNVertices();
+    for (std::size_t i = 0; i < nVerts; ++i) {
         EXPECT_TRUE(diag.getVData(6).value().phase.isZero());
+    }
 }
 
 TEST_F(ZXDiagramTest, deletions) {
@@ -100,8 +99,10 @@ TEST_F(ZXDiagramTest, graph_like) {
     EXPECT_EQ(diag.getVData(5).value().type, zx::VertexType::Z);
     EXPECT_EQ(diag.getVData(6).value().type, zx::VertexType::Z);
 
-    for (std::size_t i = 0; i < diag.getNVertices(); i++)
+    const auto nVerts = diag.getNVertices();
+    for (std::size_t i = 0; i < nVerts; ++i) {
         EXPECT_TRUE(diag.getVData(i).value().phase.isZero());
+    }
 }
 
 // TEST_F(ZXDiagramTest, concat) {
@@ -116,21 +117,21 @@ TEST_F(ZXDiagramTest, graph_like) {
 //     EXPECT_EQ(diag.getEdge(2, 6).value().type, zx::EdgeType::Simple);
 //     EXPECT_EQ(diag.getEdge(3, 6).value().type, zx::EdgeType::Simple);
 //     EXPECT_EQ(diag.getEdge(5, 9).value().type, zx::EdgeType::Hadamard);
-//     // EXPECT_EQ(diag.getEdge(4, 9).value().type, zx::EdgeType::Simple);
-//     // EXPECT_EQ(diag.getEdge(7, 8).value().type, zx::EdgeType::Simple);
-//     // EXPECT_EQ(diag.getEdge(8, 10).value().type, zx::EdgeType::Simple);
-//     // EXPECT_EQ(diag.getEdge(9, 11).value().type, zx::EdgeType::Simple);
+//     EXPECT_EQ(diag.getEdge(4, 9).value().type, zx::EdgeType::Simple);
+//     EXPECT_EQ(diag.getEdge(7, 8).value().type, zx::EdgeType::Simple);
+//     EXPECT_EQ(diag.getEdge(8, 10).value().type, zx::EdgeType::Simple);
+//     EXPECT_EQ(diag.getEdge(9, 11).value().type, zx::EdgeType::Simple);
 
-//     // EXPECT_EQ(diag.getVData(0).value().type, zx::VertexType::Boundary);
-//     // EXPECT_EQ(diag.getVData(1).value().type, zx::VertexType::Boundary);
-//     // EXPECT_EQ(diag.getVData(2).value().type, zx::VertexType::Z);
-//     // EXPECT_EQ(diag.getVData(3).value().type, zx::VertexType::Z);
-//     // EXPECT_EQ(diag.getVData(4).value().type, zx::VertexType::X);
-//     // EXPECT_EQ(diag.getVData(7).value().type, zx::VertexType::Z);
-//     // EXPECT_EQ(diag.getVData(8).value().type, zx::VertexType::Z);
-//     // EXPECT_EQ(diag.getVData(9).value().type, zx::VertexType::X);
-//     // EXPECT_EQ(diag.getVData(10).value().type, zx::VertexType::Boundary);
-//     // EXPECT_EQ(diag.getVData(11).value().type, zx::VertexType::Boundary);
+//     EXPECT_EQ(diag.getVData(0).value().type, zx::VertexType::Boundary);
+//     EXPECT_EQ(diag.getVData(1).value().type, zx::VertexType::Boundary);
+//     EXPECT_EQ(diag.getVData(2).value().type, zx::VertexType::Z);
+//     EXPECT_EQ(diag.getVData(3).value().type, zx::VertexType::Z);
+//     EXPECT_EQ(diag.getVData(4).value().type, zx::VertexType::X);
+//     EXPECT_EQ(diag.getVData(7).value().type, zx::VertexType::Z);
+//     EXPECT_EQ(diag.getVData(8).value().type, zx::VertexType::Z);
+//     EXPECT_EQ(diag.getVData(9).value().type, zx::VertexType::X);
+//     EXPECT_EQ(diag.getVData(10).value().type, zx::VertexType::Boundary);
+//     EXPECT_EQ(diag.getVData(11).value().type, zx::VertexType::Boundary);
 
 //     EXPECT_TRUE(diag.isDeleted(1));
 //     EXPECT_TRUE(diag.isDeleted(3));
@@ -159,7 +160,7 @@ TEST_F(ZXDiagramTest, approximate) {
     zx::ZXDiagram almostId(3);
 
     almostId.removeEdge(0, 3);
-    auto v = almostId.addVertex(0, 1, zx::Expression(zx::PiRational(1e-8)));
+    const auto v = almostId.addVertex(0, 1, zx::PiExpression(zx::PiRational(1e-8)));
     almostId.addEdge(0, v);
     almostId.addEdge(v, 3);
 
@@ -174,8 +175,9 @@ TEST_F(ZXDiagramTest, ancilla) {
     zx::ZXDiagram cx(2);
     cx.removeEdge(0, 2);
     cx.removeEdge(1, 3);
-    auto tar  = cx.addVertex(0, 0, zx::Expression{}, zx::VertexType::X);
-    auto ctrl = cx.addVertex(1);
+    const auto tar = cx.addVertex(0, 0, zx::PiExpression{}, zx::VertexType::X);
+
+    const auto ctrl = cx.addVertex(1);
 
     cx.addEdge(tar, ctrl);
     cx.addEdge(0, tar);
@@ -194,8 +196,8 @@ TEST_F(ZXDiagramTest, ancilla) {
     zx::fullReduce(cx);
 
     EXPECT_EQ(cx.getNEdges(), 1);
-    for (auto [v, data]: cx.getVertices()) {
-        std::cout << v << " " << (data.type == zx::VertexType::Boundary) << std::endl;
+    for (const auto& [v, data]: cx.getVertices()) {
+        std::cout << v << " " << (data.type == zx::VertexType::Boundary) << "\n";
     }
     EXPECT_EQ(cx.getNVertices(), 2);
     EXPECT_TRUE(cx.isIdentity());
@@ -204,8 +206,8 @@ TEST_F(ZXDiagramTest, ancilla) {
 TEST_F(ZXDiagramTest, RemoveScalarSubDiagram) {
     zx::ZXDiagram idWithScal(1);
 
-    auto v = idWithScal.addVertex(1);
-    auto w = idWithScal.addVertex(2);
+    const auto v = idWithScal.addVertex(1);
+    const auto w = idWithScal.addVertex(2);
     idWithScal.addEdge(v, w);
 
     zx::fullReduce(idWithScal);

@@ -4,31 +4,31 @@
 
 namespace zx {
     Vertices::VertexIterator::VertexIterator(
-            std::vector<std::optional<VertexData>>& vertices, Vertex v):
+            std::vector<std::optional<VertexData>>& vertices, const Vertex v):
         v(v),
         currentPos(vertices.begin()), vertices(vertices) {
-        if ((std::size_t)v >= vertices.size()) {
+        if (v >= vertices.size()) {
             currentPos = vertices.end();
             this->v    = vertices.size();
         } else {
             currentPos = vertices.begin() + static_cast<int>(v);
-            next_valid_vertex();
+            nextValidVertex();
         }
     }
     // Prefix increment
     Vertices::VertexIterator Vertices::VertexIterator::operator++() {
         Vertices::VertexIterator it = *this;
-        currentPos++;
-        v++;
-        next_valid_vertex();
+        ++currentPos;
+        ++v;
+        nextValidVertex();
         return it;
     }
 
     // Postfix increment
     const Vertices::VertexIterator Vertices::VertexIterator::operator++(int) {
-        currentPos++;
-        v++;
-        next_valid_vertex();
+        ++currentPos;
+        ++v;
+        nextValidVertex();
         return *this;
     }
 
@@ -41,10 +41,10 @@ namespace zx {
         return !(a == b);
     }
 
-    void Vertices::VertexIterator::next_valid_vertex() {
+    void Vertices::VertexIterator::nextValidVertex() {
         while (currentPos != vertices.end() && !currentPos->has_value()) {
-            v++;
-            currentPos++;
+            ++v;
+            ++currentPos;
         }
     }
 
@@ -54,8 +54,9 @@ namespace zx {
         v(0),
         currentPos(edges[0].begin()), edgesPos(edges.begin()), edges(edges), vertices(vertices) {
         if (!vertices.empty()) {
-            while ((std::size_t)v < edges.size() && !vertices[v].has_value())
-                v++;
+            while (v < edges.size() && !vertices[v].has_value()) {
+                ++v;
+            }
             currentPos = edges[v].begin();
             edgesPos   = edges.begin() + static_cast<int>(v);
             checkNextVertex();
@@ -68,10 +69,10 @@ namespace zx {
 
     Edges::EdgeIterator::EdgeIterator(
             std::vector<std::vector<Edge>>&         edges,
-            std::vector<std::optional<VertexData>>& vertices, Vertex v):
+            std::vector<std::optional<VertexData>>& vertices, const Vertex v):
         v(v),
         edges(edges), vertices(vertices) {
-        if ((std::size_t)v >= edges.size()) {
+        if (v >= edges.size()) {
             currentPos = edges.back().end();
             edgesPos   = edges.end();
             this->v    = edges.size();
@@ -91,30 +92,33 @@ namespace zx {
 
     void Edges::EdgeIterator::checkNextVertex() {
         while (currentPos != edges[v].end() &&
-               currentPos->to < v) // make sure to not iterate over an edge twice
-            currentPos++;
+               currentPos->to < v) { // make sure to not iterate over an edge twice
+            ++currentPos;
+        }
 
-        while (currentPos == edges[v].end() && (std::size_t)v < edges.size()) {
-            v++;
-            while ((std::size_t)v < edges.size() && !vertices[v].has_value())
-                v++;
+        while (currentPos == edges[v].end() && v < edges.size()) {
+            ++v;
+            while (v < edges.size() && !vertices[v].has_value()) {
+                ++v;
+            }
 
-            if ((std::size_t)v == edges.size()) {
+            if (v == edges.size()) {
                 currentPos = edges.back().end();
                 edgesPos   = edges.end();
-                v--;
+                --v;
                 return;
             }
             currentPos = edges[v].begin();
             edgesPos   = edges.begin() + static_cast<int>(v);
             while (currentPos != edges[v].end() &&
-                   currentPos->to < v) // make sure to not iterate over an edge twice
-                currentPos++;
+                   currentPos->to < v) { // make sure to not iterate over an edge twice
+                ++currentPos;
+            }
         }
     }
     // Postfix increment
     const Edges::EdgeIterator Edges::EdgeIterator::operator++(int) {
-        currentPos++;
+        ++currentPos;
         checkNextVertex();
         return *this;
     }
@@ -124,5 +128,31 @@ namespace zx {
     }
     bool operator!=(const Edges::EdgeIterator& a, const Edges::EdgeIterator& b) {
         return !(a == b);
+    }
+
+    bool isPauli(const PiExpression& expr) {
+        return expr.isConstant() && expr.getConst().isInteger();
+    }
+    bool isClifford(const PiExpression& expr) {
+        return expr.isConstant() && (expr.getConst().isInteger() || expr.getConst().getDenom() == 2);
+    }
+    bool isProperClifford(const PiExpression& expr) {
+        return expr.isConstant() && expr.getConst().getDenom() == 2;
+    }
+
+    void roundToClifford(PiExpression& expr, const fp tolerance) {
+        if (!expr.isConstant()) {
+            return;
+        }
+
+        if (expr.getConst().isCloseDivPi(0, tolerance)) {
+            expr.setConst(PiRational(0, 1));
+        } else if (expr.getConst().isCloseDivPi(0.5, tolerance)) {
+            expr.setConst(PiRational(1, 2));
+        } else if (expr.getConst().isCloseDivPi(-0.5, tolerance)) {
+            expr.setConst(PiRational(-1, 2));
+        } else if (expr.getConst().isCloseDivPi(1, tolerance)) {
+            expr.setConst(PiRational(1, 1));
+        }
     }
 } // namespace zx
