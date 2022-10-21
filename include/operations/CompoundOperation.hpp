@@ -45,6 +45,10 @@ namespace qc {
             return std::any_of(ops.cbegin(), ops.cend(), [](const auto& op) { return op->isNonUnitaryOperation(); });
         }
 
+        [[nodiscard]] inline bool isSymbolicOperation() const override {
+            return std::any_of(ops.begin(), ops.end(), [](const auto& op) { return op->isSymbolicOperation(); });
+        }
+
         [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const override {
             if (const auto* comp = dynamic_cast<const CompoundOperation*>(&op)) {
                 if (comp->ops.size() != ops.size()) {
@@ -106,8 +110,8 @@ namespace qc {
         }
 
         /**
-		 * Pass-Through
-		 */
+                 * Pass-Through
+                 */
 
         // Iterators (pass-through)
         auto               begin() noexcept { return ops.begin(); }

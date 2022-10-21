@@ -1,25 +1,25 @@
 [submodule "extern/dd_package"]
-	path = extern/dd_package
-	url = https://github.com/cda-tum/dd_package.git
-	branch = main
-	shallow = true
+        path = extern/dd_package
+        url = https://github.com/cda-tum/dd_package.git
+        branch = main
+        shallow = true
 [submodule "extern/json"]
-	path = extern/json
-	url = https://github.com/nlohmann/json.git
-	branch = develop
-	shallow = true
+        path = extern/json
+        url = https://github.com/nlohmann/json.git
+        branch = develop
+        shallow = true
 [submodule "extern/pybind11"]
-	path = extern/pybind11
-	url = https://github.com/pybind/pybind11.git
-	branch = master
-	shallow = true
+        path = extern/pybind11
+        url = https://github.com/pybind/pybind11.git
+        branch = master
+        shallow = true
 [submodule "extern/pybind11_json"]
-	path = extern/pybind11_json
-	url = https://github.com/pybind/pybind11_json.git
-	branch = master
-	shallow = true
+        path = extern/pybind11_json
+        url = https://github.com/pybind/pybind11_json.git
+        branch = master
+        shallow = true
 [submodule "extern/zx"]
-	path = extern/zx
-	url = https://github.com/cda-tum/zx.git
-	branch = main
-	shallow = true
+        path = extern/zx
+        url = https://github.com/cda-tum/zx.git
+        branch = main
+        shallow = true

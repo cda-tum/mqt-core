@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "Expression.hpp"
 #include "dd/Control.hpp"
 #include "dd/Definitions.hpp"
 
@@ -13,6 +14,7 @@
 #include <map>
 #include <memory>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace qc {
@@ -80,4 +82,8 @@ namespace qc {
     using DAGReverseIterator  = std::deque<std::unique_ptr<Operation>*>::reverse_iterator;
     using DAGIterators        = std::vector<DAGIterator>;
     using DAGReverseIterators = std::vector<DAGReverseIterator>;
+
+    using Symbolic           = sym::Expression<double, double>;
+    using VariableAssignment = std::unordered_map<sym::Variable, dd::fp>;
+    using SymbolOrNumber     = std::variant<Symbolic, dd::fp>;
 } // namespace qc
