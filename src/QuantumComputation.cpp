@@ -399,6 +399,10 @@ namespace qc {
         // index of logical qubit
         auto logical_qubit_index = static_cast<dd::Qubit>(nqubits + nancillae);
 
+        // resize ancillary and garbage tracking vectors
+        ancillary.resize(logical_qubit_index + 1U);
+        garbage.resize(logical_qubit_index + 1U);
+
         // increase ancillae count and mark as ancillary
         nancillae++;
         ancillary[logical_qubit_index] = true;
@@ -946,6 +950,19 @@ namespace qc {
                 break;
             }
         }
+    }
+
+    [[nodiscard]] std::pair<bool, std::optional<dd::Qubit>> QuantumComputation::containsLogicalQubit(const dd::Qubit logicalQubitIndex) const {
+        if (const auto it = std::find_if(
+                    initialLayout.cbegin(),
+                    initialLayout.cend(),
+                    [&logicalQubitIndex](const auto& mapping) {
+                        return mapping.second == logicalQubitIndex;
+                    });
+            it != initialLayout.cend()) {
+            return {true, it->first};
+        }
+        return {false, {}};
     }
 
     bool QuantumComputation::isLastOperationOnQubit(const const_iterator& opIt, const const_iterator& end) const {
