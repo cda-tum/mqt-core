@@ -367,7 +367,13 @@ namespace qc::qiskit {
             py::object Qubit = py::module::import("qiskit.circuit").attr("Qubit");
 
             // get layout
-            auto&& layout = circ.attr("_layout");
+            auto layout = circ.attr("_layout");
+
+            // qiskit-terra 0.22.0 changed the `_layout` attribute to a `TranspileLayout` dataclass object
+            // that contains the initial layout as a `Layout` object in the `initial_layout` attribute.
+            if (py::hasattr(layout, "initial_layout")) {
+                layout = layout.attr("initial_layout");
+            }
 
             // create map between registers used in the layout and logical qubit indices
             // NOTE: this only works correctly if the registers were originally declared in alphabetical order!
