@@ -19,4 +19,5 @@ add_library(MQT::${PROJECT_NAME}_python ALIAS ${PROJECT_NAME}_python)
 # add pyqfr module
 pybind11_add_module(py${PROJECT_NAME} bindings.cpp)
 target_link_libraries(py${PROJECT_NAME} PUBLIC ${PROJECT_NAME} MQT::${PROJECT_NAME}_python pybind11_json)
+target_compile_definitions(py${PROJECT_NAME} PRIVATE VERSION_INFO=${QFR_VERSION_INFO})
 enable_lto(py${PROJECT_NAME})
