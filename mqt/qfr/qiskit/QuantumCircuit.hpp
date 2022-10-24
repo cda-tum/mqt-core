@@ -364,7 +364,7 @@ namespace qc::qiskit {
         }
 
         static void importInitialLayout(QuantumComputation& qc, const py::object& circ) {
-            py::object Qubit = py::module::import("qiskit.circuit").attr("Qubit");
+            const py::object Qubit = py::module::import("qiskit.circuit").attr("Qubit");
 
             // get layout
             auto layout = circ.attr("_layout");
@@ -377,47 +377,44 @@ namespace qc::qiskit {
 
             // create map between registers used in the layout and logical qubit indices
             // NOTE: this only works correctly if the registers were originally declared in alphabetical order!
-            auto&&   registers         = layout.attr("get_registers")().cast<py::set>();
-            int      logicalQubitIndex = 0;
-            py::dict logicalQubitIndices{};
+            const auto  registers         = layout.attr("get_registers")().cast<py::set>();
+            std::size_t logicalQubitIndex = 0U;
+            py::dict    logicalQubitIndices{};
 
             // the ancilla register
             decltype(registers.get_type()) ancillaRegister = py::none();
 
             for (const auto qreg: registers) {
-                const auto qregName = qreg.attr("name").cast<std::string>();
                 // skip ancillary register since it is handled as the very last qubit register
-                if (qregName == "ancilla") {
+                if (const auto qregName = qreg.attr("name").cast<std::string>(); qregName == "ancilla") {
                     ancillaRegister = qreg;
                     continue;
                 }
 
                 const auto size = qreg.attr("size").cast<dd::QubitCount>();
-                for (int i = 0; i < size; ++i) {
+                for (std::size_t i = 0U; i < size; ++i) {
                     logicalQubitIndices[Qubit(qreg, i)] = logicalQubitIndex;
-                    logicalQubitIndex++;
+                    ++logicalQubitIndex;
                 }
             }
 
             // handle ancillary register, if there is one
             if (!ancillaRegister.is_none()) {
                 const auto size = ancillaRegister.attr("size").cast<dd::QubitCount>();
-                for (int i = 0; i < size; ++i) {
+                for (std::size_t i = 0U; i < size; ++i) {
                     logicalQubitIndices[Qubit(ancillaRegister, i)] = logicalQubitIndex;
                     qc.setLogicalQubitAncillary(static_cast<dd::Qubit>(logicalQubitIndex));
-                    logicalQubitIndex++;
+                    ++logicalQubitIndex;
                 }
             }
 
             // get a map of physical to logical qubits
-            auto&& physicalQubits = layout.attr("get_physical_bits")().cast<py::dict>();
+            const auto physicalQubits = layout.attr("get_physical_bits")().cast<py::dict>();
 
             // create initial layout
-            for (auto qubit: physicalQubits) {
-                auto&& physicalQubit = qubit.first.cast<dd::Qubit>();
-                auto&& logicalQubit  = qubit.second;
+            for (const auto& [physicalQubit, logicalQubit]: physicalQubits) {
                 if (logicalQubitIndices.contains(logicalQubit)) {
-                    qc.initialLayout[physicalQubit] = logicalQubitIndices[logicalQubit].cast<dd::Qubit>();
+                    qc.initialLayout[physicalQubit.cast<dd::Qubit>()] = logicalQubitIndices[logicalQubit].cast<dd::Qubit>();
                 }
             }
         }
