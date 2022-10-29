@@ -11,6 +11,7 @@
 #include "operations/ClassicControlledOperation.hpp"
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/StandardOperation.hpp"
+#include "operations/SymbolicOperation.hpp"
 #include "parsers/qasm_parser/Parser.hpp"
 
 #include <algorithm>
@@ -21,8 +22,8 @@
 #include <locale>
 #include <map>
 #include <memory>
+#include <optional>
 #include <random>
-#include <regex>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -57,6 +58,8 @@ namespace qc {
 
         std::mt19937_64 mt;
         std::size_t     seed = 0;
+
+        std::unordered_set<sym::Variable> occuringVariables;
 
         void importOpenQASM(std::istream& is);
         void importReal(std::istream& is);
@@ -227,6 +230,7 @@ namespace qc {
             qc.garbage           = garbage;
             qc.seed              = seed;
             qc.mt                = mt;
+            qc.occuringVariables = occuringVariables;
 
             for (auto const& op: ops) {
                 qc.ops.emplace_back<>(op->clone());
@@ -279,12 +283,17 @@ namespace qc {
         [[nodiscard]] bool                     isIdleQubit(dd::Qubit physicalQubit) const;
         [[nodiscard]] bool                     isLastOperationOnQubit(const const_iterator& opIt, const const_iterator& end) const;
         [[nodiscard]] bool                     physicalQubitIsAncillary(dd::Qubit physicalQubitIndex) const;
-        [[nodiscard]] bool                     logicalQubitIsAncillary(dd::Qubit logicalQubitIndex) const { return ancillary[logicalQubitIndex]; }
-        void                                   setLogicalQubitAncillary(dd::Qubit logicalQubitIndex) { ancillary[logicalQubitIndex] = true; }
-        [[nodiscard]] bool                     logicalQubitIsGarbage(dd::Qubit logicalQubitIndex) const { return garbage[logicalQubitIndex]; }
+        [[nodiscard]] bool                     logicalQubitIsAncillary(const dd::Qubit logicalQubitIndex) const { return ancillary[logicalQubitIndex]; }
+        void                                   setLogicalQubitAncillary(const dd::Qubit logicalQubitIndex) { ancillary[logicalQubitIndex] = true; }
+        [[nodiscard]] bool                     logicalQubitIsGarbage(const dd::Qubit logicalQubitIndex) const { return garbage[logicalQubitIndex]; }
         void                                   setLogicalQubitGarbage(dd::Qubit logicalQubitIndex);
         [[nodiscard]] const std::vector<bool>& getAncillary() const { return ancillary; }
         [[nodiscard]] const std::vector<bool>& getGarbage() const { return garbage; }
+
+        /// checks whether the given logical qubit exists in the initial layout.
+        /// \param logicalQubitIndex the logical qubit index to check
+        /// \return whether the given logical qubit exists in the initial layout and to which physical qubit it is mapped
+        [[nodiscard]] std::pair<bool, std::optional<dd::Qubit>> containsLogicalQubit(dd::Qubit logicalQubitIndex) const;
 
         void i(dd::Qubit target) {
             checkQubitRange(target);
@@ -441,6 +450,9 @@ namespace qc {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::U3, lambda, phi, theta);
         }
+        void u3(dd::Qubit target, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta);
+        void u3(dd::Qubit target, const dd::Control& control, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta);
+        void u3(dd::Qubit target, const dd::Controls& controls, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta);
 
         void u2(dd::Qubit target, dd::fp lambda, dd::fp phi) {
             checkQubitRange(target);
@@ -454,6 +466,9 @@ namespace qc {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::U2, lambda, phi);
         }
+        void u2(dd::Qubit target, const SymbolOrNumber& lambda, const SymbolOrNumber& phi);
+        void u2(dd::Qubit target, const dd::Control& control, const SymbolOrNumber& lambda, const SymbolOrNumber& phi);
+        void u2(dd::Qubit target, const dd::Controls& controls, const SymbolOrNumber& lambda, const SymbolOrNumber& phi);
 
         void phase(dd::Qubit target, dd::fp lambda) {
             checkQubitRange(target);
@@ -467,6 +482,9 @@ namespace qc {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Phase, lambda);
         }
+        void phase(dd::Qubit target, const SymbolOrNumber& lambda);
+        void phase(dd::Qubit target, const dd::Control& control, const SymbolOrNumber& lambda);
+        void phase(dd::Qubit target, const dd::Controls& controls, const SymbolOrNumber& lambda);
 
         void sx(dd::Qubit target) {
             checkQubitRange(target);
@@ -502,7 +520,13 @@ namespace qc {
             checkQubitRange(target, control);
             emplace_back<StandardOperation>(getNqubits(), control, target, qc::RX, lambda);
         }
-        void rx(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RX, lambda); }
+        void rx(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) {
+            checkQubitRange(target, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RX, lambda);
+        }
+        void rx(dd::Qubit target, const SymbolOrNumber& lambda);
+        void rx(dd::Qubit target, const dd::Control& control, const SymbolOrNumber& lambda);
+        void rx(dd::Qubit target, const dd::Controls& controls, const SymbolOrNumber& lambda);
 
         void ry(dd::Qubit target, dd::fp lambda) {
             checkQubitRange(target);
@@ -512,7 +536,14 @@ namespace qc {
             checkQubitRange(target, control);
             emplace_back<StandardOperation>(getNqubits(), control, target, qc::RY, lambda);
         }
-        void ry(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RY, lambda); }
+        void ry(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) {
+            checkQubitRange(target, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RY, lambda);
+        }
+
+        void ry(dd::Qubit target, const SymbolOrNumber& lambda);
+        void ry(dd::Qubit target, const dd::Control& control, const SymbolOrNumber& lambda);
+        void ry(dd::Qubit target, const dd::Controls& controls, const SymbolOrNumber& lambda);
 
         void rz(dd::Qubit target, dd::fp lambda) {
             checkQubitRange(target);
@@ -522,7 +553,14 @@ namespace qc {
             checkQubitRange(target, control);
             emplace_back<StandardOperation>(getNqubits(), control, target, qc::RZ, lambda);
         }
-        void rz(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) { emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RZ, lambda); }
+        void rz(dd::Qubit target, const dd::Controls& controls, dd::fp lambda) {
+            checkQubitRange(target, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RZ, lambda);
+        }
+
+        void rz(dd::Qubit target, const SymbolOrNumber& lambda);
+        void rz(dd::Qubit target, const dd::Control& control, const SymbolOrNumber& lambda);
+        void rz(dd::Qubit target, const dd::Controls& controls, const SymbolOrNumber& lambda);
 
         void swap(dd::Qubit target0, dd::Qubit target1) {
             checkQubitRange(target0, target1);
@@ -663,9 +701,26 @@ namespace qc {
             max_controls = std::max(ncontrols, max_controls);
         }
 
+        void instantiate(const VariableAssignment& assignment);
+
+        void addVariable(const SymbolOrNumber& expr);
+
+        template<typename... Vars>
+        void addVariables(const Vars&... vars) {
+            (addVariable(vars), ...);
+        }
+
+        [[nodiscard]] bool isVariableFree() const {
+            return std::all_of(ops.begin(), ops.end(), [](const auto& op) { return !op->isSymbolicOperation(); });
+        }
+
+        [[nodiscard]] const std::unordered_set<sym::Variable>& getVariables() const {
+            return occuringVariables;
+        }
+
         /**
-		 * printing
-		 */
+         * printing
+         */
         virtual std::ostream& print(std::ostream& os) const;
 
         friend std::ostream& operator<<(std::ostream& os, const QuantumComputation& qc) { return qc.print(os); }
@@ -700,8 +755,8 @@ namespace qc {
         }
 
         /**
-		 * Pass-Through
-		 */
+         * Pass-Through
+         */
 
         // Iterators (pass-through)
         auto               begin() noexcept { return ops.begin(); }

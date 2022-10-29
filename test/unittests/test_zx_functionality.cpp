@@ -70,6 +70,8 @@ TEST_F(ZXDiagramTest, complex_circuit) {
        << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
        << "qreg q[3];"
+       << "sx q[0];"
+       << "sxdg q[0];"
        << "h q[0];"
        << "cx q[0],q[1];"
        << "z q[1];"
@@ -205,6 +207,19 @@ TEST_F(ZXDiagramTest, InitialLayout) {
     EXPECT_TRUE(d.isIdentity());
 }
 
+TEST_F(ZXDiagramTest, FromSymbolic) {
+    sym::Variable x{"x"};
+    sym::Term     xTerm{1.0, x};
+    qc = qc::QuantumComputation{1};
+    qc.rz(0, qc::Symbolic(xTerm));
+    qc.rz(0, -qc::Symbolic(xTerm));
+
+    zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
+
+    zx::fullReduce(diag);
+    EXPECT_TRUE(diag.isIdentity());
+}
+
 TEST_F(ZXDiagramTest, RZ) {
     qc = qc::QuantumComputation(1);
     qc.rz(0, zx::PI / 8);
@@ -220,5 +235,28 @@ TEST_F(ZXDiagramTest, RZ) {
     zx::fullReduce(d);
     EXPECT_FALSE(d.isIdentity());
     EXPECT_FALSE(d.globalPhaseIsZero());
+    EXPECT_TRUE(d.connected(d.getInput(0), d.getOutput(0)));
+}
+
+TEST_F(ZXDiagramTest, ISWAP) {
+    qc = qc::QuantumComputation(2);
+    qc.iswap(0, 1);
+
+    auto qcPrime = qc::QuantumComputation(2);
+    qcPrime.s(0);
+    qcPrime.s(1);
+    qcPrime.h(0);
+    qcPrime.x(1, 0_pc);
+    qcPrime.x(0, 1_pc);
+    qc.h(1);
+
+    auto d      = zx::FunctionalityConstruction::buildFunctionality(&qc);
+    auto dPrime = zx::FunctionalityConstruction::buildFunctionality(&qcPrime);
+
+    d.concat(dPrime.invert());
+
+    zx::fullReduce(d);
+    EXPECT_TRUE(d.isIdentity());
+    EXPECT_TRUE(d.globalPhaseIsZero());
     EXPECT_TRUE(d.connected(d.getInput(0), d.getOutput(0)));
 }

@@ -8,6 +8,10 @@
 
 #include "pybind11/pybind11.h"
 
+#include <regex>
+#include <type_traits>
+#include <variant>
+
 namespace py = pybind11;
 using namespace pybind11::literals;
 
@@ -192,6 +196,78 @@ namespace qc::qiskit {
             }
         }
 
+        static SymbolOrNumber parseSymbolicExpr(const py::object& pyExpr) {
+            static const std::regex summands("[+|-]?[^+-]+");
+            static const std::regex products("[\\*/]?[^\\*/]+");
+
+            auto exprStr = pyExpr.attr("__str__")().cast<std::string>();
+            exprStr.erase(std::remove(exprStr.begin(), exprStr.end(), ' '),
+                          exprStr.end()); // strip whitespace
+
+            auto       sumIt  = std::sregex_iterator(exprStr.begin(), exprStr.end(), summands);
+            const auto sumEnd = std::sregex_iterator();
+
+            qc::Symbolic sym;
+            bool         isConst = true;
+
+            while (sumIt != sumEnd) {
+                auto      match    = *sumIt;
+                auto      matchStr = match.str();
+                const int sign     = matchStr[0] == '-' ? -1 : 1;
+                if (matchStr[0] == '+' || matchStr[0] == '-') {
+                    matchStr.erase(0, 1);
+                }
+                // std::cout << matchStr << std::endl;
+
+                auto prodIt  = std::sregex_iterator(matchStr.begin(), matchStr.end(), products);
+                auto prodEnd = std::sregex_iterator();
+
+                dd::fp      coeff = 1.0;
+                std::string var   = "";
+                while (prodIt != prodEnd) {
+                    auto prodMatch = *prodIt;
+                    auto prodStr   = prodMatch.str();
+
+                    const bool isDiv = prodStr[0] == '/';
+                    if (prodStr[0] == '*' || prodStr[0] == '/') {
+                        prodStr.erase(0, 1);
+                    }
+
+                    std::istringstream iss(prodStr);
+                    dd::fp             f;
+                    iss >> f;
+
+                    if (iss.eof() && !iss.fail()) {
+                        coeff *= isDiv ? 1.0 / f : f;
+                    } else {
+                        var = prodStr;
+                    }
+
+                    ++prodIt;
+                }
+                if (var.empty()) {
+                    sym += coeff;
+                } else {
+                    isConst = false;
+                    sym += sym::Term(sign * coeff, sym::Variable{var});
+                }
+                ++sumIt;
+            }
+
+            if (isConst) {
+                return {sym.getConst()};
+            }
+            return {sym};
+        }
+
+        static SymbolOrNumber parseParam(const py::object& param) {
+            try {
+                return param.cast<dd::fp>();
+            } catch (py::cast_error& e) {
+                return parseSymbolicExpr(param);
+            }
+        }
+
         static void addOperation(QuantumComputation& qc, OpType type, const py::list& qargs, const py::list& params, const py::dict& qubitMap) {
             std::vector<dd::Control> qubits{};
             for (const auto qubit: qargs) {
@@ -200,19 +276,25 @@ namespace qc::qiskit {
             }
             auto target = qubits.back().qubit;
             qubits.pop_back();
-            dd::fp theta = 0., phi = 0., lambda = 0.;
+            qc::SymbolOrNumber theta = 0., phi = 0., lambda = 0.;
+
             if (params.size() == 1) {
-                lambda = params[0].cast<dd::fp>();
+                lambda = parseParam(params[0]);
             } else if (params.size() == 2) {
-                phi    = params[0].cast<dd::fp>();
-                lambda = params[1].cast<dd::fp>();
+                phi    = parseParam(params[0]);
+                lambda = parseParam(params[1]);
             } else if (params.size() == 3) {
-                theta  = params[0].cast<dd::fp>();
-                phi    = params[1].cast<dd::fp>();
-                lambda = params[2].cast<dd::fp>();
+                theta  = parseParam(params[0]);
+                phi    = parseParam(params[1]);
+                lambda = parseParam(params[2]);
             }
             dd::Controls controls(qubits.cbegin(), qubits.cend());
-            qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target, type, lambda, phi, theta);
+            if (std::holds_alternative<dd::fp>(lambda) && std::holds_alternative<dd::fp>(phi) && std::holds_alternative<dd::fp>(theta)) {
+                qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target, type, std::get<dd::fp>(lambda), std::get<dd::fp>(phi), std::get<dd::fp>(theta));
+            } else {
+                qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target, type, lambda, phi, theta);
+                qc.addVariables(lambda, phi, theta);
+            }
         }
 
         static void addTwoTargetOperation(QuantumComputation& qc, OpType type, const py::list& qargs, const py::list& params, const py::dict& qubitMap) {
@@ -225,19 +307,24 @@ namespace qc::qiskit {
             qubits.pop_back();
             auto target0 = qubits.back().qubit;
             qubits.pop_back();
-            dd::fp theta = 0., phi = 0., lambda = 0.;
+            qc::SymbolOrNumber theta = 0., phi = 0., lambda = 0.;
             if (params.size() == 1) {
-                lambda = params[0].cast<dd::fp>();
+                lambda = parseParam(params[0]);
             } else if (params.size() == 2) {
-                phi    = params[0].cast<dd::fp>();
-                lambda = params[1].cast<dd::fp>();
+                phi    = parseParam(params[0]);
+                lambda = parseParam(params[1]);
             } else if (params.size() == 3) {
-                theta  = params[0].cast<dd::fp>();
-                phi    = params[1].cast<dd::fp>();
-                lambda = params[2].cast<dd::fp>();
+                theta  = parseParam(params[0]);
+                phi    = parseParam(params[1]);
+                lambda = parseParam(params[2]);
             }
             dd::Controls controls(qubits.cbegin(), qubits.cend());
-            qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0, target1, type, lambda, phi, theta);
+            if (std::holds_alternative<dd::fp>(lambda) && std::holds_alternative<dd::fp>(phi) && std::holds_alternative<dd::fp>(theta)) {
+                qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0, target1, type, std::get<dd::fp>(lambda), std::get<dd::fp>(phi), std::get<dd::fp>(theta));
+            } else {
+                qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target0, target1, type, lambda, phi, theta);
+                qc.addVariables(lambda, phi, theta);
+            }
         }
 
         static void importDefinition(QuantumComputation& qc, const py::object& circ, const py::list& qargs, const py::list& cargs, const py::dict& qubitMap, const py::dict& clbitMap) {

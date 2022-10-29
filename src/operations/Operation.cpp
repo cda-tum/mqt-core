@@ -246,7 +246,9 @@ namespace qc {
         const auto param2 = op.getParameter();
         for (std::size_t p = 0U; p < qc::MAX_PARAMETERS; ++p) {
             // it might make sense to use fuzzy comparison here
-            if (param1[p] != param2[p]) { return false; }
+            if (param1[p] != param2[p]) {
+                return false;
+            }
         }
 
         // check controls
@@ -269,7 +271,9 @@ namespace qc {
                 }
             }
 
-            if (controls1 != controls2) { return false; }
+            if (controls1 != controls2) {
+                return false;
+            }
         }
 
         // check targets
@@ -290,7 +294,10 @@ namespace qc {
                 targets2.emplace(perm2.at(target));
             }
         }
-        if (targets1 != targets2) { return false; }
+
+        if (targets1 != targets2) {
+            return false;
+        }
 
         // operations are identical
         return true;

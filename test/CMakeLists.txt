@@ -54,6 +54,7 @@ package_add_test(${PROJECT_NAME}_test
 		${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_qfr_functionality.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/algorithms/eval_dynamic_circuits.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_zx_functionality.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_symbolic.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_dd_noise_functionality.cpp)
 
 
