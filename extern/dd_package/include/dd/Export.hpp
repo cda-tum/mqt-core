@@ -363,7 +363,7 @@ namespace dd {
         return os;
     }
 
-    [[maybe_unused]] static std::ostream& bwEdge(const mEdge& from, const mEdge& to, std::uint_fast8_t idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& bwEdge(const mEdge& from, const mEdge& to, std::uint_fast16_t idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -404,7 +404,7 @@ namespace dd {
 
         return os;
     }
-    [[maybe_unused]] static std::ostream& bwEdge(const vEdge& from, const vEdge& to, std::uint_fast8_t idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& bwEdge(const vEdge& from, const vEdge& to, std::uint_fast16_t idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -428,7 +428,7 @@ namespace dd {
 
         return os;
     }
-    [[maybe_unused]] static std::ostream& coloredEdge(const mEdge& from, const mEdge& to, std::uint_fast8_t idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& coloredEdge(const mEdge& from, const mEdge& to, std::uint_fast16_t idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -467,7 +467,7 @@ namespace dd {
 
         return os;
     }
-    [[maybe_unused]] static std::ostream& coloredEdge(const vEdge& from, const vEdge& to, std::uint_fast8_t idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& coloredEdge(const vEdge& from, const vEdge& to, std::uint_fast16_t idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -490,7 +490,7 @@ namespace dd {
         return os;
     }
     template<class Edge>
-    static std::ostream& memoryEdge(const Edge& from, const Edge& to, std::uint_fast8_t idx, std::ostream& os, bool edgeLabels = false) {
+    static std::ostream& memoryEdge(const Edge& from, const Edge& to, std::uint_fast16_t idx, std::ostream& os, bool edgeLabels = false) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
