@@ -21,7 +21,7 @@ public:
     std::string outputName;
 
     double getGateOverhead() {
-        return (double)nOutputGates/(double)nInputGates;
+        return (double)nOutputGates / (double)nInputGates;
     }
 };
 

@@ -6,8 +6,8 @@
 #ifndef QFR_Q3ShorEcc_HPP
 #define QFR_Q3ShorEcc_HPP
 
-#include "QuantumComputation.hpp"
 #include "Ecc.hpp"
+#include "QuantumComputation.hpp"
 
 class Q3ShorEcc: public Ecc {
 public:
@@ -24,7 +24,7 @@ protected:
 
     void measureAndCorrect() override;
 
-	void writeDecoding() override;
+    void writeDecoding() override;
 
     void mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) override;
 };

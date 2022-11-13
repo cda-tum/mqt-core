@@ -6,8 +6,8 @@
 #ifndef QFR_IdEcc_HPP
 #define QFR_IdEcc_HPP
 
-#include "QuantumComputation.hpp"
 #include "Ecc.hpp"
+#include "QuantumComputation.hpp"
 
 class IdEcc: public Ecc {
 public:
@@ -22,11 +22,9 @@ protected:
 
     void measureAndCorrect() override;
 
-	void writeDecoding() override;
+    void writeDecoding() override;
 
     void mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) override;
 };
 
 #endif //QFR_IdEcc_HPP
-
-

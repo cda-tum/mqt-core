@@ -226,7 +226,7 @@ void Ecc::writeX(dd::Qubit target, const dd::Control& control) {
 }
 
 /*method has to have same signature as "writeZstatic" (as it is stored in the same function pointer in certain codes), thus bool parameter is kept */
-void Ecc::writeXstatic(dd::Qubit target, dd::Control control, qc::QuantumComputation* qcMapped, [[maybe_unused]]bool cliffordGatesOnly) {
+void Ecc::writeXstatic(dd::Qubit target, dd::Control control, qc::QuantumComputation* qcMapped, [[maybe_unused]] bool cliffordGatesOnly) {
     qcMapped->x(target, control);
 }
 
