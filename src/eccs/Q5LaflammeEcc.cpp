@@ -35,11 +35,11 @@ void Q5LaflammeEcc::writeEncoding() {
     const int nQubits  = qc.getNqubits();
     const int ancStart = nQubits * ecc.nRedundantQubits;
     const int clEncode = qc.getNcbits() + 4; //encode
-    if (gatesWritten) {
-        for (int i = 0; i < nQubits; i++) {
-            qcMapped.reset(dd::Qubit(ancStart));
-        }
+
+    for (int i = 0; i < nQubits; i++) {
+        qcMapped.reset(dd::Qubit(ancStart));
     }
+
     for (int i = 0; i < nQubits; i++) {
         qcMapped.h(dd::Qubit(ancStart));
         writeZ(dd::Qubit(i), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
