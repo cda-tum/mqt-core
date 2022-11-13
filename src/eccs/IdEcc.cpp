@@ -16,7 +16,7 @@ void IdEcc::measureAndCorrect() {}
 
 void IdEcc::writeDecoding() {}
 
-void IdEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) {
+void IdEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, [[maybe_unused]] qc::QuantumComputation& qc) {
     //gates have already been written to 'qcMapped' in the constructor
     if (gate->getNcontrols() > 1 && decomposeMultiControlledGates) {
         gateNotAvailableError(gate);
