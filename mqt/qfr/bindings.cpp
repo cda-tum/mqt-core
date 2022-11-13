@@ -10,16 +10,15 @@
 #include "qiskit/QasmQobjExperiment.hpp"
 #include "qiskit/QuantumCircuit.hpp"
 
+#include <chrono>
 #include <eccs/Ecc.hpp>
 #include <eccs/IdEcc.hpp>
+#include <eccs/Q18SurfaceEcc.hpp>
 #include <eccs/Q3ShorEcc.hpp>
 #include <eccs/Q5LaflammeEcc.hpp>
 #include <eccs/Q7SteaneEcc.hpp>
-#include <eccs/Q9SurfaceEcc.hpp>
 #include <eccs/Q9ShorEcc.hpp>
-#include <eccs/Q18SurfaceEcc.hpp>
-
-#include <chrono>
+#include <eccs/Q9SurfaceEcc.hpp>
 #include <pybind11/complex.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -161,10 +160,9 @@ py::dict matrix_from_dd(const std::string& serializedDD) {
     return results;
 }
 
-py::dict apply_ecc(const py::object &circ, const std::string &eccString, const int ecc_frequency, const bool ecc_no_mc, const bool ecc_clifford_only) {
-
+py::dict apply_ecc(const py::object& circ, const std::string& eccString, const int ecc_frequency, const bool ecc_no_mc, const bool ecc_clifford_only) {
     qc::QuantumComputation qc{};
-    std::string eccName{eccString};
+    std::string            eccName{eccString};
 
     try {
         if (py::isinstance<py::str>(circ)) {
@@ -185,11 +183,10 @@ py::dict apply_ecc(const py::object &circ, const std::string &eccString, const i
         return py::dict("error"_a = ss.str());
     }
 
-
-    Ecc *mapper = nullptr;
-    bool decomposeMC = ecc_no_mc;
-    bool cliffOnly = ecc_clifford_only;
-    int measureFrequency = ecc_frequency;
+    Ecc* mapper           = nullptr;
+    bool decomposeMC      = ecc_no_mc;
+    bool cliffOnly        = ecc_clifford_only;
+    int  measureFrequency = ecc_frequency;
 
     if (eccName.compare(IdEcc::getName()) == 0) {
         mapper = new IdEcc(qc, measureFrequency, decomposeMC, cliffOnly);
@@ -205,7 +202,7 @@ py::dict apply_ecc(const py::object &circ, const std::string &eccString, const i
         mapper = new Q9SurfaceEcc(qc, measureFrequency, decomposeMC, cliffOnly);
     } else if (eccName.compare(Q18SurfaceEcc::getName()) == 0) {
         mapper = new Q18SurfaceEcc(qc, measureFrequency, decomposeMC, cliffOnly);
-    }else {
+    } else {
         std::stringstream ss{};
         ss << "No ECC found for " << eccName << " ";
         ss << "Available ECCs: ";
@@ -255,10 +252,9 @@ PYBIND11_MODULE(pyqfr, m) {
     m.def("apply_ecc", &apply_ecc, "applying an ecc to a circuit an returning a openQasm dump",
           "circ"_a,
           "eccString"_a,
-          "ecc_frequency"_a = 100,
-          "ecc_no_mc"_a = false,
+          "ecc_frequency"_a     = 100,
+          "ecc_no_mc"_a         = false,
           "ecc_clifford_only"_a = false);
-
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);

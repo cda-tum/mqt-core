@@ -249,10 +249,10 @@ namespace qc {
         [[nodiscard]] const QuantumRegisterMap&   getANCregs() const { return ancregs; }
         [[nodiscard]] decltype(mt)&               getGenerator() { return mt; }
 
-        std::string returnClassicalRegisterName(size_t index){
+        std::string returnClassicalRegisterName(size_t index) {
             for (auto const& [regName, regBits]: cregs) {
                 const auto regStart = regBits.first;
-                const auto regEnd = regStart + regBits.second;
+                const auto regEnd   = regStart + regBits.second;
                 if (index >= regStart && index < regEnd) {
                     return {regName};
                 }
