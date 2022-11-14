@@ -238,6 +238,9 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
     void (*circuitsExpectToPass[2])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit};
     void (*circuitsExpectToFail[5])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit, createCXCircuit};
 
+    std::vector<dd::Qubit> dataQubits = {0, 1, 2, 3, 4};
+
+    int insertErrorAfterNGates = 30;
     for (auto& circuit: circuitsExpectToPass) {
         qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
@@ -248,7 +251,7 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
         //        qcECC.dumpOpenQASM(ss);
         //        std::cout << ss.str() << std::endl;
 
-        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));
+        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, {}, insertErrorAfterNGates));
     }
 
     for (auto& circuit: circuitsExpectToFail) {
