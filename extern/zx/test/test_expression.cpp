@@ -193,6 +193,6 @@ TEST_F(ExpressionTest, Instantiation) {
     EXPECT_PRED_FORMAT2(testing::FloatLE, e.evaluate(assignment), 5.0);
 
     e += z;
-
-    EXPECT_THROW(e.evaluate(assignment), sym::SymbolicException);
+    [[maybe_unused]] double h;
+    EXPECT_THROW(h = e.evaluate(assignment), sym::SymbolicException);
 }

@@ -36,4 +36,7 @@ namespace zx {
             return msg.c_str();
         }
     };
+
+    using gf2Mat = std::vector<std::vector<bool>>;
+    using gf2Vec = std::vector<bool>;
 } // namespace zx

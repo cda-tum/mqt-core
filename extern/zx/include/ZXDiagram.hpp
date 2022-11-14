@@ -61,8 +61,8 @@ namespace zx {
             return vertices[v];
         }
 
-        [[nodiscard]] std::vector<std::pair<Vertex, VertexData&>> getVertices();
-        [[nodiscard]] std::vector<std::pair<Vertex, Vertex>>      getEdges();
+        [[nodiscard]] std::vector<std::pair<Vertex, const VertexData&>> getVertices() const;
+        [[nodiscard]] std::vector<std::pair<Vertex, Vertex>>            getEdges() const;
 
         [[nodiscard]] const std::vector<Vertex>& getInputs() const {
             return inputs;
@@ -123,6 +123,9 @@ namespace zx {
         [[nodiscard]] bool globalPhaseIsZero() const {
             return globalPhase.isZero();
         }
+        gf2Mat              getAdjMat() const;
+        std::vector<Vertex> getConnectedSet(const std::vector<Vertex>& s, const std::vector<Vertex>& exclude = {}) const;
+        static bool         isIn(const Vertex& v, const std::vector<Vertex>& vertices);
 
     private:
         std::vector<std::vector<Edge>>         edges;

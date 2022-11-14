@@ -37,23 +37,23 @@ namespace zx {
     class Vertices {
     public:
         explicit Vertices(
-                std::vector<std::optional<VertexData>>& vertices):
+                const std::vector<std::optional<VertexData>>& vertices):
             vertices(vertices){};
 
         class VertexIterator {
         public:
             using iterator_category = std::forward_iterator_tag;
             using difference_type   = std::int32_t;
-            using value_type        = std::pair<Vertex, VertexData&>;
+            using value_type        = std::pair<Vertex, const VertexData&>;
             using pointer           = value_type*;
             using reference         = value_type&;
 
-            explicit VertexIterator(std::vector<std::optional<VertexData>>& vertices):
+            explicit VertexIterator(const std::vector<std::optional<VertexData>>& vertices):
                 currentPos(vertices.begin()), vertices(vertices) {
                 nextValidVertex();
             }
-            VertexIterator(std::vector<std::optional<VertexData>>& vertices,
-                           Vertex                                  v);
+            VertexIterator(const std::vector<std::optional<VertexData>>& vertices,
+                           Vertex                                        v);
 
             value_type operator*() const { return {v, currentPos->value()}; }
             // pointer operator->() { return ptr; }
@@ -70,26 +70,26 @@ namespace zx {
                                    const VertexIterator& b);
 
         private:
-            Vertex                                           v = 0;
-            std::vector<std::optional<VertexData>>::iterator currentPos;
-            std::vector<std::optional<VertexData>>&          vertices;
+            Vertex                                                 v = 0;
+            std::vector<std::optional<VertexData>>::const_iterator currentPos;
+            const std::vector<std::optional<VertexData>>&          vertices;
 
             void nextValidVertex();
         };
 
         using iterator = VertexIterator;
 
-        iterator begin() { return VertexIterator(vertices); }
-        iterator end() { return {vertices, vertices.size()}; }
+        const iterator begin() { return VertexIterator(vertices); }
+        const iterator end() { return {vertices, vertices.size()}; }
 
     private:
-        std::vector<std::optional<VertexData>>& vertices;
+        const std::vector<std::optional<VertexData>>& vertices;
     };
 
     class Edges {
     public:
-        Edges(std::vector<std::vector<Edge>>&         edges,
-              std::vector<std::optional<VertexData>>& vertices):
+        Edges(const std::vector<std::vector<Edge>>&         edges,
+              const std::vector<std::optional<VertexData>>& vertices):
             edges(edges),
             vertices(vertices){};
 
@@ -101,11 +101,11 @@ namespace zx {
             using pointer           = value_type*;
             using reference         = value_type&;
 
-            EdgeIterator(std::vector<std::vector<Edge>>&         edges,
-                         std::vector<std::optional<VertexData>>& vertices);
+            EdgeIterator(const std::vector<std::vector<Edge>>&         edges,
+                         const std::vector<std::optional<VertexData>>& vertices);
 
-            EdgeIterator(std::vector<std::vector<Edge>>&         edges,
-                         std::vector<std::optional<VertexData>>& vertices, Vertex v);
+            EdgeIterator(const std::vector<std::vector<Edge>>&         edges,
+                         const std::vector<std::optional<VertexData>>& vertices, Vertex v);
 
             value_type operator*() const { return {v, currentPos->to}; }
             // pointer operator->() { return ptr; }
@@ -120,23 +120,23 @@ namespace zx {
             friend bool operator!=(const EdgeIterator& a, const EdgeIterator& b);
 
         private:
-            Vertex                                   v;
-            std::vector<Edge>::iterator              currentPos;
-            std::vector<std::vector<Edge>>::iterator edgesPos;
-            std::vector<std::vector<Edge>>&          edges;
-            std::vector<std::optional<VertexData>>&  vertices;
+            Vertex                                         v;
+            std::vector<Edge>::const_iterator              currentPos;
+            std::vector<std::vector<Edge>>::const_iterator edgesPos;
+            const std::vector<std::vector<Edge>>&          edges;
+            const std::vector<std::optional<VertexData>>&  vertices;
 
             void checkNextVertex();
         };
 
         using iterator = EdgeIterator;
 
-        iterator begin() { return {edges, vertices}; }
-        iterator end() { return {edges, vertices, edges.size()}; }
+        const iterator begin() { return {edges, vertices}; }
+        const iterator end() { return {edges, vertices, edges.size()}; }
 
     private:
-        std::vector<std::vector<Edge>>&         edges;
-        std::vector<std::optional<VertexData>>& vertices;
+        const std::vector<std::vector<Edge>>&         edges;
+        const std::vector<std::optional<VertexData>>& vertices;
     };
 
     bool isPauli(const PiExpression& expr);

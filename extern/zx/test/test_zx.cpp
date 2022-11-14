@@ -217,3 +217,36 @@ TEST_F(ZXDiagramTest, RemoveScalarSubDiagram) {
     EXPECT_TRUE(idWithScal.isDeleted(v));
     EXPECT_TRUE(idWithScal.isDeleted(w));
 }
+
+TEST_F(ZXDiagramTest, AdjMat) {
+    zx::ZXDiagram diag(3);
+
+    const auto& adj = diag.getAdjMat();
+
+    for (const auto& [v, _]: diag.getVertices()) {
+        for (const auto& [w, _]: diag.getVertices()) {
+            if (diag.connected(v, w) || v == w) {
+                EXPECT_TRUE(adj[v][w]);
+                EXPECT_TRUE(adj[w][v]);
+            } else {
+                EXPECT_FALSE(adj[v][w]);
+                EXPECT_FALSE(adj[w][v]);
+            }
+        }
+    }
+}
+
+TEST_F(ZXDiagramTest, ConnectedSet) {
+    zx::ZXDiagram diag(3);
+    auto          connected = diag.getConnectedSet(diag.getInputs());
+
+    for (const auto& v: connected) {
+        EXPECT_TRUE(diag.isIn(v, diag.getOutputs()));
+    }
+
+    connected = diag.getConnectedSet(diag.getInputs(), {4});
+
+    EXPECT_TRUE(diag.isIn(3, connected));
+    EXPECT_FALSE(diag.isIn(4, connected));
+    EXPECT_TRUE(diag.isIn(5, connected));
+}

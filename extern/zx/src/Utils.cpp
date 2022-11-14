@@ -4,7 +4,7 @@
 
 namespace zx {
     Vertices::VertexIterator::VertexIterator(
-            std::vector<std::optional<VertexData>>& vertices, const Vertex v):
+            const std::vector<std::optional<VertexData>>& vertices, const Vertex v):
         v(v),
         currentPos(vertices.begin()), vertices(vertices) {
         if (v >= vertices.size()) {
@@ -49,8 +49,8 @@ namespace zx {
     }
 
     Edges::EdgeIterator::EdgeIterator(
-            std::vector<std::vector<Edge>>&         edges,
-            std::vector<std::optional<VertexData>>& vertices):
+            const std::vector<std::vector<Edge>>&         edges,
+            const std::vector<std::optional<VertexData>>& vertices):
         v(0),
         currentPos(edges[0].begin()), edgesPos(edges.begin()), edges(edges), vertices(vertices) {
         if (!vertices.empty()) {
@@ -68,8 +68,8 @@ namespace zx {
     }
 
     Edges::EdgeIterator::EdgeIterator(
-            std::vector<std::vector<Edge>>&         edges,
-            std::vector<std::optional<VertexData>>& vertices, const Vertex v):
+            const std::vector<std::vector<Edge>>&         edges,
+            const std::vector<std::optional<VertexData>>& vertices, const Vertex v):
         v(v),
         edges(edges), vertices(vertices) {
         if (v >= edges.size()) {
