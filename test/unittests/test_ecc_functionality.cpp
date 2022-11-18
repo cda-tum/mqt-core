@@ -29,8 +29,10 @@ protected:
         std::mt19937_64 mt;
         mt.seed(7);
 
+        std::size_t opCounter = 0;
+
         std::uint_fast32_t operationCounter = 0;
-        for (int sample = 0; sample < 100; sample++) {
+        for (int sample = 0; sample < 50; sample++) {
             std::map<std::size_t, bool> classicValuesECC{};
             auto                        dd       = std::make_unique<dd::Package<>>(qc.getNqubits());
             vEdge                       rootEdge = dd->makeZeroState(qc.getNqubits());
@@ -44,27 +46,19 @@ protected:
                         auto result = dd->measureOneCollapsing(rootEdge, quantum.at(i), false, mt);
                         assert(result == '0' || result == '1');
                         classicValuesECC[classic.at(i)] = (result == '1');
-                        auto regName                    = qc.returnClassicalRegisterName(classic.at(i));
-                        if (regName == "resultReg") {
-                            if (finalClassicValues.count(classic.at(i)) == 0) {
-                                finalClassicValues[classic.at(i)] = 0;
-                            }
-                            if (result == '1') {
-                                finalClassicValues[classic.at(i)]++;
-                            }
-                        }
                     }
                 } else if (op->getType() == qc::Reset) {
                     auto* nu_op   = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
                     auto  quantum = nu_op->getTargets();
-                    for (unsigned int i = 0; i < quantum.size(); ++i) {
+                    for (signed char qubit: quantum) {
                         dd->incRef(rootEdge);
-                        auto result = dd->measureOneCollapsing(rootEdge, quantum.at(i), false, mt);
+                        auto result = dd->measureOneCollapsing(rootEdge, qubit, false, mt);
                         if (result == '1') {
-                            auto flipOperation = StandardOperation(nu_op->getNqubits(), quantum.at(i), qc::X);
+                            auto flipOperation = StandardOperation(nu_op->getNqubits(), qubit, qc::X);
                             auto operation     = dd::getDD(&flipOperation, dd);
                             rootEdge           = dd->multiply(operation, rootEdge);
                         }
+                        assert(dd->measureOneCollapsing(rootEdge, qubit, false, mt) == '0');
                     }
                 } else {
                     if (op->getType() == qc::ClassicControlled) {
@@ -76,9 +70,6 @@ protected:
                         for (unsigned int i = 0; i < length; i++) {
                             actual_value |= (classicValuesECC[start_index + i] ? 1u : 0u) << i;
                         }
-
-                        //std::clog << "expected " << expected_value << " and actual value was " << actual_value << "\n";
-
                         if (actual_value != expected_value) {
                             continue;
                         }
@@ -87,10 +78,27 @@ protected:
                     rootEdge       = dd->multiply(operation, rootEdge);
                 }
                 if (simulateNoise && operationCounter == applyNoiseAfterNOperations) {
-                    auto operation = dd->makeGateDD(Xmat, qc.getNqubits(), targetForNoise);
-                    rootEdge       = dd->multiply(operation, rootEdge);
+                    dd->incRef(rootEdge);
+                    auto result = dd->measureOneCollapsing(rootEdge, targetForNoise, false, mt);
+                    if (result == '1') {
+                        auto flipOperation = StandardOperation(qc.getNqubits(), targetForNoise, qc::X);
+                        auto operation     = dd::getDD(&flipOperation, dd);
+                        rootEdge           = dd->multiply(operation, rootEdge);
+                    }
                 }
                 operationCounter++;
+            }
+            // Counting the final results
+            for (std::size_t i = 0; i < classicValuesECC.size(); i++) {
+                auto regName = qc.returnClassicalRegisterName(i);
+                if (regName == "resultReg") {
+                    if (finalClassicValues.count(i) == 0) {
+                        finalClassicValues[i] = 0;
+                    }
+                    if (finalClassicValues[i]) {
+                        finalClassicValues[i]++;
+                    }
+                }
             }
         }
     }
@@ -108,7 +116,7 @@ protected:
             std::map<std::size_t, int> finalClassicValuesECC{};
             simulateCircuit(qcECC, finalClassicValuesECC);
             for (auto const& x: finalClassicValuesOriginal) {
-                if (std::abs(x.second - finalClassicValuesECC[x.first]) > 5) {
+                if (std::abs(x.second - finalClassicValuesECC[x.first]) > 3) {
                     testingSuccessful = false;
                 }
             }
@@ -117,7 +125,7 @@ protected:
                 std::map<std::size_t, int> finalClassicValuesECC{};
                 simulateCircuit(qcECC, finalClassicValuesECC, true, qubit, insertErrorAfterNGates);
                 for (auto const& x: finalClassicValuesOriginal) {
-                    if (std::abs(x.second - finalClassicValuesECC[x.first]) > 5) {
+                    if (std::abs(x.second - finalClassicValuesECC[x.first]) > 3) {
                         std::cout << "Simulation failed when applying error to qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates." << std::endl;
                         testingSuccessful = false;
                     }
@@ -146,14 +154,12 @@ protected:
 
     static void createYCircuit(qc::QuantumComputation& qc) {
         qc = {};
-        qc.addQubitRegister(2U);
-        qc.addClassicalRegister(2U, "resultReg");
+        qc.addQubitRegister(1U);
+        qc.addClassicalRegister(1U, "resultReg");
         qc.h(0);
         qc.y(0);
         qc.h(0);
-        qc.y(1);
         qc.measure(0, {"resultReg", 0});
-        qc.measure(1, {"resultReg", 1});
     }
 
     static void createHCircuit(qc::QuantumComputation& qc) {
@@ -166,28 +172,23 @@ protected:
 
     static void createHTCircuit(qc::QuantumComputation& qc) {
         qc = {};
-        qc.addQubitRegister(2U);
-        qc.addClassicalRegister(2U, "resultReg");
+        qc.addQubitRegister(1U);
+        qc.addClassicalRegister(1U, "resultReg");
         qc.h(0);
         qc.t(0);
-        qc.h(1);
-        qc.t(1);
-        qc.tdag(1);
-        qc.h(1);
+        qc.tdag(0);
+        qc.h(0);
         qc.measure(0, {"resultReg", 0});
-        qc.measure(1, {"resultReg", 1});
     }
 
     static void createHZCircuit(qc::QuantumComputation& qc) {
         qc = {};
-        qc.addQubitRegister(2U);
-        qc.addClassicalRegister(2U, "resultReg");
+        qc.addQubitRegister(1U);
+        qc.addClassicalRegister(1U, "resultReg");
         qc.h(0);
         qc.z(0);
         qc.h(0);
-        qc.h(0);
         qc.measure(0, {"resultReg", 0});
-        qc.measure(1, {"resultReg", 1});
     }
 
     static void createCXCircuit(qc::QuantumComputation& qc) {
@@ -325,14 +326,24 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
     bool cliffOnly        = false;
     int  measureFrequency = 0;
 
+    //    qc::QuantumComputation qcOriginal{};
+    //    createSpecial(qcOriginal);
+    //    EXPECT_TRUE(verifyExecution(qcOriginal, qcOriginal));
+
     void (*circuitsExpectToPass[2])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit};
     void (*circuitsExpectToFail[5])(qc::QuantumComputation & qc) = {createYCircuit, createHTCircuit, createHCircuit, createHZCircuit, createCXCircuit}; //todo @Christoph the circuit createCXCircuit should fail according to the github readme
+
+    int                    circuitCounter = 0;
+    std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8};
+
+    int insertErrorAfterNGates = 55;
     for (auto& circuit: circuitsExpectToPass) {
+        std::cout << "Testing circuit " << ++circuitCounter << std::endl;
         qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
         Ecc*                    mapper = new Q9SurfaceEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
         qc::QuantumComputation& qcECC  = mapper->apply();
-        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));
+        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, dataQubits, insertErrorAfterNGates));
     }
 
     for (auto& circuit: circuitsExpectToFail) {
@@ -351,12 +362,17 @@ TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
     void (*circuitsExpectToPass[5])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createYCircuit, createHCircuit, createHZCircuit};
     void (*circuitsExpectToFail[2])(qc::QuantumComputation & qc) = {createHTCircuit, createCXCircuit};
 
+    int                    circuitCounter = 0;
+    std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
+
+    int insertErrorAfterNGates = 127;
     for (auto& circuit: circuitsExpectToPass) {
+        std::cout << "Testing circuit " << ++circuitCounter << std::endl;
         qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
         Ecc*                    mapper = new Q18SurfaceEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
         qc::QuantumComputation& qcECC  = mapper->apply();
-        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));
+        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, dataQubits, insertErrorAfterNGates));
     }
 
     for (auto& circuit: circuitsExpectToFail) {
