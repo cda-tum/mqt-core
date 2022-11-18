@@ -185,12 +185,12 @@ def main():
                      noise_model=noise_model,
                      # optimization_level=0
                      )
-    try:
-        result_counts = result.result().get_counts()
-    except:
+
+    if result.result().status != 'COMPLETED':
         print("Simulation exited with status: " + str(result.result().status))
         exit(1)
 
+    result_counts = result.result().get_counts()
     print_simulation_results(result_counts, n_shots)
 
 
