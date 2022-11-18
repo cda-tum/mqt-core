@@ -29,8 +29,6 @@ protected:
         std::mt19937_64 mt;
         mt.seed(7);
 
-        std::size_t opCounter = 0;
-
         std::uint_fast32_t operationCounter = 0;
         for (int sample = 0; sample < 50; sample++) {
             std::map<std::size_t, bool> classicValuesECC{};
@@ -330,8 +328,8 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
     //    createSpecial(qcOriginal);
     //    EXPECT_TRUE(verifyExecution(qcOriginal, qcOriginal));
 
-    void (*circuitsExpectToPass[2])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit};
-    void (*circuitsExpectToFail[5])(qc::QuantumComputation & qc) = {createYCircuit, createHTCircuit, createHCircuit, createHZCircuit, createCXCircuit}; //todo @Christoph the circuit createCXCircuit should fail according to the github readme
+    void (*circuitsExpectToPass[6])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit, createYCircuit, createHCircuit, createHZCircuit};
+    void (*circuitsExpectToFail[1])(qc::QuantumComputation & qc) = {createHTCircuit};
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8};
