@@ -91,8 +91,6 @@ protected:
     void writeZ(dd::Qubit target, const dd::Controls& controls);
 
     void writeSdag(dd::Qubit target);
-    void writeSdag(dd::Qubit target, const dd::Control& control);
-    void writeSdag(dd::Qubit target, const dd::Controls& controls);
 
     void swap(dd::Qubit target1, dd::Qubit target2);
 

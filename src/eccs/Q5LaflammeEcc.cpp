@@ -217,27 +217,6 @@ void Q5LaflammeEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quan
                 qcMapped.measure(measureGate->getClassics()[j], measureGate->getTargets()[j]);
             }
             break;
-        case qc::H:
-        case qc::S:
-        case qc::Sdag:
-        case qc::T:
-        case qc::Tdag:
-        case qc::V:
-        case qc::Vdag:
-        case qc::U3:
-        case qc::U2:
-        case qc::Phase:
-        case qc::SX:
-        case qc::SXdag:
-        case qc::RX:
-        case qc::RY:
-        case qc::RZ:
-        case qc::SWAP:
-        case qc::iSWAP:
-        case qc::Peres:
-        case qc::Peresdag:
-        case qc::Compound:
-        case qc::ClassicControlled:
         default:
             gateNotAvailableError(gate);
     }

@@ -191,22 +191,6 @@ void Q3ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumC
                 qcMapped.measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
             }
             break;
-        case qc::V:
-        case qc::Vdag:
-        case qc::U3:
-        case qc::U2:
-        case qc::Phase:
-        case qc::SX:
-        case qc::SXdag:
-        case qc::RX:
-        case qc::RY:
-        case qc::RZ:
-        case qc::SWAP:
-        case qc::iSWAP:
-        case qc::Peres:
-        case qc::Peresdag:
-        case qc::Compound:
-        case qc::ClassicControlled:
         default:
             gateNotAvailableError(gate);
             break;

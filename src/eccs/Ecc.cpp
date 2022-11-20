@@ -298,26 +298,6 @@ void Ecc::writeSdag(dd::Qubit target) {
     }
 }
 
-void Ecc::writeSdag(dd::Qubit target, const dd::Control& control) {
-    if (cliffordGatesOnly) {
-        qcMapped.s(target, control);
-        qcMapped.s(target, control);
-        qcMapped.s(target, control);
-    } else {
-        qcMapped.sdag(target, control);
-    }
-}
-
-void Ecc::writeSdag(dd::Qubit target, const dd::Controls& control) {
-    if (cliffordGatesOnly) {
-        qcMapped.s(target, control);
-        qcMapped.s(target, control);
-        qcMapped.s(target, control);
-    } else {
-        qcMapped.sdag(target, control);
-    }
-}
-
 void Ecc::writeClassicalControl(dd::Qubit control, int qubitCount, unsigned int value, qc::OpType opType, int target) {
     std::unique_ptr<qc::Operation> op    = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), dd::Qubit(target), opType);
     const auto                     pair_ = std::make_pair(control, dd::QubitCount(qubitCount));
