@@ -32,9 +32,9 @@ namespace qc {
             }
 
             if (op->isCompoundOperation()) {
-                auto&& comp = dynamic_cast<CompoundOperation*>(op.get());
+                const auto* const comp = dynamic_cast<const CompoundOperation*>(op.get());
                 for (const auto& subop: *comp) {
-                    if (subop->getNcontrols() == 0U && subop->getNtargets() == 1U) {
+                    if (subop->isUnitary() && subop->getNcontrols() == 0U && subop->getNtargets() == 1U) {
                         ++nops;
                     }
                 }
