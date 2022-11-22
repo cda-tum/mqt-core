@@ -1813,3 +1813,22 @@ TEST_F(QFRFunctionality, AddAncillaryQubits) {
     EXPECT_FALSE(qc.garbage[0]);
     EXPECT_TRUE(qc.garbage[1]);
 }
+
+TEST_F(QFRFunctionality, SingleQubitGateCount) {
+    QuantumComputation qc(2);
+    qc.x(0);
+    qc.h(0);
+    qc.x(0, 1_pc);
+    qc.z(0);
+    qc.measure(0, 0);
+
+    EXPECT_EQ(qc.getNops(), 5U);
+    EXPECT_EQ(qc.getNindividualOps(), 5U);
+    EXPECT_EQ(qc.getNsingleQubitOps(), 3U);
+
+    CircuitOptimizer::singleQubitGateFusion(qc);
+
+    EXPECT_EQ(qc.getNops(), 4U);
+    EXPECT_EQ(qc.getNindividualOps(), 5U);
+    EXPECT_EQ(qc.getNsingleQubitOps(), 3U);
+}

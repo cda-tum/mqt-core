@@ -24,6 +24,29 @@ namespace qc {
         return nops;
     }
 
+    std::size_t QuantumComputation::getNsingleQubitOps() const {
+        std::size_t nops = 0;
+        for (const auto& op: ops) {
+            if (!op->isUnitary()) {
+                continue;
+            }
+
+            if (op->isCompoundOperation()) {
+                const auto* const comp = dynamic_cast<const CompoundOperation*>(op.get());
+                for (const auto& subop: *comp) {
+                    if (subop->isUnitary() && !subop->isControlled() && subop->getNtargets() == 1U) {
+                        ++nops;
+                    }
+                }
+            } else {
+                if (!op->isControlled() && op->getNtargets() == 1U) {
+                    ++nops;
+                }
+            }
+        }
+        return nops;
+    }
+
     void QuantumComputation::import(const std::string& filename) {
         size_t      dot       = filename.find_last_of('.');
         std::string extension = filename.substr(dot + 1);
