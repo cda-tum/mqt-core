@@ -34,12 +34,12 @@ namespace qc {
             if (op->isCompoundOperation()) {
                 const auto* const comp = dynamic_cast<const CompoundOperation*>(op.get());
                 for (const auto& subop: *comp) {
-                    if (subop->isUnitary() && subop->getNcontrols() == 0U && subop->getNtargets() == 1U) {
+                    if (subop->isUnitary() && !subop->isControlled() && subop->getNtargets() == 1U) {
                         ++nops;
                     }
                 }
             } else {
-                if (op->getNcontrols() == 0U && op->getNtargets() == 1U) {
+                if (!op->isControlled() && op->getNtargets() == 1U) {
                     ++nops;
                 }
             }
