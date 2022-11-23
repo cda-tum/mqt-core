@@ -159,9 +159,10 @@ void Q9SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quant
     dd::Qubit i;
 
     //no control gate decomposition is supported
-    if (gate->getNcontrols() > 2 && decomposeMultiControlledGates && gate->getType() != qc::Measure) {
+    /* if (gate->getNcontrols() > 2 && decomposeMultiControlledGates && gate->getType() != qc::Measure) {
         gateNotAvailableError(gate);
-    } else if (gate->getNcontrols() && gate->getType() != qc::Measure) {
+    } else */
+    if (gate->getNcontrols() && gate->getType() != qc::Measure) {
         auto&        ctrls = gate->getControls();
         dd::Controls ctrls2, ctrls3;
         for (const auto& ct: ctrls) {

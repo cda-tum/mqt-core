@@ -73,6 +73,9 @@ void Q7SteaneEcc::measureAndCorrectSingle(bool xSyndrome) {
 
         void (*writeXZ)(dd::Qubit, dd::Control, qc::QuantumComputation*, bool) = xSyndrome ? writeXstatic : writeZstatic;
 
+        //delete local variable if it becomes field in Ecc class
+        bool cliffordGatesOnly = false;
+
         //K1: UIUIUIU
         writeXZ(static_cast<dd::Qubit>(i + nQubits * 0), c0, &qcMapped, cliffordGatesOnly);
         writeXZ(static_cast<dd::Qubit>(i + nQubits * 2), c0, &qcMapped, cliffordGatesOnly);
@@ -154,7 +157,7 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quantu
         case qc::Z:
             for (std::size_t t = 0; t < gate->getNtargets(); t++) {
                 int i = static_cast<unsigned char>(gate->getTargets()[t]);
-                if (gate->getNcontrols() == 2 && decomposeMultiControlledGates) {
+                /*if (gate->getNcontrols() == 2 && decomposeMultiControlledGates) {
                     auto& ctrls     = gate->getControls();
                     int   idx       = 0;
                     int   ctrl2[2]  = {-1, -1};
@@ -190,7 +193,8 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quantu
                     }
                 } else if (gate->getNcontrols() > 2 && decomposeMultiControlledGates) {
                     gateNotAvailableError(gate);
-                } else if (gate->getNcontrols()) {
+                } else */
+                if (gate->getNcontrols()) {
                     auto& ctrls = gate->getControls();
                     for (int j = 0; j < 7; j++) {
                         dd::Controls ctrls2;
@@ -213,11 +217,12 @@ void Q7SteaneEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quantu
         case qc::Sdag:
             for (std::size_t t = 0; t < gate->getNtargets(); t++) {
                 int i = static_cast<unsigned char>(gate->getTargets()[t]);
-                if (gate->getNcontrols() > 1 && decomposeMultiControlledGates) {
+                /*if (gate->getNcontrols() > 1 && decomposeMultiControlledGates) {
                     gateNotAvailableError(gate);
                 } else if (gate->getNcontrols() && cliffordGatesOnly) {
                     gateNotAvailableError(gate);
-                } else if (gate->getNcontrols()) {
+                } else*/
+                if (gate->getNcontrols()) {
                     auto& ctrls = gate->getControls();
                     for (int j = 0; j < 7; j++) {
                         dd::Controls ctrls2;

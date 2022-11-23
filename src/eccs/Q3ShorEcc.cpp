@@ -110,7 +110,7 @@ void Q3ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumC
         case qc::Tdag:
             for (std::size_t j = 0; j < gate->getNtargets(); j++) {
                 auto i = gate->getTargets()[j];
-                if (gate->getNcontrols() == 2 && decomposeMultiControlledGates) {
+                /*if (gate->getNcontrols() == 2 && decomposeMultiControlledGates) {
                     auto& ctrls     = gate->getControls();
                     int   idx       = 0;
                     int   ctrl2[2]  = {-1, -1};
@@ -156,7 +156,8 @@ void Q3ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumC
                     }
                 } else if (gate->getNcontrols() > 2 && decomposeMultiControlledGates) {
                     gateNotAvailableError(gate);
-                } else if (gate->getNcontrols()) {
+                } else */
+                if (gate->getNcontrols()) {
                     auto& ctrls = gate->getControls();
                     writeGeneric(i, ctrls, gate->getType());
                     dd::Controls ctrls2, ctrls3;

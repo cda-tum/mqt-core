@@ -215,7 +215,7 @@ void Q9ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumC
     }
     for (std::size_t t = 0; t < gate.get()->getNtargets(); t++) {
         i = gate.get()->getTargets()[t];
-        if (gate.get()->getNcontrols() == 2 && decomposeMultiControlledGates) {
+        /*if (gate.get()->getNcontrols() == 2 && decomposeMultiControlledGates) {
             //Q9Shor code: put H gate before and after each control point, i.e. "cx 0,1" becomes "h0; cz 0,1; h0"
             auto& ctrls     = gate.get()->getControls();
             int   idx       = 0;
@@ -257,7 +257,8 @@ void Q9ShorEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumC
 
         } else if (gate.get()->getNcontrols() > 2 && decomposeMultiControlledGates) {
             gateNotAvailableError(gate);
-        } else if (gate.get()->getNcontrols()) {
+        } else */
+        if (gate.get()->getNcontrols()) {
             //Q9Shor code: put H gate before and after each control point, i.e. "cx 0,1" becomes "h0; cz 0,1; h0"
             auto& ctrls = gate.get()->getControls();
             for (int j = 0; j < 9; j++) {

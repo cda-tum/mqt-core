@@ -56,9 +56,9 @@ protected:
     EccStatistics           statistics{};
     const int               measureFrequency;
     bool                    isDecoded;
-    bool                    decomposeMultiControlledGates;
-    bool                    cliffordGatesOnly;
-    bool                    gatesWritten;
+    //bool                    decomposeMultiControlledGates;
+    //bool                    cliffordGatesOnly;
+    bool gatesWritten;
 
     virtual void initMappedCircuit();
 

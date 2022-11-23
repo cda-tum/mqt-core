@@ -18,9 +18,9 @@ void IdEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, [[maybe_unused]]
     qc::NonUnitaryOperation* measureGate;
 
     //gates have already been written to 'qcMapped' in the constructor
-    if (cliffordGatesOnly) {
+    /*if (cliffordGatesOnly) {
         gateNotAvailableError(gate);
-    }
+    }*/
     switch (gate->getType()) {
         case qc::H:
         case qc::X:
