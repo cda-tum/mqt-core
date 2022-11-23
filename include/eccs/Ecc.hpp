@@ -39,16 +39,16 @@ public:
 
     //virtual void dumpResult(const std::string& outputFilename);
 
-    virtual void dumpResult(const std::string& outputFilename, qc::Format format) {
-        size_t slash          = outputFilename.find_last_of('/');
-        size_t dot            = outputFilename.find_last_of('.');
-        statistics.outputName = outputFilename.substr(slash + 1, dot - slash - 1);
-        qcMapped.dump(outputFilename, format);
-    }
-
-    virtual void dumpResult(std::ostream& os, qc::Format format) {
-        qcMapped.dump(os, format);
-    }
+    //    virtual void dumpResult(const std::string& outputFilename, qc::Format format) {
+    //        size_t slash          = outputFilename.find_last_of('/');
+    //        size_t dot            = outputFilename.find_last_of('.');
+    //        statistics.outputName = outputFilename.substr(slash + 1, dot - slash - 1);
+    //        qcMapped.dump(outputFilename, format);
+    //    }
+    //
+    //    virtual void dumpResult(std::ostream& os, qc::Format format) {
+    //        qcMapped.dump(os, format);
+    //    }
 
 protected:
     qc::QuantumComputation& qc;

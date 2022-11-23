@@ -102,29 +102,7 @@ void Q7SteaneEcc::measureAndCorrectSingle(bool xSyndrome) {
         //correct Z_i for i+1 = c0*1+c1*2+c2*4
         //correct X_i for i+1 = c3*1+c4*2+c5*4
         for (int j = 0; j < 7; j++) {
-            if (cliffordGatesOnly) {
-                if (!xSyndrome) {
-                    std::unique_ptr<qc::Operation> op0   = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i + j * nQubits, qc::H);
-                    const auto                     pair0 = std::make_pair(dd::Qubit(clAncStart), dd::QubitCount(3));
-                    qcMapped.emplace_back<qc::ClassicControlledOperation>(op0, pair0, j + 1U);
-                }
-
-                std::unique_ptr<qc::Operation> op1   = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i + j * nQubits, qc::S);
-                const auto                     pair1 = std::make_pair(dd::Qubit(clAncStart), dd::QubitCount(3));
-                qcMapped.emplace_back<qc::ClassicControlledOperation>(op1, pair1, j + 1U);
-
-                std::unique_ptr<qc::Operation> op2   = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i + j * nQubits, qc::S);
-                const auto                     pair2 = std::make_pair(dd::Qubit(clAncStart), dd::QubitCount(3));
-                qcMapped.emplace_back<qc::ClassicControlledOperation>(op2, pair2, j + 1U);
-
-                if (!xSyndrome) {
-                    std::unique_ptr<qc::Operation> op3   = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), i + j * nQubits, qc::H);
-                    const auto                     pair3 = std::make_pair(dd::Qubit(clAncStart), dd::QubitCount(3));
-                    qcMapped.emplace_back<qc::ClassicControlledOperation>(op3, pair3, j + 1U);
-                }
-            } else {
-                writeClassicalControl(dd::Qubit(clAncStart), dd::QubitCount(3), j + 1U, xSyndrome ? qc::Z : qc::X, i + j * nQubits);
-            }
+            writeClassicalControl(dd::Qubit(clAncStart), dd::QubitCount(3), j + 1U, xSyndrome ? qc::Z : qc::X, i + j * nQubits);
         }
     }
     gatesWritten = true;

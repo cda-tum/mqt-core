@@ -202,6 +202,28 @@ protected:
         qc.measure(0, {"resultReg", 0});
         qc.measure(1, {"resultReg", 1});
     }
+
+    static void createCZCircuit(qc::QuantumComputation& qc) {
+        qc = {};
+        qc.addQubitRegister(2U);
+        qc.addClassicalRegister(2U, "resultReg");
+        qc.x(0);
+        qc.h(1);
+        qc.z(1, 0_pc);
+        qc.h(1);
+        qc.measure(0, {"resultReg", 0});
+        qc.measure(1, {"resultReg", 1});
+    }
+
+    static void createCYCircuit(qc::QuantumComputation& qc) {
+        qc = {};
+        qc.addQubitRegister(2U);
+        qc.addClassicalRegister(2U, "resultReg");
+        qc.x(0);
+        qc.y(1, 0_pc);
+        qc.measure(0, {"resultReg", 0});
+        qc.measure(1, {"resultReg", 1});
+    }
 };
 
 TEST_F(DDECCFunctionalityTest, testIdEcc) {
@@ -209,7 +231,7 @@ TEST_F(DDECCFunctionalityTest, testIdEcc) {
     bool cliffOnly        = false;
     int  measureFrequency = 0;
 
-    void (*circuitsExpectToPass[7])(qc::QuantumComputation & qc) = {
+    void (*circuitsExpectToPass[9])(qc::QuantumComputation & qc) = {
             createIdentityCircuit,
             createXCircuit,
             createYCircuit,
@@ -217,6 +239,8 @@ TEST_F(DDECCFunctionalityTest, testIdEcc) {
             createHTCircuit,
             createHZCircuit,
             createCXCircuit,
+            createCZCircuit,
+            createCYCircuit,
     };
 
     int circuitCounter = 0;
@@ -235,8 +259,8 @@ TEST_F(DDECCFunctionalityTest, testQ3Shor) {
     bool cliffOnly        = false;
     int  measureFrequency = 0;
 
-    void (*circuitsExpectToPass[3])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit};
-    void (*circuitsExpectToFail[4])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit};
+    void (*circuitsExpectToPass[4])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit, createCYCircuit};
+    void (*circuitsExpectToFail[5])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createCZCircuit, createHZCircuit};
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2};
@@ -265,7 +289,7 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
     int  measureFrequency = 0;
 
     void (*circuitsExpectToPass[2])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit};
-    void (*circuitsExpectToFail[5])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit, createCXCircuit};
+    void (*circuitsExpectToFail[7])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit, createCXCircuit, createCZCircuit, createCYCircuit};
 
     std::vector<dd::Qubit> dataQubits = {0, 1, 2, 3, 4};
 
@@ -275,10 +299,6 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
         circuit(qcOriginal);
         Ecc*                    mapper = new Q5LaflammeEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
         qc::QuantumComputation& qcECC  = mapper->apply();
-
-        //        std::stringstream ss{};
-        //        qcECC.dumpOpenQASM(ss);
-        //        std::cout << ss.str() << std::endl;
 
         EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, {}, insertErrorAfterNGates));
     }
@@ -296,7 +316,7 @@ TEST_F(DDECCFunctionalityTest, testQ7Steane) {
     bool cliffOnly        = false;
     int  measureFrequency = 0;
 
-    void (*circuitsExpectToPass[7])(qc::QuantumComputation & qc) = {
+    void (*circuitsExpectToPass[9])(qc::QuantumComputation & qc) = {
             createIdentityCircuit,
             createXCircuit,
             createYCircuit,
@@ -304,6 +324,8 @@ TEST_F(DDECCFunctionalityTest, testQ7Steane) {
             createHTCircuit,
             createHZCircuit,
             createCXCircuit,
+            createCZCircuit,
+            createCYCircuit,
     };
 
     int                    circuitCounter = 0;
@@ -325,8 +347,8 @@ TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
     bool cliffOnly        = false;
     int  measureFrequency = 0;
 
-    void (*circuitsExpectToPass[3])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit};
-    void (*circuitsExpectToFail[4])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit};
+    void (*circuitsExpectToPass[4])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit, createCYCircuit};
+    void (*circuitsExpectToFail[5])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit, createCZCircuit};
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8};
@@ -354,11 +376,7 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
     bool cliffOnly        = false;
     int  measureFrequency = 0;
 
-    //    qc::QuantumComputation qcOriginal{};
-    //    createSpecial(qcOriginal);
-    //    EXPECT_TRUE(verifyExecution(qcOriginal, qcOriginal));
-
-    void (*circuitsExpectToPass[6])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit, createYCircuit, createHCircuit, createHZCircuit};
+    void (*circuitsExpectToPass[8])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit, createYCircuit, createHCircuit, createHZCircuit, createCZCircuit, createCYCircuit};
     void (*circuitsExpectToFail[1])(qc::QuantumComputation & qc) = {createHTCircuit};
 
     int                    circuitCounter = 0;
@@ -388,7 +406,7 @@ TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
     int  measureFrequency = 0;
 
     void (*circuitsExpectToPass[5])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createYCircuit, createHCircuit, createHZCircuit};
-    void (*circuitsExpectToFail[2])(qc::QuantumComputation & qc) = {createHTCircuit, createCXCircuit};
+    void (*circuitsExpectToFail[4])(qc::QuantumComputation & qc) = {createHTCircuit, createCXCircuit, createCZCircuit, createCYCircuit};
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};

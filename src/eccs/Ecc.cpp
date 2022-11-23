@@ -102,7 +102,7 @@ void Ecc::swap(dd::Qubit target1, dd::Qubit target2) {
 
 void Ecc::writeToffoli(int target, int c1, bool p1, int c2, bool p2) {
     if (decomposeMultiControlledGates && cliffordGatesOnly) {
-        throw qc::QFRException(std::string("Gate t not possible to encode with clifford gates only!"));
+        throw qc::QFRException(std::string("Gate t not supported to encode with clifford gates only!"));
     }
     if (decomposeMultiControlledGates) {
         if (!p1) {
