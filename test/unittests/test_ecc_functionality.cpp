@@ -226,8 +226,6 @@ TEST_F(DDECCFunctionalityTest, testIdEcc) {
         circuit(qcOriginal);
         Ecc*                    mapper = new IdEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
         qc::QuantumComputation& qcECC  = mapper->apply();
-        std::cout << qcECC << std::endl;
-        std::cout << qcOriginal << std::endl;
         EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));
     }
 }
