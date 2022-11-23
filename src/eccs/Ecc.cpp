@@ -26,7 +26,10 @@ void Ecc::initMappedCircuit() {
     for (auto const& [regName, regBits]: cRegs) {
         qcMapped.addClassicalRegister(regBits.second, regName);
     }
-    qcMapped.addClassicalRegister(ecc.nCorrectingBits, "qecc");
+
+    if (ecc.nCorrectingBits > 0) {
+        qcMapped.addClassicalRegister(ecc.nCorrectingBits, "qecc");
+    }
 }
 
 qc::QuantumComputation& Ecc::apply() {

@@ -225,6 +225,9 @@ namespace qc {
         if (cregs.count(reg_name)) {
             throw QFRException("[addClassicalRegister] Augmenting existing classical registers is currently not supported");
         }
+        if (nc == 0) {
+            throw QFRException("[addClassicalRegister] New register size must be larger than 0");
+        }
 
         cregs.insert({reg_name, {nclassics, nc}});
         nclassics += nc;
