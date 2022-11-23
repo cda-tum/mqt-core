@@ -25,12 +25,12 @@ protected:
     void TearDown() override {
     }
 
-    static void simulateCircuit(qc::QuantumComputation& qc, std::map<std::size_t, int>& finalClassicValues, bool simulateNoise = false, Qubit targetForNoise = 0, std::uint_fast32_t applyNoiseAfterNOperations = 0) {
-        std::mt19937_64 mt;
-        mt.seed(7);
+    static void simulateCircuit(qc::QuantumComputation& qc, std::map<std::size_t, double>& finalClassicValues, int nrShots = 5000, bool simulateNoise = false, Qubit targetForNoise = 0, std::uint_fast32_t applyNoiseAfterNOperations = 0) {
+        std::random_device rd;
+        std::mt19937_64    mt(rd());
 
         std::uint_fast32_t operationCounter = 0;
-        for (int sample = 0; sample < 50; sample++) {
+        for (int sample = 0; sample < nrShots; sample++) {
             std::map<std::size_t, bool> classicValuesECC{};
             auto                        dd       = std::make_unique<dd::Package<>>(qc.getNqubits());
             vEdge                       rootEdge = dd->makeZeroState(qc.getNqubits());
@@ -93,8 +93,8 @@ protected:
                     if (finalClassicValues.count(i) == 0) {
                         finalClassicValues[i] = 0;
                     }
-                    if (finalClassicValues[i]) {
-                        finalClassicValues[i]++;
+                    if (classicValuesECC[i]) {
+                        finalClassicValues[i] += 1.0 / nrShots;
                     }
                 }
             }
@@ -105,26 +105,30 @@ protected:
                                 bool                          simulateWithErrors     = false,
                                 const std::vector<dd::Qubit>& dataQubits             = {},
                                 int                           insertErrorAfterNGates = 0) {
-        std::map<std::size_t, int> finalClassicValuesOriginal{};
-        bool                       testingSuccessful = true;
+        double                        tolerance = 0.15;
+        std::map<std::size_t, double> finalClassicValuesOriginal{};
+        bool                          testingSuccessful = true;
 
         simulateCircuit(qcOriginal, finalClassicValuesOriginal);
 
         if (!simulateWithErrors) {
-            std::map<std::size_t, int> finalClassicValuesECC{};
-            simulateCircuit(qcECC, finalClassicValuesECC);
+            std::map<std::size_t, double> finalClassicValuesECC{};
+            simulateCircuit(qcECC, finalClassicValuesECC, 100);
             for (auto const& x: finalClassicValuesOriginal) {
-                if (std::abs(x.second - finalClassicValuesECC[x.first]) > 3) {
+                assert(x.second <= 1.000001 && finalClassicValuesECC[x.first] <= 1.000001);
+                if (std::abs(x.second - finalClassicValuesECC[x.first]) > tolerance) {
                     testingSuccessful = false;
                 }
             }
         } else {
             for (auto const& qubit: dataQubits) {
-                std::map<std::size_t, int> finalClassicValuesECC{};
-                simulateCircuit(qcECC, finalClassicValuesECC, true, qubit, insertErrorAfterNGates);
+                std::map<std::size_t, double> finalClassicValuesECC{};
+                simulateCircuit(qcECC, finalClassicValuesECC, 100, true, qubit, insertErrorAfterNGates);
                 for (auto const& x: finalClassicValuesOriginal) {
-                    if (std::abs(x.second - finalClassicValuesECC[x.first]) > 3) {
-                        std::cout << "Simulation failed when applying error to qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates." << std::endl;
+                    assert(x.second <= 1.000001 && finalClassicValuesECC[x.first] <= 1.000001);
+                    if (std::abs(x.second - finalClassicValuesECC[x.first]) > tolerance) {
+                        std::cout << "Simulation failed when applying error to qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates.\n";
+                        std::cout << "Error in bit " << x.first << " original register: " << x.second << " ecc register: " << finalClassicValuesECC[x.first] << std::endl;
                         testingSuccessful = false;
                     }
                 }
@@ -199,6 +203,34 @@ protected:
         qc.measure(1, {"resultReg", 1});
     }
 };
+
+TEST_F(DDECCFunctionalityTest, testIdEcc) {
+    bool decomposeMC      = false;
+    bool cliffOnly        = false;
+    int  measureFrequency = 0;
+
+    void (*circuitsExpectToPass[7])(qc::QuantumComputation & qc) = {
+            createIdentityCircuit,
+            createXCircuit,
+            createYCircuit,
+            createHCircuit,
+            createHTCircuit,
+            createHZCircuit,
+            createCXCircuit,
+    };
+
+    int circuitCounter = 0;
+    for (auto& circuit: circuitsExpectToPass) {
+        std::cout << "Testing circuit " << ++circuitCounter << std::endl;
+        qc::QuantumComputation qcOriginal{};
+        circuit(qcOriginal);
+        Ecc*                    mapper = new IdEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        qc::QuantumComputation& qcECC  = mapper->apply();
+        std::cout << qcECC << std::endl;
+        std::cout << qcOriginal << std::endl;
+        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));
+    }
+}
 
 TEST_F(DDECCFunctionalityTest, testQ3Shor) {
     bool decomposeMC      = false;
@@ -279,7 +311,7 @@ TEST_F(DDECCFunctionalityTest, testQ7Steane) {
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 3, 4, 5, 6};
 
-    int insertErrorAfterNGates = 30;
+    int insertErrorAfterNGates = 31;
     for (auto& circuit: circuitsExpectToPass) {
         std::cout << "Testing circuit " << ++circuitCounter << std::endl;
         qc::QuantumComputation qcOriginal{};
