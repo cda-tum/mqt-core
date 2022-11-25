@@ -11,9 +11,9 @@
 
 class Q5LaflammeEcc: public Ecc {
 public:
-    Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly);
+    Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq);
 
-    static const std::string getName() {
+    static std::string getName() {
         return "Q5Laflamme";
     }
 
@@ -26,11 +26,11 @@ protected:
 
     void writeDecoding() override;
 
-    void mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) override;
+    void mapGate(const qc::Operation& gate) override;
 
 private:
-    void writeClassicalControlled(const unsigned int value, int target, qc::OpType optype, dd::Qubit clStart, dd::QubitCount clCount);
-    void writeClassicalControlledCorrect(const unsigned int value, int target, qc::OpType optype);
+    void writeClassicalControlled(unsigned int value, int target, qc::OpType optype, dd::Qubit clStart, dd::QubitCount clCount);
+    void writeClassicalControlledCorrect(unsigned int value, int target, qc::OpType optype);
 };
 
 #endif //QFR_Q5LaflammeEcc_HPP

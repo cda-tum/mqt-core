@@ -11,9 +11,9 @@
 
 class QxCustomEcc: public Ecc {
 public:
-    QxCustomEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly);
+    QxCustomEcc(qc::QuantumComputation& qc, int measureFq);
 
-    static const std::string getName() {
+    static std::string getName() {
         return "QxCustom";
     }
 
@@ -24,7 +24,7 @@ protected:
 
     void writeDecoding() override;
 
-    void mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) override;
+    void mapGate(const qc::Operation& gate) override;
 };
 
 #endif //QFR_QxCustomEcc_HPP

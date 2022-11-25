@@ -5,19 +5,18 @@
 
 #include "eccs/Q18SurfaceEcc.hpp"
 
-Q18SurfaceEcc::Q18SurfaceEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly):
-    Ecc({ID::Q18Surface, 36, 8, Q18SurfaceEcc::getName()}, qc, measureFq, decomposeMC, cliffOnly) {}
+Q18SurfaceEcc::Q18SurfaceEcc(qc::QuantumComputation& qc, int measureFq):
+    Ecc({ID::Q18Surface, 36, 8, Q18SurfaceEcc::getName()}, qc, measureFq) {}
 
 void Q18SurfaceEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
-    qc.stripIdleQubits(true, false);
-    statistics.nInputQubits         = qc.getNqubits();
-    statistics.nInputClassicalBits  = (int)qc.getNcbits();
-    statistics.nOutputQubits        = qc.getNqubits() * 36;
+    qcOriginal.stripIdleQubits(true, false);
+    statistics.nInputQubits         = qcOriginal.getNqubits();
+    statistics.nInputClassicalBits  = (int)qcOriginal.getNcbits();
+    statistics.nOutputQubits        = qcOriginal.getNqubits() * 36;
     statistics.nOutputClassicalBits = statistics.nInputClassicalBits;
     qcMapped.addQubitRegister(statistics.nOutputQubits);
-    //    qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
-    auto cRegs = qc.getCregs();
+    auto cRegs = qcOriginal.getCregs();
     for (auto const& [regName, regBits]: cRegs) {
         qcMapped.addClassicalRegister(regBits.second, regName);
     }
@@ -37,164 +36,164 @@ void Q18SurfaceEcc::measureAndCorrect() {
     if (isDecoded) {
         return;
     }
-    const int nQubits    = qc.getNqubits();
-    const int clAncStart = (int)qc.getNcbits();
+    const int  nQubits    = qcOriginal.getNqubits();
+    const auto clAncStart = (int)qcOriginal.getNcbits();
     for (int i = 0; i < nQubits; i++) {
-        dd::Qubit   q[36];  //qubits
-        dd::Control cq[36]; //qubit controls
+        std::array<dd::Qubit, 36>   qubits        = {};
+        std::array<dd::Control, 36> controlQubits = {};
         for (int j = 0; j < 36; j++) {
-            q[j] = dd::Qubit(i + j * nQubits);
+            qubits[j] = dd::Qubit(i + j * nQubits);
         }
         for (int j = 0; j < 36; j++) {
-            cq[j] = dd::Control{dd::Qubit(q[j]), dd::Control::Type::pos};
+            controlQubits[j] = dd::Control{dd::Qubit(qubits[j]), dd::Control::Type::pos};
         }
-        int ancillaIndices[] = {0, 2, 4, 7, 9, 11, 12, 14, 16, 19, 21, 23, 24, 26, 28, 31, 33, 35};
+        std::array<int, 18> ancillaIndices = {0, 2, 4, 7, 9, 11, 12, 14, 16, 19, 21, 23, 24, 26, 28, 31, 33, 35};
         if (gatesWritten) {
             for (int ai: ancillaIndices) {
-                qcMapped.reset(q[ai]);
+                qcMapped.reset(qubits[ai]);
             }
         }
 
         //initialize ancillas: Z-check
-        writeX(q[0], cq[1]);
-        writeX(q[0], cq[6]);
+        writeX(qubits[0], controlQubits[1]);
+        writeX(qubits[0], controlQubits[6]);
 
-        writeX(q[2], cq[1]);
-        writeX(q[2], cq[8]);
-        writeX(q[2], cq[3]);
+        writeX(qubits[2], controlQubits[1]);
+        writeX(qubits[2], controlQubits[8]);
+        writeX(qubits[2], controlQubits[3]);
 
-        writeX(q[4], cq[3]);
-        writeX(q[4], cq[10]);
-        writeX(q[4], cq[5]);
+        writeX(qubits[4], controlQubits[3]);
+        writeX(qubits[4], controlQubits[10]);
+        writeX(qubits[4], controlQubits[5]);
 
-        writeX(q[12], cq[6]);
-        writeX(q[12], cq[18]);
-        writeX(q[12], cq[13]);
+        writeX(qubits[12], controlQubits[6]);
+        writeX(qubits[12], controlQubits[18]);
+        writeX(qubits[12], controlQubits[13]);
 
-        writeX(q[16], cq[10]);
-        writeX(q[16], cq[15]);
-        writeX(q[16], cq[17]);
-        writeX(q[16], cq[22]);
+        writeX(qubits[16], controlQubits[10]);
+        writeX(qubits[16], controlQubits[15]);
+        writeX(qubits[16], controlQubits[17]);
+        writeX(qubits[16], controlQubits[22]);
 
-        writeX(q[24], cq[18]);
-        writeX(q[24], cq[25]);
-        writeX(q[24], cq[30]);
+        writeX(qubits[24], controlQubits[18]);
+        writeX(qubits[24], controlQubits[25]);
+        writeX(qubits[24], controlQubits[30]);
 
-        writeX(q[26], cq[20]);
-        writeX(q[26], cq[25]);
-        writeX(q[26], cq[27]);
-        writeX(q[26], cq[32]);
+        writeX(qubits[26], controlQubits[20]);
+        writeX(qubits[26], controlQubits[25]);
+        writeX(qubits[26], controlQubits[27]);
+        writeX(qubits[26], controlQubits[32]);
 
-        writeX(q[28], cq[22]);
-        writeX(q[28], cq[27]);
-        writeX(q[28], cq[29]);
-        writeX(q[28], cq[34]);
+        writeX(qubits[28], controlQubits[22]);
+        writeX(qubits[28], controlQubits[27]);
+        writeX(qubits[28], controlQubits[29]);
+        writeX(qubits[28], controlQubits[34]);
 
         //initialize ancillas: X-check
-        int x_checks[] = {7, 9, 11, 19, 23, 31, 33, 35};
+        std::array<int, 8> x_checks = {7, 9, 11, 19, 23, 31, 33, 35};
         for (int xc: x_checks) {
-            qcMapped.h(q[xc]);
+            qcMapped.h(qubits[xc]);
         }
 
-        writeX(q[1], cq[7]);
-        writeX(q[6], cq[7]);
-        writeX(q[8], cq[7]);
-        writeX(q[13], cq[7]);
+        writeX(qubits[1], controlQubits[7]);
+        writeX(qubits[6], controlQubits[7]);
+        writeX(qubits[8], controlQubits[7]);
+        writeX(qubits[13], controlQubits[7]);
 
-        writeX(q[3], cq[9]);
-        writeX(q[8], cq[9]);
-        writeX(q[10], cq[9]);
-        writeX(q[15], cq[9]);
+        writeX(qubits[3], controlQubits[9]);
+        writeX(qubits[8], controlQubits[9]);
+        writeX(qubits[10], controlQubits[9]);
+        writeX(qubits[15], controlQubits[9]);
 
-        writeX(q[5], cq[11]);
-        writeX(q[10], cq[11]);
-        writeX(q[17], cq[11]);
+        writeX(qubits[5], controlQubits[11]);
+        writeX(qubits[10], controlQubits[11]);
+        writeX(qubits[17], controlQubits[11]);
 
-        writeX(q[13], cq[19]);
-        writeX(q[18], cq[19]);
-        writeX(q[20], cq[19]);
-        writeX(q[25], cq[19]);
+        writeX(qubits[13], controlQubits[19]);
+        writeX(qubits[18], controlQubits[19]);
+        writeX(qubits[20], controlQubits[19]);
+        writeX(qubits[25], controlQubits[19]);
 
-        writeX(q[17], cq[23]);
-        writeX(q[22], cq[23]);
-        writeX(q[29], cq[23]);
+        writeX(qubits[17], controlQubits[23]);
+        writeX(qubits[22], controlQubits[23]);
+        writeX(qubits[29], controlQubits[23]);
 
-        writeX(q[25], cq[31]);
-        writeX(q[30], cq[31]);
-        writeX(q[32], cq[31]);
+        writeX(qubits[25], controlQubits[31]);
+        writeX(qubits[30], controlQubits[31]);
+        writeX(qubits[32], controlQubits[31]);
 
-        writeX(q[27], cq[33]);
-        writeX(q[32], cq[33]);
-        writeX(q[34], cq[33]);
+        writeX(qubits[27], controlQubits[33]);
+        writeX(qubits[32], controlQubits[33]);
+        writeX(qubits[34], controlQubits[33]);
 
-        writeX(q[29], cq[35]);
-        writeX(q[34], cq[35]);
+        writeX(qubits[29], controlQubits[35]);
+        writeX(qubits[34], controlQubits[35]);
 
         for (int xc: x_checks) {
-            qcMapped.h(q[xc]);
+            qcMapped.h(qubits[xc]);
         }
 
         //map ancillas to classical bit result
 
-        qcMapped.measure(q[0], clAncStart);
-        qcMapped.measure(q[2], clAncStart + 1);
-        qcMapped.measure(q[4], clAncStart + 2);
-        qcMapped.measure(q[12], clAncStart + 3);
-        qcMapped.measure(q[16], clAncStart + 4);
-        qcMapped.measure(q[24], clAncStart + 5);
-        qcMapped.measure(q[26], clAncStart + 6);
-        qcMapped.measure(q[28], clAncStart + 7);
+        qcMapped.measure(qubits[0], clAncStart);
+        qcMapped.measure(qubits[2], clAncStart + 1);
+        qcMapped.measure(qubits[4], clAncStart + 2);
+        qcMapped.measure(qubits[12], clAncStart + 3);
+        qcMapped.measure(qubits[16], clAncStart + 4);
+        qcMapped.measure(qubits[24], clAncStart + 5);
+        qcMapped.measure(qubits[26], clAncStart + 6);
+        qcMapped.measure(qubits[28], clAncStart + 7);
 
-        qcMapped.measure(q[7], clAncStart + 8);
-        qcMapped.measure(q[9], clAncStart + 9);
-        qcMapped.measure(q[11], clAncStart + 10);
-        qcMapped.measure(q[19], clAncStart + 11);
-        qcMapped.measure(q[23], clAncStart + 12);
-        qcMapped.measure(q[31], clAncStart + 13);
-        qcMapped.measure(q[33], clAncStart + 14);
-        qcMapped.measure(q[35], clAncStart + 15);
+        qcMapped.measure(qubits[7], clAncStart + 8);
+        qcMapped.measure(qubits[9], clAncStart + 9);
+        qcMapped.measure(qubits[11], clAncStart + 10);
+        qcMapped.measure(qubits[19], clAncStart + 11);
+        qcMapped.measure(qubits[23], clAncStart + 12);
+        qcMapped.measure(qubits[31], clAncStart + 13);
+        qcMapped.measure(qubits[33], clAncStart + 14);
+        qcMapped.measure(qubits[35], clAncStart + 15);
 
         //logic: classical control
 
         //bits = 28 26 24 16 | 12 4 2 0
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00000011, qc::X, q[1]);  //0+2
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00000110, qc::X, q[3]);  //2+4
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00000100, qc::X, q[5]);  //4
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00001001, qc::X, q[6]);  //0+12
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00000010, qc::X, q[8]);  //2
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00010100, qc::X, q[10]); //4+16
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00001000, qc::X, q[13]); //12
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00010000, qc::X, q[15]); //16
-        //17 not corrected -> q[15]
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00101000, qc::X, q[18]); //12+24
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b01000000, qc::X, q[20]); //26
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b10010000, qc::X, q[22]); //16+28
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b01100000, qc::X, q[25]); //24+26
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b11000000, qc::X, q[27]); //26+28
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b10000000, qc::X, q[29]); //28
-        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00100000, qc::X, q[30]); //24
-        //32 not corrected -> q[20]
-        //34 not corrected -> q[29]
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00000011, qc::X, qubits[1]);  //0+2
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00000110, qc::X, qubits[3]);  //2+4
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00000100, qc::X, qubits[5]);  //4
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00001001, qc::X, qubits[6]);  //0+12
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00000010, qc::X, qubits[8]);  //2
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00010100, qc::X, qubits[10]); //4+16
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00001000, qc::X, qubits[13]); //12
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00010000, qc::X, qubits[15]); //16
+        //17 not corrected -> qubits[15]
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00101000, qc::X, qubits[18]); //12+24
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b01000000, qc::X, qubits[20]); //26
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b10010000, qc::X, qubits[22]); //16+28
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b01100000, qc::X, qubits[25]); //24+26
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b11000000, qc::X, qubits[27]); //26+28
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b10000000, qc::X, qubits[29]); //28
+        writeClassicalControl(dd::Qubit(clAncStart), 8, 0b00100000, qc::X, qubits[30]); //24
+        //32 not corrected -> qubits[20]
+        //34 not corrected -> qubits[29]
 
         //bits = 35 33 31 23 | 19 11 9 7
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00000001, qc::Z, q[1]); //7
-        //3 not corrected -> q[15]
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00000100, qc::Z, q[5]); //11
-        //6 not corrected -> q[1]
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00000011, qc::Z, q[8]);  //7+9
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00000110, qc::Z, q[10]); //9+11
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00001001, qc::Z, q[13]); //7+19
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00000010, qc::Z, q[15]); //9
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00010100, qc::Z, q[17]); //11+23
-        //18 not corrected -> q[20]
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00001000, qc::Z, q[20]); //19
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00010000, qc::Z, q[22]); //23
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00101000, qc::Z, q[25]); //19+31
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b01000000, qc::Z, q[27]); //33
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b10010000, qc::Z, q[29]); //23+35
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00100000, qc::Z, q[30]); //31
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b01100000, qc::Z, q[32]); //31+33
-        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b11000000, qc::Z, q[34]); //33+35
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00000001, qc::Z, qubits[1]); //7
+        //3 not corrected -> qubits[15]
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00000100, qc::Z, qubits[5]); //11
+        //6 not corrected -> qubits[1]
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00000011, qc::Z, qubits[8]);  //7+9
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00000110, qc::Z, qubits[10]); //9+11
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00001001, qc::Z, qubits[13]); //7+19
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00000010, qc::Z, qubits[15]); //9
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00010100, qc::Z, qubits[17]); //11+23
+        //18 not corrected -> qubits[20]
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00001000, qc::Z, qubits[20]); //19
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00010000, qc::Z, qubits[22]); //23
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00101000, qc::Z, qubits[25]); //19+31
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b01000000, qc::Z, qubits[27]); //33
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b10010000, qc::Z, qubits[29]); //23+35
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00100000, qc::Z, qubits[30]); //31
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b01100000, qc::Z, qubits[32]); //31+33
+        writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b11000000, qc::Z, qubits[34]); //33+35
     }
     gatesWritten = true;
 }
@@ -203,38 +202,37 @@ void Q18SurfaceEcc::writeDecoding() {
     if (isDecoded) {
         return;
     }
-    const int nQubits = qc.getNqubits();
+    const int nQubits = qcOriginal.getNqubits();
     for (int i = 0; i < nQubits; i++) {
         writeX(dd::Qubit(i + 14 * nQubits), dd::Control{dd::Qubit(i + 8 * nQubits), dd::Control::Type::pos});
         writeX(dd::Qubit(i + 14 * nQubits), dd::Control{dd::Qubit(i + 13 * nQubits), dd::Control::Type::pos});
         writeX(dd::Qubit(i + 14 * nQubits), dd::Control{dd::Qubit(i + 15 * nQubits), dd::Control::Type::pos});
         writeX(dd::Qubit(i + 14 * nQubits), dd::Control{dd::Qubit(i + 20 * nQubits), dd::Control::Type::pos});
         qcMapped.measure(dd::Qubit(i + 14 * nQubits), i);
-        qcMapped.reset(i);
+        qcMapped.reset(static_cast<dd::Qubit>(i));
         writeX(dd::Qubit(i), dd::Control{dd::Qubit(i + 14 * nQubits), dd::Control::Type::pos});
     }
     isDecoded = true;
 }
 
-void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) {
-    if (isDecoded && gate->getType() != qc::Measure) {
+void Q18SurfaceEcc::mapGate(const qc::Operation& gate) {
+    if (isDecoded && gate.getType() != qc::Measure) {
         writeEncoding();
     }
-    const int nQubits = qc.getNqubits();
+    const int nQubits = qcOriginal.getNqubits();
     dd::Qubit i;
 
     //no control gate decomposition is supported
-    if (gate->getNcontrols() && gate->getType() != qc::Measure) {
+    if (gate.getNcontrols() && gate.getType() != qc::Measure) {
         //multi-qubit gates are currently not supported
         gateNotAvailableError(gate);
     } else {
-        qc::NonUnitaryOperation* measureGate;
-        switch (gate->getType()) {
+        switch (gate.getType()) {
             case qc::I:
                 break;
             case qc::X:
-                for (std::size_t t = 0; t < gate->getNtargets(); t++) {
-                    i = gate->getTargets()[t];
+                for (std::size_t t = 0; t < gate.getNtargets(); t++) {
+                    i = gate.getTargets()[t];
                     writeX(dd::Qubit(i + 15 * nQubits));
                     writeX(dd::Qubit(i + 17 * nQubits));
                 }
@@ -242,10 +240,10 @@ void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quan
             case qc::H:
                 //apply H gate to every data qubit
                 //swap circuit along '/' axis
-                for (std::size_t t = 0; t < gate->getNtargets(); t++) {
-                    i                              = gate->getTargets()[t];
-                    std::int_fast8_t data_qubits[] = {1, 3, 5, 6, 8, 10, 13, 15, 17, 18, 20, 22, 25, 27, 29, 30, 32, 34};
-                    for (std::int_fast8_t j: data_qubits) {
+                for (std::size_t t = 0; t < gate.getNtargets(); t++) {
+                    i                                           = gate.getTargets()[t];
+                    std::array<std::int_fast8_t, 18> dataQubits = {1, 3, 5, 6, 8, 10, 13, 15, 17, 18, 20, 22, 25, 27, 29, 30, 32, 34};
+                    for (std::int_fast8_t j: dataQubits) {
                         qcMapped.h(dd::Qubit(i + j * nQubits));
                     }
                     swap(dd::Qubit(i + 1 * nQubits), dd::Qubit(i + 29 * nQubits));
@@ -259,8 +257,8 @@ void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quan
                 break;
             case qc::Y:
                 //Y = Z X
-                for (std::size_t t = 0; t < gate->getNtargets(); t++) {
-                    i = gate->getTargets()[t];
+                for (std::size_t t = 0; t < gate.getNtargets(); t++) {
+                    i = gate.getTargets()[t];
                     writeZ(dd::Qubit(i + 18 * nQubits));
                     writeZ(dd::Qubit(i + 20 * nQubits));
                     writeX(dd::Qubit(i + 15 * nQubits));
@@ -268,8 +266,8 @@ void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quan
                 }
                 break;
             case qc::Z:
-                for (std::size_t t = 0; t < gate->getNtargets(); t++) {
-                    i = gate->getTargets()[t];
+                for (std::size_t t = 0; t < gate.getNtargets(); t++) {
+                    i = gate.getTargets()[t];
                     writeZ(dd::Qubit(i + 18 * nQubits));
                     writeZ(dd::Qubit(i + 20 * nQubits));
                 }
@@ -279,9 +277,12 @@ void Q18SurfaceEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quan
                     measureAndCorrect();
                     writeDecoding();
                 }
-                measureGate = (qc::NonUnitaryOperation*)gate.get();
-                for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
-                    qcMapped.measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
+                if (auto measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
+                    for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
+                        qcMapped.measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
+                    }
+                } else {
+                    throw std::runtime_error("Dynamic cast to NonUnitaryOperation failed.");
                 }
                 break;
             default:

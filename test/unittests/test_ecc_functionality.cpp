@@ -19,16 +19,18 @@ using namespace dd;
 
 class DDECCFunctionalityTest: public ::testing::Test {
 protected:
-    void SetUp() override {
-    }
+    void SetUp() override {}
 
-    void TearDown() override {
-    }
+    void TearDown() override {}
 
-    static void simulateCircuit(qc::QuantumComputation& qc, std::map<std::size_t, double>& finalClassicValues, int nrShots = 5000, bool simulateNoise = false, Qubit targetForNoise = 0, std::uint_fast32_t applyNoiseAfterNOperations = 0) {
-        std::random_device rd;
-        std::mt19937_64    mt(rd());
-
+    static void simulateCircuit(qc::QuantumComputation& qc,
+                                std::map<std::size_t,
+                                         double>&       finalClassicValues,
+                                std::mt19937_64         mt,
+                                int                     nrShots                    = 5000,
+                                bool                    simulateNoise              = false,
+                                Qubit                   targetForNoise             = 0,
+                                std::uint_fast32_t      applyNoiseAfterNOperations = 0) {
         std::uint_fast32_t operationCounter = 0;
         for (int sample = 0; sample < nrShots; sample++) {
             std::map<std::size_t, bool> classicValuesECC{};
@@ -46,12 +48,11 @@ protected:
                         classicValuesECC[classic.at(i)] = (result == '1');
                     }
                 } else if (op->getType() == qc::Reset) {
-                    auto* nu_op   = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
-                    auto  quantum = nu_op->getTargets();
+                    auto*       nu_op   = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
+                    auto const& quantum = nu_op->getTargets();
                     for (signed char qubit: quantum) {
                         dd->incRef(rootEdge);
-                        auto result = dd->measureOneCollapsing(rootEdge, qubit, false, mt);
-                        if (result == '1') {
+                        if (auto result = dd->measureOneCollapsing(rootEdge, qubit, false, mt); result == '1') {
                             auto flipOperation = StandardOperation(nu_op->getNqubits(), qubit, qc::X);
                             auto operation     = dd::getDD(&flipOperation, dd);
                             rootEdge           = dd->multiply(operation, rootEdge);
@@ -86,8 +87,8 @@ protected:
                 }
                 operationCounter++;
             }
-            // Counting the final results
             for (std::size_t i = 0; i < classicValuesECC.size(); i++) {
+                // Counting the final hit in resultReg after each shot
                 auto regName = qc.returnClassicalRegisterName(i);
                 if (regName == "resultReg") {
                     if (finalClassicValues.count(i) == 0) {
@@ -106,30 +107,39 @@ protected:
                                 const std::vector<dd::Qubit>& dataQubits             = {},
                                 int                           insertErrorAfterNGates = 0) {
         double                        tolerance = 0.15;
+        double                        aboutOne  = 1.00000001;
         std::map<std::size_t, double> finalClassicValuesOriginal{};
         bool                          testingSuccessful = true;
+        auto                          shots             = 50;
+        
+        std::mt19937_64 mt(1);
 
-        simulateCircuit(qcOriginal, finalClassicValuesOriginal);
+        std::cout.precision(2);
+
+        simulateCircuit(qcOriginal, finalClassicValuesOriginal, mt);
 
         if (!simulateWithErrors) {
             std::map<std::size_t, double> finalClassicValuesECC{};
-            simulateCircuit(qcECC, finalClassicValuesECC, 100);
-            for (auto const& x: finalClassicValuesOriginal) {
-                assert(x.second <= 1.000001 && finalClassicValuesECC[x.first] <= 1.000001);
-                if (std::abs(x.second - finalClassicValuesECC[x.first]) > tolerance) {
+            simulateCircuit(qcECC, finalClassicValuesECC, mt, shots);
+            for (auto const& [classicalBit, probability]: finalClassicValuesOriginal) {
+                assert(probability <= aboutOne && finalClassicValuesECC[classicalBit] <= aboutOne);
+                if (std::abs(probability - finalClassicValuesECC[classicalBit]) > tolerance) {
                     testingSuccessful = false;
                 }
             }
         } else {
             for (auto const& qubit: dataQubits) {
                 std::map<std::size_t, double> finalClassicValuesECC{};
-                simulateCircuit(qcECC, finalClassicValuesECC, 100, true, qubit, insertErrorAfterNGates);
-                for (auto const& x: finalClassicValuesOriginal) {
-                    assert(x.second <= 1.000001 && finalClassicValuesECC[x.first] <= 1.000001);
-                    if (std::abs(x.second - finalClassicValuesECC[x.first]) > tolerance) {
+                simulateCircuit(qcECC, finalClassicValuesECC, mt, shots, true, qubit, insertErrorAfterNGates);
+                for (auto const& [classicalBit, probability]: finalClassicValuesOriginal) {
+                    assert(probability <= aboutOne && finalClassicValuesECC[classicalBit] <= aboutOne);
+                    if (std::abs(probability - finalClassicValuesECC[classicalBit]) > tolerance) {
                         std::cout << "Simulation failed when applying error to qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates.\n";
-                        std::cout << "Error in bit " << x.first << " original register: " << x.second << " ecc register: " << finalClassicValuesECC[x.first] << std::endl;
+                        std::cout << "Error in bit " << classicalBit << " original register: " << probability << " ecc register: " << finalClassicValuesECC[classicalBit] << std::endl;
                         testingSuccessful = false;
+                    } else {
+                        std::cout << "Diff/tolerance " << std::abs(probability - finalClassicValuesECC[classicalBit]) << "/" << tolerance << " Original register: " << probability << " ecc register: " << finalClassicValuesECC[classicalBit];
+                        std::cout << " Error at qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates." << std::endl;
                     }
                 }
             }
@@ -227,204 +237,239 @@ protected:
 };
 
 TEST_F(DDECCFunctionalityTest, testIdEcc) {
-    bool decomposeMC      = false;
-    bool cliffOnly        = false;
-    int  measureFrequency = 0;
+    int measureFrequency = 0;
 
-    void (*circuitsExpectToPass[9])(qc::QuantumComputation & qc) = {
-            createIdentityCircuit,
-            createXCircuit,
-            createYCircuit,
-            createHCircuit,
-            createHTCircuit,
-            createHZCircuit,
-            createCXCircuit,
-            createCZCircuit,
-            createCYCircuit,
-    };
+    std::vector<void (*)(qc::QuantumComputation & qc)> circuitsExpectToPass;
+    circuitsExpectToPass.push_back(createIdentityCircuit);
+    circuitsExpectToPass.push_back(createIdentityCircuit);
+    circuitsExpectToPass.push_back(createXCircuit);
+    circuitsExpectToPass.push_back(createYCircuit);
+    circuitsExpectToPass.push_back(createHCircuit);
+    circuitsExpectToPass.push_back(createHTCircuit);
+    circuitsExpectToPass.push_back(createHZCircuit);
+    circuitsExpectToPass.push_back(createCXCircuit);
+    circuitsExpectToPass.push_back(createCZCircuit);
+    circuitsExpectToPass.push_back(createCYCircuit);
 
     int circuitCounter = 0;
     for (auto& circuit: circuitsExpectToPass) {
-        std::cout << "Testing circuit " << ++circuitCounter << std::endl;
+        circuitCounter++;
+        std::cout << "Testing circuit " << circuitCounter << std::endl;
         qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
-        Ecc*                    mapper = new IdEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        auto                    mapper = std::make_unique<IdEcc>(qcOriginal, measureFrequency);
         qc::QuantumComputation& qcECC  = mapper->apply();
         EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));
     }
 }
 
 TEST_F(DDECCFunctionalityTest, testQ3Shor) {
-    bool decomposeMC      = false;
-    bool cliffOnly        = false;
-    int  measureFrequency = 0;
+    qc::QuantumComputation qcOriginal{};
+    int                    measureFrequency = 0;
 
-    void (*circuitsExpectToPass[4])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit, createCYCircuit};
-    void (*circuitsExpectToFail[5])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createCZCircuit, createHZCircuit};
+    std::vector<void (*)(qc::QuantumComputation & qc)> circuitsExpectToPass;
+    circuitsExpectToPass.push_back(createIdentityCircuit);
+    circuitsExpectToPass.push_back(createXCircuit);
+    circuitsExpectToPass.push_back(createCXCircuit);
+    circuitsExpectToPass.push_back(createCYCircuit);
+
+    std::vector<void (*)(qc::QuantumComputation & qc)> circuitsExpectToFail;
+    circuitsExpectToFail.push_back(createYCircuit);
+    circuitsExpectToFail.push_back(createHCircuit);
+    circuitsExpectToFail.push_back(createHTCircuit);
+    circuitsExpectToFail.push_back(createCZCircuit);
+    circuitsExpectToFail.push_back(createHZCircuit);
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2};
 
     int insertErrorAfterNGates = 1;
     for (auto& circuit: circuitsExpectToPass) {
-        std::cout << "Testing circuit " << ++circuitCounter << std::endl;
-        qc::QuantumComputation qcOriginal{};
+        circuitCounter++;
+        std::cout << "Testing circuit " << circuitCounter << std::endl;
         circuit(qcOriginal);
-        Ecc*                    mapper = new Q3ShorEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        auto                    mapper = std::make_unique<Q3ShorEcc>(qcOriginal, measureFrequency);
         qc::QuantumComputation& qcECC  = mapper->apply();
         EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, dataQubits, insertErrorAfterNGates));
     }
 
     for (auto& circuit: circuitsExpectToFail) {
-        qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
-        Ecc* mapper = new Q3ShorEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        auto mapper = std::make_unique<Q3ShorEcc>(qcOriginal, measureFrequency);
         EXPECT_ANY_THROW(mapper->apply());
     }
 }
 
 TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
-    bool decomposeMC      = false;
-    bool cliffOnly        = false;
-    int  measureFrequency = 0;
+    qc::QuantumComputation qcOriginal{};
+    int                    measureFrequency = 0;
 
-    void (*circuitsExpectToPass[2])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit};
-    void (*circuitsExpectToFail[7])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit, createCXCircuit, createCZCircuit, createCYCircuit};
+    std::vector<void (*)(qc::QuantumComputation & qc)> circuitsExpectToPass;
+    circuitsExpectToPass.push_back(createIdentityCircuit);
+    circuitsExpectToPass.push_back(createXCircuit);
+
+    std::vector<void (*)(qc::QuantumComputation & qc)> circuitsExpectToFail;
+    circuitsExpectToFail.push_back(createYCircuit);
+    circuitsExpectToFail.push_back(createHCircuit);
+    circuitsExpectToFail.push_back(createHTCircuit);
+    circuitsExpectToFail.push_back(createHZCircuit);
+    circuitsExpectToFail.push_back(createCXCircuit);
+    circuitsExpectToFail.push_back(createCZCircuit);
+    circuitsExpectToFail.push_back(createCYCircuit);
 
     std::vector<dd::Qubit> dataQubits = {0, 1, 2, 3, 4};
 
     int insertErrorAfterNGates = 30;
     for (auto& circuit: circuitsExpectToPass) {
-        qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
-        Ecc*                    mapper = new Q5LaflammeEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        auto                    mapper = std::make_unique<Q5LaflammeEcc>(qcOriginal, measureFrequency);
         qc::QuantumComputation& qcECC  = mapper->apply();
-
         EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, {}, insertErrorAfterNGates));
     }
 
     for (auto& circuit: circuitsExpectToFail) {
-        qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
-        Ecc* mapper = new Q5LaflammeEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        auto mapper = std::make_unique<Q5LaflammeEcc>(qcOriginal, measureFrequency);
         EXPECT_ANY_THROW(mapper->apply());
     }
 }
 
 TEST_F(DDECCFunctionalityTest, testQ7Steane) {
-    bool decomposeMC      = false;
-    bool cliffOnly        = false;
-    int  measureFrequency = 0;
+    qc::QuantumComputation qcOriginal{};
+    int                    measureFrequency = 0;
 
-    void (*circuitsExpectToPass[9])(qc::QuantumComputation & qc) = {
-            createIdentityCircuit,
-            createXCircuit,
-            createYCircuit,
-            createHCircuit,
-            createHTCircuit,
-            createHZCircuit,
-            createCXCircuit,
-            createCZCircuit,
-            createCYCircuit,
-    };
+    std::vector<void (*)(qc::QuantumComputation & qc)> circuitsExpectToPass;
+    circuitsExpectToPass.push_back(createIdentityCircuit);
+    circuitsExpectToPass.push_back(createXCircuit);
+    circuitsExpectToPass.push_back(createYCircuit);
+    circuitsExpectToPass.push_back(createHCircuit);
+    circuitsExpectToPass.push_back(createHTCircuit);
+    circuitsExpectToPass.push_back(createHZCircuit);
+    circuitsExpectToPass.push_back(createCXCircuit);
+    circuitsExpectToPass.push_back(createCZCircuit);
+    circuitsExpectToPass.push_back(createCYCircuit);
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 3, 4, 5, 6};
 
     int insertErrorAfterNGates = 31;
     for (auto& circuit: circuitsExpectToPass) {
-        std::cout << "Testing circuit " << ++circuitCounter << std::endl;
-        qc::QuantumComputation qcOriginal{};
+        circuitCounter++;
+        std::cout << "Testing circuit " << circuitCounter << std::endl;
         circuit(qcOriginal);
-        Ecc*                    mapper = new Q7SteaneEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        auto                    mapper = std::make_unique<Q7SteaneEcc>(qcOriginal, measureFrequency);
         qc::QuantumComputation& qcECC  = mapper->apply();
         EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, dataQubits, insertErrorAfterNGates));
     }
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
-    bool decomposeMC      = false;
-    bool cliffOnly        = false;
-    int  measureFrequency = 0;
+    qc::QuantumComputation qcOriginal{};
+    int                    measureFrequency = 0;
 
-    void (*circuitsExpectToPass[4])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit, createCYCircuit};
-    void (*circuitsExpectToFail[5])(qc::QuantumComputation & qc) = {createYCircuit, createHCircuit, createHTCircuit, createHZCircuit, createCZCircuit};
+    std::vector<void (*)(qc::QuantumComputation & qc)> circuitsExpectToPass;
+    circuitsExpectToPass.push_back(createIdentityCircuit);
+    circuitsExpectToPass.push_back(createXCircuit);
+    circuitsExpectToPass.push_back(createCXCircuit);
+    circuitsExpectToPass.push_back(createCYCircuit);
+
+    std::vector<void (*)(qc::QuantumComputation & qc)> circuitsExpectToFail;
+    circuitsExpectToFail.push_back(createYCircuit);
+    circuitsExpectToFail.push_back(createHCircuit);
+    circuitsExpectToFail.push_back(createHTCircuit);
+    circuitsExpectToFail.push_back(createHZCircuit);
+    circuitsExpectToFail.push_back(createCZCircuit);
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8};
 
     int insertErrorAfterNGates = 1;
     for (auto& circuit: circuitsExpectToPass) {
-        std::cout << "Testing circuit " << ++circuitCounter << std::endl;
-        qc::QuantumComputation qcOriginal{};
+        circuitCounter++;
+        std::cout << "Testing circuit " << circuitCounter << std::endl;
         circuit(qcOriginal);
-        Ecc*                    mapper = new Q9ShorEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        auto                    mapper = std::make_unique<Q9ShorEcc>(qcOriginal, measureFrequency);
         qc::QuantumComputation& qcECC  = mapper->apply();
         EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, dataQubits, insertErrorAfterNGates));
     }
 
     for (auto& circuit: circuitsExpectToFail) {
-        qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
-        Ecc* mapper = new Q9ShorEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        auto mapper = std::make_unique<Q9ShorEcc>(qcOriginal, measureFrequency);
         EXPECT_ANY_THROW(mapper->apply());
     }
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
-    bool decomposeMC      = false;
-    bool cliffOnly        = false;
-    int  measureFrequency = 0;
+    qc::QuantumComputation qcOriginal{};
+    int                    measureFrequency = 0;
 
-    void (*circuitsExpectToPass[8])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createCXCircuit, createYCircuit, createHCircuit, createHZCircuit, createCZCircuit, createCYCircuit};
-    void (*circuitsExpectToFail[1])(qc::QuantumComputation & qc) = {createHTCircuit};
+    std::vector<void (*)(qc::QuantumComputation & qc)> circuitsExpectToPass;
+    circuitsExpectToPass.push_back(createIdentityCircuit);
+    circuitsExpectToPass.push_back(createXCircuit);
+    circuitsExpectToPass.push_back(createCXCircuit);
+    circuitsExpectToPass.push_back(createYCircuit);
+    circuitsExpectToPass.push_back(createHCircuit);
+    circuitsExpectToPass.push_back(createHZCircuit);
+    circuitsExpectToPass.push_back(createCZCircuit);
+    circuitsExpectToPass.push_back(createCYCircuit);
+
+    std::vector<void (*)(qc::QuantumComputation & qc)> circuitsExpectToFail;
+    circuitsExpectToFail.push_back(createHTCircuit);
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8};
 
     int insertErrorAfterNGates = 55;
     for (auto& circuit: circuitsExpectToPass) {
-        std::cout << "Testing circuit " << ++circuitCounter << std::endl;
-        qc::QuantumComputation qcOriginal{};
+        circuitCounter++;
+        std::cout << "Testing circuit " << circuitCounter << std::endl;
         circuit(qcOriginal);
-        Ecc*                    mapper = new Q9SurfaceEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        auto                    mapper = std::make_unique<Q9SurfaceEcc>(qcOriginal, measureFrequency);
         qc::QuantumComputation& qcECC  = mapper->apply();
         EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, dataQubits, insertErrorAfterNGates));
     }
 
     for (auto& circuit: circuitsExpectToFail) {
-        qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
-        Ecc* mapper = new Q9SurfaceEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        auto mapper = std::make_unique<Q9SurfaceEcc>(qcOriginal, measureFrequency);
         EXPECT_ANY_THROW(mapper->apply());
     }
 }
 
 TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
-    bool decomposeMC      = false;
-    bool cliffOnly        = false;
-    int  measureFrequency = 0;
+    qc::QuantumComputation qcOriginal{};
+    int                    measureFrequency = 0;
 
-    void (*circuitsExpectToPass[5])(qc::QuantumComputation & qc) = {createIdentityCircuit, createXCircuit, createYCircuit, createHCircuit, createHZCircuit};
-    void (*circuitsExpectToFail[4])(qc::QuantumComputation & qc) = {createHTCircuit, createCXCircuit, createCZCircuit, createCYCircuit};
+    std::vector<void (*)(qc::QuantumComputation & qc)> circuitsExpectToPass;
+    circuitsExpectToPass.push_back(createIdentityCircuit);
+    circuitsExpectToPass.push_back(createXCircuit);
+    circuitsExpectToPass.push_back(createYCircuit);
+    circuitsExpectToPass.push_back(createHCircuit);
+    circuitsExpectToPass.push_back(createHZCircuit);
+
+    std::vector<void (*)(qc::QuantumComputation & qc)> circuitsExpectToFail;
+    circuitsExpectToFail.push_back(createHTCircuit);
+    circuitsExpectToFail.push_back(createCXCircuit);
+    circuitsExpectToFail.push_back(createCZCircuit);
+    circuitsExpectToFail.push_back(createCYCircuit);
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
 
     int insertErrorAfterNGates = 127;
     for (auto& circuit: circuitsExpectToPass) {
-        std::cout << "Testing circuit " << ++circuitCounter << std::endl;
-        qc::QuantumComputation qcOriginal{};
+        circuitCounter++;
+        std::cout << "Testing circuit " << circuitCounter << std::endl;
         circuit(qcOriginal);
-        Ecc*                    mapper = new Q18SurfaceEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        auto                    mapper = std::make_unique<Q18SurfaceEcc>(qcOriginal, measureFrequency);
         qc::QuantumComputation& qcECC  = mapper->apply();
         EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, dataQubits, insertErrorAfterNGates));
     }
 
     for (auto& circuit: circuitsExpectToFail) {
-        qc::QuantumComputation qcOriginal{};
         circuit(qcOriginal);
-        Ecc* mapper = new Q18SurfaceEcc(qcOriginal, measureFrequency, decomposeMC, cliffOnly);
+        auto mapper = std::make_unique<Q18SurfaceEcc>(qcOriginal, measureFrequency);
         EXPECT_ANY_THROW(mapper->apply());
     }
 }

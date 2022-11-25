@@ -6,19 +6,18 @@
 #include "eccs/Q5LaflammeEcc.hpp"
 
 //5 data qubits, 4 for measuring
-Q5LaflammeEcc::Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly):
-    Ecc({ID::Q5Laflamme, 5, 4, Q5LaflammeEcc::getName()}, qc, measureFq, decomposeMC, cliffOnly) {}
+Q5LaflammeEcc::Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq):
+    Ecc({ID::Q5Laflamme, 5, 4, Q5LaflammeEcc::getName()}, qc, measureFq) {}
 
 void Q5LaflammeEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
-    qc.stripIdleQubits(true, false);
-    statistics.nInputQubits         = qc.getNqubits();
-    statistics.nInputClassicalBits  = (int)qc.getNcbits();
-    statistics.nOutputQubits        = qc.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
+    qcOriginal.stripIdleQubits(true, false);
+    statistics.nInputQubits         = qcOriginal.getNqubits();
+    statistics.nInputClassicalBits  = (int)qcOriginal.getNcbits();
+    statistics.nOutputQubits        = qcOriginal.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
     statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits;
     qcMapped.addQubitRegister(statistics.nOutputQubits);
-    //    qcMapped.addClassicalRegister(statistics.nInputClassicalBits);
-    auto cRegs = qc.getCregs();
+    auto cRegs = qcOriginal.getCregs();
     for (auto const& [regName, regBits]: cRegs) {
         qcMapped.addClassicalRegister(regBits.second, regName);
     }
@@ -32,9 +31,9 @@ void Q5LaflammeEcc::writeEncoding() {
     }
     isDecoded = false;
     measureAndCorrect();
-    const int nQubits  = qc.getNqubits();
-    const int ancStart = nQubits * ecc.nRedundantQubits;
-    const int clEncode = qc.getNcbits() + 4; //encode
+    const auto nQubits  = qcOriginal.getNqubits();
+    const auto ancStart = nQubits * ecc.nRedundantQubits;
+    const auto clEncode = qcOriginal.getNcbits() + 4; //encode
 
     for (int i = 0; i < nQubits; i++) {
         qcMapped.reset(dd::Qubit(ancStart));
@@ -63,25 +62,25 @@ void Q5LaflammeEcc::measureAndCorrect() {
     if (isDecoded) {
         return;
     }
-    const int nQubits    = qc.getNqubits();
-    const int ancStart   = nQubits * ecc.nRedundantQubits;
-    const int clAncStart = qc.getNcbits();
+    const auto nQubits    = static_cast<dd::Qubit>(qcOriginal.getNqubits());
+    const auto ancStart   = static_cast<dd::Qubit>(nQubits * ecc.nRedundantQubits);
+    const auto clAncStart = static_cast<dd::Qubit>(qcOriginal.getNcbits());
 
-    for (int i = 0; i < nQubits; i++) {
-        int q[5] = {};
-        for (int j = 0; j < 5; j++) {
-            q[j] = i + j * nQubits;
+    for (dd::Qubit i = 0; i < nQubits; i++) {
+        std::array<dd::Qubit, 5> qubits = {};
+        for (dd::Qubit j = 0; j < 5; j++) {
+            qubits[j] = static_cast<dd::Qubit>(i + j * nQubits);
         }
 
         qcMapped.reset(ancStart);
-        qcMapped.reset(ancStart + 1);
-        qcMapped.reset(ancStart + 2);
-        qcMapped.reset(ancStart + 3);
+        qcMapped.reset(static_cast<dd::Qubit>(ancStart + 1));
+        qcMapped.reset(static_cast<dd::Qubit>(ancStart + 2));
+        qcMapped.reset(static_cast<dd::Qubit>(ancStart + 3));
 
         qcMapped.h(ancStart);
-        qcMapped.h(ancStart + 1);
-        qcMapped.h(ancStart + 2);
-        qcMapped.h(ancStart + 3);
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 1));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 2));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 3));
 
         auto c0 = dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos};
         auto c1 = dd::Control{dd::Qubit(ancStart + 1), dd::Control::Type::pos};
@@ -94,59 +93,59 @@ void Q5LaflammeEcc::measureAndCorrect() {
         //K3: XIXZZ
         //K4: ZXIXZ
 
-        writeX(q[0], c0);
+        writeX(qubits[0], c0);
 
-        writeZ(q[1], c0);
+        writeZ(qubits[1], c0);
         //controlled-id(i, c1)
 
-        writeZ(q[2], c0);
-        writeX(q[1], c1);
-        writeX(q[0], c2);
+        writeZ(qubits[2], c0);
+        writeX(qubits[1], c1);
+        writeX(qubits[0], c2);
 
-        writeX(q[3], c0);
-        writeZ(q[2], c1);
+        writeX(qubits[3], c0);
+        writeZ(qubits[2], c1);
         //controlled-id(i+1, c2)
-        writeZ(q[0], c3);
+        writeZ(qubits[0], c3);
 
         //controlled-id(i+4, c0)
-        writeZ(q[3], c1);
-        writeX(q[2], c2);
-        writeX(q[1], c3);
+        writeZ(qubits[3], c1);
+        writeX(qubits[2], c2);
+        writeX(qubits[1], c3);
 
-        writeX(q[4], c1);
-        writeZ(q[3], c2);
+        writeX(qubits[4], c1);
+        writeZ(qubits[3], c2);
         //controlled-id(i+2, c3)
 
-        writeZ(q[4], c2);
-        writeX(q[3], c3);
+        writeZ(qubits[4], c2);
+        writeX(qubits[3], c3);
 
-        writeZ(q[4], c3);
+        writeZ(qubits[4], c3);
 
         qcMapped.h(ancStart);
-        qcMapped.h(ancStart + 1);
-        qcMapped.h(ancStart + 2);
-        qcMapped.h(ancStart + 3);
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 1));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 2));
+        qcMapped.h(static_cast<dd::Qubit>(ancStart + 3));
 
         qcMapped.measure(ancStart, clAncStart);
-        qcMapped.measure(ancStart + 1, clAncStart + 1);
-        qcMapped.measure(ancStart + 2, clAncStart + 2);
-        qcMapped.measure(ancStart + 3, clAncStart + 3);
+        qcMapped.measure(static_cast<dd::Qubit>(ancStart + 1), clAncStart + 1);
+        qcMapped.measure(static_cast<dd::Qubit>(ancStart + 2), clAncStart + 2);
+        qcMapped.measure(static_cast<dd::Qubit>(ancStart + 3), clAncStart + 3);
 
-        writeClassicalControlledCorrect(1, q[1], qc::X);
-        writeClassicalControlledCorrect(2, q[4], qc::Z);
-        writeClassicalControlledCorrect(3, q[2], qc::X);
-        writeClassicalControlledCorrect(4, q[2], qc::Z);
-        writeClassicalControlledCorrect(5, q[0], qc::Z);
-        writeClassicalControlledCorrect(6, q[3], qc::X);
-        writeClassicalControlledCorrect(7, q[2], qc::Y);
-        writeClassicalControlledCorrect(8, q[0], qc::X);
-        writeClassicalControlledCorrect(9, q[3], qc::Z);
-        writeClassicalControlledCorrect(10, q[1], qc::Z);
-        writeClassicalControlledCorrect(11, q[1], qc::Y);
-        writeClassicalControlledCorrect(12, q[4], qc::X);
-        writeClassicalControlledCorrect(13, q[0], qc::Y);
-        writeClassicalControlledCorrect(14, q[4], qc::Y);
-        writeClassicalControlledCorrect(15, q[3], qc::Y);
+        writeClassicalControlledCorrect(1, qubits[1], qc::X);
+        writeClassicalControlledCorrect(2, qubits[4], qc::Z);
+        writeClassicalControlledCorrect(3, qubits[2], qc::X);
+        writeClassicalControlledCorrect(4, qubits[2], qc::Z);
+        writeClassicalControlledCorrect(5, qubits[0], qc::Z);
+        writeClassicalControlledCorrect(6, qubits[3], qc::X);
+        writeClassicalControlledCorrect(7, qubits[2], qc::Y);
+        writeClassicalControlledCorrect(8, qubits[0], qc::X);
+        writeClassicalControlledCorrect(9, qubits[3], qc::Z);
+        writeClassicalControlledCorrect(10, qubits[1], qc::Z);
+        writeClassicalControlledCorrect(11, qubits[1], qc::Y);
+        writeClassicalControlledCorrect(12, qubits[4], qc::X);
+        writeClassicalControlledCorrect(13, qubits[0], qc::Y);
+        writeClassicalControlledCorrect(14, qubits[4], qc::Y);
+        writeClassicalControlledCorrect(15, qubits[3], qc::Y);
     }
 }
 
@@ -164,9 +163,9 @@ void Q5LaflammeEcc::writeDecoding() {
     if (isDecoded) {
         return;
     }
-    const int    nQubits             = qc.getNqubits();
-    const int    clAncStart          = static_cast<int>(qc.getNcbits());
-    unsigned int correction_needed[] = {1, 2, 4, 7, 8, 11, 13, 14}; //values with odd amount of '1' bits
+    const int          nQubits           = qcOriginal.getNqubits();
+    const auto         clAncStart        = static_cast<int>(qcOriginal.getNcbits());
+    std::array<int, 8> correction_needed = {1, 2, 4, 7, 8, 11, 13, 14}; //values with odd amount of '1' bits
 
     for (int i = 0; i < nQubits; i++) {
         //#|####
@@ -185,24 +184,23 @@ void Q5LaflammeEcc::writeDecoding() {
     isDecoded = true;
 }
 
-void Q5LaflammeEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) {
-    if (isDecoded && gate.get()->getType() != qc::Measure && gate.get()->getType() != qc::H) {
+void Q5LaflammeEcc::mapGate(const qc::Operation& gate) {
+    if (isDecoded && gate.getType() != qc::Measure && gate.getType() != qc::H) {
         writeEncoding();
     }
-    const int                nQubits     = qc.getNqubits();
-    qc::NonUnitaryOperation* measureGate = nullptr;
-    switch (gate.get()->getType()) {
+    const auto nQubits = qcOriginal.getNqubits();
+    switch (gate.getType()) {
         case qc::I: break;
         case qc::X:
         case qc::Y:
         case qc::Z:
-            for (std::size_t t = 0; t < gate.get()->getNtargets(); t++) {
-                int i = gate.get()->getTargets()[t];
-                if (gate.get()->getNcontrols()) {
+            for (std::size_t t = 0; t < gate.getNtargets(); t++) {
+                auto i = gate.getTargets()[t];
+                if (gate.getNcontrols()) {
                     gateNotAvailableError(gate);
                 } else {
                     for (int j = 0; j < 5; j++) {
-                        writeGeneric(i + j * nQubits, gate.get()->getType());
+                        writeGeneric(static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
                     }
                 }
             }
@@ -212,10 +210,14 @@ void Q5LaflammeEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, qc::Quan
                 measureAndCorrect();
                 writeDecoding();
             }
-            measureGate = (qc::NonUnitaryOperation*)gate.get();
-            for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
-                qcMapped.measure(measureGate->getClassics()[j], measureGate->getTargets()[j]);
+            if (auto measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
+                for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
+                    qcMapped.measure(static_cast<dd::Qubit>(measureGate->getClassics()[j]), measureGate->getTargets()[j]);
+                }
+            } else {
+                throw std::runtime_error("Dynamic cast to NonUnitaryOperation failed.");
             }
+
             break;
         default:
             gateNotAvailableError(gate);

@@ -11,9 +11,9 @@
 
 class Q18SurfaceEcc: public Ecc {
 public:
-    Q18SurfaceEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly);
+    Q18SurfaceEcc(qc::QuantumComputation& qc, int measureFq);
 
-    static const std::string getName() {
+    static std::string getName() {
         return "Q18Surface";
     }
 
@@ -26,7 +26,7 @@ protected:
 
     void writeDecoding() override;
 
-    void mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) override;
+    void mapGate(const qc::Operation& gate) override;
 };
 
 #endif //QFR_Q18SurfaceEcc_HPP

@@ -6,7 +6,7 @@
 #ifndef QFR_EccStatistics_HPP
 #define QFR_EccStatistics_HPP
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <string>
 
 class EccStatistics {
@@ -20,7 +20,7 @@ public:
 
     std::string outputName;
 
-    double getGateOverhead() {
+    [[nodiscard]] double getGateOverhead() const {
         return (double)nOutputGates / (double)nInputGates;
     }
 };

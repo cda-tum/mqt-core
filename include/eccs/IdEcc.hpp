@@ -11,9 +11,9 @@
 
 class IdEcc: public Ecc {
 public:
-    IdEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly);
+    IdEcc(qc::QuantumComputation& qc, int measureFq);
 
-    static const std::string getName() {
+    static std::string getName() {
         return "Id";
     }
 
@@ -24,7 +24,7 @@ protected:
 
     void writeDecoding() override;
 
-    void mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) override;
+    void mapGate(const qc::Operation& gate) override;
 };
 
 #endif //QFR_IdEcc_HPP

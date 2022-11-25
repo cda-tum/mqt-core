@@ -11,7 +11,7 @@
 
 class Ecc {
 public:
-    enum ID {
+    enum class ID {
         Id,
         Q3Shor,
         Q9Shor,
@@ -30,35 +30,18 @@ public:
 
     const Info ecc;
 
-    Ecc(Info ecc, qc::QuantumComputation& qc, int measureFrequency, bool decomposeMC, bool cliffOnly);
+    Ecc(Info ecc, qc::QuantumComputation& qc, int measureFrequency);
     virtual ~Ecc() = default;
 
     qc::QuantumComputation& apply();
 
-    //[[maybe_unused]] virtual std::ostream& printResult(std::ostream& out);
-
-    //virtual void dumpResult(const std::string& outputFilename);
-
-    //    virtual void dumpResult(const std::string& outputFilename, qc::Format format) {
-    //        size_t slash          = outputFilename.find_last_of('/');
-    //        size_t dot            = outputFilename.find_last_of('.');
-    //        statistics.outputName = outputFilename.substr(slash + 1, dot - slash - 1);
-    //        qcMapped.dump(outputFilename, format);
-    //    }
-    //
-    //    virtual void dumpResult(std::ostream& os, qc::Format format) {
-    //        qcMapped.dump(os, format);
-    //    }
-
 protected:
-    qc::QuantumComputation& qc;
+    qc::QuantumComputation& qcOriginal;
     qc::QuantumComputation  qcMapped;
     EccStatistics           statistics{};
     const int               measureFrequency;
-    bool                    isDecoded;
-    //bool                    decomposeMultiControlledGates;
-    //bool                    cliffordGatesOnly;
-    bool gatesWritten;
+    bool                    isDecoded    = true;
+    bool                    gatesWritten = false;
 
     virtual void initMappedCircuit();
 
@@ -68,19 +51,26 @@ protected:
 
     virtual void writeDecoding() = 0;
 
-    virtual void mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) = 0;
+    virtual void mapGate(const qc::Operation& gate) = 0;
 
-    void gateNotAvailableError(const std::unique_ptr<qc::Operation>& gate);
+    inline void gateNotAvailableError(const qc::Operation& gate) const {
+        throw qc::QFRException(std::string("Gate ") + gate.getName() + " not supported to encode in error code " + ecc.name + "!");
+    }
 
     void writeToffoli(int target, int c1, bool p1, int c2, bool p2);
 
-    void writeGeneric(dd::Qubit target, qc::OpType type);
-    void writeGeneric(dd::Qubit target, const dd::Control& control, qc::OpType type);
-    void writeGeneric(dd::Qubit target, const dd::Controls& controls, qc::OpType type);
+    void                  writeGeneric(dd::Qubit target, qc::OpType type);
+    [[maybe_unused]] void writeGeneric(dd::Qubit target, const dd::Control& control, qc::OpType type);
+    void                  writeGeneric(dd::Qubit target, const dd::Controls& controls, qc::OpType type);
+
+    inline void                  writeGeneric(int target, qc::OpType type) { (writeGeneric(static_cast<dd::Qubit>(target), type)); }
+    [[maybe_unused]] inline void writeGeneric(int target, const dd::Control& control, qc::OpType type) { (writeGeneric(static_cast<dd::Qubit>(target), control, type)); }
+    inline void                  writeGeneric(int target, const dd::Controls& controls, qc::OpType type) { (writeGeneric(static_cast<dd::Qubit>(target), controls, type)); }
 
     void writeX(dd::Qubit target);
     void writeX(dd::Qubit target, const dd::Control& control);
     void writeX(dd::Qubit target, const dd::Controls& controls);
+    void writeX(int target, const dd::Control& control);
 
     void writeY(dd::Qubit target);
     void writeY(dd::Qubit target, const dd::Control& control);
@@ -97,8 +87,8 @@ protected:
     void writeClassicalControl(dd::Qubit control, int qubitCount, unsigned int value, qc::OpType opType, int target);
 
     //static, since some codes need to store those functions into function pointers
-    static void writeXstatic(dd::Qubit target, dd::Control control, qc::QuantumComputation* qcMapped, bool cliffordGatesOnly);
-    static void writeZstatic(dd::Qubit target, dd::Control control, qc::QuantumComputation* qcMapped, bool cliffordGatesOnly);
+    static void writeXstatic(dd::Qubit target, dd::Control control, qc::QuantumComputation* qcMapped);
+    static void writeZstatic(dd::Qubit target, dd::Control control, qc::QuantumComputation* qcMapped);
 };
 
 #endif //QFR_Ecc_HPP

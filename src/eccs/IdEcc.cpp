@@ -5,23 +5,23 @@
 
 #include "eccs/IdEcc.hpp"
 
-IdEcc::IdEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly):
-    Ecc({ID::Id, 1, 0, IdEcc::getName()}, qc, measureFq, decomposeMC, cliffOnly) {}
+IdEcc::IdEcc(qc::QuantumComputation& qc, int measureFq):
+    Ecc({ID::Id, 1, 0, IdEcc::getName()}, qc, measureFq) {}
 
-void IdEcc::writeEncoding() {}
+void IdEcc::writeEncoding() {
+    //Not necessary for dummy ecc
+}
 
-void IdEcc::measureAndCorrect() {}
+void IdEcc::measureAndCorrect() {
+    //Not necessary for dummy ecc
+}
 
-void IdEcc::writeDecoding() {}
+void IdEcc::writeDecoding() {
+    //Not necessary for dummy ecc
+}
 
-void IdEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, [[maybe_unused]] qc::QuantumComputation& qc) {
-    qc::NonUnitaryOperation* measureGate;
-
-    //gates have already been written to 'qcMapped' in the constructor
-    /*if (cliffordGatesOnly) {
-        gateNotAvailableError(gate);
-    }*/
-    switch (gate->getType()) {
+void IdEcc::mapGate(const qc::Operation& gate) {
+    switch (gate.getType()) {
         case qc::H:
         case qc::X:
         case qc::Y:
@@ -30,12 +30,15 @@ void IdEcc::mapGate(const std::unique_ptr<qc::Operation>& gate, [[maybe_unused]]
         case qc::S:
         case qc::T:
         case qc::Tdag:
-            qcMapped.emplace_back<dd::StandardOperation>(qc.getNqubits(), gate->getControls(), gate->getTargets(), gate->getType());
+            qcMapped.emplace_back<dd::StandardOperation>(qcOriginal.getNqubits(), gate.getControls(), gate.getTargets(), gate.getType());
             break;
         case qc::Measure:
-            measureGate = (qc::NonUnitaryOperation*)gate.get();
-            for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
-                qcMapped.measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
+            if (auto measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
+                for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
+                    qcMapped.measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
+                }
+            } else {
+                throw std::runtime_error("Dynamic cast to NonUnitaryOperation failed.");
             }
             break;
         default:

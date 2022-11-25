@@ -9,13 +9,13 @@
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
 
-//This code has been described in https://arxiv.org/pdf/1608.05053.pdf
+//Reference to this ecc in https://arxiv.org/pdf/1608.05053.pdf
 
 class Q9SurfaceEcc: public Ecc {
 public:
-    Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq, bool decomposeMC, bool cliffOnly);
+    Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq);
 
-    static const std::string getName() {
+    static std::string getName() {
         return "Q9Surface";
     }
 
@@ -28,7 +28,7 @@ protected:
 
     void writeDecoding() override;
 
-    void mapGate(const std::unique_ptr<qc::Operation>& gate, qc::QuantumComputation& qc) override;
+    void mapGate(const qc::Operation& gate) override;
 };
 
 #endif //QFR_Q9SurfaceEcc_HPP
