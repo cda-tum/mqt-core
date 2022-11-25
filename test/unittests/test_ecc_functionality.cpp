@@ -111,7 +111,7 @@ protected:
         std::map<std::size_t, double> finalClassicValuesOriginal{};
         bool                          testingSuccessful = true;
         auto                          shots             = 50;
-        
+
         std::mt19937_64 mt(1);
 
         std::cout.precision(2);
