@@ -229,7 +229,7 @@ namespace dd {
                 if (e.w.r == &ComplexTable<>::zero) {
                     os << "0";
                 } else if (e.w.r == &ComplexTable<>::sqrt2_2) {
-                    os << u8"\u221a\u00bd";
+                    os << "\xe2\x88\x9a\xc2\xbd";
                 } else if (e.w.r == &ComplexTable<>::one) {
                     os << "1";
                 } else {
@@ -239,7 +239,7 @@ namespace dd {
                 if (e.w.i == &ComplexTable<>::zero) {
                     os << "0";
                 } else if (e.w.i == &ComplexTable<>::sqrt2_2) {
-                    os << u8"\u221a\u00bd";
+                    os << "\xe2\x88\x9a\xc2\xbd";
                 } else if (e.w.i == &ComplexTable<>::one) {
                     os << "1";
                 } else {
@@ -512,7 +512,7 @@ namespace dd {
                 if (to.w.r == &ComplexTable<>::zero) {
                     os << "0";
                 } else if (to.w.r == &ComplexTable<>::sqrt2_2) {
-                    os << u8"\u221a\u00bd";
+                    os << "\xe2\x88\x9a\xc2\xbd";
                 } else if (to.w.r == &ComplexTable<>::one) {
                     os << "1";
                 } else {
@@ -522,7 +522,7 @@ namespace dd {
                 if (to.w.i == &ComplexTable<>::zero) {
                     os << "0";
                 } else if (to.w.i == &ComplexTable<>::sqrt2_2) {
-                    os << u8"\u221a\u00bd";
+                    os << "\xe2\x88\x9a\xc2\xbd";
                 } else if (to.w.i == &ComplexTable<>::one) {
                     os << "1";
                 } else {
