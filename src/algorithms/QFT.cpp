@@ -37,16 +37,13 @@ namespace qc {
                 for (dd::QubitCount j = 1; j <= i; ++j) {
                     const auto d = static_cast<dd::Qubit>(precision - j);
                     if (j == i) {
-                        std::unique_ptr<qc::Operation> op = std::make_unique<StandardOperation>(nqubits, 0, S);
-                        emplace_back<ClassicControlledOperation>(op, std::pair{static_cast<dd::Qubit>(d), 1U}, 1);
+                        classicControlled(S, 0, {d, 1U}, 1U);
                     } else if (j == i - 1) {
-                        std::unique_ptr<qc::Operation> op = std::make_unique<StandardOperation>(nqubits, 0, T);
-                        emplace_back<ClassicControlledOperation>(op, std::pair{static_cast<dd::Qubit>(d), 1U}, 1);
+                        classicControlled(T, 0, {d, 1U}, 1U);
                     } else {
-                        auto                           powerOfTwo = std::pow(2.L, i - j + 1);
-                        auto                           lambda     = static_cast<dd::fp>(dd::PI / powerOfTwo);
-                        std::unique_ptr<qc::Operation> op         = std::make_unique<StandardOperation>(nqubits, 0, Phase, lambda);
-                        emplace_back<ClassicControlledOperation>(op, std::pair{static_cast<dd::Qubit>(d), 1U}, 1);
+                        auto powerOfTwo = std::pow(2.L, i - j + 1);
+                        auto lambda     = static_cast<dd::fp>(dd::PI / powerOfTwo);
+                        classicControlled(Phase, 0, {d, 1U}, 1U, lambda);
                     }
                 }
 

@@ -83,9 +83,8 @@ namespace qc {
 
                 // hybrid quantum-classical inverse QFT
                 for (dd::QubitCount j = 0; j < i; j++) {
-                    auto                           iQFT_lambda = -dd::PI / static_cast<double>(1ULL << (i - j));
-                    std::unique_ptr<qc::Operation> op          = std::make_unique<StandardOperation>(nqubits, 1, Phase, iQFT_lambda);
-                    emplace_back<ClassicControlledOperation>(op, std::pair{static_cast<dd::Qubit>(j), 1U}, 1);
+                    auto iQFT_lambda = -dd::PI / static_cast<double>(1ULL << (i - j));
+                    classicControlled(Phase, 1, {j, 1U}, 1U, iQFT_lambda);
                 }
                 h(1);
 
