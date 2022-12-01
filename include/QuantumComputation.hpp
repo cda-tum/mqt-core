@@ -634,15 +634,15 @@ namespace qc {
             emplace_back<NonUnitaryOperation>(getNqubits(), targets, qc::Barrier);
         }
 
-        void classicControlled(const OpType op, const dd::Qubit target, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, const unsigned int expectedValue = 1U) {
-            classicControlled(op, target, dd::Controls{}, controlRegister, expectedValue);
+        void classicControlled(const OpType op, const dd::Qubit target, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, const unsigned int expectedValue = 1U, const dd::fp lambda = 0., const dd::fp phi = 0., const dd::fp theta = 0.) {
+            classicControlled(op, target, dd::Controls{}, controlRegister, expectedValue, lambda, phi, theta);
         }
-        void classicControlled(const OpType op, const dd::Qubit target, const dd::Control control, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, const unsigned int expectedValue = 1U) {
-            classicControlled(op, target, dd::Controls{control}, controlRegister, expectedValue);
+        void classicControlled(const OpType op, const dd::Qubit target, const dd::Control control, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, const unsigned int expectedValue = 1U, const dd::fp lambda = 0., const dd::fp phi = 0., const dd::fp theta = 0.) {
+            classicControlled(op, target, dd::Controls{control}, controlRegister, expectedValue, lambda, phi, theta);
         }
-        void classicControlled(const OpType op, const dd::Qubit target, const dd::Controls& controls, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, const unsigned int expectedValue = 1U) {
+        void classicControlled(const OpType op, const dd::Qubit target, const dd::Controls& controls, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, const unsigned int expectedValue = 1U, const dd::fp lambda = 0., const dd::fp phi = 0., const dd::fp theta = 0.) {
             checkQubitRange(target, controls);
-            std::unique_ptr<Operation> gate = std::make_unique<StandardOperation>(getNqubits(), controls, target, op);
+            std::unique_ptr<Operation> gate = std::make_unique<StandardOperation>(getNqubits(), controls, target, op, lambda, phi, theta);
             emplace_back<ClassicControlledOperation>(std::move(gate), controlRegister, expectedValue);
         }
 
