@@ -634,6 +634,18 @@ namespace qc {
             emplace_back<NonUnitaryOperation>(getNqubits(), targets, qc::Barrier);
         }
 
+        void classicControlled(const OpType op, const dd::Qubit target, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, const unsigned int expectedValue = 1U) {
+            classicControlled(op, target, dd::Controls{}, controlRegister, expectedValue);
+        }
+        void classicControlled(const OpType op, const dd::Qubit target, const dd::Control control, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, const unsigned int expectedValue = 1U) {
+            classicControlled(op, target, dd::Controls{control}, controlRegister, expectedValue);
+        }
+        void classicControlled(const OpType op, const dd::Qubit target, const dd::Controls& controls, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, const unsigned int expectedValue = 1U) {
+            checkQubitRange(target, controls);
+            std::unique_ptr<Operation> gate = std::make_unique<StandardOperation>(getNqubits(), controls, target, op);
+            emplace_back<ClassicControlledOperation>(std::move(gate), controlRegister, expectedValue);
+        }
+
         /// strip away qubits with no operations applied to them and which do not pop up in the output permutation
         /// \param force if true, also strip away idle qubits occurring in the output permutation
         void stripIdleQubits(bool force = false, bool reduceIOpermutations = true);
