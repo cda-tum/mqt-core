@@ -20,6 +20,11 @@ namespace qc {
             type    = Compound;
         }
 
+        explicit CompoundOperation(dd::QubitCount nq, std::vector<std::unique_ptr<Operation>>&& operations):
+            CompoundOperation(nq) {
+            ops = std::move(operations);
+        }
+
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {
             auto cloned_co = std::make_unique<CompoundOperation>(nqubits);
             cloned_co->reserve(ops.size());

@@ -718,6 +718,24 @@ namespace qc {
         virtual void dumpOpenQASM(std::ostream& of);
         virtual void dumpTensorNetwork(std::ostream& of) const;
 
+        // this convenience method allows to turn a circuit into a compound operation.
+        std::unique_ptr<CompoundOperation> asCompoundOperation() {
+            return std::make_unique<CompoundOperation>(getNqubits(), std::move(ops));
+        }
+
+        // this convenience method allows to turn a circuit into an operation.
+        std::unique_ptr<Operation> asOperation() {
+            if (ops.empty()) {
+                return {};
+            }
+            if (ops.size() == 1) {
+                auto op = std::move(ops.front());
+                ops.clear();
+                return op;
+            }
+            return asCompoundOperation();
+        }
+
         virtual void reset() {
             ops.clear();
             nqubits   = 0;
@@ -780,6 +798,11 @@ namespace qc {
 
         template<class T>
         void emplace_back(std::unique_ptr<T>& op) {
+            ops.emplace_back(std::move(op));
+        }
+
+        template<class T>
+        void emplace_back(std::unique_ptr<T>&& op) {
             ops.emplace_back(std::move(op));
         }
 

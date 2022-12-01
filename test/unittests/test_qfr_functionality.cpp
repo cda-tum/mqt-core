@@ -1832,3 +1832,21 @@ TEST_F(QFRFunctionality, SingleQubitGateCount) {
     EXPECT_EQ(qc.getNindividualOps(), 5U);
     EXPECT_EQ(qc.getNsingleQubitOps(), 3U);
 }
+
+TEST_F(QFRFunctionality, CircuitToOperation) {
+    QuantumComputation qc(1);
+    EXPECT_EQ(qc.asOperation(), nullptr);
+    qc.x(0);
+    const auto& op = qc.asOperation();
+    EXPECT_EQ(op->getType(), qc::X);
+    EXPECT_EQ(op->getNqubits(), 1U);
+    EXPECT_EQ(op->getNcontrols(), 0U);
+    EXPECT_EQ(op->getTargets().front(), 0U);
+    EXPECT_TRUE(qc.empty());
+    qc.x(0);
+    qc.h(0);
+    const auto& op2 = qc.asOperation();
+    EXPECT_EQ(op2->getType(), qc::Compound);
+    EXPECT_EQ(op2->getNqubits(), 1U);
+    EXPECT_TRUE(qc.empty());
+}
