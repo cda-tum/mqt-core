@@ -260,6 +260,7 @@ namespace qc {
 
         [[nodiscard]] std::size_t getNindividualOps() const;
         [[nodiscard]] std::size_t getNsingleQubitOps() const;
+        [[nodiscard]] std::size_t getDepth() const;
 
         [[nodiscard]] std::string                         getQubitRegister(dd::Qubit physicalQubitIndex) const;
         [[nodiscard]] std::string                         getClassicalRegister(std::size_t classicalIndex) const;

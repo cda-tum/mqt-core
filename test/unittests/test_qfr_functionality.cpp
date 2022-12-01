@@ -1833,6 +1833,45 @@ TEST_F(QFRFunctionality, SingleQubitGateCount) {
     EXPECT_EQ(qc.getNsingleQubitOps(), 3U);
 }
 
+TEST_F(QFRFunctionality, CircuitDepthEmptyCircuit) {
+    const QuantumComputation qc(2);
+    EXPECT_EQ(qc.getDepth(), 0U);
+}
+
+TEST_F(QFRFunctionality, CircuitDepthStandardOperations) {
+    QuantumComputation qc(2);
+    qc.h(0);
+    qc.h(1);
+    qc.x(0, 1_pc);
+
+    EXPECT_EQ(qc.getDepth(), 2U);
+}
+
+TEST_F(QFRFunctionality, CircuitDepthNonUnitaryOperations) {
+    QuantumComputation qc(2);
+    qc.h(0);
+    qc.h(1);
+    qc.x(0, 1_pc);
+    qc.barrier({0, 1});
+    qc.measure(0, 0);
+    qc.measure(1, 1);
+
+    EXPECT_EQ(qc.getDepth(), 3U);
+}
+
+// Test with compound operation
+TEST_F(QFRFunctionality, CircuitDepthCompoundOperation) {
+    QuantumComputation comp(2);
+    comp.h(0);
+    comp.h(1);
+    comp.x(0, 1_pc);
+
+    QuantumComputation qc(2);
+    qc.emplace_back(comp.asOperation());
+
+    EXPECT_EQ(qc.getDepth(), 2U);
+}
+
 TEST_F(QFRFunctionality, CircuitToOperation) {
     QuantumComputation qc(1);
     EXPECT_EQ(qc.asOperation(), nullptr);

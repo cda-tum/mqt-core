@@ -102,6 +102,12 @@ namespace qc {
             return std::any_of(ops.cbegin(), ops.cend(), [&i](const auto& op) { return op->actsOn(i); });
         }
 
+        void addDepthContribution(std::vector<std::size_t>& depths) const override {
+            for (const auto& op: ops) {
+                op->addDepthContribution(depths);
+            }
+        }
+
         void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override {
             for (const auto& op: ops) {
                 op->dumpOpenQASM(of, qreg, creg);
