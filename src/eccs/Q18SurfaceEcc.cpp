@@ -243,7 +243,7 @@ void Q18SurfaceEcc::mapGate(const qc::Operation& gate) {
                 for (std::size_t t = 0; t < gate.getNtargets(); t++) {
                     i                                           = gate.getTargets()[t];
                     std::array<std::int_fast8_t, 18> dataQubits = {1, 3, 5, 6, 8, 10, 13, 15, 17, 18, 20, 22, 25, 27, 29, 30, 32, 34};
-                    for (std::int_fast8_t j: dataQubits) {
+                    for (const auto j: dataQubits) {
                         qcMapped.h(dd::Qubit(i + j * nQubits));
                     }
                     swap(dd::Qubit(i + 1 * nQubits), dd::Qubit(i + 29 * nQubits));

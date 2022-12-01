@@ -17,8 +17,7 @@ void Ecc::initMappedCircuit() {
     statistics.nOutputQubits        = qcOriginal.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
     statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits;
     qcMapped.addQubitRegister(statistics.nOutputQubits);
-    auto cRegs = qcOriginal.getCregs();
-    for (auto const& [regName, regBits]: cRegs) {
+    for (const auto& cRegs = qcOriginal.getCregs(); auto const& [regName, regBits]: cRegs) {
         qcMapped.addClassicalRegister(regBits.second, regName);
     }
 
@@ -33,7 +32,7 @@ qc::QuantumComputation& Ecc::apply() {
     writeEncoding();
     isDecoded = false;
 
-    long nInputGates = 0;
+    std::size_t nInputGates = 0U;
     for (const auto& gate: qcOriginal) {
         nInputGates++;
         mapGate(*gate);
@@ -186,7 +185,6 @@ void Ecc::writeSdag(dd::Qubit target) {
 }
 
 void Ecc::writeClassicalControl(dd::Qubit control, int qubitCount, unsigned int value, qc::OpType opType, int target) {
-    std::unique_ptr<qc::Operation> op    = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), dd::Qubit(target), opType);
-    const auto                     pair_ = std::make_pair(control, dd::QubitCount(qubitCount));
-    qcMapped.emplace_back<qc::ClassicControlledOperation>(op, pair_, value);
+    std::unique_ptr<qc::Operation> op    = std::make_unique<qc::StandardOperation>(qcMapped.getNqubits(), target, opType);
+    qcMapped.emplace_back<qc::ClassicControlledOperation>(op, {control, qubitCount}, value);
 }

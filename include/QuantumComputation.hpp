@@ -628,7 +628,7 @@ namespace qc {
                     return;
                 }
             }
-            std::cerr << "The classical register \"" << clbit.first << "\" does not exists!" << std::endl;
+            std::cerr << "The classical register \"" << clbit.first << "\" does not exist!" << std::endl;
         }
 
         void measure(const std::vector<dd::Qubit>&   qubitRegister,
