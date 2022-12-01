@@ -11,11 +11,15 @@
 
 class QxCustomEcc: public Ecc {
 public:
-    QxCustomEcc(qc::QuantumComputation& qc, int measureFq);
-
-    static std::string getName() {
-        return "QxCustom";
-    }
+    //TODO parameters q and c:
+    /*
+ * q = #qubits
+ * c = #classical bits
+ * Assume your ECC needs p physical qubits to encode 1 logical qubit, a ancilla qubits and m measurements.
+ * >>then q = p+a and c=m.
+ */
+    QxCustomEcc(qc::QuantumComputation& qc, int measureFq):
+        Ecc({ID::QxCustom, /*q*/ -1, /*c*/ -1, "QxCustom"}, qc, measureFq) {}
 
 protected:
     void writeEncoding() override;

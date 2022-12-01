@@ -13,11 +13,8 @@
 
 class Q9SurfaceEcc: public Ecc {
 public:
-    Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq);
-
-    static std::string getName() {
-        return "Q9Surface";
-    }
+    Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq):
+        Ecc({ID::Q9Surface, 9, 8, "Q9Surface"}, qc, measureFq) {}
 
 protected:
     void initMappedCircuit() override;

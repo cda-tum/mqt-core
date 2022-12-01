@@ -5,11 +5,6 @@
 
 #include "eccs/Q3ShorEcc.hpp"
 
-//3 data qubits, 2 for measuring -> 5 qubits per physical qubit
-Q3ShorEcc::Q3ShorEcc(qc::QuantumComputation& qc, int measureFq):
-    Ecc(
-            {ID::Q3Shor, 3, 2, Q3ShorEcc::getName()}, qc, measureFq) {}
-
 void Q3ShorEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
     qcOriginal.stripIdleQubits(true, false);
@@ -35,8 +30,8 @@ void Q3ShorEcc::writeEncoding() {
 
     for (auto i = 0; i < nQubits; i++) {
         auto ctrl = dd::Control{dd::Qubit(i), dd::Control::Type::pos};
-        writeX(dd::Qubit(i + nQubits), ctrl);
-        writeX(dd::Qubit(i + 2 * nQubits), ctrl);
+        qcMapped.x(dd::Qubit(i + nQubits), ctrl);
+        qcMapped.x(dd::Qubit(i + 2 * nQubits), ctrl);
     }
 }
 
@@ -51,10 +46,10 @@ void Q3ShorEcc::measureAndCorrect() {
         qcMapped.reset(ancStart);
         qcMapped.reset(static_cast<dd::Qubit>(ancStart + 1));
 
-        writeX(ancStart, dd::Control{dd::Qubit(i), dd::Control::Type::pos});
-        writeX(ancStart, dd::Control{dd::Qubit(i + nQubits), dd::Control::Type::pos});
-        writeX(dd::Qubit(ancStart + 1), dd::Control{dd::Qubit(i + nQubits), dd::Control::Type::pos});
-        writeX(dd::Qubit(ancStart + 1), dd::Control{dd::Qubit(i + 2 * nQubits), dd::Control::Type::pos});
+        qcMapped.x(ancStart, dd::Control{dd::Qubit(i), dd::Control::Type::pos});
+        qcMapped.x(ancStart, dd::Control{dd::Qubit(i + nQubits), dd::Control::Type::pos});
+        qcMapped.x(dd::Qubit(ancStart + 1), dd::Control{dd::Qubit(i + nQubits), dd::Control::Type::pos});
+        qcMapped.x(dd::Qubit(ancStart + 1), dd::Control{dd::Qubit(i + 2 * nQubits), dd::Control::Type::pos});
 
         qcMapped.measure(ancStart, clStart);
         qcMapped.measure(static_cast<dd::Qubit>(ancStart + 1), clStart + 1);
@@ -83,8 +78,8 @@ void Q3ShorEcc::writeDecoding() {
     const auto nQubits = static_cast<int>(qcOriginal.getNqubits());
     for (int i = 0; i < nQubits; i++) {
         auto ctrl = dd::Control{dd::Qubit(i), dd::Control::Type::pos};
-        writeX(dd::Qubit(i + nQubits), ctrl);
-        writeX(dd::Qubit(i + 2 * nQubits), ctrl);
+        qcMapped.x(dd::Qubit(i + nQubits), ctrl);
+        qcMapped.x(dd::Qubit(i + 2 * nQubits), ctrl);
         writeToffoli(i, i + nQubits, true, i + 2 * nQubits, true);
     }
     isDecoded = true;
@@ -109,26 +104,26 @@ void Q3ShorEcc::mapGate(const qc::Operation& gate) {
                 auto i = gate.getTargets()[j];
                 if (gate.getNcontrols()) {
                     auto& ctrls = gate.getControls();
-                    writeGeneric(i, ctrls, gate.getType());
+                    qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), ctrls, i, gate.getType());
                     dd::Controls ctrls2;
                     dd::Controls ctrls3;
                     for (const auto& ct: ctrls) {
                         ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + nQubits), ct.type});
                         ctrls3.insert(dd::Control{dd::Qubit(ct.qubit + 2 * nQubits), ct.type});
                     }
-                    writeGeneric(i + nQubits, ctrls2, gate.getType());
-                    writeGeneric(i + 2 * nQubits, ctrls3, gate.getType());
+                    qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), ctrls2, i + nQubits, gate.getType());
+                    qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), ctrls3, i + 2 * nQubits, gate.getType());
                 } else {
                     if (gate.getType() == qc::H) {
-                        writeX(dd::Qubit(i + 1), dd::Control{dd::Qubit(i)});
-                        writeX(dd::Qubit(i + 2), dd::Control{dd::Qubit(i)});
+                        qcMapped.x(dd::Qubit(i + 1), dd::Control{dd::Qubit(i)});
+                        qcMapped.x(dd::Qubit(i + 2), dd::Control{dd::Qubit(i)});
                         qcMapped.h(i);
-                        writeX(dd::Qubit(i + 1), dd::Control{dd::Qubit(i)});
-                        writeX(dd::Qubit(i + 2), dd::Control{dd::Qubit(i)});
+                        qcMapped.x(dd::Qubit(i + 1), dd::Control{dd::Qubit(i)});
+                        qcMapped.x(dd::Qubit(i + 2), dd::Control{dd::Qubit(i)});
                     } else {
-                        writeGeneric(i, gate.getType());
-                        writeGeneric(i + nQubits, gate.getType());
-                        writeGeneric(i + 2 * nQubits, gate.getType());
+                        qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), i, gate.getType());
+                        qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), i + nQubits, gate.getType());
+                        qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), i + 2 * nQubits, gate.getType());
                     }
                 }
             }

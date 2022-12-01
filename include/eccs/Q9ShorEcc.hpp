@@ -11,11 +11,8 @@
 
 class Q9ShorEcc: public Ecc {
 public:
-    Q9ShorEcc(qc::QuantumComputation& qc, int measureFq);
-
-    static std::string getName() {
-        return "Q9Shor";
-    }
+    Q9ShorEcc(qc::QuantumComputation& qc, int measureFq):
+        Ecc({ID::Q9Shor, 9, 8, "Q9Shor"}, qc, measureFq) {}
 
 protected:
     void initMappedCircuit() override;

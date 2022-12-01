@@ -5,10 +5,6 @@
 
 #include "eccs/Q9ShorEcc.hpp"
 
-//9 data qubits, 8 for measuring -> 17 qubits per physical qubit
-Q9ShorEcc::Q9ShorEcc(qc::QuantumComputation& qc, int measureFq):
-    Ecc({ID::Q9Shor, 9, 8, Q9ShorEcc::getName()}, qc, measureFq) {}
-
 void Q9ShorEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
     qcOriginal.stripIdleQubits(true, false);
@@ -35,8 +31,8 @@ void Q9ShorEcc::writeEncoding() {
     const int nQubits = qcOriginal.getNqubits();
     for (int i = 0; i < nQubits; i++) {
         dd::Control ci = {dd::Qubit(i), dd::Control::Type::pos};
-        writeX(dd::Qubit(i + 3 * nQubits), ci);
-        writeX(dd::Qubit(i + 6 * nQubits), ci);
+        qcMapped.x(dd::Qubit(i + 3 * nQubits), ci);
+        qcMapped.x(dd::Qubit(i + 6 * nQubits), ci);
 
         qcMapped.h(dd::Qubit(i));
         qcMapped.h(dd::Qubit(i + 3 * nQubits));
@@ -44,12 +40,12 @@ void Q9ShorEcc::writeEncoding() {
 
         dd::Control ci3 = {dd::Qubit(i + 3 * nQubits), dd::Control::Type::pos};
         dd::Control ci6 = {dd::Qubit(i + 6 * nQubits), dd::Control::Type::pos};
-        writeX(dd::Qubit(i + nQubits), ci);
-        writeX(dd::Qubit(i + 2 * nQubits), ci);
-        writeX(dd::Qubit(i + 4 * nQubits), ci3);
-        writeX(dd::Qubit(i + 5 * nQubits), ci3);
-        writeX(dd::Qubit(i + 7 * nQubits), ci6);
-        writeX(dd::Qubit(i + 8 * nQubits), ci6);
+        qcMapped.x(dd::Qubit(i + nQubits), ci);
+        qcMapped.x(dd::Qubit(i + 2 * nQubits), ci);
+        qcMapped.x(dd::Qubit(i + 4 * nQubits), ci3);
+        qcMapped.x(dd::Qubit(i + 5 * nQubits), ci3);
+        qcMapped.x(dd::Qubit(i + 7 * nQubits), ci6);
+        qcMapped.x(dd::Qubit(i + 8 * nQubits), ci6);
     }
     gatesWritten = true;
 }
@@ -85,35 +81,35 @@ void Q9ShorEcc::measureAndCorrect() {
             qcMapped.h(j);
         }
         //x errors = indirectly via controlled z
-        writeZ(qubits[0], ancillaControls[0]);
-        writeZ(qubits[1], ancillaControls[0]);
-        writeZ(qubits[1], ancillaControls[1]);
-        writeZ(qubits[2], ancillaControls[1]);
+        qcMapped.z(qubits[0], ancillaControls[0]);
+        qcMapped.z(qubits[1], ancillaControls[0]);
+        qcMapped.z(qubits[1], ancillaControls[1]);
+        qcMapped.z(qubits[2], ancillaControls[1]);
 
-        writeZ(qubits[3], ancillaControls[2]);
-        writeZ(qubits[4], ancillaControls[2]);
-        writeZ(qubits[4], ancillaControls[3]);
-        writeZ(qubits[5], ancillaControls[3]);
+        qcMapped.z(qubits[3], ancillaControls[2]);
+        qcMapped.z(qubits[4], ancillaControls[2]);
+        qcMapped.z(qubits[4], ancillaControls[3]);
+        qcMapped.z(qubits[5], ancillaControls[3]);
 
-        writeZ(qubits[6], ancillaControls[4]);
-        writeZ(qubits[7], ancillaControls[4]);
-        writeZ(qubits[7], ancillaControls[5]);
-        writeZ(qubits[8], ancillaControls[5]);
+        qcMapped.z(qubits[6], ancillaControls[4]);
+        qcMapped.z(qubits[7], ancillaControls[4]);
+        qcMapped.z(qubits[7], ancillaControls[5]);
+        qcMapped.z(qubits[8], ancillaControls[5]);
 
         //z errors = indirectly via controlled x/CNOT
-        writeX(qubits[0], ancillaControls[6]);
-        writeX(qubits[1], ancillaControls[6]);
-        writeX(qubits[2], ancillaControls[6]);
-        writeX(qubits[3], ancillaControls[6]);
-        writeX(qubits[4], ancillaControls[6]);
-        writeX(qubits[5], ancillaControls[6]);
+        qcMapped.x(qubits[0], ancillaControls[6]);
+        qcMapped.x(qubits[1], ancillaControls[6]);
+        qcMapped.x(qubits[2], ancillaControls[6]);
+        qcMapped.x(qubits[3], ancillaControls[6]);
+        qcMapped.x(qubits[4], ancillaControls[6]);
+        qcMapped.x(qubits[5], ancillaControls[6]);
 
-        writeX(qubits[3], ancillaControls[7]);
-        writeX(qubits[4], ancillaControls[7]);
-        writeX(qubits[5], ancillaControls[7]);
-        writeX(qubits[6], ancillaControls[7]);
-        writeX(qubits[7], ancillaControls[7]);
-        writeX(qubits[8], ancillaControls[7]);
+        qcMapped.x(qubits[3], ancillaControls[7]);
+        qcMapped.x(qubits[4], ancillaControls[7]);
+        qcMapped.x(qubits[5], ancillaControls[7]);
+        qcMapped.x(qubits[6], ancillaControls[7]);
+        qcMapped.x(qubits[7], ancillaControls[7]);
+        qcMapped.x(qubits[8], ancillaControls[7]);
 
         for (dd::Qubit j: ancillaQubits) {
             qcMapped.h(j);
@@ -156,14 +152,14 @@ void Q9ShorEcc::writeDecoding() {
             ci[j] = dd::Control{dd::Qubit(i + j * nQubits), dd::Control::Type::pos};
         }
 
-        writeX(i + nQubits, ci[0]);
-        writeX(i + 2 * nQubits, ci[0]);
+        qcMapped.x(i + nQubits, ci[0]);
+        qcMapped.x(i + 2 * nQubits, ci[0]);
 
-        writeX(i + 4 * nQubits, ci[3]);
-        writeX(i + 5 * nQubits, ci[3]);
+        qcMapped.x(i + 4 * nQubits, ci[3]);
+        qcMapped.x(i + 5 * nQubits, ci[3]);
 
-        writeX(i + 7 * nQubits, ci[6]);
-        writeX(i + 8 * nQubits, ci[6]);
+        qcMapped.x(i + 7 * nQubits, ci[6]);
+        qcMapped.x(i + 8 * nQubits, ci[6]);
 
         writeToffoli(i, i + nQubits, true, i + 2 * nQubits, true);
         writeToffoli(i + 3 * nQubits, i + 4 * nQubits, true, i + 5 * nQubits, true);
@@ -173,8 +169,8 @@ void Q9ShorEcc::writeDecoding() {
         qcMapped.h(static_cast<dd::Qubit>(i + 3 * nQubits));
         qcMapped.h(static_cast<dd::Qubit>(i + 6 * nQubits));
 
-        writeX(i + 3 * nQubits, ci[0]);
-        writeX(i + 6 * nQubits, ci[0]);
+        qcMapped.x(i + 3 * nQubits, ci[0]);
+        qcMapped.x(i + 6 * nQubits, ci[0]);
         writeToffoli(i, i + 3 * nQubits, true, i + 6 * nQubits, true);
     }
     isDecoded = true;
@@ -225,14 +221,14 @@ void Q9ShorEcc::mapGate(const qc::Operation& gate) {
                     ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + j * nQubits), ct.type});
                     qcMapped.h(static_cast<dd::Qubit>(ct.qubit + j * nQubits));
                 }
-                writeGeneric(i + j * nQubits, ctrls2, type);
+                qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), ctrls2, i + j * nQubits, type);
                 for (const auto& ct: ctrls) {
                     qcMapped.h(static_cast<dd::Qubit>(ct.qubit + j * nQubits));
                 }
             }
         } else {
             for (int j = 0; j < 9; j++) {
-                writeGeneric(i + j * nQubits, type);
+                qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), i + j * nQubits, type);
             }
         }
     }

@@ -11,11 +11,9 @@
 
 class Q7SteaneEcc: public Ecc {
 public:
-    Q7SteaneEcc(qc::QuantumComputation& qc, int measureFq);
-
-    static std::string getName() {
-        return "Q7Steane";
-    }
+    Q7SteaneEcc(qc::QuantumComputation& qc, int measureFq):
+        Ecc(
+                {ID::Q7Steane, 7, 3, "Q7Steane"}, qc, measureFq) {}
 
 protected:
     void initMappedCircuit() override;

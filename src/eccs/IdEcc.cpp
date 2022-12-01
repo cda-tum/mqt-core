@@ -5,21 +5,6 @@
 
 #include "eccs/IdEcc.hpp"
 
-IdEcc::IdEcc(qc::QuantumComputation& qc, int measureFq):
-    Ecc({ID::Id, 1, 0, IdEcc::getName()}, qc, measureFq) {}
-
-void IdEcc::writeEncoding() {
-    //Not necessary for dummy ecc
-}
-
-void IdEcc::measureAndCorrect() {
-    //Not necessary for dummy ecc
-}
-
-void IdEcc::writeDecoding() {
-    //Not necessary for dummy ecc
-}
-
 void IdEcc::mapGate(const qc::Operation& gate) {
     switch (gate.getType()) {
         case qc::H:

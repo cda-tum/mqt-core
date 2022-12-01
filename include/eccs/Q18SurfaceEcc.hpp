@@ -11,11 +11,8 @@
 
 class Q18SurfaceEcc: public Ecc {
 public:
-    Q18SurfaceEcc(qc::QuantumComputation& qc, int measureFq);
-
-    static std::string getName() {
-        return "Q18Surface";
-    }
+    Q18SurfaceEcc(qc::QuantumComputation& qc, int measureFq):
+        Ecc({ID::Q18Surface, 36, 8, "Q18Surface"}, qc, measureFq) {}
 
 protected:
     void initMappedCircuit() override;

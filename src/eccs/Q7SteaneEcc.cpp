@@ -5,11 +5,6 @@
 
 #include "eccs/Q7SteaneEcc.hpp"
 
-//7 data qubits, 3 for measuring
-Q7SteaneEcc::Q7SteaneEcc(qc::QuantumComputation& qc, int measureFq):
-    Ecc(
-            {ID::Q7Steane, 7, 3, Q7SteaneEcc::getName()}, qc, measureFq) {}
-
 void Q7SteaneEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
     qcOriginal.stripIdleQubits(true, false);
@@ -159,11 +154,11 @@ void Q7SteaneEcc::mapGate(const qc::Operation& gate) {
                         for (const auto& ct: ctrls) {
                             ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + j * nQubits), ct.type});
                         }
-                        writeGeneric(static_cast<dd::Qubit>(i + j * nQubits), ctrls2, gate.getType());
+                        qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), ctrls2, static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
                     }
                 } else {
                     for (int j = 0; j < 7; j++) {
-                        writeGeneric(static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
+                        qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
                     }
                 }
             }
@@ -180,23 +175,15 @@ void Q7SteaneEcc::mapGate(const qc::Operation& gate) {
                         for (const auto& ct: ctrls) {
                             ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + j * nQubits), ct.type});
                         }
-                        writeGeneric(static_cast<dd::Qubit>(i + j * nQubits), ctrls2, gate.getType());
-                        writeGeneric(static_cast<dd::Qubit>(i + j * nQubits), ctrls2, gate.getType());
-                        writeGeneric(static_cast<dd::Qubit>(i + j * nQubits), ctrls2, gate.getType());
+                        qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), ctrls2, static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
+                        qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), ctrls2, static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
+                        qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), ctrls2, static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
                     }
                 } else {
-                    if (gate.getType() == qc::S) {
-                        for (int j = 0; j < 7; j++) {
-                            qcMapped.s(static_cast<dd::Qubit>(i + j * nQubits));
-                            qcMapped.s(static_cast<dd::Qubit>(i + j * nQubits));
-                            qcMapped.s(static_cast<dd::Qubit>(i + j * nQubits));
-                        }
-                    } else {
-                        for (int j = 0; j < 7; j++) {
-                            writeSdag(static_cast<dd::Qubit>(i + j * nQubits));
-                            writeSdag(static_cast<dd::Qubit>(i + j * nQubits));
-                            writeSdag(static_cast<dd::Qubit>(i + j * nQubits));
-                        }
+                    for (int j = 0; j < 7; j++) {
+                        qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
+                        qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
+                        qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
                     }
                 }
             }
@@ -225,15 +212,15 @@ void Q7SteaneEcc::mapGate(const qc::Operation& gate) {
             for (std::size_t t = 0; t < gate.getNtargets(); t++) {
                 int i = static_cast<unsigned char>(gate.getTargets()[t]);
                 if (gate.getControls().empty()) {
-                    writeX(dd::Qubit(i + 5 * nQubits), dd::Control{dd::Qubit(i + 6 * nQubits), dd::Control::Type::pos});
-                    writeX(dd::Qubit(i + 0 * nQubits), dd::Control{dd::Qubit(i + 5 * nQubits), dd::Control::Type::pos});
+                    qcMapped.x(dd::Qubit(i + 5 * nQubits), dd::Control{dd::Qubit(i + 6 * nQubits), dd::Control::Type::pos});
+                    qcMapped.x(dd::Qubit(i + 0 * nQubits), dd::Control{dd::Qubit(i + 5 * nQubits), dd::Control::Type::pos});
                     if (gate.getType() == qc::T) {
                         qcMapped.t(dd::Qubit(i + 0 * nQubits));
                     } else {
                         qcMapped.tdag(dd::Qubit(i + 0 * nQubits));
                     }
-                    writeX(dd::Qubit(i + 0 * nQubits), dd::Control{dd::Qubit(i + 5 * nQubits), dd::Control::Type::pos});
-                    writeX(dd::Qubit(i + 5 * nQubits), dd::Control{dd::Qubit(i + 6 * nQubits), dd::Control::Type::pos});
+                    qcMapped.x(dd::Qubit(i + 0 * nQubits), dd::Control{dd::Qubit(i + 5 * nQubits), dd::Control::Type::pos});
+                    qcMapped.x(dd::Qubit(i + 5 * nQubits), dd::Control{dd::Qubit(i + 6 * nQubits), dd::Control::Type::pos});
                 } else {
                     gateNotAvailableError(gate);
                 }

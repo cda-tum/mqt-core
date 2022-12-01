@@ -30,10 +30,17 @@ public:
 
     const Info ecc;
 
-    Ecc(Info ecc, qc::QuantumComputation& qc, int measureFrequency);
+    Ecc(Info ecc, qc::QuantumComputation& qc, int measureFrequency):
+        ecc(std::move(ecc)),
+        qcOriginal(qc), measureFrequency(measureFrequency) {
+    }
     virtual ~Ecc() = default;
 
     qc::QuantumComputation& apply();
+
+    virtual std::string getName() {
+        return ecc.name;
+    }
 
 protected:
     qc::QuantumComputation& qcOriginal;
@@ -59,30 +66,9 @@ protected:
 
     void writeToffoli(int target, int c1, bool p1, int c2, bool p2);
 
-    void                  writeGeneric(dd::Qubit target, qc::OpType type);
-    [[maybe_unused]] void writeGeneric(dd::Qubit target, const dd::Control& control, qc::OpType type);
-    void                  writeGeneric(dd::Qubit target, const dd::Controls& controls, qc::OpType type);
-
-    inline void                  writeGeneric(int target, qc::OpType type) { (writeGeneric(static_cast<dd::Qubit>(target), type)); }
-    [[maybe_unused]] inline void writeGeneric(int target, const dd::Control& control, qc::OpType type) { (writeGeneric(static_cast<dd::Qubit>(target), control, type)); }
-    inline void                  writeGeneric(int target, const dd::Controls& controls, qc::OpType type) { (writeGeneric(static_cast<dd::Qubit>(target), controls, type)); }
-
-    void writeX(dd::Qubit target);
-    void writeX(dd::Qubit target, const dd::Control& control);
-    void writeX(dd::Qubit target, const dd::Controls& controls);
-    void writeX(int target, const dd::Control& control);
-
-    void writeY(dd::Qubit target);
-    void writeY(dd::Qubit target, const dd::Control& control);
-    void writeY(dd::Qubit target, const dd::Controls& controls);
-
-    void writeZ(dd::Qubit target);
-    void writeZ(dd::Qubit target, const dd::Control& control);
-    void writeZ(dd::Qubit target, const dd::Controls& controls);
-
-    void writeSdag(dd::Qubit target);
-
-    void swap(dd::Qubit target1, dd::Qubit target2);
+    //void                  writeGeneric(dd::Qubit target, qc::OpType type);
+    //[[maybe_unused]] void writeGeneric(dd::Qubit target, const dd::Control& control, qc::OpType type);
+    //void                  writeGeneric(dd::Qubit target, const dd::Controls& controls, qc::OpType type);
 
     void writeClassicalControl(dd::Qubit control, int qubitCount, unsigned int value, qc::OpType opType, int target);
 

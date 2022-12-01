@@ -11,11 +11,8 @@
 
 class Q5LaflammeEcc: public Ecc {
 public:
-    Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq);
-
-    static std::string getName() {
-        return "Q5Laflamme";
-    }
+    Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq):
+        Ecc({ID::Q5Laflamme, 5, 4, Q5LaflammeEcc::getName()}, qc, measureFq) {}
 
 protected:
     void initMappedCircuit() override;
