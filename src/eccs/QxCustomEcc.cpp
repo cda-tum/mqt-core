@@ -5,8 +5,6 @@
 
 #include "eccs/QxCustomEcc.hpp"
 
-
-
 void QxCustomEcc::writeEncoding() {
     const int nQubits = qcOriginal.getNqubits();
     for (int i = 0; i < nQubits; i++) {
