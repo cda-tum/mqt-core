@@ -67,7 +67,6 @@ add_library(${PROJECT_NAME}
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QPE.hpp
             
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/EccStatistics.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Ecc.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/IdEcc.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q3ShorEcc.hpp
