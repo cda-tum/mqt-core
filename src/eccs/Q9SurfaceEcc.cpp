@@ -8,11 +8,7 @@
 void Q9SurfaceEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
     qcOriginal.stripIdleQubits(true, false);
-    statistics.nInputQubits         = qcOriginal.getNqubits();
-    statistics.nInputClassicalBits  = (int)qcOriginal.getNcbits();
-    statistics.nOutputQubits        = qcOriginal.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
-    statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits;
-    qcMapped.addQubitRegister(statistics.nOutputQubits);
+    qcMapped.addQubitRegister(getNOutputQubits(qcOriginal.getNqubits()));
     auto cRegs = qcOriginal.getCregs();
     for (auto const& [regName, regBits]: cRegs) {
         qcMapped.addClassicalRegister(regBits.second, regName);

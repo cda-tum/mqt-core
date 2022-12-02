@@ -8,11 +8,7 @@
 void Q9ShorEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
     qcOriginal.stripIdleQubits(true, false);
-    statistics.nInputQubits         = qcOriginal.getNqubits();
-    statistics.nInputClassicalBits  = (int)qcOriginal.getNcbits();
-    statistics.nOutputQubits        = qcOriginal.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
-    statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits;
-    qcMapped.addQubitRegister(statistics.nOutputQubits);
+    qcMapped.addQubitRegister(getNOutputQubits(qcOriginal.getNqubits()));
     auto cRegs = qcOriginal.getCregs();
     for (auto const& [regName, regBits]: cRegs) {
         qcMapped.addClassicalRegister(regBits.second, regName);
@@ -55,7 +51,7 @@ void Q9ShorEcc::measureAndCorrect() {
         return;
     }
     const auto nQubits = qcOriginal.getNqubits();
-    const auto clStart = statistics.nInputClassicalBits;
+    const auto clStart = qcOriginal.getNcbits();
     for (int i = 0; i < nQubits; i++) {
         //syntactic sugar for qubit indices
         std::array<dd::Qubit, 9>   qubits                  = {};

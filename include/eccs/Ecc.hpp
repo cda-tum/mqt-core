@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include "EccStatistics.hpp"
 #include "QuantumComputation.hpp"
 
 class Ecc {
@@ -41,10 +40,13 @@ public:
         return ecc.name;
     }
 
+    virtual std::size_t getNOutputQubits(std::size_t nInputQubits) {
+        return nInputQubits * ecc.nRedundantQubits + ecc.nCorrectingBits;
+    }
+
 protected:
     qc::QuantumComputation& qcOriginal;
     qc::QuantumComputation  qcMapped;
-    EccStatistics           statistics{};
     const int               measureFrequency;
     bool                    isDecoded    = true;
     bool                    gatesWritten = false;

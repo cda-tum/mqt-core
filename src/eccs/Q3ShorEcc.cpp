@@ -8,11 +8,11 @@
 void Q3ShorEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
     qcOriginal.stripIdleQubits(true, false);
-    statistics.nInputQubits         = qcOriginal.getNqubits();
-    statistics.nInputClassicalBits  = (int)qcOriginal.getNcbits();
-    statistics.nOutputQubits        = qcOriginal.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
-    statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits;
-    qcMapped.addQubitRegister(statistics.nOutputQubits);
+    //statistics.nInputQubits         = qcOriginal.getNqubits();
+    //statistics.nInputClassicalBits  = (int)qcOriginal.getNcbits();
+    //  statistics.nOutputQubits        = qcOriginal.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
+    //  statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits;
+    qcMapped.addQubitRegister(getNOutputQubits(qcOriginal.getNqubits()));
     auto cRegs = qcOriginal.getCregs();
     for (auto const& [regName, regBits]: cRegs) {
         qcMapped.addClassicalRegister(regBits.second, regName);
@@ -41,7 +41,7 @@ void Q3ShorEcc::measureAndCorrect() {
     }
     const int  nQubits  = qcOriginal.getNqubits();
     const auto ancStart = static_cast<dd::Qubit>(nQubits * ecc.nRedundantQubits); //measure start (index of first ancilla qubit)
-    const auto clStart  = static_cast<dd::Qubit>(statistics.nInputClassicalBits);
+    const auto clStart  = static_cast<dd::Qubit>(qcOriginal.getNcbits());
     for (int i = 0; i < nQubits; i++) {
         qcMapped.reset(ancStart);
         qcMapped.reset(static_cast<dd::Qubit>(ancStart + 1));

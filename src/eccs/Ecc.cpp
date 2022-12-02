@@ -7,11 +7,7 @@
 
 void Ecc::initMappedCircuit() {
     qcOriginal.stripIdleQubits(true, false);
-    statistics.nInputQubits         = qcOriginal.getNqubits();
-    statistics.nInputClassicalBits  = (int)qcOriginal.getNcbits();
-    statistics.nOutputQubits        = qcOriginal.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
-    statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits;
-    qcMapped.addQubitRegister(statistics.nOutputQubits);
+    qcMapped.addQubitRegister(getNOutputQubits(qcOriginal.getNqubits()));
     for (const auto& cRegs = qcOriginal.getCregs(); auto const& [regName, regBits]: cRegs) {
         qcMapped.addClassicalRegister(regBits.second, regName);
     }
@@ -35,7 +31,6 @@ qc::QuantumComputation& Ecc::apply() {
             measureAndCorrect();
         }
     }
-    statistics.nInputGates = nInputGates;
 
     //mapGate(...) can change 'isDecoded', therefore check it again
     if (!isDecoded) {
@@ -43,8 +38,6 @@ qc::QuantumComputation& Ecc::apply() {
         writeDecoding();
         isDecoded = true;
     }
-
-    statistics.nOutputGates = qcMapped.getNindividualOps();
 
     return qcMapped;
 }

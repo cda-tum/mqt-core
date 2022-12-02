@@ -8,11 +8,7 @@
 void Q5LaflammeEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
     qcOriginal.stripIdleQubits(true, false);
-    statistics.nInputQubits         = qcOriginal.getNqubits();
-    statistics.nInputClassicalBits  = (int)qcOriginal.getNcbits();
-    statistics.nOutputQubits        = qcOriginal.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
-    statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits;
-    qcMapped.addQubitRegister(statistics.nOutputQubits);
+    qcMapped.addQubitRegister(getNOutputQubits(qcOriginal.getNqubits()));
     auto cRegs = qcOriginal.getCregs();
     for (auto const& [regName, regBits]: cRegs) {
         qcMapped.addClassicalRegister(regBits.second, regName);
@@ -146,7 +142,7 @@ void Q5LaflammeEcc::measureAndCorrect() {
 }
 
 void Q5LaflammeEcc::writeClassicalControlledCorrect(const unsigned int value, int target, qc::OpType optype) {
-    writeClassicalControlled(value, target, optype, dd::Qubit(statistics.nInputClassicalBits), dd::QubitCount(4));
+    writeClassicalControlled(value, target, optype, qcOriginal.getNcbits(), dd::QubitCount(4));
 }
 
 void Q5LaflammeEcc::writeClassicalControlled(const unsigned int value, int target, qc::OpType optype, dd::Qubit clStart, dd::QubitCount clCount) {
