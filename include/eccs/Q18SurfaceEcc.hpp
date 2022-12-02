@@ -1,7 +1,7 @@
 /*
- * This file is part of JKQ QFR library which is released under the MIT license.
- * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
- */
+* This file is part of MQT QFR library which is released under the MIT license.
+* See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
+*/
 
 #ifndef QFR_Q18SurfaceEcc_HPP
 #define QFR_Q18SurfaceEcc_HPP
