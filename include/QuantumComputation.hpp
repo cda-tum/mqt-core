@@ -260,6 +260,7 @@ namespace qc {
 
         [[nodiscard]] std::size_t getNindividualOps() const;
         [[nodiscard]] std::size_t getNsingleQubitOps() const;
+        [[nodiscard]] std::size_t getDepth() const;
 
         [[nodiscard]] std::string                         getQubitRegister(dd::Qubit physicalQubitIndex) const;
         [[nodiscard]] std::string                         getClassicalRegister(std::size_t classicalIndex) const;
@@ -633,6 +634,18 @@ namespace qc {
             emplace_back<NonUnitaryOperation>(getNqubits(), targets, qc::Barrier);
         }
 
+        void classicControlled(const OpType op, const dd::Qubit target, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, const unsigned int expectedValue = 1U, const dd::fp lambda = 0., const dd::fp phi = 0., const dd::fp theta = 0.) {
+            classicControlled(op, target, dd::Controls{}, controlRegister, expectedValue, lambda, phi, theta);
+        }
+        void classicControlled(const OpType op, const dd::Qubit target, const dd::Control control, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, const unsigned int expectedValue = 1U, const dd::fp lambda = 0., const dd::fp phi = 0., const dd::fp theta = 0.) {
+            classicControlled(op, target, dd::Controls{control}, controlRegister, expectedValue, lambda, phi, theta);
+        }
+        void classicControlled(const OpType op, const dd::Qubit target, const dd::Controls& controls, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, const unsigned int expectedValue = 1U, const dd::fp lambda = 0., const dd::fp phi = 0., const dd::fp theta = 0.) {
+            checkQubitRange(target, controls);
+            std::unique_ptr<Operation> gate = std::make_unique<StandardOperation>(getNqubits(), controls, target, op, lambda, phi, theta);
+            emplace_back<ClassicControlledOperation>(std::move(gate), controlRegister, expectedValue);
+        }
+
         /// strip away qubits with no operations applied to them and which do not pop up in the output permutation
         /// \param force if true, also strip away idle qubits occurring in the output permutation
         void stripIdleQubits(bool force = false, bool reduceIOpermutations = true);
@@ -718,6 +731,24 @@ namespace qc {
         virtual void dumpOpenQASM(std::ostream& of);
         virtual void dumpTensorNetwork(std::ostream& of) const;
 
+        // this convenience method allows to turn a circuit into a compound operation.
+        std::unique_ptr<CompoundOperation> asCompoundOperation() {
+            return std::make_unique<CompoundOperation>(getNqubits(), std::move(ops));
+        }
+
+        // this convenience method allows to turn a circuit into an operation.
+        std::unique_ptr<Operation> asOperation() {
+            if (ops.empty()) {
+                return {};
+            }
+            if (ops.size() == 1) {
+                auto op = std::move(ops.front());
+                ops.clear();
+                return op;
+            }
+            return asCompoundOperation();
+        }
+
         virtual void reset() {
             ops.clear();
             nqubits   = 0;
@@ -780,6 +811,11 @@ namespace qc {
 
         template<class T>
         void emplace_back(std::unique_ptr<T>& op) {
+            ops.emplace_back(std::move(op));
+        }
+
+        template<class T>
+        void emplace_back(std::unique_ptr<T>&& op) {
             ops.emplace_back(std::move(op));
         }
 

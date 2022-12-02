@@ -307,4 +307,9 @@ namespace qc {
             return false;
         }
     }
+    void NonUnitaryOperation::addDepthContribution(std::vector<std::size_t>& depths) const {
+        if (type == Measure || type == Reset) {
+            Operation::addDepthContribution(depths);
+        }
+    }
 } // namespace qc

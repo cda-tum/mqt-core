@@ -47,6 +47,19 @@ namespace qc {
         return nops;
     }
 
+    std::size_t QuantumComputation::getDepth() const {
+        if (empty()) {
+            return 0U;
+        }
+
+        std::vector<std::size_t> depths(getNqubits(), 0U);
+        for (const auto& op: ops) {
+            op->addDepthContribution(depths);
+        }
+
+        return *std::max_element(depths.begin(), depths.end());
+    }
+
     void QuantumComputation::import(const std::string& filename) {
         size_t      dot       = filename.find_last_of('.');
         std::string extension = filename.substr(dot + 1);

@@ -20,6 +20,11 @@ namespace qc {
             type    = Compound;
         }
 
+        explicit CompoundOperation(dd::QubitCount nq, std::vector<std::unique_ptr<Operation>>&& operations):
+            CompoundOperation(nq) {
+            ops = std::move(operations);
+        }
+
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {
             auto cloned_co = std::make_unique<CompoundOperation>(nqubits);
             cloned_co->reserve(ops.size());
@@ -95,6 +100,12 @@ namespace qc {
 
         [[nodiscard]] bool actsOn(dd::Qubit i) const override {
             return std::any_of(ops.cbegin(), ops.cend(), [&i](const auto& op) { return op->actsOn(i); });
+        }
+
+        void addDepthContribution(std::vector<std::size_t>& depths) const override {
+            for (const auto& op: ops) {
+                op->addDepthContribution(depths);
+            }
         }
 
         void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override {
