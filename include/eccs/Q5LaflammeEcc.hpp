@@ -10,8 +10,8 @@
 
 class Q5LaflammeEcc: public Ecc {
 public:
-    Q5LaflammeEcc(qc::QuantumComputation& qc, std::size_t measureFq):
-        Ecc({ID::Q5Laflamme, 5, 4, "Q5Laflamme"}, qc, measureFq) {}
+    Q5LaflammeEcc(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
+        Ecc({ID::Q5Laflamme, 5, 4, "Q5Laflamme"}, std::move(qc), measureFq) {}
 
 protected:
     void initMappedCircuit() override;
@@ -25,6 +25,6 @@ protected:
     void mapGate(const qc::Operation& gate) override;
 
 private:
-    void writeClassicalControlled(unsigned int value, int target, qc::OpType optype, dd::Qubit clStart, dd::QubitCount clCount);
-    void writeClassicalControlledCorrect(unsigned int value, int target, qc::OpType optype);
+    void writeClassicalControlled(unsigned int value, int target, qc::OpType opType, dd::Qubit clStart, dd::QubitCount clCount);
+    void writeClassicalControlledCorrect(unsigned int value, int target, qc::OpType opType);
 };

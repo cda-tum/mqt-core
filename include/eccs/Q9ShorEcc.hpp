@@ -10,8 +10,8 @@
 
 class Q9ShorEcc: public Ecc {
 public:
-    Q9ShorEcc(qc::QuantumComputation& qc, std::size_t measureFq):
-        Ecc({ID::Q9Shor, 9, 8, "Q9Shor"}, qc, measureFq) {}
+    Q9ShorEcc(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
+        Ecc({ID::Q9Shor, 9, 8, "Q9Shor"}, std::move(qc), measureFq) {}
 
 protected:
     void initMappedCircuit() override;

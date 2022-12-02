@@ -26,13 +26,13 @@ public:
         std::string name;
     };
 
-    Ecc(Info ecc, qc::QuantumComputation& qc, std::size_t measureFrequency):
-        ecc(std::move(ecc)),
-        qcOriginal(qc), measureFrequency(measureFrequency) {
+    Ecc(Info ecc, std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFrequency):
+        qcOriginal(std::move(qc)), measureFrequency(measureFrequency), ecc(std::move(ecc)) {
+        qcMapped = std::make_shared<qc::QuantumComputation>();
     }
     virtual ~Ecc() = default;
 
-    qc::QuantumComputation& apply();
+    std::shared_ptr<qc::QuantumComputation> apply();
 
     virtual std::string getName() {
         return ecc.name;
@@ -43,12 +43,12 @@ public:
     }
 
 protected:
-    qc::QuantumComputation& qcOriginal;
-    qc::QuantumComputation  qcMapped;
-    std::size_t             measureFrequency;
-    bool                    isDecoded    = true;
-    bool                    gatesWritten = false;
-    Info                    ecc;
+    std::shared_ptr<qc::QuantumComputation> qcOriginal;
+    std::shared_ptr<qc::QuantumComputation> qcMapped;
+    std::size_t                             measureFrequency;
+    bool                                    isDecoded    = true;
+    bool                                    gatesWritten = false;
+    Info                                    ecc;
 
     virtual void initMappedCircuit();
 
@@ -69,6 +69,6 @@ protected:
     void writeClassicalControl(dd::Qubit control, int qubitCount, unsigned int value, qc::OpType opType, int target);
 
     //static, since some codes need to store those functions into function pointers
-    static void writeXstatic(dd::Qubit target, dd::Control control, qc::QuantumComputation* qcMapped);
-    static void writeZstatic(dd::Qubit target, dd::Control control, qc::QuantumComputation* qcMapped);
+    static void writeXstatic(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped);
+    static void writeZstatic(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped);
 };

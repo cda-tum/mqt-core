@@ -7,16 +7,16 @@
 
 void Q9ShorEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
-    qcOriginal.stripIdleQubits(true, false);
-    qcMapped.addQubitRegister(getNOutputQubits(qcOriginal.getNqubits()));
-    auto cRegs = qcOriginal.getCregs();
+    qcOriginal->stripIdleQubits(true, false);
+    qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
+    auto cRegs = qcOriginal->getCregs();
     for (auto const& [regName, regBits]: cRegs) {
-        qcMapped.addClassicalRegister(regBits.second, regName);
+        qcMapped->addClassicalRegister(regBits.second, regName);
     }
-    qcMapped.addClassicalRegister(2, "qeccX1");
-    qcMapped.addClassicalRegister(2, "qeccX2");
-    qcMapped.addClassicalRegister(2, "qeccX3");
-    qcMapped.addClassicalRegister(2, "qeccZ");
+    qcMapped->addClassicalRegister(2, "qeccX1");
+    qcMapped->addClassicalRegister(2, "qeccX2");
+    qcMapped->addClassicalRegister(2, "qeccX3");
+    qcMapped->addClassicalRegister(2, "qeccZ");
 }
 
 void Q9ShorEcc::writeEncoding() {
@@ -24,24 +24,24 @@ void Q9ShorEcc::writeEncoding() {
         return;
     }
     isDecoded          = false;
-    const auto nQubits = qcOriginal.getNqubits();
+    const auto nQubits = qcOriginal->getNqubits();
     for (int i = 0; i < nQubits; i++) {
         dd::Control ci = {dd::Qubit(i), dd::Control::Type::pos};
-        qcMapped.x(dd::Qubit(i + 3 * nQubits), ci);
-        qcMapped.x(dd::Qubit(i + 6 * nQubits), ci);
+        qcMapped->x(dd::Qubit(i + 3 * nQubits), ci);
+        qcMapped->x(dd::Qubit(i + 6 * nQubits), ci);
 
-        qcMapped.h(dd::Qubit(i));
-        qcMapped.h(dd::Qubit(i + 3 * nQubits));
-        qcMapped.h(dd::Qubit(i + 6 * nQubits));
+        qcMapped->h(dd::Qubit(i));
+        qcMapped->h(dd::Qubit(i + 3 * nQubits));
+        qcMapped->h(dd::Qubit(i + 6 * nQubits));
 
         dd::Control ci3 = {dd::Qubit(i + 3 * nQubits), dd::Control::Type::pos};
         dd::Control ci6 = {dd::Qubit(i + 6 * nQubits), dd::Control::Type::pos};
-        qcMapped.x(dd::Qubit(i + nQubits), ci);
-        qcMapped.x(dd::Qubit(i + 2 * nQubits), ci);
-        qcMapped.x(dd::Qubit(i + 4 * nQubits), ci3);
-        qcMapped.x(dd::Qubit(i + 5 * nQubits), ci3);
-        qcMapped.x(dd::Qubit(i + 7 * nQubits), ci6);
-        qcMapped.x(dd::Qubit(i + 8 * nQubits), ci6);
+        qcMapped->x(dd::Qubit(i + nQubits), ci);
+        qcMapped->x(dd::Qubit(i + 2 * nQubits), ci);
+        qcMapped->x(dd::Qubit(i + 4 * nQubits), ci3);
+        qcMapped->x(dd::Qubit(i + 5 * nQubits), ci3);
+        qcMapped->x(dd::Qubit(i + 7 * nQubits), ci6);
+        qcMapped->x(dd::Qubit(i + 8 * nQubits), ci6);
     }
     gatesWritten = true;
 }
@@ -50,8 +50,8 @@ void Q9ShorEcc::measureAndCorrect() {
     if (isDecoded) {
         return;
     }
-    const auto nQubits = qcOriginal.getNqubits();
-    const auto clStart = qcOriginal.getNcbits();
+    const auto nQubits = qcOriginal->getNqubits();
+    const auto clStart = qcOriginal->getNcbits();
     for (dd::Qubit i = 0; i < nQubits; i++) {
         //syntactic sugar for qubit indices
         std::array<dd::Qubit, 9>   qubits                  = {};
@@ -63,7 +63,7 @@ void Q9ShorEcc::measureAndCorrect() {
         }
         for (std::size_t j = 0; j < 8; j++) {
             ancillaQubits[j] = dd::Qubit(ecc.nRedundantQubits * nQubits + j);
-            qcMapped.reset(ancillaQubits[j]);
+            qcMapped->reset(ancillaQubits[j]);
         }
         for (std::size_t j = 0; j < 8; j++) {
             ancillaControls[j] = dd::Control{dd::Qubit(ancillaQubits[j]), dd::Control::Type::pos};
@@ -74,46 +74,46 @@ void Q9ShorEcc::measureAndCorrect() {
 
         // PREPARE measurements --------------------------------------------------------
         for (dd::Qubit j: ancillaQubits) {
-            qcMapped.h(j);
+            qcMapped->h(j);
         }
         //x errors = indirectly via controlled z
-        qcMapped.z(qubits[0], ancillaControls[0]);
-        qcMapped.z(qubits[1], ancillaControls[0]);
-        qcMapped.z(qubits[1], ancillaControls[1]);
-        qcMapped.z(qubits[2], ancillaControls[1]);
+        qcMapped->z(qubits[0], ancillaControls[0]);
+        qcMapped->z(qubits[1], ancillaControls[0]);
+        qcMapped->z(qubits[1], ancillaControls[1]);
+        qcMapped->z(qubits[2], ancillaControls[1]);
 
-        qcMapped.z(qubits[3], ancillaControls[2]);
-        qcMapped.z(qubits[4], ancillaControls[2]);
-        qcMapped.z(qubits[4], ancillaControls[3]);
-        qcMapped.z(qubits[5], ancillaControls[3]);
+        qcMapped->z(qubits[3], ancillaControls[2]);
+        qcMapped->z(qubits[4], ancillaControls[2]);
+        qcMapped->z(qubits[4], ancillaControls[3]);
+        qcMapped->z(qubits[5], ancillaControls[3]);
 
-        qcMapped.z(qubits[6], ancillaControls[4]);
-        qcMapped.z(qubits[7], ancillaControls[4]);
-        qcMapped.z(qubits[7], ancillaControls[5]);
-        qcMapped.z(qubits[8], ancillaControls[5]);
+        qcMapped->z(qubits[6], ancillaControls[4]);
+        qcMapped->z(qubits[7], ancillaControls[4]);
+        qcMapped->z(qubits[7], ancillaControls[5]);
+        qcMapped->z(qubits[8], ancillaControls[5]);
 
         //z errors = indirectly via controlled x/CNOT
-        qcMapped.x(qubits[0], ancillaControls[6]);
-        qcMapped.x(qubits[1], ancillaControls[6]);
-        qcMapped.x(qubits[2], ancillaControls[6]);
-        qcMapped.x(qubits[3], ancillaControls[6]);
-        qcMapped.x(qubits[4], ancillaControls[6]);
-        qcMapped.x(qubits[5], ancillaControls[6]);
+        qcMapped->x(qubits[0], ancillaControls[6]);
+        qcMapped->x(qubits[1], ancillaControls[6]);
+        qcMapped->x(qubits[2], ancillaControls[6]);
+        qcMapped->x(qubits[3], ancillaControls[6]);
+        qcMapped->x(qubits[4], ancillaControls[6]);
+        qcMapped->x(qubits[5], ancillaControls[6]);
 
-        qcMapped.x(qubits[3], ancillaControls[7]);
-        qcMapped.x(qubits[4], ancillaControls[7]);
-        qcMapped.x(qubits[5], ancillaControls[7]);
-        qcMapped.x(qubits[6], ancillaControls[7]);
-        qcMapped.x(qubits[7], ancillaControls[7]);
-        qcMapped.x(qubits[8], ancillaControls[7]);
+        qcMapped->x(qubits[3], ancillaControls[7]);
+        qcMapped->x(qubits[4], ancillaControls[7]);
+        qcMapped->x(qubits[5], ancillaControls[7]);
+        qcMapped->x(qubits[6], ancillaControls[7]);
+        qcMapped->x(qubits[7], ancillaControls[7]);
+        qcMapped->x(qubits[8], ancillaControls[7]);
 
         for (dd::Qubit j: ancillaQubits) {
-            qcMapped.h(j);
+            qcMapped->h(j);
         }
 
         //MEASURE ancilla qubits
         for (std::size_t j = 0; j < 8; j++) {
-            qcMapped.measure(ancillaQubits[j], clStart + j);
+            qcMapped->measure(ancillaQubits[j], clStart + j);
         }
 
         //CORRECT
@@ -141,32 +141,32 @@ void Q9ShorEcc::writeDecoding() {
     if (isDecoded) {
         return;
     }
-    const auto nQubits = qcOriginal.getNqubits();
+    const auto nQubits = qcOriginal->getNqubits();
     for (dd::Qubit i = 0; i < nQubits; i++) {
         std::array<dd::Control, 9> ci;
         for (dd::Qubit j = 0; j < 9; j++) {
             ci[j] = dd::Control{dd::Qubit(i + j * nQubits), dd::Control::Type::pos};
         }
 
-        qcMapped.x(i + nQubits, ci[0]);
-        qcMapped.x(i + 2 * nQubits, ci[0]);
+        qcMapped->x(i + nQubits, ci[0]);
+        qcMapped->x(i + 2 * nQubits, ci[0]);
 
-        qcMapped.x(i + 4 * nQubits, ci[3]);
-        qcMapped.x(i + 5 * nQubits, ci[3]);
+        qcMapped->x(i + 4 * nQubits, ci[3]);
+        qcMapped->x(i + 5 * nQubits, ci[3]);
 
-        qcMapped.x(i + 7 * nQubits, ci[6]);
-        qcMapped.x(i + 8 * nQubits, ci[6]);
+        qcMapped->x(i + 7 * nQubits, ci[6]);
+        qcMapped->x(i + 8 * nQubits, ci[6]);
 
         writeToffoli(i, i + nQubits, true, i + 2 * nQubits, true);
         writeToffoli(i + 3 * nQubits, i + 4 * nQubits, true, i + 5 * nQubits, true);
         writeToffoli(i + 6 * nQubits, i + 7 * nQubits, true, i + 8 * nQubits, true);
 
-        qcMapped.h(i);
-        qcMapped.h(static_cast<dd::Qubit>(i + 3 * nQubits));
-        qcMapped.h(static_cast<dd::Qubit>(i + 6 * nQubits));
+        qcMapped->h(i);
+        qcMapped->h(static_cast<dd::Qubit>(i + 3 * nQubits));
+        qcMapped->h(static_cast<dd::Qubit>(i + 6 * nQubits));
 
-        qcMapped.x(i + 3 * nQubits, ci[0]);
-        qcMapped.x(i + 6 * nQubits, ci[0]);
+        qcMapped->x(i + 3 * nQubits, ci[0]);
+        qcMapped->x(i + 6 * nQubits, ci[0]);
         writeToffoli(i, i + 3 * nQubits, true, i + 6 * nQubits, true);
     }
     isDecoded = true;
@@ -176,7 +176,7 @@ void Q9ShorEcc::mapGate(const qc::Operation& gate) {
     if (isDecoded && gate.getType() != qc::Measure && gate.getType() != qc::H) {
         writeEncoding();
     }
-    const int nQubits = qcOriginal.getNqubits();
+    const int nQubits = qcOriginal->getNqubits();
     auto      type    = qc::I;
     switch (gate.getType()) {
         case qc::I: break;
@@ -196,7 +196,7 @@ void Q9ShorEcc::mapGate(const qc::Operation& gate) {
             }
             if (auto measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
                 for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
-                    qcMapped.measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
+                    qcMapped->measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
                 }
             } else {
                 throw std::runtime_error("Dynamic cast to NonUnitaryOperation failed.");
@@ -215,16 +215,16 @@ void Q9ShorEcc::mapGate(const qc::Operation& gate) {
                 dd::Controls ctrls2;
                 for (const auto& ct: ctrls) {
                     ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + j * nQubits), ct.type});
-                    qcMapped.h(static_cast<dd::Qubit>(ct.qubit + j * nQubits));
+                    qcMapped->h(static_cast<dd::Qubit>(ct.qubit + j * nQubits));
                 }
-                qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), ctrls2, i + j * nQubits, type);
+                qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls2, i + j * nQubits, type);
                 for (const auto& ct: ctrls) {
-                    qcMapped.h(static_cast<dd::Qubit>(ct.qubit + j * nQubits));
+                    qcMapped->h(static_cast<dd::Qubit>(ct.qubit + j * nQubits));
                 }
             }
         } else {
             for (int j = 0; j < 9; j++) {
-                qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), i + j * nQubits, type);
+                qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i + j * nQubits, type);
             }
         }
     }

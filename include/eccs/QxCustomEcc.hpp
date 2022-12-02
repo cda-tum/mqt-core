@@ -17,8 +17,8 @@ public:
  * Assume your ECC needs p physical qubits to encode 1 logical qubit, a ancilla qubits and m measurements.
  * >>then q = p+a and c=m.
  */
-    QxCustomEcc(qc::QuantumComputation& qc, std::size_t measureFq):
-        Ecc({ID::QxCustom, /*q*/ 0, /*c*/ 0, "QxCustom"}, qc, measureFq) {}
+    QxCustomEcc(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
+        Ecc({ID::QxCustom, /*q*/ 0, /*c*/ 0, "QxCustom"}, std::move(qc), measureFq) {}
 
 protected:
     void writeEncoding() override;

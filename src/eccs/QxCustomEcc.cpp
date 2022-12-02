@@ -6,7 +6,7 @@
 #include "eccs/QxCustomEcc.hpp"
 
 void QxCustomEcc::writeEncoding() {
-    for (std::size_t i = 0; i < qcOriginal.getNqubits(); i++) {
+    for (std::size_t i = 0; i < qcOriginal->getNqubits(); i++) {
         //TODO write encoding here in 'encoded' form into the variable 'qcMapped'
         //i.e. which operations do you need to perform to get an "all |0>" state?
 
@@ -15,7 +15,7 @@ void QxCustomEcc::writeEncoding() {
 }
 
 void QxCustomEcc::measureAndCorrect() {
-    for (std::size_t i = 0; i < qcOriginal.getNqubits(); i++) {
+    for (std::size_t i = 0; i < qcOriginal->getNqubits(); i++) {
         //TODO write correcting here in 'encoded' form into the variable 'qcMapped'
         //i.e. which operations do you need to perform to get correct a state in case of errors?
 
@@ -24,7 +24,7 @@ void QxCustomEcc::measureAndCorrect() {
 }
 
 void QxCustomEcc::writeDecoding() {
-    for (std::size_t i = 0; i < qcOriginal.getNqubits(); i++) {
+    for (std::size_t i = 0; i < qcOriginal->getNqubits(); i++) {
         //TODO write correcting here in 'encoded' form into the variable 'qcMapped'
         //i.e. which operations do you need to perform to get the encoded information back into the original qubits?
 
