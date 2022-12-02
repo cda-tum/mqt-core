@@ -23,8 +23,8 @@ void Q9ShorEcc::writeEncoding() {
     if (!isDecoded) {
         return;
     }
-    isDecoded         = false;
-    const int nQubits = qcOriginal.getNqubits();
+    isDecoded          = false;
+    const auto nQubits = qcOriginal.getNqubits();
     for (int i = 0; i < nQubits; i++) {
         dd::Control ci = {dd::Qubit(i), dd::Control::Type::pos};
         qcMapped.x(dd::Qubit(i + 3 * nQubits), ci);
@@ -52,23 +52,23 @@ void Q9ShorEcc::measureAndCorrect() {
     }
     const auto nQubits = qcOriginal.getNqubits();
     const auto clStart = qcOriginal.getNcbits();
-    for (int i = 0; i < nQubits; i++) {
+    for (dd::Qubit i = 0; i < nQubits; i++) {
         //syntactic sugar for qubit indices
         std::array<dd::Qubit, 9>   qubits                  = {};
         std::array<dd::Qubit, 8>   ancillaQubits           = {};
         std::array<dd::Control, 8> ancillaControls         = {};
         std::array<dd::Control, 8> negativeAncillaControls = {};
-        for (int j = 0; j < 9; j++) {
+        for (std::size_t j = 0; j < 9; j++) {
             qubits[j] = dd::Qubit(i + j * nQubits);
         }
-        for (int j = 0; j < 8; j++) {
+        for (std::size_t j = 0; j < 8; j++) {
             ancillaQubits[j] = dd::Qubit(ecc.nRedundantQubits * nQubits + j);
             qcMapped.reset(ancillaQubits[j]);
         }
-        for (int j = 0; j < 8; j++) {
+        for (std::size_t j = 0; j < 8; j++) {
             ancillaControls[j] = dd::Control{dd::Qubit(ancillaQubits[j]), dd::Control::Type::pos};
         }
-        for (int j = 0; j < 8; j++) {
+        for (std::size_t j = 0; j < 8; j++) {
             negativeAncillaControls[j] = dd::Control{dd::Qubit(ancillaQubits[j]), dd::Control::Type::neg};
         }
 
@@ -112,7 +112,7 @@ void Q9ShorEcc::measureAndCorrect() {
         }
 
         //MEASURE ancilla qubits
-        for (int j = 0; j < 8; j++) {
+        for (std::size_t j = 0; j < 8; j++) {
             qcMapped.measure(ancillaQubits[j], clStart + j);
         }
 
@@ -141,7 +141,7 @@ void Q9ShorEcc::writeDecoding() {
     if (isDecoded) {
         return;
     }
-    const auto nQubits = static_cast<dd::Qubit>(qcOriginal.getNqubits());
+    const auto nQubits = qcOriginal.getNqubits();
     for (dd::Qubit i = 0; i < nQubits; i++) {
         std::array<dd::Control, 9> ci;
         for (dd::Qubit j = 0; j < 9; j++) {

@@ -12,7 +12,7 @@
 
 class Q9SurfaceEcc: public Ecc {
 public:
-    Q9SurfaceEcc(qc::QuantumComputation& qc, int measureFq):
+    Q9SurfaceEcc(qc::QuantumComputation& qc, std::size_t measureFq):
         Ecc({ID::Q9Surface, 9, 8, "Q9Surface"}, qc, measureFq) {}
 
 protected:

@@ -10,7 +10,7 @@
 
 class Q7SteaneEcc: public Ecc {
 public:
-    Q7SteaneEcc(qc::QuantumComputation& qc, int measureFq):
+    Q7SteaneEcc(qc::QuantumComputation& qc, std::size_t measureFq):
         Ecc(
                 {ID::Q7Steane, 7, 3, "Q7Steane"}, qc, measureFq) {}
 

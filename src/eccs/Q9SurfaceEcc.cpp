@@ -29,29 +29,29 @@ void Q9SurfaceEcc::measureAndCorrect() {
     if (isDecoded) {
         return;
     }
-    const int  nQubits    = qcOriginal.getNqubits();
-    const int  ancStart   = qcOriginal.getNqubits() * ecc.nRedundantQubits;
+    const auto nQubits    = qcOriginal.getNqubits();
+    const auto ancStart   = qcOriginal.getNqubits() * ecc.nRedundantQubits;
     const auto clAncStart = qcOriginal.getNcbits();
-    for (int i = 0; i < nQubits; i++) {
+    for (std::size_t i = 0; i < nQubits; i++) {
         std::array<dd::Qubit, 9>   qubits          = {};
         std::array<dd::Qubit, 8>   ancillaQubits   = {};
         std::array<dd::Control, 8> ancillaControls = {};
         std::array<dd::Control, 9> controlQubits   = {};
-        for (int j = 0; j < 9; j++) {
+        for (std::size_t j = 0; j < 9; j++) {
             qubits[j] = dd::Qubit(i + j * nQubits);
         }
-        for (int j = 0; j < 8; j++) {
+        for (std::size_t j = 0; j < 8; j++) {
             ancillaQubits[j] = dd::Qubit(ancStart + j);
         }
         if (gatesWritten) {
-            for (int j = 0; j < 8; j++) {
+            for (std::size_t j = 0; j < 8; j++) {
                 qcMapped.reset(ancillaQubits[j]);
             }
         }
-        for (int j = 0; j < 8; j++) {
+        for (std::size_t j = 0; j < 8; j++) {
             ancillaControls[j] = dd::Control{dd::Qubit(ancillaQubits[j]), dd::Control::Type::pos};
         }
-        for (int j = 0; j < 9; j++) {
+        for (std::size_t j = 0; j < 9; j++) {
             controlQubits[j] = dd::Control{dd::Qubit(qubits[j]), dd::Control::Type::pos};
         }
 
@@ -129,8 +129,8 @@ void Q9SurfaceEcc::writeDecoding() {
     if (isDecoded) {
         return;
     }
-    const int nQubits = qcOriginal.getNqubits();
-    for (int i = 0; i < nQubits; i++) {
+    const auto nQubits = qcOriginal.getNqubits();
+    for (std::size_t i = 0; i < nQubits; i++) {
         //measure 0, 4, 8. state = m0*m4*m8
         qcMapped.measure(dd::Qubit(i), i);
         qcMapped.measure(dd::Qubit(i + 4 * nQubits), i);
@@ -146,8 +146,7 @@ void Q9SurfaceEcc::mapGate(const qc::Operation& gate) {
     if (isDecoded && gate.getType() != qc::Measure) {
         writeEncoding();
     }
-    const int nQubits = qcOriginal.getNqubits();
-    dd::Qubit i;
+    const auto nQubits = qcOriginal.getNqubits();
 
     if (gate.getNcontrols() && gate.getType() != qc::Measure) {
         auto&        ctrls = gate.getControls();
@@ -161,8 +160,7 @@ void Q9SurfaceEcc::mapGate(const qc::Operation& gate) {
             case qc::I:
                 break;
             case qc::X:
-                for (std::size_t t = 0; t < gate.getNtargets(); t++) {
-                    i = gate.getTargets()[t];
+                for (auto i: gate.getTargets()) {
                     qcMapped.x(dd::Qubit(i + 2 * nQubits), ctrls);
                     qcMapped.x(dd::Qubit(i + 4 * nQubits), ctrls);
                     qcMapped.x(dd::Qubit(i + 6 * nQubits), ctrls);
@@ -176,8 +174,7 @@ void Q9SurfaceEcc::mapGate(const qc::Operation& gate) {
                 break;
             case qc::Y:
                 //Y = Z X
-                for (std::size_t t = 0; t < gate.getNtargets(); t++) {
-                    i = gate.getTargets()[t];
+                for (auto i: gate.getTargets()) {
                     qcMapped.z(dd::Qubit(i), ctrls);
                     qcMapped.z(dd::Qubit(i + 4 * nQubits), ctrls);
                     qcMapped.z(dd::Qubit(i + 8 * nQubits), ctrls);
@@ -199,8 +196,7 @@ void Q9SurfaceEcc::mapGate(const qc::Operation& gate) {
                 }
                 break;
             case qc::Z:
-                for (std::size_t t = 0; t < gate.getNtargets(); t++) {
-                    i = gate.getTargets()[t];
+                for (auto i: gate.getTargets()) {
                     qcMapped.z(dd::Qubit(i), ctrls);
                     qcMapped.z(dd::Qubit(i + 4 * nQubits), ctrls);
                     qcMapped.z(dd::Qubit(i + 8 * nQubits), ctrls);
@@ -220,17 +216,15 @@ void Q9SurfaceEcc::mapGate(const qc::Operation& gate) {
             case qc::I:
                 break;
             case qc::X:
-                for (std::size_t t = 0; t < gate.getNtargets(); t++) {
-                    i = gate.getTargets()[t];
+                for (auto i: gate.getTargets()) {
                     qcMapped.x(dd::Qubit(i + 2 * nQubits));
                     qcMapped.x(dd::Qubit(i + 4 * nQubits));
                     qcMapped.x(dd::Qubit(i + 6 * nQubits));
                 }
                 break;
             case qc::H:
-                for (std::size_t t = 0; t < gate.getNtargets(); t++) {
-                    i = gate.getTargets()[t];
-                    for (int j = 0; j < 9; j++) {
+                for (auto i: gate.getTargets()) {
+                    for (std::size_t j = 0; j < 9; j++) {
                         qcMapped.h(dd::Qubit(i + j * nQubits));
                     }
 
@@ -242,8 +236,7 @@ void Q9SurfaceEcc::mapGate(const qc::Operation& gate) {
                 break;
             case qc::Y:
                 //Y = Z X
-                for (std::size_t t = 0; t < gate.getNtargets(); t++) {
-                    i = gate.getTargets()[t];
+                for (auto i: gate.getTargets()) {
                     qcMapped.z(dd::Qubit(i));
                     qcMapped.z(dd::Qubit(i + 4 * nQubits));
                     qcMapped.z(dd::Qubit(i + 8 * nQubits));
@@ -253,8 +246,7 @@ void Q9SurfaceEcc::mapGate(const qc::Operation& gate) {
                 }
                 break;
             case qc::Z:
-                for (std::size_t t = 0; t < gate.getNtargets(); t++) {
-                    i = gate.getTargets()[t];
+                for (auto i: gate.getTargets()) {
                     qcMapped.z(dd::Qubit(i));
                     qcMapped.z(dd::Qubit(i + 4 * nQubits));
                     qcMapped.z(dd::Qubit(i + 8 * nQubits));

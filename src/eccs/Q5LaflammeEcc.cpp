@@ -27,11 +27,11 @@ void Q5LaflammeEcc::writeEncoding() {
     const auto ancStart = nQubits * ecc.nRedundantQubits;
     const auto clEncode = qcOriginal.getNcbits() + 4; //encode
 
-    for (int i = 0; i < nQubits; i++) {
+    for (dd::Qubit i = 0; i < nQubits; i++) {
         qcMapped.reset(dd::Qubit(ancStart));
     }
 
-    for (int i = 0; i < nQubits; i++) {
+    for (dd::Qubit i = 0; i < nQubits; i++) {
         qcMapped.h(dd::Qubit(ancStart));
         qcMapped.z(dd::Qubit(i), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
         qcMapped.z(dd::Qubit(i + nQubits), dd::Control{dd::Qubit(ancStart), dd::Control::Type::pos});
@@ -155,11 +155,11 @@ void Q5LaflammeEcc::writeDecoding() {
     if (isDecoded) {
         return;
     }
-    const int          nQubits           = qcOriginal.getNqubits();
+    const auto         nQubits           = qcOriginal.getNqubits();
     const auto         clAncStart        = static_cast<int>(qcOriginal.getNcbits());
     std::array<int, 8> correction_needed = {1, 2, 4, 7, 8, 11, 13, 14}; //values with odd amount of '1' bits
 
-    for (int i = 0; i < nQubits; i++) {
+    for (std::size_t i = 0; i < nQubits; i++) {
         //#|####
         //0|1111
         //odd amount of 1's -> x[0] = 1
@@ -191,7 +191,7 @@ void Q5LaflammeEcc::mapGate(const qc::Operation& gate) {
                 if (gate.getNcontrols()) {
                     gateNotAvailableError(gate);
                 } else {
-                    for (int j = 0; j < 5; j++) {
+                    for (dd::Qubit j = 0; j < 5; j++) {
                         qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
                     }
                 }

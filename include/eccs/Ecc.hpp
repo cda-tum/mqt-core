@@ -21,14 +21,12 @@ public:
     };
     struct Info {
         ID          id;
-        int         nRedundantQubits;
-        int         nCorrectingBits; //in total (not per qubit); usually number of clbits needed for correcting one qubit
+        std::size_t nRedundantQubits;
+        std::size_t nCorrectingBits; //in total (not per qubit); usually number of clbits needed for correcting one qubit
         std::string name;
     };
 
-    const Info ecc;
-
-    Ecc(Info ecc, qc::QuantumComputation& qc, int measureFrequency):
+    Ecc(Info ecc, qc::QuantumComputation& qc, std::size_t measureFrequency):
         ecc(std::move(ecc)),
         qcOriginal(qc), measureFrequency(measureFrequency) {
     }
@@ -47,9 +45,10 @@ public:
 protected:
     qc::QuantumComputation& qcOriginal;
     qc::QuantumComputation  qcMapped;
-    const int               measureFrequency;
+    std::size_t             measureFrequency;
     bool                    isDecoded    = true;
     bool                    gatesWritten = false;
+    Info                    ecc;
 
     virtual void initMappedCircuit();
 
@@ -66,10 +65,6 @@ protected:
     }
 
     void writeToffoli(int target, int c1, bool p1, int c2, bool p2);
-
-    //void                  writeGeneric(dd::Qubit target, qc::OpType type);
-    //[[maybe_unused]] void writeGeneric(dd::Qubit target, const dd::Control& control, qc::OpType type);
-    //void                  writeGeneric(dd::Qubit target, const dd::Controls& controls, qc::OpType type);
 
     void writeClassicalControl(dd::Qubit control, int qubitCount, unsigned int value, qc::OpType opType, int target);
 

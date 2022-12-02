@@ -10,7 +10,7 @@
 
 class Q5LaflammeEcc: public Ecc {
 public:
-    Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq):
+    Q5LaflammeEcc(qc::QuantumComputation& qc, std::size_t measureFq):
         Ecc({ID::Q5Laflamme, 5, 4, "Q5Laflamme"}, qc, measureFq) {}
 
 protected:

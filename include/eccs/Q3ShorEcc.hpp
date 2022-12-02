@@ -10,7 +10,7 @@
 
 class Q3ShorEcc: public Ecc {
 public:
-    Q3ShorEcc(qc::QuantumComputation& qc, int measureFq):
+    Q3ShorEcc(qc::QuantumComputation& qc, std::size_t measureFq):
         Ecc(
                 {ID::Q3Shor, 3, 2, "Q3Shor"}, qc, measureFq) {}
 

@@ -20,12 +20,12 @@ void Q7SteaneEcc::writeEncoding() {
     if (!isDecoded) {
         return;
     }
-    isDecoded         = false;
-    const int nQubits = qcOriginal.getNqubits();
+    isDecoded          = false;
+    const auto nQubits = qcOriginal.getNqubits();
     //reset data qubits if necessary
     if (gatesWritten) {
-        for (int i = 0; i < nQubits; i++) {
-            for (int j = 1; j < 7; j++) {
+        for (std::size_t i = 0; i < nQubits; i++) {
+            for (std::size_t j = 1; j < 7; j++) {
                 qcMapped.reset(dd::Qubit(i + j * nQubits));
             }
         }
@@ -42,17 +42,17 @@ void Q7SteaneEcc::measureAndCorrect() {
 }
 
 void Q7SteaneEcc::measureAndCorrectSingle(bool xSyndrome) {
-    const int  nQubits    = qcOriginal.getNqubits();
-    const int  ancStart   = nQubits * ecc.nRedundantQubits;
+    const auto nQubits    = qcOriginal.getNqubits();
+    const auto ancStart   = nQubits * ecc.nRedundantQubits;
     const auto clAncStart = static_cast<int>(qcOriginal.getNcbits());
     if (gatesWritten) {
-        for (int i = 0; i < nQubits; i++) {
+        for (std::size_t i = 0; i < nQubits; i++) {
             qcMapped.reset(static_cast<dd::Qubit>(ancStart));
             qcMapped.reset(static_cast<dd::Qubit>(ancStart + 1));
             qcMapped.reset(static_cast<dd::Qubit>(ancStart + 2));
         }
     }
-    for (int i = 0; i < nQubits; i++) {
+    for (dd::Qubit i = 0; i < nQubits; i++) {
         qcMapped.h(static_cast<dd::Qubit>(ancStart));
         qcMapped.h(static_cast<dd::Qubit>(ancStart + 1));
         qcMapped.h(static_cast<dd::Qubit>(ancStart + 2));
@@ -91,7 +91,7 @@ void Q7SteaneEcc::measureAndCorrectSingle(bool xSyndrome) {
 
         //correct Z_i for i+1 = c0*1+c1*2+c2*4
         //correct X_i for i+1 = c3*1+c4*2+c5*4
-        for (int j = 0; j < 7; j++) {
+        for (std::size_t j = 0; j < 7; j++) {
             writeClassicalControl(dd::Qubit(clAncStart), dd::QubitCount(3), j + 1U, xSyndrome ? qc::Z : qc::X, i + j * nQubits);
         }
     }
@@ -102,12 +102,12 @@ void Q7SteaneEcc::writeDecoding() {
     if (isDecoded) {
         return;
     }
-    const int                nQubits           = qcOriginal.getNqubits();
+    const auto               nQubits           = qcOriginal.getNqubits();
     const auto               clAncStart        = static_cast<int>(qcOriginal.getNcbits());
     std::array<dd::Qubit, 4> correction_needed = {1, 2, 4, 7}; //values with odd amount of '1' bits
     //use exiting registers qeccX and qeccZ for decoding
 
-    for (int i = 0; i < nQubits; i++) {
+    for (dd::Qubit i = 0; i < nQubits; i++) {
         //#|###|###
         //0|111|111
         //odd amount of 1's -> x[0] = 1
@@ -141,11 +141,10 @@ void Q7SteaneEcc::mapGate(const qc::Operation& gate) {
         case qc::H:
         case qc::Y:
         case qc::Z:
-            for (std::size_t t = 0; t < gate.getNtargets(); t++) {
-                int i = static_cast<unsigned char>(gate.getTargets()[t]);
+            for (auto i: gate.getTargets()) {
                 if (gate.getNcontrols()) {
                     auto& ctrls = gate.getControls();
-                    for (int j = 0; j < 7; j++) {
+                    for (std::size_t j = 0; j < 7; j++) {
                         dd::Controls ctrls2;
                         for (const auto& ct: ctrls) {
                             ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + j * nQubits), ct.type});
@@ -153,7 +152,7 @@ void Q7SteaneEcc::mapGate(const qc::Operation& gate) {
                         qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), ctrls2, static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
                     }
                 } else {
-                    for (int j = 0; j < 7; j++) {
+                    for (std::size_t j = 0; j < 7; j++) {
                         qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
                     }
                 }
@@ -162,11 +161,10 @@ void Q7SteaneEcc::mapGate(const qc::Operation& gate) {
             //locigal S = 3 physical S's
         case qc::S:
         case qc::Sdag:
-            for (std::size_t t = 0; t < gate.getNtargets(); t++) {
-                int i = static_cast<unsigned char>(gate.getTargets()[t]);
+            for (auto i: gate.getTargets()) {
                 if (gate.getNcontrols()) {
                     auto& ctrls = gate.getControls();
-                    for (int j = 0; j < 7; j++) {
+                    for (std::size_t j = 0; j < 7; j++) {
                         dd::Controls ctrls2;
                         for (const auto& ct: ctrls) {
                             ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + j * nQubits), ct.type});
@@ -176,7 +174,7 @@ void Q7SteaneEcc::mapGate(const qc::Operation& gate) {
                         qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), ctrls2, static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
                     }
                 } else {
-                    for (int j = 0; j < 7; j++) {
+                    for (std::size_t j = 0; j < 7; j++) {
                         qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
                         qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
                         qcMapped.emplace_back<qc::StandardOperation>(qcMapped.getNqubits(), static_cast<dd::Qubit>(i + j * nQubits), gate.getType());
@@ -205,8 +203,7 @@ void Q7SteaneEcc::mapGate(const qc::Operation& gate) {
             break;
         case qc::T:
         case qc::Tdag:
-            for (std::size_t t = 0; t < gate.getNtargets(); t++) {
-                int i = static_cast<unsigned char>(gate.getTargets()[t]);
+            for (auto i: gate.getTargets()) {
                 if (gate.getControls().empty()) {
                     qcMapped.x(dd::Qubit(i + 5 * nQubits), dd::Control{dd::Qubit(i + 6 * nQubits), dd::Control::Type::pos});
                     qcMapped.x(dd::Qubit(i + 0 * nQubits), dd::Control{dd::Qubit(i + 5 * nQubits), dd::Control::Type::pos});

@@ -8,10 +8,6 @@
 void Q3ShorEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
     qcOriginal.stripIdleQubits(true, false);
-    //statistics.nInputQubits         = qcOriginal.getNqubits();
-    //statistics.nInputClassicalBits  = (int)qcOriginal.getNcbits();
-    //  statistics.nOutputQubits        = qcOriginal.getNqubits() * ecc.nRedundantQubits + ecc.nCorrectingBits;
-    //  statistics.nOutputClassicalBits = statistics.nInputClassicalBits + ecc.nCorrectingBits;
     qcMapped.addQubitRegister(getNOutputQubits(qcOriginal.getNqubits()));
     auto cRegs = qcOriginal.getCregs();
     for (auto const& [regName, regBits]: cRegs) {
@@ -28,7 +24,7 @@ void Q3ShorEcc::writeEncoding() {
     isDecoded          = false;
     const auto nQubits = qcOriginal.getNqubits();
 
-    for (auto i = 0; i < nQubits; i++) {
+    for (std::size_t i = 0; i < nQubits; i++) {
         auto ctrl = dd::Control{dd::Qubit(i), dd::Control::Type::pos};
         qcMapped.x(dd::Qubit(i + nQubits), ctrl);
         qcMapped.x(dd::Qubit(i + 2 * nQubits), ctrl);
@@ -39,10 +35,10 @@ void Q3ShorEcc::measureAndCorrect() {
     if (isDecoded || !gatesWritten) {
         return;
     }
-    const int  nQubits  = qcOriginal.getNqubits();
+    const auto nQubits  = qcOriginal.getNqubits();
     const auto ancStart = static_cast<dd::Qubit>(nQubits * ecc.nRedundantQubits); //measure start (index of first ancilla qubit)
     const auto clStart  = static_cast<dd::Qubit>(qcOriginal.getNcbits());
-    for (int i = 0; i < nQubits; i++) {
+    for (std::size_t i = 0; i < nQubits; i++) {
         qcMapped.reset(ancStart);
         qcMapped.reset(static_cast<dd::Qubit>(ancStart + 1));
 
@@ -75,8 +71,8 @@ void Q3ShorEcc::writeDecoding() {
     if (isDecoded) {
         return;
     }
-    const auto nQubits = static_cast<int>(qcOriginal.getNqubits());
-    for (int i = 0; i < nQubits; i++) {
+    const auto nQubits = qcOriginal.getNqubits();
+    for (dd::Qubit i = 0; i < nQubits; i++) {
         auto ctrl = dd::Control{dd::Qubit(i), dd::Control::Type::pos};
         qcMapped.x(dd::Qubit(i + nQubits), ctrl);
         qcMapped.x(dd::Qubit(i + 2 * nQubits), ctrl);
