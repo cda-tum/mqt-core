@@ -11,7 +11,7 @@
 class Q5LaflammeEcc: public Ecc {
 public:
     Q5LaflammeEcc(qc::QuantumComputation& qc, int measureFq):
-        Ecc({ID::Q5Laflamme, 5, 4, Q5LaflammeEcc::getName()}, qc, measureFq) {}
+        Ecc({ID::Q5Laflamme, 5, 4, "Q5Laflamme"}, qc, measureFq) {}
 
 protected:
     void initMappedCircuit() override;
@@ -28,4 +28,3 @@ private:
     void writeClassicalControlled(unsigned int value, int target, qc::OpType optype, dd::Qubit clStart, dd::QubitCount clCount);
     void writeClassicalControlledCorrect(unsigned int value, int target, qc::OpType optype);
 };
-
