@@ -3,8 +3,7 @@
 * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
 */
 
-#ifndef QFR_Ecc_HPP
-#define QFR_Ecc_HPP
+#pragma once
 
 #include "EccStatistics.hpp"
 #include "QuantumComputation.hpp"
@@ -76,5 +75,3 @@ protected:
     static void writeXstatic(dd::Qubit target, dd::Control control, qc::QuantumComputation* qcMapped);
     static void writeZstatic(dd::Qubit target, dd::Control control, qc::QuantumComputation* qcMapped);
 };
-
-#endif //QFR_Ecc_HPP

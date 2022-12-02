@@ -3,8 +3,7 @@
 * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
 */
 
-#ifndef QFR_EccStatistics_HPP
-#define QFR_EccStatistics_HPP
+#pragma once
 
 #include <cstdlib>
 #include <string>
@@ -24,5 +23,3 @@ public:
         return (double)nOutputGates / (double)nInputGates;
     }
 };
-
-#endif // QFR_EccStatistics_HPP

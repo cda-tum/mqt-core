@@ -3,8 +3,7 @@
 * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
 */
 
-#ifndef QFR_QxCustomEcc_HPP
-#define QFR_QxCustomEcc_HPP
+#pragma once
 
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
@@ -30,5 +29,3 @@ protected:
 
     void mapGate(const qc::Operation& gate) override;
 };
-
-#endif //QFR_QxCustomEcc_HPP

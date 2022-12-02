@@ -3,8 +3,7 @@
 * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
 */
 
-#ifndef QFR_Q5LaflammeEcc_HPP
-#define QFR_Q5LaflammeEcc_HPP
+#pragma once
 
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
@@ -30,4 +29,3 @@ private:
     void writeClassicalControlledCorrect(unsigned int value, int target, qc::OpType optype);
 };
 
-#endif //QFR_Q5LaflammeEcc_HPP
