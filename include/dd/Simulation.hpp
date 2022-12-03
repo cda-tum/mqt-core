@@ -36,10 +36,19 @@ namespace dd {
     }
 
     template<class DDPackage>
-    std::map<std::string, std::size_t> simulate(const QuantumComputation* qc, const VectorDD& in, std::unique_ptr<DDPackage>& dd, std::size_t shots, std::size_t seed = 0U) {
+    std::map<std::string, std::size_t> simulate(const QuantumComputation*   qc,
+                                                const VectorDD&             in,
+                                                std::unique_ptr<DDPackage>& dd,
+                                                std::size_t                 shots,
+                                                std::size_t                 seed                   = 0U,
+                                                dd::Qubit                   noiseTarget            = 0,
+                                                size_t                      insertErrorAfterNGates = 0,
+                                                bool                        simulateNoise          = false) {
         bool isDynamicCircuit = false;
         bool hasMeasurements  = false;
         bool measurementsLast = true;
+
+        assert(in.p->ref > 0);
 
         std::mt19937_64 mt{};
         if (seed != 0U) {
@@ -148,8 +157,25 @@ namespace dd {
                 auto permutation = qc->initialLayout;
                 auto e           = in;
                 dd->incRef(e);
+                size_t operationCounter = 0;
 
                 for (const auto& op: *qc) {
+                    if (simulateNoise && operationCounter == insertErrorAfterNGates) {
+                        // Simulating noise by resetting the qubit which is affected by noise
+                        const auto& qubit = noiseTarget;
+                        auto        bit   = dd->measureOneCollapsing(e, permutation.at(qubit), true, mt);
+                        // apply an X operation whenever the measured result is one
+                        if (bit == '1') {
+                            const auto x   = qc::StandardOperation(qc->getNqubits(), qubit, qc::X);
+                            auto       tmp = dd->multiply(getDD(&x, dd), e);
+                            dd->incRef(tmp);
+                            dd->decRef(e);
+                            e = tmp;
+                            dd->garbageCollect();
+                        }
+                    }
+                    operationCounter++;
+
                     if (op->getType() == Measure) {
                         auto*       measure = dynamic_cast<NonUnitaryOperation*>(op.get());
                         const auto& qubits  = measure->getTargets();

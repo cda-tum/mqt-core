@@ -31,7 +31,7 @@ protected:
                                 const std::vector<dd::Qubit>& dataQubits             = {},
                                 int                           insertErrorAfterNGates = 0) {
         auto   shots             = 80;
-        double tolerance         = 0.15;
+        double tolerance         = 0.8;
         size_t seed              = 1;
         auto   toleranceAbsolute = (shots / 100.0) * (tolerance * 100.0);
 
@@ -60,11 +60,11 @@ protected:
             }
         } else {
             for (auto const& qubit: dataQubits) {
-                std::map<std::string, size_t> finalClassicValuesECC = simulate(qcECC.get(), eccRootEdge, ddEcc, shots, seed);
+                std::map<std::string, size_t> measurementsProtected = simulate(qcECC.get(), eccRootEdge, ddEcc, shots, seed, qubit, insertErrorAfterNGates, true);
                 for (auto const& [classicalBit, hits]: measurementsOriginal) {
                     // Since the result is stored as one bit string. I have to count the relevant classical bits.
                     size_t eccHits = 0;
-                    for (auto const& [eccMeasure, tempHits]: finalClassicValuesECC) {
+                    for (auto const& [eccMeasure, tempHits]: measurementsProtected) {
                         if (0 == eccMeasure.compare(eccMeasure.length() - classicalBit.length(), classicalBit.length(), classicalBit)) eccHits += tempHits;
                     }
                     auto difference = std::max(eccHits, hits) - std::min(eccHits, hits);
@@ -280,7 +280,7 @@ TEST_F(DDECCFunctionalityTest, testQ7Steane) {
 
     std::vector<dd::Qubit> dataQubits = {0, 1, 2, 3, 4, 5, 6};
 
-    int insertErrorAfterNGates = 31;
+    int insertErrorAfterNGates = 57;
     EXPECT_TRUE(testCircuits<Q7SteaneEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
 
