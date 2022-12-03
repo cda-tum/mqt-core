@@ -248,17 +248,18 @@ protected:
 TEST_F(DDECCFunctionalityTest, testIdEcc) {
     int measureFrequency = 0;
 
-    std::vector<std::shared_ptr<qc::QuantumComputation> (*)()> circuitsExpectToPass;
-    circuitsExpectToPass.push_back(createIdentityCircuit);
-    circuitsExpectToPass.push_back(createIdentityCircuit);
-    circuitsExpectToPass.push_back(createXCircuit);
-    circuitsExpectToPass.push_back(createYCircuit);
-    circuitsExpectToPass.push_back(createHCircuit);
-    circuitsExpectToPass.push_back(createHTCircuit);
-    circuitsExpectToPass.push_back(createHZCircuit);
-    circuitsExpectToPass.push_back(createCXCircuit);
-    circuitsExpectToPass.push_back(createCZCircuit);
-    circuitsExpectToPass.push_back(createCYCircuit);
+    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+
+    circuitsExpectToPass.emplace_back(createIdentityCircuit);
+    circuitsExpectToPass.emplace_back(createIdentityCircuit);
+    circuitsExpectToPass.emplace_back(createXCircuit);
+    circuitsExpectToPass.emplace_back(createYCircuit);
+    circuitsExpectToPass.emplace_back(createHCircuit);
+    circuitsExpectToPass.emplace_back(createHTCircuit);
+    circuitsExpectToPass.emplace_back(createHZCircuit);
+    circuitsExpectToPass.emplace_back(createCXCircuit);
+    circuitsExpectToPass.emplace_back(createCZCircuit);
+    circuitsExpectToPass.emplace_back(createCYCircuit);
 
     int circuitCounter = 0;
     for (auto& circuit: circuitsExpectToPass) {
@@ -274,18 +275,18 @@ TEST_F(DDECCFunctionalityTest, testIdEcc) {
 TEST_F(DDECCFunctionalityTest, testQ3Shor) {
     int measureFrequency = 0;
 
-    std::vector<std::shared_ptr<qc::QuantumComputation> (*)()> circuitsExpectToPass;
-    circuitsExpectToPass.push_back(createIdentityCircuit);
-    circuitsExpectToPass.push_back(createXCircuit);
-    circuitsExpectToPass.push_back(createCXCircuit);
-    circuitsExpectToPass.push_back(createCYCircuit);
+    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+    circuitsExpectToPass.emplace_back(createIdentityCircuit);
+    circuitsExpectToPass.emplace_back(createXCircuit);
+    circuitsExpectToPass.emplace_back(createCXCircuit);
+    circuitsExpectToPass.emplace_back(createCYCircuit);
 
-    std::vector<std::shared_ptr<qc::QuantumComputation> (*)()> circuitsExpectToFail;
-    circuitsExpectToFail.push_back(createYCircuit);
-    circuitsExpectToFail.push_back(createHCircuit);
-    circuitsExpectToFail.push_back(createHTCircuit);
-    circuitsExpectToFail.push_back(createCZCircuit);
-    circuitsExpectToFail.push_back(createHZCircuit);
+    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToFail;
+    circuitsExpectToFail.emplace_back(createYCircuit);
+    circuitsExpectToFail.emplace_back(createHCircuit);
+    circuitsExpectToFail.emplace_back(createHTCircuit);
+    circuitsExpectToFail.emplace_back(createCZCircuit);
+    circuitsExpectToFail.emplace_back(createHZCircuit);
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2};
@@ -310,18 +311,18 @@ TEST_F(DDECCFunctionalityTest, testQ3Shor) {
 TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
     int measureFrequency = 0;
 
-    std::vector<std::shared_ptr<qc::QuantumComputation> (*)()> circuitsExpectToPass;
-    circuitsExpectToPass.push_back(createIdentityCircuit);
-    circuitsExpectToPass.push_back(createXCircuit);
+    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+    circuitsExpectToPass.emplace_back(createIdentityCircuit);
+    circuitsExpectToPass.emplace_back(createXCircuit);
 
-    std::vector<std::shared_ptr<qc::QuantumComputation> (*)()> circuitsExpectToFail;
-    circuitsExpectToFail.push_back(createYCircuit);
-    circuitsExpectToFail.push_back(createHCircuit);
-    circuitsExpectToFail.push_back(createHTCircuit);
-    circuitsExpectToFail.push_back(createHZCircuit);
-    circuitsExpectToFail.push_back(createCXCircuit);
-    circuitsExpectToFail.push_back(createCZCircuit);
-    circuitsExpectToFail.push_back(createCYCircuit);
+    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToFail;
+    circuitsExpectToFail.emplace_back(createYCircuit);
+    circuitsExpectToFail.emplace_back(createHCircuit);
+    circuitsExpectToFail.emplace_back(createHTCircuit);
+    circuitsExpectToFail.emplace_back(createHZCircuit);
+    circuitsExpectToFail.emplace_back(createCXCircuit);
+    circuitsExpectToFail.emplace_back(createCZCircuit);
+    circuitsExpectToFail.emplace_back(createCYCircuit);
 
     std::vector<dd::Qubit> dataQubits = {0, 1, 2, 3, 4};
 
@@ -343,16 +344,16 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
 TEST_F(DDECCFunctionalityTest, testQ7Steane) {
     int measureFrequency = 0;
 
-    std::vector<std::shared_ptr<qc::QuantumComputation> (*)()> circuitsExpectToPass;
-    circuitsExpectToPass.push_back(createIdentityCircuit);
-    circuitsExpectToPass.push_back(createXCircuit);
-    circuitsExpectToPass.push_back(createYCircuit);
-    circuitsExpectToPass.push_back(createHCircuit);
-    circuitsExpectToPass.push_back(createHTCircuit);
-    circuitsExpectToPass.push_back(createHZCircuit);
-    circuitsExpectToPass.push_back(createCXCircuit);
-    circuitsExpectToPass.push_back(createCZCircuit);
-    circuitsExpectToPass.push_back(createCYCircuit);
+    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+    circuitsExpectToPass.emplace_back(createIdentityCircuit);
+    circuitsExpectToPass.emplace_back(createXCircuit);
+    circuitsExpectToPass.emplace_back(createYCircuit);
+    circuitsExpectToPass.emplace_back(createHCircuit);
+    circuitsExpectToPass.emplace_back(createHTCircuit);
+    circuitsExpectToPass.emplace_back(createHZCircuit);
+    circuitsExpectToPass.emplace_back(createCXCircuit);
+    circuitsExpectToPass.emplace_back(createCZCircuit);
+    circuitsExpectToPass.emplace_back(createCYCircuit);
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 3, 4, 5, 6};
@@ -371,18 +372,18 @@ TEST_F(DDECCFunctionalityTest, testQ7Steane) {
 TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
     int measureFrequency = 0;
 
-    std::vector<std::shared_ptr<qc::QuantumComputation> (*)()> circuitsExpectToPass;
-    circuitsExpectToPass.push_back(createIdentityCircuit);
-    circuitsExpectToPass.push_back(createXCircuit);
-    circuitsExpectToPass.push_back(createCXCircuit);
-    circuitsExpectToPass.push_back(createCYCircuit);
+    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+    circuitsExpectToPass.emplace_back(createIdentityCircuit);
+    circuitsExpectToPass.emplace_back(createXCircuit);
+    circuitsExpectToPass.emplace_back(createCXCircuit);
+    circuitsExpectToPass.emplace_back(createCYCircuit);
 
-    std::vector<std::shared_ptr<qc::QuantumComputation> (*)()> circuitsExpectToFail;
-    circuitsExpectToFail.push_back(createYCircuit);
-    circuitsExpectToFail.push_back(createHCircuit);
-    circuitsExpectToFail.push_back(createHTCircuit);
-    circuitsExpectToFail.push_back(createHZCircuit);
-    circuitsExpectToFail.push_back(createCZCircuit);
+    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToFail;
+    circuitsExpectToFail.emplace_back(createYCircuit);
+    circuitsExpectToFail.emplace_back(createHCircuit);
+    circuitsExpectToFail.emplace_back(createHTCircuit);
+    circuitsExpectToFail.emplace_back(createHZCircuit);
+    circuitsExpectToFail.emplace_back(createCZCircuit);
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8};
@@ -407,18 +408,18 @@ TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
 TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
     int measureFrequency = 0;
 
-    std::vector<std::shared_ptr<qc::QuantumComputation> (*)()> circuitsExpectToPass;
-    circuitsExpectToPass.push_back(createIdentityCircuit);
-    circuitsExpectToPass.push_back(createXCircuit);
-    circuitsExpectToPass.push_back(createCXCircuit);
-    circuitsExpectToPass.push_back(createYCircuit);
-    circuitsExpectToPass.push_back(createHCircuit);
-    circuitsExpectToPass.push_back(createHZCircuit);
-    circuitsExpectToPass.push_back(createCZCircuit);
-    circuitsExpectToPass.push_back(createCYCircuit);
+    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+    circuitsExpectToPass.emplace_back(createIdentityCircuit);
+    circuitsExpectToPass.emplace_back(createXCircuit);
+    circuitsExpectToPass.emplace_back(createCXCircuit);
+    circuitsExpectToPass.emplace_back(createYCircuit);
+    circuitsExpectToPass.emplace_back(createHCircuit);
+    circuitsExpectToPass.emplace_back(createHZCircuit);
+    circuitsExpectToPass.emplace_back(createCZCircuit);
+    circuitsExpectToPass.emplace_back(createCYCircuit);
 
-    std::vector<std::shared_ptr<qc::QuantumComputation> (*)()> circuitsExpectToFail;
-    circuitsExpectToFail.push_back(createHTCircuit);
+    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToFail;
+    circuitsExpectToFail.emplace_back(createHTCircuit);
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8};
@@ -443,18 +444,18 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
 TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
     int measureFrequency = 0;
 
-    std::vector<std::shared_ptr<qc::QuantumComputation> (*)()> circuitsExpectToPass;
-    circuitsExpectToPass.push_back(createIdentityCircuit);
-    circuitsExpectToPass.push_back(createXCircuit);
-    circuitsExpectToPass.push_back(createYCircuit);
-    circuitsExpectToPass.push_back(createHCircuit);
-    circuitsExpectToPass.push_back(createHZCircuit);
+    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+    circuitsExpectToPass.emplace_back(createIdentityCircuit);
+    circuitsExpectToPass.emplace_back(createXCircuit);
+    circuitsExpectToPass.emplace_back(createYCircuit);
+    circuitsExpectToPass.emplace_back(createHCircuit);
+    circuitsExpectToPass.emplace_back(createHZCircuit);
 
-    std::vector<std::shared_ptr<qc::QuantumComputation> (*)()> circuitsExpectToFail;
-    circuitsExpectToFail.push_back(createHTCircuit);
-    circuitsExpectToFail.push_back(createCXCircuit);
-    circuitsExpectToFail.push_back(createCZCircuit);
-    circuitsExpectToFail.push_back(createCYCircuit);
+    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToFail;
+    circuitsExpectToFail.emplace_back(createHTCircuit);
+    circuitsExpectToFail.emplace_back(createCXCircuit);
+    circuitsExpectToFail.emplace_back(createCZCircuit);
+    circuitsExpectToFail.emplace_back(createCYCircuit);
 
     int                    circuitCounter = 0;
     std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
