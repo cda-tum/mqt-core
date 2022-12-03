@@ -4,6 +4,7 @@
 */
 
 #include "gtest/gtest.h"
+#include <dd/Simulation.hpp>
 #include <eccs/Ecc.hpp>
 #include <eccs/IdEcc.hpp>
 #include <eccs/Q18SurfaceEcc.hpp>
@@ -25,118 +26,54 @@ protected:
 
     void TearDown() override {}
 
-    static void simulateCircuit(std::shared_ptr<qc::QuantumComputation>& qc,
-                                std::map<std::size_t,
-                                         double>&                        finalClassicValues,
-                                std::mt19937_64                          mt,
-                                int                                      nrShots                    = 5000,
-                                bool                                     simulateNoise              = false,
-                                Qubit                                    targetForNoise             = 0,
-                                std::uint_fast32_t                       applyNoiseAfterNOperations = 0) {
-        std::uint_fast32_t operationCounter = 0;
-        for (int sample = 0; sample < nrShots; sample++) {
-            std::map<std::size_t, bool> classicValuesECC{};
-            auto                        dd       = std::make_unique<dd::Package<>>(qc->getNqubits());
-            vEdge                       rootEdge = dd->makeZeroState(qc->getNqubits());
-            for (auto const& op: *qc) {
-                if (op->getType() == qc::Measure) {
-                    auto* nu_op   = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
-                    auto  quantum = nu_op->getTargets();
-                    auto  classic = nu_op->getClassics();
-                    for (unsigned int i = 0; i < quantum.size(); ++i) {
-                        dd->incRef(rootEdge);
-                        auto result = dd->measureOneCollapsing(rootEdge, quantum.at(i), false, mt);
-                        assert(result == '0' || result == '1');
-                        classicValuesECC[classic.at(i)] = (result == '1');
-                    }
-                } else if (op->getType() == qc::Reset) {
-                    auto*       nu_op   = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
-                    auto const& quantum = nu_op->getTargets();
-                    for (signed char qubit: quantum) {
-                        dd->incRef(rootEdge);
-                        if (auto result = dd->measureOneCollapsing(rootEdge, qubit, false, mt); result == '1') {
-                            auto flipOperation = StandardOperation(nu_op->getNqubits(), qubit, qc::X);
-                            auto operation     = dd::getDD(&flipOperation, dd);
-                            rootEdge           = dd->multiply(operation, rootEdge);
-                        }
-                        assert(dd->measureOneCollapsing(rootEdge, qubit, false, mt) == '0');
-                    }
-                } else {
-                    if (op->getType() == qc::ClassicControlled) {
-                        auto*              cc_op          = dynamic_cast<qc::ClassicControlledOperation*>(op.get());
-                        const auto         start_index    = static_cast<unsigned short>(cc_op->getParameter().at(0));
-                        const auto         length         = static_cast<unsigned short>(cc_op->getParameter().at(1));
-                        const unsigned int expected_value = cc_op->getExpectedValue();
-                        unsigned int       actual_value   = 0;
-                        for (unsigned int i = 0; i < length; i++) {
-                            actual_value |= (classicValuesECC[start_index + i] ? 1u : 0u) << i;
-                        }
-                        if (actual_value != expected_value) {
-                            continue;
-                        }
-                    }
-                    auto operation = dd::getDD(op.get(), dd);
-                    rootEdge       = dd->multiply(operation, rootEdge);
-                }
-                if (simulateNoise && operationCounter == applyNoiseAfterNOperations) {
-                    dd->incRef(rootEdge);
-                    auto result = dd->measureOneCollapsing(rootEdge, targetForNoise, false, mt);
-                    if (result == '1') {
-                        auto flipOperation = StandardOperation(qc->getNqubits(), targetForNoise, qc::X);
-                        auto operation     = dd::getDD(&flipOperation, dd);
-                        rootEdge           = dd->multiply(operation, rootEdge);
-                    }
-                }
-                operationCounter++;
-            }
-            for (std::size_t i = 0; i < classicValuesECC.size(); i++) {
-                // Counting the final hit in resultReg after each shot
-                auto regName = qc->returnClassicalRegisterName(i);
-                if (regName == "resultReg") {
-                    if (finalClassicValues.count(i) == 0) {
-                        finalClassicValues[i] = 0;
-                    }
-                    if (classicValuesECC[i]) {
-                        finalClassicValues[i] += 1.0 / nrShots;
-                    }
-                }
-            }
-        }
-    }
-
-    static bool verifyExecution(std::shared_ptr<qc::QuantumComputation> qcOriginal, std::shared_ptr<qc::QuantumComputation>& qcECC,
+    static bool verifyExecution(const std::shared_ptr<qc::QuantumComputation>& qcOriginal, const std::shared_ptr<qc::QuantumComputation>& qcECC,
                                 bool                          simulateWithErrors     = false,
                                 const std::vector<dd::Qubit>& dataQubits             = {},
                                 int                           insertErrorAfterNGates = 0) {
-        double                        tolerance = 0.15;
-        std::map<std::size_t, double> finalClassicValuesOriginal{};
-        auto                          shots             = 50;
+        auto   shots             = 80;
+        double tolerance         = 0.15;
+        size_t seed              = 1;
+        auto   toleranceAbsolute = (shots / 100.0) * (tolerance * 100.0);
 
-        std::mt19937_64 mt(1);
+        std::unique_ptr<dd::Package<>> ddOriginal       = std::make_unique<dd::Package<>>(qcOriginal->getNqubits());
+        auto                           originalRootEdge = ddOriginal->makeZeroState(qcOriginal->getNqubits());
+        ddOriginal->incRef(originalRootEdge);
 
-        std::cout.precision(2);
+        std::unique_ptr<dd::Package<>> ddEcc       = std::make_unique<dd::Package<>>(qcECC->getNqubits());
+        auto                           eccRootEdge = ddEcc->makeZeroState(qcECC->getNqubits());
+        ddEcc->incRef(eccRootEdge);
 
-        simulateCircuit(qcOriginal, finalClassicValuesOriginal, mt);
+        std::map<std::string, size_t> measurementsOriginal = simulate(qcOriginal.get(), originalRootEdge, ddOriginal, shots, seed);
 
         if (!simulateWithErrors) {
-            std::map<std::size_t, double> finalClassicValuesECC{};
-            simulateCircuit(qcECC, finalClassicValuesECC, mt, shots);
-            for (auto const& [classicalBit, probability]: finalClassicValuesOriginal) {
-                if (std::abs(probability - finalClassicValuesECC[classicalBit]) > tolerance) {
+            std::map<std::string, size_t> measurementsProtected = simulate(qcECC.get(), eccRootEdge, ddEcc, shots, seed);
+            for (auto const& [cBitsOriginal, cHitsOriginal]: measurementsOriginal) {
+                // Count the cHitsOriginal in the register with error correction
+                size_t cHitsProtected = 0;
+                for (auto const& [cBitsProtected, cHitsProtectedTemp]: measurementsProtected) {
+                    if (0 == cBitsProtected.compare(cBitsProtected.length() - cBitsOriginal.length(), cBitsOriginal.length(), cBitsOriginal)) cHitsProtected += cHitsProtectedTemp;
+                }
+                auto difference = std::max(cHitsProtected, cHitsOriginal) - std::min(cHitsProtected, cHitsOriginal);
+                if (static_cast<double>(difference) > toleranceAbsolute) {
                     return false;
                 }
             }
         } else {
             for (auto const& qubit: dataQubits) {
-                std::map<std::size_t, double> finalClassicValuesECC{};
-                simulateCircuit(qcECC, finalClassicValuesECC, mt, shots, true, qubit, insertErrorAfterNGates);
-                for (auto const& [classicalBit, probability]: finalClassicValuesOriginal) {
-                    if (std::abs(probability - finalClassicValuesECC[classicalBit]) > tolerance) {
+                std::map<std::string, size_t> finalClassicValuesECC = simulate(qcECC.get(), eccRootEdge, ddEcc, shots, seed);
+                for (auto const& [classicalBit, hits]: measurementsOriginal) {
+                    // Since the result is stored as one bit string. I have to count the relevant classical bits.
+                    size_t eccHits = 0;
+                    for (auto const& [eccMeasure, tempHits]: finalClassicValuesECC) {
+                        if (0 == eccMeasure.compare(eccMeasure.length() - classicalBit.length(), classicalBit.length(), classicalBit)) eccHits += tempHits;
+                    }
+                    auto difference = std::max(eccHits, hits) - std::min(eccHits, hits);
+                    if (static_cast<double>(difference) > toleranceAbsolute) {
                         std::cout << "Simulation failed when applying error to qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates.\n";
-                        std::cout << "Error in bit " << classicalBit << " original register: " << probability << " ecc register: " << finalClassicValuesECC[classicalBit] << std::endl;
+                        std::cout << "Error in bit " << classicalBit << " original register: " << hits << " ecc register: " << eccHits << std::endl;
                         return false;
                     } else {
-                        std::cout << "Diff/tolerance " << std::abs(probability - finalClassicValuesECC[classicalBit]) << "/" << tolerance << " Original register: " << probability << " ecc register: " << finalClassicValuesECC[classicalBit];
+                        std::cout << "Diff/tolerance " << difference << "/" << toleranceAbsolute << " Original register: " << hits << " ecc register: " << eccHits;
                         std::cout << " Error at qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates." << std::endl;
                     }
                 }
@@ -278,7 +215,7 @@ TEST_F(DDECCFunctionalityTest, testIdEcc) {
     circuitsExpectToPass.emplace_back(createCZCircuit);
     circuitsExpectToPass.emplace_back(createCYCircuit);
 
-    EXPECT_TRUE(testCircuits<IdEcc>(circuitsExpectToPass, measureFrequency, {}, {}, false));
+    EXPECT_TRUE(testCircuits<IdEcc>(circuitsExpectToPass, measureFrequency, {}, 0, false));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ3Shor) {
