@@ -17,6 +17,8 @@
 using namespace qc;
 using namespace dd;
 
+typedef std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitFunctions;
+
 class DDECCFunctionalityTest: public ::testing::Test {
 protected:
     void SetUp() override {}
@@ -243,14 +245,33 @@ protected:
         qc->measure(1, {"resultReg", 1});
         return qc;
     }
+
+    template<class eccType>
+    static bool testCircuits(const circuitFunctions&       circuitsExpectToPass,
+                             int                           measureFrequency       = 0,
+                             const std::vector<dd::Qubit>& dataQubits             = {},
+                             int                           insertErrorAfterNGates = 0,
+                             bool                          simulateNoise          = false) {
+        int circuitCounter = 0;
+        for (auto& circuit: circuitsExpectToPass) {
+            circuitCounter++;
+            std::cout << "Testing circuit " << circuitCounter << std::endl;
+            auto qcOriginal = circuit();
+            auto mapper     = std::make_unique<eccType>(qcOriginal, measureFrequency);
+            auto qcECC      = mapper->apply();
+            bool success    = verifyExecution(qcOriginal, qcECC, simulateNoise, dataQubits, insertErrorAfterNGates);
+            if (!success) {
+                return false;
+            }
+        }
+        return true;
+    }
 };
 
 TEST_F(DDECCFunctionalityTest, testIdEcc) {
     int measureFrequency = 0;
 
-    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
-
-    circuitsExpectToPass.emplace_back(createIdentityCircuit);
+    circuitFunctions circuitsExpectToPass;
     circuitsExpectToPass.emplace_back(createIdentityCircuit);
     circuitsExpectToPass.emplace_back(createXCircuit);
     circuitsExpectToPass.emplace_back(createYCircuit);
@@ -261,61 +282,40 @@ TEST_F(DDECCFunctionalityTest, testIdEcc) {
     circuitsExpectToPass.emplace_back(createCZCircuit);
     circuitsExpectToPass.emplace_back(createCYCircuit);
 
-    int circuitCounter = 0;
-    for (auto& circuit: circuitsExpectToPass) {
-        circuitCounter++;
-        std::cout << "Testing circuit " << circuitCounter << std::endl;
-        auto qcOriginal = circuit();
-        auto mapper     = std::make_unique<IdEcc>(qcOriginal, measureFrequency);
-        auto qcECC      = mapper->apply();
-        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC));
-    }
+    EXPECT_TRUE(testCircuits<IdEcc>(circuitsExpectToPass, measureFrequency, {}, {}, false));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ3Shor) {
     int measureFrequency = 0;
 
-    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+    circuitFunctions circuitsExpectToPass;
     circuitsExpectToPass.emplace_back(createIdentityCircuit);
     circuitsExpectToPass.emplace_back(createXCircuit);
     circuitsExpectToPass.emplace_back(createCXCircuit);
     circuitsExpectToPass.emplace_back(createCYCircuit);
 
-    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToFail;
+    circuitFunctions circuitsExpectToFail;
     circuitsExpectToFail.emplace_back(createYCircuit);
     circuitsExpectToFail.emplace_back(createHCircuit);
     circuitsExpectToFail.emplace_back(createHTCircuit);
     circuitsExpectToFail.emplace_back(createCZCircuit);
     circuitsExpectToFail.emplace_back(createHZCircuit);
 
-    int                    circuitCounter = 0;
-    std::vector<dd::Qubit> dataQubits     = {0, 1, 2};
+    std::vector<dd::Qubit> dataQubits             = {0, 1, 2};
+    int                    insertErrorAfterNGates = 1;
 
-    int insertErrorAfterNGates = 1;
-    for (auto& circuit: circuitsExpectToPass) {
-        circuitCounter++;
-        std::cout << "Testing circuit " << circuitCounter << std::endl;
-        auto qcOriginal = circuit();
-        auto mapper     = std::make_unique<Q3ShorEcc>(qcOriginal, measureFrequency);
-        auto qcECC      = mapper->apply();
-        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, dataQubits, insertErrorAfterNGates));
-    }
-
-    for (auto& circuit: circuitsExpectToFail) {
-        auto qcOriginal = circuit();
-        auto mapper     = std::make_unique<Q3ShorEcc>(qcOriginal, measureFrequency);
-        EXPECT_ANY_THROW(mapper->apply());
-    }
+    EXPECT_TRUE(testCircuits<Q3ShorEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_ANY_THROW(testCircuits<Q3ShorEcc>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
     int measureFrequency = 0;
 
-    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+    circuitFunctions circuitsExpectToPass;
     circuitsExpectToPass.emplace_back(createIdentityCircuit);
     circuitsExpectToPass.emplace_back(createXCircuit);
 
-    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToFail;
+    circuitFunctions circuitsExpectToFail;
     circuitsExpectToFail.emplace_back(createYCircuit);
     circuitsExpectToFail.emplace_back(createHCircuit);
     circuitsExpectToFail.emplace_back(createHTCircuit);
@@ -327,24 +327,14 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
     std::vector<dd::Qubit> dataQubits = {0, 1, 2, 3, 4};
 
     int insertErrorAfterNGates = 30;
-    for (auto& circuit: circuitsExpectToPass) {
-        auto qcOriginal = circuit();
-        auto mapper     = std::make_unique<Q5LaflammeEcc>(qcOriginal, measureFrequency);
-        auto qcECC      = mapper->apply();
-        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, {}, insertErrorAfterNGates));
-    }
-
-    for (auto& circuit: circuitsExpectToFail) {
-        auto qcOriginal = circuit();
-        auto mapper     = std::make_unique<Q5LaflammeEcc>(qcOriginal, measureFrequency);
-        EXPECT_ANY_THROW(mapper->apply());
-    }
+    EXPECT_TRUE(testCircuits<Q5LaflammeEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_ANY_THROW(testCircuits<Q5LaflammeEcc>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ7Steane) {
     int measureFrequency = 0;
 
-    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+    circuitFunctions circuitsExpectToPass;
     circuitsExpectToPass.emplace_back(createIdentityCircuit);
     circuitsExpectToPass.emplace_back(createXCircuit);
     circuitsExpectToPass.emplace_back(createYCircuit);
@@ -355,60 +345,39 @@ TEST_F(DDECCFunctionalityTest, testQ7Steane) {
     circuitsExpectToPass.emplace_back(createCZCircuit);
     circuitsExpectToPass.emplace_back(createCYCircuit);
 
-    int                    circuitCounter = 0;
-    std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 3, 4, 5, 6};
+    std::vector<dd::Qubit> dataQubits = {0, 1, 2, 3, 4, 5, 6};
 
     int insertErrorAfterNGates = 31;
-    for (auto& circuit: circuitsExpectToPass) {
-        circuitCounter++;
-        std::cout << "Testing circuit " << circuitCounter << std::endl;
-        auto qcOriginal = circuit();
-        auto mapper     = std::make_unique<Q7SteaneEcc>(qcOriginal, measureFrequency);
-        auto qcECC      = mapper->apply();
-        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, dataQubits, insertErrorAfterNGates));
-    }
+    EXPECT_TRUE(testCircuits<Q7SteaneEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
     int measureFrequency = 0;
 
-    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+    circuitFunctions circuitsExpectToPass;
     circuitsExpectToPass.emplace_back(createIdentityCircuit);
     circuitsExpectToPass.emplace_back(createXCircuit);
     circuitsExpectToPass.emplace_back(createCXCircuit);
     circuitsExpectToPass.emplace_back(createCYCircuit);
 
-    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToFail;
+    circuitFunctions circuitsExpectToFail;
     circuitsExpectToFail.emplace_back(createYCircuit);
     circuitsExpectToFail.emplace_back(createHCircuit);
     circuitsExpectToFail.emplace_back(createHTCircuit);
     circuitsExpectToFail.emplace_back(createHZCircuit);
     circuitsExpectToFail.emplace_back(createCZCircuit);
 
-    int                    circuitCounter = 0;
-    std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8};
+    std::vector<dd::Qubit> dataQubits = {0, 1, 2, 4, 5, 6, 7, 8};
 
     int insertErrorAfterNGates = 1;
-    for (auto& circuit: circuitsExpectToPass) {
-        circuitCounter++;
-        std::cout << "Testing circuit " << circuitCounter << std::endl;
-        auto qcOriginal = circuit();
-        auto mapper     = std::make_unique<Q9ShorEcc>(qcOriginal, measureFrequency);
-        auto qcECC      = mapper->apply();
-        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, dataQubits, insertErrorAfterNGates));
-    }
-
-    for (auto& circuit: circuitsExpectToFail) {
-        auto qcOriginal = circuit();
-        auto mapper     = std::make_unique<Q9ShorEcc>(qcOriginal, measureFrequency);
-        EXPECT_ANY_THROW(mapper->apply());
-    }
+    EXPECT_TRUE(testCircuits<Q9ShorEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_ANY_THROW(testCircuits<Q9ShorEcc>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
     int measureFrequency = 0;
 
-    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+    circuitFunctions circuitsExpectToPass;
     circuitsExpectToPass.emplace_back(createIdentityCircuit);
     circuitsExpectToPass.emplace_back(createXCircuit);
     circuitsExpectToPass.emplace_back(createCXCircuit);
@@ -418,61 +387,35 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
     circuitsExpectToPass.emplace_back(createCZCircuit);
     circuitsExpectToPass.emplace_back(createCYCircuit);
 
-    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToFail;
+    circuitFunctions circuitsExpectToFail;
     circuitsExpectToFail.emplace_back(createHTCircuit);
 
-    int                    circuitCounter = 0;
-    std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8};
+    std::vector<dd::Qubit> dataQubits = {0, 1, 2, 4, 5, 6, 7, 8};
 
     int insertErrorAfterNGates = 55;
-    for (auto& circuit: circuitsExpectToPass) {
-        circuitCounter++;
-        std::cout << "Testing circuit " << circuitCounter << std::endl;
-        auto qcOriginal = circuit();
-        auto mapper     = std::make_unique<Q9SurfaceEcc>(qcOriginal, measureFrequency);
-        auto qcECC      = mapper->apply();
-        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, dataQubits, insertErrorAfterNGates));
-    }
-
-    for (auto& circuit: circuitsExpectToFail) {
-        auto qcOriginal = circuit();
-        auto mapper     = std::make_unique<Q9SurfaceEcc>(qcOriginal, measureFrequency);
-        EXPECT_ANY_THROW(mapper->apply());
-    }
+    EXPECT_TRUE(testCircuits<Q9SurfaceEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_ANY_THROW(testCircuits<Q9SurfaceEcc>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
     int measureFrequency = 0;
 
-    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToPass;
+    circuitFunctions circuitsExpectToPass;
     circuitsExpectToPass.emplace_back(createIdentityCircuit);
     circuitsExpectToPass.emplace_back(createXCircuit);
     circuitsExpectToPass.emplace_back(createYCircuit);
     circuitsExpectToPass.emplace_back(createHCircuit);
     circuitsExpectToPass.emplace_back(createHZCircuit);
 
-    std::vector<std::function<std::shared_ptr<qc::QuantumComputation>()>> circuitsExpectToFail;
+    circuitFunctions circuitsExpectToFail;
     circuitsExpectToFail.emplace_back(createHTCircuit);
     circuitsExpectToFail.emplace_back(createCXCircuit);
     circuitsExpectToFail.emplace_back(createCZCircuit);
     circuitsExpectToFail.emplace_back(createCYCircuit);
 
-    int                    circuitCounter = 0;
-    std::vector<dd::Qubit> dataQubits     = {0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
+    std::vector<dd::Qubit> dataQubits = {0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
 
     int insertErrorAfterNGates = 127;
-    for (auto& circuit: circuitsExpectToPass) {
-        circuitCounter++;
-        std::cout << "Testing circuit " << circuitCounter << std::endl;
-        auto qcOriginal = circuit();
-        auto mapper     = std::make_unique<Q18SurfaceEcc>(qcOriginal, measureFrequency);
-        auto qcECC      = mapper->apply();
-        EXPECT_TRUE(verifyExecution(qcOriginal, qcECC, true, dataQubits, insertErrorAfterNGates));
-    }
-
-    for (auto& circuit: circuitsExpectToFail) {
-        auto qcOriginal = circuit();
-        auto mapper     = std::make_unique<Q18SurfaceEcc>(qcOriginal, measureFrequency);
-        EXPECT_ANY_THROW(mapper->apply());
-    }
+    EXPECT_TRUE(testCircuits<Q18SurfaceEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_ANY_THROW(testCircuits<Q18SurfaceEcc>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
