@@ -109,9 +109,7 @@ protected:
                                 const std::vector<dd::Qubit>& dataQubits             = {},
                                 int                           insertErrorAfterNGates = 0) {
         double                        tolerance = 0.15;
-        double                        aboutOne  = 1.00000001;
         std::map<std::size_t, double> finalClassicValuesOriginal{};
-        bool                          testingSuccessful = true;
         auto                          shots             = 50;
 
         std::mt19937_64 mt(1);
@@ -124,9 +122,8 @@ protected:
             std::map<std::size_t, double> finalClassicValuesECC{};
             simulateCircuit(qcECC, finalClassicValuesECC, mt, shots);
             for (auto const& [classicalBit, probability]: finalClassicValuesOriginal) {
-                assert(probability <= aboutOne && finalClassicValuesECC[classicalBit] <= aboutOne);
                 if (std::abs(probability - finalClassicValuesECC[classicalBit]) > tolerance) {
-                    testingSuccessful = false;
+                    return false;
                 }
             }
         } else {
@@ -134,11 +131,10 @@ protected:
                 std::map<std::size_t, double> finalClassicValuesECC{};
                 simulateCircuit(qcECC, finalClassicValuesECC, mt, shots, true, qubit, insertErrorAfterNGates);
                 for (auto const& [classicalBit, probability]: finalClassicValuesOriginal) {
-                    assert(probability <= aboutOne && finalClassicValuesECC[classicalBit] <= aboutOne);
                     if (std::abs(probability - finalClassicValuesECC[classicalBit]) > tolerance) {
                         std::cout << "Simulation failed when applying error to qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates.\n";
                         std::cout << "Error in bit " << classicalBit << " original register: " << probability << " ecc register: " << finalClassicValuesECC[classicalBit] << std::endl;
-                        testingSuccessful = false;
+                        return false;
                     } else {
                         std::cout << "Diff/tolerance " << std::abs(probability - finalClassicValuesECC[classicalBit]) << "/" << tolerance << " Original register: " << probability << " ecc register: " << finalClassicValuesECC[classicalBit];
                         std::cout << " Error at qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates." << std::endl;
@@ -146,7 +142,7 @@ protected:
                 }
             }
         }
-        return testingSuccessful;
+        return true;
     }
 
     static std::shared_ptr<qc::QuantumComputation> createIdentityCircuit() {
