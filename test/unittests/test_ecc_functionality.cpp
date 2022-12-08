@@ -259,7 +259,7 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
 
     std::vector<dd::Qubit> dataQubits = {0, 1, 2, 3, 4};
 
-    int insertErrorAfterNGates = 30;
+    int insertErrorAfterNGates = 61;
     EXPECT_TRUE(testCircuits<Q5LaflammeEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
     EXPECT_ANY_THROW(testCircuits<Q5LaflammeEcc>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
