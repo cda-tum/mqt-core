@@ -346,9 +346,9 @@ TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
     circuitsExpectToFail.emplace_back(createCZCircuit);
     circuitsExpectToFail.emplace_back(createCYCircuit);
 
-    std::vector<dd::Qubit> dataQubits = {0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
+    std::vector<dd::Qubit> dataQubits(Q18SurfaceEcc::dataQubits.begin(), Q18SurfaceEcc::dataQubits.end());
 
-    int insertErrorAfterNGates = 127;
+    int insertErrorAfterNGates = 115;
     EXPECT_TRUE(testCircuits<Q18SurfaceEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
     EXPECT_ANY_THROW(testCircuits<Q18SurfaceEcc>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }

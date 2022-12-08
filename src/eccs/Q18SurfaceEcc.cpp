@@ -40,9 +40,9 @@ void Q18SurfaceEcc::measureAndCorrect() {
         for (std::size_t j = 0; j < 36; j++) {
             controlQubits[j] = dd::Control{dd::Qubit(qubits[j]), dd::Control::Type::pos};
         }
-        std::array<std::size_t, 18> ancillaIndices = {0, 2, 4, 7, 9, 11, 12, 14, 16, 19, 21, 23, 24, 26, 28, 31, 33, 35};
+
         if (gatesWritten) {
-            for (std::size_t ai: ancillaIndices) {
+            for (dd::Qubit ai: ancillaIndices) {
                 qcMapped->reset(qubits[ai]);
             }
         }
@@ -187,8 +187,9 @@ void Q18SurfaceEcc::measureAndCorrect() {
         writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b00100000, qc::Z, qubits[30]); //31
         writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b01100000, qc::Z, qubits[32]); //31+33
         writeClassicalControl(dd::Qubit(clAncStart + 8), 8, 0b11000000, qc::Z, qubits[34]); //33+35
+
+        gatesWritten = true;
     }
-    gatesWritten = true;
 }
 
 void Q18SurfaceEcc::writeDecoding() {
@@ -232,7 +233,6 @@ void Q18SurfaceEcc::mapGate(const qc::Operation& gate) {
                 //apply H gate to every data qubit
                 //swap circuit along '/' axis
                 for (auto i: gate.getTargets()) {
-                    std::array<std::int_fast8_t, 18> dataQubits = {1, 3, 5, 6, 8, 10, 13, 15, 17, 18, 20, 22, 25, 27, 29, 30, 32, 34};
                     for (const auto j: dataQubits) {
                         qcMapped->h(dd::Qubit(i + j * nQubits));
                     }
