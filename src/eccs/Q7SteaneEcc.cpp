@@ -45,14 +45,16 @@ void Q7SteaneEcc::measureAndCorrectSingle(bool xSyndrome) {
     const auto nQubits    = qcOriginal->getNqubits();
     const auto ancStart   = nQubits * ecc.nRedundantQubits;
     const auto clAncStart = static_cast<int>(qcOriginal->getNcbits());
-    if (gatesWritten) {
-        for (std::size_t i = 0; i < nQubits; i++) {
-            qcMapped->reset(static_cast<dd::Qubit>(ancStart));
-            qcMapped->reset(static_cast<dd::Qubit>(ancStart + 1));
-            qcMapped->reset(static_cast<dd::Qubit>(ancStart + 2));
-        }
-    }
+
     for (dd::Qubit i = 0; i < nQubits; i++) {
+        if (gatesWritten) {
+            for (std::size_t i = 0; i < nQubits; i++) {
+                qcMapped->reset(static_cast<dd::Qubit>(ancStart));
+                qcMapped->reset(static_cast<dd::Qubit>(ancStart + 1));
+                qcMapped->reset(static_cast<dd::Qubit>(ancStart + 2));
+            }
+        }
+
         qcMapped->h(static_cast<dd::Qubit>(ancStart));
         qcMapped->h(static_cast<dd::Qubit>(ancStart + 1));
         qcMapped->h(static_cast<dd::Qubit>(ancStart + 2));
@@ -94,8 +96,8 @@ void Q7SteaneEcc::measureAndCorrectSingle(bool xSyndrome) {
         for (std::size_t j = 0; j < 7; j++) {
             writeClassicalControl(dd::Qubit(clAncStart), dd::QubitCount(3), j + 1U, xSyndrome ? qc::Z : qc::X, i + j * nQubits);
         }
+        gatesWritten = true;
     }
-    gatesWritten = true;
 }
 
 void Q7SteaneEcc::writeDecoding() {
