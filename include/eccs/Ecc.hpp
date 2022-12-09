@@ -62,7 +62,7 @@ protected:
 
     virtual void mapGate(const qc::Operation& gate) = 0;
 
-    inline void gateNotAvailableError(const qc::Operation& gate) const {
+    void gateNotAvailableError(const qc::Operation& gate) const {
         throw qc::QFRException(std::string("Gate ") + gate.getName() + " not supported to encode in error code " + ecc.name + "!");
     }
 
