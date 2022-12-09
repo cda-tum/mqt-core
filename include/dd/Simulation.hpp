@@ -41,9 +41,9 @@ namespace dd {
                                                 std::unique_ptr<DDPackage>& dd,
                                                 std::size_t                 shots,
                                                 std::size_t                 seed                   = 0U,
-                                                dd::Qubit                   noiseTarget            = 0,
-                                                size_t                      insertErrorAfterNGates = 0,
-                                                bool                        simulateNoise          = false) {
+                                                const bool                  simulateNoise          = false,
+                                                const dd::Qubit             noiseTarget            = 0,
+                                                const size_t                insertErrorAfterNGates = 0) {
         bool isDynamicCircuit = false;
         bool hasMeasurements  = false;
         bool measurementsLast = true;

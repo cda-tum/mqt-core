@@ -42,6 +42,8 @@ public:
         return nInputQubits * ecc.nRedundantQubits + ecc.nCorrectingBits;
     }
 
+    [[nodiscard]] bool verifyExecution(bool simulateWithErrors = false, const std::vector<dd::Qubit>& dataQubits = {}, int insertErrorAfterNGates = 0) const;
+
 protected:
     std::shared_ptr<qc::QuantumComputation> qcOriginal;
     std::shared_ptr<qc::QuantumComputation> qcMapped;
