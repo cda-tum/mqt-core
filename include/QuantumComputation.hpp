@@ -682,7 +682,6 @@ namespace qc {
         // this function augments a given circuit by additional registers
         void addQubitRegister(std::size_t, const char* reg_name = DEFAULT_QREG);
         void addClassicalRegister(std::size_t nc, const char* reg_name = DEFAULT_CREG);
-        void addClassicalRegister(std::size_t nc, std::string reg_name);
         void addAncillaryRegister(std::size_t nq, const char* reg_name = DEFAULT_ANCREG);
         // a function to combine all quantum registers (qregs and ancregs) into a single register (useful for circuits mapped to a device)
         void unifyQuantumRegisters(const std::string& regName = DEFAULT_QREG);

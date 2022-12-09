@@ -212,15 +212,6 @@ namespace qc {
         garbage.resize(nqubits + nancillae);
     }
 
-    void QuantumComputation::addClassicalRegister(std::size_t nc, std::string reg_name) {
-        if (cregs.count(reg_name)) {
-            throw QFRException("[addClassicalRegister] Augmenting existing classical registers is currently not supported");
-        }
-
-        cregs.insert({reg_name, {nclassics, nc}});
-        nclassics += nc;
-    }
-
     void QuantumComputation::addClassicalRegister(std::size_t nc, const char* reg_name) {
         if (cregs.count(reg_name)) {
             throw QFRException("[addClassicalRegister] Augmenting existing classical registers is currently not supported");

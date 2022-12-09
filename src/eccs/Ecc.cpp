@@ -11,7 +11,7 @@ void Ecc::initMappedCircuit() {
     qcOriginal->stripIdleQubits(true, false);
     qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
     for (const auto& cRegs = qcOriginal->getCregs(); auto const& [regName, regBits]: cRegs) {
-        qcMapped->addClassicalRegister(regBits.second, regName);
+        qcMapped->addClassicalRegister(regBits.second, regName.c_str());
     }
 
     if (ecc.nCorrectingBits > 0) {

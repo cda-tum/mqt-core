@@ -11,7 +11,7 @@ void Q5LaflammeEcc::initMappedCircuit() {
     qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
     auto cRegs = qcOriginal->getCregs();
     for (auto const& [regName, regBits]: cRegs) {
-        qcMapped->addClassicalRegister(regBits.second, regName);
+        qcMapped->addClassicalRegister(regBits.second, regName.c_str());
     }
     qcMapped->addClassicalRegister(4, "qecc");
     qcMapped->addClassicalRegister(1, "encode");
