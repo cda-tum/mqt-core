@@ -49,7 +49,6 @@ The `construct` function additionally provides the options `store_decision_diagr
 
 Special routines are available for constructing the functionality of the Quantum Fourier Transform (`construct_qft(nqubits, ...)`) or Grover's algorithm (`construct_grover(nqubits, seed, ...)`). For details on the method employed for Grover's search we refer to [[1, Section 4.2]](https://arxiv.org/abs/2103.08281).
 
-
 ## MQT Toolset
 
 The QFR library is the backbone of the quantum software tools in:

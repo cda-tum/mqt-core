@@ -21,7 +21,6 @@ class CMakeBuild(build_ext):
 
         version = get_version(relative_to=__file__)
 
-
         extdir = str(Path(self.get_ext_fullpath(ext.name)).parent.resolve())
 
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "")

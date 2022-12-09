@@ -48,8 +48,6 @@ namespace dd {
         bool hasMeasurements  = false;
         bool measurementsLast = true;
 
-        assert(in.p->ref > 0);
-
         std::mt19937_64 mt{};
         if (seed != 0U) {
             mt.seed(seed);
