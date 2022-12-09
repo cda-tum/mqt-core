@@ -191,7 +191,7 @@ void Q7SteaneEcc::mapGate(const qc::Operation& gate) {
             }
             if (auto measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
                 for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
-                    auto classicalRegisterName = qcOriginal->returnClassicalRegisterName(measureGate->getTargets()[j]);
+                    auto classicalRegisterName = qcOriginal->getClassicalRegister(measureGate->getTargets()[j]);
                     if (!classicalRegisterName.empty()) {
                         qcMapped->measure(static_cast<dd::Qubit>(measureGate->getClassics()[j]), {classicalRegisterName, measureGate->getTargets()[j]});
                     } else {

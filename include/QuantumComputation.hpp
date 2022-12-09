@@ -249,17 +249,6 @@ namespace qc {
         [[nodiscard]] const QuantumRegisterMap&   getANCregs() const { return ancregs; }
         [[nodiscard]] decltype(mt)&               getGenerator() { return mt; }
 
-        std::string returnClassicalRegisterName(size_t index) {
-            for (auto const& [regName, regBits]: cregs) {
-                const auto regStart = regBits.first;
-                const auto regEnd   = regStart + regBits.second;
-                if (index >= regStart && index < regEnd) {
-                    return {regName};
-                }
-            }
-            return {};
-        }
-
         void setName(const std::string& n) { name = n; }
 
         // initialLayout[physical_qubit] = logical_qubit
