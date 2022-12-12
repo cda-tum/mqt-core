@@ -1,7 +1,6 @@
 include README.md LICENSE.md CMakeLists.txt
 graft src
 graft include
-graft jkq/*
 graft mqt/*
 include extern/dd_package/CMakeLists.txt
 graft extern/dd_package/src
