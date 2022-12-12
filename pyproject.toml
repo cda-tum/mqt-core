@@ -62,3 +62,43 @@ archs = "x86_64 arm64"
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.15", DEPLOY = "ON" }
 
 [tool.cibuildwheel.windows]
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
+src_paths = ["mqt/qfr"]
+
+[tool.mypy]
+files = ["mqt/qfr", "setup.py"]
+python_version = "3.7"
+strict = true
+show_error_codes = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+warn_unreachable = true
+explicit_package_bases = true
+
+[tool.pylint]
+master.py-version = "3.7"
+master.jobs = "0"
+reports.output-format = "colorized"
+similarities.ignore-imports = "yes"
+messages_control.enable = [
+    "useless-suppression",
+]
+messages_control.disable = [
+    "invalid-name",
+    "line-too-long",
+    "missing-module-docstring",
+    "no-member",
+    "protected-access",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-branches",
+    "too-many-locals",
+    "too-many-statements",
+    "ungrouped-imports",
+    "wrong-import-order",
+    "wrong-import-position",
+]
