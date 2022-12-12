@@ -294,88 +294,134 @@ namespace qc {
                 op << "rz(" << parameter[0] << ")";
                 break;
             case SWAP:
-                for (const auto& c: controls) {
-                    if (c.type == dd::Control::Type::neg)
-                        of << "x " << qreg[c.qubit].second << ";" << std::endl;
-                }
-
-                of << op.str() << "swap";
-                for (const auto& c: controls)
-                    of << " " << qreg[c.qubit].second << ",";
-                of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
-
-                for (const auto& c: controls) {
-                    if (c.type == dd::Control::Type::neg)
-                        of << "x " << qreg[c.qubit].second << ";" << std::endl;
-                }
+                dumpOpenQASMSwap(of, qreg);
                 return;
             case iSWAP:
-                for (const auto& c: controls) {
-                    if (c.type == dd::Control::Type::neg)
-                        of << "x " << qreg[c.qubit].second << ";" << std::endl;
-                }
-                of << op.str() << "swap";
-                for (const auto& c: controls)
-                    of << " " << qreg[c.qubit].second << ",";
-                of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
-
-                of << op.str() << "s";
-                for (const auto& c: controls)
-                    of << " " << qreg[c.qubit].second << ",";
-                of << " " << qreg[targets[0]].second << ";" << std::endl;
-
-                of << op.str() << "s";
-                for (const auto& c: controls)
-                    of << " " << qreg[c.qubit].second << ",";
-                of << " " << qreg[targets[1]].second << ";" << std::endl;
-
-                of << op.str() << "cz";
-                for (const auto& c: controls)
-                    of << " " << qreg[c.qubit].second << ",";
-                of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";" << std::endl;
-
-                for (const auto& c: controls) {
-                    if (c.type == dd::Control::Type::neg)
-                        of << "x " << qreg[c.qubit].second << ";" << std::endl;
-                }
+                dumpOpenQASMiSwap(of, qreg);
                 return;
             case Peres:
                 of << op.str() << "cx";
-                for (const auto& c: controls)
+                for (const auto& c: controls) {
                     of << " " << qreg[c.qubit].second << ",";
-                of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
+                }
+                of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";\n";
 
                 of << op.str() << "x";
-                for (const auto& c: controls)
+                for (const auto& c: controls) {
                     of << " " << qreg[c.qubit].second << ",";
-                of << " " << qreg[targets[1]].second << ";" << std::endl;
+                }
+                of << " " << qreg[targets[1]].second << ";\n";
                 return;
             case Peresdag:
                 of << op.str() << "x";
-                for (const auto& c: controls)
+                for (const auto& c: controls) {
                     of << " " << qreg[c.qubit].second << ",";
-                of << " " << qreg[targets[1]].second << ";" << std::endl;
+                }
+                of << " " << qreg[targets[1]].second << ";\n";
 
                 of << op.str() << "cx";
-                for (const auto& c: controls)
+                for (const auto& c: controls) {
                     of << " " << qreg[c.qubit].second << ",";
-                of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";" << std::endl;
+                }
+                of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second << ";\n";
                 return;
             case Teleportation:
-                if (!controls.empty() || targets.size() != 3) {
-                    std::cerr << "controls = ";
-                    for (const auto& c: controls) {
-                        std::cerr << qreg.at(c.qubit).second << " ";
-                    }
-                    std::cerr << "\ntargets = ";
-                    for (const auto& t: targets) {
-                        std::cerr << qreg.at(t).second << " ";
-                    }
-                    std::cerr << "\n";
+                dumpOpenQASMTeleportation(of, qreg);
+                return;
+            default:
+                std::cerr << "gate type (index) " << static_cast<int>(type) << " could not be converted to OpenQASM" << std::endl;
+        }
 
-                    throw QFRException("Teleportation needs three targets");
-                }
-                /*
+        for (const auto& c: controls) {
+            if (c.type == dd::Control::Type::neg)
+                of << "x " << qreg[c.qubit].second << ";\n";
+        }
+        of << op.str();
+        for (const auto& c: controls) {
+            of << " " << qreg[c.qubit].second << ",";
+        }
+        for (const auto& target: targets) {
+            of << " " << qreg[target].second << ";\n";
+        }
+        for (const auto& c: controls) {
+            if (c.type == dd::Control::Type::neg)
+                of << "x " << qreg[c.qubit].second << ";\n";
+        }
+    }
+
+    void StandardOperation::dumpOpenQASMSwap(std::ostream& of, const RegisterNames& qreg) const {
+        for (const auto& c: controls) {
+            if (c.type == dd::Control::Type::neg) {
+                of << "x " << qreg[c.qubit].second << ";\n";
+            }
+        }
+
+        of << std::string(controls.size(), 'c') << "swap";
+        for (const auto& c: controls) {
+            of << " " << qreg[c.qubit].second << ",";
+        }
+        of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";\n";
+
+        for (const auto& c: controls) {
+            if (c.type == dd::Control::Type::neg) {
+                of << "x " << qreg[c.qubit].second << ";\n";
+            }
+        }
+    }
+
+    void StandardOperation::dumpOpenQASMiSwap(std::ostream& of, const RegisterNames& qreg) const {
+        const auto ctrlString = std::string(controls.size(), 'c');
+        for (const auto& c: controls) {
+            if (c.type == dd::Control::Type::neg) {
+                of << "x " << qreg[c.qubit].second << ";\n";
+            }
+        }
+        of << ctrlString << "swap";
+        for (const auto& c: controls) {
+            of << " " << qreg[c.qubit].second << ",";
+        }
+        of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";\n";
+
+        of << ctrlString << "s";
+        for (const auto& c: controls) {
+            of << " " << qreg[c.qubit].second << ",";
+        }
+        of << " " << qreg[targets[0]].second << ";\n";
+
+        of << ctrlString << "s";
+        for (const auto& c: controls) {
+            of << " " << qreg[c.qubit].second << ",";
+        }
+        of << " " << qreg[targets[1]].second << ";\n";
+
+        of << ctrlString << "cz";
+        for (const auto& c: controls) {
+            of << " " << qreg[c.qubit].second << ",";
+        }
+        of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";\n";
+
+        for (const auto& c: controls) {
+            if (c.type == dd::Control::Type::neg) {
+                of << "x " << qreg[c.qubit].second << ";\n";
+            }
+        }
+    }
+
+    void StandardOperation::dumpOpenQASMTeleportation(std::ostream& of, const RegisterNames& qreg) const {
+        if (!controls.empty() || targets.size() != 3) {
+            std::cerr << "controls = ";
+            for (const auto& c: controls) {
+                std::cerr << qreg.at(c.qubit).second << " ";
+            }
+            std::cerr << "\ntargets = ";
+            for (const auto& t: targets) {
+                std::cerr << qreg.at(t).second << " ";
+            }
+            std::cerr << "\n";
+
+            throw QFRException("Teleportation needs three targets");
+        }
+        /*
                                             ░      ┌───┐ ░ ┌─┐    ░
                         |ψ⟩ q_0: ───────────░───■──┤ H ├─░─┤M├────░─────────────── |0⟩ or |1⟩
                                  ┌───┐      ░ ┌─┴─┐└───┘ ░ └╥┘┌─┐ ░
@@ -389,32 +435,10 @@ namespace qc {
                     phaseflip: 1/══════════════════════════════╩═══════════╡ = 1 ╞
                                                                0           └─────┘
                 */
-                of << "// teleport q_0, a_0, a_1; q_0 --> a_1  via a_0\n";
-                of << "teleport "
-                   << qreg[targets[0]].second << ", "
-                   << qreg[targets[1]].second << ", "
-                   << qreg[targets[2]].second << ";"
-                   << std::endl;
-
-                return;
-            default:
-                std::cerr << "gate type (index) " << static_cast<int>(type) << " could not be converted to OpenQASM" << std::endl;
-        }
-
-        for (const auto& c: controls) {
-            if (c.type == dd::Control::Type::neg)
-                of << "x " << qreg[c.qubit].second << ";" << std::endl;
-        }
-        of << op.str();
-        for (const auto& c: controls) {
-            of << " " << qreg[c.qubit].second << ",";
-        }
-        for (const auto& target: targets) {
-            of << " " << qreg[target].second << ";" << std::endl;
-        }
-        for (const auto& c: controls) {
-            if (c.type == dd::Control::Type::neg)
-                of << "x " << qreg[c.qubit].second << ";" << std::endl;
-        }
+        of << "// teleport q_0, a_0, a_1; q_0 --> a_1  via a_0\n";
+        of << "teleport "
+           << qreg[targets[0]].second << ", "
+           << qreg[targets[1]].second << ", "
+           << qreg[targets[2]].second << ";\n";
     }
 } // namespace qc
