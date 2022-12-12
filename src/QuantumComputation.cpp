@@ -690,6 +690,7 @@ namespace qc {
     }
 
     void QuantumComputation::dump(const std::string& filename, Format format) {
+        assert(std::count(filename.begin(), filename.end(), '.') == 1);
         auto of = std::ofstream(filename);
         if (!of.good()) {
             throw QFRException("[dump] Error opening file: " + filename);
