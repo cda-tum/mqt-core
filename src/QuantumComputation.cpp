@@ -179,8 +179,7 @@ namespace qc {
         if (outputPermutationFromMeasurements) {
             auto it = outputPermutation.begin();
             while (it != outputPermutation.end()) {
-                const auto& [physical, _] = *it;
-                if (measuredQubits.find(physical) == measuredQubits.end()) {
+                if (measuredQubits.find(it->first) == measuredQubits.end()) {
                     it = outputPermutation.erase(it);
                 } else {
                     ++it;
