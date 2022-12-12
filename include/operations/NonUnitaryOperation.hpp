@@ -15,8 +15,8 @@ namespace qc {
         std::vector<std::size_t> classics{}; // vector for the classical bits to measure into
 
         std::ostream& printNonUnitary(std::ostream& os, const std::vector<dd::Qubit>& q, const std::vector<std::size_t>& c = {}, const Permutation& permutation = {}) const;
-        void printMeasurement(std::ostream& os, const std::vector<dd::Qubit>& q, const std::vector<std::size_t>& c, const Permutation& permutation) const;
-        void printResetBarrierOrSnapshot(std::ostream& os, const std::vector<dd::Qubit>& q, const Permutation& permutation) const;
+        void          printMeasurement(std::ostream& os, const std::vector<dd::Qubit>& q, const std::vector<std::size_t>& c, const Permutation& permutation) const;
+        void          printResetBarrierOrSnapshot(std::ostream& os, const std::vector<dd::Qubit>& q, const Permutation& permutation) const;
 
     public:
         // Measurement constructor
