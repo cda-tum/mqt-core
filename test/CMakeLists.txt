@@ -48,9 +48,9 @@ add_custom_command(
 
 # macro to add a test executable for one of the project libraries
 macro(PACKAGE_ADD_TEST testname)
-  # create an exectuable in which the tests will be stored
+  # create an executable in which the tests will be stored
   add_executable(${testname} ${ARGN})
-  # link the Google test infrastructure and a default main fuction to the test executable.
+  # link the Google test infrastructure and a default main function to the test executable.
   target_link_libraries(${testname} PRIVATE ${PROJECT_NAME} gmock gtest_main)
   # discover tests
   gtest_discover_tests(

@@ -7,7 +7,7 @@
 #   	#  - Indicates comment.  Any text following a # on the beginning
 #            of a line will be ignored.
 #   	.v - Variable list.  All variables (in AND out) need to be listed
-#            here, seperated by commas.  Any whitespace following the
+#            here, separated by commas.  Any whitespace following the
 #            beginning of this list will be considered as a part of the
 #            variable name.
 #   	.i - List of variables used as input (remaining variables from .v
@@ -32,9 +32,9 @@
 #                 	x = Number of parameters
 #
 #	Parameters follow on the same line and, similar to the parameters
-#       for the tags above, are seperated from the gate type by whitespace.
+#       for the tags above, are separated from the gate type by whitespace.
 #       Each parameter should be found in the .v list defined above, and
-#       should be seperated by commas.
+#       should be separated by commas.
 #
 #   END statement terminates the input.
 

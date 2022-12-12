@@ -803,7 +803,7 @@ namespace qc {
                         const auto& expectedValue   = classicOp->getExpectedValue();
 
                         if (controlRegister.second != 1 && expectedValue <= 1) {
-                            throw QFRException("Classic-controlled operations targetted at more than one bit are currently not supported. Try decomposing the operation into individual contributions.");
+                            throw QFRException("Classic-controlled operations targeted at more than one bit are currently not supported. Try decomposing the operation into individual contributions.");
                         }
 
                         // if this is not the classical bit that is measured, continue
