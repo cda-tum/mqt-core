@@ -145,11 +145,12 @@ namespace qasm {
     }
 
     Token Scanner::next() {
+        // skip over any whitespace
         while (::isspace(ch)) {
             nextCh();
         }
 
-        Token t = Token(Token::Kind::none, line, col);
+        auto t = Token(Token::Kind::none, line, col);
 
         switch (ch) {
             case 'a':
@@ -284,6 +285,7 @@ namespace qasm {
                 t.kind = Token::Kind::power;
                 break;
             case '"':
+                // string literal
                 nextCh();
                 readString(t);
                 nextCh();
@@ -293,17 +295,18 @@ namespace qasm {
                 t.kind = Token::Kind::gt;
                 break;
             case '=':
-                // can only be an equality operator
+                // must be an equality operator
                 nextCh();
                 if (ch == '=') {
                     nextCh();
                     t.kind = Token::Kind::eq;
                 } else {
-                    std::cerr << "ERROR: UNEXPECTED CHARACTER: '" << ch << "'! " << std::endl;
+                    std::cerr << "ERROR: UNEXPECTED CHARACTER: '" << ch << "'!\n";
                 }
                 break;
             default:
-                std::cerr << "ERROR: UNEXPECTED CHARACTER: '" << ch << "'! " << std::endl;
+                // this should never be reached
+                std::cerr << "ERROR: UNEXPECTED CHARACTER: '" << ch << "'!\n";
                 nextCh();
         }
 
