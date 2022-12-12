@@ -78,13 +78,13 @@ jobs:
       - name:              Test
         working-directory: ${{github.workspace}}/build/test
         run:               ctest -C Debug --output-on-failure
-      - name: Run gcov
-        run:  |
-              find . -type f -name '*.gcno' -exec gcov -p  {} +
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
+          gcov:        true
+          gcov_ignore: "extern/**/*"
+          token:       ${{ secrets.CODECOV_TOKEN }}
 
   codestyle:
     runs-on: ubuntu-latest
@@ -94,6 +94,6 @@ jobs:
           submodules: recursive
       - uses: DoozyX/clang-format-lint-action@v0.15
         with:
-          source:             'apps include src test mqt/qfr'
+          source:             'include src test mqt/qfr'
           extensions:         'h,hpp,c,cpp'
           clangFormatVersion: 13

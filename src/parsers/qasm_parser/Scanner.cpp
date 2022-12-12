@@ -145,11 +145,12 @@ namespace qasm {
     }
 
     Token Scanner::next() {
+        // skip over any whitespace
         while (::isspace(ch)) {
             nextCh();
         }
 
-        Token t = Token(Token::Kind::none, line, col);
+        auto t = Token(Token::Kind::none, line, col);
 
         switch (ch) {
             case 'a':
@@ -204,6 +205,7 @@ namespace qasm {
             case 'X':
             case 'Y':
             case 'Z':
+                // any name specifier [a-zA-Z]
                 readName(t);
                 break;
             case '0':
@@ -217,6 +219,7 @@ namespace qasm {
             case '8':
             case '9':
             case '.':
+                // any number starting with [0-9] or .
                 readNumber(t);
                 break;
             case ';':
@@ -267,6 +270,7 @@ namespace qasm {
                 t.kind = Token::Kind::times;
                 break;
             case '/':
+                // can indicate a comment or a division
                 nextCh();
                 if (ch == '/') {
                     nextCh();
@@ -281,6 +285,7 @@ namespace qasm {
                 t.kind = Token::Kind::power;
                 break;
             case '"':
+                // string literal
                 nextCh();
                 readString(t);
                 nextCh();
@@ -290,16 +295,18 @@ namespace qasm {
                 t.kind = Token::Kind::gt;
                 break;
             case '=':
+                // must be an equality operator
                 nextCh();
                 if (ch == '=') {
                     nextCh();
                     t.kind = Token::Kind::eq;
                 } else {
-                    std::cerr << "ERROR: UNEXPECTED CHARACTER: '" << ch << "'! " << std::endl;
+                    std::cerr << "ERROR: UNEXPECTED CHARACTER: '" << ch << "'!\n";
                 }
                 break;
             default:
-                std::cerr << "ERROR: UNEXPECTED CHARACTER: '" << ch << "'! " << std::endl;
+                // this should never be reached
+                std::cerr << "ERROR: UNEXPECTED CHARACTER: '" << ch << "'!\n";
                 nextCh();
         }
 

@@ -239,8 +239,6 @@ namespace qasm {
     }
 
     void Parser::handleComment() {
-        //    	std::cout << "Encountered comment: " << t.str << std::endl;
-
         // check if this comment provides any I/O mapping information
         auto&& initial = checkForInitialLayout(t.str);
         if (!initial.empty()) {
@@ -268,7 +266,6 @@ namespace qasm {
             dd::Qubit logical_qubit = 0;
             for (std::smatch m; std::regex_search(comment, m, qubitRegex); comment = m.suffix()) {
                 auto physical_qubit = static_cast<dd::Qubit>(std::stoul(m.str()));
-                //				std::cout << "Inserting " << physical_qubit << "->" << logical_qubit << std::endl;
                 initial.insert({physical_qubit, logical_qubit});
                 ++logical_qubit;
             }
@@ -284,7 +281,6 @@ namespace qasm {
             dd::Qubit logical_qubit = 0;
             for (std::smatch m; std::regex_search(comment, m, qubitRegex); comment = m.suffix()) {
                 auto physical_qubit = static_cast<dd::Qubit>(std::stoul(m.str()));
-                //			    std::cout << "Inserting " << physical_qubit << "->" << logical_qubit << std::endl;
                 output.insert({physical_qubit, logical_qubit});
                 ++logical_qubit;
             }

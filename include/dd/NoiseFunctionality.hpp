@@ -310,17 +310,6 @@ namespace dd {
             auto originalCopy = originalEdge;
             originalCopy.w    = dd::Complex::one;
 
-            // Check if the target of the current edge is in the "compute table".
-
-            //    auto noiseLookUpResult = dd->densityNoise.lookup(originalCopy, usedQubits);
-            //
-            //    if (noiseLookUpResult.p != nullptr) {
-            //        auto tmpComplexValue = dd->cn.getCached();
-            //        CN::mul(tmpComplexValue, noiseLookUpResult.w, originalEdge.w);
-            //        noiseLookUpResult.w = dd->cn.lookup(tmpComplexValue);
-            //        dd->cn.returnToCache(tmpComplexValue);
-            //        return noiseLookUpResult;
-            //    }
             ArrayOfEdges newEdges{};
             for (size_t i = 0; i < newEdges.size(); i++) {
                 if (firstPathEdge || i == 1) {
@@ -358,9 +347,6 @@ namespace dd {
             }
 
             e = package->makeDDNode(originalCopy.p->v, newEdges, true, firstPathEdge);
-
-            // Adding the noise operation to the cache, note that e.w is from the complex number table
-            //    package->densityNoise.insert(originalCopy, e, usedQubits);
 
             // Multiplying the old edge weight with the new one and looking up in the complex numbers table
             if (!e.w.exactlyZero()) {
@@ -595,6 +581,49 @@ namespace dd {
             }
         }
 
+        void generateDepolarizationGate(std::array<mEdge, std::tuple_size_v<decltype(dd::dNode::e)>>& pointerForMatrices, const dd::Qubit target,
+                                        const double probability) {
+            std::array<dd::GateMatrix, std::tuple_size_v<decltype(dd::dNode::e)>> idleNoiseGate{};
+            dd::ComplexValue                                                      tmp = {};
+
+            tmp.r = std::sqrt(1 - ((3 * probability) / 4)) * dd::complex_one.r;
+            //                   (1 0)
+            // sqrt(1- ((3p)/4))*(0 1)
+            idleNoiseGate[0][0] = idleNoiseGate[0][3] = tmp;
+            idleNoiseGate[0][1] = idleNoiseGate[0][2] = dd::complex_zero;
+
+            pointerForMatrices[0] = package->makeGateDD(idleNoiseGate[0], getNumberOfQubits(), target);
+
+            //                      (0 1)
+            // sqrt(probability/4))*(1 0)
+            tmp.r               = std::sqrt(probability / 4) * dd::complex_one.r;
+            idleNoiseGate[1][1] = idleNoiseGate[1][2] = tmp;
+            idleNoiseGate[1][0] = idleNoiseGate[1][3] = dd::complex_zero;
+
+            pointerForMatrices[1] = package->makeGateDD(idleNoiseGate[1], getNumberOfQubits(), target);
+
+            //                      (1 0)
+            // sqrt(probability/4))*(0 -1)
+            tmp.r               = std::sqrt(probability / 4) * dd::complex_one.r;
+            idleNoiseGate[2][0] = tmp;
+            tmp.r               = tmp.r * -1;
+            idleNoiseGate[2][3] = tmp;
+            idleNoiseGate[2][1] = idleNoiseGate[2][2] = dd::complex_zero;
+
+            pointerForMatrices[3] = package->makeGateDD(idleNoiseGate[2], getNumberOfQubits(), target);
+
+            //                      (0 -i)
+            // sqrt(probability/4))*(i 0)
+            tmp.r               = dd::complex_zero.r;
+            tmp.i               = std::sqrt(probability / 4) * 1;
+            idleNoiseGate[3][2] = tmp;
+            tmp.i               = tmp.i * -1;
+            idleNoiseGate[3][1] = tmp;
+            idleNoiseGate[3][0] = idleNoiseGate[3][3] = dd::complex_zero;
+
+            pointerForMatrices[2] = package->makeGateDD(idleNoiseGate[3], getNumberOfQubits(), target);
+        }
+
         void generateGate(std::array<mEdge, std::tuple_size_v<decltype(dd::dNode::e)>>& pointerForMatrices,
                           const dd::NoiseOperations                                     noiseType,
                           const dd::Qubit                                               target,
@@ -650,45 +679,9 @@ namespace dd {
                     break;
                 }
                     // depolarization
-                case dd::depolarization: {
-                    tmp.r = std::sqrt(1 - ((3 * probability) / 4)) * dd::complex_one.r;
-                    //                   (1 0)
-                    // sqrt(1- ((3p)/4))*(0 1)
-                    idleNoiseGate[0][0] = idleNoiseGate[0][3] = tmp;
-                    idleNoiseGate[0][1] = idleNoiseGate[0][2] = dd::complex_zero;
-
-                    pointerForMatrices[0] = package->makeGateDD(idleNoiseGate[0], getNumberOfQubits(), target);
-
-                    //                      (0 1)
-                    // sqrt(probability/4))*(1 0)
-                    tmp.r               = std::sqrt(probability / 4) * dd::complex_one.r;
-                    idleNoiseGate[1][1] = idleNoiseGate[1][2] = tmp;
-                    idleNoiseGate[1][0] = idleNoiseGate[1][3] = dd::complex_zero;
-
-                    pointerForMatrices[1] = package->makeGateDD(idleNoiseGate[1], getNumberOfQubits(), target);
-
-                    //                      (1 0)
-                    // sqrt(probability/4))*(0 -1)
-                    tmp.r               = std::sqrt(probability / 4) * dd::complex_one.r;
-                    idleNoiseGate[2][0] = tmp;
-                    tmp.r               = tmp.r * -1;
-                    idleNoiseGate[2][3] = tmp;
-                    idleNoiseGate[2][1] = idleNoiseGate[2][2] = dd::complex_zero;
-
-                    pointerForMatrices[3] = package->makeGateDD(idleNoiseGate[2], getNumberOfQubits(), target);
-
-                    //                      (0 -i)
-                    // sqrt(probability/4))*(i 0)
-                    tmp.r               = dd::complex_zero.r;
-                    tmp.i               = std::sqrt(probability / 4) * 1;
-                    idleNoiseGate[3][2] = tmp;
-                    tmp.i               = tmp.i * -1;
-                    idleNoiseGate[3][1] = tmp;
-                    idleNoiseGate[3][0] = idleNoiseGate[3][3] = dd::complex_zero;
-
-                    pointerForMatrices[2] = package->makeGateDD(idleNoiseGate[3], getNumberOfQubits(), target);
+                case dd::depolarization:
+                    generateDepolarizationGate(pointerForMatrices, target, probability);
                     break;
-                }
                 default:
                     throw std::runtime_error("Unknown noise effect received.");
             }

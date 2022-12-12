@@ -111,9 +111,5 @@ namespace qc {
         void dumpOpenQASM([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg) const override {
             throw QFRException("Dumping of classically controlled gates currently not supported for qasm");
         }
-
-        void dumpQiskit([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg, [[maybe_unused]] const char* anc_reg_name) const override {
-            throw QFRException("Dumping of classically controlled gates currently not supported for qiskit");
-        }
     };
 } // namespace qc

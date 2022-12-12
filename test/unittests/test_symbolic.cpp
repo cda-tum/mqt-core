@@ -32,6 +32,7 @@ TEST_F(SymbolicTest, Gates) {
 
     auto noRealSymQc = QuantumComputation(3);
 
+    // test all kinds of symbolic operations supported
     symQc.u3(0, {1_pc, 2_nc}, xMonom, yMonom, zMonom);
 
     symQc.u3(0, {1_pc}, xMonom, yMonom, zMonom);
@@ -114,14 +115,15 @@ TEST_F(SymbolicTest, Gates) {
 
     EXPECT_TRUE(noRealSymQc.isVariableFree());
 
+    // no operation in the uninstantiated circuit should be equal to the standard circuit
     for (auto it1 = symQc.begin(), it2 = noRealSymQc.begin(); it1 != symQc.end() && it2 != noRealSymQc.end(); ++it1, ++it2) {
         EXPECT_FALSE((*it1)->equals(*(*it2)));
     }
 
-    VariableAssignment assignment{{x, xVal}, {y, yVal}, {z, zVal}};
-
+    const VariableAssignment assignment{{x, xVal}, {y, yVal}, {z, zVal}};
     symQc.instantiate(assignment);
 
+    // after the instantiation, the symbolic circuit should be equal to the standard circuit
     for (auto it1 = symQc.begin(), it2 = noRealSymQc.begin(); it1 != symQc.end() && it2 != noRealSymQc.end(); ++it1, ++it2) {
         EXPECT_TRUE((*it1)->equals(*(*it2)));
     }

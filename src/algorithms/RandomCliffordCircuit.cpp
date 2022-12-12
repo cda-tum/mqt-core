@@ -96,6 +96,7 @@ namespace qc {
         emplace_back<CompoundOperation>(nqubits);
         auto comp = dynamic_cast<CompoundOperation*>(ops.back().get());
         if (id < 36) {
+            // single-qubit Cliffords
             if (id / 9 % 2)
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
             if (id / 18 % 2)
@@ -116,6 +117,7 @@ namespace qc {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
         } else if (id < 360) {
+            // Cliffords with a single CNOT
             id -= 36;
 
             if (id / 81 % 2)
@@ -155,6 +157,7 @@ namespace qc {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
         } else if (id < 684) {
+            // Cliffords with two CNOTs
             id -= 360;
 
             if (id / 81 % 2)
@@ -195,6 +198,7 @@ namespace qc {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
         } else {
+            // Cliffords with a SWAP
             id -= 684;
 
             if (id / 9 % 2)
@@ -222,6 +226,7 @@ namespace qc {
             comp->emplace_back<StandardOperation>(nqubits, dd::Control{control}, target, X);
         }
 
+        // random Pauli on control qubit
         if (pauliIdx % 4 == 1) {
             comp->emplace_back<StandardOperation>(nqubits, control, Z);
         } else if (pauliIdx % 4 == 2) {
@@ -230,6 +235,7 @@ namespace qc {
             comp->emplace_back<StandardOperation>(nqubits, control, Y);
         }
 
+        // random Pauli on target qubit
         if (pauliIdx / 4 == 1) {
             comp->emplace_back<StandardOperation>(nqubits, target, Z);
         } else if (pauliIdx / 4 == 2) {

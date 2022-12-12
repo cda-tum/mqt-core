@@ -179,8 +179,7 @@ namespace qc {
         if (outputPermutationFromMeasurements) {
             auto it = outputPermutation.begin();
             while (it != outputPermutation.end()) {
-                const auto [physical, logical] = *it;
-                if (measuredQubits.find(physical) == measuredQubits.end()) {
+                if (measuredQubits.find(it->first) == measuredQubits.end()) {
                     it = outputPermutation.erase(it);
                 } else {
                     ++it;
@@ -596,8 +595,6 @@ namespace qc {
             dump(filename, Real);
         } else if (extension == "qasm") {
             dump(filename, OpenQASM);
-        } else if (extension == "py") {
-            dump(filename, Qiskit);
         } else if (extension == "qc") {
             dump(filename, QC);
         } else if (extension == "tfc") {
@@ -690,6 +687,7 @@ namespace qc {
     }
 
     void QuantumComputation::dump(const std::string& filename, Format format) {
+        assert(std::count(filename.begin(), filename.end(), '.') == 1);
         auto of = std::ofstream(filename);
         if (!of.good()) {
             throw QFRException("[dump] Error opening file: " + filename);
@@ -716,121 +714,6 @@ namespace qc {
                 break;
             case QC:
                 std::cerr << "Dumping in QC format currently not supported\n";
-                break;
-            case Qiskit:
-                // TODO: improve/modernize Qiskit dump
-                dd::QubitCount totalQubits = nqubits + nancillae + (max_controls >= 2 ? max_controls - 2 : 0);
-                if (totalQubits > 53) {
-                    std::cerr << "No more than 53 total qubits are currently supported" << std::endl;
-                    break;
-                }
-
-                // For the moment all registers are fused together into for simplicity
-                // This may be adapted in the future
-                of << "from qiskit import *" << std::endl;
-                of << "from qiskit.test.mock import ";
-                dd::QubitCount narchitecture = 0;
-                if (totalQubits <= 5) {
-                    of << "FakeBurlington";
-                    narchitecture = 5;
-                } else if (totalQubits <= 20) {
-                    of << "FakeBoeblingen";
-                    narchitecture = 20;
-                } else {
-                    of << "FakeRochester";
-                    narchitecture = 53;
-                }
-                of << std::endl;
-                of << "from qiskit.converters import circuit_to_dag, dag_to_circuit" << std::endl;
-                of << "from qiskit.transpiler.passes import *" << std::endl;
-                of << "from math import pi" << std::endl
-                   << std::endl;
-
-                of << DEFAULT_QREG << " = QuantumRegister(" << static_cast<std::size_t>(nqubits) << ", '" << DEFAULT_QREG << "')" << std::endl;
-                if (nclassics > 0) {
-                    of << DEFAULT_CREG << " = ClassicalRegister(" << nclassics << ", '" << DEFAULT_CREG << "')" << std::endl;
-                }
-                if (nancillae > 0) {
-                    of << DEFAULT_ANCREG << " = QuantumRegister(" << static_cast<std::size_t>(nancillae) << ", '" << DEFAULT_ANCREG << "')" << std::endl;
-                }
-                if (max_controls > 2) {
-                    of << DEFAULT_MCTREG << " = QuantumRegister(" << static_cast<std::size_t>(max_controls - 2) << ", '" << DEFAULT_MCTREG << "')" << std::endl;
-                }
-                of << "qc = QuantumCircuit(";
-                of << DEFAULT_QREG;
-                if (nclassics > 0) {
-                    of << ", " << DEFAULT_CREG;
-                }
-                if (nancillae > 0) {
-                    of << ", " << DEFAULT_ANCREG;
-                }
-                if (max_controls > 2) {
-                    of << ", " << DEFAULT_MCTREG;
-                }
-                of << ")" << std::endl
-                   << std::endl;
-
-                RegisterNames qregnames{};
-                RegisterNames cregnames{};
-                RegisterNames ancregnames{};
-                createRegisterArray<QuantumRegister>({}, qregnames, nqubits, DEFAULT_QREG);
-                createRegisterArray<ClassicalRegister>({}, cregnames, nclassics, DEFAULT_CREG);
-                createRegisterArray<QuantumRegister>({}, ancregnames, nancillae, DEFAULT_ANCREG);
-
-                for (const auto& ancregname: ancregnames)
-                    qregnames.push_back(ancregname);
-
-                for (const auto& op: ops) {
-                    op->dumpQiskit(of, qregnames, cregnames, DEFAULT_MCTREG);
-                }
-                // add measurement for determining output mapping
-                of << "qc.measure_all()" << std::endl;
-
-                of << "qc_transpiled = transpile(qc, backend=";
-                if (totalQubits <= 5) {
-                    of << "FakeBurlington";
-                } else if (totalQubits <= 20) {
-                    of << "FakeBoeblingen";
-                } else {
-                    of << "FakeRochester";
-                }
-                of << "(), optimization_level=1)" << std::endl
-                   << std::endl;
-                of << "layout = qc_transpiled._layout" << std::endl;
-                of << "virtual_bits = layout.get_virtual_bits()" << std::endl;
-
-                of << "f = open(\"circuit"
-                   << R"(_transpiled.qasm", "w"))" << std::endl;
-                of << R"(f.write("// i"))" << std::endl;
-                of << "for qubit in " << DEFAULT_QREG << ":" << std::endl;
-                of << '\t' << R"(f.write(" " + str(virtual_bits[qubit])))" << std::endl;
-                if (nancillae > 0) {
-                    of << "for qubit in " << DEFAULT_ANCREG << ":" << std::endl;
-                    of << '\t' << R"(f.write(" " + str(virtual_bits[qubit])))" << std::endl;
-                }
-                if (max_controls > 2) {
-                    of << "for qubit in " << DEFAULT_MCTREG << ":" << std::endl;
-                    of << '\t' << R"(f.write(" " + str(virtual_bits[qubit])))" << std::endl;
-                }
-                if (totalQubits < narchitecture) {
-                    of << "for reg in layout.get_registers():" << std::endl;
-                    of << '\t' << "if reg.name is 'ancilla':" << std::endl;
-                    of << "\t\t"
-                       << "for qubit in reg:" << std::endl;
-                    of << "\t\t\t"
-                       << R"(f.write(" " + str(virtual_bits[qubit])))" << std::endl;
-                }
-                of << R"(f.write("\n"))" << std::endl;
-                of << "dag = circuit_to_dag(qc_transpiled)" << std::endl;
-                of << "out = [item for sublist in list(dag.layers())[-1]['partition'] for item in sublist]" << std::endl;
-                of << R"(f.write("// o"))" << std::endl;
-                of << "for qubit in out:" << std::endl;
-                of << '\t' << R"(f.write(" " + str(qubit.index)))" << std::endl;
-                of << R"(f.write("\n"))" << std::endl;
-                // remove measurements again
-                of << "qc_transpiled = dag_to_circuit(RemoveFinalMeasurements().run(dag))" << std::endl;
-                of << "f.write(qc_transpiled.qasm())" << std::endl;
-                of << "f.close()" << std::endl;
                 break;
         }
     }

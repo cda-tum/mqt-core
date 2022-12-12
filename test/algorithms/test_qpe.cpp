@@ -117,8 +117,6 @@ TEST_P(QPE, QPETest) {
 
     ASSERT_NO_THROW({ qc = std::make_unique<qc::QPE>(lambda, precision); });
 
-    //std::cout << *qc<<std::endl;
-
     ASSERT_EQ(static_cast<std::size_t>(qc->getNqubits()), precision + 1);
 
     ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(*qc); });
@@ -151,8 +149,6 @@ TEST_P(QPE, IQPETest) {
     ASSERT_NO_THROW({ qc = std::make_unique<qc::QPE>(lambda, precision, true); });
 
     ASSERT_EQ(static_cast<std::size_t>(qc->getNqubits()), 2U);
-
-    //    std::cout << *qc << std::endl;
 
     constexpr auto shots        = 8192U;
     auto           measurements = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd, shots);

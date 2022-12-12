@@ -71,7 +71,6 @@ namespace qc {
         Real,
         OpenQASM,
         GRCS,
-        Qiskit,
         TFC,
         QC,
         Tensor

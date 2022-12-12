@@ -114,12 +114,6 @@ namespace qc {
             }
         }
 
-        void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const override {
-            for (const auto& op: ops) {
-                op->dumpQiskit(of, qreg, creg, anc_reg_name);
-            }
-        }
-
         /**
                  * Pass-Through
                  */

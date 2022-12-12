@@ -32,6 +32,10 @@ namespace qc {
         void checkUgate();
         void setup(dd::QubitCount nq, dd::fp par0, dd::fp par1, dd::fp par2, dd::Qubit startingQubit = 0);
 
+        void dumpOpenQASMSwap(std::ostream& of, const RegisterNames& qreg) const;
+        void dumpOpenQASMiSwap(std::ostream& of, const RegisterNames& qreg) const;
+        void dumpOpenQASMTeleportation(std::ostream& of, const RegisterNames& qreg) const;
+
     public:
         StandardOperation() = default;
 
@@ -67,7 +71,6 @@ namespace qc {
         }
 
         void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override;
-        void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const override;
     };
 
 } // namespace qc

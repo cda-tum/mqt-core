@@ -108,18 +108,19 @@ namespace zx {
     FunctionalityConstruction::op_it FunctionalityConstruction::parse_op(ZXDiagram& diag, op_it it, op_it end,
                                                                          std::vector<Vertex>& qubits, const qc::Permutation& p) {
         const auto& op = *it;
+        // barrier statements are ignored
         if (op->getType() == qc::OpType::Barrier) {
             return it + 1;
         }
 
         if (!op->isControlled()) {
+            // single qubit gates
             const auto target = p.at(op->getTargets().front());
             switch (op->getType()) {
                 case qc::OpType::Z:
                     addZSpider(diag, target, qubits,
                                PiExpression(PiRational(1, 1)));
                     break;
-
                 case qc::OpType::RZ: {
                     const auto& param = parseParam(op.get(), 0);
                     diag.addGlobalPhase(-param / 2.0);
@@ -129,20 +130,16 @@ namespace zx {
                             parseParam(op.get(), 0));
                     break;
                 }
-
                 case qc::OpType::Phase:
                     addZSpider(diag, target, qubits, parseParam(op.get(), 0));
                     break;
-
                 case qc::OpType::X:
                     addXSpider(diag, target, qubits,
                                PiExpression(PiRational(1, 1)));
                     break;
-
                 case qc::OpType::RX:
                     addXSpider(diag, target, qubits, parseParam(op.get(), 0));
                     break;
-
                 case qc::OpType::Y:
                     diag.addGlobalPhase(PiExpression{-PiRational(1, 2)});
 
@@ -151,7 +148,6 @@ namespace zx {
                     addXSpider(diag, target, qubits,
                                PiExpression(PiRational(1, 1)));
                     break;
-
                 case qc::OpType::RY:
                     diag.addGlobalPhase(PiExpression(-PiRational(op->getParameter().front()) / 2 +
                                                      PiRational(1, 2) + PiRational(3, 2)));
@@ -200,7 +196,6 @@ namespace zx {
                     addZSpider(diag, target, qubits,
                                parseParam(op.get(), 1) + PiRational(3, 1));
                     break;
-
                 case qc::OpType::SWAP: {
                     const auto target2 = p.at(op->getTargets()[1]);
                     addSwap(diag, target, target2, qubits);
@@ -236,6 +231,7 @@ namespace zx {
                                       qc::toString(op->getType()));
             }
         } else if (op->getNcontrols() == 1 && op->getNtargets() == 1) {
+            // two-qubit controlled gates
             const auto target = p.at(op->getTargets().front());
             const auto ctrl   = p.at((*op->getControls().begin()).qubit);
             switch (op->getType()) { // TODO: any gate can be controlled
@@ -290,6 +286,7 @@ namespace zx {
                                       qc::toString(op->getType()));
             }
         } else if (op->getNcontrols() == 2) {
+            // three-qubit controlled gates (ccx or ccz)
             Qubit       ctrl0  = 0;
             Qubit       ctrl1  = 0;
             const Qubit target = p.at(op->getTargets().front());
