@@ -25,8 +25,7 @@ namespace qc::qiskit {
                 throw QFRException("[import] Python object needs to be a Qiskit QasmQobjExperiment");
             }
 
-            auto&& header = circ.attr("header");
-            //            auto&& config       = circ.attr("config");
+            auto&& header       = circ.attr("header");
             auto&& instructions = circ.attr("instructions");
 
             auto&& circQregs = header.attr("qreg_sizes");

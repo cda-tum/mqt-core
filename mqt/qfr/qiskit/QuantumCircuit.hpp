@@ -217,7 +217,6 @@ namespace qc::qiskit {
                 if (matchStr[0] == '+' || matchStr[0] == '-') {
                     matchStr.erase(0, 1);
                 }
-                // std::cout << matchStr << std::endl;
 
                 auto prodIt  = std::sregex_iterator(matchStr.begin(), matchStr.end(), products);
                 auto prodEnd = std::sregex_iterator();

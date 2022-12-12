@@ -310,17 +310,6 @@ namespace dd {
             auto originalCopy = originalEdge;
             originalCopy.w    = dd::Complex::one;
 
-            // Check if the target of the current edge is in the "compute table".
-
-            //    auto noiseLookUpResult = dd->densityNoise.lookup(originalCopy, usedQubits);
-            //
-            //    if (noiseLookUpResult.p != nullptr) {
-            //        auto tmpComplexValue = dd->cn.getCached();
-            //        CN::mul(tmpComplexValue, noiseLookUpResult.w, originalEdge.w);
-            //        noiseLookUpResult.w = dd->cn.lookup(tmpComplexValue);
-            //        dd->cn.returnToCache(tmpComplexValue);
-            //        return noiseLookUpResult;
-            //    }
             ArrayOfEdges newEdges{};
             for (size_t i = 0; i < newEdges.size(); i++) {
                 if (firstPathEdge || i == 1) {
@@ -358,9 +347,6 @@ namespace dd {
             }
 
             e = package->makeDDNode(originalCopy.p->v, newEdges, true, firstPathEdge);
-
-            // Adding the noise operation to the cache, note that e.w is from the complex number table
-            //    package->densityNoise.insert(originalCopy, e, usedQubits);
 
             // Multiplying the old edge weight with the new one and looking up in the complex numbers table
             if (!e.w.exactlyZero()) {

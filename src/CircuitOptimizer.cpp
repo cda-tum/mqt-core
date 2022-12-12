@@ -387,7 +387,6 @@ namespace qc {
             }
             auto op = (*it)->get();
             if (op->getType() == Barrier || op->getType() == Snapshot || op->getType() == ShowProbabilities) {
-                // either ignore barrier statement here or end for this qubit;
                 ++it;
             } else if (op->isStandardOperation()) {
                 // try removing gate and upon success increase all corresponding iterators
@@ -945,9 +944,7 @@ namespace qc {
     /// this method can be used to reorder the operations of a given quantum computation in order to get a canonical ordering
     /// it uses iterative breadth-first search starting from the topmost qubit
     void CircuitOptimizer::reorderOperations(QuantumComputation& qc) {
-        //        std::cout << qc << std::endl;
         auto dag = constructDAG(qc);
-        //        printDAG(dag);
 
         // initialize iterators
         DAGIterators dagIterators{dag.size()};
@@ -987,7 +984,6 @@ namespace qc {
                     std::cerr << "Caution! Reordering operations might not work if the circuit contains classically controlled operations" << std::endl;
                 }
 
-                // ignore barrier, snapshot and probabilities statements;
                 if (op->getType() == Barrier || op->getType() == Snapshot || op->getType() == ShowProbabilities) {
                     ++it;
                     continue;

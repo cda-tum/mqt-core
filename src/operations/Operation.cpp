@@ -187,18 +187,6 @@ namespace qc {
         auto        controlIt      = actualControls.cbegin();
         auto        targetIt       = actualTargets.cbegin();
         for (const auto& [physical, logical]: permutation) {
-            //            std::cout << static_cast<std::size_t>(physical) << " ";
-            //            if (targetIt != targets.cend())
-            //                std::cout << static_cast<std::size_t>(*targetIt) << " ";
-            //            else
-            //                std::cout << "x ";
-            //
-            //            if (controlIt != controls.cend())
-            //                std::cout << static_cast<std::size_t>(controlIt->qubit) << " ";
-            //            else
-            //                std::cout << "x ";
-            //            std::cout << std::endl;
-
             if (targetIt != actualTargets.cend() && *targetIt == physical) {
                 if (type == ClassicControlled) {
                     os << "\033[1m\033[35m" << name[2] << name[3];
