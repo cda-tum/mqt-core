@@ -217,6 +217,7 @@ namespace qc {
                       << "Thus, while not valid vanilla OpenQASM, the dumped file will work with this library. " << std::endl;
         }
 
+        // safe the numbers of controls as a prefix to the operation name
         op << std::string(controls.size(), 'c');
 
         switch (type) {
@@ -332,20 +333,26 @@ namespace qc {
                 std::cerr << "gate type (index) " << static_cast<int>(type) << " could not be converted to OpenQASM" << std::endl;
         }
 
+        // apply X operations to negate the respective controls
         for (const auto& c: controls) {
-            if (c.type == dd::Control::Type::neg)
+            if (c.type == dd::Control::Type::neg) {
                 of << "x " << qreg[c.qubit].second << ";\n";
+            }
         }
+        // apply the operation
         of << op.str();
+        // add controls and targets of the operation
         for (const auto& c: controls) {
             of << " " << qreg[c.qubit].second << ",";
         }
         for (const auto& target: targets) {
             of << " " << qreg[target].second << ";\n";
         }
+        // apply X operations to negate the respective controls again
         for (const auto& c: controls) {
-            if (c.type == dd::Control::Type::neg)
+            if (c.type == dd::Control::Type::neg) {
                 of << "x " << qreg[c.qubit].second << ";\n";
+            }
         }
     }
 

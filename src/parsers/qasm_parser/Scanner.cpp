@@ -204,6 +204,7 @@ namespace qasm {
             case 'X':
             case 'Y':
             case 'Z':
+                // any name specifier [a-zA-Z]
                 readName(t);
                 break;
             case '0':
@@ -217,6 +218,7 @@ namespace qasm {
             case '8':
             case '9':
             case '.':
+                // any number starting with [0-9] or .
                 readNumber(t);
                 break;
             case ';':
@@ -267,6 +269,7 @@ namespace qasm {
                 t.kind = Token::Kind::times;
                 break;
             case '/':
+                // can indicate a comment or a division
                 nextCh();
                 if (ch == '/') {
                     nextCh();
@@ -290,6 +293,7 @@ namespace qasm {
                 t.kind = Token::Kind::gt;
                 break;
             case '=':
+                // can only be an equality operator
                 nextCh();
                 if (ch == '=') {
                     nextCh();
