@@ -63,10 +63,10 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx")
 target_link_libraries(${PROJECT_NAME} PUBLIC MQT::zx)
 
 # add nlohmann::json library
-set(JSON_BuildTests
+set(JSON_BuildTests # cmake-lint: disable=C0103
     OFF
     CACHE INTERNAL "")
-set(JSON_MultipleHeaders
+set(JSON_MultipleHeaders # cmake-lint: disable=C0103
     OFF
     CACHE INTERNAL "")
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json" EXCLUDE_FROM_ALL)
