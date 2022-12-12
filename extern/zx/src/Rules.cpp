@@ -323,7 +323,7 @@ namespace zx {
 
             for (const auto& [nn, nnEtype]:
                  diag.incidentEdges(id1.value())) { // Todo: maybe problem with parallel edge?
-                                                    // There shouldnt be any
+                                                    // There shouldn't be any
                 if (nnEtype != zx::EdgeType::Hadamard || diag.isDeleted(nn)) {
                     // not a phase gadget
                     foundGadget = false;

@@ -1,4 +1,5 @@
-# File adapted from https://github.com/dune-project/dune-common/blob/master/cmake/modules/FindGMP.cmake
+# File adapted from
+# https://github.com/dune-project/dune-common/blob/master/cmake/modules/FindGMP.cmake
 
 #[=======================================================================[.rst:
 FindGMP
@@ -49,10 +50,10 @@ this module:
 
 # Add a feature summary for this package
 include(FeatureSummary)
-set_package_properties(GMP PROPERTIES
+set_package_properties(
+  GMP PROPERTIES
   DESCRIPTION "GNU multi-precision library"
-  URL "https://gmplib.org"
-)
+  URL "https://gmplib.org")
 
 # Try finding the package with pkg-config
 find_package(PkgConfig QUIET)
@@ -70,29 +71,25 @@ mark_as_advanced(GMP_INCLUDE_DIR GMP_LIB GMPXX_INCLUDE_DIR GMPXX_LIB)
 
 # Report if package was found
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(GMP
-  DEFAULT_MSG
-  GMPXX_LIB GMPXX_INCLUDE_DIR GMP_INCLUDE_DIR GMP_LIB
-)
+find_package_handle_standard_args(GMP DEFAULT_MSG GMPXX_LIB GMPXX_INCLUDE_DIR GMP_INCLUDE_DIR
+                                  GMP_LIB)
 
 # Set targets
 if(GMP_FOUND)
   # C library
   if(NOT TARGET GMP::gmp)
     add_library(GMP::gmp UNKNOWN IMPORTED)
-    set_target_properties(GMP::gmp PROPERTIES
-      IMPORTED_LOCATION ${GMP_LIB}
-      INTERFACE_INCLUDE_DIRECTORIES ${GMP_INCLUDE_DIR}
-    )
+    set_target_properties(GMP::gmp PROPERTIES IMPORTED_LOCATION ${GMP_LIB}
+                                              INTERFACE_INCLUDE_DIRECTORIES ${GMP_INCLUDE_DIR})
   endif()
 
   # C++ library, which requires a link to the C library
   if(NOT TARGET GMP::gmpxx)
     add_library(GMP::gmpxx UNKNOWN IMPORTED)
-    set_target_properties(GMP::gmpxx PROPERTIES
-      IMPORTED_LOCATION ${GMPXX_LIB}
-      INTERFACE_INCLUDE_DIRECTORIES ${GMPXX_INCLUDE_DIR}
-      INTERFACE_LINK_LIBRARIES GMP::gmp
-    )
+    set_target_properties(
+      GMP::gmpxx
+      PROPERTIES IMPORTED_LOCATION ${GMPXX_LIB}
+                 INTERFACE_INCLUDE_DIRECTORIES ${GMPXX_INCLUDE_DIR}
+                 INTERFACE_LINK_LIBRARIES GMP::gmp)
   endif()
 endif()

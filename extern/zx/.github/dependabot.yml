@@ -3,11 +3,11 @@ updates:
   # Enable version updates for git submodules
   - package-ecosystem: "gitsubmodule"
     # Look for `.gitmodules` in the `root` directory
-    directory:         "/"
+    directory: "/"
     # Check the submodules for updates every month
     schedule:
       interval: "monthly"
-      time:     "06:00"
+      time: "06:00"
       timezone: "Europe/Vienna"
     assignees:
       - "pehamTom"
@@ -15,12 +15,12 @@ updates:
   # Enable version updates for GitHub Actions
   - package-ecosystem: "github-actions"
     # Look for `*.yml` files in the `.github/workflows` directory
-    directory:         "/"
+    directory: "/"
     # Check for updates to GitHub Actions every week
     schedule:
       interval: "weekly"
-      day:      "monday"
-      time:     "06:00"
+      day: "monday"
+      time: "06:00"
       timezone: "Europe/Vienna"
     assignees:
       - "pehamTom"
