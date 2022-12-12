@@ -105,38 +105,6 @@ TEST_F(ZXDiagramTest, graph_like) {
     }
 }
 
-// TEST_F(ZXDiagramTest, concat) {
-//     auto copy = diag;
-//     diag.concat(copy);
-
-//     ASSERT_EQ(diag.getNEdges(), 10);
-//     ASSERT_EQ(diag.getNVertices(), 10);
-
-//     EXPECT_EQ(diag.getEdge(0, 4).value().type, zx::EdgeType::Hadamard);
-//     EXPECT_EQ(diag.getEdge(5, 6).value().type, zx::EdgeType::Simple);
-//     EXPECT_EQ(diag.getEdge(2, 6).value().type, zx::EdgeType::Simple);
-//     EXPECT_EQ(diag.getEdge(3, 6).value().type, zx::EdgeType::Simple);
-//     EXPECT_EQ(diag.getEdge(5, 9).value().type, zx::EdgeType::Hadamard);
-//     EXPECT_EQ(diag.getEdge(4, 9).value().type, zx::EdgeType::Simple);
-//     EXPECT_EQ(diag.getEdge(7, 8).value().type, zx::EdgeType::Simple);
-//     EXPECT_EQ(diag.getEdge(8, 10).value().type, zx::EdgeType::Simple);
-//     EXPECT_EQ(diag.getEdge(9, 11).value().type, zx::EdgeType::Simple);
-
-//     EXPECT_EQ(diag.getVData(0).value().type, zx::VertexType::Boundary);
-//     EXPECT_EQ(diag.getVData(1).value().type, zx::VertexType::Boundary);
-//     EXPECT_EQ(diag.getVData(2).value().type, zx::VertexType::Z);
-//     EXPECT_EQ(diag.getVData(3).value().type, zx::VertexType::Z);
-//     EXPECT_EQ(diag.getVData(4).value().type, zx::VertexType::X);
-//     EXPECT_EQ(diag.getVData(7).value().type, zx::VertexType::Z);
-//     EXPECT_EQ(diag.getVData(8).value().type, zx::VertexType::Z);
-//     EXPECT_EQ(diag.getVData(9).value().type, zx::VertexType::X);
-//     EXPECT_EQ(diag.getVData(10).value().type, zx::VertexType::Boundary);
-//     EXPECT_EQ(diag.getVData(11).value().type, zx::VertexType::Boundary);
-
-//     EXPECT_TRUE(diag.isDeleted(1));
-//     EXPECT_TRUE(diag.isDeleted(3));
-// }
-
 TEST_F(ZXDiagramTest, adjoint) {
     diag = diag.adjoint();
 

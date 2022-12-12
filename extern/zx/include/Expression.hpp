@@ -187,7 +187,7 @@ namespace sym {
                             return lhs.getVar() < rhs.getVar();
                         });
                 if (insertPos != terms.end() && insertPos->getVar() == t->getVar()) {
-                    if (insertPos->getCoeff() == -t->getCoeff()) {
+                    if (std::abs(insertPos->getCoeff() + t->getCoeff()) < TOLERANCE) {
                         terms.erase(insertPos);
                     } else {
                         insertPos->addCoeff(t->getCoeff());

@@ -56,7 +56,6 @@ namespace zx {
                            Vertex                                        v);
 
             value_type operator*() const { return {v, currentPos->value()}; }
-            // pointer operator->() { return ptr; }
 
             // Prefix increment
             VertexIterator operator++();
@@ -108,7 +107,6 @@ namespace zx {
                          const std::vector<std::optional<VertexData>>& vertices, Vertex v);
 
             value_type operator*() const { return {v, currentPos->to}; }
-            // pointer operator->() { return ptr; }
 
             // Prefix increment
             EdgeIterator operator++();

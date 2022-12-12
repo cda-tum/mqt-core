@@ -102,10 +102,6 @@ namespace zx {
                 new_matches = true;
                 n_simplifications++;
             }
-            // std::cout << "ID " << n_id << "\n";
-            // std::cout << "SPIDER " << n_spider << "\n";
-            // std::cout << "PIVOT PAULI" << n_pivot << "\n";
-            // std::cout << "LOCALCOMP " << n_localComp << "\n";
         }
         return n_simplifications;
     }
@@ -133,8 +129,6 @@ namespace zx {
     std::size_t fullReduce(ZXDiagram& diag) {
         diag.toGraphlike();
         interiorCliffordSimp(diag);
-
-        // pivotgadgetSimp(diag);
 
         std::size_t n_gadget, n_pivot;
         std::size_t n_simplifications = 0;

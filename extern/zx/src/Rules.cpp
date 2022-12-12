@@ -69,7 +69,7 @@ namespace zx {
             const auto& [n0, _] = edges[i];
             diag.addPhase(n0, phase);
             for (size_t j = i + 1; j < nedges; ++j) {
-                const auto& [n1, _] = edges[j];
+                const auto& [n1, _u] = edges[j];
                 diag.addEdgeParallelAware(n0, n1, EdgeType::Hadamard);
             }
         }

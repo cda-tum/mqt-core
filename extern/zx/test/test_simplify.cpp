@@ -292,66 +292,6 @@ TEST_F(SimplifyTest, pauli_pivot_2) {
     EXPECT_FALSE(diag.globalPhaseIsZero());
 }
 
-// TEST_F(SimplifyTest, clifford) {
-//     zx::ZXDiagram diag("circuits/clifford_identity_simple.qasm");
-//     diag.toGraphlike();
-//     zx::cliffordSimp(diag);
-
-//     EXPECT_TRUE(diag.connected(diag.getInputs()[0], diag.getOutputs()[0]));
-// }
-
-// TEST_F(SimplifyTest, clifford_2) {
-//     zx::ZXDiagram diag("circuits/ghz_identity.qasm");
-
-//     diag.toGraphlike();
-
-//     zx::cliffordSimp(diag);
-
-//     EXPECT_TRUE(diag.connected(diag.getInputs()[0], diag.getOutputs()[0]));
-//     EXPECT_TRUE(diag.connected(diag.getInputs()[1], diag.getOutputs()[1]));
-//     EXPECT_TRUE(diag.connected(diag.getInputs()[2], diag.getOutputs()[2]));
-// }
-
-// TEST_F(SimplifyTest, clifford_3) {
-//     auto diag = make_empty_diagram(2);
-//     diag.addVertex(0);
-//     diag.addVertex(0, 0, zx::PiRational(0, 1), zx::VertexType::X);
-
-//     diag.addVertex(0);
-//     diag.addVertex(1, 0, zx::PiRational(0, 1), zx::VertexType::X);
-
-//     diag.addEdge(0, 4);
-//     diag.addEdge(1, 5);
-//     diag.addEdge(4, 5);
-//     diag.addEdge(4, 6);
-//     diag.addEdge(5, 7);
-//     diag.addEdge(6, 7);
-//     diag.addEdge(6, 2);
-//     diag.addEdge(7, 3);
-
-//     //    zx::spiderSimp(diag);
-//     zx::cliffordSimp(diag);
-//     EXPECT_TRUE(diag.connected(diag.getInputs()[0], diag.getOutputs()[0]));
-//     EXPECT_TRUE(diag.connected(diag.getInputs()[1], diag.getOutputs()[1]));
-// }
-
-// // TEST_F(SimplifyTest, non_clifford) {
-// //   zx::ZXDiagram diag("circuits/ctrl_phase.qasm");
-
-// //   for (auto [to, from] : diag.getEdges()) {
-// //     std::cout << to << "-" << from << "\n";
-// //   }
-// //   std::cout << ""
-// //             << "\n";
-
-// //   diag.toGraphlike();
-// //   zx::cliffordSimp(diag);
-
-// //  for (auto [to, from] : diag.getEdges()) {
-// //    std::cout << to << "-" << from << "\n";
-// //   }
-// // }
-
 TEST_F(SimplifyTest, gadgetSimp) {
     zx::ZXDiagram diag = ::makeEmptyDiagram(1);
 
@@ -408,15 +348,6 @@ TEST_F(SimplifyTest, gadgetSimp_2) {
     EXPECT_TRUE(diag.phase(2).isZero());
     EXPECT_TRUE(diag.globalPhaseIsZero());
 }
-
-// TEST_F(SimplifyTest, pivotgadgetSimp) {}
-// TEST_F(SimplifyTest, fullReduce) {
-//     zx::ZXDiagram diag("circuits/ctrl_phase.qasm");
-
-//     zx::fullReduce(diag);
-
-//     EXPECT_TRUE(diag.isIdentity());
-// }
 
 TEST_F(SimplifyTest, fullReduce_2) {
     zx::ZXDiagram diag = ::makeEmptyDiagram(2);
@@ -603,38 +534,3 @@ TEST_F(SimplifyTest, equivalenceSymbolic) {
     EXPECT_EQ(d1.getNVertices(), 6);
     EXPECT_TRUE(d1.isIdentity());
 }
-// TEST_F(SimplifyTest, fullReduce_3) {
-//     zx::ZXDiagram diag("circuits/bell_state.qasm");
-//     auto          h = diag;
-//     diag.invert();
-//     diag.concat(h);
-
-//     zx::fullReduce(diag);
-
-//     EXPECT_TRUE(diag.isIdentity());
-// }
-
-// TEST_F(SimplifyTest, fullReduce_4) {
-//     zx::ZXDiagram d0("circuits/C17_204_o0.qasm");
-//     zx::ZXDiagram d1("circuits/C17_204_o1.qasm");
-
-//     d0.invert();
-//     d0.concat(d1);
-
-//     zx::fullReduce(d0);
-
-//     EXPECT_TRUE(2 * d0.getNEdges() == d0.getNVertices());
-// }
-
-// TEST_F(SimplifyTest, fullReduce_5) {
-//     zx::ZXDiagram d0("circuits/test0.qasm");
-//     zx::ZXDiagram d1("circuits/test1.qasm");
-
-//     d0.invert();
-//     d0.concat(d1);
-
-//     zx::fullReduce(d0);
-
-//     EXPECT_EQ(d0.getNEdges(), 3);
-//     EXPECT_EQ(d0.getNVertices(), 6);
-// }

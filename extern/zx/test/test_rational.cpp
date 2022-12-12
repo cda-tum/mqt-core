@@ -41,11 +41,6 @@ TEST_F(RationalTest, from_double_6) {
     EXPECT_EQ(r, zx::PiRational(-3, 4));
 }
 
-// TEST_F(RationalTest, from_double_7) {
-//     zx::PiRational r(0.1);
-//     EXPECT_EQ(r, zx::PiRational(-3, 4));
-// }
-
 TEST_F(RationalTest, add) {
     const zx::PiRational r0(1, 8);
     const zx::PiRational r1(7, 8);
