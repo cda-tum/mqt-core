@@ -256,15 +256,16 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
     circuitFunctions circuitsExpectToPass;
     circuitsExpectToPass.emplace_back(createIdentityCircuit);
     circuitsExpectToPass.emplace_back(createXCircuit);
-    circuitsExpectToPass.emplace_back(createCXCircuit);
+
     circuitsExpectToPass.emplace_back(createYCircuit);
     circuitsExpectToPass.emplace_back(createHCircuit);
     circuitsExpectToPass.emplace_back(createHZCircuit);
-    circuitsExpectToPass.emplace_back(createCZCircuit);
-    circuitsExpectToPass.emplace_back(createCYCircuit);
 
     circuitFunctions circuitsExpectToFail;
     circuitsExpectToFail.emplace_back(createHTCircuit);
+    circuitsExpectToFail.emplace_back(createCXCircuit);
+    circuitsExpectToFail.emplace_back(createCZCircuit);
+    circuitsExpectToFail.emplace_back(createCYCircuit);
 
     std::vector<dd::Qubit> dataQubits = {0, 1, 2, 4, 5, 6, 7, 8};
 

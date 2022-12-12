@@ -121,8 +121,9 @@ void Q9SurfaceEcc::measureAndCorrect() {
         writeClassicalControl(dd::Qubit(clAncStart + 4), 4, 6, qc::X, qubits[4]);  //ancillaQubits[3,4]
         writeClassicalControl(dd::Qubit(clAncStart + 4), 4, 8, qc::X, qubits[8]);  //ancillaQubits[6]
         writeClassicalControl(dd::Qubit(clAncStart + 4), 4, 10, qc::X, qubits[5]); //ancillaQubits[3,6]
+
+        gatesWritten = true;
     }
-    gatesWritten = true;
 }
 
 void Q9SurfaceEcc::writeDecoding() {
@@ -149,124 +150,63 @@ void Q9SurfaceEcc::mapGate(const qc::Operation& gate) {
     const auto nQubits = qcOriginal->getNqubits();
 
     if (gate.getNcontrols() && gate.getType() != qc::Measure) {
-        auto&        ctrls = gate.getControls();
-        dd::Controls ctrls2;
-        dd::Controls ctrls3;
-        for (const auto& ct: ctrls) {
-            ctrls2.insert(dd::Control{dd::Qubit(ct.qubit + 4 * nQubits), ct.type});
-            ctrls3.insert(dd::Control{dd::Qubit(ct.qubit + 8 * nQubits), ct.type});
-        }
-        switch (gate.getType()) {
-            case qc::I:
-                break;
-            case qc::X:
-                for (auto i: gate.getTargets()) {
-                    qcMapped->x(dd::Qubit(i + 2 * nQubits), ctrls);
-                    qcMapped->x(dd::Qubit(i + 4 * nQubits), ctrls);
-                    qcMapped->x(dd::Qubit(i + 6 * nQubits), ctrls);
-                    qcMapped->x(dd::Qubit(i + 2 * nQubits), ctrls2);
-                    qcMapped->x(dd::Qubit(i + 4 * nQubits), ctrls2);
-                    qcMapped->x(dd::Qubit(i + 6 * nQubits), ctrls2);
-                    qcMapped->x(dd::Qubit(i + 2 * nQubits), ctrls3);
-                    qcMapped->x(dd::Qubit(i + 4 * nQubits), ctrls3);
-                    qcMapped->x(dd::Qubit(i + 6 * nQubits), ctrls3);
-                }
-                break;
-            case qc::Y:
-                //Y = Z X
-                for (auto i: gate.getTargets()) {
-                    qcMapped->z(dd::Qubit(i), ctrls);
-                    qcMapped->z(dd::Qubit(i + 4 * nQubits), ctrls);
-                    qcMapped->z(dd::Qubit(i + 8 * nQubits), ctrls);
-                    qcMapped->x(dd::Qubit(i + 2 * nQubits), ctrls);
-                    qcMapped->x(dd::Qubit(i + 4 * nQubits), ctrls);
-                    qcMapped->x(dd::Qubit(i + 6 * nQubits), ctrls);
-                    qcMapped->z(dd::Qubit(i), ctrls2);
-                    qcMapped->z(dd::Qubit(i + 4 * nQubits), ctrls2);
-                    qcMapped->z(dd::Qubit(i + 8 * nQubits), ctrls2);
-                    qcMapped->x(dd::Qubit(i + 2 * nQubits), ctrls2);
-                    qcMapped->x(dd::Qubit(i + 4 * nQubits), ctrls2);
-                    qcMapped->x(dd::Qubit(i + 6 * nQubits), ctrls2);
-                    qcMapped->z(dd::Qubit(i), ctrls3);
-                    qcMapped->z(dd::Qubit(i + 4 * nQubits), ctrls3);
-                    qcMapped->z(dd::Qubit(i + 8 * nQubits), ctrls3);
-                    qcMapped->x(dd::Qubit(i + 2 * nQubits), ctrls3);
-                    qcMapped->x(dd::Qubit(i + 4 * nQubits), ctrls3);
-                    qcMapped->x(dd::Qubit(i + 6 * nQubits), ctrls3);
-                }
-                break;
-            case qc::Z:
-                for (auto i: gate.getTargets()) {
-                    qcMapped->z(dd::Qubit(i), ctrls);
-                    qcMapped->z(dd::Qubit(i + 4 * nQubits), ctrls);
-                    qcMapped->z(dd::Qubit(i + 8 * nQubits), ctrls);
-                    qcMapped->z(dd::Qubit(i), ctrls2);
-                    qcMapped->z(dd::Qubit(i + 4 * nQubits), ctrls2);
-                    qcMapped->z(dd::Qubit(i + 8 * nQubits), ctrls2);
-                    qcMapped->z(dd::Qubit(i), ctrls3);
-                    qcMapped->z(dd::Qubit(i + 4 * nQubits), ctrls3);
-                    qcMapped->z(dd::Qubit(i + 8 * nQubits), ctrls3);
-                }
-                break;
-            default:
-                gateNotAvailableError(gate);
-        }
-    } else {
-        switch (gate.getType()) {
-            case qc::I:
-                break;
-            case qc::X:
-                for (auto i: gate.getTargets()) {
-                    qcMapped->x(dd::Qubit(i + 2 * nQubits));
-                    qcMapped->x(dd::Qubit(i + 4 * nQubits));
-                    qcMapped->x(dd::Qubit(i + 6 * nQubits));
-                }
-                break;
-            case qc::H:
-                for (auto i: gate.getTargets()) {
-                    for (std::size_t j = 0; j < 9; j++) {
-                        qcMapped->h(dd::Qubit(i + j * nQubits));
-                    }
+        gateNotAvailableError(gate);
+    }
 
-                    qcMapped->swap(dd::Qubit(i), dd::Qubit(i + 6 * nQubits));
-                    qcMapped->swap(dd::Qubit(i + 3 * nQubits), dd::Qubit(i + 7 * nQubits));
-                    qcMapped->swap(dd::Qubit(i + 2 * nQubits), dd::Qubit(i + 8 * nQubits));
-                    qcMapped->swap(dd::Qubit(i + nQubits), dd::Qubit(i + 5 * nQubits));
+    switch (gate.getType()) {
+        case qc::I:
+            break;
+        case qc::X:
+            for (auto i: gate.getTargets()) {
+                qcMapped->x(dd::Qubit(i + 2 * nQubits));
+                qcMapped->x(dd::Qubit(i + 4 * nQubits));
+                qcMapped->x(dd::Qubit(i + 6 * nQubits));
+            }
+            break;
+        case qc::H:
+            for (auto i: gate.getTargets()) {
+                for (std::size_t j = 0; j < 9; j++) {
+                    qcMapped->h(dd::Qubit(i + j * nQubits));
                 }
-                break;
-            case qc::Y:
-                //Y = Z X
-                for (auto i: gate.getTargets()) {
-                    qcMapped->z(dd::Qubit(i));
-                    qcMapped->z(dd::Qubit(i + 4 * nQubits));
-                    qcMapped->z(dd::Qubit(i + 8 * nQubits));
-                    qcMapped->x(dd::Qubit(i + 2 * nQubits));
-                    qcMapped->x(dd::Qubit(i + 4 * nQubits));
-                    qcMapped->x(dd::Qubit(i + 6 * nQubits));
+
+                qcMapped->swap(dd::Qubit(i), dd::Qubit(i + 6 * nQubits));
+                qcMapped->swap(dd::Qubit(i + 3 * nQubits), dd::Qubit(i + 7 * nQubits));
+                qcMapped->swap(dd::Qubit(i + 2 * nQubits), dd::Qubit(i + 8 * nQubits));
+                qcMapped->swap(dd::Qubit(i + nQubits), dd::Qubit(i + 5 * nQubits));
+            }
+            break;
+        case qc::Y:
+            //Y = Z X
+            for (auto i: gate.getTargets()) {
+                qcMapped->z(dd::Qubit(i));
+                qcMapped->z(dd::Qubit(i + 4 * nQubits));
+                qcMapped->z(dd::Qubit(i + 8 * nQubits));
+                qcMapped->x(dd::Qubit(i + 2 * nQubits));
+                qcMapped->x(dd::Qubit(i + 4 * nQubits));
+                qcMapped->x(dd::Qubit(i + 6 * nQubits));
+            }
+            break;
+        case qc::Z:
+            for (auto i: gate.getTargets()) {
+                qcMapped->z(dd::Qubit(i));
+                qcMapped->z(dd::Qubit(i + 4 * nQubits));
+                qcMapped->z(dd::Qubit(i + 8 * nQubits));
+            }
+            break;
+        case qc::Measure:
+            if (!isDecoded) {
+                measureAndCorrect();
+                writeDecoding();
+            }
+            if (auto measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
+                for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
+                    qcMapped->measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
                 }
-                break;
-            case qc::Z:
-                for (auto i: gate.getTargets()) {
-                    qcMapped->z(dd::Qubit(i));
-                    qcMapped->z(dd::Qubit(i + 4 * nQubits));
-                    qcMapped->z(dd::Qubit(i + 8 * nQubits));
-                }
-                break;
-            case qc::Measure:
-                if (!isDecoded) {
-                    measureAndCorrect();
-                    writeDecoding();
-                }
-                if (auto measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
-                    for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
-                        qcMapped->measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
-                    }
-                } else {
-                    throw std::runtime_error("Dynamic cast to NonUnitaryOperation failed.");
-                }
-                break;
-            default:
-                gateNotAvailableError(gate);
-        }
+            } else {
+                throw std::runtime_error("Dynamic cast to NonUnitaryOperation failed.");
+            }
+            break;
+        default:
+            gateNotAvailableError(gate);
     }
 }
