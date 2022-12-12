@@ -2,11 +2,11 @@ name: Deploy to PyPI
 
 on:
   release:
-    types: [ published ]
+    types: [published]
   push:
-    branches: [ master, main ]
+    branches: [master, main]
   pull_request:
-    branches: [ master, main ]
+    branches: [master, main]
   workflow_dispatch:
 
 jobs:
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-python@v4
         name: Install Python
         with:
-          python-version: '3.9'
+          python-version: "3.9"
       - name: Install dependencies
         run: pip install -q build
       - name: Build sdist
