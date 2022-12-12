@@ -1,0 +1,67 @@
+# To run all pre-commit checks, use:
+#
+#     pre-commit run -a
+#
+# To install pre-commit hooks that run every time you commit:
+#
+#     pre-commit install
+#
+
+ci:
+  autoupdate_commit_msg: "⬆️🪝 update pre-commit hooks"
+  autofix_commit_msg: "🎨 pre-commit fixes"
+
+repos:
+  # Standard hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v4.4.0"
+    hooks:
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-docstring-first
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-yaml
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: requirements-txt-fixer
+      - id: trailing-whitespace
+
+  # Handling unwanted unicode characters
+  - repo: https://github.com/sirosen/texthooks
+    rev: "0.4.0"
+    hooks:
+      - id: fix-ligatures
+      - id: fix-smartquotes
+
+  # Check for spelling
+  - repo: https://github.com/codespell-project/codespell
+    rev: "v2.2.2"
+    hooks:
+      - id: codespell
+        args: ["-L", "wille,linz", "--skip", "*.ipynb"]
+
+  # Clang-format the C++ part of the code base automatically
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: "v15.0.4"
+    hooks:
+      - id: clang-format
+        types_or: [c++, c, cuda]
+
+  # CMake format and lint the CMakeLists.txt files
+  - repo: https://github.com/cheshirekow/cmake-format-precommit
+    rev: v0.6.13
+    hooks:
+      - id: cmake-format
+        additional_dependencies: [pyyaml]
+      - id: cmake-lint
+        additional_dependencies: [pyyaml]
+
+  # Format configuration files with prettier
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: "v3.0.0-alpha.4"
+    hooks:
+      - id: prettier
+        types_or: [yaml, markdown, html, css, scss, javascript, json]

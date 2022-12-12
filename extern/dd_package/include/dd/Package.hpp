@@ -2766,7 +2766,9 @@ namespace dd {
 
         template<class Edge>
         bool isLocallyConsistent(const Edge& e) {
+            // NOLINTNEXTLINE(clang-diagnostic-float-equal)
             assert(Complex::one.r->value == 1 && Complex::one.i->value == 0);
+            // NOLINTNEXTLINE(clang-diagnostic-float-equal)
             assert(Complex::zero.r->value == 0 && Complex::zero.i->value == 0);
 
             const bool result = isLocallyConsistent2(e);
@@ -2851,14 +2853,14 @@ namespace dd {
                 std::clog << "\nOffending weight: " << edge.w << "\n";
                 std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << "r " << CTEntry::val(edge.w.i) << std::defaultfloat << "i\n";
                 debugnode(edge.p);
-                throw std::runtime_error("Ref-Count mismatch for " + std::to_string(rPtr->value) + "(r): " + std::to_string(weightMap.at(rPtr)) + " occurences in DD but Ref-Count is only " + std::to_string(rPtr->refCount));
+                throw std::runtime_error("Ref-Count mismatch for " + std::to_string(rPtr->value) + "(r): " + std::to_string(weightMap.at(rPtr)) + " occurrences in DD but Ref-Count is only " + std::to_string(rPtr->refCount));
             }
 
             if (weightMap.at(iPtr) > iPtr->refCount && iPtr != Complex::zero.i && iPtr != Complex::one.r && iPtr != &ComplexTable<>::sqrt2_2) {
                 std::clog << "\nOffending weight: " << edge.w << "\n";
                 std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << "r " << CTEntry::val(edge.w.i) << std::defaultfloat << "i\n";
                 debugnode(edge.p);
-                throw std::runtime_error("Ref-Count mismatch for " + std::to_string(iPtr->value) + "(i): " + std::to_string(weightMap.at(iPtr)) + " occurences in DD but Ref-Count is only " + std::to_string(iPtr->refCount));
+                throw std::runtime_error("Ref-Count mismatch for " + std::to_string(iPtr->value) + "(i): " + std::to_string(weightMap.at(iPtr)) + " occurrences in DD but Ref-Count is only " + std::to_string(iPtr->refCount));
             }
 
             if (edge.isTerminal()) {
@@ -2867,7 +2869,7 @@ namespace dd {
 
             if (nodeMap.at(edge.p) != edge.p->ref) {
                 debugnode(edge.p);
-                throw std::runtime_error("Ref-Count mismatch for node: " + std::to_string(nodeMap.at(edge.p)) + " occurences in DD but Ref-Count is " + std::to_string(edge.p->ref));
+                throw std::runtime_error("Ref-Count mismatch for node: " + std::to_string(nodeMap.at(edge.p)) + " occurrences in DD but Ref-Count is " + std::to_string(edge.p->ref));
             }
             for (auto child: edge.p->e) {
                 if (!child.isTerminal() && child.p->v != edge.p->v - 1) {

@@ -4,7 +4,7 @@ ignore:
   - "test/bench_package.cpp"
 
 coverage:
-  range:     60..90
+  range: 60..90
   precision: 1
   status:
     project:
