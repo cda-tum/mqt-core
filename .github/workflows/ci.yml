@@ -94,6 +94,6 @@ jobs:
           submodules: recursive
       - uses: DoozyX/clang-format-lint-action@v0.15
         with:
-          source:             'apps include src test mqt/qfr'
+          source:             'include src test mqt/qfr'
           extensions:         'h,hpp,c,cpp'
           clangFormatVersion: 13
