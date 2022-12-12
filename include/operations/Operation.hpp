@@ -186,7 +186,6 @@ namespace qc {
             return op.print(os);
         }
 
-        virtual void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const                         = 0;
-        virtual void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const = 0;
+        virtual void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const = 0;
     };
 } // namespace qc

@@ -188,64 +188,6 @@ namespace qc {
         }
     }
 
-    void NonUnitaryOperation::dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char*) const {
-        switch (type) {
-            case Measure:
-                if (isWholeQubitRegister(qreg, qubits.front(), qubits.back()) &&
-                    isWholeQubitRegister(qreg, classics.front(), classics.back())) {
-                    of << "qc.measure(" << qreg[qubits.front()].first << ", " << creg[classics.front()].first << ")" << std::endl;
-                } else {
-                    of << "qc.measure([";
-                    for (const auto& q: qubits) {
-                        of << qreg[q].second << ", ";
-                    }
-                    of << "], [";
-                    for (const auto& target: classics) {
-                        of << creg[target].second << ", ";
-                    }
-                    of << "])" << std::endl;
-                }
-                break;
-            case Reset:
-                if (isWholeQubitRegister(qreg, targets.front(), targets.back())) {
-                    of << "append(Reset(), " << qreg[targets.front()].first << ", [])" << std::endl;
-                } else {
-                    of << "append(Reset(), [";
-                    for (const auto& target: targets) {
-                        of << qreg[target].second << ", " << std::endl;
-                    }
-                    of << "], [])" << std::endl;
-                }
-                break;
-            case Snapshot:
-                if (!targets.empty()) {
-                    of << "qc.snapshot(" << parameter[0] << ", qubits=[";
-                    for (const auto& target: targets) {
-                        of << qreg[target].second << ", ";
-                    }
-                    of << "])" << std::endl;
-                }
-                break;
-            case ShowProbabilities:
-                std::cerr << "No equivalent to show_probabilities statement in qiskit" << std::endl;
-                break;
-            case Barrier:
-                if (isWholeQubitRegister(qreg, targets.front(), targets.back())) {
-                    of << "qc.barrier(" << qreg[targets.front()].first << ")" << std::endl;
-                } else {
-                    of << "qc.barrier([";
-                    for (const auto& target: targets) {
-                        of << qreg[target].first << ", ";
-                    }
-                    of << "])" << std::endl;
-                }
-                break;
-            default:
-                std::cerr << "Non-unitary operation with invalid type " << type << " detected. Proceed with caution!" << std::endl;
-                break;
-        }
-    }
-
     bool NonUnitaryOperation::actsOn(dd::Qubit i) const {
         if (type == Measure) {
             return std::any_of(qubits.cbegin(), qubits.cend(), [&i](const auto& q) { return q == i; });
