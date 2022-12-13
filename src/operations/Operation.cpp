@@ -72,7 +72,7 @@ namespace qc {
                 strcpy(name, "iSWP");
                 break;
             case Peres:
-                strcpy(name, "Pres");
+                strcpy(name, "Pr ");
                 break;
             case Peresdag:
                 strcpy(name, "Prdg");

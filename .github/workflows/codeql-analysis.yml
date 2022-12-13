@@ -58,7 +58,7 @@ jobs:
         uses: advanced-security/filter-sarif@main
         with:
           patterns: |
-                    -**/extern/**
+            -**/extern/**
           input: sarif-results/${{ matrix.language }}.sarif
           output: sarif-results/${{ matrix.language }}.sarif
 
