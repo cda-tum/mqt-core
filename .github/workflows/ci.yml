@@ -2,98 +2,59 @@ name: CI
 
 on:
   push:
-    branches: [master, main]
+    branches: [main]
   pull_request:
-    branches: [master, main]
   workflow_dispatch:
 
-env:
-  BUILD_TYPE: Release
-  MAKEFLAGS: "-j2"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 defaults:
   run:
     shell: bash
 
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 3
+
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  cpp-tests:
+    name: Tests ${{ matrix.config.os }}
+    runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        config:
+          - { os: ubuntu-latest, test-dir: build/test, toolchain: "" }
+          - { os: macos-latest, test-dir: build/test, toolchain: "" }
+          - {
+              os: windows-latest,
+              test-dir: build\test\Release,
+              toolchain: "-T ClangCl",
+            }
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Configure CMake
-        run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl" -DBUILD_QFR_TESTS=ON -DBINDINGS=ON
-          else
-            cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON -DBINDINGS=ON
-          fi
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_QFR_TESTS=ON ${{ matrix.config.toolchain }}
       - name: Build
-        run: cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE
-
-  test:
-    needs: build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Configure CMake
-        run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -T "ClangCl" -DBUILD_QFR_TESTS=ON
-          else
-            cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBUILD_QFR_TESTS=ON
-          fi
-      - name: Build
-        run: cmake --build "${{github.workspace}}/build" --config $BUILD_TYPE --target qfr_test
+        run: cmake --build build --config Release
       - name: Test
-        working-directory: ${{github.workspace}}/build/test
+        working-directory: ${{ matrix.config.test-dir }}
+        run: ctest -C Release --output-on-failure
+      - if: runner.os == 'Linux'
+        name: Coverage
         run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            cd $BUILD_TYPE && ./qfr_test.exe
-          else
-            ctest -C $BUILD_TYPE --output-on-failure
-          fi
-
-  coverage:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Configure CMake
-        run: cmake -S "${{github.workspace}}" -B "${{github.workspace}}/build" -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON -DBUILD_QFR_TESTS=ON
-      - name: Build
-        run: cmake --build "${{github.workspace}}/build" --config Debug --target qfr_test
-      - name: Test
-        working-directory: ${{github.workspace}}/build/test
-        run: ctest -C Debug --output-on-failure
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+          cmake -S . -B buildCov -DCMAKE_BUILD_TYPE=Debug -DBUILD_QFR_TESTS=ON -DCOVERAGE=ON
+          cmake --build buildCov --config Debug
+          cd buildCov/test
+          ctest -C Debug --output-on-failure
+      - if: runner.os == 'Linux'
+        name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3.1.1
         with:
           fail_ci_if_error: true
           gcov: true
           gcov_ignore: "extern/**/*"
           token: ${{ secrets.CODECOV_TOKEN }}
-
-  codestyle:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - uses: DoozyX/clang-format-lint-action@v0.15
-        with:
-          source: "include src test mqt/qfr"
-          extensions: "h,hpp,c,cpp"
-          clangFormatVersion: 13
