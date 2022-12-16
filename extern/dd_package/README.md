@@ -1,6 +1,6 @@
 [![bench](https://img.shields.io/badge/benchmark-master-blue?logo=github&style=flat-square)](https://cda-tum.github.io/dd_package/dev/bench/)
 ![License MIT](https://img.shields.io/github/license/cda-tum/dd_package?color=blue&style=flat-square)
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/cda-tum/dd_package/CI?logo=github&style=flat-square)](https://github.com/cda-tum/dd_package/actions?query=workflow%3A%22CI%22)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/cda-tum/dd_package/ci.yml?branch=main&logo=github&style=flat-square)](https://github.com/cda-tum/dd_package/actions?query=workflow%3A%22CI%22)
 [![Codecov](https://img.shields.io/codecov/c/github/cda-tum/dd_package/main?label=codecov&logo=codecov&style=flat-square)](https://codecov.io/gh/cda-tum/dd_package)
 
 # MQT DD Package - A Package for Decision Diagrams Written in C++
