@@ -1,6 +1,6 @@
 ![OS](https://img.shields.io/badge/os-linux%20%7C%20macos%20%7C%20windows-blue?style=flat-square)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
-[![CI](https://img.shields.io/github/workflow/status/cda-tum/zx/CI?style=flat-square&logo=github&label=c%2B%2B)](https://github.com/cda-tum/zx/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/cda-tum/zx/ci.yml?branch=main&style=flat-square&logo=github&label=c%2B%2B)](https://github.com/cda-tum/zx/actions/workflows/ci.yml)
 [![codecov](https://img.shields.io/codecov/c/github/cda-tum/zx?style=flat-square&logo=codecov)](https://codecov.io/gh/cda-tum/zx)
 
 # MQT ZX - A library for working with ZX-diagrams
