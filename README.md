@@ -1,5 +1,5 @@
 [![PyPI](https://img.shields.io/pypi/v/mqt.qfr?logo=pypi&style=plastic)](https://pypi.org/project/mqt.qfr/)
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/cda-tum/qfr/CI?logo=github&style=plastic)](https://github.com/cda-tum/qfr/actions?query=workflow%3A%22CI%22)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/cda-tum/qfr/ci.yml?branch=main&logo=github&style=plastic)](https://github.com/cda-tum/qfr/actions?query=workflow%3A%22CI%22)
 [![Codecov branch](https://img.shields.io/codecov/c/github/cda-tum/qfr/master?label=codecov&logo=codecov&style=plastic)](https://codecov.io/gh/cda-tum/qfr)
 ![GitHub](https://img.shields.io/github/license/cda-tum/qfr?style=plastic)
 [![arXiv](https://img.shields.io/static/v1?label=arXiv&message=2103.08281&color=inactive&style=plastic)](https://arxiv.org/abs/2103.08281)
