@@ -66,8 +66,13 @@ if(MSVC)
 else()
   target_compile_options(
     ${PROJECT_NAME}
-    INTERFACE -Wall -Wextra -pedantic $<$<CONFIG:DEBUG>:-Og>$<$<CONFIG:RELEASE>:-fno-math-errno
-              -ffinite-math-only -fno-trapping-math>)
+    INTERFACE -Wall
+              -Wextra
+              -pedantic
+              -g
+              $<$<CONFIG:DEBUG>:-Og>$<$<CONFIG:RELEASE>:-fno-math-errno
+              -ffinite-math-only
+              -fno-trapping-math>)
   if(NOT DEPLOY)
     # only include machine-specific optimizations when building for the host machine
     target_compile_options(${PROJECT_NAME} INTERFACE -mtune=native)
@@ -89,13 +94,11 @@ endif()
 # add MQT alias
 add_library(MQT::DDPackage ALIAS ${PROJECT_NAME})
 
-# enable interprocedural optimization if it is supported (Clang's ThinLTO does not work with Ubuntu
-# 20.04's default linker at the moment)
+# enable interprocedural optimization if it is supported
 macro(ENABLE_LTO target_name)
   include(CheckIPOSupported)
   check_ipo_supported(RESULT ipo_supported)
-  if(ipo_supported AND NOT ((${CMAKE_SYSTEM_NAME} MATCHES "Linux") AND (${CMAKE_CXX_COMPILER_ID}
-                                                                        MATCHES "Clang")))
+  if(ipo_supported)
     set_target_properties(${target_name} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
   endif()
 endmacro()
