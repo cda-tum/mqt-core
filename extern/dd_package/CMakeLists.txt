@@ -66,8 +66,13 @@ if(MSVC)
 else()
   target_compile_options(
     ${PROJECT_NAME}
-    INTERFACE -Wall -Wextra -pedantic -g $<$<CONFIG:DEBUG>:-Og>$<$<CONFIG:RELEASE>:-fno-math-errno
-              -ffinite-math-only -fno-trapping-math>)
+    INTERFACE -Wall
+              -Wextra
+              -pedantic
+              -g
+              $<$<CONFIG:DEBUG>:-Og>$<$<CONFIG:RELEASE>:-fno-math-errno
+              -ffinite-math-only
+              -fno-trapping-math>)
   if(NOT DEPLOY)
     # only include machine-specific optimizations when building for the host machine
     target_compile_options(${PROJECT_NAME} INTERFACE -mtune=native)
