@@ -37,7 +37,7 @@ jobs:
         with:
           submodules: recursive
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.config.toolchain }}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_DD_PACKAGE_TESTS=ON ${{ matrix.config.toolchain }}
       - name: Build
         run: cmake --build build --config Release
       - name: Test
@@ -46,7 +46,7 @@ jobs:
       - if: runner.os == 'Linux'
         name: Coverage
         run: |
-          cmake -S . -B buildCov -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+          cmake -S . -B buildCov -DCMAKE_BUILD_TYPE=Debug -DBUILD_DD_PACKAGE_TESTS=ON -DENABLE_COVERAGE=ON
           cmake --build buildCov --config Debug --target DDPackage_test
           cd buildCov/test
           ./DDPackage_test
@@ -66,7 +66,7 @@ jobs:
         with:
           submodules: recursive
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_DD_PACKAGE_TESTS=ON
       - name: Build
         run: cmake --build build --config Release --target DDPackage_bench
       - name: Run Benchmarks
