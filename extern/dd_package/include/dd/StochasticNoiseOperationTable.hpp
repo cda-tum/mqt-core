@@ -32,7 +32,7 @@ namespace dd {
 
         void insert(std::uint_fast8_t kind, Qubit target, const Edge& r) {
             assert(kind < numberOfStochasticOperations); // There are new operations in OpType. Increase the value of numberOfOperations accordingly
-            table.at(target).at(kind) = r;
+            table.at(static_cast<std::size_t>(target)).at(kind) = r;
             ++count;
         }
 
@@ -40,7 +40,7 @@ namespace dd {
             assert(kind < numberOfStochasticOperations); // There are new operations in OpType. Increase the value of numberOfOperations accordingly
             lookups++;
             Edge r{};
-            auto entry = table.at(target).at(kind);
+            auto entry = table.at(static_cast<std::size_t>(target)).at(kind);
             if (entry.p == nullptr) {
                 return r;
             }

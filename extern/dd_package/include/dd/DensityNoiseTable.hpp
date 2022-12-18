@@ -38,7 +38,7 @@ namespace dd {
         static std::size_t hash(const OperandType& a, const std::vector<Qubit>& usedQubits) {
             std::size_t i = 0;
             for (const auto qubit: usedQubits) {
-                i = (i << 3U) + i * qubit + qubit;
+                i = (i << 3U) + i * static_cast<std::size_t>(qubit) + static_cast<std::size_t>(qubit);
             }
             return (std::hash<OperandType>{}(a) + i) & MASK;
         }

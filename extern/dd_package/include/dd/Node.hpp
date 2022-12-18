@@ -125,7 +125,7 @@ namespace dd {
         }
 
         static inline std::uint_least8_t alignDensityNodeNode(dNode*& p) {
-            std::uint_least8_t flags = getDensityMatrixTempFlags(p);
+            const auto flags = static_cast<std::uint_least8_t>(getDensityMatrixTempFlags(p));
             alignDensityNode(p);
 
             if (p == nullptr || p->v <= -1) {
@@ -222,7 +222,7 @@ namespace std {
             const auto h2 = std::hash<dd::Complex>{}(e.w);
             assert(e.p != nullptr);
             assert((dd::dNode::isDensityMatrixTempFlagSet(e.p)) == false);
-            const auto h3  = std::hash<std::uint_least8_t>{}(dd::dNode::getDensityMatrixTempFlags(e.p->flags));
+            const auto h3  = std::hash<std::uint_least8_t>{}(static_cast<std::uint_least8_t>(dd::dNode::getDensityMatrixTempFlags(e.p->flags)));
             const auto tmp = dd::combineHash(h1, h2);
             return dd::combineHash(tmp, h3);
         }

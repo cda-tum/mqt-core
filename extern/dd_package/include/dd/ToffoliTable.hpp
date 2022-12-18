@@ -61,12 +61,12 @@ namespace dd {
         }
 
         static std::size_t hash(const Controls& controls, Qubit target) {
-            auto key = static_cast<std::size_t>(static_cast<std::make_unsigned<Qubit>::type>(target));
+            auto key = static_cast<std::size_t>(static_cast<std::make_unsigned_t<Qubit>>(target));
             for (const auto& control: controls) {
                 if (control.type == dd::Control::Type::pos) {
-                    key *= 29UL * control.qubit;
+                    key *= 29UL * static_cast<std::size_t>(control.qubit);
                 } else {
-                    key *= 71UL * control.qubit;
+                    key *= 71UL * static_cast<std::size_t>(control.qubit);
                 }
             }
             return key & MASK;

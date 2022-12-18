@@ -100,7 +100,7 @@ namespace dd {
                 assert(edge.p->v == v - 1 || edge.isTerminal());
             }
 
-            Node* p = tables[v][key];
+            Node* p = tables[static_cast<std::size_t>(v)][key];
             while (p != nullptr) {
                 if (nodesAreEqual(e.p, p)) {
                     // Match found
@@ -125,8 +125,8 @@ namespace dd {
             }
 
             // node was not found -> add it to front of unique table bucket
-            e.p->next      = tables[v][key];
-            tables[v][key] = e.p;
+            e.p->next                                = tables[static_cast<std::size_t>(v)][key];
+            tables[static_cast<std::size_t>(v)][key] = e.p;
             nodeCount++;
             peakNodeCount = std::max(peakNodeCount, nodeCount);
 
@@ -186,7 +186,7 @@ namespace dd {
                         incRef(edge);
                     }
                 }
-                active[e.p->v]++;
+                active[static_cast<std::size_t>(e.p->v)]++;
                 activeNodeCount++;
                 maxActive = std::max(maxActive, activeNodeCount);
             }
@@ -216,7 +216,7 @@ namespace dd {
                         decRef(edge);
                     }
                 }
-                active[e.p->v]--;
+                active[static_cast<std::size_t>(e.p->v)]--;
                 activeNodeCount--;
             }
         }
@@ -313,7 +313,7 @@ namespace dd {
         };
 
         void print() {
-            Qubit q = nvars - 1;
+            auto q = static_cast<dd::Qubit>(nvars - 1);
             for (auto it = tables.rbegin(); it != tables.rend(); ++it) {
                 auto& table = *it;
                 std::cout << "\tq" << static_cast<std::size_t>(q) << ":"

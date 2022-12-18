@@ -126,7 +126,7 @@ TEST(DDComplexTest, SortedBuckets) {
             num + 6. * ComplexTable<>::tolerance(),
             num + 8. * ComplexTable<>::tolerance()};
 
-    const std::size_t theBucket = ct->hash(num);
+    const auto theBucket = static_cast<std::size_t>(ct->hash(num));
 
     for (auto const& number: numbers) {
         ASSERT_EQ(theBucket, ct->hash(number));
@@ -136,8 +136,8 @@ TEST(DDComplexTest, SortedBuckets) {
     CTEntry* p = ct->getTable().at(theBucket);
     ASSERT_NE(p, nullptr);
 
-    dd::fp      last    = std::numeric_limits<dd::fp>::min();
-    std::size_t counter = 0;
+    const dd::fp last    = std::numeric_limits<dd::fp>::min();
+    std::size_t  counter = 0;
     while (p != nullptr) {
         ASSERT_LT(last, p->value);
         p = p->next;
@@ -162,15 +162,15 @@ TEST(DDComplexTest, GarbageCollectSomeInBucket) {
     auto key2 = ComplexTable<>::hash(num2);
     ASSERT_EQ(key, key2);
 
-    auto* p = cn->complexTable.getTable()[key];
+    auto* p = cn->complexTable.getTable()[static_cast<std::size_t>(key)];
     EXPECT_NEAR(p->value, num, ComplexTable<>::tolerance());
 
     ASSERT_NE(p->next, nullptr);
     EXPECT_NEAR((p->next)->value, num2, ComplexTable<>::tolerance());
 
     cn->garbageCollect(true); // num should be collected
-    EXPECT_NEAR(cn->complexTable.getTable()[key]->value, num2, ComplexTable<>::tolerance());
-    EXPECT_EQ(cn->complexTable.getTable()[key]->next, nullptr);
+    EXPECT_NEAR(cn->complexTable.getTable()[static_cast<std::size_t>(key)]->value, num2, ComplexTable<>::tolerance());
+    EXPECT_EQ(cn->complexTable.getTable()[static_cast<std::size_t>(key)]->next, nullptr);
 }
 
 TEST(DDComplexTest, LookupInNeighbouringBuckets) {

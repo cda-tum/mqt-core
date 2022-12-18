@@ -105,8 +105,8 @@ TEST(DDPackageTest, QFTState) {
     dd->printVector(qftState);
 
     for (dd::Qubit qubit = 0; qubit < 7; ++qubit) {
-        ASSERT_NEAR(dd->getValueByPath(qftState, qubit).r, static_cast<dd::fp>(0.5) * dd::SQRT2_2, dd->cn.complexTable.tolerance());
-        ASSERT_EQ(dd->getValueByPath(qftState, qubit).i, 0);
+        ASSERT_NEAR(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).r, static_cast<dd::fp>(0.5) * dd::SQRT2_2, dd->cn.complexTable.tolerance());
+        ASSERT_EQ(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).i, 0);
     }
 
     export2Dot(qftState, "qft_state_colored_labels.dot", true, true, false, false, false);
@@ -188,12 +188,12 @@ TEST(DDPackageTest, PartialIdentityTrace) {
 }
 
 TEST(DDPackageTest, StateGenerationManipulation) {
-    std::size_t nqubits = 6;
-    auto        dd      = std::make_unique<dd::Package<>>(nqubits);
-    auto        b       = std::vector<bool>(nqubits, false);
+    const std::size_t nqubits = 6;
+    auto              dd      = std::make_unique<dd::Package<>>(nqubits);
+    auto              b       = std::vector<bool>(nqubits, false);
     b[0] = b[1] = true;
-    auto e      = dd->makeBasisState(nqubits, b);
-    auto f      = dd->makeBasisState(nqubits, {dd::BasisStates::zero, dd::BasisStates::one, dd::BasisStates::plus, dd::BasisStates::minus, dd::BasisStates::left, dd::BasisStates::right});
+    auto e      = dd->makeBasisState(static_cast<dd::QubitCount>(nqubits), b);
+    auto f      = dd->makeBasisState(static_cast<dd::QubitCount>(nqubits), {dd::BasisStates::zero, dd::BasisStates::one, dd::BasisStates::plus, dd::BasisStates::minus, dd::BasisStates::left, dd::BasisStates::right});
     dd->incRef(e);
     dd->incRef(f);
     dd->vUniqueTable.printActive();
@@ -559,7 +559,7 @@ TEST(DDPackageTest, InvalidMakeBasisStateAndGate) {
     auto nqubits    = 2;
     auto dd         = std::make_unique<dd::Package<>>(nqubits);
     auto basisState = std::vector<dd::BasisStates>{dd::BasisStates::zero};
-    EXPECT_THROW(dd->makeBasisState(nqubits, basisState), std::runtime_error);
+    EXPECT_THROW(dd->makeBasisState(static_cast<dd::QubitCount>(nqubits), basisState), std::runtime_error);
     EXPECT_THROW(dd->makeZeroState(3), std::runtime_error);
     EXPECT_THROW(dd->makeBasisState(3, {true, true, true}), std::runtime_error);
     EXPECT_THROW(dd->makeBasisState(3, {dd::BasisStates::one, dd::BasisStates::one, dd::BasisStates::one}), std::runtime_error);
@@ -633,7 +633,7 @@ TEST(DDPackageTest, UniqueTableAllocation) {
 
     // trigger new allocation
     [[maybe_unused]] auto* node = dd->vUniqueTable.getNode();
-    EXPECT_EQ(dd->vUniqueTable.getAllocations(), (1. + dd->vUniqueTable.getGrowthFactor()) * allocs);
+    EXPECT_EQ(dd->vUniqueTable.getAllocations(), (1. + static_cast<double>(dd->vUniqueTable.getGrowthFactor())) * static_cast<double>(allocs));
 
     // clearing the unique table should reduce the allocated size to the original size
     dd->vUniqueTable.clear();
@@ -813,7 +813,7 @@ TEST(DDPackageTest, DestructiveMeasurementAll) {
     const dd::CVec vAfter = dd->getVector(plusState);
     const int      i      = std::stoi(m, nullptr, 2);
 
-    ASSERT_EQ(vAfter[i], static_cast<std::complex<dd::fp>>(dd::complex_one));
+    ASSERT_EQ(vAfter[static_cast<std::size_t>(i)], static_cast<std::complex<dd::fp>>(dd::complex_one));
 }
 
 TEST(DDPackageTest, DestructiveMeasurementOne) {
@@ -1096,16 +1096,16 @@ using DensityMatrixPackageTest = dd::Package<DensityMatrixSimulatorDDPackageConf
 
 TEST(DDPackageTest, dNodeMultiply) {
     //Multiply dNode with mNode (MxMxM)
-    dd::Qubit nrQubits = 3;
-    auto      dd       = std::make_unique<DensityMatrixPackageTest>(nrQubits);
+    const dd::Qubit nrQubits = 3;
+    auto            dd       = std::make_unique<DensityMatrixPackageTest>(nrQubits);
     // Make zero density matrix
-    auto state = dd->makeZeroDensityOperator(dd->qubits());
+    auto state = dd->makeZeroDensityOperator(static_cast<dd::QubitCount>(dd->qubits()));
     dd->incRef(state);
     std::vector<dd::mEdge> operations = {};
-    operations.emplace_back(dd->makeGateDD(dd::Hmat, nrQubits, 0));
-    operations.emplace_back(dd->makeGateDD(dd::Hmat, nrQubits, 1));
-    operations.emplace_back(dd->makeGateDD(dd::Hmat, nrQubits, 2));
-    operations.emplace_back(dd->makeGateDD(dd::Zmat, nrQubits, 2));
+    operations.emplace_back(dd->makeGateDD(dd::Hmat, static_cast<dd::QubitCount>(nrQubits), 0));
+    operations.emplace_back(dd->makeGateDD(dd::Hmat, static_cast<dd::QubitCount>(nrQubits), 1));
+    operations.emplace_back(dd->makeGateDD(dd::Hmat, static_cast<dd::QubitCount>(nrQubits), 2));
+    operations.emplace_back(dd->makeGateDD(dd::Zmat, static_cast<dd::QubitCount>(nrQubits), 2));
 
     for (const auto& op: operations) {
         dd->applyOperationToDensity(state, op, true);
@@ -1120,8 +1120,8 @@ TEST(DDPackageTest, dNodeMultiply) {
         std::cout << std::endl;
     }
 
-    for (int i = 0; i < (1 << nrQubits); i++) {
-        for (int j = 0; j < (1 << nrQubits); j++) {
+    for (std::size_t i = 0; i < (1 << nrQubits); i++) {
+        for (std::size_t j = 0; j < (1 << nrQubits); j++) {
             EXPECT_EQ(std::abs(stateDensityMatrix[i][j].imag()), 0);
             if ((i < 4 && j < 4) || (i >= 4 && j >= 4)) {
                 EXPECT_TRUE(stateDensityMatrix[i][j].real() > 0);
@@ -1145,7 +1145,7 @@ TEST(DDPackageTest, dNodeMultiply2) {
     const dd::Qubit nrQubits = 3;
     auto            dd       = std::make_unique<DensityMatrixPackageTest>(nrQubits);
     // Make zero density matrix
-    auto state = dd->makeZeroDensityOperator(dd->qubits());
+    auto state = dd->makeZeroDensityOperator(static_cast<dd::QubitCount>(dd->qubits()));
     dd->incRef(state);
     std::vector<dd::mEdge> operations = {};
     operations.emplace_back(dd->makeGateDD(dd::Hmat, nrQubits, 0));
@@ -1153,15 +1153,15 @@ TEST(DDPackageTest, dNodeMultiply2) {
     operations.emplace_back(dd->makeGateDD(dd::Hmat, nrQubits, 2));
     operations.emplace_back(dd->makeGateDD(dd::Zmat, nrQubits, 2));
 
-    for (auto& op: operations) {
+    for (const auto& op: operations) {
         dd->applyOperationToDensity(state, op, true);
     }
     dd->printMatrix(operations[0]);
 
     const auto stateDensityMatrix = dd->getDensityMatrix(state);
 
-    for (int i = 0; i < (1 << nrQubits); i++) {
-        for (int j = 0; j < (1 << nrQubits); j++) {
+    for (std::size_t i = 0; i < (1 << nrQubits); i++) {
+        for (std::size_t j = 0; j < (1 << nrQubits); j++) {
             EXPECT_TRUE(std::abs(stateDensityMatrix[i][j].imag()) == 0);
             if ((i < 4 && j < 4) || (i >= 4 && j >= 4)) {
                 EXPECT_TRUE(stateDensityMatrix[i][j].real() > 0);
@@ -1171,9 +1171,9 @@ TEST(DDPackageTest, dNodeMultiply2) {
             EXPECT_TRUE(std::abs(std::abs(stateDensityMatrix[i][j]) - 0.125) < 0.000001);
         }
     }
-    auto   probVector = dd->getProbVectorFromDensityMatrix(state, 0.001);
-    double tolerance  = 1e-10;
-    for (auto& prob: probVector) {
+    auto         probVector = dd->getProbVectorFromDensityMatrix(state, 0.001);
+    const double tolerance  = 1e-10;
+    for (const auto& prob: probVector) {
         std::cout << prob.first << ": " << prob.second << std::endl;
         EXPECT_NEAR(prob.second, 0.125, tolerance);
     }
@@ -1184,7 +1184,7 @@ TEST(DDPackageTest, dNodeMulCache1) {
     const dd::Qubit nrQubits = 1;
     auto            dd       = std::make_unique<DensityMatrixPackageTest>(nrQubits);
     // Make zero density matrix
-    auto state = dd->makeZeroDensityOperator(dd->qubits());
+    auto state = dd->makeZeroDensityOperator(static_cast<dd::QubitCount>(dd->qubits()));
     dd->incRef(state);
 
     std::vector<dd::mEdge> operations = {};
@@ -1237,7 +1237,7 @@ TEST(DDPackageTest, dNoiseCache) {
     const dd::Qubit nrQubits = 1;
     auto            dd       = std::make_unique<dd::Package<>>(nrQubits);
     // Make zero density matrix
-    auto state = dd->makeZeroDensityOperator(dd->qubits());
+    auto state = dd->makeZeroDensityOperator(static_cast<dd::QubitCount>(dd->qubits()));
     dd->incRef(state);
 
     std::vector<dd::mEdge> operations = {};
@@ -1292,9 +1292,9 @@ TEST(DDPackageTest, dStochCache) {
     dd->stochasticNoiseOperationCache.insert(2, 2, operations[2]); //insert Y operations with target 2
     dd->stochasticNoiseOperationCache.insert(3, 3, operations[3]); //insert H operations with target 3
 
-    for (dd::Qubit i = 0; i < 4; i++) {
+    for (std::uint_fast8_t i = 0; i < 4; i++) {
         for (dd::Qubit j = 0; j < 4; j++) {
-            if (i == j) {
+            if (static_cast<dd::Qubit>(i) == j) {
                 auto op = dd->stochasticNoiseOperationCache.lookup(i, j);
                 EXPECT_TRUE(op.p != nullptr && op.p == operations[i].p);
             } else {
@@ -1305,7 +1305,7 @@ TEST(DDPackageTest, dStochCache) {
     }
 
     dd->stochasticNoiseOperationCache.clear();
-    for (dd::Qubit i = 0; i < 4; i++) {
+    for (std::uint_fast8_t i = 0; i < 4; i++) {
         for (dd::Qubit j = 0; j < 4; j++) {
             auto op = dd->stochasticNoiseOperationCache.lookup(i, j);
             EXPECT_EQ(op.p, nullptr);

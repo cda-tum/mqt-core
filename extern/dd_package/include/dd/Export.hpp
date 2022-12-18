@@ -583,7 +583,7 @@ namespace dd {
 
             // iterate over edges in reverse to guarantee correct proceossing order
             for (auto i = static_cast<Qubit>(node->p->e.size() - 1); i >= 0; --i) {
-                auto& edge = node->p->e[i];
+                auto& edge = node->p->e[static_cast<std::size_t>(i)];
                 if ((!memory && edge.w.approximatelyZero()) || edge.w == Complex::zero) {
                     // potentially add zero stubs here
                     continue;
@@ -593,11 +593,11 @@ namespace dd {
                 q.push(&edge);
 
                 if (memory) {
-                    memoryEdge(*node, edge, i, oss, edgeLabels);
+                    memoryEdge(*node, edge, static_cast<std::uint_fast16_t>(i), oss, edgeLabels);
                 } else if (colored) {
-                    coloredEdge(*node, edge, i, oss, edgeLabels, classic, formatAsPolar);
+                    coloredEdge(*node, edge, static_cast<std::uint_fast16_t>(i), oss, edgeLabels, classic, formatAsPolar);
                 } else {
-                    bwEdge(*node, edge, i, oss, edgeLabels, classic, formatAsPolar);
+                    bwEdge(*node, edge, static_cast<std::uint_fast16_t>(i), oss, edgeLabels, classic, formatAsPolar);
                 }
             }
         }
@@ -643,7 +643,7 @@ namespace dd {
         if (!node->isTerminal()) {
             do {
                 while (node != nullptr && !node->isTerminal()) {
-                    for (auto i = RADIX - 1; i > 0; --i) {
+                    for (auto i = static_cast<std::size_t>(RADIX - 1); i > 0; --i) {
                         auto& edge = node->p->e[i];
                         if (edge.isTerminal()) {
                             continue;
@@ -818,7 +818,7 @@ namespace dd {
 
             // iterate over edges in reverse to guarantee correct proceossing order
             for (auto i = static_cast<Qubit>(edgePtr->p->e.size() - 1); i >= 0; --i) {
-                auto& child = edgePtr->p->e[i];
+                auto& child = edgePtr->p->e[static_cast<std::size_t>(i)];
                 if (child.w.approximatelyZero()) {
                     // potentially add zero stubs here
                     continue;
