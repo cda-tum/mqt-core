@@ -46,7 +46,7 @@ jobs:
       - if: runner.os == 'Linux'
         name: Coverage
         run: |
-          cmake -S . -B buildCov -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON
+          cmake -S . -B buildCov -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
           cmake --build buildCov --config Debug --target DDPackage_test
           cd buildCov/test
           ./DDPackage_test
