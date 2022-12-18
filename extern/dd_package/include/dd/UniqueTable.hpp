@@ -348,9 +348,9 @@ namespace dd {
             std::cout << "\n";
         }
 
-        [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / lookups; }
+        [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / static_cast<fp>(lookups); }
 
-        [[nodiscard]] fp colRatio() const { return static_cast<fp>(collisions) / lookups; }
+        [[nodiscard]] fp colRatio() const { return static_cast<fp>(collisions) / static_cast<fp>(lookups); }
 
         [[nodiscard]] std::size_t getActiveNodeCount() const {
             return activeNodeCount;

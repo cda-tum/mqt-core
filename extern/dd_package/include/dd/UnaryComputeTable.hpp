@@ -71,7 +71,7 @@ namespace dd {
             lookups = 0;
         }
 
-        [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / lookups; }
+        [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / static_cast<fp>(lookups); }
 
         std::ostream& printStatistics(std::ostream& os = std::cout) {
             os << "hits: " << hits << ", looks: " << lookups << ", ratio: " << hitRatio() << std::endl;
