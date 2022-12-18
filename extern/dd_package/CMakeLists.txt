@@ -8,50 +8,50 @@ project(
   VERSION 2.1.0
   DESCRIPTION "MQT decision diagram package tailored to quantum computing")
 
-# enable organization of targets into folders
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/StandardProjectSettings.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/PreventInSourceBuilds.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CheckSubmodule.cmake)
 
-# configuration options
-option(DEPLOY "Configure for deployment")
-option(BINDINGS "Configure for building Python bindings")
-option(COVERAGE "Configure for coverage report generation")
-option(BUILD_DD_PACKAGE_TESTS "Also build tests for DD package")
+# Use the warnings specified in CompilerWarnings.cmake
+add_library(project_warnings INTERFACE)
 
-# build type settings
-set(DEFAULT_BUILD_TYPE "Release")
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "Setting build type to '${DEFAULT_BUILD_TYPE}' as none was specified.")
-  set(CMAKE_BUILD_TYPE
-      "${default_build_type}"
-      CACHE STRING "Choose the type of build." FORCE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel"
-                                               "RelWithDebInfo")
-endif()
+# Standard compiler warnings
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompilerWarnings.cmake)
+set_project_warnings(project_warnings)
+
+# Interface library to set project options
+add_library(project_options INTERFACE)
+
+# Compiler options
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompilerOptions.cmake)
+enable_project_options(project_options)
+
+# Sanitizer options if supported by compiler
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Sanitizers.cmake)
+enable_sanitizers(project_options)
 
 # add main library code
-include(GNUInstallDirs)
 add_library(${PROJECT_NAME} INTERFACE)
 target_sources(
   ${PROJECT_NAME}
-  INTERFACE
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Complex.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/ComplexCache.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/ComplexNumbers.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/ComplexTable.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/ComplexValue.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/ComputeTable.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Control.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Definitions.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Edge.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Export.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/GateMatrixDefinitions.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Node.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Package.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/ToffoliTable.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/UnaryComputeTable.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/DensityNoiseTable.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/StochasticNoiseOperationTable.hpp>
-    $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd/UniqueTable.hpp>)
+  INTERFACE ${PROJECT_SOURCE_DIR}/include/dd/Complex.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/ComplexCache.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/ComplexNumbers.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/ComplexTable.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/ComplexValue.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/ComputeTable.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/Control.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/Definitions.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/Edge.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/Export.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/GateMatrixDefinitions.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/Node.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/Package.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/ToffoliTable.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/UnaryComputeTable.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/DensityNoiseTable.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/StochasticNoiseOperationTable.hpp
+            ${PROJECT_SOURCE_DIR}/include/dd/UniqueTable.hpp)
 
 # set include directories
 target_include_directories(${PROJECT_NAME}
@@ -66,13 +66,8 @@ if(MSVC)
 else()
   target_compile_options(
     ${PROJECT_NAME}
-    INTERFACE -Wall
-              -Wextra
-              -pedantic
-              -g
-              $<$<CONFIG:DEBUG>:-Og>$<$<CONFIG:RELEASE>:-fno-math-errno
-              -ffinite-math-only
-              -fno-trapping-math>)
+    INTERFACE -Wall -Wextra -pedantic $<$<CONFIG:DEBUG>:-Og>$<$<CONFIG:RELEASE>:-fno-math-errno
+              -ffinite-math-only -fno-trapping-math>)
   if(NOT DEPLOY)
     # only include machine-specific optimizations when building for the host machine
     target_compile_options(${PROJECT_NAME} INTERFACE -mtune=native)
@@ -94,25 +89,10 @@ endif()
 # add MQT alias
 add_library(MQT::DDPackage ALIAS ${PROJECT_NAME})
 
-# enable interprocedural optimization if it is supported
-macro(ENABLE_LTO target_name)
-  include(CheckIPOSupported)
-  check_ipo_supported(RESULT ipo_supported)
-  if(ipo_supported)
-    set_target_properties(${target_name} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-  endif()
-endmacro()
-
 # add test code
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR BUILD_DD_PACKAGE_TESTS)
-  if(NOT EXISTS "${PROJECT_SOURCE_DIR}/extern/googletest/CMakeLists.txt")
-    message(
-      FATAL_ERROR
-        "GoogleTest submodule not cloned properly. \
-        Please run `git submodule update --init --recursive` \
-        from the main project directory")
-  endif()
-
+option(BUILD_DD_PACKAGE_TESTS "Also build tests for DD package")
+if(BUILD_DD_PACKAGE_TESTS)
+  check_submodule_present(googletest)
   enable_testing()
   include(GoogleTest)
   add_subdirectory(test)
