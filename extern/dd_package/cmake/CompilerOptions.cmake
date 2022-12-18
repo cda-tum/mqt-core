@@ -44,14 +44,8 @@ function(enable_project_options target_name)
 
     # enable some more options for better debugging
     target_compile_options(
-      ${target_name}
-      INTERFACE $<$<CONFIG:DEBUG>:-fno-omit-frame-pointer
-                -fno-optimize-sibling-calls
-                -fno-inline-functions
-                -fno-inline-functions-called-once
-                -fno-inline-small-functions
-                -fno-inline-small-functions
-                -fno-default-inline>)
+      ${target_name} INTERFACE $<$<CONFIG:DEBUG>:-fno-omit-frame-pointer
+                               -fno-optimize-sibling-calls -fno-inline-functions>)
   endif()
 
   if(BINDINGS)
