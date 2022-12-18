@@ -15,11 +15,6 @@ if(NOT TARGET gtest OR NOT TARGET gmock)
     gtest_force_shared_crt
     gtest_hide_internal_symbols)
   set_target_properties(gtest gtest_main gmock gmock_main PROPERTIES FOLDER extern)
-  if(BINDINGS)
-    # adjust visibility settings for building Python bindings
-    target_compile_options(gtest PUBLIC -fvisibility=hidden)
-    target_compile_options(gmock PUBLIC -fvisibility=hidden)
-  endif()
 endif()
 
 if(NOT TARGET benchmark::benchmark)
@@ -30,41 +25,26 @@ if(NOT TARGET benchmark::benchmark)
       CACHE BOOL "Skip google benchmark self tests")
   add_subdirectory("${PROJECT_SOURCE_DIR}/extern/benchmark" "extern/benchmark" EXCLUDE_FROM_ALL)
   set_target_properties(benchmark benchmark_main PROPERTIES FOLDER extern)
-  if(BINDINGS)
-    # adjust visibility settings for building Python bindings
-    target_compile_options(benchmark PUBLIC -fvisibility=hidden)
-  endif()
 endif()
 
 add_executable(${PROJECT_NAME}_example ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
-target_link_libraries(${PROJECT_NAME}_example PRIVATE ${PROJECT_NAME})
-set_target_properties(
-  ${PROJECT_NAME}_example
-  PROPERTIES FOLDER tests
-             CMAKE_CXX_STANDARD_REQUIRED ON
-             CXX_EXTENSIONS OFF)
-target_compile_features(${PROJECT_NAME}_example PUBLIC cxx_std_17)
-enable_lto(${PROJECT_NAME}_example)
+target_link_libraries(${PROJECT_NAME}_example PRIVATE ${PROJECT_NAME} project_options
+                                                      project_warnings)
+set_target_properties(${PROJECT_NAME}_example PROPERTIES FOLDER tests)
 
 # macro to add a test executable for one of the project libraries
 macro(PACKAGE_ADD_TEST testname)
   # create an executable in which the tests will be stored
   add_executable(${testname} ${ARGN})
   # link the Google test infrastructure and a default main function to the test executable.
-  target_link_libraries(${testname} PRIVATE ${PROJECT_NAME} gmock gtest_main)
+  target_link_libraries(${testname} PRIVATE ${PROJECT_NAME} gmock gtest_main project_options
+                                            project_warnings)
   # discover tests
   gtest_discover_tests(
     ${testname}
     WORKING_DIRECTORY ${PROJECT_DIR}
     PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}")
-  set_target_properties(
-    ${testname}
-    PROPERTIES FOLDER tests
-               CMAKE_CXX_STANDARD_REQUIRED ON
-               CXX_EXTENSIONS OFF)
-
-  target_compile_features(${testname} PUBLIC cxx_std_17)
-  enable_lto(${testname})
+  set_target_properties(${testname} PROPERTIES FOLDER tests)
 endmacro()
 
 # add unit tests
@@ -86,15 +66,10 @@ add_test(NAME ${PROJECT_NAME}_example COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${PROJ
 # add benchmark executable
 add_executable(${PROJECT_NAME}_bench EXCLUDE_FROM_ALL ${CMAKE_CURRENT_SOURCE_DIR}/bench_package.cpp)
 # link the Google benchmark infrastructure and a default main function to the benchmark executable.
-target_link_libraries(${PROJECT_NAME}_bench PRIVATE ${PROJECT_NAME} benchmark::benchmark_main
-                                                    Threads::Threads)
-set_target_properties(
-  ${PROJECT_NAME}_bench
-  PROPERTIES FOLDER tests
-             CMAKE_CXX_STANDARD_REQUIRED ON
-             CXX_EXTENSIONS OFF)
-target_compile_features(${PROJECT_NAME}_bench PUBLIC cxx_std_17)
-enable_lto(${PROJECT_NAME}_bench)
+target_link_libraries(
+  ${PROJECT_NAME}_bench PRIVATE ${PROJECT_NAME} benchmark::benchmark_main Threads::Threads
+                                project_options project_warnings)
+set_target_properties(${PROJECT_NAME}_bench PROPERTIES FOLDER tests)
 
 add_custom_command(
   TARGET ${PROJECT_NAME}_bench
