@@ -582,7 +582,7 @@ namespace dd {
             }
 
             // iterate over edges in reverse to guarantee correct proceossing order
-            for (auto i = static_cast<Qubit>(node->p->e.size() - 1); i >= 0; --i) {
+            for (auto i = static_cast<std::int_fast16_t>(node->p->e.size() - 1); i >= 0; --i) {
                 auto& edge = node->p->e[static_cast<std::size_t>(i)];
                 if ((!memory && edge.w.approximatelyZero()) || edge.w == Complex::zero) {
                     // potentially add zero stubs here
@@ -811,13 +811,12 @@ namespace dd {
             }
 
             // check if edgePtr has already been processed
-            auto ret = nodes.emplace(edgePtr->p);
-            if (!ret.second) {
+            if (auto ret = nodes.emplace(edgePtr->p); !ret.second) {
                 continue;
             }
 
             // iterate over edges in reverse to guarantee correct proceossing order
-            for (auto i = static_cast<Qubit>(edgePtr->p->e.size() - 1); i >= 0; --i) {
+            for (auto i = static_cast<std::int_fast16_t>(edgePtr->p->e.size() - 1); i >= 0; --i) {
                 auto& child = edgePtr->p->e[static_cast<std::size_t>(i)];
                 if (child.w.approximatelyZero()) {
                     // potentially add zero stubs here

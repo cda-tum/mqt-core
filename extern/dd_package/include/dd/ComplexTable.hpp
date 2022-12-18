@@ -412,11 +412,11 @@ namespace dd {
             std::cout.precision(precision);
         }
 
-        [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / lookups; }
+        [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / static_cast<fp>(lookups); }
 
-        [[nodiscard]] fp colRatio() const { return static_cast<fp>(collisions) / lookups; }
+        [[nodiscard]] fp colRatio() const { return static_cast<fp>(collisions) / static_cast<fp>(lookups); }
 
-        std::map<std::string, std::size_t> getStatistics() {
+        std::map<std::string, std::size_t, std::less<>> getStatistics() {
             return {
                     {"hits", hits},
                     {"collisions", collisions},
