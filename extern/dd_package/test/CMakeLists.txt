@@ -4,16 +4,6 @@ if(NOT TARGET gtest OR NOT TARGET gmock)
       ON
       CACHE BOOL "" FORCE)
   add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest" "extern/googletest" EXCLUDE_FROM_ALL)
-  mark_as_advanced(
-    BUILD_GMOCK
-    BUILD_GTEST
-    BUILD_SHARED_LIBS
-    gmock_build_tests
-    gtest_build_samples
-    gtest_build_tests
-    gtest_disable_pthreads
-    gtest_force_shared_crt
-    gtest_hide_internal_symbols)
   set_target_properties(gtest gtest_main gmock gmock_main PROPERTIES FOLDER extern)
 endif()
 
@@ -51,15 +41,6 @@ endmacro()
 package_add_test(${PROJECT_NAME}_test ${CMAKE_CURRENT_SOURCE_DIR}/test_complex.cpp
                  ${CMAKE_CURRENT_SOURCE_DIR}/test_package.cpp)
 
-add_custom_command(
-  TARGET ${PROJECT_NAME}_test
-  POST_BUILD
-  COMMAND
-    ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE_DIR:${PROJECT_NAME}_test>/${PROJECT_NAME}_test
-    ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_test
-  COMMENT "Creating symlink for ${PROJECT_NAME}_test"
-  VERBATIM)
-
 # include dd_example in test suite
 add_test(NAME ${PROJECT_NAME}_example COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_example)
 
@@ -70,13 +51,3 @@ target_link_libraries(
   ${PROJECT_NAME}_bench PRIVATE ${PROJECT_NAME} benchmark::benchmark_main Threads::Threads
                                 project_options project_warnings)
 set_target_properties(${PROJECT_NAME}_bench PROPERTIES FOLDER tests)
-
-add_custom_command(
-  TARGET ${PROJECT_NAME}_bench
-  POST_BUILD
-  COMMAND
-    ${CMAKE_COMMAND} -E create_symlink
-    $<TARGET_FILE_DIR:${PROJECT_NAME}_bench>/${PROJECT_NAME}_bench
-    ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_bench
-  COMMENT "Creating symlink for ${PROJECT_NAME}_bench"
-  VERBATIM)
