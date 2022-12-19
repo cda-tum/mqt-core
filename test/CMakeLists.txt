@@ -30,7 +30,6 @@ set_target_properties(
   PROPERTIES FOLDER tests
              CMAKE_CXX_STANDARD_REQUIRED ON
              CXX_EXTENSIONS OFF)
-enable_lto(${PROJECT_NAME}_example)
 
 add_custom_command(
   TARGET ${PROJECT_NAME}_example
@@ -62,7 +61,6 @@ macro(PACKAGE_ADD_TEST testname linklibs)
     PROPERTIES FOLDER tests
                CMAKE_CXX_STANDARD_REQUIRED ON
                CXX_EXTENSIONS OFF)
-  enable_lto(${testname})
 
   add_custom_command(
     TARGET ${testname}
