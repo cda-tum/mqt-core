@@ -1,5 +1,5 @@
 # set required cmake version
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.19)
 
 # project definition
 project(
@@ -31,27 +31,27 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Sanitizers.cmake)
 enable_sanitizers(project_options)
 
 # add main library code
-add_library(${PROJECT_NAME} INTERFACE)
-target_sources(
+add_library(
   ${PROJECT_NAME}
-  INTERFACE ${PROJECT_SOURCE_DIR}/include/dd/Complex.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/ComplexCache.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/ComplexNumbers.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/ComplexTable.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/ComplexValue.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/ComputeTable.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/Control.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/Definitions.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/Edge.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/Export.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/GateMatrixDefinitions.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/Node.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/Package.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/ToffoliTable.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/UnaryComputeTable.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/DensityNoiseTable.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/StochasticNoiseOperationTable.hpp
-            ${PROJECT_SOURCE_DIR}/include/dd/UniqueTable.hpp)
+  INTERFACE
+  ${PROJECT_SOURCE_DIR}/include/dd/Complex.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/ComplexCache.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/ComplexNumbers.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/ComplexTable.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/ComplexValue.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/ComputeTable.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/Control.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/Definitions.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/Edge.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/Export.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/GateMatrixDefinitions.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/Node.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/Package.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/ToffoliTable.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/UnaryComputeTable.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/DensityNoiseTable.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/StochasticNoiseOperationTable.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/UniqueTable.hpp)
 
 # set include directories
 target_include_directories(${PROJECT_NAME}
