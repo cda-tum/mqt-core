@@ -36,7 +36,7 @@ std::size_t simplifyEdges(ZXDiagram& diag, EdgeCheckFun check,
 
   while (newMatches) {
     newMatches = false;
-    for (const auto [v0, v1] : diag.getEdges()) {
+    for (const auto& [v0, v1] : diag.getEdges()) {
       if (diag.isDeleted(v0) || diag.isDeleted(v1) || !check(diag, v0, v1)) {
         continue;
       }
