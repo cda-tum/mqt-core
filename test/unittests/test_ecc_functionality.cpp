@@ -4,14 +4,14 @@
 */
 
 #include "gtest/gtest.h"
-#include <eccs/Ecc.hpp>
-#include <eccs/IdEcc.hpp>
-#include <eccs/Q18SurfaceEcc.hpp>
-#include <eccs/Q3ShorEcc.hpp>
-#include <eccs/Q5LaflammeEcc.hpp>
-#include <eccs/Q7SteaneEcc.hpp>
-#include <eccs/Q9ShorEcc.hpp>
-#include <eccs/Q9SurfaceEcc.hpp>
+#include <ecc/Ecc.hpp>
+#include <ecc/IdEcc.hpp>
+#include <ecc/Q18SurfaceEcc.hpp>
+#include <ecc/Q3ShorEcc.hpp>
+#include <ecc/Q5LaflammeEcc.hpp>
+#include <ecc/Q7SteaneEcc.hpp>
+#include <ecc/Q9ShorEcc.hpp>
+#include <ecc/Q9SurfaceEcc.hpp>
 #include <random>
 
 using namespace qc;

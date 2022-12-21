@@ -3,7 +3,7 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "eccs/Q9ShorEcc.hpp"
+#include "ecc/Q9ShorEcc.hpp"
 
 void Q9ShorEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers

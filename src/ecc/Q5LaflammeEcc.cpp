@@ -3,7 +3,7 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "eccs/Q5LaflammeEcc.hpp"
+#include "ecc/Q5LaflammeEcc.hpp"
 
 void Q5LaflammeEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers

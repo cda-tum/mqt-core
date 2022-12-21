@@ -3,7 +3,7 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "eccs/QxCustomEcc.hpp"
+#include "ecc/QxCustomEcc.hpp"
 
 void QxCustomEcc::writeEncoding() {
     for (std::size_t i = 0; i < qcOriginal->getNqubits(); i++) {

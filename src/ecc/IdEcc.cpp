@@ -3,7 +3,7 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "eccs/IdEcc.hpp"
+#include "ecc/IdEcc.hpp"
 
 void IdEcc::mapGate(const qc::Operation& gate) {
     switch (gate.getType()) {

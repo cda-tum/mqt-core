@@ -3,7 +3,7 @@
  * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
  */
 
-#include "eccs/Ecc.hpp"
+#include "ecc/Ecc.hpp"
 
 #include <dd/Simulation.hpp>
 

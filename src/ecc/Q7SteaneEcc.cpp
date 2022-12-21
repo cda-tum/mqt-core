@@ -3,7 +3,7 @@
 * See file README.md or go to http://iic.jku.at/eda/research/quantum/ for more information.
 */
 
-#include "eccs/Q7SteaneEcc.hpp"
+#include "ecc/Q7SteaneEcc.hpp"
 
 void Q7SteaneEcc::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
