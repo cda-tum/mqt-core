@@ -42,7 +42,7 @@ public:
         return nInputQubits * ecc.nRedundantQubits + ecc.nCorrectingBits;
     }
 
-    [[nodiscard]] bool verifyExecution(bool simulateWithErrors = false, const std::vector<dd::Qubit>& dataQubits = {}, int insertErrorAfterNGates = 0) const;
+    [[nodiscard]] bool verifyExecution(bool simulateWithErrors) const;
 
 protected:
     std::shared_ptr<qc::QuantumComputation> qcOriginal;
@@ -51,6 +51,12 @@ protected:
     bool                                    isDecoded    = true;
     bool                                    gatesWritten = false;
     Info                                    ecc;
+
+    // Set parameters for verifying the eccs
+    const size_t            shots                  = 50;
+    constexpr static double tolerance              = 0.2;
+    const size_t            seed                   = 1;
+    const size_t            insertErrorAfterNGates = 1;
 
     virtual void initMappedCircuit();
 
@@ -66,9 +72,9 @@ protected:
         throw qc::QFRException(std::string("Gate ") + gate.getName() + " not supported to encode in error code " + ecc.name + "!");
     }
 
-    void writeToffoli(int target, int c1, bool p1, int c2, bool p2);
+    void writeToffoli(dd::Qubit target, dd::Qubit c1, bool p1, dd::Qubit c2, bool p2);
 
-    void writeClassicalControl(dd::Qubit control, int qubitCount, unsigned int value, qc::OpType opType, int target);
+    void writeClassicalControl(dd::Qubit control, dd::QubitCount qubitCount, size_t value, qc::OpType opType, dd::Qubit target);
 
     //static, since some codes need to store those functions into function pointers
     static void writeXstatic(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped);

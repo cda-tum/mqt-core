@@ -44,10 +44,10 @@ std::shared_ptr<qc::QuantumComputation> Ecc::apply() {
     return qcMapped;
 }
 
-void Ecc::writeToffoli(int target, int c1, bool p1, int c2, bool p2) {
+void Ecc::writeToffoli(dd::Qubit target, dd::Qubit c1, bool p1, dd::Qubit c2, bool p2) {
     dd::Controls ctrls;
-    ctrls.insert(dd::Control{dd::Qubit(c1), p1 ? dd::Control::Type::pos : dd::Control::Type::neg});
-    ctrls.insert(dd::Control{dd::Qubit(c2), p2 ? dd::Control::Type::pos : dd::Control::Type::neg});
+    ctrls.insert(dd::Control{(c1), p1 ? dd::Control::Type::pos : dd::Control::Type::neg});
+    ctrls.insert(dd::Control{(c2), p2 ? dd::Control::Type::pos : dd::Control::Type::neg});
     qcMapped->x(static_cast<dd::Qubit>(target), ctrls);
 }
 
@@ -60,17 +60,13 @@ void Ecc::writeZstatic(dd::Qubit target, dd::Control control, const std::shared_
     qcMapped->z(target, control);
 }
 
-void Ecc::writeClassicalControl(dd::Qubit control, int qubitCount, unsigned int value, qc::OpType opType, int target) {
-    std::unique_ptr<qc::Operation> op    = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(), dd::Qubit(target), opType);
-    const auto                     pair_ = std::make_pair(control, dd::QubitCount(qubitCount));
-    qcMapped->emplace_back<qc::ClassicControlledOperation>(op, pair_, value);
+void Ecc::writeClassicalControl(dd::Qubit control, dd::QubitCount qubitCount, size_t value, qc::OpType opType, dd::Qubit target) {
+    std::unique_ptr<qc::Operation> op    = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(), target, opType);
+    qcMapped->emplace_back<qc::ClassicControlledOperation>(op, std::make_pair(control, qubitCount), value);
 }
 
-bool Ecc::verifyExecution(bool simulateWithErrors, const std::vector<dd::Qubit>& dataQubits, int insertErrorAfterNGates) const {
-    auto   shots             = 50;
-    double tolerance         = 0.2;
-    size_t seed              = 1;
-    auto   toleranceAbsolute = (shots / 100.0) * (tolerance * 100.0);
+bool Ecc::verifyExecution(bool simulateWithErrors) const {
+    auto toleranceAbsolute = (shots / 100.0) * (tolerance * 100.0);
 
     auto ddOriginal       = std::make_unique<dd::Package<>>(qcOriginal->getNqubits());
     auto originalRootEdge = ddOriginal->makeZeroState(qcOriginal->getNqubits());
@@ -88,7 +84,9 @@ bool Ecc::verifyExecution(bool simulateWithErrors, const std::vector<dd::Qubit>&
             // Count the cHitsOriginal in the register with error correction
             size_t cHitsProtected = 0;
             for (auto const& [cBitsProtected, cHitsProtectedTemp]: measurementsProtected) {
-                if (0 == cBitsProtected.compare(cBitsProtected.length() - cBitsOriginal.length(), cBitsOriginal.length(), cBitsOriginal)) cHitsProtected += cHitsProtectedTemp;
+                if (0 == cBitsProtected.compare(cBitsProtected.length() - cBitsOriginal.length(), cBitsOriginal.length(), cBitsOriginal)) {
+                    cHitsProtected += cHitsProtectedTemp;
+                }
             }
             auto difference = std::max(cHitsProtected, cHitsOriginal) - std::min(cHitsProtected, cHitsOriginal);
             if (static_cast<double>(difference) > toleranceAbsolute) {
@@ -96,22 +94,22 @@ bool Ecc::verifyExecution(bool simulateWithErrors, const std::vector<dd::Qubit>&
             }
         }
     } else {
-        for (auto const& qubit: dataQubits) {
-            auto measurementsProtected = simulate(qcMapped.get(), eccRootEdge, ddEcc, shots, seed, true, qubit, insertErrorAfterNGates);
+        for (dd::Qubit qubit = 0; qubit < static_cast<dd::Qubit>(this->qcMapped->getNqubits()); qubit++) {
+            auto measurementsProtected = simulate(qcMapped.get(), eccRootEdge, ddEcc, shots, seed, true, qubit, this->insertErrorAfterNGates);
             for (auto const& [classicalBit, hits]: measurementsOriginal) {
                 // Since the result is stored as one bit string. I have to count the relevant classical bits.
                 size_t eccHits = 0;
                 for (auto const& [eccMeasure, tempHits]: measurementsProtected) {
-                    if (0 == eccMeasure.compare(eccMeasure.length() - classicalBit.length(), classicalBit.length(), classicalBit)) eccHits += tempHits;
+                    if (0 == eccMeasure.compare(eccMeasure.length() - classicalBit.length(), classicalBit.length(), classicalBit)) {
+                        eccHits += tempHits;
+                    }
                 }
                 auto difference = std::max(eccHits, hits) - std::min(eccHits, hits);
+                std::cout << "Diff/tolerance " << difference << "/" << toleranceAbsolute << " Original register: " << hits << " ecc register: " << eccHits;
+                std::cout << " Simulating an error in qubit " << static_cast<unsigned>(qubit) << " after " << this->insertErrorAfterNGates << " gates." << std::endl;
                 if (static_cast<double>(difference) > toleranceAbsolute) {
-                    std::cout << "Simulation failed when applying error to qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates.\n";
-                    std::cout << "Error in bit " << classicalBit << " original register: " << hits << " ecc register: " << eccHits << std::endl;
+                    std::cout << "Error is too large!" << std::endl;
                     return false;
-                } else {
-                    std::cout << "Diff/tolerance " << difference << "/" << toleranceAbsolute << " Original register: " << hits << " ecc register: " << eccHits;
-                    std::cout << " Error at qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates." << std::endl;
                 }
             }
         }

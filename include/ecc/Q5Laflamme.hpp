@@ -24,7 +24,10 @@ protected:
 
     void mapGate(const qc::Operation& gate) override;
 
+    // Set parameter for verifying the ecc
+    [[maybe_unused]] const size_t insertErrorAfterNGates = 61;
+
 private:
-    void writeClassicalControlled(unsigned int value, int target, qc::OpType opType, dd::Qubit clStart, dd::QubitCount clCount);
-    void writeClassicalControlledCorrect(unsigned int value, int target, qc::OpType opType);
+    void writeClassicalControlled(dd::QubitCount value, dd::Qubit target, qc::OpType opType, dd::Qubit clStart, dd::QubitCount clCount);
+    void writeClassicalControlledCorrect(dd::QubitCount value, dd::Qubit target, qc::OpType operationType);
 };

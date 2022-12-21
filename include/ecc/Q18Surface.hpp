@@ -26,4 +26,7 @@ protected:
     void writeDecoding() override;
 
     void mapGate(const qc::Operation& gate) override;
+
+    // Set parameter for verifying the eccs
+    [[maybe_unused]] const size_t insertErrorAfterNGates = 115;
 };
