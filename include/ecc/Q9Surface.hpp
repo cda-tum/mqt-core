@@ -8,10 +8,12 @@
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
 
-class Q9ShorEcc: public Ecc {
+//Reference to this ecc in https://arxiv.org/pdf/1608.05053.pdf
+
+class Q9Surface: public Ecc {
 public:
-    Q9ShorEcc(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
-        Ecc({ID::Q9Shor, 9, 8, "Q9Shor"}, std::move(qc), measureFq) {}
+    Q9Surface(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
+        Ecc({ID::Q9Surface, 9, 8, "Q9Surface"}, std::move(qc), measureFq) {}
 
 protected:
     void initMappedCircuit() override;

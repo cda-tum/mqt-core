@@ -8,19 +8,15 @@
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
 
-class QxCustomEcc: public Ecc {
+class Q3Shor: public Ecc {
 public:
-    //TODO parameters q and c:
-    /*
- * q = #qubits
- * c = #classical bits
- * Assume your ECC needs p physical qubits to encode 1 logical qubit, a ancilla qubits and m measurements.
- * >>then q = p+a and c=m.
- */
-    QxCustomEcc(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
-        Ecc({ID::QxCustom, /*q*/ 0, /*c*/ 0, "QxCustom"}, std::move(qc), measureFq) {}
+    Q3Shor(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
+        Ecc(
+                {ID::Q3Shor, 3, 2, "Q3Shor"}, std::move(qc), measureFq) {}
 
 protected:
+    void initMappedCircuit() override;
+
     void writeEncoding() override;
 
     void measureAndCorrect() override;

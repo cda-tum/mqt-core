@@ -5,13 +5,13 @@
 
 #include "gtest/gtest.h"
 #include <ecc/Ecc.hpp>
-#include <ecc/IdEcc.hpp>
-#include <ecc/Q18SurfaceEcc.hpp>
-#include <ecc/Q3ShorEcc.hpp>
-#include <ecc/Q5LaflammeEcc.hpp>
-#include <ecc/Q7SteaneEcc.hpp>
-#include <ecc/Q9ShorEcc.hpp>
-#include <ecc/Q9SurfaceEcc.hpp>
+#include <ecc/Id.hpp>
+#include <ecc/Q18Surface.hpp>
+#include <ecc/Q3Shor.hpp>
+#include <ecc/Q5Laflamme.hpp>
+#include <ecc/Q7Steane.hpp>
+#include <ecc/Q9Shor.hpp>
+#include <ecc/Q9Surface.hpp>
 #include <random>
 
 using namespace qc;
@@ -158,7 +158,7 @@ TEST_F(DDECCFunctionalityTest, testIdEcc) {
     circuitsExpectToPass.emplace_back(createCZCircuit);
     circuitsExpectToPass.emplace_back(createCYCircuit);
 
-    EXPECT_TRUE(testCircuits<IdEcc>(circuitsExpectToPass, measureFrequency, {}, 0, false));
+    EXPECT_TRUE(testCircuits<Id>(circuitsExpectToPass, measureFrequency, {}, 0, false));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ3Shor) {
@@ -180,8 +180,8 @@ TEST_F(DDECCFunctionalityTest, testQ3Shor) {
     std::vector<dd::Qubit> dataQubits             = {0, 1, 2};
     int                    insertErrorAfterNGates = 1;
 
-    EXPECT_TRUE(testCircuits<Q3ShorEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
-    EXPECT_ANY_THROW(testCircuits<Q3ShorEcc>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_TRUE(testCircuits<Q3Shor>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_ANY_THROW(testCircuits<Q3Shor>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
@@ -203,8 +203,8 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
     std::vector<dd::Qubit> dataQubits = {0, 1, 2, 3, 4};
 
     int insertErrorAfterNGates = 61;
-    EXPECT_TRUE(testCircuits<Q5LaflammeEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
-    EXPECT_ANY_THROW(testCircuits<Q5LaflammeEcc>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_TRUE(testCircuits<Q5Laflamme>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_ANY_THROW(testCircuits<Q5Laflamme>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ7Steane) {
@@ -224,7 +224,7 @@ TEST_F(DDECCFunctionalityTest, testQ7Steane) {
     std::vector<dd::Qubit> dataQubits = {0, 1, 2, 3, 4, 5, 6};
 
     int insertErrorAfterNGates = 57;
-    EXPECT_TRUE(testCircuits<Q7SteaneEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_TRUE(testCircuits<Q7Steane>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
@@ -246,8 +246,8 @@ TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
     std::vector<dd::Qubit> dataQubits = {0, 1, 2, 4, 5, 6, 7, 8};
 
     int insertErrorAfterNGates = 1;
-    EXPECT_TRUE(testCircuits<Q9ShorEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
-    EXPECT_ANY_THROW(testCircuits<Q9ShorEcc>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_TRUE(testCircuits<Q9Shor>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_ANY_THROW(testCircuits<Q9Shor>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
@@ -270,8 +270,8 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
     std::vector<dd::Qubit> dataQubits = {0, 1, 2, 4, 5, 6, 7, 8};
 
     int insertErrorAfterNGates = 55;
-    EXPECT_TRUE(testCircuits<Q9SurfaceEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
-    EXPECT_ANY_THROW(testCircuits<Q9SurfaceEcc>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_TRUE(testCircuits<Q9Surface>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_ANY_THROW(testCircuits<Q9Surface>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
@@ -290,9 +290,9 @@ TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
     circuitsExpectToFail.emplace_back(createCZCircuit);
     circuitsExpectToFail.emplace_back(createCYCircuit);
 
-    std::vector<dd::Qubit> dataQubits(Q18SurfaceEcc::dataQubits.begin(), Q18SurfaceEcc::dataQubits.end());
+    std::vector<dd::Qubit> dataQubits(Q18Surface::dataQubits.begin(), Q18Surface::dataQubits.end());
 
     int insertErrorAfterNGates = 115;
-    EXPECT_TRUE(testCircuits<Q18SurfaceEcc>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
-    EXPECT_ANY_THROW(testCircuits<Q18SurfaceEcc>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_TRUE(testCircuits<Q18Surface>(circuitsExpectToPass, measureFrequency, dataQubits, insertErrorAfterNGates, true));
+    EXPECT_ANY_THROW(testCircuits<Q18Surface>(circuitsExpectToFail, measureFrequency, dataQubits, insertErrorAfterNGates, true));
 }

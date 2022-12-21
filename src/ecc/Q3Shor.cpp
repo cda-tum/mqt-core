@@ -3,9 +3,9 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#include "ecc/Q3ShorEcc.hpp"
+#include "ecc/Q3Shor.hpp"
 
-void Q3ShorEcc::initMappedCircuit() {
+void Q3Shor::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
     qcOriginal->stripIdleQubits(true, false);
     qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
@@ -16,7 +16,7 @@ void Q3ShorEcc::initMappedCircuit() {
     qcMapped->addClassicalRegister(2, "qecc");
 }
 
-void Q3ShorEcc::writeEncoding() {
+void Q3Shor::writeEncoding() {
     if (!isDecoded || !gatesWritten) {
         gatesWritten = true;
         return;
@@ -31,7 +31,7 @@ void Q3ShorEcc::writeEncoding() {
     }
 }
 
-void Q3ShorEcc::measureAndCorrect() {
+void Q3Shor::measureAndCorrect() {
     if (isDecoded || !gatesWritten) {
         return;
     }
@@ -67,7 +67,7 @@ void Q3ShorEcc::measureAndCorrect() {
     }
 }
 
-void Q3ShorEcc::writeDecoding() {
+void Q3Shor::writeDecoding() {
     if (isDecoded) {
         return;
     }
@@ -81,7 +81,7 @@ void Q3ShorEcc::writeDecoding() {
     isDecoded = true;
 }
 
-void Q3ShorEcc::mapGate(const qc::Operation& gate) {
+void Q3Shor::mapGate(const qc::Operation& gate) {
     if (isDecoded && gate.getType() != qc::Measure && gate.getType() != qc::H) {
         writeEncoding();
     }

@@ -26,16 +26,16 @@ add_library(${PROJECT_NAME}
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QASMParser.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/TFCParser.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QCParser.cpp
-            
-            ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Ecc.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/eccs/IdEcc.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Q3ShorEcc.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Q5LaflammeEcc.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Q7SteaneEcc.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Q9ShorEcc.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/eccs/Q9SurfaceEcc.cpp
-			${CMAKE_CURRENT_SOURCE_DIR}/eccs/Q18SurfaceEcc.cpp
-			${CMAKE_CURRENT_SOURCE_DIR}/eccs/QxCustomEcc.cpp
+
+        ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Ecc.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Id.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q3Shor.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q5Laflamme.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q7Steane.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q9Shor.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q9Surface.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q18Surface.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/ecc/QxCustom.cpp
 
             ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
@@ -67,15 +67,15 @@ add_library(${PROJECT_NAME}
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
             ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QPE.hpp
             
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Ecc.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/IdEcc.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q3ShorEcc.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q5LaflammeEcc.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q7SteaneEcc.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q9ShorEcc.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q9SurfaceEcc.hpp
-			${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/Q18SurfaceEcc.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/eccs/QxCustomEcc.hpp)
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Ecc.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Id.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q3Shor.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q5Laflamme.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q7Steane.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q9Shor.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q9Surface.hpp
+			${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q18Surface.hpp
+            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/QxCustom.hpp)
 
 # set include directories
 target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)

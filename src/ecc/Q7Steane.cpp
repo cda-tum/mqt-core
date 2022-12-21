@@ -3,9 +3,9 @@
 * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
 */
 
-#include "ecc/Q7SteaneEcc.hpp"
+#include "ecc/Q7Steane.hpp"
 
-void Q7SteaneEcc::initMappedCircuit() {
+void Q7Steane::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
     qcOriginal->stripIdleQubits(true, false);
     qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
@@ -16,7 +16,7 @@ void Q7SteaneEcc::initMappedCircuit() {
     qcMapped->addClassicalRegister(3, "qecc");
 }
 
-void Q7SteaneEcc::writeEncoding() {
+void Q7Steane::writeEncoding() {
     if (!isDecoded) {
         return;
     }
@@ -33,7 +33,7 @@ void Q7SteaneEcc::writeEncoding() {
     measureAndCorrectSingle(true);
 }
 
-void Q7SteaneEcc::measureAndCorrect() {
+void Q7Steane::measureAndCorrect() {
     if (isDecoded) {
         return;
     }
@@ -41,7 +41,7 @@ void Q7SteaneEcc::measureAndCorrect() {
     measureAndCorrectSingle(false);
 }
 
-void Q7SteaneEcc::measureAndCorrectSingle(bool xSyndrome) {
+void Q7Steane::measureAndCorrectSingle(bool xSyndrome) {
     const auto nQubits    = qcOriginal->getNqubits();
     const auto ancStart   = nQubits * ecc.nRedundantQubits;
     const auto clAncStart = static_cast<int>(qcOriginal->getNcbits());
@@ -100,7 +100,7 @@ void Q7SteaneEcc::measureAndCorrectSingle(bool xSyndrome) {
     }
 }
 
-void Q7SteaneEcc::writeDecoding() {
+void Q7Steane::writeDecoding() {
     if (isDecoded) {
         return;
     }
@@ -131,7 +131,7 @@ void Q7SteaneEcc::writeDecoding() {
     isDecoded = true;
 }
 
-void Q7SteaneEcc::mapGate(const qc::Operation& gate) {
+void Q7Steane::mapGate(const qc::Operation& gate) {
     if (isDecoded && gate.getType() != qc::Measure) {
         writeEncoding();
     }

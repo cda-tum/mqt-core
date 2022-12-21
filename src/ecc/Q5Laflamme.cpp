@@ -3,9 +3,9 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#include "ecc/Q5LaflammeEcc.hpp"
+#include "ecc/Q5Laflamme.hpp"
 
-void Q5LaflammeEcc::initMappedCircuit() {
+void Q5Laflamme::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
     qcOriginal->stripIdleQubits(true, false);
     qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
@@ -17,7 +17,7 @@ void Q5LaflammeEcc::initMappedCircuit() {
     qcMapped->addClassicalRegister(1, "encode");
 }
 
-void Q5LaflammeEcc::writeEncoding() {
+void Q5Laflamme::writeEncoding() {
     if (!isDecoded) {
         return;
     }
@@ -50,7 +50,7 @@ void Q5LaflammeEcc::writeEncoding() {
     gatesWritten = true;
 }
 
-void Q5LaflammeEcc::measureAndCorrect() {
+void Q5Laflamme::measureAndCorrect() {
     if (isDecoded) {
         return;
     }
@@ -141,17 +141,17 @@ void Q5LaflammeEcc::measureAndCorrect() {
     }
 }
 
-void Q5LaflammeEcc::writeClassicalControlledCorrect(const unsigned int value, int target, qc::OpType optype) {
+void Q5Laflamme::writeClassicalControlledCorrect(const unsigned int value, int target, qc::OpType optype) {
     writeClassicalControlled(value, target, optype, qcOriginal->getNcbits(), dd::QubitCount(4));
 }
 
-void Q5LaflammeEcc::writeClassicalControlled(const unsigned int value, int target, qc::OpType opType, dd::Qubit clStart, dd::QubitCount clCount) {
+void Q5Laflamme::writeClassicalControlled(const unsigned int value, int target, qc::OpType opType, dd::Qubit clStart, dd::QubitCount clCount) {
     std::unique_ptr<qc::Operation> op    = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(), target, opType);
     const auto                     pair_ = std::make_pair(clStart, clCount);
     qcMapped->emplace_back<qc::ClassicControlledOperation>(op, pair_, value);
 }
 
-void Q5LaflammeEcc::writeDecoding() {
+void Q5Laflamme::writeDecoding() {
     if (isDecoded) {
         return;
     }
@@ -176,7 +176,7 @@ void Q5LaflammeEcc::writeDecoding() {
     isDecoded = true;
 }
 
-void Q5LaflammeEcc::mapGate(const qc::Operation& gate) {
+void Q5Laflamme::mapGate(const qc::Operation& gate) {
     if (isDecoded && gate.getType() != qc::Measure && gate.getType() != qc::H) {
         writeEncoding();
     }

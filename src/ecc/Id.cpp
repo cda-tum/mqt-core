@@ -3,9 +3,9 @@
  * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
  */
 
-#include "ecc/IdEcc.hpp"
+#include "ecc/Id.hpp"
 
-void IdEcc::mapGate(const qc::Operation& gate) {
+void Id::mapGate(const qc::Operation& gate) {
     switch (gate.getType()) {
         case qc::H:
         case qc::X:

@@ -3,9 +3,9 @@
 * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
 */
 
-#include "ecc/Q9SurfaceEcc.hpp"
+#include "ecc/Q9Surface.hpp"
 
-void Q9SurfaceEcc::initMappedCircuit() {
+void Q9Surface::initMappedCircuit() {
     //method is overridden because we need 2 kinds of classical measurement output registers
     qcOriginal->stripIdleQubits(true, false);
     qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
@@ -17,7 +17,7 @@ void Q9SurfaceEcc::initMappedCircuit() {
     qcMapped->addClassicalRegister(4, "qeccZ");
 }
 
-void Q9SurfaceEcc::writeEncoding() {
+void Q9Surface::writeEncoding() {
     if (!isDecoded) {
         return;
     }
@@ -25,7 +25,7 @@ void Q9SurfaceEcc::writeEncoding() {
     measureAndCorrect();
 }
 
-void Q9SurfaceEcc::measureAndCorrect() {
+void Q9Surface::measureAndCorrect() {
     if (isDecoded) {
         return;
     }
@@ -126,7 +126,7 @@ void Q9SurfaceEcc::measureAndCorrect() {
     }
 }
 
-void Q9SurfaceEcc::writeDecoding() {
+void Q9Surface::writeDecoding() {
     if (isDecoded) {
         return;
     }
@@ -143,7 +143,7 @@ void Q9SurfaceEcc::writeDecoding() {
     isDecoded = true;
 }
 
-void Q9SurfaceEcc::mapGate(const qc::Operation& gate) {
+void Q9Surface::mapGate(const qc::Operation& gate) {
     if (isDecoded && gate.getType() != qc::Measure) {
         writeEncoding();
     }

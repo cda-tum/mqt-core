@@ -8,9 +8,9 @@
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
 
-class IdEcc: public Ecc {
+class Id: public Ecc {
 public:
-    IdEcc(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
+    Id(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
         Ecc({ID::Id, 1, 0, "Id"}, std::move(qc), measureFq) {}
 
 protected:
