@@ -42,10 +42,10 @@ namespace qc {
 
     protected:
         std::vector<std::unique_ptr<Operation>> ops{};
-        std::size_t                             nqubits      = 0;
-        std::size_t                             nclassics    = 0;
-        std::size_t                             nancillae    = 0;
-        std::size_t                             max_controls = 0;
+        std::size_t                             nqubits     = 0;
+        std::size_t                             nclassics   = 0;
+        std::size_t                             nancillae   = 0;
+        std::size_t                             maxControls = 0;
         std::string                             name;
 
         // register names are used as keys, while the values are `{startIndex, length}` pairs
@@ -218,7 +218,7 @@ namespace qc {
             qc.nqubits           = nqubits;
             qc.nclassics         = nclassics;
             qc.nancillae         = nancillae;
-            qc.max_controls      = max_controls;
+            qc.maxControls       = maxControls;
             qc.name              = name;
             qc.qregs             = qregs;
             qc.cregs             = cregs;
@@ -686,7 +686,7 @@ namespace qc {
         void addQubit(Qubit logicalQubitIndex, Qubit physicalQubitIndex, std::optional<Qubit> outputQubitIndex);
 
         void updateMaxControls(const std::size_t ncontrols) {
-            max_controls = std::max(ncontrols, max_controls);
+            maxControls = std::max(ncontrols, maxControls);
         }
 
         void instantiate(const VariableAssignment& assignment);

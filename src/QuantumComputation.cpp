@@ -717,13 +717,13 @@ namespace qc {
                 if (reduceIOpermutations && (logicalQubitIndex < nqubits + nancillae)) {
                     for (auto& q: initialLayout) {
                         if (q.second > logicalQubitIndex) {
-                            q.second--;
+                            --q.second;
                         }
                     }
 
                     for (auto& q: outputPermutation) {
                         if (q.second > logicalQubitIndex) {
-                            q.second--;
+                            --q.second;
                         }
                     }
                 }
@@ -768,9 +768,9 @@ namespace qc {
         if (it != qregs.end()) {
             index = static_cast<Qubit>(physicalQubitIndex - it->second.first);
         } else {
-            auto it_anc = ancregs.find(regName);
-            if (it_anc != ancregs.end()) {
-                index = static_cast<Qubit>(physicalQubitIndex - it_anc->second.first);
+            auto itAnc = ancregs.find(regName);
+            if (itAnc != ancregs.end()) {
+                index = static_cast<Qubit>(physicalQubitIndex - itAnc->second.first);
             }
             // no else branch needed here, since error would have already shown in getQubitRegister(physicalQubitIndex)
         }
@@ -794,9 +794,9 @@ namespace qc {
     }
 
     std::pair<std::string, Bit> QuantumComputation::getClassicalRegisterAndIndex(const Bit classicalIndex) const {
-        std::string regName = getClassicalRegister(classicalIndex);
-        std::size_t index   = 0;
-        auto        it      = cregs.find(regName);
+        const std::string regName = getClassicalRegister(classicalIndex);
+        std::size_t       index   = 0;
+        auto              it      = cregs.find(regName);
         if (it != cregs.end()) {
             index = classicalIndex - it->second.first;
         } // else branch not needed since getClassicalRegister already covers this case
