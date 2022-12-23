@@ -703,12 +703,8 @@ namespace qc {
         for (auto physicalQubitIt = layoutCopy.rbegin(); physicalQubitIt != layoutCopy.rend(); ++physicalQubitIt) {
             auto physicalQubitIndex = physicalQubitIt->first;
             if (isIdleQubit(physicalQubitIndex)) {
-                auto it = outputPermutation.find(physicalQubitIndex);
-                if (it != outputPermutation.end()) {
-                    auto outputIndex = it->second;
-                    if (!force && outputIndex >= 0) {
-                        continue;
-                    }
+                if (auto it = outputPermutation.find(physicalQubitIndex); it != outputPermutation.end() && !force) {
+                    continue;
                 }
 
                 auto logicalQubitIndex = initialLayout.at(physicalQubitIndex);
