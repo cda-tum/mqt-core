@@ -1,31 +1,31 @@
 # main project library
 add_library(${PROJECT_NAME}
-            parsers/qasm_parser/Scanner.cpp
-            parsers/qasm_parser/Parser.cpp
+        parsers/qasm_parser/Scanner.cpp
+        parsers/qasm_parser/Parser.cpp
 
-            ${CMAKE_CURRENT_SOURCE_DIR}/operations/Operation.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/operations/StandardOperation.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/operations/NonUnitaryOperation.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/operations/SymbolicOperation.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/operations/Operation.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/operations/StandardOperation.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/operations/NonUnitaryOperation.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/operations/SymbolicOperation.cpp
 
-            ${CMAKE_CURRENT_SOURCE_DIR}/QuantumComputation.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/CircuitOptimizer.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/QuantumComputation.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/CircuitOptimizer.cpp
 
-            ${CMAKE_CURRENT_SOURCE_DIR}/zx/FunctionalityConstruction.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/zx/FunctionalityConstruction.cpp
 
-            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/QFT.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Grover.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/BernsteinVazirani.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/GoogleRandomCircuitSampling.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Entanglement.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/RandomCliffordCircuit.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/QPE.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/QFT.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Grover.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/BernsteinVazirani.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/GoogleRandomCircuitSampling.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Entanglement.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/RandomCliffordCircuit.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/QPE.cpp
 
-            ${CMAKE_CURRENT_SOURCE_DIR}/parsers/RealParser.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/parsers/GRCSParser.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QASMParser.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/parsers/TFCParser.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QCParser.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/parsers/RealParser.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/parsers/GRCSParser.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QASMParser.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/parsers/TFCParser.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QCParser.cpp
 
         ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Ecc.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Id.cpp
@@ -35,47 +35,45 @@ add_library(${PROJECT_NAME}
         ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q9Shor.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q9Surface.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q18Surface.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/ecc/QxCustom.cpp
 
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Parser.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Parser.hpp
 
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/Operation.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/StandardOperation.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/NonUnitaryOperation.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/CompoundOperation.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/ClassicControlledOperation.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/SymbolicOperation.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/Operation.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/StandardOperation.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/NonUnitaryOperation.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/CompoundOperation.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/ClassicControlledOperation.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/SymbolicOperation.hpp
 
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/QuantumComputation.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/CircuitOptimizer.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/Definitions.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/QuantumComputation.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/CircuitOptimizer.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/Definitions.hpp
 
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Operations.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/FunctionalityConstruction.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Simulation.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/NoiseFunctionality.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Operations.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/FunctionalityConstruction.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Simulation.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/NoiseFunctionality.hpp
 
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
 
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QFT.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Grover.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/BernsteinVazirani.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/GoogleRandomCircuitSampling.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Entanglement.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QPE.hpp
-            
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Ecc.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Id.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q3Shor.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q5Laflamme.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q7Steane.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q9Shor.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q9Surface.hpp
-			${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q18Surface.hpp
-            ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/QxCustom.hpp)
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QFT.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Grover.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/BernsteinVazirani.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/GoogleRandomCircuitSampling.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Entanglement.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QPE.hpp
+
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Ecc.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Id.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q3Shor.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q5Laflamme.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q7Steane.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q9Shor.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q9Surface.hpp
+        ${${PROJECT_NAME}_SOURCE_DIR}/include/ecc/Q18Surface.hpp)
 
 # set include directories
 target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
@@ -101,37 +99,37 @@ target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json)
 enable_lto(${PROJECT_NAME})
 
 # set compiler flags depending on compiler
-if(MSVC)
-        target_compile_options(${PROJECT_NAME} PUBLIC /utf-8)
-else()
-        target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra $<$<CONFIG:DEBUG>:-Og>)
-        if (BINDINGS AND NOT WIN32)
-                # adjust visibility settings for building Python bindings
-                target_compile_options(${PROJECT_NAME} PUBLIC -fvisibility=hidden)
-                target_compile_options(nlohmann_json INTERFACE -fvisibility=hidden)
-        endif ()
-        if (NOT DEPLOY)
-                # only include machine-specific optimizations when building for the host machine
-                target_compile_options(${PROJECT_NAME} PUBLIC -mtune=native)
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PUBLIC /utf-8)
+else ()
+    target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra $<$<CONFIG:DEBUG>:-Og>)
+    if (BINDINGS AND NOT WIN32)
+        # adjust visibility settings for building Python bindings
+        target_compile_options(${PROJECT_NAME} PUBLIC -fvisibility=hidden)
+        target_compile_options(nlohmann_json INTERFACE -fvisibility=hidden)
+    endif ()
+    if (NOT DEPLOY)
+        # only include machine-specific optimizations when building for the host machine
+        target_compile_options(${PROJECT_NAME} PUBLIC -mtune=native)
         include(CheckCXXCompilerFlag)
         check_cxx_compiler_flag(-march=native HAS_MARCH_NATIVE)
         if (HAS_MARCH_NATIVE)
             target_compile_options(${PROJECT_NAME} PUBLIC -march=native)
-        endif()
         endif ()
-endif()
+    endif ()
+endif ()
 
-if(GENERATE_POSITION_INDEPENDENT_CODE OR BINDINGS)
-        include(CheckPIESupported)
-        check_pie_supported()
-        set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-endif()
+if (GENERATE_POSITION_INDEPENDENT_CODE OR BINDINGS)
+    include(CheckPIESupported)
+    check_pie_supported()
+    set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+endif ()
 
 # add coverage compiler and linker flag to the library and all targets that link against it, if COVERAGE is set
 if (COVERAGE)
-        target_compile_options(${PROJECT_NAME} PUBLIC --coverage)
-        target_link_libraries(${PROJECT_NAME} PUBLIC --coverage)
-endif()
+    target_compile_options(${PROJECT_NAME} PUBLIC --coverage)
+    target_link_libraries(${PROJECT_NAME} PUBLIC --coverage)
+endif ()
 
 # add MQT alias
 add_library(MQT::${PROJECT_NAME} ALIAS ${PROJECT_NAME})

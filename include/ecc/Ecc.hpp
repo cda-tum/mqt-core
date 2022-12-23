@@ -16,13 +16,12 @@ public:
         Q5Laflamme,
         Q7Steane,
         Q9Surface,
-        Q18Surface,
-        QxCustom
+        Q18Surface
     };
     struct Info {
         ID          id;
-        std::size_t nRedundantQubits;
-        std::size_t nCorrectingBits; //in total (not per qubit); usually number of clbits needed for correcting one qubit
+        std::size_t nRedundantQubits; //usually number of physical qubits per (encoded) logical qubit
+        std::size_t nCorrectingBits; //usually number of classical bits needed for correcting one qubit
         std::string name;
     };
 
@@ -60,6 +59,10 @@ protected:
 
     virtual void initMappedCircuit();
 
+    /**
+     * prepares an encoded logical |0> state in the qcMapped circuit.
+     * May, but does not have to be overridden by subclasses.
+     * */
     virtual void writeEncoding() {
         if (!isDecoded) {
             return;
@@ -68,8 +71,19 @@ protected:
         measureAndCorrect();
     }
 
+    /**
+     * in case of an error, calling this function creates a 'clean' state again. Usual structure:
+     *
+     * for each logical qubit i:
+     * -- reset ancilla qubits
+     * -- measure physical data qubits of logical qubit[i] onto ancilla qubits
+     * -- correct data qubits based on measurement results of ancilla qubits
+     * */
     virtual void measureAndCorrect() = 0;
 
+    /**
+     * moves encoded state information back to original qubits (i.e. 1 qubit per logical qubit)
+     * */
     virtual void writeDecoding() = 0;
 
     virtual void mapGate(const qc::Operation& gate) = 0;
