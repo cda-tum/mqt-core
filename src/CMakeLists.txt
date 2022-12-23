@@ -16,27 +16,27 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json" EXCLUDE_FROM_
 # main project library
 add_library(
   ${PROJECT_NAME}
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/BernsteinVazirani.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Entanglement.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/GoogleRandomCircuitSampling.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/Grover.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QFT.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QPE.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/CircuitOptimizer.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/Definitions.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/ClassicControlledOperation.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/CompoundOperation.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/Control.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/NonUnitaryOperation.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/Operation.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/StandardOperation.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/SymbolicOperation.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Parser.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/Permutation.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/QuantumComputation.hpp
+  ${PROJECT_SOURCE_DIR}/include/algorithms/BernsteinVazirani.hpp
+  ${PROJECT_SOURCE_DIR}/include/algorithms/Entanglement.hpp
+  ${PROJECT_SOURCE_DIR}/include/algorithms/GoogleRandomCircuitSampling.hpp
+  ${PROJECT_SOURCE_DIR}/include/algorithms/Grover.hpp
+  ${PROJECT_SOURCE_DIR}/include/algorithms/QFT.hpp
+  ${PROJECT_SOURCE_DIR}/include/algorithms/QPE.hpp
+  ${PROJECT_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
+  ${PROJECT_SOURCE_DIR}/include/CircuitOptimizer.hpp
+  ${PROJECT_SOURCE_DIR}/include/Definitions.hpp
+  ${PROJECT_SOURCE_DIR}/include/operations/ClassicControlledOperation.hpp
+  ${PROJECT_SOURCE_DIR}/include/operations/CompoundOperation.hpp
+  ${PROJECT_SOURCE_DIR}/include/operations/Control.hpp
+  ${PROJECT_SOURCE_DIR}/include/operations/NonUnitaryOperation.hpp
+  ${PROJECT_SOURCE_DIR}/include/operations/Operation.hpp
+  ${PROJECT_SOURCE_DIR}/include/operations/StandardOperation.hpp
+  ${PROJECT_SOURCE_DIR}/include/operations/SymbolicOperation.hpp
+  ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Parser.hpp
+  ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
+  ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
+  ${PROJECT_SOURCE_DIR}/include/Permutation.hpp
+  ${PROJECT_SOURCE_DIR}/include/QuantumComputation.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/BernsteinVazirani.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Entanglement.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/GoogleRandomCircuitSampling.cpp
