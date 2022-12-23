@@ -5,6 +5,8 @@
 
 #include "QuantumComputation.hpp"
 
+#include <cassert>
+
 namespace qc {
 
     /***

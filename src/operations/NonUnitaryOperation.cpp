@@ -6,6 +6,7 @@
 #include "operations/NonUnitaryOperation.hpp"
 
 #include <algorithm>
+#include <cassert>
 #include <utility>
 
 namespace qc {
