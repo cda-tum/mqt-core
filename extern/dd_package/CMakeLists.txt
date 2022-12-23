@@ -58,6 +58,9 @@ add_library(
   ${PROJECT_SOURCE_DIR}/include/dd/StochasticNoiseOperationTable.hpp
   ${PROJECT_SOURCE_DIR}/include/dd/UniqueTable.hpp)
 
+# add options and warnings to library
+target_link_libraries(${PROJECT_NAME} INTERFACE project_options project_warnings)
+
 # set include directories
 target_include_directories(${PROJECT_NAME}
                            INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
