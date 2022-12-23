@@ -71,7 +71,7 @@ jobs:
         run: cmake --build build --config Release --target DDPackage_bench
       - name: Run Benchmarks
         working-directory: build
-        run: ./DDPackage_bench --benchmark_format=json | tee benchmark_result.json
+        run: ./test/DDPackage_bench --benchmark_format=json | tee benchmark_result.json
       - name: Store benchmark result # for pushes
         if: ${{ github.actor != 'dependabot[bot]' }}
         uses: rhysd/github-action-benchmark@v1
