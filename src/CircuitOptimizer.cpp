@@ -13,10 +13,10 @@ namespace qc {
             if ((*it)->getType() == I || (*it)->getType() == Barrier) {
                 it = qc.ops.erase(it);
             } else if ((*it)->isCompoundOperation()) {
-                auto compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
-                auto cit    = compOp->cbegin();
+                auto* compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
+                auto  cit    = compOp->cbegin();
                 while (cit != compOp->cend()) {
-                    auto cop = cit->get();
+                    const auto cop = cit->get();
                     if (cop->getType() == qc::I || cop->getType() == Barrier) {
                         cit = compOp->erase(cit);
                     } else {
@@ -39,14 +39,14 @@ namespace qc {
     }
 
     void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
-        dd::Qubit highest_physical_qubit = 0;
+        Qubit highestPhysicalQubit = 0;
         for (const auto& q: qc.initialLayout) {
-            if (q.first > highest_physical_qubit) {
-                highest_physical_qubit = q.first;
+            if (q.first > highestPhysicalQubit) {
+                highestPhysicalQubit = q.first;
             }
         }
 
-        auto dag = DAG(highest_physical_qubit + 1);
+        auto dag = DAG(highestPhysicalQubit + 1);
 
         for (auto& it: qc.ops) {
             if (!it->isStandardOperation()) {
@@ -55,13 +55,13 @@ namespace qc {
             }
 
             // Operation is not a CNOT
-            if (it->getType() != X || it->getNcontrols() != 1 || it->getControls().begin()->type != dd::Control::Type::pos) {
+            if (it->getType() != X || it->getNcontrols() != 1 || it->getControls().begin()->type != Control::Type::Pos) {
                 addToDag(dag, &it);
                 continue;
             }
 
-            const dd::Qubit control = it->getControls().begin()->qubit;
-            const dd::Qubit target  = it->getTargets().at(0);
+            const Qubit control = it->getControls().begin()->qubit;
+            const Qubit target  = it->getTargets().at(0);
 
             // first operation
             if (dag.at(control).empty() || dag.at(target).empty()) {
@@ -69,12 +69,12 @@ namespace qc {
                 continue;
             }
 
-            auto opC = dag.at(control).back();
-            auto opT = dag.at(target).back();
+            auto* opC = dag.at(control).back();
+            auto* opT = dag.at(target).back();
 
             // previous operation is not a CNOT
-            if ((*opC)->getType() != qc::X || (*opC)->getNcontrols() != 1 || (*opC)->getControls().begin()->type != dd::Control::Type::pos ||
-                (*opT)->getType() != qc::X || (*opT)->getNcontrols() != 1 || (*opT)->getControls().begin()->type != dd::Control::Type::pos) {
+            if ((*opC)->getType() != qc::X || (*opC)->getNcontrols() != 1 || (*opC)->getControls().begin()->type != Control::Type::Pos ||
+                (*opT)->getType() != qc::X || (*opT)->getNcontrols() != 1 || (*opT)->getControls().begin()->type != Control::Type::Pos) {
                 addToDag(dag, &it);
                 continue;
             }
@@ -113,7 +113,7 @@ namespace qc {
                 addToDag(dag, opC);
 
                 it->setTargets({control});
-                it->setControls({dd::Control{target}});
+                it->setControls({Control{target}});
                 addToDag(dag, &it);
             } else {
                 addToDag(dag, &it);
@@ -124,13 +124,14 @@ namespace qc {
     }
 
     DAG CircuitOptimizer::constructDAG(QuantumComputation& qc) {
-        dd::Qubit highest_physical_qubit = 0;
+        Qubit highestPhysicalQubit = 0;
         for (const auto& q: qc.initialLayout) {
-            if (q.first > highest_physical_qubit)
-                highest_physical_qubit = q.first;
+            if (q.first > highestPhysicalQubit) {
+                highestPhysicalQubit = q.first;
+            }
         }
 
-        auto dag = DAG(highest_physical_qubit + 1);
+        auto dag = DAG(highestPhysicalQubit + 1);
 
         for (auto& it: qc.ops) {
             if (!it->isStandardOperation()) {
@@ -155,8 +156,8 @@ namespace qc {
         const auto& gate = *op;
         // compound operations are added "as-is"
         if (gate->isCompoundOperation()) {
-            for (dd::QubitCount i = 0U; i < gate->getNqubits(); ++i) {
-                if (gate->actsOn(static_cast<dd::Qubit>(i))) {
+            for (std::size_t i = 0U; i < gate->getNqubits(); ++i) {
+                if (gate->actsOn(static_cast<Qubit>(i))) {
                     dag.at(i).push_back(op);
                 }
             }
@@ -170,7 +171,7 @@ namespace qc {
                 dag.at(b).push_back(op);
             }
         } else if (gate->isClassicControlledOperation()) {
-            auto cop = dynamic_cast<ClassicControlledOperation*>(gate.get())->getOperation();
+            auto* cop = dynamic_cast<ClassicControlledOperation*>(gate.get())->getOperation();
             for (const auto& control: cop->getControls()) {
                 dag.at(control.qubit).push_back(op);
             }
@@ -183,7 +184,7 @@ namespace qc {
     }
 
     void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
-        static const std::map<qc::OpType, qc::OpType> inverseMap = {
+        static const std::map<qc::OpType, qc::OpType> INVERSE_MAP = {
                 {qc::I, qc::I},
                 {qc::X, qc::X},
                 {qc::Y, qc::Y},
@@ -196,13 +197,14 @@ namespace qc {
                 {qc::SX, qc::SXdag},
                 {qc::SXdag, qc::SX}};
 
-        dd::Qubit highest_physical_qubit = 0;
+        Qubit highestPhysicalQubit = 0;
         for (const auto& q: qc.initialLayout) {
-            if (q.first > highest_physical_qubit)
-                highest_physical_qubit = q.first;
+            if (q.first > highestPhysicalQubit) {
+                highestPhysicalQubit = q.first;
+            }
         }
 
-        auto dag = DAG(highest_physical_qubit + 1);
+        auto dag = DAG(highestPhysicalQubit + 1);
 
         for (auto& it: qc.ops) {
             if (!it->isStandardOperation()) {
@@ -224,8 +226,8 @@ namespace qc {
                 continue;
             }
 
-            auto dagQubit = dag.at(target);
-            auto op       = dagQubit.back();
+            auto  dagQubit = dag.at(target);
+            auto* op       = dagQubit.back();
 
             // no single qubit op to fuse with operation
             if (!(*op)->isCompoundOperation() && (!(*op)->getControls().empty() || (*op)->getTargets().size() > 1)) {
@@ -235,13 +237,14 @@ namespace qc {
 
             // compound operation
             if ((*op)->isCompoundOperation()) {
-                auto compop = dynamic_cast<CompoundOperation*>(op->get());
+                auto* compop = dynamic_cast<CompoundOperation*>(op->get());
 
                 // check if compound operation contains non-single-qubit gates
-                dd::QubitCount involvedQubits = 0;
+                std::size_t involvedQubits = 0;
                 for (std::size_t q = 0; q < dag.size(); ++q) {
-                    if (compop->actsOn(static_cast<dd::Qubit>(q)))
+                    if (compop->actsOn(static_cast<Qubit>(q))) {
                         ++involvedQubits;
+                    }
                 }
                 if (involvedQubits > 1) {
                     addToDag(dag, &it);
@@ -250,9 +253,9 @@ namespace qc {
 
                 // check if inverse
                 auto lastop    = (--(compop->end()));
-                auto inverseIt = inverseMap.find((*lastop)->getType());
+                auto inverseIt = INVERSE_MAP.find((*lastop)->getType());
                 // check if current operation is the inverse of the previous operation
-                if (inverseIt != inverseMap.end() && it->getType() == inverseIt->second) {
+                if (inverseIt != INVERSE_MAP.end() && it->getType() == inverseIt->second) {
                     compop->pop_back();
                     it->setGate(qc::I);
                 } else {
@@ -272,8 +275,8 @@ namespace qc {
             // single qubit op
 
             // check if current operation is the inverse of the previous operation
-            auto inverseIt = inverseMap.find((*op)->getType());
-            if (inverseIt != inverseMap.end() && it->getType() == inverseIt->second) {
+            auto inverseIt = INVERSE_MAP.find((*op)->getType());
+            if (inverseIt != INVERSE_MAP.end() && it->getType() == inverseIt->second) {
                 (*op)->setGate(qc::I);
                 it->setGate(qc::I);
             } else {
@@ -301,9 +304,9 @@ namespace qc {
         removeIdentities(qc);
     }
 
-    bool CircuitOptimizer::removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, DAGReverseIterator& it, qc::Operation* op) {
+    bool CircuitOptimizer::removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators, Qubit idx, DAGReverseIterator& it, qc::Operation* op) {
         // not a diagonal gate
-        if (std::find(diagonalGates.begin(), diagonalGates.end(), op->getType()) == diagonalGates.end()) {
+        if (std::find(DIAGONAL_GATES.begin(), DIAGONAL_GATES.end(), op->getType()) == DIAGONAL_GATES.end()) {
             it = dag.at(idx).rend();
             return false;
         }
@@ -313,9 +316,10 @@ namespace qc {
             bool onlyDiagonalGates = true;
             for (const auto& control: op->getControls()) {
                 auto controlQubit = control.qubit;
-                if (controlQubit == idx)
+                if (controlQubit == idx) {
                     continue;
-                if (control.type == dd::Control::Type::neg) {
+                }
+                if (control.type == Control::Type::Neg) {
                     dagIterators.at(controlQubit) = dag.at(controlQubit).rend();
                     onlyDiagonalGates             = false;
                     break;
@@ -333,8 +337,9 @@ namespace qc {
                 }
             }
             for (const auto& target: op->getTargets()) {
-                if (target == idx)
+                if (target == idx) {
                     continue;
+                }
                 if (dagIterators.at(target) == dag.at(target).rend()) {
                     onlyDiagonalGates = false;
                     break;
@@ -355,18 +360,17 @@ namespace qc {
                 op->setGate(qc::I);
             }
             return onlyDiagonalGates;
-        } else {
-            // set operation to identity so that it can be collected by the removeIdentities pass
-            op->setGate(qc::I);
-            return true;
         }
+        // set operation to identity so that it can be collected by the removeIdentities pass
+        op->setGate(qc::I);
+        return true;
     }
 
-    void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, const DAGReverseIterator& until) {
+    void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(DAG& dag, DAGReverseIterators& dagIterators, Qubit idx, const DAGReverseIterator& until) {
         // qubit is finished -> consider next qubit
         if (dagIterators.at(idx) == dag.at(idx).rend()) {
-            if (idx < static_cast<dd::Qubit>(dag.size() - 1)) {
-                removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, static_cast<dd::Qubit>(idx + 1), dag.at(idx + 1).rend());
+            if (idx < static_cast<Qubit>(dag.size() - 1)) {
+                removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, static_cast<Qubit>(idx + 1), dag.at(idx + 1).rend());
             }
             return;
         }
@@ -385,7 +389,7 @@ namespace qc {
                     break;
                 }
             }
-            auto op = (*it)->get();
+            auto* op = (*it)->get();
             if (op->getType() == Barrier || op->getType() == Snapshot || op->getType() == ShowProbabilities) {
                 ++it;
             } else if (op->isStandardOperation()) {
@@ -402,26 +406,28 @@ namespace qc {
 
             } else if (op->isCompoundOperation()) {
                 // iterate over all gates of compound operation and upon success increase all corresponding iterators
-                auto compOp            = dynamic_cast<qc::CompoundOperation*>(op);
-                bool onlyDiagonalGates = true;
-                auto cit               = compOp->rbegin();
+                auto* compOp            = dynamic_cast<qc::CompoundOperation*>(op);
+                bool  onlyDiagonalGates = true;
+                auto  cit               = compOp->rbegin();
                 while (cit != compOp->rend()) {
-                    auto cop          = (*cit).get();
+                    auto* cop         = (*cit).get();
                     onlyDiagonalGates = removeDiagonalGate(dag, dagIterators, idx, it, cop);
-                    if (!onlyDiagonalGates)
+                    if (!onlyDiagonalGates) {
                         break;
+                    }
                     ++cit;
                 }
                 if (onlyDiagonalGates) {
                     for (size_t q = 0; q < dag.size(); ++q) {
-                        if (compOp->actsOn(static_cast<dd::Qubit>(q)))
+                        if (compOp->actsOn(static_cast<Qubit>(q))) {
                             ++(dagIterators.at(q));
+                        }
                     }
                 }
             } else if (op->isClassicControlledOperation()) {
                 // consider the operation that is classically controlled and proceed as above
-                auto cop               = dynamic_cast<ClassicControlledOperation*>(op)->getOperation();
-                bool onlyDiagonalGates = removeDiagonalGate(dag, dagIterators, idx, it, cop);
+                auto*      cop               = dynamic_cast<ClassicControlledOperation*>(op)->getOperation();
+                const bool onlyDiagonalGates = removeDiagonalGate(dag, dagIterators, idx, it, cop);
                 if (onlyDiagonalGates) {
                     for (const auto& control: cop->getControls()) {
                         ++(dagIterators.at(control.qubit));
@@ -439,8 +445,8 @@ namespace qc {
         }
 
         // qubit is finished -> consider next qubit
-        if (dagIterators.at(idx) == dag.at(idx).rend() && idx < static_cast<dd::Qubit>(dag.size() - 1)) {
-            removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, static_cast<dd::Qubit>(idx + 1), dag.at(idx + 1).rend());
+        if (dagIterators.at(idx) == dag.at(idx).rend() && idx < static_cast<Qubit>(dag.size() - 1)) {
+            removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, static_cast<Qubit>(idx + 1), dag.at(idx + 1).rend());
         }
     }
 
@@ -465,13 +471,14 @@ namespace qc {
         removeIdentities(qc);
     }
 
-    bool CircuitOptimizer::removeFinalMeasurement(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, DAGReverseIterator& it, qc::Operation* op) {
+    bool CircuitOptimizer::removeFinalMeasurement(DAG& dag, DAGReverseIterators& dagIterators, Qubit idx, DAGReverseIterator& it, qc::Operation* op) {
         if (op->getNtargets() != 0) {
             // need to check all targets
             bool onlyMeasurments = true;
             for (const auto& target: op->getTargets()) {
-                if (target == idx)
+                if (target == idx) {
                     continue;
+                }
                 if (dagIterators.at(target) == dag.at(target).rend()) {
                     onlyMeasurments = false;
                     break;
@@ -492,15 +499,14 @@ namespace qc {
                 op->setGate(qc::I);
             }
             return onlyMeasurments;
-        } else {
-            return false;
         }
+        return false;
     }
 
-    void CircuitOptimizer::removeFinalMeasurementsRecursive(DAG& dag, DAGReverseIterators& dagIterators, dd::Qubit idx, const DAGReverseIterator& until) {
+    void CircuitOptimizer::removeFinalMeasurementsRecursive(DAG& dag, DAGReverseIterators& dagIterators, Qubit idx, const DAGReverseIterator& until) {
         if (dagIterators.at(idx) == dag.at(idx).rend()) { //we reached the end
-            if (idx < static_cast<dd::Qubit>(dag.size() - 1)) {
-                removeFinalMeasurementsRecursive(dag, dagIterators, static_cast<dd::Qubit>(idx + 1), dag.at(idx + 1).rend());
+            if (idx < static_cast<Qubit>(dag.size() - 1)) {
+                removeFinalMeasurementsRecursive(dag, dagIterators, static_cast<Qubit>(idx + 1), dag.at(idx + 1).rend());
             }
             return;
         }
@@ -517,36 +523,39 @@ namespace qc {
                     break;
                 }
             }
-            auto op = (*it)->get();
+            auto* op = (*it)->get();
             if (op->getType() == Measure) {
-                bool onlyMeasurment = removeFinalMeasurement(dag, dagIterators, idx, it, op);
+                const bool onlyMeasurment = removeFinalMeasurement(dag, dagIterators, idx, it, op);
                 if (onlyMeasurment) {
                     for (const auto& target: op->getTargets()) {
-                        if (dagIterators.at(target) == dag.at(target).rend())
+                        if (dagIterators.at(target) == dag.at(target).rend()) {
                             break;
+                        }
                         ++(dagIterators.at(target));
                     }
                 }
             } else if (op->getType() == Barrier || op->getType() == Snapshot || op->getType() == ShowProbabilities) {
                 for (const auto& target: op->getTargets()) {
-                    if (dagIterators.at(target) == dag.at(target).rend())
+                    if (dagIterators.at(target) == dag.at(target).rend()) {
                         break;
+                    }
                     ++(dagIterators.at(target));
                 }
             } else if (op->isCompoundOperation() && op->isNonUnitaryOperation()) {
                 // iterate over all gates of compound operation and upon success increase all corresponding iterators
-                auto compOp          = dynamic_cast<qc::CompoundOperation*>(op);
-                bool onlyMeasurement = true;
-                auto cit             = compOp->rbegin();
+                auto* compOp          = dynamic_cast<qc::CompoundOperation*>(op);
+                bool  onlyMeasurement = true;
+                auto  cit             = compOp->rbegin();
                 while (cit != compOp->rend()) {
-                    auto cop = (*cit).get();
+                    auto* cop = (*cit).get();
                     if (cop->getNtargets() > 0 && cop->getTargets()[0] != idx) {
                         ++cit;
                         continue;
                     }
                     onlyMeasurement = removeFinalMeasurement(dag, dagIterators, idx, it, cop);
-                    if (!onlyMeasurement)
+                    if (!onlyMeasurement) {
                         break;
+                    }
                     ++cit;
                 }
                 if (onlyMeasurement) {
@@ -558,8 +567,8 @@ namespace qc {
                 break;
             }
         }
-        if (dagIterators.at(idx) == dag.at(idx).rend() && idx < static_cast<dd::Qubit>(dag.size() - 1)) {
-            removeFinalMeasurementsRecursive(dag, dagIterators, static_cast<dd::Qubit>(idx + 1), dag.at(idx + 1).rend());
+        if (dagIterators.at(idx) == dag.at(idx).rend() && idx < static_cast<Qubit>(dag.size() - 1)) {
+            removeFinalMeasurementsRecursive(dag, dagIterators, static_cast<Qubit>(idx + 1), dag.at(idx + 1).rend());
         }
     }
 
@@ -581,42 +590,42 @@ namespace qc {
         while (it != qc.ops.end()) {
             if ((*it)->isStandardOperation()) {
                 if ((*it)->getType() == qc::SWAP) {
-                    const auto     targets = (*it)->getTargets();
-                    dd::QubitCount nqubits = (*it)->getNqubits();
-                    it                     = qc.ops.erase(it);
-                    it                     = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, dd::Control{targets[0]}, targets[1], qc::X));
+                    const auto targets = (*it)->getTargets();
+                    const auto nqubits = (*it)->getNqubits();
+                    it                 = qc.ops.erase(it);
+                    it                 = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, Control{targets[0]}, targets[1], qc::X));
                     if (isDirectedArchitecture) {
                         it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, targets[0], qc::H));
                         it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, targets[1], qc::H));
-                        it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, dd::Control{targets[0]}, targets[1], qc::X));
+                        it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, Control{targets[0]}, targets[1], qc::X));
                         it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, targets[0], qc::H));
                         it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, targets[1], qc::H));
                     } else {
-                        it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, dd::Control{targets[1]}, targets[0], qc::X));
+                        it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, Control{targets[1]}, targets[0], qc::X));
                     }
-                    it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, dd::Control{targets[0]}, targets[1], qc::X));
+                    it = qc.ops.insert(it, std::make_unique<StandardOperation>(nqubits, Control{targets[0]}, targets[1], qc::X));
                 } else {
                     ++it;
                 }
             } else if ((*it)->isCompoundOperation()) {
-                auto compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
-                auto cit    = compOp->begin();
+                auto* compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
+                auto  cit    = compOp->begin();
                 while (cit != compOp->end()) {
                     if ((*cit)->isStandardOperation() && (*cit)->getType() == qc::SWAP) {
-                        const auto     targets = (*cit)->getTargets();
-                        dd::QubitCount nqubits = compOp->getNqubits();
-                        cit                    = compOp->erase(cit);
-                        cit                    = compOp->insert<StandardOperation>(cit, nqubits, dd::Control{targets[0]}, targets[1], qc::X);
+                        const auto targets = (*cit)->getTargets();
+                        const auto nqubits = compOp->getNqubits();
+                        cit                = compOp->erase(cit);
+                        cit                = compOp->insert<StandardOperation>(cit, nqubits, Control{targets[0]}, targets[1], qc::X);
                         if (isDirectedArchitecture) {
                             cit = compOp->insert<StandardOperation>(cit, nqubits, targets[0], qc::H);
                             cit = compOp->insert<StandardOperation>(cit, nqubits, targets[1], qc::H);
-                            cit = compOp->insert<StandardOperation>(cit, nqubits, dd::Control{targets[0]}, targets[1], qc::X);
+                            cit = compOp->insert<StandardOperation>(cit, nqubits, Control{targets[0]}, targets[1], qc::X);
                             cit = compOp->insert<StandardOperation>(cit, nqubits, targets[0], qc::H);
                             cit = compOp->insert<StandardOperation>(cit, nqubits, targets[1], qc::H);
                         } else {
-                            cit = compOp->insert<StandardOperation>(cit, nqubits, dd::Control{targets[1]}, targets[0], qc::X);
+                            cit = compOp->insert<StandardOperation>(cit, nqubits, Control{targets[1]}, targets[0], qc::X);
                         }
-                        cit = compOp->insert<StandardOperation>(cit, nqubits, dd::Control{targets[0]}, targets[1], qc::X);
+                        cit = compOp->insert<StandardOperation>(cit, nqubits, Control{targets[0]}, targets[1], qc::X);
                     } else {
                         ++cit;
                     }
@@ -639,18 +648,18 @@ namespace qc {
         //            0            1                   ║  ░ └───┘└╥┘
         //                                  c: 2/══════╩══════════╩═
         //                                             0          1
-        auto replacementMap = std::map<dd::Qubit, dd::Qubit>();
+        auto replacementMap = std::map<Qubit, Qubit>();
         auto it             = qc.ops.begin();
         while (it != qc.ops.end()) {
             if ((*it)->getType() == qc::Reset) {
                 for (const auto& target: (*it)->getTargets()) {
-                    auto indexAddQubit = static_cast<dd::Qubit>(qc.getNqubits());
+                    auto indexAddQubit = static_cast<Qubit>(qc.getNqubits());
                     qc.addQubit(indexAddQubit, indexAddQubit, indexAddQubit);
                     auto oldReset = replacementMap.find(target);
                     if (oldReset != replacementMap.end()) {
                         oldReset->second = indexAddQubit;
                     } else {
-                        replacementMap.insert(std::pair(static_cast<dd::Qubit>(target), static_cast<dd::Qubit>(indexAddQubit)));
+                        replacementMap.insert(std::pair(static_cast<Qubit>(target), static_cast<Qubit>(indexAddQubit)));
                     }
                 }
                 it = qc.erase(it);
@@ -661,13 +670,13 @@ namespace qc {
                     while (compOpIt != compOp->end()) {
                         if ((*compOpIt)->getType() == qc::Reset) {
                             for (const auto& compTarget: (*compOpIt)->getTargets()) {
-                                auto indexAddQubit = static_cast<dd::Qubit>(qc.getNqubits());
+                                auto indexAddQubit = static_cast<Qubit>(qc.getNqubits());
                                 qc.addQubit(indexAddQubit, indexAddQubit, indexAddQubit);
                                 auto oldReset = replacementMap.find(compTarget);
                                 if (oldReset != replacementMap.end()) {
                                     oldReset->second = indexAddQubit;
                                 } else {
-                                    replacementMap.insert(std::pair(static_cast<dd::Qubit>(compTarget), static_cast<dd::Qubit>(indexAddQubit)));
+                                    replacementMap.insert(std::pair(static_cast<Qubit>(compTarget), static_cast<Qubit>(indexAddQubit)));
                                 }
                             }
                             compOpIt = compOp->erase(compOpIt);
@@ -707,7 +716,7 @@ namespace qc {
         }
     }
 
-    void CircuitOptimizer::changeTargets(Targets& targets, const std::map<dd::Qubit, dd::Qubit>& replacementMap) {
+    void CircuitOptimizer::changeTargets(Targets& targets, const std::map<Qubit, Qubit>& replacementMap) {
         for (auto& target: targets) {
             auto newTargetIt = replacementMap.find(target);
             if (newTargetIt != replacementMap.end()) {
@@ -716,9 +725,10 @@ namespace qc {
         }
     }
 
-    void CircuitOptimizer::changeControls(dd::Controls& controls, const std::map<dd::Qubit, dd::Qubit>& replacementMap) {
-        if (controls.empty() || replacementMap.empty())
+    void CircuitOptimizer::changeControls(Controls& controls, const std::map<Qubit, Qubit>& replacementMap) {
+        if (controls.empty() || replacementMap.empty()) {
             return;
+        }
 
         // iterate over the replacement map and see if any control matches
         for (const auto& [from, to]: replacementMap) {
@@ -726,7 +736,7 @@ namespace qc {
             if (controlIt != controls.end()) {
                 const auto controlType = controlIt->type;
                 controls.erase(controlIt);
-                controls.insert(dd::Control{to, controlType});
+                controls.insert(Control{to, controlType});
             }
         }
     }
@@ -740,8 +750,8 @@ namespace qc {
         //            ║ ┌──╨──┐             c: 2/═══════════╩═
         // c: 2/══════╩═╡ = 1 ╞                             0
         //            0 └─────┘
-        std::unordered_map<dd::Qubit, std::size_t> qubitsToAddMeasurements{};
-        auto                                       it = qc.begin();
+        std::unordered_map<Qubit, std::size_t> qubitsToAddMeasurements{};
+        auto                                   it = qc.begin();
         while (it != qc.end()) {
             if ((*it)->getType() == qc::Measure) {
                 auto*      measurement = dynamic_cast<qc::NonUnitaryOperation*>(it->get());
@@ -753,8 +763,9 @@ namespace qc {
                 }
 
                 // if this is the last operation, nothing has to be done
-                if (*it == qc.ops.back())
+                if (*it == qc.ops.back()) {
                     break;
+                }
 
                 // remember q-> c for adding measurements later
                 qubitsToAddMeasurements[targets[0]] = classics[0];
@@ -768,7 +779,7 @@ namespace qc {
 
                 // iterate over all subsequent operations
                 while (opIt != qc.end()) {
-                    const auto operation = opIt->get();
+                    const auto* operation = opIt->get();
                     if (operation->isUnitary() || operation->getType() == qc::Barrier) {
                         // if an operation does not act on the measured qubit, the insert location for potential operations has to be updated
                         if (!operation->actsOn(targets.at(0))) {
@@ -790,15 +801,15 @@ namespace qc {
                         // if this is the same measurement a breakpoint has been reached
                         if (targets == targets2 && classics == classics2) {
                             break;
-                        } else {
-                            ++currentInsertionPoint;
-                            ++opIt;
-                            continue;
                         }
+
+                        ++currentInsertionPoint;
+                        ++opIt;
+                        continue;
                     }
 
                     if (operation->isClassicControlledOperation()) {
-                        auto        classicOp       = dynamic_cast<qc::ClassicControlledOperation*>((*opIt).get());
+                        auto*       classicOp       = dynamic_cast<qc::ClassicControlledOperation*>((*opIt).get());
                         const auto& controlRegister = classicOp->getControlRegister();
                         const auto& expectedValue   = classicOp->getExpectedValue();
 
@@ -807,7 +818,7 @@ namespace qc {
                         }
 
                         // if this is not the classical bit that is measured, continue
-                        if (controlRegister.first == static_cast<dd::Qubit>(classics.at(0))) {
+                        if (controlRegister.first == static_cast<Qubit>(classics.at(0))) {
                             // get the underlying operation
                             const auto* standardOp = dynamic_cast<qc::StandardOperation*>(classicOp->getOperation());
 
@@ -825,8 +836,8 @@ namespace qc {
                             // determine the appropriate control to add
                             auto controls     = standardOp->getControls();
                             auto controlQubit = targets.at(0);
-                            auto controlType  = (expectedValue == 1) ? dd::Control::Type::pos : dd::Control::Type::neg;
-                            controls.emplace(dd::Control{controlQubit, controlType});
+                            auto controlType  = (expectedValue == 1) ? Control::Type::Pos : Control::Type::Neg;
+                            controls.emplace(Control{controlQubit, controlType});
 
                             const auto parameters = standardOp->getParameter();
 
@@ -865,13 +876,14 @@ namespace qc {
     }
 
     bool CircuitOptimizer::isDynamicCircuit(QuantumComputation& qc) {
-        dd::Qubit highest_physical_qubit = 0;
+        Qubit highestPhysicalQubit = 0;
         for (const auto& q: qc.initialLayout) {
-            if (q.first > highest_physical_qubit)
-                highest_physical_qubit = q.first;
+            if (q.first > highestPhysicalQubit) {
+                highestPhysicalQubit = q.first;
+            }
         }
 
-        auto dag = DAG(highest_physical_qubit + 1);
+        auto dag = DAG(highestPhysicalQubit + 1);
 
         bool hasMeasurements = false;
 
@@ -879,12 +891,14 @@ namespace qc {
             if (!it->isStandardOperation()) {
                 if (it->isNonUnitaryOperation()) {
                     // whenever a reset operation is encountered the circuit has to be dynamic
-                    if (it->getType() == Reset)
+                    if (it->getType() == Reset) {
                         return true;
+                    }
 
                     // record whether the circuit contains measurements
-                    if (it->getType() == Measure)
+                    if (it->getType() == Measure) {
                         hasMeasurements = true;
+                    }
 
                     for (const auto& b: it->getTargets()) {
                         dag.at(b).push_back(&it);
@@ -893,13 +907,15 @@ namespace qc {
                     // whenever a classic-controlled operation is encountered the circuit has to be dynamic
                     return true;
                 } else if (it->isCompoundOperation()) {
-                    auto* comp_op = dynamic_cast<CompoundOperation*>(it.get());
-                    for (auto& op: *comp_op) {
-                        if (op->getType() == Reset || op->isClassicControlledOperation())
+                    auto* compOp = dynamic_cast<CompoundOperation*>(it.get());
+                    for (auto& op: *compOp) {
+                        if (op->getType() == Reset || op->isClassicControlledOperation()) {
                             return true;
+                        }
 
-                        if (op->getType() == Measure)
+                        if (op->getType() == Measure) {
                             hasMeasurements = true;
+                        }
 
                         if (op->isNonUnitaryOperation()) {
                             for (const auto& b: op->getTargets()) {
@@ -915,14 +931,15 @@ namespace qc {
             }
         }
 
-        if (!hasMeasurements)
+        if (!hasMeasurements) {
             return false;
+        }
 
         for (const auto& qubitDAG: dag) {
             bool operation   = false;
             bool measurement = false;
             for (auto it = qubitDAG.rbegin(); it != qubitDAG.rend(); ++it) {
-                auto op = *it;
+                auto* op = *it;
                 // once a measurement is encountered the iteration for this qubit can stop
                 if (op->get()->getType() == qc::Measure) {
                     measurement = true;
@@ -934,8 +951,9 @@ namespace qc {
                 }
             }
             // there was a measurement and then a non-trivial operation, so the circuit is dynamic
-            if (measurement && operation)
+            if (measurement && operation) {
                 return true;
+            }
         }
 
         return false;
@@ -961,14 +979,14 @@ namespace qc {
         std::vector<std::unique_ptr<qc::Operation>> ops{};
 
         // iterate over DAG in depth-first fashion starting from the top-most qubit
-        const auto msq  = static_cast<dd::Qubit>(dag.size() - 1);
+        const auto msq  = dag.size() - 1;
         bool       done = false;
         while (!done) {
             // assume that everything is done
             done = true;
 
             // iterate over qubits in reverse order
-            for (dd::Qubit q = msq; q >= 0; --q) {
+            for (auto q = static_cast<std::make_signed_t<Qubit>>(msq); q >= 0; --q) {
                 // nothing to be done for this qubit
                 if (dagIterators.at(q) == dag.at(q).end()) {
                     continue;
@@ -990,14 +1008,14 @@ namespace qc {
                 }
 
                 // check whether the gate can be scheduled, i.e. whether all qubits it acts on are at this operation
-                bool                                                    executable = true;
-                std::bitset<std::numeric_limits<dd::QubitCount>::max()> actsOn{};
-                actsOn.set(q);
+                bool              executable = true;
+                std::vector<bool> actsOn(dag.size());
+                actsOn[q] = true;
                 for (std::size_t i = 0; i < dag.size(); ++i) {
                     // actually check in reverse order
-                    const auto qb = static_cast<dd::Qubit>(dag.size() - 1 - i);
-                    if (qb != q && op->actsOn(static_cast<dd::Qubit>(qb))) {
-                        actsOn.set(qb);
+                    const auto qb = static_cast<std::make_signed_t<Qubit>>(dag.size() - 1 - i);
+                    if (qb != q && op->actsOn(static_cast<Qubit>(qb))) {
+                        actsOn[qb] = true;
 
                         assert(dagIterators.at(qb) != dag.at(qb).end());
                         // check whether operation is executable for the currently considered qubit
@@ -1009,15 +1027,16 @@ namespace qc {
                 }
 
                 // continue, if this gate is not yet executable
-                if (!executable)
+                if (!executable) {
                     continue;
+                }
 
                 // gate is executable, move it to the new vector
                 ops.emplace_back(std::move(op));
 
                 // now increase all corresponding iterators
                 for (std::size_t i = 0; i < dag.size(); ++i) {
-                    if (actsOn.test(i)) {
+                    if (actsOn[i]) {
                         ++(dagIterators.at(i));
                     }
                 }
@@ -1085,13 +1104,14 @@ namespace qc {
     }
 
     void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
-        dd::Qubit highest_physical_qubit = 0;
+        Qubit highestPhysicalQubit = 0;
         for (const auto& q: qc.initialLayout) {
-            if (q.first > highest_physical_qubit)
-                highest_physical_qubit = q.first;
+            if (q.first > highestPhysicalQubit) {
+                highestPhysicalQubit = q.first;
+            }
         }
 
-        auto dag = DAG(highest_physical_qubit + 1U);
+        auto dag = DAG(highestPhysicalQubit + 1U);
 
         for (auto& it: qc.ops) {
             if (!it->isStandardOperation()) {
@@ -1100,7 +1120,7 @@ namespace qc {
             }
 
             // check whether the operation is a CNOT or SWAP gate
-            const auto isCNOT = (it->getType() == X && it->getNcontrols() == 1U && it->getControls().begin()->type == dd::Control::Type::pos);
+            const auto isCNOT = (it->getType() == X && it->getNcontrols() == 1U && it->getControls().begin()->type == Control::Type::Pos);
             const auto isSWAP = (it->getType() == SWAP && it->getNcontrols() == 0U);
 
             if (!isCNOT && !isSWAP) {
@@ -1108,8 +1128,8 @@ namespace qc {
                 continue;
             }
 
-            dd::Qubit q0 = it->getTargets().at(0);
-            dd::Qubit q1 = isSWAP ? it->getTargets().at(1) : it->getControls().begin()->qubit;
+            const Qubit q0 = it->getTargets().at(0);
+            const Qubit q1 = isSWAP ? it->getTargets().at(1) : it->getControls().begin()->qubit;
 
             // first operation
             if (dag.at(q0).empty() || dag.at(q1).empty()) {
@@ -1117,8 +1137,8 @@ namespace qc {
                 continue;
             }
 
-            auto op0 = dag.at(q0).back()->get();
-            auto op1 = dag.at(q1).back()->get();
+            auto* op0 = dag.at(q0).back()->get();
+            auto* op1 = dag.at(q1).back()->get();
 
             // check whether it's the same operation at both qubits
             if (op0 != op1) {
@@ -1127,7 +1147,7 @@ namespace qc {
             }
 
             // check whether the operation is a CNOT or SWAP gate
-            const auto prevOpIsCNOT = (op0->getType() == X && op0->getNcontrols() == 1U && op0->getControls().begin()->type == dd::Control::Type::pos);
+            const auto prevOpIsCNOT = (op0->getType() == X && op0->getNcontrols() == 1U && op0->getControls().begin()->type == Control::Type::Pos);
             const auto prevOpIsSWAP = (op0->getType() == SWAP && op0->getNcontrols() == 0U);
 
             if (!prevOpIsCNOT && !prevOpIsSWAP) {
@@ -1135,8 +1155,8 @@ namespace qc {
                 continue;
             }
 
-            dd::Qubit prevQ0 = op0->getTargets().at(0);
-            dd::Qubit prevQ1 = prevOpIsSWAP ? op0->getTargets().at(1) : op0->getControls().begin()->qubit;
+            const Qubit prevQ0 = op0->getTargets().at(0);
+            const Qubit prevQ1 = prevOpIsSWAP ? op0->getTargets().at(1) : op0->getControls().begin()->qubit;
 
             if (isCNOT && prevOpIsCNOT) {
                 // two identical CNOT gates cancel each other
@@ -1159,8 +1179,8 @@ namespace qc {
                         continue;
                     }
 
-                    auto prevPrevOp0 = (*prevPrevOp0It)->get();
-                    auto prevPrevOp1 = (*prevPrevOp1It)->get();
+                    auto* prevPrevOp0 = (*prevPrevOp0It)->get();
+                    auto* prevPrevOp1 = (*prevPrevOp1It)->get();
 
                     if (prevPrevOp0 != prevPrevOp1) {
                         addToDag(dag, &it);
@@ -1168,15 +1188,15 @@ namespace qc {
                     }
 
                     // check whether the operation is a CNOT
-                    const auto prevPrevOpIsCNOT = (prevPrevOp0->getType() == X && prevPrevOp0->getNcontrols() == 1U && prevPrevOp0->getControls().begin()->type == dd::Control::Type::pos);
+                    const auto prevPrevOpIsCNOT = (prevPrevOp0->getType() == X && prevPrevOp0->getNcontrols() == 1U && prevPrevOp0->getControls().begin()->type == Control::Type::Pos);
 
                     if (!prevPrevOpIsCNOT) {
                         addToDag(dag, &it);
                         continue;
                     }
 
-                    dd::Qubit prevPrevQ0 = prevPrevOp0->getTargets().at(0);
-                    dd::Qubit prevPrevQ1 = prevPrevOp0->getControls().begin()->qubit;
+                    const Qubit prevPrevQ0 = prevPrevOp0->getTargets().at(0);
+                    const Qubit prevPrevQ1 = prevPrevOp0->getControls().begin()->qubit;
 
                     if (q0 == prevPrevQ0 && q1 == prevPrevQ1) {
                         // SWAP gate identified
@@ -1219,9 +1239,9 @@ namespace qc {
             if (isCNOT && prevOpIsSWAP) {
                 // SWAP followed by a CNOT is equivalent to two CNOTs
                 op0->setGate(X);
-                op0->setControls({dd::Control{q1}});
+                op0->setControls({Control{q1}});
                 op0->setTargets({q0});
-                it->setControls({dd::Control{q0}});
+                it->setControls({Control{q0}});
                 it->setTargets({q1});
                 addToDag(dag, &it);
                 continue;
@@ -1229,10 +1249,10 @@ namespace qc {
 
             if (isSWAP && prevOpIsCNOT) {
                 // CNOT followed by a SWAP is equivalent to two CNOTs
-                op0->setControls({dd::Control{prevQ0}});
+                op0->setControls({Control{prevQ0}});
                 op0->setTargets({prevQ1});
                 it->setGate(X);
-                it->setControls({dd::Control{prevQ1}});
+                it->setControls({Control{prevQ1}});
                 it->setTargets({prevQ0});
                 addToDag(dag, &it);
                 continue;

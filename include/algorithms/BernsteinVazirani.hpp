@@ -8,19 +8,17 @@
 #include <QuantumComputation.hpp>
 #include <bitset>
 
-using namespace dd::literals;
-
 namespace qc {
     class BernsteinVazirani: public QuantumComputation {
     public:
-        BitString      s        = 0;
-        dd::QubitCount bitwidth = 1;
-        bool           dynamic  = false;
-        std::string    expected{};
+        BitString   s        = 0;
+        std::size_t bitwidth = 1;
+        bool        dynamic  = false;
+        std::string expected{};
 
         explicit BernsteinVazirani(const BitString& s, bool dynamic = false);
-        explicit BernsteinVazirani(dd::QubitCount nq, bool dynamic = false);
-        BernsteinVazirani(const BitString& s, dd::QubitCount nq, bool dynamic = false);
+        explicit BernsteinVazirani(std::size_t nq, bool dynamic = false);
+        BernsteinVazirani(const BitString& s, std::size_t nq, bool dynamic = false);
 
         std::ostream& printStatistics(std::ostream& os) const override;
 

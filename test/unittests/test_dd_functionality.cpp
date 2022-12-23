@@ -10,13 +10,13 @@
 #include <random>
 
 using namespace qc;
-using namespace dd;
 
 class DDFunctionality: public testing::TestWithParam<qc::OpType> {
 protected:
     void TearDown() override {
-        if (!e.isTerminal())
+        if (!e.isTerminal()) {
             dd->decRef(e);
+        }
         dd->garbageCollect(true);
 
         // number of complex table entries after clean-up should equal initial number of entries
@@ -35,10 +35,10 @@ protected:
         e = ident = dd->makeIdent(nqubits);
         dd->incRef(ident);
 
-        std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
+        std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> randomData{};
         std::random_device                                                    rd;
-        std::generate(begin(random_data), end(random_data), [&]() { return rd(); });
-        std::seed_seq seeds(begin(random_data), end(random_data));
+        std::generate(begin(randomData), end(randomData), [&]() { return rd(); });
+        std::seed_seq seeds(begin(randomData), end(randomData));
         mt.seed(seeds);
         dist = std::uniform_real_distribution<dd::fp>(0.0, 2. * dd::PI);
     }
@@ -88,7 +88,8 @@ INSTANTIATE_TEST_SUITE_P(Parameters,
                          });
 
 TEST_P(DDFunctionality, standard_op_build_inverse_build) {
-    auto gate = (qc::OpType)GetParam();
+    using namespace qc::literals;
+    auto gate = static_cast<qc::OpType>(GetParam());
 
     qc::StandardOperation op;
     switch (gate) {
@@ -107,7 +108,7 @@ TEST_P(DDFunctionality, standard_op_build_inverse_build) {
 
         case qc::SWAP:
         case qc::iSWAP:
-            op = qc::StandardOperation(nqubits, dd::Controls{}, 0, 1, gate);
+            op = qc::StandardOperation(nqubits, Controls{}, 0, 1, gate);
             break;
         case qc::Peres:
         case qc::Peresdag:
@@ -127,7 +128,7 @@ TEST_F(DDFunctionality, build_circuit) {
     qc::QuantumComputation qc(nqubits);
 
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
-    qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<dd::Qubit>{0, 1}, qc::SWAP);
+    qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<Qubit>{0, 1}, qc::SWAP);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::H);
     qc.emplace_back<qc::StandardOperation>(nqubits, 3, qc::S);
     qc.emplace_back<qc::StandardOperation>(nqubits, 2, qc::Sdag);
@@ -145,7 +146,7 @@ TEST_F(DDFunctionality, build_circuit) {
     qc.emplace_back<qc::StandardOperation>(nqubits, 2, qc::S);
     qc.emplace_back<qc::StandardOperation>(nqubits, 3, qc::Sdag);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::H);
-    qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<dd::Qubit>{0, 1}, qc::SWAP);
+    qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<Qubit>{0, 1}, qc::SWAP);
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
 
     e = dd->multiply(buildFunctionality(&qc, dd), e);
@@ -160,27 +161,27 @@ TEST_F(DDFunctionality, build_circuit) {
 }
 
 TEST_F(DDFunctionality, non_unitary) {
-    qc::QuantumComputation qc;
-    auto                   dummy_map = Permutation{};
-    auto                   op        = qc::NonUnitaryOperation(nqubits, {0, 1, 2, 3}, {0, 1, 2, 3});
+    const qc::QuantumComputation qc{};
+    auto                         dummyMap = Permutation{};
+    auto                         op       = qc::NonUnitaryOperation(nqubits, {0, 1, 2, 3}, {0, 1, 2, 3});
     EXPECT_FALSE(op.isUnitary());
     EXPECT_THROW(getDD(&op, dd), qc::QFRException);
     EXPECT_THROW(getInverseDD(&op, dd), qc::QFRException);
-    EXPECT_THROW(getDD(&op, dd, dummy_map), qc::QFRException);
-    EXPECT_THROW(getInverseDD(&op, dd, dummy_map), qc::QFRException);
-    for (dd::Qubit i = 0; i < static_cast<dd::Qubit>(nqubits); ++i) {
+    EXPECT_THROW(getDD(&op, dd, dummyMap), qc::QFRException);
+    EXPECT_THROW(getInverseDD(&op, dd, dummyMap), qc::QFRException);
+    for (Qubit i = 0; i < nqubits; ++i) {
         EXPECT_TRUE(op.actsOn(i));
     }
 
-    for (dd::Qubit i = 0; i < static_cast<dd::Qubit>(nqubits); ++i) {
-        dummy_map[i] = i;
+    for (Qubit i = 0; i < nqubits; ++i) {
+        dummyMap[i] = i;
     }
     auto barrier = qc::NonUnitaryOperation(nqubits, {0, 1, 2, 3}, qc::OpType::Barrier);
     EXPECT_EQ(getDD(&barrier, dd), dd->makeIdent(nqubits));
     EXPECT_EQ(getInverseDD(&barrier, dd), dd->makeIdent(nqubits));
-    EXPECT_EQ(getDD(&barrier, dd, dummy_map), dd->makeIdent(nqubits));
-    EXPECT_EQ(getInverseDD(&barrier, dd, dummy_map), dd->makeIdent(nqubits));
-    for (dd::Qubit i = 0; i < static_cast<dd::Qubit>(nqubits); ++i) {
+    EXPECT_EQ(getDD(&barrier, dd, dummyMap), dd->makeIdent(nqubits));
+    EXPECT_EQ(getInverseDD(&barrier, dd, dummyMap), dd->makeIdent(nqubits));
+    for (Qubit i = 0; i < nqubits; ++i) {
         EXPECT_FALSE(barrier.actsOn(i));
     }
 }
@@ -191,12 +192,12 @@ TEST_F(DDFunctionality, CircuitEquivalence) {
     qc1.h(0);
 
     qc::QuantumComputation qc2(1);
-    qc2.rz(0, dd::PI_2);
+    qc2.rz(0, PI_2);
     qc2.sx(0);
-    qc2.rz(0, dd::PI_2);
+    qc2.rz(0, PI_2);
 
-    qc::MatrixDD dd1 = buildFunctionality(&qc1, dd);
-    qc::MatrixDD dd2 = buildFunctionality(&qc2, dd);
+    const qc::MatrixDD dd1 = buildFunctionality(&qc1, dd);
+    const qc::MatrixDD dd2 = buildFunctionality(&qc2, dd);
 
     EXPECT_EQ(dd1.p, dd2.p);
 }

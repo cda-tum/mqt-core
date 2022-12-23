@@ -8,7 +8,6 @@
 #include <memory>
 #include <sstream>
 
-using namespace dd;
 using namespace qc;
 using namespace sym;
 class SymbolicTest: public ::testing::Test {

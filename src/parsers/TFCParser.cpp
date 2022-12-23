@@ -6,19 +6,19 @@
 #include "QuantumComputation.hpp"
 
 void qc::QuantumComputation::importTFC(std::istream& is) {
-    std::map<std::string, dd::Qubit> varMap{};
-    auto                             line = readTFCHeader(is, varMap);
+    std::map<std::string, Qubit> varMap{};
+    auto                         line = readTFCHeader(is, varMap);
     readTFCGateDescriptions(is, line, varMap);
 }
 
-int qc::QuantumComputation::readTFCHeader(std::istream& is, std::map<std::string, dd::Qubit>& varMap) {
+int qc::QuantumComputation::readTFCHeader(std::istream& is, std::map<std::string, Qubit>& varMap) {
     std::string cmd;
     std::string variable;
     std::string identifier;
     int         line = 0;
 
-    std::string delimiter = ",";
-    size_t      pos;
+    const std::string delimiter = ",";
+    size_t            pos;
 
     std::vector<std::string> variables{};
     std::vector<std::string> inputs{};
@@ -43,8 +43,9 @@ int qc::QuantumComputation::readTFCHeader(std::istream& is, std::map<std::string
         }
 
         // header read complete
-        if (cmd == "BEGIN" || cmd == "begin")
+        if (cmd == "BEGIN" || cmd == "begin") {
             break;
+        }
 
         if (cmd == ".v") {
             is >> std::ws;
@@ -115,14 +116,15 @@ int qc::QuantumComputation::readTFCHeader(std::istream& is, std::map<std::string
     auto constidx = inputs.size();
     for (auto& var: variables) {
         // check if variable is input
-        if (std::count(inputs.begin(), inputs.end(), var)) {
+        if (std::count(inputs.begin(), inputs.end(), var) != 0) {
             varMap.insert({var, qidx++});
         } else {
             if (!constants.empty()) {
                 if (constants.at(constidx - inputs.size()) == "0" || constants.at(constidx - inputs.size()) == "1") {
                     // add X operation in case of initial value 1
-                    if (constants.at(constidx - inputs.size()) == "1")
-                        emplace_back<StandardOperation>(nqubits + nancillae, constidx, X);
+                    if (constants.at(constidx - inputs.size()) == "1") {
+                        x(constidx);
+                    }
                     varMap.insert({var, constidx++});
                 } else {
                     throw QFRException("[tfc parser] l:" + std::to_string(line) + " msg: Non-binary constant specified: " + cmd);
@@ -135,29 +137,29 @@ int qc::QuantumComputation::readTFCHeader(std::istream& is, std::map<std::string
     }
 
     for (size_t q = 0; q < variables.size(); ++q) {
-        variable                                 = variables.at(q);
-        auto p                                   = varMap.at(variable);
-        initialLayout[static_cast<dd::Qubit>(q)] = p;
+        variable         = variables.at(q);
+        auto p           = varMap.at(variable);
+        initialLayout[q] = p;
         if (!outputs.empty()) {
-            if (std::count(outputs.begin(), outputs.end(), variable)) {
-                outputPermutation[static_cast<dd::Qubit>(q)] = p;
+            if (std::count(outputs.begin(), outputs.end(), variable) != 0) {
+                outputPermutation[q] = p;
             } else {
-                outputPermutation.erase(static_cast<dd::Qubit>(q));
+                outputPermutation.erase(q);
                 garbage.at(p) = true;
             }
         } else {
             // no output statement given --> assume all outputs are relevant
-            outputPermutation[static_cast<dd::Qubit>(q)] = p;
+            outputPermutation[q] = p;
         }
     }
 
     return line;
 }
 
-void qc::QuantumComputation::readTFCGateDescriptions(std::istream& is, int line, std::map<std::string, dd::Qubit>& varMap) {
-    std::regex  gateRegex = std::regex("([tTfF])(\\d+)");
-    std::smatch m;
-    std::string cmd;
+void qc::QuantumComputation::readTFCGateDescriptions(std::istream& is, int line, std::map<std::string, Qubit>& varMap) {
+    const std::regex gateRegex = std::regex("([tTfF])(\\d+)");
+    std::smatch      m;
+    std::string      cmd;
 
     while (!is.eof()) {
         if (!static_cast<bool>(is >> cmd)) {
@@ -170,59 +172,59 @@ void qc::QuantumComputation::readTFCGateDescriptions(std::istream& is, int line,
             continue;
         }
 
-        if (cmd == "END" || cmd == "end")
+        if (cmd == "END" || cmd == "end") {
             break;
-        else {
-            // match gate declaration
-            if (!std::regex_match(cmd, m, gateRegex)) {
-                throw QFRException("[tfc parser] l:" + std::to_string(line) + " msg: Unsupported gate detected: " + cmd);
-            }
+        }
 
-            // extract gate information (identifier, #controls, divisor)
-            OpType gate;
-            if (m.str(1) == "t" || m.str(1) == "T") { // special treatment of t(offoli) for real format
-                gate = X;
+        // match gate declaration
+        if (!std::regex_match(cmd, m, gateRegex)) {
+            throw QFRException("[tfc parser] l:" + std::to_string(line) + " msg: Unsupported gate detected: " + cmd);
+        }
+
+        // extract gate information (identifier, #controls, divisor)
+        OpType gate;
+        if (m.str(1) == "t" || m.str(1) == "T") { // special treatment of t(offoli) for real format
+            gate = X;
+        } else {
+            gate = SWAP;
+        }
+        const std::size_t ncontrols = m.str(2).empty() ? 0 : std::stoul(m.str(2), nullptr, 0) - 1;
+
+        if (ncontrols >= nqubits + nancillae) {
+            throw QFRException("[tfc parser] l:" + std::to_string(line) + " msg: Gate acts on " + std::to_string(ncontrols + 1) + " qubits, but only " + std::to_string(nqubits + nancillae) + " qubits are available.");
+        }
+
+        std::string qubits, label;
+        is >> std::ws;
+        getline(is, qubits);
+
+        std::vector<Control> controls{};
+
+        std::string delimiter = ",";
+        size_t      pos;
+
+        while ((pos = qubits.find(delimiter)) != std::string::npos) {
+            label = qubits.substr(0, pos);
+            if (label.back() == '\'') {
+                label.erase(label.size() - 1);
+                controls.emplace_back(Control{varMap.at(label), Control::Type::Neg});
             } else {
-                gate = SWAP;
+                controls.emplace_back(Control{varMap.at(label)});
             }
-            dd::QubitCount ncontrols = m.str(2).empty() ? 0 : static_cast<dd::QubitCount>(std::stoul(m.str(2), nullptr, 0)) - 1;
+            qubits.erase(0, pos + 1);
+        }
+        controls.emplace_back(Control{varMap.at(qubits)});
 
-            if (ncontrols >= nqubits + nancillae) {
-                throw QFRException("[tfc parser] l:" + std::to_string(line) + " msg: Gate acts on " + std::to_string(ncontrols + 1) + " qubits, but only " + std::to_string(nqubits + nancillae) + " qubits are available.");
-            }
-
-            std::string qubits, label;
-            is >> std::ws;
-            getline(is, qubits);
-
-            std::vector<dd::Control> controls{};
-
-            std::string delimiter = ",";
-            size_t      pos;
-
-            while ((pos = qubits.find(delimiter)) != std::string::npos) {
-                label = qubits.substr(0, pos);
-                if (label.back() == '\'') {
-                    label.erase(label.size() - 1);
-                    controls.emplace_back(dd::Control{varMap.at(label), dd::Control::Type::neg});
-                } else {
-                    controls.emplace_back(dd::Control{varMap.at(label)});
-                }
-                qubits.erase(0, pos + 1);
-            }
-            controls.emplace_back(dd::Control{varMap.at(qubits)});
-
-            if (gate == X) {
-                dd::Qubit target = controls.back().qubit;
-                controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target);
-            } else {
-                dd::Qubit target0 = controls.back().qubit;
-                controls.pop_back();
-                dd::Qubit target1 = controls.back().qubit;
-                controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target0, target1, gate);
-            }
+        if (gate == X) {
+            const Qubit target = controls.back().qubit;
+            controls.pop_back();
+            x(target, Controls{controls.cbegin(), controls.cend()});
+        } else {
+            const Qubit target0 = controls.back().qubit;
+            controls.pop_back();
+            const Qubit target1 = controls.back().qubit;
+            controls.pop_back();
+            swap(target0, target1, Controls{controls.cbegin(), controls.cend()});
         }
     }
 }

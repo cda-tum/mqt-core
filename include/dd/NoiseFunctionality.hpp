@@ -7,6 +7,8 @@
 
 #include "dd/Definitions.hpp"
 #include "dd/Export.hpp"
+#include "dd/Operations.hpp"
+#include "dd/Package.hpp"
 #include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 
@@ -14,7 +16,7 @@
 #include <utility>
 
 using CN           = dd::ComplexNumbers;
-using ArrayOfEdges = std::array<dd::DensityMatrixDD, std::tuple_size_v<decltype(dd::dNode::e)>>;
+using ArrayOfEdges = std::array<qc::DensityMatrixDD, std::tuple_size_v<decltype(dd::dNode::e)>>;
 
 namespace dd {
 
@@ -98,7 +100,7 @@ namespace dd {
         [[nodiscard]] dd::mEdge getIdentityDD() const { return identityDD; }
         void                    setNoiseEffects(std::vector<dd::NoiseOperations> newNoiseEffects) { noiseEffects = std::move(newNoiseEffects); }
 
-        void applyNoiseOperation(const std::set<dd::Qubit>& targets, dd::mEdge operation, dd::vEdge& state, std::mt19937_64& generator) {
+        void applyNoiseOperation(const std::set<qc::Qubit>& targets, dd::mEdge operation, dd::vEdge& state, std::mt19937_64& generator) {
             const bool multiQubitOperation = targets.size() > 1;
 
             for (const auto& target: targets) {
@@ -182,23 +184,23 @@ namespace dd {
                     if (prob >= (getNoiseProbability(multiQubitNoiseFlag) * 0.75)) {
                         // prob > prob apply qc::I, also 25 % of the time when depolarization is applied nothing happens
                         return qc::I;
-                    } else if (prob < (getNoiseProbability(multiQubitNoiseFlag) * 0.25)) {
+                    }
+                    if (prob < (getNoiseProbability(multiQubitNoiseFlag) * 0.25)) {
                         // if 0 < prob < 0.25 (25 % of the time when applying depolarization) apply qc::X
                         return qc::X;
-                    } else if (prob < (getNoiseProbability(multiQubitNoiseFlag) * 0.5)) {
+                    }
+                    if (prob < (getNoiseProbability(multiQubitNoiseFlag) * 0.5)) {
                         // if 0.25 < prob < 0.5 (25 % of the time when applying depolarization) apply qc::Y
                         return qc::Y;
-                    } else {
-                        // if 0.5 < prob < 0.75 (25 % of the time when applying depolarization) apply qc::Z
-                        return qc::Z;
                     }
+                    // if 0.5 < prob < 0.75 (25 % of the time when applying depolarization) apply qc::Z
+                    return qc::Z;
                 }
                 case dd::NoiseOperations::phaseFlip: {
                     if (prob > getNoiseProbability(multiQubitNoiseFlag)) {
                         return qc::I;
-                    } else {
-                        return qc::Z;
                     }
+                    return qc::Z;
                 }
                 case dd::NoiseOperations::identity: {
                     return qc::I;
@@ -257,7 +259,7 @@ namespace dd {
         }
 
     public:
-        void applyNoiseEffects(DensityMatrixDD& originalEdge, const std::unique_ptr<qc::Operation>& qcOperation) {
+        void applyNoiseEffects(qc::DensityMatrixDD& originalEdge, const std::unique_ptr<qc::Operation>& qcOperation) {
             auto usedQubits = qcOperation->getUsedQubits();
 
             [[maybe_unused]] const auto cacheSizeBefore = package->cn.cacheCount();
@@ -265,11 +267,11 @@ namespace dd {
             if (sequentiallyApplyNoise) {
                 applyDetNoiseSequential(originalEdge, usedQubits);
             } else {
-                DensityMatrixDD nodeAfterNoise = {};
+                qc::DensityMatrixDD nodeAfterNoise = {};
                 if (useDensityMatrixType) {
-                    DensityMatrixDD::applyDmChangesToEdge(originalEdge);
+                    qc::DensityMatrixDD::applyDmChangesToEdge(originalEdge);
                     nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, false);
-                    DensityMatrixDD::revertDmChangesToEdge(originalEdge);
+                    qc::DensityMatrixDD::revertDmChangesToEdge(originalEdge);
                 } else {
                     nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, true);
                 }
@@ -280,11 +282,11 @@ namespace dd {
                 }
 
                 package->incRef(nodeAfterNoise);
-                DensityMatrixDD::alignDensityEdge(originalEdge);
+                qc::DensityMatrixDD::alignDensityEdge(originalEdge);
                 package->decRef(originalEdge);
                 originalEdge = nodeAfterNoise;
                 if (useDensityMatrixType) {
-                    DensityMatrixDD::setDensityMatrixTrue(originalEdge);
+                    qc::DensityMatrixDD::setDensityMatrixTrue(originalEdge);
                 }
             }
             [[maybe_unused]] const auto cacheSizeAfter = package->cn.cacheCount();
@@ -292,20 +294,19 @@ namespace dd {
         }
 
     private:
-        DensityMatrixDD applyNoiseEffects(DensityMatrixDD& originalEdge, const std::set<dd::Qubit>& usedQubits, bool firstPathEdge) {
-            if (originalEdge.p->v < *usedQubits.begin()) {
-                DensityMatrixDD tmp{};
+        qc::DensityMatrixDD applyNoiseEffects(qc::DensityMatrixDD& originalEdge, const std::set<qc::Qubit>& usedQubits, bool firstPathEdge) {
+            if (originalEdge.p->v < static_cast<dd::Qubit>(*usedQubits.begin())) {
+                qc::DensityMatrixDD tmp{};
                 if (originalEdge.w.exactlyZero() || originalEdge.w.exactlyOne()) {
                     tmp.w = originalEdge.w;
                 } else {
                     tmp.w = package->cn.getCached(CTEntry::val(originalEdge.w.r), CTEntry::val(originalEdge.w.i));
                 }
                 if (originalEdge.isTerminal()) {
-                    return DensityMatrixDD::terminal(tmp.w);
-                } else {
-                    tmp.p = originalEdge.p;
-                    return tmp;
+                    return qc::DensityMatrixDD::terminal(tmp.w);
                 }
+                tmp.p = originalEdge.p;
+                return tmp;
             }
             auto originalCopy = originalEdge;
             originalCopy.w    = dd::Complex::one;
@@ -314,20 +315,20 @@ namespace dd {
             for (size_t i = 0; i < newEdges.size(); i++) {
                 if (firstPathEdge || i == 1) {
                     // If I am to the firstPathEdge I cannot minimize the necessary operations anymore
-                    DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e[i]);
+                    qc::DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e[i]);
                     newEdges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, true);
-                    DensityMatrixDD::revertDmChangesToEdge(originalCopy.p->e[i]);
+                    qc::DensityMatrixDD::revertDmChangesToEdge(originalCopy.p->e[i]);
                 } else if (i == 2) {
                     // Since e[1] == e[2] (due to density matrix representation), I can skip calculating e[2]
                     newEdges[2].p = newEdges[1].p;
                     newEdges[2].w = package->cn.getCached(CTEntry::val(newEdges[1].w.r), CTEntry::val(newEdges[1].w.i));
                 } else {
-                    DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e[i]);
+                    qc::DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e[i]);
                     newEdges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, false);
-                    DensityMatrixDD::revertDmChangesToEdge(originalCopy.p->e[i]);
+                    qc::DensityMatrixDD::revertDmChangesToEdge(originalCopy.p->e[i]);
                 }
             }
-            DensityMatrixDD e = {};
+            qc::DensityMatrixDD e = {};
             if (std::any_of(usedQubits.begin(), usedQubits.end(), [originalEdge](dd::Qubit qubit) { return originalEdge.p->v == qubit; })) {
                 for (auto const& type: noiseEffects) {
                     switch (type) {
@@ -387,8 +388,8 @@ namespace dd {
         }
 
         void applyAmplitudeDampingToEdges(ArrayOfEdges& e, double probability) {
-            dd::Complex     complexProb = package->cn.getCached();
-            DensityMatrixDD helperEdge;
+            dd::Complex         complexProb = package->cn.getCached();
+            qc::DensityMatrixDD helperEdge;
             helperEdge.w = package->cn.getCached();
 
             // e[0] = e[0] + p*e[3]
@@ -449,11 +450,11 @@ namespace dd {
         }
 
         void applyDepolarisationToEdges(ArrayOfEdges& e, double probability) {
-            DensityMatrixDD helperEdge[2];
-            dd::Complex     complexProb = package->cn.getCached();
-            complexProb.i->value        = 0;
+            qc::DensityMatrixDD helperEdge[2];
+            dd::Complex         complexProb = package->cn.getCached();
+            complexProb.i->value            = 0;
 
-            DensityMatrixDD oldE0Edge;
+            qc::DensityMatrixDD oldE0Edge;
             oldE0Edge.w = package->cn.getCached(dd::CTEntry::val(e[0].w.r), dd::CTEntry::val(e[0].w.i));
             oldE0Edge.p = e[0].p;
 
@@ -549,8 +550,8 @@ namespace dd {
             package->cn.returnToCache(complexProb);
         }
 
-        void applyDetNoiseSequential(DensityMatrixDD& originalEdge, const std::set<dd::Qubit>& targets) {
-            dd::DensityMatrixDD tmp = {};
+        void applyDetNoiseSequential(qc::DensityMatrixDD& originalEdge, const std::set<qc::Qubit>& targets) {
+            qc::DensityMatrixDD tmp = {};
 
             std::array<mEdge, std::tuple_size_v<decltype(dd::dNode::e)>> idleOperation{};
 
@@ -571,11 +572,11 @@ namespace dd {
                         }
                     }
                     package->incRef(tmp);
-                    DensityMatrixDD::alignDensityEdge(originalEdge);
+                    qc::DensityMatrixDD::alignDensityEdge(originalEdge);
                     package->decRef(originalEdge);
                     originalEdge = tmp;
                     if (useDensityMatrixType) {
-                        DensityMatrixDD::setDensityMatrixTrue(originalEdge);
+                        qc::DensityMatrixDD::setDensityMatrixTrue(originalEdge);
                     }
                 }
             }
@@ -687,12 +688,11 @@ namespace dd {
             }
         }
 
-        double getNoiseProbability(const dd::NoiseOperations type, const std::set<dd::Qubit>& targets) {
+        double getNoiseProbability(const dd::NoiseOperations type, const std::set<qc::Qubit>& targets) {
             if (type == dd::amplitudeDamping) {
                 return (targets.size() == 1) ? ampDampingProbSingleQubit : ampDampingProbMultiQubit;
-            } else {
-                return (targets.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit;
             }
+            return (targets.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit;
         }
     };
 

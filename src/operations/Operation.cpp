@@ -118,23 +118,23 @@ namespace qc {
 
         bool isZero = true;
         for (size_t i = 0; i < MAX_PARAMETERS; ++i) {
-            if (parameter[i] != 0.L)
+            if (parameter[i] != 0.L) {
                 isZero = false;
+            }
         }
         if (!isZero) {
-            os << "\tp: (";
-            dd::ComplexValue::printFormatted(os, parameter[0]);
-            os << ") ";
+            os << "\tp: (" << parameter[0] << ") ";
             for (size_t j = 1; j < MAX_PARAMETERS; ++j) {
                 isZero = true;
                 for (size_t i = j; i < MAX_PARAMETERS; ++i) {
-                    if (parameter[i] != 0.L)
+                    if (parameter[i] != 0.L) {
                         isZero = false;
+                    }
                 }
-                if (isZero) break;
-                os << "(";
-                dd::ComplexValue::printFormatted(os, parameter[j]);
-                os << ") ";
+                if (isZero) {
+                    break;
+                }
+                os << "(" << parameter[j] << ") ";
             }
         }
 
@@ -142,14 +142,14 @@ namespace qc {
     }
 
     std::ostream& Operation::print(std::ostream& os) const {
-        const auto prec_before = std::cout.precision(20);
+        const auto precBefore = std::cout.precision(20);
 
         os << std::setw(4) << name << "\t";
 
         auto controlIt = controls.begin();
         auto targetIt  = targets.begin();
-        for (dd::QubitCount i = 0; i < nqubits; ++i) {
-            if (targetIt != targets.end() && *targetIt == static_cast<dd::Qubit>(i)) {
+        for (std::size_t i = 0; i < nqubits; ++i) {
+            if (targetIt != targets.end() && *targetIt == i) {
                 if (type == ClassicControlled) {
                     os << "\033[1m\033[35m" << name[2] << name[3];
                 } else {
@@ -157,8 +157,8 @@ namespace qc {
                 }
                 os << "\t\033[0m";
                 ++targetIt;
-            } else if (controlIt != controls.end() && controlIt->qubit == static_cast<dd::Qubit>(i)) {
-                if (controlIt->type == dd::Control::Type::pos) {
+            } else if (controlIt != controls.end() && controlIt->qubit == i) {
+                if (controlIt->type == Control::Type::Pos) {
                     os << "\033[32m";
                 } else {
                     os << "\033[31m";
@@ -173,13 +173,13 @@ namespace qc {
 
         printParameters(os);
 
-        std::cout.precision(prec_before);
+        std::cout.precision(precBefore);
 
         return os;
     }
 
     std::ostream& Operation::print(std::ostream& os, const Permutation& permutation) const {
-        const auto prec_before = std::cout.precision(20);
+        const auto precBefore = std::cout.precision(20);
 
         os << std::setw(4) << name << "\t";
         const auto& actualControls = getControls();
@@ -196,7 +196,7 @@ namespace qc {
                 os << "\t\033[0m";
                 ++targetIt;
             } else if (controlIt != actualControls.cend() && controlIt->qubit == physical) {
-                if (controlIt->type == dd::Control::Type::pos) {
+                if (controlIt->type == Control::Type::Pos) {
                     os << "\033[32m";
                 } else {
                     os << "\033[31m";
@@ -211,7 +211,7 @@ namespace qc {
 
         printParameters(os);
 
-        std::cout.precision(prec_before);
+        std::cout.precision(precBefore);
 
         return os;
     }
@@ -241,21 +241,21 @@ namespace qc {
 
         // check controls
         if (nc1 != 0U) {
-            dd::Controls controls1{};
+            Controls controls1{};
             if (perm1.empty()) {
                 controls1 = getControls();
             } else {
                 for (const auto& control: getControls()) {
-                    controls1.emplace(dd::Control{perm1.at(control.qubit), control.type});
+                    controls1.emplace(Control{perm1.at(control.qubit), control.type});
                 }
             }
 
-            dd::Controls controls2{};
+            Controls controls2{};
             if (perm2.empty()) {
                 controls2 = op.getControls();
             } else {
                 for (const auto& control: op.getControls()) {
-                    controls2.emplace(dd::Control{perm2.at(control.qubit), control.type});
+                    controls2.emplace(Control{perm2.at(control.qubit), control.type});
                 }
             }
 
@@ -265,7 +265,7 @@ namespace qc {
         }
 
         // check targets
-        std::set<dd::Qubit> targets1{};
+        std::set<Qubit> targets1{};
         if (perm1.empty()) {
             targets1 = {getTargets().begin(), getTargets().end()};
         } else {
@@ -274,7 +274,7 @@ namespace qc {
             }
         }
 
-        std::set<dd::Qubit> targets2{};
+        std::set<Qubit> targets2{};
         if (perm2.empty()) {
             targets2 = {op.getTargets().begin(), op.getTargets().end()};
         } else {

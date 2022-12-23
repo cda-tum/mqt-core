@@ -6,35 +6,37 @@
 #include "algorithms/BernsteinVazirani.hpp"
 
 namespace qc {
-    BernsteinVazirani::BernsteinVazirani(const BitString& s, bool dynamic):
+    BernsteinVazirani::BernsteinVazirani(const BitString& s, const bool dynamic):
         s(s), dynamic(dynamic) {
-        dd::QubitCount msb = 0;
+        Qubit msb = 0;
         for (std::size_t i = 0; i < s.size(); ++i) {
-            if (s.test(i))
+            if (s.test(i)) {
                 msb = i;
+            }
         }
         bitwidth = msb + 1;
         createCircuit();
     }
 
-    BernsteinVazirani::BernsteinVazirani(dd::QubitCount nq, bool dynamic):
+    BernsteinVazirani::BernsteinVazirani(const std::size_t nq, const bool dynamic):
         bitwidth(nq), dynamic(dynamic) {
         auto distribution = std::bernoulli_distribution();
-        for (dd::QubitCount i = 0; i < nq; ++i) {
-            if (distribution(mt))
+        for (std::size_t i = 0; i < nq; ++i) {
+            if (distribution(mt)) {
                 s.set(i);
+            }
         }
         createCircuit();
     }
 
-    BernsteinVazirani::BernsteinVazirani(const BitString& s, dd::QubitCount nq, bool dynamic):
+    BernsteinVazirani::BernsteinVazirani(const BitString& s, const std::size_t nq, const bool dynamic):
         s(s), bitwidth(nq), dynamic(dynamic) {
         createCircuit();
     }
 
     std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) const {
-        os << "BernsteinVazirani (" << static_cast<std::size_t>(bitwidth) << ") Statistics:\n";
-        os << "\tn: " << static_cast<std::size_t>(bitwidth + 1) << std::endl;
+        os << "BernsteinVazirani (" << bitwidth << ") Statistics:\n";
+        os << "\tn: " << bitwidth + 1 << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;
         os << "\ts: " << expected << std::endl;
         os << "\tdynamic: " << dynamic << std::endl;
@@ -47,8 +49,9 @@ namespace qc {
 
         expected = s.to_string();
         std::reverse(expected.begin(), expected.end());
-        while (expected.length() > bitwidth)
+        while (expected.length() > bitwidth) {
             expected.pop_back();
+        }
         std::reverse(expected.begin(), expected.end());
 
         addQubitRegister(1, "flag");
@@ -65,13 +68,14 @@ namespace qc {
         x(0);
 
         if (dynamic) {
-            for (dd::QubitCount i = 0; i < bitwidth; ++i) {
+            for (std::size_t i = 0; i < bitwidth; ++i) {
                 // initial Hadamard
                 h(1);
 
                 // apply controlled-Z gate according to secret bitstring
-                if (s.test(i))
+                if (s.test(i)) {
                     z(0, 1_pc);
+                }
 
                 // final Hadamard
                 h(1);
@@ -80,29 +84,31 @@ namespace qc {
                 measure(1, i);
 
                 // reset qubit if not finished
-                if (i < bitwidth - 1)
+                if (i < bitwidth - 1) {
                     reset(1);
+                }
             }
         } else {
             // initial Hadamard transformation
-            for (dd::QubitCount i = 1; i <= bitwidth; ++i) {
-                h(static_cast<dd::Qubit>(i));
+            for (std::size_t i = 1; i <= bitwidth; ++i) {
+                h(i);
             }
 
             // apply controlled-Z gates according to secret bitstring
-            for (dd::QubitCount i = 1; i <= bitwidth; ++i) {
-                if (s.test(i - 1))
-                    z(0, dd::Control{static_cast<dd::Qubit>(i)});
+            for (std::size_t i = 1; i <= bitwidth; ++i) {
+                if (s.test(i - 1)) {
+                    z(0, qc::Control{static_cast<Qubit>(i)});
+                }
             }
 
             // final Hadamard transformation
-            for (dd::QubitCount i = 1; i <= bitwidth; ++i) {
-                h(static_cast<dd::Qubit>(i));
+            for (std::size_t i = 1; i <= bitwidth; ++i) {
+                h(i);
             }
 
             // measure results
-            for (dd::QubitCount i = 1; i <= bitwidth; i++) {
-                measure(static_cast<dd::Qubit>(i), i - 1);
+            for (std::size_t i = 1; i <= bitwidth; i++) {
+                measure(i, i - 1);
             }
         }
     }

@@ -6,8 +6,6 @@
 #pragma once
 
 #include "Expression.hpp"
-#include "dd/Control.hpp"
-#include "dd/Definitions.hpp"
 
 #include <bitset>
 #include <deque>
@@ -30,44 +28,37 @@ namespace qc {
         }
     };
 
+    using Qubit = std::uint32_t;
+    using Bit   = std::uint64_t;
+
     template<class IdxType, class SizeType>
     using Register          = std::pair<IdxType, SizeType>;
-    using QuantumRegister   = Register<dd::Qubit, dd::QubitCount>;
-    using ClassicalRegister = Register<std::size_t, std::size_t>;
+    using QuantumRegister   = Register<Qubit, std::size_t>;
+    using ClassicalRegister = Register<Bit, std::size_t>;
     template<class RegisterType>
     using RegisterMap          = std::map<std::string, RegisterType, std::greater<>>;
     using QuantumRegisterMap   = RegisterMap<QuantumRegister>;
     using ClassicalRegisterMap = RegisterMap<ClassicalRegister>;
     using RegisterNames        = std::vector<std::pair<std::string, std::string>>;
 
-    using Targets = std::vector<dd::Qubit>;
+    using Targets = std::vector<Qubit>;
 
-    using BitString = std::bitset<std::numeric_limits<dd::Qubit>::max() + 1>;
+    using BitString = std::bitset<128>;
 
-    struct Permutation: public std::map<dd::Qubit, dd::Qubit> {
-        [[nodiscard]] inline dd::Controls apply(const dd::Controls& controls) const {
-            dd::Controls c{};
-            for (const auto& control: controls) {
-                c.emplace(dd::Control{at(control.qubit), control.type});
-            }
-            return c;
-        }
-        [[nodiscard]] inline Targets apply(const Targets& targets) const {
-            Targets t{};
-            for (const auto& target: targets) {
-                t.emplace_back(at(target));
-            }
-            return t;
-        }
-    };
+    // floating-point type used throughout the library
+    using fp = double;
 
-    constexpr dd::fp PARAMETER_TOLERANCE = 1e-13;
+    constexpr fp PARAMETER_TOLERANCE = 1e-13;
+
+    static constexpr fp PI   = static_cast<fp>(3.141592653589793238462643383279502884197169399375105820974L);
+    static constexpr fp PI_2 = static_cast<fp>(1.570796326794896619231321691639751442098584699687552910487L);
+    static constexpr fp PI_4 = static_cast<fp>(0.785398163397448309615660845819875721049292349843776455243L);
 
     // forward declaration
     class Operation;
 
     // supported file formats
-    enum Format {
+    enum class Format {
         Real,
         OpenQASM,
         GRCS,
@@ -82,7 +73,7 @@ namespace qc {
     using DAGIterators        = std::vector<DAGIterator>;
     using DAGReverseIterators = std::vector<DAGReverseIterator>;
 
-    using Symbolic           = sym::Expression<double, double>;
-    using VariableAssignment = std::unordered_map<sym::Variable, dd::fp>;
-    using SymbolOrNumber     = std::variant<Symbolic, dd::fp>;
+    using Symbolic           = sym::Expression<fp, fp>;
+    using VariableAssignment = std::unordered_map<sym::Variable, fp>;
+    using SymbolOrNumber     = std::variant<Symbolic, fp>;
 } // namespace qc

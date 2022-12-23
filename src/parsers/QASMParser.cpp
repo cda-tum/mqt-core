@@ -20,10 +20,10 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             // quantum register definition
             p.scan();
             p.check(Token::Kind::identifier);
-            std::string s = p.t.str;
+            const std::string s = p.t.str;
             p.check(Token::Kind::lbrack);
             p.check(Token::Kind::nninteger);
-            auto n = static_cast<dd::QubitCount>(p.t.val);
+            const auto n = static_cast<std::size_t>(p.t.val);
             p.check(Token::Kind::rbrack);
             p.check(Token::Kind::semicolon);
             addQubitRegister(n, s.c_str());
@@ -32,10 +32,10 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             // classical register definition
             p.scan();
             p.check(Token::Kind::identifier);
-            std::string s = p.t.str;
+            const std::string s = p.t.str;
             p.check(Token::Kind::lbrack);
             p.check(Token::Kind::nninteger);
-            auto n = static_cast<std::size_t>(p.t.val);
+            const auto n = static_cast<std::size_t>(p.t.val);
             p.check(Token::Kind::rbrack);
             p.check(Token::Kind::semicolon);
             addClassicalRegister(n, s.c_str());
@@ -59,10 +59,10 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             p.ArgList(args);
             p.check(Token::Kind::semicolon);
 
-            std::vector<dd::Qubit> qubits{};
+            std::vector<qc::Qubit> qubits{};
             for (auto& arg: args) {
-                for (dd::QubitCount q = 0; q < arg.second; ++q) {
-                    qubits.emplace_back(static_cast<dd::Qubit>(arg.first + q));
+                for (std::size_t q = 0; q < arg.second; ++q) {
+                    qubits.emplace_back(arg.first + q);
                 }
             }
 
@@ -75,10 +75,10 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             p.scan();
             p.check(Token::Kind::lpar);
             p.check(Token::Kind::identifier);
-            std::string creg = p.t.str;
+            const std::string creg = p.t.str;
             p.check(Token::Kind::eq);
             p.check(Token::Kind::nninteger);
-            auto n = static_cast<dd::QubitCount>(p.t.val);
+            const auto n = static_cast<std::size_t>(p.t.val);
             p.check(Token::Kind::rpar);
 
             auto it = p.cregs.find(creg);

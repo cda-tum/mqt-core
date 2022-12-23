@@ -6,19 +6,19 @@
 #include "QuantumComputation.hpp"
 
 void qc::QuantumComputation::importQC(std::istream& is) {
-    std::map<std::string, dd::Qubit> varMap{};
-    auto                             line = readQCHeader(is, varMap);
+    std::map<std::string, Qubit> varMap{};
+    auto                         line = readQCHeader(is, varMap);
     readQCGateDescriptions(is, line, varMap);
 }
 
-int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string, dd::Qubit>& varMap) {
+int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string, Qubit>& varMap) {
     std::string cmd;
     std::string variable;
     std::string identifier;
     int         line = 0;
 
-    std::string delimiter = " ";
-    size_t      pos;
+    const std::string delimiter = " ";
+    size_t            pos;
 
     std::vector<std::string> variables{};
     std::vector<std::string> inputs{};
@@ -115,14 +115,15 @@ int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string,
     auto constidx = inputs.size();
     for (auto& var: variables) {
         // check if variable is input
-        if (std::count(inputs.begin(), inputs.end(), var)) {
+        if (std::count(inputs.begin(), inputs.end(), var) != 0) {
             varMap.insert({var, qidx++});
         } else {
             if (!constants.empty()) {
                 if (constants.at(constidx - inputs.size()) == "0" || constants.at(constidx - inputs.size()) == "1") {
                     // add X operation in case of initial value 1
-                    if (constants.at(constidx - inputs.size()) == "1")
+                    if (constants.at(constidx - inputs.size()) == "1") {
                         emplace_back<StandardOperation>(nqubits + nancillae, constidx, X);
+                    }
                     varMap.insert({var, constidx++});
                 } else {
                     throw QFRException("[qc parser] l:" + std::to_string(line) + " msg: Non-binary constant specified: " + cmd);
@@ -135,14 +136,14 @@ int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string,
     }
 
     for (size_t q = 0; q < variables.size(); ++q) {
-        variable                                 = variables.at(q);
-        auto p                                   = varMap.at(variable);
-        initialLayout[static_cast<dd::Qubit>(q)] = p;
+        variable         = variables.at(q);
+        auto p           = varMap.at(variable);
+        initialLayout[q] = p;
         if (!outputs.empty()) {
-            if (std::count(outputs.begin(), outputs.end(), variable)) {
-                outputPermutation[static_cast<dd::Qubit>(q)] = p;
+            if (std::count(outputs.begin(), outputs.end(), variable) != 0) {
+                outputPermutation[q] = p;
             } else {
-                outputPermutation.erase(static_cast<dd::Qubit>(q));
+                outputPermutation.erase(q);
                 garbage.at(p) = true;
             }
         } else {
@@ -154,10 +155,10 @@ int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string,
     return line;
 }
 
-void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, std::map<std::string, dd::Qubit>& varMap) {
-    std::regex  gateRegex = std::regex(R"((H|X|Y|Zd?|[SPT]\*?|tof|cnot|swap|R[xyz])(?:\((pi\/2\^(\d+)|(?:[-+]?[0-9]+[.]?[0-9]*(?:[eE][-+]?[0-9]+)?))\))?)");
-    std::smatch m;
-    std::string cmd;
+void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, std::map<std::string, Qubit>& varMap) {
+    const std::regex gateRegex = std::regex(R"((H|X|Y|Zd?|[SPT]\*?|tof|cnot|swap|R[xyz])(?:\((pi\/2\^(\d+)|(?:[-+]?[0-9]+[.]?[0-9]*(?:[eE][-+]?[0-9]+)?))\))?)");
+    std::smatch      m;
+    std::string      cmd;
 
     while (!is.eof()) {
         if (!static_cast<bool>(is >> cmd)) {
@@ -170,111 +171,111 @@ void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, 
             continue;
         }
 
-        if (cmd == "END" || cmd == "end")
+        if (cmd == "END" || cmd == "end") {
             break;
-        else {
-            // match gate declaration
-            if (!std::regex_match(cmd, m, gateRegex)) {
-                throw QFRException("[qc parser] l:" + std::to_string(line) + " msg: Unsupported gate detected: " + cmd);
-            }
+        }
 
-            // extract gate information (identifier, #controls, divisor)
-            auto        lambda   = static_cast<dd::fp>(0L);
-            OpType      gate     = None;
-            std::string gateType = m.str(1);
-            if (gateType == "H") {
-                gate = H;
-            } else if (gateType == "X" || gateType == "cnot" || gateType == "tof") {
-                gate = X;
-            } else if (gateType == "Y") {
-                gate = Y;
-            } else if (gateType == "Z" || gateType == "Zd") {
-                gate = Z;
-            } else if (gateType == "P" || gateType == "S") {
-                gate = S;
-            } else if (gateType == "P*" || gateType == "S*") {
-                gate = Sdag;
-            } else if (gateType == "T") {
-                gate = T;
-            } else if (gateType == "T*") {
-                gate = Tdag;
-            } else if (gateType == "swap") {
-                gate = SWAP;
-            } else if (gateType == "Rx") {
-                gate = RX;
-            } else if (gateType == "Ry") {
-                gate = RY;
-            } else if (gateType == "Rz") {
-                gate = RZ;
-            }
+        // match gate declaration
+        if (!std::regex_match(cmd, m, gateRegex)) {
+            throw QFRException("[qc parser] l:" + std::to_string(line) + " msg: Unsupported gate detected: " + cmd);
+        }
 
-            if (gate == RX || gate == RY || gate == RZ) {
-                if (m.str(3).empty()) {
-                    // float definition
-                    lambda = static_cast<dd::fp>(std::stold(m.str(2)));
-                } else if (!m.str(2).empty()) {
-                    // pi/2^x definition
-                    auto power = std::stoul(m.str(3));
-                    if (power == 0UL) {
-                        lambda = dd::PI;
-                    } else if (power == 1UL) {
-                        lambda = dd::PI_2;
-                    } else if (power == 2UL) {
-                        lambda = dd::PI_4;
-                    } else {
-                        lambda = dd::PI_4 / (std::pow(static_cast<dd::fp>(2), power - 2UL));
-                    }
+        // extract gate information (identifier, #controls, divisor)
+        auto              lambda   = static_cast<fp>(0L);
+        OpType            gate     = None;
+        const std::string gateType = m.str(1);
+        if (gateType == "H") {
+            gate = H;
+        } else if (gateType == "X" || gateType == "cnot" || gateType == "tof") {
+            gate = X;
+        } else if (gateType == "Y") {
+            gate = Y;
+        } else if (gateType == "Z" || gateType == "Zd") {
+            gate = Z;
+        } else if (gateType == "P" || gateType == "S") {
+            gate = S;
+        } else if (gateType == "P*" || gateType == "S*") {
+            gate = Sdag;
+        } else if (gateType == "T") {
+            gate = T;
+        } else if (gateType == "T*") {
+            gate = Tdag;
+        } else if (gateType == "swap") {
+            gate = SWAP;
+        } else if (gateType == "Rx") {
+            gate = RX;
+        } else if (gateType == "Ry") {
+            gate = RY;
+        } else if (gateType == "Rz") {
+            gate = RZ;
+        }
+
+        if (gate == RX || gate == RY || gate == RZ) {
+            if (m.str(3).empty()) {
+                // float definition
+                lambda = static_cast<fp>(std::stold(m.str(2)));
+            } else if (!m.str(2).empty()) {
+                // pi/2^x definition
+                auto power = std::stoul(m.str(3));
+                if (power == 0UL) {
+                    lambda = PI;
+                } else if (power == 1UL) {
+                    lambda = PI_2;
+                } else if (power == 2UL) {
+                    lambda = PI_4;
                 } else {
-                    throw QFRException("Rotation gate without angle detected");
+                    lambda = PI_4 / (std::pow(static_cast<fp>(2), power - 2UL));
                 }
+            } else {
+                throw QFRException("Rotation gate without angle detected");
             }
+        }
 
-            std::string qubits, label;
-            is >> std::ws;
-            getline(is, qubits);
+        std::string qubits, label;
+        is >> std::ws;
+        getline(is, qubits);
 
-            std::vector<dd::Control> controls{};
+        std::vector<Control> controls{};
 
-            auto   delimiter = ' ';
-            size_t pos;
+        auto        delimiter = ' ';
+        std::size_t pos;
 
-            while ((pos = qubits.find(delimiter)) != std::string::npos) {
-                label = qubits.substr(0, pos);
-                if (label.back() == '\'') {
-                    label.erase(label.size() - 1);
-                    controls.emplace_back(dd::Control{varMap.at(label), dd::Control::Type::neg});
-                } else {
-                    controls.emplace_back(dd::Control{varMap.at(label)});
-                }
-                qubits.erase(0, pos + 1);
+        while ((pos = qubits.find(delimiter)) != std::string::npos) {
+            label = qubits.substr(0, pos);
+            if (label.back() == '\'') {
+                label.erase(label.size() - 1);
+                controls.emplace_back(Control{varMap.at(label), Control::Type::Neg});
+            } else {
+                controls.emplace_back(Control{varMap.at(label)});
             }
-            // delete whitespace at the end
-            qubits.erase(std::remove(qubits.begin(), qubits.end(), delimiter), qubits.end());
-            controls.emplace_back(dd::Control{varMap.at(qubits)});
+            qubits.erase(0, pos + 1);
+        }
+        // delete whitespace at the end
+        qubits.erase(std::remove(qubits.begin(), qubits.end(), delimiter), qubits.end());
+        controls.emplace_back(Control{varMap.at(qubits)});
 
-            if (controls.size() > nqubits + nancillae) {
-                throw QFRException("[qc parser] l:" + std::to_string(line) + " msg: Gate acts on " + std::to_string(controls.size()) + " qubits, but only " + std::to_string(nqubits + nancillae) + " qubits are available.");
-            }
+        if (controls.size() > nqubits + nancillae) {
+            throw QFRException("[qc parser] l:" + std::to_string(line) + " msg: Gate acts on " + std::to_string(controls.size()) + " qubits, but only " + std::to_string(nqubits + nancillae) + " qubits are available.");
+        }
 
-            if (gate == X) {
-                dd::Qubit target = controls.back().qubit;
-                controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target);
-            } else if (gate == H || gate == Y || gate == Z || gate == S || gate == Sdag || gate == T || gate == Tdag) {
-                dd::Qubit target = controls.back().qubit;
-                controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, gate);
-            } else if (gate == SWAP) {
-                dd::Qubit target0 = controls.back().qubit;
-                controls.pop_back();
-                dd::Qubit target1 = controls.back().qubit;
-                controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target0, target1, gate);
-            } else if (gate == RX || gate == RY || gate == RZ) {
-                dd::Qubit target = controls.back().qubit;
-                controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, gate, lambda);
-            }
+        if (gate == X) {
+            const Qubit target = controls.back().qubit;
+            controls.pop_back();
+            x(target, Controls{controls.cbegin(), controls.cend()});
+        } else if (gate == H || gate == Y || gate == Z || gate == S || gate == Sdag || gate == T || gate == Tdag) {
+            const Qubit target = controls.back().qubit;
+            controls.pop_back();
+            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate);
+        } else if (gate == SWAP) {
+            const Qubit target0 = controls.back().qubit;
+            controls.pop_back();
+            const Qubit target1 = controls.back().qubit;
+            controls.pop_back();
+            swap(target0, target1, Controls{controls.cbegin(), controls.cend()});
+        } else if (gate == RX || gate == RY || gate == RZ) {
+            const Qubit target = controls.back().qubit;
+            controls.pop_back();
+            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, lambda);
         }
     }
 }

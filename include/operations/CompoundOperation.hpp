@@ -10,32 +10,32 @@
 namespace qc {
 
     class CompoundOperation final: public Operation {
-    protected:
+    private:
         std::vector<std::unique_ptr<Operation>> ops{};
 
     public:
-        explicit CompoundOperation(dd::QubitCount nq) {
+        explicit CompoundOperation(const std::size_t nq) {
             std::strcpy(name, "Compound operation:");
             nqubits = nq;
             type    = Compound;
         }
 
-        explicit CompoundOperation(dd::QubitCount nq, std::vector<std::unique_ptr<Operation>>&& operations):
+        explicit CompoundOperation(const std::size_t nq, std::vector<std::unique_ptr<Operation>>&& operations):
             CompoundOperation(nq) {
             ops = std::move(operations);
         }
 
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {
-            auto cloned_co = std::make_unique<CompoundOperation>(nqubits);
-            cloned_co->reserve(ops.size());
+            auto clonedCo = std::make_unique<CompoundOperation>(nqubits);
+            clonedCo->reserve(ops.size());
 
-            for (auto& op: ops) {
-                cloned_co->ops.emplace_back<>(op->clone());
+            for (const auto& op: ops) {
+                clonedCo->ops.emplace_back<>(op->clone());
             }
-            return cloned_co;
+            return clonedCo;
         }
 
-        void setNqubits(dd::QubitCount nq) override {
+        void setNqubits(const std::size_t nq) override {
             nqubits = nq;
             for (auto& op: ops) {
                 op->setNqubits(nq);
@@ -68,9 +68,8 @@ namespace qc {
                     ++it;
                 }
                 return true;
-            } else {
-                return false;
             }
+            return false;
         }
         [[nodiscard]] bool equals(const Operation& operation) const override {
             return equals(operation, {}, {});
@@ -98,7 +97,7 @@ namespace qc {
             return os;
         }
 
-        [[nodiscard]] bool actsOn(dd::Qubit i) const override {
+        [[nodiscard]] bool actsOn(const Qubit i) const override {
             return std::any_of(ops.cbegin(), ops.cend(), [&i](const auto& op) { return op->actsOn(i); });
         }
 
@@ -138,7 +137,7 @@ namespace qc {
         [[nodiscard]] std::size_t max_size() const noexcept { return ops.max_size(); }
         [[nodiscard]] std::size_t capacity() const noexcept { return ops.capacity(); }
 
-        void reserve(std::size_t new_cap) { ops.reserve(new_cap); }
+        void reserve(std::size_t newCap) { ops.reserve(newCap); }
         void shrink_to_fit() { ops.shrink_to_fit(); }
 
         // Modifiers (pass-through)
@@ -168,8 +167,8 @@ namespace qc {
 
         std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
 
-        [[nodiscard]] std::set<dd::Qubit> getUsedQubits() const override {
-            std::set<dd::Qubit> usedQubits{};
+        [[nodiscard]] std::set<Qubit> getUsedQubits() const override {
+            std::set<Qubit> usedQubits{};
             for (const auto& op: ops) {
                 usedQubits.merge(op->getUsedQubits());
             }
