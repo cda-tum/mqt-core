@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.14...3.24)
+# set required cmake version
+cmake_minimum_required(VERSION 3.19)
 
 project(
   qfr
