@@ -16,6 +16,7 @@ add_library(
   ${${PROJECT_NAME}_SOURCE_DIR}/include/Definitions.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/ClassicControlledOperation.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/CompoundOperation.hpp
+  ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/Control.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/NonUnitaryOperation.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/Operation.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/StandardOperation.hpp
@@ -23,6 +24,7 @@ add_library(
   ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Parser.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
+  ${${PROJECT_NAME}_SOURCE_DIR}/include/Permutation.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/QuantumComputation.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/BernsteinVazirani.cpp
