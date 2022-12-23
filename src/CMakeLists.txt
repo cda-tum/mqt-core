@@ -1,3 +1,18 @@
+# add MQT::DDPackage library
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
+
+# add MQT::zx library
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx")
+
+# add nlohmann::json library
+set(JSON_BuildTests # cmake-lint: disable=C0103
+    OFF
+    CACHE INTERNAL "")
+set(JSON_MultipleHeaders # cmake-lint: disable=C0103
+    OFF
+    CACHE INTERNAL "")
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json" EXCLUDE_FROM_ALL)
+
 # main project library
 add_library(
   ${PROJECT_NAME}
@@ -44,10 +59,10 @@ add_library(
   ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QCParser.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/parsers/RealParser.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/parsers/TFCParser.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/qasm_parser/Parser.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/qasm_parser/Scanner.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/QuantumComputation.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/zx/FunctionalityConstruction.cpp
-  parsers/qasm_parser/Parser.cpp
-  parsers/qasm_parser/Scanner.cpp)
+  ${CMAKE_CURRENT_SOURCE_DIR}/zx/FunctionalityConstruction.cpp)
 
 # set include directories
 target_include_directories(${PROJECT_NAME}
@@ -57,21 +72,8 @@ target_include_directories(${PROJECT_NAME}
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 
-# add MQT::DDpackage library
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
 target_link_libraries(${PROJECT_NAME} PUBLIC MQT::DDPackage)
-
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx")
 target_link_libraries(${PROJECT_NAME} PUBLIC MQT::zx)
-
-# add nlohmann::json library
-set(JSON_BuildTests # cmake-lint: disable=C0103
-    OFF
-    CACHE INTERNAL "")
-set(JSON_MultipleHeaders # cmake-lint: disable=C0103
-    OFF
-    CACHE INTERNAL "")
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json" EXCLUDE_FROM_ALL)
 target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json)
 
 # enable interprocedural optimization if it is supported
