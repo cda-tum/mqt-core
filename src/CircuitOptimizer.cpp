@@ -18,7 +18,7 @@ namespace qc {
                 auto* compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
                 auto  cit    = compOp->cbegin();
                 while (cit != compOp->cend()) {
-                    const auto cop = cit->get();
+                    const auto* cop = cit->get();
                     if (cop->getType() == qc::I || cop->getType() == Barrier) {
                         cit = compOp->erase(cit);
                     } else {
