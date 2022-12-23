@@ -5,6 +5,8 @@
 
 #include "CircuitOptimizer.hpp"
 
+#include <cassert>
+
 namespace qc {
     void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
         // delete the identities from circuit
