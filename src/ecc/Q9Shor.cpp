@@ -157,9 +157,9 @@ void Q9Shor::writeDecoding() {
         qcMapped->x(static_cast<dd::Qubit>(i + 7 * nQubits), ci[6]);
         qcMapped->x(static_cast<dd::Qubit>(i + 8 * nQubits), ci[6]);
 
-        writeToffoli(i, static_cast<dd::Qubit>(i + nQubits), true, static_cast<dd::Qubit>(i + 2 * nQubits), true);
-        writeToffoli(static_cast<dd::Qubit>(i + 3 * nQubits), static_cast<dd::Qubit>(i + 4 * nQubits), true, static_cast<dd::Qubit>(i + 5 * nQubits), true);
-        writeToffoli(static_cast<dd::Qubit>(i + 6 * nQubits), static_cast<dd::Qubit>(i + 7 * nQubits), true, static_cast<dd::Qubit>(i + 8 * nQubits), true);
+        ccx(i, static_cast<dd::Qubit>(i + nQubits), true, static_cast<dd::Qubit>(i + 2 * nQubits), true);
+        ccx(static_cast<dd::Qubit>(i + 3 * nQubits), static_cast<dd::Qubit>(i + 4 * nQubits), true, static_cast<dd::Qubit>(i + 5 * nQubits), true);
+        ccx(static_cast<dd::Qubit>(i + 6 * nQubits), static_cast<dd::Qubit>(i + 7 * nQubits), true, static_cast<dd::Qubit>(i + 8 * nQubits), true);
 
         qcMapped->h(i);
         qcMapped->h(static_cast<dd::Qubit>(i + 3 * nQubits));
@@ -167,7 +167,7 @@ void Q9Shor::writeDecoding() {
 
         qcMapped->x(static_cast<dd::Qubit>(i + 3 * nQubits), ci[0]);
         qcMapped->x(static_cast<dd::Qubit>(i + 6 * nQubits), ci[0]);
-        writeToffoli(i, static_cast<dd::Qubit>(i + 3 * nQubits), true, static_cast<dd::Qubit>(i + 6 * nQubits), true);
+        ccx(i, static_cast<dd::Qubit>(i + 3 * nQubits), true, static_cast<dd::Qubit>(i + 6 * nQubits), true);
     }
     isDecoded = true;
 }

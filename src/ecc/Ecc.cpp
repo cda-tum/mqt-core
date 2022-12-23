@@ -44,7 +44,7 @@ std::shared_ptr<qc::QuantumComputation> Ecc::apply() {
     return qcMapped;
 }
 
-void Ecc::writeToffoli(dd::Qubit target, dd::Qubit c1, bool p1, dd::Qubit c2, bool p2) {
+void Ecc::ccx(dd::Qubit target, dd::Qubit c1, bool p1, dd::Qubit c2, bool p2) {
     dd::Controls ctrls;
     ctrls.insert(dd::Control{(c1), p1 ? dd::Control::Type::pos : dd::Control::Type::neg});
     ctrls.insert(dd::Control{(c2), p2 ? dd::Control::Type::pos : dd::Control::Type::neg});
@@ -52,11 +52,11 @@ void Ecc::writeToffoli(dd::Qubit target, dd::Qubit c1, bool p1, dd::Qubit c2, bo
 }
 
 /*method has to have same signature as the static "writeZ" (as it is stored in the same function pointer in certain codes)*/
-void Ecc::writeXstatic(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
+void Ecc::x(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
     qcMapped->x(target, control);
 }
 
-void Ecc::writeZstatic(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
+void Ecc::z(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
     qcMapped->z(target, control);
 }
 

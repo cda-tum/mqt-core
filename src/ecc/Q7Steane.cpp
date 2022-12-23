@@ -63,7 +63,7 @@ void Q7Steane::measureAndCorrectSingle(bool xSyndrome) {
         auto c1 = dd::Control{static_cast<dd::Qubit>(ancStart + 1), dd::Control::Type::pos};
         auto c2 = dd::Control{static_cast<dd::Qubit>(ancStart + 2), dd::Control::Type::pos};
 
-        void (*writeXZ)(dd::Qubit, dd::Control, const std::shared_ptr<qc::QuantumComputation>&) = xSyndrome ? writeXstatic : writeZstatic;
+        void (*writeXZ)(dd::Qubit, dd::Control, const std::shared_ptr<qc::QuantumComputation>&) = xSyndrome ? Ecc::x : Ecc::z;
 
         //K1: UIUIUIU
         writeXZ(static_cast<dd::Qubit>(i + nQubits * 0), c0, qcMapped);

@@ -76,7 +76,7 @@ void Q3Shor::writeDecoding() {
         auto ctrl = dd::Control{static_cast<dd::Qubit>(i), dd::Control::Type::pos};
         qcMapped->x(static_cast<dd::Qubit>(i + nQubits), ctrl);
         qcMapped->x(static_cast<dd::Qubit>(i + 2 * nQubits), ctrl);
-        writeToffoli(i, i + nQubits, true, i + 2 * nQubits, true);
+        ccx(i, i + nQubits, true, i + 2 * nQubits, true);
     }
     isDecoded = true;
 }
