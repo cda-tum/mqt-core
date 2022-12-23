@@ -62,37 +62,8 @@ add_library(
 target_link_libraries(${PROJECT_NAME} INTERFACE project_options project_warnings)
 
 # set include directories
-target_include_directories(${PROJECT_NAME}
-                           INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>)
-
-# set required C++ standard and disable compiler specific extensions
-target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_17)
-
-# set compiler flags depending on compiler
-if(MSVC)
-  target_compile_options(${PROJECT_NAME} INTERFACE /utf-8 /W4)
-else()
-  target_compile_options(
-    ${PROJECT_NAME}
-    INTERFACE -Wall -Wextra -pedantic $<$<CONFIG:DEBUG>:-Og>$<$<CONFIG:RELEASE>:-fno-math-errno
-              -ffinite-math-only -fno-trapping-math>)
-  if(NOT DEPLOY)
-    # only include machine-specific optimizations when building for the host machine
-    target_compile_options(${PROJECT_NAME} INTERFACE -mtune=native)
-    include(CheckCXXCompilerFlag)
-    check_cxx_compiler_flag(-march=native HAS_MARCH_NATIVE)
-    if(HAS_MARCH_NATIVE)
-      target_compile_options(${PROJECT_NAME} INTERFACE -march=native)
-    endif()
-  endif()
-endif()
-
-# add coverage compiler and linker flag to the library and all targets that link against it, if
-# COVERAGE is set
-if(COVERAGE)
-  target_compile_options(${PROJECT_NAME} INTERFACE --coverage)
-  target_link_libraries(${PROJECT_NAME} INTERFACE --coverage)
-endif()
+target_include_directories(${PROJECT_NAME} INTERFACE ${PROJECT_SOURCE_DIR}/include
+                                                     ${PROJECT_BINARY_DIR}/include)
 
 # add MQT alias
 add_library(MQT::DDPackage ALIAS ${PROJECT_NAME})
