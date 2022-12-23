@@ -12,7 +12,6 @@ function(enable_project_options target_name)
     endif()
   endif()
 
-  option(DEPLOY "Configure for deployment")
   option(BINDINGS "Configure for building Python bindings")
   include(CheckCXXCompilerFlag)
 

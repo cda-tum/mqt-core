@@ -20,7 +20,6 @@ set_property(GLOBAL PROPERTY CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(ENABLE_IPO "Enable Interprocedural Optimization, aka Link Time Optimization (LTO)" ON)
-
 if(ENABLE_IPO)
   include(CheckIPOSupported)
   check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
@@ -38,4 +37,20 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   add_compile_options(-fdiagnostics-color=always)
 else()
   message(STATUS "No colored compiler diagnostic set for '${CMAKE_CXX_COMPILER_ID}' compiler.")
+endif()
+
+option(DEPLOY "Configure for deployment")
+if(DEFINED ENV{DEPLOY})
+  set(DEPLOY
+      $ENV{DEPLOY}
+      CACHE BOOL "Use deployment configuration from environment" FORCE)
+  message(STATUS "Setting deployment configuration to '${DEPLOY}' from environment")
+endif()
+
+# set deployment specific options
+if(DEPLOY)
+  # set the macOS deployment target appropriately
+  set(CMAKE_OSX_DEPLOYMENT_TARGET
+      "10.15"
+      CACHE STRING "" FORCE)
 endif()
