@@ -6,42 +6,6 @@ project(
   LANGUAGES CXX
   DESCRIPTION "MQT QFR  - A library for Quantum Functionality Representation")
 
-# enable organization of targets into folders
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-# configuration options
-option(DEPLOY "Configure for deployment")
-option(BINDINGS "Configure for building Python bindings")
-option(COVERAGE "Configure for coverage report generation")
-option(GENERATE_POSITION_INDEPENDENT_CODE "Generate position independent code")
-option(BUILD_QFR_TESTS "Also build tests for QFR project")
-
-if(DEFINED ENV{DEPLOY})
-  set(DEPLOY
-      $ENV{DEPLOY}
-      CACHE BOOL "Use deployment configuration from environment" FORCE)
-  message(STATUS "Setting deployment configuration to '${DEPLOY}' from environment")
-endif()
-
-# set deployment specific options
-if(DEPLOY)
-  # set the macOS deployment target appropriately
-  set(CMAKE_OSX_DEPLOYMENT_TARGET
-      "10.15"
-      CACHE STRING "" FORCE)
-endif()
-
-# build type settings
-set(DEFAULT_BUILD_TYPE "Release")
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "Setting build type to '${DEFAULT_BUILD_TYPE}' as none was specified.")
-  set(CMAKE_BUILD_TYPE
-      "${default_build_type}"
-      CACHE STRING "Choose the type of build." FORCE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel"
-                                               "RelWithDebInfo")
-endif()
-
 # check whether the submodule ``modulename`` is correctly cloned in the ``/extern`` directory.
 macro(CHECK_SUBMODULE_PRESENT modulename)
   if(NOT EXISTS "${PROJECT_SOURCE_DIR}/extern/${modulename}/CMakeLists.txt")
