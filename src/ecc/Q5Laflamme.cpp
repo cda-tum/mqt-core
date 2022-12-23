@@ -18,11 +18,8 @@ void Q5Laflamme::initMappedCircuit() {
 }
 
 void Q5Laflamme::writeEncoding() {
-    if (!isDecoded) {
-        return;
-    }
-    isDecoded = false;
-    measureAndCorrect();
+    Ecc::writeEncoding();
+
     const auto nQubits  = qcOriginal->getNqubits();
     const auto ancStart = nQubits * ecc.nRedundantQubits;
     const auto clEncode = qcOriginal->getNcbits() + 4; //encode

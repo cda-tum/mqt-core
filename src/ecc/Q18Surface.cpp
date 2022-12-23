@@ -17,14 +17,6 @@ void Q18Surface::initMappedCircuit() {
     qcMapped->addClassicalRegister(8, "qeccZ");
 }
 
-void Q18Surface::writeEncoding() {
-    if (!isDecoded) {
-        return;
-    }
-    isDecoded = false;
-    measureAndCorrect();
-}
-
 void Q18Surface::measureAndCorrect() {
     if (isDecoded) {
         return;

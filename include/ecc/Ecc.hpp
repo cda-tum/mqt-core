@@ -60,7 +60,13 @@ protected:
 
     virtual void initMappedCircuit();
 
-    virtual void writeEncoding() = 0;
+    virtual void writeEncoding() {
+        if (!isDecoded) {
+            return;
+        }
+        isDecoded = false;
+        measureAndCorrect();
+    }
 
     virtual void measureAndCorrect() = 0;
 

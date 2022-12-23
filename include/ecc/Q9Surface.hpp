@@ -18,8 +18,6 @@ public:
 protected:
     void initMappedCircuit() override;
 
-    void writeEncoding() override;
-
     void measureAndCorrect() override;
 
     void writeDecoding() override;

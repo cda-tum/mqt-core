@@ -17,14 +17,6 @@ void Q9Surface::initMappedCircuit() {
     qcMapped->addClassicalRegister(4, "qeccZ");
 }
 
-void Q9Surface::writeEncoding() {
-    if (!isDecoded) {
-        return;
-    }
-    isDecoded = false;
-    measureAndCorrect();
-}
-
 void Q9Surface::measureAndCorrect() {
     if (isDecoded) {
         return;
