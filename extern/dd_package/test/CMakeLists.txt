@@ -22,23 +22,8 @@ target_link_libraries(${PROJECT_NAME}_example PRIVATE ${PROJECT_NAME} project_op
                                                       project_warnings)
 set_target_properties(${PROJECT_NAME}_example PROPERTIES FOLDER tests)
 
-# macro to add a test executable for one of the project libraries
-macro(PACKAGE_ADD_TEST testname)
-  # create an executable in which the tests will be stored
-  add_executable(${testname} ${ARGN})
-  # link the Google test infrastructure and a default main function to the test executable.
-  target_link_libraries(${testname} PRIVATE ${PROJECT_NAME} gmock gtest_main project_options
-                                            project_warnings)
-  # discover tests
-  gtest_discover_tests(
-    ${testname}
-    WORKING_DIRECTORY ${PROJECT_DIR}
-    PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}")
-  set_target_properties(${testname} PROPERTIES FOLDER tests)
-endmacro()
-
 # add unit tests
-package_add_test(${PROJECT_NAME}_test ${CMAKE_CURRENT_SOURCE_DIR}/test_complex.cpp
+package_add_test(${PROJECT_NAME}_test ${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/test_complex.cpp
                  ${CMAKE_CURRENT_SOURCE_DIR}/test_package.cpp)
 
 # include dd_example in test suite

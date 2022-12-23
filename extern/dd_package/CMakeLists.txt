@@ -15,6 +15,7 @@ project(
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/StandardProjectSettings.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/PreventInSourceBuilds.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CheckSubmodule.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/PackageAddTest.cmake)
 
 # Use the warnings specified in CompilerWarnings.cmake
 add_library(project_warnings INTERFACE)
