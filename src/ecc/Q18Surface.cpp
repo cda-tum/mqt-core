@@ -13,8 +13,8 @@ void Q18Surface::initMappedCircuit() {
     for (auto const& [regName, regBits]: cRegs) {
         qcMapped->addClassicalRegister(regBits.second, regName.c_str());
     }
-    qcMapped->addClassicalRegister(8, "qeccX");
-    qcMapped->addClassicalRegister(8, "qeccZ");
+    qcMapped->addClassicalRegister(ancillaWidth, "qeccX");
+    qcMapped->addClassicalRegister(ancillaWidth, "qeccZ");
 }
 
 void Q18Surface::measureAndCorrect() {
@@ -128,7 +128,7 @@ void Q18Surface::mapGate(const qc::Operation& gate) {
     const auto nQubits = qcOriginal->getNqubits();
 
     //no control gate decomposition is supported
-    if ((gate.getNcontrols() != 0U) && gate.getType() != qc::Measure) {
+    if (gate.isControlled() && gate.getType() != qc::Measure) {
         //multi-qubit gates are currently not supported
         gateNotAvailableError(gate);
     } else {
@@ -177,8 +177,10 @@ void Q18Surface::mapGate(const qc::Operation& gate) {
                     writeDecoding();
                 }
                 if (const auto* measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
-                    for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
-                        qcMapped->measure(measureGate->getTargets().at(j), measureGate->getClassics().at(j));
+                    const auto& classics = measureGate->getClassics();
+                    const auto& targets  = measureGate->getTargets();
+                    for (std::size_t j = 0; j < classics.size(); j++) {
+                        qcMapped->measure(targets.at(j), classics.at(j));
                     }
                 } else {
                     throw std::runtime_error("Dynamic cast to NonUnitaryOperation failed.");
