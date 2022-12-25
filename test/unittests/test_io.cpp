@@ -4,8 +4,6 @@
  */
 
 #include "QuantumComputation.hpp"
-#include "dd/FunctionalityConstruction.hpp"
-#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <fstream>
@@ -22,7 +20,7 @@ protected:
         qc = std::make_unique<qc::QuantumComputation>();
     }
 
-    dd::QubitCount                          nqubits = 0;
+    std::size_t                             nqubits = 0;
     unsigned int                            seed    = 0;
     std::string                             output  = "tmp.txt";
     std::string                             output2 = "tmp2.txt";
@@ -298,32 +296,6 @@ TEST_F(IO, classic_controlled) {
        << std::endl;
     EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM););
     std::cout << *qc << std::endl;
-}
-
-TEST_F(IO, changePermutation) {
-    std::stringstream ss{};
-    ss << "// o 1 0\n"
-       << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
-       << "qreg q[2];"
-       << "x q[0];"
-       << std::endl;
-    qc->import(ss, qc::Format::OpenQASM);
-    auto dd  = std::make_unique<dd::Package<>>();
-    auto sim = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd);
-    EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
-    EXPECT_TRUE(sim.p->e[1].w.approximatelyOne());
-    EXPECT_TRUE(sim.p->e[1].p->e[1].isZeroTerminal());
-    EXPECT_TRUE(sim.p->e[1].p->e[0].w.approximatelyOne());
-    auto func = buildFunctionality(qc.get(), dd);
-    EXPECT_FALSE(func.p->e[0].isZeroTerminal());
-    EXPECT_FALSE(func.p->e[1].isZeroTerminal());
-    EXPECT_FALSE(func.p->e[2].isZeroTerminal());
-    EXPECT_FALSE(func.p->e[3].isZeroTerminal());
-    EXPECT_TRUE(func.p->e[0].p->e[1].w.approximatelyOne());
-    EXPECT_TRUE(func.p->e[1].p->e[3].w.approximatelyOne());
-    EXPECT_TRUE(func.p->e[2].p->e[0].w.approximatelyOne());
-    EXPECT_TRUE(func.p->e[3].p->e[2].w.approximatelyOne());
 }
 
 TEST_F(IO, iSWAP_dump_is_valid) {
