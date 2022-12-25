@@ -147,7 +147,7 @@ namespace qc {
         return Phase;
     }
 
-    void SymbolicOperation::checkUgate() {
+    void SymbolicOperation::checkSymbolicUgate() {
         if (type == Phase) {
             if (!isSymbolicParameter(0)) {
                 type = StandardOperation::parseU1(parameter[0]);
@@ -185,7 +185,7 @@ namespace qc {
         storeSymbolOrNumber(par1, 1);
         storeSymbolOrNumber(par2, 2);
         startQubit = startingQubit;
-        checkUgate();
+        checkSymbolicUgate();
         setName();
     }
 

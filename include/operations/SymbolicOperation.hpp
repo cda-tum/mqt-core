@@ -36,7 +36,7 @@ namespace qc {
 
         static OpType parseU1(const Symbolic& lambda);
 
-        void checkUgate() override;
+        void checkSymbolicUgate();
 
         void storeSymbolOrNumber(const SymbolOrNumber& param, std::size_t i);
 

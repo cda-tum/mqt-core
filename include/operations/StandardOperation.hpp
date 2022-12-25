@@ -29,8 +29,8 @@ namespace qc {
         static OpType parseU2(fp& lambda, fp& phi);
         static OpType parseU1(fp& lambda);
 
-        virtual void checkUgate();
-        void         setup(std::size_t nq, fp par0, fp par1, fp par2, Qubit startingQubit = 0);
+        void checkUgate();
+        void setup(std::size_t nq, fp par0, fp par1, fp par2, Qubit startingQubit = 0);
 
         void dumpOpenQASMSwap(std::ostream& of, const RegisterNames& qreg) const;
         void dumpOpenQASMiSwap(std::ostream& of, const RegisterNames& qreg) const;
