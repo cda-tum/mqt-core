@@ -14,29 +14,29 @@
 #include <string>
 #include <utility>
 
-class QPE: public testing::TestWithParam<std::pair<dd::fp, dd::QubitCount>> {
+class QPE: public testing::TestWithParam<std::pair<qc::fp, std::size_t>> {
 protected:
-    dd::fp         lambda{};
-    dd::QubitCount precision{};
-    dd::fp         theta{};
-    bool           exactlyRepresentable{};
-    std::size_t    expectedResult{};
-    std::string    expectedResultRepresentation{};
-    std::size_t    secondExpectedResult{};
-    std::string    secondExpectedResultRepresentation{};
+    qc::fp      lambda{};
+    std::size_t precision{};
+    qc::fp      theta{};
+    bool        exactlyRepresentable{};
+    std::size_t expectedResult{};
+    std::string expectedResultRepresentation{};
+    std::size_t secondExpectedResult{};
+    std::string secondExpectedResultRepresentation{};
 
     void TearDown() override {}
     void SetUp() override {
         lambda    = GetParam().first;
         precision = GetParam().second;
 
-        std::cout << "Estimating lambda = " << lambda << "π up to " << static_cast<std::size_t>(precision) << "-bit precision." << std::endl;
+        std::cout << "Estimating lambda = " << lambda << "π up to " << precision << "-bit precision." << std::endl;
 
         theta = lambda / 2;
 
         std::cout << "Expected theta=" << theta << std::endl;
         std::bitset<64> binaryExpansion{};
-        dd::fp          expansion = theta * 2;
+        auto            expansion = theta * 2;
         std::size_t     index     = 0;
         while (std::abs(expansion) > 1e-8) {
             if (expansion >= 1.) {
@@ -63,7 +63,7 @@ protected:
         }
         std::stringstream ss{};
         for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
-            if (expectedResult & (1U << i)) {
+            if ((expectedResult & (1U << i)) != 0) {
                 ss << 1;
             } else {
                 ss << 0;
@@ -72,13 +72,13 @@ protected:
         expectedResultRepresentation = ss.str();
 
         if (exactlyRepresentable) {
-            std::cout << "Theta is exactly representable using " << static_cast<std::size_t>(precision) << " bits." << std::endl;
+            std::cout << "Theta is exactly representable using " << precision << " bits." << std::endl;
             std::cout << "The expected output state is |" << expectedResultRepresentation << ">." << std::endl;
         } else {
             secondExpectedResult = expectedResult + 1;
             ss.str("");
             for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
-                if (secondExpectedResult & (1U << i)) {
+                if ((secondExpectedResult & (1U << i)) != 0) {
                     ss << 1;
                 } else {
                     ss << 0;
@@ -86,7 +86,7 @@ protected:
             }
             secondExpectedResultRepresentation = ss.str();
 
-            std::cout << "Theta is not exactly representable using " << static_cast<std::size_t>(precision) << " bits." << std::endl;
+            std::cout << "Theta is not exactly representable using " << precision << " bits." << std::endl;
             std::cout << "Most probable output states are |" << expectedResultRepresentation << "> and |" << secondExpectedResultRepresentation << ">." << std::endl;
         }
     }
@@ -94,19 +94,19 @@ protected:
 
 INSTANTIATE_TEST_SUITE_P(QPE, QPE,
                          testing::Values(
-                                 std::pair{1., static_cast<dd::QubitCount>(1)},
-                                 std::pair{0.5, static_cast<dd::QubitCount>(2)},
-                                 std::pair{0.25, static_cast<dd::QubitCount>(3)},
-                                 std::pair{3. / 8, static_cast<dd::QubitCount>(3)},
-                                 std::pair{3. / 8, static_cast<dd::QubitCount>(4)},
-                                 std::pair{3. / 32, static_cast<dd::QubitCount>(5)},
-                                 std::pair{3. / 32, static_cast<dd::QubitCount>(6)}),
+                                 std::pair{1., 1U},
+                                 std::pair{0.5, 2U},
+                                 std::pair{0.25, 3U},
+                                 std::pair{3. / 8, 3U},
+                                 std::pair{3. / 8, 4U},
+                                 std::pair{3. / 32, 5U},
+                                 std::pair{3. / 32, 6U}),
                          [](const testing::TestParamInfo<QPE::ParamType>& info) {
                              // Generate names for test cases
-                             dd::fp            lambda    = info.param.first;
-                             dd::QubitCount    precision = info.param.second;
+                             const auto        lambda    = info.param.first;
+                             const auto        precision = info.param.second;
                              std::stringstream ss{};
-                             ss << static_cast<std::size_t>(lambda * 100) << "_pi_" << static_cast<std::size_t>(precision);
+                             ss << static_cast<std::size_t>(lambda * 100) << "_pi_" << precision;
                              return ss.str();
                          });
 
@@ -117,7 +117,7 @@ TEST_P(QPE, QPETest) {
 
     ASSERT_NO_THROW({ qc = std::make_unique<qc::QPE>(lambda, precision); });
 
-    ASSERT_EQ(static_cast<std::size_t>(qc->getNqubits()), precision + 1);
+    ASSERT_EQ(qc->getNqubits(), precision + 1);
 
     ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(*qc); });
 
@@ -131,7 +131,7 @@ TEST_P(QPE, QPETest) {
     if (exactlyRepresentable) {
         EXPECT_NEAR(probability, 1.0, 1e-8);
     } else {
-        auto threshold = 4. / (dd::PI * dd::PI);
+        const auto threshold = 4. / (qc::PI * qc::PI);
         // account for the eigenstate qubit in the expected result by shifting and adding 1
         auto secondAmplitude   = dd->getValueByPath(e, (secondExpectedResult << 1) + 1);
         auto secondProbability = secondAmplitude.r * secondAmplitude.r + secondAmplitude.i * secondAmplitude.i;
@@ -148,7 +148,7 @@ TEST_P(QPE, IQPETest) {
 
     ASSERT_NO_THROW({ qc = std::make_unique<qc::QPE>(lambda, precision, true); });
 
-    ASSERT_EQ(static_cast<std::size_t>(qc->getNqubits()), 2U);
+    ASSERT_EQ(qc->getNqubits(), 2U);
 
     constexpr auto shots        = 8192U;
     auto           measurements = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd, shots);
@@ -178,7 +178,7 @@ TEST_P(QPE, IQPETest) {
         const auto& secondMostLikely = *(it);
         EXPECT_TRUE((mostLikely.first == expectedResultRepresentation && secondMostLikely.first == secondExpectedResultRepresentation) ||
                     (mostLikely.first == secondExpectedResultRepresentation && secondMostLikely.first == expectedResultRepresentation));
-        auto threshold = 4. / (dd::PI * dd::PI);
+        const auto threshold = 4. / (qc::PI * qc::PI);
         EXPECT_NEAR(static_cast<double>(mostLikely.second) / shots, threshold, 0.02);
         EXPECT_NEAR(static_cast<double>(secondMostLikely.second) / shots, threshold, 0.02);
     }
@@ -264,7 +264,7 @@ TEST_P(QPE, ProbabilityExtraction) {
     if (exactlyRepresentable) {
         EXPECT_NEAR(probs.at(expectedResult), 1.0, 1e-6);
     } else {
-        auto threshold = 4. / (dd::PI * dd::PI);
+        const auto threshold = 4. / (qc::PI * qc::PI);
         EXPECT_NEAR(probs.at(expectedResult), threshold, 0.02);
         EXPECT_NEAR(probs.at(secondExpectedResult), threshold, 0.02);
     }
