@@ -84,7 +84,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalExactQPE,
-                         testing::Range<std::size_t>(1U, 64U),
+                         testing::Range<std::size_t>(1U, 64U, 5U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
                              const auto nqubits = info.param;
                              std::stringstream ss{};
@@ -278,7 +278,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalInexactQPE,
-                         testing::Range<std::size_t>(1U, 15U),
+                         testing::Range<std::size_t>(1U, 15U, 3U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalInexactQPE::ParamType>& info) {
             const auto nqubits = info.param;
             std::stringstream ss{};
@@ -425,7 +425,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalBV,
-                         testing::Range<std::size_t>(1U, 64U),
+                         testing::Range<std::size_t>(1U, 64U, 5U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
                              const auto nqubits = info.param;
                              std::stringstream ss{};
@@ -566,7 +566,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalQFT,
-                         testing::Range<std::size_t>(1U, 65U),
+                         testing::Range<std::size_t>(1U, 65U, 5U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
                              const auto nqubits = info.param;
                              std::stringstream ss{};
