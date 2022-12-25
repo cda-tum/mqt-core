@@ -3,9 +3,7 @@
 #include "operations/SymbolicOperation.hpp"
 
 #include "gtest/gtest.h"
-#include <iostream>
 #include <memory>
-#include <sstream>
 
 using namespace qc;
 using namespace sym;

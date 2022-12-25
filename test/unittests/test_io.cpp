@@ -6,9 +6,7 @@
 #include "QuantumComputation.hpp"
 
 #include "gtest/gtest.h"
-#include <fstream>
 #include <iostream>
-#include <streambuf>
 #include <string>
 
 class IO: public testing::TestWithParam<std::tuple<std::string, qc::Format>> {
@@ -27,7 +25,7 @@ protected:
     std::unique_ptr<qc::QuantumComputation> qc;
 };
 
-void compare_files(const std::string& file1, const std::string& file2, bool stripWhitespaces = false) {
+void compareFiles(const std::string& file1, const std::string& file2, bool stripWhitespaces = false) {
     std::ifstream fstream1(file1);
     std::string   str1((std::istreambuf_iterator<char>(fstream1)),
                        std::istreambuf_iterator<char>());
@@ -45,7 +43,7 @@ INSTANTIATE_TEST_SUITE_P(IO,
                          IO,
                          testing::Values(std::make_tuple("./circuits/test.qasm", qc::Format::OpenQASM)), //std::make_tuple("circuits/test.real", qc::Format::Real
                          [](const testing::TestParamInfo<IO::ParamType>& info) {
-                             qc::Format format = std::get<1>(info.param);
+                             const qc::Format format = std::get<1>(info.param);
 
                              switch (format) {
                                  case qc::Format::Real:
@@ -68,7 +66,7 @@ TEST_P(IO, importAndDump) {
     ASSERT_NO_THROW(qc->import(output, format));
     ASSERT_NO_THROW(qc->dump(output2, format));
 
-    compare_files(output, output2, true);
+    compareFiles(output, output2, true);
 }
 
 TEST_F(IO, importFromString) {
@@ -368,7 +366,7 @@ TEST_F(IO, sx_and_sxdag) {
     EXPECT_EQ(op2->getType(), qc::OpType::SXdag);
     auto& op3 = *(++(++qc->begin()));
     ASSERT_TRUE(op3->isCompoundOperation());
-    auto  compOp  = dynamic_cast<qc::CompoundOperation*>(op3.get());
+    auto* compOp  = dynamic_cast<qc::CompoundOperation*>(op3.get());
     auto& compOp1 = *(compOp->begin());
     EXPECT_EQ(compOp1->getType(), qc::OpType::SX);
     auto& compOp2 = *(++compOp->begin());
