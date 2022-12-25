@@ -157,7 +157,7 @@ It acts as an intermediate representation and provides the facilitites to
 ### System Requirements
 
 Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments). However, the implementation should be compatible
-with any current C++ compiler supporting C++17 and a minimum CMake version of 3.14.
+with any current C++ compiler supporting C++17 and a minimum CMake version of 3.19.
 
 _Disclaimer_: We noticed some issues when compiling with Microsoft's `MSVC` compiler toolchain. If you are developing under Windows, consider using the `clang` compiler toolchain. A detailed description of how to set this up can be
 found [here](https://docs.microsoft.com/en-us/cpp/build/clang-support-msbuild?view=msvc-160).
@@ -197,11 +197,12 @@ Some operating systems and developer environments explicitly require a configura
 
 Building the project this way generates
 
-- the library `libqfr.a` (Unix) / `qfr.lib` (Windows) in the `build/src` folder
-- a test executable `qfr_test` containing a small set of unit tests in the `build/test` folder
+- the core library `libqfr.a` (Unix) / `qfr.lib` (Windows) in the `build/src` folder
+- the DD and ZX libraries `libqfr_dd.a` (Unix) / `qfr_dd.lib` (Windows) and `libqfr_zx.a` (Unix) / `qfr_zx.lib` (Windows) in the `build/src/` folder
+- test executables `qfr_test`, `qfr_test_dd`, and `qfr_test_zx` containing a small set of unit tests in the `build/test` folder
 - a small demo example executable `qfr_example` in the `build/test` directory.
 
-You can link against the library built by this project in other CMake project using the `MQT::qfr` target.
+You can link against the library built by this project in other CMake project using the `MQT::qfr` target (or any of the other targets `MQT::qfr_dd` and `MQT::qfr_zx`).
 
 ### Extending the Python Package
 
