@@ -11,11 +11,9 @@
 class Q5Laflamme: public Ecc {
 public:
     Q5Laflamme(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
-        Ecc({ID::Q5Laflamme, 5, 4, "Q5Laflamme"}, std::move(qc), measureFq) {}
+        Ecc({ID::Q5Laflamme, 5, 4, "Q5Laflamme", {{4, "qecc"}, {1, "encode"}}}, std::move(qc), measureFq) {}
 
 protected:
-    void initMappedCircuit() override;
-
     void writeEncoding() override;
 
     void measureAndCorrect() override;

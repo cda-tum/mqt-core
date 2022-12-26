@@ -5,18 +5,6 @@
 
 #include "ecc/Q9Surface.hpp"
 
-void Q9Surface::initMappedCircuit() {
-    //method is overridden because we need 2 kinds of classical measurement output registers
-    qcOriginal->stripIdleQubits(true, false);
-    qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
-    auto cRegs = qcOriginal->getCregs();
-    for (auto const& [regName, regBits]: cRegs) {
-        qcMapped->addClassicalRegister(regBits.second, regName.c_str());
-    }
-    qcMapped->addClassicalRegister(4, "qeccX");
-    qcMapped->addClassicalRegister(4, "qeccZ");
-}
-
 void Q9Surface::measureAndCorrect() {
     if (isDecoded) {
         return;
@@ -190,7 +178,7 @@ void Q9Surface::mapGate(const qc::Operation& gate) {
                 measureAndCorrect();
                 writeDecoding();
             }
-            if (const auto *measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
+            if (const auto* measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
                 for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
                     qcMapped->measure(measureGate->getTargets().at(j), measureGate->getClassics().at(j));
                 }

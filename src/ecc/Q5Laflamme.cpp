@@ -5,18 +5,6 @@
 
 #include "ecc/Q5Laflamme.hpp"
 
-void Q5Laflamme::initMappedCircuit() {
-    //method is overridden because we need 2 kinds of classical measurement output registers
-    qcOriginal->stripIdleQubits(true, false);
-    qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
-    auto cRegs = qcOriginal->getCregs();
-    for (auto const& [regName, regBits]: cRegs) {
-        qcMapped->addClassicalRegister(regBits.second, regName.c_str());
-    }
-    qcMapped->addClassicalRegister(4, "qecc");
-    qcMapped->addClassicalRegister(1, "encode");
-}
-
 void Q5Laflamme::writeEncoding() {
     Ecc::writeEncoding();
 

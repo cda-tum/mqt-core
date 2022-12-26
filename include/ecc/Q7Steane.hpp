@@ -12,11 +12,9 @@ class Q7Steane: public Ecc {
 public:
     Q7Steane(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
         Ecc(
-                {ID::Q7Steane, 7, 3, "Q7Steane"}, std::move(qc), measureFq) {}
+                {ID::Q7Steane, 7, 3, "Q7Steane", {{3, "qecc"}}}, std::move(qc), measureFq) {}
 
 protected:
-    void initMappedCircuit() override;
-
     void writeEncoding() override;
 
     void measureAndCorrect() override;

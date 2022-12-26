@@ -10,12 +10,12 @@
 void Ecc::initMappedCircuit() {
     qcOriginal->stripIdleQubits(true, false);
     qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
-    for (const auto& cRegs = qcOriginal->getCregs(); auto const& [regName, regBits]: cRegs) {
+    auto cRegs = qcOriginal->getCregs();
+    for (auto const& [regName, regBits]: cRegs) {
         qcMapped->addClassicalRegister(regBits.second, regName.c_str());
     }
-
-    if (ecc.nCorrectingBits > 0) {
-        qcMapped->addClassicalRegister(ecc.nCorrectingBits, "qecc");
+    for (auto cr: ecc.classicalRegisters) {
+        qcMapped->addClassicalRegister(cr.first, cr.second);
     }
 }
 
@@ -61,7 +61,7 @@ void Ecc::z(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::Qua
 }
 
 void Ecc::writeClassicalControl(dd::Qubit control, dd::QubitCount qubitCount, size_t value, qc::OpType opType, dd::Qubit target) {
-    std::unique_ptr<qc::Operation> op    = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(), target, opType);
+    std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(), target, opType);
     qcMapped->emplace_back<qc::ClassicControlledOperation>(op, std::make_pair(control, qubitCount), value);
 }
 

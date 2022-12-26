@@ -5,18 +5,6 @@
 
 #include "ecc/Q18Surface.hpp"
 
-void Q18Surface::initMappedCircuit() {
-    //method is overridden because we need 2 kinds of classical measurement output registers
-    qcOriginal->stripIdleQubits(true, false);
-    qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
-    auto cRegs = qcOriginal->getCregs();
-    for (auto const& [regName, regBits]: cRegs) {
-        qcMapped->addClassicalRegister(regBits.second, regName.c_str());
-    }
-    qcMapped->addClassicalRegister(ancillaWidth, "qeccX");
-    qcMapped->addClassicalRegister(ancillaWidth, "qeccZ");
-}
-
 void Q18Surface::measureAndCorrect() {
     if (isDecoded) {
         return;
@@ -108,15 +96,15 @@ void Q18Surface::writeDecoding() {
     if (isDecoded) {
         return;
     }
-    const auto nQubits = qcOriginal->getNqubits();
+    const auto                                nQubits               = qcOriginal->getNqubits();
+    static constexpr std::array<dd::Qubit, 4> physicalAncillaQubits = {8, 13, 15, 20};
     for (dd::Qubit i = 0; i < nQubits; i++) {
-        qcMapped->x(static_cast<dd::Qubit>(i + 14 * nQubits), dd::Control{static_cast<dd::Qubit>(i + 8 * nQubits), dd::Control::Type::pos});
-        qcMapped->x(static_cast<dd::Qubit>(i + 14 * nQubits), dd::Control{static_cast<dd::Qubit>(i + 13 * nQubits), dd::Control::Type::pos});
-        qcMapped->x(static_cast<dd::Qubit>(i + 14 * nQubits), dd::Control{static_cast<dd::Qubit>(i + 15 * nQubits), dd::Control::Type::pos});
-        qcMapped->x(static_cast<dd::Qubit>(i + 14 * nQubits), dd::Control{static_cast<dd::Qubit>(i + 20 * nQubits), dd::Control::Type::pos});
-        qcMapped->measure(static_cast<dd::Qubit>(i + 14 * nQubits), i);
+        for (dd::Qubit qubit: physicalAncillaQubits) {
+            qcMapped->x(static_cast<dd::Qubit>(i + xInformation * nQubits), dd::Control{static_cast<dd::Qubit>(i + qubit * nQubits), dd::Control::Type::pos});
+        }
+        qcMapped->measure(static_cast<dd::Qubit>(i + xInformation * nQubits), i);
         qcMapped->reset(static_cast<dd::Qubit>(i));
-        qcMapped->x(static_cast<dd::Qubit>(i), dd::Control{static_cast<dd::Qubit>(i + 14 * nQubits), dd::Control::Type::pos});
+        qcMapped->x(static_cast<dd::Qubit>(i), dd::Control{static_cast<dd::Qubit>(i + xInformation * nQubits), dd::Control::Type::pos});
     }
     isDecoded = true;
 }

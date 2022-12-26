@@ -11,7 +11,7 @@
 class Id: public Ecc {
 public:
     Id(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
-        Ecc({ID::Id, 1, 0, "Id"}, std::move(qc), measureFq) {}
+        Ecc({ID::Id, 1, 0, "Id", {}}, std::move(qc), measureFq) {}
 
 protected:
     void writeEncoding() override{};

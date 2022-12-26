@@ -5,20 +5,6 @@
 
 #include "ecc/Q9Shor.hpp"
 
-void Q9Shor::initMappedCircuit() {
-    //method is overridden because we need 2 kinds of classical measurement output registers
-    qcOriginal->stripIdleQubits(true, false);
-    qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
-    auto cRegs = qcOriginal->getCregs();
-    for (auto const& [regName, regBits]: cRegs) {
-        qcMapped->addClassicalRegister(regBits.second, regName.c_str());
-    }
-    qcMapped->addClassicalRegister(2, "qeccX1");
-    qcMapped->addClassicalRegister(2, "qeccX2");
-    qcMapped->addClassicalRegister(2, "qeccX3");
-    qcMapped->addClassicalRegister(2, "qeccZ");
-}
-
 void Q9Shor::writeEncoding() {
     if (!isDecoded) {
         return;

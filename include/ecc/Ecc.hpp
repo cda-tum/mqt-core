@@ -23,6 +23,7 @@ public:
         std::size_t nRedundantQubits; //usually number of physical qubits per (encoded) logical qubit
         std::size_t nCorrectingBits; //usually number of classical bits needed for correcting one qubit
         std::string name;
+        std::vector<std::pair<std::size_t, const char*>> classicalRegisters;
     };
 
     Ecc(Info ecc, std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFrequency):
@@ -57,7 +58,7 @@ protected:
     const size_t            seed                   = 1;
     const size_t            insertErrorAfterNGates = 1;
 
-    virtual void initMappedCircuit();
+    void initMappedCircuit();
 
     /**
      * prepares an encoded logical |0> state in the qcMapped circuit.

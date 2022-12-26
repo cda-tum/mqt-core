@@ -5,17 +5,6 @@
 
 #include "ecc/Q3Shor.hpp"
 
-void Q3Shor::initMappedCircuit() {
-    //method is overridden because we need 2 kinds of classical measurement output registers
-    qcOriginal->stripIdleQubits(true, false);
-    qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
-    auto cRegs = qcOriginal->getCregs();
-    for (auto const& [regName, regBits]: cRegs) {
-        qcMapped->addClassicalRegister(regBits.second, regName.c_str());
-    }
-    qcMapped->addClassicalRegister(2, "qecc");
-}
-
 void Q3Shor::writeEncoding() {
     if (!isDecoded || !gatesWritten) {
         gatesWritten = true;
@@ -129,7 +118,7 @@ void Q3Shor::mapGate(const qc::Operation& gate) {
                 measureAndCorrect();
                 writeDecoding();
             }
-            if (const auto *measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
+            if (const auto* measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
                 for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
                     qcMapped->measure(measureGate->getTargets()[j], measureGate->getClassics()[j]);
                 }

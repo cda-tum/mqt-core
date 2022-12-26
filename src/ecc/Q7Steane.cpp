@@ -5,17 +5,6 @@
 
 #include "ecc/Q7Steane.hpp"
 
-void Q7Steane::initMappedCircuit() {
-    //method is overridden because we need 2 kinds of classical measurement output registers
-    qcOriginal->stripIdleQubits(true, false);
-    qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
-    auto cRegs = qcOriginal->getCregs();
-    for (auto const& [regName, regBits]: cRegs) {
-        qcMapped->addClassicalRegister(regBits.second, regName.c_str());
-    }
-    qcMapped->addClassicalRegister(3, "qecc");
-}
-
 void Q7Steane::writeEncoding() {
     if (!isDecoded) {
         return;

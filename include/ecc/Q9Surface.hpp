@@ -13,11 +13,9 @@
 class Q9Surface: public Ecc {
 public:
     Q9Surface(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
-        Ecc({ID::Q9Surface, 9, 8, "Q9Surface"}, std::move(qc), measureFq) {}
+        Ecc({ID::Q9Surface, 9, 8, "Q9Surface", {{4, "qeccX"}, {4, "qeccZ"}}}, std::move(qc), measureFq) {}
 
 protected:
-    void initMappedCircuit() override;
-
     void measureAndCorrect() override;
 
     void writeDecoding() override;
