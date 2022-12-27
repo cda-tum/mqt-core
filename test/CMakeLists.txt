@@ -9,25 +9,22 @@ if(NOT TARGET gtest OR NOT TARGET gmock)
 endif()
 
 # add unit tests
-package_add_test(
-  ${PROJECT_NAME}_test ${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_io.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_qfr_functionality.cpp)
+package_add_test(${PROJECT_NAME}_test ${PROJECT_NAME} unittests/test_io.cpp
+                 unittests/test_qfr_functionality.cpp)
 
 package_add_test(
   ${PROJECT_NAME}_test_dd
   ${PROJECT_NAME}_dd
-  ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_dd_functionality.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_dd_noise_functionality.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/eval_dynamic_circuits.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_qft.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_grover.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_bernsteinvazirani.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_entanglement.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_grcs.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_random_clifford.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/test_qpe.cpp)
+  unittests/test_dd_functionality.cpp
+  unittests/test_dd_noise_functionality.cpp
+  algorithms/eval_dynamic_circuits.cpp
+  algorithms/test_qft.cpp
+  algorithms/test_grover.cpp
+  algorithms/test_bernsteinvazirani.cpp
+  algorithms/test_entanglement.cpp
+  algorithms/test_grcs.cpp
+  algorithms/test_random_clifford.cpp
+  algorithms/test_qpe.cpp)
 
-package_add_test(
-  ${PROJECT_NAME}_test_zx ${PROJECT_NAME}_zx
-  ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_zx_functionality.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/unittests/test_symbolic.cpp)
+package_add_test(${PROJECT_NAME}_test_zx ${PROJECT_NAME}_zx unittests/test_zx_functionality.cpp
+                 unittests/test_symbolic.cpp)

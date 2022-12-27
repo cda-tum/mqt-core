@@ -1,8 +1,8 @@
 # add MQT::DDPackage library
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package" EXCLUDE_FROM_ALL)
 
 # add MQT::zx library
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx")
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx" EXCLUDE_FROM_ALL)
 
 # add nlohmann::json library
 set(JSON_BuildTests # cmake-lint: disable=C0103
@@ -37,26 +37,26 @@ add_library(
   ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
   ${PROJECT_SOURCE_DIR}/include/Permutation.hpp
   ${PROJECT_SOURCE_DIR}/include/QuantumComputation.hpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/BernsteinVazirani.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Entanglement.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/GoogleRandomCircuitSampling.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Grover.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/QFT.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/QPE.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/RandomCliffordCircuit.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/CircuitOptimizer.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/operations/NonUnitaryOperation.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/operations/Operation.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/operations/StandardOperation.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/operations/SymbolicOperation.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/GRCSParser.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QASMParser.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QCParser.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/RealParser.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/TFCParser.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/qasm_parser/Parser.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/qasm_parser/Scanner.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/QuantumComputation.cpp)
+  algorithms/BernsteinVazirani.cpp
+  algorithms/Entanglement.cpp
+  algorithms/GoogleRandomCircuitSampling.cpp
+  algorithms/Grover.cpp
+  algorithms/QFT.cpp
+  algorithms/QPE.cpp
+  algorithms/RandomCliffordCircuit.cpp
+  CircuitOptimizer.cpp
+  operations/NonUnitaryOperation.cpp
+  operations/Operation.cpp
+  operations/StandardOperation.cpp
+  operations/SymbolicOperation.cpp
+  parsers/GRCSParser.cpp
+  parsers/QASMParser.cpp
+  parsers/QCParser.cpp
+  parsers/RealParser.cpp
+  parsers/TFCParser.cpp
+  parsers/qasm_parser/Parser.cpp
+  parsers/qasm_parser/Scanner.cpp
+  QuantumComputation.cpp)
 
 # set include directories
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include
@@ -81,16 +81,16 @@ add_library(
   ${PROJECT_SOURCE_DIR}/include/dd/NoiseFunctionality.hpp
   ${PROJECT_SOURCE_DIR}/include/dd/Operations.hpp ${PROJECT_SOURCE_DIR}/include/dd/Simulation.hpp)
 target_link_libraries(${PROJECT_NAME}_dd INTERFACE MQT::DDPackage MQT::${PROJECT_NAME})
-target_include_directories(${PROJECT_NAME}_dd
-                           INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd>)
+target_include_directories(${PROJECT_NAME}_dd INTERFACE ${PROJECT_SOURCE_DIR}/include/dd
+                                                        ${PROJECT_BINARY_DIR}/include/dd)
 add_library(MQT::${PROJECT_NAME}_dd ALIAS ${PROJECT_NAME}_dd)
 
 # add ZX package library
 add_library(${PROJECT_NAME}_zx ${PROJECT_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
-                               ${CMAKE_CURRENT_SOURCE_DIR}/zx/FunctionalityConstruction.cpp)
+                               zx/FunctionalityConstruction.cpp)
 target_link_libraries(${PROJECT_NAME}_zx PUBLIC MQT::zx MQT::${PROJECT_NAME})
-target_include_directories(${PROJECT_NAME}_zx
-                           PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/zx>)
+target_include_directories(${PROJECT_NAME}_zx PUBLIC ${PROJECT_SOURCE_DIR}/include/zx
+                                                     ${PROJECT_BINARY_DIR}/include/zx)
 add_library(MQT::${PROJECT_NAME}_zx ALIAS ${PROJECT_NAME}_zx)
 
 if(GENERATE_POSITION_INDEPENDENT_CODE OR BINDINGS)
