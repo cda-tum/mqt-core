@@ -64,28 +64,22 @@ void Q18Surface::measureAndCorrect() {
             qcMapped->measure(qubits[zChecks.at(j)], clAncStart + ancillaWidth + j);
         }
 
-        std::set<std::size_t> unmeasuredQubits = {3, 6, 17, 18, 32, 34};
-
         //logic: classical control
 
         for (const auto& pair: qubitCorrectionX) {
-            if (unmeasuredQubits.count(pair.first) == 0) {
-                std::size_t mask = 0;
-                for (std::size_t value: pair.second) {
-                    mask |= value;
-                }
-                classicalControl(static_cast<dd::Qubit>(clAncStart), ancillaWidth, mask, qc::X, qubits[pair.first]);
+            std::size_t mask = 0;
+            for (std::size_t value: pair.second) {
+                mask |= xCheckMasks[value];
             }
+            classicalControl(static_cast<dd::Qubit>(clAncStart), ancillaWidth, mask, qc::X, qubits[pair.first]);
         }
 
         for (const auto& pair: qubitCorrectionZ) {
-            if (unmeasuredQubits.count(pair.first) == 0) {
-                std::size_t mask = 0;
-                for (std::size_t value: pair.second) {
-                    mask |= value;
-                }
-                classicalControl(static_cast<dd::Qubit>(clAncStart + ancillaWidth), ancillaWidth, mask, qc::Z, qubits[pair.first]);
+            std::size_t mask = 0;
+            for (std::size_t value: pair.second) {
+                mask |= zCheckMasks[value];
             }
+            classicalControl(static_cast<dd::Qubit>(clAncStart + ancillaWidth), ancillaWidth, mask, qc::Z, qubits[pair.first]);
         }
 
         gatesWritten = true;
@@ -127,8 +121,9 @@ void Q18Surface::mapGate(const qc::Operation& gate) {
                 break;
             case qc::X:
                 for (auto i: gate.getTargets()) {
-                    qcMapped->x(static_cast<dd::Qubit>(i + 15 * nQubits));
-                    qcMapped->x(static_cast<dd::Qubit>(i + 17 * nQubits));
+                    for (auto j: logicalX) {
+                        qcMapped->x(static_cast<dd::Qubit>(i + j * nQubits));
+                    }
                 }
                 break;
             case qc::H:
@@ -147,16 +142,19 @@ void Q18Surface::mapGate(const qc::Operation& gate) {
             case qc::Y:
                 //Y = Z X
                 for (auto i: gate.getTargets()) {
-                    qcMapped->z(static_cast<dd::Qubit>(i + 18 * nQubits));
-                    qcMapped->z(static_cast<dd::Qubit>(i + 20 * nQubits));
-                    qcMapped->x(static_cast<dd::Qubit>(i + 15 * nQubits));
-                    qcMapped->x(static_cast<dd::Qubit>(i + 17 * nQubits));
+                    for (auto j: logicalZ) {
+                        qcMapped->z(static_cast<dd::Qubit>(i + j * nQubits));
+                    }
+                    for (auto j: logicalX) {
+                        qcMapped->x(static_cast<dd::Qubit>(i + j * nQubits));
+                    }
                 }
                 break;
             case qc::Z:
                 for (auto i: gate.getTargets()) {
-                    qcMapped->z(static_cast<dd::Qubit>(i + 18 * nQubits));
-                    qcMapped->z(static_cast<dd::Qubit>(i + 20 * nQubits));
+                    for (auto j: logicalZ) {
+                        qcMapped->z(static_cast<dd::Qubit>(i + j * nQubits));
+                    }
                 }
                 break;
             case qc::Measure:

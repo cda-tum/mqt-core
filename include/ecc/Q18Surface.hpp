@@ -16,7 +16,8 @@ public:
     constexpr static std::array<dd::Qubit, 18> dataQubits     = {1, 3, 5, 6, 8, 10, 13, 15, 17, 18, 20, 22, 25, 27, 29, 30, 32, 34};
     constexpr static std::array<dd::Qubit, 18> ancillaIndices = {0, 2, 4, 7, 9, 11, 12, 14, 16, 19, 21, 23, 24, 26, 28, 31, 33, 35};
     constexpr static dd::Qubit                 xInformation   = 14;
-
+    constexpr static std::array<dd::Qubit, 3> logicalX = {5,10,15};
+    constexpr static std::array<dd::Qubit, 3> logicalZ = {20,25,30};
     constexpr static dd::QubitCount ancillaWidth = 8;
 
     //{a,{b,c}} == qubit a is checked by b and c
@@ -29,29 +30,23 @@ public:
             {10, {4, 16}},
             {13, {12}},
             {15, {16}},
-            {17, {16}}, //NOT CORRECTED
             {18, {12, 24}},
             {20, {26}},
             {22, {16, 28}},
             {25, {24, 26}},
             {27, {26, 28}},
             {29, {28}},
-            {30, {24}},
-            {32, {26}}, //NOT CORRECTED
-            {34, {28}}  //NOT CORRECTED
+            {30, {24}}
     };
 
     std::map<std::size_t, std::vector<std::size_t>> qubitCorrectionZ = {
-            {1, {7}},
-            {3, {9}}, //NOT CORRECTED
             {5, {11}},
-            {6, {7}}, //NOT CORRECTED
+            {6, {7}},
             {8, {7, 9}},
             {10, {9, 11}},
             {13, {7, 19}},
             {15, {9}},
             {17, {11, 23}},
-            {18, {19}}, //NOT CORRECTED
             {20, {19}},
             {22, {23}},
             {25, {19, 31}},
