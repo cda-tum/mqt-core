@@ -42,7 +42,7 @@ public:
         return nInputQubits * ecc.nRedundantQubits + ecc.nCorrectingBits;
     }
 
-    [[nodiscard]] bool verifyExecution(bool simulateWithErrors) const;
+    [[nodiscard]] bool verifyExecution(bool simulateWithErrors, const std::vector<dd::Qubit>& dataQubits, size_t insertErrorAfterNGates) const;
 
 protected:
     std::shared_ptr<qc::QuantumComputation> qcOriginal;
@@ -53,10 +53,9 @@ protected:
     Info                                    ecc;
 
     // Set parameters for verifying the eccs
-    const size_t            shots                  = 50;
-    constexpr static double tolerance              = 0.2;
-    const size_t            seed                   = 1;
-    const size_t            insertErrorAfterNGates = 1;
+    const size_t            shots     = 50;
+    constexpr static double tolerance = 0.2;
+    const size_t            seed      = 1;
 
     void initMappedCircuit();
 

@@ -22,9 +22,6 @@ protected:
 
     void mapGate(const qc::Operation& gate) override;
 
-    // Set parameter for verifying the ecc
-    [[maybe_unused]] const size_t insertErrorAfterNGates = 55;
-
     //{a,{b,c}} == qubit a is checked by b and c
     std::array<std::set<std::size_t>, 9>                            qubitCorrectionX   = {{{1}, {3}, {3}, {1, 4}, {3, 4}, {3, 6}, {4}, {4}, {6}}};
     std::array<std::set<std::size_t>, 9>                            qubitCorrectionZ   = {{{2}, {0, 2}, {0}, {2}, {2, 5}, {5}, {7}, {5, 7}, {5}}};

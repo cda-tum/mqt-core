@@ -44,7 +44,7 @@ std::shared_ptr<qc::QuantumComputation> Ecc::apply() {
     return qcMapped;
 }
 
-bool Ecc::verifyExecution(bool simulateWithErrors) const {
+bool Ecc::verifyExecution(bool simulateWithErrors, const std::vector<dd::Qubit>& dataQubits = {}, std::size_t insertErrorAfterNGates = 0) const {
     auto toleranceAbsolute = (shots / 100.0) * (tolerance * 100.0);
 
     auto ddOriginal       = std::make_unique<dd::Package<>>(qcOriginal->getNqubits());
@@ -73,8 +73,8 @@ bool Ecc::verifyExecution(bool simulateWithErrors) const {
             }
         }
     } else {
-        for (dd::Qubit qubit = 0; qubit < static_cast<dd::Qubit>(this->qcMapped->getNqubits()); qubit++) {
-            auto measurementsProtected = simulate(qcMapped.get(), eccRootEdge, ddEcc, shots, seed, true, qubit, this->insertErrorAfterNGates);
+        for (auto qubit: dataQubits) {
+            auto measurementsProtected = simulate(qcMapped.get(), eccRootEdge, ddEcc, shots, seed, true, qubit, insertErrorAfterNGates);
             for (auto const& [classicalBit, hits]: measurementsOriginal) {
                 // Since the result is stored as one bit string. I have to count the relevant classical bits.
                 size_t eccHits = 0;
@@ -85,7 +85,7 @@ bool Ecc::verifyExecution(bool simulateWithErrors) const {
                 }
                 auto difference = std::max(eccHits, hits) - std::min(eccHits, hits);
                 std::cout << "Diff/tolerance " << difference << "/" << toleranceAbsolute << " Original register: " << hits << " ecc register: " << eccHits;
-                std::cout << " Simulating an error in qubit " << static_cast<unsigned>(qubit) << " after " << this->insertErrorAfterNGates << " gates." << std::endl;
+                std::cout << " Simulating an error in qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates." << std::endl;
                 if (static_cast<double>(difference) > toleranceAbsolute) {
                     std::cout << "Error is too large!" << std::endl;
                     return false;

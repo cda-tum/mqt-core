@@ -22,9 +22,6 @@ protected:
 
     void mapGate(const qc::Operation& gate) override;
 
-    // Set parameter for verifying the ecc
-    [[maybe_unused]] const size_t insertErrorAfterNGates = 61;
-
     static constexpr std::array<std::array<qc::OpType , 5>, 4> stabilizerMatrix = {{
             {qc::X, qc::Z, qc::Z, qc::X, qc::I}, //c0
             {qc::I, qc::X, qc::Z, qc::Z, qc::X}, //c1
