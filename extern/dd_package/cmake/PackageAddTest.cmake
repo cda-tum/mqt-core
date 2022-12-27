@@ -7,7 +7,7 @@ macro(PACKAGE_ADD_TEST testname linklibs)
   # discover tests
   gtest_discover_tests(
     ${testname}
-    WORKING_DIRECTORY ${PROJECT_DIR}
-    PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}")
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
   set_target_properties(${testname} PROPERTIES FOLDER tests)
 endmacro()
