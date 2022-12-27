@@ -162,7 +162,7 @@ TEST_F(DDECCFunctionalityTest, testIdEcc) {
             {createCZCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
             {createCYCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
     };
-    EXPECT_TRUE(testCircuits<Id>(circuitsExpectToPass));
+    EXPECT_TRUE(testCircuits<ecc::Id>(circuitsExpectToPass));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ3Shor) {
@@ -183,8 +183,8 @@ TEST_F(DDECCFunctionalityTest, testQ3Shor) {
             {createCZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
             {createHZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
     };
-    EXPECT_TRUE(testCircuits<Q3Shor>(circuitsExpectToPass));
-    EXPECT_ANY_THROW(testCircuits<Q3Shor>(circuitsExpectToFail));
+    EXPECT_TRUE(testCircuits<ecc::Q3Shor>(circuitsExpectToPass));
+    EXPECT_ANY_THROW(testCircuits<ecc::Q3Shor>(circuitsExpectToFail));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
@@ -204,8 +204,8 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
             {createCZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
             {createCYCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
     };
-    EXPECT_TRUE(testCircuits<Q5Laflamme>(circuitsExpectToPass));
-    EXPECT_ANY_THROW(testCircuits<Q5Laflamme>(circuitsExpectToFail));
+    EXPECT_TRUE(testCircuits<ecc::Q5Laflamme>(circuitsExpectToPass));
+    EXPECT_ANY_THROW(testCircuits<ecc::Q5Laflamme>(circuitsExpectToFail));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ7Steane) {
@@ -224,7 +224,7 @@ TEST_F(DDECCFunctionalityTest, testQ7Steane) {
             {createCZCircuit, true, insertNoiseAfterNQubits * 2, twoQubitDataQubits},
             {createCYCircuit, true, insertNoiseAfterNQubits * 2, twoQubitDataQubits},
     };
-    EXPECT_TRUE(testCircuits<Q7Steane>(circuitsExpectToPass));
+    EXPECT_TRUE(testCircuits<ecc::Q7Steane>(circuitsExpectToPass));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
@@ -247,8 +247,8 @@ TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
             {createCZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
     };
 
-    EXPECT_TRUE(testCircuits<Q9Shor>(circuitsExpectToPass));
-    EXPECT_ANY_THROW(testCircuits<Q9Shor>(circuitsExpectToFail));
+    EXPECT_TRUE(testCircuits<ecc::Q9Shor>(circuitsExpectToPass));
+    EXPECT_ANY_THROW(testCircuits<ecc::Q9Shor>(circuitsExpectToFail));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
@@ -270,8 +270,8 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
             {createCYCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
     };
 
-    EXPECT_TRUE(testCircuits<Q9Surface>(circuitsExpectToPass));
-    EXPECT_ANY_THROW(testCircuits<Q9Surface>(circuitsExpectToFail));
+    EXPECT_TRUE(testCircuits<ecc::Q9Surface>(circuitsExpectToPass));
+    EXPECT_ANY_THROW(testCircuits<ecc::Q9Surface>(circuitsExpectToFail));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
@@ -293,6 +293,6 @@ TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
             {createCYCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
     };
 
-    EXPECT_TRUE(testCircuits<Q18Surface>(circuitsExpectToPass));
-    EXPECT_ANY_THROW(testCircuits<Q18Surface>(circuitsExpectToFail));
+    EXPECT_TRUE(testCircuits<ecc::Q18Surface>(circuitsExpectToPass));
+    EXPECT_ANY_THROW(testCircuits<ecc::Q18Surface>(circuitsExpectToFail));
 }

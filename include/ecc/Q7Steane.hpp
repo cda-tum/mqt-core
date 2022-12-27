@@ -7,20 +7,21 @@
 
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
+namespace ecc {
+    class Q7Steane: public Ecc {
+    public:
+        Q7Steane(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
+            Ecc(
+                    {ID::Q7Steane, 7, 3, "Q7Steane", {{3, "qecc"}}}, std::move(qc), measureFq) {}
 
-class Q7Steane: public Ecc {
-public:
-    Q7Steane(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
-        Ecc(
-                {ID::Q7Steane, 7, 3, "Q7Steane", {{3, "qecc"}}}, std::move(qc), measureFq) {}
+    protected:
+        void writeEncoding() override;
 
-protected:
-    void writeEncoding() override;
+        void measureAndCorrect() override;
+        void measureAndCorrectSingle(bool xSyndrome);
 
-    void measureAndCorrect() override;
-    void measureAndCorrectSingle(bool xSyndrome);
+        void writeDecoding() override;
 
-    void writeDecoding() override;
-
-    void mapGate(const qc::Operation& gate) override;
-};
+        void mapGate(const qc::Operation& gate) override;
+    };
+} // namespace ecc
