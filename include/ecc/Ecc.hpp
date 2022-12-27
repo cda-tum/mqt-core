@@ -8,7 +8,7 @@
 #include "QuantumComputation.hpp"
 
 namespace ecc {
-    using Qubit = dd::Qubit;
+    using Qubit      = dd::Qubit;
     using QubitCount = std::make_unsigned_t<Qubit>;
 
     class Ecc {
@@ -121,7 +121,7 @@ namespace ecc {
      * returns if op1 and op2 are commutative,
      * i.e. if for all qubit states s: op1(op2(s)) == op2(op1(s))
      * */
-        bool commutative(qc::OpType op1, qc::OpType op2) {
+        static bool commutative(qc::OpType op1, qc::OpType op2) {
             return op1 == op2 || op1 == qc::I || op2 == qc::I;
         }
     };

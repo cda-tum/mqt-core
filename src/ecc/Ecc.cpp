@@ -46,7 +46,7 @@ namespace ecc {
     }
 
     bool Ecc::verifyExecution(bool simulateWithErrors, const std::vector<Qubit>& dataQubits = {}, std::size_t insertErrorAfterNGates = 0) const {
-        auto toleranceAbsolute = (shots / 100.0) * (tolerance * 100.0);
+        auto toleranceAbsolute = (static_cast<double>(shots) / 100.0) * (tolerance * 100.0);
         auto ddOriginal        = std::make_unique<dd::Package<>>(qcOriginal->getNqubits());
         auto originalRootEdge  = ddOriginal->makeZeroState(qcOriginal->getNqubits());
         ddOriginal->incRef(originalRootEdge);

@@ -36,8 +36,8 @@ namespace ecc {
         const auto clStart = qcOriginal->getNcbits();
         for (Qubit i = 0; i < nQubits; i++) {
             //syntactic sugar for qubit indices
-            std::array<Qubit, 9>   qubits                  = {};
-            std::array<Qubit, 8>   ancillaQubits           = {};
+            std::array<Qubit, 9>       qubits                  = {};
+            std::array<Qubit, 8>       ancillaQubits           = {};
             std::array<dd::Control, 8> ancillaControls         = {};
             std::array<dd::Control, 8> negativeAncillaControls = {};
             for (std::size_t j = 0; j < 9; j++) {

@@ -55,7 +55,7 @@ namespace ecc {
             auto ctrl = dd::Control{static_cast<Qubit>(i), dd::Control::Type::pos};
             qcMapped->x(static_cast<Qubit>(i + nQubits), ctrl);
             qcMapped->x(static_cast<Qubit>(i + 2 * nQubits), ctrl);
-            ccx(i, i + nQubits, true, i + 2 * nQubits, true);
+            ccx(i, static_cast<Qubit>(i + nQubits), true, static_cast<Qubit>(i + 2 * nQubits), true);
         }
         isDecoded = true;
     }

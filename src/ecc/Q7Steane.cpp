@@ -70,7 +70,7 @@ namespace ecc {
             //correct Z_i for i+1 = c0*1+c1*2+c2*4
             //correct X_i for i+1 = c3*1+c4*2+c5*4
             for (std::size_t j = 0; j < 7; j++) {
-                classicalControl(controlRegister, j + 1U, xSyndrome ? qc::Z : qc::X, i + j * nQubits);
+                classicalControl(controlRegister, j + 1U, xSyndrome ? qc::Z : qc::X, static_cast<Qubit>(i + j * nQubits));
             }
             gatesWritten = true;
         }
@@ -80,8 +80,8 @@ namespace ecc {
         if (isDecoded) {
             return;
         }
-        const auto                                nQubits          = qcOriginal->getNqubits();
-        const auto                                clAncStart       = static_cast<QubitCount>(qcOriginal->getNcbits());
+        const auto                            nQubits          = qcOriginal->getNqubits();
+        const auto                            clAncStart       = static_cast<QubitCount>(qcOriginal->getNcbits());
         static constexpr std::array<Qubit, 4> correctionNeeded = {1, 2, 4, 7}; //values with odd amount of '1' bits
         //use exiting registers qeccX and qeccZ for decoding
         const auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), static_cast<QubitCount>(3));

@@ -93,7 +93,7 @@ namespace ecc {
             return;
         }
         const QubitCount                      nQubits          = qcOriginal->getNqubits();
-        const size_t                              clAncStart       = qcOriginal->getNcbits();
+        const size_t                          clAncStart       = qcOriginal->getNcbits();
         static constexpr std::array<Qubit, 8> correctionNeeded = {1, 2, 4, 7, 8, 11, 13, 14}; //values with odd amount of '1' bits
 
         for (std::size_t i = 0; i < nQubits; i++) {

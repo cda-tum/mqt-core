@@ -20,7 +20,7 @@ namespace ecc {
         }
 
         for (Qubit i = 0; i < nQubits; i++) {
-            std::array<Qubit, 36>   qubits        = {};
+            std::array<Qubit, 36>       qubits        = {};
             std::array<dd::Control, 36> controlQubits = {};
             for (std::size_t j = 0; j < qubits.size(); j++) {
                 qubits.at(j) = static_cast<Qubit>(i + j * nQubits);
@@ -91,7 +91,7 @@ namespace ecc {
         if (isDecoded) {
             return;
         }
-        const auto                                nQubits               = qcOriginal->getNqubits();
+        const auto                            nQubits               = qcOriginal->getNqubits();
         static constexpr std::array<Qubit, 4> physicalAncillaQubits = {8, 13, 15, 20};
         for (Qubit i = 0; i < nQubits; i++) {
             for (Qubit qubit: physicalAncillaQubits) {

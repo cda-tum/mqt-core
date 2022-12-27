@@ -13,8 +13,8 @@ namespace ecc {
         const auto ancStart   = qcOriginal->getNqubits() * ecc.nRedundantQubits;
         const auto clAncStart = qcOriginal->getNcbits();
         for (std::size_t i = 0; i < nQubits; i++) {
-            std::array<Qubit, 9>   qubits          = {};
-            std::array<Qubit, 8>   ancillaQubits   = {};
+            std::array<Qubit, 9>       qubits          = {};
+            std::array<Qubit, 8>       ancillaQubits   = {};
             std::array<dd::Control, 8> ancillaControls = {};
             std::array<dd::Control, 9> controlQubits   = {};
             for (std::size_t j = 0; j < 9; j++) {
@@ -62,7 +62,7 @@ namespace ecc {
             //correction
             auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), ancillaWidth);
             for (std::size_t q = 0; q < qubitCorrectionZ.size(); q++) {
-                if (uncorrectedZQubits.count(q) == 0) {
+                if (uncorrectedZQubits.count(static_cast<Qubit>(q)) == 0) {
                     std::size_t mask = 0;
                     for (std::size_t c = 0; c < zAncillaQubits.size(); c++) {
                         if (qubitCorrectionZ[q].count(zAncillaQubits[c]) > 0) {
@@ -74,7 +74,7 @@ namespace ecc {
             }
             controlRegister = std::make_pair(static_cast<Qubit>(clAncStart + ancillaWidth), ancillaWidth);
             for (std::size_t q = 0; q < qubitCorrectionX.size(); q++) {
-                if (uncorrectedXQubits.count(q) == 0) {
+                if (uncorrectedXQubits.count(static_cast<Qubit>(q)) == 0) {
                     std::size_t mask = 0;
                     for (std::size_t c = 0; c < xAncillaQubits.size(); c++) {
                         if (qubitCorrectionX[q].count(xAncillaQubits[c]) > 0) {
