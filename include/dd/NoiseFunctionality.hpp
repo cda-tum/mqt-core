@@ -22,10 +22,10 @@ namespace dd {
 
     // noise operations available for deterministic noise aware quantum circuit simulation
     enum NoiseOperations : std::uint8_t {
-        amplitudeDamping,
-        phaseFlip,
-        depolarization,
-        identity
+        AmplitudeDamping,
+        PhaseFlip,
+        Depolarization,
+        Identity
     };
 
     template<class Config>
@@ -138,7 +138,7 @@ namespace dd {
                                          bool             amplitudeDamping,
                                          bool             multiQubitOperation) {
             for (const auto& noiseType: noiseEffects) {
-                const auto effect = noiseType == dd::amplitudeDamping ? getAmplitudeDampingOperationType(multiQubitOperation, amplitudeDamping) : returnNoiseOperation(noiseType, dist(generator), multiQubitOperation);
+                const auto effect = noiseType == dd::AmplitudeDamping ? getAmplitudeDampingOperationType(multiQubitOperation, amplitudeDamping) : returnNoiseOperation(noiseType, dist(generator), multiQubitOperation);
                 switch (effect) {
                     case (qc::I): {
                         continue;
@@ -177,7 +177,7 @@ namespace dd {
 
         [[nodiscard]] qc::OpType returnNoiseOperation(dd::NoiseOperations noiseOperation, double prob, bool multiQubitNoiseFlag) const {
             switch (noiseOperation) {
-                case dd::NoiseOperations::depolarization: {
+                case dd::NoiseOperations::Depolarization: {
                     if (prob >= (getNoiseProbability(multiQubitNoiseFlag) * 0.75)) {
                         // prob > prob apply qc::I, also 25 % of the time when depolarization is applied nothing happens
                         return qc::I;
@@ -193,13 +193,13 @@ namespace dd {
                     // if 0.5 < prob < 0.75 (25 % of the time when applying depolarization) apply qc::Z
                     return qc::Z;
                 }
-                case dd::NoiseOperations::phaseFlip: {
+                case dd::NoiseOperations::PhaseFlip: {
                     if (prob > getNoiseProbability(multiQubitNoiseFlag)) {
                         return qc::I;
                     }
                     return qc::Z;
                 }
-                case dd::NoiseOperations::identity: {
+                case dd::NoiseOperations::Identity: {
                     return qc::I;
                 }
                 default:
@@ -245,10 +245,10 @@ namespace dd {
         const bool                             sequentiallyApplyNoise;
 
         inline static const std::map<dd::NoiseOperations, std::size_t> SEQUENTIAL_NOISE_MAP = {
-                {dd::identity, 1},         //Identity Noise
-                {dd::phaseFlip, 2},        //Phase-flip
-                {dd::amplitudeDamping, 2}, //Amplitude Damping
-                {dd::depolarization, 4},   //Depolarisation
+                {dd::Identity, 1},         //Identity Noise
+                {dd::PhaseFlip, 2},        //Phase-flip
+                {dd::AmplitudeDamping, 2}, //Amplitude Damping
+                {dd::Depolarization, 4},   //Depolarisation
         };
 
         [[nodiscard]] dd::QubitCount getNumberOfQubits() const {
@@ -329,16 +329,16 @@ namespace dd {
             if (std::any_of(usedQubits.begin(), usedQubits.end(), [originalEdge](dd::Qubit qubit) { return originalEdge.p->v == qubit; })) {
                 for (auto const& type: noiseEffects) {
                     switch (type) {
-                        case dd::amplitudeDamping:
+                        case dd::AmplitudeDamping:
                             applyAmplitudeDampingToEdges(newEdges, (usedQubits.size() == 1) ? ampDampingProbSingleQubit : ampDampingProbMultiQubit);
                             break;
-                        case dd::phaseFlip:
+                        case dd::PhaseFlip:
                             applyPhaseFlipToEdges(newEdges, (usedQubits.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit);
                             break;
-                        case dd::depolarization:
+                        case dd::Depolarization:
                             applyDepolarisationToEdges(newEdges, (usedQubits.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit);
                             break;
-                        case dd::identity:
+                        case dd::Identity:
                             continue;
                     }
                 }
@@ -633,7 +633,7 @@ namespace dd {
                     // identity noise (for testing)
                     //                  (1  0)
                     //                  (0  1),
-                case dd::identity: {
+                case dd::Identity: {
                     idleNoiseGate[0][0] = idleNoiseGate[0][3] = dd::complex_one;
                     idleNoiseGate[0][1] = idleNoiseGate[0][2] = dd::complex_zero;
 
@@ -644,7 +644,7 @@ namespace dd {
                     // phase flip
                     //                          (1  0)                         (1  0)
                     //  e0= sqrt(1-probability)*(0  1), e1=  sqrt(probability)*(0 -1)
-                case dd::phaseFlip: {
+                case dd::PhaseFlip: {
                     tmp.r               = std::sqrt(1 - probability) * dd::complex_one.r;
                     idleNoiseGate[0][0] = idleNoiseGate[0][3] = tmp;
                     idleNoiseGate[0][1] = idleNoiseGate[0][2] = dd::complex_zero;
@@ -662,7 +662,7 @@ namespace dd {
                     // amplitude damping
                     //      (1                  0)       (0      sqrt(probability))
                     //  e0= (0 sqrt(1-probability), e1=  (0                      0)
-                case dd::amplitudeDamping: {
+                case dd::AmplitudeDamping: {
                     tmp.r               = std::sqrt(1 - probability) * dd::complex_one.r;
                     idleNoiseGate[0][0] = dd::complex_one;
                     idleNoiseGate[0][1] = idleNoiseGate[0][2] = dd::complex_zero;
@@ -677,7 +677,7 @@ namespace dd {
                     break;
                 }
                     // depolarization
-                case dd::depolarization:
+                case dd::Depolarization:
                     generateDepolarizationGate(pointerForMatrices, target, probability);
                     break;
                 default:
@@ -686,7 +686,7 @@ namespace dd {
         }
 
         double getNoiseProbability(const dd::NoiseOperations type, const std::set<qc::Qubit>& targets) {
-            if (type == dd::amplitudeDamping) {
+            if (type == dd::AmplitudeDamping) {
                 return (targets.size() == 1) ? ampDampingProbSingleQubit : ampDampingProbMultiQubit;
             }
             return (targets.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit;
