@@ -68,11 +68,10 @@ add_library(
   ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Ecc.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q3Shor.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q5Laflamme.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q7Steane.cpp  
+  ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q7Steane.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q9Shor.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q9Surface.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q18Surface.cpp
-  )
+  ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q18Surface.cpp)
 
 # set include directories
 target_include_directories(${PROJECT_NAME}
