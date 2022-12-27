@@ -123,7 +123,7 @@ int qc::QuantumComputation::readTFCHeader(std::istream& is, std::map<std::string
                 if (constants.at(constidx - inputs.size()) == "0" || constants.at(constidx - inputs.size()) == "1") {
                     // add X operation in case of initial value 1
                     if (constants.at(constidx - inputs.size()) == "1") {
-                        x(constidx);
+                        x(static_cast<Qubit>(constidx));
                     }
                     varMap.insert({var, constidx++});
                 } else {
@@ -137,19 +137,19 @@ int qc::QuantumComputation::readTFCHeader(std::istream& is, std::map<std::string
     }
 
     for (size_t q = 0; q < variables.size(); ++q) {
-        variable         = variables.at(q);
-        auto p           = varMap.at(variable);
-        initialLayout[q] = p;
+        variable                             = variables.at(q);
+        auto p                               = varMap.at(variable);
+        initialLayout[static_cast<Qubit>(q)] = p;
         if (!outputs.empty()) {
             if (std::count(outputs.begin(), outputs.end(), variable) != 0) {
-                outputPermutation[q] = p;
+                outputPermutation[static_cast<Qubit>(q)] = p;
             } else {
-                outputPermutation.erase(q);
+                outputPermutation.erase(static_cast<Qubit>(q));
                 garbage.at(p) = true;
             }
         } else {
             // no output statement given --> assume all outputs are relevant
-            outputPermutation[q] = p;
+            outputPermutation[static_cast<Qubit>(q)] = p;
         }
     }
 
@@ -182,11 +182,10 @@ void qc::QuantumComputation::readTFCGateDescriptions(std::istream& is, int line,
         }
 
         // extract gate information (identifier, #controls, divisor)
-        OpType gate;
-        if (m.str(1) == "t" || m.str(1) == "T") { // special treatment of t(offoli) for real format
+        OpType gate = SWAP;
+        // special treatment of t(offoli) for real format
+        if (m.str(1) == "t" || m.str(1) == "T") {
             gate = X;
-        } else {
-            gate = SWAP;
         }
         const std::size_t ncontrols = m.str(2).empty() ? 0 : std::stoul(m.str(2), nullptr, 0) - 1;
 
@@ -194,14 +193,15 @@ void qc::QuantumComputation::readTFCGateDescriptions(std::istream& is, int line,
             throw QFRException("[tfc parser] l:" + std::to_string(line) + " msg: Gate acts on " + std::to_string(ncontrols + 1) + " qubits, but only " + std::to_string(nqubits + nancillae) + " qubits are available.");
         }
 
-        std::string qubits, label;
+        std::string qubits;
+        std::string label;
         is >> std::ws;
         getline(is, qubits);
 
         std::vector<Control> controls{};
 
-        std::string delimiter = ",";
-        size_t      pos;
+        const std::string delimiter = ",";
+        size_t            pos;
 
         while ((pos = qubits.find(delimiter)) != std::string::npos) {
             label = qubits.substr(0, pos);

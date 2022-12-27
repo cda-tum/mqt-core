@@ -46,10 +46,10 @@ namespace dd {
             mt.seed(seed);
         } else {
             // create and properly seed rng
-            std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
+            std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> randomData{};
             std::random_device                                                    rd;
-            std::generate(std::begin(random_data), std::end(random_data), [&rd]() { return rd(); });
-            std::seed_seq seeds(std::begin(random_data), std::end(random_data));
+            std::generate(std::begin(randomData), std::end(randomData), [&rd]() { return rd(); });
+            std::seed_seq seeds(std::begin(randomData), std::end(randomData));
             mt.seed(seeds);
         }
 
@@ -65,14 +65,14 @@ namespace dd {
 
             // once a measurement is encountered we store the corresponding mapping (qubit -> bit)
             if (op->getType() == qc::Measure) {
-                auto measure    = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
-                hasMeasurements = true;
+                const auto* measure = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
+                hasMeasurements     = true;
 
                 const auto& quantum = measure->getTargets();
                 const auto& classic = measure->getClassics();
 
                 for (std::size_t i = 0; i < quantum.size(); ++i) {
-                    measurementMap[quantum.at(i)] = classic.at(i);
+                    measurementMap[static_cast<dd::Qubit>(quantum.at(i))] = classic.at(i);
                 }
             }
 
@@ -128,93 +128,94 @@ namespace dd {
                     // if the circuit contains measurements, we only want to return the measured bits
                     for (const auto& [qubit, bit]: measurementMap) {
                         // measurement map specifies that the circuit `qubit` is measured into a certain `bit`
-                        measurement[qc->getNcbits() - 1U - bit] = bitstring[bitstring.size() - 1U - qubit];
+                        measurement[qc->getNcbits() - 1U - bit] = bitstring[bitstring.size() - 1U - static_cast<std::size_t>(qubit)];
                     }
                 } else {
                     // otherwise, we consider the output permutation for determining where to measure the qubits to
                     for (const auto& [qubit, bit]: qc->outputPermutation) {
-                        measurement[qc->getNcbits() - 1 - bit] = bitstring[bitstring.size() - 1U - qubit];
+                        measurement[qc->getNcbits() - 1 - bit] = bitstring[bitstring.size() - 1U - static_cast<std::size_t>(qubit)];
                     }
                 }
                 actualCounts[measurement] += count;
             }
             return actualCounts;
-        } else {
-            std::map<std::string, std::size_t> counts{};
+        }
 
-            for (std::size_t i = 0U; i < shots; i++) {
-                std::map<std::size_t, char> measurements{};
+        std::map<std::string, std::size_t> counts{};
 
-                auto permutation = qc->initialLayout;
-                auto e           = in;
-                dd->incRef(e);
+        for (std::size_t i = 0U; i < shots; i++) {
+            std::map<std::size_t, char> measurements{};
 
-                for (const auto& op: *qc) {
-                    if (op->getType() == Measure) {
-                        auto*       measure = dynamic_cast<NonUnitaryOperation*>(op.get());
-                        const auto& qubits  = measure->getTargets();
-                        const auto& bits    = measure->getClassics();
-                        for (std::size_t j = 0U; j < qubits.size(); ++j) {
-                            measurements[bits.at(j)] = dd->measureOneCollapsing(e, permutation.at(qubits.at(j)), true, mt);
-                        }
-                        continue;
+            auto permutation = qc->initialLayout;
+            auto e           = in;
+            dd->incRef(e);
+
+            for (const auto& op: *qc) {
+                if (op->getType() == Measure) {
+                    auto*       measure = dynamic_cast<NonUnitaryOperation*>(op.get());
+                    const auto& qubits  = measure->getTargets();
+                    const auto& bits    = measure->getClassics();
+                    for (std::size_t j = 0U; j < qubits.size(); ++j) {
+                        measurements[bits.at(j)] = dd->measureOneCollapsing(e, static_cast<dd::Qubit>(permutation.at(qubits.at(j))), true, mt);
                     }
-
-                    if (op->getType() == Reset) {
-                        auto*       reset  = dynamic_cast<NonUnitaryOperation*>(op.get());
-                        const auto& qubits = reset->getTargets();
-                        for (const auto& qubit: qubits) {
-                            auto bit = dd->measureOneCollapsing(e, permutation.at(qubit), true, mt);
-                            // apply an X operation whenever the measured result is one
-                            if (bit == '1') {
-                                const auto x   = qc::StandardOperation(qc->getNqubits(), qubit, qc::X);
-                                auto       tmp = dd->multiply(getDD(&x, dd), e);
-                                dd->incRef(tmp);
-                                dd->decRef(e);
-                                e = tmp;
-                                dd->garbageCollect();
-                            }
-                        }
-                        continue;
-                    }
-
-                    if (op->getType() == ClassicControlled) {
-                        auto*       classicControlled = dynamic_cast<ClassicControlledOperation*>(op.get());
-                        const auto& controlRegister   = classicControlled->getControlRegister();
-                        const auto& expectedValue     = classicControlled->getExpectedValue();
-                        auto        actualValue       = 0ULL;
-                        // determine the actual value from measurements
-                        for (std::size_t j = 0; j < controlRegister.second; ++j) {
-                            if (measurements[controlRegister.first + j] == '1') {
-                                actualValue |= 1ULL << j;
-                            }
-                        }
-
-                        // do not apply an operation if the value is not the expected one
-                        if (actualValue != expectedValue)
-                            continue;
-                    }
-
-                    auto tmp = dd->multiply(getDD(op.get(), dd, permutation), e);
-                    dd->incRef(tmp);
-                    dd->decRef(e);
-                    e = tmp;
-
-                    dd->garbageCollect();
+                    continue;
                 }
 
-                // reduce reference count of measured state
+                if (op->getType() == Reset) {
+                    auto*       reset  = dynamic_cast<NonUnitaryOperation*>(op.get());
+                    const auto& qubits = reset->getTargets();
+                    for (const auto& qubit: qubits) {
+                        auto bit = dd->measureOneCollapsing(e, static_cast<dd::Qubit>(permutation.at(qubit)), true, mt);
+                        // apply an X operation whenever the measured result is one
+                        if (bit == '1') {
+                            const auto x   = qc::StandardOperation(qc->getNqubits(), qubit, qc::X);
+                            auto       tmp = dd->multiply(getDD(&x, dd), e);
+                            dd->incRef(tmp);
+                            dd->decRef(e);
+                            e = tmp;
+                            dd->garbageCollect();
+                        }
+                    }
+                    continue;
+                }
+
+                if (op->getType() == ClassicControlled) {
+                    auto*       classicControlled = dynamic_cast<ClassicControlledOperation*>(op.get());
+                    const auto& controlRegister   = classicControlled->getControlRegister();
+                    const auto& expectedValue     = classicControlled->getExpectedValue();
+                    auto        actualValue       = 0ULL;
+                    // determine the actual value from measurements
+                    for (std::size_t j = 0; j < controlRegister.second; ++j) {
+                        if (measurements[controlRegister.first + j] == '1') {
+                            actualValue |= 1ULL << j;
+                        }
+                    }
+
+                    // do not apply an operation if the value is not the expected one
+                    if (actualValue != expectedValue) {
+                        continue;
+                    }
+                }
+
+                auto tmp = dd->multiply(getDD(op.get(), dd, permutation), e);
+                dd->incRef(tmp);
                 dd->decRef(e);
+                e = tmp;
 
-                std::string shot(qc->getNcbits(), '0');
-                for (const auto& [bit, value]: measurements) {
-                    shot[qc->getNcbits() - bit - 1U] = value;
-                }
-                counts[shot]++;
+                dd->garbageCollect();
             }
 
-            return counts;
+            // reduce reference count of measured state
+            dd->decRef(e);
+
+            std::string shot(qc->getNcbits(), '0');
+            for (const auto& [bit, value]: measurements) {
+                shot[qc->getNcbits() - bit - 1U] = value;
+            }
+            counts[shot]++;
         }
+
+        return counts;
     }
 
     template<class Config>
@@ -228,7 +229,7 @@ namespace dd {
     void extractProbabilityVectorRecursive(const QuantumComputation* qc, const VectorDD& currentState, decltype(qc->begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package<Config>>& dd) {
         auto state = currentState;
         for (auto it = currentIt; it != qc->end(); ++it) {
-            auto& op = (*it);
+            const auto& op = (*it);
 
             // check whether a classic controlled operations can be applied
             if (op->getType() == ClassicControlled) {
@@ -242,8 +243,9 @@ namespace dd {
                 }
 
                 // do not apply an operation if the value is not the expected one
-                if (actualValue != expectedValue)
+                if (actualValue != expectedValue) {
                     continue;
+                }
             }
 
             if (op->getType() == Reset) {
@@ -258,7 +260,7 @@ namespace dd {
                     throw qc::QFRException("Resets on multiple qubits are currently not supported. Please split them into multiple single resets.");
                 }
 
-                auto [pzero, pone] = dd->determineMeasurementProbabilities(state, targets[0], true);
+                auto [pzero, pone] = dd->determineMeasurementProbabilities(state, static_cast<dd::Qubit>(targets[0]), true);
 
                 // normalize probabilities
                 const auto norm = pzero + pone;
@@ -266,7 +268,7 @@ namespace dd {
                 pone /= norm;
 
                 if (dd::ComplexTable<>::Entry::approximatelyOne(pone)) {
-                    qc::MatrixDD xGate      = dd->makeGateDD(dd::Xmat, state.p->v + 1, targets[0U]);
+                    qc::MatrixDD xGate      = dd->makeGateDD(dd::Xmat, static_cast<dd::QubitCount>(state.p->v + 1), static_cast<dd::Qubit>(targets[0U]));
                     qc::VectorDD resetState = dd->multiply(xGate, state);
                     dd->incRef(resetState);
                     dd->decRef(state);
@@ -291,7 +293,7 @@ namespace dd {
                 }
 
                 // determine probabilities for this measurement
-                auto [pzero, pone] = dd->determineMeasurementProbabilities(state, targets[0], true);
+                auto [pzero, pone] = dd->determineMeasurementProbabilities(state, static_cast<dd::Qubit>(targets[0]), true);
 
                 // normalize probabilities
                 const auto norm = pzero + pone;
@@ -350,9 +352,9 @@ namespace dd {
                     // determine the next iteration point
                     auto nextIt = it + 1;
                     // actually collapse the state
-                    dd::GateMatrix measurementMatrix{dd::complex_one, dd::complex_zero, dd::complex_zero, dd::complex_zero};
-                    qc::MatrixDD   measurementGate = dd->makeGateDD(measurementMatrix, state.p->v + 1, targets[0]);
-                    qc::VectorDD   measuredState   = dd->multiply(measurementGate, state);
+                    const dd::GateMatrix measurementMatrix{dd::complex_one, dd::complex_zero, dd::complex_zero, dd::complex_zero};
+                    qc::MatrixDD         measurementGate = dd->makeGateDD(measurementMatrix, static_cast<dd::QubitCount>(state.p->v + 1), static_cast<dd::Qubit>(targets[0]));
+                    qc::VectorDD         measuredState   = dd->multiply(measurementGate, state);
 
                     auto c = dd->cn.getTemporary(1. / std::sqrt(pzero), 0);
                     dd::ComplexNumbers::mul(c, measuredState.w, c);
@@ -372,9 +374,9 @@ namespace dd {
                     // determine the next iteration point
                     auto nextIt = it + 1;
                     // actually collapse the state
-                    dd::GateMatrix measurementMatrix{dd::complex_zero, dd::complex_zero, dd::complex_zero, dd::complex_one};
-                    qc::MatrixDD   measurementGate = dd->makeGateDD(measurementMatrix, state.p->v + 1, targets[0]);
-                    qc::VectorDD   measuredState   = dd->multiply(measurementGate, state);
+                    const dd::GateMatrix measurementMatrix{dd::complex_zero, dd::complex_zero, dd::complex_zero, dd::complex_one};
+                    qc::MatrixDD         measurementGate = dd->makeGateDD(measurementMatrix, static_cast<dd::QubitCount>(state.p->v + 1), static_cast<dd::Qubit>(targets[0]));
+                    qc::VectorDD         measuredState   = dd->multiply(measurementGate, state);
 
                     auto c = dd->cn.getTemporary(1. / std::sqrt(pone), 0);
                     dd::ComplexNumbers::mul(c, measuredState.w, c);
@@ -400,9 +402,9 @@ namespace dd {
     }
 
     template<class Config>
-    VectorDD simulate(GoogleRandomCircuitSampling* qc, const VectorDD& in, std::unique_ptr<dd::Package<Config>>& dd, short ncycles = -1) {
-        if (ncycles != -1 && (static_cast<std::size_t>(ncycles) < qc->cycles.size() - 2U)) {
-            qc->removeCycles(qc->cycles.size() - 2U - ncycles);
+    VectorDD simulate(GoogleRandomCircuitSampling* qc, const VectorDD& in, std::unique_ptr<dd::Package<Config>>& dd, const std::optional<std::size_t> ncycles = std::nullopt) {
+        if (ncycles.has_value() && (*ncycles < qc->cycles.size() - 2U)) {
+            qc->removeCycles(qc->cycles.size() - 2U - *ncycles);
         }
 
         Permutation permutation = qc->initialLayout;

@@ -28,8 +28,8 @@ namespace dd {
         GateMatrix gm;
 
         const auto  type       = op->getType();
-        const auto  nqubits    = op->getNqubits();
-        const auto  startQubit = op->getStartingQubit();
+        const auto  nqubits    = static_cast<dd::QubitCount>(op->getNqubits());
+        const auto  startQubit = static_cast<std::size_t>(op->getStartingQubit());
         const auto& parameter  = op->getParameter();
 
         switch (type) {
@@ -76,8 +76,8 @@ namespace dd {
     template<class Config>
     qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op, std::unique_ptr<dd::Package<Config>>& dd, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, bool inverse) {
         const auto type       = op->getType();
-        const auto nqubits    = op->getNqubits();
-        const auto startQubit = op->getStartingQubit();
+        const auto nqubits    = static_cast<dd::QubitCount>(op->getNqubits());
+        const auto startQubit = static_cast<std::size_t>(op->getStartingQubit());
 
         switch (type) {
             case qc::SWAP:
@@ -132,14 +132,14 @@ namespace dd {
             const auto target1 = targets.at(1U);
             // update permutation
             std::swap(permutation.at(target0), permutation.at(target1));
-            return dd->makeIdent(nqubits);
+            return dd->makeIdent(static_cast<dd::QubitCount>(nqubits));
         }
 
         if (type == qc::ShowProbabilities || type == qc::Barrier || type == qc::Snapshot) {
-            return dd->makeIdent(nqubits);
+            return dd->makeIdent(static_cast<dd::QubitCount>(nqubits));
         }
 
-        if (auto* standardOp = dynamic_cast<const qc::StandardOperation*>(op)) {
+        if (const auto* standardOp = dynamic_cast<const qc::StandardOperation*>(op)) {
             auto targets  = op->getTargets();
             auto controls = op->getControls();
             if (!permutation.empty()) {
@@ -169,8 +169,8 @@ namespace dd {
             return getStandardOperationDD(standardOp, dd, ddControls, target0, inverse);
         }
 
-        if (auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
-            auto e = dd->makeIdent(op->getNqubits());
+        if (const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
+            auto e = dd->makeIdent(static_cast<dd::QubitCount>(op->getNqubits()));
             if (inverse) {
                 for (const auto& operation: *compoundOp) {
                     e = dd->multiply(e, getInverseDD(operation.get(), dd, permutation));
@@ -183,7 +183,7 @@ namespace dd {
             return e;
         }
 
-        if (auto* classicOp = dynamic_cast<const qc::ClassicControlledOperation*>(op)) {
+        if (const auto* classicOp = dynamic_cast<const qc::ClassicControlledOperation*>(op)) {
             return getDD(classicOp->getOperation(), dd, permutation, inverse);
         }
 
@@ -366,15 +366,16 @@ namespace dd {
             }
 
             // swap i and j
-            auto saved = on;
+            auto       saved  = on;
+            const auto swapDD = dd->makeSWAPDD(static_cast<dd::QubitCount>(on.p->v + 1), {}, static_cast<dd::Qubit>(from.at(i)), static_cast<dd::Qubit>(from.at(j)));
             if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
-                on = dd->multiply(dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)), on);
+                on = dd->multiply(swapDD, on);
             } else {
                 // the regular flag only has an effect on matrix DDs
                 if (regular) {
-                    on = dd->multiply(dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)), on);
+                    on = dd->multiply(swapDD, on);
                 } else {
-                    on = dd->multiply(on, dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)));
+                    on = dd->multiply(on, swapDD);
                 }
             }
 

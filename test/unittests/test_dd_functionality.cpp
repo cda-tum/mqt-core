@@ -60,7 +60,7 @@ INSTANTIATE_TEST_SUITE_P(Parameters,
                                          qc::Vdag, qc::U3, qc::U2, qc::Phase, qc::RX, qc::RY, qc::RZ, qc::Peres, qc::Peresdag,
                                          qc::SWAP, qc::iSWAP),
                          [](const testing::TestParamInfo<DDFunctionality::ParamType>& info) {
-                             auto gate = (qc::OpType)info.param;
+                             const auto gate = info.param;
                              switch (gate) {
                                  case qc::I: return "i";
                                  case qc::H: return "h";
@@ -215,7 +215,7 @@ TEST_F(DDFunctionality, changePermutation) {
        << std::endl;
     qc.import(ss, qc::Format::OpenQASM);
     auto dd  = std::make_unique<dd::Package<>>();
-    auto sim = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
+    auto sim = simulate(&qc, dd->makeZeroState(static_cast<dd::QubitCount>(qc.getNqubits())), dd);
     EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
     EXPECT_TRUE(sim.p->e[1].w.approximatelyOne());
     EXPECT_TRUE(sim.p->e[1].p->e[1].isZeroTerminal());

@@ -32,7 +32,7 @@ namespace qc {
 
         std::ostream& printStatistics(std::ostream& os) const override;
 
-        void removeCycles(std::uint16_t ncycles) {
+        void removeCycles(const std::size_t ncycles) {
             if (ncycles > cycles.size() - 2) {
                 std::stringstream ss{};
                 ss << "Cannot remove " << ncycles << " cycles out of a circuit containing 1+" << cycles.size() - 2 << "+1 cycles.";
@@ -40,7 +40,7 @@ namespace qc {
             }
             auto last = std::move(cycles.back());
             cycles.pop_back();
-            for (int i = 0; i < ncycles; ++i) {
+            for (std::size_t i = 0; i < ncycles; ++i) {
                 cycles.pop_back();
             }
             cycles.emplace_back(std::move(last));

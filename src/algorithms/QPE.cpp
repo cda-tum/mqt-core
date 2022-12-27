@@ -99,7 +99,7 @@ namespace qc {
         } else {
             // Hadamard Layer
             for (std::size_t i = 1; i <= precision; i++) {
-                h(i);
+                h(static_cast<Qubit>(i));
             }
 
             for (std::size_t i = 0; i < precision; i++) {
@@ -113,19 +113,19 @@ namespace qc {
                 for (std::size_t j = 1; j < 1 + i; j++) {
                     auto iQFTLambda = -PI / static_cast<double>(2ULL << (i - j));
                     if (j == i) {
-                        sdag(1 + i, Control{static_cast<Qubit>(i)});
+                        sdag(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(i)});
                     } else if (j == i - 1) {
-                        tdag(1 + i, Control{static_cast<Qubit>(i - 1)});
+                        tdag(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(i - 1)});
                     } else {
-                        phase(1 + i, Control{static_cast<Qubit>(j)}, iQFTLambda);
+                        phase(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(j)}, iQFTLambda);
                     }
                 }
-                h(1 + i);
+                h(static_cast<Qubit>(1 + i));
             }
 
             // measure results
             for (std::size_t i = 0; i < nqubits - 1; i++) {
-                measure(i + 1, i);
+                measure(static_cast<Qubit>(i + 1), i);
             }
         }
     }

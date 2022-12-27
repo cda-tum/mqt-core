@@ -141,10 +141,10 @@ namespace qc {
         bool            outputPermutationFromMeasurements = false;
         std::set<Qubit> measuredQubits{};
 
-        for (auto opIt = ops.begin(); opIt != ops.end(); ++opIt) {
-            if ((*opIt)->getType() == qc::Measure) {
+        for (const auto& opIt: ops) {
+            if (opIt->getType() == qc::Measure) {
                 outputPermutationFromMeasurements = true;
-                auto* op                          = dynamic_cast<NonUnitaryOperation*>(opIt->get());
+                auto* op                          = dynamic_cast<NonUnitaryOperation*>(opIt.get());
                 assert(op->getTargets().size() == op->getClassics().size());
                 auto classicIt = op->getClassics().cbegin();
                 for (const auto& q: op->getTargets()) {
@@ -285,9 +285,9 @@ namespace qc {
     std::pair<Qubit, std::optional<Qubit>> QuantumComputation::removeQubit(const Qubit logicalQubitIndex) {
         // Find index of the physical qubit i is assigned to
         Qubit physicalQubitIndex = 0;
-        for (const auto& Q: initialLayout) {
-            if (Q.second == logicalQubitIndex) {
-                physicalQubitIndex = Q.first;
+        for (const auto& [physical, logical]: initialLayout) {
+            if (logical == logicalQubitIndex) {
+                physicalQubitIndex = physical;
             }
         }
 
@@ -390,7 +390,7 @@ namespace qc {
 
     // adds j-th physical qubit as ancilla to the end of reg or creates the register if necessary
     void QuantumComputation::addAncillaryQubit(Qubit physicalQubitIndex, std::optional<Qubit> outputQubitIndex) {
-        if (initialLayout.count(physicalQubitIndex) || outputPermutation.count(physicalQubitIndex)) {
+        if (initialLayout.count(physicalQubitIndex) > 0 || outputPermutation.count(physicalQubitIndex) > 0) {
             throw QFRException("[addAncillaryQubit] Attempting to insert physical qubit that is already assigned");
         }
 
@@ -449,7 +449,7 @@ namespace qc {
     }
 
     void QuantumComputation::addQubit(const Qubit logicalQubitIndex, const Qubit physicalQubitIndex, const std::optional<Qubit> outputQubitIndex) {
-        if (initialLayout.count(physicalQubitIndex) || outputPermutation.count(physicalQubitIndex)) {
+        if (initialLayout.count(physicalQubitIndex) > 0 || outputPermutation.count(physicalQubitIndex) > 0) {
             throw QFRException("[addQubit] Attempting to insert physical qubit that is already assigned");
         }
 
@@ -526,11 +526,11 @@ namespace qc {
         } else {
             os << "i: \t\t\t";
         }
-        for (const auto& Q: initialLayout) {
-            if (ancillary[Q.second]) {
-                os << "\033[31m" << static_cast<std::size_t>(Q.second) << "\t\033[0m";
+        for (const auto& [physical, logical]: initialLayout) {
+            if (ancillary[logical]) {
+                os << "\033[31m" << logical << "\t\033[0m";
             } else {
-                os << static_cast<std::size_t>(Q.second) << "\t";
+                os << logical << "\t";
             }
         }
         os << std::endl;
@@ -579,8 +579,8 @@ namespace qc {
     }
 
     void QuantumComputation::dump(const std::string& filename) {
-        size_t      dot       = filename.find_last_of('.');
-        std::string extension = filename.substr(dot + 1);
+        const std::size_t dot       = filename.find_last_of('.');
+        std::string       extension = filename.substr(dot + 1);
         std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return ::tolower(c); });
         if (extension == "real") {
             dump(filename, Format::Real);
@@ -758,9 +758,9 @@ namespace qc {
     }
 
     std::pair<std::string, Qubit> QuantumComputation::getQubitRegisterAndIndex(const Qubit physicalQubitIndex) const {
-        std::string regName = getQubitRegister(physicalQubitIndex);
-        Qubit       index   = 0;
-        auto        it      = qregs.find(regName);
+        const std::string regName = getQubitRegister(physicalQubitIndex);
+        Qubit             index   = 0;
+        auto              it      = qregs.find(regName);
         if (it != qregs.end()) {
             index = static_cast<Qubit>(physicalQubitIndex - it->second.first);
         } else {
@@ -880,7 +880,7 @@ namespace qc {
         // determine which qubits the gate acts on
         std::vector<bool> actson(nqubits + nancillae);
         for (std::size_t i = 0; i < actson.size(); ++i) {
-            if ((*opIt)->actsOn(i)) {
+            if ((*opIt)->actsOn(static_cast<Qubit>(i))) {
                 actson[i] = true;
             }
         }
@@ -890,7 +890,7 @@ namespace qc {
         std::advance(atEnd, 1);
         while (atEnd != end) {
             for (std::size_t i = 0; i < actson.size(); ++i) {
-                if (actson[i] && (*atEnd)->actsOn(i)) {
+                if (actson[i] && (*atEnd)->actsOn(static_cast<Qubit>(i))) {
                     return false;
                 }
             }
@@ -929,9 +929,9 @@ namespace qc {
     }
 
     void QuantumComputation::checkQubitRange(const Qubit qubit) const {
-        if (const auto it = initialLayout.find(qubit); it == initialLayout.end() || it->second >= getNqubits())
-            throw QFRException("Qubit index out of range: " +
-                               std::to_string(qubit));
+        if (const auto it = initialLayout.find(qubit); it == initialLayout.end() || it->second >= getNqubits()) {
+            throw QFRException("Qubit index out of range: " + std::to_string(qubit));
+        }
     }
     void QuantumComputation::checkQubitRange(const Qubit qubit0, const Qubit qubit1) const {
         checkQubitRange(qubit0);
@@ -947,8 +947,9 @@ namespace qc {
     }
     void QuantumComputation::checkQubitRange(const Qubit qubit, const Controls& controls) const {
         checkQubitRange(qubit);
-        for (auto& [ctrl, _]: controls)
+        for (const auto& [ctrl, _]: controls) {
             checkQubitRange(ctrl);
+        }
     }
 
     void QuantumComputation::checkQubitRange(const Qubit qubit0, const Qubit qubit1, const Controls& controls) const {

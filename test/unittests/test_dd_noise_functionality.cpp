@@ -87,14 +87,14 @@ protected:
 TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPDApplySequential) {
     auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
-    auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
+    auto rootEdge = dd->makeZeroDensityOperator(static_cast<dd::QubitCount>(qc.getNqubits()));
     dd->incRef(rootEdge);
 
     const auto noiseEffects = {dd::amplitudeDamping, dd::phaseFlip, dd::depolarization, dd::identity};
 
     auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
             dd,
-            qc.getNqubits(),
+            static_cast<dd::QubitCount>(qc.getNqubits()),
             0.01,
             0.02,
             0.02,
@@ -133,14 +133,14 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPDApplySequential) {
 TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
     auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
-    auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
+    auto rootEdge = dd->makeZeroDensityOperator(static_cast<dd::QubitCount>(qc.getNqubits()));
     dd->incRef(rootEdge);
 
     const auto noiseEffects = {dd::amplitudeDamping, dd::identity, dd::phaseFlip, dd::depolarization};
 
     auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
             dd,
-            qc.getNqubits(),
+            static_cast<dd::QubitCount>(qc.getNqubits()),
             0.01,
             0.02,
             0.02,
@@ -199,14 +199,14 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
 
     auto stochasticNoiseFunctionality = dd::StochasticNoiseFunctionality(
             dd,
-            qc.getNqubits(),
+            static_cast<dd::QubitCount>(qc.getNqubits()),
             0.01,
             0.02,
             2.,
             noiseEffects);
 
     for (size_t i = 0U; i < stochRuns; i++) {
-        auto rootEdge = dd->makeZeroState(qc.getNqubits());
+        auto rootEdge = dd->makeZeroState(static_cast<dd::QubitCount>(qc.getNqubits()));
         dd->incRef(rootEdge);
 
         for (auto const& op: qc) {
@@ -266,14 +266,14 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
 
     auto stochasticNoiseFunctionality = dd::StochasticNoiseFunctionality(
             dd,
-            qc.getNqubits(),
+            static_cast<dd::QubitCount>(qc.getNqubits()),
             0.01,
             0.02,
             2.,
             noiseEffects);
 
     for (size_t i = 0U; i < stochRuns; i++) {
-        auto rootEdge = dd->makeZeroState(qc.getNqubits());
+        auto rootEdge = dd->makeZeroState(static_cast<dd::QubitCount>(qc.getNqubits()));
         dd->incRef(rootEdge);
 
         for (auto const& op: qc) {

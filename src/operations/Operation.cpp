@@ -118,7 +118,7 @@ namespace qc {
 
         bool isZero = true;
         for (size_t i = 0; i < MAX_PARAMETERS; ++i) {
-            if (parameter[i] != 0.L) {
+            if (parameter[i] != static_cast<fp>(0)) {
                 isZero = false;
             }
         }
@@ -127,7 +127,7 @@ namespace qc {
             for (size_t j = 1; j < MAX_PARAMETERS; ++j) {
                 isZero = true;
                 for (size_t i = j; i < MAX_PARAMETERS; ++i) {
-                    if (parameter[i] != 0.L) {
+                    if (parameter[i] != static_cast<fp>(0)) {
                         isZero = false;
                     }
                 }

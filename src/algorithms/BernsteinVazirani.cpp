@@ -8,7 +8,7 @@
 namespace qc {
     BernsteinVazirani::BernsteinVazirani(const BitString& s, const bool dynamic):
         s(s), dynamic(dynamic) {
-        Qubit msb = 0;
+        std::size_t msb = 0;
         for (std::size_t i = 0; i < s.size(); ++i) {
             if (s.test(i)) {
                 msb = i;
@@ -91,7 +91,7 @@ namespace qc {
         } else {
             // initial Hadamard transformation
             for (std::size_t i = 1; i <= bitwidth; ++i) {
-                h(i);
+                h(static_cast<Qubit>(i));
             }
 
             // apply controlled-Z gates according to secret bitstring
@@ -103,12 +103,12 @@ namespace qc {
 
             // final Hadamard transformation
             for (std::size_t i = 1; i <= bitwidth; ++i) {
-                h(i);
+                h(static_cast<Qubit>(i));
             }
 
             // measure results
             for (std::size_t i = 1; i <= bitwidth; i++) {
-                measure(i, i - 1);
+                measure(static_cast<Qubit>(i), i - 1);
             }
         }
     }

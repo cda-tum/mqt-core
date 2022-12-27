@@ -15,16 +15,17 @@ namespace dd {
 
     template<class Config>
     MatrixDD buildFunctionality(const QuantumComputation* qc, std::unique_ptr<dd::Package<Config>>& dd) {
-        if (qc->getNqubits() == 0U) {
+        const auto nqubits = static_cast<dd::QubitCount>(qc->getNqubits());
+        if (nqubits == 0U) {
             return MatrixDD::one;
         }
 
-        if (auto grover = dynamic_cast<const qc::Grover*>(qc)) {
+        if (const auto* grover = dynamic_cast<const qc::Grover*>(qc)) {
             return buildFunctionality(grover, dd);
         }
 
         auto permutation = qc->initialLayout;
-        auto e           = dd->createInitialMatrix(qc->getNqubits(), qc->ancillary);
+        auto e           = dd->createInitialMatrix(nqubits, qc->ancillary);
 
         for (const auto& op: *qc) {
             auto tmp = dd->multiply(getDD(op.get(), dd, permutation), e);
@@ -49,7 +50,7 @@ namespace dd {
             return MatrixDD::one;
         }
 
-        if (auto grover = dynamic_cast<const qc::Grover*>(qc)) {
+        if (const auto* grover = dynamic_cast<const qc::Grover*>(qc)) {
             return buildFunctionalityRecursive(grover, dd);
         }
 
@@ -198,16 +199,17 @@ namespace dd {
     }
 
     template<class DDPackage>
-    MatrixDD buildFunctionality(GoogleRandomCircuitSampling* qc, std::unique_ptr<DDPackage>& dd, short ncycles = -1) {
-        if (ncycles != -1 && (static_cast<std::size_t>(ncycles) < qc->cycles.size() - 2U)) {
-            qc->removeCycles(qc->cycles.size() - 2U - ncycles);
+    MatrixDD buildFunctionality(GoogleRandomCircuitSampling* qc, std::unique_ptr<DDPackage>& dd, const std::optional<std::size_t> ncycles = std::nullopt) {
+        if (ncycles.has_value() && (*ncycles < qc->cycles.size() - 2U)) {
+            qc->removeCycles(qc->cycles.size() - 2U - *ncycles);
         }
 
+        const auto  nqubits     = static_cast<dd::QubitCount>(qc->getNqubits());
         Permutation permutation = qc->initialLayout;
-        auto        e           = dd->makeIdent(qc->getNqubits());
+        auto        e           = dd->makeIdent(nqubits);
         dd->incRef(e);
         for (const auto& cycle: qc->cycles) {
-            auto f = dd->makeIdent(qc->getNqubits());
+            auto f = dd->makeIdent(nqubits);
             for (const auto& op: cycle) {
                 f = dd->multiply(getDD(op.get(), dd, permutation), f);
             }
