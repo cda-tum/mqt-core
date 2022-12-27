@@ -84,15 +84,17 @@ void Q9Shor::measureAndCorrect() {
         //CORRECT
         //x, i.e. bit flip errors
         for (std::size_t j = 0; j < 3; j++) {
-            classicalControl(static_cast<dd::Qubit>(clStart + 2 * j), 2, 1, qc::X, static_cast<dd::Qubit>(i + 3 * j * nQubits));
-            classicalControl(static_cast<dd::Qubit>(clStart + 2 * j), 2, 2, qc::X, static_cast<dd::Qubit>(i + (3 * j + 2) * nQubits));
-            classicalControl(static_cast<dd::Qubit>(clStart + 2 * j), 2, 3, qc::X, static_cast<dd::Qubit>(i + (3 * j + 1) * nQubits));
+            const auto controlRegister = std::make_pair(static_cast<dd::Qubit>(clStart + 2 * j), 2);
+            classicalControl(controlRegister, 1, qc::X, static_cast<dd::Qubit>(i + 3 * j * nQubits));
+            classicalControl(controlRegister, 2, qc::X, static_cast<dd::Qubit>(i + (3 * j + 2) * nQubits));
+            classicalControl(controlRegister, 3, qc::X, static_cast<dd::Qubit>(i + (3 * j + 1) * nQubits));
         }
 
         //z, i.e. phase flip errors
-        classicalControl(static_cast<dd::Qubit>(clStart + 6), 2, 1, qc::Z, i);
-        classicalControl(static_cast<dd::Qubit>(clStart + 6), 2, 2, qc::Z, static_cast<dd::Qubit>(i + 6 * nQubits));
-        classicalControl(static_cast<dd::Qubit>(clStart + 6), 2, 3, qc::Z, static_cast<dd::Qubit>(i + 3 * nQubits));
+        const auto controlRegister = std::make_pair(static_cast<dd::Qubit>(clStart + 6), 2);
+        classicalControl(controlRegister, 1, qc::Z, i);
+        classicalControl(controlRegister, 2, qc::Z, static_cast<dd::Qubit>(i + 6 * nQubits));
+        classicalControl(controlRegister, 3, qc::Z, static_cast<dd::Qubit>(i + 3 * nQubits));
     }
 }
 

@@ -31,9 +31,10 @@ void Q7Steane::measureAndCorrect() {
 }
 
 void Q7Steane::measureAndCorrectSingle(bool xSyndrome) {
-    const auto nQubits    = qcOriginal->getNqubits();
-    const auto ancStart   = nQubits * ecc.nRedundantQubits;
-    const auto clAncStart = static_cast<dd::QubitCount>(qcOriginal->getNcbits());
+    const auto nQubits         = qcOriginal->getNqubits();
+    const auto ancStart        = nQubits * ecc.nRedundantQubits;
+    const auto clAncStart      = static_cast<dd::QubitCount>(qcOriginal->getNcbits());
+    const auto controlRegister = std::make_pair(static_cast<dd::Qubit>(clAncStart), static_cast<dd::QubitCount>(3));
 
     for (dd::Qubit i = 0; i < nQubits; i++) {
         if (gatesWritten) {
@@ -69,7 +70,7 @@ void Q7Steane::measureAndCorrectSingle(bool xSyndrome) {
         //correct Z_i for i+1 = c0*1+c1*2+c2*4
         //correct X_i for i+1 = c3*1+c4*2+c5*4
         for (std::size_t j = 0; j < 7; j++) {
-            classicalControl(static_cast<dd::Qubit>(clAncStart), static_cast<dd::QubitCount>(3), j + 1U, xSyndrome ? qc::Z : qc::X, i + j * nQubits);
+            classicalControl(controlRegister, j + 1U, xSyndrome ? qc::Z : qc::X, i + j * nQubits);
         }
         gatesWritten = true;
     }
@@ -83,6 +84,7 @@ void Q7Steane::writeDecoding() {
     const auto                                clAncStart       = static_cast<dd::QubitCount>(qcOriginal->getNcbits());
     static constexpr std::array<dd::Qubit, 4> correctionNeeded = {1, 2, 4, 7}; //values with odd amount of '1' bits
     //use exiting registers qeccX and qeccZ for decoding
+    const auto controlRegister = std::make_pair(static_cast<dd::Qubit>(clAncStart), static_cast<dd::QubitCount>(3));
 
     for (dd::Qubit i = 0; i < nQubits; i++) {
         //#|###|###
@@ -94,13 +96,13 @@ void Q7Steane::writeDecoding() {
         qcMapped->measure(static_cast<dd::Qubit>(i + 2 * nQubits), clAncStart + 1);
         qcMapped->measure(static_cast<dd::Qubit>(i + 3 * nQubits), clAncStart + 2);
         for (auto value: correctionNeeded) {
-            classicalControl(static_cast<dd::Qubit>(clAncStart), static_cast<dd::QubitCount>(3), value, qc::X, i);
+            classicalControl(controlRegister, value, qc::X, i);
         }
         qcMapped->measure(static_cast<dd::Qubit>(i + 4 * nQubits), clAncStart);
         qcMapped->measure(static_cast<dd::Qubit>(i + 5 * nQubits), clAncStart + 1);
         qcMapped->measure(static_cast<dd::Qubit>(i + 6 * nQubits), clAncStart + 2);
         for (auto value: correctionNeeded) {
-            classicalControl(static_cast<dd::Qubit>(clAncStart), static_cast<dd::QubitCount>(3), value, qc::X, i);
+            classicalControl(controlRegister, value, qc::X, i);
         }
     }
     isDecoded = true;

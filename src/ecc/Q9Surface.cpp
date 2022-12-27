@@ -60,6 +60,7 @@ void Q9Surface::measureAndCorrect() {
         }
 
         //correction
+        auto controlRegister = std::make_pair(static_cast<dd::Qubit>(clAncStart), ancillaWidth);
         for (std::size_t q = 0; q < qubitCorrectionZ.size(); q++) {
             if (uncorrectedZQubits.count(q) == 0) {
                 std::size_t mask = 0;
@@ -68,9 +69,10 @@ void Q9Surface::measureAndCorrect() {
                         mask |= (1 << c);
                     }
                 }
-                classicalControl(static_cast<dd::Qubit>(clAncStart), 4, mask, qc::Z, qubits[q]);
+                classicalControl(controlRegister, mask, qc::Z, qubits[q]);
             }
         }
+        controlRegister = std::make_pair(static_cast<dd::Qubit>(clAncStart + ancillaWidth), ancillaWidth);
         for (std::size_t q = 0; q < qubitCorrectionX.size(); q++) {
             if (uncorrectedXQubits.count(q) == 0) {
                 std::size_t mask = 0;
@@ -79,7 +81,7 @@ void Q9Surface::measureAndCorrect() {
                         mask |= (1 << c);
                     }
                 }
-                classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, mask, qc::X, qubits[q]);
+                classicalControl(controlRegister, mask, qc::X, qubits[q]);
             }
         }
 

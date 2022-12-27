@@ -8,9 +8,10 @@
 void Q5Laflamme::writeEncoding() {
     Ecc::writeEncoding();
 
-    const auto nQubits  = qcOriginal->getNqubits();
-    const auto ancStart = static_cast<dd::Qubit>(nQubits * ecc.nRedundantQubits);
-    const auto clEncode = qcOriginal->getNcbits() + 4; //encode
+    const auto nQubits         = qcOriginal->getNqubits();
+    const auto ancStart        = static_cast<dd::Qubit>(nQubits * ecc.nRedundantQubits);
+    const auto clEncode        = qcOriginal->getNcbits() + 4; //encode
+    const auto controlRegister = std::make_pair(static_cast<dd::Qubit>(clEncode), static_cast<dd::QubitCount>(1));
 
     for (dd::Qubit i = 0; i < nQubits; i++) {
         qcMapped->reset(ancStart);
@@ -25,7 +26,7 @@ void Q5Laflamme::writeEncoding() {
         qcMapped->measure(ancStart, clEncode);
 
         for (std::size_t j = 0; j < ecc.nRedundantQubits; j++) {
-            classicalControl(static_cast<dd::Qubit>(clEncode), static_cast<dd::QubitCount>(1), 1, qc::OpType::X, static_cast<dd::Qubit>(i + j * nQubits));
+            classicalControl(controlRegister, 1, qc::OpType::X, static_cast<dd::Qubit>(i + j * nQubits));
         }
     }
     gatesWritten = true;
@@ -70,8 +71,7 @@ void Q5Laflamme::measureAndCorrect() {
             qcMapped->measure(static_cast<dd::Qubit>(ancStart + j), clAncStart + j);
         }
 
-        auto ncBits     = static_cast<dd::Qubit>(qcOriginal->getNcbits());
-        auto qubitCount = static_cast<dd::QubitCount>(4);
+        const auto controlRegister = std::make_pair(static_cast<dd::Qubit>(qcOriginal->getNcbits()), static_cast<dd::QubitCount>(4));
 
         //perform corrections
         for (std::size_t q = 0; q < ecc.nRedundantQubits; q++) {
@@ -82,7 +82,7 @@ void Q5Laflamme::measureAndCorrect() {
                         value |= (1 << c);
                     }
                 }
-                classicalControl(ncBits, qubitCount, value, op, qubits[q]);
+                classicalControl(controlRegister, value, op, qubits[q]);
             }
         }
     }
@@ -104,8 +104,9 @@ void Q5Laflamme::writeDecoding() {
         for (std::size_t j = 1; j < ecc.nRedundantQubits; j++) {
             qcMapped->measure(static_cast<dd::Qubit>(i + j * nQubits), clAncStart + j - 1);
         }
+        const auto controlRegister = std::make_pair(static_cast<dd::Qubit>(clAncStart), 4);
         for (dd::Qubit const value: correctionNeeded) {
-            classicalControl(static_cast<dd::Qubit>(clAncStart), 4, value, qc::X, static_cast<dd::Qubit>(i));
+            classicalControl(controlRegister, value, qc::X, static_cast<dd::Qubit>(i));
         }
     }
     isDecoded = true;

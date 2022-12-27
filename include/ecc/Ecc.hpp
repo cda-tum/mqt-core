@@ -100,9 +100,9 @@ protected:
         qcMapped->x(static_cast<dd::Qubit>(target), controls);
     }
 
-    void classicalControl(dd::Qubit control, dd::QubitCount qubitCount, size_t value, qc::OpType opType, dd::Qubit target) {
+    void classicalControl(const std::pair<dd::Qubit, std::size_t>& controlRegister, std::size_t value, qc::OpType opType, dd::Qubit target) {
         std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(), target, opType);
-        qcMapped->emplace_back<qc::ClassicControlledOperation>(op, std::make_pair(control, qubitCount), value);
+        qcMapped->emplace_back<qc::ClassicControlledOperation>(op, controlRegister, value);
     }
 
     //static, since some codes need to store those functions into function pointers
@@ -118,5 +118,7 @@ protected:
      * returns if op1 and op2 are commutative,
      * i.e. if for all qubit states s: op1(op2(s)) == op2(op1(s))
      * */
-    bool commutative(qc::OpType op1, qc::OpType op2);
+    bool commutative(qc::OpType op1, qc::OpType op2) {
+        return op1 == op2 || op1 == qc::I || op2 == qc::I;
+    }
 };

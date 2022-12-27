@@ -65,21 +65,22 @@ void Q18Surface::measureAndCorrect() {
         }
 
         //logic: classical control
-
+        auto controlRegister = std::make_pair(static_cast<dd::Qubit>(clAncStart), ancillaWidth);
         for (const auto& pair: qubitCorrectionX) {
             std::size_t mask = 0;
             for (std::size_t value: pair.second) {
                 mask |= xCheckMasks[value];
             }
-            classicalControl(static_cast<dd::Qubit>(clAncStart), ancillaWidth, mask, qc::X, qubits[pair.first]);
+            classicalControl(controlRegister, mask, qc::X, qubits[pair.first]);
         }
 
+        controlRegister = std::make_pair(static_cast<dd::Qubit>(clAncStart + ancillaWidth), ancillaWidth);
         for (const auto& pair: qubitCorrectionZ) {
             std::size_t mask = 0;
             for (std::size_t value: pair.second) {
                 mask |= zCheckMasks[value];
             }
-            classicalControl(static_cast<dd::Qubit>(clAncStart + ancillaWidth), ancillaWidth, mask, qc::Z, qubits[pair.first]);
+            classicalControl(controlRegister, mask, qc::Z, qubits[pair.first]);
         }
 
         gatesWritten = true;

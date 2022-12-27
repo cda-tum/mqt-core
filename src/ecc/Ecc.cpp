@@ -95,7 +95,3 @@ bool Ecc::verifyExecution(bool simulateWithErrors) const {
     }
     return true;
 }
-
-bool Ecc::commutative(qc::OpType op1, qc::OpType op2) {
-    return op1 == op2 || op1 == qc::I || op2 == qc::I;
-}

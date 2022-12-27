@@ -39,20 +39,10 @@ void Q3Shor::measureAndCorrect() {
         qcMapped->measure(ancStart, clStart);
         qcMapped->measure(static_cast<dd::Qubit>(ancStart + 1), clStart + 1);
 
-        std::unique_ptr<qc::Operation> op1   = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(),
-                                                                                     static_cast<dd::Qubit>(i), qc::X);
-        const auto                     pair1 = std::make_pair(static_cast<dd::Qubit>(clStart), dd::QubitCount(2));
-        qcMapped->emplace_back<qc::ClassicControlledOperation>(op1, pair1, 1);
-
-        std::unique_ptr<qc::Operation> op2   = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(),
-                                                                                     static_cast<dd::Qubit>(i + 2 * nQubits), qc::X);
-        const auto                     pair2 = std::make_pair(static_cast<dd::Qubit>(clStart), dd::QubitCount(2));
-        qcMapped->emplace_back<qc::ClassicControlledOperation>(op2, pair2, 2);
-
-        std::unique_ptr<qc::Operation> op3   = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(),
-                                                                                     static_cast<dd::Qubit>(i + nQubits), qc::X);
-        const auto                     pair3 = std::make_pair(static_cast<dd::Qubit>(clStart), dd::QubitCount(2));
-        qcMapped->emplace_back<qc::ClassicControlledOperation>(op3, pair3, 3);
+        const auto controlRegister = std::make_pair(static_cast<dd::Qubit>(clStart), dd::QubitCount(2));
+        classicalControl(controlRegister, 1, qc::X, static_cast<dd::Qubit>(i));
+        classicalControl(controlRegister, 2, qc::X, static_cast<dd::Qubit>(i + 2 * nQubits));
+        classicalControl(controlRegister, 3, qc::X, static_cast<dd::Qubit>(i + nQubits));
     }
 }
 
