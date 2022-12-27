@@ -7,7 +7,7 @@
 
 #include "Definitions.hpp"
 #include "OpType.hpp"
-#include "dd/ComplexValue.hpp"
+#include "Permutation.hpp"
 
 #include <array>
 #include <cstring>
@@ -26,14 +26,14 @@ namespace qc {
 
     class Operation {
     protected:
-        dd::Controls                       controls{};
-        Targets                            targets{};
-        std::array<dd::fp, MAX_PARAMETERS> parameter{};
+        Controls                       controls{};
+        Targets                        targets{};
+        std::array<fp, MAX_PARAMETERS> parameter{};
 
-        dd::QubitCount nqubits    = 0;
-        dd::Qubit      startQubit = 0;
-        OpType         type       = None; // Op type
-        char           name[MAX_STRING_LENGTH]{};
+        std::size_t nqubits    = 0;
+        Qubit       startQubit = 0;
+        OpType      type       = None;
+        char        name[MAX_STRING_LENGTH]{};
 
         static bool isWholeQubitRegister(const RegisterNames& reg, std::size_t start, std::size_t end) {
             return !reg.empty() && reg[start].first == reg[end].first && (start == 0 || reg[start].first != reg[start - 1].first) && (end == reg.size() - 1 || reg[end].first != reg[end + 1].first);
@@ -65,24 +65,24 @@ namespace qc {
             return targets.size();
         }
 
-        [[nodiscard]] virtual const dd::Controls& getControls() const {
+        [[nodiscard]] virtual const Controls& getControls() const {
             return controls;
         }
-        virtual dd::Controls& getControls() {
+        virtual Controls& getControls() {
             return controls;
         }
         [[nodiscard]] virtual std::size_t getNcontrols() const {
             return controls.size();
         }
 
-        [[nodiscard]] dd::QubitCount getNqubits() const {
+        [[nodiscard]] std::size_t getNqubits() const {
             return nqubits;
         }
 
-        [[nodiscard]] const std::array<dd::fp, MAX_PARAMETERS>& getParameter() const {
+        [[nodiscard]] const std::array<fp, MAX_PARAMETERS>& getParameter() const {
             return parameter;
         }
-        std::array<dd::fp, MAX_PARAMETERS>& getParameter() {
+        std::array<fp, MAX_PARAMETERS>& getParameter() {
             return parameter;
         }
 
@@ -93,14 +93,14 @@ namespace qc {
             return type;
         }
 
-        [[nodiscard]] virtual dd::Qubit getStartingQubit() const {
+        [[nodiscard]] virtual Qubit getStartingQubit() const {
             return startQubit;
         }
 
-        [[nodiscard]] virtual std::set<dd::Qubit> getUsedQubits() const {
-            const auto&         opTargets  = getTargets();
-            const auto&         opControls = getControls();
-            std::set<dd::Qubit> usedQubits = {opTargets.begin(), opTargets.end()};
+        [[nodiscard]] virtual std::set<Qubit> getUsedQubits() const {
+            const auto&     opTargets  = getTargets();
+            const auto&     opControls = getControls();
+            std::set<Qubit> usedQubits = {opTargets.begin(), opTargets.end()};
             for (const auto& control: opControls) {
                 usedQubits.insert(control.qubit);
             }
@@ -108,7 +108,7 @@ namespace qc {
         }
 
         // Setter
-        virtual void setNqubits(dd::QubitCount nq) {
+        virtual void setNqubits(const std::size_t nq) {
             nqubits = nq;
         }
 
@@ -116,7 +116,7 @@ namespace qc {
             targets = t;
         }
 
-        virtual void setControls(const dd::Controls& c) {
+        virtual void setControls(const Controls& c) {
             controls = c;
         }
 
@@ -127,8 +127,8 @@ namespace qc {
             setName();
         }
 
-        virtual void setParameter(const std::array<dd::fp, MAX_PARAMETERS>& p) {
-            Operation::parameter = p;
+        virtual void setParameter(const std::array<fp, MAX_PARAMETERS>& p) {
+            parameter = p;
         }
 
         [[nodiscard]] inline virtual bool isUnitary() const {
@@ -159,17 +159,16 @@ namespace qc {
             return !controls.empty();
         }
 
-        [[nodiscard]] inline virtual bool actsOn(dd::Qubit i) const {
+        [[nodiscard]] inline virtual bool actsOn(Qubit i) const {
             for (const auto& t: targets) {
-                if (t == i)
+                if (t == i) {
                     return true;
+                }
             }
-
-            if (controls.count(i) > 0)
-                return true;
-
-            return false;
+            return controls.count(i) > 0;
         }
+
+        virtual void addDepthContribution(std::vector<std::size_t>& depths) const;
 
         [[nodiscard]] virtual bool equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const;
         [[nodiscard]] virtual bool equals(const Operation& op) const {
@@ -184,7 +183,6 @@ namespace qc {
             return op.print(os);
         }
 
-        virtual void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const                         = 0;
-        virtual void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const = 0;
+        virtual void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const = 0;
     };
 } // namespace qc

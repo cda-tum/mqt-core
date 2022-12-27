@@ -6,9 +6,9 @@
 #include "algorithms/QFT.hpp"
 
 namespace qc {
-    QFT::QFT(dd::QubitCount nq, bool includeMeasurements, bool dynamic):
+    QFT::QFT(const std::size_t nq, const bool includeMeasurements, const bool dynamic):
         precision(nq), includeMeasurements(includeMeasurements), dynamic(dynamic) {
-        name = "qft_" + std::to_string(static_cast<std::size_t>(nq));
+        name = "qft_" + std::to_string(nq);
         if (precision == 0) {
             return;
         }
@@ -23,8 +23,8 @@ namespace qc {
     }
 
     std::ostream& QFT::printStatistics(std::ostream& os) const {
-        os << "QFT (" << static_cast<std::size_t>(precision) << ") Statistics:\n";
-        os << "\tn: " << static_cast<std::size_t>(nqubits) << std::endl;
+        os << "QFT (" << precision << ") Statistics:\n";
+        os << "\tn: " << nqubits << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;
         os << "\tdynamic: " << dynamic << std::endl;
         os << "--------------" << std::endl;
@@ -32,21 +32,18 @@ namespace qc {
     }
     void QFT::createCircuit() {
         if (dynamic) {
-            for (dd::QubitCount i = 0; i < precision; i++) {
+            for (std::size_t i = 0; i < precision; i++) {
                 // apply classically controlled phase rotations
-                for (dd::QubitCount j = 1; j <= i; ++j) {
-                    const auto d = static_cast<dd::Qubit>(precision - j);
+                for (std::size_t j = 1; j <= i; ++j) {
+                    const auto d = static_cast<Qubit>(precision - j);
                     if (j == i) {
-                        std::unique_ptr<qc::Operation> op = std::make_unique<StandardOperation>(nqubits, 0, S);
-                        emplace_back<ClassicControlledOperation>(op, std::pair{static_cast<dd::Qubit>(d), 1U}, 1);
+                        classicControlled(S, 0, {d, 1U}, 1U);
                     } else if (j == i - 1) {
-                        std::unique_ptr<qc::Operation> op = std::make_unique<StandardOperation>(nqubits, 0, T);
-                        emplace_back<ClassicControlledOperation>(op, std::pair{static_cast<dd::Qubit>(d), 1U}, 1);
+                        classicControlled(T, 0, {d, 1U}, 1U);
                     } else {
-                        auto                           powerOfTwo = std::pow(2.L, i - j + 1);
-                        auto                           lambda     = static_cast<dd::fp>(dd::PI / powerOfTwo);
-                        std::unique_ptr<qc::Operation> op         = std::make_unique<StandardOperation>(nqubits, 0, Phase, lambda);
-                        emplace_back<ClassicControlledOperation>(op, std::pair{static_cast<dd::Qubit>(d), 1U}, 1);
+                        auto powerOfTwo = std::pow(2.L, i - j + 1);
+                        auto lambda     = static_cast<fp>(PI / powerOfTwo);
+                        classicControlled(Phase, 0, {d, 1U}, 1U, lambda);
                     }
                 }
 
@@ -57,25 +54,26 @@ namespace qc {
                 measure(0, precision - 1 - i);
 
                 // reset qubit if not finished
-                if (i < precision - 1)
+                if (i < precision - 1) {
                     reset(0);
+                }
             }
         } else {
             // apply quantum Fourier transform
-            for (dd::QubitCount i = 0; i < precision; ++i) {
-                const auto q = static_cast<dd::Qubit>(i);
+            for (std::size_t i = 0; i < precision; ++i) {
+                const auto q = static_cast<Qubit>(i);
 
                 // apply controlled rotations
-                for (dd::QubitCount j = i; j > 0; --j) {
-                    const auto d = static_cast<dd::Qubit>(q - j);
+                for (std::size_t j = i; j > 0; --j) {
+                    const auto d = static_cast<Qubit>(q - j);
                     if (j == 1) {
-                        s(d, dd::Control{q});
+                        s(d, Control{q});
                     } else if (j == 2) {
-                        t(d, dd::Control{q});
+                        t(d, Control{q});
                     } else {
                         auto powerOfTwo = std::pow(2.L, j);
-                        auto lambda     = static_cast<dd::fp>(dd::PI / powerOfTwo);
-                        phase(d, dd::Control{q}, lambda);
+                        auto lambda     = static_cast<fp>(PI / powerOfTwo);
+                        phase(d, Control{q}, lambda);
                     }
                 }
 
@@ -85,15 +83,15 @@ namespace qc {
 
             if (includeMeasurements) {
                 // measure qubits in reverse order
-                for (dd::QubitCount i = 0; i < precision; ++i) {
-                    measure(static_cast<dd::Qubit>(i), precision - 1 - i);
+                for (std::size_t i = 0; i < precision; ++i) {
+                    measure(i, precision - 1 - i);
                 }
             } else {
-                for (dd::Qubit i = 0; i < static_cast<dd::Qubit>(precision / 2); ++i) {
-                    swap(i, static_cast<dd::Qubit>(precision - 1 - i));
+                for (Qubit i = 0; i < static_cast<Qubit>(precision / 2); ++i) {
+                    swap(i, static_cast<Qubit>(precision - 1 - i));
                 }
-                for (dd::QubitCount i = 0; i < precision; ++i) {
-                    outputPermutation[static_cast<dd::Qubit>(i)] = static_cast<dd::Qubit>(precision - 1 - i);
+                for (std::size_t i = 0; i < precision; ++i) {
+                    outputPermutation[i] = static_cast<Qubit>(precision - 1 - i);
                 }
             }
         }

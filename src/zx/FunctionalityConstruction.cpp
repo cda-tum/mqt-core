@@ -24,7 +24,7 @@ namespace zx {
                 const auto tar2  = p.at(op2->getTargets().front());
                 const auto ctrl1 = p.at((*op1->getControls().begin()).qubit);
                 const auto ctrl2 = p.at((*op2->getControls().begin()).qubit);
-                return ctrl == tar1 && tar1 == ctrl2 && target == ctrl1 && ctrl1 == tar2;
+                return ctrl == static_cast<Qubit>(tar1) && tar1 == ctrl2 && target == static_cast<Qubit>(ctrl1) && ctrl1 == tar2;
             }
         }
         return false;
@@ -62,9 +62,9 @@ namespace zx {
     FunctionalityConstruction::addCphase(ZXDiagram& diag, const PiExpression& phase,
                                          const Qubit ctrl, const Qubit target,
                                          std::vector<Vertex>& qubits) {
-        auto new_const = phase.getConst() / 2;
-        auto newPhase  = phase / 2.0;
-        newPhase.setConst(new_const);
+        auto newConst = phase.getConst() / 2;
+        auto newPhase = phase / 2.0;
+        newPhase.setConst(newConst);
         addZSpider(diag, ctrl, qubits, newPhase); //todo maybe should provide a method for int division
         addCnot(diag, ctrl, target, qubits);
         addZSpider(diag, target, qubits, -newPhase);
@@ -108,18 +108,19 @@ namespace zx {
     FunctionalityConstruction::op_it FunctionalityConstruction::parse_op(ZXDiagram& diag, op_it it, op_it end,
                                                                          std::vector<Vertex>& qubits, const qc::Permutation& p) {
         const auto& op = *it;
+        // barrier statements are ignored
         if (op->getType() == qc::OpType::Barrier) {
             return it + 1;
         }
 
         if (!op->isControlled()) {
+            // single qubit gates
             const auto target = p.at(op->getTargets().front());
             switch (op->getType()) {
                 case qc::OpType::Z:
                     addZSpider(diag, target, qubits,
                                PiExpression(PiRational(1, 1)));
                     break;
-
                 case qc::OpType::RZ: {
                     const auto& param = parseParam(op.get(), 0);
                     diag.addGlobalPhase(-param / 2.0);
@@ -129,20 +130,16 @@ namespace zx {
                             parseParam(op.get(), 0));
                     break;
                 }
-
                 case qc::OpType::Phase:
                     addZSpider(diag, target, qubits, parseParam(op.get(), 0));
                     break;
-
                 case qc::OpType::X:
                     addXSpider(diag, target, qubits,
                                PiExpression(PiRational(1, 1)));
                     break;
-
                 case qc::OpType::RX:
                     addXSpider(diag, target, qubits, parseParam(op.get(), 0));
                     break;
-
                 case qc::OpType::Y:
                     diag.addGlobalPhase(PiExpression{-PiRational(1, 2)});
 
@@ -151,7 +148,6 @@ namespace zx {
                     addXSpider(diag, target, qubits,
                                PiExpression(PiRational(1, 1)));
                     break;
-
                 case qc::OpType::RY:
                     diag.addGlobalPhase(PiExpression(-PiRational(op->getParameter().front()) / 2 +
                                                      PiRational(1, 2) + PiRational(3, 2)));
@@ -200,7 +196,6 @@ namespace zx {
                     addZSpider(diag, target, qubits,
                                parseParam(op.get(), 1) + PiRational(3, 1));
                     break;
-
                 case qc::OpType::SWAP: {
                     const auto target2 = p.at(op->getTargets()[1]);
                     addSwap(diag, target, target2, qubits);
@@ -236,6 +231,7 @@ namespace zx {
                                       qc::toString(op->getType()));
             }
         } else if (op->getNcontrols() == 1 && op->getNtargets() == 1) {
+            // two-qubit controlled gates
             const auto target = p.at(op->getTargets().front());
             const auto ctrl   = p.at((*op->getControls().begin()).qubit);
             switch (op->getType()) { // TODO: any gate can be controlled
@@ -290,15 +286,17 @@ namespace zx {
                                       qc::toString(op->getType()));
             }
         } else if (op->getNcontrols() == 2) {
+            // three-qubit controlled gates (ccx or ccz)
             Qubit       ctrl0  = 0;
             Qubit       ctrl1  = 0;
             const Qubit target = p.at(op->getTargets().front());
             int         i      = 0;
-            for (auto& ctrl: op->getControls()) {
-                if (i++ == 0)
+            for (const auto& ctrl: op->getControls()) {
+                if (i++ == 0) {
                     ctrl0 = p.at(ctrl.qubit);
-                else
+                } else {
                     ctrl1 = p.at(ctrl.qubit);
+                }
             }
             switch (op->getType()) {
                 case qc::OpType::X:
@@ -336,8 +334,9 @@ namespace zx {
 
             if (op->getType() == qc::OpType::Compound) {
                 const auto* compOp = dynamic_cast<qc::CompoundOperation*>(op.get());
-                for (auto subIt = compOp->cbegin(); subIt != compOp->cend();)
+                for (auto subIt = compOp->cbegin(); subIt != compOp->cend();) {
                     subIt = parse_op(diag, subIt, compOp->cend(), qubits, qc->initialLayout);
+                }
                 ++it;
             } else {
                 it = parse_op(diag, it, qc->cend(), qubits, qc->initialLayout);
@@ -419,19 +418,16 @@ namespace zx {
 
     PiExpression FunctionalityConstruction::parseParam(const qc::Operation* op,
                                                        const std::size_t    i) {
-        const auto* symbOp = dynamic_cast<const qc::SymbolicOperation*>(op);
-        if (symbOp) {
+        if (const auto* symbOp = dynamic_cast<const qc::SymbolicOperation*>(op)) {
             return toPiExpr(symbOp->getParameter(i));
-        } else {
-            return PiExpression{zx::PiRational{op->getParameter()[i]}};
         }
+        return PiExpression{zx::PiRational{op->getParameter()[i]}};
     }
     PiExpression FunctionalityConstruction::toPiExpr(const qc::SymbolOrNumber& param) {
-        if (std::holds_alternative<double>(param))
+        if (std::holds_alternative<double>(param)) {
             return zx::PiExpression{
                     zx::PiRational{std::get<double>(param)}};
-        else {
-            return std::get<qc::Symbolic>(param).convert<zx::PiRational>();
         }
+        return std::get<qc::Symbolic>(param).convert<zx::PiRational>();
     }
 } // namespace zx

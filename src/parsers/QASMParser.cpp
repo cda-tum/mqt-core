@@ -17,60 +17,68 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
 
     do {
         if (p.sym == Token::Kind::qreg) {
+            // quantum register definition
             p.scan();
             p.check(Token::Kind::identifier);
-            std::string s = p.t.str;
+            const std::string s = p.t.str;
             p.check(Token::Kind::lbrack);
             p.check(Token::Kind::nninteger);
-            auto n = static_cast<dd::QubitCount>(p.t.val);
+            const auto n = static_cast<std::size_t>(p.t.val);
             p.check(Token::Kind::rbrack);
             p.check(Token::Kind::semicolon);
             addQubitRegister(n, s.c_str());
             p.nqubits = nqubits;
         } else if (p.sym == Token::Kind::creg) {
+            // classical register definition
             p.scan();
             p.check(Token::Kind::identifier);
-            std::string s = p.t.str;
+            const std::string s = p.t.str;
             p.check(Token::Kind::lbrack);
             p.check(Token::Kind::nninteger);
-            auto n = static_cast<std::size_t>(p.t.val);
+            const auto n = static_cast<std::size_t>(p.t.val);
             p.check(Token::Kind::rbrack);
             p.check(Token::Kind::semicolon);
             addClassicalRegister(n, s.c_str());
             p.nclassics = nclassics;
         } else if (p.sym == Token::Kind::ugate || p.sym == Token::Kind::cxgate || p.sym == Token::Kind::swap || p.sym == Token::Kind::identifier || p.sym == Token::Kind::measure || p.sym == Token::Kind::reset || p.sym == Token::Kind::mcx_gray || p.sym == Token::Kind::mcx_recursive || p.sym == Token::Kind::mcx_vchain || p.sym == Token::Kind::mcphase || p.sym == Token::Kind::sxgate || p.sym == Token::Kind::sxdggate) {
+            // gate application
             ops.emplace_back(p.Qop());
         } else if (p.sym == Token::Kind::gate) {
+            // gate definition
             p.GateDecl();
         } else if (p.sym == Token::Kind::include) {
+            // include statement
             p.scan();
             p.check(Token::Kind::string);
             p.scanner->addFileInput(p.t.str);
             p.check(Token::Kind::semicolon);
         } else if (p.sym == Token::Kind::barrier) {
+            // barrier statement
             p.scan();
             std::vector<qc::QuantumRegister> args;
             p.ArgList(args);
             p.check(Token::Kind::semicolon);
 
-            std::vector<dd::Qubit> qubits{};
+            std::vector<qc::Qubit> qubits{};
             for (auto& arg: args) {
-                for (dd::QubitCount q = 0; q < arg.second; ++q) {
-                    qubits.emplace_back(static_cast<dd::Qubit>(arg.first + q));
+                for (std::size_t q = 0; q < arg.second; ++q) {
+                    qubits.emplace_back(arg.first + q);
                 }
             }
 
             emplace_back<NonUnitaryOperation>(nqubits, qubits, Barrier);
         } else if (p.sym == Token::Kind::opaque) {
+            // opaque gate definition
             p.OpaqueGateDecl();
         } else if (p.sym == Token::Kind::_if) {
+            // classically-controlled operation
             p.scan();
             p.check(Token::Kind::lpar);
             p.check(Token::Kind::identifier);
-            std::string creg = p.t.str;
+            const std::string creg = p.t.str;
             p.check(Token::Kind::eq);
             p.check(Token::Kind::nninteger);
-            auto n = static_cast<dd::QubitCount>(p.t.val);
+            const auto n = static_cast<std::size_t>(p.t.val);
             p.check(Token::Kind::rpar);
 
             auto it = p.cregs.find(creg);
@@ -80,6 +88,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
                 emplace_back<ClassicControlledOperation>(p.Qop(), it->second, n);
             }
         } else if (p.sym == Token::Kind::snapshot) {
+            // snapshot statement
             p.scan();
             p.check(Token::Kind::lpar);
             p.check(Token::Kind::nninteger);
@@ -105,10 +114,12 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
 
             emplace_back<NonUnitaryOperation>(nqubits, qubits, n);
         } else if (p.sym == Token::Kind::probabilities) {
+            // show probabilities statement
             emplace_back<NonUnitaryOperation>(nqubits);
             p.scan();
             p.check(Token::Kind::semicolon);
         } else if (p.sym == Token::Kind::comment) {
+            // comment
             p.scan();
             p.handleComment();
         } else {
@@ -117,8 +128,10 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
     } while (p.sym != Token::Kind::eof);
 
     // if any I/O information was gathered during parsing, transfer it to the QuantumComputation
-    if (!p.initialLayout.empty())
+    if (!p.initialLayout.empty()) {
         initialLayout = std::move(p.initialLayout);
-    if (!p.outputPermutation.empty())
+    }
+    if (!p.outputPermutation.empty()) {
         outputPermutation = std::move(p.outputPermutation);
+    }
 }

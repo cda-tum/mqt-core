@@ -11,7 +11,6 @@
 #include <random>
 
 using namespace qc;
-using namespace dd;
 
 struct StochasticNoiseSimulatorDDPackageConfig: public dd::DDPackageConfig {
     static constexpr std::size_t STOCHASTIC_CACHE_OPS = qc::OpType::OpCount;
@@ -85,6 +84,8 @@ using DensityMatrixTestPackage = dd::Package<DensityMatrixSimulatorDDPackageConf
 class DDNoiseFunctionalityTest: public ::testing::Test {
 protected:
     void SetUp() override {
+        using namespace qc::literals;
+
         // circuit taken from https://github.com/pnnl/qasmbench
         qc.addQubitRegister(4U);
         qc.x(0);
@@ -116,7 +117,7 @@ protected:
     }
 
     qc::QuantumComputation qc{};
-    const size_t           stochRuns = 1000U;
+    size_t                 stochRuns = 1000U;
 };
 
 TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPDApplySequential) {
@@ -125,7 +126,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPDApplySequential) {
     auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
     dd->incRef(rootEdge);
 
-    std::vector<dd::NoiseOperations> noiseEffects = {amplitudeDamping, phaseFlip, depolarization, dd::identity};
+    const auto noiseEffects = {dd::amplitudeDamping, dd::phaseFlip, dd::depolarization, dd::identity};
 
     auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality<DensityMatrixTestPackage>(
             dd,
@@ -147,7 +148,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPDApplySequential) {
 
     const auto m = dd->getProbVectorFromDensityMatrix(rootEdge, 0.001);
 
-    double tolerance = 1e-10;
+    const double tolerance = 1e-10;
     EXPECT_NEAR(m.find("0000")->second, 0.0969332192741, tolerance);
     EXPECT_NEAR(m.find("0001")->second, 0.0907888041538, tolerance);
     EXPECT_NEAR(m.find("0010")->second, 0.0141409660985, tolerance);
@@ -171,7 +172,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
     auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
     dd->incRef(rootEdge);
 
-    std::vector<dd::NoiseOperations> noiseEffects = {amplitudeDamping, dd::identity, phaseFlip, depolarization};
+    const auto noiseEffects = {dd::amplitudeDamping, dd::identity, dd::phaseFlip, dd::depolarization};
 
     auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality<DensityMatrixTestPackage>(
             dd,
@@ -193,7 +194,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
 
     const auto m = dd->getProbVectorFromDensityMatrix(rootEdge, 0.001);
 
-    double tolerance = 1e-10;
+    const double tolerance = 1e-10;
     EXPECT_NEAR(m.find("0000")->second, 0.0969332192741, tolerance);
     EXPECT_NEAR(m.find("0001")->second, 0.0907888041538, tolerance);
     EXPECT_NEAR(m.find("0010")->second, 0.0141409660985, tolerance);
@@ -260,7 +261,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
         }
     }
 
-    double tolerance = 0.1;
+    const double tolerance = 0.1;
     EXPECT_NEAR(measSummary["0000"], 0.09693321927412533, tolerance);
     EXPECT_NEAR(measSummary["0001"], 0.09078880415385877, tolerance);
     EXPECT_NEAR(measSummary["0010"], 0.01414096609854787, tolerance);
@@ -327,7 +328,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
         }
     }
 
-    double tolerance = 0.1;
+    const double tolerance = 0.1;
     EXPECT_NEAR(measSummary["0000"], 0., tolerance);
     EXPECT_NEAR(measSummary["0001"], 0., tolerance);
     EXPECT_NEAR(measSummary["0010"], 0., tolerance);
@@ -346,14 +347,14 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
 }
 
 TEST_F(DDNoiseFunctionalityTest, testingUsedQubits) {
-    QubitCount nqubits    = 1;
-    auto       standardOp = StandardOperation(nqubits, 1, qc::Z);
+    const std::size_t nqubits    = 1;
+    auto              standardOp = StandardOperation(nqubits, 1, qc::Z);
     EXPECT_EQ(standardOp.getUsedQubits().size(), 1);
     EXPECT_TRUE(standardOp.getUsedQubits().count(1));
 
-    auto nonUnitaryOp = NonUnitaryOperation(nqubits, std::vector<dd::Qubit>{0}, std::vector<std::size_t>{0});
+    auto nonUnitaryOp = NonUnitaryOperation(nqubits, 0, 0);
     EXPECT_EQ(nonUnitaryOp.getUsedQubits().size(), 1);
-    EXPECT_TRUE(nonUnitaryOp.getUsedQubits().count(0));
+    EXPECT_TRUE(nonUnitaryOp.getUsedQubits().count(0) == 1U);
 
     auto compoundOp = qc::CompoundOperation(nqubits);
     compoundOp.emplace_back<qc::StandardOperation>(nqubits, 0, qc::Z);
@@ -365,6 +366,6 @@ TEST_F(DDNoiseFunctionalityTest, testingUsedQubits) {
 
     std::unique_ptr<qc::Operation> xOp                   = std::make_unique<qc::StandardOperation>(nqubits, 0, qc::X);
     auto                           classicalControlledOp = qc::ClassicControlledOperation(xOp, std::pair{0, nqubits}, 1U);
-    EXPECT_EQ(nonUnitaryOp.getUsedQubits().size(), 1);
-    EXPECT_TRUE(nonUnitaryOp.getUsedQubits().count(0));
+    EXPECT_EQ(classicalControlledOp.getUsedQubits().size(), 1);
+    EXPECT_TRUE(classicalControlledOp.getUsedQubits().count(0) == 1U);
 }

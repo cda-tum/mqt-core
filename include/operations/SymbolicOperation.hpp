@@ -23,25 +23,25 @@ namespace qc {
     protected:
         std::array<std::optional<Symbolic>, MAX_PARAMETERS> symbolicParameter{};
 
-        static OpType parseU3(const Symbolic& lambda, dd::fp& phi, dd::fp& theta);
-        static OpType parseU3(dd::fp& lambda, const Symbolic& phi, dd::fp& theta);
-        static OpType parseU3(dd::fp& lambda, dd::fp& phi, const Symbolic& theta);
-        static OpType parseU3(const Symbolic& lambda, const Symbolic& phi, dd::fp& theta);
-        static OpType parseU3(const Symbolic& lambda, dd::fp& phi, const Symbolic& theta);
-        static OpType parseU3(dd::fp& lambda, const Symbolic& phi, const Symbolic& theta);
+        static OpType parseU3(const Symbolic& lambda, fp& phi, fp& theta);
+        static OpType parseU3(fp& lambda, const Symbolic& phi, fp& theta);
+        static OpType parseU3(fp& lambda, fp& phi, const Symbolic& theta);
+        static OpType parseU3(const Symbolic& lambda, const Symbolic& phi, fp& theta);
+        static OpType parseU3(const Symbolic& lambda, fp& phi, const Symbolic& theta);
+        static OpType parseU3(fp& lambda, const Symbolic& phi, const Symbolic& theta);
 
         static OpType parseU2(const Symbolic& lambda, const Symbolic& phi);
-        static OpType parseU2(const Symbolic& lambda, dd::fp& phi);
-        static OpType parseU2(dd::fp& lambda, const Symbolic& phi);
+        static OpType parseU2(const Symbolic& lambda, fp& phi);
+        static OpType parseU2(fp& lambda, const Symbolic& phi);
 
         static OpType parseU1(const Symbolic& lambda);
 
-        void checkUgate();
+        void checkSymbolicUgate();
 
-        void storeSymbolOrNumber(const SymbolOrNumber& param, const std::size_t i);
+        void storeSymbolOrNumber(const SymbolOrNumber& param, std::size_t i);
 
         [[nodiscard]] bool isSymbolicParameter(const std::size_t i) const {
-            return symbolicParameter[i].has_value();
+            return symbolicParameter.at(i).has_value();
         }
 
         static bool isSymbol(const SymbolOrNumber& param) {
@@ -52,39 +52,40 @@ namespace qc {
             return std::get<Symbolic>(param);
         }
 
-        static dd::fp& getNumber(SymbolOrNumber& param) {
-            return std::get<dd::fp>(param);
+        static fp& getNumber(SymbolOrNumber& param) {
+            return std::get<fp>(param);
         }
 
-        void setup(dd::QubitCount nq, const SymbolOrNumber& par0, const SymbolOrNumber& par1, const SymbolOrNumber& par2, dd::Qubit startingQubit = 0);
+        void setup(std::size_t nq, const SymbolOrNumber& par0, const SymbolOrNumber& par1, const SymbolOrNumber& par2, Qubit startingQubit = 0);
 
-        [[nodiscard]] static dd::fp getInstantiation(const SymbolOrNumber& symOrNum, const VariableAssignment& assignment);
+        [[nodiscard]] static fp getInstantiation(const SymbolOrNumber& symOrNum, const VariableAssignment& assignment);
 
     public:
         SymbolicOperation() = default;
 
         [[nodiscard]] SymbolOrNumber getParameter(const std::size_t i) const {
-            if (symbolicParameter[i].has_value())
-                return symbolicParameter[i].value();
-            return parameter[i];
+            if (symbolicParameter.at(i).has_value()) {
+                return symbolicParameter.at(i).value();
+            }
+            return parameter.at(i);
         }
 
         void setSymbolicParameter(const Symbolic& par, const std::size_t i) {
-            symbolicParameter[i] = par;
+            symbolicParameter.at(i) = par;
         }
 
         // Standard Constructors
-        SymbolicOperation(dd::QubitCount nq, dd::Qubit target, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, dd::Qubit startingQubit = 0);
-        SymbolicOperation(dd::QubitCount nq, const Targets& targets, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, dd::Qubit startingQubit = 0);
+        SymbolicOperation(std::size_t nq, Qubit target, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
+        SymbolicOperation(std::size_t nq, const Targets& targets, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
 
-        SymbolicOperation(dd::QubitCount nq, dd::Control control, dd::Qubit target, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, dd::Qubit startingQubit = 0);
-        SymbolicOperation(dd::QubitCount nq, dd::Control control, const Targets& targets, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, dd::Qubit startingQubit = 0);
+        SymbolicOperation(std::size_t nq, Control control, Qubit target, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
+        SymbolicOperation(std::size_t nq, Control control, const Targets& targets, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
 
-        SymbolicOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, dd::Qubit startingQubit = 0);
-        SymbolicOperation(dd::QubitCount nq, const dd::Controls& controls, const Targets& targets, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, dd::Qubit startingQubit = 0);
+        SymbolicOperation(std::size_t nq, const Controls& controls, Qubit target, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
+        SymbolicOperation(std::size_t nq, const Controls& controls, const Targets& targets, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
 
         // MCF (cSWAP), Peres, paramterized two target Constructor
-        SymbolicOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, dd::Qubit startingQubit = 0);
+        SymbolicOperation(std::size_t nq, const Controls& controls, Qubit target0, Qubit target1, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
 
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {
             return std::make_unique<SymbolicOperation>(getNqubits(), getControls(), getTargets(), getType(), getParameter(0), getParameter(1), getParameter(2), getStartingQubit());
@@ -104,7 +105,6 @@ namespace qc {
         }
 
         void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override;
-        void dumpQiskit(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg, const char* anc_reg_name) const override;
 
         [[nodiscard]] StandardOperation getInstantiatedOperation(const VariableAssignment& assignment) const;
 

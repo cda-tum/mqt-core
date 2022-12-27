@@ -17,29 +17,31 @@ void qc::QuantumComputation::importGRCS(std::istream& is) {
     std::size_t target  = 0;
     std::size_t cycle   = 0;
     while (std::getline(is, line)) {
-        if (line.empty()) continue;
+        if (line.empty()) {
+            continue;
+        }
         std::stringstream ss(line);
         ss >> cycle;
         ss >> identifier;
         if (identifier == "cz") {
             ss >> control;
             ss >> target;
-            emplace_back<StandardOperation>(nqubits, dd::Control{static_cast<dd::Qubit>(control)}, target, Z);
+            z(target, qc::Control{static_cast<qc::Qubit>(control)});
         } else if (identifier == "is") {
             ss >> control;
             ss >> target;
-            emplace_back<StandardOperation>(nqubits, dd::Controls{}, control, target, iSWAP);
+            iswap(control, target);
         } else {
             ss >> target;
-            if (identifier == "h")
-                emplace_back<StandardOperation>(nqubits, target, H);
-            else if (identifier == "t")
-                emplace_back<StandardOperation>(nqubits, target, T);
-            else if (identifier == "x_1_2")
-                emplace_back<StandardOperation>(nqubits, target, RX, dd::PI_2);
-            else if (identifier == "y_1_2")
-                emplace_back<StandardOperation>(nqubits, target, RY, dd::PI_2);
-            else {
+            if (identifier == "h") {
+                h(target);
+            } else if (identifier == "t") {
+                t(target);
+            } else if (identifier == "x_1_2") {
+                rx(target, qc::PI_2);
+            } else if (identifier == "y_1_2") {
+                ry(target, qc::PI_2);
+            } else {
                 throw QFRException("[grcs parser] unknown gate '" + identifier + "'");
             }
         }

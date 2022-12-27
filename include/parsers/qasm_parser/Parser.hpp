@@ -55,13 +55,13 @@ namespace qasm {
                 power,
                 id
             };
-            dd::fp      num;
+            qc::fp      num;
             Kind        kind;
             Expr*       op1 = nullptr;
             Expr*       op2 = nullptr;
             std::string id;
 
-            explicit Expr(Kind kind, dd::fp num = 0., Expr* op1 = nullptr, Expr* op2 = nullptr, std::string id = ""):
+            explicit Expr(Kind kind, qc::fp num = 0., Expr* op1 = nullptr, Expr* op2 = nullptr, std::string id = ""):
                 num(num), kind(kind), op1(op1), op2(op2), id(std::move(id)) {}
             Expr(const Expr& expr):
                 num(expr.num), kind(expr.kind), id(expr.id) {
@@ -183,7 +183,7 @@ namespace qasm {
         Scanner*                  scanner;
         qc::QuantumRegisterMap&   qregs;
         qc::ClassicalRegisterMap& cregs;
-        dd::QubitCount            nqubits   = 0;
+        std::size_t               nqubits   = 0;
         std::size_t               nclassics = 0;
         qc::Permutation           initialLayout{};
         qc::Permutation           outputPermutation{};
@@ -196,9 +196,11 @@ namespace qasm {
         virtual ~Parser() {
             delete scanner;
 
-            for (auto& cGate: compoundGates)
-                for (auto& gate: cGate.second.gates)
+            for (auto& cGate: compoundGates) {
+                for (auto& gate: cGate.second.gates) {
                     delete gate;
+                }
+            }
         }
 
         void scan();
