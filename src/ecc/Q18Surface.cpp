@@ -69,7 +69,7 @@ void Q18Surface::measureAndCorrect() {
         //logic: classical control
 
         for (const auto& pair: qubitCorrectionX) {
-            if (unmeasuredQubits.count(pair.first) > 0) {
+            if (unmeasuredQubits.count(pair.first) == 0) {
                 std::size_t mask = 0;
                 for (std::size_t value: pair.second) {
                     mask |= value;
@@ -79,7 +79,7 @@ void Q18Surface::measureAndCorrect() {
         }
 
         for (const auto& pair: qubitCorrectionZ) {
-            if (unmeasuredQubits.count(pair.first) > 0) {
+            if (unmeasuredQubits.count(pair.first) == 0) {
                 std::size_t mask = 0;
                 for (std::size_t value: pair.second) {
                     mask |= value;

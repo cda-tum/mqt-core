@@ -24,4 +24,16 @@ protected:
 
     // Set parameter for verifying the ecc
     [[maybe_unused]] const size_t insertErrorAfterNGates = 55;
+
+    //{a,{b,c}} == qubit a is checked by b and c
+    std::array<std::set<std::size_t>, 9>                            qubitCorrectionX   = {{{1}, {3}, {3}, {1, 4}, {3, 4}, {3, 6}, {4}, {4}, {6}}};
+    std::array<std::set<std::size_t>, 9>                            qubitCorrectionZ   = {{{2}, {0, 2}, {0}, {2}, {2, 5}, {5}, {7}, {5, 7}, {5}}};
+    static constexpr std::array<dd::Qubit, 4>                       xAncillaQubits     = {1, 3, 4, 6};
+    static constexpr std::array<dd::Qubit, 4>                       zAncillaQubits     = {0, 2, 5, 7};
+    std::set<dd::Qubit>                                             uncorrectedXQubits = {2, 6};
+    std::set<dd::Qubit>                                             uncorrectedZQubits = {0, 8};
+    static constexpr dd::QubitCount                                 ancillaWidth       = 4;
+    static constexpr std::array<dd::Qubit, 3>                       logicalX           = {2, 4, 6};
+    static constexpr std::array<dd::Qubit, 3>                       logicalZ           = {0, 4, 8};
+    static constexpr std::array<std::pair<dd::Qubit, dd::Qubit>, 4> swapIndices        = {{{0, 6}, {3, 7}, {2, 8}, {1, 5}}};
 };

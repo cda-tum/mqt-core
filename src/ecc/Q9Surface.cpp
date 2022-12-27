@@ -35,72 +35,53 @@ void Q9Surface::measureAndCorrect() {
             controlQubits.at(j) = dd::Control{static_cast<dd::Qubit>(qubits.at(j)), dd::Control::Type::pos};
         }
 
-        //X-type check on a0, a2, a5, a7: cx ancillaQubits->qubits
-        //Z-type check on a1, a3, a4, a6: cz ancillaQubits->qubits = cx qubits->ancillaQubits, no hadamard gate
-        qcMapped->h(ancillaQubits[0]);
-        qcMapped->h(ancillaQubits[2]);
-        qcMapped->h(ancillaQubits[5]);
-        qcMapped->h(ancillaQubits[7]);
+        //X-type check (z error) on a0, a2, a5, a7: cx ancillaQubits->qubits
+        //Z-type check (x error) on a1, a3, a4, a6: cz ancillaQubits->qubits = cx qubits->ancillaQubits, no hadamard gate
+        for (auto q: zAncillaQubits) {
+            qcMapped->h(ancillaQubits[q]);
+        }
 
-        qcMapped->x(ancillaQubits[6], controlQubits[8]);
-        qcMapped->x(qubits[7], ancillaControls[5]);
-        qcMapped->x(ancillaQubits[4], controlQubits[6]);
-        qcMapped->x(ancillaQubits[3], controlQubits[4]);
-        qcMapped->x(qubits[3], ancillaControls[2]);
-        qcMapped->x(qubits[1], ancillaControls[0]);
+        for (std::size_t q = 0; q < qubitCorrectionZ.size(); q++) {
+            for (auto c: qubitCorrectionZ[q]) {
+                qcMapped->x(qubits[q], ancillaControls[c]);
+            }
+        }
 
-        qcMapped->x(ancillaQubits[6], controlQubits[5]);
-        qcMapped->x(ancillaQubits[4], controlQubits[3]);
-        qcMapped->x(qubits[8], ancillaControls[5]);
-        qcMapped->x(ancillaQubits[3], controlQubits[1]);
-        qcMapped->x(qubits[4], ancillaControls[2]);
-        qcMapped->x(qubits[2], ancillaControls[0]);
+        for (std::size_t q = 0; q < qubitCorrectionX.size(); q++) {
+            for (auto c: qubitCorrectionX[q]) {
+                qcMapped->x(ancillaQubits[c], controlQubits[q]);
+            }
+        }
 
-        qcMapped->x(qubits[6], ancillaControls[7]);
-        qcMapped->x(qubits[4], ancillaControls[5]);
-        qcMapped->x(ancillaQubits[4], controlQubits[7]);
-        qcMapped->x(ancillaQubits[3], controlQubits[5]);
-        qcMapped->x(qubits[0], ancillaControls[2]);
-        qcMapped->x(ancillaQubits[1], controlQubits[3]);
+        for (std::size_t j = 0; j < zAncillaQubits.size(); j++) {
+            qcMapped->h(ancillaQubits[zAncillaQubits[j]]);
+            qcMapped->measure(ancillaQubits[zAncillaQubits[j]], clAncStart + j);
+            qcMapped->measure(ancillaQubits[xAncillaQubits[j]], clAncStart + 4 + j);
+        }
 
-        qcMapped->x(qubits[7], ancillaControls[7]);
-        qcMapped->x(qubits[5], ancillaControls[5]);
-        qcMapped->x(ancillaQubits[4], controlQubits[4]);
-        qcMapped->x(ancillaQubits[3], controlQubits[2]);
-        qcMapped->x(qubits[1], ancillaControls[2]);
-        qcMapped->x(ancillaQubits[1], controlQubits[0]);
-
-        qcMapped->h(ancillaQubits[0]);
-        qcMapped->h(ancillaQubits[2]);
-        qcMapped->h(ancillaQubits[5]);
-        qcMapped->h(ancillaQubits[7]);
-
-        qcMapped->measure(ancillaQubits[0], clAncStart);
-        qcMapped->measure(ancillaQubits[2], clAncStart + 1);
-        qcMapped->measure(ancillaQubits[5], clAncStart + 2);
-        qcMapped->measure(ancillaQubits[7], clAncStart + 3);
-
-        qcMapped->measure(ancillaQubits[1], clAncStart + 4);
-        qcMapped->measure(ancillaQubits[3], clAncStart + 5);
-        qcMapped->measure(ancillaQubits[4], clAncStart + 6);
-        qcMapped->measure(ancillaQubits[6], clAncStart + 7);
-
-        //logic
-        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 1, qc::Z, qubits[2]);  //ancillaQubits[0]
-        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 2, qc::Z, qubits[3]);  //ancillaQubits[2] (or qubits[0])
-        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 3, qc::Z, qubits[1]);  //ancillaQubits[0,2]
-        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 4, qc::Z, qubits[5]);  //ancillaQubits[5] (or qubits[8])
-        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 6, qc::Z, qubits[4]);  //ancillaQubits[2,5]
-        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 8, qc::Z, qubits[6]);  //ancillaQubits[7]
-        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 12, qc::Z, qubits[7]); //ancillaQubits[5,7]
-
-        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 1, qc::X, qubits[0]);  //ancillaQubits[1]
-        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 2, qc::X, qubits[1]);  //ancillaQubits[3] (or qubits[2])
-        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 4, qc::X, qubits[7]);  //ancillaQubits[4] (or qubits[6])
-        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 5, qc::X, qubits[3]);  //ancillaQubits[1,4]
-        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 6, qc::X, qubits[4]);  //ancillaQubits[3,4]
-        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 8, qc::X, qubits[8]);  //ancillaQubits[6]
-        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 10, qc::X, qubits[5]); //ancillaQubits[3,6]
+        //correction
+        for (std::size_t q = 0; q < qubitCorrectionZ.size(); q++) {
+            if (uncorrectedZQubits.count(q) == 0) {
+                std::size_t mask = 0;
+                for (std::size_t c = 0; c < zAncillaQubits.size(); c++) {
+                    if (qubitCorrectionZ[q].count(zAncillaQubits[c]) > 0) {
+                        mask |= (1 << c);
+                    }
+                }
+                classicalControl(static_cast<dd::Qubit>(clAncStart), 4, mask, qc::Z, qubits[q]);
+            }
+        }
+        for (std::size_t q = 0; q < qubitCorrectionX.size(); q++) {
+            if (uncorrectedXQubits.count(q) == 0) {
+                std::size_t mask = 0;
+                for (std::size_t c = 0; c < xAncillaQubits.size(); c++) {
+                    if (qubitCorrectionX[q].count(xAncillaQubits[c]) > 0) {
+                        mask |= (1 << c);
+                    }
+                }
+                classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, mask, qc::X, qubits[q]);
+            }
+        }
 
         gatesWritten = true;
     }
@@ -138,9 +119,9 @@ void Q9Surface::mapGate(const qc::Operation& gate) {
             break;
         case qc::X:
             for (auto i: gate.getTargets()) {
-                qcMapped->x(static_cast<dd::Qubit>(i + 2 * nQubits));
-                qcMapped->x(static_cast<dd::Qubit>(i + 4 * nQubits));
-                qcMapped->x(static_cast<dd::Qubit>(i + 6 * nQubits));
+                for (auto j: logicalX) {
+                    qcMapped->x(static_cast<dd::Qubit>(i + j * nQubits));
+                }
             }
             break;
         case qc::H:
@@ -148,29 +129,27 @@ void Q9Surface::mapGate(const qc::Operation& gate) {
                 for (std::size_t j = 0; j < 9; j++) {
                     qcMapped->h(static_cast<dd::Qubit>(i + j * nQubits));
                 }
-
-                qcMapped->swap(static_cast<dd::Qubit>(i), static_cast<dd::Qubit>(i + 6 * nQubits));
-                qcMapped->swap(static_cast<dd::Qubit>(i + 3 * nQubits), static_cast<dd::Qubit>(i + 7 * nQubits));
-                qcMapped->swap(static_cast<dd::Qubit>(i + 2 * nQubits), static_cast<dd::Qubit>(i + 8 * nQubits));
-                qcMapped->swap(static_cast<dd::Qubit>(i + nQubits), static_cast<dd::Qubit>(i + 5 * nQubits));
+                for (auto pair: swapIndices) {
+                    qcMapped->swap(static_cast<dd::Qubit>(i + pair.first * nQubits), static_cast<dd::Qubit>(i + pair.second * nQubits));
+                }
             }
             break;
         case qc::Y:
             //Y = Z X
             for (auto i: gate.getTargets()) {
-                qcMapped->z(static_cast<dd::Qubit>(i));
-                qcMapped->z(static_cast<dd::Qubit>(i + 4 * nQubits));
-                qcMapped->z(static_cast<dd::Qubit>(i + 8 * nQubits));
-                qcMapped->x(static_cast<dd::Qubit>(i + 2 * nQubits));
-                qcMapped->x(static_cast<dd::Qubit>(i + 4 * nQubits));
-                qcMapped->x(static_cast<dd::Qubit>(i + 6 * nQubits));
+                for (auto j: logicalZ) {
+                    qcMapped->z(static_cast<dd::Qubit>(i + j * nQubits));
+                }
+                for (auto j: logicalX) {
+                    qcMapped->x(static_cast<dd::Qubit>(i + j * nQubits));
+                }
             }
             break;
         case qc::Z:
             for (auto i: gate.getTargets()) {
-                qcMapped->z(static_cast<dd::Qubit>(i));
-                qcMapped->z(static_cast<dd::Qubit>(i + 4 * nQubits));
-                qcMapped->z(static_cast<dd::Qubit>(i + 8 * nQubits));
+                for (auto j: logicalZ) {
+                    qcMapped->z(static_cast<dd::Qubit>(i + j * nQubits));
+                }
             }
             break;
         case qc::Measure:
