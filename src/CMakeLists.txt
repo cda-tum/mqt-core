@@ -65,7 +65,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include
 target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json)
 
 # add options and warnings to the library
-target_link_libraries(${PROJECT_NAME} PUBLIC project_options project_warnings)
+target_link_libraries(${PROJECT_NAME} PRIVATE project_options project_warnings)
 
 # Temporary: The ZX package is not yet clearly separated and some of its definitions are used
 # throughout the library. Therefore, the ZX package always needs to be linked into the main QFR
