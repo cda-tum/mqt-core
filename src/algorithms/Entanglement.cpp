@@ -5,17 +5,15 @@
 
 #include "algorithms/Entanglement.hpp"
 
-using namespace dd::literals;
-
 namespace qc {
-    Entanglement::Entanglement(dd::QubitCount nq):
+    Entanglement::Entanglement(const std::size_t nq):
         QuantumComputation(nq) {
         name           = "entanglement_" + std::to_string(nq);
-        const auto top = static_cast<dd::Qubit>(nq - 1);
+        const auto top = static_cast<Qubit>(nq - 1);
 
         h(top);
-        for (dd::QubitCount i = 1; i < nq; i++) {
-            x(static_cast<dd::Qubit>(top - i), dd::Control{top});
+        for (std::size_t i = 1; i < nq; i++) {
+            x(static_cast<Qubit>(top - i), qc::Control{top});
         }
     }
 } // namespace qc

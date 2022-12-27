@@ -7,12 +7,12 @@
 
 namespace qc {
 
-    RandomCliffordCircuit::RandomCliffordCircuit(dd::QubitCount nq, std::size_t depth, std::size_t seed):
+    RandomCliffordCircuit::RandomCliffordCircuit(const std::size_t nq, const std::size_t depth, const std::size_t seed):
         depth(depth), seed(seed) {
         addQubitRegister(nq);
         addClassicalRegister(nq);
 
-        for (dd::QubitCount i = 0; i < nqubits; ++i) {
+        for (std::size_t i = 0; i < nqubits; ++i) {
             initialLayout.insert({i, i});
             outputPermutation.insert({i, i});
         }
@@ -20,15 +20,15 @@ namespace qc {
         std::mt19937_64 generator;
         if (seed == 0) {
             // this is probably overkill but better safe than sorry
-            std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
+            std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> randomData{};
             std::random_device                                                    rd;
-            std::generate(std::begin(random_data), std::end(random_data), std::ref(rd));
-            std::seed_seq seeds(std::begin(random_data), std::end(random_data));
+            std::generate(std::begin(randomData), std::end(randomData), std::ref(rd));
+            std::seed_seq seeds(std::begin(randomData), std::end(randomData));
             generator.seed(seeds);
         } else {
             generator.seed(seed);
         }
-        std::uniform_int_distribution<std::uint_fast16_t> distribution(0, 11520);
+        std::uniform_int_distribution<std::uint16_t> distribution(0, 11520);
         cliffordGenerator = [&]() { return distribution(generator); };
 
         for (std::size_t l = 0; l < depth; ++l) {
@@ -38,12 +38,12 @@ namespace qc {
                 append2QClifford(cliffordGenerator(), 0, 1);
             } else {
                 if (l % 2) {
-                    for (dd::Qubit i = 1; i < static_cast<dd::Qubit>(nqubits - 1); i += 2) {
-                        append2QClifford(cliffordGenerator(), i, static_cast<dd::Qubit>(i + 1));
+                    for (std::size_t i = 1; i < nqubits - 1; i += 2) {
+                        append2QClifford(cliffordGenerator(), i, i + 1);
                     }
                 } else {
-                    for (dd::Qubit i = 0; i < static_cast<dd::Qubit>(nqubits - 1); i += 2) {
-                        append2QClifford(cliffordGenerator(), i, static_cast<dd::Qubit>(i + 1));
+                    for (std::size_t i = 0; i < nqubits - 1; i += 2) {
+                        append2QClifford(cliffordGenerator(), i, i + 1);
                     }
                 }
             }
@@ -52,7 +52,7 @@ namespace qc {
 
     std::ostream& RandomCliffordCircuit::printStatistics(std::ostream& os) const {
         os << "Random Clifford circuit statistics:\n";
-        os << "\tn: " << static_cast<std::size_t>(nqubits) << std::endl;
+        os << "\tn: " << nqubits << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;
         os << "\tdepth: " << depth << std::endl;
         os << "\tseed: " << seed << std::endl;
@@ -60,10 +60,10 @@ namespace qc {
         return os;
     }
 
-    void RandomCliffordCircuit::append1QClifford(std::uint_fast16_t idx, dd::Qubit target) {
-        std::uint_fast8_t id = idx % 24;
+    void RandomCliffordCircuit::append1QClifford(const std::uint16_t idx, const Qubit target) {
+        std::uint8_t id = idx % 24;
         emplace_back<CompoundOperation>(nqubits);
-        auto comp = dynamic_cast<CompoundOperation*>(ops.back().get());
+        auto* comp = dynamic_cast<CompoundOperation*>(ops.back().get());
         // Hadamard
         if (id / 12 % 2) {
             comp->emplace_back<StandardOperation>(nqubits, target, H);
@@ -88,19 +88,21 @@ namespace qc {
         }
     }
 
-    void RandomCliffordCircuit::append2QClifford(std::uint_fast16_t idx, dd::Qubit control, dd::Qubit target) {
-        std::uint_fast16_t id       = idx % 11520;
-        std::uint_fast8_t  pauliIdx = id % 16;
+    void RandomCliffordCircuit::append2QClifford(const std::uint16_t idx, const Qubit control, const Qubit target) {
+        std::uint16_t id       = idx % 11520;
+        std::uint8_t  pauliIdx = id % 16;
         id /= 16;
 
         emplace_back<CompoundOperation>(nqubits);
-        auto comp = dynamic_cast<CompoundOperation*>(ops.back().get());
+        auto* comp = dynamic_cast<CompoundOperation*>(ops.back().get());
         if (id < 36) {
             // single-qubit Cliffords
-            if (id / 9 % 2)
+            if (id / 9 % 2) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
-            if (id / 18 % 2)
+            }
+            if (id / 18 % 2) {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
+            }
 
             if (id % 3 == 1) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
@@ -120,10 +122,12 @@ namespace qc {
             // Cliffords with a single CNOT
             id -= 36;
 
-            if (id / 81 % 2)
+            if (id / 81 % 2) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
-            if (id / 162 % 2)
+            }
+            if (id / 162 % 2) {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
+            }
 
             if (id % 3 == 1) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
@@ -140,7 +144,7 @@ namespace qc {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
 
-            comp->emplace_back<StandardOperation>(nqubits, dd::Control{control}, target, X);
+            comp->emplace_back<StandardOperation>(nqubits, qc::Control{control}, target, X);
 
             if (id / 9 % 3 == 1) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
@@ -160,10 +164,12 @@ namespace qc {
             // Cliffords with two CNOTs
             id -= 360;
 
-            if (id / 81 % 2)
+            if (id / 81 % 2) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
-            if (id / 162 % 2)
+            }
+            if (id / 162 % 2) {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
+            }
 
             if (id % 3 == 1) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
@@ -180,8 +186,8 @@ namespace qc {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
 
-            comp->emplace_back<StandardOperation>(nqubits, dd::Control{control}, target, X);
-            comp->emplace_back<StandardOperation>(nqubits, dd::Control{target}, control, X);
+            comp->emplace_back<StandardOperation>(nqubits, qc::Control{control}, target, X);
+            comp->emplace_back<StandardOperation>(nqubits, qc::Control{target}, control, X);
 
             if (id / 9 % 3 == 1) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
@@ -201,10 +207,12 @@ namespace qc {
             // Cliffords with a SWAP
             id -= 684;
 
-            if (id / 9 % 2)
+            if (id / 9 % 2) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
-            if (id / 18 % 2)
+            }
+            if (id / 18 % 2) {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
+            }
 
             if (id % 3 == 1) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
@@ -221,9 +229,9 @@ namespace qc {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
 
-            comp->emplace_back<StandardOperation>(nqubits, dd::Control{control}, target, X);
-            comp->emplace_back<StandardOperation>(nqubits, dd::Control{target}, control, X);
-            comp->emplace_back<StandardOperation>(nqubits, dd::Control{control}, target, X);
+            comp->emplace_back<StandardOperation>(nqubits, qc::Control{control}, target, X);
+            comp->emplace_back<StandardOperation>(nqubits, qc::Control{target}, control, X);
+            comp->emplace_back<StandardOperation>(nqubits, qc::Control{control}, target, X);
         }
 
         // random Pauli on control qubit

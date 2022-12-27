@@ -19,8 +19,8 @@
 
 class DynamicCircuitEvalExactQPE: public testing::TestWithParam<std::size_t> {
 protected:
-    dd::QubitCount                          precision{};
-    dd::fp                                  theta{};
+    std::size_t                             precision{};
+    qc::fp                                  theta{};
     std::size_t                             expectedResult{};
     std::string                             expectedResultRepresentation{};
     std::unique_ptr<qc::QuantumComputation> qpe;
@@ -45,7 +45,7 @@ protected:
         iqpe              = std::make_unique<qc::QPE>(lambda, precision, true);
         iqpeNgates        = iqpe->getNindividualOps();
 
-        std::cout << "Estimating lambda = " << lambda << "π up to " << static_cast<std::size_t>(precision) << "-bit precision." << std::endl;
+        std::cout << "Estimating lambda = " << lambda << "π up to " << precision << "-bit precision." << std::endl;
 
         theta = lambda / 2;
 
@@ -70,7 +70,7 @@ protected:
         }
         std::stringstream ss{};
         for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
-            if (expectedResult & (1ULL << i)) {
+            if ((expectedResult & (1ULL << i)) != 0) {
                 ss << 1;
             } else {
                 ss << 0;
@@ -78,17 +78,17 @@ protected:
         }
         expectedResultRepresentation = ss.str();
 
-        std::cout << "Theta is exactly representable using " << static_cast<std::size_t>(precision) << " bits." << std::endl;
+        std::cout << "Theta is exactly representable using " << precision << " bits." << std::endl;
         std::cout << "The expected output state is |" << expectedResultRepresentation << ">." << std::endl;
     }
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalExactQPE,
-                         testing::Range<std::size_t>(1U, 64U),
+                         testing::Range<std::size_t>(1U, 64U, 5U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
-                             dd::QubitCount nqubits = info.param;
+                             const auto nqubits = info.param;
                              std::stringstream ss{};
-                             ss << static_cast<std::size_t>(nqubits);
+                             ss << nqubits;
                              if (nqubits == 1) {
                                  ss << "_qubit";
                              } else {
@@ -154,7 +154,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
     const auto verification  = std::chrono::duration<double>(finishedEC - finishedTransformation).count();
 
     std::stringstream ss{};
-    ss << "qpe_exact,transformation," << static_cast<std::size_t>(qpe->getNqubits()) << "," << qpeNgates << ",2," << iqpeNgates << "," << preprocessing << "," << verification;
+    ss << "qpe_exact,transformation," << qpe->getNqubits() << "," << qpeNgates << ",2," << iqpeNgates << "," << preprocessing << "," << verification;
     std::cout << ss.str() << std::endl;
     ofs.open("results_exact.csv", std::ios_base::app);
     ofs << ss.str() << std::endl;
@@ -164,14 +164,14 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
 
 TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
     // generate DD of QPE circuit via simulation
-    const auto start          = std::chrono::steady_clock::now();
-    auto       e              = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
-    const auto simulation_end = std::chrono::steady_clock::now();
+    const auto start         = std::chrono::steady_clock::now();
+    auto       e             = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
+    const auto simulationEnd = std::chrono::steady_clock::now();
 
     // extract measurement probabilities from IQPE simulations
     dd::ProbabilityVector probs{};
     extractProbabilityVector(iqpe.get(), dd->makeZeroState(iqpe->getNqubits()), probs, dd);
-    const auto extraction_end = std::chrono::steady_clock::now();
+    const auto extractionEnd = std::chrono::steady_clock::now();
 
     // extend to account for 0 qubit
     auto stub = dd::ProbabilityVector{};
@@ -181,16 +181,16 @@ TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
     }
 
     // compare outcomes
-    auto       fidelity       = dd->fidelityOfMeasurementOutcomes(e, stub);
-    const auto comparison_end = std::chrono::steady_clock::now();
+    auto       fidelity      = dd->fidelityOfMeasurementOutcomes(e, stub);
+    const auto comparisonEnd = std::chrono::steady_clock::now();
 
-    const auto simulation = std::chrono::duration<double>(simulation_end - start).count();
-    const auto extraction = std::chrono::duration<double>(extraction_end - simulation_end).count();
-    const auto comparison = std::chrono::duration<double>(comparison_end - extraction_end).count();
-    const auto total      = std::chrono::duration<double>(comparison_end - start).count();
+    const auto simulation = std::chrono::duration<double>(simulationEnd - start).count();
+    const auto extraction = std::chrono::duration<double>(extractionEnd - simulationEnd).count();
+    const auto comparison = std::chrono::duration<double>(comparisonEnd - extractionEnd).count();
+    const auto total      = std::chrono::duration<double>(comparisonEnd - start).count();
 
     std::stringstream ss{};
-    ss << "qpe_exact,extraction," << static_cast<std::size_t>(qpe->getNqubits()) << "," << qpeNgates << ",2," << iqpeNgates << "," << simulation << "," << extraction << "," << comparison << "," << total;
+    ss << "qpe_exact,extraction," << qpe->getNqubits() << "," << qpeNgates << ",2," << iqpeNgates << "," << simulation << "," << extraction << "," << comparison << "," << total;
     std::cout << ss.str() << std::endl;
     ofs.open("results_exact_prob.csv", std::ios_base::app);
     ofs << ss.str() << std::endl;
@@ -228,7 +228,7 @@ protected:
         iqpe              = std::make_unique<qc::QPE>(lambda, precision, true);
         iqpeNgates        = iqpe->getNindividualOps();
 
-        std::cout << "Estimating lambda = " << lambda << "π up to " << static_cast<std::size_t>(precision) << "-bit precision." << std::endl;
+        std::cout << "Estimating lambda = " << lambda << "π up to " << precision << "-bit precision." << std::endl;
 
         theta = lambda / 2;
 
@@ -253,7 +253,7 @@ protected:
         }
         std::stringstream ss{};
         for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
-            if (expectedResult & (1ULL << i)) {
+            if ((expectedResult & (1ULL << i)) != 0) {
                 ss << 1;
             } else {
                 ss << 0;
@@ -264,7 +264,7 @@ protected:
         secondExpectedResult = expectedResult + 1;
         ss.str("");
         for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
-            if (secondExpectedResult & (1ULL << i)) {
+            if ((secondExpectedResult & (1ULL << i)) != 0) {
                 ss << 1;
             } else {
                 ss << 0;
@@ -272,17 +272,17 @@ protected:
         }
         secondExpectedResultRepresentation = ss.str();
 
-        std::cout << "Theta is not exactly representable using " << static_cast<std::size_t>(precision) << " bits." << std::endl;
+        std::cout << "Theta is not exactly representable using " << precision << " bits." << std::endl;
         std::cout << "Most probable output states are |" << expectedResultRepresentation << "> and |" << secondExpectedResultRepresentation << ">." << std::endl;
     }
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalInexactQPE,
-                         testing::Range<std::size_t>(1U, 15U),
+                         testing::Range<std::size_t>(1U, 15U, 3U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalInexactQPE::ParamType>& info) {
-            dd::QubitCount nqubits = info.param;
+            const auto nqubits = info.param;
             std::stringstream ss{};
-            ss << static_cast<std::size_t>(nqubits);
+            ss << nqubits;
             if (nqubits == 1) {
                 ss << "_qubit";
             } else {
@@ -348,7 +348,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
     const auto verification  = std::chrono::duration<double>(finishedEC - finishedTransformation).count();
 
     std::stringstream ss{};
-    ss << "qpe_inexact,transformation," << static_cast<std::size_t>(qpe->getNqubits()) << "," << qpeNgates << ",2," << iqpeNgates << "," << preprocessing << "," << verification;
+    ss << "qpe_inexact,transformation," << qpe->getNqubits() << "," << qpeNgates << ",2," << iqpeNgates << "," << preprocessing << "," << verification;
     std::cout << ss.str() << std::endl;
     ofs.open("results_inexact.csv", std::ios_base::app);
     ofs << ss.str() << std::endl;
@@ -361,12 +361,12 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
     // extract measurement probabilities from IQPE simulations
     dd::ProbabilityVector probs{};
     extractProbabilityVector(iqpe.get(), dd->makeZeroState(iqpe->getNqubits()), probs, dd);
-    const auto extraction_end = std::chrono::steady_clock::now();
+    const auto extractionEnd = std::chrono::steady_clock::now();
     std::cout << "---- extraction done ----" << std::endl;
 
     // generate DD of QPE circuit via simulation
-    auto       e              = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
-    const auto simulation_end = std::chrono::steady_clock::now();
+    auto       e             = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
+    const auto simulationEnd = std::chrono::steady_clock::now();
     std::cout << "---- sim done ----" << std::endl;
 
     // extend to account for 0 qubit
@@ -377,16 +377,16 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
     }
 
     // compare outcomes
-    auto       fidelity       = dd->fidelityOfMeasurementOutcomes(e, stub);
-    const auto comparison_end = std::chrono::steady_clock::now();
+    auto       fidelity      = dd->fidelityOfMeasurementOutcomes(e, stub);
+    const auto comparisonEnd = std::chrono::steady_clock::now();
 
-    const auto extraction = std::chrono::duration<double>(extraction_end - start).count();
-    const auto simulation = std::chrono::duration<double>(simulation_end - extraction_end).count();
-    const auto comparison = std::chrono::duration<double>(comparison_end - simulation_end).count();
-    const auto total      = std::chrono::duration<double>(comparison_end - start).count();
+    const auto extraction = std::chrono::duration<double>(extractionEnd - start).count();
+    const auto simulation = std::chrono::duration<double>(simulationEnd - extractionEnd).count();
+    const auto comparison = std::chrono::duration<double>(comparisonEnd - simulationEnd).count();
+    const auto total      = std::chrono::duration<double>(comparisonEnd - start).count();
 
     std::stringstream ss{};
-    ss << "qpe_inexact,extraction," << static_cast<std::size_t>(qpe->getNqubits()) << "," << qpeNgates << ",2," << iqpeNgates << "," << simulation << "," << extraction << "," << comparison << "," << total;
+    ss << "qpe_inexact,extraction," << qpe->getNqubits() << "," << qpeNgates << ",2," << iqpeNgates << "," << simulation << "," << extraction << "," << comparison << "," << total;
     std::cout << ss.str() << std::endl;
     ofs.open("results_inexact_prob.csv", std::ios_base::app);
     ofs << ss.str() << std::endl;
@@ -420,16 +420,16 @@ protected:
         dbvNgates    = dbv->getNindividualOps();
 
         const auto expected = dynamic_cast<qc::BernsteinVazirani*>(bv.get())->expected;
-        std::cout << "Hidden bitstring: " << expected << " (" << static_cast<std::size_t>(bitwidth) << " qubits)" << std::endl;
+        std::cout << "Hidden bitstring: " << expected << " (" << bitwidth << " qubits)" << std::endl;
     }
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalBV,
-                         testing::Range<std::size_t>(1U, 64U),
+                         testing::Range<std::size_t>(1U, 64U, 5U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
-                             dd::QubitCount nqubits = info.param;
+                             const auto nqubits = info.param;
                              std::stringstream ss{};
-                             ss << static_cast<std::size_t>(nqubits);
+                             ss << nqubits;
                              if (nqubits == 1) {
                                  ss << "_qubit";
                              } else {
@@ -495,7 +495,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
     const auto verification  = std::chrono::duration<double>(finishedEC - finishedTransformation).count();
 
     std::stringstream ss{};
-    ss << "bv,transformation," << static_cast<std::size_t>(bv->getNqubits()) << "," << bvNgates << ",2," << dbvNgates << "," << preprocessing << "," << verification;
+    ss << "bv,transformation," << bv->getNqubits() << "," << bvNgates << ",2," << dbvNgates << "," << preprocessing << "," << verification;
     std::cout << ss.str() << std::endl;
     ofs.open("results_bv.csv", std::ios_base::app);
     ofs << ss.str() << std::endl;
@@ -505,14 +505,14 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
 
 TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
     // generate DD of QPE circuit via simulation
-    const auto start          = std::chrono::steady_clock::now();
-    auto       e              = simulate(bv.get(), dd->makeZeroState(bv->getNqubits()), dd);
-    const auto simulation_end = std::chrono::steady_clock::now();
+    const auto start         = std::chrono::steady_clock::now();
+    auto       e             = simulate(bv.get(), dd->makeZeroState(bv->getNqubits()), dd);
+    const auto simulationEnd = std::chrono::steady_clock::now();
 
     // extract measurement probabilities from IQPE simulations
     dd::ProbabilityVector probs{};
     extractProbabilityVector(dbv.get(), dd->makeZeroState(dbv->getNqubits()), probs, dd);
-    const auto extraction_end = std::chrono::steady_clock::now();
+    const auto extractionEnd = std::chrono::steady_clock::now();
 
     // extend to account for 0 qubit
     auto stub = dd::ProbabilityVector{};
@@ -522,16 +522,16 @@ TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
     }
 
     // compare outcomes
-    auto       fidelity       = dd->fidelityOfMeasurementOutcomes(e, stub);
-    const auto comparison_end = std::chrono::steady_clock::now();
+    auto       fidelity      = dd->fidelityOfMeasurementOutcomes(e, stub);
+    const auto comparisonEnd = std::chrono::steady_clock::now();
 
-    const auto simulation = std::chrono::duration<double>(simulation_end - start).count();
-    const auto extraction = std::chrono::duration<double>(extraction_end - simulation_end).count();
-    const auto comparison = std::chrono::duration<double>(comparison_end - extraction_end).count();
-    const auto total      = std::chrono::duration<double>(comparison_end - start).count();
+    const auto simulation = std::chrono::duration<double>(simulationEnd - start).count();
+    const auto extraction = std::chrono::duration<double>(extractionEnd - simulationEnd).count();
+    const auto comparison = std::chrono::duration<double>(comparisonEnd - extractionEnd).count();
+    const auto total      = std::chrono::duration<double>(comparisonEnd - start).count();
 
     std::stringstream ss{};
-    ss << "bv,extraction," << static_cast<std::size_t>(bv->getNqubits()) << "," << bvNgates << ",2," << dbvNgates << "," << simulation << "," << extraction << "," << comparison << "," << total;
+    ss << "bv,extraction," << bv->getNqubits() << "," << bvNgates << ",2," << dbvNgates << "," << simulation << "," << extraction << "," << comparison << "," << total;
     std::cout << ss.str() << std::endl;
     ofs.open("results_bv_prob.csv", std::ios_base::app);
     ofs << ss.str() << std::endl;
@@ -566,11 +566,11 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalQFT,
-                         testing::Range<std::size_t>(1U, 65U),
+                         testing::Range<std::size_t>(1U, 65U, 5U),
                          [](const testing::TestParamInfo<DynamicCircuitEvalExactQPE::ParamType>& info) {
-                             dd::QubitCount nqubits = info.param;
+                             const auto nqubits = info.param;
                              std::stringstream ss{};
-                             ss << static_cast<std::size_t>(nqubits);
+                             ss << nqubits;
                              if (nqubits == 1) {
                                  ss << "_qubit";
                              } else {
@@ -636,7 +636,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
     const auto verification  = std::chrono::duration<double>(finishedEC - finishedTransformation).count();
 
     std::stringstream ss{};
-    ss << "qft,transformation," << static_cast<std::size_t>(qft->getNqubits()) << "," << qftNgates << ",1," << dqftNgates << "," << preprocessing << "," << verification;
+    ss << "qft,transformation," << qft->getNqubits() << "," << qftNgates << ",1," << dqftNgates << "," << preprocessing << "," << verification;
     std::cout << ss.str() << std::endl;
     ofs.open("results_qft.csv", std::ios_base::app);
     ofs << ss.str() << std::endl;
@@ -646,30 +646,30 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
 
 TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
     // generate DD of QPE circuit via simulation
-    const auto start          = std::chrono::steady_clock::now();
-    auto       e              = simulate(qft.get(), dd->makeZeroState(qft->getNqubits()), dd);
-    const auto simulation_end = std::chrono::steady_clock::now();
-    const auto simulation     = std::chrono::duration<double>(simulation_end - start).count();
+    const auto start         = std::chrono::steady_clock::now();
+    auto       e             = simulate(qft.get(), dd->makeZeroState(qft->getNqubits()), dd);
+    const auto simulationEnd = std::chrono::steady_clock::now();
+    const auto simulation    = std::chrono::duration<double>(simulationEnd - start).count();
 
     std::stringstream ss{};
     // extract measurement probabilities from IQPE simulations
     if (qft->getNqubits() <= 15) {
         dd::ProbabilityVector probs{};
         extractProbabilityVector(dqft.get(), dd->makeZeroState(dqft->getNqubits()), probs, dd);
-        const auto extraction_end = std::chrono::steady_clock::now();
+        const auto extractionEnd = std::chrono::steady_clock::now();
 
         // compare outcomes
-        auto       fidelity       = dd->fidelityOfMeasurementOutcomes(e, probs);
-        const auto comparison_end = std::chrono::steady_clock::now();
-        const auto extraction     = std::chrono::duration<double>(extraction_end - simulation_end).count();
-        const auto comparison     = std::chrono::duration<double>(comparison_end - extraction_end).count();
-        const auto total          = std::chrono::duration<double>(comparison_end - start).count();
+        auto       fidelity      = dd->fidelityOfMeasurementOutcomes(e, probs);
+        const auto comparisonEnd = std::chrono::steady_clock::now();
+        const auto extraction    = std::chrono::duration<double>(extractionEnd - simulationEnd).count();
+        const auto comparison    = std::chrono::duration<double>(comparisonEnd - extractionEnd).count();
+        const auto total         = std::chrono::duration<double>(comparisonEnd - start).count();
         EXPECT_NEAR(fidelity, 1.0, 1e-4);
-        ss << "qft,extraction," << static_cast<std::size_t>(qft->getNqubits()) << "," << qftNgates << ",1," << dqftNgates << "," << extraction << "," << simulation << "," << comparison << "," << total;
+        ss << "qft,extraction," << qft->getNqubits() << "," << qftNgates << ",1," << dqftNgates << "," << extraction << "," << simulation << "," << comparison << "," << total;
         std::cout << ss.str() << std::endl;
 
     } else {
-        ss << "qft,extraction," << static_cast<std::size_t>(qft->getNqubits()) << "," << qftNgates << ",1," << dqftNgates << ",," << simulation << ",,,";
+        ss << "qft,extraction," << qft->getNqubits() << "," << qftNgates << ",1," << dqftNgates << ",," << simulation << ",,,";
         std::cout << ss.str() << std::endl;
     }
 

@@ -5,24 +5,26 @@
 
 #include "operations/StandardOperation.hpp"
 
+#include <sstream>
 #include <variant>
 
 namespace qc {
     /***
      * Protected Methods
      ***/
-    OpType StandardOperation::parseU3(dd::fp& lambda, dd::fp& phi, dd::fp& theta) {
+    OpType StandardOperation::parseU3(fp& lambda, fp& phi, fp& theta) {
         if (std::abs(theta) < PARAMETER_TOLERANCE && std::abs(phi) < PARAMETER_TOLERANCE) {
             phi   = 0.L;
             theta = 0.L;
             return parseU1(lambda);
         }
 
-        if (std::abs(theta - dd::PI_2) < PARAMETER_TOLERANCE) {
-            theta    = dd::PI_2;
+        if (std::abs(theta - PI_2) < PARAMETER_TOLERANCE) {
+            theta    = PI_2;
             auto res = parseU2(lambda, phi);
-            if (res != U2)
+            if (res != U2) {
                 theta = 0.L;
+            }
             return res;
         }
 
@@ -38,9 +40,9 @@ namespace qc {
             }
         }
 
-        if (std::abs(lambda - dd::PI_2) < PARAMETER_TOLERANCE) {
-            lambda = dd::PI_2;
-            if (std::abs(phi + dd::PI_2) < PARAMETER_TOLERANCE) {
+        if (std::abs(lambda - PI_2) < PARAMETER_TOLERANCE) {
+            lambda = PI_2;
+            if (std::abs(phi + PI_2) < PARAMETER_TOLERANCE) {
                 phi = 0.L;
                 checkInteger(theta);
                 checkFractionPi(theta);
@@ -49,9 +51,9 @@ namespace qc {
                 return RX;
             }
 
-            if (std::abs(phi - dd::PI_2) < PARAMETER_TOLERANCE) {
-                phi = dd::PI_2;
-                if (std::abs(theta - dd::PI) < PARAMETER_TOLERANCE) {
+            if (std::abs(phi - PI_2) < PARAMETER_TOLERANCE) {
+                phi = PI_2;
+                if (std::abs(theta - PI) < PARAMETER_TOLERANCE) {
                     lambda = 0.L;
                     phi    = 0.L;
                     theta  = 0.L;
@@ -60,11 +62,11 @@ namespace qc {
             }
         }
 
-        if (std::abs(lambda - dd::PI) < PARAMETER_TOLERANCE) {
-            lambda = dd::PI;
+        if (std::abs(lambda - PI) < PARAMETER_TOLERANCE) {
+            lambda = PI;
             if (std::abs(phi) < PARAMETER_TOLERANCE) {
                 phi = 0.L;
-                if (std::abs(theta - dd::PI) < PARAMETER_TOLERANCE) {
+                if (std::abs(theta - PI) < PARAMETER_TOLERANCE) {
                     theta  = 0.L;
                     lambda = 0.L;
                     return X;
@@ -83,22 +85,22 @@ namespace qc {
         return U3;
     }
 
-    OpType StandardOperation::parseU2(dd::fp& lambda, dd::fp& phi) {
+    OpType StandardOperation::parseU2(fp& lambda, fp& phi) {
         if (std::abs(phi) < PARAMETER_TOLERANCE) {
             phi = 0.L;
-            if (std::abs(std::abs(lambda) - dd::PI) < PARAMETER_TOLERANCE) {
+            if (std::abs(std::abs(lambda) - PI) < PARAMETER_TOLERANCE) {
                 lambda = 0.L;
                 return H;
             }
             if (std::abs(lambda) < PARAMETER_TOLERANCE) {
-                lambda = dd::PI_2;
+                lambda = PI_2;
                 return RY;
             }
         }
 
-        if (std::abs(lambda - dd::PI_2) < PARAMETER_TOLERANCE) {
-            lambda = dd::PI_2;
-            if (std::abs(phi + dd::PI_2) < PARAMETER_TOLERANCE) {
+        if (std::abs(lambda - PI_2) < PARAMETER_TOLERANCE) {
+            lambda = PI_2;
+            if (std::abs(phi + PI_2) < PARAMETER_TOLERANCE) {
                 phi = 0.L;
                 return RX;
             }
@@ -112,24 +114,24 @@ namespace qc {
         return U2;
     }
 
-    OpType StandardOperation::parseU1(dd::fp& lambda) {
+    OpType StandardOperation::parseU1(fp& lambda) {
         if (std::abs(lambda) < PARAMETER_TOLERANCE) {
             lambda = 0.L;
             return I;
         }
-        bool sign = std::signbit(lambda);
+        const bool sign = std::signbit(lambda);
 
-        if (std::abs(std::abs(lambda) - dd::PI) < PARAMETER_TOLERANCE) {
+        if (std::abs(std::abs(lambda) - PI) < PARAMETER_TOLERANCE) {
             lambda = 0.L;
             return Z;
         }
 
-        if (std::abs(std::abs(lambda) - dd::PI_2) < PARAMETER_TOLERANCE) {
+        if (std::abs(std::abs(lambda) - PI_2) < PARAMETER_TOLERANCE) {
             lambda = 0.L;
             return sign ? Sdag : S;
         }
 
-        if (std::abs(std::abs(lambda) - dd::PI_4) < PARAMETER_TOLERANCE) {
+        if (std::abs(std::abs(lambda) - PI_4) < PARAMETER_TOLERANCE) {
             lambda = 0.L;
             return sign ? Tdag : T;
         }
@@ -150,7 +152,7 @@ namespace qc {
         }
     }
 
-    void StandardOperation::setup(dd::QubitCount nq, dd::fp par0, dd::fp par1, dd::fp par2, dd::Qubit startingQubit) {
+    void StandardOperation::setup(const std::size_t nq, const fp par0, const fp par1, const fp par2, const Qubit startingQubit) {
         nqubits      = nq;
         parameter[0] = par0;
         parameter[1] = par1;
@@ -163,45 +165,45 @@ namespace qc {
     /***
      * Constructors
      ***/
-    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Qubit target, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit) {
         type = g;
         setup(nq, lambda, phi, theta, startingQubit);
         targets.emplace_back(target);
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Targets& targets, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit) {
         type = g;
         setup(nq, lambda, phi, theta, startingQubit);
         this->targets = targets;
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit):
+    StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Qubit target, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
         StandardOperation(nq, target, g, lambda, phi, theta, startingQubit) {
         controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, dd::Control control, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit):
+    StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Targets& targets, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
         StandardOperation(nq, targets, g, lambda, phi, theta, startingQubit) {
         controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit):
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& controls, const Qubit target, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
         StandardOperation(nq, target, g, lambda, phi, theta, startingQubit) {
         this->controls = controls;
     }
 
-    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, const Targets& targets, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit):
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& controls, const Targets& targets, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
         StandardOperation(nq, targets, g, lambda, phi, theta, startingQubit) {
         this->controls = controls;
     }
 
     // MCT Constructor
-    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, dd::Qubit startingQubit):
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& controls, const Qubit target, const Qubit startingQubit):
         StandardOperation(nq, controls, target, X, 0., 0., 0., startingQubit) {
     }
 
     // MCF (cSWAP), Peres, paramterized two target Constructor
-    StandardOperation::StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, OpType g, dd::fp lambda, dd::fp phi, dd::fp theta, dd::Qubit startingQubit):
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& controls, const Qubit target0, const Qubit target1, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
         StandardOperation(nq, controls, {target0, target1}, g, lambda, phi, theta, startingQubit) {
     }
 
@@ -210,7 +212,7 @@ namespace qc {
     ***/
     void StandardOperation::dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg) const {
         std::ostringstream op;
-        op << std::setprecision(std::numeric_limits<dd::fp>::digits10);
+        op << std::setprecision(std::numeric_limits<fp>::digits10);
         if ((controls.size() > 1 && type != X) || controls.size() > 2) {
             std::cout << "[WARNING] Multiple controlled gates are not natively supported by OpenQASM. "
                       << "However, this library can parse .qasm files with multiple controlled gates (e.g., cccx) correctly. "
@@ -335,7 +337,7 @@ namespace qc {
 
         // apply X operations to negate the respective controls
         for (const auto& c: controls) {
-            if (c.type == dd::Control::Type::neg) {
+            if (c.type == Control::Type::Neg) {
                 of << "x " << qreg[c.qubit].second << ";\n";
             }
         }
@@ -350,7 +352,7 @@ namespace qc {
         }
         // apply X operations to negate the respective controls again
         for (const auto& c: controls) {
-            if (c.type == dd::Control::Type::neg) {
+            if (c.type == Control::Type::Neg) {
                 of << "x " << qreg[c.qubit].second << ";\n";
             }
         }
@@ -358,7 +360,7 @@ namespace qc {
 
     void StandardOperation::dumpOpenQASMSwap(std::ostream& of, const RegisterNames& qreg) const {
         for (const auto& c: controls) {
-            if (c.type == dd::Control::Type::neg) {
+            if (c.type == Control::Type::Neg) {
                 of << "x " << qreg[c.qubit].second << ";\n";
             }
         }
@@ -370,7 +372,7 @@ namespace qc {
         of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";\n";
 
         for (const auto& c: controls) {
-            if (c.type == dd::Control::Type::neg) {
+            if (c.type == Control::Type::Neg) {
                 of << "x " << qreg[c.qubit].second << ";\n";
             }
         }
@@ -379,7 +381,7 @@ namespace qc {
     void StandardOperation::dumpOpenQASMiSwap(std::ostream& of, const RegisterNames& qreg) const {
         const auto ctrlString = std::string(controls.size(), 'c');
         for (const auto& c: controls) {
-            if (c.type == dd::Control::Type::neg) {
+            if (c.type == Control::Type::Neg) {
                 of << "x " << qreg[c.qubit].second << ";\n";
             }
         }
@@ -408,7 +410,7 @@ namespace qc {
         of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";\n";
 
         for (const auto& c: controls) {
-            if (c.type == dd::Control::Type::neg) {
+            if (c.type == Control::Type::Neg) {
                 of << "x " << qreg[c.qubit].second << ";\n";
             }
         }

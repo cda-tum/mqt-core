@@ -20,9 +20,9 @@ namespace qc {
 
         explicit GoogleRandomCircuitSampling(const std::string& filename);
 
-        GoogleRandomCircuitSampling(const std::string& pathPrefix, unsigned short device, unsigned short depth, unsigned short instance);
+        GoogleRandomCircuitSampling(const std::string& pathPrefix, std::uint16_t device, std::uint16_t depth, std::uint16_t instance);
 
-        GoogleRandomCircuitSampling(const std::string& pathPrefix, unsigned short x, unsigned short y, unsigned short depth, unsigned short instance);
+        GoogleRandomCircuitSampling(const std::string& pathPrefix, std::uint16_t x, std::uint16_t y, std::uint16_t depth, std::uint16_t instance);
 
         void importGRCS(const std::string& filename);
 
@@ -32,7 +32,7 @@ namespace qc {
 
         std::ostream& printStatistics(std::ostream& os) const override;
 
-        void removeCycles(unsigned short ncycles) {
+        void removeCycles(std::uint16_t ncycles) {
             if (ncycles > cycles.size() - 2) {
                 std::stringstream ss{};
                 ss << "Cannot remove " << ncycles << " cycles out of a circuit containing 1+" << cycles.size() - 2 << "+1 cycles.";

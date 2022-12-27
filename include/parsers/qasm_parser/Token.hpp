@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "dd/Definitions.hpp"
+#include "Definitions.hpp"
 
 #include <map>
 #include <string>
@@ -71,7 +71,7 @@ namespace qasm {
         int         line    = 0;
         int         col     = 0;
         int         val     = 0;
-        dd::fp      valReal = 0.0;
+        qc::fp      valReal = 0.0;
         std::string str;
 
         Token() = default;

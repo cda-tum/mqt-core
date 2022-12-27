@@ -10,27 +10,27 @@
 namespace qc {
     class StandardOperation: public Operation {
     protected:
-        static void checkInteger(dd::fp& ld) {
-            dd::fp nearest = std::nearbyint(ld);
+        static void checkInteger(fp& ld) {
+            const fp nearest = std::nearbyint(ld);
             if (std::abs(ld - nearest) < PARAMETER_TOLERANCE) {
                 ld = nearest;
             }
         }
 
-        static void checkFractionPi(dd::fp& ld) {
-            dd::fp div     = dd::PI / ld;
-            dd::fp nearest = std::nearbyint(div);
+        static void checkFractionPi(fp& ld) {
+            const fp div     = PI / ld;
+            const fp nearest = std::nearbyint(div);
             if (std::abs(div - nearest) < PARAMETER_TOLERANCE) {
-                ld = dd::PI / nearest;
+                ld = PI / nearest;
             }
         }
 
-        static OpType parseU3(dd::fp& lambda, dd::fp& phi, dd::fp& theta);
-        static OpType parseU2(dd::fp& lambda, dd::fp& phi);
-        static OpType parseU1(dd::fp& lambda);
+        static OpType parseU3(fp& lambda, fp& phi, fp& theta);
+        static OpType parseU2(fp& lambda, fp& phi);
+        static OpType parseU1(fp& lambda);
 
         void checkUgate();
-        void setup(dd::QubitCount nq, dd::fp par0, dd::fp par1, dd::fp par2, dd::Qubit startingQubit = 0);
+        void setup(std::size_t nq, fp par0, fp par1, fp par2, Qubit startingQubit = 0);
 
         void dumpOpenQASMSwap(std::ostream& of, const RegisterNames& qreg) const;
         void dumpOpenQASMiSwap(std::ostream& of, const RegisterNames& qreg) const;
@@ -40,20 +40,20 @@ namespace qc {
         StandardOperation() = default;
 
         // Standard Constructors
-        StandardOperation(dd::QubitCount nq, dd::Qubit target, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startingQubit = 0);
-        StandardOperation(dd::QubitCount nq, const Targets& targets, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, Qubit target, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, const Targets& targets, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
 
-        StandardOperation(dd::QubitCount nq, dd::Control control, dd::Qubit target, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startingQubit = 0);
-        StandardOperation(dd::QubitCount nq, dd::Control control, const Targets& targets, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, Control control, Qubit target, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, Control control, const Targets& targets, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
 
-        StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startingQubit = 0);
-        StandardOperation(dd::QubitCount nq, const dd::Controls& controls, const Targets& targets, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, const Controls& controls, Qubit target, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, const Controls& controls, const Targets& targets, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
 
         // MCT Constructor
-        StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target, dd::Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, const Controls& controls, Qubit target, Qubit startingQubit = 0);
 
         // MCF (cSWAP), Peres, paramterized two target Constructor
-        StandardOperation(dd::QubitCount nq, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, OpType g, dd::fp lambda = 0., dd::fp phi = 0., dd::fp theta = 0., dd::Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, const Controls& controls, Qubit target0, Qubit target1, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
 
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {
             return std::make_unique<StandardOperation>(getNqubits(), getControls(), getTargets(), getType(), getParameter().at(0), getParameter().at(1), getParameter().at(2), getStartingQubit());

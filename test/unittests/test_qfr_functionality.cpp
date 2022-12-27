@@ -6,36 +6,30 @@
 #include "CircuitOptimizer.hpp"
 #include "QuantumComputation.hpp"
 #include "algorithms/RandomCliffordCircuit.hpp"
-#include "dd/Control.hpp"
-#include "dd/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
 #include <iostream>
 #include <random>
 
 using namespace qc;
-using namespace dd;
 
-class QFRFunctionality: public testing::TestWithParam<dd::QubitCount> {
+class QFRFunctionality: public testing::TestWithParam<std::size_t> {
 protected:
     void SetUp() override {
-        dd = std::make_unique<dd::Package<>>(5);
-
-        std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> random_data{};
+        std::array<std::mt19937_64::result_type, std::mt19937_64::state_size> randomData{};
         std::random_device                                                    rd;
-        std::generate(begin(random_data), end(random_data), [&]() { return rd(); });
-        std::seed_seq seeds(begin(random_data), end(random_data));
+        std::generate(begin(randomData), end(randomData), [&]() { return rd(); });
+        std::seed_seq seeds(begin(randomData), end(randomData));
         mt.seed(seeds);
-        dist = std::uniform_real_distribution<dd::fp>(0.0, 2 * dd::PI);
+        dist = std::uniform_real_distribution<fp>(0.0, 2 * PI);
     }
 
-    std::unique_ptr<dd::Package<>>         dd;
-    std::mt19937_64                        mt;
-    std::uniform_real_distribution<dd::fp> dist;
+    std::mt19937_64                    mt;
+    std::uniform_real_distribution<fp> dist;
 };
 
 TEST_F(QFRFunctionality, fuse_cx_to_swap) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.x(1, 0_pc);
     qc.x(0, 1_pc);
@@ -50,7 +44,7 @@ TEST_F(QFRFunctionality, fuse_cx_to_swap) {
 }
 
 TEST_F(QFRFunctionality, replace_cx_to_swap_at_end) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.x(1, 0_pc);
     qc.x(0, 1_pc);
@@ -72,7 +66,7 @@ TEST_F(QFRFunctionality, replace_cx_to_swap_at_end) {
 }
 
 TEST_F(QFRFunctionality, replace_cx_to_swap) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.x(1, 0_pc);
     qc.x(0, 1_pc);
@@ -95,7 +89,7 @@ TEST_F(QFRFunctionality, replace_cx_to_swap) {
 }
 
 TEST_F(QFRFunctionality, remove_trailing_idle_qubits) {
-    const QubitCount   nqubits = 4;
+    const std::size_t  nqubits = 4;
     QuantumComputation qc(nqubits);
     qc.x(0);
     qc.x(2);
@@ -123,7 +117,7 @@ TEST_F(QFRFunctionality, remove_trailing_idle_qubits) {
 }
 
 TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.x(0);
     qc.addAncillaryRegister(1);
@@ -131,16 +125,6 @@ TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
     EXPECT_EQ(qc.getNqubitsWithoutAncillae(), nqubits);
     EXPECT_EQ(qc.getNqubits(), 3);
     qc.x(2);
-    auto e = dd->createInitialMatrix(qc.getNqubits(), qc.ancillary);
-    EXPECT_EQ(e.p->e[0], dd->makeIdent(nqubits));
-    EXPECT_EQ(e.p->e[1], MatrixDD::zero);
-    EXPECT_EQ(e.p->e[2], MatrixDD::zero);
-    EXPECT_EQ(e.p->e[3], MatrixDD::zero);
-    auto f = dd->makeIdent(nqubits + 1);
-    dd->incRef(f);
-    f = dd->reduceAncillae(f, qc.ancillary);
-    f = dd->reduceGarbage(f, qc.garbage);
-    EXPECT_EQ(e, f);
     qc.printRegisters();
     auto p = qc.removeQubit(2);
     EXPECT_EQ(p.first, nqubits);
@@ -183,7 +167,7 @@ TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
 }
 
 TEST_F(QFRFunctionality, ancillary_qubit_remove_middle) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.x(0);
     qc.addAncillaryRegister(3);
@@ -197,7 +181,7 @@ TEST_F(QFRFunctionality, ancillary_qubit_remove_middle) {
 }
 
 TEST_F(QFRFunctionality, split_qreg) {
-    const QubitCount   nqubits = 3;
+    const std::size_t  nqubits = 3;
     QuantumComputation qc(nqubits);
     qc.x(0);
     auto p = qc.removeQubit(1);
@@ -209,77 +193,9 @@ TEST_F(QFRFunctionality, split_qreg) {
     qc.printRegisters();
 }
 
-TEST_F(QFRFunctionality, FuseTwoSingleQubitGates) {
-    const QubitCount   nqubits = 1;
-    QuantumComputation qc(nqubits);
-    qc.x(0);
-    qc.h(0);
-
-    qc.print(std::cout);
-    const dd::Edge e = buildFunctionality(&qc, dd);
-    CircuitOptimizer::singleQubitGateFusion(qc);
-    const dd::Edge f = buildFunctionality(&qc, dd);
-    std::cout << "-----------------------------" << std::endl;
-    qc.print(std::cout);
-    EXPECT_EQ(qc.getNops(), 1);
-    EXPECT_EQ(e, f);
-}
-
-TEST_F(QFRFunctionality, FuseThreeSingleQubitGates) {
-    const QubitCount   nqubits = 1;
-    QuantumComputation qc(nqubits);
-    qc.x(0);
-    qc.h(0);
-    qc.y(0);
-
-    const dd::Edge e = buildFunctionality(&qc, dd);
-    std::cout << "-----------------------------" << std::endl;
-    qc.print(std::cout);
-    CircuitOptimizer::singleQubitGateFusion(qc);
-    const dd::Edge f = buildFunctionality(&qc, dd);
-    std::cout << "-----------------------------" << std::endl;
-    qc.print(std::cout);
-    EXPECT_EQ(qc.getNops(), 1);
-    EXPECT_EQ(e, f);
-}
-
-TEST_F(QFRFunctionality, FuseNoSingleQubitGates) {
-    const QubitCount   nqubits = 2;
-    QuantumComputation qc(nqubits);
-    qc.h(0);
-    qc.x(1, 0_pc);
-    qc.y(0);
-    const dd::Edge e = buildFunctionality(&qc, dd);
-    std::cout << "-----------------------------" << std::endl;
-    qc.print(std::cout);
-    CircuitOptimizer::singleQubitGateFusion(qc);
-    const dd::Edge f = buildFunctionality(&qc, dd);
-    std::cout << "-----------------------------" << std::endl;
-    qc.print(std::cout);
-    EXPECT_EQ(qc.getNops(), 3);
-    EXPECT_EQ(e, f);
-}
-
-TEST_F(QFRFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
-    const QubitCount   nqubits = 2;
-    QuantumComputation qc(nqubits);
-    qc.h(0);
-    qc.z(1);
-    qc.y(0);
-    const auto e = buildFunctionality(&qc, dd);
-    std::cout << "-----------------------------" << std::endl;
-    qc.print(std::cout);
-    CircuitOptimizer::singleQubitGateFusion(qc);
-    const auto f = buildFunctionality(&qc, dd);
-    std::cout << "-----------------------------" << std::endl;
-    qc.print(std::cout);
-    EXPECT_EQ(qc.getNops(), 2);
-    EXPECT_EQ(e, f);
-}
-
 TEST_F(QFRFunctionality, StripIdleAndDump) {
     std::stringstream ss{};
-    auto              testfile =
+    const std::string testfile =
             "OPENQASM 2.0;\n"
             "include \"qelib1.inc\";\n"
             "qreg q[5];\n"
@@ -294,17 +210,17 @@ TEST_F(QFRFunctionality, StripIdleAndDump) {
 
     ss << testfile;
     auto qc = qc::QuantumComputation();
-    qc.import(ss, qc::OpenQASM);
+    qc.import(ss, qc::Format::OpenQASM);
     qc.print(std::cout);
     qc.stripIdleQubits();
     qc.print(std::cout);
     std::stringstream goal{};
     qc.print(goal);
     std::stringstream testss{};
-    qc.dump(testss, OpenQASM);
+    qc.dump(testss, qc::Format::OpenQASM);
     std::cout << testss.str() << std::endl;
     qc.reset();
-    qc.import(testss, OpenQASM);
+    qc.import(testss, qc::Format::OpenQASM);
     qc.print(std::cout);
     qc.stripIdleQubits();
     qc.print(std::cout);
@@ -314,7 +230,7 @@ TEST_F(QFRFunctionality, StripIdleAndDump) {
 }
 
 TEST_F(QFRFunctionality, CollapseCompoundOperationToStandard) {
-    const QubitCount   nqubits = 1;
+    const std::size_t  nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.x(0);
     qc.i(0);
@@ -328,7 +244,7 @@ TEST_F(QFRFunctionality, CollapseCompoundOperationToStandard) {
 }
 
 TEST_F(QFRFunctionality, eliminateCompoundOperation) {
-    const QubitCount   nqubits = 1;
+    const std::size_t  nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.i(0);
     qc.i(0);
@@ -342,7 +258,7 @@ TEST_F(QFRFunctionality, eliminateCompoundOperation) {
 }
 
 TEST_F(QFRFunctionality, eliminateInverseInCompoundOperation) {
-    const QubitCount   nqubits = 1;
+    const std::size_t  nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.s(0);
     qc.sdag(0);
@@ -356,7 +272,7 @@ TEST_F(QFRFunctionality, eliminateInverseInCompoundOperation) {
 }
 
 TEST_F(QFRFunctionality, unknownInverseInCompoundOperation) {
-    const QubitCount   nqubits = 1;
+    const std::size_t  nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.phase(0, 1.);
     qc.phase(0, -1.);
@@ -369,7 +285,7 @@ TEST_F(QFRFunctionality, unknownInverseInCompoundOperation) {
 }
 
 TEST_F(QFRFunctionality, removeDiagonalSingleQubitBeforeMeasure) {
-    const QubitCount   nqubits = 1;
+    const std::size_t  nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.z(0);
     qc.measure(0, 0);
@@ -383,7 +299,7 @@ TEST_F(QFRFunctionality, removeDiagonalSingleQubitBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, removeDiagonalCompoundOpBeforeMeasure) {
-    const QubitCount   nqubits = 1;
+    const std::size_t  nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.z(0);
     qc.t(0);
@@ -399,7 +315,7 @@ TEST_F(QFRFunctionality, removeDiagonalCompoundOpBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, removeDiagonalTwoQubitGateBeforeMeasure) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.z(1, 0_pc);
     qc.measure({0, 1}, {0, 1});
@@ -413,7 +329,7 @@ TEST_F(QFRFunctionality, removeDiagonalTwoQubitGateBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, leaveGateBeforeMeasure) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.z(1, 0_pc);
     qc.x(0);
@@ -427,7 +343,7 @@ TEST_F(QFRFunctionality, leaveGateBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, removeComplexGateBeforeMeasure) {
-    const QubitCount   nqubits = 4;
+    const std::size_t  nqubits = 4;
     QuantumComputation qc(nqubits);
     qc.z(1, 0_pc);
     qc.x(0);
@@ -448,7 +364,7 @@ TEST_F(QFRFunctionality, removeComplexGateBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, removeSimpleCompoundOpBeforeMeasure) {
-    const QubitCount   nqubits = 1;
+    const std::size_t  nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.x(0);
     qc.t(0);
@@ -463,7 +379,7 @@ TEST_F(QFRFunctionality, removeSimpleCompoundOpBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, removePartOfCompoundOpBeforeMeasure) {
-    const QubitCount   nqubits = 1;
+    const std::size_t  nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.t(0);
     qc.x(0);
@@ -479,7 +395,7 @@ TEST_F(QFRFunctionality, removePartOfCompoundOpBeforeMeasure) {
 }
 
 TEST_F(QFRFunctionality, decomposeSWAPsUndirectedArchitecture) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.swap(0, 1);
     std::cout << "-----------------------------" << std::endl;
@@ -510,7 +426,7 @@ TEST_F(QFRFunctionality, decomposeSWAPsUndirectedArchitecture) {
     });
 }
 TEST_F(QFRFunctionality, decomposeSWAPsDirectedArchitecture) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.swap(0, 1);
     std::cout << "-----------------------------" << std::endl;
@@ -566,7 +482,7 @@ TEST_F(QFRFunctionality, decomposeSWAPsDirectedArchitecture) {
 }
 
 TEST_F(QFRFunctionality, decomposeSWAPsCompound) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     QuantumComputation comp(nqubits);
     comp.swap(0, 1);
@@ -584,7 +500,7 @@ TEST_F(QFRFunctionality, decomposeSWAPsCompound) {
     EXPECT_EQ(dynamic_cast<qc::CompoundOperation*>(it->get())->size(), 9);
 }
 TEST_F(QFRFunctionality, decomposeSWAPsCompoundDirected) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     QuantumComputation comp(nqubits);
     comp.swap(0, 1);
@@ -603,7 +519,7 @@ TEST_F(QFRFunctionality, decomposeSWAPsCompoundDirected) {
 }
 
 TEST_F(QFRFunctionality, removeFinalMeasurements) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.h(0);
     qc.h(1);
@@ -631,7 +547,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurements) {
 }
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsTwoQubitMeasurement) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.h(0);
     qc.h(1);
@@ -658,7 +574,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsTwoQubitMeasurement) {
 }
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompound) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     QuantumComputation comp(nqubits);
     comp.measure(0, 0);
@@ -684,7 +600,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsCompound) {
 }
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundDegraded) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     QuantumComputation comp(nqubits);
     comp.measure(0, 0);
@@ -711,7 +627,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundDegraded) {
 }
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundEmpty) {
-    const QubitCount   nqubits = 2;
+    const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     QuantumComputation comp(nqubits);
     comp.measure(0, 0);
@@ -731,11 +647,11 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundEmpty) {
 }
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
-    auto              circ = "OPENQASM 2.0;include \"qelib1.inc\";qreg q[3];qreg r[3];h q;cx q, r;creg c[3];creg d[3];barrier q;measure q->c;measure r->d;\n";
+    const std::string circ = "OPENQASM 2.0;include \"qelib1.inc\";qreg q[3];qreg r[3];h q;cx q, r;creg c[3];creg d[3];barrier q;measure q->c;measure r->d;\n";
     std::stringstream ss{};
     ss << circ;
     QuantumComputation qc{};
-    qc.import(ss, qc::OpenQASM);
+    qc.import(ss, qc::Format::OpenQASM);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::removeFinalMeasurements(qc);
@@ -780,30 +696,30 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
     qc.vdag(0);
     qc.vdag(0, 1_pc);
     qc.vdag(0, {1_pc, 2_nc});
-    qc.u3(0, dd::PI, dd::PI, dd::PI);
-    qc.u3(0, 1_pc, dd::PI, dd::PI, dd::PI);
-    qc.u3(0, {1_pc, 2_nc}, dd::PI, dd::PI, dd::PI);
-    qc.u2(0, dd::PI, dd::PI);
-    qc.u2(0, 1_pc, dd::PI, dd::PI);
-    qc.u2(0, {1_pc, 2_nc}, dd::PI, dd::PI);
-    qc.phase(0, dd::PI);
-    qc.phase(0, 1_pc, dd::PI);
-    qc.phase(0, {1_pc, 2_nc}, dd::PI);
+    qc.u3(0, PI, PI, PI);
+    qc.u3(0, 1_pc, PI, PI, PI);
+    qc.u3(0, {1_pc, 2_nc}, PI, PI, PI);
+    qc.u2(0, PI, PI);
+    qc.u2(0, 1_pc, PI, PI);
+    qc.u2(0, {1_pc, 2_nc}, PI, PI);
+    qc.phase(0, PI);
+    qc.phase(0, 1_pc, PI);
+    qc.phase(0, {1_pc, 2_nc}, PI);
     qc.sx(0);
     qc.sx(0, 1_pc);
     qc.sx(0, {1_pc, 2_nc});
     qc.sxdag(0);
     qc.sxdag(0, 1_pc);
     qc.sxdag(0, {1_pc, 2_nc});
-    qc.rx(0, dd::PI);
-    qc.rx(0, 1_pc, dd::PI);
-    qc.rx(0, {1_pc, 2_nc}, dd::PI);
-    qc.ry(0, dd::PI);
-    qc.ry(0, 1_pc, dd::PI);
-    qc.ry(0, {1_pc, 2_nc}, dd::PI);
-    qc.rz(0, dd::PI);
-    qc.rz(0, 1_pc, dd::PI);
-    qc.rz(0, {1_pc, 2_nc}, dd::PI);
+    qc.rx(0, PI);
+    qc.rx(0, 1_pc, PI);
+    qc.rx(0, {1_pc, 2_nc}, PI);
+    qc.ry(0, PI);
+    qc.ry(0, 1_pc, PI);
+    qc.ry(0, {1_pc, 2_nc}, PI);
+    qc.rz(0, PI);
+    qc.rz(0, 1_pc, PI);
+    qc.rz(0, {1_pc, 2_nc}, PI);
     qc.swap(0, 1);
     qc.swap(0, 1, 2_pc);
     qc.swap(0, 1, {2_pc, 3_nc});
@@ -823,26 +739,26 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
     qc.reset(0);
     qc.reset({1, 2});
 
-    auto qc_cloned = qc.clone();
-    ASSERT_EQ(qc.size(), qc_cloned.size());
+    auto qcCloned = qc.clone();
+    ASSERT_EQ(qc.size(), qcCloned.size());
 }
 
 TEST_F(QFRFunctionality, cloningDifferentOperations) {
-    const QubitCount   nqubits = 5;
+    const std::size_t  nqubits = 5;
     QuantumComputation qc(nqubits);
     QuantumComputation comp(nqubits);
     comp.barrier(0);
     comp.h(0);
     qc.emplace_back(comp.asOperation());
     qc.classicControlled(qc::X, 0, qc.getCregs().at("c"), 1);
-    qc.emplace_back<NonUnitaryOperation>(qc.getNqubits(), std::vector<dd::Qubit>{0, 1}, 1);
+    qc.emplace_back<NonUnitaryOperation>(qc.getNqubits(), std::vector<Qubit>{0, 1}, 1);
 
-    auto qc_cloned = qc.clone();
-    ASSERT_EQ(qc.size(), qc_cloned.size());
+    auto qcCloned = qc.clone();
+    ASSERT_EQ(qc.size(), qcCloned.size());
 }
 
 TEST_F(QFRFunctionality, wrongRegisterSizes) {
-    const QubitCount   nqubits = 5;
+    const std::size_t  nqubits = 5;
     QuantumComputation qc(nqubits);
     ASSERT_THROW(qc.measure({0}, {1, 2}), std::invalid_argument);
 }
@@ -867,25 +783,25 @@ TEST_F(QFRFunctionality, eliminateResetsBasicTest) {
 
     ASSERT_EQ(qc.getNqubits(), 2);
     ASSERT_EQ(qc.getNindividualOps(), 4);
-    auto& op0 = qc.at(0);
-    auto& op1 = qc.at(1);
-    auto& op2 = qc.at(2);
-    auto& op3 = qc.at(3);
+    const auto& op0 = qc.at(0);
+    const auto& op1 = qc.at(1);
+    const auto& op2 = qc.at(2);
+    const auto& op3 = qc.at(3);
 
     EXPECT_EQ(op0->getNqubits(), 2);
     EXPECT_TRUE(op0->getType() == qc::H);
     const auto& targets0 = op0->getTargets();
     EXPECT_EQ(targets0.size(), 1);
-    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets0.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op0->getControls().empty());
 
     EXPECT_EQ(op1->getNqubits(), 2);
     EXPECT_TRUE(op1->getType() == qc::Measure);
     const auto& targets1 = op1->getTargets();
     EXPECT_EQ(targets1.size(), 1);
-    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets1.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op1->getControls().empty());
-    auto        measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
+    auto*       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
     const auto& classics0 = measure0->getClassics();
     EXPECT_EQ(classics0.size(), 1);
     EXPECT_EQ(classics0.at(0), 0);
@@ -894,16 +810,16 @@ TEST_F(QFRFunctionality, eliminateResetsBasicTest) {
     EXPECT_TRUE(op2->getType() == qc::H);
     const auto& targets2 = op2->getTargets();
     EXPECT_EQ(targets2.size(), 1);
-    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_EQ(targets2.at(0), static_cast<Qubit>(1));
     EXPECT_TRUE(op2->getControls().empty());
 
     EXPECT_EQ(op3->getNqubits(), 2);
     EXPECT_TRUE(op3->getType() == qc::Measure);
     const auto& targets3 = op3->getTargets();
     EXPECT_EQ(targets3.size(), 1);
-    EXPECT_EQ(targets3.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_EQ(targets3.at(0), static_cast<Qubit>(1));
     EXPECT_TRUE(op3->getControls().empty());
-    auto        measure1  = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
+    auto*       measure1  = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
     const auto& classics1 = measure1->getClassics();
     EXPECT_EQ(classics1.size(), 1);
     EXPECT_EQ(classics1.at(0), 1);
@@ -927,31 +843,31 @@ TEST_F(QFRFunctionality, eliminateResetsClassicControlled) {
 
     ASSERT_EQ(qc.getNqubits(), 2);
     ASSERT_EQ(qc.getNindividualOps(), 3);
-    auto& op0 = qc.at(0);
-    auto& op1 = qc.at(1);
-    auto& op2 = qc.at(2);
+    const auto& op0 = qc.at(0);
+    const auto& op1 = qc.at(1);
+    const auto& op2 = qc.at(2);
 
     EXPECT_EQ(op0->getNqubits(), 2);
     EXPECT_TRUE(op0->getType() == qc::H);
     const auto& targets0 = op0->getTargets();
     EXPECT_EQ(targets0.size(), 1);
-    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets0.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op0->getControls().empty());
 
     EXPECT_EQ(op1->getNqubits(), 2);
     EXPECT_TRUE(op1->getType() == qc::Measure);
     const auto& targets1 = op1->getTargets();
     EXPECT_EQ(targets1.size(), 1);
-    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets1.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op1->getControls().empty());
-    auto        measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
+    auto*       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
     const auto& classics0 = measure0->getClassics();
     EXPECT_EQ(classics0.size(), 1);
     EXPECT_EQ(classics0.at(0), 0);
 
     EXPECT_EQ(op2->getNqubits(), 2);
     EXPECT_TRUE(op2->isClassicControlledOperation());
-    auto        classicControlled = dynamic_cast<qc::ClassicControlledOperation*>(op2.get());
+    auto*       classicControlled = dynamic_cast<qc::ClassicControlledOperation*>(op2.get());
     const auto& operation         = classicControlled->getOperation();
     EXPECT_EQ(operation->getNqubits(), 2);
     EXPECT_TRUE(operation->getType() == qc::X);
@@ -979,29 +895,29 @@ TEST_F(QFRFunctionality, eliminateResetsMultipleTargetReset) {
 
     ASSERT_EQ(qc.getNqubits(), 4);
     ASSERT_EQ(qc.getNindividualOps(), 3);
-    auto& op0 = qc.at(0);
-    auto& op1 = qc.at(1);
-    auto& op2 = qc.at(2);
+    const auto& op0 = qc.at(0);
+    const auto& op1 = qc.at(1);
+    const auto& op2 = qc.at(2);
 
     EXPECT_EQ(op0->getNqubits(), 4);
     EXPECT_TRUE(op0->getType() == qc::X);
     const auto& targets0 = op0->getTargets();
     EXPECT_EQ(targets0.size(), 1);
-    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(2));
+    EXPECT_EQ(targets0.at(0), static_cast<Qubit>(2));
     EXPECT_TRUE(op0->getControls().empty());
 
     EXPECT_EQ(op1->getNqubits(), 4);
     EXPECT_TRUE(op1->getType() == qc::Z);
     const auto& targets1 = op1->getTargets();
     EXPECT_EQ(targets1.size(), 1);
-    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(3));
+    EXPECT_EQ(targets1.at(0), static_cast<Qubit>(3));
     EXPECT_TRUE(op1->getControls().empty());
 
     EXPECT_EQ(op2->getNqubits(), 4);
     EXPECT_TRUE(op2->getType() == qc::X);
     const auto& targets2 = op2->getTargets();
     EXPECT_EQ(targets2.size(), 1);
-    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(2));
+    EXPECT_EQ(targets2.at(0), static_cast<Qubit>(2));
     const auto& controls2 = op2->getControls();
     EXPECT_EQ(controls2.size(), 1);
     EXPECT_EQ(controls2.count(3), 1);
@@ -1031,21 +947,21 @@ TEST_F(QFRFunctionality, eliminateResetsCompoundOperation) {
     ASSERT_EQ(qc.getNqubits(), 5);
     ASSERT_EQ(qc.getNindividualOps(), 3);
 
-    auto& op = qc.at(0);
+    const auto& op = qc.at(0);
     EXPECT_TRUE(op->isCompoundOperation());
     EXPECT_EQ(op->getNqubits(), 5);
-    auto compOp0 = dynamic_cast<qc::CompoundOperation*>(op.get());
+    auto* compOp0 = dynamic_cast<qc::CompoundOperation*>(op.get());
     EXPECT_EQ(compOp0->size(), 3);
 
-    auto& op0 = compOp0->at(0);
-    auto& op1 = compOp0->at(1);
-    auto& op2 = compOp0->at(2);
+    const auto& op0 = compOp0->at(0);
+    const auto& op1 = compOp0->at(1);
+    const auto& op2 = compOp0->at(2);
 
     EXPECT_EQ(op0->getNqubits(), 5);
     EXPECT_TRUE(op0->getType() == qc::X);
     const auto& targets0 = op0->getTargets();
     EXPECT_EQ(targets0.size(), 1);
-    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(2));
+    EXPECT_EQ(targets0.at(0), static_cast<Qubit>(2));
     const auto& controls0 = op0->getControls();
     EXPECT_EQ(controls0.size(), 1);
     EXPECT_EQ(controls0.count(3), 1);
@@ -1054,16 +970,16 @@ TEST_F(QFRFunctionality, eliminateResetsCompoundOperation) {
     EXPECT_TRUE(op1->getType() == qc::Measure);
     const auto& targets1 = op1->getTargets();
     EXPECT_EQ(targets1.size(), 1);
-    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(4));
+    EXPECT_EQ(targets1.at(0), static_cast<Qubit>(4));
     EXPECT_TRUE(op1->getControls().empty());
-    auto        measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
+    auto*       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
     const auto& classics0 = measure0->getClassics();
     EXPECT_EQ(classics0.size(), 1);
     EXPECT_EQ(classics0.at(0), 0);
 
     EXPECT_EQ(op2->getNqubits(), 5);
     EXPECT_TRUE(op2->isClassicControlledOperation());
-    auto        classicControlled = dynamic_cast<qc::ClassicControlledOperation*>(op2.get());
+    auto*       classicControlled = dynamic_cast<qc::ClassicControlledOperation*>(op2.get());
     const auto& operation         = classicControlled->getOperation();
     EXPECT_EQ(operation->getNqubits(), 5);
     EXPECT_TRUE(operation->getType() == qc::X);
@@ -1106,22 +1022,22 @@ TEST_F(QFRFunctionality, deferMeasurementsBasicTest) {
 
     ASSERT_EQ(qc.getNqubits(), 2);
     ASSERT_EQ(qc.getNindividualOps(), 3);
-    auto& op0 = qc.at(0);
-    auto& op1 = qc.at(1);
-    auto& op2 = qc.at(2);
+    const auto& op0 = qc.at(0);
+    const auto& op1 = qc.at(1);
+    const auto& op2 = qc.at(2);
 
     EXPECT_EQ(op0->getNqubits(), 2);
     EXPECT_TRUE(op0->getType() == qc::H);
     const auto& targets0 = op0->getTargets();
     EXPECT_EQ(targets0.size(), 1);
-    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets0.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op0->getControls().empty());
 
     EXPECT_EQ(op1->getNqubits(), 2);
     EXPECT_TRUE(op1->getType() == qc::X);
     const auto& targets1 = op1->getTargets();
     EXPECT_EQ(targets1.size(), 1);
-    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_EQ(targets1.at(0), static_cast<Qubit>(1));
     const auto& controls1 = op1->getControls();
     EXPECT_EQ(controls1.size(), 1);
     EXPECT_EQ(controls1.count(0), 1);
@@ -1130,9 +1046,9 @@ TEST_F(QFRFunctionality, deferMeasurementsBasicTest) {
     ASSERT_TRUE(op2->getType() == qc::Measure);
     const auto& targets2 = op2->getTargets();
     EXPECT_EQ(targets2.size(), 1);
-    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets2.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op2->getControls().empty());
-    auto        measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op2.get());
+    auto*       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op2.get());
     const auto& classics0 = measure0->getClassics();
     EXPECT_EQ(classics0.size(), 1);
     EXPECT_EQ(classics0.at(0), 0);
@@ -1174,23 +1090,23 @@ TEST_F(QFRFunctionality, deferMeasurementsOperationBetweenMeasurementAndClassic)
 
     ASSERT_EQ(qc.getNqubits(), 2);
     ASSERT_EQ(qc.getNindividualOps(), 4);
-    auto& op0 = qc.at(0);
-    auto& op1 = qc.at(1);
-    auto& op2 = qc.at(2);
-    auto& op3 = qc.at(3);
+    const auto& op0 = qc.at(0);
+    const auto& op1 = qc.at(1);
+    const auto& op2 = qc.at(2);
+    const auto& op3 = qc.at(3);
 
     EXPECT_EQ(op0->getNqubits(), 2);
     EXPECT_TRUE(op0->getType() == qc::H);
     const auto& targets0 = op0->getTargets();
     EXPECT_EQ(targets0.size(), 1);
-    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets0.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op0->getControls().empty());
 
     EXPECT_EQ(op1->getNqubits(), 2);
     EXPECT_TRUE(op1->getType() == qc::X);
     const auto& targets1 = op1->getTargets();
     EXPECT_EQ(targets1.size(), 1);
-    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_EQ(targets1.at(0), static_cast<Qubit>(1));
     const auto& controls1 = op1->getControls();
     EXPECT_EQ(controls1.size(), 1);
     EXPECT_EQ(controls1.count(0), 1);
@@ -1199,16 +1115,16 @@ TEST_F(QFRFunctionality, deferMeasurementsOperationBetweenMeasurementAndClassic)
     EXPECT_TRUE(op2->getType() == qc::H);
     const auto& targets2 = op2->getTargets();
     EXPECT_EQ(targets2.size(), 1);
-    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets2.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op2->getControls().empty());
 
     EXPECT_EQ(op3->getNqubits(), 2);
     ASSERT_TRUE(op3->getType() == qc::Measure);
     const auto& targets3 = op3->getTargets();
     EXPECT_EQ(targets3.size(), 1);
-    EXPECT_EQ(targets3.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets3.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op3->getControls().empty());
-    auto        measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
+    auto*       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
     const auto& classics0 = measure0->getClassics();
     EXPECT_EQ(classics0.size(), 1);
     EXPECT_EQ(classics0.at(0), 0);
@@ -1254,24 +1170,24 @@ TEST_F(QFRFunctionality, deferMeasurementsTwoClassic) {
 
     ASSERT_EQ(qc.getNqubits(), 2);
     ASSERT_EQ(qc.getNindividualOps(), 5);
-    auto& op0 = qc.at(0);
-    auto& op1 = qc.at(1);
-    auto& op2 = qc.at(2);
-    auto& op3 = qc.at(3);
-    auto& op4 = qc.at(4);
+    const auto& op0 = qc.at(0);
+    const auto& op1 = qc.at(1);
+    const auto& op2 = qc.at(2);
+    const auto& op3 = qc.at(3);
+    const auto& op4 = qc.at(4);
 
     EXPECT_EQ(op0->getNqubits(), 2);
     EXPECT_TRUE(op0->getType() == qc::H);
     const auto& targets0 = op0->getTargets();
     EXPECT_EQ(targets0.size(), 1);
-    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets0.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op0->getControls().empty());
 
     EXPECT_EQ(op1->getNqubits(), 2);
     EXPECT_TRUE(op1->getType() == qc::X);
     const auto& targets1 = op1->getTargets();
     EXPECT_EQ(targets1.size(), 1);
-    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_EQ(targets1.at(0), static_cast<Qubit>(1));
     const auto& controls1 = op1->getControls();
     EXPECT_EQ(controls1.size(), 1);
     EXPECT_EQ(controls1.count(0), 1);
@@ -1280,7 +1196,7 @@ TEST_F(QFRFunctionality, deferMeasurementsTwoClassic) {
     EXPECT_TRUE(op2->getType() == qc::Z);
     const auto& targets2 = op2->getTargets();
     EXPECT_EQ(targets2.size(), 1);
-    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_EQ(targets2.at(0), static_cast<Qubit>(1));
     const auto& controls2 = op2->getControls();
     EXPECT_EQ(controls2.size(), 1);
     EXPECT_EQ(controls2.count(0), 1);
@@ -1289,16 +1205,16 @@ TEST_F(QFRFunctionality, deferMeasurementsTwoClassic) {
     EXPECT_TRUE(op3->getType() == qc::H);
     const auto& targets3 = op3->getTargets();
     EXPECT_EQ(targets3.size(), 1);
-    EXPECT_EQ(targets3.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets3.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op3->getControls().empty());
 
     EXPECT_EQ(op4->getNqubits(), 2);
     ASSERT_TRUE(op4->getType() == qc::Measure);
     const auto& targets4 = op4->getTargets();
     EXPECT_EQ(targets4.size(), 1);
-    EXPECT_EQ(targets4.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets4.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op4->getControls().empty());
-    auto        measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op4.get());
+    auto*       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op4.get());
     const auto& classics0 = measure0->getClassics();
     EXPECT_EQ(classics0.size(), 1);
     EXPECT_EQ(classics0.at(0), 0);
@@ -1340,30 +1256,30 @@ TEST_F(QFRFunctionality, deferMeasurementsCorrectOrder) {
 
     ASSERT_EQ(qc.getNqubits(), 2);
     ASSERT_EQ(qc.getNindividualOps(), 4);
-    auto& op0 = qc.at(0);
-    auto& op1 = qc.at(1);
-    auto& op2 = qc.at(2);
-    auto& op3 = qc.at(3);
+    const auto& op0 = qc.at(0);
+    const auto& op1 = qc.at(1);
+    const auto& op2 = qc.at(2);
+    const auto& op3 = qc.at(3);
 
     EXPECT_EQ(op0->getNqubits(), 2);
     EXPECT_TRUE(op0->getType() == qc::H);
     const auto& targets0 = op0->getTargets();
     EXPECT_EQ(targets0.size(), 1);
-    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets0.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op0->getControls().empty());
 
     EXPECT_EQ(op1->getNqubits(), 2);
     EXPECT_TRUE(op1->getType() == qc::H);
     const auto& targets1 = op2->getTargets();
     EXPECT_EQ(targets1.size(), 1);
-    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_EQ(targets1.at(0), static_cast<Qubit>(1));
     EXPECT_TRUE(op1->getControls().empty());
 
     EXPECT_EQ(op2->getNqubits(), 2);
     EXPECT_TRUE(op2->getType() == qc::X);
     const auto& targets2 = op1->getTargets();
     EXPECT_EQ(targets2.size(), 1);
-    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_EQ(targets2.at(0), static_cast<Qubit>(1));
     const auto& controls2 = op2->getControls();
     EXPECT_EQ(controls2.size(), 1);
     EXPECT_EQ(controls2.count(0), 1);
@@ -1372,9 +1288,9 @@ TEST_F(QFRFunctionality, deferMeasurementsCorrectOrder) {
     ASSERT_TRUE(op3->getType() == qc::Measure);
     const auto& targets3 = op3->getTargets();
     EXPECT_EQ(targets3.size(), 1);
-    EXPECT_EQ(targets3.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets3.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op3->getControls().empty());
-    auto        measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
+    auto*       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
     const auto& classics0 = measure0->getClassics();
     EXPECT_EQ(classics0.size(), 1);
     EXPECT_EQ(classics0.at(0), 0);
@@ -1419,31 +1335,31 @@ TEST_F(QFRFunctionality, deferMeasurementsTwoClassicCorrectOrder) {
 
     ASSERT_EQ(qc.getNqubits(), 2);
     ASSERT_EQ(qc.getNindividualOps(), 5);
-    auto& op0 = qc.at(0);
-    auto& op1 = qc.at(1);
-    auto& op2 = qc.at(2);
-    auto& op3 = qc.at(3);
-    auto& op4 = qc.at(4);
+    const auto& op0 = qc.at(0);
+    const auto& op1 = qc.at(1);
+    const auto& op2 = qc.at(2);
+    const auto& op3 = qc.at(3);
+    const auto& op4 = qc.at(4);
 
     EXPECT_EQ(op0->getNqubits(), 2);
     EXPECT_TRUE(op0->getType() == qc::H);
     const auto& targets0 = op0->getTargets();
     EXPECT_EQ(targets0.size(), 1);
-    EXPECT_EQ(targets0.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets0.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op0->getControls().empty());
 
     EXPECT_EQ(op1->getNqubits(), 2);
     EXPECT_TRUE(op1->getType() == qc::H);
     const auto& targets1 = op1->getTargets();
     EXPECT_EQ(targets1.size(), 1);
-    EXPECT_EQ(targets1.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_EQ(targets1.at(0), static_cast<Qubit>(1));
     EXPECT_TRUE(op1->getControls().empty());
 
     EXPECT_EQ(op2->getNqubits(), 2);
     EXPECT_TRUE(op2->getType() == qc::X);
     const auto& targets2 = op2->getTargets();
     EXPECT_EQ(targets2.size(), 1);
-    EXPECT_EQ(targets2.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_EQ(targets2.at(0), static_cast<Qubit>(1));
     const auto& controls2 = op2->getControls();
     EXPECT_EQ(controls2.size(), 1);
     EXPECT_EQ(controls2.count(0), 1);
@@ -1452,7 +1368,7 @@ TEST_F(QFRFunctionality, deferMeasurementsTwoClassicCorrectOrder) {
     EXPECT_TRUE(op3->getType() == qc::Z);
     const auto& targets3 = op3->getTargets();
     EXPECT_EQ(targets3.size(), 1);
-    EXPECT_EQ(targets3.at(0), static_cast<dd::Qubit>(1));
+    EXPECT_EQ(targets3.at(0), static_cast<Qubit>(1));
     const auto& controls3 = op3->getControls();
     EXPECT_EQ(controls3.size(), 1);
     EXPECT_EQ(controls3.count(0), 1);
@@ -1461,9 +1377,9 @@ TEST_F(QFRFunctionality, deferMeasurementsTwoClassicCorrectOrder) {
     ASSERT_TRUE(op4->getType() == qc::Measure);
     const auto& targets4 = op4->getTargets();
     EXPECT_EQ(targets4.size(), 1);
-    EXPECT_EQ(targets4.at(0), static_cast<dd::Qubit>(0));
+    EXPECT_EQ(targets4.at(0), static_cast<Qubit>(0));
     EXPECT_TRUE(op4->getControls().empty());
-    auto        measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op4.get());
+    auto*       measure0  = dynamic_cast<qc::NonUnitaryOperation*>(op4.get());
     const auto& classics0 = measure0->getClassics();
     EXPECT_EQ(classics0.size(), 1);
     EXPECT_EQ(classics0.at(0), 0);
@@ -1491,56 +1407,6 @@ TEST_F(QFRFunctionality, deferMeasurementsErrorOnImplicitReset) {
     EXPECT_THROW(CircuitOptimizer::deferMeasurements(qc), qc::QFRException);
 }
 
-TEST_F(QFRFunctionality, basicTensorDumpTest) {
-    QuantumComputation qc(2);
-    qc.h(1);
-    qc.x(0, 1_pc);
-
-    std::stringstream ss{};
-    qc.dump(ss, qc::Tensor);
-
-    auto reference = "{\"tensors\": [\n"
-                     "[[\"H   \", \"Q1\", \"GATE0\"], [\"q1_0\", \"q1_1\"], [2, 2], [[0.70710678118654757, 0], [0.70710678118654757, 0], [0.70710678118654757, 0], [-0.70710678118654757, 0]]],\n"
-                     "[[\"X   \", \"Q1\", \"Q0\", \"GATE1\"], [\"q1_1\", \"q0_0\", \"q1_2\", \"q0_1\"], [2, 2, 2, 2], [[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [1, 0], [0, 0]]]\n"
-                     "]}\n";
-    EXPECT_EQ(ss.str(), reference);
-}
-
-TEST_F(QFRFunctionality, compoundTensorDumpTest) {
-    QuantumComputation qc(2);
-    QuantumComputation comp(2);
-    comp.h(1);
-    comp.x(0, 1_pc);
-    qc.emplace_back(comp.asOperation());
-
-    std::stringstream ss{};
-    qc.dump(ss, qc::Tensor);
-
-    auto reference = "{\"tensors\": [\n"
-                     "[[\"H   \", \"Q1\", \"GATE0\"], [\"q1_0\", \"q1_1\"], [2, 2], [[0.70710678118654757, 0], [0.70710678118654757, 0], [0.70710678118654757, 0], [-0.70710678118654757, 0]]],\n"
-                     "[[\"X   \", \"Q1\", \"Q0\", \"GATE1\"], [\"q1_1\", \"q0_0\", \"q1_2\", \"q0_1\"], [2, 2, 2, 2], [[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [1, 0], [0, 0]]]\n"
-                     "]}\n";
-    EXPECT_EQ(ss.str(), reference);
-}
-
-TEST_F(QFRFunctionality, errorTensorDumpTest) {
-    QuantumComputation qc(2);
-    qc.classicControlled(qc::X, 0, {0, 1U}, 1U);
-
-    std::stringstream ss{};
-    EXPECT_THROW(qc.dump(ss, qc::Tensor), qc::QFRException);
-
-    ss.str("");
-    qc.erase(qc.begin());
-    qc.barrier(0);
-    qc.measure(0, 0);
-    EXPECT_NO_THROW(qc.dump(ss, qc::Tensor));
-
-    ss.str("");
-    qc.reset(0);
-    EXPECT_THROW(qc.dump(ss, qc::Tensor), qc::QFRException);
-}
-
 TEST_F(QFRFunctionality, trivialOperationReordering) {
     QuantumComputation qc(2);
     qc.h(0);
@@ -1559,9 +1425,7 @@ TEST_F(QFRFunctionality, trivialOperationReordering) {
 TEST_F(QFRFunctionality, FlattenRandomClifford) {
     qc::RandomCliffordCircuit rcs(2U, 3U, 0U);
     std::cout << rcs << std::endl;
-
-    auto dd     = std::make_unique<dd::Package<>>(2U);
-    auto before = buildFunctionality(&rcs, dd);
+    const auto nops = rcs.getNindividualOps();
 
     qc::CircuitOptimizer::flattenOperations(rcs);
     std::cout << rcs << std::endl;
@@ -1569,13 +1433,11 @@ TEST_F(QFRFunctionality, FlattenRandomClifford) {
     for (const auto& op: rcs) {
         EXPECT_FALSE(op->isCompoundOperation());
     }
-
-    auto after = buildFunctionality(&rcs, dd);
-    EXPECT_EQ(before, after);
+    EXPECT_EQ(nops, rcs.getNindividualOps());
 }
 
 TEST_F(QFRFunctionality, FlattenRecursive) {
-    const dd::QubitCount nqubits = 1U;
+    const std::size_t nqubits = 1U;
 
     // create a nested compound operation
     QuantumComputation op(nqubits);
@@ -1693,12 +1555,12 @@ TEST_F(QFRFunctionality, CNOTCancellation3) {
 
     CircuitOptimizer::cancelCNOTs(qc);
     EXPECT_TRUE(qc.size() == 2U);
-    auto& firstOperation = qc.front();
+    const auto& firstOperation = qc.front();
     EXPECT_EQ(firstOperation->getType(), qc::X);
     EXPECT_EQ(firstOperation->getTargets().front(), 0U);
     EXPECT_EQ(firstOperation->getControls().begin()->qubit, 1U);
 
-    auto& secondOperation = qc.back();
+    const auto& secondOperation = qc.back();
     EXPECT_EQ(secondOperation->getType(), qc::X);
     EXPECT_EQ(secondOperation->getTargets().front(), 1U);
     EXPECT_EQ(secondOperation->getControls().begin()->qubit, 0U);
@@ -1711,12 +1573,12 @@ TEST_F(QFRFunctionality, CNOTCancellation4) {
 
     CircuitOptimizer::cancelCNOTs(qc);
     EXPECT_TRUE(qc.size() == 2U);
-    auto& firstOperation = qc.front();
+    const auto& firstOperation = qc.front();
     EXPECT_EQ(firstOperation->getType(), qc::X);
     EXPECT_EQ(firstOperation->getTargets().front(), 1U);
     EXPECT_EQ(firstOperation->getControls().begin()->qubit, 0U);
 
-    auto& secondOperation = qc.back();
+    const auto& secondOperation = qc.back();
     EXPECT_EQ(secondOperation->getType(), qc::X);
     EXPECT_EQ(secondOperation->getTargets().front(), 0U);
     EXPECT_EQ(secondOperation->getControls().begin()->qubit, 1U);
@@ -1730,7 +1592,7 @@ TEST_F(QFRFunctionality, CNOTCancellation5) {
 
     CircuitOptimizer::cancelCNOTs(qc);
     EXPECT_TRUE(qc.size() == 1U);
-    auto& firstOperation = qc.front();
+    const auto& firstOperation = qc.front();
     EXPECT_EQ(firstOperation->getType(), qc::SWAP);
     EXPECT_EQ(firstOperation->getTargets().front(), 0U);
     EXPECT_EQ(firstOperation->getTargets().back(), 1U);
@@ -1768,7 +1630,7 @@ TEST_F(QFRFunctionality, ContainsLogicalQubit) {
 
 TEST_F(QFRFunctionality, AddAncillaryQubits) {
     QuantumComputation qc(1);
-    qc.addAncillaryQubit(1, -1);
+    qc.addAncillaryQubit(1, std::nullopt);
     EXPECT_EQ(qc.getNqubits(), 2);
     EXPECT_EQ(qc.getNancillae(), 1);
     ASSERT_EQ(qc.ancillary.size(), 2U);

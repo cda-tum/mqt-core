@@ -1,3 +1,18 @@
+# add MQT::DDPackage library
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
+
+# add MQT::zx library
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx")
+
+# add nlohmann::json library
+set(JSON_BuildTests # cmake-lint: disable=C0103
+    OFF
+    CACHE INTERNAL "")
+set(JSON_MultipleHeaders # cmake-lint: disable=C0103
+    OFF
+    CACHE INTERNAL "")
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json" EXCLUDE_FROM_ALL)
+
 # main project library
 add_library(
   ${PROJECT_NAME}
@@ -9,13 +24,10 @@ add_library(
   ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/QPE.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/CircuitOptimizer.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/FunctionalityConstruction.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/NoiseFunctionality.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Operations.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/dd/Simulation.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/Definitions.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/ClassicControlledOperation.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/CompoundOperation.hpp
+  ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/Control.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/NonUnitaryOperation.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/Operation.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/operations/StandardOperation.hpp
@@ -23,8 +35,8 @@ add_library(
   ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Parser.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
+  ${${PROJECT_NAME}_SOURCE_DIR}/include/Permutation.hpp
   ${${PROJECT_NAME}_SOURCE_DIR}/include/QuantumComputation.hpp
-  ${${PROJECT_NAME}_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/BernsteinVazirani.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/Entanglement.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/algorithms/GoogleRandomCircuitSampling.cpp
@@ -42,10 +54,9 @@ add_library(
   ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QCParser.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/parsers/RealParser.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/parsers/TFCParser.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/QuantumComputation.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/zx/FunctionalityConstruction.cpp
-  parsers/qasm_parser/Parser.cpp
-  parsers/qasm_parser/Scanner.cpp)
+  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/qasm_parser/Parser.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/parsers/qasm_parser/Scanner.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/QuantumComputation.cpp)
 
 # set include directories
 target_include_directories(${PROJECT_NAME}
@@ -55,22 +66,12 @@ target_include_directories(${PROJECT_NAME}
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 set_target_properties(${PROJECT_NAME} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 
-# add MQT::DDpackage library
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package")
-target_link_libraries(${PROJECT_NAME} PUBLIC MQT::DDPackage)
-
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx")
-target_link_libraries(${PROJECT_NAME} PUBLIC MQT::zx)
-
-# add nlohmann::json library
-set(JSON_BuildTests # cmake-lint: disable=C0103
-    OFF
-    CACHE INTERNAL "")
-set(JSON_MultipleHeaders # cmake-lint: disable=C0103
-    OFF
-    CACHE INTERNAL "")
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json" EXCLUDE_FROM_ALL)
 target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json)
+
+# Temporary: The ZX package is not yet clearly separated and some of its definitions are used
+# throughout the library. Therefore, the ZX package always needs to be linked into the main QFR
+# library.
+target_link_libraries(${PROJECT_NAME} PUBLIC MQT::zx)
 
 # enable interprocedural optimization if it is supported
 enable_lto(${PROJECT_NAME})
@@ -111,3 +112,21 @@ endif()
 
 # add MQT alias
 add_library(MQT::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+
+# add DD Package library
+add_library(
+  ${PROJECT_NAME}_dd INTERFACE ${PROJECT_SOURCE_DIR}/include/dd/FunctionalityConstruction.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/NoiseFunctionality.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/Operations.hpp ${PROJECT_SOURCE_DIR}/include/dd/Simulation.hpp)
+target_link_libraries(${PROJECT_NAME}_dd INTERFACE MQT::DDPackage MQT::${PROJECT_NAME})
+target_include_directories(${PROJECT_NAME}_dd
+                           INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/dd>)
+add_library(MQT::${PROJECT_NAME}_dd ALIAS ${PROJECT_NAME}_dd)
+
+# add ZX package library
+add_library(${PROJECT_NAME}_zx ${PROJECT_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/zx/FunctionalityConstruction.cpp)
+target_link_libraries(${PROJECT_NAME}_zx PUBLIC MQT::zx MQT::${PROJECT_NAME})
+target_include_directories(${PROJECT_NAME}_zx
+                           PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/zx>)
+add_library(MQT::${PROJECT_NAME}_zx ALIAS ${PROJECT_NAME}_zx)

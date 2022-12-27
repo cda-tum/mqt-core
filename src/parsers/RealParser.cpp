@@ -34,24 +34,21 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
             throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Invalid file header");
         }
 
-        if (cmd == ".BEGIN")
-            return line; // header read complete
-        else if (cmd == ".NUMVARS") {
+        if (cmd == ".BEGIN") {
+            // header read complete
+            return line;
+        }
+
+        if (cmd == ".NUMVARS") {
             std::size_t nq;
             if (!static_cast<bool>(is >> nq)) {
                 nqubits = 0;
             } else {
-                nqubits = static_cast<dd::QubitCount>(nq);
+                nqubits = nq;
             }
             nclassics = nqubits;
-            if (nqubits + nancillae > dd::Package<>::MAX_POSSIBLE_QUBITS) {
-                throw QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
-                                   std::to_string(dd::Package<>::MAX_POSSIBLE_QUBITS) + " qubits, while " +
-                                   std::to_string(nqubits + nancillae) + " were requested. If you want to use more than " +
-                                   std::to_string(dd::Package<>::MAX_POSSIBLE_QUBITS) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
-            }
         } else if (cmd == ".VARIABLES") {
-            for (dd::QubitCount i = 0; i < nqubits; ++i) {
+            for (std::size_t i = 0; i < nqubits; ++i) {
                 if (!static_cast<bool>(is >> variable) || variable.at(0) == '.') {
                     throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Invalid or insufficient variables declared");
                 }
@@ -65,7 +62,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
             }
         } else if (cmd == ".CONSTANTS") {
             is >> std::ws;
-            for (dd::QubitCount i = 0; i < nqubits; ++i) {
+            for (std::size_t i = 0; i < nqubits; ++i) {
                 const auto value = is.get();
                 if (!is.good()) {
                     throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Failed read in '.constants' line");
@@ -163,13 +160,14 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
                 }
                 gate = (*it).second;
             }
-            dd::QubitCount ncontrols = m.str(2).empty() ? 0 : static_cast<dd::QubitCount>(std::stoul(m.str(2), nullptr, 0)) - 1;
-            dd::fp         lambda    = m.str(3).empty() ? static_cast<dd::fp>(0L) : static_cast<dd::fp>(std::stold(m.str(3)));
+            auto     ncontrols = m.str(2).empty() ? 0 : std::stoul(m.str(2), nullptr, 0) - 1;
+            const fp lambda    = m.str(3).empty() ? static_cast<fp>(0L) : static_cast<fp>(std::stold(m.str(3)));
 
-            if (gate == V || gate == Vdag || m.str(1) == "c")
+            if (gate == V || gate == Vdag || m.str(1) == "c") {
                 ncontrols = 1;
-            else if (gate == Peres || gate == Peresdag)
+            } else if (gate == Peres || gate == Peresdag) {
                 ncontrols = 2;
+            }
 
             if (ncontrols >= nqubits) {
                 throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Gate acts on " + std::to_string(ncontrols + 1) + " qubits, but only " + std::to_string(nqubits) + " qubits are available.");
@@ -178,11 +176,11 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
             std::string qubits, label;
             getline(is, qubits);
 
-            std::vector<dd::Control> controls{};
-            std::istringstream       iss(qubits);
+            std::vector<Control> controls{};
+            std::istringstream   iss(qubits);
 
             // get controls and target
-            for (int i = 0; i < ncontrols; ++i) {
+            for (std::size_t i = 0; i < ncontrols; ++i) {
                 if (!(iss >> label)) {
                     throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Too few variables for gate " + m.str(1));
                 }
@@ -195,7 +193,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
                 if (iter == qregs.end()) {
                     throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Label " + label + " not found!");
                 }
-                controls.emplace_back(dd::Control{iter->second.first, negativeControl ? dd::Control::Type::neg : dd::Control::Type::pos});
+                controls.emplace_back(Control{iter->second.first, negativeControl ? Control::Type::Neg : Control::Type::Pos});
             }
 
             if (!(iss >> label)) {
@@ -207,9 +205,9 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
             }
 
             updateMaxControls(ncontrols);
-            dd::Qubit target  = iter->second.first;
-            dd::Qubit target1 = 0;
-            auto      x       = nearbyint(lambda);
+            Qubit target  = iter->second.first;
+            Qubit target1 = 0;
+            auto  x       = nearbyint(lambda);
             switch (gate) {
                 case None:
                     throw QFRException("[real parser] l:" + std::to_string(line) + " msg: 'None' operation detected.");
@@ -225,36 +223,36 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
                 case Vdag:
                 case U3:
                 case U2:
-                    emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, gate, lambda);
+                    emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, lambda);
                     break;
 
                 case X:
-                    emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target);
+                    emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target);
                     break;
 
                 case RX:
                 case RY:
-                    emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, gate, dd::PI / (lambda));
+                    emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (lambda));
                     break;
 
                 case RZ:
                 case Phase:
                     if (std::abs(lambda - x) < qc::PARAMETER_TOLERANCE) {
                         if (x == 1.0 || x == -1.0) {
-                            emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, Z);
+                            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Z);
                         } else if (x == 2.0) {
-                            emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, S);
+                            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, S);
                         } else if (x == -2.0) {
-                            emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, Sdag);
+                            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Sdag);
                         } else if (x == 4.0) {
-                            emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, T);
+                            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, T);
                         } else if (x == -4.0) {
-                            emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, Tdag);
+                            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Tdag);
                         } else {
-                            emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, gate, dd::PI / (x));
+                            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (x));
                         }
                     } else {
-                        emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, gate, dd::PI / (lambda));
+                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (lambda));
                     }
                     break;
                 case SWAP:
@@ -263,7 +261,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
                 case iSWAP:
                     target1 = controls.back().qubit;
                     controls.pop_back();
-                    emplace_back<StandardOperation>(nqubits, dd::Controls{controls.cbegin(), controls.cend()}, target, target1, gate);
+                    emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, target1, gate);
                     break;
                 default:
                     std::cerr << "Unsupported operation encountered:  " << gate << "!" << std::endl;

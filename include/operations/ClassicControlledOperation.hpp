@@ -10,28 +10,28 @@
 namespace qc {
 
     class ClassicControlledOperation final: public Operation {
-    protected:
-        std::unique_ptr<Operation>           op;
-        std::pair<dd::Qubit, dd::QubitCount> controlRegister{};
-        unsigned int                         expectedValue = 1U;
+    private:
+        std::unique_ptr<Operation> op;
+        ClassicalRegister          controlRegister{};
+        std::uint64_t              expectedValue = 1U;
 
     public:
         // Applies operation `_op` if the creg starting at index `control` has the expected value
-        ClassicControlledOperation(std::unique_ptr<qc::Operation>& _op, const std::pair<dd::Qubit, dd::QubitCount>& controlRegister, unsigned int expectedValue = 1U):
-            op(std::move(_op)), controlRegister(controlRegister), expectedValue(expectedValue) {
-            nqubits = op->getNqubits();
+        ClassicControlledOperation(std::unique_ptr<qc::Operation>& op, const ClassicalRegister& controlRegister, std::uint64_t expectedValue = 1U):
+            op(std::move(op)), controlRegister(controlRegister), expectedValue(expectedValue) {
+            nqubits = this->op->getNqubits();
             name[0] = 'c';
             name[1] = '_';
-            std::strcpy(name + 2, op->getName());
-            parameter[0] = controlRegister.first;
-            parameter[1] = controlRegister.second;
-            parameter[2] = expectedValue;
+            std::strcpy(name + 2, this->op->getName());
+            parameter[0] = static_cast<fp>(controlRegister.first);
+            parameter[1] = static_cast<fp>(controlRegister.second);
+            parameter[2] = static_cast<fp>(expectedValue);
             type         = ClassicControlled;
         }
 
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {
-            auto op_cloned = op->clone();
-            return std::make_unique<ClassicControlledOperation>(op_cloned, controlRegister, expectedValue);
+            auto opCloned = op->clone();
+            return std::make_unique<ClassicControlledOperation>(opCloned, controlRegister, expectedValue);
         }
 
         [[nodiscard]] auto getControlRegister() const {
@@ -46,7 +46,7 @@ namespace qc {
             return op.get();
         }
 
-        void setNqubits(dd::QubitCount nq) override {
+        void setNqubits(std::size_t nq) override {
             nqubits = nq;
             op->setNqubits(nq);
         }
@@ -63,11 +63,11 @@ namespace qc {
             return op->getNtargets();
         }
 
-        [[nodiscard]] const dd::Controls& getControls() const override {
+        [[nodiscard]] const Controls& getControls() const override {
             return op->getControls();
         }
 
-        dd::Controls& getControls() override {
+        Controls& getControls() override {
             return op->getControls();
         }
 
@@ -83,7 +83,7 @@ namespace qc {
             return true;
         }
 
-        [[nodiscard]] bool actsOn(dd::Qubit i) const override {
+        [[nodiscard]] bool actsOn(Qubit i) const override {
             return op->actsOn(i);
         }
 
@@ -98,11 +98,8 @@ namespace qc {
                 }
 
                 return op->equals(*classic->op, perm1, perm2);
-
-            } else {
-                return false;
             }
-            return Operation::equals(operation, perm1, perm2);
+            return false;
         }
         [[nodiscard]] bool equals(const Operation& operation) const override {
             return equals(operation, {}, {});

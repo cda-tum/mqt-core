@@ -1,14 +1,10 @@
 #include "Expression.hpp"
 #include "QuantumComputation.hpp"
-#include "dd/Definitions.hpp"
 #include "operations/SymbolicOperation.hpp"
 
 #include "gtest/gtest.h"
-#include <iostream>
 #include <memory>
-#include <sstream>
 
-using namespace dd;
 using namespace qc;
 using namespace sym;
 class SymbolicTest: public ::testing::Test {
@@ -143,7 +139,7 @@ TEST_F(SymbolicTest, TestU3SymLambdaPhase) {
 }
 
 TEST_F(SymbolicTest, TestU3SymLambdaU2) {
-    symQc.u3(0, xMonom, 1.234, dd::PI_2);
+    symQc.u3(0, xMonom, 1.234, PI_2);
     EXPECT_EQ((*symQc.begin())->getType(), OpType::U2);
 }
 
@@ -153,7 +149,7 @@ TEST_F(SymbolicTest, TestU3SymLambdaU3) {
 }
 
 TEST_F(SymbolicTest, TestU3SymPhiU2) {
-    symQc.u3(0, 1.234, xMonom, dd::PI_2);
+    symQc.u3(0, 1.234, xMonom, PI_2);
     EXPECT_EQ((*symQc.begin())->getType(), OpType::U2);
 }
 
@@ -161,10 +157,10 @@ TEST_F(SymbolicTest, TestU3SymPhiU3) {
     symQc.u3(0, 0.0, xMonom, 4.567);
     EXPECT_EQ((*symQc.begin())->getType(), OpType::U3);
 
-    symQc.u3(0, dd::PI_2, xMonom, 1.234);
+    symQc.u3(0, PI_2, xMonom, 1.234);
     EXPECT_EQ((*(symQc.begin() + 1))->getType(), OpType::U3);
 
-    symQc.u3(0, dd::PI, xMonom, 3.465);
+    symQc.u3(0, PI, xMonom, 3.465);
     EXPECT_EQ((*(symQc.begin() + 2))->getType(), OpType::U3);
 
     symQc.u3(0, 1.2345, xMonom, 3.465);
@@ -175,10 +171,10 @@ TEST_F(SymbolicTest, TestU3SymThetaU3) {
     symQc.u3(0, 0.0, 0.0, xMonom);
     EXPECT_EQ((*symQc.begin())->getType(), OpType::U3);
 
-    symQc.u3(0, dd::PI_2, dd::PI_2, xMonom);
+    symQc.u3(0, PI_2, PI_2, xMonom);
     EXPECT_EQ((*(symQc.begin() + 1))->getType(), OpType::U3);
 
-    symQc.u3(0, dd::PI, 0.0, xMonom);
+    symQc.u3(0, PI, 0.0, xMonom);
     EXPECT_EQ((*(symQc.begin() + 2))->getType(), OpType::U3);
 
     symQc.u3(0, 1.234, 4.567, xMonom);
@@ -186,12 +182,12 @@ TEST_F(SymbolicTest, TestU3SymThetaU3) {
 }
 
 TEST_F(SymbolicTest, TestU3SymLambdaSymPhiU2) {
-    symQc.u3(0, xMonom, yMonom, dd::PI_2);
+    symQc.u3(0, xMonom, yMonom, PI_2);
     EXPECT_EQ((*symQc.begin())->getType(), OpType::U2);
 }
 
 TEST_F(SymbolicTest, TestU3SymLambdaSymPhiU3) {
-    symQc.u3(0, xMonom, yMonom, dd::PI_2 - 0.2);
+    symQc.u3(0, xMonom, yMonom, PI_2 - 0.2);
     EXPECT_EQ((*symQc.begin())->getType(), OpType::U3);
 }
 

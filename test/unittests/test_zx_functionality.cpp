@@ -7,15 +7,10 @@
 #include "QuantumComputation.hpp"
 #include "Simplify.hpp"
 #include "ZXDiagram.hpp"
-#include "dd/Control.hpp"
 #include "zx/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
-#include <cstddef>
 #include <iostream>
-#include <sstream>
-
-using namespace dd::literals;
 
 class ZXDiagramTest: public ::testing::Test {
 public:
@@ -30,9 +25,9 @@ TEST_F(ZXDiagramTest, parse_qasm) {
        << "h q[0];"
        << "cx q[0],q[1];"
        << std::endl;
-    qc.import(ss, qc::OpenQASM);
+    qc.import(ss, qc::Format::OpenQASM);
     EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
-    zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
+    const zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
     EXPECT_EQ(diag.getNVertices(), 7);
     EXPECT_EQ(diag.getNEdges(), 6);
 
@@ -59,8 +54,9 @@ TEST_F(ZXDiagramTest, parse_qasm) {
     EXPECT_EQ(diag.getVData(2).value().type, zx::VertexType::Boundary);
     EXPECT_EQ(diag.getVData(3).value().type, zx::VertexType::Boundary);
 
-    for (std::size_t i = 0; i < diag.getNVertices(); i++)
+    for (std::size_t i = 0; i < diag.getNVertices(); i++) {
         EXPECT_TRUE(diag.getVData(i).value().phase.isZero());
+    }
 }
 
 TEST_F(ZXDiagramTest, complex_circuit) {
@@ -116,7 +112,7 @@ TEST_F(ZXDiagramTest, complex_circuit) {
        << "cx q[0],q[1];"
        << "h q[0];"
        << std::endl;
-    qc.import(ss, qc::OpenQASM);
+    qc.import(ss, qc::Format::OpenQASM);
 
     EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
     zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
@@ -129,6 +125,7 @@ TEST_F(ZXDiagramTest, complex_circuit) {
 }
 
 TEST_F(ZXDiagramTest, Phase) {
+    using namespace qc::literals;
     qc = qc::QuantumComputation(2);
     qc.phase(0, zx::PI / 4);
     qc.phase(0, 1_pc, zx::PI / 4);
@@ -152,7 +149,7 @@ TEST_F(ZXDiagramTest, Compound) {
        << "ccx q[0],q[1],q[2];"
        << std::endl;
 
-    qc.import(ss, qc::OpenQASM);
+    qc.import(ss, qc::Format::OpenQASM);
     EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
     zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
     zx::fullReduce(diag);
@@ -161,26 +158,29 @@ TEST_F(ZXDiagramTest, Compound) {
 }
 
 TEST_F(ZXDiagramTest, UnsupportedMultiControl) {
+    using namespace qc::literals;
     qc = qc::QuantumComputation(4);
     qc.x(0, {1_pc,
              2_pc,
              3_pc});
     EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
-    EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
+    EXPECT_THROW(const zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
 }
 
 TEST_F(ZXDiagramTest, UnsupportedControl) {
+    using namespace qc::literals;
     qc = qc::QuantumComputation(2);
     qc.y(0, 1_pc);
     EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
-    EXPECT_THROW(zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
+    EXPECT_THROW(const zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc), zx::ZXException);
 }
 
 TEST_F(ZXDiagramTest, UnsupportedControl2) {
+    using namespace qc::literals;
     qc = qc::QuantumComputation(3);
     qc.y(0, {1_pc, 2_pc});
     EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
-    EXPECT_THROW(zx::ZXDiagram diag =
+    EXPECT_THROW(const zx::ZXDiagram diag =
                          zx::FunctionalityConstruction::buildFunctionality(&qc),
                  zx::ZXException);
 }
@@ -208,8 +208,8 @@ TEST_F(ZXDiagramTest, InitialLayout) {
 }
 
 TEST_F(ZXDiagramTest, FromSymbolic) {
-    sym::Variable x{"x"};
-    sym::Term     xTerm{1.0, x};
+    const sym::Variable x{"x"};
+    const sym::Term     xTerm{1.0, x};
     qc = qc::QuantumComputation{1};
     qc.rz(0, qc::Symbolic(xTerm));
     qc.rz(0, -qc::Symbolic(xTerm));
@@ -239,6 +239,7 @@ TEST_F(ZXDiagramTest, RZ) {
 }
 
 TEST_F(ZXDiagramTest, ISWAP) {
+    using namespace qc::literals;
     qc = qc::QuantumComputation(2);
     qc.iswap(0, 1);
 

@@ -10,44 +10,45 @@ namespace qc {
      * Private Methods
      ***/
     void Grover::setup(QuantumComputation& qc) const {
-        qc.x(static_cast<dd::Qubit>(nDataQubits));
-        for (dd::QubitCount i = 0; i < nDataQubits; ++i)
-            qc.h(static_cast<dd::Qubit>(i));
-    }
-
-    void Grover::oracle(QuantumComputation& qc) const {
-        dd::Controls controls{};
-        for (dd::QubitCount i = 0; i < nDataQubits; ++i) {
-            controls.emplace(dd::Control{static_cast<dd::Qubit>(i), targetValue.test(i) ? dd::Control::Type::pos : dd::Control::Type::neg});
-        }
-        qc.z(static_cast<dd::Qubit>(nDataQubits), controls);
-    }
-
-    void Grover::diffusion(QuantumComputation& qc) const {
-        for (dd::QubitCount i = 0; i < nDataQubits; ++i) {
-            qc.h(static_cast<dd::Qubit>(i));
-        }
-        for (dd::QubitCount i = 0; i < nDataQubits; ++i) {
-            qc.x(static_cast<dd::Qubit>(i));
-        }
-
-        qc.h(0);
-        dd::Controls controls{};
-        for (dd::Qubit j = 1; j < nDataQubits; ++j) {
-            controls.emplace(dd::Control{j});
-        }
-        qc.x(0, controls);
-        qc.h(0);
-
-        for (auto i = static_cast<dd::Qubit>(nDataQubits - 1); i >= 0; --i) {
-            qc.x(i);
-        }
-        for (auto i = static_cast<dd::Qubit>(nDataQubits - 1); i >= 0; --i) {
+        qc.x(nDataQubits);
+        for (std::size_t i = 0; i < nDataQubits; ++i) {
             qc.h(i);
         }
     }
 
-    void Grover::full_grover(QuantumComputation& qc) const {
+    void Grover::oracle(QuantumComputation& qc) const {
+        Controls controls{};
+        for (std::size_t i = 0; i < nDataQubits; ++i) {
+            controls.emplace(Control{static_cast<Qubit>(i), targetValue.test(i) ? Control::Type::Pos : Control::Type::Neg});
+        }
+        qc.z(nDataQubits, controls);
+    }
+
+    void Grover::diffusion(QuantumComputation& qc) const {
+        for (std::size_t i = 0; i < nDataQubits; ++i) {
+            qc.h(i);
+        }
+        for (std::size_t i = 0; i < nDataQubits; ++i) {
+            qc.x(i);
+        }
+
+        qc.h(0);
+        Controls controls{};
+        for (Qubit j = 1; j < nDataQubits; ++j) {
+            controls.emplace(Control{j});
+        }
+        qc.x(0, controls);
+        qc.h(0);
+
+        for (auto i = static_cast<std::make_signed_t<Qubit>>(nDataQubits - 1); i >= 0; --i) {
+            qc.x(i);
+        }
+        for (auto i = static_cast<std::make_signed_t<Qubit>>(nDataQubits - 1); i >= 0; --i) {
+            qc.h(i);
+        }
+    }
+
+    void Grover::fullGrover(QuantumComputation& qc) const {
         // create initial superposition
         setup(qc);
 
@@ -58,14 +59,15 @@ namespace qc {
         }
 
         // measure the resulting state
-        for (dd::QubitCount i = 0; i < nDataQubits; ++i)
-            qc.measure(static_cast<dd::Qubit>(i), i);
+        for (std::size_t i = 0; i < nDataQubits; ++i) {
+            qc.measure(i, i);
+        }
     }
 
     /***
      * Public Methods
      ***/
-    Grover::Grover(dd::QubitCount nq, std::size_t seed):
+    Grover::Grover(std::size_t nq, std::size_t seed):
         seed(seed), nDataQubits(nq) {
         name = "grover_" + std::to_string(nq);
 
@@ -84,24 +86,25 @@ namespace qc {
 
         expected = targetValue.to_string();
         std::reverse(expected.begin(), expected.end());
-        while (expected.length() > static_cast<std::size_t>(nqubits - 1))
+        while (expected.length() > static_cast<std::size_t>(nqubits - 1)) {
             expected.pop_back();
+        }
         std::reverse(expected.begin(), expected.end());
 
         if (nDataQubits <= 2) {
             iterations = 1;
         } else if (nDataQubits % 2 == 1) {
-            iterations = static_cast<std::size_t>(std::round(dd::PI_4 * std::pow(2.L, (nDataQubits + 1.) / 2.L - 1.) * std::sqrt(2)));
+            iterations = static_cast<std::size_t>(std::round(PI_4 * std::pow(2.L, (nDataQubits + 1.) / 2.L - 1.) * std::sqrt(2)));
         } else {
-            iterations = static_cast<std::size_t>(std::round(dd::PI_4 * std::pow(2.L, (nDataQubits) / 2.L)));
+            iterations = static_cast<std::size_t>(std::round(PI_4 * std::pow(2.L, (nDataQubits) / 2.L)));
         }
 
-        full_grover(*this);
+        fullGrover(*this);
     }
 
     std::ostream& Grover::printStatistics(std::ostream& os) const {
-        os << "Grover (" << static_cast<std::size_t>(nqubits - 1) << ") Statistics:\n";
-        os << "\tn: " << static_cast<std::size_t>(nqubits) << std::endl;
+        os << "Grover (" << nqubits - 1 << ") Statistics:\n";
+        os << "\tn: " << nqubits << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;
         os << "\tseed: " << seed << std::endl;
         os << "\tx: " << expected << std::endl;

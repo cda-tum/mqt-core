@@ -22,11 +22,9 @@ namespace qc {
 } // namespace qc
 
 namespace dd {
-    using namespace qc;
-
     // single-target Operations
     template<class DDPackage>
-    MatrixDD getStandardOperationDD(const StandardOperation* op, std::unique_ptr<DDPackage>& dd, const dd::Controls& controls, dd::Qubit target, bool inverse) {
+    qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op, std::unique_ptr<DDPackage>& dd, const dd::Controls& controls, dd::Qubit target, bool inverse) {
         GateMatrix gm;
 
         const auto  type       = op->getType();
@@ -38,7 +36,7 @@ namespace dd {
             case qc::I: gm = dd::Imat; break;
             case qc::H: gm = dd::Hmat; break;
             case qc::X: {
-                MatrixDD e{};
+                qc::MatrixDD e{};
                 if (controls.size() > 1U) { // Toffoli
                     e = dd->toffoliTable.lookup(nqubits, controls, target);
                     if (e.p == nullptr) {
@@ -69,34 +67,34 @@ namespace dd {
             default:
                 std::ostringstream oss{};
                 oss << "DD for gate" << op->getName() << " not available!";
-                throw QFRException(oss.str());
+                throw qc::QFRException(oss.str());
         }
         return dd->makeGateDD(gm, nqubits, controls, target, startQubit);
     }
 
     // two-target Operations
     template<class DDPackage>
-    MatrixDD getStandardOperationDD(const StandardOperation* op, std::unique_ptr<DDPackage>& dd, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, bool inverse) {
+    qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op, std::unique_ptr<DDPackage>& dd, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, bool inverse) {
         const auto type       = op->getType();
         const auto nqubits    = op->getNqubits();
         const auto startQubit = op->getStartingQubit();
 
         switch (type) {
-            case SWAP:
+            case qc::SWAP:
                 return dd->makeSWAPDD(nqubits, controls, target0, target1, startQubit);
-            case iSWAP:
+            case qc::iSWAP:
                 if (inverse) {
                     return dd->makeiSWAPinvDD(nqubits, controls, target0, target1, startQubit);
                 } else {
                     return dd->makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
                 }
-            case Peres:
+            case qc::Peres:
                 if (inverse) {
                     return dd->makePeresdagDD(nqubits, controls, target0, target1, startQubit);
                 } else {
                     return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
                 }
-            case Peresdag:
+            case qc::Peresdag:
                 if (inverse) {
                     return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
                 } else {
@@ -105,7 +103,7 @@ namespace dd {
             default:
                 std::ostringstream oss{};
                 oss << "DD for gate" << op->getName() << " not available!";
-                throw QFRException(oss.str());
+                throw qc::QFRException(oss.str());
         }
     }
 
@@ -114,12 +112,20 @@ namespace dd {
     //      then cx 0 1 will be translated to cx perm[0] perm[1] == cx 1 0
 
     template<class DDPackage>
-    MatrixDD getDD(const Operation* op, std::unique_ptr<DDPackage>& dd, Permutation& permutation, bool inverse = false) {
+    qc::MatrixDD getDD(const qc::Operation* op, std::unique_ptr<DDPackage>& dd, qc::Permutation& permutation, bool inverse = false) {
         const auto type    = op->getType();
         const auto nqubits = op->getNqubits();
 
+        // check whether the operation can be handled by the underlying DD package
+        if (nqubits > DDPackage::MAX_POSSIBLE_QUBITS) {
+            throw qc::QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
+                                   std::to_string(DDPackage::MAX_POSSIBLE_QUBITS) + " qubits, while " +
+                                   std::to_string(nqubits) + " were requested. If you want to use more than " +
+                                   std::to_string(DDPackage::MAX_POSSIBLE_QUBITS) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
+        }
+
         // if a permutation is provided and the current operation is a SWAP, this routine just updates the permutation
-        if (!permutation.empty() && type == SWAP && !op->isControlled()) {
+        if (!permutation.empty() && type == qc::SWAP && !op->isControlled()) {
             const auto& targets = op->getTargets();
 
             const auto target0 = targets.at(0U);
@@ -129,11 +135,11 @@ namespace dd {
             return dd->makeIdent(nqubits);
         }
 
-        if (type == ShowProbabilities || type == Barrier || type == Snapshot) {
+        if (type == qc::ShowProbabilities || type == qc::Barrier || type == qc::Snapshot) {
             return dd->makeIdent(nqubits);
         }
 
-        if (auto standardOp = dynamic_cast<const StandardOperation*>(op)) {
+        if (auto* standardOp = dynamic_cast<const qc::StandardOperation*>(op)) {
             auto targets  = op->getTargets();
             auto controls = op->getControls();
             if (!permutation.empty()) {
@@ -141,20 +147,30 @@ namespace dd {
                 controls = permutation.apply(controls);
             }
 
-            if (op->getType() == SWAP || op->getType() == iSWAP || op->getType() == Peres || op->getType() == Peresdag) {
-                assert(targets.size() == 2);
-                const auto target0 = targets[0U];
-                const auto target1 = targets[1U];
-                return getStandardOperationDD(standardOp, dd, controls, target0, target1, inverse);
-            } else {
-                assert(targets.size() == 1);
-                const auto target0 = targets[0U];
-                return getStandardOperationDD(standardOp, dd, controls, target0, inverse);
+            // convert controls to DD controls
+            dd::Controls ddControls{};
+            for (const auto& c: controls) {
+                const auto& qubit = static_cast<dd::Qubit>(c.qubit);
+                if (c.type == qc::Control::Type::Pos) {
+                    ddControls.emplace(dd::Control{qubit, dd::Control::Type::pos});
+                } else {
+                    ddControls.emplace(dd::Control{qubit, dd::Control::Type::neg});
+                }
             }
+
+            if (op->getType() == qc::SWAP || op->getType() == qc::iSWAP || op->getType() == qc::Peres || op->getType() == qc::Peresdag) {
+                assert(targets.size() == 2);
+                const auto target0 = static_cast<dd::Qubit>(targets[0U]);
+                const auto target1 = static_cast<dd::Qubit>(targets[1U]);
+                return getStandardOperationDD(standardOp, dd, ddControls, target0, target1, inverse);
+            }
+            assert(targets.size() == 1);
+            const auto target0 = static_cast<dd::Qubit>(targets[0U]);
+            return getStandardOperationDD(standardOp, dd, ddControls, target0, inverse);
         }
 
-        if (auto compoundOp = dynamic_cast<const CompoundOperation*>(op)) {
-            MatrixDD e = dd->makeIdent(op->getNqubits());
+        if (auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
+            auto e = dd->makeIdent(op->getNqubits());
             if (inverse) {
                 for (const auto& operation: *compoundOp) {
                     e = dd->multiply(e, getInverseDD(operation.get(), dd, permutation));
@@ -167,32 +183,32 @@ namespace dd {
             return e;
         }
 
-        if (auto classicOp = dynamic_cast<const ClassicControlledOperation*>(op)) {
+        if (auto* classicOp = dynamic_cast<const qc::ClassicControlledOperation*>(op)) {
             return getDD(classicOp->getOperation(), dd, permutation, inverse);
         }
 
         assert(op->isNonUnitaryOperation());
-        throw QFRException("DD for non-unitary operation not available!");
+        throw qc::QFRException("DD for non-unitary operation not available!");
     }
 
     template<class DDPackage>
-    MatrixDD getDD(const Operation* op, std::unique_ptr<DDPackage>& dd, bool inverse = false) {
-        Permutation perm{};
+    qc::MatrixDD getDD(const qc::Operation* op, std::unique_ptr<DDPackage>& dd, bool inverse = false) {
+        qc::Permutation perm{};
         return getDD(op, dd, perm, inverse);
     }
 
     template<class DDPackage>
-    MatrixDD getInverseDD(const Operation* op, std::unique_ptr<DDPackage>& dd) {
+    qc::MatrixDD getInverseDD(const qc::Operation* op, std::unique_ptr<DDPackage>& dd) {
         return getDD(op, dd, true);
     }
 
     template<class DDPackage>
-    MatrixDD getInverseDD(const Operation* op, std::unique_ptr<DDPackage>& dd, Permutation& permutation) {
+    qc::MatrixDD getInverseDD(const qc::Operation* op, std::unique_ptr<DDPackage>& dd, qc::Permutation& permutation) {
         return getDD(op, dd, permutation, true);
     }
 
     template<class DDPackage>
-    void dumpTensor(Operation* op, std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<DDPackage>& dd) {
+    void dumpTensor(qc::Operation* op, std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<DDPackage>& dd) {
         const auto type = op->getType();
         if (op->isStandardOperation()) {
             auto        nqubits  = op->getNqubits();
@@ -206,14 +222,14 @@ namespace dd {
             of << "[\"" << op->getName() << "\", ";
 
             // obtain an ordered map of involved qubits and add corresponding tags
-            std::map<dd::Qubit, std::variant<dd::Qubit, dd::Control>> orderedQubits{};
+            std::map<qc::Qubit, std::variant<qc::Qubit, qc::Control>> orderedQubits{};
             for (const auto& control: controls) {
                 orderedQubits.emplace(control.qubit, control);
-                of << "\"Q" << static_cast<std::size_t>(control.qubit) << "\", ";
+                of << "\"Q" << control.qubit << "\", ";
             }
             for (const auto& target: targets) {
                 orderedQubits.emplace(target, target);
-                of << "\"Q" << static_cast<std::size_t>(target) << "\", ";
+                of << "\"Q" << target << "\", ";
             }
             of << "\"GATE" << gateIdx << "\"], ";
             ++gateIdx;
@@ -226,16 +242,16 @@ namespace dd {
             auto              iter  = orderedQubits.rbegin();
             auto              qubit = iter->first;
             auto&             idx   = inds[qubit];
-            ssIn << "\"q" << static_cast<std::size_t>(qubit) << "_" << idx << "\"";
+            ssIn << "\"q" << qubit << "_" << idx << "\"";
             ++idx;
-            ssOut << "\"q" << static_cast<std::size_t>(qubit) << "_" << idx << "\"";
+            ssOut << "\"q" << qubit << "_" << idx << "\"";
             ++iter;
             while (iter != orderedQubits.rend()) {
                 qubit     = iter->first;
                 auto& ind = inds[qubit];
-                ssIn << ", \"q" << static_cast<std::size_t>(qubit) << "_" << ind << "\"";
+                ssIn << ", \"q" << qubit << "_" << ind << "\"";
                 ++ind;
-                ssOut << ", \"q" << static_cast<std::size_t>(qubit) << "_" << ind << "\"";
+                ssOut << ", \"q" << qubit << "_" << ind << "\"";
                 ++iter;
             }
             of << "[" << ssIn.str() << ", " << ssOut.str() << "], ";
@@ -253,15 +269,15 @@ namespace dd {
             of << "], ";
 
             // obtain a local representation of the underlying operation
-            dd::Qubit    localIdx = 0;
-            dd::Controls localControls{};
+            qc::Qubit    localIdx = 0;
+            qc::Controls localControls{};
             qc::Targets  localTargets{};
             for (const auto& [q, var]: orderedQubits) {
-                if (std::holds_alternative<dd::Qubit>(var)) {
+                if (std::holds_alternative<qc::Qubit>(var)) {
                     localTargets.emplace_back(localIdx);
                 } else {
-                    const auto* control = std::get_if<dd::Control>(&var);
-                    localControls.emplace(dd::Control{localIdx, control->type});
+                    const auto* control = std::get_if<qc::Control>(&var);
+                    localControls.emplace(qc::Control{localIdx, control->type});
                 }
                 ++localIdx;
             }
@@ -289,8 +305,9 @@ namespace dd {
             for (std::size_t row = 0U; row < localMatrix.size(); ++row) {
                 const auto& r = localMatrix[row];
                 for (std::size_t col = 0U; col < r.size(); ++col) {
-                    if (row != 0U || col != 0U)
+                    if (row != 0U || col != 0U) {
                         of << ", ";
+                    }
 
                     const auto& elem = r[col];
                     of << "[" << elem.real() << ", " << elem.imag() << "]";
@@ -303,26 +320,26 @@ namespace dd {
 
             // end of tensor
             of << "]";
-        } else if (auto compoundOp = dynamic_cast<CompoundOperation*>(op)) {
+        } else if (auto* compoundOp = dynamic_cast<qc::CompoundOperation*>(op)) {
             for (const auto& operation: *compoundOp) {
                 if (operation != (*compoundOp->begin())) {
                     of << ",\n";
                 }
                 dumpTensor(operation.get(), of, inds, gateIdx, dd);
             }
-        } else if (type == Barrier || type == ShowProbabilities || type == Snapshot) {
+        } else if (type == qc::Barrier || type == qc::ShowProbabilities || type == qc::Snapshot) {
             return;
-        } else if (type == Measure) {
+        } else if (type == qc::Measure) {
             std::clog << "Skipping measurement in tensor dump." << std::endl;
         } else {
-            throw QFRException("Dumping of tensors is currently only supported for StandardOperations.");
+            throw qc::QFRException("Dumping of tensors is currently only supported for StandardOperations.");
         }
     }
 
     // apply swaps 'on' DD in order to change 'from' to 'to'
     // where |from| >= |to|
     template<class DDType, class DDPackage>
-    void changePermutation(DDType& on, Permutation& from, const Permutation& to, std::unique_ptr<DDPackage>& dd, bool regular = true) {
+    void changePermutation(DDType& on, qc::Permutation& from, const qc::Permutation& to, std::unique_ptr<DDPackage>& dd, bool regular = true) {
         assert(from.size() >= to.size());
 
         // iterate over (k,v) pairs of second permutation
@@ -330,15 +347,17 @@ namespace dd {
             // search for key in the first map
             auto it = from.find(i);
             if (it == from.end()) {
-                throw QFRException("[changePermutation] Key " + std::to_string(it->first) + " was not found in first permutation. This should never happen.");
+                throw qc::QFRException("[changePermutation] Key " + std::to_string(it->first) + " was not found in first permutation. This should never happen.");
             }
             auto current = it->second;
 
             // permutations agree for this key value
-            if (current == goal) continue;
+            if (current == goal) {
+                continue;
+            }
 
             // search for goal value in first permutation
-            dd::Qubit j = 0;
+            qc::Qubit j = 0;
             for (const auto& [key, value]: from) {
                 if (value == goal) {
                     j = key;
@@ -348,7 +367,7 @@ namespace dd {
 
             // swap i and j
             auto saved = on;
-            if constexpr (std::is_same_v<DDType, VectorDD>) {
+            if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
                 on = dd->multiply(dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)), on);
             } else {
                 // the regular flag only has an effect on matrix DDs

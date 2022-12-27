@@ -10,13 +10,13 @@
 namespace qc {
     class QFT: public QuantumComputation {
     public:
-        explicit QFT(dd::QubitCount nq, bool includeMeasurements = true, bool dynamic = false);
+        explicit QFT(std::size_t nq, bool includeMeasurements = true, bool dynamic = false);
 
         std::ostream& printStatistics(std::ostream& os) const override;
 
-        const dd::QubitCount precision{};
-        const bool           includeMeasurements;
-        const bool           dynamic;
+        const std::size_t precision{};
+        const bool        includeMeasurements;
+        const bool        dynamic;
 
     protected:
         void createCircuit();
