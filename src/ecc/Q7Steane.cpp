@@ -52,7 +52,7 @@ void Q7Steane::measureAndCorrectSingle(bool xSyndrome) {
         auto c1 = dd::Control{static_cast<dd::Qubit>(ancStart + 1), dd::Control::Type::pos};
         auto c2 = dd::Control{static_cast<dd::Qubit>(ancStart + 2), dd::Control::Type::pos};
 
-        void (*writeXZ)(dd::Qubit, dd::Control, const std::shared_ptr<qc::QuantumComputation>&) = xSyndrome ? Ecc::x : Ecc::z;
+        staticWriteFunctionType writeXZ = xSyndrome ? Ecc::x : Ecc::z;
 
         //K1: UIUIUIU
         writeXZ(static_cast<dd::Qubit>(i + nQubits * 0), c0, qcMapped);
@@ -83,7 +83,7 @@ void Q7Steane::measureAndCorrectSingle(bool xSyndrome) {
         //correct Z_i for i+1 = c0*1+c1*2+c2*4
         //correct X_i for i+1 = c3*1+c4*2+c5*4
         for (std::size_t j = 0; j < 7; j++) {
-            writeClassicalControl(static_cast<dd::Qubit>(clAncStart), static_cast<dd::QubitCount>(3), j + 1U, xSyndrome ? qc::Z : qc::X, i + j * nQubits);
+            classicalControl(static_cast<dd::Qubit>(clAncStart), static_cast<dd::QubitCount>(3), j + 1U, xSyndrome ? qc::Z : qc::X, i + j * nQubits);
         }
         gatesWritten = true;
     }
@@ -93,9 +93,9 @@ void Q7Steane::writeDecoding() {
     if (isDecoded) {
         return;
     }
-    const auto                            nQubits           = qcOriginal->getNqubits();
-    const auto                            clAncStart        = static_cast<dd::QubitCount>(qcOriginal->getNcbits());
-    static constexpr  std::array<dd::Qubit, 4> correctionNeeded  = {1, 2, 4, 7}; //values with odd amount of '1' bits
+    const auto                                nQubits          = qcOriginal->getNqubits();
+    const auto                                clAncStart       = static_cast<dd::QubitCount>(qcOriginal->getNcbits());
+    static constexpr std::array<dd::Qubit, 4> correctionNeeded = {1, 2, 4, 7}; //values with odd amount of '1' bits
     //use exiting registers qeccX and qeccZ for decoding
 
     for (dd::Qubit i = 0; i < nQubits; i++) {
@@ -108,13 +108,13 @@ void Q7Steane::writeDecoding() {
         qcMapped->measure(static_cast<dd::Qubit>(i + 2 * nQubits), clAncStart + 1);
         qcMapped->measure(static_cast<dd::Qubit>(i + 3 * nQubits), clAncStart + 2);
         for (auto value: correctionNeeded) {
-            writeClassicalControl(static_cast<dd::Qubit>(clAncStart), static_cast<dd::QubitCount>(3), value, qc::X, i);
+            classicalControl(static_cast<dd::Qubit>(clAncStart), static_cast<dd::QubitCount>(3), value, qc::X, i);
         }
         qcMapped->measure(static_cast<dd::Qubit>(i + 4 * nQubits), clAncStart);
         qcMapped->measure(static_cast<dd::Qubit>(i + 5 * nQubits), clAncStart + 1);
         qcMapped->measure(static_cast<dd::Qubit>(i + 6 * nQubits), clAncStart + 2);
         for (auto value: correctionNeeded) {
-            writeClassicalControl(static_cast<dd::Qubit>(clAncStart), static_cast<dd::QubitCount>(3), value, qc::X, i);
+            classicalControl(static_cast<dd::Qubit>(clAncStart), static_cast<dd::QubitCount>(3), value, qc::X, i);
         }
     }
     isDecoded = true;

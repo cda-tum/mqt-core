@@ -9,28 +9,24 @@ void Q5Laflamme::writeEncoding() {
     Ecc::writeEncoding();
 
     const auto nQubits  = qcOriginal->getNqubits();
-    const auto ancStart = nQubits * ecc.nRedundantQubits;
+    const auto ancStart = static_cast<dd::Qubit>(nQubits * ecc.nRedundantQubits);
     const auto clEncode = qcOriginal->getNcbits() + 4; //encode
 
     for (dd::Qubit i = 0; i < nQubits; i++) {
-        qcMapped->reset(static_cast<dd::Qubit>(ancStart));
+        qcMapped->reset(ancStart);
     }
 
     for (dd::Qubit i = 0; i < nQubits; i++) {
+        qcMapped->h(ancStart);
+        for (std::size_t j = 0; j < ecc.nRedundantQubits; j++) {
+            qcMapped->z(static_cast<dd::Qubit>(i + j * nQubits), dd::Control{ancStart, dd::Control::Type::pos});
+        }
         qcMapped->h(static_cast<dd::Qubit>(ancStart));
-        qcMapped->z((i), dd::Control{static_cast<dd::Qubit>(ancStart), dd::Control::Type::pos});
-        qcMapped->z(static_cast<dd::Qubit>(i + nQubits), dd::Control{static_cast<dd::Qubit>(ancStart), dd::Control::Type::pos});
-        qcMapped->z(static_cast<dd::Qubit>(i + 2 * nQubits), dd::Control{static_cast<dd::Qubit>(ancStart), dd::Control::Type::pos});
-        qcMapped->z(static_cast<dd::Qubit>(i + 3 * nQubits), dd::Control{static_cast<dd::Qubit>(ancStart), dd::Control::Type::pos});
-        qcMapped->z(static_cast<dd::Qubit>(i + 4 * nQubits), dd::Control{static_cast<dd::Qubit>(ancStart), dd::Control::Type::pos});
-        qcMapped->h(static_cast<dd::Qubit>(ancStart));
-        qcMapped->measure(static_cast<dd::Qubit>(ancStart), clEncode);
+        qcMapped->measure(ancStart, clEncode);
 
-        writeClassicalControlled(1, i, qc::OpType::X, static_cast<dd::Qubit>(clEncode), static_cast<dd::QubitCount>(1));
-        writeClassicalControlled(1, i + nQubits, qc::OpType::X, static_cast<dd::Qubit>(clEncode), static_cast<dd::QubitCount>(1));
-        writeClassicalControlled(1, i + 2 * nQubits, qc::OpType::X, static_cast<dd::Qubit>(clEncode), static_cast<dd::QubitCount>(1));
-        writeClassicalControlled(1, i + 3 * nQubits, qc::OpType::X, static_cast<dd::Qubit>(clEncode), static_cast<dd::QubitCount>(1));
-        writeClassicalControlled(1, i + 4 * nQubits, qc::OpType::X, static_cast<dd::Qubit>(clEncode), static_cast<dd::QubitCount>(1));
+        for (std::size_t j = 0; j < ecc.nRedundantQubits; j++) {
+            classicalControl(static_cast<dd::Qubit>(clEncode), static_cast<dd::QubitCount>(1), 1, qc::OpType::X, static_cast<dd::Qubit>(i + j * nQubits));
+        }
     }
     gatesWritten = true;
 }
@@ -45,116 +41,71 @@ void Q5Laflamme::measureAndCorrect() {
 
     for (dd::Qubit i = 0; i < nQubits; i++) {
         std::array<dd::Qubit, 5> qubits = {};
-        for (dd::Qubit j = 0; j < 5; j++) {
+        for (std::size_t j = 0; j < qubits.size(); j++) {
             qubits[j] = static_cast<dd::Qubit>(i + j * nQubits);
         }
 
-        qcMapped->reset(ancStart);
-        qcMapped->reset(static_cast<dd::Qubit>(ancStart + 1));
-        qcMapped->reset(static_cast<dd::Qubit>(ancStart + 2));
-        qcMapped->reset(static_cast<dd::Qubit>(ancStart + 3));
+        //initialize ancilla qubits
+        std::array<dd::Control, 4> controls;
+        for (std::size_t j = 0; j < controls.size(); j++) {
+            qcMapped->reset(static_cast<dd::Qubit>(ancStart + j));
+            qcMapped->h(static_cast<dd::Qubit>(ancStart + j));
+            controls[j] = dd::Control{static_cast<dd::Qubit>(ancStart + j), dd::Control::Type::pos};
+        }
 
-        qcMapped->h(ancStart);
-        qcMapped->h(static_cast<dd::Qubit>(ancStart + 1));
-        qcMapped->h(static_cast<dd::Qubit>(ancStart + 2));
-        qcMapped->h(static_cast<dd::Qubit>(ancStart + 3));
+        //performes the controlled operations for ancilla qubits
+        for (std::size_t c = 0; c < stabilizerMatrix.size(); c++) {
+            for (std::size_t q = 0; q < stabilizerMatrix[c].size(); q++) {
+                switch (stabilizerMatrix[c][q]) {
+                    case qc::X: qcMapped->x(qubits[q], controls[c]); break;
+                    case qc::Z: qcMapped->z(qubits[q], controls[c]); break;
+                    default: break;
+                }
+            }
+        }
 
-        auto c0 = dd::Control{static_cast<dd::Qubit>(ancStart), dd::Control::Type::pos};
-        auto c1 = dd::Control{static_cast<dd::Qubit>(ancStart + 1), dd::Control::Type::pos};
-        auto c2 = dd::Control{static_cast<dd::Qubit>(ancStart + 2), dd::Control::Type::pos};
-        auto c3 = dd::Control{static_cast<dd::Qubit>(ancStart + 3), dd::Control::Type::pos};
+        //measure ancilla qubits
+        for (std::size_t j = 0; j < ecc.nCorrectingBits; j++) {
+            qcMapped->h(static_cast<dd::Qubit>(ancStart + j));
+            qcMapped->measure(static_cast<dd::Qubit>(ancStart + j), clAncStart + j);
+        }
 
-        //traversal of matrix: "/"
-        //K1: XZZXI
-        //K2: IXZZX
-        //K3: XIXZZ
-        //K4: ZXIXZ
+        auto ncBits     = static_cast<dd::Qubit>(qcOriginal->getNcbits());
+        auto qubitCount = static_cast<dd::QubitCount>(4);
 
-        qcMapped->x(qubits[0], c0);
-
-        qcMapped->z(qubits[1], c0);
-        //controlled-id(i, c1)
-
-        qcMapped->z(qubits[2], c0);
-        qcMapped->x(qubits[1], c1);
-        qcMapped->x(qubits[0], c2);
-
-        qcMapped->x(qubits[3], c0);
-        qcMapped->z(qubits[2], c1);
-        //controlled-id(i+1, c2)
-        qcMapped->z(qubits[0], c3);
-
-        //controlled-id(i+4, c0)
-        qcMapped->z(qubits[3], c1);
-        qcMapped->x(qubits[2], c2);
-        qcMapped->x(qubits[1], c3);
-
-        qcMapped->x(qubits[4], c1);
-        qcMapped->z(qubits[3], c2);
-        //controlled-id(i+2, c3)
-
-        qcMapped->z(qubits[4], c2);
-        qcMapped->x(qubits[3], c3);
-
-        qcMapped->z(qubits[4], c3);
-
-        qcMapped->h(ancStart);
-        qcMapped->h(static_cast<dd::Qubit>(ancStart + 1));
-        qcMapped->h(static_cast<dd::Qubit>(ancStart + 2));
-        qcMapped->h(static_cast<dd::Qubit>(ancStart + 3));
-
-        qcMapped->measure(ancStart, clAncStart);
-        qcMapped->measure(static_cast<dd::Qubit>(ancStart + 1), clAncStart + 1);
-        qcMapped->measure(static_cast<dd::Qubit>(ancStart + 2), clAncStart + 2);
-        qcMapped->measure(static_cast<dd::Qubit>(ancStart + 3), clAncStart + 3);
-
-        writeClassicalControlledCorrect(1, qubits[1], qc::X);
-        writeClassicalControlledCorrect(2, qubits[4], qc::Z);
-        writeClassicalControlledCorrect(3, qubits[2], qc::X);
-        writeClassicalControlledCorrect(4, qubits[2], qc::Z);
-        writeClassicalControlledCorrect(5, qubits[0], qc::Z);
-        writeClassicalControlledCorrect(6, qubits[3], qc::X);
-        writeClassicalControlledCorrect(7, qubits[2], qc::Y);
-        writeClassicalControlledCorrect(8, qubits[0], qc::X);
-        writeClassicalControlledCorrect(9, qubits[3], qc::Z);
-        writeClassicalControlledCorrect(10, qubits[1], qc::Z);
-        writeClassicalControlledCorrect(11, qubits[1], qc::Y);
-        writeClassicalControlledCorrect(12, qubits[4], qc::X);
-        writeClassicalControlledCorrect(13, qubits[0], qc::Y);
-        writeClassicalControlledCorrect(14, qubits[4], qc::Y);
-        writeClassicalControlledCorrect(15, qubits[3], qc::Y);
+        //perform corrections
+        for (std::size_t q = 0; q < ecc.nRedundantQubits; q++) {
+            for (auto op: {qc::X, qc::Y, qc::Z}) {
+                std::size_t value = 0;
+                for (std::size_t c = 0; c < stabilizerMatrix.size(); c++) {
+                    if (!commutative(op, stabilizerMatrix[c][q])) {
+                        value |= (1 << c);
+                    }
+                }
+                classicalControl(ncBits, qubitCount, value, op, qubits[q]);
+            }
+        }
     }
-}
-
-void Q5Laflamme::writeClassicalControlledCorrect(dd::QubitCount value, dd::Qubit target, qc::OpType operationType) {
-    writeClassicalControlled(value, target, operationType, static_cast<dd::Qubit>(qcOriginal->getNcbits()), static_cast<dd::QubitCount>(4));
-}
-
-void Q5Laflamme::writeClassicalControlled(dd::QubitCount value, dd::Qubit target, qc::OpType opType, dd::Qubit clStart, dd::QubitCount clCount) {
-    std::unique_ptr<qc::Operation> op    = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(), target, opType);
-    qcMapped->emplace_back<qc::ClassicControlledOperation>(op, std::make_pair(clStart, clCount), value);
 }
 
 void Q5Laflamme::writeDecoding() {
     if (isDecoded) {
         return;
     }
-    const dd::QubitCount                      nQubits           = qcOriginal->getNqubits();
-    const size_t                              clAncStart        = qcOriginal->getNcbits();
-    static constexpr std::array<dd::Qubit, 8> correctionNeeded  = {1, 2, 4, 7, 8, 11, 13, 14}; //values with odd amount of '1' bits
+    const dd::QubitCount                      nQubits          = qcOriginal->getNqubits();
+    const size_t                              clAncStart       = qcOriginal->getNcbits();
+    static constexpr std::array<dd::Qubit, 8> correctionNeeded = {1, 2, 4, 7, 8, 11, 13, 14}; //values with odd amount of '1' bits
 
     for (std::size_t i = 0; i < nQubits; i++) {
         //#|####
         //0|1111
         //odd amount of 1's -> x[0] = 1
         //measure from index 1 (not 0) to 4, =qubit 2 to 5
-
-        qcMapped->measure(static_cast<dd::Qubit>(i + 1 * nQubits), clAncStart);
-        qcMapped->measure(static_cast<dd::Qubit>(i + 2 * nQubits), clAncStart + 1);
-        qcMapped->measure(static_cast<dd::Qubit>(i + 3 * nQubits), clAncStart + 2);
-        qcMapped->measure(static_cast<dd::Qubit>(i + 4 * nQubits), clAncStart + 3);
+        for (std::size_t j = 1; j < ecc.nRedundantQubits; j++) {
+            qcMapped->measure(static_cast<dd::Qubit>(i + j * nQubits), clAncStart + j - 1);
+        }
         for (dd::Qubit const value: correctionNeeded) {
-            writeClassicalControl(static_cast<dd::Qubit>(clAncStart), 4, value, qc::X, static_cast<dd::Qubit>(i));
+            classicalControl(static_cast<dd::Qubit>(clAncStart), 4, value, qc::X, static_cast<dd::Qubit>(i));
         }
     }
     isDecoded = true;

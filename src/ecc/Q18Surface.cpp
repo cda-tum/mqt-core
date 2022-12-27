@@ -74,7 +74,7 @@ void Q18Surface::measureAndCorrect() {
                 for (std::size_t value: pair.second) {
                     mask |= value;
                 }
-                writeClassicalControl(static_cast<dd::Qubit>(clAncStart), ancillaWidth, mask, qc::X, qubits[pair.first]);
+                classicalControl(static_cast<dd::Qubit>(clAncStart), ancillaWidth, mask, qc::X, qubits[pair.first]);
             }
         }
 
@@ -84,7 +84,7 @@ void Q18Surface::measureAndCorrect() {
                 for (std::size_t value: pair.second) {
                     mask |= value;
                 }
-                writeClassicalControl(static_cast<dd::Qubit>(clAncStart + ancillaWidth), ancillaWidth, mask, qc::Z, qubits[pair.first]);
+                classicalControl(static_cast<dd::Qubit>(clAncStart + ancillaWidth), ancillaWidth, mask, qc::Z, qubits[pair.first]);
             }
         }
 

@@ -44,27 +44,6 @@ std::shared_ptr<qc::QuantumComputation> Ecc::apply() {
     return qcMapped;
 }
 
-void Ecc::ccx(dd::Qubit target, dd::Qubit c1, bool p1, dd::Qubit c2, bool p2) {
-    dd::Controls ctrls;
-    ctrls.insert(dd::Control{(c1), p1 ? dd::Control::Type::pos : dd::Control::Type::neg});
-    ctrls.insert(dd::Control{(c2), p2 ? dd::Control::Type::pos : dd::Control::Type::neg});
-    qcMapped->x(static_cast<dd::Qubit>(target), ctrls);
-}
-
-/*method has to have same signature as the static "writeZ" (as it is stored in the same function pointer in certain codes)*/
-void Ecc::x(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
-    qcMapped->x(target, control);
-}
-
-void Ecc::z(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
-    qcMapped->z(target, control);
-}
-
-void Ecc::writeClassicalControl(dd::Qubit control, dd::QubitCount qubitCount, size_t value, qc::OpType opType, dd::Qubit target) {
-    std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(), target, opType);
-    qcMapped->emplace_back<qc::ClassicControlledOperation>(op, std::make_pair(control, qubitCount), value);
-}
-
 bool Ecc::verifyExecution(bool simulateWithErrors) const {
     auto toleranceAbsolute = (shots / 100.0) * (tolerance * 100.0);
 
@@ -115,4 +94,8 @@ bool Ecc::verifyExecution(bool simulateWithErrors) const {
         }
     }
     return true;
+}
+
+bool Ecc::commutative(qc::OpType op1, qc::OpType op2) {
+    return op1 == op2 || op1 == qc::I || op2 == qc::I;
 }

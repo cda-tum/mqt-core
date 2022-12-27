@@ -25,7 +25,12 @@ protected:
     // Set parameter for verifying the ecc
     [[maybe_unused]] const size_t insertErrorAfterNGates = 61;
 
-private:
-    void writeClassicalControlled(dd::QubitCount value, dd::Qubit target, qc::OpType opType, dd::Qubit clStart, dd::QubitCount clCount);
-    void writeClassicalControlledCorrect(dd::QubitCount value, dd::Qubit target, qc::OpType operationType);
+    static constexpr std::array<std::array<qc::OpType , 5>, 4> stabilizerMatrix = {{
+            {qc::X, qc::Z, qc::Z, qc::X, qc::I}, //c0
+            {qc::I, qc::X, qc::Z, qc::Z, qc::X}, //c1
+            {qc::X, qc::I, qc::X, qc::Z, qc::Z}, //c2
+            {qc::Z, qc::X, qc::I, qc::X, qc::Z}  //c3
+    }};
+
+    
 };

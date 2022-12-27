@@ -104,22 +104,22 @@ void Q9Shor::measureAndCorrect() {
 
         //CORRECT
         //x, i.e. bit flip errors
-        writeClassicalControl(static_cast<dd::Qubit>(clStart), 2, 1, qc::X, i);
-        writeClassicalControl(static_cast<dd::Qubit>(clStart), 2, 2, qc::X, static_cast<dd::Qubit>(i + 2 * nQubits));
-        writeClassicalControl(static_cast<dd::Qubit>(clStart), 2, 3, qc::X, static_cast<dd::Qubit>(i + nQubits));
+        classicalControl(static_cast<dd::Qubit>(clStart), 2, 1, qc::X, i);
+        classicalControl(static_cast<dd::Qubit>(clStart), 2, 2, qc::X, static_cast<dd::Qubit>(i + 2 * nQubits));
+        classicalControl(static_cast<dd::Qubit>(clStart), 2, 3, qc::X, static_cast<dd::Qubit>(i + nQubits));
 
-        writeClassicalControl(static_cast<dd::Qubit>(clStart + 2), 2, 1, qc::X, static_cast<dd::Qubit>(i + 3 * nQubits));
-        writeClassicalControl(static_cast<dd::Qubit>(clStart + 2), 2, 2, qc::X, static_cast<dd::Qubit>(i + 5 * nQubits));
-        writeClassicalControl(static_cast<dd::Qubit>(clStart + 2), 2, 3, qc::X, static_cast<dd::Qubit>(i + 4 * nQubits));
+        classicalControl(static_cast<dd::Qubit>(clStart + 2), 2, 1, qc::X, static_cast<dd::Qubit>(i + 3 * nQubits));
+        classicalControl(static_cast<dd::Qubit>(clStart + 2), 2, 2, qc::X, static_cast<dd::Qubit>(i + 5 * nQubits));
+        classicalControl(static_cast<dd::Qubit>(clStart + 2), 2, 3, qc::X, static_cast<dd::Qubit>(i + 4 * nQubits));
 
-        writeClassicalControl(static_cast<dd::Qubit>(clStart + 4), 2, 1, qc::X, static_cast<dd::Qubit>(i + 6 * nQubits));
-        writeClassicalControl(static_cast<dd::Qubit>(clStart + 4), 2, 2, qc::X, static_cast<dd::Qubit>(i + 8 * nQubits));
-        writeClassicalControl(static_cast<dd::Qubit>(clStart + 4), 2, 3, qc::X, static_cast<dd::Qubit>(i + 7 * nQubits));
+        classicalControl(static_cast<dd::Qubit>(clStart + 4), 2, 1, qc::X, static_cast<dd::Qubit>(i + 6 * nQubits));
+        classicalControl(static_cast<dd::Qubit>(clStart + 4), 2, 2, qc::X, static_cast<dd::Qubit>(i + 8 * nQubits));
+        classicalControl(static_cast<dd::Qubit>(clStart + 4), 2, 3, qc::X, static_cast<dd::Qubit>(i + 7 * nQubits));
 
         //z, i.e. phase flip errors
-        writeClassicalControl(static_cast<dd::Qubit>(clStart + 6), 2, 1, qc::Z, i);
-        writeClassicalControl(static_cast<dd::Qubit>(clStart + 6), 2, 2, qc::Z, static_cast<dd::Qubit>(i + 6 * nQubits));
-        writeClassicalControl(static_cast<dd::Qubit>(clStart + 6), 2, 3, qc::Z, static_cast<dd::Qubit>(i + 3 * nQubits));
+        classicalControl(static_cast<dd::Qubit>(clStart + 6), 2, 1, qc::Z, i);
+        classicalControl(static_cast<dd::Qubit>(clStart + 6), 2, 2, qc::Z, static_cast<dd::Qubit>(i + 6 * nQubits));
+        classicalControl(static_cast<dd::Qubit>(clStart + 6), 2, 3, qc::Z, static_cast<dd::Qubit>(i + 3 * nQubits));
     }
 }
 

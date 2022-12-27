@@ -86,21 +86,21 @@ void Q9Surface::measureAndCorrect() {
         qcMapped->measure(ancillaQubits[6], clAncStart + 7);
 
         //logic
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart), 4, 1, qc::Z, qubits[2]);  //ancillaQubits[0]
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart), 4, 2, qc::Z, qubits[3]);  //ancillaQubits[2] (or qubits[0])
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart), 4, 3, qc::Z, qubits[1]);  //ancillaQubits[0,2]
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart), 4, 4, qc::Z, qubits[5]);  //ancillaQubits[5] (or qubits[8])
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart), 4, 6, qc::Z, qubits[4]);  //ancillaQubits[2,5]
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart), 4, 8, qc::Z, qubits[6]);  //ancillaQubits[7]
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart), 4, 12, qc::Z, qubits[7]); //ancillaQubits[5,7]
+        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 1, qc::Z, qubits[2]);  //ancillaQubits[0]
+        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 2, qc::Z, qubits[3]);  //ancillaQubits[2] (or qubits[0])
+        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 3, qc::Z, qubits[1]);  //ancillaQubits[0,2]
+        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 4, qc::Z, qubits[5]);  //ancillaQubits[5] (or qubits[8])
+        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 6, qc::Z, qubits[4]);  //ancillaQubits[2,5]
+        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 8, qc::Z, qubits[6]);  //ancillaQubits[7]
+        classicalControl(static_cast<dd::Qubit>(clAncStart), 4, 12, qc::Z, qubits[7]); //ancillaQubits[5,7]
 
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 1, qc::X, qubits[0]);  //ancillaQubits[1]
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 2, qc::X, qubits[1]);  //ancillaQubits[3] (or qubits[2])
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 4, qc::X, qubits[7]);  //ancillaQubits[4] (or qubits[6])
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 5, qc::X, qubits[3]);  //ancillaQubits[1,4]
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 6, qc::X, qubits[4]);  //ancillaQubits[3,4]
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 8, qc::X, qubits[8]);  //ancillaQubits[6]
-        writeClassicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 10, qc::X, qubits[5]); //ancillaQubits[3,6]
+        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 1, qc::X, qubits[0]);  //ancillaQubits[1]
+        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 2, qc::X, qubits[1]);  //ancillaQubits[3] (or qubits[2])
+        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 4, qc::X, qubits[7]);  //ancillaQubits[4] (or qubits[6])
+        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 5, qc::X, qubits[3]);  //ancillaQubits[1,4]
+        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 6, qc::X, qubits[4]);  //ancillaQubits[3,4]
+        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 8, qc::X, qubits[8]);  //ancillaQubits[6]
+        classicalControl(static_cast<dd::Qubit>(clAncStart + 4), 4, 10, qc::X, qubits[5]); //ancillaQubits[3,6]
 
         gatesWritten = true;
     }

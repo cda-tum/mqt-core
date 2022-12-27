@@ -19,10 +19,10 @@ public:
         Q18Surface
     };
     struct Info {
-        ID          id;
-        std::size_t nRedundantQubits; //usually number of physical qubits per (encoded) logical qubit
-        std::size_t nCorrectingBits; //usually number of classical bits needed for correcting one qubit
-        std::string name;
+        ID                                               id;
+        std::size_t                                      nRedundantQubits; //usually number of physical qubits per (encoded) logical qubit
+        std::size_t                                      nCorrectingBits;  //usually number of classical bits needed for correcting one qubit
+        std::string                                      name;
         std::vector<std::pair<std::size_t, const char*>> classicalRegisters;
     };
 
@@ -93,11 +93,30 @@ protected:
         throw qc::QFRException(std::string("Gate ") + gate.getName() + " not supported to encode in error code " + ecc.name + "!");
     }
 
-    void ccx(dd::Qubit target, dd::Qubit c1, bool p1, dd::Qubit c2, bool p2);
+    void ccx(dd::Qubit target, dd::Qubit c1, bool p1, dd::Qubit c2, bool p2) {
+        dd::Controls controls;
+        controls.insert(dd::Control{(c1), p1 ? dd::Control::Type::pos : dd::Control::Type::neg});
+        controls.insert(dd::Control{(c2), p2 ? dd::Control::Type::pos : dd::Control::Type::neg});
+        qcMapped->x(static_cast<dd::Qubit>(target), controls);
+    }
 
-    void writeClassicalControl(dd::Qubit control, dd::QubitCount qubitCount, size_t value, qc::OpType opType, dd::Qubit target);
+    void classicalControl(dd::Qubit control, dd::QubitCount qubitCount, size_t value, qc::OpType opType, dd::Qubit target) {
+        std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(), target, opType);
+        qcMapped->emplace_back<qc::ClassicControlledOperation>(op, std::make_pair(control, qubitCount), value);
+    }
 
     //static, since some codes need to store those functions into function pointers
-    static void x(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped);
-    static void z(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped);
+    using staticWriteFunctionType = void (*)(dd::Qubit, dd::Control, const std::shared_ptr<qc::QuantumComputation>&);
+    static void x(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
+        qcMapped->x(target, control);
+    }
+    static void z(dd::Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
+        qcMapped->z(target, control);
+    }
+
+    /**
+     * returns if op1 and op2 are commutative,
+     * i.e. if for all qubit states s: op1(op2(s)) == op2(op1(s))
+     * */
+    bool commutative(qc::OpType op1, qc::OpType op2);
 };
