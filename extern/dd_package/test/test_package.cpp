@@ -676,12 +676,12 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
     EXPECT_EQ(dd->kronecker(one, one), one);
 
     dd->debugnode(one.p);
-    dd::ComplexValue cOne{1.0, 0.0};
+    const dd::ComplexValue cOne{1.0, 0.0};
     EXPECT_EQ(dd->getValueByPath(one, ""), cOne);
     EXPECT_EQ(dd->getValueByPath(one, 0), cOne);
     EXPECT_EQ(dd->getValueByPath(dd::mEdge::one, 0, 0), cOne);
 
-    dd::ComplexValue cZero{0.0, 0.0};
+    const dd::ComplexValue cZero{0.0, 0.0};
     EXPECT_EQ(dd->innerProduct(zero, zero), cZero);
 }
 
@@ -731,9 +731,9 @@ TEST(DDPackageTest, KroneckerProduct) {
 }
 
 TEST(DDPackageTest, NearZeroNormalize) {
-    auto      dd       = std::make_unique<dd::Package<>>(2);
-    dd::fp    nearZero = dd::ComplexTable<>::tolerance() / 10;
-    dd::vEdge ve{};
+    auto         dd       = std::make_unique<dd::Package<>>(2);
+    const dd::fp nearZero = dd::ComplexTable<>::tolerance() / 10;
+    dd::vEdge    ve{};
     ve.p    = dd->vUniqueTable.getNode();
     ve.p->v = 1;
     ve.w    = dd::Complex::one;
@@ -779,8 +779,8 @@ TEST(DDPackageTest, NearZeroNormalize) {
 }
 
 TEST(DDPackageTest, Controls) {
-    dd::Control cpos{0};
-    dd::Control cneg{0, dd::Control::Type::neg};
+    const dd::Control cpos{0};
+    const dd::Control cneg{0, dd::Control::Type::neg};
 
     EXPECT_NE(cpos, cneg);
 
@@ -1132,8 +1132,8 @@ TEST(DDPackageTest, dNodeMultiply) {
         }
     }
 
-    const auto probVector = dd->getProbVectorFromDensityMatrix(state, 0.001);
-    double     tolerance  = 1e-10;
+    const auto   probVector = dd->getProbVectorFromDensityMatrix(state, 0.001);
+    const double tolerance  = 1e-10;
     for (const auto& prob: probVector) {
         std::cout << prob.first << ": " << prob.second << std::endl;
         EXPECT_NEAR(prob.second, 0.125, tolerance);
@@ -1243,7 +1243,7 @@ TEST(DDPackageTest, dNoiseCache) {
     std::vector<dd::mEdge> operations = {};
     operations.emplace_back(dd->makeGateDD(dd::Xmat, nrQubits, 0));
 
-    std::vector<dd::Qubit> target = {0};
+    const std::vector<dd::Qubit> target = {0};
 
     auto noiseLookUpResult = dd->densityNoise.lookup(state, target);
     EXPECT_EQ(noiseLookUpResult.p, nullptr);
@@ -1263,10 +1263,10 @@ TEST(DDPackageTest, dNoiseCache) {
 }
 
 TEST(DDPackageTest, calCulpDistance) {
-    dd::Qubit nrQubits = 1;
-    auto      dd       = std::make_unique<dd::Package<>>(nrQubits);
-    auto      tmp0     = dd::ulpDistance(1 + 1e-12, 1);
-    auto      tmp1     = dd::ulpDistance(1, 1);
+    const dd::Qubit nrQubits = 1;
+    auto            dd       = std::make_unique<dd::Package<>>(nrQubits);
+    auto            tmp0     = dd::ulpDistance(1 + 1e-12, 1);
+    auto            tmp1     = dd::ulpDistance(1, 1);
     EXPECT_TRUE(tmp0 > 0);
     EXPECT_EQ(tmp1, 0);
 }
