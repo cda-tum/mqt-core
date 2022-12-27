@@ -37,48 +37,34 @@ void Q7Steane::measureAndCorrectSingle(bool xSyndrome) {
 
     for (dd::Qubit i = 0; i < nQubits; i++) {
         if (gatesWritten) {
-            for (std::size_t k = 0; k < nQubits; k++) {
-                qcMapped->reset(static_cast<dd::Qubit>(ancStart));
-                qcMapped->reset(static_cast<dd::Qubit>(ancStart + 1));
-                qcMapped->reset(static_cast<dd::Qubit>(ancStart + 2));
+            for (std::size_t j = 0; j < ecc.nCorrectingBits; j++) {
+                qcMapped->reset(static_cast<dd::Qubit>(ancStart + j));
             }
         }
 
-        qcMapped->h(static_cast<dd::Qubit>(ancStart));
-        qcMapped->h(static_cast<dd::Qubit>(ancStart + 1));
-        qcMapped->h(static_cast<dd::Qubit>(ancStart + 2));
-
-        auto c0 = dd::Control{static_cast<dd::Qubit>(ancStart), dd::Control::Type::pos};
-        auto c1 = dd::Control{static_cast<dd::Qubit>(ancStart + 1), dd::Control::Type::pos};
-        auto c2 = dd::Control{static_cast<dd::Qubit>(ancStart + 2), dd::Control::Type::pos};
+        std::array<dd::Control, 3> controls = {};
+        for (std::size_t j = 0; j < ecc.nCorrectingBits; j++) {
+            qcMapped->h(static_cast<dd::Qubit>(ancStart + j));
+            controls[j] = dd::Control{static_cast<dd::Qubit>(ancStart + j), dd::Control::Type::pos};
+        }
 
         staticWriteFunctionType writeXZ = xSyndrome ? Ecc::x : Ecc::z;
 
         //K1: UIUIUIU
-        writeXZ(static_cast<dd::Qubit>(i + nQubits * 0), c0, qcMapped);
-        writeXZ(static_cast<dd::Qubit>(i + nQubits * 2), c0, qcMapped);
-        writeXZ(static_cast<dd::Qubit>(i + nQubits * 4), c0, qcMapped);
-        writeXZ(static_cast<dd::Qubit>(i + nQubits * 6), c0, qcMapped);
-
         //K2: IUUIIUU
-        writeXZ(static_cast<dd::Qubit>(i + nQubits * 1), c1, qcMapped);
-        writeXZ(static_cast<dd::Qubit>(i + nQubits * 2), c1, qcMapped);
-        writeXZ(static_cast<dd::Qubit>(i + nQubits * 5), c1, qcMapped);
-        writeXZ(static_cast<dd::Qubit>(i + nQubits * 6), c1, qcMapped);
-
         //K3: IIIUUUU
-        writeXZ(static_cast<dd::Qubit>(i + nQubits * 3), c2, qcMapped);
-        writeXZ(static_cast<dd::Qubit>(i + nQubits * 4), c2, qcMapped);
-        writeXZ(static_cast<dd::Qubit>(i + nQubits * 5), c2, qcMapped);
-        writeXZ(static_cast<dd::Qubit>(i + nQubits * 6), c2, qcMapped);
+        for (std::size_t c = 0; c < controls.size(); c++) {
+            for (std::size_t q = 0; q < ecc.nRedundantQubits; q++) {
+                if (((q + 1) & (1 << c)) != 0) {
+                    writeXZ(static_cast<dd::Qubit>(i + nQubits * q), controls[c], qcMapped);
+                }
+            }
+        }
 
-        qcMapped->h(static_cast<dd::Qubit>(ancStart));
-        qcMapped->h(static_cast<dd::Qubit>(ancStart + 1));
-        qcMapped->h(static_cast<dd::Qubit>(ancStart + 2));
-
-        qcMapped->measure(static_cast<dd::Qubit>(ancStart), clAncStart);
-        qcMapped->measure(static_cast<dd::Qubit>(ancStart + 1), clAncStart + 1);
-        qcMapped->measure(static_cast<dd::Qubit>(ancStart + 2), clAncStart + 2);
+        for (std::size_t j = 0; j < ecc.nCorrectingBits; j++) {
+            qcMapped->h(static_cast<dd::Qubit>(ancStart + j));
+            qcMapped->measure(static_cast<dd::Qubit>(ancStart + j), clAncStart + j);
+        }
 
         //correct Z_i for i+1 = c0*1+c1*2+c2*4
         //correct X_i for i+1 = c3*1+c4*2+c5*4
