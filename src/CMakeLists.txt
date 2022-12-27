@@ -28,7 +28,6 @@ add_library(${PROJECT_NAME}
         ${CMAKE_CURRENT_SOURCE_DIR}/parsers/QCParser.cpp
 
         ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Ecc.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Id.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q3Shor.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q5Laflamme.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/ecc/Q7Steane.cpp

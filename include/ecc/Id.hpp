@@ -20,5 +20,8 @@ protected:
 
     void writeDecoding() override{};
 
-    void mapGate(const qc::Operation& gate) override;
+    void mapGate(const qc::Operation& gate) override {
+        auto gateCopy = gate.clone();
+        qcMapped->emplace_back(gateCopy);
+    }
 };
