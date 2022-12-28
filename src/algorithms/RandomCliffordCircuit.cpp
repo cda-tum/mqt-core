@@ -37,7 +37,7 @@ namespace qc {
             } else if (nqubits == 2) {
                 append2QClifford(cliffordGenerator(), 0, 1);
             } else {
-                if (l % 2) {
+                if (l % 2 != 0) {
                     for (std::size_t i = 1; i < nqubits - 1; i += 2) {
                         append2QClifford(cliffordGenerator(), static_cast<Qubit>(i), static_cast<Qubit>(i + 1));
                     }
@@ -65,7 +65,7 @@ namespace qc {
         emplace_back<CompoundOperation>(nqubits);
         auto* comp = dynamic_cast<CompoundOperation*>(ops.back().get());
         // Hadamard
-        if ((id / 12 % 2) == 1) {
+        if ((id / 12 % 2) != 0) {
             comp->emplace_back<StandardOperation>(nqubits, target, H);
         }
 
@@ -97,10 +97,10 @@ namespace qc {
         auto* comp = dynamic_cast<CompoundOperation*>(ops.back().get());
         if (id < 36) {
             // single-qubit Cliffords
-            if ((id / 9 % 2) == 1) {
+            if ((id / 9 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
             }
-            if ((id / 18 % 2) == 1) {
+            if ((id / 18 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
 
@@ -122,10 +122,10 @@ namespace qc {
             // Cliffords with a single CNOT
             id -= 36;
 
-            if ((id / 81 % 2) == 1) {
+            if ((id / 81 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
             }
-            if ((id / 162 % 2) == 1) {
+            if ((id / 162 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
 
@@ -164,10 +164,10 @@ namespace qc {
             // Cliffords with two CNOTs
             id -= 360;
 
-            if ((id / 81 % 2) == 1) {
+            if ((id / 81 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
             }
-            if ((id / 162 % 2) == 1) {
+            if ((id / 162 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
 
@@ -207,10 +207,10 @@ namespace qc {
             // Cliffords with a SWAP
             id -= 684;
 
-            if ((id / 9 % 2) == 1) {
+            if ((id / 9 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
             }
-            if ((id / 18 % 2) == 1) {
+            if ((id / 18 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
 
