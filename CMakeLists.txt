@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.19)
 project(
   qfr
   LANGUAGES CXX
-  DESCRIPTION "MQT QFR  - A library for Quantum Functionality Representation")
+  DESCRIPTION "MQT QFR - A library for Quantum Functionality Representation")
 
 # check whether the submodule ``modulename`` is correctly cloned in the ``/extern`` directory.
 macro(CHECK_SUBMODULE_PRESENT modulename)
