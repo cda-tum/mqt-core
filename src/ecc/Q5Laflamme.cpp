@@ -54,7 +54,7 @@ namespace ecc {
                 controls[j] = qc::Control{static_cast<Qubit>(ancStart + j), qc::Control::Type::Pos};
             }
 
-            //performes the controlled operations for ancilla qubits
+            //performs the controlled operations for ancilla qubits
             for (std::size_t c = 0; c < stabilizerMatrix.size(); c++) {
                 for (std::size_t q = 0; q < stabilizerMatrix[c].size(); q++) {
                     switch (stabilizerMatrix[c][q]) {
