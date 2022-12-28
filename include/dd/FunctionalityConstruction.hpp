@@ -13,8 +13,8 @@
 namespace dd {
     using namespace qc;
 
-    template<class DDPackage>
-    MatrixDD buildFunctionality(const QuantumComputation* qc, std::unique_ptr<DDPackage>& dd) {
+    template<class Config>
+    MatrixDD buildFunctionality(const QuantumComputation* qc, std::unique_ptr<dd::Package<Config>>& dd) {
         if (qc->getNqubits() == 0U) {
             return MatrixDD::one;
         }
@@ -43,8 +43,8 @@ namespace dd {
         return e;
     }
 
-    template<class DDPackage>
-    MatrixDD buildFunctionalityRecursive(const QuantumComputation* qc, std::unique_ptr<DDPackage>& dd) {
+    template<class Config>
+    MatrixDD buildFunctionalityRecursive(const QuantumComputation* qc, std::unique_ptr<dd::Package<Config>>& dd) {
         if (qc->getNqubits() == 0U) {
             return MatrixDD::one;
         }
@@ -75,8 +75,8 @@ namespace dd {
         return e;
     }
 
-    template<class DDPackage>
-    bool buildFunctionalityRecursive(const QuantumComputation* qc, std::size_t depth, std::size_t opIdx, std::stack<MatrixDD>& s, Permutation& permutation, std::unique_ptr<DDPackage>& dd) {
+    template<class Config>
+    bool buildFunctionalityRecursive(const QuantumComputation* qc, std::size_t depth, std::size_t opIdx, std::stack<MatrixDD>& s, Permutation& permutation, std::unique_ptr<dd::Package<Config>>& dd) {
         // base case
         if (depth == 1U) {
             auto e = getDD(qc->at(opIdx).get(), dd, permutation);
@@ -117,8 +117,8 @@ namespace dd {
         return success;
     }
 
-    template<class DDPackage>
-    MatrixDD buildFunctionality(const qc::Grover* qc, std::unique_ptr<DDPackage>& dd) {
+    template<class Config>
+    MatrixDD buildFunctionality(const qc::Grover* qc, std::unique_ptr<dd::Package<Config>>& dd) {
         QuantumComputation groverIteration(qc->getNqubits());
         qc->oracle(groverIteration);
         qc->diffusion(groverIteration);
@@ -149,8 +149,8 @@ namespace dd {
         return e;
     }
 
-    template<class DDPackage>
-    MatrixDD buildFunctionalityRecursive(const qc::Grover* qc, std::unique_ptr<DDPackage>& dd) {
+    template<class Config>
+    MatrixDD buildFunctionalityRecursive(const qc::Grover* qc, std::unique_ptr<dd::Package<Config>>& dd) {
         QuantumComputation groverIteration(qc->getNqubits());
         qc->oracle(groverIteration);
         qc->diffusion(groverIteration);

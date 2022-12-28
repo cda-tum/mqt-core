@@ -28,15 +28,15 @@ namespace dd {
         identity
     };
 
-    template<class DDPackage>
+    template<class Config>
     class StochasticNoiseFunctionality {
     public:
-        StochasticNoiseFunctionality(const std::unique_ptr<DDPackage>& package,
-                                     dd::QubitCount                    nQubits,
-                                     double                            gateNoiseProbability,
-                                     double                            amplitudeDampingProb,
-                                     double                            multiQubitGateFactor,
-                                     std::vector<dd::NoiseOperations>  noiseEffects):
+        StochasticNoiseFunctionality(const std::unique_ptr<dd::Package<Config>>& package,
+                                     dd::QubitCount                              nQubits,
+                                     double                                      gateNoiseProbability,
+                                     double                                      amplitudeDampingProb,
+                                     double                                      multiQubitGateFactor,
+                                     std::vector<dd::NoiseOperations>            noiseEffects):
             package(package),
             nQubits(nQubits),
             dist(0.0, 1.0L),
@@ -60,9 +60,9 @@ namespace dd {
         }
 
     protected:
-        const std::unique_ptr<DDPackage>&      package;
-        const dd::QubitCount                   nQubits;
-        std::uniform_real_distribution<dd::fp> dist;
+        const std::unique_ptr<dd::Package<Config>>& package;
+        const dd::QubitCount                        nQubits;
+        std::uniform_real_distribution<dd::fp>      dist;
 
         const double                     noiseProbability;
         const double                     noiseProbabilityMulti;
@@ -211,18 +211,18 @@ namespace dd {
         }
     };
 
-    template<class DDPackage>
+    template<class Config>
     class DeterministicNoiseFunctionality {
     public:
-        DeterministicNoiseFunctionality(const std::unique_ptr<DDPackage>& package,
-                                        dd::QubitCount                    nQubits,
-                                        double                            noiseProbSingleQubit,
-                                        double                            noiseProbMultiQubit,
-                                        double                            ampDampingProbSingleQubit,
-                                        double                            ampDampingProbMultiQubit,
-                                        std::vector<dd::NoiseOperations>  noiseEffects,
-                                        bool                              useDensityMatrixType,
-                                        bool                              sequentiallyApplyNoise):
+        DeterministicNoiseFunctionality(const std::unique_ptr<dd::Package<Config>>& package,
+                                        dd::QubitCount                              nQubits,
+                                        double                                      noiseProbSingleQubit,
+                                        double                                      noiseProbMultiQubit,
+                                        double                                      ampDampingProbSingleQubit,
+                                        double                                      ampDampingProbMultiQubit,
+                                        std::vector<dd::NoiseOperations>            noiseEffects,
+                                        bool                                        useDensityMatrixType,
+                                        bool                                        sequentiallyApplyNoise):
             package(package),
             nQubits(nQubits),
             noiseProbSingleQubit(noiseProbSingleQubit),
@@ -235,8 +235,8 @@ namespace dd {
         }
 
     protected:
-        const std::unique_ptr<DDPackage>& package;
-        const dd::QubitCount              nQubits;
+        const std::unique_ptr<dd::Package<Config>>& package;
+        const dd::QubitCount                        nQubits;
 
         const double noiseProbSingleQubit;
         const double noiseProbMultiQubit;
