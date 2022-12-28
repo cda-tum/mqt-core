@@ -33,29 +33,31 @@ namespace zx {
     void FunctionalityConstruction::addZSpider(ZXDiagram& diag, const zx::Qubit qubit,
                                                std::vector<Vertex>& qubits,
                                                const PiExpression& phase, const EdgeType type) {
-        auto newVertex = diag.addVertex(
-                qubit, diag.getVData(qubits[qubit]).value().col + 1, phase,
+        const auto q         = static_cast<std::size_t>(qubit);
+        auto       newVertex = diag.addVertex(
+                qubit, diag.getVData(qubits[q]).value().col + 1, phase,
                 VertexType::Z);
 
-        diag.addEdge(qubits[qubit], newVertex, type);
-        qubits[qubit] = newVertex;
+        diag.addEdge(qubits[q], newVertex, type);
+        qubits[q] = newVertex;
     }
 
     void FunctionalityConstruction::addXSpider(ZXDiagram& diag, const Qubit qubit,
                                                std::vector<Vertex>& qubits,
                                                const PiExpression& phase, const EdgeType type) {
+        const auto q         = static_cast<std::size_t>(qubit);
         const auto newVertex = diag.addVertex(
-                qubit, diag.getVData(qubits[qubit]).value().col + 1, phase,
+                qubit, diag.getVData(qubits[q]).value().col + 1, phase,
                 VertexType::X);
-        diag.addEdge(qubits[qubit], newVertex, type);
-        qubits[qubit] = newVertex;
+        diag.addEdge(qubits[q], newVertex, type);
+        qubits[q] = newVertex;
     }
 
     void FunctionalityConstruction::addCnot(ZXDiagram& diag, const Qubit ctrl, const Qubit target,
                                             std::vector<Vertex>& qubits) {
         addZSpider(diag, ctrl, qubits);
         addXSpider(diag, target, qubits);
-        diag.addEdge(qubits[ctrl], qubits[target]);
+        diag.addEdge(qubits[static_cast<std::size_t>(ctrl)], qubits[static_cast<std::size_t>(target)]);
     }
 
     void
@@ -74,15 +76,18 @@ namespace zx {
 
     void FunctionalityConstruction::addSwap(ZXDiagram& diag, const Qubit ctrl, const Qubit target,
                                             std::vector<Vertex>& qubits) {
-        const auto s0 = qubits[target];
-        const auto s1 = qubits[ctrl];
+        const auto c = static_cast<std::size_t>(ctrl);
+        const auto t = static_cast<std::size_t>(target);
 
-        const auto t0 = diag.addVertex(target, diag.getVData(qubits[target]).value().col + 1);
-        const auto t1 = diag.addVertex(ctrl, diag.getVData(qubits[target]).value().col + 1);
+        const auto s0 = qubits[t];
+        const auto s1 = qubits[c];
+
+        const auto t0 = diag.addVertex(target, diag.getVData(qubits[t]).value().col + 1);
+        const auto t1 = diag.addVertex(ctrl, diag.getVData(qubits[t]).value().col + 1);
         diag.addEdge(s0, t1);
         diag.addEdge(s1, t0);
-        qubits[target] = t0;
-        qubits[ctrl]   = t1;
+        qubits[t] = t0;
+        qubits[c] = t1;
     }
 
     void FunctionalityConstruction::addCcx(ZXDiagram& diag, const Qubit ctrl0, const Qubit ctrl1, const Qubit target,
@@ -115,7 +120,7 @@ namespace zx {
 
         if (!op->isControlled()) {
             // single qubit gates
-            const auto target = p.at(op->getTargets().front());
+            const auto target = static_cast<zx::Qubit>(p.at(op->getTargets().front()));
             switch (op->getType()) {
                 case qc::OpType::Z:
                     addZSpider(diag, target, qubits,
@@ -197,12 +202,12 @@ namespace zx {
                                parseParam(op.get(), 1) + PiRational(3, 1));
                     break;
                 case qc::OpType::SWAP: {
-                    const auto target2 = p.at(op->getTargets()[1]);
+                    const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
                     addSwap(diag, target, target2, qubits);
                     break;
                 }
                 case qc::OpType::iSWAP: {
-                    const auto target2 = p.at(op->getTargets()[1]);
+                    const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
                     addZSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
                     addZSpider(diag, target2, qubits, PiExpression(PiRational(1, 2)));
                     addZSpider(diag, target, qubits, PiExpression(),
@@ -232,8 +237,8 @@ namespace zx {
             }
         } else if (op->getNcontrols() == 1 && op->getNtargets() == 1) {
             // two-qubit controlled gates
-            const auto target = p.at(op->getTargets().front());
-            const auto ctrl   = p.at((*op->getControls().begin()).qubit);
+            const auto target = static_cast<zx::Qubit>(p.at(op->getTargets().front()));
+            const auto ctrl   = static_cast<zx::Qubit>(p.at((*op->getControls().begin()).qubit));
             switch (op->getType()) { // TODO: any gate can be controlled
                 case qc::OpType::X:
                     // check if swap
@@ -287,15 +292,15 @@ namespace zx {
             }
         } else if (op->getNcontrols() == 2) {
             // three-qubit controlled gates (ccx or ccz)
-            Qubit       ctrl0  = 0;
-            Qubit       ctrl1  = 0;
-            const Qubit target = p.at(op->getTargets().front());
-            int         i      = 0;
+            Qubit      ctrl0  = 0;
+            Qubit      ctrl1  = 0;
+            const auto target = static_cast<Qubit>(p.at(op->getTargets().front()));
+            int        i      = 0;
             for (const auto& ctrl: op->getControls()) {
                 if (i++ == 0) {
-                    ctrl0 = p.at(ctrl.qubit);
+                    ctrl0 = static_cast<Qubit>(p.at(ctrl.qubit));
                 } else {
-                    ctrl1 = p.at(ctrl.qubit);
+                    ctrl1 = static_cast<Qubit>(p.at(ctrl.qubit));
                 }
             }
             switch (op->getType()) {
@@ -313,7 +318,6 @@ namespace zx {
                 default:
                     throw ZXException("Unsupported Multi-control operation: " +
                                       qc::toString(op->getType()));
-                    break;
             }
         } else {
             throw ZXException("Unsupported Multi-control operation (" + std::to_string(op->getNcontrols()) + " ctrls)" + qc::toString(op->getType()));
