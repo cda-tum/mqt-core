@@ -65,7 +65,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include
 target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json)
 
 # add options and warnings to the library
-target_link_libraries(${PROJECT_NAME} PRIVATE project_options project_warnings)
+target_link_libraries(${PROJECT_NAME} PUBLIC project_options project_warnings)
 
 # Temporary: The ZX package is not yet clearly separated and some of its definitions are used
 # throughout the library. Therefore, the ZX package always needs to be linked into the main QFR
@@ -80,8 +80,7 @@ add_library(
   ${PROJECT_NAME}_dd INTERFACE ${PROJECT_SOURCE_DIR}/include/dd/FunctionalityConstruction.hpp
   ${PROJECT_SOURCE_DIR}/include/dd/NoiseFunctionality.hpp
   ${PROJECT_SOURCE_DIR}/include/dd/Operations.hpp ${PROJECT_SOURCE_DIR}/include/dd/Simulation.hpp)
-target_link_libraries(${PROJECT_NAME}_dd INTERFACE MQT::DDPackage MQT::${PROJECT_NAME}
-                                                   project_options project_warnings)
+target_link_libraries(${PROJECT_NAME}_dd INTERFACE MQT::DDPackage MQT::${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME}_dd INTERFACE ${PROJECT_SOURCE_DIR}/include/dd
                                                         ${PROJECT_BINARY_DIR}/include/dd)
 add_library(MQT::${PROJECT_NAME}_dd ALIAS ${PROJECT_NAME}_dd)
@@ -89,10 +88,7 @@ add_library(MQT::${PROJECT_NAME}_dd ALIAS ${PROJECT_NAME}_dd)
 # add ZX package library
 add_library(${PROJECT_NAME}_zx ${PROJECT_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
                                zx/FunctionalityConstruction.cpp)
-target_link_libraries(
-  ${PROJECT_NAME}_zx
-  PUBLIC MQT::zx MQT::${PROJECT_NAME}
-  PRIVATE project_options project_warnings)
+target_link_libraries(${PROJECT_NAME}_zx PUBLIC MQT::zx MQT::${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME}_zx PUBLIC ${PROJECT_SOURCE_DIR}/include/zx
                                                      ${PROJECT_BINARY_DIR}/include/zx)
 add_library(MQT::${PROJECT_NAME}_zx ALIAS ${PROJECT_NAME}_zx)
