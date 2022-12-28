@@ -1,7 +1,9 @@
 # declare number of variables
 .numvars 2
 # declare variable names
-.variables a b
+.variables a b c d
+.constants --01
+.garbage --11
 
 # begin circuit description
 .begin

@@ -1,11 +1,11 @@
 # declare variables names
-.v a b c d
+.v a b c d e
 # declare inputs (missing variables are assumed ancillaries)
 .i a b c
 # declare outputs (missing variables are assumed garbage)
 .o a b c d
 # declare constants
-.c 1
+.c 1 0
 # begin circuit description
 BEGIN
 H a
