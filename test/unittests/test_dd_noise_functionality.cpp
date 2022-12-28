@@ -16,25 +16,7 @@ struct StochasticNoiseSimulatorDDPackageConfig: public dd::DDPackageConfig {
     static constexpr std::size_t STOCHASTIC_CACHE_OPS = qc::OpType::OpCount;
 };
 
-using StochasticNoiseTestPackage = dd::Package<StochasticNoiseSimulatorDDPackageConfig::UT_VEC_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::UT_VEC_INITIAL_ALLOCATION_SIZE,
-                                               StochasticNoiseSimulatorDDPackageConfig::UT_MAT_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::UT_MAT_INITIAL_ALLOCATION_SIZE,
-                                               StochasticNoiseSimulatorDDPackageConfig::CT_VEC_ADD_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::CT_MAT_ADD_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::CT_MAT_TRANS_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::CT_MAT_CONJ_TRANS_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::CT_MAT_VEC_MULT_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::CT_MAT_MAT_MULT_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::CT_VEC_KRON_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::CT_MAT_KRON_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::CT_VEC_INNER_PROD_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::CT_DM_NOISE_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::UT_DM_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::UT_DM_INITIAL_ALLOCATION_SIZE,
-                                               StochasticNoiseSimulatorDDPackageConfig::CT_DM_DM_MULT_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::CT_DM_ADD_NBUCKET,
-                                               StochasticNoiseSimulatorDDPackageConfig::STOCHASTIC_CACHE_OPS>;
+using StochasticNoiseTestPackage = dd::Package<StochasticNoiseSimulatorDDPackageConfig>;
 
 struct DensityMatrixSimulatorDDPackageConfig: public dd::DDPackageConfig {
     static constexpr std::size_t UT_DM_NBUCKET                 = 65536U;
@@ -61,25 +43,7 @@ struct DensityMatrixSimulatorDDPackageConfig: public dd::DDPackageConfig {
     static constexpr std::size_t STOCHASTIC_CACHE_OPS           = 1U;
 };
 
-using DensityMatrixTestPackage = dd::Package<DensityMatrixSimulatorDDPackageConfig::UT_VEC_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::UT_VEC_INITIAL_ALLOCATION_SIZE,
-                                             DensityMatrixSimulatorDDPackageConfig::UT_MAT_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::UT_MAT_INITIAL_ALLOCATION_SIZE,
-                                             DensityMatrixSimulatorDDPackageConfig::CT_VEC_ADD_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::CT_MAT_ADD_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::CT_MAT_TRANS_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::CT_MAT_CONJ_TRANS_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::CT_MAT_VEC_MULT_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::CT_MAT_MAT_MULT_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::CT_VEC_KRON_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::CT_MAT_KRON_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::CT_VEC_INNER_PROD_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::CT_DM_NOISE_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::UT_DM_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::UT_DM_INITIAL_ALLOCATION_SIZE,
-                                             DensityMatrixSimulatorDDPackageConfig::CT_DM_DM_MULT_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::CT_DM_ADD_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfig::STOCHASTIC_CACHE_OPS>;
+using DensityMatrixTestPackage = dd::Package<DensityMatrixSimulatorDDPackageConfig>;
 
 class DDNoiseFunctionalityTest: public ::testing::Test {
 protected:
@@ -128,7 +92,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPDApplySequential) {
 
     const auto noiseEffects = {dd::amplitudeDamping, dd::phaseFlip, dd::depolarization, dd::identity};
 
-    auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality<DensityMatrixTestPackage>(
+    auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
             dd,
             qc.getNqubits(),
             0.01,
@@ -174,7 +138,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
 
     const auto noiseEffects = {dd::amplitudeDamping, dd::identity, dd::phaseFlip, dd::depolarization};
 
-    auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality<DensityMatrixTestPackage>(
+    auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
             dd,
             qc.getNqubits(),
             0.01,
@@ -233,7 +197,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
 
     const auto noiseEffects = {dd::amplitudeDamping, dd::phaseFlip, dd::identity, dd::depolarization};
 
-    auto stochasticNoiseFunctionality = dd::StochasticNoiseFunctionality<StochasticNoiseTestPackage>(
+    auto stochasticNoiseFunctionality = dd::StochasticNoiseFunctionality(
             dd,
             qc.getNqubits(),
             0.01,
@@ -300,7 +264,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
 
     const auto noiseEffects = {dd::identity};
 
-    auto stochasticNoiseFunctionality = dd::StochasticNoiseFunctionality<StochasticNoiseTestPackage>(
+    auto stochasticNoiseFunctionality = dd::StochasticNoiseFunctionality(
             dd,
             qc.getNqubits(),
             0.01,

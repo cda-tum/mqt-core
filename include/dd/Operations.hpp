@@ -23,8 +23,8 @@ namespace qc {
 
 namespace dd {
     // single-target Operations
-    template<class DDPackage>
-    qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op, std::unique_ptr<DDPackage>& dd, const dd::Controls& controls, dd::Qubit target, bool inverse) {
+    template<class Config>
+    qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op, std::unique_ptr<dd::Package<Config>>& dd, const dd::Controls& controls, dd::Qubit target, bool inverse) {
         GateMatrix gm;
 
         const auto  type       = op->getType();
@@ -73,8 +73,8 @@ namespace dd {
     }
 
     // two-target Operations
-    template<class DDPackage>
-    qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op, std::unique_ptr<DDPackage>& dd, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, bool inverse) {
+    template<class Config>
+    qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op, std::unique_ptr<dd::Package<Config>>& dd, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, bool inverse) {
         const auto type       = op->getType();
         const auto nqubits    = op->getNqubits();
         const auto startQubit = op->getStartingQubit();
@@ -111,17 +111,17 @@ namespace dd {
     //      if perm[0] = 1 and perm[1] = 0
     //      then cx 0 1 will be translated to cx perm[0] perm[1] == cx 1 0
 
-    template<class DDPackage>
-    qc::MatrixDD getDD(const qc::Operation* op, std::unique_ptr<DDPackage>& dd, qc::Permutation& permutation, bool inverse = false) {
+    template<class Config>
+    qc::MatrixDD getDD(const qc::Operation* op, std::unique_ptr<dd::Package<Config>>& dd, qc::Permutation& permutation, bool inverse = false) {
         const auto type    = op->getType();
         const auto nqubits = op->getNqubits();
 
         // check whether the operation can be handled by the underlying DD package
-        if (nqubits > DDPackage::MAX_POSSIBLE_QUBITS) {
+        if (nqubits > dd::Package<Config>::MAX_POSSIBLE_QUBITS) {
             throw qc::QFRException("Requested too many qubits to be handled by the DD package. Qubit datatype only allows up to " +
-                                   std::to_string(DDPackage::MAX_POSSIBLE_QUBITS) + " qubits, while " +
+                                   std::to_string(dd::Package<Config>::MAX_POSSIBLE_QUBITS) + " qubits, while " +
                                    std::to_string(nqubits) + " were requested. If you want to use more than " +
-                                   std::to_string(DDPackage::MAX_POSSIBLE_QUBITS) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
+                                   std::to_string(dd::Package<Config>::MAX_POSSIBLE_QUBITS) + " qubits, you have to recompile the package with a wider Qubit type in `export/dd_package/include/dd/Definitions.hpp!`");
         }
 
         // if a permutation is provided and the current operation is a SWAP, this routine just updates the permutation
@@ -191,24 +191,24 @@ namespace dd {
         throw qc::QFRException("DD for non-unitary operation not available!");
     }
 
-    template<class DDPackage>
-    qc::MatrixDD getDD(const qc::Operation* op, std::unique_ptr<DDPackage>& dd, bool inverse = false) {
+    template<class Config>
+    qc::MatrixDD getDD(const qc::Operation* op, std::unique_ptr<dd::Package<Config>>& dd, bool inverse = false) {
         qc::Permutation perm{};
         return getDD(op, dd, perm, inverse);
     }
 
-    template<class DDPackage>
-    qc::MatrixDD getInverseDD(const qc::Operation* op, std::unique_ptr<DDPackage>& dd) {
+    template<class Config>
+    qc::MatrixDD getInverseDD(const qc::Operation* op, std::unique_ptr<dd::Package<Config>>& dd) {
         return getDD(op, dd, true);
     }
 
-    template<class DDPackage>
-    qc::MatrixDD getInverseDD(const qc::Operation* op, std::unique_ptr<DDPackage>& dd, qc::Permutation& permutation) {
+    template<class Config>
+    qc::MatrixDD getInverseDD(const qc::Operation* op, std::unique_ptr<dd::Package<Config>>& dd, qc::Permutation& permutation) {
         return getDD(op, dd, permutation, true);
     }
 
-    template<class DDPackage>
-    void dumpTensor(qc::Operation* op, std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<DDPackage>& dd) {
+    template<class Config>
+    void dumpTensor(qc::Operation* op, std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<dd::Package<Config>>& dd) {
         const auto type = op->getType();
         if (op->isStandardOperation()) {
             auto        nqubits  = op->getNqubits();
@@ -338,8 +338,8 @@ namespace dd {
 
     // apply swaps 'on' DD in order to change 'from' to 'to'
     // where |from| >= |to|
-    template<class DDType, class DDPackage>
-    void changePermutation(DDType& on, qc::Permutation& from, const qc::Permutation& to, std::unique_ptr<DDPackage>& dd, bool regular = true) {
+    template<class DDType, class Config>
+    void changePermutation(DDType& on, qc::Permutation& from, const qc::Permutation& to, std::unique_ptr<dd::Package<Config>>& dd, bool regular = true) {
         assert(from.size() >= to.size());
 
         // iterate over (k,v) pairs of second permutation
