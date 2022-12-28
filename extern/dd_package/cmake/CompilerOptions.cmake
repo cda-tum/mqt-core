@@ -49,5 +49,8 @@ function(enable_project_options target_name)
 
   if(BINDINGS)
     target_compile_options(${target_name} INTERFACE -fvisibility=hidden)
+    include(CheckPIESupported)
+    check_pie_supported()
+    set_target_properties(${target_name} PROPERTIES INTERFACE_POSITION_INDEPENDENT_CODE ON)
   endif()
 endfunction()
