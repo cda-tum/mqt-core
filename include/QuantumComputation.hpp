@@ -609,7 +609,7 @@ namespace qc {
             emplace_back<NonUnitaryOperation>(getNqubits(), qubit, clbit);
         }
 
-        void measure(Qubit qubit, const std::pair<std::string, std::size_t>& clbit) {
+        void measure(Qubit qubit, const std::pair<std::string, Bit>& clbit) {
             checkQubitRange(qubit);
             auto cRegister = cregs.find(clbit.first);
             if (cRegister != cregs.end()) {
