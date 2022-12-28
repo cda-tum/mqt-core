@@ -1092,25 +1092,7 @@ struct DensityMatrixSimulatorDDPackageConfigTesting: public dd::DDPackageConfig 
     static constexpr std::size_t STOCHASTIC_CACHE_OPS           = 1U;
 };
 
-using DensityMatrixPackageTest = dd::Package<DensityMatrixSimulatorDDPackageConfigTesting::UT_VEC_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::UT_VEC_INITIAL_ALLOCATION_SIZE,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::UT_MAT_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::UT_MAT_INITIAL_ALLOCATION_SIZE,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::CT_VEC_ADD_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::CT_MAT_ADD_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::CT_MAT_TRANS_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::CT_MAT_CONJ_TRANS_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::CT_MAT_VEC_MULT_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::CT_MAT_MAT_MULT_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::CT_VEC_KRON_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::CT_MAT_KRON_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::CT_VEC_INNER_PROD_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::CT_DM_NOISE_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::UT_DM_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::UT_DM_INITIAL_ALLOCATION_SIZE,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::CT_DM_DM_MULT_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::CT_DM_ADD_NBUCKET,
-                                             DensityMatrixSimulatorDDPackageConfigTesting::STOCHASTIC_CACHE_OPS>;
+using DensityMatrixPackageTest = dd::Package<DensityMatrixSimulatorDDPackageConfigTesting>;
 
 TEST(DDPackageTest, dNodeMultiply) {
     //Multiply dNode with mNode (MxMxM)
@@ -1293,25 +1275,7 @@ struct StochPackageConfig: public dd::DDPackageConfig {
     static constexpr std::size_t STOCHASTIC_CACHE_OPS = 36;
 };
 
-using stochPackage = dd::Package<StochPackageConfig::UT_VEC_NBUCKET,
-                                 StochPackageConfig::UT_VEC_INITIAL_ALLOCATION_SIZE,
-                                 StochPackageConfig::UT_MAT_NBUCKET,
-                                 StochPackageConfig::UT_MAT_INITIAL_ALLOCATION_SIZE,
-                                 StochPackageConfig::CT_VEC_ADD_NBUCKET,
-                                 StochPackageConfig::CT_MAT_ADD_NBUCKET,
-                                 StochPackageConfig::CT_MAT_TRANS_NBUCKET,
-                                 StochPackageConfig::CT_MAT_CONJ_TRANS_NBUCKET,
-                                 StochPackageConfig::CT_MAT_VEC_MULT_NBUCKET,
-                                 StochPackageConfig::CT_MAT_MAT_MULT_NBUCKET,
-                                 StochPackageConfig::CT_VEC_KRON_NBUCKET,
-                                 StochPackageConfig::CT_MAT_KRON_NBUCKET,
-                                 StochPackageConfig::CT_VEC_INNER_PROD_NBUCKET,
-                                 StochPackageConfig::CT_DM_NOISE_NBUCKET,
-                                 StochPackageConfig::UT_DM_NBUCKET,
-                                 StochPackageConfig::UT_DM_INITIAL_ALLOCATION_SIZE,
-                                 StochPackageConfig::CT_DM_DM_MULT_NBUCKET,
-                                 StochPackageConfig::CT_DM_ADD_NBUCKET,
-                                 StochPackageConfig::STOCHASTIC_CACHE_OPS>;
+using stochPackage = dd::Package<StochPackageConfig>;
 
 TEST(DDPackageTest, dStochCache) {
     const dd::Qubit nrQubits = 4;
