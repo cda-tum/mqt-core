@@ -20,7 +20,7 @@ namespace ecc {
         for (Qubit i = 0; i < nQubits; i++) {
             qcMapped->h(ancStart);
             for (std::size_t j = 0; j < ecc.nRedundantQubits; j++) {
-                qcMapped->z(static_cast<Qubit>(i + j * nQubits), dd::Control{ancStart, dd::Control::Type::pos});
+                qcMapped->z(static_cast<Qubit>(i + j * nQubits), qc::Control{ancStart, qc::Control::Type::Pos});
             }
             qcMapped->h(static_cast<Qubit>(ancStart));
             qcMapped->measure(ancStart, clEncode);
@@ -47,11 +47,11 @@ namespace ecc {
             }
 
             //initialize ancilla qubits
-            std::array<dd::Control, 4> controls;
+            std::array<qc::Control, 4> controls;
             for (std::size_t j = 0; j < controls.size(); j++) {
                 qcMapped->reset(static_cast<Qubit>(ancStart + j));
                 qcMapped->h(static_cast<Qubit>(ancStart + j));
-                controls[j] = dd::Control{static_cast<Qubit>(ancStart + j), dd::Control::Type::pos};
+                controls[j] = qc::Control{static_cast<Qubit>(ancStart + j), qc::Control::Type::Pos};
             }
 
             //performes the controlled operations for ancilla qubits

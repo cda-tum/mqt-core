@@ -15,8 +15,8 @@ namespace ecc {
         for (std::size_t i = 0; i < nQubits; i++) {
             std::array<Qubit, 9>       qubits          = {};
             std::array<Qubit, 8>       ancillaQubits   = {};
-            std::array<dd::Control, 8> ancillaControls = {};
-            std::array<dd::Control, 9> controlQubits   = {};
+            std::array<qc::Control, 8> ancillaControls = {};
+            std::array<qc::Control, 9> controlQubits   = {};
             for (std::size_t j = 0; j < 9; j++) {
                 qubits.at(j) = static_cast<Qubit>(i + j * nQubits);
             }
@@ -29,10 +29,10 @@ namespace ecc {
                 }
             }
             for (std::size_t j = 0; j < 8; j++) {
-                ancillaControls.at(j) = dd::Control{static_cast<Qubit>(ancillaQubits.at(j)), dd::Control::Type::pos};
+                ancillaControls.at(j) = qc::Control{static_cast<Qubit>(ancillaQubits.at(j)), qc::Control::Type::Pos};
             }
             for (std::size_t j = 0; j < 9; j++) {
-                controlQubits.at(j) = dd::Control{static_cast<Qubit>(qubits.at(j)), dd::Control::Type::pos};
+                controlQubits.at(j) = qc::Control{static_cast<Qubit>(qubits.at(j)), qc::Control::Type::Pos};
             }
 
             //X-type check (z error) on a0, a2, a5, a7: cx ancillaQubits->qubits
@@ -99,8 +99,8 @@ namespace ecc {
             qcMapped->measure(static_cast<Qubit>(i), i);
             qcMapped->measure(static_cast<Qubit>(i + 4 * nQubits), i);
             qcMapped->measure(static_cast<Qubit>(i + 8 * nQubits), i);
-            qcMapped->x(static_cast<Qubit>(i), dd::Control{static_cast<Qubit>(i + 4 * nQubits), dd::Control::Type::pos});
-            qcMapped->x(static_cast<Qubit>(i), dd::Control{static_cast<Qubit>(i + 8 * nQubits), dd::Control::Type::pos});
+            qcMapped->x(static_cast<Qubit>(i), qc::Control{static_cast<Qubit>(i + 4 * nQubits), qc::Control::Type::Pos});
+            qcMapped->x(static_cast<Qubit>(i), qc::Control{static_cast<Qubit>(i + 8 * nQubits), qc::Control::Type::Pos});
             qcMapped->measure(static_cast<Qubit>(i), i);
         }
         isDecoded = true;

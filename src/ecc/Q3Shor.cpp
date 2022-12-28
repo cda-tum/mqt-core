@@ -14,7 +14,7 @@ namespace ecc {
         const auto nQubits = qcOriginal->getNqubits();
 
         for (std::size_t i = 0; i < nQubits; i++) {
-            auto ctrl = dd::Control{static_cast<Qubit>(i), dd::Control::Type::pos};
+            auto ctrl = qc::Control{static_cast<Qubit>(i), qc::Control::Type::Pos};
             qcMapped->x(static_cast<Qubit>(i + nQubits), ctrl);
             qcMapped->x(static_cast<Qubit>(i + 2 * nQubits), ctrl);
         }
@@ -31,10 +31,10 @@ namespace ecc {
             qcMapped->reset(ancStart);
             qcMapped->reset(static_cast<Qubit>(ancStart + 1));
 
-            qcMapped->x(ancStart, dd::Control{static_cast<Qubit>(i), dd::Control::Type::pos});
-            qcMapped->x(ancStart, dd::Control{static_cast<Qubit>(i + nQubits), dd::Control::Type::pos});
-            qcMapped->x(static_cast<Qubit>(ancStart + 1), dd::Control{static_cast<Qubit>(i + nQubits), dd::Control::Type::pos});
-            qcMapped->x(static_cast<Qubit>(ancStart + 1), dd::Control{static_cast<Qubit>(i + 2 * nQubits), dd::Control::Type::pos});
+            qcMapped->x(ancStart, qc::Control{static_cast<Qubit>(i), qc::Control::Type::Pos});
+            qcMapped->x(ancStart, qc::Control{static_cast<Qubit>(i + nQubits), qc::Control::Type::Pos});
+            qcMapped->x(static_cast<Qubit>(ancStart + 1), qc::Control{static_cast<Qubit>(i + nQubits), qc::Control::Type::Pos});
+            qcMapped->x(static_cast<Qubit>(ancStart + 1), qc::Control{static_cast<Qubit>(i + 2 * nQubits), qc::Control::Type::Pos});
 
             qcMapped->measure(ancStart, clStart);
             qcMapped->measure(static_cast<Qubit>(ancStart + 1), clStart + 1);
@@ -52,7 +52,7 @@ namespace ecc {
         }
         const auto nQubits = qcOriginal->getNqubits();
         for (Qubit i = 0; i < nQubits; i++) {
-            auto ctrl = dd::Control{static_cast<Qubit>(i), dd::Control::Type::pos};
+            auto ctrl = qc::Control{static_cast<Qubit>(i), qc::Control::Type::Pos};
             qcMapped->x(static_cast<Qubit>(i + nQubits), ctrl);
             qcMapped->x(static_cast<Qubit>(i + 2 * nQubits), ctrl);
             ccx(i, static_cast<Qubit>(i + nQubits), true, static_cast<Qubit>(i + 2 * nQubits), true);
@@ -80,21 +80,21 @@ namespace ecc {
                     if (gate.getNcontrols()) {
                         auto& ctrls = gate.getControls();
                         qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls, i, gate.getType());
-                        dd::Controls ctrls2;
-                        dd::Controls ctrls3;
+                        qc::Controls ctrls2;
+                        qc::Controls ctrls3;
                         for (const auto& ct: ctrls) {
-                            ctrls2.insert(dd::Control{static_cast<Qubit>(ct.qubit + nQubits), ct.type});
-                            ctrls3.insert(dd::Control{static_cast<Qubit>(ct.qubit + 2 * nQubits), ct.type});
+                            ctrls2.insert(qc::Control{static_cast<Qubit>(ct.qubit + nQubits), ct.type});
+                            ctrls3.insert(qc::Control{static_cast<Qubit>(ct.qubit + 2 * nQubits), ct.type});
                         }
                         qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls2, i + nQubits, gate.getType());
                         qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls3, i + 2 * nQubits, gate.getType());
                     } else {
                         if (gate.getType() == qc::H) {
-                            qcMapped->x(static_cast<Qubit>(i + 1), dd::Control{static_cast<Qubit>(i)});
-                            qcMapped->x(static_cast<Qubit>(i + 2), dd::Control{static_cast<Qubit>(i)});
+                            qcMapped->x(static_cast<Qubit>(i + 1), qc::Control{static_cast<Qubit>(i)});
+                            qcMapped->x(static_cast<Qubit>(i + 2), qc::Control{static_cast<Qubit>(i)});
                             qcMapped->h(i);
-                            qcMapped->x(static_cast<Qubit>(i + 1), dd::Control{static_cast<Qubit>(i)});
-                            qcMapped->x(static_cast<Qubit>(i + 2), dd::Control{static_cast<Qubit>(i)});
+                            qcMapped->x(static_cast<Qubit>(i + 1), qc::Control{static_cast<Qubit>(i)});
+                            qcMapped->x(static_cast<Qubit>(i + 2), qc::Control{static_cast<Qubit>(i)});
                         } else {
                             qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i, gate.getType());
                             qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i + nQubits, gate.getType());

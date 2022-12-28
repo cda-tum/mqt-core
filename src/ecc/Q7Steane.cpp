@@ -43,10 +43,10 @@ namespace ecc {
                 }
             }
 
-            std::array<dd::Control, 3> controls = {};
+            std::array<qc::Control, 3> controls = {};
             for (std::size_t j = 0; j < ecc.nCorrectingBits; j++) {
                 qcMapped->h(static_cast<Qubit>(ancStart + j));
-                controls[j] = dd::Control{static_cast<Qubit>(ancStart + j), dd::Control::Type::pos};
+                controls[j] = qc::Control{static_cast<Qubit>(ancStart + j), qc::Control::Type::Pos};
             }
 
             staticWriteFunctionType writeXZ = xSyndrome ? Ecc::x : Ecc::z;
@@ -124,9 +124,9 @@ namespace ecc {
                     if (gate.getNcontrols() != 0U) {
                         const auto& ctrls = gate.getControls();
                         for (std::size_t j = 0; j < 7; j++) {
-                            dd::Controls ctrls2;
+                            qc::Controls ctrls2;
                             for (const auto& ct: ctrls) {
-                                ctrls2.insert(dd::Control{static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
+                                ctrls2.insert(qc::Control{static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
                             }
                             qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls2, static_cast<Qubit>(i + j * nQubits), gate.getType());
                         }
@@ -144,9 +144,9 @@ namespace ecc {
                     if (gate.getNcontrols() != 0U) {
                         const auto& ctrls = gate.getControls();
                         for (std::size_t j = 0; j < 7; j++) {
-                            dd::Controls ctrls2;
+                            qc::Controls ctrls2;
                             for (const auto& ct: ctrls) {
-                                ctrls2.insert(dd::Control{static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
+                                ctrls2.insert(qc::Control{static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
                             }
                             qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls2, static_cast<Qubit>(i + j * nQubits), gate.getType());
                             qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls2, static_cast<Qubit>(i + j * nQubits), gate.getType());
@@ -184,15 +184,15 @@ namespace ecc {
             case qc::Tdag:
                 for (auto i: gate.getTargets()) {
                     if (gate.getControls().empty()) {
-                        qcMapped->x(static_cast<Qubit>(i + 5 * nQubits), dd::Control{static_cast<Qubit>(i + 6 * nQubits), dd::Control::Type::pos});
-                        qcMapped->x(static_cast<Qubit>(i + 0 * nQubits), dd::Control{static_cast<Qubit>(i + 5 * nQubits), dd::Control::Type::pos});
+                        qcMapped->x(static_cast<Qubit>(i + 5 * nQubits), qc::Control{static_cast<Qubit>(i + 6 * nQubits), qc::Control::Type::Pos});
+                        qcMapped->x(static_cast<Qubit>(i + 0 * nQubits), qc::Control{static_cast<Qubit>(i + 5 * nQubits), qc::Control::Type::Pos});
                         if (gate.getType() == qc::T) {
                             qcMapped->t(static_cast<Qubit>(i + 0 * nQubits));
                         } else {
                             qcMapped->tdag(static_cast<Qubit>(i + 0 * nQubits));
                         }
-                        qcMapped->x(static_cast<Qubit>(i + 0 * nQubits), dd::Control{static_cast<Qubit>(i + 5 * nQubits), dd::Control::Type::pos});
-                        qcMapped->x(static_cast<Qubit>(i + 5 * nQubits), dd::Control{static_cast<Qubit>(i + 6 * nQubits), dd::Control::Type::pos});
+                        qcMapped->x(static_cast<Qubit>(i + 0 * nQubits), qc::Control{static_cast<Qubit>(i + 5 * nQubits), qc::Control::Type::Pos});
+                        qcMapped->x(static_cast<Qubit>(i + 5 * nQubits), qc::Control{static_cast<Qubit>(i + 6 * nQubits), qc::Control::Type::Pos});
                     } else {
                         gateNotAvailableError(gate);
                     }

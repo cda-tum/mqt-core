@@ -5,8 +5,6 @@
 
 #include "ecc/Ecc.hpp"
 
-#include <dd/Simulation.hpp>
-
 namespace ecc {
     void Ecc::initMappedCircuit() {
         qcOriginal->stripIdleQubits(true, false);
@@ -43,56 +41,5 @@ namespace ecc {
         }
 
         return qcMapped;
-    }
-
-    bool Ecc::verifyExecution(bool simulateWithErrors, const std::vector<Qubit>& dataQubits = {}, std::size_t insertErrorAfterNGates = 0) const {
-        auto toleranceAbsolute = (static_cast<double>(shots) / 100.0) * (tolerance * 100.0);
-        auto ddOriginal        = std::make_unique<dd::Package<>>(qcOriginal->getNqubits());
-        auto originalRootEdge  = ddOriginal->makeZeroState(qcOriginal->getNqubits());
-        ddOriginal->incRef(originalRootEdge);
-
-        auto ddEcc       = std::make_unique<dd::Package<>>(qcMapped->getNqubits());
-        auto eccRootEdge = ddEcc->makeZeroState(qcMapped->getNqubits());
-        ddEcc->incRef(eccRootEdge);
-
-        auto measurementsOriginal = simulate(qcOriginal.get(), originalRootEdge, ddOriginal, shots, seed);
-
-        if (!simulateWithErrors) {
-            auto measurementsProtected = simulate(qcMapped.get(), eccRootEdge, ddEcc, shots, seed);
-            for (auto const& [cBitsOriginal, cHitsOriginal]: measurementsOriginal) {
-                // Count the cHitsOriginal in the register with error correction
-                size_t cHitsProtected = 0;
-                for (auto const& [cBitsProtected, cHitsProtectedTemp]: measurementsProtected) {
-                    if (0 == cBitsProtected.compare(cBitsProtected.length() - cBitsOriginal.length(), cBitsOriginal.length(), cBitsOriginal)) {
-                        cHitsProtected += cHitsProtectedTemp;
-                    }
-                }
-                auto difference = std::max(cHitsProtected, cHitsOriginal) - std::min(cHitsProtected, cHitsOriginal);
-                if (static_cast<double>(difference) > toleranceAbsolute) {
-                    return false;
-                }
-            }
-        } else {
-            for (auto qubit: dataQubits) {
-                auto measurementsProtected = simulate(qcMapped.get(), eccRootEdge, ddEcc, shots, seed, true, qubit, insertErrorAfterNGates);
-                for (auto const& [classicalBit, hits]: measurementsOriginal) {
-                    // Since the result is stored as one bit string. I have to count the relevant classical bits.
-                    size_t eccHits = 0;
-                    for (auto const& [eccMeasure, tempHits]: measurementsProtected) {
-                        if (0 == eccMeasure.compare(eccMeasure.length() - classicalBit.length(), classicalBit.length(), classicalBit)) {
-                            eccHits += tempHits;
-                        }
-                    }
-                    auto difference = std::max(eccHits, hits) - std::min(eccHits, hits);
-                    std::cout << "Diff/tolerance " << difference << "/" << toleranceAbsolute << " Original register: " << hits << " ecc register: " << eccHits;
-                    std::cout << " Simulating an error in qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates." << std::endl;
-                    if (static_cast<double>(difference) > toleranceAbsolute) {
-                        std::cout << "Error is too large!" << std::endl;
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
     }
 } // namespace ecc

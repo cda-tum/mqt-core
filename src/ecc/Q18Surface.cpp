@@ -21,12 +21,12 @@ namespace ecc {
 
         for (Qubit i = 0; i < nQubits; i++) {
             std::array<Qubit, 36>       qubits        = {};
-            std::array<dd::Control, 36> controlQubits = {};
+            std::array<qc::Control, 36> controlQubits = {};
             for (std::size_t j = 0; j < qubits.size(); j++) {
                 qubits.at(j) = static_cast<Qubit>(i + j * nQubits);
             }
             for (std::size_t j = 0; j < controlQubits.size(); j++) {
-                controlQubits.at(j) = dd::Control{static_cast<Qubit>(qubits.at(j)), dd::Control::Type::pos};
+                controlQubits.at(j) = qc::Control{static_cast<Qubit>(qubits.at(j)), qc::Control::Type::Pos};
             }
 
             if (gatesWritten) {
@@ -95,11 +95,11 @@ namespace ecc {
         static constexpr std::array<Qubit, 4> physicalAncillaQubits = {8, 13, 15, 20};
         for (Qubit i = 0; i < nQubits; i++) {
             for (Qubit qubit: physicalAncillaQubits) {
-                qcMapped->x(static_cast<Qubit>(i + xInformation * nQubits), dd::Control{static_cast<Qubit>(i + qubit * nQubits), dd::Control::Type::pos});
+                qcMapped->x(static_cast<Qubit>(i + xInformation * nQubits), qc::Control{static_cast<Qubit>(i + qubit * nQubits), qc::Control::Type::Pos});
             }
             qcMapped->measure(static_cast<Qubit>(i + xInformation * nQubits), i);
             qcMapped->reset(static_cast<Qubit>(i));
-            qcMapped->x(static_cast<Qubit>(i), dd::Control{static_cast<Qubit>(i + xInformation * nQubits), dd::Control::Type::pos});
+            qcMapped->x(static_cast<Qubit>(i), qc::Control{static_cast<Qubit>(i + xInformation * nQubits), qc::Control::Type::Pos});
         }
         isDecoded = true;
     }

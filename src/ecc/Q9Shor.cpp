@@ -12,9 +12,9 @@ namespace ecc {
         isDecoded          = false;
         const auto nQubits = qcOriginal->getNqubits();
         for (Qubit i = 0; i < nQubits; i++) {
-            std::array<dd::Control, 3> controls = {};
+            std::array<qc::Control, 3> controls = {};
             for (std::size_t j = 0; j < controls.size(); j++) {
-                controls[j] = {static_cast<Qubit>(i + 3 * j * nQubits), dd::Control::Type::pos};
+                controls[j] = {static_cast<Qubit>(i + 3 * j * nQubits), qc::Control::Type::Pos};
                 if (j > 0) {
                     qcMapped->x(static_cast<Qubit>(i + 3 * j * nQubits), controls[0]);
                 }
@@ -38,8 +38,8 @@ namespace ecc {
             //syntactic sugar for qubit indices
             std::array<Qubit, 9>       qubits                  = {};
             std::array<Qubit, 8>       ancillaQubits           = {};
-            std::array<dd::Control, 8> ancillaControls         = {};
-            std::array<dd::Control, 8> negativeAncillaControls = {};
+            std::array<qc::Control, 8> ancillaControls         = {};
+            std::array<qc::Control, 8> negativeAncillaControls = {};
             for (std::size_t j = 0; j < 9; j++) {
                 qubits.at(j) = static_cast<Qubit>(i + j * nQubits);
             }
@@ -48,10 +48,10 @@ namespace ecc {
                 qcMapped->reset(ancillaQubits.at(j));
             }
             for (std::size_t j = 0; j < 8; j++) {
-                ancillaControls.at(j) = dd::Control{static_cast<Qubit>(ancillaQubits.at(j)), dd::Control::Type::pos};
+                ancillaControls.at(j) = qc::Control{static_cast<Qubit>(ancillaQubits.at(j)), qc::Control::Type::Pos};
             }
             for (std::size_t j = 0; j < 8; j++) {
-                negativeAncillaControls.at(j) = dd::Control{static_cast<Qubit>(ancillaQubits.at(j)), dd::Control::Type::neg};
+                negativeAncillaControls.at(j) = qc::Control{static_cast<Qubit>(ancillaQubits.at(j)), qc::Control::Type::Neg};
             }
 
             // PREPARE measurements --------------------------------------------------------
@@ -104,9 +104,9 @@ namespace ecc {
         }
         const auto nQubits = qcOriginal->getNqubits();
         for (Qubit i = 0; i < nQubits; i++) {
-            std::array<dd::Control, 9> ci;
+            std::array<qc::Control, 9> ci;
             for (Qubit j = 0; j < 9; j++) {
-                ci.at(j) = dd::Control{static_cast<Qubit>(i + j * nQubits), dd::Control::Type::pos};
+                ci.at(j) = qc::Control{static_cast<Qubit>(i + j * nQubits), qc::Control::Type::Pos};
             }
 
             for (std::size_t j = 0; j < 3; j++) {
@@ -163,9 +163,9 @@ namespace ecc {
                 //Q9Shor code: put H gate before and after each control point, i.e. "cx 0,1" becomes "h0; cz 0,1; h0"
                 const auto& ctrls = gate.getControls();
                 for (size_t j = 0; j < 9; j++) {
-                    dd::Controls ctrls2;
+                    qc::Controls ctrls2;
                     for (const auto& ct: ctrls) {
-                        ctrls2.insert(dd::Control{static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
+                        ctrls2.insert(qc::Control{static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
                         qcMapped->h(static_cast<Qubit>(ct.qubit + j * nQubits));
                     }
                     qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls2, i + j * nQubits, type);

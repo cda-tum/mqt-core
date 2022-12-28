@@ -8,7 +8,7 @@
 #include "QuantumComputation.hpp"
 
 namespace ecc {
-    using Qubit      = dd::Qubit;
+    using Qubit      = qc::Qubit;
     using QubitCount = std::make_unsigned_t<Qubit>;
 
     class Ecc {
@@ -38,6 +38,14 @@ namespace ecc {
 
         std::shared_ptr<qc::QuantumComputation> apply();
 
+        std::shared_ptr<qc::QuantumComputation> getOriginalCircuit() {
+            return qcOriginal;
+        }
+
+        std::shared_ptr<qc::QuantumComputation> getMappedCircuit() {
+            return qcMapped;
+        }
+
         virtual std::string getName() {
             return ecc.name;
         }
@@ -46,8 +54,6 @@ namespace ecc {
             return nInputQubits * ecc.nRedundantQubits + ecc.nCorrectingBits;
         }
 
-        [[nodiscard]] bool verifyExecution(bool simulateWithErrors, const std::vector<Qubit>& dataQubits, size_t insertErrorAfterNGates) const;
-
     protected:
         std::shared_ptr<qc::QuantumComputation> qcOriginal;
         std::shared_ptr<qc::QuantumComputation> qcMapped;
@@ -55,11 +61,6 @@ namespace ecc {
         bool                                    isDecoded    = true;
         bool                                    gatesWritten = false;
         Info                                    ecc;
-
-        // Set parameters for verifying the eccs
-        const size_t            shots     = 50;
-        constexpr static double tolerance = 0.2;
-        const size_t            seed      = 1;
 
         void initMappedCircuit();
 
@@ -97,9 +98,9 @@ namespace ecc {
         }
 
         void ccx(Qubit target, Qubit c1, bool p1, Qubit c2, bool p2) {
-            dd::Controls controls;
-            controls.insert(dd::Control{(c1), p1 ? dd::Control::Type::pos : dd::Control::Type::neg});
-            controls.insert(dd::Control{(c2), p2 ? dd::Control::Type::pos : dd::Control::Type::neg});
+            qc::Controls controls;
+            controls.insert(qc::Control{(c1), p1 ? qc::Control::Type::Pos : qc::Control::Type::Neg});
+            controls.insert(qc::Control{(c2), p2 ? qc::Control::Type::Pos : qc::Control::Type::Neg});
             qcMapped->x(static_cast<Qubit>(target), controls);
         }
 
@@ -109,11 +110,11 @@ namespace ecc {
         }
 
         //static, since some codes need to store those functions into function pointers
-        using staticWriteFunctionType = void (*)(Qubit, dd::Control, const std::shared_ptr<qc::QuantumComputation>&);
-        static void x(Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
+        using staticWriteFunctionType = void (*)(Qubit, qc::Control, const std::shared_ptr<qc::QuantumComputation>&);
+        static void x(Qubit target, qc::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
             qcMapped->x(target, control);
         }
-        static void z(Qubit target, dd::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
+        static void z(Qubit target, qc::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
             qcMapped->z(target, control);
         }
 
