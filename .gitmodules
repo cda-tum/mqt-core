@@ -21,4 +21,3 @@
         path = extern/zx
         url = https://github.com/cda-tum/zx.git
         branch = main
-        shallow = true
