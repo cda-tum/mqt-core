@@ -17,7 +17,9 @@ set_property(GLOBAL PROPERTY CMAKE_CXX_STANDARD_REQUIRED ON)
 set_property(GLOBAL PROPERTY CXX_EXTENSIONS OFF)
 
 # Generate compile_commands.json to make it easier to work with clang based tools
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS
+    ON
+    CACHE BOOL "Export compile commands" FORCE)
 
 option(ENABLE_IPO "Enable Interprocedural Optimization, aka Link Time Optimization (LTO)" ON)
 if(ENABLE_IPO)
@@ -25,7 +27,9 @@ if(ENABLE_IPO)
   check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
   # enable inter-procedural optimization if it is supported
   if(ipo_supported)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION
+        TRUE
+        CACHE BOOL "Enable Interprocedural Optimization" FORCE)
   else()
     message(DEBUG "IPO is not supported: ${ipo_output}")
   endif()
