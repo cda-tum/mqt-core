@@ -12,8 +12,8 @@
 namespace dd {
     using namespace qc;
 
-    template<class DDPackage>
-    VectorDD simulate(const QuantumComputation* qc, const VectorDD& in, std::unique_ptr<DDPackage>& dd) {
+    template<class Config>
+    VectorDD simulate(const QuantumComputation* qc, const VectorDD& in, std::unique_ptr<dd::Package<Config>>& dd) {
         // measurements are currently not supported here
         auto permutation = qc->initialLayout;
         auto e           = in;
@@ -241,15 +241,15 @@ namespace dd {
         }
     }
 
-    template<class DDPackage>
-    void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in, dd::ProbabilityVector& probVector, std::unique_ptr<DDPackage>& dd) {
+    template<class Config>
+    void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package<Config>>& dd) {
         // ! initial layout, output permutation and garbage qubits are currently not supported here
         dd->incRef(in);
         extractProbabilityVectorRecursive(qc, in, qc->begin(), std::map<std::size_t, char>{}, 1., probVector, dd);
     }
 
-    template<class DDPackage>
-    void extractProbabilityVectorRecursive(const QuantumComputation* qc, const VectorDD& currentState, decltype(qc->begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, dd::ProbabilityVector& probVector, std::unique_ptr<DDPackage>& dd) {
+    template<class Config>
+    void extractProbabilityVectorRecursive(const QuantumComputation* qc, const VectorDD& currentState, decltype(qc->begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package<Config>>& dd) {
         auto state = currentState;
         for (auto it = currentIt; it != qc->end(); ++it) {
             auto& op = (*it);
@@ -423,8 +423,8 @@ namespace dd {
         }
     }
 
-    template<class DDPackage>
-    VectorDD simulate(GoogleRandomCircuitSampling* qc, const VectorDD& in, std::unique_ptr<DDPackage>& dd, short ncycles = -1) {
+    template<class Config>
+    VectorDD simulate(GoogleRandomCircuitSampling* qc, const VectorDD& in, std::unique_ptr<dd::Package<Config>>& dd, short ncycles = -1) {
         if (ncycles != -1 && (static_cast<std::size_t>(ncycles) < qc->cycles.size() - 2U)) {
             qc->removeCycles(qc->cycles.size() - 2U - ncycles);
         }

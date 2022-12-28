@@ -112,12 +112,6 @@ else()
   endif()
 endif()
 
-if(GENERATE_POSITION_INDEPENDENT_CODE OR BINDINGS)
-  include(CheckPIESupported)
-  check_pie_supported()
-  set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-endif()
-
 # add coverage compiler and linker flag to the library and all targets that link against it, if
 # COVERAGE is set
 if(COVERAGE)
@@ -145,3 +139,11 @@ target_link_libraries(${PROJECT_NAME}_zx PUBLIC MQT::zx MQT::${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME}_zx
                            PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include/zx>)
 add_library(MQT::${PROJECT_NAME}_zx ALIAS ${PROJECT_NAME}_zx)
+
+if(GENERATE_POSITION_INDEPENDENT_CODE OR BINDINGS)
+  include(CheckPIESupported)
+  check_pie_supported()
+  set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+  set_target_properties(${PROJECT_NAME}_dd PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+  set_target_properties(${PROJECT_NAME}_zx PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+endif()
