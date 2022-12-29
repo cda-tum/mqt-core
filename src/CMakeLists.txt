@@ -4,13 +4,15 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package" E
 # add MQT::zx library
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx" EXCLUDE_FROM_ALL)
 
+# cmake-lint: disable=C0103
+set(JSON_BuildTests
+    OFF
+    CACHE INTERNAL "")
+# cmake-lint: disable=C0103
+set(JSON_MultipleHeaders
+    OFF
+    CACHE INTERNAL "")
 # add nlohmann::json library
-set(JSON_BuildTests # cmake-lint: disable=C0103
-    OFF
-    CACHE INTERNAL "")
-set(JSON_MultipleHeaders # cmake-lint: disable=C0103
-    OFF
-    CACHE INTERNAL "")
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/json" "extern/json" EXCLUDE_FROM_ALL)
 
 # main project library
@@ -63,6 +65,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include
                                                   ${PROJECT_BINARY_DIR}/include)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json)
+# the following sets the SYSTEM flag for the include dirs of the json libs to suppress warnings
+# cmake-lint: disable=C0307
+set_target_properties(
+  nlohmann_json PROPERTIES SYSTEM_INTERFACE_INCLUDE_DIRECTORIES
+                           $<TARGET_PROPERTY:nlohmann_json,INTERFACE_INCLUDE_DIRECTORIES>)
 
 # add options and warnings to the library
 target_link_libraries(${PROJECT_NAME} PUBLIC project_options project_warnings)
