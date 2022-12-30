@@ -839,7 +839,7 @@ namespace dd {
             while (q.front()->v != index) {
                 vNode* ptr = q.front();
                 q.pop();
-                fp prob = probsMone[ptr];
+                const fp prob = probsMone[ptr];
 
                 if (!ptr->e.at(0).w.approximatelyZero()) {
                     const fp tmp1 = prob * ComplexNumbers::mag2(ptr->e.at(0).w);
@@ -1466,7 +1466,7 @@ namespace dd {
                 rightContribution = fidelityOfMeasurementOutcomesRecursive(e.p->e[1], probs, rightIdx);
             }
 
-            dd::fp fidelity = topw * (leftContribution + rightContribution);
+            const dd::fp fidelity = topw * (leftContribution + rightContribution);
             return fidelity;
         }
 
