@@ -41,10 +41,7 @@ namespace dd {
     }
 
     inline fp thicknessFromMagnitude(const Complex& a) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuseless-cast"
-        return 3.0 * std::max(dd::ComplexNumbers::mag(a), static_cast<fp>(0.10));
-#pragma GCC diagnostic pop
+        return 3.0 * std::max(dd::ComplexNumbers::mag(a), 0.10);
     }
 
     static void printPhaseFormatted(std::ostream& os, fp r) {
