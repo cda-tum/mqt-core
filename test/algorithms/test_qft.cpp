@@ -58,8 +58,8 @@ constexpr dd::QubitCount QFT_MAX_QUBITS = 20;
 
 INSTANTIATE_TEST_SUITE_P(QFT, QFT,
                          testing::Range(static_cast<dd::QubitCount>(0), static_cast<dd::QubitCount>(QFT_MAX_QUBITS + 1), 3),
-                         [](const testing::TestParamInfo<QFT::ParamType>& info) {
-			const auto nqubits = info.param;
+                         [](const testing::TestParamInfo<QFT::ParamType>& inf) {
+			const auto nqubits = inf.param;
 			std::stringstream ss{};
 			ss << static_cast<std::size_t>(nqubits);
 			if (nqubits == 1) {
@@ -193,7 +193,7 @@ TEST_P(QFT, DynamicSimulation) {
     }
     const std::size_t unique = measurements.size();
 
-    const auto nqubits   = GetParam();
+    nqubits              = GetParam();
     const auto maxUnique = 1ULL << nqubits;
     if (maxUnique < shots) {
         shots = maxUnique;

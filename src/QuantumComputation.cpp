@@ -555,7 +555,7 @@ namespace qc {
                     os << "|\t";
                 }
             } else {
-                os << static_cast<std::size_t>(it->second) << "\t";
+                os << it->second << "\t";
             }
         }
         os << std::endl;
@@ -625,7 +625,7 @@ namespace qc {
         }
         of << "// o";
         for (const auto& q: inverseOutputPermutation) {
-            of << " " << static_cast<std::size_t>(q.second);
+            of << " " << q.second;
         }
         of << std::endl;
 
@@ -634,7 +634,7 @@ namespace qc {
         if (!qregs.empty()) {
             printSortedRegisters(qregs, "qreg", of);
         } else if (nqubits > 0) {
-            of << "qreg q[" << static_cast<std::size_t>(nqubits) << "];" << std::endl;
+            of << "qreg q[" << nqubits << "];" << std::endl;
         }
         if (!cregs.empty()) {
             printSortedRegisters(cregs, "creg", of);
@@ -644,7 +644,7 @@ namespace qc {
         if (!ancregs.empty()) {
             printSortedRegisters(ancregs, "qreg", of);
         } else if (nancillae > 0) {
-            of << "qreg anc[" << static_cast<std::size_t>(nancillae) << "];" << std::endl;
+            of << "qreg anc[" << nancillae << "];" << std::endl;
         }
 
         RegisterNames qregnames{};
@@ -762,11 +762,11 @@ namespace qc {
         Qubit             index   = 0;
         auto              it      = qregs.find(regName);
         if (it != qregs.end()) {
-            index = static_cast<Qubit>(physicalQubitIndex - it->second.first);
+            index = physicalQubitIndex - it->second.first;
         } else {
             auto itAnc = ancregs.find(regName);
             if (itAnc != ancregs.end()) {
-                index = static_cast<Qubit>(physicalQubitIndex - itAnc->second.first);
+                index = physicalQubitIndex - itAnc->second.first;
             }
             // no else branch needed here, since error would have already shown in getQubitRegister(physicalQubitIndex)
         }

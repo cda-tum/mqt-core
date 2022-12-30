@@ -10,8 +10,8 @@ namespace qc {
         importGRCS(filename);
     }
 
-    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& pathPrefix, const std::uint16_t device, const std::uint16_t depth, const std::uint16_t instance):
-        layout(Bristlecone), pathPrefix(pathPrefix) {
+    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& prefix, const std::uint16_t device, const std::uint16_t depth, const std::uint16_t instance):
+        layout(Bristlecone), pathPrefix(prefix) {
         std::stringstream ss;
         ss << pathPrefix;
         ss << "bristlecone/cz_v2/bris_";
@@ -27,8 +27,8 @@ namespace qc {
         importGRCS(ss.str());
     }
 
-    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& pathPrefix, const std::uint16_t x, const std::uint16_t y, const std::uint16_t depth, const std::uint16_t instance):
-        layout(Rectangular), pathPrefix(pathPrefix) {
+    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& prefix, const std::uint16_t x, const std::uint16_t y, const std::uint16_t depth, const std::uint16_t instance):
+        layout(Rectangular), pathPrefix(prefix) {
         std::stringstream ss;
         ss << pathPrefix;
         ss << "rectangular/cz_v2/";

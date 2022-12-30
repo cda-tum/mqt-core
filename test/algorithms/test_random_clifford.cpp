@@ -18,9 +18,9 @@ protected:
 
 INSTANTIATE_TEST_SUITE_P(RandomClifford, RandomClifford,
                          testing::Range(static_cast<dd::QubitCount>(1), static_cast<dd::QubitCount>(9)),
-                         [](const testing::TestParamInfo<RandomClifford::ParamType>& info) {
+                         [](const testing::TestParamInfo<RandomClifford::ParamType>& inf) {
                              // Generate names for test cases
-                             dd::QubitCount    nqubits = info.param;
+                             dd::QubitCount    nqubits = inf.param;
                              std::stringstream ss{};
                              ss << static_cast<std::size_t>(nqubits) << "_qubits";
                              return ss.str();

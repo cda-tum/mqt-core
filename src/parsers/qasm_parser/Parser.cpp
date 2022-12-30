@@ -563,9 +563,9 @@ namespace qasm {
                 argList(arguments);
                 check(Token::Kind::semicolon);
                 qc::QuantumRegisterMap argMap;
-                if (arguments.size() != static_cast<std::size_t>(ncontrols + 2)) {
+                if (arguments.size() != ncontrols + 2) {
                     std::ostringstream oss{};
-                    if (arguments.size() > static_cast<std::size_t>(ncontrols + 2)) {
+                    if (arguments.size() > ncontrols + 2) {
                         oss << "Too many arguments for ";
                     } else {
                         oss << "Too few arguments for ";
@@ -1101,9 +1101,9 @@ namespace qasm {
                             throw QASMParserException("Gate declaration with controlled gates inferred from internal qelib1.inc not yet implemented.");
                         }
 
-                        if (arguments.size() != static_cast<std::size_t>(ncontrols + 1)) {
+                        if (arguments.size() != ncontrols + 1) {
                             std::ostringstream oss{};
-                            if (arguments.size() > static_cast<std::size_t>(ncontrols + 1)) {
+                            if (arguments.size() > ncontrols + 1) {
                                 oss << "Too many arguments for ";
                             } else {
                                 oss << "Too few arguments for ";

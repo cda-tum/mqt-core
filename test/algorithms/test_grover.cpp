@@ -54,9 +54,9 @@ INSTANTIATE_TEST_SUITE_P(Grover,
                          testing::Combine(
                                  testing::Range(static_cast<dd::QubitCount>(2), static_cast<dd::QubitCount>(GROVER_MAX_QUBITS + 1), 3),
                                  testing::Range(static_cast<std::size_t>(0), GROVER_NUM_SEEDS)),
-                         [](const testing::TestParamInfo<Grover::ParamType>& info) {
-	                         dd::QubitCount nqubits = std::get<0>(info.param);
-	                         std::size_t seed = std::get<1>(info.param);
+                         [](const testing::TestParamInfo<Grover::ParamType>& inf) {
+	                         dd::QubitCount nqubits = std::get<0>(inf.param);
+	                         std::size_t seed = std::get<1>(inf.param);
 	                         std::stringstream ss{};
 	                         ss << static_cast<std::size_t>(nqubits+1);
 	                         if (nqubits == 0) {
@@ -72,7 +72,7 @@ TEST_P(Grover, Functionality) {
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
     qc->printStatistics(std::cout);
-    auto x = '1' + dynamic_cast<qc::Grover*>(qc.get())->expected;
+    auto x = '1' + qc->expected;
     std::reverse(x.begin(), x.end());
     std::replace(x.begin(), x.end(), '1', '2');
 
@@ -92,7 +92,7 @@ TEST_P(Grover, FunctionalityRecursive) {
     ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
     qc->printStatistics(std::cout);
-    auto x = '1' + dynamic_cast<qc::Grover*>(qc.get())->expected;
+    auto x = '1' + qc->expected;
     std::reverse(x.begin(), x.end());
     std::replace(x.begin(), x.end(), '1', '2');
 

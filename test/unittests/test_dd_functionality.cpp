@@ -59,8 +59,8 @@ INSTANTIATE_TEST_SUITE_P(Parameters,
                          testing::Values(qc::I, qc::H, qc::X, qc::Y, qc::Z, qc::S, qc::Sdag, qc::T, qc::Tdag, qc::SX, qc::SXdag, qc::V,
                                          qc::Vdag, qc::U3, qc::U2, qc::Phase, qc::RX, qc::RY, qc::RZ, qc::Peres, qc::Peresdag,
                                          qc::SWAP, qc::iSWAP),
-                         [](const testing::TestParamInfo<DDFunctionality::ParamType>& info) {
-                             const auto gate = info.param;
+                         [](const testing::TestParamInfo<DDFunctionality::ParamType>& inf) {
+                             const auto gate = inf.param;
                              switch (gate) {
                                  case qc::I: return "i";
                                  case qc::H: return "h";
@@ -214,7 +214,7 @@ TEST_F(DDFunctionality, changePermutation) {
        << "x q[0];"
        << std::endl;
     qc.import(ss, qc::Format::OpenQASM);
-    auto dd  = std::make_unique<dd::Package<>>();
+    dd       = std::make_unique<dd::Package<>>();
     auto sim = simulate(&qc, dd->makeZeroState(static_cast<dd::QubitCount>(qc.getNqubits())), dd);
     EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
     EXPECT_TRUE(sim.p->e[1].w.approximatelyOne());
@@ -282,13 +282,13 @@ TEST_F(DDFunctionality, errorTensorDumpTest) {
 }
 
 TEST_F(DDFunctionality, FuseTwoSingleQubitGates) {
-    const std::size_t  nqubits = 1;
+    nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.x(0);
     qc.h(0);
 
     qc.print(std::cout);
-    const auto e = buildFunctionality(&qc, dd);
+    e = buildFunctionality(&qc, dd);
     CircuitOptimizer::singleQubitGateFusion(qc);
     const auto f = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
@@ -298,13 +298,13 @@ TEST_F(DDFunctionality, FuseTwoSingleQubitGates) {
 }
 
 TEST_F(DDFunctionality, FuseThreeSingleQubitGates) {
-    const std::size_t  nqubits = 1;
+    nqubits = 1;
     QuantumComputation qc(nqubits);
     qc.x(0);
     qc.h(0);
     qc.y(0);
 
-    const auto e = buildFunctionality(&qc, dd);
+    e = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::singleQubitGateFusion(qc);
@@ -316,12 +316,12 @@ TEST_F(DDFunctionality, FuseThreeSingleQubitGates) {
 }
 
 TEST_F(DDFunctionality, FuseNoSingleQubitGates) {
-    const std::size_t  nqubits = 2;
+    nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.h(0);
     qc.x(1, 0_pc);
     qc.y(0);
-    const auto e = buildFunctionality(&qc, dd);
+    e = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::singleQubitGateFusion(qc);
@@ -333,12 +333,12 @@ TEST_F(DDFunctionality, FuseNoSingleQubitGates) {
 }
 
 TEST_F(DDFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
-    const std::size_t  nqubits = 2;
+    nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.h(0);
     qc.z(1);
     qc.y(0);
-    const auto e = buildFunctionality(&qc, dd);
+    e = buildFunctionality(&qc, dd);
     std::cout << "-----------------------------" << std::endl;
     qc.print(std::cout);
     CircuitOptimizer::singleQubitGateFusion(qc);

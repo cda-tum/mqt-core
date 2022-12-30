@@ -17,10 +17,10 @@ namespace qc {
 
     public:
         // Applies operation `_op` if the creg starting at index `control` has the expected value
-        ClassicControlledOperation(std::unique_ptr<qc::Operation>& op, const ClassicalRegister& controlRegister, std::uint64_t expectedValue = 1U):
-            op(std::move(op)), controlRegister(controlRegister), expectedValue(expectedValue) {
-            nqubits      = this->op->getNqubits();
-            name         = "c_" + this->op->getName();
+        ClassicControlledOperation(std::unique_ptr<qc::Operation>& operation, const ClassicalRegister& controlReg, std::uint64_t expectedVal = 1U):
+            op(std::move(operation)), controlRegister(controlReg), expectedValue(expectedVal) {
+            nqubits      = op->getNqubits();
+            name         = "c_" + op->getName();
             parameter[0] = static_cast<fp>(controlRegister.first);
             parameter[1] = static_cast<fp>(controlRegister.second);
             parameter[2] = static_cast<fp>(expectedValue);

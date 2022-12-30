@@ -75,8 +75,8 @@ namespace qasm {
         std::string str;
 
         Token() = default;
-        Token(Kind kind, int line, int col):
-            kind(kind), line(line), col(col) {}
+        Token(Kind k, int l, int c):
+            kind(k), line(l), col(c) {}
     };
 
     static std::map<Token::Kind, std::string> KindNames{

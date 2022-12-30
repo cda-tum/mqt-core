@@ -31,14 +31,14 @@ namespace dd {
     template<class Config>
     class StochasticNoiseFunctionality {
     public:
-        StochasticNoiseFunctionality(const std::unique_ptr<dd::Package<Config>>& package,
-                                     dd::QubitCount                              nQubits,
+        StochasticNoiseFunctionality(const std::unique_ptr<dd::Package<Config>>& dd,
+                                     dd::QubitCount                              nq,
                                      double                                      gateNoiseProbability,
                                      double                                      amplitudeDampingProb,
                                      double                                      multiQubitGateFactor,
-                                     std::vector<dd::NoiseOperations>            noiseEffects):
-            package(package),
-            nQubits(nQubits),
+                                     std::vector<dd::NoiseOperations>            effects):
+            package(dd),
+            nQubits(nq),
             dist(0.0, 1.0L),
             noiseProbability(gateNoiseProbability),
             noiseProbabilityMulti(gateNoiseProbability * multiQubitGateFactor),
@@ -50,7 +50,7 @@ namespace dd {
             ampDampingTrueMulti(dd::GateMatrix({dd::complex_zero, sqrtAmplitudeDampingProbabilityMulti, dd::complex_zero, dd::complex_zero})),
             ampDampingFalse(dd::GateMatrix({dd::complex_one, dd::complex_zero, dd::complex_zero, oneMinusSqrtAmplitudeDampingProbability})),
             ampDampingFalseMulti(dd::GateMatrix({dd::complex_one, dd::complex_zero, dd::complex_zero, oneMinusSqrtAmplitudeDampingProbabilityMulti})),
-            noiseEffects(std::move(noiseEffects)), identityDD(package->makeIdent(nQubits)) {
+            noiseEffects(std::move(effects)), identityDD(package->makeIdent(nQubits)) {
             package->incRef(identityDD);
         }
 
@@ -211,24 +211,24 @@ namespace dd {
     template<class Config>
     class DeterministicNoiseFunctionality {
     public:
-        DeterministicNoiseFunctionality(const std::unique_ptr<dd::Package<Config>>& package,
-                                        dd::QubitCount                              nQubits,
-                                        double                                      noiseProbSingleQubit,
-                                        double                                      noiseProbMultiQubit,
-                                        double                                      ampDampingProbSingleQubit,
-                                        double                                      ampDampingProbMultiQubit,
-                                        std::vector<dd::NoiseOperations>            noiseEffects,
-                                        bool                                        useDensityMatrixType,
-                                        bool                                        sequentiallyApplyNoise):
-            package(package),
-            nQubits(nQubits),
-            noiseProbSingleQubit(noiseProbSingleQubit),
-            noiseProbMultiQubit(noiseProbMultiQubit),
-            ampDampingProbSingleQubit(ampDampingProbSingleQubit),
-            ampDampingProbMultiQubit(ampDampingProbMultiQubit),
-            noiseEffects(std::move(noiseEffects)),
-            useDensityMatrixType(useDensityMatrixType),
-            sequentiallyApplyNoise(sequentiallyApplyNoise) {
+        DeterministicNoiseFunctionality(const std::unique_ptr<dd::Package<Config>>& dd,
+                                        dd::QubitCount                              nq,
+                                        double                                      noiseProbabilitySingleQubit,
+                                        double                                      noiseProbabilityMultiQubit,
+                                        double                                      ampDampProbSingleQubit,
+                                        double                                      ampDampProbMultiQubit,
+                                        std::vector<dd::NoiseOperations>            effects,
+                                        bool                                        useDensityMatType,
+                                        bool                                        seqApplyNoise):
+            package(dd),
+            nQubits(nq),
+            noiseProbSingleQubit(noiseProbabilitySingleQubit),
+            noiseProbMultiQubit(noiseProbabilityMultiQubit),
+            ampDampingProbSingleQubit(ampDampProbSingleQubit),
+            ampDampingProbMultiQubit(ampDampProbMultiQubit),
+            noiseEffects(std::move(effects)),
+            useDensityMatrixType(useDensityMatType),
+            sequentiallyApplyNoise(seqApplyNoise) {
         }
 
     protected:

@@ -7,8 +7,8 @@
 
 namespace qc {
 
-    RandomCliffordCircuit::RandomCliffordCircuit(const std::size_t nq, const std::size_t depth, const std::size_t seed):
-        depth(depth), seed(seed) {
+    RandomCliffordCircuit::RandomCliffordCircuit(const std::size_t nq, const std::size_t d, const std::size_t s):
+        depth(d), seed(s) {
         addQubitRegister(nq);
         addClassicalRegister(nq);
 
@@ -61,7 +61,7 @@ namespace qc {
     }
 
     void RandomCliffordCircuit::append1QClifford(const std::uint16_t idx, const Qubit target) {
-        const std::uint8_t id = idx % 24;
+        const auto id = static_cast<std::uint8_t>(idx % 24);
         emplace_back<CompoundOperation>(nqubits);
         auto* comp = dynamic_cast<CompoundOperation*>(ops.back().get());
         // Hadamard
@@ -89,8 +89,8 @@ namespace qc {
     }
 
     void RandomCliffordCircuit::append2QClifford(const std::uint16_t idx, const Qubit control, const Qubit target) {
-        std::uint16_t      id       = idx % 11520;
-        const std::uint8_t pauliIdx = id % 16;
+        auto       id       = static_cast<std::uint16_t>(idx % 11520);
+        const auto pauliIdx = static_cast<std::uint8_t>(id % 16);
         id /= 16;
 
         emplace_back<CompoundOperation>(nqubits);

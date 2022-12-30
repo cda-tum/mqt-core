@@ -21,9 +21,9 @@ INSTANTIATE_TEST_SUITE_P(BernsteinVazirani, BernsteinVazirani,
                                          819ULL, 4032ULL, 33153ULL,              // 8-bit < hInt <= 16-bit
                                          87381ULL, 16777215ULL, 1234567891011ULL // 16-bit < hInt <= 32-bit
                                          ),
-                         [](const testing::TestParamInfo<BernsteinVazirani::ParamType>& info) {
+                         [](const testing::TestParamInfo<BernsteinVazirani::ParamType>& inf) {
                              // Generate names for test cases
-                             const auto        s = info.param;
+                             const auto        s = inf.param;
                              std::stringstream ss{};
                              ss << "bv_" << s;
                              return ss.str();

@@ -372,7 +372,7 @@ namespace qc {
         // qubit is finished -> consider next qubit
         if (dagIterators.at(idx) == dag.at(idx).rend()) {
             if (idx < static_cast<Qubit>(dag.size() - 1)) {
-                removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, static_cast<Qubit>(idx + 1), dag.at(idx + 1).rend());
+                removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, idx + 1, dag.at(idx + 1).rend());
             }
             return;
         }
@@ -448,7 +448,7 @@ namespace qc {
 
         // qubit is finished -> consider next qubit
         if (dagIterators.at(idx) == dag.at(idx).rend() && idx < static_cast<Qubit>(dag.size() - 1)) {
-            removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, static_cast<Qubit>(idx + 1), dag.at(idx + 1).rend());
+            removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, idx + 1, dag.at(idx + 1).rend());
         }
     }
 
@@ -508,7 +508,7 @@ namespace qc {
     void CircuitOptimizer::removeFinalMeasurementsRecursive(DAG& dag, DAGReverseIterators& dagIterators, Qubit idx, const DAGReverseIterator& until) {
         if (dagIterators.at(idx) == dag.at(idx).rend()) { //we reached the end
             if (idx < static_cast<Qubit>(dag.size() - 1)) {
-                removeFinalMeasurementsRecursive(dag, dagIterators, static_cast<Qubit>(idx + 1), dag.at(idx + 1).rend());
+                removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1, dag.at(idx + 1).rend());
             }
             return;
         }
@@ -570,7 +570,7 @@ namespace qc {
             }
         }
         if (dagIterators.at(idx) == dag.at(idx).rend() && idx < static_cast<Qubit>(dag.size() - 1)) {
-            removeFinalMeasurementsRecursive(dag, dagIterators, static_cast<Qubit>(idx + 1), dag.at(idx + 1).rend());
+            removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1, dag.at(idx + 1).rend());
         }
     }
 
@@ -661,7 +661,7 @@ namespace qc {
                     if (oldReset != replacementMap.end()) {
                         oldReset->second = indexAddQubit;
                     } else {
-                        replacementMap.insert(std::pair(static_cast<Qubit>(target), static_cast<Qubit>(indexAddQubit)));
+                        replacementMap.try_emplace(target, indexAddQubit);
                     }
                 }
                 it = qc.erase(it);
@@ -678,7 +678,7 @@ namespace qc {
                                 if (oldReset != replacementMap.end()) {
                                     oldReset->second = indexAddQubit;
                                 } else {
-                                    replacementMap.insert(std::pair(static_cast<Qubit>(compTarget), static_cast<Qubit>(indexAddQubit)));
+                                    replacementMap.try_emplace(compTarget, indexAddQubit);
                                 }
                             }
                             compOpIt = compOp->erase(compOpIt);

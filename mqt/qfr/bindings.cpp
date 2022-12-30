@@ -54,7 +54,7 @@ py::dict construct(const std::unique_ptr<qc::QuantumComputation>& qc, const Cons
     py::dict results{};
     auto     circuit    = py::dict{};
     circuit["name"]     = qc->getName();
-    circuit["n_qubits"] = static_cast<std::size_t>(qc->getNqubits());
+    circuit["n_qubits"] = qc->getNqubits();
     circuit["n_gates"]  = qc->getNops();
     results["circuit"]  = circuit;
 

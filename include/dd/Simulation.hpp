@@ -236,10 +236,10 @@ namespace dd {
                 auto*       classicControlled = dynamic_cast<ClassicControlledOperation*>(op.get());
                 const auto& controlRegister   = classicControlled->getControlRegister();
                 const auto& expectedValue     = classicControlled->getExpectedValue();
-                auto        actualValue       = 0U;
+                qc::Bit     actualValue       = 0U;
                 // determine the actual value from measurements
                 for (std::size_t j = 0; j < controlRegister.second; ++j) {
-                    actualValue |= (measurements[controlRegister.first + j] == '1') ? (1ULL << j) : 0U;
+                    actualValue |= (measurements[controlRegister.first + j] == '1') ? (static_cast<qc::Bit>(1) << j) : 0U;
                 }
 
                 // do not apply an operation if the value is not the expected one

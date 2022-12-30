@@ -6,8 +6,8 @@
 #include "algorithms/BernsteinVazirani.hpp"
 
 namespace qc {
-    BernsteinVazirani::BernsteinVazirani(const BitString& s, const bool dynamic):
-        s(s), dynamic(dynamic) {
+    BernsteinVazirani::BernsteinVazirani(const BitString& hiddenString, const bool dyn):
+        s(hiddenString), dynamic(dyn) {
         std::size_t msb = 0;
         for (std::size_t i = 0; i < s.size(); ++i) {
             if (s.test(i)) {
@@ -18,8 +18,8 @@ namespace qc {
         createCircuit();
     }
 
-    BernsteinVazirani::BernsteinVazirani(const std::size_t nq, const bool dynamic):
-        bitwidth(nq), dynamic(dynamic) {
+    BernsteinVazirani::BernsteinVazirani(const std::size_t nq, const bool dyn):
+        bitwidth(nq), dynamic(dyn) {
         auto distribution = std::bernoulli_distribution();
         for (std::size_t i = 0; i < nq; ++i) {
             if (distribution(mt)) {
@@ -29,8 +29,8 @@ namespace qc {
         createCircuit();
     }
 
-    BernsteinVazirani::BernsteinVazirani(const BitString& s, const std::size_t nq, const bool dynamic):
-        s(s), bitwidth(nq), dynamic(dynamic) {
+    BernsteinVazirani::BernsteinVazirani(const BitString& hiddenString, const std::size_t nq, const bool dyn):
+        s(hiddenString), bitwidth(nq), dynamic(dyn) {
         createCircuit();
     }
 

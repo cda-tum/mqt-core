@@ -101,10 +101,10 @@ INSTANTIATE_TEST_SUITE_P(QPE, QPE,
                                  std::pair{3. / 8, 4U},
                                  std::pair{3. / 32, 5U},
                                  std::pair{3. / 32, 6U}),
-                         [](const testing::TestParamInfo<QPE::ParamType>& info) {
+                         [](const testing::TestParamInfo<QPE::ParamType>& inf) {
                              // Generate names for test cases
-                             const auto        lambda    = info.param.first;
-                             const auto        precision = info.param.second;
+                             const auto        lambda    = inf.param.first;
+                             const auto        precision = inf.param.second;
                              std::stringstream ss{};
                              ss << static_cast<std::size_t>(lambda * 100) << "_pi_" << precision;
                              return ss.str();

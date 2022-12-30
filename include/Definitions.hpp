@@ -20,8 +20,8 @@ namespace qc {
         std::string msg;
 
     public:
-        explicit QFRException(std::string msg):
-            std::invalid_argument("QFR Exception"), msg(std::move(msg)) {}
+        explicit QFRException(std::string m):
+            std::invalid_argument("QFR Exception"), msg(std::move(m)) {}
 
         [[nodiscard]] const char* what() const noexcept override {
             return msg.c_str();

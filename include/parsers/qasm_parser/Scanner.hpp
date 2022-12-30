@@ -21,8 +21,8 @@ namespace qasm {
             char ch;
             int  line, col;
 
-            LineInfo(char ch, int line, int col):
-                ch(ch), line(line), col(col) {}
+            LineInfo(char c, int l, int cl):
+                ch(c), line(l), col(cl) {}
         };
 
         std::istream&                             is;
@@ -45,7 +45,7 @@ namespace qasm {
         std::stack<LineInfo> lines{};
 
     public:
-        explicit Scanner(std::istream& is);
+        explicit Scanner(std::istream& in);
 
         Token next();
 

@@ -359,7 +359,7 @@ namespace zx {
         if (op->getType() == qc::OpType::Compound) {
             const auto* compOp = dynamic_cast<const qc::CompoundOperation*>(op);
 
-            return std::all_of(compOp->cbegin(), compOp->cend(), [&](const auto& op) { return transformableToZX(op.get()); });
+            return std::all_of(compOp->cbegin(), compOp->cend(), [&](const auto& operation) { return transformableToZX(operation.get()); });
         }
 
         if (op->getType() == qc::OpType::Barrier) {

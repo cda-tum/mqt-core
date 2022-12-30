@@ -20,9 +20,9 @@ namespace qc {
 
         explicit GoogleRandomCircuitSampling(const std::string& filename);
 
-        GoogleRandomCircuitSampling(const std::string& pathPrefix, std::uint16_t device, std::uint16_t depth, std::uint16_t instance);
+        GoogleRandomCircuitSampling(const std::string& prefix, std::uint16_t device, std::uint16_t depth, std::uint16_t instance);
 
-        GoogleRandomCircuitSampling(const std::string& pathPrefix, std::uint16_t x, std::uint16_t y, std::uint16_t depth, std::uint16_t instance);
+        GoogleRandomCircuitSampling(const std::string& prefix, std::uint16_t x, std::uint16_t y, std::uint16_t depth, std::uint16_t instance);
 
         void importGRCS(const std::string& filename);
 

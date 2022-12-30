@@ -67,8 +67,8 @@ namespace qc {
     /***
      * Public Methods
      ***/
-    Grover::Grover(std::size_t nq, std::size_t seed):
-        seed(seed), nDataQubits(nq) {
+    Grover::Grover(std::size_t nq, std::size_t s):
+        seed(s), nDataQubits(nq) {
         name = "grover_" + std::to_string(nq);
 
         addQubitRegister(nDataQubits, "q");
@@ -86,7 +86,7 @@ namespace qc {
 
         expected = targetValue.to_string();
         std::reverse(expected.begin(), expected.end());
-        while (expected.length() > static_cast<std::size_t>(nqubits - 1)) {
+        while (expected.length() > nqubits - 1) {
             expected.pop_back();
         }
         std::reverse(expected.begin(), expected.end());

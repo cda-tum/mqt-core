@@ -108,8 +108,8 @@ namespace qasm {
     /***
      * Public Methods
      ***/
-    Scanner::Scanner(std::istream& is):
-        is(is) {
+    Scanner::Scanner(std::istream& in):
+        is(in) {
         keywords["qreg"]               = Token::Kind::qreg;
         keywords["creg"]               = Token::Kind::creg;
         keywords["gate"]               = Token::Kind::gate;

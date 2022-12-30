@@ -6,8 +6,8 @@
 #include "algorithms/QPE.hpp"
 
 namespace qc {
-    QPE::QPE(const std::size_t nq, const bool exact, const bool iterative):
-        precision(nq), iterative(iterative) {
+    QPE::QPE(const std::size_t nq, const bool exact, const bool iter):
+        precision(nq), iterative(iter) {
         if (exact) {
             // if an exact solution is wanted, generate a random n-bit number and convert it to an appropriate phase
             const std::uint64_t max          = 1ULL << nq;
@@ -40,17 +40,17 @@ namespace qc {
         createCircuit();
     }
 
-    QPE::QPE(const fp lambda, const std::size_t precision, const bool iterative):
-        lambda(lambda), precision(precision), iterative(iterative) {
+    QPE::QPE(const fp l, const std::size_t prec, const bool iter):
+        lambda(l), precision(prec), iterative(iter) {
         createCircuit();
     }
 
     std::ostream& QPE::printStatistics(std::ostream& os) const {
         os << "QPE Statistics:\n";
-        os << "\tn: " << static_cast<std::size_t>(nqubits + 1) << std::endl;
+        os << "\tn: " << nqubits + 1 << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;
         os << "\tlambda: " << lambda << "π" << std::endl;
-        os << "\tprecision: " << static_cast<std::size_t>(precision) << std::endl;
+        os << "\tprecision: " << precision << std::endl;
         os << "\titerative: " << iterative << std::endl;
         os << "--------------" << std::endl;
         return os;

@@ -25,11 +25,11 @@ namespace qasm {
         std::string msg;
 
     public:
-        explicit QASMParserException(const std::string& msg):
+        explicit QASMParserException(const std::string& m):
             std::invalid_argument("QASM Parser Exception") {
             std::stringstream ss{};
-            ss << "[qasm parser] " << msg;
-            this->msg = ss.str();
+            ss << "[qasm parser] " << m;
+            msg = ss.str();
         }
 
         [[nodiscard]] const char* what() const noexcept override {
@@ -61,8 +61,8 @@ namespace qasm {
             std::shared_ptr<Expr> op2 = nullptr;
             std::string           id;
 
-            explicit Expr(Kind kind, qc::fp num = 0., std::shared_ptr<Expr> op1 = nullptr, std::shared_ptr<Expr> op2 = nullptr, std::string id = ""):
-                num(num), kind(kind), op1(std::move(op1)), op2(std::move(op2)), id(std::move(id)) {}
+            explicit Expr(Kind k, qc::fp n = 0., std::shared_ptr<Expr> operation1 = nullptr, std::shared_ptr<Expr> operation2 = nullptr, std::string identifier = ""):
+                num(n), kind(k), op1(std::move(operation1)), op2(std::move(operation2)), id(std::move(identifier)) {}
             Expr(const Expr& expr):
                 num(expr.num), kind(expr.kind), id(expr.id) {
                 if (expr.op1 != nullptr) {
@@ -101,16 +101,16 @@ namespace qasm {
             std::vector<std::string> controls;
             std::string              target;
 
-            CUgate(std::shared_ptr<Expr> theta, std::shared_ptr<Expr> phi, std::shared_ptr<Expr> lambda, std::vector<std::string> controls, std::string target):
-                theta(std::move(theta)), phi(std::move(phi)), lambda(std::move(lambda)), controls(std::move(controls)), target(std::move(target)) {}
+            CUgate(std::shared_ptr<Expr> t, std::shared_ptr<Expr> p, std::shared_ptr<Expr> l, std::vector<std::string> c, std::string targ):
+                theta(std::move(t)), phi(std::move(p)), lambda(std::move(l)), controls(std::move(c)), target(std::move(targ)) {}
         };
 
         struct CXgate: public BasisGate {
             std::string control;
             std::string target;
 
-            CXgate(std::string control, std::string target):
-                control(std::move(control)), target(std::move(target)) {}
+            CXgate(std::string c, std::string t):
+                control(std::move(c)), target(std::move(t)) {}
         };
 
         struct SingleQubitGate: public BasisGate {
@@ -120,24 +120,24 @@ namespace qasm {
             std::shared_ptr<Expr> phi;
             std::shared_ptr<Expr> theta;
 
-            explicit SingleQubitGate(std::string target, qc::OpType type = qc::U3, std::shared_ptr<Expr> lambda = nullptr, std::shared_ptr<Expr> phi = nullptr, std::shared_ptr<Expr> theta = nullptr):
-                target(std::move(target)), type(type), lambda(std::move(lambda)), phi(std::move(phi)), theta(std::move(theta)) {}
+            explicit SingleQubitGate(std::string targ, qc::OpType typ = qc::U3, std::shared_ptr<Expr> l = nullptr, std::shared_ptr<Expr> p = nullptr, std::shared_ptr<Expr> t = nullptr):
+                target(std::move(targ)), type(typ), lambda(std::move(l)), phi(std::move(p)), theta(std::move(t)) {}
         };
 
         struct SWAPgate: public BasisGate {
             std::string target0;
             std::string target1;
 
-            SWAPgate(std::string target0, std::string target1):
-                target0(std::move(target0)), target1(std::move(target1)) {}
+            SWAPgate(std::string t0, std::string t1):
+                target0(std::move(t0)), target1(std::move(t1)) {}
         };
 
         struct MCXgate: public BasisGate {
             std::vector<std::string> controls;
             std::string              target;
 
-            MCXgate(std::vector<std::string> controls, std::string target):
-                controls(std::move(controls)), target(std::move(target)) {}
+            MCXgate(std::vector<std::string> c, std::string t):
+                controls(std::move(c)), target(std::move(t)) {}
         };
 
         struct CompoundGate {
@@ -168,8 +168,8 @@ namespace qasm {
         qc::Permutation           initialLayout{};
         qc::Permutation           outputPermutation{};
 
-        explicit Parser(std::istream& is, qc::QuantumRegisterMap& qregs, qc::ClassicalRegisterMap& cregs):
-            in(is), qregs(qregs), cregs(cregs) {
+        explicit Parser(std::istream& is, qc::QuantumRegisterMap& q, qc::ClassicalRegisterMap& c):
+            in(is), qregs(q), cregs(c) {
             scanner = std::make_shared<Scanner>(in);
         }
 

@@ -171,10 +171,10 @@ namespace qc {
 
     public:
         QuantumComputation() = default;
-        explicit QuantumComputation(const std::size_t nqubits, const std::size_t seed = 0):
-            seed(seed) {
-            addQubitRegister(nqubits);
-            addClassicalRegister(nqubits);
+        explicit QuantumComputation(const std::size_t nq, const std::size_t s = 0):
+            seed(s) {
+            addQubitRegister(nq);
+            addClassicalRegister(nq);
             if (seed != 0) {
                 mt.seed(seed);
             } else {
@@ -186,8 +186,8 @@ namespace qc {
                 mt.seed(seeds);
             }
         }
-        explicit QuantumComputation(const std::string& filename, const std::size_t seed = 0U):
-            seed(seed) {
+        explicit QuantumComputation(const std::string& filename, const std::size_t s = 0U):
+            seed(s) {
             import(filename);
             if (seed != 0U) {
                 mt.seed(seed);
