@@ -11,7 +11,7 @@ If you have any questions, feel free to contact us via [quantum.cda@xcit.tum.de]
 
 ## System Requirements and Building
 
-The implementation is compatible with any C++17 compiler and a minimum CMake version of 3.14.
+The implementation is compatible with any C++17 compiler and a minimum CMake version of 3.19.
 
 To get the most out of this library it is recommended to have the GMP library installed.
 
