@@ -317,6 +317,7 @@ namespace qasm {
 
         if (in->fail() && filename == "qelib1.inc") {
             // internal qelib1.inc
+            // contains all essential gate definitions
             // parser can also read multiple-control versions of each gate
             auto ss = std::make_shared<std::stringstream>();
             *ss << "gate u(theta,phi,lambda) q { U(theta,phi,lambda) q; }" << std::endl;
@@ -426,8 +427,10 @@ namespace qasm {
             line = 1;
             col  = 0;
         } else if (in->fail()) {
+            // file could not be found and it was not the standard include file
             std::cerr << "Failed to open file '" << filename << "'!" << std::endl;
         } else {
+            // file was found and opened
             streams.push(in);
             lines.emplace(ch, line, col);
             line = 1;
