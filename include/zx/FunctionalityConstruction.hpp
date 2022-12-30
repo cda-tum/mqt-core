@@ -34,7 +34,7 @@ namespace zx {
                              std::vector<Vertex>& qubits);
         static void  addCphase(ZXDiagram& diag, const PiExpression& phase, Qubit ctrl, Qubit target,
                                std::vector<Vertex>& qubits);
-        static void  addSwap(ZXDiagram& diag, Qubit ctrl, Qubit target,
+        static void  addSwap(ZXDiagram& diag, Qubit target, Qubit target2,
                              std::vector<Vertex>& qubits);
         static void  addCcx(ZXDiagram& diag, Qubit ctrl0, Qubit ctrl1, Qubit target,
                             std::vector<Vertex>& qubits);

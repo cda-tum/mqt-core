@@ -246,7 +246,7 @@ namespace zx {
                 case qc::OpType::X:
                     // check if swap
                     if (checkSwap(it, end, ctrl, target, p)) {
-                        addSwap(diag, ctrl, target, qubits);
+                        addSwap(diag, target, ctrl, qubits);
                         return it + 3;
                     } else {
                         addCnot(diag, ctrl, target, qubits);

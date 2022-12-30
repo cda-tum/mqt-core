@@ -20,9 +20,9 @@ protected:
     std::uint64_t precision{};
     qc::fp        theta{};
     bool          exactlyRepresentable{};
-    std::size_t   expectedResult{};
+    std::uint64_t expectedResult{};
     std::string   expectedResultRepresentation{};
-    std::size_t   secondExpectedResult{};
+    std::uint64_t secondExpectedResult{};
     std::string   secondExpectedResultRepresentation{};
 
     void TearDown() override {}
@@ -58,12 +58,12 @@ protected:
         expectedResult = 0U;
         for (std::uint64_t i = 0; i < precision; ++i) {
             if (binaryExpansion.test(i)) {
-                expectedResult |= (1U << (precision - 1 - i));
+                expectedResult |= (1ULL << (precision - 1 - i));
             }
         }
         std::stringstream ss{};
         for (auto i = static_cast<std::int64_t>(precision - 1); i >= 0; --i) {
-            if ((expectedResult & (1U << i)) != 0) {
+            if ((expectedResult & (1ULL << i)) != 0) {
                 ss << 1;
             } else {
                 ss << 0;
@@ -78,7 +78,7 @@ protected:
             secondExpectedResult = expectedResult + 1;
             ss.str("");
             for (auto i = static_cast<std::int64_t>(precision - 1); i >= 0; --i) {
-                if ((secondExpectedResult & (1U << i)) != 0) {
+                if ((secondExpectedResult & (1ULL << i)) != 0) {
                     ss << 1;
                 } else {
                     ss << 0;
