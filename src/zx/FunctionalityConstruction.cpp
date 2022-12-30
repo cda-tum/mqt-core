@@ -32,10 +32,9 @@ namespace zx {
     void FunctionalityConstruction::addZSpider(ZXDiagram& diag, const zx::Qubit qubit,
                                                std::vector<Vertex>& qubits,
                                                const PiExpression& phase, const EdgeType type) {
-        const auto q         = static_cast<std::size_t>(qubit);
-        auto       newVertex = diag.addVertex(
-                qubit, diag.getVData(qubits[q]).value().col + 1, phase,
-                VertexType::Z);
+        const auto q = static_cast<std::size_t>(qubit);
+
+        auto newVertex = diag.addVertex(qubit, diag.getVData(qubits[q]).value().col + 1, phase, VertexType::Z);
 
         diag.addEdge(qubits[q], newVertex, type);
         qubits[q] = newVertex;
