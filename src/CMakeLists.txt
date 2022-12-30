@@ -84,12 +84,18 @@ add_library(MQT::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 # add DD Package library
 add_library(
-  ${PROJECT_NAME}_dd INTERFACE ${PROJECT_SOURCE_DIR}/include/dd/FunctionalityConstruction.hpp
+  ${PROJECT_NAME}_dd
+  ${PROJECT_SOURCE_DIR}/include/dd/FunctionalityConstruction.hpp
   ${PROJECT_SOURCE_DIR}/include/dd/NoiseFunctionality.hpp
-  ${PROJECT_SOURCE_DIR}/include/dd/Operations.hpp ${PROJECT_SOURCE_DIR}/include/dd/Simulation.hpp)
-target_link_libraries(${PROJECT_NAME}_dd INTERFACE MQT::DDPackage MQT::${PROJECT_NAME})
-target_include_directories(${PROJECT_NAME}_dd INTERFACE ${PROJECT_SOURCE_DIR}/include/dd
-                                                        ${PROJECT_BINARY_DIR}/include/dd)
+  ${PROJECT_SOURCE_DIR}/include/dd/Operations.hpp
+  ${PROJECT_SOURCE_DIR}/include/dd/Simulation.hpp
+  dd/FunctionalityConstruction.cpp
+  dd/NoiseFunctionality.cpp
+  dd/Operations.cpp
+  dd/Simulation.cpp)
+target_link_libraries(${PROJECT_NAME}_dd PUBLIC MQT::DDPackage MQT::${PROJECT_NAME})
+target_include_directories(${PROJECT_NAME}_dd PUBLIC ${PROJECT_SOURCE_DIR}/include/dd
+                                                     ${PROJECT_BINARY_DIR}/include/dd)
 add_library(MQT::${PROJECT_NAME}_dd ALIAS ${PROJECT_NAME}_dd)
 
 # add ZX package library
