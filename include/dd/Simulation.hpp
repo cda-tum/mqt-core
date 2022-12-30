@@ -13,7 +13,27 @@ namespace dd {
     using namespace qc;
 
     template<class Config>
-    VectorDD simulate(const QuantumComputation* qc, const VectorDD& in, std::unique_ptr<dd::Package<Config>>& dd);
+    VectorDD simulate(const QuantumComputation* qc, const VectorDD& in, std::unique_ptr<dd::Package<Config>>& dd) {
+        // measurements are currently not supported here
+        auto permutation = qc->initialLayout;
+        auto e           = in;
+        dd->incRef(e);
+
+        for (const auto& op: *qc) {
+            auto tmp = dd->multiply(getDD(op.get(), dd, permutation), e);
+            dd->incRef(tmp);
+            dd->decRef(e);
+            e = tmp;
+
+            dd->garbageCollect();
+        }
+
+        // correct permutation if necessary
+        changePermutation(e, permutation, qc->outputPermutation, dd);
+        e = dd->reduceGarbage(e, qc->garbage);
+
+        return e;
+    }
 
     template<class Config>
     std::map<std::string, std::size_t> simulate(const QuantumComputation* qc, const VectorDD& in, std::unique_ptr<dd::Package<Config>>& dd, std::size_t shots, std::size_t seed = 0U);
