@@ -147,7 +147,7 @@ namespace qasm {
         };
 
         std::istream&                       in;
-        std::set<Token::Kind>               unaryops{Token::Kind::sin, Token::Kind::cos, Token::Kind::tan, Token::Kind::exp, Token::Kind::ln, Token::Kind::sqrt};
+        std::set<Token::Kind>               unaryops{Token::Kind::Sin, Token::Kind::Cos, Token::Kind::Tan, Token::Kind::Exp, Token::Kind::Ln, Token::Kind::Sqrt};
         std::map<std::string, CompoundGate> compoundGates;
 
         std::shared_ptr<Expr> exponentiation();
@@ -159,7 +159,7 @@ namespace qasm {
 
     public:
         Token                     la, t;
-        Token::Kind               sym = Token::Kind::none;
+        Token::Kind               sym = Token::Kind::None;
         std::shared_ptr<Scanner>  scanner;
         qc::QuantumRegisterMap&   qregs;
         qc::ClassicalRegisterMap& cregs;

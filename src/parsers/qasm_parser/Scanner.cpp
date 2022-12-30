@@ -46,7 +46,7 @@ namespace qasm {
         }
         t.str   = ss.str();
         auto it = keywords.find(t.str);
-        t.kind  = (it != keywords.end()) ? it->second : Token::Kind::identifier;
+        t.kind  = (it != keywords.end()) ? it->second : Token::Kind::Identifier;
     }
 
     void Scanner::readNumber(Token& t) {
@@ -55,13 +55,13 @@ namespace qasm {
             ss << ch;
             nextCh();
         }
-        t.kind = Token::Kind::nninteger;
+        t.kind = Token::Kind::Nninteger;
         t.str  = ss.str();
         if (ch != '.') {
             ss >> t.val;
             return;
         }
-        t.kind = Token::Kind::real;
+        t.kind = Token::Kind::Real;
         ss << ch;
         nextCh();
         while (::isdigit(ch) != 0) {
@@ -92,7 +92,7 @@ namespace qasm {
             nextCh();
         }
         t.str  = ss.str();
-        t.kind = Token::Kind::string;
+        t.kind = Token::Kind::String;
     }
 
     void Scanner::readComment(Token& t) {
@@ -102,7 +102,7 @@ namespace qasm {
             nextCh();
         }
         t.str  = ss.str();
-        t.kind = Token::Kind::comment;
+        t.kind = Token::Kind::Comment;
     }
 
     /***
@@ -110,36 +110,36 @@ namespace qasm {
      ***/
     Scanner::Scanner(std::istream& in):
         is(in) {
-        keywords["qreg"]               = Token::Kind::qreg;
-        keywords["creg"]               = Token::Kind::creg;
-        keywords["gate"]               = Token::Kind::gate;
-        keywords["measure"]            = Token::Kind::measure;
-        keywords["U"]                  = Token::Kind::ugate;
-        keywords["CX"]                 = Token::Kind::cxgate;
-        keywords["swap"]               = Token::Kind::swap;
-        keywords["mct"]                = Token::Kind::mcx_gray;
-        keywords["mcx"]                = Token::Kind::mcx_gray;
-        keywords["mcx_gray"]           = Token::Kind::mcx_gray;
-        keywords["mcx_recursive"]      = Token::Kind::mcx_recursive;
-        keywords["mcx_vchain"]         = Token::Kind::mcx_vchain;
-        keywords["mcphase"]            = Token::Kind::mcphase;
-        keywords["sx"]                 = Token::Kind::sxgate;
-        keywords["sxdg"]               = Token::Kind::sxdggate;
-        keywords["pi"]                 = Token::Kind::pi;
-        keywords["OPENQASM"]           = Token::Kind::openqasm;
-        keywords["show_probabilities"] = Token::Kind::probabilities;
-        keywords["sin"]                = Token::Kind::sin;
-        keywords["cos"]                = Token::Kind::cos;
-        keywords["tan"]                = Token::Kind::tan;
-        keywords["exp"]                = Token::Kind::exp;
-        keywords["ln"]                 = Token::Kind::ln;
-        keywords["sqrt"]               = Token::Kind::sqrt;
-        keywords["include"]            = Token::Kind::include;
-        keywords["barrier"]            = Token::Kind::barrier;
-        keywords["opaque"]             = Token::Kind::opaque;
-        keywords["if"]                 = Token::Kind::_if;
-        keywords["reset"]              = Token::Kind::reset;
-        keywords["snapshot"]           = Token::Kind::snapshot;
+        keywords["qreg"]               = Token::Kind::Qreg;
+        keywords["creg"]               = Token::Kind::Creg;
+        keywords["gate"]               = Token::Kind::Gate;
+        keywords["measure"]            = Token::Kind::Measure;
+        keywords["U"]                  = Token::Kind::Ugate;
+        keywords["CX"]                 = Token::Kind::Cxgate;
+        keywords["swap"]               = Token::Kind::Swap;
+        keywords["mct"]                = Token::Kind::McxGray;
+        keywords["mcx"]                = Token::Kind::McxGray;
+        keywords["mcx_gray"]           = Token::Kind::McxGray;
+        keywords["mcx_recursive"]      = Token::Kind::McxRecursive;
+        keywords["mcx_vchain"]         = Token::Kind::McxVchain;
+        keywords["mcphase"]            = Token::Kind::Mcphase;
+        keywords["sx"]                 = Token::Kind::Sxgate;
+        keywords["sxdg"]               = Token::Kind::Sxdggate;
+        keywords["pi"]                 = Token::Kind::Pi;
+        keywords["OPENQASM"]           = Token::Kind::Openqasm;
+        keywords["show_probabilities"] = Token::Kind::Probabilities;
+        keywords["sin"]                = Token::Kind::Sin;
+        keywords["cos"]                = Token::Kind::Cos;
+        keywords["tan"]                = Token::Kind::Tan;
+        keywords["exp"]                = Token::Kind::Exp;
+        keywords["ln"]                 = Token::Kind::Ln;
+        keywords["sqrt"]               = Token::Kind::Sqrt;
+        keywords["include"]            = Token::Kind::Include;
+        keywords["barrier"]            = Token::Kind::Barrier;
+        keywords["opaque"]             = Token::Kind::Opaque;
+        keywords["if"]                 = Token::Kind::If;
+        keywords["reset"]              = Token::Kind::Reset;
+        keywords["snapshot"]           = Token::Kind::Snapshot;
         nextCh();
     }
 
@@ -149,7 +149,7 @@ namespace qasm {
             nextCh();
         }
 
-        auto t = Token(Token::Kind::none, line, col);
+        auto t = Token(Token::Kind::None, line, col);
 
         switch (ch) {
             case 'a':
@@ -222,51 +222,51 @@ namespace qasm {
                 readNumber(t);
                 break;
             case ';':
-                t.kind = Token::Kind::semicolon;
+                t.kind = Token::Kind::Semicolon;
                 nextCh();
                 break;
             case static_cast<char>(-1):
-                t.kind = Token::Kind::eof;
+                t.kind = Token::Kind::Eof;
                 break;
             case '(':
-                t.kind = Token::Kind::lpar;
+                t.kind = Token::Kind::Lpar;
                 nextCh();
                 break;
             case ')':
-                t.kind = Token::Kind::rpar;
+                t.kind = Token::Kind::Rpar;
                 nextCh();
                 break;
             case '[':
-                t.kind = Token::Kind::lbrack;
+                t.kind = Token::Kind::Lbrack;
                 nextCh();
                 break;
             case ']':
-                t.kind = Token::Kind::rbrack;
+                t.kind = Token::Kind::Rbrack;
                 nextCh();
                 break;
             case '{':
-                t.kind = Token::Kind::lbrace;
+                t.kind = Token::Kind::Lbrace;
                 nextCh();
                 break;
             case '}':
-                t.kind = Token::Kind::rbrace;
+                t.kind = Token::Kind::Rbrace;
                 nextCh();
                 break;
             case ',':
-                t.kind = Token::Kind::comma;
+                t.kind = Token::Kind::Comma;
                 nextCh();
                 break;
             case '+':
                 nextCh();
-                t.kind = Token::Kind::plus;
+                t.kind = Token::Kind::Plus;
                 break;
             case '-':
                 nextCh();
-                t.kind = Token::Kind::minus;
+                t.kind = Token::Kind::Minus;
                 break;
             case '*':
                 nextCh();
-                t.kind = Token::Kind::times;
+                t.kind = Token::Kind::Times;
                 break;
             case '/':
                 // can indicate a comment or a division
@@ -276,12 +276,12 @@ namespace qasm {
                     readComment(t);
                     nextCh();
                 } else {
-                    t.kind = Token::Kind::div;
+                    t.kind = Token::Kind::Div;
                 }
                 break;
             case '^':
                 nextCh();
-                t.kind = Token::Kind::power;
+                t.kind = Token::Kind::Power;
                 break;
             case '"':
                 // string literal
@@ -291,14 +291,14 @@ namespace qasm {
                 break;
             case '>':
                 nextCh();
-                t.kind = Token::Kind::gt;
+                t.kind = Token::Kind::Gt;
                 break;
             case '=':
                 // must be an equality operator
                 nextCh();
                 if (ch == '=') {
                     nextCh();
-                    t.kind = Token::Kind::eq;
+                    t.kind = Token::Kind::Eq;
                 } else {
                     std::cerr << "ERROR: UNEXPECTED CHARACTER: '" << ch << "'!\n";
                 }
