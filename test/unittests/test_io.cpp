@@ -81,49 +81,49 @@ TEST_F(IO, importFromString) {
     std::cout << *qc << std::endl;
 }
 
-TEST_F(IO, controlled_op_acting_on_whole_register) {
+TEST_F(IO, controlledOpActingOnWholeRegister) {
     const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncx q,q[1];\n";
     std::stringstream ss{circuitQasm};
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
 }
 
-TEST_F(IO, invalid_real_header) {
+TEST_F(IO, invalidRealHeader) {
     const std::string circuitReal = ".numvars 2\nvariables q0 q1\n.begin\nh1 q0\nt2 q0 q1\n.end\n";
     std::stringstream ss{circuitReal};
     EXPECT_THROW(qc->import(ss, qc::Format::Real), qc::QFRException);
 }
 
-TEST_F(IO, invalid_real_command) {
+TEST_F(IO, invalidRealCommand) {
     const std::string circuitReal = ".numvars 2\n.var q0 q1\n.begin\nh1 q0\n# test comment\nt2 q0 q1\n.end\n";
     std::stringstream ss{circuitReal};
     EXPECT_THROW(qc->import(ss, qc::Format::Real), qc::QFRException);
 }
 
-TEST_F(IO, insufficient_registers_qelib) {
+TEST_F(IO, insufficientRegistersQelib) {
     const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncx q[0];\n";
     std::stringstream ss{circuitQasm};
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
 }
 
-TEST_F(IO, insufficient_registers_enhanced_qelib) {
+TEST_F(IO, insufficientRegistersEnhancedQelib) {
     const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[4];\ncccz q[0], q[1], q[2];\n";
     std::stringstream ss{circuitQasm};
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
 }
 
-TEST_F(IO, superfluous_registers_qelib) {
+TEST_F(IO, superfluousRegistersQelib) {
     const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[3];\ncx q[0], q[1], q[2];\n";
     std::stringstream ss{circuitQasm};
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
 }
 
-TEST_F(IO, superfluous_registers_enhanced_qelib) {
+TEST_F(IO, superfluousRegistersEnhancedQelib) {
     const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[5];\ncccz q[0], q[1], q[2], q[3], q[4];\n";
     std::stringstream ss{circuitQasm};
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
 }
 
-TEST_F(IO, dump_negative_control) {
+TEST_F(IO, dumpNegativeControl) {
     const std::string circuitReal = ".numvars 2\n.variables a b\n.begin\nt2 -a b\n.end";
     std::stringstream ss{circuitReal};
     qc->import(ss, qc::Format::Real);
@@ -141,7 +141,7 @@ TEST_F(IO, dump_negative_control) {
     EXPECT_EQ((*it)->getControls().size(), 0);
 }
 
-TEST_F(IO, qiskit_mcx_gray) {
+TEST_F(IO, qiskitMcxGray) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -156,7 +156,7 @@ TEST_F(IO, qiskit_mcx_gray) {
     EXPECT_EQ(gate->getTargets().at(0), 3);
 }
 
-TEST_F(IO, qiskit_mcx_skip_gate_definition) {
+TEST_F(IO, qiskitMcxSkipGateDefinition) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -172,7 +172,7 @@ TEST_F(IO, qiskit_mcx_skip_gate_definition) {
     EXPECT_EQ(gate->getTargets().at(0), 3);
 }
 
-TEST_F(IO, qiskit_mcphase) {
+TEST_F(IO, qiskitMcphase) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -187,7 +187,7 @@ TEST_F(IO, qiskit_mcphase) {
     EXPECT_EQ(gate->getTargets().at(0), 3);
 }
 
-TEST_F(IO, qiskit_mcphase_in_declaration) {
+TEST_F(IO, qiskitMcphaseInDeclaration) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -205,7 +205,7 @@ TEST_F(IO, qiskit_mcphase_in_declaration) {
     EXPECT_EQ(op->getTargets().at(0), 3);
 }
 
-TEST_F(IO, qiskit_mcx_recursive) {
+TEST_F(IO, qiskitMcxRecursive) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -226,7 +226,7 @@ TEST_F(IO, qiskit_mcx_recursive) {
     EXPECT_EQ(second->getTargets().at(0), 5);
 }
 
-TEST_F(IO, qiskit_mcx_vchain) {
+TEST_F(IO, qiskitMcxVchain) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -242,7 +242,7 @@ TEST_F(IO, qiskit_mcx_vchain) {
     EXPECT_EQ(gate->getTargets().at(0), 3);
 }
 
-TEST_F(IO, qiskit_mcx_duplicate_qubit) {
+TEST_F(IO, qiskitMcxDuplicateQubit) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -253,7 +253,7 @@ TEST_F(IO, qiskit_mcx_duplicate_qubit) {
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
 }
 
-TEST_F(IO, qiskit_mcx_qubit_register) {
+TEST_F(IO, qiskitMcxQubitRegister) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -264,24 +264,24 @@ TEST_F(IO, qiskit_mcx_qubit_register) {
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
 }
 
-TEST_F(IO, tfc_input) {
+TEST_F(IO, tfcInput) {
     qc->import("./circuits/test.tfc");
     std::cout << *qc << std::endl;
 }
 
-TEST_F(IO, qc_input) {
+TEST_F(IO, qcInput) {
     qc->import("./circuits/test.qc");
     std::cout << *qc << std::endl;
 }
 
-TEST_F(IO, grcs_input) {
+TEST_F(IO, grcsInput) {
     qc->import("./circuits/grcs/bris_4_40_9_v2.txt");
     std::cout << *qc << std::endl;
     qc->import("./circuits/grcs/inst_4x4_80_9_v2.txt");
     std::cout << *qc << std::endl;
 }
 
-TEST_F(IO, classic_controlled) {
+TEST_F(IO, classicControlled) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -296,7 +296,7 @@ TEST_F(IO, classic_controlled) {
     std::cout << *qc << std::endl;
 }
 
-TEST_F(IO, iSWAP_dump_is_valid) {
+TEST_F(IO, iSWAPDumpIsValid) {
     qc->addQubitRegister(2);
     qc->iswap(0, 1);
     std::cout << *qc << std::endl;
@@ -306,7 +306,7 @@ TEST_F(IO, iSWAP_dump_is_valid) {
     std::cout << *qc << std::endl;
 }
 
-TEST_F(IO, Peres_dump_is_valid) {
+TEST_F(IO, PeresDumpIsValid) {
     qc->addQubitRegister(2);
     qc->peres(0, 1);
     std::cout << *qc << std::endl;
@@ -316,7 +316,7 @@ TEST_F(IO, Peres_dump_is_valid) {
     std::cout << *qc << std::endl;
 }
 
-TEST_F(IO, Peresdag_dump_is_valid) {
+TEST_F(IO, PeresdagDumpIsValid) {
     qc->addQubitRegister(2);
     qc->peresdag(0, 1);
     std::cout << *qc << std::endl;
@@ -326,7 +326,7 @@ TEST_F(IO, Peresdag_dump_is_valid) {
     std::cout << *qc << std::endl;
 }
 
-TEST_F(IO, printing_non_unitary) {
+TEST_F(IO, printingNonUnitary) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -347,7 +347,7 @@ TEST_F(IO, printing_non_unitary) {
     }
 }
 
-TEST_F(IO, sx_and_sxdag) {
+TEST_F(IO, sxAndSxdag) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -373,7 +373,7 @@ TEST_F(IO, sx_and_sxdag) {
     EXPECT_EQ(compOp2->getType(), qc::OpType::SXdag);
 }
 
-TEST_F(IO, unify_registers) {
+TEST_F(IO, unifyRegisters) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -398,7 +398,7 @@ TEST_F(IO, unify_registers) {
                  "x q[1];\n");
 }
 
-TEST_F(IO, append_measurements_according_to_output_permutation) {
+TEST_F(IO, appendMeasurementsAccordingToOutputPermutation) {
     std::stringstream ss{};
     ss << "// o 1\n"
        << "OPENQASM 2.0;"
@@ -418,7 +418,7 @@ TEST_F(IO, append_measurements_according_to_output_permutation) {
     EXPECT_EQ(meas->getClassics().front(), 0U);
 }
 
-TEST_F(IO, append_measurements_according_to_output_permutation_augment_register) {
+TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAugmentRegister) {
     std::stringstream ss{};
     ss << "// o 0 1\n"
        << "OPENQASM 2.0;"
@@ -461,7 +461,7 @@ TEST_F(IO, append_measurements_according_to_output_permutation_augment_register)
                  "measure q[1] -> c[1];\n");
 }
 
-TEST_F(IO, append_measurements_according_to_output_permutation_add_register) {
+TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAddRegister) {
     std::stringstream ss{};
     ss << "// o 0 1\n"
        << "OPENQASM 2.0;"

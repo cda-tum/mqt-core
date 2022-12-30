@@ -16,14 +16,14 @@
 
 class QPE: public testing::TestWithParam<std::pair<qc::fp, std::size_t>> {
 protected:
-    qc::fp      lambda{};
-    std::size_t precision{};
-    qc::fp      theta{};
-    bool        exactlyRepresentable{};
-    std::size_t expectedResult{};
-    std::string expectedResultRepresentation{};
-    std::size_t secondExpectedResult{};
-    std::string secondExpectedResultRepresentation{};
+    qc::fp        lambda{};
+    std::uint64_t precision{};
+    qc::fp        theta{};
+    bool          exactlyRepresentable{};
+    std::size_t   expectedResult{};
+    std::string   expectedResultRepresentation{};
+    std::size_t   secondExpectedResult{};
+    std::string   secondExpectedResultRepresentation{};
 
     void TearDown() override {}
     void SetUp() override {
@@ -48,7 +48,7 @@ protected:
         }
 
         exactlyRepresentable = true;
-        for (std::size_t i = precision; i < binaryExpansion.size(); ++i) {
+        for (std::uint64_t i = precision; i < binaryExpansion.size(); ++i) {
             if (binaryExpansion.test(i)) {
                 exactlyRepresentable = false;
                 break;
@@ -56,13 +56,13 @@ protected:
         }
 
         expectedResult = 0U;
-        for (std::size_t i = 0; i < precision; ++i) {
+        for (std::uint64_t i = 0; i < precision; ++i) {
             if (binaryExpansion.test(i)) {
                 expectedResult |= (1U << (precision - 1 - i));
             }
         }
         std::stringstream ss{};
-        for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
+        for (auto i = static_cast<std::int64_t>(precision - 1); i >= 0; --i) {
             if ((expectedResult & (1U << i)) != 0) {
                 ss << 1;
             } else {
@@ -77,7 +77,7 @@ protected:
         } else {
             secondExpectedResult = expectedResult + 1;
             ss.str("");
-            for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
+            for (auto i = static_cast<std::int64_t>(precision - 1); i >= 0; --i) {
                 if ((secondExpectedResult & (1U << i)) != 0) {
                     ss << 1;
                 } else {
@@ -161,7 +161,7 @@ TEST_P(QPE, IQPETest) {
         }
         return a.first > b.first;
     };
-    std::set<Measurement, decltype(comp)> ordered(measurements.begin(), measurements.end(), comp);
+    const std::set<Measurement, decltype(comp)> ordered(measurements.begin(), measurements.end(), comp);
 
     std::cout << "Obtained measurements: " << std::endl;
     for (const auto& measurement: ordered) {

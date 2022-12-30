@@ -89,7 +89,7 @@ INSTANTIATE_TEST_SUITE_P(Parameters,
                              }
                          });
 
-TEST_P(DDFunctionality, standard_op_build_inverse_build) {
+TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
     using namespace qc::literals;
     auto gate = static_cast<qc::OpType>(GetParam());
 
@@ -126,7 +126,7 @@ TEST_P(DDFunctionality, standard_op_build_inverse_build) {
     EXPECT_EQ(ident, e);
 }
 
-TEST_F(DDFunctionality, build_circuit) {
+TEST_F(DDFunctionality, buildCircuit) {
     qc::QuantumComputation qc(nqubits);
 
     qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
@@ -162,7 +162,7 @@ TEST_F(DDFunctionality, build_circuit) {
     EXPECT_NE(ident, e);
 }
 
-TEST_F(DDFunctionality, non_unitary) {
+TEST_F(DDFunctionality, nonUnitary) {
     const qc::QuantumComputation qc{};
     auto                         dummyMap = Permutation{};
     auto                         op       = qc::NonUnitaryOperation(nqubits, {0, 1, 2, 3}, {0, 1, 2, 3});
