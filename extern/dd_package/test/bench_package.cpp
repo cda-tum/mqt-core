@@ -313,7 +313,7 @@ static void bmMxVGhz(benchmark::State& state) {
     for ([[maybe_unused]] auto _: state) {
         auto sv = zero;
         sv      = dd->multiply(h, sv);
-        for (auto i = static_cast<int>(nqubits - 2); i >= 0; --i) {
+        for (auto i = static_cast<std::int64_t>(nqubits - 2); i >= 0; --i) {
             auto cx = dd->makeGateDD(dd::Xmat, nqubits, dd::Control{static_cast<dd::Qubit>(nqubits - 1)}, static_cast<dd::Qubit>(i));
             sv      = dd->multiply(cx, sv);
         }
@@ -344,7 +344,7 @@ static void bmMxMGhz(benchmark::State& state) {
 
     for ([[maybe_unused]] auto _: state) {
         auto func = dd->makeGateDD(dd::Hmat, nqubits, static_cast<dd::Qubit>(nqubits - 1));
-        for (auto i = static_cast<int>(nqubits - 2); i >= 0; --i) {
+        for (auto i = static_cast<std::int64_t>(nqubits - 2); i >= 0; --i) {
             auto cx = dd->makeGateDD(dd::Xmat, nqubits, dd::Control{static_cast<dd::Qubit>(nqubits - 1)}, static_cast<dd::Qubit>(i));
             func    = dd->multiply(cx, func);
         }

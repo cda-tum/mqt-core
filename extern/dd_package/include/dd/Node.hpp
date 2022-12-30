@@ -39,7 +39,7 @@ namespace dd {
         mNode*                         next{}; // used to link nodes in unique table
         RefCount                       ref{};  // reference count
         Qubit                          v{};    // variable index (nonterminal) value (-1 for terminal)
-        std::uint_least8_t             flags = 0;
+        std::uint8_t                   flags = 0;
         // 32 = marks a node with is symmetric.
         // 16 = marks a node resembling identity
         // 8 = marks a reduced dm node,
@@ -52,21 +52,21 @@ namespace dd {
 
         static constexpr bool isTerminal(const mNode* p) { return p == terminal; }
 
-        [[nodiscard]] inline bool isIdentity() const { return (flags & 16U) != 0; }
-        [[nodiscard]] inline bool isSymmetric() const { return (flags & 32U) != 0; }
+        [[nodiscard]] inline bool isIdentity() const { return (flags & static_cast<std::uint8_t>(16U)) != 0; }
+        [[nodiscard]] inline bool isSymmetric() const { return (flags & static_cast<std::uint8_t>(32U)) != 0; }
 
         inline void setIdentity(bool identity) {
             if (identity) {
-                flags = (flags | 16);
+                flags = (flags | static_cast<std::uint8_t>(16U));
             } else {
-                flags = (flags & (~16));
+                flags = (flags & static_cast<std::uint8_t>(~16U));
             }
         }
         inline void setSymmetric(bool symmetric) {
             if (symmetric) {
-                flags = (flags | 32);
+                flags = (flags | static_cast<std::uint8_t>(32U));
             } else {
-                flags = (flags & (~32));
+                flags = (flags & static_cast<std::uint8_t>(~32U));
             }
         }
     };
@@ -82,7 +82,7 @@ namespace dd {
         dNode*                         next{}; // used to link nodes in unique table
         RefCount                       ref{};  // reference count
         Qubit                          v{};    // variable index (nonterminal) value (-1 for terminal)
-        std::uint_least8_t             flags = 0;
+        std::uint8_t                   flags = 0;
         // 32 = marks a node with is symmetric.
         // 16 = marks a node resembling identity
         // 8 = marks a reduced dm node,
@@ -94,7 +94,7 @@ namespace dd {
         constexpr static dNode* terminal{&terminalNode}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
         static constexpr bool   isTerminal(const dNode* p) { return p == terminal; }
 
-        [[nodiscard]] [[maybe_unused]] static inline bool tempDensityMatrixFlagsEqual(const std::uint_least8_t a, const std::uint_least8_t b) { return getDensityMatrixTempFlags(a) == getDensityMatrixTempFlags(b); }
+        [[nodiscard]] [[maybe_unused]] static inline bool tempDensityMatrixFlagsEqual(const std::uint8_t a, const std::uint8_t b) { return getDensityMatrixTempFlags(a) == getDensityMatrixTempFlags(b); }
 
         [[nodiscard]] static inline bool isConjugateTempFlagSet(const std::uintptr_t p) { return (p & (1ULL << 0)) != 0U; }
         [[nodiscard]] static inline bool isNonReduceTempFlagSet(const std::uintptr_t p) { return (p & (1ULL << 1)) != 0U; }
@@ -114,18 +114,18 @@ namespace dd {
         [[nodiscard]] static inline std::uintptr_t getDensityMatrixTempFlags(dNode*& p) { return getDensityMatrixTempFlags(reinterpret_cast<std::uintptr_t>(p)); }
         [[nodiscard]] static inline std::uintptr_t getDensityMatrixTempFlags(const std::uintptr_t a) { return a & (7ULL); }
 
-        void unsetTempDensityMatrixFlags() { flags = flags & (~7U); }
+        void unsetTempDensityMatrixFlags() { flags = flags & static_cast<std::uint8_t>(~7U); }
 
         inline void setDensityMatrixNodeFlag(bool densityMatrix) {
             if (densityMatrix) {
-                flags = (flags | 8);
+                flags = (flags | static_cast<std::uint8_t>(8U));
             } else {
-                flags = (flags & (~8));
+                flags = (flags & static_cast<std::uint8_t>(~8U));
             }
         }
 
-        static inline std::uint_least8_t alignDensityNodeNode(dNode*& p) {
-            const auto flags = static_cast<std::uint_least8_t>(getDensityMatrixTempFlags(p));
+        static inline std::uint8_t alignDensityNodeNode(dNode*& p) {
+            const auto flags = static_cast<std::uint8_t>(getDensityMatrixTempFlags(p));
             alignDensityNode(p);
 
             if (p == nullptr || p->v <= -1) {
@@ -222,7 +222,7 @@ namespace std {
             const auto h2 = std::hash<dd::Complex>{}(e.w);
             assert(e.p != nullptr);
             assert((dd::dNode::isDensityMatrixTempFlagSet(e.p)) == false);
-            const auto h3  = std::hash<std::uint_least8_t>{}(static_cast<std::uint_least8_t>(dd::dNode::getDensityMatrixTempFlags(e.p->flags)));
+            const auto h3  = std::hash<std::uint8_t>{}(static_cast<std::uint8_t>(dd::dNode::getDensityMatrixTempFlags(e.p->flags)));
             const auto tmp = dd::combineHash(h1, h2);
             return dd::combineHash(tmp, h3);
         }

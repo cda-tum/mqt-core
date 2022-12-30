@@ -105,8 +105,11 @@ TEST(DDPackageTest, QFTState) {
     dd->printVector(qftState);
 
     for (dd::Qubit qubit = 0; qubit < 7; ++qubit) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuseless-cast"
         ASSERT_NEAR(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).r, static_cast<dd::fp>(0.5) * dd::SQRT2_2, dd->cn.complexTable.tolerance());
         ASSERT_EQ(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).i, 0);
+#pragma GCC diagnostic pop
     }
 
     export2Dot(qftState, "qft_state_colored_labels.dot", true, true, false, false, false);

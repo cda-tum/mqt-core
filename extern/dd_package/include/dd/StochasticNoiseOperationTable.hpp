@@ -19,8 +19,8 @@ namespace dd {
     template<class Edge, std::size_t numberOfStochasticOperations = 64>
     class StochasticNoiseOperationTable {
     public:
-        explicit StochasticNoiseOperationTable(std::size_t nvars):
-            nvars(nvars) { resize(nvars); };
+        explicit StochasticNoiseOperationTable(const std::size_t nv):
+            nvars(nv) { resize(nv); };
 
         // access functions
         [[nodiscard]] const auto& getTable() const { return table; }

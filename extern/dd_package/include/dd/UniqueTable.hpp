@@ -33,8 +33,8 @@ namespace dd {
     template<class Node, std::size_t NBUCKET = 32768, std::size_t INITIAL_ALLOCATION_SIZE = 2048, std::size_t GROWTH_FACTOR = 2, std::size_t INITIAL_GC_LIMIT = 131072>
     class UniqueTable {
     public:
-        explicit UniqueTable(std::size_t nvars):
-            nvars(nvars) {
+        explicit UniqueTable(const std::size_t nv):
+            nvars(nv) {
         }
 
         ~UniqueTable() = default;
