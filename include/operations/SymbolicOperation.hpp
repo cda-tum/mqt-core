@@ -30,11 +30,11 @@ namespace qc {
         static OpType parseU3(const Symbolic& lambda, fp& phi, const Symbolic& theta);
         static OpType parseU3(fp& lambda, const Symbolic& phi, const Symbolic& theta);
 
-        static OpType parseU2(const Symbolic& lambda, const Symbolic& phi);
-        static OpType parseU2(const Symbolic& lambda, fp& phi);
-        static OpType parseU2(fp& lambda, const Symbolic& phi);
+        [[gnu::const]] static OpType parseU2(const Symbolic& lambda, const Symbolic& phi);
+        static OpType                parseU2(const Symbolic& lambda, fp& phi);
+        static OpType                parseU2(fp& lambda, const Symbolic& phi);
 
-        static OpType parseU1(const Symbolic& lambda);
+        [[gnu::const]] static OpType parseU1(const Symbolic& lambda);
 
         void checkSymbolicUgate();
 

@@ -82,7 +82,7 @@ namespace qc {
             return classics.size();
         }
 
-        [[nodiscard]] bool actsOn(Qubit i) const override;
+        [[nodiscard, gnu::pure]] bool actsOn(Qubit i) const override;
 
         void addDepthContribution(std::vector<std::size_t>& depths) const override;
 

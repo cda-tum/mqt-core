@@ -26,7 +26,7 @@ namespace qc {
 
         void importGRCS(const std::string& filename);
 
-        [[nodiscard]] size_t getNops() const override;
+        [[nodiscard, gnu::pure]] size_t getNops() const override;
 
         std::ostream& print(std::ostream& os) const override;
 

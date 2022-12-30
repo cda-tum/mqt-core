@@ -259,7 +259,7 @@ namespace qc {
 
         [[nodiscard]] std::string                   getQubitRegister(Qubit physicalQubitIndex) const;
         [[nodiscard]] std::string                   getClassicalRegister(Bit classicalIndex) const;
-        static Qubit                                getHighestLogicalQubitIndex(const Permutation& permutation);
+        [[gnu::pure]] static Qubit                  getHighestLogicalQubitIndex(const Permutation& permutation);
         [[nodiscard]] Qubit                         getHighestLogicalQubitIndex() const { return getHighestLogicalQubitIndex(initialLayout); };
         [[nodiscard]] std::pair<std::string, Qubit> getQubitRegisterAndIndex(Qubit physicalQubitIndex) const;
         [[nodiscard]] std::pair<std::string, Bit>   getClassicalRegisterAndIndex(Bit classicalIndex) const;
@@ -268,7 +268,7 @@ namespace qc {
         [[nodiscard]] Bit                      getIndexFromClassicalRegister(const std::pair<std::string, std::size_t>& clbit) const;
         [[nodiscard]] bool                     isIdleQubit(Qubit physicalQubit) const;
         [[nodiscard]] bool                     isLastOperationOnQubit(const const_iterator& opIt, const const_iterator& end) const;
-        [[nodiscard]] bool                     physicalQubitIsAncillary(Qubit physicalQubitIndex) const;
+        [[nodiscard, gnu::pure]] bool          physicalQubitIsAncillary(Qubit physicalQubitIndex) const;
         [[nodiscard]] bool                     logicalQubitIsAncillary(const Qubit logicalQubitIndex) const { return ancillary[logicalQubitIndex]; }
         void                                   setLogicalQubitAncillary(const Qubit logicalQubitIndex) { ancillary[logicalQubitIndex] = true; }
         [[nodiscard]] bool                     logicalQubitIsGarbage(const Qubit logicalQubitIndex) const { return garbage[logicalQubitIndex]; }
@@ -279,7 +279,7 @@ namespace qc {
         /// checks whether the given logical qubit exists in the initial layout.
         /// \param logicalQubitIndex the logical qubit index to check
         /// \return whether the given logical qubit exists in the initial layout and to which physical qubit it is mapped
-        [[nodiscard]] std::pair<bool, std::optional<Qubit>> containsLogicalQubit(Qubit logicalQubitIndex) const;
+        [[nodiscard, gnu::pure]] std::pair<bool, std::optional<Qubit>> containsLogicalQubit(Qubit logicalQubitIndex) const;
 
         void i(Qubit target) {
             checkQubitRange(target);
