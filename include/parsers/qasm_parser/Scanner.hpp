@@ -10,6 +10,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <stack>
 
@@ -24,12 +25,12 @@ namespace qasm {
                 ch(ch), line(line), col(col) {}
         };
 
-        std::istream&                      is;
-        std::stack<std::istream*>          streams{};
-        std::map<std::string, Token::Kind> keywords{};
-        char                               ch   = 0;
-        int                                line = 1;
-        int                                col  = 0;
+        std::istream&                             is;
+        std::stack<std::shared_ptr<std::istream>> streams{};
+        std::map<std::string, Token::Kind>        keywords{};
+        char                                      ch   = 0;
+        int                                       line = 1;
+        int                                       col  = 0;
 
         void nextCh();
 

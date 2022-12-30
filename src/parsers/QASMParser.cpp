@@ -42,10 +42,10 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             p.nclassics = nclassics;
         } else if (p.sym == Token::Kind::ugate || p.sym == Token::Kind::cxgate || p.sym == Token::Kind::swap || p.sym == Token::Kind::identifier || p.sym == Token::Kind::measure || p.sym == Token::Kind::reset || p.sym == Token::Kind::mcx_gray || p.sym == Token::Kind::mcx_recursive || p.sym == Token::Kind::mcx_vchain || p.sym == Token::Kind::mcphase || p.sym == Token::Kind::sxgate || p.sym == Token::Kind::sxdggate) {
             // gate application
-            ops.emplace_back(p.Qop());
+            ops.emplace_back(p.qop());
         } else if (p.sym == Token::Kind::gate) {
             // gate definition
-            p.GateDecl();
+            p.gateDecl();
         } else if (p.sym == Token::Kind::include) {
             // include statement
             p.scan();
@@ -56,7 +56,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             // barrier statement
             p.scan();
             std::vector<qc::QuantumRegister> args;
-            p.ArgList(args);
+            p.argList(args);
             p.check(Token::Kind::semicolon);
 
             std::vector<qc::Qubit> qubits{};
@@ -69,7 +69,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             emplace_back<NonUnitaryOperation>(nqubits, qubits, Barrier);
         } else if (p.sym == Token::Kind::opaque) {
             // opaque gate definition
-            p.OpaqueGateDecl();
+            p.opaqueGateDecl();
         } else if (p.sym == Token::Kind::_if) {
             // classically-controlled operation
             p.scan();
@@ -85,7 +85,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             if (it == p.cregs.end()) {
                 p.error("Error in if statement: " + creg + " is not a creg!");
             } else {
-                emplace_back<ClassicControlledOperation>(p.Qop(), it->second, n);
+                emplace_back<ClassicControlledOperation>(p.qop(), it->second, n);
             }
         } else if (p.sym == Token::Kind::snapshot) {
             // snapshot statement
@@ -96,7 +96,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             p.check(Token::Kind::rpar);
 
             std::vector<qc::QuantumRegister> arguments{};
-            p.ArgList(arguments);
+            p.argList(arguments);
 
             p.check(Token::Kind::semicolon);
 

@@ -14,7 +14,6 @@ namespace qasm {
      ***/
     void Scanner::nextCh() {
         if (!streams.empty() && streams.top()->eof()) {
-            delete streams.top();
             streams.pop();
             ch   = lines.top().ch;
             line = lines.top().line;
@@ -41,7 +40,7 @@ namespace qasm {
 
     void Scanner::readName(Token& t) {
         std::stringstream ss;
-        while (::isalnum(ch) || ch == '_') {
+        while (::isalnum(ch) != 0 || ch == '_') {
             ss << ch;
             nextCh();
         }
@@ -52,7 +51,7 @@ namespace qasm {
 
     void Scanner::readNumber(Token& t) {
         std::stringstream ss;
-        while (::isdigit(ch)) {
+        while (::isdigit(ch) != 0) {
             ss << ch;
             nextCh();
         }
@@ -65,7 +64,7 @@ namespace qasm {
         t.kind = Token::Kind::real;
         ss << ch;
         nextCh();
-        while (::isdigit(ch)) {
+        while (::isdigit(ch) != 0) {
             ss << ch;
             nextCh();
         }
@@ -79,7 +78,7 @@ namespace qasm {
             ss << ch;
             nextCh();
         }
-        while (::isdigit(ch)) {
+        while (::isdigit(ch) != 0) {
             ss << ch;
             nextCh();
         }
@@ -146,7 +145,7 @@ namespace qasm {
 
     Token Scanner::next() {
         // skip over any whitespace
-        while (::isspace(ch)) {
+        while (::isspace(ch) != 0) {
             nextCh();
         }
 
@@ -314,13 +313,12 @@ namespace qasm {
     }
 
     void Scanner::addFileInput(const std::string& filename) {
-        auto* in = new std::ifstream(filename, std::ifstream::in);
+        auto in = std::make_shared<std::ifstream>(filename, std::ifstream::in);
 
         if (in->fail() && filename == "qelib1.inc") {
-            delete in;
             // internal qelib1.inc
             // parser can also read multiple-control versions of each gate
-            auto ss = new std::stringstream{};
+            auto ss = std::make_shared<std::stringstream>();
             *ss << "gate u(theta,phi,lambda) q { U(theta,phi,lambda) q; }" << std::endl;
             *ss << "gate u3(theta,phi,lambda) q { U(theta,phi,lambda) q; }" << std::endl;
             *ss << "gate u2(phi,lambda) q { U(pi/2,phi,lambda) q; }" << std::endl;
@@ -424,15 +422,14 @@ namespace qasm {
                 << std::endl;
 
             streams.push(ss);
-            lines.push(LineInfo(ch, line, col));
+            lines.emplace(ch, line, col);
             line = 1;
             col  = 0;
         } else if (in->fail()) {
-            delete in;
             std::cerr << "Failed to open file '" << filename << "'!" << std::endl;
         } else {
             streams.push(in);
-            lines.push(LineInfo(ch, line, col));
+            lines.emplace(ch, line, col);
             line = 1;
             col  = 0;
         }
