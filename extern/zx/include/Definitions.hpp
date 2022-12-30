@@ -27,8 +27,8 @@ class ZXException : public std::invalid_argument {
   std::string msg;
 
 public:
-  explicit ZXException(std::string msg)
-      : std::invalid_argument("ZX Exception"), msg(std::move(msg)) {}
+  explicit ZXException(std::string m)
+      : std::invalid_argument("ZX Exception"), msg(std::move(m)) {}
 
   [[nodiscard]] const char* what() const noexcept override {
     return msg.c_str();

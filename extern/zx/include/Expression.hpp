@@ -19,8 +19,8 @@ class SymbolicException : public std::invalid_argument {
   std::string msg;
 
 public:
-  explicit SymbolicException(std::string msg)
-      : std::invalid_argument("Symbolic Exception"), msg(std::move(msg)) {}
+  explicit SymbolicException(std::string m)
+      : std::invalid_argument("Symbolic Exception"), msg(std::move(m)) {}
 
   [[nodiscard]] const char* what() const noexcept override {
     return msg.c_str();
@@ -74,8 +74,8 @@ public:
     return std::abs(static_cast<double>(coeff)) < TOLERANCE;
   }
 
-  Term(T coeff, const Variable var) : coeff(coeff), var(var){};
-  explicit Term(const Variable var) : coeff(1), var(var){};
+  Term(T coef, const Variable v) : coeff(coef), var(v){};
+  explicit Term(const Variable v) : coeff(1), var(v){};
 
   Term operator-() const { return Term(-coeff, var); }
 
@@ -154,8 +154,8 @@ public:
     aggregateEqualTerms();
   }
 
-  Expression(const std::vector<Term<T>>& terms, const U& constant)
-      : terms(terms), constant(constant){};
+  Expression(const std::vector<Term<T>>& ts, const U& con)
+      : terms(ts), constant(con){};
 
   Expression() = default;
 
@@ -188,8 +188,8 @@ public:
     while (t != rhs.end()) {
       const auto insertPos =
           std::lower_bound(terms.begin(), terms.end(), *t,
-                           [&](const Term<T>& lhs, const Term<T>& rhs) {
-                             return lhs.getVar() < rhs.getVar();
+                           [&](const Term<T>& lhs, const Term<T>& r) {
+                             return lhs.getVar() < r.getVar();
                            });
       if (insertPos != terms.end() && insertPos->getVar() == t->getVar()) {
         if (std::abs(insertPos->getCoeff() + t->getCoeff()) < TOLERANCE) {

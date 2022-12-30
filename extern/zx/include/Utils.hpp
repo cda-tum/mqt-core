@@ -16,7 +16,7 @@ struct Edge {
   EdgeType type;
 
   Edge() = default;
-  Edge(const Vertex to, const EdgeType type) : to(to), type(type){};
+  Edge(const Vertex t, const EdgeType typ) : to(t), type(typ){};
   void toggle() {
     if (type == EdgeType::Simple) {
       type = EdgeType::Hadamard;
@@ -35,8 +35,8 @@ struct VertexData {
 
 class Vertices {
 public:
-  explicit Vertices(const std::vector<std::optional<VertexData>>& vertices)
-      : vertices(vertices){};
+  explicit Vertices(const std::vector<std::optional<VertexData>>& verts)
+      : vertices(verts){};
 
   class VertexIterator {
   public:
@@ -46,9 +46,8 @@ public:
     using pointer           = value_type*;
     using reference         = value_type&;
 
-    explicit VertexIterator(
-        const std::vector<std::optional<VertexData>>& vertices)
-        : currentPos(vertices.begin()), vertices(vertices) {
+    explicit VertexIterator(const std::vector<std::optional<VertexData>>& verts)
+        : currentPos(verts.begin()), vertices(verts) {
       nextValidVertex();
     }
     VertexIterator(const std::vector<std::optional<VertexData>>& vertices,
@@ -84,9 +83,9 @@ private:
 
 class Edges {
 public:
-  Edges(const std::vector<std::vector<Edge>>&         edges,
-        const std::vector<std::optional<VertexData>>& vertices)
-      : edges(edges), vertices(vertices){};
+  Edges(const std::vector<std::vector<Edge>>&         edgs,
+        const std::vector<std::optional<VertexData>>& verts)
+      : edges(edgs), vertices(verts){};
 
   class EdgeIterator {
   public:
