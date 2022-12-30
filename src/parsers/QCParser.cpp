@@ -18,7 +18,7 @@ int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string,
     int         line = 0;
 
     const std::string delimiter = " ";
-    std::size_t       pos;
+    std::size_t       pos{};
 
     std::vector<std::string> variables{};
     std::vector<std::string> inputs{};
@@ -240,7 +240,7 @@ void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, 
         std::vector<Control> controls{};
 
         auto        delimiter = ' ';
-        std::size_t pos;
+        std::size_t pos{};
 
         while ((pos = qubits.find(delimiter)) != std::string::npos) {
             label = qubits.substr(0, pos);

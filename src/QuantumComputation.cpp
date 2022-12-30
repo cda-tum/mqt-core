@@ -958,7 +958,9 @@ namespace qc {
     }
 
     void QuantumComputation::checkQubitRange(const std::vector<Qubit>& qubits) const {
-        std::for_each(qubits.begin(), qubits.end(), [&](auto q) { checkQubitRange(q); });
+        for (const auto& qubit: qubits) {
+            checkQubitRange(qubit);
+        }
     }
 
     void QuantumComputation::addVariable(const SymbolOrNumber& expr) {

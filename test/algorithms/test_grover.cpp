@@ -54,13 +54,13 @@ constexpr dd::fp      GROVER_GOAL_PROBABILITY = 0.9;
 INSTANTIATE_TEST_SUITE_P(Grover,
                          Grover,
                          testing::Combine(
-                                 testing::Range(static_cast<std::size_t>(2), static_cast<std::size_t>(GROVER_MAX_QUBITS + 1), 3),
+                                 testing::Range(static_cast<std::size_t>(2), GROVER_MAX_QUBITS + 1, 3),
                                  testing::Range(static_cast<std::size_t>(0), GROVER_NUM_SEEDS)),
                          [](const testing::TestParamInfo<Grover::ParamType>& inf) {
 	                         const auto nqubits = std::get<0>(inf.param);
 	                         const auto seed = std::get<1>(inf.param);
 	                         std::stringstream ss{};
-	                         ss << static_cast<std::size_t>(nqubits+1);
+	                         ss << nqubits+1;
 	                         if (nqubits == 0) {
 		                         ss << "_qubit_";
 	                         } else {

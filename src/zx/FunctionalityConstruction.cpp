@@ -77,16 +77,16 @@ namespace zx {
         addZSpider(diag, target, qubits, newPhase);
     }
 
-    void FunctionalityConstruction::addSwap(ZXDiagram& diag, const Qubit ctrl, const Qubit target,
+    void FunctionalityConstruction::addSwap(ZXDiagram& diag, const Qubit target, const Qubit target2,
                                             std::vector<Vertex>& qubits) {
-        const auto c = static_cast<std::size_t>(ctrl);
-        const auto t = static_cast<std::size_t>(target);
+        const auto c = static_cast<std::size_t>(target);
+        const auto t = static_cast<std::size_t>(target2);
 
         const auto s0 = qubits[t];
         const auto s1 = qubits[c];
 
-        const auto t0 = diag.addVertex(target, diag.getVData(qubits[t]).value().col + 1);
-        const auto t1 = diag.addVertex(ctrl, diag.getVData(qubits[t]).value().col + 1);
+        const auto t0 = diag.addVertex(target2, diag.getVData(qubits[t]).value().col + 1);
+        const auto t1 = diag.addVertex(target, diag.getVData(qubits[t]).value().col + 1);
         diag.addEdge(s0, t1);
         diag.addEdge(s1, t0);
         qubits[t] = t0;
@@ -215,7 +215,7 @@ namespace zx {
                     addZSpider(diag, target2, qubits, PiExpression(PiRational(1, 2)));
                     addZSpider(diag, target, qubits, PiExpression(),
                                EdgeType::Hadamard);
-                    addCnot(diag, target, target2, qubits);
+                    addCnot(diag, target, target2, qubits); // NOLINT (readability-suspicious-call-argument)
                     addCnot(diag, target2, target, qubits);
                     addZSpider(diag, target2, qubits, PiExpression(),
                                EdgeType::Hadamard);

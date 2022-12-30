@@ -282,12 +282,7 @@ namespace qc {
             }
         }
 
-        if (targets1 != targets2) {
-            return false;
-        }
-
-        // operations are identical
-        return true;
+        return targets1 == targets2;
     }
 
     void Operation::addDepthContribution(std::vector<std::size_t>& depths) const {

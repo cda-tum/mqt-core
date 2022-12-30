@@ -22,7 +22,7 @@ namespace qc {
 
         explicit CompoundOperation(const std::size_t nq, std::vector<std::unique_ptr<Operation>>&& operations):
             CompoundOperation(nq) {
-            ops = std::move(operations);
+            ops = std::move(operations); // NOLINT (cppcoreguidelines-prefer-member-initializer)
         }
 
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {

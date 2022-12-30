@@ -123,7 +123,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             p.scan();
             p.handleComment();
         } else {
-            p.error("Unexpected statement: started with " + KindNames[p.sym] + "!");
+            p.error("Unexpected statement: started with " + KIND_NAMES.at(p.sym) + "!");
         }
     } while (p.sym != Token::Kind::eof);
 

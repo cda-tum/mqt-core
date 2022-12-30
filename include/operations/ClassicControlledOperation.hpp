@@ -7,6 +7,8 @@
 
 #include "Operation.hpp"
 
+#include <utility>
+
 namespace qc {
 
     class ClassicControlledOperation final: public Operation {
@@ -17,8 +19,8 @@ namespace qc {
 
     public:
         // Applies operation `_op` if the creg starting at index `control` has the expected value
-        ClassicControlledOperation(std::unique_ptr<qc::Operation>& operation, const ClassicalRegister& controlReg, std::uint64_t expectedVal = 1U):
-            op(std::move(operation)), controlRegister(controlReg), expectedValue(expectedVal) {
+        ClassicControlledOperation(std::unique_ptr<qc::Operation>& operation, ClassicalRegister controlReg, std::uint64_t expectedVal = 1U):
+            op(std::move(operation)), controlRegister(std::move(controlReg)), expectedValue(expectedVal) {
             nqubits      = op->getNqubits();
             name         = "c_" + op->getName();
             parameter[0] = static_cast<fp>(controlRegister.first);

@@ -163,7 +163,7 @@ namespace qasm {
         return x;
     }
 
-    std::shared_ptr<Parser::Expr> Parser::rewriteExpr(const std::shared_ptr<Expr> expr, std::map<std::string, std::shared_ptr<Expr>>& exprMap) {
+    std::shared_ptr<Parser::Expr> Parser::rewriteExpr(const std::shared_ptr<Expr>& expr, std::map<std::string, std::shared_ptr<Expr>>& exprMap) {
         if (expr == nullptr) {
             return nullptr;
         }
@@ -308,7 +308,7 @@ namespace qasm {
         if (sym == expected) {
             scan();
         } else {
-            error("Expected '" + qasm::KindNames[expected] + "' but found '" + qasm::KindNames[sym] + "' in line " + std::to_string(la.line) + ", column " + std::to_string(la.col));
+            error("Expected '" + qasm::KIND_NAMES.at(expected) + "' but found '" + qasm::KIND_NAMES.at(sym) + "' in line " + std::to_string(la.line) + ", column " + std::to_string(la.col));
         }
     }
 
@@ -879,7 +879,7 @@ namespace qasm {
             }
             error("Undefined gate " + t.str);
         } else {
-            error("Symbol " + qasm::KindNames[sym] + " not expected in Gate() routine!");
+            error("Symbol " + qasm::KIND_NAMES.at(sym) + " not expected in Gate() routine!");
         }
     }
 

@@ -40,7 +40,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
         }
 
         if (cmd == ".NUMVARS") {
-            std::size_t nq;
+            std::size_t nq{};
             if (!static_cast<bool>(is >> nq)) {
                 nqubits = 0;
             } else {
@@ -151,7 +151,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
         }
 
         // extract gate information (identifier, #controls, divisor)
-        OpType gate;
+        OpType gate{};
         if (m.str(1) == "t") { // special treatment of t(offoli) for real format
             gate = X;
         } else {

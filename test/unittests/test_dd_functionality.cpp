@@ -214,7 +214,6 @@ TEST_F(DDFunctionality, changePermutation) {
        << "x q[0];"
        << std::endl;
     qc.import(ss, qc::Format::OpenQASM);
-    dd       = std::make_unique<dd::Package<>>();
     auto sim = simulate(&qc, dd->makeZeroState(static_cast<dd::QubitCount>(qc.getNqubits())), dd);
     EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
     EXPECT_TRUE(sim.p->e[1].w.approximatelyOne());

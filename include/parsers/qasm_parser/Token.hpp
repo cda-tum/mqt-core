@@ -79,7 +79,7 @@ namespace qasm {
             kind(k), line(l), col(c) {}
     };
 
-    static std::map<Token::Kind, std::string> KindNames{
+    static inline const std::map<Token::Kind, std::string> KIND_NAMES{
             {Token::Kind::none, "none"},
             {Token::Kind::include, "include"},
             {Token::Kind::identifier, "<identifier>"},

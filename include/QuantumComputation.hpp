@@ -259,7 +259,7 @@ namespace qc {
 
         [[nodiscard]] std::string                   getQubitRegister(Qubit physicalQubitIndex) const;
         [[nodiscard]] std::string                   getClassicalRegister(Bit classicalIndex) const;
-        static Qubit                                getHighestLogicalQubitIndex(const Permutation& map);
+        static Qubit                                getHighestLogicalQubitIndex(const Permutation& permutation);
         [[nodiscard]] Qubit                         getHighestLogicalQubitIndex() const { return getHighestLogicalQubitIndex(initialLayout); };
         [[nodiscard]] std::pair<std::string, Qubit> getQubitRegisterAndIndex(Qubit physicalQubitIndex) const;
         [[nodiscard]] std::pair<std::string, Bit>   getClassicalRegisterAndIndex(Bit classicalIndex) const;

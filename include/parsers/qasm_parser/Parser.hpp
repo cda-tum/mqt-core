@@ -155,7 +155,7 @@ namespace qasm {
         std::shared_ptr<Expr> term();
         std::shared_ptr<Expr> exp();
 
-        static std::shared_ptr<Expr> rewriteExpr(const std::shared_ptr<Expr> expr, std::map<std::string, std::shared_ptr<Expr>>& exprMap);
+        static std::shared_ptr<Expr> rewriteExpr(const std::shared_ptr<Expr>& expr, std::map<std::string, std::shared_ptr<Expr>>& exprMap);
 
     public:
         Token                     la, t;

@@ -6,7 +6,7 @@
 #include "QuantumComputation.hpp"
 
 void qc::QuantumComputation::importGRCS(std::istream& is) {
-    std::size_t nq;
+    std::size_t nq{};
     is >> nq;
     addQubitRegister(nq);
     addClassicalRegister(nq);
