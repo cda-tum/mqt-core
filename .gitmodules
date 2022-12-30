@@ -20,4 +20,4 @@
 [submodule "extern/zx"]
         path = extern/zx
         url = https://github.com/cda-tum/zx.git
-        branch = improve-cmake
+        branch = main
