@@ -53,7 +53,9 @@ function(set_project_warnings target_name)
       -Wformat=2 # warn on security issues around functions that format output (ie printf)
       -Wno-unknown-pragmas # do not warn if encountering unknown pragmas
       -Wno-pragmas # do not warn if encountering unknown pragma options
-      -Wno-unknown-warning-option # do not warn if encountering unknown warning options
+      $<$<CXX_COMPILER_ID:AppleClang,Clang>:-Wno-unknown-warning-option> # do not warn if
+                                                                         # encountering unknown
+                                                                         # warning options
   )
 
   if(WARNINGS_AS_ERRORS)
