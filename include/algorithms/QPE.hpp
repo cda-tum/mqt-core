@@ -10,9 +10,9 @@
 namespace qc {
     class QPE: public QuantumComputation {
     public:
-        fp                lambda = 0.;
-        const std::size_t precision;
-        const bool        iterative;
+        fp          lambda = 0.;
+        std::size_t precision;
+        bool        iterative;
 
         explicit QPE(std::size_t nq, bool exact = true, bool iterative = false);
         QPE(fp lambda, std::size_t precision, bool iterativ = false);

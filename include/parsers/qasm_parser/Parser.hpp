@@ -65,14 +65,17 @@ namespace qasm {
                 num(num), kind(kind), op1(op1), op2(op2), id(std::move(id)) {}
             Expr(const Expr& expr):
                 num(expr.num), kind(expr.kind), id(expr.id) {
-                if (expr.op1 != nullptr)
+                if (expr.op1 != nullptr) {
                     op1 = new Expr(*expr.op1);
-                if (expr.op2 != nullptr)
+                }
+                if (expr.op2 != nullptr) {
                     op2 = new Expr(*expr.op2);
+                }
             }
             Expr& operator=(const Expr& expr) {
-                if (&expr == this)
+                if (&expr == this) {
                     return *this;
+                }
 
                 num  = expr.num;
                 kind = expr.kind;
@@ -80,15 +83,17 @@ namespace qasm {
                 delete op1;
                 delete op2;
 
-                if (expr.op1 != nullptr)
+                if (expr.op1 != nullptr) {
                     op1 = new Expr(*expr.op1);
-                else
+                } else {
                     op1 = nullptr;
+                }
 
-                if (expr.op2 != nullptr)
+                if (expr.op2 != nullptr) {
                     op2 = new Expr(*expr.op2);
-                else
+                } else {
                     op2 = nullptr;
+                }
 
                 return *this;
             }

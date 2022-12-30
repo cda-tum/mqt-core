@@ -21,8 +21,7 @@
 
 namespace qc {
     // Operation Constants
-    constexpr std::size_t MAX_PARAMETERS    = 3;  // Max. parameters of an operation
-    constexpr std::size_t MAX_STRING_LENGTH = 20; // Ensure short-string-optimizations
+    constexpr std::size_t MAX_PARAMETERS = 3; // Max. parameters of an operation
 
     class Operation {
     protected:
@@ -33,7 +32,7 @@ namespace qc {
         std::size_t nqubits    = 0;
         Qubit       startQubit = 0;
         OpType      type       = None;
-        char        name[MAX_STRING_LENGTH]{};
+        std::string name{};
 
         static bool isWholeQubitRegister(const RegisterNames& reg, std::size_t start, std::size_t end) {
             return !reg.empty() && reg[start].first == reg[end].first && (start == 0 || reg[start].first != reg[start - 1].first) && (end == reg.size() - 1 || reg[end].first != reg[end + 1].first);
@@ -86,7 +85,7 @@ namespace qc {
             return parameter;
         }
 
-        [[nodiscard]] const char* getName() const {
+        [[nodiscard]] const std::string& getName() const {
             return name;
         }
         [[nodiscard]] virtual OpType getType() const {

@@ -215,7 +215,7 @@ namespace qc {
         }
     }
 
-    void QuantumComputation::addQubitRegister(std::size_t nq, const char* regName) {
+    void QuantumComputation::addQubitRegister(std::size_t nq, const std::string& regName) {
         if (qregs.count(regName) != 0) {
             auto& reg = qregs.at(regName);
             if (reg.first + reg.second == nqubits + nancillae) {
@@ -243,7 +243,7 @@ namespace qc {
         garbage.resize(nqubits + nancillae);
     }
 
-    void QuantumComputation::addClassicalRegister(std::size_t nc, const char* regName) {
+    void QuantumComputation::addClassicalRegister(std::size_t nc, const std::string& regName) {
         if (cregs.count(regName) != 0) {
             throw QFRException("[addClassicalRegister] Augmenting existing classical registers is currently not supported");
         }
@@ -252,7 +252,7 @@ namespace qc {
         nclassics += nc;
     }
 
-    void QuantumComputation::addAncillaryRegister(std::size_t nq, const char* regName) {
+    void QuantumComputation::addAncillaryRegister(std::size_t nq, const std::string& regName) {
         const auto totalqubits = nqubits + nancillae;
         if (ancregs.count(regName) != 0) {
             auto& reg = ancregs.at(regName);
@@ -414,9 +414,9 @@ namespace qc {
         }
 
         if (ancregs.empty()) {
-            ancregs.try_emplace(DEFAULT_ANCREG, physicalQubitIndex, 1);
+            ancregs.try_emplace("anc", physicalQubitIndex, 1);
         } else if (!fusionPossible) {
-            auto newRegName = std::string(DEFAULT_ANCREG) + "_" + std::to_string(physicalQubitIndex);
+            auto newRegName = "anc_" + std::to_string(physicalQubitIndex);
             ancregs.try_emplace(newRegName, physicalQubitIndex, 1);
         }
 
@@ -489,9 +489,9 @@ namespace qc {
         consolidateRegister(qregs);
 
         if (qregs.empty()) {
-            qregs.try_emplace(DEFAULT_QREG, physicalQubitIndex, 1);
+            qregs.try_emplace("q", physicalQubitIndex, 1);
         } else if (!fusionPossible) {
-            auto newRegName = std::string(DEFAULT_QREG) + "_" + std::to_string(physicalQubitIndex);
+            auto newRegName = "q_" + std::to_string(physicalQubitIndex);
             qregs.try_emplace(newRegName, physicalQubitIndex, 1);
         }
 
@@ -634,25 +634,25 @@ namespace qc {
         if (!qregs.empty()) {
             printSortedRegisters(qregs, "qreg", of);
         } else if (nqubits > 0) {
-            of << "qreg " << DEFAULT_QREG << "[" << static_cast<std::size_t>(nqubits) << "];" << std::endl;
+            of << "qreg q[" << static_cast<std::size_t>(nqubits) << "];" << std::endl;
         }
         if (!cregs.empty()) {
             printSortedRegisters(cregs, "creg", of);
         } else if (nclassics > 0) {
-            of << "creg " << DEFAULT_CREG << "[" << nclassics << "];" << std::endl;
+            of << "creg c[" << nclassics << "];" << std::endl;
         }
         if (!ancregs.empty()) {
             printSortedRegisters(ancregs, "qreg", of);
         } else if (nancillae > 0) {
-            of << "qreg " << DEFAULT_ANCREG << "[" << static_cast<std::size_t>(nancillae) << "];" << std::endl;
+            of << "qreg anc[" << static_cast<std::size_t>(nancillae) << "];" << std::endl;
         }
 
         RegisterNames qregnames{};
         RegisterNames cregnames{};
         RegisterNames ancregnames{};
-        createRegisterArray(qregs, qregnames, nqubits, DEFAULT_QREG);
-        createRegisterArray(cregs, cregnames, nclassics, DEFAULT_CREG);
-        createRegisterArray(ancregs, ancregnames, nancillae, DEFAULT_ANCREG);
+        createRegisterArray(qregs, qregnames, nqubits, "q");
+        createRegisterArray(cregs, cregnames, nclassics, "c");
+        createRegisterArray(ancregs, ancregnames, nancillae, "anc");
 
         for (const auto& ancregname: ancregnames) {
             qregnames.push_back(ancregname);
@@ -910,11 +910,11 @@ namespace qc {
         // ensure that the circuit contains enough classical registers
         if (cregs.empty()) {
             // in case there are no registers, create a new one
-            addClassicalRegister(outputPermutation.size(), registerName.c_str());
+            addClassicalRegister(outputPermutation.size(), registerName);
         } else if (nclassics < outputPermutation.size()) {
             if (cregs.find(registerName) == cregs.end()) {
                 // in case there are registers but not enough, add a new one
-                addClassicalRegister(outputPermutation.size() - nclassics, registerName.c_str());
+                addClassicalRegister(outputPermutation.size() - nclassics, registerName);
             } else {
                 // in case the register already exists, augment it
                 nclassics += outputPermutation.size() - nclassics;

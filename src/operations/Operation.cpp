@@ -9,97 +9,97 @@ namespace qc {
     void Operation::setName() {
         switch (type) {
             case I:
-                strcpy(name, "I   ");
+                name = "I   ";
                 break;
             case H:
-                strcpy(name, "H   ");
+                name = "H   ";
                 break;
             case X:
-                strcpy(name, "X   ");
+                name = "X   ";
                 break;
             case Y:
-                strcpy(name, "Y   ");
+                name = "Y   ";
                 break;
             case Z:
-                strcpy(name, "Z   ");
+                name = "Z   ";
                 break;
             case S:
-                strcpy(name, "S   ");
+                name = "S   ";
                 break;
             case Sdag:
-                strcpy(name, "Sdag");
+                name = "Sdag";
                 break;
             case T:
-                strcpy(name, "T   ");
+                name = "T   ";
                 break;
             case Tdag:
-                strcpy(name, "Tdag");
+                name = "Tdag";
                 break;
             case V:
-                strcpy(name, "V   ");
+                name = "V   ";
                 break;
             case Vdag:
-                strcpy(name, "Vdag");
+                name = "Vdag";
                 break;
             case U3:
-                strcpy(name, "U   ");
+                name = "U   ";
                 break;
             case U2:
-                strcpy(name, "U2  ");
+                name = "U2  ";
                 break;
             case Phase:
-                strcpy(name, "P   ");
+                name = "P   ";
                 break;
             case SX:
-                strcpy(name, "SX  ");
+                name = "SX  ";
                 break;
             case SXdag:
-                strcpy(name, "SXdg");
+                name = "SXdg";
                 break;
             case RX:
-                strcpy(name, "RX  ");
+                name = "RX  ";
                 break;
             case RY:
-                strcpy(name, "RY  ");
+                name = "RY  ";
                 break;
             case RZ:
-                strcpy(name, "RZ  ");
+                name = "RZ  ";
                 break;
             case SWAP:
-                strcpy(name, "SWAP");
+                name = "SWAP";
                 break;
             case iSWAP:
-                strcpy(name, "iSWP");
+                name = "iSWP";
                 break;
             case Peres:
-                strcpy(name, "Pr ");
+                name = "Pr ";
                 break;
             case Peresdag:
-                strcpy(name, "Prdg");
+                name = "Prdg";
                 break;
             case Compound:
-                strcpy(name, "Comp");
+                name = "Comp";
                 break;
             case Measure:
-                strcpy(name, "Meas");
+                name = "Meas";
                 break;
             case Teleportation:
-                strcpy(name, "Tele");
+                name = "Tele";
                 break;
             case Reset:
-                strcpy(name, "Rst ");
+                name = "Rst ";
                 break;
             case Snapshot:
-                strcpy(name, "Snap");
+                name = "Snap";
                 break;
             case ShowProbabilities:
-                strcpy(name, "Show probabilities");
+                name = "Show probabilities";
                 break;
             case Barrier:
-                strcpy(name, "Barr");
+                name = "Barr";
                 break;
             case ClassicControlled:
-                strcpy(name, "clc_");
+                name = "clc_";
                 break;
             default:
                 throw QFRException("This constructor shall not be called for gate type (index) " + std::to_string(static_cast<int>(type)));
@@ -117,9 +117,10 @@ namespace qc {
         }
 
         bool isZero = true;
-        for (size_t i = 0; i < MAX_PARAMETERS; ++i) {
-            if (parameter[i] != static_cast<fp>(0)) {
+        for (const auto& p: parameter) {
+            if (p != static_cast<fp>(0)) {
                 isZero = false;
+                break;
             }
         }
         if (!isZero) {
@@ -127,14 +128,15 @@ namespace qc {
             for (size_t j = 1; j < MAX_PARAMETERS; ++j) {
                 isZero = true;
                 for (size_t i = j; i < MAX_PARAMETERS; ++i) {
-                    if (parameter[i] != static_cast<fp>(0)) {
+                    if (parameter.at(i) != static_cast<fp>(0)) {
                         isZero = false;
+                        break;
                     }
                 }
                 if (isZero) {
                     break;
                 }
-                os << "(" << parameter[j] << ") ";
+                os << "(" << parameter.at(j) << ") ";
             }
         }
 
@@ -232,11 +234,8 @@ namespace qc {
         // check parameters
         const auto param1 = getParameter();
         const auto param2 = op.getParameter();
-        for (std::size_t p = 0U; p < qc::MAX_PARAMETERS; ++p) {
-            // it might make sense to use fuzzy comparison here
-            if (param1[p] != param2[p]) {
-                return false;
-            }
+        if (param1 != param2) {
+            return false;
         }
 
         // check controls

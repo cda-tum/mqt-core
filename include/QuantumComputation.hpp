@@ -27,10 +27,6 @@
 #include <vector>
 
 namespace qc {
-    static constexpr char DEFAULT_QREG[2]{"q"};
-    static constexpr char DEFAULT_CREG[2]{"c"};
-    static constexpr char DEFAULT_ANCREG[4]{"anc"};
-
     class CircuitOptimizer;
 
     class QuantumComputation {
@@ -117,7 +113,7 @@ namespace qc {
         }
 
         template<class RegisterType>
-        static void createRegisterArray(const RegisterMap<RegisterType>& regs, RegisterNames& regnames, decltype(RegisterType::second) defaultnumber, const char* defaultname) {
+        static void createRegisterArray(const RegisterMap<RegisterType>& regs, RegisterNames& regnames, decltype(RegisterType::second) defaultnumber, const std::string& defaultname) {
             regnames.clear();
 
             std::stringstream ss;
@@ -138,7 +134,7 @@ namespace qc {
             } else {
                 for (decltype(RegisterType::second) i = 0; i < defaultnumber; i++) {
                     ss << defaultname << "[" << i << "]";
-                    regnames.push_back(std::make_pair(defaultname, ss.str()));
+                    regnames.emplace_back(defaultname, ss.str());
                     ss.str(std::string());
                 }
             }
@@ -657,7 +653,7 @@ namespace qc {
         void import(std::istream&& is, Format format);
         void initializeIOMapping();
         // append measurements to the end of the circuit according to the tracked output permutation
-        void appendMeasurementsAccordingToOutputPermutation(const std::string& registerName = DEFAULT_CREG);
+        void appendMeasurementsAccordingToOutputPermutation(const std::string& registerName = "c");
         // search for current position of target value in map and afterwards exchange it with the value at new position
         static void findAndSWAP(Qubit targetValue, Qubit newPosition, Permutation& map) {
             for (const auto& q: map) {
@@ -669,11 +665,11 @@ namespace qc {
         }
 
         // this function augments a given circuit by additional registers
-        void addQubitRegister(std::size_t, const char* regName = DEFAULT_QREG);
-        void addClassicalRegister(std::size_t nc, const char* regName = DEFAULT_CREG);
-        void addAncillaryRegister(std::size_t nq, const char* regName = DEFAULT_ANCREG);
+        void addQubitRegister(std::size_t, const std::string& regName = "q");
+        void addClassicalRegister(std::size_t nc, const std::string& regName = "c");
+        void addAncillaryRegister(std::size_t nq, const std::string& regName = "anc");
         // a function to combine all quantum registers (qregs and ancregs) into a single register (useful for circuits mapped to a device)
-        void unifyQuantumRegisters(const std::string& regName = DEFAULT_QREG);
+        void unifyQuantumRegisters(const std::string& regName = "q");
 
         // removes a specific logical qubit and returns the index of the physical qubit in the initial layout
         // as well as the index of the removed physical qubit's output permutation
@@ -780,21 +776,21 @@ namespace qc {
         // Capacity (pass-through)
         [[nodiscard]] bool        empty() const noexcept { return ops.empty(); }
         [[nodiscard]] std::size_t size() const noexcept { return ops.size(); }
-        [[nodiscard]] std::size_t max_size() const noexcept { return ops.max_size(); }
+        [[nodiscard]] std::size_t max_size() const noexcept { return ops.max_size(); } // NOLINT (readability-identifier-naming)
         [[nodiscard]] std::size_t capacity() const noexcept { return ops.capacity(); }
 
         void reserve(const std::size_t newCap) { ops.reserve(newCap); }
-        void shrink_to_fit() { ops.shrink_to_fit(); }
+        void shrink_to_fit() { ops.shrink_to_fit(); } // NOLINT (readability-identifier-naming)
 
         // Modifiers (pass-through)
         void     clear() noexcept { ops.clear(); }
-        void     pop_back() { return ops.pop_back(); }
+        void     pop_back() { return ops.pop_back(); } // NOLINT (readability-identifier-naming)
         void     resize(std::size_t count) { ops.resize(count); }
         iterator erase(const_iterator pos) { return ops.erase(pos); }
         iterator erase(const_iterator first, const_iterator last) { return ops.erase(first, last); }
 
         template<class T>
-        void push_back(const T& op) {
+        void push_back(const T& op) { // NOLINT (readability-identifier-naming)
             if (!ops.empty() && !op.isControlled() && !ops.back()->isControlled()) {
                 std::cerr << op.getName() << std::endl;
             }
@@ -803,17 +799,17 @@ namespace qc {
         }
 
         template<class T, class... Args>
-        void emplace_back(Args&&... args) {
+        void emplace_back(Args&&... args) { // NOLINT (readability-identifier-naming)
             ops.emplace_back(std::make_unique<T>(args...));
         }
 
         template<class T>
-        void emplace_back(std::unique_ptr<T>& op) {
+        void emplace_back(std::unique_ptr<T>& op) { // NOLINT (readability-identifier-naming)
             ops.emplace_back(std::move(op));
         }
 
         template<class T>
-        void emplace_back(std::unique_ptr<T>&& op) {
+        void emplace_back(std::unique_ptr<T>&& op) { // NOLINT (readability-identifier-naming)
             ops.emplace_back(std::move(op));
         }
 

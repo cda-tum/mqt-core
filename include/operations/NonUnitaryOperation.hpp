@@ -59,16 +59,14 @@ namespace qc {
         [[nodiscard]] const Targets& getTargets() const override {
             if (type == Measure) {
                 return qubits;
-            } else {
-                return targets;
             }
+            return targets;
         }
         Targets& getTargets() override {
             if (type == Measure) {
                 return qubits;
-            } else {
-                return targets;
             }
+            return targets;
         }
         [[nodiscard]] std::size_t getNtargets() const override {
             return getTargets().size();

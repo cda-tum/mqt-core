@@ -60,19 +60,19 @@ namespace dd {
 
     protected:
         const std::unique_ptr<dd::Package<Config>>& package;
-        const dd::QubitCount                        nQubits;
+        dd::QubitCount                              nQubits;
         std::uniform_real_distribution<dd::fp>      dist;
 
-        const double                     noiseProbability;
-        const double                     noiseProbabilityMulti;
-        const dd::ComplexValue           sqrtAmplitudeDampingProbability;
-        const dd::ComplexValue           oneMinusSqrtAmplitudeDampingProbability;
-        const dd::ComplexValue           sqrtAmplitudeDampingProbabilityMulti;
-        const dd::ComplexValue           oneMinusSqrtAmplitudeDampingProbabilityMulti;
-        const dd::GateMatrix             ampDampingTrue{};
-        const dd::GateMatrix             ampDampingTrueMulti{};
-        const dd::GateMatrix             ampDampingFalse{};
-        const dd::GateMatrix             ampDampingFalseMulti{};
+        double                           noiseProbability;
+        double                           noiseProbabilityMulti;
+        dd::ComplexValue                 sqrtAmplitudeDampingProbability;
+        dd::ComplexValue                 oneMinusSqrtAmplitudeDampingProbability;
+        dd::ComplexValue                 sqrtAmplitudeDampingProbabilityMulti;
+        dd::ComplexValue                 oneMinusSqrtAmplitudeDampingProbabilityMulti;
+        dd::GateMatrix                   ampDampingTrue{};
+        dd::GateMatrix                   ampDampingTrueMulti{};
+        dd::GateMatrix                   ampDampingFalse{};
+        dd::GateMatrix                   ampDampingFalseMulti{};
         std::vector<dd::NoiseOperations> noiseEffects;
         dd::mEdge                        identityDD;
 
@@ -233,16 +233,16 @@ namespace dd {
 
     protected:
         const std::unique_ptr<dd::Package<Config>>& package;
-        const dd::QubitCount                        nQubits;
+        dd::QubitCount                              nQubits;
 
-        const double noiseProbSingleQubit;
-        const double noiseProbMultiQubit;
-        const double ampDampingProbSingleQubit;
-        const double ampDampingProbMultiQubit;
+        double noiseProbSingleQubit;
+        double noiseProbMultiQubit;
+        double ampDampingProbSingleQubit;
+        double ampDampingProbMultiQubit;
 
-        const std::vector<dd::NoiseOperations> noiseEffects;
-        const bool                             useDensityMatrixType;
-        const bool                             sequentiallyApplyNoise;
+        std::vector<dd::NoiseOperations> noiseEffects;
+        bool                             useDensityMatrixType;
+        bool                             sequentiallyApplyNoise;
 
         inline static const std::map<dd::NoiseOperations, std::size_t> SEQUENTIAL_NOISE_MAP = {
                 {dd::Identity, 1},         //Identity Noise
@@ -312,17 +312,17 @@ namespace dd {
             for (size_t i = 0; i < newEdges.size(); i++) {
                 if (firstPathEdge || i == 1) {
                     // If I am to the firstPathEdge I cannot minimize the necessary operations anymore
-                    qc::DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e[i]);
-                    newEdges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, true);
-                    qc::DensityMatrixDD::revertDmChangesToEdge(originalCopy.p->e[i]);
+                    qc::DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e.at(i));
+                    newEdges[i] = applyNoiseEffects(originalCopy.p->e.at(i), usedQubits, true);
+                    qc::DensityMatrixDD::revertDmChangesToEdge(originalCopy.p->e.at(i));
                 } else if (i == 2) {
                     // Since e[1] == e[2] (due to density matrix representation), I can skip calculating e[2]
                     newEdges[2].p = newEdges[1].p;
                     newEdges[2].w = package->cn.getCached(CTEntry::val(newEdges[1].w.r), CTEntry::val(newEdges[1].w.i));
                 } else {
-                    qc::DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e[i]);
-                    newEdges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, false);
-                    qc::DensityMatrixDD::revertDmChangesToEdge(originalCopy.p->e[i]);
+                    qc::DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e.at(i));
+                    newEdges[i] = applyNoiseEffects(originalCopy.p->e.at(i), usedQubits, false);
+                    qc::DensityMatrixDD::revertDmChangesToEdge(originalCopy.p->e.at(i));
                 }
             }
             qc::DensityMatrixDD e = {};
@@ -447,9 +447,9 @@ namespace dd {
         }
 
         void applyDepolarisationToEdges(ArrayOfEdges& e, double probability) {
-            qc::DensityMatrixDD helperEdge[2];
-            dd::Complex         complexProb = package->cn.getCached();
-            complexProb.i->value            = 0;
+            std::array<qc::DensityMatrixDD, 2> helperEdge{};
+            dd::Complex                        complexProb = package->cn.getCached();
+            complexProb.i->value                           = 0;
 
             qc::DensityMatrixDD oldE0Edge;
             oldE0Edge.w = package->cn.getCached(dd::CTEntry::val(e[0].w.r), dd::CTEntry::val(e[0].w.i));
@@ -559,9 +559,9 @@ namespace dd {
                     tmp.p = nullptr;
                     //Apply all noise matrices of the current noise effect
                     for (std::size_t m = 0; m < SEQUENTIAL_NOISE_MAP.find(type)->second; m++) {
-                        auto tmp0 = package->conjugateTranspose(idleOperation[m]);
+                        auto tmp0 = package->conjugateTranspose(idleOperation.at(m));
                         auto tmp1 = package->multiply(originalEdge, dd::densityFromMatrixEdge(tmp0), 0, false);
-                        auto tmp2 = package->multiply(dd::densityFromMatrixEdge(idleOperation[m]), tmp1, 0, useDensityMatrixType);
+                        auto tmp2 = package->multiply(dd::densityFromMatrixEdge(idleOperation.at(m)), tmp1, 0, useDensityMatrixType);
                         if (tmp.p == nullptr) {
                             tmp = tmp2;
                         } else {

@@ -5,7 +5,6 @@
 #include "ZXDiagram.hpp"
 
 #include <algorithm>
-#include <iostream>
 #include <string>
 #include <variant>
 #include <vector>
@@ -110,8 +109,8 @@ namespace zx {
         addCnot(diag, ctrl0, ctrl1, qubits);
     }
 
-    FunctionalityConstruction::op_it FunctionalityConstruction::parse_op(ZXDiagram& diag, op_it it, op_it end,
-                                                                         std::vector<Vertex>& qubits, const qc::Permutation& p) {
+    FunctionalityConstruction::op_it FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
+                                                                        std::vector<Vertex>& qubits, const qc::Permutation& p) {
         const auto& op = *it;
         // barrier statements are ignored
         if (op->getType() == qc::OpType::Barrier) {
@@ -339,11 +338,11 @@ namespace zx {
             if (op->getType() == qc::OpType::Compound) {
                 const auto* compOp = dynamic_cast<qc::CompoundOperation*>(op.get());
                 for (auto subIt = compOp->cbegin(); subIt != compOp->cend();) {
-                    subIt = parse_op(diag, subIt, compOp->cend(), qubits, qc->initialLayout);
+                    subIt = parseOp(diag, subIt, compOp->cend(), qubits, qc->initialLayout);
                 }
                 ++it;
             } else {
-                it = parse_op(diag, it, qc->cend(), qubits, qc->initialLayout);
+                it = parseOp(diag, it, qc->cend(), qubits, qc->initialLayout);
             }
         }
 
@@ -425,7 +424,7 @@ namespace zx {
         if (const auto* symbOp = dynamic_cast<const qc::SymbolicOperation*>(op)) {
             return toPiExpr(symbOp->getParameter(i));
         }
-        return PiExpression{zx::PiRational{op->getParameter()[i]}};
+        return PiExpression{zx::PiRational{op->getParameter().at(i)}};
     }
     PiExpression FunctionalityConstruction::toPiExpr(const qc::SymbolOrNumber& param) {
         if (std::holds_alternative<double>(param)) {

@@ -26,7 +26,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             const auto n = static_cast<std::size_t>(p.t.val);
             p.check(Token::Kind::rbrack);
             p.check(Token::Kind::semicolon);
-            addQubitRegister(n, s.c_str());
+            addQubitRegister(n, s);
             p.nqubits = nqubits;
         } else if (p.sym == Token::Kind::creg) {
             // classical register definition
@@ -38,7 +38,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             const auto n = static_cast<std::size_t>(p.t.val);
             p.check(Token::Kind::rbrack);
             p.check(Token::Kind::semicolon);
-            addClassicalRegister(n, s.c_str());
+            addClassicalRegister(n, s);
             p.nclassics = nclassics;
         } else if (p.sym == Token::Kind::ugate || p.sym == Token::Kind::cxgate || p.sym == Token::Kind::swap || p.sym == Token::Kind::identifier || p.sym == Token::Kind::measure || p.sym == Token::Kind::reset || p.sym == Token::Kind::mcx_gray || p.sym == Token::Kind::mcx_recursive || p.sym == Token::Kind::mcx_vchain || p.sym == Token::Kind::mcphase || p.sym == Token::Kind::sxgate || p.sym == Token::Kind::sxdggate) {
             // gate application

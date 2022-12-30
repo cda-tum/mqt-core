@@ -14,9 +14,9 @@ namespace qc {
 
         std::ostream& printStatistics(std::ostream& os) const override;
 
-        const std::size_t precision{};
-        const bool        includeMeasurements;
-        const bool        dynamic;
+        std::size_t precision{};
+        bool        includeMeasurements;
+        bool        dynamic;
 
     protected:
         void createCircuit();
