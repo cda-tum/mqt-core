@@ -91,7 +91,7 @@ namespace ecc {
         if (isDecoded) {
             return;
         }
-        const auto                            nQubits               = qcOriginal->getNqubits();
+        const auto                            nQubits                 = qcOriginal->getNqubits();
         static constexpr std::array<Qubit, 4> PHYSICAL_ANCILLA_QUBITS = {8, 13, 15, 20};
         for (Qubit i = 0; i < nQubits; i++) {
             for (const Qubit qubit: PHYSICAL_ANCILLA_QUBITS) {
