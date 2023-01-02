@@ -6,8 +6,8 @@
 #include "algorithms/QFT.hpp"
 
 namespace qc {
-    QFT::QFT(const std::size_t nq, const bool includeMeasurements, const bool dynamic):
-        precision(nq), includeMeasurements(includeMeasurements), dynamic(dynamic) {
+    QFT::QFT(const std::size_t nq, const bool includeMeas, const bool dyn):
+        precision(nq), includeMeasurements(includeMeas), dynamic(dyn) {
         name = "qft_" + std::to_string(nq);
         if (precision == 0) {
             return;
@@ -41,8 +41,8 @@ namespace qc {
                     } else if (j == i - 1) {
                         classicControlled(T, 0, {d, 1U}, 1U);
                     } else {
-                        auto powerOfTwo = std::pow(2.L, i - j + 1);
-                        auto lambda     = static_cast<fp>(PI / powerOfTwo);
+                        const auto powerOfTwo = std::pow(2., i - j + 1);
+                        const auto lambda     = PI / powerOfTwo;
                         classicControlled(Phase, 0, {d, 1U}, 1U, lambda);
                     }
                 }
@@ -71,8 +71,8 @@ namespace qc {
                     } else if (j == 2) {
                         t(d, Control{q});
                     } else {
-                        auto powerOfTwo = std::pow(2.L, j);
-                        auto lambda     = static_cast<fp>(PI / powerOfTwo);
+                        const auto powerOfTwo = std::pow(2., j);
+                        const auto lambda     = PI / powerOfTwo;
                         phase(d, Control{q}, lambda);
                     }
                 }
@@ -84,14 +84,14 @@ namespace qc {
             if (includeMeasurements) {
                 // measure qubits in reverse order
                 for (std::size_t i = 0; i < precision; ++i) {
-                    measure(i, precision - 1 - i);
+                    measure(static_cast<Qubit>(i), precision - 1 - i);
                 }
             } else {
                 for (Qubit i = 0; i < static_cast<Qubit>(precision / 2); ++i) {
                     swap(i, static_cast<Qubit>(precision - 1 - i));
                 }
                 for (std::size_t i = 0; i < precision; ++i) {
-                    outputPermutation[i] = static_cast<Qubit>(precision - 1 - i);
+                    outputPermutation[static_cast<Qubit>(i)] = static_cast<Qubit>(precision - 1 - i);
                 }
             }
         }

@@ -9,41 +9,42 @@
 
 #include "gtest/gtest.h"
 
-class GRCS: public testing::TestWithParam<unsigned short> {
+class GRCS: public testing::Test {
 protected:
     void TearDown() override {}
     void SetUp() override {}
 };
 
 TEST_F(GRCS, import) {
-    auto qc_bris = qc::GoogleRandomCircuitSampling("./circuits/grcs/bris_4_40_9_v2.txt");
-    qc_bris.printStatistics(std::cout);
-    std::cout << qc_bris << std::endl;
+    auto qcBris = qc::GoogleRandomCircuitSampling("./circuits/grcs/bris_4_40_9_v2.txt");
+    qcBris.printStatistics(std::cout);
+    std::cout << qcBris << std::endl;
 
-    auto qc_inst = qc::GoogleRandomCircuitSampling("./circuits/grcs/inst_4x4_80_9_v2.txt");
-    qc_inst.printStatistics(std::cout);
-    std::cout << qc_inst << std::endl;
+    auto qcInst = qc::GoogleRandomCircuitSampling("./circuits/grcs/inst_4x4_80_9_v2.txt");
+    qcInst.printStatistics(std::cout);
+    std::cout << qcInst << std::endl;
 }
 
 TEST_F(GRCS, simulate) {
-    auto qc_bris = qc::GoogleRandomCircuitSampling("./circuits/grcs/bris_4_40_9_v2.txt");
+    auto qcBris = qc::GoogleRandomCircuitSampling("./circuits/grcs/bris_4_40_9_v2.txt");
 
-    auto dd = std::make_unique<dd::Package<>>(qc_bris.getNqubits());
-    auto in = dd->makeZeroState(qc_bris.getNqubits());
+    auto                             dd      = std::make_unique<dd::Package<>>(qcBris.getNqubits());
+    auto                             in      = dd->makeZeroState(static_cast<dd::QubitCount>(qcBris.getNqubits()));
+    const std::optional<std::size_t> ncycles = 4;
     ASSERT_NO_THROW({
-        simulate(&qc_bris, in, dd, 4);
+        simulate(&qcBris, in, dd, ncycles);
     });
-    std::cout << qc_bris << std::endl;
-    qc_bris.printStatistics(std::cout);
+    std::cout << qcBris << std::endl;
+    qcBris.printStatistics(std::cout);
 }
 
 TEST_F(GRCS, buildFunctionality) {
-    auto qc_bris = qc::GoogleRandomCircuitSampling("./circuits/grcs/bris_4_40_9_v2.txt");
+    auto qcBris = qc::GoogleRandomCircuitSampling("./circuits/grcs/bris_4_40_9_v2.txt");
 
-    auto dd = std::make_unique<dd::Package<>>(qc_bris.getNqubits());
+    auto dd = std::make_unique<dd::Package<>>(qcBris.getNqubits());
     ASSERT_NO_THROW({
-        buildFunctionality(&qc_bris, dd, 4);
+        buildFunctionality(&qcBris, dd, 4);
     });
-    std::cout << qc_bris << std::endl;
-    qc_bris.printStatistics(std::cout);
+    std::cout << qcBris << std::endl;
+    qcBris.printStatistics(std::cout);
 }

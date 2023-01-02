@@ -202,10 +202,10 @@ namespace qc {
         targets.emplace_back(target);
     }
 
-    SymbolicOperation::SymbolicOperation(const std::size_t nq, const Targets& targets, const OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, const Qubit startingQubit) {
+    SymbolicOperation::SymbolicOperation(const std::size_t nq, const Targets& targ, const OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, const Qubit startingQubit) {
         type = g;
         setup(nq, lambda, phi, theta, startingQubit);
-        this->targets = targets;
+        targets = targ;
     }
 
     SymbolicOperation::SymbolicOperation(const std::size_t nq, const Control control, const Qubit target, const OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, const Qubit startingQubit):
@@ -213,24 +213,24 @@ namespace qc {
         controls.insert(control);
     }
 
-    SymbolicOperation::SymbolicOperation(const std::size_t nq, const Control control, const Targets& targets, const OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, const Qubit startingQubit):
-        SymbolicOperation(nq, targets, g, lambda, phi, theta, startingQubit) {
+    SymbolicOperation::SymbolicOperation(const std::size_t nq, const Control control, const Targets& targ, const OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, const Qubit startingQubit):
+        SymbolicOperation(nq, targ, g, lambda, phi, theta, startingQubit) {
         controls.insert(control);
     }
 
-    SymbolicOperation::SymbolicOperation(const std::size_t nq, const Controls& controls, const Qubit target, const OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, const Qubit startingQubit):
+    SymbolicOperation::SymbolicOperation(const std::size_t nq, const Controls& c, const Qubit target, const OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, const Qubit startingQubit):
         SymbolicOperation(nq, target, g, lambda, phi, theta, startingQubit) {
-        this->controls = controls;
+        controls = c;
     }
 
-    SymbolicOperation::SymbolicOperation(const std::size_t nq, const Controls& controls, const Targets& targets, const OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, const Qubit startingQubit):
-        SymbolicOperation(nq, targets, g, lambda, phi, theta, startingQubit) {
-        this->controls = controls;
+    SymbolicOperation::SymbolicOperation(const std::size_t nq, const Controls& c, const Targets& targ, const OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, const Qubit startingQubit):
+        SymbolicOperation(nq, targ, g, lambda, phi, theta, startingQubit) {
+        controls = c;
     }
 
     // MCF (cSWAP), Peres, paramterized two target Constructor
-    SymbolicOperation::SymbolicOperation(const std::size_t nq, const Controls& controls, const Qubit target0, const Qubit target1, const OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, const Qubit startingQubit):
-        SymbolicOperation(nq, controls, {target0, target1}, g, lambda, phi, theta, startingQubit) {
+    SymbolicOperation::SymbolicOperation(const std::size_t nq, const Controls& c, const Qubit target0, const Qubit target1, const OpType g, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta, const Qubit startingQubit):
+        SymbolicOperation(nq, c, {target0, target1}, g, lambda, phi, theta, startingQubit) {
     }
 
     bool SymbolicOperation::equals(const Operation& op, const Permutation& perm1, const Permutation& perm2) const {
@@ -257,7 +257,7 @@ namespace qc {
         return true;
     }
 
-    void SymbolicOperation::dumpOpenQASM([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg) const {
+    [[noreturn]] void SymbolicOperation::dumpOpenQASM([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg) const {
         throw QFRException("OpenQasm2.0 doesn't support parametrized gates!");
     }
 

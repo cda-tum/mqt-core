@@ -22,23 +22,23 @@ namespace dd {
 
     // noise operations available for deterministic noise aware quantum circuit simulation
     enum NoiseOperations : std::uint8_t {
-        amplitudeDamping,
-        phaseFlip,
-        depolarization,
-        identity
+        AmplitudeDamping,
+        PhaseFlip,
+        Depolarization,
+        Identity
     };
 
     template<class Config>
     class StochasticNoiseFunctionality {
     public:
-        StochasticNoiseFunctionality(const std::unique_ptr<dd::Package<Config>>& package,
-                                     dd::QubitCount                              nQubits,
+        StochasticNoiseFunctionality(const std::unique_ptr<dd::Package<Config>>& dd,
+                                     dd::QubitCount                              nq,
                                      double                                      gateNoiseProbability,
                                      double                                      amplitudeDampingProb,
                                      double                                      multiQubitGateFactor,
-                                     std::vector<dd::NoiseOperations>            noiseEffects):
-            package(package),
-            nQubits(nQubits),
+                                     std::vector<dd::NoiseOperations>            effects):
+            package(dd),
+            nQubits(nq),
             dist(0.0, 1.0L),
             noiseProbability(gateNoiseProbability),
             noiseProbabilityMulti(gateNoiseProbability * multiQubitGateFactor),
@@ -50,8 +50,7 @@ namespace dd {
             ampDampingTrueMulti(dd::GateMatrix({dd::complex_zero, sqrtAmplitudeDampingProbabilityMulti, dd::complex_zero, dd::complex_zero})),
             ampDampingFalse(dd::GateMatrix({dd::complex_one, dd::complex_zero, dd::complex_zero, oneMinusSqrtAmplitudeDampingProbability})),
             ampDampingFalseMulti(dd::GateMatrix({dd::complex_one, dd::complex_zero, dd::complex_zero, oneMinusSqrtAmplitudeDampingProbabilityMulti})),
-            noiseEffects(std::move(noiseEffects)) {
-            identityDD = package->makeIdent(nQubits);
+            noiseEffects(std::move(effects)), identityDD(package->makeIdent(nQubits)) {
             package->incRef(identityDD);
         }
 
@@ -61,39 +60,37 @@ namespace dd {
 
     protected:
         const std::unique_ptr<dd::Package<Config>>& package;
-        const dd::QubitCount                        nQubits;
+        dd::QubitCount                              nQubits;
         std::uniform_real_distribution<dd::fp>      dist;
 
-        const double                     noiseProbability;
-        const double                     noiseProbabilityMulti;
-        const dd::ComplexValue           sqrtAmplitudeDampingProbability;
-        const dd::ComplexValue           oneMinusSqrtAmplitudeDampingProbability;
-        const dd::ComplexValue           sqrtAmplitudeDampingProbabilityMulti;
-        const dd::ComplexValue           oneMinusSqrtAmplitudeDampingProbabilityMulti;
-        const dd::GateMatrix             ampDampingTrue{};
-        const dd::GateMatrix             ampDampingTrueMulti{};
-        const dd::GateMatrix             ampDampingFalse{};
-        const dd::GateMatrix             ampDampingFalseMulti{};
+        double                           noiseProbability;
+        double                           noiseProbabilityMulti;
+        dd::ComplexValue                 sqrtAmplitudeDampingProbability;
+        dd::ComplexValue                 oneMinusSqrtAmplitudeDampingProbability;
+        dd::ComplexValue                 sqrtAmplitudeDampingProbabilityMulti;
+        dd::ComplexValue                 oneMinusSqrtAmplitudeDampingProbabilityMulti;
+        dd::GateMatrix                   ampDampingTrue{};
+        dd::GateMatrix                   ampDampingTrueMulti{};
+        dd::GateMatrix                   ampDampingFalse{};
+        dd::GateMatrix                   ampDampingFalseMulti{};
         std::vector<dd::NoiseOperations> noiseEffects;
         dd::mEdge                        identityDD;
 
-        [[nodiscard]] dd::Qubit getNumberOfQubits() const { return nQubits; }
-        [[nodiscard]] double    getNoiseProbability(bool multiQubitNoiseFlag) const { return multiQubitNoiseFlag ? noiseProbabilityMulti : noiseProbability; }
+        [[nodiscard]] dd::QubitCount getNumberOfQubits() const { return nQubits; }
+        [[nodiscard]] double         getNoiseProbability(bool multiQubitNoiseFlag) const { return multiQubitNoiseFlag ? noiseProbabilityMulti : noiseProbability; }
 
         [[nodiscard]] qc::OpType getAmplitudeDampingOperationType(bool multiQubitNoiseFlag, bool amplitudeDampingFlag) const {
             if (amplitudeDampingFlag) {
                 return multiQubitNoiseFlag ? qc::MultiATrue : qc::ATrue;
-            } else {
-                return multiQubitNoiseFlag ? qc::MultiAFalse : qc::AFalse;
             }
+            return multiQubitNoiseFlag ? qc::MultiAFalse : qc::AFalse;
         }
 
         [[nodiscard]] dd::GateMatrix getAmplitudeDampingOperationMatrix(bool multiQubitNoiseFlag, bool amplitudeDampingFlag) const {
             if (amplitudeDampingFlag) {
                 return multiQubitNoiseFlag ? ampDampingTrueMulti : ampDampingTrue;
-            } else {
-                return multiQubitNoiseFlag ? ampDampingFalseMulti : ampDampingFalse;
             }
+            return multiQubitNoiseFlag ? ampDampingFalseMulti : ampDampingFalse;
         }
 
     public:
@@ -104,14 +101,14 @@ namespace dd {
             const bool multiQubitOperation = targets.size() > 1;
 
             for (const auto& target: targets) {
-                auto stackedOperation = generateNoiseOperation(operation, target, generator, false, multiQubitOperation);
+                auto stackedOperation = generateNoiseOperation(operation, static_cast<dd::Qubit>(target), generator, false, multiQubitOperation);
                 auto tmp              = package->multiply(stackedOperation, state);
 
                 if (dd::ComplexNumbers::mag2(tmp.w) < dist(generator)) {
                     // The probability of amplitude damping does not only depend on the noise probability, but also the quantum state.
                     // Due to the normalization constraint of decision diagrams the probability for applying amplitude damping stands in the root edge weight,
                     // of the dd after the noise has been applied
-                    stackedOperation = generateNoiseOperation(operation, target, generator, true, multiQubitOperation);
+                    stackedOperation = generateNoiseOperation(operation, static_cast<dd::Qubit>(target), generator, true, multiQubitOperation);
                     tmp              = package->multiply(stackedOperation, state);
                 }
                 tmp.w = dd::Complex::one;
@@ -141,7 +138,7 @@ namespace dd {
                                          bool             amplitudeDamping,
                                          bool             multiQubitOperation) {
             for (const auto& noiseType: noiseEffects) {
-                const auto effect = noiseType == dd::amplitudeDamping ? getAmplitudeDampingOperationType(multiQubitOperation, amplitudeDamping) : returnNoiseOperation(noiseType, dist(generator), multiQubitOperation);
+                const auto effect = noiseType == dd::AmplitudeDamping ? getAmplitudeDampingOperationType(multiQubitOperation, amplitudeDamping) : returnNoiseOperation(noiseType, dist(generator), multiQubitOperation);
                 switch (effect) {
                     case (qc::I): {
                         continue;
@@ -180,7 +177,7 @@ namespace dd {
 
         [[nodiscard]] qc::OpType returnNoiseOperation(dd::NoiseOperations noiseOperation, double prob, bool multiQubitNoiseFlag) const {
             switch (noiseOperation) {
-                case dd::NoiseOperations::depolarization: {
+                case dd::NoiseOperations::Depolarization: {
                     if (prob >= (getNoiseProbability(multiQubitNoiseFlag) * 0.75)) {
                         // prob > prob apply qc::I, also 25 % of the time when depolarization is applied nothing happens
                         return qc::I;
@@ -196,13 +193,13 @@ namespace dd {
                     // if 0.5 < prob < 0.75 (25 % of the time when applying depolarization) apply qc::Z
                     return qc::Z;
                 }
-                case dd::NoiseOperations::phaseFlip: {
+                case dd::NoiseOperations::PhaseFlip: {
                     if (prob > getNoiseProbability(multiQubitNoiseFlag)) {
                         return qc::I;
                     }
                     return qc::Z;
                 }
-                case dd::NoiseOperations::identity: {
+                case dd::NoiseOperations::Identity: {
                     return qc::I;
                 }
                 default:
@@ -214,47 +211,47 @@ namespace dd {
     template<class Config>
     class DeterministicNoiseFunctionality {
     public:
-        DeterministicNoiseFunctionality(const std::unique_ptr<dd::Package<Config>>& package,
-                                        dd::QubitCount                              nQubits,
-                                        double                                      noiseProbSingleQubit,
-                                        double                                      noiseProbMultiQubit,
-                                        double                                      ampDampingProbSingleQubit,
-                                        double                                      ampDampingProbMultiQubit,
-                                        std::vector<dd::NoiseOperations>            noiseEffects,
-                                        bool                                        useDensityMatrixType,
-                                        bool                                        sequentiallyApplyNoise):
-            package(package),
-            nQubits(nQubits),
-            noiseProbSingleQubit(noiseProbSingleQubit),
-            noiseProbMultiQubit(noiseProbMultiQubit),
-            ampDampingProbSingleQubit(ampDampingProbSingleQubit),
-            ampDampingProbMultiQubit(ampDampingProbMultiQubit),
-            noiseEffects(std::move(noiseEffects)),
-            useDensityMatrixType(useDensityMatrixType),
-            sequentiallyApplyNoise(sequentiallyApplyNoise) {
+        DeterministicNoiseFunctionality(const std::unique_ptr<dd::Package<Config>>& dd,
+                                        dd::QubitCount                              nq,
+                                        double                                      noiseProbabilitySingleQubit,
+                                        double                                      noiseProbabilityMultiQubit,
+                                        double                                      ampDampProbSingleQubit,
+                                        double                                      ampDampProbMultiQubit,
+                                        std::vector<dd::NoiseOperations>            effects,
+                                        bool                                        useDensityMatType,
+                                        bool                                        seqApplyNoise):
+            package(dd),
+            nQubits(nq),
+            noiseProbSingleQubit(noiseProbabilitySingleQubit),
+            noiseProbMultiQubit(noiseProbabilityMultiQubit),
+            ampDampingProbSingleQubit(ampDampProbSingleQubit),
+            ampDampingProbMultiQubit(ampDampProbMultiQubit),
+            noiseEffects(std::move(effects)),
+            useDensityMatrixType(useDensityMatType),
+            sequentiallyApplyNoise(seqApplyNoise) {
         }
 
     protected:
         const std::unique_ptr<dd::Package<Config>>& package;
-        const dd::QubitCount                        nQubits;
+        dd::QubitCount                              nQubits;
 
-        const double noiseProbSingleQubit;
-        const double noiseProbMultiQubit;
-        const double ampDampingProbSingleQubit;
-        const double ampDampingProbMultiQubit;
+        double noiseProbSingleQubit;
+        double noiseProbMultiQubit;
+        double ampDampingProbSingleQubit;
+        double ampDampingProbMultiQubit;
 
-        const std::vector<dd::NoiseOperations> noiseEffects;
-        const bool                             useDensityMatrixType;
-        const bool                             sequentiallyApplyNoise;
+        std::vector<dd::NoiseOperations> noiseEffects;
+        bool                             useDensityMatrixType;
+        bool                             sequentiallyApplyNoise;
 
-        const std::map<dd::NoiseOperations, int> sequentialNoiseMap = {
-                {dd::identity, 1},         //Identity Noise
-                {dd::phaseFlip, 2},        //Phase-flip
-                {dd::amplitudeDamping, 2}, //Amplitude Damping
-                {dd::depolarization, 4},   //Depolarisation
+        inline static const std::map<dd::NoiseOperations, std::size_t> SEQUENTIAL_NOISE_MAP = {
+                {dd::Identity, 1},         //Identity Noise
+                {dd::PhaseFlip, 2},        //Phase-flip
+                {dd::AmplitudeDamping, 2}, //Amplitude Damping
+                {dd::Depolarization, 4},   //Depolarisation
         };
 
-        [[nodiscard]] dd::Qubit getNumberOfQubits() const {
+        [[nodiscard]] dd::QubitCount getNumberOfQubits() const {
             return nQubits;
         }
 
@@ -315,33 +312,33 @@ namespace dd {
             for (size_t i = 0; i < newEdges.size(); i++) {
                 if (firstPathEdge || i == 1) {
                     // If I am to the firstPathEdge I cannot minimize the necessary operations anymore
-                    qc::DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e[i]);
-                    newEdges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, true);
-                    qc::DensityMatrixDD::revertDmChangesToEdge(originalCopy.p->e[i]);
+                    qc::DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e.at(i));
+                    newEdges[i] = applyNoiseEffects(originalCopy.p->e.at(i), usedQubits, true);
+                    qc::DensityMatrixDD::revertDmChangesToEdge(originalCopy.p->e.at(i));
                 } else if (i == 2) {
                     // Since e[1] == e[2] (due to density matrix representation), I can skip calculating e[2]
                     newEdges[2].p = newEdges[1].p;
                     newEdges[2].w = package->cn.getCached(CTEntry::val(newEdges[1].w.r), CTEntry::val(newEdges[1].w.i));
                 } else {
-                    qc::DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e[i]);
-                    newEdges[i] = applyNoiseEffects(originalCopy.p->e[i], usedQubits, false);
-                    qc::DensityMatrixDD::revertDmChangesToEdge(originalCopy.p->e[i]);
+                    qc::DensityMatrixDD::applyDmChangesToEdge(originalCopy.p->e.at(i));
+                    newEdges[i] = applyNoiseEffects(originalCopy.p->e.at(i), usedQubits, false);
+                    qc::DensityMatrixDD::revertDmChangesToEdge(originalCopy.p->e.at(i));
                 }
             }
             qc::DensityMatrixDD e = {};
             if (std::any_of(usedQubits.begin(), usedQubits.end(), [originalEdge](dd::Qubit qubit) { return originalEdge.p->v == qubit; })) {
                 for (auto const& type: noiseEffects) {
                     switch (type) {
-                        case dd::amplitudeDamping:
+                        case dd::AmplitudeDamping:
                             applyAmplitudeDampingToEdges(newEdges, (usedQubits.size() == 1) ? ampDampingProbSingleQubit : ampDampingProbMultiQubit);
                             break;
-                        case dd::phaseFlip:
+                        case dd::PhaseFlip:
                             applyPhaseFlipToEdges(newEdges, (usedQubits.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit);
                             break;
-                        case dd::depolarization:
+                        case dd::Depolarization:
                             applyDepolarisationToEdges(newEdges, (usedQubits.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit);
                             break;
-                        case dd::identity:
+                        case dd::Identity:
                             continue;
                     }
                 }
@@ -450,9 +447,9 @@ namespace dd {
         }
 
         void applyDepolarisationToEdges(ArrayOfEdges& e, double probability) {
-            qc::DensityMatrixDD helperEdge[2];
-            dd::Complex         complexProb = package->cn.getCached();
-            complexProb.i->value            = 0;
+            std::array<qc::DensityMatrixDD, 2> helperEdge{};
+            dd::Complex                        complexProb = package->cn.getCached();
+            complexProb.i->value                           = 0;
 
             qc::DensityMatrixDD oldE0Edge;
             oldE0Edge.w = package->cn.getCached(dd::CTEntry::val(e[0].w.r), dd::CTEntry::val(e[0].w.i));
@@ -558,13 +555,13 @@ namespace dd {
             // Iterate over qubits and check if the qubit had been used
             for (const auto targetQubit: targets) {
                 for (auto const& type: noiseEffects) {
-                    generateGate(idleOperation, type, targetQubit, getNoiseProbability(type, targets));
+                    generateGate(idleOperation, type, static_cast<dd::Qubit>(targetQubit), getNoiseProbability(type, targets));
                     tmp.p = nullptr;
                     //Apply all noise matrices of the current noise effect
-                    for (int m = 0; m < sequentialNoiseMap.find(type)->second; m++) {
-                        auto tmp0 = package->conjugateTranspose(idleOperation[m]);
+                    for (std::size_t m = 0; m < SEQUENTIAL_NOISE_MAP.find(type)->second; m++) {
+                        auto tmp0 = package->conjugateTranspose(idleOperation.at(m));
                         auto tmp1 = package->multiply(originalEdge, dd::densityFromMatrixEdge(tmp0), 0, false);
-                        auto tmp2 = package->multiply(dd::densityFromMatrixEdge(idleOperation[m]), tmp1, 0, useDensityMatrixType);
+                        auto tmp2 = package->multiply(dd::densityFromMatrixEdge(idleOperation.at(m)), tmp1, 0, useDensityMatrixType);
                         if (tmp.p == nullptr) {
                             tmp = tmp2;
                         } else {
@@ -636,7 +633,7 @@ namespace dd {
                     // identity noise (for testing)
                     //                  (1  0)
                     //                  (0  1),
-                case dd::identity: {
+                case dd::Identity: {
                     idleNoiseGate[0][0] = idleNoiseGate[0][3] = dd::complex_one;
                     idleNoiseGate[0][1] = idleNoiseGate[0][2] = dd::complex_zero;
 
@@ -647,7 +644,7 @@ namespace dd {
                     // phase flip
                     //                          (1  0)                         (1  0)
                     //  e0= sqrt(1-probability)*(0  1), e1=  sqrt(probability)*(0 -1)
-                case dd::phaseFlip: {
+                case dd::PhaseFlip: {
                     tmp.r               = std::sqrt(1 - probability) * dd::complex_one.r;
                     idleNoiseGate[0][0] = idleNoiseGate[0][3] = tmp;
                     idleNoiseGate[0][1] = idleNoiseGate[0][2] = dd::complex_zero;
@@ -665,7 +662,7 @@ namespace dd {
                     // amplitude damping
                     //      (1                  0)       (0      sqrt(probability))
                     //  e0= (0 sqrt(1-probability), e1=  (0                      0)
-                case dd::amplitudeDamping: {
+                case dd::AmplitudeDamping: {
                     tmp.r               = std::sqrt(1 - probability) * dd::complex_one.r;
                     idleNoiseGate[0][0] = dd::complex_one;
                     idleNoiseGate[0][1] = idleNoiseGate[0][2] = dd::complex_zero;
@@ -680,7 +677,7 @@ namespace dd {
                     break;
                 }
                     // depolarization
-                case dd::depolarization:
+                case dd::Depolarization:
                     generateDepolarizationGate(pointerForMatrices, target, probability);
                     break;
                 default:
@@ -689,7 +686,7 @@ namespace dd {
         }
 
         double getNoiseProbability(const dd::NoiseOperations type, const std::set<qc::Qubit>& targets) {
-            if (type == dd::amplitudeDamping) {
+            if (type == dd::AmplitudeDamping) {
                 return (targets.size() == 1) ? ampDampingProbSingleQubit : ampDampingProbMultiQubit;
             }
             return (targets.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit;

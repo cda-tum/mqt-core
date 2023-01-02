@@ -25,11 +25,11 @@ namespace qasm {
         std::string msg;
 
     public:
-        explicit QASMParserException(const std::string& msg):
+        explicit QASMParserException(const std::string& m):
             std::invalid_argument("QASM Parser Exception") {
             std::stringstream ss{};
-            ss << "[qasm parser] " << msg;
-            this->msg = ss.str();
+            ss << "[qasm parser] " << m;
+            msg = ss.str();
         }
 
         [[nodiscard]] const char* what() const noexcept override {
@@ -40,63 +40,54 @@ namespace qasm {
     class Parser {
         struct Expr {
             enum class Kind {
-                number,
-                plus,
-                minus,
-                sign,
-                times,
-                sin,
-                cos,
-                tan,
-                exp,
-                ln,
-                sqrt,
-                div,
-                power,
-                id
+                Number,
+                Plus,
+                Minus,
+                Sign,
+                Times,
+                Sin,
+                Cos,
+                Tan,
+                Exp,
+                Ln,
+                Sqrt,
+                Div,
+                Power,
+                Id
             };
-            qc::fp      num;
-            Kind        kind;
-            Expr*       op1 = nullptr;
-            Expr*       op2 = nullptr;
-            std::string id;
+            qc::fp                num;
+            Kind                  kind;
+            std::shared_ptr<Expr> op1 = nullptr;
+            std::shared_ptr<Expr> op2 = nullptr;
+            std::string           id;
 
-            explicit Expr(Kind kind, qc::fp num = 0., Expr* op1 = nullptr, Expr* op2 = nullptr, std::string id = ""):
-                num(num), kind(kind), op1(op1), op2(op2), id(std::move(id)) {}
+            explicit Expr(Kind k, qc::fp n = 0., std::shared_ptr<Expr> operation1 = nullptr, std::shared_ptr<Expr> operation2 = nullptr, std::string identifier = ""):
+                num(n), kind(k), op1(std::move(operation1)), op2(std::move(operation2)), id(std::move(identifier)) {}
             Expr(const Expr& expr):
                 num(expr.num), kind(expr.kind), id(expr.id) {
-                if (expr.op1 != nullptr)
-                    op1 = new Expr(*expr.op1);
-                if (expr.op2 != nullptr)
-                    op2 = new Expr(*expr.op2);
+                if (expr.op1 != nullptr) {
+                    op1 = expr.op1;
+                }
+                if (expr.op2 != nullptr) {
+                    op2 = expr.op2;
+                }
             }
             Expr& operator=(const Expr& expr) {
-                if (&expr == this)
+                if (&expr == this) {
                     return *this;
+                }
 
                 num  = expr.num;
                 kind = expr.kind;
                 id   = expr.id;
-                delete op1;
-                delete op2;
 
-                if (expr.op1 != nullptr)
-                    op1 = new Expr(*expr.op1);
-                else
-                    op1 = nullptr;
-
-                if (expr.op2 != nullptr)
-                    op2 = new Expr(*expr.op2);
-                else
-                    op2 = nullptr;
+                op1 = expr.op1;
+                op2 = expr.op2;
 
                 return *this;
             }
 
-            virtual ~Expr() {
-                delete op1;
-                delete op2;
-            }
+            virtual ~Expr() = default;
         };
 
         struct BasisGate {
@@ -104,83 +95,72 @@ namespace qasm {
         };
 
         struct CUgate: public BasisGate {
-            Expr*                    theta  = nullptr;
-            Expr*                    phi    = nullptr;
-            Expr*                    lambda = nullptr;
+            std::shared_ptr<Expr>    theta  = nullptr;
+            std::shared_ptr<Expr>    phi    = nullptr;
+            std::shared_ptr<Expr>    lambda = nullptr;
             std::vector<std::string> controls;
             std::string              target;
 
-            CUgate(Expr* theta, Expr* phi, Expr* lambda, std::vector<std::string> controls, std::string target):
-                theta(theta), phi(phi), lambda(lambda), controls(std::move(controls)), target(std::move(target)) {}
-
-            ~CUgate() override {
-                delete theta;
-                delete phi;
-                delete lambda;
-            }
+            CUgate(std::shared_ptr<Expr> t, std::shared_ptr<Expr> p, std::shared_ptr<Expr> l, std::vector<std::string> c, std::string targ):
+                theta(std::move(t)), phi(std::move(p)), lambda(std::move(l)), controls(std::move(c)), target(std::move(targ)) {}
         };
 
         struct CXgate: public BasisGate {
             std::string control;
             std::string target;
 
-            CXgate(std::string control, std::string target):
-                control(std::move(control)), target(std::move(target)) {}
+            CXgate(std::string c, std::string t):
+                control(std::move(c)), target(std::move(t)) {}
         };
 
         struct SingleQubitGate: public BasisGate {
-            std::string target;
-            qc::OpType  type;
-            Expr*       lambda;
-            Expr*       phi;
-            Expr*       theta;
+            std::string           target;
+            qc::OpType            type;
+            std::shared_ptr<Expr> lambda;
+            std::shared_ptr<Expr> phi;
+            std::shared_ptr<Expr> theta;
 
-            explicit SingleQubitGate(std::string target, qc::OpType type = qc::U3, Expr* lambda = nullptr, Expr* phi = nullptr, Expr* theta = nullptr):
-                target(std::move(target)), type(type), lambda(lambda), phi(phi), theta(theta) {}
-            ~SingleQubitGate() override {
-                delete lambda;
-                delete phi;
-                delete theta;
-            }
+            explicit SingleQubitGate(std::string targ, qc::OpType typ = qc::U3, std::shared_ptr<Expr> l = nullptr, std::shared_ptr<Expr> p = nullptr, std::shared_ptr<Expr> t = nullptr):
+                target(std::move(targ)), type(typ), lambda(std::move(l)), phi(std::move(p)), theta(std::move(t)) {}
         };
 
         struct SWAPgate: public BasisGate {
             std::string target0;
             std::string target1;
 
-            SWAPgate(std::string target0, std::string target1):
-                target0(std::move(target0)), target1(std::move(target1)) {}
+            SWAPgate(std::string t0, std::string t1):
+                target0(std::move(t0)), target1(std::move(t1)) {}
         };
 
         struct MCXgate: public BasisGate {
             std::vector<std::string> controls;
             std::string              target;
 
-            MCXgate(std::vector<std::string> controls, std::string target):
-                controls(std::move(controls)), target(std::move(target)) {}
+            MCXgate(std::vector<std::string> c, std::string t):
+                controls(std::move(c)), target(std::move(t)) {}
         };
 
         struct CompoundGate {
-            std::vector<std::string> parameterNames;
-            std::vector<std::string> argumentNames;
-            std::vector<BasisGate*>  gates;
+            std::vector<std::string>                parameterNames;
+            std::vector<std::string>                argumentNames;
+            std::vector<std::shared_ptr<BasisGate>> gates;
         };
 
         std::istream&                       in;
-        std::set<Token::Kind>               unaryops{Token::Kind::sin, Token::Kind::cos, Token::Kind::tan, Token::Kind::exp, Token::Kind::ln, Token::Kind::sqrt};
+        std::set<Token::Kind>               unaryops{Token::Kind::Sin, Token::Kind::Cos, Token::Kind::Tan, Token::Kind::Exp, Token::Kind::Ln, Token::Kind::Sqrt};
         std::map<std::string, CompoundGate> compoundGates;
 
-        Expr* Exponentiation();
-        Expr* Factor();
-        Expr* Term();
-        Expr* Exp();
+        std::shared_ptr<Expr> exponentiation();
+        std::shared_ptr<Expr> factor();
+        std::shared_ptr<Expr> term();
+        std::shared_ptr<Expr> exp();
 
-        static Expr* RewriteExpr(Expr* expr, std::map<std::string, Expr*>& exprMap);
+        static std::shared_ptr<Expr> rewriteExpr(const std::shared_ptr<Expr>& expr, std::map<std::string, std::shared_ptr<Expr>>& exprMap);
 
     public:
         Token                     la, t;
-        Token::Kind               sym = Token::Kind::none;
-        Scanner*                  scanner;
+        Token::Kind               sym = Token::Kind::None;
+        std::shared_ptr<Scanner>  scanner;
         qc::QuantumRegisterMap&   qregs;
         qc::ClassicalRegisterMap& cregs;
         std::size_t               nqubits   = 0;
@@ -188,42 +168,34 @@ namespace qasm {
         qc::Permutation           initialLayout{};
         qc::Permutation           outputPermutation{};
 
-        explicit Parser(std::istream& is, qc::QuantumRegisterMap& qregs, qc::ClassicalRegisterMap& cregs):
-            in(is), qregs(qregs), cregs(cregs) {
-            scanner = new Scanner(in);
+        explicit Parser(std::istream& is, qc::QuantumRegisterMap& q, qc::ClassicalRegisterMap& c):
+            in(is), qregs(q), cregs(c) {
+            scanner = std::make_shared<Scanner>(in);
         }
 
-        virtual ~Parser() {
-            delete scanner;
-
-            for (auto& cGate: compoundGates) {
-                for (auto& gate: cGate.second.gates) {
-                    delete gate;
-                }
-            }
-        }
+        virtual ~Parser() = default;
 
         void scan();
 
         void check(Token::Kind expected);
 
-        qc::QuantumRegister ArgumentQreg();
+        qc::QuantumRegister argumentQreg();
 
-        qc::ClassicalRegister ArgumentCreg();
+        qc::ClassicalRegister argumentCreg();
 
-        void ExpList(std::vector<Expr*>& expressions);
+        void expList(std::vector<std::shared_ptr<Expr>>& expressions);
 
-        void ArgList(std::vector<qc::QuantumRegister>& arguments);
+        void argList(std::vector<qc::QuantumRegister>& arguments);
 
-        void IdList(std::vector<std::string>& identifiers);
+        void idList(std::vector<std::string>& identifiers);
 
-        std::unique_ptr<qc::Operation> Gate();
+        std::unique_ptr<qc::Operation> gate();
 
-        void OpaqueGateDecl();
+        void opaqueGateDecl();
 
-        void GateDecl();
+        void gateDecl();
 
-        std::unique_ptr<qc::Operation> Qop();
+        std::unique_ptr<qc::Operation> qop();
 
         void error [[noreturn]] (const std::string& msg) const {
             std::ostringstream oss{};

@@ -35,7 +35,7 @@ namespace qc {
         RY,
         RZ,
         SWAP,
-        iSWAP,
+        iSWAP, // NOLINT (readability-identifier-naming)
         Peres,
         Peresdag,
         // Compound Operation
@@ -98,73 +98,103 @@ namespace qc {
     }
 
     inline OpType opTypeFromString(const std::string& opType) {
-        if (opType == "none" || opType == "0")
+        if (opType == "none" || opType == "0") {
             return OpType::None;
-        else if (opType == "i" || opType == "id" || opType == "1")
-            return OpType::I;
-        else if (opType == "h" || opType == "ch" || opType == "2")
-            return OpType::H;
-        else if (opType == "x" || opType == "cx" || opType == "cnot" || opType == "3")
-            return OpType::X;
-        else if (opType == "y" || opType == "cy" || opType == "4")
-            return OpType::Y;
-        else if (opType == "z" || opType == "cz" || opType == "5")
-            return OpType::Z;
-        else if (opType == "s" || opType == "cs" || opType == "6")
-            return OpType::S;
-        else if (opType == "sdg" || opType == "csdg" || opType == "7")
-            return OpType::Sdag;
-        else if (opType == "t" || opType == "ct" || opType == "8")
-            return OpType::T;
-        else if (opType == "tdg" || opType == "ctdg" || opType == "9")
-            return OpType::Tdag;
-        else if (opType == "v" || opType == "10")
-            return OpType::V;
-        else if (opType == "vdg" || opType == "11")
-            return OpType::Vdag;
-        else if (opType == "u3" || opType == "cu3" || opType == "u" || opType == "cu" || opType == "12")
-            return OpType::U3;
-        else if (opType == "u2" || opType == "cu2" || opType == "13")
-            return OpType::U2;
-        else if (opType == "u1" || opType == "cu1" || opType == "p" || opType == "cp" || opType == "14")
-            return OpType::Phase;
-        else if (opType == "sx" || opType == "csx" || opType == "15")
-            return OpType::SX;
-        else if (opType == "sxdg" || opType == "csxdg" || opType == "16")
-            return OpType::SXdag;
-        else if (opType == "rx" || opType == "crx" || opType == "17")
-            return OpType::RX;
-        else if (opType == "ry" || opType == "cry" || opType == "18")
-            return OpType::RY;
-        else if (opType == "rz" || opType == "crz" || opType == "19")
-            return OpType::RZ;
-        else if (opType == "swap" || opType == "cswap" || opType == "20")
-            return OpType::SWAP;
-        else if (opType == "iswap" || opType == "21")
-            return OpType::iSWAP;
-        else if (opType == "peres" || opType == "22")
-            return OpType::Peres;
-        else if (opType == "peresdg" || opType == "23")
-            return OpType::Peresdag;
-        else if (opType == "compound" || opType == "24")
-            return OpType::Compound;
-        else if (opType == "measure" || opType == "25")
-            return OpType::Measure;
-        else if (opType == "reset" || opType == "26")
-            return OpType::Reset;
-        else if (opType == "snapshot" || opType == "27")
-            return OpType::Snapshot;
-        else if (opType == "show probabilities" || opType == "28")
-            return OpType::ShowProbabilities;
-        else if (opType == "barrier" || opType == "29")
-            return OpType::Barrier;
-        else if (opType == "teleportation" || opType == "30")
-            return OpType::Teleportation;
-        else if (opType == "classic controlled" || opType == "31")
-            return OpType::ClassicControlled;
-        else {
-            throw std::invalid_argument("Unknown operation type: " + opType);
         }
+        if (opType == "i" || opType == "id" || opType == "1") {
+            return OpType::I;
+        }
+        if (opType == "h" || opType == "ch" || opType == "2") {
+            return OpType::H;
+        }
+        if (opType == "x" || opType == "cx" || opType == "cnot" || opType == "3") {
+            return OpType::X;
+        }
+        if (opType == "y" || opType == "cy" || opType == "4") {
+            return OpType::Y;
+        }
+        if (opType == "z" || opType == "cz" || opType == "5") {
+            return OpType::Z;
+        }
+        if (opType == "s" || opType == "cs" || opType == "6") {
+            return OpType::S;
+        }
+        if (opType == "sdg" || opType == "csdg" || opType == "7") {
+            return OpType::Sdag;
+        }
+        if (opType == "t" || opType == "ct" || opType == "8") {
+            return OpType::T;
+        }
+        if (opType == "tdg" || opType == "ctdg" || opType == "9") {
+            return OpType::Tdag;
+        }
+        if (opType == "v" || opType == "10") {
+            return OpType::V;
+        }
+        if (opType == "vdg" || opType == "11") {
+            return OpType::Vdag;
+        }
+        if (opType == "u3" || opType == "cu3" || opType == "u" || opType == "cu" || opType == "12") {
+            return OpType::U3;
+        }
+        if (opType == "u2" || opType == "cu2" || opType == "13") {
+            return OpType::U2;
+        }
+        if (opType == "u1" || opType == "cu1" || opType == "p" || opType == "cp" || opType == "14") {
+            return OpType::Phase;
+        }
+        if (opType == "sx" || opType == "csx" || opType == "15") {
+            return OpType::SX;
+        }
+        if (opType == "sxdg" || opType == "csxdg" || opType == "16") {
+            return OpType::SXdag;
+        }
+        if (opType == "rx" || opType == "crx" || opType == "17") {
+            return OpType::RX;
+        }
+        if (opType == "ry" || opType == "cry" || opType == "18") {
+            return OpType::RY;
+        }
+        if (opType == "rz" || opType == "crz" || opType == "19") {
+            return OpType::RZ;
+        }
+        if (opType == "swap" || opType == "cswap" || opType == "20") {
+            return OpType::SWAP;
+        }
+        if (opType == "iswap" || opType == "21") {
+            return OpType::iSWAP;
+        }
+        if (opType == "peres" || opType == "22") {
+            return OpType::Peres;
+        }
+        if (opType == "peresdg" || opType == "23") {
+            return OpType::Peresdag;
+        }
+        if (opType == "compound" || opType == "24") {
+            return OpType::Compound;
+        }
+        if (opType == "measure" || opType == "25") {
+            return OpType::Measure;
+        }
+        if (opType == "reset" || opType == "26") {
+            return OpType::Reset;
+        }
+        if (opType == "snapshot" || opType == "27") {
+            return OpType::Snapshot;
+        }
+        if (opType == "show probabilities" || opType == "28") {
+            return OpType::ShowProbabilities;
+        }
+        if (opType == "barrier" || opType == "29") {
+            return OpType::Barrier;
+        }
+        if (opType == "teleportation" || opType == "30") {
+            return OpType::Teleportation;
+        }
+        if (opType == "classic controlled" || opType == "31") {
+            return OpType::ClassicControlled;
+        }
+        throw std::invalid_argument("Unknown operation type: " + opType);
     }
 
     inline std::istream& operator>>(std::istream& in, OpType& opType) {

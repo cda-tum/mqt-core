@@ -15,14 +15,14 @@ namespace qc {
 
     public:
         explicit CompoundOperation(const std::size_t nq) {
-            std::strcpy(name, "Compound operation:");
+            name    = "Compound operation:";
             nqubits = nq;
             type    = Compound;
         }
 
         explicit CompoundOperation(const std::size_t nq, std::vector<std::unique_ptr<Operation>>&& operations):
             CompoundOperation(nq) {
-            ops = std::move(operations);
+            ops = std::move(operations); // NOLINT (cppcoreguidelines-prefer-member-initializer)
         }
 
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {
@@ -134,24 +134,24 @@ namespace qc {
         // Capacity (pass-through)
         [[nodiscard]] bool        empty() const noexcept { return ops.empty(); }
         [[nodiscard]] std::size_t size() const noexcept { return ops.size(); }
-        [[nodiscard]] std::size_t max_size() const noexcept { return ops.max_size(); }
+        [[nodiscard]] std::size_t max_size() const noexcept { return ops.max_size(); } // NOLINT (readability-identifier-naming)
         [[nodiscard]] std::size_t capacity() const noexcept { return ops.capacity(); }
 
         void reserve(std::size_t newCap) { ops.reserve(newCap); }
-        void shrink_to_fit() { ops.shrink_to_fit(); }
+        void shrink_to_fit() { ops.shrink_to_fit(); } // NOLINT (readability-identifier-naming)
 
         // Modifiers (pass-through)
         void                                              clear() noexcept { ops.clear(); }
-        void                                              pop_back() { return ops.pop_back(); }
+        void                                              pop_back() { return ops.pop_back(); } // NOLINT (readability-identifier-naming)
         void                                              resize(std::size_t count) { ops.resize(count); }
         std::vector<std::unique_ptr<Operation>>::iterator erase(std::vector<std::unique_ptr<Operation>>::const_iterator pos) { return ops.erase(pos); }
         std::vector<std::unique_ptr<Operation>>::iterator erase(std::vector<std::unique_ptr<Operation>>::const_iterator first, std::vector<std::unique_ptr<Operation>>::const_iterator last) { return ops.erase(first, last); }
         template<class T>
-        void emplace_back(std::unique_ptr<T>& op) {
+        void emplace_back(std::unique_ptr<T>& op) { // NOLINT (readability-identifier-naming)
             ops.emplace_back(std::move(op));
         }
         template<class T, class... Args>
-        void emplace_back(Args&&... args) {
+        void emplace_back(Args&&... args) { // NOLINT (readability-identifier-naming)
             ops.emplace_back(std::make_unique<T>(args...));
         }
         template<class T, class... Args>

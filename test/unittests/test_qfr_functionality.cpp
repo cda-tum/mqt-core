@@ -28,7 +28,7 @@ protected:
     std::uniform_real_distribution<fp> dist;
 };
 
-TEST_F(QFRFunctionality, fuse_cx_to_swap) {
+TEST_F(QFRFunctionality, fuseCxToSwap) {
     const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.x(1, 0_pc);
@@ -43,7 +43,7 @@ TEST_F(QFRFunctionality, fuse_cx_to_swap) {
     });
 }
 
-TEST_F(QFRFunctionality, replace_cx_to_swap_at_end) {
+TEST_F(QFRFunctionality, replaceCxToSwapAtEnd) {
     const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.x(1, 0_pc);
@@ -65,7 +65,7 @@ TEST_F(QFRFunctionality, replace_cx_to_swap_at_end) {
     });
 }
 
-TEST_F(QFRFunctionality, replace_cx_to_swap) {
+TEST_F(QFRFunctionality, replaceCxToSwap) {
     const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.x(1, 0_pc);
@@ -88,7 +88,7 @@ TEST_F(QFRFunctionality, replace_cx_to_swap) {
     });
 }
 
-TEST_F(QFRFunctionality, remove_trailing_idle_qubits) {
+TEST_F(QFRFunctionality, removeTrailingIdleQubits) {
     const std::size_t  nqubits = 4;
     QuantumComputation qc(nqubits);
     qc.x(0);
@@ -116,7 +116,7 @@ TEST_F(QFRFunctionality, remove_trailing_idle_qubits) {
     EXPECT_EQ(qc.getNqubits(), 1);
 }
 
-TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
+TEST_F(QFRFunctionality, ancillaryQubitAtEnd) {
     const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.x(0);
@@ -166,7 +166,7 @@ TEST_F(QFRFunctionality, ancillary_qubit_at_end) {
     qc.printStatistics(std::cout);
 }
 
-TEST_F(QFRFunctionality, ancillary_qubit_remove_middle) {
+TEST_F(QFRFunctionality, ancillaryQubitRemoveMiddle) {
     const std::size_t  nqubits = 2;
     QuantumComputation qc(nqubits);
     qc.x(0);
@@ -180,7 +180,7 @@ TEST_F(QFRFunctionality, ancillary_qubit_remove_middle) {
     qc.printRegisters();
 }
 
-TEST_F(QFRFunctionality, split_qreg) {
+TEST_F(QFRFunctionality, splitQreg) {
     const std::size_t  nqubits = 3;
     QuantumComputation qc(nqubits);
     qc.x(0);

@@ -28,8 +28,8 @@ namespace dd {
         GateMatrix gm;
 
         const auto  type       = op->getType();
-        const auto  nqubits    = op->getNqubits();
-        const auto  startQubit = op->getStartingQubit();
+        const auto  nqubits    = static_cast<dd::QubitCount>(op->getNqubits());
+        const auto  startQubit = static_cast<std::size_t>(op->getStartingQubit());
         const auto& parameter  = op->getParameter();
 
         switch (type) {
@@ -76,8 +76,8 @@ namespace dd {
     template<class Config>
     qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op, std::unique_ptr<dd::Package<Config>>& dd, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, bool inverse) {
         const auto type       = op->getType();
-        const auto nqubits    = op->getNqubits();
-        const auto startQubit = op->getStartingQubit();
+        const auto nqubits    = static_cast<dd::QubitCount>(op->getNqubits());
+        const auto startQubit = static_cast<std::size_t>(op->getStartingQubit());
 
         switch (type) {
             case qc::SWAP:
@@ -132,14 +132,14 @@ namespace dd {
             const auto target1 = targets.at(1U);
             // update permutation
             std::swap(permutation.at(target0), permutation.at(target1));
-            return dd->makeIdent(nqubits);
+            return dd->makeIdent(static_cast<dd::QubitCount>(nqubits));
         }
 
         if (type == qc::ShowProbabilities || type == qc::Barrier || type == qc::Snapshot) {
-            return dd->makeIdent(nqubits);
+            return dd->makeIdent(static_cast<dd::QubitCount>(nqubits));
         }
 
-        if (auto* standardOp = dynamic_cast<const qc::StandardOperation*>(op)) {
+        if (const auto* standardOp = dynamic_cast<const qc::StandardOperation*>(op)) {
             auto targets  = op->getTargets();
             auto controls = op->getControls();
             if (!permutation.empty()) {
@@ -169,8 +169,8 @@ namespace dd {
             return getStandardOperationDD(standardOp, dd, ddControls, target0, inverse);
         }
 
-        if (auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
-            auto e = dd->makeIdent(op->getNqubits());
+        if (const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
+            auto e = dd->makeIdent(static_cast<dd::QubitCount>(op->getNqubits()));
             if (inverse) {
                 for (const auto& operation: *compoundOp) {
                     e = dd->multiply(e, getInverseDD(operation.get(), dd, permutation));
@@ -183,7 +183,7 @@ namespace dd {
             return e;
         }
 
-        if (auto* classicOp = dynamic_cast<const qc::ClassicControlledOperation*>(op)) {
+        if (const auto* classicOp = dynamic_cast<const qc::ClassicControlledOperation*>(op)) {
             return getDD(classicOp->getOperation(), dd, permutation, inverse);
         }
 
@@ -208,133 +208,7 @@ namespace dd {
     }
 
     template<class Config>
-    void dumpTensor(qc::Operation* op, std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<dd::Package<Config>>& dd) {
-        const auto type = op->getType();
-        if (op->isStandardOperation()) {
-            auto        nqubits  = op->getNqubits();
-            const auto& controls = op->getControls();
-            const auto& targets  = op->getTargets();
-
-            // start of tensor
-            of << "[";
-
-            // save tags including operation type, involved qubits, and gate index
-            of << "[\"" << op->getName() << "\", ";
-
-            // obtain an ordered map of involved qubits and add corresponding tags
-            std::map<qc::Qubit, std::variant<qc::Qubit, qc::Control>> orderedQubits{};
-            for (const auto& control: controls) {
-                orderedQubits.emplace(control.qubit, control);
-                of << "\"Q" << control.qubit << "\", ";
-            }
-            for (const auto& target: targets) {
-                orderedQubits.emplace(target, target);
-                of << "\"Q" << target << "\", ";
-            }
-            of << "\"GATE" << gateIdx << "\"], ";
-            ++gateIdx;
-
-            // generate indices
-            // in order to conform to the DD variable ordering that later provides the tensor data
-            // the ordered map has to be traversed in reverse order in order to correctly determine the indices
-            std::stringstream ssIn{};
-            std::stringstream ssOut{};
-            auto              iter  = orderedQubits.rbegin();
-            auto              qubit = iter->first;
-            auto&             idx   = inds[qubit];
-            ssIn << "\"q" << qubit << "_" << idx << "\"";
-            ++idx;
-            ssOut << "\"q" << qubit << "_" << idx << "\"";
-            ++iter;
-            while (iter != orderedQubits.rend()) {
-                qubit     = iter->first;
-                auto& ind = inds[qubit];
-                ssIn << ", \"q" << qubit << "_" << ind << "\"";
-                ++ind;
-                ssOut << ", \"q" << qubit << "_" << ind << "\"";
-                ++iter;
-            }
-            of << "[" << ssIn.str() << ", " << ssOut.str() << "], ";
-
-            // write tensor dimensions
-            const std::size_t localQubits  = targets.size() + controls.size();
-            const std::size_t globalQubits = nqubits;
-            of << "[";
-            for (std::size_t q = 0U; q < localQubits; ++q) {
-                if (q != 0U) {
-                    of << ", ";
-                }
-                of << 2 << ", " << 2;
-            }
-            of << "], ";
-
-            // obtain a local representation of the underlying operation
-            qc::Qubit    localIdx = 0;
-            qc::Controls localControls{};
-            qc::Targets  localTargets{};
-            for (const auto& [q, var]: orderedQubits) {
-                if (std::holds_alternative<qc::Qubit>(var)) {
-                    localTargets.emplace_back(localIdx);
-                } else {
-                    const auto* control = std::get_if<qc::Control>(&var);
-                    localControls.emplace(qc::Control{localIdx, control->type});
-                }
-                ++localIdx;
-            }
-            // temporarily change nqubits
-            op->setNqubits(localQubits);
-
-            // get DD for local operation
-            auto localOp = op->clone();
-            localOp->setControls(localControls);
-            localOp->setTargets(localTargets);
-            const auto localDD = getDD(localOp.get(), dd);
-
-            // translate local DD to matrix
-            const auto localMatrix = dd->getMatrix(localDD);
-
-            // restore nqubits
-            op->setNqubits(globalQubits);
-
-            // set appropriate precision for dumping numbers
-            const auto precision = of.precision();
-            of.precision(std::numeric_limits<dd::fp>::max_digits10);
-
-            // write tensor data
-            of << "[";
-            for (std::size_t row = 0U; row < localMatrix.size(); ++row) {
-                const auto& r = localMatrix[row];
-                for (std::size_t col = 0U; col < r.size(); ++col) {
-                    if (row != 0U || col != 0U) {
-                        of << ", ";
-                    }
-
-                    const auto& elem = r[col];
-                    of << "[" << elem.real() << ", " << elem.imag() << "]";
-                }
-            }
-            of << "]";
-
-            // restore old precision
-            of.precision(precision);
-
-            // end of tensor
-            of << "]";
-        } else if (auto* compoundOp = dynamic_cast<qc::CompoundOperation*>(op)) {
-            for (const auto& operation: *compoundOp) {
-                if (operation != (*compoundOp->begin())) {
-                    of << ",\n";
-                }
-                dumpTensor(operation.get(), of, inds, gateIdx, dd);
-            }
-        } else if (type == qc::Barrier || type == qc::ShowProbabilities || type == qc::Snapshot) {
-            return;
-        } else if (type == qc::Measure) {
-            std::clog << "Skipping measurement in tensor dump." << std::endl;
-        } else {
-            throw qc::QFRException("Dumping of tensors is currently only supported for StandardOperations.");
-        }
-    }
+    void dumpTensor(qc::Operation* op, std::ostream& of, std::vector<std::size_t>& inds, std::size_t& gateIdx, std::unique_ptr<dd::Package<Config>>& dd);
 
     // apply swaps 'on' DD in order to change 'from' to 'to'
     // where |from| >= |to|
@@ -366,15 +240,16 @@ namespace dd {
             }
 
             // swap i and j
-            auto saved = on;
+            auto       saved  = on;
+            const auto swapDD = dd->makeSWAPDD(static_cast<dd::QubitCount>(on.p->v + 1), {}, static_cast<dd::Qubit>(from.at(i)), static_cast<dd::Qubit>(from.at(j)));
             if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
-                on = dd->multiply(dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)), on);
+                on = dd->multiply(swapDD, on);
             } else {
                 // the regular flag only has an effect on matrix DDs
                 if (regular) {
-                    on = dd->multiply(dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)), on);
+                    on = dd->multiply(swapDD, on);
                 } else {
-                    on = dd->multiply(on, dd->makeSWAPDD(on.p->v + 1, {}, from.at(i), from.at(j)));
+                    on = dd->multiply(on, swapDD);
                 }
             }
 

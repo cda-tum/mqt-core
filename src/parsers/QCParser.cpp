@@ -18,7 +18,7 @@ int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string,
     int         line = 0;
 
     const std::string delimiter = " ";
-    size_t            pos;
+    std::size_t       pos{};
 
     std::vector<std::string> variables{};
     std::vector<std::string> inputs{};
@@ -43,8 +43,9 @@ int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string,
         }
 
         // header read complete
-        if (cmd == "BEGIN" || cmd == "begin")
+        if (cmd == "BEGIN" || cmd == "begin") {
             break;
+        }
 
         if (cmd == ".v") {
             is >> std::ws;
@@ -135,20 +136,20 @@ int qc::QuantumComputation::readQCHeader(std::istream& is, std::map<std::string,
         }
     }
 
-    for (size_t q = 0; q < variables.size(); ++q) {
-        variable         = variables.at(q);
-        auto p           = varMap.at(variable);
-        initialLayout[q] = p;
+    for (std::size_t q = 0; q < variables.size(); ++q) {
+        variable                             = variables.at(q);
+        auto p                               = varMap.at(variable);
+        initialLayout[static_cast<Qubit>(q)] = p;
         if (!outputs.empty()) {
             if (std::count(outputs.begin(), outputs.end(), variable) != 0) {
-                outputPermutation[q] = p;
+                outputPermutation[static_cast<Qubit>(q)] = p;
             } else {
-                outputPermutation.erase(q);
+                outputPermutation.erase(static_cast<Qubit>(q));
                 garbage.at(p) = true;
             }
         } else {
             // no output statement given --> assume all outputs are relevant
-            outputPermutation[q] = p;
+            outputPermutation[static_cast<Qubit>(q)] = p;
         }
     }
 
@@ -231,14 +232,15 @@ void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, 
             }
         }
 
-        std::string qubits, label;
+        std::string qubits;
+        std::string label;
         is >> std::ws;
         getline(is, qubits);
 
         std::vector<Control> controls{};
 
         auto        delimiter = ' ';
-        std::size_t pos;
+        std::size_t pos{};
 
         while ((pos = qubits.find(delimiter)) != std::string::npos) {
             label = qubits.substr(0, pos);

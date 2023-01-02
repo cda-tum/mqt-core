@@ -10,80 +10,79 @@ namespace qasm {
     /***
      * Private Methods
      ***/
-    Parser::Expr* Parser::Exponentiation() {
-        Expr* x;
-        if (sym == Token::Kind::minus) {
+    std::shared_ptr<Parser::Expr> Parser::exponentiation() {
+        if (sym == Token::Kind::Minus) {
             scan();
-            x = Exponentiation();
-            if (x->kind == Expr::Kind::number) {
+            auto x = exponentiation();
+            if (x->kind == Expr::Kind::Number) {
                 x->num = -x->num;
             } else {
-                x = new Expr(Expr::Kind::sign, 0., x);
+                x = std::make_shared<Expr>(Expr::Kind::Sign, 0., x);
             }
             return x;
         }
 
-        if (sym == Token::Kind::real) {
+        if (sym == Token::Kind::Real) {
             scan();
-            return new Expr(Expr::Kind::number, t.valReal);
+            return std::make_shared<Expr>(Expr::Kind::Number, t.valReal);
         }
-        if (sym == Token::Kind::nninteger) {
+        if (sym == Token::Kind::Nninteger) {
             scan();
-            return new Expr(Expr::Kind::number, t.val);
+            return std::make_shared<Expr>(Expr::Kind::Number, t.val);
         }
-        if (sym == Token::Kind::pi) {
+        if (sym == Token::Kind::Pi) {
             scan();
-            return new Expr(Expr::Kind::number, qc::PI);
+            return std::make_shared<Expr>(Expr::Kind::Number, qc::PI);
         }
-        if (sym == Token::Kind::identifier) {
+        if (sym == Token::Kind::Identifier) {
             scan();
-            return new Expr(Expr::Kind::id, 0., nullptr, nullptr, t.str);
+            return std::make_shared<Expr>(Expr::Kind::Id, 0., nullptr, nullptr, t.str);
         }
-        if (sym == Token::Kind::lpar) {
+        if (sym == Token::Kind::Lpar) {
             scan();
-            x = Exp();
-            check(Token::Kind::rpar);
+            auto x = exp();
+            check(Token::Kind::Rpar);
             return x;
         }
         if (unaryops.find(sym) != unaryops.end()) {
             auto op = sym;
             scan();
-            check(Token::Kind::lpar);
-            x = Exp();
-            check(Token::Kind::rpar);
-            if (x->kind == Expr::Kind::number) {
-                if (op == Token::Kind::sin) {
+            check(Token::Kind::Lpar);
+            auto x = exp();
+            check(Token::Kind::Rpar);
+            if (x->kind == Expr::Kind::Number) {
+                if (op == Token::Kind::Sin) {
                     x->num = std::sin(x->num);
-                } else if (op == Token::Kind::cos) {
+                } else if (op == Token::Kind::Cos) {
                     x->num = std::cos(x->num);
-                } else if (op == Token::Kind::tan) {
+                } else if (op == Token::Kind::Tan) {
                     x->num = std::tan(x->num);
-                } else if (op == Token::Kind::exp) {
+                } else if (op == Token::Kind::Exp) {
                     x->num = std::exp(x->num);
-                } else if (op == Token::Kind::ln) {
+                } else if (op == Token::Kind::Ln) {
                     x->num = std::log(x->num);
-                } else if (op == Token::Kind::sqrt) {
+                } else if (op == Token::Kind::Sqrt) {
                     x->num = std::sqrt(x->num);
                 }
                 return x;
             }
-            if (op == Token::Kind::sin) {
-                return new Expr(Expr::Kind::sin, 0., x);
+            if (op == Token::Kind::Sin) {
+                return std::make_shared<Expr>(Expr::Kind::Sin, 0., x);
             }
-            if (op == Token::Kind::cos) {
-                return new Expr(Expr::Kind::cos, 0., x);
+            if (op == Token::Kind::Cos) {
+                return std::make_shared<Expr>(Expr::Kind::Cos, 0., x);
             }
-            if (op == Token::Kind::tan) {
-                return new Expr(Expr::Kind::tan, 0., x);
+            if (op == Token::Kind::Tan) {
+                return std::make_shared<Expr>(Expr::Kind::Tan, 0., x);
             }
-            if (op == Token::Kind::exp) {
-                return new Expr(Expr::Kind::exp, 0., x);
+            if (op == Token::Kind::Exp) {
+                return std::make_shared<Expr>(Expr::Kind::Exp, 0., x);
             }
-            if (op == Token::Kind::ln) {
-                return new Expr(Expr::Kind::ln, 0., x);
+            if (op == Token::Kind::Ln) {
+                return std::make_shared<Expr>(Expr::Kind::Ln, 0., x);
             }
-            if (op == Token::Kind::sqrt) {
-                return new Expr(Expr::Kind::sqrt, 0., x);
+            if (op == Token::Kind::Sqrt) {
+                return std::make_shared<Expr>(Expr::Kind::Sqrt, 0., x);
             }
         } else {
             error("Invalid Expression");
@@ -92,166 +91,153 @@ namespace qasm {
         return nullptr;
     }
 
-    Parser::Expr* Parser::Factor() {
-        Expr* x;
-        Expr* y;
-        x = Exponentiation();
-        while (sym == Token::Kind::power) {
+    std::shared_ptr<Parser::Expr> Parser::factor() {
+        auto x = exponentiation();
+        while (sym == Token::Kind::Power) {
             scan();
-            y = Exponentiation();
-            if (x->kind == Expr::Kind::number && y->kind == Expr::Kind::number) {
+            auto y = exponentiation();
+            if (x->kind == Expr::Kind::Number && y->kind == Expr::Kind::Number) {
                 x->num = std::pow(x->num, y->num);
-                delete y;
             } else {
-                x = new Expr(Expr::Kind::power, 0., x, y);
+                x = std::make_shared<Expr>(Expr::Kind::Power, 0., x, y);
             }
         }
         return x;
     }
 
-    Parser::Expr* Parser::Term() {
-        Expr* x = Factor();
-        Expr* y;
-
-        while (sym == Token::Kind::times || sym == Token::Kind::div) {
+    std::shared_ptr<Parser::Expr> Parser::term() {
+        auto x = factor();
+        while (sym == Token::Kind::Times || sym == Token::Kind::Div) {
             auto op = sym;
             scan();
-            y = Factor();
-            if (op == Token::Kind::times) {
-                if (x->kind == Expr::Kind::number && y->kind == Expr::Kind::number) {
+            auto y = factor();
+            if (op == Token::Kind::Times) {
+                if (x->kind == Expr::Kind::Number && y->kind == Expr::Kind::Number) {
                     x->num = x->num * y->num;
-                    delete y;
                 } else {
-                    x = new Expr(Expr::Kind::times, 0., x, y);
+                    x = std::make_shared<Expr>(Expr::Kind::Times, 0., x, y);
                 }
             } else {
-                if (x->kind == Expr::Kind::number && y->kind == Expr::Kind::number) {
+                if (x->kind == Expr::Kind::Number && y->kind == Expr::Kind::Number) {
                     x->num = x->num / y->num;
-                    delete y;
                 } else {
-                    x = new Expr(Expr::Kind::div, 0., x, y);
+                    x = std::make_shared<Expr>(Expr::Kind::Div, 0., x, y);
                 }
             }
         }
         return x;
     }
 
-    Parser::Expr* Parser::Exp() {
-        Expr* x;
-        Expr* y;
-        if (sym == Token::Kind::minus) {
+    std::shared_ptr<Parser::Expr> Parser::exp() {
+        std::shared_ptr<Expr> x{};
+        if (sym == Token::Kind::Minus) {
             scan();
-            x = Term();
-            if (x->kind == Expr::Kind::number) {
+            x = term();
+            if (x->kind == Expr::Kind::Number) {
                 x->num = -x->num;
             } else {
-                x = new Expr(Expr::Kind::sign, 0., x);
+                x = std::make_shared<Expr>(Expr::Kind::Sign, 0., x);
             }
         } else {
-            x = Term();
+            x = term();
         }
 
-        while (sym == Token::Kind::plus || sym == Token::Kind::minus) {
+        while (sym == Token::Kind::Plus || sym == Token::Kind::Minus) {
             auto op = sym;
             scan();
-            y = Term();
-            if (op == Token::Kind::plus) {
-                if (x->kind == Expr::Kind::number && y->kind == Expr::Kind::number) {
+            auto y = term();
+            if (op == Token::Kind::Plus) {
+                if (x->kind == Expr::Kind::Number && y->kind == Expr::Kind::Number) {
                     x->num += y->num;
                 } else {
-                    x = new Expr(Expr::Kind::plus, 0., x, y);
+                    x = std::make_shared<Expr>(Expr::Kind::Plus, 0., x, y);
                 }
             } else {
-                if (x->kind == Expr::Kind::number && y->kind == Expr::Kind::number) {
+                if (x->kind == Expr::Kind::Number && y->kind == Expr::Kind::Number) {
                     x->num -= y->num;
                 } else {
-                    x = new Expr(Expr::Kind::minus, 0., x, y);
+                    x = std::make_shared<Expr>(Expr::Kind::Minus, 0., x, y);
                 }
             }
         }
         return x;
     }
 
-    Parser::Expr* Parser::RewriteExpr(Expr* expr, std::map<std::string, Expr*>& exprMap) {
+    std::shared_ptr<Parser::Expr> Parser::rewriteExpr(const std::shared_ptr<Expr>& expr, std::map<std::string, std::shared_ptr<Expr>>& exprMap) {
         if (expr == nullptr) {
             return nullptr;
         }
-        Expr* op1 = RewriteExpr(expr->op1, exprMap);
-        Expr* op2 = RewriteExpr(expr->op2, exprMap);
+        auto op1 = rewriteExpr(expr->op1, exprMap);
+        auto op2 = rewriteExpr(expr->op2, exprMap);
 
-        if (expr->kind == Expr::Kind::number) {
-            return new Expr(expr->kind, expr->num, op1, op2, expr->id);
+        if (expr->kind == Expr::Kind::Number) {
+            return std::make_shared<Expr>(expr->kind, expr->num, op1, op2, expr->id);
         }
-        if (expr->kind == Expr::Kind::plus) {
-            if (op1->kind == Expr::Kind::number && op2->kind == Expr::Kind::number) {
+        if (expr->kind == Expr::Kind::Plus) {
+            if (op1->kind == Expr::Kind::Number && op2->kind == Expr::Kind::Number) {
                 op1->num = op1->num + op2->num;
-                delete op2;
                 return op1;
             }
-        } else if (expr->kind == Expr::Kind::minus) {
-            if (op1->kind == Expr::Kind::number && op2->kind == Expr::Kind::number) {
+        } else if (expr->kind == Expr::Kind::Minus) {
+            if (op1->kind == Expr::Kind::Number && op2->kind == Expr::Kind::Number) {
                 op1->num = op1->num - op2->num;
-                delete op2;
                 return op1;
             }
-        } else if (expr->kind == Expr::Kind::sign) {
-            if (op1->kind == Expr::Kind::number) {
+        } else if (expr->kind == Expr::Kind::Sign) {
+            if (op1->kind == Expr::Kind::Number) {
                 op1->num = -op1->num;
                 return op1;
             }
-        } else if (expr->kind == Expr::Kind::times) {
-            if (op1->kind == Expr::Kind::number && op2->kind == Expr::Kind::number) {
+        } else if (expr->kind == Expr::Kind::Times) {
+            if (op1->kind == Expr::Kind::Number && op2->kind == Expr::Kind::Number) {
                 op1->num = op1->num * op2->num;
-                delete op2;
                 return op1;
             }
-        } else if (expr->kind == Expr::Kind::div) {
-            if (op1->kind == Expr::Kind::number && op2->kind == Expr::Kind::number) {
+        } else if (expr->kind == Expr::Kind::Div) {
+            if (op1->kind == Expr::Kind::Number && op2->kind == Expr::Kind::Number) {
                 op1->num = op1->num / op2->num;
-                delete op2;
                 return op1;
             }
-        } else if (expr->kind == Expr::Kind::power) {
-            if (op1->kind == Expr::Kind::number && op2->kind == Expr::Kind::number) {
+        } else if (expr->kind == Expr::Kind::Power) {
+            if (op1->kind == Expr::Kind::Number && op2->kind == Expr::Kind::Number) {
                 op1->num = std::pow(op1->num, op2->num);
-                delete op2;
                 return op1;
             }
-        } else if (expr->kind == Expr::Kind::sin) {
-            if (op1->kind == Expr::Kind::number) {
+        } else if (expr->kind == Expr::Kind::Sin) {
+            if (op1->kind == Expr::Kind::Number) {
                 op1->num = std::sin(op1->num);
                 return op1;
             }
-        } else if (expr->kind == Expr::Kind::cos) {
-            if (op1->kind == Expr::Kind::number) {
+        } else if (expr->kind == Expr::Kind::Cos) {
+            if (op1->kind == Expr::Kind::Number) {
                 op1->num = std::cos(op1->num);
                 return op1;
             }
-        } else if (expr->kind == Expr::Kind::tan) {
-            if (op1->kind == Expr::Kind::number) {
+        } else if (expr->kind == Expr::Kind::Tan) {
+            if (op1->kind == Expr::Kind::Number) {
                 op1->num = std::tan(op1->num);
                 return op1;
             }
-        } else if (expr->kind == Expr::Kind::exp) {
-            if (op1->kind == Expr::Kind::number) {
+        } else if (expr->kind == Expr::Kind::Exp) {
+            if (op1->kind == Expr::Kind::Number) {
                 op1->num = std::exp(op1->num);
                 return op1;
             }
-        } else if (expr->kind == Expr::Kind::ln) {
-            if (op1->kind == Expr::Kind::number) {
+        } else if (expr->kind == Expr::Kind::Ln) {
+            if (op1->kind == Expr::Kind::Number) {
                 op1->num = std::log(op1->num);
                 return op1;
             }
-        } else if (expr->kind == Expr::Kind::sqrt) {
-            if (op1->kind == Expr::Kind::number) {
+        } else if (expr->kind == Expr::Kind::Sqrt) {
+            if (op1->kind == Expr::Kind::Number) {
                 op1->num = std::sqrt(op1->num);
                 return op1;
             }
-        } else if (expr->kind == Expr::Kind::id) {
-            return new Expr(*exprMap[expr->id]);
+        } else if (expr->kind == Expr::Kind::Id) {
+            return exprMap[expr->id];
         }
 
-        return new Expr(expr->kind, expr->num, op1, op2, expr->id);
+        return std::make_shared<Expr>(expr->kind, expr->num, op1, op2, expr->id);
     }
 
     void Parser::handleComment() {
@@ -314,7 +300,7 @@ namespace qasm {
     }
 
     void Parser::check(Token::Kind expected) {
-        while (sym == Token::Kind::comment) {
+        while (sym == Token::Kind::Comment) {
             scan();
             handleComment();
         }
@@ -322,83 +308,83 @@ namespace qasm {
         if (sym == expected) {
             scan();
         } else {
-            error("Expected '" + qasm::KindNames[expected] + "' but found '" + qasm::KindNames[sym] + "' in line " + std::to_string(la.line) + ", column " + std::to_string(la.col));
+            error("Expected '" + qasm::KIND_NAMES.at(expected) + "' but found '" + qasm::KIND_NAMES.at(sym) + "' in line " + std::to_string(la.line) + ", column " + std::to_string(la.col));
         }
     }
 
-    qc::QuantumRegister Parser::ArgumentQreg() {
-        check(Token::Kind::identifier);
+    qc::QuantumRegister Parser::argumentQreg() {
+        check(Token::Kind::Identifier);
         const std::string s = t.str;
         if (qregs.find(s) == qregs.end()) {
             error("Argument is not a qreg: " + s);
         }
 
-        if (sym == Token::Kind::lbrack) {
+        if (sym == Token::Kind::Lbrack) {
             scan();
-            check(Token::Kind::nninteger);
+            check(Token::Kind::Nninteger);
             auto offset = static_cast<std::size_t>(t.val);
-            check(Token::Kind::rbrack);
+            check(Token::Kind::Rbrack);
             return std::make_pair(qregs[s].first + offset, 1);
         }
         return std::make_pair(qregs[s].first, qregs[s].second);
     }
 
-    qc::ClassicalRegister Parser::ArgumentCreg() {
-        check(Token::Kind::identifier);
+    qc::ClassicalRegister Parser::argumentCreg() {
+        check(Token::Kind::Identifier);
         const std::string s = t.str;
         if (cregs.find(s) == cregs.end()) {
             error("Argument is not a creg: " + s);
         }
 
-        if (sym == Token::Kind::lbrack) {
+        if (sym == Token::Kind::Lbrack) {
             scan();
-            check(Token::Kind::nninteger);
+            check(Token::Kind::Nninteger);
             auto offset = static_cast<std::size_t>(t.val);
-            check(Token::Kind::rbrack);
+            check(Token::Kind::Rbrack);
             return std::make_pair(cregs[s].first + offset, 1);
         }
 
         return std::make_pair(cregs[s].first, cregs[s].second);
     }
 
-    void Parser::ExpList(std::vector<Expr*>& expressions) {
-        expressions.emplace_back(Exp());
-        while (sym == Token::Kind::comma) {
+    void Parser::expList(std::vector<std::shared_ptr<Parser::Expr>>& expressions) {
+        expressions.emplace_back(exp());
+        while (sym == Token::Kind::Comma) {
             scan();
-            expressions.emplace_back(Exp());
+            expressions.emplace_back(exp());
         }
     }
 
-    void Parser::ArgList(std::vector<qc::QuantumRegister>& arguments) {
-        arguments.emplace_back(ArgumentQreg());
-        while (sym == Token::Kind::comma) {
+    void Parser::argList(std::vector<qc::QuantumRegister>& arguments) {
+        arguments.emplace_back(argumentQreg());
+        while (sym == Token::Kind::Comma) {
             scan();
-            arguments.emplace_back(ArgumentQreg());
+            arguments.emplace_back(argumentQreg());
         }
     }
 
-    void Parser::IdList(std::vector<std::string>& identifiers) {
-        check(Token::Kind::identifier);
+    void Parser::idList(std::vector<std::string>& identifiers) {
+        check(Token::Kind::Identifier);
         identifiers.emplace_back(t.str);
-        while (sym == Token::Kind::comma) {
+        while (sym == Token::Kind::Comma) {
             scan();
-            check(Token::Kind::identifier);
+            check(Token::Kind::Identifier);
             identifiers.emplace_back(t.str);
         }
     }
 
-    std::unique_ptr<qc::Operation> Parser::Gate() {
-        if (sym == Token::Kind::ugate) {
+    std::unique_ptr<qc::Operation> Parser::gate() {
+        if (sym == Token::Kind::Ugate) {
             scan();
-            check(Token::Kind::lpar);
-            std::unique_ptr<Expr> theta(Exp());
-            check(Token::Kind::comma);
-            std::unique_ptr<Expr> phi(Exp());
-            check(Token::Kind::comma);
-            std::unique_ptr<Expr> lambda(Exp());
-            check(Token::Kind::rpar);
-            auto target = ArgumentQreg();
-            check(Token::Kind::semicolon);
+            check(Token::Kind::Lpar);
+            const auto theta = exp();
+            check(Token::Kind::Comma);
+            const auto phi = exp();
+            check(Token::Kind::Comma);
+            const auto lambda = exp();
+            check(Token::Kind::Rpar);
+            auto target = argumentQreg();
+            check(Token::Kind::Semicolon);
 
             if (target.second == 1) {
                 return std::make_unique<qc::StandardOperation>(nqubits, target.first, qc::U3, lambda->num, phi->num, theta->num);
@@ -411,14 +397,14 @@ namespace qasm {
             }
             return std::make_unique<qc::CompoundOperation>(std::move(gate));
         }
-        if (sym == Token::Kind::mcx_gray || sym == Token::Kind::mcx_recursive || sym == Token::Kind::mcx_vchain) {
+        if (sym == Token::Kind::McxGray || sym == Token::Kind::McxRecursive || sym == Token::Kind::McxVchain) {
             auto type = sym;
             scan();
             std::vector<qc::QuantumRegister> registers{};
-            registers.emplace_back(ArgumentQreg());
-            while (sym != Token::Kind::semicolon) {
-                check(Token::Kind::comma);
-                registers.emplace_back(ArgumentQreg());
+            registers.emplace_back(argumentQreg());
+            while (sym != Token::Kind::Semicolon) {
+                check(Token::Kind::Comma);
+                registers.emplace_back(argumentQreg());
             }
             scan();
 
@@ -438,13 +424,13 @@ namespace qasm {
             }
 
             // drop ancillaries since our library can natively work with MCTs
-            if (type == Token::Kind::mcx_vchain) {
+            if (type == Token::Kind::McxVchain) {
                 // n controls, 1 target, n-2 ancillaries = 2n-1 qubits
                 const auto ancillaries = (qubits.size() + 1) / 2 - 2;
                 for (std::size_t i = 0; i < ancillaries; ++i) {
                     qubits.pop_back();
                 }
-            } else if (type == Token::Kind::mcx_recursive) {
+            } else if (type == Token::Kind::McxRecursive) {
                 // 1 ancillary if more than 4 controls
                 if (qubits.size() > 5) {
                     qubits.pop_back();
@@ -454,29 +440,29 @@ namespace qasm {
             qubits.pop_back();
             return std::make_unique<qc::StandardOperation>(nqubits, qc::Controls{qubits.cbegin(), qubits.cend()}, target);
         }
-        if (sym == Token::Kind::mcphase) {
+        if (sym == Token::Kind::Mcphase) {
             scan();
-            check(Token::Kind::lpar);
-            const std::unique_ptr<Expr> lambda(Exp());
-            check(Token::Kind::rpar);
+            check(Token::Kind::Lpar);
+            const auto lambda = exp();
+            check(Token::Kind::Rpar);
 
             std::vector<qc::QuantumRegister> registers{};
-            registers.emplace_back(ArgumentQreg());
-            while (sym != Token::Kind::semicolon) {
-                check(Token::Kind::comma);
-                registers.emplace_back(ArgumentQreg());
+            registers.emplace_back(argumentQreg());
+            while (sym != Token::Kind::Semicolon) {
+                check(Token::Kind::Comma);
+                registers.emplace_back(argumentQreg());
             }
             scan();
 
             std::vector<qc::Control> qubits{};
             for (const auto& reg: registers) {
                 if (reg.second != 1) {
-                    error("MCPhase for whole qubit registers not yet implemented");
+                    error("Mcphase for whole qubit registers not yet implemented");
                 }
 
                 if (std::count(registers.begin(), registers.end(), reg) > 1) {
                     std::ostringstream oss{};
-                    oss << "Duplicate qubit " << reg.first << " in mcphase definition";
+                    oss << "Duplicate qubit " << reg.first << " in Mcphase definition";
                     error(oss.str());
                 }
 
@@ -486,12 +472,12 @@ namespace qasm {
             qubits.pop_back();
             return std::make_unique<qc::StandardOperation>(nqubits, qc::Controls{qubits.cbegin(), qubits.cend()}, target, qc::Phase, lambda->num);
         }
-        if (sym == Token::Kind::swap) {
+        if (sym == Token::Kind::Swap) {
             scan();
-            auto firstTarget = ArgumentQreg();
-            check(Token::Kind::comma);
-            auto secondTarget = ArgumentQreg();
-            check(Token::Kind::semicolon);
+            auto firstTarget = argumentQreg();
+            check(Token::Kind::Comma);
+            auto secondTarget = argumentQreg();
+            check(Token::Kind::Semicolon);
 
             // return corresponding operation
             if (firstTarget.second == 1 && secondTarget.second == 1) {
@@ -502,12 +488,12 @@ namespace qasm {
             }
             error("SWAP for whole qubit registers not yet implemented");
         }
-        if (sym == Token::Kind::cxgate) {
+        if (sym == Token::Kind::Cxgate) {
             scan();
-            auto control = ArgumentQreg();
-            check(Token::Kind::comma);
-            auto target = ArgumentQreg();
-            check(Token::Kind::semicolon);
+            auto control = argumentQreg();
+            check(Token::Kind::Comma);
+            auto target = argumentQreg();
+            check(Token::Kind::Semicolon);
 
             // valid check
             for (std::size_t i = 0; i < control.second; ++i) {
@@ -543,12 +529,12 @@ namespace qasm {
             }
             return std::make_unique<qc::CompoundOperation>(std::move(gate));
         }
-        if (sym == Token::Kind::sxgate || sym == Token::Kind::sxdggate) {
-            const auto type = (sym == Token::Kind::sxgate) ? qc::SX : qc::SXdag;
+        if (sym == Token::Kind::Sxgate || sym == Token::Kind::Sxdggate) {
+            const auto type = (sym == Token::Kind::Sxgate) ? qc::SX : qc::SXdag;
             scan();
 
-            auto target = ArgumentQreg();
-            check(Token::Kind::semicolon);
+            auto target = argumentQreg();
+            check(Token::Kind::Semicolon);
 
             if (target.second == 1) {
                 return std::make_unique<qc::StandardOperation>(nqubits, target.first, type);
@@ -561,7 +547,7 @@ namespace qasm {
             }
             return std::make_unique<qc::CompoundOperation>(std::move(gate));
         }
-        if (sym == Token::Kind::identifier) {
+        if (sym == Token::Kind::Identifier) {
             scan();
             auto        gateName  = t.str;
             auto        cGateName = gateName;
@@ -574,12 +560,12 @@ namespace qasm {
             // special treatment for controlled swap
             if (cGateName == "swap") {
                 std::vector<qc::QuantumRegister> arguments;
-                ArgList(arguments);
-                check(Token::Kind::semicolon);
+                argList(arguments);
+                check(Token::Kind::Semicolon);
                 qc::QuantumRegisterMap argMap;
-                if (arguments.size() != static_cast<std::size_t>(ncontrols + 2)) {
+                if (arguments.size() != ncontrols + 2) {
                     std::ostringstream oss{};
-                    if (arguments.size() > static_cast<std::size_t>(ncontrols + 2)) {
+                    if (arguments.size() > ncontrols + 2) {
                         oss << "Too many arguments for ";
                     } else {
                         oss << "Too few arguments for ";
@@ -615,22 +601,22 @@ namespace qasm {
             auto gateIt  = compoundGates.find(gateName);
             auto cGateIt = compoundGates.find(cGateName);
             if (gateIt != compoundGates.end() || cGateIt != compoundGates.end()) {
-                std::vector<Expr*>               parameters;
-                std::vector<qc::QuantumRegister> arguments;
-                if (sym == Token::Kind::lpar) {
+                std::vector<std::shared_ptr<Parser::Expr>> parameters;
+                std::vector<qc::QuantumRegister>           arguments;
+                if (sym == Token::Kind::Lpar) {
                     scan();
-                    if (sym != Token::Kind::rpar) {
-                        ExpList(parameters);
+                    if (sym != Token::Kind::Rpar) {
+                        expList(parameters);
                     }
-                    check(Token::Kind::rpar);
+                    check(Token::Kind::Rpar);
                 }
-                ArgList(arguments);
-                check(Token::Kind::semicolon);
+                argList(arguments);
+                check(Token::Kind::Semicolon);
 
                 // return corresponding operation
-                qc::QuantumRegisterMap       argMap;
-                std::map<std::string, Expr*> paramMap;
-                std::size_t                  size = 1;
+                qc::QuantumRegisterMap                               argMap;
+                std::map<std::string, std::shared_ptr<Parser::Expr>> paramMap;
+                std::size_t                                          size = 1;
                 if (gateIt != compoundGates.end()) {
                     if ((*gateIt).second.argumentNames.size() != arguments.size()) {
                         std::ostringstream oss{};
@@ -719,10 +705,10 @@ namespace qasm {
                             paramMap[cGateIt->second.parameterNames[j]] = parameters[j];
                         }
 
-                        if (auto* cu = dynamic_cast<SingleQubitGate*>(cGate)) {
-                            std::unique_ptr<Expr> theta(RewriteExpr(cu->theta, paramMap));
-                            std::unique_ptr<Expr> phi(RewriteExpr(cu->phi, paramMap));
-                            std::unique_ptr<Expr> lambda(RewriteExpr(cu->lambda, paramMap));
+                        if (auto* cu = dynamic_cast<SingleQubitGate*>(cGate.get())) {
+                            const auto theta  = rewriteExpr(cu->theta, paramMap);
+                            const auto phi    = rewriteExpr(cu->phi, paramMap);
+                            const auto lambda = rewriteExpr(cu->lambda, paramMap);
 
                             return std::make_unique<qc::StandardOperation>(nqubits, controls, argMap.at(targ).first, qc::U3, lambda->num, phi->num, theta->num);
                         }
@@ -736,15 +722,15 @@ namespace qasm {
                 // identifier specifies just a single operation (U3 or CX)
                 if (gateIt != compoundGates.end() && gateIt->second.gates.size() == 1) {
                     const auto gate = gateIt->second.gates.front();
-                    if (auto* u = dynamic_cast<SingleQubitGate*>(gate)) {
-                        std::unique_ptr<Expr> theta(RewriteExpr(u->theta, paramMap));
-                        std::unique_ptr<Expr> phi(RewriteExpr(u->phi, paramMap));
-                        std::unique_ptr<Expr> lambda(RewriteExpr(u->lambda, paramMap));
+                    if (auto* u = dynamic_cast<SingleQubitGate*>(gate.get())) {
+                        const auto theta  = rewriteExpr(u->theta, paramMap);
+                        const auto phi    = rewriteExpr(u->phi, paramMap);
+                        const auto lambda = rewriteExpr(u->lambda, paramMap);
 
                         if (argMap.at(u->target).second == 1) {
                             return std::make_unique<qc::StandardOperation>(nqubits, argMap.at(u->target).first, qc::U3, lambda->num, phi->num, theta->num);
                         }
-                    } else if (auto* cx = dynamic_cast<CXgate*>(gate)) {
+                    } else if (auto* cx = dynamic_cast<CXgate*>(gate.get())) {
                         if (argMap.at(cx->control).second == 1 && argMap.at(cx->target).second == 1) {
                             return std::make_unique<qc::StandardOperation>(nqubits, qc::Control{argMap.at(cx->control).first}, argMap.at(cx->target).first, qc::X);
                         }
@@ -753,10 +739,10 @@ namespace qasm {
 
                 qc::CompoundOperation op(nqubits);
                 for (auto& gate: gateIt->second.gates) {
-                    if (auto* u = dynamic_cast<SingleQubitGate*>(gate)) {
-                        std::unique_ptr<Expr> theta(RewriteExpr(u->theta, paramMap));
-                        std::unique_ptr<Expr> phi(RewriteExpr(u->phi, paramMap));
-                        std::unique_ptr<Expr> lambda(RewriteExpr(u->lambda, paramMap));
+                    if (auto* u = dynamic_cast<SingleQubitGate*>(gate.get())) {
+                        const auto theta  = rewriteExpr(u->theta, paramMap);
+                        const auto phi    = rewriteExpr(u->phi, paramMap);
+                        const auto lambda = rewriteExpr(u->lambda, paramMap);
 
                         if (argMap.at(u->target).second == 1) {
                             op.emplace_back<qc::StandardOperation>(nqubits, argMap.at(u->target).first, u->type,
@@ -769,7 +755,7 @@ namespace qasm {
                                 op.emplace_back<qc::StandardOperation>(nqubits, argMap.at(u->target).first + j, qc::U3, lambda->num, phi->num, theta->num);
                             }
                         }
-                    } else if (auto* cx = dynamic_cast<CXgate*>(gate)) {
+                    } else if (auto* cx = dynamic_cast<CXgate*>(gate.get())) {
                         // valid check
                         for (std::size_t i = 0; i < argMap.at(cx->control).second; ++i) {
                             for (std::size_t j = 0; j < argMap.at(cx->target).second; ++j) {
@@ -798,7 +784,7 @@ namespace qasm {
                         } else {
                             error("Register size does not match for CX gate!");
                         }
-                    } else if (auto* mcx = dynamic_cast<MCXgate*>(gate)) {
+                    } else if (auto* mcx = dynamic_cast<MCXgate*>(gate.get())) {
                         // valid check
                         for (const auto& control: mcx->controls) {
                             if (argMap.at(control).second != 1) {
@@ -824,7 +810,7 @@ namespace qasm {
                             controls.emplace(qc::Control{argMap.at(control).first});
                         }
                         op.emplace_back<qc::StandardOperation>(nqubits, controls, argMap.at(mcx->target).first);
-                    } else if (auto* cu = dynamic_cast<CUgate*>(gate)) {
+                    } else if (auto* cu = dynamic_cast<CUgate*>(gate.get())) {
                         // valid check
                         for (const auto& control: cu->controls) {
                             if (argMap.at(control).second != 1) {
@@ -842,9 +828,9 @@ namespace qasm {
                             }
                         }
 
-                        std::unique_ptr<Expr> theta(RewriteExpr(cu->theta, paramMap));
-                        std::unique_ptr<Expr> phi(RewriteExpr(cu->phi, paramMap));
-                        std::unique_ptr<Expr> lambda(RewriteExpr(cu->lambda, paramMap));
+                        const auto theta  = rewriteExpr(cu->theta, paramMap);
+                        const auto phi    = rewriteExpr(cu->phi, paramMap);
+                        const auto lambda = rewriteExpr(cu->lambda, paramMap);
 
                         qc::Controls controls{};
                         for (const auto& control: cu->controls) {
@@ -853,7 +839,7 @@ namespace qasm {
 
                         if (argMap.at(cu->target).second == 1) {
                             op.emplace_back<qc::StandardOperation>(nqubits, controls, argMap.at(cu->target).first, qc::U3, lambda->num, phi->num, theta->num);
-                        } else if (auto* sw = dynamic_cast<SWAPgate*>(gate)) {
+                        } else if (auto* sw = dynamic_cast<SWAPgate*>(gate.get())) {
                             // valid check
                             for (std::size_t i = 0; i < argMap.at(sw->target0).second; ++i) {
                                 for (std::size_t j = 0; j < argMap.at(sw->target1).second; ++j) {
@@ -893,52 +879,52 @@ namespace qasm {
             }
             error("Undefined gate " + t.str);
         } else {
-            error("Symbol " + qasm::KindNames[sym] + " not expected in Gate() routine!");
+            error("Symbol " + qasm::KIND_NAMES.at(sym) + " not expected in Gate() routine!");
         }
     }
 
-    void Parser::OpaqueGateDecl() {
-        check(Token::Kind::opaque);
-        check(Token::Kind::identifier);
+    void Parser::opaqueGateDecl() {
+        check(Token::Kind::Opaque);
+        check(Token::Kind::Identifier);
 
         CompoundGate gate;
         auto         gateName = t.str;
-        if (sym == Token::Kind::lpar) {
+        if (sym == Token::Kind::Lpar) {
             scan();
-            if (sym != Token::Kind::rpar) {
-                IdList(gate.argumentNames);
+            if (sym != Token::Kind::Rpar) {
+                idList(gate.argumentNames);
             }
-            check(Token::Kind::rpar);
+            check(Token::Kind::Rpar);
         }
-        IdList(gate.argumentNames);
+        idList(gate.argumentNames);
         compoundGates[gateName] = gate;
-        check(Token::Kind::semicolon);
+        check(Token::Kind::Semicolon);
     }
 
-    void Parser::GateDecl() {
-        check(Token::Kind::gate);
+    void Parser::gateDecl() {
+        check(Token::Kind::Gate);
         // skip declarations of known gates
-        if (sym == Token::Kind::mcx_gray || sym == Token::Kind::mcx_recursive || sym == Token::Kind::mcx_vchain || sym == Token::Kind::mcphase || sym == Token::Kind::swap || sym == Token::Kind::sxgate || sym == Token::Kind::sxdggate) {
-            while (sym != Token::Kind::rbrace) {
+        if (sym == Token::Kind::McxGray || sym == Token::Kind::McxRecursive || sym == Token::Kind::McxVchain || sym == Token::Kind::Mcphase || sym == Token::Kind::Swap || sym == Token::Kind::Sxgate || sym == Token::Kind::Sxdggate) {
+            while (sym != Token::Kind::Rbrace) {
                 scan();
             }
 
-            check(Token::Kind::rbrace);
+            check(Token::Kind::Rbrace);
             return;
         }
-        check(Token::Kind::identifier);
+        check(Token::Kind::Identifier);
 
         CompoundGate      gate;
         const std::string gateName = t.str;
-        if (sym == Token::Kind::lpar) {
+        if (sym == Token::Kind::Lpar) {
             scan();
-            if (sym != Token::Kind::rpar) {
-                IdList(gate.parameterNames);
+            if (sym != Token::Kind::Rpar) {
+                idList(gate.parameterNames);
             }
-            check(Token::Kind::rpar);
+            check(Token::Kind::Rpar);
         }
-        IdList(gate.argumentNames);
-        check(Token::Kind::lbrace);
+        idList(gate.argumentNames);
+        check(Token::Kind::Lbrace);
 
         auto        cGateName = gateName;
         std::size_t ncontrols = 0;
@@ -950,71 +936,69 @@ namespace qasm {
         auto controlledGateIt = compoundGates.find(cGateName);
         if (controlledGateIt != compoundGates.end() && controlledGateIt->second.gates.size() <= 1) {
             // skip over gate declaration
-            while (sym != Token::Kind::rbrace) {
+            while (sym != Token::Kind::Rbrace) {
                 scan();
             }
             scan();
             return;
         }
 
-        while (sym != Token::Kind::rbrace) {
-            if (sym == Token::Kind::ugate) {
+        while (sym != Token::Kind::Rbrace) {
+            if (sym == Token::Kind::Ugate) {
                 scan();
-                check(Token::Kind::lpar);
-                Expr* theta = Exp();
-                check(Token::Kind::comma);
-                Expr* phi = Exp();
-                check(Token::Kind::comma);
-                Expr* lambda = Exp();
-                check(Token::Kind::rpar);
-                check(Token::Kind::identifier);
-
-                gate.gates.push_back(new SingleQubitGate(t.str, qc::U3, lambda, phi, theta));
-                check(Token::Kind::semicolon);
-            } else if (sym == Token::Kind::sxgate || sym == Token::Kind::sxdggate) {
-                const auto gateType = sym == Token::Kind::sxgate ? qc::SX : qc::SXdag;
+                check(Token::Kind::Lpar);
+                auto theta = exp();
+                check(Token::Kind::Comma);
+                auto phi = exp();
+                check(Token::Kind::Comma);
+                auto lambda = exp();
+                check(Token::Kind::Rpar);
+                check(Token::Kind::Identifier);
+                gate.gates.push_back(std::make_shared<SingleQubitGate>(t.str, qc::U3, lambda, phi, theta));
+                check(Token::Kind::Semicolon);
+            } else if (sym == Token::Kind::Sxgate || sym == Token::Kind::Sxdggate) {
+                const auto gateType = sym == Token::Kind::Sxgate ? qc::SX : qc::SXdag;
                 scan();
-                check(Token::Kind::identifier);
-                gate.gates.push_back(new SingleQubitGate(t.str, gateType));
-                check(Token::Kind::semicolon);
-            } else if (sym == Token::Kind::cxgate) {
+                check(Token::Kind::Identifier);
+                gate.gates.push_back(std::make_shared<SingleQubitGate>(t.str, gateType));
+                check(Token::Kind::Semicolon);
+            } else if (sym == Token::Kind::Cxgate) {
                 scan();
-                check(Token::Kind::identifier);
+                check(Token::Kind::Identifier);
                 const std::string control = t.str;
-                check(Token::Kind::comma);
-                check(Token::Kind::identifier);
-                gate.gates.push_back(new CXgate(control, t.str));
-                check(Token::Kind::semicolon);
-
-            } else if (sym == Token::Kind::swap) {
+                check(Token::Kind::Comma);
+                check(Token::Kind::Identifier);
+                gate.gates.push_back(std::make_shared<CXgate>(control, t.str));
+                check(Token::Kind::Semicolon);
+            } else if (sym == Token::Kind::Swap) {
                 scan();
-                check(Token::Kind::identifier);
+                check(Token::Kind::Identifier);
                 auto target0 = t.str;
-                check(Token::Kind::comma);
-                check(Token::Kind::identifier);
+                check(Token::Kind::Comma);
+                check(Token::Kind::Identifier);
                 auto target1 = t.str;
-                gate.gates.push_back(new SWAPgate(target0, target1));
-                check(Token::Kind::semicolon);
-            } else if (sym == Token::Kind::mcx_gray || sym == Token::Kind::mcx_recursive || sym == Token::Kind::mcx_vchain) {
+                gate.gates.push_back(std::make_shared<SWAPgate>(target0, target1));
+                check(Token::Kind::Semicolon);
+            } else if (sym == Token::Kind::McxGray || sym == Token::Kind::McxRecursive || sym == Token::Kind::McxVchain) {
                 auto type = sym;
                 scan();
                 std::vector<std::string> arguments{};
-                check(Token::Kind::identifier);
+                check(Token::Kind::Identifier);
                 arguments.emplace_back(t.str);
-                while (sym != Token::Kind::semicolon) {
-                    check(Token::Kind::comma);
-                    check(Token::Kind::identifier);
+                while (sym != Token::Kind::Semicolon) {
+                    check(Token::Kind::Comma);
+                    check(Token::Kind::Identifier);
                     arguments.emplace_back(t.str);
                 }
                 scan();
 
                 // drop ancillaries since our library can natively work with MCTs
-                if (type == Token::Kind::mcx_vchain) {
+                if (type == Token::Kind::McxVchain) {
                     const auto ancillaries = (arguments.size() + 1) / 2 - 2;
                     for (std::size_t i = 0; i < ancillaries; ++i) {
                         arguments.pop_back();
                     }
-                } else if (type == Token::Kind::mcx_recursive) {
+                } else if (type == Token::Kind::McxRecursive) {
                     // 1 ancillary if more than 4 controls
                     if (arguments.size() > 5) {
                         arguments.pop_back();
@@ -1023,27 +1007,27 @@ namespace qasm {
 
                 auto target = arguments.back();
                 arguments.pop_back();
-                gate.gates.push_back(new MCXgate(arguments, target));
-            } else if (sym == Token::Kind::mcphase) {
+                gate.gates.push_back(std::make_shared<MCXgate>(arguments, target));
+            } else if (sym == Token::Kind::Mcphase) {
                 scan();
-                check(Token::Kind::lpar);
-                Expr* lambda = Exp();
-                check(Token::Kind::rpar);
+                check(Token::Kind::Lpar);
+                auto lambda = exp();
+                check(Token::Kind::Rpar);
                 std::vector<std::string> arguments{};
-                check(Token::Kind::identifier);
+                check(Token::Kind::Identifier);
                 arguments.emplace_back(t.str);
-                while (sym != Token::Kind::semicolon) {
-                    check(Token::Kind::comma);
-                    check(Token::Kind::identifier);
+                while (sym != Token::Kind::Semicolon) {
+                    check(Token::Kind::Comma);
+                    check(Token::Kind::Identifier);
                     arguments.emplace_back(t.str);
                 }
                 scan();
                 auto target = arguments.back();
                 arguments.pop_back();
-                auto* theta = new Expr(Expr::Kind::number);
-                auto* phi   = new Expr(Expr::Kind::number);
-                gate.gates.push_back(new CUgate(theta, phi, lambda, arguments, target));
-            } else if (sym == Token::Kind::identifier) {
+                auto theta = std::make_shared<Expr>(Expr::Kind::Number);
+                auto phi   = std::make_shared<Expr>(Expr::Kind::Number);
+                gate.gates.push_back(std::make_shared<CUgate>(theta, phi, lambda, arguments, target));
+            } else if (sym == Token::Kind::Identifier) {
                 scan();
                 const std::string name = t.str;
 
@@ -1058,20 +1042,20 @@ namespace qasm {
                 auto gateIt  = compoundGates.find(name);
                 auto cGateIt = compoundGates.find(cGateName);
                 if (gateIt != compoundGates.end() || cGateIt != compoundGates.end()) {
-                    std::vector<Expr*>       parameters;
-                    std::vector<std::string> arguments;
-                    if (sym == Token::Kind::lpar) {
+                    std::vector<std::shared_ptr<Parser::Expr>> parameters;
+                    std::vector<std::string>                   arguments;
+                    if (sym == Token::Kind::Lpar) {
                         scan();
-                        if (sym != Token::Kind::rpar) {
-                            ExpList(parameters);
+                        if (sym != Token::Kind::Rpar) {
+                            expList(parameters);
                         }
-                        check(Token::Kind::rpar);
+                        check(Token::Kind::Rpar);
                     }
-                    IdList(arguments);
-                    check(Token::Kind::semicolon);
+                    idList(arguments);
+                    check(Token::Kind::Semicolon);
 
-                    std::map<std::string, std::string> argMap;
-                    std::map<std::string, Expr*>       paramMap;
+                    std::map<std::string, std::string>                   argMap;
+                    std::map<std::string, std::shared_ptr<Parser::Expr>> paramMap;
                     if (gateIt != compoundGates.end()) {
                         if ((*gateIt).second.argumentNames.size() != arguments.size()) {
                             std::ostringstream oss{};
@@ -1092,22 +1076,22 @@ namespace qasm {
                         }
 
                         for (auto& it: gateIt->second.gates) {
-                            if (auto* u = dynamic_cast<SingleQubitGate*>(it)) {
-                                gate.gates.push_back(new SingleQubitGate(argMap.at(u->target), u->type, RewriteExpr(u->lambda, paramMap), RewriteExpr(u->phi, paramMap), RewriteExpr(u->theta, paramMap)));
-                            } else if (auto* cx = dynamic_cast<CXgate*>(it)) {
-                                gate.gates.push_back(new CXgate(argMap.at(cx->control), argMap.at(cx->target)));
-                            } else if (auto* cu = dynamic_cast<CUgate*>(it)) {
+                            if (auto* u = dynamic_cast<SingleQubitGate*>(it.get())) {
+                                gate.gates.push_back(std::make_shared<SingleQubitGate>(argMap.at(u->target), u->type, rewriteExpr(u->lambda, paramMap), rewriteExpr(u->phi, paramMap), rewriteExpr(u->theta, paramMap)));
+                            } else if (auto* cx = dynamic_cast<CXgate*>(it.get())) {
+                                gate.gates.push_back(std::make_shared<CXgate>(argMap.at(cx->control), argMap.at(cx->target)));
+                            } else if (auto* cu = dynamic_cast<CUgate*>(it.get())) {
                                 std::vector<std::string> controls{};
                                 for (const auto& control: cu->controls) {
                                     controls.emplace_back(argMap.at(control));
                                 }
-                                gate.gates.push_back(new CUgate(RewriteExpr(cu->theta, paramMap), RewriteExpr(cu->phi, paramMap), RewriteExpr(cu->lambda, paramMap), controls, argMap.at(cu->target)));
-                            } else if (auto* mcx = dynamic_cast<MCXgate*>(it)) {
+                                gate.gates.push_back(std::make_shared<CUgate>(rewriteExpr(cu->theta, paramMap), rewriteExpr(cu->phi, paramMap), rewriteExpr(cu->lambda, paramMap), controls, argMap.at(cu->target)));
+                            } else if (auto* mcx = dynamic_cast<MCXgate*>(it.get())) {
                                 std::vector<std::string> controls{};
                                 for (const auto& control: mcx->controls) {
                                     controls.emplace_back(argMap.at(control));
                                 }
-                                gate.gates.push_back(new MCXgate(controls, argMap.at(mcx->target)));
+                                gate.gates.push_back(std::make_shared<MCXgate>(controls, argMap.at(mcx->target)));
                             } else {
                                 error("Unexpected gate in GateDecl!");
                             }
@@ -1117,9 +1101,9 @@ namespace qasm {
                             throw QASMParserException("Gate declaration with controlled gates inferred from internal qelib1.inc not yet implemented.");
                         }
 
-                        if (arguments.size() != static_cast<std::size_t>(ncontrols + 1)) {
+                        if (arguments.size() != ncontrols + 1) {
                             std::ostringstream oss{};
-                            if (arguments.size() > static_cast<std::size_t>(ncontrols + 1)) {
+                            if (arguments.size() > ncontrols + 1) {
                                 oss << "Too many arguments for ";
                             } else {
                                 oss << "Too few arguments for ";
@@ -1147,32 +1131,29 @@ namespace qasm {
                             for (size_t i = 0; i < arguments.size() - 1; ++i) {
                                 controls.emplace_back(arguments[i]);
                             }
-                            gate.gates.push_back(new MCXgate(controls, arguments.back()));
+                            gate.gates.push_back(std::make_shared<MCXgate>(controls, arguments.back()));
                         } else {
                             std::vector<std::string> controls{};
                             for (size_t i = 0; i < arguments.size() - 1; ++i) {
                                 controls.emplace_back(arguments[i]);
                             }
-                            if (auto* u = dynamic_cast<SingleQubitGate*>(cGateIt->second.gates.at(0))) {
-                                gate.gates.push_back(new CUgate(RewriteExpr(u->theta, paramMap), RewriteExpr(u->phi, paramMap), RewriteExpr(u->lambda, paramMap), controls, arguments.back()));
+                            if (auto* u = dynamic_cast<SingleQubitGate*>(cGateIt->second.gates.at(0).get())) {
+                                gate.gates.push_back(std::make_shared<CUgate>(rewriteExpr(u->theta, paramMap), rewriteExpr(u->phi, paramMap), rewriteExpr(u->lambda, paramMap), controls, arguments.back()));
                             } else {
                                 throw QASMParserException("Could not cast to UGate in gate declaration.");
                             }
                         }
                     }
-                    for (auto& parameter: parameters) {
-                        delete parameter;
-                    }
                 } else {
                     error("Undefined gate " + t.str);
                 }
-            } else if (sym == Token::Kind::barrier) {
+            } else if (sym == Token::Kind::Barrier) {
                 scan();
                 std::vector<std::string> arguments;
-                IdList(arguments);
-                check(Token::Kind::semicolon);
+                idList(arguments);
+                check(Token::Kind::Semicolon);
                 //Nothing to do here for the simulator
-            } else if (sym == Token::Kind::comment) {
+            } else if (sym == Token::Kind::Comment) {
                 scan();
                 handleComment();
             } else {
@@ -1180,23 +1161,23 @@ namespace qasm {
             }
         }
         compoundGates[gateName] = gate;
-        check(Token::Kind::rbrace);
+        check(Token::Kind::Rbrace);
     }
 
-    std::unique_ptr<qc::Operation> Parser::Qop() {
-        if (sym == Token::Kind::ugate || sym == Token::Kind::cxgate ||
-            sym == Token::Kind::swap || sym == Token::Kind::identifier ||
-            sym == Token::Kind::sxgate || sym == Token::Kind::sxdggate ||
-            sym == Token::Kind::mcx_gray || sym == Token::Kind::mcx_recursive || sym == Token::Kind::mcx_vchain || sym == Token::Kind::mcphase) {
-            return Gate();
+    std::unique_ptr<qc::Operation> Parser::qop() {
+        if (sym == Token::Kind::Ugate || sym == Token::Kind::Cxgate ||
+            sym == Token::Kind::Swap || sym == Token::Kind::Identifier ||
+            sym == Token::Kind::Sxgate || sym == Token::Kind::Sxdggate ||
+            sym == Token::Kind::McxGray || sym == Token::Kind::McxRecursive || sym == Token::Kind::McxVchain || sym == Token::Kind::Mcphase) {
+            return gate();
         }
-        if (sym == Token::Kind::measure) {
+        if (sym == Token::Kind::Measure) {
             scan();
-            auto qreg = ArgumentQreg();
-            check(Token::Kind::minus);
-            check(Token::Kind::gt);
-            auto creg = ArgumentCreg();
-            check(Token::Kind::semicolon);
+            auto qreg = argumentQreg();
+            check(Token::Kind::Minus);
+            check(Token::Kind::Gt);
+            auto creg = argumentCreg();
+            check(Token::Kind::Semicolon);
 
             if (qreg.second == creg.second) {
                 std::vector<qc::Qubit> qubits{};
@@ -1221,10 +1202,10 @@ namespace qasm {
             }
             error("Mismatch of qreg and creg size in measurement");
         }
-        if (sym == Token::Kind::reset) {
+        if (sym == Token::Kind::Reset) {
             scan();
-            auto qreg = ArgumentQreg();
-            check(Token::Kind::semicolon);
+            auto qreg = argumentQreg();
+            check(Token::Kind::Semicolon);
 
             std::vector<qc::Qubit> qubits;
             for (std::size_t i = 0; i < qreg.second; ++i) {

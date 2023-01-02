@@ -46,14 +46,14 @@ namespace qc::qiskit {
                 auto size = qreg.attr("size").cast<std::size_t>();
                 auto name = qreg.attr("name").cast<std::string>();
                 if (py::isinstance(qreg, ancillaRegister)) {
-                    qc.addAncillaryRegister(size, name.c_str());
+                    qc.addAncillaryRegister(size, name);
                     // add ancillas to qubit map
                     for (std::size_t i = 0; i < size; ++i) {
                         qubitMap[ancillaQubit(qreg, i)] = qubitIndex;
                         qubitIndex++;
                     }
                 } else {
-                    qc.addQubitRegister(size, name.c_str());
+                    qc.addQubitRegister(size, name);
                     // add qubits to qubit map
                     for (std::size_t i = 0; i < size; ++i) {
                         qubitMap[qubit(qreg, i)] = qubitIndex;
@@ -71,7 +71,7 @@ namespace qc::qiskit {
                 // create corresponding register in quantum computation
                 auto size = creg.attr("size").cast<std::size_t>();
                 auto name = creg.attr("name").cast<std::string>();
-                qc.addClassicalRegister(size, name.c_str());
+                qc.addClassicalRegister(size, name);
 
                 // add clbits to clbit map
                 for (std::size_t i = 0; i < size; ++i) {
@@ -227,7 +227,7 @@ namespace qc::qiskit {
                     }
 
                     std::istringstream iss(prodStr);
-                    fp                 f;
+                    fp                 f{};
                     iss >> f;
 
                     if (iss.eof() && !iss.fail()) {

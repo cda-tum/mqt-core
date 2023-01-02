@@ -16,9 +16,9 @@ namespace qc {
         bool        dynamic  = false;
         std::string expected{};
 
-        explicit BernsteinVazirani(const BitString& s, bool dynamic = false);
-        explicit BernsteinVazirani(std::size_t nq, bool dynamic = false);
-        BernsteinVazirani(const BitString& s, std::size_t nq, bool dynamic = false);
+        explicit BernsteinVazirani(const BitString& hiddenString, bool dyn = false);
+        explicit BernsteinVazirani(std::size_t nq, bool dyn = false);
+        BernsteinVazirani(const BitString& hiddenString, std::size_t nq, bool dyn = false);
 
         std::ostream& printStatistics(std::ostream& os) const override;
 

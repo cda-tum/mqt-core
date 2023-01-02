@@ -40,7 +40,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
         }
 
         if (cmd == ".NUMVARS") {
-            std::size_t nq;
+            std::size_t nq{};
             if (!static_cast<bool>(is >> nq)) {
                 nqubits = 0;
             } else {
@@ -95,11 +95,11 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
 }
 
 void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line) {
-    std::regex  gateRegex = std::regex("(r[xyz]|q|[0a-z](?:[+i])?)(\\d+)?(?::([-+]?[0-9]+[.]?[0-9]*(?:[eE][-+]?[0-9]+)?))?");
-    std::smatch m;
-    std::string cmd;
+    const std::regex gateRegex = std::regex("(r[xyz]|q|[0a-z](?:[+i])?)(\\d+)?(?::([-+]?[0-9]+[.]?[0-9]*(?:[eE][-+]?[0-9]+)?))?");
+    std::smatch      m;
+    std::string      cmd;
 
-    static const std::map<std::string, OpType> identifierMap{
+    static const std::map<std::string, OpType> IDENTIFIER_MAP{
             {"0", I},
             {"id", I},
             {"h", H},
@@ -141,132 +141,134 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
             continue;
         }
 
-        if (cmd == ".end")
+        if (cmd == ".end") {
             break;
-        else {
-            // match gate declaration
-            if (!std::regex_match(cmd, m, gateRegex)) {
-                throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Unsupported gate detected: " + cmd);
+        }
+
+        // match gate declaration
+        if (!std::regex_match(cmd, m, gateRegex)) {
+            throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Unsupported gate detected: " + cmd);
+        }
+
+        // extract gate information (identifier, #controls, divisor)
+        OpType gate{};
+        if (m.str(1) == "t") { // special treatment of t(offoli) for real format
+            gate = X;
+        } else {
+            auto it = IDENTIFIER_MAP.find(m.str(1));
+            if (it == IDENTIFIER_MAP.end()) {
+                throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Unknown gate identifier: " + m.str(1));
             }
+            gate = (*it).second;
+        }
+        auto     ncontrols = m.str(2).empty() ? 0 : std::stoul(m.str(2), nullptr, 0) - 1;
+        const fp lambda    = m.str(3).empty() ? static_cast<fp>(0L) : static_cast<fp>(std::stold(m.str(3)));
 
-            // extract gate information (identifier, #controls, divisor)
-            OpType gate;
-            if (m.str(1) == "t") { // special treatment of t(offoli) for real format
-                gate = X;
-            } else {
-                auto it = identifierMap.find(m.str(1));
-                if (it == identifierMap.end()) {
-                    throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Unknown gate identifier: " + m.str(1));
-                }
-                gate = (*it).second;
-            }
-            auto     ncontrols = m.str(2).empty() ? 0 : std::stoul(m.str(2), nullptr, 0) - 1;
-            const fp lambda    = m.str(3).empty() ? static_cast<fp>(0L) : static_cast<fp>(std::stold(m.str(3)));
+        if (gate == V || gate == Vdag || m.str(1) == "c") {
+            ncontrols = 1;
+        } else if (gate == Peres || gate == Peresdag) {
+            ncontrols = 2;
+        }
 
-            if (gate == V || gate == Vdag || m.str(1) == "c") {
-                ncontrols = 1;
-            } else if (gate == Peres || gate == Peresdag) {
-                ncontrols = 2;
-            }
+        if (ncontrols >= nqubits) {
+            throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Gate acts on " + std::to_string(ncontrols + 1) + " qubits, but only " + std::to_string(nqubits) + " qubits are available.");
+        }
 
-            if (ncontrols >= nqubits) {
-                throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Gate acts on " + std::to_string(ncontrols + 1) + " qubits, but only " + std::to_string(nqubits) + " qubits are available.");
-            }
+        std::string qubits;
+        std::string label;
+        getline(is, qubits);
 
-            std::string qubits, label;
-            getline(is, qubits);
+        std::vector<Control> controls{};
+        std::istringstream   iss(qubits);
 
-            std::vector<Control> controls{};
-            std::istringstream   iss(qubits);
-
-            // get controls and target
-            for (std::size_t i = 0; i < ncontrols; ++i) {
-                if (!(iss >> label)) {
-                    throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Too few variables for gate " + m.str(1));
-                }
-
-                bool negativeControl = (label.at(0) == '-');
-                if (negativeControl)
-                    label.erase(label.begin());
-
-                auto iter = qregs.find(label);
-                if (iter == qregs.end()) {
-                    throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Label " + label + " not found!");
-                }
-                controls.emplace_back(Control{iter->second.first, negativeControl ? Control::Type::Neg : Control::Type::Pos});
-            }
-
+        // get controls and target
+        for (std::size_t i = 0; i < ncontrols; ++i) {
             if (!(iss >> label)) {
-                throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Too few variables (no target) for gate " + m.str(1));
+                throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Too few variables for gate " + m.str(1));
             }
+
+            const bool negativeControl = (label.at(0) == '-');
+            if (negativeControl) {
+                label.erase(label.begin());
+            }
+
             auto iter = qregs.find(label);
             if (iter == qregs.end()) {
                 throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Label " + label + " not found!");
             }
+            controls.emplace_back(Control{iter->second.first, negativeControl ? Control::Type::Neg : Control::Type::Pos});
+        }
 
-            updateMaxControls(ncontrols);
-            Qubit target  = iter->second.first;
-            Qubit target1 = 0;
-            auto  x       = nearbyint(lambda);
-            switch (gate) {
-                case None:
-                    throw QFRException("[real parser] l:" + std::to_string(line) + " msg: 'None' operation detected.");
-                case I:
-                case H:
-                case Y:
-                case Z:
-                case S:
-                case Sdag:
-                case T:
-                case Tdag:
-                case V:
-                case Vdag:
-                case U3:
-                case U2:
-                    emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, lambda);
-                    break;
+        if (!(iss >> label)) {
+            throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Too few variables (no target) for gate " + m.str(1));
+        }
+        auto iter = qregs.find(label);
+        if (iter == qregs.end()) {
+            throw QFRException("[real parser] l:" + std::to_string(line) + " msg: Label " + label + " not found!");
+        }
 
-                case X:
-                    emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target);
-                    break;
+        updateMaxControls(ncontrols);
+        const Qubit target = iter->second.first;
+        auto        x      = nearbyint(lambda);
+        switch (gate) {
+            case None:
+                throw QFRException("[real parser] l:" + std::to_string(line) + " msg: 'None' operation detected.");
+            case I:
+            case H:
+            case Y:
+            case Z:
+            case S:
+            case Sdag:
+            case T:
+            case Tdag:
+            case V:
+            case Vdag:
+            case U3:
+            case U2:
+                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, lambda);
+                break;
 
-                case RX:
-                case RY:
-                    emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (lambda));
-                    break;
+            case X:
+                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target);
+                break;
 
-                case RZ:
-                case Phase:
-                    if (std::abs(lambda - x) < qc::PARAMETER_TOLERANCE) {
-                        if (x == 1.0 || x == -1.0) {
-                            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Z);
-                        } else if (x == 2.0) {
-                            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, S);
-                        } else if (x == -2.0) {
-                            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Sdag);
-                        } else if (x == 4.0) {
-                            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, T);
-                        } else if (x == -4.0) {
-                            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Tdag);
-                        } else {
-                            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (x));
-                        }
+            case RX:
+            case RY:
+                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (lambda));
+                break;
+
+            case RZ:
+            case Phase:
+                if (std::abs(lambda - x) < qc::PARAMETER_TOLERANCE) {
+                    if (x == 1.0 || x == -1.0) {
+                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Z);
+                    } else if (x == 2.0) {
+                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, S);
+                    } else if (x == -2.0) {
+                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Sdag);
+                    } else if (x == 4.0) {
+                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, T);
+                    } else if (x == -4.0) {
+                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Tdag);
                     } else {
-                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (lambda));
+                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (x));
                     }
-                    break;
-                case SWAP:
-                case Peres:
-                case Peresdag:
-                case iSWAP:
-                    target1 = controls.back().qubit;
-                    controls.pop_back();
-                    emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, target1, gate);
-                    break;
-                default:
-                    std::cerr << "Unsupported operation encountered:  " << gate << "!" << std::endl;
-                    break;
+                } else {
+                    emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (lambda));
+                }
+                break;
+            case SWAP:
+            case Peres:
+            case Peresdag:
+            case iSWAP: {
+                const auto target1 = controls.back().qubit;
+                controls.pop_back();
+                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, target1, gate);
+                break;
             }
+            default:
+                std::cerr << "Unsupported operation encountered:  " << gate << "!" << std::endl;
+                break;
         }
     }
 }

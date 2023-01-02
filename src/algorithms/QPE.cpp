@@ -6,8 +6,8 @@
 #include "algorithms/QPE.hpp"
 
 namespace qc {
-    QPE::QPE(const std::size_t nq, const bool exact, const bool iterative):
-        precision(nq), iterative(iterative) {
+    QPE::QPE(const std::size_t nq, const bool exact, const bool iter):
+        precision(nq), iterative(iter) {
         if (exact) {
             // if an exact solution is wanted, generate a random n-bit number and convert it to an appropriate phase
             const std::uint64_t max          = 1ULL << nq;
@@ -40,17 +40,17 @@ namespace qc {
         createCircuit();
     }
 
-    QPE::QPE(const fp lambda, const std::size_t precision, const bool iterative):
-        lambda(lambda), precision(precision), iterative(iterative) {
+    QPE::QPE(const fp l, const std::size_t prec, const bool iter):
+        lambda(l), precision(prec), iterative(iter) {
         createCircuit();
     }
 
     std::ostream& QPE::printStatistics(std::ostream& os) const {
         os << "QPE Statistics:\n";
-        os << "\tn: " << static_cast<std::size_t>(nqubits + 1) << std::endl;
+        os << "\tn: " << nqubits + 1 << std::endl;
         os << "\tm: " << getNindividualOps() << std::endl;
         os << "\tlambda: " << lambda << "π" << std::endl;
-        os << "\tprecision: " << static_cast<std::size_t>(precision) << std::endl;
+        os << "\tprecision: " << precision << std::endl;
         os << "\titerative: " << iterative << std::endl;
         os << "--------------" << std::endl;
         return os;
@@ -99,7 +99,7 @@ namespace qc {
         } else {
             // Hadamard Layer
             for (std::size_t i = 1; i <= precision; i++) {
-                h(i);
+                h(static_cast<Qubit>(i));
             }
 
             for (std::size_t i = 0; i < precision; i++) {
@@ -113,19 +113,19 @@ namespace qc {
                 for (std::size_t j = 1; j < 1 + i; j++) {
                     auto iQFTLambda = -PI / static_cast<double>(2ULL << (i - j));
                     if (j == i) {
-                        sdag(1 + i, Control{static_cast<Qubit>(i)});
+                        sdag(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(i)});
                     } else if (j == i - 1) {
-                        tdag(1 + i, Control{static_cast<Qubit>(i - 1)});
+                        tdag(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(i - 1)});
                     } else {
-                        phase(1 + i, Control{static_cast<Qubit>(j)}, iQFTLambda);
+                        phase(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(j)}, iQFTLambda);
                     }
                 }
-                h(1 + i);
+                h(static_cast<Qubit>(1 + i));
             }
 
             // measure results
             for (std::size_t i = 0; i < nqubits - 1; i++) {
-                measure(i + 1, i);
+                measure(static_cast<Qubit>(i + 1), i);
             }
         }
     }

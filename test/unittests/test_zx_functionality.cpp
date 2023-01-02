@@ -17,7 +17,7 @@ public:
     qc::QuantumComputation qc;
 };
 
-TEST_F(ZXDiagramTest, parse_qasm) {
+TEST_F(ZXDiagramTest, parseQasm) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
@@ -59,7 +59,7 @@ TEST_F(ZXDiagramTest, parse_qasm) {
     }
 }
 
-TEST_F(ZXDiagramTest, complex_circuit) {
+TEST_F(ZXDiagramTest, complexCircuit) {
     std::stringstream ss{};
     ss << "// i 1 0 2\n"
        << "// o 0 1 2\n"

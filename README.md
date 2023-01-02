@@ -200,7 +200,6 @@ Building the project this way generates
 - the core library `libqfr.a` (Unix) / `qfr.lib` (Windows) in the `build/src` folder
 - the DD and ZX libraries `libqfr_dd.a` (Unix) / `qfr_dd.lib` (Windows) and `libqfr_zx.a` (Unix) / `qfr_zx.lib` (Windows) in the `build/src/` folder
 - test executables `qfr_test`, `qfr_test_dd`, and `qfr_test_zx` containing a small set of unit tests in the `build/test` folder
-- a small demo example executable `qfr_example` in the `build/test` directory.
 
 You can link against the library built by this project in other CMake project using the `MQT::qfr` target (or any of the other targets `MQT::qfr_dd` and `MQT::qfr_zx`).
 

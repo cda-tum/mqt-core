@@ -30,11 +30,11 @@ namespace qc {
         static OpType parseU3(const Symbolic& lambda, fp& phi, const Symbolic& theta);
         static OpType parseU3(fp& lambda, const Symbolic& phi, const Symbolic& theta);
 
-        static OpType parseU2(const Symbolic& lambda, const Symbolic& phi);
-        static OpType parseU2(const Symbolic& lambda, fp& phi);
-        static OpType parseU2(fp& lambda, const Symbolic& phi);
+        [[gnu::const]] static OpType parseU2(const Symbolic& lambda, const Symbolic& phi);
+        static OpType                parseU2(const Symbolic& lambda, fp& phi);
+        static OpType                parseU2(fp& lambda, const Symbolic& phi);
 
-        static OpType parseU1(const Symbolic& lambda);
+        [[gnu::const]] static OpType parseU1(const Symbolic& lambda);
 
         void checkSymbolicUgate();
 
@@ -76,16 +76,16 @@ namespace qc {
 
         // Standard Constructors
         SymbolicOperation(std::size_t nq, Qubit target, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
-        SymbolicOperation(std::size_t nq, const Targets& targets, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
+        SymbolicOperation(std::size_t nq, const Targets& targ, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
 
         SymbolicOperation(std::size_t nq, Control control, Qubit target, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
-        SymbolicOperation(std::size_t nq, Control control, const Targets& targets, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
+        SymbolicOperation(std::size_t nq, Control control, const Targets& targ, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
 
-        SymbolicOperation(std::size_t nq, const Controls& controls, Qubit target, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
-        SymbolicOperation(std::size_t nq, const Controls& controls, const Targets& targets, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
+        SymbolicOperation(std::size_t nq, const Controls& c, Qubit target, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
+        SymbolicOperation(std::size_t nq, const Controls& c, const Targets& targ, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
 
         // MCF (cSWAP), Peres, paramterized two target Constructor
-        SymbolicOperation(std::size_t nq, const Controls& controls, Qubit target0, Qubit target1, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
+        SymbolicOperation(std::size_t nq, const Controls& c, Qubit target0, Qubit target1, OpType g, const SymbolOrNumber& lambda = 0.0, const SymbolOrNumber& phi = 0.0, const SymbolOrNumber& theta = 0.0, Qubit startingQubit = 0);
 
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {
             return std::make_unique<SymbolicOperation>(getNqubits(), getControls(), getTargets(), getType(), getParameter(0), getParameter(1), getParameter(2), getStartingQubit());
@@ -104,7 +104,7 @@ namespace qc {
             return equals(op, {}, {});
         }
 
-        void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override;
+        [[noreturn]] void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override;
 
         [[nodiscard]] StandardOperation getInstantiatedOperation(const VariableAssignment& assignment) const;
 

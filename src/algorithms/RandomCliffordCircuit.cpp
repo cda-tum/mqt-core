@@ -7,8 +7,8 @@
 
 namespace qc {
 
-    RandomCliffordCircuit::RandomCliffordCircuit(const std::size_t nq, const std::size_t depth, const std::size_t seed):
-        depth(depth), seed(seed) {
+    RandomCliffordCircuit::RandomCliffordCircuit(const std::size_t nq, const std::size_t d, const std::size_t s):
+        depth(d), seed(s) {
         addQubitRegister(nq);
         addClassicalRegister(nq);
 
@@ -37,13 +37,13 @@ namespace qc {
             } else if (nqubits == 2) {
                 append2QClifford(cliffordGenerator(), 0, 1);
             } else {
-                if (l % 2) {
+                if (l % 2 != 0) {
                     for (std::size_t i = 1; i < nqubits - 1; i += 2) {
-                        append2QClifford(cliffordGenerator(), i, i + 1);
+                        append2QClifford(cliffordGenerator(), static_cast<Qubit>(i), static_cast<Qubit>(i + 1));
                     }
                 } else {
                     for (std::size_t i = 0; i < nqubits - 1; i += 2) {
-                        append2QClifford(cliffordGenerator(), i, i + 1);
+                        append2QClifford(cliffordGenerator(), static_cast<Qubit>(i), static_cast<Qubit>(i + 1));
                     }
                 }
             }
@@ -61,11 +61,11 @@ namespace qc {
     }
 
     void RandomCliffordCircuit::append1QClifford(const std::uint16_t idx, const Qubit target) {
-        std::uint8_t id = idx % 24;
+        const auto id = static_cast<std::uint8_t>(idx % 24);
         emplace_back<CompoundOperation>(nqubits);
         auto* comp = dynamic_cast<CompoundOperation*>(ops.back().get());
         // Hadamard
-        if (id / 12 % 2) {
+        if ((id / 12 % 2) != 0) {
             comp->emplace_back<StandardOperation>(nqubits, target, H);
         }
 
@@ -89,18 +89,18 @@ namespace qc {
     }
 
     void RandomCliffordCircuit::append2QClifford(const std::uint16_t idx, const Qubit control, const Qubit target) {
-        std::uint16_t id       = idx % 11520;
-        std::uint8_t  pauliIdx = id % 16;
+        auto       id       = static_cast<std::uint16_t>(idx % 11520);
+        const auto pauliIdx = static_cast<std::uint8_t>(id % 16);
         id /= 16;
 
         emplace_back<CompoundOperation>(nqubits);
         auto* comp = dynamic_cast<CompoundOperation*>(ops.back().get());
         if (id < 36) {
             // single-qubit Cliffords
-            if (id / 9 % 2) {
+            if ((id / 9 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
             }
-            if (id / 18 % 2) {
+            if ((id / 18 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
 
@@ -122,10 +122,10 @@ namespace qc {
             // Cliffords with a single CNOT
             id -= 36;
 
-            if (id / 81 % 2) {
+            if ((id / 81 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
             }
-            if (id / 162 % 2) {
+            if ((id / 162 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
 
@@ -164,10 +164,10 @@ namespace qc {
             // Cliffords with two CNOTs
             id -= 360;
 
-            if (id / 81 % 2) {
+            if ((id / 81 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
             }
-            if (id / 162 % 2) {
+            if ((id / 162 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
 
@@ -207,10 +207,10 @@ namespace qc {
             // Cliffords with a SWAP
             id -= 684;
 
-            if (id / 9 % 2) {
+            if ((id / 9 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, control, H);
             }
-            if (id / 18 % 2) {
+            if ((id / 18 % 2) != 0) {
                 comp->emplace_back<StandardOperation>(nqubits, target, H);
             }
 

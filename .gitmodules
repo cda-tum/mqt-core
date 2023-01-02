@@ -2,7 +2,6 @@
         path = extern/dd_package
         url = https://github.com/cda-tum/dd_package.git
         branch = main
-        shallow = true
 [submodule "extern/json"]
         path = extern/json
         url = https://github.com/nlohmann/json.git
@@ -22,4 +21,3 @@
         path = extern/zx
         url = https://github.com/cda-tum/zx.git
         branch = main
-        shallow = true

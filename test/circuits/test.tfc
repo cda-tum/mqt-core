@@ -38,10 +38,10 @@
 #
 #   END statement terminates the input.
 
-.v a,b,c,d
+.v a,b,c,d,e
 .i a,b,c
 .o d,c
-.c 0
+.c 0,1
 BEGIN
 t3 a,b,d
 t2 a,b
