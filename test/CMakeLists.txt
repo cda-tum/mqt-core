@@ -26,5 +26,13 @@ package_add_test(
   algorithms/test_random_clifford.cpp
   algorithms/test_qpe.cpp)
 
-package_add_test(${PROJECT_NAME}_test_zx ${PROJECT_NAME}_zx unittests/test_zx_functionality.cpp
-                 unittests/test_symbolic.cpp)
+package_add_test(
+  ${PROJECT_NAME}_test_zx
+  ${PROJECT_NAME}_zx
+  unittests/test_zx_functionality.cpp
+  unittests/test_symbolic.cpp)
+
+package_add_test(
+  ${PROJECT_NAME}_test_ecc
+  "${PROJECT_NAME}_dd ${PROJECT_NAME}_ecc, ${PROJECT_NAME}_qc"
+  unittests/test_ecc_functionality.cpp)
