@@ -171,10 +171,10 @@ namespace qc {
         targets.emplace_back(target);
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Targets& targets, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Targets& targ, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit) {
         type = g;
         setup(nq, lambda, phi, theta, startingQubit);
-        this->targets = targets;
+        targets = targ;
     }
 
     StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Qubit target, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
@@ -182,29 +182,29 @@ namespace qc {
         controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Targets& targets, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, targets, g, lambda, phi, theta, startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Targets& targ, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
+        StandardOperation(nq, targ, g, lambda, phi, theta, startingQubit) {
         controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Controls& controls, const Qubit target, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
         StandardOperation(nq, target, g, lambda, phi, theta, startingQubit) {
-        this->controls = controls;
+        controls = c;
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Controls& controls, const Targets& targets, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, targets, g, lambda, phi, theta, startingQubit) {
-        this->controls = controls;
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Targets& targ, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
+        StandardOperation(nq, targ, g, lambda, phi, theta, startingQubit) {
+        controls = c;
     }
 
     // MCT Constructor
-    StandardOperation::StandardOperation(const std::size_t nq, const Controls& controls, const Qubit target, const Qubit startingQubit):
-        StandardOperation(nq, controls, target, X, 0., 0., 0., startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target, const Qubit startingQubit):
+        StandardOperation(nq, c, target, X, 0., 0., 0., startingQubit) {
     }
 
     // MCF (cSWAP), Peres, paramterized two target Constructor
-    StandardOperation::StandardOperation(const std::size_t nq, const Controls& controls, const Qubit target0, const Qubit target1, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, controls, {target0, target1}, g, lambda, phi, theta, startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target0, const Qubit target1, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
+        StandardOperation(nq, c, {target0, target1}, g, lambda, phi, theta, startingQubit) {
     }
 
     /***

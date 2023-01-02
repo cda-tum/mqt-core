@@ -6,15 +6,15 @@
 #include "QuantumComputation.hpp"
 
 void qc::QuantumComputation::importGRCS(std::istream& is) {
-    std::size_t nq;
+    std::size_t nq{};
     is >> nq;
     addQubitRegister(nq);
     addClassicalRegister(nq);
 
     std::string line;
     std::string identifier;
-    std::size_t control = 0;
-    std::size_t target  = 0;
+    Qubit       control = 0;
+    Qubit       target  = 0;
     std::size_t cycle   = 0;
     while (std::getline(is, line)) {
         if (line.empty()) {
@@ -26,7 +26,7 @@ void qc::QuantumComputation::importGRCS(std::istream& is) {
         if (identifier == "cz") {
             ss >> control;
             ss >> target;
-            z(target, qc::Control{static_cast<qc::Qubit>(control)});
+            z(target, qc::Control{control});
         } else if (identifier == "is") {
             ss >> control;
             ss >> target;

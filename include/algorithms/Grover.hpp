@@ -20,7 +20,7 @@ namespace qc {
         std::string expected{};
         std::size_t nDataQubits{};
 
-        explicit Grover(std::size_t nq, std::size_t seed = 0);
+        explicit Grover(std::size_t nq, std::size_t s = 0);
 
         void setup(QuantumComputation& qc) const;
 

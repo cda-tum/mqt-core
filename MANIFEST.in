@@ -5,6 +5,7 @@ graft mqt/*
 include extern/dd_package/CMakeLists.txt
 graft extern/dd_package/src
 graft extern/dd_package/include
+graft extern/dd_package/cmake
 
 graft extern/json
 prune extern/json/benchmarks

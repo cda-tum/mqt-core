@@ -16,14 +16,14 @@
 
 class QPE: public testing::TestWithParam<std::pair<qc::fp, std::size_t>> {
 protected:
-    qc::fp      lambda{};
-    std::size_t precision{};
-    qc::fp      theta{};
-    bool        exactlyRepresentable{};
-    std::size_t expectedResult{};
-    std::string expectedResultRepresentation{};
-    std::size_t secondExpectedResult{};
-    std::string secondExpectedResultRepresentation{};
+    qc::fp        lambda{};
+    std::uint64_t precision{};
+    qc::fp        theta{};
+    bool          exactlyRepresentable{};
+    std::uint64_t expectedResult{};
+    std::string   expectedResultRepresentation{};
+    std::uint64_t secondExpectedResult{};
+    std::string   secondExpectedResultRepresentation{};
 
     void TearDown() override {}
     void SetUp() override {
@@ -48,7 +48,7 @@ protected:
         }
 
         exactlyRepresentable = true;
-        for (std::size_t i = precision; i < binaryExpansion.size(); ++i) {
+        for (std::uint64_t i = precision; i < binaryExpansion.size(); ++i) {
             if (binaryExpansion.test(i)) {
                 exactlyRepresentable = false;
                 break;
@@ -56,14 +56,14 @@ protected:
         }
 
         expectedResult = 0U;
-        for (std::size_t i = 0; i < precision; ++i) {
+        for (std::uint64_t i = 0; i < precision; ++i) {
             if (binaryExpansion.test(i)) {
-                expectedResult |= (1U << (precision - 1 - i));
+                expectedResult |= (1ULL << (precision - 1 - i));
             }
         }
         std::stringstream ss{};
-        for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
-            if ((expectedResult & (1U << i)) != 0) {
+        for (auto i = static_cast<std::int64_t>(precision - 1); i >= 0; --i) {
+            if ((expectedResult & (1ULL << i)) != 0) {
                 ss << 1;
             } else {
                 ss << 0;
@@ -77,8 +77,8 @@ protected:
         } else {
             secondExpectedResult = expectedResult + 1;
             ss.str("");
-            for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
-                if ((secondExpectedResult & (1U << i)) != 0) {
+            for (auto i = static_cast<std::int64_t>(precision - 1); i >= 0; --i) {
+                if ((secondExpectedResult & (1ULL << i)) != 0) {
                     ss << 1;
                 } else {
                     ss << 0;
@@ -101,10 +101,10 @@ INSTANTIATE_TEST_SUITE_P(QPE, QPE,
                                  std::pair{3. / 8, 4U},
                                  std::pair{3. / 32, 5U},
                                  std::pair{3. / 32, 6U}),
-                         [](const testing::TestParamInfo<QPE::ParamType>& info) {
+                         [](const testing::TestParamInfo<QPE::ParamType>& inf) {
                              // Generate names for test cases
-                             const auto        lambda    = info.param.first;
-                             const auto        precision = info.param.second;
+                             const auto        lambda    = inf.param.first;
+                             const auto        precision = inf.param.second;
                              std::stringstream ss{};
                              ss << static_cast<std::size_t>(lambda * 100) << "_pi_" << precision;
                              return ss.str();
@@ -121,7 +121,7 @@ TEST_P(QPE, QPETest) {
 
     ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(*qc); });
 
-    ASSERT_NO_THROW({ e = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd); });
+    ASSERT_NO_THROW({ e = simulate(qc.get(), dd->makeZeroState(static_cast<dd::QubitCount>(qc->getNqubits())), dd); });
 
     // account for the eigenstate qubit in the expected result by shifting and adding 1
     auto amplitude   = dd->getValueByPath(e, (expectedResult << 1) + 1);
@@ -151,7 +151,7 @@ TEST_P(QPE, IQPETest) {
     ASSERT_EQ(qc->getNqubits(), 2U);
 
     constexpr auto shots        = 8192U;
-    auto           measurements = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd, shots);
+    auto           measurements = simulate(qc.get(), dd->makeZeroState(static_cast<dd::QubitCount>(qc->getNqubits())), dd, shots);
 
     // sort the measurements
     using Measurement = std::pair<std::string, std::size_t>;
@@ -161,7 +161,7 @@ TEST_P(QPE, IQPETest) {
         }
         return a.first > b.first;
     };
-    std::set<Measurement, decltype(comp)> ordered(measurements.begin(), measurements.end(), comp);
+    const std::set<Measurement, decltype(comp)> ordered(measurements.begin(), measurements.end(), comp);
 
     std::cout << "Obtained measurements: " << std::endl;
     for (const auto& measurement: ordered) {
@@ -194,7 +194,7 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
     qc::CircuitOptimizer::removeFinalMeasurements(*qpe);
 
     // simulate circuit
-    auto e = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
+    auto e = simulate(qpe.get(), dd->makeZeroState(static_cast<dd::QubitCount>(qpe->getNqubits())), dd);
 
     // create standard IQPE circuit
     auto iqpe = std::make_unique<qc::QPE>(lambda, precision, true);
@@ -208,7 +208,7 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
     qc::CircuitOptimizer::removeFinalMeasurements(*iqpe);
 
     // simulate circuit
-    auto f = simulate(iqpe.get(), dd->makeZeroState(iqpe->getNqubits()), dd);
+    auto f = simulate(iqpe.get(), dd->makeZeroState(static_cast<dd::QubitCount>(iqpe->getNqubits())), dd);
 
     // calculate fidelity between both results
     auto fidelity = dd->fidelity(e, f);
@@ -253,7 +253,7 @@ TEST_P(QPE, ProbabilityExtraction) {
 
     std::cout << *iqpe << std::endl;
     dd::ProbabilityVector probs{};
-    extractProbabilityVector(iqpe.get(), dd->makeZeroState(iqpe->getNqubits()), probs, dd);
+    extractProbabilityVector(iqpe.get(), dd->makeZeroState(static_cast<dd::QubitCount>(iqpe->getNqubits())), probs, dd);
 
     for (const auto& [state, prob]: probs) {
         std::stringstream ss{};
@@ -280,7 +280,7 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
     qc::CircuitOptimizer::removeFinalMeasurements(*qpe);
 
     // simulate circuit
-    auto       e   = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
+    auto       e   = simulate(qpe.get(), dd->makeZeroState(static_cast<dd::QubitCount>(qpe->getNqubits())), dd);
     const auto vec = dd->getVector(e);
     std::cout << "QPE: " << std::endl;
     for (const auto& amp: vec) {
@@ -292,7 +292,7 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
 
     // extract measurement probabilities from IQPE simulations
     dd::ProbabilityVector probs{};
-    extractProbabilityVector(iqpe.get(), dd->makeZeroState(iqpe->getNqubits()), probs, dd);
+    extractProbabilityVector(iqpe.get(), dd->makeZeroState(static_cast<dd::QubitCount>(iqpe->getNqubits())), probs, dd);
 
     // extend to account for 0 qubit
     auto stub = dd::ProbabilityVector{};

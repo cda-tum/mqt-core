@@ -31,12 +31,12 @@ namespace qc::qiskit {
 
             auto&& circQregs = header.attr("qreg_sizes");
             for (const auto qreg: circQregs) {
-                qc.addQubitRegister(qreg.cast<py::list>()[1].cast<std::size_t>(), qreg.cast<py::list>()[0].cast<std::string>().c_str());
+                qc.addQubitRegister(qreg.cast<py::list>()[1].cast<std::size_t>(), qreg.cast<py::list>()[0].cast<std::string>());
             }
 
             auto&& circCregs = header.attr("creg_sizes");
             for (const auto creg: circCregs) {
-                qc.addClassicalRegister(creg.cast<py::list>()[1].cast<std::size_t>(), creg.cast<py::list>()[0].cast<std::string>().c_str());
+                qc.addClassicalRegister(creg.cast<py::list>()[1].cast<std::size_t>(), creg.cast<py::list>()[0].cast<std::string>());
             }
 
             for (const auto instruction: instructions) {
@@ -148,7 +148,9 @@ namespace qc::qiskit {
             auto target = qargs.back().qubit;
             qargs.pop_back();
 
-            fp theta = 0., phi = 0., lambda = 0.;
+            fp theta  = 0.;
+            fp phi    = 0.;
+            fp lambda = 0.;
             if (params.size() == 1) {
                 lambda = params[0].cast<fp>();
             } else if (params.size() == 2) {
@@ -173,7 +175,9 @@ namespace qc::qiskit {
             qargs.pop_back();
             auto target0 = qargs.back().qubit;
             qargs.pop_back();
-            fp theta = 0., phi = 0., lambda = 0.;
+            fp theta  = 0.;
+            fp phi    = 0.;
+            fp lambda = 0.;
             if (params.size() == 1) {
                 lambda = params[0].cast<fp>();
             } else if (params.size() == 2) {

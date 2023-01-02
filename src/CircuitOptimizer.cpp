@@ -372,7 +372,7 @@ namespace qc {
         // qubit is finished -> consider next qubit
         if (dagIterators.at(idx) == dag.at(idx).rend()) {
             if (idx < static_cast<Qubit>(dag.size() - 1)) {
-                removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, static_cast<Qubit>(idx + 1), dag.at(idx + 1).rend());
+                removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, idx + 1, dag.at(idx + 1).rend());
             }
             return;
         }
@@ -448,7 +448,7 @@ namespace qc {
 
         // qubit is finished -> consider next qubit
         if (dagIterators.at(idx) == dag.at(idx).rend() && idx < static_cast<Qubit>(dag.size() - 1)) {
-            removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, static_cast<Qubit>(idx + 1), dag.at(idx + 1).rend());
+            removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, idx + 1, dag.at(idx + 1).rend());
         }
     }
 
@@ -508,7 +508,7 @@ namespace qc {
     void CircuitOptimizer::removeFinalMeasurementsRecursive(DAG& dag, DAGReverseIterators& dagIterators, Qubit idx, const DAGReverseIterator& until) {
         if (dagIterators.at(idx) == dag.at(idx).rend()) { //we reached the end
             if (idx < static_cast<Qubit>(dag.size() - 1)) {
-                removeFinalMeasurementsRecursive(dag, dagIterators, static_cast<Qubit>(idx + 1), dag.at(idx + 1).rend());
+                removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1, dag.at(idx + 1).rend());
             }
             return;
         }
@@ -570,7 +570,7 @@ namespace qc {
             }
         }
         if (dagIterators.at(idx) == dag.at(idx).rend() && idx < static_cast<Qubit>(dag.size() - 1)) {
-            removeFinalMeasurementsRecursive(dag, dagIterators, static_cast<Qubit>(idx + 1), dag.at(idx + 1).rend());
+            removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1, dag.at(idx + 1).rend());
         }
     }
 
@@ -661,7 +661,7 @@ namespace qc {
                     if (oldReset != replacementMap.end()) {
                         oldReset->second = indexAddQubit;
                     } else {
-                        replacementMap.insert(std::pair(static_cast<Qubit>(target), static_cast<Qubit>(indexAddQubit)));
+                        replacementMap.try_emplace(target, indexAddQubit);
                     }
                 }
                 it = qc.erase(it);
@@ -678,7 +678,7 @@ namespace qc {
                                 if (oldReset != replacementMap.end()) {
                                     oldReset->second = indexAddQubit;
                                 } else {
-                                    replacementMap.insert(std::pair(static_cast<Qubit>(compTarget), static_cast<Qubit>(indexAddQubit)));
+                                    replacementMap.try_emplace(compTarget, indexAddQubit);
                                 }
                             }
                             compOpIt = compOp->erase(compOpIt);
@@ -990,13 +990,13 @@ namespace qc {
             // iterate over qubits in reverse order
             for (auto q = static_cast<std::make_signed_t<Qubit>>(msq); q >= 0; --q) {
                 // nothing to be done for this qubit
-                if (dagIterators.at(q) == dag.at(q).end()) {
+                if (dagIterators.at(static_cast<std::size_t>(q)) == dag.at(static_cast<std::size_t>(q)).end()) {
                     continue;
                 }
                 done = false;
 
                 // get the current operation on the qubit
-                auto& it = dagIterators.at(q);
+                auto& it = dagIterators.at(static_cast<std::size_t>(q));
                 auto& op = **it;
 
                 // warning for classically controlled operations
@@ -1012,16 +1012,16 @@ namespace qc {
                 // check whether the gate can be scheduled, i.e. whether all qubits it acts on are at this operation
                 bool              executable = true;
                 std::vector<bool> actsOn(dag.size());
-                actsOn[q] = true;
+                actsOn[static_cast<std::size_t>(q)] = true;
                 for (std::size_t i = 0; i < dag.size(); ++i) {
                     // actually check in reverse order
                     const auto qb = static_cast<std::make_signed_t<Qubit>>(dag.size() - 1 - i);
                     if (qb != q && op->actsOn(static_cast<Qubit>(qb))) {
-                        actsOn[qb] = true;
+                        actsOn[static_cast<std::size_t>(qb)] = true;
 
-                        assert(dagIterators.at(qb) != dag.at(qb).end());
+                        assert(dagIterators.at(static_cast<std::size_t>(qb)) != dag.at(static_cast<std::size_t>(qb)).end());
                         // check whether operation is executable for the currently considered qubit
-                        if (*dagIterators.at(qb) != *it) {
+                        if (*dagIterators.at(static_cast<std::size_t>(qb)) != *it) {
                             executable = false;
                             break;
                         }

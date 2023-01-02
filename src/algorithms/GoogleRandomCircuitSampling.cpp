@@ -5,13 +5,15 @@
 
 #include "algorithms/GoogleRandomCircuitSampling.hpp"
 
+#include <utility>
+
 namespace qc {
     GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& filename) {
         importGRCS(filename);
     }
 
-    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& pathPrefix, const std::uint16_t device, const std::uint16_t depth, const std::uint16_t instance):
-        layout(Bristlecone), pathPrefix(pathPrefix) {
+    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(std::string prefix, const std::uint16_t device, const std::uint16_t depth, const std::uint16_t instance):
+        layout(Bristlecone), pathPrefix(std::move(prefix)) {
         std::stringstream ss;
         ss << pathPrefix;
         ss << "bristlecone/cz_v2/bris_";
@@ -27,8 +29,8 @@ namespace qc {
         importGRCS(ss.str());
     }
 
-    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(const std::string& pathPrefix, const std::uint16_t x, const std::uint16_t y, const std::uint16_t depth, const std::uint16_t instance):
-        layout(Rectangular), pathPrefix(pathPrefix) {
+    GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(std::string prefix, const std::uint16_t x, const std::uint16_t y, const std::uint16_t depth, const std::uint16_t instance):
+        pathPrefix(std::move(prefix)) {
         std::stringstream ss;
         ss << pathPrefix;
         ss << "rectangular/cz_v2/";
@@ -58,7 +60,7 @@ namespace qc {
         std::string       benchmark = filename.substr(slash + 1, dot - slash - 1);
         name                        = benchmark;
         layout                      = (benchmark[0] == 'b') ? Bristlecone : Rectangular;
-        std::size_t nq;
+        std::size_t nq{};
         ifs >> nq;
 
         addQubitRegister(nq);

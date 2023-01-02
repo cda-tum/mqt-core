@@ -34,12 +34,12 @@ namespace zx {
                              std::vector<Vertex>& qubits);
         static void  addCphase(ZXDiagram& diag, const PiExpression& phase, Qubit ctrl, Qubit target,
                                std::vector<Vertex>& qubits);
-        static void  addSwap(ZXDiagram& diag, Qubit ctrl, Qubit target,
+        static void  addSwap(ZXDiagram& diag, Qubit target, Qubit target2,
                              std::vector<Vertex>& qubits);
         static void  addCcx(ZXDiagram& diag, Qubit ctrl0, Qubit ctrl1, Qubit target,
                             std::vector<Vertex>& qubits);
-        static op_it parse_op(ZXDiagram& diag, op_it it, op_it end,
-                              std::vector<Vertex>& qubits, const qc::Permutation& p);
+        static op_it parseOp(ZXDiagram& diag, op_it it, op_it end,
+                             std::vector<Vertex>& qubits, const qc::Permutation& p);
 
         static PiExpression toPiExpr(const qc::SymbolOrNumber& param);
         static PiExpression parseParam(const qc::Operation* op, std::size_t i);

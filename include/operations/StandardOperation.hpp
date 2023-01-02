@@ -41,19 +41,19 @@ namespace qc {
 
         // Standard Constructors
         StandardOperation(std::size_t nq, Qubit target, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
-        StandardOperation(std::size_t nq, const Targets& targets, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, const Targets& targ, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
 
         StandardOperation(std::size_t nq, Control control, Qubit target, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
-        StandardOperation(std::size_t nq, Control control, const Targets& targets, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, Control control, const Targets& targ, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
 
-        StandardOperation(std::size_t nq, const Controls& controls, Qubit target, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
-        StandardOperation(std::size_t nq, const Controls& controls, const Targets& targets, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, const Controls& c, Qubit target, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, const Controls& c, const Targets& targ, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
 
         // MCT Constructor
-        StandardOperation(std::size_t nq, const Controls& controls, Qubit target, Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, const Controls& c, Qubit target, Qubit startingQubit = 0);
 
         // MCF (cSWAP), Peres, paramterized two target Constructor
-        StandardOperation(std::size_t nq, const Controls& controls, Qubit target0, Qubit target1, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
+        StandardOperation(std::size_t nq, const Controls& c, Qubit target0, Qubit target1, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
 
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {
             return std::make_unique<StandardOperation>(getNqubits(), getControls(), getTargets(), getType(), getParameter().at(0), getParameter().at(1), getParameter().at(2), getStartingQubit());

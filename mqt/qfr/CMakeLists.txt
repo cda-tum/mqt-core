@@ -12,14 +12,13 @@ add_library(${PROJECT_NAME}_python INTERFACE)
 target_include_directories(${PROJECT_NAME}_python INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # link with main project library and pybind11 libraries
-target_link_libraries(${PROJECT_NAME}_python INTERFACE ${PROJECT_NAME} pybind11::pybind11)
+target_link_libraries(${PROJECT_NAME}_python INTERFACE ${PROJECT_NAME} pybind11::pybind11
+                                                       pybind11_json)
 
 # add MQT alias
 add_library(MQT::${PROJECT_NAME}_python ALIAS ${PROJECT_NAME}_python)
 
 # add pyqfr module
 pybind11_add_module(py${PROJECT_NAME} bindings.cpp)
-target_link_libraries(py${PROJECT_NAME} PUBLIC MQT::${PROJECT_NAME}_dd MQT::${PROJECT_NAME}_python
-                                               pybind11_json)
+target_link_libraries(py${PROJECT_NAME} PRIVATE MQT::${PROJECT_NAME}_dd MQT::${PROJECT_NAME}_python)
 target_compile_definitions(py${PROJECT_NAME} PRIVATE VERSION_INFO=${QFR_VERSION_INFO})
-enable_lto(py${PROJECT_NAME})

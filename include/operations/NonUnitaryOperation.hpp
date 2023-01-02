@@ -59,16 +59,14 @@ namespace qc {
         [[nodiscard]] const Targets& getTargets() const override {
             if (type == Measure) {
                 return qubits;
-            } else {
-                return targets;
             }
+            return targets;
         }
         Targets& getTargets() override {
             if (type == Measure) {
                 return qubits;
-            } else {
-                return targets;
             }
+            return targets;
         }
         [[nodiscard]] std::size_t getNtargets() const override {
             return getTargets().size();
@@ -84,7 +82,7 @@ namespace qc {
             return classics.size();
         }
 
-        [[nodiscard]] bool actsOn(Qubit i) const override;
+        [[nodiscard, gnu::pure]] bool actsOn(Qubit i) const override;
 
         void addDepthContribution(std::vector<std::size_t>& depths) const override;
 
@@ -109,8 +107,8 @@ namespace qc {
         void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override;
 
         [[nodiscard]] std::set<Qubit> getUsedQubits() const override {
-            const auto& targets = getTargets();
-            return {targets.begin(), targets.end()};
+            const auto& ts = getTargets();
+            return {ts.begin(), ts.end()};
         }
     };
 } // namespace qc
