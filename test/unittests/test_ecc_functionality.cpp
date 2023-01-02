@@ -130,7 +130,7 @@ protected:
     }
 
     template<class eccType>
-    bool testCircuits(const std::vector<TestCase>& circuitsExpectToPass) const{
+    bool testCircuits(const std::vector<TestCase>& circuitsExpectToPass) const {
         size_t circuitCounter = 0;
         for (const auto& testParameter: circuitsExpectToPass) {
             auto qcOriginal = testParameter.circuit();
