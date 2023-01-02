@@ -3,7 +3,6 @@
 * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
 */
 
-#include "gtest/gtest.h"
 #include "dd/Simulation.hpp"
 #include "ecc/Ecc.hpp"
 #include "ecc/Id.hpp"
@@ -13,6 +12,8 @@
 #include "ecc/Q7Steane.hpp"
 #include "ecc/Q9Shor.hpp"
 #include "ecc/Q9Surface.hpp"
+
+#include "gtest/gtest.h"
 #include <random>
 
 using namespace qc;
