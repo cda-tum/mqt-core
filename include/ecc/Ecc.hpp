@@ -54,6 +54,13 @@ namespace ecc {
             return nInputQubits * ecc.nRedundantQubits + ecc.nCorrectingBits;
         }
 
+        std::vector<Qubit> getDataQubits() {
+            auto               numberOfDataQubits = qcOriginal->getNqubits() * ecc.nRedundantQubits;
+            std::vector<Qubit> dataQubits(numberOfDataQubits);
+            std::iota(std::begin(dataQubits), std::end(dataQubits), 0);
+            return dataQubits;
+        }
+
     protected:
         std::shared_ptr<qc::QuantumComputation> qcOriginal;
         std::shared_ptr<qc::QuantumComputation> qcMapped;

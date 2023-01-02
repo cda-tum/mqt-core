@@ -4,15 +4,15 @@
 */
 
 #include "gtest/gtest.h"
-#include <dd/Simulation.hpp>
-#include <ecc/Ecc.hpp>
-#include <ecc/Id.hpp>
-#include <ecc/Q18Surface.hpp>
-#include <ecc/Q3Shor.hpp>
-#include <ecc/Q5Laflamme.hpp>
-#include <ecc/Q7Steane.hpp>
-#include <ecc/Q9Shor.hpp>
-#include <ecc/Q9Surface.hpp>
+#include "dd/Simulation.hpp"
+#include "ecc/Ecc.hpp"
+#include "ecc/Id.hpp"
+#include "ecc/Q18Surface.hpp"
+#include "ecc/Q3Shor.hpp"
+#include "ecc/Q5Laflamme.hpp"
+#include "ecc/Q7Steane.hpp"
+#include "ecc/Q9Shor.hpp"
+#include "ecc/Q9Surface.hpp"
 #include <random>
 
 using namespace qc;
@@ -20,10 +20,9 @@ using namespace qc;
 using circuitFunctions = std::function<std::shared_ptr<qc::QuantumComputation>()>;
 
 struct testCase {
-    circuitFunctions       circuit;
-    bool                   testNoise;
-    size_t                 insertNoiseAfterNQubits;
-    std::vector<qc::Qubit> dataQubits;
+    circuitFunctions circuit;
+    bool             testNoise;
+    size_t           insertNoiseAfterNGates;
 };
 
 class DDECCFunctionalityTest: public ::testing::Test {
@@ -138,7 +137,7 @@ protected:
             mapper->apply();
             circuitCounter++;
             std::cout << "Testing circuit " << circuitCounter << std::endl;
-            bool const success = verifyExecution(mapper->getOriginalCircuit(), mapper->getMappedCircuit(), testParameter.testNoise, testParameter.dataQubits, testParameter.insertNoiseAfterNQubits);
+            bool const success = testErrorCorrectionCircuit(mapper->getOriginalCircuit(), mapper->getMappedCircuit(), testParameter.testNoise, mapper->getDataQubits(), testParameter.insertNoiseAfterNGates);
             if (!success) {
                 return false;
             }
@@ -146,59 +145,60 @@ protected:
         return true;
     }
 
-    static bool verifyExecution(const std::shared_ptr<qc::QuantumComputation>& qcOriginal, const std::shared_ptr<qc::QuantumComputation>& qcMapped, bool simulateWithErrors, const std::vector<Qubit>& dataQubits = {}, std::size_t insertErrorAfterNGates = 0) {
-        auto shots     = 50;
-        auto seed      = 50;
-        auto tolerance = 0.25;
+    static bool testErrorCorrectionCircuit(const std::shared_ptr<qc::QuantumComputation>& qcOriginal, const std::shared_ptr<qc::QuantumComputation>& qcMapped, bool simulateWithErrors, const std::vector<Qubit>& dataQubits = {}, std::size_t insertErrorAfterNGates = 0) {
+        if (!simulateWithErrors) {
+            return simulateAndVerifyResults(qcOriginal, qcMapped);
+        } else {
+            for (auto target: dataQubits) {
+                auto initialQuit = qcMapped->begin();
+                qcMapped->insert(initialQuit + static_cast<long>(insertErrorAfterNGates), std::make_unique<NonUnitaryOperation>(qcMapped->getNqubits(), std::vector<Qubit>{target}, qc::Reset));
+                auto result = simulateAndVerifyResults(qcOriginal, qcMapped, simulateWithErrors, insertErrorAfterNGates, target);
+                qcMapped->erase(initialQuit + static_cast<long>(insertErrorAfterNGates));
+                if (!result) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 
+    static bool simulateAndVerifyResults(const std::shared_ptr<qc::QuantumComputation>& qcOriginal,
+                                         const std::shared_ptr<qc::QuantumComputation>& qcMapped,
+                                         bool                                           simulateWithErrors     = false,
+                                         size_t                                         insertErrorAfterNGates = 0,
+                                         unsigned int                                   target                 = 0,
+                                         double                                         tolerance              = 0.25,
+                                         int                                            shots                  = 50,
+                                         int                                            seed                   = 1) {
         auto toleranceAbsolute = (static_cast<double>(shots) / 100.0) * (tolerance * 100.0);
-        auto ddOriginal        = std::make_unique<dd::Package<>>(qcOriginal->getNqubits());
-        auto originalRootEdge  = ddOriginal->makeZeroState(qcOriginal->getNqubits());
+
+        auto ddOriginal       = std::make_unique<dd::Package<>>(qcOriginal->getNqubits());
+        auto originalRootEdge = ddOriginal->makeZeroState(qcOriginal->getNqubits());
         ddOriginal->incRef(originalRootEdge);
+
+        auto measurementsOriginal = simulate(qcOriginal.get(), originalRootEdge, ddOriginal, shots);
 
         auto ddEcc       = std::make_unique<dd::Package<>>(qcMapped->getNqubits());
         auto eccRootEdge = ddEcc->makeZeroState(qcMapped->getNqubits());
         ddEcc->incRef(eccRootEdge);
 
-        auto measurementsOriginal = simulate(qcOriginal.get(), originalRootEdge, ddOriginal, shots, seed);
-
-        if (!simulateWithErrors) {
-            auto measurementsProtected = simulate(qcMapped.get(), eccRootEdge, ddEcc, shots, seed);
-            for (auto const& [cBitsOriginal, cHitsOriginal]: measurementsOriginal) {
-                // Count the cHitsOriginal in the register with error correction
-                size_t cHitsProtected = 0;
-                for (auto const& [cBitsProtected, cHitsProtectedTemp]: measurementsProtected) {
-                    if (0 == cBitsProtected.compare(cBitsProtected.length() - cBitsOriginal.length(), cBitsOriginal.length(), cBitsOriginal)) {
-                        cHitsProtected += cHitsProtectedTemp;
-                    }
-                }
-                auto difference = std::max(cHitsProtected, cHitsOriginal) - std::min(cHitsProtected, cHitsOriginal);
-                if (static_cast<double>(difference) > toleranceAbsolute) {
-                    return false;
+        auto measurementsProtected = simulate(qcMapped.get(), eccRootEdge, ddEcc, shots, seed);
+        for (auto const& [classicalBit, hits]: measurementsOriginal) {
+            // Since the result is stored as one bit string. I have to count the relevant classical bits.
+            size_t eccHits = 0;
+            for (auto const& [eccMeasure, tempHits]: measurementsProtected) {
+                if (0 == eccMeasure.compare(eccMeasure.length() - classicalBit.length(), classicalBit.length(), classicalBit)) {
+                    eccHits += tempHits;
                 }
             }
-        } else {
-            for (auto qubit: dataQubits) {
-                auto it = qcMapped->begin();
-                qcMapped->insert(it + insertErrorAfterNGates, std::make_unique<NonUnitaryOperation>(qcMapped->getNqubits(), std::vector<Qubit>{qubit}, qc::Reset));
-                auto measurementsProtected = simulate(qcMapped.get(), eccRootEdge, ddEcc, shots, seed);
-                for (auto const& [classicalBit, hits]: measurementsOriginal) {
-                    // Since the result is stored as one bit string. I have to count the relevant classical bits.
-                    size_t eccHits = 0;
-                    for (auto const& [eccMeasure, tempHits]: measurementsProtected) {
-                        if (0 == eccMeasure.compare(eccMeasure.length() - classicalBit.length(), classicalBit.length(), classicalBit)) {
-                            eccHits += tempHits;
-                        }
-                    }
-                    auto difference = std::max(eccHits, hits) - std::min(eccHits, hits);
-                    std::cout << "Diff/tolerance " << difference << "/" << toleranceAbsolute << " Original register: " << hits << " ecc register: " << eccHits;
-                    std::cout << " Simulating an error in qubit " << static_cast<unsigned>(qubit) << " after " << insertErrorAfterNGates << " gates." << std::endl;
-                    if (static_cast<double>(difference) > toleranceAbsolute) {
-                        std::cout << "Error is too large!" << std::endl;
-                        return false;
-                    }
-                }
-                qcMapped->erase(it + insertErrorAfterNGates);
+            auto difference = std::max(eccHits, hits) - std::min(eccHits, hits);
+            std::cout << "Diff/tolerance " << difference << "/" << toleranceAbsolute << " Original register: " << hits << " ecc register: " << eccHits;
+            if (simulateWithErrors) {
+                std::cout << " Simulating an error in qubit " << static_cast<unsigned>(target) << " after " << insertErrorAfterNGates << " gates." << std::endl;
+            }
+            if (static_cast<double>(difference) > toleranceAbsolute) {
+                std::cout << "Error is too large!" << std::endl;
+                return false;
             }
         }
         return true;
@@ -206,103 +206,95 @@ protected:
 };
 
 TEST_F(DDECCFunctionalityTest, testIdEcc) {
-    size_t                 insertNoiseAfterNQubits = 1;
-    std::vector<qc::Qubit> oneQubitDataQubits      = {};
+    size_t insertNoiseAfterNQubits = 1;
 
-    std::vector<testCase> circuitsExpectToPass = {
-            {createIdentityCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createXCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createYCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHTCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHZCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCXCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCZCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCYCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
+    std::vector<testCase> const circuitsExpectToPass = {
+            {createIdentityCircuit, false, insertNoiseAfterNQubits},
+            {createXCircuit, false, insertNoiseAfterNQubits},
+            {createYCircuit, false, insertNoiseAfterNQubits},
+            {createHCircuit, false, insertNoiseAfterNQubits},
+            {createHTCircuit, false, insertNoiseAfterNQubits},
+            {createHZCircuit, false, insertNoiseAfterNQubits},
+            {createCXCircuit, false, insertNoiseAfterNQubits},
+            {createCZCircuit, false, insertNoiseAfterNQubits},
+            {createCYCircuit, false, insertNoiseAfterNQubits},
     };
     EXPECT_TRUE(testCircuits<ecc::Id>(circuitsExpectToPass));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ3Shor) {
-    size_t                 insertNoiseAfterNQubits = 4;
-    std::vector<qc::Qubit> oneQubitDataQubits      = {0, 1, 2};
-    std::vector<qc::Qubit> twoQubitDataQubits      = {0, 1, 2, 3, 4, 5};
+    size_t insertNoiseAfterNQubits = 4;
 
-    std::vector<testCase> circuitsExpectToPass = {
-            {createIdentityCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createXCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCXCircuit, true, insertNoiseAfterNQubits * 2, twoQubitDataQubits},
-            {createCYCircuit, true, insertNoiseAfterNQubits * 2, twoQubitDataQubits},
+    std::vector<testCase> const circuitsExpectToPass = {
+            {createIdentityCircuit, true, insertNoiseAfterNQubits},
+            {createXCircuit, true, insertNoiseAfterNQubits},
+            {createCXCircuit, true, insertNoiseAfterNQubits * 2},
+            {createCYCircuit, true, insertNoiseAfterNQubits * 2},
     };
-    std::vector<testCase> circuitsExpectToFail = {
-            {createYCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHTCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
+    std::vector<testCase> const circuitsExpectToFail = {
+            {createYCircuit, true, insertNoiseAfterNQubits},
+            {createHCircuit, true, insertNoiseAfterNQubits},
+            {createHTCircuit, true, insertNoiseAfterNQubits},
+            {createCZCircuit, true, insertNoiseAfterNQubits},
+            {createHZCircuit, true, insertNoiseAfterNQubits},
     };
     EXPECT_TRUE(testCircuits<ecc::Q3Shor>(circuitsExpectToPass));
     EXPECT_ANY_THROW(testCircuits<ecc::Q3Shor>(circuitsExpectToFail));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
-    size_t                 insertNoiseAfterNQubits = 61;
-    std::vector<qc::Qubit> oneQubitDataQubits      = {0, 1, 2, 3, 4};
+    size_t insertNoiseAfterNQubits = 61;
 
-    std::vector<testCase> circuitsExpectToPass = {
-            {createIdentityCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createXCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
+    std::vector<testCase> const circuitsExpectToPass = {
+            {createIdentityCircuit, true, insertNoiseAfterNQubits},
+            {createXCircuit, true, insertNoiseAfterNQubits},
     };
-    std::vector<testCase> circuitsExpectToFail = {
-            {createYCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHTCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCXCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCYCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
+    std::vector<testCase> const circuitsExpectToFail = {
+            {createYCircuit, true, insertNoiseAfterNQubits},
+            {createHCircuit, true, insertNoiseAfterNQubits},
+            {createHTCircuit, true, insertNoiseAfterNQubits},
+            {createHZCircuit, true, insertNoiseAfterNQubits},
+            {createCXCircuit, true, insertNoiseAfterNQubits},
+            {createCZCircuit, true, insertNoiseAfterNQubits},
+            {createCYCircuit, true, insertNoiseAfterNQubits},
     };
     EXPECT_TRUE(testCircuits<ecc::Q5Laflamme>(circuitsExpectToPass));
     EXPECT_ANY_THROW(testCircuits<ecc::Q5Laflamme>(circuitsExpectToFail));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ7Steane) {
-    size_t                 insertNoiseAfterNQubits = 57;
-    std::vector<qc::Qubit> oneQubitDataQubits      = {0, 1, 2, 3, 4, 5, 6};
-    std::vector<qc::Qubit> twoQubitDataQubits      = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    size_t insertNoiseAfterNQubits = 57;
 
-    std::vector<testCase> circuitsExpectToPass = {
-            {createIdentityCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createXCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createYCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHTCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCXCircuit, true, insertNoiseAfterNQubits * 2, twoQubitDataQubits},
-            {createCZCircuit, true, insertNoiseAfterNQubits * 2, twoQubitDataQubits},
-            {createCYCircuit, true, insertNoiseAfterNQubits * 2, twoQubitDataQubits},
+    std::vector<testCase> const circuitsExpectToPass = {
+            {createIdentityCircuit, true, insertNoiseAfterNQubits},
+            {createXCircuit, true, insertNoiseAfterNQubits},
+            {createYCircuit, true, insertNoiseAfterNQubits},
+            {createHCircuit, true, insertNoiseAfterNQubits},
+            {createHTCircuit, true, insertNoiseAfterNQubits},
+            {createHZCircuit, true, insertNoiseAfterNQubits},
+            {createCXCircuit, true, insertNoiseAfterNQubits * 2},
+            {createCZCircuit, true, insertNoiseAfterNQubits * 2},
+            {createCYCircuit, true, insertNoiseAfterNQubits * 2},
     };
     EXPECT_TRUE(testCircuits<ecc::Q7Steane>(circuitsExpectToPass));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
-    size_t                 insertNoiseAfterNQubits = 7;
-    std::vector<qc::Qubit> oneQubitDataQubits      = {0, 1, 2, 3, 4, 5, 6, 7, 8};
-    std::vector<qc::Qubit> twoQubitDataQubits      = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
+    size_t insertNoiseAfterNQubits = 7;
 
-    std::vector<testCase> circuitsExpectToPass = {
-            {createIdentityCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createXCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCXCircuit, true, insertNoiseAfterNQubits * 2, twoQubitDataQubits},
-            {createCYCircuit, true, insertNoiseAfterNQubits * 2, twoQubitDataQubits},
+    std::vector<testCase> const circuitsExpectToPass = {
+            {createIdentityCircuit, true, insertNoiseAfterNQubits},
+            {createXCircuit, true, insertNoiseAfterNQubits},
+            {createCXCircuit, true, insertNoiseAfterNQubits * 2},
+            {createCYCircuit, true, insertNoiseAfterNQubits * 2},
     };
 
-    std::vector<testCase> circuitsExpectToFail = {
-            {createYCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHTCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
+    std::vector<testCase> const circuitsExpectToFail = {
+            {createYCircuit, true, insertNoiseAfterNQubits},
+            {createHCircuit, true, insertNoiseAfterNQubits},
+            {createHTCircuit, true, insertNoiseAfterNQubits},
+            {createHZCircuit, true, insertNoiseAfterNQubits},
+            {createCZCircuit, true, insertNoiseAfterNQubits},
     };
 
     EXPECT_TRUE(testCircuits<ecc::Q9Shor>(circuitsExpectToPass));
@@ -310,22 +302,21 @@ TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
-    size_t                 insertNoiseAfterNQubits = 55;
-    std::vector<qc::Qubit> oneQubitDataQubits      = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+    size_t insertNoiseAfterNQubits = 55;
 
-    std::vector<testCase> circuitsExpectToPass = {
-            {createIdentityCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createXCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createYCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
+    std::vector<testCase> const circuitsExpectToPass = {
+            {createIdentityCircuit, true, insertNoiseAfterNQubits},
+            {createXCircuit, true, insertNoiseAfterNQubits},
+            {createYCircuit, true, insertNoiseAfterNQubits},
+            {createHCircuit, true, insertNoiseAfterNQubits},
+            {createHZCircuit, true, insertNoiseAfterNQubits},
     };
 
-    std::vector<testCase> circuitsExpectToFail = {
-            {createHTCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCXCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCYCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
+    std::vector<testCase> const circuitsExpectToFail = {
+            {createHTCircuit, true, insertNoiseAfterNQubits},
+            {createCXCircuit, true, insertNoiseAfterNQubits},
+            {createCZCircuit, true, insertNoiseAfterNQubits},
+            {createCYCircuit, true, insertNoiseAfterNQubits},
     };
 
     EXPECT_TRUE(testCircuits<ecc::Q9Surface>(circuitsExpectToPass));
@@ -333,22 +324,21 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
 }
 
 TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
-    size_t                 insertNoiseAfterNQubits = 115;
-    std::vector<qc::Qubit> oneQubitDataQubits      = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
+    size_t insertNoiseAfterNQubits = 115;
 
-    std::vector<testCase> circuitsExpectToPass{
-            {createIdentityCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createXCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createYCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHZCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
+    std::vector<testCase> const circuitsExpectToPass{
+            {createIdentityCircuit, false, insertNoiseAfterNQubits},
+            {createXCircuit, false, insertNoiseAfterNQubits},
+            {createYCircuit, false, insertNoiseAfterNQubits},
+            {createHCircuit, false, insertNoiseAfterNQubits},
+            {createHZCircuit, false, insertNoiseAfterNQubits},
     };
 
-    std::vector<testCase> circuitsExpectToFail = {
-            {createHTCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCXCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createCYCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
+    std::vector<testCase> const circuitsExpectToFail = {
+            {createHTCircuit, true, insertNoiseAfterNQubits},
+            {createCXCircuit, true, insertNoiseAfterNQubits},
+            {createCZCircuit, true, insertNoiseAfterNQubits},
+            {createCYCircuit, true, insertNoiseAfterNQubits},
     };
 
     EXPECT_TRUE(testCircuits<ecc::Q18Surface>(circuitsExpectToPass));
