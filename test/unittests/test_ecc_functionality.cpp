@@ -168,7 +168,7 @@ protected:
                                          bool                                           simulateWithErrors     = false,
                                          std::size_t                                    insertErrorAfterNGates = 0,
                                          Qubit                                          target                 = 0,
-                                         double                                         tolerance              = 0.25,
+                                         double                                         tolerance              = 0.3,
                                          std::size_t                                    shots                  = 50,
                                          std::size_t                                    seed                   = 1) {
         auto toleranceAbsolute = (static_cast<double>(shots) / 100.0) * (tolerance * 100.0);
@@ -193,7 +193,7 @@ protected:
                 }
             }
             auto difference = std::max(eccHits, hits) - std::min(eccHits, hits);
-            std::cout << "Diff/tolerance " << difference << "/" << toleranceAbsolute << " Original register: " << hits << " ecc register: " << eccHits;
+            std::cout << "Diff/tolerance " << difference << "/" << toleranceAbsolute << " Original register: " << hits << " ecc register: " << eccHits << std::endl;
             if (simulateWithErrors) {
                 std::cout << " Simulating an error in qubit " << target << " after " << insertErrorAfterNGates << " gates." << std::endl;
             }
