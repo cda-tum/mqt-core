@@ -29,59 +29,59 @@ namespace ecc {
                 }
             }
             for (std::size_t j = 0; j < 8; j++) {
-                ancillaControls.at(j) = qc::Control{static_cast<Qubit>(ancillaQubits.at(j)), qc::Control::Type::Pos};
+                ancillaControls.at(j) = qc::Control{ancillaQubits.at(j), qc::Control::Type::Pos};
             }
             for (std::size_t j = 0; j < 9; j++) {
-                controlQubits.at(j) = qc::Control{static_cast<Qubit>(qubits.at(j)), qc::Control::Type::Pos};
+                controlQubits.at(j) = qc::Control{qubits.at(j), qc::Control::Type::Pos};
             }
 
             //X-type check (z error) on a0, a2, a5, a7: cx ancillaQubits->qubits
             //Z-type check (x error) on a1, a3, a4, a6: cz ancillaQubits->qubits = cx qubits->ancillaQubits, no hadamard gate
-            for (auto q: zAncillaQubits) {
-                qcMapped->h(ancillaQubits[q]);
+            for (auto q: Z_ANCILLA_QUBITS) {
+                qcMapped->h(ancillaQubits.at(q));
             }
 
             for (std::size_t q = 0; q < qubitCorrectionZ.size(); q++) {
-                for (auto c: qubitCorrectionZ[q]) {
-                    qcMapped->x(qubits[q], ancillaControls[c]);
+                for (auto c: qubitCorrectionZ.at(q)) {
+                    qcMapped->x(qubits.at(q), ancillaControls.at(c));
                 }
             }
 
             for (std::size_t q = 0; q < qubitCorrectionX.size(); q++) {
-                for (auto c: qubitCorrectionX[q]) {
-                    qcMapped->x(ancillaQubits[c], controlQubits[q]);
+                for (auto c: qubitCorrectionX.at(q)) {
+                    qcMapped->x(ancillaQubits.at(c), controlQubits.at(q));
                 }
             }
 
-            for (std::size_t j = 0; j < zAncillaQubits.size(); j++) {
-                qcMapped->h(ancillaQubits[zAncillaQubits[j]]);
-                qcMapped->measure(ancillaQubits[zAncillaQubits[j]], clAncStart + j);
-                qcMapped->measure(ancillaQubits[xAncillaQubits[j]], clAncStart + 4 + j);
+            for (std::size_t j = 0; j < Z_ANCILLA_QUBITS.size(); j++) {
+                qcMapped->h(ancillaQubits.at(Z_ANCILLA_QUBITS.at(j)));
+                qcMapped->measure(ancillaQubits.at(Z_ANCILLA_QUBITS.at(j)), clAncStart + j);
+                qcMapped->measure(ancillaQubits.at(X_ANCILLA_QUBITS.at(j)), clAncStart + 4 + j);
             }
 
             //correction
-            auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), ancillaWidth);
+            auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), ANCILLA_WIDTH);
             for (std::size_t q = 0; q < qubitCorrectionZ.size(); q++) {
                 if (uncorrectedZQubits.count(static_cast<Qubit>(q)) == 0) {
                     std::size_t mask = 0;
-                    for (std::size_t c = 0; c < zAncillaQubits.size(); c++) {
-                        if (qubitCorrectionZ[q].count(zAncillaQubits[c]) > 0) {
+                    for (std::size_t c = 0; c < Z_ANCILLA_QUBITS.size(); c++) {
+                        if (qubitCorrectionZ.at(q).count(Z_ANCILLA_QUBITS.at(c)) > 0) {
                             mask |= (1 << c);
                         }
                     }
-                    classicalControl(controlRegister, mask, qc::Z, qubits[q]);
+                    classicalControl(controlRegister, mask, qc::Z, qubits.at(q));
                 }
             }
-            controlRegister = std::make_pair(static_cast<Qubit>(clAncStart + ancillaWidth), ancillaWidth);
+            controlRegister = std::make_pair(static_cast<Qubit>(clAncStart + ANCILLA_WIDTH), ANCILLA_WIDTH);
             for (std::size_t q = 0; q < qubitCorrectionX.size(); q++) {
                 if (uncorrectedXQubits.count(static_cast<Qubit>(q)) == 0) {
                     std::size_t mask = 0;
-                    for (std::size_t c = 0; c < xAncillaQubits.size(); c++) {
-                        if (qubitCorrectionX[q].count(xAncillaQubits[c]) > 0) {
+                    for (std::size_t c = 0; c < X_ANCILLA_QUBITS.size(); c++) {
+                        if (qubitCorrectionX.at(q).count(X_ANCILLA_QUBITS.at(c)) > 0) {
                             mask |= (1 << c);
                         }
                     }
-                    classicalControl(controlRegister, mask, qc::X, qubits[q]);
+                    classicalControl(controlRegister, mask, qc::X, qubits.at(q));
                 }
             }
 
@@ -121,7 +121,7 @@ namespace ecc {
                 break;
             case qc::X:
                 for (auto i: gate.getTargets()) {
-                    for (auto j: logicalX) {
+                    for (auto j: LOGICAL_X) {
                         qcMapped->x(static_cast<Qubit>(i + j * nQubits));
                     }
                 }
@@ -131,7 +131,7 @@ namespace ecc {
                     for (std::size_t j = 0; j < 9; j++) {
                         qcMapped->h(static_cast<Qubit>(i + j * nQubits));
                     }
-                    for (auto pair: swapIndices) {
+                    for (auto pair: SWAP_INDICES) {
                         qcMapped->swap(static_cast<Qubit>(i + pair.first * nQubits), static_cast<Qubit>(i + pair.second * nQubits));
                     }
                 }
@@ -139,17 +139,17 @@ namespace ecc {
             case qc::Y:
                 //Y = Z X
                 for (auto i: gate.getTargets()) {
-                    for (auto j: logicalZ) {
+                    for (auto j: LOGICAL_Z) {
                         qcMapped->z(static_cast<Qubit>(i + j * nQubits));
                     }
-                    for (auto j: logicalX) {
+                    for (auto j: LOGICAL_X) {
                         qcMapped->x(static_cast<Qubit>(i + j * nQubits));
                     }
                 }
                 break;
             case qc::Z:
                 for (auto i: gate.getTargets()) {
-                    for (auto j: logicalZ) {
+                    for (auto j: LOGICAL_Z) {
                         qcMapped->z(static_cast<Qubit>(i + j * nQubits));
                     }
                 }

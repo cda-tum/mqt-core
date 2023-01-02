@@ -22,7 +22,7 @@ namespace ecc {
 
         void mapGate(const qc::Operation& gate) override;
 
-        static constexpr std::array<std::array<qc::OpType, 5>, 4> stabilizerMatrix = {{
+        static constexpr std::array<std::array<qc::OpType, 5>, 4> STABILIZER_MATRIX = {{
                 {qc::X, qc::Z, qc::Z, qc::X, qc::I}, //c0
                 {qc::I, qc::X, qc::Z, qc::Z, qc::X}, //c1
                 {qc::X, qc::I, qc::X, qc::Z, qc::Z}, //c2

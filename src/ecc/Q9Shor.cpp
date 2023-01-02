@@ -48,10 +48,10 @@ namespace ecc {
                 qcMapped->reset(ancillaQubits.at(j));
             }
             for (std::size_t j = 0; j < 8; j++) {
-                ancillaControls.at(j) = qc::Control{static_cast<Qubit>(ancillaQubits.at(j)), qc::Control::Type::Pos};
+                ancillaControls.at(j) = qc::Control{ancillaQubits.at(j), qc::Control::Type::Pos};
             }
             for (std::size_t j = 0; j < 8; j++) {
-                negativeAncillaControls.at(j) = qc::Control{static_cast<Qubit>(ancillaQubits.at(j)), qc::Control::Type::Neg};
+                negativeAncillaControls.at(j) = qc::Control{ancillaQubits.at(j), qc::Control::Type::Neg};
             }
 
             // PREPARE measurements --------------------------------------------------------

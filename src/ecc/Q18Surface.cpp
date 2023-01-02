@@ -14,7 +14,7 @@ namespace ecc {
 
         std::map<std::size_t, std::size_t> xCheckMasks;
         std::map<std::size_t, std::size_t> zCheckMasks;
-        for (std::size_t j = 0; j < ancillaWidth; j++) {
+        for (std::size_t j = 0; j < ANCILLA_WIDTH; j++) {
             xCheckMasks[xChecks.at(j)] = 1 << j;
             zCheckMasks[zChecks.at(j)] = 1 << j;
         }
@@ -26,11 +26,11 @@ namespace ecc {
                 qubits.at(j) = static_cast<Qubit>(i + j * nQubits);
             }
             for (std::size_t j = 0; j < controlQubits.size(); j++) {
-                controlQubits.at(j) = qc::Control{static_cast<Qubit>(qubits.at(j)), qc::Control::Type::Pos};
+                controlQubits.at(j) = qc::Control{qubits.at(j), qc::Control::Type::Pos};
             }
 
             if (gatesWritten) {
-                for (Qubit const ai: ancillaIndices) {
+                for (Qubit const ai: ANCILLA_INDICES) {
                     qcMapped->reset(qubits.at(ai));
                 }
             }
@@ -38,7 +38,7 @@ namespace ecc {
             //initialize ancillas: Z-check
             for (const auto& pair: qubitCorrectionX) {
                 for (auto ancilla: pair.second) {
-                    qcMapped->x(qubits[ancilla], controlQubits[pair.first]);
+                    qcMapped->x(qubits.at(ancilla), controlQubits.at(pair.first));
                 }
             }
 
@@ -49,7 +49,7 @@ namespace ecc {
             }
             for (const auto& pair: qubitCorrectionZ) {
                 for (auto ancilla: pair.second) {
-                    qcMapped->x(qubits[pair.first], controlQubits[ancilla]);
+                    qcMapped->x(qubits.at(pair.first), controlQubits.at(ancilla));
                 }
             }
             for (std::size_t const xc: zChecks) {
@@ -61,24 +61,24 @@ namespace ecc {
                 qcMapped->measure(qubits[xChecks.at(j)], clAncStart + j);
             }
             for (std::size_t j = 0; j < zChecks.size(); j++) {
-                qcMapped->measure(qubits[zChecks.at(j)], clAncStart + ancillaWidth + j);
+                qcMapped->measure(qubits[zChecks.at(j)], clAncStart + ANCILLA_WIDTH + j);
             }
 
             //logic: classical control
-            auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), ancillaWidth);
+            auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), ANCILLA_WIDTH);
             for (const auto& pair: qubitCorrectionX) {
                 std::size_t mask = 0;
                 for (std::size_t value: pair.second) {
-                    mask |= xCheckMasks[value];
+                    mask |= xCheckMasks.at(value);
                 }
                 classicalControl(controlRegister, mask, qc::X, qubits[pair.first]);
             }
 
-            controlRegister = std::make_pair(static_cast<Qubit>(clAncStart + ancillaWidth), ancillaWidth);
+            controlRegister = std::make_pair(static_cast<Qubit>(clAncStart + ANCILLA_WIDTH), ANCILLA_WIDTH);
             for (const auto& pair: qubitCorrectionZ) {
                 std::size_t mask = 0;
                 for (std::size_t value: pair.second) {
-                    mask |= zCheckMasks[value];
+                    mask |= zCheckMasks.at(value);
                 }
                 classicalControl(controlRegister, mask, qc::Z, qubits[pair.first]);
             }
@@ -95,11 +95,11 @@ namespace ecc {
         static constexpr std::array<Qubit, 4> physicalAncillaQubits = {8, 13, 15, 20};
         for (Qubit i = 0; i < nQubits; i++) {
             for (Qubit qubit: physicalAncillaQubits) {
-                qcMapped->x(static_cast<Qubit>(i + xInformation * nQubits), qc::Control{static_cast<Qubit>(i + qubit * nQubits), qc::Control::Type::Pos});
+                qcMapped->x(static_cast<Qubit>(i + X_INFORMATION * nQubits), qc::Control{static_cast<Qubit>(i + qubit * nQubits), qc::Control::Type::Pos});
             }
-            qcMapped->measure(static_cast<Qubit>(i + xInformation * nQubits), i);
-            qcMapped->reset(static_cast<Qubit>(i));
-            qcMapped->x(static_cast<Qubit>(i), qc::Control{static_cast<Qubit>(i + xInformation * nQubits), qc::Control::Type::Pos});
+            qcMapped->measure(static_cast<Qubit>(i + X_INFORMATION * nQubits), i);
+            qcMapped->reset(i);
+            qcMapped->x(i, qc::Control{static_cast<Qubit>(i + X_INFORMATION * nQubits), qc::Control::Type::Pos});
         }
         isDecoded = true;
     }
@@ -122,7 +122,7 @@ namespace ecc {
                     break;
                 case qc::X:
                     for (auto i: gate.getTargets()) {
-                        for (auto j: logicalX) {
+                        for (auto j: LOGICAL_X) {
                             qcMapped->x(static_cast<Qubit>(i + j * nQubits));
                         }
                     }
@@ -131,11 +131,11 @@ namespace ecc {
                     //apply H gate to every data qubit
                     //swap circuit along '/' axis
                     for (auto i: gate.getTargets()) {
-                        for (const auto j: dataQubits) {
+                        for (const auto j: DATA_QUBITS) {
                             qcMapped->h(static_cast<Qubit>(i + j * nQubits));
                         }
                         for (auto pair: swapQubitIndices) {
-                            qcMapped->swap(static_cast<Qubit>(i + pair.first * nQubits), static_cast<Qubit>(i + pair.second * nQubits));
+                            qcMapped->swap(static_cast<Qubit>(i + static_cast<size_t>(pair.first) * nQubits), static_cast<Qubit>(i + static_cast<size_t>(pair.second) * nQubits));
                         }
                         //qubits 5, 10, 15, 20, 25, 30 are along axis
                     }
@@ -143,17 +143,17 @@ namespace ecc {
                 case qc::Y:
                     //Y = Z X
                     for (auto i: gate.getTargets()) {
-                        for (auto j: logicalZ) {
+                        for (auto j: LOGICAL_Z) {
                             qcMapped->z(static_cast<Qubit>(i + j * nQubits));
                         }
-                        for (auto j: logicalX) {
+                        for (auto j: LOGICAL_X) {
                             qcMapped->x(static_cast<Qubit>(i + j * nQubits));
                         }
                     }
                     break;
                 case qc::Z:
                     for (auto i: gate.getTargets()) {
-                        for (auto j: logicalZ) {
+                        for (auto j: LOGICAL_Z) {
                             qcMapped->z(static_cast<Qubit>(i + j * nQubits));
                         }
                     }

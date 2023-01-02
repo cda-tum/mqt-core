@@ -11,10 +11,10 @@ namespace ecc {
         qcMapped->addQubitRegister(getNOutputQubits(qcOriginal->getNqubits()));
         auto cRegs = qcOriginal->getCregs();
         for (auto const& [regName, regBits]: cRegs) {
-            qcMapped->addClassicalRegister(regBits.second, regName.c_str());
+            qcMapped->addClassicalRegister(regBits.second, regName);
         }
-        for (auto cr: ecc.classicalRegisters) {
-            qcMapped->addClassicalRegister(cr.first, cr.second.c_str());
+        for (auto const& [regBits, regName]: ecc.classicalRegisters) {
+            qcMapped->addClassicalRegister(regBits, regName);
         }
     }
 

@@ -30,19 +30,19 @@ namespace ecc {
             std::vector<std::pair<std::size_t, std::string>> classicalRegisters;
         };
 
-        Ecc(Info ecc, std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFrequency):
-            qcOriginal(std::move(qc)), measureFrequency(measureFrequency), ecc(std::move(ecc)) {
+        Ecc(Info newEcc, std::shared_ptr<qc::QuantumComputation> qc, std::size_t newMeasureFrequency):
+            qcOriginal(std::move(qc)), measureFrequency(newMeasureFrequency), ecc(std::move(newEcc)) {
             qcMapped = std::make_shared<qc::QuantumComputation>();
         }
         virtual ~Ecc() = default;
 
         std::shared_ptr<qc::QuantumComputation> apply();
 
-        std::shared_ptr<qc::QuantumComputation> getOriginalCircuit() {
+        [[nodiscard]] std::shared_ptr<qc::QuantumComputation> getOriginalCircuit() const {
             return qcOriginal;
         }
 
-        std::shared_ptr<qc::QuantumComputation> getMappedCircuit() {
+        [[nodiscard]] std::shared_ptr<qc::QuantumComputation> getMappedCircuit() const {
             return qcMapped;
         }
 
@@ -54,14 +54,13 @@ namespace ecc {
             return nInputQubits * ecc.nRedundantQubits + ecc.nCorrectingBits;
         }
 
-        std::vector<Qubit> getDataQubits() {
+        [[nodiscard]] std::vector<Qubit> getDataQubits() const {
             auto               numberOfDataQubits = qcOriginal->getNqubits() * ecc.nRedundantQubits;
             std::vector<Qubit> dataQubits(numberOfDataQubits);
             std::iota(std::begin(dataQubits), std::end(dataQubits), 0);
             return dataQubits;
         }
 
-    protected:
         std::shared_ptr<qc::QuantumComputation> qcOriginal;
         std::shared_ptr<qc::QuantumComputation> qcMapped;
         std::size_t                             measureFrequency;
@@ -69,6 +68,7 @@ namespace ecc {
         bool                                    gatesWritten = false;
         Info                                    ecc;
 
+    protected:
         void initMappedCircuit();
 
         /**
@@ -104,14 +104,14 @@ namespace ecc {
             throw qc::QFRException(std::string("Gate ") + gate.getName() + " not supported to encode in error code " + ecc.name + "!");
         }
 
-        void ccx(Qubit target, Qubit c1, bool p1, Qubit c2, bool p2) {
+        void ccx(Qubit target, Qubit c1, bool p1, Qubit c2, bool p2) const {
             qc::Controls controls;
-            controls.insert(qc::Control{(c1), p1 ? qc::Control::Type::Pos : qc::Control::Type::Neg});
-            controls.insert(qc::Control{(c2), p2 ? qc::Control::Type::Pos : qc::Control::Type::Neg});
-            qcMapped->x(static_cast<Qubit>(target), controls);
+            controls.insert(qc::Control{c1, p1 ? qc::Control::Type::Pos : qc::Control::Type::Neg});
+            controls.insert(qc::Control{c2, p2 ? qc::Control::Type::Pos : qc::Control::Type::Neg});
+            qcMapped->x(target, controls);
         }
 
-        void classicalControl(const std::pair<Qubit, std::size_t>& controlRegister, std::size_t value, qc::OpType opType, Qubit target) {
+        void classicalControl(const std::pair<Qubit, std::size_t>& controlRegister, std::size_t value, qc::OpType opType, Qubit target) const {
             std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(), target, opType);
             qcMapped->emplace_back<qc::ClassicControlledOperation>(op, controlRegister, value);
         }

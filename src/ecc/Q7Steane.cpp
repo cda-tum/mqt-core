@@ -33,7 +33,7 @@ namespace ecc {
     void Q7Steane::measureAndCorrectSingle(bool xSyndrome) {
         const auto nQubits         = qcOriginal->getNqubits();
         const auto ancStart        = nQubits * ecc.nRedundantQubits;
-        const auto clAncStart      = static_cast<QubitCount>(qcOriginal->getNcbits());
+        const auto clAncStart      = qcOriginal->getNcbits();
         const auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), static_cast<QubitCount>(3));
 
         for (Qubit i = 0; i < nQubits; i++) {
@@ -46,7 +46,7 @@ namespace ecc {
             std::array<qc::Control, 3> controls = {};
             for (std::size_t j = 0; j < ecc.nCorrectingBits; j++) {
                 qcMapped->h(static_cast<Qubit>(ancStart + j));
-                controls[j] = qc::Control{static_cast<Qubit>(ancStart + j), qc::Control::Type::Pos};
+                controls.at(j) = qc::Control{static_cast<Qubit>(ancStart + j), qc::Control::Type::Pos};
             }
 
             staticWriteFunctionType writeXZ = xSyndrome ? Ecc::x : Ecc::z;
@@ -57,7 +57,7 @@ namespace ecc {
             for (std::size_t c = 0; c < controls.size(); c++) {
                 for (std::size_t q = 0; q < ecc.nRedundantQubits; q++) {
                     if (((q + 1) & (1 << c)) != 0) {
-                        writeXZ(static_cast<Qubit>(i + nQubits * q), controls[c], qcMapped);
+                        writeXZ(static_cast<Qubit>(i + nQubits * q), controls.at(c), qcMapped);
                     }
                 }
             }
@@ -81,7 +81,7 @@ namespace ecc {
             return;
         }
         const auto                            nQubits          = qcOriginal->getNqubits();
-        const auto                            clAncStart       = static_cast<QubitCount>(qcOriginal->getNcbits());
+        const auto                            clAncStart       = qcOriginal->getNcbits();
         static constexpr std::array<Qubit, 4> correctionNeeded = {1, 2, 4, 7}; //values with odd amount of '1' bits
         //use exiting registers qeccX and qeccZ for decoding
         const auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), static_cast<QubitCount>(3));
@@ -89,7 +89,7 @@ namespace ecc {
         for (Qubit i = 0; i < nQubits; i++) {
             //#|###|###
             //0|111|111
-            //odd amount of 1's -> x[0] = 1
+            //odd amount of 1's -> x.at(0) = 1
             //measure from index 1 (not 0) to 6, =qubit 2 to 7
 
             qcMapped->measure(static_cast<Qubit>(i + 1 * nQubits), clAncStart);
@@ -168,11 +168,11 @@ namespace ecc {
                 }
                 if (const auto* measureGate = dynamic_cast<const qc::NonUnitaryOperation*>(&gate)) {
                     for (std::size_t j = 0; j < measureGate->getNclassics(); j++) {
-                        auto classicalRegisterName = qcOriginal->getClassicalRegister(measureGate->getTargets()[j]);
+                        auto classicalRegisterName = qcOriginal->getClassicalRegister(measureGate->getTargets().at(j));
                         if (!classicalRegisterName.empty()) {
-                            qcMapped->measure(static_cast<Qubit>(measureGate->getClassics()[j]), {classicalRegisterName, measureGate->getTargets()[j]});
+                            qcMapped->measure(static_cast<Qubit>(measureGate->getClassics().at(j)), {classicalRegisterName, measureGate->getTargets().at(j)});
                         } else {
-                            qcMapped->measure(static_cast<Qubit>(measureGate->getClassics()[j]), measureGate->getTargets()[j]);
+                            qcMapped->measure(static_cast<Qubit>(measureGate->getClassics().at(j)), measureGate->getTargets().at(j));
                         }
                     }
                 } else {
