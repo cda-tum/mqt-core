@@ -34,5 +34,5 @@ package_add_test(
 
 package_add_test(
   ${PROJECT_NAME}_test_ecc
-  "${PROJECT_NAME}_dd ${PROJECT_NAME}_ecc, ${PROJECT_NAME}_qc"
+  "${PROJECT_NAME}_dd ${PROJECT_NAME}_ecc"
   unittests/test_ecc_functionality.cpp)
