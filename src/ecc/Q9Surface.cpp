@@ -69,7 +69,7 @@ namespace ecc {
                             mask |= (1 << c);
                         }
                     }
-                    classicalControl(controlRegister, mask, qc::Z, qubits.at(q));
+                    qcMapped->classicControlled(qc::Z, qubits.at(q), controlRegister, mask);
                 }
             }
             controlRegister = std::make_pair(static_cast<Qubit>(clAncStart + ANCILLA_WIDTH), ANCILLA_WIDTH);
@@ -81,7 +81,7 @@ namespace ecc {
                             mask |= (1 << c);
                         }
                     }
-                    classicalControl(controlRegister, mask, qc::X, qubits.at(q));
+                    qcMapped->classicControlled(qc::X, qubits.at(q), controlRegister, mask);
                 }
             }
 

@@ -15,53 +15,53 @@ namespace ecc {
         std::map<std::size_t, std::size_t> xCheckMasks;
         std::map<std::size_t, std::size_t> zCheckMasks;
         for (std::size_t j = 0; j < ANCILLA_WIDTH; j++) {
-            xCheckMasks[xChecks[j]] = 1 << j;
-            zCheckMasks[zChecks[j]] = 1 << j;
+            xCheckMasks.at(xChecks.at(j)) = 1 << j;
+            zCheckMasks.at(zChecks.at(j)) = 1 << j;
         }
 
         for (Qubit i = 0; i < nQubits; i++) {
             std::array<Qubit, 36>       qubits        = {};
             std::array<qc::Control, 36> controlQubits = {};
             for (std::size_t j = 0; j < qubits.size(); j++) {
-                qubits[j] = static_cast<Qubit>(i + j * nQubits);
+                qubits.at(j) = static_cast<Qubit>(i + j * nQubits);
             }
             for (std::size_t j = 0; j < controlQubits.size(); j++) {
-                controlQubits[j] = qc::Control{qubits[j], qc::Control::Type::Pos};
+                controlQubits.at(j) = qc::Control{qubits.at(j), qc::Control::Type::Pos};
             }
 
             if (gatesWritten) {
                 for (Qubit const ai: ANCILLA_INDICES) {
-                    qcMapped->reset(qubits[ai]);
+                    qcMapped->reset(qubits.at(ai));
                 }
             }
 
             //initialize ancillas: Z-check
             for (const auto& pair: qubitCorrectionX) {
                 for (auto ancilla: pair.second) {
-                    qcMapped->x(qubits[ancilla], controlQubits[pair.first]);
+                    qcMapped->x(qubits.at(ancilla), controlQubits.at(pair.first));
                 }
             }
 
             //initialize ancillas: X-check
 
             for (std::size_t const xc: zChecks) {
-                qcMapped->h(qubits[xc]);
+                qcMapped->h(qubits.at(xc));
             }
             for (const auto& pair: qubitCorrectionZ) {
                 for (auto ancilla: pair.second) {
-                    qcMapped->x(qubits[pair.first], controlQubits[ancilla]);
+                    qcMapped->x(qubits.at(pair.first), controlQubits.at(ancilla));
                 }
             }
             for (std::size_t const xc: zChecks) {
-                qcMapped->h(qubits[xc]);
+                qcMapped->h(qubits.at(xc));
             }
 
             //map ancillas to classical bit result
             for (std::size_t j = 0; j < xChecks.size(); j++) {
-                qcMapped->measure(qubits[xChecks[j]], clAncStart + j);
+                qcMapped->measure(qubits.at(xChecks.at(j)), clAncStart + j);
             }
             for (std::size_t j = 0; j < zChecks.size(); j++) {
-                qcMapped->measure(qubits[zChecks[j]], clAncStart + ANCILLA_WIDTH + j);
+                qcMapped->measure(qubits.at(zChecks.at(j)), clAncStart + ANCILLA_WIDTH + j);
             }
 
             //logic: classical control
@@ -69,18 +69,18 @@ namespace ecc {
             for (const auto& pair: qubitCorrectionX) {
                 std::size_t mask = 0;
                 for (std::size_t const value: pair.second) {
-                    mask |= xCheckMasks[value];
+                    mask |= xCheckMasks.at(value);
                 }
-                classicalControl(controlRegister, mask, qc::X, qubits[pair.first]);
+                qcMapped->classicControlled(qc::X, qubits.at(pair.first), controlRegister, mask);
             }
 
             controlRegister = std::make_pair(static_cast<Qubit>(clAncStart + ANCILLA_WIDTH), ANCILLA_WIDTH);
             for (const auto& pair: qubitCorrectionZ) {
                 std::size_t mask = 0;
                 for (std::size_t const value: pair.second) {
-                    mask |= zCheckMasks[value];
+                    mask |= zCheckMasks.at(value);
                 }
-                classicalControl(controlRegister, mask, qc::Z, qubits[pair.first]);
+                qcMapped->classicControlled(qc::Z, qubits.at(pair.first), controlRegister, mask);
             }
 
             gatesWritten = true;
@@ -167,7 +167,7 @@ namespace ecc {
                         const auto& classics = measureGate->getClassics();
                         const auto& targets  = measureGate->getTargets();
                         for (std::size_t j = 0; j < classics.size(); j++) {
-                            qcMapped->measure(targets[j], classics[j]);
+                            qcMapped->measure(targets.at(j), classics.at(j));
                         }
                     } else {
                         throw std::runtime_error("Dynamic cast to NonUnitaryOperation failed.");

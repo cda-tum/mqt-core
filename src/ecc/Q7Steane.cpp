@@ -46,10 +46,8 @@ namespace ecc {
             std::array<qc::Control, 3> controls = {};
             for (std::size_t j = 0; j < ecc.nCorrectingBits; j++) {
                 qcMapped->h(static_cast<Qubit>(ancStart + j));
-                controls.at(j) = qc::Control{static_cast<Qubit>(ancStart + j), qc::Control::Type::Pos};
+                controls.at(j) = qc::Control{static_cast<Qubit>(ancStart + j)};
             }
-
-            staticWriteFunctionType writeXZ = xSyndrome ? Ecc::x : Ecc::z;
 
             //K1: UIUIUIU
             //K2: IUUIIUU
@@ -57,7 +55,12 @@ namespace ecc {
             for (std::size_t c = 0; c < controls.size(); c++) {
                 for (std::size_t q = 0; q < ecc.nRedundantQubits; q++) {
                     if (((q + 1) & (1 << c)) != 0) {
-                        writeXZ(static_cast<Qubit>(i + nQubits * q), controls.at(c), qcMapped);
+                        const auto target = static_cast<Qubit>(i + nQubits * q);
+                        if (xSyndrome) {
+                            qcMapped->x(target, controls.at(c));
+                        } else {
+                            qcMapped->z(target, controls.at(c));
+                        }
                     }
                 }
             }
@@ -69,8 +72,9 @@ namespace ecc {
 
             //correct Z_i for i+1 = c0*1+c1*2+c2*4
             //correct X_i for i+1 = c3*1+c4*2+c5*4
+            const auto opType = xSyndrome ? qc::Z : qc::X;
             for (std::size_t j = 0; j < 7; j++) {
-                classicalControl(controlRegister, j + 1U, xSyndrome ? qc::Z : qc::X, static_cast<Qubit>(i + j * nQubits));
+                qcMapped->classicControlled(opType, static_cast<Qubit>(i + j * nQubits), controlRegister, j + 1U);
             }
             gatesWritten = true;
         }
@@ -96,13 +100,13 @@ namespace ecc {
             qcMapped->measure(static_cast<Qubit>(i + 2 * nQubits), clAncStart + 1);
             qcMapped->measure(static_cast<Qubit>(i + 3 * nQubits), clAncStart + 2);
             for (auto value: correctionNeeded) {
-                classicalControl(controlRegister, value, qc::X, i);
+                qcMapped->classicControlled(qc::X, i, controlRegister, value);
             }
             qcMapped->measure(static_cast<Qubit>(i + 4 * nQubits), clAncStart);
             qcMapped->measure(static_cast<Qubit>(i + 5 * nQubits), clAncStart + 1);
             qcMapped->measure(static_cast<Qubit>(i + 6 * nQubits), clAncStart + 2);
             for (auto value: correctionNeeded) {
-                classicalControl(controlRegister, value, qc::X, i);
+                qcMapped->classicControlled(qc::X, i, controlRegister, value);
             }
         }
         isDecoded = true;
@@ -184,15 +188,15 @@ namespace ecc {
             case qc::Tdag:
                 for (auto i: gate.getTargets()) {
                     if (gate.getControls().empty()) {
-                        qcMapped->x(static_cast<Qubit>(i + 5 * nQubits), qc::Control{static_cast<Qubit>(i + 6 * nQubits), qc::Control::Type::Pos});
-                        qcMapped->x(static_cast<Qubit>(i + 0 * nQubits), qc::Control{static_cast<Qubit>(i + 5 * nQubits), qc::Control::Type::Pos});
+                        qcMapped->x(static_cast<Qubit>(i + 5 * nQubits), qc::Control{static_cast<Qubit>(i + 6 * nQubits)});
+                        qcMapped->x(static_cast<Qubit>(i + 0 * nQubits), qc::Control{static_cast<Qubit>(i + 5 * nQubits)});
                         if (gate.getType() == qc::T) {
                             qcMapped->t(static_cast<Qubit>(i + 0 * nQubits));
                         } else {
                             qcMapped->tdag(static_cast<Qubit>(i + 0 * nQubits));
                         }
-                        qcMapped->x(static_cast<Qubit>(i + 0 * nQubits), qc::Control{static_cast<Qubit>(i + 5 * nQubits), qc::Control::Type::Pos});
-                        qcMapped->x(static_cast<Qubit>(i + 5 * nQubits), qc::Control{static_cast<Qubit>(i + 6 * nQubits), qc::Control::Type::Pos});
+                        qcMapped->x(static_cast<Qubit>(i + 0 * nQubits), qc::Control{static_cast<Qubit>(i + 5 * nQubits)});
+                        qcMapped->x(static_cast<Qubit>(i + 5 * nQubits), qc::Control{static_cast<Qubit>(i + 6 * nQubits)});
                     } else {
                         gateNotAvailableError(gate);
                     }

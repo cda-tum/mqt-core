@@ -103,34 +103,5 @@ namespace ecc {
         void gateNotAvailableError(const qc::Operation& gate) const {
             throw qc::QFRException(std::string("Gate ") + gate.getName() + " not supported to encode in error code " + ecc.name + "!");
         }
-
-        void ccx(Qubit target, Qubit c1, bool p1, Qubit c2, bool p2) const {
-            qc::Controls controls;
-            controls.insert(qc::Control{c1, p1 ? qc::Control::Type::Pos : qc::Control::Type::Neg});
-            controls.insert(qc::Control{c2, p2 ? qc::Control::Type::Pos : qc::Control::Type::Neg});
-            qcMapped->x(target, controls);
-        }
-
-        void classicalControl(const std::pair<Qubit, std::size_t>& controlRegister, std::size_t value, qc::OpType opType, Qubit target) const {
-            std::unique_ptr<qc::Operation> op = std::make_unique<qc::StandardOperation>(qcMapped->getNqubits(), target, opType);
-            qcMapped->emplace_back<qc::ClassicControlledOperation>(op, controlRegister, value);
-        }
-
-        //static, since some codes need to store those functions into function pointers
-        using staticWriteFunctionType = void (*)(Qubit, qc::Control, const std::shared_ptr<qc::QuantumComputation>&);
-        static void x(Qubit target, qc::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
-            qcMapped->x(target, control);
-        }
-        static void z(Qubit target, qc::Control control, const std::shared_ptr<qc::QuantumComputation>& qcMapped) {
-            qcMapped->z(target, control);
-        }
-
-        /**
-     * returns if op1 and op2 are commutative,
-     * i.e. if for all qubit states s: op1(op2(s)) == op2(op1(s))
-     * */
-        static bool commutative(qc::OpType op1, qc::OpType op2) {
-            return op1 == op2 || op1 == qc::I || op2 == qc::I;
-        }
     };
 } // namespace ecc

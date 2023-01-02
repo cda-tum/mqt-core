@@ -20,13 +20,13 @@ namespace ecc {
         for (Qubit i = 0; i < nQubits; i++) {
             qcMapped->h(ancStart);
             for (std::size_t j = 0; j < ecc.nRedundantQubits; j++) {
-                qcMapped->z(static_cast<Qubit>(i + j * nQubits), qc::Control{ancStart, qc::Control::Type::Pos});
+                qcMapped->z(static_cast<Qubit>(i + j * nQubits), qc::Control{ancStart});
             }
             qcMapped->h(ancStart);
             qcMapped->measure(ancStart, clEncode);
 
             for (std::size_t j = 0; j < ecc.nRedundantQubits; j++) {
-                classicalControl(controlRegister, 1, qc::OpType::X, static_cast<Qubit>(i + j * nQubits));
+                qcMapped->classicControlled(qc::X, static_cast<Qubit>(i + j * nQubits), controlRegister);
             }
         }
         gatesWritten = true;
@@ -51,7 +51,7 @@ namespace ecc {
             for (std::size_t j = 0; j < controls.size(); j++) {
                 qcMapped->reset(static_cast<Qubit>(ancStart + j));
                 qcMapped->h(static_cast<Qubit>(ancStart + j));
-                controls.at(j) = qc::Control{static_cast<Qubit>(ancStart + j), qc::Control::Type::Pos};
+                controls.at(j) = qc::Control{static_cast<Qubit>(ancStart + j)};
             }
 
             //performs the controlled operations for ancilla qubits
@@ -78,11 +78,12 @@ namespace ecc {
                 for (auto op: {qc::X, qc::Y, qc::Z}) {
                     std::size_t value = 0;
                     for (std::size_t c = 0; c < STABILIZER_MATRIX.size(); c++) {
-                        if (!commutative(op, STABILIZER_MATRIX.at(c).at(q))) {
+                        const auto stabilizerOp = STABILIZER_MATRIX.at(c).at(q);
+                        if (stabilizerOp != qc::I && stabilizerOp != op) {
                             value |= (1 << c);
                         }
                     }
-                    classicalControl(controlRegister, value, op, qubits.at(q));
+                    qcMapped->classicControlled(op, qubits.at(q), controlRegister, value);
                 }
             }
         }
@@ -106,7 +107,7 @@ namespace ecc {
             }
             const auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), 4);
             for (Qubit const value: correctionNeeded) {
-                classicalControl(controlRegister, value, qc::X, static_cast<Qubit>(i));
+                qcMapped->classicControlled(qc::X, static_cast<Qubit>(i), controlRegister, value);
             }
         }
         isDecoded = true;

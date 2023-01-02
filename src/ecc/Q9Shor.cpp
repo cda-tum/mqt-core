@@ -14,15 +14,15 @@ namespace ecc {
         for (Qubit i = 0; i < nQubits; i++) {
             std::array<qc::Control, 3> controls = {};
             for (std::size_t j = 0; j < controls.size(); j++) {
-                controls[j] = {static_cast<Qubit>(i + 3 * j * nQubits), qc::Control::Type::Pos};
+                controls.at(j) = {static_cast<Qubit>(i + 3 * j * nQubits), qc::Control::Type::Pos};
                 if (j > 0) {
                     qcMapped->x(static_cast<Qubit>(i + 3 * j * nQubits), controls[0]);
                 }
             }
             for (std::size_t j = 0; j < controls.size(); j++) {
                 qcMapped->h(static_cast<Qubit>(i + 3 * j * nQubits));
-                qcMapped->x(static_cast<Qubit>(i + (3 * j + 1) * nQubits), controls[j]);
-                qcMapped->x(static_cast<Qubit>(i + (3 * j + 2) * nQubits), controls[j]);
+                qcMapped->x(static_cast<Qubit>(i + (3 * j + 1) * nQubits), controls.at(j));
+                qcMapped->x(static_cast<Qubit>(i + (3 * j + 2) * nQubits), controls.at(j));
             }
         }
         gatesWritten = true;
@@ -60,16 +60,16 @@ namespace ecc {
             }
             //x errors = indirectly via controlled z
             for (std::size_t j = 0; j < 3; j++) {
-                qcMapped->z(qubits[3 * j], ancillaControls[2 * j]);
-                qcMapped->z(qubits[3 * j + 1], ancillaControls[2 * j]);
-                qcMapped->z(qubits[3 * j + 1], ancillaControls[2 * j + 1]);
-                qcMapped->z(qubits[3 * j + 2], ancillaControls[2 * j + 1]);
+                qcMapped->z(qubits.at(3 * j), ancillaControls.at(2 * j));
+                qcMapped->z(qubits.at(3 * j + 1), ancillaControls.at(2 * j));
+                qcMapped->z(qubits.at(3 * j + 1), ancillaControls.at(2 * j + 1));
+                qcMapped->z(qubits.at(3 * j + 2), ancillaControls.at(2 * j + 1));
             }
 
-            //z errors = indirectly via controlled x/CNOT
+            //z errors = indirectly via controlled x/C-NOT
             for (std::size_t j = 0; j < 6; j++) {
-                qcMapped->x(qubits[j], ancillaControls[6]);
-                qcMapped->x(qubits[3 + j], ancillaControls[7]);
+                qcMapped->x(qubits.at(j), ancillaControls[6]);
+                qcMapped->x(qubits.at(3 + j), ancillaControls[7]);
             }
 
             for (Qubit const j: ancillaQubits) {
@@ -85,16 +85,16 @@ namespace ecc {
             //x, i.e. bit flip errors
             for (std::size_t j = 0; j < 3; j++) {
                 const auto controlRegister = std::make_pair(static_cast<Qubit>(clStart + 2 * j), 2);
-                classicalControl(controlRegister, 1, qc::X, static_cast<Qubit>(i + 3 * j * nQubits));
-                classicalControl(controlRegister, 2, qc::X, static_cast<Qubit>(i + (3 * j + 2) * nQubits));
-                classicalControl(controlRegister, 3, qc::X, static_cast<Qubit>(i + (3 * j + 1) * nQubits));
+                qcMapped->classicControlled(qc::X, qubits.at(3 * j), controlRegister, 1U);
+                qcMapped->classicControlled(qc::X, qubits.at(3 * j + 2), controlRegister, 2U);
+                qcMapped->classicControlled(qc::X, qubits.at(3 * j + 1), controlRegister, 3U);
             }
 
             //z, i.e. phase flip errors
             const auto controlRegister = std::make_pair(static_cast<Qubit>(clStart + 6), 2);
-            classicalControl(controlRegister, 1, qc::Z, i);
-            classicalControl(controlRegister, 2, qc::Z, static_cast<Qubit>(i + 6 * nQubits));
-            classicalControl(controlRegister, 3, qc::Z, static_cast<Qubit>(i + 3 * nQubits));
+            qcMapped->classicControlled(qc::Z, qubits.at(0), controlRegister, 1U);
+            qcMapped->classicControlled(qc::Z, qubits.at(6), controlRegister, 2U);
+            qcMapped->classicControlled(qc::Z, qubits.at(3), controlRegister, 3U);
         }
     }
 
@@ -110,15 +110,16 @@ namespace ecc {
             }
 
             for (std::size_t j = 0; j < 3; j++) {
-                qcMapped->x(static_cast<Qubit>(i + (3 * j + 1) * nQubits), ci[3 * j]);
-                qcMapped->x(static_cast<Qubit>(i + (3 * j + 2) * nQubits), ci[3 * j]);
-                ccx(static_cast<Qubit>(i + 3 * j * nQubits), static_cast<Qubit>(i + (3 * j + 1) * nQubits), true, static_cast<Qubit>(i + (3 * j + 2) * nQubits), true);
-                qcMapped->h(static_cast<Qubit>(i + 3 * j * nQubits));
+                std::array<Qubit, 3> targets = {static_cast<Qubit>(i + 3 * j * nQubits), static_cast<Qubit>(i + (3 * j + 1) * nQubits), static_cast<Qubit>(i + (3 * j + 2) * nQubits)};
+                qcMapped->x(targets.at(1), ci.at(3 * j));
+                qcMapped->x(targets.at(2), ci.at(3 * j));
+                qcMapped->x(targets.at(0), {ci.at(3 * j + 1), ci.at(3 * j + 2)});
+                qcMapped->h(targets.at(0));
             }
 
             qcMapped->x(static_cast<Qubit>(i + 3 * nQubits), ci[0]);
             qcMapped->x(static_cast<Qubit>(i + 6 * nQubits), ci[0]);
-            ccx(i, static_cast<Qubit>(i + 3 * nQubits), true, static_cast<Qubit>(i + 6 * nQubits), true);
+            qcMapped->x(i, {ci.at(3), ci.at(6)});
         }
         isDecoded = true;
     }
@@ -161,15 +162,15 @@ namespace ecc {
 
             if (gate.getNcontrols() != 0U) {
                 //Q9Shor code: put H gate before and after each control point, i.e. "cx 0,1" becomes "h0; cz 0,1; h0"
-                const auto& ctrls = gate.getControls();
+                const auto& controls = gate.getControls();
                 for (size_t j = 0; j < 9; j++) {
-                    qc::Controls ctrls2;
-                    for (const auto& ct: ctrls) {
-                        ctrls2.insert(qc::Control{static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
+                    qc::Controls controls2;
+                    for (const auto& ct: controls) {
+                        controls2.insert(qc::Control{static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
                         qcMapped->h(static_cast<Qubit>(ct.qubit + j * nQubits));
                     }
-                    qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls2, i + j * nQubits, type);
-                    for (const auto& ct: ctrls) {
+                    qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), controls2, i + j * nQubits, type);
+                    for (const auto& ct: controls) {
                         qcMapped->h(static_cast<Qubit>(ct.qubit + j * nQubits));
                     }
                 }
