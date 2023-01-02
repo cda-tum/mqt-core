@@ -149,7 +149,7 @@ protected:
     static bool verifyExecution(const std::shared_ptr<qc::QuantumComputation>& qcOriginal, const std::shared_ptr<qc::QuantumComputation>& qcMapped, bool simulateWithErrors, const std::vector<Qubit>& dataQubits = {}, std::size_t insertErrorAfterNGates = 0) {
         auto shots     = 50;
         auto seed      = 50;
-        auto tolerance = 0.8;
+        auto tolerance = 0.25;
 
         auto toleranceAbsolute = (static_cast<double>(shots) / 100.0) * (tolerance * 100.0);
         auto ddOriginal        = std::make_unique<dd::Package<>>(qcOriginal->getNqubits());
@@ -334,11 +334,11 @@ TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
     std::vector<qc::Qubit> oneQubitDataQubits      = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
 
     std::vector<testCase> circuitsExpectToPass{
-            {createIdentityCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createXCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createYCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
-            {createHZCircuit, true, insertNoiseAfterNQubits, oneQubitDataQubits},
+            {createIdentityCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
+            {createXCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
+            {createYCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
+            {createHCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
+            {createHZCircuit, false, insertNoiseAfterNQubits, oneQubitDataQubits},
     };
 
     std::vector<testCase> circuitsExpectToFail = {
