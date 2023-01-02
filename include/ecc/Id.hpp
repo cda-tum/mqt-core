@@ -21,8 +21,7 @@ namespace ecc {
         void writeDecoding() override{};
 
         void mapGate(const qc::Operation& gate) override {
-            auto gateCopy = gate.clone();
-            qcMapped->emplace_back(gateCopy);
+            qcMapped->emplace_back(gate.clone());
         }
     };
 } // namespace ecc

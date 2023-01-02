@@ -12,8 +12,8 @@
 namespace dd {
     using namespace qc;
 
-    template<class Config>
-    VectorDD simulate(const QuantumComputation* qc, const VectorDD& in, std::unique_ptr<dd::Package<Config>>& dd) {
+    template<class DDPackage>
+    VectorDD simulate(const QuantumComputation* qc, const VectorDD& in, std::unique_ptr<DDPackage>& dd) {
         // measurements are currently not supported here
         auto permutation = qc->initialLayout;
         auto e           = in;
@@ -36,14 +36,7 @@ namespace dd {
     }
 
     template<class DDPackage>
-    std::map<std::string, std::size_t> simulate(const QuantumComputation*   qc,
-                                                const VectorDD&             in,
-                                                std::unique_ptr<DDPackage>& dd,
-                                                std::size_t                 shots,
-                                                std::size_t                 seed                   = 0U,
-                                                const bool                  simulateNoise          = false,
-                                                const dd::Qubit             noiseTarget            = 0,
-                                                const size_t                insertErrorAfterNGates = 0) {
+    std::map<std::string, std::size_t> simulate(const QuantumComputation* qc, const VectorDD& in, std::unique_ptr<DDPackage>& dd, std::size_t shots, std::size_t seed = 0U) {
         bool isDynamicCircuit = false;
         bool hasMeasurements  = false;
         bool measurementsLast = true;
@@ -155,25 +148,8 @@ namespace dd {
                 auto permutation = qc->initialLayout;
                 auto e           = in;
                 dd->incRef(e);
-                size_t operationCounter = 0;
 
                 for (const auto& op: *qc) {
-                    if (simulateNoise && operationCounter == insertErrorAfterNGates) {
-                        // Simulating noise by resetting the qubit which is affected by noise
-                        const auto& qubit = noiseTarget;
-                        auto        bit   = dd->measureOneCollapsing(e, permutation.at(qubit), true, mt);
-                        // apply an X operation whenever the measured result is one
-                        if (bit == '1') {
-                            const auto x   = qc::StandardOperation(qc->getNqubits(), qubit, qc::X);
-                            auto       tmp = dd->multiply(getDD(&x, dd), e);
-                            dd->incRef(tmp);
-                            dd->decRef(e);
-                            e = tmp;
-                            dd->garbageCollect();
-                        }
-                    }
-                    operationCounter++;
-
                     if (op->getType() == Measure) {
                         auto*       measure = dynamic_cast<NonUnitaryOperation*>(op.get());
                         const auto& qubits  = measure->getTargets();
@@ -241,15 +217,15 @@ namespace dd {
         }
     }
 
-    template<class Config>
-    void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package<Config>>& dd) {
+    template<class DDPackage>
+    void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in, dd::ProbabilityVector& probVector, std::unique_ptr<DDPackage>& dd) {
         // ! initial layout, output permutation and garbage qubits are currently not supported here
         dd->incRef(in);
         extractProbabilityVectorRecursive(qc, in, qc->begin(), std::map<std::size_t, char>{}, 1., probVector, dd);
     }
 
-    template<class Config>
-    void extractProbabilityVectorRecursive(const QuantumComputation* qc, const VectorDD& currentState, decltype(qc->begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, dd::ProbabilityVector& probVector, std::unique_ptr<dd::Package<Config>>& dd) {
+    template<class DDPackage>
+    void extractProbabilityVectorRecursive(const QuantumComputation* qc, const VectorDD& currentState, decltype(qc->begin()) currentIt, std::map<std::size_t, char> measurements, dd::fp commonFactor, dd::ProbabilityVector& probVector, std::unique_ptr<DDPackage>& dd) {
         auto state = currentState;
         for (auto it = currentIt; it != qc->end(); ++it) {
             auto& op = (*it);
@@ -423,8 +399,8 @@ namespace dd {
         }
     }
 
-    template<class Config>
-    VectorDD simulate(GoogleRandomCircuitSampling* qc, const VectorDD& in, std::unique_ptr<dd::Package<Config>>& dd, short ncycles = -1) {
+    template<class DDPackage>
+    VectorDD simulate(GoogleRandomCircuitSampling* qc, const VectorDD& in, std::unique_ptr<DDPackage>& dd, short ncycles = -1) {
         if (ncycles != -1 && (static_cast<std::size_t>(ncycles) < qc->cycles.size() - 2U)) {
             qc->removeCycles(qc->cycles.size() - 2U - ncycles);
         }

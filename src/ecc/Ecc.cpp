@@ -14,7 +14,7 @@ namespace ecc {
             qcMapped->addClassicalRegister(regBits.second, regName.c_str());
         }
         for (auto cr: ecc.classicalRegisters) {
-            qcMapped->addClassicalRegister(cr.first, cr.second);
+            qcMapped->addClassicalRegister(cr.first, cr.second.c_str());
         }
     }
 

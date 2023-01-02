@@ -179,7 +179,9 @@ protected:
             }
         } else {
             for (auto qubit: dataQubits) {
-                auto measurementsProtected = simulate(qcMapped.get(), eccRootEdge, ddEcc, shots, seed, true, static_cast<dd::Qubit>(qubit), insertErrorAfterNGates);
+                auto it = qcMapped->begin();
+                qcMapped->insert(it + insertErrorAfterNGates, std::make_unique<NonUnitaryOperation>(qcMapped->getNqubits(), std::vector<Qubit>{qubit}, qc::Reset));
+                auto measurementsProtected = simulate(qcMapped.get(), eccRootEdge, ddEcc, shots, seed);
                 for (auto const& [classicalBit, hits]: measurementsOriginal) {
                     // Since the result is stored as one bit string. I have to count the relevant classical bits.
                     size_t eccHits = 0;
@@ -196,6 +198,7 @@ protected:
                         return false;
                     }
                 }
+                qcMapped->erase(it + insertErrorAfterNGates);
             }
         }
         return true;

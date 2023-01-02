@@ -611,8 +611,7 @@ namespace qc {
 
         void measure(Qubit qubit, const std::pair<std::string, Bit>& clbit) {
             checkQubitRange(qubit);
-            auto cRegister = cregs.find(clbit.first);
-            if (cRegister != cregs.end()) {
+            if (const auto cRegister = cregs.find(clbit.first); cRegister != cregs.end()) {
                 if (clbit.second >= cRegister->second.second) {
                     std::cerr << "The classical register \"" << clbit.first << "\" is too small!" << std::endl;
                 }

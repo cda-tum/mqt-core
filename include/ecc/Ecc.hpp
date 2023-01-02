@@ -9,7 +9,7 @@
 
 namespace ecc {
     using Qubit      = qc::Qubit;
-    using QubitCount = std::make_unsigned_t<Qubit>;
+    using QubitCount = std::size_t;
 
     class Ecc {
     public:
@@ -27,7 +27,7 @@ namespace ecc {
             std::size_t                                      nRedundantQubits; //usually number of physical qubits per (encoded) logical qubit
             std::size_t                                      nCorrectingBits;  //usually number of classical bits needed for correcting one qubit
             std::string                                      name;
-            std::vector<std::pair<std::size_t, const char*>> classicalRegisters;
+            std::vector<std::pair<std::size_t, std::string>> classicalRegisters;
         };
 
         Ecc(Info ecc, std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFrequency):
