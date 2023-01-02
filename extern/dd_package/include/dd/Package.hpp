@@ -187,7 +187,7 @@ namespace dd {
             const auto commonFactor = norm / magMax;
 
             auto  r   = e;
-            auto& max = r.p->e[argMax];
+            auto& max = r.p->e[static_cast<std::size_t>(argMax)];
             if (cached && !max.w.exactlyOne()) {
                 r.w = max.w;
                 r.w.r->value *= commonFactor;
@@ -205,7 +205,7 @@ namespace dd {
             }
 
             const auto argMin = (argMax + 1) % 2;
-            auto&      min    = r.p->e[argMin];
+            auto&      min    = r.p->e[static_cast<std::size_t>(argMin)];
             if (cached) {
                 cn.returnToCache(min.w);
                 ComplexNumbers::div(min.w, min.w, r.w);
@@ -224,8 +224,8 @@ namespace dd {
 
         dEdge makeZeroDensityOperator(QubitCount n) {
             auto f = dEdge::one;
-            for (size_t p = 0; p < n; p++) {
-                f = makeDDNode(p, std::array{f, dEdge::zero, dEdge::zero, dEdge::zero});
+            for (std::size_t p = 0; p < n; p++) {
+                f = makeDDNode(static_cast<Qubit>(p), std::array{f, dEdge::zero, dEdge::zero, dEdge::zero});
             }
             return f;
         }
@@ -752,7 +752,7 @@ namespace dd {
         /// Measurements from state decision diagrams
         ///
         std::string measureAll(vEdge& rootEdge, const bool collapse, std::mt19937_64& mt, fp epsilon = 0.001) {
-            if (std::abs(ComplexNumbers::mag2(rootEdge.w) - 1.0L) > epsilon) {
+            if (std::abs(ComplexNumbers::mag2(rootEdge.w) - 1.0) > epsilon) {
                 if (rootEdge.w.approximatelyZero()) {
                     throw std::runtime_error("Numerical instabilities led to a 0-vector! Abort simulation!");
                 }
@@ -768,12 +768,12 @@ namespace dd {
             std::uniform_real_distribution<fp> dist(0.0, 1.0L);
 
             for (Qubit i = rootEdge.p->v; i >= 0; --i) {
-                fp p0  = ComplexNumbers::mag2(cur.p->e.at(0).w);
-                fp p1  = ComplexNumbers::mag2(cur.p->e.at(1).w);
-                fp tmp = p0 + p1;
+                fp       p0  = ComplexNumbers::mag2(cur.p->e.at(0).w);
+                const fp p1  = ComplexNumbers::mag2(cur.p->e.at(1).w);
+                const fp tmp = p0 + p1;
 
-                if (std::abs(tmp - 1.0L) > epsilon) {
-                    throw std::runtime_error("Added probabilities differ from 1 by " + std::to_string(std::abs(tmp - 1.0L)));
+                if (std::abs(tmp - 1.0) > epsilon) {
+                    throw std::runtime_error("Added probabilities differ from 1 by " + std::to_string(std::abs(tmp - 1.0)));
                 }
                 p0 /= tmp;
 
@@ -781,8 +781,8 @@ namespace dd {
                 if (threshold < p0) {
                     cur = cur.p->e.at(0);
                 } else {
-                    result[cur.p->v] = '1';
-                    cur              = cur.p->e.at(1);
+                    result[static_cast<std::size_t>(cur.p->v)] = '1';
+                    cur                                        = cur.p->e.at(1);
                 }
             }
 
@@ -793,7 +793,7 @@ namespace dd {
                 std::array<vEdge, 2> edges{};
 
                 for (Qubit p = 0; p < numberOfQubits; p++) {
-                    if (result[p] == '0') {
+                    if (result[static_cast<std::size_t>(p)] == '0') {
                         edges[0] = e;
                         edges[1] = vEdge::zero;
                     } else {
@@ -839,7 +839,7 @@ namespace dd {
             while (q.front()->v != index) {
                 vNode* ptr = q.front();
                 q.pop();
-                fp prob = probsMone[ptr];
+                const fp prob = probsMone[ptr];
 
                 if (!ptr->e.at(0).w.approximatelyZero()) {
                     const fp tmp1 = prob * ComplexNumbers::mag2(ptr->e.at(0).w);
@@ -929,7 +929,7 @@ namespace dd {
                 result               = '1';
             }
 
-            mEdge measurementGate = makeGateDD(measurementMatrix, rootEdge.p->v + 1, index);
+            mEdge measurementGate = makeGateDD(measurementMatrix, static_cast<dd::QubitCount>(rootEdge.p->v + 1), index);
 
             vEdge e = multiply(measurementGate, rootEdge);
 
@@ -1438,14 +1438,14 @@ namespace dd {
             return fid.r * fid.r + fid.i * fid.i;
         }
 
-        dd::fp fidelityOfMeasurementOutcomes(const vEdge& e, const ProbabilityVector& probs) {
+        [[gnu::pure]] dd::fp fidelityOfMeasurementOutcomes(const vEdge& e, const ProbabilityVector& probs) {
             if (e.w.approximatelyZero()) {
                 return 0.;
             }
             return fidelityOfMeasurementOutcomesRecursive(e, probs, 0);
         }
 
-        dd::fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e, const ProbabilityVector& probs, const std::size_t i) {
+        [[gnu::pure]] dd::fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e, const ProbabilityVector& probs, const std::size_t i) {
             const auto topw = dd::ComplexNumbers::mag(e.w);
             if (e.isTerminal()) {
                 if (auto it = probs.find(i); it != probs.end()) {
@@ -1466,7 +1466,7 @@ namespace dd {
                 rightContribution = fidelityOfMeasurementOutcomesRecursive(e.p->e[1], probs, rightIdx);
             }
 
-            dd::fp fidelity = topw * (leftContribution + rightContribution);
+            const dd::fp fidelity = topw * (leftContribution + rightContribution);
             return fidelity;
         }
 
@@ -1560,8 +1560,8 @@ namespace dd {
 
         // extent the DD pointed to by `e` with `h` identities on top and `l` identities at the bottom
         mEdge extend(const mEdge& e, Qubit h, Qubit l = 0) {
-            auto f = (l > 0) ? kronecker(e, makeIdent(l)) : e;
-            auto g = (h > 0) ? kronecker(makeIdent(h), f) : f;
+            auto f = (l > 0) ? kronecker(e, makeIdent(static_cast<dd::QubitCount>(l))) : e;
+            auto g = (h > 0) ? kronecker(makeIdent(static_cast<dd::QubitCount>(h)), f) : f;
             return g;
         }
 
@@ -1660,7 +1660,7 @@ namespace dd {
                 throw std::runtime_error("Expected terminal node in trace.");
             }
 
-            if (eliminate[v]) {
+            if (eliminate[static_cast<std::size_t>(v)]) {
                 auto elims = alreadyEliminated + 1;
                 auto r     = mEdge::zero;
 
@@ -1696,7 +1696,7 @@ namespace dd {
                            a.p->e.cend(),
                            edge.begin(),
                            [&](const mEdge& e) -> mEdge { return trace(e, eliminate, alreadyEliminated); });
-            auto adjustedV = static_cast<Qubit>(a.p->v - (std::count(eliminate.begin(), eliminate.end(), true) - alreadyEliminated));
+            auto adjustedV = static_cast<Qubit>(static_cast<std::size_t>(a.p->v) - (static_cast<std::size_t>(std::count(eliminate.begin(), eliminate.end(), true)) - alreadyEliminated));
             auto r         = makeDDNode(adjustedV, edge);
 
             if (r.w.exactlyOne()) {
@@ -1783,24 +1783,24 @@ namespace dd {
                 return mEdge::one;
             }
 
-            if (leastSignificantQubit == 0 && idTable[mostSignificantQubit].p != nullptr) {
-                return idTable[mostSignificantQubit];
+            if (leastSignificantQubit == 0 && idTable[static_cast<std::size_t>(mostSignificantQubit)].p != nullptr) {
+                return idTable[static_cast<std::size_t>(mostSignificantQubit)];
             }
-            if (mostSignificantQubit >= 1 && (idTable[mostSignificantQubit - 1]).p != nullptr) {
-                idTable[mostSignificantQubit] = makeDDNode(mostSignificantQubit,
-                                                           std::array{idTable[mostSignificantQubit - 1],
-                                                                      mEdge::zero,
-                                                                      mEdge::zero,
-                                                                      idTable[mostSignificantQubit - 1]});
-                return idTable[mostSignificantQubit];
+            if (mostSignificantQubit >= 1 && (idTable[static_cast<std::size_t>(mostSignificantQubit - 1)]).p != nullptr) {
+                idTable[static_cast<std::size_t>(mostSignificantQubit)] = makeDDNode(mostSignificantQubit,
+                                                                                     std::array{idTable[static_cast<std::size_t>(mostSignificantQubit - 1)],
+                                                                                                mEdge::zero,
+                                                                                                mEdge::zero,
+                                                                                                idTable[static_cast<std::size_t>(mostSignificantQubit - 1)]});
+                return idTable[static_cast<std::size_t>(mostSignificantQubit)];
             }
 
             auto e = makeDDNode(leastSignificantQubit, std::array{mEdge::one, mEdge::zero, mEdge::zero, mEdge::one});
-            for (std::size_t k = leastSignificantQubit + 1; k <= static_cast<std::make_unsigned_t<Qubit>>(mostSignificantQubit); k++) {
+            for (auto k = static_cast<std::size_t>(leastSignificantQubit + 1); k <= static_cast<std::make_unsigned_t<Qubit>>(mostSignificantQubit); k++) {
                 e = makeDDNode(static_cast<Qubit>(k), std::array{e, mEdge::zero, mEdge::zero, e});
             }
             if (leastSignificantQubit == 0) {
-                idTable[mostSignificantQubit] = e;
+                idTable[static_cast<std::size_t>(mostSignificantQubit)] = e;
             }
             return e;
         }
@@ -1953,7 +1953,7 @@ namespace dd {
             f = makeDDNode(f.p->v, edges);
 
             // something to reduce for this qubit
-            if (f.p->v >= 0 && ancillary[f.p->v]) {
+            if (f.p->v >= 0 && ancillary[static_cast<std::size_t>(f.p->v)]) {
                 if (regular) {
                     if (f.p->e[1].w != Complex::zero || f.p->e[3].w != Complex::zero) {
                         f = makeDDNode(f.p->v, std::array{f.p->e[0], mEdge::zero, f.p->e[2], mEdge::zero});
@@ -1999,7 +1999,7 @@ namespace dd {
             f = makeDDNode(f.p->v, edges);
 
             // something to reduce for this qubit
-            if (f.p->v >= 0 && garbage[f.p->v]) {
+            if (f.p->v >= 0 && garbage[static_cast<std::size_t>(f.p->v)]) {
                 if (f.p->e[1].w != Complex::zero) {
                     vEdge g{};
                     if (f.p->e[0].w == Complex::zero && f.p->e[1].w != Complex::zero) {
@@ -2052,7 +2052,7 @@ namespace dd {
             f = makeDDNode(f.p->v, edges);
 
             // something to reduce for this qubit
-            if (f.p->v >= 0 && garbage[f.p->v]) {
+            if (f.p->v >= 0 && garbage[static_cast<std::size_t>(f.p->v)]) {
                 if (regular) {
                     if (f.p->e[2].w != Complex::zero || f.p->e[3].w != Complex::zero) {
                         mEdge g{};
@@ -2129,7 +2129,7 @@ namespace dd {
             auto r = e;
             do {
                 ComplexNumbers::mul(c, c, r.w);
-                std::size_t tmp = elements.at(r.p->v) - '0';
+                auto tmp = static_cast<std::size_t>(elements.at(static_cast<std::size_t>(r.p->v)) - '0');
                 assert(tmp <= r.p->e.size());
                 r = r.p->e.at(tmp);
             } while (!r.isTerminal());
@@ -2232,10 +2232,10 @@ namespace dd {
         }
 
         [[nodiscard]] std::string intToString(std::size_t targetNumber, char value, dd::Qubit size) const {
-            std::string path(size, '0');
+            std::string path(static_cast<std::size_t>(size), '0');
             for (auto i = 1; i <= size; i++) {
                 if ((targetNumber % 2) != 0U) {
-                    path[size - i] = value;
+                    path[static_cast<std::size_t>(size - i)] = value;
                 }
                 targetNumber = targetNumber >> 1U;
             }

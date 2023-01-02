@@ -71,10 +71,10 @@ namespace dd {
         ComplexValue w{};
 
         CachedEdge() = default;
-        CachedEdge(Node* p, const ComplexValue& w):
-            p(p), w(w) {}
-        CachedEdge(Node* p, const Complex& c):
-            p(p) {
+        CachedEdge(Node* n, const ComplexValue& v):
+            p(n), w(v) {}
+        CachedEdge(Node* n, const Complex& c):
+            p(n) {
             w.r = CTEntry::val(c.r);
             w.i = CTEntry::val(c.i);
         }

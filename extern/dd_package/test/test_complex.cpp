@@ -126,7 +126,7 @@ TEST(DDComplexTest, SortedBuckets) {
             num + 6. * ComplexTable<>::tolerance(),
             num + 8. * ComplexTable<>::tolerance()};
 
-    const std::size_t theBucket = ct->hash(num);
+    const auto theBucket = static_cast<std::size_t>(ct->hash(num));
 
     for (auto const& number: numbers) {
         ASSERT_EQ(theBucket, ct->hash(number));
@@ -136,8 +136,8 @@ TEST(DDComplexTest, SortedBuckets) {
     CTEntry* p = ct->getTable().at(theBucket);
     ASSERT_NE(p, nullptr);
 
-    dd::fp      last    = std::numeric_limits<dd::fp>::min();
-    std::size_t counter = 0;
+    const dd::fp last    = std::numeric_limits<dd::fp>::min();
+    std::size_t  counter = 0;
     while (p != nullptr) {
         ASSERT_LT(last, p->value);
         p = p->next;
@@ -162,15 +162,15 @@ TEST(DDComplexTest, GarbageCollectSomeInBucket) {
     auto key2 = ComplexTable<>::hash(num2);
     ASSERT_EQ(key, key2);
 
-    auto* p = cn->complexTable.getTable()[key];
+    auto* p = cn->complexTable.getTable()[static_cast<std::size_t>(key)];
     EXPECT_NEAR(p->value, num, ComplexTable<>::tolerance());
 
     ASSERT_NE(p->next, nullptr);
     EXPECT_NEAR((p->next)->value, num2, ComplexTable<>::tolerance());
 
     cn->garbageCollect(true); // num should be collected
-    EXPECT_NEAR(cn->complexTable.getTable()[key]->value, num2, ComplexTable<>::tolerance());
-    EXPECT_EQ(cn->complexTable.getTable()[key]->next, nullptr);
+    EXPECT_NEAR(cn->complexTable.getTable()[static_cast<std::size_t>(key)]->value, num2, ComplexTable<>::tolerance());
+    EXPECT_EQ(cn->complexTable.getTable()[static_cast<std::size_t>(key)]->next, nullptr);
 }
 
 TEST(DDComplexTest, LookupInNeighbouringBuckets) {
@@ -476,7 +476,7 @@ TEST(DDComplexTest, ComplexTableAllocation) {
 
     // trigger new allocation
     [[maybe_unused]] auto* num = cn->complexTable.getEntry();
-    EXPECT_EQ(cn->complexTable.getAllocations(), (1. + cn->complexTable.getGrowthFactor()) * allocs);
+    EXPECT_EQ(cn->complexTable.getAllocations(), (1. + static_cast<fp>(cn->complexTable.getGrowthFactor())) * static_cast<fp>(allocs));
 
     // clearing the complex table should reduce the allocated size to the original size
     cn->complexTable.clear();
@@ -505,7 +505,7 @@ TEST(DDComplexTest, ComplexCacheAllocation) {
 
     // trigger new allocation for obtaining a complex from cache
     [[maybe_unused]] auto cnum = cn->getCached();
-    EXPECT_EQ(cn->complexCache.getAllocations(), (1. + cn->complexCache.getGrowthFactor()) * allocs);
+    EXPECT_EQ(cn->complexCache.getAllocations(), (1. + static_cast<fp>(cn->complexCache.getGrowthFactor())) * static_cast<fp>(allocs));
 
     // clearing the cache should reduce the allocated size to the original size
     cn->complexCache.clear();
@@ -518,7 +518,7 @@ TEST(DDComplexTest, ComplexCacheAllocation) {
 
     // trigger new allocation for obtaining a temporary from cache
     [[maybe_unused]] auto cnumtmp = cn->getTemporary();
-    EXPECT_EQ(cn->complexCache.getAllocations(), (1. + cn->complexCache.getGrowthFactor()) * allocs);
+    EXPECT_EQ(cn->complexCache.getAllocations(), (1. + static_cast<fp>(cn->complexCache.getGrowthFactor())) * static_cast<fp>(allocs));
 
     // clearing the unique table should reduce the allocated size to the original size
     cn->complexCache.clear();
@@ -529,18 +529,18 @@ TEST(DDComplexTest, DoubleHitInFindOrInsert) {
     auto cn = std::make_unique<ComplexNumbers>();
 
     // insert a number somewhere in a bucket
-    fp    num1  = 0.5;
-    auto* tnum1 = cn->complexTable.lookup(num1);
+    const fp num1  = 0.5;
+    auto*    tnum1 = cn->complexTable.lookup(num1);
     EXPECT_EQ(tnum1->value, num1);
 
     // insert a second number that is farther away than the tolerance, but closer than twice the tolerance
-    fp    num2  = num1 + 2.1 * dd::ComplexTable<>::tolerance();
-    auto* tnum2 = cn->complexTable.lookup(num2);
+    const fp num2  = num1 + 2.1 * dd::ComplexTable<>::tolerance();
+    auto*    tnum2 = cn->complexTable.lookup(num2);
     EXPECT_EQ(tnum2->value, num2);
 
     // insert a third number that is close to both previously inserted numbers, but closer to the second
-    fp    num3  = num1 + 2.2 * dd::ComplexTable<>::tolerance();
-    auto* tnum3 = cn->complexTable.lookup(num3);
+    const fp num3  = num1 + 2.2 * dd::ComplexTable<>::tolerance();
+    auto*    tnum3 = cn->complexTable.lookup(num3);
     EXPECT_EQ(tnum3->value, num2);
 }
 
@@ -549,22 +549,22 @@ TEST(DDComplexTest, DoubleHitAcrossBuckets) {
     std::cout << std::setprecision(std::numeric_limits<dd::fp>::max_digits10);
 
     // insert a number at a lower bucket border
-    fp    num1  = 8191.5 / (static_cast<dd::fp>(cn->complexTable.getTable().size()) - 1);
-    auto* tnum1 = cn->complexTable.lookup(num1);
+    const fp num1  = 8191.5 / (static_cast<dd::fp>(cn->complexTable.getTable().size()) - 1);
+    auto*    tnum1 = cn->complexTable.lookup(num1);
     EXPECT_EQ(tnum1->value, num1);
 
     // insert a second number that is farther away than the tolerance towards the lower bucket, but closer than twice the tolerance
-    fp    num2  = num1 - 1.5 * dd::ComplexTable<>::tolerance();
-    auto* tnum2 = cn->complexTable.lookup(num2);
+    const fp num2  = num1 - 1.5 * dd::ComplexTable<>::tolerance();
+    auto*    tnum2 = cn->complexTable.lookup(num2);
     EXPECT_EQ(tnum2->value, num2);
 
     // insert a third number that is close to both previously inserted numbers, but closer to the second
-    fp    num3  = num1 - 0.9 * dd::ComplexTable<>::tolerance();
-    auto* tnum3 = cn->complexTable.lookup(num3);
+    const fp num3  = num1 - 0.9 * dd::ComplexTable<>::tolerance();
+    auto*    tnum3 = cn->complexTable.lookup(num3);
     EXPECT_EQ(tnum3->value, num2);
 
     // insert a third number that is close to both previously inserted numbers, but closer to the first
-    fp    num4  = num1 - 0.6 * dd::ComplexTable<>::tolerance();
-    auto* tnum4 = cn->complexTable.lookup(num4);
+    const fp num4  = num1 - 0.6 * dd::ComplexTable<>::tolerance();
+    auto*    tnum4 = cn->complexTable.lookup(num4);
     EXPECT_EQ(tnum4->value, num1);
 }

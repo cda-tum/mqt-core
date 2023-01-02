@@ -19,8 +19,8 @@ namespace dd {
     template<class Edge, std::size_t numberOfStochasticOperations = 64>
     class StochasticNoiseOperationTable {
     public:
-        explicit StochasticNoiseOperationTable(std::size_t nvars):
-            nvars(nvars) { resize(nvars); };
+        explicit StochasticNoiseOperationTable(const std::size_t nv):
+            nvars(nv) { resize(nv); };
 
         // access functions
         [[nodiscard]] const auto& getTable() const { return table; }
@@ -32,7 +32,7 @@ namespace dd {
 
         void insert(std::uint_fast8_t kind, Qubit target, const Edge& r) {
             assert(kind < numberOfStochasticOperations); // There are new operations in OpType. Increase the value of numberOfOperations accordingly
-            table.at(target).at(kind) = r;
+            table.at(static_cast<std::size_t>(target)).at(kind) = r;
             ++count;
         }
 
@@ -40,7 +40,7 @@ namespace dd {
             assert(kind < numberOfStochasticOperations); // There are new operations in OpType. Increase the value of numberOfOperations accordingly
             lookups++;
             Edge r{};
-            auto entry = table.at(target).at(kind);
+            auto entry = table.at(static_cast<std::size_t>(target)).at(kind);
             if (entry.p == nullptr) {
                 return r;
             }
@@ -59,7 +59,7 @@ namespace dd {
             }
         }
 
-        [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / lookups; }
+        [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / static_cast<fp>(lookups); }
 
         std::ostream& printStatistics(std::ostream& os = std::cout) {
             os << "hits: " << hits << ", looks: " << lookups << ", ratio: " << hitRatio() << std::endl;

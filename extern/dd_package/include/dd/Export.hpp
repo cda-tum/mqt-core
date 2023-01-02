@@ -41,7 +41,7 @@ namespace dd {
     }
 
     inline fp thicknessFromMagnitude(const Complex& a) {
-        return 3.0 * std::max(dd::ComplexNumbers::mag(a), static_cast<fp>(0.10));
+        return 3.0 * std::max(dd::ComplexNumbers::mag(a), 0.10);
     }
 
     static void printPhaseFormatted(std::ostream& os, fp r) {
@@ -582,8 +582,8 @@ namespace dd {
             }
 
             // iterate over edges in reverse to guarantee correct proceossing order
-            for (auto i = static_cast<Qubit>(node->p->e.size() - 1); i >= 0; --i) {
-                auto& edge = node->p->e[i];
+            for (auto i = static_cast<std::int_fast16_t>(node->p->e.size() - 1); i >= 0; --i) {
+                auto& edge = node->p->e[static_cast<std::size_t>(i)];
                 if ((!memory && edge.w.approximatelyZero()) || edge.w == Complex::zero) {
                     // potentially add zero stubs here
                     continue;
@@ -593,11 +593,11 @@ namespace dd {
                 q.push(&edge);
 
                 if (memory) {
-                    memoryEdge(*node, edge, i, oss, edgeLabels);
+                    memoryEdge(*node, edge, static_cast<std::uint_fast16_t>(i), oss, edgeLabels);
                 } else if (colored) {
-                    coloredEdge(*node, edge, i, oss, edgeLabels, classic, formatAsPolar);
+                    coloredEdge(*node, edge, static_cast<std::uint_fast16_t>(i), oss, edgeLabels, classic, formatAsPolar);
                 } else {
-                    bwEdge(*node, edge, i, oss, edgeLabels, classic, formatAsPolar);
+                    bwEdge(*node, edge, static_cast<std::uint_fast16_t>(i), oss, edgeLabels, classic, formatAsPolar);
                 }
             }
         }
@@ -633,8 +633,8 @@ namespace dd {
             os << SERIALIZATION_VERSION << "\n";
             os << basic.w.toString(false, 16) << "\n";
         }
-        std::int_least64_t                             nextIndex = 0;
-        std::unordered_map<vNode*, std::int_least64_t> nodeIndex{};
+        std::int64_t                             nextIndex = 0;
+        std::unordered_map<vNode*, std::int64_t> nodeIndex{};
 
         // POST ORDER TRAVERSAL USING ONE STACK   https://www.geeksforgeeks.org/iterative-postorder-traversal-using-stack/
         std::stack<const vEdge*> stack{};
@@ -643,8 +643,8 @@ namespace dd {
         if (!node->isTerminal()) {
             do {
                 while (node != nullptr && !node->isTerminal()) {
-                    for (auto i = RADIX - 1; i > 0; --i) {
-                        auto& edge = node->p->e[i];
+                    for (auto i = static_cast<std::size_t>(RADIX - 1); i > 0; --i) {
+                        auto& edge = node->p->e.at(i);
                         if (edge.isTerminal()) {
                             continue;
                         }
@@ -666,7 +666,7 @@ namespace dd {
 
                 bool hasChild = false;
                 for (auto i = 1U; i < RADIX && !hasChild; ++i) {
-                    auto& edge = node->p->e[i];
+                    auto& edge = node->p->e.at(i);
                     if (edge.w.approximatelyZero()) {
                         continue;
                     }
@@ -697,8 +697,8 @@ namespace dd {
 
                         // iterate over edges in reverse to guarantee correct processing order
                         for (auto i = 0U; i < RADIX; ++i) {
-                            auto&              edge    = node->p->e[i];
-                            std::int_least64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
+                            auto&        edge    = node->p->e.at(i);
+                            std::int64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
                             os.write(reinterpret_cast<const char*>(&edgeIdx), sizeof(decltype(edgeIdx)));
                             edge.w.writeBinary(os);
                         }
@@ -708,9 +708,9 @@ namespace dd {
                         // iterate over edges in reverse to guarantee correct processing order
                         for (auto i = 0U; i < RADIX; ++i) {
                             os << " (";
-                            auto& edge = node->p->e[i];
+                            auto& edge = node->p->e.at(i);
                             if (!edge.w.approximatelyZero()) {
-                                std::int_least64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
+                                const std::int64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
                                 os << edgeIdx << " " << edge.w.toString(false, 16);
                             }
                             os << ")";
@@ -723,7 +723,7 @@ namespace dd {
         }
     }
 
-    static void serializeMatrix(const mEdge& basic, std::int_least64_t& idx, std::unordered_map<mNode*, std::int_least64_t>& nodeIndex, std::unordered_set<mNode*>& visited, std::ostream& os, bool writeBinary = false) {
+    static void serializeMatrix(const mEdge& basic, std::int64_t& idx, std::unordered_map<mNode*, std::int64_t>& nodeIndex, std::unordered_set<mNode*>& visited, std::ostream& os, bool writeBinary = false) {
         if (!basic.isTerminal()) {
             for (auto& e: basic.p->e) {
                 if (auto [iter, success] = visited.insert(e.p); success) {
@@ -742,7 +742,7 @@ namespace dd {
 
                 // iterate over edges in reverse to guarantee correct processing order
                 for (auto& edge: basic.p->e) {
-                    std::int_least64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
+                    std::int64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
                     os.write(reinterpret_cast<const char*>(&edgeIdx), sizeof(decltype(edgeIdx)));
                     edge.w.writeBinary(os);
                 }
@@ -753,7 +753,7 @@ namespace dd {
                 for (auto& edge: basic.p->e) {
                     os << " (";
                     if (!edge.w.approximatelyZero()) {
-                        std::int_least64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
+                        const std::int64_t edgeIdx = edge.isTerminal() ? -1 : nodeIndex[edge.p];
                         os << edgeIdx << " " << edge.w.toString(false, 16);
                     }
                     os << ")";
@@ -770,9 +770,9 @@ namespace dd {
             os << SERIALIZATION_VERSION << "\n";
             os << basic.w.toString(false, std::numeric_limits<dd::fp>::max_digits10) << "\n";
         }
-        std::int_least64_t                             idx = 0;
-        std::unordered_map<mNode*, std::int_least64_t> nodeIndex{};
-        std::unordered_set<mNode*>                     visited{};
+        std::int64_t                             idx = 0;
+        std::unordered_map<mNode*, std::int64_t> nodeIndex{};
+        std::unordered_set<mNode*>               visited{};
         serializeMatrix(basic, idx, nodeIndex, visited, os, writeBinary);
     }
     template<class Edge>
@@ -811,14 +811,13 @@ namespace dd {
             }
 
             // check if edgePtr has already been processed
-            auto ret = nodes.emplace(edgePtr->p);
-            if (!ret.second) {
+            if (auto ret = nodes.emplace(edgePtr->p); !ret.second) {
                 continue;
             }
 
             // iterate over edges in reverse to guarantee correct proceossing order
-            for (auto i = static_cast<Qubit>(edgePtr->p->e.size() - 1); i >= 0; --i) {
-                auto& child = edgePtr->p->e[i];
+            for (auto i = static_cast<std::int_fast16_t>(edgePtr->p->e.size() - 1); i >= 0; --i) {
+                auto& child = edgePtr->p->e[static_cast<std::size_t>(i)];
                 if (child.w.approximatelyZero()) {
                     // potentially add zero stubs here
                     continue;

@@ -2,7 +2,6 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -29,10 +28,7 @@ jobs:
           languages: cpp
           config-file: .github/codeql-config.yml
       - name: Configure CMake
-        run: cmake -S . -B build -DBINDINGS=ON -DBUILD_DD_PACKAGE_TESTS=ON -DCMAKE_BUILD_TYPE=Debug
-        env:
-          CC: clang
-          CXX: clang++
+        run: cmake -S . -B build -DBUILD_DD_PACKAGE_TESTS=ON -DCMAKE_BUILD_TYPE=Debug
       - name: Build C++
         run: cmake --build build --parallel 2 --config Debug
       - name: Perform CodeQL Analysis

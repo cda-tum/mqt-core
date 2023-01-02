@@ -185,12 +185,12 @@ namespace dd {
             Entry* pLower; // NOLINT(cppcoreguidelines-init-variables)
             Entry* pUpper; // NOLINT(cppcoreguidelines-init-variables)
             if (lowerKey != key) {
-                pLower = tailTable[lowerKey];
-                pUpper = table[key];
+                pLower = tailTable[static_cast<std::size_t>(lowerKey)];
+                pUpper = table[static_cast<std::size_t>(key)];
                 ++lowerNeighbors;
             } else {
-                pLower = tailTable[key];
-                pUpper = table[upperKey];
+                pLower = tailTable[static_cast<std::size_t>(key)];
+                pUpper = table[static_cast<std::size_t>(upperKey)];
                 ++upperNeighbors;
             }
 
@@ -412,11 +412,11 @@ namespace dd {
             std::cout.precision(precision);
         }
 
-        [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / lookups; }
+        [[nodiscard]] fp hitRatio() const { return static_cast<fp>(hits) / static_cast<fp>(lookups); }
 
-        [[nodiscard]] fp colRatio() const { return static_cast<fp>(collisions) / lookups; }
+        [[nodiscard]] fp colRatio() const { return static_cast<fp>(collisions) / static_cast<fp>(lookups); }
 
-        std::map<std::string, std::size_t> getStatistics() {
+        std::map<std::string, std::size_t, std::less<>> getStatistics() {
             return {
                     {"hits", hits},
                     {"collisions", collisions},
@@ -507,7 +507,7 @@ namespace dd {
         inline Entry* findOrInsert(const std::int64_t key, const fp val) {
             [[maybe_unused]] const fp valTol = val + TOLERANCE;
 
-            Entry* curr = table[key];
+            Entry* curr = table[static_cast<std::size_t>(key)];
             Entry* prev = nullptr;
 
             while (curr != nullptr && curr->value <= valTol) {
@@ -540,13 +540,13 @@ namespace dd {
 
             if (prev == nullptr) {
                 // table bucket is empty
-                table[key] = entry;
+                table[static_cast<std::size_t>(key)] = entry;
             } else {
                 prev->next = entry;
             }
             entry->next = curr;
             if (curr == nullptr) {
-                tailTable[key] = entry;
+                tailTable[static_cast<std::size_t>(key)] = entry;
             }
             count++;
             peakCount = std::max(peakCount, count);
@@ -565,7 +565,7 @@ namespace dd {
             Entry* entry = getEntry();
             entry->value = val;
 
-            Entry* curr = table[key];
+            Entry* curr = table[static_cast<std::size_t>(key)];
             Entry* prev = nullptr;
 
             while (curr != nullptr && curr->value <= val) {
@@ -576,13 +576,13 @@ namespace dd {
 
             if (prev == nullptr) {
                 // table bucket is empty
-                table[key] = entry;
+                table[static_cast<std::size_t>(key)] = entry;
             } else {
                 prev->next = entry;
             }
             entry->next = curr;
             if (curr == nullptr) {
-                tailTable[key] = entry;
+                tailTable[static_cast<std::size_t>(key)] = entry;
             }
             count++;
             peakCount = std::max(peakCount, count);
