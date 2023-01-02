@@ -15,8 +15,8 @@ namespace ecc {
         std::map<std::size_t, std::size_t> xCheckMasks;
         std::map<std::size_t, std::size_t> zCheckMasks;
         for (std::size_t j = 0; j < ANCILLA_WIDTH; j++) {
-            xCheckMasks[xChecks.at(j)] = 1 << j;
-            zCheckMasks[zChecks.at(j)] = 1 << j;
+            xCheckMasks.at(xChecks.at(j)) = 1 << j;
+            zCheckMasks.at(zChecks.at(j)) = 1 << j;
         }
 
         for (Qubit i = 0; i < nQubits; i++) {
@@ -58,29 +58,29 @@ namespace ecc {
 
             //map ancillas to classical bit result
             for (std::size_t j = 0; j < xChecks.size(); j++) {
-                qcMapped->measure(qubits[xChecks.at(j)], clAncStart + j);
+                qcMapped->measure(qubits.at(xChecks.at(j)), clAncStart + j);
             }
             for (std::size_t j = 0; j < zChecks.size(); j++) {
-                qcMapped->measure(qubits[zChecks.at(j)], clAncStart + ANCILLA_WIDTH + j);
+                qcMapped->measure(qubits.at(zChecks.at(j)), clAncStart + ANCILLA_WIDTH + j);
             }
 
             //logic: classical control
             auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), ANCILLA_WIDTH);
             for (const auto& pair: qubitCorrectionX) {
                 std::size_t mask = 0;
-                for (std::size_t value: pair.second) {
+                for (std::size_t const value: pair.second) {
                     mask |= xCheckMasks.at(value);
                 }
-                classicalControl(controlRegister, mask, qc::X, qubits[pair.first]);
+                classicalControl(controlRegister, mask, qc::X, qubits.at(pair.first));
             }
 
             controlRegister = std::make_pair(static_cast<Qubit>(clAncStart + ANCILLA_WIDTH), ANCILLA_WIDTH);
             for (const auto& pair: qubitCorrectionZ) {
                 std::size_t mask = 0;
-                for (std::size_t value: pair.second) {
+                for (std::size_t const value: pair.second) {
                     mask |= zCheckMasks.at(value);
                 }
-                classicalControl(controlRegister, mask, qc::Z, qubits[pair.first]);
+                classicalControl(controlRegister, mask, qc::Z, qubits.at(pair.first));
             }
 
             gatesWritten = true;
@@ -92,9 +92,9 @@ namespace ecc {
             return;
         }
         const auto                            nQubits               = qcOriginal->getNqubits();
-        static constexpr std::array<Qubit, 4> physicalAncillaQubits = {8, 13, 15, 20};
+        static constexpr std::array<Qubit, 4> PHYSICAL_ANCILLA_QUBITS = {8, 13, 15, 20};
         for (Qubit i = 0; i < nQubits; i++) {
-            for (Qubit qubit: physicalAncillaQubits) {
+            for (const Qubit qubit: PHYSICAL_ANCILLA_QUBITS) {
                 qcMapped->x(static_cast<Qubit>(i + X_INFORMATION * nQubits), qc::Control{static_cast<Qubit>(i + qubit * nQubits), qc::Control::Type::Pos});
             }
             qcMapped->measure(static_cast<Qubit>(i + X_INFORMATION * nQubits), i);
@@ -115,7 +115,7 @@ namespace ecc {
             //multi-qubit gates are currently not supported
             gateNotAvailableError(gate);
         } else {
-            static constexpr std::array<std::pair<int, int>, 6> swapQubitIndices = {std::make_pair(1, 29), std::make_pair(3, 17), std::make_pair(6, 34), std::make_pair(8, 22), std::make_pair(13, 27), std::make_pair(18, 32)};
+            static constexpr std::array<std::pair<Qubit, Qubit>, 6> SWAP_QUBIT_INDICES = {std::make_pair(1, 29), std::make_pair(3, 17), std::make_pair(6, 34), std::make_pair(8, 22), std::make_pair(13, 27), std::make_pair(18, 32)};
 
             switch (gate.getType()) {
                 case qc::I:
@@ -134,7 +134,7 @@ namespace ecc {
                         for (const auto j: DATA_QUBITS) {
                             qcMapped->h(static_cast<Qubit>(i + j * nQubits));
                         }
-                        for (auto pair: swapQubitIndices) {
+                        for (auto pair: SWAP_QUBIT_INDICES) {
                             qcMapped->swap(static_cast<Qubit>(i + static_cast<size_t>(pair.first) * nQubits), static_cast<Qubit>(i + static_cast<size_t>(pair.second) * nQubits));
                         }
                         //qubits 5, 10, 15, 20, 25, 30 are along axis
