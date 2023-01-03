@@ -84,9 +84,9 @@ namespace ecc {
         if (isDecoded) {
             return;
         }
-        const auto                            nQubits          = qcOriginal->getNqubits();
-        const auto                            clAncStart       = qcOriginal->getNcbits();
-        static constexpr std::array<Qubit, 4> correctionNeeded = {1, 2, 4, 7}; //values with odd amount of '1' bits
+        const auto nQubits    = qcOriginal->getNqubits();
+        const auto clAncStart = qcOriginal->getNcbits();
+
         //use exiting registers qeccX and qeccZ for decoding
         const auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), static_cast<QubitCount>(3));
 
@@ -99,13 +99,13 @@ namespace ecc {
             qcMapped->measure(static_cast<Qubit>(i + 1 * nQubits), clAncStart);
             qcMapped->measure(static_cast<Qubit>(i + 2 * nQubits), clAncStart + 1);
             qcMapped->measure(static_cast<Qubit>(i + 3 * nQubits), clAncStart + 2);
-            for (auto value: correctionNeeded) {
+            for (auto value: DECODING_CORRECTION_VALUES) {
                 qcMapped->classicControlled(qc::X, i, controlRegister, value);
             }
             qcMapped->measure(static_cast<Qubit>(i + 4 * nQubits), clAncStart);
             qcMapped->measure(static_cast<Qubit>(i + 5 * nQubits), clAncStart + 1);
             qcMapped->measure(static_cast<Qubit>(i + 6 * nQubits), clAncStart + 2);
-            for (auto value: correctionNeeded) {
+            for (auto value: DECODING_CORRECTION_VALUES) {
                 qcMapped->classicControlled(qc::X, i, controlRegister, value);
             }
         }

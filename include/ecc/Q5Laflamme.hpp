@@ -28,5 +28,7 @@ namespace ecc {
                 {qc::X, qc::I, qc::X, qc::Z, qc::Z}, //c2
                 {qc::Z, qc::X, qc::I, qc::X, qc::Z}  //c3
         }};
+
+        static constexpr std::array<Qubit, 8> DECODING_CORRECTION_VALUES = {1, 2, 4, 7, 8, 11, 13, 14}; //values with odd amount of '1' bits
     };
 } // namespace ecc

@@ -78,16 +78,16 @@ namespace ecc {
                 for (std::size_t j = 0; j < gate.getNtargets(); j++) {
                     auto i = gate.getTargets()[j];
                     if (gate.getNcontrols() != 0U) {
-                        const auto& ctrls = gate.getControls();
-                        qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls, i, gate.getType());
-                        qc::Controls ctrls2;
-                        qc::Controls ctrls3;
-                        for (const auto& ct: ctrls) {
-                            ctrls2.insert(qc::Control{static_cast<Qubit>(ct.qubit + nQubits), ct.type});
-                            ctrls3.insert(qc::Control{static_cast<Qubit>(ct.qubit + 2 * nQubits), ct.type});
+                        const auto& controls = gate.getControls();
+                        qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), controls, i, gate.getType());
+                        qc::Controls controls2;
+                        qc::Controls controls3;
+                        for (const auto& ct: controls) {
+                            controls2.insert(qc::Control{static_cast<Qubit>(ct.qubit + nQubits), ct.type});
+                            controls3.insert(qc::Control{static_cast<Qubit>(ct.qubit + 2 * nQubits), ct.type});
                         }
-                        qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls2, i + nQubits, gate.getType());
-                        qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls3, i + 2 * nQubits, gate.getType());
+                        qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), controls2, i + nQubits, gate.getType());
+                        qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), controls3, i + 2 * nQubits, gate.getType());
                     } else {
                         qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i, gate.getType());
                         qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i + nQubits, gate.getType());

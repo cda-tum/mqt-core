@@ -23,5 +23,7 @@ namespace ecc {
         void writeDecoding() override;
 
         void mapGate(const qc::Operation& gate) override;
+
+        static constexpr std::array<Qubit, 4> DECODING_CORRECTION_VALUES = {1, 2, 4, 7}; //values with odd amount of '1' bits
     };
 } // namespace ecc
