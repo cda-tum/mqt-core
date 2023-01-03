@@ -89,17 +89,9 @@ namespace ecc {
                         qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls2, i + nQubits, gate.getType());
                         qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls3, i + 2 * nQubits, gate.getType());
                     } else {
-                        if (gate.getType() == qc::H) {
-                            qcMapped->x(i + 1, qc::Control{i});
-                            qcMapped->x(i + 2, qc::Control{i});
-                            qcMapped->h(i);
-                            qcMapped->x(i + 1, qc::Control{i});
-                            qcMapped->x(i + 2, qc::Control{i});
-                        } else {
-                            qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i, gate.getType());
-                            qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i + nQubits, gate.getType());
-                            qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i + 2 * nQubits, gate.getType());
-                        }
+                        qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i, gate.getType());
+                        qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i + nQubits, gate.getType());
+                        qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i + 2 * nQubits, gate.getType());
                     }
                 }
                 break;
