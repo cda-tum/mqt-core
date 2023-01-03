@@ -32,5 +32,3 @@ package_add_test(${PROJECT_NAME}_test_zx ${PROJECT_NAME}_zx unittests/test_zx_fu
 package_add_test(${PROJECT_NAME}_test_ecc ${PROJECT_NAME}_ecc unittests/test_ecc_functionality.cpp)
 
 target_link_libraries(${PROJECT_NAME}_test_ecc PRIVATE ${PROJECT_NAME}_dd)
-
-gtest_discover_tests(${PROJECT_NAME}_test_ecc DISCOVERY_TIMEOUT 1500)
