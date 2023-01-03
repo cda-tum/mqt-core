@@ -15,8 +15,8 @@ namespace ecc {
         std::map<std::size_t, std::size_t> xCheckMasks;
         std::map<std::size_t, std::size_t> zCheckMasks;
         for (std::size_t j = 0; j < ANCILLA_WIDTH; j++) {
-            xCheckMasks.at(xChecks.at(j)) = 1 << j;
-            zCheckMasks.at(zChecks.at(j)) = 1 << j;
+            xCheckMasks[xChecks.at(j)] = 1 << j;
+            zCheckMasks[zChecks.at(j)] = 1 << j;
         }
 
         for (Qubit i = 0; i < nQubits; i++) {
@@ -69,7 +69,7 @@ namespace ecc {
             for (const auto& pair: qubitCorrectionX) {
                 std::size_t mask = 0;
                 for (std::size_t const value: pair.second) {
-                    mask |= xCheckMasks.at(value);
+                    mask |= xCheckMasks[value];
                 }
                 qcMapped->classicControlled(qc::X, qubits.at(pair.first), controlRegister, mask);
             }
@@ -78,7 +78,7 @@ namespace ecc {
             for (const auto& pair: qubitCorrectionZ) {
                 std::size_t mask = 0;
                 for (std::size_t const value: pair.second) {
-                    mask |= zCheckMasks.at(value);
+                    mask |= zCheckMasks[value];
                 }
                 qcMapped->classicControlled(qc::Z, qubits.at(pair.first), controlRegister, mask);
             }
