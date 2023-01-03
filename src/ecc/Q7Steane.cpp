@@ -14,7 +14,7 @@ namespace ecc {
         //reset data qubits if necessary
         if (gatesWritten) {
             for (std::size_t i = 0; i < nQubits; i++) {
-                for (std::size_t j = 1; j < 7; j++) {
+                for (std::size_t j = 1; j < N_REDUNDANT_QUBITS; j++) {
                     qcMapped->reset(static_cast<Qubit>(i + j * nQubits));
                 }
             }
@@ -34,7 +34,7 @@ namespace ecc {
         const auto nQubits         = qcOriginal->getNqubits();
         const auto ancStart        = nQubits * ecc.nRedundantQubits;
         const auto clAncStart      = qcOriginal->getNcbits();
-        const auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), static_cast<QubitCount>(3));
+        const auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), N_CORRECTING_BITS);
 
         for (Qubit i = 0; i < nQubits; i++) {
             if (gatesWritten) {
@@ -73,7 +73,7 @@ namespace ecc {
             //correct Z_i for i+1 = c0*1+c1*2+c2*4
             //correct X_i for i+1 = c3*1+c4*2+c5*4
             const auto opType = xSyndrome ? qc::Z : qc::X;
-            for (std::size_t j = 0; j < 7; j++) {
+            for (std::size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
                 qcMapped->classicControlled(opType, static_cast<Qubit>(i + j * nQubits), controlRegister, j + 1U);
             }
             gatesWritten = true;
@@ -88,7 +88,7 @@ namespace ecc {
         const auto clAncStart = qcOriginal->getNcbits();
 
         //use exiting registers qeccX and qeccZ for decoding
-        const auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), static_cast<QubitCount>(3));
+        const auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), N_CORRECTING_BITS);
 
         for (Qubit i = 0; i < nQubits; i++) {
             //#|###|###
@@ -127,7 +127,7 @@ namespace ecc {
                 for (auto i: gate.getTargets()) {
                     if (gate.getNcontrols() != 0U) {
                         const auto& ctrls = gate.getControls();
-                        for (std::size_t j = 0; j < 7; j++) {
+                        for (std::size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
                             qc::Controls ctrls2;
                             for (const auto& ct: ctrls) {
                                 ctrls2.insert(qc::Control{static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
@@ -135,7 +135,7 @@ namespace ecc {
                             qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls2, static_cast<Qubit>(i + j * nQubits), gate.getType());
                         }
                     } else {
-                        for (std::size_t j = 0; j < 7; j++) {
+                        for (std::size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
                             qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), static_cast<Qubit>(i + j * nQubits), gate.getType());
                         }
                     }
@@ -147,7 +147,7 @@ namespace ecc {
                 for (auto i: gate.getTargets()) {
                     if (gate.getNcontrols() != 0U) {
                         const auto& ctrls = gate.getControls();
-                        for (std::size_t j = 0; j < 7; j++) {
+                        for (std::size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
                             qc::Controls ctrls2;
                             for (const auto& ct: ctrls) {
                                 ctrls2.insert(qc::Control{static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
@@ -157,7 +157,7 @@ namespace ecc {
                             qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls2, static_cast<Qubit>(i + j * nQubits), gate.getType());
                         }
                     } else {
-                        for (std::size_t j = 0; j < 7; j++) {
+                        for (std::size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
                             qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), static_cast<Qubit>(i + j * nQubits), gate.getType());
                             qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), static_cast<Qubit>(i + j * nQubits), gate.getType());
                             qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), static_cast<Qubit>(i + j * nQubits), gate.getType());

@@ -18,8 +18,8 @@ namespace ecc {
         }
 
         for (Qubit i = 0; i < nQubits; i++) {
-            std::array<Qubit, 36>       qubits        = {};
-            std::array<qc::Control, 36> controlQubits = {};
+            std::array<Qubit, N_REDUNDANT_QUBITS>       qubits        = {};
+            std::array<qc::Control, N_REDUNDANT_QUBITS> controlQubits = {};
             for (std::size_t j = 0; j < qubits.size(); j++) {
                 qubits.at(j) = static_cast<Qubit>(i + j * nQubits);
             }

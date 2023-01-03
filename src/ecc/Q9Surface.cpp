@@ -13,26 +13,26 @@ namespace ecc {
         const auto ancStart   = qcOriginal->getNqubits() * ecc.nRedundantQubits;
         const auto clAncStart = qcOriginal->getNcbits();
         for (std::size_t i = 0; i < nQubits; i++) {
-            std::array<Qubit, 9>       qubits          = {};
-            std::array<Qubit, 8>       ancillaQubits   = {};
-            std::array<qc::Control, 8> ancillaControls = {};
-            std::array<qc::Control, 9> controlQubits   = {};
-            for (std::size_t j = 0; j < 9; j++) {
+            std::array<Qubit, N_REDUNDANT_QUBITS>       qubits          = {};
+            std::array<Qubit, N_CORRECTING_BITS>        ancillaQubits   = {};
+            std::array<qc::Control, N_CORRECTING_BITS>  ancillaControls = {};
+            std::array<qc::Control, N_REDUNDANT_QUBITS> controlQubits   = {};
+            for (std::size_t j = 0; j < qubits.size(); j++) {
                 qubits.at(j) = static_cast<Qubit>(i + j * nQubits);
             }
-            for (std::size_t j = 0; j < 8; j++) {
+            for (std::size_t j = 0; j < ancillaQubits.size(); j++) {
                 ancillaQubits.at(j) = static_cast<Qubit>(ancStart + j);
             }
             if (gatesWritten) {
-                for (std::size_t j = 0; j < 8; j++) {
+                for (std::size_t j = 0; j < ancillaQubits.size(); j++) {
                     qcMapped->reset(ancillaQubits.at(j));
                 }
             }
-            for (std::size_t j = 0; j < 8; j++) {
-                ancillaControls.at(j) = qc::Control{ancillaQubits.at(j), qc::Control::Type::Pos};
+            for (std::size_t j = 0; j < ancillaControls.size(); j++) {
+                ancillaControls.at(j) = qc::Control{ancillaQubits.at(j)};
             }
-            for (std::size_t j = 0; j < 9; j++) {
-                controlQubits.at(j) = qc::Control{qubits.at(j), qc::Control::Type::Pos};
+            for (std::size_t j = 0; j < controlQubits.size(); j++) {
+                controlQubits.at(j) = qc::Control{qubits.at(j)};
             }
 
             //X-type check (z error) on a0, a2, a5, a7: cx ancillaQubits->qubits
@@ -128,7 +128,7 @@ namespace ecc {
                 break;
             case qc::H:
                 for (auto i: gate.getTargets()) {
-                    for (std::size_t j = 0; j < 9; j++) {
+                    for (std::size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
                         qcMapped->h(static_cast<Qubit>(i + j * nQubits));
                     }
                     for (auto pair: SWAP_INDICES) {

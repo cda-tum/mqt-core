@@ -36,21 +36,21 @@ namespace ecc {
         const auto clStart = qcOriginal->getNcbits();
         for (Qubit i = 0; i < nQubits; i++) {
             //syntactic sugar for qubit indices
-            std::array<Qubit, 9>       qubits                  = {};
-            std::array<Qubit, 8>       ancillaQubits           = {};
-            std::array<qc::Control, 8> ancillaControls         = {};
-            std::array<qc::Control, 8> negativeAncillaControls = {};
-            for (std::size_t j = 0; j < 9; j++) {
+            std::array<Qubit, N_REDUNDANT_QUBITS>      qubits                  = {};
+            std::array<Qubit, N_CORRECTING_BITS>       ancillaQubits           = {};
+            std::array<qc::Control, N_CORRECTING_BITS> ancillaControls         = {};
+            std::array<qc::Control, N_CORRECTING_BITS> negativeAncillaControls = {};
+            for (std::size_t j = 0; j < qubits.size(); j++) {
                 qubits.at(j) = static_cast<Qubit>(i + j * nQubits);
             }
-            for (std::size_t j = 0; j < 8; j++) {
+            for (std::size_t j = 0; j < ancillaQubits.size(); j++) {
                 ancillaQubits.at(j) = static_cast<Qubit>(ecc.nRedundantQubits * nQubits + j);
                 qcMapped->reset(ancillaQubits.at(j));
             }
-            for (std::size_t j = 0; j < 8; j++) {
-                ancillaControls.at(j) = qc::Control{ancillaQubits.at(j), qc::Control::Type::Pos};
+            for (std::size_t j = 0; j < ancillaControls.size(); j++) {
+                ancillaControls.at(j) = qc::Control{ancillaQubits.at(j)};
             }
-            for (std::size_t j = 0; j < 8; j++) {
+            for (std::size_t j = 0; j < negativeAncillaControls.size(); j++) {
                 negativeAncillaControls.at(j) = qc::Control{ancillaQubits.at(j), qc::Control::Type::Neg};
             }
 
@@ -77,7 +77,7 @@ namespace ecc {
             }
 
             //MEASURE ancilla qubits
-            for (std::size_t j = 0; j < 8; j++) {
+            for (std::size_t j = 0; j < N_CORRECTING_BITS; j++) {
                 qcMapped->measure(ancillaQubits.at(j), clStart + j);
             }
 
@@ -104,8 +104,8 @@ namespace ecc {
         }
         const auto nQubits = qcOriginal->getNqubits();
         for (Qubit i = 0; i < nQubits; i++) {
-            std::array<qc::Control, 9> ci;
-            for (Qubit j = 0; j < 9; j++) {
+            std::array<qc::Control, N_REDUNDANT_QUBITS> ci;
+            for (Qubit j = 0; j < ci.size(); j++) {
                 ci.at(j) = qc::Control{static_cast<Qubit>(i + j * nQubits), qc::Control::Type::Pos};
             }
 
@@ -163,7 +163,7 @@ namespace ecc {
             if (gate.getNcontrols() != 0U) {
                 //Q9Shor code: put H gate before and after each control point, i.e. "cx 0,1" becomes "h0; cz 0,1; h0"
                 const auto& controls = gate.getControls();
-                for (size_t j = 0; j < 9; j++) {
+                for (size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
                     qc::Controls controls2;
                     for (const auto& ct: controls) {
                         controls2.insert(qc::Control{static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
@@ -175,7 +175,7 @@ namespace ecc {
                     }
                 }
             } else {
-                for (size_t j = 0; j < 9; j++) {
+                for (size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
                     qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i + j * nQubits, type);
                 }
             }

@@ -10,7 +10,7 @@ namespace ecc {
 
         const auto nQubits         = qcOriginal->getNqubits();
         const auto ancStart        = static_cast<Qubit>(nQubits * ecc.nRedundantQubits);
-        const auto clEncode        = qcOriginal->getNcbits() + 4; //encode
+        const auto clEncode        = qcOriginal->getNcbits() + N_CORRECTING_BITS; //encode
         const auto controlRegister = std::make_pair(static_cast<Qubit>(clEncode), static_cast<QubitCount>(1));
 
         for (Qubit i = 0; i < nQubits; i++) {
@@ -41,13 +41,13 @@ namespace ecc {
         const auto clAncStart = static_cast<Qubit>(qcOriginal->getNcbits());
 
         for (Qubit i = 0; i < nQubits; i++) {
-            std::array<Qubit, 5> qubits = {};
+            std::array<Qubit, N_REDUNDANT_QUBITS> qubits = {};
             for (std::size_t j = 0; j < qubits.size(); j++) {
                 qubits.at(j) = static_cast<Qubit>(i + j * nQubits);
             }
 
             //initialize ancilla qubits
-            std::array<qc::Control, 4> controls;
+            std::array<qc::Control, N_CORRECTING_BITS> controls;
             for (std::size_t j = 0; j < controls.size(); j++) {
                 qcMapped->reset(static_cast<Qubit>(ancStart + j));
                 qcMapped->h(static_cast<Qubit>(ancStart + j));
@@ -71,7 +71,7 @@ namespace ecc {
                 qcMapped->measure(static_cast<Qubit>(ancStart + j), clAncStart + j);
             }
 
-            const auto controlRegister = std::make_pair(static_cast<Qubit>(qcOriginal->getNcbits()), static_cast<QubitCount>(4));
+            const auto controlRegister = std::make_pair(static_cast<Qubit>(qcOriginal->getNcbits()), N_CORRECTING_BITS);
 
             //perform corrections
             for (std::size_t q = 0; q < ecc.nRedundantQubits; q++) {
@@ -104,7 +104,7 @@ namespace ecc {
             for (std::size_t j = 1; j < ecc.nRedundantQubits; j++) {
                 qcMapped->measure(static_cast<Qubit>(i + j * nQubits), clAncStart + j - 1);
             }
-            const auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), 4);
+            const auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), N_CORRECTING_BITS);
             for (Qubit const value: DECODING_CORRECTION_VALUES) {
                 qcMapped->classicControlled(qc::X, static_cast<Qubit>(i), controlRegister, value);
             }
@@ -127,7 +127,7 @@ namespace ecc {
                     if (gate.getNcontrols() != 0U) {
                         gateNotAvailableError(gate);
                     } else {
-                        for (Qubit j = 0; j < 5; j++) {
+                        for (Qubit j = 0; j < N_REDUNDANT_QUBITS; j++) {
                             qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), static_cast<Qubit>(i + j * nQubits), gate.getType());
                         }
                     }

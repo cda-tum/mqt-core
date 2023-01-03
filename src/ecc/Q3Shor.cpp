@@ -52,7 +52,7 @@ namespace ecc {
         }
         const auto nQubits = qcOriginal->getNqubits();
         for (Qubit i = 0; i < nQubits; i++) {
-            std::array<Qubit, 3> qubits = {i, static_cast<Qubit>(i + nQubits), static_cast<Qubit>(i + 2 * nQubits)};
+            std::array<Qubit, N_REDUNDANT_QUBITS> qubits = {i, static_cast<Qubit>(i + nQubits), static_cast<Qubit>(i + 2 * nQubits)};
             qcMapped->x(qubits[1], qc::Control{qubits[0]});
             qcMapped->x(qubits[2], qc::Control{qubits[0]});
             qcMapped->x(qubits[0], {qc::Control{qubits[1]}, qc::Control{qubits[2]}});
