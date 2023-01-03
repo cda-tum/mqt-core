@@ -325,7 +325,7 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
 }
 
 TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
-    size_t insertNoiseAfterNQubits = 115;
+    size_t insertNoiseAfterNQubits = 47;
 
     std::vector<TestCase> const circuitsExpectToPass{
             {createIdentityCircuit, false, insertNoiseAfterNQubits},

@@ -13,10 +13,8 @@ namespace ecc {
         const auto clAncStart = qcOriginal->getNcbits();
 
         std::map<std::size_t, std::size_t> xCheckMasks;
-        std::map<std::size_t, std::size_t> zCheckMasks;
         for (std::size_t j = 0; j < ANCILLA_WIDTH; j++) {
             xCheckMasks[xChecks.at(j)] = 1 << j;
-            zCheckMasks[zChecks.at(j)] = 1 << j;
         }
 
         for (Qubit i = 0; i < nQubits; i++) {
@@ -26,7 +24,7 @@ namespace ecc {
                 qubits.at(j) = static_cast<Qubit>(i + j * nQubits);
             }
             for (std::size_t j = 0; j < controlQubits.size(); j++) {
-                controlQubits.at(j) = qc::Control{qubits.at(j), qc::Control::Type::Pos};
+                controlQubits.at(j) = qc::Control{qubits.at(j)};
             }
 
             if (gatesWritten) {
@@ -35,52 +33,26 @@ namespace ecc {
                 }
             }
 
-            //initialize ancillas: Z-check
-            for (const auto& pair: qubitCorrectionX) {
-                for (auto ancilla: pair.second) {
-                    qcMapped->x(qubits.at(ancilla), controlQubits.at(pair.first));
-                }
-            }
-
             //initialize ancillas: X-check
-
-            for (std::size_t const xc: zChecks) {
-                qcMapped->h(qubits.at(xc));
-            }
-            for (const auto& pair: qubitCorrectionZ) {
-                for (auto ancilla: pair.second) {
-                    qcMapped->x(qubits.at(pair.first), controlQubits.at(ancilla));
+            for (const auto& [targetIndex, ancillaIndices]: qubitCorrectionX) {
+                for (const auto ancilla: ancillaIndices) {
+                    qcMapped->x(qubits.at(ancilla), controlQubits.at(targetIndex));
                 }
-            }
-            for (std::size_t const xc: zChecks) {
-                qcMapped->h(qubits.at(xc));
             }
 
             //map ancillas to classical bit result
             for (std::size_t j = 0; j < xChecks.size(); j++) {
                 qcMapped->measure(qubits.at(xChecks.at(j)), clAncStart + j);
             }
-            for (std::size_t j = 0; j < zChecks.size(); j++) {
-                qcMapped->measure(qubits.at(zChecks.at(j)), clAncStart + ANCILLA_WIDTH + j);
-            }
 
             //logic: classical control
             auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), ANCILLA_WIDTH);
-            for (const auto& pair: qubitCorrectionX) {
+            for (const auto& [targetIndex, ancillaIndices]: qubitCorrectionX) {
                 std::size_t mask = 0;
-                for (std::size_t const value: pair.second) {
-                    mask |= xCheckMasks[value];
+                for (std::size_t const ancillaIndex: ancillaIndices) {
+                    mask |= xCheckMasks[ancillaIndex];
                 }
-                qcMapped->classicControlled(qc::X, qubits.at(pair.first), controlRegister, mask);
-            }
-
-            controlRegister = std::make_pair(static_cast<Qubit>(clAncStart + ANCILLA_WIDTH), ANCILLA_WIDTH);
-            for (const auto& pair: qubitCorrectionZ) {
-                std::size_t mask = 0;
-                for (std::size_t const value: pair.second) {
-                    mask |= zCheckMasks[value];
-                }
-                qcMapped->classicControlled(qc::Z, qubits.at(pair.first), controlRegister, mask);
+                qcMapped->classicControlled(qc::X, qubits.at(targetIndex), controlRegister, mask);
             }
 
             gatesWritten = true;
@@ -91,10 +63,10 @@ namespace ecc {
         if (isDecoded) {
             return;
         }
-        const auto                            nQubits                 = qcOriginal->getNqubits();
-        static constexpr std::array<Qubit, 4> PHYSICAL_ANCILLA_QUBITS = {8, 13, 15, 20};
+        const auto nQubits = qcOriginal->getNqubits();
         for (Qubit i = 0; i < nQubits; i++) {
-            for (const Qubit qubit: PHYSICAL_ANCILLA_QUBITS) {
+            qcMapped->reset(static_cast<Qubit>(i + X_INFORMATION * nQubits));
+            for (const Qubit qubit: ANCILLA_QUBITS_DECODE) {
                 qcMapped->x(static_cast<Qubit>(i + X_INFORMATION * nQubits), qc::Control{static_cast<Qubit>(i + qubit * nQubits), qc::Control::Type::Pos});
             }
             qcMapped->measure(static_cast<Qubit>(i + X_INFORMATION * nQubits), i);

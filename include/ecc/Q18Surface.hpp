@@ -11,14 +11,15 @@ namespace ecc {
     class Q18Surface: public Ecc {
     public:
         Q18Surface(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq):
-            Ecc({ID::Q18Surface, 36, 0, "Q18Surface", {{ANCILLA_WIDTH, "qeccX"}, {ANCILLA_WIDTH, "qeccZ"}}}, std::move(qc), measureFq) {}
+            Ecc({ID::Q18Surface, 36, 0, "Q18Surface", {{ANCILLA_WIDTH, "qeccX"}}}, std::move(qc), measureFq) {}
 
-        constexpr static std::array<Qubit, 18> DATA_QUBITS     = {1, 3, 5, 6, 8, 10, 13, 15, 17, 18, 20, 22, 25, 27, 29, 30, 32, 34};
-        constexpr static std::array<Qubit, 18> ANCILLA_INDICES = {0, 2, 4, 7, 9, 11, 12, 14, 16, 19, 21, 23, 24, 26, 28, 31, 33, 35};
-        constexpr static Qubit                 X_INFORMATION   = 14;
-        constexpr static std::array<Qubit, 3>  LOGICAL_X       = {5, 10, 15};
-        constexpr static std::array<Qubit, 3>  LOGICAL_Z       = {20, 25, 30};
-        constexpr static QubitCount            ANCILLA_WIDTH   = 8;
+        constexpr static std::array<Qubit, 18> DATA_QUBITS           = {1, 3, 5, 6, 8, 10, 13, 15, 17, 18, 20, 22, 25, 27, 29, 30, 32, 34};
+        constexpr static std::array<Qubit, 18> ANCILLA_INDICES       = {0, 2, 4, 7, 9, 11, 12, 14, 16, 19, 21, 23, 24, 26, 28, 31, 33, 35};
+        constexpr static std::array<Qubit, 4>  ANCILLA_QUBITS_DECODE = {8, 13, 15, 20};
+        constexpr static Qubit                 X_INFORMATION         = 14;
+        constexpr static std::array<Qubit, 3>  LOGICAL_X             = {5, 10, 15};
+        constexpr static std::array<Qubit, 3>  LOGICAL_Z             = {20, 25, 30};
+        constexpr static QubitCount            ANCILLA_WIDTH         = 8;
 
         //{a,{b,c}} == qubit a is checked by b and c
         std::map<std::size_t, std::vector<std::size_t>> qubitCorrectionX = {
@@ -38,7 +39,8 @@ namespace ecc {
                 {29, {28}},
                 {30, {24}}};
 
-        std::map<std::size_t, std::vector<std::size_t>> qubitCorrectionZ = {
+        //temporarily deactivating phase correction
+        /*std::map<std::size_t, std::vector<std::size_t>> qubitCorrectionZ = {
                 {5, {11}},
                 {6, {7}},
                 {8, {7, 9}},
@@ -53,10 +55,11 @@ namespace ecc {
                 {29, {23, 35}},
                 {30, {31}},
                 {32, {31, 33}},
-                {34, {33, 35}}};
+                {34, {33, 35}}};*/
 
         static constexpr std::array<std::size_t, 8> xChecks = {0, 2, 4, 12, 16, 24, 26, 28};
-        static constexpr std::array<std::size_t, 8> zChecks = {7, 9, 11, 19, 23, 31, 33, 35};
+        //temporarily deactivating phase correction
+        //static constexpr std::array<std::size_t, 8> zChecks = {7, 9, 11, 19, 23, 31, 33, 35};
 
     protected:
         void measureAndCorrect() override;
