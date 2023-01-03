@@ -150,16 +150,16 @@ protected:
         if (!simulateWithErrors) {
             return simulateAndVerifyResults(qcOriginal, qcMapped);
         }
-        for (auto target: dataQubits) {
-            auto initialQuit = qcMapped->begin();
-            qcMapped->insert(initialQuit + static_cast<int64_t>(insertErrorAfterNGates), std::make_unique<NonUnitaryOperation>(qcMapped->getNqubits(), std::vector<Qubit>{target}, qc::Reset));
-            auto result = simulateAndVerifyResults(qcOriginal, qcMapped, simulateWithErrors, insertErrorAfterNGates, target);
-            qcMapped->erase(initialQuit + static_cast<int64_t>(insertErrorAfterNGates));
-            if (!result) {
-                return false;
-            }
+        if (std::all_of(dataQubits.begin(), dataQubits.end(), [qcMapped, insertErrorAfterNGates, qcOriginal, simulateWithErrors](Qubit target) {
+                auto initialQuit = qcMapped->begin();
+                qcMapped->insert(initialQuit + static_cast<int64_t>(insertErrorAfterNGates), std::make_unique<NonUnitaryOperation>(qcMapped->getNqubits(), std::vector<Qubit>{target}, qc::Reset));
+                auto result = simulateAndVerifyResults(qcOriginal, qcMapped, simulateWithErrors, insertErrorAfterNGates, target);
+                qcMapped->erase(initialQuit + static_cast<int64_t>(insertErrorAfterNGates));
+                return result;
+            })) {
+            return true;
         }
-        return true;
+        return false;
     }
 
     static bool simulateAndVerifyResults(const std::shared_ptr<qc::QuantumComputation>& qcOriginal,
@@ -167,8 +167,8 @@ protected:
                                          bool                                           simulateWithErrors     = false,
                                          std::size_t                                    insertErrorAfterNGates = 0,
                                          Qubit                                          target                 = 0,
-                                         double                                         tolerance              = 0.30,
-                                         std::size_t                                    shots                  = 25,
+                                         double                                         tolerance              = 0.2,
+                                         std::size_t                                    shots                  = 50,
                                          std::size_t                                    seed                   = 5) {
         auto toleranceAbsolute = (static_cast<double>(shots) / 100.0) * (tolerance * 100.0);
 
@@ -239,7 +239,7 @@ TEST_F(DDECCFunctionalityTest, testQ3Shor) {
             {createHZCircuit, true, insertNoiseAfterNQubits},
     };
     EXPECT_TRUE(testCircuits<ecc::Q3Shor>(circuitsExpectToPass));
-    EXPECT_ANY_THROW(testCircuits<ecc::Q3Shor>(circuitsExpectToFail));
+    EXPECT_ANY_THROW([[maybe_unused]] const bool result = testCircuits<ecc::Q3Shor>(circuitsExpectToFail));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
@@ -259,7 +259,7 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
             {createCYCircuit, true, insertNoiseAfterNQubits},
     };
     EXPECT_TRUE(testCircuits<ecc::Q5Laflamme>(circuitsExpectToPass));
-    EXPECT_ANY_THROW(testCircuits<ecc::Q5Laflamme>(circuitsExpectToFail));
+    EXPECT_ANY_THROW([[maybe_unused]] const bool result = testCircuits<ecc::Q5Laflamme>(circuitsExpectToFail));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ7Steane) {
@@ -298,7 +298,7 @@ TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
     };
 
     EXPECT_TRUE(testCircuits<ecc::Q9Shor>(circuitsExpectToPass));
-    EXPECT_ANY_THROW(testCircuits<ecc::Q9Shor>(circuitsExpectToFail));
+    EXPECT_ANY_THROW([[maybe_unused]] const bool result = testCircuits<ecc::Q9Shor>(circuitsExpectToFail));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
@@ -320,7 +320,8 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
     };
 
     EXPECT_TRUE(testCircuits<ecc::Q9Surface>(circuitsExpectToPass));
-    EXPECT_ANY_THROW(testCircuits<ecc::Q9Surface>(circuitsExpectToFail));
+
+    EXPECT_ANY_THROW([[maybe_unused]] const bool result = testCircuits<ecc::Q9Surface>(circuitsExpectToFail));
 }
 
 TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
@@ -342,5 +343,5 @@ TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
     };
 
     EXPECT_TRUE(testCircuits<ecc::Q18Surface>(circuitsExpectToPass));
-    EXPECT_ANY_THROW(testCircuits<ecc::Q18Surface>(circuitsExpectToFail));
+    EXPECT_ANY_THROW([[maybe_unused]] const bool result = testCircuits<ecc::Q18Surface>(circuitsExpectToFail));
 }

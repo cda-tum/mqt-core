@@ -24,8 +24,8 @@ namespace ecc {
                 ancillaQubits.at(j) = static_cast<Qubit>(ancStart + j);
             }
             if (gatesWritten) {
-                for (std::size_t j = 0; j < ancillaQubits.size(); j++) {
-                    qcMapped->reset(ancillaQubits.at(j));
+                for (unsigned int ancillaQubit : ancillaQubits) {
+                    qcMapped->reset(ancillaQubit);
                 }
             }
             for (std::size_t j = 0; j < ancillaControls.size(); j++) {
