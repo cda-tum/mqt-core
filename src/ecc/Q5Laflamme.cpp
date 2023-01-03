@@ -95,7 +95,7 @@ namespace ecc {
         }
         const QubitCount                      nQubits          = qcOriginal->getNqubits();
         const size_t                          clAncStart       = qcOriginal->getNcbits();
-        static constexpr std::array<Qubit, 8> correctionNeeded = {1, 2, 4, 7, 8, 11, 13, 14}; //values with odd amount of '1' bits
+        static constexpr std::array<Qubit, 8> CORRECTION_NEEDED = {1, 2, 4, 7, 8, 11, 13, 14}; //values with odd amount of '1' bits
 
         for (std::size_t i = 0; i < nQubits; i++) {
             //#|####
@@ -106,7 +106,7 @@ namespace ecc {
                 qcMapped->measure(static_cast<Qubit>(i + j * nQubits), clAncStart + j - 1);
             }
             const auto controlRegister = std::make_pair(static_cast<Qubit>(clAncStart), 4);
-            for (Qubit const value: correctionNeeded) {
+            for (Qubit const value: CORRECTION_NEEDED) {
                 qcMapped->classicControlled(qc::X, static_cast<Qubit>(i), controlRegister, value);
             }
         }

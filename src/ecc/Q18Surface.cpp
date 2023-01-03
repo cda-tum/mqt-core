@@ -14,7 +14,7 @@ namespace ecc {
 
         std::map<std::size_t, std::size_t> xCheckMasks;
         for (std::size_t j = 0; j < ANCILLA_WIDTH; j++) {
-            xCheckMasks[xChecks.at(j)] = 1 << j;
+            xCheckMasks[X_CHECKS.at(j)] = 1 << j;
         }
 
         for (Qubit i = 0; i < nQubits; i++) {
@@ -41,8 +41,8 @@ namespace ecc {
             }
 
             //map ancillas to classical bit result
-            for (std::size_t j = 0; j < xChecks.size(); j++) {
-                qcMapped->measure(qubits.at(xChecks.at(j)), clAncStart + j);
+            for (std::size_t j = 0; j < X_CHECKS.size(); j++) {
+                qcMapped->measure(qubits.at(X_CHECKS.at(j)), clAncStart + j);
             }
 
             //logic: classical control

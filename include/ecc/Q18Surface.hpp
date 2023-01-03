@@ -57,7 +57,7 @@ namespace ecc {
                 {32, {31, 33}},
                 {34, {33, 35}}};*/
 
-        static constexpr std::array<std::size_t, 8> xChecks = {0, 2, 4, 12, 16, 24, 26, 28};
+        static constexpr std::array<std::size_t, 8> X_CHECKS = {0, 2, 4, 12, 16, 24, 26, 28};
         //temporarily deactivating phase correction
         //static constexpr std::array<std::size_t, 8> zChecks = {7, 9, 11, 19, 23, 31, 33, 35};
 

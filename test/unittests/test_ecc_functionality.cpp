@@ -130,7 +130,7 @@ protected:
     }
 
     template<class eccType>
-    bool testCircuits(const std::vector<TestCase>& circuitsExpectToPass) const {
+    [[nodiscard]] bool testCircuits(const std::vector<TestCase>& circuitsExpectToPass) const {
         size_t circuitCounter = 0;
         for (const auto& testParameter: circuitsExpectToPass) {
             auto qcOriginal = testParameter.circuit();
@@ -149,15 +149,14 @@ protected:
     static bool testErrorCorrectionCircuit(const std::shared_ptr<qc::QuantumComputation>& qcOriginal, const std::shared_ptr<qc::QuantumComputation>& qcMapped, bool simulateWithErrors, const std::vector<Qubit>& dataQubits = {}, std::size_t insertErrorAfterNGates = 0) {
         if (!simulateWithErrors) {
             return simulateAndVerifyResults(qcOriginal, qcMapped);
-        } else {
-            for (auto target: dataQubits) {
-                auto initialQuit = qcMapped->begin();
-                qcMapped->insert(initialQuit + static_cast<int64_t>(insertErrorAfterNGates), std::make_unique<NonUnitaryOperation>(qcMapped->getNqubits(), std::vector<Qubit>{target}, qc::Reset));
-                auto result = simulateAndVerifyResults(qcOriginal, qcMapped, simulateWithErrors, insertErrorAfterNGates, target);
-                qcMapped->erase(initialQuit + static_cast<int64_t>(insertErrorAfterNGates));
-                if (!result) {
-                    return false;
-                }
+        }
+        for (auto target: dataQubits) {
+            auto initialQuit = qcMapped->begin();
+            qcMapped->insert(initialQuit + static_cast<int64_t>(insertErrorAfterNGates), std::make_unique<NonUnitaryOperation>(qcMapped->getNqubits(), std::vector<Qubit>{target}, qc::Reset));
+            auto result = simulateAndVerifyResults(qcOriginal, qcMapped, simulateWithErrors, insertErrorAfterNGates, target);
+            qcMapped->erase(initialQuit + static_cast<int64_t>(insertErrorAfterNGates));
+            if (!result) {
+                return false;
             }
         }
         return true;

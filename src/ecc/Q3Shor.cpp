@@ -39,7 +39,7 @@ namespace ecc {
             qcMapped->measure(ancStart, clStart);
             qcMapped->measure(ancStart + 1, clStart + 1);
 
-            const auto controlRegister = std::make_pair(clStart, QubitCount(2));
+            const auto controlRegister = std::make_pair(clStart, static_cast<QubitCount>(2));
             qcMapped->classicControlled(qc::X, static_cast<Qubit>(i), controlRegister, 1U);
             qcMapped->classicControlled(qc::X, static_cast<Qubit>(i + 2 * nQubits), controlRegister, 2U);
             qcMapped->classicControlled(qc::X, static_cast<Qubit>(i + nQubits), controlRegister, 3U);
@@ -52,7 +52,7 @@ namespace ecc {
         }
         const auto nQubits = qcOriginal->getNqubits();
         for (Qubit i = 0; i < nQubits; i++) {
-            std::array<Qubit, 3> qubits = {static_cast<Qubit>(i), static_cast<Qubit>(i + nQubits), static_cast<Qubit>(i + 2 * nQubits)};
+            std::array<Qubit, 3> qubits = {i, static_cast<Qubit>(i + nQubits), static_cast<Qubit>(i + 2 * nQubits)};
             qcMapped->x(qubits[1], qc::Control{qubits[0]});
             qcMapped->x(qubits[2], qc::Control{qubits[0]});
             qcMapped->x(qubits[0], {qc::Control{qubits[1]}, qc::Control{qubits[2]}});
@@ -77,8 +77,8 @@ namespace ecc {
             case qc::Tdag:
                 for (std::size_t j = 0; j < gate.getNtargets(); j++) {
                     auto i = gate.getTargets()[j];
-                    if (gate.getNcontrols()) {
-                        auto& ctrls = gate.getControls();
+                    if (gate.getNcontrols() != 0U) {
+                        const auto& ctrls = gate.getControls();
                         qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), ctrls, i, gate.getType());
                         qc::Controls ctrls2;
                         qc::Controls ctrls3;
