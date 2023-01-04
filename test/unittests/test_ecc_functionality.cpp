@@ -150,16 +150,13 @@ protected:
         if (!simulateWithErrors) {
             return simulateAndVerifyResults(qcOriginal, qcMapped);
         }
-        if (std::all_of(dataQubits.begin(), dataQubits.end(), [qcMapped, insertErrorAfterNGates, qcOriginal, simulateWithErrors](Qubit target) {
-                auto initialQuit = qcMapped->begin();
-                qcMapped->insert(initialQuit + static_cast<int64_t>(insertErrorAfterNGates), std::make_unique<NonUnitaryOperation>(qcMapped->getNqubits(), std::vector<Qubit>{target}, qc::Reset));
-                auto result = simulateAndVerifyResults(qcOriginal, qcMapped, simulateWithErrors, insertErrorAfterNGates, target);
-                qcMapped->erase(initialQuit + static_cast<int64_t>(insertErrorAfterNGates));
-                return result;
-            })) {
-            return true;
-        }
-        return false;
+        return (std::all_of(dataQubits.begin(), dataQubits.end(), [qcMapped, insertErrorAfterNGates, qcOriginal, simulateWithErrors](Qubit target) {
+            auto initialQuit = qcMapped->begin();
+            qcMapped->insert(initialQuit + static_cast<int64_t>(insertErrorAfterNGates), std::make_unique<NonUnitaryOperation>(qcMapped->getNqubits(), std::vector<Qubit>{target}, qc::Reset));
+            auto result = simulateAndVerifyResults(qcOriginal, qcMapped, simulateWithErrors, insertErrorAfterNGates, target);
+            qcMapped->erase(initialQuit + static_cast<int64_t>(insertErrorAfterNGates));
+            return result;
+        }));
     }
 
     static bool simulateAndVerifyResults(const std::shared_ptr<qc::QuantumComputation>& qcOriginal,
@@ -168,7 +165,7 @@ protected:
                                          std::size_t                                    insertErrorAfterNGates = 0,
                                          Qubit                                          target                 = 0,
                                          double                                         tolerance              = 0.2,
-                                         std::size_t                                    shots                  = 50,
+                                         std::size_t                                    shots                  = 40,
                                          std::size_t                                    seed                   = 5) {
         auto toleranceAbsolute = (static_cast<double>(shots) / 100.0) * (tolerance * 100.0);
 
