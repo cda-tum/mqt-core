@@ -165,7 +165,7 @@ protected:
                                          std::size_t                                    insertErrorAfterNGates = 0,
                                          Qubit                                          target                 = 0,
                                          double                                         tolerance              = 0.2,
-                                         std::size_t                                    shots                  = 40,
+                                         std::size_t                                    shots                  = 50,
                                          std::size_t                                    seed                   = 5) {
         auto toleranceAbsolute = (static_cast<double>(shots) / 100.0) * (tolerance * 100.0);
 
