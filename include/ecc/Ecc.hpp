@@ -101,7 +101,9 @@ namespace ecc {
         virtual void mapGate(const qc::Operation& gate) = 0;
 
         void gateNotAvailableError(const qc::Operation& gate) const {
-            throw qc::QFRException(std::string("Gate ") + gate.getName() + " not supported to encode in error code " + ecc.name + "!");
+            std::stringstream stream;
+            stream << "Gate " << gate << " not supported to encode in error code " << ecc.name << "!";
+            throw qc::QFRException(stream.str());
         }
     };
 } // namespace ecc
