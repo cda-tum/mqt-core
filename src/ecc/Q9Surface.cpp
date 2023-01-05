@@ -118,6 +118,7 @@ namespace ecc {
 
         switch (gate.getType()) {
             case qc::I:
+            case qc::Barrier:
                 break;
             case qc::X:
                 for (auto i: gate.getTargets()) {

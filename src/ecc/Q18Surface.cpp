@@ -90,6 +90,7 @@ namespace ecc {
             static constexpr std::array<std::pair<Qubit, Qubit>, 6> SWAP_QUBIT_INDICES = {std::make_pair(1, 29), std::make_pair(3, 17), std::make_pair(6, 34), std::make_pair(8, 22), std::make_pair(13, 27), std::make_pair(18, 32)};
 
             switch (gate.getType()) {
+                case qc::Barrier:
                 case qc::I:
                     break;
                 case qc::X:

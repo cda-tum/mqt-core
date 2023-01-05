@@ -119,6 +119,7 @@ namespace ecc {
         const QubitCount nQubits = qcOriginal->getNqubits();
         switch (gate.getType()) {
             case qc::I:
+            case qc::Barrier:
                 break;
             case qc::X:
             case qc::H:

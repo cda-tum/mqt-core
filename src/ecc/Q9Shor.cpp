@@ -131,7 +131,9 @@ namespace ecc {
         const auto nQubits = qcOriginal->getNqubits();
         auto       type    = qc::I;
         switch (gate.getType()) {
-            case qc::I: break;
+            case qc::I:
+            case qc::Barrier:
+                break;
             case qc::X:
                 type = qc::Z;
                 break;
