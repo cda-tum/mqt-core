@@ -105,3 +105,27 @@ target_link_libraries(${PROJECT_NAME}_zx PUBLIC MQT::zx MQT::${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME}_zx PUBLIC ${PROJECT_SOURCE_DIR}/include/zx
                                                      ${PROJECT_BINARY_DIR}/include/zx)
 add_library(MQT::${PROJECT_NAME}_zx ALIAS ${PROJECT_NAME}_zx)
+
+# add ECC package library
+add_library(
+  ${PROJECT_NAME}_ecc
+  ${PROJECT_SOURCE_DIR}/include/ecc/Ecc.hpp
+  ${PROJECT_SOURCE_DIR}/include/ecc/Id.hpp
+  ${PROJECT_SOURCE_DIR}/include/ecc/Q3Shor.hpp
+  ${PROJECT_SOURCE_DIR}/include/ecc/Q5Laflamme.hpp
+  ${PROJECT_SOURCE_DIR}/include/ecc/Q7Steane.hpp
+  ${PROJECT_SOURCE_DIR}/include/ecc/Q9Shor.hpp
+  ${PROJECT_SOURCE_DIR}/include/ecc/Q9Surface.hpp
+  ${PROJECT_SOURCE_DIR}/include/ecc/Q18Surface.hpp
+  ecc/Ecc.cpp
+  ecc/Q3Shor.cpp
+  ecc/Q5Laflamme.cpp
+  ecc/Q7Steane.cpp
+  ecc/Q9Shor.cpp
+  ecc/Q9Surface.cpp
+  ecc/Q18Surface.cpp)
+
+target_link_libraries(${PROJECT_NAME}_ecc PUBLIC MQT::${PROJECT_NAME})
+target_include_directories(${PROJECT_NAME}_ecc PUBLIC ${PROJECT_SOURCE_DIR}/include/ecc
+                                                      ${PROJECT_BINARY_DIR}/include/ecc)
+add_library(MQT::${PROJECT_NAME}_ecc ALIAS ${PROJECT_NAME}_ecc)

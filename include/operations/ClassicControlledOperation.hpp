@@ -105,8 +105,11 @@ namespace qc {
             return equals(operation, {}, {});
         }
 
-        void dumpOpenQASM([[maybe_unused]] std::ostream& of, [[maybe_unused]] const RegisterNames& qreg, [[maybe_unused]] const RegisterNames& creg) const override {
-            throw QFRException("Dumping of classically controlled gates currently not supported for qasm");
+        void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg, const RegisterNames& creg) const override {
+            of << "if(";
+            of << creg[controlRegister.first].first;
+            of << " == " << expectedValue << ") ";
+            op->dumpOpenQASM(of, qreg, creg);
         }
     };
 } // namespace qc

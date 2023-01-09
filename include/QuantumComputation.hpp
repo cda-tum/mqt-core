@@ -604,6 +604,20 @@ namespace qc {
             checkQubitRange(qubit);
             emplace_back<NonUnitaryOperation>(getNqubits(), qubit, clbit);
         }
+
+        void measure(Qubit qubit, const std::pair<std::string, Bit>& clbit) {
+            checkQubitRange(qubit);
+            if (const auto cRegister = cregs.find(clbit.first); cRegister != cregs.end()) {
+                if (clbit.second >= cRegister->second.second) {
+                    std::cerr << "The classical register \"" << clbit.first << "\" is too small!" << std::endl;
+                }
+                emplace_back<NonUnitaryOperation>(getNqubits(), qubit, cRegister->second.first + clbit.second);
+
+            } else {
+                std::cerr << "The classical register \"" << clbit.first << "\" does not exist!" << std::endl;
+            }
+        }
+
         void measure(const std::vector<Qubit>& qubitRegister,
                      const std::vector<Bit>&   classicalRegister) {
             checkQubitRange(qubitRegister);
