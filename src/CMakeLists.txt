@@ -68,7 +68,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json)
 # the following sets the SYSTEM flag for the include dirs of the json libs to suppress warnings
 # cmake-lint: disable=C0307
 set_target_properties(
-  nlohmann_json PROPERTIES SYSTEM_INTERFACE_INCLUDE_DIRECTORIES
+  nlohmann_json PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                            $<TARGET_PROPERTY:nlohmann_json,INTERFACE_INCLUDE_DIRECTORIES>)
 
 # add options and warnings to the library
