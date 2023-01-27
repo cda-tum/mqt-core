@@ -457,6 +457,7 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAugmentRegister) {
                  "creg c[2];\n"
                  "x q[0];\n"
                  "x q[1];\n"
+                 "barrier q;\n"
                  "measure q[0] -> c[0];\n"
                  "measure q[1] -> c[1];\n");
 }
@@ -501,6 +502,7 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAddRegister) {
                  "creg c[1];\n"
                  "x q[0];\n"
                  "x q[1];\n"
+                 "barrier q;\n"
                  "measure q[0] -> d[0];\n"
                  "measure q[1] -> c[0];\n");
 }
