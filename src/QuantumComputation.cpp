@@ -924,7 +924,11 @@ namespace qc {
                 cregs[registerName].second = outputPermutation.size();
             }
         }
-
+        auto targets = std::vector<qc::Qubit>{};
+        for (std::size_t q = 0; q < getNqubits(); ++q) {
+            targets.emplace_back(q);
+        }
+        barrier(targets);
         // append measurements according to output permutation
         for (const auto& [qubit, clbit]: outputPermutation) {
             measure(qubit, clbit);
