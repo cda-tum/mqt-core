@@ -190,27 +190,25 @@ namespace qc {
             }
         }
 
-        // if the output permutation is still empty, we assume the identity (i.e., it is equal to the initial layout)
-        if (outputPermutation.empty()) {
-            for (Qubit i = 0; i < nqubits; ++i) {
-                // only add to output permutation if the qubit is actually acted upon
-                if (!isIdleQubit(i)) {
-                    outputPermutation.insert({i, initialLayout.at(i)});
-                }
-            }
-        }
+        const bool buildOutputPermutation = outputPermutation.empty();
+        for (const auto& [physicalIn, logicalIn]: initialLayout) {
+            const bool isIdle = isIdleQubit(physicalIn);
 
-        // allow for incomplete output permutation -> mark rest as garbage
-        for (const auto& in: initialLayout) {
-            bool isOutput = false;
-            for (const auto& out: outputPermutation) {
-                if (in.second == out.second) {
-                    isOutput = true;
-                    break;
-                }
+            // if no output permutation was found, build it from the initial layout
+            if (buildOutputPermutation && !isIdle) {
+                outputPermutation.insert({physicalIn, logicalIn});
             }
+
+            // if the qubit is not an output, mark it as garbage
+            const bool isOutput = std::any_of(outputPermutation.begin(), outputPermutation.end(),
+                                              [&logicalIn = logicalIn](const auto& p) { return p.second == logicalIn; });
             if (!isOutput) {
-                setLogicalQubitGarbage(in.second);
+                setLogicalQubitGarbage(logicalIn);
+            }
+
+            // if the qubit is an ancillary and idle, mark it as garbage
+            if (logicalQubitIsAncillary(logicalIn) && isIdle) {
+                setLogicalQubitGarbage(logicalIn);
             }
         }
     }
