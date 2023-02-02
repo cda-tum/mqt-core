@@ -192,15 +192,23 @@ namespace qc {
 
         const bool buildOutputPermutation = outputPermutation.empty();
         for (const auto& [physicalIn, logicalIn]: initialLayout) {
-            // if the physical qubit is idle, it should be considered garbage
-            if (isIdleQubit(physicalIn)) {
-                setLogicalQubitGarbage(logicalIn);
-                continue;
+            const bool isIdle = isIdleQubit(physicalIn);
+
+            // if no output permutation was found, build it from the initial layout
+            if (buildOutputPermutation && !isIdle) {
+                outputPermutation.insert({physicalIn, logicalIn});
             }
 
-            // if no output permutation could be determined previously, an identity mapping is assumed
-            if (buildOutputPermutation) {
-                outputPermutation.insert({physicalIn, logicalIn});
+            // if the qubit is not an output, mark it as garbage
+            const bool isOutput = std::any_of(outputPermutation.begin(), outputPermutation.end(),
+                                              [&logicalIn = logicalIn](const auto& p) { return p.second == logicalIn; });
+            if (!isOutput) {
+                setLogicalQubitGarbage(logicalIn);
+            }
+
+            // if the qubit is an ancillary and idle, mark it as garbage
+            if (logicalQubitIsAncillary(logicalIn) && isIdle) {
+                setLogicalQubitGarbage(logicalIn);
             }
         }
     }
