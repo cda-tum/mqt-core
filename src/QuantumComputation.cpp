@@ -190,27 +190,17 @@ namespace qc {
             }
         }
 
-        // if the output permutation is still empty, we assume the identity (i.e., it is equal to the initial layout)
-        if (outputPermutation.empty()) {
-            for (Qubit i = 0; i < nqubits; ++i) {
-                // only add to output permutation if the qubit is actually acted upon
-                if (!isIdleQubit(i)) {
-                    outputPermutation.insert({i, initialLayout.at(i)});
-                }
+        const bool buildOutputPermutation = outputPermutation.empty();
+        for (const auto& [physicalIn, logicalIn]: initialLayout) {
+            // if the physical qubit is idle, it should be considered garbage
+            if (isIdleQubit(physicalIn)) {
+                setLogicalQubitGarbage(logicalIn);
+                continue;
             }
-        }
 
-        // allow for incomplete output permutation -> mark rest as garbage
-        for (const auto& in: initialLayout) {
-            bool isOutput = false;
-            for (const auto& out: outputPermutation) {
-                if (in.second == out.second) {
-                    isOutput = true;
-                    break;
-                }
-            }
-            if (!isOutput) {
-                setLogicalQubitGarbage(in.second);
+            // if no output permutation could be determined previously, an identity mapping is assumed
+            if (buildOutputPermutation) {
+                outputPermutation.insert({physicalIn, logicalIn});
             }
         }
     }
