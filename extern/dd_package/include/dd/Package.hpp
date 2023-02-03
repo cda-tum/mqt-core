@@ -312,8 +312,21 @@ namespace dd {
             if ((length & (length - 1)) != 0) {
                 throw std::invalid_argument("State vector must have a length of a power of two.");
             }
+
+            [[maybe_unused]] const auto before = cn.cacheCount();
+
             const auto level = static_cast<std::size_t>(std::log2(length)) - 1;
-            return makeStateFromVector(stateVector.begin(), stateVector.end(), level);
+            auto       state = makeStateFromVector(stateVector.begin(), stateVector.end(), level);
+
+            // the recursive function makes use of the cache, so we have to clean it up
+            if (state.w != Complex::zero) {
+                cn.returnToCache(state.w);
+                state.w = cn.lookup(state.w);
+            }
+
+            [[maybe_unused]] const auto after = cn.cacheCount();
+            assert(after == before);
+            return state;
         }
 
         ///
@@ -565,17 +578,17 @@ namespace dd {
                                   const std::size_t           level) {
             if (level == 0) {
                 assert(std::distance(begin, end) == 2);
-                const auto& zeroWeight    = cn.lookup({begin->real(), begin->imag()});
-                const auto& oneWeight     = cn.lookup({std::next(begin)->real(), std::next(begin)->imag()});
+                const auto& zeroWeight    = cn.getCached(begin->real(), begin->imag());
+                const auto& oneWeight     = cn.getCached(std::next(begin)->real(), std::next(begin)->imag());
                 const auto  zeroSuccessor = vEdge{vNode::terminal, zeroWeight};
                 const auto  oneSuccessor  = vEdge{vNode::terminal, oneWeight};
-                return makeDDNode<vNode>(0, {zeroSuccessor, oneSuccessor});
+                return makeDDNode<vNode>(0, {zeroSuccessor, oneSuccessor}, true);
             }
 
             const auto half          = std::distance(begin, end) / 2;
             const auto zeroSuccessor = makeStateFromVector(begin, begin + half, level - 1);
             const auto oneSuccessor  = makeStateFromVector(begin + half, end, level - 1);
-            return makeDDNode<vNode>(static_cast<dd::Qubit>(level), {zeroSuccessor, oneSuccessor});
+            return makeDDNode<vNode>(static_cast<dd::Qubit>(level), {zeroSuccessor, oneSuccessor}, true);
         }
 
         ///
