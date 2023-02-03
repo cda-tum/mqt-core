@@ -303,6 +303,19 @@ namespace dd {
             return f;
         }
 
+        // generate the decision diagram from an arbitrary state vector
+        vEdge makeStateFromVector(const CVec& stateVector) {
+            if (stateVector.empty()) {
+                return vEdge::one;
+            }
+            const auto& length = stateVector.size();
+            if ((length & (length - 1)) != 0) {
+                throw std::invalid_argument("State vector must have a length of a power of two.");
+            }
+            const auto level = static_cast<std::size_t>(std::log2(length)) - 1;
+            return makeStateFromVector(stateVector.begin(), stateVector.end(), level);
+        }
+
         ///
         /// Matrix nodes, edges and quantum gates
         ///
@@ -545,6 +558,24 @@ namespace dd {
                 return;
             }
             p->setIdentity(true);
+        }
+
+        vEdge makeStateFromVector(const CVec::const_iterator& begin,
+                                  const CVec::const_iterator& end,
+                                  const std::size_t           level) {
+            if (level == 0) {
+                assert(std::distance(begin, end) == 2);
+                const auto& zeroWeight    = cn.lookup({begin->real(), begin->imag()});
+                const auto& oneWeight     = cn.lookup({std::next(begin)->real(), std::next(begin)->imag()});
+                const auto  zeroSuccessor = vEdge{vNode::terminal, zeroWeight};
+                const auto  oneSuccessor  = vEdge{vNode::terminal, oneWeight};
+                return makeDDNode<vNode>(0, {zeroSuccessor, oneSuccessor});
+            }
+
+            const auto half          = std::distance(begin, end) / 2;
+            const auto zeroSuccessor = makeStateFromVector(begin, begin + half, level - 1);
+            const auto oneSuccessor  = makeStateFromVector(begin + half, end, level - 1);
+            return makeDDNode<vNode>(static_cast<dd::Qubit>(level), {zeroSuccessor, oneSuccessor});
         }
 
         ///
