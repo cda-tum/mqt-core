@@ -1338,3 +1338,34 @@ TEST(DDPackageTest, exactlyOneComparison) {
     EXPECT_TRUE(!notOne.exactlyOne());
     EXPECT_TRUE(one.exactlyOne());
 }
+
+TEST(DDPackageTest, stateFromVectorBell) {
+    auto       dd = std::make_unique<dd::Package<>>(2);
+    const auto v  = std::vector<std::complex<dd::fp>>{dd::SQRT2_2, 0, 0, dd::SQRT2_2};
+    const auto s  = dd->makeStateFromVector(v);
+    EXPECT_EQ(s.p->v, 1);
+    EXPECT_EQ(s.p->e[0].w.r->value, dd::SQRT2_2);
+    EXPECT_EQ(s.p->e[0].w.i->value, 0);
+    EXPECT_EQ(s.p->e[1].w.r->value, dd::SQRT2_2);
+    EXPECT_EQ(s.p->e[1].w.i->value, 0);
+    EXPECT_EQ(s.p->e[0].p->e[0].w.r->value, 1);
+    EXPECT_EQ(s.p->e[0].p->e[0].w.i->value, 0);
+    EXPECT_EQ(s.p->e[0].p->e[1].w.r->value, 0);
+    EXPECT_EQ(s.p->e[0].p->e[1].w.i->value, 0);
+    EXPECT_EQ(s.p->e[1].p->e[0].w.r->value, 0);
+    EXPECT_EQ(s.p->e[1].p->e[0].w.i->value, 0);
+    EXPECT_EQ(s.p->e[1].p->e[1].w.r->value, 1);
+    EXPECT_EQ(s.p->e[1].p->e[1].w.i->value, 0);
+}
+
+TEST(DDPackageTest, stateFromVectorEmpty) {
+    auto dd = std::make_unique<dd::Package<>>(1);
+    auto v  = std::vector<std::complex<dd::fp>>{};
+    EXPECT_EQ(dd->makeStateFromVector(v), dd::vEdge::one);
+}
+
+TEST(DDPackageTest, stateFromVectorNoPowerOfTwo) {
+    auto dd = std::make_unique<dd::Package<>>(3);
+    auto v  = std::vector<std::complex<dd::fp>>{1, 2, 3, 4, 5};
+    EXPECT_THROW(dd->makeStateFromVector(v), std::invalid_argument);
+}
