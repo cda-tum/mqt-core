@@ -313,6 +313,10 @@ namespace dd {
                 throw std::invalid_argument("State vector must have a length of a power of two.");
             }
 
+            if (length == 1) {
+                return vEdge::terminal(cn.lookup(stateVector[0].real(), stateVector[0].imag()));
+            }
+
             [[maybe_unused]] const auto before = cn.cacheCount();
 
             const auto level = static_cast<Qubit>(std::log2(length) - 1);

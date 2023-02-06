@@ -1369,3 +1369,11 @@ TEST(DDPackageTest, stateFromVectorNoPowerOfTwo) {
     auto v  = std::vector<std::complex<dd::fp>>{1, 2, 3, 4, 5};
     EXPECT_THROW(dd->makeStateFromVector(v), std::invalid_argument);
 }
+
+TEST(DDPackageTest, stateFromScalar) {
+    auto dd = std::make_unique<dd::Package<>>(1);
+    auto s  = dd->makeStateFromVector({1});
+    EXPECT_EQ(s.p->v, -1);
+    EXPECT_EQ(s.w.r->value, 1);
+    EXPECT_EQ(s.w.i->value, 0);
+}
