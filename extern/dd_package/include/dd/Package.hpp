@@ -315,7 +315,7 @@ namespace dd {
 
             [[maybe_unused]] const auto before = cn.cacheCount();
 
-            const auto level = static_cast<std::size_t>(std::log2(length)) - 1;
+            const auto level = static_cast<Qubit>(std::log2(length) - 1);
             auto       state = makeStateFromVector(stateVector.begin(), stateVector.end(), level);
 
             // the recursive function makes use of the cache, so we have to clean it up
@@ -575,7 +575,7 @@ namespace dd {
 
         vEdge makeStateFromVector(const CVec::const_iterator& begin,
                                   const CVec::const_iterator& end,
-                                  const std::size_t           level) {
+                                  const Qubit                 level) {
             if (level == 0) {
                 assert(std::distance(begin, end) == 2);
                 const auto& zeroWeight    = cn.getCached(begin->real(), begin->imag());
@@ -588,7 +588,7 @@ namespace dd {
             const auto half          = std::distance(begin, end) / 2;
             const auto zeroSuccessor = makeStateFromVector(begin, begin + half, level - 1);
             const auto oneSuccessor  = makeStateFromVector(begin + half, end, level - 1);
-            return makeDDNode<vNode>(static_cast<dd::Qubit>(level), {zeroSuccessor, oneSuccessor}, true);
+            return makeDDNode<vNode>(level, {zeroSuccessor, oneSuccessor}, true);
         }
 
         ///
