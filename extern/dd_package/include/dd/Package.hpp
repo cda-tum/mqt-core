@@ -303,6 +303,36 @@ namespace dd {
             return f;
         }
 
+        // generate the decision diagram from an arbitrary state vector
+        vEdge makeStateFromVector(const CVec& stateVector) {
+            if (stateVector.empty()) {
+                return vEdge::one;
+            }
+            const auto& length = stateVector.size();
+            if ((length & (length - 1)) != 0) {
+                throw std::invalid_argument("State vector must have a length of a power of two.");
+            }
+
+            if (length == 1) {
+                return vEdge::terminal(cn.lookup(stateVector[0].real(), stateVector[0].imag()));
+            }
+
+            [[maybe_unused]] const auto before = cn.cacheCount();
+
+            const auto level = static_cast<Qubit>(std::log2(length) - 1);
+            auto       state = makeStateFromVector(stateVector.begin(), stateVector.end(), level);
+
+            // the recursive function makes use of the cache, so we have to clean it up
+            if (state.w != Complex::zero) {
+                cn.returnToCache(state.w);
+                state.w = cn.lookup(state.w);
+            }
+
+            [[maybe_unused]] const auto after = cn.cacheCount();
+            assert(after == before);
+            return state;
+        }
+
         ///
         /// Matrix nodes, edges and quantum gates
         ///
@@ -545,6 +575,24 @@ namespace dd {
                 return;
             }
             p->setIdentity(true);
+        }
+
+        vEdge makeStateFromVector(const CVec::const_iterator& begin,
+                                  const CVec::const_iterator& end,
+                                  const Qubit                 level) {
+            if (level == 0) {
+                assert(std::distance(begin, end) == 2);
+                const auto& zeroWeight    = cn.getCached(begin->real(), begin->imag());
+                const auto& oneWeight     = cn.getCached(std::next(begin)->real(), std::next(begin)->imag());
+                const auto  zeroSuccessor = vEdge{vNode::terminal, zeroWeight};
+                const auto  oneSuccessor  = vEdge{vNode::terminal, oneWeight};
+                return makeDDNode<vNode>(0, {zeroSuccessor, oneSuccessor}, true);
+            }
+
+            const auto half          = std::distance(begin, end) / 2;
+            const auto zeroSuccessor = makeStateFromVector(begin, begin + half, level - 1);
+            const auto oneSuccessor  = makeStateFromVector(begin + half, end, level - 1);
+            return makeDDNode<vNode>(level, {zeroSuccessor, oneSuccessor}, true);
         }
 
         ///
