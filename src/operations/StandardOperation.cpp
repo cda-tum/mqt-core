@@ -267,16 +267,16 @@ namespace qc {
                 }
                 break;
             case V:
-                op << "u(pi/2, -pi/2, pi/2)";
+                op << "u3(pi/2, -pi/2, pi/2)";
                 break;
             case Vdag:
-                op << "u(pi/2, pi/2, -pi/2)";
+                op << "u3(pi/2, pi/2, -pi/2)";
                 break;
             case U3:
-                op << "u(" << parameter[2] << "," << parameter[1] << "," << parameter[0] << ")";
+                op << "u3(" << parameter[2] << "," << parameter[1] << "," << parameter[0] << ")";
                 break;
             case U2:
-                op << "u(pi/2, " << parameter[1] << "," << parameter[0] << ")";
+                op << "u3(pi/2, " << parameter[1] << "," << parameter[0] << ")";
                 break;
             case Phase:
                 op << "p(" << parameter[0] << ")";
