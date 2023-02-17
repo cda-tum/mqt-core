@@ -1377,3 +1377,62 @@ TEST(DDPackageTest, stateFromScalar) {
     EXPECT_EQ(s.w.r->value, 1);
     EXPECT_EQ(s.w.i->value, 0);
 }
+
+TEST(DDPackageTest, expectationValueGlobalOperators) {
+    const dd::QubitCount maxQubits = 3;
+    for (dd::QubitCount nrQubits = 1; nrQubits < maxQubits + 1; ++nrQubits) {
+        auto       dd        = std::make_unique<dd::Package<>>(nrQubits);
+        const auto zeroState = dd->makeZeroState(nrQubits);
+
+        // Definition global operators
+        const auto singleSiteX = dd->makeGateDD(dd::Xmat, 1, 0);
+        auto       globalX     = singleSiteX;
+
+        const auto singleSiteZ = dd->makeGateDD(dd::Zmat, 1, 0);
+        auto       globalZ     = singleSiteZ;
+
+        const auto singleSiteHadamard = dd->makeGateDD(dd::Hmat, 1, 0);
+        auto       globalHadamard     = singleSiteHadamard;
+
+        for (dd::QubitCount i = 1; i < nrQubits; ++i) {
+            globalX        = dd->kronecker(globalX, singleSiteX);
+            globalZ        = dd->kronecker(globalZ, singleSiteZ);
+            globalHadamard = dd->kronecker(globalHadamard, singleSiteHadamard);
+        }
+
+        // Global Expectation values
+        EXPECT_EQ(dd->expectationValue(globalX, zeroState), 0);
+        EXPECT_EQ(dd->expectationValue(globalZ, zeroState), 1);
+        EXPECT_EQ(dd->expectationValue(globalHadamard, zeroState), std::pow(dd::SQRT2_2, nrQubits));
+    }
+}
+
+TEST(DDPackageTest, expectationValueLocalOperators) {
+    const dd::QubitCount maxQubits = 3;
+    for (dd::QubitCount nrQubits = 1; nrQubits < maxQubits + 1; ++nrQubits) {
+        auto       dd        = std::make_unique<dd::Package<>>(nrQubits);
+        const auto zeroState = dd->makeZeroState(nrQubits);
+
+        // Local expectation values at each site
+        for (dd::Qubit site = 0; site < static_cast<dd::Qubit>(nrQubits) - 1; ++site) {
+            // Definition local operators
+            auto xGate    = dd->makeGateDD(dd::Xmat, nrQubits, site);
+            auto zGate    = dd->makeGateDD(dd::Zmat, nrQubits, site);
+            auto hadamard = dd->makeGateDD(dd::Hmat, nrQubits, site);
+
+            EXPECT_EQ(dd->expectationValue(xGate, zeroState), 0);
+            EXPECT_EQ(dd->expectationValue(zGate, zeroState), 1);
+            EXPECT_EQ(dd->expectationValue(hadamard, zeroState), dd::SQRT2_2);
+        }
+    }
+}
+
+TEST(DDPackageTest, expectationValueExceptions) {
+    const dd::QubitCount nrQubits = 2;
+
+    auto       dd        = std::make_unique<dd::Package<>>(nrQubits);
+    const auto zeroState = dd->makeZeroState(static_cast<dd::QubitCount>(nrQubits - 1));
+    const auto xGate     = dd->makeGateDD(dd::Xmat, nrQubits, 0);
+
+    EXPECT_ANY_THROW(dd->expectationValue(xGate, zeroState));
+}
