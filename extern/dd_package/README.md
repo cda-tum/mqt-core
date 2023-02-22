@@ -43,7 +43,7 @@ For implementing more complex functionality which requires garbage collection, b
 ### System Requirements
 
 Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments). However, the implementation should be compatible
-with any current C++ compiler supporting C++17 and a minimum CMake version of 3.14.
+with any current C++ compiler supporting C++17 and a minimum CMake version of 3.19.
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
@@ -58,14 +58,17 @@ git clone --recurse-submodules -j8 https://github.com/cda-tum/dd_package
 Note the `--recurse-submodules` flag. It is required to also clone all the required submodules. If you happen to forget passing the flag on your initial clone, you can initialize all the submodules by
 executing `git submodule update --init --recursive` in the main project directory.
 
-Our projects use CMake as the main build configuration tool. Building a project using CMake is a two-stage process. First, CMake needs to be _configured_ by calling
+The DD package is a header-only library, so there is no need to build it. However, we provide a CMake-based build system for testing and benchmarking purposes.
+Additionally, a dedicated CMake target `MQT::DDPackage` is provided to easily integrate the DD package into other CMake projects (see, e.g., https://github.com/cda-tum/qfr).
+
+If you want to build the tests and benchmarks, you need to first configure the project using CMake. This can be done by calling
 
 ```shell
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_DD_PACKAGE_TESTS=ON
 ```
 
 This tells CMake to search the current directory `.` (passed via `-S`) for a _CMakeLists.txt_ file and process it into a directory `build` (passed via `-B`).
-The flag `-DCMAKE_BUILD_TYPE=Release` tells CMake to configure a _Release_ build (as opposed to, e.g., a _Debug_ build).
+The flag `-DCMAKE_BUILD_TYPE=Release` tells CMake to configure a _Release_ build (as opposed to, e.g., a _Debug_ build), while the flag `-DBUILD_DD_PACKAGE_TESTS=ON` tells CMake to also include the tests in the build process.
 
 After configuring with CMake, the project can be built by calling
 
@@ -76,13 +79,7 @@ After configuring with CMake, the project can be built by calling
 This tries to build the project in the `build` directory (passed via `--build`).
 Some operating systems and developer environments explicitly require a configuration to be set, which is why the `--config` flag is also passed to the build command. The flag `--parallel <NUMBER_OF_THREADS>` may be added to trigger a parallel build.
 
-Building the project this way generates
-
-- the library `libdd_package.a` (Unix) / `dd_package.lib` (Windows) in the `build/src` folder
-- a test executable `dd_package_test` containing a small set of unit tests in the `build/test` folder
-- a small demo example executable `dd_package_example` in the `build/test` directory.
-
-You can link against the library built by this project in other CMake project using the `MQT::DDpackage` target.
+This generates a number of executables in the `build/test` directory, including the test executable `dd_package_test` and the example executable `dd_package_example`.
 
 ## Reference
 
