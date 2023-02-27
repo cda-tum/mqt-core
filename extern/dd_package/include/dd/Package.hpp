@@ -314,7 +314,7 @@ namespace dd {
             }
 
             if (length == 1) {
-                return vEdge::terminal(cn.lookup(stateVector[0].real(), stateVector[0].imag()));
+                return vEdge::terminal(cn.lookup(stateVector[0]));
             }
 
             [[maybe_unused]] const auto before = cn.cacheCount();
@@ -331,6 +331,47 @@ namespace dd {
             [[maybe_unused]] const auto after = cn.cacheCount();
             assert(after == before);
             return state;
+        }
+
+        /**
+            Converts a given matrix to a decision diagram
+            @param matrix A complex matrix to convert to a DD.
+            @return An mEdge that represents the DD.
+            @throws std::invalid_argument If the given matrix is not square or its length is not a power of two.
+        **/
+        mEdge makeDDFromMatrix(const CMat& matrix) {
+            if (matrix.empty()) {
+                return mEdge::one;
+            }
+
+            const auto& length = matrix.size();
+            if ((length & (length - 1)) != 0) {
+                throw std::invalid_argument("Matrix must have a length of a power of two.");
+            }
+
+            const auto& width = matrix[0].size();
+            if (length != width) {
+                throw std::invalid_argument("Matrix must be square.");
+            }
+
+            if (length == 1) {
+                return mEdge::terminal(cn.lookup(matrix[0][0]));
+            }
+
+            [[maybe_unused]] const auto before = cn.cacheCount();
+
+            const auto level = static_cast<Qubit>(std::log2(length) - 1);
+
+            auto matrixDD = makeDDFromMatrix(matrix, level, 0, length, 0, width);
+
+            if (matrixDD.w != Complex::zero) {
+                cn.returnToCache(matrixDD.w);
+                matrixDD.w = cn.lookup(matrixDD.w);
+            }
+
+            [[maybe_unused]] const auto after = cn.cacheCount();
+            assert(after == before);
+            return matrixDD;
         }
 
         ///
@@ -593,6 +634,49 @@ namespace dd {
             const auto zeroSuccessor = makeStateFromVector(begin, begin + half, level - 1);
             const auto oneSuccessor  = makeStateFromVector(begin + half, end, level - 1);
             return makeDDNode<vNode>(level, {zeroSuccessor, oneSuccessor}, true);
+        }
+
+        /**
+        Constructs a decision diagram (DD) from a complex matrix using a recursive algorithm.
+        @param matrix The complex matrix from which to create the DD.
+        @param level The current level of recursion. Starts at the highest level of the matrix (log base 2 of the matrix size - 1).
+        @param rowStart The starting row of the quadrant being processed.
+        @param rowEnd The ending row of the quadrant being processed.
+        @param colStart The starting column of the quadrant being processed.
+        @param colEnd The ending column of the quadrant being processed.
+        @return An mEdge representing the root node of the created DD.
+        @throw std::invalid_argument If level is negative.
+        @details This function recursively breaks down the matrix into quadrants until each quadrant has only one element.
+        At each level of recursion, four new edges are created, one for each quadrant of the matrix.
+        The four resulting decision diagram edges are used to create a new decision diagram node at the current level,
+        and this node is returned as the result of the current recursive call.
+        At the base case of recursion, the matrix has only one element, which is converted into a terminal node of the decision diagram.
+        @note This function assumes that the matrix size is a power of two.
+        **/
+        mEdge makeDDFromMatrix(const CMat& matrix, const Qubit level,
+                               const std::size_t rowStart, const std::size_t rowEnd,
+                               const std::size_t colStart, const std::size_t colEnd) {
+            // base case
+            if (level == -1) {
+                assert(rowEnd - rowStart == 1);
+                assert(colEnd - colStart == 1);
+                return {mNode::terminal, cn.getCached(matrix[rowStart][colStart])};
+            }
+
+            // recursively call the function on all quadrants
+            const auto rowMid = (rowStart + rowEnd) / 2;
+            const auto colMid = (colStart + colEnd) / 2;
+
+            const auto edge0 =
+                    makeDDFromMatrix(matrix, level - 1, rowStart, rowMid, colStart, colMid);
+            const auto edge1 =
+                    makeDDFromMatrix(matrix, level - 1, rowStart, rowMid, colMid, colEnd);
+            const auto edge2 =
+                    makeDDFromMatrix(matrix, level - 1, rowMid, rowEnd, colStart, colMid);
+            const auto edge3 =
+                    makeDDFromMatrix(matrix, level - 1, rowMid, rowEnd, colMid, colEnd);
+
+            return makeDDNode<mNode>(level, {edge0, edge1, edge2, edge3}, true);
         }
 
         ///
@@ -1576,8 +1660,7 @@ namespace dd {
         }
 
     public:
-        fp expectationValue(const mEdge& x, const vEdge& y) {
-            /**
+        /**
             Calculates the expectation value of an operator x with respect to a quantum state y given their corresponding decision diagrams.
             @param x a matrix DD representing the operator
             @param y a vector DD representing the quantum state
@@ -1586,8 +1669,8 @@ namespace dd {
             @note This function calls the multiply() function to apply the operator to the quantum state, then calls innerProduct()
                   to calculate the overlap between the original state and the applied state i.e. <Psi| Psi'> = <Psi| (Op|Psi>).
                   It also calls the garbageCollect() function to free up any unused memory.
-            **/
-
+        **/
+        fp expectationValue(const mEdge& x, const vEdge& y) {
             if (x.p->v != y.p->v) {
                 throw std::invalid_argument("Observable and state must act on the same number of qubits to compute the expectation value.");
             }
