@@ -91,7 +91,7 @@ namespace dd {
                 return e;
             }
 
-            lookups++;
+            ++lookups;
             const auto key = hash(e.p);
             const auto v   = e.p->v;
 
@@ -100,34 +100,15 @@ namespace dd {
                 assert(edge.p->v == v - 1 || edge.isTerminal());
             }
 
-            Node* p = tables[static_cast<std::size_t>(v)][key];
-            while (p != nullptr) {
-                if (nodesAreEqual(e.p, p)) {
-                    // Match found
-                    if (e.p != p && !keepNode) {
-                        // put node pointed to by e.p on available chain
-                        returnNode(e.p);
-                    }
-                    hits++;
-
-                    // variables should stay the same
-                    assert(p->v == e.p->v);
-
-                    // successors of a node shall either have successive variable numbers or be terminals
-                    for ([[maybe_unused]] const auto& edge: e.p->e) {
-                        assert(edge.p->v == v - 1 || edge.isTerminal());
-                    }
-
-                    return {p, e.w};
-                }
-                collisions++;
-                p = p->next;
+            // search bucket in table corresponding to hashed value for the given node and return it if found.
+            if (const auto hashedNode = searchTable(e, key, keepNode); hashedNode != Edge<Node>::zero) {
+                return hashedNode;
             }
 
-            // node was not found -> add it to front of unique table bucket
+            // if node not found -> add it to front of unique table bucket
             e.p->next                                = tables[static_cast<std::size_t>(v)][key];
             tables[static_cast<std::size_t>(v)][key] = e.p;
-            nodeCount++;
+            ++nodeCount;
             peakNodeCount = std::max(peakNodeCount, nodeCount);
 
             return e;
@@ -399,6 +380,44 @@ namespace dd {
         std::size_t gcCalls = 0;
         std::size_t gcRuns  = 0;
         std::size_t gcLimit = INITIAL_GC_LIMIT;
+
+        /**
+        Searches for a node in the hash table with the given key.
+        @param e The node to search for.
+        @param key The hashed value used to search the table.
+        @param keepNode If true, the node pointed to by e.p will not be put on the available chain.
+        @return The Edge<Node> found in the hash table or Edge<Node>::zero if not found.
+        **/
+        Edge<Node> searchTable(const Edge<Node>& e, const std::size_t& key, const bool keepNode = false) {
+            const auto v = e.p->v;
+
+            Node* p = tables[static_cast<std::size_t>(v)][key];
+            while (p != nullptr) {
+                if (nodesAreEqual(e.p, p)) {
+                    // Match found
+                    if (e.p != p && !keepNode) {
+                        // put node pointed to by e.p on available chain
+                        returnNode(e.p);
+                    }
+                    ++hits;
+
+                    // variables should stay the same
+                    assert(p->v == e.p->v);
+
+                    // successors of a node shall either have successive variable numbers or be terminals
+                    for ([[maybe_unused]] const auto& edge: e.p->e) {
+                        assert(edge.p->v == v - 1 || edge.isTerminal());
+                    }
+
+                    return {p, e.w};
+                }
+                ++collisions;
+                p = p->next;
+            }
+
+            // Node not found in bucket
+            return Edge<Node>::zero;
+        }
     };
 
 } // namespace dd
