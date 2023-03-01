@@ -68,7 +68,7 @@ jobs:
         working-directory: build
         run: ./test/DDPackage_bench --benchmark_format=json | tee benchmark_result.json
       - name: Store benchmark result # for pushes
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: github.event.pull_request.head.repo.fork == false && github.actor != 'dependabot[bot]'
         uses: rhysd/github-action-benchmark@v1
         #        if: github.event_name == 'push'
         with:
