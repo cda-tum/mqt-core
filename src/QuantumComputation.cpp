@@ -712,15 +712,15 @@ namespace qc {
                 removeQubit(logicalQubitIndex);
 
                 if (reduceIOpermutations && (logicalQubitIndex < nqubits + nancillae)) {
-                    for (auto& q: initialLayout) {
-                        if (q.second > logicalQubitIndex) {
-                            --q.second;
+                    for (auto& [physical, logical]: initialLayout) {
+                        if (logical > logicalQubitIndex) {
+                            --logical;
                         }
                     }
 
-                    for (auto& q: outputPermutation) {
-                        if (q.second > logicalQubitIndex) {
-                            --q.second;
+                    for (auto& [physical, logical]: outputPermutation) {
+                        if (logical > logicalQubitIndex) {
+                            --logical;
                         }
                     }
                 }
