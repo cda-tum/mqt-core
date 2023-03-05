@@ -1717,3 +1717,13 @@ TEST_F(QFRFunctionality, CircuitToOperation) {
     EXPECT_EQ(op2->getNqubits(), 2U);
     EXPECT_TRUE(qc.empty());
 }
+
+TEST_F(QFRFunctionality, AvoidStrippingIdleQubitWhenInOutputPermutation) {
+    // a qubit being present in the output permutation should not be stripped
+    QuantumComputation qc(2);
+    qc.measure(1, 0);
+    qc.initializeIOMapping();
+    qc.stripIdleQubits();
+    EXPECT_EQ(qc.getNqubits(), 2U);
+    EXPECT_EQ(qc.outputPermutation[1], 0U);
+}

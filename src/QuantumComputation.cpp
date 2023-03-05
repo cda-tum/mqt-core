@@ -709,25 +709,35 @@ namespace qc {
                 }
 
                 auto logicalQubitIndex = initialLayout.at(physicalQubitIndex);
+                // check whether the logical qubit is used in the output permutation
+                bool usedInOutputPermutation = false;
+                for (const auto& [physical, logical]: outputPermutation) {
+                    if (logical == logicalQubitIndex) {
+                        usedInOutputPermutation = true;
+                        break;
+                    }
+                }
+                if (usedInOutputPermutation) {
+                    // cannot strip a logical qubit that is used in the output permutation
+                    continue;
+                }
+
                 removeQubit(logicalQubitIndex);
 
                 if (reduceIOpermutations && (logicalQubitIndex < nqubits + nancillae)) {
-                    for (auto& q: initialLayout) {
-                        if (q.second > logicalQubitIndex) {
-                            --q.second;
+                    for (auto& [physical, logical]: initialLayout) {
+                        if (logical > logicalQubitIndex) {
+                            --logical;
                         }
                     }
 
-                    for (auto& q: outputPermutation) {
-                        if (q.second > logicalQubitIndex) {
-                            --q.second;
+                    for (auto& [physical, logical]: outputPermutation) {
+                        if (logical > logicalQubitIndex) {
+                            --logical;
                         }
                     }
                 }
             }
-        }
-        for (auto& op: ops) {
-            op->setNqubits(nqubits + nancillae);
         }
     }
 
