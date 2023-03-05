@@ -726,9 +726,6 @@ namespace qc {
                 }
             }
         }
-        for (auto& op: ops) {
-            op->setNqubits(nqubits + nancillae);
-        }
     }
 
     std::string QuantumComputation::getQubitRegister(const Qubit physicalQubitIndex) const {
