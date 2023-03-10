@@ -717,7 +717,7 @@ namespace qc {
                         break;
                     }
                 }
-                if (usedInOutputPermutation) {
+                if (usedInOutputPermutation && !force) {
                     // cannot strip a logical qubit that is used in the output permutation
                     continue;
                 }
