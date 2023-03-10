@@ -91,7 +91,7 @@ TEST(DDPackageTest, QFTState) {
     auto h1Gate   = dd->makeGateDD(dd::Hmat, 3, 1);
     auto s1Gate   = dd->makeGateDD(dd::Smat, 3, 2_pc, 1);
     auto h2Gate   = dd->makeGateDD(dd::Hmat, 3, 2);
-    auto swapGate = dd->makeSWAPDD(3, {}, 0, 2);
+    auto swapGate = dd->makeSWAPDD(3, dd::Controls{}, 0, 2);
 
     auto qftOp = dd->multiply(s0Gate, h0Gate);
     qftOp      = dd->multiply(t0Gate, qftOp);

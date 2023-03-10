@@ -538,7 +538,98 @@ namespace dd {
             return e;
         }
 
-        mEdge makeSWAPDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1, std::size_t start = 0) {
+        /**
+        Creates the DD for a two-qubit gate
+        @param mat Matrix representation of the gate
+        @param n Number of qubits in the circuit
+        @param target0 First target qubit
+        @param target1 Second target qubit
+        @param start Start index for the DD
+        @return DD representing the gate
+        @throws std::runtime_error if the number of qubits is larger than the package configuration
+        **/
+        mEdge makeTwoQubitGateDD(const std::array<std::array<ComplexValue, NEDGE>, NEDGE>& mat, const QubitCount n, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
+            // sanity check
+            if (n + start > nqubits) {
+                throw std::runtime_error{"Requested gate with " +
+                                         std::to_string(n + start) +
+                                         " qubits, but current package configuration only supports up to " +
+                                         std::to_string(nqubits) +
+                                         " qubits. Please allocate a larger package instance."};
+            }
+
+            // create terminal edge matrix
+            std::array<std::array<mEdge, NEDGE>, NEDGE> em{};
+            for (auto i1 = 0U; i1 < NEDGE; i1++) {
+                const auto& matRow = mat.at(i1);
+                auto&       emRow  = em.at(i1);
+                for (auto i2 = 0U; i2 < NEDGE; i2++) {
+                    const auto& matEntry = matRow.at(i2);
+                    auto&       emEntry  = emRow.at(i2);
+                    // NOLINTNEXTLINE(clang-diagnostic-float-equal) it has to be really zero
+                    if (matEntry.r == 0 && matEntry.i == 0) {
+                        emEntry = mEdge::zero;
+                    } else {
+                        emEntry = mEdge::terminal(cn.lookup(matEntry));
+                    }
+                }
+            }
+
+            // process lines below smaller target (by creating identity structures)
+            auto       z             = static_cast<Qubit>(start);
+            const auto smallerTarget = std::min(target0, target1);
+            for (; z < smallerTarget; ++z) {
+                for (auto& row: em) {
+                    for (auto& entry: row) {
+                        entry = makeDDNode(z, std::array{entry, mEdge::zero, mEdge::zero, entry});
+                    }
+                }
+            }
+
+            // process the smaller target by taking the 16 submatrices and appropriately combining them into four DDs.
+            std::array<mEdge, NEDGE> em0{};
+            for (std::size_t row = 0; row < RADIX; ++row) {
+                for (std::size_t col = 0; col < RADIX; ++col) {
+                    std::array<mEdge, NEDGE> local{};
+                    if (target0 > target1) {
+                        for (std::size_t i = 0; i < RADIX; ++i) {
+                            for (std::size_t j = 0; j < RADIX; ++j) {
+                                local.at(i * RADIX + j) = em.at(row * RADIX + i).at(col * RADIX + j);
+                            }
+                        }
+                    } else {
+                        for (std::size_t i = 0; i < RADIX; ++i) {
+                            for (std::size_t j = 0; j < RADIX; ++j) {
+                                local.at(i * RADIX + j) = em.at(i * RADIX + row).at(j * RADIX + col);
+                            }
+                        }
+                    }
+                    em0.at(row * RADIX + col) = makeDDNode(z, local);
+                }
+            }
+
+            // process lines between the two targets (by creating identity structures)
+            for (++z; z < std::max(target0, target1); ++z) {
+                for (auto& entry: em0) {
+                    entry = makeDDNode(z, std::array{entry, mEdge::zero, mEdge::zero, entry});
+                }
+            }
+
+            // process the larger target by combining the four DDs from the smaller target
+            auto e = makeDDNode(z, em0);
+
+            // process lines above the larger target (by creating identity structures)
+            for (++z; z < static_cast<Qubit>(n + start); ++z) {
+                e = makeDDNode(z, std::array{e, mEdge::zero, mEdge::zero, e});
+            }
+
+            return e;
+        }
+
+        mEdge makeSWAPDD(const QubitCount n, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
+            return makeTwoQubitGateDD(SWAPmat, n, target0, target1, start);
+        }
+        mEdge makeSWAPDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
             auto c = controls;
             c.insert(Control{target0});
             mEdge e = makeGateDD(Xmat, n, c, target1, start);
