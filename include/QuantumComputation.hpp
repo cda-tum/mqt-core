@@ -600,6 +600,46 @@ namespace qc {
             emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::Peresdag);
         }
 
+        void dcx(const Qubit target0, const Qubit target1) {
+            checkQubitRange(target0, target1);
+            emplace_back<StandardOperation>(getNqubits(), Controls{}, target0, target1, qc::DCX);
+        }
+
+        void ecr(const Qubit target0, const Qubit target1) {
+            checkQubitRange(target0, target1);
+            emplace_back<StandardOperation>(getNqubits(), Controls{}, target0, target1, qc::ECR);
+        }
+
+        void rxx(const Qubit target0, const Qubit target1, const fp theta) {
+            checkQubitRange(target0, target1);
+            emplace_back<StandardOperation>(getNqubits(), Controls{}, target0, target1, qc::RXX, theta);
+        }
+
+        void ryy(const Qubit target0, const Qubit target1, const fp theta) {
+            checkQubitRange(target0, target1);
+            emplace_back<StandardOperation>(getNqubits(), Controls{}, target0, target1, qc::RYY, theta);
+        }
+
+        void rzz(const Qubit target0, const Qubit target1, const fp theta) {
+            checkQubitRange(target0, target1);
+            emplace_back<StandardOperation>(getNqubits(), Controls{}, target0, target1, qc::RZZ, theta);
+        }
+
+        void rzx(const Qubit target0, const Qubit target1, const fp theta) {
+            checkQubitRange(target0, target1);
+            emplace_back<StandardOperation>(getNqubits(), Controls{}, target0, target1, qc::RZX, theta);
+        }
+
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const fp theta, const fp beta) { // NOLINT(readability-identifier-naming)
+            checkQubitRange(target0, target1);
+            emplace_back<StandardOperation>(getNqubits(), Controls{}, target0, target1, qc::XXminusYY, theta, beta);
+        }
+
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const fp theta, const fp beta) { // NOLINT(readability-identifier-naming)
+            checkQubitRange(target0, target1);
+            emplace_back<StandardOperation>(getNqubits(), Controls{}, target0, target1, qc::XXplusYY, theta, beta);
+        }
+
         void measure(Qubit qubit, std::size_t clbit) {
             checkQubitRange(qubit);
             emplace_back<NonUnitaryOperation>(getNqubits(), qubit, clbit);
