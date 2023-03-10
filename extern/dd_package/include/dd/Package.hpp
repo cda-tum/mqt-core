@@ -639,7 +639,7 @@ namespace dd {
             return e;
         }
 
-        mEdge makePeresDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1, std::size_t start = 0) {
+        mEdge makePeresDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
             auto c = controls;
             c.insert(Control{target1});
             mEdge e = makeGateDD(Xmat, n, c, target0, start);
@@ -647,7 +647,7 @@ namespace dd {
             return e;
         }
 
-        mEdge makePeresdagDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1, std::size_t start = 0) {
+        mEdge makePeresdagDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
             mEdge e = makeGateDD(Xmat, n, controls, target1, start);
             auto  c = controls;
             c.insert(Control{target1});
@@ -655,7 +655,10 @@ namespace dd {
             return e;
         }
 
-        mEdge makeiSWAPDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1, std::size_t start = 0) {
+        mEdge makeiSWAPDD(const QubitCount n, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
+            return makeTwoQubitGateDD(iSWAPmat, n, target0, target1, start);
+        }
+        mEdge makeiSWAPDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
             mEdge e = makeGateDD(Smat, n, controls, target1, start);              // S q[1]
             e       = multiply(e, makeGateDD(Smat, n, controls, target0, start)); // S q[0]
             e       = multiply(e, makeGateDD(Hmat, n, controls, target0, start)); // H q[0]
@@ -669,7 +672,10 @@ namespace dd {
             return e;
         }
 
-        mEdge makeiSWAPinvDD(QubitCount n, const Controls& controls, Qubit target0, Qubit target1, std::size_t start = 0) {
+        mEdge makeiSWAPinvDD(const QubitCount n, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
+            return makeTwoQubitGateDD(iSWAPinvmat, n, target0, target1, start);
+        }
+        mEdge makeiSWAPinvDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
             mEdge e = makeGateDD(Hmat, n, controls, target1, start); // H q[1]
             auto  c = controls;
             c.insert(Control{target1});
@@ -680,6 +686,126 @@ namespace dd {
             e = multiply(e, makeGateDD(Hmat, n, controls, target0, start));    // H q[0]
             e = multiply(e, makeGateDD(Sdagmat, n, controls, target0, start)); // Sdag q[0]
             e = multiply(e, makeGateDD(Sdagmat, n, controls, target1, start)); // Sdag q[1]
+            return e;
+        }
+
+        mEdge makeDCXDD(const QubitCount n, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
+            return makeTwoQubitGateDD(DCXmat, n, target0, target1, start);
+        }
+        mEdge makeDCXDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
+            auto c = controls;
+            c.insert(Control{target0});
+            mEdge e = makeGateDD(Xmat, n, c, target1, start);
+            c.erase(Control{target0});
+            c.insert(Control{target1});
+            e = multiply(e, makeGateDD(Xmat, n, c, target0, start));
+            return e;
+        }
+
+        mEdge makeRZZDD(const QubitCount n, const Qubit target0, const Qubit target1, const fp theta, const std::size_t start = 0) {
+            return makeTwoQubitGateDD(RZZmat(theta), n, target0, target1, start);
+        }
+        mEdge makeRZZDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const fp theta, const std::size_t start = 0) {
+            auto c = controls;
+            c.insert(Control{target0});
+            auto e = makeGateDD(Xmat, n, c, target1, start);
+            c.erase(Control{target0});
+            e = multiply(e, makeGateDD(RZmat(theta), n, c, target1, start));
+            c.insert(Control{target0});
+            e = multiply(e, makeGateDD(Xmat, n, c, target1, start));
+            return e;
+        }
+
+        mEdge makeRYYDD(const QubitCount n, const Qubit target0, const Qubit target1, const fp theta, const std::size_t start = 0) {
+            return makeTwoQubitGateDD(RYYmat(theta), n, target0, target1, start);
+        }
+        mEdge makeRYYDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const fp theta, const std::size_t start = 0) {
+            // no controls are necessary on the RX gates since they cancel if the controls are 0.
+            auto e = makeGateDD(RXmat(PI_2), n, Controls{}, target0, start);
+            e      = multiply(e, makeGateDD(RXmat(PI_2), n, Controls{}, target1, start));
+            e      = multiply(e, makeRZZDD(n, controls, target0, target1, theta, start));
+            e      = multiply(e, makeGateDD(RXmat(-PI_2), n, Controls{}, target1, start));
+            e      = multiply(e, makeGateDD(RXmat(-PI_2), n, Controls{}, target0, start));
+            return e;
+        }
+
+        mEdge makeRXXDD(const QubitCount n, const Qubit target0, const Qubit target1, const fp theta, const std::size_t start = 0) {
+            return makeTwoQubitGateDD(RXXmat(theta), n, target0, target1, start);
+        }
+        mEdge makeRXXDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const fp theta, const std::size_t start = 0) {
+            // no controls are necessary on the H gates since they cancel if the controls are 0.
+            auto e = makeGateDD(Hmat, n, Controls{}, target0, start);
+            e      = multiply(e, makeGateDD(Hmat, n, Controls{}, target1, start));
+            e      = multiply(e, makeRZZDD(n, controls, target0, target1, theta, start));
+            e      = multiply(e, makeGateDD(Hmat, n, Controls{}, target1, start));
+            e      = multiply(e, makeGateDD(Hmat, n, Controls{}, target0, start));
+            return e;
+        }
+
+        mEdge makeRZXDD(const QubitCount n, const Qubit target0, const Qubit target1, const fp theta, const std::size_t start = 0) {
+            return makeTwoQubitGateDD(RZXmat(theta), n, target0, target1, start);
+        }
+        mEdge makeRZXDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const fp theta, const std::size_t start = 0) {
+            // no controls are necessary on the H gates since they cancel if the controls are 0.
+            auto e = makeGateDD(Hmat, n, Controls{}, target1, start);
+            e      = multiply(e, makeRZZDD(n, controls, target0, target1, theta, start));
+            e      = multiply(e, makeGateDD(Hmat, n, Controls{}, target1, start));
+            return e;
+        }
+
+        mEdge makeECRDD(const QubitCount n, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
+            return makeTwoQubitGateDD(ECRmat, n, target0, target1, start);
+        }
+        mEdge makeECRDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const std::size_t start = 0) {
+            auto e = makeRZXDD(n, controls, target0, target1, -PI_4, start);
+            e      = multiply(e, makeGateDD(Xmat, n, controls, target0, start));
+            e      = multiply(e, makeRZXDD(n, controls, target0, target1, PI_4, start));
+            return e;
+        }
+
+        mEdge makeXXMinusYYDD(const QubitCount n, const Qubit target0, const Qubit target1, const fp theta, const fp beta = 0., const std::size_t start = 0) {
+            return makeTwoQubitGateDD(XXMinusYYmat(theta, beta), n, target0, target1, start);
+        }
+        mEdge makeXXMinusYYDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const fp theta, const fp beta = 0., const std::size_t start = 0) {
+            auto e = makeGateDD(RZmat(-beta), n, Controls{}, target1, start);
+            e      = multiply(e, makeGateDD(RZmat(-PI_2), n, Controls{}, target0, start));
+            e      = multiply(e, makeGateDD(SXmat, n, Controls{}, target0, start));
+            e      = multiply(e, makeGateDD(RZmat(PI_2), n, Controls{}, target0, start));
+            e      = multiply(e, makeGateDD(Smat, n, Controls{}, target1, start));
+            e      = multiply(e, makeGateDD(Xmat, n, Control{target0}, target1, start));
+            // only the following two gates need to be controlled by the controls since the other gates cancel if the controls are 0.
+            e = multiply(e, makeGateDD(RYmat(-theta / 2.), n, controls, target0, start));
+            e = multiply(e, makeGateDD(RYmat(theta / 2.), n, controls, target1, start));
+
+            e = multiply(e, makeGateDD(Xmat, n, Control{target0}, target1, start));
+            e = multiply(e, makeGateDD(Sdagmat, n, Controls{}, target1, start));
+            e = multiply(e, makeGateDD(RZmat(-PI_2), n, Controls{}, target0, start));
+            e = multiply(e, makeGateDD(SXdagmat, n, Controls{}, target0, start));
+            e = multiply(e, makeGateDD(RZmat(PI_2), n, Controls{}, target0, start));
+            e = multiply(e, makeGateDD(RZmat(beta), n, Controls{}, target1, start));
+            return e;
+        }
+
+        mEdge makeXXPlusYYDD(const QubitCount n, const Qubit target0, const Qubit target1, const fp theta, const fp beta = 0., const std::size_t start = 0) {
+            return makeTwoQubitGateDD(XXPlusYYmat(theta, beta), n, target0, target1, start);
+        }
+        mEdge makeXXPlusYYDD(const QubitCount n, const Controls& controls, const Qubit target0, const Qubit target1, const fp theta, const fp beta = 0., const std::size_t start = 0) {
+            auto e = makeGateDD(RZmat(beta), n, Controls{}, target1, start);
+            e      = multiply(e, makeGateDD(RZmat(-PI_2), n, Controls{}, target0, start));
+            e      = multiply(e, makeGateDD(SXmat, n, Controls{}, target0, start));
+            e      = multiply(e, makeGateDD(RZmat(PI_2), n, Controls{}, target0, start));
+            e      = multiply(e, makeGateDD(Smat, n, Controls{}, target1, start));
+            e      = multiply(e, makeGateDD(Xmat, n, Control{target0}, target1, start));
+            // only the following two gates need to be controlled by the controls since the other gates cancel if the controls are 0.
+            e = multiply(e, makeGateDD(RYmat(theta / 2.), n, controls, target0, start));
+            e = multiply(e, makeGateDD(RYmat(theta / 2.), n, controls, target1, start));
+
+            e = multiply(e, makeGateDD(Xmat, n, Control{target0}, target1, start));
+            e = multiply(e, makeGateDD(Sdagmat, n, Controls{}, target1, start));
+            e = multiply(e, makeGateDD(RZmat(-PI_2), n, Controls{}, target0, start));
+            e = multiply(e, makeGateDD(SXdagmat, n, Controls{}, target0, start));
+            e = multiply(e, makeGateDD(RZmat(PI_2), n, Controls{}, target0, start));
+            e = multiply(e, makeGateDD(RZmat(-beta), n, Controls{}, target1, start));
             return e;
         }
 
