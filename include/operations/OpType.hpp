@@ -38,6 +38,14 @@ namespace qc {
         iSWAP, // NOLINT (readability-identifier-naming)
         Peres,
         Peresdag,
+        DCX,
+        ECR,
+        RXX,
+        RYY,
+        RZZ,
+        RZX,
+        XXminusYY,
+        XXplusYY,
         // Compound Operation
         Compound,
         // Non Unitary Operations
@@ -84,6 +92,14 @@ namespace qc {
             case iSWAP: return "iswap";
             case Peres: return "peres";
             case Peresdag: return "peresdg";
+            case DCX: return "dcx";
+            case ECR: return "ecr";
+            case RXX: return "rxx";
+            case RYY: return "ryy";
+            case RZZ: return "rzz";
+            case RZX: return "rzx";
+            case XXminusYY: return "xx_minus_yy";
+            case XXplusYY: return "xx_plus_yy";
             case Compound: return "compound";
             case Measure: return "measure";
             case Reset: return "reset";
@@ -170,28 +186,49 @@ namespace qc {
         if (opType == "peresdg" || opType == "23") {
             return OpType::Peresdag;
         }
-        if (opType == "compound" || opType == "24") {
+        if (opType == "dcx" || opType == "24") {
+            return OpType::DCX;
+        }
+        if (opType == "ecr" || opType == "25") {
+            return OpType::ECR;
+        }
+        if (opType == "rxx" || opType == "26") {
+            return OpType::RXX;
+        }
+        if (opType == "ryy" || opType == "27") {
+            return OpType::RYY;
+        }
+        if (opType == "rzz" || opType == "28") {
+            return OpType::RZZ;
+        }
+        if (opType == "rzx" || opType == "29") {
+            return OpType::RZX;
+        }
+        if (opType == "xx_minus_yy" || opType == "30") {
+            return OpType::XXminusYY;
+        }
+        if (opType == "xx_plus_yy" || opType == "31") {
+            return OpType::XXplusYY;
+        }
+        if (opType == "compound" || opType == "32") {
             return OpType::Compound;
         }
-        if (opType == "measure" || opType == "25") {
+        if (opType == "measure" || opType == "33") {
             return OpType::Measure;
         }
-        if (opType == "reset" || opType == "26") {
+        if (opType == "reset" || opType == "34") {
             return OpType::Reset;
         }
-        if (opType == "snapshot" || opType == "27") {
+        if (opType == "snapshot" || opType == "35") {
             return OpType::Snapshot;
         }
-        if (opType == "show probabilities" || opType == "28") {
+        if (opType == "show probabilities" || opType == "36") {
             return OpType::ShowProbabilities;
         }
-        if (opType == "barrier" || opType == "29") {
+        if (opType == "barrier" || opType == "37") {
             return OpType::Barrier;
         }
-        if (opType == "teleportation" || opType == "30") {
-            return OpType::Teleportation;
-        }
-        if (opType == "classic controlled" || opType == "31") {
+        if (opType == "classic controlled" || opType == "38") {
             return OpType::ClassicControlled;
         }
         throw std::invalid_argument("Unknown operation type: " + opType);
