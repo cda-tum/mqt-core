@@ -83,6 +83,106 @@ namespace dd {
                            complex_zero,
                            {std::cos(lambda / 2.), std::sin(lambda / 2.)}}};
     }
+
+    using TwoQubitGateMatrix = std::array<std::array<ComplexValue, NEDGE>, NEDGE>;
+    constexpr TwoQubitGateMatrix CXmat{{{complex_one, complex_zero, complex_zero, complex_zero},
+                                        {complex_zero, complex_one, complex_zero, complex_zero},
+                                        {complex_zero, complex_zero, complex_zero, complex_one},
+                                        {complex_zero, complex_zero, complex_one, complex_zero}}};
+
+    constexpr TwoQubitGateMatrix CZmat{{{complex_one, complex_zero, complex_zero, complex_zero},
+                                        {complex_zero, complex_one, complex_zero, complex_zero},
+                                        {complex_zero, complex_zero, complex_one, complex_zero},
+                                        {complex_zero, complex_zero, complex_zero, complex_mone}}};
+
+    constexpr TwoQubitGateMatrix SWAPmat{{{complex_one, complex_zero, complex_zero, complex_zero},
+                                          {complex_zero, complex_zero, complex_one, complex_zero},
+                                          {complex_zero, complex_one, complex_zero, complex_zero},
+                                          {complex_zero, complex_zero, complex_zero, complex_one}}};
+
+    constexpr TwoQubitGateMatrix iSWAPmat{{{complex_one, complex_zero, complex_zero, complex_zero},
+                                           {complex_zero, complex_zero, complex_i, complex_zero},
+                                           {complex_zero, complex_i, complex_zero, complex_zero},
+                                           {complex_zero, complex_zero, complex_zero, complex_one}}};
+
+    constexpr TwoQubitGateMatrix iSWAPinvmat{{{complex_one, complex_zero, complex_zero, complex_zero},
+                                              {complex_zero, complex_zero, complex_mi, complex_zero},
+                                              {complex_zero, complex_mi, complex_zero, complex_zero},
+                                              {complex_zero, complex_zero, complex_zero, complex_one}}};
+
+    constexpr TwoQubitGateMatrix ECRmat{{{complex_zero, complex_zero, complex_SQRT2_2, complex_iSQRT2_2},
+                                         {complex_zero, complex_zero, complex_iSQRT2_2, complex_SQRT2_2},
+                                         {complex_SQRT2_2, complex_miSQRT2_2, complex_zero, complex_zero},
+                                         {complex_miSQRT2_2, complex_SQRT2_2, complex_zero, complex_zero}}};
+
+    constexpr TwoQubitGateMatrix DCXmat{{{complex_one, complex_zero, complex_zero, complex_zero},
+                                         {complex_zero, complex_zero, complex_zero, complex_one},
+                                         {complex_zero, complex_one, complex_zero, complex_zero},
+                                         {complex_zero, complex_zero, complex_one, complex_zero}}};
+
+    inline TwoQubitGateMatrix RXXmat(const fp theta) {
+        const auto cosTheta = std::cos(theta / 2.);
+        const auto sinTheta = std::sin(theta / 2.);
+
+        return TwoQubitGateMatrix{{{ComplexValue{cosTheta, 0.}, complex_zero, complex_zero, ComplexValue{0., -sinTheta}},
+                                   {complex_zero, ComplexValue{cosTheta, 0.}, ComplexValue{0., -sinTheta}, complex_zero},
+                                   {complex_zero, ComplexValue{0., -sinTheta}, ComplexValue{cosTheta, 0.}, complex_zero},
+                                   {ComplexValue{0., -sinTheta}, complex_zero, complex_zero, ComplexValue{cosTheta, 0.}}}};
+    }
+
+    inline TwoQubitGateMatrix RYYmat(const fp theta) {
+        const auto cosTheta = std::cos(theta / 2.);
+        const auto sinTheta = std::sin(theta / 2.);
+
+        return TwoQubitGateMatrix{{{ComplexValue{cosTheta, 0.}, complex_zero, complex_zero, ComplexValue{0., sinTheta}},
+                                   {complex_zero, ComplexValue{cosTheta, 0.}, ComplexValue{0., -sinTheta}, complex_zero},
+                                   {complex_zero, ComplexValue{0., -sinTheta}, ComplexValue{cosTheta, 0.}, complex_zero},
+                                   {ComplexValue{0., sinTheta}, complex_zero, complex_zero, ComplexValue{cosTheta, 0.}}}};
+    }
+
+    inline TwoQubitGateMatrix RZZmat(const fp theta) {
+        const auto cosTheta = std::cos(theta / 2.);
+        const auto sinTheta = std::sin(theta / 2.);
+
+        return TwoQubitGateMatrix{{{ComplexValue{cosTheta, -sinTheta}, complex_zero, complex_zero, complex_zero},
+                                   {complex_zero, ComplexValue{cosTheta, sinTheta}, complex_zero, complex_zero},
+                                   {complex_zero, complex_zero, ComplexValue{cosTheta, sinTheta}, complex_zero},
+                                   {complex_zero, complex_zero, complex_zero, ComplexValue{cosTheta, -sinTheta}}}};
+    }
+
+    inline TwoQubitGateMatrix RZXmat(const fp theta) {
+        const auto cosTheta = std::cos(theta / 2.);
+        const auto sinTheta = std::sin(theta / 2.);
+
+        return TwoQubitGateMatrix{{{ComplexValue{cosTheta, 0.}, ComplexValue{0., -sinTheta}, complex_zero, complex_zero},
+                                   {ComplexValue{0., -sinTheta}, ComplexValue{cosTheta, 0.}, complex_zero, complex_zero},
+                                   {complex_zero, complex_zero, ComplexValue{cosTheta, 0.}, ComplexValue{0., sinTheta}},
+                                   {complex_zero, complex_zero, ComplexValue{0., sinTheta}, ComplexValue{cosTheta, 0.}}}};
+    }
+
+    inline TwoQubitGateMatrix XXMinusYYmat(const fp theta, const fp beta = 0.) {
+        const auto cosTheta = std::cos(theta / 2.);
+        const auto sinTheta = std::sin(theta / 2.);
+        const auto cosBeta  = std::cos(beta);
+        const auto sinBeta  = std::sin(beta);
+
+        return TwoQubitGateMatrix{{{ComplexValue{cosTheta, 0.}, complex_zero, complex_zero, ComplexValue{sinBeta * sinTheta, -cosBeta * sinTheta}},
+                                   {complex_zero, complex_one, complex_zero, complex_zero},
+                                   {complex_zero, complex_zero, complex_one, complex_zero},
+                                   {ComplexValue{-sinBeta * sinTheta, -cosBeta * sinTheta}, complex_zero, complex_zero, ComplexValue{cosTheta, 0.}}}};
+    }
+
+    inline TwoQubitGateMatrix XXPlusYYmat(const fp theta, const fp beta = 0.) {
+        const auto cosTheta = std::cos(theta / 2.);
+        const auto sinTheta = std::sin(theta / 2.);
+        const auto cosBeta  = std::cos(beta);
+        const auto sinBeta  = std::sin(beta);
+
+        return TwoQubitGateMatrix{{{complex_one, complex_zero, complex_zero, complex_zero},
+                                   {complex_zero, ComplexValue{cosTheta, 0.}, ComplexValue{sinBeta * sinTheta, -cosBeta * sinTheta}, complex_zero},
+                                   {complex_zero, ComplexValue{-sinBeta * sinTheta, -cosBeta * sinTheta}, ComplexValue{cosTheta, 0.}, complex_zero},
+                                   {complex_zero, complex_zero, complex_zero, complex_one}}};
+    }
     // NOLINTEND(readability-identifier-naming)
 } // namespace dd
 #endif //DD_PACKAGE_GATEMATRIXDEFINITIONS_H
