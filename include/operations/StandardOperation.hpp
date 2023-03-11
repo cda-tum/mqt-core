@@ -32,7 +32,6 @@ namespace qc {
         void checkUgate();
         void setup(std::size_t nq, fp par0, fp par1, fp par2, Qubit startingQubit = 0);
 
-        void dumpOpenQASMSwap(std::ostream& of, const RegisterNames& qreg) const;
         void dumpOpenQASMiSwap(std::ostream& of, const RegisterNames& qreg) const;
         void dumpOpenQASMTeleportation(std::ostream& of, const RegisterNames& qreg) const;
 

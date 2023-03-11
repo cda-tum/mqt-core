@@ -297,8 +297,8 @@ namespace qc {
                 op << "rz(" << parameter[0] << ")";
                 break;
             case SWAP:
-                dumpOpenQASMSwap(of, qreg);
-                return;
+                op << "swap";
+                break;
             case iSWAP:
                 dumpOpenQASMiSwap(of, qreg);
                 return;
@@ -351,26 +351,6 @@ namespace qc {
             of << " " << qreg[target].second << ";\n";
         }
         // apply X operations to negate the respective controls again
-        for (const auto& c: controls) {
-            if (c.type == Control::Type::Neg) {
-                of << "x " << qreg[c.qubit].second << ";\n";
-            }
-        }
-    }
-
-    void StandardOperation::dumpOpenQASMSwap(std::ostream& of, const RegisterNames& qreg) const {
-        for (const auto& c: controls) {
-            if (c.type == Control::Type::Neg) {
-                of << "x " << qreg[c.qubit].second << ";\n";
-            }
-        }
-
-        of << std::string(controls.size(), 'c') << "swap";
-        for (const auto& c: controls) {
-            of << " " << qreg[c.qubit].second << ",";
-        }
-        of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";\n";
-
         for (const auto& c: controls) {
             if (c.type == Control::Type::Neg) {
                 of << "x " << qreg[c.qubit].second << ";\n";
