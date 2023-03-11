@@ -320,47 +320,33 @@ namespace qasm {
             // contains all essential gate definitions
             // parser can also read multiple-control versions of each gate
             auto ss = std::make_shared<std::stringstream>();
-            *ss << "gate u(theta,phi,lambda) q { U(theta,phi,lambda) q; }" << std::endl;
-            *ss << "gate u3(theta,phi,lambda) q { U(theta,phi,lambda) q; }" << std::endl;
-            *ss << "gate u2(phi,lambda) q { U(pi/2,phi,lambda) q; }" << std::endl;
-            *ss << "gate u1(lambda) q { U(0,0,lambda) q; }" << std::endl;
-            *ss << "gate p(lambda) q { U(0,0,lambda) q; }" << std::endl;
-            *ss << "gate cx c, t { CX c, t; }" << std::endl;
-            *ss << "gate id t { U(0,0,0) t; }" << std::endl;
-            *ss << "gate x t { u3(pi,0,pi) t; }" << std::endl;
-            *ss << "gate y t { u3(pi,pi/2,pi/2) t; }" << std::endl;
-            *ss << "gate z t { u1(pi) t; }" << std::endl;
-            *ss << "gate h t { u2(0,pi) t; }" << std::endl;
-            *ss << "gate s t { u1(pi/2) t; }" << std::endl;
-            *ss << "gate sdg t { u1(-pi/2) t; }" << std::endl;
-            *ss << "gate t t { u1(pi/4) t; }" << std::endl;
-            *ss << "gate tdg t { u1(-pi/4) t; }" << std::endl;
-            *ss << "gate rx(theta) t { u3(theta,-pi/2,pi/2) t; }" << std::endl;
-            *ss << "gate ry(theta) t { u3(theta,0,0) t; }" << std::endl;
-            *ss << "gate rz(phi) t { u1(phi) t; }" << std::endl;
-            *ss << "gate sx t { sdg t; h t; sdg t; }" << std::endl;
-            *ss << "gate sxdg t { s t; h t; s t; }" << std::endl;
-            *ss << "gate rxx(theta) a, b { "
-                   "u3(pi/2, theta, 0) a; h b; "
-                   "cx a,b; u1(-theta) b; "
-                   "cx a,b; h b; "
-                   "u2(-pi, pi-theta) a; "
-                   "}"
-                << std::endl;
-            *ss << "gate rzz(theta) a, b { "
-                   "cx a,b; "
-                   "u1(theta) b; "
-                   "cx a,b; "
-                   "}"
-                << std::endl;
+            *ss << "gate u(theta,phi,lambda) q { U(theta,phi,lambda) q; }\n";
+            *ss << "gate u3(theta,phi,lambda) q { U(theta,phi,lambda) q; }\n";
+            *ss << "gate u2(phi,lambda) q { U(pi/2,phi,lambda) q; }\n";
+            *ss << "gate u1(lambda) q { U(0,0,lambda) q; }\n";
+            *ss << "gate p(lambda) q { U(0,0,lambda) q; }\n";
+            *ss << "gate cx c, t { CX c, t; }\n";
+            *ss << "gate id t { U(0,0,0) t; }\n";
+            *ss << "gate x t { u3(pi,0,pi) t; }\n";
+            *ss << "gate y t { u3(pi,pi/2,pi/2) t; }\n";
+            *ss << "gate z t { u1(pi) t; }\n";
+            *ss << "gate h t { u2(0,pi) t; }\n";
+            *ss << "gate s t { u1(pi/2) t; }\n";
+            *ss << "gate sdg t { u1(-pi/2) t; }\n";
+            *ss << "gate t t { u1(pi/4) t; }\n";
+            *ss << "gate tdg t { u1(-pi/4) t; }\n";
+            *ss << "gate rx(theta) t { u3(theta,-pi/2,pi/2) t; }\n";
+            *ss << "gate ry(theta) t { u3(theta,0,0) t; }\n";
+            *ss << "gate rz(phi) t { u1(phi) t; }\n";
+            *ss << "gate sx t { sdg t; h t; sdg t; }\n";
+            *ss << "gate sxdg t { s t; h t; s t; }\n";
             *ss << "gate rccx a, b, c { "
                    "u2(0, pi) c; u1(pi/4) c; "
                    "cx b, c; u1(-pi/4) c; "
                    "cx a, c; u1(pi/4) c; "
                    "cx b, c; u1(-pi/4) c; "
                    "u2(0, pi) c; "
-                   "}"
-                << std::endl;
+                   "}\n";
             *ss << "gate rc3x a,b,c,d { "
                    "u2(0,pi) d; u1(pi/4) d; "
                    "cx c,d; u1(-pi/4) d; u2(0,pi) d; "
@@ -371,8 +357,7 @@ namespace qasm {
                    "u2(0,pi) d; u1(pi/4) d; "
                    "cx c,d; u1(-pi/4) d; "
                    "u2(0,pi) d; "
-                   "}"
-                << std::endl;
+                   "}\n";
             *ss << "gate c3x a,b,c,d { "
                    "h d; cu1(-pi/4) a,d; h d; "
                    "cx a,b; "
@@ -387,8 +372,7 @@ namespace qasm {
                    "h d; cu1(pi/4) c,d; h d; "
                    "cx a,c; "
                    "h d; cu1(-pi/4) c,d; h d; "
-                   "}"
-                << std::endl;
+                   "}\n";
             *ss << "gate c3sqrtx a,b,c,d { "
                    "h d; cu1(-pi/8) a,d; h d; "
                    "cx a,b; "
@@ -403,24 +387,59 @@ namespace qasm {
                    "h d; cu1(pi/8) c,d; h d; "
                    "cx a,c; "
                    "h d; cu1(-pi/8) c,d; h d; "
-                   "}"
-                << std::endl;
+                   "}\n";
             *ss << "gate c4x a,b,c,d,e { "
                    "h e; cu1(-pi/2) d,e; h e; "
                    "c3x a,b,c,d; "
                    "h e; cu1(pi/2) d,e; h e; "
                    "c3x a,b,c,d; "
                    "c3sqrtx a,b,c,e; "
-                   "}"
-                << std::endl;
+                   "}\n";
             *ss << "gate iswap a,b { "
                    "s a; s b; "
                    "h a; "
                    "cx a,b; "
                    "cx b,a; "
                    "h b; "
-                   "}"
-                << std::endl;
+                   "}\n";
+            *ss << "gate rzz(theta) a, b { cx a,b; rz(theta) b; cx a,b; }\n";
+            *ss << "gate ryy(theta) a, b { rx(pi/2) a; rx(pi/2) b; rzz(theta) a,b; rx(-pi/2) a; rx(-pi/2) b; }\n";
+            *ss << "gate rxx(theta) a, b { h a; h b; rzz(theta) a,b; h b; h a; }\n";
+            *ss << "gate rzx(theta) a, b { h b; rzz(theta) a,b; h b; }\n";
+            *ss << "gate ecr a, b { rzx(pi/4) a, b; x a; rzx(-pi/4) a, b;}\n";
+            *ss << "gate dcx a, b { cx a, b; cx b, a; }\n";
+            *ss << "gate xx_minus_yy(theta, beta) a, b { "
+                   "rz(-beta) b; "
+                   "rz(-pi/2) a; "
+                   "sx a; "
+                   "rz(pi/2) a; "
+                   "s b; "
+                   "cx a, b; "
+                   "ry(theta/2) a; "
+                   "ry(-theta/2) b; "
+                   "cx a, b; "
+                   "sdg b; "
+                   "rz(-pi/2) a; "
+                   "sxdg a; "
+                   "rz(pi/2) a; "
+                   "rz(beta) b; "
+                   "}\n";
+            *ss << "gate xx_plus_yy(theta, beta) a, b { "
+                   "rz(beta) b; "
+                   "rz(-pi/2) a; "
+                   "sx a; "
+                   "rz(pi/2) a; "
+                   "s b; "
+                   "cx a, b; "
+                   "ry(theta/2) a; "
+                   "ry(theta/2) b; "
+                   "cx a, b; "
+                   "sdg b; "
+                   "rz(-pi/2) a; "
+                   "sxdg a; "
+                   "rz(pi/2) a; "
+                   "rz(-beta) b; "
+                   "}\n";
 
             streams.push(ss);
             lines.emplace(ch, line, col);
