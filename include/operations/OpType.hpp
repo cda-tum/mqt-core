@@ -113,7 +113,7 @@ namespace qc {
         }
     }
 
-    bool isTwoQubitGate(const OpType& opType) {
+    inline bool isTwoQubitGate(const OpType& opType) {
         switch (opType) {
             case SWAP:
             case iSWAP:
