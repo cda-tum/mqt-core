@@ -162,9 +162,6 @@ namespace qc {
             return isLastOperationOnQubit(opIt, end);
         }
         void checkQubitRange(Qubit qubit) const;
-        void checkQubitRange(Qubit qubit0, Qubit qubit1) const;
-        void checkQubitRange(Qubit qubit, const Control& control) const;
-        void checkQubitRange(Qubit qubit0, Qubit qubit1, const Control& control) const;
         void checkQubitRange(Qubit qubit, const Controls& controls) const;
         void checkQubitRange(Qubit qubit0, Qubit qubit1, const Controls& controls) const;
         void checkQubitRange(const std::vector<Qubit>& qubits) const;

@@ -948,18 +948,6 @@ namespace qc {
             throw QFRException("Qubit index out of range: " + std::to_string(qubit));
         }
     }
-    void QuantumComputation::checkQubitRange(const Qubit qubit0, const Qubit qubit1) const {
-        checkQubitRange(qubit0);
-        checkQubitRange(qubit1);
-    }
-    void QuantumComputation::checkQubitRange(const Qubit qubit, const Control& control) const {
-        checkQubitRange(qubit);
-        checkQubitRange(control.qubit);
-    }
-    void QuantumComputation::checkQubitRange(const Qubit qubit0, const Qubit qubit1, const Control& control) const {
-        checkQubitRange(qubit0, qubit1);
-        checkQubitRange(control.qubit);
-    }
     void QuantumComputation::checkQubitRange(const Qubit qubit, const Controls& controls) const {
         checkQubitRange(qubit);
         for (const auto& [ctrl, _]: controls) {
