@@ -296,6 +296,30 @@ namespace qc {
             case RZ:
                 op << "rz(" << parameter[0] << ")";
                 break;
+            case DCX:
+                op << "dcx";
+                break;
+            case ECR:
+                op << "ecr";
+                break;
+            case RXX:
+                op << "rxx(" << parameter[0] << ")";
+                break;
+            case RYY:
+                op << "ryy(" << parameter[0] << ")";
+                break;
+            case RZZ:
+                op << "rzz(" << parameter[0] << ")";
+                break;
+            case RZX:
+                op << "rzx(" << parameter[0] << ")";
+                break;
+            case XXminusYY:
+                op << "xx_minus_yy(" << parameter[0] << ", " << parameter[1] << ")";
+                break;
+            case XXplusYY:
+                op << "xx_plus_yy(" << parameter[0] << ", " << parameter[1] << ")";
+                break;
             case SWAP:
                 op << "swap";
                 break;
