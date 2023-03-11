@@ -710,49 +710,51 @@ namespace qc {
             emplace_back<SymbolicOperation>(getNqubits(), controls, target0, target1, qc::RZX, theta);
         }
 
-        void xx_minus_yy(const Qubit target0, const Qubit target1, const fp theta, const fp beta) { // NOLINT(readability-identifier-naming)
+        // NOLINTBEGIN(readability-identifier-naming)
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const fp theta, const fp beta) {
             xx_minus_yy(target0, target1, Controls{}, theta, beta);
         }
-        void xx_minus_yy(const Qubit target0, const Qubit target1, const Control& control, const fp theta, const fp beta) { // NOLINT(readability-identifier-naming)
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const Control& control, const fp theta, const fp beta) {
             xx_minus_yy(target0, target1, Controls{control}, theta, beta);
         }
-        void xx_minus_yy(const Qubit target0, const Qubit target1, const Controls& controls, const fp theta, const fp beta) { // NOLINT(readability-identifier-naming)
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const Controls& controls, const fp theta, const fp beta) {
             checkQubitRange(target0, target1, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::XXminusYY, theta, beta);
         }
-        void xx_minus_yy(const Qubit target0, const Qubit target1, const SymbolOrNumber& theta, const SymbolOrNumber& beta) { // NOLINT(readability-identifier-naming)
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const SymbolOrNumber& theta, const SymbolOrNumber& beta) {
             xx_minus_yy(target0, target1, Controls{}, theta, beta);
         }
-        void xx_minus_yy(const Qubit target0, const Qubit target1, const Control& control, const SymbolOrNumber& theta, const SymbolOrNumber& beta) { // NOLINT(readability-identifier-naming)
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const Control& control, const SymbolOrNumber& theta, const SymbolOrNumber& beta) {
             xx_minus_yy(target0, target1, Controls{control}, theta, beta);
         }
-        void xx_minus_yy(const Qubit target0, const Qubit target1, const Controls& controls, const SymbolOrNumber& theta, const SymbolOrNumber& beta) { // NOLINT(readability-identifier-naming)
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const Controls& controls, const SymbolOrNumber& theta, const SymbolOrNumber& beta) {
             checkQubitRange(target0, target1, controls);
             addVariables(theta, beta);
             emplace_back<SymbolicOperation>(getNqubits(), controls, target0, target1, qc::XXminusYY, theta, beta);
         }
 
-        void xx_plus_yy(const Qubit target0, const Qubit target1, const fp theta, const fp beta) { // NOLINT(readability-identifier-naming)
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const fp theta, const fp beta) {
             xx_plus_yy(target0, target1, Controls{}, theta, beta);
         }
-        void xx_plus_yy(const Qubit target0, const Qubit target1, const Control& control, const fp theta, const fp beta) { // NOLINT(readability-identifier-naming)
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const Control& control, const fp theta, const fp beta) {
             xx_plus_yy(target0, target1, Controls{control}, theta, beta);
         }
-        void xx_plus_yy(const Qubit target0, const Qubit target1, const Controls& controls, const fp theta, const fp beta) { // NOLINT(readability-identifier-naming)
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const Controls& controls, const fp theta, const fp beta) {
             checkQubitRange(target0, target1, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::XXplusYY, theta, beta);
         }
-        void xx_plus_yy(const Qubit target0, const Qubit target1, const SymbolOrNumber& theta, const SymbolOrNumber& beta) { // NOLINT(readability-identifier-naming)
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const SymbolOrNumber& theta, const SymbolOrNumber& beta) {
             xx_plus_yy(target0, target1, Controls{}, theta, beta);
         }
-        void xx_plus_yy(const Qubit target0, const Qubit target1, const Control& control, const SymbolOrNumber& theta, const SymbolOrNumber& beta) { // NOLINT(readability-identifier-naming)
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const Control& control, const SymbolOrNumber& theta, const SymbolOrNumber& beta) {
             xx_plus_yy(target0, target1, Controls{control}, theta, beta);
         }
-        void xx_plus_yy(const Qubit target0, const Qubit target1, const Controls& controls, const SymbolOrNumber& theta, const SymbolOrNumber& beta) { // NOLINT(readability-identifier-naming)
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const Controls& controls, const SymbolOrNumber& theta, const SymbolOrNumber& beta) {
             checkQubitRange(target0, target1, controls);
             addVariables(theta, beta);
             emplace_back<SymbolicOperation>(getNqubits(), controls, target0, target1, qc::XXplusYY, theta, beta);
         }
+        // NOLINTEND(readability-identifier-naming)
 
         void measure(Qubit qubit, std::size_t clbit) {
             checkQubitRange(qubit);
