@@ -101,7 +101,7 @@ namespace qc::qiskit {
 
     protected:
         static void emplaceOperation(QuantumComputation& qc, const py::object& instruction, const py::list& qargs, const py::list& cargs, const py::list& params, const py::dict& qubitMap, const py::dict& clbitMap) {
-            static const auto NATIVELY_SUPPORTED_GATES = std::set<std::string>{"i", "id", "iden", "x", "y", "z", "h", "s", "sdg", "t", "tdg", "p", "u1", "rx", "ry", "rz", "u2", "u", "u3", "cx", "cy", "cz", "cp", "cu1", "ch", "crx", "cry", "crz", "cu3", "ccx", "swap", "cswap", "iswap", "sx", "sxdg", "csx", "mcx", "mcx_gray", "mcx_recursive", "mcx_vchain", "mcphase", "mcrx", "mcry", "mcrz"};
+            static const auto NATIVELY_SUPPORTED_GATES = std::set<std::string>{"i", "id", "iden", "x", "y", "z", "h", "s", "sdg", "t", "tdg", "p", "u1", "rx", "ry", "rz", "u2", "u", "u3", "cx", "cy", "cz", "cp", "cu1", "ch", "crx", "cry", "crz", "cu3", "ccx", "swap", "cswap", "iswap", "sx", "sxdg", "csx", "mcx", "mcx_gray", "mcx_recursive", "mcx_vchain", "mcphase", "mcrx", "mcry", "mcrz", "dcx", "ecr", "rxx", "ryy", "rzx", "rzz", "xx_minus_yy", "xx_plus_yy"};
 
             auto instructionName = instruction.attr("name").cast<std::string>();
             if (instructionName == "measure") {
@@ -162,6 +162,22 @@ namespace qc::qiskit {
                     addTwoTargetOperation(qc, SWAP, qargs, params, qubitMap);
                 } else if (instructionName == "iswap") {
                     addTwoTargetOperation(qc, iSWAP, qargs, params, qubitMap);
+                } else if (instructionName == "dcx") {
+                    addTwoTargetOperation(qc, DCX, qargs, params, qubitMap);
+                } else if (instructionName == "ecr") {
+                    addTwoTargetOperation(qc, ECR, qargs, params, qubitMap);
+                } else if (instructionName == "rxx") {
+                    addTwoTargetOperation(qc, RXX, qargs, params, qubitMap);
+                } else if (instructionName == "ryy") {
+                    addTwoTargetOperation(qc, RYY, qargs, params, qubitMap);
+                } else if (instructionName == "rzx") {
+                    addTwoTargetOperation(qc, RZX, qargs, params, qubitMap);
+                } else if (instructionName == "rzz") {
+                    addTwoTargetOperation(qc, RZZ, qargs, params, qubitMap);
+                } else if (instructionName == "xx_minus_yy") {
+                    addTwoTargetOperation(qc, XXminusYY, qargs, params, qubitMap);
+                } else if (instructionName == "xx_plus_yy") {
+                    addTwoTargetOperation(qc, XXplusYY, qargs, params, qubitMap);
                 } else if (instructionName == "mcx_recursive") {
                     if (qargs.size() <= 5) {
                         addOperation(qc, X, qargs, params, qubitMap);
