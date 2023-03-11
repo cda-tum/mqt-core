@@ -756,12 +756,12 @@ namespace qc {
         }
         // NOLINTEND(readability-identifier-naming)
 
-        void measure(Qubit qubit, std::size_t clbit) {
+        void measure(const Qubit qubit, const std::size_t clbit) {
             checkQubitRange(qubit);
             emplace_back<NonUnitaryOperation>(getNqubits(), qubit, clbit);
         }
 
-        void measure(Qubit qubit, const std::pair<std::string, Bit>& clbit) {
+        void measure(const Qubit qubit, const std::pair<std::string, Bit>& clbit) {
             checkQubitRange(qubit);
             if (const auto cRegister = cregs.find(clbit.first); cRegister != cregs.end()) {
                 if (clbit.second >= cRegister->second.second) {
@@ -781,7 +781,7 @@ namespace qc {
                                               classicalRegister);
         }
 
-        void reset(Qubit target) {
+        void reset(const Qubit target) {
             checkQubitRange(target);
             emplace_back<NonUnitaryOperation>(getNqubits(), std::vector<Qubit>{target}, qc::Reset);
         }
@@ -790,7 +790,7 @@ namespace qc {
             emplace_back<NonUnitaryOperation>(getNqubits(), targets, qc::Reset);
         }
 
-        void barrier(Qubit target) {
+        void barrier(const Qubit target) {
             checkQubitRange(target);
             emplace_back<NonUnitaryOperation>(getNqubits(), std::vector<Qubit>{target}, qc::Barrier);
         }
