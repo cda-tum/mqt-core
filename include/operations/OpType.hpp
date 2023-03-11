@@ -113,6 +113,26 @@ namespace qc {
         }
     }
 
+    bool isTwoQubitGate(const OpType& opType) {
+        switch (opType) {
+            case SWAP:
+            case iSWAP:
+            case Peres:
+            case Peresdag:
+            case DCX:
+            case ECR:
+            case RXX:
+            case RYY:
+            case RZZ:
+            case RZX:
+            case XXminusYY:
+            case XXplusYY:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     inline OpType opTypeFromString(const std::string& opType) {
         if (opType == "none" || opType == "0") {
             return OpType::None;
