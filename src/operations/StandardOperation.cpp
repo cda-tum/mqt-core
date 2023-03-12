@@ -223,6 +223,9 @@ namespace qc {
         op << std::string(controls.size(), 'c');
 
         switch (type) {
+            case GPhase:
+                op << "gphase(" << parameter.at(0) << ")";
+                break;
             case I:
                 op << "id";
                 break;

@@ -15,6 +15,7 @@ namespace qc {
     enum OpType : std::uint8_t {
         None,
         // Standard Operations
+        GPhase,
         I,
         H,
         X,
@@ -69,6 +70,7 @@ namespace qc {
     inline std::string toString(const OpType& opType) {
         switch (opType) {
             case None: return "none";
+            case GPhase: return "gphase";
             case I: return "i";
             case H: return "h";
             case X: return "x";
@@ -137,118 +139,121 @@ namespace qc {
         if (opType == "none" || opType == "0") {
             return OpType::None;
         }
-        if (opType == "i" || opType == "id" || opType == "1") {
+        if (opType == "gphase" || opType == "1") {
+            return OpType::GPhase;
+        }
+        if (opType == "i" || opType == "id" || opType == "2") {
             return OpType::I;
         }
-        if (opType == "h" || opType == "ch" || opType == "2") {
+        if (opType == "h" || opType == "ch" || opType == "3") {
             return OpType::H;
         }
-        if (opType == "x" || opType == "cx" || opType == "cnot" || opType == "3") {
+        if (opType == "x" || opType == "cx" || opType == "cnot" || opType == "4") {
             return OpType::X;
         }
-        if (opType == "y" || opType == "cy" || opType == "4") {
+        if (opType == "y" || opType == "cy" || opType == "5") {
             return OpType::Y;
         }
-        if (opType == "z" || opType == "cz" || opType == "5") {
+        if (opType == "z" || opType == "cz" || opType == "6") {
             return OpType::Z;
         }
-        if (opType == "s" || opType == "cs" || opType == "6") {
+        if (opType == "s" || opType == "cs" || opType == "7") {
             return OpType::S;
         }
-        if (opType == "sdg" || opType == "csdg" || opType == "7") {
+        if (opType == "sdg" || opType == "csdg" || opType == "8") {
             return OpType::Sdag;
         }
-        if (opType == "t" || opType == "ct" || opType == "8") {
+        if (opType == "t" || opType == "ct" || opType == "9") {
             return OpType::T;
         }
-        if (opType == "tdg" || opType == "ctdg" || opType == "9") {
+        if (opType == "tdg" || opType == "ctdg" || opType == "10") {
             return OpType::Tdag;
         }
-        if (opType == "v" || opType == "10") {
+        if (opType == "v" || opType == "11") {
             return OpType::V;
         }
-        if (opType == "vdg" || opType == "11") {
+        if (opType == "vdg" || opType == "12") {
             return OpType::Vdag;
         }
-        if (opType == "u3" || opType == "cu3" || opType == "u" || opType == "cu" || opType == "12") {
+        if (opType == "u3" || opType == "cu3" || opType == "u" || opType == "cu" || opType == "13") {
             return OpType::U3;
         }
-        if (opType == "u2" || opType == "cu2" || opType == "13") {
+        if (opType == "u2" || opType == "cu2" || opType == "14") {
             return OpType::U2;
         }
-        if (opType == "u1" || opType == "cu1" || opType == "p" || opType == "cp" || opType == "14") {
+        if (opType == "u1" || opType == "cu1" || opType == "p" || opType == "cp" || opType == "15") {
             return OpType::Phase;
         }
-        if (opType == "sx" || opType == "csx" || opType == "15") {
+        if (opType == "sx" || opType == "csx" || opType == "16") {
             return OpType::SX;
         }
-        if (opType == "sxdg" || opType == "csxdg" || opType == "16") {
+        if (opType == "sxdg" || opType == "csxdg" || opType == "17") {
             return OpType::SXdag;
         }
-        if (opType == "rx" || opType == "crx" || opType == "17") {
+        if (opType == "rx" || opType == "crx" || opType == "18") {
             return OpType::RX;
         }
-        if (opType == "ry" || opType == "cry" || opType == "18") {
+        if (opType == "ry" || opType == "cry" || opType == "19") {
             return OpType::RY;
         }
-        if (opType == "rz" || opType == "crz" || opType == "19") {
+        if (opType == "rz" || opType == "crz" || opType == "20") {
             return OpType::RZ;
         }
-        if (opType == "swap" || opType == "cswap" || opType == "20") {
+        if (opType == "swap" || opType == "cswap" || opType == "21") {
             return OpType::SWAP;
         }
-        if (opType == "iswap" || opType == "21") {
+        if (opType == "iswap" || opType == "22") {
             return OpType::iSWAP;
         }
-        if (opType == "peres" || opType == "22") {
+        if (opType == "peres" || opType == "23") {
             return OpType::Peres;
         }
-        if (opType == "peresdg" || opType == "23") {
+        if (opType == "peresdg" || opType == "24") {
             return OpType::Peresdag;
         }
-        if (opType == "dcx" || opType == "24") {
+        if (opType == "dcx" || opType == "25") {
             return OpType::DCX;
         }
-        if (opType == "ecr" || opType == "25") {
+        if (opType == "ecr" || opType == "26") {
             return OpType::ECR;
         }
-        if (opType == "rxx" || opType == "26") {
+        if (opType == "rxx" || opType == "27") {
             return OpType::RXX;
         }
-        if (opType == "ryy" || opType == "27") {
+        if (opType == "ryy" || opType == "28") {
             return OpType::RYY;
         }
-        if (opType == "rzz" || opType == "28") {
+        if (opType == "rzz" || opType == "29") {
             return OpType::RZZ;
         }
-        if (opType == "rzx" || opType == "29") {
+        if (opType == "rzx" || opType == "30") {
             return OpType::RZX;
         }
-        if (opType == "xx_minus_yy" || opType == "30") {
+        if (opType == "xx_minus_yy" || opType == "31") {
             return OpType::XXminusYY;
         }
-        if (opType == "xx_plus_yy" || opType == "31") {
+        if (opType == "xx_plus_yy" || opType == "32") {
             return OpType::XXplusYY;
         }
-        if (opType == "compound" || opType == "32") {
+        if (opType == "compound" || opType == "33") {
             return OpType::Compound;
         }
-        if (opType == "measure" || opType == "33") {
+        if (opType == "measure" || opType == "34") {
             return OpType::Measure;
         }
-        if (opType == "reset" || opType == "34") {
+        if (opType == "reset" || opType == "35") {
             return OpType::Reset;
         }
-        if (opType == "snapshot" || opType == "35") {
+        if (opType == "snapshot" || opType == "36") {
             return OpType::Snapshot;
         }
-        if (opType == "show probabilities" || opType == "36") {
+        if (opType == "show probabilities" || opType == "37") {
             return OpType::ShowProbabilities;
         }
-        if (opType == "barrier" || opType == "37") {
+        if (opType == "barrier" || opType == "38") {
             return OpType::Barrier;
         }
-        if (opType == "classic controlled" || opType == "38") {
+        if (opType == "classic controlled" || opType == "39") {
             return OpType::ClassicControlled;
         }
         throw std::invalid_argument("Unknown operation type: " + opType);

@@ -8,6 +8,7 @@
 
 #include "pybind11/pybind11.h"
 
+#include <pybind11/pytypes.h>
 #include <regex>
 #include <type_traits>
 #include <variant>
@@ -78,6 +79,12 @@ namespace qc::qiskit {
                     clbitMap[clbit(creg, i)] = clbitIndex;
                     clbitIndex++;
                 }
+            }
+
+            if (const auto globalPhase = circ.attr("global_phase"); !py::isinstance<py::float_>(globalPhase)) {
+                std::clog << "[import] Warning: Symbolic global phase values are not supported yet. Ignoring global phase.\n";
+            } else {
+                qc.gphase(globalPhase.cast<fp>());
             }
 
             // iterate over instructions

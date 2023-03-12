@@ -8,6 +8,9 @@
 namespace qc {
     void Operation::setName() {
         switch (type) {
+            case GPhase:
+                name = "GP  ";
+                break;
             case I:
                 name = "I   ";
                 break;
