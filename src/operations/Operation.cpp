@@ -80,6 +80,30 @@ namespace qc {
             case Peresdag:
                 name = "Prdg";
                 break;
+            case DCX:
+                name = "DCX ";
+                break;
+            case ECR:
+                name = "ECR ";
+                break;
+            case RXX:
+                name = "XX  ";
+                break;
+            case RYY:
+                name = "YY  ";
+                break;
+            case RZZ:
+                name = "ZZ  ";
+                break;
+            case RZX:
+                name = "ZX  ";
+                break;
+            case XXminusYY:
+                name = "XY- ";
+                break;
+            case XXplusYY:
+                name = "XY+ ";
+                break;
             case Compound:
                 name = "Comp";
                 break;
