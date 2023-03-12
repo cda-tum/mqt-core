@@ -368,9 +368,13 @@ namespace qc {
         for (const auto& c: controls) {
             of << " " << qreg[c.qubit].second << ",";
         }
-        for (const auto& target: targets) {
-            of << " " << qreg[target].second << ";\n";
+        for (std::size_t i = 0; i < targets.size(); ++i) {
+            of << " " << qreg[targets[i]].second;
+            if (i < targets.size() - 1) {
+                of << ",";
+            }
         }
+        of << ";\n";
         // apply X operations to negate the respective controls again
         for (const auto& c: controls) {
             if (c.type == Control::Type::Neg) {
