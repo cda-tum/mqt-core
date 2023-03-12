@@ -118,7 +118,7 @@ namespace dd {
             case qc::DCX:
                 if (inverse) {
                     if (controls.empty()) {
-                        return dd->makeDCXinvDD(nqubits, target0, target1, startQubit);
+                        return dd->makeDCXDD(nqubits, target1, target0, startQubit);
                     }
                     return dd->makeDCXDD(nqubits, controls, target1, target0, startQubit);
                 }
@@ -155,6 +155,7 @@ namespace dd {
                 if (controls.empty()) {
                     return dd->makeRYYDD(nqubits, target0, target1, parameter[0U], startQubit);
                 }
+                return dd->makeRYYDD(nqubits, controls, target0, target1, parameter[0U], startQubit);
             }
             case qc::RZZ: {
                 const auto& parameter = op->getParameter();
@@ -180,32 +181,33 @@ namespace dd {
                 if (controls.empty()) {
                     return dd->makeRZXDD(nqubits, target0, target1, parameter[0U], startQubit);
                 }
+                return dd->makeRZXDD(nqubits, controls, target0, target1, parameter[0U], startQubit);
             }
             case qc::XXminusYY: {
                 const auto& parameter = op->getParameter();
                 if (inverse) {
                     if (controls.empty()) {
-                        return dd->makeXXminusYYDD(nqubits, target0, target1, -parameter[0U], parameter[1U], startQubit);
+                        return dd->makeXXMinusYYDD(nqubits, target0, target1, -parameter[0U], parameter[1U], startQubit);
                     }
-                    return dd->makeXXminusYYDD(nqubits, controls, target0, target1, -parameter[0U], parameter[1U], startQubit);
+                    return dd->makeXXMinusYYDD(nqubits, controls, target0, target1, -parameter[0U], parameter[1U], startQubit);
                 }
                 if (controls.empty()) {
-                    return dd->makeXXminusYYDD(nqubits, target0, target1, parameter[0U], parameter[1U], startQubit);
+                    return dd->makeXXMinusYYDD(nqubits, target0, target1, parameter[0U], parameter[1U], startQubit);
                 }
-                return dd->makeXXminusYYDD(nqubits, controls, target0, target1, parameter[0U], parameter[1U], startQubit);
+                return dd->makeXXMinusYYDD(nqubits, controls, target0, target1, parameter[0U], parameter[1U], startQubit);
             }
             case qc::XXplusYY: {
                 const auto& parameter = op->getParameter();
                 if (inverse) {
                     if (controls.empty()) {
-                        return dd->makeXXplusYYDD(nqubits, target0, target1, -parameter[0U], parameter[1U], startQubit);
+                        return dd->makeXXPlusYYDD(nqubits, target0, target1, -parameter[0U], parameter[1U], startQubit);
                     }
-                    return dd->makeXXplusYYDD(nqubits, controls, target0, target1, -parameter[0U], parameter[1U], startQubit);
+                    return dd->makeXXPlusYYDD(nqubits, controls, target0, target1, -parameter[0U], parameter[1U], startQubit);
                 }
                 if (controls.empty()) {
-                    return dd->makeXXplusYYDD(nqubits, target0, target1, parameter[0U], parameter[1U], startQubit);
+                    return dd->makeXXPlusYYDD(nqubits, target0, target1, parameter[0U], parameter[1U], startQubit);
                 }
-                return dd->makeXXplusYYDD(nqubits, controls, target0, target1, parameter[0U], parameter[1U], startQubit);
+                return dd->makeXXPlusYYDD(nqubits, controls, target0, target1, parameter[0U], parameter[1U], startQubit);
             }
             default:
                 std::ostringstream oss{};
