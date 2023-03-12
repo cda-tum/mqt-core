@@ -128,9 +128,9 @@ namespace qc {
         }
         if (!isZero) {
             os << "\tp: (" << parameter[0] << ") ";
-            for (size_t j = 1; j < MAX_PARAMETERS; ++j) {
+            for (size_t j = 1; j < parameter.size(); ++j) {
                 isZero = true;
-                for (size_t i = j; i < MAX_PARAMETERS; ++i) {
+                for (size_t i = j; i < parameter.size(); ++i) {
                     if (parameter.at(i) != static_cast<fp>(0)) {
                         isZero = false;
                         break;
@@ -235,8 +235,8 @@ namespace qc {
         }
 
         // check parameters
-        const auto param1 = getParameter();
-        const auto param2 = op.getParameter();
+        const auto& param1 = getParameter();
+        const auto& param2 = op.getParameter();
         if (param1 != param2) {
             return false;
         }

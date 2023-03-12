@@ -5,6 +5,7 @@
 
 #include "operations/StandardOperation.hpp"
 
+#include <cassert>
 #include <sstream>
 #include <variant>
 
@@ -12,30 +13,23 @@ namespace qc {
     /***
      * Protected Methods
      ***/
-    OpType StandardOperation::parseU3(fp& lambda, fp& phi, fp& theta) {
+    OpType StandardOperation::parseU3(fp& theta, fp& phi, fp& lambda) {
         if (std::abs(theta) < PARAMETER_TOLERANCE && std::abs(phi) < PARAMETER_TOLERANCE) {
-            phi   = 0.L;
-            theta = 0.L;
-            return parseU1(lambda);
+            parameter = {lambda};
+            return parseU1(parameter[0]);
         }
 
         if (std::abs(theta - PI_2) < PARAMETER_TOLERANCE) {
-            theta    = PI_2;
-            auto res = parseU2(lambda, phi);
-            if (res != U2) {
-                theta = 0.L;
-            }
-            return res;
+            parameter = {phi, lambda};
+            return parseU2(parameter[0], parameter[1]);
         }
 
         if (std::abs(lambda) < PARAMETER_TOLERANCE) {
             lambda = 0.L;
             if (std::abs(phi) < PARAMETER_TOLERANCE) {
-                phi = 0.L;
                 checkInteger(theta);
                 checkFractionPi(theta);
-                lambda = theta;
-                theta  = 0.L;
+                parameter = {theta};
                 return RY;
             }
         }
@@ -43,20 +37,16 @@ namespace qc {
         if (std::abs(lambda - PI_2) < PARAMETER_TOLERANCE) {
             lambda = PI_2;
             if (std::abs(phi + PI_2) < PARAMETER_TOLERANCE) {
-                phi = 0.L;
                 checkInteger(theta);
                 checkFractionPi(theta);
-                lambda = theta;
-                theta  = 0.L;
+                parameter = {theta};
                 return RX;
             }
 
             if (std::abs(phi - PI_2) < PARAMETER_TOLERANCE) {
                 phi = PI_2;
                 if (std::abs(theta - PI) < PARAMETER_TOLERANCE) {
-                    lambda = 0.L;
-                    phi    = 0.L;
-                    theta  = 0.L;
+                    parameter.clear();
                     return Y;
                 }
             }
@@ -67,8 +57,7 @@ namespace qc {
             if (std::abs(phi) < PARAMETER_TOLERANCE) {
                 phi = 0.L;
                 if (std::abs(theta - PI) < PARAMETER_TOLERANCE) {
-                    theta  = 0.L;
-                    lambda = 0.L;
+                    parameter.clear();
                     return X;
                 }
             }
@@ -85,15 +74,15 @@ namespace qc {
         return U3;
     }
 
-    OpType StandardOperation::parseU2(fp& lambda, fp& phi) {
+    OpType StandardOperation::parseU2(fp& phi, fp& lambda) {
         if (std::abs(phi) < PARAMETER_TOLERANCE) {
             phi = 0.L;
             if (std::abs(std::abs(lambda) - PI) < PARAMETER_TOLERANCE) {
-                lambda = 0.L;
+                parameter.clear();
                 return H;
             }
             if (std::abs(lambda) < PARAMETER_TOLERANCE) {
-                lambda = PI_2;
+                parameter = {PI_2};
                 return RY;
             }
         }
@@ -101,7 +90,7 @@ namespace qc {
         if (std::abs(lambda - PI_2) < PARAMETER_TOLERANCE) {
             lambda = PI_2;
             if (std::abs(phi + PI_2) < PARAMETER_TOLERANCE) {
-                phi = 0.L;
+                parameter = {PI_2};
                 return RX;
             }
         }
@@ -116,23 +105,23 @@ namespace qc {
 
     OpType StandardOperation::parseU1(fp& lambda) {
         if (std::abs(lambda) < PARAMETER_TOLERANCE) {
-            lambda = 0.L;
+            parameter.clear();
             return I;
         }
         const bool sign = std::signbit(lambda);
 
         if (std::abs(std::abs(lambda) - PI) < PARAMETER_TOLERANCE) {
-            lambda = 0.L;
+            parameter.clear();
             return Z;
         }
 
         if (std::abs(std::abs(lambda) - PI_2) < PARAMETER_TOLERANCE) {
-            lambda = 0.L;
+            parameter.clear();
             return sign ? Sdag : S;
         }
 
         if (std::abs(std::abs(lambda) - PI_4) < PARAMETER_TOLERANCE) {
-            lambda = 0.L;
+            parameter.clear();
             return sign ? Tdag : T;
         }
 
@@ -143,21 +132,24 @@ namespace qc {
     }
 
     void StandardOperation::checkUgate() {
+        if (parameter.empty()) {
+            return;
+        }
         if (type == Phase) {
-            type = parseU1(parameter[0]);
+            assert(parameter.size() == 1);
+            type = parseU1(parameter.at(0));
         } else if (type == U2) {
-            type = parseU2(parameter[0], parameter[1]);
+            assert(parameter.size() == 2);
+            type = parseU2(parameter.at(0), parameter.at(1));
         } else if (type == U3) {
-            type = parseU3(parameter[0], parameter[1], parameter[2]);
+            assert(parameter.size() == 3);
+            type = parseU3(parameter.at(0), parameter.at(1), parameter.at(2));
         }
     }
 
-    void StandardOperation::setup(const std::size_t nq, const fp par0, const fp par1, const fp par2, const Qubit startingQubit) {
-        nqubits      = nq;
-        parameter[0] = par0;
-        parameter[1] = par1;
-        parameter[2] = par2;
-        startQubit   = startingQubit;
+    void StandardOperation::setup(const std::size_t nq, const Qubit startingQubit) {
+        nqubits    = nq;
+        startQubit = startingQubit;
         checkUgate();
         setName();
     }
@@ -165,46 +157,48 @@ namespace qc {
     /***
      * Constructors
      ***/
-    StandardOperation::StandardOperation(const std::size_t nq, const Qubit target, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit) {
-        type = g;
-        setup(nq, lambda, phi, theta, startingQubit);
+    StandardOperation::StandardOperation(const std::size_t nq, const Qubit target, const OpType g, std::vector<fp> params, const Qubit startingQubit) {
+        type      = g;
+        parameter = std::move(params);
+        setup(nq, startingQubit);
         targets.emplace_back(target);
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Targets& targ, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit) {
-        type = g;
-        setup(nq, lambda, phi, theta, startingQubit);
+    StandardOperation::StandardOperation(const std::size_t nq, const Targets& targ, const OpType g, std::vector<fp> params, const Qubit startingQubit) {
+        type      = g;
+        parameter = std::move(params);
+        setup(nq, startingQubit);
         targets = targ;
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Qubit target, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, target, g, lambda, phi, theta, startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Qubit target, const OpType g, const std::vector<fp>& params, const Qubit startingQubit):
+        StandardOperation(nq, target, g, params, startingQubit) {
         controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Targets& targ, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, targ, g, lambda, phi, theta, startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Targets& targ, const OpType g, const std::vector<fp>& params, const Qubit startingQubit):
+        StandardOperation(nq, targ, g, params, startingQubit) {
         controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, target, g, lambda, phi, theta, startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target, const OpType g, const std::vector<fp>& params, const Qubit startingQubit):
+        StandardOperation(nq, target, g, params, startingQubit) {
         controls = c;
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Targets& targ, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, targ, g, lambda, phi, theta, startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Targets& targ, const OpType g, const std::vector<fp>& params, const Qubit startingQubit):
+        StandardOperation(nq, targ, g, params, startingQubit) {
         controls = c;
     }
 
     // MCT Constructor
     StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target, const Qubit startingQubit):
-        StandardOperation(nq, c, target, X, 0., 0., 0., startingQubit) {
+        StandardOperation(nq, c, target, X, {}, startingQubit) {
     }
 
     // MCF (cSWAP), Peres, paramterized two target Constructor
-    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target0, const Qubit target1, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, c, {target0, target1}, g, lambda, phi, theta, startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target0, const Qubit target1, const OpType g, const std::vector<fp>& params, const Qubit startingQubit):
+        StandardOperation(nq, c, {target0, target1}, g, params, startingQubit) {
     }
 
     /***
@@ -276,10 +270,10 @@ namespace qc {
                 op << "u3(pi/2, pi/2, -pi/2)";
                 break;
             case U3:
-                op << "u3(" << parameter[2] << "," << parameter[1] << "," << parameter[0] << ")";
+                op << "u3(" << parameter[0] << "," << parameter[1] << "," << parameter[2] << ")";
                 break;
             case U2:
-                op << "u3(pi/2, " << parameter[1] << "," << parameter[0] << ")";
+                op << "u3(pi/2, " << parameter[0] << "," << parameter[1] << ")";
                 break;
             case Phase:
                 op << "p(" << parameter[0] << ")";

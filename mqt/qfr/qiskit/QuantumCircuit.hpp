@@ -292,26 +292,20 @@ namespace qc::qiskit {
             }
             auto target = qubits.back().qubit;
             qubits.pop_back();
-            qc::SymbolOrNumber theta  = 0.;
-            qc::SymbolOrNumber phi    = 0.;
-            qc::SymbolOrNumber lambda = 0.;
-
-            if (params.size() == 1) {
-                lambda = parseParam(params[0]);
-            } else if (params.size() == 2) {
-                phi    = parseParam(params[0]);
-                lambda = parseParam(params[1]);
-            } else if (params.size() == 3) {
-                theta  = parseParam(params[0]);
-                phi    = parseParam(params[1]);
-                lambda = parseParam(params[2]);
+            std::vector<qc::SymbolOrNumber> parameters{};
+            for (std::size_t i = 0; i < params.size(); ++i) { // NOLINT(modernize-loop-convert)
+                parameters.emplace_back(parseParam(params[i]));
             }
             const Controls controls(qubits.cbegin(), qubits.cend());
-            if (std::holds_alternative<fp>(lambda) && std::holds_alternative<fp>(phi) && std::holds_alternative<fp>(theta)) {
-                qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target, type, std::get<fp>(lambda), std::get<fp>(phi), std::get<fp>(theta));
+            if (std::all_of(parameters.cbegin(), parameters.cend(), [](const auto& p) { return std::holds_alternative<fp>(p); })) {
+                std::vector<fp> fpParams{};
+                std::transform(parameters.cbegin(), parameters.cend(), std::back_inserter(fpParams), [](const auto& p) { return std::get<fp>(p); });
+                qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target, type, fpParams);
             } else {
-                qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target, type, lambda, phi, theta);
-                qc.addVariables(lambda, phi, theta);
+                qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target, type, parameters);
+                for (const auto& p: parameters) {
+                    qc.addVariables(p);
+                }
             }
         }
 
@@ -325,25 +319,20 @@ namespace qc::qiskit {
             qubits.pop_back();
             auto target0 = qubits.back().qubit;
             qubits.pop_back();
-            qc::SymbolOrNumber theta  = 0.;
-            qc::SymbolOrNumber phi    = 0.;
-            qc::SymbolOrNumber lambda = 0.;
-            if (params.size() == 1) {
-                lambda = parseParam(params[0]);
-            } else if (params.size() == 2) {
-                phi    = parseParam(params[0]);
-                lambda = parseParam(params[1]);
-            } else if (params.size() == 3) {
-                theta  = parseParam(params[0]);
-                phi    = parseParam(params[1]);
-                lambda = parseParam(params[2]);
+            std::vector<qc::SymbolOrNumber> parameters{};
+            for (std::size_t i = 0; i < params.size(); ++i) { // NOLINT(modernize-loop-convert)
+                parameters.emplace_back(parseParam(params[i]));
             }
             const Controls controls(qubits.cbegin(), qubits.cend());
-            if (std::holds_alternative<fp>(lambda) && std::holds_alternative<fp>(phi) && std::holds_alternative<fp>(theta)) {
-                qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0, target1, type, std::get<fp>(lambda), std::get<fp>(phi), std::get<fp>(theta));
+            if (std::all_of(parameters.cbegin(), parameters.cend(), [](const auto& p) { return std::holds_alternative<fp>(p); })) {
+                std::vector<fp> fpParams{};
+                std::transform(parameters.cbegin(), parameters.cend(), std::back_inserter(fpParams), [](const auto& p) { return std::get<fp>(p); });
+                qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0, target1, type, fpParams);
             } else {
-                qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target0, target1, type, lambda, phi, theta);
-                qc.addVariables(lambda, phi, theta);
+                qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target0, target1, type, parameters);
+                for (const auto& p: parameters) {
+                    qc.addVariables(p);
+                }
             }
         }
 

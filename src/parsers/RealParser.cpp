@@ -225,7 +225,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
             case Vdag:
             case U3:
             case U2:
-                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, lambda);
+                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, std::vector{lambda});
                 break;
 
             case X:
@@ -234,7 +234,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
 
             case RX:
             case RY:
-                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (lambda));
+                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, std::vector{PI / (lambda)});
                 break;
 
             case RZ:
@@ -251,10 +251,10 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
                     } else if (x == -4.0) {
                         emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Tdag);
                     } else {
-                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (x));
+                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, std::vector{PI / (x)});
                     }
                 } else {
-                    emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (lambda));
+                    emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, std::vector{PI / (lambda)});
                 }
                 break;
             case SWAP:

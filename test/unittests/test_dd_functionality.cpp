@@ -96,16 +96,16 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
     qc::StandardOperation op;
     switch (gate) {
         case qc::U3:
-            op = qc::StandardOperation(nqubits, 0, gate, dist(mt), dist(mt), dist(mt));
+            op = qc::StandardOperation(nqubits, 0, gate, std::vector{dist(mt), dist(mt), dist(mt)});
             break;
         case qc::U2:
-            op = qc::StandardOperation(nqubits, 0, gate, dist(mt), dist(mt));
+            op = qc::StandardOperation(nqubits, 0, gate, std::vector{dist(mt), dist(mt)});
             break;
         case qc::RX:
         case qc::RY:
         case qc::RZ:
         case qc::Phase:
-            op = qc::StandardOperation(nqubits, 0, gate, dist(mt));
+            op = qc::StandardOperation(nqubits, 0, gate, std::vector{dist(mt)});
             break;
 
         case qc::SWAP:

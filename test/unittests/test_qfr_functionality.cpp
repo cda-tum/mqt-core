@@ -1481,8 +1481,8 @@ TEST_F(QFRFunctionality, OperationEquality) {
     EXPECT_FALSE(cx01.equals(cx10));
     EXPECT_FALSE(x0.equals(cx01));
 
-    const auto p  = StandardOperation(1U, 0, qc::Phase, 2.0);
-    const auto pm = StandardOperation(1U, 0, qc::Phase, -2.0);
+    const auto p  = StandardOperation(1U, 0, qc::Phase, {2.0});
+    const auto pm = StandardOperation(1U, 0, qc::Phase, {-2.0});
     EXPECT_FALSE(p.equals(pm));
 
     const auto measure0 = NonUnitaryOperation(2U, 0, 0U);

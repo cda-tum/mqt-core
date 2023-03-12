@@ -97,9 +97,9 @@ namespace qc {
                 } else if (identifier == "t") {
                     cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, target, T));
                 } else if (identifier == "x_1_2") {
-                    cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, target, RX, PI_2));
+                    cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, target, RX, std::vector{PI_2}));
                 } else if (identifier == "y_1_2") {
-                    cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, target, RY, PI_2));
+                    cycles[cycle].emplace_back(std::make_unique<StandardOperation>(nqubits, target, RY, std::vector{PI_2}));
                 } else {
                     throw QFRException("Unknown gate '" + identifier);
                 }
