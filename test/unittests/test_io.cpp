@@ -504,3 +504,28 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAddRegister) {
                  "measure q[0] -> d[0];\n"
                  "measure q[1] -> c[0];\n");
 }
+
+TEST_F(IO, NativeTwoQubitGateImportAndExport) {
+    const auto gates = std::vector<std::string>{"dcx", "ecr",
+                                                "rxx(0.5)", "ryy(0.5)", "rzz(0.5)", "rzx(0.5)",
+                                                "xx_minus_yy(0.5, 0.5)", "xx_plus_yy(0.5, 0.5)"};
+
+    const std::string header = "// i 0 1\n"
+                               "// o 0 1\n"
+                               "OPENQASM 2.0;\n"
+                               "include \"qelib1.inc\";\n"
+                               "qreg q[2];\n";
+    for (const auto& gate: gates) {
+        std::stringstream ss{};
+        ss << header << gate << " q[0], q[1];\n";
+        const auto target = ss.str();
+        qc->import(ss, qc::Format::OpenQASM);
+        std::cout << *qc << std::endl;
+        std::ostringstream oss{};
+        qc->dump(oss, qc::Format::OpenQASM);
+        std::cout << oss.str() << std::endl;
+        EXPECT_STREQ(oss.str().c_str(), target.c_str());
+        qc->reset();
+        std::cout << "---" << std::endl;
+    }
+}
