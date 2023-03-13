@@ -662,6 +662,13 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
 }
 
 TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
+    // This test checks if the gate shortcuts are working correctly
+    // and if the cloning of gates is working correctly.
+    // To this end, we create a circuit with every possible gate in the following variants:
+    //  - without controls,
+    //  - with a single control,
+    //  - with multiple controls.
+    // Then, we clone the circuit and check if the resulting circuit contains the same number of gates.
     QuantumComputation qc(5);
     qc.gphase(PI);
     qc.i(0);
