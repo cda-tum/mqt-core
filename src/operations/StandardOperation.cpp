@@ -281,16 +281,16 @@ namespace qc {
                 }
                 break;
             case V:
-                op << "u3(pi/2, -pi/2, pi/2)";
+                op << "u3(pi/2,-pi/2,pi/2)";
                 break;
             case Vdag:
-                op << "u3(pi/2, pi/2, -pi/2)";
+                op << "u3(pi/2,pi/2,-pi/2)";
                 break;
             case U3:
                 op << "u3(" << parameter[0] << "," << parameter[1] << "," << parameter[2] << ")";
                 break;
             case U2:
-                op << "u3(pi/2, " << parameter[0] << "," << parameter[1] << ")";
+                op << "u3(pi/2," << parameter[0] << "," << parameter[1] << ")";
                 break;
             case Phase:
                 op << "p(" << parameter[0] << ")";
@@ -329,10 +329,10 @@ namespace qc {
                 op << "rzx(" << parameter[0] << ")";
                 break;
             case XXminusYY:
-                op << "xx_minus_yy(" << parameter[0] << ", " << parameter[1] << ")";
+                op << "xx_minus_yy(" << parameter[0] << "," << parameter[1] << ")";
                 break;
             case XXplusYY:
-                op << "xx_plus_yy(" << parameter[0] << ", " << parameter[1] << ")";
+                op << "xx_plus_yy(" << parameter[0] << "," << parameter[1] << ")";
                 break;
             case SWAP:
                 op << "swap";
