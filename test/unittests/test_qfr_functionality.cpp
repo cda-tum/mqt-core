@@ -1727,3 +1727,23 @@ TEST_F(QFRFunctionality, AvoidStrippingIdleQubitWhenInOutputPermutation) {
     EXPECT_EQ(qc.getNqubits(), 2U);
     EXPECT_EQ(qc.outputPermutation[1], 0U);
 }
+
+TEST_F(QFRFunctionality, Test) {
+    QuantumComputation qc(2);
+    const std::string  qasm =
+            "// i 0 1\n"
+            "// o 0 1\n"
+            "OPENQASM 2.0;\n"
+            "include \"qelib1.inc\";\n"
+            "qreg q[2];\n"
+            "rz(1/8) q[0];\n"
+            "p(1/8) q[1];\n"
+            "crz(1/8) q[0],q[1];\n"
+            "cp(1/8) q[0],q[1];\n";
+    std::stringstream ss;
+    ss << qasm;
+    qc.import(ss, qc::Format::OpenQASM);
+    std::cout << qc << std::endl;
+    std::stringstream oss;
+    qc.dumpOpenQASM(oss);
+}
