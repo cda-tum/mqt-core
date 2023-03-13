@@ -62,8 +62,8 @@ namespace dd {
             case qc::Tdag: gm = inverse ? dd::Tmat : dd::Tdagmat; break;
             case qc::V: gm = inverse ? dd::Vdagmat : dd::Vmat; break;
             case qc::Vdag: gm = inverse ? dd::Vmat : dd::Vdagmat; break;
-            case qc::U3: gm = inverse ? dd::U3mat(-parameter[1U], -parameter[0U], -parameter[2U]) : dd::U3mat(parameter[0U], parameter[1U], parameter[2U]); break;
-            case qc::U2: gm = inverse ? dd::U2mat(-parameter[1U] + dd::PI, -parameter[0U] - dd::PI) : dd::U2mat(parameter[0U], parameter[1U]); break;
+            case qc::U3: gm = inverse ? dd::U3mat(-parameter[1U], -parameter[2U], -parameter[0U]) : dd::U3mat(parameter[2U], parameter[1U], parameter[0U]); break;
+            case qc::U2: gm = inverse ? dd::U2mat(-parameter[0U] + dd::PI, -parameter[1U] - dd::PI) : dd::U2mat(parameter[1U], parameter[0U]); break;
             case qc::Phase: gm = inverse ? dd::Phasemat(-parameter[0U]) : dd::Phasemat(parameter[0U]); break;
             case qc::SX: gm = inverse ? dd::SXdagmat : dd::SXmat; break;
             case qc::SXdag: gm = inverse ? dd::SXmat : dd::SXdagmat; break;
