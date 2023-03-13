@@ -300,6 +300,48 @@ TEST_F(IO, qiskitMcxQubitRegister) {
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
 
+TEST_F(IO, barrierInDeclaration) {
+    std::stringstream ss{};
+    ss << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[1];"
+       << "gate foo q0 { h q0; barrier q0; h q0; }"
+       << "foo q[0];"
+       << std::endl;
+    qc->import(ss, qc::Format::OpenQASM);
+    std::cout << *qc << std::endl;
+    EXPECT_EQ(qc->getNops(), 1);
+    const auto& op = qc->at(0);
+    EXPECT_EQ(op->getType(), qc::Compound);
+    const auto* comp = dynamic_cast<const qc::CompoundOperation*>(op.get());
+    EXPECT_EQ(comp->size(), 2);
+    EXPECT_EQ(comp->at(0)->getType(), qc::H);
+    EXPECT_EQ(comp->at(1)->getType(), qc::H);
+}
+
+TEST_F(IO, CommentInDeclaration) {
+    std::stringstream ss{};
+    ss << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[1];"
+       << "gate foo q0 { \n"
+          "  h q0;\n"
+          "  //x q0;\n"
+          "  h q0;\n"
+          "}\n"
+       << "foo q[0];"
+       << std::endl;
+    qc->import(ss, qc::Format::OpenQASM);
+    std::cout << *qc << std::endl;
+    EXPECT_EQ(qc->getNops(), 1);
+    const auto& op = qc->at(0);
+    EXPECT_EQ(op->getType(), qc::Compound);
+    const auto* comp = dynamic_cast<const qc::CompoundOperation*>(op.get());
+    EXPECT_EQ(comp->size(), 2);
+    EXPECT_EQ(comp->at(0)->getType(), qc::H);
+    EXPECT_EQ(comp->at(1)->getType(), qc::H);
+}
+
 TEST_F(IO, realInput) {
     qc->import("./circuits/test.real");
     std::cout << *qc << std::endl;
