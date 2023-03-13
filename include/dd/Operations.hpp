@@ -86,6 +86,11 @@ namespace dd {
         const auto  startQubit = static_cast<std::size_t>(op->getStartingQubit());
         const auto& parameter  = op->getParameter();
 
+        if (type == qc::DCX && inverse) {
+            // DCX is not self-inverse, but the inverse is just swapping the targets
+            std::swap(target0, target1);
+        }
+
         if (controls.empty()) {
             // the DD creation without controls is faster, so we use it if possible
             // and only use the DD creation with controls if necessary
@@ -94,13 +99,7 @@ namespace dd {
             switch (type) {
                 case qc::SWAP: gm = dd::SWAPmat; break;
                 case qc::iSWAP: gm = inverse ? dd::iSWAPinvmat : dd::iSWAPmat; break;
-                case qc::DCX: {
-                    gm = dd::DCXmat;
-                    if (inverse) {
-                        std::swap(target0, target1);
-                    }
-                    break;
-                }
+                case qc::DCX: gm = dd::DCXmat; break;
                 case qc::ECR: gm = dd::ECRmat; break;
                 case qc::RXX: gm = inverse ? dd::RXXmat(-parameter[0U]) : dd::RXXmat(parameter[0U]); break;
                 case qc::RYY: gm = inverse ? dd::RYYmat(-parameter[0U]) : dd::RYYmat(parameter[0U]); break;
@@ -117,6 +116,7 @@ namespace dd {
 
         switch (type) {
             case qc::SWAP:
+                // SWAP is self-inverse
                 return dd->makeSWAPDD(nqubits, controls, target0, target1, startQubit);
             case qc::iSWAP:
                 if (inverse) {
@@ -134,11 +134,9 @@ namespace dd {
                 }
                 return dd->makePeresdagDD(nqubits, controls, target0, target1, startQubit);
             case qc::DCX:
-                if (inverse) {
-                    std::swap(target0, target1);
-                }
                 return dd->makeDCXDD(nqubits, controls, target0, target1, startQubit);
             case qc::ECR:
+                // ECR is self-inverse
                 return dd->makeECRDD(nqubits, controls, target0, target1, startQubit);
             case qc::RXX: {
                 if (inverse) {
