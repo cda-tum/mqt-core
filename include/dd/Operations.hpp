@@ -32,12 +32,6 @@ namespace dd {
         const auto  startQubit = static_cast<std::size_t>(op->getStartingQubit());
         const auto& parameter  = op->getParameter();
 
-        if (type == qc::GPhase) {
-            auto id = dd->makeIdent(nqubits);
-            id.w    = dd->cn.lookup(std::cos(parameter[0U]), std::sin(parameter[0U]));
-            return id;
-        }
-
         switch (type) {
             case qc::I: gm = dd::Imat; break;
             case qc::H: gm = dd::Hmat; break;
@@ -211,6 +205,16 @@ namespace dd {
 
         if (type == qc::ShowProbabilities || type == qc::Barrier || type == qc::Snapshot) {
             return dd->makeIdent(static_cast<dd::QubitCount>(nqubits));
+        }
+
+        if (type == qc::GPhase) {
+            auto phase = op->getParameter()[0U];
+            if (inverse) {
+                phase = -phase;
+            }
+            auto id = dd->makeIdent(nqubits);
+            id.w    = dd->cn.lookup(std::cos(phase), std::sin(phase));
+            return id;
         }
 
         if (const auto* standardOp = dynamic_cast<const qc::StandardOperation*>(op)) {
