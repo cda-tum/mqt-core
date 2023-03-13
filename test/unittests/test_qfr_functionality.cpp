@@ -663,6 +663,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
 
 TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
     QuantumComputation qc(5);
+    qc.gphase(PI);
     qc.i(0);
     qc.i(0, 1_pc);
     qc.i(0, {1_pc, 2_nc});
@@ -732,6 +733,30 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
     qc.peresdag(0, 1);
     qc.peresdag(0, 1, 2_pc);
     qc.peresdag(0, 1, {2_pc, 3_nc});
+    qc.dcx(0, 1);
+    qc.dcx(0, 1, 2_pc);
+    qc.dcx(0, 1, {2_pc, 3_nc});
+    qc.ecr(0, 1);
+    qc.ecr(0, 1, 2_pc);
+    qc.ecr(0, 1, {2_pc, 3_nc});
+    qc.rxx(0, 1, PI);
+    qc.rxx(0, 1, 2_pc, PI);
+    qc.rxx(0, 1, {2_pc, 3_nc}, PI);
+    qc.ryy(0, 1, PI);
+    qc.ryy(0, 1, 2_pc, PI);
+    qc.ryy(0, 1, {2_pc, 3_nc}, PI);
+    qc.rzz(0, 1, PI);
+    qc.rzz(0, 1, 2_pc, PI);
+    qc.rzz(0, 1, {2_pc, 3_nc}, PI);
+    qc.rzx(0, 1, PI);
+    qc.rzx(0, 1, 2_pc, PI);
+    qc.rzx(0, 1, {2_pc, 3_nc}, PI);
+    qc.xx_minus_yy(0, 1, PI, PI);
+    qc.xx_minus_yy(0, 1, 2_pc, PI, PI);
+    qc.xx_minus_yy(0, 1, {2_pc, 3_nc}, PI, PI);
+    qc.xx_plus_yy(0, 1, PI, PI);
+    qc.xx_plus_yy(0, 1, 2_pc, PI, PI);
+    qc.xx_plus_yy(0, 1, {2_pc, 3_nc}, PI, PI);
     qc.measure(0, 0);
     qc.measure({1, 2}, {1, 2});
     qc.barrier(0);
