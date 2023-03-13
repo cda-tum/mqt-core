@@ -350,7 +350,7 @@ namespace dd {
 
             // swap i and j
             auto       saved  = on;
-            const auto swapDD = dd->makeSWAPDD(static_cast<dd::QubitCount>(on.p->v + 1), {}, static_cast<dd::Qubit>(from.at(i)), static_cast<dd::Qubit>(from.at(j)));
+            const auto swapDD = dd->makeSWAPDD(static_cast<dd::QubitCount>(on.p->v + 1), dd::Controls{}, static_cast<dd::Qubit>(from.at(i)), static_cast<dd::Qubit>(from.at(j)));
             if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
                 on = dd->multiply(swapDD, on);
             } else {

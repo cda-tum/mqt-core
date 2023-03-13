@@ -61,7 +61,7 @@ namespace qasm {
             std::shared_ptr<Expr> op2 = nullptr;
             std::string           id;
 
-            explicit Expr(Kind k, qc::fp n = 0., std::shared_ptr<Expr> operation1 = nullptr, std::shared_ptr<Expr> operation2 = nullptr, std::string identifier = ""):
+            explicit Expr(const Kind k, const qc::fp n = 0., std::shared_ptr<Expr> operation1 = nullptr, std::shared_ptr<Expr> operation2 = nullptr, std::string identifier = ""):
                 num(n), kind(k), op1(std::move(operation1)), op2(std::move(operation2)), id(std::move(identifier)) {}
             Expr(const Expr& expr):
                 num(expr.num), kind(expr.kind), id(expr.id) {

@@ -7,9 +7,9 @@
 
 namespace qc {
 
-    void SymbolicOperation::storeSymbolOrNumber(const SymbolOrNumber& param, std::size_t i) {
-        if (std::holds_alternative<double>(param)) {
-            parameter.at(i) = std::get<double>(param);
+    void SymbolicOperation::storeSymbolOrNumber(const SymbolOrNumber& param, const std::size_t i) {
+        if (std::holds_alternative<fp>(param)) {
+            parameter.at(i) = std::get<fp>(param);
         } else {
             symbolicParameter.at(i) = std::get<Symbolic>(param);
         }

@@ -118,7 +118,7 @@ namespace qc {
 
         virtual void setName();
 
-        virtual void setGate(OpType g) {
+        virtual void setGate(const OpType g) {
             type = g;
             setName();
         }
@@ -155,7 +155,7 @@ namespace qc {
             return !controls.empty();
         }
 
-        [[nodiscard]] inline virtual bool actsOn(Qubit i) const {
+        [[nodiscard]] inline virtual bool actsOn(const Qubit i) const {
             for (const auto& t: targets) {
                 if (t == i) {
                     return true;

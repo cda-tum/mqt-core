@@ -111,10 +111,10 @@ namespace qc {
 
                 // inverse QFT
                 for (std::size_t j = 1; j < 1 + i; j++) {
-                    auto iQFTLambda = -PI / static_cast<double>(2ULL << (i - j));
+                    const auto iQFTLambda = -PI / static_cast<double>(2ULL << (i - j));
                     if (j == i) {
                         sdag(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(i)});
-                    } else if (j == i - 1) {
+                    } else if (j == (i - 1)) {
                         tdag(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(i - 1)});
                     } else {
                         phase(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(j)}, iQFTLambda);
