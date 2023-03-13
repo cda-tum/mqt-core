@@ -119,36 +119,69 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
 TEST_F(DDFunctionality, buildCircuit) {
     qc::QuantumComputation qc(nqubits);
 
-    qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
-    qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<Qubit>{0, 1}, qc::SWAP);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::H);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 3, qc::S);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 2, qc::Sdag);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::V);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 1, qc::T);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 0_pc, 1, qc::X);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 3_pc, 2, qc::X);
-    qc.emplace_back<qc::StandardOperation>(nqubits, Controls{2_pc, 3_pc}, 0, qc::X);
+    qc.x(0);
+    qc.swap(0, 1);
+    qc.h(0);
+    qc.s(3);
+    qc.sdag(2);
+    qc.v(0);
+    qc.t(1);
+    qc.x(1, 0_pc);
+    qc.x(2, 3_pc);
+    qc.x(0, {2_pc, 3_pc});
+    qc.dcx(0, 1);
+    qc.dcx(0, 1, 2_pc);
+    qc.ecr(0, 1);
+    qc.ecr(0, 1, 2_pc);
+    const auto theta = dist(mt);
+    qc.rxx(0, 1, theta);
+    qc.rxx(0, 1, 2_pc, theta);
+    qc.ryy(0, 1, theta);
+    qc.ryy(0, 1, 2_pc, theta);
+    qc.rzz(0, 1, theta);
+    qc.rzz(0, 1, 2_pc, theta);
+    qc.rzx(0, 1, theta);
+    qc.rzx(0, 1, 2_pc, theta);
+    const auto beta = dist(mt);
+    qc.xx_minus_yy(0, 1, theta, beta);
+    qc.xx_minus_yy(0, 1, 2_pc, theta, beta);
+    qc.xx_plus_yy(0, 1, theta, beta);
+    qc.xx_plus_yy(0, 1, 2_pc, theta, beta);
 
-    qc.emplace_back<qc::StandardOperation>(nqubits, Controls{2_pc, 3_pc}, 0, qc::X);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 3_pc, 2, qc::X);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 0_pc, 1, qc::X);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 1, qc::Tdag);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::Vdag);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 2, qc::S);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 3, qc::Sdag);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::H);
-    qc.emplace_back<qc::StandardOperation>(nqubits, std::vector<Qubit>{0, 1}, qc::SWAP);
-    qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
+    // invert the circuit above
+    qc.xx_plus_yy(0, 1, 2_pc, -theta, beta);
+    qc.xx_plus_yy(0, 1, -theta, beta);
+    qc.xx_minus_yy(0, 1, 2_pc, -theta, beta);
+    qc.xx_minus_yy(0, 1, -theta, beta);
+    qc.rzx(0, 1, 2_pc, -theta);
+    qc.rzx(0, 1, -theta);
+    qc.rzz(0, 1, 2_pc, -theta);
+    qc.rzz(0, 1, -theta);
+    qc.ryy(0, 1, 2_pc, -theta);
+    qc.ryy(0, 1, -theta);
+    qc.rxx(0, 1, 2_pc, -theta);
+    qc.rxx(0, 1, -theta);
+    qc.ecr(0, 1, 2_pc);
+    qc.ecr(0, 1);
+    qc.dcx(1, 0, 2_pc);
+    qc.dcx(1, 0);
+    qc.x(0, {2_pc, 3_pc});
+    qc.x(2, 3_pc);
+    qc.x(1, 0_pc);
+    qc.tdag(1);
+    qc.vdag(0);
+    qc.s(2);
+    qc.sdag(3);
+    qc.h(0);
+    qc.swap(0, 1);
+    qc.x(0);
 
-    e = dd->multiply(buildFunctionality(&qc, dd), e);
-
+    e = buildFunctionality(&qc, dd);
     EXPECT_EQ(ident, e);
 
-    qc.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
-    e = dd->multiply(buildFunctionality(&qc, dd), e);
+    qc.x(0);
+    e = buildFunctionality(&qc, dd);
     dd->incRef(e);
-
     EXPECT_NE(ident, e);
 }
 
