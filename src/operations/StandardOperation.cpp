@@ -202,7 +202,7 @@ namespace qc {
         StandardOperation(nq, c, target, X, 0., 0., 0., startingQubit) {
     }
 
-    // MCF (cSWAP), Peres, paramterized two target Constructor
+    // MCF (cSWAP), Peres, parameterized two target Constructor
     StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target0, const Qubit target1, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
         StandardOperation(nq, c, {target0, target1}, g, lambda, phi, theta, startingQubit) {
     }
