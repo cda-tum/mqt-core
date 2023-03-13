@@ -44,9 +44,12 @@ namespace qasm {
             ss << ch;
             nextCh();
         }
-        t.str   = ss.str();
-        auto it = keywords.find(t.str);
-        t.kind  = (it != keywords.end()) ? it->second : Token::Kind::Identifier;
+        t.str = ss.str();
+        if (const auto it = keywords.find(t.str); it != keywords.end()) {
+            t.kind = it->second;
+        } else {
+            t.kind = Token::Kind::Identifier;
+        }
     }
 
     void Scanner::readNumber(Token& t) {

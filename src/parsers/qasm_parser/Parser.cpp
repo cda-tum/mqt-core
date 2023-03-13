@@ -45,7 +45,7 @@ namespace qasm {
             return x;
         }
         if (unaryops.find(sym) != unaryops.end()) {
-            auto op = sym;
+            const auto op = sym;
             scan();
             check(Token::Kind::Lpar);
             auto x = exp();
@@ -242,16 +242,14 @@ namespace qasm {
 
     void Parser::handleComment() {
         // check if this comment provides any I/O mapping information
-        auto&& initial = checkForInitialLayout(t.str);
-        if (!initial.empty()) {
+        if (const auto initial = checkForInitialLayout(t.str); !initial.empty()) {
             if (!initialLayout.empty()) {
                 error("Multiple initial layout specifications found.");
             } else {
                 initialLayout = initial;
             }
         }
-        auto&& output = checkForOutputPermutation(t.str);
-        if (!output.empty()) {
+        if (const auto output = checkForOutputPermutation(t.str); !output.empty()) {
             if (!outputPermutation.empty()) {
                 error("Multiple output permutation specifications found.");
             } else {
@@ -261,12 +259,12 @@ namespace qasm {
     }
 
     qc::Permutation Parser::checkForInitialLayout(std::string comment) {
-        static auto     initialLayoutRegex = std::regex("i (\\d+ )*(\\d+)");
-        static auto     qubitRegex         = std::regex("\\d+");
-        qc::Permutation initial{};
-        if (std::regex_search(comment, initialLayoutRegex)) {
+        static const auto INITIAL_LAYOUT_REGEX = std::regex("i (\\d+ )*(\\d+)");
+        static const auto QUBIT_REGEX          = std::regex("\\d+");
+        qc::Permutation   initial{};
+        if (std::regex_search(comment, INITIAL_LAYOUT_REGEX)) {
             qc::Qubit logicalQubit = 0;
-            for (std::smatch m; std::regex_search(comment, m, qubitRegex); comment = m.suffix()) {
+            for (std::smatch m; std::regex_search(comment, m, QUBIT_REGEX); comment = m.suffix()) {
                 auto physicalQubit = static_cast<qc::Qubit>(std::stoul(m.str()));
                 initial.insert({physicalQubit, logicalQubit});
                 ++logicalQubit;
@@ -276,12 +274,12 @@ namespace qasm {
     }
 
     qc::Permutation Parser::checkForOutputPermutation(std::string comment) {
-        static auto     outputPermutationRegex = std::regex("o (\\d+ )*(\\d+)");
-        static auto     qubitRegex             = std::regex("\\d+");
-        qc::Permutation output{};
-        if (std::regex_search(comment, outputPermutationRegex)) {
+        static const auto OUTPUT_PERMUTATION_REGEX = std::regex("o (\\d+ )*(\\d+)");
+        static const auto QUBIT_REGEX              = std::regex("\\d+");
+        qc::Permutation   output{};
+        if (std::regex_search(comment, OUTPUT_PERMUTATION_REGEX)) {
             qc::Qubit logicalQubit = 0;
-            for (std::smatch m; std::regex_search(comment, m, qubitRegex); comment = m.suffix()) {
+            for (std::smatch m; std::regex_search(comment, m, QUBIT_REGEX); comment = m.suffix()) {
                 auto physicalQubit = static_cast<qc::Qubit>(std::stoul(m.str()));
                 output.insert({physicalQubit, logicalQubit});
                 ++logicalQubit;
@@ -299,7 +297,7 @@ namespace qasm {
         sym = la.kind;
     }
 
-    void Parser::check(Token::Kind expected) {
+    void Parser::check(const Token::Kind expected) {
         while (sym == Token::Kind::Comment) {
             scan();
             handleComment();
@@ -322,7 +320,7 @@ namespace qasm {
         if (sym == Token::Kind::Lbrack) {
             scan();
             check(Token::Kind::Nninteger);
-            auto offset = static_cast<std::size_t>(t.val);
+            const auto offset = static_cast<std::size_t>(t.val);
             check(Token::Kind::Rbrack);
             return std::make_pair(qregs[s].first + offset, 1);
         }
@@ -339,7 +337,7 @@ namespace qasm {
         if (sym == Token::Kind::Lbrack) {
             scan();
             check(Token::Kind::Nninteger);
-            auto offset = static_cast<std::size_t>(t.val);
+            const auto offset = static_cast<std::size_t>(t.val);
             check(Token::Kind::Rbrack);
             return std::make_pair(cregs[s].first + offset, 1);
         }
@@ -398,7 +396,7 @@ namespace qasm {
             return std::make_unique<qc::CompoundOperation>(std::move(gate));
         }
         if (sym == Token::Kind::McxGray || sym == Token::Kind::McxRecursive || sym == Token::Kind::McxVchain) {
-            auto type = sym;
+            const auto type = sym;
             scan();
             std::vector<qc::QuantumRegister> registers{};
             registers.emplace_back(argumentQreg());
@@ -903,12 +901,12 @@ namespace qasm {
 
     void Parser::gateDecl() {
         check(Token::Kind::Gate);
+
         // skip declarations of known gates
         if (sym == Token::Kind::McxGray || sym == Token::Kind::McxRecursive || sym == Token::Kind::McxVchain || sym == Token::Kind::Mcphase || sym == Token::Kind::Swap || sym == Token::Kind::Sxgate || sym == Token::Kind::Sxdggate) {
             while (sym != Token::Kind::Rbrace) {
                 scan();
             }
-
             check(Token::Kind::Rbrace);
             return;
         }
@@ -1005,13 +1003,13 @@ namespace qasm {
                     }
                 }
 
-                auto target = arguments.back();
+                const auto target = arguments.back();
                 arguments.pop_back();
                 gate.gates.push_back(std::make_shared<MCXgate>(arguments, target));
             } else if (sym == Token::Kind::Mcphase) {
                 scan();
                 check(Token::Kind::Lpar);
-                auto lambda = exp();
+                const auto lambda = expr();
                 check(Token::Kind::Rpar);
                 std::vector<std::string> arguments{};
                 check(Token::Kind::Identifier);
@@ -1022,7 +1020,7 @@ namespace qasm {
                     arguments.emplace_back(t.str);
                 }
                 scan();
-                auto target = arguments.back();
+                const auto target = arguments.back();
                 arguments.pop_back();
                 auto theta = std::make_shared<Expr>(Expr::Kind::Number);
                 auto phi   = std::make_shared<Expr>(Expr::Kind::Number);
