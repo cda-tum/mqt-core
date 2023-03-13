@@ -590,3 +590,23 @@ TEST_F(IO, UseQelib1Gate) {
     const auto& op = dynamic_cast<const qc::CompoundOperation*>(qc->at(0).get());
     EXPECT_EQ(op->size(), 9U);
 }
+
+TEST_F(IO, ParametrizedGateDefinition) {
+    std::stringstream ss{};
+    ss << "qreg q[1];\n"
+       << "gate foo(theta, beta) q { rz(theta) q; rx(beta) q; }\n"
+       << "foo(2*cos(pi/4), 0.5*sin(pi/2)) q[0];\n";
+    qc->import(ss, qc::Format::OpenQASM);
+    std::cout << *qc << std::endl;
+    EXPECT_EQ(qc->getNqubits(), 1U);
+    EXPECT_EQ(qc->getNops(), 1U);
+    EXPECT_EQ(qc->at(0)->getType(), qc::Compound);
+    const auto& op = dynamic_cast<const qc::CompoundOperation*>(qc->at(0).get());
+    EXPECT_EQ(op->size(), 2U);
+    EXPECT_EQ(op->at(0)->getType(), qc::RZ);
+    EXPECT_EQ(op->at(1)->getType(), qc::RX);
+    const auto& rz = dynamic_cast<const qc::StandardOperation*>(op->at(0).get());
+    const auto& rx = dynamic_cast<const qc::StandardOperation*>(op->at(1).get());
+    EXPECT_EQ(rz->getParameter().at(0), 2 * std::cos(qc::PI_4));
+    EXPECT_EQ(rx->getParameter().at(0), 0.5 * std::sin(qc::PI_2));
+}
