@@ -81,28 +81,46 @@ namespace dd {
     // two-target Operations
     template<class Config>
     qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op, std::unique_ptr<dd::Package<Config>>& dd, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, bool inverse) {
-        const auto type       = op->getType();
-        const auto nqubits    = static_cast<dd::QubitCount>(op->getNqubits());
-        const auto startQubit = static_cast<std::size_t>(op->getStartingQubit());
+        const auto  type       = op->getType();
+        const auto  nqubits    = static_cast<dd::QubitCount>(op->getNqubits());
+        const auto  startQubit = static_cast<std::size_t>(op->getStartingQubit());
+        const auto& parameter  = op->getParameter();
 
-        // all two-qubit gates have a DD creation variant with and without controls.
-        // the DD creation without controls is faster, so we use it if possible
-        // and only use the DD creation with controls if necessary.
+        if (controls.empty()) {
+            // the DD creation without controls is faster, so we use it if possible
+            // and only use the DD creation with controls if necessary
+            TwoQubitGateMatrix gm;
+            bool               definitionFound = true;
+            switch (type) {
+                case qc::SWAP: gm = dd::SWAPmat; break;
+                case qc::iSWAP: gm = inverse ? dd::iSWAPinvmat : dd::iSWAPmat; break;
+                case qc::DCX: {
+                    gm = dd::DCXmat;
+                    if (inverse) {
+                        std::swap(target0, target1);
+                    }
+                    break;
+                }
+                case qc::ECR: gm = dd::ECRmat; break;
+                case qc::RXX: gm = inverse ? dd::RXXmat(-parameter[0U]) : dd::RXXmat(parameter[0U]); break;
+                case qc::RYY: gm = inverse ? dd::RYYmat(-parameter[0U]) : dd::RYYmat(parameter[0U]); break;
+                case qc::RZZ: gm = inverse ? dd::RZZmat(-parameter[0U]) : dd::RZZmat(parameter[0U]); break;
+                case qc::RZX: gm = inverse ? dd::RZXmat(-parameter[0U]) : dd::RZXmat(parameter[0U]); break;
+                case qc::XXminusYY: gm = inverse ? dd::XXMinusYYmat(-parameter[0U], parameter[1U]) : dd::XXMinusYYmat(parameter[0U], parameter[1U]); break;
+                case qc::XXplusYY: gm = inverse ? dd::XXPlusYYmat(-parameter[0U], parameter[1U]) : dd::XXPlusYYmat(parameter[0U], parameter[1U]); break;
+                default: definitionFound = false;
+            }
+            if (definitionFound) {
+                return dd->makeTwoQubitGateDD(gm, nqubits, target0, target1, startQubit);
+            }
+        }
+
         switch (type) {
             case qc::SWAP:
-                if (controls.empty()) {
-                    return dd->makeSWAPDD(nqubits, target0, target1, startQubit);
-                }
                 return dd->makeSWAPDD(nqubits, controls, target0, target1, startQubit);
             case qc::iSWAP:
                 if (inverse) {
-                    if (controls.empty()) {
-                        return dd->makeiSWAPinvDD(nqubits, target0, target1, startQubit);
-                    }
                     return dd->makeiSWAPinvDD(nqubits, controls, target0, target1, startQubit);
-                }
-                if (controls.empty()) {
-                    return dd->makeiSWAPDD(nqubits, target0, target1, startQubit);
                 }
                 return dd->makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
             case qc::Peres:
@@ -117,95 +135,44 @@ namespace dd {
                 return dd->makePeresdagDD(nqubits, controls, target0, target1, startQubit);
             case qc::DCX:
                 if (inverse) {
-                    if (controls.empty()) {
-                        return dd->makeDCXDD(nqubits, target1, target0, startQubit);
-                    }
-                    return dd->makeDCXDD(nqubits, controls, target1, target0, startQubit);
-                }
-                if (controls.empty()) {
-                    return dd->makeDCXDD(nqubits, target0, target1, startQubit);
+                    std::swap(target0, target1);
                 }
                 return dd->makeDCXDD(nqubits, controls, target0, target1, startQubit);
             case qc::ECR:
-                if (controls.empty()) {
-                    return dd->makeECRDD(nqubits, target0, target1, startQubit);
-                }
                 return dd->makeECRDD(nqubits, controls, target0, target1, startQubit);
             case qc::RXX: {
-                const auto& parameter = op->getParameter();
                 if (inverse) {
-                    if (controls.empty()) {
-                        return dd->makeRXXDD(nqubits, target0, target1, -parameter[0U], startQubit);
-                    }
                     return dd->makeRXXDD(nqubits, controls, target0, target1, -parameter[0U], startQubit);
-                }
-                if (controls.empty()) {
-                    return dd->makeRXXDD(nqubits, target0, target1, parameter[0U], startQubit);
                 }
                 return dd->makeRXXDD(nqubits, controls, target0, target1, parameter[0U], startQubit);
             }
             case qc::RYY: {
-                const auto& parameter = op->getParameter();
                 if (inverse) {
-                    if (controls.empty()) {
-                        return dd->makeRYYDD(nqubits, target0, target1, -parameter[0U], startQubit);
-                    }
                     return dd->makeRYYDD(nqubits, controls, target0, target1, -parameter[0U], startQubit);
-                }
-                if (controls.empty()) {
-                    return dd->makeRYYDD(nqubits, target0, target1, parameter[0U], startQubit);
                 }
                 return dd->makeRYYDD(nqubits, controls, target0, target1, parameter[0U], startQubit);
             }
             case qc::RZZ: {
-                const auto& parameter = op->getParameter();
                 if (inverse) {
-                    if (controls.empty()) {
-                        return dd->makeRZZDD(nqubits, target0, target1, -parameter[0U], startQubit);
-                    }
                     return dd->makeRZZDD(nqubits, controls, target0, target1, -parameter[0U], startQubit);
-                }
-                if (controls.empty()) {
-                    return dd->makeRZZDD(nqubits, target0, target1, parameter[0U], startQubit);
                 }
                 return dd->makeRZZDD(nqubits, controls, target0, target1, parameter[0U], startQubit);
             }
             case qc::RZX: {
-                const auto& parameter = op->getParameter();
                 if (inverse) {
-                    if (controls.empty()) {
-                        return dd->makeRZXDD(nqubits, target0, target1, -parameter[0U], startQubit);
-                    }
                     return dd->makeRZXDD(nqubits, controls, target0, target1, -parameter[0U], startQubit);
-                }
-                if (controls.empty()) {
-                    return dd->makeRZXDD(nqubits, target0, target1, parameter[0U], startQubit);
                 }
                 return dd->makeRZXDD(nqubits, controls, target0, target1, parameter[0U], startQubit);
             }
             case qc::XXminusYY: {
-                const auto& parameter = op->getParameter();
                 if (inverse) {
-                    if (controls.empty()) {
-                        return dd->makeXXMinusYYDD(nqubits, target0, target1, -parameter[0U], parameter[1U], startQubit);
-                    }
                     return dd->makeXXMinusYYDD(nqubits, controls, target0, target1, -parameter[0U], parameter[1U], startQubit);
-                }
-                if (controls.empty()) {
-                    return dd->makeXXMinusYYDD(nqubits, target0, target1, parameter[0U], parameter[1U], startQubit);
                 }
                 return dd->makeXXMinusYYDD(nqubits, controls, target0, target1, parameter[0U], parameter[1U], startQubit);
             }
             case qc::XXplusYY: {
-                const auto& parameter = op->getParameter();
                 if (inverse) {
-                    if (controls.empty()) {
-                        return dd->makeXXPlusYYDD(nqubits, target0, target1, -parameter[0U], parameter[1U], startQubit);
-                    }
                     return dd->makeXXPlusYYDD(nqubits, controls, target0, target1, -parameter[0U], parameter[1U], startQubit);
-                }
-                if (controls.empty()) {
-                    return dd->makeXXPlusYYDD(nqubits, target0, target1, parameter[0U], parameter[1U], startQubit);
                 }
                 return dd->makeXXPlusYYDD(nqubits, controls, target0, target1, parameter[0U], parameter[1U], startQubit);
             }
