@@ -11,9 +11,15 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
     Parser p(is, qregs, cregs);
 
     p.scan();
-    p.check(Token::Kind::Openqasm);
-    p.check(Token::Kind::Real);
-    p.check(Token::Kind::Semicolon);
+    while (p.sym == Token::Kind::Comment) {
+        p.scan();
+        p.handleComment();
+    }
+    if (p.sym == Token::Kind::Openqasm) {
+        p.scan();
+        p.check(Token::Kind::Real);
+        p.check(Token::Kind::Semicolon);
+    }
 
     do {
         if (p.sym == Token::Kind::Qreg) {

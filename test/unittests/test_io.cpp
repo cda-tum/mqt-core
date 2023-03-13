@@ -70,7 +70,7 @@ TEST_P(IO, importAndDump) {
 }
 
 TEST_F(IO, importFromString) {
-    const std::string bellCircuitQasm = "OPENQASM 2.0;\nqreg q[2];\nU(pi/2,0,pi) q[0];\nCX q[0],q[1];\n";
+    const std::string bellCircuitQasm = "qreg q[2];\nU(pi/2,0,pi) q[0];\nCX q[0],q[1];\n";
     std::stringstream ss{bellCircuitQasm};
     ASSERT_NO_THROW(qc->import(ss, qc::Format::OpenQASM));
     std::cout << *qc << std::endl;
@@ -82,7 +82,7 @@ TEST_F(IO, importFromString) {
 }
 
 TEST_F(IO, controlledOpActingOnWholeRegister) {
-    const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncx q,q[1];\n";
+    const std::string circuitQasm = "include \"qelib1.inc\";\nqreg q[2];\ncx q,q[1];\n";
     std::stringstream ss{circuitQasm};
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
@@ -100,25 +100,25 @@ TEST_F(IO, invalidRealCommand) {
 }
 
 TEST_F(IO, insufficientRegistersQelib) {
-    const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncx q[0];\n";
+    const std::string circuitQasm = "include \"qelib1.inc\";\nqreg q[2];\ncx q[0];\n";
     std::stringstream ss{circuitQasm};
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
 
 TEST_F(IO, insufficientRegistersEnhancedQelib) {
-    const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[4];\ncccz q[0], q[1], q[2];\n";
+    const std::string circuitQasm = "include \"qelib1.inc\";\nqreg q[4];\ncccz q[0], q[1], q[2];\n";
     std::stringstream ss{circuitQasm};
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
 
 TEST_F(IO, superfluousRegistersQelib) {
-    const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[3];\ncx q[0], q[1], q[2];\n";
+    const std::string circuitQasm = "include \"qelib1.inc\";\nqreg q[3];\ncx q[0], q[1], q[2];\n";
     std::stringstream ss{circuitQasm};
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
 
 TEST_F(IO, superfluousRegistersEnhancedQelib) {
-    const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[5];\ncccz q[0], q[1], q[2], q[3], q[4];\n";
+    const std::string circuitQasm = "include \"qelib1.inc\";\nqreg q[5];\ncccz q[0], q[1], q[2], q[3], q[4];\n";
     std::stringstream ss{circuitQasm};
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
@@ -143,8 +143,7 @@ TEST_F(IO, dumpNegativeControl) {
 
 TEST_F(IO, qiskitMcxGray) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[4];"
        << "mcx_gray q[0], q[1], q[2], q[3];"
        << std::endl;
@@ -158,8 +157,7 @@ TEST_F(IO, qiskitMcxGray) {
 
 TEST_F(IO, qiskitMcxSkipGateDefinition) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[4];"
        << "gate mcx q0,q1,q2,q3 { cccx q0,q1,q2,q3; }"
        << "mcx q[0], q[1], q[2], q[3];"
@@ -174,8 +172,7 @@ TEST_F(IO, qiskitMcxSkipGateDefinition) {
 
 TEST_F(IO, qiskitMcphase) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[4];"
        << "mcphase(pi) q[0], q[1], q[2], q[3];"
        << std::endl;
@@ -189,8 +186,7 @@ TEST_F(IO, qiskitMcphase) {
 
 TEST_F(IO, qiskitMcphaseInDeclaration) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[4];"
        << "gate foo q0, q1, q2, q3 { mcphase(pi) q0, q1, q2, q3; }"
        << "foo q[0], q[1], q[2], q[3];"
@@ -205,8 +201,7 @@ TEST_F(IO, qiskitMcphaseInDeclaration) {
 
 TEST_F(IO, qiskitMcxRecursive) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[6];"
        << "qreg anc[1];"
        << "mcx_recursive q[0], q[1], q[2], q[3], q[4];"
@@ -226,8 +221,7 @@ TEST_F(IO, qiskitMcxRecursive) {
 
 TEST_F(IO, qiskitMcxVchain) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[4];"
        << "qreg anc[1];"
        << "mcx_vchain q[0], q[1], q[2], q[3], anc[0];"
@@ -242,8 +236,7 @@ TEST_F(IO, qiskitMcxVchain) {
 
 TEST_F(IO, qiskitMcxRecursiveInDeclaration) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[7];"
        << "gate foo q0, q1, q2, q3, q4 { mcx_recursive q0, q1, q2, q3, q4; }"
        << "gate bar q0, q1, q2, q3, q4, q5, anc { mcx_recursive q0, q1, q2, q3, q4, q5, anc; }"
@@ -264,8 +257,7 @@ TEST_F(IO, qiskitMcxRecursiveInDeclaration) {
 
 TEST_F(IO, qiskitMcxVchainInDeclaration) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[5];"
        << "gate foo q0, q1, q2, q3, anc { mcx_vchain q0, q1, q2, q3, anc; }"
        << "foo q[0], q[1], q[2], q[3], q[4];"
@@ -280,8 +272,7 @@ TEST_F(IO, qiskitMcxVchainInDeclaration) {
 
 TEST_F(IO, qiskitMcxDuplicateQubit) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[4];"
        << "qreg anc[1];"
        << "mcx_vchain q[0], q[0], q[2], q[3], anc[0];"
@@ -291,8 +282,7 @@ TEST_F(IO, qiskitMcxDuplicateQubit) {
 
 TEST_F(IO, qiskitMcxQubitRegister) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[4];"
        << "qreg anc[1];"
        << "mcx_vchain q, q[0], q[2], q[3], anc[0];"
@@ -302,8 +292,7 @@ TEST_F(IO, qiskitMcxQubitRegister) {
 
 TEST_F(IO, barrierInDeclaration) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[1];"
        << "gate foo q0 { h q0; barrier q0; h q0; }"
        << "foo q[0];"
@@ -321,8 +310,7 @@ TEST_F(IO, barrierInDeclaration) {
 
 TEST_F(IO, CommentInDeclaration) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[1];"
        << "gate foo q0 { \n"
           "  h q0;\n"
@@ -366,8 +354,7 @@ TEST_F(IO, grcsInput) {
 
 TEST_F(IO, classicControlled) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[1];"
        << "creg c[1];"
        << "h q[0];"
@@ -411,8 +398,7 @@ TEST_F(IO, PeresdagDumpIsValid) {
 
 TEST_F(IO, printingNonUnitary) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[2];"
        << "creg c[2];"
        << "h q[0];"
@@ -432,8 +418,7 @@ TEST_F(IO, printingNonUnitary) {
 
 TEST_F(IO, sxAndSxdag) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[1];"
        << "creg c[1];"
        << "gate test q0 { sx q0; sxdg q0;}"
@@ -458,8 +443,7 @@ TEST_F(IO, sxAndSxdag) {
 
 TEST_F(IO, unifyRegisters) {
     std::stringstream ss{};
-    ss << "OPENQASM 2.0;"
-       << "include \"qelib1.inc\";"
+    ss << "include \"qelib1.inc\";"
        << "qreg q[1];"
        << "qreg r[1];"
        << "x q[0];"
@@ -484,7 +468,6 @@ TEST_F(IO, unifyRegisters) {
 TEST_F(IO, appendMeasurementsAccordingToOutputPermutation) {
     std::stringstream ss{};
     ss << "// o 1\n"
-       << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
        << "qreg q[2];"
        << "x q[1];"
@@ -504,7 +487,6 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutation) {
 TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAugmentRegister) {
     std::stringstream ss{};
     ss << "// o 0 1\n"
-       << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
        << "qreg q[2];"
        << "creg c[1];"
@@ -548,7 +530,6 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAugmentRegister) {
 TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAddRegister) {
     std::stringstream ss{};
     ss << "// o 0 1\n"
-       << "OPENQASM 2.0;"
        << "include \"qelib1.inc\";"
        << "qreg q[2];"
        << "creg d[1];"
