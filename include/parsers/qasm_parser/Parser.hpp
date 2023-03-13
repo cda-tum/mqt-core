@@ -21,22 +21,6 @@
 #include <vector>
 
 namespace qasm {
-    class QASMParserException: public std::invalid_argument {
-        std::string msg;
-
-    public:
-        explicit QASMParserException(const std::string& m):
-            std::invalid_argument("QASM Parser Exception") {
-            std::stringstream ss{};
-            ss << "[qasm parser] " << m;
-            msg = ss.str();
-        }
-
-        [[nodiscard]] const char* what() const noexcept override {
-            return msg.c_str();
-        }
-    };
-
     class Parser {
         struct GateInfo {
             std::size_t nControls;
@@ -220,8 +204,8 @@ namespace qasm {
 
         void error [[noreturn]] (const std::string& msg) const {
             std::ostringstream oss{};
-            oss << "l:" << t.line << " c:" << t.col << " msg: " << msg;
-            throw QASMParserException(oss.str());
+            oss << "[qasm parser] l:" << t.line << " c:" << t.col << " msg: " << msg;
+            throw std::runtime_error(oss.str());
         }
 
         void handleComment();

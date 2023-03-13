@@ -84,7 +84,7 @@ TEST_F(IO, importFromString) {
 TEST_F(IO, controlledOpActingOnWholeRegister) {
     const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncx q,q[1];\n";
     std::stringstream ss{circuitQasm};
-    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
+    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
 
 TEST_F(IO, invalidRealHeader) {
@@ -102,25 +102,25 @@ TEST_F(IO, invalidRealCommand) {
 TEST_F(IO, insufficientRegistersQelib) {
     const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncx q[0];\n";
     std::stringstream ss{circuitQasm};
-    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
+    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
 
 TEST_F(IO, insufficientRegistersEnhancedQelib) {
     const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[4];\ncccz q[0], q[1], q[2];\n";
     std::stringstream ss{circuitQasm};
-    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
+    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
 
 TEST_F(IO, superfluousRegistersQelib) {
     const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[3];\ncx q[0], q[1], q[2];\n";
     std::stringstream ss{circuitQasm};
-    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
+    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
 
 TEST_F(IO, superfluousRegistersEnhancedQelib) {
     const std::string circuitQasm = "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[5];\ncccz q[0], q[1], q[2], q[3], q[4];\n";
     std::stringstream ss{circuitQasm};
-    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
+    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
 
 TEST_F(IO, dumpNegativeControl) {
@@ -248,7 +248,7 @@ TEST_F(IO, qiskitMcxDuplicateQubit) {
        << "qreg anc[1];"
        << "mcx_vchain q[0], q[0], q[2], q[3], anc[0];"
        << std::endl;
-    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
+    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
 
 TEST_F(IO, qiskitMcxQubitRegister) {
@@ -259,7 +259,7 @@ TEST_F(IO, qiskitMcxQubitRegister) {
        << "qreg anc[1];"
        << "mcx_vchain q, q[0], q[2], q[3], anc[0];"
        << std::endl;
-    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm::QASMParserException);
+    EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
 
 TEST_F(IO, tfcInput) {
