@@ -40,7 +40,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
             p.check(Token::Kind::Semicolon);
             addClassicalRegister(n, s);
             p.nclassics = nclassics;
-        } else if (p.sym == Token::Kind::Ugate || p.sym == Token::Kind::Cxgate || p.sym == Token::Kind::Swap || p.sym == Token::Kind::Identifier || p.sym == Token::Kind::Measure || p.sym == Token::Kind::Reset || p.sym == Token::Kind::McxGray || p.sym == Token::Kind::McxRecursive || p.sym == Token::Kind::McxVchain || p.sym == Token::Kind::Mcphase || p.sym == Token::Kind::Sxgate || p.sym == Token::Kind::Sxdggate) {
+        } else if (p.sym == Token::Kind::Identifier || p.sym == Token::Kind::Measure || p.sym == Token::Kind::Reset || p.sym == Token::Kind::McxGray || p.sym == Token::Kind::McxRecursive || p.sym == Token::Kind::McxVchain || p.sym == Token::Kind::Mcphase) {
             // gate application
             ops.emplace_back(p.qop());
         } else if (p.sym == Token::Kind::Gate) {

@@ -196,10 +196,8 @@ TEST_F(IO, qiskitMcphaseInDeclaration) {
        << "foo q[0], q[1], q[2], q[3];"
        << std::endl;
     qc->import(ss, qc::Format::OpenQASM);
-    auto&       gate     = *(qc->begin());
-    auto*       compound = dynamic_cast<qc::CompoundOperation*>(gate.get());
-    const auto& op       = compound->at(0);
-    std::cout << *op << std::endl;
+    std::cout << *qc << std::endl;
+    auto& op = *(qc->begin());
     EXPECT_EQ(op->getType(), qc::Z);
     EXPECT_EQ(op->getNcontrols(), 3);
     EXPECT_EQ(op->getTargets().at(0), 3);

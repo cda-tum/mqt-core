@@ -38,6 +38,13 @@ namespace qasm {
     };
 
     class Parser {
+        struct GateInfo {
+            std::size_t nControls;
+            std::size_t nTargets;
+            std::size_t nParameters;
+            qc::OpType  type;
+        };
+
         struct Expr {
             enum class Kind {
                 Number,
@@ -94,50 +101,11 @@ namespace qasm {
             virtual ~BasisGate() = default;
         };
 
-        struct CUgate: public BasisGate {
-            std::shared_ptr<Expr>    theta  = nullptr;
-            std::shared_ptr<Expr>    phi    = nullptr;
-            std::shared_ptr<Expr>    lambda = nullptr;
-            std::vector<std::string> controls;
-            std::string              target;
-
-            CUgate(std::shared_ptr<Expr> t, std::shared_ptr<Expr> p, std::shared_ptr<Expr> l, std::vector<std::string> c, std::string targ):
-                theta(std::move(t)), phi(std::move(p)), lambda(std::move(l)), controls(std::move(c)), target(std::move(targ)) {}
-        };
-
-        struct CXgate: public BasisGate {
-            std::string control;
-            std::string target;
-
-            CXgate(std::string c, std::string t):
-                control(std::move(c)), target(std::move(t)) {}
-        };
-
-        struct SingleQubitGate: public BasisGate {
-            std::string           target;
-            qc::OpType            type;
-            std::shared_ptr<Expr> lambda;
-            std::shared_ptr<Expr> phi;
-            std::shared_ptr<Expr> theta;
-
-            explicit SingleQubitGate(std::string targ, qc::OpType typ = qc::U3, std::shared_ptr<Expr> l = nullptr, std::shared_ptr<Expr> p = nullptr, std::shared_ptr<Expr> t = nullptr):
-                target(std::move(targ)), type(typ), lambda(std::move(l)), phi(std::move(p)), theta(std::move(t)) {}
-        };
-
-        struct SWAPgate: public BasisGate {
-            std::string target0;
-            std::string target1;
-
-            SWAPgate(std::string t0, std::string t1):
-                target0(std::move(t0)), target1(std::move(t1)) {}
-        };
-
-        struct MCXgate: public BasisGate {
-            std::vector<std::string> controls;
-            std::string              target;
-
-            MCXgate(std::vector<std::string> c, std::string t):
-                controls(std::move(c)), target(std::move(t)) {}
+        struct StandardGate: public BasisGate {
+            GateInfo                           info;
+            std::vector<std::shared_ptr<Expr>> parameters;
+            std::vector<std::string>           controls;
+            std::vector<std::string>           targets;
         };
 
         struct CompoundGate {
@@ -153,7 +121,7 @@ namespace qasm {
         std::shared_ptr<Expr> exponentiation();
         std::shared_ptr<Expr> factor();
         std::shared_ptr<Expr> term();
-        std::shared_ptr<Expr> exp();
+        std::shared_ptr<Expr> expr();
 
         static std::shared_ptr<Expr> rewriteExpr(const std::shared_ptr<Expr>& expr, std::map<std::string, std::shared_ptr<Expr>>& exprMap);
 
@@ -167,6 +135,43 @@ namespace qasm {
         std::size_t               nclassics = 0;
         qc::Permutation           initialLayout{};
         qc::Permutation           outputPermutation{};
+
+        static const inline std::unordered_map<std::string, GateInfo> GATE_MAP = {
+                {"gphase", {0, 0, 1, qc::GPhase}},
+                {"i", {0, 1, 0, qc::I}},
+                {"id", {0, 1, 0, qc::I}},
+                {"x", {0, 1, 0, qc::X}},
+                {"y", {0, 1, 0, qc::Y}},
+                {"z", {0, 1, 0, qc::Z}},
+                {"h", {0, 1, 0, qc::H}},
+                {"s", {0, 1, 0, qc::S}},
+                {"sdg", {0, 1, 0, qc::Sdag}},
+                {"t", {0, 1, 0, qc::T}},
+                {"tdg", {0, 1, 0, qc::Tdag}},
+                {"sx", {0, 1, 0, qc::SX}},
+                {"sxdg", {0, 1, 0, qc::SXdag}},
+                {"rx", {0, 1, 1, qc::RX}},
+                {"ry", {0, 1, 1, qc::RY}},
+                {"rz", {0, 1, 1, qc::RZ}},
+                {"u1", {0, 1, 1, qc::Phase}},
+                {"p", {0, 1, 1, qc::Phase}},
+                {"u2", {0, 1, 2, qc::U2}},
+                {"u3", {0, 1, 3, qc::U3}},
+                {"U", {0, 1, 3, qc::U3}},
+                {"u", {0, 1, 3, qc::U3}},
+                {"swap", {0, 2, 0, qc::SWAP}},
+                {"iswap", {0, 2, 0, qc::iSWAP}},
+                {"cnot", {1, 1, 0, qc::X}},
+                {"CX", {1, 1, 0, qc::X}},
+                {"cx", {1, 1, 0, qc::X}},
+                {"dcx", {0, 2, 0, qc::DCX}},
+                {"ecr", {0, 2, 0, qc::ECR}},
+                {"rxx", {0, 2, 1, qc::RXX}},
+                {"ryy", {0, 2, 1, qc::RYY}},
+                {"rzz", {0, 2, 1, qc::RZZ}},
+                {"rzx", {0, 2, 1, qc::RZX}},
+                {"xx_minus_yy", {0, 2, 2, qc::XXminusYY}},
+                {"xx_plus_yy", {0, 2, 2, qc::XXplusYY}}};
 
         explicit Parser(std::istream& is, qc::QuantumRegisterMap& q, qc::ClassicalRegisterMap& c):
             in(is), qregs(q), cregs(c) {
@@ -196,6 +201,22 @@ namespace qasm {
         void gateDecl();
 
         std::unique_ptr<qc::Operation> qop();
+
+        static bool gateInfo(const std::string& name, GateInfo& info);
+
+        void parseParameters(const GateInfo& info, std::vector<qc::fp>& parameters);
+
+        void parseArguments(const GateInfo& info, std::vector<qc::fp>& parameters, std::vector<qc::QuantumRegister>& controlRegisters, std::vector<qc::QuantumRegister>& targetRegisters);
+
+        std::unique_ptr<qc::Operation> knownGate(const GateInfo& info, const std::vector<qc::fp>& parameters, const std::vector<qc::QuantumRegister>& controlRegisters, const std::vector<qc::QuantumRegister>& targetRegisters);
+
+        std::unique_ptr<qc::Operation> knownGate(const GateInfo& info) {
+            std::vector<qc::fp>              parameters{};
+            std::vector<qc::QuantumRegister> controlRegisters{};
+            std::vector<qc::QuantumRegister> targetRegisters{};
+            parseArguments(info, parameters, controlRegisters, targetRegisters);
+            return knownGate(info, parameters, controlRegisters, targetRegisters);
+        }
 
         void error [[noreturn]] (const std::string& msg) const {
             std::ostringstream oss{};
