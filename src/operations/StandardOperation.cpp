@@ -321,8 +321,8 @@ namespace qc {
                 op << "swap";
                 break;
             case iSWAP:
-                dumpOpenQASMiSwap(of, qreg);
-                return;
+                op << "iswap";
+                break;
             case Peres:
                 of << op.str() << "cx";
                 for (const auto& c: controls) {
@@ -376,44 +376,6 @@ namespace qc {
         }
         of << ";\n";
         // apply X operations to negate the respective controls again
-        for (const auto& c: controls) {
-            if (c.type == Control::Type::Neg) {
-                of << "x " << qreg[c.qubit].second << ";\n";
-            }
-        }
-    }
-
-    void StandardOperation::dumpOpenQASMiSwap(std::ostream& of, const RegisterNames& qreg) const {
-        const auto ctrlString = std::string(controls.size(), 'c');
-        for (const auto& c: controls) {
-            if (c.type == Control::Type::Neg) {
-                of << "x " << qreg[c.qubit].second << ";\n";
-            }
-        }
-        of << ctrlString << "swap";
-        for (const auto& c: controls) {
-            of << " " << qreg[c.qubit].second << ",";
-        }
-        of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";\n";
-
-        of << ctrlString << "s";
-        for (const auto& c: controls) {
-            of << " " << qreg[c.qubit].second << ",";
-        }
-        of << " " << qreg[targets[0]].second << ";\n";
-
-        of << ctrlString << "s";
-        for (const auto& c: controls) {
-            of << " " << qreg[c.qubit].second << ",";
-        }
-        of << " " << qreg[targets[1]].second << ";\n";
-
-        of << ctrlString << "cz";
-        for (const auto& c: controls) {
-            of << " " << qreg[c.qubit].second << ",";
-        }
-        of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";\n";
-
         for (const auto& c: controls) {
             if (c.type == Control::Type::Neg) {
                 of << "x " << qreg[c.qubit].second << ";\n";
