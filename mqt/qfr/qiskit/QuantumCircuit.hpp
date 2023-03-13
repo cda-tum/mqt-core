@@ -81,10 +81,10 @@ namespace qc::qiskit {
                 }
             }
 
-            if (const auto globalPhase = circ.attr("global_phase"); !py::isinstance<py::float_>(globalPhase)) {
+            try {
+                qc.gphase(circ.attr("global_phase").cast<fp>());
+            } catch (const py::cast_error& e) {
                 std::clog << "[import] Warning: Symbolic global phase values are not supported yet. Ignoring global phase.\n";
-            } else {
-                qc.gphase(globalPhase.cast<fp>());
             }
 
             // iterate over instructions
