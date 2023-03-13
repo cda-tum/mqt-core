@@ -44,9 +44,6 @@ namespace qc {
         std::size_t                             maxControls = 0;
         std::string                             name;
 
-        // keep track of the normalized global phase of the circuit (in radians between 0 and 2pi)
-        fp globalPhase = 0.0;
-
         // register names are used as keys, while the values are `{startIndex, length}` pairs
         QuantumRegisterMap   qregs{};
         ClassicalRegisterMap cregs{};
@@ -284,13 +281,7 @@ namespace qc {
         /// Adds a global phase to the quantum circuit.
         /// \param angle the angle to add
         void gphase(const fp& angle) {
-            globalPhase += angle;
-
-            // normalize to [0, 2pi)
-            globalPhase = std::fmod(globalPhase, 2 * PI);
-            if (globalPhase < 0) {
-                globalPhase += 2 * PI;
-            }
+            emplace_back<StandardOperation>(getNqubits(), Controls{}, Targets{}, qc::GPhase, std::vector{angle});
         }
 
         void i(const Qubit target) {
