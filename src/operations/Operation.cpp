@@ -8,69 +8,6 @@
 namespace qc {
     void Operation::setName() {
         switch (type) {
-            case GPhase:
-                name = "GP  ";
-                break;
-            case I:
-                name = "I   ";
-                break;
-            case H:
-                name = "H   ";
-                break;
-            case X:
-                name = "X   ";
-                break;
-            case Y:
-                name = "Y   ";
-                break;
-            case Z:
-                name = "Z   ";
-                break;
-            case S:
-                name = "S   ";
-                break;
-            case Sdag:
-                name = "Sdag";
-                break;
-            case T:
-                name = "T   ";
-                break;
-            case Tdag:
-                name = "Tdag";
-                break;
-            case V:
-                name = "V   ";
-                break;
-            case Vdag:
-                name = "Vdag";
-                break;
-            case U3:
-                name = "U   ";
-                break;
-            case U2:
-                name = "U2  ";
-                break;
-            case Phase:
-                name = "P   ";
-                break;
-            case SX:
-                name = "SX  ";
-                break;
-            case SXdag:
-                name = "SXdg";
-                break;
-            case RX:
-                name = "RX  ";
-                break;
-            case RY:
-                name = "RY  ";
-                break;
-            case RZ:
-                name = "RZ  ";
-                break;
-            case SWAP:
-                name = "SWAP";
-                break;
             case iSWAP:
                 name = "iSWP";
                 break;
@@ -79,12 +16,6 @@ namespace qc {
                 break;
             case Peresdag:
                 name = "Prdg";
-                break;
-            case DCX:
-                name = "DCX ";
-                break;
-            case ECR:
-                name = "ECR ";
                 break;
             case RXX:
                 name = "XX  ";
@@ -104,32 +35,15 @@ namespace qc {
             case XXplusYY:
                 name = "XY+ ";
                 break;
-            case Compound:
-                name = "Comp";
-                break;
-            case Measure:
-                name = "Meas";
-                break;
-            case Teleportation:
-                name = "Tele";
-                break;
             case Reset:
                 name = "Rst ";
-                break;
-            case Snapshot:
-                name = "Snap";
-                break;
-            case ShowProbabilities:
-                name = "Show probabilities";
-                break;
-            case Barrier:
-                name = "Barr";
                 break;
             case ClassicControlled:
                 name = "clc_";
                 break;
             default:
-                throw QFRException("This constructor shall not be called for gate type (index) " + std::to_string(static_cast<int>(type)));
+                name = toString(type);
+                name.resize(4, ' ');
         }
     }
 
