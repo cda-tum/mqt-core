@@ -52,6 +52,15 @@ namespace qc {
             }
         }
 
+        if (std::abs(lambda + PI_2) < PARAMETER_TOLERANCE) {
+            lambda = -PI_2;
+            if (std::abs(phi - PI_2) < PARAMETER_TOLERANCE) {
+                phi       = PI_2;
+                parameter = {-theta};
+                return RX;
+            }
+        }
+
         if (std::abs(lambda - PI) < PARAMETER_TOLERANCE) {
             lambda = PI;
             if (std::abs(phi) < PARAMETER_TOLERANCE) {
@@ -90,8 +99,16 @@ namespace qc {
         if (std::abs(lambda - PI_2) < PARAMETER_TOLERANCE) {
             lambda = PI_2;
             if (std::abs(phi + PI_2) < PARAMETER_TOLERANCE) {
-                parameter = {PI_2};
-                return RX;
+                parameter.clear();
+                return V;
+            }
+        }
+
+        if (std::abs(lambda + PI_2) < PARAMETER_TOLERANCE) {
+            lambda = -PI_2;
+            if (std::abs(phi - PI_2) < PARAMETER_TOLERANCE) {
+                parameter.clear();
+                return Vdag;
             }
         }
 
