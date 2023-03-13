@@ -156,7 +156,7 @@ namespace qc {
             } else if (isSymbolicParameter(0)) {
                 type = parseU2(symbolicParameter[0].value(), parameter[1]);
             } else if (isSymbolicParameter(1)) {
-                type = parseU2(parameter[1], symbolicParameter[1].value());
+                type = parseU2(parameter[0], symbolicParameter[1].value());
             }
         } else if (type == U3) {
             if (!isSymbolicParameter(0) && !isSymbolicParameter(1) && !isSymbolicParameter(2)) {
