@@ -1753,7 +1753,7 @@ TEST_F(QFRFunctionality, AvoidStrippingIdleQubitWhenInOutputPermutation) {
     EXPECT_EQ(qc.outputPermutation[1], 0U);
 }
 
-TEST_F(QFRFunctionality, Test) {
+TEST_F(QFRFunctionality, RzAndPhaseDifference) {
     QuantumComputation qc(2);
     const std::string  qasm =
             "// i 0 1\n"
@@ -1771,4 +1771,63 @@ TEST_F(QFRFunctionality, Test) {
     std::cout << qc << std::endl;
     std::stringstream oss;
     qc.dumpOpenQASM(oss);
+}
+
+TEST_F(QFRFunctionality, U3toU2Gate) {
+    QuantumComputation qc(1);
+    qc.u3(0, PI_2, 0., PI);      // H
+    qc.u3(0, PI_2, 0., 0.);      // RY(pi/2)
+    qc.u3(0, PI_2, -PI_2, PI_2); // RX(pi/2)
+    qc.u3(0, PI_2, 0.25, 0.5);   // U2(0.25, 0.5)
+    std::cout << qc << std::endl;
+    EXPECT_EQ(qc.at(0)->getType(), qc::H);
+    EXPECT_EQ(qc.at(1)->getType(), qc::RY);
+    EXPECT_EQ(qc.at(1)->getParameter().at(0), PI_2);
+    EXPECT_EQ(qc.at(2)->getType(), qc::RX);
+    EXPECT_EQ(qc.at(2)->getParameter().at(0), PI_2);
+    EXPECT_EQ(qc.at(3)->getType(), qc::U2);
+    EXPECT_EQ(qc.at(3)->getParameter().at(0), 0.25);
+    EXPECT_EQ(qc.at(3)->getParameter().at(1), 0.5);
+}
+
+TEST_F(QFRFunctionality, U3toU1Gate) {
+    QuantumComputation qc(1);
+    qc.u3(0, 0., 0., 0.);    // I
+    qc.u3(0, 0., 0., PI);    // Z
+    qc.u3(0, 0., 0., PI_2);  // S
+    qc.u3(0, 0., 0., -PI_2); // Sdg
+    qc.u3(0, 0., 0., PI_4);  // T
+    qc.u3(0, 0., 0., -PI_4); // Tdg
+    qc.u3(0, 0., 0., 0.5);   // p(0.5)
+
+    std::cout << qc << std::endl;
+    EXPECT_EQ(qc.at(0)->getType(), qc::I);
+    EXPECT_EQ(qc.at(1)->getType(), qc::Z);
+    EXPECT_EQ(qc.at(2)->getType(), qc::S);
+    EXPECT_EQ(qc.at(3)->getType(), qc::Sdag);
+    EXPECT_EQ(qc.at(4)->getType(), qc::T);
+    EXPECT_EQ(qc.at(5)->getType(), qc::Tdag);
+    EXPECT_EQ(qc.at(6)->getType(), qc::Phase);
+    EXPECT_EQ(qc.at(6)->getParameter().at(0), 0.5);
+}
+
+TEST_F(QFRFunctionality, U3SpecialCases) {
+    QuantumComputation qc(1);
+    qc.u3(0, 0.5, 0., 0.);      // RY(0.5)
+    qc.u3(0, 0.5, -PI_2, PI_2); // RX(0.5)
+    qc.u3(0, PI, PI_2, PI_2);   // Y
+    qc.u3(0, PI, 0., PI);       // X
+    qc.u3(0, 0.5, 0.25, 0.125); // U3(0.5, 0.25, 0.125)
+
+    std::cout << qc << std::endl;
+    EXPECT_EQ(qc.at(0)->getType(), qc::RY);
+    EXPECT_EQ(qc.at(0)->getParameter().at(0), 0.5);
+    EXPECT_EQ(qc.at(1)->getType(), qc::RX);
+    EXPECT_EQ(qc.at(1)->getParameter().at(0), 0.5);
+    EXPECT_EQ(qc.at(2)->getType(), qc::Y);
+    EXPECT_EQ(qc.at(3)->getType(), qc::X);
+    EXPECT_EQ(qc.at(4)->getType(), qc::U3);
+    EXPECT_EQ(qc.at(4)->getParameter().at(0), 0.5);
+    EXPECT_EQ(qc.at(4)->getParameter().at(1), 0.25);
+    EXPECT_EQ(qc.at(4)->getParameter().at(2), 0.125);
 }
