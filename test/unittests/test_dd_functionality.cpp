@@ -56,37 +56,12 @@ protected:
 
 INSTANTIATE_TEST_SUITE_P(Parameters,
                          DDFunctionality,
-                         testing::Values(qc::I, qc::H, qc::X, qc::Y, qc::Z, qc::S, qc::Sdag, qc::T, qc::Tdag, qc::SX, qc::SXdag, qc::V,
+                         testing::Values(qc::GPhase, qc::I, qc::H, qc::X, qc::Y, qc::Z, qc::S, qc::Sdag, qc::T, qc::Tdag, qc::SX, qc::SXdag, qc::V,
                                          qc::Vdag, qc::U3, qc::U2, qc::Phase, qc::RX, qc::RY, qc::RZ, qc::Peres, qc::Peresdag,
-                                         qc::SWAP, qc::iSWAP),
+                                         qc::SWAP, qc::iSWAP, qc::DCX, qc::ECR, qc::RXX, qc::RYY, qc::RZZ, qc::RZX, qc::XXminusYY, qc::XXplusYY),
                          [](const testing::TestParamInfo<DDFunctionality::ParamType>& inf) {
                              const auto gate = inf.param;
-                             switch (gate) {
-                                 case qc::I: return "i";
-                                 case qc::H: return "h";
-                                 case qc::X: return "x";
-                                 case qc::Y: return "y";
-                                 case qc::Z: return "z";
-                                 case qc::S: return "s";
-                                 case qc::Sdag: return "sdg";
-                                 case qc::T: return "t";
-                                 case qc::Tdag: return "tdg";
-                                 case qc::SX: return "sx";
-                                 case qc::SXdag: return "sxdg";
-                                 case qc::V: return "v";
-                                 case qc::Vdag: return "vdg";
-                                 case qc::U3: return "u3";
-                                 case qc::U2: return "u2";
-                                 case qc::Phase: return "u1";
-                                 case qc::RX: return "rx";
-                                 case qc::RY: return "ry";
-                                 case qc::RZ: return "rz";
-                                 case qc::SWAP: return "swap";
-                                 case qc::iSWAP: return "iswap";
-                                 case qc::Peres: return "p";
-                                 case qc::Peresdag: return "pdag";
-                                 default: return "unknownGate";
-                             }
+                             return toString(gate);
                          });
 
 TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
@@ -95,6 +70,9 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
 
     qc::StandardOperation op;
     switch (gate) {
+        case qc::GPhase:
+            op = qc::StandardOperation(nqubits, Controls{}, Targets{}, gate, std::vector{dist(mt)});
+            break;
         case qc::U3:
             op = qc::StandardOperation(nqubits, 0, gate, std::vector{dist(mt), dist(mt), dist(mt)});
             break;
@@ -110,11 +88,23 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
 
         case qc::SWAP:
         case qc::iSWAP:
+        case qc::DCX:
+        case qc::ECR:
             op = qc::StandardOperation(nqubits, Controls{}, 0, 1, gate);
             break;
         case qc::Peres:
         case qc::Peresdag:
             op = qc::StandardOperation(nqubits, {0_pc}, 1, 2, gate);
+            break;
+        case qc::RXX:
+        case qc::RYY:
+        case qc::RZZ:
+        case qc::RZX:
+            op = qc::StandardOperation(nqubits, Controls{}, 0, 1, gate, std::vector{dist(mt)});
+            break;
+        case qc::XXminusYY:
+        case qc::XXplusYY:
+            op = qc::StandardOperation(nqubits, Controls{}, 0, 1, gate, std::vector{dist(mt), dist(mt)});
             break;
         default:
             op = qc::StandardOperation(nqubits, 0, gate);
