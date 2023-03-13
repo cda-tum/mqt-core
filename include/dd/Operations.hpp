@@ -212,7 +212,7 @@ namespace dd {
             if (inverse) {
                 phase = -phase;
             }
-            auto id = dd->makeIdent(nqubits);
+            auto id = dd->makeIdent(static_cast<dd::QubitCount>(nqubits));
             id.w    = dd->cn.lookup(std::cos(phase), std::sin(phase));
             return id;
         }
