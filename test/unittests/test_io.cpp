@@ -576,3 +576,17 @@ TEST_F(IO, NativeTwoQubitGateImportAndExport) {
         std::cout << "---" << std::endl;
     }
 }
+
+TEST_F(IO, UseQelib1Gate) {
+    std::stringstream ss{};
+    ss << "include \"qelib1.inc\";\n"
+       << "qreg q[3];\n"
+       << "rccx q[0], q[1], q[2];\n";
+    qc->import(ss, qc::Format::OpenQASM);
+    std::cout << *qc << std::endl;
+    EXPECT_EQ(qc->getNqubits(), 3U);
+    EXPECT_EQ(qc->getNops(), 1U);
+    EXPECT_EQ(qc->at(0)->getType(), qc::Compound);
+    const auto& op = dynamic_cast<const qc::CompoundOperation*>(qc->at(0).get());
+    EXPECT_EQ(op->size(), 9U);
+}
