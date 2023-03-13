@@ -7,6 +7,7 @@ qreg r[2];
 creg c[2];
 creg d[2];
 
+gphase(pi/4);
 id q[0];
 h q[0];
 x q;
@@ -25,6 +26,8 @@ sx q[1];
 sxdg q[1];
 U(0,0,-pi/4) q[1];
 U(0,0,pi/4) q[0];
+U(pi/2,pi/2,-pi/2) q[0];
+U(pi/2,-pi/2,pi/2) q[0];
 
 cx q[0],r[0];
 cx q[0],r;

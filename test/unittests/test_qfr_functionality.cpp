@@ -1777,17 +1777,18 @@ TEST_F(QFRFunctionality, U3toU2Gate) {
     QuantumComputation qc(1);
     qc.u3(0, PI_2, 0., PI);      // H
     qc.u3(0, PI_2, 0., 0.);      // RY(pi/2)
-    qc.u3(0, PI_2, -PI_2, PI_2); // RX(pi/2)
+    qc.u3(0, PI_2, -PI_2, PI_2); // V = RX(pi/2)
+    qc.u3(0, PI_2, PI_2, -PI_2); // Vdag = RX(-pi/2)
     qc.u3(0, PI_2, 0.25, 0.5);   // U2(0.25, 0.5)
     std::cout << qc << std::endl;
     EXPECT_EQ(qc.at(0)->getType(), qc::H);
     EXPECT_EQ(qc.at(1)->getType(), qc::RY);
     EXPECT_EQ(qc.at(1)->getParameter().at(0), PI_2);
-    EXPECT_EQ(qc.at(2)->getType(), qc::RX);
-    EXPECT_EQ(qc.at(2)->getParameter().at(0), PI_2);
-    EXPECT_EQ(qc.at(3)->getType(), qc::U2);
-    EXPECT_EQ(qc.at(3)->getParameter().at(0), 0.25);
-    EXPECT_EQ(qc.at(3)->getParameter().at(1), 0.5);
+    EXPECT_EQ(qc.at(2)->getType(), qc::V);
+    EXPECT_EQ(qc.at(3)->getType(), qc::Vdag);
+    EXPECT_EQ(qc.at(4)->getType(), qc::U2);
+    EXPECT_EQ(qc.at(4)->getParameter().at(0), 0.25);
+    EXPECT_EQ(qc.at(4)->getParameter().at(1), 0.5);
 }
 
 TEST_F(QFRFunctionality, U3toU1Gate) {
@@ -1815,6 +1816,7 @@ TEST_F(QFRFunctionality, U3SpecialCases) {
     QuantumComputation qc(1);
     qc.u3(0, 0.5, 0., 0.);      // RY(0.5)
     qc.u3(0, 0.5, -PI_2, PI_2); // RX(0.5)
+    qc.u3(0, 0.5, PI_2, -PI_2); // RX(-0.5)
     qc.u3(0, PI, PI_2, PI_2);   // Y
     qc.u3(0, PI, 0., PI);       // X
     qc.u3(0, 0.5, 0.25, 0.125); // U3(0.5, 0.25, 0.125)
@@ -1824,10 +1826,12 @@ TEST_F(QFRFunctionality, U3SpecialCases) {
     EXPECT_EQ(qc.at(0)->getParameter().at(0), 0.5);
     EXPECT_EQ(qc.at(1)->getType(), qc::RX);
     EXPECT_EQ(qc.at(1)->getParameter().at(0), 0.5);
-    EXPECT_EQ(qc.at(2)->getType(), qc::Y);
-    EXPECT_EQ(qc.at(3)->getType(), qc::X);
-    EXPECT_EQ(qc.at(4)->getType(), qc::U3);
-    EXPECT_EQ(qc.at(4)->getParameter().at(0), 0.5);
-    EXPECT_EQ(qc.at(4)->getParameter().at(1), 0.25);
-    EXPECT_EQ(qc.at(4)->getParameter().at(2), 0.125);
+    EXPECT_EQ(qc.at(2)->getType(), qc::RX);
+    EXPECT_EQ(qc.at(2)->getParameter().at(0), -0.5);
+    EXPECT_EQ(qc.at(3)->getType(), qc::Y);
+    EXPECT_EQ(qc.at(4)->getType(), qc::X);
+    EXPECT_EQ(qc.at(5)->getType(), qc::U3);
+    EXPECT_EQ(qc.at(5)->getParameter().at(0), 0.5);
+    EXPECT_EQ(qc.at(5)->getParameter().at(1), 0.25);
+    EXPECT_EQ(qc.at(5)->getParameter().at(2), 0.125);
 }
