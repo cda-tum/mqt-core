@@ -240,6 +240,44 @@ TEST_F(IO, qiskitMcxVchain) {
     EXPECT_EQ(gate->getTargets().at(0), 3);
 }
 
+TEST_F(IO, qiskitMcxRecursiveInDeclaration) {
+    std::stringstream ss{};
+    ss << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[7];"
+       << "gate foo q0, q1, q2, q3, q4 { mcx_recursive q0, q1, q2, q3, q4; }"
+       << "gate bar q0, q1, q2, q3, q4, q5, anc { mcx_recursive q0, q1, q2, q3, q4, q5, anc; }"
+       << "foo q[0], q[1], q[2], q[3], q[4];"
+       << "bar q[0], q[1], q[2], q[3], q[4], q[5], q[6];"
+       << std::endl;
+    qc->import(ss, qc::Format::OpenQASM);
+    std::cout << *qc << std::endl;
+    const auto& op = qc->at(0);
+    EXPECT_EQ(op->getType(), qc::X);
+    EXPECT_EQ(op->getNcontrols(), 4);
+    EXPECT_EQ(op->getTargets().at(0), 4);
+    const auto& second = qc->at(1);
+    EXPECT_EQ(second->getType(), qc::X);
+    EXPECT_EQ(second->getNcontrols(), 5);
+    EXPECT_EQ(second->getTargets().at(0), 5);
+}
+
+TEST_F(IO, qiskitMcxVchainInDeclaration) {
+    std::stringstream ss{};
+    ss << "OPENQASM 2.0;"
+       << "include \"qelib1.inc\";"
+       << "qreg q[5];"
+       << "gate foo q0, q1, q2, q3, anc { mcx_vchain q0, q1, q2, q3, anc; }"
+       << "foo q[0], q[1], q[2], q[3], q[4];"
+       << std::endl;
+    qc->import(ss, qc::Format::OpenQASM);
+    std::cout << *qc << std::endl;
+    const auto& op = qc->at(0);
+    EXPECT_EQ(op->getType(), qc::X);
+    EXPECT_EQ(op->getNcontrols(), 3);
+    EXPECT_EQ(op->getTargets().at(0), 3);
+}
+
 TEST_F(IO, qiskitMcxDuplicateQubit) {
     std::stringstream ss{};
     ss << "OPENQASM 2.0;"
