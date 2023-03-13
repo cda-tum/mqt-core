@@ -262,6 +262,11 @@ TEST_F(IO, qiskitMcxQubitRegister) {
     EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
 }
 
+TEST_F(IO, realInput) {
+    qc->import("./circuits/test.real");
+    std::cout << *qc << std::endl;
+}
+
 TEST_F(IO, tfcInput) {
     qc->import("./circuits/test.tfc");
     std::cout << *qc << std::endl;
