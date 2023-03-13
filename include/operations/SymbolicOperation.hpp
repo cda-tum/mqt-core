@@ -73,7 +73,7 @@ namespace qc {
         [[nodiscard]] std::vector<SymbolOrNumber> getParameters() const {
             std::vector<SymbolOrNumber> params{};
             for (std::size_t i = 0; i < parameter.size(); ++i) {
-                params.push_back(getParameter(i));
+                params.emplace_back(getParameter(i));
             }
             return params;
         }
