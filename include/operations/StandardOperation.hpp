@@ -52,7 +52,7 @@ namespace qc {
         // MCT Constructor
         StandardOperation(std::size_t nq, const Controls& c, Qubit target, Qubit startingQubit = 0);
 
-        // MCF (cSWAP), Peres, paramterized two target Constructor
+        // MCF (cSWAP), Peres, parameterized two target Constructor
         StandardOperation(std::size_t nq, const Controls& c, Qubit target0, Qubit target1, OpType g, fp lambda = 0., fp phi = 0., fp theta = 0., Qubit startingQubit = 0);
 
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {
