@@ -293,8 +293,8 @@ namespace qc::qiskit {
             auto target = qubits.back().qubit;
             qubits.pop_back();
             std::vector<qc::SymbolOrNumber> parameters{};
-            for (std::size_t i = 0; i < params.size(); ++i) { // NOLINT(modernize-loop-convert)
-                parameters.emplace_back(parseParam(params[i]));
+            for (const auto& param: params) {
+                parameters.emplace_back(parseParam(py::reinterpret_borrow<py::object>(param)));
             }
             const Controls controls(qubits.cbegin(), qubits.cend());
             if (std::all_of(parameters.cbegin(), parameters.cend(), [](const auto& p) { return std::holds_alternative<fp>(p); })) {
@@ -320,8 +320,8 @@ namespace qc::qiskit {
             auto target0 = qubits.back().qubit;
             qubits.pop_back();
             std::vector<qc::SymbolOrNumber> parameters{};
-            for (std::size_t i = 0; i < params.size(); ++i) { // NOLINT(modernize-loop-convert)
-                parameters.emplace_back(parseParam(params[i]));
+            for (const auto& param: params) {
+                parameters.emplace_back(parseParam(py::reinterpret_borrow<py::object>(param)));
             }
             const Controls controls(qubits.cbegin(), qubits.cend());
             if (std::all_of(parameters.cbegin(), parameters.cend(), [](const auto& p) { return std::holds_alternative<fp>(p); })) {
