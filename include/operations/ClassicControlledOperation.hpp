@@ -23,6 +23,7 @@ namespace qc {
             op(std::move(operation)), controlRegister(std::move(controlReg)), expectedValue(expectedVal) {
             nqubits = op->getNqubits();
             name    = "c_" + op->getName();
+            parameter.reserve(3);
             parameter.emplace_back(static_cast<fp>(controlRegister.first));
             parameter.emplace_back(static_cast<fp>(controlRegister.second));
             parameter.emplace_back(static_cast<fp>(expectedValue));
