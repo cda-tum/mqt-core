@@ -92,7 +92,7 @@ namespace qc {
         SymbolicOperation(std::size_t nq, const Controls& c, Qubit target, OpType g, const std::vector<SymbolOrNumber>& params = {}, Qubit startingQubit = 0);
         SymbolicOperation(std::size_t nq, const Controls& c, const Targets& targ, OpType g, const std::vector<SymbolOrNumber>& params = {}, Qubit startingQubit = 0);
 
-        // MCF (cSWAP), Peres, paramterized two target Constructor
+        // MCF (cSWAP), Peres, parameterized two target Constructor
         SymbolicOperation(std::size_t nq, const Controls& c, Qubit target0, Qubit target1, OpType g, const std::vector<SymbolOrNumber>& params = {}, Qubit startingQubit = 0);
 
         [[nodiscard]] std::unique_ptr<Operation> clone() const override {

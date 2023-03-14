@@ -229,7 +229,7 @@ namespace qc {
         controls = c;
     }
 
-    // MCF (cSWAP), Peres, paramterized two target Constructor
+    // MCF (cSWAP), Peres, parameterized two target Constructor
     SymbolicOperation::SymbolicOperation(const std::size_t nq, const Controls& c, const Qubit target0, const Qubit target1, const OpType g, const std::vector<SymbolOrNumber>& params, const Qubit startingQubit):
         SymbolicOperation(nq, c, {target0, target1}, g, params, startingQubit) {
     }
