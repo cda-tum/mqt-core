@@ -109,8 +109,7 @@ namespace qc {
 
         return U3;
     }
-    OpType SymbolicOperation::parseU3(fp& theta, [[maybe_unused]] const Symbolic& phi,
-                                      [[maybe_unused]] const Symbolic& lambda) {
+    OpType SymbolicOperation::parseU3(fp& theta, const Symbolic& phi, const Symbolic& lambda) {
         if (std::abs(theta - PI_2) < PARAMETER_TOLERANCE) {
             theta = PI_2;
             return parseU2(phi, lambda);
