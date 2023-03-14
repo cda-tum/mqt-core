@@ -385,11 +385,11 @@ namespace qc {
         for (const auto& c: controls) {
             of << " " << qreg[c.qubit].second << ",";
         }
-        for (std::size_t i = 0; i < targets.size(); ++i) {
-            of << " " << qreg[targets[i]].second;
-            if (i < targets.size() - 1) {
-                of << ",";
+        if (!targets.empty()) {
+            for (const auto& t: targets) {
+                of << " " << qreg[t].second << ",";
             }
+            of.seekp(-1, std::ios_base::cur);
         }
         of << ";\n";
         // apply X operations to negate the respective controls again
