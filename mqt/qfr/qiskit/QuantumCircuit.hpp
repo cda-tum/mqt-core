@@ -8,6 +8,7 @@
 
 #include "pybind11/pybind11.h"
 
+#include <pybind11/pytypes.h>
 #include <regex>
 #include <type_traits>
 #include <variant>
@@ -80,6 +81,12 @@ namespace qc::qiskit {
                 }
             }
 
+            try {
+                qc.gphase(circ.attr("global_phase").cast<fp>());
+            } catch (const py::cast_error& e) {
+                std::clog << "[import] Warning: Symbolic global phase values are not supported yet. Ignoring global phase.\n";
+            }
+
             // iterate over instructions
             auto&& data = circ.attr("data");
             for (const auto pyinst: data) {
@@ -101,7 +108,7 @@ namespace qc::qiskit {
 
     protected:
         static void emplaceOperation(QuantumComputation& qc, const py::object& instruction, const py::list& qargs, const py::list& cargs, const py::list& params, const py::dict& qubitMap, const py::dict& clbitMap) {
-            static const auto NATIVELY_SUPPORTED_GATES = std::set<std::string>{"i", "id", "iden", "x", "y", "z", "h", "s", "sdg", "t", "tdg", "p", "u1", "rx", "ry", "rz", "u2", "u", "u3", "cx", "cy", "cz", "cp", "cu1", "ch", "crx", "cry", "crz", "cu3", "ccx", "swap", "cswap", "iswap", "sx", "sxdg", "csx", "mcx", "mcx_gray", "mcx_recursive", "mcx_vchain", "mcphase", "mcrx", "mcry", "mcrz"};
+            static const auto NATIVELY_SUPPORTED_GATES = std::set<std::string>{"i", "id", "iden", "x", "y", "z", "h", "s", "sdg", "t", "tdg", "p", "u1", "rx", "ry", "rz", "u2", "u", "u3", "cx", "cy", "cz", "cp", "cu1", "ch", "crx", "cry", "crz", "cu3", "ccx", "swap", "cswap", "iswap", "sx", "sxdg", "csx", "mcx", "mcx_gray", "mcx_recursive", "mcx_vchain", "mcphase", "mcrx", "mcry", "mcrz", "dcx", "ecr", "rxx", "ryy", "rzx", "rzz", "xx_minus_yy", "xx_plus_yy"};
 
             auto instructionName = instruction.attr("name").cast<std::string>();
             if (instructionName == "measure") {
@@ -162,6 +169,22 @@ namespace qc::qiskit {
                     addTwoTargetOperation(qc, SWAP, qargs, params, qubitMap);
                 } else if (instructionName == "iswap") {
                     addTwoTargetOperation(qc, iSWAP, qargs, params, qubitMap);
+                } else if (instructionName == "dcx") {
+                    addTwoTargetOperation(qc, DCX, qargs, params, qubitMap);
+                } else if (instructionName == "ecr") {
+                    addTwoTargetOperation(qc, ECR, qargs, params, qubitMap);
+                } else if (instructionName == "rxx") {
+                    addTwoTargetOperation(qc, RXX, qargs, params, qubitMap);
+                } else if (instructionName == "ryy") {
+                    addTwoTargetOperation(qc, RYY, qargs, params, qubitMap);
+                } else if (instructionName == "rzx") {
+                    addTwoTargetOperation(qc, RZX, qargs, params, qubitMap);
+                } else if (instructionName == "rzz") {
+                    addTwoTargetOperation(qc, RZZ, qargs, params, qubitMap);
+                } else if (instructionName == "xx_minus_yy") {
+                    addTwoTargetOperation(qc, XXminusYY, qargs, params, qubitMap);
+                } else if (instructionName == "xx_plus_yy") {
+                    addTwoTargetOperation(qc, XXplusYY, qargs, params, qubitMap);
                 } else if (instructionName == "mcx_recursive") {
                     if (qargs.size() <= 5) {
                         addOperation(qc, X, qargs, params, qubitMap);
@@ -269,26 +292,20 @@ namespace qc::qiskit {
             }
             auto target = qubits.back().qubit;
             qubits.pop_back();
-            qc::SymbolOrNumber theta  = 0.;
-            qc::SymbolOrNumber phi    = 0.;
-            qc::SymbolOrNumber lambda = 0.;
-
-            if (params.size() == 1) {
-                lambda = parseParam(params[0]);
-            } else if (params.size() == 2) {
-                phi    = parseParam(params[0]);
-                lambda = parseParam(params[1]);
-            } else if (params.size() == 3) {
-                theta  = parseParam(params[0]);
-                phi    = parseParam(params[1]);
-                lambda = parseParam(params[2]);
+            std::vector<qc::SymbolOrNumber> parameters{};
+            for (const auto& param: params) {
+                parameters.emplace_back(parseParam(py::reinterpret_borrow<py::object>(param)));
             }
             const Controls controls(qubits.cbegin(), qubits.cend());
-            if (std::holds_alternative<fp>(lambda) && std::holds_alternative<fp>(phi) && std::holds_alternative<fp>(theta)) {
-                qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target, type, std::get<fp>(lambda), std::get<fp>(phi), std::get<fp>(theta));
+            if (std::all_of(parameters.cbegin(), parameters.cend(), [](const auto& p) { return std::holds_alternative<fp>(p); })) {
+                std::vector<fp> fpParams{};
+                std::transform(parameters.cbegin(), parameters.cend(), std::back_inserter(fpParams), [](const auto& p) { return std::get<fp>(p); });
+                qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target, type, fpParams);
             } else {
-                qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target, type, lambda, phi, theta);
-                qc.addVariables(lambda, phi, theta);
+                qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target, type, parameters);
+                for (const auto& p: parameters) {
+                    qc.addVariables(p);
+                }
             }
         }
 
@@ -302,25 +319,20 @@ namespace qc::qiskit {
             qubits.pop_back();
             auto target0 = qubits.back().qubit;
             qubits.pop_back();
-            qc::SymbolOrNumber theta  = 0.;
-            qc::SymbolOrNumber phi    = 0.;
-            qc::SymbolOrNumber lambda = 0.;
-            if (params.size() == 1) {
-                lambda = parseParam(params[0]);
-            } else if (params.size() == 2) {
-                phi    = parseParam(params[0]);
-                lambda = parseParam(params[1]);
-            } else if (params.size() == 3) {
-                theta  = parseParam(params[0]);
-                phi    = parseParam(params[1]);
-                lambda = parseParam(params[2]);
+            std::vector<qc::SymbolOrNumber> parameters{};
+            for (const auto& param: params) {
+                parameters.emplace_back(parseParam(py::reinterpret_borrow<py::object>(param)));
             }
             const Controls controls(qubits.cbegin(), qubits.cend());
-            if (std::holds_alternative<fp>(lambda) && std::holds_alternative<fp>(phi) && std::holds_alternative<fp>(theta)) {
-                qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0, target1, type, std::get<fp>(lambda), std::get<fp>(phi), std::get<fp>(theta));
+            if (std::all_of(parameters.cbegin(), parameters.cend(), [](const auto& p) { return std::holds_alternative<fp>(p); })) {
+                std::vector<fp> fpParams{};
+                std::transform(parameters.cbegin(), parameters.cend(), std::back_inserter(fpParams), [](const auto& p) { return std::get<fp>(p); });
+                qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0, target1, type, fpParams);
             } else {
-                qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target0, target1, type, lambda, phi, theta);
-                qc.addVariables(lambda, phi, theta);
+                qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target0, target1, type, parameters);
+                for (const auto& p: parameters) {
+                    qc.addVariables(p);
+                }
             }
         }
 

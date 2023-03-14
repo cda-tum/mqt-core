@@ -265,9 +265,7 @@ namespace qc {
                             it->getNqubits(),
                             it->getTargets().at(0),
                             it->getType(),
-                            it->getParameter().at(0),
-                            it->getParameter().at(1),
-                            it->getParameter().at(2));
+                            it->getParameter());
                     it->setGate(I);
                 }
 
@@ -287,16 +285,12 @@ namespace qc {
                         (*op)->getNqubits(),
                         (*op)->getTargets().at(0),
                         (*op)->getType(),
-                        (*op)->getParameter().at(0),
-                        (*op)->getParameter().at(1),
-                        (*op)->getParameter().at(2));
+                        (*op)->getParameter());
                 compop->emplace_back<StandardOperation>(
                         it->getNqubits(),
                         it->getTargets().at(0),
                         it->getType(),
-                        it->getParameter().at(0),
-                        it->getParameter().at(1),
-                        it->getParameter().at(2));
+                        it->getParameter());
                 it->setGate(I);
                 (*op) = std::move(compop);
                 dag.at(target).push_back(op);
@@ -852,9 +846,7 @@ namespace qc {
                                                                                                       controls,
                                                                                                       targs,
                                                                                                       type,
-                                                                                                      parameters[0],
-                                                                                                      parameters[1],
-                                                                                                      parameters[2]));
+                                                                                                      parameters));
 
                             // advance just after the currently inserted operation
                             ++currentInsertionPoint;

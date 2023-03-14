@@ -43,7 +43,7 @@ namespace qc {
                     } else {
                         const auto powerOfTwo = std::pow(2., i - j + 1);
                         const auto lambda     = PI / powerOfTwo;
-                        classicControlled(Phase, 0, {d, 1U}, 1U, lambda);
+                        classicControlled(Phase, 0, {d, 1U}, 1U, std::vector{lambda});
                     }
                 }
 

@@ -19,18 +19,19 @@ namespace qasm {
     class Scanner {
         struct LineInfo {
             char ch;
-            int  line, col;
+            int  line;
+            int  col;
 
-            LineInfo(char c, int l, int cl):
+            LineInfo(const char c, const int l, const int cl):
                 ch(c), line(l), col(cl) {}
         };
 
-        std::istream&                             is;
-        std::stack<std::shared_ptr<std::istream>> streams{};
-        std::map<std::string, Token::Kind>        keywords{};
-        char                                      ch   = 0;
-        int                                       line = 1;
-        int                                       col  = 0;
+        std::istream&                                   is;
+        std::stack<std::shared_ptr<std::istream>>       streams{};
+        std::map<std::string, Token::Kind, std::less<>> keywords{};
+        char                                            ch   = 0;
+        int                                             line = 1;
+        int                                             col  = 0;
 
         void nextCh();
 

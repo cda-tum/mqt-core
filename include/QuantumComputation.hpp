@@ -162,9 +162,6 @@ namespace qc {
             return isLastOperationOnQubit(opIt, end);
         }
         void checkQubitRange(Qubit qubit) const;
-        void checkQubitRange(Qubit qubit0, Qubit qubit1) const;
-        void checkQubitRange(Qubit qubit, const Control& control) const;
-        void checkQubitRange(Qubit qubit0, Qubit qubit1, const Control& control) const;
         void checkQubitRange(Qubit qubit, const Controls& controls) const;
         void checkQubitRange(Qubit qubit0, Qubit qubit1, const Controls& controls) const;
         void checkQubitRange(const std::vector<Qubit>& qubits) const;
@@ -281,331 +278,493 @@ namespace qc {
         /// \return whether the given logical qubit exists in the initial layout and to which physical qubit it is mapped
         [[nodiscard, gnu::pure]] std::pair<bool, std::optional<Qubit>> containsLogicalQubit(Qubit logicalQubitIndex) const;
 
-        void i(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::I);
+        /// Adds a global phase to the quantum circuit.
+        /// \param angle the angle to add
+        void gphase(const fp& angle) {
+            emplace_back<StandardOperation>(getNqubits(), Controls{}, Targets{}, qc::GPhase, std::vector{angle});
         }
-        void i(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::I);
+
+        void i(const Qubit target) {
+            i(target, Controls{});
         }
-        void i(Qubit target, const Controls& controls) {
+        void i(const Qubit target, const Control& control) {
+            i(target, Controls{control});
+        }
+        void i(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::I);
         }
 
-        void h(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::H);
+        void h(const Qubit target) {
+            h(target, Controls{});
         }
-        void h(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::H);
+        void h(const Qubit target, const Control& control) {
+            h(target, Controls{control});
         }
-        void h(Qubit target, const Controls& controls) {
+        void h(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::H);
         }
 
-        void x(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::X);
+        void x(const Qubit target) {
+            x(target, Controls{});
         }
-        void x(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::X);
+        void x(const Qubit target, const Control& control) {
+            x(target, Controls{control});
         }
-        void x(Qubit target, const Controls& controls) {
+        void x(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::X);
         }
 
-        void y(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::Y);
+        void y(const Qubit target) {
+            y(target, Controls{});
         }
-        void y(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::Y);
+        void y(const Qubit target, const Control& control) {
+            y(target, Controls{control});
         }
-        void y(Qubit target, const Controls& controls) {
+        void y(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Y);
         }
 
-        void z(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::Z);
+        void z(const Qubit target) {
+            z(target, Controls{});
         }
-        void z(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::Z);
+        void z(const Qubit target, const Control& control) {
+            z(target, Controls{control});
         }
-        void z(Qubit target, const Controls& controls) {
+        void z(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Z);
         }
 
-        void s(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::S);
+        void s(const Qubit target) {
+            s(target, Controls{});
         }
-        void s(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::S);
+        void s(const Qubit target, const Control& control) {
+            s(target, Controls{control});
         }
-        void s(Qubit target, const Controls& controls) {
+        void s(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::S);
         }
 
-        void sdag(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::Sdag);
+        void sdag(const Qubit target) {
+            sdag(target, Controls{});
         }
-        void sdag(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::Sdag);
+        void sdag(const Qubit target, const Control& control) {
+            sdag(target, Controls{control});
         }
-        void sdag(Qubit target, const Controls& controls) {
+        void sdag(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Sdag);
         }
 
-        void t(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::T);
+        void t(const Qubit target) {
+            t(target, Controls{});
         }
-        void t(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::T);
+        void t(const Qubit target, const Control& control) {
+            t(target, Controls{control});
         }
-        void t(Qubit target, const Controls& controls) {
+        void t(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::T);
         }
 
-        void tdag(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::Tdag);
+        void tdag(const Qubit target) {
+            tdag(target, Controls{});
         }
-        void tdag(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::Tdag);
+        void tdag(const Qubit target, const Control& control) {
+            tdag(target, Controls{control});
         }
-        void tdag(Qubit target, const Controls& controls) {
+        void tdag(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Tdag);
         }
 
-        void v(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::V);
+        void v(const Qubit target) {
+            v(target, Controls{});
         }
-        void v(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::V);
+        void v(const Qubit target, const Control& control) {
+            v(target, Controls{control});
         }
-        void v(Qubit target, const Controls& controls) {
+        void v(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::V);
         }
 
-        void vdag(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::Vdag);
+        void vdag(const Qubit target) {
+            vdag(target, Controls{});
         }
-        void vdag(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::Vdag);
+        void vdag(const Qubit target, const Control& control) {
+            vdag(target, Controls{control});
         }
-        void vdag(Qubit target, const Controls& controls) {
+        void vdag(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Vdag);
         }
 
-        void u3(Qubit target, fp lambda, fp phi, fp theta) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::U3, lambda, phi, theta);
+        void u3(const Qubit target, const fp theta, const fp phi, const fp lambda) {
+            u3(target, Controls{}, theta, phi, lambda);
         }
-        void u3(Qubit target, const Control& control, fp lambda, fp phi, fp theta) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::U3, lambda, phi, theta);
+        void u3(const Qubit target, const Control& control, const fp theta, const fp phi, const fp lambda) {
+            u3(target, Controls{control}, theta, phi, lambda);
         }
-        void u3(Qubit target, const Controls& controls, fp lambda, fp phi, fp theta) {
+        void u3(const Qubit target, const Controls& controls, const fp theta, const fp phi, const fp lambda) {
             checkQubitRange(target, controls);
-            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::U3, lambda, phi, theta);
+            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::U3, std::vector{theta, phi, lambda});
         }
-        void u3(Qubit target, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta);
-        void u3(Qubit target, const Control& control, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta);
-        void u3(Qubit target, const Controls& controls, const SymbolOrNumber& lambda, const SymbolOrNumber& phi, const SymbolOrNumber& theta);
-
-        void u2(Qubit target, fp lambda, fp phi) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::U2, lambda, phi);
+        void u3(const Qubit target, const SymbolOrNumber& theta, const SymbolOrNumber& phi, const SymbolOrNumber& lambda) {
+            u3(target, Controls{}, theta, phi, lambda);
         }
-        void u2(Qubit target, const Control& control, fp lambda, fp phi) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::U2, lambda, phi);
+        void u3(const Qubit target, const Control& control, const SymbolOrNumber& theta, const SymbolOrNumber& phi, const SymbolOrNumber& lambda) {
+            u3(target, Controls{control}, theta, phi, lambda);
         }
-        void u2(Qubit target, const Controls& controls, fp lambda, fp phi) {
+        void u3(const Qubit target, const Controls& controls, const SymbolOrNumber& theta, const SymbolOrNumber& phi, const SymbolOrNumber& lambda) {
             checkQubitRange(target, controls);
-            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::U2, lambda, phi);
+            addVariables(theta, phi, lambda);
+            emplace_back<SymbolicOperation>(getNqubits(), controls, target, qc::U3, std::vector{theta, phi, lambda});
         }
-        void u2(Qubit target, const SymbolOrNumber& lambda, const SymbolOrNumber& phi);
-        void u2(Qubit target, const Control& control, const SymbolOrNumber& lambda, const SymbolOrNumber& phi);
-        void u2(Qubit target, const Controls& controls, const SymbolOrNumber& lambda, const SymbolOrNumber& phi);
 
-        void phase(Qubit target, fp lambda) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::Phase, lambda);
+        void u2(const Qubit target, const fp phi, const fp lambda) {
+            u2(target, Controls{}, phi, lambda);
         }
-        void phase(Qubit target, const Control& control, fp lambda) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::Phase, lambda);
+        void u2(const Qubit target, const Control& control, const fp phi, const fp lambda) {
+            u2(target, Controls{control}, phi, lambda);
         }
-        void phase(Qubit target, const Controls& controls, fp lambda) {
+        void u2(const Qubit target, const Controls& controls, const fp phi, const fp lambda) {
             checkQubitRange(target, controls);
-            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Phase, lambda);
+            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::U2, std::vector{phi, lambda});
         }
-        void phase(Qubit target, const SymbolOrNumber& lambda);
-        void phase(Qubit target, const Control& control, const SymbolOrNumber& lambda);
-        void phase(Qubit target, const Controls& controls, const SymbolOrNumber& lambda);
+        void u2(const Qubit target, const SymbolOrNumber& phi, const SymbolOrNumber& lambda) {
+            u2(target, Controls{}, phi, lambda);
+        }
+        void u2(const Qubit target, const Control& control, const SymbolOrNumber& phi, const SymbolOrNumber& lambda) {
+            u2(target, Controls{control}, phi, lambda);
+        }
+        void u2(const Qubit target, const Controls& controls, const SymbolOrNumber& phi, const SymbolOrNumber& lambda) {
+            checkQubitRange(target, controls);
+            addVariables(phi, lambda);
+            emplace_back<SymbolicOperation>(getNqubits(), controls, target, qc::U2, std::vector{phi, lambda});
+        }
 
-        void sx(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::SX);
+        void phase(const Qubit target, const fp lambda) {
+            phase(target, Controls{}, lambda);
         }
-        void sx(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::SX);
+        void phase(const Qubit target, const Control& control, const fp lambda) {
+            phase(target, Controls{control}, lambda);
         }
-        void sx(Qubit target, const Controls& controls) {
+        void phase(const Qubit target, const Controls& controls, const fp lambda) {
+            checkQubitRange(target, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::Phase, std::vector{lambda});
+        }
+        void phase(const Qubit target, const SymbolOrNumber& lambda) {
+            phase(target, Controls{}, lambda);
+        }
+        void phase(const Qubit target, const Control& control, const SymbolOrNumber& lambda) {
+            phase(target, Controls{control}, lambda);
+        }
+        void phase(const Qubit target, const Controls& controls, const SymbolOrNumber& lambda) {
+            checkQubitRange(target, controls);
+            addVariables(lambda);
+            emplace_back<SymbolicOperation>(getNqubits(), controls, target, qc::Phase, std::vector{lambda});
+        }
+
+        void sx(const Qubit target) {
+            sx(target, Controls{});
+        }
+        void sx(const Qubit target, const Control& control) {
+            sx(target, Controls{control});
+        }
+        void sx(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::SX);
         }
 
-        void sxdag(Qubit target) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::SXdag);
+        void sxdag(const Qubit target) {
+            sxdag(target, Controls{});
         }
-        void sxdag(Qubit target, const Control& control) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::SXdag);
+        void sxdag(const Qubit target, const Control& control) {
+            sxdag(target, Controls{control});
         }
-        void sxdag(Qubit target, const Controls& controls) {
+        void sxdag(const Qubit target, const Controls& controls) {
             checkQubitRange(target, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target, qc::SXdag);
         }
 
-        void rx(Qubit target, fp lambda) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::RX, lambda);
+        void rx(const Qubit target, const fp lambda) {
+            rx(target, Controls{}, lambda);
         }
-        void rx(Qubit target, const Control& control, fp lambda) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::RX, lambda);
+        void rx(const Qubit target, const Control& control, const fp lambda) {
+            rx(target, Controls{control}, lambda);
         }
-        void rx(Qubit target, const Controls& controls, fp lambda) {
+        void rx(const Qubit target, const Controls& controls, const fp lambda) {
             checkQubitRange(target, controls);
-            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RX, lambda);
+            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RX, std::vector{lambda});
         }
-        void rx(Qubit target, const SymbolOrNumber& lambda);
-        void rx(Qubit target, const Control& control, const SymbolOrNumber& lambda);
-        void rx(Qubit target, const Controls& controls, const SymbolOrNumber& lambda);
-
-        void ry(Qubit target, fp lambda) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::RY, lambda);
+        void rx(const Qubit target, const SymbolOrNumber& lambda) {
+            rx(target, Controls{}, lambda);
         }
-        void ry(Qubit target, const Control& control, fp lambda) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::RY, lambda);
+        void rx(const Qubit target, const Control& control, const SymbolOrNumber& lambda) {
+            rx(target, Controls{control}, lambda);
         }
-        void ry(Qubit target, const Controls& controls, fp lambda) {
+        void rx(const Qubit target, const Controls& controls, const SymbolOrNumber& lambda) {
             checkQubitRange(target, controls);
-            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RY, lambda);
+            addVariables(lambda);
+            emplace_back<SymbolicOperation>(getNqubits(), controls, target, qc::RX, std::vector{lambda});
         }
 
-        void ry(Qubit target, const SymbolOrNumber& lambda);
-        void ry(Qubit target, const Control& control, const SymbolOrNumber& lambda);
-        void ry(Qubit target, const Controls& controls, const SymbolOrNumber& lambda);
-
-        void rz(Qubit target, fp lambda) {
-            checkQubitRange(target);
-            emplace_back<StandardOperation>(getNqubits(), target, qc::RZ, lambda);
+        void ry(const Qubit target, const fp lambda) {
+            ry(target, Controls{}, lambda);
         }
-        void rz(Qubit target, const Control& control, fp lambda) {
-            checkQubitRange(target, control);
-            emplace_back<StandardOperation>(getNqubits(), control, target, qc::RZ, lambda);
+        void ry(const Qubit target, const Control& control, const fp lambda) {
+            ry(target, Controls{control}, lambda);
         }
-        void rz(Qubit target, const Controls& controls, fp lambda) {
+        void ry(const Qubit target, const Controls& controls, const fp lambda) {
             checkQubitRange(target, controls);
-            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RZ, lambda);
+            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RY, std::vector{lambda});
+        }
+        void ry(const Qubit target, const SymbolOrNumber& lambda) {
+            ry(target, Controls{}, lambda);
+        }
+        void ry(const Qubit target, const Control& control, const SymbolOrNumber& lambda) {
+            ry(target, Controls{control}, lambda);
+        }
+        void ry(const Qubit target, const Controls& controls, const SymbolOrNumber& lambda) {
+            checkQubitRange(target, controls);
+            addVariables(lambda);
+            emplace_back<SymbolicOperation>(getNqubits(), controls, target, qc::RY, std::vector{lambda});
         }
 
-        void rz(Qubit target, const SymbolOrNumber& lambda);
-        void rz(Qubit target, const Control& control, const SymbolOrNumber& lambda);
-        void rz(Qubit target, const Controls& controls, const SymbolOrNumber& lambda);
+        void rz(const Qubit target, const fp lambda) {
+            rz(target, Controls{}, lambda);
+        }
+        void rz(const Qubit target, const Control& control, const fp lambda) {
+            rz(target, Controls{control}, lambda);
+        }
+        void rz(const Qubit target, const Controls& controls, const fp lambda) {
+            checkQubitRange(target, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target, qc::RZ, std::vector{lambda});
+        }
+        void rz(const Qubit target, const SymbolOrNumber& lambda) {
+            rz(target, Controls{}, lambda);
+        }
+        void rz(const Qubit target, const Control& control, const SymbolOrNumber& lambda) {
+            rz(target, Controls{control}, lambda);
+        }
+        void rz(const Qubit target, const Controls& controls, const SymbolOrNumber& lambda) {
+            checkQubitRange(target, controls);
+            addVariables(lambda);
+            emplace_back<SymbolicOperation>(getNqubits(), controls, target, qc::RZ, std::vector{lambda});
+        }
 
-        void swap(Qubit target0, Qubit target1) {
-            checkQubitRange(target0, target1);
-            emplace_back<StandardOperation>(getNqubits(), Controls{}, target0, target1, qc::SWAP);
+        void swap(const Qubit target0, const Qubit target1) {
+            swap(target0, target1, Controls{});
         }
-        void swap(Qubit target0, Qubit target1, const Control& control) {
-            checkQubitRange(target0, target1, control);
-            emplace_back<StandardOperation>(getNqubits(), Controls{control}, target0, target1, qc::SWAP);
+        void swap(const Qubit target0, const Qubit target1, const Control& control) {
+            swap(target0, target1, Controls{control});
         }
-        void swap(Qubit target0, Qubit target1, const Controls& controls) {
+        void swap(const Qubit target0, const Qubit target1, const Controls& controls) {
             checkQubitRange(target0, target1, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::SWAP);
         }
 
-        void iswap(Qubit target0, Qubit target1) {
-            checkQubitRange(target0, target1);
-            emplace_back<StandardOperation>(getNqubits(), Controls{}, target0, target1, qc::iSWAP);
+        void iswap(const Qubit target0, const Qubit target1) {
+            iswap(target0, target1, Controls{});
         }
-        void iswap(Qubit target0, Qubit target1, const Control& control) {
-            checkQubitRange(target0, target1, control);
-            emplace_back<StandardOperation>(getNqubits(), Controls{control}, target0, target1, qc::iSWAP);
+        void iswap(const Qubit target0, const Qubit target1, const Control& control) {
+            iswap(target0, target1, Controls{control});
         }
-        void iswap(Qubit target0, Qubit target1, const Controls& controls) {
+        void iswap(const Qubit target0, const Qubit target1, const Controls& controls) {
             checkQubitRange(target0, target1, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::iSWAP);
         }
 
-        void peres(Qubit target0, Qubit target1) {
-            checkQubitRange(target0, target1);
-            emplace_back<StandardOperation>(getNqubits(), Controls{}, target0, target1, qc::Peres);
+        void peres(const Qubit target0, const Qubit target1) {
+            peres(target0, target1, Controls{});
         }
-        void peres(Qubit target0, Qubit target1, const Control& control) {
-            checkQubitRange(target0, target1, control);
-            emplace_back<StandardOperation>(getNqubits(), Controls{control}, target0, target1, qc::Peres);
+        void peres(const Qubit target0, const Qubit target1, const Control& control) {
+            peres(target0, target1, Controls{control});
         }
-        void peres(Qubit target0, Qubit target1, const Controls& controls) {
+        void peres(const Qubit target0, const Qubit target1, const Controls& controls) {
             checkQubitRange(target0, target1, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::Peres);
         }
 
-        void peresdag(Qubit target0, Qubit target1) {
-            checkQubitRange(target0, target1);
-            emplace_back<StandardOperation>(getNqubits(), Controls{}, target0, target1, qc::Peresdag);
+        void peresdag(const Qubit target0, const Qubit target1) {
+            peresdag(target0, target1, Controls{});
         }
-        void peresdag(Qubit target0, Qubit target1, const Control& control) {
-            checkQubitRange(target0, target1, control);
-            emplace_back<StandardOperation>(getNqubits(), Controls{control}, target0, target1, qc::Peresdag);
+        void peresdag(const Qubit target0, const Qubit target1, const Control& control) {
+            peresdag(target0, target1, Controls{control});
         }
-        void peresdag(Qubit target0, Qubit target1, const Controls& controls) {
+        void peresdag(const Qubit target0, const Qubit target1, const Controls& controls) {
             checkQubitRange(target0, target1, controls);
             emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::Peresdag);
         }
 
-        void measure(Qubit qubit, std::size_t clbit) {
+        void dcx(const Qubit target0, const Qubit target1) {
+            dcx(target0, target1, Controls{});
+        }
+        void dcx(const Qubit target0, const Qubit target1, const Control& control) {
+            dcx(target0, target1, Controls{control});
+        }
+        void dcx(const Qubit target0, const Qubit target1, const Controls& controls) {
+            checkQubitRange(target0, target1, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::DCX);
+        }
+
+        void ecr(const Qubit target0, const Qubit target1) {
+            ecr(target0, target1, Controls{});
+        }
+        void ecr(const Qubit target0, const Qubit target1, const Control& control) {
+            ecr(target0, target1, Controls{control});
+        }
+        void ecr(const Qubit target0, const Qubit target1, const Controls& controls) {
+            checkQubitRange(target0, target1, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::ECR);
+        }
+
+        void rxx(const Qubit target0, const Qubit target1, const fp theta) {
+            rxx(target0, target1, Controls{}, theta);
+        }
+        void rxx(const Qubit target0, const Qubit target1, const Control& control, const fp theta) {
+            rxx(target0, target1, Controls{control}, theta);
+        }
+        void rxx(const Qubit target0, const Qubit target1, const Controls& controls, const fp theta) {
+            checkQubitRange(target0, target1, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::RXX, std::vector{theta});
+        }
+        void rxx(const Qubit target0, const Qubit target1, const SymbolOrNumber& theta) {
+            rxx(target0, target1, Controls{}, theta);
+        }
+        void rxx(const Qubit target0, const Qubit target1, const Control& control, const SymbolOrNumber& theta) {
+            rxx(target0, target1, Controls{control}, theta);
+        }
+        void rxx(const Qubit target0, const Qubit target1, const Controls& controls, const SymbolOrNumber& theta) {
+            checkQubitRange(target0, target1, controls);
+            addVariables(theta);
+            emplace_back<SymbolicOperation>(getNqubits(), controls, target0, target1, qc::RXX, std::vector{theta});
+        }
+
+        void ryy(const Qubit target0, const Qubit target1, const fp theta) {
+            ryy(target0, target1, Controls{}, theta);
+        }
+        void ryy(const Qubit target0, const Qubit target1, const Control& control, const fp theta) {
+            ryy(target0, target1, Controls{control}, theta);
+        }
+        void ryy(const Qubit target0, const Qubit target1, const Controls& controls, const fp theta) {
+            checkQubitRange(target0, target1, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::RYY, std::vector{theta});
+        }
+        void ryy(const Qubit target0, const Qubit target1, const SymbolOrNumber& theta) {
+            ryy(target0, target1, Controls{}, theta);
+        }
+        void ryy(const Qubit target0, const Qubit target1, const Control& control, const SymbolOrNumber& theta) {
+            ryy(target0, target1, Controls{control}, theta);
+        }
+        void ryy(const Qubit target0, const Qubit target1, const Controls& controls, const SymbolOrNumber& theta) {
+            checkQubitRange(target0, target1, controls);
+            addVariables(theta);
+            emplace_back<SymbolicOperation>(getNqubits(), controls, target0, target1, qc::RYY, std::vector{theta});
+        }
+
+        void rzz(const Qubit target0, const Qubit target1, const fp theta) {
+            rzz(target0, target1, Controls{}, theta);
+        }
+        void rzz(const Qubit target0, const Qubit target1, const Control& control, const fp theta) {
+            rzz(target0, target1, Controls{control}, theta);
+        }
+        void rzz(const Qubit target0, const Qubit target1, const Controls& controls, const fp theta) {
+            checkQubitRange(target0, target1, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::RZZ, std::vector{theta});
+        }
+        void rzz(const Qubit target0, const Qubit target1, const SymbolOrNumber& theta) {
+            rzz(target0, target1, Controls{}, theta);
+        }
+        void rzz(const Qubit target0, const Qubit target1, const Control& control, const SymbolOrNumber& theta) {
+            rzz(target0, target1, Controls{control}, theta);
+        }
+        void rzz(const Qubit target0, const Qubit target1, const Controls& controls, const SymbolOrNumber& theta) {
+            checkQubitRange(target0, target1, controls);
+            addVariables(theta);
+            emplace_back<SymbolicOperation>(getNqubits(), controls, target0, target1, qc::RZZ, std::vector{theta});
+        }
+
+        void rzx(const Qubit target0, const Qubit target1, const fp theta) {
+            rzx(target0, target1, Controls{}, theta);
+        }
+        void rzx(const Qubit target0, const Qubit target1, const Control& control, const fp theta) {
+            rzx(target0, target1, Controls{control}, theta);
+        }
+        void rzx(const Qubit target0, const Qubit target1, const Controls& controls, const fp theta) {
+            checkQubitRange(target0, target1, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::RZX, std::vector{theta});
+        }
+        void rzx(const Qubit target0, const Qubit target1, const SymbolOrNumber& theta) {
+            rzx(target0, target1, Controls{}, theta);
+        }
+        void rzx(const Qubit target0, const Qubit target1, const Control& control, const SymbolOrNumber& theta) {
+            rzx(target0, target1, Controls{control}, theta);
+        }
+        void rzx(const Qubit target0, const Qubit target1, const Controls& controls, const SymbolOrNumber& theta) {
+            checkQubitRange(target0, target1, controls);
+            addVariables(theta);
+            emplace_back<SymbolicOperation>(getNqubits(), controls, target0, target1, qc::RZX, std::vector{theta});
+        }
+
+        // NOLINTBEGIN(readability-identifier-naming)
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const fp theta, const fp beta) {
+            xx_minus_yy(target0, target1, Controls{}, theta, beta);
+        }
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const Control& control, const fp theta, const fp beta) {
+            xx_minus_yy(target0, target1, Controls{control}, theta, beta);
+        }
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const Controls& controls, const fp theta, const fp beta) {
+            checkQubitRange(target0, target1, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::XXminusYY, std::vector{theta, beta});
+        }
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const SymbolOrNumber& theta, const SymbolOrNumber& beta) {
+            xx_minus_yy(target0, target1, Controls{}, theta, beta);
+        }
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const Control& control, const SymbolOrNumber& theta, const SymbolOrNumber& beta) {
+            xx_minus_yy(target0, target1, Controls{control}, theta, beta);
+        }
+        void xx_minus_yy(const Qubit target0, const Qubit target1, const Controls& controls, const SymbolOrNumber& theta, const SymbolOrNumber& beta) {
+            checkQubitRange(target0, target1, controls);
+            addVariables(theta, beta);
+            emplace_back<SymbolicOperation>(getNqubits(), controls, target0, target1, qc::XXminusYY, std::vector{theta, beta});
+        }
+
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const fp theta, const fp beta) {
+            xx_plus_yy(target0, target1, Controls{}, theta, beta);
+        }
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const Control& control, const fp theta, const fp beta) {
+            xx_plus_yy(target0, target1, Controls{control}, theta, beta);
+        }
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const Controls& controls, const fp theta, const fp beta) {
+            checkQubitRange(target0, target1, controls);
+            emplace_back<StandardOperation>(getNqubits(), controls, target0, target1, qc::XXplusYY, std::vector{theta, beta});
+        }
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const SymbolOrNumber& theta, const SymbolOrNumber& beta) {
+            xx_plus_yy(target0, target1, Controls{}, theta, beta);
+        }
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const Control& control, const SymbolOrNumber& theta, const SymbolOrNumber& beta) {
+            xx_plus_yy(target0, target1, Controls{control}, theta, beta);
+        }
+        void xx_plus_yy(const Qubit target0, const Qubit target1, const Controls& controls, const SymbolOrNumber& theta, const SymbolOrNumber& beta) {
+            checkQubitRange(target0, target1, controls);
+            addVariables(theta, beta);
+            emplace_back<SymbolicOperation>(getNqubits(), controls, target0, target1, qc::XXplusYY, std::vector{theta, beta});
+        }
+        // NOLINTEND(readability-identifier-naming)
+
+        void measure(const Qubit qubit, const std::size_t clbit) {
             checkQubitRange(qubit);
             emplace_back<NonUnitaryOperation>(getNqubits(), qubit, clbit);
         }
 
-        void measure(Qubit qubit, const std::pair<std::string, Bit>& clbit) {
+        void measure(const Qubit qubit, const std::pair<std::string, Bit>& clbit) {
             checkQubitRange(qubit);
             if (const auto cRegister = cregs.find(clbit.first); cRegister != cregs.end()) {
                 if (clbit.second >= cRegister->second.second) {
@@ -625,7 +784,7 @@ namespace qc {
                                               classicalRegister);
         }
 
-        void reset(Qubit target) {
+        void reset(const Qubit target) {
             checkQubitRange(target);
             emplace_back<NonUnitaryOperation>(getNqubits(), std::vector<Qubit>{target}, qc::Reset);
         }
@@ -634,7 +793,7 @@ namespace qc {
             emplace_back<NonUnitaryOperation>(getNqubits(), targets, qc::Reset);
         }
 
-        void barrier(Qubit target) {
+        void barrier(const Qubit target) {
             checkQubitRange(target);
             emplace_back<NonUnitaryOperation>(getNqubits(), std::vector<Qubit>{target}, qc::Barrier);
         }
@@ -643,15 +802,15 @@ namespace qc {
             emplace_back<NonUnitaryOperation>(getNqubits(), targets, qc::Barrier);
         }
 
-        void classicControlled(const OpType op, const Qubit target, const ClassicalRegister& controlRegister, const std::uint64_t expectedValue = 1U, const fp lambda = 0., const fp phi = 0., const fp theta = 0.) {
-            classicControlled(op, target, Controls{}, controlRegister, expectedValue, lambda, phi, theta);
+        void classicControlled(const OpType op, const Qubit target, const ClassicalRegister& controlRegister, const std::uint64_t expectedValue = 1U, const std::vector<fp>& params = {}) {
+            classicControlled(op, target, Controls{}, controlRegister, expectedValue, params);
         }
-        void classicControlled(const OpType op, const Qubit target, const Control control, const ClassicalRegister& controlRegister, const std::uint64_t expectedValue = 1U, const fp lambda = 0., const fp phi = 0., const fp theta = 0.) {
-            classicControlled(op, target, Controls{control}, controlRegister, expectedValue, lambda, phi, theta);
+        void classicControlled(const OpType op, const Qubit target, const Control control, const ClassicalRegister& controlRegister, const std::uint64_t expectedValue = 1U, const std::vector<fp>& params = {}) {
+            classicControlled(op, target, Controls{control}, controlRegister, expectedValue, params);
         }
-        void classicControlled(const OpType op, const Qubit target, const Controls& controls, const ClassicalRegister& controlRegister, const std::uint64_t expectedValue = 1U, const fp lambda = 0., const fp phi = 0., const fp theta = 0.) {
+        void classicControlled(const OpType op, const Qubit target, const Controls& controls, const ClassicalRegister& controlRegister, const std::uint64_t expectedValue = 1U, const std::vector<fp>& params = {}) {
             checkQubitRange(target, controls);
-            std::unique_ptr<Operation> gate = std::make_unique<StandardOperation>(getNqubits(), controls, target, op, lambda, phi, theta);
+            std::unique_ptr<Operation> gate = std::make_unique<StandardOperation>(getNqubits(), controls, target, op, params);
             emplace_back<ClassicControlledOperation>(std::move(gate), controlRegister, expectedValue);
         }
 

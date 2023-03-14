@@ -277,7 +277,7 @@ void qc::QuantumComputation::readQCGateDescriptions(std::istream& is, int line, 
         } else if (gate == RX || gate == RY || gate == RZ) {
             const Qubit target = controls.back().qubit;
             controls.pop_back();
-            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, lambda);
+            emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, std::vector{lambda});
         }
     }
 }

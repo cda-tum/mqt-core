@@ -8,66 +8,6 @@
 namespace qc {
     void Operation::setName() {
         switch (type) {
-            case I:
-                name = "I   ";
-                break;
-            case H:
-                name = "H   ";
-                break;
-            case X:
-                name = "X   ";
-                break;
-            case Y:
-                name = "Y   ";
-                break;
-            case Z:
-                name = "Z   ";
-                break;
-            case S:
-                name = "S   ";
-                break;
-            case Sdag:
-                name = "Sdag";
-                break;
-            case T:
-                name = "T   ";
-                break;
-            case Tdag:
-                name = "Tdag";
-                break;
-            case V:
-                name = "V   ";
-                break;
-            case Vdag:
-                name = "Vdag";
-                break;
-            case U3:
-                name = "U   ";
-                break;
-            case U2:
-                name = "U2  ";
-                break;
-            case Phase:
-                name = "P   ";
-                break;
-            case SX:
-                name = "SX  ";
-                break;
-            case SXdag:
-                name = "SXdg";
-                break;
-            case RX:
-                name = "RX  ";
-                break;
-            case RY:
-                name = "RY  ";
-                break;
-            case RZ:
-                name = "RZ  ";
-                break;
-            case SWAP:
-                name = "SWAP";
-                break;
             case iSWAP:
                 name = "iSWP";
                 break;
@@ -77,32 +17,33 @@ namespace qc {
             case Peresdag:
                 name = "Prdg";
                 break;
-            case Compound:
-                name = "Comp";
+            case RXX:
+                name = "XX  ";
                 break;
-            case Measure:
-                name = "Meas";
+            case RYY:
+                name = "YY  ";
                 break;
-            case Teleportation:
-                name = "Tele";
+            case RZZ:
+                name = "ZZ  ";
+                break;
+            case RZX:
+                name = "ZX  ";
+                break;
+            case XXminusYY:
+                name = "XY- ";
+                break;
+            case XXplusYY:
+                name = "XY+ ";
                 break;
             case Reset:
                 name = "Rst ";
-                break;
-            case Snapshot:
-                name = "Snap";
-                break;
-            case ShowProbabilities:
-                name = "Show probabilities";
-                break;
-            case Barrier:
-                name = "Barr";
                 break;
             case ClassicControlled:
                 name = "clc_";
                 break;
             default:
-                throw QFRException("This constructor shall not be called for gate type (index) " + std::to_string(static_cast<int>(type)));
+                name = toString(type);
+                name.resize(4, ' ');
         }
     }
 
@@ -125,9 +66,9 @@ namespace qc {
         }
         if (!isZero) {
             os << "\tp: (" << parameter[0] << ") ";
-            for (size_t j = 1; j < MAX_PARAMETERS; ++j) {
+            for (size_t j = 1; j < parameter.size(); ++j) {
                 isZero = true;
-                for (size_t i = j; i < MAX_PARAMETERS; ++i) {
+                for (size_t i = j; i < parameter.size(); ++i) {
                     if (parameter.at(i) != static_cast<fp>(0)) {
                         isZero = false;
                         break;
@@ -232,8 +173,8 @@ namespace qc {
         }
 
         // check parameters
-        const auto param1 = getParameter();
-        const auto param2 = op.getParameter();
+        const auto& param1 = getParameter();
+        const auto& param2 = op.getParameter();
         if (param1 != param2) {
             return false;
         }

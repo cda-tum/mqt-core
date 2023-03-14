@@ -32,7 +32,7 @@ namespace qc {
     // Snapshot constructor
     NonUnitaryOperation::NonUnitaryOperation(const std::size_t nq, const std::vector<Qubit>& qubitRegister, const std::size_t n):
         NonUnitaryOperation(nq, qubitRegister, Snapshot) {
-        parameter[0] = static_cast<fp>(n);
+        parameter.emplace_back(static_cast<fp>(n));
     }
 
     // General constructor

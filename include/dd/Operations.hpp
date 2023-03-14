@@ -56,8 +56,8 @@ namespace dd {
             case qc::Tdag: gm = inverse ? dd::Tmat : dd::Tdagmat; break;
             case qc::V: gm = inverse ? dd::Vdagmat : dd::Vmat; break;
             case qc::Vdag: gm = inverse ? dd::Vmat : dd::Vdagmat; break;
-            case qc::U3: gm = inverse ? dd::U3mat(-parameter[1U], -parameter[0U], -parameter[2U]) : dd::U3mat(parameter[0U], parameter[1U], parameter[2U]); break;
-            case qc::U2: gm = inverse ? dd::U2mat(-parameter[1U] + dd::PI, -parameter[0U] - dd::PI) : dd::U2mat(parameter[0U], parameter[1U]); break;
+            case qc::U3: gm = inverse ? dd::U3mat(-parameter[1U], -parameter[2U], -parameter[0U]) : dd::U3mat(parameter[2U], parameter[1U], parameter[0U]); break;
+            case qc::U2: gm = inverse ? dd::U2mat(-parameter[0U] + dd::PI, -parameter[1U] - dd::PI) : dd::U2mat(parameter[1U], parameter[0U]); break;
             case qc::Phase: gm = inverse ? dd::Phasemat(-parameter[0U]) : dd::Phasemat(parameter[0U]); break;
             case qc::SX: gm = inverse ? dd::SXdagmat : dd::SXmat; break;
             case qc::SXdag: gm = inverse ? dd::SXmat : dd::SXdagmat; break;
@@ -75,31 +75,99 @@ namespace dd {
     // two-target Operations
     template<class Config>
     qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op, std::unique_ptr<dd::Package<Config>>& dd, const dd::Controls& controls, dd::Qubit target0, dd::Qubit target1, bool inverse) {
-        const auto type       = op->getType();
-        const auto nqubits    = static_cast<dd::QubitCount>(op->getNqubits());
-        const auto startQubit = static_cast<std::size_t>(op->getStartingQubit());
+        const auto  type       = op->getType();
+        const auto  nqubits    = static_cast<dd::QubitCount>(op->getNqubits());
+        const auto  startQubit = static_cast<std::size_t>(op->getStartingQubit());
+        const auto& parameter  = op->getParameter();
+
+        if (type == qc::DCX && inverse) {
+            // DCX is not self-inverse, but the inverse is just swapping the targets
+            std::swap(target0, target1);
+        }
+
+        if (controls.empty()) {
+            // the DD creation without controls is faster, so we use it if possible
+            // and only use the DD creation with controls if necessary
+            TwoQubitGateMatrix gm;
+            bool               definitionFound = true;
+            switch (type) {
+                case qc::SWAP: gm = dd::SWAPmat; break;
+                case qc::iSWAP: gm = inverse ? dd::iSWAPinvmat : dd::iSWAPmat; break;
+                case qc::DCX: gm = dd::DCXmat; break;
+                case qc::ECR: gm = dd::ECRmat; break;
+                case qc::RXX: gm = inverse ? dd::RXXmat(-parameter[0U]) : dd::RXXmat(parameter[0U]); break;
+                case qc::RYY: gm = inverse ? dd::RYYmat(-parameter[0U]) : dd::RYYmat(parameter[0U]); break;
+                case qc::RZZ: gm = inverse ? dd::RZZmat(-parameter[0U]) : dd::RZZmat(parameter[0U]); break;
+                case qc::RZX: gm = inverse ? dd::RZXmat(-parameter[0U]) : dd::RZXmat(parameter[0U]); break;
+                case qc::XXminusYY: gm = inverse ? dd::XXMinusYYmat(-parameter[0U], parameter[1U]) : dd::XXMinusYYmat(parameter[0U], parameter[1U]); break;
+                case qc::XXplusYY: gm = inverse ? dd::XXPlusYYmat(-parameter[0U], parameter[1U]) : dd::XXPlusYYmat(parameter[0U], parameter[1U]); break;
+                default: definitionFound = false;
+            }
+            if (definitionFound) {
+                return dd->makeTwoQubitGateDD(gm, nqubits, target0, target1, startQubit);
+            }
+        }
 
         switch (type) {
             case qc::SWAP:
+                // SWAP is self-inverse
                 return dd->makeSWAPDD(nqubits, controls, target0, target1, startQubit);
             case qc::iSWAP:
                 if (inverse) {
                     return dd->makeiSWAPinvDD(nqubits, controls, target0, target1, startQubit);
-                } else {
-                    return dd->makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
                 }
+                return dd->makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
             case qc::Peres:
                 if (inverse) {
                     return dd->makePeresdagDD(nqubits, controls, target0, target1, startQubit);
-                } else {
-                    return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
                 }
+                return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
             case qc::Peresdag:
                 if (inverse) {
                     return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
-                } else {
-                    return dd->makePeresdagDD(nqubits, controls, target0, target1, startQubit);
                 }
+                return dd->makePeresdagDD(nqubits, controls, target0, target1, startQubit);
+            case qc::DCX:
+                return dd->makeDCXDD(nqubits, controls, target0, target1, startQubit);
+            case qc::ECR:
+                // ECR is self-inverse
+                return dd->makeECRDD(nqubits, controls, target0, target1, startQubit);
+            case qc::RXX: {
+                if (inverse) {
+                    return dd->makeRXXDD(nqubits, controls, target0, target1, -parameter[0U], startQubit);
+                }
+                return dd->makeRXXDD(nqubits, controls, target0, target1, parameter[0U], startQubit);
+            }
+            case qc::RYY: {
+                if (inverse) {
+                    return dd->makeRYYDD(nqubits, controls, target0, target1, -parameter[0U], startQubit);
+                }
+                return dd->makeRYYDD(nqubits, controls, target0, target1, parameter[0U], startQubit);
+            }
+            case qc::RZZ: {
+                if (inverse) {
+                    return dd->makeRZZDD(nqubits, controls, target0, target1, -parameter[0U], startQubit);
+                }
+                return dd->makeRZZDD(nqubits, controls, target0, target1, parameter[0U], startQubit);
+            }
+            case qc::RZX: {
+                if (inverse) {
+                    return dd->makeRZXDD(nqubits, controls, target0, target1, -parameter[0U], startQubit);
+                }
+                return dd->makeRZXDD(nqubits, controls, target0, target1, parameter[0U], startQubit);
+            }
+            case qc::XXminusYY: {
+                if (inverse) {
+                    return dd->makeXXMinusYYDD(nqubits, controls, target0, target1, -parameter[0U], parameter[1U], startQubit);
+                }
+                return dd->makeXXMinusYYDD(nqubits, controls, target0, target1, parameter[0U], parameter[1U], startQubit);
+            }
+            case qc::XXplusYY: {
+                if (inverse) {
+                    return dd->makeXXPlusYYDD(nqubits, controls, target0, target1, -parameter[0U], parameter[1U], startQubit);
+                }
+                return dd->makeXXPlusYYDD(nqubits, controls, target0, target1, parameter[0U], parameter[1U], startQubit);
+            }
             default:
                 std::ostringstream oss{};
                 oss << "DD for gate" << op->getName() << " not available!";
@@ -139,6 +207,16 @@ namespace dd {
             return dd->makeIdent(static_cast<dd::QubitCount>(nqubits));
         }
 
+        if (type == qc::GPhase) {
+            auto phase = op->getParameter()[0U];
+            if (inverse) {
+                phase = -phase;
+            }
+            auto id = dd->makeIdent(static_cast<dd::QubitCount>(nqubits));
+            id.w    = dd->cn.lookup(std::cos(phase), std::sin(phase));
+            return id;
+        }
+
         if (const auto* standardOp = dynamic_cast<const qc::StandardOperation*>(op)) {
             auto targets  = op->getTargets();
             auto controls = op->getControls();
@@ -158,7 +236,7 @@ namespace dd {
                 }
             }
 
-            if (op->getType() == qc::SWAP || op->getType() == qc::iSWAP || op->getType() == qc::Peres || op->getType() == qc::Peresdag) {
+            if (qc::isTwoQubitGate(type)) {
                 assert(targets.size() == 2);
                 const auto target0 = static_cast<dd::Qubit>(targets[0U]);
                 const auto target1 = static_cast<dd::Qubit>(targets[1U]);
@@ -241,7 +319,7 @@ namespace dd {
 
             // swap i and j
             auto       saved  = on;
-            const auto swapDD = dd->makeSWAPDD(static_cast<dd::QubitCount>(on.p->v + 1), {}, static_cast<dd::Qubit>(from.at(i)), static_cast<dd::Qubit>(from.at(j)));
+            const auto swapDD = dd->makeSWAPDD(static_cast<dd::QubitCount>(on.p->v + 1), dd::Controls{}, static_cast<dd::Qubit>(from.at(i)), static_cast<dd::Qubit>(from.at(j)));
             if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
                 on = dd->multiply(swapDD, on);
             } else {

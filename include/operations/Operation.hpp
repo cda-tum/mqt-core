@@ -20,14 +20,11 @@
 #include <vector>
 
 namespace qc {
-    // Operation Constants
-    constexpr std::size_t MAX_PARAMETERS = 3; // Max. parameters of an operation
-
     class Operation {
     protected:
-        Controls                       controls{};
-        Targets                        targets{};
-        std::array<fp, MAX_PARAMETERS> parameter{};
+        Controls        controls{};
+        Targets         targets{};
+        std::vector<fp> parameter{};
 
         std::size_t nqubits    = 0;
         Qubit       startQubit = 0;
@@ -78,10 +75,10 @@ namespace qc {
             return nqubits;
         }
 
-        [[nodiscard]] const std::array<fp, MAX_PARAMETERS>& getParameter() const {
+        [[nodiscard]] const std::vector<fp>& getParameter() const {
             return parameter;
         }
-        std::array<fp, MAX_PARAMETERS>& getParameter() {
+        std::vector<fp>& getParameter() {
             return parameter;
         }
 
@@ -121,12 +118,12 @@ namespace qc {
 
         virtual void setName();
 
-        virtual void setGate(OpType g) {
+        virtual void setGate(const OpType g) {
             type = g;
             setName();
         }
 
-        virtual void setParameter(const std::array<fp, MAX_PARAMETERS>& p) {
+        virtual void setParameter(const std::vector<fp>& p) {
             parameter = p;
         }
 
@@ -158,7 +155,7 @@ namespace qc {
             return !controls.empty();
         }
 
-        [[nodiscard]] inline virtual bool actsOn(Qubit i) const {
+        [[nodiscard]] inline virtual bool actsOn(const Qubit i) const {
             for (const auto& t: targets) {
                 if (t == i) {
                     return true;

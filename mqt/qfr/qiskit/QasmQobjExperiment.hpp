@@ -47,7 +47,7 @@ namespace qc::qiskit {
 
     protected:
         static void emplaceInstruction(QuantumComputation& qc, const py::object& instruction) {
-            static const auto NATIVELY_SUPPORTED_GATES = std::set<std::string>{"i", "id", "iden", "x", "y", "z", "h", "s", "sdg", "t", "tdg", "p", "u1", "rx", "ry", "rz", "u2", "u", "u3", "cx", "cy", "cz", "cp", "cu1", "ch", "crx", "cry", "crz", "cu3", "ccx", "swap", "cswap", "iswap", "sx", "sxdg", "csx", "mcx", "mcx_gray", "mcx_recursive", "mcx_vchain", "mcphase", "mcrx", "mcry", "mcrz"};
+            static const auto NATIVELY_SUPPORTED_GATES = std::set<std::string>{"i", "id", "iden", "x", "y", "z", "h", "s", "sdg", "t", "tdg", "p", "u1", "rx", "ry", "rz", "u2", "u", "u3", "cx", "cy", "cz", "cp", "cu1", "ch", "crx", "cry", "crz", "cu3", "ccx", "swap", "cswap", "iswap", "sx", "sxdg", "csx", "mcx", "mcx_gray", "mcx_recursive", "mcx_vchain", "mcphase", "mcrx", "mcry", "mcrz", "dcx", "ecr", "rxx", "ryy", "rzx", "rzz", "xx_minus_yy", "xx_plus_yy"};
 
             auto instructionName = instruction.attr("name").cast<std::string>();
             if (instructionName == "measure") {
@@ -116,6 +116,22 @@ namespace qc::qiskit {
                     addTwoTargetOperation(qc, SWAP, qubits, params);
                 } else if (instructionName == "iswap") {
                     addTwoTargetOperation(qc, iSWAP, qubits, params);
+                } else if (instructionName == "dcx") {
+                    addTwoTargetOperation(qc, DCX, qubits, params);
+                } else if (instructionName == "ecr") {
+                    addTwoTargetOperation(qc, ECR, qubits, params);
+                } else if (instructionName == "rxx") {
+                    addTwoTargetOperation(qc, RXX, qubits, params);
+                } else if (instructionName == "ryy") {
+                    addTwoTargetOperation(qc, RYY, qubits, params);
+                } else if (instructionName == "rzx") {
+                    addTwoTargetOperation(qc, RZX, qubits, params);
+                } else if (instructionName == "rzz") {
+                    addTwoTargetOperation(qc, RZZ, qubits, params);
+                } else if (instructionName == "xx_minus_yy") {
+                    addTwoTargetOperation(qc, XXminusYY, qubits, params);
+                } else if (instructionName == "xx_plus_yy") {
+                    addTwoTargetOperation(qc, XXplusYY, qubits, params);
                 } else if (instructionName == "mcx_recursive") {
                     if (qubits.size() <= 5) {
                         addOperation(qc, X, qubits, params);
@@ -148,21 +164,12 @@ namespace qc::qiskit {
             auto target = qargs.back().qubit;
             qargs.pop_back();
 
-            fp theta  = 0.;
-            fp phi    = 0.;
-            fp lambda = 0.;
-            if (params.size() == 1) {
-                lambda = params[0].cast<fp>();
-            } else if (params.size() == 2) {
-                phi    = params[0].cast<fp>();
-                lambda = params[1].cast<fp>();
-            } else if (params.size() == 3) {
-                theta  = params[0].cast<fp>();
-                phi    = params[1].cast<fp>();
-                lambda = params[2].cast<fp>();
+            std::vector<fp> parameters{};
+            for (const auto& param: params) {
+                parameters.emplace_back(param.cast<fp>());
             }
             const Controls controls(qargs.cbegin(), qargs.cend());
-            qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target, type, lambda, phi, theta);
+            qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target, type, parameters);
         }
 
         static void addTwoTargetOperation(QuantumComputation& qc, OpType type, const py::list& qubits, const py::list& params) {
@@ -175,21 +182,13 @@ namespace qc::qiskit {
             qargs.pop_back();
             auto target0 = qargs.back().qubit;
             qargs.pop_back();
-            fp theta  = 0.;
-            fp phi    = 0.;
-            fp lambda = 0.;
-            if (params.size() == 1) {
-                lambda = params[0].cast<fp>();
-            } else if (params.size() == 2) {
-                phi    = params[0].cast<fp>();
-                lambda = params[1].cast<fp>();
-            } else if (params.size() == 3) {
-                theta  = params[0].cast<fp>();
-                phi    = params[1].cast<fp>();
-                lambda = params[2].cast<fp>();
+
+            std::vector<fp> parameters{};
+            for (const auto& param: params) {
+                parameters.emplace_back(param.cast<fp>());
             }
             const Controls controls(qargs.cbegin(), qargs.cend());
-            qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0, target1, type, lambda, phi, theta);
+            qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0, target1, type, parameters);
         }
     };
 } // namespace qc::qiskit

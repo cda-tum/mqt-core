@@ -662,7 +662,15 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
 }
 
 TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
+    // This test checks if the gate shortcuts are working correctly
+    // and if the cloning of gates is working correctly.
+    // To this end, we create a circuit with every possible gate in the following variants:
+    //  - without controls,
+    //  - with a single control,
+    //  - with multiple controls.
+    // Then, we clone the circuit and check if the resulting circuit contains the same number of gates.
     QuantumComputation qc(5);
+    qc.gphase(PI);
     qc.i(0);
     qc.i(0, 1_pc);
     qc.i(0, {1_pc, 2_nc});
@@ -732,6 +740,30 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
     qc.peresdag(0, 1);
     qc.peresdag(0, 1, 2_pc);
     qc.peresdag(0, 1, {2_pc, 3_nc});
+    qc.dcx(0, 1);
+    qc.dcx(0, 1, 2_pc);
+    qc.dcx(0, 1, {2_pc, 3_nc});
+    qc.ecr(0, 1);
+    qc.ecr(0, 1, 2_pc);
+    qc.ecr(0, 1, {2_pc, 3_nc});
+    qc.rxx(0, 1, PI);
+    qc.rxx(0, 1, 2_pc, PI);
+    qc.rxx(0, 1, {2_pc, 3_nc}, PI);
+    qc.ryy(0, 1, PI);
+    qc.ryy(0, 1, 2_pc, PI);
+    qc.ryy(0, 1, {2_pc, 3_nc}, PI);
+    qc.rzz(0, 1, PI);
+    qc.rzz(0, 1, 2_pc, PI);
+    qc.rzz(0, 1, {2_pc, 3_nc}, PI);
+    qc.rzx(0, 1, PI);
+    qc.rzx(0, 1, 2_pc, PI);
+    qc.rzx(0, 1, {2_pc, 3_nc}, PI);
+    qc.xx_minus_yy(0, 1, PI, PI);
+    qc.xx_minus_yy(0, 1, 2_pc, PI, PI);
+    qc.xx_minus_yy(0, 1, {2_pc, 3_nc}, PI, PI);
+    qc.xx_plus_yy(0, 1, PI, PI);
+    qc.xx_plus_yy(0, 1, 2_pc, PI, PI);
+    qc.xx_plus_yy(0, 1, {2_pc, 3_nc}, PI, PI);
     qc.measure(0, 0);
     qc.measure({1, 2}, {1, 2});
     qc.barrier(0);
@@ -1481,8 +1513,8 @@ TEST_F(QFRFunctionality, OperationEquality) {
     EXPECT_FALSE(cx01.equals(cx10));
     EXPECT_FALSE(x0.equals(cx01));
 
-    const auto p  = StandardOperation(1U, 0, qc::Phase, 2.0);
-    const auto pm = StandardOperation(1U, 0, qc::Phase, -2.0);
+    const auto p  = StandardOperation(1U, 0, qc::Phase, {2.0});
+    const auto pm = StandardOperation(1U, 0, qc::Phase, {-2.0});
     EXPECT_FALSE(p.equals(pm));
 
     const auto measure0 = NonUnitaryOperation(2U, 0, 0U);
@@ -1726,4 +1758,87 @@ TEST_F(QFRFunctionality, AvoidStrippingIdleQubitWhenInOutputPermutation) {
     qc.stripIdleQubits();
     EXPECT_EQ(qc.getNqubits(), 2U);
     EXPECT_EQ(qc.outputPermutation[1], 0U);
+}
+
+TEST_F(QFRFunctionality, RzAndPhaseDifference) {
+    QuantumComputation qc(2);
+    const std::string  qasm =
+            "// i 0 1\n"
+            "// o 0 1\n"
+            "OPENQASM 2.0;\n"
+            "include \"qelib1.inc\";\n"
+            "qreg q[2];\n"
+            "rz(1/8) q[0];\n"
+            "p(1/8) q[1];\n"
+            "crz(1/8) q[0],q[1];\n"
+            "cp(1/8) q[0],q[1];\n";
+    std::stringstream ss;
+    ss << qasm;
+    qc.import(ss, qc::Format::OpenQASM);
+    std::cout << qc << std::endl;
+    std::stringstream oss;
+    qc.dumpOpenQASM(oss);
+}
+
+TEST_F(QFRFunctionality, U3toU2Gate) {
+    QuantumComputation qc(1);
+    qc.u3(0, PI_2, 0., PI);      // H
+    qc.u3(0, PI_2, 0., 0.);      // RY(pi/2)
+    qc.u3(0, PI_2, -PI_2, PI_2); // V = RX(pi/2)
+    qc.u3(0, PI_2, PI_2, -PI_2); // Vdag = RX(-pi/2)
+    qc.u3(0, PI_2, 0.25, 0.5);   // U2(0.25, 0.5)
+    std::cout << qc << std::endl;
+    EXPECT_EQ(qc.at(0)->getType(), qc::H);
+    EXPECT_EQ(qc.at(1)->getType(), qc::RY);
+    EXPECT_EQ(qc.at(1)->getParameter().at(0), PI_2);
+    EXPECT_EQ(qc.at(2)->getType(), qc::V);
+    EXPECT_EQ(qc.at(3)->getType(), qc::Vdag);
+    EXPECT_EQ(qc.at(4)->getType(), qc::U2);
+    EXPECT_EQ(qc.at(4)->getParameter().at(0), 0.25);
+    EXPECT_EQ(qc.at(4)->getParameter().at(1), 0.5);
+}
+
+TEST_F(QFRFunctionality, U3toU1Gate) {
+    QuantumComputation qc(1);
+    qc.u3(0, 0., 0., 0.);    // I
+    qc.u3(0, 0., 0., PI);    // Z
+    qc.u3(0, 0., 0., PI_2);  // S
+    qc.u3(0, 0., 0., -PI_2); // Sdg
+    qc.u3(0, 0., 0., PI_4);  // T
+    qc.u3(0, 0., 0., -PI_4); // Tdg
+    qc.u3(0, 0., 0., 0.5);   // p(0.5)
+
+    std::cout << qc << std::endl;
+    EXPECT_EQ(qc.at(0)->getType(), qc::I);
+    EXPECT_EQ(qc.at(1)->getType(), qc::Z);
+    EXPECT_EQ(qc.at(2)->getType(), qc::S);
+    EXPECT_EQ(qc.at(3)->getType(), qc::Sdag);
+    EXPECT_EQ(qc.at(4)->getType(), qc::T);
+    EXPECT_EQ(qc.at(5)->getType(), qc::Tdag);
+    EXPECT_EQ(qc.at(6)->getType(), qc::Phase);
+    EXPECT_EQ(qc.at(6)->getParameter().at(0), 0.5);
+}
+
+TEST_F(QFRFunctionality, U3SpecialCases) {
+    QuantumComputation qc(1);
+    qc.u3(0, 0.5, 0., 0.);      // RY(0.5)
+    qc.u3(0, 0.5, -PI_2, PI_2); // RX(0.5)
+    qc.u3(0, 0.5, PI_2, -PI_2); // RX(-0.5)
+    qc.u3(0, PI, PI_2, PI_2);   // Y
+    qc.u3(0, PI, 0., PI);       // X
+    qc.u3(0, 0.5, 0.25, 0.125); // U3(0.5, 0.25, 0.125)
+
+    std::cout << qc << std::endl;
+    EXPECT_EQ(qc.at(0)->getType(), qc::RY);
+    EXPECT_EQ(qc.at(0)->getParameter().at(0), 0.5);
+    EXPECT_EQ(qc.at(1)->getType(), qc::RX);
+    EXPECT_EQ(qc.at(1)->getParameter().at(0), 0.5);
+    EXPECT_EQ(qc.at(2)->getType(), qc::RX);
+    EXPECT_EQ(qc.at(2)->getParameter().at(0), -0.5);
+    EXPECT_EQ(qc.at(3)->getType(), qc::Y);
+    EXPECT_EQ(qc.at(4)->getType(), qc::X);
+    EXPECT_EQ(qc.at(5)->getType(), qc::U3);
+    EXPECT_EQ(qc.at(5)->getParameter().at(0), 0.5);
+    EXPECT_EQ(qc.at(5)->getParameter().at(1), 0.25);
+    EXPECT_EQ(qc.at(5)->getParameter().at(2), 0.125);
 }

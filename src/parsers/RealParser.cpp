@@ -95,7 +95,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
 }
 
 void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line) {
-    const std::regex gateRegex = std::regex("(r[xyz]|q|[0a-z](?:[+i])?)(\\d+)?(?::([-+]?[0-9]+[.]?[0-9]*(?:[eE][-+]?[0-9]+)?))?");
+    const std::regex gateRegex = std::regex("(r[xyz]|i[df]|q|[0a-z](?:[+ip])?)(\\d+)?(?::([-+]?[0-9]+[.]?[0-9]*(?:[eE][-+]?[0-9]+)?))?");
     std::smatch      m;
     std::string      cmd;
 
@@ -112,7 +112,6 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
             {"si", Sdag},
             {"sp", Sdag},
             {"s+", Sdag},
-            {"sdg", Sdag},
             {"v", V},
             {"vi", Vdag},
             {"vp", Vdag},
@@ -125,9 +124,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
             {"p", Peres},
             {"pi", Peresdag},
             {"p+", Peresdag},
-            {"q", Phase},
-            {"t", T},
-            {"tdg", Tdag}};
+            {"q", Phase}};
 
     while (!is.eof()) {
         if (!static_cast<bool>(is >> cmd)) {
@@ -164,7 +161,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
         auto     ncontrols = m.str(2).empty() ? 0 : std::stoul(m.str(2), nullptr, 0) - 1;
         const fp lambda    = m.str(3).empty() ? static_cast<fp>(0L) : static_cast<fp>(std::stold(m.str(3)));
 
-        if (gate == V || gate == Vdag || m.str(1) == "c") {
+        if (gate == V || gate == Vdag || m.str(1) == "c" || gate == SWAP) {
             ncontrols = 1;
         } else if (gate == Peres || gate == Peresdag) {
             ncontrols = 2;
@@ -209,10 +206,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
 
         updateMaxControls(ncontrols);
         const Qubit target = iter->second.first;
-        auto        x      = nearbyint(lambda);
         switch (gate) {
-            case None:
-                throw QFRException("[real parser] l:" + std::to_string(line) + " msg: 'None' operation detected.");
             case I:
             case H:
             case Y:
@@ -223,39 +217,16 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
             case Tdag:
             case V:
             case Vdag:
-            case U3:
-            case U2:
-                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, lambda);
+                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate);
                 break;
-
             case X:
                 emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target);
                 break;
-
             case RX:
             case RY:
-                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (lambda));
-                break;
-
             case RZ:
             case Phase:
-                if (std::abs(lambda - x) < qc::PARAMETER_TOLERANCE) {
-                    if (x == 1.0 || x == -1.0) {
-                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Z);
-                    } else if (x == 2.0) {
-                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, S);
-                    } else if (x == -2.0) {
-                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Sdag);
-                    } else if (x == 4.0) {
-                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, T);
-                    } else if (x == -4.0) {
-                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, Tdag);
-                    } else {
-                        emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (x));
-                    }
-                } else {
-                    emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, PI / (lambda));
-                }
+                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate, std::vector{PI / (lambda)});
                 break;
             case SWAP:
             case Peres:
@@ -263,7 +234,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is, int line
             case iSWAP: {
                 const auto target1 = controls.back().qubit;
                 controls.pop_back();
-                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target, target1, gate);
+                emplace_back<StandardOperation>(nqubits, Controls{controls.cbegin(), controls.cend()}, target1, target, gate);
                 break;
             }
             default:

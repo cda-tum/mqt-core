@@ -5,6 +5,7 @@
 
 #include "operations/StandardOperation.hpp"
 
+#include <cassert>
 #include <sstream>
 #include <variant>
 
@@ -12,30 +13,23 @@ namespace qc {
     /***
      * Protected Methods
      ***/
-    OpType StandardOperation::parseU3(fp& lambda, fp& phi, fp& theta) {
+    OpType StandardOperation::parseU3(fp& theta, fp& phi, fp& lambda) {
         if (std::abs(theta) < PARAMETER_TOLERANCE && std::abs(phi) < PARAMETER_TOLERANCE) {
-            phi   = 0.L;
-            theta = 0.L;
-            return parseU1(lambda);
+            parameter = {lambda};
+            return parseU1(parameter[0]);
         }
 
         if (std::abs(theta - PI_2) < PARAMETER_TOLERANCE) {
-            theta    = PI_2;
-            auto res = parseU2(lambda, phi);
-            if (res != U2) {
-                theta = 0.L;
-            }
-            return res;
+            parameter = {phi, lambda};
+            return parseU2(parameter[0], parameter[1]);
         }
 
         if (std::abs(lambda) < PARAMETER_TOLERANCE) {
             lambda = 0.L;
             if (std::abs(phi) < PARAMETER_TOLERANCE) {
-                phi = 0.L;
                 checkInteger(theta);
                 checkFractionPi(theta);
-                lambda = theta;
-                theta  = 0.L;
+                parameter = {theta};
                 return RY;
             }
         }
@@ -43,22 +37,27 @@ namespace qc {
         if (std::abs(lambda - PI_2) < PARAMETER_TOLERANCE) {
             lambda = PI_2;
             if (std::abs(phi + PI_2) < PARAMETER_TOLERANCE) {
-                phi = 0.L;
                 checkInteger(theta);
                 checkFractionPi(theta);
-                lambda = theta;
-                theta  = 0.L;
+                parameter = {theta};
                 return RX;
             }
 
             if (std::abs(phi - PI_2) < PARAMETER_TOLERANCE) {
                 phi = PI_2;
                 if (std::abs(theta - PI) < PARAMETER_TOLERANCE) {
-                    lambda = 0.L;
-                    phi    = 0.L;
-                    theta  = 0.L;
+                    parameter.clear();
                     return Y;
                 }
+            }
+        }
+
+        if (std::abs(lambda + PI_2) < PARAMETER_TOLERANCE) {
+            lambda = -PI_2;
+            if (std::abs(phi - PI_2) < PARAMETER_TOLERANCE) {
+                phi       = PI_2;
+                parameter = {-theta};
+                return RX;
             }
         }
 
@@ -67,8 +66,7 @@ namespace qc {
             if (std::abs(phi) < PARAMETER_TOLERANCE) {
                 phi = 0.L;
                 if (std::abs(theta - PI) < PARAMETER_TOLERANCE) {
-                    theta  = 0.L;
-                    lambda = 0.L;
+                    parameter.clear();
                     return X;
                 }
             }
@@ -85,15 +83,15 @@ namespace qc {
         return U3;
     }
 
-    OpType StandardOperation::parseU2(fp& lambda, fp& phi) {
+    OpType StandardOperation::parseU2(fp& phi, fp& lambda) {
         if (std::abs(phi) < PARAMETER_TOLERANCE) {
             phi = 0.L;
             if (std::abs(std::abs(lambda) - PI) < PARAMETER_TOLERANCE) {
-                lambda = 0.L;
+                parameter.clear();
                 return H;
             }
             if (std::abs(lambda) < PARAMETER_TOLERANCE) {
-                lambda = PI_2;
+                parameter = {PI_2};
                 return RY;
             }
         }
@@ -101,8 +99,16 @@ namespace qc {
         if (std::abs(lambda - PI_2) < PARAMETER_TOLERANCE) {
             lambda = PI_2;
             if (std::abs(phi + PI_2) < PARAMETER_TOLERANCE) {
-                phi = 0.L;
-                return RX;
+                parameter.clear();
+                return V;
+            }
+        }
+
+        if (std::abs(lambda + PI_2) < PARAMETER_TOLERANCE) {
+            lambda = -PI_2;
+            if (std::abs(phi - PI_2) < PARAMETER_TOLERANCE) {
+                parameter.clear();
+                return Vdag;
             }
         }
 
@@ -116,23 +122,23 @@ namespace qc {
 
     OpType StandardOperation::parseU1(fp& lambda) {
         if (std::abs(lambda) < PARAMETER_TOLERANCE) {
-            lambda = 0.L;
+            parameter.clear();
             return I;
         }
         const bool sign = std::signbit(lambda);
 
         if (std::abs(std::abs(lambda) - PI) < PARAMETER_TOLERANCE) {
-            lambda = 0.L;
+            parameter.clear();
             return Z;
         }
 
         if (std::abs(std::abs(lambda) - PI_2) < PARAMETER_TOLERANCE) {
-            lambda = 0.L;
+            parameter.clear();
             return sign ? Sdag : S;
         }
 
         if (std::abs(std::abs(lambda) - PI_4) < PARAMETER_TOLERANCE) {
-            lambda = 0.L;
+            parameter.clear();
             return sign ? Tdag : T;
         }
 
@@ -143,21 +149,24 @@ namespace qc {
     }
 
     void StandardOperation::checkUgate() {
+        if (parameter.empty()) {
+            return;
+        }
         if (type == Phase) {
-            type = parseU1(parameter[0]);
+            assert(parameter.size() == 1);
+            type = parseU1(parameter.at(0));
         } else if (type == U2) {
-            type = parseU2(parameter[0], parameter[1]);
+            assert(parameter.size() == 2);
+            type = parseU2(parameter.at(0), parameter.at(1));
         } else if (type == U3) {
-            type = parseU3(parameter[0], parameter[1], parameter[2]);
+            assert(parameter.size() == 3);
+            type = parseU3(parameter.at(0), parameter.at(1), parameter.at(2));
         }
     }
 
-    void StandardOperation::setup(const std::size_t nq, const fp par0, const fp par1, const fp par2, const Qubit startingQubit) {
-        nqubits      = nq;
-        parameter[0] = par0;
-        parameter[1] = par1;
-        parameter[2] = par2;
-        startQubit   = startingQubit;
+    void StandardOperation::setup(const std::size_t nq, const Qubit startingQubit) {
+        nqubits    = nq;
+        startQubit = startingQubit;
         checkUgate();
         setName();
     }
@@ -165,46 +174,48 @@ namespace qc {
     /***
      * Constructors
      ***/
-    StandardOperation::StandardOperation(const std::size_t nq, const Qubit target, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit) {
-        type = g;
-        setup(nq, lambda, phi, theta, startingQubit);
+    StandardOperation::StandardOperation(const std::size_t nq, const Qubit target, const OpType g, std::vector<fp> params, const Qubit startingQubit) {
+        type      = g;
+        parameter = std::move(params);
+        setup(nq, startingQubit);
         targets.emplace_back(target);
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Targets& targ, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit) {
-        type = g;
-        setup(nq, lambda, phi, theta, startingQubit);
+    StandardOperation::StandardOperation(const std::size_t nq, const Targets& targ, const OpType g, std::vector<fp> params, const Qubit startingQubit) {
+        type      = g;
+        parameter = std::move(params);
+        setup(nq, startingQubit);
         targets = targ;
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Qubit target, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, target, g, lambda, phi, theta, startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Qubit target, const OpType g, const std::vector<fp>& params, const Qubit startingQubit):
+        StandardOperation(nq, target, g, params, startingQubit) {
         controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Targets& targ, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, targ, g, lambda, phi, theta, startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Control control, const Targets& targ, const OpType g, const std::vector<fp>& params, const Qubit startingQubit):
+        StandardOperation(nq, targ, g, params, startingQubit) {
         controls.insert(control);
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, target, g, lambda, phi, theta, startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target, const OpType g, const std::vector<fp>& params, const Qubit startingQubit):
+        StandardOperation(nq, target, g, params, startingQubit) {
         controls = c;
     }
 
-    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Targets& targ, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, targ, g, lambda, phi, theta, startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Targets& targ, const OpType g, const std::vector<fp>& params, const Qubit startingQubit):
+        StandardOperation(nq, targ, g, params, startingQubit) {
         controls = c;
     }
 
     // MCT Constructor
     StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target, const Qubit startingQubit):
-        StandardOperation(nq, c, target, X, 0., 0., 0., startingQubit) {
+        StandardOperation(nq, c, target, X, {}, startingQubit) {
     }
 
     // MCF (cSWAP), Peres, parameterized two target Constructor
-    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target0, const Qubit target1, const OpType g, const fp lambda, const fp phi, const fp theta, const Qubit startingQubit):
-        StandardOperation(nq, c, {target0, target1}, g, lambda, phi, theta, startingQubit) {
+    StandardOperation::StandardOperation(const std::size_t nq, const Controls& c, const Qubit target0, const Qubit target1, const OpType g, const std::vector<fp>& params, const Qubit startingQubit):
+        StandardOperation(nq, c, {target0, target1}, g, params, startingQubit) {
     }
 
     /***
@@ -223,6 +234,9 @@ namespace qc {
         op << std::string(controls.size(), 'c');
 
         switch (type) {
+            case GPhase:
+                op << "gphase(" << parameter.at(0) << ")";
+                break;
             case I:
                 op << "id";
                 break;
@@ -267,16 +281,16 @@ namespace qc {
                 }
                 break;
             case V:
-                op << "u3(pi/2, -pi/2, pi/2)";
+                op << "u3(pi/2,-pi/2,pi/2)";
                 break;
             case Vdag:
-                op << "u3(pi/2, pi/2, -pi/2)";
+                op << "u3(pi/2,pi/2,-pi/2)";
                 break;
             case U3:
-                op << "u3(" << parameter[2] << "," << parameter[1] << "," << parameter[0] << ")";
+                op << "u3(" << parameter[0] << "," << parameter[1] << "," << parameter[2] << ")";
                 break;
             case U2:
-                op << "u3(pi/2, " << parameter[1] << "," << parameter[0] << ")";
+                op << "u3(pi/2," << parameter[0] << "," << parameter[1] << ")";
                 break;
             case Phase:
                 op << "p(" << parameter[0] << ")";
@@ -296,12 +310,36 @@ namespace qc {
             case RZ:
                 op << "rz(" << parameter[0] << ")";
                 break;
+            case DCX:
+                op << "dcx";
+                break;
+            case ECR:
+                op << "ecr";
+                break;
+            case RXX:
+                op << "rxx(" << parameter[0] << ")";
+                break;
+            case RYY:
+                op << "ryy(" << parameter[0] << ")";
+                break;
+            case RZZ:
+                op << "rzz(" << parameter[0] << ")";
+                break;
+            case RZX:
+                op << "rzx(" << parameter[0] << ")";
+                break;
+            case XXminusYY:
+                op << "xx_minus_yy(" << parameter[0] << "," << parameter[1] << ")";
+                break;
+            case XXplusYY:
+                op << "xx_plus_yy(" << parameter[0] << "," << parameter[1] << ")";
+                break;
             case SWAP:
-                dumpOpenQASMSwap(of, qreg);
-                return;
+                op << "swap";
+                break;
             case iSWAP:
-                dumpOpenQASMiSwap(of, qreg);
-                return;
+                op << "iswap";
+                break;
             case Peres:
                 of << op.str() << "cx";
                 for (const auto& c: controls) {
@@ -347,68 +385,14 @@ namespace qc {
         for (const auto& c: controls) {
             of << " " << qreg[c.qubit].second << ",";
         }
-        for (const auto& target: targets) {
-            of << " " << qreg[target].second << ";\n";
+        if (!targets.empty()) {
+            for (const auto& t: targets) {
+                of << " " << qreg[t].second << ",";
+            }
+            of.seekp(-1, std::ios_base::cur);
         }
+        of << ";\n";
         // apply X operations to negate the respective controls again
-        for (const auto& c: controls) {
-            if (c.type == Control::Type::Neg) {
-                of << "x " << qreg[c.qubit].second << ";\n";
-            }
-        }
-    }
-
-    void StandardOperation::dumpOpenQASMSwap(std::ostream& of, const RegisterNames& qreg) const {
-        for (const auto& c: controls) {
-            if (c.type == Control::Type::Neg) {
-                of << "x " << qreg[c.qubit].second << ";\n";
-            }
-        }
-
-        of << std::string(controls.size(), 'c') << "swap";
-        for (const auto& c: controls) {
-            of << " " << qreg[c.qubit].second << ",";
-        }
-        of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";\n";
-
-        for (const auto& c: controls) {
-            if (c.type == Control::Type::Neg) {
-                of << "x " << qreg[c.qubit].second << ";\n";
-            }
-        }
-    }
-
-    void StandardOperation::dumpOpenQASMiSwap(std::ostream& of, const RegisterNames& qreg) const {
-        const auto ctrlString = std::string(controls.size(), 'c');
-        for (const auto& c: controls) {
-            if (c.type == Control::Type::Neg) {
-                of << "x " << qreg[c.qubit].second << ";\n";
-            }
-        }
-        of << ctrlString << "swap";
-        for (const auto& c: controls) {
-            of << " " << qreg[c.qubit].second << ",";
-        }
-        of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";\n";
-
-        of << ctrlString << "s";
-        for (const auto& c: controls) {
-            of << " " << qreg[c.qubit].second << ",";
-        }
-        of << " " << qreg[targets[0]].second << ";\n";
-
-        of << ctrlString << "s";
-        for (const auto& c: controls) {
-            of << " " << qreg[c.qubit].second << ",";
-        }
-        of << " " << qreg[targets[1]].second << ";\n";
-
-        of << ctrlString << "cz";
-        for (const auto& c: controls) {
-            of << " " << qreg[c.qubit].second << ",";
-        }
-        of << " " << qreg[targets[0]].second << ", " << qreg[targets[1]].second << ";\n";
-
         for (const auto& c: controls) {
             if (c.type == Control::Type::Neg) {
                 of << "x " << qreg[c.qubit].second << ";\n";
