@@ -1764,6 +1764,12 @@ namespace dd {
     public:
         ComputeTable<vEdge, vEdge, vCachedEdge, Config::CT_VEC_INNER_PROD_NBUCKET> vectorInnerProduct{};
 
+        /**
+            Calculates the inner product of two vector decision diagrams x and y.
+            @param x a vector DD representing a quantum state
+            @param y a vector DD representing a quantum state
+            @return a complex number representing the scalar product of the DDs
+        **/
         ComplexValue innerProduct(const vEdge& x, const vEdge& y) {
             if (x.p == nullptr || y.p == nullptr || x.w.approximatelyZero() || y.w.approximatelyZero()) { // the 0 case
                 return {0, 0};
@@ -1775,6 +1781,9 @@ namespace dd {
             if (y.p->v > w) {
                 w = y.p->v;
             }
+            auto xCopy = x;
+            xCopy.w    = ComplexNumbers::conj(x.w); // Overall normalization factor needs to be conjugated
+                                                    // before input into recursive private function
             const ComplexValue ip = innerProduct(x, y, static_cast<Qubit>(w + 1));
 
             [[maybe_unused]] const auto after = cn.cacheCount();
@@ -1821,19 +1830,27 @@ namespace dd {
         }
 
     private:
+        /**
+            Private function to recursively calculate the inner product of two vector decision diagrams x and y with var levels.
+            @param x a vector DD representing a quantum state
+            @param y a vector DD representing a quantum state
+            @param var the number of levels contained in each vector DD
+            @return a complex number  representing the scalar product of the DDs
+            @note This function is called recursively such that the number of levels decreases each time to traverse the DDs.
+        **/
         ComplexValue innerProduct(const vEdge& x, const vEdge& y, Qubit var) {
             if (x.p == nullptr || y.p == nullptr || x.w.approximatelyZero() || y.w.approximatelyZero()) { // the 0 case
                 return {0.0, 0.0};
             }
 
-            if (var == 0) {
+            if (var == 0) { // Multiplies terminal weights
                 auto c = cn.getTemporary();
                 ComplexNumbers::mul(c, x.w, y.w);
                 return {c.r->value, c.i->value};
             }
 
             auto xCopy = x;
-            xCopy.w    = Complex::one;
+            xCopy.w    = Complex::one; // Set to one to generate more lookup hits
             auto yCopy = y;
             yCopy.w    = Complex::one;
 
@@ -1848,17 +1865,18 @@ namespace dd {
             auto w = static_cast<Qubit>(var - 1);
 
             ComplexValue sum{0.0, 0.0};
+            // Iterates through edge weights recursively until terminal
             for (auto i = 0U; i < RADIX; i++) {
                 vEdge e1{};
                 if (!x.isTerminal() && x.p->v == w) {
-                    e1 = x.p->e[i];
+                    e1   = x.p->e[i];
+                    e1.w = ComplexNumbers::conj(e1.w);
                 } else {
                     e1 = xCopy;
                 }
                 vEdge e2{};
                 if (!y.isTerminal() && y.p->v == w) {
-                    e2   = y.p->e[i];
-                    e2.w = ComplexNumbers::conj(e2.w);
+                    e2 = y.p->e[i];
                 } else {
                     e2 = yCopy;
                 }
@@ -1892,14 +1910,14 @@ namespace dd {
                 throw std::invalid_argument("Observable and state must act on the same number of qubits to compute the expectation value.");
             }
 
-            auto               yPrime = multiply(x, y);
-            const ComplexValue ip     = innerProduct(y, yPrime);
+            auto               yPrime   = multiply(x, y);
+            const ComplexValue expValue = innerProduct(y, yPrime);
 
-            assert(CTEntry::approximatelyZero(ip.i));
+            assert(CTEntry::approximatelyZero(expValue.i));
 
             garbageCollect();
 
-            return ip.r;
+            return expValue.r;
         }
 
         ///
