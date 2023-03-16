@@ -363,7 +363,7 @@ namespace dd {
         return os;
     }
 
-    [[maybe_unused]] static std::ostream& bwEdge(const mEdge& from, const mEdge& to, std::uint_fast16_t idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& bwEdge(const mEdge& from, const mEdge& to, std::uint16_t idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -404,7 +404,7 @@ namespace dd {
 
         return os;
     }
-    [[maybe_unused]] static std::ostream& bwEdge(const vEdge& from, const vEdge& to, std::uint_fast16_t idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& bwEdge(const vEdge& from, const vEdge& to, std::uint16_t idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -428,7 +428,7 @@ namespace dd {
 
         return os;
     }
-    [[maybe_unused]] static std::ostream& coloredEdge(const mEdge& from, const mEdge& to, std::uint_fast16_t idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& coloredEdge(const mEdge& from, const mEdge& to, std::uint16_t idx, std::ostream& os, bool edgeLabels = false, bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -467,7 +467,7 @@ namespace dd {
 
         return os;
     }
-    [[maybe_unused]] static std::ostream& coloredEdge(const vEdge& from, const vEdge& to, std::uint_fast16_t idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
+    [[maybe_unused]] static std::ostream& coloredEdge(const vEdge& from, const vEdge& to, std::uint16_t idx, std::ostream& os, bool edgeLabels = false, [[maybe_unused]] bool classic = false, bool formatAsPolar = true) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -490,7 +490,7 @@ namespace dd {
         return os;
     }
     template<class Edge>
-    static std::ostream& memoryEdge(const Edge& from, const Edge& to, std::uint_fast16_t idx, std::ostream& os, bool edgeLabels = false) {
+    static std::ostream& memoryEdge(const Edge& from, const Edge& to, std::uint16_t idx, std::ostream& os, bool edgeLabels = false) {
         auto fromlabel = (reinterpret_cast<std::uintptr_t>(from.p) & 0x001fffffU) >> 1U;
         auto tolabel   = (reinterpret_cast<std::uintptr_t>(to.p) & 0x001fffffU) >> 1U;
 
@@ -582,7 +582,7 @@ namespace dd {
             }
 
             // iterate over edges in reverse to guarantee correct proceossing order
-            for (auto i = static_cast<std::int_fast16_t>(node->p->e.size() - 1); i >= 0; --i) {
+            for (auto i = static_cast<std::int16_t>(node->p->e.size() - 1); i >= 0; --i) {
                 auto& edge = node->p->e[static_cast<std::size_t>(i)];
                 if ((!memory && edge.w.approximatelyZero()) || edge.w == Complex::zero) {
                     // potentially add zero stubs here
@@ -593,11 +593,11 @@ namespace dd {
                 q.push(&edge);
 
                 if (memory) {
-                    memoryEdge(*node, edge, static_cast<std::uint_fast16_t>(i), oss, edgeLabels);
+                    memoryEdge(*node, edge, static_cast<std::uint16_t>(i), oss, edgeLabels);
                 } else if (colored) {
-                    coloredEdge(*node, edge, static_cast<std::uint_fast16_t>(i), oss, edgeLabels, classic, formatAsPolar);
+                    coloredEdge(*node, edge, static_cast<std::uint16_t>(i), oss, edgeLabels, classic, formatAsPolar);
                 } else {
-                    bwEdge(*node, edge, static_cast<std::uint_fast16_t>(i), oss, edgeLabels, classic, formatAsPolar);
+                    bwEdge(*node, edge, static_cast<std::uint16_t>(i), oss, edgeLabels, classic, formatAsPolar);
                 }
             }
         }
@@ -816,7 +816,7 @@ namespace dd {
             }
 
             // iterate over edges in reverse to guarantee correct proceossing order
-            for (auto i = static_cast<std::int_fast16_t>(edgePtr->p->e.size() - 1); i >= 0; --i) {
+            for (auto i = static_cast<std::int16_t>(edgePtr->p->e.size() - 1); i >= 0; --i) {
                 auto& child = edgePtr->p->e[static_cast<std::size_t>(i)];
                 if (child.w.approximatelyZero()) {
                     // potentially add zero stubs here

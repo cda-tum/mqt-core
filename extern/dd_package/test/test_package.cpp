@@ -1292,7 +1292,7 @@ TEST(DDPackageTest, dStochCache) {
     dd->stochasticNoiseOperationCache.insert(2, 2, operations[2]); //insert Y operations with target 2
     dd->stochasticNoiseOperationCache.insert(3, 3, operations[3]); //insert H operations with target 3
 
-    for (std::uint_fast8_t i = 0; i < 4; i++) {
+    for (std::uint8_t i = 0; i < 4; i++) {
         for (dd::Qubit j = 0; j < 4; j++) {
             if (static_cast<dd::Qubit>(i) == j) {
                 auto op = dd->stochasticNoiseOperationCache.lookup(i, j);
@@ -1305,7 +1305,7 @@ TEST(DDPackageTest, dStochCache) {
     }
 
     dd->stochasticNoiseOperationCache.clear();
-    for (std::uint_fast8_t i = 0; i < 4; i++) {
+    for (std::uint8_t i = 0; i < 4; i++) {
         for (dd::Qubit j = 0; j < 4; j++) {
             auto op = dd->stochasticNoiseOperationCache.lookup(i, j);
             EXPECT_EQ(op.p, nullptr);

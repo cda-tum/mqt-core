@@ -16,8 +16,8 @@
 namespace dd {
     // integer type used for indexing qubits
     // needs to be a signed type to encode -1 as the index for the terminal
-    // std::int_fast8_t can at least address 128 qubits as [0, ..., 127]
-    using Qubit = std::int_fast8_t;
+    // std::int8_t can address up to 128 qubits as [0, ..., 127]
+    using Qubit = std::int8_t;
     static_assert(std::is_signed_v<Qubit>, "Type Qubit must be signed.");
 
     // integer type used for specifying numbers of qubits
@@ -25,7 +25,7 @@ namespace dd {
 
     // integer type used for reference counting
     // 32bit suffice for a max ref count of around 4 billion
-    using RefCount = std::uint_fast32_t;
+    using RefCount = std::uint32_t;
     static_assert(std::is_unsigned_v<RefCount>, "RefCount should be unsigned.");
 
     // floating point type to use
@@ -33,9 +33,9 @@ namespace dd {
     static_assert(std::is_floating_point_v<fp>, "fp should be a floating point type (float, *double*, long double)");
 
     // logic radix
-    static constexpr std::uint_fast8_t RADIX = 2;
+    static constexpr std::uint8_t RADIX = 2;
     // max no. of edges = RADIX^2
-    static constexpr std::uint_fast8_t NEDGE = RADIX * RADIX;
+    static constexpr std::uint8_t NEDGE = RADIX * RADIX;
 
     enum class BasisStates {
         zero,  // NOLINT(readability-identifier-naming)
@@ -57,7 +57,7 @@ namespace dd {
     // use hash maps for representing sparse vectors of probabilities
     using ProbabilityVector = std::unordered_map<std::size_t, fp>;
 
-    static constexpr std::uint_least64_t SERIALIZATION_VERSION = 1;
+    static constexpr std::uint64_t SERIALIZATION_VERSION = 1;
 
     // 64bit mixing hash (from MurmurHash3, https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp)
     constexpr std::size_t murmur64(std::size_t k) {

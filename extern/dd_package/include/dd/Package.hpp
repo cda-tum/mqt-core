@@ -2952,11 +2952,11 @@ namespace dd {
             auto         result = Edge::zero;
             ComplexValue rootweight{};
 
-            std::unordered_map<std::int_least64_t, Node*> nodes{};
-            std::int_least64_t                            nodeIndex{};
-            Qubit                                         v{};
-            std::array<ComplexValue, N>                   edgeWeights{};
-            std::array<std::int_least64_t, N>             edgeIndices{};
+            std::unordered_map<std::int64_t, Node*> nodes{};
+            std::int64_t                            nodeIndex{};
+            Qubit                                   v{};
+            std::array<ComplexValue, N>             edgeWeights{};
+            std::array<std::int64_t, N>             edgeIndices{};
             edgeIndices.fill(-2);
 
             if (readBinary) {
@@ -3061,7 +3061,7 @@ namespace dd {
 
     private:
         template<class Node, class Edge = Edge<Node>, std::size_t N = std::tuple_size_v<decltype(Node::e)>>
-        Edge deserializeNode(std::int_least64_t index, Qubit v, std::array<std::int_least64_t, N>& edgeIdx, std::array<ComplexValue, N>& edgeWeight, std::unordered_map<std::int_least64_t, Node*>& nodes) {
+        Edge deserializeNode(std::int64_t index, Qubit v, std::array<std::int64_t, N>& edgeIdx, std::array<ComplexValue, N>& edgeWeight, std::unordered_map<std::int64_t, Node*>& nodes) {
             if (index == -1) {
                 return Edge::zero;
             }
@@ -3116,7 +3116,7 @@ namespace dd {
             }
             std::stringstream sst;
             sst << "0x" << std::hex << reinterpret_cast<std::uintptr_t>(p) << std::dec
-                << "[v=" << static_cast<std::int_fast64_t>(p->v)
+                << "[v=" << static_cast<std::int64_t>(p->v)
                 << " ref=" << p->ref
                 << " hash=" << UniqueTable<Node>::hash(p)
                 << "]";
