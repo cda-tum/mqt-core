@@ -773,6 +773,7 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
 
     auto qcCloned = qc.clone();
     ASSERT_EQ(qc.size(), qcCloned.size());
+    ASSERT_EQ(qcCloned.getGlobalPhase(), PI);
 }
 
 TEST_F(QFRFunctionality, cloningDifferentOperations) {
