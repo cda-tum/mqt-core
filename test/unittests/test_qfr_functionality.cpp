@@ -1843,3 +1843,12 @@ TEST_F(QFRFunctionality, U3SpecialCases) {
     EXPECT_EQ(qc.at(5)->getParameter().at(1), 0.25);
     EXPECT_EQ(qc.at(5)->getParameter().at(2), 0.125);
 }
+
+TEST_F(QFRFunctionality, GlobalPhaseNormalization) {
+    QuantumComputation qc(1);
+    EXPECT_EQ(qc.getGlobalPhase(), 0.);
+    qc.gphase(-PI);
+    EXPECT_EQ(qc.getGlobalPhase(), PI);
+    qc.gphase(PI);
+    EXPECT_EQ(qc.getGlobalPhase(), 0.);
+}
