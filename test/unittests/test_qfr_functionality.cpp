@@ -1852,3 +1852,19 @@ TEST_F(QFRFunctionality, GlobalPhaseNormalization) {
     qc.gphase(PI);
     EXPECT_EQ(qc.getGlobalPhase(), 0.);
 }
+
+TEST_F(QFRFunctionality, OpNameToTypeSimple) {
+    EXPECT_EQ(qc::OpType::X, qc::opTypeFromString("x"));
+    EXPECT_EQ(qc::OpType::Y, qc::opTypeFromString("y"));
+    EXPECT_EQ(qc::OpType::Z, qc::opTypeFromString("z"));
+
+    EXPECT_EQ(qc::OpType::H, qc::opTypeFromString("h"));
+    EXPECT_EQ(qc::OpType::S, qc::opTypeFromString("s"));
+    EXPECT_EQ(qc::OpType::Sdag, qc::opTypeFromString("sdg"));
+    EXPECT_EQ(qc::OpType::T, qc::opTypeFromString("t"));
+    EXPECT_EQ(qc::OpType::Tdag, qc::opTypeFromString("tdg"));
+
+    EXPECT_EQ(qc::OpType::X, qc::opTypeFromString("cnot"));
+
+    EXPECT_THROW([[maybe_unused]] const auto type = qc::opTypeFromString("foo"), std::invalid_argument);
+}
