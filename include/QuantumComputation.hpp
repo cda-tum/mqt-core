@@ -52,6 +52,8 @@ namespace qc {
         std::mt19937_64 mt;
         std::size_t     seed = 0;
 
+        fp globalPhase = 0.;
+
         std::unordered_set<sym::Variable> occuringVariables;
 
         void importOpenQASM(std::istream& is);
@@ -223,6 +225,7 @@ namespace qc {
             qc.seed              = seed;
             qc.mt                = mt;
             qc.occuringVariables = occuringVariables;
+            qc.globalPhase       = globalPhase;
 
             for (auto const& op: ops) {
                 qc.ops.emplace_back<>(op->clone());
@@ -240,6 +243,8 @@ namespace qc {
         [[nodiscard]] const ClassicalRegisterMap& getCregs() const { return cregs; }
         [[nodiscard]] const QuantumRegisterMap&   getANCregs() const { return ancregs; }
         [[nodiscard]] decltype(mt)&               getGenerator() { return mt; }
+
+        [[nodiscard]] fp getGlobalPhase() const { return globalPhase; }
 
         void setName(const std::string& n) { name = n; }
 
@@ -281,7 +286,14 @@ namespace qc {
         /// Adds a global phase to the quantum circuit.
         /// \param angle the angle to add
         void gphase(const fp& angle) {
-            emplace_back<StandardOperation>(getNqubits(), Controls{}, Targets{}, qc::GPhase, std::vector{angle});
+            globalPhase += angle;
+            // normalize to [0, 2pi)
+            while (globalPhase < 0) {
+                globalPhase += 2 * PI;
+            }
+            while (globalPhase >= 2 * PI) {
+                globalPhase -= 2 * PI;
+            }
         }
 
         void i(const Qubit target) {
