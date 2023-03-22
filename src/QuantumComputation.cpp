@@ -632,6 +632,9 @@ namespace qc {
 
         of << "OPENQASM 2.0;" << std::endl;
         of << "include \"qelib1.inc\";" << std::endl;
+        if (std::any_of(std::begin(ops), std::end(ops), [](const auto& op) { return op->getType() == OpType::Teleportation; })) {
+            of << "opaque teleport src, anc, tgt;" << std::endl;
+        }
         if (!qregs.empty()) {
             printSortedRegisters(qregs, "qreg", of);
         } else if (nqubits > 0) {

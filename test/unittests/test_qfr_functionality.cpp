@@ -1868,3 +1868,16 @@ TEST_F(QFRFunctionality, OpNameToTypeSimple) {
 
     EXPECT_THROW([[maybe_unused]] const auto type = qc::opTypeFromString("foo"), std::invalid_argument);
 }
+
+TEST_F(QFRFunctionality, dumpAndImportTeleportation) {
+    QuantumComputation qc(3);
+    qc.emplace_back<StandardOperation>(3, Targets{0, 1, 2}, OpType::Teleportation);
+    std::stringstream ss;
+    qc.dumpOpenQASM(ss);
+    EXPECT_TRUE(ss.str().find("teleport") != std::string::npos);
+
+    QuantumComputation qcImported(3);
+    qcImported.import(ss, qc::Format::OpenQASM);
+    ASSERT_EQ(qcImported.size(), 1);
+    EXPECT_EQ(qcImported.at(0)->getType(), OpType::Teleportation);
+}
