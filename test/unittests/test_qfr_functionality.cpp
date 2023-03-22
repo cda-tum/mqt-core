@@ -1871,7 +1871,7 @@ TEST_F(QFRFunctionality, OpNameToTypeSimple) {
 
 TEST_F(QFRFunctionality, dumpAndImportTeleportation) {
     QuantumComputation qc(3);
-    qc.emplace_back<StandardOperation>(3, Targets{0,1,2}, OpType::Teleportation);
+    qc.emplace_back<StandardOperation>(3, Targets{0, 1, 2}, OpType::Teleportation);
     std::stringstream ss;
     qc.dumpOpenQASM(ss);
     EXPECT_TRUE(ss.str().find("teleport") != std::string::npos);
