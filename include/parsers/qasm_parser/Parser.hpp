@@ -143,6 +143,7 @@ namespace qasm {
                 {"u3", {0, 1, 3, qc::U3}},
                 {"U", {0, 1, 3, qc::U3}},
                 {"u", {0, 1, 3, qc::U3}},
+                {"teleport", {0, 3, 0, qc::Teleportation}},
                 {"swap", {0, 2, 0, qc::SWAP}},
                 {"iswap", {0, 2, 0, qc::iSWAP}},
                 {"cnot", {1, 1, 0, qc::X}},
