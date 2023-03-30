@@ -1786,3 +1786,21 @@ TEST(DDPackageTest, TwoQubitGateCreationFailure) {
 
     EXPECT_THROW(dd->makeTwoQubitGateDD(dd::CXmat, 2, 0, 1), std::runtime_error);
 }
+
+TEST(DDPackageTest, InnerProductTopNodeConjugation) {
+    // Test comes from experimental results
+    // 2 qubit state is rotated Rxx(-2) equivalent to
+    // Ising model evolution up to a time T=1
+    const dd::QubitCount nrQubits  = 2;
+    const auto           dd        = std::make_unique<dd::Package<>>(nrQubits);
+    const auto           zeroState = dd->makeZeroState(nrQubits);
+    const auto           rxx       = dd->makeRXXDD(nrQubits, 0, 1, -2);
+    const auto           op        = dd->makeGateDD(dd::Zmat, nrQubits, 0);
+
+    const auto evolvedState = dd->multiply(rxx, zeroState);
+
+    // Actual evolution results in approximately -0.416
+    // If the top node in the inner product is not conjugated properly,
+    // it will result in +0.416.
+    EXPECT_NEAR(dd->expectationValue(op, evolvedState), -0.416, 0.001);
+}

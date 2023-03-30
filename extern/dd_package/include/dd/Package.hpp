@@ -1784,7 +1784,7 @@ namespace dd {
             auto xCopy = x;
             xCopy.w    = ComplexNumbers::conj(x.w); // Overall normalization factor needs to be conjugated
                                                     // before input into recursive private function
-            const ComplexValue ip = innerProduct(x, y, static_cast<Qubit>(w + 1));
+            const ComplexValue ip = innerProduct(xCopy, y, static_cast<Qubit>(w + 1));
 
             [[maybe_unused]] const auto after = cn.cacheCount();
             assert(after == before);
