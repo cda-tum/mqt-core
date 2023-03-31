@@ -17,10 +17,10 @@
 namespace dd {
     // NOLINTNEXTLINE(readability-identifier-naming)
     struct vNode {
-        std::array<Edge<vNode>, RADIX> e{};    // edges out of this node
-        vNode*                         next{}; // used to link nodes in unique table
-        RefCount                       ref{};  // reference count
-        Qubit                          v{};    // variable index (nonterminal) value (-1 for terminal)
+        std::array<Edge<vNode>, RADIX> e{};              // edges out of this node
+        vNode*                         next{};           // used to link nodes in unique table
+        RefCount                       ref{};            // reference count
+        Qubit                          v{};              // variable index (nonterminal) value (-1 for terminal)
 
         static vNode            terminalNode;            // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
         constexpr static vNode* terminal{&terminalNode}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
