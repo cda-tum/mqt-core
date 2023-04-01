@@ -165,6 +165,8 @@ namespace qc {
             {"ctdg", OpType::Tdag},
             {"v", OpType::V},
             {"vdg", OpType::Vdag},
+            {"u", OpType::U3},
+            {"cu", OpType::U3},
             {"u3", OpType::U3},
             {"cu3", OpType::U3},
             {"u2", OpType::U2},
