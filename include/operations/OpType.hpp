@@ -221,6 +221,12 @@ namespace qc {
     inline std::istream& operator>>(std::istream& in, OpType& opType) {
         std::string opTypeStr;
         in >> opTypeStr;
+
+        if (opTypeStr.empty()) {
+            in.setstate(std::istream::failbit);
+            return in;
+        }
+
         opType = opTypeFromString(opTypeStr);
         return in;
     }
