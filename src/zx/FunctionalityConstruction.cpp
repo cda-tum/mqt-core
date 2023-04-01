@@ -187,18 +187,18 @@ namespace zx {
                     break;
                 case qc::OpType::U2:
                     addZSpider(diag, target, qubits,
-                               parseParam(op.get(), 0) - PiRational(1, 2));
+                               parseParam(op.get(), 1) - PiRational(1, 2));
                     addXSpider(diag, target, qubits,
                                PiExpression(PiRational(1, 2)));
                     addZSpider(diag, target, qubits,
-                               parseParam(op.get(), 1) + PiRational(1, 2));
+                               parseParam(op.get(), 0) + PiRational(1, 2));
                     break;
                 case qc::OpType::U3:
-                    addZSpider(diag, target, qubits, parseParam(op.get(), 0));
+                    addZSpider(diag, target, qubits, parseParam(op.get(), 2));
                     addXSpider(diag, target, qubits,
                                PiExpression(PiRational(1, 2)));
                     addZSpider(diag, target, qubits,
-                               parseParam(op.get(), 2) + PiRational(1, 1));
+                               parseParam(op.get(), 0) + PiRational(1, 1));
                     addXSpider(diag, target, qubits,
                                PiExpression(PiRational(1, 2)));
                     addZSpider(diag, target, qubits,
