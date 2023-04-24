@@ -505,7 +505,7 @@ namespace dd {
                         if (it != controls.end() && it->qubit == z) {
                             if (it->type == Control::Type::neg) { // neg. control
                                 em[i] = makeDDNode(z, std::array{em[i], mEdge::zero, mEdge::zero, (i1 == i2) ? makeIdent(static_cast<Qubit>(start), static_cast<Qubit>(z - 1)) : mEdge::zero});
-                            } else {                              // pos. control
+                            } else { // pos. control
                                 em[i] = makeDDNode(z, std::array{(i1 == i2) ? makeIdent(static_cast<Qubit>(start), static_cast<Qubit>(z - 1)) : mEdge::zero, mEdge::zero, mEdge::zero, em[i]});
                             }
                         } else { // not connected
@@ -527,7 +527,7 @@ namespace dd {
                 if (it != controls.end() && it->qubit == q) {
                     if (it->type == Control::Type::neg) { // neg. control
                         e = makeDDNode(q, std::array{e, mEdge::zero, mEdge::zero, makeIdent(static_cast<Qubit>(start), static_cast<Qubit>(q - 1))});
-                    } else {                              // pos. control
+                    } else { // pos. control
                         e = makeDDNode(q, std::array{makeIdent(static_cast<Qubit>(start), static_cast<Qubit>(q - 1)), mEdge::zero, mEdge::zero, e});
                     }
                     ++it;
