@@ -27,7 +27,7 @@ jobs:
           submodules: recursive
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.12.2
+        uses: pypa/cibuildwheel@v2.12.3
       - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
