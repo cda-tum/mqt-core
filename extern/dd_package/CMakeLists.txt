@@ -17,55 +17,61 @@ include(cmake/PreventInSourceBuilds.cmake)
 include(cmake/CheckSubmodule.cmake)
 include(cmake/PackageAddTest.cmake)
 
-# Use the warnings specified in CompilerWarnings.cmake
-add_library(project_warnings INTERFACE)
+if(NOT TARGET project_warnings)
+  # Use the warnings specified in CompilerWarnings.cmake
+  add_library(project_warnings INTERFACE)
 
-# Standard compiler warnings
-include(cmake/CompilerWarnings.cmake)
-set_project_warnings(project_warnings)
+  # Standard compiler warnings
+  include(cmake/CompilerWarnings.cmake)
+  set_project_warnings(project_warnings)
+endif()
 
-# Interface library to set project options
-add_library(project_options INTERFACE)
+if(NOT TARGET project_options)
+  # Use the options specified in CompilerOptions.cmake
+  add_library(project_options INTERFACE)
 
-# Compiler options
-include(cmake/CompilerOptions.cmake)
-enable_project_options(project_options)
+  # Standard compiler options
+  include(cmake/CompilerOptions.cmake)
+  enable_project_options(project_options)
 
-# Sanitizer options if supported by compiler
-include(cmake/Sanitizers.cmake)
-enable_sanitizers(project_options)
+  # Sanitizer options if supported by compiler
+  include(cmake/Sanitizers.cmake)
+  enable_sanitizers(project_options)
+endif()
 
 # add main library code
-add_library(
-  ${PROJECT_NAME}
-  INTERFACE
-  include/dd/Complex.hpp
-  include/dd/ComplexCache.hpp
-  include/dd/ComplexNumbers.hpp
-  include/dd/ComplexTable.hpp
-  include/dd/ComplexValue.hpp
-  include/dd/ComputeTable.hpp
-  include/dd/Control.hpp
-  include/dd/Definitions.hpp
-  include/dd/Edge.hpp
-  include/dd/Export.hpp
-  include/dd/GateMatrixDefinitions.hpp
-  include/dd/Node.hpp
-  include/dd/Package.hpp
-  include/dd/ToffoliTable.hpp
-  include/dd/UnaryComputeTable.hpp
-  include/dd/DensityNoiseTable.hpp
-  include/dd/StochasticNoiseOperationTable.hpp
-  include/dd/UniqueTable.hpp)
+if(NOT TARGET ${PROJECT_NAME})
+  add_library(
+    ${PROJECT_NAME}
+    INTERFACE
+    include/dd/Complex.hpp
+    include/dd/ComplexCache.hpp
+    include/dd/ComplexNumbers.hpp
+    include/dd/ComplexTable.hpp
+    include/dd/ComplexValue.hpp
+    include/dd/ComputeTable.hpp
+    include/dd/Control.hpp
+    include/dd/Definitions.hpp
+    include/dd/Edge.hpp
+    include/dd/Export.hpp
+    include/dd/GateMatrixDefinitions.hpp
+    include/dd/Node.hpp
+    include/dd/Package.hpp
+    include/dd/ToffoliTable.hpp
+    include/dd/UnaryComputeTable.hpp
+    include/dd/DensityNoiseTable.hpp
+    include/dd/StochasticNoiseOperationTable.hpp
+    include/dd/UniqueTable.hpp)
 
-# add options and warnings to library
-target_link_libraries(${PROJECT_NAME} INTERFACE project_options project_warnings)
+  # add options and warnings to library
+  target_link_libraries(${PROJECT_NAME} INTERFACE project_options project_warnings)
 
-# set include directories
-target_include_directories(${PROJECT_NAME} INTERFACE include ${PROJECT_BINARY_DIR}/include)
+  # set include directories
+  target_include_directories(${PROJECT_NAME} INTERFACE include ${PROJECT_BINARY_DIR}/include)
 
-# add MQT alias
-add_library(MQT::DDPackage ALIAS ${PROJECT_NAME})
+  # add MQT alias
+  add_library(MQT::DDPackage ALIAS ${PROJECT_NAME})
+endif()
 
 # add test code
 option(BUILD_DD_PACKAGE_TESTS "Also build tests for DD package")
