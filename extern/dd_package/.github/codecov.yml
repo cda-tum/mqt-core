@@ -1,0 +1,20 @@
+ignore:
+  - "extern/**/*"
+  - "include/GateMatrixDefinitions.h"
+
+coverage:
+  range: 60..90
+  precision: 1
+  status:
+    project:
+      default:
+        threshold: 0.5%
+    patch:
+      default:
+        threshold: 1%
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: no
+      loop: no

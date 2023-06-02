@@ -24,7 +24,7 @@ jobs:
           cmake -S . -B build \
           -DBINDINGS=ON \
           -DBUILD_QFR_TESTS=ON \
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          -DBUILD_DD_PACKAGE_TESTS=ON
       - name: Run cpp-linter
         id: linter
         env:
@@ -37,7 +37,8 @@ jobs:
           --thread-comments=true \
           --files-changed-only=true \
           --ignore="build" \
-          --database=build
+          --database=build \
+          --extra-arg=-std=c++17
       - name: Fail if linter found errors
         if: steps.linter.outputs.checks-failed > 0
         run: echo "Linter found errors" && exit 1

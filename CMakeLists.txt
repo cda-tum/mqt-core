@@ -10,16 +10,32 @@ project(
   LANGUAGES CXX
   DESCRIPTION "MQT QFR - A library for Quantum Functionality Representation")
 
-# check whether the submodule ``modulename`` is correctly cloned in the ``/extern`` directory.
-macro(CHECK_SUBMODULE_PRESENT modulename)
-  if(NOT EXISTS "${PROJECT_SOURCE_DIR}/extern/${modulename}/CMakeLists.txt")
-    message(
-      FATAL_ERROR
-        "${modulename} submodule not cloned properly. \
-        Please run `git submodule update --init --recursive` \
-        from the main project directory")
-  endif()
-endmacro()
+include(cmake/StandardProjectSettings.cmake)
+include(cmake/PreventInSourceBuilds.cmake)
+include(cmake/CheckSubmodule.cmake)
+include(cmake/PackageAddTest.cmake)
+
+if(NOT TARGET project_warnings)
+  # Use the warnings specified in CompilerWarnings.cmake
+  add_library(project_warnings INTERFACE)
+
+  # Standard compiler warnings
+  include(cmake/CompilerWarnings.cmake)
+  set_project_warnings(project_warnings)
+endif()
+
+if(NOT TARGET project_options)
+  # Use the options specified in CompilerOptions.cmake
+  add_library(project_options INTERFACE)
+
+  # Standard compiler options
+  include(cmake/CompilerOptions.cmake)
+  enable_project_options(project_options)
+
+  # Sanitizer options if supported by compiler
+  include(cmake/Sanitizers.cmake)
+  enable_sanitizers(project_options)
+endif()
 
 check_submodule_present(dd_package)
 check_submodule_present(json)
