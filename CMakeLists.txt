@@ -16,25 +16,25 @@ include(cmake/CheckSubmodule.cmake)
 include(cmake/PackageAddTest.cmake)
 
 if(NOT TARGET project_warnings)
-	# Use the warnings specified in CompilerWarnings.cmake
-	add_library(project_warnings INTERFACE)
+  # Use the warnings specified in CompilerWarnings.cmake
+  add_library(project_warnings INTERFACE)
 
-	# Standard compiler warnings
-	include(cmake/CompilerWarnings.cmake)
-	set_project_warnings(project_warnings)
+  # Standard compiler warnings
+  include(cmake/CompilerWarnings.cmake)
+  set_project_warnings(project_warnings)
 endif()
 
 if(NOT TARGET project_options)
-	# Use the options specified in CompilerOptions.cmake
-	add_library(project_options INTERFACE)
+  # Use the options specified in CompilerOptions.cmake
+  add_library(project_options INTERFACE)
 
-	# Standard compiler options
-	include(cmake/CompilerOptions.cmake)
-	enable_project_options(project_options)
+  # Standard compiler options
+  include(cmake/CompilerOptions.cmake)
+  enable_project_options(project_options)
 
-	# Sanitizer options if supported by compiler
-	include(cmake/Sanitizers.cmake)
-	enable_sanitizers(project_options)
+  # Sanitizer options if supported by compiler
+  include(cmake/Sanitizers.cmake)
+  enable_sanitizers(project_options)
 endif()
 
 check_submodule_present(dd_package)
