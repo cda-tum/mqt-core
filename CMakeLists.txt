@@ -10,6 +10,8 @@ project(
   LANGUAGES CXX
   DESCRIPTION "MQT QFR - A library for Quantum Functionality Representation")
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/PreventInSourceBuilds.cmake)
 include(cmake/CheckSubmodule.cmake)
