@@ -24,7 +24,8 @@ jobs:
           cmake -S . -B build \
           -DBINDINGS=ON \
           -DBUILD_QFR_TESTS=ON \
-          -DBUILD_DD_PACKAGE_TESTS=ON
+          -DBUILD_DD_PACKAGE_TESTS=ON \
+          -DBUILD_ZX_TESTS=ON
       - name: Run cpp-linter
         id: linter
         env:
