@@ -53,38 +53,3 @@ jobs:
           gcov: true
           gcov_ignore: "extern/**/*"
           token: ${{ secrets.CODECOV_TOKEN }}
-
-  benchmark:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_DD_PACKAGE_TESTS=ON
-      - name: Build
-        run: cmake --build build --config Release --target DDPackage_bench
-      - name: Run Benchmarks
-        working-directory: build
-        run: ./test/DDPackage_bench --benchmark_format=json | tee benchmark_result.json
-      - name: Store benchmark result # for pushes
-        if: github.event.pull_request.head.repo.fork == false && github.actor != 'dependabot[bot]'
-        uses: rhysd/github-action-benchmark@v1
-        #        if: github.event_name == 'push'
-        with:
-          # What benchmark tool the output.txt came from
-          tool: "googlecpp"
-          # Where the output from the benchmark tool is stored
-          output-file-path: build/benchmark_result.json
-          # Workflow will fail when an alert happens
-          fail-on-alert: true
-          # GitHub API token to make a commit comment
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          # Enable alert commit comment
-          comment-on-alert: true
-          # Set alert threshold
-          alert-threshold: 500%
-          # Mention @burgholzer in the commit comment
-          alert-comment-cc-users: "@burgholzer"
-          # Push and deploy GitHub pages branch automatically
-          auto-push: true

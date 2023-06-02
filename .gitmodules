@@ -22,8 +22,3 @@
         url = https://github.com/google/googletest.git
         branch = main
         shallow = true
-[submodule "extern/dd_package/extern/benchmark"]
-        path = extern/dd_package/extern/benchmark
-        url = https://github.com/google/benchmark.git
-        branch = main
-        shallow = true

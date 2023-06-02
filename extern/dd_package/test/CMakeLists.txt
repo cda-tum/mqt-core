@@ -7,16 +7,6 @@ if(NOT TARGET gtest OR NOT TARGET gmock)
   set_target_properties(gtest gtest_main gmock gmock_main PROPERTIES FOLDER extern)
 endif()
 
-if(NOT TARGET benchmark::benchmark)
-  set(THREADS_PREFER_PTHREAD_FLAG ON)
-  find_package(Threads REQUIRED)
-  set(BENCHMARK_ENABLE_TESTING
-      OFF
-      CACHE BOOL "Skip google benchmark self tests")
-  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/benchmark" "extern/benchmark" EXCLUDE_FROM_ALL)
-  set_target_properties(benchmark benchmark_main PROPERTIES FOLDER extern)
-endif()
-
 if(NOT TARGET ${PROJECT_NAME}_example)
   add_executable(${PROJECT_NAME}_example main.cpp)
   target_link_libraries(${PROJECT_NAME}_example PRIVATE ${PROJECT_NAME})
@@ -28,12 +18,3 @@ endif()
 
 # add unit tests
 package_add_test(${PROJECT_NAME}_test ${PROJECT_NAME} test_complex.cpp test_package.cpp)
-
-if(NOT TARGET ${PROJECT_NAME}_bench)
-  # add benchmark executable
-  add_executable(${PROJECT_NAME}_bench EXCLUDE_FROM_ALL bench_package.cpp)
-  # link the Google benchmark infrastructure and a default main function
-  target_link_libraries(${PROJECT_NAME}_bench PRIVATE ${PROJECT_NAME} benchmark::benchmark_main
-                                                      Threads::Threads)
-  set_target_properties(${PROJECT_NAME}_bench PROPERTIES FOLDER tests)
-endif()
