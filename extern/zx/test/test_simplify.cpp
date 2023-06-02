@@ -21,8 +21,8 @@ static zx::ZXDiagram makeIdentityDiagram(const std::size_t nqubits,
        ++qubit) {
     for (std::size_t j = 0; j < spidersPerQubit; ++j) {
       const zx::Vertex v = diag.addVertex(qubit);
-      diag.addEdge(rightmostVertices[qubit], v);
-      rightmostVertices[qubit] = v;
+      diag.addEdge(rightmostVertices[static_cast<std::size_t>(qubit)], v);
+      rightmostVertices[static_cast<std::size_t>(qubit)] = v;
     }
   }
 

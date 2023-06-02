@@ -23,12 +23,12 @@ TEST_F(ExpressionTest, basicOps1) {
 
   EXPECT_EQ(1, e.numTerms());
   EXPECT_EQ(zx::PiRational(0, 1), e.getConst());
-  EXPECT_PRED_FORMAT2(testing::FloatLE, e[0].getCoeff(), 2.0);
+  EXPECT_PRED_FORMAT2(testing::DoubleLE, e[0].getCoeff(), 2.0);
 
   e += y;
   EXPECT_EQ(2, e.numTerms());
-  EXPECT_PRED_FORMAT2(testing::FloatLE, e[0].getCoeff(), 2.0);
-  EXPECT_PRED_FORMAT2(testing::FloatLE, e[1].getCoeff(), 1.0);
+  EXPECT_PRED_FORMAT2(testing::DoubleLE, e[0].getCoeff(), 2.0);
+  EXPECT_PRED_FORMAT2(testing::DoubleLE, e[1].getCoeff(), 1.0);
   EXPECT_EQ(e[0].getVar().getName(), "x");
   EXPECT_EQ(e[1].getVar().getName(), "y");
 }
@@ -49,8 +49,8 @@ TEST_F(ExpressionTest, basicOps2) {
   auto sum = e1 + e2;
 
   EXPECT_EQ(2, sum.numTerms());
-  EXPECT_PRED_FORMAT2(testing::FloatLE, sum[0].getCoeff(), -4.0);
-  EXPECT_PRED_FORMAT2(testing::FloatLE, sum[1].getCoeff(), 0.1);
+  EXPECT_PRED_FORMAT2(testing::DoubleLE, sum[0].getCoeff(), -4.0);
+  EXPECT_PRED_FORMAT2(testing::DoubleLE, sum[1].getCoeff(), 0.1);
   EXPECT_EQ(sum[0].getVar().getName(), "x");
   EXPECT_EQ(sum[1].getVar().getName(), "z");
   EXPECT_EQ(sum.getConst(), zx::PiRational(0, 1));
@@ -66,15 +66,15 @@ TEST_F(ExpressionTest, mult) {
 
   e = e * 2.0;
 
-  EXPECT_PRED_FORMAT2(testing::FloatLE, e[0].getCoeff(), 2);
+  EXPECT_PRED_FORMAT2(testing::DoubleLE, e[0].getCoeff(), 2);
 
   e = e * zx::PiRational(0.5);
 
-  EXPECT_PRED_FORMAT2(testing::FloatLE, e[0].getCoeff(), 1);
+  EXPECT_PRED_FORMAT2(testing::DoubleLE, e[0].getCoeff(), 1);
 
   e += sym::Expression<double, zx::PiRational>{};
 
-  EXPECT_PRED_FORMAT2(testing::FloatLE, e[0].getCoeff(), 1);
+  EXPECT_PRED_FORMAT2(testing::DoubleLE, e[0].getCoeff(), 1);
 
   e = e * 0.0;
 
@@ -86,11 +86,11 @@ TEST_F(ExpressionTest, div) {
 
   e = e / 2.0;
 
-  EXPECT_PRED_FORMAT2(testing::FloatLE, e[0].getCoeff(), 0.5);
+  EXPECT_PRED_FORMAT2(testing::DoubleLE, e[0].getCoeff(), 0.5);
 
   e = e / zx::PiRational(0.5);
 
-  EXPECT_PRED_FORMAT2(testing::FloatLE, e[0].getCoeff(), 1);
+  EXPECT_PRED_FORMAT2(testing::DoubleLE, e[0].getCoeff(), 1);
 
   EXPECT_THROW(e = e / 0.0, std::runtime_error);
 }
@@ -190,7 +190,7 @@ TEST_F(ExpressionTest, Instantiation) {
   const sym::VariableAssignment assignment{{sym::Variable{"x"}, 2.0},
                                            {sym::Variable{"y"}, 1.0}};
 
-  EXPECT_PRED_FORMAT2(testing::FloatLE, e.evaluate(assignment), 5.0);
+  EXPECT_PRED_FORMAT2(testing::DoubleLE, e.evaluate(assignment), 5.0);
 
   e += z;
   EXPECT_THROW([[maybe_unused]] const auto h = e.evaluate(assignment),

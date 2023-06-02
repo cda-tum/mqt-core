@@ -249,7 +249,7 @@ ZXDiagram& ZXDiagram::concat(const ZXDiagram& rhs) {
           addEdge(newVs[i], newVs[to], type);
         }
       } else {
-        const auto outV = outputs[rhs.qubit(to)];
+        const auto outV = outputs[static_cast<std::size_t>(rhs.qubit(to))];
         for (const auto& [interior_v, interior_type] :
              edges[outV]) { // redirect edges going to outputs
           if (interior_type == type) {
@@ -314,8 +314,8 @@ void ZXDiagram::closeGraph(const std::vector<Vertex>& qubitVertices) {
 void ZXDiagram::makeAncilla(const Qubit qubit) { makeAncilla(qubit, qubit); }
 
 void ZXDiagram::makeAncilla(const Qubit in, const Qubit out) {
-  const auto inV  = inputs[in];
-  const auto outV = outputs[out];
+  const auto inV  = inputs[static_cast<std::size_t>(in)];
+  const auto outV = outputs[static_cast<std::size_t>(out)];
   inputs.erase(inputs.begin() + in);
   outputs.erase(outputs.begin() + out);
 

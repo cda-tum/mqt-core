@@ -193,7 +193,7 @@ TEST_F(ZXDiagramTest, AdjMat) {
   const auto& adj = diag.getAdjMat();
 
   for (const auto& [v, _] : diag.getVertices()) {
-    for (const auto& [w, _] : diag.getVertices()) {
+    for (const auto& [w, wd] : diag.getVertices()) {
       if (diag.connected(v, w) || v == w) {
         EXPECT_TRUE(adj[v][w]);
         EXPECT_TRUE(adj[w][v]);

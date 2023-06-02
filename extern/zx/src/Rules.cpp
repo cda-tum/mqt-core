@@ -133,7 +133,7 @@ void pivotPauli(ZXDiagram& diag, const Vertex v0,
     }
 
     diag.addPhase(neighbor_v0, v1Phase);
-    for (const auto& [neighbor_v1, _] : v1Edges) {
+    for (const auto& [neighbor_v1, type] : v1Edges) {
       if (neighbor_v1 != v0) {
         diag.addEdgeParallelAware(neighbor_v0, neighbor_v1, EdgeType::Hadamard);
       }
