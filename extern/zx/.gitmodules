@@ -1,0 +1,11 @@
+[submodule "extern/googletest"]
+	path = extern/googletest
+	url = https://github.com/google/googletest
+    branch = main
+    shallow = true
+[submodule "extern/boost/config"]
+	path = extern/boost/config
+	url = https://github.com/boostorg/config
+[submodule "extern/boost/multiprecision"]
+	path = extern/boost/multiprecision
+	url = https://github.com/boostorg/multiprecision.git
