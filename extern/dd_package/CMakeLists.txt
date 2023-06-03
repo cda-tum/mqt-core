@@ -42,7 +42,6 @@ endif()
 # add test code
 option(BUILD_DD_PACKAGE_TESTS "Also build tests for DD package")
 if(BUILD_DD_PACKAGE_TESTS)
-  check_submodule_present(googletest)
   enable_testing()
   include(GoogleTest)
   add_subdirectory(test)

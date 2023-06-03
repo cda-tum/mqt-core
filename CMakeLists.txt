@@ -49,6 +49,7 @@ add_subdirectory(src)
 # add test code
 option(BUILD_QFR_TESTS "Also build tests for QFR project")
 if(BUILD_QFR_TESTS)
+  check_submodule_present(googletest)
   enable_testing()
   include(GoogleTest)
   add_subdirectory(test)
