@@ -23,10 +23,10 @@ struct vNode {
   RefCount ref{};                     // reference count
   Qubit v{}; // variable index (nonterminal) value (-1 for terminal)
 
-  static vNode
-      terminalNode; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-  constexpr static vNode* terminal{
-      &terminalNode}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+  static vNode terminalNode;
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
+  constexpr static vNode* terminal{&terminalNode};
 
   static constexpr bool isTerminal(const vNode* p) { return p == terminal; }
 };
@@ -51,10 +51,10 @@ struct mNode {
   // 2 = mark first path edge (tmp flag),
   // 1 = mark path is conjugated (tmp flag))
 
-  static mNode
-      terminalNode; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-  constexpr static mNode* terminal{
-      &terminalNode}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+  static mNode terminalNode;
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
+  constexpr static mNode* terminal{&terminalNode};
 
   static constexpr bool isTerminal(const mNode* p) { return p == terminal; }
 
@@ -107,10 +107,10 @@ struct dNode {
   // 2 = mark first path edge (tmp flag),
   // 1 = mark path is conjugated (tmp flag))
 
-  static dNode
-      terminalNode; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-  constexpr static dNode* terminal{
-      &terminalNode}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+  static dNode terminalNode;
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
+  constexpr static dNode* terminal{&terminalNode};
   static constexpr bool isTerminal(const dNode* p) { return p == terminal; }
 
   [[nodiscard]] [[maybe_unused]] static inline bool
@@ -282,8 +282,8 @@ inline dNode dNode::terminalNode{{{{nullptr, Complex::zero},
                                  -1,
                                  0};
 
-// NOLINTNEXTLINE(clang-diagnostic-unused-function) It's used but clang-tidy in
-// our CI complains...
+// It's used but clang-tidy in our CI complains...
+// NOLINTNEXTLINE(clang-diagnostic-unused-function)
 static inline dEdge densityFromMatrixEdge(const mEdge& e) {
   return dEdge{reinterpret_cast<dNode*>(e.p), e.w};
 }

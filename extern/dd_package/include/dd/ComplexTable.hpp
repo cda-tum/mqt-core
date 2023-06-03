@@ -94,8 +94,8 @@ public:
     }
     [[nodiscard]] static constexpr bool approximatelyEquals(const fp left,
                                                             const fp right) {
-      // NOLINTNEXTLINE(clang-diagnostic-float-equal) equivalence check is a
-      // shortcut before check with tolerance
+      // equivalence check is a shortcut before check with tolerance
+      // NOLINTNEXTLINE(clang-diagnostic-float-equal)
       return left == right || std::abs(left - right) <= TOLERANCE;
     }
 
@@ -119,18 +119,12 @@ public:
     }
   };
 
-  static inline Entry zero{
-      0., nullptr,
-      1}; // NOLINT(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
-          // automatic renaming does not work reliably, so skip linting
-  static inline Entry sqrt2_2{
-      SQRT2_2, nullptr,
-      1}; // NOLINT(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
-          // automatic renaming does not work reliably, so skip linting
-  static inline Entry one{
-      1., nullptr,
-      1}; // NOLINT(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
-          // automatic renaming does not work reliably, so skip linting
+  // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
+  static inline Entry zero{0., nullptr, 1};
+  // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
+  static inline Entry sqrt2_2{SQRT2_2, nullptr, 1};
+  // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
+  static inline Entry one{1., nullptr, 1};
 
   ComplexTable() {
     // add 1/2 to the complex table and increase its ref count (so that it is
@@ -524,9 +518,8 @@ private:
   std::size_t upperNeighbors = 0;
 
   // numerical tolerance to be used for floating point values
-  static inline fp TOLERANCE =
-      std::numeric_limits<dd::fp>::epsilon() *
-      1024; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
+  static inline fp TOLERANCE = std::numeric_limits<dd::fp>::epsilon() * 1024;
 
   Entry* available{};
   std::vector<std::vector<Entry>> chunks{

@@ -15,8 +15,8 @@ namespace dd {
 struct Control {
   enum class Type : bool {
     pos = true, // NOLINT(readability-identifier-naming)
-    neg = false
-  }; // NOLINT(readability-identifier-naming)
+    neg = false // NOLINT(readability-identifier-naming)
+  };
 
   Qubit qubit{};
   Type type = Type::pos;
@@ -54,13 +54,11 @@ struct CompareControl {
 using Controls = std::set<Control, CompareControl>;
 
 inline namespace literals {
-// NOLINTNEXTLINE(google-runtime-int) User-defined literals require unsigned
-// long long int
+// NOLINTNEXTLINE(google-runtime-int) User-defined literals require ull
 inline Control operator""_pc(unsigned long long int q) {
   return {static_cast<Qubit>(q)};
 }
-// NOLINTNEXTLINE(google-runtime-int) User-defined literals require unsigned
-// long long int
+// NOLINTNEXTLINE(google-runtime-int) User-defined literals require ull
 inline Control operator""_nc(unsigned long long int q) {
   return {static_cast<Qubit>(q), Control::Type::neg};
 }

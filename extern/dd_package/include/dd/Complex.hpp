@@ -21,12 +21,10 @@ struct Complex {
   CTEntry* r;
   CTEntry* i;
 
-  static Complex
-      zero; // NOLINT(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
-            // automatic renaming does not work reliably, so skip linting
-  static Complex
-      one; // NOLINT(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
-           // automatic renaming does not work reliably, so skip linting
+  // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
+  static Complex zero;
+  // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
+  static Complex one;
 
   void setVal(const Complex& c) const {
     r->value = CTEntry::val(c.r);
