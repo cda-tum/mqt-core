@@ -12,8 +12,8 @@ Variable::Variable(const std::string& name) {
     id = it->second;
   } else {
     registered[name] = nextId;
-    names[nextId]    = name;
-    id               = nextId;
+    names[nextId] = name;
+    id = nextId;
     ++nextId;
   }
 }

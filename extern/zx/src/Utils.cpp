@@ -8,7 +8,7 @@ Vertices::VertexIterator::VertexIterator(
     : v(v), currentPos(vertices.begin()), vertices(vertices) {
   if (v >= vertices.size()) {
     currentPos = vertices.end();
-    this->v    = vertices.size();
+    this->v = vertices.size();
   } else {
     currentPos = vertices.begin() + static_cast<int>(v);
     nextValidVertex();
@@ -48,7 +48,7 @@ void Vertices::VertexIterator::nextValidVertex() {
 }
 
 Edges::EdgeIterator::EdgeIterator(
-    const std::vector<std::vector<Edge>>&         edges,
+    const std::vector<std::vector<Edge>>& edges,
     const std::vector<std::optional<VertexData>>& vertices)
     : v(0), currentPos(edges[0].begin()), edgesPos(edges.begin()), edges(edges),
       vertices(vertices) {
@@ -57,26 +57,26 @@ Edges::EdgeIterator::EdgeIterator(
       ++v;
     }
     currentPos = edges[v].begin();
-    edgesPos   = edges.begin() + static_cast<int>(v);
+    edgesPos = edges.begin() + static_cast<int>(v);
     checkNextVertex();
   } else {
     currentPos = edges.back().end();
-    edgesPos   = edges.end();
-    v          = edges.size();
+    edgesPos = edges.end();
+    v = edges.size();
   }
 }
 
 Edges::EdgeIterator::EdgeIterator(
-    const std::vector<std::vector<Edge>>&         edges,
+    const std::vector<std::vector<Edge>>& edges,
     const std::vector<std::optional<VertexData>>& vertices, const Vertex v)
     : v(v), edges(edges), vertices(vertices) {
   if (v >= edges.size()) {
     currentPos = edges.back().end();
-    edgesPos   = edges.end();
-    this->v    = edges.size();
+    edgesPos = edges.end();
+    this->v = edges.size();
   } else {
     currentPos = edges[v].begin();
-    edgesPos   = edges.begin() + static_cast<int>(v);
+    edgesPos = edges.begin() + static_cast<int>(v);
   }
 }
 
@@ -102,12 +102,12 @@ void Edges::EdgeIterator::checkNextVertex() {
 
     if (v == edges.size()) {
       currentPos = edges.back().end();
-      edgesPos   = edges.end();
+      edgesPos = edges.end();
       --v;
       return;
     }
     currentPos = edges[v].begin();
-    edgesPos   = edges.begin() + static_cast<int>(v);
+    edgesPos = edges.begin() + static_cast<int>(v);
     while (currentPos != edges[v].end() &&
            currentPos->to < v) { // make sure to not iterate over an edge twice
       ++currentPos;

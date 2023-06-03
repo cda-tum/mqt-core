@@ -12,7 +12,7 @@
 namespace zx {
 
 struct Edge {
-  Vertex   to;
+  Vertex to;
   EdgeType type;
 
   Edge() = default;
@@ -27,10 +27,10 @@ struct Edge {
 };
 
 struct VertexData {
-  Col          col;
-  Qubit        qubit;
+  Col col;
+  Qubit qubit;
   PiExpression phase;
-  VertexType   type;
+  VertexType type;
 };
 
 class Vertices {
@@ -41,17 +41,17 @@ public:
   class VertexIterator {
   public:
     using iterator_category = std::forward_iterator_tag;
-    using difference_type   = std::int32_t;
-    using value_type        = std::pair<Vertex, const VertexData&>;
-    using pointer           = value_type*;
-    using reference         = value_type&;
+    using difference_type = std::int32_t;
+    using value_type = std::pair<Vertex, const VertexData&>;
+    using pointer = value_type*;
+    using reference = value_type&;
 
     explicit VertexIterator(const std::vector<std::optional<VertexData>>& verts)
         : currentPos(verts.begin()), vertices(verts) {
       nextValidVertex();
     }
     VertexIterator(const std::vector<std::optional<VertexData>>& vertices,
-                   Vertex                                        v);
+                   Vertex v);
 
     value_type operator*() const { return {v, currentPos->value()}; }
 
@@ -65,9 +65,9 @@ public:
     friend bool operator!=(const VertexIterator& a, const VertexIterator& b);
 
   private:
-    Vertex                                                 v = 0;
+    Vertex v = 0;
     std::vector<std::optional<VertexData>>::const_iterator currentPos;
-    const std::vector<std::optional<VertexData>>&          vertices;
+    const std::vector<std::optional<VertexData>>& vertices;
 
     void nextValidVertex();
   };
@@ -83,24 +83,24 @@ private:
 
 class Edges {
 public:
-  Edges(const std::vector<std::vector<Edge>>&         edgs,
+  Edges(const std::vector<std::vector<Edge>>& edgs,
         const std::vector<std::optional<VertexData>>& verts)
       : edges(edgs), vertices(verts){};
 
   class EdgeIterator {
   public:
     using iterator_category = std::forward_iterator_tag;
-    using difference_type   = std::int32_t;
-    using value_type        = std::pair<Vertex, Vertex>;
-    using pointer           = value_type*;
-    using reference         = value_type&;
+    using difference_type = std::int32_t;
+    using value_type = std::pair<Vertex, Vertex>;
+    using pointer = value_type*;
+    using reference = value_type&;
 
-    EdgeIterator(const std::vector<std::vector<Edge>>&         edges,
+    EdgeIterator(const std::vector<std::vector<Edge>>& edges,
                  const std::vector<std::optional<VertexData>>& vertices);
 
-    EdgeIterator(const std::vector<std::vector<Edge>>&         edges,
+    EdgeIterator(const std::vector<std::vector<Edge>>& edges,
                  const std::vector<std::optional<VertexData>>& vertices,
-                 Vertex                                        v);
+                 Vertex v);
 
     value_type operator*() const { return {v, currentPos->to}; }
 
@@ -114,11 +114,11 @@ public:
     friend bool operator!=(const EdgeIterator& a, const EdgeIterator& b);
 
   private:
-    Vertex                                         v;
-    std::vector<Edge>::const_iterator              currentPos;
+    Vertex v;
+    std::vector<Edge>::const_iterator currentPos;
     std::vector<std::vector<Edge>>::const_iterator edgesPos;
-    const std::vector<std::vector<Edge>>&          edges;
-    const std::vector<std::optional<VertexData>>&  vertices;
+    const std::vector<std::vector<Edge>>& edges;
+    const std::vector<std::optional<VertexData>>& vertices;
 
     void checkNextVertex();
   };
@@ -129,7 +129,7 @@ public:
   iterator end() { return {edges, vertices, edges.size()}; }
 
 private:
-  const std::vector<std::vector<Edge>>&         edges;
+  const std::vector<std::vector<Edge>>& edges;
   const std::vector<std::optional<VertexData>>& vertices;
 };
 

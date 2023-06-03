@@ -31,7 +31,7 @@ struct Variable {
   // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
   static inline std::unordered_map<std::string, std::size_t> registered{};
   static inline std::unordered_map<std::size_t, std::string> names{};
-  static inline std::size_t                                  nextId{};
+  static inline std::size_t nextId{};
   // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
   explicit Variable(const std::string& name);
@@ -68,7 +68,7 @@ template <typename T,
 class Term {
 public:
   [[nodiscard]] Variable getVar() const { return var; }
-  [[nodiscard]] T        getCoeff() const { return coeff; }
+  [[nodiscard]] T getCoeff() const { return coeff; }
 
   [[nodiscard]] bool hasZeroCoeff() const {
     return std::abs(static_cast<double>(coeff)) < TOLERANCE;
@@ -79,7 +79,7 @@ public:
 
   Term operator-() const { return Term(-coeff, var); }
 
-  void  addCoeff(const T& r) { coeff += r; }
+  void addCoeff(const T& r) { coeff += r; }
   Term& operator*=(const T& rhs) {
     coeff *= rhs;
     return *this;
@@ -103,7 +103,7 @@ public:
   }
 
 private:
-  T        coeff;
+  T coeff;
   Variable var;
 };
 template <typename T,
@@ -137,7 +137,7 @@ template <
         std::is_constructible_v<U, double>>>
 class Expression {
 public:
-  using iterator       = typename std::vector<Term<T>>::iterator;
+  using iterator = typename std::vector<Term<T>>::iterator;
   using const_iterator = typename std::vector<Term<T>>::const_iterator;
 
   template <typename... Args> explicit Expression(Term<T> t, Args&&... ms) {
@@ -161,9 +161,9 @@ public:
 
   explicit Expression(const U& r) : constant(r){};
 
-  iterator                     begin() { return terms.begin(); }
+  iterator begin() { return terms.begin(); }
   [[nodiscard]] const_iterator begin() const { return terms.cbegin(); }
-  iterator                     end() { return terms.end(); }
+  iterator end() { return terms.end(); }
   [[nodiscard]] const_iterator end() const { return terms.cend(); }
   [[nodiscard]] const_iterator cbegin() const { return terms.cbegin(); }
   [[nodiscard]] const_iterator cend() const { return terms.cend(); }
@@ -279,8 +279,8 @@ public:
   [[nodiscard]] const Term<T>& operator[](const std::size_t i) const {
     return terms[i];
   }
-  [[nodiscard]] U    getConst() const { return constant; }
-  void               setConst(const U& val) { constant = val; }
+  [[nodiscard]] U getConst() const { return constant; }
+  void setConst(const U& val) { constant = val; }
   [[nodiscard]] auto numTerms() const { return terms.size(); }
 
   [[nodiscard]] const std::vector<Term<T>>& getTerms() const { return terms; }
@@ -301,7 +301,7 @@ public:
 
 private:
   std::vector<Term<T>> terms;
-  U                    constant{T{0.0}};
+  U constant{T{0.0}};
 
   void sortTerms() {
     std::sort(terms.begin(), terms.end(),
@@ -327,7 +327,7 @@ private:
 };
 
 template <typename T, typename U>
-inline Expression<T, U> operator+(Expression<T, U>        lhs,
+inline Expression<T, U> operator+(Expression<T, U> lhs,
                                   const Expression<T, U>& rhs) {
   lhs += rhs;
   return lhs;
@@ -359,13 +359,13 @@ inline Expression<T, U> operator+(Expression<T, U> lhs, const U& rhs) {
 
 template <typename T, typename U>
 inline Expression<T, U> operator+([[maybe_unused]] const T& lhs,
-                                  Expression<T, U>          rhs) {
+                                  Expression<T, U> rhs) {
   rhs += rhs;
   return rhs;
 }
 
 template <typename T, typename U>
-inline Expression<T, U> operator-(Expression<T, U>        lhs,
+inline Expression<T, U> operator-(Expression<T, U> lhs,
                                   const Expression<T, U>& rhs) {
   lhs -= rhs;
   return lhs;

@@ -28,17 +28,17 @@ public:
   Vertex addVertex(const VertexData& data);
   Vertex addVertex(Qubit qubit, Col col = 0,
                    const PiExpression& phase = PiExpression(),
-                   VertexType          type  = VertexType::Z);
-  void   addQubit();
-  void   addQubits(zx::Qubit n);
-  void   removeVertex(Vertex toRemove);
+                   VertexType type = VertexType::Z);
+  void addQubit();
+  void addQubits(zx::Qubit n);
+  void removeVertex(Vertex toRemove);
 
   [[nodiscard]] std::size_t getNdeleted() const { return deleted.size(); }
   [[nodiscard]] std::size_t getNVertices() const { return nvertices; }
   [[nodiscard]] std::size_t getNEdges() const { return nedges; }
   [[nodiscard]] std::size_t getNQubits() const { return inputs.size(); }
 
-  [[nodiscard]] bool                connected(Vertex from, Vertex to) const;
+  [[nodiscard]] bool connected(Vertex from, Vertex to) const;
   [[nodiscard]] std::optional<Edge> getEdge(Vertex from, Vertex to) const;
   [[nodiscard]] const std::vector<Edge>& incidentEdges(const Vertex v) const {
     return edges[v];
@@ -68,7 +68,7 @@ public:
   }
 
   [[nodiscard]] std::vector<std::pair<Vertex, const VertexData&>>
-                                                       getVertices() const;
+  getVertices() const;
   [[nodiscard]] std::vector<std::pair<Vertex, Vertex>> getEdges() const;
 
   [[nodiscard]] const std::vector<Vertex>& getInputs() const { return inputs; }
@@ -123,27 +123,27 @@ public:
 
   void removeDisconnectedSpiders();
 
-  void                       addGlobalPhase(const PiExpression& phase);
+  void addGlobalPhase(const PiExpression& phase);
   [[nodiscard]] PiExpression getGlobalPhase() const { return globalPhase; }
   [[nodiscard]] bool globalPhaseIsZero() const { return globalPhase.isZero(); }
   [[nodiscard]] gf2Mat getAdjMat() const;
   [[nodiscard]] std::vector<Vertex>
-              getConnectedSet(const std::vector<Vertex>& s,
-                              const std::vector<Vertex>& exclude = {}) const;
+  getConnectedSet(const std::vector<Vertex>& s,
+                  const std::vector<Vertex>& exclude = {}) const;
   static bool isIn(const Vertex& v, const std::vector<Vertex>& vertices);
 
 private:
-  std::vector<std::vector<Edge>>         edges;
+  std::vector<std::vector<Edge>> edges;
   std::vector<std::optional<VertexData>> vertices;
-  std::vector<Vertex>                    deleted;
-  std::vector<Vertex>                    inputs;
-  std::vector<Vertex>                    outputs;
-  std::size_t                            nvertices   = 0;
-  std::size_t                            nedges      = 0;
-  PiExpression                           globalPhase = {};
+  std::vector<Vertex> deleted;
+  std::vector<Vertex> inputs;
+  std::vector<Vertex> outputs;
+  std::size_t nvertices = 0;
+  std::size_t nedges = 0;
+  PiExpression globalPhase = {};
 
   std::vector<Vertex> initGraph(std::size_t nqubits);
-  void                closeGraph(const std::vector<Vertex>& qubitVertices);
+  void closeGraph(const std::vector<Vertex>& qubitVertices);
 
   void removeHalfEdge(Vertex from, Vertex to);
 

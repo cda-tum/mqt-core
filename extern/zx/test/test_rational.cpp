@@ -44,7 +44,7 @@ TEST_F(RationalTest, fromDouble6) {
 TEST_F(RationalTest, add) {
   const zx::PiRational r0(1, 8);
   const zx::PiRational r1(7, 8);
-  const auto           r = r0 + r1;
+  const auto r = r0 + r1;
 
   EXPECT_EQ(r, 1);
 }
@@ -52,7 +52,7 @@ TEST_F(RationalTest, add) {
 TEST_F(RationalTest, add2) {
   const zx::PiRational r0(9, 8);
   const zx::PiRational r1(7, 8);
-  const auto           r = r0 + r1;
+  const auto r = r0 + r1;
 
   EXPECT_EQ(r, 0);
 }
@@ -60,7 +60,7 @@ TEST_F(RationalTest, add2) {
 TEST_F(RationalTest, sub) {
   const zx::PiRational r0(9, 8);
   const zx::PiRational r1(-7, 8);
-  const auto           r = r0 - r1;
+  const auto r = r0 - r1;
 
   EXPECT_EQ(r, 0);
 }
@@ -68,7 +68,7 @@ TEST_F(RationalTest, sub) {
 TEST_F(RationalTest, sub2) {
   const zx::PiRational r0(-1, 2);
   const zx::PiRational r1(1, 2);
-  const auto           r = r0 - r1;
+  const auto r = r0 - r1;
 
   EXPECT_EQ(r, 1);
 }
@@ -76,7 +76,7 @@ TEST_F(RationalTest, sub2) {
 TEST_F(RationalTest, mul) {
   const zx::PiRational r0(1, 8);
   const zx::PiRational r1(1, 2);
-  const auto           r = r0 * r1;
+  const auto r = r0 * r1;
 
   EXPECT_EQ(r, zx::PiRational(1, 16));
 }
@@ -84,7 +84,7 @@ TEST_F(RationalTest, mul) {
 TEST_F(RationalTest, mul2) {
   const zx::PiRational r0(1, 8);
   const zx::PiRational r1(0, 1);
-  const auto           r = r0 * r1;
+  const auto r = r0 * r1;
 
   EXPECT_EQ(r, 0);
 }
@@ -92,7 +92,7 @@ TEST_F(RationalTest, mul2) {
 TEST_F(RationalTest, div) {
   const zx::PiRational r0(1, 2);
   const zx::PiRational r1(1, 2);
-  const auto           r = r0 / r1;
+  const auto r = r0 / r1;
 
   EXPECT_EQ(r, 1);
 }
