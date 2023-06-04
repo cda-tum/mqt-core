@@ -18,28 +18,44 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
+
+      - name: Cache LLVM and Clang
+        id: cache-llvm
+        uses: actions/cache@v3
+        with:
+          path: ./llvm
+          key: llvm-16
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "16"
+          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+          env: true
+
       - name: Generate compilation database
         run: |
-          CC=clang-14 CXX=clang++-14 \
-          cmake -S . -B build \
-          -DBINDINGS=ON \
-          -DBUILD_QFR_TESTS=ON \
-          -DBUILD_DD_PACKAGE_TESTS=ON \
-          -DBUILD_ZX_TESTS=ON
+          echo $CC
+          echo $CXX
+          $CC --version
+          $CXX --version
+          cmake -S . -B build -DBUILD_QFR_TESTS=ON -DBUILD_DD_PACKAGE_TESTS=ON -DBUILD_ZX_TESTS=ON
+
       - name: Run cpp-linter
+        uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          pipx run cpp-linter \
-          --version=14 \
-          --style="" \
-          --tidy-checks="" \
-          --thread-comments=true \
-          --files-changed-only=true \
-          --ignore="build" \
-          --database=build \
-          --extra-arg=-std=c++17
+        with:
+          style: ""
+          tidy-checks: ""
+          version: 16
+          ignore: build
+          thread-comments: true
+          step-summary: true
+          database: build
+          extra-args: -std=c++17
+
       - name: Fail if linter found errors
         if: steps.linter.outputs.checks-failed > 0
         run: echo "Linter found errors" && exit 1
