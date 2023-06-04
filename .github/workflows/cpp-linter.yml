@@ -53,7 +53,7 @@ jobs:
           ignore: build
           thread-comments: true
           step-summary: true
-          database: build
+          database: "build|llvm"
           extra-args: -std=c++17
           files-changed-only: false
 
