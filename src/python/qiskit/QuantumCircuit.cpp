@@ -29,7 +29,7 @@ void qc::qiskit::QuantumCircuit::import(qc::QuantumComputation& qc,
   const py::object ancillaRegister =
       py::module::import("qiskit.circuit").attr("AncillaRegister");
   int qubitIndex = 0;
-  py::dict qubitMap{};
+  const py::dict qubitMap{};
   auto&& circQregs = circ.attr("qregs");
   for (const auto qreg : circQregs) {
     // create corresponding register in quantum computation
@@ -55,7 +55,7 @@ void qc::qiskit::QuantumCircuit::import(qc::QuantumComputation& qc,
   // handle classical registers
   const py::object clbit = py::module::import("qiskit.circuit").attr("Clbit");
   int clbitIndex = 0;
-  py::dict clbitMap{};
+  const py::dict clbitMap{};
   auto&& circCregs = circ.attr("cregs");
   for (const auto creg : circCregs) {
     // create corresponding register in quantum computation
@@ -383,13 +383,13 @@ void qc::qiskit::QuantumCircuit::addTwoTargetOperation(
 void qc::qiskit::QuantumCircuit::importDefinition(
     qc::QuantumComputation& qc, const py::object& circ, const py::list& qargs,
     const py::list& cargs, const py::dict& qubitMap, const py::dict& clbitMap) {
-  py::dict qargMap{};
+  const py::dict qargMap{};
   py::list&& defQubits = circ.attr("qubits");
   for (size_t i = 0; i < qargs.size(); ++i) {
     qargMap[defQubits[i]] = qargs[i];
   }
 
-  py::dict cargMap{};
+  const py::dict cargMap{};
   py::list&& defClbits = circ.attr("clbits");
   for (size_t i = 0; i < cargs.size(); ++i) {
     cargMap[defClbits[i]] = cargs[i];
@@ -438,7 +438,7 @@ void qc::qiskit::QuantumCircuit::importInitialLayout(qc::QuantumComputation& qc,
   // in alphabetical order!
   const auto registers = layout.attr("get_registers")().cast<py::set>();
   std::size_t logicalQubitIndex = 0U;
-  py::dict logicalQubitIndices{};
+  const py::dict logicalQubitIndices{};
 
   // the ancilla register
   decltype(registers.get_type()) ancillaRegister = py::none();
