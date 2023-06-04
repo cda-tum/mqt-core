@@ -213,8 +213,8 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       addZSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
       addZSpider(diag, target2, qubits, PiExpression(PiRational(1, 2)));
       addZSpider(diag, target, qubits, PiExpression(), EdgeType::Hadamard);
-      addCnot(diag, target, target2,
-              qubits); // NOLINT (readability-suspicious-call-argument)
+      // NOLINTNEXTLINE(readability-suspicious-call-argument)
+      addCnot(diag, target, target2, qubits);
       addCnot(diag, target2, target, qubits);
       addZSpider(diag, target2, qubits, PiExpression(), EdgeType::Hadamard);
       break;
