@@ -55,6 +55,7 @@ jobs:
           step-summary: true
           database: build
           extra-args: -std=c++17
+          files-changed-only: false
 
       - name: Fail if linter found errors
         if: steps.linter.outputs.checks-failed > 0
