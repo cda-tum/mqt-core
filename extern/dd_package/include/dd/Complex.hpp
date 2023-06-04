@@ -76,14 +76,10 @@ inline std::ostream& operator<<(std::ostream& os, const Complex& c) {
   return os << c.toString();
 }
 
-inline Complex Complex::zero{
-    &ComplexTable<>::zero,
-    &ComplexTable<>::
-        zero}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-inline Complex Complex::one{
-    &ComplexTable<>::one,
-    &ComplexTable<>::
-        zero}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+// NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
+inline Complex Complex::zero{&ComplexTable<>::zero, &ComplexTable<>::zero};
+// NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
+inline Complex Complex::one{&ComplexTable<>::one, &ComplexTable<>::zero};
 } // namespace dd
 
 namespace std {

@@ -50,8 +50,8 @@ public:
         : currentPos(verts.begin()), vertices(verts) {
       nextValidVertex();
     }
-    VertexIterator(const std::vector<std::optional<VertexData>>& vertices,
-                   Vertex v);
+    VertexIterator(const std::vector<std::optional<VertexData>>& verts,
+                   Vertex vertex);
 
     value_type operator*() const { return {v, currentPos->value()}; }
 
@@ -95,12 +95,12 @@ public:
     using pointer = value_type*;
     using reference = value_type&;
 
-    EdgeIterator(const std::vector<std::vector<Edge>>& edges,
-                 const std::vector<std::optional<VertexData>>& vertices);
+    EdgeIterator(const std::vector<std::vector<Edge>>& es,
+                 const std::vector<std::optional<VertexData>>& verts);
 
-    EdgeIterator(const std::vector<std::vector<Edge>>& edges,
-                 const std::vector<std::optional<VertexData>>& vertices,
-                 Vertex v);
+    EdgeIterator(const std::vector<std::vector<Edge>>& es,
+                 const std::vector<std::optional<VertexData>>& verts,
+                 Vertex vertex);
 
     value_type operator*() const { return {v, currentPos->to}; }
 
