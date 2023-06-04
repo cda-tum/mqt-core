@@ -3,11 +3,11 @@
 #if defined(GMP)
 #include "boost/multiprecision/gmp.hpp"
 using Rational = boost::multiprecision::mpq_rational;
-using BigInt   = boost::multiprecision::mpz_int;
+using BigInt = boost::multiprecision::mpz_int;
 #else
 #include "boost/multiprecision/cpp_int.hpp"
 using Rational = boost::multiprecision::cpp_rational;
-using BigInt   = boost::multiprecision::cpp_int;
+using BigInt = boost::multiprecision::cpp_int;
 #endif
 
 #include <cmath>

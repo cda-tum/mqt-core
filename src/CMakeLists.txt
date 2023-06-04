@@ -140,3 +140,32 @@ if(NOT TARGET ${PROJECT_NAME}_ecc)
                                                         ${PROJECT_BINARY_DIR}/include/ecc)
   add_library(MQT::${PROJECT_NAME}_ecc ALIAS ${PROJECT_NAME}_ecc)
 endif()
+
+# add pybind11 library
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11" "extern/pybind11" EXCLUDE_FROM_ALL)
+
+if(NOT TARGET pybind11_json)
+  # add pybind11_json library
+  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11_json" "extern/pybind11_json"
+                   EXCLUDE_FROM_ALL)
+endif()
+
+if(NOT TARGET ${PROJECT_NAME}_python)
+  # add Python interface library
+  add_library(
+    ${PROJECT_NAME}_python
+    ${PROJECT_SOURCE_DIR}/include/python/qiskit/QuantumCircuit.hpp
+    ${PROJECT_SOURCE_DIR}/include/python/qiskit/QasmQobjExperiment.hpp
+    python/qiskit/QuantumCircuit.cpp python/qiskit/QasmQobjExperiment.cpp)
+
+  # set include directories
+  target_include_directories(${PROJECT_NAME}_python PUBLIC ${PROJECT_SOURCE_DIR}/include/python
+                                                           ${PROJECT_BINARY_DIR}/include/python)
+
+  # link with main project library and pybind11 libraries
+  target_link_libraries(${PROJECT_NAME}_python PRIVATE ${PROJECT_NAME} pybind11::pybind11
+                                                       pybind11_json)
+
+  # add MQT alias
+  add_library(MQT::${PROJECT_NAME}_python ALIAS ${PROJECT_NAME}_python)
+endif()

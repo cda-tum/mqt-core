@@ -9,11 +9,11 @@ PiRational::PiRational(double val) {
     return;
   }
 
-  const double multPi  = PI / val;
+  const double multPi = PI / val;
   const double nearest = std::round(multPi);
   if (std::abs(nearest - multPi) < PARAMETER_TOLERANCE) {
     auto denom = static_cast<int>(nearest);
-    frac       = Rational(1, denom);
+    frac = Rational(1, denom);
     modPi();
     return;
   }

@@ -207,7 +207,7 @@ TEST_F(ZXDiagramTest, AdjMat) {
 
 TEST_F(ZXDiagramTest, ConnectedSet) {
   zx::ZXDiagram diag(3);
-  auto          connected = diag.getConnectedSet(diag.getInputs());
+  auto connected = diag.getConnectedSet(diag.getInputs());
 
   for (const auto& v : connected) {
     EXPECT_TRUE(diag.isIn(v, diag.getOutputs()));

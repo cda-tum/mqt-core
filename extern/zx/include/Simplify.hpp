@@ -12,7 +12,7 @@ template <class VertexCheckFun, class VertexRuleFun>
 std::size_t simplifyVertices(ZXDiagram& diag, VertexCheckFun check,
                              VertexRuleFun rule) {
   std::size_t nSimplifications = 0;
-  bool        newMatches       = true;
+  bool newMatches = true;
 
   while (newMatches) {
     newMatches = false;
@@ -32,7 +32,7 @@ template <class EdgeCheckFun, class EdgeRuleFun>
 std::size_t simplifyEdges(ZXDiagram& diag, EdgeCheckFun check,
                           EdgeRuleFun rule) {
   std::size_t nSimplifications = 0;
-  bool        newMatches       = true;
+  bool newMatches = true;
 
   while (newMatches) {
     newMatches = false;

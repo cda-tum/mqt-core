@@ -42,6 +42,8 @@ endif()
 check_submodule_present(dd_package)
 check_submodule_present(json)
 check_submodule_present(zx)
+check_submodule_present(pybind11)
+check_submodule_present(pybind11_json)
 
 # add main library code
 add_subdirectory(src)
@@ -53,12 +55,4 @@ if(BUILD_QFR_TESTS)
   enable_testing()
   include(GoogleTest)
   add_subdirectory(test)
-endif()
-
-# add Python binding code
-option(BINDINGS "Configure for building Python bindings")
-if(BINDINGS)
-  check_submodule_present(pybind11)
-  check_submodule_present(pybind11_json)
-  add_subdirectory(mqt/qfr)
 endif()

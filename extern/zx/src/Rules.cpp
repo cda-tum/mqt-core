@@ -16,9 +16,9 @@ bool checkIdSimp(const ZXDiagram& diag, const Vertex v) {
 }
 
 void removeId(ZXDiagram& diag, const Vertex v) {
-  auto         edges = diag.incidentEdges(v);
-  const Vertex v0    = edges[0].to;
-  const Vertex v1    = edges[1].to;
+  auto edges = diag.incidentEdges(v);
+  const Vertex v0 = edges[0].to;
+  const Vertex v1 = edges[1].to;
 
   EdgeType type = EdgeType::Simple;
   if (edges[0].type != edges[1].type) {
@@ -62,9 +62,9 @@ bool checkLocalComp(const ZXDiagram& diag, const Vertex v) {
 }
 
 void localComp(ZXDiagram& diag, const Vertex v) { // TODO:scalars
-  const auto  phase  = -diag.phase(v);
-  const auto& edges  = diag.incidentEdges(v);
-  const auto  nedges = edges.size();
+  const auto phase = -diag.phase(v);
+  const auto& edges = diag.incidentEdges(v);
+  const auto nedges = edges.size();
 
   for (std::size_t i = 0U; i < nedges; ++i) {
     const auto& [n0, _] = edges[i];
@@ -100,8 +100,8 @@ bool checkPivotPauli(const ZXDiagram& diag, const Vertex v0, const Vertex v1) {
     return false;
   }
 
-  const auto& v0Edges     = diag.incidentEdges(v0);
-  auto        isValidEdge = [&](const Edge& e) {
+  const auto& v0Edges = diag.incidentEdges(v0);
+  auto isValidEdge = [&](const Edge& e) {
     return diag.type(e.to) == VertexType::Z && e.type == EdgeType::Hadamard;
   };
 
@@ -168,8 +168,8 @@ bool checkPivot(const ZXDiagram& diag, const Vertex v0, const Vertex v1) {
     return false;
   }
 
-  const auto& v0Edges       = diag.incidentEdges(v0);
-  const auto  isInvalidEdge = [&](const Edge& e) {
+  const auto& v0Edges = diag.incidentEdges(v0);
+  const auto isInvalidEdge = [&](const Edge& e) {
     const auto toType = diag.type(e.to);
     return !((toType == VertexType::Z && e.type == EdgeType::Hadamard) ||
              toType == VertexType::Boundary);
@@ -192,9 +192,9 @@ bool checkPivot(const ZXDiagram& diag, const Vertex v0, const Vertex v1) {
 }
 
 static void extractGadget(ZXDiagram& diag, const Vertex v) {
-  const auto   vData     = diag.getVData(v).value();
+  const auto vData = diag.getVData(v).value();
   const Vertex phaseVert = diag.addVertex(vData.qubit, -2, vData.phase);
-  const Vertex idVert    = diag.addVertex(vData.qubit, -1);
+  const Vertex idVert = diag.addVertex(vData.qubit, -1);
   diag.setPhase(v, PiExpression(PiRational(0, 1)));
   diag.addHadamardEdge(v, idVert);
   diag.addHadamardEdge(idVert, phaseVert);
@@ -272,7 +272,7 @@ bool checkAndFuseGadget(ZXDiagram& diag, const Vertex v) {
     return false;
   }
 
-  const auto id0      = diag.incidentEdges(v)[0].to;
+  const auto id0 = diag.incidentEdges(v)[0].to;
   const auto id0Etype = diag.incidentEdges(v)[0].type;
   if (!isPauli(diag, id0) || diag.degree(id0) < 2 ||
       id0Etype != zx::EdgeType::Hadamard) {
@@ -325,7 +325,7 @@ bool checkAndFuseGadget(ZXDiagram& diag, const Vertex v) {
     }
 
     foundGadget = true;
-    id1         = n;
+    id1 = n;
 
     for (const auto& [nn, nnEtype] :
          diag.incidentEdges(id1.value())) { // Todo: maybe problem with parallel

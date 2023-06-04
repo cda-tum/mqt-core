@@ -1,6 +1,7 @@
 /*
  * This file is part of MQT QFR library which is released under the MIT license.
- * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for more information.
+ * See file README.md or go to https://www.cda.cit.tum.de/research/quantum/ for
+ * more information.
  */
 
 #pragma once
@@ -16,47 +17,43 @@
 
 namespace qasm {
 
-    class Scanner {
-        struct LineInfo {
-            char ch;
-            int  line;
-            int  col;
+class Scanner {
+  struct LineInfo {
+    char ch;
+    int line;
+    int col;
 
-            LineInfo(const char c, const int l, const int cl):
-                ch(c), line(l), col(cl) {}
-        };
+    LineInfo(const char c, const int l, const int cl)
+        : ch(c), line(l), col(cl) {}
+  };
 
-        std::istream&                                   is;
-        std::stack<std::shared_ptr<std::istream>>       streams{};
-        std::map<std::string, Token::Kind, std::less<>> keywords{};
-        char                                            ch   = 0;
-        int                                             line = 1;
-        int                                             col  = 0;
+  std::istream& is;
+  std::stack<std::shared_ptr<std::istream>> streams{};
+  std::map<std::string, Token::Kind, std::less<>> keywords{};
+  char ch = 0;
+  int line = 1;
+  int col = 0;
 
-        void nextCh();
+  void nextCh();
 
-        void readName(Token& t);
+  void readName(Token& t);
 
-        void readNumber(Token& t);
+  void readNumber(Token& t);
 
-        void readString(Token& t);
+  void readString(Token& t);
 
-        void readComment(Token& t);
+  void readComment(Token& t);
 
-        std::stack<LineInfo> lines{};
+  std::stack<LineInfo> lines{};
 
-    public:
-        explicit Scanner(std::istream& in);
+public:
+  explicit Scanner(std::istream& in);
 
-        Token next();
+  Token next();
 
-        void addFileInput(const std::string& filename);
+  void addFileInput(const std::string& filename);
 
-        [[nodiscard]] int getLine() const {
-            return line;
-        }
-        [[nodiscard]] int getCol() const {
-            return col;
-        }
-    };
+  [[nodiscard]] int getLine() const { return line; }
+  [[nodiscard]] int getCol() const { return col; }
+};
 } // namespace qasm

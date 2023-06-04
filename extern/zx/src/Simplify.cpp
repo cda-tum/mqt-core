@@ -10,7 +10,7 @@ namespace zx {
 
 std::size_t gadgetSimp(ZXDiagram& diag) {
   std::size_t nSimplifications = 0;
-  bool        newMatches       = true;
+  bool newMatches = true;
 
   while (newMatches) {
     newMatches = false;
@@ -51,13 +51,13 @@ std::size_t pivotSimp(ZXDiagram& diag) {
 std::size_t interiorCliffordSimp(ZXDiagram& diag) {
   spiderSimp(diag);
 
-  bool        newMatches       = true;
+  bool newMatches = true;
   std::size_t nSimplifications = 0;
   while (newMatches) {
-    newMatches            = false;
-    const auto nId        = idSimp(diag);
-    const auto nSpider    = spiderSimp(diag);
-    const auto nPivot     = pivotPauliSimp(diag);
+    newMatches = false;
+    const auto nId = idSimp(diag);
+    const auto nSpider = spiderSimp(diag);
+    const auto nPivot = pivotPauliSimp(diag);
     const auto nLocalComp = localCompSimp(diag);
 
     if ((nId + nSpider + nPivot + nLocalComp) != 0) {
@@ -69,12 +69,12 @@ std::size_t interiorCliffordSimp(ZXDiagram& diag) {
 }
 
 std::size_t cliffordSimp(ZXDiagram& diag) {
-  bool        newMatches       = true;
+  bool newMatches = true;
   std::size_t nSimplifications = 0;
   while (newMatches) {
-    newMatches           = false;
+    newMatches = false;
     const auto nClifford = interiorCliffordSimp(diag);
-    const auto nPivot    = pivotSimp(diag);
+    const auto nPivot = pivotSimp(diag);
     if ((nClifford + nPivot) != 0) {
       newMatches = true;
       nSimplifications++;
@@ -108,8 +108,8 @@ std::size_t fullReduce(ZXDiagram& diag) {
 }
 
 std::size_t fullReduceApproximate(ZXDiagram& diag, const fp tolerance) {
-  auto        nSimplifications = fullReduce(diag);
-  std::size_t newSimps         = 0;
+  auto nSimplifications = fullReduce(diag);
+  std::size_t newSimps = 0;
   do {
     diag.approximateCliffords(tolerance);
     newSimps = fullReduce(diag);

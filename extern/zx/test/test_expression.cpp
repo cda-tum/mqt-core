@@ -97,7 +97,7 @@ TEST_F(ExpressionTest, div) {
 
 TEST_F(ExpressionTest, Commutativity) {
   const sym::Expression<double, double> e1(x, y);
-  sym::Expression<double, double>       e2(z);
+  sym::Expression<double, double> e2(z);
   e2.setConst(1.0);
 
   EXPECT_EQ(e1 + e2, e2 + e1);
@@ -147,7 +147,7 @@ TEST_F(ExpressionTest, SumMult) {
 }
 
 TEST_F(ExpressionTest, CliffordRounding) {
-  const double     eps = 1e-14;
+  const double eps = 1e-14;
   zx::PiExpression e{zx::PiRational(zx::PI - eps)};
   zx::roundToClifford(e, 1e-9);
   EXPECT_EQ(e, zx::PiExpression(zx::PiRational(1, 1)));
@@ -179,7 +179,7 @@ TEST_F(ExpressionTest, Clifford) {
 
 TEST_F(ExpressionTest, Convertability) {
   const sym::Expression<double, double> e({x, y}, zx::PI);
-  const auto                            piE = e.convert<zx::PiRational>();
+  const auto piE = e.convert<zx::PiRational>();
 
   EXPECT_EQ(piE, zx::PiExpression({x, y}, zx::PiRational(1, 1)));
 }

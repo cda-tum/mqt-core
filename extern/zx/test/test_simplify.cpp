@@ -9,7 +9,7 @@ class SimplifyTest : public ::testing::Test {};
 
 static zx::ZXDiagram makeIdentityDiagram(const std::size_t nqubits,
                                          const std::size_t spidersPerQubit) {
-  zx::ZXDiagram           diag(nqubits);
+  zx::ZXDiagram diag(nqubits);
   std::vector<zx::Vertex> rightmostVertices = diag.getInputs();
 
   for (std::size_t i = 0; i < nqubits; ++i) {
@@ -44,7 +44,7 @@ static zx::ZXDiagram makeEmptyDiagram(const std::size_t nqubits) {
 TEST_F(SimplifyTest, idSimp) {
   const std::size_t nqubits = 3U;
   const std::size_t spiders = 100U;
-  zx::ZXDiagram     diag    = ::makeIdentityDiagram(nqubits, spiders);
+  zx::ZXDiagram diag = ::makeIdentityDiagram(nqubits, spiders);
 
   const std::size_t removed = zx::idSimp(diag);
 
@@ -57,7 +57,7 @@ TEST_F(SimplifyTest, idSimp) {
 TEST_F(SimplifyTest, idSimp2) {
   const std::size_t nqubits = 2U;
   const std::size_t spiders = 100U;
-  zx::ZXDiagram     diag    = ::makeIdentityDiagram(nqubits, spiders);
+  zx::ZXDiagram diag = ::makeIdentityDiagram(nqubits, spiders);
 
   // make vertices 50 and 150 non-removable
   diag.addEdge(50, 150);
@@ -70,9 +70,9 @@ TEST_F(SimplifyTest, idSimp2) {
 }
 
 TEST_F(SimplifyTest, spiderFusion) {
-  const std::size_t nqubits  = 1U;
+  const std::size_t nqubits = 1U;
   const std::size_t nspiders = 100U;
-  zx::ZXDiagram     diag     = ::makeIdentityDiagram(nqubits, nspiders);
+  zx::ZXDiagram diag = ::makeIdentityDiagram(nqubits, nspiders);
 
   const auto nVerts = diag.getNVertices();
   for (zx::Vertex v = 2; v < nVerts; ++v) {
@@ -89,9 +89,9 @@ TEST_F(SimplifyTest, spiderFusion) {
 }
 
 TEST_F(SimplifyTest, spiderFusion2) {
-  const std::size_t nqubits  = 2U;
+  const std::size_t nqubits = 2U;
   const std::size_t nspiders = 5U;
-  zx::ZXDiagram     diag     = ::makeIdentityDiagram(nqubits, nspiders);
+  zx::ZXDiagram diag = ::makeIdentityDiagram(nqubits, nspiders);
 
   diag.addEdge(6, 11);
 
@@ -112,9 +112,9 @@ TEST_F(SimplifyTest, spiderFusion2) {
 }
 
 TEST_F(SimplifyTest, spiderFusionParallelEdges) {
-  const std::size_t nqubits  = 1U;
+  const std::size_t nqubits = 1U;
   const std::size_t nspiders = 3U;
-  zx::ZXDiagram     diag     = ::makeIdentityDiagram(nqubits, nspiders);
+  zx::ZXDiagram diag = ::makeIdentityDiagram(nqubits, nspiders);
   diag.addEdge(2, 4);
   diag.setType(4, zx::VertexType::X);
 
@@ -218,9 +218,9 @@ TEST_F(SimplifyTest, pivotPauli) {
 }
 
 TEST_F(SimplifyTest, interiorClifford) {
-  const std::size_t nqubits      = 100U;
+  const std::size_t nqubits = 100U;
   const std::size_t qubitSpiders = 100U;
-  zx::ZXDiagram     diag         = ::makeIdentityDiagram(nqubits, qubitSpiders);
+  zx::ZXDiagram diag = ::makeIdentityDiagram(nqubits, qubitSpiders);
 
   zx::interiorCliffordSimp(diag);
 
@@ -467,7 +467,7 @@ TEST_F(SimplifyTest, idSymbolic) {
 
   const std::size_t nqubits = 50U;
 
-  zx::ZXDiagram    diag = ::makeIdentityDiagram(nqubits, 100);
+  zx::ZXDiagram diag = ::makeIdentityDiagram(nqubits, 100);
   zx::PiExpression e;
   e += x;
   diag.setPhase((nqubits * 2) + 5, e);
@@ -485,7 +485,7 @@ TEST_F(SimplifyTest, equivalenceSymbolic) {
   const sym::Term<double> x{sym::Variable("x")};
   const sym::Term<double> y{sym::Variable("y")};
   const sym::Term<double> z{sym::Variable("z")};
-  zx::ZXDiagram           d1 = ::makeEmptyDiagram(3);
+  zx::ZXDiagram d1 = ::makeEmptyDiagram(3);
 
   // first circuit
   d1.addVertex(0, 0); // 6

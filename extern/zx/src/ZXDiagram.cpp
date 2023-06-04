@@ -108,8 +108,8 @@ Vertex ZXDiagram::addVertex(const Qubit qubit, const Col col,
 }
 
 void ZXDiagram::addQubit() {
-  auto in  = addVertex(static_cast<zx::Qubit>(getNQubits()) + 1, 0,
-                       PiExpression(), VertexType::Boundary);
+  auto in = addVertex(static_cast<zx::Qubit>(getNQubits()) + 1, 0,
+                      PiExpression(), VertexType::Boundary);
   auto out = addVertex(static_cast<zx::Qubit>(getNQubits()) + 1, 0,
                        PiExpression(), VertexType::Boundary);
   inputs.emplace_back(in);
@@ -139,17 +139,17 @@ void ZXDiagram::removeVertex(const Vertex toRemove) {
   }
 
   const auto& incident = edges[from];
-  const auto  edge     = std::find_if(incident.begin(), incident.end(),
-                                      [&](const auto& e) { return e.to == to; });
+  const auto edge = std::find_if(incident.begin(), incident.end(),
+                                 [&](const auto& e) { return e.to == to; });
   return edge != incident.end();
 }
 
 [[nodiscard]] std::optional<Edge> ZXDiagram::getEdge(const Vertex from,
                                                      const Vertex to) const {
   std::optional<Edge> ret;
-  const auto&         incident = edges[from];
-  const auto          edge     = std::find_if(incident.begin(), incident.end(),
-                                              [&](const auto& e) { return e.to == to; });
+  const auto& incident = edges[from];
+  const auto edge = std::find_if(incident.begin(), incident.end(),
+                                 [&](const auto& e) { return e.to == to; });
   if (edge != incident.end()) {
     ret = *edge;
   }
@@ -159,8 +159,8 @@ void ZXDiagram::removeVertex(const Vertex toRemove) {
 std::vector<Edge>::iterator ZXDiagram::getEdgePtr(const Vertex from,
                                                   const Vertex to) {
   auto& incident = edges[from];
-  auto  edge     = std::find_if(incident.begin(), incident.end(),
-                                [&](const auto& e) { return e.to == to; });
+  auto edge = std::find_if(incident.begin(), incident.end(),
+                           [&](const auto& e) { return e.to == to; });
   return edge;
 }
 
@@ -210,8 +210,8 @@ void ZXDiagram::toGraphlike() {
 
 ZXDiagram& ZXDiagram::invert() {
   const auto h = inputs;
-  inputs       = outputs;
-  outputs      = h;
+  inputs = outputs;
+  outputs = h;
 
   for (auto& data : vertices) {
     if (data.has_value()) {
@@ -228,14 +228,14 @@ ZXDiagram& ZXDiagram::concat(const ZXDiagram& rhs) {
   }
 
   std::unordered_map<Vertex, Vertex> newVs;
-  const auto                         nverts = rhs.vertices.size();
+  const auto nverts = rhs.vertices.size();
   for (std::size_t i = 0; i < nverts; ++i) {
     if (!rhs.vertices[i].has_value() || rhs.isInput(i)) {
       continue;
     }
 
     const auto newV = addVertex(rhs.vertices[i].value());
-    newVs[i]        = newV;
+    newVs[i] = newV;
   }
 
   for (std::size_t i = 0; i < nverts; ++i) { // add new edges
@@ -314,7 +314,7 @@ void ZXDiagram::closeGraph(const std::vector<Vertex>& qubitVertices) {
 void ZXDiagram::makeAncilla(const Qubit qubit) { makeAncilla(qubit, qubit); }
 
 void ZXDiagram::makeAncilla(const Qubit in, const Qubit out) {
-  const auto inV  = inputs[static_cast<std::size_t>(in)];
+  const auto inV = inputs[static_cast<std::size_t>(in)];
   const auto outV = outputs[static_cast<std::size_t>(out)];
   inputs.erase(inputs.begin() + in);
   outputs.erase(outputs.begin() + out);
@@ -334,7 +334,7 @@ void ZXDiagram::approximateCliffords(const fp tolerance) {
 void ZXDiagram::removeDisconnectedSpiders() {
   auto connectedToBoundary = [&](const Vertex v) {
     std::unordered_set<Vertex> visited{};
-    std::vector<Vertex>        stack{};
+    std::vector<Vertex> stack{};
     stack.push_back(v);
 
     while (!stack.empty()) {
