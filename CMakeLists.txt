@@ -16,6 +16,7 @@ include(cmake/StandardProjectSettings.cmake)
 include(cmake/PreventInSourceBuilds.cmake)
 include(cmake/CheckSubmodule.cmake)
 include(cmake/PackageAddTest.cmake)
+include(cmake/Cache.cmake)
 
 if(NOT TARGET project_warnings)
   # Use the warnings specified in CompilerWarnings.cmake
