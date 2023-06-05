@@ -11,6 +11,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+env:
+  clang-version: 16
+
 jobs:
   cpp-linter:
     runs-on: ubuntu-latest
@@ -19,20 +22,16 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Cache LLVM and Clang
-        id: cache-llvm
-        uses: actions/cache@v3
-        with:
-          path: ${{ runner.tool_cache }}/llvm
-          key: llvm-16
-
-      - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: "16"
-          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
-          directory: ${{ runner.tool_cache }}/llvm
-          env: true
+      - name: Install clang-${{ env.clang-version }}
+        run: |
+          sudo apt-get update
+          wget https://apt.llvm.org/llvm.sh -O ${{ runner.temp }}/llvm_install.sh
+          chmod +x ${{ runner.temp }}/llvm_install.sh
+          if sudo ${{ runner.temp }}/llvm_install.sh ${{ env.clang-version }}; then
+            sudo apt-get install -y clang-${{ env.clang-version }} clang-format-${{ env.clang-version }} clang-tidy-${{ env.clang-version }}
+          fi
+          echo "CC=clang-${{ env.clang-version }}" >> $GITHUB_ENV
+          echo "CXX=clang++-${{ env.clang-version }}" >> $GITHUB_ENV
 
       - name: Generate compilation database
         run: |
