@@ -7,8 +7,9 @@ using zx::fullReduceApproximate;
 
 class SimplifyTest : public ::testing::Test {};
 
-static zx::ZXDiagram makeIdentityDiagram(const std::size_t nqubits,
-                                         const std::size_t spidersPerQubit) {
+namespace {
+zx::ZXDiagram makeIdentityDiagram(const std::size_t nqubits,
+                                  const std::size_t spidersPerQubit) {
   zx::ZXDiagram diag(nqubits);
   std::vector<zx::Vertex> rightmostVertices = diag.getInputs();
 
@@ -33,13 +34,14 @@ static zx::ZXDiagram makeIdentityDiagram(const std::size_t nqubits,
   return diag;
 }
 
-static zx::ZXDiagram makeEmptyDiagram(const std::size_t nqubits) {
+zx::ZXDiagram makeEmptyDiagram(const std::size_t nqubits) {
   auto diag = ::makeIdentityDiagram(nqubits, 0);
   for (std::size_t i = 0; i < nqubits; ++i) {
     diag.removeEdge(i, i + nqubits);
   }
   return diag;
 }
+} // namespace
 
 TEST_F(SimplifyTest, idSimp) {
   const std::size_t nqubits = 3U;
@@ -162,6 +164,7 @@ TEST_F(SimplifyTest, localComp) {
     for (zx::Vertex w = 5; w <= 8; ++w) {
       if (w != v) {
         ASSERT_TRUE(diag.connected(v, w));
+        ASSERT_TRUE(diag.getEdge(v, w).has_value());
         EXPECT_EQ(diag.getEdge(v, w).value().type, zx::EdgeType::Hadamard);
       }
     }

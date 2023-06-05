@@ -109,12 +109,14 @@ std::size_t fullReduce(ZXDiagram& diag) {
 
 std::size_t fullReduceApproximate(ZXDiagram& diag, const fp tolerance) {
   auto nSimplifications = fullReduce(diag);
-  std::size_t newSimps = 0;
-  do {
+  while (true) {
     diag.approximateCliffords(tolerance);
-    newSimps = fullReduce(diag);
+    const auto newSimps = fullReduce(diag);
+    if (newSimps == 0U) {
+      break;
+    }
     nSimplifications += newSimps;
-  } while (newSimps != 0U);
+  }
   return nSimplifications;
 }
 } // namespace zx

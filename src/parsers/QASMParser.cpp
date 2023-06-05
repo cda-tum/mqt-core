@@ -22,7 +22,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
     p.check(Token::Kind::Semicolon);
   }
 
-  do {
+  while (p.sym != Token::Kind::Eof) {
     if (p.sym == Token::Kind::Qreg) {
       // quantum register definition
       p.scan();
@@ -138,7 +138,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
       p.error("Unexpected statement: started with " + KIND_NAMES.at(p.sym) +
               "!");
     }
-  } while (p.sym != Token::Kind::Eof);
+  }
 
   // if any I/O information was gathered during parsing, transfer it to the
   // QuantumComputation

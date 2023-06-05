@@ -49,6 +49,13 @@ TEST_F(ZXDiagramTest, createDiagram) {
   EXPECT_EQ(outputs[0], 1);
   EXPECT_EQ(outputs[1], 3);
 
+  EXPECT_TRUE(diag.getEdge(0, 4).has_value());
+  EXPECT_TRUE(diag.getEdge(4, 5).has_value());
+  EXPECT_TRUE(diag.getEdge(2, 6).has_value());
+  EXPECT_TRUE(diag.getEdge(5, 6).has_value());
+  EXPECT_TRUE(diag.getEdge(5, 1).has_value());
+  EXPECT_TRUE(diag.getEdge(6, 3).has_value());
+
   EXPECT_EQ(diag.getEdge(0, 4).value().type, zx::EdgeType::Hadamard);
   EXPECT_EQ(diag.getEdge(4, 5).value().type, zx::EdgeType::Simple);
   EXPECT_EQ(diag.getEdge(2, 6).value().type, zx::EdgeType::Simple);
@@ -56,6 +63,9 @@ TEST_F(ZXDiagramTest, createDiagram) {
   EXPECT_EQ(diag.getEdge(5, 1).value().type, zx::EdgeType::Simple);
   EXPECT_EQ(diag.getEdge(6, 3).value().type, zx::EdgeType::Simple);
 
+  for (std::size_t i = 0; i < 7; ++i) {
+    EXPECT_TRUE(diag.getVData(i).has_value());
+  }
   EXPECT_EQ(diag.getVData(0).value().type, zx::VertexType::Boundary);
   EXPECT_EQ(diag.getVData(1).value().type, zx::VertexType::Boundary);
   EXPECT_EQ(diag.getVData(2).value().type, zx::VertexType::Boundary);
@@ -84,6 +94,13 @@ TEST_F(ZXDiagramTest, deletions) {
 TEST_F(ZXDiagramTest, graphLike) {
   diag.toGraphlike();
 
+  EXPECT_TRUE(diag.getEdge(0, 4).has_value());
+  EXPECT_TRUE(diag.getEdge(5, 6).has_value());
+  EXPECT_TRUE(diag.getEdge(2, 6).has_value());
+  EXPECT_TRUE(diag.getEdge(3, 6).has_value());
+  EXPECT_TRUE(diag.getEdge(4, 5).has_value());
+  EXPECT_TRUE(diag.getEdge(5, 1).has_value());
+
   EXPECT_EQ(diag.getEdge(0, 4).value().type, zx::EdgeType::Hadamard);
   EXPECT_EQ(diag.getEdge(5, 6).value().type, zx::EdgeType::Hadamard);
   EXPECT_EQ(diag.getEdge(2, 6).value().type, zx::EdgeType::Hadamard);
@@ -91,6 +108,9 @@ TEST_F(ZXDiagramTest, graphLike) {
   EXPECT_EQ(diag.getEdge(4, 5).value().type, zx::EdgeType::Simple);
   EXPECT_EQ(diag.getEdge(5, 1).value().type, zx::EdgeType::Simple);
 
+  for (std::size_t i = 0; i < 7; ++i) {
+    EXPECT_TRUE(diag.getVData(i).has_value());
+  }
   EXPECT_EQ(diag.getVData(0).value().type, zx::VertexType::Boundary);
   EXPECT_EQ(diag.getVData(1).value().type, zx::VertexType::Boundary);
   EXPECT_EQ(diag.getVData(2).value().type, zx::VertexType::Boundary);
@@ -108,6 +128,13 @@ TEST_F(ZXDiagramTest, graphLike) {
 TEST_F(ZXDiagramTest, adjoint) {
   diag = diag.adjoint();
 
+  EXPECT_TRUE(diag.getEdge(0, 4).has_value());
+  EXPECT_TRUE(diag.getEdge(5, 6).has_value());
+  EXPECT_TRUE(diag.getEdge(2, 6).has_value());
+  EXPECT_TRUE(diag.getEdge(3, 6).has_value());
+  EXPECT_TRUE(diag.getEdge(4, 5).has_value());
+  EXPECT_TRUE(diag.getEdge(5, 1).has_value());
+
   EXPECT_EQ(diag.getEdge(0, 4).value().type, zx::EdgeType::Hadamard);
   EXPECT_EQ(diag.getEdge(5, 6).value().type, zx::EdgeType::Simple);
   EXPECT_EQ(diag.getEdge(2, 6).value().type, zx::EdgeType::Simple);
@@ -115,6 +142,9 @@ TEST_F(ZXDiagramTest, adjoint) {
   EXPECT_EQ(diag.getEdge(4, 5).value().type, zx::EdgeType::Simple);
   EXPECT_EQ(diag.getEdge(5, 1).value().type, zx::EdgeType::Simple);
 
+  for (std::size_t i = 0; i < 7; ++i) {
+    EXPECT_TRUE(diag.getVData(i).has_value());
+  }
   EXPECT_EQ(diag.getVData(0).value().type, zx::VertexType::Boundary);
   EXPECT_EQ(diag.getVData(1).value().type, zx::VertexType::Boundary);
   EXPECT_EQ(diag.getVData(2).value().type, zx::VertexType::Boundary);
@@ -188,7 +218,7 @@ TEST_F(ZXDiagramTest, RemoveScalarSubDiagram) {
 }
 
 TEST_F(ZXDiagramTest, AdjMat) {
-  zx::ZXDiagram diag(3);
+  const zx::ZXDiagram diag(3);
 
   const auto& adj = diag.getAdjMat();
 
@@ -206,7 +236,7 @@ TEST_F(ZXDiagramTest, AdjMat) {
 }
 
 TEST_F(ZXDiagramTest, ConnectedSet) {
-  zx::ZXDiagram diag(3);
+  const zx::ZXDiagram diag(3);
   auto connected = diag.getConnectedSet(diag.getInputs());
 
   for (const auto& v : connected) {

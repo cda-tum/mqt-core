@@ -187,17 +187,18 @@ bool ZXDiagram::isOutput(const Vertex v) const {
 void ZXDiagram::toGraphlike() {
   const auto nverts = vertices.size();
   for (Vertex v = 0U; v < nverts; ++v) {
-    if (!vertices[v].has_value()) {
+    auto& vertex = vertices[v];
+    if (!vertex.has_value()) {
       continue;
     }
-    if (vertices[v].value().type == VertexType::X) {
+    if (vertex.value().type == VertexType::X) {
       for (auto& edge : edges[v]) {
         edge.toggle();
         // toggle corresponding edge in other direction
         getEdgePtr(edge.to, v)->toggle();
       }
 
-      vertices[v].value().type = VertexType::Z;
+      vertex.value().type = VertexType::Z;
     }
   }
 }
@@ -230,11 +231,12 @@ ZXDiagram& ZXDiagram::concat(const ZXDiagram& rhs) {
   std::unordered_map<Vertex, Vertex> newVs;
   const auto nverts = rhs.vertices.size();
   for (std::size_t i = 0; i < nverts; ++i) {
-    if (!rhs.vertices[i].has_value() || rhs.isInput(i)) {
+    const auto& vertex = rhs.vertices[i];
+    if (!vertex.has_value() || rhs.isInput(i)) {
       continue;
     }
 
-    const auto newV = addVertex(rhs.vertices[i].value());
+    const auto newV = addVertex(vertex.value());
     newVs[i] = newV;
   }
 
@@ -302,6 +304,7 @@ std::vector<Vertex> ZXDiagram::initGraph(const std::size_t nqubits) {
 
 void ZXDiagram::closeGraph(const std::vector<Vertex>& qubitVertices) {
   for (const Vertex v : qubitVertices) {
+    assert(vertices[v].has_value());
     const VertexData vData = vertices[v].value();
 
     const Vertex newV = addVertex(

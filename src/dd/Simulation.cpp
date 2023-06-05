@@ -96,9 +96,7 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
     for (std::size_t i = 0U; i < shots; ++i) {
       // measure all returns a string of the form "q(n-1) ... q(0)"
       auto measurement = dd->measureAll(e, false, mt);
-      // reverse the order of the bits so that measurements follow big-endian
-      // convention
-      counts[measurement]++;
+      counts.operator[](measurement) += 1U;
     }
     // reduce reference count of measured state
     dd->decRef(e);
@@ -276,10 +274,10 @@ void extractProbabilityVectorRecursive(
       pone /= norm;
 
       if (dd::ComplexTable<>::Entry::approximatelyOne(pone)) {
-        qc::MatrixDD xGate = dd->makeGateDD(
+        const qc::MatrixDD xGate = dd->makeGateDD(
             dd::Xmat, static_cast<dd::QubitCount>(state.p->v + 1),
             static_cast<dd::Qubit>(targets[0U]));
-        qc::VectorDD resetState = dd->multiply(xGate, state);
+        const qc::VectorDD resetState = dd->multiply(xGate, state);
         dd->incRef(resetState);
         dd->decRef(state);
         state = resetState;
@@ -352,8 +350,10 @@ void extractProbabilityVectorRecursive(
         return;
       }
 
-      bool nonZeroP0 = !dd::ComplexTable<>::Entry::approximatelyZero(pzero);
-      bool nonZeroP1 = !dd::ComplexTable<>::Entry::approximatelyZero(pone);
+      const bool nonZeroP0 =
+          !dd::ComplexTable<>::Entry::approximatelyZero(pzero);
+      const bool nonZeroP1 =
+          !dd::ComplexTable<>::Entry::approximatelyZero(pone);
 
       // in case both outcomes are non-zero the reference count of the state has
       // to be increased once more in order to avoid reference counting errors
@@ -373,7 +373,7 @@ void extractProbabilityVectorRecursive(
         const dd::GateMatrix measurementMatrix{
             dd::complex_one, dd::complex_zero, dd::complex_zero,
             dd::complex_zero};
-        qc::MatrixDD measurementGate = dd->makeGateDD(
+        const qc::MatrixDD measurementGate = dd->makeGateDD(
             measurementMatrix, static_cast<dd::QubitCount>(state.p->v + 1),
             static_cast<dd::Qubit>(targets[0]));
         qc::VectorDD measuredState = dd->multiply(measurementGate, state);
@@ -401,7 +401,7 @@ void extractProbabilityVectorRecursive(
         const dd::GateMatrix measurementMatrix{
             dd::complex_zero, dd::complex_zero, dd::complex_zero,
             dd::complex_one};
-        qc::MatrixDD measurementGate = dd->makeGateDD(
+        const qc::MatrixDD measurementGate = dd->makeGateDD(
             measurementMatrix, static_cast<dd::QubitCount>(state.p->v + 1),
             static_cast<dd::Qubit>(targets[0]));
         qc::VectorDD measuredState = dd->multiply(measurementGate, state);
