@@ -24,10 +24,10 @@ bool isInterior(const ZXDiagram& diag, const Vertex v) {
 }
 
 void extractGadget(ZXDiagram& diag, const Vertex v) {
-  assert(diag.getVData(v).has_value());
-  const auto vData = diag.getVData(v).value();
-  const Vertex phaseVert = diag.addVertex(vData.qubit, -2, vData.phase);
-  const Vertex idVert = diag.addVertex(vData.qubit, -1);
+  const auto& vData = diag.getVData(v);
+  assert(vData.has_value());
+  const Vertex phaseVert = diag.addVertex(vData->qubit, -2, vData->phase);
+  const Vertex idVert = diag.addVertex(vData->qubit, -1);
   diag.setPhase(v, PiExpression(PiRational(0, 1)));
   diag.addHadamardEdge(v, idVert);
   diag.addHadamardEdge(idVert, phaseVert);
@@ -43,16 +43,16 @@ void extractPauliGadget(ZXDiagram& diag, const Vertex v) {
 
 void ensureInterior(ZXDiagram& diag, const Vertex v) {
   const auto edges = diag.incidentEdges(v);
-  assert(diag.getVData(v).has_value());
-  const auto vData = diag.getVData(v).value();
+  const auto& vData = diag.getVData(v);
+  assert(vData.has_value());
 
   for (const auto& [to, type] : edges) {
     if (!diag.isBoundaryVertex(to)) {
       continue;
     }
 
-    const Vertex newV =
-        diag.addVertex(vData.qubit, vData.col, PiExpression(PiRational(0, 1)));
+    const Vertex newV = diag.addVertex(vData->qubit, vData->col,
+                                       PiExpression(PiRational(0, 1)));
     const auto boundaryEdgeType = type == zx::EdgeType::Simple
                                       ? zx::EdgeType::Hadamard
                                       : zx::EdgeType::Simple;

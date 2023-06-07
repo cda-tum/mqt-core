@@ -40,23 +40,30 @@ TEST_F(ZXDiagramTest, parseQasm) {
   EXPECT_EQ(outputs[0], 2);
   EXPECT_EQ(outputs[1], 3);
 
-  EXPECT_EQ(diag.getEdge(0, 4).value().type, zx::EdgeType::Hadamard);
-  EXPECT_EQ(diag.getEdge(5, 6).value().type, zx::EdgeType::Simple);
-  EXPECT_EQ(diag.getEdge(6, 1).value().type, zx::EdgeType::Simple);
-  EXPECT_EQ(diag.getEdge(3, 6).value().type, zx::EdgeType::Simple);
-  EXPECT_EQ(diag.getEdge(4, 5).value().type, zx::EdgeType::Simple);
-  EXPECT_EQ(diag.getEdge(5, 2).value().type, zx::EdgeType::Simple);
+  const auto edges =
+      std::array{std::pair{0U, 4U}, std::pair{5U, 6U}, std::pair{6U, 1U},
+                 std::pair{3U, 6U}, std::pair{4U, 5U}, std::pair{5U, 2U}};
+  const auto expectedEdgeTypes = std::array{
+      zx::EdgeType::Hadamard, zx::EdgeType::Simple, zx::EdgeType::Simple,
+      zx::EdgeType::Simple,   zx::EdgeType::Simple, zx::EdgeType::Simple};
+  for (std::size_t i = 0; i < edges.size(); ++i) {
+    const auto& [v1, v2] = edges[i];
+    const auto& edge = diag.getEdge(v1, v2);
+    ASSERT_TRUE(edge.has_value());
+    EXPECT_EQ(edge->type, expectedEdgeTypes[i]);
+  }
 
-  EXPECT_EQ(diag.getVData(0).value().type, zx::VertexType::Boundary);
-  EXPECT_EQ(diag.getVData(1).value().type, zx::VertexType::Boundary);
-  EXPECT_EQ(diag.getVData(4).value().type, zx::VertexType::Z);
-  EXPECT_EQ(diag.getVData(5).value().type, zx::VertexType::Z);
-  EXPECT_EQ(diag.getVData(6).value().type, zx::VertexType::X);
-  EXPECT_EQ(diag.getVData(2).value().type, zx::VertexType::Boundary);
-  EXPECT_EQ(diag.getVData(3).value().type, zx::VertexType::Boundary);
-
-  for (std::size_t i = 0; i < diag.getNVertices(); i++) {
-    EXPECT_TRUE(diag.getVData(i).value().phase.isZero());
+  const auto expectedVertexTypes =
+      std::array{zx::VertexType::Boundary, zx::VertexType::Boundary,
+                 zx::VertexType::Boundary, zx::VertexType::Boundary,
+                 zx::VertexType::Z,        zx::VertexType::Z,
+                 zx::VertexType::X};
+  const auto nVerts = diag.getNVertices();
+  for (std::size_t i = 0; i < nVerts; ++i) {
+    const auto& vData = diag.getVData(i);
+    ASSERT_TRUE(vData.has_value());
+    EXPECT_EQ(vData->type, expectedVertexTypes[i]);
+    EXPECT_TRUE(vData->phase.isZero());
   }
 }
 

@@ -159,13 +159,13 @@ TEST_F(SimplifyTest, localComp) {
   EXPECT_EQ(removed, 1);
 
   for (zx::Vertex v = 5; v <= 8; ++v) {
-    EXPECT_TRUE(diag.phase(v) ==
-                zx::PiExpression(zx::PiExpression(zx::PiRational(-1, 2))));
+    EXPECT_TRUE(diag.phase(v) == zx::PiExpression(zx::PiRational(-1, 2)));
     for (zx::Vertex w = 5; w <= 8; ++w) {
       if (w != v) {
         ASSERT_TRUE(diag.connected(v, w));
-        ASSERT_TRUE(diag.getEdge(v, w).has_value());
-        EXPECT_EQ(diag.getEdge(v, w).value().type, zx::EdgeType::Hadamard);
+        const auto& edge = diag.getEdge(v, w);
+        ASSERT_TRUE(edge.has_value());
+        EXPECT_EQ(edge->type, zx::EdgeType::Hadamard);
       }
     }
   }
@@ -212,8 +212,7 @@ TEST_F(SimplifyTest, pivotPauli) {
   EXPECT_EQ(removed, 1);
   EXPECT_EQ(diag.getNEdges(), 12);
   EXPECT_EQ(diag.getNVertices(), 9);
-  EXPECT_TRUE(diag.phase(8) ==
-              zx::PiExpression(zx::PiExpression(zx::PiRational(1, 1))));
+  EXPECT_TRUE(diag.phase(8) == zx::PiExpression(zx::PiRational(1, 1)));
   EXPECT_TRUE(diag.phase(9) == zx::PiExpression(zx::PiRational(1, 1)));
   EXPECT_TRUE(diag.phase(10) == zx::PiExpression(zx::PiRational(0, 1)));
   EXPECT_TRUE(diag.phase(6) == zx::PiExpression(zx::PiRational(0, 1)));

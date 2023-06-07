@@ -774,6 +774,7 @@ export2Dot(Edge basic, const std::string& outputFilename, bool colored = true,
 
   const auto* node = &basic;
   if (!node->isTerminal()) {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
     do {
       while (node != nullptr && !node->isTerminal()) {
         for (auto i = static_cast<std::size_t>(RADIX - 1); i > 0; --i) {

@@ -52,15 +52,21 @@ public:
   }
 
   [[nodiscard]] const PiExpression& phase(const Vertex v) const {
-    return vertices[v].value().phase;
+    const auto& vertex = vertices[v];
+    assert(vertex.has_value());
+    return vertex->phase;
   }
 
   [[nodiscard]] Qubit qubit(const Vertex v) const {
-    return vertices[v].value().qubit;
+    const auto& vertex = vertices[v];
+    assert(vertex.has_value());
+    return vertex->qubit;
   }
 
   [[nodiscard]] VertexType type(const Vertex v) const {
-    return vertices[v].value().type;
+    const auto& vertex = vertices[v];
+    assert(vertex.has_value());
+    return vertex->type;
   }
 
   [[nodiscard]] std::optional<VertexData> getVData(const Vertex v) const {
@@ -87,22 +93,28 @@ public:
   }
 
   [[nodiscard]] bool isBoundaryVertex(const Vertex v) const {
-    return vertices[v].value().type == VertexType::Boundary;
+    return type(v) == VertexType::Boundary;
   }
 
   [[nodiscard]] bool isInput(Vertex v) const;
   [[nodiscard]] bool isOutput(Vertex v) const;
 
   void addPhase(const Vertex v, const PiExpression& phase) {
-    vertices[v].value().phase += phase;
+    auto& vertex = vertices[v];
+    assert(vertex.has_value());
+    vertex->phase += phase;
   }
 
   void setPhase(const Vertex v, const PiExpression& phase) {
-    vertices[v].value().phase = phase;
+    auto& vertex = vertices[v];
+    assert(vertex.has_value());
+    vertex->phase = phase;
   }
 
   void setType(const Vertex v, const VertexType type) {
-    vertices[v].value().type = type;
+    auto& vertex = vertices[v];
+    assert(vertex.has_value());
+    vertex->type = type;
   }
 
   void toGraphlike();

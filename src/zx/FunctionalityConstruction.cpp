@@ -42,10 +42,10 @@ void FunctionalityConstruction::addZSpider(ZXDiagram& diag,
                                            const PiExpression& phase,
                                            const EdgeType type) {
   const auto q = static_cast<std::size_t>(qubit);
-
-  auto newVertex = diag.addVertex(
-      qubit, diag.getVData(qubits[q]).value().col + 1, phase, VertexType::Z);
-
+  const auto& vData = diag.getVData(qubits[q]);
+  assert(vData.has_value());
+  const auto newVertex =
+      diag.addVertex(qubit, vData->col + 1, phase, VertexType::Z);
   diag.addEdge(qubits[q], newVertex, type);
   qubits[q] = newVertex;
 }
@@ -55,8 +55,10 @@ void FunctionalityConstruction::addXSpider(ZXDiagram& diag, const Qubit qubit,
                                            const PiExpression& phase,
                                            const EdgeType type) {
   const auto q = static_cast<std::size_t>(qubit);
-  const auto newVertex = diag.addVertex(
-      qubit, diag.getVData(qubits[q]).value().col + 1, phase, VertexType::X);
+  const auto& vData = diag.getVData(qubits[q]);
+  assert(vData.has_value());
+  const auto newVertex =
+      diag.addVertex(qubit, vData->col + 1, phase, VertexType::X);
   diag.addEdge(qubits[q], newVertex, type);
   qubits[q] = newVertex;
 }
@@ -94,10 +96,12 @@ void FunctionalityConstruction::addSwap(ZXDiagram& diag, const Qubit target,
   const auto s0 = qubits[t];
   const auto s1 = qubits[c];
 
-  const auto t0 =
-      diag.addVertex(target2, diag.getVData(qubits[t]).value().col + 1);
-  const auto t1 =
-      diag.addVertex(target, diag.getVData(qubits[t]).value().col + 1);
+  const auto& vData = diag.getVData(qubits[t]);
+  assert(vData.has_value());
+  const auto col = vData->col + 1;
+
+  const auto t0 = diag.addVertex(target2, col);
+  const auto t1 = diag.addVertex(target, col);
   diag.addEdge(s0, t1);
   diag.addEdge(s1, t0);
   qubits[t] = t0;

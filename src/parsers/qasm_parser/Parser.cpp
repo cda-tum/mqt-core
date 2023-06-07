@@ -502,14 +502,17 @@ std::unique_ptr<qc::Operation> Parser::gate() {
         error("Unsupported gate type in compound gate definition");
       }
       std::vector<qc::fp> rewrittenParameters;
+      rewrittenParameters.reserve(gate->parameters.size());
       for (const auto& p : gate->parameters) {
         rewrittenParameters.emplace_back(rewriteExpr(p, paramMap)->num);
       }
       std::vector<qc::QuantumRegister> rewrittenControls;
+      rewrittenControls.reserve(gate->controls.size());
       for (const auto& control : gate->controls) {
         rewrittenControls.emplace_back(argMap.at(control));
       }
       std::vector<qc::QuantumRegister> rewrittenTargets;
+      rewrittenTargets.reserve(gate->targets.size());
       for (const auto& target : gate->targets) {
         rewrittenTargets.emplace_back(argMap.at(target));
       }
@@ -708,14 +711,17 @@ void Parser::gateDecl() {
           error("Unsupported gate type in compound gate definition");
         }
         std::vector<std::shared_ptr<Expr>> rewrittenParameters;
+        rewrittenParameters.reserve(gateDef->parameters.size());
         for (const auto& p : gateDef->parameters) {
           rewrittenParameters.emplace_back(rewriteExpr(p, paramMap));
         }
         std::vector<std::string> rewrittenControls;
+        rewrittenControls.reserve(gateDef->controls.size());
         for (const auto& control : gateDef->controls) {
           rewrittenControls.emplace_back(argMap.at(control));
         }
         std::vector<std::string> rewrittenTargets;
+        rewrittenTargets.reserve(gateDef->targets.size());
         for (const auto& target : gateDef->targets) {
           rewrittenTargets.emplace_back(argMap.at(target));
         }

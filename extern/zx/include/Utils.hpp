@@ -53,7 +53,10 @@ public:
     VertexIterator(const std::vector<std::optional<VertexData>>& verts,
                    Vertex vertex);
 
-    value_type operator*() const { return {v, currentPos->value()}; }
+    value_type operator*() const {
+      assert(currentPos->has_value());
+      return {v, currentPos->value()};
+    }
 
     // Prefix increment
     VertexIterator operator++();
@@ -67,6 +70,7 @@ public:
   private:
     Vertex v = 0;
     std::vector<std::optional<VertexData>>::const_iterator currentPos;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     const std::vector<std::optional<VertexData>>& vertices;
 
     void nextValidVertex();
@@ -78,6 +82,7 @@ public:
   iterator end() { return {vertices, vertices.size()}; }
 
 private:
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   const std::vector<std::optional<VertexData>>& vertices;
 };
 
@@ -117,7 +122,9 @@ public:
     Vertex v;
     std::vector<Edge>::const_iterator currentPos;
     std::vector<std::vector<Edge>>::const_iterator edgesPos;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     const std::vector<std::vector<Edge>>& edges;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
     const std::vector<std::optional<VertexData>>& vertices;
 
     void checkNextVertex();
@@ -129,7 +136,9 @@ public:
   iterator end() { return {edges, vertices, edges.size()}; }
 
 private:
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   const std::vector<std::vector<Edge>>& edges;
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   const std::vector<std::optional<VertexData>>& vertices;
 };
 

@@ -304,11 +304,11 @@ std::vector<Vertex> ZXDiagram::initGraph(const std::size_t nqubits) {
 
 void ZXDiagram::closeGraph(const std::vector<Vertex>& qubitVertices) {
   for (const Vertex v : qubitVertices) {
-    assert(vertices[v].has_value());
-    const VertexData vData = vertices[v].value();
+    const auto& vData = vertices[v];
+    assert(vData.has_value());
 
     const Vertex newV = addVertex(
-        {vData.col + 1, vData.qubit, PiExpression(), VertexType::Boundary});
+        {vData->col + 1, vData->qubit, PiExpression(), VertexType::Boundary});
     addEdge(v, newV);
     outputs.push_back(newV);
   }

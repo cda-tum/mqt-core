@@ -68,6 +68,7 @@ public:
   ~StochasticNoiseFunctionality() { package->decRef(identityDD); }
 
 protected:
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   const std::unique_ptr<dd::Package<Config>>& package;
   dd::QubitCount nQubits;
   std::uniform_real_distribution<dd::fp> dist;
@@ -271,6 +272,7 @@ public:
         sequentiallyApplyNoise(seqApplyNoise) {}
 
 protected:
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   const std::unique_ptr<dd::Package<Config>>& package;
   dd::QubitCount nQubits;
 

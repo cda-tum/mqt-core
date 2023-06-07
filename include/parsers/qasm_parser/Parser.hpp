@@ -102,6 +102,7 @@ class Parser {
     std::vector<std::shared_ptr<BasisGate>> gates;
   };
 
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   std::istream& in;
   std::set<Token::Kind> unaryops{Token::Kind::Sin, Token::Kind::Cos,
                                  Token::Kind::Tan, Token::Kind::Exp,
@@ -121,7 +122,9 @@ public:
   Token la, t;
   Token::Kind sym = Token::Kind::None;
   std::shared_ptr<Scanner> scanner;
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   qc::QuantumRegisterMap& qregs;
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   qc::ClassicalRegisterMap& cregs;
   std::size_t nqubits = 0;
   std::size_t nclassics = 0;

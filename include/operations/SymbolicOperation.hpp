@@ -64,8 +64,9 @@ public:
   SymbolicOperation() = default;
 
   [[nodiscard]] SymbolOrNumber getParameter(const std::size_t i) const {
-    if (symbolicParameter.at(i).has_value()) {
-      return symbolicParameter.at(i).value();
+    const auto& param = symbolicParameter.at(i);
+    if (param.has_value()) {
+      return *param;
     }
     return parameter.at(i);
   }
