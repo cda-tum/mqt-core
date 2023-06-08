@@ -164,8 +164,11 @@ TEST_F(SimplifyTest, localComp) {
       if (w != v) {
         ASSERT_TRUE(diag.connected(v, w));
         const auto& edge = diag.getEdge(v, w);
-        ASSERT_TRUE(edge.has_value());
-        EXPECT_EQ(edge->type, zx::EdgeType::Hadamard);
+        const auto hasValue = edge.has_value();
+        ASSERT_TRUE(hasValue);
+        if (hasValue) {
+          EXPECT_EQ(edge->type, zx::EdgeType::Hadamard);
+        }
       }
     }
   }

@@ -55,6 +55,7 @@ public:
 
     value_type operator*() const {
       assert(currentPos->has_value());
+      // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
       return {v, currentPos->value()};
     }
 

@@ -305,7 +305,9 @@ std::vector<Vertex> ZXDiagram::initGraph(const std::size_t nqubits) {
 void ZXDiagram::closeGraph(const std::vector<Vertex>& qubitVertices) {
   for (const Vertex v : qubitVertices) {
     const auto& vData = vertices[v];
-    assert(vData.has_value());
+    if (!vData.has_value()) {
+      continue;
+    }
 
     const Vertex newV = addVertex(
         {vData->col + 1, vData->qubit, PiExpression(), VertexType::Boundary});
@@ -335,7 +337,7 @@ void ZXDiagram::approximateCliffords(const fp tolerance) {
 }
 
 void ZXDiagram::removeDisconnectedSpiders() {
-  auto connectedToBoundary = [&](const Vertex v) {
+  auto connectedToBoundary = [this](const Vertex v) {
     std::unordered_set<Vertex> visited{};
     std::vector<Vertex> stack{};
     stack.push_back(v);

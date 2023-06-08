@@ -43,7 +43,9 @@ void FunctionalityConstruction::addZSpider(ZXDiagram& diag,
                                            const EdgeType type) {
   const auto q = static_cast<std::size_t>(qubit);
   const auto& vData = diag.getVData(qubits[q]);
-  assert(vData.has_value());
+  if (!vData.has_value()) {
+    return;
+  }
   const auto newVertex =
       diag.addVertex(qubit, vData->col + 1, phase, VertexType::Z);
   diag.addEdge(qubits[q], newVertex, type);
@@ -56,7 +58,9 @@ void FunctionalityConstruction::addXSpider(ZXDiagram& diag, const Qubit qubit,
                                            const EdgeType type) {
   const auto q = static_cast<std::size_t>(qubit);
   const auto& vData = diag.getVData(qubits[q]);
-  assert(vData.has_value());
+  if (!vData.has_value()) {
+    return;
+  }
   const auto newVertex =
       diag.addVertex(qubit, vData->col + 1, phase, VertexType::X);
   diag.addEdge(qubits[q], newVertex, type);
@@ -97,7 +101,9 @@ void FunctionalityConstruction::addSwap(ZXDiagram& diag, const Qubit target,
   const auto s1 = qubits[c];
 
   const auto& vData = diag.getVData(qubits[t]);
-  assert(vData.has_value());
+  if (!vData.has_value()) {
+    return;
+  }
   const auto col = vData->col + 1;
 
   const auto t0 = diag.addVertex(target2, col);

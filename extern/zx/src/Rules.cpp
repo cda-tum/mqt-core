@@ -25,7 +25,9 @@ bool isInterior(const ZXDiagram& diag, const Vertex v) {
 
 void extractGadget(ZXDiagram& diag, const Vertex v) {
   const auto& vData = diag.getVData(v);
-  assert(vData.has_value());
+  if (!vData.has_value()) {
+    return;
+  }
   const Vertex phaseVert = diag.addVertex(vData->qubit, -2, vData->phase);
   const Vertex idVert = diag.addVertex(vData->qubit, -1);
   diag.setPhase(v, PiExpression(PiRational(0, 1)));
@@ -44,7 +46,9 @@ void extractPauliGadget(ZXDiagram& diag, const Vertex v) {
 void ensureInterior(ZXDiagram& diag, const Vertex v) {
   const auto edges = diag.incidentEdges(v);
   const auto& vData = diag.getVData(v);
-  assert(vData.has_value());
+  if (!vData.has_value()) {
+    return;
+  }
 
   for (const auto& [to, type] : edges) {
     if (!diag.isBoundaryVertex(to)) {

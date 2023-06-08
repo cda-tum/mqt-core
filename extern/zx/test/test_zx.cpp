@@ -58,8 +58,11 @@ TEST_F(ZXDiagramTest, createDiagram) {
   for (std::size_t i = 0; i < edges.size(); ++i) {
     const auto& [v1, v2] = edges[i];
     const auto& edge = diag.getEdge(v1, v2);
-    ASSERT_TRUE(edge.has_value());
-    EXPECT_EQ(edge->type, expectedEdgeTypes[i]);
+    const auto hasValue = edge.has_value();
+    ASSERT_TRUE(hasValue);
+    if (hasValue) {
+      EXPECT_EQ(edge->type, expectedEdgeTypes[i]);
+    }
   }
 
   const auto expectedVertexTypes =
@@ -70,9 +73,12 @@ TEST_F(ZXDiagramTest, createDiagram) {
   const auto nVerts = diag.getNVertices();
   for (std::size_t i = 0; i < nVerts; ++i) {
     const auto& vData = diag.getVData(i);
-    ASSERT_TRUE(vData.has_value());
-    EXPECT_EQ(vData->type, expectedVertexTypes[i]);
-    EXPECT_TRUE(vData->phase.isZero());
+    const auto hasValue = vData.has_value();
+    ASSERT_TRUE(hasValue);
+    if (hasValue) {
+      EXPECT_EQ(vData->type, expectedVertexTypes[i]);
+      EXPECT_TRUE(vData->phase.isZero());
+    }
   }
 }
 
@@ -99,8 +105,11 @@ TEST_F(ZXDiagramTest, graphLike) {
   for (std::size_t i = 0; i < edges.size(); ++i) {
     const auto& [v1, v2] = edges[i];
     const auto& edge = diag.getEdge(v1, v2);
-    ASSERT_TRUE(edge.has_value());
-    EXPECT_EQ(edge->type, expectedEdgeTypes[i]);
+    const auto hasValue = edge.has_value();
+    ASSERT_TRUE(hasValue);
+    if (hasValue) {
+      EXPECT_EQ(edge->type, expectedEdgeTypes[i]);
+    }
   }
 
   const auto expectedVertexTypes =
@@ -111,9 +120,12 @@ TEST_F(ZXDiagramTest, graphLike) {
   const auto nVerts = diag.getNVertices();
   for (std::size_t i = 0; i < nVerts; ++i) {
     const auto& vData = diag.getVData(i);
-    ASSERT_TRUE(vData.has_value());
-    EXPECT_EQ(vData->type, expectedVertexTypes[i]);
-    EXPECT_TRUE(vData->phase.isZero());
+    const auto hasValue = vData.has_value();
+    ASSERT_TRUE(hasValue);
+    if (hasValue) {
+      EXPECT_EQ(vData->type, expectedVertexTypes[i]);
+      EXPECT_TRUE(vData->phase.isZero());
+    }
   }
 }
 
@@ -129,8 +141,11 @@ TEST_F(ZXDiagramTest, adjoint) {
   for (std::size_t i = 0; i < edges.size(); ++i) {
     const auto& [v1, v2] = edges[i];
     const auto& edge = diag.getEdge(v1, v2);
-    ASSERT_TRUE(edge.has_value());
-    EXPECT_EQ(edge->type, expectedEdgeTypes[i]);
+    const auto hasValue = edge.has_value();
+    ASSERT_TRUE(hasValue);
+    if (hasValue) {
+      EXPECT_EQ(edge->type, expectedEdgeTypes[i]);
+    }
   }
 
   const auto expectedVertexTypes =
@@ -141,9 +156,12 @@ TEST_F(ZXDiagramTest, adjoint) {
   const auto nVerts = diag.getNVertices();
   for (std::size_t i = 0; i < nVerts; ++i) {
     const auto& vData = diag.getVData(i);
-    ASSERT_TRUE(vData.has_value());
-    EXPECT_EQ(vData->type, expectedVertexTypes[i]);
-    EXPECT_TRUE(vData->phase.isZero());
+    const auto hasValue = vData.has_value();
+    ASSERT_TRUE(hasValue);
+    if (hasValue) {
+      EXPECT_EQ(vData->type, expectedVertexTypes[i]);
+      EXPECT_TRUE(vData->phase.isZero());
+    }
   }
 }
 
