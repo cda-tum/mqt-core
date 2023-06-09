@@ -10,6 +10,69 @@
 #include <optional>
 
 namespace zx {
+
+namespace {
+bool isPauli(const ZXDiagram& diag, const Vertex v) {
+  return isPauli(diag.phase(v));
+}
+
+bool isInterior(const ZXDiagram& diag, const Vertex v) {
+  const auto& edges = diag.incidentEdges(v);
+  return std::all_of(edges.begin(), edges.end(), [&](auto& edge) {
+    return diag.degree(edge.to) > 1 && diag.type(edge.to) == VertexType::Z;
+  });
+}
+
+void extractGadget(ZXDiagram& diag, const Vertex v) {
+  const auto& vData = diag.getVData(v);
+  if (!vData.has_value()) {
+    return;
+  }
+  const Vertex phaseVert = diag.addVertex(vData->qubit, -2, vData->phase);
+  const Vertex idVert = diag.addVertex(vData->qubit, -1);
+  diag.setPhase(v, PiExpression(PiRational(0, 1)));
+  diag.addHadamardEdge(v, idVert);
+  diag.addHadamardEdge(idVert, phaseVert);
+}
+
+void extractPauliGadget(ZXDiagram& diag, const Vertex v) {
+  if (isPauli(diag.phase(v))) {
+    return;
+  }
+
+  extractGadget(diag, v);
+}
+
+void ensureInterior(ZXDiagram& diag, const Vertex v) {
+  const auto edges = diag.incidentEdges(v);
+  const auto& vData = diag.getVData(v);
+  if (!vData.has_value()) {
+    return;
+  }
+
+  for (const auto& [to, type] : edges) {
+    if (!diag.isBoundaryVertex(to)) {
+      continue;
+    }
+
+    const Vertex newV = diag.addVertex(vData->qubit, vData->col,
+                                       PiExpression(PiRational(0, 1)));
+    const auto boundaryEdgeType = type == zx::EdgeType::Simple
+                                      ? zx::EdgeType::Hadamard
+                                      : zx::EdgeType::Simple;
+
+    diag.addEdge(v, newV, EdgeType::Hadamard);
+    diag.addEdge(to, newV, boundaryEdgeType);
+    diag.removeEdge(v, to);
+  }
+}
+
+void ensurePauliVertex(ZXDiagram& diag, const Vertex v) {
+  extractPauliGadget(diag, v);
+  ensureInterior(diag, v);
+}
+} // namespace
+
 bool checkIdSimp(const ZXDiagram& diag, const Vertex v) {
   return diag.degree(v) == 2 && diag.phase(v).isZero() &&
          !diag.isBoundaryVertex(v);
@@ -79,10 +142,6 @@ void localComp(ZXDiagram& diag, const Vertex v) { // TODO:scalars
   diag.removeVertex(v);
 }
 
-static bool isPauli(const ZXDiagram& diag, const Vertex v) {
-  return isPauli(diag.phase(v));
-}
-
 bool checkPivotPauli(const ZXDiagram& diag, const Vertex v0, const Vertex v1) {
   const auto v0Data = diag.getVData(v0).value_or(
       VertexData{0, 0, PiExpression(), VertexType::X});
@@ -148,13 +207,6 @@ void pivotPauli(ZXDiagram& diag, const Vertex v0,
   diag.removeVertex(v1);
 }
 
-static bool isInterior(const ZXDiagram& diag, const Vertex v) {
-  const auto& edges = diag.incidentEdges(v);
-  return std::all_of(edges.begin(), edges.end(), [&](auto& edge) {
-    return diag.degree(edge.to) > 1 && diag.type(edge.to) == VertexType::Z;
-  });
-}
-
 bool checkPivot(const ZXDiagram& diag, const Vertex v0, const Vertex v1) {
   const auto v0Type = diag.type(v0);
   const auto v1Type = diag.type(v1);
@@ -171,8 +223,8 @@ bool checkPivot(const ZXDiagram& diag, const Vertex v0, const Vertex v1) {
   const auto& v0Edges = diag.incidentEdges(v0);
   const auto isInvalidEdge = [&](const Edge& e) {
     const auto toType = diag.type(e.to);
-    return !((toType == VertexType::Z && e.type == EdgeType::Hadamard) ||
-             toType == VertexType::Boundary);
+    return (toType != VertexType::Z || e.type != EdgeType::Hadamard) &&
+           toType != VertexType::Boundary;
   };
 
   if (std::any_of(v0Edges.begin(), v0Edges.end(), isInvalidEdge)) {
@@ -189,49 +241,6 @@ bool checkPivot(const ZXDiagram& diag, const Vertex v0, const Vertex v1) {
   };
 
   return (isInteriorPauli(v0) || isInteriorPauli(v1));
-}
-
-static void extractGadget(ZXDiagram& diag, const Vertex v) {
-  const auto vData = diag.getVData(v).value();
-  const Vertex phaseVert = diag.addVertex(vData.qubit, -2, vData.phase);
-  const Vertex idVert = diag.addVertex(vData.qubit, -1);
-  diag.setPhase(v, PiExpression(PiRational(0, 1)));
-  diag.addHadamardEdge(v, idVert);
-  diag.addHadamardEdge(idVert, phaseVert);
-}
-
-static void extractPauliGadget(ZXDiagram& diag, const Vertex v) {
-  if (isPauli(diag.phase(v))) {
-    return;
-  }
-
-  extractGadget(diag, v);
-}
-
-static void ensureInterior(ZXDiagram& diag, const Vertex v) {
-  const auto edges = diag.incidentEdges(v);
-  const auto vData = diag.getVData(v).value();
-
-  for (const auto& [to, type] : edges) {
-    if (!diag.isBoundaryVertex(to)) {
-      continue;
-    }
-
-    const Vertex newV =
-        diag.addVertex(vData.qubit, vData.col, PiExpression(PiRational(0, 1)));
-    const auto boundaryEdgeType = type == zx::EdgeType::Simple
-                                      ? zx::EdgeType::Hadamard
-                                      : zx::EdgeType::Simple;
-
-    diag.addEdge(v, newV, EdgeType::Hadamard);
-    diag.addEdge(to, newV, boundaryEdgeType);
-    diag.removeEdge(v, to);
-  }
-}
-
-static void ensurePauliVertex(ZXDiagram& diag, const Vertex v) {
-  extractPauliGadget(diag, v);
-  ensureInterior(diag, v);
 }
 
 void pivot(ZXDiagram& diag, const Vertex v0, const Vertex v1) {

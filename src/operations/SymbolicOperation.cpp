@@ -152,6 +152,7 @@ OpType SymbolicOperation::parseU1([[maybe_unused]] const Symbolic& lambda) {
 }
 
 void SymbolicOperation::checkSymbolicUgate() {
+  // NOLINTBEGIN(bugprone-unchecked-optional-access) - we check for this
   if (type == Phase) {
     if (!isSymbolicParameter(0)) {
       type = StandardOperation::parseU1(parameter[0]);
@@ -186,6 +187,7 @@ void SymbolicOperation::checkSymbolicUgate() {
                      parameter[2]);
     }
   }
+  // NOLINTEND(bugprone-unchecked-optional-access)
 }
 
 void SymbolicOperation::setup(const std::size_t nq,
@@ -287,14 +289,17 @@ bool SymbolicOperation::equals(const Operation& op, const Permutation& perm1,
   }
   const auto& symOp = dynamic_cast<const SymbolicOperation&>(op);
   for (std::size_t i = 0; i < symbolicParameter.size(); ++i) {
-    if (symbolicParameter.at(i).has_value() !=
-        symOp.symbolicParameter.at(i).has_value()) {
+    const auto& symParam = symbolicParameter.at(i);
+    const auto& symOpParam = symOp.symbolicParameter.at(i);
+    const auto symParamIsSymbolic = symParam.has_value();
+    const auto symOpParamIsSymbolic = symOpParam.has_value();
+
+    if (symParamIsSymbolic != symOpParamIsSymbolic) {
       return false;
     }
 
-    if (symbolicParameter.at(i).has_value()) {
-      return symbolicParameter.at(i).value() ==
-             symOp.symbolicParameter.at(i).value();
+    if (symParamIsSymbolic) {
+      return symParam.value() == symOpParam.value();
     }
   }
   return true;

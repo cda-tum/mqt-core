@@ -22,7 +22,7 @@ INSTANTIATE_TEST_SUITE_P(
                    static_cast<dd::QubitCount>(90), 7),
     [](const testing::TestParamInfo<Entanglement::ParamType>& inf) {
       // Generate names for test cases
-      dd::QubitCount nqubits = inf.param;
+      const dd::QubitCount nqubits = inf.param;
       std::stringstream ss{};
       ss << static_cast<std::size_t>(nqubits) << "_qubits";
       return ss.str();
@@ -39,7 +39,7 @@ TEST_P(Entanglement, FunctionTest) {
   ASSERT_NO_THROW({ e = buildFunctionality(qc.get(), dd); });
 
   ASSERT_EQ(qc->getNops(), nq);
-  qc::VectorDD r = dd->multiply(e, dd->makeZeroState(nq));
+  const qc::VectorDD r = dd->multiply(e, dd->makeZeroState(nq));
 
   ASSERT_EQ(dd->getValueByPath(r, std::string(nq, '0')),
             (dd::ComplexValue{dd::SQRT2_2, 0}));

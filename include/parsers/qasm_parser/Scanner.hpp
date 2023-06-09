@@ -27,6 +27,7 @@ class Scanner {
         : ch(c), line(l), col(cl) {}
   };
 
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   std::istream& is;
   std::stack<std::shared_ptr<std::istream>> streams{};
   std::map<std::string, Token::Kind, std::less<>> keywords{};

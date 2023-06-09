@@ -2776,6 +2776,7 @@ public:
 
     auto c = cn.getTemporary(1, 0);
     auto r = e;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
     do {
       ComplexNumbers::mul(c, c, r.w);
       auto tmp = static_cast<std::size_t>(
@@ -3179,6 +3180,7 @@ public:
     Edge* currentEdge = &original;
     if (!currentEdge->isTerminal()) {
       constexpr std::size_t n = std::tuple_size_v<decltype(original.p->e)>;
+      // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
       do {
         while (currentEdge != nullptr && !currentEdge->isTerminal()) {
           for (std::size_t i = n - 1; i > 0; --i) {

@@ -102,8 +102,8 @@ TEST(DDComplexTest, ComplexNumberArithmetic) {
   auto f = cn->getTemporary();
   ComplexNumbers::div(f, Complex::zero, Complex::one);
 
-  dd::ComplexValue zero{0., 0.};
-  dd::ComplexValue one{1., 0.};
+  const dd::ComplexValue zero{0., 0.};
+  const dd::ComplexValue one{1., 0.};
   EXPECT_EQ(one + zero, one);
 }
 
@@ -234,7 +234,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
 
   // insert border number that is too far away from the number in the bucket,
   // but is close enough to a number in the bucket below
-  fp num4 = numBucketBorder;
+  const fp num4 = numBucketBorder;
   auto c = cn->lookup(num4, 0.0);
   auto key4 = ComplexTable<>::hash(num4 - ComplexTable<>::tolerance());
   EXPECT_EQ(hashBarelyBelow, key4);
@@ -256,7 +256,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
 
   // search for a number in the lower bucket that is ultimately close enough to
   // a number in the upper bucket
-  fp num6 = numNextBorder - ComplexTable<>::tolerance() / 10;
+  const fp num6 = numNextBorder - ComplexTable<>::tolerance() / 10;
   auto d = cn->lookup(num6, 0.0);
   auto key6 = ComplexTable<>::hash(num6 + ComplexTable<>::tolerance());
   EXPECT_EQ(hashNextBorder, key6);
@@ -264,9 +264,9 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
 }
 
 TEST(DDComplexTest, ComplexValueEquals) {
-  ComplexValue a{1.0, 0.0};
-  ComplexValue aTol{1.0 + ComplexTable<>::tolerance() / 10, 0.0};
-  ComplexValue b{0.0, 1.0};
+  const ComplexValue a{1.0, 0.0};
+  const ComplexValue aTol{1.0 + ComplexTable<>::tolerance() / 10, 0.0};
+  const ComplexValue b{0.0, 1.0};
   EXPECT_TRUE(a.approximatelyEquals(aTol));
   EXPECT_FALSE(a.approximatelyEquals(b));
 }

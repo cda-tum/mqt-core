@@ -60,14 +60,14 @@ struct ComplexValue {
   }
 
   void fromString(const std::string& realStr, std::string imagStr) {
-    fp real = realStr.empty() ? 0. : std::stod(realStr);
+    const fp real = realStr.empty() ? 0. : std::stod(realStr);
 
     imagStr.erase(remove(imagStr.begin(), imagStr.end(), ' '), imagStr.end());
     imagStr.erase(remove(imagStr.begin(), imagStr.end(), 'i'), imagStr.end());
     if (imagStr == "+" || imagStr == "-") {
       imagStr = imagStr + "1";
     }
-    fp imag = imagStr.empty() ? 0. : std::stod(imagStr);
+    const fp imag = imagStr.empty() ? 0. : std::stod(imagStr);
     r = {real};
     i = {imag};
   }

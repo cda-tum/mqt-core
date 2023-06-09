@@ -1670,10 +1670,18 @@ TEST_F(QFRFunctionality, ContainsLogicalQubit) {
   const QuantumComputation qc(2);
   const auto [contains0, index0] = qc.containsLogicalQubit(0);
   EXPECT_TRUE(contains0);
-  EXPECT_EQ(*index0, 0);
+  const auto hasValue0 = index0.has_value();
+  ASSERT_TRUE(hasValue0);
+  if (hasValue0) {
+    EXPECT_EQ(*index0, 0);
+  }
   const auto [contains1, index1] = qc.containsLogicalQubit(1);
   EXPECT_TRUE(contains1);
-  EXPECT_EQ(*index1, 1);
+  const auto hasValue1 = index1.has_value();
+  ASSERT_TRUE(hasValue1);
+  if (hasValue1) {
+    EXPECT_EQ(*index1, 1);
+  }
   const auto [contains2, index2] = qc.containsLogicalQubit(2);
   EXPECT_FALSE(contains2);
   EXPECT_FALSE(index2.has_value());

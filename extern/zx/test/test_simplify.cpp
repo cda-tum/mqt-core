@@ -7,8 +7,9 @@ using zx::fullReduceApproximate;
 
 class SimplifyTest : public ::testing::Test {};
 
-static zx::ZXDiagram makeIdentityDiagram(const std::size_t nqubits,
-                                         const std::size_t spidersPerQubit) {
+namespace {
+zx::ZXDiagram makeIdentityDiagram(const std::size_t nqubits,
+                                  const std::size_t spidersPerQubit) {
   zx::ZXDiagram diag(nqubits);
   std::vector<zx::Vertex> rightmostVertices = diag.getInputs();
 
@@ -33,13 +34,14 @@ static zx::ZXDiagram makeIdentityDiagram(const std::size_t nqubits,
   return diag;
 }
 
-static zx::ZXDiagram makeEmptyDiagram(const std::size_t nqubits) {
+zx::ZXDiagram makeEmptyDiagram(const std::size_t nqubits) {
   auto diag = ::makeIdentityDiagram(nqubits, 0);
   for (std::size_t i = 0; i < nqubits; ++i) {
     diag.removeEdge(i, i + nqubits);
   }
   return diag;
 }
+} // namespace
 
 TEST_F(SimplifyTest, idSimp) {
   const std::size_t nqubits = 3U;
@@ -157,12 +159,16 @@ TEST_F(SimplifyTest, localComp) {
   EXPECT_EQ(removed, 1);
 
   for (zx::Vertex v = 5; v <= 8; ++v) {
-    EXPECT_TRUE(diag.phase(v) ==
-                zx::PiExpression(zx::PiExpression(zx::PiRational(-1, 2))));
+    EXPECT_TRUE(diag.phase(v) == zx::PiExpression(zx::PiRational(-1, 2)));
     for (zx::Vertex w = 5; w <= 8; ++w) {
       if (w != v) {
         ASSERT_TRUE(diag.connected(v, w));
-        EXPECT_EQ(diag.getEdge(v, w).value().type, zx::EdgeType::Hadamard);
+        const auto& edge = diag.getEdge(v, w);
+        const auto hasValue = edge.has_value();
+        ASSERT_TRUE(hasValue);
+        if (hasValue) {
+          EXPECT_EQ(edge->type, zx::EdgeType::Hadamard);
+        }
       }
     }
   }
@@ -209,8 +215,7 @@ TEST_F(SimplifyTest, pivotPauli) {
   EXPECT_EQ(removed, 1);
   EXPECT_EQ(diag.getNEdges(), 12);
   EXPECT_EQ(diag.getNVertices(), 9);
-  EXPECT_TRUE(diag.phase(8) ==
-              zx::PiExpression(zx::PiExpression(zx::PiRational(1, 1))));
+  EXPECT_TRUE(diag.phase(8) == zx::PiExpression(zx::PiRational(1, 1)));
   EXPECT_TRUE(diag.phase(9) == zx::PiExpression(zx::PiRational(1, 1)));
   EXPECT_TRUE(diag.phase(10) == zx::PiExpression(zx::PiRational(0, 1)));
   EXPECT_TRUE(diag.phase(6) == zx::PiExpression(zx::PiRational(0, 1)));
