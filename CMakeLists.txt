@@ -40,7 +40,6 @@ if(NOT TARGET project_options)
   enable_sanitizers(project_options)
 endif()
 
-check_submodule_present(dd_package)
 check_submodule_present(json)
 check_submodule_present(zx)
 check_submodule_present(pybind11)
