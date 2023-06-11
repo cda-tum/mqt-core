@@ -1,6 +1,3 @@
-# add MQT::zx library
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx" EXCLUDE_FROM_ALL)
-
 if(NOT TARGET nlohmann_json)
   # cmake-lint: disable=C0103
   set(JSON_BuildTests
@@ -75,11 +72,6 @@ if(NOT TARGET ${PROJECT_NAME})
   # add options and warnings to the library
   target_link_libraries(${PROJECT_NAME} PUBLIC project_options project_warnings)
 
-  # Temporary: The ZX package is not yet clearly separated and some of its definitions are used
-  # throughout the library. Therefore, the ZX package always needs to be linked into the main QFR
-  # library.
-  target_link_libraries(${PROJECT_NAME} PUBLIC MQT::zx)
-
   # add MQT alias
   add_library(MQT::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 endif()
@@ -122,12 +114,51 @@ endif()
 
 if(NOT TARGET ${PROJECT_NAME}_zx)
   # add ZX package library
-  add_library(${PROJECT_NAME}_zx ${PROJECT_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
-                                 zx/FunctionalityConstruction.cpp)
-  target_link_libraries(${PROJECT_NAME}_zx PUBLIC MQT::zx MQT::${PROJECT_NAME})
+  add_library(
+    ${PROJECT_NAME}_zx
+    ${PROJECT_SOURCE_DIR}/include/zx/Rational.hpp
+    ${PROJECT_SOURCE_DIR}/include/zx/ZXDiagram.hpp
+    ${PROJECT_SOURCE_DIR}/include/zx/Definitions.hpp
+    ${PROJECT_SOURCE_DIR}/include/zx/Rules.hpp
+    ${PROJECT_SOURCE_DIR}/include/zx/Simplify.hpp
+    ${PROJECT_SOURCE_DIR}/include/zx/Utils.hpp
+    ${PROJECT_SOURCE_DIR}/include/zx/Expression.hpp
+    ${PROJECT_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
+    zx/Rational.cpp
+    zx/ZXDiagram.cpp
+    zx/Rules.cpp
+    zx/Simplify.cpp
+    zx/Utils.cpp
+    zx/Expression.cpp
+    zx/FunctionalityConstruction.cpp)
+  target_link_libraries(${PROJECT_NAME}_zx PUBLIC MQT::${PROJECT_NAME})
   target_include_directories(${PROJECT_NAME}_zx PUBLIC ${PROJECT_SOURCE_DIR}/include/zx
                                                        ${PROJECT_BINARY_DIR}/include/zx)
   add_library(MQT::${PROJECT_NAME}_zx ALIAS ${PROJECT_NAME}_zx)
+
+  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/boost/config" "extern/boost/config"
+                   EXCLUDE_FROM_ALL)
+  target_link_libraries(${PROJECT_NAME}_zx PUBLIC Boost::config)
+
+  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/boost/multiprecision"
+                   "extern/boost/multiprecision" EXCLUDE_FROM_ALL)
+  target_link_libraries(${PROJECT_NAME}_zx PUBLIC Boost::multiprecision)
+  # the following sets the SYSTEM flag for the include dirs of the boost libs to suppress warnings
+  # cmake-lint: disable=C0307
+  set_target_properties(
+    boost_config PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                            $<TARGET_PROPERTY:boost_config,INTERFACE_INCLUDE_DIRECTORIES>)
+  # cmake-lint: disable=C0307
+  set_target_properties(
+    boost_multiprecision
+    PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+               $<TARGET_PROPERTY:boost_multiprecision,INTERFACE_INCLUDE_DIRECTORIES>)
+
+  # # link to GMP libraries if present
+  if(GMP_FOUND)
+    target_compile_definitions(${PROJECT_NAME}_zx PUBLIC GMP)
+    target_link_libraries(${PROJECT_NAME}_zx PUBLIC GMP::gmp GMP::gmpxx)
+  endif()
 endif()
 
 if(NOT TARGET ${PROJECT_NAME}_ecc)
