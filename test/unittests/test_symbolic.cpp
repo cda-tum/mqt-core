@@ -1,5 +1,5 @@
-#include "Expression.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/Expression.hpp"
 #include "operations/SymbolicOperation.hpp"
 
 #include "gtest/gtest.h"

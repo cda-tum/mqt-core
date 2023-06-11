@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "Expression.hpp"
+#include "operations/Expression.hpp"
 
 #include <bitset>
 #include <deque>

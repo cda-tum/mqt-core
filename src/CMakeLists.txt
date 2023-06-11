@@ -30,6 +30,7 @@ if(NOT TARGET ${PROJECT_NAME})
     ${PROJECT_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
     ${PROJECT_SOURCE_DIR}/include/CircuitOptimizer.hpp
     ${PROJECT_SOURCE_DIR}/include/Definitions.hpp
+    ${PROJECT_SOURCE_DIR}/include/operations/Expression.hpp
     ${PROJECT_SOURCE_DIR}/include/operations/ClassicControlledOperation.hpp
     ${PROJECT_SOURCE_DIR}/include/operations/CompoundOperation.hpp
     ${PROJECT_SOURCE_DIR}/include/operations/Control.hpp
@@ -50,6 +51,7 @@ if(NOT TARGET ${PROJECT_NAME})
     algorithms/QPE.cpp
     algorithms/RandomCliffordCircuit.cpp
     CircuitOptimizer.cpp
+    operations/Expression.cpp
     operations/NonUnitaryOperation.cpp
     operations/Operation.cpp
     operations/StandardOperation.cpp
@@ -122,14 +124,12 @@ if(NOT TARGET ${PROJECT_NAME}_zx)
     ${PROJECT_SOURCE_DIR}/include/zx/Rules.hpp
     ${PROJECT_SOURCE_DIR}/include/zx/Simplify.hpp
     ${PROJECT_SOURCE_DIR}/include/zx/Utils.hpp
-    ${PROJECT_SOURCE_DIR}/include/zx/Expression.hpp
     ${PROJECT_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
     zx/Rational.cpp
     zx/ZXDiagram.cpp
     zx/Rules.cpp
     zx/Simplify.cpp
     zx/Utils.cpp
-    zx/Expression.cpp
     zx/FunctionalityConstruction.cpp)
   target_link_libraries(${PROJECT_NAME}_zx PUBLIC MQT::${PROJECT_NAME})
   target_include_directories(${PROJECT_NAME}_zx PUBLIC ${PROJECT_SOURCE_DIR}/include/zx

@@ -1,8 +1,4 @@
-#include "Expression.hpp"
-
-#include <algorithm>
-#include <cstddef>
-#include <string>
+#include "operations/Expression.hpp"
 
 namespace sym {
 
