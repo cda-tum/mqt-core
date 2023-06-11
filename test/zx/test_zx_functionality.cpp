@@ -10,8 +10,10 @@
 #include "zx/Simplify.hpp"
 #include "zx/ZXDiagram.hpp"
 
-#include "gtest/gtest.h"
+#include <array>
+#include <gtest/gtest.h>
 #include <iostream>
+#include <sstream>
 
 class ZXDiagramTest : public ::testing::Test {
 public:
