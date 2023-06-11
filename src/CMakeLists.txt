@@ -1,6 +1,3 @@
-# add MQT::DDPackage library
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package" EXCLUDE_FROM_ALL)
-
 # add MQT::zx library
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx" EXCLUDE_FROM_ALL)
 
@@ -91,6 +88,24 @@ if(NOT TARGET ${PROJECT_NAME}_dd)
   # add DD Package library
   add_library(
     ${PROJECT_NAME}_dd
+    ${PROJECT_SOURCE_DIR}/include/dd/Complex.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/ComplexCache.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/ComplexNumbers.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/ComplexTable.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/ComplexValue.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/ComputeTable.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/Control.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/Definitions.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/Edge.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/Export.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/GateMatrixDefinitions.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/Node.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/Package.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/ToffoliTable.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/UnaryComputeTable.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/DensityNoiseTable.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/StochasticNoiseOperationTable.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/UniqueTable.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/FunctionalityConstruction.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/NoiseFunctionality.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/Operations.hpp
@@ -99,7 +114,7 @@ if(NOT TARGET ${PROJECT_NAME}_dd)
     dd/NoiseFunctionality.cpp
     dd/Operations.cpp
     dd/Simulation.cpp)
-  target_link_libraries(${PROJECT_NAME}_dd PUBLIC MQT::DDPackage MQT::${PROJECT_NAME})
+  target_link_libraries(${PROJECT_NAME}_dd PUBLIC MQT::${PROJECT_NAME})
   target_include_directories(${PROJECT_NAME}_dd PUBLIC ${PROJECT_SOURCE_DIR}/include/dd
                                                        ${PROJECT_BINARY_DIR}/include/dd)
   add_library(MQT::${PROJECT_NAME}_dd ALIAS ${PROJECT_NAME}_dd)

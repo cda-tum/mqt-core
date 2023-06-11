@@ -14,8 +14,10 @@ package_add_test(${PROJECT_NAME}_test ${PROJECT_NAME} unittests/test_io.cpp
 package_add_test(
   ${PROJECT_NAME}_test_dd
   ${PROJECT_NAME}_dd
-  unittests/test_dd_functionality.cpp
-  unittests/test_dd_noise_functionality.cpp
+  dd/test_complex.cpp
+  dd/test_package.cpp
+  dd/test_dd_functionality.cpp
+  dd/test_dd_noise_functionality.cpp
   algorithms/eval_dynamic_circuits.cpp
   algorithms/test_qft.cpp
   algorithms/test_grover.cpp
