@@ -7,7 +7,7 @@
 #pragma once
 
 #include "QuantumComputation.hpp"
-#include "ZXDiagram.hpp"
+#include "zx/ZXDiagram.hpp"
 
 #include <cstddef>
 

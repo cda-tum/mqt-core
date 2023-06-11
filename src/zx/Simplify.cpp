@@ -1,8 +1,7 @@
-#include "Simplify.hpp"
+#include "zx/Simplify.hpp"
 
-#include "Definitions.hpp"
-#include "Rules.hpp"
-#include "ZXDiagram.hpp"
+#include "zx/Rules.hpp"
+#include "zx/ZXDiagram.hpp"
 
 #include <utility>
 

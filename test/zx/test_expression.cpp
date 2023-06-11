@@ -1,6 +1,6 @@
-#include "Rational.hpp"
-#include "Utils.hpp"
 #include "operations/Expression.hpp"
+#include "zx/Rational.hpp"
+#include "zx/Utils.hpp"
 
 #include <gtest/gtest.h>
 #include <stdexcept>

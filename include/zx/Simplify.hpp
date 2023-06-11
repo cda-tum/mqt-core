@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Definitions.hpp"
-#include "Rules.hpp"
-#include "ZXDiagram.hpp"
+#include "zx/Definitions.hpp"
+#include "zx/Rules.hpp"
+#include "zx/ZXDiagram.hpp"
 
 #include <cstddef>
 

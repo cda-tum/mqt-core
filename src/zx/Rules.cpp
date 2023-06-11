@@ -1,9 +1,9 @@
-#include "Rules.hpp"
+#include "zx/Rules.hpp"
 
-#include "Definitions.hpp"
-#include "Rational.hpp"
-#include "Utils.hpp"
-#include "ZXDiagram.hpp"
+#include "zx/Definitions.hpp"
+#include "zx/Rational.hpp"
+#include "zx/Utils.hpp"
+#include "zx/ZXDiagram.hpp"
 
 #include <algorithm>
 #include <cstddef>

@@ -4,11 +4,11 @@
  * more information.
  */
 
-#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
-#include "Simplify.hpp"
-#include "ZXDiagram.hpp"
+#include "zx/Definitions.hpp"
 #include "zx/FunctionalityConstruction.hpp"
+#include "zx/Simplify.hpp"
+#include "zx/ZXDiagram.hpp"
 
 #include "gtest/gtest.h"
 #include <iostream>

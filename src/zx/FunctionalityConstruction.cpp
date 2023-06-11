@@ -6,9 +6,9 @@
 
 #include "zx/FunctionalityConstruction.hpp"
 
-#include "Definitions.hpp"
-#include "Rational.hpp"
-#include "ZXDiagram.hpp"
+#include "zx/Definitions.hpp"
+#include "zx/Rational.hpp"
+#include "zx/ZXDiagram.hpp"
 
 #include <algorithm>
 #include <string>
