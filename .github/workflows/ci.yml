@@ -40,11 +40,11 @@ jobs:
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_QFR_TESTS=ON ${{ matrix.config.toolchain }}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_QFR_TESTS=ON ${{ matrix.config.toolchain }}
       - name: Build
-        run: cmake --build build --config Debug
+        run: cmake --build build --config Release
       - name: Test
-        run: ctest -C Debug --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   coverage:
     name: C++ Coverage
