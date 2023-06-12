@@ -75,13 +75,14 @@ if(NOT TARGET ${PROJECT_NAME})
   target_link_libraries(${PROJECT_NAME} PUBLIC project_options project_warnings)
 
   # add MQT alias
-  add_library(MQT::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+  add_library(MQT::Core ALIAS ${PROJECT_NAME})
+  add_library(MQT::${OLD_PROJECT_NAME} ALIAS ${PROJECT_NAME})
 endif()
 
-if(NOT TARGET ${PROJECT_NAME}_dd)
+if(NOT TARGET ${PROJECT_NAME}-dd)
   # add DD Package library
   add_library(
-    ${PROJECT_NAME}_dd
+    ${PROJECT_NAME}-dd
     ${PROJECT_SOURCE_DIR}/include/dd/Complex.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/ComplexCache.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/ComplexNumbers.hpp
@@ -108,16 +109,17 @@ if(NOT TARGET ${PROJECT_NAME}_dd)
     dd/NoiseFunctionality.cpp
     dd/Operations.cpp
     dd/Simulation.cpp)
-  target_link_libraries(${PROJECT_NAME}_dd PUBLIC MQT::${PROJECT_NAME})
-  target_include_directories(${PROJECT_NAME}_dd PUBLIC ${PROJECT_SOURCE_DIR}/include/dd
+  target_link_libraries(${PROJECT_NAME}-dd PUBLIC ${PROJECT_NAME})
+  target_include_directories(${PROJECT_NAME}-dd PUBLIC ${PROJECT_SOURCE_DIR}/include/dd
                                                        ${PROJECT_BINARY_DIR}/include/dd)
-  add_library(MQT::${PROJECT_NAME}_dd ALIAS ${PROJECT_NAME}_dd)
+  add_library(MQT::CoreDD ALIAS ${PROJECT_NAME}-dd)
+  add_library(MQT::${OLD_PROJECT_NAME}_dd ALIAS ${PROJECT_NAME}-dd)
 endif()
 
-if(NOT TARGET ${PROJECT_NAME}_zx)
+if(NOT TARGET ${PROJECT_NAME}-zx)
   # add ZX package library
   add_library(
-    ${PROJECT_NAME}_zx
+    ${PROJECT_NAME}-zx
     ${PROJECT_SOURCE_DIR}/include/zx/Rational.hpp
     ${PROJECT_SOURCE_DIR}/include/zx/ZXDiagram.hpp
     ${PROJECT_SOURCE_DIR}/include/zx/Definitions.hpp
@@ -131,18 +133,17 @@ if(NOT TARGET ${PROJECT_NAME}_zx)
     zx/Simplify.cpp
     zx/Utils.cpp
     zx/FunctionalityConstruction.cpp)
-  target_link_libraries(${PROJECT_NAME}_zx PUBLIC MQT::${PROJECT_NAME})
-  target_include_directories(${PROJECT_NAME}_zx PUBLIC ${PROJECT_SOURCE_DIR}/include/zx
+  target_link_libraries(${PROJECT_NAME}-zx PUBLIC ${PROJECT_NAME})
+  target_include_directories(${PROJECT_NAME}-zx PUBLIC ${PROJECT_SOURCE_DIR}/include/zx
                                                        ${PROJECT_BINARY_DIR}/include/zx)
-  add_library(MQT::${PROJECT_NAME}_zx ALIAS ${PROJECT_NAME}_zx)
 
   add_subdirectory("${PROJECT_SOURCE_DIR}/extern/boost/config" "extern/boost/config"
                    EXCLUDE_FROM_ALL)
-  target_link_libraries(${PROJECT_NAME}_zx PUBLIC Boost::config)
+  target_link_libraries(${PROJECT_NAME}-zx PUBLIC Boost::config)
 
   add_subdirectory("${PROJECT_SOURCE_DIR}/extern/boost/multiprecision"
                    "extern/boost/multiprecision" EXCLUDE_FROM_ALL)
-  target_link_libraries(${PROJECT_NAME}_zx PUBLIC Boost::multiprecision)
+  target_link_libraries(${PROJECT_NAME}-zx PUBLIC Boost::multiprecision)
   # the following sets the SYSTEM flag for the include dirs of the boost libs to suppress warnings
   # cmake-lint: disable=C0307
   set_target_properties(
@@ -156,15 +157,19 @@ if(NOT TARGET ${PROJECT_NAME}_zx)
 
   # # link to GMP libraries if present
   if(GMP_FOUND)
-    target_compile_definitions(${PROJECT_NAME}_zx PUBLIC GMP)
-    target_link_libraries(${PROJECT_NAME}_zx PUBLIC GMP::gmp GMP::gmpxx)
+    target_compile_definitions(${PROJECT_NAME}-zx PUBLIC GMP)
+    target_link_libraries(${PROJECT_NAME}-zx PUBLIC GMP::gmp GMP::gmpxx)
   endif()
+
+  # add MQT alias
+  add_library(MQT::CoreZX ALIAS ${PROJECT_NAME}-zx)
+  add_library(MQT::${OLD_PROJECT_NAME}_zx ALIAS ${PROJECT_NAME}-zx)
 endif()
 
-if(NOT TARGET ${PROJECT_NAME}_ecc)
+if(NOT TARGET ${PROJECT_NAME}-ecc)
   # add ECC package library
   add_library(
-    ${PROJECT_NAME}_ecc
+    ${PROJECT_NAME}-ecc
     ${PROJECT_SOURCE_DIR}/include/ecc/Ecc.hpp
     ${PROJECT_SOURCE_DIR}/include/ecc/Id.hpp
     ${PROJECT_SOURCE_DIR}/include/ecc/Q3Shor.hpp
@@ -181,37 +186,41 @@ if(NOT TARGET ${PROJECT_NAME}_ecc)
     ecc/Q9Surface.cpp
     ecc/Q18Surface.cpp)
 
-  target_link_libraries(${PROJECT_NAME}_ecc PUBLIC MQT::${PROJECT_NAME})
-  target_include_directories(${PROJECT_NAME}_ecc PUBLIC ${PROJECT_SOURCE_DIR}/include/ecc
+  target_link_libraries(${PROJECT_NAME}-ecc PUBLIC ${PROJECT_NAME})
+  target_include_directories(${PROJECT_NAME}-ecc PUBLIC ${PROJECT_SOURCE_DIR}/include/ecc
                                                         ${PROJECT_BINARY_DIR}/include/ecc)
-  add_library(MQT::${PROJECT_NAME}_ecc ALIAS ${PROJECT_NAME}_ecc)
+
+  # add MQT alias
+  add_library(MQT::CoreECC ALIAS ${PROJECT_NAME}-ecc)
+  add_library(MQT::${OLD_PROJECT_NAME}_ecc ALIAS ${PROJECT_NAME}-ecc)
 endif()
 
-# add pybind11 library
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11" "extern/pybind11" EXCLUDE_FROM_ALL)
+if(NOT TARGET ${PROJECT_NAME}-python)
+  # add pybind11 library
+  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11" "extern/pybind11" EXCLUDE_FROM_ALL)
 
-if(NOT TARGET pybind11_json)
-  # add pybind11_json library
-  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11_json" "extern/pybind11_json"
-                   EXCLUDE_FROM_ALL)
-endif()
+  if(NOT TARGET pybind11_json)
+    # add pybind11_json library
+    add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11_json" "extern/pybind11_json"
+                     EXCLUDE_FROM_ALL)
+  endif()
 
-if(NOT TARGET ${PROJECT_NAME}_python)
   # add Python interface library
   add_library(
-    ${PROJECT_NAME}_python
+    ${PROJECT_NAME}-python
     ${PROJECT_SOURCE_DIR}/include/python/qiskit/QuantumCircuit.hpp
     ${PROJECT_SOURCE_DIR}/include/python/qiskit/QasmQobjExperiment.hpp
     python/qiskit/QuantumCircuit.cpp python/qiskit/QasmQobjExperiment.cpp)
 
   # set include directories
-  target_include_directories(${PROJECT_NAME}_python PUBLIC ${PROJECT_SOURCE_DIR}/include/python
+  target_include_directories(${PROJECT_NAME}-python PUBLIC ${PROJECT_SOURCE_DIR}/include/python
                                                            ${PROJECT_BINARY_DIR}/include/python)
 
   # link with main project library and pybind11 libraries
-  target_link_libraries(${PROJECT_NAME}_python PRIVATE ${PROJECT_NAME} pybind11::pybind11
+  target_link_libraries(${PROJECT_NAME}-python PRIVATE ${PROJECT_NAME} pybind11::pybind11
                                                        pybind11_json)
 
   # add MQT alias
-  add_library(MQT::${PROJECT_NAME}_python ALIAS ${PROJECT_NAME}_python)
+  add_library(MQT::CorePython ALIAS ${PROJECT_NAME}-python)
+  add_library(MQT::${OLD_PROJECT_NAME}_python ALIAS ${PROJECT_NAME}-python)
 endif()
