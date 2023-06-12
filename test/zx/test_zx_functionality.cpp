@@ -15,12 +15,12 @@
 #include <iostream>
 #include <sstream>
 
-class ZXDiagramTest : public ::testing::Test {
+class ZXFunctionalityTest : public ::testing::Test {
 public:
   qc::QuantumComputation qc;
 };
 
-TEST_F(ZXDiagramTest, parseQasm) {
+TEST_F(ZXFunctionalityTest, parseQasm) {
   std::stringstream ss{};
   ss << "OPENQASM 2.0;"
      << "include \"qelib1.inc\";"
@@ -75,7 +75,7 @@ TEST_F(ZXDiagramTest, parseQasm) {
   }
 }
 
-TEST_F(ZXDiagramTest, complexCircuit) {
+TEST_F(ZXFunctionalityTest, complexCircuit) {
   std::stringstream ss{};
   ss << "// i 1 0 2\n"
      << "// o 0 1 2\n"
@@ -139,7 +139,7 @@ TEST_F(ZXDiagramTest, complexCircuit) {
   EXPECT_TRUE(diag.connected(diag.getInput(2), diag.getOutput(2)));
 }
 
-TEST_F(ZXDiagramTest, Phase) {
+TEST_F(ZXFunctionalityTest, Phase) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(2);
   qc.phase(0, zx::PI / 4);
@@ -154,7 +154,7 @@ TEST_F(ZXDiagramTest, Phase) {
   EXPECT_TRUE(diag.isIdentity());
 }
 
-TEST_F(ZXDiagramTest, Compound) {
+TEST_F(ZXFunctionalityTest, Compound) {
   std::stringstream ss;
   ss << "OPENQASM 2.0;"
      << "include \"qelib1.inc\";"
@@ -173,7 +173,7 @@ TEST_F(ZXDiagramTest, Compound) {
   EXPECT_TRUE(diag.isIdentity());
 }
 
-TEST_F(ZXDiagramTest, UnsupportedMultiControl) {
+TEST_F(ZXFunctionalityTest, UnsupportedMultiControl) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(4);
   qc.x(0, {1_pc, 2_pc, 3_pc});
@@ -183,7 +183,7 @@ TEST_F(ZXDiagramTest, UnsupportedMultiControl) {
                zx::ZXException);
 }
 
-TEST_F(ZXDiagramTest, UnsupportedControl) {
+TEST_F(ZXFunctionalityTest, UnsupportedControl) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(2);
   qc.y(0, 1_pc);
@@ -193,7 +193,7 @@ TEST_F(ZXDiagramTest, UnsupportedControl) {
                zx::ZXException);
 }
 
-TEST_F(ZXDiagramTest, UnsupportedControl2) {
+TEST_F(ZXFunctionalityTest, UnsupportedControl2) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(3);
   qc.y(0, {1_pc, 2_pc});
@@ -203,7 +203,7 @@ TEST_F(ZXDiagramTest, UnsupportedControl2) {
                zx::ZXException);
 }
 
-TEST_F(ZXDiagramTest, InitialLayout) {
+TEST_F(ZXFunctionalityTest, InitialLayout) {
   qc = qc::QuantumComputation(2);
   qc::Permutation layout{};
   layout[0] = 1;
@@ -225,7 +225,7 @@ TEST_F(ZXDiagramTest, InitialLayout) {
   EXPECT_TRUE(d.isIdentity());
 }
 
-TEST_F(ZXDiagramTest, FromSymbolic) {
+TEST_F(ZXFunctionalityTest, FromSymbolic) {
   const sym::Variable x{"x"};
   const sym::Term xTerm{1.0, x};
   qc = qc::QuantumComputation{1};
@@ -238,7 +238,7 @@ TEST_F(ZXDiagramTest, FromSymbolic) {
   EXPECT_TRUE(diag.isIdentity());
 }
 
-TEST_F(ZXDiagramTest, RZ) {
+TEST_F(ZXFunctionalityTest, RZ) {
   qc = qc::QuantumComputation(1);
   qc.rz(0, zx::PI / 8);
 
@@ -256,7 +256,7 @@ TEST_F(ZXDiagramTest, RZ) {
   EXPECT_TRUE(d.connected(d.getInput(0), d.getOutput(0)));
 }
 
-TEST_F(ZXDiagramTest, ISWAP) {
+TEST_F(ZXFunctionalityTest, ISWAP) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(2);
   qc.iswap(0, 1);
