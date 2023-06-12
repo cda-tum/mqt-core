@@ -59,7 +59,7 @@ endif()
 add_subdirectory(src)
 
 # add test code
-option(BUILD_MQT_CORE_TESTS "Also build tests for the MQT Core project")
+option(BUILD_MQT_CORE_TESTS "Also build tests for the MQT Core project" ON)
 if(BUILD_MQT_CORE_TESTS)
   check_submodule_present(googletest)
   enable_testing()
