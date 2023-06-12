@@ -1,11 +1,4 @@
-/*
- * This file is part of the MQT DD Package which is released under the MIT
- * license. See file README.md or go to
- * https://www.cda.cit.tum.de/research/quantum_dd/ for more information.
- */
-
-#ifndef DDcomplex_H
-#define DDcomplex_H
+#pragma once
 
 #include "Complex.hpp"
 #include "ComplexCache.hpp"
@@ -242,4 +235,3 @@ struct ComplexNumbers {
   }
 };
 } // namespace dd
-#endif

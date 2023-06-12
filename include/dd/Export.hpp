@@ -1,11 +1,4 @@
-/*
- * This file is part of the MQT DD Package which is released under the MIT
- * license. See file README.md or go to
- * https://www.cda.cit.tum.de/research/quantum_dd/ for more information.
- */
-
-#ifndef DDexport_H
-#define DDexport_H
+#pragma once
 
 #include "Complex.hpp"
 #include "ComplexNumbers.hpp"
@@ -984,5 +977,3 @@ static void exportEdgeWeights(const Edge& edge, std::ostream& stream) {
 }
 
 } // namespace dd
-
-#endif // DDexport_H

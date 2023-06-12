@@ -1,11 +1,4 @@
-/*
- * This file is part of the MQT DD Package which is released under the MIT
- * license. See file README.md or go to
- * https://www.cda.cit.tum.de/research/quantum_dd/ for more information.
- */
-
-#ifndef DD_PACKAGE_COMPLEXCACHE_HPP
-#define DD_PACKAGE_COMPLEXCACHE_HPP
+#pragma once
 
 #include "Complex.hpp"
 #include "ComplexTable.hpp"
@@ -132,5 +125,3 @@ private:
   std::size_t peakCount = 0;
 };
 } // namespace dd
-
-#endif // DD_PACKAGE_COMPLEXCACHE_HPP
