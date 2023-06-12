@@ -868,7 +868,7 @@ static void serializeMatrix(const mEdge& basic, std::int64_t& idx,
                             std::ostream& os, bool writeBinary = false) {
   if (!basic.isTerminal()) {
     for (auto& e : basic.p->e) {
-      if (const auto [_, success] = visited.insert(e.p); success) {
+      if (visited.insert(e.p).second) {
         serializeMatrix(e, idx, nodeIndex, visited, os, writeBinary);
       }
     }
