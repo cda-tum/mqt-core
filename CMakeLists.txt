@@ -8,7 +8,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 project(
   mqt-core
   LANGUAGES CXX
-  DESCRIPTION "MQT Core - The core library of the Munich Quantum Toolkit")
+  DESCRIPTION "MQT Core - The Backbone of the Munich Quantum Toolkit")
 
 # this is to create aliases and maintain backwards compatibility
 set(OLD_PROJECT_NAME "qfr")
