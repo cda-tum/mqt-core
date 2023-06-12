@@ -39,7 +39,7 @@ jobs:
           echo $CXX
           $CC --version
           $CXX --version
-          cmake -S . -B build -DBUILD_QFR_TESTS=ON -DBUILD_DD_PACKAGE_TESTS=ON -DBUILD_ZX_TESTS=ON
+          cmake -S . -B build
 
       - name: Run cpp-linter
         uses: cpp-linter/cpp-linter-action@v2
