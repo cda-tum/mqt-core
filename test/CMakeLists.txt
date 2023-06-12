@@ -36,5 +36,5 @@ package_add_test(
   zx/test_simplify.cpp
   zx/test_zx_functionality.cpp)
 
-package_add_test(${PROJECT_NAME}-test-ecc ${PROJECT_NAME}_ecc unittests/test_ecc_functionality.cpp)
+package_add_test(${PROJECT_NAME}-test-ecc ${PROJECT_NAME}-ecc unittests/test_ecc_functionality.cpp)
 target_link_libraries(${PROJECT_NAME}-test-ecc PRIVATE ${PROJECT_NAME}-dd)
