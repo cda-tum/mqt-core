@@ -1,10 +1,9 @@
-#include "Definitions.hpp"
-#include "Rational.hpp"
-#include "Simplify.hpp"
-#include "ZXDiagram.hpp"
+#include "zx/Definitions.hpp"
+#include "zx/Rational.hpp"
+#include "zx/Simplify.hpp"
+#include "zx/ZXDiagram.hpp"
 
-#include <cstddef>
-#include <cstdint>
+#include <array>
 #include <gtest/gtest.h>
 
 class ZXDiagramTest : public ::testing::Test {

@@ -1,5 +1,5 @@
-#include "Simplify.hpp"
-#include "ZXDiagram.hpp"
+#include "zx/Simplify.hpp"
+#include "zx/ZXDiagram.hpp"
 
 #include <gtest/gtest.h>
 

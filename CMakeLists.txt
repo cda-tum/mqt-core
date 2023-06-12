@@ -41,9 +41,16 @@ if(NOT TARGET project_options)
 endif()
 
 check_submodule_present(json)
-check_submodule_present(zx)
 check_submodule_present(pybind11)
 check_submodule_present(pybind11_json)
+check_submodule_present(boost/config)
+check_submodule_present(boost/multiprecision)
+set(BOOST_MP_STANDALONE ON)
+
+find_package(GMP)
+if(NOT GMP_FOUND)
+  message(NOTICE "Did not find GMP. Using Boost multiprecision library instead.")
+endif()
 
 # add main library code
 add_subdirectory(src)

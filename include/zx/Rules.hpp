@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Definitions.hpp"
+#include "zx/Definitions.hpp"
 
 namespace zx {
 class ZXDiagram;

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Definitions.hpp"
-#include "Expression.hpp"
-#include "Utils.hpp"
+#include "operations/Expression.hpp"
+#include "zx/Definitions.hpp"
+#include "zx/Utils.hpp"
 
 #include <cstddef>
 #include <optional>

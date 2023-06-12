@@ -1,9 +1,9 @@
-#include "ZXDiagram.hpp"
+#include "zx/ZXDiagram.hpp"
 
-#include "Definitions.hpp"
-#include "Expression.hpp"
-#include "Rational.hpp"
-#include "Utils.hpp"
+#include "operations/Expression.hpp"
+#include "zx/Definitions.hpp"
+#include "zx/Rational.hpp"
+#include "zx/Utils.hpp"
 
 #include <algorithm>
 #include <unordered_map>

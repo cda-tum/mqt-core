@@ -9,7 +9,7 @@ endif()
 
 # add unit tests
 package_add_test(${PROJECT_NAME}_test ${PROJECT_NAME} unittests/test_io.cpp
-                 unittests/test_qfr_functionality.cpp)
+                 unittests/test_qfr_functionality.cpp unittests/test_symbolic.cpp)
 
 package_add_test(
   ${PROJECT_NAME}_test_dd
@@ -27,8 +27,14 @@ package_add_test(
   algorithms/test_random_clifford.cpp
   algorithms/test_qpe.cpp)
 
-package_add_test(${PROJECT_NAME}_test_zx ${PROJECT_NAME}_zx unittests/test_zx_functionality.cpp
-                 unittests/test_symbolic.cpp)
+package_add_test(
+  ${PROJECT_NAME}_test_zx
+  ${PROJECT_NAME}_zx
+  zx/test_zx.cpp
+  zx/test_rational.cpp
+  zx/test_expression.cpp
+  zx/test_simplify.cpp
+  zx/test_zx_functionality.cpp)
 
 package_add_test(${PROJECT_NAME}_test_ecc ${PROJECT_NAME}_ecc unittests/test_ecc_functionality.cpp)
 

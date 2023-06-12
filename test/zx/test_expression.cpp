@@ -1,6 +1,6 @@
-#include "Expression.hpp"
-#include "Rational.hpp"
-#include "Utils.hpp"
+#include "operations/Expression.hpp"
+#include "zx/Rational.hpp"
+#include "zx/Utils.hpp"
 
 #include <gtest/gtest.h>
 #include <stdexcept>
@@ -82,13 +82,13 @@ TEST_F(ExpressionTest, mult) {
 }
 
 TEST_F(ExpressionTest, div) {
-  sym::Expression<double, zx::PiRational> e(x);
+  sym::Expression<double, Rational> e(x);
 
   e = e / 2.0;
 
   EXPECT_PRED_FORMAT2(testing::DoubleLE, e[0].getCoeff(), 0.5);
 
-  e = e / zx::PiRational(0.5);
+  e = e / Rational(0.5);
 
   EXPECT_PRED_FORMAT2(testing::DoubleLE, e[0].getCoeff(), 1);
 
