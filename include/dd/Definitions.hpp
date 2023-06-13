@@ -84,18 +84,6 @@ constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) {
   return lhs;
 }
 
-// alternative hash combinator (from Google's city hash,
-// https://github.com/google/cityhash/blob/master/COPYING)
-//    constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) {
-//        const std::size_t kMul = 0x9ddfea08eb382d69ULL;
-//        std::size_t a = (lhs ^ rhs) * kMul;
-//        a ^= (a >> 47);
-//        std::size_t b = (rhs ^ a) * kMul;
-//        b ^= (b >> 47);
-//        b *= kMul;
-//        return b;
-//    }
-
 // calculates the Units in Last Place (ULP) distance of two floating point
 // numbers
 [[maybe_unused]] static std::size_t ulpDistance(fp a, fp b) {

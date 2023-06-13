@@ -743,9 +743,9 @@ export2Dot(Edge basic, const std::string& outputFilename, bool colored = true,
     std::ostringstream oss;
     oss << "dot -Tsvg " << outputFilename << " -o "
         << outputFilename.substr(0, outputFilename.find_last_of('.')) << ".svg";
-    auto str =
+    const auto str =
         oss.str(); // required to avoid immediate deallocation of temporary
-    [[maybe_unused]] auto rc = std::system(str.c_str());
+    std::system(str.c_str());
   }
 }
 
@@ -868,7 +868,7 @@ static void serializeMatrix(const mEdge& basic, std::int64_t& idx,
                             std::ostream& os, bool writeBinary = false) {
   if (!basic.isTerminal()) {
     for (auto& e : basic.p->e) {
-      if (auto [iter, success] = visited.insert(e.p); success) {
+      if (visited.insert(e.p).second) {
         serializeMatrix(e, idx, nodeIndex, visited, os, writeBinary);
       }
     }

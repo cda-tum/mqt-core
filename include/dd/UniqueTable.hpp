@@ -102,12 +102,6 @@ public:
     const auto key = hash(e.p);
     const auto v = e.p->v;
 
-    // successors of a node shall either have successive variable numbers or be
-    // terminals
-    for ([[maybe_unused]] const auto& edge : e.p->e) {
-      assert(edge.p->v == v - 1 || edge.isTerminal());
-    }
-
     // search bucket in table corresponding to hashed value for the given node
     // and return it if found.
     if (const auto hashedNode = searchTable(e, key, keepNode);
@@ -260,9 +254,6 @@ public:
     if (remaining > gcLimit / 10 * 9) {
       gcLimit = remaining + INITIAL_GC_LIMIT;
     }
-    //            else if (remaining < gcLimit / 32) {
-    //                gcLimit /= 4;
-    //            }
     nodeCount = remaining;
     return collected;
   }
@@ -430,12 +421,6 @@ private:
 
         // variables should stay the same
         assert(p->v == e.p->v);
-
-        // successors of a node shall either have successive variable numbers or
-        // be terminals
-        for ([[maybe_unused]] const auto& edge : e.p->e) {
-          assert(edge.p->v == v - 1 || edge.isTerminal());
-        }
 
         return {p, e.w};
       }
