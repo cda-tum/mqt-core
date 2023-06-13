@@ -49,7 +49,7 @@ jobs:
 
       - if: matrix.language == 'cpp'
         name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_QFR_TESTS=ON -DBINDINGS=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
       - if: matrix.language == 'cpp'
         name: Build

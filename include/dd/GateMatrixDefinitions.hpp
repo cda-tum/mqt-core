@@ -1,11 +1,4 @@
-/*
- * This file is part of the MQT DD Package which is released under the MIT
- * license. See file README.md or go to
- * https://www.cda.cit.tum.de/research/quantum_dd/ for more information.
- */
-
-#ifndef DD_PACKAGE_GATEMATRIXDEFINITIONS_H
-#define DD_PACKAGE_GATEMATRIXDEFINITIONS_H
+#pragma once
 
 #include "ComplexValue.hpp"
 #include "Definitions.hpp"
@@ -233,4 +226,3 @@ inline TwoQubitGateMatrix XXPlusYYmat(const fp theta, const fp beta = 0.) {
 }
 // NOLINTEND(readability-identifier-naming)
 } // namespace dd
-#endif // DD_PACKAGE_GATEMATRIXDEFINITIONS_H

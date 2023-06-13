@@ -6,9 +6,12 @@ cmake_policy(SET CMP0069 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 
 project(
-  qfr
+  mqt-core
   LANGUAGES CXX
-  DESCRIPTION "MQT QFR - A library for Quantum Functionality Representation")
+  DESCRIPTION "MQT Core - The Backbone of the Munich Quantum Toolkit")
+
+# this is to create aliases and maintain backwards compatibility
+set(OLD_PROJECT_NAME "qfr")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -56,8 +59,8 @@ endif()
 add_subdirectory(src)
 
 # add test code
-option(BUILD_QFR_TESTS "Also build tests for QFR project")
-if(BUILD_QFR_TESTS)
+option(BUILD_MQT_CORE_TESTS "Also build tests for the MQT Core project" ON)
+if(BUILD_MQT_CORE_TESTS)
   check_submodule_present(googletest)
   enable_testing()
   include(GoogleTest)

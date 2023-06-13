@@ -1,11 +1,4 @@
-/*
- * This file is part of the MQT DD Package which is released under the MIT
- * license. See file README.md or go to
- * https://www.cda.cit.tum.de/research/quantum_dd/ for more information.
- */
-
-#ifndef DDpackage_DATATYPES_HPP
-#define DDpackage_DATATYPES_HPP
+#pragma once
 
 #include <complex>
 #include <cstdint>
@@ -101,6 +94,4 @@ constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) {
   }
   return ulps;
 }
-
 } // namespace dd
-#endif // DDpackage_DATATYPES_HPP
