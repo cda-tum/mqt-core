@@ -71,6 +71,9 @@ namespace qc::qiskit {
             } else if (NATIVELY_SUPPORTED_GATES.count(instructionName) != 0) {
                 auto&&   qubits = instruction.attr("qubits").cast<py::list>();
                 py::list params{};
+                if (py::hasattr(instruction, "params")) {
+                    params = instruction.attr("params");
+                }
                 // natively supported operations
                 if (instructionName == "i" || instructionName == "id" || instructionName == "iden") {
                     addOperation(qc, I, qubits, params);
