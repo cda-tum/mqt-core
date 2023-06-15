@@ -1,12 +1,12 @@
 ![OS](https://img.shields.io/badge/os-linux%20%7C%20macos%20%7C%20windows-blue?style=flat-square)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
-[![CI](https://img.shields.io/github/actions/workflow/status/cda-tum/qfr/ci.yml?branch=main&style=flat-square&logo=github&label=c%2B%2B)](https://github.com/cda-tum/qfr/actions/workflows/ci.yml)
-[![codecov](https://img.shields.io/codecov/c/github/cda-tum/qfr?style=flat-square&logo=codecov)](https://codecov.io/gh/cda-tum/qfr)
+[![CI](https://img.shields.io/github/actions/workflow/status/cda-tum/mqt-core/ci.yml?branch=main&style=flat-square&logo=github&label=c%2B%2B)](https://github.com/cda-tum/mqt-core/actions/workflows/ci.yml)
+[![codecov](https://img.shields.io/codecov/c/github/cda-tum/mqt-core?style=flat-square&logo=codecov)](https://codecov.io/gh/cda-tum/mqt-core)
 
 <p align="center">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/cda-tum/qfr/main/extern/mqt_light.png" width="60%">
-   <img src="https://raw.githubusercontent.com/cda-tum/qfr/main/extern/mqt_dark.png" width="60%">
+   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/cda-tum/mqt-core/main/extern/mqt_light.png" width="60%">
+   <img src="https://raw.githubusercontent.com/cda-tum/mqt-core/main/extern/mqt_dark.png" width="60%">
  </picture>
 </p>
 
@@ -29,7 +29,7 @@ MQT Core encompasses:
 - `MQT::CoreECC`: A library for working with error correcting codes (ECCs) for quantum computing.
 - `MQT::CorePython`: A Python interface for the MQT Core library (e.g., facilitating the import of Qiskit QuantumCircuits).
 
-If you have any questions, feel free to create a [discussion](https://github.com/cda-tum/qfr/discussions) or an [issue](https://github.com/cda-tum/qfr/issues) on [GitHub](https://github.com/cda-tum/qfr).
+If you have any questions, feel free to create a [discussion](https://github.com/cda-tum/mqt-core/discussions) or an [issue](https://github.com/cda-tum/mqt-core/issues) on [GitHub](https://github.com/cda-tum/mqt-core).
 
 ### System Requirements
 
