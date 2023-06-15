@@ -33,21 +33,39 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: "${{matrix.config.os}}"
+      - name: Set up mold as linker (Linux only)
+        uses: rui314/setup-mold@v1
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_QFR_TESTS=ON ${{ matrix.config.toolchain }}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.config.toolchain }}
       - name: Build
         run: cmake --build build --config Release
       - name: Test
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
-      - if: runner.os == 'Linux'
-        name: Coverage
-        run: |
-          cmake -S . -B buildCov -DCMAKE_BUILD_TYPE=Debug -DBUILD_QFR_TESTS=ON -DENABLE_COVERAGE=ON
-          cmake --build buildCov --config Debug
-          ctest -C Debug --output-on-failure --test-dir buildCov --repeat until-pass:3 --timeout 300
 
-      - if: runner.os == 'Linux'
-        name: Upload coverage to Codecov
+  coverage:
+    name: C++ Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: "coverage"
+      - name: Set up mold as linker
+        uses: rui314/setup-mold@v1
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+      - name: Build
+        run: cmake --build build --config Debug
+      - name: Test
+        run: ctest -C Debug --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3.1.4
         with:
           fail_ci_if_error: true
