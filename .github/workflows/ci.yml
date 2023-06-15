@@ -40,7 +40,7 @@ jobs:
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.config.toolchain }}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.config.toolchain }} -DENABLE_IPO=ON
       - name: Build
         run: cmake --build build --config Release
       - name: Test
