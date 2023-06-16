@@ -26,7 +26,9 @@ exclude_patterns = [
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
+    "mqt": ("https://mqt.readthedocs.io/en/latest/", None),
 }
+intersphinx_disabled_reftypes = ["*"]
 
 myst_enable_extensions = [
     "colon_fence",
