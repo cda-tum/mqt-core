@@ -10,6 +10,8 @@
  </picture>
 </p>
 
+<!-- SPHINX-START -->
+
 # MQT Core - The Backbone of the Munich Quantum Toolkit
 
 The MQT Core library forms the backbone of the quantum software tools developed as part of the _Munich Quantum Toolkit_ (_MQT_)[^1] by the [Chair for Design Automation](https://www.cda.cit.tum.de/) at the [Technical University of Munich](https://www.tum.de/). This includes the following tools:
