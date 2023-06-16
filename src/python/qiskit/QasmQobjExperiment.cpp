@@ -1,4 +1,4 @@
-#include "qiskit/QasmQobjExperiment.hpp"
+#include "python/qiskit/QasmQobjExperiment.hpp"
 
 void qc::qiskit::QasmQobjExperiment::import(qc::QuantumComputation& qc,
                                             const py::object& circ) {

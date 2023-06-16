@@ -1,4 +1,4 @@
-#include "qiskit/QuantumCircuit.hpp"
+#include "python/qiskit/QuantumCircuit.hpp"
 
 void qc::qiskit::QuantumCircuit::import(qc::QuantumComputation& qc,
                                         const py::object& circ) {
