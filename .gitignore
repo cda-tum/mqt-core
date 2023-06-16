@@ -1,10 +1,13 @@
 /build*
 /cmake-build-*
-.idea
+.idea/
+.cache/
+.vscode/
 
 __pycache__/
 *.so
 *.py[cod]
+.ipynb_checkpoints/
 
 bin/
 build/
@@ -19,3 +22,18 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+src/mqt/core/_version.py
+
+# Sphinx documentation
+docs/_build/
