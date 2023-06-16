@@ -12,7 +12,7 @@
 
 <!-- SPHINX-START -->
 
-# MQT Core - The Backbone of the Munich Quantum Toolkit
+# MQT Core - The Backbone of the Munich Quantum Toolkit (MQT)
 
 The MQT Core library forms the backbone of the quantum software tools developed as part of the _Munich Quantum Toolkit_ (_MQT_)[^1] by the [Chair for Design Automation](https://www.cda.cit.tum.de/) at the [Technical University of Munich](https://www.tum.de/). This includes the following tools:
 
@@ -33,7 +33,7 @@ MQT Core encompasses:
 
 If you have any questions, feel free to create a [discussion](https://github.com/cda-tum/mqt-core/discussions) or an [issue](https://github.com/cda-tum/mqt-core/issues) on [GitHub](https://github.com/cda-tum/mqt-core).
 
-### System Requirements
+## System Requirements
 
 Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments).
 However, the implementation should be compatible with any current C++ compiler supporting C++17 and a minimum CMake version of 3.19.
