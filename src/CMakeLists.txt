@@ -110,8 +110,6 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
     dd/Operations.cpp
     dd/Simulation.cpp)
   target_link_libraries(${PROJECT_NAME}-dd PUBLIC ${PROJECT_NAME})
-  target_include_directories(${PROJECT_NAME}-dd PUBLIC ${PROJECT_SOURCE_DIR}/include/dd
-                                                       ${PROJECT_BINARY_DIR}/include/dd)
   add_library(MQT::CoreDD ALIAS ${PROJECT_NAME}-dd)
   add_library(MQT::${OLD_PROJECT_NAME}_dd ALIAS ${PROJECT_NAME}-dd)
 endif()
@@ -134,8 +132,6 @@ if(NOT TARGET ${PROJECT_NAME}-zx)
     zx/Utils.cpp
     zx/FunctionalityConstruction.cpp)
   target_link_libraries(${PROJECT_NAME}-zx PUBLIC ${PROJECT_NAME})
-  target_include_directories(${PROJECT_NAME}-zx PUBLIC ${PROJECT_SOURCE_DIR}/include/zx
-                                                       ${PROJECT_BINARY_DIR}/include/zx)
 
   add_subdirectory("${PROJECT_SOURCE_DIR}/extern/boost/config" "extern/boost/config"
                    EXCLUDE_FROM_ALL)
@@ -187,8 +183,6 @@ if(NOT TARGET ${PROJECT_NAME}-ecc)
     ecc/Q18Surface.cpp)
 
   target_link_libraries(${PROJECT_NAME}-ecc PUBLIC ${PROJECT_NAME})
-  target_include_directories(${PROJECT_NAME}-ecc PUBLIC ${PROJECT_SOURCE_DIR}/include/ecc
-                                                        ${PROJECT_BINARY_DIR}/include/ecc)
 
   # add MQT alias
   add_library(MQT::CoreECC ALIAS ${PROJECT_NAME}-ecc)
@@ -211,10 +205,6 @@ if(NOT TARGET ${PROJECT_NAME}-python)
     ${PROJECT_SOURCE_DIR}/include/python/qiskit/QuantumCircuit.hpp
     ${PROJECT_SOURCE_DIR}/include/python/qiskit/QasmQobjExperiment.hpp
     python/qiskit/QuantumCircuit.cpp python/qiskit/QasmQobjExperiment.cpp)
-
-  # set include directories
-  target_include_directories(${PROJECT_NAME}-python PUBLIC ${PROJECT_SOURCE_DIR}/include/python
-                                                           ${PROJECT_BINARY_DIR}/include/python)
 
   # link with main project library and pybind11 libraries
   target_link_libraries(${PROJECT_NAME}-python PRIVATE ${PROJECT_NAME} pybind11::pybind11
