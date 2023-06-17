@@ -11,6 +11,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_design",
     "sphinx_copybutton",
+    "sphinxext.opengraph",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -24,9 +25,21 @@ exclude_patterns = [
     ".venv",
 ]
 
+pygments_style = "colorful"
+
+add_module_names = False
+
+modindex_common_prefix = ["mqt.core."]
+
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
+    "qiskit": ("https://qiskit.org/documentation/", None),
     "mqt": ("https://mqt.readthedocs.io/en/latest/", None),
+    "ddsim": ("https://mqt.readthedocs.io/projects/ddsim/en/latest/", None),
+    "qmap": ("https://mqt.readthedocs.io/projects/qmap/en/latest/", None),
+    "qcec": ("https://mqt.readthedocs.io/projects/qcec/en/latest/", None),
+    "qecc": ("https://mqt.readthedocs.io/projects/qecc/en/latest/", None),
+    "syrec": ("https://mqt.readthedocs.io/projects/syrec/en/latest/", None),
 }
 intersphinx_disabled_reftypes = ["*"]
 

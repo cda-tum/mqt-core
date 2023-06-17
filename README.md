@@ -10,8 +10,6 @@
  </picture>
 </p>
 
-<!-- SPHINX-START -->
-
 # MQT Core - The Backbone of the Munich Quantum Toolkit (MQT)
 
 The MQT Core library forms the backbone of the quantum software tools developed as part of the _Munich Quantum Toolkit_ (_MQT_)[^1] by the [Chair for Design Automation](https://www.cda.cit.tum.de/) at the [Technical University of Munich](https://www.tum.de/). This includes the following tools:
@@ -19,9 +17,13 @@ The MQT Core library forms the backbone of the quantum software tools developed 
 - [MQT DDSIM](https://github.com/cda-tum/ddsim): A Tool for Classical Quantum Circuit Simulation based on Decision Diagrams.
 - [MQT QMAP](https://github.com/cda-tum/qmap): A Tool for Quantum Circuit Mapping.
 - [MQT QCEC](https://github.com/cda-tum/qcec): A Tool for Quantum Circuit Equivalence Checking.
-- [MQT DDVis](http://github.com/cda-tum/ddvis): A Web-Application visualizing Decision Diagrams for Quantum Computing.
+- [MQT QECC](https://github.com/cda-tum/qecc): A Tool for Quantum Error Correcting Codes.
+- [MQT DDVis](https://github.com/cda-tum/ddvis): A Web-Application visualizing Decision Diagrams for Quantum Computing.
+- [MQT SyReC](https://github.com/cda-tum/syrec): A Tool for Synthesis of Reversible Circuits/Quanutm Computing Oracles.
 
 For a full list of tools and libraries, please visit the [MQT website](https://www.cda.cit.tum.de/research/quantum/mqt/).
+
+<!-- SPHINX-START -->
 
 MQT Core encompasses:
 
