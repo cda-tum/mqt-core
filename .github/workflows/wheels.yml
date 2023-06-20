@@ -50,7 +50,11 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
-
+      - if: matrix.os == 'macos-latest'
+        name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: "wheels-${{ matrix.python }}-${{ matrix.os }}"
       - uses: pypa/cibuildwheel@v2.13
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
