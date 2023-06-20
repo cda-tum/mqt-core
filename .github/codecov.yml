@@ -1,5 +1,7 @@
 ignore:
   - "extern/**/*"
+  - "include/python/**/*"
+  - "src/python/**/*"
   - "test/**/*"
 
 coverage:
