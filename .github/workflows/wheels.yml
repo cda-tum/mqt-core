@@ -18,7 +18,7 @@ env:
 
 jobs:
   build_sdist:
-    name: Build SDist
+    name: 🐍 Build SDist
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -37,7 +37,7 @@ jobs:
           path: dist/*.tar.gz
 
   build_wheels:
-    name: Wheels on ${{ matrix.os }}
+    name: 🐍 Wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -66,6 +66,7 @@ jobs:
 
   deploy:
     if: github.event_name == 'release' && github.event.action == 'published'
+    name: 🚀 Deploy to PyPI
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -84,6 +85,7 @@ jobs:
 
   wheels-check:
     if: always()
+    name: 🚦 Python Wheels check
     needs: [build_sdist, build_wheels, deploy]
     runs-on: ubuntu-latest
     timeout-minutes: 1
