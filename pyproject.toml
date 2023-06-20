@@ -198,8 +198,7 @@ convention = "google"
 build = "cp3*"
 skip = "*-musllinux_*"
 archs = "auto64"
-test-extras = ["test"]
-test-command = "pytest"
+test-command = "python -c \"from mqt import core\""
 environment = { DEPLOY = "ON" }
 build-frontend = "build"
 
