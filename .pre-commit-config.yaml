@@ -120,3 +120,11 @@ repos:
     hooks:
       - id: codespell
         args: ["-L", "wille,linz", "--skip", "*.ipynb"]
+
+  - repo: local
+    hooks:
+      - id: disallow-caps
+        name: Disallow improper capitalization
+        language: pygrep
+        entry: PyBind|Numpy|Cmake|CCache|Github|PyTest|Mqt|Tum
+        exclude: .pre-commit-config.yaml
