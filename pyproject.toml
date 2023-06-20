@@ -13,6 +13,15 @@ keywords = ["MQT", "quantum computing", "design automation"]
 license = { file = "LICENSE.md" }
 
 classifiers = [
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: C++",
+    "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.8",
@@ -20,15 +29,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: C++",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: Microsoft :: Windows",
-    "Operating System :: MacOS",
-    "Operating System :: POSIX :: Linux",
-    "Intended Audience :: Science/Research",
-    "Natural Language :: English",
-    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
     "Development Status :: 4 - Beta",
+    "Typing :: Typed",
 ]
 requires-python = ">=3.8"
 dynamic = ["version"]
