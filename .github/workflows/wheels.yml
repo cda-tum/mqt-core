@@ -1,4 +1,4 @@
-name: Wheels
+name: Python Packaging Wheels
 
 on:
   release:
@@ -81,3 +81,15 @@ jobs:
           path: dist
 
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  wheels-check:
+    if: always()
+    needs: [build_sdist, build_wheels, deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          allowed-skips: deploy
+          jobs: ${{ toJSON(needs) }}

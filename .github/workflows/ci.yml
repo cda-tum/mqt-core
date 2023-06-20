@@ -73,3 +73,15 @@ jobs:
           gcov: true
           gcov_ignore: "extern/**/*"
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  cpp-ci-check:
+    if: always()
+    needs: [cpp-tests, coverage]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          allowed-skips: deploy
+          jobs: ${{ toJSON(needs) }}
