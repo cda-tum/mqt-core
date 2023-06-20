@@ -36,6 +36,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: "tests-cpp-${{matrix.runs-on}}"
+          verbose: 1
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
       - name: Configure CMake
@@ -62,6 +63,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: "tests-cpp-windows"
+          verbose: 1
       - name: Configure CMake
         run: cmake -G Ninja -S . -B build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
       - name: Build
@@ -110,6 +112,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: "coverage-cpp"
+          verbose: 1
       - name: Set up mold as linker
         uses: rui314/setup-mold@v1
       - name: Configure CMake

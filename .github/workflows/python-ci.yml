@@ -29,6 +29,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: "python-lint"
+          verbose: 1
       - uses: actions/setup-python@v4
         with:
           python-version: "3.11"
@@ -62,6 +63,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: "tests-python-${{matrix.runs-on}}-${{matrix.python-version}}"
+          verbose: 1
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -88,6 +90,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: "coverage-python-${{matrix.python-version}}"
+          verbose: 1
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -116,6 +119,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: "dist-python"
+          verbose: 1
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
       - uses: hynek/build-and-inspect-python-package@v1
