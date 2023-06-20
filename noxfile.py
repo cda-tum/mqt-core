@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 
 import nox
 
@@ -12,6 +13,10 @@ PYTHON_ALL_VERSIONS = ["3.8", "3.9", "3.10", "3.11"]
 
 if os.environ.get("CI", None):
     nox.options.error_on_missing_interpreters = True
+
+# Make sure that clang is used on Windows.
+if sys.platform == "win32":
+    os.environ["SKBUILD_CMAKE_ARGS"] = "-T ClangCL"
 
 
 @nox.session(reuse_venv=True)
