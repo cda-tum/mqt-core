@@ -34,7 +34,7 @@ requires-python = ">=3.8"
 dynamic = ["version"]
 
 [project.optional-dependencies]
-test = ["pytest>=7.2"]
+test = ["pytest>=7.0"]
 coverage = ["mqt.core[test]", "pytest-cov"]
 docs = [
     "furo",
@@ -100,6 +100,16 @@ write_to = "src/mqt/core/_version.py"
 
 [tool.black]
 line-length = 120
+
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = ["error"]
+log_cli_level = "info"
+testpaths = ["test/python"]
+
 
 
 [tool.mypy]
