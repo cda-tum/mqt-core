@@ -60,6 +60,14 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: "CodeQL-${{ matrix.language }}"
+
+      - name: Set up mold as linker
+        uses: rui314/setup-mold@v1
+
       - if: matrix.language == 'python'
         name: Set up Python
         uses: actions/setup-python@v4
@@ -74,14 +82,6 @@ jobs:
           pip install nanobind scikit-build-core[pyproject] setuptools_scm
           pip install --no-build-isolation -ve .
           echo "CODEQL_PYTHON=$(which python)" >> $GITHUB_ENV
-
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: "CodeQL-${{ matrix.language }}"
-
-      - name: Set up mold as linker
-        uses: rui314/setup-mold@v1
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
