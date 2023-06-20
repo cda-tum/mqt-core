@@ -47,11 +47,19 @@ nanobind_add_module(
   module.cpp)
 target_link_libraries(_core PRIVATE MQT::Core)
 
+if(TARGET nanobind-static)
+  set(NANOBIND_LIB nanobind-static)
+elseif(TARGET nanobind-static-abi3)
+  set(NANOBIND_LIB nanobind-static-abi3)
+else()
+  message(FATAL_ERROR "nanobind library not found")
+endif()
+
 # the following sets the SYSTEM flag for the include dirs of the boost libs to suppress warnings
 # cmake-lint: disable=C0307
 set_target_properties(
-  nanobind-static PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                             $<TARGET_PROPERTY:nanobind-static,INTERFACE_INCLUDE_DIRECTORIES>)
+  ${NANOBIND_LIB} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                             $<TARGET_PROPERTY:${NANOBIND_LIB},INTERFACE_INCLUDE_DIRECTORIES>)
 
 # Install directive for scikit-build-core
 install(TARGETS _core LIBRARY DESTINATION mqt/core)
