@@ -2,7 +2,22 @@ name: "CodeQL"
 
 on:
   push:
+    branches: [main, protected]
   pull_request:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "**/*.rst"
+      - "**/*.toml"
+      - "**/*.txt"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - ".github/**"
+      - ".clang-format"
+      - ".clang-tidy"
+      - ".gitignore"
+
   merge_group:
   schedule:
     - cron: "15 21 * * 6"
@@ -13,6 +28,7 @@ concurrency:
 
 env:
   CMAKE_BUILD_PARALLEL_LEVEL: 3
+  FORCE_COLOR: 3
 
 jobs:
   analyze:
