@@ -121,6 +121,14 @@ log_cli_level = "info"
 testpaths = ["test/python"]
 
 
+[tool.coverage]
+run.source = ["mqt.core"]
+report.exclude_lines = [
+    'pragma: no cover',
+    '\.\.\.',
+    'if typing.TYPE_CHECKING:',
+]
+
 
 [tool.mypy]
 files = ["src/mqt", "test/python"]
