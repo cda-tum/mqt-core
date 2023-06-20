@@ -18,7 +18,7 @@ env:
 jobs:
   cpp-linter:
     runs-on: ubuntu-latest
-    container: silkeh/clang:${{ env.clang-version }}
+    container: silkeh/clang:16
     steps:
       - uses: actions/checkout@v3
         with:
