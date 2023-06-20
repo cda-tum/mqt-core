@@ -225,7 +225,7 @@ TEST(DDPackageTest, IdentityTrace) {
 
 TEST(DDPackageTest, PartialIdentityTrace) {
   auto dd = std::make_unique<dd::Package<>>(2);
-  auto tr  = dd->partialTrace(dd->makeIdent(), {false, true});
+  auto tr = dd->partialTrace(dd->makeIdent(), {false, true});
   auto mul = dd->multiply(tr, tr);
   EXPECT_EQ(dd::CTEntry::val(mul.w.r), 4.0);
 }
@@ -257,7 +257,8 @@ TEST(DDPackageTest, VectorSerializationTest) {
   auto zeroState = dd->makeZeroState(2);
 
   auto bellState = dd->multiply(dd->multiply(cxGate, hGate), zeroState);
-  std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/extern/qfr/extern/dd_package/graphs/BellState";
+  std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
+                          "extern/qfr/extern/dd_package/graphs/BellState";
   dd::export2Dot(bellState, filename1, true, true);
 
   serialize(bellState, "bell_state.dd", false);
@@ -278,7 +279,8 @@ TEST(DDPackageTest, BellMatrix) {
   auto cxGate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
 
   auto bellMatrix = dd->multiply(cxGate, hGate);
-  std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/extern/qfr/extern/dd_package/graphs/BellMatrix";
+  std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
+                          "extern/qfr/extern/dd_package/graphs/BellMatrix";
   dd::export2Dot(bellMatrix, filename1, true, true);
 
   ASSERT_EQ(dd->getValueByPath(bellMatrix, "00"),
@@ -473,43 +475,43 @@ TEST(DDPackageTest, ToffoliTable) {
   EXPECT_EQ(toffoliTableEntry.p, nullptr);
 }
 
-//TEST(DDPackageTest, Extend) {
-//  auto dd = std::make_unique<dd::Package<>>(4);
+// TEST(DDPackageTest, Extend) {
+//   auto dd = std::make_unique<dd::Package<>>(4);
 //
-//  auto id = dd->makeIdent(3);
-//  EXPECT_EQ(id.p->v, 2);
-//  EXPECT_EQ(id.p->e[0], id.p->e[3]);
-//  EXPECT_EQ(id.p->e[1], id.p->e[2]);
-//  EXPECT_TRUE(id.p->isIdentity());
+//   auto id = dd->makeIdent(3);
+//   EXPECT_EQ(id.p->v, 2);
+//   EXPECT_EQ(id.p->e[0], id.p->e[3]);
+//   EXPECT_EQ(id.p->e[1], id.p->e[2]);
+//   EXPECT_TRUE(id.p->isIdentity());
 //
-//  auto ext = dd->extend(id, 0, 1);
-//  EXPECT_EQ(ext.p->v, 3);
-//  EXPECT_EQ(ext.p->e[0], ext.p->e[3]);
-//  EXPECT_EQ(ext.p->e[1], ext.p->e[2]);
-//  EXPECT_TRUE(ext.p->isIdentity());
-//}
+//   auto ext = dd->extend(id, 0, 1);
+//   EXPECT_EQ(ext.p->v, 3);
+//   EXPECT_EQ(ext.p->e[0], ext.p->e[3]);
+//   EXPECT_EQ(ext.p->e[1], ext.p->e[2]);
+//   EXPECT_TRUE(ext.p->isIdentity());
+// }
 
-//TEST(DDPackageTest, Identity) {
-//  auto dd = std::make_unique<dd::Package<>>(4);
+// TEST(DDPackageTest, Identity) {
+//   auto dd = std::make_unique<dd::Package<>>(4);
 //
-//  EXPECT_TRUE(dd->makeIdent(0).isOneTerminal());
-//  EXPECT_TRUE(dd->makeIdent(0, -1).isOneTerminal());
+//   EXPECT_TRUE(dd->makeIdent(0).isOneTerminal());
+//   EXPECT_TRUE(dd->makeIdent(0, -1).isOneTerminal());
 //
-//  auto id3 = dd->makeIdent(3);
-//  EXPECT_EQ(dd->makeIdent(0, 2), id3);
-//  const auto& table = dd->getIdentityTable();
-//  EXPECT_NE(table[2].p, nullptr);
+//   auto id3 = dd->makeIdent(3);
+//   EXPECT_EQ(dd->makeIdent(0, 2), id3);
+//   const auto& table = dd->getIdentityTable();
+//   EXPECT_NE(table[2].p, nullptr);
 //
-//  auto id2 = dd->makeIdent(0, 1); // should be found in idTable
-//  EXPECT_EQ(dd->makeIdent(2), id2);
+//   auto id2 = dd->makeIdent(0, 1); // should be found in idTable
+//   EXPECT_EQ(dd->makeIdent(2), id2);
 //
-//  auto id4 = dd->makeIdent(0, 3); // should use id3 and extend it
-//  EXPECT_EQ(dd->makeIdent(0, 3), id4);
-//  EXPECT_NE(table[3].p, nullptr);
+//   auto id4 = dd->makeIdent(0, 3); // should use id3 and extend it
+//   EXPECT_EQ(dd->makeIdent(0, 3), id4);
+//   EXPECT_NE(table[3].p, nullptr);
 //
-//  auto idCached = dd->makeIdent(4);
-//  EXPECT_EQ(id4, idCached);
-//}
+//   auto idCached = dd->makeIdent(4);
+//   EXPECT_EQ(id4, idCached);
+// }
 
 TEST(DDPackageTest, TestLocalInconsistency) {
   auto dd = std::make_unique<dd::Package<>>(3);
@@ -538,46 +540,47 @@ TEST(DDPackageTest, TestLocalInconsistency) {
   bellState.p->e[0].w.r->refCount = 1;
 }
 
-//TEST(DDPackageTest, Ancillaries) {
-//  auto dd = std::make_unique<dd::Package<>>(4);
-//  auto hGate = dd->makeGateDD(dd::Hmat, 2, 0);
-//  auto cxGate = dd->makeGateDD(dd::Xmat, 2, 0_pc, 1);
-//  auto bellMatrix = dd->multiply(cxGate, hGate);
+// TEST(DDPackageTest, Ancillaries) {
+//   auto dd = std::make_unique<dd::Package<>>(4);
+//   auto hGate = dd->makeGateDD(dd::Hmat, 2, 0);
+//   auto cxGate = dd->makeGateDD(dd::Xmat, 2, 0_pc, 1);
+//   auto bellMatrix = dd->multiply(cxGate, hGate);
 //
-//  dd->incRef(bellMatrix);
-//  auto reducedBellMatrix =
-//      dd->reduceAncillae(bellMatrix, {false, false, false, false});
-//  EXPECT_EQ(bellMatrix, reducedBellMatrix);
-//  dd->incRef(bellMatrix);
-//  reducedBellMatrix =
-//      dd->reduceAncillae(bellMatrix, {false, false, true, true});
-//  EXPECT_EQ(bellMatrix, reducedBellMatrix);
+//   dd->incRef(bellMatrix);
+//   auto reducedBellMatrix =
+//       dd->reduceAncillae(bellMatrix, {false, false, false, false});
+//   EXPECT_EQ(bellMatrix, reducedBellMatrix);
+//   dd->incRef(bellMatrix);
+//   reducedBellMatrix =
+//       dd->reduceAncillae(bellMatrix, {false, false, true, true});
+//   EXPECT_EQ(bellMatrix, reducedBellMatrix);
 //
-//  auto extendedBellMatrix = dd->extend(bellMatrix, 2);
-//  dd->incRef(extendedBellMatrix);
-//  reducedBellMatrix =
-//      dd->reduceAncillae(extendedBellMatrix, {false, false, true, true});
-//  EXPECT_TRUE(reducedBellMatrix.p->e[1].isZeroTerminal());
-//  EXPECT_TRUE(reducedBellMatrix.p->e[2].isZeroTerminal());
-//  EXPECT_TRUE(reducedBellMatrix.p->e[3].isZeroTerminal());
+//   auto extendedBellMatrix = dd->extend(bellMatrix, 2);
+//   dd->incRef(extendedBellMatrix);
+//   reducedBellMatrix =
+//       dd->reduceAncillae(extendedBellMatrix, {false, false, true, true});
+//   EXPECT_TRUE(reducedBellMatrix.p->e[1].isZeroTerminal());
+//   EXPECT_TRUE(reducedBellMatrix.p->e[2].isZeroTerminal());
+//   EXPECT_TRUE(reducedBellMatrix.p->e[3].isZeroTerminal());
 //
-//  EXPECT_EQ(reducedBellMatrix.p->e[0].p->e[0].p, bellMatrix.p);
-//  EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[1].isZeroTerminal());
-//  EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[2].isZeroTerminal());
-//  EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[3].isZeroTerminal());
+//   EXPECT_EQ(reducedBellMatrix.p->e[0].p->e[0].p, bellMatrix.p);
+//   EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[1].isZeroTerminal());
+//   EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[2].isZeroTerminal());
+//   EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[3].isZeroTerminal());
 //
-//  dd->incRef(extendedBellMatrix);
-//  reducedBellMatrix =
-//      dd->reduceAncillae(extendedBellMatrix, {false, false, true, true}, false);
-//  EXPECT_TRUE(reducedBellMatrix.p->e[1].isZeroTerminal());
-//  EXPECT_TRUE(reducedBellMatrix.p->e[2].isZeroTerminal());
-//  EXPECT_TRUE(reducedBellMatrix.p->e[3].isZeroTerminal());
+//   dd->incRef(extendedBellMatrix);
+//   reducedBellMatrix =
+//       dd->reduceAncillae(extendedBellMatrix, {false, false, true, true},
+//       false);
+//   EXPECT_TRUE(reducedBellMatrix.p->e[1].isZeroTerminal());
+//   EXPECT_TRUE(reducedBellMatrix.p->e[2].isZeroTerminal());
+//   EXPECT_TRUE(reducedBellMatrix.p->e[3].isZeroTerminal());
 //
-//  EXPECT_EQ(reducedBellMatrix.p->e[0].p->e[0].p, bellMatrix.p);
-//  EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[1].isZeroTerminal());
-//  EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[2].isZeroTerminal());
-//  EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[3].isZeroTerminal());
-//}
+//   EXPECT_EQ(reducedBellMatrix.p->e[0].p->e[0].p, bellMatrix.p);
+//   EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[1].isZeroTerminal());
+//   EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[2].isZeroTerminal());
+//   EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[3].isZeroTerminal());
+// }
 
 TEST(DDPackageTest, GarbageVector) {
   auto dd = std::make_unique<dd::Package<>>(4);
@@ -1583,16 +1586,16 @@ TEST(DDPackageTest, expectationValueLocalOperators) {
   }
 }
 
-//TEST(DDPackageTest, expectationValueExceptions) {
-//  const dd::QubitCount nrQubits = 2;
+// TEST(DDPackageTest, expectationValueExceptions) {
+//   const dd::QubitCount nrQubits = 2;
 //
-//  auto dd = std::make_unique<dd::Package<>>(nrQubits);
-//  const auto zeroState =
-//      dd->makeZeroState(static_cast<dd::QubitCount>(nrQubits - 1));
-//  const auto xGate = dd->makeGateDD(dd::Xmat, nrQubits, 0);
+//   auto dd = std::make_unique<dd::Package<>>(nrQubits);
+//   const auto zeroState =
+//       dd->makeZeroState(static_cast<dd::QubitCount>(nrQubits - 1));
+//   const auto xGate = dd->makeGateDD(dd::Xmat, nrQubits, 0);
 //
-//  EXPECT_ANY_THROW(dd->expectationValue(xGate, zeroState));
-//}
+//   EXPECT_ANY_THROW(dd->expectationValue(xGate, zeroState));
+// }
 
 TEST(DDPackageTest, DDFromSingleQubitMatrix) {
   const auto inputMatrix =
