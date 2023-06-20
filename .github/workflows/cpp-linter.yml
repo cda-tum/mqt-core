@@ -1,6 +1,7 @@
 name: cpp-linter
 
 on:
+  merge_group:
   pull_request:
   push:
     branches:
