@@ -22,7 +22,7 @@ env:
 
 jobs:
   cpp-tests:
-    name: Tests ${{ matrix.runs-on }}
+    name: 🇨‌➕➕ Tests on ${{ matrix.runs-on }}
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
@@ -46,7 +46,7 @@ jobs:
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   windows-cpp-tests:
-    name: Tests windows-latest
+    name: 🇨‌➕➕ Tests on windows-latest
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -70,7 +70,7 @@ jobs:
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   windows-msys2-cpp-tests:
-    name: Tests windows-latest (MSYS2)
+    name: 🇨‌➕➕ Tests on windows-latest (using MSYS2)
     runs-on: windows-latest
     defaults:
       run:
@@ -99,7 +99,7 @@ jobs:
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   coverage:
-    name: C++ Coverage
+    name: 🇨‌➕➕ Coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -127,7 +127,7 @@ jobs:
 
   cpp-ci-check:
     if: always()
-    name: 🚦 C++ CI Check
+    name: 🚦 🇨‌➕➕ CI Check
     needs: [cpp-tests, windows-cpp-tests, windows-msys2-cpp-tests, coverage]
     runs-on: ubuntu-latest
     timeout-minutes: 1
