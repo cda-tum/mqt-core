@@ -86,6 +86,7 @@ jobs:
             mingw-w64-x86_64-python-pip
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-ccache
       - uses: actions/checkout@v3
         with:
           submodules: recursive
@@ -93,9 +94,9 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: "tests-cpp-windows-msys2"
-          variant: sccache
+          verbose: 2
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON -DCACHE_OPTION="sccache"
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
       - name: Build
         run: cmake --build build --config Release
       - name: Test
