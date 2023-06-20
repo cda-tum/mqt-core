@@ -50,7 +50,7 @@ jobs:
 
       - if: matrix.language == 'cpp'
         name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 
       - if: matrix.language == 'cpp'
         name: Build
