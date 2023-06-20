@@ -22,15 +22,12 @@ env:
 
 jobs:
   cpp-tests:
-    name: Tests ${{ matrix.config.os }}
-    runs-on: ${{ matrix.config.os }}
+    name: Tests ${{ matrix.runs-on }}
+    runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
-        config:
-          - { os: ubuntu-latest, toolchain: "" }
-          - { os: macos-latest, toolchain: "" }
-          - { os: windows-latest, toolchain: "-T ClangCl" }
+        runs-on: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -38,11 +35,64 @@ jobs:
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: "${{matrix.config.os}}"
+          key: "tests-cpp-${{matrix.runs-on}}"
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.config.toolchain }} -DENABLE_IPO=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Test
+        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+
+  windows-cpp-tests:
+    name: Tests windows-latest
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Set up Clang
+        uses: egor-tensin/setup-clang@v1
+      - name: Install ninja-build tool
+        uses: seanmiddleditch/gha-setup-ninja@v3
+      - name: Show Clang++ version
+        run: clang++ --version
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: "tests-cpp-windows"
+      - name: Configure CMake
+        run: cmake -G Ninja -S . -B build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Test
+        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+
+  windows-msys2-cpp-tests:
+    name: Tests windows-latest (MSYS2)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          install: >-
+            git
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-python-pip
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: "tests-cpp-windows-msys2"
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Configure CMake
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
       - name: Build
         run: cmake --build build --config Release
       - name: Test
@@ -58,7 +108,7 @@ jobs:
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: "coverage"
+          key: "coverage-cpp"
       - name: Set up mold as linker
         uses: rui314/setup-mold@v1
       - name: Configure CMake
@@ -78,7 +128,7 @@ jobs:
   cpp-ci-check:
     if: always()
     name: 🚦 C++ CI Check
-    needs: [cpp-tests, coverage]
+    needs: [cpp-tests, windows-cpp-tests, windows-msys2-cpp-tests, coverage]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
