@@ -3,9 +3,19 @@ name: cpp-linter
 on:
   merge_group:
   pull_request:
+    paths:
+      - "**/*.cpp"
+      - "**/*.hpp"
+      - ".github/workflows/cpp-linter.yml"
+      - ".clang-tidy"
   push:
     branches:
       - main
+    paths:
+      - "**/*.cpp"
+      - "**/*.hpp"
+      - ".github/workflows/cpp-linter.yml"
+      - ".clang-tidy"
   workflow_dispatch:
 
 concurrency:

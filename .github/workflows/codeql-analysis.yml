@@ -3,6 +3,18 @@ name: "CodeQL"
 on:
   push:
     branches: [main, protected]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "**/*.rst"
+      - "**/*.toml"
+      - "**/*.txt"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - ".github/**"
+      - ".clang-format"
+      - ".clang-tidy"
+      - ".gitignore"
   pull_request:
     branches: [main]
     paths-ignore:
@@ -17,7 +29,6 @@ on:
       - ".clang-format"
       - ".clang-tidy"
       - ".gitignore"
-
   merge_group:
   schedule:
     - cron: "15 21 * * 6"
