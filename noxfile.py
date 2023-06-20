@@ -2,44 +2,45 @@
 
 from __future__ import annotations
 
-import argparse
-from typing import TYPE_CHECKING
-
 import nox
 
-if TYPE_CHECKING:
-    from nox.sessions import Session
+nox.options.sessions = ["lint", "pylint", "tests"]
 
 
 @nox.session(reuse_venv=True)
-def docs(session: Session) -> None:
-    """Build the docs. Pass "--serve" to serve."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--serve", action="store_true", help="Serve after building")
-    parser.add_argument("-b", dest="builder", default="html", help="Build target (default: html)")
-    args, posargs = parser.parse_known_args(session.posargs)
+def lint(session: nox.Session) -> None:
+    """Run the linter."""
+    session.install("pre-commit")
+    session.run("pre-commit", "run", "--all-files", *session.posargs)
 
-    if args.builder != "html" and args.serve:
-        session.error("Must not specify non-HTML builder with --serve")
 
-    session.install(".[docs]")
-    session.chdir("docs")
+@nox.session(reuse_venv=True)
+def pylint(session: nox.Session) -> None:
+    """Run PyLint."""
+    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm")
+    session.install("--no-build-isolation", "-ve.[dev]", "pylint")
+    session.run("pylint", "mqt.core", *session.posargs)
 
-    if args.builder == "linkcheck":
-        session.run("sphinx-build", "-b", "linkcheck", ".", "_build/linkcheck", *posargs)
-        return
 
-    session.run(
-        "sphinx-build",
-        "-n",  # nitpicky mode
-        "-T",  # full tracebacks
-        "-b",
-        args.builder,
-        ".",
-        f"_build/{args.builder}",
-        *posargs,
-    )
+@nox.session(reuse_venv=True)
+def tests(session: nox.Session) -> None:
+    """Run the test suite."""
+    posargs = list(session.posargs)
+    env = {"PIP_DISABLE_PIP_VERSION_CHECK": "1"}
+    install_arg = "-ve.[coverage]" if "--cov" in posargs else "-ve.[test]"
+    if "--cov" in posargs:
+        posargs.append("--cov-config=pyproject.toml")
 
-    if args.serve:
-        print("Launching docs at http://localhost:8000/ - use Ctrl-C to quit")
-        session.run("python", "-m", "http.server", "8000", "-d", "_build/html")
+    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm")
+    session.install("--no-build-isolation", install_arg)
+    session.run("pytest", *posargs, env=env)
+
+
+@nox.session(reuse_venv=True)
+def docs(session: nox.Session) -> None:
+    """Build the docs."""
+    session.install("sphinx-autobuild")
+    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm")
+    session.install("--no-build-isolation", "-ve.[docs]")
+
+    session.run("sphinx-autobuild", "docs", "docs/_build/html", "--open-browser")
