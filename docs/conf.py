@@ -1,8 +1,35 @@
 """Sphinx configuration file."""
 
+from __future__ import annotations
+
+import warnings
+from importlib import metadata
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent.resolve()
+
+
+try:
+    from mqt.core import __version__ as version
+except ModuleNotFoundError:
+    try:
+        version = metadata.version("mqt.core")
+    except ModuleNotFoundError:
+        msg = (
+            "Package should be installed to produce documentation! "
+            "Assuming a modern git archive was used for version discovery."
+        )
+        warnings.warn(msg, stacklevel=1)
+
+        from setuptools_scm import get_version
+
+        version = get_version(root=str(ROOT), fallback_root=ROOT)
+
+# Filter git details from version
+release = version.split("+")[0]
+
 project = 'mqt-core'
 author = 'Chair for Design Automation, Technical University of Munich'
-release = '1.0.0'
 language = "en"
 project_copyright = "2023, Chair for Design Automation, Technical University of Munich"
 
@@ -48,6 +75,10 @@ myst_enable_extensions = [
     "substitution",
     "deflist",
 ]
+
+myst_substitutions = {
+    "version": version,
+}
 
 copybutton_prompt_text = r"(?:\(venv\) )?(?:\[.*\] )?\$ "
 copybutton_prompt_is_regexp = True
