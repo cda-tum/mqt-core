@@ -1,3 +1,5 @@
+"""MQT Core - The Backbone of the Munich Quantum Toolkit."""
+
 from __future__ import annotations
 
 from ._core import add
