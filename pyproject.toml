@@ -89,6 +89,14 @@ sdist.exclude = [
     "extern/boost/multiprecision/tools"
 ]
 
+[tool.check-sdist]
+sdist-only = ["src/mqt/core/_version.py"]
+git-only = [
+    "docs/*",
+    "extern/*",
+    "test/*",
+]
+
 [tool.scikit-build.cmake.define]
 BINDINGS = "ON"
 BUILD_MQT_CORE_TESTS = "OFF"
