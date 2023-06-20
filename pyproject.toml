@@ -1,0 +1,85 @@
+[build-system]
+requires = ["scikit-build-core>=0.4.5", "nanobind>=1.4.0", "setuptools-scm>=7"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "mqt.core"
+description = "The Backbone of the Munich Quantum Toolkit"
+readme = "README.md"
+authors = [
+    { name = "Lukas Burgholzer", email = "burgholzer@me.com" }
+]
+keywords = ["MQT", "quantum computing", "design automation"]
+license = { file = "LICENSE.md" }
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C++",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+    "Development Status :: 4 - Beta",
+]
+requires-python = ">=3.8"
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/cda-tum/mqt-core"
+Documentation = "https://mqt.readthedocs.io/projects/core"
+Issues = "https://github.com/cda-tum/mqt-core/issues"
+Discussions = "https://github.com/cda-tum/mqt-core/discussions"
+
+
+[tool.scikit-build]
+# Protect the configuration against future changes in scikit-build-core
+minimum-version = "0.4"
+
+# Set required CMake version
+cmake.minimum-version = "3.19"
+
+# Setuptools-style build caching in a local directory
+build-dir = "build/{wheel_tag}"
+
+# Build stable ABI wheels for CPython 3.12+
+wheel.py-api = "cp312"
+
+# Explicitly set the package directory
+wheel.packages = ["src/mqt"]
+
+metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
+sdist.include = ["src/mqt/core/_version.py"]
+sdist.exclude = [
+    "**/.github",
+    "**/doc",
+    "**/docs",
+    "**/meta",
+    "**/plots",
+    "**/test",
+    "**/tests",
+    "extern/json/include",
+    "extern/googletest",
+    "extern/boost/config/checks",
+    "extern/boost/config/tools",
+    "extern/boost/multiprecision/config",
+    "extern/boost/multiprecision/example",
+    "extern/boost/multiprecision/performance",
+    "extern/boost/multiprecision/tools"
+]
+
+[tool.scikit-build.cmake.define]
+BINDINGS = "ON"
+BUILD_MQT_CORE_TESTS = "OFF"
+
+
+[tool.setuptools_scm]
+write_to = "src/mqt/core/_version.py"
