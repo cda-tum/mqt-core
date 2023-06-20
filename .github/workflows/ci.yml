@@ -17,6 +17,7 @@ defaults:
 env:
   CMAKE_BUILD_PARALLEL_LEVEL: 3
   CTEST_PARALLEL_LEVEL: 3
+  FORCE_COLOR: 3
 
 jobs:
   cpp-tests:
@@ -66,7 +67,7 @@ jobs:
       - name: Test
         run: ctest -C Debug --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3.1.4
+        uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
           gcov: true
