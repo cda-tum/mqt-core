@@ -37,12 +37,13 @@ jobs:
           path: dist/*.tar.gz
 
   build_wheels:
-    name: 🐍 Wheels on ${{ matrix.os }}
+    name: 🐍 ${{ matrix.python }} wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-2019]
+        python: ["cp38", "cp39", "cp310", "cp311", "cp312"]
 
     steps:
       - uses: actions/checkout@v3
@@ -52,6 +53,7 @@ jobs:
 
       - uses: pypa/cibuildwheel@v2.13
         env:
+          CIBW_BUILD: ${{ matrix.python }}-*
           # Temporary: use pre-release Python 3.12 for stable ABI builds
           CIBW_PRERELEASE_PYTHONS: True
 
