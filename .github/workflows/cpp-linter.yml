@@ -17,26 +17,16 @@ env:
 jobs:
   cpp-linter:
     runs-on: ubuntu-latest
+    container: silkeh/clang:${{ env.clang-version }}
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - name: Install clang-${{ env.clang-version }}
-        run: |
-          sudo apt-get update
-          wget https://apt.llvm.org/llvm.sh -O ${{ runner.temp }}/llvm_install.sh
-          chmod +x ${{ runner.temp }}/llvm_install.sh
-          if sudo ${{ runner.temp }}/llvm_install.sh ${{ env.clang-version }}; then
-            sudo apt-get install -y clang-format-${{ env.clang-version }} clang-tidy-${{ env.clang-version }}
-          fi
-          echo "CC=clang-${{ env.clang-version }}" >> $GITHUB_ENV
-          echo "CXX=clang++-${{ env.clang-version }}" >> $GITHUB_ENV
-
       - name: Generate compilation database
         run: |
-          echo $CC
-          echo $CXX
+          export CC=clang-${{ env.clang-version }}
+          export CXX=clang++-${{ env.clang-version }}
           $CC --version
           $CXX --version
           cmake -S . -B build
@@ -49,7 +39,7 @@ jobs:
         with:
           style: ""
           tidy-checks: ""
-          version: 16
+          version: ${{ env.clang-version }}
           ignore: build
           thread-comments: true
           step-summary: true
