@@ -44,6 +44,9 @@ jobs:
           $CXX --version
           cmake -S . -B build
 
+      - name: Install pipx
+        run: pip3 install pipx
+
       - name: Run cpp-linter
         id: linter
         env:
