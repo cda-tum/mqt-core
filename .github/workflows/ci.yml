@@ -46,25 +46,25 @@ jobs:
       - name: Test
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
-  cpp-tests-sccache:
-    name: Tests • ${{ matrix.runs-on }} • sccache
+  cpp-tests-ccache:
+    name: Tests • ${{ matrix.runs-on }} • ccache
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
         runs-on: [ubuntu-latest, macos-latest]
-    env:
-      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCACHE_OPTION="sccache"
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build --config Release
       - name: Test
@@ -91,21 +91,23 @@ jobs:
       - name: Test
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
-  windows-cpp-tests-sccache-mozilla:
-    name: Tests • windows-latest • gcc • sccache-mozilla
+  windows-cpp-tests-ccache:
+    name: Tests • windows-latest • gcc • ccache
     runs-on: windows-latest
-    env:
-      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Install ninja-build tool
-        run: choco install ninja
-      - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        run: choco install ninja ccache -y
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          windows_compile_environment: msvc
+          install_ccache: false
+          prepend_symlinks_to_path: false
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DCACHE_OPTION="sccache"
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build --config Release
       - name: Test
