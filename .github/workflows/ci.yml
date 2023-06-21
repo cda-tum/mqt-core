@@ -40,7 +40,7 @@ jobs:
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build --config Release
       - name: Test
@@ -61,7 +61,7 @@ jobs:
           key: "tests-cpp-windows-sccache"
           variant: sccache
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON -DCACHE_OPTION="sccache"
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DCACHE_OPTION="sccache"
       - name: Build
         run: cmake --build build --config Release
       - name: Test
@@ -81,7 +81,7 @@ jobs:
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON -DCACHE_OPTION="sccache"
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DCACHE_OPTION="sccache"
       - name: Build
         run: cmake --build build --config Release
       - name: Test
@@ -111,7 +111,7 @@ jobs:
           windows_compile_environment: msys2
           prepend_symlinks_to_path: false
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build --config Release
       - name: Test
@@ -132,7 +132,7 @@ jobs:
       - name: Set up mold as linker
         uses: rui314/setup-mold@v1
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
