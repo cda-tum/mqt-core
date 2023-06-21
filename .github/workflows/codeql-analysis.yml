@@ -61,10 +61,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: Chocobo1/setup-ccache-action@v1
         with:
-          key: "CodeQL-${{ matrix.language }}"
-          verbose: 1
+          prepend_symlinks_to_path: false
 
       - name: Set up mold as linker
         uses: rui314/setup-mold@v1

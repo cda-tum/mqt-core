@@ -27,32 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runs-on: [ubuntu-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: "tests-cpp-${{matrix.runs-on}}"
-          verbose: 1
-      - name: Set up mold as linker (Linux only)
-        uses: rui314/setup-mold@v1
-      - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-      - name: Build
-        run: cmake --build build --config Release
-      - name: Test
-        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
-
-  cpp-tests-ccache:
-    name: Tests • ${{ matrix.runs-on }} • ccache
-    runs-on: ${{ matrix.runs-on }}
-    strategy:
-      fail-fast: false
-      matrix:
-        runs-on: [ubuntu-latest, macos-latest]
+        runs-on: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -61,81 +36,9 @@ jobs:
         uses: Chocobo1/setup-ccache-action@v1
         with:
           prepend_symlinks_to_path: false
-      - name: Set up mold as linker (Linux only)
-        uses: rui314/setup-mold@v1
-      - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-      - name: Build
-        run: cmake --build build --config Release
-      - name: Test
-        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
-
-  windows-cpp-tests-sccache:
-    name: Tests • windows-latest • gcc • sccache
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Install ninja-build tool
-        run: choco install ninja
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: "tests-cpp-windows-sccache"
-          variant: sccache
-      - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DCACHE_OPTION="sccache"
-      - name: Build
-        run: cmake --build build --config Release
-      - name: Test
-        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
-
-  windows-cpp-tests-ccache:
-    name: Tests • windows-latest • gcc • ccache
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Install ninja-build tool
-        run: choco install ninja ccache -y
-      - name: Setup ccache
-        uses: Chocobo1/setup-ccache-action@v1
-        with:
           windows_compile_environment: msvc
-          install_ccache: false
-          prepend_symlinks_to_path: false
-      - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release
-      - name: Build
-        run: cmake --build build --config Release
-      - name: Test
-        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
-
-  windows-msys2-cpp-tests:
-    name: Tests • windows-latest • msys2/gcc • ccache
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-      - uses: msys2/setup-msys2@v2
-        with:
-          install: >-
-            git
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-python-pip
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-ninja
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Setup ccache
-        uses: Chocobo1/setup-ccache-action@v1
-        with:
-          windows_compile_environment: msys2
-          prepend_symlinks_to_path: false
+      - name: Set up mold as linker (Linux only)
+        uses: rui314/setup-mold@v1
       - name: Configure CMake
         run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
@@ -151,10 +54,9 @@ jobs:
         with:
           submodules: recursive
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: Chocobo1/setup-ccache-action@v1
         with:
-          key: "coverage-cpp"
-          verbose: 1
+          prepend_symlinks_to_path: false
       - name: Set up mold as linker
         uses: rui314/setup-mold@v1
       - name: Configure CMake
@@ -174,7 +76,7 @@ jobs:
   cpp-ci-check:
     if: always()
     name: 🚦 Check
-    needs: [cpp-tests, coverage] # TODO: add windows checks once they work
+    needs: [cpp-tests, coverage]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
