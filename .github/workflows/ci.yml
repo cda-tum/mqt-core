@@ -22,7 +22,7 @@ env:
 
 jobs:
   cpp-tests:
-    name: 🇨‌➕➕ Tests on ${{ matrix.runs-on }}
+    name: 🇨‌➕➕ • Tests • ${{ matrix.runs-on }}
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
@@ -46,28 +46,8 @@ jobs:
       - name: Test
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
-  windows-cpp-tests-ccache:
-    name: 🇨‌➕➕ Tests on windows-latest
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Install ninja-build tool
-        run: choco install ninja
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: "tests-cpp-windows-sccache"
-      - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
-      - name: Build
-        run: cmake --build build --config Release
-      - name: Test
-        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
-
   windows-cpp-tests-sccache:
-    name: 🇨‌➕➕ Tests on windows-latest
+    name: 🇨‌➕➕ • Tests • windows-latest • gcc • sccache
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -87,27 +67,50 @@ jobs:
       - name: Test
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
-  windows-cpp-tests-msvc-clang:
-    name: 🇨‌➕➕ Tests on windows-latest
+  windows-cpp-tests-sccache-mozilla:
+    name: 🇨‌➕➕ • Tests • windows-latest • gcc • sccache-mozilla
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Setup ccache
-        uses: Chocobo1/setup-ccache-action@v1
-        with:
-          windows_compile_environment: msvc
-          prepend_symlinks_to_path: false
+      - name: Install ninja-build tool
+        run: choco install ninja
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON -T ClangCL
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON -DCACHE_OPTION="sccache"
       - name: Build
         run: cmake --build build --config Release
       - name: Test
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+      - name: Run sccache stat for check
+        shell: bash
+        run: ${SCCACHE_PATH} --show-stats
+
+  windows-cpp-tests-msvc-clang:
+    name: 🇨‌➕➕ • Tests • windows-latest • clang-cl • sccache
+    runs-on: windows-latest
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON -DCACHE_OPTION="sccache" -T ClangCL
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Test
+        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+      - name: Run sccache stat for check
+        shell: bash
+        run: ${SCCACHE_PATH} --show-stats
 
   windows-msys2-cpp-tests:
-    name: 🇨‌➕➕ Tests on windows-latest (using MSYS2)
+    name: 🇨‌➕➕ • Tests • windows-latest • msys2/gcc • ccache
     runs-on: windows-latest
     defaults:
       run:
@@ -137,7 +140,7 @@ jobs:
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   coverage:
-    name: 🇨‌➕➕ Coverage
+    name: 🇨‌➕➕ • Coverage • ubuntu-latest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -166,7 +169,7 @@ jobs:
 
   cpp-ci-check:
     if: always()
-    name: 🚦 🇨‌➕➕ CI Check
+    name: 🇨‌➕➕ • 🚦 Check
     needs: [cpp-tests, coverage] # TODO: add windows checks once they work
     runs-on: ubuntu-latest
     timeout-minutes: 1
