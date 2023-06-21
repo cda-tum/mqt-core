@@ -8,6 +8,8 @@ on:
       - "**/*.hpp"
       - ".github/workflows/cpp-linter.yml"
       - ".clang-tidy"
+      - "!include/python/**"
+      - "!src/python/**"
   push:
     branches:
       - main
@@ -16,6 +18,8 @@ on:
       - "**/*.hpp"
       - ".github/workflows/cpp-linter.yml"
       - ".clang-tidy"
+      - "!include/python/**"
+      - "!src/python/**"
   workflow_dispatch:
 
 concurrency:
@@ -32,14 +36,10 @@ jobs:
     name: run
     steps:
       - name: Install requirements
-        run: apt-get update && apt-get install -y python3-dev python3-pip git pipx lsb-release
+        run: apt-get update && apt-get install -y python3-dev python3-pip git pipx
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-          cache: "pip"
       - name: Generate compilation database
         run: |
           export CC=clang-${{ env.clang-version }}
@@ -48,8 +48,6 @@ jobs:
           $CXX --version
           python3 --version
           pip3 --version
-          python --version
-          pip --version
           cmake -S . -B build
 
       - name: Run cpp-linter
@@ -66,7 +64,8 @@ jobs:
           --ignore="build" \
           --database=build \
           --extra-arg="-std=c++17" \
-          --step-summary=true
+          --step-summary=true \
+          --ignore="include/python|src/python"
 
       - name: Fail if linter found errors
         if: steps.linter.outputs.checks-failed > 0
