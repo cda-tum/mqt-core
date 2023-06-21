@@ -45,7 +45,9 @@ jobs:
           cmake -S . -B build
 
       - name: Install pipx
-        run: pip3 install pipx
+        run: |
+          python3 -m pip install --user pipx
+          python3 -m pipx ensurepath
 
       - name: Run cpp-linter
         id: linter
