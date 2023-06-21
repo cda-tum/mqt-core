@@ -57,7 +57,7 @@ jobs:
           --files-changed-only=true \
           --ignore="build" \
           --database=build \
-          --extra-args="-std=c++17" \
+          --extra-arg="-std=c++17" \
           --step-summary=true
 
       - name: Fail if linter found errors
