@@ -76,7 +76,7 @@ jobs:
         name: Set CMake generator to Ninja (Windows only)
         run: echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
       - name: Test on 🐍 ${{ matrix.python-version }}
-        run: pipx run nox -s tests-${{ matrix.python-version }}
+        run: pipx run nox -s tests-${{ matrix.python-version }} --verbose
 
   coverage:
     name: Coverage • ${{ matrix.python-version }}
