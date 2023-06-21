@@ -31,7 +31,7 @@ jobs:
     container: silkeh/clang:16
     steps:
       - name: Install requirements
-        run: apt-get update && apt-get install -y python3-dev python3-pip git
+        run: apt-get update && apt-get install -y python3-dev python3-pip git pipx
       - uses: actions/checkout@v3
         with:
           submodules: recursive
@@ -43,11 +43,6 @@ jobs:
           $CC --version
           $CXX --version
           cmake -S . -B build
-
-      - name: Install pipx
-        run: |
-          python3 -m pip install --user pipx
-          python3 -m pipx ensurepath
 
       - name: Run cpp-linter
         id: linter
