@@ -56,6 +56,7 @@ jobs:
         with:
           prepend_symlinks_to_path: false
           windows_compile_environment: msvc
+          override_cache_key: wheels-${{ matrix.os }}-${{ matrix.python }}
       - uses: pypa/cibuildwheel@v2.13
         env:
           CIBW_BUILD: ${{ matrix.python }}-*

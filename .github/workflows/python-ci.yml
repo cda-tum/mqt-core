@@ -29,6 +29,7 @@ jobs:
         uses: Chocobo1/setup-ccache-action@v1
         with:
           prepend_symlinks_to_path: false
+          override_cache_key: lint
       - uses: actions/setup-python@v4
         with:
           python-version: "3.11"
@@ -63,6 +64,7 @@ jobs:
         with:
           prepend_symlinks_to_path: false
           windows_compile_environment: msvc
+          override_cache_key: python-tests-${{ matrix.runs-on }}-${{ matrix.python-version }}
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -92,6 +94,7 @@ jobs:
         uses: Chocobo1/setup-ccache-action@v1
         with:
           prepend_symlinks_to_path: false
+          override_cache_key: python-coverage-${{ matrix.python-version }}
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
