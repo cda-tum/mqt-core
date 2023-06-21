@@ -46,26 +46,61 @@ jobs:
       - name: Test
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
-  windows-cpp-tests:
+  windows-cpp-tests-ccache:
     name: 🇨‌➕➕ Tests on windows-latest
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Set up Clang
-        uses: egor-tensin/setup-clang@v1
       - name: Install ninja-build tool
-        uses: seanmiddleditch/gha-setup-ninja@v3
-      - name: Show Clang++ version
-        run: clang++ --version
+        run: choco install ninja
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: "tests-cpp-windows"
+          key: "tests-cpp-windows-sccache"
+      - name: Configure CMake
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Test
+        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+
+  windows-cpp-tests-sccache:
+    name: 🇨‌➕➕ Tests on windows-latest
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install ninja-build tool
+        run: choco install ninja
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: "tests-cpp-windows-sccache"
           variant: sccache
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON -DCACHE_OPTION="sccache"
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON -DCACHE_OPTION="sccache"
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Test
+        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+
+  windows-cpp-tests-msvc-clang:
+    name: 🇨‌➕➕ Tests on windows-latest
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          windows_compile_environment: msvc
+          prepend_symlinks_to_path: false
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON -T ClangCL
       - name: Build
         run: cmake --build build --config Release
       - name: Test
