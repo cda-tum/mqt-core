@@ -10,6 +10,7 @@ on:
 
 env:
   FORCE_COLOR: 3
+  CMAKE_GENERATOR: Ninja
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -26,10 +27,9 @@ jobs:
           submodules: recursive
           fetch-depth: 0
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: Chocobo1/setup-ccache-action@v1
         with:
-          key: "python-lint"
-          verbose: 1
+          prepend_symlinks_to_path: false
       - uses: actions/setup-python@v4
         with:
           python-version: "3.11"
@@ -60,10 +60,10 @@ jobs:
           submodules: recursive
           fetch-depth: 0
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: Chocobo1/setup-ccache-action@v1
         with:
-          key: "tests-python-${{matrix.runs-on}}-${{matrix.python-version}}"
-          verbose: 1
+          prepend_symlinks_to_path: false
+          windows_compile_environment: msvc
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -87,10 +87,9 @@ jobs:
           submodules: recursive
           fetch-depth: 0
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: Chocobo1/setup-ccache-action@v1
         with:
-          key: "coverage-python-${{matrix.python-version}}"
-          verbose: 1
+          prepend_symlinks_to_path: false
       - name: Setup Python
         uses: actions/setup-python@v4
         with:

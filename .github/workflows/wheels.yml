@@ -15,6 +15,7 @@ concurrency:
 
 env:
   FORCE_COLOR: 3
+  CMAKE_GENERATOR: Ninja
 
 jobs:
   build_sdist:
@@ -50,12 +51,12 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
-      - if: matrix.os == 'macos-latest'
+      - if: matrix.os != 'ubuntu-latest'
         name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: Chocobo1/setup-ccache-action@v1
         with:
-          key: "wheels-${{ matrix.python }}-${{ matrix.os }}"
-          verbose: 1
+          prepend_symlinks_to_path: false
+          windows_compile_environment: msvc
       - uses: pypa/cibuildwheel@v2.13
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
