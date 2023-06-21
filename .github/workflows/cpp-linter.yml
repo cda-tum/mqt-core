@@ -32,6 +32,7 @@ env:
 jobs:
   cpp-linter:
     runs-on: ubuntu-latest
+    name: Run
     steps:
       - uses: actions/checkout@v3
         with:
