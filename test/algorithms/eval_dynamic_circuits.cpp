@@ -109,7 +109,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
   qc::CircuitOptimizer::reorderOperations(*iqpe);
   const auto finishedTransformation = std::chrono::steady_clock::now();
 
-  qc::MatrixDD e = dd->makeIdent(static_cast<dd::QubitCount>(precision + 1));
+  qc::MatrixDD e = dd->makeIdent();
   dd->incRef(e);
 
   auto leftIt = qpe->begin();
@@ -326,7 +326,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
   qc::CircuitOptimizer::reorderOperations(*iqpe);
   const auto finishedTransformation = std::chrono::steady_clock::now();
 
-  qc::MatrixDD e = dd->makeIdent(precision + 1);
+  qc::MatrixDD e = dd->makeIdent();
   dd->incRef(e);
 
   auto leftIt = qpe->begin();
@@ -493,7 +493,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
   qc::CircuitOptimizer::reorderOperations(*dbv);
   const auto finishedTransformation = std::chrono::steady_clock::now();
 
-  qc::MatrixDD e = dd->makeIdent(static_cast<dd::QubitCount>(bitwidth + 1));
+  qc::MatrixDD e = dd->makeIdent();
   dd->incRef(e);
 
   auto leftIt = bv->begin();
@@ -652,7 +652,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
   qc::CircuitOptimizer::reorderOperations(*dqft);
   const auto finishedTransformation = std::chrono::steady_clock::now();
 
-  qc::MatrixDD e = dd->makeIdent(static_cast<dd::QubitCount>(precision));
+  qc::MatrixDD e = dd->makeIdent();
   dd->incRef(e);
 
   auto leftIt = qft->begin();

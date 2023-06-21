@@ -688,7 +688,7 @@ TEST(DDPackageTest, PackageReset) {
   dd->reset();
   // after clearing the tables, they should be empty
   EXPECT_EQ(table[ihash], nullptr);
-  iGate = dd->makeIdent(1);
+  iGate = dd->makeIdent();
   const auto* node2 = table[ihash];
   // after recreating the DD, it should receive the same node
   EXPECT_EQ(node2, node);
