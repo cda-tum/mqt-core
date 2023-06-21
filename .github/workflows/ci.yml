@@ -39,6 +39,9 @@ jobs:
           windows_compile_environment: msvc
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
+      - name: Install Ninja
+        if: runner.os != 'Windows'
+        run: pipx install ninja
       - name: Configure CMake
         run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
