@@ -46,6 +46,28 @@ jobs:
       - name: Test
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
+  cpp-tests-sccache:
+    name: Tests • ${{ matrix.runs-on }} • sccache
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+      - name: Set up mold as linker (Linux only)
+        uses: rui314/setup-mold@v1
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCACHE_OPTION="sccache"
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Test
+        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+
   windows-cpp-tests-sccache:
     name: Tests • windows-latest • gcc • sccache
     runs-on: windows-latest
