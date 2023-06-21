@@ -1,4 +1,4 @@
-name: cpp-linter
+name: 🇨‌➕➕ • Lint
 
 on:
   merge_group:
@@ -29,7 +29,7 @@ jobs:
   cpp-linter:
     runs-on: ubuntu-latest
     container: silkeh/clang:16
-    name: 🇨‌➕➕ • Lint
+    name: run
     steps:
       - name: Install requirements
         run: apt-get update && apt-get install -y python3-dev python3-pip git pipx

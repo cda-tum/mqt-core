@@ -1,4 +1,4 @@
-name: "CodeQL"
+name: 📝 • CodeQL
 
 on:
   push:
@@ -43,7 +43,7 @@ env:
 
 jobs:
   analyze:
-    name: 📝 • CodeQL • ${{ matrix.language }}
+    name: ${{ matrix.language }}
     runs-on: ubuntu-latest
     permissions:
       security-events: write

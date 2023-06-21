@@ -1,4 +1,4 @@
-name: CI
+name: 🇨‌➕➕ • CI
 
 on:
   push:
@@ -22,7 +22,7 @@ env:
 
 jobs:
   cpp-tests:
-    name: 🇨‌➕➕ • Tests • ${{ matrix.runs-on }}
+    name: Tests • ${{ matrix.runs-on }}
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
@@ -47,7 +47,7 @@ jobs:
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   windows-cpp-tests-sccache:
-    name: 🇨‌➕➕ • Tests • windows-latest • gcc • sccache
+    name: Tests • windows-latest • gcc • sccache
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -68,7 +68,7 @@ jobs:
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   windows-cpp-tests-sccache-mozilla:
-    name: 🇨‌➕➕ • Tests • windows-latest • gcc • sccache-mozilla
+    name: Tests • windows-latest • gcc • sccache-mozilla
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -89,7 +89,7 @@ jobs:
         run: ${SCCACHE_PATH} --show-stats
 
   windows-cpp-tests-msvc-clang:
-    name: 🇨‌➕➕ • Tests • windows-latest • clang-cl • sccache
+    name: Tests • windows-latest • clang-cl • sccache
     runs-on: windows-latest
     env:
       SCCACHE_GHA_ENABLED: "true"
@@ -110,7 +110,7 @@ jobs:
         run: ${SCCACHE_PATH} --show-stats
 
   windows-msys2-cpp-tests:
-    name: 🇨‌➕➕ • Tests • windows-latest • msys2/gcc • ccache
+    name: Tests • windows-latest • msys2/gcc • ccache
     runs-on: windows-latest
     defaults:
       run:
@@ -140,7 +140,7 @@ jobs:
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   coverage:
-    name: 🇨‌➕➕ • Coverage • ubuntu-latest
+    name: Coverage • ubuntu-latest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -169,7 +169,7 @@ jobs:
 
   cpp-ci-check:
     if: always()
-    name: 🇨‌➕➕ • CI • 🚦Check
+    name: 🚦 Check
     needs: [cpp-tests, coverage] # TODO: add windows checks once they work
     runs-on: ubuntu-latest
     timeout-minutes: 1
