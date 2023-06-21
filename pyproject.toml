@@ -149,15 +149,19 @@ select = [
     "A",           # flake8-builtins
     "ANN",         # flake8-annotations
     "ARG",         # flake8-unused-arguments
+    "ASYNC",       # flake8-async
     "B",  "B904",  # flake8-bugbear
     "C4",          # flake8-comprehensions
     "D",           # pydocstyle
     "EM",          # flake8-errmsg
     "EXE",         # flake8-executable
+    "FA",          # flake8-future-annotations
     "I",           # isort
     "ICN",         # flake8-import-conventions
     "ISC",         # flake8-implicit-str-concat
     "N",           # flake8-naming
+    "NPY",         # numpy
+    "PERF",        # perflint
     "PGH",         # pygrep-hooks
     "PIE",         # flake8-pie
     "PL",          # pylint
@@ -169,6 +173,7 @@ select = [
     "RSE",         # flake8-raise
     "RUF",         # Ruff-specific
     "SLF",         # flake8-self
+    "SLOT",        # flake8-slots
     "SIM",         # flake8-simplify
     "TCH",         # flake8-type-checking
     "TID",         # flake8-tidy-imports
