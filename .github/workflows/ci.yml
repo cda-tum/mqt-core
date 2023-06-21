@@ -169,7 +169,7 @@ jobs:
 
   cpp-ci-check:
     if: always()
-    name: 🇨‌➕➕ • 🚦 Check
+    name: 🇨‌➕➕ • CI • 🚦Check
     needs: [cpp-tests, coverage] # TODO: add windows checks once they work
     runs-on: ubuntu-latest
     timeout-minutes: 1

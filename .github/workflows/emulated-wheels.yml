@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   build_wheels_emulation:
-    name: 🐍 ${{ matrix.python }} wheels on ${{ matrix.arch }}
+    name: 🐍 • Emulated Wheels • ${{ matrix.arch }} • ${{ matrix.python }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -37,7 +37,7 @@ jobs:
 
   deploy:
     if: github.event_name == 'release' && github.event.action == 'published'
-    name: 🚀 Deploy to PyPI
+    name: 🐍 • Emulated Wheels • 🚀 Deploy to PyPI
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -56,7 +56,7 @@ jobs:
 
   emulated-wheels-check:
     if: always()
-    name: 🚦 Emulated Python Wheels Check
+    name: 🐍 • Emulated Wheels • 🚦Check
     needs: [build_wheels_emulation, deploy]
     runs-on: ubuntu-latest
     timeout-minutes: 1

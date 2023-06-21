@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   lint:
-    name: 🐍 Lint
+    name: 🐍 • Lint
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -42,7 +42,7 @@ jobs:
           pipx run nox -s pylint
 
   python-tests:
-    name: 🐍 ${{ matrix.python-version }} Tests on ${{ matrix.runs-on }}
+    name: 🐍 • Tests • ${{ matrix.runs-on }} • ${{ matrix.python-version }}
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
@@ -75,7 +75,7 @@ jobs:
         run: pipx run nox -s tests-${{ matrix.python-version }}
 
   coverage:
-    name: 🐍 ${{ matrix.python-version }} Coverage
+    name: 🐍 • Coverage • ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -107,7 +107,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   dist:
-    name: 🐍 Distribution build
+    name: 🐍 • Distribution build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -121,7 +121,7 @@ jobs:
 
   python-ci-check:
     if: always()
-    name: 🚦 Python CI Check
+    name: 🐍 • CI • 🚦Check
     needs: [lint, python-tests, coverage, dist]
     runs-on: ubuntu-latest
     timeout-minutes: 1

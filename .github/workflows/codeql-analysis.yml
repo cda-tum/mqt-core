@@ -43,7 +43,7 @@ env:
 
 jobs:
   analyze:
-    name: Analyze ${{ matrix.language }}
+    name: 📝 • CodeQL • ${{ matrix.language }}
     runs-on: ubuntu-latest
     permissions:
       security-events: write
