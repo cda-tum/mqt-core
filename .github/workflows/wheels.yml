@@ -15,7 +15,6 @@ concurrency:
 
 env:
   FORCE_COLOR: 3
-  CMAKE_GENERATOR: Ninja
 
 jobs:
   build_sdist:
@@ -60,6 +59,7 @@ jobs:
       - uses: pypa/cibuildwheel@v2.13
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
+          CIBW_ENVIRONMENT_WINDOWS: CMAKE_GENERATOR=Ninja
           # Temporary: use pre-release Python 3.12 for stable ABI builds
           CIBW_PRERELEASE_PYTHONS: True
 
