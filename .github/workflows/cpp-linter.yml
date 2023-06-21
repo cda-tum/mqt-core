@@ -32,40 +32,45 @@ env:
 jobs:
   cpp-linter:
     runs-on: ubuntu-latest
-    container: silkeh/clang:16
-    name: run
     steps:
-      - name: Install requirements
-        run: apt-get update && apt-get install -y python3-dev python3-pip git pipx
       - uses: actions/checkout@v3
         with:
           submodules: recursive
+
+      - name: Install clang-${{ env.clang-version }}
+        run: |
+          sudo apt-get update
+          wget https://apt.llvm.org/llvm.sh -O ${{ runner.temp }}/llvm_install.sh
+          chmod +x ${{ runner.temp }}/llvm_install.sh
+          if sudo ${{ runner.temp }}/llvm_install.sh ${{ env.clang-version }}; then
+            sudo apt-get install -y clang-format-${{ env.clang-version }} clang-tidy-${{ env.clang-version }}
+          fi
+          echo "CC=clang-${{ env.clang-version }}" >> $GITHUB_ENV
+          echo "CXX=clang++-${{ env.clang-version }}" >> $GITHUB_ENV
+
       - name: Generate compilation database
         run: |
-          export CC=clang-${{ env.clang-version }}
-          export CXX=clang++-${{ env.clang-version }}
+          echo $CC
+          echo $CXX
           $CC --version
           $CXX --version
-          python3 --version
-          pip3 --version
           cmake -S . -B build
 
       - name: Run cpp-linter
+        uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          pipx run cpp-linter \
-          --version=${{ env.clang-version }} \
-          --style="" \
-          --tidy-checks="" \
-          --thread-comments=true \
-          --files-changed-only=true \
-          --ignore="build" \
-          --database=build \
-          --extra-arg="-std=c++17" \
-          --step-summary=true \
-          --ignore="include/python|src/python"
+        with:
+          style: ""
+          tidy-checks: ""
+          version: ${{ env.clang-version }}
+          ignore: "build|include/python|src/python"
+          thread-comments: true
+          step-summary: true
+          database: "build"
+          extra-args: -std=c++17
+          files-changed-only: true
 
       - name: Fail if linter found errors
         if: steps.linter.outputs.checks-failed > 0
