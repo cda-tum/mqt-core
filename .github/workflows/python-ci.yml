@@ -72,13 +72,12 @@ jobs:
           cache: "pip"
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
-      - uses: ilammy/msvc-dev-cmd@v1
       - if: matrix.runs-on == 'windows-latest'
         name: Set CMake generator to Ninja (Windows only)
         run: |
           echo "CMAKE_GENERATOR=Ninja" >> $env:GITHUB_ENV
-          echo "CC=clang-cl.exe" >> $env:GITHUB_ENV
-          echo "CXX=clang-cl.exe" >> $env:GITHUB_ENV
+          echo "CC=clang" >> $env:GITHUB_ENV
+          echo "CXX=clang++" >> $env:GITHUB_ENV
       - name: Test on 🐍 ${{ matrix.python-version }}
         run: pipx run nox -s tests-${{ matrix.python-version }} --verbose
 
@@ -113,59 +112,6 @@ jobs:
         with:
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
-
-  windows-experiment:
-    name: Windows Experiment
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          fetch-depth: 0
-      - name: Setup ccache
-        uses: Chocobo1/setup-ccache-action@v1
-        with:
-          prepend_symlinks_to_path: false
-          override_cache_key: windows-experiment
-          windows_compile_environment: msvc
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
-          cache: "pip"
-      - uses: ilammy/msvc-dev-cmd@v1
-      - name: Set CMake generator to Ninja (Windows only)
-        run: |
-          echo "CMAKE_GENERATOR=Ninja" >> $env:GITHUB_ENV
-      - name: Test on 🐍 ${{ matrix.python-version }}
-        run: pipx run nox -s tests-3.11 --verbose
-
-  windows-experiment-clang:
-    name: Windows Experiment (clang)
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          fetch-depth: 0
-      - name: Setup ccache
-        uses: Chocobo1/setup-ccache-action@v1
-        with:
-          prepend_symlinks_to_path: false
-          override_cache_key: windows-experiment-clang
-          windows_compile_environment: msvc
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
-          cache: "pip"
-      - name: Set CMake generator to Ninja (Windows only)
-        run: |
-          echo "CMAKE_GENERATOR=Ninja" >> $env:GITHUB_ENV
-          echo "CC=clang" >> $env:GITHUB_ENV
-          echo "CXX=clang++" >> $env:GITHUB_ENV
-      - name: Test on 🐍 ${{ matrix.python-version }}
-        run: pipx run nox -s tests-3.11 --verbose
 
   dist:
     name: Distribution build
