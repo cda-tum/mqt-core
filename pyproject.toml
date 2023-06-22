@@ -216,6 +216,4 @@ DEPLOY = "ON"
 [tool.cibuildwheel.windows]
 before-build = "pip install delvewheel"
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
-
-[tool.cibuildwheel.windows.config-settings]
-"cmake.args" = ["-T ClangCl"]
+environment = { DEPLOY = "ON", CMAKE_GENERATOR = "Ninja" }
