@@ -134,8 +134,7 @@ jobs:
           python-version: 3.11
           cache: "pip"
       - uses: ilammy/msvc-dev-cmd@v1
-      - if: matrix.runs-on == 'windows-latest'
-        name: Set CMake generator to Ninja (Windows only)
+      - name: Set CMake generator to Ninja (Windows only)
         run: |
           echo "CMAKE_GENERATOR=Ninja" >> $env:GITHUB_ENV
       - name: Test on 🐍 ${{ matrix.python-version }}
@@ -160,8 +159,7 @@ jobs:
         with:
           python-version: 3.11
           cache: "pip"
-      - if: matrix.runs-on == 'windows-latest'
-        name: Set CMake generator to Ninja (Windows only)
+      - name: Set CMake generator to Ninja (Windows only)
         run: |
           echo "CMAKE_GENERATOR=Ninja" >> $env:GITHUB_ENV
           echo "CC=clang" >> $env:GITHUB_ENV
