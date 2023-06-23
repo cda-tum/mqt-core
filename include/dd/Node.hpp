@@ -17,19 +17,13 @@ struct vNode {
   RefCount ref{};                     // reference count
   Qubit v{}; // variable index (nonterminal) value (-1 for terminal)
 
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-  static vNode terminalNode;
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
-  constexpr static vNode* terminal{&terminalNode};
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables
+  static vNode terminal;
 
-  static constexpr bool isTerminal(const vNode* p) { return p == terminal; }
+  static constexpr bool isTerminal(const vNode* p) { return p == &terminal; }
 };
 using vEdge = Edge<vNode>;
 using vCachedEdge = CachedEdge<vNode>;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline vNode vNode::terminalNode{
-    {{{nullptr, Complex::zero}, {nullptr, Complex::zero}}}, nullptr, 0U, -1};
 
 // NOLINTNEXTLINE(readability-identifier-naming)
 struct mNode {
@@ -46,11 +40,9 @@ struct mNode {
   // 1 = mark path is conjugated (tmp flag))
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-  static mNode terminalNode;
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
-  constexpr static mNode* terminal{&terminalNode};
+  static mNode terminal;
 
-  static constexpr bool isTerminal(const mNode* p) { return p == terminal; }
+  static constexpr bool isTerminal(const mNode* p) { return p == &terminal; }
 
   [[nodiscard]] inline bool isIdentity() const {
     return (flags & static_cast<std::uint8_t>(16U)) != 0;
@@ -77,16 +69,6 @@ struct mNode {
 using mEdge = Edge<mNode>;
 using mCachedEdge = CachedEdge<mNode>;
 
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline mNode mNode::terminalNode{{{{nullptr, Complex::zero},
-                                   {nullptr, Complex::zero},
-                                   {nullptr, Complex::zero},
-                                   {nullptr, Complex::zero}}},
-                                 nullptr,
-                                 0U,
-                                 -1,
-                                 32 + 16};
-
 // NOLINTNEXTLINE(readability-identifier-naming)
 struct dNode {
   std::array<Edge<dNode>, NEDGE> e{}; // edges out of this node
@@ -102,10 +84,9 @@ struct dNode {
   // 1 = mark path is conjugated (tmp flag))
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-  static dNode terminalNode;
+  static dNode terminal;
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
-  constexpr static dNode* terminal{&terminalNode};
-  static constexpr bool isTerminal(const dNode* p) { return p == terminal; }
+  static constexpr bool isTerminal(const dNode* p) { return p == &terminal; }
 
   [[nodiscard]] [[maybe_unused]] static inline bool
   tempDensityMatrixFlagsEqual(const std::uint8_t a, const std::uint8_t b) {
@@ -266,15 +247,6 @@ struct dNode {
 };
 using dEdge = Edge<dNode>;
 using dCachedEdge = CachedEdge<dNode>;
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-inline dNode dNode::terminalNode{{{{nullptr, Complex::zero},
-                                   {nullptr, Complex::zero},
-                                   {nullptr, Complex::zero},
-                                   {nullptr, Complex::zero}}},
-                                 nullptr,
-                                 0,
-                                 -1,
-                                 0};
 
 // It's used but clang-tidy in our CI complains...
 // NOLINTNEXTLINE(clang-diagnostic-unused-function)

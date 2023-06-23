@@ -106,6 +106,7 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
     ${PROJECT_SOURCE_DIR}/include/dd/Operations.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/Simulation.hpp
     dd/FunctionalityConstruction.cpp
+    dd/Node.cpp
     dd/NoiseFunctionality.cpp
     dd/Operations.cpp
     dd/Simulation.cpp)
