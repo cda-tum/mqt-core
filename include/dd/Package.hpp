@@ -2975,25 +2975,38 @@ public:
   }
 
   CMat getMatrix(const mEdge& e) {
-    const std::size_t dim = 2ULL << e.p->v;
+    const std::size_t dim = 2ULL << (nqubits-1);
     // allocate resulting matrix
     auto mat = CMat(dim, CVec(dim, {0.0, 0.0}));
-    getMatrix(e, Complex::one, 0, 0, mat, false);
+    if (e.isTerminal()) {
+      for (auto i = 0ULL; i < dim; i++) {
+        for (auto j = 0ULL; j < dim; j++) {
+          if (i == j) {
+            mat[i][j] = {1., 0.};
+          }
+        }
+        }
+    } else {
+      getMatrix(e, Complex::one, 0, 0, mat);
+    }
     return mat;
   }
+  // CMat getMatrix(const mEdge& e) {
+  //   const std::size_t dim = 2ULL << e.p->v;
+  //   // allocate resulting matrix
+  //   auto mat = CMat(dim, CVec(dim, {0.0, 0.0}));
+  //   getMatrix(e, Complex::one, 0, 0, mat);
+  //   return mat;
+  // }
   void getMatrix(const mEdge& e, const Complex& amp, std::size_t i,
-                 std::size_t j, CMat& mat, bool skippedLevel = false) {
+                 std::size_t j, CMat& mat) {
     // calculate new accumulated amplitude
-    if (skippedLevel) {
-      std::cout << "Problem here \n";
-    }
     auto c = cn.mulCached(e.w, amp);
 
     const std::size_t x = i | (1ULL << e.p->v);
     const std::size_t y = j | (1ULL << e.p->v);
     if (e.isTerminal()) {
       // base case
-      // if (!skippedLevel) {
       mat.at(i).at(j) = {CTEntry::val(c.r), CTEntry::val(c.i)};
       cn.returnToCache(c);
       return;
@@ -3014,14 +3027,14 @@ public:
     auto levelsToSkip = (e.p->v - e.p->e[0].p->v) - 1;
     std::cout << "Outer loop \n";
     //// If successor node skips a level
-    if (levelsToSkip != 0) {
-      auto pseudoIdentity = makeIdent();
-      //    // Apply identity case until reaching next non-identity node
-      for (int level = 0; level < levelsToSkip; ++level) {
-        std::cout << "Entered Loop \n";
-        getMatrix(pseudoIdentity, c, i, j, mat, true);
-      }
-    }
+    // if (levelsToSkip != 0) {
+    //  auto pseudoIdentity = makeIdent();
+    ////  //    // Apply identity case until reaching next non-identity node
+    // for (int level = 0; level < levelsToSkip; ++level) {
+    ////    std::cout << "Entered Loop \n";
+    //    getMatrix(pseudoIdentity, c, i, j, mat, true);
+    //  }
+    // }
 
     // recursive case
     if (!e.p->e[0].w.approximatelyZero()) {
