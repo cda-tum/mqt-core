@@ -45,37 +45,15 @@ template <class Node> struct Edge {
     return Node::isTerminal(p) && w == Complex::one;
   }
 
-  [[maybe_unused]] static inline void setDensityConjugateTrue(Edge& e) {
-    Node::setConjugateTempFlagTrue(e.p);
-  }
-  [[maybe_unused]] static inline void setFirstEdgeDensityPathTrue(Edge& e) {
-    Node::setNonReduceTempFlagTrue(e.p);
-  }
-  [[maybe_unused]] static inline void setDensityMatrixTrue(Edge& e) {
-    Node::setDensityMatTempFlagTrue(e.p);
-  }
-  [[maybe_unused]] static inline void alignDensityEdge(Edge& e) {
-    Node::alignDensityNode(e.p);
-  }
-
-  static inline void revertDmChangesToEdges(Edge& x, Edge& y) {
-    revertDmChangesToEdge(x);
-    revertDmChangesToEdge(y);
-  }
-  static inline void revertDmChangesToEdge(Edge& x) {
-    // Align the node pointer
-    Node::revertDmChangesToNode(x.p);
-  }
-
-  static inline void applyDmChangesToEdges(Edge& x, Edge& y) {
-    applyDmChangesToEdge(x);
-    applyDmChangesToEdge(y);
-  }
-
-  static inline void applyDmChangesToEdge(Edge& x) {
-    // Apply density matrix changes to node pointer
-    Node::applyDmChangesToNode(x.p);
-  }
+  // Functions only related to density matrices
+  [[maybe_unused]] static void setDensityConjugateTrue(Edge& e);
+  [[maybe_unused]] static void setFirstEdgeDensityPathTrue(Edge& e);
+  static void setDensityMatrixTrue(Edge& e);
+  static void alignDensityEdge(Edge& e);
+  static void revertDmChangesToEdges(Edge& x, Edge& y);
+  static void revertDmChangesToEdge(Edge& x);
+  static void applyDmChangesToEdges(Edge& x, Edge& y);
+  static void applyDmChangesToEdge(Edge& x);
 };
 
 template <typename Node> struct CachedEdge {
