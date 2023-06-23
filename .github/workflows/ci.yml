@@ -44,7 +44,7 @@ jobs:
         if: runner.os != 'Windows'
         run: pipx install ninja
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DDEPLOY=ON
       - name: Build
         run: cmake --build build --config Release
       - name: Test
@@ -64,7 +64,7 @@ jobs:
           windows_compile_environment: msvc
           override_cache_key: c++-tests-${{ matrix.runs-on }}-msvc
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DDEPLOY=ON
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
@@ -85,7 +85,7 @@ jobs:
       - name: Set up mold as linker
         uses: rui314/setup-mold@v1
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON -DDEPLOY=ON
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
