@@ -210,9 +210,8 @@ test-command = "python -c \"from mqt import core\""
 environment = { DEPLOY = "ON" }
 build-frontend = "build"
 
-[tool.cibuildwheel.macos.environment]
-MACOSX_DEPLOYMENT_TARGET = "10.15"
-DEPLOY = "ON"
+[tool.cibuildwheel.macos]
+environment = { DEPLOY = "ON", MACOSX_DEPLOYMENT_TARGET = "10.15" }
 
 [tool.cibuildwheel.windows]
 before-build = "pip install delvewheel"
