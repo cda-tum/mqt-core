@@ -30,13 +30,13 @@ template <class Node> struct Edge {
 
   // edges pointing to zero and one terminals
   // NOLINTNEXTLINE(readability-identifier-naming)
-  static const inline Edge one{Node::getTerminal, Complex::one};
+  static const inline Edge one{Node::getTerminal(), Complex::one};
 
   // NOLINTNEXTLINE(readability-identifier-naming)
-  static const inline Edge zero{Node::getTerminal, Complex::zero};
+  static const inline Edge zero{Node::getTerminal(), Complex::zero};
 
   [[nodiscard]] static constexpr Edge terminal(const Complex& w) {
-    return {Node::getTerminal, w};
+    return {Node::getTerminal(), w};
   }
   [[nodiscard]] constexpr bool isZeroTerminal() const {
     return Node::isTerminal(p) && w == Complex::zero;
