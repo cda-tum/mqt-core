@@ -41,6 +41,7 @@ coverage = ["mqt.core[test]", "pytest-cov"]
 docs = [
     "furo",
     "myst_parser>=0.13",
+    "setuptools-scm>=7",
     "sphinx>=5",
     "sphinx-copybutton",
     "sphinx_design",
