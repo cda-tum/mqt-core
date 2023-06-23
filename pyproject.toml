@@ -3,7 +3,7 @@ requires = ["scikit-build-core>=0.4.5", "nanobind>=1.4.0", "setuptools-scm>=7"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "mqt.core"
+name = "mqt-core"
 description = "The Backbone of the Munich Quantum Toolkit"
 readme = "README.md"
 authors = [
