@@ -952,8 +952,8 @@ private:
       const auto& zeroWeight = cn.getCached(begin->real(), begin->imag());
       const auto& oneWeight =
           cn.getCached(std::next(begin)->real(), std::next(begin)->imag());
-      const auto zeroSuccessor = vEdge{&vNode::terminal, zeroWeight};
-      const auto oneSuccessor = vEdge{&vNode::terminal, oneWeight};
+      const auto zeroSuccessor = vEdge{vNode::getTerminal(), zeroWeight};
+      const auto oneSuccessor = vEdge{vNode::getTerminal(), oneWeight};
       return makeDDNode<vNode>(0, {zeroSuccessor, oneSuccessor}, true);
     }
 
@@ -992,7 +992,7 @@ private:
     if (level == -1) {
       assert(rowEnd - rowStart == 1);
       assert(colEnd - colStart == 1);
-      return {&mNode::terminal, cn.getCached(matrix[rowStart][colStart])};
+      return {mNode::getTerminal(), cn.getCached(matrix[rowStart][colStart])};
     }
 
     // recursively call the function on all quadrants
@@ -2075,7 +2075,7 @@ private:
       sum.r += cv.r;
       sum.i += cv.i;
     }
-    r.p = &vNode::terminal;
+    r.p = vNode::getTerminal();
     r.w = sum;
 
     vectorInnerProduct.insert(xCopy, yCopy, r);

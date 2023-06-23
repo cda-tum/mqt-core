@@ -21,6 +21,7 @@ struct vNode {
   static vNode terminal;
 
   static constexpr bool isTerminal(const vNode* p) { return p == &terminal; }
+  static constexpr vNode* getTerminal() { return &terminal; }
 };
 using vEdge = Edge<vNode>;
 using vCachedEdge = CachedEdge<vNode>;
@@ -43,6 +44,7 @@ struct mNode {
   static mNode terminal;
 
   static constexpr bool isTerminal(const mNode* p) { return p == &terminal; }
+  static constexpr mNode* getTerminal() { return &terminal; }
 
   [[nodiscard]] inline bool isIdentity() const {
     return (flags & static_cast<std::uint8_t>(16U)) != 0;
@@ -85,8 +87,9 @@ struct dNode {
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
   static dNode terminal;
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
+
   static constexpr bool isTerminal(const dNode* p) { return p == &terminal; }
+  static constexpr dNode* getTerminal() { return &terminal; }
 
   [[nodiscard]] [[maybe_unused]] static inline bool
   tempDensityMatrixFlagsEqual(const std::uint8_t a, const std::uint8_t b) {
