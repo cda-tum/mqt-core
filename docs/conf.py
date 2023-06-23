@@ -28,7 +28,7 @@ except ModuleNotFoundError:
 # Filter git details from version
 release = version.split("+")[0]
 
-project = "mqt-core"
+project = "MQT Core"
 author = "Chair for Design Automation, Technical University of Munich"
 language = "en"
 project_copyright = "2023, Chair for Design Automation, Technical University of Munich"
