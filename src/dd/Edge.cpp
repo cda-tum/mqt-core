@@ -4,6 +4,22 @@
 
 namespace dd {
 
+template <class Node> Edge<Node> Edge<Node>::terminal(const Complex& w) {
+  return {Node::getTerminal(), w};
+}
+
+template <class Node> bool Edge<Node>::isTerminal() const {
+  return Node::isTerminal(p);
+}
+
+template <class Node> bool Edge<Node>::isZeroTerminal() const {
+  return isTerminal() && w == Complex::zero;
+}
+
+template <class Node> bool Edge<Node>::isOneTerminal() const {
+  return isTerminal() && w == Complex::one;
+}
+
 template <class Node>
 [[maybe_unused]] void Edge<Node>::setDensityConjugateTrue(Edge& e) {
   if constexpr (std::is_same_v<Node, dNode>) {
@@ -56,6 +72,11 @@ template <class Node> void Edge<Node>::applyDmChangesToEdge(Edge& x) {
     Node::applyDmChangesToNode(x.p);
   }
 }
+
+template <class Node>
+const Edge<Node> Edge<Node>::zero{Node::getTerminal(), Complex::zero};
+template <class Node>
+const Edge<Node> Edge<Node>::one{Node::getTerminal(), Complex::one};
 
 // Explicit instantiations
 template struct Edge<vNode>;

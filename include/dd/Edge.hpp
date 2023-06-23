@@ -24,26 +24,14 @@ template <class Node> struct Edge {
     return !operator==(other);
   }
 
-  [[nodiscard]] constexpr bool isTerminal() const {
-    return Node::isTerminal(p);
-  }
-
   // edges pointing to zero and one terminals
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  static const inline Edge one{Node::getTerminal(), Complex::one};
+  static const Edge zero; // NOLINT(readability-identifier-naming)
+  static const Edge one;  // NOLINT(readability-identifier-naming)
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  static const inline Edge zero{Node::getTerminal(), Complex::zero};
-
-  [[nodiscard]] static constexpr Edge terminal(const Complex& w) {
-    return {Node::getTerminal(), w};
-  }
-  [[nodiscard]] constexpr bool isZeroTerminal() const {
-    return Node::isTerminal(p) && w == Complex::zero;
-  }
-  [[nodiscard]] constexpr bool isOneTerminal() const {
-    return Node::isTerminal(p) && w == Complex::one;
-  }
+  [[nodiscard]] static Edge terminal(const Complex& w);
+  [[nodiscard]] bool isTerminal() const;
+  [[nodiscard]] bool isZeroTerminal() const;
+  [[nodiscard]] bool isOneTerminal() const;
 
   // Functions only related to density matrices
   [[maybe_unused]] static void setDensityConjugateTrue(Edge& e);
