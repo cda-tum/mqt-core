@@ -128,7 +128,7 @@ jobs:
 
   python-ci-check:
     if: always()
-    name: 🚦 Check
+    name: 🚦 🐍 Check
     needs: [lint, python-tests, coverage, dist]
     runs-on: ubuntu-latest
     timeout-minutes: 1

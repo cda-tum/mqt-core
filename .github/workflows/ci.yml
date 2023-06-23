@@ -80,7 +80,7 @@ jobs:
 
   cpp-ci-check:
     if: always()
-    name: 🚦 Check
+    name: 🚦 🇨‌➕➕ Check
     needs: [cpp-tests, coverage]
     runs-on: ubuntu-latest
     timeout-minutes: 1
