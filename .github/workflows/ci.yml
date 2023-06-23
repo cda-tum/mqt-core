@@ -64,11 +64,11 @@ jobs:
           windows_compile_environment: msvc
           override_cache_key: c++-tests-${{ matrix.runs-on }}-msvc
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
       - name: Build
-        run: cmake --build build --config Release
+        run: cmake --build build --config Debug
       - name: Test
-        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+        run: ctest -C Debug --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   coverage:
     name: Coverage • ubuntu-latest
