@@ -1,10 +1,25 @@
-name: cpp-linter
+name: 🇨‌➕➕ • Lint
 
 on:
+  merge_group:
   pull_request:
+    paths:
+      - "**/*.cpp"
+      - "**/*.hpp"
+      - ".github/workflows/cpp-linter.yml"
+      - ".clang-tidy"
+      - "!include/python/**"
+      - "!src/python/**"
   push:
     branches:
       - main
+    paths:
+      - "**/*.cpp"
+      - "**/*.hpp"
+      - ".github/workflows/cpp-linter.yml"
+      - ".clang-tidy"
+      - "!include/python/**"
+      - "!src/python/**"
   workflow_dispatch:
 
 concurrency:
@@ -17,6 +32,7 @@ env:
 jobs:
   cpp-linter:
     runs-on: ubuntu-latest
+    name: Run
     steps:
       - uses: actions/checkout@v3
         with:
@@ -49,8 +65,8 @@ jobs:
         with:
           style: ""
           tidy-checks: ""
-          version: 16
-          ignore: build
+          version: ${{ env.clang-version }}
+          ignore: "build|include/python|src/python"
           thread-comments: true
           step-summary: true
           database: "build"
