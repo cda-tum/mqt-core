@@ -36,20 +36,20 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
-# TODO: Uncomment this in a subsequent PR after one release has been made
-#  deploy:
-#    if: github.event_name == 'release' && github.event.action == 'published'
-#    name: 🚀 Deploy to PyPI
-#    runs-on: ubuntu-latest
-#    environment:
-#      name: pypi
-#      url: https://pypi.org/p/mqt.core
-#    permissions:
-#      id-token: write
-#    needs: [build_wheels_emulation]
-#    steps:
-#      - uses: actions/download-artifact@v3
-#        with:
-#          name: artifact
-#          path: dist
-#      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  deploy:
+    if: github.event_name == 'release' && github.event.action == 'published'
+    name: 🚀 Deploy to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mqt.core
+    permissions:
+      id-token: write
+    needs: [build_wheels_emulation]
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
