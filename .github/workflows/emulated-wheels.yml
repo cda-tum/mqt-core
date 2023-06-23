@@ -31,6 +31,8 @@ jobs:
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
           CIBW_BUILD: ${{ matrix.python }}-*
           CIBW_TEST_SKIP: "cp*"
+          # Temporary: use pre-release Python 3.12 for stable ABI builds
+          CIBW_PRERELEASE_PYTHONS: True
       - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
