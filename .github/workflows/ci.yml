@@ -68,15 +68,15 @@ jobs:
     name: Tests • windows-latest • MSVC • Release
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
-    - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-    - name: Build
-      run: cmake --build build --config Release
-    - name: Test
-      run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Test
+        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   coverage:
     name: Coverage • ubuntu-latest
