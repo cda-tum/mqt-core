@@ -50,25 +50,33 @@ jobs:
       - name: Test
         run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
-  cpp-tests-windows-msvc:
-    name: Tests • windows-latest • MSVC
+  cpp-tests-windows-msvc-debug:
+    name: Tests • windows-latest • MSVC • Debug
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Setup ccache
-        uses: Chocobo1/setup-ccache-action@v1
-        with:
-          prepend_symlinks_to_path: false
-          windows_compile_environment: msvc
-          override_cache_key: c++-tests-${{ matrix.runs-on }}-msvc
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DDEPLOY=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
         run: ctest -C Debug --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+
+  cpp-tests-windows-msvc-release:
+    name: Tests • windows-latest • MSVC • Release
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: Configure CMake
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+    - name: Build
+      run: cmake --build build --config Release
+    - name: Test
+      run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   coverage:
     name: Coverage • ubuntu-latest
