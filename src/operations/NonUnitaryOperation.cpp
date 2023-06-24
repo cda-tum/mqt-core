@@ -286,7 +286,7 @@ void NonUnitaryOperation::printResetBarrierOrSnapshot(
     }
   }
   if (type == Snapshot) {
-    os << "\tp: (" << q.size() << ") (" << parameter[1] << ")";
+    os << "\tp: (" << q.size() << ") (" << parameter[0] << ")";
   }
 }
 } // namespace qc
