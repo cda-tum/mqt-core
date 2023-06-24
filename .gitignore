@@ -167,3 +167,5 @@ Thumbs.db
 /distro/tests/main.fmf
 
 /docs/**/build
+.vs
+out/build
