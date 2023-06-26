@@ -1026,18 +1026,18 @@ TEST_F(QFRFunctionality, eliminateResetsCompoundOperation) {
 
 TEST_F(QFRFunctionality, deferMeasurementsBasicTest) {
   // Input:
-  // i: 			0	1
+  // i: 		0	1
   // 1: 	H   	H 	|
   // 2: 	Meas	0	|
   // 3: 	c_X   	|	X 		c[0] == 1
-  // o: 			0	1
+  // o: 		0	1
 
   // Expected Output:
-  // i: 			0	1
+  // i: 		0	1
   // 1: 	H   	H 	|
   // 3: 	X   	c	X
   // 2: 	Meas	0	|
-  // o: 			0	1
+  // o: 		0	1
 
   QuantumComputation qc{};
   qc.addQubitRegister(2);
