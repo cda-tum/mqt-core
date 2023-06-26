@@ -445,7 +445,7 @@ void QuantumComputation::addAncillaryQubit(
   }
 
   // index of logical qubit
-  auto logicalQubitIndex = nqubits + nancillae;
+  const auto logicalQubitIndex = nqubits + nancillae;
 
   // resize ancillary and garbage tracking vectors
   ancillary.resize(logicalQubitIndex + 1U);
