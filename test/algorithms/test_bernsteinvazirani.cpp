@@ -1,6 +1,5 @@
 #include "CircuitOptimizer.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
-#include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
