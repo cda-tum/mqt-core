@@ -533,13 +533,18 @@ void QuantumComputation::addQubit(const Qubit logicalQubitIndex,
     // adjust output permutation
     outputPermutation.insert({physicalQubitIndex, *outputQubitIndex});
   }
+
+  const auto totalQubits = nqubits + nancillae;
+
   // update all operations
   for (auto& op : ops) {
-    op->setNqubits(nqubits + nancillae);
+    op->setNqubits(totalQubits);
   }
 
   // update ancillary and garbage tracking
-  for (auto i = nqubits + nancillae - 1; i > logicalQubitIndex; --i) {
+  ancillary.resize(totalQubits);
+  garbage.resize(totalQubits);
+  for (auto i = totalQubits - 1; i > logicalQubitIndex; --i) {
     ancillary[i] = ancillary[i - 1];
     garbage[i] = garbage[i - 1];
   }
