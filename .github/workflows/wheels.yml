@@ -46,6 +46,7 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
+      - uses: ilammy/msvc-dev-cmd@v1
       - if: matrix.os != 'ubuntu-latest'
         name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1
