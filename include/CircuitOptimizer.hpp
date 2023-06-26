@@ -54,7 +54,7 @@ public:
 protected:
   static void removeDiagonalGatesBeforeMeasureRecursive(
       DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
-      const DAGReverseIterator& until);
+      const qc::Operation* until);
   static bool removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators,
                                  Qubit idx, DAGReverseIterator& it,
                                  qc::Operation* op);

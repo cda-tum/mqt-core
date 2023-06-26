@@ -320,7 +320,7 @@ bool CircuitOptimizer::removeDiagonalGate(DAG& dag,
       }
       // recursive call at control with this operation as goal
       removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, controlQubit,
-                                                it);
+                                                (*it)->get());
       // check if iteration of control qubit was successful
       if (*dagIterators.at(controlQubit) != *it) {
         onlyDiagonalGates = false;
@@ -336,7 +336,8 @@ bool CircuitOptimizer::removeDiagonalGate(DAG& dag,
         break;
       }
       // recursive call at target with this operation as goal
-      removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, target, it);
+      removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, target,
+                                                (*it)->get());
       // check if iteration of target qubit was successful
       if (*dagIterators.at(target) != *it) {
         onlyDiagonalGates = false;
@@ -361,18 +362,18 @@ bool CircuitOptimizer::removeDiagonalGate(DAG& dag,
 
 void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(
     DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
-    const DAGReverseIterator& until) {
+    const qc::Operation* until) {
   // qubit is finished -> consider next qubit
   if (dagIterators.at(idx) == dag.at(idx).rend()) {
     if (idx < static_cast<Qubit>(dag.size() - 1)) {
       removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, idx + 1,
-                                                dag.at(idx + 1).rend());
+                                                nullptr);
     }
     return;
   }
   // check if desired operation was reached
-  if (until != dag.at(idx).rend()) {
-    if (*dagIterators.at(idx) == *until) {
+  if (until != nullptr) {
+    if ((*dagIterators.at(idx))->get() == until) {
       return;
     }
   }
@@ -380,8 +381,8 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(
   auto& it = dagIterators.at(idx);
   while (it != dag.at(idx).rend()) {
     // check if desired operation was reached
-    if (until != dag.at(idx).rend()) {
-      if (*dagIterators.at(idx) == *until) {
+    if (until != nullptr) {
+      if ((*dagIterators.at(idx))->get() == until) {
         break;
       }
     }
@@ -449,7 +450,7 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(
   if (dagIterators.at(idx) == dag.at(idx).rend() &&
       idx < static_cast<Qubit>(dag.size() - 1)) {
     removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, idx + 1,
-                                              dag.at(idx + 1).rend());
+                                              nullptr);
   }
 }
 
@@ -470,8 +471,7 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasure(
     }
   }
   // iterate over DAG in depth-first fashion
-  removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, 0,
-                                            dag.at(0).rend());
+  removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, 0, nullptr);
 
   // remove resulting identities from circuit
   removeIdentities(qc);
