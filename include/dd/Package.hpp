@@ -2978,6 +2978,8 @@ public:
     const std::size_t dim = 2ULL << (nqubits-1);
     // allocate resulting matrix
     auto mat = CMat(dim, CVec(dim, {0.0, 0.0}));
+
+    // Identity case
     if (e.isTerminal()) {
       for (auto i = 0ULL; i < dim; i++) {
         for (auto j = 0ULL; j < dim; j++) {
@@ -2985,69 +2987,44 @@ public:
             mat[i][j] = {1., 0.};
           }
         }
-        }
+      }
     } else {
-      getMatrix(e, Complex::one, 0, 0, mat);
+      getMatrix(e, Complex::one, 0, 0, mat, static_cast<int>(nqubits-1));
     }
     return mat;
   }
-  // CMat getMatrix(const mEdge& e) {
-  //   const std::size_t dim = 2ULL << e.p->v;
-  //   // allocate resulting matrix
-  //   auto mat = CMat(dim, CVec(dim, {0.0, 0.0}));
-  //   getMatrix(e, Complex::one, 0, 0, mat);
-  //   return mat;
-  // }
+
   void getMatrix(const mEdge& e, const Complex& amp, std::size_t i,
-                 std::size_t j, CMat& mat) {
+                 std::size_t j, CMat& mat, const int level) {
     // calculate new accumulated amplitude
     auto c = cn.mulCached(e.w, amp);
+    const std::size_t x = i | (1ULL << level);
+    const std::size_t y = j | (1ULL << level);
 
-    const std::size_t x = i | (1ULL << e.p->v);
-    const std::size_t y = j | (1ULL << e.p->v);
-    if (e.isTerminal()) {
+    if (e.isTerminal() && level == -1) {
       // base case
       mat.at(i).at(j) = {CTEntry::val(c.r), CTEntry::val(c.i)};
       cn.returnToCache(c);
       return;
-
-      // Pseudo-identity
-      //} else {
-      //    std::cout << "Entered Else \n";
-      //}
-      //    if (!e.p->e[0].w.approximatelyZero()) {
-      //        getMatrix(e.p->e[0], c, i, j, mat);
-      //    }
-      //    if (!e.p->e[3].w.approximatelyZero()) {
-      //        getMatrix(e.p->e[3], c, x, y, mat);
-      //    }
-      //}
     }
 
-    auto levelsToSkip = (e.p->v - e.p->e[0].p->v) - 1;
-    std::cout << "Outer loop \n";
-    //// If successor node skips a level
-    // if (levelsToSkip != 0) {
-    //  auto pseudoIdentity = makeIdent();
-    ////  //    // Apply identity case until reaching next non-identity node
-    // for (int level = 0; level < levelsToSkip; ++level) {
-    ////    std::cout << "Entered Loop \n";
-    //    getMatrix(pseudoIdentity, c, i, j, mat, true);
-    //  }
-    // }
-
-    // recursive case
-    if (!e.p->e[0].w.approximatelyZero()) {
-      getMatrix(e.p->e[0], c, i, j, mat);
-    }
-    if (!e.p->e[1].w.approximatelyZero()) {
-      getMatrix(e.p->e[1], c, i, y, mat);
-    }
-    if (!e.p->e[2].w.approximatelyZero()) {
-      getMatrix(e.p->e[2], c, x, j, mat);
-    }
-    if (!e.p->e[3].w.approximatelyZero()) {
-      getMatrix(e.p->e[3], c, x, y, mat);
+    if (e.p->v == level) {
+      // recursive case
+      if (!e.p->e[0].w.approximatelyZero()) {
+        getMatrix(e.p->e[0], c, i, j, mat, level-1);
+      }
+      if (!e.p->e[1].w.approximatelyZero()) {
+        getMatrix(e.p->e[1], c, i, y, mat, level-1);
+      }
+      if (!e.p->e[2].w.approximatelyZero()) {
+        getMatrix(e.p->e[2], c, x, j, mat, level-1);
+      }
+      if (!e.p->e[3].w.approximatelyZero()) {
+        getMatrix(e.p->e[3], c, x, y, mat, level-1);
+      }
+    } else if (e.p->v < level) {
+        getMatrix(e, c, i, j, mat, level-1);
+        getMatrix(e, c, x, y, mat, level-1);
     }
     cn.returnToCache(c);
   }
