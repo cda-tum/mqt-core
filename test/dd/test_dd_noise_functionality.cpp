@@ -1,6 +1,5 @@
 #include "QuantumComputation.hpp"
 #include "dd/NoiseFunctionality.hpp"
-#include "operations/NonUnitaryOperation.hpp"
 
 #include "gtest/gtest.h"
 #include <random>
