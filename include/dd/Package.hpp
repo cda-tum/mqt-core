@@ -2397,20 +2397,21 @@ public:
       return mEdge::one;
     }
 
-    if (leastSignificantQubit == 0 &&
-        idTable[static_cast<std::size_t>(mostSignificantQubit)].p != nullptr) {
-      return idTable[static_cast<std::size_t>(mostSignificantQubit)];
+    const auto& entry =
+        idTable.at(static_cast<std::size_t>(mostSignificantQubit));
+    if (leastSignificantQubit == 0 && entry.p != nullptr) {
+      return entry;
     }
-    if (mostSignificantQubit >= 1 &&
-        (idTable[static_cast<std::size_t>(mostSignificantQubit - 1)]).p !=
-            nullptr) {
-      idTable[static_cast<std::size_t>(mostSignificantQubit)] = makeDDNode(
-          mostSignificantQubit,
-          std::array{
-              idTable[static_cast<std::size_t>(mostSignificantQubit - 1)],
-              mEdge::zero, mEdge::zero,
-              idTable[static_cast<std::size_t>(mostSignificantQubit - 1)]});
-      return idTable[static_cast<std::size_t>(mostSignificantQubit)];
+
+    if (mostSignificantQubit >= 1) {
+      const auto& prevEntry =
+          idTable.at(static_cast<std::size_t>(mostSignificantQubit - 1));
+      if (prevEntry.p != nullptr) {
+        idTable.at(static_cast<std::size_t>(mostSignificantQubit)) = makeDDNode(
+            mostSignificantQubit,
+            std::array{prevEntry, mEdge::zero, mEdge::zero, prevEntry});
+        return idTable[static_cast<std::size_t>(mostSignificantQubit)];
+      }
     }
 
     auto e =
@@ -2423,7 +2424,7 @@ public:
                      std::array{e, mEdge::zero, mEdge::zero, e});
     }
     if (leastSignificantQubit == 0) {
-      idTable[static_cast<std::size_t>(mostSignificantQubit)] = e;
+      idTable.at(static_cast<std::size_t>(mostSignificantQubit)) = e;
     }
     return e;
   }
