@@ -85,7 +85,7 @@ jobs:
 
   wheels-check:
     if: always()
-    name: 🚦 Check
+    name: 🚦 🐍🛞 Check
     needs: [build_sdist, build_wheels, deploy]
     runs-on: ubuntu-latest
     timeout-minutes: 1
