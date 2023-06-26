@@ -797,8 +797,9 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
   std::unordered_map<Qubit, std::size_t> qubitsToAddMeasurements{};
   auto it = qc.begin();
   while (it != qc.end()) {
-    if ((*it)->getType() == qc::Measure) {
-      auto* measurement = dynamic_cast<qc::NonUnitaryOperation*>(it->get());
+    if (const auto* measurement =
+            dynamic_cast<qc::NonUnitaryOperation*>(it->get());
+        measurement != nullptr && measurement->getType() == qc::Measure) {
       const auto targets = measurement->getTargets();
       const auto classics = measurement->getClassics();
 
@@ -846,9 +847,9 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
               "eliminateResets method before deferring measurements.");
         }
 
-        if (operation->getType() == qc::Measure) {
-          const auto* measurement2 =
-              dynamic_cast<qc::NonUnitaryOperation*>((*opIt).get());
+        if (const auto* measurement2 =
+                dynamic_cast<qc::NonUnitaryOperation*>((*opIt).get());
+            measurement2 != nullptr && operation->getType() == qc::Measure) {
           const auto& targets2 = measurement2->getTargets();
           const auto& classics2 = measurement2->getClassics();
 
@@ -862,9 +863,9 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
           continue;
         }
 
-        if (operation->isClassicControlledOperation()) {
-          auto* classicOp =
-              dynamic_cast<qc::ClassicControlledOperation*>((*opIt).get());
+        if (const auto* classicOp =
+                dynamic_cast<qc::ClassicControlledOperation*>((*opIt).get());
+            classicOp != nullptr) {
           const auto& controlRegister = classicOp->getControlRegister();
           const auto& expectedValue = classicOp->getExpectedValue();
 
@@ -880,6 +881,13 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
             // get the underlying operation
             const auto* standardOp =
                 dynamic_cast<qc::StandardOperation*>(classicOp->getOperation());
+            if (standardOp == nullptr) {
+              std::stringstream ss{};
+              ss << "Underlying operation of classic-controlled operation is "
+                    "not a StandardOperation.\n";
+              classicOp->print(ss);
+              throw QFRException(ss.str());
+            }
 
             // get all the necessary information for reconstructing the
             // operation
