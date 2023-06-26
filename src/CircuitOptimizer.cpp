@@ -493,7 +493,7 @@ bool CircuitOptimizer::removeFinalMeasurement(DAG& dag,
         break;
       }
       // recursive call at target with this operation as goal
-      removeFinalMeasurementsRecursive(dag, dagIterators, target, it);
+      removeFinalMeasurementsRecursive(dag, dagIterators, target, (*it)->get());
       // check if iteration of target qubit was successful
       if (dagIterators.at(target) == dag.at(target).rend() ||
           *dagIterators.at(target) != *it) {
@@ -516,24 +516,23 @@ bool CircuitOptimizer::removeFinalMeasurement(DAG& dag,
 
 void CircuitOptimizer::removeFinalMeasurementsRecursive(
     DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
-    const DAGReverseIterator& until) {
+    const qc::Operation* until) {
   if (dagIterators.at(idx) == dag.at(idx).rend()) { // we reached the end
     if (idx < static_cast<Qubit>(dag.size() - 1)) {
-      removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1,
-                                       dag.at(idx + 1).rend());
+      removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1, nullptr);
     }
     return;
   }
   // check if desired operation was reached
-  if (until != dag.at(idx).rend()) {
-    if (*dagIterators.at(idx) == *until) {
+  if (until != nullptr) {
+    if ((*dagIterators.at(idx))->get() == until) {
       return;
     }
   }
   auto& it = dagIterators.at(idx);
   while (it != dag.at(idx).rend()) {
-    if (until != dag.at(idx).rend()) {
-      if (*dagIterators.at(idx) == *until) {
+    if (until != nullptr) {
+      if ((*dagIterators.at(idx))->get() == until) {
         break;
       }
     }
@@ -587,8 +586,7 @@ void CircuitOptimizer::removeFinalMeasurementsRecursive(
   }
   if (dagIterators.at(idx) == dag.at(idx).rend() &&
       idx < static_cast<Qubit>(dag.size() - 1)) {
-    removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1,
-                                     dag.at(idx + 1).rend());
+    removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1, nullptr);
   }
 }
 
@@ -599,7 +597,7 @@ void CircuitOptimizer::removeFinalMeasurements(QuantumComputation& qc) {
     dagIterators.at(q) = (dag.at(q).rbegin());
   }
 
-  removeFinalMeasurementsRecursive(dag, dagIterators, 0, dag.at(0).rend());
+  removeFinalMeasurementsRecursive(dag, dagIterators, 0, nullptr);
 
   removeIdentities(qc);
 }

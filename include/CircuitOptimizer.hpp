@@ -61,7 +61,7 @@ protected:
 
   static void
   removeFinalMeasurementsRecursive(DAG& dag, DAGReverseIterators& dagIterators,
-                                   Qubit idx, const DAGReverseIterator& until);
+                                   Qubit idx, const qc::Operation* until);
   static bool removeFinalMeasurement(DAG& dag,
                                      DAGReverseIterators& dagIterators,
                                      Qubit idx, DAGReverseIterator& it,
