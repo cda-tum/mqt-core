@@ -813,8 +813,11 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
         break;
       }
 
-      // remember q-> c for adding measurements later
-      qubitsToAddMeasurements[targets[0]] = classics[0];
+      const auto measurementQubit = targets[0];
+      const auto measurementBit = classics[0];
+
+      // remember q->c for adding measurements later
+      qubitsToAddMeasurements[measurementQubit] = measurementBit;
 
       // remove the measurement from the vector of operations
       it = qc.erase(it);
@@ -830,7 +833,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
         if (operation->isUnitary() || operation->getType() == qc::Barrier) {
           // if an operation does not act on the measured qubit, the insert
           // location for potential operations has to be updated
-          if (!operation->actsOn(targets.at(0))) {
+          if (!operation->actsOn(measurementQubit)) {
             ++currentInsertionPoint;
           }
           ++opIt;
@@ -873,7 +876,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
           }
 
           // if this is not the classical bit that is measured, continue
-          if (controlRegister.first == static_cast<Qubit>(classics.at(0))) {
+          if (controlRegister.first == static_cast<Qubit>(measurementBit)) {
             // get the underlying operation
             const auto* standardOp =
                 dynamic_cast<qc::StandardOperation*>(classicOp->getOperation());
@@ -885,7 +888,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
 
             const auto targs = standardOp->getTargets();
             for (const auto& target : targs) {
-              if (target == targets[0]) {
+              if (target == measurementQubit) {
                 throw qc::QFRException(
                     "Implicit reset operation in circuit detected. Measuring a "
                     "qubit and then targeting the same qubit with a "
@@ -896,15 +899,24 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
 
             // determine the appropriate control to add
             auto controls = standardOp->getControls();
-            auto controlQubit = targets.at(0);
-            auto controlType =
+            const auto controlQubit = measurementQubit;
+            const auto controlType =
                 (expectedValue == 1) ? Control::Type::Pos : Control::Type::Neg;
             controls.emplace(Control{controlQubit, controlType});
 
             const auto parameters = standardOp->getParameter();
 
             // remove the classic-controlled operation
-            opIt = qc.erase(opIt);
+            // carefully handle iterator invalidation.
+            // if the current insertion point is the same as the current
+            // iterator the insertion point has to be updated to the new
+            // operation as well.
+            if (currentInsertionPoint == opIt) {
+              opIt = qc.erase(opIt);
+              currentInsertionPoint = opIt;
+            } else {
+              opIt = qc.erase(opIt);
+            }
 
             // insert the new operation (invalidated all pointer onwards)
             currentInsertionPoint =
@@ -918,7 +930,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
             // invalidation of the iterators
             opIt = currentInsertionPoint;
           } else {
-            if (!operation->actsOn(targets[0])) {
+            if (!operation->actsOn(measurementQubit)) {
               ++currentInsertionPoint;
             }
             ++opIt;
