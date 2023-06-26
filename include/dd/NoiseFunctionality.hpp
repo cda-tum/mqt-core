@@ -54,8 +54,7 @@ public:
         ampDampingFalseMulti(
             dd::GateMatrix({dd::complex_one, dd::complex_zero, dd::complex_zero,
                             oneMinusSqrtAmplitudeDampingProbabilityMulti})),
-        noiseEffects(std::move(effects)),
-        identityDD(package->makeIdent()) {
+        noiseEffects(std::move(effects)), identityDD(package->makeIdent()) {
     package->incRef(identityDD);
   }
 

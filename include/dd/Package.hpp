@@ -2452,7 +2452,8 @@ public:
     }
   }
 
-  mEdge createInitialMatrix(dd::QubitCount n, const std::vector<bool>&ancillary) {
+  mEdge createInitialMatrix(dd::QubitCount n,
+                            const std::vector<bool>& ancillary) {
     auto e = makeIdent();
     incRef(e);
     return reduceAncillae(e, ancillary);
@@ -2975,7 +2976,7 @@ public:
   }
 
   CMat getMatrix(const mEdge& e) {
-    const std::size_t dim = 2ULL << (nqubits-1);
+    const std::size_t dim = 2ULL << (nqubits - 1);
     // allocate resulting matrix
     auto mat = CMat(dim, CVec(dim, {0.0, 0.0}));
 
@@ -2989,7 +2990,7 @@ public:
         }
       }
     } else {
-      getMatrix(e, Complex::one, 0, 0, mat, static_cast<int>(nqubits-1));
+      getMatrix(e, Complex::one, 0, 0, mat, static_cast<int>(nqubits - 1));
     }
     return mat;
   }
@@ -3011,20 +3012,20 @@ public:
     if (e.p->v == level) {
       // recursive case
       if (!e.p->e[0].w.approximatelyZero()) {
-        getMatrix(e.p->e[0], c, i, j, mat, level-1);
+        getMatrix(e.p->e[0], c, i, j, mat, level - 1);
       }
       if (!e.p->e[1].w.approximatelyZero()) {
-        getMatrix(e.p->e[1], c, i, y, mat, level-1);
+        getMatrix(e.p->e[1], c, i, y, mat, level - 1);
       }
       if (!e.p->e[2].w.approximatelyZero()) {
-        getMatrix(e.p->e[2], c, x, j, mat, level-1);
+        getMatrix(e.p->e[2], c, x, j, mat, level - 1);
       }
       if (!e.p->e[3].w.approximatelyZero()) {
-        getMatrix(e.p->e[3], c, x, y, mat, level-1);
+        getMatrix(e.p->e[3], c, x, y, mat, level - 1);
       }
     } else if (e.p->v < level) {
-        getMatrix(e, c, i, j, mat, level-1);
-        getMatrix(e, c, x, y, mat, level-1);
+      getMatrix(e, c, i, j, mat, level - 1);
+      getMatrix(e, c, x, y, mat, level - 1);
     }
     cn.returnToCache(c);
   }
