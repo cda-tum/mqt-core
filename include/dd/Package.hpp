@@ -2295,10 +2295,11 @@ private:
     }
 
     std::array<mEdge, NEDGE> edge{};
-    std::transform(a.p->e.cbegin(), a.p->e.cend(), edge.begin(),
-                   [&](const mEdge& e) -> mEdge {
-                     return trace(e, eliminate, alreadyEliminated);
-                   });
+    std::transform(
+        a.p->e.cbegin(), a.p->e.cend(), edge.begin(),
+        [this, &eliminate, &alreadyEliminated](const mEdge& e) -> mEdge {
+          return trace(e, eliminate, alreadyEliminated);
+        });
     auto adjustedV =
         static_cast<Qubit>(static_cast<std::size_t>(a.p->v) -
                            (static_cast<std::size_t>(std::count(
@@ -3652,7 +3653,7 @@ public:
 
   // print unique and compute table statistics
   void statistics() {
-    std::cout << "DD statistics:" << std::endl << "[vUniqueTable] ";
+    std::cout << "DD statistics:\n[vUniqueTable] ";
     vUniqueTable.printStatistics();
     std::cout << "[mUniqueTable] ";
     mUniqueTable.printStatistics();
