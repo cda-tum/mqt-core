@@ -911,19 +911,29 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
             // if the current insertion point is the same as the current
             // iterator the insertion point has to be updated to the new
             // operation as well.
-            if (currentInsertionPoint == opIt) {
-              opIt = qc.erase(opIt);
+            auto itInvalidated = (it >= opIt);
+            const auto insertionPointInvalidated =
+                (currentInsertionPoint >= opIt);
+
+            opIt = qc.erase(opIt);
+
+            if (itInvalidated) {
+              it = opIt;
+            }
+            if (insertionPointInvalidated) {
               currentInsertionPoint = opIt;
-            } else {
-              opIt = qc.erase(opIt);
             }
 
+            itInvalidated = (it >= currentInsertionPoint);
             // insert the new operation (invalidated all pointer onwards)
             currentInsertionPoint =
                 qc.insert(currentInsertionPoint,
                           std::make_unique<qc::StandardOperation>(
                               nqubits, controls, targs, type, parameters));
 
+            if (itInvalidated) {
+              it = currentInsertionPoint;
+            }
             // advance just after the currently inserted operation
             ++currentInsertionPoint;
             // the inner loop also has to restart from here due to the
