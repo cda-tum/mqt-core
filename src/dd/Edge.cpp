@@ -73,11 +73,6 @@ template <class Node> void Edge<Node>::applyDmChangesToEdge(Edge& x) {
   }
 }
 
-template <class Node>
-const Edge<Node> Edge<Node>::zero{Node::getTerminal(), Complex::zero};
-template <class Node>
-const Edge<Node> Edge<Node>::one{Node::getTerminal(), Complex::one};
-
 // Explicit instantiations
 template struct Edge<vNode>;
 template struct Edge<mNode>;

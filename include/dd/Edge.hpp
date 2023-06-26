@@ -44,6 +44,11 @@ template <class Node> struct Edge {
   static void applyDmChangesToEdge(Edge& x);
 };
 
+template <class Node>
+const Edge<Node> Edge<Node>::zero{Node::getTerminal(), Complex::zero};
+template <class Node>
+const Edge<Node> Edge<Node>::one{Node::getTerminal(), Complex::one};
+
 template <typename Node> struct CachedEdge {
   Node* p{};
   ComplexValue w{};
