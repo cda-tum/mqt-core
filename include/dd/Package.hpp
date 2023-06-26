@@ -7,7 +7,6 @@
 #include "ComplexValue.hpp"
 #include "ComputeTable.hpp"
 #include "Control.hpp"
-#include "DDpackageConfig.hpp"
 #include "Definitions.hpp"
 #include "DensityNoiseTable.hpp"
 #include "Edge.hpp"
