@@ -329,7 +329,7 @@ qc::QuantumRegister Parser::argumentQreg() {
     check(Token::Kind::Nninteger);
     const auto offset = static_cast<std::size_t>(t.val);
     check(Token::Kind::Rbrack);
-    return std::make_pair(qregs[s].first + offset, 1);
+    return std::make_pair(static_cast<qc::Qubit>(qregs[s].first + offset), 1U);
   }
   return std::make_pair(qregs[s].first, qregs[s].second);
 }
@@ -778,7 +778,7 @@ std::unique_ptr<qc::Operation> Parser::qop() {
              << nclassics << " classical bits";
           error(ss.str());
         }
-        qubits.emplace_back(qubit);
+        qubits.emplace_back(static_cast<qc::Qubit>(qubit));
         classics.emplace_back(clbit);
       }
       return std::make_unique<qc::NonUnitaryOperation>(nqubits, qubits,
@@ -801,7 +801,7 @@ std::unique_ptr<qc::Operation> Parser::qop() {
            << " qubits";
         error(ss.str());
       }
-      qubits.emplace_back(qubit);
+      qubits.emplace_back(static_cast<qc::Qubit>(qubit));
     }
     return std::make_unique<qc::NonUnitaryOperation>(nqubits, qubits);
   }

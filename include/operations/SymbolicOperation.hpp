@@ -28,12 +28,11 @@ protected:
   static OpType parseU3(const Symbolic& theta, fp& phi, const Symbolic& lambda);
   static OpType parseU3(fp& theta, const Symbolic& phi, const Symbolic& lambda);
 
-  [[gnu::const]] static OpType parseU2(const Symbolic& phi,
-                                       const Symbolic& lambda);
+  static OpType parseU2(const Symbolic& phi, const Symbolic& lambda);
   static OpType parseU2(const Symbolic& phi, fp& lambda);
   static OpType parseU2(fp& phi, const Symbolic& lambda);
 
-  [[gnu::const]] static OpType parseU1(const Symbolic& lambda);
+  static OpType parseU1(const Symbolic& lambda);
 
   void checkSymbolicUgate();
 

@@ -24,7 +24,7 @@ public:
 
   void importGRCS(const std::string& filename);
 
-  [[nodiscard, gnu::pure]] size_t getNops() const override;
+  [[nodiscard]] size_t getNops() const override;
 
   std::ostream& print(std::ostream& os) const override;
 

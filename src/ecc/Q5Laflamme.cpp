@@ -83,7 +83,7 @@ void Q5Laflamme::measureAndCorrect() {
         for (std::size_t c = 0; c < STABILIZER_MATRIX.size(); c++) {
           const auto stabilizerOp = STABILIZER_MATRIX.at(c).at(q);
           if (stabilizerOp != qc::I && stabilizerOp != op) {
-            value |= (1 << c);
+            value |= (static_cast<std::size_t>(1U) << c);
           }
         }
         qcMapped->classicControlled(op, qubits.at(q), controlRegister, value);

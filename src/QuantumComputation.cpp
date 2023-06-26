@@ -61,8 +61,9 @@ std::size_t QuantumComputation::getDepth() const {
 void QuantumComputation::import(const std::string& filename) {
   const std::size_t dot = filename.find_last_of('.');
   std::string extension = filename.substr(dot + 1);
-  std::transform(extension.begin(), extension.end(), extension.begin(),
-                 [](unsigned char ch) { return ::tolower(ch); });
+  std::transform(
+      extension.begin(), extension.end(), extension.begin(),
+      [](unsigned char ch) { return static_cast<char>(::tolower(ch)); });
   if (extension == "real") {
     import(filename, Format::Real);
   } else if (extension == "qasm") {
@@ -232,13 +233,13 @@ void QuantumComputation::addQubitRegister(std::size_t nq,
           "supported for the last register in a circuit");
     }
   } else {
-    qregs.try_emplace(regName, nqubits, nq);
+    qregs.try_emplace(regName, static_cast<Qubit>(nqubits), nq);
   }
   assert(nancillae ==
          0); // should only reach this point if no ancillae are present
 
   for (std::size_t i = 0; i < nq; ++i) {
-    auto j = nqubits + i;
+    auto j = static_cast<Qubit>(nqubits + i);
     initialLayout.insert({j, j});
     outputPermutation.insert({j, j});
   }
@@ -280,7 +281,7 @@ void QuantumComputation::addAncillaryRegister(std::size_t nq,
           "only supported for the last register in a circuit");
     }
   } else {
-    ancregs.try_emplace(regName, totalqubits, nq);
+    ancregs.try_emplace(regName, static_cast<Qubit>(totalqubits), nq);
   }
 
   ancillary.resize(totalqubits + nq);
@@ -456,7 +457,8 @@ void QuantumComputation::addAncillaryQubit(
   ancillary[logicalQubitIndex] = true;
 
   // adjust initial layout
-  initialLayout.insert({physicalQubitIndex, logicalQubitIndex});
+  initialLayout.insert(
+      {physicalQubitIndex, static_cast<Qubit>(logicalQubitIndex)});
 
   // adjust output permutation
   if (outputQubitIndex.has_value()) {
@@ -617,8 +619,9 @@ std::ostream& QuantumComputation::printStatistics(std::ostream& os) const {
 void QuantumComputation::dump(const std::string& filename) {
   const std::size_t dot = filename.find_last_of('.');
   std::string extension = filename.substr(dot + 1);
-  std::transform(extension.begin(), extension.end(), extension.begin(),
-                 [](unsigned char c) { return ::tolower(c); });
+  std::transform(
+      extension.begin(), extension.end(), extension.begin(),
+      [](unsigned char c) { return static_cast<char>(::tolower(c)); });
   if (extension == "real") {
     dump(filename, Format::Real);
   } else if (extension == "qasm") {
@@ -1010,7 +1013,7 @@ void QuantumComputation::appendMeasurementsAccordingToOutputPermutation(
   }
   auto targets = std::vector<qc::Qubit>{};
   for (std::size_t q = 0; q < getNqubits(); ++q) {
-    targets.emplace_back(q);
+    targets.emplace_back(static_cast<Qubit>(q));
   }
   barrier(targets);
   // append measurements according to output permutation

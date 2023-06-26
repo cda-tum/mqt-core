@@ -185,15 +185,16 @@ void Q9Shor::mapGate(const qc::Operation& gate) {
           qcMapped->h(static_cast<Qubit>(ct.qubit + j * nQubits));
         }
         qcMapped->emplace_back<qc::StandardOperation>(
-            qcMapped->getNqubits(), controls2, i + j * nQubits, type);
+            qcMapped->getNqubits(), controls2,
+            static_cast<Qubit>(i + j * nQubits), type);
         for (const auto& ct : controls) {
           qcMapped->h(static_cast<Qubit>(ct.qubit + j * nQubits));
         }
       }
     } else {
       for (size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
-        qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(),
-                                                      i + j * nQubits, type);
+        qcMapped->emplace_back<qc::StandardOperation>(
+            qcMapped->getNqubits(), static_cast<Qubit>(i + j * nQubits), type);
       }
     }
   }

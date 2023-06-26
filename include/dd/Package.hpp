@@ -1980,17 +1980,17 @@ public:
     return fid.r * fid.r + fid.i * fid.i;
   }
 
-  [[gnu::pure]] dd::fp
-  fidelityOfMeasurementOutcomes(const vEdge& e,
-                                const ProbabilityVector& probs) {
+  dd::fp fidelityOfMeasurementOutcomes(const vEdge& e,
+                                       const ProbabilityVector& probs) {
     if (e.w.approximatelyZero()) {
       return 0.;
     }
     return fidelityOfMeasurementOutcomesRecursive(e, probs, 0);
   }
 
-  [[gnu::pure]] dd::fp fidelityOfMeasurementOutcomesRecursive(
-      const vEdge& e, const ProbabilityVector& probs, const std::size_t i) {
+  dd::fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e,
+                                                const ProbabilityVector& probs,
+                                                const std::size_t i) {
     const auto topw = dd::ComplexNumbers::mag(e.w);
     if (e.isTerminal()) {
       if (auto it = probs.find(i); it != probs.end()) {

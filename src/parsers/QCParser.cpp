@@ -134,9 +134,10 @@ int qc::QuantumComputation::readQCHeader(std::istream& is,
             constants.at(constidx - inputs.size()) == "1") {
           // add X operation in case of initial value 1
           if (constants.at(constidx - inputs.size()) == "1") {
-            emplace_back<StandardOperation>(nqubits + nancillae, constidx, X);
+            emplace_back<StandardOperation>(nqubits + nancillae,
+                                            static_cast<Qubit>(constidx), X);
           }
-          varMap.insert({var, constidx++});
+          varMap.insert({var, static_cast<Qubit>(constidx++)});
         } else {
           throw QFRException("[qc parser] l:" + std::to_string(line) +
                              " msg: Non-binary constant specified: " + cmd);
@@ -144,7 +145,7 @@ int qc::QuantumComputation::readQCHeader(std::istream& is,
       } else {
         // variable does not occur in input statement --> assumed to be |0>
         // ancillary
-        varMap.insert({var, constidx++});
+        varMap.insert({var, static_cast<Qubit>(constidx++)});
       }
     }
   }
