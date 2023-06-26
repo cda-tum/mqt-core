@@ -886,7 +886,8 @@ TEST(DDPackageTest, Controls) {
   controls.insert(cpos);
   controls.insert(cneg);
   EXPECT_EQ(controls.begin()->type, dd::Control::Type::neg);
-  EXPECT_EQ(controls.count(0), 2);
+  EXPECT_EQ(controls.count(static_cast<dd::Qubit>(0)),
+            static_cast<std::size_t>(2U));
 }
 
 TEST(DDPackageTest, DestructiveMeasurementAll) {

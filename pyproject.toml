@@ -216,4 +216,4 @@ environment = { DEPLOY = "ON", MACOSX_DEPLOYMENT_TARGET = "10.15" }
 [tool.cibuildwheel.windows]
 before-build = "pip install delvewheel"
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
-environment = { DEPLOY = "ON", CMAKE_GENERATOR = "Ninja", CC = "clang", CXX = "clang++" }
+environment = { DEPLOY = "ON", CMAKE_GENERATOR = "Ninja" }

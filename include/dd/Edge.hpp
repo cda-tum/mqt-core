@@ -24,59 +24,30 @@ template <class Node> struct Edge {
     return !operator==(other);
   }
 
-  [[nodiscard]] constexpr bool isTerminal() const {
-    return Node::isTerminal(p);
-  }
-
   // edges pointing to zero and one terminals
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  static const inline Edge one{Node::terminal, Complex::one};
+  static const Edge zero; // NOLINT(readability-identifier-naming)
+  static const Edge one;  // NOLINT(readability-identifier-naming)
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  static const inline Edge zero{Node::terminal, Complex::zero};
+  [[nodiscard]] static Edge terminal(const Complex& w);
+  [[nodiscard]] bool isTerminal() const;
+  [[nodiscard]] bool isZeroTerminal() const;
+  [[nodiscard]] bool isOneTerminal() const;
 
-  [[nodiscard]] static constexpr Edge terminal(const Complex& w) {
-    return {Node::terminal, w};
-  }
-  [[nodiscard]] constexpr bool isZeroTerminal() const {
-    return Node::isTerminal(p) && w == Complex::zero;
-  }
-  [[nodiscard]] constexpr bool isOneTerminal() const {
-    return Node::isTerminal(p) && w == Complex::one;
-  }
-
-  [[maybe_unused]] static inline void setDensityConjugateTrue(Edge& e) {
-    Node::setConjugateTempFlagTrue(e.p);
-  }
-  [[maybe_unused]] static inline void setFirstEdgeDensityPathTrue(Edge& e) {
-    Node::setNonReduceTempFlagTrue(e.p);
-  }
-  [[maybe_unused]] static inline void setDensityMatrixTrue(Edge& e) {
-    Node::setDensityMatTempFlagTrue(e.p);
-  }
-  [[maybe_unused]] static inline void alignDensityEdge(Edge& e) {
-    Node::alignDensityNode(e.p);
-  }
-
-  static inline void revertDmChangesToEdges(Edge& x, Edge& y) {
-    revertDmChangesToEdge(x);
-    revertDmChangesToEdge(y);
-  }
-  static inline void revertDmChangesToEdge(Edge& x) {
-    // Align the node pointer
-    Node::revertDmChangesToNode(x.p);
-  }
-
-  static inline void applyDmChangesToEdges(Edge& x, Edge& y) {
-    applyDmChangesToEdge(x);
-    applyDmChangesToEdge(y);
-  }
-
-  static inline void applyDmChangesToEdge(Edge& x) {
-    // Apply density matrix changes to node pointer
-    Node::applyDmChangesToNode(x.p);
-  }
+  // Functions only related to density matrices
+  [[maybe_unused]] static void setDensityConjugateTrue(Edge& e);
+  [[maybe_unused]] static void setFirstEdgeDensityPathTrue(Edge& e);
+  static void setDensityMatrixTrue(Edge& e);
+  static void alignDensityEdge(Edge& e);
+  static void revertDmChangesToEdges(Edge& x, Edge& y);
+  static void revertDmChangesToEdge(Edge& x);
+  static void applyDmChangesToEdges(Edge& x, Edge& y);
+  static void applyDmChangesToEdge(Edge& x);
 };
+
+template <class Node>
+const Edge<Node> Edge<Node>::zero{Node::getTerminal(), Complex::zero};
+template <class Node>
+const Edge<Node> Edge<Node>::one{Node::getTerminal(), Complex::one};
 
 template <typename Node> struct CachedEdge {
   Node* p{};

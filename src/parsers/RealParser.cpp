@@ -15,8 +15,9 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       throw QFRException("[real parser] l:" + std::to_string(line) +
                          " msg: Invalid file header");
     }
-    std::transform(cmd.begin(), cmd.end(), cmd.begin(),
-                   [](unsigned char ch) { return toupper(ch); });
+    std::transform(cmd.begin(), cmd.end(), cmd.begin(), [](unsigned char ch) {
+      return static_cast<char>(toupper(ch));
+    });
     ++line;
 
     // skip comments
@@ -51,11 +52,11 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
               "[real parser] l:" + std::to_string(line) +
               " msg: Invalid or insufficient variables declared");
         }
-
-        qregs.insert({variable, {i, 1}});
-        cregs.insert({"c_" + variable, {i, 1}});
-        initialLayout.insert({i, i});
-        outputPermutation.insert({i, i});
+        const auto qubit = static_cast<Qubit>(i);
+        qregs.insert({variable, {qubit, 1U}});
+        cregs.insert({"c_" + variable, {qubit, 1U}});
+        initialLayout.insert({qubit, qubit});
+        outputPermutation.insert({qubit, qubit});
         ancillary.resize(nqubits);
         garbage.resize(nqubits);
       }
@@ -68,7 +69,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                              " msg: Failed read in '.constants' line");
         }
         if (value == '1') {
-          emplace_back<StandardOperation>(nqubits, i, X);
+          x(static_cast<Qubit>(i));
         } else if (value != '-' && value != '0') {
           throw QFRException("[real parser] l:" + std::to_string(line) +
                              " msg: Invalid value in '.constants' header: '" +
@@ -92,7 +93,9 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
         is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         is >> cmd;
         std::transform(cmd.begin(), cmd.end(), cmd.begin(),
-                       [](const unsigned char c) { return toupper(c); });
+                       [](const unsigned char c) {
+                         return static_cast<char>(toupper(c));
+                       });
       }
     } else {
       throw QFRException("[real parser] l:" + std::to_string(line) +
@@ -123,8 +126,9 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
       throw QFRException("[real parser] l:" + std::to_string(line) +
                          " msg: Failed to read command");
     }
-    std::transform(cmd.begin(), cmd.end(), cmd.begin(),
-                   [](const unsigned char c) { return tolower(c); });
+    std::transform(
+        cmd.begin(), cmd.end(), cmd.begin(),
+        [](const unsigned char c) { return static_cast<char>(tolower(c)); });
     ++line;
 
     if (cmd.front() == '#') {

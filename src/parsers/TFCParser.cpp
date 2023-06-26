@@ -136,7 +136,7 @@ int qc::QuantumComputation::readTFCHeader(
           if (constants.at(constidx - inputs.size()) == "1") {
             x(static_cast<Qubit>(constidx));
           }
-          varMap.insert({var, constidx++});
+          varMap.insert({var, static_cast<Qubit>(constidx++)});
         } else {
           throw QFRException("[tfc parser] l:" + std::to_string(line) +
                              " msg: Non-binary constant specified: " + cmd);
@@ -144,7 +144,7 @@ int qc::QuantumComputation::readTFCHeader(
       } else {
         // variable does not occur in input statement --> assumed to be |0>
         // ancillary
-        varMap.insert({var, constidx++});
+        varMap.insert({var, static_cast<Qubit>(constidx++)});
       }
     }
   }

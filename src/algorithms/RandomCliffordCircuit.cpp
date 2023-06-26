@@ -9,11 +9,6 @@ RandomCliffordCircuit::RandomCliffordCircuit(const std::size_t nq,
   addQubitRegister(nq);
   addClassicalRegister(nq);
 
-  for (std::size_t i = 0; i < nqubits; ++i) {
-    initialLayout.insert({i, i});
-    outputPermutation.insert({i, i});
-  }
-
   std::mt19937_64 generator;
   if (seed == 0) {
     // this is probably overkill but better safe than sorry

@@ -94,16 +94,20 @@ void Q3Shor::mapGate(const qc::Operation& gate) {
               qc::Control{static_cast<Qubit>(ct.qubit + 2 * nQubits), ct.type});
         }
         qcMapped->emplace_back<qc::StandardOperation>(
-            qcMapped->getNqubits(), controls2, i + nQubits, gate.getType());
+            qcMapped->getNqubits(), controls2, static_cast<Qubit>(i + nQubits),
+            gate.getType());
         qcMapped->emplace_back<qc::StandardOperation>(
-            qcMapped->getNqubits(), controls3, i + 2 * nQubits, gate.getType());
+            qcMapped->getNqubits(), controls3,
+            static_cast<Qubit>(i + 2 * nQubits), gate.getType());
       } else {
         qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i,
                                                       gate.getType());
         qcMapped->emplace_back<qc::StandardOperation>(
-            qcMapped->getNqubits(), i + nQubits, gate.getType());
+            qcMapped->getNqubits(), static_cast<Qubit>(i + nQubits),
+            gate.getType());
         qcMapped->emplace_back<qc::StandardOperation>(
-            qcMapped->getNqubits(), i + 2 * nQubits, gate.getType());
+            qcMapped->getNqubits(), static_cast<Qubit>(i + 2 * nQubits),
+            gate.getType());
       }
     }
     break;

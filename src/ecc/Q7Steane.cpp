@@ -50,7 +50,7 @@ void Q7Steane::measureAndCorrectSingle(bool xSyndrome) {
     // K3: IIIUUUU
     for (std::size_t c = 0; c < controls.size(); c++) {
       for (std::size_t q = 0; q < ecc.nRedundantQubits; q++) {
-        if (((q + 1) & (1 << c)) != 0) {
+        if (((q + 1) & (static_cast<std::size_t>(1U) << c)) != 0) {
           const auto target = static_cast<Qubit>(i + nQubits * q);
           if (xSyndrome) {
             qcMapped->x(target, controls.at(c));

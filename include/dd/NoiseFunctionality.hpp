@@ -1,11 +1,6 @@
 #pragma once
 
-#include "dd/Definitions.hpp"
-#include "dd/Export.hpp"
 #include "dd/Operations.hpp"
-#include "dd/Package.hpp"
-#include "operations/OpType.hpp"
-#include "operations/Operation.hpp"
 
 #include <random>
 #include <utility>
@@ -371,8 +366,8 @@ private:
     }
     qc::DensityMatrixDD e = {};
     if (std::any_of(usedQubits.begin(), usedQubits.end(),
-                    [originalEdge](dd::Qubit qubit) {
-                      return originalEdge.p->v == qubit;
+                    [originalEdge](const qc::Qubit qubit) {
+                      return originalEdge.p->v == static_cast<dd::Qubit>(qubit);
                     })) {
       for (auto const& type : noiseEffects) {
         switch (type) {

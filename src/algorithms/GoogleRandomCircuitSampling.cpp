@@ -86,26 +86,28 @@ void GoogleRandomCircuitSampling::importGRCS(const std::string& filename) {
       ss >> control;
       ss >> target;
       cycles[cycle].emplace_back(std::make_unique<StandardOperation>(
-          nqubits, Control{static_cast<Qubit>(control)}, target, Z));
+          nqubits, Control{static_cast<Qubit>(control)},
+          static_cast<Qubit>(target), Z));
     } else if (identifier == "is") {
       ss >> control;
       ss >> target;
       cycles[cycle].emplace_back(std::make_unique<StandardOperation>(
-          nqubits, qc::Controls{}, control, target, iSWAP));
+          nqubits, qc::Controls{}, static_cast<Qubit>(control),
+          static_cast<Qubit>(target), iSWAP));
     } else {
       ss >> target;
       if (identifier == "h") {
-        cycles[cycle].emplace_back(
-            std::make_unique<StandardOperation>(nqubits, target, H));
+        cycles[cycle].emplace_back(std::make_unique<StandardOperation>(
+            nqubits, static_cast<Qubit>(target), H));
       } else if (identifier == "t") {
-        cycles[cycle].emplace_back(
-            std::make_unique<StandardOperation>(nqubits, target, T));
+        cycles[cycle].emplace_back(std::make_unique<StandardOperation>(
+            nqubits, static_cast<Qubit>(target), T));
       } else if (identifier == "x_1_2") {
         cycles[cycle].emplace_back(std::make_unique<StandardOperation>(
-            nqubits, target, RX, std::vector{PI_2}));
+            nqubits, static_cast<Qubit>(target), RX, std::vector{PI_2}));
       } else if (identifier == "y_1_2") {
         cycles[cycle].emplace_back(std::make_unique<StandardOperation>(
-            nqubits, target, RY, std::vector{PI_2}));
+            nqubits, static_cast<Qubit>(target), RY, std::vector{PI_2}));
       } else {
         throw QFRException("Unknown gate '" + identifier);
       }

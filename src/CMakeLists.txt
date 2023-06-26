@@ -90,12 +90,14 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
     ${PROJECT_SOURCE_DIR}/include/dd/ComplexValue.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/ComputeTable.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/Control.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/DDpackageConfig.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/Definitions.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/Edge.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/Export.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/GateMatrixDefinitions.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/Node.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/Package.hpp
+    ${PROJECT_SOURCE_DIR}/include/dd/Package_fwd.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/ToffoliTable.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/UnaryComputeTable.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/DensityNoiseTable.hpp
@@ -105,7 +107,9 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
     ${PROJECT_SOURCE_DIR}/include/dd/NoiseFunctionality.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/Operations.hpp
     ${PROJECT_SOURCE_DIR}/include/dd/Simulation.hpp
+    dd/Edge.cpp
     dd/FunctionalityConstruction.cpp
+    dd/Node.cpp
     dd/NoiseFunctionality.cpp
     dd/Operations.cpp
     dd/Simulation.cpp)

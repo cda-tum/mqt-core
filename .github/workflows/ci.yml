@@ -21,13 +21,13 @@ env:
   FORCE_COLOR: 3
 
 jobs:
-  cpp-tests:
-    name: Tests • ${{ matrix.runs-on }}
-    runs-on: ${{ matrix.runs-on }}
+  cpp-tests-ubuntu:
+    name: Tests • ubuntu-latest • ${{ matrix.config }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        runs-on: [ubuntu-latest, macos-latest, windows-latest]
+        config: [Debug, Release]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -36,19 +36,67 @@ jobs:
         uses: Chocobo1/setup-ccache-action@v1
         with:
           prepend_symlinks_to_path: false
-          windows_compile_environment: msvc
-          override_cache_key: c++-tests-${{ matrix.runs-on }}
-      - name: Set up mold as linker (Linux only)
+          override_cache_key: c++-tests-ubuntu-latest-${{ matrix.config }}
+      - name: Set up mold as linker
         uses: rui314/setup-mold@v1
       - name: Install Ninja
-        if: runner.os != 'Windows'
         run: pipx install ninja
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEPLOY=ON
       - name: Build
-        run: cmake --build build --config Release
+        run: cmake --build build --config ${{ matrix.config }}
       - name: Test
-        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+        run: ctest -C ${{ matrix.config }} --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+
+  cpp-tests-macos:
+    name: Tests • macos-latest • ${{ matrix.config }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          override_cache_key: c++-tests-macos-latest-${{ matrix.config }}
+      - name: Install Ninja
+        run: pipx install ninja
+      - name: Configure CMake
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+      - name: Build
+        run: cmake --build build --config ${{ matrix.config }}
+      - name: Test
+        run: ctest -C ${{ matrix.config }} --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+
+  cpp-tests-windows:
+    name: Tests • windows-latest • ${{ matrix.config }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          windows_compile_environment: msvc
+          override_cache_key: c++-tests-windows-latest-${{ matrix.config }}
+      - name: Configure CMake
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+      - name: Build
+        run: cmake --build build --config ${{ matrix.config }}
+      - name: Test
+        run: ctest -C ${{ matrix.config }} --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   coverage:
     name: Coverage • ubuntu-latest
@@ -65,7 +113,7 @@ jobs:
       - name: Set up mold as linker
         uses: rui314/setup-mold@v1
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON -DDEPLOY=ON
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
@@ -81,7 +129,7 @@ jobs:
   cpp-ci-check:
     if: always()
     name: 🚦 🇨‌➕➕ Check
-    needs: [cpp-tests, coverage]
+    needs: [cpp-tests-ubuntu, cpp-tests-macos, cpp-tests-windows, coverage]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:

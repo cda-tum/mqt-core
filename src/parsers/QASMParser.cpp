@@ -68,7 +68,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
       std::vector<qc::Qubit> qubits{};
       for (auto& arg : args) {
         for (std::size_t q = 0; q < arg.second; ++q) {
-          qubits.emplace_back(arg.first + q);
+          qubits.emplace_back(static_cast<Qubit>(arg.first + q));
         }
       }
 
