@@ -74,8 +74,6 @@ protected:
     qc.h(3);
   }
 
-  void TearDown() override {}
-
   qc::QuantumComputation qc{};
   size_t stochRuns = 1000U;
 };

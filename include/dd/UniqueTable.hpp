@@ -43,7 +43,8 @@ public:
     // TODO: if the new size is smaller than the old one we might have to
     // release the unique table entries for the superfluous variables
     active.resize(nq);
-    activeNodeCount = std::accumulate(active.begin(), active.end(), 0UL);
+    activeNodeCount = std::accumulate(active.begin(), active.end(),
+                                      static_cast<std::size_t>(0U));
   }
 
   static std::size_t hash(const Node* p) {

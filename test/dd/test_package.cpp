@@ -886,7 +886,7 @@ TEST(DDPackageTest, Controls) {
   controls.insert(cpos);
   controls.insert(cneg);
   EXPECT_EQ(controls.begin()->type, dd::Control::Type::neg);
-  EXPECT_EQ(controls.count(0), 2);
+  EXPECT_EQ(controls.count(0), 2U);
 }
 
 TEST(DDPackageTest, DestructiveMeasurementAll) {

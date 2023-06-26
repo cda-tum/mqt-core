@@ -47,8 +47,9 @@ public:
                                                    getClassics());
     }
     if (getType() == qc::Snapshot) {
-      return std::make_unique<NonUnitaryOperation>(getNqubits(), getTargets(),
-                                                   getParameter().at(0));
+      return std::make_unique<NonUnitaryOperation>(
+          getNqubits(), getTargets(),
+          static_cast<std::size_t>(getParameter().at(0)));
     }
     if (getType() == qc::ShowProbabilities) {
       return std::make_unique<NonUnitaryOperation>(getNqubits());
