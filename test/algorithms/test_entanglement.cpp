@@ -1,5 +1,6 @@
 #include "algorithms/Entanglement.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Package.hpp"
 
 #include "gtest/gtest.h"
 #include <string>

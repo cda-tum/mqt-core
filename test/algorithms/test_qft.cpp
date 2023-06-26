@@ -1,5 +1,6 @@
 #include "algorithms/QFT.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
