@@ -1143,8 +1143,8 @@ public:
       // Check if matrix node is an identity pointing to same successor
       // If so, replaces it with an edge with weight of normalization factor
       if ((e.p->e[0].p == e.p->e[3].p) &&
-          (e.p->e[0] == mEdge::one && e.p->e[1] == mEdge::zero &&
-           e.p->e[2] == mEdge::zero && e.p->e[3] == mEdge::one)) {
+          (e.p->e[0].w == Complex::one && e.p->e[1].w == Complex::zero &&
+           e.p->e[2].w == Complex::zero && e.p->e[3].w == Complex::one)) {
         return Edge<mNode>{e.p->e[0].p, e.w};
       }
     }
@@ -2974,8 +2974,8 @@ public:
     std::cout << std::flush;
   }
 
-  CMat getMatrix(const mEdge& e) {
-    const std::size_t dim = 2ULL << (nqubits-1);
+  CMat getMatrix(const mEdge& e, int nrQubits) {
+    const std::size_t dim = 2ULL << (nrQubits-1);
     // allocate resulting matrix
     auto mat = CMat(dim, CVec(dim, {0.0, 0.0}));
 
@@ -2989,7 +2989,7 @@ public:
         }
       }
     } else {
-      getMatrix(e, Complex::one, 0, 0, mat, static_cast<int>(nqubits-1));
+      getMatrix(e, Complex::one, 0, 0, mat, nrQubits-1);
     }
     return mat;
   }
