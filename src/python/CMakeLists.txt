@@ -1,7 +1,7 @@
 if(NOT SKBUILD)
   message(
-    WARNING
-      "\
+    NOTICE
+    "\
   This CMake file is meant to be executed using 'scikit-build'. Running
   it directly will almost certainly not produce the desired result. If
   you are a user trying to install this package, please use the command
