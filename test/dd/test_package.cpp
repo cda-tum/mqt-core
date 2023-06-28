@@ -273,14 +273,15 @@ TEST(DDPackageTest, VectorSerializationTest) {
 }
 
 TEST(DDPackageTest, BellMatrix) {
-  auto dd = std::make_unique<dd::Package<>>(2);
+  dd::QubitCount nrQubits = 2;
+  auto dd = std::make_unique<dd::Package<>>(nrQubits);
 
   auto hGate = dd->makeGateDD(dd::Hmat, 2, 1);
   auto cxGate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
 
   auto bellMatrix = dd->multiply(cxGate, hGate);
   std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
-                          "extern/qfr/extern/dd_package/graphs/BellMatrix";
+                          "extern/mqt-core/graphs/BellMatrix";
   dd::export2Dot(bellMatrix, filename1, true, true);
 
   ASSERT_EQ(dd->getValueByPath(bellMatrix, "00"),
@@ -327,7 +328,7 @@ TEST(DDPackageTest, BellMatrix) {
   auto goalRow3 =
       dd::CVec{{dd::SQRT2_2, 0.}, {0., 0.}, {-dd::SQRT2_2, 0.}, {0., 0.}};
   auto goalMatrix = dd::CMat{goalRow0, goalRow1, goalRow2, goalRow3};
-  ASSERT_EQ(dd->getMatrix(bellMatrix), goalMatrix);
+  ASSERT_EQ(dd->getMatrix(bellMatrix, nrQubits), goalMatrix);
 
   export2Dot(bellMatrix, "bell_matrix_colored_labels.dot", true, true, false,
              false, false);
@@ -614,7 +615,8 @@ TEST(DDPackageTest, GarbageVector) {
 }
 
 TEST(DDPackageTest, GarbageMatrix) {
-  auto dd = std::make_unique<dd::Package<>>(4);
+  auto nrQubits = 4;
+  auto dd = std::make_unique<dd::Package<>>(nrQubits);
   auto hGate = dd->makeGateDD(dd::Hmat, 2, 0);
   auto cxGate = dd->makeGateDD(dd::Xmat, 2, 0_pc, 1);
   auto bellMatrix = dd->multiply(cxGate, hGate);
@@ -631,7 +633,7 @@ TEST(DDPackageTest, GarbageMatrix) {
   dd->incRef(bellMatrix);
   reducedBellMatrix =
       dd->reduceGarbage(bellMatrix, {false, true, false, false});
-  auto mat = dd->getMatrix(reducedBellMatrix);
+  auto mat = dd->getMatrix(reducedBellMatrix, 2);
   auto zero = dd::CVec{{0., 0.}, {0., 0.}, {0., 0.}, {0., 0.}};
   EXPECT_EQ(mat[2], zero);
   EXPECT_EQ(mat[3], zero);
@@ -639,7 +641,7 @@ TEST(DDPackageTest, GarbageMatrix) {
   dd->incRef(bellMatrix);
   reducedBellMatrix =
       dd->reduceGarbage(bellMatrix, {true, false, false, false});
-  mat = dd->getMatrix(reducedBellMatrix);
+  mat = dd->getMatrix(reducedBellMatrix, 2);
   EXPECT_EQ(mat[1], zero);
   EXPECT_EQ(mat[3], zero);
 
@@ -668,7 +670,7 @@ TEST(DDPackageTest, InvalidMakeBasisStateAndGate) {
 
 TEST(DDPackageTest, InvalidDecRef) {
   auto dd = std::make_unique<dd::Package<>>(2);
-  auto e = dd->makeIdent();
+  auto e = dd->makeGateDD(dd::Hmat, 2, 0);
   EXPECT_THROW(dd->decRef(e), std::runtime_error);
 }
 
@@ -676,7 +678,9 @@ TEST(DDPackageTest, PackageReset) {
   auto dd = std::make_unique<dd::Package<>>(1);
 
   // one node in unique table of variable 0
-  auto iGate = dd->makeIdent();
+  //auto iGate = dd->makeIdent();
+  auto iGate = dd->makeGateDD(dd::Hmat, 1, 0);
+
   const auto& unique = dd->mUniqueTable.getTables();
   const auto& table = unique[0];
   auto ihash = decltype(dd->mUniqueTable)::hash(iGate.p);
@@ -688,7 +692,7 @@ TEST(DDPackageTest, PackageReset) {
   dd->reset();
   // after clearing the tables, they should be empty
   EXPECT_EQ(table[ihash], nullptr);
-  iGate = dd->makeIdent();
+  iGate = dd->makeGateDD(dd::Hmat, 1, 0);
   const auto* node2 = table[ihash];
   // after recreating the DD, it should receive the same node
   EXPECT_EQ(node2, node);
@@ -1605,7 +1609,7 @@ TEST(DDPackageTest, DDFromSingleQubitMatrix) {
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
 
-  const auto outputMatrix = dd->getMatrix(matDD);
+  const auto outputMatrix = dd->getMatrix(matDD, nrQubits);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1617,7 +1621,7 @@ TEST(DDPackageTest, DDFromTwoQubitMatrix) {
   const dd::QubitCount nrQubits = 2;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
-  const auto outputMatrix = dd->getMatrix(matDD);
+  const auto outputMatrix = dd->getMatrix(matDD, nrQubits);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1633,7 +1637,7 @@ TEST(DDPackageTest, DDFromThreeQubitMatrix) {
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
 
-  const auto outputMatrix = dd->getMatrix(matDD);
+  const auto outputMatrix = dd->getMatrix(matDD, nrQubits);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1914,6 +1918,15 @@ TEST(DDPackageTest, XXMinusYYGateDDConstruction) {
               dd->makeXXMinusYYDD(nrQubits, control, target, theta, beta);
           const auto gateDD = dd->makeXXMinusYYDD(nrQubits, dd::Controls{},
                                                   control, target, theta, beta);
+          std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
+                                  "extern/mqt-core/graphs/xxyy";
+          std::string filename2 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
+                                  "extern/mqt-core/graphs/GateDD";
+          if (xxMinusYYGateDD != gateDD) {
+            std::cout << "Control: " << static_cast<int16_t>(control) << " Target: " << static_cast<int16_t>(target) << " Theta: " << theta << " Beta: " << beta << "\n";
+            dd::export2Dot(xxMinusYYGateDD, filename1, true, true);
+            dd::export2Dot(gateDD, filename2, true, true);
+          }
           EXPECT_EQ(xxMinusYYGateDD, gateDD);
         }
       }
@@ -1970,4 +1983,56 @@ TEST(DDPackageTest, InnerProductTopNodeConjugation) {
   // If the top node in the inner product is not conjugated properly,
   // it will result in +0.416.
   EXPECT_NEAR(dd->expectationValue(op, evolvedState), -0.416, 0.001);
+}
+
+TEST(DDPackageTest, GetMatrixMultiQubitIdentity) {
+  const dd::QubitCount nrQubits = 2;
+
+  auto dd = std::make_unique<dd::Package<>>(nrQubits);
+
+  auto identity = dd->makeIdent();
+  auto matrix = dd->getMatrix(identity, nrQubits);
+
+  auto goalRow0 =
+      dd::CVec{{1., 0.}, {0., 0.}, {0., 0.}, {0., 0.}};
+  auto goalRow1 =
+      dd::CVec{{0., 0.}, {1., 0.}, {0., 0.}, {0., 0.}};
+  auto goalRow2 =
+      dd::CVec{{0., 0.}, {0., 0.}, {1., 0.}, {0., 0.}};
+  auto goalRow3 =
+      dd::CVec{{0., 0.}, {0., 0.}, {0., 0.}, {1., 0.}};
+  auto goalMatrix = dd::CMat{goalRow0, goalRow1, goalRow2, goalRow3};//dd::CMat{goalRow0, goalRow1};
+  ASSERT_EQ(dd->getMatrix(identity, nrQubits), goalMatrix);
+}
+
+TEST(DDPackageTest, GetMatrixCNOT) {
+  const dd::QubitCount nrQubits = 2;
+
+  auto dd = std::make_unique<dd::Package<>>(nrQubits);
+
+  auto originalDD = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
+  auto matrix = dd->getMatrix(originalDD, nrQubits);
+  auto recreatedDD = dd->makeDDFromMatrix(matrix);
+
+  ASSERT_EQ(originalDD, recreatedDD);
+}
+
+TEST(DDPackageTest, Sandbox) {
+  const dd::QubitCount nrQubits = 2;
+
+  auto dd = std::make_unique<dd::Package<>>(nrQubits);
+
+  auto cxGate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
+  auto matrix = dd->getMatrix(cxGate, nrQubits);
+  auto reFormed = dd->makeDDFromMatrix(matrix);
+  std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
+                          "extern/mqt-core/graphs/Sandbox";
+  dd::export2Dot(reFormed, filename1, true, true);
+
+  //auto goalRow0 =
+  //    dd::CVec{{1., 0.}, {0., 0.}};
+  //auto goalRow1 =
+  //    dd::CVec{{0., 0.}, {1., 0.}};
+  //auto goalMatrix = dd::CMat{{1, 0}, {0, 1}};//dd::CMat{goalRow0, goalRow1};
+  //ASSERT_EQ(dd->getMatrix(cxGate), goalMatrix);
 }
