@@ -21,6 +21,14 @@ include(cmake/CheckSubmodule.cmake)
 include(cmake/PackageAddTest.cmake)
 include(cmake/Cache.cmake)
 
+option(BUILD_MQT_CORE_BINDINGS "Build the MQT Core Python bindings" OFF)
+if(BUILD_MQT_CORE_BINDINGS)
+  # ensure that the BINDINGS option is set in the MQT Core library
+  set(BINDINGS
+      ON
+      CACHE BOOL "Build the MQT Core Python bindings" FORCE)
+endif()
+
 if(NOT TARGET project_warnings)
   # Use the warnings specified in CompilerWarnings.cmake
   add_library(project_warnings INTERFACE)
