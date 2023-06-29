@@ -116,6 +116,6 @@ if(NOT TARGET ${PROJECT_NAME}-python)
   add_library(MQT::${OLD_PROJECT_NAME}_python ALIAS ${PROJECT_NAME}-python)
 endif()
 
-if(BINDINGS)
+if(BUILD_MQT_CORE_BINDINGS)
   add_subdirectory(python)
 endif()
