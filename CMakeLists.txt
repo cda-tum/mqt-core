@@ -23,10 +23,10 @@ include(cmake/Cache.cmake)
 
 option(BUILD_MQT_CORE_BINDINGS "Build the MQT Core Python bindings" OFF)
 if(BUILD_MQT_CORE_BINDINGS)
-  # ensure that the BINDINGS option is set in the MQT Core library
+  # ensure that the BINDINGS option is set
   set(BINDINGS
       ON
-      CACHE BOOL "Build the MQT Core Python bindings" FORCE)
+      CACHE BOOL "Enable settings related to Python bindings" FORCE)
 endif()
 
 if(NOT TARGET project_warnings)
