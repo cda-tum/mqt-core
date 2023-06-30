@@ -2776,19 +2776,37 @@ public:
   ///        ignored.
   /// \return the complex amplitude of the specified element
   template <class Edge>
-  ComplexValue getValueByPath(const Edge& e, const std::string& elements) {
+  ComplexValue getValueByPath(const Edge& e, const std::string& elements, int level) {
     if (e.isTerminal()) {
       return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
     }
 
     auto c = cn.getTemporary(1, 0);
     auto r = e;
+
+    // Normalization factor
+    ComplexNumbers::mul(c, c, r.w);
+
     do {
-      ComplexNumbers::mul(c, c, r.w);
-      auto tmp = static_cast<std::size_t>(
-          elements.at(static_cast<std::size_t>(r.p->v)) - '0');
+      auto tmp = static_cast<std::size_t>(elements.at(static_cast<std::size_t>(level)) - '0');
       assert(tmp <= r.p->e.size());
       r = r.p->e.at(tmp);
+      level--;
+
+      if (r.p->v == level) {
+        ComplexNumbers::mul(c, c, r.w);
+      } else {
+        // Iterates over pseudo-identity if
+        // node is not at correct level
+        for (;level > r.p->v; level--) {
+          tmp = static_cast<std::size_t>(elements.at(static_cast<std::size_t>(level)) - '0');
+          if (tmp == 0 || tmp == 3) {
+            ComplexNumbers::mul(c, c, Complex::one);
+          } else if (tmp == 1 || tmp == 2) {
+            ComplexNumbers::mul(c, c, Complex::zero);
+          }
+        }
+      }
     } while (!r.isTerminal());
     ComplexNumbers::mul(c, c, r.w);
 
