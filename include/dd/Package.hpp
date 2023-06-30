@@ -2769,16 +2769,16 @@ private:
 public:
   /// Get a single element of the vector or matrix represented by the dd with
   /// root edge e \tparam Edge type of edge to use (vector or matrix) \param e
-  /// edge to traverse \param elements string {0, 1, 2, 3}^n describing which
-  /// outgoing edge should be followed
-  ///        (for vectors entries are limited to 0 and 1)
-  ///        If string is longer than required, the additional characters are
-  ///        ignored.
+  /// edge to traverse \param decisions string {0, 1, 2, 3}^n describing which
+  /// outgoing edge should be followed (for vectors entries are limited
+  /// to 0 and 1). If string is longer than required, the additional characters
+  /// are ignored. \param level is used to know the expected levels in the
+  /// DD being traversed.
   /// \return the complex amplitude of the specified element
   template <class Edge>
-  ComplexValue getValueByPath(const Edge& e, const std::string& decisions, int level) {
+  ComplexValue getValueByPath(const Edge& e, const std::string& decisions) {
     if (e.isTerminal()) {
-      return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
+        return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
     }
 
     auto c = cn.getTemporary(1, 0);
@@ -2788,7 +2788,8 @@ public:
     ComplexNumbers::mul(c, c, r.w);
 
     // Indexing of elements list is from top of DD, so we need a reference point
-    const auto topLevel = level;
+    const auto topLevel = e.p->v;
+    auto level = topLevel;
     do {
       auto decision = static_cast<std::size_t>(decisions.at(static_cast<std::size_t>(topLevel - level)) - '0');
       assert(decision <= r.p->e.size());
@@ -2823,13 +2824,14 @@ public:
     do {
       if (i < vectorHalf) {
         decisions = decisions + '0';
-      } else if (i > vectorHalf) {
+      } else if (i >= vectorHalf) {
         decisions = decisions + '1';
+        i -= vectorHalf;
       }
       vectorHalf = vectorHalf / 2;
-    } while (vectorHalf != 1);
+    } while (vectorHalf > 0);
 
-    return getValueByPath(e, decisions, e.p->v);
+    return getValueByPath(e, decisions);
   }
   //ComplexValue getValueByPath(const vEdge& e, const Complex& amp,
   //                            std::size_t i) {
@@ -2872,7 +2874,7 @@ public:
       matrixHalf = matrixHalf / 2;
     } while (matrixHalf > 0);
 
-    return getValueByPath(e, decisions, e.p->v);
+    return getValueByPath(e, decisions);
   }
 
   //ComplexValue getValueByPath(const mEdge& e, const Complex& amp, std::size_t i,
