@@ -67,6 +67,7 @@ void qc::qiskit::QuantumCircuit::import(qc::QuantumComputation& qc,
   try {
     qc.gphase(circ.attr("global_phase").cast<fp>());
   } catch (const py::cast_error& e) {
+    std::clog << e.what() << "\n";
     std::clog << "[import] Warning: Symbolic global phase values are not "
                  "supported yet. Ignoring global phase.\n";
   }
@@ -297,7 +298,7 @@ qc::SymbolOrNumber
 qc::qiskit::QuantumCircuit::parseParam(const py::object& param) {
   try {
     return param.cast<fp>();
-  } catch (py::cast_error& e) {
+  } catch ([[maybe_unused]] py::cast_error& e) {
     return parseSymbolicExpr(param);
   }
 }

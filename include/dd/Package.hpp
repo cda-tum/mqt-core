@@ -18,7 +18,7 @@
 #include "DensityNoiseTable.hpp"
 #include "Edge.hpp"
 #include "GateMatrixDefinitions.hpp"
-#include "Node.hpp"
+#include "Package_fwd.hpp"
 #include "StochasticNoiseOperationTable.hpp"
 #include "ToffoliTable.hpp"
 #include "UnaryComputeTable.hpp"
@@ -50,35 +50,8 @@
 #include <vector>
 
 namespace dd {
-struct DDPackageConfig {
-  // Note the order of parameters here must be the *same* as in the template
-  // definition.
-  static constexpr std::size_t UT_VEC_NBUCKET = 32768U;
-  static constexpr std::size_t UT_VEC_INITIAL_ALLOCATION_SIZE = 2048U;
-  static constexpr std::size_t UT_MAT_NBUCKET = 32768U;
-  static constexpr std::size_t UT_MAT_INITIAL_ALLOCATION_SIZE = 2048U;
-  static constexpr std::size_t CT_VEC_ADD_NBUCKET = 16384U;
-  static constexpr std::size_t CT_MAT_ADD_NBUCKET = 16384U;
-  static constexpr std::size_t CT_MAT_TRANS_NBUCKET = 4096U;
-  static constexpr std::size_t CT_MAT_CONJ_TRANS_NBUCKET = 4096U;
-  static constexpr std::size_t CT_MAT_VEC_MULT_NBUCKET = 16384U;
-  static constexpr std::size_t CT_MAT_MAT_MULT_NBUCKET = 16384U;
-  static constexpr std::size_t CT_VEC_KRON_NBUCKET = 4096U;
-  static constexpr std::size_t CT_MAT_KRON_NBUCKET = 4096U;
-  static constexpr std::size_t CT_VEC_INNER_PROD_NBUCKET = 4096U;
-  static constexpr std::size_t CT_DM_NOISE_NBUCKET = 1U;
-  static constexpr std::size_t UT_DM_NBUCKET = 1U;
-  static constexpr std::size_t UT_DM_INITIAL_ALLOCATION_SIZE = 1U;
-  static constexpr std::size_t CT_DM_DM_MULT_NBUCKET = 1U;
-  static constexpr std::size_t CT_DM_ADD_NBUCKET = 1U;
 
-  // The number of different quantum operations. I.e., the number of operations
-  // defined in the QFR OpType.hpp This parameter is required to initialize the
-  // StochasticNoiseOperationTable.hpp
-  static constexpr std::size_t STOCHASTIC_CACHE_OPS = 1;
-};
-
-template <class Config = DDPackageConfig> class Package {
+template <class Config> class Package {
   static_assert(std::is_base_of_v<DDPackageConfig, Config>,
                 "Config must be derived from DDPackageConfig");
   ///
@@ -953,8 +926,8 @@ private:
       const auto& zeroWeight = cn.getCached(begin->real(), begin->imag());
       const auto& oneWeight =
           cn.getCached(std::next(begin)->real(), std::next(begin)->imag());
-      const auto zeroSuccessor = vEdge{vNode::terminal, zeroWeight};
-      const auto oneSuccessor = vEdge{vNode::terminal, oneWeight};
+      const auto zeroSuccessor = vEdge{vNode::getTerminal(), zeroWeight};
+      const auto oneSuccessor = vEdge{vNode::getTerminal(), oneWeight};
       return makeDDNode<vNode>(0, {zeroSuccessor, oneSuccessor}, true);
     }
 
@@ -993,7 +966,7 @@ private:
     if (level == -1) {
       assert(rowEnd - rowStart == 1);
       assert(colEnd - colStart == 1);
-      return {mNode::terminal, cn.getCached(matrix[rowStart][colStart])};
+      return {mNode::getTerminal(), cn.getCached(matrix[rowStart][colStart])};
     }
 
     // recursively call the function on all quadrants
@@ -2030,17 +2003,17 @@ public:
     return fid.r * fid.r + fid.i * fid.i;
   }
 
-  [[gnu::pure]] dd::fp
-  fidelityOfMeasurementOutcomes(const vEdge& e,
-                                const ProbabilityVector& probs) {
+  dd::fp fidelityOfMeasurementOutcomes(const vEdge& e,
+                                       const ProbabilityVector& probs) {
     if (e.w.approximatelyZero()) {
       return 0.;
     }
     return fidelityOfMeasurementOutcomesRecursive(e, probs, 0);
   }
 
-  [[gnu::pure]] dd::fp fidelityOfMeasurementOutcomesRecursive(
-      const vEdge& e, const ProbabilityVector& probs, const std::size_t i) {
+  dd::fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e,
+                                                const ProbabilityVector& probs,
+                                                const std::size_t i) {
     const auto topw = dd::ComplexNumbers::mag(e.w);
     if (e.isTerminal()) {
       if (auto it = probs.find(i); it != probs.end()) {
@@ -2125,7 +2098,7 @@ private:
       sum.r += cv.r;
       sum.i += cv.i;
     }
-    r.p = vNode::terminal;
+    r.p = vNode::getTerminal();
     r.w = sum;
 
     vectorInnerProduct.insert(xCopy, yCopy, r);
@@ -2347,10 +2320,11 @@ private:
     }
 
     std::array<mEdge, NEDGE> edge{};
-    std::transform(a.p->e.cbegin(), a.p->e.cend(), edge.begin(),
-                   [&](const mEdge& e) -> mEdge {
-                     return trace(e, eliminate, alreadyEliminated);
-                   });
+    std::transform(
+        a.p->e.cbegin(), a.p->e.cend(), edge.begin(),
+        [this, &eliminate, &alreadyEliminated](const mEdge& e) -> mEdge {
+          return trace(e, eliminate, alreadyEliminated);
+        });
     auto adjustedV =
         static_cast<Qubit>(static_cast<std::size_t>(a.p->v) -
                            (static_cast<std::size_t>(std::count(
@@ -3732,7 +3706,7 @@ public:
 
   // print unique and compute table statistics
   void statistics() {
-    std::cout << "DD statistics:" << std::endl << "[vUniqueTable] ";
+    std::cout << "DD statistics:\n[vUniqueTable] ";
     vUniqueTable.printStatistics();
     std::cout << "[mUniqueTable] ";
     mUniqueTable.printStatistics();

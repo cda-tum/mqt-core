@@ -280,8 +280,7 @@ public:
 
   [[nodiscard]] std::string getQubitRegister(Qubit physicalQubitIndex) const;
   [[nodiscard]] std::string getClassicalRegister(Bit classicalIndex) const;
-  [[gnu::pure]] static Qubit
-  getHighestLogicalQubitIndex(const Permutation& permutation);
+  static Qubit getHighestLogicalQubitIndex(const Permutation& permutation);
   [[nodiscard]] Qubit getHighestLogicalQubitIndex() const {
     return getHighestLogicalQubitIndex(initialLayout);
   };
@@ -297,8 +296,7 @@ public:
   [[nodiscard]] bool isIdleQubit(Qubit physicalQubit) const;
   [[nodiscard]] bool isLastOperationOnQubit(const const_iterator& opIt,
                                             const const_iterator& end) const;
-  [[nodiscard, gnu::pure]] bool
-  physicalQubitIsAncillary(Qubit physicalQubitIndex) const;
+  [[nodiscard]] bool physicalQubitIsAncillary(Qubit physicalQubitIndex) const;
   [[nodiscard]] bool
   logicalQubitIsAncillary(const Qubit logicalQubitIndex) const {
     return ancillary[logicalQubitIndex];
@@ -320,7 +318,7 @@ public:
   /// \param logicalQubitIndex the logical qubit index to check
   /// \return whether the given logical qubit exists in the initial layout and
   /// to which physical qubit it is mapped
-  [[nodiscard, gnu::pure]] std::pair<bool, std::optional<Qubit>>
+  [[nodiscard]] std::pair<bool, std::optional<Qubit>>
   containsLogicalQubit(Qubit logicalQubitIndex) const;
 
   /// Adds a global phase to the quantum circuit.

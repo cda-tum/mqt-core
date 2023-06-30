@@ -12,9 +12,6 @@ function(enable_project_options target_name)
     endif()
   endif()
 
-  option(BINDINGS "Configure for building Python bindings")
-  include(CheckCXXCompilerFlag)
-
   if(MSVC)
     target_compile_options(${target_name} INTERFACE /utf-8)
   else()
@@ -31,6 +28,8 @@ function(enable_project_options target_name)
     if(NOT DEPLOY)
       # only include machine-specific optimizations when building for the host machine
       target_compile_options(${target_name} INTERFACE -mtune=native)
+
+      include(CheckCXXCompilerFlag)
       check_cxx_compiler_flag(-march=native HAS_MARCH_NATIVE)
       if(HAS_MARCH_NATIVE)
         target_compile_options(${target_name} INTERFACE -march=native)
@@ -47,6 +46,7 @@ function(enable_project_options target_name)
                                -fno-optimize-sibling-calls -fno-inline-functions>)
   endif()
 
+  option(BINDINGS "Configure for building Python bindings")
   if(BINDINGS)
     target_compile_options(${target_name} INTERFACE -fvisibility=hidden)
     include(CheckPIESupported)

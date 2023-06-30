@@ -65,7 +65,7 @@ void Q9Surface::measureAndCorrect() {
         std::size_t mask = 0;
         for (std::size_t c = 0; c < Z_ANCILLA_QUBITS.size(); c++) {
           if (qubitCorrectionZ.at(q).count(Z_ANCILLA_QUBITS.at(c)) > 0) {
-            mask |= (1 << c);
+            mask |= (static_cast<std::size_t>(1U) << c);
           }
         }
         qcMapped->classicControlled(qc::Z, qubits.at(q), controlRegister, mask);
@@ -78,7 +78,7 @@ void Q9Surface::measureAndCorrect() {
         std::size_t mask = 0;
         for (std::size_t c = 0; c < X_ANCILLA_QUBITS.size(); c++) {
           if (qubitCorrectionX.at(q).count(X_ANCILLA_QUBITS.at(c)) > 0) {
-            mask |= (1 << c);
+            mask |= (static_cast<std::size_t>(1U) << c);
           }
         }
         qcMapped->classicControlled(qc::X, qubits.at(q), controlRegister, mask);

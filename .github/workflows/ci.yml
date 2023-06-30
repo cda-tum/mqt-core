@@ -1,9 +1,10 @@
-name: CI
+name: 🇨‌➕➕ • CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
   workflow_dispatch:
 
 concurrency:
@@ -17,58 +18,123 @@ defaults:
 env:
   CMAKE_BUILD_PARALLEL_LEVEL: 3
   CTEST_PARALLEL_LEVEL: 3
+  FORCE_COLOR: 3
 
 jobs:
-  cpp-tests:
-    name: Tests ${{ matrix.config.os }}
-    runs-on: ${{ matrix.config.os }}
+  cpp-tests-ubuntu:
+    name: Tests • ubuntu-latest • ${{ matrix.config }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        config:
-          - { os: ubuntu-latest, toolchain: "" }
-          - { os: macos-latest, toolchain: "" }
-          - { os: windows-latest, toolchain: "-T ClangCl" }
+        config: [Debug, Release]
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: Chocobo1/setup-ccache-action@v1
         with:
-          key: "${{matrix.config.os}}"
-      - name: Set up mold as linker (Linux only)
+          prepend_symlinks_to_path: false
+          override_cache_key: c++-tests-ubuntu-latest-${{ matrix.config }}
+      - name: Set up mold as linker
         uses: rui314/setup-mold@v1
+      - name: Install Ninja
+        run: pipx install ninja
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.config.toolchain }} -DENABLE_IPO=ON
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEPLOY=ON
       - name: Build
-        run: cmake --build build --config Release
+        run: cmake --build build --config ${{ matrix.config }}
       - name: Test
-        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+        run: ctest -C ${{ matrix.config }} --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+
+  cpp-tests-macos:
+    name: Tests • macos-latest • ${{ matrix.config }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          override_cache_key: c++-tests-macos-latest-${{ matrix.config }}
+      - name: Install Ninja
+        run: pipx install ninja
+      - name: Configure CMake
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+      - name: Build
+        run: cmake --build build --config ${{ matrix.config }}
+      - name: Test
+        run: ctest -C ${{ matrix.config }} --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+
+  cpp-tests-windows:
+    name: Tests • windows-latest • ${{ matrix.config }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          windows_compile_environment: msvc
+          override_cache_key: c++-tests-windows-latest-${{ matrix.config }}
+      - name: Configure CMake
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+      - name: Build
+        run: cmake --build build --config ${{ matrix.config }}
+      - name: Test
+        run: ctest -C ${{ matrix.config }} --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
 
   coverage:
-    name: C++ Coverage
+    name: Coverage • ubuntu-latest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: Chocobo1/setup-ccache-action@v1
         with:
-          key: "coverage"
+          prepend_symlinks_to_path: false
+          override_cache_key: c++-coverage
       - name: Set up mold as linker
         uses: rui314/setup-mold@v1
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON -DDEPLOY=ON
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
         run: ctest -C Debug --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3.1.4
+        uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
           gcov: true
           gcov_ignore: "extern/**/*"
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  cpp-ci-check:
+    if: always()
+    name: 🚦 🇨‌➕➕ Check
+    needs: [cpp-tests-ubuntu, cpp-tests-macos, cpp-tests-windows, coverage]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          allowed-skips: deploy
+          jobs: ${{ toJSON(needs) }}

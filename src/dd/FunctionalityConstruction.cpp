@@ -89,13 +89,15 @@ bool buildFunctionalityRecursive(const QuantumComputation* qc,
 
   // in case no operations are left after the first recursive call nothing has
   // to be done
-  const size_t leftIdx = opIdx & ~(1UL << (depth - 1U));
+  const size_t leftIdx =
+      opIdx & ~(static_cast<std::size_t>(1U) << (depth - 1U));
   if (!buildFunctionalityRecursive(qc, depth - 1U, leftIdx, s, permutation,
                                    dd)) {
     return false;
   }
 
-  const size_t rightIdx = opIdx | (1UL << (depth - 1));
+  const size_t rightIdx =
+      opIdx | (static_cast<std::size_t>(1U) << (depth - 1U));
   const auto success =
       buildFunctionalityRecursive(qc, depth - 1U, rightIdx, s, permutation, dd);
 

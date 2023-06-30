@@ -1,6 +1,5 @@
 #include "QuantumComputation.hpp"
 #include "dd/NoiseFunctionality.hpp"
-#include "operations/NonUnitaryOperation.hpp"
 
 #include "gtest/gtest.h"
 #include <random>
@@ -73,8 +72,6 @@ protected:
     qc.x(0, 3_pc);
     qc.h(3);
   }
-
-  void TearDown() override {}
 
   qc::QuantumComputation qc{};
   size_t stochRuns = 1000U;

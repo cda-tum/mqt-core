@@ -47,8 +47,9 @@ public:
                                                    getClassics());
     }
     if (getType() == qc::Snapshot) {
-      return std::make_unique<NonUnitaryOperation>(getNqubits(), getTargets(),
-                                                   getParameter().at(0));
+      return std::make_unique<NonUnitaryOperation>(
+          getNqubits(), getTargets(),
+          static_cast<std::size_t>(getParameter().at(0)));
     }
     if (getType() == qc::ShowProbabilities) {
       return std::make_unique<NonUnitaryOperation>(getNqubits());
@@ -81,7 +82,7 @@ public:
   std::vector<Bit>& getClassics() { return classics; }
   [[nodiscard]] size_t getNclassics() const { return classics.size(); }
 
-  [[nodiscard, gnu::pure]] bool actsOn(Qubit i) const override;
+  [[nodiscard]] bool actsOn(Qubit i) const override;
 
   void addDepthContribution(std::vector<std::size_t>& depths) const override;
 

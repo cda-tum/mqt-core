@@ -1,0 +1,219 @@
+[build-system]
+requires = ["scikit-build-core>=0.4.5", "nanobind>=1.4.0", "setuptools-scm>=7"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "mqt-core"
+description = "The Backbone of the Munich Quantum Toolkit"
+readme = "README.md"
+authors = [
+    { name = "Lukas Burgholzer", email = "burgholzer@me.com" }
+]
+keywords = ["MQT", "quantum computing", "design automation"]
+license = { file = "LICENSE.md" }
+
+classifiers = [
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: C++",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Development Status :: 4 - Beta",
+    "Typing :: Typed",
+]
+requires-python = ">=3.8"
+dynamic = ["version"]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+coverage = ["mqt.core[test]", "pytest-cov"]
+docs = [
+    "furo",
+    "myst_parser>=0.13",
+    "setuptools-scm>=7",
+    "sphinx>=5",
+    "sphinx-copybutton",
+    "sphinx_design",
+    "sphinxext-opengraph",
+]
+dev = ["mqt.core[coverage, docs]"]
+
+[project.urls]
+Homepage = "https://github.com/cda-tum/mqt-core"
+Documentation = "https://mqt.readthedocs.io/projects/core"
+Issues = "https://github.com/cda-tum/mqt-core/issues"
+Discussions = "https://github.com/cda-tum/mqt-core/discussions"
+
+
+[tool.scikit-build]
+# Protect the configuration against future changes in scikit-build-core
+minimum-version = "0.4"
+
+# Set required CMake and Ninja versions
+cmake.minimum-version = "3.19"
+ninja.minimum-version = "1.10"
+
+# Setuptools-style build caching in a local directory
+build-dir = "build/{wheel_tag}"
+
+# Build stable ABI wheels for CPython 3.12+
+wheel.py-api = "cp312"
+
+# Explicitly set the package directory
+wheel.packages = ["src/mqt"]
+
+metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
+sdist.include = ["src/mqt/core/_version.py"]
+sdist.exclude = [
+    "**/.github",
+    "**/doc",
+    "**/docs",
+    "**/meta",
+    "**/plots",
+    "**/test",
+    "**/tests",
+    "extern/json/include",
+    "extern/googletest",
+    "extern/boost/config/checks",
+    "extern/boost/config/tools",
+    "extern/boost/multiprecision/config",
+    "extern/boost/multiprecision/example",
+    "extern/boost/multiprecision/performance",
+    "extern/boost/multiprecision/tools"
+]
+
+[tool.check-sdist]
+sdist-only = ["src/mqt/core/_version.py"]
+git-only = [
+    "docs/*",
+    "extern/*",
+    "test/*",
+]
+
+[tool.scikit-build.cmake.define]
+BUILD_MQT_CORE_BINDINGS = "ON"
+BUILD_MQT_CORE_TESTS = "OFF"
+ENABLE_IPO = "ON"
+
+
+[tool.setuptools_scm]
+write_to = "src/mqt/core/_version.py"
+
+
+[tool.black]
+line-length = 120
+
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = ["error"]
+log_cli_level = "info"
+testpaths = ["test/python"]
+
+
+[tool.coverage]
+run.source = ["mqt.core"]
+report.exclude_lines = [
+    'pragma: no cover',
+    '\.\.\.',
+    'if typing.TYPE_CHECKING:',
+]
+
+
+[tool.mypy]
+files = ["src/mqt", "test/python"]
+mypy_path = ["$MYPY_CONFIG_FILE_DIR/src"]
+python_version = "3.8"
+warn_unused_configs = true
+show_error_codes = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+strict = true
+disallow_untyped_defs = false
+explicit_package_bases = true
+
+
+[tool.ruff]
+select = [
+    "E", "F", "W", # flake8
+    "A",           # flake8-builtins
+    "ANN",         # flake8-annotations
+    "ARG",         # flake8-unused-arguments
+    "ASYNC",       # flake8-async
+    "B",  "B904",  # flake8-bugbear
+    "C4",          # flake8-comprehensions
+    "D",           # pydocstyle
+    "EM",          # flake8-errmsg
+    "EXE",         # flake8-executable
+    "FA",          # flake8-future-annotations
+    "I",           # isort
+    "ICN",         # flake8-import-conventions
+    "ISC",         # flake8-implicit-str-concat
+    "N",           # flake8-naming
+    "NPY",         # numpy
+    "PERF",        # perflint
+    "PGH",         # pygrep-hooks
+    "PIE",         # flake8-pie
+    "PL",          # pylint
+    "PT",          # flake8-pytest-style
+    "PTH",         # flake8-use-pathlib
+    "PYI",         # flake8-pyi
+    "Q",           # flake8-quotes
+    "RET",         # flake8-return
+    "RSE",         # flake8-raise
+    "RUF",         # Ruff-specific
+    "SLF",         # flake8-self
+    "SLOT",        # flake8-slots
+    "SIM",         # flake8-simplify
+    "TCH",         # flake8-type-checking
+    "TID",         # flake8-tidy-imports
+    "TRY",         # tryceratops
+    "UP",          # pyupgrade
+    "YTT",         # flake8-2020
+]
+extend-ignore = [
+    "ANN101",  # Missing type annotation for self in method
+    "ANN102",  # Missing type annotation for cls in classmethod
+    "E501",    # Line too long (Black is enough)
+    "PLR",     # Design related pylint codes
+]
+src = ["src"]
+exclude = []
+flake8-unused-arguments.ignore-variadic-names = true
+isort.required-imports = ["from __future__ import annotations"]
+line-length = 120
+
+[tool.ruff.per-file-ignores]
+"*.pyi" = ["D"]
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+
+[tool.cibuildwheel]
+build = "cp3*"
+skip = "*-musllinux_*"
+archs = "auto64"
+test-command = "python -c \"from mqt import core\""
+environment = { DEPLOY = "ON" }
+build-frontend = "build"
+
+[tool.cibuildwheel.macos]
+environment = { DEPLOY = "ON", MACOSX_DEPLOYMENT_TARGET = "10.15" }
+
+[tool.cibuildwheel.windows]
+before-build = "pip install delvewheel"
+repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
+environment = { DEPLOY = "ON", CMAKE_GENERATOR = "Ninja" }

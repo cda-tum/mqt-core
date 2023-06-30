@@ -320,7 +320,7 @@ bool CircuitOptimizer::removeDiagonalGate(DAG& dag,
       }
       // recursive call at control with this operation as goal
       removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, controlQubit,
-                                                it);
+                                                (*it)->get());
       // check if iteration of control qubit was successful
       if (*dagIterators.at(controlQubit) != *it) {
         onlyDiagonalGates = false;
@@ -336,7 +336,8 @@ bool CircuitOptimizer::removeDiagonalGate(DAG& dag,
         break;
       }
       // recursive call at target with this operation as goal
-      removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, target, it);
+      removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, target,
+                                                (*it)->get());
       // check if iteration of target qubit was successful
       if (*dagIterators.at(target) != *it) {
         onlyDiagonalGates = false;
@@ -361,18 +362,18 @@ bool CircuitOptimizer::removeDiagonalGate(DAG& dag,
 
 void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(
     DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
-    const DAGReverseIterator& until) {
+    const qc::Operation* until) {
   // qubit is finished -> consider next qubit
   if (dagIterators.at(idx) == dag.at(idx).rend()) {
     if (idx < static_cast<Qubit>(dag.size() - 1)) {
       removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, idx + 1,
-                                                dag.at(idx + 1).rend());
+                                                nullptr);
     }
     return;
   }
   // check if desired operation was reached
-  if (until != dag.at(idx).rend()) {
-    if (*dagIterators.at(idx) == *until) {
+  if (until != nullptr) {
+    if ((*dagIterators.at(idx))->get() == until) {
       return;
     }
   }
@@ -380,8 +381,8 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(
   auto& it = dagIterators.at(idx);
   while (it != dag.at(idx).rend()) {
     // check if desired operation was reached
-    if (until != dag.at(idx).rend()) {
-      if (*dagIterators.at(idx) == *until) {
+    if (until != nullptr) {
+      if ((*dagIterators.at(idx))->get() == until) {
         break;
       }
     }
@@ -449,7 +450,7 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(
   if (dagIterators.at(idx) == dag.at(idx).rend() &&
       idx < static_cast<Qubit>(dag.size() - 1)) {
     removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, idx + 1,
-                                              dag.at(idx + 1).rend());
+                                              nullptr);
   }
 }
 
@@ -470,8 +471,7 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasure(
     }
   }
   // iterate over DAG in depth-first fashion
-  removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, 0,
-                                            dag.at(0).rend());
+  removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, 0, nullptr);
 
   // remove resulting identities from circuit
   removeIdentities(qc);
@@ -493,7 +493,7 @@ bool CircuitOptimizer::removeFinalMeasurement(DAG& dag,
         break;
       }
       // recursive call at target with this operation as goal
-      removeFinalMeasurementsRecursive(dag, dagIterators, target, it);
+      removeFinalMeasurementsRecursive(dag, dagIterators, target, (*it)->get());
       // check if iteration of target qubit was successful
       if (dagIterators.at(target) == dag.at(target).rend() ||
           *dagIterators.at(target) != *it) {
@@ -516,24 +516,23 @@ bool CircuitOptimizer::removeFinalMeasurement(DAG& dag,
 
 void CircuitOptimizer::removeFinalMeasurementsRecursive(
     DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
-    const DAGReverseIterator& until) {
+    const qc::Operation* until) {
   if (dagIterators.at(idx) == dag.at(idx).rend()) { // we reached the end
     if (idx < static_cast<Qubit>(dag.size() - 1)) {
-      removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1,
-                                       dag.at(idx + 1).rend());
+      removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1, nullptr);
     }
     return;
   }
   // check if desired operation was reached
-  if (until != dag.at(idx).rend()) {
-    if (*dagIterators.at(idx) == *until) {
+  if (until != nullptr) {
+    if ((*dagIterators.at(idx))->get() == until) {
       return;
     }
   }
   auto& it = dagIterators.at(idx);
   while (it != dag.at(idx).rend()) {
-    if (until != dag.at(idx).rend()) {
-      if (*dagIterators.at(idx) == *until) {
+    if (until != nullptr) {
+      if ((*dagIterators.at(idx))->get() == until) {
         break;
       }
     }
@@ -587,8 +586,7 @@ void CircuitOptimizer::removeFinalMeasurementsRecursive(
   }
   if (dagIterators.at(idx) == dag.at(idx).rend() &&
       idx < static_cast<Qubit>(dag.size() - 1)) {
-    removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1,
-                                     dag.at(idx + 1).rend());
+    removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1, nullptr);
   }
 }
 
@@ -599,7 +597,7 @@ void CircuitOptimizer::removeFinalMeasurements(QuantumComputation& qc) {
     dagIterators.at(q) = (dag.at(q).rbegin());
   }
 
-  removeFinalMeasurementsRecursive(dag, dagIterators, 0, dag.at(0).rend());
+  removeFinalMeasurementsRecursive(dag, dagIterators, 0, nullptr);
 
   removeIdentities(qc);
 }
@@ -799,8 +797,9 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
   std::unordered_map<Qubit, std::size_t> qubitsToAddMeasurements{};
   auto it = qc.begin();
   while (it != qc.end()) {
-    if ((*it)->getType() == qc::Measure) {
-      auto* measurement = dynamic_cast<qc::NonUnitaryOperation*>(it->get());
+    if (const auto* measurement =
+            dynamic_cast<qc::NonUnitaryOperation*>(it->get());
+        measurement != nullptr && measurement->getType() == qc::Measure) {
       const auto targets = measurement->getTargets();
       const auto classics = measurement->getClassics();
 
@@ -815,8 +814,11 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
         break;
       }
 
-      // remember q-> c for adding measurements later
-      qubitsToAddMeasurements[targets[0]] = classics[0];
+      const auto measurementQubit = targets[0];
+      const auto measurementBit = classics[0];
+
+      // remember q->c for adding measurements later
+      qubitsToAddMeasurements[measurementQubit] = measurementBit;
 
       // remove the measurement from the vector of operations
       it = qc.erase(it);
@@ -832,7 +834,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
         if (operation->isUnitary() || operation->getType() == qc::Barrier) {
           // if an operation does not act on the measured qubit, the insert
           // location for potential operations has to be updated
-          if (!operation->actsOn(targets.at(0))) {
+          if (!operation->actsOn(measurementQubit)) {
             ++currentInsertionPoint;
           }
           ++opIt;
@@ -845,9 +847,9 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
               "eliminateResets method before deferring measurements.");
         }
 
-        if (operation->getType() == qc::Measure) {
-          const auto* measurement2 =
-              dynamic_cast<qc::NonUnitaryOperation*>((*opIt).get());
+        if (const auto* measurement2 =
+                dynamic_cast<qc::NonUnitaryOperation*>((*opIt).get());
+            measurement2 != nullptr && operation->getType() == qc::Measure) {
           const auto& targets2 = measurement2->getTargets();
           const auto& classics2 = measurement2->getClassics();
 
@@ -861,9 +863,9 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
           continue;
         }
 
-        if (operation->isClassicControlledOperation()) {
-          auto* classicOp =
-              dynamic_cast<qc::ClassicControlledOperation*>((*opIt).get());
+        if (const auto* classicOp =
+                dynamic_cast<qc::ClassicControlledOperation*>((*opIt).get());
+            classicOp != nullptr) {
           const auto& controlRegister = classicOp->getControlRegister();
           const auto& expectedValue = classicOp->getExpectedValue();
 
@@ -875,10 +877,17 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
           }
 
           // if this is not the classical bit that is measured, continue
-          if (controlRegister.first == static_cast<Qubit>(classics.at(0))) {
+          if (controlRegister.first == static_cast<Qubit>(measurementBit)) {
             // get the underlying operation
             const auto* standardOp =
                 dynamic_cast<qc::StandardOperation*>(classicOp->getOperation());
+            if (standardOp == nullptr) {
+              std::stringstream ss{};
+              ss << "Underlying operation of classic-controlled operation is "
+                    "not a StandardOperation.\n";
+              classicOp->print(ss);
+              throw QFRException(ss.str());
+            }
 
             // get all the necessary information for reconstructing the
             // operation
@@ -887,7 +896,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
 
             const auto targs = standardOp->getTargets();
             for (const auto& target : targs) {
-              if (target == targets[0]) {
+              if (target == measurementQubit) {
                 throw qc::QFRException(
                     "Implicit reset operation in circuit detected. Measuring a "
                     "qubit and then targeting the same qubit with a "
@@ -898,29 +907,48 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
 
             // determine the appropriate control to add
             auto controls = standardOp->getControls();
-            auto controlQubit = targets.at(0);
-            auto controlType =
+            const auto controlQubit = measurementQubit;
+            const auto controlType =
                 (expectedValue == 1) ? Control::Type::Pos : Control::Type::Neg;
             controls.emplace(Control{controlQubit, controlType});
 
             const auto parameters = standardOp->getParameter();
 
             // remove the classic-controlled operation
+            // carefully handle iterator invalidation.
+            // if the current insertion point is the same as the current
+            // iterator the insertion point has to be updated to the new
+            // operation as well.
+            auto itInvalidated = (it >= opIt);
+            const auto insertionPointInvalidated =
+                (currentInsertionPoint >= opIt);
+
             opIt = qc.erase(opIt);
 
+            if (itInvalidated) {
+              it = opIt;
+            }
+            if (insertionPointInvalidated) {
+              currentInsertionPoint = opIt;
+            }
+
+            itInvalidated = (it >= currentInsertionPoint);
             // insert the new operation (invalidated all pointer onwards)
             currentInsertionPoint =
                 qc.insert(currentInsertionPoint,
                           std::make_unique<qc::StandardOperation>(
                               nqubits, controls, targs, type, parameters));
 
+            if (itInvalidated) {
+              it = currentInsertionPoint;
+            }
             // advance just after the currently inserted operation
             ++currentInsertionPoint;
             // the inner loop also has to restart from here due to the
             // invalidation of the iterators
             opIt = currentInsertionPoint;
           } else {
-            if (!operation->actsOn(targets[0])) {
+            if (!operation->actsOn(measurementQubit)) {
               ++currentInsertionPoint;
             }
             ++opIt;

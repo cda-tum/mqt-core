@@ -1,0 +1,98 @@
+name: 🐍 • Wheels
+
+on:
+  release:
+    types: [published]
+  pull_request:
+  merge_group:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 3
+
+jobs:
+  build_sdist:
+    name: SDist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0
+      - name: Build SDist
+        run: pipx run build --sdist
+      - name: Check metadata
+        run: pipx run twine check dist/*
+      - uses: actions/upload-artifact@v3
+        with:
+          path: dist/*.tar.gz
+
+  build_wheels:
+    name: ${{ matrix.os }} • ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["cp38", "cp39", "cp310", "cp311", "cp312"]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0
+      - uses: ilammy/msvc-dev-cmd@v1
+      - if: matrix.os != 'ubuntu-latest'
+        name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          windows_compile_environment: msvc
+          override_cache_key: wheels-${{ matrix.os }}-${{ matrix.python }}
+      - uses: pypa/cibuildwheel@v2.13
+        env:
+          CIBW_BUILD: ${{ matrix.python }}-*
+          # Temporary: use pre-release Python 3.12 for stable ABI builds
+          CIBW_PRERELEASE_PYTHONS: True
+      - name: Verify clean directory
+        run: git diff --exit-code
+        shell: bash
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
+        with:
+          path: wheelhouse/*.whl
+
+  deploy:
+    if: github.event_name == 'release' && github.event.action == 'published'
+    name: 🚀 Deploy to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mqt.core
+    permissions:
+      id-token: write
+    needs: [build_wheels, build_sdist]
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  wheels-check:
+    if: always()
+    name: 🚦 🐍🛞 Check
+    needs: [build_sdist, build_wheels, deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          allowed-skips: deploy
+          jobs: ${{ toJSON(needs) }}

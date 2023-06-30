@@ -9,7 +9,7 @@ void Q18Surface::measureAndCorrect() {
 
   std::map<std::size_t, std::size_t> xCheckMasks;
   for (std::size_t j = 0; j < ANCILLA_WIDTH; j++) {
-    xCheckMasks[X_CHECKS.at(j)] = 1 << j;
+    xCheckMasks[X_CHECKS.at(j)] = static_cast<std::size_t>(1U) << j;
   }
 
   for (Qubit i = 0; i < nQubits; i++) {
