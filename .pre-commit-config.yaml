@@ -50,12 +50,21 @@ repos:
       - id: rst-directive-colons
       - id: rst-inline-touching-normal
 
+  # Python linting using ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.0.275
     hooks:
       - id: ruff
         args: ["--fix", "--show-fixes"]
 
+  # Python linting for Jupyter notebooks using ruff
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: "1.7.0"
+    hooks:
+      - id: nbqa-ruff
+        additional_dependencies: [ruff==0.0.275] # keep in sync with ruff-pre-commit
+
+  # Static type checking using mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.4.1
     hooks:
@@ -65,6 +74,7 @@ repos:
         additional_dependencies:
           - pytest
 
+  # Checking sdist validity
   - repo: https://github.com/henryiii/check-sdist
     rev: "v0.1.2"
     hooks:
@@ -118,6 +128,7 @@ repos:
       - id: codespell
         args: ["-L", "wille,linz", "--skip", "*.ipynb"]
 
+  # Catch common capitalization mistakes
   - repo: local
     hooks:
       - id: disallow-caps
