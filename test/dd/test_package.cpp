@@ -678,7 +678,7 @@ TEST(DDPackageTest, PackageReset) {
   auto dd = std::make_unique<dd::Package<>>(1);
 
   // one node in unique table of variable 0
-  //auto iGate = dd->makeIdent();
+  // auto iGate = dd->makeIdent();
   auto iGate = dd->makeGateDD(dd::Hmat, 1, 0);
 
   const auto& unique = dd->mUniqueTable.getTables();
@@ -1919,12 +1919,16 @@ TEST(DDPackageTest, XXMinusYYGateDDConstruction) {
               dd->makeXXMinusYYDD(nrQubits, control, target, theta, beta);
           const auto gateDD = dd->makeXXMinusYYDD(nrQubits, dd::Controls{},
                                                   control, target, theta, beta);
-          std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
-                                  "extern/mqt-core/graphs/xxyy";
-          std::string filename2 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
-                                  "extern/mqt-core/graphs/GateDD";
+          std::string filename1 =
+              "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
+              "extern/mqt-core/graphs/xxyy";
+          std::string filename2 =
+              "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
+              "extern/mqt-core/graphs/GateDD";
           if (xxMinusYYGateDD != gateDD) {
-            std::cout << "Control: " << static_cast<int16_t>(control) << " Target: " << static_cast<int16_t>(target) << " Theta: " << theta << " Beta: " << beta << "\n";
+            std::cout << "Control: " << static_cast<int16_t>(control)
+                      << " Target: " << static_cast<int16_t>(target)
+                      << " Theta: " << theta << " Beta: " << beta << "\n";
             dd::export2Dot(xxMinusYYGateDD, filename1, true, true);
             dd::export2Dot(gateDD, filename2, true, true);
           }
@@ -1994,15 +1998,12 @@ TEST(DDPackageTest, GetMatrixMultiQubitIdentity) {
   auto identity = dd->makeIdent();
   auto matrix = dd->getMatrix(identity, nrQubits);
 
-  auto goalRow0 =
-      dd::CVec{{1., 0.}, {0., 0.}, {0., 0.}, {0., 0.}};
-  auto goalRow1 =
-      dd::CVec{{0., 0.}, {1., 0.}, {0., 0.}, {0., 0.}};
-  auto goalRow2 =
-      dd::CVec{{0., 0.}, {0., 0.}, {1., 0.}, {0., 0.}};
-  auto goalRow3 =
-      dd::CVec{{0., 0.}, {0., 0.}, {0., 0.}, {1., 0.}};
-  auto goalMatrix = dd::CMat{goalRow0, goalRow1, goalRow2, goalRow3};//dd::CMat{goalRow0, goalRow1};
+  auto goalRow0 = dd::CVec{{1., 0.}, {0., 0.}, {0., 0.}, {0., 0.}};
+  auto goalRow1 = dd::CVec{{0., 0.}, {1., 0.}, {0., 0.}, {0., 0.}};
+  auto goalRow2 = dd::CVec{{0., 0.}, {0., 0.}, {1., 0.}, {0., 0.}};
+  auto goalRow3 = dd::CVec{{0., 0.}, {0., 0.}, {0., 0.}, {1., 0.}};
+  auto goalMatrix = dd::CMat{goalRow0, goalRow1, goalRow2,
+                             goalRow3}; // dd::CMat{goalRow0, goalRow1};
   ASSERT_EQ(dd->getMatrix(identity, nrQubits), goalMatrix);
 }
 
@@ -2030,10 +2031,10 @@ TEST(DDPackageTest, Sandbox) {
                           "extern/mqt-core/graphs/Sandbox";
   dd::export2Dot(reFormed, filename1, true, true);
 
-  //auto goalRow0 =
-  //    dd::CVec{{1., 0.}, {0., 0.}};
-  //auto goalRow1 =
-  //    dd::CVec{{0., 0.}, {1., 0.}};
-  //auto goalMatrix = dd::CMat{{1, 0}, {0, 1}};//dd::CMat{goalRow0, goalRow1};
-  //ASSERT_EQ(dd->getMatrix(cxGate), goalMatrix);
+  // auto goalRow0 =
+  //     dd::CVec{{1., 0.}, {0., 0.}};
+  // auto goalRow1 =
+  //     dd::CVec{{0., 0.}, {1., 0.}};
+  // auto goalMatrix = dd::CMat{{1, 0}, {0, 1}};//dd::CMat{goalRow0, goalRow1};
+  // ASSERT_EQ(dd->getMatrix(cxGate), goalMatrix);
 }

@@ -2426,7 +2426,8 @@ public:
     }
   }
 
-  mEdge createInitialMatrix(dd::QubitCount n, const std::vector<bool>&ancillary) {
+  mEdge createInitialMatrix(dd::QubitCount n,
+                            const std::vector<bool>& ancillary) {
     auto e = makeIdent();
     incRef(e);
     return reduceAncillae(e, ancillary);
@@ -2752,7 +2753,7 @@ public:
   template <class Edge>
   ComplexValue getValueByPath(const Edge& e, const std::string& decisions) {
     if (e.isTerminal()) {
-        return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
+      return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
     }
 
     auto c = cn.getTemporary(1, 0);
@@ -2765,7 +2766,8 @@ public:
     const auto topLevel = e.p->v;
     auto level = topLevel;
     do {
-      auto decision = static_cast<std::size_t>(decisions.at(static_cast<std::size_t>(topLevel - level)) - '0');
+      auto decision = static_cast<std::size_t>(
+          decisions.at(static_cast<std::size_t>(topLevel - level)) - '0');
       assert(decision <= r.p->e.size());
 
       // Path is selected
@@ -2777,8 +2779,9 @@ public:
         ComplexNumbers::mul(c, c, r.w);
       } else {
         // Iterates over pseudo-identity if node is at a lower level
-        for (;level > r.p->v; level--) {
-          decision = static_cast<std::size_t>(decisions.at(static_cast<std::size_t>(topLevel - level)) - '0');
+        for (; level > r.p->v; level--) {
+          decision = static_cast<std::size_t>(
+              decisions.at(static_cast<std::size_t>(topLevel - level)) - '0');
           if (decision == 0 || decision == 3) {
             ComplexNumbers::mul(c, c, Complex::one);
           } else if (decision == 1 || decision == 2) {
@@ -2807,17 +2810,17 @@ public:
 
     return getValueByPath(e, decisions);
   }
-  //ComplexValue getValueByPath(const vEdge& e, const Complex& amp,
-  //                            std::size_t i) {
-  //  auto c = cn.mulCached(e.w, amp);
-//
+  // ComplexValue getValueByPath(const vEdge& e, const Complex& amp,
+  //                             std::size_t i) {
+  //   auto c = cn.mulCached(e.w, amp);
+  //
   //  if (e.isTerminal()) {
   //    cn.returnToCache(c);
   //    return {CTEntry::val(c.r), CTEntry::val(c.i)};
   //  }
-//
+  //
   //  const bool one = (i & (1ULL << e.p->v)) != 0U;
-//
+  //
   //  ComplexValue r{};
   //  if (!one && !e.p->e[0].w.approximatelyZero()) {
   //    r = getValueByPath(e.p->e[0], c, i);
@@ -2851,18 +2854,19 @@ public:
     return getValueByPath(e, decisions);
   }
 
-  //ComplexValue getValueByPath(const mEdge& e, const Complex& amp, std::size_t i,
-  //                            std::size_t j, int level) {
-  //  auto c = cn.mulCached(e.w, amp);
-//
+  // ComplexValue getValueByPath(const mEdge& e, const Complex& amp, std::size_t
+  // i,
+  //                             std::size_t j, int level) {
+  //   auto c = cn.mulCached(e.w, amp);
+  //
   //  if (e.isTerminal()) {
   //    cn.returnToCache(c);
   //    return {CTEntry::val(c.r), CTEntry::val(c.i)};
   //  }
-//
+  //
   //  const bool row = (i & (1ULL << level)) != 0U;
   //  const bool col = (j & (1ULL << level)) != 0U;
-//
+  //
   //  ComplexValue r{};
   //  if (!row && !col && !e.p->e[0].w.approximatelyZero()) {
   //    r = getValueByPath(e.p->e[0], c, i, j, level-1);
@@ -3000,7 +3004,7 @@ public:
   }
 
   CMat getMatrix(const mEdge& e, int nrQubits) {
-    const std::size_t dim = 2ULL << (nrQubits-1);
+    const std::size_t dim = 2ULL << (nrQubits - 1);
     // allocate resulting matrix
     auto mat = CMat(dim, CVec(dim, {0.0, 0.0}));
 
@@ -3014,7 +3018,7 @@ public:
         }
       }
     } else {
-      getMatrix(e, Complex::one, 0, 0, mat, nrQubits-1);
+      getMatrix(e, Complex::one, 0, 0, mat, nrQubits - 1);
     }
     return mat;
   }
@@ -3036,20 +3040,20 @@ public:
     if (e.p->v == level) {
       // recursive case
       if (!e.p->e[0].w.approximatelyZero()) {
-        getMatrix(e.p->e[0], c, i, j, mat, level-1);
+        getMatrix(e.p->e[0], c, i, j, mat, level - 1);
       }
       if (!e.p->e[1].w.approximatelyZero()) {
-        getMatrix(e.p->e[1], c, i, y, mat, level-1);
+        getMatrix(e.p->e[1], c, i, y, mat, level - 1);
       }
       if (!e.p->e[2].w.approximatelyZero()) {
-        getMatrix(e.p->e[2], c, x, j, mat, level-1);
+        getMatrix(e.p->e[2], c, x, j, mat, level - 1);
       }
       if (!e.p->e[3].w.approximatelyZero()) {
-        getMatrix(e.p->e[3], c, x, y, mat, level-1);
+        getMatrix(e.p->e[3], c, x, y, mat, level - 1);
       }
     } else if (e.p->v < level) {
-        getMatrix(e, c, i, j, mat, level-1);
-        getMatrix(e, c, x, y, mat, level-1);
+      getMatrix(e, c, i, j, mat, level - 1);
+      getMatrix(e, c, x, y, mat, level - 1);
     }
     cn.returnToCache(c);
   }

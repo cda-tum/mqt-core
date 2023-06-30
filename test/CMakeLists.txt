@@ -11,10 +11,7 @@ endif()
 package_add_test(${PROJECT_NAME}-test ${PROJECT_NAME} unittests/test_io.cpp
                  unittests/test_qfr_functionality.cpp unittests/test_symbolic.cpp)
 
-package_add_test(
-  ${PROJECT_NAME}-test-dd
-  ${PROJECT_NAME}-dd
-  dd/test_package.cpp)
+package_add_test(${PROJECT_NAME}-test-dd ${PROJECT_NAME}-dd dd/test_package.cpp)
 
 package_add_test(
   ${PROJECT_NAME}-test-zx
