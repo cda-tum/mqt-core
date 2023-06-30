@@ -102,7 +102,7 @@ git-only = [
 ]
 
 [tool.scikit-build.cmake.define]
-BINDINGS = "ON"
+BUILD_MQT_CORE_BINDINGS = "ON"
 BUILD_MQT_CORE_TESTS = "OFF"
 ENABLE_IPO = "ON"
 

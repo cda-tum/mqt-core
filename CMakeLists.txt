@@ -21,6 +21,14 @@ include(cmake/CheckSubmodule.cmake)
 include(cmake/PackageAddTest.cmake)
 include(cmake/Cache.cmake)
 
+option(BUILD_MQT_CORE_BINDINGS "Build the MQT Core Python bindings" OFF)
+if(BUILD_MQT_CORE_BINDINGS)
+  # ensure that the BINDINGS option is set
+  set(BINDINGS
+      ON
+      CACHE BOOL "Enable settings related to Python bindings" FORCE)
+endif()
+
 if(NOT TARGET project_warnings)
   # Use the warnings specified in CompilerWarnings.cmake
   add_library(project_warnings INTERFACE)
@@ -48,12 +56,6 @@ check_submodule_present(pybind11)
 check_submodule_present(pybind11_json)
 check_submodule_present(boost/config)
 check_submodule_present(boost/multiprecision)
-set(BOOST_MP_STANDALONE ON)
-
-find_package(GMP)
-if(NOT GMP_FOUND)
-  message(NOTICE "Did not find GMP. Using Boost multiprecision library instead.")
-endif()
 
 # add main library code
 add_subdirectory(src)
