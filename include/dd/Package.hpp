@@ -2776,7 +2776,7 @@ public:
   ///        ignored.
   /// \return the complex amplitude of the specified element
   template <class Edge>
-  ComplexValue getValueByPath(const Edge& e, const std::string& elements, int level) {
+  ComplexValue getValueByPath(const Edge& e, const std::string& decisions, int level) {
     if (e.isTerminal()) {
       return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
     }
@@ -2787,22 +2787,26 @@ public:
     // Normalization factor
     ComplexNumbers::mul(c, c, r.w);
 
+    // Indexing of elements list is from top of DD, so we need a reference point
+    const auto topLevel = level;
     do {
-      auto tmp = static_cast<std::size_t>(elements.at(static_cast<std::size_t>(level)) - '0');
-      assert(tmp <= r.p->e.size());
-      r = r.p->e.at(tmp);
+      auto decision = static_cast<std::size_t>(decisions.at(static_cast<std::size_t>(topLevel - level)) - '0');
+      assert(decision <= r.p->e.size());
+
+      // Path is selected
+      r = r.p->e.at(decision);
       level--;
 
+      // Checks if path moves down more than one level i.e. skips nodes
       if (r.p->v == level) {
         ComplexNumbers::mul(c, c, r.w);
       } else {
-        // Iterates over pseudo-identity if
-        // node is not at correct level
+        // Iterates over pseudo-identity if node is at a lower level
         for (;level > r.p->v; level--) {
-          tmp = static_cast<std::size_t>(elements.at(static_cast<std::size_t>(level)) - '0');
-          if (tmp == 0 || tmp == 3) {
+          decision = static_cast<std::size_t>(decisions.at(static_cast<std::size_t>(topLevel - level)) - '0');
+          if (decision == 0 || decision == 3) {
             ComplexNumbers::mul(c, c, Complex::one);
-          } else if (tmp == 1 || tmp == 2) {
+          } else if (decision == 1 || decision == 2) {
             ComplexNumbers::mul(c, c, Complex::zero);
           }
         }
@@ -2812,63 +2816,90 @@ public:
 
     return {CTEntry::val(c.r), CTEntry::val(c.i)};
   }
-  ComplexValue getValueByPath(const vEdge& e, std::size_t i) {
-    if (e.isTerminal()) {
-      return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
-    }
-    return getValueByPath(e, Complex::one, i);
+  ComplexValue getValueByIndex(const vEdge& e, std::size_t i) {
+    auto vectorHalf = static_cast<std::size_t>(std::pow(2, e.p->v));
+
+    std::string decisions;
+    do {
+      if (i < vectorHalf) {
+        decisions = decisions + '0';
+      } else if (i > vectorHalf) {
+        decisions = decisions + '1';
+      }
+      vectorHalf = vectorHalf / 2;
+    } while (vectorHalf != 1);
+
+    return getValueByPath(e, decisions, e.p->v);
   }
-  ComplexValue getValueByPath(const vEdge& e, const Complex& amp,
-                              std::size_t i) {
-    auto c = cn.mulCached(e.w, amp);
+  //ComplexValue getValueByPath(const vEdge& e, const Complex& amp,
+  //                            std::size_t i) {
+  //  auto c = cn.mulCached(e.w, amp);
+//
+  //  if (e.isTerminal()) {
+  //    cn.returnToCache(c);
+  //    return {CTEntry::val(c.r), CTEntry::val(c.i)};
+  //  }
+//
+  //  const bool one = (i & (1ULL << e.p->v)) != 0U;
+//
+  //  ComplexValue r{};
+  //  if (!one && !e.p->e[0].w.approximatelyZero()) {
+  //    r = getValueByPath(e.p->e[0], c, i);
+  //  } else if (one && !e.p->e[1].w.approximatelyZero()) {
+  //    r = getValueByPath(e.p->e[1], c, i);
+  //  }
+  //  cn.returnToCache(c);
+  //  return r;
+  //}
+  ComplexValue getValueByIndex(const mEdge& e, std::size_t i, std::size_t j) {
+    auto matrixHalf = static_cast<std::size_t>(std::pow(2, e.p->v));
 
-    if (e.isTerminal()) {
-      cn.returnToCache(c);
-      return {CTEntry::val(c.r), CTEntry::val(c.i)};
-    }
+    std::string decisions;
+    do {
+      if (i < matrixHalf && j < matrixHalf) {
+        decisions += '0';
+      } else if (i < matrixHalf && j >= matrixHalf) {
+        decisions += '1';
+        j -= matrixHalf;
+      } else if (i >= matrixHalf && j < matrixHalf) {
+        decisions += '2';
+        i -= matrixHalf;
+      } else if (i >= matrixHalf && j >= matrixHalf) {
+        decisions += '3';
+        i -= matrixHalf;
+        j -= matrixHalf;
+      }
+      matrixHalf = matrixHalf / 2;
+    } while (matrixHalf > 0);
 
-    const bool one = (i & (1ULL << e.p->v)) != 0U;
-
-    ComplexValue r{};
-    if (!one && !e.p->e[0].w.approximatelyZero()) {
-      r = getValueByPath(e.p->e[0], c, i);
-    } else if (one && !e.p->e[1].w.approximatelyZero()) {
-      r = getValueByPath(e.p->e[1], c, i);
-    }
-    cn.returnToCache(c);
-    return r;
+    return getValueByPath(e, decisions, e.p->v);
   }
-  ComplexValue getValueByPath(const mEdge& e, std::size_t i, std::size_t j) {
-    if (e.isTerminal()) {
-      return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
-    }
-    return getValueByPath(e, Complex::one, i, j);
-  }
-  ComplexValue getValueByPath(const mEdge& e, const Complex& amp, std::size_t i,
-                              std::size_t j) {
-    auto c = cn.mulCached(e.w, amp);
 
-    if (e.isTerminal()) {
-      cn.returnToCache(c);
-      return {CTEntry::val(c.r), CTEntry::val(c.i)};
-    }
-
-    const bool row = (i & (1ULL << e.p->v)) != 0U;
-    const bool col = (j & (1ULL << e.p->v)) != 0U;
-
-    ComplexValue r{};
-    if (!row && !col && !e.p->e[0].w.approximatelyZero()) {
-      r = getValueByPath(e.p->e[0], c, i, j);
-    } else if (!row && col && !e.p->e[1].w.approximatelyZero()) {
-      r = getValueByPath(e.p->e[1], c, i, j);
-    } else if (row && !col && !e.p->e[2].w.approximatelyZero()) {
-      r = getValueByPath(e.p->e[2], c, i, j);
-    } else if (row && col && !e.p->e[3].w.approximatelyZero()) {
-      r = getValueByPath(e.p->e[3], c, i, j);
-    }
-    cn.returnToCache(c);
-    return r;
-  }
+  //ComplexValue getValueByPath(const mEdge& e, const Complex& amp, std::size_t i,
+  //                            std::size_t j, int level) {
+  //  auto c = cn.mulCached(e.w, amp);
+//
+  //  if (e.isTerminal()) {
+  //    cn.returnToCache(c);
+  //    return {CTEntry::val(c.r), CTEntry::val(c.i)};
+  //  }
+//
+  //  const bool row = (i & (1ULL << level)) != 0U;
+  //  const bool col = (j & (1ULL << level)) != 0U;
+//
+  //  ComplexValue r{};
+  //  if (!row && !col && !e.p->e[0].w.approximatelyZero()) {
+  //    r = getValueByPath(e.p->e[0], c, i, j, level-1);
+  //  } else if (!row && col && !e.p->e[1].w.approximatelyZero()) {
+  //    r = getValueByPath(e.p->e[1], c, i, j, level-1);
+  //  } else if (row && !col && !e.p->e[2].w.approximatelyZero()) {
+  //    r = getValueByPath(e.p->e[2], c, i, j, level-1);
+  //  } else if (row && col && !e.p->e[3].w.approximatelyZero()) {
+  //    r = getValueByPath(e.p->e[3], c, i, j, level-1);
+  //  }
+  //  cn.returnToCache(c);
+  //  return r;
+  //}
 
   std::map<std::string, dd::fp>
   getProbVectorFromDensityMatrix(dEdge e, double measurementThreshold) {
@@ -2957,7 +2988,7 @@ public:
   void printVector(const vEdge& e) {
     const std::size_t element = 2ULL << e.p->v;
     for (auto i = 0ULL; i < element; i++) {
-      const auto amplitude = getValueByPath(e, i);
+      const auto amplitude = getValueByIndex(e, i);
       for (Qubit j = e.p->v; j >= 0; j--) {
         std::cout << ((i >> j) & 1ULL);
       }
@@ -2977,7 +3008,7 @@ public:
     const std::size_t element = 2ULL << e.p->v;
     for (auto i = 0ULL; i < element; i++) {
       for (auto j = 0ULL; j < element; j++) {
-        const auto amplitude = getValueByPath(e, i, j);
+        const auto amplitude = getValueByIndex(e, i, j);
         constexpr auto precision = 3;
         // set fixed width to maximum of a printed number
         // (-) 0.precision plus/minus 0.precision i
