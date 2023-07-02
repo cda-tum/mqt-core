@@ -1,5 +1,7 @@
 #include "operations/OpType.hpp"
 #include <python/nanobind.hpp>
+#include <nanobind/stl/string.h>
+#include <string>
 
 namespace mqt {
 
@@ -47,11 +49,8 @@ NB_MODULE(_core, m) {
       .value("teleportation", qc::OpType::Teleportation)
       .value("classiccontrolled", qc::OpType::ClassicControlled)
       .export_values()
-      .def("__init__",
-           [](qc::OpType* op, const std::string& s) {
-             new (op) qc::OpType(qc::opTypeFromString(s));
-           })
-    .def(nb::init_implicit<std::string>());
+    .def_static("from_string", [](const std::string& s){return qc::opTypeFromString(s);});
+
 }
 
 } // namespace mqt
