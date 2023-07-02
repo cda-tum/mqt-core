@@ -725,7 +725,8 @@ TEST(DDPackageTest, UniqueTableAllocation) {
   }
 
   // trigger new allocation
-  [[maybe_unused]] auto* node = dd->vUniqueTable.getNode();
+  const auto* node = dd->vUniqueTable.getNode();
+  ASSERT_NE(node, nullptr);
   EXPECT_EQ(dd->vUniqueTable.getAllocations(),
             (1. + static_cast<double>(dd->vUniqueTable.getGrowthFactor())) *
                 static_cast<double>(allocs));
