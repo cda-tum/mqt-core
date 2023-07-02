@@ -494,7 +494,8 @@ TEST(DDComplexTest, ComplexTableAllocation) {
   }
 
   // trigger new allocation
-  [[maybe_unused]] auto* num = cn->complexTable.getEntry();
+  const auto* num = cn->complexTable.getEntry();
+  ASSERT_NE(num, nullptr);
   EXPECT_EQ(cn->complexTable.getAllocations(),
             (1. + static_cast<fp>(cn->complexTable.getGrowthFactor())) *
                 static_cast<fp>(allocs));
@@ -526,7 +527,9 @@ TEST(DDComplexTest, ComplexCacheAllocation) {
   }
 
   // trigger new allocation for obtaining a complex from cache
-  [[maybe_unused]] auto cnum = cn->getCached();
+  const auto cnum = cn->getCached();
+  ASSERT_NE(cnum.r, nullptr);
+  ASSERT_NE(cnum.i, nullptr);
   EXPECT_EQ(cn->complexCache.getAllocations(),
             (1. + static_cast<fp>(cn->complexCache.getGrowthFactor())) *
                 static_cast<fp>(allocs));
@@ -541,7 +544,9 @@ TEST(DDComplexTest, ComplexCacheAllocation) {
   }
 
   // trigger new allocation for obtaining a temporary from cache
-  [[maybe_unused]] auto cnumtmp = cn->getTemporary();
+  const auto tmp = cn->getTemporary();
+  ASSERT_NE(tmp.r, nullptr);
+  ASSERT_NE(tmp.i, nullptr);
   EXPECT_EQ(cn->complexCache.getAllocations(),
             (1. + static_cast<fp>(cn->complexCache.getGrowthFactor())) *
                 static_cast<fp>(allocs));
