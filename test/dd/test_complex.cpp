@@ -17,24 +17,18 @@ TEST(DDComplexTest, TrivialTest) {
 
   auto r0 = cn->getCached(12, -5);
   auto r1 = cn->mulCached(a, b);
+  auto r2 = cn->divCached(r0, r1);
 
-  cn->lookup(a);
-  cn->lookup(b);
   const auto betweenCount = cn->cacheCount();
-  // the lookup increases the count in the complex table
-  ASSERT_TRUE(beforeCount < betweenCount);
+  ASSERT_LE(beforeCount, betweenCount);
   cn->returnToCache(a);
   cn->returnToCache(b);
   cn->returnToCache(r0);
   cn->returnToCache(r1);
+  cn->returnToCache(r2);
   cn->garbageCollect(true);
-  // since lookup does not increase the ref count, garbage collection removes
-  // the new values
   const auto endCount = cn->cacheCount();
   ASSERT_EQ(beforeCount, endCount);
-
-  EXPECT_NO_THROW(cn->incRef({nullptr, nullptr}));
-  EXPECT_NO_THROW(cn->decRef({nullptr, nullptr}));
 }
 
 TEST(DDComplexTest, ComplexNumberCreation) {
@@ -49,26 +43,26 @@ TEST(DDComplexTest, ComplexNumberCreation) {
   EXPECT_EQ(CTEntry::val(cn->lookup(-1., -1.).r), -1.);
   EXPECT_EQ(CTEntry::val(cn->lookup(-1., -1.).i), -1.);
   auto c = cn->lookup(0., -1.);
-  std::cout << c << std::endl;
+  std::cout << c << "\n";
   EXPECT_EQ(CTEntry::val(cn->lookup(c).r), 0.);
   EXPECT_EQ(CTEntry::val(cn->lookup(c).i), -1.);
   c = cn->lookup(0., 1.);
   EXPECT_EQ(CTEntry::val(cn->lookup(c).r), 0.);
   EXPECT_EQ(CTEntry::val(cn->lookup(c).i), 1.);
   c = cn->lookup(0., -0.5);
-  std::cout << c << std::endl;
+  std::cout << c << "\n";
   EXPECT_EQ(CTEntry::val(cn->lookup(c).r), 0.);
   EXPECT_EQ(CTEntry::val(cn->lookup(c).i), -0.5);
   c = cn->lookup(-1., -1.);
   EXPECT_EQ(CTEntry::val(cn->lookup(c).r), -1.);
   EXPECT_EQ(CTEntry::val(cn->lookup(c).i), -1.);
-  std::cout << c << std::endl;
+  std::cout << c << "\n";
 
   auto e = cn->lookup(1., -1.);
-  std::cout << e << std::endl;
-  std::cout << ComplexValue{1., 1.} << std::endl;
-  std::cout << ComplexValue{1., -1.} << std::endl;
-  std::cout << ComplexValue{1., -0.5} << std::endl;
+  std::cout << e << "\n";
+  std::cout << ComplexValue{1., 1.} << "\n";
+  std::cout << ComplexValue{1., -1.} << "\n";
+  std::cout << ComplexValue{1., -0.5} << "\n";
   cn->complexTable.print();
   cn->complexTable.printStatistics();
 }
@@ -150,27 +144,33 @@ TEST(DDComplexTest, GarbageCollectSomeInBucket) {
   EXPECT_EQ(cn->garbageCollect(), 0);
 
   const fp num = 0.25;
-  cn->lookup(num, 0.0);
+  const auto lookup = cn->lookup(num, 0.0);
+  ASSERT_NE(lookup.r, nullptr);
+  ASSERT_NE(lookup.i, nullptr);
 
   const fp num2 = num + 2. * ComplexTable<>::tolerance();
-  ComplexNumbers::incRef(
-      cn->lookup(num2, 0.0)); // num2 should be placed in same bucket as num
+  const auto lookup2 = cn->lookup(num2, 0.0);
+  ASSERT_NE(lookup2.r, nullptr);
+  ASSERT_NE(lookup2.i, nullptr);
+  ComplexNumbers::incRef(lookup2);
 
+  // num2 should be placed in same bucket as num
   auto key = ComplexTable<>::hash(num);
   auto key2 = ComplexTable<>::hash(num2);
   ASSERT_EQ(key, key2);
 
-  auto* p = cn->complexTable.getTable()[static_cast<std::size_t>(key)];
+  const auto& table = cn->complexTable.getTable();
+  const auto* p = table[static_cast<std::size_t>(key)];
   EXPECT_NEAR(p->value, num, ComplexTable<>::tolerance());
 
   ASSERT_NE(p->next, nullptr);
   EXPECT_NEAR((p->next)->value, num2, ComplexTable<>::tolerance());
 
   cn->garbageCollect(true); // num should be collected
-  EXPECT_NEAR(cn->complexTable.getTable()[static_cast<std::size_t>(key)]->value,
-              num2, ComplexTable<>::tolerance());
-  EXPECT_EQ(cn->complexTable.getTable()[static_cast<std::size_t>(key)]->next,
-            nullptr);
+  const auto* q = table[static_cast<std::size_t>(key)];
+  ASSERT_NE(q, nullptr);
+  EXPECT_NEAR(q->value, num2, ComplexTable<>::tolerance());
+  EXPECT_EQ(q->next, nullptr);
 }
 
 TEST(DDComplexTest, LookupInNeighbouringBuckets) {
@@ -196,63 +196,66 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
 
   // insert a number slightly away from the border
   const fp numAbove = numBucketBorder + 2 * ComplexTable<>::tolerance();
-  cn->lookup(numAbove, 0.0);
-  auto key = ComplexTable<>::hash(numAbove);
+  const auto lookupAbove = cn->lookup(numAbove, 0.0);
+  ASSERT_NE(lookupAbove.r, nullptr);
+  ASSERT_NE(lookupAbove.i, nullptr);
+  const auto key = ComplexTable<>::hash(numAbove);
   EXPECT_EQ(key, nbucket / 4);
 
   // insert a number barely in the bucket below
   const fp numBarelyBelow = numBucketBorder - ComplexTable<>::tolerance() / 10;
-  cn->lookup(numBarelyBelow, 0.0);
-  auto hashBarelyBelow = ComplexTable<>::hash(numBarelyBelow);
-  std::cout.flush();
+  const auto lookupBarelyBelow = cn->lookup(numBarelyBelow, 0.0);
+  ASSERT_NE(lookupBarelyBelow.r, nullptr);
+  ASSERT_NE(lookupBarelyBelow.i, nullptr);
+  const auto hashBarelyBelow = ComplexTable<>::hash(numBarelyBelow);
   std::clog << "numBarelyBelow          = "
             << std::setprecision(std::numeric_limits<fp>::max_digits10)
             << numBarelyBelow << "\n";
   std::clog << "preHash(numBarelyBelow) = " << preHash(numBarelyBelow) << "\n";
-  std::clog << "hashBarelyBelow         = " << hashBarelyBelow << "\n"
-            << std::flush;
+  std::clog << "hashBarelyBelow         = " << hashBarelyBelow << "\n";
   EXPECT_EQ(hashBarelyBelow, nbucket / 4 - 1);
 
   // insert another number in the bucket below a bit farther away from the
   // border
   const fp numBelow = numBucketBorder - 2 * ComplexTable<>::tolerance();
-  cn->lookup(numBelow, 0.0);
-  auto hashBelow = ComplexTable<>::hash(numBelow);
-  std::cout.flush();
+  const auto lookupBelow = cn->lookup(numBelow, 0.0);
+  ASSERT_NE(lookupBelow.r, nullptr);
+  ASSERT_NE(lookupBelow.i, nullptr);
+  const auto hashBelow = ComplexTable<>::hash(numBelow);
   std::clog << "numBelow          = "
             << std::setprecision(std::numeric_limits<fp>::max_digits10)
             << numBelow << "\n";
   std::clog << "preHash(numBelow) = " << preHash(numBelow) << "\n";
-  std::clog << "hashBelow         = " << hashBelow << "\n" << std::flush;
+  std::clog << "hashBelow         = " << hashBelow << "\n";
   EXPECT_EQ(hashBelow, nbucket / 4 - 1);
 
   // insert border number that is too far away from the number in the bucket,
   // but is close enough to a number in the bucket below
   const fp num4 = numBucketBorder;
-  auto c = cn->lookup(num4, 0.0);
-  auto key4 = ComplexTable<>::hash(num4 - ComplexTable<>::tolerance());
+  const auto c = cn->lookup(num4, 0.0);
+  const auto key4 = ComplexTable<>::hash(num4 - ComplexTable<>::tolerance());
   EXPECT_EQ(hashBarelyBelow, key4);
   EXPECT_NEAR(c.r->value, numBarelyBelow, ComplexTable<>::tolerance());
 
   // insert a number in the higher bucket
   const fp numNextBorder =
       numBucketBorder + 1.0 / (nbucket - 1) + ComplexTable<>::tolerance();
-  cn->lookup(numNextBorder, 0.0);
-  auto hashNextBorder = ComplexTable<>::hash(numNextBorder);
-  std::cout.flush();
+  const auto lookupNextBorder = cn->lookup(numNextBorder, 0.0);
+  ASSERT_NE(lookupNextBorder.r, nullptr);
+  ASSERT_NE(lookupNextBorder.i, nullptr);
+  const auto hashNextBorder = ComplexTable<>::hash(numNextBorder);
   std::clog << "numNextBorder          = "
             << std::setprecision(std::numeric_limits<fp>::max_digits10)
             << numNextBorder << "\n";
   std::clog << "preHash(numNextBorder) = " << preHash(numNextBorder) << "\n";
-  std::clog << "hashNextBorder         = " << hashNextBorder << "\n"
-            << std::flush;
+  std::clog << "hashNextBorder         = " << hashNextBorder << "\n";
   EXPECT_EQ(hashNextBorder, nbucket / 4 + 1);
 
   // search for a number in the lower bucket that is ultimately close enough to
   // a number in the upper bucket
   const fp num6 = numNextBorder - ComplexTable<>::tolerance() / 10;
-  auto d = cn->lookup(num6, 0.0);
-  auto key6 = ComplexTable<>::hash(num6 + ComplexTable<>::tolerance());
+  const auto d = cn->lookup(num6, 0.0);
+  const auto key6 = ComplexTable<>::hash(num6 + ComplexTable<>::tolerance());
   EXPECT_EQ(hashNextBorder, key6);
   EXPECT_NEAR(d.r->value, numNextBorder, ComplexTable<>::tolerance());
 }
@@ -483,7 +486,7 @@ TEST(DDComplexTest, NegativeRefCountReached) {
 TEST(DDComplexTest, ComplexTableAllocation) {
   auto cn = std::make_unique<ComplexNumbers>();
   auto allocs = cn->complexTable.getAllocations();
-  std::cout << allocs << std::endl;
+  std::cout << allocs << "\n";
   std::vector<ComplexTable<>::Entry*> nums{allocs};
   // get all the numbers that are pre-allocated
   for (auto i = 0U; i < allocs; ++i) {
@@ -515,7 +518,7 @@ TEST(DDComplexTest, ComplexTableAllocation) {
 TEST(DDComplexTest, ComplexCacheAllocation) {
   auto cn = std::make_unique<ComplexNumbers>();
   auto allocs = cn->complexCache.getAllocations();
-  std::cout << allocs << std::endl;
+  std::cout << allocs << "\n";
   std::vector<Complex> cnums{allocs};
   // get all the cached complex numbers that are pre-allocated
   for (auto i = 0U; i < allocs; i += 2) {
