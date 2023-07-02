@@ -959,7 +959,7 @@ static void exportEdgeWeights(const Edge& edge, std::ostream& stream) {
       continue;
     }
 
-    // iterate over edges in reverse to guarantee correct proceossing order
+    // iterate over edges in reverse to guarantee correct processing order
     for (auto i = static_cast<std::int16_t>(edgePtr->p->e.size() - 1); i >= 0;
          --i) {
       auto& child = edgePtr->p->e[static_cast<std::size_t>(i)];
