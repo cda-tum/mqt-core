@@ -1317,93 +1317,76 @@ TEST(DDPackageTest, dNodeMultiply2) {
 
 TEST(DDPackageTest, dNodeMulCache1) {
   // Make caching test with dNodes
-  const dd::Qubit nrQubits = 1;
+  const dd::QubitCount nrQubits = 1U;
   auto dd = std::make_unique<DensityMatrixPackageTest>(nrQubits);
   // Make zero density matrix
-  auto state =
-      dd->makeZeroDensityOperator(static_cast<dd::QubitCount>(dd->qubits()));
+  auto state = dd->makeZeroDensityOperator(nrQubits);
   dd->incRef(state);
 
-  std::vector<dd::mEdge> operations = {};
-  operations.emplace_back(dd->makeGateDD(dd::Hmat, nrQubits, 0));
+  const auto operation = dd->makeGateDD(dd::Hmat, nrQubits, 0);
+  dd->applyOperationToDensity(state, operation, true);
 
-  for (auto& op : operations) {
-    auto tmp0 = dd->conjugateTranspose(op);
-    auto tmp1 =
-        dd->multiply(state, reinterpret_cast<dd::dEdge&>(tmp0), 0, false);
-    auto tmp2 = dd->multiply(reinterpret_cast<dd::dEdge&>(op), tmp1, 0, false);
-    dd->incRef(tmp2);
-    state = tmp2;
-  }
+  state = dd->makeZeroDensityOperator(nrQubits);
+  auto& computeTable =
+      dd->getMultiplicationComputeTable<dd::dNode, dd::dNode>();
 
-  auto state1 = dd->makeDDNode(0, std::array{dd::dEdge::one, dd::dEdge::zero,
-                                             dd::dEdge::zero, dd::dEdge::zero});
-  dd->incRef(state1);
+  const auto& densityMatrix0 =
+      dd::densityFromMatrixEdge(dd->conjugateTranspose(operation));
 
-  for (auto& op : operations) {
-    auto tmp0 = dd->conjugateTranspose(op);
-    auto& computeTable =
-        dd->getMultiplicationComputeTable<dd::dNode, dd::dNode>();
+  const auto xCopy = dd::dEdge{state.p, dd::Complex::one};
+  const auto yCopy = dd::dEdge{densityMatrix0.p, dd::Complex::one};
+  const auto cachedResult = computeTable.lookup(xCopy, yCopy, false);
+  ASSERT_NE(cachedResult.p, nullptr);
+  state = dd->multiply(state, densityMatrix0, 0, false);
+  ASSERT_NE(state.p, nullptr);
+  ASSERT_EQ(state.p, cachedResult.p);
 
-    auto xCopy = state1;
-    xCopy.w = dd::Complex::one;
-    auto yCopy = reinterpret_cast<dd::dEdge&>(tmp0);
-    yCopy.w = dd::Complex::one;
+  const auto densityMatrix1 = dd::densityFromMatrixEdge(operation);
+  const auto xCopy1 = dd::dEdge{densityMatrix1.p, dd::Complex::one};
+  const auto yCopy1 = dd::dEdge{state.p, dd::Complex::one};
+  const auto cachedResult1 = computeTable.lookup(xCopy1, yCopy1, true);
+  ASSERT_NE(cachedResult1.p, nullptr);
+  state = dd->multiply(densityMatrix1, state, 0, true);
+  ASSERT_NE(state.p, nullptr);
+  ASSERT_EQ(state.p, cachedResult1.p);
 
-    auto tmptmp1 = computeTable.lookup(xCopy, yCopy, false);
-    auto tmp1 =
-        dd->multiply(state1, reinterpret_cast<dd::dEdge&>(tmp0), 0, false);
-    EXPECT_TRUE(tmptmp1.p != nullptr && tmp1.p == tmptmp1.p);
+  // try a repeated lookup
+  const auto cachedResult2 = computeTable.lookup(xCopy1, yCopy1, true);
+  ASSERT_NE(cachedResult2.p, nullptr);
+  ASSERT_EQ(cachedResult2.p, cachedResult1.p);
 
-    auto xCopy1 = reinterpret_cast<dd::dEdge&>(op);
-    xCopy1.w = dd::Complex::one;
-    auto yCopy1 = tmp1;
-    yCopy1.w = dd::Complex::one;
-
-    auto tmptmp2 = computeTable.lookup(xCopy1, yCopy1, true);
-    auto tmp2 = dd->multiply(reinterpret_cast<dd::dEdge&>(op), tmp1, 0, true);
-    EXPECT_EQ(tmptmp2.p, nullptr);
-
-    auto tmptmp3 = computeTable.lookup(xCopy1, yCopy1, true);
-    EXPECT_TRUE(tmptmp3.p != nullptr && tmp2.p == tmptmp3.p);
-
-    computeTable.clear();
-    auto tmptmp4 = computeTable.lookup(xCopy1, yCopy1, true);
-    EXPECT_EQ(tmptmp4.p, nullptr);
-  }
+  computeTable.clear();
+  const auto cachedResult3 = computeTable.lookup(xCopy1, yCopy1, true);
+  ASSERT_EQ(cachedResult3.p, nullptr);
 }
 
 TEST(DDPackageTest, dNoiseCache) {
   // Test the flags for dnode, vnode and mnodes
-  const dd::Qubit nrQubits = 1;
+  const dd::QubitCount nrQubits = 1U;
   auto dd = std::make_unique<dd::Package<>>(nrQubits);
   // Make zero density matrix
-  auto state =
-      dd->makeZeroDensityOperator(static_cast<dd::QubitCount>(dd->qubits()));
-  dd->incRef(state);
+  const auto initialState = dd->makeZeroDensityOperator(nrQubits);
+  dd->incRef(initialState);
 
-  std::vector<dd::mEdge> operations = {};
-  operations.emplace_back(dd->makeGateDD(dd::Xmat, nrQubits, 0));
-
+  // nothing pre-cached
   const std::vector<dd::Qubit> target = {0};
+  const auto cachedNoise = dd->densityNoise.lookup(initialState, target);
+  ASSERT_EQ(cachedNoise.p, nullptr);
 
-  auto noiseLookUpResult = dd->densityNoise.lookup(state, target);
-  EXPECT_EQ(noiseLookUpResult.p, nullptr);
-  auto tmp0 = dd->conjugateTranspose(operations[0]);
-  auto tmp1 = dd->multiply(state, reinterpret_cast<dd::dEdge&>(tmp0), 0, false);
-  auto tmp2 =
-      dd->multiply(reinterpret_cast<dd::dEdge&>(operations[0]), tmp1, 0, true);
-  dd->incRef(tmp2);
-  auto state1 = tmp2;
-  dd->densityNoise.insert(state, state1, target);
+  auto state = initialState;
+  const auto operation = dd->makeGateDD(dd::Xmat, nrQubits, 0);
+  dd->applyOperationToDensity(state, operation, true);
+  dd->densityNoise.insert(initialState, state, target);
 
-  noiseLookUpResult = dd->densityNoise.lookup(state, target);
-  EXPECT_TRUE(noiseLookUpResult.p != nullptr &&
-              noiseLookUpResult.p == state1.p);
+  // noise pre-cached
+  const auto cachedNoise1 = dd->densityNoise.lookup(initialState, target);
+  ASSERT_NE(cachedNoise1.p, nullptr);
+  ASSERT_EQ(cachedNoise1.p, state.p);
 
+  // no noise pre-cached after clear
   dd->densityNoise.clear();
-  noiseLookUpResult = dd->densityNoise.lookup(state, target);
-  EXPECT_EQ(noiseLookUpResult.p, nullptr);
+  const auto cachedNoise2 = dd->densityNoise.lookup(initialState, target);
+  ASSERT_EQ(cachedNoise2.p, nullptr);
 }
 
 TEST(DDPackageTest, calCulpDistance) {
