@@ -8,8 +8,6 @@
 #include <utility>
 
 namespace dd {
-using CTEntry = ComplexTable<>::Entry;
-
 struct Complex {
   CTEntry* r;
   CTEntry* i;
@@ -70,9 +68,9 @@ inline std::ostream& operator<<(std::ostream& os, const Complex& c) {
 }
 
 // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
-inline Complex Complex::zero{&ComplexTable<>::zero, &ComplexTable<>::zero};
+inline Complex Complex::zero{&ComplexTable::zero, &ComplexTable::zero};
 // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
-inline Complex Complex::one{&ComplexTable<>::one, &ComplexTable<>::zero};
+inline Complex Complex::one{&ComplexTable::one, &ComplexTable::zero};
 } // namespace dd
 
 namespace std {

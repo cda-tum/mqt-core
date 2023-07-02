@@ -12,8 +12,8 @@
 
 namespace dd {
 struct ComplexNumbers {
-  ComplexTable<> complexTable{};
-  ComplexCache<> complexCache{};
+  ComplexTable complexTable{};
+  ComplexCache complexCache{};
 
   ComplexNumbers() = default;
   ~ComplexNumbers() = default;
@@ -23,7 +23,7 @@ struct ComplexNumbers {
     complexCache.clear();
   }
 
-  static void setTolerance(fp tol) { ComplexTable<>::setTolerance(tol); }
+  static void setTolerance(fp tol) { ComplexTable::setTolerance(tol); }
 
   // operations on complex numbers
   // meanings are self-evident from the names
@@ -184,15 +184,15 @@ struct ComplexNumbers {
   static void incRef(const Complex& c) {
     // `zero` and `one` are static and never altered
     if (c != Complex::zero && c != Complex::one) {
-      ComplexTable<>::incRef(c.r);
-      ComplexTable<>::incRef(c.i);
+      ComplexTable::incRef(c.r);
+      ComplexTable::incRef(c.i);
     }
   }
   static void decRef(const Complex& c) {
     // `zero` and `one` are static and never altered
     if (c != Complex::zero && c != Complex::one) {
-      ComplexTable<>::decRef(c.r);
-      ComplexTable<>::decRef(c.i);
+      ComplexTable::decRef(c.r);
+      ComplexTable::decRef(c.i);
     }
   }
   std::size_t garbageCollect(bool force = false) {

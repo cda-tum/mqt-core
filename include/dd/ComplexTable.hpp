@@ -17,10 +17,15 @@
 #include <vector>
 
 namespace dd {
-template <std::size_t NBUCKET = 65537,
-          std::size_t INITIAL_ALLOCATION_SIZE = 2048,
-          std::size_t GROWTH_FACTOR = 2, std::size_t INITIAL_GC_LIMIT = 65536>
 class ComplexTable {
+  // statically define the number of hash table buckets
+  static constexpr std::size_t NBUCKET = 65537U;
+
+  // default values for the hash table
+  static constexpr std::size_t INITIAL_ALLOCATION_SIZE = 2048U;
+  static constexpr std::size_t GROWTH_FACTOR = 2U;
+  static constexpr std::size_t INITIAL_GC_LIMIT = 65536U;
+
 public:
   struct Entry {
     fp value{};
@@ -43,18 +48,15 @@ public:
     }
 
     [[nodiscard]] static inline bool exactlyZero(const Entry* e) {
-      return (e == &ComplexTable<NBUCKET, INITIAL_ALLOCATION_SIZE,
-                                 GROWTH_FACTOR, INITIAL_GC_LIMIT>::zero);
+      return (e == &zero);
     }
 
     [[nodiscard]] static inline bool exactlyOne(const Entry* e) {
-      return (e == &ComplexTable<NBUCKET, INITIAL_ALLOCATION_SIZE,
-                                 GROWTH_FACTOR, INITIAL_GC_LIMIT>::one);
+      return (e == &one);
     }
 
     [[nodiscard]] static inline Entry* flipPointerSign(const Entry* e) {
-      if (e == &ComplexTable<NBUCKET, INITIAL_ALLOCATION_SIZE, GROWTH_FACTOR,
-                             INITIAL_GC_LIMIT>::zero) {
+      if (e == &zero) {
         // No point in flipping the sign of 0
         return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e));
       }
@@ -81,28 +83,28 @@ public:
       return e->refCount;
     }
 
-    [[nodiscard]] static constexpr bool
-    approximatelyEquals(const Entry* left, const Entry* right) {
+    [[nodiscard]] static bool approximatelyEquals(const Entry* left,
+                                                  const Entry* right) {
       return left == right || approximatelyEquals(val(left), val(right));
     }
-    [[nodiscard]] static constexpr bool approximatelyEquals(const fp left,
-                                                            const fp right) {
+    [[nodiscard]] static bool approximatelyEquals(const fp left,
+                                                  const fp right) {
       // equivalence check is a shortcut before check with tolerance
       // NOLINTNEXTLINE(clang-diagnostic-float-equal)
       return left == right || std::abs(left - right) <= TOLERANCE;
     }
 
-    [[nodiscard]] static constexpr bool approximatelyZero(const Entry* e) {
+    [[nodiscard]] static bool approximatelyZero(const Entry* e) {
       return e == &zero || approximatelyZero(val(e));
     }
-    [[nodiscard]] static constexpr bool approximatelyZero(const fp e) {
+    [[nodiscard]] static bool approximatelyZero(const fp e) {
       return std::abs(e) <= TOLERANCE;
     }
 
-    [[nodiscard]] static constexpr bool approximatelyOne(const Entry* e) {
+    [[nodiscard]] static bool approximatelyOne(const Entry* e) {
       return e == &one || approximatelyOne(val(e));
     }
-    [[nodiscard]] static constexpr bool approximatelyOne(fp e) {
+    [[nodiscard]] static bool approximatelyOne(fp e) {
       return approximatelyEquals(e, 1.0);
     }
 
@@ -119,7 +121,12 @@ public:
   // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
   static inline Entry one{1., nullptr, 1};
 
-  ComplexTable() {
+  explicit ComplexTable(
+      const std::size_t initialAllocSize = INITIAL_ALLOCATION_SIZE,
+      const std::size_t growthFact = GROWTH_FACTOR,
+      const std::size_t initialGCLim = INITIAL_GC_LIMIT)
+      : initialAllocationSize(initialAllocSize), growthFactor(growthFact),
+        initialGCLimit(initialGCLim) {
     // add 1/2 to the complex table and increase its ref count (so that it is
     // not collected)
     lookup(0.5L)->refCount++;
@@ -147,7 +154,7 @@ public:
 
   [[nodiscard]] std::size_t getAllocations() const { return allocations; }
 
-  [[nodiscard]] std::size_t getGrowthFactor() const { return GROWTH_FACTOR; }
+  [[nodiscard]] std::size_t getGrowthFactor() const { return growthFactor; }
 
   [[nodiscard]] const auto& getTable() const { return table; }
 
@@ -201,9 +208,9 @@ public:
       ++upperNeighbors;
     }
 
-    bool lowerMatchFound =
+    const bool lowerMatchFound =
         (pLower != nullptr && Entry::approximatelyEquals(val, pLower->value));
-    bool upperMatchFound =
+    const bool upperMatchFound =
         (pUpper != nullptr && Entry::approximatelyEquals(val, pUpper->value));
 
     if (lowerMatchFound && upperMatchFound) {
@@ -247,13 +254,13 @@ public:
     if (chunkIt == chunkEndIt) {
       chunks.emplace_back(allocationSize);
       allocations += allocationSize;
-      allocationSize *= GROWTH_FACTOR;
+      allocationSize *= growthFactor;
       chunkID++;
       chunkIt = chunks[chunkID].begin();
       chunkEndIt = chunks[chunkID].end();
     }
 
-    auto entry = &(*chunkIt);
+    auto* entry = &(*chunkIt);
     ++chunkIt;
     return entry;
   }
@@ -266,7 +273,7 @@ public:
   // increment reference count for corresponding entry
   static void incRef(Entry* entry) {
     // get valid pointer
-    auto entryPtr = Entry::getAlignedPointer(entry);
+    auto* entryPtr = Entry::getAlignedPointer(entry);
 
     if (entryPtr == nullptr) {
       return;
@@ -276,7 +283,7 @@ public:
     if (entryPtr != &one && entryPtr != &zero && entryPtr != &sqrt2_2) {
       if (entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
         std::clog << "[WARN] MAXREFCNT reached for " << entryPtr->value
-                  << ". Number will never be collected." << std::endl;
+                  << ". Number will never be collected.\n";
         return;
       }
 
@@ -288,7 +295,7 @@ public:
   // decrement reference count for corresponding entry
   static void decRef(Entry* entry) {
     // get valid pointer
-    auto entryPtr = Entry::getAlignedPointer(entry);
+    auto* entryPtr = Entry::getAlignedPointer(entry);
 
     if (entryPtr == nullptr) {
       return;
@@ -356,7 +363,7 @@ public:
     // garbage collection threshold and decreased if the number of remaining
     // entries is much lower than the current limit.
     if (remaining > gcLimit / 10 * 9) {
-      gcLimit = remaining + INITIAL_GC_LIMIT;
+      gcLimit = remaining + initialGCLimit;
     } else if (remaining < gcLimit / 128) {
       gcLimit /= 2;
     }
@@ -376,8 +383,8 @@ public:
     // clear available stack
     available = nullptr;
 
-    // release memory of all but the first chunk TODO: it could be desirable to
-    // keep the memory
+    // release memory of all but the first chunk
+    // it could be desirable to keep the memory for later use
     while (chunkID > 0) {
       chunks.pop_back();
       chunkID--;
@@ -385,8 +392,8 @@ public:
     // restore initial chunk setting
     chunkIt = chunks[0].begin();
     chunkEndIt = chunks[0].end();
-    allocationSize = INITIAL_ALLOCATION_SIZE * GROWTH_FACTOR;
-    allocations = INITIAL_ALLOCATION_SIZE;
+    allocationSize = initialAllocationSize * growthFactor;
+    allocations = initialAllocationSize;
 
     for (auto& entry : chunks[0]) {
       entry.refCount = 0;
@@ -406,17 +413,16 @@ public:
 
     gcCalls = 0;
     gcRuns = 0;
-    gcLimit = INITIAL_GC_LIMIT;
+    gcLimit = initialGCLimit;
   };
 
   void print() {
     const auto precision = std::cout.precision();
     std::cout.precision(std::numeric_limits<dd::fp>::max_digits10);
     for (std::size_t key = 0; key < table.size(); ++key) {
-      auto p = table[key];
+      auto* p = table[key];
       if (p != nullptr) {
-        std::cout << key << ": "
-                  << "\n";
+        std::cout << key << ": \n";
       }
 
       while (p != nullptr) {
@@ -456,27 +462,20 @@ public:
     };
   }
 
-  std::ostream& printStatistics(std::ostream& os = std::cout) {
-    // clang-format off
-            os << "hits: " << hits
-               << ", collisions: " << collisions
-               << ", looks: " << lookups
-               << ", inserts: " << inserts
-               << ", insertCollisions: " << insertCollisions
-               << ", findOrInserts: " << findOrInserts
-               << ", upperNeighbors: " << upperNeighbors
-               << ", lowerNeighbors: " << lowerNeighbors
-               << ", hitRatio: " << hitRatio()
-               << ", colRatio: " << colRatio()
-               << ", gc calls: " << gcCalls
-               << ", gc runs: " << gcRuns
-               << "\n";
-    // clang-format on
+  std::ostream& printStatistics(std::ostream& os = std::cout) const {
+    os << "hits: " << hits << ", collisions: " << collisions
+       << ", looks: " << lookups << ", inserts: " << inserts
+       << ", insertCollisions: " << insertCollisions
+       << ", findOrInserts: " << findOrInserts
+       << ", upperNeighbors: " << upperNeighbors
+       << ", lowerNeighbors: " << lowerNeighbors << ", hitRatio: " << hitRatio()
+       << ", colRatio: " << colRatio() << ", gc calls: " << gcCalls
+       << ", gc runs: " << gcRuns << "\n";
     return os;
   }
 
   std::ostream& printBucketDistribution(std::ostream& os = std::cout) {
-    for (auto bucket : table) {
+    for (auto* bucket : table) {
       if (bucket == nullptr) {
         os << "0\n";
         continue;
@@ -488,7 +487,7 @@ public:
       }
       os << bucketCount << "\n";
     }
-    os << std::endl;
+    os << "\n";
     return os;
   }
 
@@ -515,18 +514,21 @@ private:
   static inline fp TOLERANCE = std::numeric_limits<dd::fp>::epsilon() * 1024;
 
   Entry* available{};
+  std::size_t initialAllocationSize;
+  std::size_t growthFactor;
   std::vector<std::vector<Entry>> chunks{
-      1, std::vector<Entry>{INITIAL_ALLOCATION_SIZE}};
+      1U, std::vector<Entry>{initialAllocationSize}};
   std::size_t chunkID{};
-  typename std::vector<Entry>::iterator chunkIt{chunks.at(0).begin()};
-  typename std::vector<Entry>::iterator chunkEndIt{chunks.at(0).end()};
-  std::size_t allocationSize{INITIAL_ALLOCATION_SIZE * GROWTH_FACTOR};
+  typename std::vector<Entry>::iterator chunkIt{chunks.front().begin()};
+  typename std::vector<Entry>::iterator chunkEndIt{chunks.front().end()};
+  std::size_t allocationSize{initialAllocationSize * growthFactor};
 
-  std::size_t allocations = INITIAL_ALLOCATION_SIZE;
+  std::size_t allocations = initialAllocationSize;
   std::size_t count = 0;
   std::size_t peakCount = 0;
 
   // garbage collection
+  std::size_t initialGCLimit;
   std::size_t gcCalls = 0;
   std::size_t gcRuns = 0;
   std::size_t gcLimit = 100000;
@@ -617,4 +619,5 @@ private:
     return entry;
   }
 };
+using CTEntry = ComplexTable::Entry;
 } // namespace dd

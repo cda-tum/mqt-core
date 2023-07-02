@@ -40,7 +40,7 @@ inline fp thicknessFromMagnitude(const Complex& a) {
 }
 
 static void printPhaseFormatted(std::ostream& os, fp r) {
-  const auto tol = dd::ComplexTable<>::tolerance();
+  const auto tol = dd::ComplexTable::tolerance();
 
   r /= dd::PI;
   // special case treatment for +-i
@@ -114,35 +114,35 @@ inline std::string conditionalFormat(const Complex& a,
   const auto mag = ComplexNumbers::mag(a);
   const auto phase = ComplexNumbers::arg(a);
 
-  if (std::abs(mag) < ComplexTable<>::tolerance()) {
+  if (std::abs(mag) < ComplexTable::tolerance()) {
     return "0";
   }
 
   std::ostringstream ss{};
   // magnitude is (almost) 1
-  if (std::abs(mag - 1) < ComplexTable<>::tolerance()) {
-    if (std::abs(phase) < ComplexTable<>::tolerance()) {
+  if (std::abs(mag - 1) < ComplexTable::tolerance()) {
+    if (std::abs(phase) < ComplexTable::tolerance()) {
       return "1";
     }
-    if (std::abs(phase - dd::PI_2) < ComplexTable<>::tolerance()) {
+    if (std::abs(phase - dd::PI_2) < ComplexTable::tolerance()) {
       return "i";
     }
-    if (std::abs(phase + dd::PI_2) < ComplexTable<>::tolerance()) {
+    if (std::abs(phase + dd::PI_2) < ComplexTable::tolerance()) {
       return "-i";
     }
-    if (std::abs(std::abs(phase) - dd::PI) < ComplexTable<>::tolerance()) {
+    if (std::abs(std::abs(phase) - dd::PI) < ComplexTable::tolerance()) {
       return "-1";
     }
     printPhaseFormatted(ss, phase);
     return ss.str();
   }
 
-  if (std::abs(std::abs(phase) - dd::PI) < ComplexTable<>::tolerance()) {
+  if (std::abs(std::abs(phase) - dd::PI) < ComplexTable::tolerance()) {
     ss << "-";
     dd::ComplexValue::printFormatted(ss, mag);
     return ss.str();
   }
-  if (std::abs(phase) < ComplexTable<>::tolerance()) {
+  if (std::abs(phase) < ComplexTable::tolerance()) {
     dd::ComplexValue::printFormatted(ss, mag);
     return ss.str();
   }
@@ -237,21 +237,21 @@ static std::ostream& memoryHeader(const Edge& e, std::ostream& os,
     } else if (e.w == Complex::one) {
       os << "1";
     } else {
-      if (e.w.r == &ComplexTable<>::zero) {
+      if (e.w.r == &ComplexTable::zero) {
         os << "0";
-      } else if (e.w.r == &ComplexTable<>::sqrt2_2) {
+      } else if (e.w.r == &ComplexTable::sqrt2_2) {
         os << "\xe2\x88\x9a\xc2\xbd";
-      } else if (e.w.r == &ComplexTable<>::one) {
+      } else if (e.w.r == &ComplexTable::one) {
         os << "1";
       } else {
         os << std::hex << reinterpret_cast<std::uintptr_t>(e.w.r) << std::dec;
       }
       os << " ";
-      if (e.w.i == &ComplexTable<>::zero) {
+      if (e.w.i == &ComplexTable::zero) {
         os << "0";
-      } else if (e.w.i == &ComplexTable<>::sqrt2_2) {
+      } else if (e.w.i == &ComplexTable::sqrt2_2) {
         os << "\xe2\x88\x9a\xc2\xbd";
-      } else if (e.w.i == &ComplexTable<>::one) {
+      } else if (e.w.i == &ComplexTable::one) {
         os << "1";
       } else {
         os << std::hex << reinterpret_cast<std::uintptr_t>(e.w.i) << std::dec;
@@ -617,21 +617,21 @@ static std::ostream& memoryEdge(const Edge& from, const Edge& to,
     if (to.w == Complex::one) {
       os << "1";
     } else {
-      if (to.w.r == &ComplexTable<>::zero) {
+      if (to.w.r == &ComplexTable::zero) {
         os << "0";
-      } else if (to.w.r == &ComplexTable<>::sqrt2_2) {
+      } else if (to.w.r == &ComplexTable::sqrt2_2) {
         os << "\xe2\x88\x9a\xc2\xbd";
-      } else if (to.w.r == &ComplexTable<>::one) {
+      } else if (to.w.r == &ComplexTable::one) {
         os << "1";
       } else {
         os << std::hex << reinterpret_cast<std::uintptr_t>(to.w.r) << std::dec;
       }
       os << " ";
-      if (to.w.i == &ComplexTable<>::zero) {
+      if (to.w.i == &ComplexTable::zero) {
         os << "0";
-      } else if (to.w.i == &ComplexTable<>::sqrt2_2) {
+      } else if (to.w.i == &ComplexTable::sqrt2_2) {
         os << "\xe2\x88\x9a\xc2\xbd";
-      } else if (to.w.i == &ComplexTable<>::one) {
+      } else if (to.w.i == &ComplexTable::one) {
         os << "1";
       } else {
         os << std::hex << reinterpret_cast<std::uintptr_t>(to.w.i) << std::dec;

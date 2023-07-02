@@ -17,20 +17,17 @@ namespace dd {
 struct ComplexValue {
   fp r, i;
 
-  [[nodiscard]] constexpr bool
-  approximatelyEquals(const ComplexValue& c) const {
-    return ComplexTable<>::Entry::approximatelyEquals(r, c.r) &&
-           ComplexTable<>::Entry::approximatelyEquals(i, c.i);
+  [[nodiscard]] bool approximatelyEquals(const ComplexValue& c) const {
+    return CTEntry::approximatelyEquals(r, c.r) &&
+           CTEntry::approximatelyEquals(i, c.i);
   }
 
-  [[nodiscard]] constexpr bool approximatelyZero() const {
-    return ComplexTable<>::Entry::approximatelyZero(r) &&
-           ComplexTable<>::Entry::approximatelyZero(i);
+  [[nodiscard]] bool approximatelyZero() const {
+    return CTEntry::approximatelyZero(r) && CTEntry::approximatelyZero(i);
   }
 
-  [[nodiscard]] constexpr bool approximatelyOne() const {
-    return ComplexTable<>::Entry::approximatelyOne(r) &&
-           ComplexTable<>::Entry::approximatelyZero(i);
+  [[nodiscard]] bool approximatelyOne() const {
+    return CTEntry::approximatelyOne(r) && CTEntry::approximatelyZero(i);
   }
 
   constexpr bool operator==(const ComplexValue& other) const {
@@ -65,10 +62,9 @@ struct ComplexValue {
     i = {imag};
   }
 
-  static auto
-  getLowestFraction(const double x,
-                    const std::uint64_t maxDenominator = 1U << 10,
-                    const fp tol = dd::ComplexTable<>::tolerance()) {
+  static auto getLowestFraction(const double x,
+                                const std::uint64_t maxDenominator = 1U << 10,
+                                const fp tol = ComplexTable::tolerance()) {
     assert(x >= 0.);
 
     std::pair<std::uint64_t, std::uint64_t> lowerBound{0U, 1U};
@@ -101,7 +97,7 @@ struct ComplexValue {
   }
 
   static void printFormatted(std::ostream& os, fp num, bool imaginary = false) {
-    if (std::abs(num) <= ComplexTable<>::tolerance()) {
+    if (std::abs(num) <= ComplexTable::tolerance()) {
       os << (std::signbit(num) ? "-" : "+") << "0" << (imaginary ? "i" : "");
       return;
     }
@@ -112,7 +108,7 @@ struct ComplexValue {
         static_cast<fp>(fraction.first) / static_cast<fp>(fraction.second);
     auto error = std::abs(absnum - approx);
 
-    if (error <= ComplexTable<>::tolerance()) { // suitable fraction a/b found
+    if (error <= ComplexTable::tolerance()) { // suitable fraction a/b found
       const std::string sign = std::signbit(num) ? "-" : (imaginary ? "+" : "");
 
       if (fraction.first == 1U && fraction.second == 1U) {
@@ -134,8 +130,8 @@ struct ComplexValue {
     approx = static_cast<fp>(fraction.first) / static_cast<fp>(fraction.second);
     error = std::abs(abssqrt - approx);
 
-    if (error <= ComplexTable<>::tolerance()) { // suitable fraction a/(b *
-                                                // sqrt(2)) found
+    if (error <= ComplexTable::tolerance()) { // suitable fraction a/(b *
+                                              // sqrt(2)) found
       const std::string sign = std::signbit(num) ? "-" : (imaginary ? "+" : "");
 
       if (fraction.first == 1U && fraction.second == 1U) {
@@ -157,7 +153,7 @@ struct ComplexValue {
     approx = static_cast<fp>(fraction.first) / static_cast<fp>(fraction.second);
     error = std::abs(abspi - approx);
 
-    if (error <= ComplexTable<>::tolerance()) { // suitable fraction a/b π found
+    if (error <= ComplexTable::tolerance()) { // suitable fraction a/b π found
       const std::string sign = std::signbit(num) ? "-" : (imaginary ? "+" : "");
       const std::string imagUnit = imaginary ? "i" : "";
 
@@ -188,7 +184,7 @@ struct ComplexValue {
     if (precision >= 0) {
       ss << std::setprecision(precision);
     }
-    const auto tol = ComplexTable<>::tolerance();
+    const auto tol = ComplexTable::tolerance();
 
     if (std::abs(real) <= tol && std::abs(imag) <= tol) {
       return "0";
@@ -251,9 +247,9 @@ namespace std {
 template <> struct hash<dd::ComplexValue> {
   std::size_t operator()(dd::ComplexValue const& c) const noexcept {
     auto h1 = dd::murmur64(static_cast<std::size_t>(
-        std::round(c.r / dd::ComplexTable<>::tolerance())));
+        std::round(c.r / dd::ComplexTable::tolerance())));
     auto h2 = dd::murmur64(static_cast<std::size_t>(
-        std::round(c.i / dd::ComplexTable<>::tolerance())));
+        std::round(c.i / dd::ComplexTable::tolerance())));
     return dd::combineHash(h1, h2);
   }
 };

@@ -9,20 +9,15 @@
 
 namespace dd {
 
-template <std::size_t INITIAL_ALLOCATION_SIZE = 2048,
-          std::size_t GROWTH_FACTOR = 2>
 class ComplexCache {
-  using Entry = ComplexTable<>::Entry;
+  static constexpr std::size_t INITIAL_ALLOCATION_SIZE = 2048U;
+  static constexpr std::size_t GROWTH_FACTOR = 2U;
 
 public:
-  ComplexCache() : allocationSize(INITIAL_ALLOCATION_SIZE) {
-    // allocate first chunk of cache entries
-    chunks.emplace_back(allocationSize);
-    allocations += allocationSize;
-    allocationSize *= GROWTH_FACTOR;
-    chunkIt = chunks[0].begin();
-    chunkEndIt = chunks[0].end();
-  }
+  explicit ComplexCache(
+      const std::size_t initialAllocSize = INITIAL_ALLOCATION_SIZE,
+      const std::size_t growthFact = GROWTH_FACTOR)
+      : initialAllocationSize(initialAllocSize), growthFactor(growthFact) {}
 
   ~ComplexCache() = default;
 
@@ -30,7 +25,7 @@ public:
   [[nodiscard]] std::size_t getCount() const { return count; }
   [[nodiscard]] std::size_t getPeakCount() const { return peakCount; }
   [[nodiscard]] std::size_t getAllocations() const { return allocations; }
-  [[nodiscard]] std::size_t getGrowthFactor() const { return GROWTH_FACTOR; }
+  [[nodiscard]] std::size_t getGrowthFactor() const { return growthFactor; }
 
   [[nodiscard]] Complex getCachedComplex() {
     // an entry is available on the stack
@@ -46,7 +41,7 @@ public:
     if (chunkIt == chunkEndIt) {
       chunks.emplace_back(allocationSize);
       allocations += allocationSize;
-      allocationSize *= GROWTH_FACTOR;
+      allocationSize *= growthFactor;
       chunkID++;
       chunkIt = chunks[chunkID].begin();
       chunkEndIt = chunks[chunkID].end();
@@ -72,7 +67,7 @@ public:
     if (chunkIt == chunkEndIt) {
       chunks.emplace_back(allocationSize);
       allocations += allocationSize;
-      allocationSize *= GROWTH_FACTOR;
+      allocationSize *= growthFactor;
       chunkID++;
       chunkIt = chunks[chunkID].begin();
       chunkEndIt = chunks[chunkID].end();
@@ -96,8 +91,8 @@ public:
     // clear available stack
     available = nullptr;
 
-    // release memory of all but the first chunk TODO: it could be desirable to
-    // keep the memory
+    // release memory of all but the first chunk
+    // it could be desirable to keep the memory for later use
     while (chunkID > 0) {
       chunks.pop_back();
       chunkID--;
@@ -105,22 +100,25 @@ public:
     // restore initial chunk setting
     chunkIt = chunks[0].begin();
     chunkEndIt = chunks[0].end();
-    allocationSize = INITIAL_ALLOCATION_SIZE * GROWTH_FACTOR;
-    allocations = INITIAL_ALLOCATION_SIZE;
+    allocationSize = initialAllocationSize * growthFactor;
+    allocations = initialAllocationSize;
 
     count = 0;
     peakCount = 0;
   };
 
 private:
-  Entry* available{};
-  std::vector<std::vector<Entry>> chunks{};
-  std::size_t chunkID{0};
-  typename std::vector<Entry>::iterator chunkIt;
-  typename std::vector<Entry>::iterator chunkEndIt;
-  std::size_t allocationSize;
+  CTEntry* available{};
+  std::size_t initialAllocationSize;
+  std::size_t growthFactor;
+  std::vector<std::vector<CTEntry>> chunks{
+      1U, std::vector<CTEntry>(initialAllocationSize)};
+  std::size_t chunkID{};
+  typename std::vector<CTEntry>::iterator chunkIt{chunks.front().begin()};
+  typename std::vector<CTEntry>::iterator chunkEndIt{chunks.front().end()};
+  std::size_t allocationSize{initialAllocationSize * growthFactor};
 
-  std::size_t allocations = 0;
+  std::size_t allocations = initialAllocationSize;
   std::size_t count = 0;
   std::size_t peakCount = 0;
 };
