@@ -782,33 +782,6 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
   EXPECT_EQ(dd->innerProduct(zero, zero), cZero);
 }
 
-// TEST(DDPackageTest, GarbageCollectSomeButNotAll) {
-//     auto dd = std::make_unique<dd::Package<>>(1);
-//
-//     // one node in unique table of variable 0
-//     const auto& unique = dd->mUniqueTable.getTables();
-//     const auto& table  = unique[0];
-//
-//     auto I     = dd->makeIdent(1);
-//     auto Ihash = dd->mUniqueTable.hash(I.p);
-//
-//     // two nodes in same unique table bucket of variable 0
-//     auto Z     = dd->makeGateDD(dd::Zmat, 1, 0);
-//     auto Zhash = dd->mUniqueTable.hash(Z.p);
-//
-//     // I and Z should be placed in the same bucket
-//     EXPECT_EQ(Ihash, Zhash);
-//
-//     // increase the reference count of the Z gate, but not the I gate
-//     dd->incRef(Z);
-//
-//     // garbage collection should only collect the I gate and leave the Z gate
-//     at the front of the bucket dd->garbageCollect(true);
-//
-//     EXPECT_EQ(table[Zhash], Z.p);
-//     EXPECT_EQ(table[Zhash]->next, nullptr);
-// }
-
 TEST(DDPackageTest, KroneckerProduct) {
   auto dd = std::make_unique<dd::Package<>>(2);
   auto x = dd->makeGateDD(dd::Xmat, 1, 0);
