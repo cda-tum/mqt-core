@@ -5,7 +5,7 @@
 #include <nanobind/nanobind.h>
 
 namespace mqt {
-namespace nb = nanobind;
-using namespace nb::literals;
+  namespace nb = nanobind;
+  using namespace nb::literals;
 
 } // namespace mqt

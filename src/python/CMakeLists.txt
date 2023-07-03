@@ -53,7 +53,11 @@ nanobind_add_module(
   NB_STATIC
   # Source code goes here
   ${PROJECT_SOURCE_DIR}/include/python/nanobind.hpp
-  module.cpp)
+  ${PROJECT_SOURCE_DIR}/include/python/qiskit/nanobind/QuantumCircuit.hpp
+  qiskit/nanobind/QuantumCircuit.cpp
+  module.cpp
+)
+
 target_link_libraries(_core PRIVATE MQT::Core)
 
 if(TARGET nanobind-static)

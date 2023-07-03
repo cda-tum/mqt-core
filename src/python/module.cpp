@@ -1,11 +1,46 @@
 #include "operations/OpType.hpp"
+#include <iostream>
+#include <ostream>
 #include <python/nanobind.hpp>
 #include <nanobind/stl/string.h>
 #include <string>
+#include "QuantumComputation.hpp"
+#include "python/qiskit/nanobind/QuantumCircuit.hpp"
+
 
 namespace mqt {
+  // void register_qiskit(nb::module_);
+ 
+void loadQC(qc::QuantumComputation& qc, const nb::object& circ) {
+  try {
+    if (nb::isinstance<nb::str>(circ)) {
+      auto&& file = nb::cast<std::string>(circ);
+      qc.import(file);
+    } else {
+      qc::qiskit::QuantumCircuit::import(qc, circ);
+    }
+  } catch (std::exception const& e) {
+    std::stringstream ss{};
+    ss << "Could not import circuit: " << e.what();
+    throw std::invalid_argument(ss.str());
+  }
+}
+  
+  enum class foo {
+    a
+  };
 
+  foo fooFromStr(const std::string& s) {
+    return foo::a;
+  }
 NB_MODULE(_core, m) {
+  m.def("load_qc", &loadQC);
+  
+  nb::enum_<foo>(m, "Foo")
+      .value("a", foo::a)
+      .export_values()
+    .def("__init__", [](foo* t, const std::string& s) { new (t) foo(fooFromStr(s)); });
+
   nb::enum_<qc::OpType>(m, "OpType")
       .value("none", qc::OpType::None)
       .value("gphase", qc::OpType::GPhase)
@@ -49,7 +84,8 @@ NB_MODULE(_core, m) {
       .value("teleportation", qc::OpType::Teleportation)
       .value("classiccontrolled", qc::OpType::ClassicControlled)
       .export_values()
-    .def_static("from_string", [](const std::string& s){return qc::opTypeFromString(s);});
+    .def_static("from_string",
+                [](const std::string& s) { return qc::opTypeFromString(s); });
 
 }
 
