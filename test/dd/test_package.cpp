@@ -1060,7 +1060,7 @@ TEST(DDPackageTest, BasicNumericInstabilityTest) {
   const std::size_t nq = 64;
   for (std::size_t i = 1; i < nq; i += 2) {
     const std::size_t power = (i + 1) / 2;
-    const std::size_t denom = 1UL << power;
+    const std::size_t denom = static_cast<std::size_t>(1U) << power;
     const dd::fp target = 1. / static_cast<double>(denom);
     const dd::fp diff = std::abs(target - accumulator);
     const auto ulps = dd::ulpDistance(accumulator, target);
