@@ -1,6 +1,5 @@
 from typing import ClassVar, overload
 
-
 class OpType:
     __members__: ClassVar[dict[OpType, int]] = ...  # read-only
     none: ClassVar[OpType] = ...

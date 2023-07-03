@@ -1,16 +1,16 @@
 #pragma once
 
+#include "QuantumComputation.hpp"
 #include "python/nanobind.hpp"
+
 #include <regex>
 #include <type_traits>
 #include <variant>
 
-#include "QuantumComputation.hpp"
-
 namespace qc::qiskit {
 namespace nb = nanobind;
 using namespace nb::literals;
-  
+
 class QuantumCircuit {
 public:
   static void import(QuantumComputation& qc, const nb::object& circ);
