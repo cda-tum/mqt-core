@@ -10,8 +10,9 @@ namespace qc {
 std::size_t QuantumComputation::getNindividualOps() const {
   std::size_t nops = 0;
   for (const auto& op : ops) {
-    if (op->isCompoundOperation()) {
-      auto&& comp = dynamic_cast<CompoundOperation*>(op.get());
+    if (const auto* const comp =
+            dynamic_cast<const CompoundOperation*>(op.get());
+        comp != nullptr) {
       nops += comp->size();
     } else {
       ++nops;
@@ -28,8 +29,9 @@ std::size_t QuantumComputation::getNsingleQubitOps() const {
       continue;
     }
 
-    if (op->isCompoundOperation()) {
-      const auto* const comp = dynamic_cast<const CompoundOperation*>(op.get());
+    if (const auto* const comp =
+            dynamic_cast<const CompoundOperation*>(op.get());
+        comp != nullptr) {
       for (const auto& subop : *comp) {
         if (subop->isUnitary() && !subop->isControlled() &&
             subop->getNtargets() == 1U) {
@@ -144,9 +146,9 @@ void QuantumComputation::initializeIOMapping() {
   std::set<Qubit> measuredQubits{};
 
   for (const auto& opIt : ops) {
-    if (opIt->getType() == qc::Measure) {
+    if (const auto* const op = dynamic_cast<NonUnitaryOperation*>(opIt.get());
+        op != nullptr && op->getType() == Measure) {
       outputPermutationFromMeasurements = true;
-      auto* op = dynamic_cast<NonUnitaryOperation*>(opIt.get());
       assert(op->getTargets().size() == op->getClassics().size());
       auto classicIt = op->getClassics().cbegin();
       for (const auto& q : op->getTargets()) {
@@ -1061,7 +1063,8 @@ void QuantumComputation::addVariable(const SymbolOrNumber& expr) {
 // Instantiates this computation
 void QuantumComputation::instantiate(const VariableAssignment& assignment) {
   for (auto& op : ops) {
-    if (auto* symOp = dynamic_cast<SymbolicOperation*>(op.get())) {
+    if (auto* symOp = dynamic_cast<SymbolicOperation*>(op.get());
+        symOp != nullptr) {
       symOp->instantiate(assignment);
     }
   }

@@ -36,8 +36,8 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
 
     // once a measurement is encountered we store the corresponding mapping
     // (qubit -> bit)
-    if (op->getType() == qc::Measure) {
-      const auto* measure = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
+    if (const auto* measure = dynamic_cast<qc::NonUnitaryOperation*>(op.get());
+        measure != nullptr && measure->getType() == qc::Measure) {
       hasMeasurements = true;
 
       const auto& quantum = measure->getTargets();
@@ -132,41 +132,42 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
     dd->incRef(e);
 
     for (const auto& op : *qc) {
-      if (op->getType() == Measure) {
-        auto* measure = dynamic_cast<NonUnitaryOperation*>(op.get());
-        const auto& qubits = measure->getTargets();
-        const auto& bits = measure->getClassics();
-        for (std::size_t j = 0U; j < qubits.size(); ++j) {
-          measurements[bits.at(j)] = dd->measureOneCollapsing(
-              e, static_cast<dd::Qubit>(permutation.at(qubits.at(j))), true,
-              mt);
-        }
-        continue;
-      }
-
-      if (op->getType() == Reset) {
-        auto* reset = dynamic_cast<NonUnitaryOperation*>(op.get());
-        const auto& qubits = reset->getTargets();
-        for (const auto& qubit : qubits) {
-          auto bit = dd->measureOneCollapsing(
-              e, static_cast<dd::Qubit>(permutation.at(qubit)), true, mt);
-          // apply an X operation whenever the measured result is one
-          if (bit == '1') {
-            const auto x =
-                qc::StandardOperation(qc->getNqubits(), qubit, qc::X);
-            auto tmp = dd->multiply(getDD(&x, dd), e);
-            dd->incRef(tmp);
-            dd->decRef(e);
-            e = tmp;
-            dd->garbageCollect();
+      if (const auto* nonunitary = dynamic_cast<NonUnitaryOperation*>(op.get());
+          nonunitary != nullptr) {
+        if (nonunitary->getType() == Measure) {
+          const auto& qubits = nonunitary->getTargets();
+          const auto& bits = nonunitary->getClassics();
+          for (std::size_t j = 0U; j < qubits.size(); ++j) {
+            measurements[bits.at(j)] = dd->measureOneCollapsing(
+                e, static_cast<dd::Qubit>(permutation.at(qubits.at(j))), true,
+                mt);
           }
+          continue;
         }
-        continue;
+
+        if (nonunitary->getType() == Reset) {
+          const auto& qubits = nonunitary->getTargets();
+          for (const auto& qubit : qubits) {
+            auto bit = dd->measureOneCollapsing(
+                e, static_cast<dd::Qubit>(permutation.at(qubit)), true, mt);
+            // apply an X operation whenever the measured result is one
+            if (bit == '1') {
+              const auto x =
+                  qc::StandardOperation(qc->getNqubits(), qubit, qc::X);
+              auto tmp = dd->multiply(getDD(&x, dd), e);
+              dd->incRef(tmp);
+              dd->decRef(e);
+              e = tmp;
+              dd->garbageCollect();
+            }
+          }
+          continue;
+        }
       }
 
-      if (op->getType() == ClassicControlled) {
-        auto* classicControlled =
-            dynamic_cast<ClassicControlledOperation*>(op.get());
+      if (const auto* classicControlled =
+              dynamic_cast<ClassicControlledOperation*>(op.get());
+          classicControlled != nullptr) {
         const auto& controlRegister = classicControlled->getControlRegister();
         const auto& expectedValue = classicControlled->getExpectedValue();
         auto actualValue = 0ULL;
@@ -226,9 +227,9 @@ void extractProbabilityVectorRecursive(
     const auto& op = (*it);
 
     // check whether a classic controlled operations can be applied
-    if (op->getType() == ClassicControlled) {
-      auto* classicControlled =
-          dynamic_cast<ClassicControlledOperation*>(op.get());
+    if (const auto* classicControlled =
+            dynamic_cast<ClassicControlledOperation*>(op.get());
+        classicControlled != nullptr) {
       const auto& controlRegister = classicControlled->getControlRegister();
       const auto& expectedValue = classicControlled->getExpectedValue();
       qc::Bit actualValue = 0U;
@@ -287,9 +288,9 @@ void extractProbabilityVectorRecursive(
     }
 
     // measurements form splitting points in this extraction scheme
-    if (op->getType() == Measure) {
-      const auto* measurement =
-          dynamic_cast<qc::NonUnitaryOperation*>(op.get());
+    if (const auto* measurement =
+            dynamic_cast<qc::NonUnitaryOperation*>(op.get());
+        measurement != nullptr && measurement->getType() == Measure) {
       const auto& targets = measurement->getTargets();
       const auto& classics = measurement->getClassics();
       if (targets.size() != 1U || classics.size() != 1U) {
