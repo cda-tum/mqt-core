@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ._core import OpType
+from ._core import OpType, StandardOperation
 from ._version import version as __version__
 
-__all__ = ["__version__", "OpType"]
+__all__ = ["__version__", "OpType", "StandardOperation"]

@@ -53,8 +53,6 @@ nanobind_add_module(
   NB_STATIC
   # Source code goes here
   ${PROJECT_SOURCE_DIR}/include/python/nanobind.hpp
-  ${PROJECT_SOURCE_DIR}/include/python/qiskit/nanobind/QuantumCircuit.hpp
-  qiskit/nanobind/QuantumCircuit.cpp
   module.cpp
 )
 
