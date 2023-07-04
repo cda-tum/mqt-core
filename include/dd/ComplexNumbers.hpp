@@ -79,56 +79,56 @@ struct ComplexNumbers {
       r.i->value = (ai * br - ar * bi) / cmag;
     }
   }
-  static inline fp mag2(const Complex& a) {
+  [[nodiscard]] static fp mag2(const Complex& a) {
     auto ar = CTEntry::val(a.r);
     auto ai = CTEntry::val(a.i);
 
     return ar * ar + ai * ai;
   }
-  static inline fp mag(const Complex& a) { return std::sqrt(mag2(a)); }
-  static inline fp arg(const Complex& a) {
+  [[nodiscard]] static fp mag(const Complex& a) { return std::sqrt(mag2(a)); }
+  [[nodiscard]] static fp arg(const Complex& a) {
     auto ar = CTEntry::val(a.r);
     auto ai = CTEntry::val(a.i);
     return std::atan2(ai, ar);
   }
-  static Complex conj(const Complex& a) {
+  [[nodiscard]] static Complex conj(const Complex& a) {
     auto ret = a;
     ret.i = CTEntry::flipPointerSign(a.i);
     return ret;
   }
-  static Complex neg(const Complex& a) {
+  [[nodiscard]] static Complex neg(const Complex& a) {
     auto ret = a;
     ret.i = CTEntry::flipPointerSign(a.i);
     ret.r = CTEntry::flipPointerSign(a.r);
     return ret;
   }
 
-  inline Complex addCached(const Complex& a, const Complex& b) {
+  [[nodiscard]] Complex addCached(const Complex& a, const Complex& b) {
     auto c = getCached();
     add(c, a, b);
     return c;
   }
 
-  inline Complex subCached(const Complex& a, const Complex& b) {
+  [[nodiscard]] Complex subCached(const Complex& a, const Complex& b) {
     auto c = getCached();
     sub(c, a, b);
     return c;
   }
 
-  inline Complex mulCached(const Complex& a, const Complex& b) {
+  [[nodiscard]] Complex mulCached(const Complex& a, const Complex& b) {
     auto c = getCached();
     mul(c, a, b);
     return c;
   }
 
-  inline Complex divCached(const Complex& a, const Complex& b) {
+  [[nodiscard]] Complex divCached(const Complex& a, const Complex& b) {
     auto c = getCached();
     div(c, a, b);
     return c;
   }
 
   // lookup a complex value in the complex table; if not found add it
-  Complex lookup(const Complex& c) {
+  [[nodiscard]] Complex lookup(const Complex& c) {
     if (c == Complex::zero) {
       return Complex::zero;
     }
@@ -140,10 +140,10 @@ struct ComplexNumbers {
     auto vali = CTEntry::val(c.i);
     return lookup(valr, vali);
   }
-  Complex lookup(const std::complex<fp>& c) {
+  [[nodiscard]] Complex lookup(const std::complex<fp>& c) {
     return lookup(c.real(), c.imag());
   }
-  Complex lookup(const fp& r, const fp& i) {
+  [[nodiscard]] Complex lookup(const fp& r, const fp& i) {
     Complex ret{};
 
     auto signR = std::signbit(r);
@@ -176,7 +176,9 @@ struct ComplexNumbers {
 
     return ret;
   }
-  inline Complex lookup(const ComplexValue& c) { return lookup(c.r, c.i); }
+  [[nodiscard]] Complex lookup(const ComplexValue& c) {
+    return lookup(c.r, c.i);
+  }
 
   // reference counting and garbage collection
   static void incRef(const Complex& c) {
@@ -198,33 +200,35 @@ struct ComplexNumbers {
   }
 
   // provide (temporary) cached complex number
-  inline Complex getTemporary() { return complexCache.getTemporaryComplex(); }
+  [[nodiscard]] Complex getTemporary() {
+    return complexCache.getTemporaryComplex();
+  }
 
-  inline Complex getTemporary(const fp& r, const fp& i) {
+  [[nodiscard]] Complex getTemporary(const fp& r, const fp& i) {
     auto c = complexCache.getTemporaryComplex();
     c.r->value = r;
     c.i->value = i;
     return c;
   }
 
-  inline Complex getTemporary(const ComplexValue& c) {
+  [[nodiscard]] Complex getTemporary(const ComplexValue& c) {
     return getTemporary(c.r, c.i);
   }
 
-  inline Complex getCached() { return complexCache.getCachedComplex(); }
+  [[nodiscard]] Complex getCached() { return complexCache.getCachedComplex(); }
 
-  inline Complex getCached(const fp& r, const fp& i) {
+  [[nodiscard]] Complex getCached(const fp& r, const fp& i) {
     auto c = complexCache.getCachedComplex();
     c.r->value = r;
     c.i->value = i;
     return c;
   }
 
-  inline Complex getCached(const ComplexValue& c) {
+  [[nodiscard]] Complex getCached(const ComplexValue& c) {
     return getCached(c.r, c.i);
   }
 
-  inline Complex getCached(const std::complex<fp>& c) {
+  [[nodiscard]] Complex getCached(const std::complex<fp>& c) {
     return getCached(c.real(), c.imag());
   }
 

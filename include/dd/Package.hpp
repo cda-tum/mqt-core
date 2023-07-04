@@ -1375,9 +1375,23 @@ public:
     return {pzero, pone};
   }
 
+  /**
+   * @brief Measures the qubit with the given index in the given state vector
+   * decision diagram. Collapses the state according to the measurement result.
+   * @param rootEdge the root edge of the state vector decision diagram
+   * @param index the index of the qubit to be measured
+   * @param assumeProbabilityNormalization whether or not to assume that the
+   * state vector decision diagram has normalized edge weights.
+   * @param mt the random number generator
+   * @param epsilon the numerical precision used for checking the normalization
+   * of the state vector decision diagram
+   * @return the measurement result ('0' or '1')
+   * @throws std::runtime_error if a numerical instability is detected during
+   * the measurement.
+   */
   char measureOneCollapsing(vEdge& rootEdge, const Qubit index,
                             const bool assumeProbabilityNormalization,
-                            std::mt19937_64& mt, fp epsilon = 0.001) {
+                            std::mt19937_64& mt, const fp epsilon = 0.001) {
     const auto& [pzero, pone] = determineMeasurementProbabilities(
         rootEdge, index, assumeProbabilityNormalization);
     const fp sum = pzero + pone;
@@ -1388,41 +1402,50 @@ public:
           std::to_string(pzero) + " + " + std::to_string(pone) + " = " +
           std::to_string(pzero + pone) + ", but should be 1!");
     }
+    std::uniform_real_distribution<fp> dist(0.0, 1.0L);
+    if (const auto threshold = dist(mt); threshold < pzero / sum) {
+      performCollapsingMeasurement(rootEdge, index, pzero, true);
+      return '0';
+    }
+    performCollapsingMeasurement(rootEdge, index, pone, false);
+    return '1';
+  }
+
+  /**
+   * @brief Performs a specific measurement on the given state vector decision
+   * diagram. Collapses the state according to the measurement result.
+   * @param rootEdge the root edge of the state vector decision diagram
+   * @param index the index of the qubit to be measured
+   * @param probability the probability of the measurement result (required for
+   * normalization)
+   * @param measureZero whether or not to measure '0' (otherwise '1' is
+   * measured)
+   */
+  void performCollapsingMeasurement(vEdge& rootEdge, const Qubit index,
+                                    const fp probability,
+                                    const bool measureZero) {
     GateMatrix measurementMatrix{complex_zero, complex_zero, complex_zero,
                                  complex_zero};
 
-    std::uniform_real_distribution<fp> dist(0.0, 1.0L);
-
-    fp threshold = dist(mt);
-    fp normalizationFactor; // NOLINT(cppcoreguidelines-init-variables) always
-                            // assigned a value in the following block
-    char result; // NOLINT(cppcoreguidelines-init-variables) always assigned a
-                 // value in the following block
-
-    if (threshold < pzero / sum) {
+    if (measureZero) {
       measurementMatrix[0] = complex_one;
-      normalizationFactor = pzero;
-      result = '0';
     } else {
       measurementMatrix[3] = complex_one;
-      normalizationFactor = pone;
-      result = '1';
     }
 
-    mEdge measurementGate =
+    const auto measurementGate =
         makeGateDD(measurementMatrix,
                    static_cast<dd::QubitCount>(rootEdge.p->v + 1), index);
 
     vEdge e = multiply(measurementGate, rootEdge);
 
-    Complex c = cn.getTemporary(std::sqrt(1.0 / normalizationFactor), 0);
+    assert(probability > 0.0L);
+    Complex c = cn.getTemporary(std::sqrt(1.0 / probability), 0);
     ComplexNumbers::mul(c, e.w, c);
     e.w = cn.lookup(c);
     incRef(e);
     decRef(rootEdge);
     rootEdge = e;
-
-    return result;
   }
 
   ///
