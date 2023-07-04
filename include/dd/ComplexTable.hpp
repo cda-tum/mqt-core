@@ -283,7 +283,7 @@ public:
    * @param val The floating point number to hash. Must be non-negative.
    * @returns The hash value of the floating point number.
    */
-  static constexpr std::int64_t hash(const fp val) {
+  static std::int64_t hash(const fp val) {
     assert(val >= 0);
     const auto key = static_cast<std::int64_t>(std::nearbyint(val * MASK));
     return std::min<std::int64_t>(key, MASK);
