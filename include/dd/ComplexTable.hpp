@@ -2,622 +2,527 @@
 
 #include "Definitions.hpp"
 
-#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
-#include <cstdlib>
-#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <map>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace dd {
+/**
+ * @brief A hash table for complex numbers.
+ * @details The complex table is a hash table that stores complex numbers as
+ * pairs of floating point numbers. The hash table is implemented as an array
+ * of buckets, each of which is a linked list of entries. The hash table has a
+ * fixed number of buckets.
+ * @note This class is historically misnamed. It does not store complex numbers,
+ * but rather floating point numbers. It is used as the basis for storing
+ * complex numbers in the DD package. The name is kept for historical reasons.
+ */
 class ComplexTable {
-  // statically define the number of hash table buckets
+  /**
+   * @brief The number of buckets in the table.
+   * @details The number of buckets is fixed and cannot be changed after the
+   * table has been created. Increasing the number of buckets reduces the
+   * number of collisions, but increases the memory usage.
+   * @attention The number of buckets has to be one larger than a power of two.
+   * Otherwise, the hash function will not work correctly.
+   */
   static constexpr std::size_t NBUCKET = 65537U;
 
-  // default values for the hash table
+  /**
+   * @brief The number of initially allocated entries.
+   * @details The number of initially allocated entries is the number of entries
+   * that are allocated as a chunk when the table is created. Increasing this
+   * number reduces the number of allocations, but increases the memory usage.
+   */
   static constexpr std::size_t INITIAL_ALLOCATION_SIZE = 2048U;
+  /**
+   * @brief The growth factor for table entry allocation.
+   * @details The growth factor is used to determine the number of entries that
+   * are allocated when the table runs out of entries. Per default, the number
+   * of entries is doubled. Increasing this number reduces the number of memory
+   * allocations, but increases the memory usage.
+   */
   static constexpr std::size_t GROWTH_FACTOR = 2U;
+  /**
+   * @brief The initial garbage collection limit.
+   * @details The initial garbage collection limit is the number of entries that
+   * must be present in the table before garbage collection is triggered.
+   * Increasing this number reduces the number of garbage collections, but
+   * increases the memory usage.
+   */
   static constexpr std::size_t INITIAL_GC_LIMIT = 65536U;
 
 public:
+  /**
+   * @brief An entry in the table.
+   * @details An entry in the table consists of a floating point number (the
+   * value), a next pointer, and a reference count.
+   *
+   * @note Due to the way the sign of the value is encoded, special care has to
+   * be taken when accessing the value. The static functions in this struct
+   * provide safe access to the value.
+   */
   struct Entry {
+    /**
+     * @brief The value of the entry.
+     * @details The value of the entry is a floating point number. The sign of
+     * the value is encoded in the least significant bit of the memory address
+     * of the entry. As a consequence, values stored in the table are always
+     * non-negative. The sign of the value as well as the value itself can be
+     * accessed using the static functions of this struct.
+     */
     fp value{};
+    /**
+     * @brief The next pointer of the entry.
+     * @details The next pointer is used to chain entries in the same bucket.
+     * The next pointer is part of the entry struct for efficiency reasons. It
+     * could be stored separately, but that would require many small
+     * allocations. This way, the entries can be allocated in chunks, which is
+     * much more efficient.
+     */
     Entry* next{};
+    /**
+     * @brief The reference count of the entry.
+     * @details The reference count is used to determine whether an entry is
+     * still in use. If the reference count is zero, the entry is not in use and
+     * can be garbage collected.
+     */
     RefCount refCount{};
 
-    ///
-    /// The sign of number is encoded in the least significant bit of its entry
-    /// pointer If not handled properly, this causes misaligned access These
-    /// routines allow to obtain safe pointers
-    ///
-    [[nodiscard]] static inline Entry* getAlignedPointer(const Entry* e) {
-      return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) &
-                                      ~static_cast<std::uintptr_t>(1U));
-    }
+    /**
+     * @brief Get an aligned pointer to the entry.
+     * @details Since the least significant bit of the memory address of the
+     * entry is used to encode the sign of the value, the pointer to the entry
+     * might not be aligned. This function returns an aligned pointer to the
+     * entry.
+     * @param e The entry to get the aligned pointer for.
+     * @returns An aligned pointer to the entry.
+     */
+    [[nodiscard]] static Entry* getAlignedPointer(const Entry* e);
 
-    [[nodiscard]] static inline Entry* getNegativePointer(const Entry* e) {
-      return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) |
-                                      static_cast<std::uintptr_t>(1U));
-    }
+    /**
+     * @brief Get a pointer to the entry with a negative sign.
+     * @details Since the least significant bit of the memory address of the
+     * entry is used to encode the sign of the value, this function just sets
+     * the least significant bit of the memory address of the entry to 1.
+     * @param e The entry to get the negative pointer for.
+     * @returns A negative pointer to the entry.
+     */
+    [[nodiscard]] static Entry* getNegativePointer(const Entry* e);
 
-    [[nodiscard]] static inline bool exactlyZero(const Entry* e) {
-      return (e == &zero);
-    }
+    /**
+     * @brief Check whether the entry is a negative pointer.
+     * @param e The entry to check.
+     * @returns Whether the entry is a negative pointer.
+     */
+    [[nodiscard]] static bool isNegativePointer(const Entry* e);
 
-    [[nodiscard]] static inline bool exactlyOne(const Entry* e) {
-      return (e == &one);
-    }
+    /**
+     * @brief Flip the sign of the entry pointer.
+     * @param e The entry to flip the sign of.
+     * @returns The entry with the sign flipped.
+     * @note This function does not change the sign of the value of the entry.
+     * It rather changes the sign of the pointer to the entry.
+     * @note We do not consider negative zero here, since it is not used in the
+     * DD package. There only exists one zero entry, which is positive.
+     */
+    [[nodiscard]] static Entry* flipPointerSign(const Entry* e);
 
-    [[nodiscard]] static inline Entry* flipPointerSign(const Entry* e) {
-      if (e == &zero) {
-        // No point in flipping the sign of 0
-        return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e));
-      }
-      return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) ^
-                                      static_cast<std::uintptr_t>(1U));
-    }
+    /**
+     * @brief Check whether the entry points to the zero entry.
+     * @param e The entry to check.
+     * @returns Whether the entry points to zero.
+     */
+    [[nodiscard]] static bool exactlyZero(const Entry* e);
 
-    [[nodiscard]] static inline bool isNegativePointer(const Entry* e) {
-      return (reinterpret_cast<std::uintptr_t>(e) &
-              static_cast<std::uintptr_t>(1U)) != 0U;
-    }
+    /**
+     * @brief Check whether the entry points to the one entry.
+     * @param e The entry to check.
+     * @returns Whether the entry points to one.
+     */
+    [[nodiscard]] static bool exactlyOne(const Entry* e);
 
-    [[nodiscard]] static inline fp val(const Entry* e) {
-      if (isNegativePointer(e)) {
-        return -getAlignedPointer(e)->value;
-      }
-      return e->value;
-    }
+    /**
+     * @brief Get the value of the entry.
+     * @param e The entry to get the value for.
+     * @returns The value of the entry.
+     * @note This function accounts for the sign of the entry embedded in the
+     * memory address of the entry.
+     */
+    [[nodiscard]] static fp val(const Entry* e);
 
-    [[nodiscard]] static inline RefCount ref(const Entry* e) {
-      if (isNegativePointer(e)) {
-        return -getAlignedPointer(e)->refCount;
-      }
-      return e->refCount;
-    }
+    /**
+     * @brief Get the reference count of the entry.
+     * @param e The entry to get the reference count for.
+     * @returns The reference count of the entry.
+     * @note This function accounts for the sign of the entry embedded in the
+     * memory address of the entry.
+     */
+    [[nodiscard]] static RefCount ref(const Entry* e);
 
+    /**
+     * @brief Check whether two floating point numbers are approximately equal.
+     * @details This function checks whether two floating point numbers are
+     * approximately equal. The two numbers are considered approximately equal
+     * if the absolute difference between them is smaller than a small value
+     * (TOLERANCE). This function is used to compare floating point numbers
+     * stored in the table.
+     * @param left The first floating point number.
+     * @param right The second floating point number.
+     * @returns Whether the two floating point numbers are approximately equal.
+     */
+    [[nodiscard]] static bool approximatelyEquals(fp left, fp right);
+
+    /**
+     * @brief Check whether two entries are approximately equal.
+     * @details This function checks whether two entries are approximately
+     * equal. Two entries are considered approximately equal if they point to
+     * the same entry or if the values of the entries are approximately equal.
+     * @param left The first entry.
+     * @param right The second entry.
+     * @returns Whether the two entries are approximately equal.
+     * @see approximatelyEquals(fp, fp)
+     */
     [[nodiscard]] static bool approximatelyEquals(const Entry* left,
-                                                  const Entry* right) {
-      return left == right || approximatelyEquals(val(left), val(right));
-    }
-    [[nodiscard]] static bool approximatelyEquals(const fp left,
-                                                  const fp right) {
-      // equivalence check is a shortcut before check with tolerance
-      // NOLINTNEXTLINE(clang-diagnostic-float-equal)
-      return left == right || std::abs(left - right) <= TOLERANCE;
-    }
+                                                  const Entry* right);
 
-    [[nodiscard]] static bool approximatelyZero(const Entry* e) {
-      return e == &zero || approximatelyZero(val(e));
-    }
-    [[nodiscard]] static bool approximatelyZero(const fp e) {
-      return std::abs(e) <= TOLERANCE;
-    }
+    /**
+     * @brief Check whether a floating point number is approximately zero.
+     * @param e The floating point number to check.
+     * @returns Whether the floating point number is approximately zero.
+     */
+    [[nodiscard]] static bool approximatelyZero(fp e);
 
-    [[nodiscard]] static bool approximatelyOne(const Entry* e) {
-      return e == &one || approximatelyOne(val(e));
-    }
-    [[nodiscard]] static bool approximatelyOne(fp e) {
-      return approximatelyEquals(e, 1.0);
-    }
+    /**
+     * @brief Check whether an entry is approximately zero.
+     * @param e The entry to check.
+     * @returns Whether the entry is approximately zero.
+     * @see approximatelyZero(fp)
+     */
+    [[nodiscard]] static bool approximatelyZero(const Entry* e);
 
-    static void writeBinary(const Entry* e, std::ostream& os) {
-      auto temp = val(e);
-      os.write(reinterpret_cast<const char*>(&temp), sizeof(decltype(temp)));
-    }
+    /**
+     * @brief Check whether a floating point number is approximately one.
+     * @param e The floating point number to check.
+     * @returns Whether the floating point number is approximately one.
+     */
+    [[nodiscard]] static bool approximatelyOne(fp e);
+
+    /**
+     * @brief Check whether an entry is approximately one.
+     * @param e The entry to check.
+     * @returns Whether the entry is approximately one.
+     * @see approximatelyOne(fp)
+     */
+    [[nodiscard]] static bool approximatelyOne(const Entry* e);
+
+    /**
+     * @brief Write a binary representation of the entry to a stream.
+     * @param e The entry to write.
+     * @param os The stream to write to.
+     */
+    static void writeBinary(const Entry* e, std::ostream& os);
   };
 
-  // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
-  static inline Entry zero{0., nullptr, 1};
-  // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
-  static inline Entry sqrt2_2{SQRT2_2, nullptr, 1};
-  // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
-  static inline Entry one{1., nullptr, 1};
+  // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+  /// The constant zero entry.
+  static inline Entry zero{0., nullptr, 1U};
+  /// The constant one entry.
+  static inline Entry one{1., nullptr, 1U};
+  /// The constant sqrt(2)/2 = 1/sqrt(2) entry.
+  static inline Entry sqrt2over2{SQRT2_2, nullptr, 1U};
+  // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
-  explicit ComplexTable(
-      const std::size_t initialAllocSize = INITIAL_ALLOCATION_SIZE,
-      const std::size_t growthFact = GROWTH_FACTOR,
-      const std::size_t initialGCLim = INITIAL_GC_LIMIT)
-      : initialAllocationSize(initialAllocSize), growthFactor(growthFact),
-        initialGCLimit(initialGCLim) {
-    // add 1/2 to the complex table and increase its ref count (so that it is
-    // not collected)
-    lookup(0.5L)->refCount++;
-  }
+  /**
+   * @brief The default constructor.
+   * @details The default constructor initializes the complex table with the
+   * default values for the initial allocation size, the growth factor, and the
+   * initial garbage collection limit.
+   * @param initialAllocSize The initial allocation size.
+   * @param growthFact The growth factor used for the allocation size.
+   * @param initialGCLim The initial garbage collection limit.
+   *
+   * @see INITIAL_ALLOCATION_SIZE
+   * @see GROWTH_FACTOR
+   * @see INITIAL_GC_LIMIT
+   */
+  explicit ComplexTable(std::size_t initialAllocSize = INITIAL_ALLOCATION_SIZE,
+                        std::size_t growthFact = GROWTH_FACTOR,
+                        std::size_t initialGCLim = INITIAL_GC_LIMIT);
 
+  /// The default destructor.
   ~ComplexTable() = default;
 
+  /**
+   * @brief Getter for the tolerance used for floating point comparisons.
+   * @returns The tolerance used for floating point comparisons.
+   */
   static fp tolerance() { return TOLERANCE; }
 
+  /**
+   * @brief Setter for the tolerance used for floating point comparisons.
+   * @param tol The tolerance used for floating point comparisons.
+   */
   static void setTolerance(fp tol) { TOLERANCE = tol; }
 
+  /// The bit mask used for the hash function.
   static constexpr std::int64_t MASK = NBUCKET - 1;
 
-  // linear (clipped) hash function
+  /**
+   * @brief The hash function for the complex table.
+   * @details The hash function for the complex table is a simple linear
+   * (clipped) hash function. The hash function is used to map floating point
+   * numbers to the buckets of the table.
+   * @param val The floating point number to hash. Must be non-negative.
+   * @returns The hash value of the floating point number.
+   */
   static constexpr std::int64_t hash(const fp val) {
     assert(val >= 0);
-    auto key = static_cast<std::int64_t>(std::nearbyint(val * MASK));
+    const auto key = static_cast<std::int64_t>(std::nearbyint(val * MASK));
     return std::min<std::int64_t>(key, MASK);
   }
 
-  // access functions
+  /// Get the number of entries in the table.
   [[nodiscard]] std::size_t getCount() const { return count; }
 
+  /// Get the peak number of entries in the table.
   [[nodiscard]] std::size_t getPeakCount() const { return peakCount; }
 
+  /// Get the number of allocations performed.
   [[nodiscard]] std::size_t getAllocations() const { return allocations; }
 
+  /// Get the growth factor used for the allocation size.
   [[nodiscard]] std::size_t getGrowthFactor() const { return growthFactor; }
 
+  /// Get a reference to the table.
   [[nodiscard]] const auto& getTable() const { return table; }
 
-  [[nodiscard]] bool availableEmpty() const { return available == nullptr; };
+  /// Check whether there is an entry on the available list.
+  [[nodiscard]] bool availableEmpty() const { return available == nullptr; }
 
-  Entry* lookup(const fp& val) {
-    assert(!std::isnan(val));
-    assert(val >= 0); // required anyway for the hash function
-    ++lookups;
-    if (Entry::approximatelyZero(val)) {
-      ++hits;
-      return &zero;
-    }
+  /**
+   * @brief Lookup an entry in the table.
+   * @details This function looks up an entry in the table. If the entry is not
+   * found, a new entry is created and inserted into the table.
+   * @param val The floating point number to look up. Must be non-negative.
+   * @returns A pointer to the entry corresponding to the floating point number.
+   */
+  [[nodiscard]] Entry* lookup(fp val);
 
-    if (Entry::approximatelyOne(val)) {
-      ++hits;
-      return &one;
-    }
+  /**
+   * @brief Get a free entry
+   * @details This function returns a free entry. It first checks whether there
+   * is an entry on the available list. If not, it checks whether the currently
+   * allocated chunk still has free entries. If not, it allocates a new chunk.
+   * @returns A pointer to a free entry.
+   */
+  [[nodiscard]] Entry* getEntry();
 
-    if (Entry::approximatelyEquals(val, SQRT2_2)) {
-      ++hits;
-      return &sqrt2_2;
-    }
+  /**
+   * @brief Return an entry to the available list.
+   * @details This function marks an entry as available by appending it to the
+   * available list. The entry is not actually deleted, but can be reused by
+   * subsequent calls to getEntry().
+   * @param entry
+   */
+  void returnEntry(Entry* entry);
 
-    assert(val - TOLERANCE >= 0); // should be handle above as special case
-
-    const auto lowerKey = hash(val - TOLERANCE);
-    const auto upperKey = hash(val + TOLERANCE);
-
-    if (upperKey == lowerKey) {
-      ++findOrInserts;
-      return findOrInsert(lowerKey, val);
-    }
-
-    // code below is to properly handle border cases |----(-|-)----|
-    // in case a value close to a border is looked up,
-    // only the last entry in the lower bucket and the first entry in the upper
-    // bucket need to be checked
-
-    const auto key = hash(val);
-
-    Entry* pLower; // NOLINT(cppcoreguidelines-init-variables)
-    Entry* pUpper; // NOLINT(cppcoreguidelines-init-variables)
-    if (lowerKey != key) {
-      pLower = tailTable[static_cast<std::size_t>(lowerKey)];
-      pUpper = table[static_cast<std::size_t>(key)];
-      ++lowerNeighbors;
-    } else {
-      pLower = tailTable[static_cast<std::size_t>(key)];
-      pUpper = table[static_cast<std::size_t>(upperKey)];
-      ++upperNeighbors;
-    }
-
-    const bool lowerMatchFound =
-        (pLower != nullptr && Entry::approximatelyEquals(val, pLower->value));
-    const bool upperMatchFound =
-        (pUpper != nullptr && Entry::approximatelyEquals(val, pUpper->value));
-
-    if (lowerMatchFound && upperMatchFound) {
-      ++hits;
-      const auto diffToLower = std::abs(pLower->value - val);
-      const auto diffToUpper = std::abs(pUpper->value - val);
-      // val is actually closer to p_lower than to p_upper
-      if (diffToLower < diffToUpper) {
-        return pLower;
-      }
-      return pUpper;
-    }
-
-    if (lowerMatchFound) {
-      ++hits;
-      return pLower;
-    }
-
-    if (upperMatchFound) {
-      ++hits;
-      return pUpper;
-    }
-
-    // value was not found in the table -> get a new entry and add it to the
-    // central bucket
-    Entry* entry = insert(key, val);
-    return entry;
-  }
-
-  [[nodiscard]] Entry* getEntry() {
-    // an entry is available on the stack
-    if (!availableEmpty()) {
-      Entry* entry = available;
-      available = entry->next;
-      // returned entries could have a ref count != 0
-      entry->refCount = 0;
-      return entry;
-    }
-
-    // new chunk has to be allocated
-    if (chunkIt == chunkEndIt) {
-      chunks.emplace_back(allocationSize);
-      allocations += allocationSize;
-      allocationSize *= growthFactor;
-      chunkID++;
-      chunkIt = chunks[chunkID].begin();
-      chunkEndIt = chunks[chunkID].end();
-    }
-
-    auto* entry = &(*chunkIt);
-    ++chunkIt;
-    return entry;
-  }
-
-  void returnEntry(Entry* entry) {
-    entry->next = available;
-    available = entry;
-  }
-
-  // increment reference count for corresponding entry
-  static void incRef(Entry* entry) {
-    // get valid pointer
-    auto* entryPtr = Entry::getAlignedPointer(entry);
-
-    if (entryPtr == nullptr) {
-      return;
-    }
-
-    // important (static) numbers are never altered
-    if (entryPtr != &one && entryPtr != &zero && entryPtr != &sqrt2_2) {
-      if (entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
-        std::clog << "[WARN] MAXREFCNT reached for " << entryPtr->value
-                  << ". Number will never be collected.\n";
-        return;
-      }
-
-      // increase reference count
-      entryPtr->refCount++;
-    }
-  }
-
-  // decrement reference count for corresponding entry
-  static void decRef(Entry* entry) {
-    // get valid pointer
-    auto* entryPtr = Entry::getAlignedPointer(entry);
-
-    if (entryPtr == nullptr) {
-      return;
-    }
-
-    // important (static) numbers are never altered
-    if (entryPtr != &one && entryPtr != &zero && entryPtr != &sqrt2_2) {
-      if (entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
-        return;
-      }
-      if (entryPtr->refCount == 0) {
-        throw std::runtime_error("In ComplexTable: RefCount of entry " +
-                                 std::to_string(entryPtr->value) +
-                                 " is zero before decrement");
-      }
-
-      // decrease reference count
-      entryPtr->refCount--;
-    }
-  }
-
-  [[nodiscard]] bool possiblyNeedsCollection() const {
-    return count >= gcLimit;
-  }
-
-  std::size_t garbageCollect(bool force = false) {
-    gcCalls++;
-    // nothing to be done if garbage collection is not forced, and the limit has
-    // not been reached, or the current count is minimal (the complex table
-    // always contains at least 0.5)
-    if ((!force && count < gcLimit) || count <= 1) {
-      return 0;
-    }
-
-    gcRuns++;
-    std::size_t collected = 0;
-    std::size_t remaining = 0;
-    for (std::size_t key = 0; key < table.size(); ++key) {
-      Entry* p = table[key];
-      Entry* lastp = nullptr;
-      while (p != nullptr) {
-        if (p->refCount == 0) {
-          Entry* next = p->next;
-          if (lastp == nullptr) {
-            table[key] = next;
-          } else {
-            lastp->next = next;
-          }
-          returnEntry(p);
-          p = next;
-          collected++;
-        } else {
-          lastp = p;
-          p = p->next;
-          remaining++;
-        }
-        tailTable[key] = lastp;
-      }
-    }
-    // The garbage collection limit changes dynamically depending on the number
-    // of remaining (active) nodes. If it were not changed, garbage collection
-    // would run through the complete table on each successive call once the
-    // number of remaining entries reaches the garbage collection limit. It is
-    // increased whenever the number of remaining entries is rather close to the
-    // garbage collection threshold and decreased if the number of remaining
-    // entries is much lower than the current limit.
-    if (remaining > gcLimit / 10 * 9) {
-      gcLimit = remaining + initialGCLimit;
-    } else if (remaining < gcLimit / 128) {
-      gcLimit /= 2;
-    }
-    count = remaining;
-    return collected;
-  }
-
-  void clear() {
-    // clear table buckets
-    for (auto& bucket : table) {
-      bucket = nullptr;
-    }
-    for (auto& entry : tailTable) {
-      entry = nullptr;
-    }
-
-    // clear available stack
-    available = nullptr;
-
-    // release memory of all but the first chunk
-    // it could be desirable to keep the memory for later use
-    while (chunkID > 0) {
-      chunks.pop_back();
-      chunkID--;
-    }
-    // restore initial chunk setting
-    chunkIt = chunks[0].begin();
-    chunkEndIt = chunks[0].end();
-    allocationSize = initialAllocationSize * growthFactor;
-    allocations = initialAllocationSize;
-
-    for (auto& entry : chunks[0]) {
-      entry.refCount = 0;
-    }
-
-    count = 0;
-    peakCount = 0;
-
-    collisions = 0;
-    insertCollisions = 0;
-    hits = 0;
-    findOrInserts = 0;
-    lookups = 0;
-    inserts = 0;
-    lowerNeighbors = 0;
-    upperNeighbors = 0;
-
-    gcCalls = 0;
-    gcRuns = 0;
-    gcLimit = initialGCLimit;
-  };
-
-  void print() {
-    const auto precision = std::cout.precision();
-    std::cout.precision(std::numeric_limits<dd::fp>::max_digits10);
-    for (std::size_t key = 0; key < table.size(); ++key) {
-      auto* p = table[key];
-      if (p != nullptr) {
-        std::cout << key << ": \n";
-      }
-
-      while (p != nullptr) {
-        std::cout << "\t\t" << p->value << " "
-                  << reinterpret_cast<std::uintptr_t>(p) << " " << p->refCount
-                  << "\n";
-        p = p->next;
-      }
-
-      if (table[key] != nullptr) {
-        std::cout << "\n";
-      }
-    }
-    std::cout.precision(precision);
-  }
-
-  [[nodiscard]] fp hitRatio() const {
-    return static_cast<fp>(hits) / static_cast<fp>(lookups);
-  }
-
-  [[nodiscard]] fp colRatio() const {
-    return static_cast<fp>(collisions) / static_cast<fp>(lookups);
-  }
-
-  std::map<std::string, std::size_t, std::less<>> getStatistics() {
-    return {
-        {"hits", hits},
-        {"collisions", collisions},
-        {"lookups", lookups},
-        {"inserts", inserts},
-        {"insertCollisions", insertCollisions},
-        {"findOrInserts", findOrInserts},
-        {"upperNeighbors", upperNeighbors},
-        {"lowerNeighbors", lowerNeighbors},
-        {"gcCalls", gcCalls},
-        {"gcRuns", gcRuns},
-    };
-  }
-
-  std::ostream& printStatistics(std::ostream& os = std::cout) const {
-    os << "hits: " << hits << ", collisions: " << collisions
-       << ", looks: " << lookups << ", inserts: " << inserts
-       << ", insertCollisions: " << insertCollisions
-       << ", findOrInserts: " << findOrInserts
-       << ", upperNeighbors: " << upperNeighbors
-       << ", lowerNeighbors: " << lowerNeighbors << ", hitRatio: " << hitRatio()
-       << ", colRatio: " << colRatio() << ", gc calls: " << gcCalls
-       << ", gc runs: " << gcRuns << "\n";
-    return os;
-  }
-
-  std::ostream& printBucketDistribution(std::ostream& os = std::cout) {
-    for (auto* bucket : table) {
-      if (bucket == nullptr) {
-        os << "0\n";
-        continue;
-      }
-      std::size_t bucketCount = 0;
-      while (bucket != nullptr) {
-        ++bucketCount;
-        bucket = bucket->next;
-      }
-      os << bucketCount << "\n";
-    }
-    os << "\n";
-    return os;
-  }
-
-private:
-  using Bucket = Entry*;
-  using Table = std::array<Bucket, NBUCKET>;
-
-  Table table{};
-
-  std::array<Entry*, NBUCKET> tailTable{};
-
-  // table lookup statistics
-  std::size_t collisions = 0;
-  std::size_t insertCollisions = 0;
-  std::size_t hits = 0;
-  std::size_t findOrInserts = 0;
-  std::size_t lookups = 0;
-  std::size_t inserts = 0;
-  std::size_t lowerNeighbors = 0;
-  std::size_t upperNeighbors = 0;
-
-  // numerical tolerance to be used for floating point values
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
-  static inline fp TOLERANCE = std::numeric_limits<dd::fp>::epsilon() * 1024;
-
-  Entry* available{};
-  std::size_t initialAllocationSize;
-  std::size_t growthFactor;
-  std::vector<std::vector<Entry>> chunks{
-      1U, std::vector<Entry>{initialAllocationSize}};
-  std::size_t chunkID{};
-  typename std::vector<Entry>::iterator chunkIt{chunks.front().begin()};
-  typename std::vector<Entry>::iterator chunkEndIt{chunks.front().end()};
-  std::size_t allocationSize{initialAllocationSize * growthFactor};
-
-  std::size_t allocations = initialAllocationSize;
-  std::size_t count = 0;
-  std::size_t peakCount = 0;
-
-  // garbage collection
-  std::size_t initialGCLimit;
-  std::size_t gcCalls = 0;
-  std::size_t gcRuns = 0;
-  std::size_t gcLimit = 100000;
-
-  inline Entry* findOrInsert(const std::int64_t key, const fp val) {
-    [[maybe_unused]] const fp valTol = val + TOLERANCE;
-
-    Entry* curr = table[static_cast<std::size_t>(key)];
-    Entry* prev = nullptr;
-
-    while (curr != nullptr && curr->value <= valTol) {
-      if (Entry::approximatelyEquals(curr->value, val)) {
-        // check if val is actually closer to the next element in the list (if
-        // there is one)
-        if (curr->next != nullptr) {
-          const auto& next = curr->next;
-          // potential candidate in range
-          if (valTol >= next->value) {
-            const auto diffToCurr = std::abs(curr->value - val);
-            const auto diffToNext = std::abs(next->value - val);
-            // val is actually closer to next than to curr
-            if (diffToNext < diffToCurr) {
-              ++hits;
-              return next;
-            }
-          }
-        }
-        ++hits;
-        return curr;
-      }
-      ++collisions;
-      prev = curr;
-      curr = curr->next;
-    }
-
-    ++inserts;
-    Entry* entry = getEntry();
-    entry->value = val;
-
-    if (prev == nullptr) {
-      // table bucket is empty
-      table[static_cast<std::size_t>(key)] = entry;
-    } else {
-      prev->next = entry;
-    }
-    entry->next = curr;
-    if (curr == nullptr) {
-      tailTable[static_cast<std::size_t>(key)] = entry;
-    }
-    count++;
-    peakCount = std::max(peakCount, count);
-    return entry;
+  /**
+   * @brief Check whether an entry is one of the static entries.
+   * @param entry The entry to check.
+   * @returns Whether the entry is one of the static entries.
+   */
+  [[nodiscard]] static bool isStaticEntry(const Entry* entry) {
+    return entry == &zero || entry == &one || entry == &sqrt2over2;
   }
 
   /**
-   * Inserts a value into the bucket indexed by key. This function assumes no
-   * element within TOLERANCE is present in the bucket.
-   * @param key index to the bucket
-   * @param val value to be inserted
-   * @return pointer to the inserted entry
+   * @brief Increment the reference count for an entry.
+   * @param entry The entry to increment the reference count for.
    */
-  inline Entry* insert(const std::int64_t key, const fp val) {
-    ++inserts;
-    Entry* entry = getEntry();
-    entry->value = val;
+  static void incRef(Entry* entry);
 
-    Entry* curr = table[static_cast<std::size_t>(key)];
-    Entry* prev = nullptr;
+  /**
+   * @brief Decrement the reference count for an entry.
+   * @param entry The entry to decrement the reference count for.
+   */
+  static void decRef(Entry* entry);
 
-    while (curr != nullptr && curr->value <= val) {
-      ++insertCollisions;
-      prev = curr;
-      curr = curr->next;
-    }
+  /**
+   * @brief Check whether the table possibly needs garbage collection.
+   * @returns Whether the number of entries in the table has reached the garbage
+   * collection limit.
+   */
+  [[nodiscard]] bool possiblyNeedsCollection() const;
 
-    if (prev == nullptr) {
-      // table bucket is empty
-      table[static_cast<std::size_t>(key)] = entry;
-    } else {
-      prev->next = entry;
-    }
-    entry->next = curr;
-    if (curr == nullptr) {
-      tailTable[static_cast<std::size_t>(key)] = entry;
-    }
-    count++;
-    peakCount = std::max(peakCount, count);
-    return entry;
-  }
+  /**
+   * @brief Perform garbage collection.
+   * @details This function performs garbage collection. It first checks whether
+   * garbage collection is necessary. If not, it does nothing. Otherwise, it
+   * iterates over all entries in the table and returns all entries with a
+   * reference count of zero to the available list. If the force flag is set,
+   * garbage collection is performed even if it is not necessary.
+   * Based on how many entries are returned to the available list, the garbage
+   * collection limit is dynamically adjusted.
+   * @param force Whether to force garbage collection.
+   * @returns The number of entries returned to the available list.
+   */
+  std::size_t garbageCollect(bool force = false);
+
+  /**
+   * @brief Clear the table.
+   * @details This function clears the table. It iterates over all entries in
+   * the table and sets them to nullptr. It also discards the available list and
+   * all but the first chunk of the allocated chunks. Also resets all counters.
+   */
+  void clear();
+
+  /**
+   * @brief Print the table.
+   */
+  void print();
+
+  /**
+   * @brief Get the hit ratio of the table.
+   * @details The hit ratio is the ratio of lookups that were successful.
+   * @returns The hit ratio of the table.
+   */
+  [[nodiscard]] fp hitRatio() const;
+
+  /**
+   * @brief Get the collision ratio of the table.
+   * @details A collision occurs when the hash function maps two different
+   * floating point numbers to the same bucket. The collision ratio is the ratio
+   * of lookups that resulted in a collision.
+   * @returns The collision ratio of the table.
+   */
+  [[nodiscard]] fp colRatio() const;
+
+  /**
+   * @brief Get the statistics of the table.
+   * @details The statistics of the table are the number of hits, collisions,
+   * lookups, inserts, insert collisions, findOrInserts, upper neighbors, lower
+   * neighbors, garbage collection calls and garbage collection runs.
+   * @returns A map containing the statistics of the table.
+   */
+  std::map<std::string, std::size_t, std::less<>> getStatistics();
+
+  /**
+   * @brief Print the statistics of the table.
+   * @param os The output stream to print to.
+   * @returns The output stream.
+   */
+  std::ostream& printStatistics(std::ostream& os = std::cout) const;
+
+  /**
+   * @brief Print the bucket distribution of the table.
+   * @param os The output stream to print to.
+   * @returns The output stream.
+   */
+  std::ostream& printBucketDistribution(std::ostream& os = std::cout);
+
+private:
+  /// Typedef for a bucket in the table.
+  using Bucket = Entry*;
+  /// Typedef for the table.
+  using Table = std::array<Bucket, NBUCKET>;
+
+  /**
+   * @brief The actual hash table
+   * @details The hash table is an array of buckets. Each bucket is a linked
+   * list of entries. The linked list is implemented by using the next pointer
+   * of the entries.
+   */
+  Table table{};
+  /**
+   * @brief The tail table
+   * @details The tail table is an array of pointers to the last entry in each
+   * bucket. This is used to speed up the insertion of new entries.
+   */
+  std::array<Entry*, NBUCKET> tailTable{};
+
+  /// the number of collisions
+  std::size_t collisions = 0;
+  /// the number of collisions when inserting
+  std::size_t insertCollisions = 0;
+  /// the number of successful lookups
+  std::size_t hits = 0;
+  /// the number of calls to findOrInsert
+  std::size_t findOrInserts = 0;
+  /// the number of lookups
+  std::size_t lookups = 0;
+  /// the number of inserts
+  std::size_t inserts = 0;
+  /// the number of borderline cases where the lower neighbor is returned
+  std::size_t lowerNeighbors = 0;
+  /// the number of borderline cases where the upper neighbor is returned
+  std::size_t upperNeighbors = 0;
+
+  /// numerical tolerance to be used for floating point values
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
+  static inline fp TOLERANCE = std::numeric_limits<dd::fp>::epsilon() * 1024;
+
+  /// the list of entries that are available for reuse
+  Entry* available{};
+  /// the number of entries initially allocated
+  std::size_t initialAllocationSize;
+  /// the growth factor for the number of entries
+  std::size_t growthFactor;
+  /// the actual memory chunks of entries
+  std::vector<std::vector<Entry>> chunks{
+      1U, std::vector<Entry>{initialAllocationSize}};
+  /// the current chunk
+  std::size_t chunkID{};
+  /// the iterator for the current chunk
+  std::vector<Entry>::iterator chunkIt{chunks.front().begin()};
+  /// the end iterator for the current chunk
+  std::vector<Entry>::iterator chunkEndIt{chunks.front().end()};
+  /// the size of the next allocation
+  std::size_t allocationSize{initialAllocationSize * growthFactor};
+  /// the total number of allocations performed
+  std::size_t allocations = initialAllocationSize;
+  /// the number of entries in the table
+  std::size_t count = 0;
+  /// the peak number of entries in the table
+  std::size_t peakCount = 0;
+
+  /// the initial garbage collection limit
+  std::size_t initialGCLimit;
+  /// the number of garbage collection calls
+  std::size_t gcCalls = 0;
+  /// the number of garbage actual garbage collection runs
+  std::size_t gcRuns = 0;
+  /// the current garbage collection limit
+  std::size_t gcLimit = initialGCLimit;
+
+  /**
+   * @brief Finds or inserts a value into the bucket indexed by key.
+   * @details This function either finds an entry with a value within TOLERANCE
+   * of val in the bucket indexed by key or inserts a new entry with value val
+   * into the bucket.
+   * @param key The index of the bucket to find or insert the value into.
+   * @param val The value to find or insert.
+   * @returns A pointer to the found or inserted entry.
+   */
+  Entry* findOrInsert(std::int64_t key, fp val);
+
+  /**
+   * @brief Inserts a value into the bucket indexed by key.
+   * @details This function inserts a value into the bucket indexed by key.
+   * It assumes that no element within TOLERANCE is present in the bucket.
+   * @param key The index of the bucket to insert the value into.
+   * @param val The value to insert.
+   * @returns A pointer to the inserted entry.
+   */
+  Entry* insert(std::int64_t key, fp val);
 };
+/// Alias for ComplexTable::Entry
 using CTEntry = ComplexTable::Entry;
 } // namespace dd

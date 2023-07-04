@@ -120,7 +120,8 @@ TEST(DDComplexTest, SortedBuckets) {
 
   for (auto const& number : numbers) {
     ASSERT_EQ(theBucket, ct->hash(number));
-    ct->lookup(number);
+    const auto* entry = ct->lookup(number);
+    ASSERT_NE(entry, nullptr);
   }
 
   CTEntry* p = ct->getTable().at(theBucket);

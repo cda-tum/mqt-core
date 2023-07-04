@@ -239,7 +239,7 @@ static std::ostream& memoryHeader(const Edge& e, std::ostream& os,
     } else {
       if (e.w.r == &ComplexTable::zero) {
         os << "0";
-      } else if (e.w.r == &ComplexTable::sqrt2_2) {
+      } else if (e.w.r == &ComplexTable::sqrt2over2) {
         os << "\xe2\x88\x9a\xc2\xbd";
       } else if (e.w.r == &ComplexTable::one) {
         os << "1";
@@ -249,7 +249,7 @@ static std::ostream& memoryHeader(const Edge& e, std::ostream& os,
       os << " ";
       if (e.w.i == &ComplexTable::zero) {
         os << "0";
-      } else if (e.w.i == &ComplexTable::sqrt2_2) {
+      } else if (e.w.i == &ComplexTable::sqrt2over2) {
         os << "\xe2\x88\x9a\xc2\xbd";
       } else if (e.w.i == &ComplexTable::one) {
         os << "1";
@@ -619,7 +619,7 @@ static std::ostream& memoryEdge(const Edge& from, const Edge& to,
     } else {
       if (to.w.r == &ComplexTable::zero) {
         os << "0";
-      } else if (to.w.r == &ComplexTable::sqrt2_2) {
+      } else if (to.w.r == &ComplexTable::sqrt2over2) {
         os << "\xe2\x88\x9a\xc2\xbd";
       } else if (to.w.r == &ComplexTable::one) {
         os << "1";
@@ -629,7 +629,7 @@ static std::ostream& memoryEdge(const Edge& from, const Edge& to,
       os << " ";
       if (to.w.i == &ComplexTable::zero) {
         os << "0";
-      } else if (to.w.i == &ComplexTable::sqrt2_2) {
+      } else if (to.w.i == &ComplexTable::sqrt2over2) {
         os << "\xe2\x88\x9a\xc2\xbd";
       } else if (to.w.i == &ComplexTable::one) {
         os << "1";

@@ -3530,8 +3530,8 @@ private:
     auto* rPtr = CTEntry::getAlignedPointer(edge.w.r);
     auto* iPtr = CTEntry::getAlignedPointer(edge.w.i);
 
-    if (weightMap.at(rPtr) > rPtr->refCount && rPtr != Complex::one.r &&
-        rPtr != Complex::zero.i && rPtr != &ComplexTable::sqrt2_2) {
+    if (weightMap.at(rPtr) > rPtr->refCount &&
+        !ComplexTable::isStaticEntry(rPtr)) {
       std::clog << "\nOffending weight: " << edge.w << "\n";
       std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << "r "
                 << CTEntry::val(edge.w.i) << std::defaultfloat << "i\n";
@@ -3543,8 +3543,8 @@ private:
                                std::to_string(rPtr->refCount));
     }
 
-    if (weightMap.at(iPtr) > iPtr->refCount && iPtr != Complex::zero.i &&
-        iPtr != Complex::one.r && iPtr != &ComplexTable::sqrt2_2) {
+    if (weightMap.at(iPtr) > iPtr->refCount &&
+        !ComplexTable::isStaticEntry(iPtr)) {
       std::clog << "\nOffending weight: " << edge.w << "\n";
       std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << "r "
                 << CTEntry::val(edge.w.i) << std::defaultfloat << "i\n";
