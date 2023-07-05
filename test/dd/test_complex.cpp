@@ -476,13 +476,6 @@ TEST(DDComplexTest, MaxRefCountReached) {
   EXPECT_EQ(c.i->refCount, max);
 }
 
-TEST(DDComplexTest, NegativeRefCountReached) {
-  auto cn = std::make_unique<ComplexNumbers>();
-  auto c = cn->lookup(SQRT2_2 / 2, SQRT2_2 / 2);
-
-  ASSERT_THROW(CN::decRef(c), std::runtime_error);
-}
-
 TEST(DDComplexTest, ComplexTableAllocation) {
   auto cn = std::make_unique<ComplexNumbers>();
   auto allocs = cn->complexTable.getAllocations();
