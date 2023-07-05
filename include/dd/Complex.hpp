@@ -1,82 +1,130 @@
 #pragma once
 
-#include "ComplexTable.hpp"
-#include "ComplexValue.hpp"
+#include "dd/ComplexTable.hpp"
+#include "dd/Definitions.hpp"
 
 #include <cstddef>
 #include <iostream>
+#include <string>
 #include <utility>
 
 namespace dd {
-using CTEntry = ComplexTable<>::Entry;
-
+/// A complex number represented by two pointers to compute table entries.
 struct Complex {
+  /// Compute table entry for the real part.
   CTEntry* r;
+  /// Compute table entry for the imaginary part.
   CTEntry* i;
 
-  // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
+  // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+  /// The static zero constant.
   static Complex zero;
-  // NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
+  /// The static one constant.
   static Complex one;
+  // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
-  void setVal(const Complex& c) const {
-    r->value = CTEntry::val(c.r);
-    i->value = CTEntry::val(c.i);
-  }
+  /**
+   * @brief Set the value based on the given complex number.
+   * @param c The value to set.
+   */
+  void setVal(const Complex& c) const noexcept;
 
-  [[nodiscard]] inline bool approximatelyEquals(const Complex& c) const {
-    return CTEntry::approximatelyEquals(r, c.r) &&
-           CTEntry::approximatelyEquals(i, c.i);
-  };
+  /**
+   * @brief Check whether the complex number is exactly equal to zero.
+   * @returns True if the complex number is exactly equal to zero, false
+   * otherwise.
+   * @see CTEntry::exactlyZero
+   */
+  [[nodiscard]] bool exactlyZero() const noexcept;
 
-  [[nodiscard]] inline bool exactlyZero() const {
-    return CTEntry::exactlyZero(r) && CTEntry::exactlyZero(i);
-  };
+  /**
+   * @brief Check whether the complex number is exactly equal to one.
+   * @returns True if the complex number is exactly equal to one, false
+   * otherwise.
+   * @see CTEntry::exactlyOne
+   * @see CTEntry::exactlyZero
+   */
+  [[nodiscard]] bool exactlyOne() const noexcept;
 
-  [[nodiscard]] inline bool exactlyOne() const {
-    return CTEntry::exactlyOne(r) && CTEntry::exactlyZero(i);
-  };
+  /**
+   * @brief Check whether the complex number is approximately equal to the
+   * given complex number.
+   * @param c The complex number to compare to.
+   * @returns True if the complex number is approximately equal to the given
+   * complex number, false otherwise.
+   * @see CTEntry::approximatelyEquals
+   */
+  [[nodiscard]] bool approximatelyEquals(const Complex& c) const noexcept;
 
-  [[nodiscard]] inline bool approximatelyZero() const {
-    return CTEntry::approximatelyZero(r) && CTEntry::approximatelyZero(i);
-  }
+  /**
+   * @brief Check whether the complex number is approximately equal to zero.
+   * @returns True if the complex number is approximately equal to zero, false
+   * otherwise.
+   * @see CTEntry::approximatelyZero
+   */
+  [[nodiscard]] bool approximatelyZero() const noexcept;
 
-  [[nodiscard]] inline bool approximatelyOne() const {
-    return CTEntry::approximatelyOne(r) && CTEntry::approximatelyZero(i);
-  }
+  /**
+   * @brief Check whether the complex number is approximately equal to one.
+   * @returns True if the complex number is approximately equal to one, false
+   * otherwise.
+   * @see CTEntry::approximatelyOne
+   * @see CTEntry::approximatelyZero
+   */
+  [[nodiscard]] bool approximatelyOne() const noexcept;
 
-  inline bool operator==(const Complex& other) const {
-    return r == other.r && i == other.i;
-  }
+  /**
+   * @brief Check for exact equality.
+   * @param other The complex number to compare to.
+   * @returns True if the complex numbers are exactly equal, false otherwise.
+   * @note Boils down to a pointer comparison.
+   */
+  [[nodiscard]] bool operator==(const Complex& other) const noexcept;
 
-  inline bool operator!=(const Complex& other) const {
-    return !operator==(other);
-  }
+  /// @see operator==
+  [[nodiscard]] bool operator!=(const Complex& other) const noexcept;
 
+  /**
+   * @brief Convert the complex number to a string.
+   * @param formatted Whether to apply special formatting to the numbers.
+   * @param precision The precision to use for the numbers.
+   * @returns The string representation of the complex number.
+   * @see ComplexValue::toString
+   */
   [[nodiscard]] std::string toString(bool formatted = true,
-                                     int precision = -1) const {
-    return ComplexValue::toString(CTEntry::val(r), CTEntry::val(i), formatted,
-                                  precision);
-  }
+                                     int precision = -1) const;
 
-  void writeBinary(std::ostream& os) const {
-    CTEntry::writeBinary(r, os);
-    CTEntry::writeBinary(i, os);
-  }
+  /**
+   * @brief Write the complex number to a binary stream.
+   * @param os The output stream to write to.
+   * @see CTEntry::writeBinary
+   */
+  void writeBinary(std::ostream& os) const;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Complex& c) {
-  return os << c.toString();
-}
+/**
+ * @brief Print a complex number to a stream.
+ * @param os The output stream to write to.
+ * @param c The complex number to print.
+ * @returns The output stream.
+ */
+std::ostream& operator<<(std::ostream& os, const Complex& c);
 
-// NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
-inline Complex Complex::zero{&ComplexTable<>::zero, &ComplexTable<>::zero};
-// NOLINTNEXTLINE(readability-identifier-naming,cppcoreguidelines-avoid-non-const-global-variables)
-inline Complex Complex::one{&ComplexTable<>::one, &ComplexTable<>::zero};
 } // namespace dd
 
 namespace std {
+/// Hash function for complex numbers.
 template <> struct hash<dd::Complex> {
+  /**
+   * @brief Compute the hash value for a complex number.
+   * @details Reinterprets the pointers to the real and imaginary part as
+   * integers and computes the hash value for those. Afterwards, the two hash
+   * values are combined.
+   * @param c The complex number to compute the hash value for.
+   * @returns The hash value.
+   * @see dd::murmur64
+   * @see dd::combineHash
+   */
   std::size_t operator()(dd::Complex const& c) const noexcept {
     auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(c.r));
     auto h2 = dd::murmur64(reinterpret_cast<std::size_t>(c.i));
