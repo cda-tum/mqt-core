@@ -8,63 +8,67 @@ namespace dd {
 
 static constexpr std::size_t LSB = static_cast<std::uintptr_t>(1U);
 
-CTEntry* CTEntry::getAlignedPointer(const Entry* e) {
+CTEntry* CTEntry::getAlignedPointer(const Entry* e) noexcept {
   return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) & ~LSB);
 }
 
-CTEntry* CTEntry::getNegativePointer(const Entry* e) {
+CTEntry* CTEntry::getNegativePointer(const Entry* e) noexcept {
   return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) | LSB);
 }
 
-bool CTEntry::exactlyZero(const Entry* e) { return (e == &zero); }
+bool CTEntry::exactlyZero(const Entry* e) noexcept { return (e == &zero); }
 
-bool CTEntry::exactlyOne(const Entry* e) { return (e == &one); }
+bool CTEntry::exactlyOne(const Entry* e) noexcept { return (e == &one); }
 
-CTEntry* CTEntry::flipPointerSign(const Entry* e) {
+CTEntry* CTEntry::flipPointerSign(const Entry* e) noexcept {
   if (exactlyZero(e)) {
-    return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e));
+    return &zero;
   }
   return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) ^ LSB);
 }
 
-bool CTEntry::isNegativePointer(const Entry* e) {
+bool CTEntry::isNegativePointer(const Entry* e) noexcept {
   return (reinterpret_cast<std::uintptr_t>(e) & LSB) != 0U;
 }
 
-fp CTEntry::val(const Entry* e) {
+fp CTEntry::val(const Entry* e) noexcept {
+  assert(e != nullptr);
   if (isNegativePointer(e)) {
     return -getAlignedPointer(e)->value;
   }
   return e->value;
 }
 
-RefCount CTEntry::ref(const Entry* e) {
+RefCount CTEntry::ref(const Entry* e) noexcept {
+  assert(e != nullptr);
   if (isNegativePointer(e)) {
     return -getAlignedPointer(e)->refCount;
   }
   return e->refCount;
 }
 
-bool CTEntry::approximatelyEquals(const fp left, const fp right) {
-  // NOLINTNEXTLINE(clang-diagnostic-float-equal)
-  return left == right || std::abs(left - right) <= TOLERANCE;
+bool CTEntry::approximatelyEquals(const fp left, const fp right) noexcept {
+  return std::abs(left - right) <= TOLERANCE;
 }
 
-bool CTEntry::approximatelyEquals(const Entry* left, const Entry* right) {
+bool CTEntry::approximatelyEquals(const Entry* left,
+                                  const Entry* right) noexcept {
   return left == right || approximatelyEquals(val(left), val(right));
 }
 
-bool CTEntry::approximatelyZero(const fp e) { return std::abs(e) <= TOLERANCE; }
+bool CTEntry::approximatelyZero(const fp e) noexcept {
+  return std::abs(e) <= TOLERANCE;
+}
 
-bool CTEntry::approximatelyZero(const Entry* e) {
+bool CTEntry::approximatelyZero(const Entry* e) noexcept {
   return e == &zero || approximatelyZero(val(e));
 }
 
-bool CTEntry::approximatelyOne(const fp e) {
+bool CTEntry::approximatelyOne(const fp e) noexcept {
   return approximatelyEquals(e, 1.0);
 }
 
-bool CTEntry::approximatelyOne(const Entry* e) {
+bool CTEntry::approximatelyOne(const Entry* e) noexcept {
   return e == &one || approximatelyOne(val(e));
 }
 
@@ -187,26 +191,17 @@ CTEntry* ComplexTable::getEntry() {
   return entry;
 }
 
-void ComplexTable::returnEntry(Entry* entry) {
+void ComplexTable::returnEntry(Entry* entry) noexcept {
   entry->next = available;
   available = entry;
 }
 
-void ComplexTable::incRef(Entry* entry) {
+void ComplexTable::incRef(Entry* entry) noexcept {
   // get valid pointer
   auto* entryPtr = Entry::getAlignedPointer(entry);
 
-  if (entryPtr == nullptr) {
-    return;
-  }
-
-  if (isStaticEntry(entryPtr)) {
-    return;
-  }
-
-  if (entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
-    std::clog << "[WARN] MAXREFCNT reached for " << entryPtr->value
-              << ". Number will never be collected.\n";
+  if (entryPtr == nullptr || isStaticEntry(entryPtr) ||
+      entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
     return;
   }
 
@@ -214,34 +209,27 @@ void ComplexTable::incRef(Entry* entry) {
   entryPtr->refCount++;
 }
 
-void ComplexTable::decRef(Entry* entry) {
+void ComplexTable::decRef(Entry* entry) noexcept {
   // get valid pointer
   auto* entryPtr = Entry::getAlignedPointer(entry);
 
-  if (entryPtr == nullptr) {
+  if (entryPtr == nullptr || isStaticEntry(entryPtr) ||
+      entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
     return;
   }
 
-  if (isStaticEntry(entryPtr)) {
-    return;
-  }
-
-  if (entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
-    return;
-  }
-
-  if (entryPtr->refCount == 0) {
-    throw std::runtime_error("In ComplexTable: RefCount of entry " +
-                             std::to_string(entryPtr->value) +
-                             " is zero before decrement");
-  }
+  assert(entryPtr->refCount != 0 &&
+         "Reference count of CTEntry is zero before decrement");
 
   // decrease reference count
   entryPtr->refCount--;
 }
 
-bool ComplexTable::possiblyNeedsCollection() const { return count >= gcLimit; }
-std::size_t ComplexTable::garbageCollect(const bool force) {
+bool ComplexTable::possiblyNeedsCollection() const noexcept {
+  return count >= gcLimit;
+}
+
+std::size_t ComplexTable::garbageCollect(const bool force) noexcept {
   gcCalls++;
   // nothing to be done if garbage collection is not forced, and the limit has
   // not been reached, or the current count is minimal (the complex table
@@ -291,7 +279,7 @@ std::size_t ComplexTable::garbageCollect(const bool force) {
   return collected;
 }
 
-void ComplexTable::clear() {
+void ComplexTable::clear() noexcept {
   // clear table buckets
   for (auto& bucket : table) {
     bucket = nullptr;
@@ -359,15 +347,22 @@ void ComplexTable::print() {
   std::cout.precision(precision);
 }
 
-fp ComplexTable::hitRatio() const {
+fp ComplexTable::hitRatio() const noexcept {
+  if (lookups == 0) {
+    return 0.0;
+  }
   return static_cast<fp>(hits) / static_cast<fp>(lookups);
 }
 
-fp ComplexTable::colRatio() const {
+fp ComplexTable::colRatio() const noexcept {
+  if (lookups == 0) {
+    return 0.0;
+  }
   return static_cast<fp>(collisions) / static_cast<fp>(lookups);
 }
 
-std::map<std::string, std::size_t, std::less<>> ComplexTable::getStatistics() {
+std::map<std::string, std::size_t, std::less<>>
+ComplexTable::getStatistics() noexcept {
   return {
       {"hits", hits},
       {"collisions", collisions},

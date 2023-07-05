@@ -30,13 +30,17 @@ public:
   ~ComplexCache() = default;
 
   /// Get the number of entries in the cache
-  [[nodiscard]] std::size_t getCount() const { return count; }
+  [[nodiscard]] std::size_t getCount() const noexcept { return count; }
   /// Get the peak number of entries in the cache
-  [[nodiscard]] std::size_t getPeakCount() const { return peakCount; }
+  [[nodiscard]] std::size_t getPeakCount() const noexcept { return peakCount; }
   /// Get the number of allocations performed
-  [[nodiscard]] std::size_t getAllocations() const { return allocations; }
+  [[nodiscard]] std::size_t getAllocations() const noexcept {
+    return allocations;
+  }
   /// Get the growth factor used for the allocation size
-  [[nodiscard]] std::size_t getGrowthFactor() const { return growthFactor; }
+  [[nodiscard]] std::size_t getGrowthFactor() const noexcept {
+    return growthFactor;
+  }
 
   /**
    * @brief Get a Complex from the cache
@@ -68,14 +72,14 @@ public:
    * reference count must be zero.
    * @param c the Complex to return
    */
-  void returnToCache(Complex& c);
+  void returnToCache(Complex& c) noexcept;
 
   /**
    * @brief Clear the cache
    * @details This method clears the cache. It discards the available list and
    * all but the first chunk of memory. Also resets all counters.
    */
-  void clear();
+  void clear() noexcept;
 
 private:
   /// the list of entries that are available for reuse

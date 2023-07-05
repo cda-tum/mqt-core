@@ -8,25 +8,25 @@
 #include <sstream>
 
 namespace dd {
-bool ComplexValue::operator==(const ComplexValue& other) const {
+bool ComplexValue::operator==(const ComplexValue& other) const noexcept {
   // NOLINTNEXTLINE(clang-diagnostic-float-equal)
   return r == other.r && i == other.i;
 }
 
-bool ComplexValue::operator!=(const ComplexValue& other) const {
+bool ComplexValue::operator!=(const ComplexValue& other) const noexcept {
   return !operator==(other);
 }
 
-bool ComplexValue::approximatelyEquals(const ComplexValue& c) const {
+bool ComplexValue::approximatelyEquals(const ComplexValue& c) const noexcept {
   return CTEntry::approximatelyEquals(r, c.r) &&
          CTEntry::approximatelyEquals(i, c.i);
 }
 
-bool ComplexValue::approximatelyZero() const {
+bool ComplexValue::approximatelyZero() const noexcept {
   return CTEntry::approximatelyZero(r) && CTEntry::approximatelyZero(i);
 }
 
-bool ComplexValue::approximatelyOne() const {
+bool ComplexValue::approximatelyOne() const noexcept {
   return CTEntry::approximatelyOne(r) && CTEntry::approximatelyZero(i);
 }
 
@@ -212,13 +212,13 @@ std::string ComplexValue::toString(const fp& real, const fp& imag,
   return ss.str();
 }
 
-ComplexValue& ComplexValue::operator+=(const ComplexValue& rhs) {
+ComplexValue& ComplexValue::operator+=(const ComplexValue& rhs) noexcept {
   r += rhs.r;
   i += rhs.i;
   return *this;
 }
 
-ComplexValue operator+(ComplexValue lhs, const ComplexValue& rhs) {
+ComplexValue operator+(ComplexValue lhs, const ComplexValue& rhs) noexcept {
   lhs += rhs;
   return lhs;
 }

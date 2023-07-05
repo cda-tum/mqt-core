@@ -105,7 +105,7 @@ public:
      * @param e The entry to get the aligned pointer for.
      * @returns An aligned pointer to the entry.
      */
-    [[nodiscard]] static Entry* getAlignedPointer(const Entry* e);
+    [[nodiscard]] static Entry* getAlignedPointer(const Entry* e) noexcept;
 
     /**
      * @brief Get a pointer to the entry with a negative sign.
@@ -115,14 +115,14 @@ public:
      * @param e The entry to get the negative pointer for.
      * @returns A negative pointer to the entry.
      */
-    [[nodiscard]] static Entry* getNegativePointer(const Entry* e);
+    [[nodiscard]] static Entry* getNegativePointer(const Entry* e) noexcept;
 
     /**
      * @brief Check whether the entry is a negative pointer.
      * @param e The entry to check.
      * @returns Whether the entry is a negative pointer.
      */
-    [[nodiscard]] static bool isNegativePointer(const Entry* e);
+    [[nodiscard]] static bool isNegativePointer(const Entry* e) noexcept;
 
     /**
      * @brief Flip the sign of the entry pointer.
@@ -133,21 +133,21 @@ public:
      * @note We do not consider negative zero here, since it is not used in the
      * DD package. There only exists one zero entry, which is positive.
      */
-    [[nodiscard]] static Entry* flipPointerSign(const Entry* e);
+    [[nodiscard]] static Entry* flipPointerSign(const Entry* e) noexcept;
 
     /**
      * @brief Check whether the entry points to the zero entry.
      * @param e The entry to check.
      * @returns Whether the entry points to zero.
      */
-    [[nodiscard]] static bool exactlyZero(const Entry* e);
+    [[nodiscard]] static bool exactlyZero(const Entry* e) noexcept;
 
     /**
      * @brief Check whether the entry points to the one entry.
      * @param e The entry to check.
      * @returns Whether the entry points to one.
      */
-    [[nodiscard]] static bool exactlyOne(const Entry* e);
+    [[nodiscard]] static bool exactlyOne(const Entry* e) noexcept;
 
     /**
      * @brief Get the value of the entry.
@@ -156,7 +156,7 @@ public:
      * @note This function accounts for the sign of the entry embedded in the
      * memory address of the entry.
      */
-    [[nodiscard]] static fp val(const Entry* e);
+    [[nodiscard]] static fp val(const Entry* e) noexcept;
 
     /**
      * @brief Get the reference count of the entry.
@@ -165,7 +165,7 @@ public:
      * @note This function accounts for the sign of the entry embedded in the
      * memory address of the entry.
      */
-    [[nodiscard]] static RefCount ref(const Entry* e);
+    [[nodiscard]] static RefCount ref(const Entry* e) noexcept;
 
     /**
      * @brief Check whether two floating point numbers are approximately equal.
@@ -178,7 +178,7 @@ public:
      * @param right The second floating point number.
      * @returns Whether the two floating point numbers are approximately equal.
      */
-    [[nodiscard]] static bool approximatelyEquals(fp left, fp right);
+    [[nodiscard]] static bool approximatelyEquals(fp left, fp right) noexcept;
 
     /**
      * @brief Check whether two entries are approximately equal.
@@ -191,14 +191,14 @@ public:
      * @see approximatelyEquals(fp, fp)
      */
     [[nodiscard]] static bool approximatelyEquals(const Entry* left,
-                                                  const Entry* right);
+                                                  const Entry* right) noexcept;
 
     /**
      * @brief Check whether a floating point number is approximately zero.
      * @param e The floating point number to check.
      * @returns Whether the floating point number is approximately zero.
      */
-    [[nodiscard]] static bool approximatelyZero(fp e);
+    [[nodiscard]] static bool approximatelyZero(fp e) noexcept;
 
     /**
      * @brief Check whether an entry is approximately zero.
@@ -206,14 +206,14 @@ public:
      * @returns Whether the entry is approximately zero.
      * @see approximatelyZero(fp)
      */
-    [[nodiscard]] static bool approximatelyZero(const Entry* e);
+    [[nodiscard]] static bool approximatelyZero(const Entry* e) noexcept;
 
     /**
      * @brief Check whether a floating point number is approximately one.
      * @param e The floating point number to check.
      * @returns Whether the floating point number is approximately one.
      */
-    [[nodiscard]] static bool approximatelyOne(fp e);
+    [[nodiscard]] static bool approximatelyOne(fp e) noexcept;
 
     /**
      * @brief Check whether an entry is approximately one.
@@ -221,7 +221,7 @@ public:
      * @returns Whether the entry is approximately one.
      * @see approximatelyOne(fp)
      */
-    [[nodiscard]] static bool approximatelyOne(const Entry* e);
+    [[nodiscard]] static bool approximatelyOne(const Entry* e) noexcept;
 
     /**
      * @brief Write a binary representation of the entry to a stream.
@@ -264,13 +264,13 @@ public:
    * @brief Getter for the tolerance used for floating point comparisons.
    * @returns The tolerance used for floating point comparisons.
    */
-  static fp tolerance() { return TOLERANCE; }
+  static fp tolerance() noexcept { return TOLERANCE; }
 
   /**
    * @brief Setter for the tolerance used for floating point comparisons.
    * @param tol The tolerance used for floating point comparisons.
    */
-  static void setTolerance(fp tol) { TOLERANCE = tol; }
+  static void setTolerance(const fp tol) noexcept { TOLERANCE = tol; }
 
   /// The bit mask used for the hash function.
   static constexpr std::int64_t MASK = NBUCKET - 1;
@@ -290,22 +290,28 @@ public:
   }
 
   /// Get the number of entries in the table.
-  [[nodiscard]] std::size_t getCount() const { return count; }
+  [[nodiscard]] std::size_t getCount() const noexcept { return count; }
 
   /// Get the peak number of entries in the table.
-  [[nodiscard]] std::size_t getPeakCount() const { return peakCount; }
+  [[nodiscard]] std::size_t getPeakCount() const noexcept { return peakCount; }
 
   /// Get the number of allocations performed.
-  [[nodiscard]] std::size_t getAllocations() const { return allocations; }
+  [[nodiscard]] std::size_t getAllocations() const noexcept {
+    return allocations;
+  }
 
   /// Get the growth factor used for the allocation size.
-  [[nodiscard]] std::size_t getGrowthFactor() const { return growthFactor; }
+  [[nodiscard]] std::size_t getGrowthFactor() const noexcept {
+    return growthFactor;
+  }
 
   /// Get a reference to the table.
-  [[nodiscard]] const auto& getTable() const { return table; }
+  [[nodiscard]] const auto& getTable() const noexcept { return table; }
 
   /// Check whether there is an entry on the available list.
-  [[nodiscard]] bool availableEmpty() const { return available == nullptr; }
+  [[nodiscard]] bool availableEmpty() const noexcept {
+    return available == nullptr;
+  }
 
   /**
    * @brief Lookup an entry in the table.
@@ -332,14 +338,14 @@ public:
    * subsequent calls to getEntry().
    * @param entry
    */
-  void returnEntry(Entry* entry);
+  void returnEntry(Entry* entry) noexcept;
 
   /**
    * @brief Check whether an entry is one of the static entries.
    * @param entry The entry to check.
    * @returns Whether the entry is one of the static entries.
    */
-  [[nodiscard]] static bool isStaticEntry(const Entry* entry) {
+  [[nodiscard]] static bool isStaticEntry(const Entry* entry) noexcept {
     return entry == &zero || entry == &one || entry == &sqrt2over2;
   }
 
@@ -347,20 +353,20 @@ public:
    * @brief Increment the reference count for an entry.
    * @param entry The entry to increment the reference count for.
    */
-  static void incRef(Entry* entry);
+  static void incRef(Entry* entry) noexcept;
 
   /**
    * @brief Decrement the reference count for an entry.
    * @param entry The entry to decrement the reference count for.
    */
-  static void decRef(Entry* entry);
+  static void decRef(Entry* entry) noexcept;
 
   /**
    * @brief Check whether the table possibly needs garbage collection.
    * @returns Whether the number of entries in the table has reached the garbage
    * collection limit.
    */
-  [[nodiscard]] bool possiblyNeedsCollection() const;
+  [[nodiscard]] bool possiblyNeedsCollection() const noexcept;
 
   /**
    * @brief Perform garbage collection.
@@ -374,7 +380,7 @@ public:
    * @param force Whether to force garbage collection.
    * @returns The number of entries returned to the available list.
    */
-  std::size_t garbageCollect(bool force = false);
+  std::size_t garbageCollect(bool force = false) noexcept;
 
   /**
    * @brief Clear the table.
@@ -382,7 +388,7 @@ public:
    * the table and sets them to nullptr. It also discards the available list and
    * all but the first chunk of the allocated chunks. Also resets all counters.
    */
-  void clear();
+  void clear() noexcept;
 
   /**
    * @brief Print the table.
@@ -394,7 +400,7 @@ public:
    * @details The hit ratio is the ratio of lookups that were successful.
    * @returns The hit ratio of the table.
    */
-  [[nodiscard]] fp hitRatio() const;
+  [[nodiscard]] fp hitRatio() const noexcept;
 
   /**
    * @brief Get the collision ratio of the table.
@@ -403,7 +409,7 @@ public:
    * of lookups that resulted in a collision.
    * @returns The collision ratio of the table.
    */
-  [[nodiscard]] fp colRatio() const;
+  [[nodiscard]] fp colRatio() const noexcept;
 
   /**
    * @brief Get the statistics of the table.
@@ -412,7 +418,7 @@ public:
    * neighbors, garbage collection calls and garbage collection runs.
    * @returns A map containing the statistics of the table.
    */
-  std::map<std::string, std::size_t, std::less<>> getStatistics();
+  std::map<std::string, std::size_t, std::less<>> getStatistics() noexcept;
 
   /**
    * @brief Print the statistics of the table.

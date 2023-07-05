@@ -27,7 +27,7 @@ struct Complex {
    * @brief Set the value based on the given complex number.
    * @param c The value to set.
    */
-  void setVal(const Complex& c) const;
+  void setVal(const Complex& c) const noexcept;
 
   /**
    * @brief Check whether the complex number is exactly equal to zero.
@@ -35,7 +35,7 @@ struct Complex {
    * otherwise.
    * @see CTEntry::exactlyZero
    */
-  [[nodiscard]] bool exactlyZero() const;
+  [[nodiscard]] bool exactlyZero() const noexcept;
 
   /**
    * @brief Check whether the complex number is exactly equal to one.
@@ -44,7 +44,7 @@ struct Complex {
    * @see CTEntry::exactlyOne
    * @see CTEntry::exactlyZero
    */
-  [[nodiscard]] bool exactlyOne() const;
+  [[nodiscard]] bool exactlyOne() const noexcept;
 
   /**
    * @brief Check whether the complex number is approximately equal to the
@@ -54,7 +54,7 @@ struct Complex {
    * complex number, false otherwise.
    * @see CTEntry::approximatelyEquals
    */
-  [[nodiscard]] bool approximatelyEquals(const Complex& c) const;
+  [[nodiscard]] bool approximatelyEquals(const Complex& c) const noexcept;
 
   /**
    * @brief Check whether the complex number is approximately equal to zero.
@@ -62,7 +62,7 @@ struct Complex {
    * otherwise.
    * @see CTEntry::approximatelyZero
    */
-  [[nodiscard]] bool approximatelyZero() const;
+  [[nodiscard]] bool approximatelyZero() const noexcept;
 
   /**
    * @brief Check whether the complex number is approximately equal to one.
@@ -71,7 +71,7 @@ struct Complex {
    * @see CTEntry::approximatelyOne
    * @see CTEntry::approximatelyZero
    */
-  [[nodiscard]] bool approximatelyOne() const;
+  [[nodiscard]] bool approximatelyOne() const noexcept;
 
   /**
    * @brief Check for exact equality.
@@ -79,10 +79,10 @@ struct Complex {
    * @returns True if the complex numbers are exactly equal, false otherwise.
    * @note Boils down to a pointer comparison.
    */
-  [[nodiscard]] bool operator==(const Complex& other) const;
+  [[nodiscard]] bool operator==(const Complex& other) const noexcept;
 
   /// @see operator==
-  [[nodiscard]] bool operator!=(const Complex& other) const;
+  [[nodiscard]] bool operator!=(const Complex& other) const noexcept;
 
   /**
    * @brief Convert the complex number to a string.

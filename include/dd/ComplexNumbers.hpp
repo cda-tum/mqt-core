@@ -23,14 +23,14 @@ struct ComplexNumbers {
    * @see ComplexTable::clear
    * @see ComplexCache::clear
    */
-  void clear();
+  void clear() noexcept;
 
   /**
    * @brief Set the numerical tolerance for complex numbers.
    * @param tol The new tolerance.
    * @see ComplexTable::setTolerance
    */
-  static void setTolerance(fp tol);
+  static void setTolerance(fp tol) noexcept;
 
   /**
    * @brief Add two complex numbers.
@@ -39,7 +39,7 @@ struct ComplexNumbers {
    * @param b The second operand.
    * @note Assumes that the entry pointers of the result are aligned.
    */
-  static void add(Complex& r, const Complex& a, const Complex& b);
+  static void add(Complex& r, const Complex& a, const Complex& b) noexcept;
 
   /**
    * @brief Subtract two complex numbers.
@@ -48,7 +48,7 @@ struct ComplexNumbers {
    * @param b The second operand.
    * @note Assumes that the entry pointers of the result are aligned.
    */
-  static void sub(Complex& r, const Complex& a, const Complex& b);
+  static void sub(Complex& r, const Complex& a, const Complex& b) noexcept;
 
   /**
    * @brief Multiply two complex numbers.
@@ -57,7 +57,7 @@ struct ComplexNumbers {
    * @param b The second operand.
    * @note Assumes that the entry pointers of the result are aligned.
    */
-  static void mul(Complex& r, const Complex& a, const Complex& b);
+  static void mul(Complex& r, const Complex& a, const Complex& b) noexcept;
 
   /**
    * @brief Divide two complex numbers.
@@ -66,28 +66,28 @@ struct ComplexNumbers {
    * @param b The second operand.
    * @note Assumes that the entry pointers of the result are aligned.
    */
-  static void div(Complex& r, const Complex& a, const Complex& b);
+  static void div(Complex& r, const Complex& a, const Complex& b) noexcept;
 
   /**
    * @brief Compute the squared magnitude of a complex number.
    * @param a The complex number.
    * @returns The squared magnitude.
    */
-  [[nodiscard]] static fp mag2(const Complex& a);
+  [[nodiscard]] static fp mag2(const Complex& a) noexcept;
 
   /**
    * @brief Compute the magnitude of a complex number.
    * @param a The complex number.
    * @returns The magnitude.
    */
-  [[nodiscard]] static fp mag(const Complex& a);
+  [[nodiscard]] static fp mag(const Complex& a) noexcept;
 
   /**
    * @brief Compute the argument of a complex number.
    * @param a The complex number.
    * @returns The argument.
    */
-  [[nodiscard]] static fp arg(const Complex& a);
+  [[nodiscard]] static fp arg(const Complex& a) noexcept;
 
   /**
    * @brief Compute the complex conjugate of a complex number.
@@ -96,7 +96,7 @@ struct ComplexNumbers {
    * @note Conjugation is efficiently handled by just flipping the sign of the
    * imaginary pointer.
    */
-  [[nodiscard]] static Complex conj(const Complex& a);
+  [[nodiscard]] static Complex conj(const Complex& a) noexcept;
 
   /**
    * @brief Compute the negation of a complex number.
@@ -105,7 +105,7 @@ struct ComplexNumbers {
    * @note Negation is efficiently handled by just flipping the sign of both
    * pointers.
    */
-  [[nodiscard]] static Complex neg(const Complex& a);
+  [[nodiscard]] static Complex neg(const Complex& a) noexcept;
 
   /**
    * @brief Add two complex numbers and return the result in a new complex
@@ -181,14 +181,14 @@ struct ComplexNumbers {
    * @param c The complex number.
    * @see ComplexTable::incRef
    */
-  static void incRef(const Complex& c);
+  static void incRef(const Complex& c) noexcept;
 
   /**
    * @brief Decrement the reference count of a complex number.
    * @param c The complex number.
    * @see ComplexTable::decRef
    */
-  static void decRef(const Complex& c);
+  static void decRef(const Complex& c) noexcept;
 
   /**
    * @brief Garbage collect the complex table.
@@ -196,7 +196,7 @@ struct ComplexNumbers {
    * @return The number of collected entries.
    * @see ComplexTable::garbageCollect
    */
-  std::size_t garbageCollect(bool force = false);
+  std::size_t garbageCollect(bool force = false) noexcept;
 
   /**
    * @brief Get a temporary complex number from the complex cache.

@@ -21,10 +21,10 @@ struct ComplexValue {
    * @param other The other complex number to compare to.
    * @returns True if the complex numbers are exactly equal, false otherwise.
    */
-  [[nodiscard]] bool operator==(const ComplexValue& other) const;
+  [[nodiscard]] bool operator==(const ComplexValue& other) const noexcept;
 
   /// @see operator==
-  [[nodiscard]] bool operator!=(const ComplexValue& other) const;
+  [[nodiscard]] bool operator!=(const ComplexValue& other) const noexcept;
 
   /**
    * @brief Check whether the complex number is approximately equal to the
@@ -34,7 +34,7 @@ struct ComplexValue {
    * complex number, false otherwise.
    * @see CTEntry::approximatelyEquals
    */
-  [[nodiscard]] bool approximatelyEquals(const ComplexValue& c) const;
+  [[nodiscard]] bool approximatelyEquals(const ComplexValue& c) const noexcept;
 
   /**
    * @brief Check whether the complex number is approximately equal to zero.
@@ -42,7 +42,7 @@ struct ComplexValue {
    * otherwise.
    * @see CTEntry::approximatelyZero
    */
-  [[nodiscard]] bool approximatelyZero() const;
+  [[nodiscard]] bool approximatelyZero() const noexcept;
 
   /**
    * @brief Check whether the complex number is approximately equal to one.
@@ -51,7 +51,7 @@ struct ComplexValue {
    * @see CTEntry::approximatelyOne
    * @see CTEntry::approximatelyZero
    */
-  [[nodiscard]] bool approximatelyOne() const;
+  [[nodiscard]] bool approximatelyOne() const noexcept;
 
   /**
    * @brief Write a binary representation of the complex number to the given
@@ -104,13 +104,14 @@ struct ComplexValue {
                               bool formatted = true, int precision = -1);
 
   /// Automatically convert to std::complex<dd::fp>
-  explicit operator auto() const { return std::complex<dd::fp>{r, i}; }
+  explicit operator auto() const noexcept { return std::complex<dd::fp>{r, i}; }
 
   /// In-place addition of two complex numbers
-  ComplexValue& operator+=(const ComplexValue& rhs);
+  ComplexValue& operator+=(const ComplexValue& rhs) noexcept;
 
   /// Addition of two complex numbers
-  friend ComplexValue operator+(ComplexValue lhs, const ComplexValue& rhs);
+  friend ComplexValue operator+(ComplexValue lhs,
+                                const ComplexValue& rhs) noexcept;
 };
 
 /**

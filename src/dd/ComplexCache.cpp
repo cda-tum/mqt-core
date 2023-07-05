@@ -52,7 +52,7 @@ Complex ComplexCache::getTemporaryComplex() {
   return {&(*chunkIt), &(*(chunkIt + 1))};
 }
 
-void ComplexCache::returnToCache(Complex& c) {
+void ComplexCache::returnToCache(Complex& c) noexcept {
   assert(count >= 2);
   assert(c != Complex::zero);
   assert(c != Complex::one);
@@ -64,7 +64,7 @@ void ComplexCache::returnToCache(Complex& c) {
   count -= 2;
 }
 
-void ComplexCache::clear() {
+void ComplexCache::clear() noexcept {
   // clear available stack
   available = nullptr;
 

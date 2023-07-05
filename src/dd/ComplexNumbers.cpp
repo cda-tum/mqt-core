@@ -4,28 +4,33 @@
 #include <cmath>
 
 namespace dd {
-void ComplexNumbers::clear() {
+void ComplexNumbers::clear() noexcept {
   complexTable.clear();
   complexCache.clear();
 }
 
-void ComplexNumbers::setTolerance(fp tol) { ComplexTable::setTolerance(tol); }
+void ComplexNumbers::setTolerance(fp tol) noexcept {
+  ComplexTable::setTolerance(tol);
+}
 
-void ComplexNumbers::add(Complex& r, const Complex& a, const Complex& b) {
+void ComplexNumbers::add(Complex& r, const Complex& a,
+                         const Complex& b) noexcept {
   assert(r != Complex::zero);
   assert(r != Complex::one);
   r.r->value = CTEntry::val(a.r) + CTEntry::val(b.r);
   r.i->value = CTEntry::val(a.i) + CTEntry::val(b.i);
 }
 
-void ComplexNumbers::sub(Complex& r, const Complex& a, const Complex& b) {
+void ComplexNumbers::sub(Complex& r, const Complex& a,
+                         const Complex& b) noexcept {
   assert(r != Complex::zero);
   assert(r != Complex::one);
   r.r->value = CTEntry::val(a.r) - CTEntry::val(b.r);
   r.i->value = CTEntry::val(a.i) - CTEntry::val(b.i);
 }
 
-void ComplexNumbers::mul(Complex& r, const Complex& a, const Complex& b) {
+void ComplexNumbers::mul(Complex& r, const Complex& a,
+                         const Complex& b) noexcept {
   assert(r != Complex::zero);
   assert(r != Complex::one);
   if (a.approximatelyOne()) {
@@ -46,7 +51,8 @@ void ComplexNumbers::mul(Complex& r, const Complex& a, const Complex& b) {
   }
 }
 
-void ComplexNumbers::div(Complex& r, const Complex& a, const Complex& b) {
+void ComplexNumbers::div(Complex& r, const Complex& a,
+                         const Complex& b) noexcept {
   assert(r != Complex::zero);
   assert(r != Complex::one);
   if (a.approximatelyEquals(b)) {
@@ -67,26 +73,26 @@ void ComplexNumbers::div(Complex& r, const Complex& a, const Complex& b) {
   }
 }
 
-fp ComplexNumbers::mag2(const Complex& a) {
+fp ComplexNumbers::mag2(const Complex& a) noexcept {
   auto ar = CTEntry::val(a.r);
   auto ai = CTEntry::val(a.i);
 
   return ar * ar + ai * ai;
 }
 
-fp ComplexNumbers::mag(const Complex& a) { return std::sqrt(mag2(a)); }
+fp ComplexNumbers::mag(const Complex& a) noexcept { return std::sqrt(mag2(a)); }
 
-fp ComplexNumbers::arg(const Complex& a) {
+fp ComplexNumbers::arg(const Complex& a) noexcept {
   auto ar = CTEntry::val(a.r);
   auto ai = CTEntry::val(a.i);
   return std::atan2(ai, ar);
 }
 
-Complex ComplexNumbers::conj(const Complex& a) {
+Complex ComplexNumbers::conj(const Complex& a) noexcept {
   return {a.r, CTEntry::flipPointerSign(a.i)};
 }
 
-Complex ComplexNumbers::neg(const Complex& a) {
+Complex ComplexNumbers::neg(const Complex& a) noexcept {
   return {CTEntry::flipPointerSign(a.r), CTEntry::flipPointerSign(a.i)};
 }
 
@@ -167,21 +173,21 @@ Complex ComplexNumbers::lookup(const fp r, const fp i) {
   return ret;
 }
 
-void ComplexNumbers::incRef(const Complex& c) {
+void ComplexNumbers::incRef(const Complex& c) noexcept {
   if (!isStaticComplex(c)) {
     ComplexTable::incRef(c.r);
     ComplexTable::incRef(c.i);
   }
 }
 
-void ComplexNumbers::decRef(const Complex& c) {
+void ComplexNumbers::decRef(const Complex& c) noexcept {
   if (!isStaticComplex(c)) {
     ComplexTable::decRef(c.r);
     ComplexTable::decRef(c.i);
   }
 }
 
-std::size_t ComplexNumbers::garbageCollect(bool force) {
+std::size_t ComplexNumbers::garbageCollect(bool force) noexcept {
   return complexTable.garbageCollect(force);
 }
 
