@@ -738,7 +738,10 @@ export2Dot(Edge basic, const std::string& outputFilename, bool colored = true,
         << outputFilename.substr(0, outputFilename.find_last_of('.')) << ".svg";
     const auto str =
         oss.str(); // required to avoid immediate deallocation of temporary
-    std::system(str.c_str());
+    const auto exitCode = std::system(str.c_str());
+    if (exitCode != 0) {
+      std::cerr << "Error: dot returned with exit code " << exitCode << "\n";
+    }
   }
 }
 
@@ -959,7 +962,7 @@ static void exportEdgeWeights(const Edge& edge, std::ostream& stream) {
       continue;
     }
 
-    // iterate over edges in reverse to guarantee correct proceossing order
+    // iterate over edges in reverse to guarantee correct processing order
     for (auto i = static_cast<std::int16_t>(edgePtr->p->e.size() - 1); i >= 0;
          --i) {
       auto& child = edgePtr->p->e[static_cast<std::size_t>(i)];
