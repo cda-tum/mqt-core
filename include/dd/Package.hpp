@@ -1103,7 +1103,7 @@ public:
       }
     }
 
-    assert(e.p->ref == 0);
+    assert(e.p->refCount == 0);
     for ([[maybe_unused]] const auto& edge : edges) {
       // an error here indicates that cached nodes are assigned multiple times.
       // Check if garbage collect correctly resets the cache tables!
@@ -3463,10 +3463,10 @@ private:
     const auto* ptrR = CTEntry::getAlignedPointer(e.w.r);
     const auto* ptrI = CTEntry::getAlignedPointer(e.w.i);
 
-    if ((ptrR->refCount == 0 || ptrI->refCount == 0) && e.w != Complex::one &&
+    if ((ptrR->ref == 0 || ptrI->ref == 0) && e.w != Complex::one &&
         e.w != Complex::zero) {
       std::clog << "\nLOCAL INCONSISTENCY FOUND\nOffending Number: " << e.w
-                << " (" << ptrR->refCount << ", " << ptrI->refCount << ")\n\n";
+                << " (" << ptrR->ref << ", " << ptrI->ref << ")\n\n";
       debugnode(e.p);
       return false;
     }
@@ -3530,8 +3530,7 @@ private:
     auto* rPtr = CTEntry::getAlignedPointer(edge.w.r);
     auto* iPtr = CTEntry::getAlignedPointer(edge.w.i);
 
-    if (weightMap.at(rPtr) > rPtr->refCount &&
-        !ComplexTable::isStaticEntry(rPtr)) {
+    if (weightMap.at(rPtr) > rPtr->ref && !ComplexTable::isStaticEntry(rPtr)) {
       std::clog << "\nOffending weight: " << edge.w << "\n";
       std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << "r "
                 << CTEntry::val(edge.w.i) << std::defaultfloat << "i\n";
@@ -3540,11 +3539,10 @@ private:
                                std::to_string(rPtr->value) +
                                "(r): " + std::to_string(weightMap.at(rPtr)) +
                                " occurrences in DD but Ref-Count is only " +
-                               std::to_string(rPtr->refCount));
+                               std::to_string(rPtr->ref));
     }
 
-    if (weightMap.at(iPtr) > iPtr->refCount &&
-        !ComplexTable::isStaticEntry(iPtr)) {
+    if (weightMap.at(iPtr) > iPtr->ref && !ComplexTable::isStaticEntry(iPtr)) {
       std::clog << "\nOffending weight: " << edge.w << "\n";
       std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << "r "
                 << CTEntry::val(edge.w.i) << std::defaultfloat << "i\n";
@@ -3553,7 +3551,7 @@ private:
                                std::to_string(iPtr->value) +
                                "(i): " + std::to_string(weightMap.at(iPtr)) +
                                " occurrences in DD but Ref-Count is only " +
-                               std::to_string(iPtr->refCount));
+                               std::to_string(iPtr->ref));
     }
 
     if (edge.isTerminal()) {

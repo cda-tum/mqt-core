@@ -94,7 +94,7 @@ public:
      * still in use. If the reference count is zero, the entry is not in use and
      * can be garbage collected.
      */
-    RefCount refCount{};
+    RefCount ref{};
 
     /**
      * @brief Get an aligned pointer to the entry.
@@ -165,7 +165,7 @@ public:
      * @note This function accounts for the sign of the entry embedded in the
      * memory address of the entry.
      */
-    [[nodiscard]] static RefCount ref(const Entry* e) noexcept;
+    [[nodiscard]] static RefCount refCount(const Entry* e) noexcept;
 
     /**
      * @brief Check whether two floating point numbers are approximately equal.

@@ -39,12 +39,12 @@ fp CTEntry::val(const Entry* e) noexcept {
   return e->value;
 }
 
-RefCount CTEntry::ref(const Entry* e) noexcept {
+RefCount CTEntry::refCount(const Entry* e) noexcept {
   assert(e != nullptr);
   if (isNegativePointer(e)) {
-    return -getAlignedPointer(e)->refCount;
+    return -getAlignedPointer(e)->ref;
   }
-  return e->refCount;
+  return e->ref;
 }
 
 bool CTEntry::approximatelyEquals(const fp left, const fp right) noexcept {
@@ -84,7 +84,7 @@ ComplexTable::ComplexTable(const std::size_t initialAllocSize,
       initialGCLimit(initialGCLim) {
   // add 1/2 to the complex table and increase its ref count (so that it is
   // not collected)
-  lookup(0.5L)->refCount++;
+  lookup(0.5L)->ref++;
 }
 
 CTEntry* ComplexTable::lookup(const fp val) {
@@ -172,7 +172,7 @@ CTEntry* ComplexTable::getEntry() {
     auto* entry = available;
     available = entry->next;
     // returned entries could have a ref count != 0
-    entry->refCount = 0;
+    entry->ref = 0;
     return entry;
   }
 
@@ -201,12 +201,12 @@ void ComplexTable::incRef(Entry* entry) noexcept {
   auto* entryPtr = Entry::getAlignedPointer(entry);
 
   if (entryPtr == nullptr || isStaticEntry(entryPtr) ||
-      entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
+      entryPtr->ref == std::numeric_limits<RefCount>::max()) {
     return;
   }
 
   // increase reference count
-  entryPtr->refCount++;
+  entryPtr->ref++;
 }
 
 void ComplexTable::decRef(Entry* entry) noexcept {
@@ -214,15 +214,15 @@ void ComplexTable::decRef(Entry* entry) noexcept {
   auto* entryPtr = Entry::getAlignedPointer(entry);
 
   if (entryPtr == nullptr || isStaticEntry(entryPtr) ||
-      entryPtr->refCount == std::numeric_limits<RefCount>::max()) {
+      entryPtr->ref == std::numeric_limits<RefCount>::max()) {
     return;
   }
 
-  assert(entryPtr->refCount != 0 &&
+  assert(entryPtr->ref != 0 &&
          "Reference count of CTEntry is zero before decrement");
 
   // decrease reference count
-  entryPtr->refCount--;
+  entryPtr->ref--;
 }
 
 bool ComplexTable::possiblyNeedsCollection() const noexcept {
@@ -245,7 +245,7 @@ std::size_t ComplexTable::garbageCollect(const bool force) noexcept {
     Entry* p = table[key];
     Entry* lastp = nullptr;
     while (p != nullptr) {
-      if (p->refCount == 0) {
+      if (p->ref == 0) {
         Entry* next = p->next;
         if (lastp == nullptr) {
           table[key] = next;
@@ -304,7 +304,7 @@ void ComplexTable::clear() noexcept {
   allocations = initialAllocationSize;
 
   for (auto& entry : chunks[0]) {
-    entry.refCount = 0;
+    entry.ref = 0;
   }
 
   count = 0;
@@ -335,8 +335,7 @@ void ComplexTable::print() {
 
     while (p != nullptr) {
       std::cout << "\t\t" << p->value << " "
-                << reinterpret_cast<std::uintptr_t>(p) << " " << p->refCount
-                << "\n";
+                << reinterpret_cast<std::uintptr_t>(p) << " " << p->ref << "\n";
       p = p->next;
     }
 

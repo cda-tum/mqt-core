@@ -526,10 +526,10 @@ TEST(DDPackageTest, TestLocalInconsistency) {
   EXPECT_FALSE(local);
   bellState.p->v = 1;
 
-  bellState.p->e[0].w.r->refCount = 0;
+  bellState.p->e[0].w.r->ref = 0;
   local = dd->isLocallyConsistent(bellState);
   EXPECT_FALSE(local);
-  bellState.p->e[0].w.r->refCount = 1;
+  bellState.p->e[0].w.r->ref = 1;
 }
 
 TEST(DDPackageTest, Ancillaries) {
@@ -1421,11 +1421,11 @@ TEST(DDPackageTest, dStochCache) {
 TEST(DDPackageTest, complexRefCount) {
   auto dd = std::make_unique<dd::Package<>>(1);
   auto value = dd->cn.lookup(0.2, 0.2);
-  EXPECT_EQ(value.r->refCount, 0);
-  EXPECT_EQ(value.i->refCount, 0);
+  EXPECT_EQ(value.r->ref, 0);
+  EXPECT_EQ(value.i->ref, 0);
   decltype(dd->cn)::incRef(value);
-  EXPECT_EQ(value.r->refCount, 2);
-  EXPECT_EQ(value.i->refCount, 2);
+  EXPECT_EQ(value.r->ref, 2);
+  EXPECT_EQ(value.i->ref, 2);
 }
 
 TEST(DDPackageTest, exactlyZeroComparison) {

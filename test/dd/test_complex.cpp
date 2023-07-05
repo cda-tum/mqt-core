@@ -463,8 +463,8 @@ TEST(DDComplexTest, NumberPrintingFormattedFloating) {
 TEST(DDComplexTest, MaxRefCountReached) {
   auto cn = std::make_unique<ComplexNumbers>();
   auto c = cn->lookup(SQRT2_2 / 2, SQRT2_2 / 2);
-  const auto max = std::numeric_limits<decltype(c.r->refCount)>::max();
-  c.r->refCount = max - 1;
+  const auto max = std::numeric_limits<decltype(c.r->ref)>::max();
+  c.r->ref = max - 1;
 
   std::cout.flush();
   std::clog << "Heads up: The following three MAXREFCNT warnings are part of a "
@@ -472,8 +472,8 @@ TEST(DDComplexTest, MaxRefCountReached) {
   CN::incRef(c);
   CN::incRef(c);
   std::clog.flush();
-  EXPECT_EQ(c.r->refCount, max);
-  EXPECT_EQ(c.i->refCount, max);
+  EXPECT_EQ(c.r->ref, max);
+  EXPECT_EQ(c.i->ref, max);
 }
 
 TEST(DDComplexTest, ComplexTableAllocation) {

@@ -56,8 +56,8 @@ void ComplexCache::returnToCache(Complex& c) noexcept {
   assert(count >= 2);
   assert(c != Complex::zero);
   assert(c != Complex::one);
-  assert(c.r->refCount == 0);
-  assert(c.i->refCount == 0);
+  assert(c.r->ref == 0);
+  assert(c.i->ref == 0);
   c.i->next = available;
   c.r->next = c.i;
   available = c.r;
