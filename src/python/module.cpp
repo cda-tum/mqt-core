@@ -363,11 +363,12 @@ NB_MODULE(_core, m) {
            nb::overload_cast<const qc::Operation&, const qc::Permutation&,
                              const qc::Permutation&>(
                &qc::StandardOperation::equals, nb::const_))
-      .def("__str__", [](const qc::StandardOperation& qc) {
-        std::ostringstream ss;
-        qc.dumpOpenQASM(ss, {{"q", "0"}, {"q", "1"}, {"q", "2"}}, {});
-        ss.str();
-      });
+      // .def("__str__", [](const qc::StandardOperation& qc) {
+      //   std::ostringstream ss;
+      //   qc.dumpOpenQASM(ss, {{"q", "0"}, {"q", "1"}, {"q", "2"}}, {});
+      //   ss.str();
+      // })
+      ;
 
   nb::class_<qc::Permutation>(m, "Permutation")
       .def("apply", nb::overload_cast<const qc::Controls&>(
