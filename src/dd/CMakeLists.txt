@@ -12,6 +12,7 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
     ComplexValue.cpp
     Edge.cpp
     FunctionalityConstruction.cpp
+    MemoryManager.cpp
     Node.cpp
     NoiseFunctionality.cpp
     Operations.cpp
