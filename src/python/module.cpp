@@ -22,11 +22,8 @@
 #include <vector>
 
 namespace mqt {
-// void register_qiskit(nb::module_);
+using qc::QuantumComputation;
 
-enum class foo { a };
-
-foo fooFromStr(const std::string& s) { return foo::a; }
 NB_MODULE(_core, m) {
 
   nb::class_<qc::QuantumComputation>(
@@ -296,7 +293,7 @@ NB_MODULE(_core, m) {
       .def("__len__", &qc::QuantumComputation::getNindividualOps)
       .def(
           "__getitem__",
-          [](const qc::QuantumComputation& qc,
+          [](const QuantumComputation& qc,
              std::size_t
                  idx) { return qc.at(idx).get(); }, // Beware: this gives write
                                                     // access to underlying
@@ -317,11 +314,26 @@ NB_MODULE(_core, m) {
       .export_values();
 
   nb::class_<qc::Operation>(m, "Operation")
-      // .def(nb::init<>())
-      // .def_prop_rw("targets", &qc::Operation::getTargets,
-      // &qc::Operation::setTargets)
+    .def_prop_rw("targets", [](const qc::Operation& qc){return qc.getTargets();}, [](qc::Operation& qc, const qc::Targets& tar){return qc.setTargets(tar);})
+          .def_prop_ro("n_targets", &qc::Operation::getNtargets)
+        .def_prop_rw("controls", [](const qc::Operation& qc){return qc.getControls();}, [](qc::Operation& qc, const qc::Controls& tar){return qc.setControls(tar);})
+    .def_prop_ro("n_controls", &qc::Operation::getNcontrols)
+    .def_prop_rw("n_qubits", &qc::Operation::getNqubits, &qc::Operation::setNqubits)
+    // .def_prop_ro("parameter", nb::overload_cast<const std::vector<qc::fp>&>(&qc::Operation::getParameter, nb::const_), nb::rv_policy::reference_internal)
       .def_prop_rw("name", &qc::Operation::getName, &qc::Operation::setName)
-      .def("set_gate", &qc::Operation::setGate);
+    .def_prop_ro("type", &qc::Operation::getType)
+    .def("get_starting_qubit", &qc::Operation::getStartingQubit)
+    .def("get_used_qubits", &qc::Operation::getUsedQubits)
+    .def_prop_rw("gate", &qc::Operation::setGate, &qc::Operation::setGate)
+    .def("is_unitary", &qc::Operation::isUnitary)
+    .def("is_standard_operation", &qc::Operation::isStandardOperation)
+        .def("is_compound_operation", &qc::Operation::isCompoundOperation)
+        .def("is_non_unitary_operation", &qc::Operation::isNonUnitaryOperation)
+        .def("is_classic_controlled_operation", &qc::Operation::isClassicControlledOperation)
+        .def("is_symbolic_operation", &qc::Operation::isSymbolicOperation)
+        .def("is_controlled", &qc::Operation::isControlled)
+    .def("acts_on", &qc::Operation::actsOn)
+    ;
   ;
   nb::class_<qc::StandardOperation, qc::Operation>(m, "StandardOperation")
       .def(nb::init<>())
@@ -369,6 +381,32 @@ NB_MODULE(_core, m) {
       //   ss.str();
       // })
       ;
+
+  nb::class_<qc::CompoundOperation, qc::Operation>(m, "CompoundOperation")
+      .def(nb::init<std::size_t,
+                    std::vector<std::unique_ptr<qc::Operation>>&&>())
+      .def("clone", &qc::CompoundOperation::clone)
+      .def("set_n_qubits", &qc::CompoundOperation::setNqubits)
+      .def("is_compound_operation", &qc::CompoundOperation::isCompoundOperation)
+      .def("is_non_unitary_operation",
+           &qc::CompoundOperation::isNonUnitaryOperation)
+      .def("equals",
+           nb::overload_cast<const qc::Operation&, const qc::Permutation&,
+                             const qc::Permutation&>(
+               &qc::CompoundOperation::equals, nb::const_))
+      .def("acts_on", &qc::CompoundOperation::actsOn)
+      .def("add_depth_contribution",
+           &qc::CompoundOperation::addDepthContribution)
+      .def("__len__", &qc::CompoundOperation::size)
+      .def("size", &qc::CompoundOperation::size)
+      .def("empty", &qc::CompoundOperation::empty)
+      // .def("add_op",
+      // nb::overload_cast<std::vector<std::unique_ptr<qc::Operation>>::const_iterator,
+      // Args>&qc::CompoundOperation::emplace_back)
+    .def("__getitem__", [](const qc::CompoundOperation& op, std::size_t i){return op.at(i).get();})
+    .def("get_used_qubits", &qc::CompoundOperation::getUsedQubits)
+    ;
+  
 
   nb::class_<qc::Permutation>(m, "Permutation")
       .def("apply", nb::overload_cast<const qc::Controls&>(
