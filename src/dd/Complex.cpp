@@ -6,10 +6,12 @@
 #include <cassert>
 
 namespace dd {
-// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables,
+// cppcoreguidelines-interfaces-global-init)
 Complex Complex::zero{&constants::zero, &constants::zero};
 Complex Complex::one{&constants::one, &constants::zero};
-// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,
+// cppcoreguidelines-interfaces-global-init)
 
 void Complex::setVal(const Complex& c) const noexcept {
   assert(!RealNumber::isNegativePointer(r));

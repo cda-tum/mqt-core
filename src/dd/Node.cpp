@@ -3,11 +3,11 @@
 #include "dd/RealNumber.hpp"
 
 namespace dd {
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables,
+// cppcoreguidelines-interfaces-global-init)
 vNode vNode::terminal{
     {{{nullptr, Complex::zero}, {nullptr, Complex::zero}}}, nullptr, 0U, -1};
 
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 mNode mNode::terminal{{{{nullptr, Complex::zero},
                         {nullptr, Complex::zero},
                         {nullptr, Complex::zero},
@@ -17,7 +17,6 @@ mNode mNode::terminal{{{{nullptr, Complex::zero},
                       -1,
                       32 + 16};
 
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 dNode dNode::terminal{{{{nullptr, Complex::zero},
                         {nullptr, Complex::zero},
                         {nullptr, Complex::zero},
@@ -26,6 +25,8 @@ dNode dNode::terminal{{{{nullptr, Complex::zero},
                       0,
                       -1,
                       0};
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,
+// cppcoreguidelines-interfaces-global-init)
 
 void dNode::setDensityMatrixNodeFlag(const bool densityMatrix) {
   if (densityMatrix) {
