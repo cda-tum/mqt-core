@@ -16,6 +16,7 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
     Node.cpp
     NoiseFunctionality.cpp
     Operations.cpp
+    RealNumber.cpp
     Simulation.cpp)
   target_link_libraries(${PROJECT_NAME}-dd PUBLIC ${PROJECT_NAME})
   add_library(MQT::CoreDD ALIAS ${PROJECT_NAME}-dd)

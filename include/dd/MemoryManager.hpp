@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace dd {
@@ -31,6 +32,7 @@ template <typename T> class MemoryManager {
   static_assert(std::is_same_v<decltype(T::ref), RefCount>,
                 "T must have a `ref` member of type RefCount");
 
+public:
   /**
    * @brief The number of initially allocated entries.
    * @details The number of initially allocated entries is the number of entries
@@ -48,7 +50,6 @@ template <typename T> class MemoryManager {
    */
   static constexpr double GROWTH_FACTOR = 2U;
 
-public:
   /**
    * @brief Construct a new MemoryManager object
    * @param initialAllocationSize The initial number of entries to allocate
@@ -72,6 +73,15 @@ public:
   [[nodiscard]] T* get();
 
   /**
+   * @brief Get a pair of entries from the manager.
+   * @return A pair of pointers to entries.
+   * @see get()
+   * @note This method assumes that there is an even number of entries available
+   * from the manager. If this is not the case, the behavior is undefined.
+   */
+  [[nodiscard]] std::pair<T*, T*> getPair();
+
+  /**
    * @brief Get a temporary entry from the manager.
    * @details In contrast to `get()`, this method does not consume an entry from
    * the manager. It just provides access to a temporary entry. Any subsequent
@@ -82,6 +92,15 @@ public:
   [[nodiscard]] T* getTemporary();
 
   /**
+   * @brief Get a pair of temporary entries from the manager.
+   * @return A pair of pointers to entries.
+   * @see getTemporary()
+   * @note This method assumes that there is an even number of entries available
+   * from the manager. If this is not the case, the behavior is undefined.
+   */
+  [[nodiscard]] std::pair<T*, T*> getTemporaryPair();
+
+  /**
    * @brief Return an entry to the manager.
    * @details The entry is added to the list of available entries. The entry
    * must not be used after it has been returned to the manager. Entries should
@@ -89,7 +108,7 @@ public:
    * this indicates a reference counting error.
    * @param entry A pointer to an entry that is no longer in use.
    */
-  void free(T* entry);
+  void free(T* entry) noexcept;
 
   /**
    * @brief Reset the manager.

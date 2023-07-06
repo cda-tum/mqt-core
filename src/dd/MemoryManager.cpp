@@ -1,7 +1,7 @@
 #include "dd/MemoryManager.hpp"
 
-#include "dd/ComplexTable.hpp"
 #include "dd/Node.hpp"
+#include "dd/RealNumber.hpp"
 
 #include <cassert>
 
@@ -19,6 +19,30 @@ template <typename T> T* MemoryManager<T>::get() {
   return getEntryFromChunk();
 }
 
+template <typename T> std::pair<T*, T*> MemoryManager<T>::getPair() {
+  if (entryAvailableForReuse()) {
+    auto* r = available;
+    assert(r->next != nullptr && "At least two entries must be available");
+    auto* i = available->next;
+    available = i->next;
+    usedCount += 2U;
+    availableForReuseCount -= 2U;
+    return {r, i};
+  }
+
+  if (!entryAvailableInChunk()) {
+    allocateNewChunk();
+  }
+
+  auto* r = &(*chunkIt);
+  ++chunkIt;
+  assert(chunkIt != chunkEndIt && "At least two entries must be available");
+  auto* i = &(*chunkIt);
+  ++chunkIt;
+  usedCount += 2U;
+  return {r, i};
+}
+
 template <typename T> T* MemoryManager<T>::getTemporary() {
   if (entryAvailableForReuse()) {
     return available;
@@ -31,7 +55,22 @@ template <typename T> T* MemoryManager<T>::getTemporary() {
   return &(*chunkIt);
 }
 
-template <typename T> void MemoryManager<T>::free(T* entry) {
+template <typename T> std::pair<T*, T*> MemoryManager<T>::getTemporaryPair() {
+  if (entryAvailableForReuse()) {
+    assert(available->next != nullptr &&
+           "At least two entries must be available");
+    return {available, available->next};
+  }
+
+  if (!entryAvailableInChunk()) {
+    allocateNewChunk();
+  }
+
+  assert(chunkIt + 1 != chunkEndIt && "At least two entries must be available");
+  return {&(*chunkIt), &(*(chunkIt + 1))};
+}
+
+template <typename T> void MemoryManager<T>::free(T* entry) noexcept {
   assert(entry != nullptr);
   assert(entry->ref == 0);
   entry->next = available;
@@ -89,7 +128,7 @@ template <typename T> T* MemoryManager<T>::getEntryFromChunk() noexcept {
   return entry;
 }
 
-template class MemoryManager<CTEntry>;
+template class MemoryManager<RealNumber>;
 template class MemoryManager<vNode>;
 template class MemoryManager<mNode>;
 template class MemoryManager<dNode>;
