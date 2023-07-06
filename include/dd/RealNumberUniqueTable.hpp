@@ -173,30 +173,30 @@ private:
   /// A pointer to the memory manager for the numbers stored in the table.
   MemoryManager<RealNumber>* memoryManager{};
 
-  /// the number of collisions
+  /// The number of collisions
   std::size_t collisions = 0;
-  /// the number of collisions when inserting
+  /// The number of collisions when inserting
   std::size_t insertCollisions = 0;
-  /// the number of successful lookups
+  /// The number of successful lookups
   std::size_t hits = 0;
-  /// the number of calls to findOrInsert
+  /// The number of calls to findOrInsert
   std::size_t findOrInserts = 0;
-  /// the number of lookups
+  /// The number of lookups
   std::size_t lookups = 0;
-  /// the number of inserts
+  /// The number of inserts
   std::size_t inserts = 0;
-  /// the number of borderline cases where the lower neighbor is returned
+  /// The number of borderline cases where the lower neighbor is returned
   std::size_t lowerNeighbors = 0;
-  /// the number of borderline cases where the upper neighbor is returned
+  /// The number of borderline cases where the upper neighbor is returned
   std::size_t upperNeighbors = 0;
 
-  /// the initial garbage collection limit
+  /// The initial garbage collection limit
   std::size_t initialGCLimit;
-  /// the number of garbage collection calls
+  /// The number of garbage collection calls
   std::size_t gcCalls = 0;
-  /// the number of garbage actual garbage collection runs
+  /// The number of garbage actual garbage collection runs
   std::size_t gcRuns = 0;
-  /// the current garbage collection limit
+  /// The current garbage collection limit
   std::size_t gcLimit = initialGCLimit;
 
   /**
