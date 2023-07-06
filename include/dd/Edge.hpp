@@ -24,13 +24,9 @@ template <class Node> struct Edge {
     return !operator==(other);
   }
 
-  // NOLINTBEGIN(cppcoreguidelines-interfaces-global-init,
-  // readability-identifier-naming)
   // edges pointing to zero and one terminals
-  static inline const Edge zero{Node::getTerminal(), Complex::zero};
-  static inline const Edge one{Node::getTerminal(), Complex::one};
-  // NOLINTEND(cppcoreguidelines-interfaces-global-init,
-  // readability-identifier-naming)
+  static const Edge zero; // NOLINT(readability-identifier-naming)
+  static const Edge one;  // NOLINT(readability-identifier-naming)
 
   [[nodiscard]] static Edge terminal(const Complex& w);
   [[nodiscard]] bool isTerminal() const;
@@ -47,6 +43,13 @@ template <class Node> struct Edge {
   static void applyDmChangesToEdges(Edge& x, Edge& y);
   static void applyDmChangesToEdge(Edge& x);
 };
+
+// NOLINTBEGIN(cppcoreguidelines-interfaces-global-init)
+template <class Node>
+const Edge<Node> Edge<Node>::zero{Node::getTerminal(), Complex::zero};
+template <class Node>
+const Edge<Node> Edge<Node>::one{Node::getTerminal(), Complex::one};
+// NOLINTEND(cppcoreguidelines-interfaces-global-init)
 
 template <typename Node> struct CachedEdge {
   Node* p{};
