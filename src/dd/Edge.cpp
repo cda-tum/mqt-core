@@ -21,13 +21,6 @@ template <class Node> bool Edge<Node>::isOneTerminal() const {
   return isTerminal() && w == Complex::one;
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-interfaces-global-init)
-template <class Node>
-const Edge<Node> Edge<Node>::zero{Node::getTerminal(), Complex::zero};
-// NOLINTNEXTLINE(cppcoreguidelines-interfaces-global-init)
-template <class Node>
-const Edge<Node> Edge<Node>::one{Node::getTerminal(), Complex::one};
-
 template <typename Node>
 CachedEdge<Node>::CachedEdge(Node* n, const Complex& c) : p(n) {
   w.r = RealNumber::val(c.r);
