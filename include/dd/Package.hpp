@@ -165,8 +165,8 @@ public:
     const auto mag1 = ComplexNumbers::mag2(e.p->e[1].w);
     const auto norm2 = mag0 + mag1;
     const auto mag2Max =
-        (mag0 + ComplexTable<>::tolerance() >= mag1) ? mag0 : mag1;
-    const auto argMax = (mag0 + ComplexTable<>::tolerance() >= mag1) ? 0 : 1;
+        (mag0 + ComplexTable::tolerance() >= mag1) ? mag0 : mag1;
+    const auto argMax = (mag0 + ComplexTable::tolerance() >= mag1) ? 0 : 1;
     const auto norm = std::sqrt(norm2);
     const auto magMax = std::sqrt(mag2Max);
     const auto commonFactor = norm / magMax;
@@ -437,7 +437,7 @@ public:
           maxc = e.p->e[i].w;
         } else {
           auto mag = ComplexNumbers::mag2(e.p->e[i].w);
-          if (mag - max > ComplexTable<>::tolerance()) {
+          if (mag - max > ComplexTable::tolerance()) {
             argmax = static_cast<decltype(argmax)>(i);
             max = mag;
             maxc = e.p->e[i].w;
@@ -3184,8 +3184,8 @@ public:
       idx <<= level;
       for (std::size_t i = 0; i < (1ULL << level); i++) {
         amplitudes[idx++] =
-            std::complex<dd::fp>{dd::ComplexTable<>::Entry::val(amp.r),
-                                 dd::ComplexTable<>::Entry::val(amp.i)};
+            std::complex<dd::fp>{dd::ComplexTable::Entry::val(amp.r),
+                                 dd::ComplexTable::Entry::val(amp.i)};
       }
 
       return;
@@ -3213,8 +3213,8 @@ public:
                         std::vector<std::complex<dd::fp>>& amplitudes,
                         ComplexValue& amplitude, dd::QubitCount level,
                         std::size_t idx) {
-    auto ar = dd::ComplexTable<>::Entry::val(edge.w.r);
-    auto ai = dd::ComplexTable<>::Entry::val(edge.w.i);
+    auto ar = dd::ComplexTable::Entry::val(edge.w.r);
+    auto ai = dd::ComplexTable::Entry::val(edge.w.i);
     ComplexValue amp{ar * amplitude.r - ai * amplitude.i,
                      ar * amplitude.i + ai * amplitude.r};
 
@@ -3315,8 +3315,8 @@ public:
         }
       } while (!stack.empty());
 
-      auto w = cn.getCached(dd::ComplexTable<>::Entry::val(original.w.r),
-                            dd::ComplexTable<>::Entry::val(original.w.i));
+      auto w = cn.getCached(dd::ComplexTable::Entry::val(original.w.r),
+                            dd::ComplexTable::Entry::val(original.w.i));
       dd::ComplexNumbers::mul(w, root.w, w);
       root.w = cn.lookup(w);
       cn.returnToCache(w);
@@ -3534,7 +3534,7 @@ public:
   }
 
   template <class Edge> bool isGloballyConsistent(const Edge& e) {
-    std::map<ComplexTable<>::Entry*, std::size_t> weightCounter{};
+    std::map<ComplexTable::Entry*, std::size_t> weightCounter{};
     std::map<decltype(e.p), std::size_t> nodeCounter{};
     fillConsistencyCounter(e, weightCounter, nodeCounter);
     checkConsistencyCounter(e, weightCounter, nodeCounter);
@@ -3583,10 +3583,10 @@ private:
   }
 
   template <class Edge>
-  void fillConsistencyCounter(
-      const Edge& edge,
-      std::map<ComplexTable<>::Entry*, std::size_t>& weightMap,
-      std::map<decltype(edge.p), std::size_t>& nodeMap) {
+  void
+  fillConsistencyCounter(const Edge& edge,
+                         std::map<CTEntry*, std::size_t>& weightMap,
+                         std::map<decltype(edge.p), std::size_t>& nodeMap) {
     weightMap[CTEntry::getAlignedPointer(edge.w.r)]++;
     weightMap[CTEntry::getAlignedPointer(edge.w.i)]++;
 
@@ -3608,13 +3608,13 @@ private:
   template <class Edge>
   void checkConsistencyCounter(
       const Edge& edge,
-      const std::map<ComplexTable<>::Entry*, std::size_t>& weightMap,
+      const std::map<ComplexTable::Entry*, std::size_t>& weightMap,
       const std::map<decltype(edge.p), std::size_t>& nodeMap) {
     auto* rPtr = CTEntry::getAlignedPointer(edge.w.r);
     auto* iPtr = CTEntry::getAlignedPointer(edge.w.i);
 
-    if (weightMap.at(rPtr) > rPtr->refCount && rPtr != Complex::one.r &&
-        rPtr != Complex::zero.i && rPtr != &ComplexTable<>::sqrt2_2) {
+    if (weightMap.at(rPtr) > rPtr->refCount &&
+        !ComplexTable::isStaticEntry(rPtr)) {
       std::clog << "\nOffending weight: " << edge.w << "\n";
       std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << "r "
                 << CTEntry::val(edge.w.i) << std::defaultfloat << "i\n";
@@ -3626,8 +3626,8 @@ private:
                                std::to_string(rPtr->refCount));
     }
 
-    if (weightMap.at(iPtr) > iPtr->refCount && iPtr != Complex::zero.i &&
-        iPtr != Complex::one.r && iPtr != &ComplexTable<>::sqrt2_2) {
+    if (weightMap.at(iPtr) > iPtr->refCount &&
+        !ComplexTable::isStaticEntry(iPtr)) {
       std::clog << "\nOffending weight: " << edge.w << "\n";
       std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << "r "
                 << CTEntry::val(edge.w.i) << std::defaultfloat << "i\n";

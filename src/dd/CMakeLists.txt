@@ -5,6 +5,11 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
   add_library(
     ${PROJECT_NAME}-dd
     ${DD_HEADERS}
+    Complex.cpp
+    ComplexCache.cpp
+    ComplexNumbers.cpp
+    ComplexTable.cpp
+    ComplexValue.cpp
     Edge.cpp
     FunctionalityConstruction.cpp
     Node.cpp
