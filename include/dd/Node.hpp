@@ -6,6 +6,7 @@
 #include "Edge.hpp"
 
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <utility>
 
@@ -158,101 +159,19 @@ struct dNode {
     flags = flags & static_cast<std::uint8_t>(~7U);
   }
 
-  inline void setDensityMatrixNodeFlag(bool densityMatrix) {
-    if (densityMatrix) {
-      flags = (flags | static_cast<std::uint8_t>(8U));
-    } else {
-      flags = (flags & static_cast<std::uint8_t>(~8U));
-    }
-  }
+  void setDensityMatrixNodeFlag(bool densityMatrix);
 
-  static inline std::uint8_t alignDensityNodeNode(dNode*& p) {
-    const auto flags = static_cast<std::uint8_t>(getDensityMatrixTempFlags(p));
-    alignDensityNode(p);
+  static std::uint8_t alignDensityNodeNode(dNode*& p);
 
-    if (p == nullptr || p->v <= -1) {
-      return 0;
-    }
+  static void getAlignedNodeRevertModificationsOnSubEdges(dNode* p);
 
-    if (isNonReduceTempFlagSet(flags) && !isConjugateTempFlagSet(flags)) {
-      // first edge paths are not modified and the property is inherited by all
-      // child paths
-      return flags;
-    }
-    if (!isConjugateTempFlagSet(flags)) {
-      // Conjugate the second edge (i.e. negate the complex part of the second
-      // edge)
-      p->e[2].w.i = dd::CTEntry::flipPointerSign(p->e[2].w.i);
-      setConjugateTempFlagTrue(p->e[2].p);
-      // Mark the first edge
-      setNonReduceTempFlagTrue(p->e[1].p);
+  static void applyDmChangesToNode(dNode*& p);
 
-      for (auto& edge : p->e) {
-        setDensityMatTempFlagTrue(edge.p);
-      }
-
-    } else {
-      std::swap(p->e[2], p->e[1]);
-      for (auto& edge : p->e) {
-        // Conjugate all edges
-        edge.w.i = dd::CTEntry::flipPointerSign(edge.w.i);
-        setConjugateTempFlagTrue(edge.p);
-        setDensityMatTempFlagTrue(edge.p);
-      }
-    }
-    return flags;
-  }
-
-  static inline void getAlignedNodeRevertModificationsOnSubEdges(dNode* p) {
-    // Before I do anything else, I must align the pointer
-    alignDensityNode(p);
-
-    for (auto& edge : p->e) {
-      // remove the set properties from the node pointers of edge.p->e
-      alignDensityNode(edge.p);
-    }
-
-    if (isNonReduceTempFlagSet(p->flags) && !isConjugateTempFlagSet(p->flags)) {
-      // first edge paths are not modified I only have to remove the first edge
-      // property
-      ;
-
-    } else if (!isConjugateTempFlagSet(p->flags)) {
-      // Conjugate the second edge (i.e. negate the complex part of the second
-      // edge)
-      p->e[2].w.i = dd::CTEntry::flipPointerSign(p->e[2].w.i);
-
-    } else {
-      for (auto& edge : p->e) {
-        // Align all nodes and conjugate the weights
-        edge.w.i = dd::CTEntry::flipPointerSign(edge.w.i);
-      }
-      std::swap(p->e[2], p->e[1]);
-    }
-  }
-
-  static inline void applyDmChangesToNode(dNode*& p) {
-    // Align the node pointers
-    if (isDensityMatrixTempFlagSet(p)) {
-      auto tmp = alignDensityNodeNode(p);
-      assert(getDensityMatrixTempFlags(p->flags) == 0);
-      p->flags = p->flags | tmp;
-    }
-  }
-
-  static inline void revertDmChangesToNode(dNode*& p) {
-    // Align the node pointers
-    if (isDensityMatrixTempFlagSet(p->flags)) {
-      getAlignedNodeRevertModificationsOnSubEdges(p);
-      p->unsetTempDensityMatrixFlags();
-    }
-  }
+  static void revertDmChangesToNode(dNode*& p);
 };
 using dEdge = Edge<dNode>;
 using dCachedEdge = CachedEdge<dNode>;
 
-// It's used but clang-tidy in our CI complains...
-// NOLINTNEXTLINE(clang-diagnostic-unused-function)
 static inline dEdge densityFromMatrixEdge(const mEdge& e) {
   return dEdge{reinterpret_cast<dNode*>(e.p), e.w};
 }

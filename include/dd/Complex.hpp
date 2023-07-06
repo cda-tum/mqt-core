@@ -1,6 +1,5 @@
 #pragma once
 
-#include "dd/ComplexTable.hpp"
 #include "dd/Definitions.hpp"
 
 #include <cstddef>
@@ -9,12 +8,15 @@
 #include <utility>
 
 namespace dd {
+
+struct RealNumber;
+
 /// A complex number represented by two pointers to compute table entries.
 struct Complex {
   /// Compute table entry for the real part.
-  CTEntry* r;
+  RealNumber* r;
   /// Compute table entry for the imaginary part.
-  CTEntry* i;
+  RealNumber* i;
 
   // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
   /// The static zero constant.

@@ -20,18 +20,18 @@ protected:
 
     // number of complex table entries after clean-up should equal initial
     // number of entries
-    EXPECT_EQ(dd->cn.complexTable.getCount(), initialComplexCount);
+    EXPECT_EQ(dd->cn.realCount(), initialComplexCount);
 
     // number of available cache entries after clean-up should equal initial
     // number of entries
-    EXPECT_EQ(dd->cn.complexCache.getCount(), initialCacheCount);
+    EXPECT_EQ(dd->cn.cacheCount(), initialCacheCount);
   }
 
   void SetUp() override {
     std::tie(nqubits, seed) = GetParam();
     dd = std::make_unique<dd::Package<>>(nqubits + 1);
-    initialCacheCount = dd->cn.complexCache.getCount();
-    initialComplexCount = dd->cn.complexTable.getCount();
+    initialCacheCount = dd->cn.cacheCount();
+    initialComplexCount = dd->cn.realCount();
   }
 
   std::size_t nqubits = 0;

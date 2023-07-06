@@ -32,10 +32,8 @@ TEST(DDPackageTest, TrivialTest) {
   ASSERT_EQ(dd->fidelity(zeroState, oneState), 0.0);
   // repeat the same calculation - triggering compute table hit
   ASSERT_EQ(dd->fidelity(zeroState, oneState), 0.0);
-  ASSERT_NEAR(dd->fidelity(zeroState, hState), 0.5,
-              dd::ComplexTable::tolerance());
-  ASSERT_NEAR(dd->fidelity(oneState, hState), 0.5,
-              dd::ComplexTable::tolerance());
+  ASSERT_NEAR(dd->fidelity(zeroState, hState), 0.5, dd::RealNumber::eps);
+  ASSERT_NEAR(dd->fidelity(oneState, hState), 0.5, dd::RealNumber::eps);
 }
 
 TEST(DDPackageTest, BellState) {
@@ -119,7 +117,7 @@ TEST(DDPackageTest, QFTState) {
 
   for (dd::Qubit qubit = 0; qubit < 7; ++qubit) {
     ASSERT_NEAR(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).r,
-                0.5 * dd::SQRT2_2, dd->cn.complexTable.tolerance());
+                0.5 * dd::SQRT2_2, dd::RealNumber::eps);
     ASSERT_EQ(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).i,
               0);
   }
@@ -225,7 +223,7 @@ TEST(DDPackageTest, PartialIdentityTrace) {
   auto dd = std::make_unique<dd::Package<>>(2);
   auto tr = dd->partialTrace(dd->makeIdent(2), {false, true});
   auto mul = dd->multiply(tr, tr);
-  EXPECT_EQ(dd::CTEntry::val(mul.w.r), 4.0);
+  EXPECT_EQ(dd::RealNumber::val(mul.w.r), 4.0);
 }
 
 TEST(DDPackageTest, StateGenerationManipulation) {
@@ -801,7 +799,7 @@ TEST(DDPackageTest, KroneckerProduct) {
 
 TEST(DDPackageTest, NearZeroNormalize) {
   auto dd = std::make_unique<dd::Package<>>(2);
-  const dd::fp nearZero = dd::ComplexTable::tolerance() / 10;
+  const dd::fp nearZero = dd::RealNumber::eps / 10;
   dd::vEdge ve{};
   ve.p = dd->vUniqueTable.getNode();
   ve.p->v = 1;
@@ -1075,7 +1073,7 @@ TEST(DDPackageTest, BasicNumericStabilityTest) {
   using limits = std::numeric_limits<dd::fp>;
 
   auto dd = std::make_unique<dd::Package<>>(1);
-  auto tol = dd::ComplexTable::tolerance();
+  auto tol = dd::RealNumber::eps;
   dd::ComplexNumbers::setTolerance(limits::epsilon());
   auto state = dd->makeZeroState(1);
   auto h = dd->makeGateDD(dd::Hmat, 1, 0);
@@ -1111,7 +1109,7 @@ TEST(DDPackageTest, NormalizationNumericStabilityTest) {
     auto pdag = dd->makeGateDD(dd::Phasemat(-lambda), 1, 0);
     auto result = dd->multiply(p, pdag);
     EXPECT_TRUE(result.p->isIdentity());
-    dd->cn.complexTable.clear();
+    dd->cn.clear();
   }
 }
 
@@ -1130,7 +1128,7 @@ TEST(DDPackageTest, FidelityOfMeasurementOutcomes) {
   probs[0] = 0.5;
   probs[7] = 0.5;
   auto fidelity = dd->fidelityOfMeasurementOutcomes(ghzState, probs);
-  EXPECT_NEAR(fidelity, 1.0, dd::ComplexTable::tolerance());
+  EXPECT_NEAR(fidelity, 1.0, dd::RealNumber::eps);
 }
 
 TEST(DDPackageTest, CloseToIdentity) {
@@ -1430,7 +1428,7 @@ TEST(DDPackageTest, complexRefCount) {
 
 TEST(DDPackageTest, exactlyZeroComparison) {
   auto dd = std::make_unique<dd::Package<>>(1);
-  auto notZero = dd->cn.lookup(0, 2 * dd::ComplexTable::tolerance());
+  auto notZero = dd->cn.lookup(0, 2 * dd::RealNumber::eps);
   auto zero = dd->cn.lookup(0, 0);
   EXPECT_TRUE(!notZero.exactlyZero());
   EXPECT_TRUE(zero.exactlyZero());
@@ -1438,7 +1436,7 @@ TEST(DDPackageTest, exactlyZeroComparison) {
 
 TEST(DDPackageTest, exactlyOneComparison) {
   auto dd = std::make_unique<dd::Package<>>(1);
-  auto notOne = dd->cn.lookup(1 + 2 * dd::ComplexTable::tolerance(), 0);
+  auto notOne = dd->cn.lookup(1 + 2 * dd::RealNumber::eps, 0);
   auto one = dd->cn.lookup(1, 0);
   EXPECT_TRUE(!notOne.exactlyOne());
   EXPECT_TRUE(one.exactlyOne());
@@ -1728,7 +1726,7 @@ TEST(DDPackageTest, RZZGateDDConstruction) {
 
   auto rzzTwoPi = dd->makeRZZDD(2, 0, 1, 2 * dd::PI);
   EXPECT_EQ(rzzTwoPi.p, identity.p);
-  EXPECT_EQ(dd::ComplexTable::Entry::val(rzzTwoPi.w.r), -1.);
+  EXPECT_EQ(dd::RealNumber::val(rzzTwoPi.w.r), -1.);
 
   auto rzzPi = dd->makeRZZDD(2, 0, 1, dd::PI);
   auto zz = dd->makeGateDD(dd::Zmat, 2, dd::Controls{}, 0);

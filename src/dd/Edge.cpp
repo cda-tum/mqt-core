@@ -1,6 +1,7 @@
 #include "dd/Edge.hpp"
 
 #include "dd/Node.hpp"
+#include "dd/RealNumber.hpp"
 
 namespace dd {
 
@@ -18,6 +19,12 @@ template <class Node> bool Edge<Node>::isZeroTerminal() const {
 
 template <class Node> bool Edge<Node>::isOneTerminal() const {
   return isTerminal() && w == Complex::one;
+}
+
+template <typename Node>
+CachedEdge<Node>::CachedEdge(Node* n, const Complex& c) : p(n) {
+  w.r = RealNumber::val(c.r);
+  w.i = RealNumber::val(c.i);
 }
 
 template <class Node>
@@ -77,5 +84,8 @@ template <class Node> void Edge<Node>::applyDmChangesToEdge(Edge& x) {
 template struct Edge<vNode>;
 template struct Edge<mNode>;
 template struct Edge<dNode>;
+template struct CachedEdge<vNode>;
+template struct CachedEdge<mNode>;
+template struct CachedEdge<dNode>;
 
 } // namespace dd

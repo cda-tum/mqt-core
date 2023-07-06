@@ -55,10 +55,7 @@ template <typename Node> struct CachedEdge {
 
   CachedEdge() = default;
   CachedEdge(Node* n, const ComplexValue& v) : p(n), w(v) {}
-  CachedEdge(Node* n, const Complex& c) : p(n) {
-    w.r = CTEntry::val(c.r);
-    w.i = CTEntry::val(c.i);
-  }
+  CachedEdge(Node* n, const Complex& c);
 
   /// Comparing two DD edges with another involves comparing the respective
   /// pointers and checking whether the corresponding weights are "close enough"

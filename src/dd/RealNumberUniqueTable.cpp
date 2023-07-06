@@ -1,115 +1,59 @@
-#include "dd/ComplexTable.hpp"
+#include "dd/RealNumberUniqueTable.hpp"
+
+#include "dd/RealNumber.hpp"
 
 #include <algorithm>
+#include <cassert>
+#include <cmath>
 #include <iomanip>
+#include <limits>
 #include <stdexcept>
 
 namespace dd {
 
-static constexpr std::size_t LSB = static_cast<std::uintptr_t>(1U);
-
-CTEntry* CTEntry::getAlignedPointer(const Entry* e) noexcept {
-  return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) & ~LSB);
-}
-
-CTEntry* CTEntry::getNegativePointer(const Entry* e) noexcept {
-  return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) | LSB);
-}
-
-bool CTEntry::exactlyZero(const Entry* e) noexcept { return (e == &zero); }
-
-bool CTEntry::exactlyOne(const Entry* e) noexcept { return (e == &one); }
-
-CTEntry* CTEntry::flipPointerSign(const Entry* e) noexcept {
-  if (exactlyZero(e)) {
-    return &zero;
-  }
-  return reinterpret_cast<Entry*>(reinterpret_cast<std::uintptr_t>(e) ^ LSB);
-}
-
-bool CTEntry::isNegativePointer(const Entry* e) noexcept {
-  return (reinterpret_cast<std::uintptr_t>(e) & LSB) != 0U;
-}
-
-fp CTEntry::val(const Entry* e) noexcept {
-  assert(e != nullptr);
-  if (isNegativePointer(e)) {
-    return -getAlignedPointer(e)->value;
-  }
-  return e->value;
-}
-
-RefCount CTEntry::refCount(const Entry* e) noexcept {
-  assert(e != nullptr);
-  if (isNegativePointer(e)) {
-    return -getAlignedPointer(e)->ref;
-  }
-  return e->ref;
-}
-
-bool CTEntry::approximatelyEquals(const fp left, const fp right) noexcept {
-  return std::abs(left - right) <= TOLERANCE;
-}
-
-bool CTEntry::approximatelyEquals(const Entry* left,
-                                  const Entry* right) noexcept {
-  return left == right || approximatelyEquals(val(left), val(right));
-}
-
-bool CTEntry::approximatelyZero(const fp e) noexcept {
-  return std::abs(e) <= TOLERANCE;
-}
-
-bool CTEntry::approximatelyZero(const Entry* e) noexcept {
-  return e == &zero || approximatelyZero(val(e));
-}
-
-bool CTEntry::approximatelyOne(const fp e) noexcept {
-  return approximatelyEquals(e, 1.0);
-}
-
-bool CTEntry::approximatelyOne(const Entry* e) noexcept {
-  return e == &one || approximatelyOne(val(e));
-}
-
-void CTEntry::writeBinary(const Entry* e, std::ostream& os) {
-  const auto temp = val(e);
-  os.write(reinterpret_cast<const char*>(&temp), sizeof(decltype(temp)));
-}
-
-ComplexTable::ComplexTable(const std::size_t initialAllocSize,
-                           const std::size_t growthFact,
-                           const std::size_t initialGCLim)
-    : initialAllocationSize(initialAllocSize), growthFactor(growthFact),
-      initialGCLimit(initialGCLim) {
+RealNumberUniqueTable::RealNumberUniqueTable(MemoryManager<RealNumber>& manager,
+                                             const std::size_t initialGCLim)
+    : memoryManager(&manager), initialGCLimit(initialGCLim) {
   // add 1/2 to the complex table and increase its ref count (so that it is
   // not collected)
   lookup(0.5L)->ref++;
 }
 
-CTEntry* ComplexTable::lookup(const fp val) {
+fp RealNumberUniqueTable::tolerance() noexcept { return RealNumber::eps; }
+
+void RealNumberUniqueTable::setTolerance(const fp tol) noexcept {
+  RealNumber::eps = tol;
+}
+
+std::int64_t RealNumberUniqueTable::hash(const fp val) noexcept {
+  static constexpr std::int64_t MASK = NBUCKET - 1;
+  assert(val >= 0);
+  const auto key = static_cast<std::int64_t>(std::nearbyint(val * MASK));
+  return std::min<std::int64_t>(key, MASK);
+}
+
+RealNumber* RealNumberUniqueTable::lookup(const fp val) {
   assert(!std::isnan(val));
   assert(val >= 0); // required anyway for the hash function
   ++lookups;
-  if (Entry::approximatelyZero(val)) {
+  if (RealNumber::approximatelyZero(val)) {
     ++hits;
-    return &zero;
+    return &constants::zero;
   }
 
-  if (Entry::approximatelyOne(val)) {
+  if (RealNumber::approximatelyOne(val)) {
     ++hits;
-    return &one;
+    return &constants::one;
   }
 
-  if (Entry::approximatelyEquals(val, SQRT2_2)) {
+  if (RealNumber::approximatelyEquals(val, SQRT2_2)) {
     ++hits;
-    return &sqrt2over2;
+    return &constants::sqrt2over2;
   }
+  assert(val - RealNumber::eps >= 0); // should be handle above as special case
 
-  assert(val - TOLERANCE >= 0); // should be handle above as special case
-
-  const auto lowerKey = hash(val - TOLERANCE);
-  const auto upperKey = hash(val + TOLERANCE);
+  const auto lowerKey = hash(val - RealNumber::eps);
+  const auto upperKey = hash(val + RealNumber::eps);
 
   if (upperKey == lowerKey) {
     ++findOrInserts;
@@ -123,8 +67,8 @@ CTEntry* ComplexTable::lookup(const fp val) {
 
   const auto key = hash(val);
 
-  Entry* pLower; // NOLINT(cppcoreguidelines-init-variables)
-  Entry* pUpper; // NOLINT(cppcoreguidelines-init-variables)
+  RealNumber* pLower; // NOLINT(cppcoreguidelines-init-variables)
+  RealNumber* pUpper; // NOLINT(cppcoreguidelines-init-variables)
   if (lowerKey != key) {
     pLower = tailTable[static_cast<std::size_t>(lowerKey)];
     pUpper = table[static_cast<std::size_t>(key)];
@@ -136,9 +80,11 @@ CTEntry* ComplexTable::lookup(const fp val) {
   }
 
   const bool lowerMatchFound =
-      (pLower != nullptr && Entry::approximatelyEquals(val, pLower->value));
+      (pLower != nullptr &&
+       RealNumber::approximatelyEquals(val, pLower->value));
   const bool upperMatchFound =
-      (pUpper != nullptr && Entry::approximatelyEquals(val, pUpper->value));
+      (pUpper != nullptr &&
+       RealNumber::approximatelyEquals(val, pUpper->value));
 
   if (lowerMatchFound && upperMatchFound) {
     ++hits;
@@ -166,75 +112,17 @@ CTEntry* ComplexTable::lookup(const fp val) {
   return insert(key, val);
 }
 
-CTEntry* ComplexTable::getEntry() {
-  // an entry is available on the stack
-  if (!availableEmpty()) {
-    auto* entry = available;
-    available = entry->next;
-    // returned entries could have a ref count != 0
-    entry->ref = 0;
-    return entry;
-  }
-
-  // new chunk has to be allocated
-  if (chunkIt == chunkEndIt) {
-    chunks.emplace_back(allocationSize);
-    allocations += allocationSize;
-    allocationSize *= growthFactor;
-    chunkID++;
-    chunkIt = chunks[chunkID].begin();
-    chunkEndIt = chunks[chunkID].end();
-  }
-
-  auto* entry = &(*chunkIt);
-  ++chunkIt;
-  return entry;
+bool RealNumberUniqueTable::possiblyNeedsCollection() const noexcept {
+  return memoryManager->getUsedCount() >= gcLimit;
 }
 
-void ComplexTable::returnEntry(Entry* entry) noexcept {
-  entry->next = available;
-  available = entry;
-}
-
-void ComplexTable::incRef(Entry* entry) noexcept {
-  // get valid pointer
-  auto* entryPtr = Entry::getAlignedPointer(entry);
-
-  if (entryPtr == nullptr || isStaticEntry(entryPtr) ||
-      entryPtr->ref == std::numeric_limits<RefCount>::max()) {
-    return;
-  }
-
-  // increase reference count
-  entryPtr->ref++;
-}
-
-void ComplexTable::decRef(Entry* entry) noexcept {
-  // get valid pointer
-  auto* entryPtr = Entry::getAlignedPointer(entry);
-
-  if (entryPtr == nullptr || isStaticEntry(entryPtr) ||
-      entryPtr->ref == std::numeric_limits<RefCount>::max()) {
-    return;
-  }
-
-  assert(entryPtr->ref != 0 &&
-         "Reference count of CTEntry is zero before decrement");
-
-  // decrease reference count
-  entryPtr->ref--;
-}
-
-bool ComplexTable::possiblyNeedsCollection() const noexcept {
-  return count >= gcLimit;
-}
-
-std::size_t ComplexTable::garbageCollect(const bool force) noexcept {
+std::size_t RealNumberUniqueTable::garbageCollect(const bool force) noexcept {
   gcCalls++;
   // nothing to be done if garbage collection is not forced, and the limit has
   // not been reached, or the current count is minimal (the complex table
   // always contains at least 0.5)
-  if ((!force && !possiblyNeedsCollection()) || count <= 1) {
+  if ((!force && !possiblyNeedsCollection()) ||
+      memoryManager->getUsedCount() <= 1) {
     return 0;
   }
 
@@ -242,17 +130,17 @@ std::size_t ComplexTable::garbageCollect(const bool force) noexcept {
   std::size_t collected = 0;
   std::size_t remaining = 0;
   for (std::size_t key = 0; key < table.size(); ++key) {
-    Entry* p = table[key];
-    Entry* lastp = nullptr;
+    auto* p = table[key];
+    RealNumber* lastp = nullptr;
     while (p != nullptr) {
       if (p->ref == 0) {
-        Entry* next = p->next;
+        auto* next = p->next;
         if (lastp == nullptr) {
           table[key] = next;
         } else {
           lastp->next = next;
         }
-        returnEntry(p);
+        memoryManager->free(p);
         p = next;
         collected++;
       } else {
@@ -275,11 +163,10 @@ std::size_t ComplexTable::garbageCollect(const bool force) noexcept {
   } else if (remaining < gcLimit / 128) {
     gcLimit /= 2;
   }
-  count = remaining;
   return collected;
 }
 
-void ComplexTable::clear() noexcept {
+void RealNumberUniqueTable::clear() noexcept {
   // clear table buckets
   for (auto& bucket : table) {
     bucket = nullptr;
@@ -287,28 +174,6 @@ void ComplexTable::clear() noexcept {
   for (auto& entry : tailTable) {
     entry = nullptr;
   }
-
-  // clear available stack
-  available = nullptr;
-
-  // release memory of all but the first chunk
-  // it could be desirable to keep the memory for later use
-  while (chunkID > 0) {
-    chunks.pop_back();
-    chunkID--;
-  }
-  // restore initial chunk setting
-  chunkIt = chunks[0].begin();
-  chunkEndIt = chunks[0].end();
-  allocationSize = initialAllocationSize * growthFactor;
-  allocations = initialAllocationSize;
-
-  for (auto& entry : chunks[0]) {
-    entry.ref = 0;
-  }
-
-  count = 0;
-  peakCount = 0;
 
   collisions = 0;
   insertCollisions = 0;
@@ -324,7 +189,7 @@ void ComplexTable::clear() noexcept {
   gcLimit = initialGCLimit;
 }
 
-void ComplexTable::print() {
+void RealNumberUniqueTable::print() const {
   const auto precision = std::cout.precision();
   std::cout.precision(std::numeric_limits<dd::fp>::max_digits10);
   for (std::size_t key = 0; key < table.size(); ++key) {
@@ -346,14 +211,14 @@ void ComplexTable::print() {
   std::cout.precision(precision);
 }
 
-fp ComplexTable::hitRatio() const noexcept {
+fp RealNumberUniqueTable::hitRatio() const noexcept {
   if (lookups == 0) {
     return 0.0;
   }
   return static_cast<fp>(hits) / static_cast<fp>(lookups);
 }
 
-fp ComplexTable::colRatio() const noexcept {
+fp RealNumberUniqueTable::colRatio() const noexcept {
   if (lookups == 0) {
     return 0.0;
   }
@@ -361,7 +226,7 @@ fp ComplexTable::colRatio() const noexcept {
 }
 
 std::map<std::string, std::size_t, std::less<>>
-ComplexTable::getStatistics() noexcept {
+RealNumberUniqueTable::getStatistics() noexcept {
   return {
       {"hits", hits},
       {"collisions", collisions},
@@ -376,7 +241,7 @@ ComplexTable::getStatistics() noexcept {
   };
 }
 
-std::ostream& ComplexTable::printStatistics(std::ostream& os) const {
+std::ostream& RealNumberUniqueTable::printStatistics(std::ostream& os) const {
   os << "hits: " << hits << ", collisions: " << collisions
      << ", looks: " << lookups << ", inserts: " << inserts
      << ", insertCollisions: " << insertCollisions
@@ -388,7 +253,7 @@ std::ostream& ComplexTable::printStatistics(std::ostream& os) const {
   return os;
 }
 
-std::ostream& ComplexTable::printBucketDistribution(std::ostream& os) {
+std::ostream& RealNumberUniqueTable::printBucketDistribution(std::ostream& os) {
   for (auto* bucket : table) {
     if (bucket == nullptr) {
       os << "0\n";
@@ -405,15 +270,15 @@ std::ostream& ComplexTable::printBucketDistribution(std::ostream& os) {
   return os;
 }
 
-ComplexTable::Entry* ComplexTable::findOrInsert(const std::int64_t key,
+RealNumber* RealNumberUniqueTable::findOrInsert(const std::int64_t key,
                                                 const fp val) {
-  const fp valTol = val + TOLERANCE;
+  const fp valTol = val + RealNumber::eps;
 
   auto* curr = table[static_cast<std::size_t>(key)];
-  Entry* prev = nullptr;
+  RealNumber* prev = nullptr;
 
   while (curr != nullptr && curr->value <= valTol) {
-    if (Entry::approximatelyEquals(curr->value, val)) {
+    if (RealNumber::approximatelyEquals(curr->value, val)) {
       // check if val is actually closer to the next element in the list (if
       // there is one)
       if (curr->next != nullptr) {
@@ -438,7 +303,7 @@ ComplexTable::Entry* ComplexTable::findOrInsert(const std::int64_t key,
   }
 
   ++inserts;
-  auto* entry = getEntry();
+  auto* entry = memoryManager->get();
   entry->value = val;
 
   if (prev == nullptr) {
@@ -451,19 +316,17 @@ ComplexTable::Entry* ComplexTable::findOrInsert(const std::int64_t key,
   if (curr == nullptr) {
     tailTable[static_cast<std::size_t>(key)] = entry;
   }
-  count++;
-  peakCount = std::max(peakCount, count);
   return entry;
 }
 
-ComplexTable::Entry* ComplexTable::insert(const std::int64_t key,
+RealNumber* RealNumberUniqueTable::insert(const std::int64_t key,
                                           const fp val) {
   ++inserts;
-  auto* entry = getEntry();
+  auto* entry = memoryManager->get();
   entry->value = val;
 
   auto* curr = table[static_cast<std::size_t>(key)];
-  Entry* prev = nullptr;
+  RealNumber* prev = nullptr;
 
   while (curr != nullptr && curr->value <= val) {
     ++insertCollisions;
@@ -481,8 +344,6 @@ ComplexTable::Entry* ComplexTable::insert(const std::int64_t key,
   if (curr == nullptr) {
     tailTable[static_cast<std::size_t>(key)] = entry;
   }
-  count++;
-  peakCount = std::max(peakCount, count);
   return entry;
 }
 

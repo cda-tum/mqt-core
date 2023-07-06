@@ -1,9 +1,7 @@
 #pragma once
 
 #include "Complex.hpp"
-#include "ComplexCache.hpp"
 #include "ComplexNumbers.hpp"
-#include "ComplexTable.hpp"
 #include "ComplexValue.hpp"
 #include "ComputeTable.hpp"
 #include "Control.hpp"
@@ -113,7 +111,7 @@ public:
     // zero
     if (cached) {
       for (auto i = 0U; i < RADIX; i++) {
-        if (zero[i] && e.p->e[i].w != Complex::zero) {
+        if (zero[i]) {
           cn.returnToCache(e.p->e[i].w);
           e.p->e[i] = vEdge::zero;
         }
@@ -133,7 +131,7 @@ public:
 
       auto r = e;
       auto& w = r.p->e[1].w;
-      if (cached && !w.exactlyOne()) {
+      if (cached) {
         r.w = w;
       } else {
         r.w = cn.lookup(w);
@@ -145,7 +143,7 @@ public:
     if (zero[1]) {
       auto r = e;
       auto& w = r.p->e[0].w;
-      if (cached && !w.exactlyOne()) {
+      if (cached) {
         r.w = w;
       } else {
         r.w = cn.lookup(w);
@@ -157,22 +155,25 @@ public:
     const auto mag0 = ComplexNumbers::mag2(e.p->e[0].w);
     const auto mag1 = ComplexNumbers::mag2(e.p->e[1].w);
     const auto norm2 = mag0 + mag1;
-    const auto mag2Max =
-        (mag0 + ComplexTable::tolerance() >= mag1) ? mag0 : mag1;
-    const auto argMax = (mag0 + ComplexTable::tolerance() >= mag1) ? 0 : 1;
+    const auto mag2Max = (mag0 + RealNumber::eps >= mag1) ? mag0 : mag1;
+    const auto argMax = (mag0 + RealNumber::eps >= mag1) ? 0 : 1;
     const auto norm = std::sqrt(norm2);
     const auto magMax = std::sqrt(mag2Max);
     const auto commonFactor = norm / magMax;
 
     auto r = e;
     auto& max = r.p->e[static_cast<std::size_t>(argMax)];
-    if (cached && !max.w.exactlyOne()) {
-      r.w = max.w;
-      r.w.r->value *= commonFactor;
-      r.w.i->value *= commonFactor;
+    if (cached) {
+      if (max.w.exactlyOne()) {
+        r.w = cn.lookup(commonFactor, 0.);
+      } else {
+        r.w = max.w;
+        r.w.r->value *= commonFactor;
+        r.w.i->value *= commonFactor;
+      }
     } else {
-      r.w = cn.lookup(CTEntry::val(max.w.r) * commonFactor,
-                      CTEntry::val(max.w.i) * commonFactor);
+      r.w = cn.lookup(RealNumber::val(max.w.r) * commonFactor,
+                      RealNumber::val(max.w.i) * commonFactor);
       if (r.w.approximatelyZero()) {
         return vEdge::zero;
       }
@@ -186,13 +187,10 @@ public:
     const auto argMin = (argMax + 1) % 2;
     auto& min = r.p->e[static_cast<std::size_t>(argMin)];
     if (cached) {
-      cn.returnToCache(min.w);
       ComplexNumbers::div(min.w, min.w, r.w);
-      min.w = cn.lookup(min.w);
+      min.w = cn.lookup(min.w, true);
     } else {
-      auto c = cn.getTemporary();
-      ComplexNumbers::div(c, min.w, r.w);
-      min.w = cn.lookup(c);
+      min.w = cn.lookup(cn.divTemp(min.w, r.w));
     }
     if (min.w == Complex::zero) {
       min = vEdge::zero;
@@ -321,10 +319,7 @@ public:
         makeStateFromVector(stateVector.begin(), stateVector.end(), level);
 
     // the recursive function makes use of the cache, so we have to clean it up
-    if (state.w != Complex::zero) {
-      cn.returnToCache(state.w);
-      state.w = cn.lookup(state.w);
-    }
+    state.w = cn.lookup(state.w, true);
 
     [[maybe_unused]] const auto after = cn.cacheCount();
     assert(after == before);
@@ -364,10 +359,7 @@ public:
 
     auto matrixDD = makeDDFromMatrix(matrix, level, 0, length, 0, width);
 
-    if (matrixDD.w != Complex::zero) {
-      cn.returnToCache(matrixDD.w);
-      matrixDD.w = cn.lookup(matrixDD.w);
-    }
+    matrixDD.w = cn.lookup(matrixDD.w, true);
 
     [[maybe_unused]] const auto after = cn.cacheCount();
     assert(after == before);
@@ -389,9 +381,10 @@ public:
       // zero
       if (cached) {
         for (auto i = 0U; i < NEDGE; i++) {
-          if (zero[i] && e.p->e[i].w != Complex::zero) {
-            cn.returnToCache(e.p->e[i].w);
-            e.p->e[i] = Edge<Node>::zero;
+          auto& successor = e.p->e[i];
+          if (zero[i]) {
+            cn.returnToCache(successor.w);
+            successor = Edge<Node>::zero;
           }
         }
       }
@@ -403,16 +396,17 @@ public:
         if (zero[i]) {
           continue;
         }
+        const auto& w = e.p->e[i].w;
         if (argmax == -1) {
           argmax = static_cast<decltype(argmax)>(i);
-          max = ComplexNumbers::mag2(e.p->e[i].w);
-          maxc = e.p->e[i].w;
+          max = ComplexNumbers::mag2(w);
+          maxc = w;
         } else {
-          auto mag = ComplexNumbers::mag2(e.p->e[i].w);
-          if (mag - max > ComplexTable::tolerance()) {
+          auto mag = ComplexNumbers::mag2(w);
+          if (mag - max > RealNumber::eps) {
             argmax = static_cast<decltype(argmax)>(i);
             max = mag;
-            maxc = e.p->e[i].w;
+            maxc = w;
           }
         }
       }
@@ -431,39 +425,37 @@ public:
       // divide each entry by max
       for (auto i = 0U; i < NEDGE; ++i) {
         if (static_cast<decltype(argmax)>(i) == argmax) {
-          if (cached) {
-            if (r.w.exactlyOne()) {
-              r.w = maxc;
-            } else {
-              ComplexNumbers::mul(r.w, r.w, maxc);
-            }
-          } else {
-            if (r.w.exactlyOne()) {
-              r.w = maxc;
-            } else {
-              auto c = cn.getTemporary();
-              ComplexNumbers::mul(c, r.w, maxc);
-              r.w = cn.lookup(c);
-            }
-          }
           r.p->e[i].w = Complex::one;
-        } else {
-          if (zero[i]) {
-            if (cached && r.p->e[i].w != Complex::zero) {
-              cn.returnToCache(r.p->e[i].w);
-            }
-            r.p->e[i] = Edge<Node>::zero;
+          if (r.w.exactlyOne()) {
+            r.w = maxc;
             continue;
           }
-          if (cached && !zero[i] && !r.p->e[i].w.exactlyOne()) {
-            cn.returnToCache(r.p->e[i].w);
+
+          if (cached) {
+            ComplexNumbers::mul(r.w, r.w, maxc);
+          } else {
+            r.w = cn.lookup(cn.mulTemp(r.w, maxc));
           }
-          if (r.p->e[i].w.approximatelyOne()) {
-            r.p->e[i].w = Complex::one;
+        } else {
+          auto& successor = r.p->e[i];
+          if (zero[i]) {
+            assert(successor.w.exactlyZero() &&
+                   "Should have been set to zero at the start");
+            continue;
           }
-          auto c = cn.getTemporary();
-          ComplexNumbers::div(c, r.p->e[i].w, maxc);
-          r.p->e[i].w = cn.lookup(c);
+          // TODO: it might be worth revisiting whether this check actually
+          // improves performance or rather causes more instability.
+          if (successor.w.approximatelyOne()) {
+            if (cached) {
+              cn.returnToCache(successor.w);
+            }
+            successor.w = Complex::one;
+          }
+          const auto c = cn.divTemp(successor.w, maxc);
+          if (cached) {
+            cn.returnToCache(successor.w);
+          }
+          successor.w = cn.lookup(c);
         }
       }
       return r;
@@ -909,9 +901,9 @@ private:
     p->setSymmetric(true);
 
     // check if matrix resembles identity
-    if (!(p->e[0].p->isIdentity()) || (p->e[1].w) != Complex::zero ||
-        (p->e[2].w) != Complex::zero || (p->e[0].w) != Complex::one ||
-        (p->e[3].w) != Complex::one || !(p->e[3].p->isIdentity())) {
+    if (!(p->e[0].p->isIdentity()) || !p->e[1].w.exactlyZero() ||
+        !p->e[2].w.exactlyZero() || !p->e[0].w.exactlyOne() ||
+        !p->e[3].w.exactlyOne() || !(p->e[3].p->isIdentity())) {
       return;
     }
     p->setIdentity(true);
@@ -922,9 +914,8 @@ private:
                             const Qubit level) {
     if (level == 0) {
       assert(std::distance(begin, end) == 2);
-      const auto& zeroWeight = cn.getCached(begin->real(), begin->imag());
-      const auto& oneWeight =
-          cn.getCached(std::next(begin)->real(), std::next(begin)->imag());
+      const auto& zeroWeight = cn.getCached(*begin);
+      const auto& oneWeight = cn.getCached(*std::next(begin));
       const auto zeroSuccessor = vEdge{vNode::getTerminal(), zeroWeight};
       const auto oneSuccessor = vEdge{vNode::getTerminal(), oneWeight};
       return makeDDNode<vNode>(0, {zeroSuccessor, oneSuccessor}, true);
@@ -1021,7 +1012,7 @@ public:
     if (!force && !vUniqueTable.possiblyNeedsCollection() &&
         !mUniqueTable.possiblyNeedsCollection() &&
         !dUniqueTable.possiblyNeedsCollection() &&
-        !cn.complexTable.possiblyNeedsCollection()) {
+        !cn.getComplexTable().possiblyNeedsCollection()) {
       return false;
     }
 
@@ -1103,7 +1094,7 @@ public:
       }
     }
 
-    assert(e.p->refCount == 0);
+    assert(e.p->ref == 0);
     for ([[maybe_unused]] const auto& edge : edges) {
       // an error here indicates that cached nodes are assigned multiple times.
       // Check if garbage collect correctly resets the cache tables!
@@ -1168,9 +1159,7 @@ private:
     if (newedge.w.approximatelyOne()) {
       newedge.w = e.w;
     } else {
-      auto w = cn.getTemporary();
-      dd::ComplexNumbers::mul(w, newedge.w, e.w);
-      newedge.w = cn.lookup(w);
+      newedge.w = cn.lookup(cn.mulTemp(newedge.w, e.w));
     }
 
     return newedge;
@@ -1392,7 +1381,7 @@ public:
           std::to_string(pzero) + " + " + std::to_string(pone) + " = " +
           std::to_string(pzero + pone) + ", but should be 1!");
     }
-    std::uniform_real_distribution<fp> dist(0.0, 1.0L);
+    std::uniform_real_distribution<fp> dist(0., 1.);
     if (const auto threshold = dist(mt); threshold < pzero / sum) {
       performCollapsingMeasurement(rootEdge, index, pzero, true);
       return '0';
@@ -1429,7 +1418,7 @@ public:
 
     vEdge e = multiply(measurementGate, rootEdge);
 
-    assert(probability > 0.0L);
+    assert(probability > 0.);
     Complex c = cn.getTemporary(std::sqrt(1.0 / probability), 0);
     ComplexNumbers::mul(c, e.w, c);
     e.w = cn.lookup(c);
@@ -1464,13 +1453,9 @@ public:
     [[maybe_unused]] const auto before = cn.cacheCount();
 
     auto result = add2(x, y);
+    result.w = cn.lookup(result.w, true);
 
-    if (result.w != Complex::zero) {
-      cn.returnToCache(result.w);
-      result.w = cn.lookup(result.w);
-    }
-
-    [[maybe_unused]] const auto after = cn.complexCache.getCount();
+    [[maybe_unused]] const auto after = cn.cacheCount();
     assert(after == before);
 
     return result;
@@ -1489,14 +1474,10 @@ public:
       if (y.w.exactlyZero()) {
         return Edge<Node>::zero;
       }
-      auto r = y;
-      r.w = cn.getCached(CTEntry::val(y.w.r), CTEntry::val(y.w.i));
-      return r;
+      return {y.p, cn.getCached(y.w)};
     }
     if (y.w.exactlyZero()) {
-      auto r = x;
-      r.w = cn.getCached(CTEntry::val(x.w.r), CTEntry::val(x.w.i));
-      return r;
+      return {x.p, cn.getCached(x.w)};
     }
     if (x.p == y.p) {
       auto r = y;
@@ -1530,7 +1511,7 @@ public:
       if (!x.isTerminal() && x.p->v == w) {
         e1 = x.p->e[i];
 
-        if (e1.w != Complex::zero) {
+        if (!e1.w.exactlyZero()) {
           e1.w = cn.mulCached(e1.w, x.w);
         }
       } else {
@@ -1543,7 +1524,7 @@ public:
       if (!y.isTerminal() && y.p->v == w) {
         e2 = y.p->e[i];
 
-        if (e2.w != Complex::zero) {
+        if (!e2.w.exactlyZero()) {
           e2.w = cn.mulCached(e2.w, y.w);
         }
       } else {
@@ -1561,11 +1542,11 @@ public:
         edge[i] = add2(e1, e2);
       }
 
-      if (!x.isTerminal() && x.p->v == w && e1.w != Complex::zero) {
+      if (!x.isTerminal() && x.p->v == w) {
         cn.returnToCache(e1.w);
       }
 
-      if (!y.isTerminal() && y.p->v == w && e2.w != Complex::zero) {
+      if (!y.isTerminal() && y.p->v == w) {
         cn.returnToCache(e2.w);
       }
     }
@@ -1610,9 +1591,7 @@ public:
     // create new top node
     r = makeDDNode(a.p->v, e);
     // adjust top weight
-    auto c = cn.getTemporary();
-    ComplexNumbers::mul(c, r.w, a.w);
-    r.w = cn.lookup(c);
+    r.w = cn.lookup(cn.mulTemp(r.w, a.w));
 
     // put in compute table
     matrixTranspose.insert(a, r);
@@ -1644,10 +1623,8 @@ public:
     // create new top node
     r = makeDDNode(a.p->v, e);
 
-    auto c = cn.getTemporary();
     // adjust top weight including conjugate
-    ComplexNumbers::mul(c, r.w, ComplexNumbers::conj(a.w));
-    r.w = cn.lookup(c);
+    r.w = cn.lookup(cn.mulTemp(r.w, ComplexNumbers::conj(a.w)));
 
     // put it in the compute table
     conjugateMatrixTranspose.insert(a, r);
@@ -1729,10 +1706,7 @@ public:
       e = multiply2(x, y, var, start);
     }
 
-    if (!e.w.exactlyZero() && !e.w.exactlyOne()) {
-      cn.returnToCache(e.w);
-      e.w = cn.lookup(e.w);
-    }
+    e.w = cn.lookup(e.w, true);
 
     [[maybe_unused]] const auto after = cn.cacheCount();
     assert(before == after);
@@ -1765,10 +1739,8 @@ private:
       return ResultEdge::terminal(cn.mulCached(x.w, y.w));
     }
 
-    auto xCopy = x;
-    xCopy.w = Complex::one;
-    auto yCopy = y;
-    yCopy.w = Complex::one;
+    auto xCopy = LEdge{x.p, Complex::one};
+    auto yCopy = REdge{y.p, Complex::one};
 
     auto& computeTable =
         getMultiplicationComputeTable<LeftOperandNode, RightOperandNode>();
@@ -1872,9 +1844,7 @@ private:
                 if (edge[1].w.approximatelyZero()) {
                   edge[2] = ResultEdge::zero;
                 } else {
-                  edge[2] =
-                      ResultEdge{edge[1].p, cn.getCached(edge[1].w.r->value,
-                                                         edge[1].w.i->value)};
+                  edge[2] = {edge[1].p, cn.getCached(edge[1].w)};
                 }
               }
               continue;
@@ -1887,10 +1857,10 @@ private:
               edge[idx] = m;
             } else if (!m.w.exactlyZero()) {
               dEdge::applyDmChangesToEdges(edge[idx], m);
-              auto oldE = edge[idx];
+              const auto w = edge[idx].w;
               edge[idx] = add2(edge[idx], m);
               dEdge::revertDmChangesToEdges(edge[idx], e2);
-              cn.returnToCache(oldE.w);
+              cn.returnToCache(w);
               cn.returnToCache(m.w);
             }
             // Undo modifications on density matrices
@@ -1901,9 +1871,9 @@ private:
             if (k == 0 || edge[idx].w.exactlyZero()) {
               edge[idx] = m;
             } else if (!m.w.exactlyZero()) {
-              auto oldE = edge[idx];
+              const auto w = edge[idx].w;
               edge[idx] = add2(edge[idx], m);
-              cn.returnToCache(oldE.w);
+              cn.returnToCache(w);
               cn.returnToCache(m.w);
             }
           }
@@ -1919,7 +1889,7 @@ private:
 
     computeTable.insert(xCopy, yCopy, {e.p, e.w});
 
-    if (!e.w.exactlyZero() && (x.w.exactlyOne() || !y.w.exactlyZero())) {
+    if (!e.w.exactlyZero()) {
       if (e.w.exactlyOne()) {
         e.w = cn.mulCached(x.w, y.w);
       } else {
@@ -1959,10 +1929,9 @@ public:
     if (y.p->v > w) {
       w = y.p->v;
     }
-    auto xCopy = x;
-    xCopy.w = ComplexNumbers::conj(
-        x.w); // Overall normalization factor needs to be conjugated
-              // before input into recursive private function
+    // Overall normalization factor needs to be conjugated
+    // before input into recursive private function
+    auto xCopy = vEdge{x.p, ComplexNumbers::conj(x.w)};
     const ComplexValue ip = innerProduct(xCopy, y, static_cast<Qubit>(w + 1));
 
     [[maybe_unused]] const auto after = cn.cacheCount();
@@ -2031,22 +2000,19 @@ private:
     }
 
     if (var == 0) { // Multiplies terminal weights
-      auto c = cn.getTemporary();
-      ComplexNumbers::mul(c, x.w, y.w);
+      auto c = cn.mulTemp(x.w, y.w);
       return {c.r->value, c.i->value};
     }
 
-    auto xCopy = x;
-    xCopy.w = Complex::one; // Set to one to generate more lookup hits
-    auto yCopy = y;
-    yCopy.w = Complex::one;
-
+    // Set to one to generate more lookup hits
+    auto xCopy = vEdge{x.p, Complex::one};
+    auto yCopy = vEdge{y.p, Complex::one};
     auto r = vectorInnerProduct.lookup(xCopy, yCopy);
     if (r.p != nullptr) {
       auto c = cn.getTemporary(r.w);
       ComplexNumbers::mul(c, c, x.w);
       ComplexNumbers::mul(c, c, y.w);
-      return {CTEntry::val(c.r), CTEntry::val(c.i)};
+      return {RealNumber::val(c.r), RealNumber::val(c.i)};
     }
 
     auto w = static_cast<Qubit>(var - 1);
@@ -2078,7 +2044,7 @@ private:
     auto c = cn.getTemporary(sum);
     ComplexNumbers::mul(c, c, x.w);
     ComplexNumbers::mul(c, c, y.w);
-    return {CTEntry::val(c.r), CTEntry::val(c.i)};
+    return {RealNumber::val(c.r), RealNumber::val(c.i)};
   }
 
 public:
@@ -2107,7 +2073,7 @@ public:
     auto yPrime = multiply(x, y);
     const ComplexValue expValue = innerProduct(y, yPrime);
 
-    assert(CTEntry::approximatelyZero(expValue.i));
+    assert(RealNumber::approximatelyZero(expValue.i));
 
     garbageCollect();
 
@@ -2139,11 +2105,7 @@ public:
     }
 
     auto e = kronecker2(x, y, incIdx);
-
-    if (e.w != Complex::zero && !e.w.exactlyOne()) {
-      cn.returnToCache(e.w);
-      e.w = cn.lookup(e.w);
-    }
+    e.w = cn.lookup(e.w, true);
 
     return e;
   }
@@ -2167,9 +2129,7 @@ private:
     }
 
     if (x.isTerminal()) {
-      auto r = y;
-      r.w = cn.mulCached(x.w, y.w);
-      return r;
+      return {y.p, cn.mulCached(x.w, y.w)};
     }
 
     auto& computeTable = getKroneckerComputeTable<Node>();
@@ -2194,7 +2154,7 @@ private:
                          std::array{e, Edge<Node>::zero, Edge<Node>::zero, e});
         }
 
-        e.w = cn.getCached(CTEntry::val(y.w.r), CTEntry::val(y.w.i));
+        e.w = cn.getCached(y.w);
         computeTable.insert(x, y, {e.p, e.w});
         return e;
       }
@@ -2229,7 +2189,7 @@ public:
     const auto res = partialTrace(a, eliminate);
     [[maybe_unused]] const auto after = cn.cacheCount();
     assert(before == after);
-    return {CTEntry::val(res.w.r), CTEntry::val(res.w.i)};
+    return {RealNumber::val(res.w.r), RealNumber::val(res.w.i)};
   }
   bool isCloseToIdentity(const mEdge& m, dd::fp tol = 1e-10) {
     std::unordered_set<decltype(m.p)> visited{};
@@ -2273,20 +2233,13 @@ private:
       if (r.w.exactlyOne()) {
         r.w = a.w;
       } else {
-        auto c = cn.getTemporary();
-        ComplexNumbers::mul(c, r.w, a.w);
-        r.w =
-            cn.lookup(c); // better safe than sorry. this may result in complex
-                          // values with magnitude > 1 in the complex table
+        // better safe than sorry. this may result in complex
+        // values with magnitude > 1 in the complex table
+        r.w = cn.lookup(cn.mulTemp(r.w, a.w));
       }
 
-      if (r1.w != Complex::zero) {
-        cn.returnToCache(r1.w);
-      }
-
-      if (r2.w != Complex::zero) {
-        cn.returnToCache(r2.w);
-      }
+      cn.returnToCache(r1.w);
+      cn.returnToCache(r2.w);
 
       return r;
     }
@@ -2307,9 +2260,7 @@ private:
     if (r.w.exactlyOne()) {
       r.w = a.w;
     } else {
-      auto c = cn.getTemporary();
-      ComplexNumbers::mul(c, r.w, a.w);
-      r.w = cn.lookup(c);
+      r.w = cn.lookup(cn.mulTemp(r.w, a.w));
     }
     return r;
   }
@@ -2503,8 +2454,8 @@ public:
       return e;
     }
     auto f = reduceAncillaeRecursion(e, ancillary, lowerbound, regular);
-    decRef(e);
     incRef(f);
+    decRef(e);
     return f;
   }
 
@@ -2528,8 +2479,8 @@ public:
       return e;
     }
     auto f = reduceGarbageRecursion(e, garbage, lowerbound);
-    decRef(e);
     incRef(f);
+    decRef(e);
     return f;
   }
   mEdge reduceGarbage(mEdge& e, const std::vector<bool>& garbage,
@@ -2551,8 +2502,8 @@ public:
       return e;
     }
     auto f = reduceGarbageRecursion(e, garbage, lowerbound, regular);
-    decRef(e);
     incRef(f);
+    decRef(e);
     return f;
   }
 
@@ -2600,10 +2551,7 @@ private:
         }
       }
     }
-
-    auto c = cn.mulCached(f.w, e.w);
-    f.w = cn.lookup(c);
-    cn.returnToCache(c);
+    f.w = cn.lookup(cn.mulTemp(f.w, e.w));
     return f;
   }
 
@@ -2649,10 +2597,7 @@ private:
         f = makeDDNode(e.p->v, std::array{g, vEdge::zero});
       }
     }
-
-    auto c = cn.mulCached(f.w, e.w);
-    f.w = cn.lookup(c);
-    cn.returnToCache(c);
+    f.w = cn.lookup(cn.mulTemp(f.w, e.w));
 
     // Quick-fix for normalization bug
     if (ComplexNumbers::mag2(f.w) > 1.0) {
@@ -2734,10 +2679,7 @@ private:
         }
       }
     }
-
-    auto c = cn.mulCached(f.w, e.w);
-    f.w = cn.lookup(c);
-    cn.returnToCache(c);
+    f.w = cn.lookup(cn.mulTemp(f.w, e.w));
 
     // Quick-fix for normalization bug
     if (ComplexNumbers::mag2(f.w) > 1.0) {
@@ -2762,7 +2704,7 @@ public:
   template <class Edge>
   ComplexValue getValueByPath(const Edge& e, const std::string& elements) {
     if (e.isTerminal()) {
-      return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
+      return {RealNumber::val(e.w.r), RealNumber::val(e.w.i)};
     }
 
     auto c = cn.getTemporary(1, 0);
@@ -2777,11 +2719,11 @@ public:
     } while (!r.isTerminal());
     ComplexNumbers::mul(c, c, r.w);
 
-    return {CTEntry::val(c.r), CTEntry::val(c.i)};
+    return {RealNumber::val(c.r), RealNumber::val(c.i)};
   }
   ComplexValue getValueByPath(const vEdge& e, std::size_t i) {
     if (e.isTerminal()) {
-      return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
+      return {RealNumber::val(e.w.r), RealNumber::val(e.w.i)};
     }
     return getValueByPath(e, Complex::one, i);
   }
@@ -2791,7 +2733,7 @@ public:
 
     if (e.isTerminal()) {
       cn.returnToCache(c);
-      return {CTEntry::val(c.r), CTEntry::val(c.i)};
+      return {RealNumber::val(c.r), RealNumber::val(c.i)};
     }
 
     const bool one = (i & (1ULL << e.p->v)) != 0U;
@@ -2807,7 +2749,7 @@ public:
   }
   ComplexValue getValueByPath(const mEdge& e, std::size_t i, std::size_t j) {
     if (e.isTerminal()) {
-      return {CTEntry::val(e.w.r), CTEntry::val(e.w.i)};
+      return {RealNumber::val(e.w.r), RealNumber::val(e.w.i)};
     }
     return getValueByPath(e, Complex::one, i, j);
   }
@@ -2817,7 +2759,7 @@ public:
 
     if (e.isTerminal()) {
       cn.returnToCache(c);
-      return {CTEntry::val(c.r), CTEntry::val(c.i)};
+      return {RealNumber::val(c.r), RealNumber::val(c.i)};
     }
 
     const bool row = (i & (1ULL << e.p->v)) != 0U;
@@ -2850,7 +2792,7 @@ public:
     std::map<std::string, dd::fp> measuredResult = {};
     for (std::size_t m = 0; m < statesToMeasure; m++) {
       std::size_t currentResult = m;
-      auto globalProbability = dd::CTEntry::val(e.w.r);
+      auto globalProbability = RealNumber::val(e.w.r);
       auto resultString = intToString(m, '1', e.p->v + 1);
       dEdge cur = e;
       for (dd::Qubit i = 0; i < e.p->v + 1; ++i) {
@@ -2858,10 +2800,10 @@ public:
           globalProbability = 0;
           break;
         }
-        assert(dd::CTEntry::approximatelyZero(cur.p->e.at(0).w.i) &&
-               dd::CTEntry::approximatelyZero(cur.p->e.at(3).w.i));
-        auto p0 = dd::CTEntry::val(cur.p->e.at(0).w.r);
-        auto p1 = dd::CTEntry::val(cur.p->e.at(3).w.r);
+        assert(RealNumber::approximatelyZero(cur.p->e.at(0).w.i) &&
+               RealNumber::approximatelyZero(cur.p->e.at(3).w.i));
+        const auto p0 = RealNumber::val(cur.p->e.at(0).w.r);
+        const auto p1 = RealNumber::val(cur.p->e.at(3).w.r);
 
         if (currentResult % 2 == 0) {
           cur = cur.p->e.at(0);
@@ -2904,7 +2846,7 @@ public:
 
     // base case
     if (e.isTerminal()) {
-      vec.at(i) = {CTEntry::val(c.r), CTEntry::val(c.i)};
+      vec.at(i) = {RealNumber::val(c.r), RealNumber::val(c.i)};
       cn.returnToCache(c);
       return;
     }
@@ -2973,7 +2915,7 @@ public:
 
     // base case
     if (e.isTerminal()) {
-      mat.at(i).at(j) = {CTEntry::val(c.r), CTEntry::val(c.i)};
+      mat.at(i).at(j) = {RealNumber::val(c.r), RealNumber::val(c.i)};
       cn.returnToCache(c);
       return;
     }
@@ -3014,7 +2956,7 @@ public:
 
     // base case
     if (e.isTerminal()) {
-      mat.at(i).at(j) = {CTEntry::val(c.r), CTEntry::val(c.i)};
+      mat.at(i).at(j) = {RealNumber::val(c.r), RealNumber::val(c.i)};
       cn.returnToCache(c);
       return;
     }
@@ -3099,9 +3041,8 @@ public:
       dd::ComplexNumbers::mul(amp, amplitude, edge.w);
       idx <<= level;
       for (std::size_t i = 0; i < (1ULL << level); i++) {
-        amplitudes[idx++] =
-            std::complex<dd::fp>{dd::ComplexTable::Entry::val(amp.r),
-                                 dd::ComplexTable::Entry::val(amp.i)};
+        amplitudes[idx++] = std::complex<dd::fp>{RealNumber::val(amp.r),
+                                                 RealNumber::val(amp.i)};
       }
 
       return;
@@ -3129,8 +3070,8 @@ public:
                         std::vector<std::complex<dd::fp>>& amplitudes,
                         ComplexValue& amplitude, dd::QubitCount level,
                         std::size_t idx) {
-    auto ar = dd::ComplexTable::Entry::val(edge.w.r);
-    auto ai = dd::ComplexTable::Entry::val(edge.w.i);
+    const auto ar = RealNumber::val(edge.w.r);
+    const auto ai = RealNumber::val(edge.w.i);
     ComplexValue amp{ar * amplitude.r - ai * amplitude.i,
                      ar * amplitude.i + ai * amplitude.r};
 
@@ -3231,12 +3172,7 @@ public:
           currentEdge = nullptr;
         }
       } while (!stack.empty());
-
-      auto w = cn.getCached(dd::ComplexTable::Entry::val(original.w.r),
-                            dd::ComplexTable::Entry::val(original.w.i));
-      dd::ComplexNumbers::mul(w, root.w, w);
-      root.w = cn.lookup(w);
-      cn.returnToCache(w);
+      root.w = cn.lookup(cn.mulTemp(original.w, root.w));
     } else {
       root.p = original.p; // terminal -> static
       root.w = cn.lookup(original.w);
@@ -3356,10 +3292,9 @@ public:
       }
     }
 
-    auto w = cn.getCached(rootweight.r, rootweight.i);
-    ComplexNumbers::mul(w, result.w, w);
+    auto w = cn.getTemporary(rootweight.r, rootweight.i);
+    ComplexNumbers::mul(w, w, result.w);
     result.w = cn.lookup(w);
-    cn.returnToCache(w);
 
     return result;
   }
@@ -3422,8 +3357,8 @@ public:
     std::clog << "Debug node: " << debugnodeLine(p) << "\n";
     for (const auto& edge : p->e) {
       std::clog << "  " << std::hexfloat << std::setw(22)
-                << CTEntry::val(edge.w.r) << " " << std::setw(22)
-                << CTEntry::val(edge.w.i) << std::defaultfloat << "i --> "
+                << RealNumber::val(edge.w.r) << " " << std::setw(22)
+                << RealNumber::val(edge.w.i) << std::defaultfloat << "i --> "
                 << debugnodeLine(edge.p) << "\n";
     }
     std::clog << std::flush;
@@ -3451,7 +3386,7 @@ public:
   }
 
   template <class Edge> bool isGloballyConsistent(const Edge& e) {
-    std::map<ComplexTable::Entry*, std::size_t> weightCounter{};
+    std::map<RealNumber*, std::size_t> weightCounter{};
     std::map<decltype(e.p), std::size_t> nodeCounter{};
     fillConsistencyCounter(e, weightCounter, nodeCounter);
     checkConsistencyCounter(e, weightCounter, nodeCounter);
@@ -3460,8 +3395,8 @@ public:
 
 private:
   template <class Edge> bool isLocallyConsistent2(const Edge& e) {
-    const auto* ptrR = CTEntry::getAlignedPointer(e.w.r);
-    const auto* ptrI = CTEntry::getAlignedPointer(e.w.i);
+    const auto* ptrR = RealNumber::getAlignedPointer(e.w.r);
+    const auto* ptrI = RealNumber::getAlignedPointer(e.w.i);
 
     if ((ptrR->ref == 0 || ptrI->ref == 0) && e.w != Complex::one &&
         e.w != Complex::zero) {
@@ -3502,10 +3437,10 @@ private:
   template <class Edge>
   void
   fillConsistencyCounter(const Edge& edge,
-                         std::map<CTEntry*, std::size_t>& weightMap,
+                         std::map<RealNumber*, std::size_t>& weightMap,
                          std::map<decltype(edge.p), std::size_t>& nodeMap) {
-    weightMap[CTEntry::getAlignedPointer(edge.w.r)]++;
-    weightMap[CTEntry::getAlignedPointer(edge.w.i)]++;
+    weightMap[RealNumber::getAlignedPointer(edge.w.r)]++;
+    weightMap[RealNumber::getAlignedPointer(edge.w.i)]++;
 
     if (edge.isTerminal()) {
       return;
@@ -3516,24 +3451,24 @@ private:
         fillConsistencyCounter(child, weightMap, nodeMap);
       } else {
         nodeMap[child.p]++;
-        weightMap[CTEntry::getAlignedPointer(child.w.r)]++;
-        weightMap[CTEntry::getAlignedPointer(child.w.i)]++;
+        weightMap[RealNumber::getAlignedPointer(child.w.r)]++;
+        weightMap[RealNumber::getAlignedPointer(child.w.i)]++;
       }
     }
   }
 
   template <class Edge>
   void checkConsistencyCounter(
-      const Edge& edge,
-      const std::map<ComplexTable::Entry*, std::size_t>& weightMap,
+      const Edge& edge, const std::map<RealNumber*, std::size_t>& weightMap,
       const std::map<decltype(edge.p), std::size_t>& nodeMap) {
-    auto* rPtr = CTEntry::getAlignedPointer(edge.w.r);
-    auto* iPtr = CTEntry::getAlignedPointer(edge.w.i);
+    auto* rPtr = RealNumber::getAlignedPointer(edge.w.r);
+    auto* iPtr = RealNumber::getAlignedPointer(edge.w.i);
 
-    if (weightMap.at(rPtr) > rPtr->ref && !ComplexTable::isStaticEntry(rPtr)) {
+    if (weightMap.at(rPtr) > rPtr->ref && !constants::isStaticNumber(rPtr)) {
       std::clog << "\nOffending weight: " << edge.w << "\n";
-      std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << "r "
-                << CTEntry::val(edge.w.i) << std::defaultfloat << "i\n";
+      std::clog << "Bits: " << std::hexfloat << RealNumber::val(edge.w.r)
+                << "r " << RealNumber::val(edge.w.i) << std::defaultfloat
+                << "i\n";
       debugnode(edge.p);
       throw std::runtime_error("Ref-Count mismatch for " +
                                std::to_string(rPtr->value) +
@@ -3542,10 +3477,11 @@ private:
                                std::to_string(rPtr->ref));
     }
 
-    if (weightMap.at(iPtr) > iPtr->ref && !ComplexTable::isStaticEntry(iPtr)) {
+    if (weightMap.at(iPtr) > iPtr->ref && !constants::isStaticNumber(iPtr)) {
       std::clog << "\nOffending weight: " << edge.w << "\n";
-      std::clog << "Bits: " << std::hexfloat << CTEntry::val(edge.w.r) << "r "
-                << CTEntry::val(edge.w.i) << std::defaultfloat << "i\n";
+      std::clog << "Bits: " << std::hexfloat << RealNumber::val(edge.w.r)
+                << "r " << RealNumber::val(edge.w.i) << std::defaultfloat
+                << "i\n";
       debugnode(edge.p);
       throw std::runtime_error("Ref-Count mismatch for " +
                                std::to_string(iPtr->value) +
@@ -3680,8 +3616,8 @@ public:
     densityDensityMultiplication.printStatistics();
     std::cout << "[CT Density Noise] ";
     densityNoise.printStatistics();
-    std::cout << "[ComplexTable] ";
-    cn.complexTable.printStatistics();
+    std::cout << "[RealNumberUniqueTable] ";
+    cn.getComplexTable().printStatistics();
   }
 };
 

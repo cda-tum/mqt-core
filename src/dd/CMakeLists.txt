@@ -6,9 +6,7 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
     ${PROJECT_NAME}-dd
     ${DD_HEADERS}
     Complex.cpp
-    ComplexCache.cpp
     ComplexNumbers.cpp
-    ComplexTable.cpp
     ComplexValue.cpp
     Edge.cpp
     FunctionalityConstruction.cpp
@@ -17,6 +15,7 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
     NoiseFunctionality.cpp
     Operations.cpp
     RealNumber.cpp
+    RealNumberUniqueTable.cpp
     Simulation.cpp)
   target_link_libraries(${PROJECT_NAME}-dd PUBLIC ${PROJECT_NAME})
   add_library(MQT::CoreDD ALIAS ${PROJECT_NAME}-dd)
