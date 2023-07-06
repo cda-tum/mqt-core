@@ -70,7 +70,7 @@ template <typename T> std::pair<T*, T*> MemoryManager<T>::getTemporaryPair() {
   return {&(*chunkIt), &(*(chunkIt + 1))};
 }
 
-template <typename T> void MemoryManager<T>::free(T* entry) noexcept {
+template <typename T> void MemoryManager<T>::returnEntry(T* entry) noexcept {
   assert(entry != nullptr);
   assert(entry->ref == 0);
   entry->next = available;

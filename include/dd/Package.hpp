@@ -125,7 +125,7 @@ public:
         if (!cached && !e.isTerminal()) {
           // If it is not a cached computation, the node has to be put back into
           // the chain
-          vMemoryManager.free(e.p);
+          vMemoryManager.returnEntry(e.p);
         }
         return vEdge::zero;
       }
@@ -417,7 +417,7 @@ public:
         if (!cached && !e.isTerminal()) {
           // If it is not a cached computation, the node has to be put back into
           // the chain
-          getMemoryManager<Node>().free(e.p);
+          getMemoryManager<Node>().returnEntry(e.p);
         }
         return Edge<Node>::zero;
       }

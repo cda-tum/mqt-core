@@ -106,7 +106,7 @@ public:
     // search bucket in table corresponding to hashed value for the given node
     // and return it if found.
     if (const auto hashedNode = searchTable(e, key, keepNode);
-        hashedNode != Edge<Node>::zero) {
+        !hashedNode.isZeroTerminal()) {
       return hashedNode;
     }
 
@@ -205,7 +205,7 @@ public:
             } else {
               lastp->next = next;
             }
-            memoryManager->free(p);
+            memoryManager->returnEntry(p);
             p = next;
             collected++;
           } else {
@@ -403,7 +403,7 @@ private:
         // Match found
         if (e.p != p && !keepNode) {
           // put node pointed to by e.p on available chain
-          memoryManager->free(e.p);
+          memoryManager->returnEntry(e.p);
         }
         ++hits;
 

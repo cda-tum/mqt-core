@@ -108,7 +108,7 @@ public:
    * this indicates a reference counting error.
    * @param entry A pointer to an entry that is no longer in use.
    */
-  void free(T* entry) noexcept;
+  void returnEntry(T* entry) noexcept;
 
   /**
    * @brief Reset the manager.

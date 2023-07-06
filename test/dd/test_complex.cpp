@@ -503,7 +503,7 @@ TEST(DDComplexTest, ComplexTableAllocation) {
   // obtain entry
   auto* entry = manager.get();
   // immediately return entry
-  manager.free(entry);
+  manager.returnEntry(entry);
   EXPECT_EQ(manager.getAvailableForReuseCount(), 1U);
   // obtain the same entry again, but this time from the available stack
   auto* entry2 = manager.get();

@@ -278,10 +278,10 @@ Complex ComplexNumbers::getCached(const std::complex<fp>& c) {
 
 void ComplexNumbers::returnToCache(const Complex& c) noexcept {
   if (!constants::isStaticNumber(c.i)) {
-    cacheManager.free(c.i);
+    cacheManager.returnEntry(c.i);
   }
   if (!constants::isStaticNumber(c.r)) {
-    cacheManager.free(c.r);
+    cacheManager.returnEntry(c.r);
   }
 }
 
