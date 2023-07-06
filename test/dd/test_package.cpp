@@ -713,25 +713,25 @@ TEST(DDPackageTest, Inverse) {
 TEST(DDPackageTest, UniqueTableAllocation) {
   auto dd = std::make_unique<dd::Package<>>(1);
 
-  auto allocs = dd->vUniqueTable.getAllocations();
+  auto allocs = dd->vMemoryManager.getAllocationCount();
   std::cout << allocs << "\n";
   std::vector<dd::vNode*> nodes{allocs};
   // get all the nodes that are pre-allocated
   for (auto i = 0U; i < allocs; ++i) {
-    nodes[i] = dd->vUniqueTable.getNode();
+    nodes[i] = dd->vMemoryManager.get();
   }
 
   // trigger new allocation
-  const auto* node = dd->vUniqueTable.getNode();
+  const auto* node = dd->vMemoryManager.get();
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(dd->vUniqueTable.getAllocations(),
-            (1. + static_cast<double>(dd->vUniqueTable.getGrowthFactor())) *
+  EXPECT_EQ(dd->vMemoryManager.getAllocationCount(),
+            (1. + dd::MemoryManager<dd::vNode>::GROWTH_FACTOR) *
                 static_cast<double>(allocs));
 
   // clearing the unique table should reduce the allocated size to the original
   // size
-  dd->vUniqueTable.clear();
-  EXPECT_EQ(dd->vUniqueTable.getAllocations(), allocs);
+  dd->vMemoryManager.reset();
+  EXPECT_EQ(dd->vMemoryManager.getAllocationCount(), allocs);
 }
 
 TEST(DDPackageTest, MatrixTranspose) {
@@ -801,11 +801,11 @@ TEST(DDPackageTest, NearZeroNormalize) {
   auto dd = std::make_unique<dd::Package<>>(2);
   const dd::fp nearZero = dd::RealNumber::eps / 10;
   dd::vEdge ve{};
-  ve.p = dd->vUniqueTable.getNode();
+  ve.p = dd->vMemoryManager.get();
   ve.p->v = 1;
   ve.w = dd::Complex::one;
   for (auto& edge : ve.p->e) {
-    edge.p = dd->vUniqueTable.getNode();
+    edge.p = dd->vMemoryManager.get();
     edge.p->v = 0;
     edge.w = dd->cn.getCached(nearZero, 0.);
     edge.p->e = {dd::vEdge::one, dd::vEdge::one};
@@ -814,7 +814,7 @@ TEST(DDPackageTest, NearZeroNormalize) {
   EXPECT_EQ(veNormalizedCached, dd::vEdge::zero);
 
   for (auto& edge : ve.p->e) {
-    edge.p = dd->vUniqueTable.getNode();
+    edge.p = dd->vMemoryManager.get();
     edge.p->v = 0;
     edge.w = dd->cn.lookup(nearZero, 0.);
     edge.p->e = {dd::vEdge::one, dd::vEdge::one};
@@ -823,11 +823,11 @@ TEST(DDPackageTest, NearZeroNormalize) {
   EXPECT_EQ(veNormalized, dd::vEdge::zero);
 
   dd::mEdge me{};
-  me.p = dd->mUniqueTable.getNode();
+  me.p = dd->mMemoryManager.get();
   me.p->v = 1;
   me.w = dd::Complex::one;
   for (auto& edge : me.p->e) {
-    edge.p = dd->mUniqueTable.getNode();
+    edge.p = dd->mMemoryManager.get();
     edge.p->v = 0;
     edge.w = dd->cn.getCached(nearZero, 0.);
     edge.p->e = {dd::mEdge::one, dd::mEdge::one, dd::mEdge::one,
@@ -837,7 +837,7 @@ TEST(DDPackageTest, NearZeroNormalize) {
   EXPECT_EQ(meNormalizedCached, dd::mEdge::zero);
 
   for (auto& edge : me.p->e) {
-    edge.p = dd->mUniqueTable.getNode();
+    edge.p = dd->mMemoryManager.get();
     edge.p->v = 0;
     edge.w = dd->cn.lookup(nearZero, 0.);
     edge.p->e = {dd::mEdge::one, dd::mEdge::one, dd::mEdge::one,

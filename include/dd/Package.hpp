@@ -89,6 +89,7 @@ public:
   // reset package state
   void reset() {
     clearUniqueTables();
+    resetMemoryManagers();
     clearComputeTables();
     cn.clear();
   }
@@ -124,7 +125,7 @@ public:
         if (!cached && !e.isTerminal()) {
           // If it is not a cached computation, the node has to be put back into
           // the chain
-          vUniqueTable.returnNode(e.p);
+          vMemoryManager.free(e.p);
         }
         return vEdge::zero;
       }
@@ -416,7 +417,7 @@ public:
         if (!cached && !e.isTerminal()) {
           // If it is not a cached computation, the node has to be put back into
           // the chain
-          getUniqueTable<Node>().returnNode(e.p);
+          getMemoryManager<Node>().free(e.p);
         }
         return Edge<Node>::zero;
       }
@@ -976,9 +977,30 @@ private:
   }
 
   ///
-  /// Unique tables, Reference counting and garbage collection
+  /// Memory managers, Unique tables, Reference counting and garbage collection
   ///
 public:
+  // memory managers
+  MemoryManager<vNode> vMemoryManager{Config::UT_VEC_INITIAL_ALLOCATION_SIZE};
+  MemoryManager<mNode> mMemoryManager{Config::UT_MAT_INITIAL_ALLOCATION_SIZE};
+  MemoryManager<dNode> dMemoryManager{Config::UT_DM_INITIAL_ALLOCATION_SIZE};
+
+  template <class Node> [[nodiscard]] auto& getMemoryManager() {
+    if constexpr (std::is_same_v<Node, vNode>) {
+      return vMemoryManager;
+    } else if constexpr (std::is_same_v<Node, mNode>) {
+      return mMemoryManager;
+    } else if constexpr (std::is_same_v<Node, dNode>) {
+      return dMemoryManager;
+    }
+  }
+
+  void resetMemoryManagers(const bool resizeToTotal = false) {
+    vMemoryManager.reset(resizeToTotal);
+    mMemoryManager.reset(resizeToTotal);
+    dMemoryManager.reset(resizeToTotal);
+  }
+
   // unique tables
   template <class Node> [[nodiscard]] auto& getUniqueTable() {
     if constexpr (std::is_same_v<Node, vNode>) {
@@ -997,15 +1019,12 @@ public:
     getUniqueTable<Node>().decRef(e);
   }
 
-  UniqueTable<vNode, Config::UT_VEC_NBUCKET,
-              Config::UT_VEC_INITIAL_ALLOCATION_SIZE>
-      vUniqueTable{nqubits};
-  UniqueTable<mNode, Config::UT_MAT_NBUCKET,
-              Config::UT_MAT_INITIAL_ALLOCATION_SIZE>
-      mUniqueTable{nqubits};
-  UniqueTable<dNode, Config::UT_DM_NBUCKET,
-              Config::UT_DM_INITIAL_ALLOCATION_SIZE>
-      dUniqueTable{nqubits};
+  UniqueTable<vNode, Config::UT_VEC_NBUCKET> vUniqueTable{nqubits,
+                                                          vMemoryManager};
+  UniqueTable<mNode, Config::UT_MAT_NBUCKET> mUniqueTable{nqubits,
+                                                          mMemoryManager};
+  UniqueTable<dNode, Config::UT_DM_NBUCKET> dUniqueTable{nqubits,
+                                                         dMemoryManager};
 
   bool garbageCollect(bool force = false) {
     // return immediately if no table needs collection
@@ -1082,8 +1101,8 @@ public:
       const std::array<Edge<Node>, std::tuple_size_v<decltype(Node::e)>>& edges,
       bool cached = false,
       [[maybe_unused]] const bool generateDensityMatrix = false) {
-    auto& uniqueTable = getUniqueTable<Node>();
-    Edge<Node> e{uniqueTable.getNode(), Complex::one};
+    auto& memoryManager = getMemoryManager<Node>();
+    Edge<Node> e{memoryManager.get(), Complex::one};
     e.p->v = var;
     e.p->e = edges;
 
@@ -1106,6 +1125,7 @@ public:
     assert(e.p->v == var || e.isTerminal());
 
     // look it up in the unique tables
+    auto& uniqueTable = getUniqueTable<Node>();
     auto l = uniqueTable.lookup(e, false);
     assert(l.p->v == var || l.isTerminal());
 
