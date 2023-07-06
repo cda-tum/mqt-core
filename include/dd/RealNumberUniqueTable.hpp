@@ -45,7 +45,11 @@ class RealNumberUniqueTable {
   static constexpr std::size_t INITIAL_GC_LIMIT = 65536U;
 
 public:
-  /// The default constructor.
+  /**
+   * @brief The default constructor
+   * @param manager The memory manager to use for allocating new numbers.
+   * @param initialGCLim The initial garbage collection limit.
+   */
   explicit RealNumberUniqueTable(MemoryManager<RealNumber>& manager,
                                  std::size_t initialGCLim = INITIAL_GC_LIMIT);
 
