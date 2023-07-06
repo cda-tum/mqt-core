@@ -1,20 +1,21 @@
 #include "python/qiskit/nanobind/QuantumCircuit.hpp"
+
 #include "Definitions.hpp"
+
 #include <cstddef>
-#include <string>
-#include <nanobind/stl/set.h>
 #include <nanobind/stl/bind_map.h>
+#include <nanobind/stl/set.h>
 #include <set>
+#include <string>
 
 void qc::qiskit::QuantumCircuit::import(qc::QuantumComputation& qc,
                                         const nb::object& circ) {
   qc.reset();
 
   const nb::object quantumCircuit =
-    nb::module_::import_("qiskit").attr("QuantumCircuit");
+      nb::module_::import_("qiskit").attr("QuantumCircuit");
   // if (!nb::isinstance(circ, quantumCircuit))
-  if(circ.type().is(quantumCircuit))
-    {
+  if (circ.type().is(quantumCircuit)) {
     throw QFRException(
         "[import] Python object needs to be a Qiskit QuantumCircuit");
   }
@@ -37,8 +38,7 @@ void qc::qiskit::QuantumCircuit::import(qc::QuantumComputation& qc,
     auto size = nb::cast<std::size_t>(qreg.attr("size"));
     auto name = nb::cast<std::string>(qreg.attr("name"));
     // if (nb::isinstance(qreg, ancillaRegister))
-    if(qreg.type().is(ancillaRegister))
-      {
+    if (qreg.type().is(ancillaRegister)) {
       qc.addAncillaryRegister(size, name);
       // add ancillas to qubit map
       for (std::size_t i = 0; i < size; ++i) {
@@ -326,8 +326,7 @@ void qc::qiskit::QuantumCircuit::addOperation(qc::QuantumComputation& qc,
   qubits.pop_back();
   std::vector<qc::SymbolOrNumber> parameters{};
   for (const auto& param : params) {
-    parameters.emplace_back(
-        parseParam(nb::borrow<nb::object>(param)));
+    parameters.emplace_back(parseParam(nb::borrow<nb::object>(param)));
   }
   const Controls controls(qubits.cbegin(), qubits.cend());
   if (std::all_of(parameters.cbegin(), parameters.cend(), [](const auto& p) {
@@ -362,8 +361,7 @@ void qc::qiskit::QuantumCircuit::addTwoTargetOperation(
   qubits.pop_back();
   std::vector<qc::SymbolOrNumber> parameters{};
   for (const auto& param : params) {
-    parameters.emplace_back(
-        parseParam(nb::borrow<nb::object>(param)));
+    parameters.emplace_back(parseParam(nb::borrow<nb::object>(param)));
   }
   const Controls controls(qubits.cbegin(), qubits.cend());
   if (std::all_of(parameters.cbegin(), parameters.cend(), [](const auto& p) {
@@ -440,7 +438,8 @@ void qc::qiskit::QuantumCircuit::importInitialLayout(qc::QuantumComputation& qc,
   // create map between registers used in the layout and logical qubit indices
   // NOTE: this only works correctly if the registers were originally declared
   // in alphabetical order!
-  const auto registers = layout.attr("get_registers")(); //potential cast to set necessary?
+  const auto registers =
+      layout.attr("get_registers")(); // potential cast to set necessary?
   std::size_t logicalQubitIndex = 0U;
   std::map<nb::object, std::size_t> logicalQubitIndices{};
 
@@ -456,8 +455,7 @@ void qc::qiskit::QuantumCircuit::importInitialLayout(qc::QuantumComputation& qc,
       continue;
     }
 
-    const auto size =
-        nb::cast<std::size_t>(qreg.attr("size"));
+    const auto size = nb::cast<std::size_t>(qreg.attr("size"));
     for (std::size_t i = 0U; i < size; ++i) {
       logicalQubitIndices[qubit(qreg, i)] = logicalQubitIndex;
       ++logicalQubitIndex;
@@ -476,11 +474,12 @@ void qc::qiskit::QuantumCircuit::importInitialLayout(qc::QuantumComputation& qc,
 
   // get a map of physical to logical qubits
   const auto physicalQubits =
-    nb::cast<nb::dict>(layout.attr("get_physical_bits")());
+      nb::cast<nb::dict>(layout.attr("get_physical_bits")());
 
   // create initial layout
   // for (const auto& [physicalQubit, logicalQubit] : physicalQubits) {
-  //   if (logicalQubitIndices.find(logicalQubit) != logicalQubitIndices.end()) {
+  //   if (logicalQubitIndices.find(logicalQubit) != logicalQubitIndices.end())
+  //   {
   //     qc.initialLayout[nb::cast<Qubit>(physicalQubit)] =
   //       nb::cast<Qubit>(logicalQubitIndices[logicalQubit]);
   //   }

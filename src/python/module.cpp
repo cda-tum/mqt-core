@@ -1,38 +1,32 @@
 #include "Definitions.hpp"
 #include "Permutation.hpp"
+#include "QuantumComputation.hpp"
 #include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
+#include "operations/StandardOperation.hpp"
+
 #include <cstddef>
 #include <iostream>
-#include <ostream>
-#include <python/nanobind.hpp>
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/vector.h>
+#include <nanobind/make_iterator.h>
 #include <nanobind/stl/bind_vector.h>
+#include <nanobind/stl/map.h>
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/set.h>
-#include <nanobind/stl/map.h>
-#include <nanobind/make_iterator.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/unique_ptr.h>
+#include <nanobind/stl/vector.h>
+#include <ostream>
+#include <python/nanobind.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
-#include "QuantumComputation.hpp"
-#include "operations/Operation.hpp"
-#include "operations/StandardOperation.hpp"
-#include <nanobind/stl/unique_ptr.h>
-
-
 
 namespace mqt {
-  // void register_qiskit(nb::module_);
- 
-  
-  enum class foo {
-    a
-  };
+// void register_qiskit(nb::module_);
 
-  foo fooFromStr(const std::string& s) {
-    return foo::a;
-  }
+enum class foo { a };
+
+foo fooFromStr(const std::string& s) { return foo::a; }
 NB_MODULE(_core, m) {
 
   nb::class_<qc::QuantumComputation>(
@@ -160,7 +154,7 @@ NB_MODULE(_core, m) {
                      &qc::QuantumComputation::ry))
       .def("ry", nb::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
                      &qc::QuantumComputation::ry))
-      .def("ry", 
+      .def("ry",
            nb::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
                &qc::QuantumComputation::ry))
       .def("rz", nb::overload_cast<qc::Qubit, const qc::fp>(
@@ -300,17 +294,22 @@ NB_MODULE(_core, m) {
       //   qc.begin(), qc.end());
       // }, nb::keep_alive<0, 1>())
       .def("__len__", &qc::QuantumComputation::getNindividualOps)
-      .def("__getitem__",
+      .def(
+          "__getitem__",
           [](const qc::QuantumComputation& qc,
-             std::size_t idx) { return qc.at(idx).get(); }, // Beware: this gives write access to underlying Operation
-           nb::rv_policy::reference)
-    // .def_prop_ro("ops", [](const qc::QuantumComputation& qc, std::size_t idx){return *qc.at(idx);})
-    ;
+             std::size_t
+                 idx) { return qc.at(idx).get(); }, // Beware: this gives write
+                                                    // access to underlying
+                                                    // Operation
+          nb::rv_policy::reference)
+      // .def_prop_ro("ops", [](const qc::QuantumComputation& qc, std::size_t
+      // idx){return *qc.at(idx);})
+      ;
   nb::class_<qc::Control>(m, "Control")
-    .def_rw("type", &qc::Control::type)
-    .def_rw("qubit", &qc::Control::qubit)
-    .def(nb::init<qc::Qubit>())
-    .def(nb::init<qc::Qubit, qc::Control::Type>());
+      .def_rw("type", &qc::Control::type)
+      .def_rw("qubit", &qc::Control::qubit)
+      .def(nb::init<qc::Qubit>())
+      .def(nb::init<qc::Qubit, qc::Control::Type>());
 
   nb::enum_<qc::Control::Type>(m, "ControlType")
       .value("Pos", qc::Control::Type::Pos)
@@ -318,99 +317,113 @@ NB_MODULE(_core, m) {
       .export_values();
 
   nb::class_<qc::Operation>(m, "Operation")
-    // .def(nb::init<>())
-    // .def_prop_rw("targets", &qc::Operation::getTargets, &qc::Operation::setTargets)
-    .def_prop_rw("name", &qc::Operation::getName, &qc::Operation::setName)
-    .def("set_gate", &qc::Operation::setGate);
-    ;
-    nb::class_<qc::StandardOperation, qc::Operation>(m, "StandardOperation")
-        .def(nb::init<>())
-        .def(nb::init<std::size_t, qc::Qubit, qc::OpType, std::vector<qc::fp>,
-                      qc::Qubit>(),
-             "nq"_a, "target"_a, "op_type"_a,
-             "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
-        .def(nb::init<std::size_t, const qc::Targets&, qc::OpType,
-                      std::vector<qc::fp>, qc::Qubit>(),
-             "nq"_a, "targets"_a, "op_type"_a,
-             "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
-        .def(nb::init<std::size_t, qc::Control, qc::Qubit, qc::OpType,
-                      const std::vector<qc::fp>&, qc::Qubit>(),
-             "nq"_a, "control"_a, "target"_a, "op_type"_a,
-             "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
-        .def(nb::init<std::size_t, qc::Control, const qc::Targets&, qc::OpType,
-                      const std::vector<qc::fp>&, qc::Qubit>(),
-             "nq"_a, "control"_a, "targets"_a, "op_type"_a,
-             "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
-        .def(nb::init<std::size_t, const qc::Controls&, qc::Qubit, qc::OpType,
-                      const std::vector<qc::fp>&, qc::Qubit>(),
-             "nq"_a, "controls"_a, "target"_a, "op_type"_a,
-             "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
-        .def(nb::init<std::size_t, const qc::Controls&, const qc::Targets&,
-                      qc::OpType, std::vector<qc::fp>, qc::Qubit>(),
-             "nq"_a, "controls"_a, "targets"_a, "op_type"_a,
-             "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
-        .def(nb::init<std::size_t, const qc::Controls&, qc::Qubit, qc::Qubit>(),
-             "nq"_a, "controls"_a, "target"_a,           "starting_qubit"_a = 0)
-        .def(nb::init<std::size_t, const qc::Controls&, qc::Qubit, qc::Qubit,
-             qc::OpType, std::vector<qc::fp>, qc::Qubit>(), "nq"_a, "controls"_a, "target0"_a, "target1"_a, "op_type"_a, "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a=0)
+      // .def(nb::init<>())
+      // .def_prop_rw("targets", &qc::Operation::getTargets,
+      // &qc::Operation::setTargets)
+      .def_prop_rw("name", &qc::Operation::getName, &qc::Operation::setName)
+      .def("set_gate", &qc::Operation::setGate);
+  ;
+  nb::class_<qc::StandardOperation, qc::Operation>(m, "StandardOperation")
+      .def(nb::init<>())
+      .def(nb::init<std::size_t, qc::Qubit, qc::OpType, std::vector<qc::fp>,
+                    qc::Qubit>(),
+           "nq"_a, "target"_a, "op_type"_a, "params"_a = std::vector<qc::fp>{},
+           "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, const qc::Targets&, qc::OpType,
+                    std::vector<qc::fp>, qc::Qubit>(),
+           "nq"_a, "targets"_a, "op_type"_a, "params"_a = std::vector<qc::fp>{},
+           "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, qc::Control, qc::Qubit, qc::OpType,
+                    const std::vector<qc::fp>&, qc::Qubit>(),
+           "nq"_a, "control"_a, "target"_a, "op_type"_a,
+           "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, qc::Control, const qc::Targets&, qc::OpType,
+                    const std::vector<qc::fp>&, qc::Qubit>(),
+           "nq"_a, "control"_a, "targets"_a, "op_type"_a,
+           "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, const qc::Controls&, qc::Qubit, qc::OpType,
+                    const std::vector<qc::fp>&, qc::Qubit>(),
+           "nq"_a, "controls"_a, "target"_a, "op_type"_a,
+           "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, const qc::Controls&, const qc::Targets&,
+                    qc::OpType, std::vector<qc::fp>, qc::Qubit>(),
+           "nq"_a, "controls"_a, "targets"_a, "op_type"_a,
+           "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, const qc::Controls&, qc::Qubit, qc::Qubit>(),
+           "nq"_a, "controls"_a, "target"_a, "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, const qc::Controls&, qc::Qubit, qc::Qubit,
+                    qc::OpType, std::vector<qc::fp>, qc::Qubit>(),
+           "nq"_a, "controls"_a, "target0"_a, "target1"_a, "op_type"_a,
+           "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
       .def("is_standard_operation", &qc::StandardOperation::isStandardOperation)
       .def("clone", &qc::StandardOperation::clone)
-      .def("equals", nb::overload_cast<const qc::Operation&>(&qc::StandardOperation::equals, nb::const_))
-      .def("equals", nb::overload_cast<const qc::Operation&, const qc::Permutation&, const qc::Permutation&>(&qc::StandardOperation::equals, nb::const_))
-      .def("__str__", [](const qc::StandardOperation& qc){std::ostringstream ss; qc.dumpOpenQASM(ss, {{"q", "0"}, {"q", "1"}, {"q", "2"}}, {}); return ss.str();})
+      .def("equals", nb::overload_cast<const qc::Operation&>(
+                         &qc::StandardOperation::equals, nb::const_))
+      .def("equals",
+           nb::overload_cast<const qc::Operation&, const qc::Permutation&,
+                             const qc::Permutation&>(
+               &qc::StandardOperation::equals, nb::const_))
+      // .def("__str__", [](const qc::StandardOperation& qc) {
+      //   std::ostringstream ss;
+      //   qc.dumpOpenQASM(ss, {{"q", "0"}, {"q", "1"}, {"q", "2"}}, {});
+      //   ss.str();
+      // })
       ;
 
-    nb::class_<qc::Permutation>(m, "Permutation")
-      .def("apply", nb::overload_cast<const qc::Controls&>(&qc::Permutation::apply, nb::const_))
-      .def("apply", nb::overload_cast<const qc::Targets&>(&qc::Permutation::apply, nb::const_))
-      .def(nb::init_implicit<std::map<qc::Qubit, qc::Qubit>>()); // Allows for implicit conversion from dict[int, int] to Permutation
-      
-    nb::enum_<qc::OpType>(m, "OpType")
-        .value("none", qc::OpType::None)
-        .value("gphase", qc::OpType::GPhase)
-        .value("i", qc::OpType::I)
-        .value("h", qc::OpType::H)
-        .value("x", qc::OpType::X)
-        .value("y", qc::OpType::Y)
-        .value("z", qc::OpType::Z)
-        .value("s", qc::OpType::S)
-        .value("sdag", qc::OpType::Sdag)
-        .value("t", qc::OpType::T)
-        .value("tdag", qc::OpType::Tdag)
-        .value("v", qc::OpType::V)
-        .value("vdag", qc::OpType::Vdag)
-        .value("u3", qc::OpType::U3)
-        .value("u2", qc::OpType::U2)
-        .value("phase", qc::OpType::Phase)
-        .value("sx", qc::OpType::SX)
-        .value("sxdag", qc::OpType::SXdag)
-        .value("rx", qc::OpType::RX)
-        .value("ry", qc::OpType::RY)
-        .value("rz", qc::OpType::RZ)
-        .value("swap", qc::OpType::SWAP)
-        .value("iswap", qc::OpType::iSWAP)
-        .value("peres", qc::OpType::Peres)
-        .value("peresdag", qc::OpType::Peresdag)
-        .value("dcx", qc::OpType::DCX)
-        .value("ecr", qc::OpType::ECR)
-        .value("rxx", qc::OpType::RXX)
-        .value("ryy", qc::OpType::RYY)
-        .value("rzz", qc::OpType::RZZ)
-        .value("rzx", qc::OpType::RZX)
-        .value("xx_minus_yy", qc::OpType::XXminusYY)
-        .value("xx_plus_yy", qc::OpType::XXplusYY)
-        .value("compound", qc::OpType::Compound)
-        .value("measure", qc::OpType::Measure)
-        .value("reset", qc::OpType::Reset)
-        .value("snapshot", qc::OpType::Snapshot)
-        .value("showprobabilities", qc::OpType::ShowProbabilities)
-        .value("barrier", qc::OpType::Barrier)
-        .value("teleportation", qc::OpType::Teleportation)
-        .value("classiccontrolled", qc::OpType::ClassicControlled)
-        .export_values()
-        .def_static("from_string", [](const std::string& s) {
-          return qc::opTypeFromString(s);
-        });
+  nb::class_<qc::Permutation>(m, "Permutation")
+      .def("apply", nb::overload_cast<const qc::Controls&>(
+                        &qc::Permutation::apply, nb::const_))
+      .def("apply", nb::overload_cast<const qc::Targets&>(
+                        &qc::Permutation::apply, nb::const_))
+      .def(nb::init_implicit<std::map<
+               qc::Qubit, qc::Qubit>>()); // Allows for implicit conversion from
+                                          // dict[int, int] to Permutation
+
+  nb::enum_<qc::OpType>(m, "OpType")
+      .value("none", qc::OpType::None)
+      .value("gphase", qc::OpType::GPhase)
+      .value("i", qc::OpType::I)
+      .value("h", qc::OpType::H)
+      .value("x", qc::OpType::X)
+      .value("y", qc::OpType::Y)
+      .value("z", qc::OpType::Z)
+      .value("s", qc::OpType::S)
+      .value("sdag", qc::OpType::Sdag)
+      .value("t", qc::OpType::T)
+      .value("tdag", qc::OpType::Tdag)
+      .value("v", qc::OpType::V)
+      .value("vdag", qc::OpType::Vdag)
+      .value("u3", qc::OpType::U3)
+      .value("u2", qc::OpType::U2)
+      .value("phase", qc::OpType::Phase)
+      .value("sx", qc::OpType::SX)
+      .value("sxdag", qc::OpType::SXdag)
+      .value("rx", qc::OpType::RX)
+      .value("ry", qc::OpType::RY)
+      .value("rz", qc::OpType::RZ)
+      .value("swap", qc::OpType::SWAP)
+      .value("iswap", qc::OpType::iSWAP)
+      .value("peres", qc::OpType::Peres)
+      .value("peresdag", qc::OpType::Peresdag)
+      .value("dcx", qc::OpType::DCX)
+      .value("ecr", qc::OpType::ECR)
+      .value("rxx", qc::OpType::RXX)
+      .value("ryy", qc::OpType::RYY)
+      .value("rzz", qc::OpType::RZZ)
+      .value("rzx", qc::OpType::RZX)
+      .value("xx_minus_yy", qc::OpType::XXminusYY)
+      .value("xx_plus_yy", qc::OpType::XXplusYY)
+      .value("compound", qc::OpType::Compound)
+      .value("measure", qc::OpType::Measure)
+      .value("reset", qc::OpType::Reset)
+      .value("snapshot", qc::OpType::Snapshot)
+      .value("showprobabilities", qc::OpType::ShowProbabilities)
+      .value("barrier", qc::OpType::Barrier)
+      .value("teleportation", qc::OpType::Teleportation)
+      .value("classiccontrolled", qc::OpType::ClassicControlled)
+      .export_values()
+      .def_static("from_string",
+                  [](const std::string& s) { return qc::opTypeFromString(s); });
 }
 
 } // namespace mqt
