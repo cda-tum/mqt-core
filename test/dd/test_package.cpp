@@ -238,7 +238,6 @@ TEST(DDPackageTest, StateGenerationManipulation) {
                                dd::BasisStates::left, dd::BasisStates::right});
   dd->incRef(e);
   dd->incRef(f);
-  dd->vUniqueTable.printActive();
   dd->vUniqueTable.print();
   dd->printInformation();
   dd->decRef(e);
@@ -698,16 +697,16 @@ TEST(DDPackageTest, Inverse) {
   EXPECT_EQ(x, xdag);
   dd->garbageCollect();
   // nothing should have been collected since the threshold is not reached
-  EXPECT_EQ(dd->mUniqueTable.getNodeCount(), 1);
+  EXPECT_EQ(dd->mUniqueTable.getStats().entryCount, 1);
   dd->incRef(x);
   dd->garbageCollect(true);
   // nothing should have been collected since the lone node has a non-zero ref
   // count
-  EXPECT_EQ(dd->mUniqueTable.getNodeCount(), 1);
+  EXPECT_EQ(dd->mUniqueTable.getStats().entryCount, 1);
   dd->decRef(x);
   dd->garbageCollect(true);
   // now the node should have been collected
-  EXPECT_EQ(dd->mUniqueTable.getNodeCount(), 0);
+  EXPECT_EQ(dd->mUniqueTable.getStats().entryCount, 0);
 }
 
 TEST(DDPackageTest, UniqueTableAllocation) {

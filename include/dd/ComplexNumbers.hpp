@@ -25,9 +25,8 @@ public:
   void clear() noexcept;
 
   /**
-   * @brief Set the numerical tolerance for complex numbers.
+   * @brief Set the numerical tolerance for comparisons of floats.
    * @param tol The new tolerance.
-   * @see ComplexTable::setTolerance
    */
   static void setTolerance(fp tol) noexcept;
 

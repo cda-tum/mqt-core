@@ -64,7 +64,7 @@ TEST(DDComplexTest, ComplexNumberCreation) {
   std::cout << ComplexValue{1., -1.} << "\n";
   std::cout << ComplexValue{1., -0.5} << "\n";
   cn->getComplexTable().print();
-  cn->getComplexTable().printStatistics();
+  std::cout << cn->getComplexTable().getStats();
 }
 
 TEST(DDComplexTest, ComplexNumberArithmetic) {
@@ -132,8 +132,7 @@ TEST(DDComplexTest, SortedBuckets) {
     p = p->next;
     ++counter;
   }
-  ct->printStatistics(std::cout);
-  EXPECT_EQ(ct->getStatistics().at("lowerNeighbors"), 0);
+  std::cout << ct->getStats();
   EXPECT_EQ(counter, numbers.size());
 }
 

@@ -2,14 +2,12 @@
 
 #include "dd/Definitions.hpp"
 #include "dd/MemoryManager.hpp"
+#include "dd/UniqueTableStatistics.hpp"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <map>
-#include <string>
-#include <vector>
 
 namespace dd {
 
@@ -53,12 +51,6 @@ public:
   explicit RealNumberUniqueTable(MemoryManager<RealNumber>& manager,
                                  std::size_t initialGCLim = INITIAL_GC_LIMIT);
 
-  /// Get the numerical tolerance used for floating point comparisons.
-  static fp tolerance() noexcept;
-
-  /// Set the numerical tolerance used for floating point comparisons.
-  static void setTolerance(fp tol) noexcept;
-
   /**
    * @brief The hash function for the hash table.
    * @details The hash function for the table is a simple linear (clipped) hash
@@ -71,6 +63,9 @@ public:
 
   /// Get a reference to the table.
   [[nodiscard]] const auto& getTable() const noexcept { return table; }
+
+  /// Get a reference to the statistics
+  [[nodiscard]] const auto& getStats() const noexcept { return stats; }
 
   /**
    * @brief Lookup a number in the table.
@@ -116,38 +111,6 @@ public:
   void print() const;
 
   /**
-   * @brief Get the hit ratio of the table.
-   * @details The hit ratio is the ratio of lookups that were successful.
-   * @returns The hit ratio of the table.
-   */
-  [[nodiscard]] fp hitRatio() const noexcept;
-
-  /**
-   * @brief Get the collision ratio of the table.
-   * @details A collision occurs when the hash function maps two different
-   * floating point numbers to the same bucket. The collision ratio is the ratio
-   * of lookups that resulted in a collision.
-   * @returns The collision ratio of the table.
-   */
-  [[nodiscard]] fp colRatio() const noexcept;
-
-  /**
-   * @brief Get the statistics of the table.
-   * @details The statistics of the table are the number of hits, collisions,
-   * lookups, inserts, insert collisions, findOrInserts, upper neighbors, lower
-   * neighbors, garbage collection calls and garbage collection runs.
-   * @returns A map containing the statistics of the table.
-   */
-  std::map<std::string, std::size_t, std::less<>> getStatistics() noexcept;
-
-  /**
-   * @brief Print the statistics of the table.
-   * @param os The output stream to print to.
-   * @returns The output stream.
-   */
-  std::ostream& printStatistics(std::ostream& os = std::cout) const;
-
-  /**
    * @brief Print the bucket distribution of the table.
    * @param os The output stream to print to.
    * @returns The output stream.
@@ -177,29 +140,11 @@ private:
   /// A pointer to the memory manager for the numbers stored in the table.
   MemoryManager<RealNumber>* memoryManager{};
 
-  /// The number of collisions
-  std::size_t collisions = 0;
-  /// The number of collisions when inserting
-  std::size_t insertCollisions = 0;
-  /// The number of successful lookups
-  std::size_t hits = 0;
-  /// The number of calls to findOrInsert
-  std::size_t findOrInserts = 0;
-  /// The number of lookups
-  std::size_t lookups = 0;
-  /// The number of inserts
-  std::size_t inserts = 0;
-  /// The number of borderline cases where the lower neighbor is returned
-  std::size_t lowerNeighbors = 0;
-  /// The number of borderline cases where the upper neighbor is returned
-  std::size_t upperNeighbors = 0;
+  /// A collection of statistics
+  UniqueTableStatistics stats{};
 
   /// The initial garbage collection limit
   std::size_t initialGCLimit;
-  /// The number of garbage collection calls
-  std::size_t gcCalls = 0;
-  /// The number of garbage actual garbage collection runs
-  std::size_t gcRuns = 0;
   /// The current garbage collection limit
   std::size_t gcLimit = initialGCLimit;
 

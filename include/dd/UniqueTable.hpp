@@ -4,6 +4,7 @@
 #include "dd/Definitions.hpp"
 #include "dd/MemoryManager.hpp"
 #include "dd/Node.hpp"
+#include "dd/UniqueTableStatistics.hpp"
 
 #include <algorithm>
 #include <array>
@@ -13,13 +14,12 @@
 #include <iostream>
 #include <limits>
 #include <numeric>
-#include <stdexcept>
 #include <vector>
 
 namespace dd {
 
 /**
- * @brief Data structure for providing and uniquely storing DD nodes
+ * @brief Data structure for uniquely storing DD nodes
  * @tparam Node class of nodes to provide/store
  * @tparam NBUCKET number of hash buckets to use (has to be a power of two)
  */
@@ -50,8 +50,8 @@ public:
     // TODO: if the new size is smaller than the old one we might have to
     // release the unique table entries for the superfluous variables
     active.resize(nq);
-    activeNodeCount = std::accumulate(active.begin(), active.end(),
-                                      static_cast<std::size_t>(0U));
+    stats.activeEntryCount = std::accumulate(active.begin(), active.end(),
+                                             static_cast<std::size_t>(0U));
   }
 
   /**
@@ -74,12 +74,9 @@ public:
 
   /// Get a reference to the table
   [[nodiscard]] const auto& getTables() const { return tables; }
-  /// Get the current node count
-  [[nodiscard]] std::size_t getNodeCount() const { return nodeCount; }
-  /// Get the peak node count
-  [[nodiscard]] std::size_t getPeakNodeCount() const { return peakNodeCount; }
-  /// Get the maximum number of active nodes
-  [[nodiscard]] std::size_t getMaxActiveNodes() const { return maxActive; }
+
+  /// Get a reference to the statistics
+  [[nodiscard]] const auto& getStats() const noexcept { return stats; }
 
   static bool nodesAreEqual(const Node* p, const Node* q) {
     if constexpr (std::is_same_v<Node, dNode>) {
@@ -99,7 +96,7 @@ public:
       return e;
     }
 
-    ++lookups;
+    ++stats.lookups;
     const auto key = hash(e.p);
     const auto v = e.p->v;
 
@@ -113,9 +110,7 @@ public:
     // if node not found -> add it to front of unique table bucket
     e.p->next = tables[static_cast<std::size_t>(v)][key];
     tables[static_cast<std::size_t>(v)][key] = e.p;
-    ++inserts;
-    ++nodeCount;
-    peakNodeCount = std::max(peakNodeCount, nodeCount);
+    stats.trackInsert();
 
     return e;
   }
@@ -144,9 +139,8 @@ public:
           incRef(edge);
         }
       }
-      active[static_cast<std::size_t>(e.p->v)]++;
-      activeNodeCount++;
-      maxActive = std::max(maxActive, activeNodeCount);
+      ++active[static_cast<std::size_t>(e.p->v)];
+      stats.trackActiveEntry();
     }
   }
 
@@ -174,24 +168,23 @@ public:
           decRef(edge);
         }
       }
-      active[static_cast<std::size_t>(e.p->v)]--;
-      activeNodeCount--;
+      --active[static_cast<std::size_t>(e.p->v)];
+      --stats.activeEntryCount;
     }
   }
 
   [[nodiscard]] bool possiblyNeedsCollection() const {
-    return nodeCount >= gcLimit;
+    return stats.entryCount >= gcLimit;
   }
 
   std::size_t garbageCollect(bool force = false) {
-    gcCalls++;
-    if ((!force && nodeCount < gcLimit) || nodeCount == 0) {
+    ++stats.gcCalls;
+    if ((!force && !possiblyNeedsCollection()) || stats.entryCount == 0) {
       return 0;
     }
 
-    gcRuns++;
-    std::size_t collected = 0;
-    std::size_t remaining = 0;
+    ++stats.gcRuns;
+    const auto entryCountBefore = stats.entryCount;
     for (auto& table : tables) {
       for (auto& bucket : table) {
         Node* p = bucket;
@@ -207,11 +200,10 @@ public:
             }
             memoryManager->returnEntry(p);
             p = next;
-            collected++;
+            --stats.entryCount;
           } else {
             lastp = p;
             p = p->next;
-            remaining++;
           }
         }
       }
@@ -223,11 +215,10 @@ public:
     // increased whenever the number of remaining entries is rather close to the
     // garbage collection threshold and decreased if the number of remaining
     // entries is much lower than the current limit.
-    if (remaining > gcLimit / 10 * 9) {
-      gcLimit = remaining + initialGCLimit;
+    if (stats.entryCount > gcLimit / 10 * 9) {
+      gcLimit = stats.entryCount + initialGCLimit;
     }
-    nodeCount = remaining;
-    return collected;
+    return entryCountBefore - stats.entryCount;
   }
 
   void clear() {
@@ -237,22 +228,9 @@ public:
         bucket = nullptr;
       }
     }
-
-    nodeCount = 0;
-    peakNodeCount = 0;
-
-    collisions = 0;
-    hits = 0;
-    lookups = 0;
-    inserts = 0;
-
-    std::fill(active.begin(), active.end(), 0);
-    activeNodeCount = 0;
-    maxActive = 0;
-
-    gcCalls = 0;
-    gcRuns = 0;
     gcLimit = initialGCLimit;
+    std::fill(active.begin(), active.end(), 0);
+    stats.reset();
   };
 
   void print() {
@@ -283,56 +261,6 @@ public:
     }
   }
 
-  void printActive() {
-    std::cout << "#printActive: " << activeNodeCount << ", ";
-    for (const auto& a : active) {
-      std::cout << a << " ";
-    }
-    std::cout << "\n";
-  }
-
-  /**
-   * @brief Get the hit ratio of the table.
-   * @details The hit ratio is the ratio of lookups that were successful.
-   * @returns The hit ratio of the table.
-   */
-  [[nodiscard]] fp hitRatio() const noexcept {
-    if (lookups == 0) {
-      return 0.;
-    }
-    return static_cast<fp>(hits) / static_cast<fp>(lookups);
-  }
-
-  /**
-   * @brief Get the collision ratio of the table.
-   * @details A collision occurs when the hash function maps two different
-   * floating point numbers to the same bucket. The collision ratio is the ratio
-   * of lookups that resulted in a collision.
-   * @returns The collision ratio of the table.
-   */
-  [[nodiscard]] fp colRatio() const noexcept {
-    if (lookups == 0) {
-      return 0.;
-    }
-    return static_cast<fp>(collisions) / static_cast<fp>(lookups);
-  }
-
-  [[nodiscard]] std::size_t getActiveNodeCount() const noexcept {
-    return activeNodeCount;
-  }
-
-  [[nodiscard]] std::size_t getActiveNodeCount(Qubit var) const {
-    return active.at(var);
-  }
-
-  std::ostream& printStatistics(std::ostream& os = std::cout) const {
-    os << "hits: " << hits << ", collisions: " << collisions
-       << ", looks: " << lookups << ", inserts: " << inserts
-       << ", hitRatio: " << hitRatio() << ", colRatio: " << colRatio()
-       << ", gc calls: " << gcCalls << ", gc runs: " << gcRuns << "\n";
-    return os;
-  }
-
 private:
   /// Typedef for a bucket in the table
   using Bucket = Node*;
@@ -352,35 +280,17 @@ private:
   /// A pointer to the memory manager for the numbers stored in the table.
   MemoryManager<Node>* memoryManager{};
 
-  /// The number of collisions
-  std::size_t collisions = 0;
-  /// The number of successful lookups
-  std::size_t hits = 0;
-  /// The number of lookups
-  std::size_t lookups = 0;
-  /// The number of inserts
-  std::size_t inserts = 0;
+  /// A collection of statistics
+  UniqueTableStatistics stats{};
 
-  /// The number of nodes in the table
-  std::size_t nodeCount = 0U;
-  /// The peak number of nodes in the table
-  std::size_t peakNodeCount = 0U;
   /**
    * @brief the number of active nodes for each variable
    * @note A node is considered active if it has a non-zero reference count.
    */
   std::vector<std::size_t> active{std::vector<std::size_t>(nvars, 0)};
-  /// The total number of active nodes
-  std::size_t activeNodeCount = 0;
-  /// The maximum number of active nodes
-  std::size_t maxActive = 0;
 
   /// The initial garbage collection limit
   std::size_t initialGCLimit;
-  /// The number of garbage collection calls
-  std::size_t gcCalls = 0;
-  /// The number of garbage actual garbage collection runs
-  std::size_t gcRuns = 0;
   /// The current garbage collection limit
   std::size_t gcLimit = initialGCLimit;
 
@@ -405,14 +315,14 @@ private:
           // put node pointed to by e.p on available chain
           memoryManager->returnEntry(e.p);
         }
-        ++hits;
+        ++stats.hits;
 
         // variables should stay the same
         assert(p->v == e.p->v);
 
         return {p, e.w};
       }
-      ++collisions;
+      ++stats.collisions;
       p = p->next;
     }
 

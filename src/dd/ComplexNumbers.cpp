@@ -10,9 +10,7 @@ void ComplexNumbers::clear() noexcept {
   cacheManager.reset();
 }
 
-void ComplexNumbers::setTolerance(fp tol) noexcept {
-  RealNumberUniqueTable::setTolerance(tol);
-}
+void ComplexNumbers::setTolerance(fp tol) noexcept { RealNumber::eps = tol; }
 
 void ComplexNumbers::add(Complex& r, const Complex& a,
                          const Complex& b) noexcept {

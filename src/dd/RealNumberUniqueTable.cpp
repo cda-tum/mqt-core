@@ -5,9 +5,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <iomanip>
 #include <limits>
-#include <stdexcept>
 
 namespace dd {
 
@@ -17,12 +15,6 @@ RealNumberUniqueTable::RealNumberUniqueTable(MemoryManager<RealNumber>& manager,
   // add 1/2 to the complex table and increase its ref count (so that it is
   // not collected)
   lookup(0.5L)->ref++;
-}
-
-fp RealNumberUniqueTable::tolerance() noexcept { return RealNumber::eps; }
-
-void RealNumberUniqueTable::setTolerance(const fp tol) noexcept {
-  RealNumber::eps = tol;
 }
 
 std::int64_t RealNumberUniqueTable::hash(const fp val) noexcept {
@@ -35,19 +27,19 @@ std::int64_t RealNumberUniqueTable::hash(const fp val) noexcept {
 RealNumber* RealNumberUniqueTable::lookup(const fp val) {
   assert(!std::isnan(val));
   assert(val >= 0); // required anyway for the hash function
-  ++lookups;
+  ++stats.lookups;
   if (RealNumber::approximatelyZero(val)) {
-    ++hits;
+    ++stats.hits;
     return &constants::zero;
   }
 
   if (RealNumber::approximatelyOne(val)) {
-    ++hits;
+    ++stats.hits;
     return &constants::one;
   }
 
   if (RealNumber::approximatelyEquals(val, SQRT2_2)) {
-    ++hits;
+    ++stats.hits;
     return &constants::sqrt2over2;
   }
   assert(val - RealNumber::eps >= 0); // should be handle above as special case
@@ -56,7 +48,6 @@ RealNumber* RealNumberUniqueTable::lookup(const fp val) {
   const auto upperKey = hash(val + RealNumber::eps);
 
   if (upperKey == lowerKey) {
-    ++findOrInserts;
     return findOrInsert(lowerKey, val);
   }
 
@@ -72,11 +63,9 @@ RealNumber* RealNumberUniqueTable::lookup(const fp val) {
   if (lowerKey != key) {
     pLower = tailTable[static_cast<std::size_t>(lowerKey)];
     pUpper = table[static_cast<std::size_t>(key)];
-    ++lowerNeighbors;
   } else {
     pLower = tailTable[static_cast<std::size_t>(key)];
     pUpper = table[static_cast<std::size_t>(upperKey)];
-    ++upperNeighbors;
   }
 
   const bool lowerMatchFound =
@@ -87,7 +76,7 @@ RealNumber* RealNumberUniqueTable::lookup(const fp val) {
        RealNumber::approximatelyEquals(val, pUpper->value));
 
   if (lowerMatchFound && upperMatchFound) {
-    ++hits;
+    ++stats.hits;
     const auto diffToLower = std::abs(pLower->value - val);
     const auto diffToUpper = std::abs(pUpper->value - val);
     // val is actually closer to p_lower than to p_upper
@@ -98,12 +87,12 @@ RealNumber* RealNumberUniqueTable::lookup(const fp val) {
   }
 
   if (lowerMatchFound) {
-    ++hits;
+    ++stats.hits;
     return pLower;
   }
 
   if (upperMatchFound) {
-    ++hits;
+    ++stats.hits;
     return pUpper;
   }
 
@@ -113,11 +102,11 @@ RealNumber* RealNumberUniqueTable::lookup(const fp val) {
 }
 
 bool RealNumberUniqueTable::possiblyNeedsCollection() const noexcept {
-  return memoryManager->getUsedCount() >= gcLimit;
+  return stats.entryCount >= gcLimit;
 }
 
 std::size_t RealNumberUniqueTable::garbageCollect(const bool force) noexcept {
-  gcCalls++;
+  ++stats.gcCalls;
   // nothing to be done if garbage collection is not forced, and the limit has
   // not been reached, or the current count is minimal (the complex table
   // always contains at least 0.5)
@@ -126,9 +115,8 @@ std::size_t RealNumberUniqueTable::garbageCollect(const bool force) noexcept {
     return 0;
   }
 
-  gcRuns++;
-  std::size_t collected = 0;
-  std::size_t remaining = 0;
+  ++stats.gcRuns;
+  const auto entryCountBefore = stats.entryCount;
   for (std::size_t key = 0; key < table.size(); ++key) {
     auto* p = table[key];
     RealNumber* lastp = nullptr;
@@ -142,11 +130,10 @@ std::size_t RealNumberUniqueTable::garbageCollect(const bool force) noexcept {
         }
         memoryManager->returnEntry(p);
         p = next;
-        collected++;
+        --stats.entryCount;
       } else {
         lastp = p;
         p = p->next;
-        remaining++;
       }
       tailTable[key] = lastp;
     }
@@ -158,12 +145,12 @@ std::size_t RealNumberUniqueTable::garbageCollect(const bool force) noexcept {
   // increased whenever the number of remaining entries is rather close to the
   // garbage collection threshold and decreased if the number of remaining
   // entries is much lower than the current limit.
-  if (remaining > gcLimit / 10 * 9) {
-    gcLimit = remaining + initialGCLimit;
-  } else if (remaining < gcLimit / 128) {
+  if (stats.entryCount > gcLimit / 10 * 9) {
+    gcLimit = stats.entryCount + initialGCLimit;
+  } else if (stats.entryCount < gcLimit / 128) {
     gcLimit /= 2;
   }
-  return collected;
+  return entryCountBefore - stats.entryCount;
 }
 
 void RealNumberUniqueTable::clear() noexcept {
@@ -174,19 +161,8 @@ void RealNumberUniqueTable::clear() noexcept {
   for (auto& entry : tailTable) {
     entry = nullptr;
   }
-
-  collisions = 0;
-  insertCollisions = 0;
-  hits = 0;
-  findOrInserts = 0;
-  lookups = 0;
-  inserts = 0;
-  lowerNeighbors = 0;
-  upperNeighbors = 0;
-
-  gcCalls = 0;
-  gcRuns = 0;
   gcLimit = initialGCLimit;
+  stats.reset();
 }
 
 void RealNumberUniqueTable::print() const {
@@ -209,48 +185,6 @@ void RealNumberUniqueTable::print() const {
     }
   }
   std::cout.precision(precision);
-}
-
-fp RealNumberUniqueTable::hitRatio() const noexcept {
-  if (lookups == 0) {
-    return 0.0;
-  }
-  return static_cast<fp>(hits) / static_cast<fp>(lookups);
-}
-
-fp RealNumberUniqueTable::colRatio() const noexcept {
-  if (lookups == 0) {
-    return 0.0;
-  }
-  return static_cast<fp>(collisions) / static_cast<fp>(lookups);
-}
-
-std::map<std::string, std::size_t, std::less<>>
-RealNumberUniqueTable::getStatistics() noexcept {
-  return {
-      {"hits", hits},
-      {"collisions", collisions},
-      {"lookups", lookups},
-      {"inserts", inserts},
-      {"insertCollisions", insertCollisions},
-      {"findOrInserts", findOrInserts},
-      {"upperNeighbors", upperNeighbors},
-      {"lowerNeighbors", lowerNeighbors},
-      {"gcCalls", gcCalls},
-      {"gcRuns", gcRuns},
-  };
-}
-
-std::ostream& RealNumberUniqueTable::printStatistics(std::ostream& os) const {
-  os << "hits: " << hits << ", collisions: " << collisions
-     << ", looks: " << lookups << ", inserts: " << inserts
-     << ", insertCollisions: " << insertCollisions
-     << ", findOrInserts: " << findOrInserts
-     << ", upperNeighbors: " << upperNeighbors
-     << ", lowerNeighbors: " << lowerNeighbors << ", hitRatio: " << hitRatio()
-     << ", colRatio: " << colRatio() << ", gc calls: " << gcCalls
-     << ", gc runs: " << gcRuns << "\n";
-  return os;
 }
 
 std::ostream& RealNumberUniqueTable::printBucketDistribution(std::ostream& os) {
@@ -289,20 +223,19 @@ RealNumber* RealNumberUniqueTable::findOrInsert(const std::int64_t key,
           const auto diffToNext = std::abs(next->value - val);
           // val is actually closer to next than to curr
           if (diffToNext < diffToCurr) {
-            ++hits;
+            ++stats.hits;
             return next;
           }
         }
       }
-      ++hits;
+      ++stats.hits;
       return curr;
     }
-    ++collisions;
+    ++stats.collisions;
     prev = curr;
     curr = curr->next;
   }
 
-  ++inserts;
   auto* entry = memoryManager->get();
   entry->value = val;
 
@@ -316,12 +249,12 @@ RealNumber* RealNumberUniqueTable::findOrInsert(const std::int64_t key,
   if (curr == nullptr) {
     tailTable[static_cast<std::size_t>(key)] = entry;
   }
+  stats.trackInsert();
   return entry;
 }
 
 RealNumber* RealNumberUniqueTable::insert(const std::int64_t key,
                                           const fp val) {
-  ++inserts;
   auto* entry = memoryManager->get();
   entry->value = val;
 
@@ -329,7 +262,7 @@ RealNumber* RealNumberUniqueTable::insert(const std::int64_t key,
   RealNumber* prev = nullptr;
 
   while (curr != nullptr && curr->value <= val) {
-    ++insertCollisions;
+    ++stats.collisions;
     prev = curr;
     curr = curr->next;
   }
@@ -344,6 +277,7 @@ RealNumber* RealNumberUniqueTable::insert(const std::int64_t key,
   if (curr == nullptr) {
     tailTable[static_cast<std::size_t>(key)] = entry;
   }
+  stats.trackInsert();
   return entry;
 }
 

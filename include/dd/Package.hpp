@@ -2213,7 +2213,7 @@ public:
   }
   bool isCloseToIdentity(const mEdge& m, dd::fp tol = 1e-10) {
     std::unordered_set<decltype(m.p)> visited{};
-    visited.reserve(mUniqueTable.getActiveNodeCount());
+    visited.reserve(mUniqueTable.getStats().activeEntryCount);
     return isCloseToIdentityRecursive(m, visited, tol);
   }
 
@@ -3604,10 +3604,10 @@ public:
 
   // print unique and compute table statistics
   void statistics() {
-    std::cout << "DD statistics:\n[vUniqueTable] ";
-    vUniqueTable.printStatistics();
-    std::cout << "[mUniqueTable] ";
-    mUniqueTable.printStatistics();
+    std::cout << "DD statistics:\n";
+    std::cout << "[vUniqueTable] " << vUniqueTable.getStats();
+    std::cout << "[mUniqueTable] " << mUniqueTable.getStats();
+    std::cout << "[dUniqueTable] " << dUniqueTable.getStats();
     std::cout << "[CT Vector Add] ";
     vectorAdd.printStatistics();
     std::cout << "[CT Matrix Add] ";
@@ -3636,8 +3636,7 @@ public:
     densityDensityMultiplication.printStatistics();
     std::cout << "[CT Density Noise] ";
     densityNoise.printStatistics();
-    std::cout << "[RealNumberUniqueTable] ";
-    cn.getComplexTable().printStatistics();
+    std::cout << "[RealNumberUniqueTable] " << cn.getComplexTable().getStats();
   }
 };
 
