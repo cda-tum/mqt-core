@@ -8,86 +8,91 @@
 using namespace dd;
 using CN = ComplexNumbers;
 
-TEST(DDComplexTest, TrivialTest) {
-  auto cn = std::make_unique<ComplexNumbers>();
-  const auto beforeCount = cn->cacheCount();
+class CNTest : public testing::Test {
+protected:
+  MemoryManager<RealNumber> mm{};
+  MemoryManager<RealNumber> cm{};
+  RealNumberUniqueTable ut{mm};
+  ComplexNumbers cn{ut, cm};
+};
 
-  auto a = cn->getCached(2, -3);
-  auto b = cn->getCached(3, 2);
+TEST_F(CNTest, TrivialTest) {
+  const auto beforeCount = cn.cacheCount();
 
-  auto r0 = cn->getCached(12, -5);
-  auto r1 = cn->mulCached(a, b);
-  auto r2 = cn->divCached(r0, r1);
+  auto a = cn.getCached(2, -3);
+  auto b = cn.getCached(3, 2);
 
-  const auto betweenCount = cn->cacheCount();
+  auto r0 = cn.getCached(12, -5);
+  auto r1 = cn.mulCached(a, b);
+  auto r2 = cn.divCached(r0, r1);
+
+  const auto betweenCount = cn.cacheCount();
   ASSERT_LE(beforeCount, betweenCount);
-  cn->returnToCache(a);
-  cn->returnToCache(b);
-  cn->returnToCache(r0);
-  cn->returnToCache(r1);
-  cn->returnToCache(r2);
-  cn->garbageCollect(true);
-  const auto endCount = cn->cacheCount();
+  cn.returnToCache(a);
+  cn.returnToCache(b);
+  cn.returnToCache(r0);
+  cn.returnToCache(r1);
+  cn.returnToCache(r2);
+  ut.garbageCollect(true);
+  const auto endCount = cn.cacheCount();
   ASSERT_EQ(beforeCount, endCount);
 }
 
-TEST(DDComplexTest, ComplexNumberCreation) {
-  auto cn = std::make_unique<ComplexNumbers>();
-  EXPECT_EQ(cn->lookup(Complex::zero), Complex::zero);
-  EXPECT_EQ(cn->lookup(Complex::one), Complex::one);
-  EXPECT_EQ(cn->lookup(1e-16, 0.), Complex::zero);
-  EXPECT_EQ(RealNumber::val(cn->lookup(1e-16, 1.).r), 0.);
-  EXPECT_EQ(RealNumber::val(cn->lookup(1e-16, 1.).i), 1.);
-  EXPECT_EQ(RealNumber::val(cn->lookup(1e-16, -1.).r), 0.);
-  EXPECT_EQ(RealNumber::val(cn->lookup(1e-16, -1.).i), -1.);
-  EXPECT_EQ(RealNumber::val(cn->lookup(-1., -1.).r), -1.);
-  EXPECT_EQ(RealNumber::val(cn->lookup(-1., -1.).i), -1.);
-  auto c = cn->lookup(0., -1.);
+TEST_F(CNTest, ComplexNumberCreation) {
+  EXPECT_EQ(cn.lookup(Complex::zero), Complex::zero);
+  EXPECT_EQ(cn.lookup(Complex::one), Complex::one);
+  EXPECT_EQ(cn.lookup(1e-16, 0.), Complex::zero);
+  EXPECT_EQ(RealNumber::val(cn.lookup(1e-16, 1.).r), 0.);
+  EXPECT_EQ(RealNumber::val(cn.lookup(1e-16, 1.).i), 1.);
+  EXPECT_EQ(RealNumber::val(cn.lookup(1e-16, -1.).r), 0.);
+  EXPECT_EQ(RealNumber::val(cn.lookup(1e-16, -1.).i), -1.);
+  EXPECT_EQ(RealNumber::val(cn.lookup(-1., -1.).r), -1.);
+  EXPECT_EQ(RealNumber::val(cn.lookup(-1., -1.).i), -1.);
+  auto c = cn.lookup(0., -1.);
   std::cout << c << "\n";
-  EXPECT_EQ(RealNumber::val(cn->lookup(c).r), 0.);
-  EXPECT_EQ(RealNumber::val(cn->lookup(c).i), -1.);
-  c = cn->lookup(0., 1.);
-  EXPECT_EQ(RealNumber::val(cn->lookup(c).r), 0.);
-  EXPECT_EQ(RealNumber::val(cn->lookup(c).i), 1.);
-  c = cn->lookup(0., -0.5);
+  EXPECT_EQ(RealNumber::val(cn.lookup(c).r), 0.);
+  EXPECT_EQ(RealNumber::val(cn.lookup(c).i), -1.);
+  c = cn.lookup(0., 1.);
+  EXPECT_EQ(RealNumber::val(cn.lookup(c).r), 0.);
+  EXPECT_EQ(RealNumber::val(cn.lookup(c).i), 1.);
+  c = cn.lookup(0., -0.5);
   std::cout << c << "\n";
-  EXPECT_EQ(RealNumber::val(cn->lookup(c).r), 0.);
-  EXPECT_EQ(RealNumber::val(cn->lookup(c).i), -0.5);
-  c = cn->lookup(-1., -1.);
-  EXPECT_EQ(RealNumber::val(cn->lookup(c).r), -1.);
-  EXPECT_EQ(RealNumber::val(cn->lookup(c).i), -1.);
+  EXPECT_EQ(RealNumber::val(cn.lookup(c).r), 0.);
+  EXPECT_EQ(RealNumber::val(cn.lookup(c).i), -0.5);
+  c = cn.lookup(-1., -1.);
+  EXPECT_EQ(RealNumber::val(cn.lookup(c).r), -1.);
+  EXPECT_EQ(RealNumber::val(cn.lookup(c).i), -1.);
   std::cout << c << "\n";
 
-  auto e = cn->lookup(1., -1.);
+  auto e = cn.lookup(1., -1.);
   std::cout << e << "\n";
   std::cout << ComplexValue{1., 1.} << "\n";
   std::cout << ComplexValue{1., -1.} << "\n";
   std::cout << ComplexValue{1., -0.5} << "\n";
-  cn->getComplexTable().print();
-  std::cout << cn->getComplexTable().getStats();
+  ut.print();
+  std::cout << ut.getStats();
 }
 
-TEST(DDComplexTest, ComplexNumberArithmetic) {
-  auto cn = std::make_unique<ComplexNumbers>();
-  auto c = cn->lookup(0., 1.);
+TEST_F(CNTest, ComplexNumberArithmetic) {
+  auto c = cn.lookup(0., 1.);
   auto d = ComplexNumbers::conj(c);
   EXPECT_EQ(RealNumber::val(d.r), 0.);
   EXPECT_EQ(RealNumber::val(d.i), -1.);
-  c = cn->lookup(-1., -1.);
+  c = cn.lookup(-1., -1.);
   d = ComplexNumbers::neg(c);
   EXPECT_EQ(RealNumber::val(d.r), 1.);
   EXPECT_EQ(RealNumber::val(d.i), 1.);
-  c = cn->lookup(0.5, 0.5);
+  c = cn.lookup(0.5, 0.5);
   ComplexNumbers::incRef(c);
-  d = cn->lookup(-0.5, 0.5);
+  d = cn.lookup(-0.5, 0.5);
   ComplexNumbers::incRef(d);
-  auto e = cn->getTemporary();
+  auto e = cn.getTemporary();
   ComplexNumbers::sub(e, c, d);
   ComplexNumbers::decRef(c);
   ComplexNumbers::decRef(d);
-  e = cn->lookup(e);
+  e = cn.lookup(e);
   EXPECT_EQ(e, Complex::one);
-  auto f = cn->getTemporary();
+  auto f = cn.getTemporary();
   ComplexNumbers::div(f, Complex::zero, Complex::one);
 
   const dd::ComplexValue zero{0., 0.};
@@ -95,17 +100,14 @@ TEST(DDComplexTest, ComplexNumberArithmetic) {
   EXPECT_EQ(one + zero, one);
 }
 
-TEST(DDComplexTest, NearZeroLookup) {
-  auto cn = std::make_unique<ComplexNumbers>();
-  auto c = cn->getTemporary(RealNumber::eps / 10., RealNumber::eps / 10.);
-  auto d = cn->lookup(c);
+TEST_F(CNTest, NearZeroLookup) {
+  auto c = cn.getTemporary(RealNumber::eps / 10., RealNumber::eps / 10.);
+  auto d = cn.lookup(c);
   EXPECT_EQ(d.r, Complex::zero.r);
   EXPECT_EQ(d.i, Complex::zero.i);
 }
 
-TEST(DDComplexTest, SortedBuckets) {
-  auto manager = MemoryManager<RealNumber>();
-  auto ct = std::make_unique<RealNumberUniqueTable>(manager);
+TEST_F(CNTest, SortedBuckets) {
   const fp num = 0.25;
 
   const std::array<dd::fp, 7> numbers = {
@@ -114,15 +116,16 @@ TEST(DDComplexTest, SortedBuckets) {
       num - 4. * RealNumber::eps, num + 6. * RealNumber::eps,
       num + 8. * RealNumber::eps};
 
-  const auto theBucket = static_cast<std::size_t>(ct->hash(num));
+  const auto theBucket =
+      static_cast<std::size_t>(dd::RealNumberUniqueTable::hash(num));
 
   for (auto const& number : numbers) {
-    ASSERT_EQ(theBucket, ct->hash(number));
-    const auto* entry = ct->lookup(number);
+    ASSERT_EQ(theBucket, ut.hash(number));
+    const auto* entry = ut.lookup(number);
     ASSERT_NE(entry, nullptr);
   }
 
-  RealNumber* p = ct->getTable().at(theBucket);
+  RealNumber* p = ut.getTable().at(theBucket);
   ASSERT_NE(p, nullptr);
 
   const dd::fp last = std::numeric_limits<dd::fp>::min();
@@ -132,21 +135,20 @@ TEST(DDComplexTest, SortedBuckets) {
     p = p->next;
     ++counter;
   }
-  std::cout << ct->getStats();
+  std::cout << ut.getStats();
   EXPECT_EQ(counter, numbers.size());
 }
 
-TEST(DDComplexTest, GarbageCollectSomeInBucket) {
-  auto cn = std::make_unique<ComplexNumbers>();
-  EXPECT_EQ(cn->garbageCollect(), 0);
+TEST_F(CNTest, GarbageCollectSomeInBucket) {
+  EXPECT_EQ(ut.garbageCollect(), 0);
 
   const fp num = 0.25;
-  const auto lookup = cn->lookup(num, 0.0);
+  const auto lookup = cn.lookup(num, 0.0);
   ASSERT_NE(lookup.r, nullptr);
   ASSERT_NE(lookup.i, nullptr);
 
   const fp num2 = num + 2. * RealNumber::eps;
-  const auto lookup2 = cn->lookup(num2, 0.0);
+  const auto lookup2 = cn.lookup(num2, 0.0);
   ASSERT_NE(lookup2.r, nullptr);
   ASSERT_NE(lookup2.i, nullptr);
   ComplexNumbers::incRef(lookup2);
@@ -156,25 +158,24 @@ TEST(DDComplexTest, GarbageCollectSomeInBucket) {
   auto key2 = RealNumberUniqueTable::hash(num2);
   ASSERT_EQ(key, key2);
 
-  const auto& table = cn->getComplexTable().getTable();
+  const auto& table = ut.getTable();
   const auto* p = table[static_cast<std::size_t>(key)];
   EXPECT_NEAR(p->value, num, RealNumber::eps);
 
   ASSERT_NE(p->next, nullptr);
   EXPECT_NEAR((p->next)->value, num2, RealNumber::eps);
 
-  cn->garbageCollect(true); // num should be collected
+  ut.garbageCollect(true); // num should be collected
   const auto* q = table[static_cast<std::size_t>(key)];
   ASSERT_NE(q, nullptr);
   EXPECT_NEAR(q->value, num2, RealNumber::eps);
   EXPECT_EQ(q->next, nullptr);
 }
 
-TEST(DDComplexTest, LookupInNeighbouringBuckets) {
+TEST_F(CNTest, LookupInNeighbouringBuckets) {
   std::clog << "Current rounding mode: " << std::numeric_limits<fp>::round_style
             << "\n";
-  auto cn = std::make_unique<ComplexNumbers>();
-  const auto mask = cn->getComplexTable().getTable().size() - 1;
+  const auto mask = ut.getTable().size() - 1;
   const auto fpMask = static_cast<fp>(mask);
   const std::size_t nbucket = mask + 1U;
   auto preHash = [fpMask](const fp val) { return val * fpMask; };
@@ -194,7 +195,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
 
   // insert a number slightly away from the border
   const fp numAbove = numBucketBorder + 2 * RealNumber::eps;
-  const auto lookupAbove = cn->lookup(numAbove, 0.0);
+  const auto lookupAbove = cn.lookup(numAbove, 0.0);
   ASSERT_NE(lookupAbove.r, nullptr);
   ASSERT_NE(lookupAbove.i, nullptr);
   const auto key = RealNumberUniqueTable::hash(numAbove);
@@ -202,7 +203,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
 
   // insert a number barely in the bucket below
   const fp numBarelyBelow = numBucketBorder - RealNumber::eps / 10;
-  const auto lookupBarelyBelow = cn->lookup(numBarelyBelow, 0.0);
+  const auto lookupBarelyBelow = cn.lookup(numBarelyBelow, 0.0);
   ASSERT_NE(lookupBarelyBelow.r, nullptr);
   ASSERT_NE(lookupBarelyBelow.i, nullptr);
   const auto hashBarelyBelow = RealNumberUniqueTable::hash(numBarelyBelow);
@@ -216,7 +217,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
   // insert another number in the bucket below a bit farther away from the
   // border
   const fp numBelow = numBucketBorder - 2 * RealNumber::eps;
-  const auto lookupBelow = cn->lookup(numBelow, 0.0);
+  const auto lookupBelow = cn.lookup(numBelow, 0.0);
   ASSERT_NE(lookupBelow.r, nullptr);
   ASSERT_NE(lookupBelow.i, nullptr);
   const auto hashBelow = RealNumberUniqueTable::hash(numBelow);
@@ -230,7 +231,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
   // insert border number that is too far away from the number in the bucket,
   // but is close enough to a number in the bucket below
   const fp num4 = numBucketBorder;
-  const auto c = cn->lookup(num4, 0.0);
+  const auto c = cn.lookup(num4, 0.0);
   const auto key4 = RealNumberUniqueTable::hash(num4 - RealNumber::eps);
   EXPECT_EQ(hashBarelyBelow, key4);
   EXPECT_NEAR(c.r->value, numBarelyBelow, RealNumber::eps);
@@ -239,7 +240,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
   const fp numNextBorder = numBucketBorder +
                            1.0 / static_cast<double>(nbucket - 1) +
                            RealNumber::eps;
-  const auto lookupNextBorder = cn->lookup(numNextBorder, 0.0);
+  const auto lookupNextBorder = cn.lookup(numNextBorder, 0.0);
   ASSERT_NE(lookupNextBorder.r, nullptr);
   ASSERT_NE(lookupNextBorder.i, nullptr);
   const auto hashNextBorder = RealNumberUniqueTable::hash(numNextBorder);
@@ -253,7 +254,7 @@ TEST(DDComplexTest, LookupInNeighbouringBuckets) {
   // search for a number in the lower bucket that is ultimately close enough to
   // a number in the upper bucket
   const fp num6 = numNextBorder - RealNumber::eps / 10;
-  const auto d = cn->lookup(num6, 0.0);
+  const auto d = cn.lookup(num6, 0.0);
   const auto key6 = RealNumberUniqueTable::hash(num6 + RealNumber::eps);
   EXPECT_EQ(hashNextBorder, key6);
   EXPECT_NEAR(d.r->value, numNextBorder, RealNumber::eps);
@@ -279,20 +280,19 @@ TEST(DDComplexTest, LowestFractions) {
               ::testing::Pair(1, 1));
 }
 
-TEST(DDComplexTest, NumberPrintingToString) {
-  auto cn = std::make_unique<ComplexNumbers>();
-  auto imag = cn->lookup(0., 1.);
+TEST_F(CNTest, NumberPrintingToString) {
+  auto imag = cn.lookup(0., 1.);
   auto imagStr = imag.toString(false);
   EXPECT_STREQ(imagStr.c_str(), "1i");
   auto imagStrFormatted = imag.toString(true);
   EXPECT_STREQ(imagStrFormatted.c_str(), "+i");
 
-  auto superposition = cn->lookup(dd::SQRT2_2, dd::SQRT2_2);
+  auto superposition = cn.lookup(dd::SQRT2_2, dd::SQRT2_2);
   auto superpositionStr = superposition.toString(false, 3);
   EXPECT_STREQ(superpositionStr.c_str(), "0.707+0.707i");
   auto superpositionStrFormatted = superposition.toString(true, 3);
   EXPECT_STREQ(superpositionStrFormatted.c_str(), "1/√2(1+i)");
-  auto negSuperposition = cn->lookup(dd::SQRT2_2, -dd::SQRT2_2);
+  auto negSuperposition = cn.lookup(dd::SQRT2_2, -dd::SQRT2_2);
   auto negSuperpositionStrFormatted = negSuperposition.toString(true, 3);
   EXPECT_STREQ(negSuperpositionStrFormatted.c_str(), "1/√2(1-i)");
 }
@@ -459,9 +459,8 @@ TEST(DDComplexTest, NumberPrintingFormattedFloating) {
   ss.str("");
 }
 
-TEST(DDComplexTest, MaxRefCountReached) {
-  auto cn = std::make_unique<ComplexNumbers>();
-  auto c = cn->lookup(SQRT2_2 / 2, SQRT2_2 / 2);
+TEST_F(CNTest, MaxRefCountReached) {
+  auto c = cn.lookup(SQRT2_2 / 2, SQRT2_2 / 2);
   const auto max = std::numeric_limits<decltype(c.r->ref)>::max();
   c.r->ref = max - 1;
 
@@ -475,128 +474,120 @@ TEST(DDComplexTest, MaxRefCountReached) {
   EXPECT_EQ(c.i->ref, max);
 }
 
-TEST(DDComplexTest, ComplexTableAllocation) {
-  auto cn = std::make_unique<ComplexNumbers>();
-  auto& manager = cn->getMemoryManager();
-  auto allocs = manager.getAllocationCount();
+TEST_F(CNTest, ComplexTableAllocation) {
+  auto allocs = mm.getAllocationCount();
   std::cout << allocs << "\n";
   std::vector<RealNumber*> nums{allocs};
   // get all the numbers that are pre-allocated
   for (auto i = 0U; i < allocs; ++i) {
-    nums[i] = manager.get();
+    nums[i] = mm.get();
   }
 
   // trigger new allocation
-  const auto* num = cn->getMemoryManager().get();
+  const auto* num = mm.get();
   ASSERT_NE(num, nullptr);
-  EXPECT_EQ(manager.getAllocationCount(),
+  EXPECT_EQ(mm.getAllocationCount(),
             (1. + MemoryManager<RealNumber>::GROWTH_FACTOR) *
                 static_cast<fp>(allocs));
 
   // clearing the complex table should reduce the allocated size to the original
   // size
-  manager.reset();
-  EXPECT_EQ(manager.getAllocationCount(), allocs);
+  mm.reset();
+  EXPECT_EQ(mm.getAllocationCount(), allocs);
 
-  EXPECT_EQ(manager.getAvailableForReuseCount(), 0U);
+  EXPECT_EQ(mm.getAvailableForReuseCount(), 0U);
   // obtain entry
-  auto* entry = manager.get();
+  auto* entry = mm.get();
   // immediately return entry
-  manager.returnEntry(entry);
-  EXPECT_EQ(manager.getAvailableForReuseCount(), 1U);
+  mm.returnEntry(entry);
+  EXPECT_EQ(mm.getAvailableForReuseCount(), 1U);
   // obtain the same entry again, but this time from the available stack
-  auto* entry2 = manager.get();
+  auto* entry2 = mm.get();
   EXPECT_EQ(entry, entry2);
 }
 
-TEST(DDComplexTest, ComplexCacheAllocation) {
-  auto cn = std::make_unique<ComplexNumbers>();
-  auto allocs = cn->getCacheManager().getAllocationCount();
+TEST_F(CNTest, ComplexCacheAllocation) {
+  auto allocs = cm.getAllocationCount();
   std::cout << allocs << "\n";
   std::vector<Complex> cnums{allocs};
   // get all the cached complex numbers that are pre-allocated
   for (auto i = 0U; i < allocs; i += 2) {
-    cnums[i % 2] = cn->getCached();
+    cnums[i % 2] = cn.getCached();
   }
 
   // trigger new allocation for obtaining a complex from cache
-  const auto cnum = cn->getCached();
+  const auto cnum = cn.getCached();
   ASSERT_NE(cnum.r, nullptr);
   ASSERT_NE(cnum.i, nullptr);
-  EXPECT_EQ(cn->getCacheManager().getAllocationCount(),
+  EXPECT_EQ(cm.getAllocationCount(),
             (1. + MemoryManager<RealNumber>::GROWTH_FACTOR) *
                 static_cast<fp>(allocs));
 
   // clearing the cache should reduce the allocated size to the original size
-  cn->resetCache();
-  EXPECT_EQ(cn->getCacheManager().getAllocationCount(), allocs);
+  cm.reset();
+  EXPECT_EQ(cm.getAllocationCount(), allocs);
 
   // get all the cached complex numbers again
   for (auto i = 0U; i < allocs; i += 2) {
-    cnums[i % 2] = cn->getCached();
+    cnums[i % 2] = cn.getCached();
   }
 
   // trigger new allocation for obtaining a temporary from cache
-  const auto tmp = cn->getTemporary();
+  const auto tmp = cn.getTemporary();
   ASSERT_NE(tmp.r, nullptr);
   ASSERT_NE(tmp.i, nullptr);
-  EXPECT_EQ(cn->getCacheManager().getAllocationCount(),
+  EXPECT_EQ(cm.getAllocationCount(),
             (1. + MemoryManager<RealNumber>::GROWTH_FACTOR) *
                 static_cast<fp>(allocs));
 
   // clearing the unique table should reduce the allocated size to the original
   // size
-  cn->resetCache();
-  EXPECT_EQ(cn->getCacheManager().getAllocationCount(), allocs);
+  cm.reset();
+  EXPECT_EQ(cm.getAllocationCount(), allocs);
 }
 
-TEST(DDComplexTest, DoubleHitInFindOrInsert) {
-  auto manager = MemoryManager<RealNumber>{};
-  auto rt = std::make_unique<RealNumberUniqueTable>(manager);
-
+TEST_F(CNTest, DoubleHitInFindOrInsert) {
   // insert a number somewhere in a bucket
   const fp num1 = 0.5;
-  auto* tnum1 = rt->lookup(num1);
+  auto* tnum1 = ut.lookup(num1);
   EXPECT_EQ(tnum1->value, num1);
 
   // insert a second number that is farther away than the tolerance, but closer
   // than twice the tolerance
   const fp num2 = num1 + 2.1 * dd::RealNumber::eps;
-  auto* tnum2 = rt->lookup(num2);
+  auto* tnum2 = ut.lookup(num2);
   EXPECT_EQ(tnum2->value, num2);
 
   // insert a third number that is close to both previously inserted numbers,
   // but closer to the second
   const fp num3 = num1 + 2.2 * dd::RealNumber::eps;
-  auto* tnum3 = rt->lookup(num3);
+  auto* tnum3 = ut.lookup(num3);
   EXPECT_EQ(tnum3->value, num2);
 }
 
-TEST(DDComplexTest, DoubleHitAcrossBuckets) {
-  auto manager = MemoryManager<RealNumber>{};
-  auto rt = std::make_unique<RealNumberUniqueTable>(manager);
+TEST_F(CNTest, DoubleHitAcrossBuckets) {
   std::cout << std::setprecision(std::numeric_limits<dd::fp>::max_digits10);
 
   // insert a number at a lower bucket border
-  const fp num1 = 8191.5 / (static_cast<dd::fp>(rt->getTable().size()) - 1);
-  auto* tnum1 = rt->lookup(num1);
+  const fp num1 = 8191.5 / (static_cast<dd::fp>(ut.getTable().size()) - 1);
+  auto* tnum1 = ut.lookup(num1);
   EXPECT_EQ(tnum1->value, num1);
 
   // insert a second number that is farther away than the tolerance towards the
   // lower bucket, but closer than twice the tolerance
   const fp num2 = num1 - 1.5 * dd::RealNumber::eps;
-  auto* tnum2 = rt->lookup(num2);
+  auto* tnum2 = ut.lookup(num2);
   EXPECT_EQ(tnum2->value, num2);
 
   // insert a third number that is close to both previously inserted numbers,
   // but closer to the second
   const fp num3 = num1 - 0.9 * dd::RealNumber::eps;
-  auto* tnum3 = rt->lookup(num3);
+  auto* tnum3 = ut.lookup(num3);
   EXPECT_EQ(tnum3->value, num2);
 
   // insert a third number that is close to both previously inserted numbers,
   // but closer to the first
   const fp num4 = num1 - 0.6 * dd::RealNumber::eps;
-  auto* tnum4 = rt->lookup(num4);
+  auto* tnum4 = ut.lookup(num4);
   EXPECT_EQ(tnum4->value, num1);
 }

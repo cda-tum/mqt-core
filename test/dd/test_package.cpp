@@ -998,20 +998,23 @@ TEST(DDPackageTest, ExportPolarPhaseFormatted) {
 }
 
 TEST(DDPackageTest, ExportConditionalFormat) {
-  auto cn = std::make_unique<dd::ComplexNumbers>();
+  dd::MemoryManager<dd::RealNumber> mm{};
+  dd::MemoryManager<dd::RealNumber> cm{};
+  dd::RealNumberUniqueTable ut{mm};
+  dd::ComplexNumbers cn{ut, cm};
 
-  EXPECT_STREQ(dd::conditionalFormat(cn->getCached(1, 0)).c_str(), "1");
-  EXPECT_STREQ(dd::conditionalFormat(cn->getCached(0, 1)).c_str(), "i");
-  EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-1, 0)).c_str(), "-1");
-  EXPECT_STREQ(dd::conditionalFormat(cn->getCached(0, -1)).c_str(), "-i");
+  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(1, 0)).c_str(), "1");
+  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(0, 1)).c_str(), "i");
+  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-1, 0)).c_str(), "-1");
+  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(0, -1)).c_str(), "-i");
 
-  const auto num = cn->getCached(-dd::SQRT2_2, -dd::SQRT2_2);
+  const auto num = cn.getCached(-dd::SQRT2_2, -dd::SQRT2_2);
   EXPECT_STREQ(dd::conditionalFormat(num).c_str(), "ℯ(-iπ 3/4)");
   EXPECT_STREQ(dd::conditionalFormat(num, false).c_str(), "-1/√2(1+i)");
 
-  EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-1, -1)).c_str(),
+  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-1, -1)).c_str(),
                "2/√2 ℯ(-iπ 3/4)");
-  EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-dd::SQRT2_2, 0)).c_str(),
+  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-dd::SQRT2_2, 0)).c_str(),
                "-1/√2");
 }
 
@@ -1108,7 +1111,9 @@ TEST(DDPackageTest, NormalizationNumericStabilityTest) {
     auto pdag = dd->makeGateDD(dd::Phasemat(-lambda), 1, 0);
     auto result = dd->multiply(p, pdag);
     EXPECT_TRUE(result.p->isIdentity());
-    dd->cn.clear();
+    dd->cUniqueTable.clear();
+    dd->cCacheManager.reset();
+    dd->cMemoryManager.reset();
   }
 }
 

@@ -45,16 +45,11 @@ namespace dd {
 template <class Config> class Package {
   static_assert(std::is_base_of_v<DDPackageConfig, Config>,
                 "Config must be derived from DDPackageConfig");
-  ///
-  /// Complex number handling
-  ///
-public:
-  ComplexNumbers cn{};
 
   ///
   /// Construction, destruction, information and reset
   ///
-
+public:
   static constexpr std::size_t MAX_POSSIBLE_QUBITS =
       static_cast<std::make_unsigned_t<Qubit>>(
           std::numeric_limits<Qubit>::max()) +
@@ -91,14 +86,179 @@ public:
     clearUniqueTables();
     resetMemoryManagers();
     clearComputeTables();
-    cn.clear();
   }
 
-  // getter for qubits
+  /// Get the number of qubits
   [[nodiscard]] auto qubits() const { return nqubits; }
 
 private:
   std::size_t nqubits;
+
+public:
+  /// The memory manager for vector nodes
+  MemoryManager<vNode> vMemoryManager{Config::UT_VEC_INITIAL_ALLOCATION_SIZE};
+  /// The memory manager for matrix nodes
+  MemoryManager<mNode> mMemoryManager{Config::UT_MAT_INITIAL_ALLOCATION_SIZE};
+  /// The memory manager for density matrix nodes
+  MemoryManager<dNode> dMemoryManager{Config::UT_DM_INITIAL_ALLOCATION_SIZE};
+  /**
+   * @brief The memory manager for complex numbers
+   * @note The real and imaginary part of complex numbers are treated
+   * separately. Hence, it suffices for the manager to only manage real numbers.
+   */
+  MemoryManager<RealNumber> cMemoryManager{};
+  /**
+   * @brief The cache manager for complex numbers
+   * @note Similar to the memory manager, the cache only maintains real entries,
+   * but typically gives them out in pairs to form complex numbers.
+   */
+  MemoryManager<RealNumber> cCacheManager{};
+
+  /**
+   * @brief Get the memory manager for a given type
+   * @tparam T The type to get the manager for
+   * @return A reference to the manager
+   */
+  template <class T> [[nodiscard]] auto& getMemoryManager() {
+    if constexpr (std::is_same_v<T, vNode>) {
+      return vMemoryManager;
+    } else if constexpr (std::is_same_v<T, mNode>) {
+      return mMemoryManager;
+    } else if constexpr (std::is_same_v<T, dNode>) {
+      return dMemoryManager;
+    } else if constexpr (std::is_same_v<T, RealNumber>) {
+      return cMemoryManager;
+    }
+  }
+
+  /**
+   * @brief Reset all memory managers
+   * @arg resizeToTotal If set to true, each manager allocates one chunk of
+   * memory as large as all chunks combined before the reset.
+   * @see MemoryManager::reset
+   */
+  void resetMemoryManagers(const bool resizeToTotal = false) {
+    vMemoryManager.reset(resizeToTotal);
+    mMemoryManager.reset(resizeToTotal);
+    dMemoryManager.reset(resizeToTotal);
+    cMemoryManager.reset(resizeToTotal);
+    cCacheManager.reset(resizeToTotal);
+  }
+
+  /// The unique table used for vector nodes
+  UniqueTable<vNode, Config::UT_VEC_NBUCKET> vUniqueTable{nqubits,
+                                                          vMemoryManager};
+  /// The unique table used for matrix nodes
+  UniqueTable<mNode, Config::UT_MAT_NBUCKET> mUniqueTable{nqubits,
+                                                          mMemoryManager};
+  /// The unique table used for density matrix nodes
+  UniqueTable<dNode, Config::UT_DM_NBUCKET> dUniqueTable{nqubits,
+                                                         dMemoryManager};
+  /**
+   * @brief The unique table used for complex numbers
+   * @note The table actually only stores real numbers in the interval [0, 1],
+   * but is used to manages all complex numbers throughout the package.
+   * @see RealNumberUniqueTable
+   */
+  RealNumberUniqueTable cUniqueTable{cMemoryManager};
+  ComplexNumbers cn{cUniqueTable, cCacheManager};
+
+  /**
+   * @brief Get the unique table for a given type
+   * @tparam T The type to get the unique table for
+   * @return A reference to the unique table
+   */
+  template <class T> [[nodiscard]] auto& getUniqueTable() {
+    if constexpr (std::is_same_v<T, vNode>) {
+      return vUniqueTable;
+    } else if constexpr (std::is_same_v<T, mNode>) {
+      return mUniqueTable;
+    } else if constexpr (std::is_same_v<T, dNode>) {
+      return dUniqueTable;
+    } else if constexpr (std::is_same_v<T, RealNumber>) {
+      return cUniqueTable;
+    }
+  }
+
+  /**
+   * @brief Clear all unique tables
+   * @see UniqueTable::clear
+   * @see RealNumberUniqueTable::clear
+   */
+  void clearUniqueTables() {
+    vUniqueTable.clear();
+    mUniqueTable.clear();
+    dUniqueTable.clear();
+    cUniqueTable.clear();
+  }
+
+  template <class Node> void incRef(const Edge<Node>& e) {
+    getUniqueTable<Node>().incRef(e);
+  }
+  template <class Node> void decRef(const Edge<Node>& e) {
+    getUniqueTable<Node>().decRef(e);
+  }
+
+  bool garbageCollect(bool force = false) {
+    // return immediately if no table needs collection
+    if (!force && !vUniqueTable.possiblyNeedsCollection() &&
+        !mUniqueTable.possiblyNeedsCollection() &&
+        !dUniqueTable.possiblyNeedsCollection() &&
+        !cUniqueTable.possiblyNeedsCollection()) {
+      return false;
+    }
+
+    auto cCollect = cUniqueTable.garbageCollect(force);
+    if (cCollect > 0) {
+      // Collecting garbage in the complex numbers table requires collecting the
+      // node tables as well
+      force = true;
+    }
+    auto vCollect = vUniqueTable.garbageCollect(force);
+    auto mCollect = mUniqueTable.garbageCollect(force);
+    auto dCollect = dUniqueTable.garbageCollect(force);
+
+    // invalidate all compute tables involving vectors if any vector node has
+    // been collected
+    if (vCollect > 0) {
+      vectorAdd.clear();
+      vectorInnerProduct.clear();
+      vectorKronecker.clear();
+      matrixVectorMultiplication.clear();
+    }
+    // invalidate all compute tables involving matrices if any matrix node has
+    // been collected
+    if (mCollect > 0 || dCollect > 0) {
+      matrixAdd.clear();
+      matrixTranspose.clear();
+      conjugateMatrixTranspose.clear();
+      matrixKronecker.clear();
+      matrixVectorMultiplication.clear();
+      matrixMatrixMultiplication.clear();
+      toffoliTable.clear();
+      clearIdentityTable();
+      stochasticNoiseOperationCache.clear();
+      densityAdd.clear();
+      densityDensityMultiplication.clear();
+      densityNoise.clear();
+    }
+    // invalidate all compute tables where any component of the entry contains
+    // numbers from the complex table if any complex numbers were collected
+    if (cCollect > 0) {
+      matrixVectorMultiplication.clear();
+      matrixMatrixMultiplication.clear();
+      matrixTranspose.clear();
+      conjugateMatrixTranspose.clear();
+      vectorInnerProduct.clear();
+      vectorKronecker.clear();
+      matrixKronecker.clear();
+      stochasticNoiseOperationCache.clear();
+      densityAdd.clear();
+      densityDensityMultiplication.clear();
+      densityNoise.clear();
+    }
+    return vCollect > 0 || mCollect > 0 || cCollect > 0;
+  }
 
   ///
   /// Vector nodes, edges and quantum states
@@ -976,123 +1136,7 @@ private:
     return makeDDNode<mNode>(level, {edge0, edge1, edge2, edge3}, true);
   }
 
-  ///
-  /// Memory managers, Unique tables, Reference counting and garbage collection
-  ///
 public:
-  // memory managers
-  MemoryManager<vNode> vMemoryManager{Config::UT_VEC_INITIAL_ALLOCATION_SIZE};
-  MemoryManager<mNode> mMemoryManager{Config::UT_MAT_INITIAL_ALLOCATION_SIZE};
-  MemoryManager<dNode> dMemoryManager{Config::UT_DM_INITIAL_ALLOCATION_SIZE};
-
-  template <class Node> [[nodiscard]] auto& getMemoryManager() {
-    if constexpr (std::is_same_v<Node, vNode>) {
-      return vMemoryManager;
-    } else if constexpr (std::is_same_v<Node, mNode>) {
-      return mMemoryManager;
-    } else if constexpr (std::is_same_v<Node, dNode>) {
-      return dMemoryManager;
-    }
-  }
-
-  void resetMemoryManagers(const bool resizeToTotal = false) {
-    vMemoryManager.reset(resizeToTotal);
-    mMemoryManager.reset(resizeToTotal);
-    dMemoryManager.reset(resizeToTotal);
-  }
-
-  // unique tables
-  template <class Node> [[nodiscard]] auto& getUniqueTable() {
-    if constexpr (std::is_same_v<Node, vNode>) {
-      return vUniqueTable;
-    } else if constexpr (std::is_same_v<Node, mNode>) {
-      return mUniqueTable;
-    } else if constexpr (std::is_same_v<Node, dNode>) {
-      return dUniqueTable;
-    }
-  }
-
-  template <class Node> void incRef(const Edge<Node>& e) {
-    getUniqueTable<Node>().incRef(e);
-  }
-  template <class Node> void decRef(const Edge<Node>& e) {
-    getUniqueTable<Node>().decRef(e);
-  }
-
-  UniqueTable<vNode, Config::UT_VEC_NBUCKET> vUniqueTable{nqubits,
-                                                          vMemoryManager};
-  UniqueTable<mNode, Config::UT_MAT_NBUCKET> mUniqueTable{nqubits,
-                                                          mMemoryManager};
-  UniqueTable<dNode, Config::UT_DM_NBUCKET> dUniqueTable{nqubits,
-                                                         dMemoryManager};
-
-  bool garbageCollect(bool force = false) {
-    // return immediately if no table needs collection
-    if (!force && !vUniqueTable.possiblyNeedsCollection() &&
-        !mUniqueTable.possiblyNeedsCollection() &&
-        !dUniqueTable.possiblyNeedsCollection() &&
-        !cn.getComplexTable().possiblyNeedsCollection()) {
-      return false;
-    }
-
-    auto cCollect = cn.garbageCollect(force);
-    if (cCollect > 0) {
-      // Collecting garbage in the complex numbers table requires collecting the
-      // node tables as well
-      force = true;
-    }
-    auto vCollect = vUniqueTable.garbageCollect(force);
-    auto mCollect = mUniqueTable.garbageCollect(force);
-    auto dCollect = dUniqueTable.garbageCollect(force);
-
-    // invalidate all compute tables involving vectors if any vector node has
-    // been collected
-    if (vCollect > 0) {
-      vectorAdd.clear();
-      vectorInnerProduct.clear();
-      vectorKronecker.clear();
-      matrixVectorMultiplication.clear();
-    }
-    // invalidate all compute tables involving matrices if any matrix node has
-    // been collected
-    if (mCollect > 0 || dCollect > 0) {
-      matrixAdd.clear();
-      matrixTranspose.clear();
-      conjugateMatrixTranspose.clear();
-      matrixKronecker.clear();
-      matrixVectorMultiplication.clear();
-      matrixMatrixMultiplication.clear();
-      toffoliTable.clear();
-      clearIdentityTable();
-      stochasticNoiseOperationCache.clear();
-      densityAdd.clear();
-      densityDensityMultiplication.clear();
-      densityNoise.clear();
-    }
-    // invalidate all compute tables where any component of the entry contains
-    // numbers from the complex table if any complex numbers were collected
-    if (cCollect > 0) {
-      matrixVectorMultiplication.clear();
-      matrixMatrixMultiplication.clear();
-      matrixTranspose.clear();
-      conjugateMatrixTranspose.clear();
-      vectorInnerProduct.clear();
-      vectorKronecker.clear();
-      matrixKronecker.clear();
-      stochasticNoiseOperationCache.clear();
-      densityAdd.clear();
-      densityDensityMultiplication.clear();
-      densityNoise.clear();
-    }
-    return vCollect > 0 || mCollect > 0 || cCollect > 0;
-  }
-
-  void clearUniqueTables() {
-    vUniqueTable.clear();
-    mUniqueTable.clear();
-    dUniqueTable.clear();
-  }
-
   // create a normalized DD node and return an edge pointing to it. The node is
   // not recreated if it already exists.
   template <class Node>
@@ -3608,6 +3652,7 @@ public:
     std::cout << "[vUniqueTable] " << vUniqueTable.getStats();
     std::cout << "[mUniqueTable] " << mUniqueTable.getStats();
     std::cout << "[dUniqueTable] " << dUniqueTable.getStats();
+    std::cout << "[cUniqueTable] " << cUniqueTable.getStats();
     std::cout << "[CT Vector Add] ";
     vectorAdd.printStatistics();
     std::cout << "[CT Matrix Add] ";
@@ -3636,7 +3681,6 @@ public:
     densityDensityMultiplication.printStatistics();
     std::cout << "[CT Density Noise] ";
     densityNoise.printStatistics();
-    std::cout << "[RealNumberUniqueTable] " << cn.getComplexTable().getStats();
   }
 };
 

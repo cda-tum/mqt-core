@@ -4,11 +4,6 @@
 #include <cmath>
 
 namespace dd {
-void ComplexNumbers::clear() noexcept {
-  complexTable.clear();
-  memoryManager.reset();
-  cacheManager.reset();
-}
 
 void ComplexNumbers::setTolerance(fp tol) noexcept { RealNumber::eps = tol; }
 
@@ -191,10 +186,10 @@ Complex ComplexNumbers::lookup(const fp r, const fp i) {
     if (RealNumber::approximatelyZero(r)) {
       ret.r = &constants::zero;
     } else {
-      ret.r = RealNumber::getNegativePointer(complexTable.lookup(std::abs(r)));
+      ret.r = RealNumber::getNegativePointer(uniqueTable->lookup(std::abs(r)));
     }
   } else {
-    ret.r = complexTable.lookup(r);
+    ret.r = uniqueTable->lookup(r);
   }
 
   if (const auto signI = std::signbit(i); signI) {
@@ -203,10 +198,10 @@ Complex ComplexNumbers::lookup(const fp r, const fp i) {
     if (RealNumber::approximatelyZero(i)) {
       ret.i = &constants::zero;
     } else {
-      ret.i = RealNumber::getNegativePointer(complexTable.lookup(std::abs(i)));
+      ret.i = RealNumber::getNegativePointer(uniqueTable->lookup(std::abs(i)));
     }
   } else {
-    ret.i = complexTable.lookup(i);
+    ret.i = uniqueTable->lookup(i);
   }
 
   return ret;
@@ -226,17 +221,13 @@ void ComplexNumbers::decRef(const Complex& c) noexcept {
   }
 }
 
-std::size_t ComplexNumbers::garbageCollect(bool force) noexcept {
-  return complexTable.garbageCollect(force);
-}
-
 Complex ComplexNumbers::getTemporary() {
-  const auto [rv, iv] = cacheManager.getTemporaryPair();
+  const auto [rv, iv] = cacheManager->getTemporaryPair();
   return {rv, iv};
 }
 
 Complex ComplexNumbers::getTemporary(const fp r, const fp i) {
-  const auto [rv, iv] = cacheManager.getTemporaryPair();
+  const auto [rv, iv] = cacheManager->getTemporaryPair();
   rv->value = r;
   iv->value = i;
   return {rv, iv};
@@ -251,7 +242,7 @@ Complex ComplexNumbers::getTemporary(const Complex& c) {
 }
 
 Complex ComplexNumbers::getCached() {
-  const auto [rv, iv] = cacheManager.getPair();
+  const auto [rv, iv] = cacheManager->getPair();
   return {rv, iv};
 }
 
@@ -276,19 +267,19 @@ Complex ComplexNumbers::getCached(const std::complex<fp>& c) {
 
 void ComplexNumbers::returnToCache(const Complex& c) noexcept {
   if (!constants::isStaticNumber(c.i)) {
-    cacheManager.returnEntry(c.i);
+    cacheManager->returnEntry(c.i);
   }
   if (!constants::isStaticNumber(c.r)) {
-    cacheManager.returnEntry(c.r);
+    cacheManager->returnEntry(c.r);
   }
 }
 
 std::size_t ComplexNumbers::cacheCount() const noexcept {
-  return cacheManager.getUsedCount();
+  return cacheManager->getUsedCount();
 }
 
 std::size_t ComplexNumbers::realCount() const noexcept {
-  return memoryManager.getUsedCount();
+  return uniqueTable->getStats().entryCount;
 }
 
 } // namespace dd

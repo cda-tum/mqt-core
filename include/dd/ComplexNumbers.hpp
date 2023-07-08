@@ -13,16 +13,10 @@ class ComplexNumbers {
 
 public:
   /// Default constructor.
-  ComplexNumbers() = default;
+  ComplexNumbers(RealNumberUniqueTable& table, MemoryManager<RealNumber>& cache)
+      : uniqueTable(&table), cacheManager(&cache){};
   /// Default destructor.
   ~ComplexNumbers() = default;
-
-  /**
-   * @brief Clear both the hash table and the cache.
-   * @see ComplexTable::clear
-   * @see MemoryManager::reset
-   */
-  void clear() noexcept;
 
   /**
    * @brief Set the numerical tolerance for comparisons of floats.
@@ -238,14 +232,6 @@ public:
   static void decRef(const Complex& c) noexcept;
 
   /**
-   * @brief Garbage collect the complex table.
-   * @param force Whether to force garbage collection.
-   * @return The number of collected entries.
-   * @see ComplexTable::garbageCollect
-   */
-  std::size_t garbageCollect(bool force = false) noexcept;
-
-  /**
    * @brief Get a temporary complex number from the complex cache.
    * @return The temporary complex number.
    * @see MemoryManager::getTemporaryPair
@@ -341,34 +327,10 @@ public:
    */
   [[nodiscard]] std::size_t realCount() const noexcept;
 
-  /// Get the cache manager
-  [[nodiscard]] const auto& getCacheManager() const noexcept {
-    return cacheManager;
-  }
-
-  /// @see MemoryManager::reset
-  void resetCache(const bool resizeToTotal = false) noexcept {
-    cacheManager.reset(resizeToTotal);
-  }
-
-  /// Get the complex table
-  [[nodiscard]] const auto& getComplexTable() const noexcept {
-    return complexTable;
-  }
-
-  /// Get the memory manager
-  [[nodiscard]] const auto& getMemoryManager() const noexcept {
-    return memoryManager;
-  }
-  /// Get a mutual reference to the memory manager
-  [[nodiscard]] auto& getMemoryManager() noexcept { return memoryManager; }
-
 private:
-  /// The memory manager for complex numbers.
-  MemoryManager<RealNumber> memoryManager{};
-  /// The hash table for complex numbers.
-  RealNumberUniqueTable complexTable{memoryManager};
-  /// The cache manager for complex numbers.
-  MemoryManager<RealNumber> cacheManager{};
+  /// A pointer to the unique table to use for calculations
+  RealNumberUniqueTable* uniqueTable;
+  /// A pointer to the cache manager to use for calculations
+  MemoryManager<RealNumber>* cacheManager;
 };
 } // namespace dd
