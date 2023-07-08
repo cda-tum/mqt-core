@@ -178,33 +178,7 @@ Complex ComplexNumbers::lookup(const ComplexValue& c) {
 }
 
 Complex ComplexNumbers::lookup(const fp r, const fp i) {
-  Complex ret{};
-
-  if (const auto signR = std::signbit(r); signR) {
-    // if absolute value is close enough to zero, just return the zero entry
-    // (avoiding -0.0)
-    if (RealNumber::approximatelyZero(r)) {
-      ret.r = &constants::zero;
-    } else {
-      ret.r = RealNumber::getNegativePointer(uniqueTable->lookup(std::abs(r)));
-    }
-  } else {
-    ret.r = uniqueTable->lookup(r);
-  }
-
-  if (const auto signI = std::signbit(i); signI) {
-    // if absolute value is close enough to zero, just return the zero entry
-    // (avoiding -0.0)
-    if (RealNumber::approximatelyZero(i)) {
-      ret.i = &constants::zero;
-    } else {
-      ret.i = RealNumber::getNegativePointer(uniqueTable->lookup(std::abs(i)));
-    }
-  } else {
-    ret.i = uniqueTable->lookup(i);
-  }
-
-  return ret;
+  return {uniqueTable->lookup(r), uniqueTable->lookup(i)};
 }
 
 void ComplexNumbers::incRef(const Complex& c) noexcept {

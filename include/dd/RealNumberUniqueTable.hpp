@@ -68,11 +68,15 @@ public:
   [[nodiscard]] const auto& getStats() const noexcept { return stats; }
 
   /**
-   * @brief Lookup a number in the table.
-   * @details This function looks up a number in the table. If the number is not
-   * found, a new number is created and inserted into the table.
-   * @param val The floating point number to look up. Must be non-negative.
-   * @returns A pointer to the number corresponding to the input number.
+   * @brief Lookup a number in the table
+   * @details This function is used to lookup and insert them into the table if
+   * they are not yet present. Since the table only ever stores non-negative
+   * numbers, the lookup is a three-step process. First the sign is stripped off
+   * the number and stored, then the non-negative value is looked up in the
+   * table and an aligned pointer to the respective entry is returned. Finally,
+   * If the sign of the original number was negative, the pointer is adjusted.
+   * @param val The floating point number to look up.
+   * @return A pointer to an entry corresponding to that number.
    */
   [[nodiscard]] RealNumber* lookup(fp val);
 
@@ -168,5 +172,16 @@ private:
    * @returns A pointer to the inserted entry.
    */
   RealNumber* insert(std::int64_t key, fp val);
+
+  /**
+   * @brief Lookup a non-negative number in the table.
+   * @details The table only ever stores non-negative values. Thus, any lookup
+   * must be split between actually looking up the number and adjusting for its
+   * sign. This function looks up a number in the table. If the number is not
+   * found, a new number is created and inserted into the table.
+   * @param val The floating point number to look up. Must be non-negative.
+   * @returns An aligned pointer to the entry corresponding to the number.
+   */
+  [[nodiscard]] RealNumber* lookupNonNegative(fp val);
 };
 } // namespace dd
