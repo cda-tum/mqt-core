@@ -181,20 +181,6 @@ Complex ComplexNumbers::lookup(const fp r, const fp i) {
   return {uniqueTable->lookup(r), uniqueTable->lookup(i)};
 }
 
-void ComplexNumbers::incRef(const Complex& c) noexcept {
-  if (!isStaticComplex(c)) {
-    RealNumber::incRef(c.r);
-    RealNumber::incRef(c.i);
-  }
-}
-
-void ComplexNumbers::decRef(const Complex& c) noexcept {
-  if (!isStaticComplex(c)) {
-    RealNumber::decRef(c.r);
-    RealNumber::decRef(c.i);
-  }
-}
-
 Complex ComplexNumbers::getTemporary() {
   const auto [rv, iv] = cacheManager->getTemporaryPair();
   return {rv, iv};

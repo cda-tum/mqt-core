@@ -83,13 +83,13 @@ TEST_F(CNTest, ComplexNumberArithmetic) {
   EXPECT_EQ(RealNumber::val(d.r), 1.);
   EXPECT_EQ(RealNumber::val(d.i), 1.);
   c = cn.lookup(0.5, 0.5);
-  ComplexNumbers::incRef(c);
+  c.incRef();
   d = cn.lookup(-0.5, 0.5);
-  ComplexNumbers::incRef(d);
+  d.incRef();
   auto e = cn.getTemporary();
   ComplexNumbers::sub(e, c, d);
-  ComplexNumbers::decRef(c);
-  ComplexNumbers::decRef(d);
+  c.decRef();
+  d.decRef();
   e = cn.lookup(e);
   EXPECT_EQ(e, Complex::one);
   auto f = cn.getTemporary();
@@ -151,7 +151,7 @@ TEST_F(CNTest, GarbageCollectSomeInBucket) {
   const auto lookup2 = cn.lookup(num2, 0.0);
   ASSERT_NE(lookup2.r, nullptr);
   ASSERT_NE(lookup2.i, nullptr);
-  ComplexNumbers::incRef(lookup2);
+  lookup2.incRef();
 
   // num2 should be placed in same bucket as num
   auto key = RealNumberUniqueTable::hash(num);
@@ -467,8 +467,8 @@ TEST_F(CNTest, MaxRefCountReached) {
   std::cout.flush();
   std::clog << "Heads up: The following three MAXREFCNT warnings are part of a "
                "passing test.\n";
-  CN::incRef(c);
-  CN::incRef(c);
+  c.incRef();
+  c.incRef();
   std::clog.flush();
   EXPECT_EQ(c.r->ref, max);
   EXPECT_EQ(c.i->ref, max);

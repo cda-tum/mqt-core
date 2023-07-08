@@ -1425,7 +1425,7 @@ TEST(DDPackageTest, complexRefCount) {
   auto value = dd->cn.lookup(0.2, 0.2);
   EXPECT_EQ(value.r->ref, 0);
   EXPECT_EQ(value.i->ref, 0);
-  decltype(dd->cn)::incRef(value);
+  value.incRef();
   EXPECT_EQ(value.r->ref, 2);
   EXPECT_EQ(value.i->ref, 2);
 }

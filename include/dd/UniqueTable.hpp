@@ -119,7 +119,7 @@ public:
   // and recursively increment reference counter for
   // each child if this is the first reference
   void incRef(const Edge<Node>& e) {
-    dd::ComplexNumbers::incRef(e.w);
+    e.w.incRef();
     if (e.p == nullptr || e.isTerminal()) {
       return;
     }
@@ -148,7 +148,7 @@ public:
   // and recursively decrement reference counter for
   // each child if this is the last reference
   void decRef(const Edge<Node>& e) {
-    dd::ComplexNumbers::decRef(e.w);
+    e.w.decRef();
     if (e.p == nullptr || e.isTerminal()) {
       return;
     }

@@ -20,6 +20,16 @@ void Complex::setVal(const Complex& c) const noexcept {
   i->value = RealNumber::val(c.i);
 }
 
+void Complex::incRef() const noexcept {
+  RealNumber::incRef(r);
+  RealNumber::incRef(i);
+}
+
+void Complex::decRef() const noexcept {
+  RealNumber::decRef(r);
+  RealNumber::decRef(i);
+}
+
 bool Complex::exactlyZero() const noexcept {
   return RealNumber::exactlyZero(r) && RealNumber::exactlyZero(i);
 }

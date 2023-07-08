@@ -218,20 +218,6 @@ public:
   }
 
   /**
-   * @brief Increment the reference count of a complex number.
-   * @param c The complex number.
-   * @see ComplexTable::incRef
-   */
-  static void incRef(const Complex& c) noexcept;
-
-  /**
-   * @brief Decrement the reference count of a complex number.
-   * @param c The complex number.
-   * @see ComplexTable::decRef
-   */
-  static void decRef(const Complex& c) noexcept;
-
-  /**
    * @brief Get a temporary complex number from the complex cache.
    * @return The temporary complex number.
    * @see MemoryManager::getTemporaryPair
