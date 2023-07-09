@@ -108,8 +108,15 @@ if(NOT TARGET ${PROJECT_NAME}-python)
     python/qiskit/QuantumCircuit.cpp python/qiskit/QasmQobjExperiment.cpp)
 
   # link with main project library and pybind11 libraries
-  target_link_libraries(${PROJECT_NAME}-python PRIVATE ${PROJECT_NAME} pybind11::pybind11
-                                                       pybind11_json)
+  target_link_libraries(${PROJECT_NAME}-python PUBLIC ${PROJECT_NAME} pybind11::pybind11
+                                                      pybind11_json)
+
+  # the following sets the SYSTEM flag for the include dirs of the pybind11_json libs to suppress
+  # warnings
+  set_target_properties(
+    pybind11_json PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                             $<TARGET_PROPERTY:pybind11_json,INTERFACE_INCLUDE_DIRECTORIES>
+  )# cmake-lint: disable=C0307
 
   # add MQT alias
   add_library(MQT::CorePython ALIAS ${PROJECT_NAME}-python)
