@@ -1,9 +1,7 @@
 #pragma once
 
-#include "dd/ComplexNumbers.hpp"
 #include "dd/Definitions.hpp"
 #include "dd/MemoryManager.hpp"
-#include "dd/Node.hpp"
 #include "dd/UniqueTableStatistics.hpp"
 
 #include <algorithm>
@@ -11,10 +9,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
-#include <limits>
-#include <numeric>
-#include <type_traits>
 #include <vector>
 
 namespace dd {
@@ -25,9 +19,6 @@ namespace dd {
  * @tparam NBUCKET number of hash buckets to use (has to be a power of two)
  */
 template <class Node, std::size_t NBUCKET = 32768> class UniqueTable {
-  static_assert(
-      std::disjunction_v<std::is_same<Node, vNode>, std::is_same<Node, mNode>,
-                         std::is_same<Node, dNode>>);
 
 public:
   /**
@@ -55,8 +46,10 @@ public:
     // TODO: if the new size is smaller than the old one we might have to
     // release the unique table entries for the superfluous variables
     active.resize(nq);
-    stats.activeEntryCount = std::accumulate(active.begin(), active.end(),
-                                             static_cast<std::size_t>(0U));
+    stats.activeEntryCount = 0;
+    for (auto i = 0U; i < nq; ++i) {
+      stats.activeEntryCount += active[i];
+    }
   }
 
   /**
