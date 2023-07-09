@@ -132,9 +132,12 @@ public:
    */
   [[nodiscard]] bool incRef(Node* p) noexcept {
     const auto inc = ::dd::incRef(p);
-    if (inc && p->ref == 1U) {
-      stats.trackActiveEntry();
-      ++active[static_cast<std::size_t>(p->v)];
+    if (inc) {
+      assert(p != nullptr);
+      if (p->ref == 1U) {
+        stats.trackActiveEntry();
+        ++active[static_cast<std::size_t>(p->v)];
+      }
     }
     return inc;
   }
@@ -151,9 +154,12 @@ public:
    */
   [[nodiscard]] bool decRef(Node* p) noexcept {
     const auto dec = ::dd::decRef(p);
-    if (dec && p->ref == 0U) {
-      --stats.activeEntryCount;
-      --active[static_cast<std::size_t>(p->v)];
+    if (dec) {
+      assert(p != nullptr);
+      if (p->ref == 0U) {
+        --stats.activeEntryCount;
+        --active[static_cast<std::size_t>(p->v)];
+      }
     }
     return dec;
   }

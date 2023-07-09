@@ -1784,9 +1784,11 @@ public:
       dEdge::applyDmChangesToEdges(xCopy, yCopy);
 
       if (!xCopy.isTerminal()) {
+        assert(xCopy.p != nullptr);
         var = xCopy.p->v;
       }
       if (!y.isTerminal() && yCopy.p->v > var) {
+        assert(xCopy.p != nullptr);
         var = yCopy.p->v;
       }
 
@@ -1796,9 +1798,11 @@ public:
 
     } else {
       if (!x.isTerminal()) {
+        assert(x.p != nullptr);
         var = x.p->v;
       }
       if (!y.isTerminal() && (y.p->v) > var) {
+        assert(y.p != nullptr);
         var = y.p->v;
       }
       e = multiply2(x, y, var, start);
