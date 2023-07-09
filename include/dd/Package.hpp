@@ -2166,6 +2166,7 @@ public:
   memory.
   **/
   fp expectationValue(const mEdge& x, const vEdge& y) {
+    assert(x.p != nullptr && y.p != nullptr);
     if (x.p->v != y.p->v) {
       throw std::invalid_argument(
           "Observable and state must act on the same number of qubits to "
