@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dd/Definitions.hpp"
+#include "dd/Edge.hpp"
 #include "dd/MemoryManager.hpp"
 #include "dd/UniqueTableStatistics.hpp"
 
@@ -9,6 +10,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <vector>
 
 namespace dd {
@@ -64,7 +66,7 @@ public:
     static constexpr std::size_t MASK = NBUCKET - 1;
     std::size_t key = 0;
     for (std::size_t i = 0; i < p->e.size(); ++i) {
-      key = dd::combineHash(key, std::hash<Edge<Node>>{}(p->e[i]));
+      key = combineHash(key, std::hash<Edge<Node>>{}(p->e[i]));
     }
     key &= MASK;
     return key;
