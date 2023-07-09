@@ -19,8 +19,10 @@ struct vNode {
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables
   static vNode terminal;
 
-  static constexpr bool isTerminal(const vNode* p) { return p == &terminal; }
-  static constexpr vNode* getTerminal() { return &terminal; }
+  static constexpr bool isTerminal(const vNode* p) noexcept {
+    return p == &terminal;
+  }
+  static constexpr vNode* getTerminal() noexcept { return &terminal; }
 };
 using vEdge = Edge<vNode>;
 using vCachedEdge = CachedEdge<vNode>;
@@ -42,24 +44,26 @@ struct mNode {
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
   static mNode terminal;
 
-  static constexpr bool isTerminal(const mNode* p) { return p == &terminal; }
-  static constexpr mNode* getTerminal() { return &terminal; }
+  static constexpr bool isTerminal(const mNode* p) noexcept {
+    return p == &terminal;
+  }
+  static constexpr mNode* getTerminal() noexcept { return &terminal; }
 
-  [[nodiscard]] inline bool isIdentity() const {
+  [[nodiscard]] inline bool isIdentity() const noexcept {
     return (flags & static_cast<std::uint8_t>(16U)) != 0;
   }
-  [[nodiscard]] inline bool isSymmetric() const {
+  [[nodiscard]] inline bool isSymmetric() const noexcept {
     return (flags & static_cast<std::uint8_t>(32U)) != 0;
   }
 
-  inline void setIdentity(bool identity) {
+  inline void setIdentity(const bool identity) noexcept {
     if (identity) {
       flags = (flags | static_cast<std::uint8_t>(16U));
     } else {
       flags = (flags & static_cast<std::uint8_t>(~16U));
     }
   }
-  inline void setSymmetric(bool symmetric) {
+  inline void setSymmetric(const bool symmetric) noexcept {
     if (symmetric) {
       flags = (flags | static_cast<std::uint8_t>(32U));
     } else {
@@ -87,73 +91,77 @@ struct dNode {
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
   static dNode terminal;
 
-  static constexpr bool isTerminal(const dNode* p) { return p == &terminal; }
-  static constexpr dNode* getTerminal() { return &terminal; }
+  static constexpr bool isTerminal(const dNode* p) noexcept {
+    return p == &terminal;
+  }
+  static constexpr dNode* getTerminal() noexcept { return &terminal; }
 
   [[nodiscard]] [[maybe_unused]] static inline bool
-  tempDensityMatrixFlagsEqual(const std::uint8_t a, const std::uint8_t b) {
+  tempDensityMatrixFlagsEqual(const std::uint8_t a,
+                              const std::uint8_t b) noexcept {
     return getDensityMatrixTempFlags(a) == getDensityMatrixTempFlags(b);
   }
 
   [[nodiscard]] static inline bool
-  isConjugateTempFlagSet(const std::uintptr_t p) {
+  isConjugateTempFlagSet(const std::uintptr_t p) noexcept {
     return (p & (1ULL << 0)) != 0U;
   }
   [[nodiscard]] static inline bool
-  isNonReduceTempFlagSet(const std::uintptr_t p) {
+  isNonReduceTempFlagSet(const std::uintptr_t p) noexcept {
     return (p & (1ULL << 1)) != 0U;
   }
   [[nodiscard]] static inline bool
-  isDensityMatrixTempFlagSet(const std::uintptr_t p) {
+  isDensityMatrixTempFlagSet(const std::uintptr_t p) noexcept {
     return (p & (1ULL << 2)) != 0U;
   }
-  [[nodiscard]] static inline bool isDensityMatrixNode(const std::uintptr_t p) {
+  [[nodiscard]] static inline bool
+  isDensityMatrixNode(const std::uintptr_t p) noexcept {
     return (p & (1ULL << 3)) != 0U;
   }
 
   [[nodiscard]] [[maybe_unused]] static inline bool
-  isConjugateTempFlagSet(const dNode* p) {
+  isConjugateTempFlagSet(const dNode* p) noexcept {
     return isConjugateTempFlagSet(reinterpret_cast<std::uintptr_t>(p));
   }
   [[nodiscard]] [[maybe_unused]] static inline bool
-  isNonReduceTempFlagSet(const dNode* p) {
+  isNonReduceTempFlagSet(const dNode* p) noexcept {
     return isNonReduceTempFlagSet(reinterpret_cast<std::uintptr_t>(p));
   }
   [[nodiscard]] [[maybe_unused]] static inline bool
-  isDensityMatrixTempFlagSet(const dNode* p) {
+  isDensityMatrixTempFlagSet(const dNode* p) noexcept {
     return isDensityMatrixTempFlagSet(reinterpret_cast<std::uintptr_t>(p));
   }
   [[nodiscard]] [[maybe_unused]] static inline bool
-  isDensityMatrixNode(const dNode* p) {
+  isDensityMatrixNode(const dNode* p) noexcept {
     return isDensityMatrixNode(reinterpret_cast<std::uintptr_t>(p));
   }
 
-  static inline void setConjugateTempFlagTrue(dNode*& p) {
+  static inline void setConjugateTempFlagTrue(dNode*& p) noexcept {
     p = reinterpret_cast<dNode*>(reinterpret_cast<std::uintptr_t>(p) |
                                  (1ULL << 0));
   }
-  static inline void setNonReduceTempFlagTrue(dNode*& p) {
+  static inline void setNonReduceTempFlagTrue(dNode*& p) noexcept {
     p = reinterpret_cast<dNode*>(reinterpret_cast<std::uintptr_t>(p) |
                                  (1ULL << 1));
   }
-  static inline void setDensityMatTempFlagTrue(dNode*& p) {
+  static inline void setDensityMatTempFlagTrue(dNode*& p) noexcept {
     p = reinterpret_cast<dNode*>(reinterpret_cast<std::uintptr_t>(p) |
                                  (1ULL << 2));
   }
-  static inline void alignDensityNode(dNode*& p) {
+  static inline void alignDensityNode(dNode*& p) noexcept {
     p = reinterpret_cast<dNode*>(reinterpret_cast<std::uintptr_t>(p) & (~7ULL));
   }
 
   [[nodiscard]] static inline std::uintptr_t
-  getDensityMatrixTempFlags(dNode*& p) {
+  getDensityMatrixTempFlags(dNode*& p) noexcept {
     return getDensityMatrixTempFlags(reinterpret_cast<std::uintptr_t>(p));
   }
   [[nodiscard]] static inline std::uintptr_t
-  getDensityMatrixTempFlags(const std::uintptr_t a) {
+  getDensityMatrixTempFlags(const std::uintptr_t a) noexcept {
     return a & (7ULL);
   }
 
-  void unsetTempDensityMatrixFlags() {
+  void unsetTempDensityMatrixFlags() noexcept {
     flags = flags & static_cast<std::uint8_t>(~7U);
   }
 
