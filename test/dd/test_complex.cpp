@@ -614,18 +614,34 @@ TEST_F(CNTest, exactlyOneComparison) {
   EXPECT_TRUE(one.exactlyOne());
 }
 
-TEST_F(CNTest, ExportConditionalFormat) {
+TEST_F(CNTest, ExportConditionalFormat1) {
   EXPECT_STREQ(dd::conditionalFormat(cn.getCached(1, 0)).c_str(), "1");
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(0, 1)).c_str(), "i");
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-1, 0)).c_str(), "-1");
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(0, -1)).c_str(), "-i");
+}
 
+TEST_F(CNTest, ExportConditionalFormat2) {
+  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(0, 1)).c_str(), "i");
+}
+
+TEST_F(CNTest, ExportConditionalFormat3) {
+  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-1, 0)).c_str(), "-1");
+}
+
+TEST_F(CNTest, ExportConditionalFormat4) {
+  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(0, -1)).c_str(), "-i");
+}
+
+TEST_F(CNTest, ExportConditionalFormat5) {
   const auto num = cn.getCached(-dd::SQRT2_2, -dd::SQRT2_2);
   EXPECT_STREQ(dd::conditionalFormat(num).c_str(), "ℯ(-iπ 3/4)");
   EXPECT_STREQ(dd::conditionalFormat(num, false).c_str(), "-1/√2(1+i)");
+}
 
+TEST_F(CNTest, ExportConditionalFormat6) {
   EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-1, -1)).c_str(),
                "2/√2 ℯ(-iπ 3/4)");
+}
+
+TEST_F(CNTest, ExportConditionalFormat7) {
   EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-dd::SQRT2_2, 0)).c_str(),
                "-1/√2");
 }
