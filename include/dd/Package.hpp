@@ -298,7 +298,6 @@ public:
   ///
   /// Vector nodes, edges and quantum states
   ///
-public:
   vEdge normalize(const vEdge& e, bool cached) {
     auto zero = std::array{e.p->e[0].w.approximatelyZero(),
                            e.p->e[1].w.approximatelyZero()};
