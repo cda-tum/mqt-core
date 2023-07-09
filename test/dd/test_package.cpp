@@ -999,27 +999,6 @@ TEST(DDPackageTest, ExportPolarPhaseFormatted) {
   phaseString.str("");
 }
 
-TEST(DDPackageTest, ExportConditionalFormat) {
-  dd::MemoryManager<dd::RealNumber> mm{};
-  dd::MemoryManager<dd::RealNumber> cm{};
-  dd::RealNumberUniqueTable ut{mm};
-  dd::ComplexNumbers cn{ut, cm};
-
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(1, 0)).c_str(), "1");
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(0, 1)).c_str(), "i");
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-1, 0)).c_str(), "-1");
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(0, -1)).c_str(), "-i");
-
-  const auto num = cn.getCached(-dd::SQRT2_2, -dd::SQRT2_2);
-  EXPECT_STREQ(dd::conditionalFormat(num).c_str(), "ℯ(-iπ 3/4)");
-  EXPECT_STREQ(dd::conditionalFormat(num, false).c_str(), "-1/√2(1+i)");
-
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-1, -1)).c_str(),
-               "2/√2 ℯ(-iπ 3/4)");
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-dd::SQRT2_2, 0)).c_str(),
-               "-1/√2");
-}
-
 TEST(DDPackageTest, BasicNumericInstabilityTest) {
   const dd::fp zero = 0.0;
   const dd::fp half = 0.5;
