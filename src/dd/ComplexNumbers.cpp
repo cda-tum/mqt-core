@@ -84,8 +84,8 @@ void ComplexNumbers::div(Complex& r, const Complex& a,
 }
 
 fp ComplexNumbers::mag2(const Complex& a) noexcept {
-  auto ar = RealNumber::val(a.r);
-  auto ai = RealNumber::val(a.i);
+  const auto ar = RealNumber::val(a.r);
+  const auto ai = RealNumber::val(a.i);
 
   return ar * ar + ai * ai;
 }
@@ -93,8 +93,8 @@ fp ComplexNumbers::mag2(const Complex& a) noexcept {
 fp ComplexNumbers::mag(const Complex& a) noexcept { return std::sqrt(mag2(a)); }
 
 fp ComplexNumbers::arg(const Complex& a) noexcept {
-  auto ar = RealNumber::val(a.r);
-  auto ai = RealNumber::val(a.i);
+  const auto ar = RealNumber::val(a.r);
+  const auto ai = RealNumber::val(a.i);
   return std::atan2(ai, ar);
 }
 
