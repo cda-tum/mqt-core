@@ -14,6 +14,7 @@
 #include <iostream>
 #include <limits>
 #include <numeric>
+#include <type_traits>
 #include <vector>
 
 namespace dd {
@@ -24,6 +25,10 @@ namespace dd {
  * @tparam NBUCKET number of hash buckets to use (has to be a power of two)
  */
 template <class Node, std::size_t NBUCKET = 32768> class UniqueTable {
+  static_assert(
+      std::disjunction_v<std::is_same<Node, vNode>, std::is_same<Node, mNode>,
+                         std::is_same<Node, dNode>>);
+
 public:
   /**
    * @brief The initial garbage collection limit.
@@ -115,62 +120,42 @@ public:
     return e;
   }
 
-  // increment reference counter for node e points to
-  // and recursively increment reference counter for
-  // each child if this is the first reference
-  void incRef(const Edge<Node>& e) {
-    e.w.incRef();
-    if (e.p == nullptr || e.isTerminal()) {
-      return;
-    }
-
-    if (e.p->ref == std::numeric_limits<decltype(e.p->ref)>::max()) {
-      std::clog << "[WARN] MAXREFCNT reached for p="
-                << reinterpret_cast<std::uintptr_t>(e.p)
-                << ". Node will never be collected.\n";
-      return;
-    }
-
-    e.p->ref++;
-
-    if (e.p->ref == 1) {
-      for (const auto& edge : e.p->e) {
-        if (edge.p != nullptr) {
-          incRef(edge);
-        }
-      }
-      ++active[static_cast<std::size_t>(e.p->v)];
+  /**
+   * @brief Increment the reference count of a node.
+   * @details This is a pass-through function that calls the increment function
+   * of the node. It additionally keeps track of the number of active entries
+   * in the table (entries with a reference count greater than zero). Reference
+   * counts saturate at the maximum value of RefCount.
+   * @param p A pointer to the node to increase the reference count of.
+   * @returns Whether the reference count was increased.
+   * @see Node::incRef(Node*)
+   */
+  [[nodiscard]] bool incRef(Node* p) noexcept {
+    const auto inc = ::dd::incRef(p);
+    if (inc && p->ref == 1U) {
       stats.trackActiveEntry();
+      ++active[static_cast<std::size_t>(p->v)];
     }
+    return inc;
   }
 
-  // decrement reference counter for node e points to
-  // and recursively decrement reference counter for
-  // each child if this is the last reference
-  void decRef(const Edge<Node>& e) {
-    e.w.decRef();
-    if (e.p == nullptr || e.isTerminal()) {
-      return;
-    }
-    if (e.p->ref == std::numeric_limits<decltype(e.p->ref)>::max()) {
-      return;
-    }
-
-    if (e.p->ref == 0) {
-      throw std::runtime_error("In decref: ref==0 before decref\n");
-    }
-
-    e.p->ref--;
-
-    if (e.p->ref == 0) {
-      for (const auto& edge : e.p->e) {
-        if (edge.p != nullptr) {
-          decRef(edge);
-        }
-      }
-      --active[static_cast<std::size_t>(e.p->v)];
+  /**
+   * @brief Decrement the reference count of a node.
+   * @details This is a pass-through function that calls the decrement function
+   * of the node. It additionally keeps track of the number of active entries
+   * in the table (entries with a reference count greater than zero). Reference
+   * counts saturate at the maximum value of RefCount.
+   * @param p A pointer to the node to decrease the reference count of.
+   * @returns Whether the reference count was decreased.
+   * @see Node::decRef(Node*)
+   */
+  [[nodiscard]] bool decRef(Node* p) noexcept {
+    const auto dec = ::dd::decRef(p);
+    if (dec && p->ref == 0U) {
       --stats.activeEntryCount;
+      --active[static_cast<std::size_t>(p->v)];
     }
+    return dec;
   }
 
   [[nodiscard]] bool possiblyNeedsCollection() const {
@@ -277,8 +262,8 @@ private:
    */
   std::vector<Table> tables{nvars};
 
-  /// A pointer to the memory manager for the numbers stored in the table.
-  MemoryManager<Node>* memoryManager{};
+  /// A pointer to the memory manager for the nodes stored in the table.
+  MemoryManager<Node>* memoryManager;
 
   /// A collection of statistics
   UniqueTableStatistics stats{};

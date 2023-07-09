@@ -83,13 +83,13 @@ TEST_F(CNTest, ComplexNumberArithmetic) {
   EXPECT_EQ(RealNumber::val(d.r), 1.);
   EXPECT_EQ(RealNumber::val(d.i), 1.);
   c = cn.lookup(0.5, 0.5);
-  c.incRef();
+  cn.incRef(c);
   d = cn.lookup(-0.5, 0.5);
-  d.incRef();
+  cn.incRef(d);
   auto e = cn.getTemporary();
   ComplexNumbers::sub(e, c, d);
-  c.decRef();
-  d.decRef();
+  cn.decRef(c);
+  cn.decRef(d);
   e = cn.lookup(e);
   EXPECT_EQ(e, Complex::one);
   auto f = cn.getTemporary();
@@ -151,7 +151,7 @@ TEST_F(CNTest, GarbageCollectSomeInBucket) {
   const auto lookup2 = cn.lookup(num2, 0.0);
   ASSERT_NE(lookup2.r, nullptr);
   ASSERT_NE(lookup2.i, nullptr);
-  lookup2.incRef();
+  cn.incRef(lookup2);
 
   // num2 should be placed in same bucket as num
   auto key = RealNumberUniqueTable::hash(num);
@@ -461,15 +461,13 @@ TEST(DDComplexTest, NumberPrintingFormattedFloating) {
 
 TEST_F(CNTest, MaxRefCountReached) {
   auto c = cn.lookup(SQRT2_2 / 2, SQRT2_2 / 2);
-  const auto max = std::numeric_limits<decltype(c.r->ref)>::max();
+  const auto max = std::numeric_limits<RefCount>::max();
   c.r->ref = max - 1;
-
-  std::cout.flush();
-  std::clog << "Heads up: The following three MAXREFCNT warnings are part of a "
-               "passing test.\n";
-  c.incRef();
-  c.incRef();
-  std::clog.flush();
+  cn.incRef(c);
+  cn.incRef(c);
+  EXPECT_EQ(c.r->ref, max);
+  EXPECT_EQ(c.i->ref, max);
+  cn.decRef(c);
   EXPECT_EQ(c.r->ref, max);
   EXPECT_EQ(c.i->ref, max);
 }
@@ -590,4 +588,27 @@ TEST_F(CNTest, DoubleHitAcrossBuckets) {
   const fp num4 = num1 - 0.6 * dd::RealNumber::eps;
   auto* tnum4 = ut.lookup(num4);
   EXPECT_EQ(tnum4->value, num1);
+}
+
+TEST_F(CNTest, complexRefCount) {
+  auto value = cn.lookup(0.2, 0.2);
+  EXPECT_EQ(value.r->ref, 0);
+  EXPECT_EQ(value.i->ref, 0);
+  cn.incRef(value);
+  EXPECT_EQ(value.r->ref, 2);
+  EXPECT_EQ(value.i->ref, 2);
+}
+
+TEST_F(CNTest, exactlyZeroComparison) {
+  const auto notZero = cn.lookup(0, 2 * dd::RealNumber::eps);
+  const auto zero = cn.lookup(0, 0);
+  EXPECT_TRUE(!notZero.exactlyZero());
+  EXPECT_TRUE(zero.exactlyZero());
+}
+
+TEST_F(CNTest, exactlyOneComparison) {
+  const auto notOne = cn.lookup(1 + 2 * dd::RealNumber::eps, 0);
+  const auto one = cn.lookup(1, 0);
+  EXPECT_TRUE(!notOne.exactlyOne());
+  EXPECT_TRUE(one.exactlyOne());
 }

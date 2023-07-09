@@ -45,12 +45,12 @@ struct RealNumber {
 
   /**
    * @brief Get the reference count of the number.
-   * @param e The number to get the reference count for.
+   * @param num A pointer to the number to get the reference count for.
    * @returns The reference count of the number.
    * @note This function accounts for the sign of the number embedded in the
    * memory address of the number.
    */
-  [[nodiscard]] static RefCount refCount(const RealNumber* e) noexcept;
+  [[nodiscard]] static RefCount refCount(const RealNumber* num) noexcept;
 
   /**
    * @brief Check whether two floating point numbers are approximately equal.
@@ -109,18 +109,40 @@ struct RealNumber {
   [[nodiscard]] static bool approximatelyOne(const RealNumber* e) noexcept;
 
   /**
-   * @brief Increment the reference count of a number.
-   * @note Reference counts saturate at the maximum value of RefCount.
-   * @param e The number to increment the reference count of.
+   * @brief Indicates whether a given number needs reference count updates.
+   * @details This function checks whether a given number needs reference count
+   * updates. A number needs reference count updates if the pointer to it is
+   * not the null pointer, if it is not one of the special numbers (zero,
+   * one, 1/sqrt(2)), and if the reference count has saturated.
+   * @param num Pointer to the number to check.
+   * @returns Whether the number needs reference count updates.
+   * @note This function assumes that the pointer to the number is aligned.
    */
-  static void incRef(RealNumber* e) noexcept;
+  [[nodiscard]] static bool noRefCountingNeeded(const RealNumber* num) noexcept;
+
+  /**
+   * @brief Increment the reference count of a number.
+   * @details This function increments the reference count of a number. If the
+   * reference count has saturated (i.e. reached the maximum value of RefCount)
+   * the reference count is not incremented.
+   * @param num A pointer to the number to increment the reference count of.
+   * @returns Whether the reference count was incremented.
+   * @note Typically, you do not want to call this function directly. Instead,
+   * use the RealNumberUniqueTable::incRef(RelNumber*) function.
+   */
+  [[nodiscard]] static bool incRef(const RealNumber* num) noexcept;
 
   /**
    * @brief Decrement the reference count of a number.
-   * @note Reference counts saturate at the maximum value of RefCount.
-   * @param e The number to decrement the reference count of.
+   * @details This function decrements the reference count of a number. If the
+   * reference count has saturated (i.e. reached the maximum value of RefCount)
+   * the reference count is not decremented.
+   * @param num A pointer to the number to decrement the reference count of.
+   * @returns Whether the reference count was decremented.
+   * @note Typically, you do not want to call this function directly. Instead,
+   * use the RealNumberUniqueTable::decRef(RelNumber*) function.
    */
-  static void decRef(RealNumber* e) noexcept;
+  [[nodiscard]] static bool decRef(const RealNumber* num) noexcept;
 
   /**
    * @brief Write a binary representation of the number to a stream.

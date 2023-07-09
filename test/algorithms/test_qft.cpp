@@ -9,10 +9,10 @@
 class QFT : public testing::TestWithParam<dd::QubitCount> {
 protected:
   void TearDown() override {
-    if (!sim.isTerminal()) {
+    if (sim.p != nullptr) {
       dd->decRef(sim);
     }
-    if (!func.isTerminal()) {
+    if (func.p != nullptr) {
       dd->decRef(func);
     }
     dd->garbageCollect(true);

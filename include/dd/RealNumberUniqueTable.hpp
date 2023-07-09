@@ -81,6 +81,28 @@ public:
   [[nodiscard]] RealNumber* lookup(fp val);
 
   /**
+   * @brief Increment the reference count of a number.
+   * @details This is a pass-through function that calls the increment function
+   * of the number. It additionally keeps track of the number of active entries
+   * in the table (entries with a reference count greater than zero). Reference
+   * counts saturate at the maximum value of RefCount.
+   * @param num A pointer to the number to increase the reference count of.
+   * @see RealNumber::incRef(RealNumber*)
+   */
+  void incRef(RealNumber* num) noexcept;
+
+  /**
+   * @brief Decrement the reference count of a number.
+   * @details This is a pass-through function that calls the decrement function
+   * of the number. It additionally keeps track of the number of active entries
+   * in the table (entries with a reference count greater than zero). Reference
+   * counts saturate at the maximum value of RefCount.
+   * @param num A pointer to the number to decrease the reference count of.
+   * @see RealNumber::decRef(RealNumber*)
+   */
+  void decRef(RealNumber* num) noexcept;
+
+  /**
    * @brief Check whether the table possibly needs garbage collection.
    * @returns Whether the number of entries in the table has reached the garbage
    * collection limit.

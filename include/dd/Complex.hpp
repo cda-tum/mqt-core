@@ -32,18 +32,6 @@ struct Complex {
   void setVal(const Complex& c) const noexcept;
 
   /**
-   * @brief Increment the reference count of a complex number.
-   * @see RealNumber::incRef
-   */
-  void incRef() const noexcept;
-
-  /**
-   * @brief Decrement the reference count of a complex number.
-   * @see RealNumber::decRef
-   */
-  void decRef() const noexcept;
-
-  /**
    * @brief Check whether the complex number is exactly equal to zero.
    * @returns True if the complex number is exactly equal to zero, false
    * otherwise.

@@ -657,7 +657,9 @@ TEST(DDPackageTest, InvalidMakeBasisStateAndGate) {
 TEST(DDPackageTest, InvalidDecRef) {
   auto dd = std::make_unique<dd::Package<>>(2);
   auto e = dd->makeIdent(2);
-  EXPECT_THROW(dd->decRef(e), std::runtime_error);
+  EXPECT_DEBUG_DEATH(
+      dd->decRef(e),
+      "Reference count of Node must not be zero before decrement");
 }
 
 TEST(DDPackageTest, PackageReset) {
@@ -1420,32 +1422,6 @@ TEST(DDPackageTest, dStochCache) {
   }
 }
 
-TEST(DDPackageTest, complexRefCount) {
-  auto dd = std::make_unique<dd::Package<>>(1);
-  auto value = dd->cn.lookup(0.2, 0.2);
-  EXPECT_EQ(value.r->ref, 0);
-  EXPECT_EQ(value.i->ref, 0);
-  value.incRef();
-  EXPECT_EQ(value.r->ref, 2);
-  EXPECT_EQ(value.i->ref, 2);
-}
-
-TEST(DDPackageTest, exactlyZeroComparison) {
-  auto dd = std::make_unique<dd::Package<>>(1);
-  auto notZero = dd->cn.lookup(0, 2 * dd::RealNumber::eps);
-  auto zero = dd->cn.lookup(0, 0);
-  EXPECT_TRUE(!notZero.exactlyZero());
-  EXPECT_TRUE(zero.exactlyZero());
-}
-
-TEST(DDPackageTest, exactlyOneComparison) {
-  auto dd = std::make_unique<dd::Package<>>(1);
-  auto notOne = dd->cn.lookup(1 + 2 * dd::RealNumber::eps, 0);
-  auto one = dd->cn.lookup(1, 0);
-  EXPECT_TRUE(!notOne.exactlyOne());
-  EXPECT_TRUE(one.exactlyOne());
-}
-
 TEST(DDPackageTest, stateFromVectorBell) {
   auto dd = std::make_unique<dd::Package<>>(2);
   const auto v =
@@ -1488,8 +1464,8 @@ TEST(DDPackageTest, stateFromScalar) {
 
 TEST(DDPackageTest, expectationValueGlobalOperators) {
   const dd::QubitCount maxQubits = 3;
+  auto dd = std::make_unique<dd::Package<>>(maxQubits);
   for (dd::QubitCount nrQubits = 1; nrQubits < maxQubits + 1; ++nrQubits) {
-    auto dd = std::make_unique<dd::Package<>>(nrQubits);
     const auto zeroState = dd->makeZeroState(nrQubits);
 
     // Definition global operators
@@ -1518,8 +1494,8 @@ TEST(DDPackageTest, expectationValueGlobalOperators) {
 
 TEST(DDPackageTest, expectationValueLocalOperators) {
   const dd::QubitCount maxQubits = 3;
+  auto dd = std::make_unique<dd::Package<>>(maxQubits);
   for (dd::QubitCount nrQubits = 1; nrQubits < maxQubits + 1; ++nrQubits) {
-    auto dd = std::make_unique<dd::Package<>>(nrQubits);
     const auto zeroState = dd->makeZeroState(nrQubits);
 
     // Local expectation values at each site

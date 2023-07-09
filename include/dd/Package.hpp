@@ -192,11 +192,46 @@ public:
     cUniqueTable.clear();
   }
 
-  template <class Node> void incRef(const Edge<Node>& e) {
-    getUniqueTable<Node>().incRef(e);
+  /**
+   * @brief Increment the reference count of an edge
+   * @details This is the main function for increasing reference counts within
+   * the DD package. It increases the reference count of the complex edge weight
+   * as well as the DD node itself. If the node newly becomes active, meaning
+   * that it had a reference count of zero beforehand, the reference count of
+   * all children is recursively increased.
+   * @tparam Node The node type of the edge.
+   * @param e The edge to increase the reference count of
+   */
+  template <class Node> void incRef(const Edge<Node>& e) noexcept {
+    cn.incRef(e.w);
+    const auto& p = e.p;
+    const auto inc = getUniqueTable<Node>().incRef(p);
+    if (inc && p->ref == 1U) {
+      for (const auto& child : p->e) {
+        incRef(child);
+      }
+    }
   }
-  template <class Node> void decRef(const Edge<Node>& e) {
-    getUniqueTable<Node>().decRef(e);
+
+  /**
+   * @brief Decrement the reference count of an edge
+   * @details This is the main function for decreasing reference counts within
+   * the DD package. It decreases the reference count of the complex edge weight
+   * as well as the DD node itself. If the node newly becomes dead, meaning
+   * that its reference count hit zero, the reference count of all children is
+   * recursively decreased.
+   * @tparam Node The node type of the edge.
+   * @param e The edge to decrease the reference count of
+   */
+  template <class Node> void decRef(const Edge<Node>& e) noexcept {
+    cn.decRef(e.w);
+    const auto& p = e.p;
+    const auto dec = getUniqueTable<Node>().decRef(p);
+    if (dec && p->ref == 0U) {
+      for (const auto& child : p->e) {
+        decRef(child);
+      }
+    }
   }
 
   bool garbageCollect(bool force = false) {

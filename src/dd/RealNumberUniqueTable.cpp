@@ -36,6 +36,20 @@ RealNumber* RealNumberUniqueTable::lookup(const fp val) {
   return lookupNonNegative(val);
 }
 
+void RealNumberUniqueTable::incRef(RealNumber* num) noexcept {
+  const auto inc = RealNumber::incRef(num);
+  if (inc && RealNumber::refCount(num) == 1U) {
+    stats.trackActiveEntry();
+  }
+}
+
+void RealNumberUniqueTable::decRef(RealNumber* num) noexcept {
+  const auto dec = RealNumber::decRef(num);
+  if (dec && RealNumber::refCount(num) == 0U) {
+    --stats.activeEntryCount;
+  }
+}
+
 RealNumber* RealNumberUniqueTable::lookupNonNegative(const fp val) {
   assert(!std::isnan(val));
   assert(val >= 0); // required anyway for the hash function

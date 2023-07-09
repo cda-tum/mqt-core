@@ -48,12 +48,12 @@ fp RealNumber::val(const RealNumber* e) noexcept {
   return e->value;
 }
 
-RefCount RealNumber::refCount(const RealNumber* e) noexcept {
-  assert(e != nullptr);
-  if (isNegativePointer(e)) {
-    return -getAlignedPointer(e)->ref;
+RefCount RealNumber::refCount(const RealNumber* num) noexcept {
+  assert(num != nullptr);
+  if (isNegativePointer(num)) {
+    return getAlignedPointer(num)->ref;
   }
-  return e->ref;
+  return num->ref;
 }
 
 bool RealNumber::approximatelyEquals(const fp left, const fp right) noexcept {
@@ -81,28 +81,30 @@ bool RealNumber::approximatelyOne(const RealNumber* e) noexcept {
   return e == &constants::one || approximatelyOne(val(e));
 }
 
-void RealNumber::incRef(dd::RealNumber* e) noexcept {
-  auto* const ptr = getAlignedPointer(e);
-
-  if (ptr == nullptr || constants::isStaticNumber(ptr) ||
-      ptr->ref == std::numeric_limits<RefCount>::max()) {
-    return;
-  }
-
-  ++ptr->ref;
+bool RealNumber::noRefCountingNeeded(const RealNumber* const num) noexcept {
+  assert(!isNegativePointer(num));
+  return num == nullptr || constants::isStaticNumber(num) ||
+         num->ref == std::numeric_limits<RefCount>::max();
 }
 
-void RealNumber::decRef(dd::RealNumber* e) noexcept {
-  auto* const ptr = getAlignedPointer(e);
-
-  if (ptr == nullptr || constants::isStaticNumber(ptr) ||
-      ptr->ref == std::numeric_limits<RefCount>::max()) {
-    return;
+bool RealNumber::incRef(const dd::RealNumber* num) noexcept {
+  auto* const ptr = getAlignedPointer(num);
+  if (noRefCountingNeeded(ptr)) {
+    return false;
   }
+  ++ptr->ref;
+  return true;
+}
 
+bool RealNumber::decRef(const dd::RealNumber* num) noexcept {
+  auto* const ptr = getAlignedPointer(num);
+  if (noRefCountingNeeded(ptr)) {
+    return false;
+  }
   assert(ptr->ref != 0 &&
          "Reference count of RealNumber must not be zero before decrement");
   --ptr->ref;
+  return true;
 }
 
 void RealNumber::writeBinary(const RealNumber* e, std::ostream& os) {
