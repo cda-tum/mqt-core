@@ -128,8 +128,8 @@ template <> struct hash<dd::Complex> {
    * @see dd::combineHash
    */
   std::size_t operator()(dd::Complex const& c) const noexcept {
-    auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(c.r));
-    auto h2 = dd::murmur64(reinterpret_cast<std::size_t>(c.i));
+    const auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(c.r));
+    const auto h2 = dd::murmur64(reinterpret_cast<std::size_t>(c.i));
     return dd::combineHash(h1, h2);
   }
 };

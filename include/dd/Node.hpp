@@ -204,7 +204,8 @@ noRefCountingNeeded(const Node* const p) noexcept {
  * @note Typically, you do not want to call this function directly. Instead,
  * use the UniqueTable::incRef(Node*) function.
  */
-template <typename Node> [[nodiscard]] static inline bool incRef(Node* p) {
+template <typename Node>
+[[nodiscard]] static inline bool incRef(Node* p) noexcept {
   if (noRefCountingNeeded(p)) {
     return false;
   }
@@ -223,7 +224,8 @@ template <typename Node> [[nodiscard]] static inline bool incRef(Node* p) {
  * @note Typically, you do not want to call this function directly. Instead,
  * use the UniqueTable::decRef(Node*) function.
  */
-template <typename Node> [[nodiscard]] static inline bool decRef(Node* p) {
+template <typename Node>
+[[nodiscard]] static inline bool decRef(Node* p) noexcept {
   if (noRefCountingNeeded(p)) {
     return false;
   }
