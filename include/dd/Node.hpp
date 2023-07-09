@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Complex.hpp"
-#include "ComplexValue.hpp"
 #include "Definitions.hpp"
 #include "Edge.hpp"
 
@@ -236,18 +234,3 @@ template <typename Node>
 }
 
 } // namespace dd
-
-namespace std {
-template <> struct hash<dd::dEdge> {
-  std::size_t operator()(dd::dEdge const& e) const noexcept {
-    const auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(e.p));
-    const auto h2 = std::hash<dd::Complex>{}(e.w);
-    assert(e.p != nullptr);
-    assert((dd::dNode::isDensityMatrixTempFlagSet(e.p)) == false);
-    const auto h3 = std::hash<std::uint8_t>{}(static_cast<std::uint8_t>(
-        dd::dNode::getDensityMatrixTempFlags(e.p->flags)));
-    const auto tmp = dd::combineHash(h1, h2);
-    return dd::combineHash(tmp, h3);
-  }
-};
-} // namespace std

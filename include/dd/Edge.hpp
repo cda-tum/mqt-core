@@ -72,18 +72,10 @@ template <typename Node> struct CachedEdge {
 
 namespace std {
 template <class Node> struct hash<dd::Edge<Node>> {
-  std::size_t operator()(dd::Edge<Node> const& e) const noexcept {
-    auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(e.p));
-    auto h2 = std::hash<dd::Complex>{}(e.w);
-    return dd::combineHash(h1, h2);
-  }
+  std::size_t operator()(dd::Edge<Node> const& e) const noexcept;
 };
 
 template <class Node> struct hash<dd::CachedEdge<Node>> {
-  std::size_t operator()(dd::CachedEdge<Node> const& e) const noexcept {
-    auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(e.p));
-    auto h2 = std::hash<dd::ComplexValue>{}(e.w);
-    return dd::combineHash(h1, h2);
-  }
+  std::size_t operator()(dd::CachedEdge<Node> const& e) const noexcept;
 };
 } // namespace std
