@@ -1,6 +1,7 @@
 #include "Definitions.hpp"
 #include "Permutation.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/CompoundOperation.hpp"
 #include "operations/Control.hpp"
 #include "operations/Expression.hpp"
 #include "operations/NonUnitaryOperation.hpp"
@@ -11,6 +12,7 @@
 
 #include <cstddef>
 #include <iostream>
+#include <memory>
 #include <nanobind/make_iterator.h>
 #include <nanobind/stl/bind_vector.h>
 #include <nanobind/stl/map.h>
@@ -291,7 +293,18 @@ NB_MODULE(_core, m) {
       .def("add_qubit_register", &qc::QuantumComputation::addQubitRegister)
       .def("add_classical_bit_register",
            &qc::QuantumComputation::addClassicalRegister)
+      .def("append_operation",
+           [](QuantumComputation& qc,
+              std::unique_ptr<qc::StandardOperation> op) {
+             qc.emplace_back(op);
+           }) // Transfers ownership from Python to C++
 
+      // .def("append_operation", nb::overload_cast<const
+      // qc::NonUnitaryOperation&>(&qc::QuantumComputation::push_back<qc::NonUnitaryOperation>))
+      // .def("append_operation", nb::overload_cast<const
+      // qc::CompoundOperation&>(&qc::QuantumComputation::push_back<qc::CompoundOperation>))
+      // .def("append_operation", nb::overload_cast<const
+      // qc::SymbolicOperation&>(&qc::QuantumComputation::push_back<qc::SymbolicOperation>))
       // .def("__str__", [](const qc::QuantumComputation& qc){std::stringstream
       // ss;qc.print(ss);return ss.str();})
       // .def("__iter__", [](const qc::QuantumComputation& qc) {
