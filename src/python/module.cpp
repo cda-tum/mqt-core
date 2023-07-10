@@ -298,6 +298,10 @@ NB_MODULE(_core, m) {
               std::unique_ptr<qc::StandardOperation> op) {
              qc.emplace_back(op);
            }) // Transfers ownership from Python to C++
+      .def("instantiate", &qc::QuantumComputation::instantiate)
+      .def("add_variable", &qc::QuantumComputation::addVariable)
+      .def("is_variable_free", &qc::QuantumComputation::isVariableFree)
+      .def("get_variables", &qc::QuantumComputation::getVariables)
 
       // .def("append_operation", nb::overload_cast<const
       // qc::NonUnitaryOperation&>(&qc::QuantumComputation::push_back<qc::NonUnitaryOperation>))
