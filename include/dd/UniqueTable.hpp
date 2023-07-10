@@ -3,6 +3,7 @@
 #include "dd/Definitions.hpp"
 #include "dd/Edge.hpp"
 #include "dd/MemoryManager.hpp"
+#include "dd/Node.hpp"
 #include "dd/UniqueTableStatistics.hpp"
 
 #include <algorithm>
