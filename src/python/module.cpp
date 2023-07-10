@@ -300,6 +300,10 @@ NB_MODULE(_core, m) {
            }) // Transfers ownership from Python to C++
       .def("instantiate", &qc::QuantumComputation::instantiate)
       .def("add_variable", &qc::QuantumComputation::addVariable)
+      .def(
+          "add_variables",
+          [](qc::QuantumComputation& qc,
+             const std::vector<sym::Variable>& vars) { qc.addVariables(vars); })
       .def("is_variable_free", &qc::QuantumComputation::isVariableFree)
       .def("get_variables", &qc::QuantumComputation::getVariables)
 
