@@ -119,36 +119,33 @@ struct dNode {
     return (p & (1ULL << 3)) != 0U;
   }
 
-  [[nodiscard]] [[maybe_unused]] static inline bool
-  isConjugateTempFlagSet(const dNode* p) noexcept {
+  [[nodiscard]] static bool isConjugateTempFlagSet(const dNode* p) noexcept {
     return isConjugateTempFlagSet(reinterpret_cast<std::uintptr_t>(p));
   }
-  [[nodiscard]] [[maybe_unused]] static inline bool
-  isNonReduceTempFlagSet(const dNode* p) noexcept {
+  [[nodiscard]] static bool isNonReduceTempFlagSet(const dNode* p) noexcept {
     return isNonReduceTempFlagSet(reinterpret_cast<std::uintptr_t>(p));
   }
-  [[nodiscard]] [[maybe_unused]] static inline bool
+  [[nodiscard]] static bool
   isDensityMatrixTempFlagSet(const dNode* p) noexcept {
     return isDensityMatrixTempFlagSet(reinterpret_cast<std::uintptr_t>(p));
   }
-  [[nodiscard]] [[maybe_unused]] static inline bool
-  isDensityMatrixNode(const dNode* p) noexcept {
+  [[nodiscard]] static bool isDensityMatrixNode(const dNode* p) noexcept {
     return isDensityMatrixNode(reinterpret_cast<std::uintptr_t>(p));
   }
 
-  static inline void setConjugateTempFlagTrue(dNode*& p) noexcept {
+  static void setConjugateTempFlagTrue(dNode*& p) noexcept {
     p = reinterpret_cast<dNode*>(reinterpret_cast<std::uintptr_t>(p) |
                                  (1ULL << 0));
   }
-  static inline void setNonReduceTempFlagTrue(dNode*& p) noexcept {
+  static void setNonReduceTempFlagTrue(dNode*& p) noexcept {
     p = reinterpret_cast<dNode*>(reinterpret_cast<std::uintptr_t>(p) |
                                  (1ULL << 1));
   }
-  static inline void setDensityMatTempFlagTrue(dNode*& p) noexcept {
+  static void setDensityMatTempFlagTrue(dNode*& p) noexcept {
     p = reinterpret_cast<dNode*>(reinterpret_cast<std::uintptr_t>(p) |
                                  (1ULL << 2));
   }
-  static inline void alignDensityNode(dNode*& p) noexcept {
+  static void alignDensityNode(dNode*& p) noexcept {
     p = reinterpret_cast<dNode*>(reinterpret_cast<std::uintptr_t>(p) & (~7ULL));
   }
 
@@ -165,15 +162,15 @@ struct dNode {
     flags = flags & static_cast<std::uint8_t>(~7U);
   }
 
-  void setDensityMatrixNodeFlag(bool densityMatrix);
+  void setDensityMatrixNodeFlag(bool densityMatrix) noexcept;
 
-  static std::uint8_t alignDensityNodeNode(dNode*& p);
+  static std::uint8_t alignDensityNodeNode(dNode*& p) noexcept;
 
-  static void getAlignedNodeRevertModificationsOnSubEdges(dNode* p);
+  static void getAlignedNodeRevertModificationsOnSubEdges(dNode* p) noexcept;
 
-  static void applyDmChangesToNode(dNode*& p);
+  static void applyDmChangesToNode(dNode*& p) noexcept;
 
-  static void revertDmChangesToNode(dNode*& p);
+  static void revertDmChangesToNode(dNode*& p) noexcept;
 };
 using dEdge = Edge<dNode>;
 using dCachedEdge = CachedEdge<dNode>;
