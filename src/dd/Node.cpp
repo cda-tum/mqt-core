@@ -105,7 +105,7 @@ void dNode::applyDmChangesToNode(dNode*& p) noexcept {
 }
 
 void dNode::revertDmChangesToNode(dNode*& p) noexcept {
-  if (isDensityMatrixTempFlagSet(p)) {
+  if (isDensityMatrixTempFlagSet(p->flags)) {
     getAlignedNodeRevertModificationsOnSubEdges(p);
     p->unsetTempDensityMatrixFlags();
   }
