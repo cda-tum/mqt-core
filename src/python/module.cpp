@@ -300,12 +300,17 @@ NB_MODULE(_core, m) {
            }) // Transfers ownership from Python to C++
       .def("instantiate", &qc::QuantumComputation::instantiate)
       .def("add_variable", &qc::QuantumComputation::addVariable)
-      .def(
-          "add_variables",
-          [](qc::QuantumComputation& qc,
-             const std::vector<sym::Variable>& vars) { qc.addVariables(vars); })
+      .def("add_variables",
+           [](qc::QuantumComputation& qc,
+              const std::vector<qc::SymbolOrNumber>& vars) {
+             for (const auto& var : vars) {
+               qc.addVariable(var);
+             }
+           })
       .def("is_variable_free", &qc::QuantumComputation::isVariableFree)
       .def("get_variables", &qc::QuantumComputation::getVariables)
+      .def("initialize_io_mapping",
+           &qc::QuantumComputation::initializeIOMapping)
 
       // .def("append_operation", nb::overload_cast<const
       // qc::NonUnitaryOperation&>(&qc::QuantumComputation::push_back<qc::NonUnitaryOperation>))
