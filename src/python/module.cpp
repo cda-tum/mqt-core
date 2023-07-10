@@ -7,6 +7,7 @@
 #include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 #include "operations/StandardOperation.hpp"
+#include "operations/SymbolicOperation.hpp"
 
 #include <cstddef>
 #include <iostream>
@@ -463,6 +464,60 @@ NB_MODULE(_core, m) {
       .def(nb::init_implicit<std::map<
                qc::Qubit, qc::Qubit>>()); // Allows for implicit conversion from
                                           // dict[int, int] to Permutation
+
+  nb::class_<qc::SymbolicOperation, qc::Operation>(m, "SymbolicOperation")
+      .def(nb::init<>())
+      .def(nb::init<std::size_t, qc::Qubit, qc::OpType,
+                    const std::vector<qc::SymbolOrNumber>&, qc::Qubit>(),
+           "nq"_a, "target"_a, "op_type"_a,
+           "params"_a = std::vector<qc::SymbolOrNumber>{},
+           "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, const qc::Targets&, qc::OpType,
+                    const std::vector<qc::SymbolOrNumber>&, qc::Qubit>(),
+           "nq"_a, "targets"_a, "op_type"_a,
+           "params"_a = std::vector<qc::SymbolOrNumber>{},
+           "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, qc::Control, qc::Qubit, qc::OpType,
+                    const std::vector<qc::SymbolOrNumber>&, qc::Qubit>(),
+           "nq"_a, "control"_a, "target"_a, "op_type"_a,
+           "params"_a = std::vector<qc::SymbolOrNumber>{},
+           "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, qc::Control, const qc::Targets&, qc::OpType,
+                    const std::vector<qc::SymbolOrNumber>&, qc::Qubit>(),
+           "nq"_a, "control"_a, "targets"_a, "op_type"_a,
+           "params"_a = std::vector<qc::SymbolOrNumber>{},
+           "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, const qc::Controls&, qc::Qubit, qc::OpType,
+                    const std::vector<qc::SymbolOrNumber>&, qc::Qubit>(),
+           "nq"_a, "controls"_a, "target"_a, "op_type"_a,
+           "params"_a = std::vector<qc::SymbolOrNumber>{},
+           "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, const qc::Controls&, const qc::Targets&,
+                    qc::OpType, const std::vector<qc::SymbolOrNumber>&,
+                    qc::Qubit>(),
+           "nq"_a, "controls"_a, "targets"_a, "op_type"_a,
+           "params"_a = std::vector<qc::SymbolOrNumber>{},
+           "starting_qubit"_a = 0)
+      .def(nb::init<std::size_t, const qc::Controls&, qc::Qubit, qc::Qubit,
+                    qc::OpType, const std::vector<qc::SymbolOrNumber>&,
+                    qc::Qubit>(),
+           "nq"_a, "controls"_a, "target0"_a, "target1"_a, "op_type"_a,
+           "params"_a = std::vector<qc::SymbolOrNumber>{},
+           "starting_qubit"_a = 0)
+      .def("get_parameter", &qc::SymbolicOperation::getParameter)
+      .def("get_parameters", &qc::SymbolicOperation::getParameters)
+      .def("clone", &qc::SymbolicOperation::clone)
+      .def("is_symbolic_operation", &qc::SymbolicOperation::isSymbolicOperation)
+      .def("is_standard_operation", &qc::SymbolicOperation::isStandardOperation)
+      .def("equals",
+           nb::overload_cast<const qc::Operation&, const qc::Permutation&,
+                             const qc::Permutation&>(
+               &qc::SymbolicOperation::equals, nb::const_))
+      .def("equals", nb::overload_cast<const qc::Operation&>(
+                         &qc::SymbolicOperation::equals, nb::const_))
+      .def("get_instantiated_operation",
+           &qc::SymbolicOperation::getInstantiatedOperation)
+      .def("instantiate", &qc::SymbolicOperation::instantiate);
 
   nb::class_<sym::Variable>(m, "Variable")
       .def(nb::init<std::string>())

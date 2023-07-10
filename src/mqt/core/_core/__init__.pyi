@@ -491,6 +491,87 @@ class StandardOperation:
     @overload
     def equals(self, arg: Operation, /) -> bool: ...
 
+class SymbolicOperation:
+    @overload
+    def __init__(
+        self,
+        nq: int,
+        controls: set[Control],
+        target0: int,
+        target1: int,
+        op_type: OpType,
+        params: list[float | Expression],
+        starting_qubit: int,
+    ) -> None: ...
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(
+        self, nq: int, target: int, op_type: OpType, params: list[float | Expression], starting_qubit: int
+    ) -> None: ...
+    @overload
+    def __init__(
+        self,
+        nq: int,
+        targets: list[int],
+        op_type: OpType,
+        params: list[float | Expression],
+        starting_qubit: int,
+    ) -> None: ...
+    @overload
+    def __init__(
+        self,
+        nq: int,
+        control: Control,
+        target: int,
+        op_type: OpType,
+        params: list[float | Expression],
+        starting_qubit: int,
+    ) -> None: ...
+    @overload
+    def __init__(
+        self,
+        nq: int,
+        control: Control,
+        targets: list[int],
+        op_type: OpType,
+        params: list[float | Expression],
+        starting_qubit: int,
+    ) -> None: ...
+    @overload
+    def __init__(
+        self,
+        nq: int,
+        controls: set[Control],
+        target: int,
+        op_type: OpType,
+        params: list[float | Expression],
+        starting_qubit: int,
+    ) -> None: ...
+    @overload
+    def __init__(
+        self,
+        nq: int,
+        controls: set[Control],
+        targets: list[int],
+        op_type: OpType,
+        params: list[float | Expression],
+        starting_qubit: int,
+    ) -> None: ...
+    @overload
+    def __init__(self, nq: int, controls: set[Control], target: int, starting_qubit: int = 0) -> None: ...
+    def get_parameter(self, index: int, /) -> float | Expression: ...
+    def get_parameters(self) -> list[float | Expression]: ...
+    def clone(self) -> Operation: ...
+    def is_symbolic_operation(self) -> bool: ...
+    def is_standard_operation(self) -> bool: ...
+    @overload
+    def equals(self, arg0: Operation, arg1: Permutation, arg2: Permutation, /) -> bool: ...
+    @overload
+    def equals(self, arg: Operation, /) -> bool: ...
+    def get_instantiated_operation(self, arg: list[float], /) -> Operation: ...
+    def instantiate(self, arg: list[float], /) -> Operation: ...
+
 class Control:
     @overload
     def __init__(self, qubit: int, /) -> None: ...
