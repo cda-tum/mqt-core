@@ -33,9 +33,9 @@ TEST(DDPackageTest, TrivialTest) {
   // repeat the same calculation - triggering compute table hit
   ASSERT_EQ(dd->fidelity(zeroState, oneState), 0.0);
   ASSERT_NEAR(dd->fidelity(zeroState, hState), 0.5,
-              dd::ComplexTable<>::tolerance());
+              dd::ComplexTable::tolerance());
   ASSERT_NEAR(dd->fidelity(oneState, hState), 0.5,
-              dd::ComplexTable<>::tolerance());
+              dd::ComplexTable::tolerance());
 }
 
 TEST(DDPackageTest, BellState) {
@@ -379,9 +379,9 @@ TEST(DDPackageTest, SerializationErrors) {
 
   // test wrong version number
   std::stringstream ss{};
-  ss << 2 << std::endl;
+  ss << 2 << "\n";
   EXPECT_THROW(dd->deserialize<dd::vNode>(ss, false), std::runtime_error);
-  ss << 2 << std::endl;
+  ss << 2 << "\n";
   EXPECT_THROW(dd->deserialize<dd::mNode>(ss, false), std::runtime_error);
 
   ss.str("");
@@ -395,21 +395,21 @@ TEST(DDPackageTest, SerializationErrors) {
 
   // test wrong format
   ss.str("");
-  ss << "1" << std::endl;
-  ss << "not_complex" << std::endl;
+  ss << "1\n";
+  ss << "not_complex\n";
   EXPECT_THROW(dd->deserialize<dd::vNode>(ss), std::runtime_error);
-  ss << "1" << std::endl;
-  ss << "not_complex" << std::endl;
+  ss << "1\n";
+  ss << "not_complex\n";
   EXPECT_THROW(dd->deserialize<dd::mNode>(ss), std::runtime_error);
 
   ss.str("");
-  ss << "1" << std::endl;
-  ss << "1.0" << std::endl;
-  ss << "no_node_here" << std::endl;
+  ss << "1\n";
+  ss << "1.0\n";
+  ss << "no_node_here\n";
   EXPECT_THROW(dd->deserialize<dd::vNode>(ss), std::runtime_error);
-  ss << "1" << std::endl;
-  ss << "1.0" << std::endl;
-  ss << "no_node_here" << std::endl;
+  ss << "1\n";
+  ss << "1.0\n";
+  ss << "no_node_here\n";
   EXPECT_THROW(dd->deserialize<dd::mNode>(ss), std::runtime_error);
 }
 
@@ -672,8 +672,7 @@ TEST(DDPackageTest, PackageReset) {
   const auto& table = unique[0];
   auto ihash = decltype(dd->mUniqueTable)::hash(iGate.p);
   const auto* node = table[ihash];
-  std::cout << ihash << ": " << reinterpret_cast<uintptr_t>(iGate.p)
-            << std::endl;
+  std::cout << ihash << ": " << reinterpret_cast<uintptr_t>(iGate.p) << "\n";
   // node should be the first in this unique table bucket
   EXPECT_EQ(node, iGate.p);
   dd->reset();
@@ -717,7 +716,7 @@ TEST(DDPackageTest, UniqueTableAllocation) {
   auto dd = std::make_unique<dd::Package<>>(1);
 
   auto allocs = dd->vUniqueTable.getAllocations();
-  std::cout << allocs << std::endl;
+  std::cout << allocs << "\n";
   std::vector<dd::vNode*> nodes{allocs};
   // get all the nodes that are pre-allocated
   for (auto i = 0U; i < allocs; ++i) {
@@ -802,7 +801,7 @@ TEST(DDPackageTest, KroneckerProduct) {
 
 TEST(DDPackageTest, NearZeroNormalize) {
   auto dd = std::make_unique<dd::Package<>>(2);
-  const dd::fp nearZero = dd::ComplexTable<>::tolerance() / 10;
+  const dd::fp nearZero = dd::ComplexTable::tolerance() / 10;
   dd::vEdge ve{};
   ve.p = dd->vUniqueTable.getNode();
   ve.p->v = 1;
@@ -1076,7 +1075,7 @@ TEST(DDPackageTest, BasicNumericStabilityTest) {
   using limits = std::numeric_limits<dd::fp>;
 
   auto dd = std::make_unique<dd::Package<>>(1);
-  auto tol = dd::ComplexTable<>::tolerance();
+  auto tol = dd::ComplexTable::tolerance();
   dd::ComplexNumbers::setTolerance(limits::epsilon());
   auto state = dd->makeZeroState(1);
   auto h = dd->makeGateDD(dd::Hmat, 1, 0);
@@ -1089,8 +1088,7 @@ TEST(DDPackageTest, BasicNumericStabilityTest) {
       result.p->e[0].w.toString(false, limits::max_digits10);
   const auto rightWeight =
       result.p->e[1].w.toString(false, limits::max_digits10);
-  std::cout << topWeight << " | " << leftWeight << " | " << rightWeight
-            << std::endl;
+  std::cout << topWeight << " | " << leftWeight << " | " << rightWeight << "\n";
   EXPECT_EQ(topWeight, "1");
   std::ostringstream oss{};
   oss << std::setprecision(limits::max_digits10) << dd::SQRT2_2;
@@ -1108,7 +1106,7 @@ TEST(DDPackageTest, NormalizationNumericStabilityTest) {
     const auto lambda = dd::PI / static_cast<dd::fp>(1ULL << x);
     std::cout << std::setprecision(17) << "x: " << x << " | lambda: " << lambda
               << " | cos(lambda): " << std::cos(lambda)
-              << " | sin(lambda): " << std::sin(lambda) << std::endl;
+              << " | sin(lambda): " << std::sin(lambda) << "\n";
     auto p = dd->makeGateDD(dd::Phasemat(lambda), 1, 0);
     auto pdag = dd->makeGateDD(dd::Phasemat(-lambda), 1, 0);
     auto result = dd->multiply(p, pdag);
@@ -1132,7 +1130,7 @@ TEST(DDPackageTest, FidelityOfMeasurementOutcomes) {
   probs[0] = 0.5;
   probs[7] = 0.5;
   auto fidelity = dd->fidelityOfMeasurementOutcomes(ghzState, probs);
-  EXPECT_NEAR(fidelity, 1.0, dd::ComplexTable<>::tolerance());
+  EXPECT_NEAR(fidelity, 1.0, dd::ComplexTable::tolerance());
 }
 
 TEST(DDPackageTest, CloseToIdentity) {
@@ -1226,7 +1224,7 @@ TEST(DDPackageTest, dNodeMultiply) {
     for (const auto& cValue : stateVector) {
       std::cout << "r:" << cValue.real() << " i:" << cValue.imag();
     }
-    std::cout << std::endl;
+    std::cout << "\n";
   }
 
   for (std::size_t i = 0; i < (1 << nrQubits); i++) {
@@ -1245,7 +1243,7 @@ TEST(DDPackageTest, dNodeMultiply) {
   const auto probVector = dd->getProbVectorFromDensityMatrix(state, 0.001);
   const double tolerance = 1e-10;
   for (const auto& prob : probVector) {
-    std::cout << prob.first << ": " << prob.second << std::endl;
+    std::cout << prob.first << ": " << prob.second << "\n";
     EXPECT_NEAR(prob.second, 0.125, tolerance);
   }
 }
@@ -1286,7 +1284,7 @@ TEST(DDPackageTest, dNodeMultiply2) {
   auto probVector = dd->getProbVectorFromDensityMatrix(state, 0.001);
   const double tolerance = 1e-10;
   for (const auto& prob : probVector) {
-    std::cout << prob.first << ": " << prob.second << std::endl;
+    std::cout << prob.first << ": " << prob.second << "\n";
     EXPECT_NEAR(prob.second, 0.125, tolerance);
   }
 }
@@ -1432,7 +1430,7 @@ TEST(DDPackageTest, complexRefCount) {
 
 TEST(DDPackageTest, exactlyZeroComparison) {
   auto dd = std::make_unique<dd::Package<>>(1);
-  auto notZero = dd->cn.lookup(0, 2 * dd::ComplexTable<>::tolerance());
+  auto notZero = dd->cn.lookup(0, 2 * dd::ComplexTable::tolerance());
   auto zero = dd->cn.lookup(0, 0);
   EXPECT_TRUE(!notZero.exactlyZero());
   EXPECT_TRUE(zero.exactlyZero());
@@ -1440,7 +1438,7 @@ TEST(DDPackageTest, exactlyZeroComparison) {
 
 TEST(DDPackageTest, exactlyOneComparison) {
   auto dd = std::make_unique<dd::Package<>>(1);
-  auto notOne = dd->cn.lookup(1 + 2 * dd::ComplexTable<>::tolerance(), 0);
+  auto notOne = dd->cn.lookup(1 + 2 * dd::ComplexTable::tolerance(), 0);
   auto one = dd->cn.lookup(1, 0);
   EXPECT_TRUE(!notOne.exactlyOne());
   EXPECT_TRUE(one.exactlyOne());
@@ -1730,7 +1728,7 @@ TEST(DDPackageTest, RZZGateDDConstruction) {
 
   auto rzzTwoPi = dd->makeRZZDD(2, 0, 1, 2 * dd::PI);
   EXPECT_EQ(rzzTwoPi.p, identity.p);
-  EXPECT_EQ(dd::ComplexTable<>::Entry::val(rzzTwoPi.w.r), -1.);
+  EXPECT_EQ(dd::ComplexTable::Entry::val(rzzTwoPi.w.r), -1.);
 
   auto rzzPi = dd->makeRZZDD(2, 0, 1, dd::PI);
   auto zz = dd->makeGateDD(dd::Zmat, 2, dd::Controls{}, 0);

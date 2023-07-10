@@ -15,7 +15,7 @@ using Qubit = std::int8_t;
 static_assert(std::is_signed_v<Qubit>, "Type Qubit must be signed.");
 
 // integer type used for specifying numbers of qubits
-using QubitCount = std::make_unsigned<Qubit>::type;
+using QubitCount = std::make_unsigned_t<Qubit>;
 
 // integer type used for reference counting
 // 32bit suffice for a max ref count of around 4 billion
@@ -59,9 +59,14 @@ using ProbabilityVector = std::unordered_map<std::size_t, fp>;
 
 static constexpr std::uint64_t SERIALIZATION_VERSION = 1;
 
-// 64bit mixing hash (from MurmurHash3,
-// https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp)
-constexpr std::size_t murmur64(std::size_t k) {
+/**
+ * @brief 64bit mixing hash (from MurmurHash3)
+ * @details Hash function for 64bit integers adapted from MurmurHash3
+ * @param k the number to hash
+ * @returns the hash value
+ * @see https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
+ */
+constexpr std::size_t murmur64(std::size_t k) noexcept {
   k ^= k >> 33;
   k *= 0xff51afd7ed558ccdULL;
   k ^= k >> 33;
@@ -70,9 +75,15 @@ constexpr std::size_t murmur64(std::size_t k) {
   return k;
 }
 
-// combine two 64bit hashes into one 64bit hash (boost::hash_combine,
-// https://www.boost.org/LICENSE_1_0.txt)
-constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) {
+/**
+ * @brief Combine two 64bit hashes into one 64bit hash
+ * @details Combines two 64bit hashes into one 64bit hash based on
+ * boost::hash_combine (https://www.boost.org/LICENSE_1_0.txt)
+ * @param lhs The first hash
+ * @param rhs The second hash
+ * @returns The combined hash
+ */
+constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) noexcept {
   lhs ^= rhs + 0x9e3779b97f4a7c15ULL + (lhs << 6) + (lhs >> 2);
   return lhs;
 }
