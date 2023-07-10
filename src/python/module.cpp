@@ -2,6 +2,7 @@
 #include "Permutation.hpp"
 #include "QuantumComputation.hpp"
 #include "operations/Control.hpp"
+#include "operations/NonUnitaryOperation.hpp"
 #include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 #include "operations/StandardOperation.hpp"
@@ -283,6 +284,12 @@ NB_MODULE(_core, m) {
                              const qc::Controls&, const qc::ClassicalRegister&,
                              const std::uint64_t, const std::vector<qc::fp>&>(
                &qc::QuantumComputation::classicControlled))
+      .def("set_logical_qubit_ancillary",
+           &qc::QuantumComputation::setLogicalQubitAncillary)
+      .def("add_qubit_register", &qc::QuantumComputation::addQubitRegister)
+      .def("add_classical_bit_register",
+           &qc::QuantumComputation::addClassicalRegister)
+
       // .def("__str__", [](const qc::QuantumComputation& qc){std::stringstream
       // ss;qc.print(ss);return ss.str();})
       // .def("__iter__", [](const qc::QuantumComputation& qc) {
@@ -416,6 +423,37 @@ NB_MODULE(_core, m) {
       .def("__getitem__", [](const qc::CompoundOperation& op,
                              std::size_t i) { return op.at(i).get(); })
       .def("get_used_qubits", &qc::CompoundOperation::getUsedQubits);
+
+  nb::class_<qc::NonUnitaryOperation, qc::Operation>(m, "NonUnitaryOperation")
+      .def(
+          nb::init<std::size_t, std::vector<qc::Qubit>, std::vector<qc::Bit>>())
+      .def(nb::init<std::size_t, qc::Qubit, qc::Bit>())
+      .def(nb::init<std::size_t, std::vector<qc::Qubit>, std::size_t>())
+      .def(nb::init<std::size_t>())
+      .def(nb::init<std::size_t, std::vector<qc::Qubit>, qc::OpType>(), "nq"_a,
+           "qubits"_a, "op_type"_a = qc::OpType::Reset)
+      .def("clone", &qc::NonUnitaryOperation::clone)
+      .def("is_unitary", &qc::NonUnitaryOperation::isUnitary)
+      .def("is_non_unitary_operation",
+           &qc::NonUnitaryOperation::isNonUnitaryOperation)
+      .def_prop_rw(
+          "targets",
+          nb::overload_cast<>(&qc::NonUnitaryOperation::getTargets, nb::const_),
+          &qc::NonUnitaryOperation::setTargets)
+      .def_prop_ro("n_targets", &qc::NonUnitaryOperation::getNtargets)
+      .def_prop_ro("classics",
+                   nb::overload_cast<>(&qc::NonUnitaryOperation::getClassics,
+                                       nb::const_))
+      .def("add_depth_contribution",
+           &qc::NonUnitaryOperation::addDepthContribution)
+      .def("acts_on", &qc::NonUnitaryOperation::actsOn)
+      .def("equals",
+           nb::overload_cast<const qc::Operation&, const qc::Permutation&,
+                             const qc::Permutation&>(
+               &qc::NonUnitaryOperation::equals, nb::const_))
+      .def("equals", nb::overload_cast<const qc::Operation&>(
+                         &qc::NonUnitaryOperation::equals, nb::const_))
+      .def("get_used_qubits", &qc::NonUnitaryOperation::getUsedQubits);
 
   nb::class_<qc::Permutation>(m, "Permutation")
       .def("apply", nb::overload_cast<const qc::Controls&>(
