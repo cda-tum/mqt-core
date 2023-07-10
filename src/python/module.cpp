@@ -2,6 +2,7 @@
 #include "Permutation.hpp"
 #include "QuantumComputation.hpp"
 #include "operations/Control.hpp"
+#include "operations/Expression.hpp"
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
@@ -430,8 +431,7 @@ NB_MODULE(_core, m) {
       .def(nb::init<std::size_t, qc::Qubit, qc::Bit>())
       .def(nb::init<std::size_t, std::vector<qc::Qubit>, std::size_t>())
       .def(nb::init<std::size_t>())
-      .def(nb::init<std::size_t, std::vector<qc::Qubit>, qc::OpType>(), "nq"_a,
-           "qubits"_a, "op_type"_a = qc::OpType::Reset)
+      .def(nb::init<std::size_t, std::vector<qc::Qubit>, qc::OpType>())
       .def("clone", &qc::NonUnitaryOperation::clone)
       .def("is_unitary", &qc::NonUnitaryOperation::isUnitary)
       .def("is_non_unitary_operation",
@@ -463,6 +463,117 @@ NB_MODULE(_core, m) {
       .def(nb::init_implicit<std::map<
                qc::Qubit, qc::Qubit>>()); // Allows for implicit conversion from
                                           // dict[int, int] to Permutation
+
+  nb::class_<sym::Variable>(m, "Variable")
+      .def(nb::init<std::string>())
+      .def_prop_ro("name", &sym::Variable::getName)
+      .def("__str__", &sym::Variable::getName)
+      .def("__eq__", &sym::Variable::operator==)
+      .def("__ne__", &sym::Variable::operator!=)
+      .def("__lt__", &sym::Variable::operator<)
+      .def("__gt__", &sym::Variable::operator>);
+
+  nb::class_<sym::Term<double>>(m, "Term")
+      .def(nb::init<double, sym::Variable>())
+      .def(nb::init<sym::Variable>())
+      .def_prop_ro("variable", &sym::Term<double>::getVar)
+      .def_prop_ro("coefficient", &sym::Term<double>::getCoeff)
+      .def("has_zero_coefficient", &sym::Term<double>::hasZeroCoeff)
+      .def("add_coefficient", &sym::Term<double>::addCoeff)
+      .def("total_assignment", &sym::Term<double>::totalAssignment)
+      .def("evaluate", &sym::Term<double>::evaluate)
+      .def("__mul__",
+           [](const sym::Term<double>& lhs, double rhs) { return lhs * rhs; })
+      .def("__rmul__",
+           [](sym::Term<double> rhs, const double lhs) { return lhs * rhs; })
+      .def("__truediv__",
+           [](const sym::Term<double>& lhs, double rhs) { return lhs / rhs; })
+      .def("__rtruediv__",
+           [](sym::Term<double> rhs, const double lhs) { return lhs / rhs; });
+
+  nb::class_<sym::Expression<double, double>>(m, "Expression")
+      .def(nb::init<>())
+      .def("__init__",
+           [](sym::Expression<double, double>* expr,
+              const std::vector<sym::Term<double>>& terms, double constant) {
+             new (expr) sym::Expression<double, double>(terms, constant);
+           })
+      .def("__init__",
+           [](sym::Expression<double, double>* expr,
+              const sym::Term<double>& term, double constant) {
+             new (expr) sym::Expression<double, double>(
+                 std::vector<sym::Term<double>>{term}, constant);
+           })
+      .def(nb::init<double>())
+      .def_prop_rw("constant", &sym::Expression<double, double>::getConst,
+                   &sym::Expression<double, double>::setConst)
+      .def(
+          "__iter__",
+          [](const sym::Expression<double, double>& expr) {
+            return nb::make_iterator(
+                nb::type<sym::Expression<double, double>>(), "iterator",
+                expr.begin(), expr.end());
+          },
+          nb::keep_alive<0, 1>())
+      .def("__getitem__",
+           [](const sym::Expression<double, double>& expr, std::size_t idx) {
+             if (idx >= expr.numTerms()) {
+               throw nb::index_error();
+             }
+             return expr.getTerms()[idx];
+           })
+
+      .def("is_zero", &sym::Expression<double, double>::isZero)
+      .def("is_constant", &sym::Expression<double, double>::isConstant)
+      .def("num_terms", &sym::Expression<double, double>::numTerms)
+      .def("__len__", &sym::Expression<double, double>::numTerms)
+      .def_prop_ro("terms", &sym::Expression<double, double>::getTerms)
+      .def("evaluate", &sym::Expression<double, double>::evaluate)
+      // addition operators
+      .def("__add__",
+           [](const sym::Expression<double, double>& lhs,
+              const sym::Expression<double, double>& rhs) { return lhs + rhs; })
+      .def("__add__", [](const sym::Expression<double, double>& lhs,
+                         const sym::Term<double>& rhs) { return lhs + rhs; })
+      .def("__add__", [](const sym::Expression<double, double>& lhs,
+                         const double rhs) { return lhs + rhs; })
+      .def("__radd__", [](const sym::Expression<double, double>& rhs,
+                          const sym::Term<double>& lhs) { return lhs + rhs; })
+      .def("__radd__", [](const sym::Expression<double, double>& rhs,
+                          const double lhs) { return rhs + lhs; })
+      // subtraction operators
+      .def("__sub__",
+           [](const sym::Expression<double, double>& lhs,
+              const sym::Expression<double, double>& rhs) { return lhs - rhs; })
+      .def("__sub__", [](const sym::Expression<double, double>& lhs,
+                         const sym::Term<double>& rhs) { return lhs - rhs; })
+      .def("__sub__", [](const sym::Expression<double, double>& lhs,
+                         const double rhs) { return lhs - rhs; })
+      .def("__rsub__", [](const sym::Expression<double, double>& rhs,
+                          const sym::Term<double>& lhs) { return lhs - rhs; })
+      .def("__rsub__", [](const sym::Expression<double, double>& rhs,
+                          const double lhs) { return lhs - rhs; })
+      // multiplication operators
+      .def("__mul__", [](const sym::Expression<double, double>& lhs,
+                         double rhs) { return lhs * rhs; })
+      .def("__rmul__", [](const sym::Expression<double, double>& rhs,
+                          double lhs) { return rhs * lhs; })
+      // division operators
+      .def("__truediv__", [](const sym::Expression<double, double>& lhs,
+                             double rhs) { return lhs / rhs; })
+      .def("__rtruediv__", [](const sym::Expression<double, double>& rhs,
+                              double lhs) { return rhs / lhs; })
+
+      .def(
+          "__eq__",
+          [](const sym::Expression<double, double>& lhs,
+             const sym::Expression<double, double>& rhs) { return lhs == rhs; })
+      // .def("__str__", [](const sym::Expression<double, double>& expr) {
+      //   std::stringstream ss;
+      //   ss << expr;
+      //   return ss.str();
+      // })
+      ;
 
   nb::enum_<qc::OpType>(m, "OpType")
       .value("none", qc::OpType::None)
