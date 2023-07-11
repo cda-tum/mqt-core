@@ -58,6 +58,9 @@ public:
    * buckets of the table.
    * @param val The floating point number to hash. Must be non-negative.
    * @returns The hash value of the floating point number.
+   * @note Typically, you would expect the hash to be an unsigned integer. Here,
+   * we use a signed integer because it turns out to result in fewer assembly
+   * instructions. See https://godbolt.org/z/9v4TEMfdz for a comparison.
    */
   static std::int64_t hash(fp val) noexcept;
 
