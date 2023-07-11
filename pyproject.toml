@@ -34,6 +34,9 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dynamic = ["version"]
+dependencies = [
+    "qiskit-terra>=0.20.2",
+]
 
 [project.optional-dependencies]
 test = ["pytest>=7.0"]
@@ -145,6 +148,9 @@ disallow_untyped_defs = false
 explicit_package_bases = true
 warn_unreachable = true
 
+[[tool.mypy.overrides]]
+module = ["qiskit.*", "matplotlib.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]

@@ -45,6 +45,8 @@ NB_MODULE(_core, m) {
       // &qc::QuantumComputation::setName)
       .def("clone", &qc::QuantumComputation::clone,
            "Clone this QuantumComputation object.")
+      .def_prop_rw("name", &qc::QuantumComputation::getName,
+                   &qc::QuantumComputation::setName)
       .def_prop_ro("n_qubits", &qc::QuantumComputation::getNqubits)
       .def_prop_ro("n_ancillae", &qc::QuantumComputation::getNancillae)
       .def_prop_ro("n_qubits_without_ancillae",
@@ -58,6 +60,7 @@ NB_MODULE(_core, m) {
       .def_prop_ro("depth", &qc::QuantumComputation::getDepth)
       .def_prop_rw("gphase", &qc::QuantumComputation::getGlobalPhase,
                    &qc::QuantumComputation::gphase)
+      .def_rw("initial_layout", &qc::QuantumComputation::initialLayout)
       .def("i", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::i))
       .def("i", nb::overload_cast<qc::Qubit, const qc::Control&>(
                     &qc::QuantumComputation::i))
@@ -487,6 +490,17 @@ NB_MODULE(_core, m) {
                         &qc::Permutation::apply, nb::const_))
       .def("apply", nb::overload_cast<const qc::Targets&>(
                         &qc::Permutation::apply, nb::const_))
+      .def("__getitem__",
+           [](const qc::Permutation& p, qc::Qubit q) { return p.at(q); })
+      .def("__setitem__",
+           [](qc::Permutation& p, qc::Qubit q, qc::Qubit r) { p.at(q) = r; })
+      .def(
+          "__iter__",
+          [](const qc::Permutation& p) {
+            return nb::make_iterator(nb::type<qc::Permutation>(), "iterator",
+                                     p.begin(), p.end());
+          },
+          nb::keep_alive<0, 1>())
       .def(nb::init_implicit<std::map<
                qc::Qubit, qc::Qubit>>()); // Allows for implicit conversion from
                                           // dict[int, int] to Permutation
