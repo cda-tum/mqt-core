@@ -32,10 +32,8 @@ TEST(DDPackageTest, TrivialTest) {
   ASSERT_EQ(dd->fidelity(zeroState, oneState), 0.0);
   // repeat the same calculation - triggering compute table hit
   ASSERT_EQ(dd->fidelity(zeroState, oneState), 0.0);
-  ASSERT_NEAR(dd->fidelity(zeroState, hState), 0.5,
-              dd::ComplexTable::tolerance());
-  ASSERT_NEAR(dd->fidelity(oneState, hState), 0.5,
-              dd::ComplexTable::tolerance());
+  ASSERT_NEAR(dd->fidelity(zeroState, hState), 0.5, dd::RealNumber::eps);
+  ASSERT_NEAR(dd->fidelity(oneState, hState), 0.5, dd::RealNumber::eps);
 }
 
 TEST(DDPackageTest, BellState) {
@@ -119,7 +117,7 @@ TEST(DDPackageTest, QFTState) {
 
   for (dd::Qubit qubit = 0; qubit < 7; ++qubit) {
     ASSERT_NEAR(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).r,
-                0.5 * dd::SQRT2_2, dd->cn.complexTable.tolerance());
+                0.5 * dd::SQRT2_2, dd::RealNumber::eps);
     ASSERT_EQ(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).i,
               0);
   }
@@ -225,7 +223,7 @@ TEST(DDPackageTest, PartialIdentityTrace) {
   auto dd = std::make_unique<dd::Package<>>(2);
   auto tr = dd->partialTrace(dd->makeIdent(2), {false, true});
   auto mul = dd->multiply(tr, tr);
-  EXPECT_EQ(dd::CTEntry::val(mul.w.r), 4.0);
+  EXPECT_EQ(dd::RealNumber::val(mul.w.r), 4.0);
 }
 
 TEST(DDPackageTest, StateGenerationManipulation) {
@@ -240,7 +238,6 @@ TEST(DDPackageTest, StateGenerationManipulation) {
                                dd::BasisStates::left, dd::BasisStates::right});
   dd->incRef(e);
   dd->incRef(f);
-  dd->vUniqueTable.printActive();
   dd->vUniqueTable.print();
   dd->printInformation();
   dd->decRef(e);
@@ -526,10 +523,10 @@ TEST(DDPackageTest, TestLocalInconsistency) {
   EXPECT_FALSE(local);
   bellState.p->v = 1;
 
-  bellState.p->e[0].w.r->refCount = 0;
+  bellState.p->e[0].w.r->ref = 0;
   local = dd->isLocallyConsistent(bellState);
   EXPECT_FALSE(local);
-  bellState.p->e[0].w.r->refCount = 1;
+  bellState.p->e[0].w.r->ref = 1;
 }
 
 TEST(DDPackageTest, Ancillaries) {
@@ -660,7 +657,9 @@ TEST(DDPackageTest, InvalidMakeBasisStateAndGate) {
 TEST(DDPackageTest, InvalidDecRef) {
   auto dd = std::make_unique<dd::Package<>>(2);
   auto e = dd->makeIdent(2);
-  EXPECT_THROW(dd->decRef(e), std::runtime_error);
+  EXPECT_DEBUG_DEATH(
+      dd->decRef(e),
+      "Reference count of Node must not be zero before decrement");
 }
 
 TEST(DDPackageTest, PackageReset) {
@@ -700,40 +699,40 @@ TEST(DDPackageTest, Inverse) {
   EXPECT_EQ(x, xdag);
   dd->garbageCollect();
   // nothing should have been collected since the threshold is not reached
-  EXPECT_EQ(dd->mUniqueTable.getNodeCount(), 1);
+  EXPECT_EQ(dd->mUniqueTable.getStats().entryCount, 1);
   dd->incRef(x);
   dd->garbageCollect(true);
   // nothing should have been collected since the lone node has a non-zero ref
   // count
-  EXPECT_EQ(dd->mUniqueTable.getNodeCount(), 1);
+  EXPECT_EQ(dd->mUniqueTable.getStats().entryCount, 1);
   dd->decRef(x);
   dd->garbageCollect(true);
   // now the node should have been collected
-  EXPECT_EQ(dd->mUniqueTable.getNodeCount(), 0);
+  EXPECT_EQ(dd->mUniqueTable.getStats().entryCount, 0);
 }
 
 TEST(DDPackageTest, UniqueTableAllocation) {
   auto dd = std::make_unique<dd::Package<>>(1);
 
-  auto allocs = dd->vUniqueTable.getAllocations();
+  auto allocs = dd->vMemoryManager.getAllocationCount();
   std::cout << allocs << "\n";
   std::vector<dd::vNode*> nodes{allocs};
   // get all the nodes that are pre-allocated
   for (auto i = 0U; i < allocs; ++i) {
-    nodes[i] = dd->vUniqueTable.getNode();
+    nodes[i] = dd->vMemoryManager.get();
   }
 
   // trigger new allocation
-  const auto* node = dd->vUniqueTable.getNode();
+  const auto* node = dd->vMemoryManager.get();
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(dd->vUniqueTable.getAllocations(),
-            (1. + static_cast<double>(dd->vUniqueTable.getGrowthFactor())) *
+  EXPECT_EQ(dd->vMemoryManager.getAllocationCount(),
+            (1. + dd::MemoryManager<dd::vNode>::GROWTH_FACTOR) *
                 static_cast<double>(allocs));
 
   // clearing the unique table should reduce the allocated size to the original
   // size
-  dd->vUniqueTable.clear();
-  EXPECT_EQ(dd->vUniqueTable.getAllocations(), allocs);
+  dd->vMemoryManager.reset();
+  EXPECT_EQ(dd->vMemoryManager.getAllocationCount(), allocs);
 }
 
 TEST(DDPackageTest, MatrixTranspose) {
@@ -801,13 +800,13 @@ TEST(DDPackageTest, KroneckerProduct) {
 
 TEST(DDPackageTest, NearZeroNormalize) {
   auto dd = std::make_unique<dd::Package<>>(2);
-  const dd::fp nearZero = dd::ComplexTable::tolerance() / 10;
+  const dd::fp nearZero = dd::RealNumber::eps / 10;
   dd::vEdge ve{};
-  ve.p = dd->vUniqueTable.getNode();
+  ve.p = dd->vMemoryManager.get();
   ve.p->v = 1;
   ve.w = dd::Complex::one;
   for (auto& edge : ve.p->e) {
-    edge.p = dd->vUniqueTable.getNode();
+    edge.p = dd->vMemoryManager.get();
     edge.p->v = 0;
     edge.w = dd->cn.getCached(nearZero, 0.);
     edge.p->e = {dd::vEdge::one, dd::vEdge::one};
@@ -816,7 +815,7 @@ TEST(DDPackageTest, NearZeroNormalize) {
   EXPECT_EQ(veNormalizedCached, dd::vEdge::zero);
 
   for (auto& edge : ve.p->e) {
-    edge.p = dd->vUniqueTable.getNode();
+    edge.p = dd->vMemoryManager.get();
     edge.p->v = 0;
     edge.w = dd->cn.lookup(nearZero, 0.);
     edge.p->e = {dd::vEdge::one, dd::vEdge::one};
@@ -825,11 +824,11 @@ TEST(DDPackageTest, NearZeroNormalize) {
   EXPECT_EQ(veNormalized, dd::vEdge::zero);
 
   dd::mEdge me{};
-  me.p = dd->mUniqueTable.getNode();
+  me.p = dd->mMemoryManager.get();
   me.p->v = 1;
   me.w = dd::Complex::one;
   for (auto& edge : me.p->e) {
-    edge.p = dd->mUniqueTable.getNode();
+    edge.p = dd->mMemoryManager.get();
     edge.p->v = 0;
     edge.w = dd->cn.getCached(nearZero, 0.);
     edge.p->e = {dd::mEdge::one, dd::mEdge::one, dd::mEdge::one,
@@ -839,7 +838,7 @@ TEST(DDPackageTest, NearZeroNormalize) {
   EXPECT_EQ(meNormalizedCached, dd::mEdge::zero);
 
   for (auto& edge : me.p->e) {
-    edge.p = dd->mUniqueTable.getNode();
+    edge.p = dd->mMemoryManager.get();
     edge.p->v = 0;
     edge.w = dd->cn.lookup(nearZero, 0.);
     edge.p->e = {dd::mEdge::one, dd::mEdge::one, dd::mEdge::one,
@@ -1000,24 +999,6 @@ TEST(DDPackageTest, ExportPolarPhaseFormatted) {
   phaseString.str("");
 }
 
-TEST(DDPackageTest, ExportConditionalFormat) {
-  auto cn = std::make_unique<dd::ComplexNumbers>();
-
-  EXPECT_STREQ(dd::conditionalFormat(cn->getCached(1, 0)).c_str(), "1");
-  EXPECT_STREQ(dd::conditionalFormat(cn->getCached(0, 1)).c_str(), "i");
-  EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-1, 0)).c_str(), "-1");
-  EXPECT_STREQ(dd::conditionalFormat(cn->getCached(0, -1)).c_str(), "-i");
-
-  const auto num = cn->getCached(-dd::SQRT2_2, -dd::SQRT2_2);
-  EXPECT_STREQ(dd::conditionalFormat(num).c_str(), "ℯ(-iπ 3/4)");
-  EXPECT_STREQ(dd::conditionalFormat(num, false).c_str(), "-1/√2(1+i)");
-
-  EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-1, -1)).c_str(),
-               "2/√2 ℯ(-iπ 3/4)");
-  EXPECT_STREQ(dd::conditionalFormat(cn->getCached(-dd::SQRT2_2, 0)).c_str(),
-               "-1/√2");
-}
-
 TEST(DDPackageTest, BasicNumericInstabilityTest) {
   const dd::fp zero = 0.0;
   const dd::fp half = 0.5;
@@ -1075,7 +1056,7 @@ TEST(DDPackageTest, BasicNumericStabilityTest) {
   using limits = std::numeric_limits<dd::fp>;
 
   auto dd = std::make_unique<dd::Package<>>(1);
-  auto tol = dd::ComplexTable::tolerance();
+  auto tol = dd::RealNumber::eps;
   dd::ComplexNumbers::setTolerance(limits::epsilon());
   auto state = dd->makeZeroState(1);
   auto h = dd->makeGateDD(dd::Hmat, 1, 0);
@@ -1111,7 +1092,9 @@ TEST(DDPackageTest, NormalizationNumericStabilityTest) {
     auto pdag = dd->makeGateDD(dd::Phasemat(-lambda), 1, 0);
     auto result = dd->multiply(p, pdag);
     EXPECT_TRUE(result.p->isIdentity());
-    dd->cn.complexTable.clear();
+    dd->cUniqueTable.clear();
+    dd->cCacheManager.reset();
+    dd->cMemoryManager.reset();
   }
 }
 
@@ -1130,7 +1113,7 @@ TEST(DDPackageTest, FidelityOfMeasurementOutcomes) {
   probs[0] = 0.5;
   probs[7] = 0.5;
   auto fidelity = dd->fidelityOfMeasurementOutcomes(ghzState, probs);
-  EXPECT_NEAR(fidelity, 1.0, dd::ComplexTable::tolerance());
+  EXPECT_NEAR(fidelity, 1.0, dd::RealNumber::eps);
 }
 
 TEST(DDPackageTest, CloseToIdentity) {
@@ -1418,32 +1401,6 @@ TEST(DDPackageTest, dStochCache) {
   }
 }
 
-TEST(DDPackageTest, complexRefCount) {
-  auto dd = std::make_unique<dd::Package<>>(1);
-  auto value = dd->cn.lookup(0.2, 0.2);
-  EXPECT_EQ(value.r->refCount, 0);
-  EXPECT_EQ(value.i->refCount, 0);
-  decltype(dd->cn)::incRef(value);
-  EXPECT_EQ(value.r->refCount, 2);
-  EXPECT_EQ(value.i->refCount, 2);
-}
-
-TEST(DDPackageTest, exactlyZeroComparison) {
-  auto dd = std::make_unique<dd::Package<>>(1);
-  auto notZero = dd->cn.lookup(0, 2 * dd::ComplexTable::tolerance());
-  auto zero = dd->cn.lookup(0, 0);
-  EXPECT_TRUE(!notZero.exactlyZero());
-  EXPECT_TRUE(zero.exactlyZero());
-}
-
-TEST(DDPackageTest, exactlyOneComparison) {
-  auto dd = std::make_unique<dd::Package<>>(1);
-  auto notOne = dd->cn.lookup(1 + 2 * dd::ComplexTable::tolerance(), 0);
-  auto one = dd->cn.lookup(1, 0);
-  EXPECT_TRUE(!notOne.exactlyOne());
-  EXPECT_TRUE(one.exactlyOne());
-}
-
 TEST(DDPackageTest, stateFromVectorBell) {
   auto dd = std::make_unique<dd::Package<>>(2);
   const auto v =
@@ -1486,8 +1443,8 @@ TEST(DDPackageTest, stateFromScalar) {
 
 TEST(DDPackageTest, expectationValueGlobalOperators) {
   const dd::QubitCount maxQubits = 3;
+  auto dd = std::make_unique<dd::Package<>>(maxQubits);
   for (dd::QubitCount nrQubits = 1; nrQubits < maxQubits + 1; ++nrQubits) {
-    auto dd = std::make_unique<dd::Package<>>(nrQubits);
     const auto zeroState = dd->makeZeroState(nrQubits);
 
     // Definition global operators
@@ -1516,8 +1473,8 @@ TEST(DDPackageTest, expectationValueGlobalOperators) {
 
 TEST(DDPackageTest, expectationValueLocalOperators) {
   const dd::QubitCount maxQubits = 3;
+  auto dd = std::make_unique<dd::Package<>>(maxQubits);
   for (dd::QubitCount nrQubits = 1; nrQubits < maxQubits + 1; ++nrQubits) {
-    auto dd = std::make_unique<dd::Package<>>(nrQubits);
     const auto zeroState = dd->makeZeroState(nrQubits);
 
     // Local expectation values at each site
@@ -1728,7 +1685,7 @@ TEST(DDPackageTest, RZZGateDDConstruction) {
 
   auto rzzTwoPi = dd->makeRZZDD(2, 0, 1, 2 * dd::PI);
   EXPECT_EQ(rzzTwoPi.p, identity.p);
-  EXPECT_EQ(dd::ComplexTable::Entry::val(rzzTwoPi.w.r), -1.);
+  EXPECT_EQ(dd::RealNumber::val(rzzTwoPi.w.r), -1.);
 
   auto rzzPi = dd->makeRZZDD(2, 0, 1, dd::PI);
   auto zz = dd->makeGateDD(dd::Zmat, 2, dd::Controls{}, 0);
