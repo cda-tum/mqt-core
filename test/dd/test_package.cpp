@@ -435,36 +435,6 @@ TEST(DDPackageTest, TestConsistency) {
   dd->debugnode(bellState.p);
 }
 
-TEST(DDPackageTest, ToffoliTable) {
-  auto dd = std::make_unique<dd::Package<>>(4);
-
-  // try to search for a toffoli in an empty table
-  auto toffoli = dd->toffoliTable.lookup(3, {0_nc, 1_pc}, 2);
-  EXPECT_EQ(toffoli.p, nullptr);
-  if (toffoli.p == nullptr) {
-    toffoli = dd->makeGateDD(dd::Xmat, 3, {0_nc, 1_pc}, 2);
-    dd->toffoliTable.insert(3, {0_nc, 1_pc}, 2, toffoli);
-  }
-
-  // try again with same toffoli
-  auto toffoliTableEntry = dd->toffoliTable.lookup(3, {0_nc, 1_pc}, 2);
-  EXPECT_NE(toffoliTableEntry.p, nullptr);
-  EXPECT_EQ(toffoli, toffoliTableEntry);
-
-  // try again with different controlled toffoli
-  toffoliTableEntry = dd->toffoliTable.lookup(3, {0_pc, 1_pc}, 2);
-  EXPECT_EQ(toffoliTableEntry.p, nullptr);
-
-  // try again with different qubit toffoli
-  toffoliTableEntry = dd->toffoliTable.lookup(4, {0_pc, 1_pc, 2_pc}, 3);
-  EXPECT_EQ(toffoliTableEntry.p, nullptr);
-
-  // clear the table
-  dd->toffoliTable.clear();
-  toffoliTableEntry = dd->toffoliTable.lookup(3, {0_nc, 1_pc}, 2);
-  EXPECT_EQ(toffoliTableEntry.p, nullptr);
-}
-
 TEST(DDPackageTest, Extend) {
   auto dd = std::make_unique<dd::Package<>>(4);
 

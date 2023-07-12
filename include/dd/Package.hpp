@@ -10,7 +10,6 @@
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package_fwd.hpp"
 #include "dd/StochasticNoiseOperationTable.hpp"
-#include "dd/ToffoliTable.hpp"
 #include "dd/UnaryComputeTable.hpp"
 #include "dd/UniqueTable.hpp"
 #include "operations/Control.hpp"
@@ -270,7 +269,6 @@ public:
       matrixKronecker.clear();
       matrixVectorMultiplication.clear();
       matrixMatrixMultiplication.clear();
-      toffoliTable.clear();
       clearIdentityTable();
       stochasticNoiseOperationCache.clear();
       densityAdd.clear();
@@ -1292,8 +1290,6 @@ public:
     vectorInnerProduct.clear();
     vectorKronecker.clear();
     matrixKronecker.clear();
-
-    toffoliTable.clear();
 
     clearIdentityTable();
 
@@ -2445,12 +2441,7 @@ private:
     return ident3;
   }
 
-  ///
-  /// Toffoli gates
-  ///
 public:
-  ToffoliTable<mEdge> toffoliTable{};
-
   ///
   /// Identity matrices
   ///
@@ -3691,9 +3682,6 @@ public:
               << sizeof(typename decltype(matrixKronecker)::Entry)
               << " bytes (aligned "
               << alignof(typename decltype(matrixKronecker)::Entry) << " bytes)"
-              << "\n  ToffoliTable::Entry size: "
-              << sizeof(ToffoliTable<mEdge>::Entry) << " bytes (aligned "
-              << alignof(ToffoliTable<mEdge>::Entry) << " bytes)"
               << "\n  Package size: " << sizeof(Package) << " bytes (aligned "
               << alignof(Package) << " bytes)"
               << "\n"
@@ -3725,8 +3713,6 @@ public:
     vectorKronecker.printStatistics();
     std::cout << "[CT Matrix Kronecker] ";
     matrixKronecker.printStatistics();
-    std::cout << "[Toffoli Table] ";
-    toffoliTable.printStatistics();
     std::cout << "[Stochastic Noise Table] ";
     stochasticNoiseOperationCache.printStatistics();
     std::cout << "[CT Density Add] ";
