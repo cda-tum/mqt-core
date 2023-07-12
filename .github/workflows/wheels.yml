@@ -54,7 +54,7 @@ jobs:
           prepend_symlinks_to_path: false
           windows_compile_environment: msvc
           override_cache_key: wheels-${{ matrix.os }}-${{ matrix.python }}
-      - uses: pypa/cibuildwheel@v2.13
+      - uses: pypa/cibuildwheel@v2.14
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
           # Temporary: use pre-release Python 3.12 for stable ABI builds
