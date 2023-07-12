@@ -31,15 +31,6 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
     gm = dd::Hmat;
     break;
   case qc::X: {
-    qc::MatrixDD e{};
-    if (controls.size() > 1U) { // Toffoli
-      e = dd->toffoliTable.lookup(nqubits, controls, target);
-      if (e.p == nullptr) {
-        e = dd->makeGateDD(dd::Xmat, nqubits, controls, target, startQubit);
-        dd->toffoliTable.insert(nqubits, controls, target, e);
-      }
-      return e;
-    }
     gm = dd::Xmat;
     break;
   }
