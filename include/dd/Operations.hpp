@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Definitions.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
 #include "operations/ClassicControlledOperation.hpp"
