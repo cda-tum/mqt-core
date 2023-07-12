@@ -3,9 +3,12 @@
 #include "operations/Expression.hpp"
 
 #include <bitset>
+#include <cstdint>
 #include <deque>
 #include <map>
 #include <memory>
+#include <stdexcept>
+#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
