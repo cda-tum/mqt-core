@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Complex.hpp"
-#include "ComplexNumbers.hpp"
-#include "Definitions.hpp"
-#include "Edge.hpp"
-#include "Package.hpp"
+#include "dd/Complex.hpp"
+#include "dd/ComplexNumbers.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/Edge.hpp"
+#include "dd/Package.hpp"
 
 #include <algorithm>
 #include <array>

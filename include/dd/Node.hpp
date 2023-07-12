@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Definitions.hpp"
-#include "Edge.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/Edge.hpp"
 
 #include <array>
 #include <cassert>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ComplexValue.hpp"
-#include "Definitions.hpp"
+#include "dd/ComplexValue.hpp"
+#include "dd/DDDefinitions.hpp"
 
 #include <array>
 #include <cmath>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Definitions.hpp"
-#include "Node.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/Node.hpp"
 
 #include <array>
 #include <cstddef>

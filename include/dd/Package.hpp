@@ -4,7 +4,7 @@
 #include "dd/ComplexNumbers.hpp"
 #include "dd/ComplexValue.hpp"
 #include "dd/ComputeTable.hpp"
-#include "dd/Definitions.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/DensityNoiseTable.hpp"
 #include "dd/Edge.hpp"
 #include "dd/GateMatrixDefinitions.hpp"

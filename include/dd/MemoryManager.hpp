@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dd/Definitions.hpp"
+#include "dd/DDDefinitions.hpp"
 
 #include <cstddef>
 #include <type_traits>
