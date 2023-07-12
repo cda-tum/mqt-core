@@ -1,5 +1,7 @@
 # set common compiler options for projects
 function(enable_project_options target_name)
+  include(CheckCXXCompilerFlag)
+
   # set required C++ standard and disable compiler specific extensions
   target_compile_features(${target_name} INTERFACE cxx_std_17)
 
@@ -29,7 +31,6 @@ function(enable_project_options target_name)
       # only include machine-specific optimizations when building for the host machine
       target_compile_options(${target_name} INTERFACE -mtune=native)
 
-      include(CheckCXXCompilerFlag)
       check_cxx_compiler_flag(-march=native HAS_MARCH_NATIVE)
       if(HAS_MARCH_NATIVE)
         target_compile_options(${target_name} INTERFACE -march=native)
@@ -48,7 +49,10 @@ function(enable_project_options target_name)
 
   option(BINDINGS "Configure for building Python bindings")
   if(BINDINGS)
-    target_compile_options(${target_name} INTERFACE -fvisibility=hidden)
+    check_cxx_compiler_flag(-fvisibility=hidden HAS_VISIBILITY_HIDDEN)
+    if(HAS_VISIBILITY_HIDDEN)
+      target_compile_options(${target_name} INTERFACE -fvisibility=hidden)
+    endif()
     include(CheckPIESupported)
     check_pie_supported()
     set_target_properties(${target_name} PROPERTIES INTERFACE_POSITION_INDEPENDENT_CODE ON)

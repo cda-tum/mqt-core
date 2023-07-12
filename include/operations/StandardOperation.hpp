@@ -2,6 +2,8 @@
 
 #include "Operation.hpp"
 
+#include <cmath>
+
 namespace qc {
 class StandardOperation : public Operation {
 protected:

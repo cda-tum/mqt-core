@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Control.hpp"
-#include "Definitions.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "operations/Control.hpp"
 
 #include <cstddef>
 #include <iostream>
@@ -16,7 +16,7 @@ public:
 
   struct Entry {
     QubitCount n = 0;
-    Controls controls{};
+    qc::Controls controls{};
     Qubit target = 0;
     Edge e;
   };
@@ -26,14 +26,14 @@ public:
   // access functions
   [[nodiscard]] const auto& getTable() const { return table; }
 
-  void insert(QubitCount n, const Controls& controls, Qubit target,
+  void insert(QubitCount n, const qc::Controls& controls, Qubit target,
               const Edge& e) {
     const auto key = hash(controls, target);
     table[key] = {n, controls, target, e};
     ++count;
   }
 
-  Edge lookup(QubitCount n, const Controls& controls, Qubit target) {
+  Edge lookup(QubitCount n, const qc::Controls& controls, Qubit target) {
     lookups++;
     Edge r{};
     const auto key = hash(controls, target);
@@ -54,11 +54,11 @@ public:
     return entry.e;
   }
 
-  static std::size_t hash(const Controls& controls, Qubit target) {
+  static std::size_t hash(const qc::Controls& controls, Qubit target) {
     auto key = static_cast<std::size_t>(
         static_cast<std::make_unsigned_t<Qubit>>(target));
     for (const auto& control : controls) {
-      if (control.type == dd::Control::Type::pos) {
+      if (control.type == qc::Control::Type::Pos) {
         key *= 29UL * static_cast<std::size_t>(control.qubit);
       } else {
         key *= 71UL * static_cast<std::size_t>(control.qubit);

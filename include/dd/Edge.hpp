@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Complex.hpp"
-#include "ComplexValue.hpp"
-#include "Definitions.hpp"
+#include "dd/Complex.hpp"
+#include "dd/ComplexValue.hpp"
+#include "dd/DDDefinitions.hpp"
 
 #include <array>
 #include <cstddef>

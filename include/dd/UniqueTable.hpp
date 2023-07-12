@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dd/Definitions.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/Edge.hpp"
 #include "dd/MemoryManager.hpp"
 #include "dd/Node.hpp"
