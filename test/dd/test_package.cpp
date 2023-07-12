@@ -1,14 +1,15 @@
 #include "dd/Export.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
+#include "operations/Control.hpp"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include <iomanip>
 #include <memory>
 #include <random>
 #include <sstream>
 
-using namespace dd::literals;
+using namespace qc::literals;
 
 TEST(DDPackageTest, RequestInvalidPackageSize) {
   EXPECT_THROW(auto dd = std::make_unique<dd::Package<>>(
@@ -102,7 +103,7 @@ TEST(DDPackageTest, QFTState) {
   auto h1Gate = dd->makeGateDD(dd::Hmat, 3, 1);
   auto s1Gate = dd->makeGateDD(dd::Smat, 3, 2_pc, 1);
   auto h2Gate = dd->makeGateDD(dd::Hmat, 3, 2);
-  auto swapGate = dd->makeSWAPDD(3, dd::Controls{}, 0, 2);
+  auto swapGate = dd->makeSWAPDD(3, qc::Controls{}, 0, 2);
 
   auto qftOp = dd->multiply(s0Gate, h0Gate);
   qftOp = dd->multiply(t0Gate, qftOp);
@@ -848,20 +849,6 @@ TEST(DDPackageTest, NearZeroNormalize) {
   EXPECT_EQ(meNormalized, dd::mEdge::zero);
 }
 
-TEST(DDPackageTest, Controls) {
-  const dd::Control cpos{0};
-  const dd::Control cneg{0, dd::Control::Type::neg};
-
-  EXPECT_NE(cpos, cneg);
-
-  dd::Controls controls{};
-  controls.insert(cpos);
-  controls.insert(cneg);
-  EXPECT_EQ(controls.begin()->type, dd::Control::Type::neg);
-  EXPECT_EQ(controls.count(static_cast<dd::Qubit>(0)),
-            static_cast<std::size_t>(2U));
-}
-
 TEST(DDPackageTest, DestructiveMeasurementAll) {
   auto dd = std::make_unique<dd::Package<>>(4);
   auto hGate0 = dd->makeGateDD(dd::Hmat, 2, 0);
@@ -1596,7 +1583,8 @@ TEST(DDPackageTest, TwoQubitControlledGateDDConstruction) {
         const auto controlledGateDD = dd->makeTwoQubitGateDD(
             controlledGateMatrix, nrQubits, control, target);
         const auto gateDD = dd->makeGateDD(
-            gateMatrix, nrQubits, dd::Controls{dd::Control{control}}, target);
+            gateMatrix, nrQubits, qc::Control{static_cast<qc::Qubit>(control)},
+            target);
         EXPECT_EQ(controlledGateDD, gateDD);
       }
     }
@@ -1614,7 +1602,7 @@ TEST(DDPackageTest, SWAPGateDDConstruction) {
       }
       const auto swapGateDD = dd->makeSWAPDD(nrQubits, control, target);
       const auto gateDD =
-          dd->makeSWAPDD(nrQubits, dd::Controls{}, control, target);
+          dd->makeSWAPDD(nrQubits, qc::Controls{}, control, target);
       EXPECT_EQ(swapGateDD, gateDD);
     }
   }
@@ -1631,12 +1619,12 @@ TEST(DDPackageTest, iSWAPGateDDConstruction) {
       }
       const auto iswapGateDD = dd->makeiSWAPDD(nrQubits, control, target);
       const auto gateDD =
-          dd->makeiSWAPDD(nrQubits, dd::Controls{}, control, target);
+          dd->makeiSWAPDD(nrQubits, qc::Controls{}, control, target);
       EXPECT_EQ(iswapGateDD, gateDD);
 
       const auto iswapInvGateDD = dd->makeiSWAPinvDD(nrQubits, control, target);
       const auto gateInvDD =
-          dd->makeiSWAPinvDD(nrQubits, dd::Controls{}, control, target);
+          dd->makeiSWAPinvDD(nrQubits, qc::Controls{}, control, target);
       EXPECT_EQ(iswapInvGateDD, gateInvDD);
     }
   }
@@ -1653,7 +1641,7 @@ TEST(DDPackageTest, DCXGateDDConstruction) {
       }
       const auto dcxGateDD = dd->makeDCXDD(nrQubits, control, target);
       const auto gateDD =
-          dd->makeDCXDD(nrQubits, dd::Controls{}, control, target);
+          dd->makeDCXDD(nrQubits, qc::Controls{}, control, target);
       EXPECT_EQ(dcxGateDD, gateDD);
     }
   }
@@ -1673,7 +1661,7 @@ TEST(DDPackageTest, RZZGateDDConstruction) {
       for (const auto& param : params) {
         const auto rzzGateDD = dd->makeRZZDD(nrQubits, control, target, param);
         const auto gateDD =
-            dd->makeRZZDD(nrQubits, dd::Controls{}, control, target, param);
+            dd->makeRZZDD(nrQubits, qc::Controls{}, control, target, param);
         EXPECT_EQ(rzzGateDD, gateDD);
       }
     }
@@ -1688,8 +1676,8 @@ TEST(DDPackageTest, RZZGateDDConstruction) {
   EXPECT_EQ(dd::RealNumber::val(rzzTwoPi.w.r), -1.);
 
   auto rzzPi = dd->makeRZZDD(2, 0, 1, dd::PI);
-  auto zz = dd->makeGateDD(dd::Zmat, 2, dd::Controls{}, 0);
-  zz = dd->multiply(zz, dd->makeGateDD(dd::Zmat, 2, dd::Controls{}, 1));
+  auto zz = dd->makeGateDD(dd::Zmat, 2, qc::Controls{}, 0);
+  zz = dd->multiply(zz, dd->makeGateDD(dd::Zmat, 2, qc::Controls{}, 1));
   EXPECT_EQ(rzzPi.p, zz.p);
 }
 
@@ -1707,7 +1695,7 @@ TEST(DDPackageTest, RYYGateDDConstruction) {
       for (const auto& param : params) {
         const auto ryyGateDD = dd->makeRYYDD(nrQubits, control, target, param);
         const auto gateDD =
-            dd->makeRYYDD(nrQubits, dd::Controls{}, control, target, param);
+            dd->makeRYYDD(nrQubits, qc::Controls{}, control, target, param);
         EXPECT_EQ(ryyGateDD, gateDD);
       }
     }
@@ -1718,8 +1706,8 @@ TEST(DDPackageTest, RYYGateDDConstruction) {
   EXPECT_EQ(ryyZero, identity);
 
   auto ryyPi = dd->makeRYYDD(2, 0, 1, dd::PI);
-  auto yy = dd->makeGateDD(dd::Ymat, 2, dd::Controls{}, 0);
-  yy = dd->multiply(yy, dd->makeGateDD(dd::Ymat, 2, dd::Controls{}, 1));
+  auto yy = dd->makeGateDD(dd::Ymat, 2, qc::Controls{}, 0);
+  yy = dd->multiply(yy, dd->makeGateDD(dd::Ymat, 2, qc::Controls{}, 1));
   EXPECT_EQ(ryyPi.p, yy.p);
 }
 
@@ -1737,7 +1725,7 @@ TEST(DDPackageTest, RXXGateDDConstruction) {
       for (const auto& param : params) {
         const auto rxxGateDD = dd->makeRXXDD(nrQubits, control, target, param);
         const auto gateDD =
-            dd->makeRXXDD(nrQubits, dd::Controls{}, control, target, param);
+            dd->makeRXXDD(nrQubits, qc::Controls{}, control, target, param);
         EXPECT_EQ(rxxGateDD, gateDD);
       }
     }
@@ -1748,8 +1736,8 @@ TEST(DDPackageTest, RXXGateDDConstruction) {
   EXPECT_EQ(rxxZero, identity);
 
   auto rxxPi = dd->makeRXXDD(2, 0, 1, dd::PI);
-  auto xx = dd->makeGateDD(dd::Xmat, 2, dd::Controls{}, 0);
-  xx = dd->multiply(xx, dd->makeGateDD(dd::Xmat, 2, dd::Controls{}, 1));
+  auto xx = dd->makeGateDD(dd::Xmat, 2, qc::Controls{}, 0);
+  xx = dd->multiply(xx, dd->makeGateDD(dd::Xmat, 2, qc::Controls{}, 1));
   EXPECT_EQ(rxxPi.p, xx.p);
 }
 
@@ -1767,7 +1755,7 @@ TEST(DDPackageTest, RZXGateDDConstruction) {
       for (const auto& param : params) {
         const auto rzxGateDD = dd->makeRZXDD(nrQubits, control, target, param);
         const auto gateDD =
-            dd->makeRZXDD(nrQubits, dd::Controls{}, control, target, param);
+            dd->makeRZXDD(nrQubits, qc::Controls{}, control, target, param);
         EXPECT_EQ(rzxGateDD, gateDD);
       }
     }
@@ -1778,8 +1766,8 @@ TEST(DDPackageTest, RZXGateDDConstruction) {
   EXPECT_EQ(rzxZero, identity);
 
   auto rzxPi = dd->makeRZXDD(2, 0, 1, dd::PI);
-  auto zx = dd->makeGateDD(dd::Zmat, 2, dd::Controls{}, 0);
-  zx = dd->multiply(zx, dd->makeGateDD(dd::Xmat, 2, dd::Controls{}, 1));
+  auto zx = dd->makeGateDD(dd::Zmat, 2, qc::Controls{}, 0);
+  zx = dd->multiply(zx, dd->makeGateDD(dd::Xmat, 2, qc::Controls{}, 1));
   EXPECT_EQ(rzxPi.p, zx.p);
 }
 
@@ -1795,7 +1783,7 @@ TEST(DDPackageTest, ECRGateDDConstruction) {
 
       const auto ecrGateDD = dd->makeECRDD(nrQubits, control, target);
       const auto gateDD =
-          dd->makeECRDD(nrQubits, dd::Controls{}, control, target);
+          dd->makeECRDD(nrQubits, qc::Controls{}, control, target);
       EXPECT_EQ(ecrGateDD, gateDD);
     }
   }
@@ -1818,7 +1806,7 @@ TEST(DDPackageTest, XXMinusYYGateDDConstruction) {
         for (const auto& beta : betaAngles) {
           const auto xxMinusYYGateDD =
               dd->makeXXMinusYYDD(nrQubits, control, target, theta, beta);
-          const auto gateDD = dd->makeXXMinusYYDD(nrQubits, dd::Controls{},
+          const auto gateDD = dd->makeXXMinusYYDD(nrQubits, qc::Controls{},
                                                   control, target, theta, beta);
           EXPECT_EQ(xxMinusYYGateDD, gateDD);
         }
@@ -1844,7 +1832,7 @@ TEST(DDPackageTest, XXPlusYYGateDDConstruction) {
         for (const auto& beta : betaAngles) {
           const auto xxPlusYYGateDD =
               dd->makeXXPlusYYDD(nrQubits, control, target, theta, beta);
-          const auto gateDD = dd->makeXXPlusYYDD(nrQubits, dd::Controls{},
+          const auto gateDD = dd->makeXXPlusYYDD(nrQubits, qc::Controls{},
                                                  control, target, theta, beta);
           EXPECT_EQ(xxPlusYYGateDD, gateDD);
         }
