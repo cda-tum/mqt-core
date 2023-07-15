@@ -255,7 +255,7 @@ private:
   using Table = std::array<Bucket, NBUCKET>;
 
   /// The number of variables
-  std::size_t nvars = 0;
+  std::size_t nvars = 0U;
   /**
    * @brief The actual tables (one for each variable)
    * @details Each hash table is an array of buckets. Each bucket is a linked
@@ -274,7 +274,7 @@ private:
    * @brief the number of active nodes for each variable
    * @note A node is considered active if it has a non-zero reference count.
    */
-  std::vector<std::size_t> active{std::vector<std::size_t>(nvars, 0)};
+  std::vector<std::size_t> active{std::vector<std::size_t>(nvars, 0U)};
 
   /// The initial garbage collection limit
   std::size_t initialGCLimit;

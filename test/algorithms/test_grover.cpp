@@ -119,7 +119,7 @@ TEST_P(Grover, Simulation) {
   auto measurements = simulate(qc.get(), in, dd, shots);
 
   for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << std::endl;
+    std::cout << state << ": " << count << "\n";
   }
 
   auto correctShots = measurements[qc->expected];

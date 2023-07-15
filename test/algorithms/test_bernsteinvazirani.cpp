@@ -43,7 +43,7 @@ TEST_P(BernsteinVazirani, FunctionTest) {
                dd, shots);
 
   for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << std::endl;
+    std::cout << state << ": " << count << "\n";
   }
 
   // expect to obtain the hidden bitstring with certainty
@@ -67,7 +67,7 @@ TEST_P(BernsteinVazirani, FunctionTestDynamic) {
                dd, shots);
 
   for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << std::endl;
+    std::cout << state << ": " << count << "\n";
   }
 
   // expect to obtain the hidden bitstring with certainty
@@ -88,7 +88,7 @@ TEST_F(BernsteinVazirani, LargeCircuit) {
                dd, shots);
 
   for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << std::endl;
+    std::cout << state << ": " << count << "\n";
   }
 
   // expect to obtain the hidden bitstring with certainty
@@ -109,7 +109,7 @@ TEST_F(BernsteinVazirani, DynamicCircuit) {
                dd, shots);
 
   for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << std::endl;
+    std::cout << state << ": " << count << "\n";
   }
 
   // expect to obtain the hidden bitstring with certainty
@@ -152,7 +152,7 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelity(e, f);
-  std::cout << "Fidelity of both circuits: " << fidelity << std::endl;
+  std::cout << "Fidelity of both circuits: " << fidelity << "\n";
 
   EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }

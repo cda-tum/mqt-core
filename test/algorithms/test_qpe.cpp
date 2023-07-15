@@ -26,11 +26,11 @@ protected:
     precision = GetParam().second;
 
     std::cout << "Estimating lambda = " << lambda << "π up to " << precision
-              << "-bit precision." << std::endl;
+              << "-bit precision.\n";
 
     theta = lambda / 2;
 
-    std::cout << "Expected theta=" << theta << std::endl;
+    std::cout << "Expected theta=" << theta << "\n";
     std::bitset<64> binaryExpansion{};
     auto expansion = theta * 2;
     std::size_t index = 0;
@@ -69,9 +69,9 @@ protected:
 
     if (exactlyRepresentable) {
       std::cout << "Theta is exactly representable using " << precision
-                << " bits." << std::endl;
+                << " bits.\n";
       std::cout << "The expected output state is |"
-                << expectedResultRepresentation << ">." << std::endl;
+                << expectedResultRepresentation << ">.\n";
     } else {
       secondExpectedResult = expectedResult + 1;
       ss.str("");
@@ -85,10 +85,10 @@ protected:
       secondExpectedResultRepresentation = ss.str();
 
       std::cout << "Theta is not exactly representable using " << precision
-                << " bits." << std::endl;
+                << " bits.\n";
       std::cout << "Most probable output states are |"
                 << expectedResultRepresentation << "> and |"
-                << secondExpectedResultRepresentation << ">." << std::endl;
+                << secondExpectedResultRepresentation << ">.\n";
     }
   }
 };
@@ -129,7 +129,7 @@ TEST_P(QPE, QPETest) {
   auto amplitude = dd->getValueByPath(e, (expectedResult << 1) + 1);
   auto probability = amplitude.r * amplitude.r + amplitude.i * amplitude.i;
   std::cout << "Obtained probability for |" << expectedResultRepresentation
-            << ">: " << probability << std::endl;
+            << ">: " << probability << "\n";
 
   if (exactlyRepresentable) {
     EXPECT_NEAR(probability, 1.0, 1e-8);
@@ -143,7 +143,7 @@ TEST_P(QPE, QPETest) {
                              secondAmplitude.i * secondAmplitude.i;
     std::cout << "Obtained probability for |"
               << secondExpectedResultRepresentation
-              << ">: " << secondProbability << std::endl;
+              << ">: " << secondProbability << "\n";
 
     EXPECT_GT(probability, threshold);
     EXPECT_GT(secondProbability, threshold);
@@ -175,10 +175,10 @@ TEST_P(QPE, IQPETest) {
   const std::set<Measurement, decltype(comp)> ordered(measurements.begin(),
                                                       measurements.end(), comp);
 
-  std::cout << "Obtained measurements: " << std::endl;
+  std::cout << "Obtained measurements: \n";
   for (const auto& measurement : ordered) {
     std::cout << "\t" << measurement.first << ": " << measurement.second << " ("
-              << (measurement.second * 100) / shots << "%)" << std::endl;
+              << (measurement.second * 100) / shots << "%)\n";
   }
 
   const auto& mostLikely = *ordered.begin();
@@ -235,7 +235,7 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelity(e, f);
-  std::cout << "Fidelity of both circuits: " << fidelity << std::endl;
+  std::cout << "Fidelity of both circuits: " << fidelity << "\n";
 
   EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }
@@ -285,7 +285,7 @@ TEST_P(QPE, ProbabilityExtraction) {
   for (const auto& [state, prob] : probs) {
     std::stringstream ss{};
     qc::QuantumComputation::printBin(state, ss);
-    std::cout << ss.str() << ": " << prob << std::endl;
+    std::cout << ss.str() << ": " << prob << "\n";
   }
 
   if (exactlyRepresentable) {
@@ -311,9 +311,9 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
       qpe.get(),
       dd->makeZeroState(static_cast<dd::QubitCount>(qpe->getNqubits())), dd);
   const auto vec = dd->getVector(e);
-  std::cout << "QPE: " << std::endl;
+  std::cout << "QPE:\n";
   for (const auto& amp : vec) {
-    std::cout << std::norm(amp) << std::endl;
+    std::cout << std::norm(amp) << "\n";
   }
 
   // create standard IQPE circuit
@@ -333,17 +333,17 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
     stub[2 * state + 1] = prob;
   }
 
-  std::cout << "IQPE: " << std::endl;
+  std::cout << "IQPE:\n";
   for (const auto& [state, prob] : stub) {
     std::stringstream ss{};
     qc::QuantumComputation::printBin(state, ss);
-    std::cout << ss.str() << ": " << prob << std::endl;
+    std::cout << ss.str() << ": " << prob << "\n";
   }
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelityOfMeasurementOutcomes(e, stub);
   std::cout << "Fidelity of both circuits' measurement outcomes: " << fidelity
-            << std::endl;
+            << "\n";
 
   EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }

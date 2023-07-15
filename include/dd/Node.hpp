@@ -55,7 +55,6 @@ struct mNode {
   [[nodiscard]] inline bool isSymmetric() const noexcept {
     return (flags & static_cast<std::uint8_t>(32U)) != 0;
   }
-
   inline void setIdentity(const bool identity) noexcept {
     if (identity) {
       flags = (flags | static_cast<std::uint8_t>(16U));

@@ -41,11 +41,11 @@ protected:
     iqpeNgates = iqpe->getNindividualOps();
 
     std::cout << "Estimating lambda = " << lambda << "π up to " << precision
-              << "-bit precision." << std::endl;
+              << "-bit precision.\n";
 
     theta = lambda / 2;
 
-    std::cout << "Expected theta=" << theta << std::endl;
+    std::cout << "Expected theta=" << theta << "\n";
     std::bitset<64> binaryExpansion{};
     dd::fp expansion = theta * 2;
     std::size_t index = 0;
@@ -75,9 +75,9 @@ protected:
     expectedResultRepresentation = ss.str();
 
     std::cout << "Theta is exactly representable using " << precision
-              << " bits." << std::endl;
+              << " bits.\n";
     std::cout << "The expected output state is |"
-              << expectedResultRepresentation << ">." << std::endl;
+              << expectedResultRepresentation << ">.\n";
   }
 };
 
@@ -160,9 +160,9 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
   std::stringstream ss{};
   ss << "qpe_exact,transformation," << qpe->getNqubits() << "," << qpeNgates
      << ",2," << iqpeNgates << "," << preprocessing << "," << verification;
-  std::cout << ss.str() << std::endl;
+  std::cout << ss.str() << "\n";
   ofs.open("results_exact.csv", std::ios_base::app);
-  ofs << ss.str() << std::endl;
+  ofs << ss.str() << "\n";
 
   EXPECT_TRUE(e.p->isIdentity());
 }
@@ -207,9 +207,9 @@ TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
   ss << "qpe_exact,extraction," << qpe->getNqubits() << "," << qpeNgates
      << ",2," << iqpeNgates << "," << simulation << "," << extraction << ","
      << comparison << "," << total;
-  std::cout << ss.str() << std::endl;
+  std::cout << ss.str() << "\n";
   ofs.open("results_exact_prob.csv", std::ios_base::app);
-  ofs << ss.str() << std::endl;
+  ofs << ss.str() << "\n";
 
   EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }
@@ -246,11 +246,11 @@ protected:
     iqpeNgates = iqpe->getNindividualOps();
 
     std::cout << "Estimating lambda = " << lambda << "π up to " << precision
-              << "-bit precision." << std::endl;
+              << "-bit precision.\n";
 
     theta = lambda / 2;
 
-    std::cout << "Expected theta=" << theta << std::endl;
+    std::cout << "Expected theta=" << theta << "\n";
     std::bitset<64> binaryExpansion{};
     dd::fp expansion = theta * 2;
     std::size_t index = 0;
@@ -270,8 +270,8 @@ protected:
       }
     }
     std::stringstream ss{};
-    for (auto i = precision - 1; i >= 0; --i) {
-      if ((expectedResult & (1ULL << i)) != 0) {
+    for (auto i = precision; i > 0; --i) {
+      if ((expectedResult & (1ULL << (i - 1))) != 0) {
         ss << 1;
       } else {
         ss << 0;
@@ -281,8 +281,8 @@ protected:
 
     secondExpectedResult = expectedResult + 1;
     ss.str("");
-    for (auto i = precision - 1; i >= 0; --i) {
-      if ((secondExpectedResult & (1ULL << i)) != 0) {
+    for (auto i = precision; i > 0; --i) {
+      if ((secondExpectedResult & (1ULL << (i - 1))) != 0) {
         ss << 1;
       } else {
         ss << 0;
@@ -291,10 +291,10 @@ protected:
     secondExpectedResultRepresentation = ss.str();
 
     std::cout << "Theta is not exactly representable using " << precision
-              << " bits." << std::endl;
+              << " bits.\n";
     std::cout << "Most probable output states are |"
               << expectedResultRepresentation << "> and |"
-              << secondExpectedResultRepresentation << ">." << std::endl;
+              << secondExpectedResultRepresentation << ">.\n";
   }
 };
 
@@ -377,9 +377,9 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
   std::stringstream ss{};
   ss << "qpe_inexact,transformation," << qpe->getNqubits() << "," << qpeNgates
      << ",2," << iqpeNgates << "," << preprocessing << "," << verification;
-  std::cout << ss.str() << std::endl;
+  std::cout << ss.str() << "\n";
   ofs.open("results_inexact.csv", std::ios_base::app);
-  ofs << ss.str() << std::endl;
+  ofs << ss.str() << "\n";
 
   EXPECT_TRUE(e.p->isIdentity());
 }
@@ -393,14 +393,14 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
       dd->makeZeroState(static_cast<dd::QubitCount>(iqpe->getNqubits())), probs,
       dd);
   const auto extractionEnd = std::chrono::steady_clock::now();
-  std::cout << "---- extraction done ----" << std::endl;
+  std::cout << "---- extraction done ----\n";
 
   // generate DD of QPE circuit via simulation
   auto e = simulate(
       qpe.get(),
       dd->makeZeroState(static_cast<dd::QubitCount>(qpe->getNqubits())), dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
-  std::cout << "---- sim done ----" << std::endl;
+  std::cout << "---- sim done ----\n";
 
   // extend to account for 0 qubit
   auto stub = dd::ProbabilityVector{};
@@ -426,9 +426,9 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
   ss << "qpe_inexact,extraction," << qpe->getNqubits() << "," << qpeNgates
      << ",2," << iqpeNgates << "," << simulation << "," << extraction << ","
      << comparison << "," << total;
-  std::cout << ss.str() << std::endl;
+  std::cout << ss.str() << "\n";
   ofs.open("results_inexact_prob.csv", std::ios_base::app);
-  ofs << ss.str() << std::endl;
+  ofs << ss.str() << "\n";
 
   EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }
@@ -461,7 +461,7 @@ protected:
     const auto expected =
         dynamic_cast<qc::BernsteinVazirani*>(bv.get())->expected;
     std::cout << "Hidden bitstring: " << expected << " (" << bitwidth
-              << " qubits)" << std::endl;
+              << " qubits)\n";
   }
 };
 
@@ -544,9 +544,9 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
   std::stringstream ss{};
   ss << "bv,transformation," << bv->getNqubits() << "," << bvNgates << ",2,"
      << dbvNgates << "," << preprocessing << "," << verification;
-  std::cout << ss.str() << std::endl;
+  std::cout << ss.str() << "\n";
   ofs.open("results_bv.csv", std::ios_base::app);
-  ofs << ss.str() << std::endl;
+  ofs << ss.str() << "\n";
 
   EXPECT_TRUE(e.p->isIdentity());
 }
@@ -591,9 +591,9 @@ TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
   ss << "bv,extraction," << bv->getNqubits() << "," << bvNgates << ",2,"
      << dbvNgates << "," << simulation << "," << extraction << "," << comparison
      << "," << total;
-  std::cout << ss.str() << std::endl;
+  std::cout << ss.str() << "\n";
   ofs.open("results_bv_prob.csv", std::ios_base::app);
-  ofs << ss.str() << std::endl;
+  ofs << ss.str() << "\n";
 
   EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }
@@ -703,9 +703,9 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
   std::stringstream ss{};
   ss << "qft,transformation," << qft->getNqubits() << "," << qftNgates << ",1,"
      << dqftNgates << "," << preprocessing << "," << verification;
-  std::cout << ss.str() << std::endl;
+  std::cout << ss.str() << "\n";
   ofs.open("results_qft.csv", std::ios_base::app);
-  ofs << ss.str() << std::endl;
+  ofs << ss.str() << "\n";
 
   EXPECT_TRUE(e.p->isIdentity());
 }
@@ -743,14 +743,14 @@ TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
     ss << "qft,extraction," << qft->getNqubits() << "," << qftNgates << ",1,"
        << dqftNgates << "," << extraction << "," << simulation << ","
        << comparison << "," << total;
-    std::cout << ss.str() << std::endl;
+    std::cout << ss.str() << "\n";
 
   } else {
     ss << "qft,extraction," << qft->getNqubits() << "," << qftNgates << ",1,"
        << dqftNgates << ",," << simulation << ",,,";
-    std::cout << ss.str() << std::endl;
+    std::cout << ss.str() << "\n";
   }
 
   ofs.open("results_qft_prob.csv", std::ios_base::app);
-  ofs << ss.str() << std::endl;
+  ofs << ss.str() << "\n";
 }
