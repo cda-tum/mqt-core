@@ -836,7 +836,8 @@ public:
     auto e = makeDDNode(z, em0);
 
     // process lines above the larger target (by creating identity structures)
-    for (++z; z < n + start; ++z) {
+    const auto end = static_cast<Qubit>(n + start);
+    for (++z; z < end; ++z) {
       e = makeDDNode(z, std::array{e, mEdge::zero, mEdge::zero, e});
     }
 
@@ -2609,7 +2610,7 @@ private:
     f = makeDDNode(f.p->v, edges);
 
     // something to reduce for this qubit
-    if (f.p->v >= 0 && ancillary[f.p->v]) {
+    if (ancillary[f.p->v]) {
       if (regular) {
         if (f.p->e[1].w != Complex::zero || f.p->e[3].w != Complex::zero) {
           f = makeDDNode(f.p->v, std::array{f.p->e[0], mEdge::zero, f.p->e[2],
@@ -2655,7 +2656,7 @@ private:
     f = makeDDNode(f.p->v, edges);
 
     // something to reduce for this qubit
-    if (f.p->v >= 0 && garbage[f.p->v]) {
+    if (garbage[f.p->v]) {
       if (f.p->e[1].w != Complex::zero) {
         vEdge g{};
         if (f.p->e[0].w == Complex::zero && f.p->e[1].w != Complex::zero) {
@@ -2708,7 +2709,7 @@ private:
     f = makeDDNode(f.p->v, edges);
 
     // something to reduce for this qubit
-    if (f.p->v >= 0 && garbage[f.p->v]) {
+    if (garbage[f.p->v]) {
       if (regular) {
         if (f.p->e[2].w != Complex::zero || f.p->e[3].w != Complex::zero) {
           mEdge g{};
