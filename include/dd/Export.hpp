@@ -663,7 +663,7 @@ static void toDot(const Edge& e, std::ostream& os, bool colored = true,
 
   auto priocmp = [](const Edge* left, const Edge* right) {
     if (left->p == nullptr) {
-      return true;
+      return right->p != nullptr;
     }
     if (right->p == nullptr) {
       return false;
@@ -943,7 +943,7 @@ static void exportEdgeWeights(const Edge& edge, std::ostream& stream) {
   struct Priocmp {
     bool operator()(const Edge* left, const Edge* right) {
       if (left->p == nullptr) {
-        return true;
+        return right->p != nullptr;
       }
       if (right->p == nullptr) {
         return false;
