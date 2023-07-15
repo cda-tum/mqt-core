@@ -695,7 +695,7 @@ static void toDot(const Edge& e, std::ostream& os, bool colored = true,
       modernNode(*node, oss, formatAsPolar);
     }
 
-    // iterate over edges in reverse to guarantee correct proceossing order
+    // iterate over edges in reverse to guarantee correct processing order
     for (auto i = static_cast<std::int16_t>(node->p->e.size() - 1); i >= 0;
          --i) {
       auto& edge = node->p->e[static_cast<std::size_t>(i)];
