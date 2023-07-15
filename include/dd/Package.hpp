@@ -1782,6 +1782,14 @@ public:
   RightOperand
   multiply(const LeftOperand& x, const RightOperand& y, const Qubit start = 0,
            [[maybe_unused]] const bool generateDensityMatrix = false) {
+    static_assert(std::disjunction_v<std::is_same<LeftOperand, mEdge>,
+                                     std::is_same<LeftOperand, dEdge>>,
+                  "Left operand must be a matrix or density matrix");
+    static_assert(std::disjunction_v<std::is_same<RightOperand, vEdge>,
+                                     std::is_same<RightOperand, mEdge>,
+                                     std::is_same<RightOperand, dEdge>>,
+                  "Right operand must be a vector, matrix or density matrix");
+
     [[maybe_unused]] const auto before = cn.cacheCount();
 
     Qubit var{};

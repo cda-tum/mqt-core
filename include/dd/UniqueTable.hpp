@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <type_traits>
 #include <vector>
 
 namespace dd {
@@ -22,6 +23,11 @@ namespace dd {
  * @tparam NBUCKET number of hash buckets to use (has to be a power of two)
  */
 template <class Node, std::size_t NBUCKET = 32768> class UniqueTable {
+
+  static_assert(
+      std::disjunction_v<std::is_same<Node, vNode>, std::is_same<Node, mNode>,
+                         std::is_same<Node, dNode>>,
+      "Node type must be one of vNode, mNode, dNode");
 
 public:
   /**
