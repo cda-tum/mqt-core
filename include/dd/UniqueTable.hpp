@@ -109,8 +109,8 @@ public:
     }
 
     // if node not found -> add it to front of unique table bucket
-    e.p->next = tables[static_cast<std::size_t>(v)][key];
-    tables[static_cast<std::size_t>(v)][key] = e.p;
+    e.p->next = tables[v][key];
+    tables[v][key] = e.p;
     stats.trackInsert();
 
     return e;
@@ -128,12 +128,9 @@ public:
    */
   [[nodiscard]] bool incRef(Node* p) noexcept {
     const auto inc = ::dd::incRef(p);
-    if (inc) {
-      assert(p != nullptr);
-      if (p->ref == 1U) {
-        stats.trackActiveEntry();
-        ++active[static_cast<std::size_t>(p->v)];
-      }
+    if (inc && p->ref == 1U) {
+      stats.trackActiveEntry();
+      ++active[p->v];
     }
     return inc;
   }
@@ -150,12 +147,9 @@ public:
    */
   [[nodiscard]] bool decRef(Node* p) noexcept {
     const auto dec = ::dd::decRef(p);
-    if (dec) {
-      assert(p != nullptr);
-      if (p->ref == 0U) {
-        --stats.activeEntryCount;
-        --active[static_cast<std::size_t>(p->v)];
-      }
+    if (dec && p->ref == 0U) {
+      --stats.activeEntryCount;
+      --active[p->v];
     }
     return dec;
   }
@@ -178,7 +172,6 @@ public:
         Node* lastp = nullptr;
         while (p != nullptr) {
           if (p->ref == 0) {
-            assert(!Node::isTerminal(p));
             Node* next = p->next;
             if (lastp == nullptr) {
               bucket = next;
@@ -221,10 +214,10 @@ public:
   };
 
   void print() {
-    auto q = static_cast<dd::Qubit>(nvars - 1);
+    auto q = nvars - 1U;
     for (auto it = tables.rbegin(); it != tables.rend(); ++it) {
       auto& table = *it;
-      std::cout << "\tq" << static_cast<std::size_t>(q) << ":"
+      std::cout << "\tq" << q << ":"
                 << "\n";
       for (std::size_t key = 0; key < table.size(); ++key) {
         auto p = table[key];
@@ -292,9 +285,7 @@ private:
   **/
   Edge<Node> searchTable(const Edge<Node>& e, const std::size_t& key,
                          const bool keepNode = false) {
-    const auto v = e.p->v;
-
-    Node* p = tables[static_cast<std::size_t>(v)][key];
+    Node* p = tables[e.p->v][key];
     while (p != nullptr) {
       if (nodesAreEqual(e.p, p)) {
         // Match found

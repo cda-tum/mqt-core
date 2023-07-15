@@ -5,11 +5,11 @@
 #include <random>
 #include <utility>
 
-using CN = dd::ComplexNumbers;
-using ArrayOfEdges =
-    std::array<qc::DensityMatrixDD, std::tuple_size_v<decltype(dd::dNode::e)>>;
-
 namespace dd {
+
+using CN = ComplexNumbers;
+using NrEdges = std::tuple_size<decltype(dNode::e)>;
+using ArrayOfEdges = std::array<qc::DensityMatrixDD, NrEdges::value>;
 
 // noise operations available for deterministic noise aware quantum circuit
 // simulation
@@ -22,8 +22,9 @@ enum NoiseOperations : std::uint8_t {
 
 template <class Config> class StochasticNoiseFunctionality {
 public:
-  StochasticNoiseFunctionality(const std::unique_ptr<dd::Package<Config>>& dd,
-                               dd::QubitCount nq, double gateNoiseProbability,
+  StochasticNoiseFunctionality(const std::unique_ptr<Package<Config>>& dd,
+                               const std::size_t nq,
+                               double gateNoiseProbability,
                                double amplitudeDampingProb,
                                double multiQubitGateFactor,
                                std::vector<NoiseOperations> effects)
@@ -57,9 +58,9 @@ public:
 
 protected:
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
-  const std::unique_ptr<dd::Package<Config>>& package;
-  dd::QubitCount nQubits;
-  std::uniform_real_distribution<dd::fp> dist;
+  const std::unique_ptr<Package<Config>>& package;
+  std::size_t nQubits;
+  std::uniform_real_distribution<fp> dist;
 
   double noiseProbability;
   double noiseProbabilityMulti;
@@ -74,7 +75,7 @@ protected:
   std::vector<NoiseOperations> noiseEffects;
   mEdge identityDD;
 
-  [[nodiscard]] dd::QubitCount getNumberOfQubits() const { return nQubits; }
+  [[nodiscard]] std::size_t getNumberOfQubits() const { return nQubits; }
   [[nodiscard]] double getNoiseProbability(bool multiQubitNoiseFlag) const {
     return multiQubitNoiseFlag ? noiseProbabilityMulti : noiseProbability;
   }
@@ -108,9 +109,8 @@ public:
     const bool multiQubitOperation = targets.size() > 1;
 
     for (const auto& target : targets) {
-      auto stackedOperation =
-          generateNoiseOperation(operation, static_cast<dd::Qubit>(target),
-                                 generator, false, multiQubitOperation);
+      auto stackedOperation = generateNoiseOperation(
+          operation, target, generator, false, multiQubitOperation);
       auto tmp = package->multiply(stackedOperation, state);
 
       if (ComplexNumbers::mag2(tmp.w) < dist(generator)) {
@@ -119,12 +119,11 @@ public:
         // normalization constraint of decision diagrams the probability for
         // applying amplitude damping stands in the root edge weight, of the dd
         // after the noise has been applied
-        stackedOperation =
-            generateNoiseOperation(operation, static_cast<dd::Qubit>(target),
-                                   generator, true, multiQubitOperation);
+        stackedOperation = generateNoiseOperation(operation, target, generator,
+                                                  true, multiQubitOperation);
         tmp = package->multiply(stackedOperation, state);
       }
-      tmp.w = dd::Complex::one;
+      tmp.w = Complex::one;
 
       package->incRef(tmp);
       package->decRef(state);
@@ -136,13 +135,12 @@ public:
   }
 
 protected:
-  [[nodiscard]] dd::mEdge stackOperation(dd::mEdge operation,
-                                         const dd::Qubit target,
-                                         const qc::OpType noiseOperation,
-                                         const GateMatrix matrix) {
+  [[nodiscard]] mEdge stackOperation(mEdge operation, const qc::Qubit target,
+                                     const qc::OpType noiseOperation,
+                                     const GateMatrix matrix) {
     auto tmpOperation =
         package->stochasticNoiseOperationCache.lookup(noiseOperation, target);
-    if (tmpOperation.p == nullptr) {
+    if (tmpOperation.isTerminal()) {
       tmpOperation = package->makeGateDD(matrix, getNumberOfQubits(), target);
       package->stochasticNoiseOperationCache.insert(noiseOperation, target,
                                                     tmpOperation);
@@ -150,10 +148,10 @@ protected:
     return package->multiply(tmpOperation, operation);
   }
 
-  dd::mEdge generateNoiseOperation(dd::mEdge operation, dd::Qubit target,
-                                   std::mt19937_64& generator,
-                                   bool amplitudeDamping,
-                                   bool multiQubitOperation) {
+  mEdge generateNoiseOperation(mEdge operation, qc::Qubit target,
+                               std::mt19937_64& generator,
+                               bool amplitudeDamping,
+                               bool multiQubitOperation) {
     for (const auto& noiseType : noiseEffects) {
       const auto effect = noiseType == AmplitudeDamping
                               ? getAmplitudeDampingOperationType(
@@ -243,12 +241,14 @@ protected:
 
 template <class Config> class DeterministicNoiseFunctionality {
 public:
-  DeterministicNoiseFunctionality(
-      const std::unique_ptr<dd::Package<Config>>& dd, dd::QubitCount nq,
-      double noiseProbabilitySingleQubit, double noiseProbabilityMultiQubit,
-      double ampDampProbSingleQubit, double ampDampProbMultiQubit,
-      std::vector<dd::NoiseOperations> effects, bool useDensityMatType,
-      bool seqApplyNoise)
+  DeterministicNoiseFunctionality(const std::unique_ptr<Package<Config>>& dd,
+                                  const std::size_t nq,
+                                  double noiseProbabilitySingleQubit,
+                                  double noiseProbabilityMultiQubit,
+                                  double ampDampProbSingleQubit,
+                                  double ampDampProbMultiQubit,
+                                  std::vector<NoiseOperations> effects,
+                                  bool useDensityMatType, bool seqApplyNoise)
       : package(dd), nQubits(nq),
         noiseProbSingleQubit(noiseProbabilitySingleQubit),
         noiseProbMultiQubit(noiseProbabilityMultiQubit),
@@ -260,8 +260,8 @@ public:
 
 protected:
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
-  const std::unique_ptr<dd::Package<Config>>& package;
-  dd::QubitCount nQubits;
+  const std::unique_ptr<Package<Config>>& package;
+  std::size_t nQubits;
 
   double noiseProbSingleQubit;
   double noiseProbMultiQubit;
@@ -280,7 +280,7 @@ protected:
           {Depolarization, 4},   // Depolarisation
   };
 
-  [[nodiscard]] dd::QubitCount getNumberOfQubits() const { return nQubits; }
+  [[nodiscard]] std::size_t getNumberOfQubits() const { return nQubits; }
 
 public:
   void applyNoiseEffects(qc::DensityMatrixDD& originalEdge,
@@ -318,7 +318,7 @@ private:
   qc::DensityMatrixDD applyNoiseEffects(qc::DensityMatrixDD& originalEdge,
                                         const std::set<qc::Qubit>& usedQubits,
                                         bool firstPathEdge) {
-    if (originalEdge.p->v < static_cast<dd::Qubit>(*usedQubits.begin())) {
+    if (originalEdge.isTerminal() || originalEdge.p->v < *usedQubits.begin()) {
       if (ComplexNumbers::isStaticComplex(originalEdge.w)) {
         return originalEdge;
       }
@@ -349,7 +349,7 @@ private:
     qc::DensityMatrixDD e = {};
     if (std::any_of(usedQubits.begin(), usedQubits.end(),
                     [originalEdge](const qc::Qubit qubit) {
-                      return originalEdge.p->v == static_cast<dd::Qubit>(qubit);
+                      return originalEdge.p->v == qubit;
                     })) {
       for (auto const& type : noiseEffects) {
         switch (type) {
@@ -545,13 +545,12 @@ private:
                                const std::set<qc::Qubit>& targets) {
     qc::DensityMatrixDD tmp = {};
 
-    std::array<mEdge, std::tuple_size_v<decltype(dd::dNode::e)>>
-        idleOperation{};
+    std::array<mEdge, NrEdges::value> idleOperation{};
 
     // Iterate over qubits and check if the qubit had been used
     for (const auto targetQubit : targets) {
       for (auto const& type : noiseEffects) {
-        generateGate(idleOperation, type, static_cast<dd::Qubit>(targetQubit),
+        generateGate(idleOperation, type, targetQubit,
                      getNoiseProbability(type, targets));
         tmp.p = nullptr;
         // Apply all noise matrices of the current noise effect
@@ -581,12 +580,10 @@ private:
   }
 
   void generateDepolarizationGate(
-      std::array<mEdge, std::tuple_size_v<decltype(dd::dNode::e)>>&
-          pointerForMatrices,
-      const dd::Qubit target, const double probability) {
-    std::array<dd::GateMatrix, std::tuple_size_v<decltype(dd::dNode::e)>>
-        idleNoiseGate{};
-    dd::ComplexValue tmp = {};
+      std::array<mEdge, NrEdges::value>& pointerForMatrices,
+      const qc::Qubit target, const double probability) {
+    std::array<GateMatrix, NrEdges::value> idleNoiseGate{};
+    ComplexValue tmp = {};
 
     tmp.r = std::sqrt(1 - ((3 * probability) / 4)) * complex_one.r;
     //                   (1 0)
@@ -630,14 +627,11 @@ private:
         package->makeGateDD(idleNoiseGate[3], getNumberOfQubits(), target);
   }
 
-  void
-  generateGate(std::array<mEdge, std::tuple_size_v<decltype(dd::dNode::e)>>&
-                   pointerForMatrices,
-               const dd::NoiseOperations noiseType, const dd::Qubit target,
-               const double probability) {
-    std::array<dd::GateMatrix, std::tuple_size_v<decltype(dd::dNode::e)>>
-        idleNoiseGate{};
-    dd::ComplexValue tmp = {};
+  void generateGate(std::array<mEdge, NrEdges::value>& pointerForMatrices,
+                    const NoiseOperations noiseType, const qc::Qubit target,
+                    const double probability) {
+    std::array<GateMatrix, NrEdges::value> idleNoiseGate{};
+    ComplexValue tmp = {};
 
     switch (noiseType) {
       // identity noise (for testing)

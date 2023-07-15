@@ -8,21 +8,25 @@
 #include <vector>
 
 namespace dd {
-// integer type used for indexing qubits
-// needs to be a signed type to encode -1 as the index for the terminal
-// std::int8_t can address up to 128 qubits as [0, ..., 127]
-using Qubit = std::int8_t;
-static_assert(std::is_signed_v<Qubit>, "Type Qubit must be signed.");
+/**
+ * @brief Integer type used for indexing qubits
+ * @details `std::uint16_t` can address up to 65536 qubits as [0, ..., 65535].
+ * @note If you need even more qubits, this can be increased to `std::uint32_t`.
+ * Beware of the increased memory footprint of matrix nodes.
+ */
+using Qubit = std::uint16_t;
 
-// integer type used for specifying numbers of qubits
-using QubitCount = std::make_unsigned_t<Qubit>;
-
-// integer type used for reference counting
-// 32bit suffice for a max ref count of around 4 billion
+/**
+ * @brief Integer type used for reference counting
+ * @details Allows a maximum reference count of roughly 4 billion.
+ */
 using RefCount = std::uint32_t;
 static_assert(std::is_unsigned_v<RefCount>, "RefCount should be unsigned.");
 
-// floating point type to use
+/**
+ * @brief Floating point type to use for computations
+ * @note Adjusting the precision might lead to unexpected results.
+ */
 using fp = double;
 static_assert(
     std::is_floating_point_v<fp>,

@@ -3,9 +3,9 @@
 namespace dd {
 template <class Config>
 MatrixDD buildFunctionality(const QuantumComputation* qc,
-                            std::unique_ptr<dd::Package<Config>>& dd) {
-  const auto nqubits = static_cast<dd::QubitCount>(qc->getNqubits());
-  if (nqubits == 0U) {
+                            std::unique_ptr<Package<Config>>& dd) {
+  const auto nq = qc->getNqubits();
+  if (nq == 0U) {
     return MatrixDD::one;
   }
 
@@ -14,7 +14,7 @@ MatrixDD buildFunctionality(const QuantumComputation* qc,
   }
 
   auto permutation = qc->initialLayout;
-  auto e = dd->createInitialMatrix(nqubits, qc->ancillary);
+  auto e = dd->createInitialMatrix(nq, qc->ancillary);
 
   for (const auto& op : *qc) {
     auto tmp = dd->multiply(getDD(op.get(), dd, permutation), e);
@@ -207,12 +207,12 @@ MatrixDD buildFunctionality(GoogleRandomCircuitSampling* qc,
     qc->removeCycles(qc->cycles.size() - 2U - *ncycles);
   }
 
-  const auto nqubits = static_cast<dd::QubitCount>(qc->getNqubits());
+  const auto nq = qc->getNqubits();
   Permutation permutation = qc->initialLayout;
-  auto e = dd->makeIdent(nqubits);
+  auto e = dd->makeIdent(nq);
   dd->incRef(e);
   for (const auto& cycle : qc->cycles) {
-    auto f = dd->makeIdent(nqubits);
+    auto f = dd->makeIdent(nq);
     for (const auto& op : cycle) {
       f = dd->multiply(getDD(op.get(), dd, permutation), f);
     }

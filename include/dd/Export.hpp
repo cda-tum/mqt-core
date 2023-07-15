@@ -662,6 +662,12 @@ static void toDot(const Edge& e, std::ostream& os, bool colored = true,
   std::unordered_set<decltype(e.p)> nodes{};
 
   auto priocmp = [](const Edge* left, const Edge* right) {
+    if (left->p == nullptr) {
+      return true;
+    }
+    if (right->p == nullptr) {
+      return false;
+    }
     return left->p->v < right->p->v;
   };
 
@@ -936,6 +942,12 @@ template <typename Edge>
 static void exportEdgeWeights(const Edge& edge, std::ostream& stream) {
   struct Priocmp {
     bool operator()(const Edge* left, const Edge* right) {
+      if (left->p == nullptr) {
+        return true;
+      }
+      if (right->p == nullptr) {
+        return false;
+      }
       return left->p->v < right->p->v;
     }
   };

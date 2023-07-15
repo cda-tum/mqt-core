@@ -15,12 +15,13 @@ template <class Config>
 qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
                                     std::unique_ptr<Package<Config>>& dd,
                                     const qc::Controls& controls,
-                                    dd::Qubit target, bool inverse) {
+                                    const qc::Qubit target,
+                                    const bool inverse) {
   GateMatrix gm;
 
   const auto type = op->getType();
-  const auto nqubits = static_cast<dd::QubitCount>(op->getNqubits());
-  const auto startQubit = static_cast<std::size_t>(op->getStartingQubit());
+  const auto nqubits = op->getNqubits();
+  const auto startQubit = op->getStartingQubit();
   const auto& parameter = op->getParameter();
 
   switch (type) {
@@ -94,13 +95,13 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
 // two-target Operations
 template <class Config>
 qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
-                                    std::unique_ptr<dd::Package<Config>>& dd,
+                                    std::unique_ptr<Package<Config>>& dd,
                                     const qc::Controls& controls,
-                                    dd::Qubit target0, dd::Qubit target1,
-                                    bool inverse) {
+                                    qc::Qubit target0, qc::Qubit target1,
+                                    const bool inverse) {
   const auto type = op->getType();
-  const auto nqubits = static_cast<dd::QubitCount>(op->getNqubits());
-  const auto startQubit = static_cast<std::size_t>(op->getStartingQubit());
+  const auto nqubits = op->getNqubits();
+  const auto startQubit = op->getStartingQubit();
   const auto& parameter = op->getParameter();
 
   if (type == qc::DCX && inverse) {
@@ -269,12 +270,12 @@ qc::MatrixDD getDD(const qc::Operation* op,
     const auto target1 = targets[1U];
     // update permutation
     std::swap(permutation.at(target0), permutation.at(target1));
-    return dd->makeIdent(static_cast<dd::QubitCount>(nqubits));
+    return dd->makeIdent(nqubits);
   }
 
   if (type == qc::ShowProbabilities || type == qc::Barrier ||
       type == qc::Snapshot) {
-    return dd->makeIdent(static_cast<dd::QubitCount>(nqubits));
+    return dd->makeIdent(nqubits);
   }
 
   if (type == qc::GPhase) {
@@ -282,7 +283,7 @@ qc::MatrixDD getDD(const qc::Operation* op,
     if (inverse) {
       phase = -phase;
     }
-    auto id = dd->makeIdent(static_cast<dd::QubitCount>(nqubits));
+    auto id = dd->makeIdent(nqubits);
     id.w = dd->cn.lookup(std::cos(phase), std::sin(phase));
     return id;
   }
@@ -297,18 +298,16 @@ qc::MatrixDD getDD(const qc::Operation* op,
 
     if (qc::isTwoQubitGate(type)) {
       assert(targets.size() == 2);
-      const auto target0 = static_cast<dd::Qubit>(targets[0U]);
-      const auto target1 = static_cast<dd::Qubit>(targets[1U]);
-      return getStandardOperationDD(standardOp, dd, controls, target0, target1,
-                                    inverse);
+      return getStandardOperationDD(standardOp, dd, controls, targets[0U],
+                                    targets[1U], inverse);
     }
     assert(targets.size() == 1);
-    const auto target0 = static_cast<dd::Qubit>(targets[0U]);
-    return getStandardOperationDD(standardOp, dd, controls, target0, inverse);
+    return getStandardOperationDD(standardOp, dd, controls, targets[0U],
+                                  inverse);
   }
 
   if (const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
-    auto e = dd->makeIdent(static_cast<dd::QubitCount>(op->getNqubits()));
+    auto e = dd->makeIdent(op->getNqubits());
     if (inverse) {
       for (const auto& operation : *compoundOp) {
         e = dd->multiply(e, getInverseDD(operation.get(), dd, permutation));
@@ -392,9 +391,8 @@ void changePermutation(DDType& on, qc::Permutation& from,
 
     // swap i and j
     auto saved = on;
-    const auto swapDD = dd->makeSWAPDD(
-        static_cast<dd::QubitCount>(on.p->v + 1), qc::Controls{},
-        static_cast<dd::Qubit>(from.at(i)), static_cast<dd::Qubit>(from.at(j)));
+    const auto swapDD = dd->makeSWAPDD(static_cast<qc::Qubit>(on.p->v) + 1,
+                                       qc::Controls{}, from.at(i), from.at(j));
     if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
       on = dd->multiply(swapDD, on);
     } else {
