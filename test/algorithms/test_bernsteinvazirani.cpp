@@ -31,23 +31,21 @@ TEST_P(BernsteinVazirani, FunctionTest) {
   auto s = qc::BitString(GetParam());
 
   // construct Bernstein Vazirani circuit
-  auto qc = std::make_unique<qc::BernsteinVazirani>(s);
-  qc->printStatistics(std::cout);
+  auto qc = qc::BernsteinVazirani(s);
+  qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc->getNqubits());
+  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
   auto measurements =
-      simulate(qc.get(),
-               dd->makeZeroState(static_cast<dd::QubitCount>(qc->getNqubits())),
-               dd, shots);
+      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
   }
 
   // expect to obtain the hidden bitstring with certainty
-  EXPECT_EQ(measurements[qc->expected], shots);
+  EXPECT_EQ(measurements[qc.expected], shots);
 }
 
 TEST_P(BernsteinVazirani, FunctionTestDynamic) {
@@ -55,65 +53,59 @@ TEST_P(BernsteinVazirani, FunctionTestDynamic) {
   auto s = qc::BitString(GetParam());
 
   // construct Bernstein Vazirani circuit
-  auto qc = std::make_unique<qc::BernsteinVazirani>(s, true);
-  qc->printStatistics(std::cout);
+  auto qc = qc::BernsteinVazirani(s, true);
+  qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc->getNqubits());
+  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
   auto measurements =
-      simulate(qc.get(),
-               dd->makeZeroState(static_cast<dd::QubitCount>(qc->getNqubits())),
-               dd, shots);
+      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
   }
 
   // expect to obtain the hidden bitstring with certainty
-  EXPECT_EQ(measurements[qc->expected], shots);
+  EXPECT_EQ(measurements[qc.expected], shots);
 }
 
 TEST_F(BernsteinVazirani, LargeCircuit) {
   const std::size_t nq = 127;
-  auto qc = std::make_unique<qc::BernsteinVazirani>(nq);
-  qc->printStatistics(std::cout);
+  auto qc = qc::BernsteinVazirani(nq);
+  qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc->getNqubits());
+  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
   auto measurements =
-      simulate(qc.get(),
-               dd->makeZeroState(static_cast<dd::QubitCount>(qc->getNqubits())),
-               dd, shots);
+      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
   }
 
   // expect to obtain the hidden bitstring with certainty
-  EXPECT_EQ(measurements[qc->expected], shots);
+  EXPECT_EQ(measurements[qc.expected], shots);
 }
 
 TEST_F(BernsteinVazirani, DynamicCircuit) {
   const std::size_t nq = 127;
-  auto qc = std::make_unique<qc::BernsteinVazirani>(nq, true);
-  qc->printStatistics(std::cout);
+  auto qc = qc::BernsteinVazirani(nq, true);
+  qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc->getNqubits());
+  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
   auto measurements =
-      simulate(qc.get(),
-               dd->makeZeroState(static_cast<dd::QubitCount>(qc->getNqubits())),
-               dd, shots);
+      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
   }
 
   // expect to obtain the hidden bitstring with certainty
-  EXPECT_EQ(measurements[qc->expected], shots);
+  EXPECT_EQ(measurements[qc.expected], shots);
 }
 
 TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
@@ -121,34 +113,29 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   auto s = qc::BitString(GetParam());
 
   // create standard BV circuit
-  auto bv = std::make_unique<qc::BernsteinVazirani>(s);
+  auto bv = qc::BernsteinVazirani(s);
 
-  auto dd = std::make_unique<dd::Package<>>(bv->getNqubits());
+  auto dd = std::make_unique<dd::Package<>>(bv.getNqubits());
 
   // remove final measurements to obtain statevector
-  qc::CircuitOptimizer::removeFinalMeasurements(*bv);
+  qc::CircuitOptimizer::removeFinalMeasurements(bv);
 
   // simulate circuit
-  auto e = simulate(
-      bv.get(),
-      dd->makeZeroState(static_cast<dd::QubitCount>(bv->getNqubits())), dd);
+  auto e = simulate(&bv, dd->makeZeroState(bv.getNqubits()), dd);
 
   // create dynamic BV circuit
-  auto dbv = std::make_unique<qc::BernsteinVazirani>(s, true);
+  auto dbv = qc::BernsteinVazirani(s, true);
 
   // transform dynamic circuits by first eliminating reset operations and
   // afterwards deferring measurements
-  qc::CircuitOptimizer::eliminateResets(*dbv);
-
-  qc::CircuitOptimizer::deferMeasurements(*dbv);
+  qc::CircuitOptimizer::eliminateResets(dbv);
+  qc::CircuitOptimizer::deferMeasurements(dbv);
 
   // remove final measurements to obtain statevector
-  qc::CircuitOptimizer::removeFinalMeasurements(*dbv);
+  qc::CircuitOptimizer::removeFinalMeasurements(dbv);
 
   // simulate circuit
-  auto f = simulate(
-      dbv.get(),
-      dd->makeZeroState(static_cast<dd::QubitCount>(dbv->getNqubits())), dd);
+  auto f = simulate(&dbv, dd->makeZeroState(dbv.getNqubits()), dd);
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelity(e, f);

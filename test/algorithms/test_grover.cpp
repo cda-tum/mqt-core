@@ -10,12 +10,8 @@ class Grover
     : public testing::TestWithParam<std::tuple<std::size_t, std::size_t>> {
 protected:
   void TearDown() override {
-    if (sim.p != nullptr) {
-      dd->decRef(sim);
-    }
-    if (func.p != nullptr) {
-      dd->decRef(func);
-    }
+    dd->decRef(sim);
+    dd->decRef(func);
     dd->garbageCollect(true);
 
     // number of complex table entries after clean-up should equal initial
@@ -113,7 +109,7 @@ TEST_P(Grover, Simulation) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
   qc->printStatistics(std::cout);
-  auto in = dd->makeZeroState(static_cast<dd::QubitCount>(nqubits + 1));
+  auto in = dd->makeZeroState(nqubits + 1U);
   // there should be no error simulating the circuit
   const std::size_t shots = 1024;
   auto measurements = simulate(qc.get(), in, dd, shots);
