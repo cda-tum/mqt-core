@@ -200,9 +200,12 @@ public:
     cn.incRef(e.w);
     const auto& p = e.p;
     const auto inc = getUniqueTable<Node>().incRef(p);
-    if (inc && p->ref == 1U) {
-      for (const auto& child : p->e) {
-        incRef(child);
+    if (inc) {
+      assert(p != nullptr);
+      if (p->ref == 1U) {
+        for (const auto& child : p->e) {
+          incRef(child);
+        }
       }
     }
   }
@@ -221,9 +224,12 @@ public:
     cn.decRef(e.w);
     const auto& p = e.p;
     const auto dec = getUniqueTable<Node>().decRef(p);
-    if (dec && p->ref == 0U) {
-      for (const auto& child : p->e) {
-        decRef(child);
+    if (dec) {
+      assert(p != nullptr);
+      if (p->ref == 0U) {
+        for (const auto& child : p->e) {
+          decRef(child);
+        }
       }
     }
   }
@@ -1811,9 +1817,11 @@ public:
       dEdge::revertDmChangesToEdges(xCopy, yCopy);
     } else {
       if (!x.isTerminal()) {
+        assert(x.p != nullptr);
         var = x.p->v;
       }
       if (!y.isTerminal() && (y.p->v) > var) {
+        assert(y.p != nullptr);
         var = y.p->v;
       }
       e = multiply2(x, y, var, start);
