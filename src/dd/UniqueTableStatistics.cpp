@@ -29,20 +29,26 @@ void UniqueTableStatistics::reset() noexcept {
 }
 
 nlohmann::json UniqueTableStatistics::json() const {
-  return nlohmann::json{
-      {"table_performance",
-       {"collisions", collisions},
-       {"hits", hits},
-       {"lookups", lookups},
-       {"inserts", inserts},
-       {"hit_ratio", hitRatio()},
-       {"col_ratio", colRatio()}},
-      {"entry_statistics",
-       {"entry_count", entryCount},
-       {"peak_entry_count", peakActiveEntryCount},
-       {"active_entry_count", activeEntryCount},
-       {"peak_active_entry_count", peakActiveEntryCount}},
-      {"garbage_collection_statistics", {"calls", gcCalls}, {"runs", gcRuns}}};
+  nlohmann::json j{};
+  auto& perf = j["table_performance"];
+  perf["collisions"] = collisions;
+  perf["hits"] = hits;
+  perf["lookups"] = lookups;
+  perf["inserts"] = inserts;
+  perf["hit_ratio"] = hitRatio();
+  perf["col_ratio"] = colRatio();
+
+  auto& entry = j["entry_statistics"];
+  entry["entry_count"] = entryCount;
+  entry["peak_entry_count"] = peakEntryCount;
+  entry["active_entry_count"] = activeEntryCount;
+  entry["peak_active_entry_count"] = peakActiveEntryCount;
+
+  auto& garbage = j["garbage_collection_statistics"];
+  garbage["calls"] = gcCalls;
+  garbage["runs"] = gcRuns;
+
+  return j;
 }
 
 std::string UniqueTableStatistics::toString() const { return json().dump(2U); }
