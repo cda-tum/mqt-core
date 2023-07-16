@@ -200,12 +200,9 @@ public:
     cn.incRef(e.w);
     const auto& p = e.p;
     const auto inc = getUniqueTable<Node>().incRef(p);
-    if (inc) {
-      assert(p != nullptr);
-      if (p->ref == 1U) {
-        for (const auto& child : p->e) {
-          incRef(child);
-        }
+    if (inc && p->ref == 1U) {
+      for (const auto& child : p->e) {
+        incRef(child);
       }
     }
   }
