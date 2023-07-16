@@ -134,9 +134,12 @@ public:
    */
   [[nodiscard]] bool incRef(Node* p) noexcept {
     const auto inc = ::dd::incRef(p);
-    if (inc && p->ref == 1U) {
-      stats.trackActiveEntry();
-      ++active[p->v];
+    if (inc) {
+      assert(p != nullptr);
+      if (p->ref == 1U) {
+        stats.trackActiveEntry();
+        ++active[p->v];
+      }
     }
     return inc;
   }
