@@ -221,12 +221,9 @@ public:
     cn.decRef(e.w);
     const auto& p = e.p;
     const auto dec = getUniqueTable<Node>().decRef(p);
-    if (dec) {
-      assert(p != nullptr);
-      if (p->ref == 0U) {
-        for (const auto& child : p->e) {
-          decRef(child);
-        }
+    if (dec && p->ref == 0U) {
+      for (const auto& child : p->e) {
+        decRef(child);
       }
     }
   }
