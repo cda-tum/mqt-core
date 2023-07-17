@@ -20,6 +20,7 @@ from mqt.core._core import (
 
 if TYPE_CHECKING:
     from qiskit import QuantumCircuit
+    from qiskit.transpiler import Layout
 
 
 def qiskit_to_mqt(qiskit_circuit: QuantumCircuit) -> QuantumComputation:
@@ -75,9 +76,10 @@ def qiskit_to_mqt(qiskit_circuit: QuantumCircuit) -> QuantumComputation:
 
         _emplace_operation(mqt_computation, instruction, qargs, cargs, params, qubit_map, clbit_map)
 
-    # import initial layout in case it is available
+    # import initial layout and output permutation in case it is available
     if qiskit_circuit.layout is not None:
-        _import_initial_layout(mqt_computation, qiskit_circuit)
+        _import_layouts(mqt_computation, qiskit_circuit)
+
     mqt_computation.initialize_io_mapping()
     return mqt_computation
 
@@ -262,11 +264,7 @@ def _add_two_target_operation(
             mqt_computation.add_variable(parameter)
 
 
-def _import_initial_layout(mqt_computation: QuantumComputation, qiskit_circuit: QuantumCircuit) -> None:
-    layout = qiskit_circuit._layout  # noqa: SLF001
-    if hasattr(layout, "initial_layout"):
-        layout = layout.initial_layout
-
+def _get_logical_qubit_indices(mqt_computation: QuantumComputation, layout: Layout) -> dict[Qubit, int]:
     registers = layout.get_registers()
     logical_qubit_index = 0
     logical_qubit_indices = {}
@@ -289,9 +287,23 @@ def _import_initial_layout(mqt_computation: QuantumComputation, qiskit_circuit: 
             mqt_computation.set_logical_qubit_ancillary(logical_qubit_index)
             logical_qubit_index += 1
 
-    physical_qubits = layout.get_physical_bits()
+    return logical_qubit_indices
+
+
+def _import_layouts(mqt_computation: QuantumComputation, qiskit_circuit: QuantumCircuit) -> None:
+    initial_layout = qiskit_circuit._layout.initial_layout  # noqa: SLF001
+    final_layout = qiskit_circuit._layout.final_layout  # noqa: SLF001
+
+    initial_logical_qubit_indices = _get_logical_qubit_indices(mqt_computation, initial_layout)
+    final_logical_qubit_indices = _get_logical_qubit_indices(mqt_computation, final_layout)
+
+    physical_qubits = initial_layout.get_physical_bits()
     for physical_qubit, logical_qubit in physical_qubits.items():
-        mqt_computation.initial_layout[physical_qubit] = logical_qubit_indices[logical_qubit]
+        mqt_computation.initial_layout[physical_qubit] = initial_logical_qubit_indices[logical_qubit]
+
+    physical_qubit = final_layout.get_physical_bits()
+    for physical_qubit, logical_qubit in physical_qubits.items():
+        mqt_computation.output_permutation[physical_qubit] = final_logical_qubit_indices[logical_qubit]
 
 
 def _import_definition(

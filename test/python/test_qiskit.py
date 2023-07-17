@@ -104,12 +104,14 @@ def test_custom_gate() -> None:
     assert {control.qubit for control in mqt_qc[2].controls} == {0}
 
 
-def test_initial_layout() -> None:
+def test_layout() -> None:
     """Test import of initial layout."""
     qc = QuantumCircuit(3)
     q_reg = QuantumRegister(3, "q")
     qc._layout = TranspileLayout(  # noqa: SLF001
-        Layout.from_intlist([2, 1, 0], q_reg), {Qubit(q_reg, 0): 0, Qubit(q_reg, 1): 1, Qubit(q_reg, 2): 2}
+        Layout.from_intlist([2, 1, 0], q_reg),
+        {Qubit(q_reg, 0): 0, Qubit(q_reg, 1): 1, Qubit(q_reg, 2): 2},
+        Layout.from_intlist([1, 2, 0], q_reg),
     )
     qc.h(0)
     qc.s(1)
@@ -118,6 +120,7 @@ def test_initial_layout() -> None:
     assert mqt_qc.n_qubits == 3
     assert mqt_qc.n_ops == 3
     assert mqt_qc.initial_layout.apply([0, 1, 2]) == [2, 1, 0]
+    assert mqt_qc.output_permutation.apply([0, 1, 2]) == [2, 1, 0]
 
 
 def test_ancilla() -> None:

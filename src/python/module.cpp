@@ -63,6 +63,7 @@ NB_MODULE(_core, m) {
       .def_prop_rw("gphase", &qc::QuantumComputation::getGlobalPhase,
                    &qc::QuantumComputation::gphase)
       .def_rw("initial_layout", &qc::QuantumComputation::initialLayout)
+      .def_rw("output_permutation", &qc::QuantumComputation::initialLayout)
       .def("i", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::i))
       .def("i", nb::overload_cast<qc::Qubit, const qc::Control&>(
                     &qc::QuantumComputation::i))
