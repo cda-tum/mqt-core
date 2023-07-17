@@ -4,35 +4,41 @@
 #include <cmath>
 
 namespace dd {
-void ComplexNumbers::clear() noexcept {
-  complexTable.clear();
-  complexCache.clear();
-}
 
-void ComplexNumbers::setTolerance(fp tol) noexcept {
-  ComplexTable::setTolerance(tol);
-}
+void ComplexNumbers::setTolerance(fp tol) noexcept { RealNumber::eps = tol; }
 
 void ComplexNumbers::add(Complex& r, const Complex& a,
                          const Complex& b) noexcept {
   assert(r != Complex::zero);
   assert(r != Complex::one);
-  r.r->value = CTEntry::val(a.r) + CTEntry::val(b.r);
-  r.i->value = CTEntry::val(a.i) + CTEntry::val(b.i);
+  assert(r.r != a.i && "r.r and a.i point to the same entry!");
+  assert(r.i != a.r && "r.i and a.r point to the same entry!");
+  assert(r.r != b.i && "r.r and b.i point to the same entry!");
+  assert(r.i != b.r && "r.i and b.r point to the same entry!");
+  r.r->value = RealNumber::val(a.r) + RealNumber::val(b.r);
+  r.i->value = RealNumber::val(a.i) + RealNumber::val(b.i);
 }
 
 void ComplexNumbers::sub(Complex& r, const Complex& a,
                          const Complex& b) noexcept {
   assert(r != Complex::zero);
   assert(r != Complex::one);
-  r.r->value = CTEntry::val(a.r) - CTEntry::val(b.r);
-  r.i->value = CTEntry::val(a.i) - CTEntry::val(b.i);
+  assert(r.r != a.i && "r.r and a.i point to the same entry!");
+  assert(r.i != a.r && "r.i and a.r point to the same entry!");
+  assert(r.r != b.i && "r.r and b.i point to the same entry!");
+  assert(r.i != b.r && "r.i and b.r point to the same entry!");
+  r.r->value = RealNumber::val(a.r) - RealNumber::val(b.r);
+  r.i->value = RealNumber::val(a.i) - RealNumber::val(b.i);
 }
 
 void ComplexNumbers::mul(Complex& r, const Complex& a,
                          const Complex& b) noexcept {
   assert(r != Complex::zero);
   assert(r != Complex::one);
+  assert(r.r != a.i && "r.r and a.i point to the same entry!");
+  assert(r.i != a.r && "r.i and a.r point to the same entry!");
+  assert(r.r != b.i && "r.r and b.i point to the same entry!");
+  assert(r.i != b.r && "r.i and b.r point to the same entry!");
   if (a.approximatelyOne()) {
     r.setVal(b);
   } else if (b.approximatelyOne()) {
@@ -41,10 +47,10 @@ void ComplexNumbers::mul(Complex& r, const Complex& a,
     r.r->value = 0.;
     r.i->value = 0.;
   } else {
-    const auto ar = CTEntry::val(a.r);
-    const auto ai = CTEntry::val(a.i);
-    const auto br = CTEntry::val(b.r);
-    const auto bi = CTEntry::val(b.i);
+    const auto ar = RealNumber::val(a.r);
+    const auto ai = RealNumber::val(a.i);
+    const auto br = RealNumber::val(b.r);
+    const auto bi = RealNumber::val(b.i);
 
     r.r->value = ar * br - ai * bi;
     r.i->value = ar * bi + ai * br;
@@ -55,16 +61,20 @@ void ComplexNumbers::div(Complex& r, const Complex& a,
                          const Complex& b) noexcept {
   assert(r != Complex::zero);
   assert(r != Complex::one);
+  assert(r.r != a.i && "r.r and a.i point to the same entry!");
+  assert(r.i != a.r && "r.i and a.r point to the same entry!");
+  assert(r.r != b.i && "r.r and b.i point to the same entry!");
+  assert(r.i != b.r && "r.i and b.r point to the same entry!");
   if (a.approximatelyEquals(b)) {
     r.r->value = 1.;
     r.i->value = 0.;
   } else if (b.approximatelyOne()) {
     r.setVal(a);
   } else {
-    const auto ar = CTEntry::val(a.r);
-    const auto ai = CTEntry::val(a.i);
-    const auto br = CTEntry::val(b.r);
-    const auto bi = CTEntry::val(b.i);
+    const auto ar = RealNumber::val(a.r);
+    const auto ai = RealNumber::val(a.i);
+    const auto br = RealNumber::val(b.r);
+    const auto bi = RealNumber::val(b.i);
 
     const auto cmag = br * br + bi * bi;
 
@@ -74,8 +84,8 @@ void ComplexNumbers::div(Complex& r, const Complex& a,
 }
 
 fp ComplexNumbers::mag2(const Complex& a) noexcept {
-  auto ar = CTEntry::val(a.r);
-  auto ai = CTEntry::val(a.i);
+  const auto ar = RealNumber::val(a.r);
+  const auto ai = RealNumber::val(a.i);
 
   return ar * ar + ai * ai;
 }
@@ -83,17 +93,17 @@ fp ComplexNumbers::mag2(const Complex& a) noexcept {
 fp ComplexNumbers::mag(const Complex& a) noexcept { return std::sqrt(mag2(a)); }
 
 fp ComplexNumbers::arg(const Complex& a) noexcept {
-  auto ar = CTEntry::val(a.r);
-  auto ai = CTEntry::val(a.i);
+  const auto ar = RealNumber::val(a.r);
+  const auto ai = RealNumber::val(a.i);
   return std::atan2(ai, ar);
 }
 
 Complex ComplexNumbers::conj(const Complex& a) noexcept {
-  return {a.r, CTEntry::flipPointerSign(a.i)};
+  return {a.r, RealNumber::flipPointerSign(a.i)};
 }
 
 Complex ComplexNumbers::neg(const Complex& a) noexcept {
-  return {CTEntry::flipPointerSign(a.r), CTEntry::flipPointerSign(a.i)};
+  return {RealNumber::flipPointerSign(a.r), RealNumber::flipPointerSign(a.i)};
 }
 
 Complex ComplexNumbers::addCached(const Complex& a, const Complex& b) {
@@ -120,17 +130,53 @@ Complex ComplexNumbers::divCached(const Complex& a, const Complex& b) {
   return c;
 }
 
-Complex ComplexNumbers::lookup(const Complex& c) {
-  if (c == Complex::zero) {
-    return Complex::zero;
-  }
-  if (c == Complex::one) {
-    return Complex::one;
+Complex ComplexNumbers::addTemp(const dd::Complex& a, const dd::Complex& b) {
+  auto c = getTemporary();
+  add(c, a, b);
+  return c;
+}
+
+Complex ComplexNumbers::subTemp(const dd::Complex& a, const dd::Complex& b) {
+  auto c = getTemporary();
+  sub(c, a, b);
+  return c;
+}
+
+Complex ComplexNumbers::mulTemp(const dd::Complex& a, const dd::Complex& b) {
+  auto c = getTemporary();
+  mul(c, a, b);
+  return c;
+}
+
+Complex ComplexNumbers::divTemp(const dd::Complex& a, const dd::Complex& b) {
+  auto c = getTemporary();
+  div(c, a, b);
+  return c;
+}
+
+Complex ComplexNumbers::lookup(const Complex& c, const bool cached) {
+  if (isStaticComplex(c)) {
+    return c;
   }
 
-  const auto valr = CTEntry::val(c.r);
-  const auto vali = CTEntry::val(c.i);
+  const auto valr = RealNumber::val(c.r);
+  const auto vali = RealNumber::val(c.i);
+
+  if (cached) {
+    returnToCache(c);
+  }
+
   return lookup(valr, vali);
+}
+
+void ComplexNumbers::incRef(const Complex& c) const noexcept {
+  uniqueTable->incRef(c.r);
+  uniqueTable->incRef(c.i);
+}
+
+void ComplexNumbers::decRef(const Complex& c) const noexcept {
+  uniqueTable->decRef(c.r);
+  uniqueTable->decRef(c.i);
 }
 
 Complex ComplexNumbers::lookup(const std::complex<fp>& c) {
@@ -142,77 +188,43 @@ Complex ComplexNumbers::lookup(const ComplexValue& c) {
 }
 
 Complex ComplexNumbers::lookup(const fp r, const fp i) {
-  Complex ret{};
-
-  if (const auto signR = std::signbit(r); signR) {
-    const auto absr = std::abs(r);
-    // if absolute value is close enough to zero, just return the zero entry
-    // (avoiding -0.0)
-    if (absr < ComplexTable::tolerance()) {
-      ret.r = &ComplexTable::zero;
-    } else {
-      ret.r = CTEntry::getNegativePointer(complexTable.lookup(absr));
-    }
-  } else {
-    ret.r = complexTable.lookup(r);
-  }
-
-  if (const auto signI = std::signbit(i); signI) {
-    const auto absi = std::abs(i);
-    // if absolute value is close enough to zero, just return the zero entry
-    // (avoiding -0.0)
-    if (absi < ComplexTable::tolerance()) {
-      ret.i = &ComplexTable::zero;
-    } else {
-      ret.i = CTEntry::getNegativePointer(complexTable.lookup(absi));
-    }
-  } else {
-    ret.i = complexTable.lookup(i);
-  }
-
-  return ret;
-}
-
-void ComplexNumbers::incRef(const Complex& c) noexcept {
-  if (!isStaticComplex(c)) {
-    ComplexTable::incRef(c.r);
-    ComplexTable::incRef(c.i);
-  }
-}
-
-void ComplexNumbers::decRef(const Complex& c) noexcept {
-  if (!isStaticComplex(c)) {
-    ComplexTable::decRef(c.r);
-    ComplexTable::decRef(c.i);
-  }
-}
-
-std::size_t ComplexNumbers::garbageCollect(bool force) noexcept {
-  return complexTable.garbageCollect(force);
+  return {uniqueTable->lookup(r), uniqueTable->lookup(i)};
 }
 
 Complex ComplexNumbers::getTemporary() {
-  return complexCache.getTemporaryComplex();
+  const auto [rv, iv] = cacheManager->getTemporaryPair();
+  return {rv, iv};
 }
 
-Complex ComplexNumbers::getTemporary(const fp& r, const fp& i) {
-  auto c = complexCache.getTemporaryComplex();
-  c.r->value = r;
-  c.i->value = i;
-  return c;
+Complex ComplexNumbers::getTemporary(const fp r, const fp i) {
+  const auto [rv, iv] = cacheManager->getTemporaryPair();
+  rv->value = r;
+  iv->value = i;
+  return {rv, iv};
 }
 
 Complex ComplexNumbers::getTemporary(const ComplexValue& c) {
   return getTemporary(c.r, c.i);
 }
 
-Complex ComplexNumbers::getCached() { return complexCache.getCachedComplex(); }
+Complex ComplexNumbers::getTemporary(const Complex& c) {
+  return getTemporary(RealNumber::val(c.r), RealNumber::val(c.i));
+}
 
-Complex ComplexNumbers::getCached(const fp& r, const fp& i) {
-  auto c = complexCache.getCachedComplex();
-  c.r->value = r;
-  c.i->value = i;
-  return c;
+Complex ComplexNumbers::getCached() {
+  const auto [rv, iv] = cacheManager->getPair();
+  return {rv, iv};
+}
+
+Complex ComplexNumbers::getCached(const fp r, const fp i) {
+  const auto [rv, iv] = getCached();
+  rv->value = r;
+  iv->value = i;
+  return {rv, iv};
+}
+
+Complex ComplexNumbers::getCached(const Complex& c) {
+  return getCached(RealNumber::val(c.r), RealNumber::val(c.i));
 }
 
 Complex ComplexNumbers::getCached(const ComplexValue& c) {
@@ -223,12 +235,21 @@ Complex ComplexNumbers::getCached(const std::complex<fp>& c) {
   return getCached(c.real(), c.imag());
 }
 
-void ComplexNumbers::returnToCache(Complex& c) {
-  complexCache.returnToCache(c);
+void ComplexNumbers::returnToCache(const Complex& c) noexcept {
+  if (!constants::isStaticNumber(c.i)) {
+    cacheManager->returnEntry(c.i);
+  }
+  if (!constants::isStaticNumber(c.r)) {
+    cacheManager->returnEntry(c.r);
+  }
 }
 
-std::size_t ComplexNumbers::cacheCount() const {
-  return complexCache.getCount();
+std::size_t ComplexNumbers::cacheCount() const noexcept {
+  return cacheManager->getUsedCount();
+}
+
+std::size_t ComplexNumbers::realCount() const noexcept {
+  return uniqueTable->getStats().entryCount;
 }
 
 } // namespace dd

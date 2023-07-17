@@ -10,28 +10,28 @@ class Grover
     : public testing::TestWithParam<std::tuple<std::size_t, std::size_t>> {
 protected:
   void TearDown() override {
-    if (!sim.isTerminal()) {
+    if (sim.p != nullptr) {
       dd->decRef(sim);
     }
-    if (!func.isTerminal()) {
+    if (func.p != nullptr) {
       dd->decRef(func);
     }
     dd->garbageCollect(true);
 
     // number of complex table entries after clean-up should equal initial
     // number of entries
-    EXPECT_EQ(dd->cn.complexTable.getCount(), initialComplexCount);
+    EXPECT_EQ(dd->cn.realCount(), initialComplexCount);
 
     // number of available cache entries after clean-up should equal initial
     // number of entries
-    EXPECT_EQ(dd->cn.complexCache.getCount(), initialCacheCount);
+    EXPECT_EQ(dd->cn.cacheCount(), initialCacheCount);
   }
 
   void SetUp() override {
     std::tie(nqubits, seed) = GetParam();
     dd = std::make_unique<dd::Package<>>(nqubits + 1);
-    initialCacheCount = dd->cn.complexCache.getCount();
-    initialComplexCount = dd->cn.complexTable.getCount();
+    initialCacheCount = dd->cn.cacheCount();
+    initialComplexCount = dd->cn.realCount();
   }
 
   std::size_t nqubits = 0;

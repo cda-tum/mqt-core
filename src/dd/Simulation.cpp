@@ -268,7 +268,7 @@ void extractProbabilityVectorRecursive(
       pzero /= norm;
       pone /= norm;
 
-      if (CTEntry::approximatelyOne(pone)) {
+      if (RealNumber::approximatelyOne(pone)) {
         const qc::MatrixDD xGate = dd->makeGateDD(
             dd::Xmat, static_cast<dd::QubitCount>(state.p->v + 1),
             static_cast<dd::Qubit>(targets[0U]));
@@ -279,7 +279,7 @@ void extractProbabilityVectorRecursive(
         continue;
       }
 
-      if (!CTEntry::approximatelyOne(pzero)) {
+      if (!RealNumber::approximatelyOne(pzero)) {
         throw qc::QFRException("Reset on non basis state encountered. This is "
                                "not supported in this method.");
       }
@@ -332,11 +332,11 @@ void extractProbabilityVectorRecursive(
           }
         }
         const auto prob0 = commonFactor * pzero;
-        if (!CTEntry::approximatelyZero(prob0)) {
+        if (!RealNumber::approximatelyZero(prob0)) {
           probVector[idx0] = prob0;
         }
         const auto prob1 = commonFactor * pone;
-        if (!CTEntry::approximatelyZero(prob1)) {
+        if (!RealNumber::approximatelyZero(prob1)) {
           probVector[idx1] = prob1;
         }
 
@@ -345,8 +345,8 @@ void extractProbabilityVectorRecursive(
         return;
       }
 
-      const bool nonZeroP0 = !CTEntry::approximatelyZero(pzero);
-      const bool nonZeroP1 = !CTEntry::approximatelyZero(pone);
+      const bool nonZeroP0 = !RealNumber::approximatelyZero(pzero);
+      const bool nonZeroP1 = !RealNumber::approximatelyZero(pone);
 
       // in case both outcomes are non-zero the reference count of the state has
       // to be increased once more in order to avoid reference counting errors

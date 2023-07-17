@@ -77,86 +77,55 @@ protected:
   size_t stochRuns = 1000U;
 };
 
-TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPDApplySequential) {
-  auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
-
-  auto rootEdge =
-      dd->makeZeroDensityOperator(static_cast<dd::QubitCount>(qc.getNqubits()));
-  dd->incRef(rootEdge);
-
-  const auto noiseEffects = {dd::AmplitudeDamping, dd::PhaseFlip,
-                             dd::Depolarization, dd::Identity};
-
-  auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
-      dd, static_cast<dd::QubitCount>(qc.getNqubits()), 0.01, 0.02, 0.02, 0.04,
-      noiseEffects, false, true);
-
-  for (auto const& op : qc) {
-    auto operation = dd::getDD(op.get(), dd);
-    dd->applyOperationToDensity(rootEdge, operation, false);
-
-    deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
-  }
-
-  const auto m = dd->getProbVectorFromDensityMatrix(rootEdge, 0.001);
-
-  const double tolerance = 1e-10;
-  EXPECT_NEAR(m.find("0000")->second, 0.0969332192741, tolerance);
-  EXPECT_NEAR(m.find("0001")->second, 0.0907888041538, tolerance);
-  EXPECT_NEAR(m.find("0010")->second, 0.0141409660985, tolerance);
-  EXPECT_NEAR(m.find("0100")->second, 0.0238203475524, tolerance);
-  EXPECT_NEAR(m.find("0101")->second, 0.0235097990017, tolerance);
-  EXPECT_NEAR(m.find("0110")->second, 0.0244576087400, tolerance);
-  EXPECT_NEAR(m.find("0111")->second, 0.0116282811276, tolerance);
-  EXPECT_NEAR(m.find("1000")->second, 0.1731941264570, tolerance);
-  EXPECT_NEAR(m.find("1001")->second, 0.4145855071998, tolerance);
-  EXPECT_NEAR(m.find("1010")->second, 0.0138062113213, tolerance);
-  EXPECT_NEAR(m.find("1011")->second, 0.0184033482066, tolerance);
-  EXPECT_NEAR(m.find("1100")->second, 0.0242454336917, tolerance);
-  EXPECT_NEAR(m.find("1101")->second, 0.0262779844799, tolerance);
-  EXPECT_NEAR(m.find("1110")->second, 0.0239296920989, tolerance);
-  EXPECT_NEAR(m.find("1111")->second, 0.0110373166627, tolerance);
-}
-
 TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
-  auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
+  const std::map<std::string, fp> reference = {
+      {"0000", 0.0969332192741}, {"0001", 0.0907888041538},
+      {"0010", 0.0141409660985}, {"0011", 0.0092413539333},
+      {"0100", 0.0238203475524}, {"0101", 0.0235097990017},
+      {"0110", 0.0244576087400}, {"0111", 0.0116282811276},
+      {"1000", 0.1731941264570}, {"1001", 0.4145855071998},
+      {"1010", 0.0138062113213}, {"1011", 0.0184033482066},
+      {"1100", 0.0242454336917}, {"1101", 0.0262779844799},
+      {"1110", 0.0239296920989}, {"1111", 0.0110373166627}};
 
-  auto rootEdge =
-      dd->makeZeroDensityOperator(static_cast<dd::QubitCount>(qc.getNqubits()));
-  dd->incRef(rootEdge);
+  std::array<std::array<std::map<std::string, fp>, 2>, 2> results{};
+  for (const auto useDensityMatrixType : {false, true}) {
+    for (const auto applyNoiseSequentially : {false, true}) {
+      auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
-  const auto noiseEffects = {dd::AmplitudeDamping, dd::Identity, dd::PhaseFlip,
-                             dd::Depolarization};
+      auto rootEdge = dd->makeZeroDensityOperator(
+          static_cast<dd::QubitCount>(qc.getNqubits()));
+      dd->incRef(rootEdge);
 
-  auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
-      dd, static_cast<dd::QubitCount>(qc.getNqubits()), 0.01, 0.02, 0.02, 0.04,
-      noiseEffects, true, false);
+      const auto noiseEffects = {dd::AmplitudeDamping, dd::PhaseFlip,
+                                 dd::Depolarization, dd::Identity};
 
-  for (auto const& op : qc) {
-    auto operation = dd::getDD(op.get(), dd);
-    dd->applyOperationToDensity(rootEdge, operation, true);
+      auto deterministicNoiseFunctionality =
+          dd::DeterministicNoiseFunctionality(
+              dd, static_cast<dd::QubitCount>(qc.getNqubits()), 0.01, 0.02,
+              0.02, 0.04, noiseEffects, useDensityMatrixType,
+              applyNoiseSequentially);
 
-    deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
+      for (auto const& op : qc) {
+        dd->applyOperationToDensity(rootEdge, dd::getDD(op.get(), dd),
+                                    useDensityMatrixType);
+        deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
+      }
+
+      const auto m = dd->getProbVectorFromDensityMatrix(rootEdge, 0.001);
+      results[static_cast<std::size_t>(useDensityMatrixType)]
+             [static_cast<std::size_t>(applyNoiseSequentially)] = m;
+    }
   }
-
-  const auto m = dd->getProbVectorFromDensityMatrix(rootEdge, 0.001);
-
-  const double tolerance = 1e-10;
-  EXPECT_NEAR(m.find("0000")->second, 0.0969332192741, tolerance);
-  EXPECT_NEAR(m.find("0001")->second, 0.0907888041538, tolerance);
-  EXPECT_NEAR(m.find("0010")->second, 0.0141409660985, tolerance);
-  EXPECT_NEAR(m.find("0100")->second, 0.0238203475524, tolerance);
-  EXPECT_NEAR(m.find("0101")->second, 0.0235097990017, tolerance);
-  EXPECT_NEAR(m.find("0110")->second, 0.0244576087400, tolerance);
-  EXPECT_NEAR(m.find("0111")->second, 0.0116282811276, tolerance);
-  EXPECT_NEAR(m.find("1000")->second, 0.1731941264570, tolerance);
-  EXPECT_NEAR(m.find("1001")->second, 0.4145855071998, tolerance);
-  EXPECT_NEAR(m.find("1010")->second, 0.0138062113213, tolerance);
-  EXPECT_NEAR(m.find("1011")->second, 0.0184033482066, tolerance);
-  EXPECT_NEAR(m.find("1100")->second, 0.0242454336917, tolerance);
-  EXPECT_NEAR(m.find("1101")->second, 0.0262779844799, tolerance);
-  EXPECT_NEAR(m.find("1110")->second, 0.0239296920989, tolerance);
-  EXPECT_NEAR(m.find("1111")->second, 0.0110373166627, tolerance);
+  // Expect that all results are the same
+  static constexpr fp TOLERANCE = 1e-10;
+  for (auto& result : results) {
+    for (auto& j : result) {
+      for (const auto& [key, value] : j) {
+        EXPECT_NEAR(value, reference.at(key), TOLERANCE);
+      }
+    }
+  }
 }
 
 TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
