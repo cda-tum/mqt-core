@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from qiskit import QuantumCircuit
 
 
-def quantum_computation_from_qiskit_circuit(qiskit_circuit: QuantumCircuit) -> QuantumComputation:
+def qiskit_to_mqt(qiskit_circuit: QuantumCircuit) -> QuantumComputation:
     """Convert a Qiskit circuit to a QuantumComputation object.
 
     Args:

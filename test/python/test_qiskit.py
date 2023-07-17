@@ -7,14 +7,14 @@ from qiskit.circuit import QuantumRegister, Qubit
 from qiskit.circuit.library import MCXRecursive, MCXVChain
 from qiskit.transpiler import Layout, TranspileLayout
 
-from mqt.core.qiskit_utils import quantum_computation_from_qiskit_circuit
+from mqt.core.qiskit_utils import qiskit_to_mqt
 
 
 def test_empty_circuit() -> None:
     """Test import."""
     q = QuantumCircuit()
 
-    mqt_qc = quantum_computation_from_qiskit_circuit(q)
+    mqt_qc = qiskit_to_mqt(q)
     assert mqt_qc.n_qubits == 0
     assert mqt_qc.n_ops == 0
 
@@ -24,7 +24,7 @@ def test_single_gate() -> None:
     q = QuantumCircuit(1)
     q.h(0)
 
-    mqt_qc = quantum_computation_from_qiskit_circuit(q)
+    mqt_qc = qiskit_to_mqt(q)
     assert mqt_qc.n_qubits == 1
     assert mqt_qc.n_ops == 1
     assert mqt_qc[0].name.strip() == "h"
@@ -35,7 +35,7 @@ def test_two_qubit_gate() -> None:
     """Test import of two qubit gate."""
     q = QuantumCircuit(2)
     q.cx(0, 1)
-    mqt_qc = quantum_computation_from_qiskit_circuit(q)
+    mqt_qc = qiskit_to_mqt(q)
     assert mqt_qc.n_qubits == 2
     assert mqt_qc.n_ops == 1
     assert mqt_qc[0].name.strip() == "x"
@@ -47,7 +47,7 @@ def test_mcx() -> None:
     """Test import of mcx gate."""
     q = QuantumCircuit(3)
     q.mcx([0, 1], 2)
-    mqt_qc = quantum_computation_from_qiskit_circuit(q)
+    mqt_qc = qiskit_to_mqt(q)
     assert mqt_qc.n_qubits == 3
     assert mqt_qc.n_ops == 1
     assert mqt_qc[0].name.strip() == "x"
@@ -59,7 +59,7 @@ def test_mcx_recursive() -> None:
     """Test import of large mcx gate."""
     q = QuantumCircuit(9)
     q.append(MCXRecursive(num_ctrl_qubits=7), range(9))
-    mqt_qc = quantum_computation_from_qiskit_circuit(q)
+    mqt_qc = qiskit_to_mqt(q)
     assert mqt_qc.n_qubits == 9
     assert mqt_qc.n_ops == 1
     assert mqt_qc[0].name.strip() == "x"
@@ -71,7 +71,7 @@ def test_mcx_vchain() -> None:
     """Test import of mcx gate with v-chain."""
     q = QuantumCircuit(9)
     q.append(MCXVChain(num_ctrl_qubits=5), range(9))
-    mqt_qc = quantum_computation_from_qiskit_circuit(q)
+    mqt_qc = qiskit_to_mqt(q)
     assert mqt_qc.n_qubits == 9
     assert mqt_qc.n_ops == 1
     assert mqt_qc[0].name.strip() == "x"
@@ -88,7 +88,7 @@ def test_custom_gate() -> None:
     custom_instr = custom_instr.to_instruction()
     qc = QuantumCircuit(3)
     qc.append(custom_instr, range(3))
-    mqt_qc = quantum_computation_from_qiskit_circuit(qc)
+    mqt_qc = qiskit_to_mqt(qc)
     assert mqt_qc.n_qubits == 3
     assert mqt_qc.n_ops == 3
     assert mqt_qc[0].name.strip() == "h"
@@ -111,7 +111,7 @@ def test_initial_layout() -> None:
     qc.h(0)
     qc.s(1)
     qc.x(2)
-    mqt_qc = quantum_computation_from_qiskit_circuit(qc)
+    mqt_qc = qiskit_to_mqt(qc)
     assert mqt_qc.n_qubits == 3
     assert mqt_qc.n_ops == 3
     assert mqt_qc.initial_layout.apply([0, 1, 2]) == [2, 1, 0]
