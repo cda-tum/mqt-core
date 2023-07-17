@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ._core import CompoundOperation, OpType, Permutation, QuantumComputation, StandardOperation
+from ._core import CompoundOperation, Control, OpType, Permutation, QuantumComputation, StandardOperation
 from ._version import version as __version__
 
 __all__ = [
@@ -12,4 +12,5 @@ __all__ = [
     "CompoundOperation",
     "Permutation",
     "QuantumComputation",
+    "Control",
 ]

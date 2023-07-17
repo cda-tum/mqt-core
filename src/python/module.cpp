@@ -35,6 +35,7 @@ NB_MODULE(_core, m) {
   nb::class_<qc::QuantumComputation>(
       m, "QuantumComputation",
       "Representation of quantum circuits within MQT Core")
+      .def(nb::init<>(), "Constructs an empty QuantumComputation.")
       .def(nb::init<std::size_t>(), "nq"_a,
            "Constructs an empty QuantumComputation with the given number of "
            "qubits.")
@@ -297,9 +298,8 @@ NB_MODULE(_core, m) {
       .def("add_classical_bit_register",
            &qc::QuantumComputation::addClassicalRegister)
       .def("append_operation",
-           [](QuantumComputation& qc,
-              std::unique_ptr<qc::StandardOperation> op) {
-             qc.emplace_back(op);
+           [](QuantumComputation& qc, const qc::Operation& op) {
+             qc.emplace_back(op.clone()); // not an ideal solution but it works
            }) // Transfers ownership from Python to C++
       .def("instantiate", &qc::QuantumComputation::instantiate)
       .def("add_variable", &qc::QuantumComputation::addVariable)

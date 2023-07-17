@@ -31,7 +31,7 @@ def quantum_computation_from_qiskit_circuit(qiskit_circuit: QuantumCircuit) -> Q
     Returns:
         QuantumComputation: The converted circuit.
     """
-    mqt_computation = QuantumComputation(qiskit_circuit.num_qubits)
+    mqt_computation = QuantumComputation()
 
     if qiskit_circuit.name is not None:
         mqt_computation.name = qiskit_circuit.name
@@ -78,7 +78,7 @@ def quantum_computation_from_qiskit_circuit(qiskit_circuit: QuantumCircuit) -> Q
     # import initial layout in case it is available
     if qiskit_circuit.layout is not None:
         _import_initial_layout(mqt_computation, qiskit_circuit)
-    mqt_computation.initialize_io_mappping()
+    mqt_computation.initialize_io_mapping()
     return mqt_computation
 
 
@@ -263,7 +263,10 @@ def _add_two_target_operation(
 
 
 def _import_initial_layout(mqt_computation: QuantumComputation, qiskit_circuit: QuantumCircuit) -> None:
-    layout = qiskit_circuit.initial_layout
+    layout = qiskit_circuit._layout  # noqa: SLF001
+    if hasattr(layout, "initial_layout"):
+        layout = layout.initial_layout
+
     registers = layout.get_registers()
     logical_qubit_index = 0
     logical_qubit_indices = {}
@@ -287,7 +290,7 @@ def _import_initial_layout(mqt_computation: QuantumComputation, qiskit_circuit: 
             logical_qubit_index += 1
 
     physical_qubits = layout.get_physical_bits()
-    for physical_qubit, logical_qubit in physical_qubits:
+    for physical_qubit, logical_qubit in physical_qubits.items():
         mqt_computation.initial_layout[physical_qubit] = logical_qubit_indices[logical_qubit]
 
 
@@ -312,8 +315,8 @@ def _import_definition(
     for inst in data:
         instruction = inst[0]
 
-        mapped_qargs = [qubit_map[qarg_map[qarg]] for qarg in inst[1]]
-        mapped_cargs = [clbit_map[carg_map[carg]] for carg in inst[2]]
+        mapped_qargs = [qarg_map[qarg] for qarg in inst[1]]
+        mapped_cargs = [carg_map[carg] for carg in inst[2]]
         instruction_params = instruction.params
         _emplace_operation(
             mqt_computation, instruction, mapped_qargs, mapped_cargs, instruction_params, qubit_map, clbit_map
