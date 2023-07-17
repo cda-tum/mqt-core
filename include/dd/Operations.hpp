@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Definitions.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
 #include "operations/ClassicControlledOperation.hpp"
@@ -15,7 +14,7 @@ namespace dd {
 template <class Config>
 qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
                                     std::unique_ptr<dd::Package<Config>>& dd,
-                                    const dd::Controls& controls,
+                                    const qc::Controls& controls,
                                     dd::Qubit target, bool inverse) {
   GateMatrix gm;
 
@@ -32,15 +31,6 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
     gm = dd::Hmat;
     break;
   case qc::X: {
-    qc::MatrixDD e{};
-    if (controls.size() > 1U) { // Toffoli
-      e = dd->toffoliTable.lookup(nqubits, controls, target);
-      if (e.p == nullptr) {
-        e = dd->makeGateDD(dd::Xmat, nqubits, controls, target, startQubit);
-        dd->toffoliTable.insert(nqubits, controls, target, e);
-      }
-      return e;
-    }
     gm = dd::Xmat;
     break;
   }
@@ -106,7 +96,7 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
 template <class Config>
 qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
                                     std::unique_ptr<dd::Package<Config>>& dd,
-                                    const dd::Controls& controls,
+                                    const qc::Controls& controls,
                                     dd::Qubit target0, dd::Qubit target1,
                                     bool inverse) {
   const auto type = op->getType();
@@ -306,27 +296,16 @@ qc::MatrixDD getDD(const qc::Operation* op,
       controls = permutation.apply(controls);
     }
 
-    // convert controls to DD controls
-    dd::Controls ddControls{};
-    for (const auto& c : controls) {
-      const auto& qubit = static_cast<dd::Qubit>(c.qubit);
-      if (c.type == qc::Control::Type::Pos) {
-        ddControls.emplace(dd::Control{qubit, dd::Control::Type::pos});
-      } else {
-        ddControls.emplace(dd::Control{qubit, dd::Control::Type::neg});
-      }
-    }
-
     if (qc::isTwoQubitGate(type)) {
       assert(targets.size() == 2);
       const auto target0 = static_cast<dd::Qubit>(targets[0U]);
       const auto target1 = static_cast<dd::Qubit>(targets[1U]);
-      return getStandardOperationDD(standardOp, dd, ddControls, target0,
-                                    target1, inverse);
+      return getStandardOperationDD(standardOp, dd, controls, target0, target1,
+                                    inverse);
     }
     assert(targets.size() == 1);
     const auto target0 = static_cast<dd::Qubit>(targets[0U]);
-    return getStandardOperationDD(standardOp, dd, ddControls, target0, inverse);
+    return getStandardOperationDD(standardOp, dd, controls, target0, inverse);
   }
 
   if (const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
@@ -415,7 +394,7 @@ void changePermutation(DDType& on, qc::Permutation& from,
     // swap i and j
     auto saved = on;
     const auto swapDD = dd->makeSWAPDD(
-        static_cast<dd::QubitCount>(on.p->v + 1), dd::Controls{},
+        static_cast<dd::QubitCount>(on.p->v + 1), qc::Controls{},
         static_cast<dd::Qubit>(from.at(i)), static_cast<dd::Qubit>(from.at(j)));
     if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
       on = dd->multiply(swapDD, on);

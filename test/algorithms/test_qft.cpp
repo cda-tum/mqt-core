@@ -9,27 +9,27 @@
 class QFT : public testing::TestWithParam<dd::QubitCount> {
 protected:
   void TearDown() override {
-    if (!sim.isTerminal()) {
+    if (sim.p != nullptr) {
       dd->decRef(sim);
     }
-    if (!func.isTerminal()) {
+    if (func.p != nullptr) {
       dd->decRef(func);
     }
     dd->garbageCollect(true);
 
     // number of complex table entries after clean-up should equal initial
     // number of entries
-    EXPECT_EQ(dd->cn.complexTable.getCount(), initialComplexCount);
+    EXPECT_EQ(dd->cn.realCount(), initialComplexCount);
     // number of available cache entries after clean-up should equal initial
     // number of entries
-    EXPECT_EQ(dd->cn.complexCache.getCount(), initialCacheCount);
+    EXPECT_EQ(dd->cn.cacheCount(), initialCacheCount);
   }
 
   void SetUp() override {
     nqubits = GetParam();
     dd = std::make_unique<dd::Package<>>(nqubits);
-    initialCacheCount = dd->cn.complexCache.getCount();
-    initialComplexCount = dd->cn.complexTable.getCount();
+    initialCacheCount = dd->cn.cacheCount();
+    initialComplexCount = dd->cn.realCount();
   }
 
   dd::QubitCount nqubits = 0;
@@ -86,13 +86,13 @@ TEST_P(QFT, Functionality) {
   // the final DD should store all 2^n different amplitudes
   // since only positive real values are stored in the complex table
   // this number has to be divided by 4
-  ASSERT_EQ(dd->cn.complexTable.getCount(),
+  ASSERT_EQ(dd->cn.realCount(),
             static_cast<unsigned int>(std::ceil(std::pow(2, nqubits) / 4)));
 
   // top edge weight should equal sqrt(0.5)^n
-  EXPECT_NEAR(dd::CTEntry::val(func.w.r),
+  EXPECT_NEAR(dd::RealNumber::val(func.w.r),
               static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
-              dd->cn.complexTable.tolerance());
+              dd::RealNumber::eps);
 
   // first row and first column should consist only of (1/sqrt(2))**nqubits
   for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
@@ -100,13 +100,13 @@ TEST_P(QFT, Functionality) {
     auto c = dd->getValueByPath(func, 0, i);
     EXPECT_NEAR(c.r,
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
-                dd->cn.complexTable.tolerance());
-    EXPECT_NEAR(c.i, 0, dd->cn.complexTable.tolerance());
+                dd::RealNumber::eps);
+    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
     c = dd->getValueByPath(func, i, 0);
     EXPECT_NEAR(c.r,
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
-                dd->cn.complexTable.tolerance());
-    EXPECT_NEAR(c.i, 0, dd->cn.complexTable.tolerance());
+                dd::RealNumber::eps);
+    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
   }
 }
 
@@ -127,13 +127,13 @@ TEST_P(QFT, FunctionalityRecursive) {
   // the final DD should store all 2^n different amplitudes
   // since only positive real values are stored in the complex table
   // this number has to be divided by 4
-  ASSERT_EQ(dd->cn.complexTable.getCount(),
+  ASSERT_EQ(dd->cn.realCount(),
             static_cast<unsigned int>(std::ceil(std::pow(2, nqubits) / 4)));
 
   // top edge weight should equal sqrt(0.5)^n
-  EXPECT_NEAR(dd::CTEntry::val(func.w.r),
+  EXPECT_NEAR(dd::RealNumber::val(func.w.r),
               static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
-              dd->cn.complexTable.tolerance());
+              dd::RealNumber::eps);
 
   // first row and first column should consist only of (1/sqrt(2))**nqubits
   for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
@@ -141,13 +141,13 @@ TEST_P(QFT, FunctionalityRecursive) {
     auto c = dd->getValueByPath(func, 0, i);
     EXPECT_NEAR(c.r,
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
-                dd->cn.complexTable.tolerance());
-    EXPECT_NEAR(c.i, 0, dd->cn.complexTable.tolerance());
+                dd::RealNumber::eps);
+    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
     c = dd->getValueByPath(func, i, 0);
     EXPECT_NEAR(c.r,
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
-                dd->cn.complexTable.tolerance());
-    EXPECT_NEAR(c.i, 0, dd->cn.complexTable.tolerance());
+                dd::RealNumber::eps);
+    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
   }
 }
 
@@ -169,8 +169,8 @@ TEST_P(QFT, Simulation) {
   dd->garbageCollect(true);
 
   // top edge weight should equal 1
-  EXPECT_NEAR(dd::CTEntry::val(sim.w.r), 1, dd->cn.complexTable.tolerance());
-  EXPECT_NEAR(dd::CTEntry::val(sim.w.i), 0, dd->cn.complexTable.tolerance());
+  EXPECT_NEAR(dd::RealNumber::val(sim.w.r), 1, dd::RealNumber::eps);
+  EXPECT_NEAR(dd::RealNumber::val(sim.w.i), 0, dd::RealNumber::eps);
 
   // first column should consist only of sqrt(0.5)^n's
   for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
@@ -178,8 +178,8 @@ TEST_P(QFT, Simulation) {
     auto c = dd->getValueByPath(sim, i);
     EXPECT_NEAR(c.r,
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
-                dd->cn.complexTable.tolerance());
-    EXPECT_NEAR(c.i, 0, dd->cn.complexTable.tolerance());
+                dd::RealNumber::eps);
+    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
   }
 }
 
@@ -212,7 +212,7 @@ TEST_P(QFT, DynamicSimulation) {
                dd, shots);
 
   for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << std::endl;
+    std::cout << state << ": " << count << "\n";
   }
   const std::size_t unique = measurements.size();
 
@@ -223,7 +223,7 @@ TEST_P(QFT, DynamicSimulation) {
   }
   const auto ratio = static_cast<double>(unique) / static_cast<double>(shots);
   std::cout << "Unique entries " << unique << " out of " << shots
-            << " for a ratio of: " << ratio << std::endl;
+            << " for a ratio of: " << ratio << "\n";
 
   // the number of unique entries should be close to the number of shots
   EXPECT_GE(ratio, 0.7);
