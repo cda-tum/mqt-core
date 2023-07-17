@@ -43,7 +43,7 @@ def qiskit_to_mqt(qiskit_circuit: QuantumCircuit) -> QuantumComputation:
         size = reg.size
         name = reg.name
         if isinstance(reg, AncillaRegister):
-            mqt_computation.add_qubit_register(size, name)
+            mqt_computation.add_ancillary_register(size, name)
             for i in range(size):
                 qubit_map[AncillaQubit(reg, i)] = qubit_index
                 qubit_index += 1
@@ -59,7 +59,7 @@ def qiskit_to_mqt(qiskit_circuit: QuantumCircuit) -> QuantumComputation:
     for reg in qiskit_cregs:
         size = reg.size
         name = reg.name
-        mqt_computation.add_classical_bit_register(name, size)
+        mqt_computation.add_classical_bit_register(size, name)
         for i in range(size):
             clbit_map[Clbit(reg, i)] = clbit_index
             clbit_index += 1
@@ -130,7 +130,7 @@ def _emplace_operation(
     elif name in ["p", "u1", "cp", "cu1", "mcphase"]:
         _add_operation(mqt_computation, OpType.phase, qargs, params, qubit_map)
     elif name in ["sx", "csx"]:
-        _add_two_target_operation(mqt_computation, OpType.sx, qargs, params, qubit_map)
+        _add_operation(mqt_computation, OpType.sx, qargs, params, qubit_map)
     elif name in ["swap", "cswap"]:
         _add_two_target_operation(mqt_computation, OpType.swap, qargs, params, qubit_map)
     elif name == "iswap":

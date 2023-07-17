@@ -20,6 +20,7 @@
 #include <nanobind/stl/set.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/unique_ptr.h>
+#include <nanobind/stl/variant.h>
 #include <nanobind/stl/vector.h>
 #include <ostream>
 #include <python/nanobind.hpp>
@@ -297,6 +298,8 @@ NB_MODULE(_core, m) {
       .def("add_qubit_register", &qc::QuantumComputation::addQubitRegister)
       .def("add_classical_bit_register",
            &qc::QuantumComputation::addClassicalRegister)
+      .def("add_ancillary_register",
+           &qc::QuantumComputation::addAncillaryRegister)
       .def("append_operation",
            [](QuantumComputation& qc, const qc::Operation& op) {
              qc.emplace_back(op.clone()); // not an ideal solution but it works
