@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import re
 import sys
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
-from qiskit import Clbit, Instruction, ParameterExpression, QuantumCircuit, Qubit
+from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
 
 from mqt.core._core import (
     Control,
@@ -17,6 +17,9 @@ from mqt.core._core import (
     Term,
     Variable,
 )
+
+if TYPE_CHECKING:
+    from qiskit import QuantumCircuit
 
 
 def quantum_computation_from_qiskit_circuit(qiskit_circuit: QuantumCircuit) -> QuantumComputation:
@@ -33,17 +36,16 @@ def quantum_computation_from_qiskit_circuit(qiskit_circuit: QuantumCircuit) -> Q
     if qiskit_circuit.name is not None:
         mqt_computation.name = qiskit_circuit.name
 
-    ancilla_register = qiskit_circuit.ancilla_register
     qubit_index = 0
     qubit_map = {}
     qiskit_qregs = qiskit_circuit.qregs
     for reg in qiskit_qregs:
         size = reg.size
         name = reg.name
-        if isinstance(reg, ancilla_register):
+        if isinstance(reg, AncillaRegister):
             mqt_computation.add_qubit_register(size, name)
             for i in range(size):
-                qubit_map[Qubit(reg, i)] = qubit_index
+                qubit_map[AncillaQubit(reg, i)] = qubit_index
                 qubit_index += 1
         else:
             mqt_computation.add_qubit_register(size, name)
