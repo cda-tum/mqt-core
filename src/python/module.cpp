@@ -426,13 +426,7 @@ NB_MODULE(_core, m) {
       .def("equals",
            nb::overload_cast<const qc::Operation&, const qc::Permutation&,
                              const qc::Permutation&>(
-               &qc::StandardOperation::equals, nb::const_))
-      // .def("__str__", [](const qc::StandardOperation& qc) {
-      //   std::ostringstream ss;
-      //   qc.dumpOpenQASM(ss, {{"q", "0"}, {"q", "1"}, {"q", "2"}}, {});
-      //   ss.str();
-      // })
-      ;
+               &qc::StandardOperation::equals, nb::const_));
 
   nb::class_<qc::CompoundOperation, qc::Operation>(m, "CompoundOperation")
       .def(nb::init<std::size_t,
@@ -667,12 +661,11 @@ NB_MODULE(_core, m) {
           "__eq__",
           [](const sym::Expression<double, double>& lhs,
              const sym::Expression<double, double>& rhs) { return lhs == rhs; })
-      // .def("__str__", [](const sym::Expression<double, double>& expr) {
-      //   std::stringstream ss;
-      //   ss << expr;
-      //   return ss.str();
-      // })
-      ;
+      .def("__str__", [](const sym::Expression<double, double>& expr) {
+        std::stringstream ss;
+        ss << expr;
+        return ss.str();
+      });
 
   nb::enum_<qc::OpType>(m, "OpType")
       .value("none", qc::OpType::None)
