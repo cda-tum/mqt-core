@@ -297,13 +297,15 @@ def _import_layouts(mqt_computation: QuantumComputation, qiskit_circuit: Quantum
     initial_logical_qubit_indices = _get_logical_qubit_indices(mqt_computation, initial_layout)
     final_logical_qubit_indices = _get_logical_qubit_indices(mqt_computation, final_layout)
 
-    physical_qubits = initial_layout.get_physical_bits()
-    for physical_qubit, logical_qubit in physical_qubits.items():
-        mqt_computation.initial_layout[physical_qubit] = initial_logical_qubit_indices[logical_qubit]
+    initial_physical_qubits = initial_layout.get_physical_bits()
+    for physical_qubit, logical_qubit in initial_physical_qubits.items():
+        if logical_qubit in initial_logical_qubit_indices:
+            mqt_computation.initial_layout[physical_qubit] = initial_logical_qubit_indices[logical_qubit]
 
-    physical_qubit = final_layout.get_physical_bits()
-    for physical_qubit, logical_qubit in physical_qubits.items():
-        mqt_computation.output_permutation[physical_qubit] = final_logical_qubit_indices[logical_qubit]
+    final_physical_qubits = final_layout.get_physical_bits()
+    for physical_qubit, logical_qubit in final_physical_qubits.items():
+        if logical_qubit in final_logical_qubit_indices:
+            mqt_computation.output_permutation[physical_qubit] = final_logical_qubit_indices[logical_qubit]
 
 
 def _import_definition(

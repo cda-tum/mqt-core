@@ -120,7 +120,7 @@ def test_layout() -> None:
     assert mqt_qc.n_qubits == 3
     assert mqt_qc.n_ops == 3
     assert mqt_qc.initial_layout.apply([0, 1, 2]) == [2, 1, 0]
-    assert mqt_qc.output_permutation.apply([0, 1, 2]) == [2, 1, 0]
+    assert mqt_qc.output_permutation.apply([0, 2, 1]) == [2, 1, 0]
 
 
 def test_ancilla() -> None:
