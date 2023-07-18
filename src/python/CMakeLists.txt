@@ -56,7 +56,7 @@ nanobind_add_module(
   module.cpp)
 
 target_link_libraries(_core PRIVATE MQT::Core)
-
+target_link_options(_core PRIVATE -static-libstdc++ -static-libgcc)
 if(TARGET nanobind-static)
   set(NANOBIND_LIB nanobind-static)
 elseif(TARGET nanobind-static-abi3)
