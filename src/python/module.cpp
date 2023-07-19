@@ -318,19 +318,54 @@ NB_MODULE(_core, m) {
       .def("get_variables", &qc::QuantumComputation::getVariables)
       .def("initialize_io_mapping",
            &qc::QuantumComputation::initializeIOMapping)
-
-      // .def("append_operation", nb::overload_cast<const
-      // qc::NonUnitaryOperation&>(&qc::QuantumComputation::push_back<qc::NonUnitaryOperation>))
-      // .def("append_operation", nb::overload_cast<const
-      // qc::CompoundOperation&>(&qc::QuantumComputation::push_back<qc::CompoundOperation>))
-      // .def("append_operation", nb::overload_cast<const
-      // qc::SymbolicOperation&>(&qc::QuantumComputation::push_back<qc::SymbolicOperation>))
-      // .def("__str__", [](const qc::QuantumComputation& qc){std::stringstream
-      // ss;qc.print(ss);return ss.str();})
-      // .def("__iter__", [](const qc::QuantumComputation& qc) {
-      //   return nb::make_iterator(nb::type<qc::QuantumComputation>(), "ops",
-      //   qc.begin(), qc.end());
-      // }, nb::keep_alive<0, 1>())
+      .def("from_file", nb::overload_cast<const std::string&>(
+                            &qc::QuantumComputation::import))
+      .def("from_file",
+           [](qc::QuantumComputation& qc, const std::string& filename,
+              const std::string& format) {
+             if (format == "qasm") {
+               qc.import(filename, qc::Format::OpenQASM);
+             } else if (format == "real") {
+               qc.import(filename, qc::Format::Real);
+             } else if (format == "grcs") {
+               qc.import(filename, qc::Format::GRCS);
+             } else if (format == "tfc") {
+               qc.import(filename, qc::Format::TFC);
+             } else if (format == "tensor") {
+               qc.import(filename, qc::Format::Tensor);
+             } else if (format == "qc") {
+               qc.import(filename, qc::Format::QC);
+             } else {
+               throw qc::QFRException("Unknown format: " + format);
+             }
+           })
+      .def("dump",
+           nb::overload_cast<const std::string&>(&qc::QuantumComputation::dump))
+      .def("dump",
+           [](qc::QuantumComputation& qc, const std::string& filename,
+              const std::string& format) {
+             if (format == "qasm") {
+               qc.dump(filename, qc::Format::OpenQASM);
+             } else if (format == "real") {
+               qc.dump(filename, qc::Format::Real);
+             } else if (format == "grcs") {
+               qc.dump(filename, qc::Format::GRCS);
+             } else if (format == "tfc") {
+               qc.dump(filename, qc::Format::TFC);
+             } else if (format == "tensor") {
+               qc.dump(filename, qc::Format::Tensor);
+             } else if (format == "qc") {
+               qc.dump(filename, qc::Format::QC);
+             } else {
+               throw qc::QFRException("Unknown format: " + format);
+             }
+           })
+      .def("to_open_qasm",
+           [](qc::QuantumComputation& qc) {
+             std::ostringstream oss;
+             qc.dumpOpenQASM(oss);
+             return oss.str();
+           })
       .def("__len__", &qc::QuantumComputation::getNindividualOps)
       .def(
           "__getitem__",
@@ -339,10 +374,7 @@ NB_MODULE(_core, m) {
                  idx) { return qc.at(idx).get(); }, // Beware: this gives write
                                                     // access to underlying
                                                     // Operation
-          nb::rv_policy::reference)
-      // .def_prop_ro("ops", [](const qc::QuantumComputation& qc, std::size_t
-      // idx){return *qc.at(idx);})
-      ;
+          nb::rv_policy::reference);
   nb::class_<qc::Control>(m, "Control")
       .def(nb::init<qc::Qubit>())
       .def(nb::init<qc::Qubit, qc::Control::Type>())
@@ -370,9 +402,6 @@ NB_MODULE(_core, m) {
       .def_prop_ro("n_controls", &qc::Operation::getNcontrols)
       .def_prop_rw("n_qubits", &qc::Operation::getNqubits,
                    &qc::Operation::setNqubits)
-      // .def_prop_ro("parameter", nb::overload_cast<const
-      // std::vector<qc::fp>&>(&qc::Operation::getParameter, nb::const_),
-      // nb::rv_policy::reference_internal)
       .def_prop_rw("name", &qc::Operation::getName, &qc::Operation::setName)
       .def("get_starting_qubit", &qc::Operation::getStartingQubit)
       .def("get_used_qubits", &qc::Operation::getUsedQubits)
@@ -426,7 +455,14 @@ NB_MODULE(_core, m) {
       .def("equals",
            nb::overload_cast<const qc::Operation&, const qc::Permutation&,
                              const qc::Permutation&>(
-               &qc::StandardOperation::equals, nb::const_));
+               &qc::StandardOperation::equals, nb::const_))
+      .def("to_open_qasm",
+           [](const qc::StandardOperation& op, const qc::RegisterNames& qreg,
+              const qc::RegisterNames& creg) {
+             std::ostringstream oss;
+             op.dumpOpenQASM(oss, qreg, creg);
+             return oss.str();
+           });
 
   nb::class_<qc::CompoundOperation, qc::Operation>(m, "CompoundOperation")
       .def(nb::init<std::size_t,
@@ -446,12 +482,16 @@ NB_MODULE(_core, m) {
       .def("__len__", &qc::CompoundOperation::size)
       .def("size", &qc::CompoundOperation::size)
       .def("empty", &qc::CompoundOperation::empty)
-      // .def("add_op",
-      // nb::overload_cast<std::vector<std::unique_ptr<qc::Operation>>::const_iterator,
-      // Args>&qc::CompoundOperation::emplace_back)
       .def("__getitem__", [](const qc::CompoundOperation& op,
                              std::size_t i) { return op.at(i).get(); })
-      .def("get_used_qubits", &qc::CompoundOperation::getUsedQubits);
+      .def("get_used_qubits", &qc::CompoundOperation::getUsedQubits)
+      .def("to_open_qasm",
+           [](const qc::CompoundOperation& op, const qc::RegisterNames& qreg,
+              const qc::RegisterNames& creg) {
+             std::ostringstream oss;
+             op.dumpOpenQASM(oss, qreg, creg);
+             return oss.str();
+           });
 
   nb::class_<qc::NonUnitaryOperation, qc::Operation>(m, "NonUnitaryOperation")
       .def(
@@ -481,7 +521,14 @@ NB_MODULE(_core, m) {
                &qc::NonUnitaryOperation::equals, nb::const_))
       .def("equals", nb::overload_cast<const qc::Operation&>(
                          &qc::NonUnitaryOperation::equals, nb::const_))
-      .def("get_used_qubits", &qc::NonUnitaryOperation::getUsedQubits);
+      .def("get_used_qubits", &qc::NonUnitaryOperation::getUsedQubits)
+      .def("to_open_qasm",
+           [](const qc::NonUnitaryOperation& op, const qc::RegisterNames& qreg,
+              const qc::RegisterNames& creg) {
+             std::ostringstream oss;
+             op.dumpOpenQASM(oss, qreg, creg);
+             return oss.str();
+           });
 
   nb::class_<qc::Permutation>(m, "Permutation")
       .def("apply", nb::overload_cast<const qc::Controls&>(
@@ -710,6 +757,7 @@ NB_MODULE(_core, m) {
       .value("teleportation", qc::OpType::Teleportation)
       .value("classiccontrolled", qc::OpType::ClassicControlled)
       .export_values()
+      .def("__str__", [](const qc::OpType& op) { return qc::toString(op); })
       .def_static("from_string",
                   [](const std::string& s) { return qc::opTypeFromString(s); });
 }
