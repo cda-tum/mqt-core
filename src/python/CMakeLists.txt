@@ -56,7 +56,13 @@ nanobind_add_module(
   module.cpp)
 
 target_link_libraries(_core PRIVATE MQT::Core)
-target_link_options(_core PRIVATE -static-libstdc++ -static-libgcc)
+
+if(NOT APPLE)
+  # On Linux and Windows, we need to link against libstdc++ and libgcc statically to avoid runtime
+  # errors related to ABI incompatibilities
+  target_link_options(_core PRIVATE -static-libstdc++ -static-libgcc)
+endif()
+
 if(TARGET nanobind-static)
   set(NANOBIND_LIB nanobind-static)
 elseif(TARGET nanobind-static-abi3)
