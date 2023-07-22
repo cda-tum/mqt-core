@@ -43,7 +43,7 @@ protected:
     dist = std::uniform_real_distribution<dd::fp>(0.0, 2. * dd::PI);
   }
 
-  dd::QubitCount nqubits = 4U;
+  std::size_t nqubits = 4U;
   std::size_t initialCacheCount = 0U;
   std::size_t initialComplexCount = 0U;
   qc::MatrixDD e{}, ident{};
@@ -244,8 +244,7 @@ TEST_F(DDFunctionality, changePermutation) {
      << "qreg q[2];"
      << "x q[0];\n";
   qc.import(ss, qc::Format::OpenQASM);
-  auto sim = simulate(
-      &qc, dd->makeZeroState(static_cast<dd::QubitCount>(qc.getNqubits())), dd);
+  auto sim = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
   EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
   EXPECT_TRUE(sim.p->e[1].w.approximatelyOne());
   EXPECT_TRUE(sim.p->e[1].p->e[1].isZeroTerminal());

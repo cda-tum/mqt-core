@@ -9,30 +9,34 @@
 #include <utility>
 
 namespace dd {
-// NOLINTNEXTLINE(readability-identifier-naming)
-struct vNode {
+
+/**
+ * @brief A vector DD node
+ * @details Data Layout |24|24|8|4|2| = 62B (space for two more bytes)
+ */
+struct vNode {                        // NOLINT(readability-identifier-naming)
   std::array<Edge<vNode>, RADIX> e{}; // edges out of this node
   vNode* next{};                      // used to link nodes in unique table
   RefCount ref{};                     // reference count
-  Qubit v{}; // variable index (nonterminal) value (-1 for terminal)
-
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables
-  static vNode terminal;
+  Qubit v{};                          // variable index
 
   static constexpr bool isTerminal(const vNode* p) noexcept {
-    return p == &terminal;
+    return p == nullptr;
   }
-  static constexpr vNode* getTerminal() noexcept { return &terminal; }
+  static constexpr vNode* getTerminal() noexcept { return nullptr; }
 };
 using vEdge = Edge<vNode>;
 using vCachedEdge = CachedEdge<vNode>;
 
-// NOLINTNEXTLINE(readability-identifier-naming)
-struct mNode {
+/**
+ * @brief A matrix DD node
+ * @details Data Layout |24|24|24|24|8|4|2|1| = 111B (space for one more byte)
+ */
+struct mNode {                        // NOLINT(readability-identifier-naming)
   std::array<Edge<mNode>, NEDGE> e{}; // edges out of this node
   mNode* next{};                      // used to link nodes in unique table
   RefCount ref{};                     // reference count
-  Qubit v{}; // variable index (nonterminal) value (-1 for terminal)
+  Qubit v{};                          // variable index
   std::uint8_t flags = 0;
   // 32 = marks a node with is symmetric.
   // 16 = marks a node resembling identity
@@ -41,27 +45,18 @@ struct mNode {
   // 2 = mark first path edge (tmp flag),
   // 1 = mark path is conjugated (tmp flag))
 
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-  static mNode terminal;
-
-  static constexpr bool isTerminal(const mNode* p) noexcept {
-    return p == &terminal;
+  [[nodiscard]] static constexpr bool isTerminal(const mNode* p) noexcept {
+    return p == nullptr;
   }
-  static constexpr mNode* getTerminal() noexcept { return &terminal; }
-
-  [[nodiscard]] inline bool isIdentity() const noexcept {
-    return (flags & static_cast<std::uint8_t>(16U)) != 0;
+  [[nodiscard]] static constexpr mNode* getTerminal() noexcept {
+    return nullptr;
   }
+
   [[nodiscard]] inline bool isSymmetric() const noexcept {
     return (flags & static_cast<std::uint8_t>(32U)) != 0;
   }
-
-  inline void setIdentity(const bool identity) noexcept {
-    if (identity) {
-      flags = (flags | static_cast<std::uint8_t>(16U));
-    } else {
-      flags = (flags & static_cast<std::uint8_t>(~16U));
-    }
+  [[nodiscard]] static constexpr bool isSymmetric(const mNode* p) noexcept {
+    return p == nullptr || p->isSymmetric();
   }
   inline void setSymmetric(const bool symmetric) noexcept {
     if (symmetric) {
@@ -70,16 +65,33 @@ struct mNode {
       flags = (flags & static_cast<std::uint8_t>(~32U));
     }
   }
+
+  [[nodiscard]] inline bool isIdentity() const noexcept {
+    return (flags & static_cast<std::uint8_t>(16U)) != 0;
+  }
+  [[nodiscard]] static constexpr bool isIdentity(const mNode* p) noexcept {
+    return p == nullptr || p->isIdentity();
+  }
+  inline void setIdentity(const bool identity) noexcept {
+    if (identity) {
+      flags = (flags | static_cast<std::uint8_t>(16U));
+    } else {
+      flags = (flags & static_cast<std::uint8_t>(~16U));
+    }
+  }
 };
 using mEdge = Edge<mNode>;
 using mCachedEdge = CachedEdge<mNode>;
 
-// NOLINTNEXTLINE(readability-identifier-naming)
-struct dNode {
+/**
+ * @brief A density matrix DD node
+ * @details Data Layout |24|24|24|24|8|4|2|1| = 111B (space for one more byte)
+ */
+struct dNode {                        // NOLINT(readability-identifier-naming)
   std::array<Edge<dNode>, NEDGE> e{}; // edges out of this node
   dNode* next{};                      // used to link nodes in unique table
   RefCount ref{};                     // reference count
-  Qubit v{}; // variable index (nonterminal) value (-1 for terminal)
+  Qubit v{};                          // variable index
   std::uint8_t flags = 0;
   // 32 = marks a node with is symmetric.
   // 16 = marks a node resembling identity
@@ -88,13 +100,10 @@ struct dNode {
   // 2 = mark first path edge (tmp flag),
   // 1 = mark path is conjugated (tmp flag))
 
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-  static dNode terminal;
-
   static constexpr bool isTerminal(const dNode* p) noexcept {
-    return p == &terminal;
+    return p == nullptr;
   }
-  static constexpr dNode* getTerminal() noexcept { return &terminal; }
+  static constexpr dNode* getTerminal() noexcept { return nullptr; }
 
   [[nodiscard]] [[maybe_unused]] static inline bool
   tempDensityMatrixFlagsEqual(const std::uint8_t a,
@@ -192,8 +201,7 @@ static inline dEdge densityFromMatrixEdge(const mEdge& e) {
 template <typename Node>
 [[nodiscard]] static inline bool
 noRefCountingNeeded(const Node* const p) noexcept {
-  return p == nullptr || Node::isTerminal(p) ||
-         p->ref == std::numeric_limits<RefCount>::max();
+  return Node::isTerminal(p) || p->ref == std::numeric_limits<RefCount>::max();
 }
 
 /**

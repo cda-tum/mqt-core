@@ -4,30 +4,6 @@
 #include "dd/RealNumber.hpp"
 
 namespace dd {
-// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables,
-// cppcoreguidelines-interfaces-global-init)
-vNode vNode::terminal{
-    {{{nullptr, Complex::zero}, {nullptr, Complex::zero}}}, nullptr, 0U, -1};
-
-mNode mNode::terminal{{{{nullptr, Complex::zero},
-                        {nullptr, Complex::zero},
-                        {nullptr, Complex::zero},
-                        {nullptr, Complex::zero}}},
-                      nullptr,
-                      0U,
-                      -1,
-                      32 + 16};
-
-dNode dNode::terminal{{{{nullptr, Complex::zero},
-                        {nullptr, Complex::zero},
-                        {nullptr, Complex::zero},
-                        {nullptr, Complex::zero}}},
-                      nullptr,
-                      0,
-                      -1,
-                      0};
-// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,
-// cppcoreguidelines-interfaces-global-init)
 
 void dNode::setDensityMatrixNodeFlag(const bool densityMatrix) noexcept {
   if (densityMatrix) {
@@ -42,7 +18,7 @@ std::uint8_t dNode::alignDensityNodeNode(dNode*& p) noexcept {
   // Get an aligned node
   alignDensityNode(p);
 
-  if (p == nullptr || dNode::isTerminal(p)) {
+  if (dNode::isTerminal(p)) {
     return 0U;
   }
 
@@ -99,13 +75,16 @@ void dNode::getAlignedNodeRevertModificationsOnSubEdges(dNode* p) noexcept {
 void dNode::applyDmChangesToNode(dNode*& p) noexcept {
   if (isDensityMatrixTempFlagSet(p)) {
     const auto tmp = alignDensityNodeNode(p);
+    if (p == nullptr) {
+      return;
+    }
     assert(getDensityMatrixTempFlags(p->flags) == 0);
     p->flags = p->flags | tmp;
   }
 }
 
 void dNode::revertDmChangesToNode(dNode*& p) noexcept {
-  if (isDensityMatrixTempFlagSet(p->flags)) {
+  if (!dNode::isTerminal(p) && isDensityMatrixTempFlagSet(p->flags)) {
     getAlignedNodeRevertModificationsOnSubEdges(p);
     p->unsetTempDensityMatrixFlags();
   }

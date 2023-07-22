@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <type_traits>
 #include <vector>
 
 namespace dd {
@@ -22,6 +23,11 @@ namespace dd {
  * @tparam NBUCKET number of hash buckets to use (has to be a power of two)
  */
 template <class Node, std::size_t NBUCKET = 32768> class UniqueTable {
+
+  static_assert(
+      std::disjunction_v<std::is_same<Node, vNode>, std::is_same<Node, mNode>,
+                         std::is_same<Node, dNode>>,
+      "Node type must be one of vNode, mNode, dNode");
 
 public:
   /**
@@ -109,8 +115,8 @@ public:
     }
 
     // if node not found -> add it to front of unique table bucket
-    e.p->next = tables[static_cast<std::size_t>(v)][key];
-    tables[static_cast<std::size_t>(v)][key] = e.p;
+    e.p->next = tables[v][key];
+    tables[v][key] = e.p;
     stats.trackInsert();
 
     return e;
@@ -132,7 +138,7 @@ public:
       assert(p != nullptr);
       if (p->ref == 1U) {
         stats.trackActiveEntry();
-        ++active[static_cast<std::size_t>(p->v)];
+        ++active[p->v];
       }
     }
     return inc;
@@ -154,7 +160,7 @@ public:
       assert(p != nullptr);
       if (p->ref == 0U) {
         --stats.activeEntryCount;
-        --active[static_cast<std::size_t>(p->v)];
+        --active[p->v];
       }
     }
     return dec;
@@ -178,7 +184,6 @@ public:
         Node* lastp = nullptr;
         while (p != nullptr) {
           if (p->ref == 0) {
-            assert(!Node::isTerminal(p));
             Node* next = p->next;
             if (lastp == nullptr) {
               bucket = next;
@@ -221,10 +226,10 @@ public:
   };
 
   void print() {
-    auto q = static_cast<dd::Qubit>(nvars - 1);
+    auto q = nvars - 1U;
     for (auto it = tables.rbegin(); it != tables.rend(); ++it) {
       auto& table = *it;
-      std::cout << "\tq" << static_cast<std::size_t>(q) << ":"
+      std::cout << "\tq" << q << ":"
                 << "\n";
       for (std::size_t key = 0; key < table.size(); ++key) {
         auto p = table[key];
@@ -255,7 +260,7 @@ private:
   using Table = std::array<Bucket, NBUCKET>;
 
   /// The number of variables
-  std::size_t nvars = 0;
+  std::size_t nvars = 0U;
   /**
    * @brief The actual tables (one for each variable)
    * @details Each hash table is an array of buckets. Each bucket is a linked
@@ -274,7 +279,7 @@ private:
    * @brief the number of active nodes for each variable
    * @note A node is considered active if it has a non-zero reference count.
    */
-  std::vector<std::size_t> active{std::vector<std::size_t>(nvars, 0)};
+  std::vector<std::size_t> active{std::vector<std::size_t>(nvars, 0U)};
 
   /// The initial garbage collection limit
   std::size_t initialGCLimit;
@@ -292,9 +297,7 @@ private:
   **/
   Edge<Node> searchTable(const Edge<Node>& e, const std::size_t& key,
                          const bool keepNode = false) {
-    const auto v = e.p->v;
-
-    Node* p = tables[static_cast<std::size_t>(v)][key];
+    Node* p = tables[e.p->v][key];
     while (p != nullptr) {
       if (nodesAreEqual(e.p, p)) {
         // Match found

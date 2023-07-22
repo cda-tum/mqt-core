@@ -99,10 +99,11 @@ hash<dd::Edge<Node>>::operator()(const dd::Edge<Node>& e) const noexcept {
   const auto h2 = std::hash<dd::Complex>{}(e.w);
   auto h3 = dd::combineHash(h1, h2);
   if constexpr (std::is_same_v<Node, dd::dNode>) {
-    assert(e.p != nullptr);
+    if (e.isTerminal()) {
+      return h3;
+    }
     assert((dd::dNode::isDensityMatrixTempFlagSet(e.p)) == false);
-    const auto h4 = std::hash<std::uint8_t>{}(static_cast<std::uint8_t>(
-        dd::dNode::getDensityMatrixTempFlags(e.p->flags)));
+    const auto h4 = dd::dNode::getDensityMatrixTempFlags(e.p->flags);
     h3 = dd::combineHash(h3, h4);
   }
   return h3;

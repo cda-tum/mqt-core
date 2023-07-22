@@ -26,11 +26,11 @@ protected:
     precision = GetParam().second;
 
     std::cout << "Estimating lambda = " << lambda << "π up to " << precision
-              << "-bit precision." << std::endl;
+              << "-bit precision.\n";
 
     theta = lambda / 2;
 
-    std::cout << "Expected theta=" << theta << std::endl;
+    std::cout << "Expected theta=" << theta << "\n";
     std::bitset<64> binaryExpansion{};
     auto expansion = theta * 2;
     std::size_t index = 0;
@@ -69,9 +69,9 @@ protected:
 
     if (exactlyRepresentable) {
       std::cout << "Theta is exactly representable using " << precision
-                << " bits." << std::endl;
+                << " bits.\n";
       std::cout << "The expected output state is |"
-                << expectedResultRepresentation << ">." << std::endl;
+                << expectedResultRepresentation << ">.\n";
     } else {
       secondExpectedResult = expectedResult + 1;
       ss.str("");
@@ -85,10 +85,10 @@ protected:
       secondExpectedResultRepresentation = ss.str();
 
       std::cout << "Theta is not exactly representable using " << precision
-                << " bits." << std::endl;
+                << " bits.\n";
       std::cout << "Most probable output states are |"
                 << expectedResultRepresentation << "> and |"
-                << secondExpectedResultRepresentation << ">." << std::endl;
+                << secondExpectedResultRepresentation << ">.\n";
     }
   }
 };
@@ -109,27 +109,20 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_P(QPE, QPETest) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
-  std::unique_ptr<qc::QPE> qc;
+  auto qc = qc::QPE(lambda, precision);
+  ASSERT_EQ(qc.getNqubits(), precision + 1);
+  ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(qc); });
+
   qc::VectorDD e{};
-
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::QPE>(lambda, precision); });
-
-  ASSERT_EQ(qc->getNqubits(), precision + 1);
-
-  ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(*qc); });
-
-  ASSERT_NO_THROW({
-    e = simulate(
-        qc.get(),
-        dd->makeZeroState(static_cast<dd::QubitCount>(qc->getNqubits())), dd);
-  });
+  ASSERT_NO_THROW(
+      { e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd); });
 
   // account for the eigenstate qubit in the expected result by shifting and
   // adding 1
   auto amplitude = dd->getValueByPath(e, (expectedResult << 1) + 1);
   auto probability = amplitude.r * amplitude.r + amplitude.i * amplitude.i;
   std::cout << "Obtained probability for |" << expectedResultRepresentation
-            << ">: " << probability << std::endl;
+            << ">: " << probability << "\n";
 
   if (exactlyRepresentable) {
     EXPECT_NEAR(probability, 1.0, 1e-8);
@@ -143,7 +136,7 @@ TEST_P(QPE, QPETest) {
                              secondAmplitude.i * secondAmplitude.i;
     std::cout << "Obtained probability for |"
               << secondExpectedResultRepresentation
-              << ">: " << secondProbability << std::endl;
+              << ">: " << secondProbability << "\n";
 
     EXPECT_GT(probability, threshold);
     EXPECT_GT(secondProbability, threshold);
@@ -152,17 +145,12 @@ TEST_P(QPE, QPETest) {
 
 TEST_P(QPE, IQPETest) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
-  std::unique_ptr<qc::QPE> qc;
-
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::QPE>(lambda, precision, true); });
-
-  ASSERT_EQ(qc->getNqubits(), 2U);
+  auto qc = qc::QPE(lambda, precision, true);
+  ASSERT_EQ(qc.getNqubits(), 2U);
 
   constexpr auto shots = 8192U;
   auto measurements =
-      simulate(qc.get(),
-               dd->makeZeroState(static_cast<dd::QubitCount>(qc->getNqubits())),
-               dd, shots);
+      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
 
   // sort the measurements
   using Measurement = std::pair<std::string, std::size_t>;
@@ -175,10 +163,10 @@ TEST_P(QPE, IQPETest) {
   const std::set<Measurement, decltype(comp)> ordered(measurements.begin(),
                                                       measurements.end(), comp);
 
-  std::cout << "Obtained measurements: " << std::endl;
+  std::cout << "Obtained measurements: \n";
   for (const auto& measurement : ordered) {
     std::cout << "\t" << measurement.first << ": " << measurement.second << " ("
-              << (measurement.second * 100) / shots << "%)" << std::endl;
+              << (measurement.second * 100) / shots << "%)\n";
   }
 
   const auto& mostLikely = *ordered.begin();
@@ -206,36 +194,31 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
 
   // create standard QPE circuit
-  auto qpe = std::make_unique<qc::QPE>(lambda, precision);
+  auto qpe = qc::QPE(lambda, precision);
 
   // remove final measurements to obtain statevector
-  qc::CircuitOptimizer::removeFinalMeasurements(*qpe);
+  qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = simulate(
-      qpe.get(),
-      dd->makeZeroState(static_cast<dd::QubitCount>(qpe->getNqubits())), dd);
+  auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), dd);
 
   // create standard IQPE circuit
-  auto iqpe = std::make_unique<qc::QPE>(lambda, precision, true);
+  auto iqpe = qc::QPE(lambda, precision, true);
 
   // transform dynamic circuits by first eliminating reset operations and
   // afterwards deferring measurements
-  qc::CircuitOptimizer::eliminateResets(*iqpe);
-
-  qc::CircuitOptimizer::deferMeasurements(*iqpe);
+  qc::CircuitOptimizer::eliminateResets(iqpe);
+  qc::CircuitOptimizer::deferMeasurements(iqpe);
 
   // remove final measurements to obtain statevector
-  qc::CircuitOptimizer::removeFinalMeasurements(*iqpe);
+  qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = simulate(
-      iqpe.get(),
-      dd->makeZeroState(static_cast<dd::QubitCount>(iqpe->getNqubits())), dd);
+  auto f = simulate(&iqpe, dd->makeZeroState(iqpe.getNqubits()), dd);
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelity(e, f);
-  std::cout << "Fidelity of both circuits: " << fidelity << std::endl;
+  std::cout << "Fidelity of both circuits: " << fidelity << "\n";
 
   EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }
@@ -244,27 +227,27 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
 
   // create standard QPE circuit
-  auto qpe = std::make_unique<qc::QPE>(lambda, precision);
+  auto qpe = qc::QPE(lambda, precision);
 
   // remove final measurements to obtain statevector
-  qc::CircuitOptimizer::removeFinalMeasurements(*qpe);
+  qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = buildFunctionality(qpe.get(), dd);
+  auto e = buildFunctionality(&qpe, dd);
 
   // create standard IQPE circuit
-  auto iqpe = std::make_unique<qc::QPE>(lambda, precision, true);
+  auto iqpe = qc::QPE(lambda, precision, true);
 
   // transform dynamic circuits by first eliminating reset operations and
   // afterwards deferring measurements
-  qc::CircuitOptimizer::eliminateResets(*iqpe);
-  qc::CircuitOptimizer::deferMeasurements(*iqpe);
+  qc::CircuitOptimizer::eliminateResets(iqpe);
+  qc::CircuitOptimizer::deferMeasurements(iqpe);
 
   // remove final measurements to obtain statevector
-  qc::CircuitOptimizer::removeFinalMeasurements(*iqpe);
+  qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = buildFunctionality(iqpe.get(), dd);
+  auto f = buildFunctionality(&iqpe, dd);
 
   EXPECT_EQ(e, f);
 }
@@ -273,19 +256,17 @@ TEST_P(QPE, ProbabilityExtraction) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
 
   // create standard QPE circuit
-  auto iqpe = std::make_unique<qc::QPE>(lambda, precision, true);
+  auto iqpe = qc::QPE(lambda, precision, true);
 
-  std::cout << *iqpe << std::endl;
+  std::cout << iqpe << "\n";
   dd::ProbabilityVector probs{};
-  extractProbabilityVector(
-      iqpe.get(),
-      dd->makeZeroState(static_cast<dd::QubitCount>(iqpe->getNqubits())), probs,
-      dd);
+  extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()), probs,
+                           dd);
 
   for (const auto& [state, prob] : probs) {
     std::stringstream ss{};
     qc::QuantumComputation::printBin(state, ss);
-    std::cout << ss.str() << ": " << prob << std::endl;
+    std::cout << ss.str() << ": " << prob << "\n";
   }
 
   if (exactlyRepresentable) {
@@ -301,30 +282,26 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
 
   // create standard QPE circuit
-  auto qpe = std::make_unique<qc::QPE>(lambda, precision);
+  auto qpe = qc::QPE(lambda, precision);
 
   // remove final measurements to obtain statevector
-  qc::CircuitOptimizer::removeFinalMeasurements(*qpe);
+  qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = simulate(
-      qpe.get(),
-      dd->makeZeroState(static_cast<dd::QubitCount>(qpe->getNqubits())), dd);
+  auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), dd);
   const auto vec = dd->getVector(e);
-  std::cout << "QPE: " << std::endl;
+  std::cout << "QPE:\n";
   for (const auto& amp : vec) {
-    std::cout << std::norm(amp) << std::endl;
+    std::cout << std::norm(amp) << "\n";
   }
 
   // create standard IQPE circuit
-  auto iqpe = std::make_unique<qc::QPE>(lambda, precision, true);
+  auto iqpe = qc::QPE(lambda, precision, true);
 
   // extract measurement probabilities from IQPE simulations
   dd::ProbabilityVector probs{};
-  extractProbabilityVector(
-      iqpe.get(),
-      dd->makeZeroState(static_cast<dd::QubitCount>(iqpe->getNqubits())), probs,
-      dd);
+  extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()), probs,
+                           dd);
 
   // extend to account for 0 qubit
   auto stub = dd::ProbabilityVector{};
@@ -333,17 +310,17 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
     stub[2 * state + 1] = prob;
   }
 
-  std::cout << "IQPE: " << std::endl;
+  std::cout << "IQPE:\n";
   for (const auto& [state, prob] : stub) {
     std::stringstream ss{};
     qc::QuantumComputation::printBin(state, ss);
-    std::cout << ss.str() << ": " << prob << std::endl;
+    std::cout << ss.str() << ": " << prob << "\n";
   }
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelityOfMeasurementOutcomes(e, stub);
   std::cout << "Fidelity of both circuits' measurement outcomes: " << fidelity
-            << std::endl;
+            << "\n";
 
   EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }

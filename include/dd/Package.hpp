@@ -50,10 +50,8 @@ template <class Config> class Package {
   ///
 public:
   static constexpr std::size_t MAX_POSSIBLE_QUBITS =
-      static_cast<std::make_unsigned_t<Qubit>>(
-          std::numeric_limits<Qubit>::max()) +
-      1U;
-  static constexpr std::size_t DEFAULT_QUBITS = 128;
+      static_cast<std::size_t>(std::numeric_limits<Qubit>::max()) + 1U;
+  static constexpr std::size_t DEFAULT_QUBITS = 32U;
   explicit Package(std::size_t nq = DEFAULT_QUBITS) : nqubits(nq) {
     resize(nq);
   };
@@ -145,14 +143,11 @@ public:
   }
 
   /// The unique table used for vector nodes
-  UniqueTable<vNode, Config::UT_VEC_NBUCKET> vUniqueTable{nqubits,
-                                                          vMemoryManager};
+  UniqueTable<vNode, Config::UT_VEC_NBUCKET> vUniqueTable{0U, vMemoryManager};
   /// The unique table used for matrix nodes
-  UniqueTable<mNode, Config::UT_MAT_NBUCKET> mUniqueTable{nqubits,
-                                                          mMemoryManager};
+  UniqueTable<mNode, Config::UT_MAT_NBUCKET> mUniqueTable{0U, mMemoryManager};
   /// The unique table used for density matrix nodes
-  UniqueTable<dNode, Config::UT_DM_NBUCKET> dUniqueTable{nqubits,
-                                                         dMemoryManager};
+  UniqueTable<dNode, Config::UT_DM_NBUCKET> dUniqueTable{0U, dMemoryManager};
   /**
    * @brief The unique table used for complex numbers
    * @note The table actually only stores real numbers in the interval [0, 1],
@@ -392,7 +387,7 @@ public:
     return r;
   }
 
-  dEdge makeZeroDensityOperator(QubitCount n) {
+  dEdge makeZeroDensityOperator(const std::size_t n) {
     auto f = dEdge::one;
     for (std::size_t p = 0; p < n; p++) {
       f = makeDDNode(static_cast<Qubit>(p),
@@ -402,7 +397,7 @@ public:
   }
 
   // generate |0...0> with n qubits
-  vEdge makeZeroState(QubitCount n, std::size_t start = 0) {
+  vEdge makeZeroState(const std::size_t n, const std::size_t start = 0) {
     if (n + start > nqubits) {
       throw std::runtime_error{
           "Requested state with " + std::to_string(n + start) +
@@ -417,8 +412,8 @@ public:
     return f;
   }
   // generate computational basis state |i> with n qubits
-  vEdge makeBasisState(QubitCount n, const std::vector<bool>& state,
-                       std::size_t start = 0) {
+  vEdge makeBasisState(const std::size_t n, const std::vector<bool>& state,
+                       const std::size_t start = 0) {
     if (n + start > nqubits) {
       throw std::runtime_error{
           "Requested state with " + std::to_string(n + start) +
@@ -437,8 +432,9 @@ public:
     return f;
   }
   // generate general basis state with n qubits
-  vEdge makeBasisState(QubitCount n, const std::vector<BasisStates>& state,
-                       std::size_t start = 0) {
+  vEdge makeBasisState(const std::size_t n,
+                       const std::vector<BasisStates>& state,
+                       const std::size_t start = 0) {
     if (n + start > nqubits) {
       throw std::runtime_error{
           "Requested state with " + std::to_string(n + start) +
@@ -656,18 +652,19 @@ public:
   }
 
   // build matrix representation for a single gate on an n-qubit circuit
-  mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n,
-                   Qubit target, std::size_t start = 0) {
+  mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat,
+                   const std::size_t n, const qc::Qubit target,
+                   const std::size_t start = 0) {
     return makeGateDD(mat, n, qc::Controls{}, target, start);
   }
-  mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n,
-                   const qc::Control& control, Qubit target,
-                   std::size_t start = 0) {
+  mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat,
+                   const std::size_t n, const qc::Control& control,
+                   const qc::Qubit target, const std::size_t start = 0) {
     return makeGateDD(mat, n, qc::Controls{control}, target, start);
   }
-  mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat, QubitCount n,
-                   const qc::Controls& controls, Qubit target,
-                   std::size_t start = 0) {
+  mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat,
+                   const std::size_t n, const qc::Controls& controls,
+                   const qc::Qubit target, const std::size_t start = 0) {
     if (n + start > nqubits) {
       throw std::runtime_error{
           "Requested gate with " + std::to_string(n + start) +
@@ -688,33 +685,40 @@ public:
 
     // process lines below target
     auto z = static_cast<Qubit>(start);
-    for (; z < target; z++) {
-      for (auto i1 = 0U; i1 < RADIX; i1++) {
-        for (auto i2 = 0U; i2 < RADIX; i2++) {
+    for (; z < static_cast<Qubit>(target); ++z) {
+      for (auto i1 = 0U; i1 < RADIX; ++i1) {
+        for (auto i2 = 0U; i2 < RADIX; ++i2) {
           auto i = i1 * RADIX + i2;
-          if (it != controls.end() && it->qubit == static_cast<qc::Qubit>(z)) {
+          if (it != controls.end() && it->qubit == z) {
+            auto edges =
+                std::array{mEdge::zero, mEdge::zero, mEdge::zero, mEdge::zero};
             if (it->type == qc::Control::Type::Neg) { // neg. control
-              em[i] = makeDDNode(
-                  z,
-                  std::array{em[i], mEdge::zero, mEdge::zero,
-                             (i1 == i2) ? makeIdent(static_cast<Qubit>(start),
-                                                    static_cast<Qubit>(z - 1))
-                                        : mEdge::zero});
+              edges[0] = em[i];
+              if (i1 == i2) {
+                if (z == 0U) {
+                  edges[3] = mEdge::one;
+                } else {
+                  edges[3] = makeIdent(start, z - 1U);
+                }
+              }
             } else { // pos. control
-              em[i] = makeDDNode(
-                  z,
-                  std::array{(i1 == i2) ? makeIdent(static_cast<Qubit>(start),
-                                                    static_cast<Qubit>(z - 1))
-                                        : mEdge::zero,
-                             mEdge::zero, mEdge::zero, em[i]});
+              edges[3] = em[i];
+              if (i1 == i2) {
+                if (z == 0U) {
+                  edges[0] = mEdge::one;
+                } else {
+                  edges[0] = makeIdent(start, z - 1U);
+                }
+              }
             }
+            em[i] = makeDDNode(z, edges);
           } else { // not connected
             em[i] = makeDDNode(
                 z, std::array{em[i], mEdge::zero, mEdge::zero, em[i]});
           }
         }
       }
-      if (it != controls.end() && it->qubit == static_cast<qc::Qubit>(z)) {
+      if (it != controls.end() && it->qubit == z) {
         ++it;
       }
     }
@@ -728,12 +732,10 @@ public:
       if (it != controls.end() && it->qubit == static_cast<qc::Qubit>(q)) {
         if (it->type == qc::Control::Type::Neg) { // neg. control
           e = makeDDNode(q, std::array{e, mEdge::zero, mEdge::zero,
-                                       makeIdent(static_cast<Qubit>(start),
-                                                 static_cast<Qubit>(q - 1))});
+                                       makeIdent(start, q - 1U)});
         } else { // pos. control
-          e = makeDDNode(q, std::array{makeIdent(static_cast<Qubit>(start),
-                                                 static_cast<Qubit>(q - 1)),
-                                       mEdge::zero, mEdge::zero, e});
+          e = makeDDNode(q, std::array{makeIdent(start, q - 1U), mEdge::zero,
+                                       mEdge::zero, e});
         }
         ++it;
       } else { // not connected
@@ -756,7 +758,7 @@ public:
   **/
   mEdge makeTwoQubitGateDD(
       const std::array<std::array<ComplexValue, NEDGE>, NEDGE>& mat,
-      const QubitCount n, const Qubit target0, const Qubit target1,
+      const std::size_t n, const qc::Qubit target0, const qc::Qubit target1,
       const std::size_t start = 0) {
     // sanity check
     if (n + start > nqubits) {
@@ -834,82 +836,83 @@ public:
     auto e = makeDDNode(z, em0);
 
     // process lines above the larger target (by creating identity structures)
-    for (++z; z < static_cast<Qubit>(n + start); ++z) {
+    const auto end = static_cast<Qubit>(n + start);
+    for (++z; z < end; ++z) {
       e = makeDDNode(z, std::array{e, mEdge::zero, mEdge::zero, e});
     }
 
     return e;
   }
 
-  mEdge makeSWAPDD(const QubitCount n, const Qubit target0, const Qubit target1,
-                   const std::size_t start = 0) {
+  mEdge makeSWAPDD(const std::size_t n, const qc::Qubit target0,
+                   const qc::Qubit target1, const std::size_t start = 0) {
     return makeTwoQubitGateDD(SWAPmat, n, target0, target1, start);
   }
-  mEdge makeSWAPDD(const QubitCount n, const qc::Controls& controls,
-                   const Qubit target0, const Qubit target1,
+  mEdge makeSWAPDD(const std::size_t n, const qc::Controls& controls,
+                   const qc::Qubit target0, const qc::Qubit target1,
                    const std::size_t start = 0) {
     auto c = controls;
-    c.insert(qc::Control{static_cast<qc::Qubit>(target0)});
+    c.insert(qc::Control{target0});
     mEdge e = makeGateDD(Xmat, n, c, target1, start);
-    c.erase(qc::Control{static_cast<qc::Qubit>(target0)});
-    c.insert(qc::Control{static_cast<qc::Qubit>(target1)});
+    c.erase(qc::Control{target0});
+    c.insert(qc::Control{target1});
     e = multiply(e, multiply(makeGateDD(Xmat, n, c, target0, start), e));
     return e;
   }
 
-  mEdge makePeresDD(const QubitCount n, const qc::Controls& controls,
-                    const Qubit target0, const Qubit target1,
+  mEdge makePeresDD(const std::size_t n, const qc::Controls& controls,
+                    const qc::Qubit target0, const qc::Qubit target1,
                     const std::size_t start = 0) {
     auto c = controls;
-    c.insert(qc::Control{static_cast<qc::Qubit>(target1)});
+    c.insert(qc::Control{target1});
     mEdge e = makeGateDD(Xmat, n, c, target0, start);
     e = multiply(makeGateDD(Xmat, n, controls, target1, start), e);
     return e;
   }
 
-  mEdge makePeresdagDD(const QubitCount n, const qc::Controls& controls,
-                       const Qubit target0, const Qubit target1,
+  mEdge makePeresdagDD(const std::size_t n, const qc::Controls& controls,
+                       const qc::Qubit target0, const qc::Qubit target1,
                        const std::size_t start = 0) {
     mEdge e = makeGateDD(Xmat, n, controls, target1, start);
     auto c = controls;
-    c.insert(qc::Control{static_cast<qc::Qubit>(target1)});
+    c.insert(qc::Control{target1});
     e = multiply(makeGateDD(Xmat, n, c, target0, start), e);
     return e;
   }
 
-  mEdge makeiSWAPDD(const QubitCount n, const Qubit target0,
-                    const Qubit target1, const std::size_t start = 0) {
+  mEdge makeiSWAPDD(const std::size_t n, const qc::Qubit target0,
+                    const qc::Qubit target1, const std::size_t start = 0) {
     return makeTwoQubitGateDD(iSWAPmat, n, target0, target1, start);
   }
-  mEdge makeiSWAPDD(const QubitCount n, const qc::Controls& controls,
-                    const Qubit target0, const Qubit target1,
+  mEdge makeiSWAPDD(const std::size_t n, const qc::Controls& controls,
+                    const qc::Qubit target0, const qc::Qubit target1,
                     const std::size_t start = 0) {
     mEdge e = makeGateDD(Smat, n, controls, target1, start);        // S q[1]
     e = multiply(e, makeGateDD(Smat, n, controls, target0, start)); // S q[0]
     e = multiply(e, makeGateDD(Hmat, n, controls, target0, start)); // H q[0]
     auto c = controls;
-    c.insert(qc::Control{static_cast<qc::Qubit>(target0)});
+    c.insert(qc::Control{target0});
     e = multiply(e, makeGateDD(Xmat, n, c, target1, start)); // CX q[0], q[1]
-    c.erase(qc::Control{static_cast<qc::Qubit>(target0)});
-    c.insert(qc::Control{static_cast<qc::Qubit>(target1)});
+    c.erase(qc::Control{target0});
+    c.insert(qc::Control{target1});
     e = multiply(e, makeGateDD(Xmat, n, c, target0, start)); // CX q[1], q[0]
     e = multiply(e, makeGateDD(Hmat, n, controls, target1, start)); // H q[1]
     return e;
   }
 
-  mEdge makeiSWAPinvDD(const QubitCount n, const Qubit target0,
-                       const Qubit target1, const std::size_t start = 0) {
+  mEdge makeiSWAPinvDD(const std::size_t n, const qc::Qubit target0,
+                       const qc::Qubit target1, const std::size_t start = 0) {
     return makeTwoQubitGateDD(iSWAPinvmat, n, target0, target1, start);
   }
-  mEdge makeiSWAPinvDD(const QubitCount n, const qc::Controls& controls,
-                       const Qubit target0, const Qubit target1,
+  mEdge makeiSWAPinvDD(const std::size_t n, const qc::Controls& controls,
+                       const qc::Qubit target0, const qc::Qubit target1,
                        const std::size_t start = 0) {
     mEdge e = makeGateDD(Hmat, n, controls, target1, start); // H q[1]
     auto c = controls;
-    c.insert(qc::Control{static_cast<qc::Qubit>(target1)});
+    c.insert(qc::Control{target1});
     e = multiply(e, makeGateDD(Xmat, n, c, target0, start)); // CX q[1], q[0]
-    c.erase(qc::Control{static_cast<qc::Qubit>(target1)});
-    c.insert(qc::Control{static_cast<qc::Qubit>(target0)});
+    c.erase(qc::Control{target1});
+    c.insert(qc::Control{target0});
     e = multiply(e, makeGateDD(Xmat, n, c, target1, start)); // CX q[0], q[1]
     e = multiply(e, makeGateDD(Hmat, n, controls, target0, start)); // H q[0]
     e = multiply(e,
@@ -919,46 +922,48 @@ public:
     return e;
   }
 
-  mEdge makeDCXDD(const QubitCount n, const Qubit target0, const Qubit target1,
-                  const std::size_t start = 0) {
+  mEdge makeDCXDD(const std::size_t n, const qc::Qubit target0,
+                  const qc::Qubit target1, const std::size_t start = 0) {
     return makeTwoQubitGateDD(DCXmat, n, target0, target1, start);
   }
-  mEdge makeDCXDD(const QubitCount n, const qc::Controls& controls,
-                  const Qubit target0, const Qubit target1,
+  mEdge makeDCXDD(const std::size_t n, const qc::Controls& controls,
+                  const qc::Qubit target0, const qc::Qubit target1,
                   const std::size_t start = 0) {
     auto c = controls;
-    c.insert(qc::Control{static_cast<qc::Qubit>(target0)});
+    c.insert(qc::Control{target0});
     mEdge e = makeGateDD(Xmat, n, c, target1, start);
-    c.erase(qc::Control{static_cast<qc::Qubit>(target0)});
-    c.insert(qc::Control{static_cast<qc::Qubit>(target1)});
+    c.erase(qc::Control{target0});
+    c.insert(qc::Control{target1});
     e = multiply(e, makeGateDD(Xmat, n, c, target0, start));
     return e;
   }
 
-  mEdge makeRZZDD(const QubitCount n, const Qubit target0, const Qubit target1,
-                  const fp theta, const std::size_t start = 0) {
+  mEdge makeRZZDD(const std::size_t n, const qc::Qubit target0,
+                  const qc::Qubit target1, const fp theta,
+                  const std::size_t start = 0) {
     return makeTwoQubitGateDD(RZZmat(theta), n, target0, target1, start);
   }
-  mEdge makeRZZDD(const QubitCount n, const qc::Controls& controls,
-                  const Qubit target0, const Qubit target1, const fp theta,
-                  const std::size_t start = 0) {
+  mEdge makeRZZDD(const std::size_t n, const qc::Controls& controls,
+                  const qc::Qubit target0, const qc::Qubit target1,
+                  const fp theta, const std::size_t start = 0) {
     auto c = controls;
-    c.insert(qc::Control{static_cast<qc::Qubit>(target0)});
+    c.insert(qc::Control{target0});
     auto e = makeGateDD(Xmat, n, c, target1, start);
-    c.erase(qc::Control{static_cast<qc::Qubit>(target0)});
+    c.erase(qc::Control{target0});
     e = multiply(e, makeGateDD(RZmat(theta), n, c, target1, start));
-    c.insert(qc::Control{static_cast<qc::Qubit>(target0)});
+    c.insert(qc::Control{target0});
     e = multiply(e, makeGateDD(Xmat, n, c, target1, start));
     return e;
   }
 
-  mEdge makeRYYDD(const QubitCount n, const Qubit target0, const Qubit target1,
-                  const fp theta, const std::size_t start = 0) {
+  mEdge makeRYYDD(const std::size_t n, const qc::Qubit target0,
+                  const qc::Qubit target1, const fp theta,
+                  const std::size_t start = 0) {
     return makeTwoQubitGateDD(RYYmat(theta), n, target0, target1, start);
   }
-  mEdge makeRYYDD(const QubitCount n, const qc::Controls& controls,
-                  const Qubit target0, const Qubit target1, const fp theta,
-                  const std::size_t start = 0) {
+  mEdge makeRYYDD(const std::size_t n, const qc::Controls& controls,
+                  const qc::Qubit target0, const qc::Qubit target1,
+                  const fp theta, const std::size_t start = 0) {
     // no controls are necessary on the RX gates since they cancel if the
     // controls are 0.
     auto e = makeGateDD(RXmat(PI_2), n, qc::Controls{}, target0, start);
@@ -971,13 +976,14 @@ public:
     return e;
   }
 
-  mEdge makeRXXDD(const QubitCount n, const Qubit target0, const Qubit target1,
-                  const fp theta, const std::size_t start = 0) {
+  mEdge makeRXXDD(const std::size_t n, const qc::Qubit target0,
+                  const qc::Qubit target1, const fp theta,
+                  const std::size_t start = 0) {
     return makeTwoQubitGateDD(RXXmat(theta), n, target0, target1, start);
   }
-  mEdge makeRXXDD(const QubitCount n, const qc::Controls& controls,
-                  const Qubit target0, const Qubit target1, const fp theta,
-                  const std::size_t start = 0) {
+  mEdge makeRXXDD(const std::size_t n, const qc::Controls& controls,
+                  const qc::Qubit target0, const qc::Qubit target1,
+                  const fp theta, const std::size_t start = 0) {
     // no controls are necessary on the H gates since they cancel if the
     // controls are 0.
     auto e = makeGateDD(Hmat, n, qc::Controls{}, target0, start);
@@ -988,13 +994,14 @@ public:
     return e;
   }
 
-  mEdge makeRZXDD(const QubitCount n, const Qubit target0, const Qubit target1,
-                  const fp theta, const std::size_t start = 0) {
+  mEdge makeRZXDD(const std::size_t n, const qc::Qubit target0,
+                  const qc::Qubit target1, const fp theta,
+                  const std::size_t start = 0) {
     return makeTwoQubitGateDD(RZXmat(theta), n, target0, target1, start);
   }
-  mEdge makeRZXDD(const QubitCount n, const qc::Controls& controls,
-                  const Qubit target0, const Qubit target1, const fp theta,
-                  const std::size_t start = 0) {
+  mEdge makeRZXDD(const std::size_t n, const qc::Controls& controls,
+                  const qc::Qubit target0, const qc::Qubit target1,
+                  const fp theta, const std::size_t start = 0) {
     // no controls are necessary on the H gates since they cancel if the
     // controls are 0.
     auto e = makeGateDD(Hmat, n, qc::Controls{}, target1, start);
@@ -1003,12 +1010,12 @@ public:
     return e;
   }
 
-  mEdge makeECRDD(const QubitCount n, const Qubit target0, const Qubit target1,
-                  const std::size_t start = 0) {
+  mEdge makeECRDD(const std::size_t n, const qc::Qubit target0,
+                  const qc::Qubit target1, const std::size_t start = 0) {
     return makeTwoQubitGateDD(ECRmat, n, target0, target1, start);
   }
-  mEdge makeECRDD(const QubitCount n, const qc::Controls& controls,
-                  const Qubit target0, const Qubit target1,
+  mEdge makeECRDD(const std::size_t n, const qc::Controls& controls,
+                  const qc::Qubit target0, const qc::Qubit target1,
                   const std::size_t start = 0) {
     auto e = makeRZXDD(n, controls, target0, target1, -PI_4, start);
     e = multiply(e, makeGateDD(Xmat, n, controls, target0, start));
@@ -1016,14 +1023,14 @@ public:
     return e;
   }
 
-  mEdge makeXXMinusYYDD(const QubitCount n, const Qubit target0,
-                        const Qubit target1, const fp theta, const fp beta = 0.,
-                        const std::size_t start = 0) {
+  mEdge makeXXMinusYYDD(const std::size_t n, const qc::Qubit target0,
+                        const qc::Qubit target1, const fp theta,
+                        const fp beta = 0., const std::size_t start = 0) {
     return makeTwoQubitGateDD(XXMinusYYmat(theta, beta), n, target0, target1,
                               start);
   }
-  mEdge makeXXMinusYYDD(const QubitCount n, const qc::Controls& controls,
-                        const Qubit target0, const Qubit target1,
+  mEdge makeXXMinusYYDD(const std::size_t n, const qc::Controls& controls,
+                        const qc::Qubit target0, const qc::Qubit target1,
                         const fp theta, const fp beta = 0.,
                         const std::size_t start = 0) {
     auto e = makeGateDD(RZmat(-beta), n, qc::Controls{}, target1, start);
@@ -1032,18 +1039,14 @@ public:
     e = multiply(e, makeGateDD(SXmat, n, qc::Controls{}, target0, start));
     e = multiply(e, makeGateDD(RZmat(PI_2), n, qc::Controls{}, target0, start));
     e = multiply(e, makeGateDD(Smat, n, qc::Controls{}, target1, start));
-    e = multiply(e, makeGateDD(Xmat, n,
-                               qc::Control{static_cast<qc::Qubit>(target0)},
-                               target1, start));
+    e = multiply(e, makeGateDD(Xmat, n, qc::Control{target0}, target1, start));
     // only the following two gates need to be controlled by the controls since
     // the other gates cancel if the controls are 0.
     e = multiply(e,
                  makeGateDD(RYmat(-theta / 2.), n, controls, target0, start));
     e = multiply(e, makeGateDD(RYmat(theta / 2.), n, controls, target1, start));
 
-    e = multiply(e, makeGateDD(Xmat, n,
-                               qc::Control{static_cast<qc::Qubit>(target0)},
-                               target1, start));
+    e = multiply(e, makeGateDD(Xmat, n, qc::Control{target0}, target1, start));
     e = multiply(e, makeGateDD(Sdagmat, n, qc::Controls{}, target1, start));
     e = multiply(e,
                  makeGateDD(RZmat(-PI_2), n, qc::Controls{}, target0, start));
@@ -1053,32 +1056,29 @@ public:
     return e;
   }
 
-  mEdge makeXXPlusYYDD(const QubitCount n, const Qubit target0,
-                       const Qubit target1, const fp theta, const fp beta = 0.,
-                       const std::size_t start = 0) {
+  mEdge makeXXPlusYYDD(const std::size_t n, const qc::Qubit target0,
+                       const qc::Qubit target1, const fp theta,
+                       const fp beta = 0., const std::size_t start = 0) {
     return makeTwoQubitGateDD(XXPlusYYmat(theta, beta), n, target0, target1,
                               start);
   }
-  mEdge makeXXPlusYYDD(const QubitCount n, const qc::Controls& controls,
-                       const Qubit target0, const Qubit target1, const fp theta,
-                       const fp beta = 0., const std::size_t start = 0) {
+  mEdge makeXXPlusYYDD(const std::size_t n, const qc::Controls& controls,
+                       const qc::Qubit target0, const qc::Qubit target1,
+                       const fp theta, const fp beta = 0.,
+                       const std::size_t start = 0) {
     auto e = makeGateDD(RZmat(beta), n, qc::Controls{}, target1, start);
     e = multiply(e,
                  makeGateDD(RZmat(-PI_2), n, qc::Controls{}, target0, start));
     e = multiply(e, makeGateDD(SXmat, n, qc::Controls{}, target0, start));
     e = multiply(e, makeGateDD(RZmat(PI_2), n, qc::Controls{}, target0, start));
     e = multiply(e, makeGateDD(Smat, n, qc::Controls{}, target1, start));
-    e = multiply(e, makeGateDD(Xmat, n,
-                               qc::Control{static_cast<qc::Qubit>(target0)},
-                               target1, start));
+    e = multiply(e, makeGateDD(Xmat, n, qc::Control{target0}, target1, start));
     // only the following two gates need to be controlled by the controls since
     // the other gates cancel if the controls are 0.
     e = multiply(e, makeGateDD(RYmat(theta / 2.), n, controls, target0, start));
     e = multiply(e, makeGateDD(RYmat(theta / 2.), n, controls, target1, start));
 
-    e = multiply(e, makeGateDD(Xmat, n,
-                               qc::Control{static_cast<qc::Qubit>(target0)},
-                               target1, start));
+    e = multiply(e, makeGateDD(Xmat, n, qc::Control{target0}, target1, start));
     e = multiply(e, makeGateDD(Sdagmat, n, qc::Controls{}, target1, start));
     e = multiply(e,
                  makeGateDD(RZmat(-PI_2), n, qc::Controls{}, target0, start));
@@ -1092,7 +1092,7 @@ public:
 private:
   // check whether node represents a symmetric matrix or the identity
   void checkSpecialMatrices(mNode* p) {
-    if (p->v == -1) {
+    if (mNode::isTerminal(p)) {
       return;
     }
 
@@ -1100,7 +1100,9 @@ private:
     p->setSymmetric(false);
 
     // check if matrix is symmetric
-    if (!p->e[0].p->isSymmetric() || !p->e[3].p->isSymmetric()) {
+    const auto& e0 = p->e[0];
+    const auto& e3 = p->e[3];
+    if (!mNode::isSymmetric(e0.p) || !mNode::isSymmetric(e3.p)) {
       return;
     }
     if (transpose(p->e[1]) != p->e[2]) {
@@ -1109,9 +1111,11 @@ private:
     p->setSymmetric(true);
 
     // check if matrix resembles identity
-    if (!(p->e[0].p->isIdentity()) || !p->e[1].w.exactlyZero() ||
-        !p->e[2].w.exactlyZero() || !p->e[0].w.exactlyOne() ||
-        !p->e[3].w.exactlyOne() || !(p->e[3].p->isIdentity())) {
+    const auto& e1 = p->e[1];
+    const auto& e2 = p->e[2];
+    if (!mNode::isIdentity(e0.p) || !e1.w.exactlyZero() ||
+        !e2.w.exactlyZero() || !e0.w.exactlyOne() || !e3.w.exactlyOne() ||
+        !mNode::isIdentity(e3.p)) {
       return;
     }
     p->setIdentity(true);
@@ -1120,7 +1124,7 @@ private:
   vEdge makeStateFromVector(const CVec::const_iterator& begin,
                             const CVec::const_iterator& end,
                             const Qubit level) {
-    if (level == 0) {
+    if (level == 0U) {
       assert(std::distance(begin, end) == 2);
       const auto& zeroWeight = cn.getCached(*begin);
       const auto& oneWeight = cn.getCached(*std::next(begin));
@@ -1147,7 +1151,6 @@ private:
   @param colStart The starting column of the quadrant being processed.
   @param colEnd The ending column of the quadrant being processed.
   @return An mEdge representing the root node of the created DD.
-  @throw std::invalid_argument If level is negative.
   @details This function recursively breaks down the matrix into quadrants until
   each quadrant has only one element. At each level of recursion, four new edges
   are created, one for each quadrant of the matrix. The four resulting decision
@@ -1161,10 +1164,18 @@ private:
                          const std::size_t rowStart, const std::size_t rowEnd,
                          const std::size_t colStart, const std::size_t colEnd) {
     // base case
-    if (level == -1) {
-      assert(rowEnd - rowStart == 1);
-      assert(colEnd - colStart == 1);
-      return {mNode::getTerminal(), cn.getCached(matrix[rowStart][colStart])};
+    if (level == 0U) {
+      assert(rowEnd - rowStart == 2);
+      assert(colEnd - colStart == 2);
+      const auto w0 = cn.getCached(matrix[rowStart][colStart]);
+      const auto e0 = mEdge{mNode::getTerminal(), w0};
+      const auto w1 = cn.getCached(matrix[rowStart + 1][colStart]);
+      const auto e1 = mEdge{mNode::getTerminal(), w1};
+      const auto w2 = cn.getCached(matrix[rowStart][colStart + 1]);
+      const auto e2 = mEdge{mNode::getTerminal(), w2};
+      const auto w3 = cn.getCached(matrix[rowStart + 1][colStart + 1]);
+      const auto e3 = mEdge{mNode::getTerminal(), w3};
+      return makeDDNode<mNode>(0U, {e0, e1, e2, e3}, true);
     }
 
     // recursively call the function on all quadrants
@@ -1188,9 +1199,9 @@ public:
   // not recreated if it already exists.
   template <class Node>
   Edge<Node> makeDDNode(
-      Qubit var,
+      const Qubit var,
       const std::array<Edge<Node>, std::tuple_size_v<decltype(Node::e)>>& edges,
-      bool cached = false,
+      const bool cached = false,
       [[maybe_unused]] const bool generateDensityMatrix = false) {
     auto& memoryManager = getMemoryManager<Node>();
     Edge<Node> e{memoryManager.get(), Complex::one};
@@ -1208,17 +1219,17 @@ public:
     for ([[maybe_unused]] const auto& edge : edges) {
       // an error here indicates that cached nodes are assigned multiple times.
       // Check if garbage collect correctly resets the cache tables!
-      assert(edge.p->v == var - 1 || edge.isTerminal());
+      assert(edge.isTerminal() || edge.p->v == var - 1);
     }
 
     // normalize it
     e = normalize(e, cached);
-    assert(e.p->v == var || e.isTerminal());
+    assert(e.isTerminal() || e.p->v == var);
 
     // look it up in the unique tables
     auto& uniqueTable = getUniqueTable<Node>();
     auto l = uniqueTable.lookup(e, false);
-    assert(l.p->v == var || l.isTerminal());
+    assert(l.isTerminal() || l.p->v == var);
 
     // set specific node properties for matrices
     if constexpr (std::is_same_v<Node, mNode>) {
@@ -1230,16 +1241,18 @@ public:
   }
 
   template <class Node>
-  Edge<Node> deleteEdge(const Edge<Node>& e, dd::Qubit v, std::size_t edgeIdx) {
+  Edge<Node> deleteEdge(const Edge<Node>& e, const Qubit v,
+                        const std::size_t edgeIdx) {
     std::unordered_map<Node*, Edge<Node>> nodes{};
     return deleteEdge(e, v, edgeIdx, nodes);
   }
 
 private:
   template <class Node>
-  Edge<Node> deleteEdge(const Edge<Node>& e, dd::Qubit v, std::size_t edgeIdx,
+  Edge<Node> deleteEdge(const Edge<Node>& e, const Qubit v,
+                        const std::size_t edgeIdx,
                         std::unordered_map<Node*, Edge<Node>>& nodes) {
-    if (e.p == nullptr || e.isTerminal()) {
+    if (e.isTerminal()) {
       return e;
     }
 
@@ -1303,7 +1316,7 @@ public:
   /// Measurements from state decision diagrams
   ///
   std::string measureAll(vEdge& rootEdge, const bool collapse,
-                         std::mt19937_64& mt, fp epsilon = 0.001) {
+                         std::mt19937_64& mt, const fp epsilon = 0.001) {
     if (std::abs(ComplexNumbers::mag2(rootEdge.w) - 1.0) > epsilon) {
       if (rootEdge.w.approximatelyZero()) {
         throw std::runtime_error(
@@ -1314,14 +1327,18 @@ public:
                 << ComplexNumbers::mag2(rootEdge.w) << ", but should be 1!\n";
     }
 
+    if (rootEdge.isTerminal()) {
+      return "";
+    }
+
     vEdge cur = rootEdge;
-    const auto numberOfQubits = static_cast<QubitCount>(rootEdge.p->v + 1);
+    const auto numberOfQubits = static_cast<std::size_t>(rootEdge.p->v) + 1U;
 
     std::string result(numberOfQubits, '0');
 
     std::uniform_real_distribution<fp> dist(0.0, 1.0L);
 
-    for (Qubit i = rootEdge.p->v; i >= 0; --i) {
+    for (auto i = numberOfQubits; i > 0; --i) {
       fp p0 = ComplexNumbers::mag2(cur.p->e.at(0).w);
       const fp p1 = ComplexNumbers::mag2(cur.p->e.at(1).w);
       const fp tmp = p0 + p1;
@@ -1336,7 +1353,7 @@ public:
       if (threshold < p0) {
         cur = cur.p->e.at(0);
       } else {
-        result[static_cast<std::size_t>(cur.p->v)] = '1';
+        result[cur.p->v] = '1';
         cur = cur.p->e.at(1);
       }
     }
@@ -1347,15 +1364,15 @@ public:
       vEdge e = vEdge::one;
       std::array<vEdge, 2> edges{};
 
-      for (Qubit p = 0; p < numberOfQubits; p++) {
-        if (result[static_cast<std::size_t>(p)] == '0') {
+      for (std::size_t p = 0U; p < numberOfQubits; ++p) {
+        if (result[p] == '0') {
           edges[0] = e;
           edges[1] = vEdge::zero;
         } else {
           edges[0] = vEdge::zero;
           edges[1] = e;
         }
-        e = makeDDNode(p, edges, false);
+        e = makeDDNode(static_cast<Qubit>(p), edges, false);
       }
       incRef(e);
       rootEdge = e;
@@ -1367,15 +1384,15 @@ public:
 
 private:
   double assignProbabilities(const vEdge& edge,
-                             std::unordered_map<vNode*, fp>& probs) {
+                             std::unordered_map<const vNode*, fp>& probs) {
     auto it = probs.find(edge.p);
     if (it != probs.end()) {
       return ComplexNumbers::mag2(edge.w) * it->second;
     }
     double sum{1};
     if (!edge.isTerminal()) {
-      sum = assignProbabilities(edge.p->e.at(0), probs) +
-            assignProbabilities(edge.p->e.at(1), probs);
+      sum = assignProbabilities(edge.p->e[0], probs) +
+            assignProbabilities(edge.p->e[1], probs);
     }
 
     probs.insert({edge.p, sum});
@@ -1387,40 +1404,42 @@ public:
   std::pair<dd::fp, dd::fp>
   determineMeasurementProbabilities(const vEdge& rootEdge, const Qubit index,
                                     const bool assumeProbabilityNormalization) {
-    std::map<vNode*, fp> probsMone;
-    std::set<vNode*> visited;
-    std::queue<vNode*> q;
+    std::map<const vNode*, fp> probsMone;
+    std::set<const vNode*> visited;
+    std::queue<const vNode*> q;
 
     probsMone[rootEdge.p] = ComplexNumbers::mag2(rootEdge.w);
     visited.insert(rootEdge.p);
     q.push(rootEdge.p);
 
     while (q.front()->v != index) {
-      vNode* ptr = q.front();
+      const auto* ptr = q.front();
       q.pop();
       const fp prob = probsMone[ptr];
 
-      if (!ptr->e.at(0).w.approximatelyZero()) {
-        const fp tmp1 = prob * ComplexNumbers::mag2(ptr->e.at(0).w);
+      const auto& s0 = ptr->e[0];
+      if (!s0.w.approximatelyZero()) {
+        const fp tmp1 = prob * ComplexNumbers::mag2(s0.w);
 
-        if (visited.find(ptr->e.at(0).p) != visited.end()) {
-          probsMone[ptr->e.at(0).p] = probsMone[ptr->e.at(0).p] + tmp1;
+        if (visited.find(s0.p) != visited.end()) {
+          probsMone[s0.p] = probsMone[s0.p] + tmp1;
         } else {
-          probsMone[ptr->e.at(0).p] = tmp1;
-          visited.insert(ptr->e.at(0).p);
-          q.push(ptr->e.at(0).p);
+          probsMone[s0.p] = tmp1;
+          visited.insert(s0.p);
+          q.push(s0.p);
         }
       }
 
-      if (!ptr->e.at(1).w.approximatelyZero()) {
-        const fp tmp1 = prob * ComplexNumbers::mag2(ptr->e.at(1).w);
+      const auto& s1 = ptr->e[1];
+      if (!s1.w.approximatelyZero()) {
+        const fp tmp1 = prob * ComplexNumbers::mag2(s1.w);
 
-        if (visited.find(ptr->e.at(1).p) != visited.end()) {
-          probsMone[ptr->e.at(1).p] = probsMone[ptr->e.at(1).p] + tmp1;
+        if (visited.find(s1.p) != visited.end()) {
+          probsMone[s1.p] = probsMone[s1.p] + tmp1;
         } else {
-          probsMone[ptr->e.at(1).p] = tmp1;
-          visited.insert(ptr->e.at(1).p);
-          q.push(ptr->e.at(1).p);
+          probsMone[s1.p] = tmp1;
+          visited.insert(s1.p);
+          q.push(s1.p);
         }
       }
     }
@@ -1430,33 +1449,32 @@ public:
 
     if (assumeProbabilityNormalization) {
       while (!q.empty()) {
-        vNode* ptr = q.front();
+        const auto* ptr = q.front();
         q.pop();
-
-        if (!ptr->e.at(0).w.approximatelyZero()) {
-          pzero += probsMone[ptr] * ComplexNumbers::mag2(ptr->e.at(0).w);
+        const auto& s0 = ptr->e[0];
+        if (!s0.w.approximatelyZero()) {
+          pzero += probsMone[ptr] * ComplexNumbers::mag2(s0.w);
         }
-
-        if (!ptr->e.at(1).w.approximatelyZero()) {
-          pone += probsMone[ptr] * ComplexNumbers::mag2(ptr->e.at(1).w);
+        const auto& s1 = ptr->e[1];
+        if (!s1.w.approximatelyZero()) {
+          pone += probsMone[ptr] * ComplexNumbers::mag2(s1.w);
         }
       }
     } else {
-      std::unordered_map<vNode*, fp> probs;
+      std::unordered_map<const vNode*, fp> probs;
       assignProbabilities(rootEdge, probs);
 
       while (!q.empty()) {
-        vNode* ptr = q.front();
+        const auto* ptr = q.front();
         q.pop();
 
-        if (!ptr->e.at(0).w.approximatelyZero()) {
-          pzero += probsMone[ptr] * probs[ptr->e.at(0).p] *
-                   ComplexNumbers::mag2(ptr->e.at(0).w);
+        const auto& s0 = ptr->e[0];
+        if (!s0.w.approximatelyZero()) {
+          pzero += probsMone[ptr] * probs[s0.p] * ComplexNumbers::mag2(s0.w);
         }
-
-        if (!ptr->e.at(1).w.approximatelyZero()) {
-          pone += probsMone[ptr] * probs[ptr->e.at(1).p] *
-                  ComplexNumbers::mag2(ptr->e.at(1).w);
+        const auto& s1 = ptr->e[1];
+        if (!s1.w.approximatelyZero()) {
+          pone += probsMone[ptr] * probs[s1.p] * ComplexNumbers::mag2(s1.w);
         }
       }
     }
@@ -1522,8 +1540,7 @@ public:
     }
 
     const auto measurementGate =
-        makeGateDD(measurementMatrix,
-                   static_cast<dd::QubitCount>(rootEdge.p->v + 1), index);
+        makeGateDD(measurementMatrix, rootEdge.p->v + 1U, index);
 
     vEdge e = multiply(measurementGate, rootEdge);
 
@@ -1572,13 +1589,6 @@ public:
 
   template <class Node>
   Edge<Node> add2(const Edge<Node>& x, const Edge<Node>& y) {
-    if (x.p == nullptr) {
-      return y;
-    }
-    if (y.p == nullptr) {
-      return x;
-    }
-
     if (x.w.exactlyZero()) {
       if (y.w.exactlyZero()) {
         return Edge<Node>::zero;
@@ -1600,9 +1610,7 @@ public:
 
     auto& computeTable = getAddComputeTable<Node>();
     auto r = computeTable.lookup({x.p, x.w}, {y.p, y.w});
-    //           if (r.p != nullptr && false) { // activate for debugging
-    //           caching only
-    if (r.p != nullptr) {
+    if (!Node::isTerminal(r.p)) {
       if (r.w.approximatelyZero()) {
         return Edge<Node>::zero;
       }
@@ -1625,8 +1633,8 @@ public:
         }
       } else {
         e1 = x;
-        if (y.p->e[i].p == nullptr) {
-          e1 = {nullptr, Complex::zero};
+        if (y.p->e[i].isTerminal()) {
+          e1 = Edge<Node>::zero;
         }
       }
       Edge<Node> e2{};
@@ -1638,8 +1646,8 @@ public:
         }
       } else {
         e2 = y;
-        if (x.p->e[i].p == nullptr) {
-          e2 = {nullptr, Complex::zero};
+        if (x.p->e[i].isTerminal()) {
+          e2 = Edge<Node>::zero;
         }
       }
 
@@ -1662,11 +1670,6 @@ public:
 
     auto e = makeDDNode(w, edge, true);
 
-    //           if (r.p != nullptr && e.p != r.p){ // activate for debugging
-    //           caching only
-    //               std::cout << "Caching error detected in add" << std::endl;
-    //           }
-
     computeTable.insert({x.p, x.w}, {y.p, y.w}, {e.p, e.w});
     return e;
   }
@@ -1680,13 +1683,13 @@ public:
       conjugateMatrixTranspose{};
 
   mEdge transpose(const mEdge& a) {
-    if (a.p == nullptr || a.isTerminal() || a.p->isSymmetric()) {
+    if (a.isTerminal() || a.p->isSymmetric()) {
       return a;
     }
 
     // check in compute table
     auto r = matrixTranspose.lookup(a);
-    if (r.p != nullptr) {
+    if (!r.isTerminal()) {
       return r;
     }
 
@@ -1707,18 +1710,13 @@ public:
     return r;
   }
   mEdge conjugateTranspose(const mEdge& a) {
-    if (a.p == nullptr) {
-      return a;
-    }
     if (a.isTerminal()) { // terminal case
-      auto r = a;
-      r.w = ComplexNumbers::conj(a.w);
-      return r;
+      return {a.p, ComplexNumbers::conj(a.w)};
     }
 
     // check if in compute table
     auto r = conjugateMatrixTranspose.lookup(a);
-    if (r.p != nullptr) {
+    if (!r.isTerminal()) {
       return r;
     }
 
@@ -1762,7 +1760,7 @@ public:
   }
 
   dEdge applyOperationToDensity(dEdge& e, const mEdge& operation,
-                                bool generateDensityMatrix = false) {
+                                const bool generateDensityMatrix = false) {
     [[maybe_unused]] const auto before = cn.cacheCount();
     auto tmp0 = conjugateTranspose(operation);
     auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
@@ -1781,12 +1779,20 @@ public:
   }
 
   template <class LeftOperand, class RightOperand>
-  RightOperand multiply(const LeftOperand& x, const RightOperand& y,
-                        dd::Qubit start = 0,
-                        [[maybe_unused]] bool generateDensityMatrix = false) {
+  RightOperand
+  multiply(const LeftOperand& x, const RightOperand& y, const Qubit start = 0,
+           [[maybe_unused]] const bool generateDensityMatrix = false) {
+    static_assert(std::disjunction_v<std::is_same<LeftOperand, mEdge>,
+                                     std::is_same<LeftOperand, dEdge>>,
+                  "Left operand must be a matrix or density matrix");
+    static_assert(std::disjunction_v<std::is_same<RightOperand, vEdge>,
+                                     std::is_same<RightOperand, mEdge>,
+                                     std::is_same<RightOperand, dEdge>>,
+                  "Right operand must be a vector, matrix or density matrix");
+
     [[maybe_unused]] const auto before = cn.cacheCount();
 
-    Qubit var = -1;
+    Qubit var{};
     RightOperand e;
 
     if constexpr (std::is_same_v<LeftOperand, dEdge>) {
@@ -1795,18 +1801,14 @@ public:
       dEdge::applyDmChangesToEdges(xCopy, yCopy);
 
       if (!xCopy.isTerminal()) {
-        assert(xCopy.p != nullptr);
         var = xCopy.p->v;
       }
       if (!y.isTerminal() && yCopy.p->v > var) {
-        assert(xCopy.p != nullptr);
         var = yCopy.p->v;
       }
 
       e = multiply2(xCopy, yCopy, var, start, generateDensityMatrix);
-
       dEdge::revertDmChangesToEdges(xCopy, yCopy);
-
     } else {
       if (!x.isTerminal()) {
         assert(x.p != nullptr);
@@ -1831,24 +1833,17 @@ private:
   template <class LeftOperandNode, class RightOperandNode>
   Edge<RightOperandNode>
   multiply2(const Edge<LeftOperandNode>& x, const Edge<RightOperandNode>& y,
-            Qubit var, Qubit start = 0,
-            [[maybe_unused]] bool generateDensityMatrix = false) {
+            const Qubit var, const Qubit start = 0,
+            [[maybe_unused]] const bool generateDensityMatrix = false) {
     using LEdge = Edge<LeftOperandNode>;
     using REdge = Edge<RightOperandNode>;
     using ResultEdge = Edge<RightOperandNode>;
-
-    if (x.p == nullptr) {
-      return {nullptr, Complex::zero};
-    }
-    if (y.p == nullptr) {
-      return y;
-    }
 
     if (x.w.exactlyZero() || y.w.exactlyZero()) {
       return ResultEdge::zero;
     }
 
-    if (var == start - 1) {
+    if (x.isTerminal() && y.isTerminal()) {
       return ResultEdge::terminal(cn.mulCached(x.w, y.w));
     }
 
@@ -1858,9 +1853,7 @@ private:
     auto& computeTable =
         getMultiplicationComputeTable<LeftOperandNode, RightOperandNode>();
     auto r = computeTable.lookup(xCopy, yCopy, generateDensityMatrix);
-    //            if (r.p != nullptr && false) { // activate for debugging
-    //            caching only
-    if (r.p != nullptr) {
+    if (!RightOperandNode::isTerminal(r.p)) {
       if (r.w.approximatelyZero()) {
         return ResultEdge::zero;
       }
@@ -1875,7 +1868,6 @@ private:
     }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(y.p->e)>;
-
     ResultEdge e{};
     if constexpr (std::is_same_v<RightOperandNode, mCachedEdge>) {
       // This branch is only taken for matrices
@@ -1994,12 +1986,6 @@ private:
       }
     }
     e = makeDDNode(var, edge, true, generateDensityMatrix);
-
-    //            if (r.p != nullptr && e.p != r.p) { // activate for debugging
-    //            caching
-    //                std::cout << "Caching error detected in mul" << std::endl;
-    //            }
-
     computeTable.insert(xCopy, yCopy, {e.p, e.w});
 
     if (!e.w.exactlyZero()) {
@@ -2031,7 +2017,7 @@ public:
       @return a complex number representing the scalar product of the DDs
   **/
   ComplexValue innerProduct(const vEdge& x, const vEdge& y) {
-    if (x.p == nullptr || y.p == nullptr || x.w.approximatelyZero() ||
+    if (x.isTerminal() || y.isTerminal() || x.w.approximatelyZero() ||
         y.w.approximatelyZero()) { // the 0 case
       return {0, 0};
     }
@@ -2045,7 +2031,7 @@ public:
     // Overall normalization factor needs to be conjugated
     // before input into recursive private function
     auto xCopy = vEdge{x.p, ComplexNumbers::conj(x.w)};
-    const ComplexValue ip = innerProduct(xCopy, y, static_cast<Qubit>(w + 1));
+    const ComplexValue ip = innerProduct(xCopy, y, w + 1U);
 
     [[maybe_unused]] const auto after = cn.cacheCount();
     assert(after == before);
@@ -2091,8 +2077,7 @@ public:
           fidelityOfMeasurementOutcomesRecursive(e.p->e[1], probs, rightIdx);
     }
 
-    const dd::fp fidelity = topw * (leftContribution + rightContribution);
-    return fidelity;
+    return topw * (leftContribution + rightContribution);
   }
 
 private:
@@ -2107,8 +2092,7 @@ private:
   decreases each time to traverse the DDs.
   **/
   ComplexValue innerProduct(const vEdge& x, const vEdge& y, Qubit var) {
-    if (x.p == nullptr || y.p == nullptr || x.w.approximatelyZero() ||
-        y.w.approximatelyZero()) { // the 0 case
+    if (x.w.approximatelyZero() || y.w.approximatelyZero()) { // the 0 case
       return {0.0, 0.0};
     }
 
@@ -2121,15 +2105,14 @@ private:
     auto xCopy = vEdge{x.p, Complex::one};
     auto yCopy = vEdge{y.p, Complex::one};
     auto r = vectorInnerProduct.lookup(xCopy, yCopy);
-    if (r.p != nullptr) {
+    if (!vNode::isTerminal(r.p)) {
       auto c = cn.getTemporary(r.w);
       ComplexNumbers::mul(c, c, x.w);
       ComplexNumbers::mul(c, c, y.w);
-      return {RealNumber::val(c.r), RealNumber::val(c.i)};
+      return {c.r->value, c.i->value};
     }
 
-    auto w = static_cast<Qubit>(var - 1);
-
+    auto w = static_cast<Qubit>(var - 1U);
     ComplexValue sum{0.0, 0.0};
     // Iterates through edge weights recursively until terminal
     for (auto i = 0U; i < RADIX; i++) {
@@ -2150,14 +2133,13 @@ private:
       sum.r += cv.r;
       sum.i += cv.i;
     }
-    r.p = vNode::getTerminal();
     r.w = sum;
 
     vectorInnerProduct.insert(xCopy, yCopy, r);
     auto c = cn.getTemporary(sum);
     ComplexNumbers::mul(c, c, x.w);
     ComplexNumbers::mul(c, c, y.w);
-    return {RealNumber::val(c.r), RealNumber::val(c.i)};
+    return {c.r->value, c.i->value};
   }
 
 public:
@@ -2177,7 +2159,7 @@ public:
   memory.
   **/
   fp expectationValue(const mEdge& x, const vEdge& y) {
-    assert(x.p != nullptr && y.p != nullptr);
+    assert(!x.isTerminal() && !y.isTerminal());
     if (x.p->v != y.p->v) {
       throw std::invalid_argument(
           "Observable and state must act on the same number of qubits to "
@@ -2212,7 +2194,7 @@ public:
   }
 
   template <class Edge>
-  Edge kronecker(const Edge& x, const Edge& y, bool incIdx = true) {
+  Edge kronecker(const Edge& x, const Edge& y, const bool incIdx = true) {
     if constexpr (std::is_same_v<Edge, dEdge>) {
       throw std::invalid_argument(
           "Kronecker is currently not supported for density matrices");
@@ -2226,18 +2208,16 @@ public:
 
   // extent the DD pointed to by `e` with `h` identities on top and `l`
   // identities at the bottom
-  mEdge extend(const mEdge& e, Qubit h, Qubit l = 0) {
-    auto f =
-        (l > 0) ? kronecker(e, makeIdent(static_cast<dd::QubitCount>(l))) : e;
-    auto g =
-        (h > 0) ? kronecker(makeIdent(static_cast<dd::QubitCount>(h)), f) : f;
+  mEdge extend(const mEdge& e, const Qubit h, const Qubit l = 0) {
+    auto f = (l > 0) ? kronecker(e, makeIdent(l)) : e;
+    auto g = (h > 0) ? kronecker(makeIdent(h), f) : f;
     return g;
   }
 
 private:
   template <class Node>
   Edge<Node> kronecker2(const Edge<Node>& x, const Edge<Node>& y,
-                        bool incIdx = true) {
+                        const bool incIdx = true) {
     if (x.w.approximatelyZero() || y.w.approximatelyZero()) {
       return Edge<Node>::zero;
     }
@@ -2248,7 +2228,7 @@ private:
 
     auto& computeTable = getKroneckerComputeTable<Node>();
     auto r = computeTable.lookup(x, y);
-    if (r.p != nullptr) {
+    if (!Node::isTerminal(r.p)) {
       if (r.w.approximatelyZero()) {
         return Edge<Node>::zero;
       }
@@ -2263,7 +2243,7 @@ private:
         auto e = makeDDNode(
             idx, std::array{y, Edge<Node>::zero, Edge<Node>::zero, y});
         for (auto i = 0; i < x.p->v; ++i) {
-          idx = incIdx ? static_cast<Qubit>(e.p->v + 1) : e.p->v;
+          idx = incIdx ? (e.p->v + 1) : e.p->v;
           e = makeDDNode(idx,
                          std::array{e, Edge<Node>::zero, Edge<Node>::zero, e});
         }
@@ -2279,8 +2259,8 @@ private:
       edge[i] = kronecker2(x.p->e[i], y, incIdx);
     }
 
-    auto idx = incIdx ? static_cast<Qubit>(y.p->v + x.p->v + 1) : x.p->v;
-    auto e = makeDDNode(idx, edge, true);
+    auto idx = incIdx ? (y.p->v + x.p->v + 1) : x.p->v;
+    auto e = makeDDNode(static_cast<Qubit>(idx), edge, true);
     ComplexNumbers::mul(e.w, e.w, x.w);
     computeTable.insert(x, y, {e.p, e.w});
     return e;
@@ -2298,14 +2278,14 @@ public:
     return result;
   }
   ComplexValue trace(const mEdge& a) {
-    auto eliminate = std::vector<bool>(nqubits, true);
+    const auto eliminate = std::vector<bool>(nqubits, true);
     [[maybe_unused]] const auto before = cn.cacheCount();
     const auto res = partialTrace(a, eliminate);
     [[maybe_unused]] const auto after = cn.cacheCount();
     assert(before == after);
     return {RealNumber::val(res.w.r), RealNumber::val(res.w.i)};
   }
-  bool isCloseToIdentity(const mEdge& m, dd::fp tol = 1e-10) {
+  bool isCloseToIdentity(const mEdge& m, const dd::fp tol = 1e-10) {
     std::unordered_set<decltype(m.p)> visited{};
     visited.reserve(mUniqueTable.getStats().activeEntryCount);
     return isCloseToIdentityRecursive(m, visited, tol);
@@ -2319,28 +2299,21 @@ private:
       return mEdge::zero;
     }
 
-    if (std::none_of(eliminate.begin(), eliminate.end(),
-                     [](bool v) { return v; })) {
+    if (a.isTerminal() || std::none_of(eliminate.begin(), eliminate.end(),
+                                       [](bool v) { return v; })) {
       return a;
     }
-    auto v = a.p->v;
-    // Base case
-    if (v == -1) {
-      if (a.isTerminal()) {
-        return a;
-      }
-      throw std::runtime_error("Expected terminal node in trace.");
-    }
 
-    if (eliminate[static_cast<std::size_t>(v)]) {
-      auto elims = alreadyEliminated + 1;
+    const auto v = a.p->v;
+    if (eliminate[v]) {
+      const auto elims = alreadyEliminated + 1;
       auto r = mEdge::zero;
 
-      auto t0 = trace(a.p->e[0], eliminate, elims);
+      const auto t0 = trace(a.p->e[0], eliminate, elims);
       r = add2(r, t0);
       auto r1 = r;
 
-      auto t1 = trace(a.p->e[3], eliminate, elims);
+      const auto t1 = trace(a.p->e[3], eliminate, elims);
       r = add2(r, t1);
       auto r2 = r;
 
@@ -2364,13 +2337,12 @@ private:
         [this, &eliminate, &alreadyEliminated](const mEdge& e) -> mEdge {
           return trace(e, eliminate, alreadyEliminated);
         });
-    auto adjustedV =
+    const auto adjustedV =
         static_cast<Qubit>(static_cast<std::size_t>(a.p->v) -
                            (static_cast<std::size_t>(std::count(
                                 eliminate.begin(), eliminate.end(), true)) -
                             alreadyEliminated));
     auto r = makeDDNode(adjustedV, edge);
-
     if (r.w.exactlyOne()) {
       r.w = a.w;
     } else {
@@ -2381,14 +2353,14 @@ private:
 
   bool isCloseToIdentityRecursive(const mEdge& m,
                                   std::unordered_set<decltype(m.p)>& visited,
-                                  dd::fp tol) {
+                                  const dd::fp tol) {
     // immediately return if this node has already been visited
     if (visited.find(m.p) != visited.end()) {
       return true;
     }
 
     // immediately return of this node is identical to the identity
-    if (m.p->isIdentity()) {
+    if (m.isTerminal() || m.p->isIdentity()) {
       return true;
     }
 
@@ -2446,42 +2418,42 @@ public:
   /// Identity matrices
   ///
   // create n-qubit identity DD. makeIdent(n) === makeIdent(0, n-1)
-  mEdge makeIdent(QubitCount n) {
-    return makeIdent(0, static_cast<Qubit>(n - 1));
+  mEdge makeIdent(const std::size_t n) {
+    if (n == 0U) {
+      return mEdge::one;
+    }
+    return makeIdent(0, n - 1);
   }
-  mEdge makeIdent(Qubit leastSignificantQubit, Qubit mostSignificantQubit) {
+  mEdge makeIdent(const std::size_t leastSignificantQubit,
+                  const std::size_t mostSignificantQubit) {
     if (mostSignificantQubit < leastSignificantQubit) {
       return mEdge::one;
     }
 
-    const auto& entry =
-        idTable.at(static_cast<std::size_t>(mostSignificantQubit));
+    const auto& entry = idTable.at(mostSignificantQubit);
     if (leastSignificantQubit == 0 && entry.p != nullptr) {
       return entry;
     }
 
     if (mostSignificantQubit >= 1) {
-      const auto& prevEntry =
-          idTable.at(static_cast<std::size_t>(mostSignificantQubit - 1));
-      if (prevEntry.p != nullptr) {
-        idTable.at(static_cast<std::size_t>(mostSignificantQubit)) = makeDDNode(
-            mostSignificantQubit,
+      const auto& prevEntry = idTable.at(mostSignificantQubit - 1);
+      if (!prevEntry.isTerminal()) {
+        idTable.at(mostSignificantQubit) = makeDDNode(
+            static_cast<Qubit>(mostSignificantQubit),
             std::array{prevEntry, mEdge::zero, mEdge::zero, prevEntry});
-        return idTable[static_cast<std::size_t>(mostSignificantQubit)];
+        return idTable[mostSignificantQubit];
       }
     }
 
-    auto e =
-        makeDDNode(leastSignificantQubit, std::array{mEdge::one, mEdge::zero,
-                                                     mEdge::zero, mEdge::one});
-    for (auto k = static_cast<std::size_t>(leastSignificantQubit + 1);
-         k <= static_cast<std::make_unsigned_t<Qubit>>(mostSignificantQubit);
-         k++) {
+    auto e = makeDDNode(
+        static_cast<Qubit>(leastSignificantQubit),
+        std::array{mEdge::one, mEdge::zero, mEdge::zero, mEdge::one});
+    for (auto k = leastSignificantQubit + 1; k <= mostSignificantQubit; ++k) {
       e = makeDDNode(static_cast<Qubit>(k),
                      std::array{e, mEdge::zero, mEdge::zero, e});
     }
     if (leastSignificantQubit == 0) {
-      idTable.at(static_cast<std::size_t>(mostSignificantQubit)) = e;
+      idTable.at(mostSignificantQubit) = e;
     }
     return e;
   }
@@ -2495,7 +2467,7 @@ public:
     }
   }
 
-  mEdge createInitialMatrix(dd::QubitCount n,
+  mEdge createInitialMatrix(const std::size_t n,
                             const std::vector<bool>& ancillary) {
     auto e = makeIdent(n);
     incRef(e);
@@ -2516,8 +2488,8 @@ public:
   ///
   /// Decision diagram size
   ///
-  template <class Edge> unsigned int size(const Edge& e) {
-    static constexpr unsigned int NODECOUNT_BUCKETS = 200000;
+  template <class Edge> std::size_t size(const Edge& e) {
+    static constexpr std::size_t NODECOUNT_BUCKETS = 200000U;
     static std::unordered_set<decltype(e.p)> visited{NODECOUNT_BUCKETS}; // 2e6
     visited.max_load_factor(10);
     visited.clear();
@@ -2526,13 +2498,13 @@ public:
 
 private:
   template <class Edge>
-  unsigned int nodeCount(const Edge& e,
-                         std::unordered_set<decltype(e.p)>& v) const {
+  std::size_t nodeCount(const Edge& e,
+                        std::unordered_set<decltype(e.p)>& v) const {
     v.insert(e.p);
-    unsigned int sum = 1;
+    std::size_t sum = 1U;
     if (!e.isTerminal()) {
       for (const auto& edge : e.p->e) {
-        if (edge.p != nullptr && !v.count(edge.p)) {
+        if (!v.count(edge.p)) {
           sum += nodeCount(edge, v);
         }
       }
@@ -2545,11 +2517,11 @@ private:
   ///
 public:
   mEdge reduceAncillae(mEdge& e, const std::vector<bool>& ancillary,
-                       bool regular = true) {
+                       const bool regular = true) {
     // return if no more garbage left
     if (std::none_of(ancillary.begin(), ancillary.end(),
                      [](bool v) { return v; }) ||
-        e.p == nullptr) {
+        e.isTerminal()) {
       return e;
     }
     Qubit lowerbound = 0;
@@ -2574,7 +2546,7 @@ public:
     // return if no more garbage left
     if (std::none_of(garbage.begin(), garbage.end(),
                      [](bool v) { return v; }) ||
-        e.p == nullptr) {
+        e.isTerminal()) {
       return e;
     }
     Qubit lowerbound = 0;
@@ -2593,11 +2565,11 @@ public:
     return f;
   }
   mEdge reduceGarbage(mEdge& e, const std::vector<bool>& garbage,
-                      bool regular = true) {
+                      const bool regular = true) {
     // return if no more garbage left
     if (std::none_of(garbage.begin(), garbage.end(),
                      [](bool v) { return v; }) ||
-        e.p == nullptr) {
+        e.isTerminal()) {
       return e;
     }
     Qubit lowerbound = 0;
@@ -2618,7 +2590,8 @@ public:
 
 private:
   mEdge reduceAncillaeRecursion(mEdge& e, const std::vector<bool>& ancillary,
-                                Qubit lowerbound, bool regular = true) {
+                                const Qubit lowerbound,
+                                const bool regular = true) {
     if (e.p->v < lowerbound) {
       return e;
     }
@@ -2647,7 +2620,7 @@ private:
     f = makeDDNode(f.p->v, edges);
 
     // something to reduce for this qubit
-    if (f.p->v >= 0 && ancillary[static_cast<std::size_t>(f.p->v)]) {
+    if (ancillary[f.p->v]) {
       if (regular) {
         if (f.p->e[1].w != Complex::zero || f.p->e[3].w != Complex::zero) {
           f = makeDDNode(f.p->v, std::array{f.p->e[0], mEdge::zero, f.p->e[2],
@@ -2665,7 +2638,7 @@ private:
   }
 
   vEdge reduceGarbageRecursion(vEdge& e, const std::vector<bool>& garbage,
-                               Qubit lowerbound) {
+                               const Qubit lowerbound) {
     if (e.p->v < lowerbound) {
       return e;
     }
@@ -2693,7 +2666,7 @@ private:
     f = makeDDNode(f.p->v, edges);
 
     // something to reduce for this qubit
-    if (f.p->v >= 0 && garbage[static_cast<std::size_t>(f.p->v)]) {
+    if (garbage[f.p->v]) {
       if (f.p->e[1].w != Complex::zero) {
         vEdge g{};
         if (f.p->e[0].w == Complex::zero && f.p->e[1].w != Complex::zero) {
@@ -2716,7 +2689,8 @@ private:
     return f;
   }
   mEdge reduceGarbageRecursion(mEdge& e, const std::vector<bool>& garbage,
-                               Qubit lowerbound, bool regular = true) {
+                               const Qubit lowerbound,
+                               const bool regular = true) {
     if (e.p->v < lowerbound) {
       return e;
     }
@@ -2745,7 +2719,7 @@ private:
     f = makeDDNode(f.p->v, edges);
 
     // something to reduce for this qubit
-    if (f.p->v >= 0 && garbage[static_cast<std::size_t>(f.p->v)]) {
+    if (garbage[f.p->v]) {
       if (regular) {
         if (f.p->e[2].w != Complex::zero || f.p->e[3].w != Complex::zero) {
           mEdge g{};
@@ -2821,8 +2795,7 @@ public:
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
     do {
       ComplexNumbers::mul(c, c, r.w);
-      auto tmp = static_cast<std::size_t>(
-          elements.at(static_cast<std::size_t>(r.p->v)) - '0');
+      auto tmp = static_cast<std::size_t>(elements.at(r.p->v) - '0');
       assert(tmp <= r.p->e.size());
       r = r.p->e.at(tmp);
     } while (!r.isTerminal());
@@ -2830,14 +2803,14 @@ public:
 
     return {RealNumber::val(c.r), RealNumber::val(c.i)};
   }
-  ComplexValue getValueByPath(const vEdge& e, std::size_t i) {
+  ComplexValue getValueByPath(const vEdge& e, const std::size_t i) {
     if (e.isTerminal()) {
       return {RealNumber::val(e.w.r), RealNumber::val(e.w.i)};
     }
     return getValueByPath(e, Complex::one, i);
   }
   ComplexValue getValueByPath(const vEdge& e, const Complex& amp,
-                              std::size_t i) {
+                              const std::size_t i) {
     auto c = cn.mulCached(e.w, amp);
 
     if (e.isTerminal()) {
@@ -2856,14 +2829,15 @@ public:
     cn.returnToCache(c);
     return r;
   }
-  ComplexValue getValueByPath(const mEdge& e, std::size_t i, std::size_t j) {
+  ComplexValue getValueByPath(const mEdge& e, const std::size_t i,
+                              const std::size_t j) {
     if (e.isTerminal()) {
       return {RealNumber::val(e.w.r), RealNumber::val(e.w.i)};
     }
     return getValueByPath(e, Complex::one, i, j);
   }
-  ComplexValue getValueByPath(const mEdge& e, const Complex& amp, std::size_t i,
-                              std::size_t j) {
+  ComplexValue getValueByPath(const mEdge& e, const Complex& amp,
+                              const std::size_t i, const std::size_t j) {
     auto c = cn.mulCached(e.w, amp);
 
     if (e.isTerminal()) {
@@ -2889,7 +2863,7 @@ public:
   }
 
   std::map<std::string, dd::fp>
-  getProbVectorFromDensityMatrix(dEdge e, double measurementThreshold) {
+  getProbVectorFromDensityMatrix(dEdge e, const double measurementThreshold) {
     dEdge::alignDensityEdge(e);
     if (std::pow(2, e.p->v + 1) >=
         static_cast<double>(std::numeric_limits<std::size_t>::max())) {
@@ -2905,7 +2879,7 @@ public:
       auto resultString = intToString(m, '1', e.p->v + 1);
       dEdge cur = e;
       for (dd::Qubit i = 0; i < e.p->v + 1; ++i) {
-        if (cur.p->v == -1 || globalProbability <= measurementThreshold) {
+        if (cur.isTerminal() || globalProbability <= measurementThreshold) {
           globalProbability = 0;
           break;
         }
@@ -2930,12 +2904,13 @@ public:
     return measuredResult;
   }
 
-  [[nodiscard]] std::string intToString(std::size_t targetNumber, char value,
-                                        dd::Qubit size) const {
-    std::string path(static_cast<std::size_t>(size), '0');
-    for (auto i = 1; i <= size; i++) {
+  [[nodiscard]] std::string intToString(std::size_t targetNumber,
+                                        const char value,
+                                        const Qubit size) const {
+    std::string path(size, '0');
+    for (auto i = 1U; i <= size; ++i) {
       if ((targetNumber % 2) != 0U) {
-        path[static_cast<std::size_t>(size - i)] = value;
+        path[size - i] = value;
       }
       targetNumber = targetNumber >> 1U;
     }
@@ -2949,7 +2924,8 @@ public:
     getVector(e, Complex::one, 0, vec);
     return vec;
   }
-  void getVector(const vEdge& e, const Complex& amp, std::size_t i, CVec& vec) {
+  void getVector(const vEdge& e, const Complex& amp, const std::size_t i,
+                 CVec& vec) {
     // calculate new accumulated amplitude
     auto c = cn.mulCached(e.w, amp);
 
@@ -2976,8 +2952,9 @@ public:
     const std::size_t element = 2ULL << e.p->v;
     for (auto i = 0ULL; i < element; i++) {
       const auto amplitude = getValueByPath(e, i);
-      for (Qubit j = e.p->v; j >= 0; j--) {
-        std::cout << ((i >> j) & 1ULL);
+      const auto n = static_cast<std::size_t>(e.p->v) + 1U;
+      for (auto j = n; j > 0; --j) {
+        std::cout << ((i >> (j - 1)) & 1ULL);
       }
       constexpr auto precision = 3;
       // set fixed width to maximum of a printed number
@@ -3017,8 +2994,8 @@ public:
     getMatrix(e, Complex::one, 0, 0, mat);
     return mat;
   }
-  void getMatrix(const mEdge& e, const Complex& amp, std::size_t i,
-                 std::size_t j, CMat& mat) {
+  void getMatrix(const mEdge& e, const Complex& amp, const std::size_t i,
+                 const std::size_t j, CMat& mat) {
     // calculate new accumulated amplitude
     auto c = cn.mulCached(e.w, amp);
 
@@ -3058,8 +3035,8 @@ public:
     return mat;
   }
 
-  void getDensityMatrix(dEdge& e, const Complex& amp, std::size_t i,
-                        std::size_t j, CMat& mat) {
+  void getDensityMatrix(dEdge& e, const Complex& amp, const std::size_t i,
+                        const std::size_t j, CMat& mat) {
     // calculate new accumulated amplitude
     auto c = cn.mulCached(e.w, amp);
 
@@ -3100,7 +3077,7 @@ public:
 
   void exportAmplitudesRec(const vEdge& edge, std::ostream& oss,
                            const std::string& path, Complex& amplitude,
-                           dd::QubitCount level, bool binary = false) {
+                           const std::size_t level, const bool binary = false) {
     if (edge.isTerminal()) {
       auto amp = cn.getTemporary();
       dd::ComplexNumbers::mul(amp, amplitude, edge.w);
@@ -3120,8 +3097,8 @@ public:
     exportAmplitudesRec(edge.p->e[1], oss, path + "1", a, level - 1, binary);
     cn.returnToCache(a);
   }
-  void exportAmplitudes(const vEdge& edge, std::ostream& oss, dd::QubitCount nq,
-                        bool binary = false) {
+  void exportAmplitudes(const vEdge& edge, std::ostream& oss,
+                        const std::size_t nq, const bool binary = false) {
     if (edge.isTerminal()) {
       // TODO special treatment
       return;
@@ -3131,7 +3108,7 @@ public:
     cn.returnToCache(weight);
   }
   void exportAmplitudes(const vEdge& edge, const std::string& outputFilename,
-                        dd::QubitCount nq, bool binary = false) {
+                        const std::size_t nq, const bool binary = false) {
     std::ofstream init(outputFilename);
     std::ostringstream oss{};
 
@@ -3143,7 +3120,7 @@ public:
 
   void exportAmplitudesRec(const vEdge& edge,
                            std::vector<std::complex<dd::fp>>& amplitudes,
-                           Complex& amplitude, dd::QubitCount level,
+                           Complex& amplitude, const std::size_t level,
                            std::size_t idx) {
     if (edge.isTerminal()) {
       auto amp = cn.getTemporary();
@@ -3165,7 +3142,7 @@ public:
   }
   void exportAmplitudes(const vEdge& edge,
                         std::vector<std::complex<dd::fp>>& amplitudes,
-                        dd::QubitCount nq) {
+                        const std::size_t nq) {
     if (edge.isTerminal()) {
       // TODO special treatment
       return;
@@ -3177,7 +3154,7 @@ public:
 
   void addAmplitudesRec(const vEdge& edge,
                         std::vector<std::complex<dd::fp>>& amplitudes,
-                        ComplexValue& amplitude, dd::QubitCount level,
+                        ComplexValue& amplitude, const std::size_t level,
                         std::size_t idx) {
     const auto ar = RealNumber::val(edge.w.r);
     const auto ai = RealNumber::val(edge.w.i);
@@ -3200,7 +3177,7 @@ public:
   }
   void addAmplitudes(const vEdge& edge,
                      std::vector<std::complex<dd::fp>>& amplitudes,
-                     dd::QubitCount nq) {
+                     const std::size_t nq) {
     if (edge.isTerminal()) {
       // TODO special treatment
       return;
@@ -3297,7 +3274,7 @@ public:
 
   template <class Node, class Edge = Edge<Node>,
             std::size_t N = std::tuple_size_v<decltype(Node::e)>>
-  Edge deserialize(std::istream& is, bool readBinary = false) {
+  Edge deserialize(std::istream& is, const bool readBinary = false) {
     auto result = Edge::zero;
     ComplexValue rootweight{};
 
@@ -3409,7 +3386,7 @@ public:
   }
 
   template <class Node, class Edge = Edge<Node>>
-  Edge deserialize(const std::string& inputFilename, bool readBinary) {
+  Edge deserialize(const std::string& inputFilename, const bool readBinary) {
     auto ifs = std::ifstream(inputFilename, std::ios::binary);
 
     if (!ifs.good()) {
@@ -3423,9 +3400,9 @@ public:
 private:
   template <class Node, class Edge = Edge<Node>,
             std::size_t N = std::tuple_size_v<decltype(Node::e)>>
-  Edge deserializeNode(std::int64_t index, Qubit v,
+  Edge deserializeNode(const std::int64_t index, const Qubit v,
                        std::array<std::int64_t, N>& edgeIdx,
-                       std::array<ComplexValue, N>& edgeWeight,
+                       const std::array<ComplexValue, N>& edgeWeight,
                        std::unordered_map<std::int64_t, Node*>& nodes) {
     if (index == -1) {
       return Edge::zero;
@@ -3526,7 +3503,7 @@ private:
     }
 
     for (const auto& child : e.p->e) {
-      if (child.p->v + 1 != e.p->v && !child.isTerminal()) {
+      if (!child.isTerminal() && child.p->v + 1 != e.p->v) {
         std::clog << "\nLOCAL INCONSISTENCY FOUND: Wrong V\n";
         debugnode(e.p);
         return false;
@@ -3642,6 +3619,10 @@ public:
               << alignof(mEdge) << " bytes)"
               << "\n  mNode size: " << sizeof(mNode) << " bytes (aligned "
               << alignof(mNode) << " bytes)"
+              << "\n  dEdge size: " << sizeof(dEdge) << " bytes (aligned "
+              << alignof(dEdge) << " bytes)"
+              << "\n  dNode size: " << sizeof(dNode) << " bytes (aligned "
+              << alignof(dNode) << " bytes)"
               << "\n  CT Vector Add size: "
               << sizeof(typename decltype(vectorAdd)::Entry)
               << " bytes (aligned "
@@ -3691,10 +3672,10 @@ public:
   // print unique and compute table statistics
   void statistics() {
     std::cout << "DD statistics:\n";
-    std::cout << "[vUniqueTable] " << vUniqueTable.getStats();
-    std::cout << "[mUniqueTable] " << mUniqueTable.getStats();
-    std::cout << "[dUniqueTable] " << dUniqueTable.getStats();
-    std::cout << "[cUniqueTable] " << cUniqueTable.getStats();
+    std::cout << "[vUniqueTable] " << vUniqueTable.getStats() << "\n";
+    std::cout << "[mUniqueTable] " << mUniqueTable.getStats() << "\n";
+    std::cout << "[dUniqueTable] " << dUniqueTable.getStats() << "\n";
+    std::cout << "[cUniqueTable] " << cUniqueTable.getStats() << "\n";
     std::cout << "[CT Vector Add] ";
     vectorAdd.printStatistics();
     std::cout << "[CT Matrix Add] ";
