@@ -391,8 +391,7 @@ void changePermutation(DDType& on, qc::Permutation& from,
 
     // swap i and j
     auto saved = on;
-    const auto swapDD = dd->makeSWAPDD(static_cast<qc::Qubit>(on.p->v) + 1,
-                                       qc::Controls{}, from.at(i), from.at(j));
+    const auto swapDD = dd->makeSWAPDD(on.p->v + 1U, from.at(i), from.at(j));
     if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
       on = dd->multiply(swapDD, on);
     } else {
