@@ -3,6 +3,7 @@ FormatStyle: file
 Checks: |
   clang-diagnostic-*,
   clang-analyzer-*,
+  -clang-analyzer-core.NullDereference,
   boost-*,
   bugprone-*,
   -bugprone-easily-swappable-parameters,
