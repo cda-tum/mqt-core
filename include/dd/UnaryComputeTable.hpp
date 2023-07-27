@@ -38,27 +38,22 @@ public:
     ++count;
   }
 
-  ResultType lookup(const OperandType& operand) {
-    ResultType result{};
+  ResultType* lookup(const OperandType& operand) {
+    ResultType* result = nullptr;
     lookups++;
     const auto key = hash(operand);
     auto& entry = table[key];
-    if (entry.result.p == nullptr) {
-      return result;
-    }
     if (entry.operand != operand) {
       return result;
     }
 
     hits++;
-    return entry.result;
+    return &entry.result;
   }
 
   void clear() {
     if (count > 0) {
-      for (auto& entry : table) {
-        entry.result.p = nullptr;
-      }
+      std::fill(table.begin(), table.end(), Entry{});
       count = 0;
     }
     hits = 0;

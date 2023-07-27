@@ -1241,29 +1241,32 @@ TEST(DDPackageTest, dNodeMulCache1) {
 
   const auto xCopy = dd::dEdge{state.p, dd::Complex::one};
   const auto yCopy = dd::dEdge{densityMatrix0.p, dd::Complex::one};
-  const auto cachedResult = computeTable.lookup(xCopy, yCopy, false);
-  ASSERT_NE(cachedResult.p, nullptr);
+  const auto* cachedResult = computeTable.lookup(xCopy, yCopy, false);
+  ASSERT_NE(cachedResult, nullptr);
+  ASSERT_NE(cachedResult->p, nullptr);
   state = dd->multiply(state, densityMatrix0, 0, false);
   ASSERT_NE(state.p, nullptr);
-  ASSERT_EQ(state.p, cachedResult.p);
+  ASSERT_EQ(state.p, cachedResult->p);
 
   const auto densityMatrix1 = dd::densityFromMatrixEdge(operation);
   const auto xCopy1 = dd::dEdge{densityMatrix1.p, dd::Complex::one};
   const auto yCopy1 = dd::dEdge{state.p, dd::Complex::one};
-  const auto cachedResult1 = computeTable.lookup(xCopy1, yCopy1, true);
-  ASSERT_NE(cachedResult1.p, nullptr);
+  const auto* cachedResult1 = computeTable.lookup(xCopy1, yCopy1, true);
+  ASSERT_NE(cachedResult1, nullptr);
+  ASSERT_NE(cachedResult1->p, nullptr);
   state = dd->multiply(densityMatrix1, state, 0, true);
   ASSERT_NE(state.p, nullptr);
-  ASSERT_EQ(state.p, cachedResult1.p);
+  ASSERT_EQ(state.p, cachedResult1->p);
 
   // try a repeated lookup
-  const auto cachedResult2 = computeTable.lookup(xCopy1, yCopy1, true);
-  ASSERT_NE(cachedResult2.p, nullptr);
-  ASSERT_EQ(cachedResult2.p, cachedResult1.p);
+  const auto* cachedResult2 = computeTable.lookup(xCopy1, yCopy1, true);
+  ASSERT_NE(cachedResult2, nullptr);
+  ASSERT_NE(cachedResult2->p, nullptr);
+  ASSERT_EQ(cachedResult2->p, cachedResult1->p);
 
   computeTable.clear();
-  const auto cachedResult3 = computeTable.lookup(xCopy1, yCopy1, true);
-  ASSERT_EQ(cachedResult3.p, nullptr);
+  const auto* cachedResult3 = computeTable.lookup(xCopy1, yCopy1, true);
+  ASSERT_EQ(cachedResult3, nullptr);
 }
 
 TEST(DDPackageTest, dNoiseCache) {

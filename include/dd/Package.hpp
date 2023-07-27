@@ -1607,12 +1607,12 @@ public:
     }
 
     auto& computeTable = getAddComputeTable<Node>();
-    auto r = computeTable.lookup({x.p, x.w}, {y.p, y.w});
-    if (!Node::isTerminal(r.p)) {
-      if (r.w.approximatelyZero()) {
+    if (const auto* r = computeTable.lookup({x.p, x.w}, {y.p, y.w});
+        r != nullptr) {
+      if (r->w.approximatelyZero()) {
         return Edge<Node>::zero;
       }
-      return {r.p, cn.getCached(r.w)};
+      return {r->p, cn.getCached(r->w)};
     }
 
     const Qubit w = (x.isTerminal() || (!y.isTerminal() && y.p->v > x.p->v))
@@ -1686,9 +1686,8 @@ public:
     }
 
     // check in compute table
-    auto r = matrixTranspose.lookup(a);
-    if (!r.isTerminal()) {
-      return r;
+    if (const auto* r = matrixTranspose.lookup(a); r != nullptr) {
+      return *r;
     }
 
     std::array<mEdge, NEDGE> e{};
@@ -1699,13 +1698,13 @@ public:
       }
     }
     // create new top node
-    r = makeDDNode(a.p->v, e);
+    auto res = makeDDNode(a.p->v, e);
     // adjust top weight
-    r.w = cn.lookup(cn.mulTemp(r.w, a.w));
+    res.w = cn.lookup(cn.mulTemp(res.w, a.w));
 
     // put in compute table
-    matrixTranspose.insert(a, r);
-    return r;
+    matrixTranspose.insert(a, res);
+    return res;
   }
   mEdge conjugateTranspose(const mEdge& a) {
     if (a.isTerminal()) { // terminal case
@@ -1713,9 +1712,8 @@ public:
     }
 
     // check if in compute table
-    auto r = conjugateMatrixTranspose.lookup(a);
-    if (!r.isTerminal()) {
-      return r;
+    if (const auto* r = conjugateMatrixTranspose.lookup(a); r != nullptr) {
+      return *r;
     }
 
     std::array<mEdge, NEDGE> e{};
@@ -1726,14 +1724,14 @@ public:
       }
     }
     // create new top node
-    r = makeDDNode(a.p->v, e);
+    auto res = makeDDNode(a.p->v, e);
 
     // adjust top weight including conjugate
-    r.w = cn.lookup(cn.mulTemp(r.w, ComplexNumbers::conj(a.w)));
+    res.w = cn.lookup(cn.mulTemp(res.w, ComplexNumbers::conj(a.w)));
 
     // put it in the compute table
-    conjugateMatrixTranspose.insert(a, r);
-    return r;
+    conjugateMatrixTranspose.insert(a, res);
+    return res;
   }
 
   ///
@@ -1850,12 +1848,13 @@ private:
 
     auto& computeTable =
         getMultiplicationComputeTable<LeftOperandNode, RightOperandNode>();
-    auto r = computeTable.lookup(xCopy, yCopy, generateDensityMatrix);
-    if (!RightOperandNode::isTerminal(r.p)) {
-      if (r.w.approximatelyZero()) {
+    if (const auto* r =
+            computeTable.lookup(xCopy, yCopy, generateDensityMatrix);
+        r != nullptr) {
+      if (r->w.approximatelyZero()) {
         return ResultEdge::zero;
       }
-      auto e = ResultEdge{r.p, cn.getCached(r.w)};
+      auto e = ResultEdge{r->p, cn.getCached(r->w)};
       ComplexNumbers::mul(e.w, e.w, x.w);
       ComplexNumbers::mul(e.w, e.w, y.w);
       if (e.w.approximatelyZero()) {
@@ -2102,9 +2101,8 @@ private:
     // Set to one to generate more lookup hits
     auto xCopy = vEdge{x.p, Complex::one};
     auto yCopy = vEdge{y.p, Complex::one};
-    auto r = vectorInnerProduct.lookup(xCopy, yCopy);
-    if (!vNode::isTerminal(r.p)) {
-      auto c = cn.getTemporary(r.w);
+    if (const auto* r = vectorInnerProduct.lookup(xCopy, yCopy); r != nullptr) {
+      auto c = cn.getTemporary(r->w);
       ComplexNumbers::mul(c, c, x.w);
       ComplexNumbers::mul(c, c, y.w);
       return {c.r->value, c.i->value};
@@ -2131,9 +2129,8 @@ private:
       sum.r += cv.r;
       sum.i += cv.i;
     }
-    r.w = sum;
 
-    vectorInnerProduct.insert(xCopy, yCopy, r);
+    vectorInnerProduct.insert(xCopy, yCopy, {vNode::getTerminal(), sum});
     auto c = cn.getTemporary(sum);
     ComplexNumbers::mul(c, c, x.w);
     ComplexNumbers::mul(c, c, y.w);
@@ -2225,12 +2222,11 @@ private:
     }
 
     auto& computeTable = getKroneckerComputeTable<Node>();
-    auto r = computeTable.lookup(x, y);
-    if (!Node::isTerminal(r.p)) {
-      if (r.w.approximatelyZero()) {
+    if (const auto* r = computeTable.lookup(x, y); r != nullptr) {
+      if (r->w.approximatelyZero()) {
         return Edge<Node>::zero;
       }
-      return {r.p, cn.getCached(r.w)};
+      return {r->p, cn.getCached(r->w)};
     }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;

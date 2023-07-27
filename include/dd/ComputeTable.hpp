@@ -47,16 +47,13 @@ public:
     ++count;
   }
 
-  ResultType lookup(const LeftOperandType& leftOperand,
-                    const RightOperandType& rightOperand,
-                    [[maybe_unused]] const bool useDensityMatrix = false) {
-    ResultType result{};
+  ResultType* lookup(const LeftOperandType& leftOperand,
+                     const RightOperandType& rightOperand,
+                     [[maybe_unused]] const bool useDensityMatrix = false) {
+    ResultType* result = nullptr;
     lookups++;
     const auto key = hash(leftOperand, rightOperand);
     auto& entry = table[key];
-    if (entry.result.p == nullptr) {
-      return result;
-    }
     if (entry.leftOperand != leftOperand) {
       return result;
     }
@@ -68,20 +65,19 @@ public:
       // Since density matrices are reduced representations of matrices, a
       // density matrix may not be returned when a matrix is required and vice
       // versa
-      if (dNode::isDensityMatrixNode(entry.result.p->flags) !=
-          useDensityMatrix) {
+      if (!dNode::isTerminal(entry.result.p) &&
+          dNode::isDensityMatrixNode(entry.result.p->flags) !=
+              useDensityMatrix) {
         return result;
       }
     }
     hits++;
-    return entry.result;
+    return &entry.result;
   }
 
   void clear() {
     if (count > 0) {
-      for (auto& entry : table) {
-        entry.result.p = nullptr;
-      }
+      std::fill(table.begin(), table.end(), Entry{});
       count = 0;
     }
   }
