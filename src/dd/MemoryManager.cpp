@@ -9,6 +9,10 @@ namespace dd {
 
 template <typename T> T* MemoryManager<T>::get() {
   if (entryAvailableForReuse()) {
+    if constexpr (std::is_same_v<T, mNode>) {
+      std::cout << "Reusing " << std::hex
+                << reinterpret_cast<std::size_t>(available) << std::dec << "\n";
+    }
     return getEntryFromAvailableList();
   }
 
@@ -16,6 +20,10 @@ template <typename T> T* MemoryManager<T>::get() {
     allocateNewChunk();
   }
 
+  if constexpr (std::is_same_v<T, mNode>) {
+    std::cout << "Allocating " << std::hex
+              << reinterpret_cast<std::size_t>(&(*chunkIt)) << std::dec << "\n";
+  }
   return getEntryFromChunk();
 }
 
@@ -77,6 +85,10 @@ template <typename T> void MemoryManager<T>::returnEntry(T* entry) noexcept {
   available = entry;
   ++availableForReuseCount;
   --usedCount;
+  if constexpr (std::is_same_v<T, mNode>) {
+    std::cout << "Returning " << std::hex
+              << reinterpret_cast<std::size_t>(entry) << std::dec << "\n";
+  }
 }
 
 template <typename T>

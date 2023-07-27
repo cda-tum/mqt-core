@@ -100,6 +100,10 @@ public:
   Edge<Node> lookup(const Edge<Node>& e, bool keepNode = false) {
     // there are unique terminal nodes
     if (e.isTerminal()) {
+      if constexpr (std::is_same_v<Node, mNode>) {
+        std::cout << "Terminal node in lookup | " << std::hex
+                  << reinterpret_cast<std::uintptr_t>(e.p) << std::dec << "\n";
+      }
       return e;
     }
 
@@ -111,7 +115,15 @@ public:
     // and return it if found.
     if (const auto hashedNode = searchTable(e, key, keepNode);
         !hashedNode.isZeroTerminal()) {
+      if constexpr (std::is_same_v<Node, mNode>) {
+        std::cout << "Node found in table. Should have freed " << std::hex
+                  << reinterpret_cast<std::uintptr_t>(e.p) << std::dec << "\n";
+      }
       return hashedNode;
+    } else {
+      if constexpr (std::is_same_v<Node, mNode>) {
+        std::cout << "Node not found in table\n";
+      }
     }
 
     // if node not found -> add it to front of unique table bucket
@@ -292,12 +304,35 @@ private:
   Edge<Node> searchTable(const Edge<Node>& e, const std::size_t& key,
                          const bool keepNode = false) {
     Node* p = tables[e.p->v][key];
+    if constexpr (std::is_same_v<Node, mNode>) {
+      if (p == nullptr) {
+        std::cout << "Bucket empty\n";
+      }
+    }
     while (p != nullptr) {
       if (nodesAreEqual(e.p, p)) {
+        if constexpr (std::is_same_v<Node, mNode>) {
+          std::cout << "Nodes equal | " << std::hex
+                    << reinterpret_cast<std::uintptr_t>(e.p) << " "
+                    << reinterpret_cast<std::uintptr_t>(p) << std::dec << "\n";
+        }
         // Match found
         if (e.p != p && !keepNode) {
           // put node pointed to by e.p on available chain
           memoryManager->returnEntry(e.p);
+          if constexpr (std::is_same_v<Node, mNode>) {
+            std::cout << "Put node on available chain | " << std::hex
+                      << reinterpret_cast<std::uintptr_t>(e.p) << " | "
+                      << std::dec << memoryManager->getAvailableForReuseCount()
+                      << "\n";
+          }
+        } else {
+          if constexpr (std::is_same_v<Node, mNode>) {
+            std::cout << "Node not put on available chain | " << std::hex
+                      << reinterpret_cast<std::uintptr_t>(e.p) << " | "
+                      << std::dec << memoryManager->getAvailableForReuseCount()
+                      << "\n";
+          }
         }
         ++stats.hits;
 
@@ -305,6 +340,10 @@ private:
         assert(p->v == e.p->v);
 
         return {p, e.w};
+      } else {
+        if constexpr (std::is_same_v<Node, mNode>) {
+          std::cout << "Nodes not equal\n";
+        }
       }
       ++stats.collisions;
       p = p->next;

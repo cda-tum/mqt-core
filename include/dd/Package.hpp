@@ -566,6 +566,11 @@ public:
           e.p->e[0].w.approximatelyZero(), e.p->e[1].w.approximatelyZero(),
           e.p->e[2].w.approximatelyZero(), e.p->e[3].w.approximatelyZero()};
 
+      if (cached && std::all_of(zero.begin(), zero.end(),
+                                [](const auto& z) { return z; })) {
+        std::cout << "This is where things are messed up\n";
+      }
+
       // make sure to release cached numbers approximately zero, but not exactly
       // zero
       if (cached) {
@@ -607,6 +612,7 @@ public:
           // the chain
           getMemoryManager<Node>().returnEntry(e.p);
         }
+        std::cout << "All zero\n";
         return Edge<Node>::zero;
       }
 
@@ -1204,9 +1210,13 @@ public:
       const bool cached = false,
       [[maybe_unused]] const bool generateDensityMatrix = false) {
     auto& memoryManager = getMemoryManager<Node>();
+
+    const auto nodesBefore = memoryManager.getUsedCount();
     Edge<Node> e{memoryManager.get(), Complex::one};
     e.p->v = var;
     e.p->e = edges;
+    const auto nodesAfter = memoryManager.getUsedCount();
+    assert(nodesAfter == nodesBefore + 1);
 
     if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
       e.p->flags = 0;
@@ -1223,12 +1233,46 @@ public:
     }
 
     // normalize it
+    if constexpr (std::is_same_v<Node, mNode>) {
+      std::cout << "e.p before normalization: " << std::hex
+                << reinterpret_cast<std::size_t>(e.p) << std::dec << "\n";
+    }
     e = normalize(e, cached);
+    if constexpr (std::is_same_v<Node, mNode>) {
+      std::cout << "e.p after normalization: " << std::hex
+                << reinterpret_cast<std::size_t>(e.p) << std::dec << "\n";
+    }
     assert(e.isTerminal() || e.p->v == var);
 
     // look it up in the unique tables
     auto& uniqueTable = getUniqueTable<Node>();
+    auto utEntryBefore = uniqueTable.getStats().entryCount;
+    const auto reuseBefore = memoryManager.getAvailableForReuseCount();
     auto l = uniqueTable.lookup(e, false);
+    auto utEntryAfter = uniqueTable.getStats().entryCount;
+    auto nodesAfterLookup = memoryManager.getUsedCount();
+    const auto reuseAfter = memoryManager.getAvailableForReuseCount();
+    if constexpr (std::is_same_v<Node, mNode>) {
+      if (!((nodesAfterLookup == nodesAfter &&
+             utEntryAfter == utEntryBefore + 1) ||
+            (nodesAfterLookup == nodesBefore &&
+             utEntryAfter == utEntryBefore))) {
+        if (utEntryAfter == utEntryBefore) {
+          std::cout << "New entries available for reuse: "
+                    << (reuseAfter - reuseBefore) << "\n";
+        }
+
+        std::cout << "nodesAfterLookup: " << nodesAfterLookup
+                  << ", nodesAfter: " << nodesAfter
+                  << ", nodesBefore: " << nodesBefore
+                  << ", utEntryAfter: " << utEntryAfter
+                  << ", utEntryBefore: " << utEntryBefore << "\n";
+      }
+//      assert(
+//          (nodesAfterLookup == nodesAfter &&
+//           utEntryAfter == utEntryBefore + 1) ||
+//          (nodesAfterLookup == nodesBefore && utEntryAfter == utEntryBefore));
+    }
     assert(l.isTerminal() || l.p->v == var);
 
     // set specific node properties for matrices

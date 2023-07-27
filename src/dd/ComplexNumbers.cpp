@@ -237,9 +237,11 @@ Complex ComplexNumbers::getCached(const std::complex<fp>& c) {
 
 void ComplexNumbers::returnToCache(const Complex& c) noexcept {
   if (!constants::isStaticNumber(c.i)) {
+    std::cout << "Returning " << std::hex << reinterpret_cast<std::uintptr_t>(c.i) << std::dec << " | " << RealNumber::val(c.i) << "\n";
     cacheManager->returnEntry(c.i);
   }
   if (!constants::isStaticNumber(c.r)) {
+    std::cout << "Returning " << std::hex << reinterpret_cast<std::uintptr_t>(c.r) << std::dec << " | " << RealNumber::val(c.r) << "\n";
     cacheManager->returnEntry(c.r);
   }
 }
