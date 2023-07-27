@@ -82,8 +82,13 @@ public:
     }
   }
 
+  [[nodiscard]] std::size_t getHits() const { return hits; }
+  [[nodiscard]] std::size_t getLookups() const { return lookups; }
   [[nodiscard]] fp hitRatio() const {
-    return static_cast<fp>(hits) / static_cast<fp>(lookups);
+    if (lookups == 0U) {
+      return 1.;
+    }
+    return static_cast<fp>(getHits()) / static_cast<fp>(getLookups());
   }
 
   std::ostream& printStatistics(std::ostream& os = std::cout) {
