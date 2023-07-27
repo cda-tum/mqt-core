@@ -1850,3 +1850,32 @@ TEST(DDPackageTest, DDNodeLeakRegressionTest) {
   dd->garbageCollect(true);
   EXPECT_EQ(dd->mMemoryManager.getUsedCount(), 0U);
 }
+
+/**
+ * @brief This is a regression test for a compute table bug with terminals.
+ * @details The bug was caused by the assumption that `result.p == nullptr`
+ * indicates that the lookup was unsuccessful. However, this is not the case
+ * anymore since terminal DD nodes were replaced by a `nullptr` pointer.
+ */
+TEST(DDPackageTest, CTPerformanceRegressionTest) {
+  const auto nqubits = 1U;
+  auto matrix = dd::GateMatrix{dd::complex_one, dd::complex_zero,
+                               dd::complex_zero, dd::complex_zero};
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+
+  auto dd1 = dd->makeGateDD(matrix, nqubits, 0U);
+  matrix[0] = dd::complex_zero;
+  matrix[3] = dd::complex_one;
+  auto dd2 = dd->makeGateDD(matrix, nqubits, 0U);
+  const auto repetitions = 10U;
+  for (auto i = 0U; i < repetitions; ++i) {
+    dd->multiply(dd1, dd2);
+  }
+  auto& ct = dd->matrixMatrixMultiplication;
+  EXPECT_EQ(ct.getLookups(), repetitions);
+  EXPECT_EQ(ct.getHits(), repetitions - 1U);
+
+  // This additional check makes sure that no nodes are leaked.
+  dd->garbageCollect(true);
+  EXPECT_EQ(dd->mMemoryManager.getUsedCount(), 0U);
+}
