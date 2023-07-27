@@ -805,6 +805,7 @@ TEST(DDPackageTest, NearZeroNormalize) {
   auto meNormalizedCached = dd->normalize(me, true);
   EXPECT_EQ(meNormalizedCached, dd::mEdge::zero);
 
+  me.p = dd->mMemoryManager.get();
   for (auto& edge : me.p->e) {
     edge.p = dd->mMemoryManager.get();
     edge.p->v = 0;
