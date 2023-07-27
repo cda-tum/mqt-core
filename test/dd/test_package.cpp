@@ -1825,3 +1825,25 @@ TEST(DDPackageTest, InnerProductTopNodeConjugation) {
   // it will result in +0.416.
   EXPECT_NEAR(dd->expectationValue(op, evolvedState), -0.416, 0.001);
 }
+
+/**
+ * @brief This is a regression test for a long lasting memory leak in the DD
+ * package.
+ * @details The memory leak was caused by a bug in the normalization routine
+ * which was not properly returning a node to the memory manager. This occurred
+ * whenever the multiplication of two DDs resulted in a zero terminal.
+ */
+TEST(DDPackageTest, DDNodeLeakRegressionTest) {
+  const auto nqubits = 1U;
+  auto matrix = dd::GateMatrix{dd::complex_one, dd::complex_zero,
+                               dd::complex_zero, dd::complex_zero};
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+
+  auto dd1 = dd->makeGateDD(matrix, nqubits, 0U);
+  matrix[0] = dd::complex_zero;
+  matrix[3] = dd::complex_one;
+  auto dd2 = dd->makeGateDD(matrix, nqubits, 0U);
+  dd->multiply(dd1, dd2);
+  dd->garbageCollect(true);
+  EXPECT_EQ(dd->mMemoryManager.getUsedCount(), 0U);
+}
