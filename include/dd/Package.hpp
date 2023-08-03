@@ -602,9 +602,7 @@ public:
 
       // all equal to zero
       if (argmax == -1) {
-        if (!cached && !e.isTerminal()) {
-          // If it is not a cached computation, the node has to be put back into
-          // the chain
+        if (!e.isTerminal()) {
           getMemoryManager<Node>().returnEntry(e.p);
         }
         return Edge<Node>::zero;
