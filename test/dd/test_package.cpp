@@ -1241,29 +1241,32 @@ TEST(DDPackageTest, dNodeMulCache1) {
 
   const auto xCopy = dd::dEdge{state.p, dd::Complex::one};
   const auto yCopy = dd::dEdge{densityMatrix0.p, dd::Complex::one};
-  const auto cachedResult = computeTable.lookup(xCopy, yCopy, false);
-  ASSERT_NE(cachedResult.p, nullptr);
+  const auto* cachedResult = computeTable.lookup(xCopy, yCopy, false);
+  ASSERT_NE(cachedResult, nullptr);
+  ASSERT_NE(cachedResult->p, nullptr);
   state = dd->multiply(state, densityMatrix0, 0, false);
   ASSERT_NE(state.p, nullptr);
-  ASSERT_EQ(state.p, cachedResult.p);
+  ASSERT_EQ(state.p, cachedResult->p);
 
   const auto densityMatrix1 = dd::densityFromMatrixEdge(operation);
   const auto xCopy1 = dd::dEdge{densityMatrix1.p, dd::Complex::one};
   const auto yCopy1 = dd::dEdge{state.p, dd::Complex::one};
-  const auto cachedResult1 = computeTable.lookup(xCopy1, yCopy1, true);
-  ASSERT_NE(cachedResult1.p, nullptr);
+  const auto* cachedResult1 = computeTable.lookup(xCopy1, yCopy1, true);
+  ASSERT_NE(cachedResult1, nullptr);
+  ASSERT_NE(cachedResult1->p, nullptr);
   state = dd->multiply(densityMatrix1, state, 0, true);
   ASSERT_NE(state.p, nullptr);
-  ASSERT_EQ(state.p, cachedResult1.p);
+  ASSERT_EQ(state.p, cachedResult1->p);
 
   // try a repeated lookup
-  const auto cachedResult2 = computeTable.lookup(xCopy1, yCopy1, true);
-  ASSERT_NE(cachedResult2.p, nullptr);
-  ASSERT_EQ(cachedResult2.p, cachedResult1.p);
+  const auto* cachedResult2 = computeTable.lookup(xCopy1, yCopy1, true);
+  ASSERT_NE(cachedResult2, nullptr);
+  ASSERT_NE(cachedResult2->p, nullptr);
+  ASSERT_EQ(cachedResult2->p, cachedResult1->p);
 
   computeTable.clear();
-  const auto cachedResult3 = computeTable.lookup(xCopy1, yCopy1, true);
-  ASSERT_EQ(cachedResult3.p, nullptr);
+  const auto* cachedResult3 = computeTable.lookup(xCopy1, yCopy1, true);
+  ASSERT_EQ(cachedResult3, nullptr);
 }
 
 TEST(DDPackageTest, dNoiseCache) {
@@ -1844,6 +1847,35 @@ TEST(DDPackageTest, DDNodeLeakRegressionTest) {
   matrix[3] = dd::complex_one;
   auto dd2 = dd->makeGateDD(matrix, nqubits, 0U);
   dd->multiply(dd1, dd2);
+  dd->garbageCollect(true);
+  EXPECT_EQ(dd->mMemoryManager.getUsedCount(), 0U);
+}
+
+/**
+ * @brief This is a regression test for a compute table bug with terminals.
+ * @details The bug was caused by the assumption that `result.p == nullptr`
+ * indicates that the lookup was unsuccessful. However, this is not the case
+ * anymore since terminal DD nodes were replaced by a `nullptr` pointer.
+ */
+TEST(DDPackageTest, CTPerformanceRegressionTest) {
+  const auto nqubits = 1U;
+  auto matrix = dd::GateMatrix{dd::complex_one, dd::complex_zero,
+                               dd::complex_zero, dd::complex_zero};
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+
+  auto dd1 = dd->makeGateDD(matrix, nqubits, 0U);
+  matrix[0] = dd::complex_zero;
+  matrix[3] = dd::complex_one;
+  auto dd2 = dd->makeGateDD(matrix, nqubits, 0U);
+  const auto repetitions = 10U;
+  for (auto i = 0U; i < repetitions; ++i) {
+    dd->multiply(dd1, dd2);
+  }
+  auto& ct = dd->matrixMatrixMultiplication;
+  EXPECT_EQ(ct.getLookups(), repetitions);
+  EXPECT_EQ(ct.getHits(), repetitions - 1U);
+
+  // This additional check makes sure that no nodes are leaked.
   dd->garbageCollect(true);
   EXPECT_EQ(dd->mMemoryManager.getUsedCount(), 0U);
 }
