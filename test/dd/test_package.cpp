@@ -117,8 +117,9 @@ TEST(DDPackageTest, QFTState) {
   dd->printVector(qftState);
 
   for (dd::Qubit qubit = 0; qubit < 7; ++qubit) {
-    ASSERT_NEAR(dd->getValueByIndex(qftState, static_cast<std::size_t>(qubit)).r,
-                0.5 * dd::SQRT2_2, dd::RealNumber::eps);
+    ASSERT_NEAR(
+        dd->getValueByIndex(qftState, static_cast<std::size_t>(qubit)).r,
+        0.5 * dd::SQRT2_2, dd::RealNumber::eps);
     ASSERT_EQ(dd->getValueByIndex(qftState, static_cast<std::size_t>(qubit)).i,
               0);
   }
