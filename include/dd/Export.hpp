@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Complex.hpp"
-#include "ComplexNumbers.hpp"
-#include "Definitions.hpp"
-#include "Edge.hpp"
-#include "Package.hpp"
+#include "dd/Complex.hpp"
+#include "dd/ComplexNumbers.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/Edge.hpp"
+#include "dd/Package.hpp"
 
 #include <algorithm>
 #include <array>
@@ -40,7 +40,7 @@ inline fp thicknessFromMagnitude(const Complex& a) {
 }
 
 static void printPhaseFormatted(std::ostream& os, fp r) {
-  const auto tol = dd::ComplexTable::tolerance();
+  const auto tol = dd::RealNumber::eps;
 
   r /= dd::PI;
   // special case treatment for +-i
@@ -114,35 +114,35 @@ inline std::string conditionalFormat(const Complex& a,
   const auto mag = ComplexNumbers::mag(a);
   const auto phase = ComplexNumbers::arg(a);
 
-  if (std::abs(mag) < ComplexTable::tolerance()) {
+  if (RealNumber::approximatelyZero(mag)) {
     return "0";
   }
 
   std::ostringstream ss{};
   // magnitude is (almost) 1
-  if (std::abs(mag - 1) < ComplexTable::tolerance()) {
-    if (std::abs(phase) < ComplexTable::tolerance()) {
+  if (RealNumber::approximatelyOne(mag)) {
+    if (RealNumber::approximatelyZero(phase)) {
       return "1";
     }
-    if (std::abs(phase - dd::PI_2) < ComplexTable::tolerance()) {
+    if (RealNumber::approximatelyEquals(phase, dd::PI_2)) {
       return "i";
     }
-    if (std::abs(phase + dd::PI_2) < ComplexTable::tolerance()) {
+    if (RealNumber::approximatelyEquals(phase, -dd::PI_2)) {
       return "-i";
     }
-    if (std::abs(std::abs(phase) - dd::PI) < ComplexTable::tolerance()) {
+    if (RealNumber::approximatelyEquals(phase, dd::PI)) {
       return "-1";
     }
     printPhaseFormatted(ss, phase);
     return ss.str();
   }
 
-  if (std::abs(std::abs(phase) - dd::PI) < ComplexTable::tolerance()) {
+  if (RealNumber::approximatelyEquals(std::abs(phase), dd::PI)) {
     ss << "-";
     dd::ComplexValue::printFormatted(ss, mag);
     return ss.str();
   }
-  if (std::abs(phase) < ComplexTable::tolerance()) {
+  if (RealNumber::approximatelyZero(phase)) {
     dd::ComplexValue::printFormatted(ss, mag);
     return ss.str();
   }
@@ -237,21 +237,21 @@ static std::ostream& memoryHeader(const Edge& e, std::ostream& os,
     } else if (e.w == Complex::one) {
       os << "1";
     } else {
-      if (e.w.r == &ComplexTable::zero) {
+      if (RealNumber::exactlyZero(e.w.r)) {
         os << "0";
-      } else if (e.w.r == &ComplexTable::sqrt2over2) {
+      } else if (RealNumber::exactlySqrt2over2(e.w.r)) {
         os << "\xe2\x88\x9a\xc2\xbd";
-      } else if (e.w.r == &ComplexTable::one) {
+      } else if (RealNumber::exactlyOne(e.w.r)) {
         os << "1";
       } else {
         os << std::hex << reinterpret_cast<std::uintptr_t>(e.w.r) << std::dec;
       }
       os << " ";
-      if (e.w.i == &ComplexTable::zero) {
+      if (RealNumber::exactlyZero(e.w.i)) {
         os << "0";
-      } else if (e.w.i == &ComplexTable::sqrt2over2) {
+      } else if (RealNumber::exactlySqrt2over2(e.w.i)) {
         os << "\xe2\x88\x9a\xc2\xbd";
-      } else if (e.w.i == &ComplexTable::one) {
+      } else if (RealNumber::exactlyOne(e.w.i)) {
         os << "1";
       } else {
         os << std::hex << reinterpret_cast<std::uintptr_t>(e.w.i) << std::dec;
@@ -617,21 +617,21 @@ static std::ostream& memoryEdge(const Edge& from, const Edge& to,
     if (to.w == Complex::one) {
       os << "1";
     } else {
-      if (to.w.r == &ComplexTable::zero) {
+      if (RealNumber::exactlyZero(to.w.r)) {
         os << "0";
-      } else if (to.w.r == &ComplexTable::sqrt2over2) {
+      } else if (RealNumber::exactlySqrt2over2(to.w.r)) {
         os << "\xe2\x88\x9a\xc2\xbd";
-      } else if (to.w.r == &ComplexTable::one) {
+      } else if (RealNumber::exactlyOne(to.w.r)) {
         os << "1";
       } else {
         os << std::hex << reinterpret_cast<std::uintptr_t>(to.w.r) << std::dec;
       }
       os << " ";
-      if (to.w.i == &ComplexTable::zero) {
+      if (RealNumber::exactlyZero(to.w.i)) {
         os << "0";
-      } else if (to.w.i == &ComplexTable::sqrt2over2) {
+      } else if (RealNumber::exactlySqrt2over2(to.w.i)) {
         os << "\xe2\x88\x9a\xc2\xbd";
-      } else if (to.w.i == &ComplexTable::one) {
+      } else if (RealNumber::exactlyOne(to.w.i)) {
         os << "1";
       } else {
         os << std::hex << reinterpret_cast<std::uintptr_t>(to.w.i) << std::dec;
@@ -662,6 +662,12 @@ static void toDot(const Edge& e, std::ostream& os, bool colored = true,
   std::unordered_set<decltype(e.p)> nodes{};
 
   auto priocmp = [](const Edge* left, const Edge* right) {
+    if (left->p == nullptr) {
+      return right->p != nullptr;
+    }
+    if (right->p == nullptr) {
+      return false;
+    }
     return left->p->v < right->p->v;
   };
 
@@ -695,7 +701,7 @@ static void toDot(const Edge& e, std::ostream& os, bool colored = true,
       modernNode(*node, oss, formatAsPolar);
     }
 
-    // iterate over edges in reverse to guarantee correct proceossing order
+    // iterate over edges in reverse to guarantee correct processing order
     for (auto i = static_cast<std::int16_t>(node->p->e.size() - 1); i >= 0;
          --i) {
       auto& edge = node->p->e[static_cast<std::size_t>(i)];
@@ -936,11 +942,17 @@ template <typename Edge>
 static void exportEdgeWeights(const Edge& edge, std::ostream& stream) {
   struct Priocmp {
     bool operator()(const Edge* left, const Edge* right) {
+      if (left->p == nullptr) {
+        return right->p != nullptr;
+      }
+      if (right->p == nullptr) {
+        return false;
+      }
       return left->p->v < right->p->v;
     }
   };
-  stream << std::showpos << CTEntry::val(edge.w.r) << CTEntry::val(edge.w.i)
-         << std::noshowpos << "i\n";
+  stream << std::showpos << RealNumber::val(edge.w.r)
+         << RealNumber::val(edge.w.i) << std::noshowpos << "i\n";
 
   std::unordered_set<decltype(edge.p)> nodes{};
 
@@ -973,8 +985,8 @@ static void exportEdgeWeights(const Edge& edge, std::ostream& stream) {
 
       // non-zero child to be included
       q.push(&child);
-      stream << std::showpos << CTEntry::val(child.w.r)
-             << CTEntry::val(child.w.i) << std::noshowpos << "i\n";
+      stream << std::showpos << RealNumber::val(child.w.r)
+             << RealNumber::val(child.w.i) << std::noshowpos << "i\n";
     }
   }
 }

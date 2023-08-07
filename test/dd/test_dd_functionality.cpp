@@ -18,17 +18,17 @@ protected:
 
     // number of complex table entries after clean-up should equal initial
     // number of entries
-    EXPECT_EQ(dd->cn.complexTable.getCount(), initialComplexCount);
+    EXPECT_EQ(dd->cn.realCount(), initialComplexCount);
     // number of available cache entries after clean-up should equal initial
     // number of entries
-    EXPECT_EQ(dd->cn.complexCache.getCount(), initialCacheCount);
+    EXPECT_EQ(dd->cn.cacheCount(), initialCacheCount);
   }
 
   void SetUp() override {
     // dd
     dd = std::make_unique<dd::Package<>>(nqubits);
-    initialCacheCount = dd->cn.complexCache.getCount();
-    initialComplexCount = dd->cn.complexTable.getCount();
+    initialCacheCount = dd->cn.cacheCount();
+    initialComplexCount = dd->cn.realCount();
 
     // initial state preparation
     e = ident = dd->makeIdent();
@@ -43,7 +43,7 @@ protected:
     dist = std::uniform_real_distribution<dd::fp>(0.0, 2. * dd::PI);
   }
 
-  dd::QubitCount nqubits = 4U;
+  std::size_t nqubits = 4U;
   std::size_t initialCacheCount = 0U;
   std::size_t initialComplexCount = 0U;
   qc::MatrixDD e{}, ident{};
@@ -242,10 +242,9 @@ TEST_F(DDFunctionality, changePermutation) {
      << "OPENQASM 2.0;"
      << "include \"qelib1.inc\";"
      << "qreg q[2];"
-     << "x q[0];" << std::endl;
+     << "x q[0];\n";
   qc.import(ss, qc::Format::OpenQASM);
-  auto sim = simulate(
-      &qc, dd->makeZeroState(static_cast<dd::QubitCount>(qc.getNqubits())), dd);
+  auto sim = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
   EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
   EXPECT_TRUE(sim.p->e[1].w.approximatelyOne());
   EXPECT_TRUE(sim.p->e[1].p->e[1].isZeroTerminal());
@@ -333,7 +332,7 @@ TEST_F(DDFunctionality, FuseTwoSingleQubitGates) {
   e = buildFunctionality(&qc, dd);
   CircuitOptimizer::singleQubitGateFusion(qc);
   const auto f = buildFunctionality(&qc, dd);
-  std::cout << "-----------------------------" << std::endl;
+  std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 1);
   EXPECT_EQ(e, f);
@@ -347,11 +346,11 @@ TEST_F(DDFunctionality, FuseThreeSingleQubitGates) {
   qc.y(0);
 
   e = buildFunctionality(&qc, dd);
-  std::cout << "-----------------------------" << std::endl;
+  std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::singleQubitGateFusion(qc);
   const auto f = buildFunctionality(&qc, dd);
-  std::cout << "-----------------------------" << std::endl;
+  std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 1);
   EXPECT_EQ(e, f);
@@ -364,11 +363,11 @@ TEST_F(DDFunctionality, FuseNoSingleQubitGates) {
   qc.x(1, 0_pc);
   qc.y(0);
   e = buildFunctionality(&qc, dd);
-  std::cout << "-----------------------------" << std::endl;
+  std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::singleQubitGateFusion(qc);
   const auto f = buildFunctionality(&qc, dd);
-  std::cout << "-----------------------------" << std::endl;
+  std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 3);
   EXPECT_EQ(e, f);
@@ -381,11 +380,11 @@ TEST_F(DDFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
   qc.z(1);
   qc.y(0);
   e = buildFunctionality(&qc, dd);
-  std::cout << "-----------------------------" << std::endl;
+  std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::singleQubitGateFusion(qc);
   const auto f = buildFunctionality(&qc, dd);
-  std::cout << "-----------------------------" << std::endl;
+  std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 2);
   EXPECT_EQ(e, f);

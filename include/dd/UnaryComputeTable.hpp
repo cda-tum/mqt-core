@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Definitions.hpp"
+#include "DDDefinitions.hpp"
 
 #include <array>
 #include <cstddef>
@@ -38,35 +38,35 @@ public:
     ++count;
   }
 
-  ResultType lookup(const OperandType& operand) {
-    ResultType result{};
+  ResultType* lookup(const OperandType& operand) {
+    ResultType* result = nullptr;
     lookups++;
     const auto key = hash(operand);
     auto& entry = table[key];
-    if (entry.result.p == nullptr) {
-      return result;
-    }
     if (entry.operand != operand) {
       return result;
     }
 
     hits++;
-    return entry.result;
+    return &entry.result;
   }
 
   void clear() {
     if (count > 0) {
-      for (auto& entry : table) {
-        entry.result.p = nullptr;
-      }
+      std::fill(table.begin(), table.end(), Entry{});
       count = 0;
     }
     hits = 0;
     lookups = 0;
   }
 
+  [[nodiscard]] std::size_t getHits() const { return hits; }
+  [[nodiscard]] std::size_t getLookups() const { return lookups; }
   [[nodiscard]] fp hitRatio() const {
-    return static_cast<fp>(hits) / static_cast<fp>(lookups);
+    if (lookups == 0U) {
+      return 1.;
+    }
+    return static_cast<fp>(getHits()) / static_cast<fp>(getLookups());
   }
 
   std::ostream& printStatistics(std::ostream& os = std::cout) {

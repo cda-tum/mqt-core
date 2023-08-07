@@ -52,7 +52,7 @@ repos:
 
   # Python linting using ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.0.276
+    rev: v0.0.281
     hooks:
       - id: ruff
         args: ["--fix", "--show-fixes"]
@@ -80,16 +80,16 @@ repos:
 
   # Run code formatting with Black
   - repo: https://github.com/psf/black
-    rev: 23.3.0 # Keep in sync with blacken-docs
+    rev: 23.7.0 # Keep in sync with blacken-docs
     hooks:
       - id: black-jupyter
 
   # Also run Black on examples in the documentation
   - repo: https://github.com/asottile/blacken-docs
-    rev: 1.14.0
+    rev: 1.15.0
     hooks:
       - id: blacken-docs
-        additional_dependencies: [black==23.3.0] # Keep in sync with blacken-docs
+        additional_dependencies: [black==23.7.0] # Keep in sync with blacken-docs
 
   # Clang-format the C++ part of the code base automatically
   - repo: https://github.com/pre-commit/mirrors-clang-format
@@ -109,7 +109,7 @@ repos:
 
   # Format configuration files with prettier
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: "v3.0.0-alpha.9-for-vscode"
+    rev: "v3.0.0"
     hooks:
       - id: prettier
         types_or: [yaml, markdown, html, css, scss, javascript, json]

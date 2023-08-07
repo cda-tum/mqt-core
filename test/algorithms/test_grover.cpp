@@ -10,28 +10,24 @@ class Grover
     : public testing::TestWithParam<std::tuple<std::size_t, std::size_t>> {
 protected:
   void TearDown() override {
-    if (!sim.isTerminal()) {
-      dd->decRef(sim);
-    }
-    if (!func.isTerminal()) {
-      dd->decRef(func);
-    }
+    dd->decRef(sim);
+    dd->decRef(func);
     dd->garbageCollect(true);
 
     // number of complex table entries after clean-up should equal initial
     // number of entries
-    EXPECT_EQ(dd->cn.complexTable.getCount(), initialComplexCount);
+    EXPECT_EQ(dd->cn.realCount(), initialComplexCount);
 
     // number of available cache entries after clean-up should equal initial
     // number of entries
-    EXPECT_EQ(dd->cn.complexCache.getCount(), initialCacheCount);
+    EXPECT_EQ(dd->cn.cacheCount(), initialCacheCount);
   }
 
   void SetUp() override {
     std::tie(nqubits, seed) = GetParam();
     dd = std::make_unique<dd::Package<>>(nqubits + 1);
-    initialCacheCount = dd->cn.complexCache.getCount();
-    initialComplexCount = dd->cn.complexTable.getCount();
+    initialCacheCount = dd->cn.cacheCount();
+    initialComplexCount = dd->cn.realCount();
   }
 
   std::size_t nqubits = 0;
@@ -113,13 +109,13 @@ TEST_P(Grover, Simulation) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
   qc->printStatistics(std::cout);
-  auto in = dd->makeZeroState(static_cast<dd::QubitCount>(nqubits + 1));
+  auto in = dd->makeZeroState(nqubits + 1U);
   // there should be no error simulating the circuit
   const std::size_t shots = 1024;
   auto measurements = simulate(qc.get(), in, dd, shots);
 
   for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << std::endl;
+    std::cout << state << ": " << count << "\n";
   }
 
   auto correctShots = measurements[qc->expected];

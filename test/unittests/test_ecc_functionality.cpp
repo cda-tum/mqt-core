@@ -134,7 +134,7 @@ protected:
       auto mapper = std::make_unique<eccType>(qcOriginal, 0);
       mapper->apply();
       circuitCounter++;
-      std::cout << "Testing circuit " << circuitCounter << std::endl;
+      std::cout << "Testing circuit " << circuitCounter << "\n";
       bool const success = testErrorCorrectionCircuit(
           mapper->getOriginalCircuit(), mapper->getMappedCircuit(),
           testParameter.testNoise, mapper->getDataQubits(),
@@ -183,16 +183,14 @@ protected:
         (static_cast<double>(shots) / 100.0) * (tolerance * 100.0);
 
     auto ddOriginal = std::make_unique<dd::Package<>>(qcOriginal->getNqubits());
-    auto originalRootEdge = ddOriginal->makeZeroState(
-        static_cast<dd::QubitCount>(qcOriginal->getNqubits()));
+    auto originalRootEdge = ddOriginal->makeZeroState(qcOriginal->getNqubits());
     ddOriginal->incRef(originalRootEdge);
 
     auto measurementsOriginal =
         simulate(qcOriginal.get(), originalRootEdge, ddOriginal, shots);
 
     auto ddEcc = std::make_unique<dd::Package<>>(qcMapped->getNqubits());
-    auto eccRootEdge = ddEcc->makeZeroState(
-        static_cast<dd::QubitCount>(qcMapped->getNqubits()));
+    auto eccRootEdge = ddEcc->makeZeroState(qcMapped->getNqubits());
     ddEcc->incRef(eccRootEdge);
 
     auto measurementsProtected =
@@ -210,13 +208,13 @@ protected:
       auto difference = std::max(eccHits, hits) - std::min(eccHits, hits);
       std::cout << "Diff/tolerance " << difference << "/" << toleranceAbsolute
                 << " Original register: " << hits
-                << " ecc register: " << eccHits << std::endl;
+                << " ecc register: " << eccHits << "\n";
       if (simulateWithErrors) {
         std::cout << " Simulating an error in qubit " << target << " after "
-                  << insertErrorAfterNGates << " gates." << std::endl;
+                  << insertErrorAfterNGates << " gates.\n";
       }
       if (static_cast<double>(difference) > toleranceAbsolute) {
-        std::cout << "Error is too large!" << std::endl;
+        std::cout << "Error is too large!\n";
         return false;
       }
     }

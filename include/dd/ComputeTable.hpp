@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Definitions.hpp"
-#include "Node.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/Node.hpp"
 
 #include <array>
 #include <cstddef>
@@ -47,16 +47,13 @@ public:
     ++count;
   }
 
-  ResultType lookup(const LeftOperandType& leftOperand,
-                    const RightOperandType& rightOperand,
-                    [[maybe_unused]] const bool useDensityMatrix = false) {
-    ResultType result{};
+  ResultType* lookup(const LeftOperandType& leftOperand,
+                     const RightOperandType& rightOperand,
+                     [[maybe_unused]] const bool useDensityMatrix = false) {
+    ResultType* result = nullptr;
     lookups++;
     const auto key = hash(leftOperand, rightOperand);
     auto& entry = table[key];
-    if (entry.result.p == nullptr) {
-      return result;
-    }
     if (entry.leftOperand != leftOperand) {
       return result;
     }
@@ -68,26 +65,30 @@ public:
       // Since density matrices are reduced representations of matrices, a
       // density matrix may not be returned when a matrix is required and vice
       // versa
-      if (dNode::isDensityMatrixNode(entry.result.p->flags) !=
-          useDensityMatrix) {
+      if (!dNode::isTerminal(entry.result.p) &&
+          dNode::isDensityMatrixNode(entry.result.p->flags) !=
+              useDensityMatrix) {
         return result;
       }
     }
     hits++;
-    return entry.result;
+    return &entry.result;
   }
 
   void clear() {
     if (count > 0) {
-      for (auto& entry : table) {
-        entry.result.p = nullptr;
-      }
+      std::fill(table.begin(), table.end(), Entry{});
       count = 0;
     }
   }
 
+  [[nodiscard]] std::size_t getHits() const { return hits; }
+  [[nodiscard]] std::size_t getLookups() const { return lookups; }
   [[nodiscard]] fp hitRatio() const {
-    return static_cast<fp>(hits) / static_cast<fp>(lookups);
+    if (lookups == 0U) {
+      return 1.;
+    }
+    return static_cast<fp>(getHits()) / static_cast<fp>(getLookups());
   }
 
   std::ostream& printStatistics(std::ostream& os = std::cout) {

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Definitions.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
 #include "operations/ClassicControlledOperation.hpp"
@@ -14,85 +13,76 @@ namespace dd {
 // single-target Operations
 template <class Config>
 qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
-                                    std::unique_ptr<dd::Package<Config>>& dd,
-                                    const dd::Controls& controls,
-                                    dd::Qubit target, bool inverse) {
+                                    std::unique_ptr<Package<Config>>& dd,
+                                    const qc::Controls& controls,
+                                    const qc::Qubit target,
+                                    const bool inverse) {
   GateMatrix gm;
 
   const auto type = op->getType();
-  const auto nqubits = static_cast<dd::QubitCount>(op->getNqubits());
-  const auto startQubit = static_cast<std::size_t>(op->getStartingQubit());
+  const auto nqubits = op->getNqubits();
+  const auto startQubit = op->getStartingQubit();
   const auto& parameter = op->getParameter();
 
   switch (type) {
   case qc::I:
-    gm = dd::Imat;
+    gm = Imat;
     break;
   case qc::H:
-    gm = dd::Hmat;
+    gm = Hmat;
     break;
-  case qc::X: {
-    qc::MatrixDD e{};
-    if (controls.size() > 1U) { // Toffoli
-      e = dd->toffoliTable.lookup(nqubits, controls, target);
-      if (e.p == nullptr) {
-        e = dd->makeGateDD(dd::Xmat, nqubits, controls, target, startQubit);
-        dd->toffoliTable.insert(nqubits, controls, target, e);
-      }
-      return e;
-    }
-    gm = dd::Xmat;
+  case qc::X:
+    gm = Xmat;
     break;
-  }
   case qc::Y:
-    gm = dd::Ymat;
+    gm = Ymat;
     break;
   case qc::Z:
-    gm = dd::Zmat;
+    gm = Zmat;
     break;
   case qc::S:
-    gm = inverse ? dd::Sdagmat : dd::Smat;
+    gm = inverse ? Sdagmat : Smat;
     break;
   case qc::Sdag:
-    gm = inverse ? dd::Smat : dd::Sdagmat;
+    gm = inverse ? Smat : Sdagmat;
     break;
   case qc::T:
-    gm = inverse ? dd::Tdagmat : dd::Tmat;
+    gm = inverse ? Tdagmat : Tmat;
     break;
   case qc::Tdag:
-    gm = inverse ? dd::Tmat : dd::Tdagmat;
+    gm = inverse ? Tmat : Tdagmat;
     break;
   case qc::V:
-    gm = inverse ? dd::Vdagmat : dd::Vmat;
+    gm = inverse ? Vdagmat : Vmat;
     break;
   case qc::Vdag:
-    gm = inverse ? dd::Vmat : dd::Vdagmat;
+    gm = inverse ? Vmat : Vdagmat;
     break;
   case qc::U3:
-    gm = inverse ? dd::U3mat(-parameter[1U], -parameter[2U], -parameter[0U])
-                 : dd::U3mat(parameter[2U], parameter[1U], parameter[0U]);
+    gm = inverse ? U3mat(-parameter[1U], -parameter[2U], -parameter[0U])
+                 : U3mat(parameter[2U], parameter[1U], parameter[0U]);
     break;
   case qc::U2:
-    gm = inverse ? dd::U2mat(-parameter[0U] + dd::PI, -parameter[1U] - dd::PI)
-                 : dd::U2mat(parameter[1U], parameter[0U]);
+    gm = inverse ? U2mat(-parameter[0U] + PI, -parameter[1U] - PI)
+                 : U2mat(parameter[1U], parameter[0U]);
     break;
   case qc::Phase:
-    gm = inverse ? dd::Phasemat(-parameter[0U]) : dd::Phasemat(parameter[0U]);
+    gm = inverse ? Phasemat(-parameter[0U]) : Phasemat(parameter[0U]);
     break;
   case qc::SX:
-    gm = inverse ? dd::SXdagmat : dd::SXmat;
+    gm = inverse ? SXdagmat : SXmat;
     break;
   case qc::SXdag:
-    gm = inverse ? dd::SXmat : dd::SXdagmat;
+    gm = inverse ? SXmat : SXdagmat;
     break;
   case qc::RX:
-    gm = inverse ? dd::RXmat(-parameter[0U]) : dd::RXmat(parameter[0U]);
+    gm = inverse ? RXmat(-parameter[0U]) : RXmat(parameter[0U]);
     break;
   case qc::RY:
-    gm = inverse ? dd::RYmat(-parameter[0U]) : dd::RYmat(parameter[0U]);
+    gm = inverse ? RYmat(-parameter[0U]) : RYmat(parameter[0U]);
     break;
   case qc::RZ:
-    gm = inverse ? dd::RZmat(-parameter[0U]) : dd::RZmat(parameter[0U]);
+    gm = inverse ? RZmat(-parameter[0U]) : RZmat(parameter[0U]);
     break;
   default:
     std::ostringstream oss{};
@@ -105,13 +95,13 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
 // two-target Operations
 template <class Config>
 qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
-                                    std::unique_ptr<dd::Package<Config>>& dd,
-                                    const dd::Controls& controls,
-                                    dd::Qubit target0, dd::Qubit target1,
-                                    bool inverse) {
+                                    std::unique_ptr<Package<Config>>& dd,
+                                    const qc::Controls& controls,
+                                    qc::Qubit target0, qc::Qubit target1,
+                                    const bool inverse) {
   const auto type = op->getType();
-  const auto nqubits = static_cast<dd::QubitCount>(op->getNqubits());
-  const auto startQubit = static_cast<std::size_t>(op->getStartingQubit());
+  const auto nqubits = op->getNqubits();
+  const auto startQubit = op->getStartingQubit();
   const auto& parameter = op->getParameter();
 
   if (type == qc::DCX && inverse) {
@@ -126,36 +116,36 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
     bool definitionFound = true;
     switch (type) {
     case qc::SWAP:
-      gm = dd::SWAPmat;
+      gm = SWAPmat;
       break;
     case qc::iSWAP:
-      gm = inverse ? dd::iSWAPinvmat : dd::iSWAPmat;
+      gm = inverse ? iSWAPinvmat : iSWAPmat;
       break;
     case qc::DCX:
-      gm = dd::DCXmat;
+      gm = DCXmat;
       break;
     case qc::ECR:
-      gm = dd::ECRmat;
+      gm = ECRmat;
       break;
     case qc::RXX:
-      gm = inverse ? dd::RXXmat(-parameter[0U]) : dd::RXXmat(parameter[0U]);
+      gm = inverse ? RXXmat(-parameter[0U]) : RXXmat(parameter[0U]);
       break;
     case qc::RYY:
-      gm = inverse ? dd::RYYmat(-parameter[0U]) : dd::RYYmat(parameter[0U]);
+      gm = inverse ? RYYmat(-parameter[0U]) : RYYmat(parameter[0U]);
       break;
     case qc::RZZ:
-      gm = inverse ? dd::RZZmat(-parameter[0U]) : dd::RZZmat(parameter[0U]);
+      gm = inverse ? RZZmat(-parameter[0U]) : RZZmat(parameter[0U]);
       break;
     case qc::RZX:
-      gm = inverse ? dd::RZXmat(-parameter[0U]) : dd::RZXmat(parameter[0U]);
+      gm = inverse ? RZXmat(-parameter[0U]) : RZXmat(parameter[0U]);
       break;
     case qc::XXminusYY:
-      gm = inverse ? dd::XXMinusYYmat(-parameter[0U], parameter[1U])
-                   : dd::XXMinusYYmat(parameter[0U], parameter[1U]);
+      gm = inverse ? XXMinusYYmat(-parameter[0U], parameter[1U])
+                   : XXMinusYYmat(parameter[0U], parameter[1U]);
       break;
     case qc::XXplusYY:
-      gm = inverse ? dd::XXPlusYYmat(-parameter[0U], parameter[1U])
-                   : dd::XXPlusYYmat(parameter[0U], parameter[1U]);
+      gm = inverse ? XXPlusYYmat(-parameter[0U], parameter[1U])
+                   : XXPlusYYmat(parameter[0U], parameter[1U]);
       break;
     default:
       definitionFound = false;
@@ -253,22 +243,22 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
 
 template <class Config>
 qc::MatrixDD getDD(const qc::Operation* op,
-                   std::unique_ptr<dd::Package<Config>>& dd,
-                   qc::Permutation& permutation, bool inverse = false) {
+                   std::unique_ptr<Package<Config>>& dd,
+                   qc::Permutation& permutation, const bool inverse = false) {
   const auto type = op->getType();
   const auto nqubits = op->getNqubits();
 
   // check whether the operation can be handled by the underlying DD package
-  if (nqubits > dd::Package<Config>::MAX_POSSIBLE_QUBITS) {
+  if (nqubits > Package<Config>::MAX_POSSIBLE_QUBITS) {
     throw qc::QFRException(
         "Requested too many qubits to be handled by the DD package. Qubit "
         "datatype only allows up to " +
-        std::to_string(dd::Package<Config>::MAX_POSSIBLE_QUBITS) +
+        std::to_string(Package<Config>::MAX_POSSIBLE_QUBITS) +
         " qubits, while " + std::to_string(nqubits) +
         " were requested. If you want to use more than " +
-        std::to_string(dd::Package<Config>::MAX_POSSIBLE_QUBITS) +
+        std::to_string(Package<Config>::MAX_POSSIBLE_QUBITS) +
         " qubits, you have to recompile the package with a wider Qubit type in "
-        "`export/dd_package/include/dd/Definitions.hpp!`");
+        "`include/dd/DDDefinitions.hpp!`");
   }
 
   // if a permutation is provided and the current operation is a SWAP, this
@@ -276,16 +266,16 @@ qc::MatrixDD getDD(const qc::Operation* op,
   if (!permutation.empty() && type == qc::SWAP && !op->isControlled()) {
     const auto& targets = op->getTargets();
 
-    const auto target0 = targets.at(0U);
-    const auto target1 = targets.at(1U);
+    const auto target0 = targets[0U];
+    const auto target1 = targets[1U];
     // update permutation
     std::swap(permutation.at(target0), permutation.at(target1));
-    return dd->makeIdent();
+    return dd->makeIdent(nqubits);
   }
 
   if (type == qc::ShowProbabilities || type == qc::Barrier ||
       type == qc::Snapshot) {
-    return dd->makeIdent();
+    return dd->makeIdent(nqubits);
   }
 
   if (type == qc::GPhase) {
@@ -293,7 +283,7 @@ qc::MatrixDD getDD(const qc::Operation* op,
     if (inverse) {
       phase = -phase;
     }
-    auto id = dd->makeIdent();
+    auto id = dd->makeIdent(nqubits);
     id.w = dd->cn.lookup(std::cos(phase), std::sin(phase));
     return id;
   }
@@ -306,31 +296,18 @@ qc::MatrixDD getDD(const qc::Operation* op,
       controls = permutation.apply(controls);
     }
 
-    // convert controls to DD controls
-    dd::Controls ddControls{};
-    for (const auto& c : controls) {
-      const auto& qubit = static_cast<dd::Qubit>(c.qubit);
-      if (c.type == qc::Control::Type::Pos) {
-        ddControls.emplace(dd::Control{qubit, dd::Control::Type::pos});
-      } else {
-        ddControls.emplace(dd::Control{qubit, dd::Control::Type::neg});
-      }
-    }
-
     if (qc::isTwoQubitGate(type)) {
       assert(targets.size() == 2);
-      const auto target0 = static_cast<dd::Qubit>(targets[0U]);
-      const auto target1 = static_cast<dd::Qubit>(targets[1U]);
-      return getStandardOperationDD(standardOp, dd, ddControls, target0,
-                                    target1, inverse);
+      return getStandardOperationDD(standardOp, dd, controls, targets[0U],
+                                    targets[1U], inverse);
     }
     assert(targets.size() == 1);
-    const auto target0 = static_cast<dd::Qubit>(targets[0U]);
-    return getStandardOperationDD(standardOp, dd, ddControls, target0, inverse);
+    return getStandardOperationDD(standardOp, dd, controls, targets[0U],
+                                  inverse);
   }
 
   if (const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
-    auto e = dd->makeIdent();
+    auto e = dd->makeIdent(op->getNqubits());
     if (inverse) {
       for (const auto& operation : *compoundOp) {
         e = dd->multiply(e, getInverseDD(operation.get(), dd, permutation));
@@ -354,21 +331,21 @@ qc::MatrixDD getDD(const qc::Operation* op,
 
 template <class Config>
 qc::MatrixDD getDD(const qc::Operation* op,
-                   std::unique_ptr<dd::Package<Config>>& dd,
-                   bool inverse = false) {
+                   std::unique_ptr<Package<Config>>& dd,
+                   const bool inverse = false) {
   qc::Permutation perm{};
   return getDD(op, dd, perm, inverse);
 }
 
 template <class Config>
 qc::MatrixDD getInverseDD(const qc::Operation* op,
-                          std::unique_ptr<dd::Package<Config>>& dd) {
+                          std::unique_ptr<Package<Config>>& dd) {
   return getDD(op, dd, true);
 }
 
 template <class Config>
 qc::MatrixDD getInverseDD(const qc::Operation* op,
-                          std::unique_ptr<dd::Package<Config>>& dd,
+                          std::unique_ptr<Package<Config>>& dd,
                           qc::Permutation& permutation) {
   return getDD(op, dd, permutation, true);
 }
@@ -376,15 +353,15 @@ qc::MatrixDD getInverseDD(const qc::Operation* op,
 template <class Config>
 void dumpTensor(qc::Operation* op, std::ostream& of,
                 std::vector<std::size_t>& inds, std::size_t& gateIdx,
-                std::unique_ptr<dd::Package<Config>>& dd);
+                std::unique_ptr<Package<Config>>& dd);
 
 // apply swaps 'on' DD in order to change 'from' to 'to'
 // where |from| >= |to|
 template <class DDType, class Config>
 void changePermutation(DDType& on, qc::Permutation& from,
                        const qc::Permutation& to,
-                       std::unique_ptr<dd::Package<Config>>& dd,
-                       bool regular = true) {
+                       std::unique_ptr<Package<Config>>& dd,
+                       const bool regular = true) {
   assert(from.size() >= to.size());
 
   // iterate over (k,v) pairs of second permutation
@@ -414,9 +391,7 @@ void changePermutation(DDType& on, qc::Permutation& from,
 
     // swap i and j
     auto saved = on;
-    const auto swapDD = dd->makeSWAPDD(
-        static_cast<dd::QubitCount>(on.p->v + 1), dd::Controls{},
-        static_cast<dd::Qubit>(from.at(i)), static_cast<dd::Qubit>(from.at(j)));
+    const auto swapDD = dd->makeSWAPDD(on.p->v + 1U, from.at(i), from.at(j));
     if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
       on = dd->multiply(swapDD, on);
     } else {

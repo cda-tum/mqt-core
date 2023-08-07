@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Definitions.hpp"
+#include "dd/DDDefinitions.hpp"
 
 #include <array>
 #include <cassert>
@@ -25,23 +26,23 @@ public:
     table.resize(nvars);
   }
 
-  void insert(std::uint8_t kind, Qubit target, const Edge& r) {
+  void insert(std::uint8_t kind, qc::Qubit target, const Edge& r) {
     assert(kind <
            numberOfStochasticOperations); // There are new operations in OpType.
                                           // Increase the value of
                                           // numberOfOperations accordingly
-    table.at(static_cast<std::size_t>(target)).at(kind) = r;
+    table.at(target).at(kind) = r;
     ++count;
   }
 
-  Edge lookup(std::uint8_t kind, Qubit target) {
+  Edge lookup(std::uint8_t kind, qc::Qubit target) {
     assert(kind <
            numberOfStochasticOperations); // There are new operations in OpType.
                                           // Increase the value of
                                           // numberOfOperations accordingly
     lookups++;
     Edge r{};
-    auto entry = table.at(static_cast<std::size_t>(target)).at(kind);
+    auto entry = table.at(target).at(kind);
     if (entry.p == nullptr) {
       return r;
     }

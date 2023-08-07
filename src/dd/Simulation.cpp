@@ -4,7 +4,7 @@ namespace dd {
 template <class Config>
 std::map<std::string, std::size_t>
 simulate(const QuantumComputation* qc, const VectorDD& in,
-         std::unique_ptr<dd::Package<Config>>& dd, std::size_t shots,
+         std::unique_ptr<Package<Config>>& dd, std::size_t shots,
          std::size_t seed) {
   bool isDynamicCircuit = false;
   bool hasMeasurements = false;
@@ -24,7 +24,7 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
     mt.seed(seeds);
   }
 
-  std::map<dd::Qubit, std::size_t> measurementMap{};
+  std::map<qc::Qubit, std::size_t> measurementMap{};
 
   // rudimentary check whether circuit is dynamic
   for (const auto& op : *qc) {
@@ -44,7 +44,7 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
       const auto& classic = measure->getClassics();
 
       for (std::size_t i = 0; i < quantum.size(); ++i) {
-        measurementMap[static_cast<dd::Qubit>(quantum.at(i))] = classic.at(i);
+        measurementMap[quantum.at(i)] = classic.at(i);
       }
     }
 
@@ -105,16 +105,14 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
           // measurement map specifies that the circuit `qubit` is measured into
           // a certain `bit`
           measurement[qc->getNcbits() - 1U - bit] =
-              bitstring[bitstring.size() - 1U -
-                        static_cast<std::size_t>(qubit)];
+              bitstring[bitstring.size() - 1U - qubit];
         }
       } else {
         // otherwise, we consider the output permutation for determining where
         // to measure the qubits to
         for (const auto& [qubit, bit] : qc->outputPermutation) {
           measurement[qc->getNcbits() - 1 - bit] =
-              bitstring[bitstring.size() - 1U -
-                        static_cast<std::size_t>(qubit)];
+              bitstring[bitstring.size() - 1U - qubit];
         }
       }
       actualCounts[measurement] += count;
@@ -139,8 +137,7 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
           const auto& bits = nonunitary->getClassics();
           for (std::size_t j = 0U; j < qubits.size(); ++j) {
             measurements[bits.at(j)] = dd->measureOneCollapsing(
-                e, static_cast<dd::Qubit>(permutation.at(qubits.at(j))), true,
-                mt);
+                e, static_cast<Qubit>(permutation.at(qubits.at(j))), true, mt);
           }
           continue;
         }
@@ -149,7 +146,7 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
           const auto& qubits = nonunitary->getTargets();
           for (const auto& qubit : qubits) {
             auto bit = dd->measureOneCollapsing(
-                e, static_cast<dd::Qubit>(permutation.at(qubit)), true, mt);
+                e, static_cast<Qubit>(permutation.at(qubit)), true, mt);
             // apply an X operation whenever the measured result is one
             if (bit == '1') {
               const auto x =
@@ -208,7 +205,7 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
 template <class Config>
 void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in,
                               ProbabilityVector& probVector,
-                              std::unique_ptr<dd::Package<Config>>& dd) {
+                              std::unique_ptr<Package<Config>>& dd) {
   // ! initial layout, output permutation and garbage qubits are currently not
   // supported here
   dd->incRef(in);
@@ -217,11 +214,13 @@ void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in,
 }
 
 template <class Config>
-void extractProbabilityVectorRecursive(
-    const QuantumComputation* qc, const VectorDD& currentState,
-    decltype(qc->begin()) currentIt, std::map<std::size_t, char> measurements,
-    dd::fp commonFactor, ProbabilityVector& probVector,
-    std::unique_ptr<dd::Package<Config>>& dd) {
+void extractProbabilityVectorRecursive(const QuantumComputation* qc,
+                                       const VectorDD& currentState,
+                                       decltype(qc->begin()) currentIt,
+                                       std::map<std::size_t, char> measurements,
+                                       fp commonFactor,
+                                       ProbabilityVector& probVector,
+                                       std::unique_ptr<Package<Config>>& dd) {
   auto state = currentState;
   for (auto it = currentIt; it != qc->end(); ++it) {
     const auto& op = (*it);
@@ -261,17 +260,17 @@ void extractProbabilityVectorRecursive(
       }
 
       auto [pzero, pone] = dd->determineMeasurementProbabilities(
-          state, static_cast<dd::Qubit>(targets[0]), true);
+          state, static_cast<Qubit>(targets[0]), true);
 
       // normalize probabilities
       const auto norm = pzero + pone;
       pzero /= norm;
       pone /= norm;
 
-      if (CTEntry::approximatelyOne(pone)) {
-        const qc::MatrixDD xGate = dd->makeGateDD(
-            dd::Xmat, static_cast<dd::QubitCount>(state.p->v + 1),
-            static_cast<dd::Qubit>(targets[0U]));
+      if (RealNumber::approximatelyOne(pone)) {
+        const qc::MatrixDD xGate =
+            dd->makeGateDD(Xmat, static_cast<std::size_t>(state.p->v) + 1U,
+                           static_cast<Qubit>(targets[0U]));
         const qc::VectorDD resetState = dd->multiply(xGate, state);
         dd->incRef(resetState);
         dd->decRef(state);
@@ -279,7 +278,7 @@ void extractProbabilityVectorRecursive(
         continue;
       }
 
-      if (!CTEntry::approximatelyOne(pzero)) {
+      if (!RealNumber::approximatelyOne(pzero)) {
         throw qc::QFRException("Reset on non basis state encountered. This is "
                                "not supported in this method.");
       }
@@ -301,7 +300,7 @@ void extractProbabilityVectorRecursive(
 
       // determine probabilities for this measurement
       auto [pzero, pone] = dd->determineMeasurementProbabilities(
-          state, static_cast<dd::Qubit>(targets[0]), true);
+          state, static_cast<Qubit>(targets[0]), true);
 
       // normalize probabilities
       const auto norm = pzero + pone;
@@ -332,11 +331,11 @@ void extractProbabilityVectorRecursive(
           }
         }
         const auto prob0 = commonFactor * pzero;
-        if (!CTEntry::approximatelyZero(prob0)) {
+        if (!RealNumber::approximatelyZero(prob0)) {
           probVector[idx0] = prob0;
         }
         const auto prob1 = commonFactor * pone;
-        if (!CTEntry::approximatelyZero(prob1)) {
+        if (!RealNumber::approximatelyZero(prob1)) {
           probVector[idx1] = prob1;
         }
 
@@ -345,8 +344,8 @@ void extractProbabilityVectorRecursive(
         return;
       }
 
-      const bool nonZeroP0 = !CTEntry::approximatelyZero(pzero);
-      const bool nonZeroP1 = !CTEntry::approximatelyZero(pone);
+      const bool nonZeroP0 = !RealNumber::approximatelyZero(pzero);
+      const bool nonZeroP1 = !RealNumber::approximatelyZero(pone);
 
       // in case both outcomes are non-zero the reference count of the state has
       // to be increased once more in order to avoid reference counting errors
@@ -363,16 +362,15 @@ void extractProbabilityVectorRecursive(
         // determine the next iteration point
         auto nextIt = it + 1;
         // actually collapse the state
-        const dd::GateMatrix measurementMatrix{
-            dd::complex_one, dd::complex_zero, dd::complex_zero,
-            dd::complex_zero};
+        const GateMatrix measurementMatrix{complex_one, complex_zero,
+                                           complex_zero, complex_zero};
         const qc::MatrixDD measurementGate = dd->makeGateDD(
-            measurementMatrix, static_cast<dd::QubitCount>(state.p->v + 1),
-            static_cast<dd::Qubit>(targets[0]));
+            measurementMatrix, static_cast<std::size_t>(state.p->v) + 1U,
+            targets[0]);
         qc::VectorDD measuredState = dd->multiply(measurementGate, state);
 
         auto c = dd->cn.getTemporary(1. / std::sqrt(pzero), 0);
-        dd::ComplexNumbers::mul(c, measuredState.w, c);
+        ComplexNumbers::mul(c, c, measuredState.w);
         measuredState.w = dd->cn.lookup(c);
         dd->incRef(measuredState);
         dd->decRef(state);
@@ -391,16 +389,15 @@ void extractProbabilityVectorRecursive(
         // determine the next iteration point
         auto nextIt = it + 1;
         // actually collapse the state
-        const dd::GateMatrix measurementMatrix{
-            dd::complex_zero, dd::complex_zero, dd::complex_zero,
-            dd::complex_one};
+        const GateMatrix measurementMatrix{complex_zero, complex_zero,
+                                           complex_zero, complex_one};
         const qc::MatrixDD measurementGate = dd->makeGateDD(
-            measurementMatrix, static_cast<dd::QubitCount>(state.p->v + 1),
-            static_cast<dd::Qubit>(targets[0]));
+            measurementMatrix, static_cast<std::size_t>(state.p->v) + 1U,
+            targets[0]);
         qc::VectorDD measuredState = dd->multiply(measurementGate, state);
 
         auto c = dd->cn.getTemporary(1. / std::sqrt(pone), 0);
-        dd::ComplexNumbers::mul(c, measuredState.w, c);
+        ComplexNumbers::mul(c, measuredState.w, c);
         measuredState.w = dd->cn.lookup(c);
         dd->incRef(measuredState);
         dd->decRef(state);
@@ -426,7 +423,7 @@ void extractProbabilityVectorRecursive(
 
 template <class Config>
 VectorDD simulate(GoogleRandomCircuitSampling* qc, const VectorDD& in,
-                  std::unique_ptr<dd::Package<Config>>& dd,
+                  std::unique_ptr<Package<Config>>& dd,
                   const std::optional<std::size_t> ncycles) {
   if (ncycles.has_value() && (*ncycles < qc->cycles.size() - 2U)) {
     qc->removeCycles(qc->cycles.size() - 2U - *ncycles);
@@ -449,19 +446,19 @@ VectorDD simulate(GoogleRandomCircuitSampling* qc, const VectorDD& in,
 
 template std::map<std::string, std::size_t>
 simulate<DDPackageConfig>(const QuantumComputation* qc, const VectorDD& in,
-                          std::unique_ptr<dd::Package<DDPackageConfig>>& dd,
+                          std::unique_ptr<Package<DDPackageConfig>>& dd,
                           std::size_t shots, std::size_t seed);
 template void extractProbabilityVector<DDPackageConfig>(
     const QuantumComputation* qc, const VectorDD& in,
     ProbabilityVector& probVector,
-    std::unique_ptr<dd::Package<DDPackageConfig>>& dd);
+    std::unique_ptr<Package<DDPackageConfig>>& dd);
 template void extractProbabilityVectorRecursive<DDPackageConfig>(
     const QuantumComputation* qc, const VectorDD& in,
     decltype(qc->begin()) currentIt, std::map<std::size_t, char> measurements,
-    dd::fp commonFactor, dd::ProbabilityVector& probVector,
-    std::unique_ptr<dd::Package<DDPackageConfig>>& dd);
+    fp commonFactor, ProbabilityVector& probVector,
+    std::unique_ptr<Package<DDPackageConfig>>& dd);
 template VectorDD
 simulate<DDPackageConfig>(GoogleRandomCircuitSampling* qc, const VectorDD& in,
-                          std::unique_ptr<dd::Package<DDPackageConfig>>& dd,
+                          std::unique_ptr<Package<DDPackageConfig>>& dd,
                           const std::optional<std::size_t> ncycles);
 } // namespace dd
