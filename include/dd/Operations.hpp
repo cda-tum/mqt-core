@@ -270,12 +270,12 @@ qc::MatrixDD getDD(const qc::Operation* op,
     const auto target1 = targets[1U];
     // update permutation
     std::swap(permutation.at(target0), permutation.at(target1));
-    return dd->makeIdent(nqubits);
+    return dd->makeIdent();
   }
 
   if (type == qc::ShowProbabilities || type == qc::Barrier ||
       type == qc::Snapshot) {
-    return dd->makeIdent(nqubits);
+    return dd->makeIdent();
   }
 
   if (type == qc::GPhase) {
@@ -283,7 +283,7 @@ qc::MatrixDD getDD(const qc::Operation* op,
     if (inverse) {
       phase = -phase;
     }
-    auto id = dd->makeIdent(nqubits);
+    auto id = dd->makeIdent();
     id.w = dd->cn.lookup(std::cos(phase), std::sin(phase));
     return id;
   }
@@ -307,7 +307,7 @@ qc::MatrixDD getDD(const qc::Operation* op,
   }
 
   if (const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
-    auto e = dd->makeIdent(op->getNqubits());
+    auto e = dd->makeIdent();
     if (inverse) {
       for (const auto& operation : *compoundOp) {
         e = dd->multiply(e, getInverseDD(operation.get(), dd, permutation));

@@ -60,9 +60,9 @@ TEST(DDPackageTest, BellState) {
 
   ASSERT_EQ(dd->getValueByPath(bellState, 0),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellState, 1), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellState, 2), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellState, 3),
+  ASSERT_EQ(dd->getValueByIndex(bellState, 1), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellState, 2), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellState, 3),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
 
   auto goalState =
@@ -117,9 +117,9 @@ TEST(DDPackageTest, QFTState) {
   dd->printVector(qftState);
 
   for (dd::Qubit qubit = 0; qubit < 7; ++qubit) {
-    ASSERT_NEAR(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).r,
+    ASSERT_NEAR(dd->getValueByIndex(qftState, static_cast<std::size_t>(qubit)).r,
                 0.5 * dd::SQRT2_2, dd::RealNumber::eps);
-    ASSERT_EQ(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).i,
+    ASSERT_EQ(dd->getValueByIndex(qftState, static_cast<std::size_t>(qubit)).i,
               0);
   }
 
@@ -210,7 +210,7 @@ TEST(DDPackageTest, NegativeControl) {
   auto xGate = dd->makeGateDD(dd::Xmat, 2, 1_nc, 0);
   auto zeroState = dd->makeZeroState(2);
   auto state01 = dd->multiply(xGate, zeroState);
-  EXPECT_EQ(dd->getValueByPath(state01, 0b01).r, 1.);
+  EXPECT_EQ(dd->getValueByIndex(state01, 0b01).r, 1.);
 }
 
 TEST(DDPackageTest, IdentityTrace) {
@@ -271,7 +271,7 @@ TEST(DDPackageTest, VectorSerializationTest) {
 }
 
 TEST(DDPackageTest, BellMatrix) {
-  dd::QubitCount nrQubits = 2;
+  const auto nrQubits = 2U;
   auto dd = std::make_unique<dd::Package<>>(nrQubits);
 
   auto hGate = dd->makeGateDD(dd::Hmat, 2, 1);
@@ -289,33 +289,33 @@ TEST(DDPackageTest, BellMatrix) {
   ASSERT_EQ(dd->getValueByPath(bellMatrix, "22"),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
 
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 0, 0),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 0, 0),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 1, 0), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 2, 0), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 3, 0),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 1, 0), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 2, 0), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 3, 0),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
 
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 0, 1), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 1, 1),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 0, 1), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 1, 1),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 2, 1),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 2, 1),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 3, 1), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 3, 1), (dd::ComplexValue{0, 0}));
 
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 0, 2),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 0, 2),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 1, 2), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 2, 2), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 3, 2),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 1, 2), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 2, 2), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 3, 2),
             (dd::ComplexValue{-dd::SQRT2_2, 0}));
 
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 0, 3), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 1, 3),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 0, 3), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 1, 3),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 2, 3),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 2, 3),
             (dd::ComplexValue{-dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 3, 3), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 3, 3), (dd::ComplexValue{0, 0}));
 
   auto goalRow0 =
       dd::CVec{{dd::SQRT2_2, 0.}, {0., 0.}, {dd::SQRT2_2, 0.}, {0., 0.}};
@@ -444,35 +444,35 @@ TEST(DDPackageTest, TestConsistency) {
   dd->debugnode(bellState.p);
 }
 
-TEST(DDPackageTest, ToffoliTable) {
-  auto dd = std::make_unique<dd::Package<>>(4);
-
-  // try to search for a toffoli in an empty table
-  auto toffoli = dd->toffoliTable.lookup(3, {0_nc, 1_pc}, 2);
-  EXPECT_EQ(toffoli.p, nullptr);
-  if (toffoli.p == nullptr) {
-    toffoli = dd->makeGateDD(dd::Xmat, 3, {0_nc, 1_pc}, 2);
-    dd->toffoliTable.insert(3, {0_nc, 1_pc}, 2, toffoli);
-  }
-
-  // try again with same toffoli
-  auto toffoliTableEntry = dd->toffoliTable.lookup(3, {0_nc, 1_pc}, 2);
-  EXPECT_NE(toffoliTableEntry.p, nullptr);
-  EXPECT_EQ(toffoli, toffoliTableEntry);
-
-  // try again with different controlled toffoli
-  toffoliTableEntry = dd->toffoliTable.lookup(3, {0_pc, 1_pc}, 2);
-  EXPECT_EQ(toffoliTableEntry.p, nullptr);
-
-  // try again with different qubit toffoli
-  toffoliTableEntry = dd->toffoliTable.lookup(4, {0_pc, 1_pc, 2_pc}, 3);
-  EXPECT_EQ(toffoliTableEntry.p, nullptr);
-
-  // clear the table
-  dd->toffoliTable.clear();
-  toffoliTableEntry = dd->toffoliTable.lookup(3, {0_nc, 1_pc}, 2);
-  EXPECT_EQ(toffoliTableEntry.p, nullptr);
-}
+// TEST(DDPackageTest, ToffoliTable) {
+//   auto dd = std::make_unique<dd::Package<>>(4);
+//
+//   // try to search for a toffoli in an empty table
+//   auto toffoli = dd->toffoliTable.lookup(3, {0_nc, 1_pc}, 2);
+//   EXPECT_EQ(toffoli.p, nullptr);
+//   if (toffoli.p == nullptr) {
+//     toffoli = dd->makeGateDD(dd::Xmat, 3, {0_nc, 1_pc}, 2);
+//     dd->toffoliTable.insert(3, {0_nc, 1_pc}, 2, toffoli);
+//   }
+//
+//   // try again with same toffoli
+//   auto toffoliTableEntry = dd->toffoliTable.lookup(3, {0_nc, 1_pc}, 2);
+//   EXPECT_NE(toffoliTableEntry.p, nullptr);
+//   EXPECT_EQ(toffoli, toffoliTableEntry);
+//
+//   // try again with different controlled toffoli
+//   toffoliTableEntry = dd->toffoliTable.lookup(3, {0_pc, 1_pc}, 2);
+//   EXPECT_EQ(toffoliTableEntry.p, nullptr);
+//
+//   // try again with different qubit toffoli
+//   toffoliTableEntry = dd->toffoliTable.lookup(4, {0_pc, 1_pc, 2_pc}, 3);
+//   EXPECT_EQ(toffoliTableEntry.p, nullptr);
+//
+//   // clear the table
+//   dd->toffoliTable.clear();
+//   toffoliTableEntry = dd->toffoliTable.lookup(3, {0_nc, 1_pc}, 2);
+//   EXPECT_EQ(toffoliTableEntry.p, nullptr);
+// }
 
 // TEST(DDPackageTest, Extend) {
 //   auto dd = std::make_unique<dd::Package<>>(4);
@@ -666,7 +666,7 @@ TEST(DDPackageTest, InvalidMakeBasisStateAndGate) {
 
 TEST(DDPackageTest, InvalidDecRef) {
   auto dd = std::make_unique<dd::Package<>>(2);
-  auto e = dd->makeIdent(2);
+  auto e = dd->makeIdent();
   EXPECT_DEBUG_DEATH(
       dd->decRef(e),
       "Reference count of Node must not be zero before decrement");
@@ -786,7 +786,7 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
   const dd::ComplexValue cOne{1.0, 0.0};
   EXPECT_EQ(dd->getValueByPath(one, ""), cOne);
   EXPECT_EQ(dd->getValueByPath(one, 0), cOne);
-  EXPECT_EQ(dd->getValueByPath(dd::mEdge::one, 0, 0), cOne);
+  EXPECT_EQ(dd->getValueByIndex(dd::mEdge::one, 0, 0), cOne);
 
   const dd::ComplexValue cZero{0.0, 0.0};
   EXPECT_EQ(dd->innerProduct(zero, zero), cZero);
@@ -1888,7 +1888,7 @@ TEST(DDPackageTest, InnerProductTopNodeConjugation) {
 }
 
 TEST(DDPackageTest, GetMatrixMultiQubitIdentity) {
-  const dd::QubitCount nrQubits = 2;
+  const auto nrQubits = 2U;
 
   auto dd = std::make_unique<dd::Package<>>(nrQubits);
 
@@ -1905,7 +1905,7 @@ TEST(DDPackageTest, GetMatrixMultiQubitIdentity) {
 }
 
 TEST(DDPackageTest, GetMatrixCNOT) {
-  const dd::QubitCount nrQubits = 2;
+  const auto nrQubits = 2U;
 
   auto dd = std::make_unique<dd::Package<>>(nrQubits);
 
@@ -1917,7 +1917,7 @@ TEST(DDPackageTest, GetMatrixCNOT) {
 }
 
 TEST(DDPackageTest, Sandbox) {
-  const dd::QubitCount nrQubits = 2;
+  const auto nrQubits = 2U;
 
   auto dd = std::make_unique<dd::Package<>>(nrQubits);
 

@@ -209,10 +209,10 @@ MatrixDD buildFunctionality(GoogleRandomCircuitSampling* qc,
 
   const auto nq = qc->getNqubits();
   Permutation permutation = qc->initialLayout;
-  auto e = dd->makeIdent(nq);
+  auto e = dd->makeIdent();
   dd->incRef(e);
   for (const auto& cycle : qc->cycles) {
-    auto f = dd->makeIdent(nq);
+    auto f = dd->makeIdent();
     for (const auto& op : cycle) {
       f = dd->multiply(getDD(op.get(), dd, permutation), f);
     }
