@@ -1863,6 +1863,8 @@ private:
 
     constexpr std::size_t n = std::tuple_size_v<decltype(y.p->e)>;
     ResultEdge e{};
+    // TODO: This branch needs to be updated to do multiplication properly
+    //       with identities
     if constexpr (std::is_same_v<RightOperandNode, mCachedEdge>) {
       // This branch is only taken for matrices
       if (x.p->v == var && x.p->v == y.p->v) {
@@ -1915,35 +1917,33 @@ private:
         edge[idx] = ResultEdge::zero;
         for (auto k = 0U; k < rows; k++) {
           LEdge e1{};
-          if (!x.isTerminal() && x.p->v == var) {
-            e1 = x.p->e[rows * i + k];
-          } else {
-            // LeftOperand does not support vectors
-            static_assert(!std::is_same_v<LeftOperandNode, vNode>);
-            // Effectively inserts an identity node
-            if (i == k) {
-              e1 = xCopy;
-            } else {
-              e1 = LEdge::zero;
-            }
-          }
-
           REdge e2{};
-          if (!y.isTerminal() && y.p->v == var) {
+
+        // Check that neither is terminal, both nodes are at same level
+        if ((!x.isTerminal() && !y.isTerminal())
+              && (x.p->v == var && y.p->v == var)) {
+            // Follow relevant successor
+            e1 = x.p->e[rows * i + k];
             e2 = y.p->e[j + cols * k];
-          } else {
-            if constexpr (std::is_same_v<RightOperandNode, vNode>) {
-              // Skipping nodes not supported for vectors
-              e2 = yCopy;
-            } else {
-              // Effectively inserts an identity node
-              if (j == k) {
-                e2 = yCopy;
-              } else {
-                e2 = REdge::zero;
-              }
+
+            // Check if e1 skipped a level
+            if ((e1.isTerminal() && var != 0) || (e1.p->v != var-1)) {
+              // Stay at current position until we reach the correct var
+              e1 = xCopy;
             }
-          }
+            // Check if x is terminal
+        } else if ((!x.isTerminal() && !y.isTerminal())
+                   && (x.p->v > var && y.p->v == var)) {
+            // Follow relevant successor
+            e1 = x.p->e[rows * i + k];
+            e2 = y.p->e[j + cols * k];
+
+            // Check if e1 skipped a level
+            if ((e1.isTerminal() && var != 0) || (!e1.isTerminal() && e1.p->v != var-1)) {
+              // Stay at current position until we reach the correct var
+              e1 = xCopy;
+            }
+        }
 
           if constexpr (std::is_same_v<LeftOperandNode, dNode>) {
             dEdge m;
@@ -1982,7 +1982,7 @@ private:
             // Undo modifications on density matrices
             dEdge::revertDmChangesToEdges(e1, e2);
           } else {
-            auto m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start);
+            auto m = multiply2(e1, e2, static_cast<Qubit>(var-1), start);
 
             if (k == 0 || edge[idx].w.exactlyZero()) {
               edge[idx] = m;
@@ -1996,6 +1996,7 @@ private:
         }
       }
     }
+
     e = makeDDNode(var, edge, true, generateDensityMatrix);
     computeTable.insert(xCopy, yCopy, {e.p, e.w});
 
@@ -2771,7 +2772,11 @@ public:
 
     // Indexing of elements list is from top of DD, so we need a reference point
     const auto topLevel = e.p->v;
-    auto level = topLevel;
+
+    // TODO: Size is hardcoded, may need a more flexible solution
+    //       not connected to number of max qubits
+
+    auto level = static_cast<std::int32_t>(topLevel);
     do {
       auto decision = static_cast<std::size_t>(
           decisions.at(static_cast<std::size_t>(topLevel - level)) - '0');
@@ -2782,7 +2787,7 @@ public:
       level--;
 
       // Checks if path moves down more than one level i.e. skips nodes
-      if (r.p->v == level) {
+      if (level == -1 || r.p->v == level) {
         ComplexNumbers::mul(c, c, r.w);
       } else {
         // Iterates over pseudo-identity if node is at a lower level
