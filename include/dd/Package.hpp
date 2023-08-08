@@ -1219,7 +1219,7 @@ public:
       }
     }
 
-    assert(e.p->v == var || e.isTerminal());
+    assert(e.isTerminal() || e.p->v == var);
 
     // look it up in the unique tables
     auto& uniqueTable = getUniqueTable<Node>();
@@ -1919,34 +1919,25 @@ private:
           LEdge e1{};
           REdge e2{};
 
-        // Check that neither is terminal, both nodes are at same level
-        if ((!x.isTerminal() && !y.isTerminal())
-              && (x.p->v >= var && y.p->v == var)) {
-            // Follow relevant successor
-            e1 = x.p->e[rows * i + k];
-            e2 = y.p->e[j + cols * k];
+          // Matrix-Vector multiplication
+          if (std::is_same_v<RightOperandNode, vNode>) {
+            // Check that neither is terminal, both nodes are at same level
+            if ((!x.isTerminal() && !y.isTerminal()) &&
+                (x.p->v >= var && y.p->v == var)) {
+              // Follow relevant successor
+              e1 = x.p->e[rows * i + k];
+              e2 = y.p->e[j + cols * k];
 
-            // Check if e1 skipped a level
-            if ((e1.isTerminal() && var != 0) ||
-                (!e1.isTerminal() && e1.p->v != var - 1)) {
-              // Stay at current position until we reach the correct var
-              e1 = xCopy;
+              // Check if e1 skipped a level
+              if ((e1.isTerminal() && var != 0) ||
+                  (!e1.isTerminal() && e1.p->v != var - 1)) {
+                // x stays at current position until we reach correct var
+                e1 = xCopy;
+              }
             }
-            // Check if x is terminal
-        }
-        //} else if ((!x.isTerminal() && !y.isTerminal())
-        //           && (x.p->v > var && y.p->v == var)) {
-        //    // Follow relevant successor
-        //    e1 = x.p->e[rows * i + k];
-        //    e2 = y.p->e[j + cols * k];
-//
-        //    // Check if e1 skipped a level
-        //    if ((e1.isTerminal() && var != 0) || (!e1.isTerminal() && e1.p->v != var-1)) {
-        //      // Stay at current position until we reach the correct var
-        //      e1 = xCopy;
-        //    }
-        //}
-
+          } else if (std::is_same_v<RightOperandNode, mNode>) {
+            // No skipping on either side
+          }
           if constexpr (std::is_same_v<LeftOperandNode, dNode>) {
             dEdge m;
             dEdge::applyDmChangesToEdges(e1, e2);
