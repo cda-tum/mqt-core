@@ -29,6 +29,12 @@ repos:
       - id: requirements-txt-fixer
       - id: trailing-whitespace
 
+  # Clean jupyter notebooks
+  - repo: https://github.com/srstevenson/nb-clean
+    rev: 2.4.0
+    hooks:
+      - id: nb-clean
+
   # Handling unwanted unicode characters
   - repo: https://github.com/sirosen/texthooks
     rev: "0.5.0"
@@ -36,84 +42,58 @@ repos:
       - id: fix-ligatures
       - id: fix-smartquotes
 
-  # Run Flake8 checks
-  - repo: https://github.com/PyCQA/flake8
-    rev: "6.0.0"
+  # Check for common mistakes
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: "v1.10.0"
     hooks:
-      - id: flake8
+      - id: rst-backticks
+      - id: rst-directive-colons
+      - id: rst-inline-touching-normal
+
+  # Python linting using ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.0.282
+    hooks:
+      - id: ruff
+        args: ["--fix", "--show-fixes"]
+
+  # Static type checking using mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.4.1
+    hooks:
+      - id: mypy
+        files: ^(src/mqt|test/python)
+        args: []
         additional_dependencies:
-          - flake8-bugbear
-          - flake8-comprehensions
-          - flake8-future-annotations
-          - flake8-new-union-types
-          - flake8-simplify
-          - flake8-use-pathlib
-          - flake8-2020
+          - pytest
 
-  # Upgrade old Python syntax
-  - repo: https://github.com/asottile/pyupgrade
-    rev: "v3.3.2"
+  # Checking sdist validity
+  - repo: https://github.com/henryiii/check-sdist
+    rev: "v0.1.2"
     hooks:
-      - id: pyupgrade
-        args: ["--py37-plus"]
-
-  # Sort includes
-  - repo: https://github.com/PyCQA/isort
-    rev: "5.12.0"
-    hooks:
-      - id: isort
+      - id: check-sdist
+        args: [--inject-junk]
+        additional_dependencies:
+          - nanobind
+          - scikit-build-core[pyproject]
+          - setuptools-scm
 
   # Run code formatting with Black
   - repo: https://github.com/psf/black
-    rev: "23.3.0" # Keep in sync with blacken-docs
+    rev: 23.7.0 # Keep in sync with blacken-docs
     hooks:
       - id: black-jupyter
 
   # Also run Black on examples in the documentation
   - repo: https://github.com/asottile/blacken-docs
-    rev: "1.13.0"
+    rev: 1.15.0
     hooks:
       - id: blacken-docs
-        additional_dependencies:
-          - black==23.3.0 # keep in sync with black hook
-
-  # Check for common mistakes
-  - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: "v1.10.0"
-    hooks:
-      - id: python-check-blanket-noqa
-      - id: python-check-blanket-type-ignore
-      - id: python-no-log-warn
-      - id: python-no-eval
-      - id: python-use-type-annotations
-      - id: rst-backticks
-      - id: rst-directive-colons
-      - id: rst-inline-touching-normal
-
-  # Check static types with mypy
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.2.0"
-    hooks:
-      - id: mypy
-        stages: [manual]
-        files: ^(mqt/qfr|test/python|setup.py)
-        args: []
-        additional_dependencies:
-          - "importlib_resources"
-          - "numpy"
-          - "pytest>=7.0"
-          - "types-setuptools"
-
-  # Check for spelling
-  - repo: https://github.com/codespell-project/codespell
-    rev: "v2.2.4"
-    hooks:
-      - id: codespell
-        args: ["-L", "wille,linz", "--skip", "*.ipynb"]
+        additional_dependencies: [black==23.7.0] # Keep in sync with blacken-docs
 
   # Clang-format the C++ part of the code base automatically
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: "v16.0.2"
+    rev: "v16.0.6"
     hooks:
       - id: clang-format
         types_or: [c++, c, cuda]
@@ -129,7 +109,23 @@ repos:
 
   # Format configuration files with prettier
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: "v3.0.0-alpha.9-for-vscode"
+    rev: "v3.0.1"
     hooks:
       - id: prettier
         types_or: [yaml, markdown, html, css, scss, javascript, json]
+
+  # Check for spelling
+  - repo: https://github.com/codespell-project/codespell
+    rev: "v2.2.5"
+    hooks:
+      - id: codespell
+        args: ["-L", "wille,linz", "--skip", "*.ipynb"]
+
+  # Catch common capitalization mistakes
+  - repo: local
+    hooks:
+      - id: disallow-caps
+        name: Disallow improper capitalization
+        language: pygrep
+        entry: PyBind|Numpy|Cmake|CCache|Github|PyTest|Mqt|Tum
+        exclude: .pre-commit-config.yaml

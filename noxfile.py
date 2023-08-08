@@ -1,43 +1,53 @@
+"""Nox sessions."""
+
 from __future__ import annotations
 
+import os
+
 import nox
-from nox.sessions import Session
 
-nox.options.sessions = ["lint"]
+nox.options.sessions = ["lint", "pylint", "tests"]
+
+PYTHON_ALL_VERSIONS = ["3.8", "3.9", "3.10", "3.11"]
+
+if os.environ.get("CI", None):
+    nox.options.error_on_missing_interpreters = True
 
 
-@nox.session
-def lint(session: Session) -> None:
-    """
-    Lint the Python part of the codebase using pre-commit.
-    Simply execute `nox -rs lint` to run all configured hooks.
-    """
+@nox.session(reuse_venv=True)
+def lint(session: nox.Session) -> None:
+    """Run the linter."""
     session.install("pre-commit")
     session.run("pre-commit", "run", "--all-files", *session.posargs)
 
 
-@nox.session
-def pylint(session: Session) -> None:
-    """
-    Run pylint.
-    Simply execute `nox -rs pylint` to run pylint.
-    Run as `nox -rs pylint -- skip-install` to skip installing the package and its dependencies.
-    """
-    session.install("pylint")
-    run_install = True
-    if session.posargs and "skip-install" in session.posargs:
-        run_install = False
-        session.posargs.remove("skip-install")
-    if run_install:
-        session.install("-e", ".")
-    session.run("pylint", "mqt.qfr", "--extension-pkg-allow-list=mqt.qfr.pyqfr", *session.posargs)
+@nox.session(reuse_venv=True)
+def pylint(session: nox.Session) -> None:
+    """Run PyLint."""
+    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm")
+    session.install("--no-build-isolation", "-ve.[dev]", "pylint")
+    session.run("pylint", "mqt.core", *session.posargs)
 
 
-@nox.session
-def mypy(session: Session) -> None:
-    """
-    Run mypy.
-    Simply execute `nox -rs mypy` to run mypy.
-    """
-    session.install("pre-commit")
-    session.run("pre-commit", "run", "--all-files", "--hook-stage", "manual", "mypy", *session.posargs)
+@nox.session(reuse_venv=True, python=PYTHON_ALL_VERSIONS)
+def tests(session: nox.Session) -> None:
+    """Run the test suite."""
+    posargs = list(session.posargs)
+    env = {"PIP_DISABLE_PIP_VERSION_CHECK": "1"}
+    install_arg = "-ve.[coverage]" if "--cov" in posargs else "-ve.[test]"
+    if "--cov" in posargs:
+        posargs.append("--cov-config=pyproject.toml")
+
+    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm")
+    session.install("--no-build-isolation", install_arg)
+    session.run("pytest", *posargs, env=env)
+
+
+@nox.session(reuse_venv=True)
+def docs(session: nox.Session) -> None:
+    """Build the docs."""
+    session.install("sphinx-autobuild")
+    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm")
+    session.install("--no-build-isolation", "-ve.[docs]")
+
+    session.run("sphinx-autobuild", "docs", "docs/_build/html", "--open-browser")

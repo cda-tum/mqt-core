@@ -1,9 +1,3 @@
-# add MQT::DDPackage library
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/dd_package" "extern/dd_package" EXCLUDE_FROM_ALL)
-
-# add MQT::zx library
-add_subdirectory("${PROJECT_SOURCE_DIR}/extern/zx" "extern/zx" EXCLUDE_FROM_ALL)
-
 if(NOT TARGET nlohmann_json)
   # cmake-lint: disable=C0103
   set(JSON_BuildTests
@@ -36,6 +30,7 @@ if(NOT TARGET ${PROJECT_NAME})
     ${PROJECT_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
     ${PROJECT_SOURCE_DIR}/include/CircuitOptimizer.hpp
     ${PROJECT_SOURCE_DIR}/include/Definitions.hpp
+    ${PROJECT_SOURCE_DIR}/include/operations/Expression.hpp
     ${PROJECT_SOURCE_DIR}/include/operations/ClassicControlledOperation.hpp
     ${PROJECT_SOURCE_DIR}/include/operations/CompoundOperation.hpp
     ${PROJECT_SOURCE_DIR}/include/operations/Control.hpp
@@ -56,6 +51,7 @@ if(NOT TARGET ${PROJECT_NAME})
     algorithms/QPE.cpp
     algorithms/RandomCliffordCircuit.cpp
     CircuitOptimizer.cpp
+    operations/Expression.cpp
     operations/NonUnitaryOperation.cpp
     operations/Operation.cpp
     operations/StandardOperation.cpp
@@ -78,65 +74,55 @@ if(NOT TARGET ${PROJECT_NAME})
   # add options and warnings to the library
   target_link_libraries(${PROJECT_NAME} PUBLIC project_options project_warnings)
 
-  # Temporary: The ZX package is not yet clearly separated and some of its definitions are used
-  # throughout the library. Therefore, the ZX package always needs to be linked into the main QFR
-  # library.
-  target_link_libraries(${PROJECT_NAME} PUBLIC MQT::zx)
+  # add MQT alias
+  add_library(MQT::Core ALIAS ${PROJECT_NAME})
+  add_library(MQT::${OLD_PROJECT_NAME} ALIAS ${PROJECT_NAME})
+endif()
+
+# add DD package library
+add_subdirectory(dd)
+
+# add ZX package library
+add_subdirectory(zx)
+
+# add ECC library
+add_subdirectory(ecc)
+
+# ** Note ** The following target will soon be removed from the project. All top-level projects
+# should switch to nanobind. After that, the pybind submodules will be removed.
+if(NOT TARGET ${PROJECT_NAME}-python)
+  # add pybind11 library
+  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11" "extern/pybind11" EXCLUDE_FROM_ALL)
+
+  if(NOT TARGET pybind11_json)
+    # add pybind11_json library
+    add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11_json" "extern/pybind11_json"
+                     EXCLUDE_FROM_ALL)
+  endif()
+
+  # add Python interface library
+  add_library(
+    ${PROJECT_NAME}-python
+    ${PROJECT_SOURCE_DIR}/include/python/qiskit/QuantumCircuit.hpp
+    ${PROJECT_SOURCE_DIR}/include/python/qiskit/QasmQobjExperiment.hpp
+    python/qiskit/QuantumCircuit.cpp python/qiskit/QasmQobjExperiment.cpp)
+
+  # link with main project library and pybind11 libraries
+  target_link_libraries(${PROJECT_NAME}-python PUBLIC ${PROJECT_NAME} pybind11::pybind11
+                                                      pybind11_json)
+
+  # the following sets the SYSTEM flag for the include dirs of the pybind11_json libs to suppress
+  # warnings
+  set_target_properties(
+    pybind11_json PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                             $<TARGET_PROPERTY:pybind11_json,INTERFACE_INCLUDE_DIRECTORIES>
+  )# cmake-lint: disable=C0307
 
   # add MQT alias
-  add_library(MQT::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+  add_library(MQT::CorePython ALIAS ${PROJECT_NAME}-python)
+  add_library(MQT::${OLD_PROJECT_NAME}_python ALIAS ${PROJECT_NAME}-python)
 endif()
 
-if(NOT TARGET ${PROJECT_NAME}_dd)
-  # add DD Package library
-  add_library(
-    ${PROJECT_NAME}_dd
-    ${PROJECT_SOURCE_DIR}/include/dd/FunctionalityConstruction.hpp
-    ${PROJECT_SOURCE_DIR}/include/dd/NoiseFunctionality.hpp
-    ${PROJECT_SOURCE_DIR}/include/dd/Operations.hpp
-    ${PROJECT_SOURCE_DIR}/include/dd/Simulation.hpp
-    dd/FunctionalityConstruction.cpp
-    dd/NoiseFunctionality.cpp
-    dd/Operations.cpp
-    dd/Simulation.cpp)
-  target_link_libraries(${PROJECT_NAME}_dd PUBLIC MQT::DDPackage MQT::${PROJECT_NAME})
-  target_include_directories(${PROJECT_NAME}_dd PUBLIC ${PROJECT_SOURCE_DIR}/include/dd
-                                                       ${PROJECT_BINARY_DIR}/include/dd)
-  add_library(MQT::${PROJECT_NAME}_dd ALIAS ${PROJECT_NAME}_dd)
-endif()
-
-if(NOT TARGET ${PROJECT_NAME}_zx)
-  # add ZX package library
-  add_library(${PROJECT_NAME}_zx ${PROJECT_SOURCE_DIR}/include/zx/FunctionalityConstruction.hpp
-                                 zx/FunctionalityConstruction.cpp)
-  target_link_libraries(${PROJECT_NAME}_zx PUBLIC MQT::zx MQT::${PROJECT_NAME})
-  target_include_directories(${PROJECT_NAME}_zx PUBLIC ${PROJECT_SOURCE_DIR}/include/zx
-                                                       ${PROJECT_BINARY_DIR}/include/zx)
-  add_library(MQT::${PROJECT_NAME}_zx ALIAS ${PROJECT_NAME}_zx)
-endif()
-
-if(NOT TARGET ${PROJECT_NAME}_ecc)
-  # add ECC package library
-  add_library(
-    ${PROJECT_NAME}_ecc
-    ${PROJECT_SOURCE_DIR}/include/ecc/Ecc.hpp
-    ${PROJECT_SOURCE_DIR}/include/ecc/Id.hpp
-    ${PROJECT_SOURCE_DIR}/include/ecc/Q3Shor.hpp
-    ${PROJECT_SOURCE_DIR}/include/ecc/Q5Laflamme.hpp
-    ${PROJECT_SOURCE_DIR}/include/ecc/Q7Steane.hpp
-    ${PROJECT_SOURCE_DIR}/include/ecc/Q9Shor.hpp
-    ${PROJECT_SOURCE_DIR}/include/ecc/Q9Surface.hpp
-    ${PROJECT_SOURCE_DIR}/include/ecc/Q18Surface.hpp
-    ecc/Ecc.cpp
-    ecc/Q3Shor.cpp
-    ecc/Q5Laflamme.cpp
-    ecc/Q7Steane.cpp
-    ecc/Q9Shor.cpp
-    ecc/Q9Surface.cpp
-    ecc/Q18Surface.cpp)
-
-  target_link_libraries(${PROJECT_NAME}_ecc PUBLIC MQT::${PROJECT_NAME})
-  target_include_directories(${PROJECT_NAME}_ecc PUBLIC ${PROJECT_SOURCE_DIR}/include/ecc
-                                                        ${PROJECT_BINARY_DIR}/include/ecc)
-  add_library(MQT::${PROJECT_NAME}_ecc ALIAS ${PROJECT_NAME}_ecc)
+if(BUILD_MQT_CORE_BINDINGS)
+  add_subdirectory(python)
 endif()

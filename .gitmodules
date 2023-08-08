@@ -1,7 +1,3 @@
-[submodule "extern/dd_package"]
-        path = extern/dd_package
-        url = https://github.com/cda-tum/dd_package.git
-        branch = mem-opt-dd-tw
 [submodule "extern/json"]
         path = extern/json
         url = https://github.com/nlohmann/json.git
@@ -17,7 +13,18 @@
         url = https://github.com/pybind/pybind11_json.git
         branch = master
         shallow = true
-[submodule "extern/zx"]
-        path = extern/zx
-        url = https://github.com/cda-tum/zx.git
+[submodule "extern/googletest"]
+        path = extern/googletest
+        url = https://github.com/google/googletest.git
         branch = main
+        shallow = true
+[submodule "extern/boost/config"]
+	path = extern/boost/config
+	url = https://github.com/boostorg/config.git
+	branch = develop
+	shallow = true
+[submodule "extern/boost/multiprecision"]
+	path = extern/boost/multiprecision
+	url = https://github.com/boostorg/multiprecision.git
+	branch = develop
+	shallow = true

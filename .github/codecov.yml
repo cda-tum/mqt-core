@@ -1,7 +1,8 @@
 ignore:
   - "extern/**/*"
+  - "include/python/**/*"
+  - "src/python/**/*"
   - "test/**/*"
-  - "mqt/**/*.cpp"
 
 coverage:
   range: 60..90
@@ -19,3 +20,7 @@ parsers:
     branch_detection:
       conditional: no
       loop: no
+
+codecov:
+  notify:
+    after_n_builds: 3

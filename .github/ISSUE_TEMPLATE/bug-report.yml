@@ -1,0 +1,45 @@
+name: 🐛 Bug report
+description: Something is not working correctly.
+title: "🐛 <title>"
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        **Thank you for wanting to report a bug for this project!**
+
+        ⚠
+        Verify first that your issue is not [already reported on GitHub](https://github.com/cda-tum/mqt-core/search?q=is%3Aissue&type=issues).
+
+        If you have general questions, please consider [starting a discussion](https://github.com/cda-tum/mqt-core/discussions).
+  - type: textarea
+    attributes:
+      label: Environment information
+      description: >-
+        Please provide information about your environment. For example, OS, C++ compiler, mqt.core version etc.
+      placeholder: |
+        - OS:
+        - C++ compiler:
+        - mqt.core version:
+        - Additional environment information:
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+  - type: textarea
+    attributes:
+      label: How to Reproduce
+      description: Please provide steps to reproduce this bug.
+      placeholder: |
+        1. Get package from '...'
+        2. Then run '...'
+        3. An error occurs.
+    validations:
+      required: true
