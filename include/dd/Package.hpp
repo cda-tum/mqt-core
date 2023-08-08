@@ -1209,13 +1209,15 @@ public:
 
     // normalize it
     e = normalize(e, cached);
-    if constexpr (std::is_same_v<Node, mNode>) {
-      // Check if matrix node is an identity pointing to same successor
-      // If so, replaces it with an edge with weight of normalization factor
-      if ((e.p->e[0].p == e.p->e[3].p) &&
-          (e.p->e[0].w == Complex::one && e.p->e[1].w == Complex::zero &&
-           e.p->e[2].w == Complex::zero && e.p->e[3].w == Complex::one)) {
-        return Edge<mNode>{e.p->e[0].p, e.w};
+    if (e != Edge<Node>::zero) {
+      if constexpr (std::is_same_v<Node, mNode>) {
+        // Check if matrix node is an identity pointing to same successor
+        // If so, replaces it with an edge with weight of normalization factor
+        if ((e.p->e[0].p == e.p->e[3].p) &&
+            (e.p->e[0].w == Complex::one && e.p->e[1].w == Complex::zero &&
+             e.p->e[2].w == Complex::zero && e.p->e[3].w == Complex::one)) {
+          return Edge<mNode>{e.p->e[0].p, e.w};
+        }
       }
     }
 
@@ -1937,6 +1939,12 @@ private:
             }
           } else if (std::is_same_v<RightOperandNode, mNode>) {
             // No skipping on either side
+            if ((!x.isTerminal() && !y.isTerminal()) &&
+                (x.p->v == var && y.p->v == var)) {
+              // Follow relevant successor
+              e1 = x.p->e[rows * i + k];
+              e2 = y.p->e[j + cols * k];
+            }
           }
           if constexpr (std::is_same_v<LeftOperandNode, dNode>) {
             dEdge m;
@@ -1990,7 +1998,9 @@ private:
       }
     }
 
+    // Check if nothing was created
     e = makeDDNode(var, edge, true, generateDensityMatrix);
+
     computeTable.insert(xCopy, yCopy, {e.p, e.w});
 
     if (!e.w.exactlyZero()) {
