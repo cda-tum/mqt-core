@@ -26,6 +26,7 @@ template <typename T> std::pair<T*, T*> MemoryManager<T>::getPair() {
     auto* i = available->next;
     available = i->next;
     usedCount += 2U;
+    peakUsedCount = std::max(peakUsedCount, usedCount);
     availableForReuseCount -= 2U;
     return {r, i};
   }
@@ -40,6 +41,7 @@ template <typename T> std::pair<T*, T*> MemoryManager<T>::getPair() {
   auto* i = &(*chunkIt);
   ++chunkIt;
   usedCount += 2U;
+  peakUsedCount = std::max(peakUsedCount, usedCount);
   return {r, i};
 }
 
@@ -76,6 +78,8 @@ template <typename T> void MemoryManager<T>::returnEntry(T* entry) noexcept {
   entry->next = available;
   available = entry;
   ++availableForReuseCount;
+  peakAvailableForReuseCount =
+      std::max(peakAvailableForReuseCount, availableForReuseCount);
   --usedCount;
 }
 
@@ -105,6 +109,7 @@ T* MemoryManager<T>::getEntryFromAvailableList() noexcept {
   available = available->next;
   --availableForReuseCount;
   ++usedCount;
+  peakUsedCount = std::max(peakUsedCount, usedCount);
   // Reclaimed entries might have a non-zero reference count
   entry->ref = 0;
   return entry;
@@ -126,6 +131,7 @@ template <typename T> T* MemoryManager<T>::getEntryFromChunk() noexcept {
   auto* entry = &(*chunkIt);
   ++chunkIt;
   ++usedCount;
+  peakUsedCount = std::max(peakUsedCount, usedCount);
   return entry;
 }
 
