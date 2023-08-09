@@ -387,8 +387,7 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(
       }
     }
     auto* op = (*it)->get();
-    if (op->getType() == Barrier || op->getType() == Snapshot ||
-        op->getType() == ShowProbabilities) {
+    if (op->getType() == Barrier) {
       ++it;
     } else if (op->isStandardOperation()) {
       // try removing gate and upon success increase all corresponding iterators
@@ -548,8 +547,7 @@ void CircuitOptimizer::removeFinalMeasurementsRecursive(
           ++(dagIterators.at(target));
         }
       }
-    } else if (op->getType() == Barrier || op->getType() == Snapshot ||
-               op->getType() == ShowProbabilities) {
+    } else if (op->getType() == Barrier) {
       for (const auto& target : op->getTargets()) {
         if (dagIterators.at(target) == dag.at(target).rend()) {
           break;
@@ -1096,12 +1094,10 @@ void CircuitOptimizer::reorderOperations(QuantumComputation& qc) {
       // warning for classically controlled operations
       if (op->getType() == ClassicControlled) {
         std::cerr << "Caution! Reordering operations might not work if the "
-                     "circuit contains classically controlled operations"
-                  << std::endl;
+                     "circuit contains classically controlled operations\n";
       }
 
-      if (op->getType() == Barrier || op->getType() == Snapshot ||
-          op->getType() == ShowProbabilities) {
+      if (op->getType() == Barrier) {
         ++it;
         continue;
       }
@@ -1159,7 +1155,7 @@ void CircuitOptimizer::printDAG(const DAG& dag) {
       std::cout << std::hex << (*op).get() << std::dec << "("
                 << toString((*op)->getType()) << ") - ";
     }
-    std::cout << std::endl;
+    std::cout << "\n";
   }
 }
 void CircuitOptimizer::printDAG(const DAG& dag, const DAGIterators& iterators) {
@@ -1169,7 +1165,7 @@ void CircuitOptimizer::printDAG(const DAG& dag, const DAGIterators& iterators) {
       std::cout << std::hex << (**it).get() << std::dec << "("
                 << toString((**it)->getType()) << ") - ";
     }
-    std::cout << std::endl;
+    std::cout << "\n";
   }
 }
 

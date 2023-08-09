@@ -17,25 +17,14 @@ protected:
   void printMeasurement(std::ostream& os, const std::vector<Qubit>& q,
                         const std::vector<Bit>& c,
                         const Permutation& permutation) const;
-  void printResetBarrierOrSnapshot(std::ostream& os,
-                                   const std::vector<Qubit>& q,
-                                   const Permutation& permutation) const;
+  void printResetOrBarrier(std::ostream& os, const std::vector<Qubit>& q,
+                           const Permutation& permutation) const;
 
 public:
   // Measurement constructor
   NonUnitaryOperation(std::size_t nq, std::vector<Qubit> qubitRegister,
                       std::vector<Bit> classicalRegister);
   NonUnitaryOperation(std::size_t nq, Qubit qubit, Bit cbit);
-
-  // Snapshot constructor
-  NonUnitaryOperation(std::size_t nq, const std::vector<Qubit>& qubitRegister,
-                      std::size_t n);
-
-  // ShowProbabilities constructor
-  explicit NonUnitaryOperation(const std::size_t nq) {
-    nqubits = nq;
-    type = ShowProbabilities;
-  }
 
   // General constructor
   NonUnitaryOperation(std::size_t nq, const std::vector<Qubit>& qubitRegister,
@@ -45,14 +34,6 @@ public:
     if (getType() == qc::Measure) {
       return std::make_unique<NonUnitaryOperation>(getNqubits(), getTargets(),
                                                    getClassics());
-    }
-    if (getType() == qc::Snapshot) {
-      return std::make_unique<NonUnitaryOperation>(
-          getNqubits(), getTargets(),
-          static_cast<std::size_t>(getParameter().at(0)));
-    }
-    if (getType() == qc::ShowProbabilities) {
-      return std::make_unique<NonUnitaryOperation>(getNqubits());
     }
     return std::make_unique<NonUnitaryOperation>(getNqubits(), getTargets(),
                                                  getType());

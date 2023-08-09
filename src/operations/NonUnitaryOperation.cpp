@@ -34,14 +34,6 @@ NonUnitaryOperation::NonUnitaryOperation(const std::size_t nq,
   Operation::setName();
 }
 
-// Snapshot constructor
-NonUnitaryOperation::NonUnitaryOperation(
-    const std::size_t nq, const std::vector<Qubit>& qubitRegister,
-    const std::size_t n)
-    : NonUnitaryOperation(nq, qubitRegister, Snapshot) {
-  parameter.emplace_back(static_cast<fp>(n));
-}
-
 // General constructor
 NonUnitaryOperation::NonUnitaryOperation(
     const std::size_t nq, const std::vector<Qubit>& qubitRegister, OpType op) {
@@ -61,15 +53,9 @@ std::ostream& NonUnitaryOperation::printNonUnitary(
     break;
   case Reset:
   case Barrier:
-  case Snapshot:
-    printResetBarrierOrSnapshot(os, q, permutation);
-    break;
-  case ShowProbabilities:
-    os << name;
+    printResetOrBarrier(os, q, permutation);
     break;
   default:
-    std::cerr << "Non-unitary operation with invalid type " << type
-              << " detected. Proceed with caution!" << std::endl;
     break;
   }
   return os;
@@ -78,59 +64,25 @@ std::ostream& NonUnitaryOperation::printNonUnitary(
 void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
                                        const RegisterNames& qreg,
                                        const RegisterNames& creg) const {
+  const auto& qubitArgs = getTargets();
+  if (isWholeQubitRegister(qreg, qubitArgs.front(), qubitArgs.back())) {
+    of << toString(type) << " " << qreg[qubitArgs.front()].first;
+    if (type == Measure) {
+      of << " -> ";
+      assert(isWholeQubitRegister(creg, classics.front(), classics.back()));
+      of << creg[classics.front()].first;
+    }
+    of << ";\n";
+    return;
+  }
   auto classicsIt = classics.cbegin();
-  switch (type) {
-  case Measure:
-    if (isWholeQubitRegister(qreg, qubits.front(), qubits.back()) &&
-        isWholeQubitRegister(qreg, classics.front(), classics.back())) {
-      of << "measure " << qreg[qubits.front()].first << " -> "
-         << creg[classics.front()].first << ";" << std::endl;
-    } else {
-      for (const auto& c : qubits) {
-        of << "measure " << qreg[c].second << " -> " << creg[*classicsIt].second
-           << ";" << std::endl;
-        ++classicsIt;
-      }
+  for (const auto& q : qubitArgs) {
+    of << toString(type) << " " << qreg[q].second;
+    if (type == Measure) {
+      of << " -> " << creg[*classicsIt].second;
+      ++classicsIt;
     }
-    break;
-  case Reset:
-    if (isWholeQubitRegister(qreg, targets.front(), targets.back())) {
-      of << "reset " << qreg[targets.front()].first << ";" << std::endl;
-    } else {
-      for (const auto& target : targets) {
-        of << "reset " << qreg[target].second << ";" << std::endl;
-      }
-    }
-    break;
-  case Snapshot:
-    if (!targets.empty()) {
-      of << "snapshot(" << parameter[0] << ") ";
-
-      for (unsigned int q = 0; q < targets.size(); ++q) {
-        if (q > 0) {
-          of << ", ";
-        }
-        of << qreg[targets[q]].second;
-      }
-      of << ";" << std::endl;
-    }
-    break;
-  case ShowProbabilities:
-    of << "show_probabilities;" << std::endl;
-    break;
-  case Barrier:
-    if (isWholeQubitRegister(qreg, targets.front(), targets.back())) {
-      of << "barrier " << qreg[targets.front()].first << ";" << std::endl;
-    } else {
-      for (const auto& target : targets) {
-        of << "barrier " << qreg[target].second << ";" << std::endl;
-      }
-    }
-    break;
-  default:
-    std::cerr << "Non-unitary operation with invalid type " << type
-              << " detected. Proceed with caution!" << std::endl;
-    break;
+    of << ";\n";
   }
 }
 
@@ -237,7 +189,7 @@ void NonUnitaryOperation::printMeasurement(
   }
 }
 
-void NonUnitaryOperation::printResetBarrierOrSnapshot(
+void NonUnitaryOperation::printResetOrBarrier(
     std::ostream& os, const std::vector<Qubit>& q,
     const Permutation& permutation) const {
   auto qubitIt = q.cbegin();
@@ -247,17 +199,13 @@ void NonUnitaryOperation::printResetBarrierOrSnapshot(
       if (qubitIt != q.cend() && *qubitIt == i) {
         if (type == Reset) {
           os << "\033[31m"
-             << "r\t"
-             << "\033[0m";
-        } else if (type == Barrier) {
-          os << "\033[32m"
-             << "b\t"
-             << "\033[0m";
+             << "r";
         } else {
-          os << "\033[33m"
-             << "s\t"
-             << "\033[0m";
+          assert(type == Barrier);
+          os << "\033[32m"
+             << "b";
         }
+        os << "\t\033[0m";
         ++qubitIt;
       } else {
         os << "|\t";
@@ -268,25 +216,18 @@ void NonUnitaryOperation::printResetBarrierOrSnapshot(
       if (qubitIt != q.cend() && *qubitIt == physical) {
         if (type == Reset) {
           os << "\033[31m"
-             << "r\t"
-             << "\033[0m";
-        } else if (type == Barrier) {
-          os << "\033[32m"
-             << "b\t"
-             << "\033[0m";
+             << "r";
         } else {
-          os << "\033[33m"
-             << "s\t"
-             << "\033[0m";
+          assert(type == Barrier);
+          os << "\033[32m"
+             << "b";
         }
+        os << "\t\033[0m";
         ++qubitIt;
       } else {
         os << "|\t";
       }
     }
-  }
-  if (type == Snapshot) {
-    os << "\tp: (" << q.size() << ") (" << parameter[0] << ")";
   }
 }
 } // namespace qc

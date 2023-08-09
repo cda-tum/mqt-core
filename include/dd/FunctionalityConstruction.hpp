@@ -45,8 +45,7 @@ inline void dumpTensorNetwork(std::ostream& of, const QuantumComputation& qc) {
   auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   for (const auto& op : qc) {
     const auto type = op->getType();
-    if (op != qc.front() && (type != Measure && type != Barrier &&
-                             type != ShowProbabilities && type != Snapshot)) {
+    if (op != qc.front() && (type != Measure && type != Barrier)) {
       of << ",\n";
     }
     dumpTensor(op.get(), of, inds, gateIdx, dd);
