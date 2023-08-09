@@ -98,32 +98,15 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
       p.scan();
       p.check(Token::Kind::Lpar);
       p.check(Token::Kind::Nninteger);
-      auto n = static_cast<std::size_t>(p.t.val);
       p.check(Token::Kind::Rpar);
-
       std::vector<qc::QuantumRegister> arguments{};
       p.argList(arguments);
-
       p.check(Token::Kind::Semicolon);
-
-      for (auto& arg : arguments) {
-        if (arg.second != 1) {
-          p.error("Error in snapshot: arguments must be qubits");
-        }
-      }
-
-      Targets qubits{};
-      qubits.reserve(arguments.size());
-      for (auto& arg : arguments) {
-        qubits.emplace_back(arg.first);
-      }
-
-      emplace_back<NonUnitaryOperation>(nqubits, qubits, n);
+      // Snapshots have no meaning for MQT Core and are ignored.
     } else if (p.sym == Token::Kind::Probabilities) {
-      // show probabilities statement
-      emplace_back<NonUnitaryOperation>(nqubits);
       p.scan();
       p.check(Token::Kind::Semicolon);
+      // Show probabilities has no meaning for MQT Core and is ignored.
     } else if (p.sym == Token::Kind::Comment) {
       // comment
       p.scan();

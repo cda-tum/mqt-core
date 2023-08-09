@@ -777,8 +777,6 @@ TEST_F(QFRFunctionality, cloningDifferentOperations) {
   comp.h(0);
   qc.emplace_back(comp.asOperation());
   qc.classicControlled(qc::X, 0, qc.getCregs().at("c"), 1);
-  qc.emplace_back<NonUnitaryOperation>(qc.getNqubits(),
-                                       std::vector<Qubit>{0, 1}, 1);
 
   auto qcCloned = qc.clone();
   ASSERT_EQ(qc.size(), qcCloned.size());
