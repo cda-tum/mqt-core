@@ -3,7 +3,6 @@
 #include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
-
 #include <iostream>
 #include <vector>
 
