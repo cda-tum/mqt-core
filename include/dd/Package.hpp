@@ -1921,25 +1921,8 @@ private:
           LEdge e1{};
           REdge e2{};
 
-          // Matrix-Vector multiplication
-          // TODO: Works if matrix DD is full size
-         // if (std::is_same_v<RightOperandNode, vNode>) {
-         //   // Check that neither is terminal, both nodes are at same level
-         //   if ((!x.isTerminal() && !y.isTerminal()) &&
-         //       (x.p->v >= var && y.p->v == var)) {
-         //     // Follow relevant successor
-         //     e1 = x.p->e[rows * i + k];
-         //     e2 = y.p->e[j + cols * k];
-//
-         //     // Check if e1 skipped a level
-         //     if ((e1.isTerminal() && var != 0) ||
-         //         (!e1.isTerminal() && e1.p->v != var - 1)) {
-         //       // x stays at current position until we reach correct var
-         //       e1 = xCopy;
-         //     }
-         //   }
-         // }
-          // Check that neither is terminal
+
+          // Check if either is a terminal
           if (!x.isTerminal() && !y.isTerminal()) {
             // Nodes are at correct level and can be multiplied
             if (x.p->v == var) {
@@ -1954,7 +1937,18 @@ private:
                 e1.w = Complex::zero;
               }
             }
-            e2 = y.p->e[j + cols * k];
+            if (y.p->v == var) {
+              e2 = y.p->e[j + cols * k];
+              // Hold y at current level until we reach correct level var
+            } else if (y.p->v > var) {
+              e2 = yCopy;
+              // Pseudo-identity inserted TODO: Is this efficient?
+            } else if (y.p->v < var) {
+              e2 = yCopy;
+              if (j + cols * k == 1 || j + cols * k == 2) {
+                e2.w = Complex::zero;
+              }
+            }
 
           } else if ((x.isTerminal() && !y.isTerminal())) {
             // x has already reached terminal, pseudo-identity inserted
@@ -1963,6 +1957,13 @@ private:
               e1.w = Complex::zero;
             }
             e2 = y.p->e[j + cols * k];
+          } else if ((!x.isTerminal() && y.isTerminal())) {
+            // y has already reached terminal, pseudo-identity inserted
+            e1 = x.p->e[rows * i + k];
+            e2 = yCopy;
+            if (j + cols * k == 1 || j + cols * k == 2) {
+              e2.w = Complex::zero;
+            }
           }
 
           if constexpr (std::is_same_v<LeftOperandNode, dNode>) {
