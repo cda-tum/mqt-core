@@ -1,30 +1,30 @@
 #include "algorithms/WState.hpp"
 
 namespace qc {
-void fGate(QuantumComputation& qc, const std::size_t i, const std::size_t j,
-           const std::size_t k, const std::size_t n) {
+void fGate(QuantumComputation& qc, const Qubit i, const Qubit j,
+           const Qubit k, const Qubit n) {
   const auto theta = std::acos(std::sqrt(1.0 / static_cast<double>(k - n + 1)));
-  qc.ry(static_cast<Qubit>(j), -theta);
-  qc.z(static_cast<Qubit>(j), qc::Control{static_cast<Qubit>(i)});
-  qc.ry(static_cast<Qubit>(j), theta);
+  qc.ry(j, -theta);
+  qc.z(j, qc::Control{i});
+  qc.ry(j, theta);
 }
 
-WState::WState(const std::size_t nq) : QuantumComputation(nq) {
+WState::WState(const Qubit nq) : QuantumComputation(nq) {
   if (nq == 0) {
     return;
   }
 
   name = "wstate_" + std::to_string(nq);
-  const auto top = static_cast<Qubit>(nq - 1);
+  const auto top = nq - 1;
 
   x(top);
 
-  for (std::size_t m = 1; m < nq; m++) {
+  for (Qubit m = 1; m < nq; m++) {
     fGate(*this, nq - m, nq - m - 1, nq, m);
   }
 
-  for (std::size_t k = nq - 1; k > 0; k--) {
-    x(static_cast<Qubit>(k), qc::Control{static_cast<Qubit>(k - 1)});
+  for (Qubit k = nq - 1; k > 0; k--) {
+    x(k, qc::Control{k - 1});
   }
 }
 } // namespace qc
