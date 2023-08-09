@@ -1,8 +1,8 @@
 #include "algorithms/WState.hpp"
 
 namespace qc {
-void fGate(QuantumComputation& qc, const std::size_t i, const std::size_t j, const std::size_t n,
-           const std::size_t k) {
+void fGate(QuantumComputation& qc, const std::size_t i, const std::size_t j,
+           const std::size_t n, const std::size_t k) {
   const auto theta = std::acos(std::sqrt(1.0 / static_cast<double>(n - k + 1)));
   qc.ry(static_cast<Qubit>(j), -theta);
   qc.z(static_cast<Qubit>(j), qc::Control{static_cast<Qubit>(i)});
