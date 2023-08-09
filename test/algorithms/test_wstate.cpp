@@ -12,7 +12,7 @@ std::vector<std::string> generateWStateStrings(const std::size_t length) {
   std::vector<std::string> result;
   result.reserve(length);
   for (std::size_t i = 0U; i < length; ++i) {
-    auto binaryString = std::string('0', length);
+    auto binaryString = std::string(length, '0');
     binaryString[i] = '1';
     result.emplace_back(binaryString);
   }
@@ -20,7 +20,7 @@ std::vector<std::string> generateWStateStrings(const std::size_t length) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    WState, WState, testing::Range<std::size_t>(2U, 30U, 6U),
+    WState, WState, testing::Range<std::size_t>(2U, 128U, 7U),
     [](const testing::TestParamInfo<WState::ParamType>& inf) {
       // Generate names for test cases
       const auto nqubits = inf.param;
