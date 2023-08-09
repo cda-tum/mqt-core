@@ -1939,32 +1939,30 @@ private:
          //     }
          //   }
          // }
-          if (std::is_same_v<RightOperandNode, vNode>) {
-            // Check that neither is terminal
-            if (!x.isTerminal() && !y.isTerminal()) {
-              // Nodes are at correct level and can be multiplied
-              if (x.p->v == var) {
-                e1 = x.p->e[rows * i + k];
-              // Hold x at current level until we reach correct level var
-              } else if (x.p->v > var) {
-                e1 = xCopy;
-              // Pseudo-identity inserted TODO: Is this efficient?
-              } else if (x.p->v < var) {
-                e1 = xCopy;
-                if (rows * i + k == 1 || rows * i + k == 2) {
-                  e1.w = Complex::zero;
-                }
-              }
-              e2 = y.p->e[j + cols * k];
-
-            } else if ((x.isTerminal() && !y.isTerminal())) {
-              // x has already reached terminal, pseudo-identity inserted
+          // Check that neither is terminal
+          if (!x.isTerminal() && !y.isTerminal()) {
+            // Nodes are at correct level and can be multiplied
+            if (x.p->v == var) {
+              e1 = x.p->e[rows * i + k];
+            // Hold x at current level until we reach correct level var
+            } else if (x.p->v > var) {
+              e1 = xCopy;
+            // Pseudo-identity inserted TODO: Is this efficient?
+            } else if (x.p->v < var) {
               e1 = xCopy;
               if (rows * i + k == 1 || rows * i + k == 2) {
                 e1.w = Complex::zero;
               }
-              e2 = y.p->e[j + cols * k];
             }
+            e2 = y.p->e[j + cols * k];
+
+          } else if ((x.isTerminal() && !y.isTerminal())) {
+            // x has already reached terminal, pseudo-identity inserted
+            e1 = xCopy;
+            if (rows * i + k == 1 || rows * i + k == 2) {
+              e1.w = Complex::zero;
+            }
+            e2 = y.p->e[j + cols * k];
           }
 
           if constexpr (std::is_same_v<LeftOperandNode, dNode>) {
