@@ -17,8 +17,8 @@ protected:
   void printMeasurement(std::ostream& os, const std::vector<Qubit>& q,
                         const std::vector<Bit>& c,
                         const Permutation& permutation) const;
-  void printResetOrBarrier(std::ostream& os, const std::vector<Qubit>& q,
-                           const Permutation& permutation) const;
+  void printReset(std::ostream& os, const std::vector<Qubit>& q,
+                  const Permutation& permutation) const;
 
 public:
   // Measurement constructor
@@ -65,8 +65,6 @@ public:
 
   [[nodiscard]] bool actsOn(Qubit i) const override;
 
-  void addDepthContribution(std::vector<std::size_t>& depths) const override;
-
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override;
   [[nodiscard]] bool equals(const Operation& operation) const override {
@@ -74,17 +72,13 @@ public:
   }
 
   std::ostream& print(std::ostream& os) const override {
-    if (type == Measure) {
-      return printNonUnitary(os, qubits, classics);
-    }
-    return printNonUnitary(os, targets);
+    const auto& qubitArgs = getTargets();
+    return printNonUnitary(os, qubitArgs, classics);
   }
   std::ostream& print(std::ostream& os,
                       const Permutation& permutation) const override {
-    if (type == Measure) {
-      return printNonUnitary(os, qubits, classics, permutation);
-    }
-    return printNonUnitary(os, targets, {}, permutation);
+    const auto& qubitArgs = getTargets();
+    return printNonUnitary(os, qubitArgs, classics, permutation);
   }
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,

@@ -208,7 +208,7 @@ TEST_F(DDFunctionality, nonUnitary) {
     dummyMap[i] = i;
   }
   auto barrier =
-      qc::NonUnitaryOperation(nqubits, {0, 1, 2, 3}, qc::OpType::Barrier);
+      qc::StandardOperation(nqubits, {0, 1, 2, 3}, qc::OpType::Barrier);
   EXPECT_EQ(getDD(&barrier, dd), dd->makeIdent(nqubits));
   EXPECT_EQ(getInverseDD(&barrier, dd), dd->makeIdent(nqubits));
   EXPECT_EQ(getDD(&barrier, dd, dummyMap), dd->makeIdent(nqubits));

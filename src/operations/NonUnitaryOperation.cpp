@@ -52,8 +52,7 @@ std::ostream& NonUnitaryOperation::printNonUnitary(
     printMeasurement(os, q, c, permutation);
     break;
   case Reset:
-  case Barrier:
-    printResetOrBarrier(os, q, permutation);
+    printReset(os, q, permutation);
     break;
   default:
     break;
@@ -87,16 +86,9 @@ void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
 }
 
 bool NonUnitaryOperation::actsOn(Qubit i) const {
-  if (type == Measure) {
-    return std::any_of(qubits.cbegin(), qubits.cend(),
-                       [&i](const auto& q) { return q == i; });
-  }
-  if (type == Reset) {
-    return std::any_of(targets.cbegin(), targets.cend(),
-                       [&i](const auto& t) { return t == i; });
-  }
-  // other non-unitary operations (e.g., barrier statements) may be ignored
-  return false;
+  const auto& qubitArgs = getTargets();
+  return std::any_of(qubitArgs.cbegin(), qubitArgs.cend(),
+                     [&i](const auto& q) { return q == i; });
 }
 
 bool NonUnitaryOperation::equals(const Operation& op, const Permutation& perm1,
@@ -151,13 +143,6 @@ bool NonUnitaryOperation::equals(const Operation& op, const Permutation& perm1,
   return false;
 }
 
-void NonUnitaryOperation::addDepthContribution(
-    std::vector<std::size_t>& depths) const {
-  if (type == Measure || type == Reset) {
-    Operation::addDepthContribution(depths);
-  }
-}
-
 void NonUnitaryOperation::printMeasurement(
     std::ostream& os, const std::vector<Qubit>& q, const std::vector<Bit>& c,
     const Permutation& permutation) const {
@@ -189,23 +174,15 @@ void NonUnitaryOperation::printMeasurement(
   }
 }
 
-void NonUnitaryOperation::printResetOrBarrier(
-    std::ostream& os, const std::vector<Qubit>& q,
-    const Permutation& permutation) const {
+void NonUnitaryOperation::printReset(std::ostream& os,
+                                     const std::vector<Qubit>& q,
+                                     const Permutation& permutation) const {
   auto qubitIt = q.cbegin();
   os << name << "\t";
   if (permutation.empty()) {
     for (std::size_t i = 0; i < nqubits; ++i) {
       if (qubitIt != q.cend() && *qubitIt == i) {
-        if (type == Reset) {
-          os << "\033[31m"
-             << "r";
-        } else {
-          assert(type == Barrier);
-          os << "\033[32m"
-             << "b";
-        }
-        os << "\t\033[0m";
+        os << "\033[31mr\t\033[0m";
         ++qubitIt;
       } else {
         os << "|\t";
@@ -214,15 +191,7 @@ void NonUnitaryOperation::printResetOrBarrier(
   } else {
     for (const auto& [physical, logical] : permutation) {
       if (qubitIt != q.cend() && *qubitIt == physical) {
-        if (type == Reset) {
-          os << "\033[31m"
-             << "r";
-        } else {
-          assert(type == Barrier);
-          os << "\033[32m"
-             << "b";
-        }
-        os << "\t\033[0m";
+        os << "\033[31mr\t\033[0m";
         ++qubitIt;
       } else {
         os << "|\t";

@@ -12,6 +12,7 @@ enum OpType : std::uint8_t {
   // Standard Operations
   GPhase,
   I,
+  Barrier,
   H,
   X,
   Y,
@@ -47,7 +48,6 @@ enum OpType : std::uint8_t {
   // Non Unitary Operations
   Measure,
   Reset,
-  Barrier,
   Teleportation,
   // Classically-controlled Operation
   ClassicControlled,
