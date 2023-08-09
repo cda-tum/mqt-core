@@ -1847,21 +1847,21 @@ private:
 
     auto& computeTable =
         getMultiplicationComputeTable<LeftOperandNode, RightOperandNode>();
-    if (const auto* r =
-            computeTable.lookup(xCopy, yCopy, generateDensityMatrix);
-        r != nullptr) {
-      if (r->w.approximatelyZero()) {
-        return ResultEdge::zero;
-      }
-      auto e = ResultEdge{r->p, cn.getCached(r->w)};
-      ComplexNumbers::mul(e.w, e.w, x.w);
-      ComplexNumbers::mul(e.w, e.w, y.w);
-      if (e.w.approximatelyZero()) {
-        cn.returnToCache(e.w);
-        return ResultEdge::zero;
-      }
-      return e;
-    }
+    //if (const auto* r =
+    //        computeTable.lookup(xCopy, yCopy, generateDensityMatrix); // TODO: Problem here
+    //    r != nullptr) {
+    //  if (r->w.approximatelyZero()) {
+    //    return ResultEdge::zero;
+    //  }
+    //  auto e = ResultEdge{r->p, cn.getCached(r->w)};
+    //  ComplexNumbers::mul(e.w, e.w, x.w);
+    //  ComplexNumbers::mul(e.w, e.w, y.w);
+    //  if (e.w.approximatelyZero()) {
+    //    cn.returnToCache(e.w);
+    //    return ResultEdge::zero;
+    //  }
+    //  return e;
+    //}
 
     constexpr std::size_t n = std::tuple_size_v<decltype(y.p->e)>;
     ResultEdge e{};
@@ -1922,30 +1922,51 @@ private:
           REdge e2{};
 
           // Matrix-Vector multiplication
+          // TODO: Works if matrix DD is full size
+         // if (std::is_same_v<RightOperandNode, vNode>) {
+         //   // Check that neither is terminal, both nodes are at same level
+         //   if ((!x.isTerminal() && !y.isTerminal()) &&
+         //       (x.p->v >= var && y.p->v == var)) {
+         //     // Follow relevant successor
+         //     e1 = x.p->e[rows * i + k];
+         //     e2 = y.p->e[j + cols * k];
+//
+         //     // Check if e1 skipped a level
+         //     if ((e1.isTerminal() && var != 0) ||
+         //         (!e1.isTerminal() && e1.p->v != var - 1)) {
+         //       // x stays at current position until we reach correct var
+         //       e1 = xCopy;
+         //     }
+         //   }
+         // }
           if (std::is_same_v<RightOperandNode, vNode>) {
-            // Check that neither is terminal, both nodes are at same level
-            if ((!x.isTerminal() && !y.isTerminal()) &&
-                (x.p->v >= var && y.p->v == var)) {
-              // Follow relevant successor
-              e1 = x.p->e[rows * i + k];
+            // Check that neither is terminal
+            if (!x.isTerminal() && !y.isTerminal()) {
+              // Nodes are at correct level and can be multiplied
+              if (x.p->v == var) {
+                e1 = x.p->e[rows * i + k];
+              // Hold x at current level until we reach correct level var
+              } else if (x.p->v > var) {
+                e1 = xCopy;
+              // Pseudo-identity inserted TODO: Is this efficient?
+              } else if (x.p->v < var) {
+                e1 = xCopy;
+                if (rows * i + k == 1 || rows * i + k == 2) {
+                  e1.w = Complex::zero;
+                }
+              }
               e2 = y.p->e[j + cols * k];
 
-              // Check if e1 skipped a level
-              if ((e1.isTerminal() && var != 0) ||
-                  (!e1.isTerminal() && e1.p->v != var - 1)) {
-                // x stays at current position until we reach correct var
-                e1 = xCopy;
+            } else if ((x.isTerminal() && !y.isTerminal())) {
+              // x has already reached terminal, pseudo-identity inserted
+              e1 = xCopy;
+              if (rows * i + k == 1 || rows * i + k == 2) {
+                e1.w = Complex::zero;
               }
-            }
-          } else if (std::is_same_v<RightOperandNode, mNode>) {
-            // No skipping on either side
-            if ((!x.isTerminal() && !y.isTerminal()) &&
-                (x.p->v == var && y.p->v == var)) {
-              // Follow relevant successor
-              e1 = x.p->e[rows * i + k];
               e2 = y.p->e[j + cols * k];
             }
           }
+
           if constexpr (std::is_same_v<LeftOperandNode, dNode>) {
             dEdge m;
             dEdge::applyDmChangesToEdges(e1, e2);
@@ -1983,7 +2004,7 @@ private:
             // Undo modifications on density matrices
             dEdge::revertDmChangesToEdges(e1, e2);
           } else {
-            auto m = multiply2(e1, e2, static_cast<Qubit>(var-1), start);
+            auto m = multiply2(e1, e2, var-1, start);
 
             if (k == 0 || edge[idx].w.exactlyZero()) {
               edge[idx] = m;
