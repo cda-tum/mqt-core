@@ -1,12 +1,11 @@
 #include "algorithms/WState.hpp"
-#include "dd/FunctionalityConstruction.hpp"
 #include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <iostream>
 #include <vector>
 
-class WState : public testing::TestWithParam<std::size_t> {};
+class WState : public testing::TestWithParam<qc::Qubit> {};
 
 std::vector<std::string> generateWStateStrings(const std::size_t length) {
   std::vector<std::string> result;
@@ -20,7 +19,7 @@ std::vector<std::string> generateWStateStrings(const std::size_t length) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    WState, WState, testing::Range<std::size_t>(2U, 128U, 7U),
+    WState, WState, testing::Range<qc::Qubit>(0U, 128U, 7U),
     [](const testing::TestParamInfo<WState::ParamType>& inf) {
       // Generate names for test cases
       const auto nqubits = inf.param;
@@ -35,7 +34,7 @@ TEST_P(WState, FunctionTest) {
   auto qc = qc::WState(nq);
   auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
-  auto measurements =
+  const auto measurements =
       simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
   for (const auto& result : generateWStateStrings(nq)) {
     EXPECT_TRUE(measurements.find(result) != measurements.end());
