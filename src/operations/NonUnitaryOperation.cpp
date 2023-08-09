@@ -56,8 +56,6 @@ std::ostream& NonUnitaryOperation::printNonUnitary(
     printResetOrBarrier(os, q, permutation);
     break;
   default:
-    std::cerr << "Non-unitary operation with invalid type " << type
-              << " detected. Proceed with caution!\n";
     break;
   }
   return os;
