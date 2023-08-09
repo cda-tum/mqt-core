@@ -90,41 +90,29 @@ add_subdirectory(zx)
 # add ECC library
 add_subdirectory(ecc)
 
-## ** Note ** The following target will soon be removed from the project. All top-level projects
-## should switch to nanobind. After that, the pybind submodules will be removed.
-#if(NOT TARGET ${PROJECT_NAME}-python)
-#  # add pybind11 library
-#  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11" "extern/pybind11" EXCLUDE_FROM_ALL)
+# ** Note ** The following target will soon be removed from the project. All top-level projects
+# should switch to nanobind. After that, the pybind submodules will be removed. if(NOT TARGET
+# ${PROJECT_NAME}-python) # add pybind11 library
+# add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11" "extern/pybind11" EXCLUDE_FROM_ALL)
 #
-#  if(NOT TARGET pybind11_json)
-#    # add pybind11_json library
-#    add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11_json" "extern/pybind11_json"
-#                     EXCLUDE_FROM_ALL)
-#  endif()
+# if(NOT TARGET pybind11_json) # add pybind11_json library
+# add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11_json" "extern/pybind11_json"
+# EXCLUDE_FROM_ALL) endif()
 #
-#  # add Python interface library
-#  add_library(
-#    ${PROJECT_NAME}-python
-#    ${PROJECT_SOURCE_DIR}/include/python/qiskit/QuantumCircuit.hpp
-#    ${PROJECT_SOURCE_DIR}/include/python/qiskit/QasmQobjExperiment.hpp
-#    python/qiskit/QuantumCircuit.cpp python/qiskit/QasmQobjExperiment.cpp)
+# # add Python interface library add_library( ${PROJECT_NAME}-python
+# ${PROJECT_SOURCE_DIR}/include/python/qiskit/QuantumCircuit.hpp
+# ${PROJECT_SOURCE_DIR}/include/python/qiskit/QasmQobjExperiment.hpp
+# python/qiskit/QuantumCircuit.cpp python/qiskit/QasmQobjExperiment.cpp)
 #
-#  # link with main project library and pybind11 libraries
-#  target_link_libraries(${PROJECT_NAME}-python PUBLIC ${PROJECT_NAME} pybind11::pybind11
-#                                                      pybind11_json)
+# # link with main project library and pybind11 libraries
+# target_link_libraries(${PROJECT_NAME}-python PUBLIC ${PROJECT_NAME} pybind11::pybind11
+# pybind11_json)
 #
-#  # the following sets the SYSTEM flag for the include dirs of the pybind11_json libs to suppress
-#  # warnings
-#  set_target_properties(
-#    pybind11_json PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-#                             $<TARGET_PROPERTY:pybind11_json,INTERFACE_INCLUDE_DIRECTORIES>
-#  )# cmake-lint: disable=C0307
+# # the following sets the SYSTEM flag for the include dirs of the pybind11_json libs to suppress #
+# warnings set_target_properties( pybind11_json PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+# $<TARGET_PROPERTY:pybind11_json,INTERFACE_INCLUDE_DIRECTORIES> )# cmake-lint: disable=C0307
 #
-#  # add MQT alias
-#  add_library(MQT::CorePython ALIAS ${PROJECT_NAME}-python)
-#  add_library(MQT::${OLD_PROJECT_NAME}_python ALIAS ${PROJECT_NAME}-python)
-#endif()
+# # add MQT alias add_library(MQT::CorePython ALIAS ${PROJECT_NAME}-python)
+# add_library(MQT::${OLD_PROJECT_NAME}_python ALIAS ${PROJECT_NAME}-python) endif()
 
-#if(BUILD_MQT_CORE_BINDINGS)
-#  add_subdirectory(python)
-#endif()
+# if(BUILD_MQT_CORE_BINDINGS) add_subdirectory(python) endif()
