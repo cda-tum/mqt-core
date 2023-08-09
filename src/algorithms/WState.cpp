@@ -10,10 +10,6 @@ void fGate(QuantumComputation& qc, const Qubit i, const Qubit j, const Qubit k,
 }
 
 WState::WState(const Qubit nq) : QuantumComputation(nq) {
-  if (nq == 0) {
-    return;
-  }
-
   name = "wstate_" + std::to_string(nq);
 
   x(nq - 1);

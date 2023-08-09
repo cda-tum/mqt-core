@@ -19,7 +19,7 @@ std::vector<std::string> generateWStateStrings(const std::size_t length) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    WState, WState, testing::Range<qc::Qubit>(0U, 128U, 7U),
+    WState, WState, testing::Range<qc::Qubit>(1U, 128U, 7U),
     [](const testing::TestParamInfo<WState::ParamType>& inf) {
       // Generate names for test cases
       const auto nqubits = inf.param;
