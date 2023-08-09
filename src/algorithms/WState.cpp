@@ -9,21 +9,22 @@ void fGate(QuantumComputation& qc, const Qubit i, const Qubit j, const Qubit k,
   qc.ry(j, theta);
 }
 
-WState::WState(const Qubit nq) : QuantumComputation(nq) {
+WState::WState(const std::size_t nq) : QuantumComputation(nq) {
   if (nq == 0) {
     return;
   }
+  auto nQubits = static_cast<Qubit>(nq);
 
   name = "wstate_" + std::to_string(nq);
-  const auto top = nq - 1;
+  const auto top = nQubits - 1;
 
   x(top);
 
   for (Qubit m = 1; m < nq; m++) {
-    fGate(*this, nq - m, nq - m - 1, nq, m);
+    fGate(*this, nQubits - m, nQubits - m - 1, nQubits, m);
   }
 
-  for (Qubit k = nq - 1; k > 0; k--) {
+  for (Qubit k = nQubits - 1; k > 0; k--) {
     x(k, qc::Control{k - 1});
   }
 }

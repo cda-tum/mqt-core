@@ -5,6 +5,6 @@
 namespace qc {
 class WState : public QuantumComputation {
 public:
-  explicit WState(Qubit nq);
+  explicit WState(std::size_t nq);
 };
 } // namespace qc
