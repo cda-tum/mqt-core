@@ -6,8 +6,7 @@
 #include <iostream>
 #include <vector>
 
-class WState : public testing::TestWithParam<std::size_t> {
-};
+class WState : public testing::TestWithParam<std::size_t> {};
 
 std::vector<std::string> generateWStateStrings(const std::size_t length) {
   std::vector<std::string> result;
