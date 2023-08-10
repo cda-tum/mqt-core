@@ -7,14 +7,14 @@ void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
   // delete the identities from circuit
   auto it = qc.ops.begin();
   while (it != qc.ops.end()) {
-    if ((*it)->getType() == I || (*it)->getType() == Barrier) {
+    if ((*it)->getType() == I) {
       it = qc.ops.erase(it);
     } else if ((*it)->isCompoundOperation()) {
       auto* compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
       auto cit = compOp->cbegin();
       while (cit != compOp->cend()) {
         const auto* cop = cit->get();
-        if (cop->getType() == qc::I || cop->getType() == Barrier) {
+        if (cop->getType() == qc::I) {
           cit = compOp->erase(cit);
         } else {
           ++cit;
@@ -163,11 +163,6 @@ void CircuitOptimizer::addNonStandardOperationToDag(
       }
     }
   } else if (gate->isNonUnitaryOperation()) {
-    // barriers are not added to a circuit DAG
-    if (gate->getType() == Barrier) {
-      return;
-    }
-
     for (const auto& b : gate->getTargets()) {
       dag.at(b).push_back(op);
     }
@@ -187,10 +182,10 @@ void CircuitOptimizer::addNonStandardOperationToDag(
 
 void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
   static const std::map<qc::OpType, qc::OpType> INVERSE_MAP = {
-      {qc::I, qc::I},      {qc::X, qc::X},     {qc::Y, qc::Y},
-      {qc::Z, qc::Z},      {qc::H, qc::H},     {qc::S, qc::Sdag},
-      {qc::Sdag, qc::S},   {qc::T, qc::Tdag},  {qc::Tdag, qc::T},
-      {qc::SX, qc::SXdag}, {qc::SXdag, qc::SX}};
+      {qc::I, qc::I},      {qc::X, qc::X},      {qc::Y, qc::Y},
+      {qc::Z, qc::Z},      {qc::H, qc::H},      {qc::S, qc::Sdag},
+      {qc::Sdag, qc::S},   {qc::T, qc::Tdag},   {qc::Tdag, qc::T},
+      {qc::SX, qc::SXdag}, {qc::SXdag, qc::SX}, {qc::Barrier, qc::Barrier}};
 
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : qc.initialLayout) {
@@ -387,9 +382,7 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(
       }
     }
     auto* op = (*it)->get();
-    if (op->getType() == Barrier) {
-      ++it;
-    } else if (op->isStandardOperation()) {
+    if (op->isStandardOperation()) {
       // try removing gate and upon success increase all corresponding iterators
       auto onlyDiagonalGates =
           removeDiagonalGate(dag, dagIterators, idx, it, op);
@@ -482,13 +475,13 @@ bool CircuitOptimizer::removeFinalMeasurement(DAG& dag,
                                               qc::Operation* op) {
   if (op->getNtargets() != 0) {
     // need to check all targets
-    bool onlyMeasurments = true;
+    bool onlyMeasurements = true;
     for (const auto& target : op->getTargets()) {
       if (target == idx) {
         continue;
       }
       if (dagIterators.at(target) == dag.at(target).rend()) {
-        onlyMeasurments = false;
+        onlyMeasurements = false;
         break;
       }
       // recursive call at target with this operation as goal
@@ -496,19 +489,20 @@ bool CircuitOptimizer::removeFinalMeasurement(DAG& dag,
       // check if iteration of target qubit was successful
       if (dagIterators.at(target) == dag.at(target).rend() ||
           *dagIterators.at(target) != *it) {
-        onlyMeasurments = false;
+        onlyMeasurements = false;
         break;
       }
     }
-    if (!onlyMeasurments) {
+    if (!onlyMeasurements) {
       // end qubit
       dagIterators.at(idx) = dag.at(idx).rend();
     } else {
       // set operation to identity so that it can be collected by the
       // removeIdentities pass
+      op->setTargets(op->getTargets()); // work-around to properly set targets
       op->setGate(qc::I);
     }
-    return onlyMeasurments;
+    return onlyMeasurements;
   }
   return false;
 }
@@ -537,9 +531,9 @@ void CircuitOptimizer::removeFinalMeasurementsRecursive(
     }
     auto* op = (*it)->get();
     if (op->getType() == Measure) {
-      const bool onlyMeasurment =
+      const bool onlyMeasurement =
           removeFinalMeasurement(dag, dagIterators, idx, it, op);
-      if (onlyMeasurment) {
+      if (onlyMeasurement) {
         for (const auto& target : op->getTargets()) {
           if (dagIterators.at(target) == dag.at(target).rend()) {
             break;
@@ -554,6 +548,8 @@ void CircuitOptimizer::removeFinalMeasurementsRecursive(
         }
         ++(dagIterators.at(target));
       }
+      // Barriers at the end of the circuit can be removed
+      op->setGate(OpType::I);
     } else if (op->isCompoundOperation() && op->isNonUnitaryOperation()) {
       // iterate over all gates of compound operation and upon success increase
       // all corresponding iterators
@@ -829,7 +825,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
       // iterate over all subsequent operations
       while (opIt != qc.end()) {
         const auto* operation = opIt->get();
-        if (operation->isUnitary() || operation->getType() == qc::Barrier) {
+        if (operation->isUnitary()) {
           // if an operation does not act on the measured qubit, the insert
           // location for potential operations has to be updated
           if (!operation->actsOn(measurementQubit)) {
@@ -1095,11 +1091,6 @@ void CircuitOptimizer::reorderOperations(QuantumComputation& qc) {
       if (op->getType() == ClassicControlled) {
         std::cerr << "Caution! Reordering operations might not work if the "
                      "circuit contains classically controlled operations\n";
-      }
-
-      if (op->getType() == Barrier) {
-        ++it;
-        continue;
       }
 
       // check whether the gate can be scheduled, i.e. whether all qubits it

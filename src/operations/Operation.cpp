@@ -90,6 +90,8 @@ std::ostream& Operation::print(std::ostream& os) const {
     if (targetIt != targets.end() && *targetIt == i) {
       if (type == ClassicControlled) {
         os << "\033[1m\033[35m" << name[2] << name[3];
+      } else if (type == Barrier) {
+        os << "\033[1m\033[32mb";
       } else {
         os << "\033[1m\033[36m" << name[0] << name[1];
       }
@@ -129,6 +131,8 @@ std::ostream& Operation::print(std::ostream& os,
     if (targetIt != actualTargets.cend() && *targetIt == physical) {
       if (type == ClassicControlled) {
         os << "\033[1m\033[35m" << name[2] << name[3];
+      } else if (type == Barrier) {
+        os << "\033[1m\033[32mb";
       } else {
         os << "\033[1m\033[36m" << name[0] << name[1];
       }
@@ -225,6 +229,10 @@ bool Operation::equals(const Operation& op, const Permutation& perm1,
 }
 
 void Operation::addDepthContribution(std::vector<std::size_t>& depths) const {
+  if (type == Barrier) {
+    return;
+  }
+
   std::size_t maxDepth = 0;
   for (const auto& target : getTargets()) {
     maxDepth = std::max(maxDepth, depths[target]);

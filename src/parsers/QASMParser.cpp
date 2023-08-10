@@ -71,8 +71,7 @@ void qc::QuantumComputation::importOpenQASM(std::istream& is) {
           qubits.emplace_back(static_cast<Qubit>(arg.first + q));
         }
       }
-
-      emplace_back<NonUnitaryOperation>(nqubits, qubits, Barrier);
+      barrier(qubits);
     } else if (p.sym == Token::Kind::Opaque) {
       // opaque gate definition
       p.opaqueGateDecl();
