@@ -2806,13 +2806,15 @@ public:
       assert(decision <= r.p->e.size());
 
       // Path is selected
-      r = r.p->e.at(decision);
+      if (!r.isTerminal()) {
+        r = r.p->e.at(decision);
+      }
       level--;
 
       // Checks if path moves down more than one level i.e. skips nodes
-      if (level == -1 || r.p->v == level) {
+      if ((r.isTerminal() && level == -1) || (!r.isTerminal() && r.p->v == level)) {
         ComplexNumbers::mul(c, c, r.w);
-      } else {
+      } else if (!r.isTerminal() && level > r.p->v) {
         // Iterates over pseudo-identity if node is at a lower level
         for (; level > r.p->v; level--) {
           decision = static_cast<std::size_t>(
@@ -2823,8 +2825,20 @@ public:
             ComplexNumbers::mul(c, c, Complex::zero);
           }
         }
+      } else if (r.isTerminal() && level != -1) {
+        while (level != -1) {
+          decision = static_cast<std::size_t>(
+              decisions.at(static_cast<std::size_t>(topLevel - level)) - '0');
+          if (decision == 0 || decision == 3) {
+            ComplexNumbers::mul(c, c, Complex::one);
+          } else if (decision == 1 || decision == 2) {
+            ComplexNumbers::mul(c, c, Complex::zero);
+          }
+          level--;
+        }
       }
-    } while (!r.isTerminal());
+      std::cout << level << "\n";
+    } while (level != -1);
     ComplexNumbers::mul(c, c, r.w);
 
     return {RealNumber::val(c.r), RealNumber::val(c.i)};
@@ -3075,7 +3089,7 @@ public:
       return;
     }
 
-    if (e.p->v == level) {
+    if (!e.isTerminal() && e.p->v == level) {
       // recursive case
       if (!e.p->e[0].w.approximatelyZero()) {
         getMatrix(e.p->e[0], c, i, j, mat, level - 1);
@@ -3089,7 +3103,7 @@ public:
       if (!e.p->e[3].w.approximatelyZero()) {
         getMatrix(e.p->e[3], c, x, y, mat, level - 1);
       }
-    } else if (e.p->v < level) {
+    } else if (!e.isTerminal() && e.p->v < level) {
       getMatrix(e, c, i, j, mat, level - 1);
       getMatrix(e, c, x, y, mat, level - 1);
     }
