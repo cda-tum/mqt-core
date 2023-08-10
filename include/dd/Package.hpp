@@ -3089,7 +3089,7 @@ public:
       return;
     }
 
-    if (!e.isTerminal() && e.p->v == level) {
+    if ((!e.isTerminal() && e.p->v == level)) {
       // recursive case
       if (!e.p->e[0].w.approximatelyZero()) {
         getMatrix(e.p->e[0], c, i, j, mat, level - 1);
@@ -3103,7 +3103,7 @@ public:
       if (!e.p->e[3].w.approximatelyZero()) {
         getMatrix(e.p->e[3], c, x, y, mat, level - 1);
       }
-    } else if (!e.isTerminal() && e.p->v < level) {
+    } else if ((!e.isTerminal() && e.p->v < level) || (e.isTerminal() && level != -1)) {
       getMatrix(e, c, i, j, mat, level - 1);
       getMatrix(e, c, x, y, mat, level - 1);
     }
