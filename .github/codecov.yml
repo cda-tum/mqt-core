@@ -26,7 +26,8 @@ flag_management:
     - name: cpp
       paths:
         - "include"
-        - "src/**/*.cpp"
+        - "src"
+        - "!src/mqt/**/*"
       after_n_builds: 1
     - name: python
       paths:
