@@ -9,7 +9,7 @@ on:
 
 jobs:
   cpp-tests-macos:
-    name: 🍎 ${{ matrix.config }}
+    name: 🍎 ${{ inputs.config }}
     runs-on: macos-latest
     env:
       CMAKE_BUILD_PARALLEL_LEVEL: 3
