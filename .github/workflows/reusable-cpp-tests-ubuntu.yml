@@ -29,7 +29,7 @@ jobs:
       - name: Install Ninja
         run: pipx install ninja
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }}
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }} -DDEPLOY=ON
       - name: Build
         run: cmake --build build --config ${{ inputs.config }}
       - name: Test
