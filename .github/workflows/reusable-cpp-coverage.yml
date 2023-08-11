@@ -1,0 +1,41 @@
+name: 🇨 • Coverage
+on:
+  workflow_call:
+    secrets:
+      token:
+        description: "The token to use for Codecov"
+        required: true
+
+jobs:
+  coverage:
+    name: Coverage • ubuntu-latest
+    runs-on: ubuntu-latest
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: 3
+      CTEST_PARALLEL_LEVEL: 3
+      FORCE_COLOR: 3
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          override_cache_key: c++-coverage
+      - name: Set up mold as linker
+        uses: rui314/setup-mold@v1
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+      - name: Build
+        run: cmake --build build --config Debug
+      - name: Test
+        run: ctest -C Debug --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true
+          flags: cpp
+          gcov: true
+          gcov_ignore: "extern/**/*"
+          token: ${{ secrets.token }}

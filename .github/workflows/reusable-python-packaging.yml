@@ -1,20 +1,12 @@
-name: 🐍 • Wheels
+name: 🐍 • Packaging
 
 on:
-  release:
-    types: [published]
-  pull_request:
-  merge_group:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
-
-env:
-  FORCE_COLOR: 3
+  workflow_call:
+    inputs:
+      package-name:
+        description: "The name of the Python package"
+        required: true
+        type: string
 
 jobs:
   build_sdist:
@@ -34,12 +26,12 @@ jobs:
           path: dist/*.tar.gz
 
   build_wheels:
-    name: ${{ matrix.os }} • ${{ matrix.python }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.runs-on }} • ${{ matrix.python }}
+    runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        runs-on: [ubuntu-latest, macos-latest, windows-latest]
         python: ["cp38", "cp39", "cp310", "cp311", "cp312"]
     steps:
       - uses: actions/checkout@v3
@@ -53,7 +45,7 @@ jobs:
         with:
           prepend_symlinks_to_path: false
           windows_compile_environment: msvc
-          override_cache_key: wheels-${{ matrix.os }}-${{ matrix.python }}
+          override_cache_key: wheels-${{ matrix.runs-on }}-${{ matrix.python }}
       - uses: pypa/cibuildwheel@v2.15
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
@@ -65,32 +57,44 @@ jobs:
         with:
           path: wheelhouse/*.whl
 
+  build_wheels_emulation:
+    name: ${{ matrix.arch }} • ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ["s390x", "ppc64le"]
+        python: ["cp38", "cp39", "cp310", "cp311", "cp312"]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.15
+        env:
+          CIBW_ARCHS_LINUX: ${{ matrix.arch }}
+          CIBW_BUILD: ${{ matrix.python }}-*
+          CIBW_TEST_SKIP: "cp*"
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheelhouse/*.whl
+
   deploy:
     if: github.event_name == 'release' && github.event.action == 'published'
     name: 🚀 Deploy to PyPI
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/mqt.core
+      url: https://pypi.org/p/${{ inputs.package-name }}
     permissions:
       id-token: write
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels, build_sdist, build_wheels_emulation]
     steps:
       - uses: actions/download-artifact@v3
         with:
           name: artifact
           path: dist
       - uses: pypa/gh-action-pypi-publish@release/v1
-
-  wheels-check:
-    if: always()
-    name: 🚦 🐍🛞 Check
-    needs: [build_sdist, build_wheels, deploy]
-    runs-on: ubuntu-latest
-    timeout-minutes: 1
-    steps:
-      - name: Decide whether the needed jobs succeeded or failed
-        uses: re-actors/alls-green@release/v1
-        with:
-          allowed-skips: deploy
-          jobs: ${{ toJSON(needs) }}

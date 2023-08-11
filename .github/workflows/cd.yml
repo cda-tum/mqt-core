@@ -1,0 +1,11 @@
+name: CD
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  python-packaging:
+    uses: ./.github/workflows/reusable-python-packaging.yml
+    with:
+      package-name: mqt.core

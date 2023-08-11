@@ -1,38 +1,13 @@
-name: 🇨‌➕➕ • Lint
-
+name: 🇨 • Lint
 on:
-  merge_group:
-  pull_request:
-    paths:
-      - "**/*.cpp"
-      - "**/*.hpp"
-      - ".github/workflows/cpp-linter.yml"
-      - ".clang-tidy"
-      - "!include/python/**"
-      - "!src/python/**"
-  push:
-    branches:
-      - main
-    paths:
-      - "**/*.cpp"
-      - "**/*.hpp"
-      - ".github/workflows/cpp-linter.yml"
-      - ".clang-tidy"
-      - "!include/python/**"
-      - "!src/python/**"
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
-
-env:
-  clang-version: 16
+  workflow_call:
 
 jobs:
   cpp-linter:
-    runs-on: ubuntu-latest
     name: Run
+    runs-on: ubuntu-latest
+    env:
+      clang-version: 16
     steps:
       - uses: actions/checkout@v3
         with:
@@ -44,7 +19,10 @@ jobs:
           wget https://apt.llvm.org/llvm.sh -O ${{ runner.temp }}/llvm_install.sh
           chmod +x ${{ runner.temp }}/llvm_install.sh
           if sudo ${{ runner.temp }}/llvm_install.sh ${{ env.clang-version }}; then
-            sudo apt-get install -y clang-format-${{ env.clang-version }} clang-tidy-${{ env.clang-version }}
+            sudo apt-get install -y clang-format-${{ env.clang-version }} clang-tidy-${{ env.clang-version }} || exit 1
+          else
+            echo "Installation from script failed."
+            exit 1
           fi
           echo "CC=clang-${{ env.clang-version }}" >> $GITHUB_ENV
           echo "CXX=clang++-${{ env.clang-version }}" >> $GITHUB_ENV
@@ -61,7 +39,7 @@ jobs:
         uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           style: ""
           tidy-checks: ""

@@ -1,0 +1,47 @@
+name: 🐍 • CI
+
+on:
+  workflow_call:
+    secrets:
+      token:
+        description: "The token to use for Codecov"
+        required: true
+
+jobs:
+  lint:
+    uses: ./.github/workflows/reusable-python-linter.yml
+
+  python-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+    uses: ./.github/workflows/reusable-python-tests.yml
+    with:
+      runs-on: ${{ matrix.runs-on }}
+      python-version: ${{ matrix.python-version }}
+
+  coverage:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.11"]
+    uses: ./.github/workflows/reusable-python-coverage.yml
+    with:
+      python-version: ${{ matrix.python-version }}
+    secrets:
+      token: ${{ secrets.token }}
+
+  dist:
+    name: Distribution build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Set up mold as linker (Linux only)
+        uses: rui314/setup-mold@v1
+      - uses: hynek/build-and-inspect-python-package@v1

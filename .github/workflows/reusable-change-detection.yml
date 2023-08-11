@@ -1,0 +1,127 @@
+name: ❓ • Change Detection
+on:
+  workflow_call:
+    outputs:
+      run-cpp-tests:
+        description: Whether to run the C++ tests
+        value: ${{ jobs.change-detection.outputs.run-cpp-tests || false }}
+      run-cpp-linter:
+        description: Whether to run the C++ linter
+        value: ${{ jobs.change-detection.outputs.run-cpp-linter || false }}
+      run-python-tests:
+        description: Whether to run the Python tests
+        value: ${{ jobs.change-detection.outputs.run-python-tests || false }}
+      run-code-ql:
+        description: Whether to run CodeQL
+        value: ${{ jobs.change-detection.outputs.run-code-ql || false }}
+
+jobs:
+  change-detection:
+    name: 🔍 Identify source changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      run-cpp-tests: ${{ steps.cpp-tests-changes.outputs.run-cpp-tests || false }}
+      run-cpp-linter: ${{ steps.cpp-linter-changes.outputs.run-cpp-linter || false }}
+      run-python-tests: ${{ steps.python-tests-changes.outputs.run-python-tests || false }}
+      run-code-ql: ${{ steps.code-ql-changes.outputs.run-code-ql || false }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get a list of the changed files relevant for the C++ tests
+        if: github.event_name == 'pull_request'
+        id: changed-cpp-testable-files
+        uses: Ana06/get-changed-files@v2.2.0
+        with:
+          filter: |
+            include/**
+            !include/python/**
+            src/**
+            !src/mqt/**
+            !src/python/**
+            test/**
+            !test/python/**
+            CMakelists.txt
+            cmake/**
+            extern/**
+            .github/codecov.yml
+            .github/workflows/reuseable-cpp-tests-ubuntu.yml
+            .github/workflows/reuseable-cpp-tests-macos.yml
+            .github/workflows/reuseable-cpp-tests-windows.yml
+            .github/workflows/reuseable-cpp-coverage.yml
+            .github/workflows/reuseable-cpp-tests-ci.yml
+            .github/workflows/ci.yml
+      - name: Set a flag for running the C++ tests
+        if: >-
+          github.event_name != 'pull_request'
+          || steps.changed-cpp-testable-files.outputs.added_modified_renamed != ''
+        id: cpp-tests-changes
+        run: >-
+          echo "run-cpp-tests=true" >> "${GITHUB_OUTPUT}"
+      - name: Get a list of the changed files relevant for the C++ linter
+        if: github.event_name == 'pull_request'
+        id: changed-cpp-linter-files
+        uses: Ana06/get-changed-files@v2.2.0
+        with:
+          filter: |
+            include/**
+            !include/python/**
+            src/**
+            !src/mqt/**
+            !src/python/**
+            test/**
+            !test/python/**
+            .clang-tidy
+            .github/workflows/reuseable-cpp-linter.yml
+      - name: Set a flag for running the C++ tests
+        if: >-
+          github.event_name != 'pull_request'
+          || steps.changed-cpp-linter-files.outputs.added_modified_renamed != ''
+        id: cpp-linter-changes
+        run: >-
+          echo "run-cpp-linter=true" >> "${GITHUB_OUTPUT}"
+      - name: Get a list of the changed files relevant for the Python tests
+        if: github.event_name == 'pull_request'
+        id: changed-python-testable-files
+        uses: Ana06/get-changed-files@v2.2.0
+        with:
+          filter: |
+            cmake/**
+            extern/**
+            include/**
+            src/**
+            test/python/**
+            noxfile.py
+            .github/codecov.yml
+            .github/workflows/reuseable-python-linter.yml
+            .github/workflows/reuseable-python-tests.yml
+            .github/workflows/reuseable-python-coverage.yml
+            .github/workflows/reuseable-python-ci.yml
+      - name: Set a flag for running the Python tests
+        if: >-
+          github.event_name != 'pull_request'
+          || steps.changed-python-testable-files.outputs.added_modified_renamed != ''
+        id: python-tests-changes
+        run: >-
+          echo "run-python-tests=true" >> "${GITHUB_OUTPUT}"
+      - name: Get a list of the changed files relevant for CodeQL
+        if: github.event_name == 'pull_request'
+        id: changed-code-ql-files
+        uses: Ana06/get-changed-files@v2.2.0
+        with:
+          filter: |
+            cmake/**
+            extern/**
+            include/**
+            src/**
+            test/**
+            .github/codeql-config.yml
+            .github/workflows/reuseable-codeql-cpp.yml
+            .github/workflows/reuseable-codeql-python.yml
+            .github/workflows/reuseable-codeql-analysis.yml
+      - name: Set a flag for running CodeQL
+        if: >-
+          github.event_name != 'pull_request'
+          || steps.changed-code-ql-files.outputs.added_modified_renamed != ''
+        id: code-ql-changes
+        run: >-
+          echo "run-code-ql=true" >> "${GITHUB_OUTPUT}"
