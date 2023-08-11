@@ -13,7 +13,7 @@ on:
 
 jobs:
   python-tests:
-    name: Tests • ${{ inputs.runs-on }} • ${{ inputs.python-version }}
+    name: ${{ inputs.python-version }}
     runs-on: ${{ inputs.runs-on }}
     env:
       FORCE_COLOR: 3

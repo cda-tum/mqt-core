@@ -3,8 +3,7 @@ on:
   workflow_call:
 
 jobs:
-  cpp-linter:
-    name: Run
+  lint:
     runs-on: ubuntu-latest
     env:
       clang-version: 16

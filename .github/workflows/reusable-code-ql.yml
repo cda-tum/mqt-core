@@ -5,7 +5,9 @@ on:
 
 jobs:
   analyze-cpp:
+    name: 🇨‌
     uses: ./.github/workflows/reusable-code-ql-cpp.yml
 
   analyze-python:
+    name: 🐍
     uses: ./.github/workflows/reusable-code-ql-python.yml
