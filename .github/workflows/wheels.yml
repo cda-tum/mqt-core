@@ -57,8 +57,6 @@ jobs:
       - uses: pypa/cibuildwheel@v2.15
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
-          # Temporary: use pre-release Python 3.12 for stable ABI builds
-          CIBW_PRERELEASE_PYTHONS: True
       - name: Verify clean directory
         run: git diff --exit-code
         shell: bash
