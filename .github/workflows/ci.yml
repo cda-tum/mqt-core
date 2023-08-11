@@ -13,10 +13,11 @@ concurrency:
 
 jobs:
   change-detection:
+    name: 🔍 Change
     uses: ./.github/workflows/reusable-change-detection.yml
 
   cpp-tests:
-    name: 🇨‌•Test
+    name: 🇨‌ Test
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
     uses: ./.github/workflows/reusable-cpp-ci.yml
@@ -24,13 +25,13 @@ jobs:
       token: ${{ secrets.CODECOV_TOKEN }}
 
   cpp-linter:
-    name: 🇨‌•Lint
+    name: 🇨‌ Lint
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-linter)
     uses: ./.github/workflows/reusable-cpp-linter.yml
 
   python-tests:
-    name: 🐍•Test
+    name: 🐍 Test
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-python-tests)
     uses: ./.github/workflows/reusable-python-ci.yml
@@ -38,13 +39,13 @@ jobs:
       token: ${{ secrets.CODECOV_TOKEN }}
 
   code-ql:
-    name: 📝•CodeQL
+    name: 📝 CodeQL
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-code-ql)
     uses: ./.github/workflows/reusable-code-ql.yml
 
   required-checks-pass: # This job does nothing and is only used for branch protection
-    name: 🚦•Check
+    name: 🚦 Check
     if: always()
     needs:
       - change-detection

@@ -12,7 +12,7 @@ jobs:
     uses: ./.github/workflows/reusable-python-linter.yml
 
   python-tests-ubuntu:
-    name: 🐧
+    name: 🐧 ${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -23,7 +23,7 @@ jobs:
       python-version: ${{ matrix.python-version }}
 
   python-tests-macos:
-    name: 🍎
+    name: 🍎 ${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -34,7 +34,7 @@ jobs:
       python-version: ${{ matrix.python-version }}
 
   python-tests-windows:
-    name: 🏁
+    name: 🏁 ${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -45,7 +45,7 @@ jobs:
       python-version: ${{ matrix.python-version }}
 
   coverage:
-    name: 📈•${{ matrix.python-version }}
+    name: 📈 ${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -57,7 +57,7 @@ jobs:
       token: ${{ secrets.token }}
 
   dist:
-    name: Distribution build
+    name: 📦 Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

@@ -4,6 +4,7 @@ on:
 
 jobs:
   lint:
+    name: Run
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
