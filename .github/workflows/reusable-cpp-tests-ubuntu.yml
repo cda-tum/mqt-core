@@ -9,7 +9,7 @@ on:
 
 jobs:
   cpp-tests-ubuntu:
-    name: Run
+    name: 🐧 ${{ matrix.config }}
     runs-on: ubuntu-latest
     env:
       CMAKE_BUILD_PARALLEL_LEVEL: 3

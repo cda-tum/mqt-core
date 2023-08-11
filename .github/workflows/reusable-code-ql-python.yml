@@ -4,6 +4,7 @@ on:
 
 jobs:
   analyze:
+    name: analyze 🐍
     runs-on: ubuntu-latest
     permissions:
       security-events: write

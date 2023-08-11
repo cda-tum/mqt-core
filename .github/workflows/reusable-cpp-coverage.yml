@@ -8,7 +8,7 @@ on:
 
 jobs:
   coverage:
-    name: Run
+    name: Coverage
     runs-on: ubuntu-latest
     env:
       CMAKE_BUILD_PARALLEL_LEVEL: 3
