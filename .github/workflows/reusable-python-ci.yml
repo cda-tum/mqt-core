@@ -9,6 +9,7 @@ on:
 
 jobs:
   lint:
+    name: 🚨 Lint
     uses: ./.github/workflows/reusable-python-linter.yml
 
   python-tests-ubuntu:

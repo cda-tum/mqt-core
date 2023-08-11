@@ -4,7 +4,7 @@ on:
 
 jobs:
   analyze:
-    name: analyze 🇨‌
+    name: 🇨 Analysis
     runs-on: ubuntu-latest
     permissions:
       security-events: write

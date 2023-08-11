@@ -17,7 +17,7 @@ on:
 
 jobs:
   change-detection:
-    name: Run
+    name: 🕵️ Check
     runs-on: ubuntu-latest
     timeout-minutes: 1
     outputs:
