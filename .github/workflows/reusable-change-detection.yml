@@ -44,11 +44,11 @@ jobs:
             cmake/**
             extern/**
             .github/codecov.yml
-            .github/workflows/reuseable-cpp-tests-ubuntu.yml
-            .github/workflows/reuseable-cpp-tests-macos.yml
-            .github/workflows/reuseable-cpp-tests-windows.yml
-            .github/workflows/reuseable-cpp-coverage.yml
-            .github/workflows/reuseable-cpp-tests-ci.yml
+            .github/workflows/reusable-cpp-tests-ubuntu.yml
+            .github/workflows/reusable-cpp-tests-macos.yml
+            .github/workflows/reusable-cpp-tests-windows.yml
+            .github/workflows/reusable-cpp-coverage.yml
+            .github/workflows/reusable-cpp-tests-ci.yml
             .github/workflows/ci.yml
       - name: Set a flag for running the C++ tests
         if: >-
@@ -71,8 +71,8 @@ jobs:
             test/**
             !test/python/**
             .clang-tidy
-            .github/workflows/reuseable-cpp-linter.yml
-      - name: Set a flag for running the C++ tests
+            .github/workflows/reusable-cpp-linter.yml
+      - name: Set a flag for running the C++ linter
         if: >-
           github.event_name != 'pull_request'
           || steps.changed-cpp-linter-files.outputs.added_modified_renamed != ''
@@ -92,10 +92,10 @@ jobs:
             test/python/**
             noxfile.py
             .github/codecov.yml
-            .github/workflows/reuseable-python-linter.yml
-            .github/workflows/reuseable-python-tests.yml
-            .github/workflows/reuseable-python-coverage.yml
-            .github/workflows/reuseable-python-ci.yml
+            .github/workflows/reusable-python-linter.yml
+            .github/workflows/reusable-python-tests.yml
+            .github/workflows/reusable-python-coverage.yml
+            .github/workflows/reusable-python-ci.yml
       - name: Set a flag for running the Python tests
         if: >-
           github.event_name != 'pull_request'
@@ -115,9 +115,9 @@ jobs:
             src/**
             test/**
             .github/codeql-config.yml
-            .github/workflows/reuseable-codeql-cpp.yml
-            .github/workflows/reuseable-codeql-python.yml
-            .github/workflows/reuseable-codeql-analysis.yml
+            .github/workflows/reusable-code-ql-cpp.yml
+            .github/workflows/reusable-code-ql-python.yml
+            .github/workflows/reusable-code-ql.yml
       - name: Set a flag for running CodeQL
         if: >-
           github.event_name != 'pull_request'
