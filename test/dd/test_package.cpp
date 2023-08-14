@@ -1499,7 +1499,9 @@ TEST(DDPackageTest, DDFromSingleQubitMatrix) {
   const auto nrQubits = 1U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
-
+  std::string filename2 = "C:/Users/aaron/OneDrive/Documents/GitHub/mqt-core/"
+                          "graphs/matDD";
+  dd::export2Dot(matDD, filename2, true, true);
   const auto outputMatrix = dd->getMatrix(matDD, nrQubits);
 
   EXPECT_EQ(inputMatrix, outputMatrix);

@@ -541,7 +541,7 @@ public:
       @throws std::invalid_argument If the given matrix is not square or its
   length is not a power of two.
   **/
-  mEdge makeDDFromMatrix(const CMat& matrix, Qubit level = -1) {
+  mEdge makeDDFromMatrix(const CMat& matrix, int level = -1) {
     if (matrix.empty()) {
       return mEdge::one;
     }
