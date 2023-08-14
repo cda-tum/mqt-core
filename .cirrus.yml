@@ -68,7 +68,6 @@ linux_aarch64_wheels_task:
   <<: *BUILD_AND_STORE_WHEELS
 
 macos_arm64_wheels_task:
-  only_if: "$CIRRUS_RELEASE != ''"
   name: 🐍 Packaging / 🎡 🍎 arm64
   alias: macos_arm64_wheels
   clone_script: *clone
