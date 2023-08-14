@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_sdist:
-    name: SDist
+    name: 📦 SDist
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -26,7 +26,7 @@ jobs:
           path: dist/*.tar.gz
 
   build_wheels:
-    name: ${{ matrix.runs-on }} • ${{ matrix.python }}
+    name: 🎡 ${{ matrix.runs-on }} ${{ matrix.python }}
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
@@ -58,7 +58,7 @@ jobs:
           path: wheelhouse/*.whl
 
   build_wheels_emulation:
-    name: ${{ matrix.arch }} • ${{ matrix.python }}
+    name: 🎡 ${{ matrix.arch }} ${{ matrix.python }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

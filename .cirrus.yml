@@ -16,7 +16,7 @@
   echo $(python -m pip cache list)
 
 linux_aarch64_test_task:
-  name: Run Python tests on Linux aarch64.
+  name: 🐍 Test / 🐧 arm64
   compute_engine_instance:
     image_project: cirrus-images
     image: family/docker-builder-arm64
@@ -45,7 +45,7 @@ linux_aarch64_test_task:
   statistics_script: *statistics
 
 macos_arm64_test_task:
-  name: Run Python tests on macOS arm64.
+  name: 🐍 Test / 🍎 arm64
   alias: macos_arm64_test
   clone_script: *clone
   macos_instance:
@@ -81,7 +81,7 @@ build_and_store_wheels: &BUILD_AND_STORE_WHEELS
 
 linux_aarch64_wheels_task:
   only_if: "$CIRRUS_RELEASE != ''"
-  name: Build Linux aarch64 wheels.
+  name: 🐍 Packaging / 🎡 🐧 arm64
   alias: linux_aarch64_wheels
   clone_script: *clone
   compute_engine_instance:
@@ -98,7 +98,7 @@ linux_aarch64_wheels_task:
 
 macos_arm64_wheels_task:
   only_if: "$CIRRUS_RELEASE != ''"
-  name: Build macOS arm64 wheels.
+  name: 🐍 Packaging / 🎡 🍎 arm64
   alias: macos_arm64_wheels
   clone_script: *clone
   macos_instance:
@@ -111,7 +111,7 @@ macos_arm64_wheels_task:
   <<: *BUILD_AND_STORE_WHEELS
 
 publish_task:
-  name: Upload to PyPI
+  name: 🚀 Deploy to PyPI
   container: { image: "python:3.10-bullseye" }
   depends_on:
     - linux_aarch64_wheels

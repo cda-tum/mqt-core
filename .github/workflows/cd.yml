@@ -6,6 +6,7 @@ on:
 
 jobs:
   python-packaging:
+    name: 🐍 Packaging
     uses: ./.github/workflows/reusable-python-packaging.yml
     with:
       package-name: mqt.core
