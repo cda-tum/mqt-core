@@ -91,6 +91,7 @@ jobs:
             src/**
             test/python/**
             noxfile.py
+            pyproject.toml
             .github/codecov.yml
             .github/workflows/reusable-python-linter.yml
             .github/workflows/reusable-python-tests.yml
@@ -114,6 +115,7 @@ jobs:
             include/**
             src/**
             test/**
+            pyproject.toml
             .github/codeql-config.yml
             .github/workflows/reusable-code-ql-cpp.yml
             .github/workflows/reusable-code-ql-python.yml
