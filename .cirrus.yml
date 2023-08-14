@@ -21,9 +21,9 @@ linux_aarch64_test_task:
   setup_python_script:
     - apt install -y python3-venv python-is-python3
   setup_nox_script:
-    - python -m pip install pipx
+    - python -m pip install pipx cmake
   run_nox_script:
-    - pipx run nox -s tests --verbose
+    - pipx run nox -s tests-3.10 --verbose
 
 macos_arm64_test_task:
   name: Run Python tests on macOS arm64.
