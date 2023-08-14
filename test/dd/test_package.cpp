@@ -1084,7 +1084,7 @@ TEST(DDPackageTest, NormalizationNumericStabilityTest) {
     auto p = dd->makeGateDD(dd::Phasemat(lambda), 1, 0);
     auto pdag = dd->makeGateDD(dd::Phasemat(-lambda), 1, 0);
     auto result = dd->multiply(p, pdag);
-    EXPECT_TRUE(result.p->isIdentity());
+    EXPECT_TRUE(result.isTerminal());
     dd->cUniqueTable.clear();
     dd->cCacheManager.reset();
     dd->cMemoryManager.reset();
