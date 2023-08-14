@@ -1,11 +1,3 @@
-build_and_store_wheels: &BUILD_AND_STORE_WHEELS
-  install_cibuildwheel_script:
-    - python -m pip install cibuildwheel~=2.15.0
-  run_cibuildwheel_script:
-    - cibuildwheel
-  wheels_artifacts:
-    path: "wheelhouse/*"
-
 .clone_script: &clone |
   if [ -z "$CIRRUS_PR" ]; then
     git clone --branch=$CIRRUS_BRANCH https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/${CIRRUS_REPO_FULL_NAME}.git $CIRRUS_WORKING_DIR
@@ -16,8 +8,52 @@ build_and_store_wheels: &BUILD_AND_STORE_WHEELS
   git reset --hard $CIRRUS_CHANGE_IN_REPO
   git submodule update --init --recursive
 
-linux_aarch64_task:
+linux_aarch64_test_task:
+  name: Run Python tests on Linux aarch64.
+  alias: linux_aarch64_test
+  clone_script: *clone
+  compute_engine_instance:
+    image_project: cirrus-images
+    image: family/docker-builder-arm64
+    architecture: arm64
+    platform: linux
+    cpu: 4
+  setup_python_script:
+    - apt install -y python3-venv python-is-python3
+  setup_nox_script:
+    - python -m pip install pipx
+    - pipx install nox
+  run_nox_script:
+    - nox -s tests --verbose
+
+macos_arm64_test_task:
+  name: Run Python tests on macOS arm64.
+  alias: macos_arm64_test
+  clone_script: *clone
+  macos_instance:
+    image: ghcr.io/cirruslabs/macos-monterey-xcode:latest
+  env:
+    PATH: /opt/homebrew/opt/python@3.11/bin:$PATH
+  setup_python_script:
+    - brew install python@3.11
+    - ln -s python3 /opt/homebrew/opt/python@3.11/bin/python
+  setup_nox_script:
+    - brew install nox
+  run_nox_script:
+    - nox -s tests-3.11 --verbose
+
+build_and_store_wheels: &BUILD_AND_STORE_WHEELS
+  install_cibuildwheel_script:
+    - python -m pip install cibuildwheel~=2.15.0
+  run_cibuildwheel_script:
+    - cibuildwheel
+  wheels_artifacts:
+    path: "wheelhouse/*"
+
+linux_aarch64_wheels_task:
+  only_if: "$CIRRUS_RELEASE != ''"
   name: Build Linux aarch64 wheels.
+  alias: linux_aarch64_wheels
   clone_script: *clone
   compute_engine_instance:
     image_project: cirrus-images
@@ -27,35 +63,37 @@ linux_aarch64_task:
     cpu: 4
   env:
     CIBW_SKIP: "*-musllinux_*"
-
-  install_pre_requirements_script:
+  setup_pyhton_script:
     - apt install -y python3-venv python-is-python3
   <<: *BUILD_AND_STORE_WHEELS
 
-macos_arm64_task:
+macos_arm64_wheels_task:
+  only_if: "$CIRRUS_RELEASE != ''"
   name: Build macOS arm64 wheels.
+  alias: macos_arm64_wheels
   clone_script: *clone
   macos_instance:
     image: ghcr.io/cirruslabs/macos-monterey-xcode:latest
-
   env:
-    PATH: /opt/homebrew/opt/python@3.10/bin:$PATH
-  install_pre_requirements_script:
-    - brew install python@3.10
-    - ln -s python3 /opt/homebrew/opt/python@3.10/bin/python
+    PATH: /opt/homebrew/opt/python@3.11/bin:$PATH
+  setup_python_script:
+    - brew install python@3.11
+    - ln -s python3 /opt/homebrew/opt/python@3.11/bin/python
   <<: *BUILD_AND_STORE_WHEELS
 
 publish_task:
   name: Upload to PyPI
   container: { image: "python:3.10-bullseye" }
   depends_on:
-    - Build Linux aarch64 wheels.
-    - Build macOS arm64 wheels.
+    - linux_aarch64_wheels
+    - macos_arm64_wheels
   only_if: "$CIRRUS_RELEASE != ''"
   env:
     TWINE_REPOSITORY: pypi
     TWINE_USERNAME: __token__
-    TWINE_PASSWORD: ENCRYPTED[776960f3f91eccd9d5036b8dd2ef02dd3d23caf52942443ed9aabf8fe4e7597406fd388e8b280a6c766703cc0e7b92fb]
+    TWINE_PASSWORD: "ENCRYPTED\
+      [776960f3f91eccd9d5036b8dd2ef02dd3d23caf52942443e\
+      d9aabf8fe4e7597406fd388e8b280a6c766703cc0e7b92fb]"
   install_script: pip install twine
   publish_script:
     - curl -L https://api.cirrus-ci.com/v1/artifact/build/$CIRRUS_BUILD_ID/wheels.zip -o wheels.zip
