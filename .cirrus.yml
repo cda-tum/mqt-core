@@ -11,11 +11,11 @@
 linux_aarch64_test_task:
   name: Run Python tests on Linux aarch64.
   alias: linux_aarch64_test
-  clone_script: *clone
   arm_container:
     image: ubuntu:latest
     cpu: 2
     greedy: true
+  clone_script: *clone
   setup_python_script:
     - apt install -y python3-venv python-is-python3
   setup_nox_script:
