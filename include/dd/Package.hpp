@@ -2844,7 +2844,12 @@ public:
     return {RealNumber::val(c.r), RealNumber::val(c.i)};
   }
   ComplexValue getValueByIndex(const vEdge& e, std::size_t i) {
-    auto vectorHalf = static_cast<std::size_t>(std::pow(2, e.p->v));
+    std::size_t vectorHalf;
+    if (!e.isTerminal()) {
+      vectorHalf = static_cast<std::size_t>(std::pow(2, e.p->v));
+    } else {
+      vectorHalf = 1;
+    }
 
     std::string decisions;
     do {
@@ -2880,7 +2885,12 @@ public:
   //  return r;
   //}
   ComplexValue getValueByIndex(const mEdge& e, std::size_t i, std::size_t j) {
-    auto matrixHalf = static_cast<std::size_t>(std::pow(2, e.p->v));
+    std::size_t matrixHalf;
+    if (!e.isTerminal()) {
+      matrixHalf = static_cast<std::size_t>(std::pow(2, e.p->v));
+    } else {
+      matrixHalf = 1;
+    }
 
     std::string decisions;
     do {

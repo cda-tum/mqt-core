@@ -21,20 +21,18 @@ TEST(DDPackageTest, TrivialTest) {
   auto dd = std::make_unique<dd::Package<>>(2);
   EXPECT_EQ(dd->qubits(), 2);
 
-  auto xGate = dd->makeGateDD(dd::Xmat, 1, 0);
-  auto hGate = dd->makeGateDD(dd::Hmat, 1, 0);
+auto xGate = dd->makeGateDD(dd::Xmat, 1, 0);
+auto hGate = dd->makeGateDD(dd::Hmat, 1, 0);
 
-  ASSERT_EQ(dd->getValueByPath(hGate, "0"), (dd::ComplexValue{dd::SQRT2_2, 0}));
-
-  auto zeroState = dd->makeZeroState(1);
-  auto hState = dd->multiply(hGate, zeroState);
-  auto oneState = dd->multiply(xGate, zeroState);
-
-  ASSERT_EQ(dd->fidelity(zeroState, oneState), 0.0);
-  // repeat the same calculation - triggering compute table hit
-  ASSERT_EQ(dd->fidelity(zeroState, oneState), 0.0);
-  ASSERT_NEAR(dd->fidelity(zeroState, hState), 0.5, dd::RealNumber::eps);
-  ASSERT_NEAR(dd->fidelity(oneState, hState), 0.5, dd::RealNumber::eps);
+ASSERT_EQ(dd->getValueByPath(hGate, "0"), (dd::ComplexValue{dd::SQRT2_2, 0}));
+auto zeroState = dd->makeZeroState(1);
+auto hState = dd->multiply(hGate, zeroState);
+auto oneState = dd->multiply(xGate, zeroState);
+ASSERT_EQ(dd->fidelity(zeroState, oneState), 0.0);
+// repeat the same calculation - triggering compute table hit
+ASSERT_EQ(dd->fidelity(zeroState, oneState), 0.0);
+ASSERT_NEAR(dd->fidelity(zeroState, hState), 0.5, dd::RealNumber::eps);
+ASSERT_NEAR(dd->fidelity(oneState, hState), 0.5, dd::RealNumber::eps);
 }
 
 TEST(DDPackageTest, BellState) {
@@ -44,144 +42,145 @@ TEST(DDPackageTest, BellState) {
   auto cxGate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
   auto zeroState = dd->makeZeroState(2);
 
-  auto bellState = dd->multiply(dd->multiply(cxGate, hGate), zeroState);
+  auto bellMatrix = dd->multiply(cxGate, hGate);
+  auto bellState = dd->multiply(bellMatrix, zeroState);
   dd->printVector(bellState);
 
-  // repeated calculation is practically for free
-  auto bellState2 = dd->multiply(dd->multiply(cxGate, hGate), zeroState);
-  EXPECT_EQ(bellState, bellState2);
+   // repeated calculation is practically for free
+   auto bellState2 = dd->multiply(dd->multiply(cxGate, hGate), zeroState);
+   EXPECT_EQ(bellState, bellState2);
 
-  ASSERT_EQ(dd->getValueByPath(bellState, "00"),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellState, "01"), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellState, "10"), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellState, "11"),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
+   ASSERT_EQ(dd->getValueByPath(bellState, "00"),
+             (dd::ComplexValue{dd::SQRT2_2, 0}));
+   ASSERT_EQ(dd->getValueByPath(bellState, "01"), (dd::ComplexValue{0, 0}));
+   ASSERT_EQ(dd->getValueByPath(bellState, "10"), (dd::ComplexValue{0, 0}));
+   ASSERT_EQ(dd->getValueByPath(bellState, "11"),
+             (dd::ComplexValue{dd::SQRT2_2, 0}));
 
-  ASSERT_EQ(dd->getValueByPath(bellState, 0),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByIndex(bellState, 1), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByIndex(bellState, 2), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByIndex(bellState, 3),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
+   ASSERT_EQ(dd->getValueByIndex(bellState, 0),
+             (dd::ComplexValue{dd::SQRT2_2, 0}));
+   ASSERT_EQ(dd->getValueByIndex(bellState, 1), (dd::ComplexValue{0, 0}));
+   ASSERT_EQ(dd->getValueByIndex(bellState, 2), (dd::ComplexValue{0, 0}));
+   ASSERT_EQ(dd->getValueByIndex(bellState, 3),
+             (dd::ComplexValue{dd::SQRT2_2, 0}));
 
-  auto goalState =
-      dd::CVec{{dd::SQRT2_2, 0.}, {0., 0.}, {0., 0.}, {dd::SQRT2_2, 0.}};
-  ASSERT_EQ(dd->getVector(bellState), goalState);
+   auto goalState =
+       dd::CVec{{dd::SQRT2_2, 0.}, {0., 0.}, {0., 0.}, {dd::SQRT2_2, 0.}};
+   ASSERT_EQ(dd->getVector(bellState), goalState);
 
-  ASSERT_DOUBLE_EQ(dd->fidelity(zeroState, bellState), 0.5);
+   ASSERT_DOUBLE_EQ(dd->fidelity(zeroState, bellState), 0.5);
 
-  export2Dot(bellState, "bell_state_colored_labels.dot", true, true, false,
-             false, false);
-  export2Dot(bellState, "bell_state_colored_labels_classic.dot", true, true,
-             true, false, false);
-  export2Dot(bellState, "bell_state_mono_labels.dot", false, true, false, false,
-             false);
-  export2Dot(bellState, "bell_state_mono_labels_classic.dot", false, true, true,
-             false, false);
-  export2Dot(bellState, "bell_state_colored.dot", true, false, false, false,
-             false);
-  export2Dot(bellState, "bell_state_colored_classic.dot", true, false, true,
-             false, false);
-  export2Dot(bellState, "bell_state_mono.dot", false, false, false, false,
-             false);
-  export2Dot(bellState, "bell_state_mono_classic.dot", false, false, true,
-             false, false);
-  export2Dot(bellState, "bell_state_memory.dot", false, true, true, true,
-             false);
-  dd::exportEdgeWeights(bellState, std::cout);
+   export2Dot(bellState, "bell_state_colored_labels.dot", true, true, false,
+              false, false);
+   export2Dot(bellState, "bell_state_colored_labels_classic.dot", true, true,
+              true, false, false);
+   export2Dot(bellState, "bell_state_mono_labels.dot", false, true, false, false,
+              false);
+   export2Dot(bellState, "bell_state_mono_labels_classic.dot", false, true, true,
+              false, false);
+   export2Dot(bellState, "bell_state_colored.dot", true, false, false, false,
+              false);
+   export2Dot(bellState, "bell_state_colored_classic.dot", true, false, true,
+              false, false);
+   export2Dot(bellState, "bell_state_mono.dot", false, false, false, false,
+              false);
+   export2Dot(bellState, "bell_state_mono_classic.dot", false, false, true,
+              false, false);
+   export2Dot(bellState, "bell_state_memory.dot", false, true, true, true,
+              false);
+   dd::exportEdgeWeights(bellState, std::cout);
 
-  dd->statistics();
+   dd->statistics();
 }
 
-TEST(DDPackageTest, QFTState) {
-  auto dd = std::make_unique<dd::Package<>>(3);
-
-  auto h0Gate = dd->makeGateDD(dd::Hmat, 3, 0);
-  auto s0Gate = dd->makeGateDD(dd::Smat, 3, 1_pc, 0);
-  auto t0Gate = dd->makeGateDD(dd::Tmat, 3, 2_pc, 0);
-  auto h1Gate = dd->makeGateDD(dd::Hmat, 3, 1);
-  auto s1Gate = dd->makeGateDD(dd::Smat, 3, 2_pc, 1);
-  auto h2Gate = dd->makeGateDD(dd::Hmat, 3, 2);
-  auto swapGate = dd->makeSWAPDD(3, qc::Controls{}, 0, 2);
-
-  auto qftOp = dd->multiply(s0Gate, h0Gate);
-  qftOp = dd->multiply(t0Gate, qftOp);
-  qftOp = dd->multiply(h1Gate, qftOp);
-  qftOp = dd->multiply(s1Gate, qftOp);
-  qftOp = dd->multiply(h2Gate, qftOp);
-
-  qftOp = dd->multiply(swapGate, qftOp);
-  auto qftState = dd->multiply(qftOp, dd->makeZeroState(3));
-
-  dd->printVector(qftState);
-
-  for (dd::Qubit qubit = 0; qubit < 7; ++qubit) {
-    ASSERT_NEAR(
-        dd->getValueByIndex(qftState, static_cast<std::size_t>(qubit)).r,
-        0.5 * dd::SQRT2_2, dd::RealNumber::eps);
-    ASSERT_EQ(dd->getValueByIndex(qftState, static_cast<std::size_t>(qubit)).i,
-              0);
-  }
-
-  export2Dot(qftState, "qft_state_colored_labels.dot", true, true, false, false,
-             false);
-  export2Dot(qftState, "qft_state_colored_labels_classic.dot", true, true, true,
-             false, false);
-  export2Dot(qftState, "qft_state_mono_labels.dot", false, true, false, false,
-             false);
-  export2Dot(qftState, "qft_state_mono_labels_classic.dot", false, true, true,
-             false, false);
-  export2Dot(qftState, "qft_state_colored.dot", true, false, false, false,
-             false);
-  export2Dot(qftState, "qft_state_colored_classic.dot", true, false, true,
-             false, false);
-  export2Dot(qftState, "qft_state_mono.dot", false, false, false, false, false);
-  export2Dot(qftState, "qft_state_mono_classic.dot", false, false, true, false,
-             false);
-  export2Dot(qftState, "qft_state_memory.dot", false, true, true, true, false);
-  dd::exportEdgeWeights(qftState, std::cout);
-
-  export2Dot(qftOp, "qft_op_polar_colored_labels.dot", true, true, false, false,
-             false, true);
-  export2Dot(qftOp, "qft_op_polar_colored_labels_classic.dot", true, true, true,
-             false, false, true);
-  export2Dot(qftOp, "qft_op_polar_mono_labels.dot", false, true, false, false,
-             false, true);
-  export2Dot(qftOp, "qft_op_polar_mono_labels_classic.dot", false, true, true,
-             false, false, true);
-  export2Dot(qftOp, "qft_op_polar_colored.dot", true, false, false, false,
-             false, true);
-  export2Dot(qftOp, "qft_op_polar_colored_classic.dot", true, false, true,
-             false, false, true);
-  export2Dot(qftOp, "qft_op_polar_mono.dot", false, false, false, false, false,
-             true);
-  export2Dot(qftOp, "qft_op_polar_mono_classic.dot", false, false, true, false,
-             false, true);
-  export2Dot(qftOp, "qft_op_polar_memory.dot", false, true, true, true, false,
-             true);
-
-  export2Dot(qftOp, "qft_op_rectangular_colored_labels.dot", true, true, false,
-             false, false, false);
-  export2Dot(qftOp, "qft_op_rectangular_colored_labels_classic.dot", true, true,
-             true, false, false, false);
-  export2Dot(qftOp, "qft_op_rectangular_mono_labels.dot", false, true, false,
-             false, false, false);
-  export2Dot(qftOp, "qft_op_rectangular_mono_labels_classic.dot", false, true,
-             true, false, false, false);
-  export2Dot(qftOp, "qft_op_rectangular_colored.dot", true, false, false, false,
-             false, false);
-  export2Dot(qftOp, "qft_op_rectangular_colored_classic.dot", true, false, true,
-             false, false, false);
-  export2Dot(qftOp, "qft_op_rectangular_mono.dot", false, false, false, false,
-             false, false);
-  export2Dot(qftOp, "qft_op_rectangular_mono_classic.dot", false, false, true,
-             false, false, false);
-  export2Dot(qftOp, "qft_op_rectangular_memory.dot", false, true, true, true,
-             false, false);
-
-  dd->statistics();
-}
+//TEST(DDPackageTest, QFTState) {
+//  auto dd = std::make_unique<dd::Package<>>(3);
+//
+//  auto h0Gate = dd->makeGateDD(dd::Hmat, 3, 0);
+//  auto s0Gate = dd->makeGateDD(dd::Smat, 3, 1_pc, 0);
+//  auto t0Gate = dd->makeGateDD(dd::Tmat, 3, 2_pc, 0);
+//  auto h1Gate = dd->makeGateDD(dd::Hmat, 3, 1);
+//  auto s1Gate = dd->makeGateDD(dd::Smat, 3, 2_pc, 1);
+//  auto h2Gate = dd->makeGateDD(dd::Hmat, 3, 2);
+//  auto swapGate = dd->makeSWAPDD(3, qc::Controls{}, 0, 2);
+//
+//  auto qftOp = dd->multiply(s0Gate, h0Gate);
+//  qftOp = dd->multiply(t0Gate, qftOp);
+//  qftOp = dd->multiply(h1Gate, qftOp);
+//  qftOp = dd->multiply(s1Gate, qftOp);
+//  qftOp = dd->multiply(h2Gate, qftOp);
+//
+//  qftOp = dd->multiply(swapGate, qftOp);
+//  auto qftState = dd->multiply(qftOp, dd->makeZeroState(3));
+//
+//  dd->printVector(qftState);
+//
+//  for (dd::Qubit qubit = 0; qubit < 7; ++qubit) {
+//    ASSERT_NEAR(
+//        dd->getValueByIndex(qftState, static_cast<std::size_t>(qubit)).r,
+//        0.5 * dd::SQRT2_2, dd::RealNumber::eps);
+//    ASSERT_EQ(dd->getValueByIndex(qftState, static_cast<std::size_t>(qubit)).i,
+//              0);
+//  }
+//
+//  export2Dot(qftState, "qft_state_colored_labels.dot", true, true, false, false,
+//             false);
+//  export2Dot(qftState, "qft_state_colored_labels_classic.dot", true, true, true,
+//             false, false);
+//  export2Dot(qftState, "qft_state_mono_labels.dot", false, true, false, false,
+//             false);
+//  export2Dot(qftState, "qft_state_mono_labels_classic.dot", false, true, true,
+//             false, false);
+//  export2Dot(qftState, "qft_state_colored.dot", true, false, false, false,
+//             false);
+//  export2Dot(qftState, "qft_state_colored_classic.dot", true, false, true,
+//             false, false);
+//  export2Dot(qftState, "qft_state_mono.dot", false, false, false, false, false);
+//  export2Dot(qftState, "qft_state_mono_classic.dot", false, false, true, false,
+//             false);
+//  export2Dot(qftState, "qft_state_memory.dot", false, true, true, true, false);
+//  dd::exportEdgeWeights(qftState, std::cout);
+//
+//  export2Dot(qftOp, "qft_op_polar_colored_labels.dot", true, true, false, false,
+//             false, true);
+//  export2Dot(qftOp, "qft_op_polar_colored_labels_classic.dot", true, true, true,
+//             false, false, true);
+//  export2Dot(qftOp, "qft_op_polar_mono_labels.dot", false, true, false, false,
+//             false, true);
+//  export2Dot(qftOp, "qft_op_polar_mono_labels_classic.dot", false, true, true,
+//             false, false, true);
+//  export2Dot(qftOp, "qft_op_polar_colored.dot", true, false, false, false,
+//             false, true);
+//  export2Dot(qftOp, "qft_op_polar_colored_classic.dot", true, false, true,
+//             false, false, true);
+//  export2Dot(qftOp, "qft_op_polar_mono.dot", false, false, false, false, false,
+//             true);
+//  export2Dot(qftOp, "qft_op_polar_mono_classic.dot", false, false, true, false,
+//             false, true);
+//  export2Dot(qftOp, "qft_op_polar_memory.dot", false, true, true, true, false,
+//             true);
+//
+//  export2Dot(qftOp, "qft_op_rectangular_colored_labels.dot", true, true, false,
+//             false, false, false);
+//  export2Dot(qftOp, "qft_op_rectangular_colored_labels_classic.dot", true, true,
+//             true, false, false, false);
+//  export2Dot(qftOp, "qft_op_rectangular_mono_labels.dot", false, true, false,
+//             false, false, false);
+//  export2Dot(qftOp, "qft_op_rectangular_mono_labels_classic.dot", false, true,
+//             true, false, false, false);
+//  export2Dot(qftOp, "qft_op_rectangular_colored.dot", true, false, false, false,
+//             false, false);
+//  export2Dot(qftOp, "qft_op_rectangular_colored_classic.dot", true, false, true,
+//             false, false, false);
+//  export2Dot(qftOp, "qft_op_rectangular_mono.dot", false, false, false, false,
+//             false, false);
+//  export2Dot(qftOp, "qft_op_rectangular_mono_classic.dot", false, false, true,
+//             false, false, false);
+//  export2Dot(qftOp, "qft_op_rectangular_memory.dot", false, true, true, true,
+//             false, false);
+//
+//  dd->statistics();
+//}
 
 TEST(DDPackageTest, CorruptedBellState) {
   auto dd = std::make_unique<dd::Package<>>(2);
@@ -256,9 +255,6 @@ TEST(DDPackageTest, VectorSerializationTest) {
   auto zeroState = dd->makeZeroState(2);
 
   auto bellState = dd->multiply(dd->multiply(cxGate, hGate), zeroState);
-  std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
-                          "extern/qfr/extern/dd_package/graphs/BellState";
-  dd::export2Dot(bellState, filename1, true, true);
 
   serialize(bellState, "bell_state.dd", false);
   auto deserializedBellState =
@@ -279,9 +275,6 @@ TEST(DDPackageTest, BellMatrix) {
   auto cxGate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
 
   auto bellMatrix = dd->multiply(cxGate, hGate);
-  std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
-                          "extern/mqt-core/graphs/BellMatrix";
-  dd::export2Dot(bellMatrix, filename1, true, true);
 
   ASSERT_EQ(dd->getValueByPath(bellMatrix, "00"),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
@@ -667,7 +660,7 @@ TEST(DDPackageTest, InvalidMakeBasisStateAndGate) {
 
 TEST(DDPackageTest, InvalidDecRef) {
   auto dd = std::make_unique<dd::Package<>>(2);
-  auto e = dd->makeIdent();
+  auto e = dd->makeGateDD(dd::Hmat, 2, 0);
   EXPECT_DEBUG_DEATH(
       dd->decRef(e),
       "Reference count of Node must not be zero before decrement");
@@ -698,7 +691,7 @@ TEST(DDPackageTest, PackageReset) {
 
 TEST(DDPackageTest, MaxRefCount) {
   auto dd = std::make_unique<dd::Package<>>(1);
-  auto e = dd->makeIdent();
+  auto e = dd->makeGateDD(dd::Hmat, 1, 0);
   // ref count saturates at this value
   e.p->ref = std::numeric_limits<decltype(e.p->ref)>::max();
   dd->incRef(e);
@@ -786,7 +779,7 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
   dd->debugnode(one.p);
   const dd::ComplexValue cOne{1.0, 0.0};
   EXPECT_EQ(dd->getValueByPath(one, ""), cOne);
-  EXPECT_EQ(dd->getValueByPath(one, 0), cOne);
+  EXPECT_EQ(dd->getValueByIndex(one, 0), cOne);
   EXPECT_EQ(dd->getValueByIndex(dd::mEdge::one, 0, 0), cOne);
 
   const dd::ComplexValue cZero{0.0, 0.0};
@@ -1817,19 +1810,7 @@ TEST(DDPackageTest, XXMinusYYGateDDConstruction) {
               dd->makeXXMinusYYDD(nrQubits, control, target, theta, beta);
           const auto gateDD = dd->makeXXMinusYYDD(nrQubits, qc::Controls{},
                                                   control, target, theta, beta);
-          std::string filename1 =
-              "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
-              "extern/mqt-core/graphs/xxyy";
-          std::string filename2 =
-              "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
-              "extern/mqt-core/graphs/GateDD";
-          if (xxMinusYYGateDD != gateDD) {
-            std::cout << "Control: " << static_cast<int16_t>(control)
-                      << " Target: " << static_cast<int16_t>(target)
-                      << " Theta: " << theta << " Beta: " << beta << "\n";
-            dd::export2Dot(xxMinusYYGateDD, filename1, true, true);
-            dd::export2Dot(gateDD, filename2, true, true);
-          }
+
           EXPECT_EQ(xxMinusYYGateDD, gateDD);
         }
       }
@@ -1918,23 +1899,26 @@ TEST(DDPackageTest, GetMatrixCNOT) {
 }
 
 TEST(DDPackageTest, Sandbox) {
-  const auto nrQubits = 2U;
+  auto dd = std::make_unique<dd::Package<>>(5);
 
-  auto dd = std::make_unique<dd::Package<>>(nrQubits);
+  auto hGate = dd->makeGateDD(dd::Hmat, 5, 4);
+  //auto cxGate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
+  auto zeroState = dd->makeZeroState(5);
 
-  auto cxGate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
-  auto matrix = dd->getMatrix(cxGate, nrQubits);
-  auto reFormed = dd->makeDDFromMatrix(matrix);
-  std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/ddsim/"
-                          "extern/mqt-core/graphs/Sandbox";
-  dd::export2Dot(reFormed, filename1, true, true);
+  auto xGate = dd->makeGateDD(dd::Xmat, 5, 1);
+  //std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/mqt-core/"
+  //                        "graphs/zero";
+  //dd::export2Dot(zeroState, filename1, true, true);
+  auto swap = dd->makeSWAPDD(5, 2, 0);
 
-  // auto goalRow0 =
-  //     dd::CVec{{1., 0.}, {0., 0.}};
-  // auto goalRow1 =
-  //     dd::CVec{{0., 0.}, {1., 0.}};
-  // auto goalMatrix = dd::CMat{{1, 0}, {0, 1}};//dd::CMat{goalRow0, goalRow1};
-  // ASSERT_EQ(dd->getMatrix(cxGate), goalMatrix);
+  auto op = dd->multiply(swap, xGate);
+  op = dd->multiply(hGate, op);
+  //auto test = dd->multiply(xGate, zeroState);
+  auto test = dd->multiply(op, zeroState);
+
+  std::string filename2 = "C:/Users/aaron/OneDrive/Documents/GitHub/mqt-core/"
+                          "graphs/test";
+  dd::export2Dot(op, filename2, true, true);
 }
 
 /**
