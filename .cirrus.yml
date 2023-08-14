@@ -11,7 +11,7 @@
   fi
 
 .statistics_script: &statistics |
-  ccache -s
+  ccache -s -v
   echo $(python -m pip cache dir)
   echo $(python -m pip cache list)
 
