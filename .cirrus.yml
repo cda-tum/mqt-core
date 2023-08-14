@@ -17,7 +17,7 @@ linux_aarch64_test_task:
     image: family/docker-builder-arm64
     architecture: arm64
     platform: linux
-    cpu: 4
+    cpu: 8
   setup_python_script:
     - apt install -y python3-venv python-is-python3
   setup_nox_script:
@@ -59,7 +59,7 @@ linux_aarch64_wheels_task:
     image: family/docker-builder-arm64
     architecture: arm64
     platform: linux
-    cpu: 4
+    cpu: 8
   env:
     CIBW_SKIP: "*-musllinux_*"
   setup_pyhton_script:
