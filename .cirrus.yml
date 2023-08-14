@@ -12,12 +12,10 @@ linux_aarch64_test_task:
   name: Run Python tests on Linux aarch64.
   alias: linux_aarch64_test
   clone_script: *clone
-  compute_engine_instance:
-    image_project: cirrus-images
-    image: family/docker-builder-arm64
-    architecture: arm64
-    platform: linux
-    cpu: 8
+  arm_container:
+    image: ubuntu:latest
+    cpu: 2
+    greedy: true
   setup_python_script:
     - apt install -y python3-venv python-is-python3
   setup_nox_script:
