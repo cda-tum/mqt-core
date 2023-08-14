@@ -12,7 +12,7 @@ linux_aarch64_test_task:
   name: Run Python tests on Linux aarch64.
   alias: linux_aarch64_test
   arm_container:
-    image: ubuntu:latest
+    image: cirrus-images/family/docker-builder
     cpu: 2
     greedy: true
   clone_script: *clone
