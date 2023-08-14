@@ -33,6 +33,12 @@ jobs:
       - name: Configure CMake
         run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }}
       - name: Build
-        run: cmake --build build --config ${{ inputs.config }}
+        uses: nick-fields/retry@v2 # Windows builds with MSVC are flaky and frequently run out of heap space
+        with:
+          timeout_minutes: 15
+          max_attempts: 5
+          shell: bash
+          retry_on: error
+          command: cmake --build build --config ${{ inputs.config }}
       - name: Test
         run: ctest -C ${{ inputs.config }} --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
