@@ -841,6 +841,8 @@ public:
     mEdge e = makeGateDD(Xmat, n, c, target1, start);
     c.erase(qc::Control{target0});
     c.insert(qc::Control{target1});
+    e = multiply(makeGateDD(Xmat, n, c, target0, start), e);
+
     e = multiply(e, multiply(makeGateDD(Xmat, n, c, target0, start), e));
     return e;
   }
@@ -1867,29 +1869,29 @@ private:
     ResultEdge e{};
     // TODO: This branch needs to be updated to do multiplication properly
     //       with identities
-    if constexpr (std::is_same_v<RightOperandNode, mCachedEdge>) {
-      // This branch is only taken for matrices
-      if (x.p->v == var && x.p->v == y.p->v) {
-        if (x.p->isIdentity()) {
-          if constexpr (n == NEDGE) {
-            // additionally check if y is the identity in case of matrix
-            // multiplication
-            if (y.p->isIdentity()) {
-              // e = makeIdent(start, var);
-            } else {
-              e = yCopy;
-            }
-          } else {
-            e = yCopy;
-          }
-          computeTable.insert(xCopy, yCopy, {e.p, e.w});
-          e.w = cn.mulCached(x.w, y.w);
-          if (e.w.approximatelyZero()) {
-            cn.returnToCache(e.w);
-            return ResultEdge::zero;
-          }
-          return e;
-        }
+   if constexpr (std::is_same_v<RightOperandNode, mCachedEdge>) {
+     // This branch is only taken for matrices
+     if (x.p->v == var && x.p->v == y.p->v) {
+       if (x.p->isIdentity()) {
+         if constexpr (n == NEDGE) {
+           // additionally check if y is the identity in case of matrix
+           // multiplication
+           if (y.p->isIdentity()) {
+             // e = makeIdent(start, var);
+           } else {
+             e = yCopy;
+           }
+         } else {
+           e = yCopy;
+         }
+         computeTable.insert(xCopy, yCopy, {e.p, e.w});
+         e.w = cn.mulCached(x.w, y.w);
+         if (e.w.approximatelyZero()) {
+           cn.returnToCache(e.w);
+           return ResultEdge::zero;
+         }
+         return e;
+       }
 
         if constexpr (n == NEDGE) {
           // additionally check if y is the identity in case of matrix
@@ -1950,16 +1952,25 @@ private:
               }
             }
 
-          } else if ((x.isTerminal() && !y.isTerminal())) {
+          } else if ((x.isTerminal() && !y.isTerminal()) && var == y.p->v) {
             // x has already reached terminal, pseudo-identity inserted
             e1 = xCopy;
             if (rows * i + k == 1 || rows * i + k == 2) {
               e1.w = Complex::zero;
             }
             e2 = y.p->e[j + cols * k];
-          } else if ((!x.isTerminal() && y.isTerminal())) {
+          } else if ((!x.isTerminal() && y.isTerminal()) && var == x.p->v) {
             // y has already reached terminal, pseudo-identity inserted
             e1 = x.p->e[rows * i + k];
+            e2 = yCopy;
+            if (j + cols * k == 1 || j + cols * k == 2) {
+              e2.w = Complex::zero;
+            }
+          } else {
+            e1 = xCopy;
+            if (rows * i + k == 1 || rows * i + k == 2) {
+              e1.w = Complex::zero;
+            }
             e2 = yCopy;
             if (j + cols * k == 1 || j + cols * k == 2) {
               e2.w = Complex::zero;
