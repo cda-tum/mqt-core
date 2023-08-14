@@ -1,0 +1,44 @@
+name: 🐍 • Lint
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "The Python version to use (3.8-3.11)"
+        required: true
+        type: string
+    secrets:
+      token:
+        description: "The token to use for Codecov"
+        required: true
+
+jobs:
+  coverage:
+    name: 📈 Coverage ${{ inputs.python-version }}
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 3
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          override_cache_key: python-coverage-${{ inputs.python-version }}
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: "pip"
+      - name: Set up mold as linker (Linux only)
+        uses: rui314/setup-mold@v1
+      - name: Run session
+        run: pipx run nox -s tests-${{ inputs.python-version }} -- --cov --cov-report=xml
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true
+          flags: python
+          token: ${{ secrets.token }}

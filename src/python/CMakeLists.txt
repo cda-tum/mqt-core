@@ -64,7 +64,7 @@ else()
   message(FATAL_ERROR "nanobind library not found")
 endif()
 
-# the following sets the SYSTEM flag for the include dirs of the boost libs to suppress warnings
+# the following sets the SYSTEM flag for the include dirs of the nanobind libs to suppress warnings
 # cmake-lint: disable=C0307
 set_target_properties(
   ${NANOBIND_LIB} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES

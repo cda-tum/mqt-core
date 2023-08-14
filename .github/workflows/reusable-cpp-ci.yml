@@ -1,0 +1,44 @@
+name: 🇨‌ • CI
+on:
+  workflow_call:
+    secrets:
+      token:
+        description: "The token to use for Codecov"
+        required: true
+
+jobs:
+  cpp-tests-ubuntu:
+    name: 🐧 ${{ matrix.config }}
+    strategy:
+      matrix:
+        config: [Debug, Release]
+      fail-fast: false
+    uses: ./.github/workflows/reusable-cpp-tests-ubuntu.yml
+    with:
+      config: ${{ matrix.config }}
+
+  cpp-tests-macos:
+    name: 🍎 ${{ matrix.config }}
+    strategy:
+      matrix:
+        config: [Debug, Release]
+      fail-fast: false
+    uses: ./.github/workflows/reusable-cpp-tests-macos.yml
+    with:
+      config: ${{ matrix.config }}
+
+  cpp-tests-windows:
+    name: 🏁 ${{ matrix.config }}
+    strategy:
+      matrix:
+        config: [Debug, Release]
+      fail-fast: false
+    uses: ./.github/workflows/reusable-cpp-tests-windows.yml
+    with:
+      config: ${{ matrix.config }}
+
+  coverage:
+    name: 📈
+    uses: ./.github/workflows/reusable-cpp-coverage.yml
+    secrets:
+      token: ${{ secrets.token }}

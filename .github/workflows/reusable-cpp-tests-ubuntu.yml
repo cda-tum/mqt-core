@@ -1,0 +1,36 @@
+name: 🇨 • Tests • ubuntu-latest
+on:
+  workflow_call:
+    inputs:
+      config:
+        description: "The configuration to use (Debug or Release)"
+        required: true
+        type: string
+
+jobs:
+  cpp-tests-ubuntu:
+    name: 🐧 ${{ inputs.config }}
+    runs-on: ubuntu-latest
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: 3
+      CTEST_PARALLEL_LEVEL: 3
+      FORCE_COLOR: 3
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          override_cache_key: c++-tests-ubuntu-latest-${{ inputs.config }}
+      - name: Set up mold as linker
+        uses: rui314/setup-mold@v1
+      - name: Install Ninja
+        run: pipx install ninja
+      - name: Configure CMake
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }} -DDEPLOY=ON
+      - name: Build
+        run: cmake --build build --config ${{ inputs.config }}
+      - name: Test
+        run: ctest -C ${{ inputs.config }} --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300

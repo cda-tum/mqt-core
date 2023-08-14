@@ -1,0 +1,44 @@
+name: 🇨 • Tests • windows-latest
+on:
+  workflow_call:
+    inputs:
+      config:
+        description: "The configuration to use (Debug or Release)"
+        required: true
+        type: string
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  cpp-tests-windows:
+    name: 🏁 ${{ inputs.config }}
+    runs-on: windows-latest
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: 3
+      CTEST_PARALLEL_LEVEL: 3
+      FORCE_COLOR: 3
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          windows_compile_environment: msvc
+          override_cache_key: c++-tests-windows-latest-${{ inputs.config }}
+      - name: Configure CMake
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }}
+      - name: Build
+        uses: nick-fields/retry@v2 # Windows builds with MSVC are flaky and frequently run out of heap space
+        with:
+          timeout_minutes: 15
+          max_attempts: 5
+          shell: bash
+          retry_on: error
+          command: cmake --build build --config ${{ inputs.config }}
+      - name: Test
+        run: ctest -C ${{ inputs.config }} --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
