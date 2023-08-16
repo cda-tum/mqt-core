@@ -15,44 +15,43 @@ namespace qc {
 NonUnitaryOperation::NonUnitaryOperation(const std::size_t nq,
                                          std::vector<Qubit> qubitRegister,
                                          std::vector<Bit> classicalRegister)
-    : qubits(std::move(qubitRegister)), classics(std::move(classicalRegister)) {
-  if (qubits.size() != classics.size()) {
+    : classics(std::move(classicalRegister)) {
+  type = Measure;
+  nqubits = nq;
+  targets = std::move(qubitRegister);
+  Operation::setName();
+  if (targets.size() != classics.size()) {
     throw std::invalid_argument(
         "Sizes of qubit register and classical register do not match.");
   }
-  // i-th qubit to be measured shall be measured into i-th classical register
-  type = Measure;
-  nqubits = nq;
-  Operation::setName();
 }
 NonUnitaryOperation::NonUnitaryOperation(const std::size_t nq,
-                                         const Qubit qubit, const Bit cbit) {
+                                         const Qubit qubit, const Bit cbit)
+    : classics({cbit}) {
   type = Measure;
   nqubits = nq;
-  qubits.emplace_back(qubit);
-  classics.emplace_back(cbit);
+  targets = {qubit};
   Operation::setName();
 }
 
 // General constructor
-NonUnitaryOperation::NonUnitaryOperation(
-    const std::size_t nq, const std::vector<Qubit>& qubitRegister, OpType op) {
+NonUnitaryOperation::NonUnitaryOperation(const std::size_t nq, Targets qubits,
+                                         OpType op) {
   type = op;
   nqubits = nq;
-  targets = qubitRegister;
+  targets = std::move(qubits);
   std::sort(targets.begin(), targets.end());
   Operation::setName();
 }
 
-std::ostream& NonUnitaryOperation::printNonUnitary(
-    std::ostream& os, const std::vector<Qubit>& q, const std::vector<Bit>& c,
-    const Permutation& permutation) const {
+std::ostream& NonUnitaryOperation::print(std::ostream& os,
+                                         const Permutation& permutation) const {
   switch (type) {
   case Measure:
-    printMeasurement(os, q, c, permutation);
+    printMeasurement(os, targets, classics, permutation);
     break;
   case Reset:
-    printReset(os, q, permutation);
+    printReset(os, targets, permutation);
     break;
   default:
     break;
@@ -63,9 +62,8 @@ std::ostream& NonUnitaryOperation::printNonUnitary(
 void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
                                        const RegisterNames& qreg,
                                        const RegisterNames& creg) const {
-  const auto& qubitArgs = getTargets();
-  if (isWholeQubitRegister(qreg, qubitArgs.front(), qubitArgs.back())) {
-    of << toString(type) << " " << qreg[qubitArgs.front()].first;
+  if (isWholeQubitRegister(qreg, targets.front(), targets.back())) {
+    of << toString(type) << " " << qreg[targets.front()].first;
     if (type == Measure) {
       of << " -> ";
       assert(isWholeQubitRegister(creg, classics.front(), classics.back()));
@@ -75,7 +73,7 @@ void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
     return;
   }
   auto classicsIt = classics.cbegin();
-  for (const auto& q : qubitArgs) {
+  for (const auto& q : targets) {
     of << toString(type) << " " << qreg[q].second;
     if (type == Measure) {
       of << " -> " << creg[*classicsIt].second;
@@ -83,12 +81,6 @@ void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
     }
     of << ";\n";
   }
-}
-
-bool NonUnitaryOperation::actsOn(Qubit i) const {
-  const auto& qubitArgs = getTargets();
-  return std::any_of(qubitArgs.cbegin(), qubitArgs.cend(),
-                     [&i](const auto& q) { return q == i; });
 }
 
 bool NonUnitaryOperation::equals(const Operation& op, const Permutation& perm1,
@@ -100,20 +92,20 @@ bool NonUnitaryOperation::equals(const Operation& op, const Permutation& perm1,
 
     if (getType() == Measure) {
       // check number of qubits to be measured
-      const auto nq1 = qubits.size();
-      const auto nq2 = nonunitary->qubits.size();
+      const auto nq1 = targets.size();
+      const auto nq2 = nonunitary->targets.size();
       if (nq1 != nq2) {
         return false;
       }
 
       // these are just sanity checks and should always be fulfilled
-      assert(qubits.size() == classics.size());
-      assert(nonunitary->qubits.size() == nonunitary->classics.size());
+      assert(targets.size() == classics.size());
+      assert(nonunitary->targets.size() == nonunitary->classics.size());
 
       std::set<std::pair<Qubit, Bit>> measurements1{};
-      auto qubitIt1 = qubits.cbegin();
+      auto qubitIt1 = targets.cbegin();
       auto classicIt1 = classics.cbegin();
-      while (qubitIt1 != qubits.cend()) {
+      while (qubitIt1 != targets.cend()) {
         if (perm1.empty()) {
           measurements1.emplace(*qubitIt1, *classicIt1);
         } else {
@@ -124,9 +116,9 @@ bool NonUnitaryOperation::equals(const Operation& op, const Permutation& perm1,
       }
 
       std::set<std::pair<Qubit, Bit>> measurements2{};
-      auto qubitIt2 = nonunitary->qubits.cbegin();
+      auto qubitIt2 = nonunitary->targets.cbegin();
       auto classicIt2 = nonunitary->classics.cbegin();
-      while (qubitIt2 != nonunitary->qubits.cend()) {
+      while (qubitIt2 != nonunitary->targets.cend()) {
         if (perm2.empty()) {
           measurements2.emplace(*qubitIt2, *classicIt2);
         } else {
