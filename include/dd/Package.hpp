@@ -1847,49 +1847,50 @@ private:
 
     auto& computeTable =
         getMultiplicationComputeTable<LeftOperandNode, RightOperandNode>();
-    //if (const auto* r =
-    //        computeTable.lookup(xCopy, yCopy, generateDensityMatrix); // TODO: Problem here
-    //    r != nullptr) {
-    //  if (r->w.approximatelyZero()) {
-    //    return ResultEdge::zero;
-    //  }
-    //  auto e = ResultEdge{r->p, cn.getCached(r->w)};
-    //  ComplexNumbers::mul(e.w, e.w, x.w);
-    //  ComplexNumbers::mul(e.w, e.w, y.w);
-    //  if (e.w.approximatelyZero()) {
-    //    cn.returnToCache(e.w);
-    //    return ResultEdge::zero;
-    //  }
-    //  return e;
-    //}
+    // if (const auto* r =
+    //         computeTable.lookup(xCopy, yCopy, generateDensityMatrix); //
+    //         TODO: Problem here
+    //     r != nullptr) {
+    //   if (r->w.approximatelyZero()) {
+    //     return ResultEdge::zero;
+    //   }
+    //   auto e = ResultEdge{r->p, cn.getCached(r->w)};
+    //   ComplexNumbers::mul(e.w, e.w, x.w);
+    //   ComplexNumbers::mul(e.w, e.w, y.w);
+    //   if (e.w.approximatelyZero()) {
+    //     cn.returnToCache(e.w);
+    //     return ResultEdge::zero;
+    //   }
+    //   return e;
+    // }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(y.p->e)>;
     ResultEdge e{};
     // TODO: This branch needs to be updated to do multiplication properly
     //       with identities
-   if constexpr (std::is_same_v<RightOperandNode, mCachedEdge>) {
-     // This branch is only taken for matrices
-     if (x.p->v == var && x.p->v == y.p->v) {
-       if (x.p->isIdentity()) {
-         if constexpr (n == NEDGE) {
-           // additionally check if y is the identity in case of matrix
-           // multiplication
-           if (y.p->isIdentity()) {
-             // e = makeIdent(start, var);
-           } else {
-             e = yCopy;
-           }
-         } else {
-           e = yCopy;
-         }
-         computeTable.insert(xCopy, yCopy, {e.p, e.w});
-         e.w = cn.mulCached(x.w, y.w);
-         if (e.w.approximatelyZero()) {
-           cn.returnToCache(e.w);
-           return ResultEdge::zero;
-         }
-         return e;
-       }
+    if constexpr (std::is_same_v<RightOperandNode, mCachedEdge>) {
+      // This branch is only taken for matrices
+      if (x.p->v == var && x.p->v == y.p->v) {
+        if (x.p->isIdentity()) {
+          if constexpr (n == NEDGE) {
+            // additionally check if y is the identity in case of matrix
+            // multiplication
+            if (y.p->isIdentity()) {
+              // e = makeIdent(start, var);
+            } else {
+              e = yCopy;
+            }
+          } else {
+            e = yCopy;
+          }
+          computeTable.insert(xCopy, yCopy, {e.p, e.w});
+          e.w = cn.mulCached(x.w, y.w);
+          if (e.w.approximatelyZero()) {
+            cn.returnToCache(e.w);
+            return ResultEdge::zero;
+          }
+          return e;
+        }
 
         if constexpr (n == NEDGE) {
           // additionally check if y is the identity in case of matrix
@@ -1921,16 +1922,15 @@ private:
           LEdge e1{};
           REdge e2{};
 
-
           // Check if either is a terminal
           if (!x.isTerminal() && !y.isTerminal()) {
             // Nodes are at correct level and can be multiplied
             if (x.p->v == var) {
               e1 = x.p->e[rows * i + k];
-            // Hold x at current level until we reach correct level var
+              // Hold x at current level until we reach correct level var
             } else if (x.p->v > var) {
               e1 = xCopy;
-            // Pseudo-identity inserted TODO: Is this efficient?
+              // Pseudo-identity inserted TODO: Is this efficient?
             } else if (x.p->v < var) {
               e1 = xCopy;
               if (rows * i + k == 1 || rows * i + k == 2) {
@@ -2012,7 +2012,7 @@ private:
             // Undo modifications on density matrices
             dEdge::revertDmChangesToEdges(e1, e2);
           } else {
-            auto m = multiply2(e1, e2, var-1, start);
+            auto m = multiply2(e1, e2, var - 1, start);
 
             if (k == 0 || edge[idx].w.exactlyZero()) {
               edge[idx] = m;
@@ -2821,7 +2821,8 @@ public:
       level--;
 
       // Checks if path moves down more than one level i.e. skips nodes
-      if ((r.isTerminal() && level == -1) || (!r.isTerminal() && r.p->v == level)) {
+      if ((r.isTerminal() && level == -1) ||
+          (!r.isTerminal() && r.p->v == level)) {
         ComplexNumbers::mul(c, c, r.w);
       } else if (!r.isTerminal() && level > r.p->v) {
         // Iterates over pseudo-identity if node is at a lower level
@@ -3122,7 +3123,8 @@ public:
       if (!e.p->e[3].w.approximatelyZero()) {
         getMatrix(e.p->e[3], c, x, y, mat, level - 1);
       }
-    } else if ((!e.isTerminal() && e.p->v < level) || (e.isTerminal() && level != -1)) {
+    } else if ((!e.isTerminal() && e.p->v < level) ||
+               (e.isTerminal() && level != -1)) {
       getMatrix(e, c, i, j, mat, level - 1);
       getMatrix(e, c, x, y, mat, level - 1);
     }
