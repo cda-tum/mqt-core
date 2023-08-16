@@ -2503,6 +2503,7 @@ private:
 public:
   mEdge reduceAncillae(mEdge& e, const std::vector<bool>& ancillary,
                        const bool regular = true) {
+    // TODO: these methods do not handle ancillaries yet
     // return if no more garbage left
     if (std::none_of(ancillary.begin(), ancillary.end(),
                      [](bool v) { return v; }) ||
@@ -2528,6 +2529,7 @@ public:
   // Garbage reduction works for reversible circuits --- to be thoroughly tested
   // for quantum circuits
   vEdge reduceGarbage(vEdge& e, const std::vector<bool>& garbage) {
+    // TODO: these methods do not handle ancillaries yet
     // return if no more garbage left
     if (std::none_of(garbage.begin(), garbage.end(),
                      [](bool v) { return v; }) ||
