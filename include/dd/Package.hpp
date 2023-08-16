@@ -1056,13 +1056,12 @@ public:
   }
 
 private:
-  // check whether node represents a symmetric matrix or the identity
+  // check whether node represents a symmetric matrix
   void checkSpecialMatrices(mNode* p) {
     if (mNode::isTerminal(p)) {
       return;
     }
 
-    p->setIdentity(false);
     p->setSymmetric(false);
 
     // check if matrix is symmetric
@@ -1075,16 +1074,6 @@ private:
       return;
     }
     p->setSymmetric(true);
-
-    // check if matrix resembles identity
-    const auto& e1 = p->e[1];
-    const auto& e2 = p->e[2];
-    if (!mNode::isIdentity(e0.p) || !e1.w.exactlyZero() ||
-        !e2.w.exactlyZero() || !e0.w.exactlyOne() || !e3.w.exactlyOne() ||
-        !mNode::isIdentity(e3.p)) {
-      return;
-    }
-    p->setIdentity(true);
   }
 
   vEdge makeStateFromVector(const CVec::const_iterator& begin,
@@ -2011,7 +2000,7 @@ private:
       }
     }
 
-    e = makeDDNode(var, edge, true, generateDensityMatrix);
+    auto e = makeDDNode(var, edge, true, generateDensityMatrix);
     computeTable.insert(xCopy, yCopy, {e.p, e.w});
 
     if (!e.w.exactlyZero()) {
@@ -2238,6 +2227,7 @@ private:
       return Edge<Node>::zero;
     }
 
+    // TODO: this does also not yet work with identities
     if (x.isTerminal()) {
       return {y.p, cn.mulCached(x.w, y.w)};
     }
@@ -2253,7 +2243,7 @@ private:
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
     // special case handling for matrices
     if constexpr (n == NEDGE) {
-      if (x.p->isIdentity()) {
+      if (x.isIdentity()) {
         auto idx = incIdx ? static_cast<Qubit>(y.p->v + 1) : y.p->v;
         auto e = makeDDNode(
             idx, std::array{y, Edge<Node>::zero, Edge<Node>::zero, y});
@@ -2379,13 +2369,13 @@ private:
   bool isCloseToIdentityRecursive(const mEdge& m,
                                   std::unordered_set<decltype(m.p)>& visited,
                                   const dd::fp tol) {
-    // immediately return if this node has already been visited
-    if (visited.find(m.p) != visited.end()) {
+    // immediately return of this node is identical to the identity
+    if (m.isIdentity() || m.isTerminal()) {
       return true;
     }
 
-    // immediately return of this node is identical to the identity
-    if (m.isTerminal() || m.p->isIdentity()) {
+    // immediately return if this node has already been visited
+    if (visited.find(m.p) != visited.end()) {
       return true;
     }
 

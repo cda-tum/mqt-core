@@ -164,7 +164,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
   ofs.open("results_exact.csv", std::ios_base::app);
   ofs << ss.str() << "\n";
 
-  EXPECT_TRUE(e.p->isIdentity());
+  EXPECT_TRUE(e.isIdentity());
 }
 
 TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
@@ -377,7 +377,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
   ofs.open("results_inexact.csv", std::ios_base::app);
   ofs << ss.str() << "\n";
 
-  EXPECT_TRUE(e.p->isIdentity());
+  EXPECT_TRUE(e.isIdentity());
 }
 
 TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
@@ -540,7 +540,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
   ofs.open("results_bv.csv", std::ios_base::app);
   ofs << ss.str() << "\n";
 
-  EXPECT_TRUE(e.p->isIdentity());
+  EXPECT_TRUE(e.isIdentity());
 }
 
 TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
@@ -695,7 +695,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
   ofs.open("results_qft.csv", std::ios_base::app);
   ofs << ss.str() << "\n";
 
-  EXPECT_TRUE(e.p->isIdentity());
+  EXPECT_TRUE(e.isIdentity());
 }
 
 TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
