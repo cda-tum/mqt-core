@@ -841,8 +841,6 @@ public:
     mEdge e = makeGateDD(Xmat, n, c, target1, start);
     c.erase(qc::Control{target0});
     c.insert(qc::Control{target1});
-    e = multiply(makeGateDD(Xmat, n, c, target0, start), e);
-
     e = multiply(e, multiply(makeGateDD(Xmat, n, c, target0, start), e));
     return e;
   }
