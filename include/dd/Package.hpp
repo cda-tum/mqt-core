@@ -1814,6 +1814,17 @@ private:
       return ResultEdge::zero;
     }
 
+    if (x.isIdentity()) {
+      return {y.p, cn.mulCached(x.w, y.w)};
+    }
+
+    if constexpr (std::is_same_v<RightOperandNode, mNode> ||
+                  std::is_same_v<RightOperandNode, dNode>) {
+      if (y.isIdentity()) {
+        return {x.p, cn.mulCached(x.w, y.w)};
+      }
+    }
+
     if (x.isTerminal() && y.isTerminal()) {
       return ResultEdge::terminal(cn.mulCached(x.w, y.w));
     }
