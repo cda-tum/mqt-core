@@ -1499,9 +1499,7 @@ TEST(DDPackageTest, DDFromSingleQubitMatrix) {
   const auto nrQubits = 1U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
-  std::string filename2 = "C:/Users/aaron/OneDrive/Documents/GitHub/mqt-core/"
-                          "graphs/matDD";
-  dd::export2Dot(matDD, filename2, true, true);
+
   const auto outputMatrix = dd->getMatrix(matDD, nrQubits);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
@@ -1596,7 +1594,7 @@ TEST(DDPackageTest, TwoQubitControlledGateDDConstruction) {
 }
 
 TEST(DDPackageTest, SWAPGateDDConstruction) {
-  const auto nrQubits = 5U;
+  const auto nrQubits = 3U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
 
   for (dd::Qubit control = 0; control < nrQubits; ++control) {
@@ -1607,6 +1605,7 @@ TEST(DDPackageTest, SWAPGateDDConstruction) {
       const auto swapGateDD = dd->makeSWAPDD(nrQubits, control, target);
       const auto gateDD =
           dd->makeSWAPDD(nrQubits, qc::Controls{}, control, target);
+
       EXPECT_EQ(swapGateDD, gateDD);
     }
   }
@@ -1901,26 +1900,40 @@ TEST(DDPackageTest, GetMatrixCNOT) {
 }
 
 TEST(DDPackageTest, Sandbox) {
-  auto dd = std::make_unique<dd::Package<>>(5);
+  const auto nrQubits = 2U;
+  const auto dd = std::make_unique<dd::Package<>>(nrQubits);
 
-  auto hGate = dd->makeGateDD(dd::Hmat, 5, 4);
-  //auto cxGate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
-  auto zeroState = dd->makeZeroState(5);
+  const auto thetaAngles = {0., dd::PI_2, dd::PI};
+  const auto betaAngles = {0., dd::PI_2, dd::PI};
 
-  auto xGate = dd->makeGateDD(dd::Xmat, 5, 1);
-  //std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/mqt-core/"
-  //                        "graphs/zero";
-  //dd::export2Dot(zeroState, filename1, true, true);
-  auto swap = dd->makeSWAPDD(5, 2, 0);
+  for (dd::Qubit control = 0; control < nrQubits; ++control) {
+    for (dd::Qubit target = 0; target < nrQubits; ++target) {
+      if (control == target) {
+        continue;
+      }
 
-  auto op = dd->multiply(swap, xGate);
-  op = dd->multiply(hGate, op);
-  //auto test = dd->multiply(xGate, zeroState);
-  auto test = dd->multiply(op, zeroState);
+      for (const auto& theta : thetaAngles) {
+        for (const auto& beta : betaAngles) {
+          const auto xxMinusYYGateDD =
+              dd->makeXXMinusYYDD(nrQubits, control, target, theta, beta);
+          const auto gateDD = dd->makeXXMinusYYDD(nrQubits, qc::Controls{},
+                                                  control, target, theta, beta);
 
-  std::string filename2 = "C:/Users/aaron/OneDrive/Documents/GitHub/mqt-core/"
-                          "graphs/test";
-  dd::export2Dot(op, filename2, true, true);
+          if (xxMinusYYGateDD != gateDD) {
+            std::cout << theta << " " << beta << " " << " " << control << "" << target << "\n";
+            std::string filename1 = "C:/Users/aaron/OneDrive/Documents/GitHub/mqt-core/"
+                                    "graphs/xxminusyy";
+            dd::export2Dot(xxMinusYYGateDD, filename1, true, true);
+            std::string filename2 = "C:/Users/aaron/OneDrive/Documents/GitHub/mqt-core/"
+                                    "graphs/gateDD";
+            dd::export2Dot(gateDD, filename2, true, true);
+          }
+          EXPECT_EQ(xxMinusYYGateDD, gateDD);
+        }
+      }
+    }
+  }
+
 }
 
 /**
