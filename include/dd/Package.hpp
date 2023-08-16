@@ -2184,10 +2184,10 @@ public:
   **/
   fp expectationValue(const mEdge& x, const vEdge& y) {
     assert(!x.isZeroTerminal() && !y.isTerminal());
-    if (!x.isTerminal() && x.p->v != y.p->v) {
+    if (!x.isTerminal() && x.p->v > y.p->v) {
       throw std::invalid_argument(
-          "Observable and state must act on the same number of qubits to "
-          "compute the expectation value.");
+          "Observable must not act on more qubits than the state to compute the"
+          "expectation value.");
     }
 
     auto yPrime = multiply(x, y);
