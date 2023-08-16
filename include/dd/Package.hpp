@@ -104,12 +104,6 @@ public:
    * separately. Hence, it suffices for the manager to only manage real numbers.
    */
   MemoryManager<RealNumber> cMemoryManager{};
-  /**
-   * @brief The cache manager for complex numbers
-   * @note Similar to the memory manager, the cache only maintains real entries,
-   * but typically gives them out in pairs to form complex numbers.
-   */
-  MemoryManager<RealNumber> cCacheManager{};
 
   /**
    * @brief Get the memory manager for a given type
@@ -139,7 +133,6 @@ public:
     mMemoryManager.reset(resizeToTotal);
     dMemoryManager.reset(resizeToTotal);
     cMemoryManager.reset(resizeToTotal);
-    cCacheManager.reset(resizeToTotal);
   }
 
   /// The unique table used for vector nodes
@@ -155,7 +148,7 @@ public:
    * @see RealNumberUniqueTable
    */
   RealNumberUniqueTable cUniqueTable{cMemoryManager};
-  ComplexNumbers cn{cUniqueTable, cCacheManager};
+  ComplexNumbers cn{cUniqueTable, cMemoryManager};
 
   /**
    * @brief Get the unique table for a given type

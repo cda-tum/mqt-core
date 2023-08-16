@@ -1048,7 +1048,6 @@ TEST(DDPackageTest, NormalizationNumericStabilityTest) {
     auto result = dd->multiply(p, pdag);
     EXPECT_TRUE(result.p->isIdentity());
     dd->cUniqueTable.clear();
-    dd->cCacheManager.reset();
     dd->cMemoryManager.reset();
   }
 }

@@ -20,29 +20,7 @@ template <typename T> T* MemoryManager<T>::get() {
 }
 
 template <typename T> std::pair<T*, T*> MemoryManager<T>::getPair() {
-  if (entryAvailableForReuse()) {
-    auto* r = available;
-    assert(r->next != nullptr && "At least two entries must be available");
-    auto* i = available->next;
-    available = i->next;
-    usedCount += 2U;
-    peakUsedCount = std::max(peakUsedCount, usedCount);
-    availableForReuseCount -= 2U;
-    return {r, i};
-  }
-
-  if (!entryAvailableInChunk()) {
-    allocateNewChunk();
-  }
-
-  auto* r = &(*chunkIt);
-  ++chunkIt;
-  assert(chunkIt != chunkEndIt && "At least two entries must be available");
-  auto* i = &(*chunkIt);
-  ++chunkIt;
-  usedCount += 2U;
-  peakUsedCount = std::max(peakUsedCount, usedCount);
-  return {r, i};
+  return {get(), get()};
 }
 
 template <typename T> T* MemoryManager<T>::getTemporary() {
@@ -58,9 +36,7 @@ template <typename T> T* MemoryManager<T>::getTemporary() {
 }
 
 template <typename T> std::pair<T*, T*> MemoryManager<T>::getTemporaryPair() {
-  if (entryAvailableForReuse()) {
-    assert(available->next != nullptr &&
-           "At least two entries must be available");
+  if (entryAvailableForReuse() && available->next != nullptr) {
     return {available, available->next};
   }
 

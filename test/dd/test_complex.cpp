@@ -12,9 +12,8 @@ using CN = ComplexNumbers;
 class CNTest : public testing::Test {
 protected:
   MemoryManager<RealNumber> mm{};
-  MemoryManager<RealNumber> cm{};
   RealNumberUniqueTable ut{mm};
-  ComplexNumbers cn{ut, cm};
+  ComplexNumbers cn{ut, mm};
 };
 
 TEST_F(CNTest, TrivialTest) {
@@ -506,7 +505,7 @@ TEST_F(CNTest, ComplexTableAllocation) {
 }
 
 TEST_F(CNTest, ComplexCacheAllocation) {
-  auto allocs = cm.getAllocationCount();
+  auto allocs = mm.getAllocationCount();
   std::cout << allocs << "\n";
   std::vector<Complex> cnums{allocs};
   // get all the cached complex numbers that are pre-allocated
@@ -518,13 +517,13 @@ TEST_F(CNTest, ComplexCacheAllocation) {
   const auto cnum = cn.getCached();
   ASSERT_NE(cnum.r, nullptr);
   ASSERT_NE(cnum.i, nullptr);
-  EXPECT_EQ(cm.getAllocationCount(),
+  EXPECT_EQ(mm.getAllocationCount(),
             (1. + MemoryManager<RealNumber>::GROWTH_FACTOR) *
                 static_cast<fp>(allocs));
 
   // clearing the cache should reduce the allocated size to the original size
-  cm.reset();
-  EXPECT_EQ(cm.getAllocationCount(), allocs);
+  mm.reset();
+  EXPECT_EQ(mm.getAllocationCount(), allocs);
 
   // get all the cached complex numbers again
   for (auto i = 0U; i < allocs; i += 2) {
@@ -535,14 +534,14 @@ TEST_F(CNTest, ComplexCacheAllocation) {
   const auto tmp = cn.getTemporary();
   ASSERT_NE(tmp.r, nullptr);
   ASSERT_NE(tmp.i, nullptr);
-  EXPECT_EQ(cm.getAllocationCount(),
+  EXPECT_EQ(mm.getAllocationCount(),
             (1. + MemoryManager<RealNumber>::GROWTH_FACTOR) *
                 static_cast<fp>(allocs));
 
   // clearing the unique table should reduce the allocated size to the original
   // size
-  cm.reset();
-  EXPECT_EQ(cm.getAllocationCount(), allocs);
+  mm.reset();
+  EXPECT_EQ(mm.getAllocationCount(), allocs);
 }
 
 TEST_F(CNTest, DoubleHitInFindOrInsert) {
