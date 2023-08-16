@@ -2289,11 +2289,12 @@ public:
     [[maybe_unused]] const auto before = cn.cacheCount();
     mEdge result;
     // Check for identity case
-    if (a.isOneTerminal()) {
+    if (a.isIdentity()) {
       auto relevantQubits =
           std::count(eliminate.begin(), eliminate.end(), true);
-      const auto ones = std::pow(2, relevantQubits);
-      result = mEdge::terminal(cn.lookup(ones));
+      auto c = cn.getCached(std::pow(2, relevantQubits), 0.);
+      dd::ComplexNumbers::mul(c, c, a.w);
+      result = mEdge::terminal(cn.lookup(c, true));
     } else {
       result = trace(a, eliminate);
     }
