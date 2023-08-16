@@ -2830,7 +2830,6 @@ public:
           level--;
         }
       }
-      std::cout << level << "\n";
     } while (level != -1);
     ComplexNumbers::mul(c, c, r.w);
 
