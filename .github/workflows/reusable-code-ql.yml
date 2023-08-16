@@ -1,0 +1,13 @@
+name: 📝 • CodeQL
+
+on:
+  workflow_call:
+
+jobs:
+  analyze-cpp:
+    name: 🇨‌
+    uses: ./.github/workflows/reusable-code-ql-cpp.yml
+
+  analyze-python:
+    name: 🐍
+    uses: ./.github/workflows/reusable-code-ql-python.yml

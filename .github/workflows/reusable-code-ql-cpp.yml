@@ -1,0 +1,51 @@
+name: 📝 • CodeQL • C++
+on:
+  workflow_call:
+
+jobs:
+  analyze:
+    name: 🇨 Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: 3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          override_cache_key: codeql-cpp
+      - name: Set up mold as linker
+        uses: rui314/setup-mold@v1
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: cpp
+          config-file: .github/codeql-config.yml
+          setup-python-dependencies: false
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+      - name: Build
+        run: cmake --build build
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          upload: False
+          output: sarif-results
+      - name: filter-sarif
+        uses: advanced-security/filter-sarif@main
+        with:
+          patterns: |
+            -**/extern/**
+          input: sarif-results/cpp.sarif
+          output: sarif-results/cpp.sarif
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: sarif-results/cpp.sarif

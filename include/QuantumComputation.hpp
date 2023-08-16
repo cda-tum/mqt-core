@@ -915,12 +915,11 @@ public:
 
   void barrier(const Qubit target) {
     checkQubitRange(target);
-    emplace_back<NonUnitaryOperation>(getNqubits(), std::vector<Qubit>{target},
-                                      qc::Barrier);
+    emplace_back<StandardOperation>(getNqubits(), target, qc::Barrier);
   }
   void barrier(const std::vector<Qubit>& targets) {
     checkQubitRange(targets);
-    emplace_back<NonUnitaryOperation>(getNqubits(), targets, qc::Barrier);
+    emplace_back<StandardOperation>(getNqubits(), targets, qc::Barrier);
   }
 
   void classicControlled(const OpType op, const Qubit target,

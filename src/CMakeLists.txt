@@ -28,6 +28,7 @@ if(NOT TARGET ${PROJECT_NAME})
     ${PROJECT_SOURCE_DIR}/include/algorithms/QFT.hpp
     ${PROJECT_SOURCE_DIR}/include/algorithms/QPE.hpp
     ${PROJECT_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
+    ${PROJECT_SOURCE_DIR}/include/algorithms/WState.hpp
     ${PROJECT_SOURCE_DIR}/include/CircuitOptimizer.hpp
     ${PROJECT_SOURCE_DIR}/include/Definitions.hpp
     ${PROJECT_SOURCE_DIR}/include/operations/Expression.hpp
@@ -50,6 +51,7 @@ if(NOT TARGET ${PROJECT_NAME})
     algorithms/QFT.cpp
     algorithms/QPE.cpp
     algorithms/RandomCliffordCircuit.cpp
+    algorithms/WState.cpp
     CircuitOptimizer.cpp
     operations/Expression.cpp
     operations/NonUnitaryOperation.cpp

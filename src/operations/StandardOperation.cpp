@@ -250,8 +250,7 @@ void StandardOperation::dumpOpenQASM(
               << "However, this library can parse .qasm files with multiple "
                  "controlled gates (e.g., cccx) correctly. "
               << "Thus, while not valid vanilla OpenQASM, the dumped file will "
-                 "work with this library. "
-              << std::endl;
+                 "work with this library.\n";
   }
 
   // safe the numbers of controls as a prefix to the operation name
@@ -263,6 +262,10 @@ void StandardOperation::dumpOpenQASM(
     break;
   case I:
     op << "id";
+    break;
+  case Barrier:
+    assert(controls.empty());
+    op << "barrier";
     break;
   case H:
     op << "h";
@@ -397,8 +400,8 @@ void StandardOperation::dumpOpenQASM(
     dumpOpenQASMTeleportation(of, qreg);
     return;
   default:
-    std::cerr << "gate type (index) " << static_cast<int>(type)
-              << " could not be converted to OpenQASM" << std::endl;
+    std::cerr << "gate type " << toString(type)
+              << " could not be converted to OpenQASM\n.";
   }
 
   // apply X operations to negate the respective controls
@@ -414,10 +417,15 @@ void StandardOperation::dumpOpenQASM(
     of << " " << qreg[c.qubit].second << ",";
   }
   if (!targets.empty()) {
-    for (const auto& t : targets) {
-      of << " " << qreg[t].second << ",";
+    if (type == Barrier &&
+        isWholeQubitRegister(qreg, targets.front(), targets.back())) {
+      of << " " << qreg[targets.front()].first;
+    } else {
+      for (const auto& t : targets) {
+        of << " " << qreg[t].second << ",";
+      }
+      of.seekp(-1, std::ios_base::cur);
     }
-    of.seekp(-1, std::ios_base::cur);
   }
   of << ";\n";
   // apply X operations to negate the respective controls again

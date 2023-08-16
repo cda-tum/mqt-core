@@ -1,0 +1,71 @@
+name: 🐍 • CI
+
+on:
+  workflow_call:
+    secrets:
+      token:
+        description: "The token to use for Codecov"
+        required: true
+
+jobs:
+  lint:
+    name: 🚨 Lint
+    uses: ./.github/workflows/reusable-python-linter.yml
+
+  python-tests-ubuntu:
+    name: 🐧 ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+    uses: ./.github/workflows/reusable-python-tests.yml
+    with:
+      runs-on: ubuntu-latest
+      python-version: ${{ matrix.python-version }}
+
+  python-tests-macos:
+    name: 🍎 ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.11"]
+    uses: ./.github/workflows/reusable-python-tests.yml
+    with:
+      runs-on: macos-latest
+      python-version: ${{ matrix.python-version }}
+
+  python-tests-windows:
+    name: 🏁 ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.11"]
+    uses: ./.github/workflows/reusable-python-tests.yml
+    with:
+      runs-on: windows-latest
+      python-version: ${{ matrix.python-version }}
+
+  coverage:
+    name: 📈 ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.11"]
+    uses: ./.github/workflows/reusable-python-coverage.yml
+    with:
+      python-version: ${{ matrix.python-version }}
+    secrets:
+      token: ${{ secrets.token }}
+
+  dist:
+    name: 📦 Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Set up mold as linker (Linux only)
+        uses: rui314/setup-mold@v1
+      - uses: hynek/build-and-inspect-python-package@v1

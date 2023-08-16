@@ -12,6 +12,7 @@ enum OpType : std::uint8_t {
   // Standard Operations
   GPhase,
   I,
+  Barrier,
   H,
   X,
   Y,
@@ -47,9 +48,6 @@ enum OpType : std::uint8_t {
   // Non Unitary Operations
   Measure,
   Reset,
-  Snapshot,
-  ShowProbabilities,
-  Barrier,
   Teleportation,
   // Classically-controlled Operation
   ClassicControlled,
@@ -136,10 +134,6 @@ inline std::string toString(const OpType& opType) {
     return "measure";
   case Reset:
     return "reset";
-  case Snapshot:
-    return "snapshot";
-  case ShowProbabilities:
-    return "show probabilities";
   case Barrier:
     return "barrier";
   case Teleportation:
@@ -241,8 +235,6 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"xx_plus_yy", OpType::XXplusYY},
         {"measure", OpType::Measure},
         {"reset", OpType::Reset},
-        {"snapshot", OpType::Snapshot},
-        {"show probabilities", OpType::ShowProbabilities},
         {"barrier", OpType::Barrier},
         {"teleportation", OpType::Teleportation},
         {"classic controlled", OpType::ClassicControlled},

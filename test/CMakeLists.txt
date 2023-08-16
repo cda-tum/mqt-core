@@ -12,6 +12,22 @@ package_add_test(${PROJECT_NAME}-test ${PROJECT_NAME} unittests/test_io.cpp
                  unittests/test_qfr_functionality.cpp unittests/test_symbolic.cpp)
 
 package_add_test(${PROJECT_NAME}-test-dd ${PROJECT_NAME}-dd dd/test_package.cpp)
+package_add_test(
+  ${PROJECT_NAME}-test-dd
+  ${PROJECT_NAME}-dd
+  dd/test_complex.cpp
+  dd/test_package.cpp
+  dd/test_dd_functionality.cpp
+  dd/test_dd_noise_functionality.cpp
+  algorithms/eval_dynamic_circuits.cpp
+  algorithms/test_qft.cpp
+  algorithms/test_grover.cpp
+  algorithms/test_bernsteinvazirani.cpp
+  algorithms/test_entanglement.cpp
+  algorithms/test_grcs.cpp
+  algorithms/test_random_clifford.cpp
+  algorithms/test_qpe.cpp
+  algorithms/test_wstate.cpp)
 
 package_add_test(
   ${PROJECT_NAME}-test-zx
