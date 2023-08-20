@@ -126,10 +126,6 @@ public:
   }
 
   [[nodiscard]] inline virtual bool actsOn(const Qubit i) const {
-    if (type == Barrier) {
-      return false;
-    }
-
     for (const auto& t : targets) {
       if (t == i) {
         return true;
