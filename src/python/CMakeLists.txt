@@ -28,8 +28,8 @@ if(NOT SKBUILD)
   execute_process(
     COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
     OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE NB_DIR)
-  list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
+    OUTPUT_VARIABLE nanobind_DIR)
+  list(APPEND CMAKE_PREFIX_PATH "${nanobind_DIR}")
 endif()
 
 # Import nanobind through CMake's find_package mechanism
