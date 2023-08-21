@@ -57,7 +57,6 @@ if(NOT TARGET project_options)
 endif()
 
 check_submodule_present(json)
-check_submodule_present(pybind11)
 check_submodule_present(pybind11_json)
 check_submodule_present(boost/config)
 check_submodule_present(boost/multiprecision)
