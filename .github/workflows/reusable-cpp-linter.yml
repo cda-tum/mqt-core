@@ -1,13 +1,22 @@
 name: 🇨 • Lint
 on:
   workflow_call:
+    inputs:
+      clang-version:
+        description: "Clang version to use"
+        default: 16
+        type: number
+      cmake-args:
+        description: "Additional arguments to pass to CMake"
+        default: ""
+        type: string
 
 jobs:
   lint:
     name: 🚨 Lint
     runs-on: ubuntu-latest
     env:
-      clang-version: 16
+      clang-version: ${{ inputs.clang-version }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -33,7 +42,7 @@ jobs:
           echo $CXX
           $CC --version
           $CXX --version
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug ${{ inputs.cmake-args }}
 
       - name: Run cpp-linter
         uses: cpp-linter/cpp-linter-action@v2
