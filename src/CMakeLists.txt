@@ -94,6 +94,7 @@ add_subdirectory(ecc)
 # should switch to nanobind. After that, the pybind submodules will be removed.
 if(NOT TARGET ${PROJECT_NAME}-python)
   # add pybind11 library
+  find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
   set(PYBIND11_FINDPYTHON
       ON
       CACHE BOOL "Use the new FindPython module")
