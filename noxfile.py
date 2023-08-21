@@ -24,7 +24,7 @@ def lint(session: nox.Session) -> None:
 @nox.session(reuse_venv=True)
 def pylint(session: nox.Session) -> None:
     """Run PyLint."""
-    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm")
+    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm", "pybind11")
     session.install("--no-build-isolation", "-ve.[dev]", "pylint")
     session.run("pylint", "mqt.core", *session.posargs)
 
@@ -38,7 +38,7 @@ def tests(session: nox.Session) -> None:
     if "--cov" in posargs:
         posargs.append("--cov-config=pyproject.toml")
 
-    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm")
+    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm", "pybind11")
     session.install("--no-build-isolation", install_arg)
     session.run("pytest", *posargs, env=env)
 
@@ -47,7 +47,7 @@ def tests(session: nox.Session) -> None:
 def docs(session: nox.Session) -> None:
     """Build the docs."""
     session.install("sphinx-autobuild")
-    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm")
+    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm", "pybind11")
     session.install("--no-build-isolation", "-ve.[docs]")
 
     session.run("sphinx-autobuild", "docs", "docs/_build/html", "--open-browser")
