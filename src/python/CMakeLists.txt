@@ -23,12 +23,6 @@ if(NOT SKBUILD)
   after editing C++ files.")
 endif()
 
-# Try to import all Python components potentially needed by nanobind
-find_package(
-  Python 3.8 REQUIRED
-  COMPONENTS Interpreter Development.Module
-  OPTIONAL_COMPONENTS Development.SABIModule)
-
 if(NOT SKBUILD)
   # Manually detect the installed nanobind package and import it into CMake.
   execute_process(
