@@ -15,7 +15,7 @@ if(NOT SKBUILD)
   in your environment once and use the following command that avoids
   a costly creation of a new virtual environment at every compilation:
   =====================================================================
-   $ pip install nanobind scikit-build-core[pyproject] setuptools_scm
+   $ pip install nanobind 'scikit-build-core[pyproject]' setuptools_scm pybind11
    $ pip install --no-build-isolation -ve .
   =====================================================================
   You may optionally add -Ceditable.rebuild=true to auto-rebuild when
