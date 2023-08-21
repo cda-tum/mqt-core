@@ -94,6 +94,9 @@ add_subdirectory(ecc)
 # should switch to nanobind. After that, the pybind submodules will be removed.
 if(NOT TARGET ${PROJECT_NAME}-python)
   # add pybind11 library
+  set(PYBIND11_FINDPYTHON
+      ON
+      CACHE BOOL "Use the new FindPython module")
   add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11" "extern/pybind11" EXCLUDE_FROM_ALL)
 
   if(NOT TARGET pybind11_json)
