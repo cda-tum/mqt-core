@@ -92,7 +92,16 @@ add_subdirectory(ecc)
 
 # ** Note ** The following target will soon be removed from the project. All top-level projects
 # should switch to nanobind. After that, the pybind submodules will be removed.
-if(NOT TARGET ${PROJECT_NAME}-python)
+if(BINDINGS AND NOT TARGET ${PROJECT_NAME}-python)
+  if(NOT SKBUILD)
+    # Manually detect the installed pybind11 package and import it into CMake.
+    execute_process(
+      COMMAND "${Python_EXECUTABLE}" -m pybind11 --cmakedir
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      OUTPUT_VARIABLE pybind11_DIR)
+    list(APPEND CMAKE_PREFIX_PATH "${pybind11_DIR}")
+  endif()
+
   # add pybind11 library
   find_package(pybind11 CONFIG REQUIRED)
 
