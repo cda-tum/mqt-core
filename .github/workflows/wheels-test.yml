@@ -1,0 +1,25 @@
+name: Wheels Test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build_wheels:
+    name: 🎡 Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0
+      - uses: pypa/cibuildwheel@v2.15
+        env:
+          CIBW_BUILD: cp38-*
