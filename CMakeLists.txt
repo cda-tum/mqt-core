@@ -23,6 +23,15 @@ if(BUILD_MQT_CORE_BINDINGS)
   set(BINDINGS
       ON
       CACHE BOOL "Enable settings related to Python bindings" FORCE)
+  # cmake-lint: disable=C0103
+  set(Python_FIND_VIRTUALENV
+      FIRST
+      CACHE STRING "Give precedence to virtualenvs when searching for Python")
+  # top-level call to find Python
+  find_package(
+    Python 3.8 REQUIRED
+    COMPONENTS Interpreter Development.Module
+    OPTIONAL_COMPONENTS Development.SABIModule)
 endif()
 
 if(NOT TARGET project_warnings)
@@ -48,7 +57,6 @@ if(NOT TARGET project_options)
 endif()
 
 check_submodule_present(json)
-check_submodule_present(pybind11)
 check_submodule_present(pybind11_json)
 check_submodule_present(boost/config)
 check_submodule_present(boost/multiprecision)
