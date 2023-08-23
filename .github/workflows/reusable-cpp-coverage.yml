@@ -45,6 +45,8 @@ jobs:
           override_cache_key: c++-coverage
       - name: Set up mold as linker
         uses: rui314/setup-mold@v1
+      - name: Install Ninja
+        run: pipx install ninja
       - name: Configure CMake
         # `-DDEPLOY=ON` is set here to avoid invalid instruction warnings resulting from ccache build caching in combination with slightly different machines on GitHub Actions.
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON -DDEPLOY=ON ${{ inputs.cmake-args }}
