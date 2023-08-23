@@ -10,6 +10,14 @@ on:
         description: "Additional arguments to pass to CMake"
         default: ""
         type: string
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
 
 defaults:
   run:
@@ -28,6 +36,13 @@ jobs:
         with:
           submodules: recursive
       - uses: ilammy/msvc-dev-cmd@v1
+      - if: ${{ inputs.setup-z3 }}
+        name: Setup Z3
+        uses: cda-tum/setup-z3@v1
+        with:
+          version: ${{ inputs.z3-version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1
         with:

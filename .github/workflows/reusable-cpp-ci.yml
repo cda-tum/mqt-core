@@ -22,6 +22,14 @@ on:
         description: "Additional arguments to pass to CMake on Windows"
         default: ""
         type: string
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
 
 jobs:
   cpp-tests-ubuntu:
@@ -34,6 +42,8 @@ jobs:
     with:
       config: ${{ matrix.config }}
       cmake-args: ${{ inputs.cmake-args }} ${{ inputs.cmake-args-ubuntu }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
 
   cpp-tests-macos:
     name: 🍎 ${{ matrix.config }}
@@ -45,6 +55,8 @@ jobs:
     with:
       config: ${{ matrix.config }}
       cmake-args: ${{ inputs.cmake-args }} ${{ inputs.cmake-args-macos }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
 
   cpp-tests-windows:
     name: 🏁 ${{ matrix.config }}
@@ -56,6 +68,8 @@ jobs:
     with:
       config: ${{ matrix.config }}
       cmake-args: ${{ inputs.cmake-args }} ${{ inputs.cmake-args-windows }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
 
   coverage:
     name: 📈
@@ -64,3 +78,5 @@ jobs:
       token: ${{ secrets.token }}
     with:
       cmake-args: ${{ inputs.cmake-args }} ${{ inputs.cmake-args-ubuntu }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
