@@ -5,6 +5,11 @@ on:
       token:
         description: "The token to use for Codecov"
         required: true
+    inputs:
+      cmake-args:
+        description: "Additional arguments to pass to CMake"
+        default: ""
+        type: string
 
 jobs:
   coverage:
@@ -26,7 +31,8 @@ jobs:
       - name: Set up mold as linker
         uses: rui314/setup-mold@v1
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON -DDEPLOY=ON
+        # `-DDEPLOY=ON` is set here to avoid invalid instruction warnings resulting from ccache build caching in combination with slightly different machines on GitHub Actions.
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON -DDEPLOY=ON ${{ inputs.cmake-args }}
       - name: Build
         run: cmake --build build --config Debug
       - name: Test

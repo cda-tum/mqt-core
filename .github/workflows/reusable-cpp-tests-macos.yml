@@ -6,6 +6,10 @@ on:
         description: "The configuration to use (Debug or Release)"
         required: true
         type: string
+      cmake-args:
+        description: "Additional arguments to pass to CMake"
+        default: ""
+        type: string
 
 jobs:
   cpp-tests-macos:
@@ -27,7 +31,7 @@ jobs:
       - name: Install Ninja
         run: pipx install ninja
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }}
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }} ${{ inputs.cmake-args }}
       - name: Build
         run: cmake --build build --config ${{ inputs.config }}
       - name: Test

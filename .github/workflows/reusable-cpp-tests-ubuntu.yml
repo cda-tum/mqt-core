@@ -6,6 +6,10 @@ on:
         description: "The configuration to use (Debug or Release)"
         required: true
         type: string
+      cmake-args:
+        description: "Additional arguments to pass to CMake"
+        default: ""
+        type: string
 
 jobs:
   cpp-tests-ubuntu:
@@ -29,7 +33,8 @@ jobs:
       - name: Install Ninja
         run: pipx install ninja
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }} -DDEPLOY=ON
+        # `-DDEPLOY=ON` is set here to avoid invalid instruction warnings resulting from ccache build caching in combination with slightly different machines on GitHub Actions.
+        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }} -DDEPLOY=ON ${{ inputs.cmake-args }}
       - name: Build
         run: cmake --build build --config ${{ inputs.config }}
       - name: Test
