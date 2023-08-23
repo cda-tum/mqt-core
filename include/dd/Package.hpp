@@ -2865,7 +2865,7 @@ public:
         }
       }
     } while (level != -1);
-    ComplexNumbers::mul(c, c, r.w);
+    // ComplexNumbers::mul(c, c, r.w);
 
     return {RealNumber::val(c.r), RealNumber::val(c.i)};
   }
@@ -2887,6 +2887,7 @@ public:
       vectorHalf = vectorHalf / 2;
     } while (vectorHalf > 0);
 
+    std::cout << decisions << "\n";
     return getValueByPath(e, decisions);
   }
 
