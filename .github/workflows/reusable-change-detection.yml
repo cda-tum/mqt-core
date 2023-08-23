@@ -72,6 +72,7 @@ jobs:
             !test/python/**
             .clang-tidy
             .github/workflows/reusable-cpp-linter.yml
+            .github/workflows/ci.yml
       - name: Set a flag for running the C++ linter
         if: >-
           github.event_name != 'pull_request'
@@ -98,6 +99,7 @@ jobs:
             .github/workflows/reusable-python-tests.yml
             .github/workflows/reusable-python-coverage.yml
             .github/workflows/reusable-python-ci.yml
+            .github/workflows/ci.yml
       - name: Set a flag for running the Python tests
         if: >-
           github.event_name != 'pull_request'
@@ -122,6 +124,7 @@ jobs:
             .github/workflows/reusable-code-ql-cpp.yml
             .github/workflows/reusable-code-ql-python.yml
             .github/workflows/reusable-code-ql.yml
+            .github/workflows/ci.yml
       - name: Set a flag for running CodeQL
         if: >-
           github.event_name != 'pull_request'
