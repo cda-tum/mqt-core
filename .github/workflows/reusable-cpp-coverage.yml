@@ -53,10 +53,15 @@ jobs:
       - name: Test
         run: ctest -C Debug --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        # Coverage uploads can be flaky, so we retry them a few times.
+        uses: Wandalen/wretry.action@1.3.0
         with:
-          fail_ci_if_error: true
-          flags: cpp
-          gcov: true
-          gcov_ignore: "extern/**/*"
-          token: ${{ secrets.token }}
+          action: codecov/codecov-action@v3
+          attempt_limit: 5
+          attempt_delay: 2000
+          with: |
+            fail_ci_if_error: true
+            flags: cpp
+            gcov: true
+            gcov_ignore: "extern/**/*"
+            token: ${{ secrets.token }}
