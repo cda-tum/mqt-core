@@ -1540,7 +1540,17 @@ public:
   template <class Edge> Edge add(const Edge& x, const Edge& y) {
     [[maybe_unused]] const auto before = cn.cacheCount();
 
-    auto result = add2(x, y);
+    Qubit var{};
+    if (!x.isTerminal()) {
+      assert(x.p != nullptr);
+      var = x.p->v;
+    }
+    if (!y.isTerminal() && (y.p->v) > var) {
+      assert(y.p != nullptr);
+      var = y.p->v;
+    }
+
+    auto result = add2(x, y, var);
     result.w = cn.lookup(result.w, true);
 
     [[maybe_unused]] const auto after = cn.cacheCount();
@@ -1550,7 +1560,7 @@ public:
   }
 
   template <class Node>
-  Edge<Node> add2(const Edge<Node>& x, const Edge<Node>& y, Qubit var = 655) {
+  Edge<Node> add2(const Edge<Node>& x, const Edge<Node>& y, Qubit var) {
     if (x.w.exactlyZero()) {
       if (y.w.exactlyZero()) {
         return Edge<Node>::zero;
@@ -1569,7 +1579,10 @@ public:
       }
       return r;
     }
-
+    // TODO: Add check that both are vectors or both matrices
+    // TODO: Remove copies
+    auto xCopy = Edge<Node>{x.p, Complex::one};
+    auto yCopy = Edge<Node>{y.p, Complex::one};
     auto& computeTable = getAddComputeTable<Node>();
     if (const auto* r = computeTable.lookup({x.p, x.w}, {y.p, y.w});
         r != nullptr) {
@@ -1579,56 +1592,83 @@ public:
       return {r->p, cn.getCached(r->w)};
     }
 
-    // if (w == 655) {
-    //   w = (x.isTerminal() || (!y.isTerminal() && y.p->v > x.p->v))
-    //                       ? y.p->v
-    //                       : x.p->v;
-    // }
-
-
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
     std::array<Edge<Node>, n> edge{};
     for (std::size_t i = 0U; i < n; i++) {
-      Edge<Node> e1{};
-      if (!x.isTerminal() && x.p->v == var) {
-        e1 = x.p->e[i];
+     Edge<Node> e1{};
+     Edge<Node> e2{};
 
-        if (!e1.w.exactlyZero()) {
-          e1.w = cn.mulCached(e1.w, x.w);
-        }
-      } else {
-        e1 = x;
-        if (y.p->e[i].isTerminal()) {
-          e1 = Edge<Node>::zero;
-        }
-      }
-      Edge<Node> e2{};
-      if (!y.isTerminal() && y.p->v == var) {
-        e2 = y.p->e[i];
+     if (!x.isTerminal() && !y.isTerminal()){
+       // Node is at correct level
+       if (x.p->v == var) {
+         e1 = x.p->e[i];
+         // Else if's should only be accessible for matrix addition
+       } else if (x.p->v > var) {
+         e1 = xCopy;
+       } else if (x.p->v < var) {
+         e1 = xCopy;
+         if (i == 1 || i == 2) {
+           e1.w = Complex::zero;
+         }
+       }
 
-        if (!e2.w.exactlyZero()) {
-          e2.w = cn.mulCached(e2.w, y.w);
-        }
-      } else {
-        e2 = y;
-        if (x.p->e[i].isTerminal()) {
-          e2 = Edge<Node>::zero;
-        }
-      }
+       // Node is at correct level
+       if (y.p->v == var) {
+         e2 = y.p->e[i];
+         // Else if's should only be accessible for matrix addition
+       } else if (y.p->v > var) {
+         e2 = yCopy;
+       } else if (y.p->v < var) {
+         e2 = yCopy;
+         if (i == 1 || i == 2) {
+           e2.w = Complex::zero;
+         }
+       }
+     } else if ((x.isTerminal() && !y.isTerminal()) && var == y.p->v) {
+       // x has already reached terminal, pseudo-identity inserted
+       e1 = xCopy;
+       if (i == 1 || i == 2) {
+         e1.w = Complex::zero;
+       }
+       e2 = y.p->e[i];
+     } else if ((!x.isTerminal() && y.isTerminal()) && var == x.p->v) {
+       // y has already reached terminal, pseudo-identity inserted
+       e1 = x.p->e[i];
+       e2 = yCopy;
+       if (i == 1 || i == 2) {
+         e2.w = Complex::zero;
+       }
+     } else {
+       // Both have identities at this level
+       e1 = xCopy;
+       if (i == 1 || i == 2) {
+         e1.w = Complex::zero;
+       }
+       e2 = yCopy;
+       if (i == 1 || i == 2) {
+         e2.w = Complex::zero;
+       }
+     }
+     if (!e1.w.exactlyZero()) {
+       e1.w = cn.mulCached(e1.w, x.w);
+     }
+     if (!e2.w.exactlyZero()) {
+       e2.w = cn.mulCached(e2.w, y.w);
+     }
 
       if constexpr (std::is_same_v<Node, dNode>) {
         dEdge::applyDmChangesToEdges(e1, e2);
-        edge[i] = add2(e1, e2);
+        edge[i] = add2(e1, e2, var-1);
         dEdge::revertDmChangesToEdges(e1, e2);
       } else {
-        edge[i] = add2(e1, e2);
+        edge[i] = add2(e1, e2, var-1);
       }
 
-      if (!x.isTerminal() && x.p->v == var) {
+      if  (!x.isZeroTerminal()) {
         cn.returnToCache(e1.w);
       }
 
-      if (!y.isTerminal() && y.p->v == var) {
+      if (!y.isZeroTerminal()) {
         cn.returnToCache(e2.w);
       }
     }
@@ -1941,6 +1981,7 @@ private:
               e2.w = Complex::zero;
             }
           } else {
+            // Both have identities at this level
             e1 = xCopy;
             if (rows * i + k == 1 || rows * i + k == 2) {
               e1.w = Complex::zero;
@@ -1994,7 +2035,7 @@ private:
               edge[idx] = m;
             } else if (!m.w.exactlyZero()) {
               const auto w = edge[idx].w;
-              edge[idx] = add2(edge[idx], m);
+              edge[idx] = add2(edge[idx], m, var);
               cn.returnToCache(w);
               cn.returnToCache(m.w);
             }
@@ -2328,11 +2369,11 @@ private:
       auto r = mEdge::zero;
 
       const auto t0 = trace(a.p->e[0], eliminate, elims);
-      r = add2(r, t0);
+      r = add2(r, t0, v);
       auto r1 = r;
 
       const auto t1 = trace(a.p->e[3], eliminate, elims);
-      r = add2(r, t1);
+      r = add2(r, t1, v);
       auto r2 = r;
 
       if (r.w.exactlyOne()) {
