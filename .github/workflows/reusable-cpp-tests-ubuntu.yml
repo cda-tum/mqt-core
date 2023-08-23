@@ -8,7 +8,7 @@ on:
         type: string
       cmake-args:
         description: "Additional arguments to pass to CMake"
-        default: ""
+        default: "-G Ninja"
         type: string
       setup-z3:
         description: "Whether to set up Z3"
@@ -49,7 +49,7 @@ jobs:
         run: pipx install ninja
       - name: Configure CMake
         # `-DDEPLOY=ON` is set here to avoid invalid instruction warnings resulting from ccache build caching in combination with slightly different machines on GitHub Actions.
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }} -DDEPLOY=ON ${{ inputs.cmake-args }}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }} -DDEPLOY=ON ${{ inputs.cmake-args }}
       - name: Build
         run: cmake --build build --config ${{ inputs.config }}
       - name: Test

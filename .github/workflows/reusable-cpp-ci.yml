@@ -8,7 +8,7 @@ on:
     inputs:
       cmake-args:
         description: "Additional arguments to pass to CMake on every OS"
-        default: ""
+        default: "-G Ninja"
         type: string
       cmake-args-ubuntu:
         description: "Additional arguments to pass to CMake on Ubuntu"

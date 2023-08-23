@@ -8,7 +8,7 @@ on:
         type: string
       cmake-args:
         description: "Additional arguments to pass to CMake"
-        default: ""
+        default: "-G Ninja"
         type: string
       setup-z3:
         description: "Whether to set up Z3"
@@ -46,7 +46,7 @@ jobs:
       - name: Install Ninja
         run: pipx install ninja
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }} ${{ inputs.cmake-args }}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }} ${{ inputs.cmake-args }}
       - name: Build
         run: cmake --build build --config ${{ inputs.config }}
       - name: Test
