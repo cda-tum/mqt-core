@@ -10,14 +10,14 @@ on:
         description: "Additional arguments to pass to CMake"
         default: ""
         type: string
-    setup-z3:
-      description: "Whether to set up Z3"
-      default: false
-      type: boolean
-    z3-version:
-      description: "The version of Z3 to set up"
-      default: "4.11.2"
-      type: string
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
 
 jobs:
   coverage:
