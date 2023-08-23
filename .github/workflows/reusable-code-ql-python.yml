@@ -10,6 +10,10 @@ on:
         description: "The version of Z3 to set up"
         default: "4.11.2"
         type: string
+      build-time-dependencies:
+        description: "The build-time dependencies to install"
+        default: "nanobind scikit-build-core[pyproject] setuptools_scm pybind11"
+        type: string
 
 jobs:
   analyze:
@@ -46,8 +50,8 @@ jobs:
           cache: "pip"
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip wheel
-          pip install nanobind scikit-build-core[pyproject] setuptools_scm pybind11
+          python -m pip install --upgrade pip wheel setuptools
+          pip install ${{ inputs.build-time-dependencies }}
           pip install --no-build-isolation -ve .
           echo "CODEQL_PYTHON=$(which python)" >> $GITHUB_ENV
       - name: Initialize CodeQL
