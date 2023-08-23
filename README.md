@@ -14,14 +14,14 @@
 
 The MQT Core library forms the backbone of the quantum software tools developed as part of the _Munich Quantum Toolkit_ (_MQT_)[^1] by the [Chair for Design Automation](https://www.cda.cit.tum.de/) at the [Technical University of Munich](https://www.tum.de/). This includes the following tools:
 
-- [MQT DDSIM](https://github.com/cda-tum/ddsim): A Tool for Classical Quantum Circuit Simulation based on Decision Diagrams.
-- [MQT QMAP](https://github.com/cda-tum/qmap): A Tool for Quantum Circuit Mapping.
-- [MQT QCEC](https://github.com/cda-tum/qcec): A Tool for Quantum Circuit Equivalence Checking.
-- [MQT QECC](https://github.com/cda-tum/qecc): A Tool for Quantum Error Correcting Codes.
-- [MQT DDVis](https://github.com/cda-tum/ddvis): A Web-Application visualizing Decision Diagrams for Quantum Computing.
-- [MQT SyReC](https://github.com/cda-tum/syrec): A Tool for Synthesis of Reversible Circuits/Quanutm Computing Oracles.
+- [MQT DDSIM](https://github.com/cda-tum/mqt-ddsim): A Tool for Classical Quantum Circuit Simulation based on Decision Diagrams.
+- [MQT QMAP](https://github.com/cda-tum/mqt-qmap): A Tool for Quantum Circuit Mapping.
+- [MQT QCEC](https://github.com/cda-tum/mqt-qcec): A Tool for Quantum Circuit Equivalence Checking.
+- [MQT QECC](https://github.com/cda-tum/mqt-qecc): A Tool for Quantum Error Correcting Codes.
+- [MQT DDVis](https://github.com/cda-tum/mqt-ddvis): A Web-Application visualizing Decision Diagrams for Quantum Computing.
+- [MQT SyReC](https://github.com/cda-tum/mqt-syrec): A Tool for Synthesis of Reversible Circuits/Quanutm Computing Oracles.
 
-For a full list of tools and libraries, please visit the [MQT website](https://www.cda.cit.tum.de/research/quantum/mqt/).
+For a full list of tools and libraries, please visit the [MQT website](https://mqt.readthedocs.io/).
 
 <!-- SPHINX-START -->
 
@@ -37,11 +37,11 @@ If you have any questions, feel free to create a [discussion](https://github.com
 
 ## System Requirements
 
-Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments).
+Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/runner-images).
 However, the implementation should be compatible with any current C++ compiler supporting C++17 and a minimum CMake version of 3.19.
 
 _Disclaimer_: We noticed some issues when compiling with Microsoft's `MSVC` compiler toolchain. If you are developing under Windows, consider using the `clang` compiler toolchain.
-A detailed description of how to set this up can be found [here](https://docs.microsoft.com/en-us/cpp/build/clang-support-msbuild?view=msvc-160).
+A detailed description of how to set this up can be found [here](https://learn.microsoft.com/en-us/cpp/build/clang-support-msbuild?view=msvc-160).
 
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
