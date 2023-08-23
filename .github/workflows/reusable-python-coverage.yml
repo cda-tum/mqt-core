@@ -62,3 +62,46 @@ jobs:
             fail_ci_if_error: true
             flags: python
             token: ${{ secrets.token }}
+
+  minimums:
+    name: 🐍 Minimal Versions
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 3
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - if: ${{ inputs.setup-z3 }}
+        name: Setup Z3
+        uses: cda-tum/setup-z3@v1
+        with:
+          version: ${{ inputs.z3-version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          override_cache_key: python-minimums
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+          cache: "pip"
+      - name: Set up mold as linker (Linux only)
+        uses: rui314/setup-mold@v1
+      - name: Tests with minimal versions
+        run: pipx run nox -s minimums -- --cov --cov-report=xml
+      - name: Upload coverage to Codecov
+        # Coverage uploads can be flaky, so we retry them a few times.
+        uses: Wandalen/wretry.action@v1.3.0
+        with:
+          action: codecov/codecov-action@v3
+          attempt_limit: 5
+          attempt_delay: 2000
+          with: |
+            fail_ci_if_error: true
+            flags: python
+            token: ${{ secrets.token }}

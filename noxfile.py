@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import argparse
 import os
+from typing import TYPE_CHECKING
 
 import nox
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 nox.options.sessions = ["lint", "pylint", "tests"]
 
@@ -30,18 +34,42 @@ def pylint(session: nox.Session) -> None:
     session.run("pylint", "mqt.core", *session.posargs)
 
 
+def _run_tests(
+    session: nox.Session,
+    *,
+    install_args: Sequence[str] = (),
+    run_args: Sequence[str] = (),
+    extras: Sequence[str] = (),
+) -> None:
+    posargs = list(session.posargs)
+    env = {"PIP_DISABLE_PIP_VERSION_CHECK": "1"}
+
+    _extras = ["test", *extras]
+    if "--cov" in posargs:
+        _extras.append("coverage")
+        posargs.append("--cov-config=pyproject.toml")
+
+    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm", "pybind11", *install_args, env=env)
+    install_arg = f"-ve.[{','.join(_extras)}]"
+    session.install("--no-build-isolation", install_arg, *install_args, env=env)
+    session.run("pytest", *run_args, *posargs, env=env)
+
+
 @nox.session(reuse_venv=True, python=PYTHON_ALL_VERSIONS)
 def tests(session: nox.Session) -> None:
     """Run the test suite."""
-    posargs = list(session.posargs)
-    env = {"PIP_DISABLE_PIP_VERSION_CHECK": "1"}
-    install_arg = "-ve.[coverage]" if "--cov" in posargs else "-ve.[test]"
-    if "--cov" in posargs:
-        posargs.append("--cov-config=pyproject.toml")
+    _run_tests(session)
 
-    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm", "pybind11")
-    session.install("--no-build-isolation", install_arg)
-    session.run("pytest", *posargs, env=env)
+
+@nox.session()
+def minimums(session: nox.Session) -> None:
+    """Test the minimum versions of dependencies."""
+    _run_tests(
+        session,
+        install_args=["--constraint=test/python/constraints.txt"],
+        run_args=["-Wdefault"],
+    )
+    session.run("pip", "list")
 
 
 @nox.session(reuse_venv=True)
