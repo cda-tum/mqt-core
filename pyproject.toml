@@ -131,7 +131,7 @@ testpaths = ["test/python"]
 run.source = ["mqt.core"]
 report.exclude_also = [
     '\.\.\.',
-    'if TYPE_CHECKING',
+    'if TYPE_CHECKING:',
 ]
 
 
