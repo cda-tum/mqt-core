@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
           fetch-depth: 0
       - name: Build SDist
         run: pipx run build --sdist
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
           fetch-depth: 0
       - uses: ilammy/msvc-dev-cmd@v1
       - if: ${{ inputs.setup-z3 }} && matrix.os != 'ubuntu-latest'
