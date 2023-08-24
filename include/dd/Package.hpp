@@ -1595,76 +1595,76 @@ public:
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
     std::array<Edge<Node>, n> edge{};
     for (std::size_t i = 0U; i < n; i++) {
-     Edge<Node> e1{};
-     Edge<Node> e2{};
+      Edge<Node> e1{};
+      Edge<Node> e2{};
 
-     if (!x.isTerminal() && !y.isTerminal()){
-       // Node is at correct level
-       if (x.p->v == var) {
-         e1 = x.p->e[i];
-         // Else if's should only be accessible for matrix addition
-       } else if (x.p->v > var) {
-         e1 = xCopy;
-       } else if (x.p->v < var) {
-         e1 = xCopy;
-         if (i == 1 || i == 2) {
-           e1.w = Complex::zero;
-         }
-       }
+      if (!x.isTerminal() && !y.isTerminal()) {
+        // Node is at correct level
+        if (x.p->v == var) {
+          e1 = x.p->e[i];
+          // Else if's should only be accessible for matrix addition
+        } else if (x.p->v > var) {
+          e1 = xCopy;
+        } else if (x.p->v < var) {
+          e1 = xCopy;
+          if (i == 1 || i == 2) {
+            e1.w = Complex::zero;
+          }
+        }
 
-       // Node is at correct level
-       if (y.p->v == var) {
-         e2 = y.p->e[i];
-         // Else if's should only be accessible for matrix addition
-       } else if (y.p->v > var) {
-         e2 = yCopy;
-       } else if (y.p->v < var) {
-         e2 = yCopy;
-         if (i == 1 || i == 2) {
-           e2.w = Complex::zero;
-         }
-       }
-     } else if ((x.isTerminal() && !y.isTerminal()) && var == y.p->v) {
-       // x has already reached terminal, pseudo-identity inserted
-       e1 = xCopy;
-       if (i == 1 || i == 2) {
-         e1.w = Complex::zero;
-       }
-       e2 = y.p->e[i];
-     } else if ((!x.isTerminal() && y.isTerminal()) && var == x.p->v) {
-       // y has already reached terminal, pseudo-identity inserted
-       e1 = x.p->e[i];
-       e2 = yCopy;
-       if (i == 1 || i == 2) {
-         e2.w = Complex::zero;
-       }
-     } else {
-       // Both have identities at this level
-       e1 = xCopy;
-       if (i == 1 || i == 2) {
-         e1.w = Complex::zero;
-       }
-       e2 = yCopy;
-       if (i == 1 || i == 2) {
-         e2.w = Complex::zero;
-       }
-     }
-     if (!e1.w.exactlyZero()) {
-       e1.w = cn.mulCached(e1.w, x.w);
-     }
-     if (!e2.w.exactlyZero()) {
-       e2.w = cn.mulCached(e2.w, y.w);
-     }
+        // Node is at correct level
+        if (y.p->v == var) {
+          e2 = y.p->e[i];
+          // Else if's should only be accessible for matrix addition
+        } else if (y.p->v > var) {
+          e2 = yCopy;
+        } else if (y.p->v < var) {
+          e2 = yCopy;
+          if (i == 1 || i == 2) {
+            e2.w = Complex::zero;
+          }
+        }
+      } else if ((x.isTerminal() && !y.isTerminal()) && var == y.p->v) {
+        // x has already reached terminal, pseudo-identity inserted
+        e1 = xCopy;
+        if (i == 1 || i == 2) {
+          e1.w = Complex::zero;
+        }
+        e2 = y.p->e[i];
+      } else if ((!x.isTerminal() && y.isTerminal()) && var == x.p->v) {
+        // y has already reached terminal, pseudo-identity inserted
+        e1 = x.p->e[i];
+        e2 = yCopy;
+        if (i == 1 || i == 2) {
+          e2.w = Complex::zero;
+        }
+      } else {
+        // Both have identities at this level
+        e1 = xCopy;
+        if (i == 1 || i == 2) {
+          e1.w = Complex::zero;
+        }
+        e2 = yCopy;
+        if (i == 1 || i == 2) {
+          e2.w = Complex::zero;
+        }
+      }
+      if (!e1.w.exactlyZero()) {
+        e1.w = cn.mulCached(e1.w, x.w);
+      }
+      if (!e2.w.exactlyZero()) {
+        e2.w = cn.mulCached(e2.w, y.w);
+      }
 
       if constexpr (std::is_same_v<Node, dNode>) {
         dEdge::applyDmChangesToEdges(e1, e2);
-        edge[i] = add2(e1, e2, var-1);
+        edge[i] = add2(e1, e2, var - 1);
         dEdge::revertDmChangesToEdges(e1, e2);
       } else {
-        edge[i] = add2(e1, e2, var-1);
+        edge[i] = add2(e1, e2, var - 1);
       }
 
-      if  (!x.isZeroTerminal()) {
+      if (!x.isZeroTerminal()) {
         cn.returnToCache(e1.w);
       }
 
@@ -2503,7 +2503,8 @@ public:
       return e;
     }
 
-    auto f = reduceAncillaeRecursion(e, ancillary, ancillary.size()-1, regular);
+    auto f =
+        reduceAncillaeRecursion(e, ancillary, ancillary.size() - 1, regular);
 
     incRef(f);
     decRef(e);
@@ -2561,8 +2562,7 @@ public:
 
 private:
   mEdge reduceAncillaeRecursion(mEdge& e, const std::vector<bool>& ancillary,
-                                int var,
-                                const bool regular = true) {
+                                int var, const bool regular = true) {
     // if (e.p->v < lowerbound) {
     //   return e;
     // }
@@ -2584,11 +2584,11 @@ private:
           }
         }
         auto extension = makeDDNode(var, edges);
-        var = var-1;
+        var = var - 1;
         while (ancillary[var]) {
           auto node = makeDDNode(var, edges);
           extension = kronecker(extension, node, false);
-          var = var-1;
+          var = var - 1;
         }
         // Stick them together
         f = kronecker(extension, f, false);
@@ -2606,12 +2606,12 @@ private:
 
       // No ancillary
     } else {
-      for (auto i = 0U; i < NEDGE; ++i){
-        edges[i] = reduceAncillaeRecursion(f.p->e[i], ancillary, var - 1, regular);
+      for (auto i = 0U; i < NEDGE; ++i) {
+        edges[i] =
+            reduceAncillaeRecursion(f.p->e[i], ancillary, var - 1, regular);
       }
       f = makeDDNode(var, edges);
     }
-
 
     // auto f = e;
     // std::array<mEdge, NEDGE> edges{};
@@ -2639,7 +2639,8 @@ private:
     //   } else {
     //     for (auto i = 0U; i < NEDGE; ++i) {
     //       edges[i] =
-    //           reduceAncillaeRecursion(f.p->e[i], ancillary, var - 1, regular);
+    //           reduceAncillaeRecursion(f.p->e[i], ancillary, var - 1,
+    //           regular);
     //     }
     //   }
     // } else if (f.p->v < var) {
@@ -2648,14 +2649,15 @@ private:
     //       edges[i] = f.p->e[i];
     //     } else {
     //       edges[i] =
-    //           reduceAncillaeRecursion(f.p->e[i], ancillary, var - 1, regular);
+    //           reduceAncillaeRecursion(f.p->e[i], ancillary, var - 1,
+    //           regular);
     //     }
     //   }
     // }
     // f = makeDDNode(f.p->v, edges);
 
     // auto f = e;
-//
+    //
     // std::array<mEdge, NEDGE> edges{};
     // std::bitset<NEDGE> handled{};
     // for (auto i = 0U; i < NEDGE; ++i) {
@@ -2663,7 +2665,8 @@ private:
     //     if (e.p->e[i].isTerminal()) {
     //       edges[i] = e.p->e[i];
     //     } else {
-    //       edges[i] = reduceAncillaeRecursion(f.p->e[i], ancillary, lowerbound,
+    //       edges[i] = reduceAncillaeRecursion(f.p->e[i], ancillary,
+    //       lowerbound,
     //                                          regular);
     //       for (auto j = i + 1; j < NEDGE; ++j) {
     //         if (e.p->e[i].p == e.p->e[j].p) {
@@ -2675,18 +2678,20 @@ private:
     //     handled.set(i);
     //   }
     // }
-    //f = makeDDNode(f.p->v, edges);
+    // f = makeDDNode(f.p->v, edges);
 
     // something to reduce for this qubit
     // if (ancillary[f.p->v]) {
     //   if (regular) {
     //     if (f.p->e[1].w != Complex::zero || f.p->e[3].w != Complex::zero) {
-    //       f = makeDDNode(f.p->v, std::array{f.p->e[0], mEdge::zero, f.p->e[2],
+    //       f = makeDDNode(f.p->v, std::array{f.p->e[0], mEdge::zero,
+    //       f.p->e[2],
     //                                         mEdge::zero});
     //     }
     //   } else {
     //     if (f.p->e[2].w != Complex::zero || f.p->e[3].w != Complex::zero) {
-    //       f = makeDDNode(f.p->v, std::array{f.p->e[0], f.p->e[1], mEdge::zero,
+    //       f = makeDDNode(f.p->v, std::array{f.p->e[0], f.p->e[1],
+    //       mEdge::zero,
     //                                         mEdge::zero});
     //     }
     //   }
