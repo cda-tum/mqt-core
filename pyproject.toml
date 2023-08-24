@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core>=0.4.8", "nanobind>=1.5.0", "setuptools-scm>=7"]
+requires = ["scikit-build-core>=0.4.8", "nanobind>=1.5.0", "setuptools-scm>=7", "pybind11>=2.11"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -42,7 +42,7 @@ docs = [
     "furo",
     "myst_parser>=0.13",
     "setuptools-scm>=7",
-    "sphinx>=5",
+    "sphinx>=7.2.2",
     "sphinx-copybutton",
     "sphinx_design",
     "sphinxext-opengraph",

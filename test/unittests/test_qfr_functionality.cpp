@@ -652,6 +652,20 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
   ASSERT_EQ(qc.getNindividualOps(), 6);
 }
 
+TEST_F(QFRFunctionality, removeFinalMeasurementsWithBarrier) {
+  const std::size_t nqubits = 2;
+  QuantumComputation qc(nqubits);
+  qc.barrier({0, 1});
+  qc.measure(0, 0);
+  qc.measure(1, 1);
+  std::cout << "-----------------------------\n";
+  qc.print(std::cout);
+  CircuitOptimizer::removeFinalMeasurements(qc);
+  std::cout << "-----------------------------\n";
+  qc.print(std::cout);
+  EXPECT_TRUE(qc.empty());
+}
+
 TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
   // This test checks if the gate shortcuts are working correctly
   // and if the cloning of gates is working correctly.
@@ -1461,6 +1475,23 @@ TEST_F(QFRFunctionality, trivialOperationReordering) {
   ++it;
   const auto target2 = (*it)->getTargets().at(0);
   EXPECT_EQ(target2, 0);
+}
+
+TEST_F(QFRFunctionality, OperationReorderingBarrier) {
+  QuantumComputation qc(2);
+  qc.h(0);
+  qc.barrier({0, 1});
+  qc.h(1);
+  std::cout << qc << "\n";
+  qc::CircuitOptimizer::reorderOperations(qc);
+  std::cout << qc << "\n";
+  auto it = qc.begin();
+  const auto target = (*it)->getTargets().at(0);
+  EXPECT_EQ(target, 0);
+  ++it;
+  ++it;
+  const auto target2 = (*it)->getTargets().at(0);
+  EXPECT_EQ(target2, 1);
 }
 
 TEST_F(QFRFunctionality, FlattenRandomClifford) {

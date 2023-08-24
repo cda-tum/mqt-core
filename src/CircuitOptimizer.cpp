@@ -499,7 +499,6 @@ bool CircuitOptimizer::removeFinalMeasurement(DAG& dag,
     } else {
       // set operation to identity so that it can be collected by the
       // removeIdentities pass
-      op->setTargets(op->getTargets()); // work-around to properly set targets
       op->setGate(qc::I);
     }
     return onlyMeasurements;
@@ -530,7 +529,7 @@ void CircuitOptimizer::removeFinalMeasurementsRecursive(
       }
     }
     auto* op = (*it)->get();
-    if (op->getType() == Measure) {
+    if (op->getType() == Measure || op->getType() == Barrier) {
       const bool onlyMeasurement =
           removeFinalMeasurement(dag, dagIterators, idx, it, op);
       if (onlyMeasurement) {
@@ -541,15 +540,6 @@ void CircuitOptimizer::removeFinalMeasurementsRecursive(
           ++(dagIterators.at(target));
         }
       }
-    } else if (op->getType() == Barrier) {
-      for (const auto& target : op->getTargets()) {
-        if (dagIterators.at(target) == dag.at(target).rend()) {
-          break;
-        }
-        ++(dagIterators.at(target));
-      }
-      // Barriers at the end of the circuit can be removed
-      op->setGate(OpType::I);
     } else if (op->isCompoundOperation() && op->isNonUnitaryOperation()) {
       // iterate over all gates of compound operation and upon success increase
       // all corresponding iterators

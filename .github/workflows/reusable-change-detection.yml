@@ -40,7 +40,7 @@ jobs:
             !src/python/**
             test/**
             !test/python/**
-            CMakelists.txt
+            CMakeLists.txt
             cmake/**
             extern/**
             .github/codecov.yml
@@ -92,6 +92,7 @@ jobs:
             test/python/**
             noxfile.py
             pyproject.toml
+            CMakeLists.txt
             .github/codecov.yml
             .github/workflows/reusable-python-linter.yml
             .github/workflows/reusable-python-tests.yml
@@ -116,6 +117,7 @@ jobs:
             src/**
             test/**
             pyproject.toml
+            CMakeLists.txt
             .github/codeql-config.yml
             .github/workflows/reusable-code-ql-cpp.yml
             .github/workflows/reusable-code-ql-python.yml
