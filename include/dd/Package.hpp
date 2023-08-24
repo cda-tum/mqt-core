@@ -1866,65 +1866,23 @@ private:
 
     auto& computeTable =
         getMultiplicationComputeTable<LeftOperandNode, RightOperandNode>();
-    //if (const auto* r =
-    //        computeTable.lookup(xCopy, yCopy, generateDensityMatrix);
-    //    r != nullptr) {
-    //  if (r->w.approximatelyZero()) {
-    //    return ResultEdge::zero;
-    //  }
-    //  auto e = ResultEdge{r->p, cn.getCached(r->w)};
-    //  ComplexNumbers::mul(e.w, e.w, x.w);
-    //  ComplexNumbers::mul(e.w, e.w, y.w);
-    //  if (e.w.approximatelyZero()) {
-    //    cn.returnToCache(e.w);
-    //    return ResultEdge::zero;
-    //  }
-    //  return e;
-    //}
+    if (const auto* r =
+            computeTable.lookup(xCopy, yCopy, generateDensityMatrix);
+        r != nullptr) {
+      if (r->w.approximatelyZero()) {
+        return ResultEdge::zero;
+      }
+      auto e = ResultEdge{r->p, cn.getCached(r->w)};
+      ComplexNumbers::mul(e.w, e.w, x.w);
+      ComplexNumbers::mul(e.w, e.w, y.w);
+      if (e.w.approximatelyZero()) {
+        cn.returnToCache(e.w);
+        return ResultEdge::zero;
+      }
+      return e;
+    }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(y.p->e)>;
-//    ResultEdge e{};
-//    if constexpr (std::is_same_v<RightOperandNode, mCachedEdge>) {
-//      // This branch is only taken for matrices
-//      if (x.p->v == var && x.p->v == y.p->v) {
-//        if (x.p->isIdentity()) {
-//          if constexpr (n == NEDGE) {
-//            // additionally check if y is the identity in case of matrix
-//            // multiplication
-//            if (y.p->isIdentity()) {
-//              e = makeIdent();
-//            } else {
-//              e = yCopy;
-//            }
-//          } else {
-//            e = yCopy;
-//          }
-//          computeTable.insert(xCopy, yCopy, {e.p, e.w});
-//          e.w = cn.mulCached(x.w, y.w);
-//          if (e.w.approximatelyZero()) {
-//            cn.returnToCache(e.w);
-//            return ResultEdge::zero;
-//          }
-//          return e;
-//        }
-//
-//        if constexpr (n == NEDGE) {
-//          // additionally check if y is the identity in case of matrix
-//          // multiplication
-//          if (y.p->isIdentity()) {
-//            e = xCopy;
-//            computeTable.insert(xCopy, yCopy, {e.p, e.w});
-//            e.w = cn.mulCached(x.w, y.w);
-//
-//            if (e.w.approximatelyZero()) {
-//              cn.returnToCache(e.w);
-//              return ResultEdge::zero;
-//            }
-//            return e;
-//          }
-//        }
-//      }
-//    }
 
     constexpr std::size_t rows = RADIX;
     constexpr std::size_t cols = n == NEDGE ? RADIX : 1U;
@@ -1946,7 +1904,7 @@ private:
               // Hold x at current level until we reach correct level var
             } else if (x.p->v > var) {
               e1 = xCopy;
-              // Pseudo-identity inserted TODO: Is this efficient?
+              // Pseudo-identity inserted
             } else if (x.p->v < var) {
               e1 = xCopy;
               if (rows * i + k == 1 || rows * i + k == 2) {
@@ -1958,7 +1916,7 @@ private:
               // Hold y at current level until we reach correct level var
             } else if (y.p->v > var) {
               e2 = yCopy;
-              // Pseudo-identity inserted TODO: Is this efficient?
+              // Pseudo-identity inserted
             } else if (y.p->v < var) {
               e2 = yCopy;
               if (j + cols * k == 1 || j + cols * k == 2) {
@@ -2544,17 +2502,9 @@ public:
         e.isTerminal()) {
       return e;
     }
-    Qubit lowerbound = 0;
-    for (auto i = 0U; i < ancillary.size(); ++i) {
-      if (ancillary[i]) {
-        lowerbound = static_cast<Qubit>(i);
-        break;
-      }
-    }
-    if (e.p->v < lowerbound) {
-      return e;
-    }
-    auto f = reduceAncillaeRecursion(e, ancillary, lowerbound, regular);
+
+    auto f = reduceAncillaeRecursion(e, ancillary, ancillary.size()-1, regular);
+
     incRef(f);
     decRef(e);
     return f;
@@ -2611,49 +2561,136 @@ public:
 
 private:
   mEdge reduceAncillaeRecursion(mEdge& e, const std::vector<bool>& ancillary,
-                                const Qubit lowerbound,
+                                int var,
                                 const bool regular = true) {
-    if (e.p->v < lowerbound) {
-      return e;
-    }
+    // if (e.p->v < lowerbound) {
+    //   return e;
+    // }
 
     auto f = e;
-
     std::array<mEdge, NEDGE> edges{};
-    std::bitset<NEDGE> handled{};
-    for (auto i = 0U; i < NEDGE; ++i) {
-      if (!handled.test(i)) {
-        if (e.p->e[i].isTerminal()) {
-          edges[i] = e.p->e[i];
-        } else {
-          edges[i] = reduceAncillaeRecursion(f.p->e[i], ancillary, lowerbound,
-                                             regular);
-          for (auto j = i + 1; j < NEDGE; ++j) {
-            if (e.p->e[i].p == e.p->e[j].p) {
-              edges[j] = edges[i];
-              handled.set(j);
-            }
+
+    // TODO: Only works for ancillaries above matrix, passes tests
+    // Check if ancillary at this level
+    if (ancillary[var]) {
+      // Check if level is above DD
+      if (f.p->v < var) {
+        // Create ancillaries above the DD
+        for (auto i = 0U; i < NEDGE; ++i) {
+          if (i == 0) {
+            edges[i] = mEdge::terminal(Complex::one);
+          } else {
+            edges[i] = mEdge::terminal(Complex::zero);
           }
         }
-        handled.set(i);
+        auto extension = makeDDNode(var, edges);
+        var = var-1;
+        while (ancillary[var]) {
+          auto node = makeDDNode(var, edges);
+          extension = kronecker(extension, node, false);
+          var = var-1;
+        }
+        // Stick them together
+        f = kronecker(extension, f, false);
+      } else if (f.p->v == var) {
+        // Replace current nodes with ancillaries
+        for (auto i = 0U; i < NEDGE; ++i) {
+          if (i == 0) {
+            edges[i] = {f.p->e[i].p, Complex::one};
+          } else {
+            edges[i] = {f.p->e[i].p, Complex::zero};
+          }
+        }
+        f = makeDDNode(var, edges);
       }
+
+      // No ancillary
+    } else {
+      for (auto i = 0U; i < NEDGE; ++i){
+        edges[i] = reduceAncillaeRecursion(f.p->e[i], ancillary, var - 1, regular);
+      }
+      f = makeDDNode(var, edges);
     }
-    f = makeDDNode(f.p->v, edges);
+
+
+    // auto f = e;
+    // std::array<mEdge, NEDGE> edges{};
+    // if (!f.isTerminal() && f.p->v > var) {
+    //   if (ancillary[var]) {
+    //     for (auto i = 0U; i < NEDGE; ++i) {
+    //       // Create ancillary node attached to top of DD
+    //       if (i == 0) {
+    //         edges[i] = {f.p, Complex::one};
+    //       } else {
+    //         edges[i] = {f.p, Complex::zero};
+    //       }
+    //     }
+    //   }
+    // } else if (!f.isTerminal() && f.p->v == var) {
+    //   if (ancillary[var]) {
+    //     for (auto i = 0U; i < NEDGE; ++i) {
+    //       // Replace node with ancillary
+    //       if (i == 0) {
+    //         edges[i] = {f.p->e[i].p, Complex::one};
+    //       } else {
+    //         edges[i] = {f.p->e[i].p, Complex::zero};
+    //       }
+    //     }
+    //   } else {
+    //     for (auto i = 0U; i < NEDGE; ++i) {
+    //       edges[i] =
+    //           reduceAncillaeRecursion(f.p->e[i], ancillary, var - 1, regular);
+    //     }
+    //   }
+    // } else if (f.p->v < var) {
+    //   for (auto i = 0U; i < NEDGE; ++i) {
+    //     if (f.p->e[i].isTerminal()) {
+    //       edges[i] = f.p->e[i];
+    //     } else {
+    //       edges[i] =
+    //           reduceAncillaeRecursion(f.p->e[i], ancillary, var - 1, regular);
+    //     }
+    //   }
+    // }
+    // f = makeDDNode(f.p->v, edges);
+
+    // auto f = e;
+//
+    // std::array<mEdge, NEDGE> edges{};
+    // std::bitset<NEDGE> handled{};
+    // for (auto i = 0U; i < NEDGE; ++i) {
+    //   if (!handled.test(i)) {
+    //     if (e.p->e[i].isTerminal()) {
+    //       edges[i] = e.p->e[i];
+    //     } else {
+    //       edges[i] = reduceAncillaeRecursion(f.p->e[i], ancillary, lowerbound,
+    //                                          regular);
+    //       for (auto j = i + 1; j < NEDGE; ++j) {
+    //         if (e.p->e[i].p == e.p->e[j].p) {
+    //           edges[j] = edges[i];
+    //           handled.set(j);
+    //         }
+    //       }
+    //     }
+    //     handled.set(i);
+    //   }
+    // }
+    //f = makeDDNode(f.p->v, edges);
 
     // something to reduce for this qubit
-    if (ancillary[f.p->v]) {
-      if (regular) {
-        if (f.p->e[1].w != Complex::zero || f.p->e[3].w != Complex::zero) {
-          f = makeDDNode(f.p->v, std::array{f.p->e[0], mEdge::zero, f.p->e[2],
-                                            mEdge::zero});
-        }
-      } else {
-        if (f.p->e[2].w != Complex::zero || f.p->e[3].w != Complex::zero) {
-          f = makeDDNode(f.p->v, std::array{f.p->e[0], f.p->e[1], mEdge::zero,
-                                            mEdge::zero});
-        }
-      }
-    }
+    // if (ancillary[f.p->v]) {
+    //   if (regular) {
+    //     if (f.p->e[1].w != Complex::zero || f.p->e[3].w != Complex::zero) {
+    //       f = makeDDNode(f.p->v, std::array{f.p->e[0], mEdge::zero, f.p->e[2],
+    //                                         mEdge::zero});
+    //     }
+    //   } else {
+    //     if (f.p->e[2].w != Complex::zero || f.p->e[3].w != Complex::zero) {
+    //       f = makeDDNode(f.p->v, std::array{f.p->e[0], f.p->e[1], mEdge::zero,
+    //                                         mEdge::zero});
+    //     }
+    //   }
+    // }
     f.w = cn.lookup(cn.mulTemp(f.w, e.w));
     return f;
   }

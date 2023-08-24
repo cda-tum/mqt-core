@@ -474,10 +474,6 @@ TEST(DDPackageTest, Ancillaries) {
   auto reducedBellMatrix =
       dd->reduceAncillae(bellMatrix, {false, false, false, false});
   EXPECT_EQ(bellMatrix, reducedBellMatrix);
-  dd->incRef(bellMatrix);
-  reducedBellMatrix =
-      dd->reduceAncillae(bellMatrix, {false, false, true, true});
-  EXPECT_EQ(bellMatrix, reducedBellMatrix);
 
   dd->incRef(bellMatrix);
   reducedBellMatrix =
@@ -1823,38 +1819,39 @@ TEST(DDPackageTest, GetMatrixCNOT) {
 }
 
 TEST(DDPackageTest, Sandbox) {
-  const auto nrQubits = 2U;
-  const auto dd = std::make_unique<dd::Package<>>(nrQubits);
+  auto dd = std::make_unique<dd::Package<>>(4);
+  auto hGate = dd->makeGateDD(dd::Hmat, 2, 0);
+  auto cxGate = dd->makeGateDD(dd::Xmat, 2, 0_pc, 1);
+  auto bellMatrix = dd->multiply(cxGate, hGate);
 
-  const auto thetaAngles = {0., dd::PI_2, dd::PI};
-  const auto betaAngles = {0., dd::PI_2, dd::PI};
+  dd->incRef(bellMatrix);
+  auto reducedBellMatrix =
+      dd->reduceAncillae(bellMatrix, {false, false, false, false});
+  EXPECT_EQ(bellMatrix, reducedBellMatrix);
 
-  for (dd::Qubit control = 0; control < nrQubits; ++control) {
-    for (dd::Qubit target = 0; target < nrQubits; ++target) {
-      if (control == target) {
-        continue;
-      }
+  dd->incRef(bellMatrix);
+  reducedBellMatrix =
+      dd->reduceAncillae(bellMatrix, {false, false, true, true});
+  EXPECT_TRUE(reducedBellMatrix.p->e[1].isZeroTerminal());
+  EXPECT_TRUE(reducedBellMatrix.p->e[2].isZeroTerminal());
+  EXPECT_TRUE(reducedBellMatrix.p->e[3].isZeroTerminal());
 
-      for (const auto& theta : thetaAngles) {
-        for (const auto& beta : betaAngles) {
-          const auto xxMinusYYGateDD =
-              dd->makeXXMinusYYDD(nrQubits, control, target, theta, beta);
-          const auto gateDD = dd->makeXXMinusYYDD(nrQubits, qc::Controls{},
-                                                  control, target, theta, beta);
+  EXPECT_EQ(reducedBellMatrix.p->e[0].p->e[0].p, bellMatrix.p);
+  EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[1].isZeroTerminal());
+  EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[2].isZeroTerminal());
+  EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[3].isZeroTerminal());
 
-          if (xxMinusYYGateDD != gateDD) {
-            std::cout << theta << " " << beta << " "
-                      << " " << control << "" << target << "\n";
-            const std::string filename1 = "xxminusyy.dot";
-            dd::export2Dot(xxMinusYYGateDD, filename1, true, true);
-            const std::string filename2 = "gateDD.dot";
-            dd::export2Dot(gateDD, filename2, true, true);
-          }
-          EXPECT_EQ(xxMinusYYGateDD, gateDD);
-        }
-      }
-    }
-  }
+  dd->incRef(bellMatrix);
+  reducedBellMatrix =
+      dd->reduceAncillae(bellMatrix, {false, false, true, true}, false);
+  EXPECT_TRUE(reducedBellMatrix.p->e[1].isZeroTerminal());
+  EXPECT_TRUE(reducedBellMatrix.p->e[2].isZeroTerminal());
+  EXPECT_TRUE(reducedBellMatrix.p->e[3].isZeroTerminal());
+
+  EXPECT_EQ(reducedBellMatrix.p->e[0].p->e[0].p, bellMatrix.p);
+  EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[1].isZeroTerminal());
+  EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[2].isZeroTerminal());
+  EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[3].isZeroTerminal());
 }
 
 /**
