@@ -51,8 +51,5 @@ jobs:
           cache: "pip"
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
-      - if: matrix.runs-on == 'windows-latest'
-        name: Set CMake generator to Ninja (Windows only)
-        run: echo "CMAKE_GENERATOR=Ninja" >> $env:GITHUB_ENV
       - name: Test on 🐍 ${{ inputs.python-version }}
         run: pipx run nox -s tests-${{ inputs.python-version }} --verbose

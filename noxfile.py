@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 from typing import TYPE_CHECKING
 
 import nox
@@ -43,6 +44,12 @@ def _run_tests(
 ) -> None:
     posargs = list(session.posargs)
     env = {"PIP_DISABLE_PIP_VERSION_CHECK": "1"}
+
+    if os.environ.get("CI", None):
+        # disable `-march=native` for CI builds
+        env["SKBUILD_CMAKE_DEFINES"] = "DEPLOY=ON"
+        if sys.platform == "win32":
+            env["CMAKE_GENERATOR"] = "Ninja"
 
     _extras = ["test", *extras]
     if "--cov" in posargs:
