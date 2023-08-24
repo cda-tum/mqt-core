@@ -9,7 +9,7 @@ readme = "README.md"
 authors = [
     { name = "Lukas Burgholzer", email = "burgholzer@me.com" }
 ]
-keywords = ["MQT", "quantum computing", "design automation"]
+keywords = ["MQT", "quantum-computing", "design-automation", "decision-diagrams", "zx-calculus"]
 license = { file = "LICENSE.md" }
 
 classifiers = [
