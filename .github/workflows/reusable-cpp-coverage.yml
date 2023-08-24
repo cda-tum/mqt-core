@@ -48,8 +48,7 @@ jobs:
       - name: Install Ninja
         run: pipx install ninja
       - name: Configure CMake
-        # `-DDEPLOY=ON` is set here to avoid invalid instruction warnings resulting from ccache build caching in combination with slightly different machines on GitHub Actions.
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON -DDEPLOY=ON ${{ inputs.cmake-args }}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON ${{ inputs.cmake-args }}
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
