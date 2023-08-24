@@ -129,10 +129,9 @@ testpaths = ["test/python"]
 
 [tool.coverage]
 run.source = ["mqt.core"]
-report.exclude_lines = [
-    'pragma: no cover',
+report.exclude_also = [
     '\.\.\.',
-    'if typing.TYPE_CHECKING:',
+    'if TYPE_CHECKING',
 ]
 
 
