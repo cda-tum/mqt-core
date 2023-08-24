@@ -31,7 +31,7 @@ def lint(session: nox.Session) -> None:
 def pylint(session: nox.Session) -> None:
     """Run PyLint."""
     session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm", "pybind11")
-    session.install("--no-build-isolation", "-ve.[dev]", "pylint")
+    session.install("--no-build-isolation", "-ve.", "pylint")
     session.run("pylint", "mqt.core", *session.posargs)
 
 
