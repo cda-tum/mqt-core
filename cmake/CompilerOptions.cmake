@@ -29,7 +29,10 @@ function(enable_project_options target_name)
 
     if(NOT DEPLOY)
       # only include machine-specific optimizations when building for the host machine
-      target_compile_options(${target_name} INTERFACE -mtune=native)
+      check_cxx_compiler_flag(-mtune=native HAS_MTUNE_NATIVE)
+      if(HAS_MTUNE_NATIVE)
+        target_compile_options(${target_name} INTERFACE -mtune=native)
+      endif()
 
       check_cxx_compiler_flag(-march=native HAS_MARCH_NATIVE)
       if(HAS_MARCH_NATIVE)
