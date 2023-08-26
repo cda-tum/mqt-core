@@ -19,9 +19,18 @@ on:
         description: "The build-time dependencies to install"
         default: "nanobind scikit-build-core[pyproject] setuptools_scm pybind11"
         type: string
+      enable-cpp:
+        description: "Whether to enable C++ analysis"
+        default: true
+        type: boolean
+      enable-python:
+        description: "Whether to enable Python analysis"
+        default: true
+        type: boolean
 
 jobs:
   analyze-cpp:
+    if: ${{ inputs.enable-cpp }}
     name: 🇨‌
     uses: ./.github/workflows/reusable-code-ql-cpp.yml
     with:
@@ -30,6 +39,7 @@ jobs:
       z3-version: ${{ inputs.z3-version }}
 
   analyze-python:
+    if: ${{ inputs.enable-python }}
     name: 🐍
     uses: ./.github/workflows/reusable-code-ql-python.yml
     with:
