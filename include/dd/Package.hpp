@@ -2504,7 +2504,7 @@ public:
     }
 
     auto f =
-        reduceAncillaeRecursion(e, ancillary, ancillary.size() - 1, regular);
+        reduceAncillaeRecursion(e, ancillary, static_cast<Qubit>(ancillary.size() - 1), regular);
 
     incRef(f);
     decRef(e);
@@ -2562,7 +2562,7 @@ public:
 
 private:
   mEdge reduceAncillaeRecursion(mEdge& e, const std::vector<bool>& ancillary,
-                                int var, const bool regular = true) {
+                                Qubit var, const bool regular = true) {
     // if (e.p->v < lowerbound) {
     //   return e;
     // }
