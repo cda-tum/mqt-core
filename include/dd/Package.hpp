@@ -3022,7 +3022,12 @@ public:
   }
 
   CMat getMatrix(const mEdge& e, std::size_t nrQubits) {
-    const std::size_t dim = 2ULL << (nrQubits - 1);
+    std::size_t dim;
+    if (nrQubits != 0) {
+      dim = 2ULL << (nrQubits - 1);
+    } else {
+      dim = 0ULL;
+    }
     // allocate resulting matrix
     auto mat = CMat(dim, CVec(dim, {0.0, 0.0}));
 
@@ -3045,8 +3050,14 @@ public:
                  const std::size_t j, CMat& mat, const int level) {
     // calculate new accumulated amplitude
     auto c = cn.mulCached(e.w, amp);
-    const std::size_t x = i | (1ULL << level);
-    const std::size_t y = j | (1ULL << level);
+
+    std::size_t x;
+    std::size_t y;
+
+    if (level != -1) {
+      x = i | (1ULL << level);
+      y = j | (1ULL << level);
+    }
 
     if (e.isTerminal() && level == -1) {
       // base case
