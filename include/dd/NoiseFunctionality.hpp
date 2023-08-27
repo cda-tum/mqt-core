@@ -411,7 +411,7 @@ private:
       complexProb.r->value = probability;
       if (!e[0].w.exactlyZero()) {
         const auto w = package->cn.mulCached(complexProb, e[3].w);
-        const auto tmp = package->add2(e[0], {e[3].p, w});
+        const auto tmp = package->add2(e[0], {e[3].p, w}, e[0].p->v);
         package->cn.returnToCache(w);
         package->cn.returnToCache(e[0].w);
         e[0] = tmp;
@@ -485,7 +485,7 @@ private:
 
       // e[0] = helperEdge[0] + helperEdge[1]
       package->cn.returnToCache(e[0].w);
-      e[0] = package->add2(helperEdge[0], helperEdge[1]);
+      e[0] = package->add2(helperEdge[0], helperEdge[1], helperEdge[0].p->v);
       package->cn.returnToCache(helperEdge[0].w);
       package->cn.returnToCache(helperEdge[1].w);
     }
@@ -532,7 +532,7 @@ private:
       }
 
       package->cn.returnToCache(e[3].w);
-      e[3] = package->add2(helperEdge[0], helperEdge[1]);
+      e[3] = package->add2(helperEdge[0], helperEdge[1], helperEdge[0].p->v);
       package->cn.returnToCache(helperEdge[0].w);
       package->cn.returnToCache(helperEdge[1].w);
     }
