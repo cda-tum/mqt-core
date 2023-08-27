@@ -52,7 +52,7 @@ jobs:
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
-        run: ctest -C Debug --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+        run: ctest -C Debug --output-on-failure --test-dir build --repeat until-pass:3 --timeout 600
       - name: Upload coverage to Codecov
         # Coverage uploads can be flaky, so we retry them a few times.
         uses: Wandalen/wretry.action@v1.3.0

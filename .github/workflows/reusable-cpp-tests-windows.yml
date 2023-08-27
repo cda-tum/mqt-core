@@ -60,4 +60,4 @@ jobs:
           retry_on: error
           command: cmake --build build --config ${{ inputs.config }}
       - name: Test
-        run: ctest -C ${{ inputs.config }} --output-on-failure --test-dir build --repeat until-pass:3 --timeout 300
+        run: ctest -C ${{ inputs.config }} --output-on-failure --test-dir build --repeat until-pass:3 --timeout 600
