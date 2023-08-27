@@ -2602,6 +2602,24 @@ private:
           }
         }
         f = makeDDNode(var, edges);
+      } else if (f.p->v > var) {
+        // Create ancillaries below the DD
+        for (auto i = 0U; i < NEDGE; ++i) {
+          if (i == 0) {
+            edges[i] = mEdge::terminal(Complex::one);
+          } else {
+            edges[i] = mEdge::terminal(Complex::zero);
+          }
+        }
+        auto extension = makeDDNode(var, edges);
+        var = var - 1;
+        while (ancillary[var]) {
+          auto node = makeDDNode(var, edges);
+          extension = kronecker(extension, node, false);
+          var = var - 1;
+        }
+        // Stick them together
+        f = kronecker(f, extension, false);
       }
 
       // No ancillary
