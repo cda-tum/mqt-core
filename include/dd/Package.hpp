@@ -3052,6 +3052,9 @@ public:
     if (level != -1) {
       x = i | (1ULL << level);
       y = j | (1ULL << level);
+    } else {
+      x = i;
+      y = j;
     }
 
     if (e.isTerminal() && level == -1) {
