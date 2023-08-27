@@ -2503,8 +2503,8 @@ public:
       return e;
     }
 
-    auto f =
-        reduceAncillaeRecursion(e, ancillary, static_cast<Qubit>(ancillary.size() - 1), regular);
+    auto f = reduceAncillaeRecursion(
+        e, ancillary, static_cast<Qubit>(ancillary.size() - 1), regular);
 
     incRef(f);
     decRef(e);
