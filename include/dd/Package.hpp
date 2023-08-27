@@ -2563,14 +2563,10 @@ public:
 private:
   mEdge reduceAncillaeRecursion(mEdge& e, const std::vector<bool>& ancillary,
                                 Qubit var, const bool regular = true) {
-    // if (e.p->v < lowerbound) {
-    //   return e;
-    // }
 
     auto f = e;
     std::array<mEdge, NEDGE> edges{};
 
-    // TODO: Only works for ancillaries above matrix, passes tests
     // Check if ancillary at this level
     if (ancillary[var]) {
       // Check if level is above DD
@@ -2842,7 +2838,6 @@ public:
         }
       }
     } while (level != -1);
-    // ComplexNumbers::mul(c, c, r.w);
 
     return {RealNumber::val(c.r), RealNumber::val(c.i)};
   }
