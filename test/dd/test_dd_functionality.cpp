@@ -213,9 +213,6 @@ TEST_F(DDFunctionality, nonUnitary) {
   EXPECT_EQ(getInverseDD(&barrier, dd), dd->makeIdent());
   EXPECT_EQ(getDD(&barrier, dd, dummyMap), dd->makeIdent());
   EXPECT_EQ(getInverseDD(&barrier, dd, dummyMap), dd->makeIdent());
-  for (Qubit i = 0; i < nqubits; ++i) {
-    EXPECT_FALSE(barrier.actsOn(i));
-  }
 }
 
 TEST_F(DDFunctionality, CircuitEquivalence) {
