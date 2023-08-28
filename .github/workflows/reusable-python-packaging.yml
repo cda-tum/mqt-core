@@ -3,9 +3,13 @@ name: 🐍 • Packaging
 on:
   workflow_call:
     inputs:
-      package-name:
-        description: "The name of the Python package"
-        required: true
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
         type: string
 
 jobs:
@@ -15,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
           fetch-depth: 0
       - name: Build SDist
         run: pipx run build --sdist
@@ -36,9 +40,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
           fetch-depth: 0
       - uses: ilammy/msvc-dev-cmd@v1
+      - if: ${{ inputs.setup-z3 }} && matrix.os != 'ubuntu-latest'
+        name: Setup Z3
+        uses: cda-tum/setup-z3@v1
+        with:
+          version: ${{ inputs.z3-version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - if: ${{ inputs.setup-z3 }} && matrix.os == 'ubuntu-latest'
+        name: Set environment variables for Z3 installation in manylinux image
+        run: |
+          echo "CIBW_BEFORE_ALL_LINUX=/opt/python/cp311-cp311/bin/pip install z3-solver==${{ inputs.z3-version }}" >> $GITHUB_ENV
       - if: matrix.os != 'ubuntu-latest'
         name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1
@@ -72,6 +87,10 @@ jobs:
           submodules: recursive
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
+      - if: ${{ inputs.setup-z3 }}
+        name: Set environment variables for Z3 installation in manylinux image
+        run: |
+          echo "CIBW_BEFORE_ALL_LINUX=/opt/python/cp311-cp311/bin/pip install z3-solver==${{ inputs.z3-version }}" >> $GITHUB_ENV
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.15
         env:
@@ -81,20 +100,3 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
-
-  deploy:
-    if: github.event_name == 'release' && github.event.action == 'published'
-    name: 🚀 Deploy to PyPI
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/${{ inputs.package-name }}
-    permissions:
-      id-token: write
-    needs: [build_wheels, build_sdist, build_wheels_emulation]
-    steps:
-      - uses: actions/download-artifact@v3
-        with:
-          name: artifact
-          path: dist
-      - uses: pypa/gh-action-pypi-publish@release/v1

@@ -1,15 +1,23 @@
 name: 🐍 • Lint
 on:
   workflow_call:
+    secrets:
+      token:
+        description: "The token to use for Codecov"
+        required: true
     inputs:
       python-version:
         description: "The Python version to use (3.8-3.11)"
         required: true
         type: string
-    secrets:
-      token:
-        description: "The token to use for Codecov"
-        required: true
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
 
 jobs:
   coverage:
@@ -22,6 +30,13 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+      - if: ${{ inputs.setup-z3 }}
+        name: Setup Z3
+        uses: cda-tum/setup-z3@v1
+        with:
+          version: ${{ inputs.z3-version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1
         with:
@@ -36,9 +51,14 @@ jobs:
         uses: rui314/setup-mold@v1
       - name: Run session
         run: pipx run nox -s tests-${{ inputs.python-version }} -- --cov --cov-report=xml
-      - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v3
+      - name: Upload coverage to Codecov
+        # Coverage uploads can be flaky, so we retry them a few times.
+        uses: Wandalen/wretry.action@v1.3.0
         with:
-          fail_ci_if_error: true
-          flags: python
-          token: ${{ secrets.token }}
+          action: codecov/codecov-action@v3
+          attempt_limit: 5
+          attempt_delay: 2000
+          with: |
+            fail_ci_if_error: true
+            flags: python
+            token: ${{ secrets.token }}
