@@ -2,12 +2,47 @@ name: 📝 • CodeQL
 
 on:
   workflow_call:
+    inputs:
+      cmake-args:
+        description: "Additional arguments to pass to CMake"
+        default: ""
+        type: string
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
+      build-time-dependencies:
+        description: "The build-time dependencies to install"
+        default: "nanobind scikit-build-core[pyproject] setuptools_scm pybind11"
+        type: string
+      enable-cpp:
+        description: "Whether to enable C++ analysis"
+        default: true
+        type: boolean
+      enable-python:
+        description: "Whether to enable Python analysis"
+        default: true
+        type: boolean
 
 jobs:
   analyze-cpp:
+    if: ${{ inputs.enable-cpp }}
     name: 🇨‌
     uses: ./.github/workflows/reusable-code-ql-cpp.yml
+    with:
+      cmake-args: ${{ inputs.cmake-args }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
 
   analyze-python:
+    if: ${{ inputs.enable-python }}
     name: 🐍
     uses: ./.github/workflows/reusable-code-ql-python.yml
+    with:
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
+      build-time-dependencies: ${{ inputs.build-time-dependencies }}

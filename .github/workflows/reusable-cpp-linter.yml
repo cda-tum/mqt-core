@@ -1,18 +1,41 @@
 name: 🇨 • Lint
 on:
   workflow_call:
+    inputs:
+      clang-version:
+        description: "Clang version to use"
+        default: 16
+        type: number
+      cmake-args:
+        description: "Additional arguments to pass to CMake"
+        default: ""
+        type: string
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
 
 jobs:
   lint:
     name: 🚨 Lint
     runs-on: ubuntu-latest
     env:
-      clang-version: 16
+      clang-version: ${{ inputs.clang-version }}
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-
+      - if: ${{ inputs.setup-z3 }}
+        name: Setup Z3
+        uses: cda-tum/setup-z3@v1
+        with:
+          version: ${{ inputs.z3-version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Install clang-${{ env.clang-version }}
         run: |
           sudo apt-get update
@@ -33,7 +56,7 @@ jobs:
           echo $CXX
           $CC --version
           $CXX --version
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug ${{ inputs.cmake-args }}
 
       - name: Run cpp-linter
         uses: cpp-linter/cpp-linter-action@v2
@@ -45,7 +68,7 @@ jobs:
           tidy-checks: ""
           version: ${{ env.clang-version }}
           ignore: "build|include/python|src/python"
-          thread-comments: true
+          thread-comments: ${{ github.event_name == 'pull_request' }}
           step-summary: true
           database: "build"
           extra-args: -std=c++17

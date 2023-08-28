@@ -1,17 +1,33 @@
 name: 🐍 • Lint
 on:
   workflow_call:
+    inputs:
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
 
 jobs:
   lint:
     name: 🚨 Lint
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch-depth: 0
+      - if: ${{ inputs.setup-z3 }}
+        name: Setup Z3
+        uses: cda-tum/setup-z3@v1
+        with:
+          version: ${{ inputs.z3-version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1
         with:
@@ -27,3 +43,6 @@ jobs:
         run: |
           echo "::add-matcher::${{ github.workspace }}/.github/matchers/pylint.json"
           pipx run nox -s pylint
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: mypy --all-files

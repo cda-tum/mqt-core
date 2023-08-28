@@ -61,8 +61,6 @@ linux_aarch64_wheels_task:
     architecture: arm64
     platform: linux
     cpu: 8
-  env:
-    CIBW_SKIP: "*-musllinux_*"
   setup_pyhton_script:
     - apt-get install -y python3-venv python-is-python3
   <<: *BUILD_AND_STORE_WHEELS

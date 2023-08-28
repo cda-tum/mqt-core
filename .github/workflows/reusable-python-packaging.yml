@@ -7,6 +7,14 @@ on:
         description: "The name of the Python package"
         required: true
         type: string
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
 
 jobs:
   build_sdist:
@@ -15,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
           fetch-depth: 0
       - name: Build SDist
         run: pipx run build --sdist
@@ -36,9 +44,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
           fetch-depth: 0
       - uses: ilammy/msvc-dev-cmd@v1
+      - if: ${{ inputs.setup-z3 }} && matrix.os != 'ubuntu-latest'
+        name: Setup Z3
+        uses: cda-tum/setup-z3@v1
+        with:
+          version: ${{ inputs.z3-version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - if: ${{ inputs.setup-z3 }} && matrix.os == 'ubuntu-latest'
+        name: Set environment variables for Z3 installation in manylinux image
+        run: |
+          echo "CIBW_BEFORE_ALL_LINUX=/opt/python/cp311-cp311/bin/pip install z3-solver==${{ inputs.z3-version }}" >> $GITHUB_ENV
       - if: matrix.os != 'ubuntu-latest'
         name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1
@@ -72,6 +91,10 @@ jobs:
           submodules: recursive
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
+      - if: ${{ inputs.setup-z3 }}
+        name: Set environment variables for Z3 installation in manylinux image
+        run: |
+          echo "CIBW_BEFORE_ALL_LINUX=/opt/python/cp311-cp311/bin/pip install z3-solver==${{ inputs.z3-version }}" >> $GITHUB_ENV
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.15
         env:

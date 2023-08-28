@@ -27,6 +27,10 @@ if(BUILD_MQT_CORE_BINDINGS)
   set(Python_FIND_VIRTUALENV
       FIRST
       CACHE STRING "Give precedence to virtualenvs when searching for Python")
+  # cmake-lint: disable=C0103
+  set(Python_ARTIFACTS_INTERACTIVE
+      ON
+      CACHE BOOL "Prevent multiple searches for Python and instead cache the results.")
   # top-level call to find Python
   find_package(
     Python 3.8 REQUIRED

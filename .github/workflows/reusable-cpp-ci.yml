@@ -5,6 +5,31 @@ on:
       token:
         description: "The token to use for Codecov"
         required: true
+    inputs:
+      cmake-args:
+        description: "Additional arguments to pass to CMake on every OS"
+        default: "-G Ninja"
+        type: string
+      cmake-args-ubuntu:
+        description: "Additional arguments to pass to CMake on Ubuntu"
+        default: ""
+        type: string
+      cmake-args-macos:
+        description: "Additional arguments to pass to CMake on macOS"
+        default: ""
+        type: string
+      cmake-args-windows:
+        description: "Additional arguments to pass to CMake on Windows"
+        default: ""
+        type: string
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
 
 jobs:
   cpp-tests-ubuntu:
@@ -16,6 +41,9 @@ jobs:
     uses: ./.github/workflows/reusable-cpp-tests-ubuntu.yml
     with:
       config: ${{ matrix.config }}
+      cmake-args: ${{ inputs.cmake-args }} ${{ inputs.cmake-args-ubuntu }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
 
   cpp-tests-macos:
     name: 🍎 ${{ matrix.config }}
@@ -26,6 +54,9 @@ jobs:
     uses: ./.github/workflows/reusable-cpp-tests-macos.yml
     with:
       config: ${{ matrix.config }}
+      cmake-args: ${{ inputs.cmake-args }} ${{ inputs.cmake-args-macos }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
 
   cpp-tests-windows:
     name: 🏁 ${{ matrix.config }}
@@ -36,9 +67,16 @@ jobs:
     uses: ./.github/workflows/reusable-cpp-tests-windows.yml
     with:
       config: ${{ matrix.config }}
+      cmake-args: ${{ inputs.cmake-args }} ${{ inputs.cmake-args-windows }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
 
   coverage:
     name: 📈
     uses: ./.github/workflows/reusable-cpp-coverage.yml
     secrets:
       token: ${{ secrets.token }}
+    with:
+      cmake-args: ${{ inputs.cmake-args }} ${{ inputs.cmake-args-ubuntu }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
