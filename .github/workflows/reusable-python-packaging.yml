@@ -3,10 +3,6 @@ name: 🐍 • Packaging
 on:
   workflow_call:
     inputs:
-      package-name:
-        description: "The name of the Python package"
-        required: true
-        type: string
       setup-z3:
         description: "Whether to set up Z3"
         default: false
@@ -104,20 +100,3 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
-
-  deploy:
-    if: github.event_name == 'release' && github.event.action == 'published'
-    name: 🚀 Deploy to PyPI
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/${{ inputs.package-name }}
-    permissions:
-      id-token: write
-    needs: [build_wheels, build_sdist, build_wheels_emulation]
-    steps:
-      - uses: actions/download-artifact@v3
-        with:
-          name: artifact
-          path: dist
-      - uses: pypa/gh-action-pypi-publish@release/v1
