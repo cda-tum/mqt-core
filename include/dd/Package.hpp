@@ -2109,6 +2109,7 @@ private:
   decreases each time to traverse the DDs.
   **/
   ComplexValue innerProduct(const vEdge& x, const vEdge& y, Qubit var) {
+    // TODO: Adapt to identities
     if (x.w.approximatelyZero() || y.w.approximatelyZero()) { // the 0 case
       return {0.0, 0.0};
     }
@@ -2779,7 +2780,6 @@ public:
   /// \return the complex amplitude of the specified element
   template <class Edge>
   ComplexValue getValueByPath(const Edge& e, const std::string& decisions) {
-    // TODO: this does not handle the identity yet
 
     if (e.isTerminal()) {
       return {RealNumber::val(e.w.r), RealNumber::val(e.w.i)};
@@ -2841,6 +2841,13 @@ public:
 
     return {RealNumber::val(c.r), RealNumber::val(c.i)};
   }
+
+  template <class Edge>
+  ComplexValue getValueByBitstring(const Edge& e, std::string& bitstring) {
+    std::reverse(bitstring.begin(), bitstring.end());
+    return getValueByPath(e, bitstring);
+  }
+
   ComplexValue getValueByIndex(const vEdge& e, std::size_t i) {
     std::size_t vectorHalf = 1U;
     if (!e.isTerminal()) {
