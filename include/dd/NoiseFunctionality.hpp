@@ -317,7 +317,9 @@ private:
   qc::DensityMatrixDD applyNoiseEffects(qc::DensityMatrixDD& originalEdge,
                                         const std::set<qc::Qubit>& usedQubits,
                                         bool firstPathEdge) {
-    if (originalEdge.isTerminal() || (!originalEdge.isTerminal() && originalEdge.p->v < *usedQubits.begin())) {
+    if (originalEdge.isTerminal() ||
+        (!originalEdge.isTerminal() &&
+         originalEdge.p->v < *usedQubits.begin())) {
       if (ComplexNumbers::isStaticComplex(originalEdge.w)) {
         return originalEdge;
       }
