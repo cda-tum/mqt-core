@@ -2844,6 +2844,9 @@ public:
 
   template <class Edge>
   ComplexValue getValueByBitstring(const Edge& e, std::string& bitstring) {
+    if (std::is_same_v<Edge, mEdge>) {
+      std::replace(bitstring.begin(), bitstring.end(), '1', '2');
+    }
     std::reverse(bitstring.begin(), bitstring.end());
     return getValueByPath(e, bitstring);
   }

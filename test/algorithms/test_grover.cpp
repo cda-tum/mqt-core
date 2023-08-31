@@ -71,13 +71,12 @@ TEST_P(Grover, Functionality) {
   qc->printStatistics(std::cout);
   auto x = '1' + qc->expected;
   std::reverse(x.begin(), x.end());
-  std::replace(x.begin(), x.end(), '1', '2');
 
   // there should be no error building the functionality
   ASSERT_NO_THROW({ func = buildFunctionality(qc.get(), dd); });
 
   // amplitude of the searched-for entry should be 1
-  auto c = dd->getValueByPath(func, x);
+  auto c = dd->getValueByBitstring(func, x);
   EXPECT_NEAR(std::abs(c.r), 1, GROVER_ACCURACY);
   EXPECT_NEAR(std::abs(c.i), 0, GROVER_ACCURACY);
   auto prob = c.r * c.r + c.i * c.i;
@@ -91,13 +90,12 @@ TEST_P(Grover, FunctionalityRecursive) {
   qc->printStatistics(std::cout);
   auto x = '1' + qc->expected;
   std::reverse(x.begin(), x.end());
-  std::replace(x.begin(), x.end(), '1', '2');
 
   // there should be no error building the functionality
   ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), dd); });
 
   // amplitude of the searched-for entry should be 1
-  auto c = dd->getValueByPath(func, x);
+  auto c = dd->getValueByBitstring(func, x);
   EXPECT_NEAR(std::abs(c.r), 1, GROVER_ACCURACY);
   EXPECT_NEAR(std::abs(c.i), 0, GROVER_ACCURACY);
   auto prob = c.r * c.r + c.i * c.i;
