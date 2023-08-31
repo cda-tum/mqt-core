@@ -11,7 +11,7 @@ protected:
 };
 
 INSTANTIATE_TEST_SUITE_P(
-    Entanglement, Entanglement, testing::Range<std::size_t>(2U, 90U, 7U),
+    Entanglement, Entanglement, testing::Range<std::size_t>(2U, 1024U, 7U),
     [](const testing::TestParamInfo<Entanglement::ParamType>& inf) {
       // Generate names for test cases
       const auto nqubits = inf.param;
