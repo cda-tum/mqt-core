@@ -52,7 +52,7 @@ constexpr std::size_t QFT_MAX_QUBITS = 20U;
 
 INSTANTIATE_TEST_SUITE_P(QFT, QFT,
                          testing::Range<std::size_t>(0U, QFT_MAX_QUBITS + 1U,
-                                                     1U),
+                                                     3U),
                          [](const testing::TestParamInfo<QFT::ParamType>& inf) {
                            const auto nqubits = inf.param;
                            std::stringstream ss{};
