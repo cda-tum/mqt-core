@@ -125,6 +125,26 @@ public:
                        [](const auto& sym) { return !sym.has_value(); });
   }
 
+  void addControls(const Controls& c) override {
+    for (auto ctrl : c) {
+      if (actsOn(ctrl.qubit)) {
+        throw QFRException(
+            "Cannot add control to operation as it already acts on "
+            "the control qubit.");
+      }
+
+      controls.insert(ctrl);
+    }
+  }
+
+  void clearControls() override { controls.clear(); }
+
+  void removeControls(const Controls& c) override {
+    for (auto ctrl : c) {
+      controls.erase(ctrl);
+    }
+  }
+
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override;
   [[nodiscard]] inline bool equals(const Operation& op) const override {

@@ -1937,3 +1937,133 @@ TEST_F(QFRFunctionality, dumpAndImportTeleportation) {
   ASSERT_EQ(qcImported.size(), 1);
   EXPECT_EQ(qcImported.at(0)->getType(), OpType::Teleportation);
 }
+
+TEST_F(QFRFunctionality, addControlStandardOperation) {
+  auto op = StandardOperation(2, Targets{0}, OpType::X);
+
+  op.addControl(Control{1, Control::Type::Pos});
+  op.addControl(Control{2, Control::Type::Pos});
+
+  ASSERT_EQ(op.getNcontrols(), 2);
+  auto expectedControls =
+      Controls{Control{1, Control::Type::Pos}, Control{2, Control::Type::Pos}};
+  EXPECT_EQ(op.getControls(), expectedControls);
+  op.removeControl(Control{1, Control::Type::Pos});
+  auto expectedControlsAfterRemove = Controls{Control{2, Control::Type::Pos}};
+  EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
+  op.clearControls();
+  EXPECT_EQ(op.getNcontrols(), 0);
+}
+
+TEST_F(QFRFunctionality, addControlSymbolicOperation) {
+  auto op = SymbolicOperation(2, Targets{0}, OpType::X);
+
+  op.addControl(Control{1, Control::Type::Pos});
+  op.addControl(Control{2, Control::Type::Pos});
+
+  ASSERT_EQ(op.getNcontrols(), 2);
+  auto expectedControls =
+      Controls{Control{1, Control::Type::Pos}, Control{2, Control::Type::Pos}};
+  EXPECT_EQ(op.getControls(), expectedControls);
+  op.removeControl(Control{1, Control::Type::Pos});
+  auto expectedControlsAfterRemove = Controls{Control{2, Control::Type::Pos}};
+  EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
+  op.clearControls();
+  EXPECT_EQ(op.getNcontrols(), 0);
+}
+
+TEST_F(QFRFunctionality, addControlClassicControlledOperation) {
+  std::unique_ptr<Operation> xp =
+      std::make_unique<StandardOperation>(1U, 0, qc::X);
+  const auto controlRegister = qc::QuantumRegister{0, 1U};
+  const auto expectedValue = 0U;
+  auto op = ClassicControlledOperation(xp, controlRegister, expectedValue);
+
+  op.addControl(Control{1, Control::Type::Pos});
+  op.addControl(Control{2, Control::Type::Pos});
+
+  ASSERT_EQ(op.getNcontrols(), 2);
+  auto expectedControls =
+      Controls{Control{1, Control::Type::Pos}, Control{2, Control::Type::Pos}};
+  EXPECT_EQ(op.getControls(), expectedControls);
+  op.removeControl(Control{1, Control::Type::Pos});
+  auto expectedControlsAfterRemove = Controls{Control{2, Control::Type::Pos}};
+  EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
+  op.clearControls();
+  EXPECT_EQ(op.getNcontrols(), 0);
+}
+
+TEST_F(QFRFunctionality, addControlCompundOperation) {
+  auto op = CompoundOperation(4);
+
+  auto control0 = Control{0, Control::Type::Pos};
+  auto control1 = Control{1, Control::Type::Pos};
+
+  auto xOp = std::make_unique<StandardOperation>(4, Targets{1}, OpType::X);
+  auto cxOp = std::make_unique<StandardOperation>(4, Targets{3}, OpType::X);
+  cxOp->addControl(control1);
+
+  op.emplace_back(xOp);
+  op.emplace_back(cxOp);
+
+  op.addControl(control0);
+
+  ASSERT_EQ(op.getOps()[0]->getNcontrols(), 1);
+  ASSERT_EQ(op.getOps()[1]->getNcontrols(), 2);
+
+  op.clearControls();
+
+  ASSERT_EQ(op.getOps()[0]->getNcontrols(), 0);
+  ASSERT_EQ(op.getOps()[1]->getNcontrols(), 1);
+  ASSERT_EQ(*op.getOps()[1]->getControls().begin(), control1);
+  EXPECT_THROW(op.removeControl(control0), QFRException);
+}
+
+TEST_F(QFRFunctionality, addControlTwice) {
+  Control const control{0, Control::Type::Pos};
+
+  std::unique_ptr<Operation> op =
+      std::make_unique<StandardOperation>(2, Targets{1}, OpType::X);
+  op->addControl(control);
+  EXPECT_THROW(op->addControl(control), QFRException);
+
+  auto classicControlledOp =
+      ClassicControlledOperation(op, qc::QuantumRegister{0, 1U}, 0U);
+  EXPECT_THROW(classicControlledOp.addControl(control), QFRException);
+
+  auto symbolicOp = SymbolicOperation(2, Targets{1}, OpType::X);
+  symbolicOp.addControl(control);
+  EXPECT_THROW(symbolicOp.addControl(control), QFRException);
+}
+
+TEST_F(QFRFunctionality, addTargetAsControl) {
+  // Adding a control that is already a target
+  Control const control{1, Control::Type::Pos};
+
+  std::unique_ptr<Operation> op =
+      std::make_unique<StandardOperation>(2, Targets{1}, OpType::X);
+  EXPECT_THROW(op->addControl(control), QFRException);
+
+  auto classicControlledOp =
+      ClassicControlledOperation(op, qc::QuantumRegister{0, 1U}, 0U);
+  EXPECT_THROW(classicControlledOp.addControl(control), QFRException);
+
+  auto symbolicOp = SymbolicOperation(2, Targets{1}, OpType::X);
+  EXPECT_THROW(symbolicOp.addControl(control), QFRException);
+}
+
+TEST_F(QFRFunctionality, addControlCompundOperationInvalid) {
+  auto op = CompoundOperation(4);
+
+  auto control1 = Control{1, Control::Type::Pos};
+
+  auto xOp = std::make_unique<StandardOperation>(4, Targets{1}, OpType::X);
+  auto cxOp = std::make_unique<StandardOperation>(4, Targets{3}, OpType::X);
+  cxOp->addControl(control1);
+
+  op.emplace_back(xOp);
+  op.emplace_back(cxOp);
+
+  ASSERT_THROW(op.addControl(control1), QFRException);
+  ASSERT_THROW(op.addControl(Control{1}), QFRException);
+}

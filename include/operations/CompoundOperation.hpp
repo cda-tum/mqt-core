@@ -54,6 +54,36 @@ public:
     });
   }
 
+  void addControls(const Controls& c) override {
+    for (auto ctrl : c) {
+      controls.insert(ctrl);
+    }
+    // we can just add the controls to each operation, as the operations will
+    // check if they already act on the control qubits.
+    for (auto& op : ops) {
+      op->addControls(c);
+    }
+  }
+
+  void clearControls() override {
+    // we remove just our controls from nested operations
+    removeControls(Controls{controls});
+  }
+
+  void removeControls(const Controls& c) override {
+    // first we iterate over our controls and check if we are actually allowed
+    // to remove them
+    for (const auto& ctrl : c) {
+      if (controls.erase(ctrl) == 0) {
+        throw QFRException("Cannot remove control from compound operation.");
+      }
+    }
+
+    for (auto& op : ops) {
+      op->removeControls(c);
+    }
+  }
+
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override {
     if (const auto* comp = dynamic_cast<const CompoundOperation*>(&op)) {

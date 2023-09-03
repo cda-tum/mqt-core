@@ -95,9 +95,9 @@ void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
       dag.at(control).pop_back();
       dag.at(target).pop_back();
       (*opC)->setGate(I);
-      (*opC)->setControls({});
+      (*opC)->clearControls();
       it->setGate(I);
-      it->setControls({});
+      it->clearControls();
     } else if (control == opCtarget && target == opCcontrol) {
       dag.at(control).pop_back();
       dag.at(target).pop_back();
@@ -109,7 +109,7 @@ void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
       } else {
         (*opC)->setTargets({target, control});
       }
-      (*opC)->setControls({});
+      (*opC)->clearControls();
       addToDag(dag, opC);
 
       it->setTargets({control});
@@ -1257,9 +1257,9 @@ void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
         dag.at(q0).pop_back();
         dag.at(q1).pop_back();
         op0->setGate(I);
-        op0->setControls({});
+        op0->clearControls();
         it->setGate(I);
-        it->setControls({});
+        it->clearControls();
       } else {
         // two CNOTs with alternating controls and targets
         // check whether there is a third one which would make this a SWAP gate
@@ -1297,16 +1297,16 @@ void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
         if (q0 == prevPrevQ0 && q1 == prevPrevQ1) {
           // SWAP gate identified
           prevPrevOp0->setGate(SWAP);
-          prevPrevOp0->setControls({});
+          prevPrevOp0->clearControls();
           if (prevQ0 > prevQ1) {
             prevPrevOp0->setTargets({prevQ1, prevQ0});
           } else {
             prevPrevOp0->setTargets({prevQ0, prevQ1});
           }
           op0->setGate(I);
-          op0->setControls({});
+          op0->clearControls();
           it->setGate(I);
-          it->setControls({});
+          it->clearControls();
           dag.at(q0).pop_back();
           dag.at(q1).pop_back();
         } else {
@@ -1323,9 +1323,9 @@ void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
         dag.at(q0).pop_back();
         dag.at(q1).pop_back();
         op0->setGate(I);
-        op0->setControls({});
+        op0->clearControls();
         it->setGate(I);
-        it->setControls({});
+        it->clearControls();
       } else {
         addToDag(dag, &it);
       }
@@ -1335,21 +1335,21 @@ void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
     if (isCNOT && prevOpIsSWAP) {
       // SWAP followed by a CNOT is equivalent to two CNOTs
       op0->setGate(X);
-      op0->setControls({Control{q1}});
       op0->setTargets({q0});
-      it->setControls({Control{q0}});
+      op0->setControls({Control{q1}});
       it->setTargets({q1});
+      it->setControls({Control{q0}});
       addToDag(dag, &it);
       continue;
     }
 
     if (isSWAP && prevOpIsCNOT) {
       // CNOT followed by a SWAP is equivalent to two CNOTs
-      op0->setControls({Control{prevQ0}});
       op0->setTargets({prevQ1});
+      op0->setControls({Control{prevQ0}});
       it->setGate(X);
-      it->setControls({Control{prevQ1}});
       it->setTargets({prevQ0});
+      it->setControls({Control{prevQ1}});
       addToDag(dag, &it);
       continue;
     }

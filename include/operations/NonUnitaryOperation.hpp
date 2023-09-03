@@ -40,6 +40,19 @@ public:
   std::vector<Bit>& getClassics() { return classics; }
   [[nodiscard]] size_t getNclassics() const { return classics.size(); }
 
+  void addControls(const Controls& /*c*/) override {
+    throw QFRException("Cannot add controls to non-unitary operation.");
+  }
+
+  void clearControls() override {
+    throw QFRException("Cannot clear controls from non-unitary operation.");
+  }
+
+
+  void removeControls(const Controls& /*c*/) override {
+    throw QFRException("Cannot remove controls from non-unitary operation.");
+  }
+
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override;
   [[nodiscard]] bool equals(const Operation& operation) const override {

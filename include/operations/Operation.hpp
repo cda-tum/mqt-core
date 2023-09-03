@@ -88,7 +88,20 @@ public:
 
   virtual void setTargets(const Targets& t) { targets = t; }
 
-  virtual void setControls(const Controls& c) { controls = c; }
+  virtual void setControls(const Controls& c) {
+    clearControls();
+    addControls(c);
+  }
+
+  virtual void addControl(const Control c) { addControls({c}); }
+
+  virtual void addControls(const Controls& c) = 0;
+
+  virtual void clearControls() = 0;
+
+  virtual void removeControl(const Control c) { removeControls({c}); }
+
+  virtual void removeControls(const Controls& c) = 0;
 
   virtual void setName();
 

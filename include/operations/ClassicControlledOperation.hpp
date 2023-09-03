@@ -63,7 +63,7 @@ public:
   Controls& getControls() override { return op->getControls(); }
 
   [[nodiscard]] std::size_t getNcontrols() const override {
-    return controls.size();
+    return op->getNcontrols();
   }
 
   [[nodiscard]] bool isUnitary() const override { return false; }
@@ -73,6 +73,12 @@ public:
   }
 
   [[nodiscard]] bool actsOn(Qubit i) const override { return op->actsOn(i); }
+
+  void addControls(const Controls& c) override { op->addControls(c); }
+
+  void clearControls() override { op->clearControls(); }
+
+  void removeControls(const Controls& c) override { op->removeControls(c); }
 
   [[nodiscard]] bool equals(const Operation& operation,
                             const Permutation& perm1,
