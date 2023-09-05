@@ -1908,7 +1908,8 @@ private:
               // Pseudo-identity inserted
             } else if (x.p->v < var) {
               e1 = xCopy;
-              if (std::is_same_v<LeftOperandNode, mNode> && (rows * i + k == 1 || rows * i + k == 2)) {
+              if (std::is_same_v<LeftOperandNode, mNode> &&
+                  (rows * i + k == 1 || rows * i + k == 2)) {
                 e1.w = Complex::zero;
               }
             }
@@ -1920,7 +1921,8 @@ private:
               // Pseudo-identity inserted
             } else if (y.p->v < var) {
               e2 = yCopy;
-              if (std::is_same_v<RightOperandNode, mNode> && (j + cols * k == 1 || j + cols * k == 2)) {
+              if (std::is_same_v<RightOperandNode, mNode> &&
+                  (j + cols * k == 1 || j + cols * k == 2)) {
                 e2.w = Complex::zero;
               }
             }
@@ -1928,7 +1930,8 @@ private:
           } else if ((x.isTerminal() && !y.isTerminal()) && var == y.p->v) {
             // x has already reached terminal, pseudo-identity inserted
             e1 = xCopy;
-            if (std::is_same_v<LeftOperandNode, mNode> && (rows * i + k == 1 || rows * i + k == 2)) {
+            if (std::is_same_v<LeftOperandNode, mNode> &&
+                (rows * i + k == 1 || rows * i + k == 2)) {
               e1.w = Complex::zero;
             }
             e2 = y.p->e[j + cols * k];
@@ -1936,17 +1939,20 @@ private:
             // y has already reached terminal, pseudo-identity inserted
             e1 = x.p->e[rows * i + k];
             e2 = yCopy;
-            if (std::is_same_v<RightOperandNode, mNode> && (j + cols * k == 1 || j + cols * k == 2)) {
+            if (std::is_same_v<RightOperandNode, mNode> &&
+                (j + cols * k == 1 || j + cols * k == 2)) {
               e2.w = Complex::zero;
             }
           } else {
             // Both have identities at this level
             e1 = xCopy;
-            if (std::is_same_v<LeftOperandNode, mNode> && (rows * i + k == 1 || rows * i + k == 2)) {
+            if (std::is_same_v<LeftOperandNode, mNode> &&
+                (rows * i + k == 1 || rows * i + k == 2)) {
               e1.w = Complex::zero;
             }
             e2 = yCopy;
-            if (std::is_same_v<RightOperandNode, mNode> && (j + cols * k == 1 || j + cols * k == 2)) {
+            if (std::is_same_v<RightOperandNode, mNode> &&
+                (j + cols * k == 1 || j + cols * k == 2)) {
               e2.w = Complex::zero;
             }
           }
