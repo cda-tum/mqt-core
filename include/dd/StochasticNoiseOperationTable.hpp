@@ -35,27 +35,25 @@ public:
     ++count;
   }
 
-  Edge lookup(std::uint8_t kind, qc::Qubit target) {
+  Edge* lookup(std::uint8_t kind, qc::Qubit target) {
     assert(kind <
            numberOfStochasticOperations); // There are new operations in OpType.
                                           // Increase the value of
                                           // numberOfOperations accordingly
     lookups++;
-    Edge r{};
-    auto entry = table.at(target).at(kind);
-    if (entry.p == nullptr) {
+    Edge* r = nullptr;
+    auto& entry = table.at(target).at(kind);
+    if (entry.w.r == nullptr) {
       return r;
     }
     hits++;
-    return entry;
+    return &entry;
   }
 
   void clear() {
     if (count > 0) {
-      for (auto& tableRow : table) {
-        for (auto& entry : tableRow) {
-          entry.p = nullptr;
-        }
+      for (auto& t : table) {
+        std::fill(t.begin(), t.end(), Edge{});
       }
       count = 0;
     }

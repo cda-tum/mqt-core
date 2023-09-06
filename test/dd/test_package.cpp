@@ -1295,12 +1295,11 @@ TEST(DDPackageTest, dStochCache) {
 
   for (std::uint8_t i = 0; i < 4; i++) {
     for (dd::Qubit j = 0; j < 4; j++) {
+      const auto* op = dd->stochasticNoiseOperationCache.lookup(i, j);
       if (static_cast<dd::Qubit>(i) == j) {
-        auto op = dd->stochasticNoiseOperationCache.lookup(i, j);
-        EXPECT_TRUE(op.p != nullptr && op.p == operations[i].p);
+        EXPECT_TRUE(op != nullptr && op->p == operations[i].p);
       } else {
-        auto op = dd->stochasticNoiseOperationCache.lookup(i, j);
-        EXPECT_EQ(op.p, nullptr);
+        EXPECT_EQ(op, nullptr);
       }
     }
   }
@@ -1308,8 +1307,8 @@ TEST(DDPackageTest, dStochCache) {
   dd->stochasticNoiseOperationCache.clear();
   for (std::uint8_t i = 0; i < 4; i++) {
     for (dd::Qubit j = 0; j < 4; j++) {
-      auto op = dd->stochasticNoiseOperationCache.lookup(i, j);
-      EXPECT_EQ(op.p, nullptr);
+      auto* op = dd->stochasticNoiseOperationCache.lookup(i, j);
+      EXPECT_EQ(op, nullptr);
     }
   }
 }
