@@ -1580,10 +1580,7 @@ public:
       }
       return r;
     }
-    // TODO: Add check that both are vectors or both matrices
-    // TODO: Remove copies
-    auto xCopy = Edge<Node>{x.p, Complex::one};
-    auto yCopy = Edge<Node>{y.p, Complex::one};
+
     auto& computeTable = getAddComputeTable<Node>();
     if (const auto* r = computeTable.lookup({x.p, x.w}, {y.p, y.w});
         r != nullptr) {
@@ -1596,65 +1593,40 @@ public:
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
     std::array<Edge<Node>, n> edge{};
     for (std::size_t i = 0U; i < n; i++) {
-      Edge<Node> e1{};
-      Edge<Node> e2{};
+      if constexpr (std::is_same_v<Node, vNode>) {
+        assert(!x.isTerminal() && "x must not be terminal");
+        assert(!y.isTerminal() && "y must not be terminal");
+        assert(x.p->v == y.p->v && "x and y must be at the same level");
+      }
 
-      if (!x.isTerminal() && !y.isTerminal()) {
-        // Node is at correct level
-        if (x.p->v == var) {
-          e1 = x.p->e[i];
-          // Else if's should only be accessible for matrix addition
-        } else if (x.p->v > var) {
-          e1 = xCopy;
-        } else if (x.p->v < var) {
-          e1 = xCopy;
-          if (n == 4 && (i == 1 || i == 2)) {
-            e1.w = Complex::zero;
-          }
-        }
-
-        // Node is at correct level
-        if (y.p->v == var) {
-          e2 = y.p->e[i];
-          // Else if's should only be accessible for matrix addition
-        } else if (y.p->v > var) {
-          e2 = yCopy;
-        } else if (y.p->v < var) {
-          e2 = yCopy;
-          if (n == 4 && (i == 1 || i == 2)) {
-            e2.w = Complex::zero;
-          }
-        }
-      } else if ((x.isTerminal() && !y.isTerminal()) && var == y.p->v) {
-        // x has already reached terminal, pseudo-identity inserted
-        e1 = xCopy;
-        if (n == 4 && (i == 1 || i == 2)) {
-          e1.w = Complex::zero;
-        }
-        e2 = y.p->e[i];
-      } else if ((!x.isTerminal() && y.isTerminal()) && var == x.p->v) {
-        // y has already reached terminal, pseudo-identity inserted
-        e1 = x.p->e[i];
-        e2 = yCopy;
-        if (n == 4 && (i == 1 || i == 2)) {
-          e2.w = Complex::zero;
+      auto e1 = Edge<Node>::zero;
+      if (x.isIdentity() || x.p->v < var) {
+        // [ 0 | 1 ]   [ x | 0 ]
+        // --------- = ---------
+        // [ 2 | 3 ]   [ 0 | x ]
+        if (i == 0 || i == 3) {
+          e1 = x;
         }
       } else {
-        // Both have identities at this level
-        e1 = xCopy;
-        if (n == 4 && (i == 1 || i == 2)) {
-          e1.w = Complex::zero;
-        }
-        e2 = yCopy;
-        if (n == 4 && (i == 1 || i == 2)) {
-          e2.w = Complex::zero;
+        e1 = x.p->e[i];
+        if (!e1.w.exactlyZero()) {
+          e1.w = cn.mulCached(e1.w, x.w);
         }
       }
-      if (!e1.w.exactlyZero()) {
-        e1.w = cn.mulCached(e1.w, x.w);
-      }
-      if (!e2.w.exactlyZero()) {
-        e2.w = cn.mulCached(e2.w, y.w);
+
+      Edge<Node> e2 = Edge<Node>::zero;
+      if (y.isIdentity() || y.p->v < var) {
+        // [ 0 | 1 ]   [ y | 0 ]
+        // --------- = ---------
+        // [ 2 | 3 ]   [ 0 | y ]
+        if (i == 0 || i == 3) {
+          e2 = y;
+        }
+      } else {
+        e2 = y.p->e[i];
+        if (!e2.w.exactlyZero()) {
+          e2.w = cn.mulCached(e2.w, y.w);
+        }
       }
 
       if constexpr (std::is_same_v<Node, dNode>) {
@@ -1665,11 +1637,10 @@ public:
         edge[i] = add2(e1, e2, var - 1);
       }
 
-      if (!x.isZeroTerminal()) {
+      if (!x.isTerminal() && x.p->v == var) {
         cn.returnToCache(e1.w);
       }
-
-      if (!y.isZeroTerminal()) {
+      if (!y.isTerminal() && y.p->v == var) {
         cn.returnToCache(e2.w);
       }
     }
@@ -1858,10 +1829,6 @@ private:
       }
     }
 
-    if (x.isTerminal() && y.isTerminal()) {
-      return ResultEdge::terminal(cn.mulCached(x.w, y.w));
-    }
-
     auto xCopy = LEdge{x.p, Complex::one};
     auto yCopy = REdge{y.p, Complex::one};
 
@@ -1897,66 +1864,29 @@ private:
           LEdge e1{};
           REdge e2{};
 
-          // Check if either is a terminal
-          if (!x.isTerminal() && !y.isTerminal()) {
-            // Nodes are at correct level and can be multiplied
-            if (x.p->v == var) {
-              e1 = x.p->e[rows * i + k];
-              // Hold x at current level until we reach correct level var
-            } else if (x.p->v > var) {
-              e1 = xCopy;
-              // Pseudo-identity inserted
-            } else if (x.p->v < var) {
-              e1 = xCopy;
-              if (std::is_same_v<LeftOperandNode, mNode> &&
-                  (rows * i + k == 1 || rows * i + k == 2)) {
-                e1.w = Complex::zero;
-              }
-            }
-            if (y.p->v == var) {
-              e2 = y.p->e[j + cols * k];
-              // Hold y at current level until we reach correct level var
-            } else if (y.p->v > var) {
-              e2 = yCopy;
-              // Pseudo-identity inserted
-            } else if (y.p->v < var) {
-              e2 = yCopy;
-              if (std::is_same_v<RightOperandNode, mNode> &&
-                  (j + cols * k == 1 || j + cols * k == 2)) {
-                e2.w = Complex::zero;
-              }
-            }
-
-          } else if ((x.isTerminal() && !y.isTerminal()) && var == y.p->v) {
-            // x has already reached terminal, pseudo-identity inserted
-            e1 = xCopy;
-            if (std::is_same_v<LeftOperandNode, mNode> &&
-                (rows * i + k == 1 || rows * i + k == 2)) {
-              e1.w = Complex::zero;
-            }
-            e2 = y.p->e[j + cols * k];
-          } else if ((!x.isTerminal() && y.isTerminal()) && var == x.p->v) {
-            // y has already reached terminal, pseudo-identity inserted
-            e1 = x.p->e[rows * i + k];
-            e2 = yCopy;
-            if (std::is_same_v<RightOperandNode, mNode> &&
-                (j + cols * k == 1 || j + cols * k == 2)) {
-              e2.w = Complex::zero;
-            }
+          const auto xIdx = rows * i + k;
+          if (x.p->v == var) {
+            e1 = x.p->e[xIdx];
           } else {
-            // Both have identities at this level
-            e1 = xCopy;
-            if (std::is_same_v<LeftOperandNode, mNode> &&
-                (rows * i + k == 1 || rows * i + k == 2)) {
-              e1.w = Complex::zero;
-            }
-            e2 = yCopy;
-            if (std::is_same_v<RightOperandNode, mNode> &&
-                (j + cols * k == 1 || j + cols * k == 2)) {
-              e2.w = Complex::zero;
+            if (xIdx == 0 || xIdx == 3) {
+              e1 = xCopy;
+            } else {
+              e1 = LEdge::zero;
             }
           }
 
+          const auto yIdx = j + cols * k;
+          if (y.p->v == var) {
+            e2 = y.p->e[yIdx];
+          } else {
+            if (yIdx == 0 || yIdx == 3) {
+              e2 = yCopy;
+            } else {
+              e2 = REdge::zero;
+            }
+          }
+
+          const auto v = static_cast<Qubit>(var - 1);
           if constexpr (std::is_same_v<LeftOperandNode, dNode>) {
             dEdge m;
             dEdge::applyDmChangesToEdges(e1, e2);
@@ -1964,7 +1894,7 @@ private:
               // When generateDensityMatrix is false or I have the first edge I
               // don't optimize anything and set generateDensityMatrix to false
               // for all child edges
-              m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start, false);
+              m = multiply2(e1, e2, v, start, false);
             } else if (idx == 2) {
               // When I have the second edge and generateDensityMatrix == false,
               // then edge[2] == edge[1]
@@ -1977,8 +1907,7 @@ private:
               }
               continue;
             } else {
-              m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start,
-                            generateDensityMatrix);
+              m = multiply2(e1, e2, v, start, generateDensityMatrix);
             }
 
             if (k == 0 || edge[idx].w.exactlyZero()) {
@@ -1994,13 +1923,13 @@ private:
             // Undo modifications on density matrices
             dEdge::revertDmChangesToEdges(e1, e2);
           } else {
-            auto m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start);
+            auto m = multiply2(e1, e2, v, start);
 
             if (k == 0 || edge[idx].w.exactlyZero()) {
               edge[idx] = m;
             } else if (!m.w.exactlyZero()) {
               const auto w = edge[idx].w;
-              edge[idx] = add2(edge[idx], m, var);
+              edge[idx] = add2(edge[idx], m, v);
               cn.returnToCache(w);
               cn.returnToCache(m.w);
             }
