@@ -32,7 +32,7 @@ jobs:
       CTEST_PARALLEL_LEVEL: 3
       FORCE_COLOR: 3
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - uses: ilammy/msvc-dev-cmd@v1
