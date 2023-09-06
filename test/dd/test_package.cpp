@@ -1478,6 +1478,20 @@ TEST(DDPackageTest, DDFromTwoQubitMatrix) {
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
 
+TEST(DDPackageTest, DDFromTwoQubitAsymmetricalMatrix) {
+  const auto inputMatrix = dd::CMat{{dd::SQRT2_2, dd::SQRT2_2, 0, 0},
+                                    {-dd::SQRT2_2, dd::SQRT2_2, 0, 0},
+                                    {0, 0, dd::SQRT2_2, -dd::SQRT2_2},
+                                    {0, 0, dd::SQRT2_2, dd::SQRT2_2}};
+
+  const auto nrQubits = 2U;
+  const auto dd = std::make_unique<dd::Package<>>(nrQubits);
+  const auto matDD = dd->makeDDFromMatrix(inputMatrix);
+  const auto outputMatrix = dd->getMatrix(matDD);
+
+  EXPECT_EQ(inputMatrix, outputMatrix);
+}
+
 TEST(DDPackageTest, DDFromThreeQubitMatrix) {
   const auto inputMatrix =
       dd::CMat{{1, 0, 0, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0, 0, 0},
