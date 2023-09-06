@@ -1167,9 +1167,9 @@ private:
       assert(colEnd - colStart == 2);
       const auto w0 = cn.getCached(matrix[rowStart][colStart]);
       const auto e0 = mEdge{mNode::getTerminal(), w0};
-      const auto w1 = cn.getCached(matrix[rowStart + 1][colStart]);
+      const auto w1 = cn.getCached(matrix[rowStart][colStart + 1]);
       const auto e1 = mEdge{mNode::getTerminal(), w1};
-      const auto w2 = cn.getCached(matrix[rowStart][colStart + 1]);
+      const auto w2 = cn.getCached(matrix[rowStart + 1][colStart]);
       const auto e2 = mEdge{mNode::getTerminal(), w2};
       const auto w3 = cn.getCached(matrix[rowStart + 1][colStart + 1]);
       const auto e3 = mEdge{mNode::getTerminal(), w3};
