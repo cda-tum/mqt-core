@@ -26,7 +26,7 @@ jobs:
       run-python-tests: ${{ steps.python-tests-changes.outputs.run-python-tests || false }}
       run-code-ql: ${{ steps.code-ql-changes.outputs.run-code-ql || false }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Get a list of the changed files relevant for the C++ tests
         if: github.event_name == 'pull_request'
         id: changed-cpp-testable-files
