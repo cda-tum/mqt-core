@@ -1479,11 +1479,10 @@ TEST(DDPackageTest, DDFromTwoQubitMatrix) {
 }
 
 TEST(DDPackageTest, DDFromTwoQubitAsymmetricalMatrix) {
-  const auto inputMatrix =
-    dd::CMat {{dd::SQRT2_2, dd::SQRT2_2, 0, 0},
-              {-dd::SQRT2_2, dd::SQRT2_2, 0, 0},
-              {0, 0, dd::SQRT2_2, -dd::SQRT2_2},
-              {0, 0, dd::SQRT2_2, dd::SQRT2_2}};
+  const auto inputMatrix = dd::CMat{{dd::SQRT2_2, dd::SQRT2_2, 0, 0},
+                                    {-dd::SQRT2_2, dd::SQRT2_2, 0, 0},
+                                    {0, 0, dd::SQRT2_2, -dd::SQRT2_2},
+                                    {0, 0, dd::SQRT2_2, dd::SQRT2_2}};
 
   const auto nrQubits = 2U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
