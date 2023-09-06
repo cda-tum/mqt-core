@@ -135,6 +135,7 @@ public:
   }
 
   virtual void addDepthContribution(std::vector<std::size_t>& depths) const;
+  virtual void addTQDepthContribution(std::vector<std::size_t>& depths) const;
 
   [[nodiscard]] virtual bool equals(const Operation& op,
                                     const Permutation& perm1,

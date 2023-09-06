@@ -249,4 +249,28 @@ void Operation::addDepthContribution(std::vector<std::size_t>& depths) const {
   }
 }
 
+void Operation::addTQDepthContribution(std::vector<std::size_t>& depths) const {
+  if (type == Barrier) {
+    return;
+  }
+
+  std::size_t maxDepth = 0;
+  for (const auto& target : getTargets()) {
+    maxDepth = std::max(maxDepth, depths[target]);
+  }
+  for (const auto& control : getControls()) {
+    maxDepth = std::max(maxDepth, depths[control.qubit]);
+  }
+
+  if (!getControls().empty()) {
+    maxDepth += 1;
+    for (const auto& target : getTargets()) {
+      depths[target] = maxDepth;
+    }
+    for (const auto& control : getControls()) {
+      depths[control.qubit] = maxDepth;
+    }
+  }
+}
+
 } // namespace qc
