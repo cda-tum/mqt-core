@@ -76,7 +76,6 @@ public:
     mUniqueTable.resize(nqubits);
     dUniqueTable.resize(nqubits);
     stochasticNoiseOperationCache.resize(nqubits);
-    idTable.resize(nqubits);
   }
 
   // reset package state
@@ -265,7 +264,6 @@ public:
       matrixKronecker.clear();
       matrixVectorMultiplication.clear();
       matrixMatrixMultiplication.clear();
-      clearIdentityTable();
       stochasticNoiseOperationCache.clear();
       densityAdd.clear();
       densityDensityMultiplication.clear();
@@ -1266,9 +1264,6 @@ public:
     vectorInnerProduct.clear();
     vectorKronecker.clear();
     matrixKronecker.clear();
-
-    clearIdentityTable();
-
     stochasticNoiseOperationCache.clear();
     densityAdd.clear();
     densityDensityMultiplication.clear();
@@ -2374,22 +2369,10 @@ public:
   // create n-qubit identity DD represented by the one-terminal.
   mEdge makeIdent() { return mEdge::one; }
 
-  // identity table access and reset
-  [[nodiscard]] const auto& getIdentityTable() const { return idTable; }
-
-  void clearIdentityTable() {
-    for (auto& entry : idTable) {
-      entry.p = nullptr;
-    }
-  }
-
   mEdge createInitialMatrix(const std::vector<bool>& ancillary) {
     auto e = makeIdent();
     return reduceAncillae(e, ancillary);
   }
-
-private:
-  std::vector<mEdge> idTable{};
 
   ///
   /// Noise Operations
