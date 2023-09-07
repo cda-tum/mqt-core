@@ -4,6 +4,7 @@
 #include "dd/Node.hpp"
 
 #include <array>
+#include <bitset>
 #include <cstddef>
 #include <iostream>
 #include <utility>
@@ -44,6 +45,7 @@ public:
               const RightOperandType& rightOperand, const ResultType& result) {
     const auto key = hash(leftOperand, rightOperand);
     table[key] = {leftOperand, rightOperand, result};
+    valid.set(key);
     ++count;
   }
 
@@ -53,6 +55,10 @@ public:
     ResultType* result = nullptr;
     lookups++;
     const auto key = hash(leftOperand, rightOperand);
+    if (!valid[key]) {
+      return result;
+    }
+
     auto& entry = table[key];
     if (entry.leftOperand != leftOperand) {
       return result;
@@ -77,7 +83,7 @@ public:
 
   void clear() {
     if (count > 0) {
-      std::fill(table.begin(), table.end(), Entry{});
+      valid.reset();
       count = 0;
     }
   }
@@ -99,6 +105,7 @@ public:
 
 private:
   std::array<Entry, NBUCKET> table{};
+  std::bitset<NBUCKET> valid{};
   // compute table lookup statistics
   std::size_t hits = 0;
   std::size_t lookups = 0;
