@@ -2086,3 +2086,129 @@ TEST_F(QFRFunctionality, addControlCompundOperationInvalid) {
   ASSERT_THROW(op.addControl(control1), QFRException);
   ASSERT_THROW(op.addControl(Control{1}), QFRException);
 }
+
+TEST_F(QFRFunctionality, invertUnsupportedOperation) {
+  auto op = NonUnitaryOperation(1U, 0U, OpType::Measure);
+
+  ASSERT_THROW(op.invert(), QFRException);
+}
+
+TEST_F(QFRFunctionality, invertStandardOpSelfInverting) {
+  const auto opTypes = {
+      OpType::I, OpType::X, OpType::Y, OpType::Z, OpType::H, OpType::SWAP,
+  };
+
+  for (auto opType : opTypes) {
+    auto op = StandardOperation(1U, 0U, opType);
+    op.invert();
+    ASSERT_EQ(op.getType(), opType);
+  }
+}
+
+TEST_F(QFRFunctionality, invertStandardOpInvertClone) {
+  auto op1 = StandardOperation(1U, 0U, S);
+  auto op2 = op1.getInverted();
+  ASSERT_EQ(op1.getType(), S);
+  ASSERT_EQ(op2->getType(), Sdag);
+}
+
+TEST_F(QFRFunctionality, invertStandardOpSpecial) {
+  const auto opTypes = {
+      std::pair{S, Sdag},   std::pair{T, Tdag},         std::pair{V, Vdag},
+      std::pair{SX, SXdag}, std::pair{Peres, Peresdag},
+  };
+
+  for (const auto& [opType, opTypeInv] : opTypes) {
+    auto op = StandardOperation(1U, 0U, opType);
+    op.invert();
+    ASSERT_EQ(op.getType(), opTypeInv);
+
+    auto op2 = StandardOperation(1U, 0U, opTypeInv);
+    op2.invert();
+    ASSERT_EQ(op2.getType(), opType);
+  }
+}
+
+TEST_F(QFRFunctionality, invertStandardOpParamChange) {
+  const auto cases = {
+      std::tuple{OpType::GPhase, std::vector<fp>{1}, std::vector<fp>{-1}},
+      std::tuple{OpType::Phase, std::vector<fp>{1}, std::vector<fp>{-1}},
+      std::tuple{OpType::RX, std::vector<fp>{1}, std::vector<fp>{-1}},
+      std::tuple{OpType::RY, std::vector<fp>{1}, std::vector<fp>{-1}},
+      std::tuple{OpType::RZ, std::vector<fp>{1}, std::vector<fp>{-1}},
+      std::tuple{OpType::RXX, std::vector<fp>{1}, std::vector<fp>{-1}},
+      std::tuple{OpType::RYY, std::vector<fp>{1}, std::vector<fp>{-1}},
+      std::tuple{OpType::RZZ, std::vector<fp>{1}, std::vector<fp>{-1}},
+      std::tuple{OpType::RZX, std::vector<fp>{1}, std::vector<fp>{-1}},
+      std::tuple{OpType::U2, std::vector<fp>{1, 1},
+                 std::vector<fp>{-1 + PI, -1 - PI}},
+      std::tuple{OpType::U3, std::vector<fp>{1, 2, 3},
+                 std::vector<fp>{-1, -3, -2}},
+      std::tuple{OpType::XXminusYY, std::vector<fp>{1}, std::vector<fp>{-1}},
+      std::tuple{OpType::XXplusYY, std::vector<fp>{1}, std::vector<fp>{-1}},
+  };
+
+  for (const auto& testcase : cases) {
+    auto op =
+        StandardOperation(1U, 0U, std::get<0>(testcase), std::get<1>(testcase));
+    op.invert();
+    ASSERT_EQ(op.getParameter(), std::get<2>(testcase));
+  }
+
+  auto op = StandardOperation(2U, Targets{0U, 1U}, OpType::DCX);
+  op.invert();
+  const auto expectedTargets = Targets{1U, 0U};
+  ASSERT_EQ(op.getTargets(), expectedTargets);
+}
+
+TEST_F(QFRFunctionality, invertCompoundOperation) {
+  auto op = CompoundOperation(4);
+
+  op.emplace_back<StandardOperation>(4U, 0U, OpType::X);
+  op.emplace_back<StandardOperation>(4U, 1U, OpType::RZ, std::vector<fp>{1});
+  op.emplace_back<StandardOperation>(4U, 1U, OpType::S);
+
+  op.invert();
+
+  ASSERT_EQ(op.getOps()[0]->getType(), OpType::Sdag);
+  ASSERT_EQ(op.getOps()[1]->getType(), OpType::RZ);
+  ASSERT_EQ(op.getOps()[1]->getParameter(), std::vector<fp>{-1});
+  ASSERT_EQ(op.getOps()[2]->getType(), OpType::X);
+}
+
+TEST_F(QFRFunctionality, invertSymbolicOpParamChange) {
+  auto x = sym::Variable("x");
+  auto y = sym::Variable("y");
+  const auto cases = {
+      std::tuple{OpType::GPhase, std::vector<SymbolOrNumber>{Symbolic({x})},
+                 std::vector<SymbolOrNumber>{-Symbolic({x})}},
+      std::tuple{OpType::GPhase, std::vector<SymbolOrNumber>{1.0},
+                 std::vector<SymbolOrNumber>{-1.0}},
+      std::tuple{OpType::U2, std::vector<SymbolOrNumber>{Symbolic({x}), 1.0},
+                 std::vector<SymbolOrNumber>{-1.0 + PI, -Symbolic({x}) - PI}},
+      std::tuple{
+          OpType::U3,
+          std::vector<SymbolOrNumber>{Symbolic({x}), 2.0, Symbolic({y})},
+          std::vector<SymbolOrNumber>{-Symbolic({x}), -Symbolic({y}), -2.0}},
+      std::tuple{OpType::XXminusYY, std::vector<SymbolOrNumber>{Symbolic({x})},
+                 std::vector<SymbolOrNumber>{-Symbolic({x})}},
+      std::tuple{OpType::XXplusYY, std::vector<SymbolOrNumber>{1.0},
+                 std::vector<SymbolOrNumber>{-1.0}},
+  };
+
+  for (const auto& testcase : cases) {
+    auto op =
+        SymbolicOperation(1U, 0U, std::get<0>(testcase), std::get<1>(testcase));
+    op.invert();
+
+    for (size_t i = 0; i < std::get<1>(testcase).size(); ++i) {
+      ASSERT_EQ(op.getParameter(i), std::get<2>(testcase)[i]);
+    }
+  }
+
+  // The following gate should be handled by the StandardOperation function
+  auto op = SymbolicOperation(2U, Targets{0U, 1U}, OpType::DCX);
+  op.invert();
+  const auto expectedTargets = Targets{1U, 0U};
+  ASSERT_EQ(op.getTargets(), expectedTargets);
+}

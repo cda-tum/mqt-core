@@ -59,6 +59,10 @@ protected:
   getInstantiation(const SymbolOrNumber& symOrNum,
                    const VariableAssignment& assignment);
 
+  void negateSymbolicParameter(std::size_t index);
+
+  void addToSymbolicParameter(std::size_t index, fp value);
+
 public:
   SymbolicOperation() = default;
 
@@ -140,5 +144,7 @@ public:
   // Instantiates this Operation
   // Afterwards casting to StandardOperation can be done if assignment is total
   void instantiate(const VariableAssignment& assignment);
+
+  void invert() override;
 };
 } // namespace qc

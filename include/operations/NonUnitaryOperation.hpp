@@ -79,5 +79,9 @@ public:
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                     const RegisterNames& creg) const override;
+
+  void invert() override {
+    throw QFRException("Inverting a non-unitary operation is not supported.");
+  }
 };
 } // namespace qc
