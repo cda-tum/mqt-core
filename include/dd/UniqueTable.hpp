@@ -93,7 +93,7 @@ public:
   }
 
   /// Get a JSON object with the statistics
-  [[nodiscard]] nlohmann::json getStatsJson() const noexcept {
+  [[nodiscard]] nlohmann::json getStatsJson() const {
     nlohmann::json j;
     std::size_t v = 0U;
     for (const auto& stat : stats) {
