@@ -1123,9 +1123,9 @@ private:
       assert(colEnd - colStart == 2);
       const auto w0 = cn.getCached(matrix[rowStart][colStart]);
       const auto e0 = mEdge{mNode::getTerminal(), w0};
-      const auto w1 = cn.getCached(matrix[rowStart + 1][colStart]);
+      const auto w1 = cn.getCached(matrix[rowStart][colStart + 1]);
       const auto e1 = mEdge{mNode::getTerminal(), w1};
-      const auto w2 = cn.getCached(matrix[rowStart][colStart + 1]);
+      const auto w2 = cn.getCached(matrix[rowStart + 1][colStart]);
       const auto e2 = mEdge{mNode::getTerminal(), w2};
       const auto w3 = cn.getCached(matrix[rowStart + 1][colStart + 1]);
       const auto e3 = mEdge{mNode::getTerminal(), w3};
@@ -2236,7 +2236,7 @@ public:
   }
   bool isCloseToIdentity(const mEdge& m, const dd::fp tol = 1e-10) {
     std::unordered_set<decltype(m.p)> visited{};
-    visited.reserve(mUniqueTable.getStats().activeEntryCount);
+    visited.reserve(mUniqueTable.getNumActiveEntries());
     return isCloseToIdentityRecursive(m, visited, tol);
   }
 
@@ -3580,112 +3580,6 @@ private:
       }
       checkConsistencyCounter(child, weightMap, nodeMap);
     }
-  }
-
-  ///
-  /// Printing and Statistics
-  ///
-public:
-  // print information on package and its members
-  static void printInformation() {
-    std::cout << "\n  compiled: " << __DATE__ << " " << __TIME__
-              << "\n  Complex size: " << sizeof(Complex) << " bytes (aligned "
-              << alignof(Complex) << " bytes)"
-              << "\n  ComplexValue size: " << sizeof(ComplexValue)
-              << " bytes (aligned " << alignof(ComplexValue) << " bytes)"
-              << "\n  ComplexNumbers size: " << sizeof(ComplexNumbers)
-              << " bytes (aligned " << alignof(ComplexNumbers) << " bytes)"
-              << "\n  vEdge size: " << sizeof(vEdge) << " bytes (aligned "
-              << alignof(vEdge) << " bytes)"
-              << "\n  vNode size: " << sizeof(vNode) << " bytes (aligned "
-              << alignof(vNode) << " bytes)"
-              << "\n  mEdge size: " << sizeof(mEdge) << " bytes (aligned "
-              << alignof(mEdge) << " bytes)"
-              << "\n  mNode size: " << sizeof(mNode) << " bytes (aligned "
-              << alignof(mNode) << " bytes)"
-              << "\n  dEdge size: " << sizeof(dEdge) << " bytes (aligned "
-              << alignof(dEdge) << " bytes)"
-              << "\n  dNode size: " << sizeof(dNode) << " bytes (aligned "
-              << alignof(dNode) << " bytes)"
-              << "\n  CT Vector Add size: "
-              << sizeof(typename decltype(vectorAdd)::Entry)
-              << " bytes (aligned "
-              << alignof(typename decltype(vectorAdd)::Entry) << " bytes)"
-              << "\n  CT Matrix Add size: "
-              << sizeof(typename decltype(matrixAdd)::Entry)
-              << " bytes (aligned "
-              << alignof(typename decltype(matrixAdd)::Entry) << " bytes)"
-              << "\n  CT Matrix Transpose size: "
-              << sizeof(typename decltype(matrixTranspose)::Entry)
-              << " bytes (aligned "
-              << alignof(typename decltype(matrixTranspose)::Entry) << " bytes)"
-              << "\n  CT Conjugate Matrix Transpose size: "
-              << sizeof(typename decltype(conjugateMatrixTranspose)::Entry)
-              << " bytes (aligned "
-              << alignof(typename decltype(conjugateMatrixTranspose)::Entry)
-              << " bytes)"
-              << "\n  CT Matrix Multiplication size: "
-              << sizeof(typename decltype(matrixMatrixMultiplication)::Entry)
-              << " bytes (aligned "
-              << alignof(typename decltype(matrixMatrixMultiplication)::Entry)
-              << " bytes)"
-              << "\n  CT Matrix Vector Multiplication size: "
-              << sizeof(typename decltype(matrixVectorMultiplication)::Entry)
-              << " bytes (aligned "
-              << alignof(typename decltype(matrixVectorMultiplication)::Entry)
-              << " bytes)"
-              << "\n  CT Vector Inner Product size: "
-              << sizeof(typename decltype(vectorInnerProduct)::Entry)
-              << " bytes (aligned "
-              << alignof(typename decltype(vectorInnerProduct)::Entry)
-              << " bytes)"
-              << "\n  CT Vector Kronecker size: "
-              << sizeof(typename decltype(vectorKronecker)::Entry)
-              << " bytes (aligned "
-              << alignof(typename decltype(vectorKronecker)::Entry) << " bytes)"
-              << "\n  CT Matrix Kronecker size: "
-              << sizeof(typename decltype(matrixKronecker)::Entry)
-              << " bytes (aligned "
-              << alignof(typename decltype(matrixKronecker)::Entry) << " bytes)"
-              << "\n  Package size: " << sizeof(Package) << " bytes (aligned "
-              << alignof(Package) << " bytes)"
-              << "\n"
-              << std::flush;
-  }
-
-  // print unique and compute table statistics
-  void statistics() {
-    std::cout << "DD statistics:\n";
-    std::cout << "[vUniqueTable] " << vUniqueTable.getStats() << "\n";
-    std::cout << "[mUniqueTable] " << mUniqueTable.getStats() << "\n";
-    std::cout << "[dUniqueTable] " << dUniqueTable.getStats() << "\n";
-    std::cout << "[cUniqueTable] " << cUniqueTable.getStats() << "\n";
-    std::cout << "[CT Vector Add] ";
-    vectorAdd.printStatistics();
-    std::cout << "[CT Matrix Add] ";
-    matrixAdd.printStatistics();
-    std::cout << "[CT Matrix Transpose] ";
-    matrixTranspose.printStatistics();
-    std::cout << "[CT Conjugate Matrix Transpose] ";
-    conjugateMatrixTranspose.printStatistics();
-    std::cout << "[CT Matrix Multiplication] ";
-    matrixMatrixMultiplication.printStatistics();
-    std::cout << "[CT Matrix Vector Multiplication] ";
-    matrixVectorMultiplication.printStatistics();
-    std::cout << "[CT Inner Product] ";
-    vectorInnerProduct.printStatistics();
-    std::cout << "[CT Vector Kronecker] ";
-    vectorKronecker.printStatistics();
-    std::cout << "[CT Matrix Kronecker] ";
-    matrixKronecker.printStatistics();
-    std::cout << "[Stochastic Noise Table] ";
-    stochasticNoiseOperationCache.printStatistics();
-    std::cout << "[CT Density Add] ";
-    densityAdd.printStatistics();
-    std::cout << "[CT Density Mul] ";
-    densityDensityMultiplication.printStatistics();
-    std::cout << "[CT Density Noise] ";
-    densityNoise.printStatistics();
   }
 };
 

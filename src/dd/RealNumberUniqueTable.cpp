@@ -12,6 +12,9 @@ namespace dd {
 RealNumberUniqueTable::RealNumberUniqueTable(MemoryManager<RealNumber>& manager,
                                              const std::size_t initialGCLim)
     : memoryManager(&manager), initialGCLimit(initialGCLim) {
+  stats.entrySize = sizeof(Bucket);
+  stats.numBuckets = NBUCKET;
+
   // add 1/2 to the complex table and increase its ref count (so that it is
   // not collected)
   lookupNonNegative(0.5L)->ref++;
@@ -46,7 +49,7 @@ void RealNumberUniqueTable::incRef(RealNumber* num) noexcept {
 void RealNumberUniqueTable::decRef(RealNumber* num) noexcept {
   const auto dec = RealNumber::decRef(num);
   if (dec && RealNumber::refCount(num) == 0U) {
-    --stats.activeEntryCount;
+    --stats.numActiveEntries;
   }
 }
 
@@ -128,7 +131,7 @@ RealNumber* RealNumberUniqueTable::lookupNonNegative(const fp val) {
 }
 
 bool RealNumberUniqueTable::possiblyNeedsCollection() const noexcept {
-  return stats.entryCount >= gcLimit;
+  return stats.numEntries >= gcLimit;
 }
 
 std::size_t RealNumberUniqueTable::garbageCollect(const bool force) noexcept {
@@ -136,13 +139,12 @@ std::size_t RealNumberUniqueTable::garbageCollect(const bool force) noexcept {
   // nothing to be done if garbage collection is not forced, and the limit has
   // not been reached, or the current count is minimal (the complex table
   // always contains at least 0.5)
-  if ((!force && !possiblyNeedsCollection()) ||
-      memoryManager->getUsedCount() <= 1) {
+  if ((!force && !possiblyNeedsCollection()) || stats.numEntries <= 1) {
     return 0;
   }
 
   ++stats.gcRuns;
-  const auto entryCountBefore = stats.entryCount;
+  const auto entryCountBefore = stats.numEntries;
   for (std::size_t key = 0; key < table.size(); ++key) {
     auto* p = table[key];
     RealNumber* lastp = nullptr;
@@ -156,7 +158,7 @@ std::size_t RealNumberUniqueTable::garbageCollect(const bool force) noexcept {
         }
         memoryManager->returnEntry(p);
         p = next;
-        --stats.entryCount;
+        --stats.numEntries;
       } else {
         lastp = p;
         p = p->next;
@@ -171,12 +173,12 @@ std::size_t RealNumberUniqueTable::garbageCollect(const bool force) noexcept {
   // increased whenever the number of remaining entries is rather close to the
   // garbage collection threshold and decreased if the number of remaining
   // entries is much lower than the current limit.
-  if (stats.entryCount > gcLimit / 10 * 9) {
-    gcLimit = stats.entryCount + initialGCLimit;
-  } else if (stats.entryCount < gcLimit / 128) {
+  if (stats.numEntries > gcLimit / 10 * 9) {
+    gcLimit = stats.numEntries + initialGCLimit;
+  } else if (stats.numEntries < gcLimit / 128) {
     gcLimit /= 2;
   }
-  return entryCountBefore - stats.entryCount;
+  return entryCountBefore - stats.numEntries;
 }
 
 void RealNumberUniqueTable::clear() noexcept {
