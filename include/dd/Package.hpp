@@ -52,11 +52,31 @@ public:
   static constexpr std::size_t MAX_POSSIBLE_QUBITS =
       static_cast<std::size_t>(std::numeric_limits<Qubit>::max()) + 1U;
   static constexpr std::size_t DEFAULT_QUBITS = 32U;
-  explicit Package(std::size_t nq = DEFAULT_QUBITS) : nqubits(nq) {}
+  explicit Package(std::size_t nq = DEFAULT_QUBITS) : nqubits(nq) {
+    resize(nq);
+  };
   ~Package() = default;
   Package(const Package& package) = delete;
 
   Package& operator=(const Package& package) = delete;
+
+  // resize the package instance
+  void resize(std::size_t nq) {
+    if (nq > MAX_POSSIBLE_QUBITS) {
+      throw std::invalid_argument("Requested too many qubits from package. "
+                                  "Qubit datatype only allows up to " +
+                                  std::to_string(MAX_POSSIBLE_QUBITS) +
+                                  " qubits, while " + std::to_string(nq) +
+                                  " were requested. Please recompile the "
+                                  "package with a wider Qubit type!");
+    }
+    nqubits = nq;
+    vUniqueTable.resize(nqubits);
+    mUniqueTable.resize(nqubits);
+    dUniqueTable.resize(nqubits);
+    stochasticNoiseOperationCache.resize(nqubits);
+    idTable.resize(nqubits);
+  }
 
   // reset package state
   void reset() {
@@ -123,14 +143,11 @@ public:
   }
 
   /// The unique table used for vector nodes
-  UniqueTable<vNode, Config::UT_VEC_NBUCKET> vUniqueTable{nqubits,
-                                                          vMemoryManager};
+  UniqueTable<vNode, Config::UT_VEC_NBUCKET> vUniqueTable{0U, vMemoryManager};
   /// The unique table used for matrix nodes
-  UniqueTable<mNode, Config::UT_MAT_NBUCKET> mUniqueTable{nqubits,
-                                                          mMemoryManager};
+  UniqueTable<mNode, Config::UT_MAT_NBUCKET> mUniqueTable{0U, mMemoryManager};
   /// The unique table used for density matrix nodes
-  UniqueTable<dNode, Config::UT_DM_NBUCKET> dUniqueTable{nqubits,
-                                                         dMemoryManager};
+  UniqueTable<dNode, Config::UT_DM_NBUCKET> dUniqueTable{0U, dMemoryManager};
   /**
    * @brief The unique table used for complex numbers
    * @note The table actually only stores real numbers in the interval [0, 1],

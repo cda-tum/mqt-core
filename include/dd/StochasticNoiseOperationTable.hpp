@@ -16,6 +16,7 @@ template <class Edge, std::size_t numberOfStochasticOperations = 64>
 class StochasticNoiseOperationTable {
 public:
   explicit StochasticNoiseOperationTable(const std::size_t nv) : nvars(nv) {
+    resize(nv);
     stats.entrySize = sizeof(Edge);
     stats.numBuckets = nv * numberOfStochasticOperations;
   };
@@ -25,6 +26,11 @@ public:
 
   /// Get a reference to the statistics
   [[nodiscard]] const auto& getStats() const noexcept { return stats; }
+
+  void resize(std::size_t nq) {
+    nvars = nq;
+    table.resize(nvars);
+  }
 
   void insert(std::uint8_t kind, qc::Qubit target, const Edge& r) {
     assert(kind <
@@ -61,7 +67,7 @@ public:
 
 private:
   std::size_t nvars;
-  std::vector<std::array<Edge, numberOfStochasticOperations>> table{nvars};
+  std::vector<std::array<Edge, numberOfStochasticOperations>> table;
   TableStatistics stats{};
 };
 } // namespace dd

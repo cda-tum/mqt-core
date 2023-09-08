@@ -55,6 +55,14 @@ public:
     }
   }
 
+  void resize(std::size_t nq) {
+    nvars = nq;
+    tables.resize(nq);
+    // TODO: if the new size is smaller than the old one we might have to
+    // release the unique table entries for the superfluous variables
+    stats.resize(nq);
+  }
+
   /**
    * @brief The hash function for the hash table.
    * @details The hash function just combines the hashes of the edges of the
