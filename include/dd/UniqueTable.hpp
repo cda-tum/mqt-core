@@ -191,9 +191,6 @@ public:
   }
 
   std::size_t garbageCollect(bool force = false) {
-    for (auto& stat : stats) {
-      ++stat.gcCalls;
-    }
     if ((!force && !possiblyNeedsCollection()) || getNumEntries() == 0) {
       return 0;
     }
