@@ -18,7 +18,10 @@ namespace dd {
 template <class OperandType, class ResultType, std::size_t NBUCKET = 32768>
 class DensityNoiseTable { // todo: Inherit from UnaryComputerTable
 public:
-  DensityNoiseTable() = default;
+  DensityNoiseTable() {
+    stats.entrySize = sizeof(Entry);
+    stats.numBuckets = NBUCKET;
+  }
 
   struct Entry {
     OperandType operand;

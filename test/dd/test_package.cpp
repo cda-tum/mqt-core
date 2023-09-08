@@ -241,7 +241,6 @@ TEST(DDPackageTest, StateGenerationManipulation) {
   dd->incRef(e);
   dd->incRef(f);
   dd->vUniqueTable.print();
-  dd->printInformation();
   dd->decRef(e);
   dd->decRef(f);
 }
@@ -1892,4 +1891,25 @@ TEST(DDPackageTest, CTPerformanceRegressionTest) {
   // This additional check makes sure that no nodes are leaked.
   dd->garbageCollect(true);
   EXPECT_EQ(dd->mMemoryManager.getStats().numUsed, 0U);
+}
+
+TEST(DDPackageTest, DataStructureStatistics) {
+  const auto nqubits = 1U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto stats = dd::getDataStructureStatistics(dd.get());
+
+  EXPECT_EQ(stats["vNode"]["size_B"], 64U);
+  EXPECT_EQ(stats["vNode"]["alignment_B"], 8U);
+  EXPECT_EQ(stats["mNode"]["size_B"], 112U);
+  EXPECT_EQ(stats["mNode"]["alignment_B"], 8U);
+  EXPECT_EQ(stats["dNode"]["size_B"], 112U);
+  EXPECT_EQ(stats["dNode"]["alignment_B"], 8U);
+  EXPECT_EQ(stats["vEdge"]["size_B"], 24U);
+  EXPECT_EQ(stats["vEdge"]["alignment_B"], 8U);
+  EXPECT_EQ(stats["mEdge"]["size_B"], 24U);
+  EXPECT_EQ(stats["mEdge"]["alignment_B"], 8U);
+  EXPECT_EQ(stats["dEdge"]["size_B"], 24U);
+  EXPECT_EQ(stats["dEdge"]["alignment_B"], 8U);
+  EXPECT_EQ(stats["RealNumber"]["size_B"], 24U);
+  EXPECT_EQ(stats["RealNumber"]["alignment_B"], 8U);
 }

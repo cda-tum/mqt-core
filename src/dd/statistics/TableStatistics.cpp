@@ -19,30 +19,40 @@ void TableStatistics::reset() noexcept {
   inserts = 0U;
 }
 
-fp TableStatistics::hitRatio() const noexcept {
+double TableStatistics::hitRatio() const noexcept {
   if (lookups == 0) {
     return 1.;
   }
-  return static_cast<fp>(hits) / static_cast<fp>(lookups);
+  return static_cast<double>(hits) / static_cast<double>(lookups);
 }
 
-fp TableStatistics::colRatio() const noexcept {
+double TableStatistics::colRatio() const noexcept {
   if (lookups == 0) {
     return 0.;
   }
-  return static_cast<fp>(collisions) / static_cast<fp>(lookups);
+  return static_cast<double>(collisions) / static_cast<double>(lookups);
 }
 
-fp TableStatistics::loadFactor() const noexcept {
+double TableStatistics::loadFactor() const noexcept {
   if (numBuckets == 0) {
     return 0.;
   }
-  return static_cast<fp>(numEntries) / static_cast<fp>(numBuckets);
+  return static_cast<double>(numEntries) / static_cast<double>(numBuckets);
+}
+
+double TableStatistics::getEntrySizeMiB() const noexcept {
+  return static_cast<double>(entrySize) / static_cast<double>(1ULL << 20U);
+}
+
+double TableStatistics::getMemoryMiB() const noexcept {
+  return static_cast<double>(numBuckets) * getEntrySizeMiB();
 }
 
 nlohmann::json TableStatistics::json() const {
   nlohmann::json j = Statistics::json();
+  j["entry_size_B"] = entrySize;
   j["num_buckets"] = numBuckets;
+  j["memory_MiB"] = getMemoryMiB();
   j["num_entries"] = numEntries;
   j["peak_num_entries"] = peakNumEntries;
   j["collisions"] = collisions;

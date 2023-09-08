@@ -17,6 +17,7 @@ class StochasticNoiseOperationTable {
 public:
   explicit StochasticNoiseOperationTable(const std::size_t nv) : nvars(nv) {
     resize(nv);
+    stats.entrySize = sizeof(Edge);
     stats.numBuckets = nv * numberOfStochasticOperations;
   };
 

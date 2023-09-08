@@ -4,7 +4,6 @@
 #include "dd/RealNumber.hpp"
 
 #include <cassert>
-#include <nlohmann/json.hpp>
 
 namespace dd {
 

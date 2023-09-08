@@ -1,6 +1,5 @@
 #pragma once
 
-#include "dd/DDDefinitions.hpp"
 #include "dd/statistics/Statistics.hpp"
 
 #include <cstddef>
@@ -9,6 +8,8 @@ namespace dd {
 
 /// A utility class for storing statistics of a table
 struct TableStatistics : public Statistics {
+  /// The size of a single entry
+  std::size_t entrySize = 0U;
   /// The number of buckets in the table
   std::size_t numBuckets = 0U;
   /// The number of entries in the table
@@ -36,7 +37,7 @@ struct TableStatistics : public Statistics {
    * @details The hit ratio is the ratio of lookups that were successful.
    * @returns The hit ratio of the table.
    */
-  [[nodiscard]] fp hitRatio() const noexcept;
+  [[nodiscard]] double hitRatio() const noexcept;
 
   /**
    * @brief Get the collision ratio of the table.
@@ -45,14 +46,20 @@ struct TableStatistics : public Statistics {
    * that resulted in a collision.
    * @returns The collision ratio of the table.
    */
-  [[nodiscard]] fp colRatio() const noexcept;
+  [[nodiscard]] double colRatio() const noexcept;
 
   /**
    * @brief Get the load factor of the table.
    * @details The load factor is the ratio of entries to buckets.
    * @return The load factor of the table.
    */
-  [[nodiscard]] fp loadFactor() const noexcept;
+  [[nodiscard]] double loadFactor() const noexcept;
+
+  /// Convert the entry size to MiB
+  [[nodiscard]] double getEntrySizeMiB() const noexcept;
+
+  /// Get the amount of memory required for the table in MiB
+  [[nodiscard]] double getMemoryMiB() const noexcept;
 
   /// Get a JSON representation of the statistics
   [[nodiscard]] nlohmann::json json() const override;

@@ -21,7 +21,10 @@ template <class LeftOperandType, class RightOperandType, class ResultType,
           std::size_t NBUCKET = 16384>
 class ComputeTable {
 public:
-  ComputeTable() { stats.numBuckets = NBUCKET; }
+  ComputeTable() {
+    stats.entrySize = sizeof(Entry);
+    stats.numBuckets = NBUCKET;
+  }
 
   struct Entry {
     LeftOperandType leftOperand;

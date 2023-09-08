@@ -194,7 +194,7 @@ private:
   typename std::vector<T>::iterator chunkEndIt;
 
   /// Memory manager statistics
-  MemoryManagerStatistics stats{};
+  MemoryManagerStatistics<T> stats{};
 };
 
 } // namespace dd

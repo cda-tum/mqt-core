@@ -50,6 +50,7 @@ public:
                        std::size_t initialGCLim = INITIAL_GC_LIMIT)
       : nvars(nv), memoryManager(&manager), initialGCLimit(initialGCLim) {
     for (auto& stat : stats) {
+      stat.entrySize = sizeof(Bucket);
       stat.numBuckets = NBUCKET;
     }
   }

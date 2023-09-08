@@ -18,7 +18,10 @@ namespace dd {
 template <class OperandType, class ResultType, std::size_t NBUCKET = 32768>
 class UnaryComputeTable {
 public:
-  UnaryComputeTable() { stats.numBuckets = NBUCKET; }
+  UnaryComputeTable() {
+    stats.entrySize = sizeof(Entry);
+    stats.numBuckets = NBUCKET;
+  }
 
   struct Entry {
     OperandType operand;

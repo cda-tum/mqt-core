@@ -12,6 +12,7 @@ namespace dd {
 RealNumberUniqueTable::RealNumberUniqueTable(MemoryManager<RealNumber>& manager,
                                              const std::size_t initialGCLim)
     : memoryManager(&manager), initialGCLimit(initialGCLim) {
+  stats.entrySize = sizeof(Bucket);
   stats.numBuckets = NBUCKET;
 
   // add 1/2 to the complex table and increase its ref count (so that it is
