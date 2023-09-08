@@ -138,14 +138,16 @@ protected:
   [[nodiscard]] mEdge stackOperation(mEdge operation, const qc::Qubit target,
                                      const qc::OpType noiseOperation,
                                      const GateMatrix matrix) {
-    auto tmpOperation =
-        package->stochasticNoiseOperationCache.lookup(noiseOperation, target);
-    if (tmpOperation.isTerminal()) {
-      tmpOperation = package->makeGateDD(matrix, getNumberOfQubits(), target);
-      package->stochasticNoiseOperationCache.insert(noiseOperation, target,
-                                                    tmpOperation);
+    if (const auto* op = package->stochasticNoiseOperationCache.lookup(
+            noiseOperation, target);
+        op != nullptr) {
+      return package->multiply(*op, operation);
     }
-    return package->multiply(tmpOperation, operation);
+    const auto gateDD =
+        package->makeGateDD(matrix, getNumberOfQubits(), target);
+    package->stochasticNoiseOperationCache.insert(noiseOperation, target,
+                                                  gateDD);
+    return package->multiply(gateDD, operation);
   }
 
   mEdge generateNoiseOperation(mEdge operation, qc::Qubit target,

@@ -4,7 +4,7 @@
 #include "dd/Edge.hpp"
 #include "dd/MemoryManager.hpp"
 #include "dd/Node.hpp"
-#include "dd/UniqueTableStatistics.hpp"
+#include "dd/statistics/UniqueTableStatistics.hpp"
 
 #include <algorithm>
 #include <array>
@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <type_traits>
 #include <vector>
 
@@ -47,18 +48,18 @@ public:
    */
   explicit UniqueTable(const std::size_t nv, MemoryManager<Node>& manager,
                        std::size_t initialGCLim = INITIAL_GC_LIMIT)
-      : nvars(nv), memoryManager(&manager), initialGCLimit(initialGCLim) {}
+      : nvars(nv), memoryManager(&manager), initialGCLimit(initialGCLim) {
+    for (auto& stat : stats) {
+      stat.numBuckets = NBUCKET;
+    }
+  }
 
   void resize(std::size_t nq) {
     nvars = nq;
     tables.resize(nq);
     // TODO: if the new size is smaller than the old one we might have to
     // release the unique table entries for the superfluous variables
-    active.resize(nq);
-    stats.activeEntryCount = 0;
-    for (auto i = 0U; i < nq; ++i) {
-      stats.activeEntryCount += active[i];
-    }
+    stats.resize(nq);
   }
 
   /**
@@ -85,6 +86,40 @@ public:
   /// Get a reference to the statistics
   [[nodiscard]] const auto& getStats() const noexcept { return stats; }
 
+  /// Get a reference to individual statistics
+  [[nodiscard]] const auto& getStats(const std::size_t idx) const noexcept {
+    return stats.at(idx);
+  }
+
+  /// Get a JSON object with the statistics
+  [[nodiscard]] nlohmann::json getStatsJson() const noexcept {
+    nlohmann::json j;
+    std::size_t v = 0U;
+    for (const auto& stat : stats) {
+      j[std::to_string(v)] = stat.json();
+      ++v;
+    }
+    return j;
+  }
+
+  /// Get the total number of entries
+  [[nodiscard]] std::size_t getNumEntries() const noexcept {
+    return std::accumulate(
+        stats.begin(), stats.end(), 0U,
+        [](const std::size_t& sum, const UniqueTableStatistics& stat) {
+          return sum + stat.numEntries;
+        });
+  }
+
+  /// Get the total number of active entries
+  [[nodiscard]] std::size_t getNumActiveEntries() const noexcept {
+    return std::accumulate(
+        stats.begin(), stats.end(), 0U,
+        [](const std::size_t& sum, const UniqueTableStatistics& stat) {
+          return sum + stat.numActiveEntries;
+        });
+  }
+
   static bool nodesAreEqual(const Node* p, const Node* q) {
     if constexpr (std::is_same_v<Node, dNode>) {
       return (p->e == q->e && (p->flags == q->flags));
@@ -103,9 +138,9 @@ public:
       return e;
     }
 
-    ++stats.lookups;
     const auto key = hash(e.p);
     const auto v = e.p->v;
+    ++stats[v].lookups;
 
     // search bucket in table corresponding to hashed value for the given node
     // and return it if found.
@@ -117,7 +152,7 @@ public:
     // if node not found -> add it to front of unique table bucket
     e.p->next = tables[v][key];
     tables[v][key] = e.p;
-    stats.trackInsert();
+    stats[v].trackInsert();
 
     return e;
   }
@@ -135,8 +170,7 @@ public:
   [[nodiscard]] bool incRef(Node* p) noexcept {
     const auto inc = ::dd::incRef(p);
     if (inc && p->ref == 1U) {
-      stats.trackActiveEntry();
-      ++active[p->v];
+      stats[p->v].trackActiveEntry();
     }
     return inc;
   }
@@ -154,25 +188,28 @@ public:
   [[nodiscard]] bool decRef(Node* p) noexcept {
     const auto dec = ::dd::decRef(p);
     if (dec && p->ref == 0U) {
-      --stats.activeEntryCount;
-      --active[p->v];
+      --stats[p->v].numActiveEntries;
     }
     return dec;
   }
 
   [[nodiscard]] bool possiblyNeedsCollection() const {
-    return stats.entryCount >= gcLimit;
+    return getNumEntries() >= gcLimit;
   }
 
   std::size_t garbageCollect(bool force = false) {
-    ++stats.gcCalls;
-    if ((!force && !possiblyNeedsCollection()) || stats.entryCount == 0) {
+    for (auto& stat : stats) {
+      ++stat.gcCalls;
+    }
+    if ((!force && !possiblyNeedsCollection()) || getNumEntries() == 0) {
       return 0;
     }
 
-    ++stats.gcRuns;
-    const auto entryCountBefore = stats.entryCount;
+    const std::size_t numEntriesBefore = getNumEntries();
+    std::size_t v = 0U;
     for (auto& table : tables) {
+      auto& stat = stats[v];
+      ++stat.gcRuns;
       for (auto& bucket : table) {
         Node* p = bucket;
         Node* lastp = nullptr;
@@ -186,14 +223,16 @@ public:
             }
             memoryManager->returnEntry(p);
             p = next;
-            --stats.entryCount;
+            --stat.numEntries;
           } else {
             lastp = p;
             p = p->next;
           }
         }
       }
+      ++v;
     }
+
     // The garbage collection limit changes dynamically depending on the number
     // of remaining (active) nodes. If it were not changed, garbage collection
     // would run through the complete table on each successive call once the
@@ -201,10 +240,11 @@ public:
     // increased whenever the number of remaining entries is rather close to the
     // garbage collection threshold and decreased if the number of remaining
     // entries is much lower than the current limit.
-    if (stats.entryCount > gcLimit / 10 * 9) {
-      gcLimit = stats.entryCount + initialGCLimit;
+    const auto numEntries = getNumEntries();
+    if (numEntries > gcLimit / 10 * 9) {
+      gcLimit = numEntries + initialGCLimit;
     }
-    return entryCountBefore - stats.entryCount;
+    return numEntriesBefore - numEntries;
   }
 
   void clear() {
@@ -215,8 +255,9 @@ public:
       }
     }
     gcLimit = initialGCLimit;
-    std::fill(active.begin(), active.end(), 0);
-    stats.reset();
+    for (auto& stat : stats) {
+      stat.reset();
+    }
   };
 
   void print() {
@@ -267,13 +308,7 @@ private:
   MemoryManager<Node>* memoryManager;
 
   /// A collection of statistics
-  UniqueTableStatistics stats{};
-
-  /**
-   * @brief the number of active nodes for each variable
-   * @note A node is considered active if it has a non-zero reference count.
-   */
-  std::vector<std::size_t> active{std::vector<std::size_t>(nvars, 0U)};
+  std::vector<UniqueTableStatistics> stats{nvars};
 
   /// The initial garbage collection limit
   std::size_t initialGCLimit;
@@ -291,7 +326,8 @@ private:
   **/
   Edge<Node> searchTable(const Edge<Node>& e, const std::size_t& key,
                          const bool keepNode = false) {
-    Node* p = tables[e.p->v][key];
+    const auto v = e.p->v;
+    Node* p = tables[v][key];
     while (p != nullptr) {
       if (nodesAreEqual(e.p, p)) {
         // Match found
@@ -299,14 +335,14 @@ private:
           // put node pointed to by e.p on available chain
           memoryManager->returnEntry(e.p);
         }
-        ++stats.hits;
+        ++stats[v].hits;
 
         // variables should stay the same
-        assert(p->v == e.p->v);
+        assert(p->v == v);
 
         return {p, e.w};
       }
-      ++stats.collisions;
+      ++stats[v].collisions;
       p = p->next;
     }
 

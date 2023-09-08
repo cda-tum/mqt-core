@@ -4,6 +4,7 @@
 #include "dd/RealNumber.hpp"
 
 #include <cassert>
+#include <nlohmann/json.hpp>
 
 namespace dd {
 
@@ -25,9 +26,7 @@ template <typename T> std::pair<T*, T*> MemoryManager<T>::getPair() {
     assert(r->next != nullptr && "At least two entries must be available");
     auto* i = available->next;
     available = i->next;
-    usedCount += 2U;
-    peakUsedCount = std::max(peakUsedCount, usedCount);
-    availableForReuseCount -= 2U;
+    stats.trackReusedEntries(2U);
     return {r, i};
   }
 
@@ -40,8 +39,7 @@ template <typename T> std::pair<T*, T*> MemoryManager<T>::getPair() {
   assert(chunkIt != chunkEndIt && "At least two entries must be available");
   auto* i = &(*chunkIt);
   ++chunkIt;
-  usedCount += 2U;
-  peakUsedCount = std::max(peakUsedCount, usedCount);
+  stats.trackUsedEntries(2U);
   return {r, i};
 }
 
@@ -77,29 +75,27 @@ template <typename T> void MemoryManager<T>::returnEntry(T* entry) noexcept {
   assert(entry->ref == 0);
   entry->next = available;
   available = entry;
-  ++availableForReuseCount;
-  peakAvailableForReuseCount =
-      std::max(peakAvailableForReuseCount, availableForReuseCount);
-  --usedCount;
+  stats.trackReturnedEntry();
 }
 
 template <typename T>
 void MemoryManager<T>::reset(const bool resizeToTotal) noexcept {
   available = nullptr;
-  availableForReuseCount = 0U;
 
   chunks.erase(chunks.begin() + 1, chunks.end());
   for (auto& entry : chunks[0]) {
     entry.ref = 0U;
   }
   if (resizeToTotal) {
-    chunks[0].resize(allocationCount);
+    chunks[0].resize(stats.numAllocated);
   }
 
   chunkIt = chunks[0].begin();
   chunkEndIt = chunks[0].end();
-  allocationCount = chunks[0].size();
-  usedCount = 0U;
+
+  stats.reset();
+  stats.numAllocations = 1U;
+  stats.numAllocated = chunks[0].size();
 }
 
 template <typename T>
@@ -107,9 +103,7 @@ T* MemoryManager<T>::getEntryFromAvailableList() noexcept {
   assert(entryAvailableForReuse());
   auto* entry = available;
   available = available->next;
-  --availableForReuseCount;
-  ++usedCount;
-  peakUsedCount = std::max(peakUsedCount, usedCount);
+  stats.trackReusedEntries();
   // Reclaimed entries might have a non-zero reference count
   entry->ref = 0;
   return entry;
@@ -122,7 +116,8 @@ template <typename T> void MemoryManager<T>::allocateNewChunk() {
   chunks.emplace_back(newChunkSize);
   chunkIt = chunks.back().begin();
   chunkEndIt = chunks.back().end();
-  allocationCount += newChunkSize;
+  ++stats.numAllocations;
+  stats.numAllocated += newChunkSize;
 }
 
 template <typename T> T* MemoryManager<T>::getEntryFromChunk() noexcept {
@@ -130,8 +125,7 @@ template <typename T> T* MemoryManager<T>::getEntryFromChunk() noexcept {
   assert(entryAvailableInChunk());
   auto* entry = &(*chunkIt);
   ++chunkIt;
-  ++usedCount;
-  peakUsedCount = std::max(peakUsedCount, usedCount);
+  stats.trackUsedEntries();
   return entry;
 }
 

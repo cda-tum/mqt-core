@@ -2281,7 +2281,7 @@ public:
   }
   bool isCloseToIdentity(const mEdge& m, const dd::fp tol = 1e-10) {
     std::unordered_set<decltype(m.p)> visited{};
-    visited.reserve(mUniqueTable.getStats().activeEntryCount);
+    visited.reserve(mUniqueTable.getNumActiveEntries());
     return isCloseToIdentityRecursive(m, visited, tol);
   }
 
@@ -3661,41 +3661,6 @@ public:
               << alignof(Package) << " bytes)"
               << "\n"
               << std::flush;
-  }
-
-  // print unique and compute table statistics
-  void statistics() {
-    std::cout << "DD statistics:\n";
-    std::cout << "[vUniqueTable] " << vUniqueTable.getStats() << "\n";
-    std::cout << "[mUniqueTable] " << mUniqueTable.getStats() << "\n";
-    std::cout << "[dUniqueTable] " << dUniqueTable.getStats() << "\n";
-    std::cout << "[cUniqueTable] " << cUniqueTable.getStats() << "\n";
-    std::cout << "[CT Vector Add] ";
-    vectorAdd.printStatistics();
-    std::cout << "[CT Matrix Add] ";
-    matrixAdd.printStatistics();
-    std::cout << "[CT Matrix Transpose] ";
-    matrixTranspose.printStatistics();
-    std::cout << "[CT Conjugate Matrix Transpose] ";
-    conjugateMatrixTranspose.printStatistics();
-    std::cout << "[CT Matrix Multiplication] ";
-    matrixMatrixMultiplication.printStatistics();
-    std::cout << "[CT Matrix Vector Multiplication] ";
-    matrixVectorMultiplication.printStatistics();
-    std::cout << "[CT Inner Product] ";
-    vectorInnerProduct.printStatistics();
-    std::cout << "[CT Vector Kronecker] ";
-    vectorKronecker.printStatistics();
-    std::cout << "[CT Matrix Kronecker] ";
-    matrixKronecker.printStatistics();
-    std::cout << "[Stochastic Noise Table] ";
-    stochasticNoiseOperationCache.printStatistics();
-    std::cout << "[CT Density Add] ";
-    densityAdd.printStatistics();
-    std::cout << "[CT Density Mul] ";
-    densityDensityMultiplication.printStatistics();
-    std::cout << "[CT Density Noise] ";
-    densityNoise.printStatistics();
   }
 };
 

@@ -2,6 +2,7 @@
 
 #include "dd/DDDefinitions.hpp"
 #include "dd/Node.hpp"
+#include "dd/statistics/TableStatistics.hpp"
 
 #include <array>
 #include <bitset>
@@ -20,7 +21,7 @@ template <class LeftOperandType, class RightOperandType, class ResultType,
           std::size_t NBUCKET = 16384>
 class ComputeTable {
 public:
-  ComputeTable() = default;
+  ComputeTable() { stats.numBuckets = NBUCKET; }
 
   struct Entry {
     LeftOperandType leftOperand;
@@ -38,22 +39,29 @@ public:
     return hash & MASK;
   }
 
-  // access functions
+  /// Get a reference to the table
   [[nodiscard]] const auto& getTable() const { return table; }
+
+  /// Get a reference to the statistics
+  [[nodiscard]] const auto& getStats() const noexcept { return stats; }
 
   void insert(const LeftOperandType& leftOperand,
               const RightOperandType& rightOperand, const ResultType& result) {
     const auto key = hash(leftOperand, rightOperand);
+    if (valid[key]) {
+      ++stats.collisions;
+    } else {
+      stats.trackInsert();
+      valid.set(key);
+    }
     table[key] = {leftOperand, rightOperand, result};
-    valid.set(key);
-    ++count;
   }
 
   ResultType* lookup(const LeftOperandType& leftOperand,
                      const RightOperandType& rightOperand,
                      [[maybe_unused]] const bool useDensityMatrix = false) {
     ResultType* result = nullptr;
-    lookups++;
+    ++stats.lookups;
     const auto key = hash(leftOperand, rightOperand);
     if (!valid[key]) {
       return result;
@@ -77,38 +85,22 @@ public:
         return result;
       }
     }
-    hits++;
+    ++stats.hits;
     return &entry.result;
   }
 
   void clear() {
-    if (count > 0) {
-      valid.reset();
-      count = 0;
-    }
-  }
-
-  [[nodiscard]] std::size_t getHits() const { return hits; }
-  [[nodiscard]] std::size_t getLookups() const { return lookups; }
-  [[nodiscard]] fp hitRatio() const {
-    if (lookups == 0U) {
-      return 1.;
-    }
-    return static_cast<fp>(getHits()) / static_cast<fp>(getLookups());
+    valid.reset();
+    stats.reset();
   }
 
   std::ostream& printStatistics(std::ostream& os = std::cout) {
-    os << "hits: " << hits << ", looks: " << lookups
-       << ", ratio: " << hitRatio() << std::endl;
-    return os;
+    return os << stats;
   }
 
 private:
   std::array<Entry, NBUCKET> table{};
   std::bitset<NBUCKET> valid{};
-  // compute table lookup statistics
-  std::size_t hits = 0;
-  std::size_t lookups = 0;
-  std::size_t count = 0;
+  TableStatistics stats{};
 };
 } // namespace dd

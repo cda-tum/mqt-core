@@ -1,8 +1,10 @@
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
+#include "dd/statistics/TableStatistics.hpp"
 
 #include <array>
+#include <bitset>
 #include <cstddef>
 #include <iostream>
 #include <utility>
@@ -14,7 +16,7 @@ namespace dd {
 /// \tparam ResultType type of the operation's result
 /// \tparam NBUCKET number of hash buckets to use (has to be a power of two)
 template <class OperandType, class ResultType, std::size_t NBUCKET = 32768>
-class DensityNoiseTable { // todo Inherent from UnaryComputerTable
+class DensityNoiseTable { // todo: Inherit from UnaryComputerTable
 public:
   DensityNoiseTable() = default;
 
@@ -26,8 +28,11 @@ public:
 
   static constexpr size_t MASK = NBUCKET - 1;
 
-  // access functions
+  /// Get a reference to the table
   [[nodiscard]] const auto& getTable() const { return table; }
+
+  /// Get a reference to the statistics
+  [[nodiscard]] const auto& getStats() const noexcept { return stats; }
 
   static std::size_t hash(const OperandType& a,
                           const std::vector<Qubit>& usedQubits) {
@@ -42,56 +47,44 @@ public:
   void insert(const OperandType& operand, const ResultType& result,
               const std::vector<Qubit>& usedQubits) {
     const auto key = hash(operand, usedQubits);
-    auto& entry = table[key];
-    entry.result = result;
-    entry.operand = operand;
-    entry.usedQubits = usedQubits;
-    ++count;
+    if (valid[key]) {
+      ++stats.collisions;
+    } else {
+      stats.trackInsert();
+      valid.set(key);
+    }
+    table[key] = {operand, result, usedQubits};
   }
 
   ResultType lookup(const OperandType& operand,
                     const std::vector<Qubit>& usedQubits) {
     ResultType result{};
-    lookups++;
+    ++stats.lookups;
     const auto key = hash(operand, usedQubits);
-    auto& entry = table[key];
-    if (entry.result.p == nullptr) {
+
+    if (!valid[key]) {
       return result;
     }
+
+    auto& entry = table[key];
     if (entry.operand != operand) {
       return result;
     }
     if (entry.usedQubits != usedQubits) {
       return result;
     }
-    hits++;
+    ++stats.hits;
     return entry.result;
   }
 
   void clear() {
-    if (count > 0) {
-      for (auto& entry : table) {
-        entry.result.p = nullptr;
-      }
-      count = 0;
-    }
-  }
-
-  [[nodiscard]] fp hitRatio() const {
-    return static_cast<fp>(hits) / static_cast<fp>(lookups);
-  }
-
-  std::ostream& printStatistics(std::ostream& os = std::cout) {
-    os << "hits: " << hits << ", looks: " << lookups
-       << ", ratio: " << hitRatio() << std::endl;
-    return os;
+    valid.reset();
+    stats.reset();
   }
 
 private:
   std::array<Entry, NBUCKET> table{};
-  // compute table lookup statistics
-  std::size_t hits = 0;
-  std::size_t lookups = 0;
-  std::size_t count = 0;
+  std::bitset<NBUCKET> valid{};
+  TableStatistics stats{};
 };
 } // namespace dd

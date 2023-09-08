@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
+#include "dd/statistics/MemoryManagerStatistics.hpp"
 
 #include <cstddef>
 #include <type_traits>
@@ -57,8 +58,10 @@ public:
   explicit MemoryManager(
       const std::size_t initialAllocationSize = INITIAL_ALLOCATION_SIZE)
       : chunks(1, std::vector<T>(initialAllocationSize)),
-        chunkIt(chunks[0].begin()), chunkEndIt(chunks[0].end()),
-        allocationCount(initialAllocationSize) {}
+        chunkIt(chunks[0].begin()), chunkEndIt(chunks[0].end()) {
+    stats.numAllocations = 1U;
+    stats.numAllocated = initialAllocationSize;
+  }
 
   /// default destructor
   ~MemoryManager() = default;
@@ -123,35 +126,8 @@ public:
    */
   void reset(bool resizeToTotal = false) noexcept;
 
-  // Getters
-  /// Get the total number of allocated entries
-  [[nodiscard]] std::size_t getAllocationCount() const noexcept {
-    return allocationCount;
-  }
-  /// Get the number of used entries
-  [[nodiscard]] std::size_t getUsedCount() const noexcept { return usedCount; }
-  /// Get the number of available entries for (re-)use
-  [[nodiscard]] std::size_t getAvailableForReuseCount() const noexcept {
-    return availableForReuseCount;
-  }
-  /// Get the peak number of used entries
-  [[nodiscard]] std::size_t getPeakUsedCount() const noexcept {
-    return peakUsedCount;
-  }
-  /// Get the peak number of available entries for (re-)use
-  [[nodiscard]] std::size_t getPeakAvailableForReuseCount() const noexcept {
-    return peakAvailableForReuseCount;
-  }
-
-  // Further statistics
-  /// Get the number of available entries from chunks
-  [[nodiscard]] std::size_t getAvailableFromChunksCount() const noexcept {
-    return allocationCount - usedCount;
-  }
-  /// Get the total number of available entries
-  [[nodiscard]] std::size_t getTotalAvailableCount() const noexcept {
-    return getAvailableFromChunksCount() + availableForReuseCount;
-  }
+  /// Get a reference to the statistics
+  [[nodiscard]] const auto& getStats() const noexcept { return stats; }
 
 private:
   /**
@@ -217,17 +193,8 @@ private:
    */
   typename std::vector<T>::iterator chunkEndIt;
 
-  // Statistics
-  /// The total number of allocations performed
-  std::size_t allocationCount = 0U;
-  /// The number of entries currently in use
-  std::size_t usedCount = 0U;
-  /// The number of entries currently available for reuse
-  std::size_t availableForReuseCount = 0U;
-  /// The peak number of entries in use
-  std::size_t peakUsedCount = 0U;
-  /// The peak number of entries available for reuse
-  std::size_t peakAvailableForReuseCount = 0U;
+  /// Memory manager statistics
+  MemoryManagerStatistics stats{};
 };
 
 } // namespace dd
