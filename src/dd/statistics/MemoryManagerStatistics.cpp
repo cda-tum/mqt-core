@@ -70,8 +70,11 @@ template <typename T> void MemoryManagerStatistics<T>::reset() noexcept {
 }
 
 template <typename T> nlohmann::json MemoryManagerStatistics<T>::json() const {
+  if (peakNumUsed == 0) {
+    return "unused";
+  }
+
   nlohmann::json j = Statistics::json();
-  j["entry_size_B"] = entrySize;
   j["num_allocations"] = numAllocations;
   j["num_allocated"] = numAllocated;
   j["memory_allocated_MiB"] = getAllocatedMemoryMiB();

@@ -135,7 +135,6 @@ bool RealNumberUniqueTable::possiblyNeedsCollection() const noexcept {
 }
 
 std::size_t RealNumberUniqueTable::garbageCollect(const bool force) noexcept {
-  ++stats.gcCalls;
   // nothing to be done if garbage collection is not forced, and the limit has
   // not been reached, or the current count is minimal (the complex table
   // always contains at least 0.5)

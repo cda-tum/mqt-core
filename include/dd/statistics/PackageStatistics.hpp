@@ -97,19 +97,24 @@ template <class Config>
 }
 
 template <class Config = DDPackageConfig>
-[[nodiscard]] static nlohmann::json getStatistics(Package<Config>* package) {
+[[nodiscard]] static nlohmann::json
+getStatistics(Package<Config>* package,
+              const bool includeIndividualTables = false) {
   nlohmann::json j;
 
   auto& vector = j["vector"];
-  vector["unique_table"] = package->vUniqueTable.getStatsJson();
+  vector["unique_table"] =
+      package->vUniqueTable.getStatsJson(includeIndividualTables);
   vector["memory_manager"] = package->vMemoryManager.getStats().json();
 
   auto& matrix = j["matrix"];
-  matrix["unique_table"] = package->mUniqueTable.getStatsJson();
+  matrix["unique_table"] =
+      package->mUniqueTable.getStatsJson(includeIndividualTables);
   matrix["memory_manager"] = package->mMemoryManager.getStats().json();
 
   auto& densityMatrix = j["density_matrix"];
-  densityMatrix["unique_table"] = package->dUniqueTable.getStatsJson();
+  densityMatrix["unique_table"] =
+      package->dUniqueTable.getStatsJson(includeIndividualTables);
   densityMatrix["memory_manager"] = package->dMemoryManager.getStats().json();
 
   auto& realNumbers = j["real_numbers"];
