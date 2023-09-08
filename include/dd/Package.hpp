@@ -2377,7 +2377,6 @@ public:
   ///
   /// Noise Operations
   ///
-public:
   StochasticNoiseOperationTable<mEdge, Config::STOCHASTIC_CACHE_OPS>
       stochasticNoiseOperationCache{nqubits};
   DensityNoiseTable<dEdge, dEdge, Config::CT_DM_NOISE_NBUCKET> densityNoise{};
