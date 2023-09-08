@@ -148,10 +148,19 @@ template <class Config = DDPackageConfig>
   return j;
 }
 
+/**
+ * @brief Get some key statistics about data structures used by the DD package
+ * @tparam Config The package configuration
+ * @param package The package instance
+ * @return A JSON representation of the statistics
+ */
 template <class Config = DDPackageConfig>
 [[nodiscard]] static nlohmann::json
 getDataStructureStatistics(Package<Config>* package) {
   nlohmann::json j;
+
+  // Information about key data structures
+  // For every entry, we store the size in bytes and the alignment in bytes
   auto& ddPackage = j["Package"];
   ddPackage["size_B"] = sizeof(Package<Config>);
   ddPackage["alignment_B"] = alignof(Package<Config>);
@@ -196,6 +205,8 @@ getDataStructureStatistics(Package<Config>* package) {
   complexNumbers["size_B"] = sizeof(ComplexNumbers);
   complexNumbers["alignment_B"] = alignof(ComplexNumbers);
 
+  // Information about all the compute table entries
+  // For every entry, we store the size in bytes and the alignment in bytes
   auto& ctEntries = j["ComplexTableEntries"];
   auto& vectorAdd = ctEntries["vector_add"];
   vectorAdd["size_B"] = sizeof(typename decltype(package->vectorAdd)::Entry);
