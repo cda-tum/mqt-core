@@ -1,6 +1,7 @@
 #include "dd/Export.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
+#include "dd/statistics/PackageStatistics.hpp"
 #include "operations/Control.hpp"
 
 #include <gtest/gtest.h>
@@ -91,7 +92,7 @@ TEST(DDPackageTest, BellState) {
              false);
   dd::exportEdgeWeights(bellState, std::cout);
 
-  dd->statistics();
+  dd::printStatistics(dd.get());
 }
 
 TEST(DDPackageTest, QFTState) {
@@ -179,7 +180,7 @@ TEST(DDPackageTest, QFTState) {
   export2Dot(qftOp, "qft_op_rectangular_memory.dot", false, true, true, true,
              false, false);
 
-  dd->statistics();
+  dd::printStatistics(dd.get());
 }
 
 TEST(DDPackageTest, CorruptedBellState) {
@@ -240,7 +241,6 @@ TEST(DDPackageTest, StateGenerationManipulation) {
   dd->incRef(e);
   dd->incRef(f);
   dd->vUniqueTable.print();
-  dd->printInformation();
   dd->decRef(e);
   dd->decRef(f);
 }
@@ -338,7 +338,7 @@ TEST(DDPackageTest, BellMatrix) {
   export2Dot(bellMatrix, "bell_matrix_memory.dot", false, true, true, true,
              false);
 
-  dd->statistics();
+  dd::printStatistics(dd.get());
 }
 
 TEST(DDPackageTest, MatrixSerializationTest) {
@@ -667,22 +667,22 @@ TEST(DDPackageTest, Inverse) {
   EXPECT_EQ(x, xdag);
   dd->garbageCollect();
   // nothing should have been collected since the threshold is not reached
-  EXPECT_EQ(dd->mUniqueTable.getStats().entryCount, 1);
+  EXPECT_EQ(dd->mUniqueTable.getNumEntries(), 1);
   dd->incRef(x);
   dd->garbageCollect(true);
   // nothing should have been collected since the lone node has a non-zero ref
   // count
-  EXPECT_EQ(dd->mUniqueTable.getStats().entryCount, 1);
+  EXPECT_EQ(dd->mUniqueTable.getNumEntries(), 1);
   dd->decRef(x);
   dd->garbageCollect(true);
   // now the node should have been collected
-  EXPECT_EQ(dd->mUniqueTable.getStats().entryCount, 0);
+  EXPECT_EQ(dd->mUniqueTable.getNumEntries(), 0);
 }
 
 TEST(DDPackageTest, UniqueTableAllocation) {
   auto dd = std::make_unique<dd::Package<>>(1);
 
-  auto allocs = dd->vMemoryManager.getAllocationCount();
+  auto allocs = dd->vMemoryManager.getStats().numAllocated;
   std::cout << allocs << "\n";
   std::vector<dd::vNode*> nodes{allocs};
   // get all the nodes that are pre-allocated
@@ -693,14 +693,14 @@ TEST(DDPackageTest, UniqueTableAllocation) {
   // trigger new allocation
   const auto* node = dd->vMemoryManager.get();
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(dd->vMemoryManager.getAllocationCount(),
+  EXPECT_EQ(dd->vMemoryManager.getStats().numAllocated,
             (1. + dd::MemoryManager<dd::vNode>::GROWTH_FACTOR) *
                 static_cast<double>(allocs));
 
   // clearing the unique table should reduce the allocated size to the original
   // size
   dd->vMemoryManager.reset();
-  EXPECT_EQ(dd->vMemoryManager.getAllocationCount(), allocs);
+  EXPECT_EQ(dd->vMemoryManager.getStats().numAllocated, allocs);
 }
 
 TEST(DDPackageTest, MatrixTranspose) {
@@ -1334,12 +1334,11 @@ TEST(DDPackageTest, dStochCache) {
 
   for (std::uint8_t i = 0; i < 4; i++) {
     for (dd::Qubit j = 0; j < 4; j++) {
+      const auto* op = dd->stochasticNoiseOperationCache.lookup(i, j);
       if (static_cast<dd::Qubit>(i) == j) {
-        auto op = dd->stochasticNoiseOperationCache.lookup(i, j);
-        EXPECT_TRUE(op.p != nullptr && op.p == operations[i].p);
+        EXPECT_TRUE(op != nullptr && op->p == operations[i].p);
       } else {
-        auto op = dd->stochasticNoiseOperationCache.lookup(i, j);
-        EXPECT_EQ(op.p, nullptr);
+        EXPECT_EQ(op, nullptr);
       }
     }
   }
@@ -1347,8 +1346,8 @@ TEST(DDPackageTest, dStochCache) {
   dd->stochasticNoiseOperationCache.clear();
   for (std::uint8_t i = 0; i < 4; i++) {
     for (dd::Qubit j = 0; j < 4; j++) {
-      auto op = dd->stochasticNoiseOperationCache.lookup(i, j);
-      EXPECT_EQ(op.p, nullptr);
+      auto* op = dd->stochasticNoiseOperationCache.lookup(i, j);
+      EXPECT_EQ(op, nullptr);
     }
   }
 }
@@ -1862,7 +1861,7 @@ TEST(DDPackageTest, DDNodeLeakRegressionTest) {
   auto dd2 = dd->makeGateDD(matrix, nqubits, 0U);
   dd->multiply(dd1, dd2);
   dd->garbageCollect(true);
-  EXPECT_EQ(dd->mMemoryManager.getUsedCount(), 0U);
+  EXPECT_EQ(dd->mMemoryManager.getStats().numUsed, 0U);
 }
 
 /**
@@ -1886,10 +1885,31 @@ TEST(DDPackageTest, CTPerformanceRegressionTest) {
     dd->multiply(dd1, dd2);
   }
   auto& ct = dd->matrixMatrixMultiplication;
-  EXPECT_EQ(ct.getLookups(), repetitions);
-  EXPECT_EQ(ct.getHits(), repetitions - 1U);
+  EXPECT_EQ(ct.getStats().lookups, repetitions);
+  EXPECT_EQ(ct.getStats().hits, repetitions - 1U);
 
   // This additional check makes sure that no nodes are leaked.
   dd->garbageCollect(true);
-  EXPECT_EQ(dd->mMemoryManager.getUsedCount(), 0U);
+  EXPECT_EQ(dd->mMemoryManager.getStats().numUsed, 0U);
+}
+
+TEST(DDPackageTest, DataStructureStatistics) {
+  const auto nqubits = 1U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto stats = dd::getDataStructureStatistics(dd.get());
+
+  EXPECT_EQ(stats["vNode"]["size_B"], 64U);
+  EXPECT_EQ(stats["vNode"]["alignment_B"], 8U);
+  EXPECT_EQ(stats["mNode"]["size_B"], 112U);
+  EXPECT_EQ(stats["mNode"]["alignment_B"], 8U);
+  EXPECT_EQ(stats["dNode"]["size_B"], 112U);
+  EXPECT_EQ(stats["dNode"]["alignment_B"], 8U);
+  EXPECT_EQ(stats["vEdge"]["size_B"], 24U);
+  EXPECT_EQ(stats["vEdge"]["alignment_B"], 8U);
+  EXPECT_EQ(stats["mEdge"]["size_B"], 24U);
+  EXPECT_EQ(stats["mEdge"]["alignment_B"], 8U);
+  EXPECT_EQ(stats["dEdge"]["size_B"], 24U);
+  EXPECT_EQ(stats["dEdge"]["alignment_B"], 8U);
+  EXPECT_EQ(stats["RealNumber"]["size_B"], 24U);
+  EXPECT_EQ(stats["RealNumber"]["alignment_B"], 8U);
 }

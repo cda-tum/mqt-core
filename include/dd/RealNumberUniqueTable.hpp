@@ -2,7 +2,7 @@
 
 #include "dd/DDDefinitions.hpp"
 #include "dd/MemoryManager.hpp"
-#include "dd/UniqueTableStatistics.hpp"
+#include "dd/statistics/UniqueTableStatistics.hpp"
 
 #include <array>
 #include <cstddef>
