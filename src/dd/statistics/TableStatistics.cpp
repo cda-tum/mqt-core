@@ -49,6 +49,10 @@ double TableStatistics::getMemoryMiB() const noexcept {
 }
 
 nlohmann::json TableStatistics::json() const {
+  if (lookups == 0) {
+    return "unused";
+  }
+
   nlohmann::json j = Statistics::json();
   j["num_buckets"] = numBuckets;
   j["memory_MiB"] = getMemoryMiB();

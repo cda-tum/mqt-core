@@ -86,6 +86,13 @@ public:
 
   /// Get a JSON object with the statistics
   [[nodiscard]] nlohmann::json getStatsJson() const {
+    if (std::all_of(stats.begin(), stats.end(),
+                    [](const UniqueTableStatistics& stat) {
+                      return stat.peakNumEntries == 0U;
+                    })) {
+      return "unused";
+    }
+
     nlohmann::json j;
     std::size_t v = 0U;
     for (const auto& stat : stats) {

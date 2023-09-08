@@ -17,6 +17,10 @@ void UniqueTableStatistics::reset() noexcept {
 }
 
 nlohmann::json UniqueTableStatistics::json() const {
+  if (lookups == 0) {
+    return "unused";
+  }
+
   nlohmann::json j = TableStatistics::json();
   j["num_active_entries"] = numActiveEntries;
   j["peak_num_active_entries"] = peakNumActiveEntries;
