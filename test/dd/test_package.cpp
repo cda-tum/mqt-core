@@ -1913,3 +1913,16 @@ TEST(DDPackageTest, DataStructureStatistics) {
   EXPECT_EQ(stats["RealNumber"]["size_B"], 24U);
   EXPECT_EQ(stats["RealNumber"]["alignment_B"], 8U);
 }
+
+TEST(DDPackageTest, DDStatistics) {
+  const auto nqubits = 2U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto stats = dd::getStatistics(dd.get(), true);
+
+  std::cout << stats.dump(2) << "\n";
+  EXPECT_TRUE(stats.contains("vector"));
+  EXPECT_TRUE(stats.contains("matrix"));
+  EXPECT_TRUE(stats.contains("density_matrix"));
+  EXPECT_TRUE(stats.contains("real_numbers"));
+  EXPECT_TRUE(stats.contains("compute_tables"));
+}
