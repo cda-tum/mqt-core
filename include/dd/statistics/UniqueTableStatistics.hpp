@@ -12,9 +12,7 @@ struct UniqueTableStatistics : public TableStatistics {
   std::size_t numActiveEntries = 0U;
   /// The peak number of active entries in the table
   std::size_t peakNumActiveEntries = 0U;
-  /// The number of garbage collection calls
-  std::size_t gcCalls = 0U;
-  /// The number of garbage actual garbage collection runs
+  /// The number of garbage collection runs
   std::size_t gcRuns = 0U;
 
   /// Track a new active entry

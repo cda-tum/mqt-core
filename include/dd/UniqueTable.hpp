@@ -93,12 +93,38 @@ public:
   }
 
   /// Get a JSON object with the statistics
-  [[nodiscard]] nlohmann::json getStatsJson() const {
-    nlohmann::json j;
-    std::size_t v = 0U;
+  [[nodiscard]] nlohmann::json
+  getStatsJson(const bool includeIndividualTables = false) const {
+    if (std::all_of(stats.begin(), stats.end(),
+                    [](const UniqueTableStatistics& stat) {
+                      return stat.peakNumEntries == 0U;
+                    })) {
+      return "unused";
+    }
+
+    UniqueTableStatistics totalStats;
     for (const auto& stat : stats) {
-      j[std::to_string(v)] = stat.json();
-      ++v;
+      totalStats.entrySize = std::max(totalStats.entrySize, stat.entrySize);
+      totalStats.numBuckets += stat.numBuckets;
+      totalStats.numEntries += stat.numEntries;
+      totalStats.peakNumEntries += stat.peakNumEntries;
+      totalStats.collisions += stat.collisions;
+      totalStats.hits += stat.hits;
+      totalStats.lookups += stat.lookups;
+      totalStats.inserts += stat.inserts;
+      totalStats.numActiveEntries += stat.numActiveEntries;
+      totalStats.peakNumActiveEntries += stat.peakNumActiveEntries;
+      totalStats.gcRuns = std::max(totalStats.gcRuns, stat.gcRuns);
+    }
+
+    nlohmann::json j;
+    j["total"] = totalStats.json();
+    if (includeIndividualTables) {
+      std::size_t v = 0U;
+      for (const auto& stat : stats) {
+        j[std::to_string(v)] = stat.json();
+        ++v;
+      }
     }
     return j;
   }
@@ -199,9 +225,6 @@ public:
   }
 
   std::size_t garbageCollect(bool force = false) {
-    for (auto& stat : stats) {
-      ++stat.gcCalls;
-    }
     if ((!force && !possiblyNeedsCollection()) || getNumEntries() == 0) {
       return 0;
     }
