@@ -1515,13 +1515,70 @@ public:
     return '1';
   }
 
+  mEdge buildMeasOp(const Qubit index, const size_t numberOfQubits,
+                    const char measureFor = '0') {
+    mEdge measOp = {};
+    mEdge f = {};
+
+    const auto identityMatrix =
+        std::array{qc::MatrixDD::one, qc::MatrixDD::zero, qc::MatrixDD::zero,
+                   qc::MatrixDD::one};
+
+    const auto measureMatrix =
+        measureFor == '0' ? std::array{qc::MatrixDD::zero, qc::MatrixDD::zero,
+                                       qc::MatrixDD::zero, qc::MatrixDD::one}
+                          : std::array{qc::MatrixDD::one, qc::MatrixDD::zero,
+                                       qc::MatrixDD::zero, qc::MatrixDD::zero};
+
+    if (index == 0) {
+      measOp = makeDDNode(static_cast<dd::Qubit>(0), measureMatrix);
+    } else {
+      measOp = makeDDNode(static_cast<dd::Qubit>(0), identityMatrix);
+    }
+
+    for (dd::Qubit p = 1; p < numberOfQubits; p++) {
+      if (p == index) {
+        f = makeDDNode(static_cast<dd::Qubit>(p), measureMatrix);
+      } else {
+        f = makeDDNode(static_cast<dd::Qubit>(p), identityMatrix);
+      }
+      measOp = kronecker(measOp, f);
+    }
+    return measOp;
+  }
+
+  std::pair<dEdge, char>
+  measureOneCollapsing(dEdge& rootEdge, const Qubit index,
+                        const bool assumeProbabilityNormalization,
+                        std::mt19937_64& mt, const fp epsilon = 0.001) {
+
+    const auto numberOfQubits = static_cast<std::size_t>(rootEdge.p->v) + 1U;
+    char measuredResult = '0';
+
+    auto tmp0 = applyOperationToDensity(
+        rootEdge, buildMeasOp(index, numberOfQubits, '0'), true);
+
+    auto pzero = RealNumber::val(rootEdge.w.r);
+
+    std::uniform_real_distribution<fp> dist(0., 1.);
+    if (const auto threshold = dist(mt); threshold < pzero) {
+      rootEdge = tmp0;
+    } else {
+      rootEdge = applyOperationToDensity(
+          rootEdge, buildMeasOp(index, numberOfQubits, '1'), true);
+      measuredResult = '1';
+    }
+    rootEdge.w = Complex::one;
+    return {rootEdge, measuredResult};
+  }
+
   /**
    * @brief Performs a specific measurement on the given state vector decision
    * diagram. Collapses the state according to the measurement result.
    * @param rootEdge the root edge of the state vector decision diagram
    * @param index the index of the qubit to be measured
-   * @param probability the probability of the measurement result (required for
-   * normalization)
+   * @param probability the probability of the measurement result (required
+   * for normalization)
    * @param measureZero whether or not to measure '0' (otherwise '1' is
    * measured)
    */
@@ -1935,13 +1992,13 @@ private:
             dEdge m;
             dEdge::applyDmChangesToEdges(e1, e2);
             if (!generateDensityMatrix || idx == 1) {
-              // When generateDensityMatrix is false or I have the first edge I
-              // don't optimize anything and set generateDensityMatrix to false
-              // for all child edges
+              // When generateDensityMatrix is false or I have the first edge
+              // I don't optimize anything and set generateDensityMatrix to
+              // false for all child edges
               m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start, false);
             } else if (idx == 2) {
-              // When I have the second edge and generateDensityMatrix == false,
-              // then edge[2] == edge[1]
+              // When I have the second edge and generateDensityMatrix ==
+              // false, then edge[2] == edge[1]
               if (k == 0) {
                 if (edge[1].w.approximatelyZero()) {
                   edge[2] = ResultEdge::zero;
@@ -2079,8 +2136,8 @@ public:
 
 private:
   /**
-      Private function to recursively calculate the inner product of two vector
-  decision diagrams x and y with var levels.
+      Private function to recursively calculate the inner product of two
+  vector decision diagrams x and y with var levels.
       @param x a vector DD representing a quantum state
       @param y a vector DD representing a quantum state
       @param var the number of levels contained in each vector DD
@@ -2147,10 +2204,10 @@ public:
   operator with respect to the quantum state
       @throw an exception message is thrown if the edges are not on the same
   level or if the expectation value is non-real.
-      @note This function calls the multiply() function to apply the operator to
-  the quantum state, then calls innerProduct() to calculate the overlap between
-  the original state and the applied state i.e. <Psi| Psi'> = <Psi| (Op|Psi>).
-            It also calls the garbageCollect() function to free up any unused
+      @note This function calls the multiply() function to apply the operator
+  to the quantum state, then calls innerProduct() to calculate the overlap
+  between the original state and the applied state i.e. <Psi| Psi'> = <Psi|
+  (Op|Psi>). It also calls the garbageCollect() function to free up any unused
   memory.
   **/
   fp expectationValue(const mEdge& x, const vEdge& y) {
@@ -2358,8 +2415,8 @@ private:
       return true;
     }
 
-    // check whether any of the middle successors is non-zero, i.e., m = [ x 0 0
-    // y ]
+    // check whether any of the middle successors is non-zero, i.e., m = [ x 0
+    // 0 y ]
     const auto mag1 = dd::ComplexNumbers::mag2(m.p->e[1U].w);
     const auto mag2 = dd::ComplexNumbers::mag2(m.p->e[2U].w);
     if (mag1 > tol || mag2 > tol) {
@@ -2379,8 +2436,8 @@ private:
       return false;
     }
 
-    // check whether m = [ x 0 0 ~1 ] or m = [ x 0 0 ~0 ] (the last case is true
-    // for an ancillary qubit)
+    // check whether m = [ x 0 0 ~1 ] or m = [ x 0 0 ~0 ] (the last case is
+    // true for an ancillary qubit)
     const auto mag3 = dd::ComplexNumbers::mag2(m.p->e[3U].w);
     if (mag3 > tol) {
       if (std::abs(mag3 - 1.0) > tol) {
@@ -2534,8 +2591,8 @@ public:
     return f;
   }
 
-  // Garbage reduction works for reversible circuits --- to be thoroughly tested
-  // for quantum circuits
+  // Garbage reduction works for reversible circuits --- to be thoroughly
+  // tested for quantum circuits
   vEdge reduceGarbage(vEdge& e, const std::vector<bool>& garbage) {
     // return if no more garbage left
     if (std::none_of(garbage.begin(), garbage.end(),
