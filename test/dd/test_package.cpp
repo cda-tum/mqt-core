@@ -1917,12 +1917,20 @@ TEST(DDPackageTest, DataStructureStatistics) {
 TEST(DDPackageTest, DDStatistics) {
   const auto nqubits = 2U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto dummyGate = dd->makeGateDD(dd::Xmat, nqubits, 0U);
+  EXPECT_NE(dummyGate.p, nullptr);
   const auto stats = dd::getStatistics(dd.get(), true);
 
   std::cout << stats.dump(2) << "\n";
   EXPECT_TRUE(stats.contains("vector"));
-  EXPECT_TRUE(stats.contains("matrix"));
+  ASSERT_TRUE(stats.contains("matrix"));
   EXPECT_TRUE(stats.contains("density_matrix"));
   EXPECT_TRUE(stats.contains("real_numbers"));
   EXPECT_TRUE(stats.contains("compute_tables"));
+  const auto& matrixStats = stats["matrix"];
+  ASSERT_TRUE(matrixStats.contains("unique_table"));
+  const auto& uniqueTableStats = matrixStats["unique_table"];
+  EXPECT_TRUE(uniqueTableStats.contains("0"));
+  EXPECT_TRUE(uniqueTableStats.contains("1"));
+  EXPECT_TRUE(uniqueTableStats.contains("total"));
 }
