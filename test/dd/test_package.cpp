@@ -1447,7 +1447,7 @@ TEST(DDPackageTest, DDFromTwoQubitAsymmetricalMatrix) {
   const auto nrQubits = 2U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
-  const auto outputMatrix = dd->getMatrix(matDD);
+  const auto outputMatrix = dd->getMatrix(matDD, nrQubits);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
