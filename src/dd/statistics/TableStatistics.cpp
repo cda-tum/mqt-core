@@ -11,7 +11,6 @@ void TableStatistics::trackInsert() noexcept {
 }
 
 void TableStatistics::reset() noexcept {
-  numBuckets = 0U;
   numEntries = 0U;
   collisions = 0U;
   hits = 0U;
