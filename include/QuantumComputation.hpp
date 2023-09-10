@@ -277,7 +277,7 @@ public:
   [[nodiscard]] std::size_t getNindividualOps() const;
   [[nodiscard]] std::size_t getNsingleQubitOps() const;
   [[nodiscard]] std::size_t getDepth() const;
-  [[nodiscard]] std::size_t getTQDepth() const;
+  [[nodiscard]] std::size_t getTwoQubitDepth() const;
 
   [[nodiscard]] std::string getQubitRegister(Qubit physicalQubitIndex) const;
   [[nodiscard]] std::string getClassicalRegister(Bit classicalIndex) const;

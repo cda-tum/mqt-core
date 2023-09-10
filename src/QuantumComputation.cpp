@@ -60,14 +60,14 @@ std::size_t QuantumComputation::getDepth() const {
   return *std::max_element(depths.begin(), depths.end());
 }
 
-std::size_t QuantumComputation::getTQDepth() const {
+std::size_t QuantumComputation::getTwoQubitDepth() const {
   if (empty()) {
     return 0U;
   }
 
   std::vector<std::size_t> depths(getNqubits(), 0U);
   for (const auto& op : ops) {
-    op->addTQDepthContribution(depths);
+    op->addTwoQubitDepthContribution(depths);
   }
 
   return *std::max_element(depths.begin(), depths.end());
