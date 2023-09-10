@@ -249,7 +249,8 @@ void Operation::addDepthContribution(std::vector<std::size_t>& depths) const {
   }
 }
 
-void Operation::addTwoQubitDepthContribution(std::vector<std::size_t>& depths) const {
+void Operation::addTwoQubitDepthContribution(
+    std::vector<std::size_t>& depths) const {
   if (type == Barrier) {
     return;
   }
