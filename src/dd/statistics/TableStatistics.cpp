@@ -10,13 +10,7 @@ void TableStatistics::trackInsert() noexcept {
   peakNumEntries = std::max(peakNumEntries, numEntries);
 }
 
-void TableStatistics::reset() noexcept {
-  numEntries = 0U;
-  collisions = 0U;
-  hits = 0U;
-  lookups = 0U;
-  inserts = 0U;
-}
+void TableStatistics::reset() noexcept { numEntries = 0U; }
 
 double TableStatistics::hitRatio() const noexcept {
   if (lookups == 0) {

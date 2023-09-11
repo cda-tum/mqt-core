@@ -254,6 +254,7 @@ public:
           }
         }
       }
+      stat.numActiveEntries = stat.numEntries;
       ++v;
     }
 
