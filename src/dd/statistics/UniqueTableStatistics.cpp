@@ -13,7 +13,6 @@ void UniqueTableStatistics::trackActiveEntry() noexcept {
 void UniqueTableStatistics::reset() noexcept {
   TableStatistics::reset();
   numActiveEntries = 0U;
-  gcRuns = 0U;
 }
 
 nlohmann::json UniqueTableStatistics::json() const {
