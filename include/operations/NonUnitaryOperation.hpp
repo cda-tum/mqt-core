@@ -48,7 +48,6 @@ public:
     throw QFRException("Cannot clear controls from non-unitary operation.");
   }
 
-
   void removeControls(const Controls& /*c*/) override {
     throw QFRException("Cannot remove controls from non-unitary operation.");
   }
