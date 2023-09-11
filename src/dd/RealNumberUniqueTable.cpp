@@ -177,6 +177,7 @@ std::size_t RealNumberUniqueTable::garbageCollect(const bool force) noexcept {
   } else if (stats.numEntries < gcLimit / 128) {
     gcLimit /= 2;
   }
+  stats.numActiveEntries = stats.numEntries;
   return entryCountBefore - stats.numEntries;
 }
 
