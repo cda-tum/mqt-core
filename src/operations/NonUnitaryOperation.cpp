@@ -191,4 +191,20 @@ void NonUnitaryOperation::printReset(std::ostream& os,
     }
   }
 }
+
+void NonUnitaryOperation::addDepthContribution(
+    std::vector<std::size_t>& depths) const {
+  if (type == Barrier) {
+    return;
+  }
+
+  std::size_t maxDepth = 0;
+  for (const auto& target : getTargets()) {
+    maxDepth = std::max(maxDepth, depths[target]);
+  }
+  maxDepth += 1;
+  for (const auto& target : getTargets()) {
+    depths[target] = maxDepth;
+  }
+}
 } // namespace qc

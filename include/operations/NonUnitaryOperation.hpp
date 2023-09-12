@@ -40,6 +40,12 @@ public:
   std::vector<Bit>& getClassics() { return classics; }
   [[nodiscard]] size_t getNclassics() const { return classics.size(); }
 
+  Controls& getControls() const override {
+    throw QFRException("Cannot get controls from non-unitary operation.");
+  }
+
+  void addDepthContribution(std::vector<std::size_t>& depths) const override;
+
   void addControl(const Control /*c*/) override {
     throw QFRException("Cannot add control to non-unitary operation.");
   }
