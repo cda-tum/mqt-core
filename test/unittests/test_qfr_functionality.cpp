@@ -1950,6 +1950,7 @@ TEST_F(QFRFunctionality, addControlStandardOperation) {
   EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
+  ASSERT_THROW(op.removeControl(1_pc), QFRException);
 }
 
 TEST_F(QFRFunctionality, addControlSymbolicOperation) {
