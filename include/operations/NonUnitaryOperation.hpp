@@ -40,6 +40,11 @@ public:
   std::vector<Bit>& getClassics() { return classics; }
   [[nodiscard]] size_t getNclassics() const { return classics.size(); }
 
+  [[nodiscard]] std::set<Qubit> getUsedQubits() const override {
+    const auto& opTargets = getTargets();
+    return {opTargets.begin(), opTargets.end()};
+  }
+
   [[nodiscard]] Controls& getControls() const override {
     throw QFRException("Cannot get controls from non-unitary operation.");
   }
