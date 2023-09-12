@@ -1958,4 +1958,8 @@ TEST(DDPackageTest, DDStatistics) {
   EXPECT_TRUE(uniqueTableStats.contains("0"));
   EXPECT_TRUE(uniqueTableStats.contains("1"));
   EXPECT_TRUE(uniqueTableStats.contains("total"));
+  ASSERT_TRUE(uniqueTableStats["0"].contains("num_buckets"));
+  EXPECT_GT(uniqueTableStats["0"]["num_buckets"], 0);
+  ASSERT_TRUE(uniqueTableStats["total"].contains("num_buckets"));
+  EXPECT_GT(uniqueTableStats["total"]["num_buckets"], 0);
 }
