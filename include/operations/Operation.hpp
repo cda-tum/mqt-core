@@ -93,7 +93,7 @@ public:
     addControls(c);
   }
 
-  virtual void addControl(const Control c) = 0;
+  virtual void addControl(Control c) = 0;
 
   void addControls(const Controls& c) {
     for (const auto& control : c) {
@@ -103,11 +103,13 @@ public:
 
   virtual void clearControls() = 0;
 
-  virtual void removeControl(const Control c) = 0;
+  virtual void removeControl(Control c) = 0;
+
+  virtual Controls::iterator removeControl(Controls::iterator it) = 0;
 
   void removeControls(const Controls& c) {
-    for (const auto& control : c) {
-      removeControl(control);
+    for (auto it = c.begin(); it != c.end();) {
+      it = removeControl(it);
     }
   }
 

@@ -65,8 +65,7 @@ public:
 
   void clearControls() override {
     // we remove just our controls from nested operations
-    // We need to copy controls here as we will modify the set while iterating
-    removeControls(Controls{controls});
+    removeControls(controls);
   }
 
   void removeControl(const Control c) override {
@@ -80,6 +79,14 @@ public:
     for (auto& op : ops) {
       op->removeControl(c);
     }
+  }
+
+  Controls::iterator removeControl(const Controls::iterator it) override {
+    for (auto& op : ops) {
+      op->removeControl(*it);
+    }
+
+    return controls.erase(it);
   }
 
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,

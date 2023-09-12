@@ -80,6 +80,10 @@ public:
 
   void removeControl(const Control c) override { op->removeControl(c); }
 
+  Controls::iterator removeControl(const Controls::iterator it) override {
+    return op->removeControl(it);
+  }
+
   [[nodiscard]] bool equals(const Operation& operation,
                             const Permutation& perm1,
                             const Permutation& perm2) const override {

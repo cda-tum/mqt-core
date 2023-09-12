@@ -91,6 +91,10 @@ public:
     }
   }
 
+  Controls::iterator removeControl(const Controls::iterator it) override {
+    return controls.erase(it);
+  }
+
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override {
     return Operation::equals(op, perm1, perm2);
