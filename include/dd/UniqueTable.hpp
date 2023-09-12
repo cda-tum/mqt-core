@@ -61,6 +61,10 @@ public:
     // TODO: if the new size is smaller than the old one we might have to
     // release the unique table entries for the superfluous variables
     stats.resize(nq);
+    for (auto& stat : stats) {
+      stat.entrySize = sizeof(Bucket);
+      stat.numBuckets = NBUCKET;
+    }
   }
 
   /**
