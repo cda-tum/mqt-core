@@ -93,15 +93,23 @@ public:
     addControls(c);
   }
 
-  virtual void addControl(const Control c) { addControls({c}); }
+  virtual void addControl(const Control c) = 0;
 
-  virtual void addControls(const Controls& c) = 0;
+  void addControls(const Controls& c) {
+    for (const auto& control : c) {
+      addControl(control);
+    }
+  }
 
   virtual void clearControls() = 0;
 
-  virtual void removeControl(const Control c) { removeControls({c}); }
+  virtual void removeControl(const Control c) = 0;
 
-  virtual void removeControls(const Controls& c) = 0;
+  void removeControls(const Controls& c) {
+    for (const auto& control : c) {
+      removeControl(control);
+    }
+  }
 
   virtual void setName();
 

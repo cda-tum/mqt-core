@@ -72,23 +72,22 @@ public:
 
   [[nodiscard]] bool isStandardOperation() const override { return true; }
 
-  void addControls(const Controls& c) override {
-    for (auto ctrl : c) {
-      if (actsOn(ctrl.qubit)) {
-        throw QFRException(
-            "Cannot add control to operation as it already acts on "
-            "the control qubit.");
-      }
-
-      controls.insert(ctrl);
+  void addControl(const Control c) override {
+    if (actsOn(c.qubit)) {
+      throw QFRException(
+          "Cannot add control to operation as it already acts on "
+          "the control qubit.");
     }
+
+    controls.emplace(c);
   }
 
   void clearControls() override { controls.clear(); }
 
-  void removeControls(const Controls& c) override {
-    for (auto ctrl : c) {
-      controls.erase(ctrl);
+  void removeControl(const Control c) override {
+    if (controls.erase(c) == 0) {
+      throw QFRException("Cannot remove control from operation as it is not a "
+                         "control.");
     }
   }
 

@@ -74,11 +74,11 @@ public:
 
   [[nodiscard]] bool actsOn(Qubit i) const override { return op->actsOn(i); }
 
-  void addControls(const Controls& c) override { op->addControls(c); }
+  void addControl(const Control c) override { op->addControl(c); }
 
   void clearControls() override { op->clearControls(); }
 
-  void removeControls(const Controls& c) override { op->removeControls(c); }
+  void removeControl(const Control c) override { op->removeControl(c); }
 
   [[nodiscard]] bool equals(const Operation& operation,
                             const Permutation& perm1,

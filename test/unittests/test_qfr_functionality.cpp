@@ -1939,34 +1939,30 @@ TEST_F(QFRFunctionality, dumpAndImportTeleportation) {
 }
 
 TEST_F(QFRFunctionality, addControlStandardOperation) {
-  auto op = StandardOperation(2, Targets{0}, OpType::X);
-
-  op.addControl(Control{1, Control::Type::Pos});
-  op.addControl(Control{2, Control::Type::Pos});
-
+  auto op = StandardOperation(3, 0, OpType::X);
+  op.addControl(1_pc);
+  op.addControl(2_pc);
   ASSERT_EQ(op.getNcontrols(), 2);
-  auto expectedControls =
-      Controls{Control{1, Control::Type::Pos}, Control{2, Control::Type::Pos}};
+  const auto expectedControls = Controls{1_pc, 2_pc};
   EXPECT_EQ(op.getControls(), expectedControls);
-  op.removeControl(Control{1, Control::Type::Pos});
-  auto expectedControlsAfterRemove = Controls{Control{2, Control::Type::Pos}};
+  op.removeControl(1_pc);
+  const auto expectedControlsAfterRemove = Controls{2_pc};
   EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
 }
 
 TEST_F(QFRFunctionality, addControlSymbolicOperation) {
-  auto op = SymbolicOperation(2, Targets{0}, OpType::X);
+  auto op = SymbolicOperation(3, 0, OpType::X);
 
-  op.addControl(Control{1, Control::Type::Pos});
-  op.addControl(Control{2, Control::Type::Pos});
+  op.addControl(1_pc);
+  op.addControl(2_pc);
 
   ASSERT_EQ(op.getNcontrols(), 2);
-  auto expectedControls =
-      Controls{Control{1, Control::Type::Pos}, Control{2, Control::Type::Pos}};
+  auto expectedControls = Controls{1_pc, 2_pc};
   EXPECT_EQ(op.getControls(), expectedControls);
-  op.removeControl(Control{1, Control::Type::Pos});
-  auto expectedControlsAfterRemove = Controls{Control{2, Control::Type::Pos}};
+  op.removeControl(1_pc);
+  auto expectedControlsAfterRemove = Controls{2_pc};
   EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
@@ -1979,15 +1975,14 @@ TEST_F(QFRFunctionality, addControlClassicControlledOperation) {
   const auto expectedValue = 0U;
   auto op = ClassicControlledOperation(xp, controlRegister, expectedValue);
 
-  op.addControl(Control{1, Control::Type::Pos});
-  op.addControl(Control{2, Control::Type::Pos});
+  op.addControl(1_pc);
+  op.addControl(2_pc);
 
   ASSERT_EQ(op.getNcontrols(), 2);
-  auto expectedControls =
-      Controls{Control{1, Control::Type::Pos}, Control{2, Control::Type::Pos}};
+  auto expectedControls = Controls{1_pc, 2_pc};
   EXPECT_EQ(op.getControls(), expectedControls);
-  op.removeControl(Control{1, Control::Type::Pos});
-  auto expectedControlsAfterRemove = Controls{Control{2, Control::Type::Pos}};
+  op.removeControl(1_pc);
+  auto expectedControlsAfterRemove = Controls{2_pc};
   EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
@@ -1996,8 +1991,8 @@ TEST_F(QFRFunctionality, addControlClassicControlledOperation) {
 TEST_F(QFRFunctionality, addControlCompundOperation) {
   auto op = CompoundOperation(4);
 
-  auto control0 = Control{0, Control::Type::Pos};
-  auto control1 = Control{1, Control::Type::Pos};
+  auto control0 = 0_pc;
+  auto control1 = 1_pc;
 
   auto xOp = std::make_unique<StandardOperation>(4, Targets{1}, OpType::X);
   auto cxOp = std::make_unique<StandardOperation>(4, Targets{3}, OpType::X);
@@ -2020,7 +2015,7 @@ TEST_F(QFRFunctionality, addControlCompundOperation) {
 }
 
 TEST_F(QFRFunctionality, addControlTwice) {
-  Control const control{0, Control::Type::Pos};
+  auto control = 0_pc;
 
   std::unique_ptr<Operation> op =
       std::make_unique<StandardOperation>(2, Targets{1}, OpType::X);
@@ -2038,7 +2033,7 @@ TEST_F(QFRFunctionality, addControlTwice) {
 
 TEST_F(QFRFunctionality, addTargetAsControl) {
   // Adding a control that is already a target
-  Control const control{1, Control::Type::Pos};
+  auto control = 1_pc;
 
   std::unique_ptr<Operation> op =
       std::make_unique<StandardOperation>(2, Targets{1}, OpType::X);
@@ -2055,7 +2050,7 @@ TEST_F(QFRFunctionality, addTargetAsControl) {
 TEST_F(QFRFunctionality, addControlCompundOperationInvalid) {
   auto op = CompoundOperation(4);
 
-  auto control1 = Control{1, Control::Type::Pos};
+  auto control1 = 1_pc;
 
   auto xOp = std::make_unique<StandardOperation>(4, Targets{1}, OpType::X);
   auto cxOp = std::make_unique<StandardOperation>(4, Targets{3}, OpType::X);

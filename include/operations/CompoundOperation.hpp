@@ -54,33 +54,31 @@ public:
     });
   }
 
-  void addControls(const Controls& c) override {
-    for (auto ctrl : c) {
-      controls.insert(ctrl);
-    }
+  void addControl(const Control c) override {
+    controls.insert(c);
     // we can just add the controls to each operation, as the operations will
     // check if they already act on the control qubits.
     for (auto& op : ops) {
-      op->addControls(c);
+      op->addControl(c);
     }
   }
 
   void clearControls() override {
     // we remove just our controls from nested operations
+    // We need to copy controls here as we will modify the set while iterating
     removeControls(Controls{controls});
   }
 
-  void removeControls(const Controls& c) override {
+  void removeControl(const Control c) override {
     // first we iterate over our controls and check if we are actually allowed
     // to remove them
-    for (const auto& ctrl : c) {
-      if (controls.erase(ctrl) == 0) {
-        throw QFRException("Cannot remove control from compound operation.");
-      }
+    if (controls.erase(c) == 0) {
+      throw QFRException("Cannot remove control from compound operation as it "
+                         "is not a control.");
     }
 
     for (auto& op : ops) {
-      op->removeControls(c);
+      op->removeControl(c);
     }
   }
 
