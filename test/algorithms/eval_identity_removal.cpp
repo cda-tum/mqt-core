@@ -354,3 +354,98 @@ TEST_P(QPEEvalFunctionality, QPEFunctionality) {
 
   writeResults("QPE", "Functionality", *qc, runtime.count(), dd);
 }
+
+TEST(JSON, JSONTranspose) {
+  std::ifstream ifs("results.json");
+  nlohmann::json j;
+  ifs >> j;
+  ifs.close();
+
+  nlohmann::json k;
+
+  for (const auto& [algorithm, resultsA] : j.items()) {
+    for (const auto& [type, resultsT] : resultsA.items()) {
+      for (const auto& [nqubits, resultsN] : resultsT.items()) {
+        for (const auto& [branch, resultsB] : resultsN.items()) {
+          const auto& runtime = resultsB["runtime"];
+          k[algorithm][type][nqubits]["runtime"][branch] = runtime;
+
+          const auto& gateCount = resultsB["gate_count"];
+          k[algorithm][type][nqubits]["gate_count"][branch] = gateCount;
+
+          const auto& dd = resultsB["dd"];
+          const auto& activeMemoryMiB = dd["active_memory_mib"];
+          k[algorithm][type][nqubits]["dd"]["active_memory_mib"][branch] =
+              activeMemoryMiB;
+          const auto& peakMemoryMiB = dd["peak_memory_mib"];
+          k[algorithm][type][nqubits]["dd"]["peak_memory_mib"][branch] =
+              peakMemoryMiB;
+          for (const auto& stat : {"matrix", "vector", "density_matrix",
+                                   "real_numbers", "compute_tables"}) {
+            for (const auto& [key, value] : dd[stat].items()) {
+              if (value == "unused") {
+                k[algorithm][type][nqubits]["dd"][stat][key][branch] = value;
+                continue;
+              }
+
+              for (const auto& [key2, value2] : value.items()) {
+                if ((std::strcmp(stat, "matrix") != 0 ||
+                     std::strcmp(stat, "vector") != 0 ||
+                     std::strcmp(stat, "density_matrix") != 0) &&
+                    key == "unique_table") {
+                  for (const auto& [key3, value3] : value2.items()) {
+                    k[algorithm][type][nqubits]["dd"][stat][key][key2][key3]
+                     [branch] = value3;
+                  }
+                  continue;
+                }
+                k[algorithm][type][nqubits]["dd"][stat][key][key2][branch] =
+                    value2;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  std::ofstream ofs("results_transposed.json");
+  ofs << k.dump(2);
+  ofs.close();
+}
+
+TEST(JSON, JSONReduce) {
+  std::ifstream ifs("results_transposed.json");
+  nlohmann::json j;
+  ifs >> j;
+  ifs.close();
+
+  for (const auto& [algorithm, resultsA] : j.items()) {
+    for (const auto& [type, resultsT] : resultsA.items()) {
+      for (const auto& [nqubits, resultsN] : resultsT.items()) {
+        auto& dd = resultsN["dd"];
+        dd.erase("density_matrix");
+
+        auto& computeTables = dd["compute_tables"];
+        computeTables.erase("density_matrix_add");
+        computeTables.erase("density_density_mult");
+        computeTables.erase("density_noise_operations");
+        computeTables.erase("stochastic_noise_operations");
+        computeTables.erase("matrix_kronecker");
+        computeTables.erase("vector_kronecker");
+        computeTables.erase("vector_inner_product");
+        computeTables.erase("matrix_conjugate_transpose");
+
+        if (type == "Functionality") {
+          dd.erase("vector");
+          computeTables.erase("vector_add");
+          computeTables.erase("matrix_vector_mult");
+        }
+      }
+    }
+  }
+
+  std::ofstream ofs("results_reduced.json");
+  ofs << j.dump(2);
+  ofs.close();
+}
