@@ -40,7 +40,7 @@ public:
   std::vector<Bit>& getClassics() { return classics; }
   [[nodiscard]] size_t getNclassics() const { return classics.size(); }
 
-  Controls& getControls() const override {
+  [[nodiscard]] Controls& getControls() const override {
     throw QFRException("Cannot get controls from non-unitary operation.");
   }
 
