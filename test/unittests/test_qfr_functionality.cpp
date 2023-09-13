@@ -1953,7 +1953,7 @@ TEST_F(QFRFunctionality, addControlStandardOperation) {
   ASSERT_THROW(op.removeControl(1_pc), QFRException);
 
   op.addControl(1_pc);
-  const auto &controls = op.getControls();
+  const auto& controls = op.getControls();
   EXPECT_EQ(op.removeControl(controls.begin()), controls.end());
 }
 
@@ -1973,7 +1973,7 @@ TEST_F(QFRFunctionality, addControlSymbolicOperation) {
   EXPECT_EQ(op.getNcontrols(), 0);
 
   op.addControl(1_pc);
-  const auto &controls = op.getControls();
+  const auto& controls = op.getControls();
   EXPECT_EQ(op.removeControl(controls.begin()), controls.end());
 }
 
@@ -1996,7 +1996,7 @@ TEST_F(QFRFunctionality, addControlClassicControlledOperation) {
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
   op.addControl(1_pc);
-  const auto &controls = op.getControls();
+  const auto& controls = op.getControls();
   EXPECT_EQ(op.removeControl(controls.begin()), controls.end());
 }
 
