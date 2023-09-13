@@ -74,9 +74,9 @@ public:
 
   void addControl(const Control c) override {
     if (actsOn(c.qubit)) {
-      throw QFRException(
-          "Cannot add control to operation as it already acts on "
-          "the control qubit.");
+      throw QFRException("Cannot add control on qubit " +
+                         std::to_string(c.qubit) +
+                         " to operation it already acts on the qubit.");
     }
 
     controls.emplace(c);
@@ -86,8 +86,9 @@ public:
 
   void removeControl(const Control c) override {
     if (controls.erase(c) == 0) {
-      throw QFRException("Cannot remove control from operation as it is not a "
-                         "control.");
+      throw QFRException("Cannot remove control on qubit " +
+                         std::to_string(c.qubit) +
+                         " from operation as it is not a control.");
     }
   }
 
