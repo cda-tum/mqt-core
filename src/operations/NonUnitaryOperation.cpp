@@ -191,4 +191,11 @@ void NonUnitaryOperation::printReset(std::ostream& os,
     }
   }
 }
+
+void NonUnitaryOperation::addDepthContribution(
+    std::vector<std::size_t>& depths) const {
+  for (const auto& target : getTargets()) {
+    depths[target] += 1;
+  }
+}
 } // namespace qc

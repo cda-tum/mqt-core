@@ -88,7 +88,30 @@ public:
 
   virtual void setTargets(const Targets& t) { targets = t; }
 
-  virtual void setControls(const Controls& c) { controls = c; }
+  virtual void setControls(const Controls& c) {
+    clearControls();
+    addControls(c);
+  }
+
+  virtual void addControl(Control c) = 0;
+
+  void addControls(const Controls& c) {
+    for (const auto& control : c) {
+      addControl(control);
+    }
+  }
+
+  virtual void clearControls() = 0;
+
+  virtual void removeControl(Control c) = 0;
+
+  virtual Controls::iterator removeControl(Controls::iterator it) = 0;
+
+  void removeControls(const Controls& c) {
+    for (auto it = c.begin(); it != c.end();) {
+      it = removeControl(it);
+    }
+  }
 
   virtual void setName();
 
