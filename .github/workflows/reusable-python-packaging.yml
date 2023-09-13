@@ -86,7 +86,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
       - if: ${{ inputs.setup-z3 }}
         name: Set environment variables for Z3 installation in manylinux image
         run: |
