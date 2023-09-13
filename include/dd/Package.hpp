@@ -1180,7 +1180,9 @@ public:
         if ((es[0].p == es[3].p) &&
             (es[0].w == Complex::one && es[1].w == Complex::zero &&
              es[2].w == Complex::zero && es[3].w == Complex::one)) {
-          return Edge<mNode>{es[0].p, e.w};
+          auto* p = es[0].p;
+          memoryManager.returnEntry(e.p);
+          return Edge<mNode>{p, e.w};
         }
       }
     }
