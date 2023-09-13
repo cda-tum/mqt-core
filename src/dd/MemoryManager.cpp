@@ -81,19 +81,18 @@ template <typename T>
 void MemoryManager<T>::reset(const bool resizeToTotal) noexcept {
   available = nullptr;
 
-  chunks.erase(chunks.begin() + 1, chunks.end());
-  for (auto& entry : chunks[0]) {
-    entry.ref = 0U;
-  }
+  auto numAllocations = stats.numAllocations;
+  chunks.resize(1U);
   if (resizeToTotal) {
     chunks[0].resize(stats.numAllocated);
+    ++numAllocations;
   }
 
   chunkIt = chunks[0].begin();
   chunkEndIt = chunks[0].end();
 
   stats.reset();
-  stats.numAllocations = 1U;
+  stats.numAllocations = numAllocations;
   stats.numAllocated = chunks[0].size();
 }
 
