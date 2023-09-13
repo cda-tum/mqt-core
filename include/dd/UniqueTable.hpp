@@ -229,11 +229,11 @@ public:
   }
 
   std::size_t garbageCollect(bool force = false) {
-    if ((!force && !possiblyNeedsCollection()) || getNumEntries() == 0) {
-      return 0;
+    const std::size_t numEntriesBefore = getNumEntries();
+    if ((!force && numEntriesBefore < gcLimit) || numEntriesBefore == 0U) {
+      return 0U;
     }
 
-    const std::size_t numEntriesBefore = getNumEntries();
     std::size_t v = 0U;
     for (auto& table : tables) {
       auto& stat = stats[v];
