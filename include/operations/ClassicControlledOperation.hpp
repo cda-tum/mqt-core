@@ -112,5 +112,7 @@ public:
     of << " == " << expectedValue << ") ";
     op->dumpOpenQASM(of, qreg, creg);
   }
+
+  void invert() override { op->invert(); }
 };
 } // namespace qc

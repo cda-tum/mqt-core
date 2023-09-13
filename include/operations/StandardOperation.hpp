@@ -106,6 +106,8 @@ public:
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                     const RegisterNames& creg) const override;
+
+  void invert() override;
 };
 
 } // namespace qc
