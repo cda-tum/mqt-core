@@ -218,6 +218,9 @@ archs = "auto64"
 test-command = "python -c \"from mqt import core\""
 build-frontend = "build"
 
+[tool.cibuildwheel.linux]
+environment = { DEPLOY = "ON" }
+
 [tool.cibuildwheel.macos]
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
 
