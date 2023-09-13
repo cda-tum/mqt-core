@@ -1951,6 +1951,10 @@ TEST_F(QFRFunctionality, addControlStandardOperation) {
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
   ASSERT_THROW(op.removeControl(1_pc), QFRException);
+
+  op.addControl(1_pc);
+  const auto &controls = op.getControls();
+  EXPECT_EQ(op.removeControl(controls.begin()), controls.end());
 }
 
 TEST_F(QFRFunctionality, addControlSymbolicOperation) {
@@ -1967,6 +1971,10 @@ TEST_F(QFRFunctionality, addControlSymbolicOperation) {
   EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
+
+  op.addControl(1_pc);
+  const auto &controls = op.getControls();
+  EXPECT_EQ(op.removeControl(controls.begin()), controls.end());
 }
 
 TEST_F(QFRFunctionality, addControlClassicControlledOperation) {
@@ -1987,6 +1995,9 @@ TEST_F(QFRFunctionality, addControlClassicControlledOperation) {
   EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
+  op.addControl(1_pc);
+  const auto &controls = op.getControls();
+  EXPECT_EQ(op.removeControl(controls.begin()), controls.end());
 }
 
 TEST_F(QFRFunctionality, addControlNonUnitaryOperation) {
@@ -1996,6 +2007,9 @@ TEST_F(QFRFunctionality, addControlNonUnitaryOperation) {
   EXPECT_THROW(op.addControl(1_pc), QFRException);
   EXPECT_THROW(op.removeControl(1_pc), QFRException);
   EXPECT_THROW(op.clearControls(), QFRException);
+  // we pass an invalid iterator to removeControl, which is fine, since the
+  // function call should unconditionally trap
+  EXPECT_THROW(op.removeControl(Controls::const_iterator{}), QFRException);
 }
 
 TEST_F(QFRFunctionality, addControlCompundOperation) {
