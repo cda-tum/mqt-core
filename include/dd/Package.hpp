@@ -1882,20 +1882,13 @@ private:
         auto idx = cols * i + j;
         edge[idx] = ResultEdge::zero;
         for (auto k = 0U; k < rows; k++) {
-          LEdge e1{};
-          if (!x.isTerminal() && x.p->v == var) {
-            e1 = x.p->e[rows * i + k];
-          } else {
-            e1 = xCopy;
-          }
+          const auto xIdx = rows * i + k;
+          LEdge e1 = x.p->e[xIdx];
 
-          REdge e2{};
-          if (!y.isTerminal() && y.p->v == var) {
-            e2 = y.p->e[j + cols * k];
-          } else {
-            e2 = yCopy;
-          }
+          const auto yIdx = j + cols * k;
+          REdge e2 = y.p->e[yIdx];
 
+          const auto v = static_cast<Qubit>(var - 1);
           if constexpr (std::is_same_v<LeftOperandNode, dNode>) {
             dEdge m;
             dEdge::applyDmChangesToEdges(e1, e2);
@@ -1903,7 +1896,7 @@ private:
               // When generateDensityMatrix is false or I have the first edge I
               // don't optimize anything and set generateDensityMatrix to false
               // for all child edges
-              m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start, false);
+              m = multiply2(e1, e2, v, start, false);
             } else if (idx == 2) {
               // When I have the second edge and generateDensityMatrix == false,
               // then edge[2] == edge[1]
@@ -1916,8 +1909,7 @@ private:
               }
               continue;
             } else {
-              m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start,
-                            generateDensityMatrix);
+              m = multiply2(e1, e2, v, start, generateDensityMatrix);
             }
 
             if (k == 0 || edge[idx].w.exactlyZero()) {
@@ -1933,7 +1925,7 @@ private:
             // Undo modifications on density matrices
             dEdge::revertDmChangesToEdges(e1, e2);
           } else {
-            auto m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start);
+            auto m = multiply2(e1, e2, v, start);
 
             if (k == 0 || edge[idx].w.exactlyZero()) {
               edge[idx] = m;
