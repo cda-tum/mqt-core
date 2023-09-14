@@ -1576,7 +1576,17 @@ public:
   template <class Edge> Edge add(const Edge& x, const Edge& y) {
     [[maybe_unused]] const auto before = cn.cacheCount();
 
-    auto result = add2(x, y);
+    Qubit var{};
+    if (!x.isTerminal()) {
+      assert(x.p != nullptr);
+      var = x.p->v;
+    }
+    if (!y.isTerminal() && (y.p->v) > var) {
+      assert(y.p != nullptr);
+      var = y.p->v;
+    }
+
+    auto result = add2(x, y, var);
     result.w = cn.lookup(result.w, true);
 
     [[maybe_unused]] const auto after = cn.cacheCount();
@@ -1586,7 +1596,7 @@ public:
   }
 
   template <class Node>
-  Edge<Node> add2(const Edge<Node>& x, const Edge<Node>& y) {
+  Edge<Node> add2(const Edge<Node>& x, const Edge<Node>& y, const Qubit var) {
     if (x.w.exactlyZero()) {
       if (y.w.exactlyZero()) {
         return Edge<Node>::zero;
@@ -1615,15 +1625,16 @@ public:
       return {r->p, cn.getCached(r->w)};
     }
 
-    const Qubit w = (x.isTerminal() || (!y.isTerminal() && y.p->v > x.p->v))
-                        ? y.p->v
-                        : x.p->v;
-
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
     std::array<Edge<Node>, n> edge{};
     for (std::size_t i = 0U; i < n; i++) {
+      if constexpr (std::is_same_v<Node, vNode>) {
+        assert(!x.isTerminal() && "x must not be terminal");
+        assert(!y.isTerminal() && "y must not be terminal");
+        assert(x.p->v == y.p->v && "x and y must be at the same level");
+      }
       Edge<Node> e1{};
-      if (!x.isTerminal() && x.p->v == w) {
+      if (!x.isTerminal()) {
         e1 = x.p->e[i];
 
         if (!e1.w.exactlyZero()) {
@@ -1636,7 +1647,7 @@ public:
         }
       }
       Edge<Node> e2{};
-      if (!y.isTerminal() && y.p->v == w) {
+      if (!y.isTerminal()) {
         e2 = y.p->e[i];
 
         if (!e2.w.exactlyZero()) {
@@ -1651,22 +1662,22 @@ public:
 
       if constexpr (std::is_same_v<Node, dNode>) {
         dEdge::applyDmChangesToEdges(e1, e2);
-        edge[i] = add2(e1, e2);
+        edge[i] = add2(e1, e2, var - 1);
         dEdge::revertDmChangesToEdges(e1, e2);
       } else {
-        edge[i] = add2(e1, e2);
+        edge[i] = add2(e1, e2, var - 1);
       }
 
-      if (!x.isTerminal() && x.p->v == w) {
+      if (!x.isTerminal() && x.p->v == var) {
         cn.returnToCache(e1.w);
       }
 
-      if (!y.isTerminal() && y.p->v == w) {
+      if (!y.isTerminal() && y.p->v == var) {
         cn.returnToCache(e2.w);
       }
     }
 
-    auto e = makeDDNode(w, edge, true);
+    auto e = makeDDNode(var, edge, true);
 
     computeTable.insert({x.p, x.w}, {y.p, y.w}, {e.p, e.w});
     return e;
@@ -1917,7 +1928,7 @@ private:
             } else if (!m.w.exactlyZero()) {
               dEdge::applyDmChangesToEdges(edge[idx], m);
               const auto w = edge[idx].w;
-              edge[idx] = add2(edge[idx], m);
+              edge[idx] = add2(edge[idx], m, v);
               dEdge::revertDmChangesToEdges(edge[idx], e2);
               cn.returnToCache(w);
               cn.returnToCache(m.w);
@@ -1931,7 +1942,7 @@ private:
               edge[idx] = m;
             } else if (!m.w.exactlyZero()) {
               const auto w = edge[idx].w;
-              edge[idx] = add2(edge[idx], m);
+              edge[idx] = add2(edge[idx], m, v);
               cn.returnToCache(w);
               cn.returnToCache(m.w);
             }
@@ -2262,11 +2273,11 @@ private:
       auto r = mEdge::zero;
 
       const auto t0 = trace(a.p->e[0], eliminate, elims);
-      r = add2(r, t0);
+      r = add2(r, t0, v - 1);
       auto r1 = r;
 
       const auto t1 = trace(a.p->e[3], eliminate, elims);
-      r = add2(r, t1);
+      r = add2(r, t1, v - 1);
       auto r2 = r;
 
       if (r.w.exactlyOne()) {
