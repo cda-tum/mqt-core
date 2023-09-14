@@ -474,6 +474,10 @@ TEST_F(CNTest, MaxRefCountReached) {
 }
 
 TEST_F(CNTest, ComplexTableAllocation) {
+  // Reset the memory manager to get a clean state.
+  // This is a temporary solution until the UniqueTable is refactored to not
+  // unconditionally add .5 to the memory manager.
+  mm = MemoryManager<RealNumber>{};
   auto allocs = mm.getStats().numAllocated;
   std::cout << allocs << "\n";
   std::vector<RealNumber*> nums{allocs};
