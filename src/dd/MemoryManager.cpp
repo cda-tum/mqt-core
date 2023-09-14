@@ -102,8 +102,6 @@ T* MemoryManager<T>::getEntryFromAvailableList() noexcept {
   auto* entry = available;
   available = available->next;
   stats.trackReusedEntries();
-  // Reclaimed entries might have a non-zero reference count
-  entry->ref = 0;
   return entry;
 }
 
