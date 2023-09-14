@@ -1576,7 +1576,15 @@ public:
   template <class Edge> Edge add(const Edge& x, const Edge& y) {
     [[maybe_unused]] const auto before = cn.cacheCount();
 
-    auto result = add2(x, y);
+    Qubit var{};
+    if (!x.isTerminal()) {
+      var = x.p->v;
+    }
+    if (!y.isTerminal() && (y.p->v) > var) {
+      var = y.p->v;
+    }
+
+    auto result = add2(x, y, var);
     result.w = cn.lookup(result.w, true);
 
     [[maybe_unused]] const auto after = cn.cacheCount();
@@ -1586,7 +1594,7 @@ public:
   }
 
   template <class Node>
-  Edge<Node> add2(const Edge<Node>& x, const Edge<Node>& y) {
+  Edge<Node> add2(const Edge<Node>& x, const Edge<Node>& y, const Qubit var) {
     if (x.w.exactlyZero()) {
       if (y.w.exactlyZero()) {
         return Edge<Node>::zero;
@@ -1615,15 +1623,11 @@ public:
       return {r->p, cn.getCached(r->w)};
     }
 
-    const Qubit w = (x.isTerminal() || (!y.isTerminal() && y.p->v > x.p->v))
-                        ? y.p->v
-                        : x.p->v;
-
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
     std::array<Edge<Node>, n> edge{};
     for (std::size_t i = 0U; i < n; i++) {
       Edge<Node> e1{};
-      if (!x.isTerminal() && x.p->v == w) {
+      if (!x.isTerminal()) {
         e1 = x.p->e[i];
 
         if (!e1.w.exactlyZero()) {
@@ -1636,7 +1640,7 @@ public:
         }
       }
       Edge<Node> e2{};
-      if (!y.isTerminal() && y.p->v == w) {
+      if (!y.isTerminal()) {
         e2 = y.p->e[i];
 
         if (!e2.w.exactlyZero()) {
@@ -1651,22 +1655,22 @@ public:
 
       if constexpr (std::is_same_v<Node, dNode>) {
         dEdge::applyDmChangesToEdges(e1, e2);
-        edge[i] = add2(e1, e2);
+        edge[i] = add2(e1, e2, var - 1);
         dEdge::revertDmChangesToEdges(e1, e2);
       } else {
-        edge[i] = add2(e1, e2);
+        edge[i] = add2(e1, e2, var - 1);
       }
 
-      if (!x.isTerminal() && x.p->v == w) {
+      if (!x.isTerminal() && x.p->v == var) {
         cn.returnToCache(e1.w);
       }
 
-      if (!y.isTerminal() && y.p->v == w) {
+      if (!y.isTerminal() && y.p->v == var) {
         cn.returnToCache(e2.w);
       }
     }
 
-    auto e = makeDDNode(w, edge, true);
+    auto e = makeDDNode(var, edge, true);
 
     computeTable.insert({x.p, x.w}, {y.p, y.w}, {e.p, e.w});
     return e;
@@ -1839,8 +1843,15 @@ private:
       return ResultEdge::zero;
     }
 
-    if (x.isTerminal() && y.isTerminal()) {
-      return ResultEdge::terminal(cn.mulCached(x.w, y.w));
+    if (x.isIdentity()) {
+      return {y.p, cn.mulCached(x.w, y.w)};
+    }
+
+    if constexpr (std::is_same_v<RightOperandNode, mNode> ||
+                  std::is_same_v<RightOperandNode, dNode>) {
+      if (y.isIdentity()) {
+        return {x.p, cn.mulCached(x.w, y.w)};
+      }
     }
 
     auto xCopy = LEdge{x.p, Complex::one};
@@ -1865,48 +1876,6 @@ private:
     }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(y.p->e)>;
-    ResultEdge e{};
-    if constexpr (std::is_same_v<RightOperandNode, mCachedEdge>) {
-      // This branch is only taken for matrices
-      if (x.p->v == var && x.p->v == y.p->v) {
-        if (x.p->isIdentity()) {
-          if constexpr (n == NEDGE) {
-            // additionally check if y is the identity in case of matrix
-            // multiplication
-            if (y.p->isIdentity()) {
-              e = makeIdent(start, var);
-            } else {
-              e = yCopy;
-            }
-          } else {
-            e = yCopy;
-          }
-          computeTable.insert(xCopy, yCopy, {e.p, e.w});
-          e.w = cn.mulCached(x.w, y.w);
-          if (e.w.approximatelyZero()) {
-            cn.returnToCache(e.w);
-            return ResultEdge::zero;
-          }
-          return e;
-        }
-
-        if constexpr (n == NEDGE) {
-          // additionally check if y is the identity in case of matrix
-          // multiplication
-          if (y.p->isIdentity()) {
-            e = xCopy;
-            computeTable.insert(xCopy, yCopy, {e.p, e.w});
-            e.w = cn.mulCached(x.w, y.w);
-
-            if (e.w.approximatelyZero()) {
-              cn.returnToCache(e.w);
-              return ResultEdge::zero;
-            }
-            return e;
-          }
-        }
-      }
-    }
 
     constexpr std::size_t rows = RADIX;
     constexpr std::size_t cols = n == NEDGE ? RADIX : 1U;
@@ -1917,20 +1886,13 @@ private:
         auto idx = cols * i + j;
         edge[idx] = ResultEdge::zero;
         for (auto k = 0U; k < rows; k++) {
-          LEdge e1{};
-          if (!x.isTerminal() && x.p->v == var) {
-            e1 = x.p->e[rows * i + k];
-          } else {
-            e1 = xCopy;
-          }
+          const auto xIdx = rows * i + k;
+          LEdge e1 = x.p->e[xIdx];
 
-          REdge e2{};
-          if (!y.isTerminal() && y.p->v == var) {
-            e2 = y.p->e[j + cols * k];
-          } else {
-            e2 = yCopy;
-          }
+          const auto yIdx = j + cols * k;
+          REdge e2 = y.p->e[yIdx];
 
+          const auto v = static_cast<Qubit>(var - 1);
           if constexpr (std::is_same_v<LeftOperandNode, dNode>) {
             dEdge m;
             dEdge::applyDmChangesToEdges(e1, e2);
@@ -1938,7 +1900,7 @@ private:
               // When generateDensityMatrix is false or I have the first edge I
               // don't optimize anything and set generateDensityMatrix to false
               // for all child edges
-              m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start, false);
+              m = multiply2(e1, e2, v, start, false);
             } else if (idx == 2) {
               // When I have the second edge and generateDensityMatrix == false,
               // then edge[2] == edge[1]
@@ -1951,8 +1913,7 @@ private:
               }
               continue;
             } else {
-              m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start,
-                            generateDensityMatrix);
+              m = multiply2(e1, e2, v, start, generateDensityMatrix);
             }
 
             if (k == 0 || edge[idx].w.exactlyZero()) {
@@ -1960,7 +1921,7 @@ private:
             } else if (!m.w.exactlyZero()) {
               dEdge::applyDmChangesToEdges(edge[idx], m);
               const auto w = edge[idx].w;
-              edge[idx] = add2(edge[idx], m);
+              edge[idx] = add2(edge[idx], m, v);
               dEdge::revertDmChangesToEdges(edge[idx], e2);
               cn.returnToCache(w);
               cn.returnToCache(m.w);
@@ -1968,13 +1929,13 @@ private:
             // Undo modifications on density matrices
             dEdge::revertDmChangesToEdges(e1, e2);
           } else {
-            auto m = multiply2(e1, e2, static_cast<Qubit>(var - 1), start);
+            auto m = multiply2(e1, e2, v, start);
 
             if (k == 0 || edge[idx].w.exactlyZero()) {
               edge[idx] = m;
             } else if (!m.w.exactlyZero()) {
               const auto w = edge[idx].w;
-              edge[idx] = add2(edge[idx], m);
+              edge[idx] = add2(edge[idx], m, v);
               cn.returnToCache(w);
               cn.returnToCache(m.w);
             }
@@ -1982,7 +1943,8 @@ private:
         }
       }
     }
-    e = makeDDNode(var, edge, true, generateDensityMatrix);
+
+    auto e = makeDDNode(var, edge, true, generateDensityMatrix);
     computeTable.insert(xCopy, yCopy, {e.p, e.w});
 
     if (!e.w.exactlyZero()) {
@@ -2304,11 +2266,11 @@ private:
       auto r = mEdge::zero;
 
       const auto t0 = trace(a.p->e[0], eliminate, elims);
-      r = add2(r, t0);
+      r = add2(r, t0, v - 1);
       auto r1 = r;
 
       const auto t1 = trace(a.p->e[3], eliminate, elims);
-      r = add2(r, t1);
+      r = add2(r, t1, v - 1);
       auto r2 = r;
 
       if (r.w.exactlyOne()) {

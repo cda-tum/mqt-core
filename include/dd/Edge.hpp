@@ -32,6 +32,7 @@ template <class Node> struct Edge {
   [[nodiscard]] bool isTerminal() const;
   [[nodiscard]] bool isZeroTerminal() const;
   [[nodiscard]] bool isOneTerminal() const;
+  [[nodiscard]] bool isIdentity() const;
 
   // Functions only related to density matrices
   [[maybe_unused]] static void setDensityConjugateTrue(Edge& e);

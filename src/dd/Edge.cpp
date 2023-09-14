@@ -22,6 +22,13 @@ template <class Node> bool Edge<Node>::isOneTerminal() const {
   return isTerminal() && w == Complex::one;
 }
 
+template <class Node> bool Edge<Node>::isIdentity() const {
+  if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
+    return Node::isIdentity(p);
+  }
+  return false;
+}
+
 template <typename Node>
 CachedEdge<Node>::CachedEdge(Node* n, const Complex& c) : p(n) {
   w.r = RealNumber::val(c.r);

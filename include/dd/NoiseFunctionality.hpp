@@ -414,7 +414,12 @@ private:
       complexProb.r->value = probability;
       if (!e[0].w.exactlyZero()) {
         const auto w = package->cn.mulCached(complexProb, e[3].w);
-        const auto tmp = package->add2(e[0], {e[3].p, w});
+        const auto var =
+            static_cast<Qubit>(std::max({e[0].p != nullptr ? e[0].p->v : 0,
+                                         e[1].p != nullptr ? e[1].p->v : 0,
+                                         e[2].p != nullptr ? e[2].p->v : 0,
+                                         e[3].p != nullptr ? e[3].p->v : 0}));
+        const auto tmp = package->add2(e[0], {e[3].p, w}, var);
         package->cn.returnToCache(w);
         package->cn.returnToCache(e[0].w);
         e[0] = tmp;
@@ -464,6 +469,11 @@ private:
     Complex complexProb = package->cn.getCached();
     complexProb.i->value = 0;
 
+    const auto var = static_cast<Qubit>(std::max(
+        {e[0].p != nullptr ? e[0].p->v : 0, e[1].p != nullptr ? e[1].p->v : 0,
+         e[2].p != nullptr ? e[2].p->v : 0,
+         e[3].p != nullptr ? e[3].p->v : 0}));
+
     qc::DensityMatrixDD oldE0Edge{e[0].p, package->cn.getCached(e[0].w)};
 
     // e[0] = 0.5*((2-p)*e[0] + p*e[3])
@@ -488,7 +498,7 @@ private:
 
       // e[0] = helperEdge[0] + helperEdge[1]
       package->cn.returnToCache(e[0].w);
-      e[0] = package->add2(helperEdge[0], helperEdge[1]);
+      e[0] = package->add2(helperEdge[0], helperEdge[1], var);
       package->cn.returnToCache(helperEdge[0].w);
       package->cn.returnToCache(helperEdge[1].w);
     }
@@ -535,7 +545,7 @@ private:
       }
 
       package->cn.returnToCache(e[3].w);
-      e[3] = package->add2(helperEdge[0], helperEdge[1]);
+      e[3] = package->add2(helperEdge[0], helperEdge[1], var);
       package->cn.returnToCache(helperEdge[0].w);
       package->cn.returnToCache(helperEdge[1].w);
     }
