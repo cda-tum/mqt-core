@@ -11,12 +11,12 @@ namespace dd {
 template <typename T>
 std::size_t
 MemoryManagerStatistics<T>::getNumAvailableFromChunks() const noexcept {
-  return numAllocated - numUsed;
+  return getTotalNumAvailable() - numAvailableForReuse;
 }
 
 template <typename T>
 std::size_t MemoryManagerStatistics<T>::getTotalNumAvailable() const noexcept {
-  return getNumAvailableFromChunks() + numAvailableForReuse;
+  return numAllocated - numUsed;
 }
 
 template <typename T>
@@ -75,17 +75,18 @@ template <typename T> nlohmann::json MemoryManagerStatistics<T>::json() const {
   }
 
   nlohmann::json j = Statistics::json();
-  j["num_allocations"] = numAllocations;
-  j["num_allocated"] = numAllocated;
   j["memory_allocated_MiB"] = getAllocatedMemoryMiB();
-  j["num_used"] = numUsed;
   j["memory_used_MiB"] = getUsedMemoryMiB();
+  j["memory_used_MiB_peak"] = getPeakUsedMemoryMiB();
+  j["num_allocated"] = numAllocated;
+  j["num_allocations"] = numAllocations;
   j["num_available_for_reuse"] = numAvailableForReuse;
-  j["total_num_available"] = getTotalNumAvailable();
+  j["num_available_for_reuse_peak"] = peakNumAvailableForReuse;
+  j["num_available_from_chunks"] = getNumAvailableFromChunks();
+  j["num_available_total"] = getTotalNumAvailable();
+  j["num_used"] = numUsed;
+  j["num_used_peak"] = peakNumUsed;
   j["usage_ratio"] = getUsageRatio();
-  j["peak_num_used"] = peakNumUsed;
-  j["peak_num_available_for_reuse"] = peakNumAvailableForReuse;
-  j["peak_memory_used_MiB"] = getPeakUsedMemoryMiB();
   return j;
 }
 

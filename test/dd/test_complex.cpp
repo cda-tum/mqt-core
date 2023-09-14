@@ -474,34 +474,35 @@ TEST_F(CNTest, MaxRefCountReached) {
 }
 
 TEST_F(CNTest, ComplexTableAllocation) {
-  auto allocs = mm.getStats().numAllocated;
+  auto mem = MemoryManager<RealNumber>{};
+  auto allocs = mem.getStats().numAllocated;
   std::cout << allocs << "\n";
   std::vector<RealNumber*> nums{allocs};
   // get all the numbers that are pre-allocated
   for (auto i = 0U; i < allocs; ++i) {
-    nums[i] = mm.get();
+    nums[i] = mem.get();
   }
 
   // trigger new allocation
-  const auto* num = mm.get();
+  const auto* num = mem.get();
   ASSERT_NE(num, nullptr);
-  EXPECT_EQ(mm.getStats().numAllocated,
+  EXPECT_EQ(mem.getStats().numAllocated,
             (1. + MemoryManager<RealNumber>::GROWTH_FACTOR) *
                 static_cast<fp>(allocs));
 
   // clearing the complex table should reduce the allocated size to the original
   // size
-  mm.reset();
-  EXPECT_EQ(mm.getStats().numAllocated, allocs);
+  mem.reset();
+  EXPECT_EQ(mem.getStats().numAllocated, allocs);
 
-  EXPECT_EQ(mm.getStats().numAvailableForReuse, 0U);
+  EXPECT_EQ(mem.getStats().numAvailableForReuse, 0U);
   // obtain entry
-  auto* entry = mm.get();
+  auto* entry = mem.get();
   // immediately return entry
-  mm.returnEntry(entry);
-  EXPECT_EQ(mm.getStats().numAvailableForReuse, 1U);
+  mem.returnEntry(entry);
+  EXPECT_EQ(mem.getStats().numAvailableForReuse, 1U);
   // obtain the same entry again, but this time from the available stack
-  auto* entry2 = mm.get();
+  auto* entry2 = mem.get();
   EXPECT_EQ(entry, entry2);
 }
 
