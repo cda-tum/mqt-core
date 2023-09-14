@@ -1578,11 +1578,9 @@ public:
 
     Qubit var{};
     if (!x.isTerminal()) {
-      assert(x.p != nullptr);
       var = x.p->v;
     }
     if (!y.isTerminal() && (y.p->v) > var) {
-      assert(y.p != nullptr);
       var = y.p->v;
     }
 
@@ -1628,11 +1626,6 @@ public:
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
     std::array<Edge<Node>, n> edge{};
     for (std::size_t i = 0U; i < n; i++) {
-      if constexpr (std::is_same_v<Node, vNode>) {
-        assert(!x.isTerminal() && "x must not be terminal");
-        assert(!y.isTerminal() && "y must not be terminal");
-        assert(x.p->v == y.p->v && "x and y must be at the same level");
-      }
       Edge<Node> e1{};
       if (!x.isTerminal()) {
         e1 = x.p->e[i];
