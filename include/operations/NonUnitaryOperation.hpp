@@ -45,7 +45,11 @@ public:
     return {opTargets.begin(), opTargets.end()};
   }
 
-  [[nodiscard]] Controls& getControls() const override {
+  [[nodiscard]] const Controls& getControls() const override {
+    throw QFRException("Cannot get controls from non-unitary operation.");
+  }
+
+  [[nodiscard]] Controls& getControls() override {
     throw QFRException("Cannot get controls from non-unitary operation.");
   }
 
