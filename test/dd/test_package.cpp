@@ -59,11 +59,11 @@ TEST(DDPackageTest, BellState) {
   ASSERT_EQ(dd->getValueByPath(bellState, "11"),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
 
-  ASSERT_EQ(dd->getValueByPath(bellState, 0),
+  ASSERT_EQ(dd->getValueByIndex(bellState, 0),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellState, 1), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellState, 2), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellState, 3),
+  ASSERT_EQ(dd->getValueByIndex(bellState, 1), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellState, 2), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellState, 3),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
 
   auto goalState =
@@ -118,9 +118,10 @@ TEST(DDPackageTest, QFTState) {
   dd->printVector(qftState);
 
   for (dd::Qubit qubit = 0; qubit < 7; ++qubit) {
-    ASSERT_NEAR(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).r,
-                0.5 * dd::SQRT2_2, dd::RealNumber::eps);
-    ASSERT_EQ(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).i,
+    ASSERT_NEAR(
+        dd->getValueByIndex(qftState, static_cast<std::size_t>(qubit)).r,
+        0.5 * dd::SQRT2_2, dd::RealNumber::eps);
+    ASSERT_EQ(dd->getValueByIndex(qftState, static_cast<std::size_t>(qubit)).i,
               0);
   }
 
@@ -211,19 +212,19 @@ TEST(DDPackageTest, NegativeControl) {
   auto xGate = dd->makeGateDD(dd::Xmat, 2, 1_nc, 0);
   auto zeroState = dd->makeZeroState(2);
   auto state01 = dd->multiply(xGate, zeroState);
-  EXPECT_EQ(dd->getValueByPath(state01, 0b01).r, 1.);
+  EXPECT_EQ(dd->getValueByIndex(state01, 0b01).r, 1.);
 }
 
 TEST(DDPackageTest, IdentityTrace) {
   auto dd = std::make_unique<dd::Package<>>(4);
-  auto fullTrace = dd->trace(dd->makeIdent(4));
+  auto fullTrace = dd->trace(dd->makeIdent());
 
   ASSERT_EQ(fullTrace, (dd::ComplexValue{16, 0}));
 }
 
 TEST(DDPackageTest, PartialIdentityTrace) {
   auto dd = std::make_unique<dd::Package<>>(2);
-  auto tr = dd->partialTrace(dd->makeIdent(2), {false, true});
+  auto tr = dd->partialTrace(dd->makeIdent(), {false, true});
   auto mul = dd->multiply(tr, tr);
   EXPECT_EQ(dd::RealNumber::val(mul.w.r), 4.0);
 }
@@ -266,7 +267,8 @@ TEST(DDPackageTest, VectorSerializationTest) {
 }
 
 TEST(DDPackageTest, BellMatrix) {
-  auto dd = std::make_unique<dd::Package<>>(2);
+  const auto nrQubits = 2U;
+  auto dd = std::make_unique<dd::Package<>>(nrQubits);
 
   auto hGate = dd->makeGateDD(dd::Hmat, 2, 1);
   auto cxGate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
@@ -280,33 +282,33 @@ TEST(DDPackageTest, BellMatrix) {
   ASSERT_EQ(dd->getValueByPath(bellMatrix, "22"),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
 
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 0, 0),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 0, 0),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 1, 0), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 2, 0), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 3, 0),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 1, 0), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 2, 0), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 3, 0),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
 
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 0, 1), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 1, 1),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 0, 1), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 1, 1),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 2, 1),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 2, 1),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 3, 1), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 3, 1), (dd::ComplexValue{0, 0}));
 
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 0, 2),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 0, 2),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 1, 2), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 2, 2), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 3, 2),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 1, 2), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 2, 2), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 3, 2),
             (dd::ComplexValue{-dd::SQRT2_2, 0}));
 
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 0, 3), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 1, 3),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 0, 3), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 1, 3),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 2, 3),
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 2, 3),
             (dd::ComplexValue{-dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 3, 3), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(dd->getValueByIndex(bellMatrix, 3, 3), (dd::ComplexValue{0, 0}));
 
   auto goalRow0 =
       dd::CVec{{dd::SQRT2_2, 0.}, {0., 0.}, {dd::SQRT2_2, 0.}, {0., 0.}};
@@ -317,7 +319,7 @@ TEST(DDPackageTest, BellMatrix) {
   auto goalRow3 =
       dd::CVec{{dd::SQRT2_2, 0.}, {0., 0.}, {-dd::SQRT2_2, 0.}, {0., 0.}};
   auto goalMatrix = dd::CMat{goalRow0, goalRow1, goalRow2, goalRow3};
-  ASSERT_EQ(dd->getMatrix(bellMatrix), goalMatrix);
+  ASSERT_EQ(dd->getMatrix(bellMatrix, nrQubits), goalMatrix);
 
   export2Dot(bellMatrix, "bell_matrix_colored_labels.dot", true, true, false,
              false, false);
@@ -435,43 +437,6 @@ TEST(DDPackageTest, TestConsistency) {
   dd->debugnode(bellState.p);
 }
 
-TEST(DDPackageTest, Extend) {
-  auto dd = std::make_unique<dd::Package<>>(4);
-
-  auto id = dd->makeIdent(3);
-  EXPECT_EQ(id.p->v, 2);
-  EXPECT_EQ(id.p->e[0], id.p->e[3]);
-  EXPECT_EQ(id.p->e[1], id.p->e[2]);
-  EXPECT_TRUE(id.p->isIdentity());
-
-  auto ext = dd->extend(id, 0, 1);
-  EXPECT_EQ(ext.p->v, 3);
-  EXPECT_EQ(ext.p->e[0], ext.p->e[3]);
-  EXPECT_EQ(ext.p->e[1], ext.p->e[2]);
-  EXPECT_TRUE(ext.p->isIdentity());
-}
-
-TEST(DDPackageTest, Identity) {
-  auto dd = std::make_unique<dd::Package<>>(4);
-
-  EXPECT_TRUE(dd->makeIdent(0).isOneTerminal());
-
-  auto id3 = dd->makeIdent(3);
-  EXPECT_EQ(dd->makeIdent(0, 2), id3);
-  const auto& table = dd->getIdentityTable();
-  EXPECT_NE(table[2].p, nullptr);
-
-  auto id2 = dd->makeIdent(0, 1); // should be found in idTable
-  EXPECT_EQ(dd->makeIdent(2), id2);
-
-  auto id4 = dd->makeIdent(0, 3); // should use id3 and extend it
-  EXPECT_EQ(dd->makeIdent(0, 3), id4);
-  EXPECT_NE(table[3].p, nullptr);
-
-  auto idCached = dd->makeIdent(4);
-  EXPECT_EQ(id4, idCached);
-}
-
 TEST(DDPackageTest, TestLocalInconsistency) {
   auto dd = std::make_unique<dd::Package<>>(3);
 
@@ -509,15 +474,10 @@ TEST(DDPackageTest, Ancillaries) {
   auto reducedBellMatrix =
       dd->reduceAncillae(bellMatrix, {false, false, false, false});
   EXPECT_EQ(bellMatrix, reducedBellMatrix);
+
   dd->incRef(bellMatrix);
   reducedBellMatrix =
       dd->reduceAncillae(bellMatrix, {false, false, true, true});
-  EXPECT_EQ(bellMatrix, reducedBellMatrix);
-
-  auto extendedBellMatrix = dd->extend(bellMatrix, 2);
-  dd->incRef(extendedBellMatrix);
-  reducedBellMatrix =
-      dd->reduceAncillae(extendedBellMatrix, {false, false, true, true});
   EXPECT_TRUE(reducedBellMatrix.p->e[1].isZeroTerminal());
   EXPECT_TRUE(reducedBellMatrix.p->e[2].isZeroTerminal());
   EXPECT_TRUE(reducedBellMatrix.p->e[3].isZeroTerminal());
@@ -527,9 +487,9 @@ TEST(DDPackageTest, Ancillaries) {
   EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[2].isZeroTerminal());
   EXPECT_TRUE(reducedBellMatrix.p->e[0].p->e[3].isZeroTerminal());
 
-  dd->incRef(extendedBellMatrix);
+  dd->incRef(bellMatrix);
   reducedBellMatrix =
-      dd->reduceAncillae(extendedBellMatrix, {false, false, true, true}, false);
+      dd->reduceAncillae(bellMatrix, {false, false, true, true}, false);
   EXPECT_TRUE(reducedBellMatrix.p->e[1].isZeroTerminal());
   EXPECT_TRUE(reducedBellMatrix.p->e[2].isZeroTerminal());
   EXPECT_TRUE(reducedBellMatrix.p->e[3].isZeroTerminal());
@@ -589,7 +549,7 @@ TEST(DDPackageTest, GarbageMatrix) {
   dd->incRef(bellMatrix);
   reducedBellMatrix =
       dd->reduceGarbage(bellMatrix, {false, true, false, false});
-  auto mat = dd->getMatrix(reducedBellMatrix);
+  auto mat = dd->getMatrix(reducedBellMatrix, 2);
   auto zero = dd::CVec{{0., 0.}, {0., 0.}, {0., 0.}, {0., 0.}};
   EXPECT_EQ(mat[2], zero);
   EXPECT_EQ(mat[3], zero);
@@ -597,7 +557,7 @@ TEST(DDPackageTest, GarbageMatrix) {
   dd->incRef(bellMatrix);
   reducedBellMatrix =
       dd->reduceGarbage(bellMatrix, {true, false, false, false});
-  mat = dd->getMatrix(reducedBellMatrix);
+  mat = dd->getMatrix(reducedBellMatrix, 2);
   EXPECT_EQ(mat[1], zero);
   EXPECT_EQ(mat[3], zero);
 
@@ -624,7 +584,7 @@ TEST(DDPackageTest, InvalidMakeBasisStateAndGate) {
 
 TEST(DDPackageTest, InvalidDecRef) {
   auto dd = std::make_unique<dd::Package<>>(2);
-  auto e = dd->makeIdent(2);
+  auto e = dd->makeGateDD(dd::Hmat, 2, 0);
   EXPECT_DEBUG_DEATH(
       dd->decRef(e),
       "Reference count of Node must not be zero before decrement");
@@ -634,18 +594,19 @@ TEST(DDPackageTest, PackageReset) {
   auto dd = std::make_unique<dd::Package<>>(1);
 
   // one node in unique table of variable 0
-  auto iGate = dd->makeIdent(1);
+  auto xGate = dd->makeGateDD(dd::Xmat, 1, 0);
+
   const auto& unique = dd->mUniqueTable.getTables();
   const auto& table = unique[0];
-  auto ihash = decltype(dd->mUniqueTable)::hash(iGate.p);
+  auto ihash = decltype(dd->mUniqueTable)::hash(xGate.p);
   const auto* node = table[ihash];
-  std::cout << ihash << ": " << reinterpret_cast<uintptr_t>(iGate.p) << "\n";
+  std::cout << ihash << ": " << reinterpret_cast<uintptr_t>(xGate.p) << "\n";
   // node should be the first in this unique table bucket
-  EXPECT_EQ(node, iGate.p);
+  EXPECT_EQ(node, xGate.p);
   dd->reset();
   // after clearing the tables, they should be empty
   EXPECT_EQ(table[ihash], nullptr);
-  iGate = dd->makeIdent(1);
+  xGate = dd->makeGateDD(dd::Xmat, 1, 0);
   const auto* node2 = table[ihash];
   // after recreating the DD, it should receive the same node
   EXPECT_EQ(node2, node);
@@ -653,7 +614,7 @@ TEST(DDPackageTest, PackageReset) {
 
 TEST(DDPackageTest, MaxRefCount) {
   auto dd = std::make_unique<dd::Package<>>(1);
-  auto e = dd->makeIdent(1);
+  auto e = dd->makeGateDD(dd::Xmat, 1, 0);
   // ref count saturates at this value
   e.p->ref = std::numeric_limits<decltype(e.p->ref)>::max();
   dd->incRef(e);
@@ -741,8 +702,8 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
   dd->debugnode(one.p);
   const dd::ComplexValue cOne{1.0, 0.0};
   EXPECT_EQ(dd->getValueByPath(one, ""), cOne);
-  EXPECT_EQ(dd->getValueByPath(one, 0), cOne);
-  EXPECT_EQ(dd->getValueByPath(dd::mEdge::one, 0, 0), cOne);
+  EXPECT_EQ(dd->getValueByIndex(one, 0), cOne);
+  EXPECT_EQ(dd->getValueByIndex(dd::mEdge::one, 0, 0), cOne);
 
   const dd::ComplexValue cZero{0.0, 0.0};
   EXPECT_EQ(dd->innerProduct(zero, zero), cZero);
@@ -1046,7 +1007,7 @@ TEST(DDPackageTest, NormalizationNumericStabilityTest) {
     auto p = dd->makeGateDD(dd::Phasemat(lambda), 1, 0);
     auto pdag = dd->makeGateDD(dd::Phasemat(-lambda), 1, 0);
     auto result = dd->multiply(p, pdag);
-    EXPECT_TRUE(result.p->isIdentity());
+    EXPECT_TRUE(result.isOneTerminal());
     dd->cUniqueTable.clear();
     dd->cCacheManager.reset();
     dd->cMemoryManager.reset();
@@ -1073,7 +1034,7 @@ TEST(DDPackageTest, FidelityOfMeasurementOutcomes) {
 
 TEST(DDPackageTest, CloseToIdentity) {
   auto dd = std::make_unique<dd::Package<>>(3);
-  auto id = dd->makeIdent(1);
+  auto id = dd->makeIdent();
   EXPECT_TRUE(dd->isCloseToIdentity(id));
   dd::mEdge close{};
   close.p = id.p;
@@ -1447,7 +1408,7 @@ TEST(DDPackageTest, expectationValueExceptions) {
 
   auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto zeroState = dd->makeZeroState(nrQubits - 1);
-  const auto xGate = dd->makeGateDD(dd::Xmat, nrQubits, 0);
+  const auto xGate = dd->makeGateDD(dd::Xmat, nrQubits, 1);
 
   EXPECT_ANY_THROW(dd->expectationValue(xGate, zeroState));
 }
@@ -1460,7 +1421,7 @@ TEST(DDPackageTest, DDFromSingleQubitMatrix) {
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
 
-  const auto outputMatrix = dd->getMatrix(matDD);
+  const auto outputMatrix = dd->getMatrix(matDD, nrQubits);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1472,7 +1433,7 @@ TEST(DDPackageTest, DDFromTwoQubitMatrix) {
   const auto nrQubits = 2U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
-  const auto outputMatrix = dd->getMatrix(matDD);
+  const auto outputMatrix = dd->getMatrix(matDD, nrQubits);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1486,7 +1447,7 @@ TEST(DDPackageTest, DDFromTwoQubitAsymmetricalMatrix) {
   const auto nrQubits = 2U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
-  const auto outputMatrix = dd->getMatrix(matDD);
+  const auto outputMatrix = dd->getMatrix(matDD, nrQubits);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1502,7 +1463,7 @@ TEST(DDPackageTest, DDFromThreeQubitMatrix) {
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
 
-  const auto outputMatrix = dd->getMatrix(matDD);
+  const auto outputMatrix = dd->getMatrix(matDD, nrQubits);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1643,7 +1604,7 @@ TEST(DDPackageTest, RZZGateDDConstruction) {
     }
   }
 
-  auto identity = dd->makeIdent(2);
+  auto identity = dd->makeIdent();
   auto rzzZero = dd->makeRZZDD(2, 0, 1, 0.);
   EXPECT_EQ(rzzZero, identity);
 
@@ -1677,7 +1638,7 @@ TEST(DDPackageTest, RYYGateDDConstruction) {
     }
   }
 
-  auto identity = dd->makeIdent(2);
+  auto identity = dd->makeIdent();
   auto ryyZero = dd->makeRYYDD(2, 0, 1, 0.);
   EXPECT_EQ(ryyZero, identity);
 
@@ -1707,7 +1668,7 @@ TEST(DDPackageTest, RXXGateDDConstruction) {
     }
   }
 
-  auto identity = dd->makeIdent(2);
+  auto identity = dd->makeIdent();
   auto rxxZero = dd->makeRXXDD(2, 0, 1, 0.);
   EXPECT_EQ(rxxZero, identity);
 
@@ -1737,7 +1698,7 @@ TEST(DDPackageTest, RZXGateDDConstruction) {
     }
   }
 
-  auto identity = dd->makeIdent(2);
+  auto identity = dd->makeIdent();
   auto rzxZero = dd->makeRZXDD(2, 0, 1, 0.);
   EXPECT_EQ(rzxZero, identity);
 
@@ -1840,6 +1801,34 @@ TEST(DDPackageTest, InnerProductTopNodeConjugation) {
   // If the top node in the inner product is not conjugated properly,
   // it will result in +0.416.
   EXPECT_NEAR(dd->expectationValue(op, evolvedState), -0.416, 0.001);
+}
+
+TEST(DDPackageTest, GetMatrixMultiQubitIdentity) {
+  const auto nrQubits = 2U;
+
+  auto dd = std::make_unique<dd::Package<>>(nrQubits);
+
+  auto identity = dd->makeIdent();
+  auto matrix = dd->getMatrix(identity, nrQubits);
+
+  auto goalRow0 = dd::CVec{{1., 0.}, {0., 0.}, {0., 0.}, {0., 0.}};
+  auto goalRow1 = dd::CVec{{0., 0.}, {1., 0.}, {0., 0.}, {0., 0.}};
+  auto goalRow2 = dd::CVec{{0., 0.}, {0., 0.}, {1., 0.}, {0., 0.}};
+  auto goalRow3 = dd::CVec{{0., 0.}, {0., 0.}, {0., 0.}, {1., 0.}};
+  auto goalMatrix = dd::CMat{goalRow0, goalRow1, goalRow2, goalRow3};
+  ASSERT_EQ(dd->getMatrix(identity, nrQubits), goalMatrix);
+}
+
+TEST(DDPackageTest, GetMatrixCNOT) {
+  const auto nrQubits = 2U;
+
+  auto dd = std::make_unique<dd::Package<>>(nrQubits);
+
+  auto originalDD = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
+  auto matrix = dd->getMatrix(originalDD, nrQubits);
+  auto recreatedDD = dd->makeDDFromMatrix(matrix);
+
+  ASSERT_EQ(originalDD, recreatedDD);
 }
 
 /**

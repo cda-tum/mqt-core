@@ -24,7 +24,7 @@ template <class Node> bool Edge<Node>::isOneTerminal() const {
 
 template <class Node> bool Edge<Node>::isIdentity() const {
   if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
-    return Node::isIdentity(p);
+    return isTerminal() && w != Complex::zero;
   }
   return false;
 }

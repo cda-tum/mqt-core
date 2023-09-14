@@ -14,7 +14,7 @@ MatrixDD buildFunctionality(const QuantumComputation* qc,
   }
 
   auto permutation = qc->initialLayout;
-  auto e = dd->createInitialMatrix(nq, qc->ancillary);
+  auto e = dd->createInitialMatrix(qc->ancillary);
 
   for (const auto& op : *qc) {
     auto tmp = dd->multiply(getDD(op.get(), dd, permutation), e);
@@ -207,12 +207,11 @@ MatrixDD buildFunctionality(GoogleRandomCircuitSampling* qc,
     qc->removeCycles(qc->cycles.size() - 2U - *ncycles);
   }
 
-  const auto nq = qc->getNqubits();
   Permutation permutation = qc->initialLayout;
-  auto e = dd->makeIdent(nq);
+  auto e = dd->makeIdent();
   dd->incRef(e);
   for (const auto& cycle : qc->cycles) {
-    auto f = dd->makeIdent(nq);
+    auto f = dd->makeIdent();
     for (const auto& op : cycle) {
       f = dd->multiply(getDD(op.get(), dd, permutation), f);
     }

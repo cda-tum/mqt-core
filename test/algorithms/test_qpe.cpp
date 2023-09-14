@@ -119,7 +119,7 @@ TEST_P(QPE, QPETest) {
 
   // account for the eigenstate qubit in the expected result by shifting and
   // adding 1
-  auto amplitude = dd->getValueByPath(e, (expectedResult << 1) + 1);
+  auto amplitude = dd->getValueByIndex(e, (expectedResult << 1) + 1);
   auto probability = amplitude.r * amplitude.r + amplitude.i * amplitude.i;
   std::cout << "Obtained probability for |" << expectedResultRepresentation
             << ">: " << probability << "\n";
@@ -131,7 +131,7 @@ TEST_P(QPE, QPETest) {
     // account for the eigenstate qubit in the expected result by shifting and
     // adding 1
     auto secondAmplitude =
-        dd->getValueByPath(e, (secondExpectedResult << 1) + 1);
+        dd->getValueByIndex(e, (secondExpectedResult << 1) + 1);
     auto secondProbability = secondAmplitude.r * secondAmplitude.r +
                              secondAmplitude.i * secondAmplitude.i;
     std::cout << "Obtained probability for |"

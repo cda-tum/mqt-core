@@ -39,7 +39,7 @@ struct mNode {                        // NOLINT(readability-identifier-naming)
   Qubit v{};                          // variable index
   std::uint8_t flags = 0;
   // 32 = marks a node with is symmetric.
-  // 16 = marks a node resembling identity
+  // 16 = free (used to mark identity nodes)
   // 8 = marks a reduced dm node,
   // 4 = marks a dm (tmp flag),
   // 2 = mark first path edge (tmp flag),
@@ -65,20 +65,6 @@ struct mNode {                        // NOLINT(readability-identifier-naming)
       flags = (flags & static_cast<std::uint8_t>(~32U));
     }
   }
-
-  [[nodiscard]] inline bool isIdentity() const noexcept {
-    return (flags & static_cast<std::uint8_t>(16U)) != 0;
-  }
-  [[nodiscard]] static constexpr bool isIdentity(const mNode* p) noexcept {
-    return p == nullptr || p->isIdentity();
-  }
-  inline void setIdentity(const bool identity) noexcept {
-    if (identity) {
-      flags = (flags | static_cast<std::uint8_t>(16U));
-    } else {
-      flags = (flags & static_cast<std::uint8_t>(~16U));
-    }
-  }
 };
 using mEdge = Edge<mNode>;
 using mCachedEdge = CachedEdge<mNode>;
@@ -94,7 +80,7 @@ struct dNode {                        // NOLINT(readability-identifier-naming)
   Qubit v{};                          // variable index
   std::uint8_t flags = 0;
   // 32 = marks a node with is symmetric.
-  // 16 = marks a node resembling identity
+  // 16 = free (used to mark identity nodes)
   // 8 = marks a reduced dm node,
   // 4 = marks a dm (tmp flag),
   // 2 = mark first path edge (tmp flag),
