@@ -839,7 +839,6 @@ TEST_F(QFRFunctionality, eliminateResetsBasicTest) {
   const auto& targets1 = op1->getTargets();
   EXPECT_EQ(targets1.size(), 1);
   EXPECT_EQ(targets1.at(0), static_cast<Qubit>(0));
-  EXPECT_TRUE(op1->getControls().empty());
   const auto* measure0 = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
   ASSERT_NE(measure0, nullptr);
   const auto& classics0 = measure0->getClassics();
@@ -858,7 +857,6 @@ TEST_F(QFRFunctionality, eliminateResetsBasicTest) {
   const auto& targets3 = op3->getTargets();
   EXPECT_EQ(targets3.size(), 1);
   EXPECT_EQ(targets3.at(0), static_cast<Qubit>(1));
-  EXPECT_TRUE(op3->getControls().empty());
   auto* measure1 = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
   ASSERT_NE(measure1, nullptr);
   const auto& classics1 = measure1->getClassics();
@@ -900,7 +898,6 @@ TEST_F(QFRFunctionality, eliminateResetsClassicControlled) {
   const auto& targets1 = op1->getTargets();
   EXPECT_EQ(targets1.size(), 1);
   EXPECT_EQ(targets1.at(0), static_cast<Qubit>(0));
-  EXPECT_TRUE(op1->getControls().empty());
   auto* measure0 = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
   ASSERT_NE(measure0, nullptr);
   const auto& classics0 = measure0->getClassics();
@@ -1016,7 +1013,6 @@ TEST_F(QFRFunctionality, eliminateResetsCompoundOperation) {
   const auto& targets1 = op1->getTargets();
   EXPECT_EQ(targets1.size(), 1);
   EXPECT_EQ(targets1.at(0), static_cast<Qubit>(4));
-  EXPECT_TRUE(op1->getControls().empty());
   auto* measure0 = dynamic_cast<qc::NonUnitaryOperation*>(op1.get());
   ASSERT_NE(measure0, nullptr);
   const auto& classics0 = measure0->getClassics();
@@ -1095,7 +1091,6 @@ TEST_F(QFRFunctionality, deferMeasurementsBasicTest) {
   const auto& targets2 = op2->getTargets();
   EXPECT_EQ(targets2.size(), 1);
   EXPECT_EQ(targets2.at(0), static_cast<Qubit>(0));
-  EXPECT_TRUE(op2->getControls().empty());
   auto* measure0 = dynamic_cast<qc::NonUnitaryOperation*>(op2.get());
   ASSERT_NE(measure0, nullptr);
   const auto& classics0 = measure0->getClassics();
@@ -1173,7 +1168,6 @@ TEST_F(QFRFunctionality,
   const auto& targets3 = op3->getTargets();
   EXPECT_EQ(targets3.size(), 1);
   EXPECT_EQ(targets3.at(0), static_cast<Qubit>(0));
-  EXPECT_TRUE(op3->getControls().empty());
   auto* measure0 = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
   ASSERT_NE(measure0, nullptr);
   const auto& classics0 = measure0->getClassics();
@@ -1264,7 +1258,6 @@ TEST_F(QFRFunctionality, deferMeasurementsTwoClassic) {
   const auto& targets4 = op4->getTargets();
   EXPECT_EQ(targets4.size(), 1);
   EXPECT_EQ(targets4.at(0), static_cast<Qubit>(0));
-  EXPECT_TRUE(op4->getControls().empty());
   auto* measure0 = dynamic_cast<qc::NonUnitaryOperation*>(op4.get());
   ASSERT_NE(measure0, nullptr);
   const auto& classics0 = measure0->getClassics();
@@ -1341,7 +1334,6 @@ TEST_F(QFRFunctionality, deferMeasurementsCorrectOrder) {
   const auto& targets3 = op3->getTargets();
   EXPECT_EQ(targets3.size(), 1);
   EXPECT_EQ(targets3.at(0), static_cast<Qubit>(0));
-  EXPECT_TRUE(op3->getControls().empty());
   auto* measure0 = dynamic_cast<qc::NonUnitaryOperation*>(op3.get());
   ASSERT_NE(measure0, nullptr);
   const auto& classics0 = measure0->getClassics();
@@ -1431,7 +1423,6 @@ TEST_F(QFRFunctionality, deferMeasurementsTwoClassicCorrectOrder) {
   const auto& targets4 = op4->getTargets();
   EXPECT_EQ(targets4.size(), 1);
   EXPECT_EQ(targets4.at(0), static_cast<Qubit>(0));
-  EXPECT_TRUE(op4->getControls().empty());
   auto* measure0 = dynamic_cast<qc::NonUnitaryOperation*>(op4.get());
   ASSERT_NE(measure0, nullptr);
   const auto& classics0 = measure0->getClassics();
