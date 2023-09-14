@@ -1839,8 +1839,15 @@ private:
       return ResultEdge::zero;
     }
 
-    if (x.isTerminal() && y.isTerminal()) {
-      return ResultEdge::terminal(cn.mulCached(x.w, y.w));
+    if (x.isIdentity()) {
+      return {y.p, cn.mulCached(x.w, y.w)};
+    }
+
+    if constexpr (std::is_same_v<RightOperandNode, mNode> ||
+                  std::is_same_v<RightOperandNode, dNode>) {
+      if (y.isIdentity()) {
+        return {x.p, cn.mulCached(x.w, y.w)};
+      }
     }
 
     auto xCopy = LEdge{x.p, Complex::one};
@@ -1865,48 +1872,6 @@ private:
     }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(y.p->e)>;
-    ResultEdge e{};
-    if constexpr (std::is_same_v<RightOperandNode, mCachedEdge>) {
-      // This branch is only taken for matrices
-      if (x.p->v == var && x.p->v == y.p->v) {
-        if (x.p->isIdentity()) {
-          if constexpr (n == NEDGE) {
-            // additionally check if y is the identity in case of matrix
-            // multiplication
-            if (y.p->isIdentity()) {
-              e = makeIdent(start, var);
-            } else {
-              e = yCopy;
-            }
-          } else {
-            e = yCopy;
-          }
-          computeTable.insert(xCopy, yCopy, {e.p, e.w});
-          e.w = cn.mulCached(x.w, y.w);
-          if (e.w.approximatelyZero()) {
-            cn.returnToCache(e.w);
-            return ResultEdge::zero;
-          }
-          return e;
-        }
-
-        if constexpr (n == NEDGE) {
-          // additionally check if y is the identity in case of matrix
-          // multiplication
-          if (y.p->isIdentity()) {
-            e = xCopy;
-            computeTable.insert(xCopy, yCopy, {e.p, e.w});
-            e.w = cn.mulCached(x.w, y.w);
-
-            if (e.w.approximatelyZero()) {
-              cn.returnToCache(e.w);
-              return ResultEdge::zero;
-            }
-            return e;
-          }
-        }
-      }
-    }
 
     constexpr std::size_t rows = RADIX;
     constexpr std::size_t cols = n == NEDGE ? RADIX : 1U;
@@ -1982,7 +1947,8 @@ private:
         }
       }
     }
-    e = makeDDNode(var, edge, true, generateDensityMatrix);
+
+    auto e = makeDDNode(var, edge, true, generateDensityMatrix);
     computeTable.insert(xCopy, yCopy, {e.p, e.w});
 
     if (!e.w.exactlyZero()) {
