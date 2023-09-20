@@ -61,7 +61,7 @@ jobs:
           prepend_symlinks_to_path: false
           windows_compile_environment: msvc
           override_cache_key: wheels-${{ matrix.runs-on }}-${{ matrix.python }}
-      - uses: pypa/cibuildwheel@v2.15
+      - uses: pypa/cibuildwheel@v2.16
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
       - name: Verify clean directory
@@ -92,7 +92,7 @@ jobs:
         run: |
           echo "CIBW_BEFORE_ALL_LINUX=/opt/python/cp311-cp311/bin/pip install z3-solver==${{ inputs.z3-version }}" >> $GITHUB_ENV
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.15
+        uses: pypa/cibuildwheel@v2.16
         env:
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
           CIBW_BUILD: ${{ matrix.python }}-*
