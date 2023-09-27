@@ -28,6 +28,7 @@ if(NOT TARGET ${PROJECT_NAME})
     ${PROJECT_SOURCE_DIR}/include/algorithms/QFT.hpp
     ${PROJECT_SOURCE_DIR}/include/algorithms/QPE.hpp
     ${PROJECT_SOURCE_DIR}/include/algorithms/RandomCliffordCircuit.hpp
+    ${PROJECT_SOURCE_DIR}/include/algorithms/WState.hpp
     ${PROJECT_SOURCE_DIR}/include/CircuitOptimizer.hpp
     ${PROJECT_SOURCE_DIR}/include/Definitions.hpp
     ${PROJECT_SOURCE_DIR}/include/operations/Expression.hpp
@@ -50,6 +51,7 @@ if(NOT TARGET ${PROJECT_NAME})
     algorithms/QFT.cpp
     algorithms/QPE.cpp
     algorithms/RandomCliffordCircuit.cpp
+    algorithms/WState.cpp
     CircuitOptimizer.cpp
     operations/Expression.cpp
     operations/NonUnitaryOperation.cpp
@@ -90,9 +92,18 @@ add_subdirectory(ecc)
 
 # ** Note ** The following target will soon be removed from the project. All top-level projects
 # should switch to nanobind. After that, the pybind submodules will be removed.
-if(NOT TARGET ${PROJECT_NAME}-python)
+if(BINDINGS AND NOT TARGET ${PROJECT_NAME}-python)
+  if(NOT SKBUILD)
+    # Manually detect the installed pybind11 package and import it into CMake.
+    execute_process(
+      COMMAND "${Python_EXECUTABLE}" -m pybind11 --cmakedir
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      OUTPUT_VARIABLE pybind11_DIR)
+    list(APPEND CMAKE_PREFIX_PATH "${pybind11_DIR}")
+  endif()
+
   # add pybind11 library
-  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/pybind11" "extern/pybind11" EXCLUDE_FROM_ALL)
+  find_package(pybind11 CONFIG REQUIRED)
 
   if(NOT TARGET pybind11_json)
     # add pybind11_json library
@@ -108,8 +119,15 @@ if(NOT TARGET ${PROJECT_NAME}-python)
     python/qiskit/QuantumCircuit.cpp python/qiskit/QasmQobjExperiment.cpp)
 
   # link with main project library and pybind11 libraries
-  target_link_libraries(${PROJECT_NAME}-python PRIVATE ${PROJECT_NAME} pybind11::pybind11
-                                                       pybind11_json)
+  target_link_libraries(${PROJECT_NAME}-python PUBLIC ${PROJECT_NAME} pybind11::pybind11
+                                                      pybind11_json)
+
+  # the following sets the SYSTEM flag for the include dirs of the pybind11_json libs to suppress
+  # warnings
+  set_target_properties(
+    pybind11_json PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                             $<TARGET_PROPERTY:pybind11_json,INTERFACE_INCLUDE_DIRECTORIES>
+  )# cmake-lint: disable=C0307
 
   # add MQT alias
   add_library(MQT::CorePython ALIAS ${PROJECT_NAME}-python)

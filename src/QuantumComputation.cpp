@@ -573,12 +573,12 @@ std::ostream& QuantumComputation::print(std::ostream& os) const {
       os << logical << "\t";
     }
   }
-  os << std::endl;
+  os << "\n";
   size_t i = 0U;
   for (const auto& op : ops) {
     os << std::setw(width) << ++i << ": \t";
     op->print(os, initialLayout);
-    os << std::endl;
+    os << "\n";
   }
   if (!ops.empty()) {
     os << std::setw(width) << "o"
@@ -598,7 +598,7 @@ std::ostream& QuantumComputation::print(std::ostream& os) const {
       os << it->second << "\t";
     }
   }
-  os << std::endl;
+  os << "\n";
   return os;
 }
 
@@ -610,11 +610,11 @@ void QuantumComputation::printBin(std::size_t n, std::stringstream& ss) {
 }
 
 std::ostream& QuantumComputation::printStatistics(std::ostream& os) const {
-  os << "QC Statistics:\n";
-  os << "\tn: " << static_cast<std::size_t>(nqubits) << std::endl;
-  os << "\tanc: " << static_cast<std::size_t>(nancillae) << std::endl;
-  os << "\tm: " << ops.size() << std::endl;
-  os << "--------------" << std::endl;
+  os << "QC Statistics:";
+  os << "\n\tn: " << static_cast<std::size_t>(nqubits);
+  os << "\n\tanc: " << static_cast<std::size_t>(nancillae);
+  os << "\n\tm: " << ops.size();
+  os << "\n--------------\n";
   return os;
 }
 

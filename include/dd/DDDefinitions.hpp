@@ -8,21 +8,25 @@
 #include <vector>
 
 namespace dd {
-// integer type used for indexing qubits
-// needs to be a signed type to encode -1 as the index for the terminal
-// std::int8_t can address up to 128 qubits as [0, ..., 127]
-using Qubit = std::int8_t;
-static_assert(std::is_signed_v<Qubit>, "Type Qubit must be signed.");
+/**
+ * @brief Integer type used for indexing qubits
+ * @details `std::uint16_t` can address up to 65536 qubits as [0, ..., 65535].
+ * @note If you need even more qubits, this can be increased to `std::uint32_t`.
+ * Beware of the increased memory footprint of matrix nodes.
+ */
+using Qubit = std::uint16_t;
 
-// integer type used for specifying numbers of qubits
-using QubitCount = std::make_unsigned<Qubit>::type;
-
-// integer type used for reference counting
-// 32bit suffice for a max ref count of around 4 billion
+/**
+ * @brief Integer type used for reference counting
+ * @details Allows a maximum reference count of roughly 4 billion.
+ */
 using RefCount = std::uint32_t;
 static_assert(std::is_unsigned_v<RefCount>, "RefCount should be unsigned.");
 
-// floating point type to use
+/**
+ * @brief Floating point type to use for computations
+ * @note Adjusting the precision might lead to unexpected results.
+ */
 using fp = double;
 static_assert(
     std::is_floating_point_v<fp>,
@@ -59,9 +63,14 @@ using ProbabilityVector = std::unordered_map<std::size_t, fp>;
 
 static constexpr std::uint64_t SERIALIZATION_VERSION = 1;
 
-// 64bit mixing hash (from MurmurHash3,
-// https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp)
-constexpr std::size_t murmur64(std::size_t k) {
+/**
+ * @brief 64bit mixing hash (from MurmurHash3)
+ * @details Hash function for 64bit integers adapted from MurmurHash3
+ * @param k the number to hash
+ * @returns the hash value
+ * @see https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
+ */
+constexpr std::size_t murmur64(std::size_t k) noexcept {
   k ^= k >> 33;
   k *= 0xff51afd7ed558ccdULL;
   k ^= k >> 33;
@@ -70,9 +79,15 @@ constexpr std::size_t murmur64(std::size_t k) {
   return k;
 }
 
-// combine two 64bit hashes into one 64bit hash (boost::hash_combine,
-// https://www.boost.org/LICENSE_1_0.txt)
-constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) {
+/**
+ * @brief Combine two 64bit hashes into one 64bit hash
+ * @details Combines two 64bit hashes into one 64bit hash based on
+ * boost::hash_combine (https://www.boost.org/LICENSE_1_0.txt)
+ * @param lhs The first hash
+ * @param rhs The second hash
+ * @returns The combined hash
+ */
+constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) noexcept {
   lhs ^= rhs + 0x9e3779b97f4a7c15ULL + (lhs << 6) + (lhs >> 2);
   return lhs;
 }

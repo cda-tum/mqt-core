@@ -1,0 +1,68 @@
+name: 🇨 • Coverage
+on:
+  workflow_call:
+    secrets:
+      token:
+        description: "The token to use for Codecov"
+        required: true
+    inputs:
+      cmake-args:
+        description: "Additional arguments to pass to CMake"
+        default: "-G Ninja"
+        type: string
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
+
+jobs:
+  coverage:
+    name: 📈 Coverage
+    runs-on: ubuntu-latest
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: 3
+      CTEST_PARALLEL_LEVEL: 3
+      FORCE_COLOR: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - if: ${{ inputs.setup-z3 }}
+        name: Setup Z3
+        uses: cda-tum/setup-z3@v1
+        with:
+          version: ${{ inputs.z3-version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          override_cache_key: c++-coverage
+      - name: Set up mold as linker
+        uses: rui314/setup-mold@v1
+      - name: Install Ninja
+        run: pipx install ninja
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON ${{ inputs.cmake-args }}
+      - name: Build
+        run: cmake --build build --config Debug
+      - name: Test
+        run: ctest -C Debug --output-on-failure --test-dir build --repeat until-pass:3 --timeout 600
+      - name: Upload coverage to Codecov
+        # Coverage uploads can be flaky, so we retry them a few times.
+        uses: Wandalen/wretry.action@v1.3.0
+        with:
+          action: codecov/codecov-action@v3
+          attempt_limit: 5
+          attempt_delay: 2000
+          with: |
+            fail_ci_if_error: true
+            flags: cpp
+            gcov: true
+            gcov_ignore: "extern/**/*"
+            token: ${{ secrets.token }}

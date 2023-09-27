@@ -67,7 +67,7 @@ void qc::qiskit::QasmQobjExperiment::emplaceInstruction(
       auto target = qubit.cast<Qubit>();
       targets.emplace_back(target);
     }
-    qc.emplace_back<NonUnitaryOperation>(qc.getNqubits(), targets, Barrier);
+    qc.emplace_back<StandardOperation>(qc.getNqubits(), targets, Barrier);
   } else if (instructionName == "reset") {
     Targets targets{};
     for (const auto qubit : instruction.attr("qubits")) {

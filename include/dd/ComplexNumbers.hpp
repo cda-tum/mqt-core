@@ -1,241 +1,340 @@
 #pragma once
 
-#include "Complex.hpp"
-#include "ComplexCache.hpp"
-#include "ComplexTable.hpp"
-#include "ComplexValue.hpp"
-#include "Definitions.hpp"
-
-#include <cassert>
-#include <cmath>
-#include <cstdlib>
+#include "dd/Complex.hpp"
+#include "dd/ComplexValue.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/MemoryManager.hpp"
+#include "dd/RealNumber.hpp"
+#include "dd/RealNumberUniqueTable.hpp"
 
 namespace dd {
-struct ComplexNumbers {
-  ComplexTable<> complexTable{};
-  ComplexCache<> complexCache{};
+/// A class for managing complex numbers in the DD package.
+class ComplexNumbers {
 
-  ComplexNumbers() = default;
+public:
+  /// Default constructor.
+  ComplexNumbers(RealNumberUniqueTable& table, MemoryManager<RealNumber>& cache)
+      : uniqueTable(&table), cacheManager(&cache){};
+  /// Default destructor.
   ~ComplexNumbers() = default;
 
-  void clear() {
-    complexTable.clear();
-    complexCache.clear();
+  /**
+   * @brief Set the numerical tolerance for comparisons of floats.
+   * @param tol The new tolerance.
+   */
+  static void setTolerance(fp tol) noexcept;
+
+  /**
+   * @brief Add two complex numbers.
+   * @param r The result.
+   * @param a The first operand.
+   * @param b The second operand.
+   * @note Assumes that the entry pointers of the result are aligned.
+   */
+  static void add(Complex& r, const Complex& a, const Complex& b) noexcept;
+
+  /**
+   * @brief Subtract two complex numbers.
+   * @param r The result.
+   * @param a The first operand.
+   * @param b The second operand.
+   * @note Assumes that the entry pointers of the result are aligned.
+   */
+  static void sub(Complex& r, const Complex& a, const Complex& b) noexcept;
+
+  /**
+   * @brief Multiply two complex numbers.
+   * @param r The result.
+   * @param a The first operand.
+   * @param b The second operand.
+   * @note Assumes that the entry pointers of the result are aligned.
+   */
+  static void mul(Complex& r, const Complex& a, const Complex& b) noexcept;
+
+  /**
+   * @brief Divide two complex numbers.
+   * @param r The result.
+   * @param a The first operand.
+   * @param b The second operand.
+   * @note Assumes that the entry pointers of the result are aligned.
+   */
+  static void div(Complex& r, const Complex& a, const Complex& b) noexcept;
+
+  /**
+   * @brief Compute the squared magnitude of a complex number.
+   * @param a The complex number.
+   * @returns The squared magnitude.
+   */
+  [[nodiscard]] static fp mag2(const Complex& a) noexcept;
+
+  /**
+   * @brief Compute the magnitude of a complex number.
+   * @param a The complex number.
+   * @returns The magnitude.
+   */
+  [[nodiscard]] static fp mag(const Complex& a) noexcept;
+
+  /**
+   * @brief Compute the argument of a complex number.
+   * @param a The complex number.
+   * @returns The argument.
+   */
+  [[nodiscard]] static fp arg(const Complex& a) noexcept;
+
+  /**
+   * @brief Compute the complex conjugate of a complex number.
+   * @param a The complex number.
+   * @returns The complex conjugate.
+   * @note Conjugation is efficiently handled by just flipping the sign of the
+   * imaginary pointer.
+   */
+  [[nodiscard]] static Complex conj(const Complex& a) noexcept;
+
+  /**
+   * @brief Compute the negation of a complex number.
+   * @param a The complex number.
+   * @returns The negation.
+   * @note Negation is efficiently handled by just flipping the sign of both
+   * pointers.
+   */
+  [[nodiscard]] static Complex neg(const Complex& a) noexcept;
+
+  /**
+   * @brief Add two complex numbers and return the result in a new complex
+   * number taken from the cache.
+   * @param a The first operand.
+   * @param b The second operand.
+   * @return The result.
+   */
+  [[nodiscard]] Complex addCached(const Complex& a, const Complex& b);
+
+  /**
+   * @brief Subtract two complex numbers and return the result in a new complex
+   * number taken from the cache.
+   * @param a The first operand.
+   * @param b The second operand.
+   * @return The result.
+   */
+  [[nodiscard]] Complex subCached(const Complex& a, const Complex& b);
+
+  /**
+   * @brief Multiply two complex numbers and return the result in a new complex
+   * number taken from the cache.
+   * @param a The first operand.
+   * @param b The second operand.
+   * @return The result.
+   */
+  [[nodiscard]] Complex mulCached(const Complex& a, const Complex& b);
+
+  /**
+   * @brief Divide two complex numbers and return the result in a new complex
+   * number taken from the cache.
+   * @param a The first operand.
+   * @param b The second operand.
+   * @return The result.
+   */
+  [[nodiscard]] Complex divCached(const Complex& a, const Complex& b);
+
+  /**
+   * @brief Add two complex numbers and return the result in temporary complex
+   * number taken from the cache.
+   * @param a The first operand.
+   * @param b The second operand.
+   * @return The result.
+   * @note The result is only valid until the next call to any function that
+   * requests a temporary or cached complex number.
+   */
+  [[nodiscard]] Complex addTemp(const Complex& a, const Complex& b);
+
+  /**
+   * @brief Subtract two complex numbers and return the result in temporary
+   * complex number taken from the cache.
+   * @param a The first operand.
+   * @param b The second operand.
+   * @return The result.
+   * @note The result is only valid until the next call to any function that
+   * requests a temporary or cached complex number.
+   */
+  [[nodiscard]] Complex subTemp(const Complex& a, const Complex& b);
+
+  /**
+   * @brief Multiply two complex numbers and return the result in temporary
+   * complex number taken from the cache.
+   * @param a The first operand.
+   * @param b The second operand.
+   * @return The result.
+   * @note The result is only valid until the next call to any function that
+   * requests a temporary or cached complex number.
+   */
+  [[nodiscard]] Complex mulTemp(const Complex& a, const Complex& b);
+
+  /**
+   * @brief Divide two complex numbers and return the result in temporary
+   * complex number taken from the cache.
+   * @param a The first operand.
+   * @param b The second operand.
+   * @return The result.
+   * @note The result is only valid until the next call to any function that
+   * requests a temporary or cached complex number.
+   */
+  [[nodiscard]] Complex divTemp(const Complex& a, const Complex& b);
+
+  /**
+   * @brief Lookup a complex value in the complex table; if not found add it.
+   * @param c The complex number.
+   * @param cached Used to indicate whether the number to be looked up is from
+   * the cache or not. If true, the number is returned to the cache as part of
+   * the lookup.
+   * @return
+   */
+  [[nodiscard]] Complex lookup(const Complex& c, bool cached = false);
+
+  /**
+   * @see lookup(fp r, fp i)
+   */
+  [[nodiscard]] Complex lookup(const std::complex<fp>& c);
+
+  /**
+   * @see lookup(fp r, fp i)
+   */
+  [[nodiscard]] Complex lookup(const ComplexValue& c);
+
+  /**
+   * @brief Lookup a complex value in the complex table; if not found add it.
+   * @param r The real part.
+   * @param i The imaginary part.
+   * @return The found or added complex number.
+   * @see ComplexTable::lookup
+   */
+  [[nodiscard]] Complex lookup(fp r, fp i);
+
+  /**
+   * @brief Increment the reference count of a complex number.
+   * @details This is a pass-through function that increments the reference
+   * count of the real and imaginary parts of the given complex number.
+   * @param c The complex number
+   * @see RealNumberUniqueTable::incRef(RealNumber*)
+   */
+  void incRef(const Complex& c) const noexcept;
+
+  /**
+   * @brief Decrement the reference count of a complex number.
+   * @details This is a pass-through function that decrements the reference
+   * count of the real and imaginary parts of the given complex number.
+   * @param c The complex number
+   * @see RealNumberUniqueTable::decRef(RealNumber*)
+   */
+  void decRef(const Complex& c) const noexcept;
+
+  /**
+   * @brief Check whether a complex number is one of the static ones.
+   * @param c The complex number.
+   * @return Whether the complex number is one of the static ones.
+   */
+  [[nodiscard]] static bool isStaticComplex(const Complex& c) {
+    return &c == &Complex::zero || &c == &Complex::one;
   }
 
-  static void setTolerance(fp tol) { ComplexTable<>::setTolerance(tol); }
+  /**
+   * @brief Get a temporary complex number from the complex cache.
+   * @return The temporary complex number.
+   * @see MemoryManager::getTemporaryPair
+   */
+  [[nodiscard]] Complex getTemporary();
 
-  // operations on complex numbers
-  // meanings are self-evident from the names
-  static void add(Complex& r, const Complex& a, const Complex& b) {
-    assert(r != Complex::zero);
-    assert(r != Complex::one);
-    r.r->value = CTEntry::val(a.r) + CTEntry::val(b.r);
-    r.i->value = CTEntry::val(a.i) + CTEntry::val(b.i);
-  }
-  static void sub(Complex& r, const Complex& a, const Complex& b) {
-    assert(r != Complex::zero);
-    assert(r != Complex::one);
-    r.r->value = CTEntry::val(a.r) - CTEntry::val(b.r);
-    r.i->value = CTEntry::val(a.i) - CTEntry::val(b.i);
-  }
-  static void mul(Complex& r, const Complex& a, const Complex& b) {
-    assert(r != Complex::zero);
-    assert(r != Complex::one);
-    if (a.approximatelyOne()) {
-      r.setVal(b);
-    } else if (b.approximatelyOne()) {
-      r.setVal(a);
-    } else if (a.approximatelyZero() || b.approximatelyZero()) {
-      r.r->value = 0.;
-      r.i->value = 0.;
-    } else {
-      const auto ar = CTEntry::val(a.r);
-      const auto ai = CTEntry::val(a.i);
-      const auto br = CTEntry::val(b.r);
-      const auto bi = CTEntry::val(b.i);
+  /**
+   * @brief Get a temporary complex number from the complex cache.
+   * @param r The real part.
+   * @param i The imaginary part.
+   * @return The temporary complex number.
+   * @see MemoryManager::getTemporaryPair
+   */
+  [[nodiscard]] Complex getTemporary(fp r, fp i);
 
-      r.r->value = ar * br - ai * bi;
-      r.i->value = ar * bi + ai * br;
-    }
-  }
-  static void div(Complex& r, const Complex& a, const Complex& b) {
-    assert(r != Complex::zero);
-    assert(r != Complex::one);
-    if (a.approximatelyEquals(b)) {
-      r.r->value = 1.;
-      r.i->value = 0.;
-    } else if (b.approximatelyOne()) {
-      r.setVal(a);
-    } else {
-      const auto ar = CTEntry::val(a.r);
-      const auto ai = CTEntry::val(a.i);
-      const auto br = CTEntry::val(b.r);
-      const auto bi = CTEntry::val(b.i);
+  /**
+   * @brief Get a temporary complex number from the complex cache.
+   * @param c The complex value.
+   * @return The temporary complex number.
+   * @see MemoryManager::getTemporaryPair
+   */
+  [[nodiscard]] Complex getTemporary(const ComplexValue& c);
 
-      const auto cmag = br * br + bi * bi;
+  /**
+   * @brief Get a temporary complex number from the complex cache.
+   * @param c The complex number.
+   * @return The temporary complex number.
+   * @see MemoryManager::getTemporaryPair
+   */
+  [[nodiscard]] Complex getTemporary(const Complex& c);
 
-      r.r->value = (ar * br + ai * bi) / cmag;
-      r.i->value = (ai * br - ar * bi) / cmag;
-    }
-  }
-  [[nodiscard]] static fp mag2(const Complex& a) {
-    auto ar = CTEntry::val(a.r);
-    auto ai = CTEntry::val(a.i);
+  /**
+   * @brief Get a complex number from the complex cache.
+   * @param c The complex number.
+   * @return The cached complex number.
+   * @see MemoryManager::get
+   */
+  [[nodiscard]] Complex getCached();
 
-    return ar * ar + ai * ai;
-  }
-  [[nodiscard]] static fp mag(const Complex& a) { return std::sqrt(mag2(a)); }
-  [[nodiscard]] static fp arg(const Complex& a) {
-    auto ar = CTEntry::val(a.r);
-    auto ai = CTEntry::val(a.i);
-    return std::atan2(ai, ar);
-  }
-  [[nodiscard]] static Complex conj(const Complex& a) {
-    auto ret = a;
-    ret.i = CTEntry::flipPointerSign(a.i);
-    return ret;
-  }
-  [[nodiscard]] static Complex neg(const Complex& a) {
-    auto ret = a;
-    ret.i = CTEntry::flipPointerSign(a.i);
-    ret.r = CTEntry::flipPointerSign(a.r);
-    return ret;
-  }
+  /**
+   * @brief Get a complex number from the complex cache.
+   * @param r The real part.
+   * @param i The imaginary part.
+   * @return The cached complex number.
+   * @see MemoryManager::get
+   */
+  [[nodiscard]] Complex getCached(fp r, fp i);
 
-  [[nodiscard]] Complex addCached(const Complex& a, const Complex& b) {
-    auto c = getCached();
-    add(c, a, b);
-    return c;
-  }
+  /**
+   * @brief Get a complex number from the complex cache.
+   * @param c The complex value.
+   * @return The cached complex number.
+   * @see MemoryManager::get
+   */
+  [[nodiscard]] Complex getCached(const ComplexValue& c);
 
-  [[nodiscard]] Complex subCached(const Complex& a, const Complex& b) {
-    auto c = getCached();
-    sub(c, a, b);
-    return c;
-  }
+  /**
+   * @brief Get a complex number from the complex cache.
+   * @param c The complex number.
+   * @return The cached complex number.
+   * @see MemoryManager::get
+   */
+  [[nodiscard]] Complex getCached(const std::complex<fp>& c);
 
-  [[nodiscard]] Complex mulCached(const Complex& a, const Complex& b) {
-    auto c = getCached();
-    mul(c, a, b);
-    return c;
-  }
+  /**
+   * @brief Get a complex number from the complex cache.
+   * @param c The complex number.
+   * @return The cached complex number.
+   * @see MemoryManager::get
+   */
+  [[nodiscard]] Complex getCached(const Complex& c);
 
-  [[nodiscard]] Complex divCached(const Complex& a, const Complex& b) {
-    auto c = getCached();
-    div(c, a, b);
-    return c;
-  }
+  /**
+   * @brief Return a complex number to the complex cache.
+   * @param c The complex number.
+   * @see MemoryManager::free
+   * @note This method takes care that it never returns a static complex number
+   * to the cache. This means it can be called with any complex number. The
+   * real and imaginary parts are returned in reverse order to improve cache
+   * locality.
+   */
+  void returnToCache(const Complex& c) noexcept;
 
-  // lookup a complex value in the complex table; if not found add it
-  [[nodiscard]] Complex lookup(const Complex& c) {
-    if (c == Complex::zero) {
-      return Complex::zero;
-    }
-    if (c == Complex::one) {
-      return Complex::one;
-    }
+  /**
+   * @brief Get the number of cached numbers.
+   * @return The number of cached numbers.
+   */
+  [[nodiscard]] std::size_t cacheCount() const noexcept;
 
-    auto valr = CTEntry::val(c.r);
-    auto vali = CTEntry::val(c.i);
-    return lookup(valr, vali);
-  }
-  [[nodiscard]] Complex lookup(const std::complex<fp>& c) {
-    return lookup(c.real(), c.imag());
-  }
-  [[nodiscard]] Complex lookup(const fp& r, const fp& i) {
-    Complex ret{};
+  /**
+   * @brief Get the number of stored real numbers.
+   * @return The number of stored real numbers.
+   */
+  [[nodiscard]] std::size_t realCount() const noexcept;
 
-    auto signR = std::signbit(r);
-    if (signR) {
-      auto absr = std::abs(r);
-      // if absolute value is close enough to zero, just return the zero entry
-      // (avoiding -0.0)
-      if (absr < decltype(complexTable)::tolerance()) {
-        ret.r = &decltype(complexTable)::zero;
-      } else {
-        ret.r = CTEntry::getNegativePointer(complexTable.lookup(absr));
-      }
-    } else {
-      ret.r = complexTable.lookup(r);
-    }
-
-    auto signI = std::signbit(i);
-    if (signI) {
-      auto absi = std::abs(i);
-      // if absolute value is close enough to zero, just return the zero entry
-      // (avoiding -0.0)
-      if (absi < decltype(complexTable)::tolerance()) {
-        ret.i = &decltype(complexTable)::zero;
-      } else {
-        ret.i = CTEntry::getNegativePointer(complexTable.lookup(absi));
-      }
-    } else {
-      ret.i = complexTable.lookup(i);
-    }
-
-    return ret;
-  }
-  [[nodiscard]] Complex lookup(const ComplexValue& c) {
-    return lookup(c.r, c.i);
-  }
-
-  // reference counting and garbage collection
-  static void incRef(const Complex& c) {
-    // `zero` and `one` are static and never altered
-    if (c != Complex::zero && c != Complex::one) {
-      ComplexTable<>::incRef(c.r);
-      ComplexTable<>::incRef(c.i);
-    }
-  }
-  static void decRef(const Complex& c) {
-    // `zero` and `one` are static and never altered
-    if (c != Complex::zero && c != Complex::one) {
-      ComplexTable<>::decRef(c.r);
-      ComplexTable<>::decRef(c.i);
-    }
-  }
-  std::size_t garbageCollect(bool force = false) {
-    return complexTable.garbageCollect(force);
-  }
-
-  // provide (temporary) cached complex number
-  [[nodiscard]] Complex getTemporary() {
-    return complexCache.getTemporaryComplex();
-  }
-
-  [[nodiscard]] Complex getTemporary(const fp& r, const fp& i) {
-    auto c = complexCache.getTemporaryComplex();
-    c.r->value = r;
-    c.i->value = i;
-    return c;
-  }
-
-  [[nodiscard]] Complex getTemporary(const ComplexValue& c) {
-    return getTemporary(c.r, c.i);
-  }
-
-  [[nodiscard]] Complex getCached() { return complexCache.getCachedComplex(); }
-
-  [[nodiscard]] Complex getCached(const fp& r, const fp& i) {
-    auto c = complexCache.getCachedComplex();
-    c.r->value = r;
-    c.i->value = i;
-    return c;
-  }
-
-  [[nodiscard]] Complex getCached(const ComplexValue& c) {
-    return getCached(c.r, c.i);
-  }
-
-  [[nodiscard]] Complex getCached(const std::complex<fp>& c) {
-    return getCached(c.real(), c.imag());
-  }
-
-  void returnToCache(Complex& c) { complexCache.returnToCache(c); }
-
-  [[nodiscard]] std::size_t cacheCount() const {
-    return complexCache.getCount();
-  }
+private:
+  /// A pointer to the unique table to use for calculations
+  RealNumberUniqueTable* uniqueTable;
+  /// A pointer to the cache manager to use for calculations
+  MemoryManager<RealNumber>* cacheManager;
 };
 } // namespace dd

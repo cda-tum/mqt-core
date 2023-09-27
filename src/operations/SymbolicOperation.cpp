@@ -332,4 +332,64 @@ void SymbolicOperation::instantiate(const VariableAssignment& assignment) {
   }
   checkUgate();
 }
+
+void SymbolicOperation::negateSymbolicParameter(const std::size_t index) {
+  if (isSymbolicParameter(index)) {
+    // NOLINTBEGIN(bugprone-unchecked-optional-access) - we check for this
+    symbolicParameter.at(index) = -symbolicParameter.at(index).value();
+    // NOLINTEND(bugprone-unchecked-optional-access)
+  } else {
+    parameter.at(index) = -parameter.at(index);
+  }
+}
+
+void SymbolicOperation::addToSymbolicParameter(const std::size_t index,
+                                               const fp value) {
+  if (isSymbolicParameter(index)) {
+    // NOLINTBEGIN(bugprone-unchecked-optional-access) - we check for this
+    symbolicParameter.at(index) = symbolicParameter.at(index).value() + value;
+    // NOLINTEND(bugprone-unchecked-optional-access)
+  } else {
+    parameter.at(index) += value;
+  }
+}
+
+void SymbolicOperation::invert() {
+  switch (type) {
+  case GPhase:
+  case Phase:
+  case RX:
+  case RY:
+  case RZ:
+  case RXX:
+  case RYY:
+  case RZZ:
+  case RZX:
+    negateSymbolicParameter(0);
+    break;
+  case U2:
+    negateSymbolicParameter(0);
+    negateSymbolicParameter(1);
+
+    addToSymbolicParameter(0, -PI);
+    addToSymbolicParameter(1, PI);
+    std::swap(parameter[0], parameter[1]);
+    std::swap(symbolicParameter[0], symbolicParameter[1]);
+    break;
+  case U3:
+    negateSymbolicParameter(0);
+    negateSymbolicParameter(1);
+    negateSymbolicParameter(2);
+
+    std::swap(parameter[1], parameter[2]);
+    std::swap(symbolicParameter[1], symbolicParameter[2]);
+    break;
+  case XXminusYY:
+  case XXplusYY:
+    negateSymbolicParameter(0);
+    break;
+  default:
+    StandardOperation::invert();
+  }
+}
 } // namespace qc

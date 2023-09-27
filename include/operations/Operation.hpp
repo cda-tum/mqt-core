@@ -83,12 +83,41 @@ public:
     return usedQubits;
   }
 
+  [[nodiscard]] std::unique_ptr<Operation> getInverted() const {
+    auto op = clone();
+    op->invert();
+    return op;
+  }
+
   // Setter
   virtual void setNqubits(const std::size_t nq) { nqubits = nq; }
 
   virtual void setTargets(const Targets& t) { targets = t; }
 
-  virtual void setControls(const Controls& c) { controls = c; }
+  virtual void setControls(const Controls& c) {
+    clearControls();
+    addControls(c);
+  }
+
+  virtual void addControl(Control c) = 0;
+
+  void addControls(const Controls& c) {
+    for (const auto& control : c) {
+      addControl(control);
+    }
+  }
+
+  virtual void clearControls() = 0;
+
+  virtual void removeControl(Control c) = 0;
+
+  virtual Controls::iterator removeControl(Controls::iterator it) = 0;
+
+  void removeControls(const Controls& c) {
+    for (auto it = c.begin(); it != c.end();) {
+      it = removeControl(it);
+    }
+  }
 
   virtual void setName();
 
@@ -154,5 +183,7 @@ public:
 
   virtual void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                             const RegisterNames& creg) const = 0;
+
+  virtual void invert() = 0;
 };
 } // namespace qc

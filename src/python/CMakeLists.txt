@@ -15,7 +15,7 @@ if(NOT SKBUILD)
   in your environment once and use the following command that avoids
   a costly creation of a new virtual environment at every compilation:
   =====================================================================
-   $ pip install nanobind scikit-build-core[pyproject] setuptools_scm
+   $ pip install nanobind 'scikit-build-core[pyproject]' setuptools_scm pybind11
    $ pip install --no-build-isolation -ve .
   =====================================================================
   You may optionally add -Ceditable.rebuild=true to auto-rebuild when
@@ -23,19 +23,13 @@ if(NOT SKBUILD)
   after editing C++ files.")
 endif()
 
-# Try to import all Python components potentially needed by nanobind
-find_package(
-  Python 3.8 REQUIRED
-  COMPONENTS Interpreter Development.Module
-  OPTIONAL_COMPONENTS Development.SABIModule)
-
 if(NOT SKBUILD)
   # Manually detect the installed nanobind package and import it into CMake.
   execute_process(
     COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
     OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE NB_DIR)
-  list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
+    OUTPUT_VARIABLE nanobind_DIR)
+  list(APPEND CMAKE_PREFIX_PATH "${nanobind_DIR}")
 endif()
 
 # Import nanobind through CMake's find_package mechanism
@@ -65,7 +59,7 @@ else()
   message(FATAL_ERROR "nanobind library not found")
 endif()
 
-# the following sets the SYSTEM flag for the include dirs of the boost libs to suppress warnings
+# the following sets the SYSTEM flag for the include dirs of the nanobind libs to suppress warnings
 # cmake-lint: disable=C0307
 set_target_properties(
   ${NANOBIND_LIB} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES

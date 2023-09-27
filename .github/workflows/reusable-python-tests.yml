@@ -1,0 +1,55 @@
+name: 🐍 • Tests
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "The platform to run the tests on (ubuntu-latest, macos-latest, windows-latest)"
+        required: true
+        type: string
+      python-version:
+        description: "The Python version to use (3.8-3.11)"
+        required: true
+        type: string
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
+
+jobs:
+  python-tests:
+    name: 🐍 ${{ inputs.runs-on }} ${{ inputs.python-version }}
+    runs-on: ${{ inputs.runs-on }}
+    env:
+      FORCE_COLOR: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: ilammy/msvc-dev-cmd@v1
+      - if: ${{ inputs.setup-z3 }}
+        name: Setup Z3
+        uses: cda-tum/setup-z3@v1
+        with:
+          version: ${{ inputs.z3-version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          windows_compile_environment: msvc
+          override_cache_key: python-tests-${{ inputs.runs-on }}-${{ inputs.python-version }}
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: "pip"
+      - name: Set up mold as linker (Linux only)
+        uses: rui314/setup-mold@v1
+      - name: Test on 🐍 ${{ inputs.python-version }}
+        run: pipx run nox -s tests-${{ inputs.python-version }} --verbose

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Complex.hpp"
-#include "ComplexValue.hpp"
-#include "Definitions.hpp"
+#include "dd/Complex.hpp"
+#include "dd/ComplexValue.hpp"
+#include "dd/DDDefinitions.hpp"
 
 #include <array>
 #include <cstddef>
@@ -32,6 +32,7 @@ template <class Node> struct Edge {
   [[nodiscard]] bool isTerminal() const;
   [[nodiscard]] bool isZeroTerminal() const;
   [[nodiscard]] bool isOneTerminal() const;
+  [[nodiscard]] bool isIdentity() const;
 
   // Functions only related to density matrices
   [[maybe_unused]] static void setDensityConjugateTrue(Edge& e);
@@ -44,10 +45,12 @@ template <class Node> struct Edge {
   static void applyDmChangesToEdge(Edge& x);
 };
 
+// NOLINTBEGIN(cppcoreguidelines-interfaces-global-init)
 template <class Node>
 const Edge<Node> Edge<Node>::zero{Node::getTerminal(), Complex::zero};
 template <class Node>
 const Edge<Node> Edge<Node>::one{Node::getTerminal(), Complex::one};
+// NOLINTEND(cppcoreguidelines-interfaces-global-init)
 
 template <typename Node> struct CachedEdge {
   Node* p{};
@@ -55,10 +58,7 @@ template <typename Node> struct CachedEdge {
 
   CachedEdge() = default;
   CachedEdge(Node* n, const ComplexValue& v) : p(n), w(v) {}
-  CachedEdge(Node* n, const Complex& c) : p(n) {
-    w.r = CTEntry::val(c.r);
-    w.i = CTEntry::val(c.i);
-  }
+  CachedEdge(Node* n, const Complex& c);
 
   /// Comparing two DD edges with another involves comparing the respective
   /// pointers and checking whether the corresponding weights are "close enough"
@@ -73,18 +73,10 @@ template <typename Node> struct CachedEdge {
 
 namespace std {
 template <class Node> struct hash<dd::Edge<Node>> {
-  std::size_t operator()(dd::Edge<Node> const& e) const noexcept {
-    auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(e.p));
-    auto h2 = std::hash<dd::Complex>{}(e.w);
-    return dd::combineHash(h1, h2);
-  }
+  std::size_t operator()(dd::Edge<Node> const& e) const noexcept;
 };
 
 template <class Node> struct hash<dd::CachedEdge<Node>> {
-  std::size_t operator()(dd::CachedEdge<Node> const& e) const noexcept {
-    auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(e.p));
-    auto h2 = std::hash<dd::ComplexValue>{}(e.w);
-    return dd::combineHash(h1, h2);
-  }
+  std::size_t operator()(dd::CachedEdge<Node> const& e) const noexcept;
 };
 } // namespace std

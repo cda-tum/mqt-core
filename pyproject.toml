@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core>=0.4.5", "nanobind>=1.4.0", "setuptools-scm>=7"]
+requires = ["scikit-build-core>=0.5.0", "nanobind>=1.5.2", "setuptools-scm>=7", "pybind11>=2.11"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -9,7 +9,7 @@ readme = "README.md"
 authors = [
     { name = "Lukas Burgholzer", email = "burgholzer@me.com" }
 ]
-keywords = ["MQT", "quantum computing", "design automation"]
+keywords = ["MQT", "quantum-computing", "design-automation", "decision-diagrams", "zx-calculus"]
 license = { file = "LICENSE.md" }
 
 classifiers = [
@@ -39,10 +39,10 @@ dynamic = ["version"]
 test = ["pytest>=7.0"]
 coverage = ["mqt.core[test]", "pytest-cov"]
 docs = [
-    "furo",
+    "furo>=2023.08.17",
+    "sphinx~=7.0",
     "myst_parser>=0.13",
     "setuptools-scm>=7",
-    "sphinx>=5",
     "sphinx-copybutton",
     "sphinx_design",
     "sphinxext-opengraph",
@@ -58,7 +58,10 @@ Discussions = "https://github.com/cda-tum/mqt-core/discussions"
 
 [tool.scikit-build]
 # Protect the configuration against future changes in scikit-build-core
-minimum-version = "0.4"
+minimum-version = "0.5.0"
+
+# Set the target to build
+cmake.targets = ["_core"]
 
 # Set required CMake and Ninja versions
 cmake.minimum-version = "3.19"
@@ -126,10 +129,9 @@ testpaths = ["test/python"]
 
 [tool.coverage]
 run.source = ["mqt.core"]
-report.exclude_lines = [
-    'pragma: no cover',
+report.exclude_also = [
     '\.\.\.',
-    'if typing.TYPE_CHECKING:',
+    'if TYPE_CHECKING:',
 ]
 
 
@@ -160,6 +162,7 @@ select = [
     "EM",          # flake8-errmsg
     "EXE",         # flake8-executable
     "FA",          # flake8-future-annotations
+    "FLY",         # flynt
     "I",           # isort
     "ICN",         # flake8-import-conventions
     "ISC",         # flake8-implicit-str-concat
@@ -213,13 +216,15 @@ build = "cp3*"
 skip = "*-musllinux_*"
 archs = "auto64"
 test-command = "python -c \"from mqt import core\""
-environment = { DEPLOY = "ON" }
 build-frontend = "build"
 
+[tool.cibuildwheel.linux]
+environment = { DEPLOY = "ON" }
+
 [tool.cibuildwheel.macos]
-environment = { DEPLOY = "ON", MACOSX_DEPLOYMENT_TARGET = "10.15" }
+environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
 
 [tool.cibuildwheel.windows]
 before-build = "pip install delvewheel"
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
-environment = { DEPLOY = "ON", CMAKE_GENERATOR = "Ninja" }
+environment = { CMAKE_GENERATOR = "Ninja" }

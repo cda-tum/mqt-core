@@ -250,8 +250,7 @@ void StandardOperation::dumpOpenQASM(
               << "However, this library can parse .qasm files with multiple "
                  "controlled gates (e.g., cccx) correctly. "
               << "Thus, while not valid vanilla OpenQASM, the dumped file will "
-                 "work with this library. "
-              << std::endl;
+                 "work with this library.\n";
   }
 
   // safe the numbers of controls as a prefix to the operation name
@@ -263,6 +262,10 @@ void StandardOperation::dumpOpenQASM(
     break;
   case I:
     op << "id";
+    break;
+  case Barrier:
+    assert(controls.empty());
+    op << "barrier";
     break;
   case H:
     op << "h";
@@ -397,8 +400,8 @@ void StandardOperation::dumpOpenQASM(
     dumpOpenQASMTeleportation(of, qreg);
     return;
   default:
-    std::cerr << "gate type (index) " << static_cast<int>(type)
-              << " could not be converted to OpenQASM" << std::endl;
+    std::cerr << "gate type " << toString(type)
+              << " could not be converted to OpenQASM\n.";
   }
 
   // apply X operations to negate the respective controls
@@ -414,10 +417,15 @@ void StandardOperation::dumpOpenQASM(
     of << " " << qreg[c.qubit].second << ",";
   }
   if (!targets.empty()) {
-    for (const auto& t : targets) {
-      of << " " << qreg[t].second << ",";
+    if (type == Barrier &&
+        isWholeQubitRegister(qreg, targets.front(), targets.back())) {
+      of << " " << qreg[targets.front()].first;
+    } else {
+      for (const auto& t : targets) {
+        of << " " << qreg[t].second << ",";
+      }
+      of.seekp(-1, std::ios_base::cur);
     }
-    of.seekp(-1, std::ios_base::cur);
   }
   of << ";\n";
   // apply X operations to negate the respective controls again
@@ -458,5 +466,96 @@ void StandardOperation::dumpOpenQASMTeleportation(
   of << "// teleport q_0, a_0, a_1; q_0 --> a_1  via a_0\n";
   of << "teleport " << qreg[targets[0]].second << ", "
      << qreg[targets[1]].second << ", " << qreg[targets[2]].second << ";\n";
+}
+
+void StandardOperation::invert() {
+  switch (type) {
+  // self-inverting gates
+  case I:
+  case X:
+  case Y:
+  case Z:
+  case H:
+  case SWAP:
+  case ECR:
+  case Barrier:
+    break;
+  // gates where we just update parameters
+  case GPhase:
+  case Phase:
+  case RX:
+  case RY:
+  case RZ:
+  case RXX:
+  case RYY:
+  case RZZ:
+  case RZX:
+    parameter[0] = -parameter[0];
+    break;
+  case U2:
+    std::swap(parameter[0], parameter[1]);
+    parameter[0] = -parameter[0] + PI;
+    parameter[1] = -parameter[1] - PI;
+    break;
+  case U3:
+    parameter[0] = -parameter[0];
+    parameter[1] = -parameter[1];
+    parameter[2] = -parameter[2];
+    std::swap(parameter[1], parameter[2]);
+    break;
+  case XXminusYY:
+  case XXplusYY:
+    parameter[0] = -parameter[0];
+    break;
+  case DCX:
+    std::swap(targets[0], targets[1]);
+    break;
+  // gates where we have specialized inverted operation types
+  case S:
+    type = Sdag;
+    break;
+  case Sdag:
+    type = S;
+    break;
+  case T:
+    type = Tdag;
+    break;
+  case Tdag:
+    type = T;
+    break;
+  case V:
+    type = Vdag;
+    break;
+  case Vdag:
+    type = V;
+    break;
+  case SX:
+    type = SXdag;
+    break;
+  case SXdag:
+    type = SX;
+    break;
+  case Peres:
+    type = Peresdag;
+    break;
+  case Peresdag:
+    type = Peres;
+    break;
+  // Tracking issue for iSwap: https://github.com/cda-tum/mqt-core/issues/423
+  case iSWAP:
+  case None:
+  case Compound:
+  case Measure:
+  case Reset:
+  case Teleportation:
+  case ClassicControlled:
+  case ATrue:
+  case AFalse:
+  case MultiATrue:
+  case MultiAFalse:
+  case OpCount:
+    throw QFRException("Inverting gate" + toString(type) +
+                       " is not supported.");
+  }
 }
 } // namespace qc
