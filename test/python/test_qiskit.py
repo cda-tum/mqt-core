@@ -14,7 +14,7 @@ from mqt.core.qiskit_utils import qiskit_to_mqt
 
 
 def test_empty_circuit() -> None:
-    """Test import."""
+    """Test import of empty circuit."""
     q = QuantumCircuit()
 
     mqt_qc = qiskit_to_mqt(q)
@@ -23,10 +23,9 @@ def test_empty_circuit() -> None:
 
 
 def test_single_gate() -> None:
-    """Test import."""
+    """Test import of single-gate circuit."""
     q = QuantumCircuit(1)
     q.h(0)
-
     mqt_qc = qiskit_to_mqt(q)
     assert mqt_qc.n_qubits == 1
     assert mqt_qc.n_ops == 1
