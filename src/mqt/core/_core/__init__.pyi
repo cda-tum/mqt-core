@@ -966,18 +966,22 @@ class StandardOperation(Operation):
         """
     @overload
     def __init__(
-        self, nq: int, target: int, op_type: OpType, params: list[float] = [], starting_qubit: int = 0
+        self, nq: int, target: int, op_type: OpType, params: list[float] | None = None, starting_qubit: int = 0
     ) -> None:
         """
         Create a single-qubit standard operation of specified type.
         """
+        if params is None:
+            params = []
     @overload
     def __init__(
-        self, nq: int, targets: list[int], op_type: OpType, params: list[float] = [], starting_qubit: int = 0
+        self, nq: int, targets: list[int], op_type: OpType, params: list[float] | None = None, starting_qubit: int = 0
     ) -> None:
         """
         Create a multi-qubit standard operation of specified type.
         """
+        if params is None:
+            params = []
     @overload
     def __init__(
         self,
@@ -985,12 +989,14 @@ class StandardOperation(Operation):
         control: Control,
         target: int,
         op_type: OpType,
-        params: list[float] = [],
+        params: list[float] | None = None,
         starting_qubit: int = 0,
     ) -> None:
         """
         Create a controlled standard operation of specified type.
         """
+        if params is None:
+            params = []
     @overload
     def __init__(
         self,
@@ -998,12 +1004,14 @@ class StandardOperation(Operation):
         control: Control,
         targets: list[int],
         op_type: OpType,
-        params: list[float] = [],
+        params: list[float] | None = None,
         starting_qubit: int = 0,
     ) -> None:
         """
         Create a controlled multi-target standard operation of specified type.
         """
+        if params is None:
+            params = []
     @overload
     def __init__(
         self,
@@ -1011,12 +1019,14 @@ class StandardOperation(Operation):
         controls: set[Control],
         target: int,
         op_type: OpType,
-        params: list[float] = [],
+        params: list[float] | None = None,
         starting_qubit: int = 0,
     ) -> None:
         """
         Create a multi-controlled standard operation of specified type.
         """
+        if params is None:
+            params = []
     @overload
     def __init__(
         self,
@@ -1024,12 +1034,14 @@ class StandardOperation(Operation):
         controls: set[Control],
         targets: list[int],
         op_type: OpType,
-        params: list[float] = [],
+        params: list[float] | None = None,
         starting_qubit: int = 0,
     ) -> None:
         """
         Create a multi-controlled multi-target standard operation of specified type.
         """
+        if params is None:
+            params = []
     @overload
     def __init__(self, nq: int, controls: set[Control], target: int, starting_qubit: int = 0) -> None:
         """
@@ -1043,12 +1055,14 @@ class StandardOperation(Operation):
         target0: int,
         target1: int,
         op_type: OpType,
-        params: list[float] = [],
+        params: list[float] | None = None,
         starting_qubit: int = 0,
     ) -> None:
         """
         Create a multi-controlled two-target operation of specified type involving nq consecutive control qubits starting_qubit.
         """
+        if params is None:
+            params = []
     def clone(self) -> Operation:
         """
         Return deep clone of the operation.
