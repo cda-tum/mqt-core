@@ -7,363 +7,348 @@
 
 #include <cstddef>
 #include <iostream>
-#include <nanobind/make_iterator.h>
-#include <nanobind/stl/bind_vector.h>
-#include <nanobind/stl/map.h>
-#include <nanobind/stl/pair.h>
-#include <nanobind/stl/set.h>
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/unique_ptr.h>
-#include <nanobind/stl/vector.h>
 #include <ostream>
-#include <python/nanobind.hpp>
+#include <pybind11/stl.h>
 #include <python/pybind11.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
+namespace py = pybind11;
+using namespace pybind11::literals;
 
 namespace mqt {
-// void register_qiskit(nb::module_);
 
-enum class foo { a };
+PYBIND11_MODULE(_core, m) {
 
-foo fooFromStr(const std::string& s) { return foo::a; }
-NB_MODULE(_core, m) {
-
-  nb::class_<qc::QuantumComputation>(
+  py::class_<qc::QuantumComputation>(
       m, "QuantumComputation",
       "Representation of quantum circuits within MQT Core")
-      .def(nb::init<std::size_t>(), "nq"_a,
+      .def(py::init<std::size_t>(), "nq"_a,
            "Constructs an empty QuantumComputation with the given number of "
            "qubits.")
-      .def(nb::init<std::string>(), "filename"_a,
+      .def(py::init<std::string>(), "filename"_a,
            "Read QuantumComputation from given file. Supported formats are "
            "[OpenQASM, Real, GRCS, TFC, QC]")
       // .def_rw("name", &qc::QuantumComputation::getName,
       // &qc::QuantumComputation::setName)
       .def("clone", &qc::QuantumComputation::clone,
            "Clone this QuantumComputation object.")
-      .def_prop_ro("n_qubits", &qc::QuantumComputation::getNqubits)
-      .def_prop_ro("n_ancillae", &qc::QuantumComputation::getNancillae)
-      .def_prop_ro("n_qubits_without_ancillae",
-                   &qc::QuantumComputation::getNqubitsWithoutAncillae)
-      .def_prop_ro("n_cbits", &qc::QuantumComputation::getNcbits)
-      .def_prop_ro("n_ops", &qc::QuantumComputation::getNops)
-      .def_prop_ro("n_single_qubit_ops",
-                   &qc::QuantumComputation::getNsingleQubitOps)
-      .def_prop_ro("n_individual_ops",
-                   &qc::QuantumComputation::getNindividualOps)
-      .def_prop_ro("depth", &qc::QuantumComputation::getDepth)
-      .def_prop_rw("gphase", &qc::QuantumComputation::getGlobalPhase,
-                   &qc::QuantumComputation::gphase)
-      .def("i", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::i))
-      .def("i", nb::overload_cast<qc::Qubit, const qc::Control&>(
+      .def_property_readonly("n_qubits", &qc::QuantumComputation::getNqubits)
+      .def_property_readonly("n_ancillae",
+                             &qc::QuantumComputation::getNancillae)
+      .def_property_readonly("n_qubits_without_ancillae",
+                             &qc::QuantumComputation::getNqubitsWithoutAncillae)
+      .def_property_readonly("n_cbits", &qc::QuantumComputation::getNcbits)
+      .def_property_readonly("n_ops", &qc::QuantumComputation::getNops)
+      .def_property_readonly("n_single_qubit_ops",
+                             &qc::QuantumComputation::getNsingleQubitOps)
+      .def_property_readonly("n_individual_ops",
+                             &qc::QuantumComputation::getNindividualOps)
+      .def_property_readonly("depth", &qc::QuantumComputation::getDepth)
+      .def_property("gphase", &qc::QuantumComputation::getGlobalPhase,
+                    &qc::QuantumComputation::gphase)
+      .def("i", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::i))
+      .def("i", py::overload_cast<qc::Qubit, const qc::Control&>(
                     &qc::QuantumComputation::i))
-      .def("i", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("i", py::overload_cast<qc::Qubit, const qc::Controls&>(
                     &qc::QuantumComputation::i))
-      .def("h", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::h))
-      .def("h", nb::overload_cast<qc::Qubit, const qc::Control&>(
+      .def("h", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::h))
+      .def("h", py::overload_cast<qc::Qubit, const qc::Control&>(
                     &qc::QuantumComputation::h))
-      .def("h", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("h", py::overload_cast<qc::Qubit, const qc::Controls&>(
                     &qc::QuantumComputation::h))
-      .def("x", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::x))
-      .def("x", nb::overload_cast<qc::Qubit, const qc::Control&>(
+      .def("x", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::x))
+      .def("x", py::overload_cast<qc::Qubit, const qc::Control&>(
                     &qc::QuantumComputation::x))
-      .def("x", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("x", py::overload_cast<qc::Qubit, const qc::Controls&>(
                     &qc::QuantumComputation::x))
-      .def("y", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::y))
-      .def("y", nb::overload_cast<qc::Qubit, const qc::Control&>(
+      .def("y", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::y))
+      .def("y", py::overload_cast<qc::Qubit, const qc::Control&>(
                     &qc::QuantumComputation::y))
-      .def("y", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("y", py::overload_cast<qc::Qubit, const qc::Controls&>(
                     &qc::QuantumComputation::y))
-      .def("z", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::z))
-      .def("z", nb::overload_cast<qc::Qubit, const qc::Control&>(
+      .def("z", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::z))
+      .def("z", py::overload_cast<qc::Qubit, const qc::Control&>(
                     &qc::QuantumComputation::z))
-      .def("z", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("z", py::overload_cast<qc::Qubit, const qc::Controls&>(
                     &qc::QuantumComputation::z))
-      .def("s", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::s))
-      .def("s", nb::overload_cast<qc::Qubit, const qc::Control&>(
+      .def("s", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::s))
+      .def("s", py::overload_cast<qc::Qubit, const qc::Control&>(
                     &qc::QuantumComputation::s))
-      .def("s", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("s", py::overload_cast<qc::Qubit, const qc::Controls&>(
                     &qc::QuantumComputation::s))
-      .def("sdag", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::sdag))
-      .def("sdag", nb::overload_cast<qc::Qubit, const qc::Control&>(
+      .def("sdag", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::sdag))
+      .def("sdag", py::overload_cast<qc::Qubit, const qc::Control&>(
                        &qc::QuantumComputation::sdag))
-      .def("sdag", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("sdag", py::overload_cast<qc::Qubit, const qc::Controls&>(
                        &qc::QuantumComputation::sdag))
-      .def("t", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::t))
-      .def("t", nb::overload_cast<qc::Qubit, const qc::Control&>(
+      .def("t", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::t))
+      .def("t", py::overload_cast<qc::Qubit, const qc::Control&>(
                     &qc::QuantumComputation::t))
-      .def("t", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("t", py::overload_cast<qc::Qubit, const qc::Controls&>(
                     &qc::QuantumComputation::t))
-      .def("tdag", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::tdag))
-      .def("tdag", nb::overload_cast<qc::Qubit, const qc::Control&>(
+      .def("tdag", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::tdag))
+      .def("tdag", py::overload_cast<qc::Qubit, const qc::Control&>(
                        &qc::QuantumComputation::tdag))
-      .def("tdag", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("tdag", py::overload_cast<qc::Qubit, const qc::Controls&>(
                        &qc::QuantumComputation::tdag))
-      .def("v", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::v))
-      .def("v", nb::overload_cast<qc::Qubit, const qc::Control&>(
+      .def("v", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::v))
+      .def("v", py::overload_cast<qc::Qubit, const qc::Control&>(
                     &qc::QuantumComputation::v))
-      .def("v", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("v", py::overload_cast<qc::Qubit, const qc::Controls&>(
                     &qc::QuantumComputation::v))
-      .def("vdag", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::vdag))
-      .def("vdag", nb::overload_cast<qc::Qubit, const qc::Control&>(
+      .def("vdag", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::vdag))
+      .def("vdag", py::overload_cast<qc::Qubit, const qc::Control&>(
                        &qc::QuantumComputation::vdag))
-      .def("vdag", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("vdag", py::overload_cast<qc::Qubit, const qc::Controls&>(
                        &qc::QuantumComputation::vdag))
-      .def("u3", nb::overload_cast<qc::Qubit, const qc::fp, const qc::fp,
+      .def("u3", py::overload_cast<qc::Qubit, const qc::fp, const qc::fp,
                                    const qc::fp>(&qc::QuantumComputation::u3))
-      .def("u3", nb::overload_cast<qc::Qubit, const qc::Control&, const qc::fp,
+      .def("u3", py::overload_cast<qc::Qubit, const qc::Control&, const qc::fp,
                                    const qc::fp, const qc::fp>(
                      &qc::QuantumComputation::u3))
-      .def("u3", nb::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp,
+      .def("u3", py::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp,
                                    const qc::fp, const qc::fp>(
                      &qc::QuantumComputation::u3))
-      .def("u2", nb::overload_cast<qc::Qubit, const qc::fp, const qc::fp>(
+      .def("u2", py::overload_cast<qc::Qubit, const qc::fp, const qc::fp>(
                      &qc::QuantumComputation::u2))
-      .def("u2", nb::overload_cast<qc::Qubit, const qc::Control&, const qc::fp,
+      .def("u2", py::overload_cast<qc::Qubit, const qc::Control&, const qc::fp,
                                    const qc::fp>(&qc::QuantumComputation::u2))
-      .def("u2", nb::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp,
+      .def("u2", py::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp,
                                    const qc::fp>(&qc::QuantumComputation::u2))
-      .def("phase", nb::overload_cast<qc::Qubit, const qc::fp>(
+      .def("phase", py::overload_cast<qc::Qubit, const qc::fp>(
                         &qc::QuantumComputation::phase))
       .def("phase",
-           nb::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
+           py::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
                &qc::QuantumComputation::phase))
       .def("phase",
-           nb::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
+           py::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
                &qc::QuantumComputation::phase))
-      .def("sx", nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::sx))
-      .def("sx", nb::overload_cast<qc::Qubit, const qc::Control&>(
+      .def("sx", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::sx))
+      .def("sx", py::overload_cast<qc::Qubit, const qc::Control&>(
                      &qc::QuantumComputation::sx))
-      .def("sx", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("sx", py::overload_cast<qc::Qubit, const qc::Controls&>(
                      &qc::QuantumComputation::sx))
       .def("sxdag",
-           nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::sxdag))
-      .def("sxdag", nb::overload_cast<qc::Qubit, const qc::Control&>(
+           py::overload_cast<qc::Qubit>(&qc::QuantumComputation::sxdag))
+      .def("sxdag", py::overload_cast<qc::Qubit, const qc::Control&>(
                         &qc::QuantumComputation::sxdag))
-      .def("sxdag", nb::overload_cast<qc::Qubit, const qc::Controls&>(
+      .def("sxdag", py::overload_cast<qc::Qubit, const qc::Controls&>(
                         &qc::QuantumComputation::sxdag))
-      .def("rx", nb::overload_cast<qc::Qubit, const qc::fp>(
+      .def("rx", py::overload_cast<qc::Qubit, const qc::fp>(
                      &qc::QuantumComputation::rx))
-      .def("rx", nb::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
+      .def("rx", py::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
                      &qc::QuantumComputation::rx))
       .def("rx",
-           nb::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
+           py::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
                &qc::QuantumComputation::rx))
-      .def("ry", nb::overload_cast<qc::Qubit, const qc::fp>(
+      .def("ry", py::overload_cast<qc::Qubit, const qc::fp>(
                      &qc::QuantumComputation::ry))
-      .def("ry", nb::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
+      .def("ry", py::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
                      &qc::QuantumComputation::ry))
       .def("ry",
-           nb::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
+           py::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
                &qc::QuantumComputation::ry))
-      .def("rz", nb::overload_cast<qc::Qubit, const qc::fp>(
+      .def("rz", py::overload_cast<qc::Qubit, const qc::fp>(
                      &qc::QuantumComputation::rz))
-      .def("rz", nb::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
+      .def("rz", py::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
                      &qc::QuantumComputation::rz))
       .def("rz",
-           nb::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
+           py::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
                &qc::QuantumComputation::rz))
-      .def("swap", nb::overload_cast<qc::Qubit, qc::Qubit>(
+      .def("swap", py::overload_cast<qc::Qubit, qc::Qubit>(
                        &qc::QuantumComputation::swap))
-      .def("swap", nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
+      .def("swap", py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
                        &qc::QuantumComputation::swap))
-      .def("swap", nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
+      .def("swap", py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
                        &qc::QuantumComputation::swap))
-      .def("iswap", nb::overload_cast<qc::Qubit, qc::Qubit>(
+      .def("iswap", py::overload_cast<qc::Qubit, qc::Qubit>(
                         &qc::QuantumComputation::iswap))
-      .def("iswap", nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
+      .def("iswap", py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
                         &qc::QuantumComputation::iswap))
       .def("iswap",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
                &qc::QuantumComputation::iswap))
-      .def("peres", nb::overload_cast<qc::Qubit, qc::Qubit>(
+      .def("peres", py::overload_cast<qc::Qubit, qc::Qubit>(
                         &qc::QuantumComputation::peres))
-      .def("peres", nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
+      .def("peres", py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
                         &qc::QuantumComputation::peres))
       .def("peres",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
                &qc::QuantumComputation::peres))
-      .def("peresdag", nb::overload_cast<qc::Qubit, qc::Qubit>(
+      .def("peresdag", py::overload_cast<qc::Qubit, qc::Qubit>(
                            &qc::QuantumComputation::peresdag))
       .def("peresdag",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
                &qc::QuantumComputation::peresdag))
       .def("peresdag",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
                &qc::QuantumComputation::peresdag))
-      .def("dcx", nb::overload_cast<qc::Qubit, qc::Qubit>(
+      .def("dcx", py::overload_cast<qc::Qubit, qc::Qubit>(
                       &qc::QuantumComputation::dcx))
-      .def("dcx", nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
+      .def("dcx", py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
                       &qc::QuantumComputation::dcx))
-      .def("dcx", nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
+      .def("dcx", py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
                       &qc::QuantumComputation::dcx))
-      .def("ecr", nb::overload_cast<qc::Qubit, qc::Qubit>(
+      .def("ecr", py::overload_cast<qc::Qubit, qc::Qubit>(
                       &qc::QuantumComputation::ecr))
-      .def("ecr", nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
+      .def("ecr", py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
                       &qc::QuantumComputation::ecr))
-      .def("ecr", nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
+      .def("ecr", py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
                       &qc::QuantumComputation::ecr))
-      .def("rxx", nb::overload_cast<qc::Qubit, qc::Qubit, qc::fp>(
+      .def("rxx", py::overload_cast<qc::Qubit, qc::Qubit, qc::fp>(
                       &qc::QuantumComputation::rxx))
       .def("rxx",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp>(
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp>(
                &qc::QuantumComputation::rxx))
       .def("rxx",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp>(
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp>(
                &qc::QuantumComputation::rxx))
-      .def("ryy", nb::overload_cast<qc::Qubit, qc::Qubit, qc::fp>(
+      .def("ryy", py::overload_cast<qc::Qubit, qc::Qubit, qc::fp>(
                       &qc::QuantumComputation::ryy))
       .def("ryy",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp>(
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp>(
                &qc::QuantumComputation::ryy))
       .def("ryy",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp>(
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp>(
                &qc::QuantumComputation::ryy))
-      .def("rzz", nb::overload_cast<qc::Qubit, qc::Qubit, qc::fp>(
+      .def("rzz", py::overload_cast<qc::Qubit, qc::Qubit, qc::fp>(
                       &qc::QuantumComputation::rzz))
       .def("rzz",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp>(
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp>(
                &qc::QuantumComputation::rzz))
       .def("rzz",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp>(
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp>(
                &qc::QuantumComputation::rzz))
-      .def("rzx", nb::overload_cast<qc::Qubit, qc::Qubit, qc::fp>(
+      .def("rzx", py::overload_cast<qc::Qubit, qc::Qubit, qc::fp>(
                       &qc::QuantumComputation::rzx))
       .def("rzx",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp>(
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp>(
                &qc::QuantumComputation::rzx))
       .def("rzx",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp>(
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp>(
                &qc::QuantumComputation::rzx))
       .def("xx_minus_yy",
-           nb::overload_cast<qc::Qubit, qc::Qubit, qc::fp, qc::fp>(
+           py::overload_cast<qc::Qubit, qc::Qubit, qc::fp, qc::fp>(
                &qc::QuantumComputation::xx_minus_yy))
       .def("xx_minus_yy",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp,
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp,
                              qc::fp>(&qc::QuantumComputation::xx_minus_yy))
       .def("xx_minus_yy",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp,
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp,
                              qc::fp>(&qc::QuantumComputation::xx_minus_yy))
       .def("xx_plus_yy",
-           nb::overload_cast<qc::Qubit, qc::Qubit, qc::fp, qc::fp>(
+           py::overload_cast<qc::Qubit, qc::Qubit, qc::fp, qc::fp>(
                &qc::QuantumComputation::xx_plus_yy))
       .def("xx_plus_yy",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp,
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp,
                              qc::fp>(&qc::QuantumComputation::xx_plus_yy))
       .def("xx_plus_yy",
-           nb::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp,
+           py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp,
                              qc::fp>(&qc::QuantumComputation::xx_plus_yy))
-      .def("measure", nb::overload_cast<qc::Qubit, std::size_t>(
+      .def("measure", py::overload_cast<qc::Qubit, std::size_t>(
                           &qc::QuantumComputation::measure))
       .def("measure",
-           nb::overload_cast<qc::Qubit, const std::pair<std::string, qc::Bit>&>(
+           py::overload_cast<qc::Qubit, const std::pair<std::string, qc::Bit>&>(
                &qc::QuantumComputation::measure))
-      .def("measure", nb::overload_cast<const std::vector<qc::Qubit>&,
+      .def("measure", py::overload_cast<const std::vector<qc::Qubit>&,
                                         const std::vector<qc::Bit>&>(
                           &qc::QuantumComputation::measure))
       .def("reset",
-           nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::reset))
-      .def("reset", nb::overload_cast<const std::vector<qc::Qubit>&>(
+           py::overload_cast<qc::Qubit>(&qc::QuantumComputation::reset))
+      .def("reset", py::overload_cast<const std::vector<qc::Qubit>&>(
                         &qc::QuantumComputation::reset))
       .def("barrier",
-           nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::barrier))
-      .def("barrier", nb::overload_cast<const std::vector<qc::Qubit>&>(
+           py::overload_cast<qc::Qubit>(&qc::QuantumComputation::barrier))
+      .def("barrier", py::overload_cast<const std::vector<qc::Qubit>&>(
                           &qc::QuantumComputation::barrier))
       .def("reset",
-           nb::overload_cast<qc::Qubit>(&qc::QuantumComputation::reset))
+           py::overload_cast<qc::Qubit>(&qc::QuantumComputation::reset))
       .def("classic_controlled",
-           nb::overload_cast<const qc::OpType, const qc::Qubit,
+           py::overload_cast<const qc::OpType, const qc::Qubit,
                              const qc::ClassicalRegister&, const std::uint64_t,
                              const std::vector<qc::fp>&>(
                &qc::QuantumComputation::classicControlled))
       .def("classic_controlled",
-           nb::overload_cast<const qc::OpType, const qc::Qubit,
+           py::overload_cast<const qc::OpType, const qc::Qubit,
                              const qc::Control, const qc::ClassicalRegister&,
                              const std::uint64_t, const std::vector<qc::fp>&>(
                &qc::QuantumComputation::classicControlled))
       .def("classic_controlled",
-           nb::overload_cast<const qc::OpType, const qc::Qubit,
+           py::overload_cast<const qc::OpType, const qc::Qubit,
                              const qc::Controls&, const qc::ClassicalRegister&,
                              const std::uint64_t, const std::vector<qc::fp>&>(
                &qc::QuantumComputation::classicControlled))
       // .def("__str__", [](const qc::QuantumComputation& qc){std::stringstream
       // ss;qc.print(ss);return ss.str();})
       // .def("__iter__", [](const qc::QuantumComputation& qc) {
-      //   return nb::make_iterator(nb::type<qc::QuantumComputation>(), "ops",
+      //   return py::make_iterator(py::type<qc::QuantumComputation>(), "ops",
       //   qc.begin(), qc.end());
-      // }, nb::keep_alive<0, 1>())
+      // }, py::keep_alive<0, 1>())
       .def("__len__", &qc::QuantumComputation::getNindividualOps)
-      .def(
-          "__getitem__",
-          [](const qc::QuantumComputation& qc,
-             std::size_t
-                 idx) { return qc.at(idx).get(); }, // Beware: this gives write
-                                                    // access to underlying
-                                                    // Operation
-          nb::rv_policy::reference)
-      // .def_prop_ro("ops", [](const qc::QuantumComputation& qc, std::size_t
-      // idx){return *qc.at(idx);})
+      .def("__getitem__", [](const qc::QuantumComputation& qc,
+                             std::size_t idx) { return qc.at(idx).get(); })
+      // .def_property_readonly("ops", [](const qc::QuantumComputation& qc,
+      // std::size_t idx){return *qc.at(idx);})
       ;
-  nb::class_<qc::Control>(m, "Control")
-      .def_rw("type", &qc::Control::type)
-      .def_rw("qubit", &qc::Control::qubit)
-      .def(nb::init<qc::Qubit>())
-      .def(nb::init<qc::Qubit, qc::Control::Type>());
+  py::class_<qc::Control>(m, "Control")
+      .def_readwrite("type", &qc::Control::type)
+      .def_readwrite("qubit", &qc::Control::qubit)
+      .def(py::init<qc::Qubit>())
+      .def(py::init<qc::Qubit, qc::Control::Type>());
 
-  nb::enum_<qc::Control::Type>(m, "ControlType")
+  py::enum_<qc::Control::Type>(m, "ControlType")
       .value("Pos", qc::Control::Type::Pos)
       .value("Neg", qc::Control::Type::Neg)
       .export_values();
 
-  nb::class_<qc::Operation>(m, "Operation")
-      // .def(nb::init<>())
-      // .def_prop_rw("targets", &qc::Operation::getTargets,
+  py::class_<qc::Operation>(m, "Operation")
+      // .def(py::init<>())
+      // .def_property("targets", &qc::Operation::getTargets,
       // &qc::Operation::setTargets)
-      .def_prop_rw("name", &qc::Operation::getName, &qc::Operation::setName)
+      .def_property("name", &qc::Operation::getName, &qc::Operation::setName)
       .def("set_gate", &qc::Operation::setGate);
   ;
-  nb::class_<qc::StandardOperation, qc::Operation>(m, "StandardOperation")
-      .def(nb::init<>())
-      .def(nb::init<std::size_t, qc::Qubit, qc::OpType, std::vector<qc::fp>,
+  py::class_<qc::StandardOperation, qc::Operation>(m, "StandardOperation")
+      .def(py::init<>())
+      .def(py::init<std::size_t, qc::Qubit, qc::OpType, std::vector<qc::fp>,
                     qc::Qubit>(),
            "nq"_a, "target"_a, "op_type"_a, "params"_a = std::vector<qc::fp>{},
            "starting_qubit"_a = 0)
-      .def(nb::init<std::size_t, const qc::Targets&, qc::OpType,
+      .def(py::init<std::size_t, const qc::Targets&, qc::OpType,
                     std::vector<qc::fp>, qc::Qubit>(),
            "nq"_a, "targets"_a, "op_type"_a, "params"_a = std::vector<qc::fp>{},
            "starting_qubit"_a = 0)
-      .def(nb::init<std::size_t, qc::Control, qc::Qubit, qc::OpType,
+      .def(py::init<std::size_t, qc::Control, qc::Qubit, qc::OpType,
                     const std::vector<qc::fp>&, qc::Qubit>(),
            "nq"_a, "control"_a, "target"_a, "op_type"_a,
            "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
-      .def(nb::init<std::size_t, qc::Control, const qc::Targets&, qc::OpType,
+      .def(py::init<std::size_t, qc::Control, const qc::Targets&, qc::OpType,
                     const std::vector<qc::fp>&, qc::Qubit>(),
            "nq"_a, "control"_a, "targets"_a, "op_type"_a,
            "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
-      .def(nb::init<std::size_t, const qc::Controls&, qc::Qubit, qc::OpType,
+      .def(py::init<std::size_t, const qc::Controls&, qc::Qubit, qc::OpType,
                     const std::vector<qc::fp>&, qc::Qubit>(),
            "nq"_a, "controls"_a, "target"_a, "op_type"_a,
            "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
-      .def(nb::init<std::size_t, const qc::Controls&, const qc::Targets&,
+      .def(py::init<std::size_t, const qc::Controls&, const qc::Targets&,
                     qc::OpType, std::vector<qc::fp>, qc::Qubit>(),
            "nq"_a, "controls"_a, "targets"_a, "op_type"_a,
            "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
-      .def(nb::init<std::size_t, const qc::Controls&, qc::Qubit, qc::Qubit>(),
+      .def(py::init<std::size_t, const qc::Controls&, qc::Qubit, qc::Qubit>(),
            "nq"_a, "controls"_a, "target"_a, "starting_qubit"_a = 0)
-      .def(nb::init<std::size_t, const qc::Controls&, qc::Qubit, qc::Qubit,
+      .def(py::init<std::size_t, const qc::Controls&, qc::Qubit, qc::Qubit,
                     qc::OpType, std::vector<qc::fp>, qc::Qubit>(),
            "nq"_a, "controls"_a, "target0"_a, "target1"_a, "op_type"_a,
            "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0)
       .def("is_standard_operation", &qc::StandardOperation::isStandardOperation)
       .def("clone", &qc::StandardOperation::clone)
-      .def("equals", nb::overload_cast<const qc::Operation&>(
-                         &qc::StandardOperation::equals, nb::const_))
+      .def("equals", py::overload_cast<const qc::Operation&>(
+                         &qc::StandardOperation::equals, py::const_))
       .def("equals",
-           nb::overload_cast<const qc::Operation&, const qc::Permutation&,
+           py::overload_cast<const qc::Operation&, const qc::Permutation&,
                              const qc::Permutation&>(
-               &qc::StandardOperation::equals, nb::const_))
+               &qc::StandardOperation::equals, py::const_))
       // .def("__str__", [](const qc::StandardOperation& qc) {
       //   std::ostringstream ss;
       //   qc.dumpOpenQASM(ss, {{"q", "0"}, {"q", "1"}, {"q", "2"}}, {});
@@ -371,16 +356,13 @@ NB_MODULE(_core, m) {
       // })
       ;
 
-  nb::class_<qc::Permutation>(m, "Permutation")
-      .def("apply", nb::overload_cast<const qc::Controls&>(
-                        &qc::Permutation::apply, nb::const_))
-      .def("apply", nb::overload_cast<const qc::Targets&>(
-                        &qc::Permutation::apply, nb::const_))
-      .def(nb::init_implicit<std::map<
-               qc::Qubit, qc::Qubit>>()); // Allows for implicit conversion from
-                                          // dict[int, int] to Permutation
+  py::class_<qc::Permutation>(m, "Permutation")
+      .def("apply", py::overload_cast<const qc::Controls&>(
+                        &qc::Permutation::apply, py::const_))
+      .def("apply", py::overload_cast<const qc::Targets&>(
+                        &qc::Permutation::apply, py::const_));
 
-  nb::enum_<qc::OpType>(m, "OpType")
+  py::enum_<qc::OpType>(m, "OpType")
       .value("none", qc::OpType::None)
       .value("gphase", qc::OpType::GPhase)
       .value("i", qc::OpType::I)
@@ -417,8 +399,6 @@ NB_MODULE(_core, m) {
       .value("compound", qc::OpType::Compound)
       .value("measure", qc::OpType::Measure)
       .value("reset", qc::OpType::Reset)
-      .value("snapshot", qc::OpType::Snapshot)
-      .value("showprobabilities", qc::OpType::ShowProbabilities)
       .value("barrier", qc::OpType::Barrier)
       .value("teleportation", qc::OpType::Teleportation)
       .value("classiccontrolled", qc::OpType::ClassicControlled)
