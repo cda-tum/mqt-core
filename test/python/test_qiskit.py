@@ -9,7 +9,7 @@ from qiskit.circuit import AncillaRegister, ClassicalRegister, Parameter, Quantu
 from qiskit.circuit.library import MCXRecursive, MCXVChain, XXMinusYYGate, XXPlusYYGate
 from qiskit.transpiler import Layout, TranspileLayout
 
-from mqt.core._core import Expression, SymbolicOperation
+from mqt.core import Expression, SymbolicOperation
 from mqt.core.qiskit import qiskit_to_mqt
 
 

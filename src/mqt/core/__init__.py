@@ -10,6 +10,7 @@ from ._core import (
     Permutation,
     QuantumComputation,
     StandardOperation,
+    SymbolicOperation
 )
 from ._version import version as __version__
 
@@ -22,4 +23,5 @@ __all__ = [
     "QuantumComputation",
     "Control",
     "Expression",
+    "SymbolicOperation"
 ]
