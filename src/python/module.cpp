@@ -17,6 +17,7 @@
 #include <nanobind/stl/vector.h>
 #include <ostream>
 #include <python/nanobind.hpp>
+#include <python/pybind11.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
