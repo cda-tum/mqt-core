@@ -10,7 +10,7 @@ from qiskit.circuit.library import MCXRecursive, MCXVChain, XXMinusYYGate, XXPlu
 from qiskit.transpiler import Layout, TranspileLayout
 
 from mqt.core._core import Expression, SymbolicOperation
-from mqt.core.qiskit_utils import qiskit_to_mqt
+from mqt.core.qiskit import qiskit_to_mqt
 
 
 def test_empty_circuit() -> None:
