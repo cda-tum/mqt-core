@@ -59,6 +59,10 @@ void Complex::writeBinary(std::ostream& os) const {
   RealNumber::writeBinary(i, os);
 }
 
+Complex::operator std::complex<fp>() const noexcept {
+  return {RealNumber::val(r), RealNumber::val(i)};
+}
+
 std::ostream& operator<<(std::ostream& os, const Complex& c) {
   return os << c.toString();
 }

@@ -77,10 +77,10 @@ TEST_P(Grover, Functionality) {
   ASSERT_NO_THROW({ func = buildFunctionality(qc.get(), dd); });
 
   // amplitude of the searched-for entry should be 1
-  auto c = dd->getValueByPath(func, x);
-  EXPECT_NEAR(std::abs(c.r), 1, GROVER_ACCURACY);
-  EXPECT_NEAR(std::abs(c.i), 0, GROVER_ACCURACY);
-  auto prob = c.r * c.r + c.i * c.i;
+  auto c = func.getValueByPath(x);
+  EXPECT_NEAR(std::abs(c.real()), 1, GROVER_ACCURACY);
+  EXPECT_NEAR(std::abs(c.imag()), 0, GROVER_ACCURACY);
+  const auto prob = std::norm(c);
   EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }
 
@@ -97,10 +97,10 @@ TEST_P(Grover, FunctionalityRecursive) {
   ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), dd); });
 
   // amplitude of the searched-for entry should be 1
-  auto c = dd->getValueByPath(func, x);
-  EXPECT_NEAR(std::abs(c.r), 1, GROVER_ACCURACY);
-  EXPECT_NEAR(std::abs(c.i), 0, GROVER_ACCURACY);
-  auto prob = c.r * c.r + c.i * c.i;
+  auto c = func.getValueByPath(x);
+  EXPECT_NEAR(std::abs(c.real()), 1, GROVER_ACCURACY);
+  EXPECT_NEAR(std::abs(c.imag()), 0, GROVER_ACCURACY);
+  const auto prob = std::norm(c);
   EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }
 

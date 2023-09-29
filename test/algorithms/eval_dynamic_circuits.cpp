@@ -174,13 +174,13 @@ TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
   const auto simulationEnd = std::chrono::steady_clock::now();
 
   // extract measurement probabilities from IQPE simulations
-  dd::ProbabilityVector probs{};
+  dd::SparsePVec probs{};
   extractProbabilityVector(iqpe.get(), dd->makeZeroState(iqpe->getNqubits()),
                            probs, dd);
   const auto extractionEnd = std::chrono::steady_clock::now();
 
   // extend to account for 0 qubit
-  auto stub = dd::ProbabilityVector{};
+  auto stub = dd::SparsePVec{};
   stub.reserve(probs.size());
   for (const auto& [state, prob] : probs) {
     stub[2ULL * state + 1] = prob;
@@ -383,7 +383,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
   const auto start = std::chrono::steady_clock::now();
   // extract measurement probabilities from IQPE simulations
-  dd::ProbabilityVector probs{};
+  dd::SparsePVec probs{};
   extractProbabilityVector(iqpe.get(), dd->makeZeroState(iqpe->getNqubits()),
                            probs, dd);
   const auto extractionEnd = std::chrono::steady_clock::now();
@@ -395,7 +395,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
   std::cout << "---- sim done ----\n";
 
   // extend to account for 0 qubit
-  auto stub = dd::ProbabilityVector{};
+  auto stub = dd::SparsePVec{};
   stub.reserve(probs.size());
   for (const auto& [state, prob] : probs) {
     stub[2 * state + 1] = prob;
@@ -550,13 +550,13 @@ TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
   const auto simulationEnd = std::chrono::steady_clock::now();
 
   // extract measurement probabilities from IQPE simulations
-  dd::ProbabilityVector probs{};
+  dd::SparsePVec probs{};
   extractProbabilityVector(dbv.get(), dd->makeZeroState(dbv->getNqubits()),
                            probs, dd);
   const auto extractionEnd = std::chrono::steady_clock::now();
 
   // extend to account for 0 qubit
-  auto stub = dd::ProbabilityVector{};
+  auto stub = dd::SparsePVec{};
   stub.reserve(probs.size());
   for (const auto& [state, prob] : probs) {
     stub[2ULL * state + 1] = prob;
@@ -709,7 +709,7 @@ TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
   std::stringstream ss{};
   // extract measurement probabilities from IQPE simulations
   if (qft->getNqubits() <= 15) {
-    dd::ProbabilityVector probs{};
+    dd::SparsePVec probs{};
     extractProbabilityVector(dqft.get(), dd->makeZeroState(dqft->getNqubits()),
                              probs, dd);
     const auto extractionEnd = std::chrono::steady_clock::now();

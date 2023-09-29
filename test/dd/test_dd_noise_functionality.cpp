@@ -78,17 +78,17 @@ protected:
 };
 
 TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
-  const std::map<std::string, fp> reference = {
-      {"0000", 0.0969332192741}, {"0001", 0.0907888041538},
-      {"0010", 0.0141409660985}, {"0011", 0.0092413539333},
-      {"0100", 0.0238203475524}, {"0101", 0.0235097990017},
-      {"0110", 0.0244576087400}, {"0111", 0.0116282811276},
-      {"1000", 0.1731941264570}, {"1001", 0.4145855071998},
-      {"1010", 0.0138062113213}, {"1011", 0.0184033482066},
-      {"1100", 0.0242454336917}, {"1101", 0.0262779844799},
-      {"1110", 0.0239296920989}, {"1111", 0.0110373166627}};
+  const dd::SparsePVecStrKeys reference = {
+      {"0000", 0.0969332192741}, {"1000", 0.0907888041538},
+      {"0100", 0.0141409660985}, {"1100", 0.0092413539333},
+      {"0010", 0.0238203475524}, {"1010", 0.0235097990017},
+      {"0110", 0.0244576087400}, {"1110", 0.0116282811276},
+      {"0001", 0.1731941264570}, {"1001", 0.4145855071998},
+      {"0101", 0.0138062113213}, {"1101", 0.0184033482066},
+      {"0011", 0.0242454336917}, {"1011", 0.0262779844799},
+      {"0111", 0.0239296920989}, {"1111", 0.0110373166627}};
 
-  std::array<std::array<std::map<std::string, fp>, 2>, 2> results{};
+  std::array<std::array<dd::SparsePVecStrKeys, 2>, 2> results{};
   for (const auto useDensityMatrixType : {false, true}) {
     for (const auto applyNoiseSequentially : {false, true}) {
       auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
@@ -110,7 +110,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
         deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
       }
 
-      const auto m = dd->getProbVectorFromDensityMatrix(rootEdge, 0.001);
+      const auto m = rootEdge.getSparseProbabilityVectorStrKeys(0.001);
       results[static_cast<std::size_t>(useDensityMatrixType)]
              [static_cast<std::size_t>(applyNoiseSequentially)] = m;
     }
@@ -151,7 +151,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
           usedQubits, operation, rootEdge, qc.getGenerator());
     }
 
-    const auto amplitudes = dd->getVector(rootEdge);
+    const auto amplitudes = rootEdge.getVector();
     for (size_t m = 0U; m < amplitudes.size(); m++) {
       auto state = std::bitset<4U>(m).to_string();
       std::reverse(state.begin(), state.end());
@@ -203,7 +203,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
           op->getUsedQubits(), operation, rootEdge, qc.getGenerator());
     }
 
-    const auto amplitudes = dd->getVector(rootEdge);
+    const auto amplitudes = rootEdge.getVector();
     for (size_t m = 0U; m < amplitudes.size(); m++) {
       auto state = std::bitset<4U>(m).to_string();
       std::reverse(state.begin(), state.end());
