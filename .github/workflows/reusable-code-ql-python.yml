@@ -40,7 +40,7 @@ jobs:
         uses: Chocobo1/setup-ccache-action@v1
         with:
           prepend_symlinks_to_path: false
-          override_cache_key: codeql-cpp
+          override_cache_key: codeql-python
       - name: Set up mold as linker
         uses: rui314/setup-mold@v1
       - name: Set up Python
@@ -58,7 +58,6 @@ jobs:
         uses: github/codeql-action/init@v2
         with:
           languages: python
-          config-file: .github/codeql-config.yml
           setup-python-dependencies: false
           config: |
             queries:
