@@ -36,7 +36,7 @@ requires-python = ">=3.8"
 dynamic = ["version"]
 
 [project.optional-dependencies]
-test = ["pytest>=7.0"]
+test = ["pytest>=7.0", "qiskit-terra>=0.20.2"]
 coverage = ["mqt.core[test]", "pytest-cov"]
 docs = [
     "furo>=2023.08.17",
@@ -48,7 +48,7 @@ docs = [
     "sphinxext-opengraph",
 ]
 qiskit = [
-  "qiskit-terra>=0.20.2",
+   "qiskit-terra>=0.20.2",
   ]
 dev = ["mqt.core[coverage, docs]",
     "qiskit-terra>=0.20.2"]
