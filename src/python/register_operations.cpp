@@ -1,5 +1,3 @@
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 #include "operations/CompoundOperation.hpp"
 #include "operations/Control.hpp"
 #include "operations/NonUnitaryOperation.hpp"
@@ -7,15 +5,18 @@
 #include "operations/Operation.hpp"
 #include "operations/StandardOperation.hpp"
 #include "operations/SymbolicOperation.hpp"
+
 #include <iostream>
-#include <sstream>
 #include <memory>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#include <sstream>
 namespace mqt {
 namespace py = pybind11;
 using namespace py::literals;
-  void registerOperations(py::module& m) {
+void registerOperations(py::module& m) {
 
-      py::class_<qc::Control>(m, "Control")
+  py::class_<qc::Control>(m, "Control")
       .def(py::init<qc::Qubit>(), "qubit"_a, "Create a positive control qubit.")
       .def(py::init<qc::Qubit, qc::Control::Type>(), "qubit"_a, "type"_a,
            "Create a control qubit of the specified control type.")
@@ -30,8 +31,7 @@ using namespace py::literals;
       .value("Neg", qc::Control::Type::Neg)
       .export_values();
   py::implicitly_convertible<py::str, qc::Control::Type>();
-  
-      py::class_<qc::Operation>(m, "Operation", "Generic quantum operation.")
+  py::class_<qc::Operation>(m, "Operation", "Generic quantum operation.")
       .def_property(
           "targets", [](const qc::Operation& qc) { return qc.getTargets(); },
           [](qc::Operation& qc, const qc::Targets& tar) {
@@ -134,7 +134,8 @@ using namespace py::literals;
   py::class_<qc::CompoundOperation, qc::Operation>(
       m, "CompoundOperation",
       "Quantum operation comprised of multiple sub-operations.")
-    .def(py::init<std::size_t>(), "nq"_a, "Create an empty compound operation on `nq` qubits.")
+      .def(py::init<std::size_t>(), "nq"_a,
+           "Create an empty compound operation on `nq` qubits.")
       .def(py::init([](std::size_t nq, std::vector<qc::Operation*> ops) {
              std::vector<std::unique_ptr<qc::Operation>> unique_ops;
              unique_ops.reserve(ops.size());
@@ -161,8 +162,14 @@ using namespace py::literals;
       .def("__len__", &qc::CompoundOperation::size,
            "Return number of sub-operations.")
       .def("empty", &qc::CompoundOperation::empty)
-      .def("__getitem__", [](const qc::CompoundOperation& op,
-                             std::size_t i) { return op.at(i).get(); }, py::return_value_policy::reference_internal, "i"_a, "Return i-th sub-operation. Beware: this gives write access to the sub-operation.")
+      .def(
+          "__getitem__",
+          [](const qc::CompoundOperation& op, std::size_t i) {
+            return op.at(i).get();
+          },
+          py::return_value_policy::reference_internal, "i"_a,
+          "Return i-th sub-operation. Beware: this gives write access to the "
+          "sub-operation.")
       .def("get_used_qubits", &qc::CompoundOperation::getUsedQubits,
            "Return set of qubits used by the operation.")
       .def("to_open_qasm",
@@ -175,7 +182,7 @@ using namespace py::literals;
       .def(
           "append_operation",
           [](qc::CompoundOperation& compOp, const qc::Operation& op) {
-            compOp.emplace_back(op.clone()); 
+            compOp.emplace_back(op.clone());
           },
           "op"_a, "Append operation op to the `CompoundOperation`.");
 
@@ -344,6 +351,5 @@ using namespace py::literals;
            "Replace all variables within this operation by their values "
            "dictated by the dict assignment which maps Variable objects to "
            "float.");
-
-  }
 }
+} // namespace mqt
