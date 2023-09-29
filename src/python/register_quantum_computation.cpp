@@ -2,15 +2,16 @@
 #include "operations/Control.hpp"
 #include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
+
+#include <memory>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <memory>
 namespace mqt {
 namespace py = pybind11;
 using namespace py::literals;
 
-  void registerQuantumComputation(py::module& m) {
-      py::class_<qc::QuantumComputation>(
+void registerQuantumComputation(py::module& m) {
+  py::class_<qc::QuantumComputation>(
       m, "QuantumComputation",
       "Representation of quantum circuits within MQT Core")
     .def(py::init<>(), "Constructs an empty QuantumComputation.")
@@ -622,5 +623,5 @@ using namespace py::literals;
         return qc::opTypeFromString(str);
       }));
   py::implicitly_convertible<py::str, qc::OpType>();
-  }
+}
 } // namespace mqt

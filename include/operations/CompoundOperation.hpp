@@ -193,22 +193,22 @@ public:
         std::vector<std::unique_ptr<Operation>>::const_iterator last) {
     return ops.erase(first, last);
   }
-  
+
   // NOLINTNEXTLINE(readability-identifier-naming)
   template <class T, class... Args> void emplace_back(Args&&... args) {
     ops.emplace_back(std::make_unique<T>(args...));
   }
-  
+
   // NOLINTNEXTLINE(readability-identifier-naming)
   template <class T> void emplace_back(std::unique_ptr<T>& op) {
     ops.emplace_back(std::move(op));
   }
 
-    // NOLINTNEXTLINE(readability-identifier-naming)
+  // NOLINTNEXTLINE(readability-identifier-naming)
   template <class T> void emplace_back(std::unique_ptr<T>&& op) {
     ops.emplace_back(std::move(op));
   }
-    
+
   template <class T, class... Args>
   std::vector<std::unique_ptr<Operation>>::iterator
   insert(std::vector<std::unique_ptr<Operation>>::const_iterator iterator,
