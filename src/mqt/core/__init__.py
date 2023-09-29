@@ -5,13 +5,19 @@ from __future__ import annotations
 from ._core import (
     CompoundOperation,
     Control,
-    Expression,
     OpType,
     Permutation,
     QuantumComputation,
     StandardOperation,
     SymbolicOperation
 )
+
+from ._core.symbolic import (
+    Expression,
+    Term,
+    Variable,
+)
+
 from ._version import version as __version__
 
 __all__ = [

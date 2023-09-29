@@ -7,15 +7,15 @@ from typing import TYPE_CHECKING, cast
 
 from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
 
-from mqt.core._core import (
+from .. import (
     Control,
     Expression,
+    Term,
+    Variable,
     OpType,
     QuantumComputation,
     StandardOperation,
     SymbolicOperation,
-    Term,
-    Variable,
     CompoundOperation
 )
 

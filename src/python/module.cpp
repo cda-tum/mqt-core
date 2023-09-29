@@ -3,7 +3,7 @@
 #include "QuantumComputation.hpp"
 #include "operations/CompoundOperation.hpp"
 #include "operations/Control.hpp"
-#include "operations/Expression.hpp"
+
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
@@ -20,12 +20,20 @@
 #include <sstream>
 #include <string>
 #include <vector>
-namespace py = pybind11;
-using namespace pybind11::literals;
+
 
 namespace mqt {
 
+namespace py = pybind11;
+using namespace pybind11::literals;
+
+  //forward declarations
+  void register_symbolic(py::module& m); 
+
 PYBIND11_MODULE(_core, m) {
+
+  py::module symbolic = m.def_submodule("symbolic");
+  register_symbolic(symbolic);
 
   py::class_<qc::QuantumComputation>(
       m, "QuantumComputation",
@@ -52,7 +60,7 @@ PYBIND11_MODULE(_core, m) {
                              &qc::QuantumComputation::getNsingleQubitOps)
       .def_property_readonly("n_individual_ops",
                              &qc::QuantumComputation::getNindividualOps)
-      .def_property_readonly("depth", &qc::QuantumComputation::getDepth)
+    .def("depth", &qc::QuantumComputation::getDepth, "Returns the depth of the circuit.")
     .def_readonly("initial_layout", &qc::QuantumComputation::initialLayout)
     .def_readonly("output_permutation", &qc::QuantumComputation::outputPermutation)
       .def_property("gphase", &qc::QuantumComputation::getGlobalPhase,
@@ -590,7 +598,7 @@ PYBIND11_MODULE(_core, m) {
            .def("__len__", &qc::QuantumComputation::getNindividualOps,
                 "Get the number of operations in the quantum computation.")
       .def("__getitem__", [](const qc::QuantumComputation& qc,
-                             std::size_t idx) { return qc.at(idx).get(); }, py::return_value_policy::reference_internal);
+                             std::size_t idx) { return qc.at(idx).get(); }, py::return_value_policy::reference_internal, "idx"_a, "Get the operation at index idx. Beware: this gives write access to the operation.");
 
   py::class_<qc::Control>(m, "Control")
       .def(py::init<qc::Qubit>(), "qubit"_a, "Create a positive control qubit.")
@@ -737,11 +745,9 @@ PYBIND11_MODULE(_core, m) {
       //      &qc::CompoundOperation::addDepthContribution, "depths"_a,)
       .def("__len__", &qc::CompoundOperation::size,
            "Return number of sub-operations.")
-      .def("size", &qc::CompoundOperation::size,
-           "Return number of sub-operations.")
       .def("empty", &qc::CompoundOperation::empty)
       .def("__getitem__", [](const qc::CompoundOperation& op,
-                             std::size_t i) { return op.at(i).get(); }, py::return_value_policy::reference_internal)
+                             std::size_t i) { return op.at(i).get(); }, py::return_value_policy::reference_internal, "i"_a, "Return i-th sub-operation. Beware: this gives write access to the sub-operation.")
       .def("get_used_qubits", &qc::CompoundOperation::getUsedQubits,
            "Return set of qubits used by the operation.")
       .def("to_open_qasm",
@@ -754,7 +760,7 @@ PYBIND11_MODULE(_core, m) {
       .def(
           "append_operation",
           [](qc::CompoundOperation& compOp, const qc::Operation& op) {
-              compOp.emplace_back(op.clone()); 
+            compOp.emplace_back(op.clone()); 
           },
           "op"_a, "Append operation op to the `CompoundOperation`.");
 
@@ -923,147 +929,6 @@ PYBIND11_MODULE(_core, m) {
            "Replace all variables within this operation by their values "
            "dictated by the dict assignment which maps Variable objects to "
            "float.");
-
-  py::class_<sym::Variable>(m, "Variable", "A symbolic variable.")
-      .def(py::init<std::string>(), "name"_a = "",
-           "Create a variable with a given variable name. Variables are "
-           "uniquely identified by their name, so if a variable with the same "
-           "name already exists, the existing variable will be returned.")
-      .def_property_readonly("name", &sym::Variable::getName)
-      .def("__str__", &sym::Variable::getName)
-      .def("__eq__", &sym::Variable::operator==)
-      .def("__ne__", &sym::Variable::operator!=)
-      .def("__lt__", &sym::Variable::operator<)
-      .def("__gt__", &sym::Variable::operator>);
-
-  py::class_<sym::Term<double>>(
-      m, "Term",
-      "A symbolic term which consists of a variable with a given coefficient.")
-      .def(py::init<double, sym::Variable>(), "coefficient"_a, "variable"_a,
-           "Create a term with a given coefficient and variable.")
-      .def(py::init<sym::Variable>(), "variable"_a,
-           "Create a term with a given variable and coefficient 1.")
-      .def_property_readonly("variable", &sym::Term<double>::getVar,
-                             "Return the variable of this term.")
-      .def_property_readonly("coefficient", &sym::Term<double>::getCoeff,
-                             "Return the coefficient of this term.")
-      .def("has_zero_coefficient", &sym::Term<double>::hasZeroCoeff,
-           "Return true if the coefficient of this term is zero.")
-      .def("add_coefficient", &sym::Term<double>::addCoeff, "coeff"_a,
-           "Add coeff a to the coefficient of this term.")
-      .def("evaluate", &sym::Term<double>::evaluate, "assignment"_a,
-           "Return the value of this term given by multiplying the coefficient "
-           "of this term to the variable value dictated by the assignment.")
-      .def("__mul__",
-           [](const sym::Term<double>& lhs, double rhs) { return lhs * rhs; })
-      .def("__rmul__",
-           [](sym::Term<double> rhs, const double lhs) { return lhs * rhs; })
-      .def("__truediv__",
-           [](const sym::Term<double>& lhs, double rhs) { return lhs / rhs; })
-      .def("__rtruediv__",
-           [](sym::Term<double> rhs, const double lhs) { return lhs / rhs; });
-
-  py::class_<sym::Expression<double, double>>(
-      m, "Expression",
-      "Class representing a symbolic sum of terms. The expression is of the "
-      "form `constant + term_1 + term_2 + ... + term_n`.")
-      .def(py::init<>(), "Create an empty expression.")
-      .def(
-          "__init__",
-          [](sym::Expression<double, double>* expr,
-             const std::vector<sym::Term<double>>& terms, double constant) {
-            new (expr) sym::Expression<double, double>(terms, constant);
-          },
-          "terms"_a, "constant"_a = 0.0,
-          "Create an expression with a given list of terms and a constant (0 "
-          "by default).")
-      .def(
-          "__init__",
-          [](sym::Expression<double, double>* expr,
-             const sym::Term<double>& term, double constant) {
-            new (expr) sym::Expression<double, double>(
-                std::vector<sym::Term<double>>{term}, constant);
-          },
-          "term"_a, "constant"_a = 0.0,
-          "Create an expression with a given term and a constant (0 by "
-          "default).")
-      .def(py::init<double>(), "constant"_a,
-           "Create a constant expression involving no symbolic terms.")
-      .def_property("constant", &sym::Expression<double, double>::getConst,
-                    &sym::Expression<double, double>::setConst)
-      .def(
-          "__iter__",
-          [](const sym::Expression<double, double>& expr) {
-            return py::make_iterator(expr.begin(), expr.end());
-          },
-          py::keep_alive<0, 1>())
-      .def("__getitem__",
-           [](const sym::Expression<double, double>& expr, std::size_t idx) {
-             if (idx >= expr.numTerms()) {
-               throw py::index_error();
-             }
-             return expr.getTerms()[idx];
-           })
-
-      .def("is_zero", &sym::Expression<double, double>::isZero,
-           "Return true if this expression is zero, i.e., all terms have "
-           "coefficient 0 and the constant is 0 as well.")
-      .def("is_constant", &sym::Expression<double, double>::isConstant,
-           "Return true if this expression is constant, i.e., all terms have "
-           "coefficient 0 or no terms are involved.")
-      .def("num_terms", &sym::Expression<double, double>::numTerms,
-           "Return the number of terms in this expression.")
-      .def("__len__", &sym::Expression<double, double>::numTerms)
-      .def_property_readonly("terms",
-                             &sym::Expression<double, double>::getTerms)
-      .def("evaluate", &sym::Expression<double, double>::evaluate,
-           "assignment"_a,
-           "Return the value of this expression given by summing the values of "
-           "all instantiated terms and the constant given by the assignment.")
-      // addition operators
-      .def("__add__",
-           [](const sym::Expression<double, double>& lhs,
-              const sym::Expression<double, double>& rhs) { return lhs + rhs; })
-      .def("__add__", [](const sym::Expression<double, double>& lhs,
-                         const sym::Term<double>& rhs) { return lhs + rhs; })
-      .def("__add__", [](const sym::Expression<double, double>& lhs,
-                         const double rhs) { return lhs + rhs; })
-      .def("__radd__", [](const sym::Expression<double, double>& rhs,
-                          const sym::Term<double>& lhs) { return lhs + rhs; })
-      .def("__radd__", [](const sym::Expression<double, double>& rhs,
-                          const double lhs) { return rhs + lhs; })
-      // subtraction operators
-      .def("__sub__",
-           [](const sym::Expression<double, double>& lhs,
-              const sym::Expression<double, double>& rhs) { return lhs - rhs; })
-      .def("__sub__", [](const sym::Expression<double, double>& lhs,
-                         const sym::Term<double>& rhs) { return lhs - rhs; })
-      .def("__sub__", [](const sym::Expression<double, double>& lhs,
-                         const double rhs) { return lhs - rhs; })
-      .def("__rsub__", [](const sym::Expression<double, double>& rhs,
-                          const sym::Term<double>& lhs) { return lhs - rhs; })
-      .def("__rsub__", [](const sym::Expression<double, double>& rhs,
-                          const double lhs) { return lhs - rhs; })
-      // multiplication operators
-      .def("__mul__", [](const sym::Expression<double, double>& lhs,
-                         double rhs) { return lhs * rhs; })
-      .def("__rmul__", [](const sym::Expression<double, double>& rhs,
-                          double lhs) { return rhs * lhs; })
-      // division operators
-      .def("__truediv__", [](const sym::Expression<double, double>& lhs,
-                             double rhs) { return lhs / rhs; })
-      .def("__rtruediv__", [](const sym::Expression<double, double>& rhs,
-                              double lhs) { return rhs / lhs; })
-
-      .def(
-          "__eq__",
-          [](const sym::Expression<double, double>& lhs,
-             const sym::Expression<double, double>& rhs) { return lhs == rhs; })
-      .def("__str__", [](const sym::Expression<double, double>& expr) {
-        std::stringstream ss;
-        ss << expr;
-        return ss.str();
-      });
 
   py::enum_<qc::OpType>(m, "OpType",
                         "Enum class for representing quantum operations.")
