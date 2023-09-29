@@ -119,8 +119,12 @@ def test_layout() -> None:
     mqt_qc = qiskit_to_mqt(qc)
     assert mqt_qc.n_qubits == 3
     assert mqt_qc.n_ops == 3
-    assert mqt_qc.initial_layout.apply([0, 1, 2]) == [2, 1, 0]
-    assert mqt_qc.output_permutation.apply([0, 2, 1]) == [2, 1, 0]
+    assert mqt_qc.initial_layout[0] == 2
+    assert mqt_qc.initial_layout[1] == 1
+    assert mqt_qc.initial_layout[2] == 0
+    assert mqt_qc.output_permutation[0] == 2
+    assert mqt_qc.output_permutation[1] == 0
+    assert mqt_qc.output_permutation[2] == 1
 
 
 def test_ancilla() -> None:
@@ -195,3 +199,4 @@ def test_symbolic() -> None:
     expr = cast(Expression, mqt_qc[0].get_parameter(0))
     assert expr.num_terms() == 2
     assert expr.constant == 0.0
+    assert not mqt_qc.is_variable_free()
