@@ -126,7 +126,7 @@ line-length = 120
 minversion = "7.0"
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
-filterwarnings = ["error"]
+filterwarnings = ["error", 'ignore:.*qiskit.__qiskit_version__.*:DeprecationWarning:qiskit:']
 log_cli_level = "info"
 testpaths = ["test/python"]
 
