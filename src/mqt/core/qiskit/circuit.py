@@ -69,8 +69,7 @@ def qiskit_to_mqt(qiskit_circuit: QuantumCircuit) -> QuantumComputation:
 
     mqt_computation.gphase = qiskit_circuit.global_phase
 
-    data = qiskit_circuit.data
-    for inst in data:
+    for inst in qiskit_circuit.data:
         instruction = inst[0]
         qargs = inst[1]
         cargs = inst[2]
@@ -272,24 +271,21 @@ def _add_two_target_operation(
 
 
 def _get_logical_qubit_indices(mqt_computation: QuantumComputation, layout: Layout) -> dict[Qubit, int]:
-    registers = layout.get_registers()
     logical_qubit_index = 0
     logical_qubit_indices = {}
     ancilla_register = None
 
-    for register in registers:
+    for register in layout.get_registers():
         if register.name == "ancilla":
             ancilla_register = register
             continue
 
-        size = register.size
-        for physical_qubit_index in range(size):
+        for physical_qubit_index in range(register.size):
             logical_qubit_indices[Qubit(register, physical_qubit_index)] = logical_qubit_index
             logical_qubit_index += 1
 
     if ancilla_register is not None:
-        ancilla_size = ancilla_register.size
-        for physical_qubit_index in range(ancilla_size):
+        for physical_qubit_index in range(ancilla_register.size):
             logical_qubit_indices[Qubit(ancilla_register, physical_qubit_index)] = logical_qubit_index
             mqt_computation.set_logical_qubit_ancillary(logical_qubit_index)
             logical_qubit_index += 1
@@ -298,19 +294,21 @@ def _get_logical_qubit_indices(mqt_computation: QuantumComputation, layout: Layo
 
 
 def _import_layouts(mqt_computation: QuantumComputation, qiskit_circuit: QuantumCircuit) -> None:
+    # qiskit-terra 0.22.0 changed the `_layout` attribute to a
+    # `TranspileLayout` dataclass object that contains the initial layout as a
+    # `Layout` object in the `initial_layout` attribute.
+
     initial_layout = qiskit_circuit._layout.initial_layout  # noqa: SLF001
     final_layout = qiskit_circuit._layout.final_layout  # noqa: SLF001
 
     initial_logical_qubit_indices = _get_logical_qubit_indices(mqt_computation, initial_layout)
     final_logical_qubit_indices = _get_logical_qubit_indices(mqt_computation, final_layout)
 
-    initial_physical_qubits = initial_layout.get_physical_bits()
-    for physical_qubit, logical_qubit in initial_physical_qubits.items():
+    for physical_qubit, logical_qubit in initial_layout.get_physical_bits().items():
         if logical_qubit in initial_logical_qubit_indices:
             mqt_computation.initial_layout[physical_qubit] = initial_logical_qubit_indices[logical_qubit]
 
-    final_physical_qubits = final_layout.get_physical_bits()
-    for physical_qubit, logical_qubit in final_physical_qubits.items():
+    for physical_qubit, logical_qubit in final_layout.get_physical_bits().items():
         if logical_qubit in final_logical_qubit_indices:
             mqt_computation.output_permutation[physical_qubit] = final_logical_qubit_indices[logical_qubit]
 
