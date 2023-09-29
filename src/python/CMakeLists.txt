@@ -47,8 +47,7 @@ pybind11_add_module(
   module.cpp
   register_operations.cpp
   register_symbolic.cpp
-  register_quantum_computation.cpp
-)
+  register_quantum_computation.cpp)
 target_link_libraries(_core PRIVATE MQT::CoreDD)
 
 # Install directive for scikit-build-core

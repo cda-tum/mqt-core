@@ -19,22 +19,21 @@
 #include <string>
 #include <vector>
 
-
 namespace mqt {
 
 namespace py = pybind11;
 using namespace pybind11::literals;
 
-  //forward declarations
-  void registerOperations(py::module& m);
-  void registerSymbolic(py::module& m);
-  void registerQuantumComputation(py::module& m);
+// forward declarations
+void registerOperations(py::module& m);
+void registerSymbolic(py::module& m);
+void registerQuantumComputation(py::module& m);
 
 PYBIND11_MODULE(_core, m) {
 
   py::module operations = m.def_submodule("operations");
   registerOperations(operations);
-  
+
   py::module symbolic = m.def_submodule("symbolic");
   registerSymbolic(symbolic);
 

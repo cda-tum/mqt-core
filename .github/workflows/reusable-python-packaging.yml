@@ -50,11 +50,11 @@ jobs:
           version: ${{ inputs.z3-version }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - if: ${{ inputs.setup-z3 }} && matrix.os == 'ubuntu-latest'
+      - if: ${{ inputs.setup-z3 }} && matrix.runs-on == 'ubuntu-latest'
         name: Set environment variables for Z3 installation in manylinux image
         run: |
           echo "CIBW_BEFORE_ALL_LINUX=/opt/python/cp311-cp311/bin/pip install z3-solver==${{ inputs.z3-version }}" >> $GITHUB_ENV
-      - if: matrix.os != 'ubuntu-latest'
+      - if: matrix.runs-on != 'ubuntu-latest'
         name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1
         with:
