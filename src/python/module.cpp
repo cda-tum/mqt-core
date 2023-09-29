@@ -711,6 +711,7 @@ PYBIND11_MODULE(_core, m) {
   py::class_<qc::CompoundOperation, qc::Operation>(
       m, "CompoundOperation",
       "Quantum operation comprised of multiple sub-operations.")
+    .def(py::init<std::size_t>(), "nq"_a, "Create an empty compound operation on `nq` qubits.")
       .def(py::init([](std::size_t nq, std::vector<qc::Operation*> ops) {
              std::vector<std::unique_ptr<qc::Operation>> unique_ops;
              unique_ops.reserve(ops.size());
@@ -740,7 +741,7 @@ PYBIND11_MODULE(_core, m) {
            "Return number of sub-operations.")
       .def("empty", &qc::CompoundOperation::empty)
       .def("__getitem__", [](const qc::CompoundOperation& op,
-                             std::size_t i) { return op.at(i).get(); })
+                             std::size_t i) { return op.at(i).get(); }, py::return_value_policy::reference_internal)
       .def("get_used_qubits", &qc::CompoundOperation::getUsedQubits,
            "Return set of qubits used by the operation.")
       .def("to_open_qasm",
@@ -749,7 +750,13 @@ PYBIND11_MODULE(_core, m) {
              std::ostringstream oss;
              op.dumpOpenQASM(oss, qreg, creg);
              return oss.str();
-           });
+           })
+      .def(
+          "append_operation",
+          [](qc::CompoundOperation& compOp, const qc::Operation& op) {
+              compOp.emplace_back(op.clone()); 
+          },
+          "op"_a, "Append operation op to the `CompoundOperation`.");
 
   py::class_<qc::NonUnitaryOperation, qc::Operation>(
       m, "NonUnitaryOperation",
