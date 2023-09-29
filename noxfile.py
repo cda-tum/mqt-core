@@ -30,7 +30,7 @@ def lint(session: nox.Session) -> None:
 @nox.session(reuse_venv=True)
 def pylint(session: nox.Session) -> None:
     """Run PyLint."""
-    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm", "pybind11")
+    session.install("scikit-build-core[pyproject]", "setuptools_scm", "pybind11")
     session.install("--no-build-isolation", "-ve.", "pylint")
     session.run("pylint", "mqt.core", *session.posargs)
 
@@ -53,7 +53,7 @@ def _run_tests(
         _extras.append("coverage")
         posargs.append("--cov-config=pyproject.toml")
 
-    session.install("nanobind", "scikit-build-core[pyproject]", "setuptools_scm", "pybind11", *install_args, env=env)
+    session.install("scikit-build-core[pyproject]", "setuptools_scm", "pybind11", *install_args, env=env)
     install_arg = f"-ve.[{','.join(_extras)}]"
     session.install("--no-build-isolation", install_arg, *install_args, env=env)
     session.run("pytest", *run_args, *posargs, env=env)
@@ -87,7 +87,7 @@ def docs(session: nox.Session) -> None:
     if args.builder != "html" and args.serve:
         session.error("Must not specify non-HTML builder with --serve")
 
-    build_requirements = ["nanobind", "scikit-build-core[pyproject]", "setuptools_scm", "pybind11"]
+    build_requirements = ["scikit-build-core[pyproject]", "setuptools_scm", "pybind11"]
     extra_installs = ["sphinx-autobuild"] if args.serve else []
     session.install(*build_requirements, *extra_installs)
     session.install("--no-build-isolation", "-ve.[docs]")
