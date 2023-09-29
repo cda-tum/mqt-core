@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "operations/Expression.hpp"
 #include <iostream>
 #include <sstream>
@@ -8,7 +9,7 @@ namespace mqt {
 namespace py = pybind11;
 using namespace pybind11::literals;
   
-void register_symbolic(pybind11::module& m) {
+void registerSymbolic(pybind11::module& m) {
   
     py::class_<sym::Variable>(m, "Variable", "A symbolic variable.")
       .def(py::init<std::string>(), "name"_a = "",
