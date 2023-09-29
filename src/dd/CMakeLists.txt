@@ -19,6 +19,7 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
     RealNumber.cpp
     RealNumberUniqueTable.cpp
     Simulation.cpp
+    StateGenerator.cpp
     Vector.cpp
     statistics/MemoryManagerStatistics.cpp
     statistics/Statistics.cpp

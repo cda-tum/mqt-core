@@ -44,7 +44,8 @@ pybind11_add_module(
   WITH_SOABI
   # Source code goes here
   ${PROJECT_SOURCE_DIR}/include/python/pybind11.hpp
-  module.cpp)
+  module.cpp
+  dd.cpp)
 target_link_libraries(_core PRIVATE MQT::CoreDD)
 
 # Install directive for scikit-build-core

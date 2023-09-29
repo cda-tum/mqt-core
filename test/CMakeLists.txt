@@ -18,6 +18,7 @@ package_add_test(
   dd/test_package.cpp
   dd/test_dd_functionality.cpp
   dd/test_dd_noise_functionality.cpp
+  dd/test_state_generation.cpp
   algorithms/eval_dynamic_circuits.cpp
   algorithms/test_qft.cpp
   algorithms/test_grover.cpp

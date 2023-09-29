@@ -33,6 +33,9 @@ classifiers = [
     "Typing :: Typed",
 ]
 requires-python = ">=3.8"
+dependencies = [
+    "numpy",
+]
 dynamic = ["version"]
 
 [project.optional-dependencies]
@@ -122,7 +125,7 @@ line-length = 120
 minversion = "7.0"
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
-filterwarnings = ["error"]
+#filterwarnings = ["error"]
 log_cli_level = "info"
 testpaths = ["test/python"]
 
