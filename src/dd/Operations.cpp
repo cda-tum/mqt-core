@@ -1,5 +1,7 @@
 #include "dd/Operations.hpp"
 
+#include "dd/Matrix.hpp"
+
 namespace dd {
 template <class Config>
 void dumpTensor(qc::Operation* op, std::ostream& of,
@@ -88,7 +90,7 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
     const auto localDD = getDD(localOp.get(), dd);
 
     // translate local DD to matrix
-    const auto localMatrix = dd->getMatrix(localDD);
+    const auto localMatrix = getMatrixFromDD(localDD);
 
     // restore nqubits
     op->setNqubits(globalQubits);

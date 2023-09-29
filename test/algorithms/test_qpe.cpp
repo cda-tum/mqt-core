@@ -2,6 +2,7 @@
 #include "algorithms/QPE.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Simulation.hpp"
+#include "dd/Vector.hpp"
 
 #include "gtest/gtest.h"
 #include <bitset>
@@ -119,8 +120,8 @@ TEST_P(QPE, QPETest) {
 
   // account for the eigenstate qubit in the expected result by shifting and
   // adding 1
-  auto amplitude = dd->getValueByPath(e, (expectedResult << 1) + 1);
-  auto probability = amplitude.r * amplitude.r + amplitude.i * amplitude.i;
+  const auto amplitude = getValueByIndex(e, (expectedResult << 1) + 1);
+  const auto probability = std::norm(amplitude);
   std::cout << "Obtained probability for |" << expectedResultRepresentation
             << ">: " << probability << "\n";
 
@@ -130,10 +131,9 @@ TEST_P(QPE, QPETest) {
     const auto threshold = 4. / (qc::PI * qc::PI);
     // account for the eigenstate qubit in the expected result by shifting and
     // adding 1
-    auto secondAmplitude =
-        dd->getValueByPath(e, (secondExpectedResult << 1) + 1);
-    auto secondProbability = secondAmplitude.r * secondAmplitude.r +
-                             secondAmplitude.i * secondAmplitude.i;
+    const auto secondAmplitude =
+        getValueByIndex(e, (secondExpectedResult << 1) + 1);
+    const auto secondProbability = std::norm(secondAmplitude);
     std::cout << "Obtained probability for |"
               << secondExpectedResultRepresentation
               << ">: " << secondProbability << "\n";
@@ -289,7 +289,7 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
 
   // simulate circuit
   auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), dd);
-  const auto vec = dd->getVector(e);
+  const auto vec = getVectorFromDD(e);
   std::cout << "QPE:\n";
   for (const auto& amp : vec) {
     std::cout << std::norm(amp) << "\n";

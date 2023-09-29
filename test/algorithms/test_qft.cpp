@@ -1,6 +1,8 @@
 #include "algorithms/QFT.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Matrix.hpp"
 #include "dd/Simulation.hpp"
+#include "dd/Vector.hpp"
 
 #include "gtest/gtest.h"
 #include <cmath>
@@ -92,16 +94,16 @@ TEST_P(QFT, Functionality) {
   // first row and first column should consist only of (1/sqrt(2))**nqubits
   for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
        ++i) {
-    auto c = dd->getValueByPath(func, 0, i);
-    EXPECT_NEAR(c.r,
+    auto c = getValueByIndex(func, 0, i);
+    EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
-    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
-    c = dd->getValueByPath(func, i, 0);
-    EXPECT_NEAR(c.r,
+    EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
+    c = getValueByIndex(func, i, 0);
+    EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
-    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
+    EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
   }
 }
 
@@ -133,16 +135,16 @@ TEST_P(QFT, FunctionalityRecursive) {
   // first row and first column should consist only of (1/sqrt(2))**nqubits
   for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
        ++i) {
-    auto c = dd->getValueByPath(func, 0, i);
-    EXPECT_NEAR(c.r,
+    auto c = getValueByIndex(func, 0, i);
+    EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
-    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
-    c = dd->getValueByPath(func, i, 0);
-    EXPECT_NEAR(c.r,
+    EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
+    c = getValueByIndex(func, i, 0);
+    EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
-    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
+    EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
   }
 }
 
@@ -170,11 +172,11 @@ TEST_P(QFT, Simulation) {
   // first column should consist only of sqrt(0.5)^n's
   for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
        ++i) {
-    auto c = dd->getValueByPath(sim, i);
-    EXPECT_NEAR(c.r,
+    auto c = getValueByIndex(sim, i);
+    EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
-    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
+    EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
   }
 }
 

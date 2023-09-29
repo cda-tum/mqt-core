@@ -8,8 +8,10 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
     Complex.cpp
     ComplexNumbers.cpp
     ComplexValue.cpp
+    DensityMatrix.cpp
     Edge.cpp
     FunctionalityConstruction.cpp
+    Matrix.cpp
     MemoryManager.cpp
     Node.cpp
     NoiseFunctionality.cpp
@@ -17,6 +19,7 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
     RealNumber.cpp
     RealNumberUniqueTable.cpp
     Simulation.cpp
+    Vector.cpp
     statistics/MemoryManagerStatistics.cpp
     statistics/Statistics.cpp
     statistics/TableStatistics.cpp

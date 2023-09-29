@@ -1,6 +1,9 @@
+#include "dd/DensityMatrix.hpp"
 #include "dd/Export.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
+#include "dd/Matrix.hpp"
 #include "dd/Package.hpp"
+#include "dd/Vector.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
 #include "operations/Control.hpp"
 
@@ -46,7 +49,7 @@ TEST(DDPackageTest, BellState) {
   auto zeroState = dd->makeZeroState(2);
 
   auto bellState = dd->multiply(dd->multiply(cxGate, hGate), zeroState);
-  dd->printVector(bellState);
+  printVector(bellState);
 
   // repeated calculation is practically for free
   auto bellState2 = dd->multiply(dd->multiply(cxGate, hGate), zeroState);
@@ -59,16 +62,14 @@ TEST(DDPackageTest, BellState) {
   ASSERT_EQ(dd->getValueByPath(bellState, "11"),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
 
-  ASSERT_EQ(dd->getValueByPath(bellState, 0),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellState, 1), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellState, 2), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellState, 3),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
+  ASSERT_EQ(getValueByIndex(bellState, 0), dd::SQRT2_2);
+  ASSERT_EQ(getValueByIndex(bellState, 1), 0.);
+  ASSERT_EQ(getValueByIndex(bellState, 2), 0.);
+  ASSERT_EQ(getValueByIndex(bellState, 3), dd::SQRT2_2);
 
   auto goalState =
       dd::CVec{{dd::SQRT2_2, 0.}, {0., 0.}, {0., 0.}, {dd::SQRT2_2, 0.}};
-  ASSERT_EQ(dd->getVector(bellState), goalState);
+  ASSERT_EQ(getVectorFromDD(bellState), goalState);
 
   ASSERT_DOUBLE_EQ(dd->fidelity(zeroState, bellState), 0.5);
 
@@ -115,12 +116,13 @@ TEST(DDPackageTest, QFTState) {
   qftOp = dd->multiply(swapGate, qftOp);
   auto qftState = dd->multiply(qftOp, dd->makeZeroState(3));
 
-  dd->printVector(qftState);
+  printVector(qftState);
 
   for (dd::Qubit qubit = 0; qubit < 7; ++qubit) {
-    ASSERT_NEAR(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).r,
-                0.5 * dd::SQRT2_2, dd::RealNumber::eps);
-    ASSERT_EQ(dd->getValueByPath(qftState, static_cast<std::size_t>(qubit)).i,
+    ASSERT_NEAR(
+        getValueByIndex(qftState, static_cast<std::size_t>(qubit)).real(),
+        0.5 * dd::SQRT2_2, dd::RealNumber::eps);
+    ASSERT_EQ(getValueByIndex(qftState, static_cast<std::size_t>(qubit)).imag(),
               0);
   }
 
@@ -211,7 +213,7 @@ TEST(DDPackageTest, NegativeControl) {
   auto xGate = dd->makeGateDD(dd::Xmat, 2, 1_nc, 0);
   auto zeroState = dd->makeZeroState(2);
   auto state01 = dd->multiply(xGate, zeroState);
-  EXPECT_EQ(dd->getValueByPath(state01, 0b01).r, 1.);
+  EXPECT_EQ(getValueByIndex(state01, 0b01).real(), 1.);
 }
 
 TEST(DDPackageTest, IdentityTrace) {
@@ -280,33 +282,25 @@ TEST(DDPackageTest, BellMatrix) {
   ASSERT_EQ(dd->getValueByPath(bellMatrix, "22"),
             (dd::ComplexValue{dd::SQRT2_2, 0}));
 
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 0, 0),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 1, 0), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 2, 0), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 3, 0),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
+  ASSERT_EQ(getValueByIndex(bellMatrix, 0, 0), dd::SQRT2_2);
+  ASSERT_EQ(getValueByIndex(bellMatrix, 1, 0), 0.);
+  ASSERT_EQ(getValueByIndex(bellMatrix, 2, 0), 0.);
+  ASSERT_EQ(getValueByIndex(bellMatrix, 3, 0), dd::SQRT2_2);
 
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 0, 1), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 1, 1),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 2, 1),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 3, 1), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(getValueByIndex(bellMatrix, 0, 1), 0.);
+  ASSERT_EQ(getValueByIndex(bellMatrix, 1, 1), dd::SQRT2_2);
+  ASSERT_EQ(getValueByIndex(bellMatrix, 2, 1), dd::SQRT2_2);
+  ASSERT_EQ(getValueByIndex(bellMatrix, 3, 1), 0.);
 
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 0, 2),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 1, 2), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 2, 2), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 3, 2),
-            (dd::ComplexValue{-dd::SQRT2_2, 0}));
+  ASSERT_EQ(getValueByIndex(bellMatrix, 0, 2), dd::SQRT2_2);
+  ASSERT_EQ(getValueByIndex(bellMatrix, 1, 2), 0.);
+  ASSERT_EQ(getValueByIndex(bellMatrix, 2, 2), 0.);
+  ASSERT_EQ(getValueByIndex(bellMatrix, 3, 2), -dd::SQRT2_2);
 
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 0, 3), (dd::ComplexValue{0, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 1, 3),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 2, 3),
-            (dd::ComplexValue{-dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(bellMatrix, 3, 3), (dd::ComplexValue{0, 0}));
+  ASSERT_EQ(getValueByIndex(bellMatrix, 0, 3), 0.);
+  ASSERT_EQ(getValueByIndex(bellMatrix, 1, 3), dd::SQRT2_2);
+  ASSERT_EQ(getValueByIndex(bellMatrix, 2, 3), -dd::SQRT2_2);
+  ASSERT_EQ(getValueByIndex(bellMatrix, 3, 3), 0.);
 
   auto goalRow0 =
       dd::CVec{{dd::SQRT2_2, 0.}, {0., 0.}, {dd::SQRT2_2, 0.}, {0., 0.}};
@@ -317,7 +311,7 @@ TEST(DDPackageTest, BellMatrix) {
   auto goalRow3 =
       dd::CVec{{dd::SQRT2_2, 0.}, {0., 0.}, {-dd::SQRT2_2, 0.}, {0., 0.}};
   auto goalMatrix = dd::CMat{goalRow0, goalRow1, goalRow2, goalRow3};
-  ASSERT_EQ(dd->getMatrix(bellMatrix), goalMatrix);
+  ASSERT_EQ(getMatrixFromDD(bellMatrix), goalMatrix);
 
   export2Dot(bellMatrix, "bell_matrix_colored_labels.dot", true, true, false,
              false, false);
@@ -546,7 +540,7 @@ TEST(DDPackageTest, GarbageVector) {
   auto cxGate = dd->makeGateDD(dd::Xmat, 2, 0_pc, 1);
   auto zeroState = dd->makeZeroState(2);
   auto bellState = dd->multiply(dd->multiply(cxGate, hGate), zeroState);
-  dd->printVector(bellState);
+  printVector(bellState);
 
   dd->incRef(bellState);
   auto reducedBellState =
@@ -558,15 +552,15 @@ TEST(DDPackageTest, GarbageVector) {
 
   dd->incRef(bellState);
   reducedBellState = dd->reduceGarbage(bellState, {false, true, false, false});
-  auto vec = dd->getVector(reducedBellState);
-  dd->printVector(reducedBellState);
+  auto vec = getVectorFromDD(reducedBellState);
+  printVector(reducedBellState);
   EXPECT_EQ(vec[2], static_cast<std::complex<dd::fp>>(dd::complex_zero));
   EXPECT_EQ(vec[3], static_cast<std::complex<dd::fp>>(dd::complex_zero));
 
   dd->incRef(bellState);
   reducedBellState = dd->reduceGarbage(bellState, {true, false, false, false});
-  dd->printVector(reducedBellState);
-  vec = dd->getVector(reducedBellState);
+  printVector(reducedBellState);
+  vec = getVectorFromDD(reducedBellState);
   EXPECT_EQ(vec[1], static_cast<std::complex<dd::fp>>(dd::complex_zero));
   EXPECT_EQ(vec[3], static_cast<std::complex<dd::fp>>(dd::complex_zero));
 }
@@ -589,7 +583,7 @@ TEST(DDPackageTest, GarbageMatrix) {
   dd->incRef(bellMatrix);
   reducedBellMatrix =
       dd->reduceGarbage(bellMatrix, {false, true, false, false});
-  auto mat = dd->getMatrix(reducedBellMatrix);
+  auto mat = getMatrixFromDD(reducedBellMatrix);
   auto zero = dd::CVec{{0., 0.}, {0., 0.}, {0., 0.}, {0., 0.}};
   EXPECT_EQ(mat[2], zero);
   EXPECT_EQ(mat[3], zero);
@@ -597,7 +591,7 @@ TEST(DDPackageTest, GarbageMatrix) {
   dd->incRef(bellMatrix);
   reducedBellMatrix =
       dd->reduceGarbage(bellMatrix, {true, false, false, false});
-  mat = dd->getMatrix(reducedBellMatrix);
+  mat = getMatrixFromDD(reducedBellMatrix);
   EXPECT_EQ(mat[1], zero);
   EXPECT_EQ(mat[3], zero);
 
@@ -741,8 +735,8 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
   dd->debugnode(one.p);
   const dd::ComplexValue cOne{1.0, 0.0};
   EXPECT_EQ(dd->getValueByPath(one, ""), cOne);
-  EXPECT_EQ(dd->getValueByPath(one, 0), cOne);
-  EXPECT_EQ(dd->getValueByPath(dd::mEdge::one, 0, 0), cOne);
+  EXPECT_EQ(getValueByIndex(one, 0), 1.);
+  EXPECT_EQ(getValueByIndex(dd::mEdge::one, 0, 0), 1.);
 
   const dd::ComplexValue cZero{0.0, 0.0};
   EXPECT_EQ(dd->innerProduct(zero, zero), cZero);
@@ -828,7 +822,7 @@ TEST(DDPackageTest, DestructiveMeasurementAll) {
 
   std::mt19937_64 mt{0}; // NOLINT(ms
 
-  const dd::CVec vBefore = dd->getVector(plusState);
+  const dd::CVec vBefore = getVectorFromDD(plusState);
 
   ASSERT_EQ(vBefore[0], vBefore[1]);
   ASSERT_EQ(vBefore[0], vBefore[2]);
@@ -836,7 +830,7 @@ TEST(DDPackageTest, DestructiveMeasurementAll) {
 
   const std::string m = dd->measureAll(plusState, true, mt);
 
-  const dd::CVec vAfter = dd->getVector(plusState);
+  const dd::CVec vAfter = getVectorFromDD(plusState);
   const int i = std::stoi(m, nullptr, 2);
 
   ASSERT_EQ(vAfter[static_cast<std::size_t>(i)],
@@ -855,7 +849,7 @@ TEST(DDPackageTest, DestructiveMeasurementOne) {
   std::mt19937_64 mt{0}; // NOLINT(cert-msc51-cpp)
 
   const char m = dd->measureOneCollapsing(plusState, 0, true, mt);
-  const dd::CVec vAfter = dd->getVector(plusState);
+  const dd::CVec vAfter = getVectorFromDD(plusState);
 
   ASSERT_EQ(m, '0');
   ASSERT_EQ(vAfter[0], static_cast<std::complex<dd::fp>>(dd::complex_SQRT2_2));
@@ -876,7 +870,7 @@ TEST(DDPackageTest, DestructiveMeasurementOneArbitraryNormalization) {
   std::mt19937_64 mt{0}; // NOLINT(cert-msc51-cpp)
 
   const char m = dd->measureOneCollapsing(plusState, 0, false, mt);
-  const dd::CVec vAfter = dd->getVector(plusState);
+  const dd::CVec vAfter = getVectorFromDD(plusState);
 
   ASSERT_EQ(m, '0');
   ASSERT_EQ(vAfter[0], static_cast<std::complex<dd::fp>>(dd::complex_SQRT2_2));
@@ -1151,7 +1145,7 @@ TEST(DDPackageTest, dNodeMultiply) {
     dd->applyOperationToDensity(state, op, true);
   }
 
-  const auto stateDensityMatrix = dd->getDensityMatrix(state);
+  const auto stateDensityMatrix = getDensityMatrixFromDD(state);
 
   for (const auto& stateVector : stateDensityMatrix) {
     for (const auto& cValue : stateVector) {
@@ -1197,9 +1191,9 @@ TEST(DDPackageTest, dNodeMultiply2) {
   for (const auto& op : operations) {
     dd->applyOperationToDensity(state, op, true);
   }
-  dd->printMatrix(operations[0]);
+  printMatrix(operations[0]);
 
-  const auto stateDensityMatrix = dd->getDensityMatrix(state);
+  const auto stateDensityMatrix = getDensityMatrixFromDD(state);
 
   for (std::size_t i = 0; i < (1 << nrQubits); i++) {
     for (std::size_t j = 0; j < (1 << nrQubits); j++) {
@@ -1460,7 +1454,7 @@ TEST(DDPackageTest, DDFromSingleQubitMatrix) {
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
 
-  const auto outputMatrix = dd->getMatrix(matDD);
+  const auto outputMatrix = getMatrixFromDD(matDD);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1472,7 +1466,7 @@ TEST(DDPackageTest, DDFromTwoQubitMatrix) {
   const auto nrQubits = 2U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
-  const auto outputMatrix = dd->getMatrix(matDD);
+  const auto outputMatrix = getMatrixFromDD(matDD);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1486,7 +1480,7 @@ TEST(DDPackageTest, DDFromTwoQubitAsymmetricalMatrix) {
   const auto nrQubits = 2U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
-  const auto outputMatrix = dd->getMatrix(matDD);
+  const auto outputMatrix = getMatrixFromDD(matDD);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1502,7 +1496,7 @@ TEST(DDPackageTest, DDFromThreeQubitMatrix) {
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
   const auto matDD = dd->makeDDFromMatrix(inputMatrix);
 
-  const auto outputMatrix = dd->getMatrix(matDD);
+  const auto outputMatrix = getMatrixFromDD(matDD);
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }

@@ -1,5 +1,6 @@
 #include "QuantumComputation.hpp"
 #include "dd/NoiseFunctionality.hpp"
+#include "dd/Vector.hpp"
 
 #include "gtest/gtest.h"
 #include <random>
@@ -151,7 +152,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
           usedQubits, operation, rootEdge, qc.getGenerator());
     }
 
-    const auto amplitudes = dd->getVector(rootEdge);
+    const auto amplitudes = getVectorFromDD(rootEdge);
     for (size_t m = 0U; m < amplitudes.size(); m++) {
       auto state = std::bitset<4U>(m).to_string();
       std::reverse(state.begin(), state.end());
@@ -203,7 +204,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
           op->getUsedQubits(), operation, rootEdge, qc.getGenerator());
     }
 
-    const auto amplitudes = dd->getVector(rootEdge);
+    const auto amplitudes = getVectorFromDD(rootEdge);
     for (size_t m = 0U; m < amplitudes.size(); m++) {
       auto state = std::bitset<4U>(m).to_string();
       std::reverse(state.begin(), state.end());
