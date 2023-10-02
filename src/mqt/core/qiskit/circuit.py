@@ -266,8 +266,6 @@ def _add_two_target_operation(
             SymbolicOperation(mqt_computation.n_qubits, controls, target1, target2, type_, parameters)
         )
     return parameters
-    # for parameter in parameters:
-    #     mqt_computation.add_variable(parameter)
 
 
 def _get_logical_qubit_indices(mqt_computation: QuantumComputation, layout: Layout) -> dict[Qubit, int]:
@@ -294,12 +292,13 @@ def _get_logical_qubit_indices(mqt_computation: QuantumComputation, layout: Layo
 
 
 def _import_layouts(mqt_computation: QuantumComputation, qiskit_circuit: QuantumCircuit) -> None:
-    # qiskit-terra 0.22.0 changed the `_layout` attribute to a
-    # `TranspileLayout` dataclass object that contains the initial layout as a
-    # `Layout` object in the `initial_layout` attribute.
-
-    initial_layout = qiskit_circuit._layout.initial_layout  # noqa: SLF001
-    final_layout = qiskit_circuit._layout.final_layout  # noqa: SLF001
+    # qiskit-terra 0.24.0 added a `_layout` attribute
+    if hasattr(qiskit_circuit, "layout"):
+        initial_layout = qiskit_circuit.layout.initial_layout
+        final_layout = qiskit_circuit.layout.final_layout
+    else:
+        initial_layout = qiskit_circuit._layout.initial_layout  # noqa: SLF001
+        final_layout = qiskit_circuit._layout.final_layout  # noqa: SLF001
 
     initial_logical_qubit_indices = _get_logical_qubit_indices(mqt_computation, initial_layout)
     final_logical_qubit_indices = _get_logical_qubit_indices(mqt_computation, final_layout)
