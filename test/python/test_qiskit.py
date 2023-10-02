@@ -12,7 +12,6 @@ from qiskit.transpiler import Layout, TranspileLayout
 from mqt.core import Expression, SymbolicOperation
 from mqt.core.qiskit import qiskit_to_mqt
 
-import pdb
 
 def test_empty_circuit() -> None:
     """Test import of empty circuit."""
