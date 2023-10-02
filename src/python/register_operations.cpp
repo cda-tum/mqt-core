@@ -1,3 +1,4 @@
+#include "Permutation.hpp"
 #include "operations/CompoundOperation.hpp"
 #include "operations/Control.hpp"
 #include "operations/NonUnitaryOperation.hpp"
@@ -9,6 +10,7 @@
 #include <iostream>
 #include <memory>
 #include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
 #include <sstream>
 namespace mqt {
@@ -239,6 +241,15 @@ void registerOperations(py::module& m) {
 
   py::class_<qc::Permutation>(m, "Permutation",
                               "Class representing a permutation of qubits.")
+      .def(py::init([](const py::dict& p) {
+             qc::Permutation perm;
+             for (auto& [key, value] : p) {
+               perm[key.cast<qc::Qubit>()] = value.cast<qc::Qubit>();
+             }
+
+             return perm;
+           }),
+           "perm"_a, "Create a permutation from a dictionary.")
       .def("apply",
            py::overload_cast<const qc::Controls&>(&qc::Permutation::apply,
                                                   py::const_),
