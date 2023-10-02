@@ -95,13 +95,14 @@ def test_mcx_vchain() -> None:
 
 def test_custom_gate() -> None:
     """Test import of custom gate."""
-    custom_instr = QuantumCircuit(3)
+    custom_instr = QuantumCircuit(3, 1)
     custom_instr.h(0)
     custom_instr.cx(0, 1)
     custom_instr.cx(0, 2)
+    custom_instr.measure(0, 0)
     custom_instr = custom_instr.to_instruction()
-    qc = QuantumCircuit(3)
-    qc.append(custom_instr, range(3))
+    qc = QuantumCircuit(3, 1)
+    qc.append(custom_instr, range(3), range(1))
     mqt_qc = qiskit_to_mqt(qc)
     assert mqt_qc.n_qubits == 3
     assert mqt_qc.n_ops == 1
@@ -109,6 +110,7 @@ def test_custom_gate() -> None:
     assert mqt_qc[0][0].name.strip() == "h"
     assert mqt_qc[0][1].name.strip() == "x"
     assert mqt_qc[0][2].name.strip() == "x"
+    assert mqt_qc[0][3].name.strip() == "meas"
     assert mqt_qc[0][0].n_qubits == 3
     assert mqt_qc[0][1].n_qubits == 3
     assert mqt_qc[0][1].n_qubits == 3
