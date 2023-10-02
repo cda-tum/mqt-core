@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 import sys
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Sequence, cast
 
 from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
 
@@ -90,8 +90,8 @@ def qiskit_to_mqt(qiskit_circuit: QuantumCircuit) -> QuantumComputation:
 def _emplace_operation(
     mqt_computation: QuantumComputation | CompoundOperation,
     instr: Instruction,
-    qargs: list[Qubit] | tuple[Qubit],
-    cargs: list[Clbit] | tuple[Clbit],
+    qargs: Sequence[Qubit],
+    cargs: Sequence[Clbit],
     params: list[float | ParameterExpression],
     qubit_map: dict[Qubit, int],
     clbit_map: dict[Clbit, int],
@@ -223,7 +223,7 @@ def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> floa
 def _add_operation(
     mqt_computation: QuantumComputation | CompoundOperation,
     type_: OpType,
-    qargs: list[Qubit] | tuple[Qubit],
+    qargs: Sequence[Qubit],
     params: list[float | ParameterExpression],
     qubit_map: dict[Qubit, int],
 ) -> list[float | ParameterExpression]:
@@ -247,7 +247,7 @@ def _add_operation(
 def _add_two_target_operation(
     mqt_computation: QuantumComputation | CompoundOperation,
     type_: OpType,
-    qargs: list[Qubit] | tuple[Qubit],
+    qargs: Sequence[Qubit],
     params: list[float | ParameterExpression],
     qubit_map: dict[Qubit, int],
 ) -> list[float | ParameterExpression]:
@@ -316,8 +316,8 @@ def _import_layouts(mqt_computation: QuantumComputation, qiskit_circuit: Quantum
 def _import_definition(
     mqt_computation: QuantumComputation | CompoundOperation,
     qiskit_circuit: QuantumCircuit,
-    qargs: tuple[int] | list[int],
-    cargs: tuple[int] | list[int],
+    qargs: Sequence[int],
+    cargs: Sequence[int],
     qubit_map: dict[Qubit, int],
     clbit_map: dict[Clbit, int],
 ) -> list[float | ParameterExpression]:
