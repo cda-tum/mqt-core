@@ -39,6 +39,19 @@ extensions = [
     "sphinx_design",
     "sphinx_copybutton",
     "sphinxext.opengraph",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.autosectionlabel",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.githubpages",
+    "sphinx_copybutton",
+    "sphinxext.opengraph",
+    "sphinx_autodoc_typehints",
+    "nbsphinx",
 ]
 
 source_suffix = [".rst", ".md"]
