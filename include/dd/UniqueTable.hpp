@@ -151,6 +151,15 @@ public:
         });
   }
 
+  /// Get the peak total number of active entries
+  [[nodiscard]] std::size_t getPeakNumActiveEntries() const noexcept {
+    return std::accumulate(
+        stats.begin(), stats.end(), 0U,
+        [](const std::size_t& sum, const UniqueTableStatistics& stat) {
+          return sum + stat.peakNumActiveEntries;
+        });
+  }
+
   static bool nodesAreEqual(const Node* p, const Node* q) {
     if constexpr (std::is_same_v<Node, dNode>) {
       return (p->e == q->e && (p->flags == q->flags));
@@ -200,6 +209,7 @@ public:
    */
   [[nodiscard]] bool incRef(Node* p) noexcept {
     const auto inc = ::dd::incRef(p);
+    assert(!inc || p != nullptr);
     if (inc && p->ref == 1U) {
       stats[p->v].trackActiveEntry();
     }
@@ -218,6 +228,7 @@ public:
    */
   [[nodiscard]] bool decRef(Node* p) noexcept {
     const auto dec = ::dd::decRef(p);
+    assert(!dec || p != nullptr);
     if (dec && p->ref == 0U) {
       --stats[p->v].numActiveEntries;
     }
