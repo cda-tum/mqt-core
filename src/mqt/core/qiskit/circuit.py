@@ -240,7 +240,7 @@ def _add_operation(
         mqt_computation.append_operation(
             SymbolicOperation(mqt_computation.n_qubits, controls, target, type_, parameters)
         )
-    print(parameters)
+
     return parameters
 
 
