@@ -274,7 +274,7 @@ def _get_logical_qubit_indices(mqt_computation: QuantumComputation, layout: Layo
     ancilla_register = None
 
     for register in layout.get_registers():
-        if register.name == "ancilla":
+        if register.name == "ancilla" or isinstance(register, AncillaRegister):
             ancilla_register = register
             continue
 
@@ -284,7 +284,7 @@ def _get_logical_qubit_indices(mqt_computation: QuantumComputation, layout: Layo
 
     if ancilla_register is not None:
         for physical_qubit_index in range(ancilla_register.size):
-            logical_qubit_indices[Qubit(ancilla_register, physical_qubit_index)] = logical_qubit_index
+            logical_qubit_indices[AncillaQubit(ancilla_register, physical_qubit_index)] = logical_qubit_index
             mqt_computation.set_logical_qubit_ancillary(logical_qubit_index)
             logical_qubit_index += 1
 

@@ -69,6 +69,18 @@ def test_mcx_recursive() -> None:
     assert {control.qubit for control in mqt_qc[0].controls} == {1, 2, 3, 4, 5, 6, 7}
 
 
+def test_small_mcx_recursive() -> None:
+    """Test import of small mcx_recursive gate."""
+    q = QuantumCircuit(3)
+    q.append(MCXRecursive(num_ctrl_qubits=2), range(3))
+    mqt_qc = qiskit_to_mqt(q)
+    assert mqt_qc.n_qubits == 3
+    assert mqt_qc.n_ops == 1
+    assert mqt_qc[0].name.strip() == "x"
+    assert mqt_qc[0].n_qubits == 3
+    assert {control.qubit for control in mqt_qc[0].controls} == {0, 1}
+
+
 def test_mcx_vchain() -> None:
     """Test import of mcx gate with v-chain."""
     q = QuantumCircuit(9)
@@ -118,6 +130,32 @@ def test_layout() -> None:
     qc.x(2)
     mqt_qc = qiskit_to_mqt(qc)
     assert mqt_qc.n_qubits == 3
+    assert mqt_qc.n_ops == 3
+    assert mqt_qc.initial_layout[0] == 2
+    assert mqt_qc.initial_layout[1] == 1
+    assert mqt_qc.initial_layout[2] == 0
+    assert mqt_qc.output_permutation[0] == 2
+    assert mqt_qc.output_permutation[1] == 0
+    assert mqt_qc.output_permutation[2] == 1
+
+
+def test_layout_ancilla() -> None:
+    """Test import of initial layout with ancilla information."""
+    q_reg = QuantumRegister(2, "q")
+    a_reg = AncillaRegister(1, "a")
+    qc = QuantumCircuit(q_reg, a_reg)
+    qc._layout = TranspileLayout(  # noqa: SLF001
+        Layout.from_intlist([2, 1, 0], q_reg, a_reg),
+        {Qubit(q_reg, 0): 0, Qubit(q_reg, 1): 1, Qubit(a_reg, 0): 2},
+        Layout.from_intlist([1, 2, 0], q_reg, a_reg),
+    )
+    qc.h(0)
+    qc.s(1)
+    qc.x(2)
+    # set_trace()
+    mqt_qc = qiskit_to_mqt(qc)
+    assert mqt_qc.n_qubits == 3
+    assert mqt_qc.n_ancillae == 1
     assert mqt_qc.n_ops == 3
     assert mqt_qc.initial_layout[0] == 2
     assert mqt_qc.initial_layout[1] == 1
@@ -188,7 +226,8 @@ def test_symbolic() -> None:
     qc = QuantumCircuit(1)
     theta = Parameter("theta")
     phi = Parameter("phi")
-    qc.rx(2 * theta + phi, 0)
+    lambda_ = Parameter("lambda")
+    qc.rx(2 * theta + phi - lambda_, 0)
     mqt_qc = qiskit_to_mqt(qc)
 
     assert mqt_qc.n_qubits == 1
@@ -197,6 +236,6 @@ def test_symbolic() -> None:
     assert isinstance(mqt_qc[0], SymbolicOperation)
     assert isinstance(mqt_qc[0].get_parameter(0), Expression)
     expr = cast(Expression, mqt_qc[0].get_parameter(0))
-    assert expr.num_terms() == 2
+    assert expr.num_terms() == 3
     assert expr.constant == 0.0
     assert not mqt_qc.is_variable_free()
