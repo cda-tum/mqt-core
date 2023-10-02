@@ -108,7 +108,7 @@ struct Complex {
    * @brief Convert the Complex number to an std::complex<fp>.
    * @returns The std::complex<fp> representation of the Complex number.
    */
-  explicit operator std::complex<fp>() const noexcept;
+  [[nodiscard]] explicit operator std::complex<fp>() const noexcept;
 };
 
 /**
