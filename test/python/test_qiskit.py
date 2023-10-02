@@ -9,7 +9,7 @@ from qiskit.circuit import AncillaRegister, ClassicalRegister, Parameter, Quantu
 from qiskit.circuit.library import MCXRecursive, MCXVChain, XXMinusYYGate, XXPlusYYGate
 from qiskit.transpiler import Layout, TranspileLayout
 
-from mqt.core import Expression, SymbolicOperation
+from mqt.core import CompoundOperation, Expression, SymbolicOperation
 from mqt.core.qiskit import qiskit_to_mqt
 
 
@@ -93,6 +93,7 @@ def test_custom_gate() -> None:
     mqt_qc = qiskit_to_mqt(qc)
     assert mqt_qc.n_qubits == 3
     assert mqt_qc.n_ops == 1
+    assert isinstance(mqt_qc[0], CompoundOperation)
     assert mqt_qc[0][0].name.strip() == "h"
     assert mqt_qc[0][1].name.strip() == "x"
     assert mqt_qc[0][2].name.strip() == "x"
@@ -173,13 +174,13 @@ def test_operations() -> None:
     qc.rxx(0.5, 0, 1)  # op 16
     qc.rzz(0.5, 0, 1)  # op 17
     qc.ryy(0.5, 0, 1)  # op 18
-    qc.append(XXMinusYYGate(0.1), [0, 1])  # op 19
-    qc.append(XXPlusYYGate(0.1), [0, 1])  # op 20
+    qc.append(XXMinusYYGate(0.1, 0.0), [0, 1])  # op 19
+    qc.append(XXPlusYYGate(0.1, 0.0), [0, 1])  # op 20
 
     mqt_qc = qiskit_to_mqt(qc)
     assert mqt_qc.n_qubits == 3
     assert mqt_qc.n_ops == 20
-    assert not mqt_qc.is_variable_free()
+    assert mqt_qc.is_variable_free()
 
 
 def test_symbolic() -> None:
