@@ -39,7 +39,7 @@ using MatrixEntryFunc = std::function<void(const std::size_t, const std::size_t,
                                            const std::complex<fp>&)>;
 
 /**
- * @brief A DD node with an edge weight
+ * @brief A weighted edge pointing to a DD node
  * @details This struct is used to represent the core data structure of the DD
  * package. It is a wrapper around a pointer to a DD node and a complex edge
  * weight.
