@@ -574,7 +574,12 @@ void registerQuantumComputation(py::module& m) {
            .def("__len__", &qc::QuantumComputation::getNindividualOps,
                 "Get the number of operations in the quantum computation.")
       .def("__getitem__", [](const qc::QuantumComputation& qc,
-                             std::size_t idx) { return qc.at(idx).get(); }, py::return_value_policy::reference_internal, "idx"_a, "Get the operation at index idx. Beware: this gives write access to the operation.");
+                             std::size_t idx) { return qc.at(idx).get(); }, py::return_value_policy::reference_internal, "idx"_a, "Get the operation at index idx. Beware: this gives write access to the operation.")
+    .def("qasm_str", [](qc::QuantumComputation& qc) {
+      auto ss = std::stringstream();
+      qc.dumpOpenQASM(ss);
+      return ss.str();
+    }, "Get the quantum computation as a string in OpenQASM 2.0 format.");
 
   py::enum_<qc::OpType>(m, "OpType",
                         "Enum class for representing quantum operations.")
