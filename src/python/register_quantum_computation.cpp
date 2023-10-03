@@ -2,10 +2,9 @@
 #include "operations/Control.hpp"
 #include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
+#include "python/pybind11.hpp"
 
 #include <memory>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 namespace mqt {
 namespace py = pybind11;
 using namespace py::literals;
