@@ -1,4 +1,4 @@
-#include <python/pybind11.hpp>
+#include "python/pybind11.hpp"
 
 namespace mqt {
 
@@ -12,17 +12,17 @@ void registerSymbolic(py::module& m);
 void registerQuantumComputation(py::module& m);
 
 PYBIND11_MODULE(_core, m) {
-
-  py::module operations = m.def_submodule("operations");
-  registerOperations(operations);
+  py::module permutation = m.def_submodule("permutation");
+  registerPermutation(permutation);
 
   py::module symbolic = m.def_submodule("symbolic");
   registerSymbolic(symbolic);
 
+  py::module operations = m.def_submodule("operations");
+  registerOperations(operations);
+
   py::module quantumComputation = m.def_submodule("quantum_computation");
   registerQuantumComputation(quantumComputation);
-
-  registerPermutation(m);
 }
 
 } // namespace mqt
