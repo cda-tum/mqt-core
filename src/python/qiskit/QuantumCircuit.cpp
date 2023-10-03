@@ -283,7 +283,7 @@ qc::qiskit::QuantumCircuit::parseSymbolicExpr(const py::object& pyExpr) {
       sym += coeff;
     } else {
       isConst = false;
-      sym += sym::Term(sign * coeff, sym::Variable{var});
+      sym += sym::Term(sym::Variable{var}, sign * coeff);
     }
     ++sumIt;
   }
