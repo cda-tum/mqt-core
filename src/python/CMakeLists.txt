@@ -46,9 +46,21 @@ pybind11_add_module(
   ${PROJECT_SOURCE_DIR}/include/python/pybind11.hpp
   module.cpp
   register_operations.cpp
+  register_permutation.cpp
   register_symbolic.cpp
-  register_quantum_computation.cpp)
-target_link_libraries(_core PRIVATE MQT::CoreDD)
+  register_quantum_computation.cpp
+  operations/register_optype.cpp
+  operations/register_control.cpp
+  operations/register_operation.cpp
+  operations/register_standard_operation.cpp
+  operations/register_classic_controlled_operation.cpp
+  operations/register_compound_operation.cpp
+  operations/register_non_unitary_operation.cpp
+  operations/register_symbolic_operation.cpp
+  symbolic/register_variable.cpp
+  symbolic/register_term.cpp
+  symbolic/register_expression.cpp)
+target_link_libraries(_core PRIVATE MQT::Core)
 
 # Install directive for scikit-build-core
 install(TARGETS _core LIBRARY DESTINATION mqt/core)
