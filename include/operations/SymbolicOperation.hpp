@@ -115,9 +115,7 @@ public:
                     Qubit startingQubit = 0);
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override {
-    return std::make_unique<SymbolicOperation>(
-        getNqubits(), getControls(), getTargets(), getType(), getParameters(),
-        getStartingQubit());
+    return std::make_unique<SymbolicOperation>(*this);
   }
 
   [[nodiscard]] inline bool isSymbolicOperation() const override {

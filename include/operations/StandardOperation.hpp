@@ -65,9 +65,7 @@ public:
                     Qubit startingQubit = 0);
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override {
-    return std::make_unique<StandardOperation>(
-        getNqubits(), getControls(), getTargets(), getType(), getParameter(),
-        getStartingQubit());
+    return std::make_unique<StandardOperation>(*this);
   }
 
   [[nodiscard]] bool isStandardOperation() const override { return true; }

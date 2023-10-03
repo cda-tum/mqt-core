@@ -35,12 +35,9 @@ protected:
 
 public:
   Operation() = default;
-
-  Operation(const Operation& op) = delete;
+  Operation(const Operation& op) = default;
   Operation(Operation&& op) noexcept = default;
-
-  Operation& operator=(const Operation& op) = delete;
-
+  Operation& operator=(const Operation& op) = default;
   Operation& operator=(Operation&& op) noexcept = default;
 
   // Virtual Destructor

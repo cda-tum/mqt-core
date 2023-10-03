@@ -29,10 +29,25 @@ public:
     type = ClassicControlled;
   }
 
+  ClassicControlledOperation(const ClassicControlledOperation& ccop)
+      : Operation(ccop), controlRegister(ccop.controlRegister),
+        expectedValue(ccop.expectedValue) {
+    op = ccop.op->clone();
+  }
+
+  ClassicControlledOperation&
+  operator=(const ClassicControlledOperation& ccop) {
+    if (this != &ccop) {
+      Operation::operator=(ccop);
+      controlRegister = ccop.controlRegister;
+      expectedValue = ccop.expectedValue;
+      op = ccop.op->clone();
+    }
+    return *this;
+  }
+
   [[nodiscard]] std::unique_ptr<Operation> clone() const override {
-    auto opCloned = op->clone();
-    return std::make_unique<ClassicControlledOperation>(
-        opCloned, controlRegister, expectedValue);
+    return std::make_unique<ClassicControlledOperation>(*this);
   }
 
   [[nodiscard]] auto getControlRegister() const { return controlRegister; }

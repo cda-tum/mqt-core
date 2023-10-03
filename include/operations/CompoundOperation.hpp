@@ -23,14 +23,26 @@ public:
     ops = std::move(operations);
   }
 
-  [[nodiscard]] std::unique_ptr<Operation> clone() const override {
-    auto clonedCo = std::make_unique<CompoundOperation>(nqubits);
-    clonedCo->reserve(ops.size());
-
-    for (const auto& op : ops) {
-      clonedCo->ops.emplace_back<>(op->clone());
+  CompoundOperation(const CompoundOperation& co)
+      : Operation(co), ops(co.ops.size()) {
+    for (std::size_t i = 0; i < co.ops.size(); ++i) {
+      ops[i] = co.ops[i]->clone();
     }
-    return clonedCo;
+  }
+
+  CompoundOperation& operator=(const CompoundOperation& co) {
+    if (this != &co) {
+      Operation::operator=(co);
+      ops.resize(co.ops.size());
+      for (std::size_t i = 0; i < co.ops.size(); ++i) {
+        ops[i] = co.ops[i]->clone();
+      }
+    }
+    return *this;
+  }
+
+  [[nodiscard]] std::unique_ptr<Operation> clone() const override {
+    return std::make_unique<CompoundOperation>(*this);
   }
 
   void setNqubits(const std::size_t nq) override {

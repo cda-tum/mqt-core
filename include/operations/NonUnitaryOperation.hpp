@@ -24,12 +24,7 @@ public:
   NonUnitaryOperation(std::size_t nq, Targets qubits, OpType op = Reset);
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override {
-    if (getType() == qc::Measure) {
-      return std::make_unique<NonUnitaryOperation>(getNqubits(), getTargets(),
-                                                   getClassics());
-    }
-    return std::make_unique<NonUnitaryOperation>(getNqubits(), getTargets(),
-                                                 getType());
+    return std::make_unique<NonUnitaryOperation>(*this);
   }
 
   [[nodiscard]] bool isUnitary() const override { return false; }
