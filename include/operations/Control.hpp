@@ -3,6 +3,7 @@
 #include "Definitions.hpp"
 
 #include <set>
+#include <sstream>
 
 namespace qc {
 struct Control {
@@ -10,6 +11,18 @@ struct Control {
 
   Qubit qubit{};
   Type type = Type::Pos;
+
+  [[nodiscard]] std::string toString() const {
+    std::ostringstream oss{};
+    oss << "Control(qubit=" << qubit << ", type_=\"";
+    if (type == Type::Pos) {
+      oss << "Pos";
+    } else {
+      oss << "Neg";
+    }
+    oss << "\")";
+    return oss.str();
+  }
 };
 
 inline bool operator<(const Control& lhs, const Control& rhs) {
