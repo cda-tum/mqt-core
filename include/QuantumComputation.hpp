@@ -906,7 +906,7 @@ public:
     }
   }
 
-  void measure(const std::vector<Qubit>& qubitRegister,
+  void measure(const Targets& qubitRegister,
                const std::vector<Bit>& classicalRegister) {
     checkQubitRange(qubitRegister);
     emplace_back<NonUnitaryOperation>(getNqubits(), qubitRegister,
@@ -915,10 +915,9 @@ public:
 
   void reset(const Qubit target) {
     checkQubitRange(target);
-    emplace_back<NonUnitaryOperation>(getNqubits(), std::vector<Qubit>{target},
-                                      qc::Reset);
+    emplace_back<NonUnitaryOperation>(getNqubits(), target, qc::Reset);
   }
-  void reset(const std::vector<Qubit>& targets) {
+  void reset(const Targets& targets) {
     checkQubitRange(targets);
     emplace_back<NonUnitaryOperation>(getNqubits(), targets, qc::Reset);
   }
@@ -927,7 +926,7 @@ public:
     checkQubitRange(target);
     emplace_back<StandardOperation>(getNqubits(), target, qc::Barrier);
   }
-  void barrier(const std::vector<Qubit>& targets) {
+  void barrier(const Targets& targets) {
     checkQubitRange(targets);
     emplace_back<StandardOperation>(getNqubits(), targets, qc::Barrier);
   }
