@@ -216,39 +216,49 @@ public:
       mt.seed(seeds);
     }
   }
-  QuantumComputation(const QuantumComputation& qc) = delete;
   QuantumComputation(QuantumComputation&& qc) noexcept = default;
-
-  QuantumComputation& operator=(const QuantumComputation& qc) = delete;
-
   QuantumComputation& operator=(QuantumComputation&& qc) noexcept = default;
-
-  virtual ~QuantumComputation() = default;
-
-  [[nodiscard]] QuantumComputation clone() const {
-    auto qc = QuantumComputation(nqubits);
-    qc.nqubits = nqubits;
-    qc.nclassics = nclassics;
-    qc.nancillae = nancillae;
-    qc.maxControls = maxControls;
-    qc.name = name;
-    qc.qregs = qregs;
-    qc.cregs = cregs;
-    qc.ancregs = ancregs;
-    qc.initialLayout = initialLayout;
-    qc.outputPermutation = outputPermutation;
-    qc.ancillary = ancillary;
-    qc.garbage = garbage;
-    qc.seed = seed;
-    qc.mt = mt;
-    qc.occuringVariables = occuringVariables;
-    qc.globalPhase = globalPhase;
-
-    for (auto const& op : ops) {
-      qc.ops.emplace_back<>(op->clone());
+  QuantumComputation(const QuantumComputation& qc)
+      : nqubits(qc.nqubits), nclassics(qc.nclassics), nancillae(qc.nancillae),
+        maxControls(qc.maxControls), name(qc.name), qregs(qc.qregs),
+        cregs(qc.cregs), ancregs(qc.ancregs), mt(qc.mt), seed(qc.seed),
+        globalPhase(qc.globalPhase), occuringVariables(qc.occuringVariables),
+        initialLayout(qc.initialLayout),
+        outputPermutation(qc.outputPermutation), ancillary(qc.ancillary),
+        garbage(qc.garbage) {
+    ops.reserve(qc.ops.size());
+    for (const auto& op : qc.ops) {
+      emplace_back(op->clone());
     }
-    return qc;
   }
+  QuantumComputation& operator=(const QuantumComputation& qc) {
+    if (this != &qc) {
+      nqubits = qc.nqubits;
+      nclassics = qc.nclassics;
+      nancillae = qc.nancillae;
+      maxControls = qc.maxControls;
+      name = qc.name;
+      qregs = qc.qregs;
+      cregs = qc.cregs;
+      ancregs = qc.ancregs;
+      mt = qc.mt;
+      seed = qc.seed;
+      globalPhase = qc.globalPhase;
+      occuringVariables = qc.occuringVariables;
+      initialLayout = qc.initialLayout;
+      outputPermutation = qc.outputPermutation;
+      ancillary = qc.ancillary;
+      garbage = qc.garbage;
+
+      ops.clear();
+      ops.reserve(qc.ops.size());
+      for (const auto& op : qc.ops) {
+        emplace_back(op->clone());
+      }
+    }
+    return *this;
+  }
+  virtual ~QuantumComputation() = default;
 
   [[nodiscard]] virtual std::size_t getNops() const { return ops.size(); }
   [[nodiscard]] std::size_t getNqubits() const { return nqubits + nancillae; }
