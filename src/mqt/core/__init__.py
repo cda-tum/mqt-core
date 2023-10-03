@@ -2,37 +2,15 @@
 
 from __future__ import annotations
 
-from ._core.operations import (
-    CompoundOperation,
-    Control,
-    ControlType,
-    NonUnitaryOperation,
-    Operation,
-    Permutation,
-    StandardOperation,
-    SymbolicOperation,
-)
-from ._core.quantum_computation import OpType, QuantumComputation
-from ._core.symbolic import (
-    Expression,
-    Term,
-    Variable,
-)
+from . import operations, symbolic
 from ._version import version as __version__
+from .permutation import Permutation
+from .quantum_computation import QuantumComputation
 
 __all__ = [
-    "__version__",
-    "CompoundOperation",
-    "Control",
-    "ControlType",
-    "NonUnitaryOperation",
-    "Operation",
+    "operations",
     "Permutation",
-    "StandardOperation",
-    "SymbolicOperation",
-    "OpType",
     "QuantumComputation",
-    "Expression",
-    "Term",
-    "Variable",
+    "symbolic",
+    "__version__",
 ]
