@@ -4,12 +4,22 @@
 #include "operations/Operation.hpp"
 #include "python/pybind11.hpp"
 
-#include <memory>
 namespace mqt {
-namespace py = pybind11;
-using namespace py::literals;
+
+using DiffType = std::vector<std::unique_ptr<qc::Operation>>::difference_type;
+using SizeType = std::vector<std::unique_ptr<qc::Operation>>::size_type;
 
 void registerQuantumComputation(py::module& m) {
+  auto wrap = [](DiffType i, const SizeType size) {
+    if (i < 0) {
+      i += static_cast<DiffType>(size);
+    }
+    if (i < 0 || static_cast<SizeType>(i) >= size) {
+      throw py::index_error();
+    }
+    return i;
+  };
+
   auto qc = py::class_<qc::QuantumComputation>(
       m, "QuantumComputation",
       "Representation of quantum circuits within MQT Core");
@@ -62,8 +72,9 @@ void registerQuantumComputation(py::module& m) {
 
   qc.def(
       "__getitem__",
-      [](const qc::QuantumComputation& circ, std::size_t idx) {
-        return circ.at(idx).get();
+      [&wrap](const qc::QuantumComputation& circ, DiffType i) {
+        i = wrap(i, circ.getNops());
+        return circ.at(static_cast<SizeType>(i)).get();
       },
       py::return_value_policy::reference_internal, "idx"_a,
       "Get the operation at index idx. Beware: this gives write access to "
@@ -79,20 +90,23 @@ void registerQuantumComputation(py::module& m) {
                            &sliceLength)) {
           throw py::error_already_set();
         }
-        auto* ops = new std::vector<qc::Operation*>();
-        ops->reserve(sliceLength);
+        auto ops = std::vector<qc::Operation*>();
+        ops.reserve(sliceLength);
         for (std::size_t i = start; i < stop; i += step) {
-          ops->emplace_back(circ.at(i).get());
+          ops.emplace_back(circ.at(i).get());
         }
         return ops;
       },
-      py::return_value_policy::take_ownership, "slice"_a,
+      py::return_value_policy::reference_internal, "slice"_a,
       "Get a slice of the quantum computation. Beware: this gives write "
       "access to the operations.");
   qc.def(
       "__setitem__",
-      [](qc::QuantumComputation& circ, std::size_t idx,
-         const qc::Operation& op) { circ.at(idx) = op.clone(); },
+      [&wrap](qc::QuantumComputation& circ, DiffType i,
+              const qc::Operation& op) {
+        i = wrap(i, circ.getNops());
+        circ.at(static_cast<SizeType>(i)) = op.clone();
+      },
       "idx"_a, "op"_a, "Set the operation at index idx to op.");
   qc.def(
       "__setitem__",
@@ -118,8 +132,9 @@ void registerQuantumComputation(py::module& m) {
       "slice"_a, "ops"_a, "Set a slice of the quantum computation to ops.");
   qc.def(
       "__delitem__",
-      [](qc::QuantumComputation& circ, const std::size_t idx) {
-        circ.erase(circ.begin() + static_cast<int64_t>(idx));
+      [&wrap](qc::QuantumComputation& circ, DiffType i) {
+        i = wrap(i, circ.getNops());
+        circ.erase(circ.begin() + i);
       },
       "idx"_a, "Delete the operation at index idx.");
   qc.def(
