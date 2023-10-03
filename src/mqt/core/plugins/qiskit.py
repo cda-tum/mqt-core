@@ -3,30 +3,30 @@ from __future__ import annotations
 
 import re
 import sys
-from typing import TYPE_CHECKING, Sequence, cast
+from typing import TYPE_CHECKING, cast
 
 from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
 
-from mqt.core import (
+from ..operations import (
     CompoundOperation,
     Control,
-    Expression,
     NonUnitaryOperation,
     OpType,
-    QuantumComputation,
     StandardOperation,
     SymbolicOperation,
-    Term,
-    Variable,
 )
+from ..quantum_computation import QuantumComputation
+from ..symbolic import Expression, Term, Variable
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from qiskit import QuantumCircuit
     from qiskit.transpiler import Layout
 
 
 def qiskit_to_mqt(qiskit_circuit: QuantumCircuit) -> QuantumComputation:
-    """Convert a Qiskit circuit to a QuantumComputation object.
+    """Convert a Qiskit `QuantumCircuit` to a `QuantumComputation` object.
 
     Args:
         qiskit_circuit (QuantumCircuit): The Qiskit circuit to convert.
@@ -62,12 +62,12 @@ def qiskit_to_mqt(qiskit_circuit: QuantumCircuit) -> QuantumComputation:
     for reg in qiskit_cregs:
         size = reg.size
         name = reg.name
-        mqt_computation.add_classical_bit_register(size, name)
+        mqt_computation.add_classical_register(size, name)
         for i in range(size):
             clbit_map[Clbit(reg, i)] = clbit_index
             clbit_index += 1
 
-    mqt_computation.gphase = qiskit_circuit.global_phase
+    mqt_computation.global_phase = qiskit_circuit.global_phase
 
     for inst in qiskit_circuit.data:
         instruction = inst[0]
@@ -101,15 +101,15 @@ def _emplace_operation(
     if name == "measure":
         ctrl = qubit_map[qargs[0]]
         target = clbit_map[cargs[0]]
-        mqt_computation.append_operation(NonUnitaryOperation(mqt_computation.n_qubits, [target], [ctrl]))
+        mqt_computation.append(NonUnitaryOperation(mqt_computation.num_qubits, [target], [ctrl]))
         return []
     if name == "barrier":
         targets = [qubit_map[qubit] for qubit in qargs]
-        mqt_computation.append_operation(NonUnitaryOperation(mqt_computation.n_qubits, targets, OpType.barrier))
+        mqt_computation.append(NonUnitaryOperation(mqt_computation.num_qubits, targets, OpType.barrier))
         return []
     if name == "reset":
         targets = [qubit_map[qubit] for qubit in qargs]
-        mqt_computation.append_operation(NonUnitaryOperation(mqt_computation.n_qubits, targets, OpType.reset))
+        mqt_computation.append(NonUnitaryOperation(mqt_computation.num_qubits, targets, OpType.reset))
         return []
     if name in ["i", "id", "iden"]:
         return _add_operation(mqt_computation, OpType.i, qargs, params, qubit_map)
@@ -163,8 +163,8 @@ def _emplace_operation(
         return _add_operation(mqt_computation, OpType.x, list(qargs[1:]), params, qubit_map)
     if name == "mcx_vchain":
         size = len(qargs)
-        n_controls = (size + 1) // 2
-        return _add_operation(mqt_computation, OpType.x, list(qargs[n_controls - 2 :]), params, qubit_map)
+        num_controls = (size + 1) // 2
+        return _add_operation(mqt_computation, OpType.x, list(qargs[num_controls - 2 :]), params, qubit_map)
     try:
         return _import_definition(mqt_computation, instr.definition, qargs, cargs, qubit_map, clbit_map)
     except Exception:
@@ -213,7 +213,7 @@ def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> floa
             expr += coeff
         else:
             is_const = False
-            expr += Term(sign * coeff, Variable(var))
+            expr += Term(Variable(var), sign * coeff)
 
     if is_const:
         return expr.constant
@@ -233,13 +233,9 @@ def _add_operation(
     controls = {Control(qubit) for qubit in qubits}
     if all(isinstance(parameter, float) for parameter in parameters):
         float_parameters = [cast(float, parameter) for parameter in parameters]
-        mqt_computation.append_operation(
-            StandardOperation(mqt_computation.n_qubits, controls, target, type_, float_parameters)
-        )
+        mqt_computation.append(StandardOperation(mqt_computation.num_qubits, controls, target, type_, float_parameters))
     else:
-        mqt_computation.append_operation(
-            SymbolicOperation(mqt_computation.n_qubits, controls, target, type_, parameters)
-        )
+        mqt_computation.append(SymbolicOperation(mqt_computation.num_qubits, controls, target, type_, parameters))
 
     return parameters
 
@@ -258,12 +254,12 @@ def _add_two_target_operation(
     controls = {Control(qubit) for qubit in qubits}
     if all(isinstance(parameter, float) for parameter in parameters):
         float_parameters = [cast(float, parameter) for parameter in parameters]
-        mqt_computation.append_operation(
-            StandardOperation(mqt_computation.n_qubits, controls, target1, target2, type_, float_parameters)
+        mqt_computation.append(
+            StandardOperation(mqt_computation.num_qubits, controls, target1, target2, type_, float_parameters)
         )
     else:
-        mqt_computation.append_operation(
-            SymbolicOperation(mqt_computation.n_qubits, controls, target1, target2, type_, parameters)
+        mqt_computation.append(
+            SymbolicOperation(mqt_computation.num_qubits, controls, target1, target2, type_, parameters)
         )
     return parameters
 
@@ -285,7 +281,7 @@ def _get_logical_qubit_indices(mqt_computation: QuantumComputation, layout: Layo
     if ancilla_register is not None:
         for physical_qubit_index in range(ancilla_register.size):
             logical_qubit_indices[AncillaQubit(ancilla_register, physical_qubit_index)] = logical_qubit_index
-            mqt_computation.set_logical_qubit_ancillary(logical_qubit_index)
+            mqt_computation.set_circuit_qubit_ancillary(logical_qubit_index)
             logical_qubit_index += 1
 
     return logical_qubit_indices
@@ -327,7 +323,7 @@ def _import_definition(
     for def_clbit, carg in zip(qiskit_circuit.clbits, cargs):
         carg_map[def_clbit] = carg
 
-    comp_op = CompoundOperation(mqt_computation.n_qubits)
+    comp_op = CompoundOperation(mqt_computation.num_qubits)
 
     params = []
     for instruction, qargs, cargs in qiskit_circuit.data:
@@ -338,5 +334,5 @@ def _import_definition(
             comp_op, instruction, mapped_qargs, mapped_cargs, instruction_params, qubit_map, clbit_map
         )
         params.extend(new_params)
-    mqt_computation.append_operation(comp_op)
+    mqt_computation.append(comp_op)
     return params
