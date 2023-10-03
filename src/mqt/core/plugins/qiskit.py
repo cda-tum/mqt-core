@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import re
-import sys
+import warnings
 from typing import TYPE_CHECKING, cast
 
-from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
+from qiskit.circuit import AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
 
 from ..operations import (
     CompoundOperation,
@@ -19,161 +19,280 @@ from ..quantum_computation import QuantumComputation
 from ..symbolic import Expression, Term, Variable
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
     from qiskit import QuantumCircuit
-    from qiskit.transpiler import Layout
 
 
-def qiskit_to_mqt(qiskit_circuit: QuantumCircuit) -> QuantumComputation:
+def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
     """Convert a Qiskit `QuantumCircuit` to a `QuantumComputation` object.
 
     Args:
-        qiskit_circuit (QuantumCircuit): The Qiskit circuit to convert.
+        circ (QuantumCircuit): The Qiskit circuit to convert.
 
     Returns:
         QuantumComputation: The converted circuit.
     """
-    mqt_computation = QuantumComputation()
+    qc = QuantumComputation()
 
-    if qiskit_circuit.name is not None:
-        mqt_computation.name = qiskit_circuit.name
+    if circ.name is not None:
+        qc.name = circ.name
 
     qubit_index = 0
-    qubit_map = {}
-    qiskit_qregs = qiskit_circuit.qregs
-    for reg in qiskit_qregs:
+    qubit_map: dict[Qubit, int] = {}
+    for reg in circ.qregs:
         size = reg.size
-        name = reg.name
         if isinstance(reg, AncillaRegister):
-            mqt_computation.add_ancillary_register(size, name)
-            for i in range(size):
-                qubit_map[AncillaQubit(reg, i)] = qubit_index
+            qc.add_ancillary_register(size, reg.name)
+            for qubit in reg:
+                qubit_map[qubit] = qubit_index
                 qubit_index += 1
         else:
-            mqt_computation.add_qubit_register(size, name)
-            for i in range(size):
-                qubit_map[Qubit(reg, i)] = qubit_index
+            qc.add_qubit_register(size, reg.name)
+            for qubit in reg:
+                qubit_map[qubit] = qubit_index
                 qubit_index += 1
 
     clbit_index = 0
-    clbit_map = {}
-    qiskit_cregs = qiskit_circuit.cregs
-    for reg in qiskit_cregs:
+    clbit_map: dict[Clbit, int] = {}
+    for reg in circ.cregs:
         size = reg.size
-        name = reg.name
-        mqt_computation.add_classical_register(size, name)
-        for i in range(size):
-            clbit_map[Clbit(reg, i)] = clbit_index
+        qc.add_classical_register(size, reg.name)
+        for bit in reg:
+            clbit_map[bit] = clbit_index
             clbit_index += 1
 
-    mqt_computation.global_phase = qiskit_circuit.global_phase
+    try:
+        qc.global_phase = circ.global_phase
+    except TypeError:
+        warnings.warn(
+            "Symbolic global phase values are not supported yet. Setting global phase to 0.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        qc.global_phase = 0
 
-    for inst in qiskit_circuit.data:
-        instruction = inst[0]
-        qargs = inst[1]
-        cargs = inst[2]
-        params = instruction.params
-
-        symb_params = _emplace_operation(mqt_computation, instruction, qargs, cargs, params, qubit_map, clbit_map)
+    for instruction, qargs, cargs in circ.data:
+        symb_params = _emplace_operation(qc, instruction, qargs, cargs, instruction.params, qubit_map, clbit_map)
         for symb_param in symb_params:
-            mqt_computation.add_variable(symb_param)
+            qc.add_variable(symb_param)
 
     # import initial layout and output permutation in case it is available
-    if qiskit_circuit.layout is not None:
-        _import_layouts(mqt_computation, qiskit_circuit)
+    if (hasattr(circ, "layout") and circ.layout is not None) or circ._layout is not None:  # noqa: SLF001
+        _import_layouts(qc, circ)
 
-    mqt_computation.initialize_io_mapping()
-    return mqt_computation
+    qc.initialize_io_mapping()
+    return qc
+
+
+_NATIVELY_SUPPORTED_GATES = frozenset(
+    {
+        "i",
+        "id",
+        "iden",
+        "x",
+        "y",
+        "z",
+        "h",
+        "s",
+        "sdg",
+        "t",
+        "tdg",
+        "p",
+        "u1",
+        "rx",
+        "ry",
+        "rz",
+        "u2",
+        "u",
+        "u3",
+        "cx",
+        "cy",
+        "cz",
+        "cp",
+        "cu1",
+        "ch",
+        "crx",
+        "cry",
+        "crz",
+        "cu3",
+        "ccx",
+        "swap",
+        "cswap",
+        "iswap",
+        "sx",
+        "sxdg",
+        "csx",
+        "mcx",
+        "mcx_gray",
+        "mcx_recursive",
+        "mcx_vchain",
+        "mcphase",
+        "mcrx",
+        "mcry",
+        "mcrz",
+        "dcx",
+        "ecr",
+        "rxx",
+        "ryy",
+        "rzx",
+        "rzz",
+        "xx_minus_yy",
+        "xx_plus_yy",
+        "reset",
+        "barrier",
+        "measure",
+    }
+)
 
 
 def _emplace_operation(
-    mqt_computation: QuantumComputation | CompoundOperation,
+    qc: QuantumComputation | CompoundOperation,
     instr: Instruction,
     qargs: Sequence[Qubit],
     cargs: Sequence[Clbit],
-    params: list[float | ParameterExpression],
-    qubit_map: dict[Qubit, int],
-    clbit_map: dict[Clbit, int],
+    params: Sequence[float | ParameterExpression],
+    qubit_map: Mapping[Qubit, int],
+    clbit_map: Mapping[Clbit, int],
 ) -> list[float | ParameterExpression]:
     name = instr.name
 
+    print(
+        "\n",
+        "name: ",
+        name,
+        "qargs: ",
+        qargs,
+        "cargs: ",
+        cargs,
+        "params: ",
+        params,
+        "qubit_map: ",
+        qubit_map,
+        "clbit_map: ",
+        clbit_map,
+    )
+
+    if name not in _NATIVELY_SUPPORTED_GATES:
+        try:
+            return _import_definition(qc, instr.definition, qargs, cargs, qubit_map, clbit_map)
+        except Exception as ex:
+            msg = f"Unsupported gate {name} with definition {instr.definition}"
+            raise NotImplementedError(msg) from ex
+
+    qubits = [qubit_map[qubit] for qubit in qargs]
+
     if name == "measure":
-        ctrl = qubit_map[qargs[0]]
-        target = clbit_map[cargs[0]]
-        mqt_computation.append(NonUnitaryOperation(mqt_computation.num_qubits, [target], [ctrl]))
+        clbits = [clbit_map[clbit] for clbit in cargs]
+        qc.append(NonUnitaryOperation(qc.num_qubits, qubits, clbits))
         return []
-    if name == "barrier":
-        targets = [qubit_map[qubit] for qubit in qargs]
-        mqt_computation.append(NonUnitaryOperation(mqt_computation.num_qubits, targets, OpType.barrier))
-        return []
+
     if name == "reset":
-        targets = [qubit_map[qubit] for qubit in qargs]
-        mqt_computation.append(NonUnitaryOperation(mqt_computation.num_qubits, targets, OpType.reset))
+        qc.append(NonUnitaryOperation(qc.num_qubits, qubits))
         return []
+
+    if name == "barrier":
+        qc.append(StandardOperation(qc.num_qubits, qubits, OpType.barrier))
+        return []
+
     if name in ["i", "id", "iden"]:
-        return _add_operation(mqt_computation, OpType.i, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.i, qargs, params, qubit_map)
+
     if name in ["x", "cx", "ccx", "ccx", "mcx", "mcx_gray"]:
-        return _add_operation(mqt_computation, OpType.x, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.x, qargs, params, qubit_map)
+
     if name in ["y", "cy"]:
-        return _add_operation(mqt_computation, OpType.y, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.y, qargs, params, qubit_map)
+
     if name in ["z", "cz"]:
-        return _add_operation(mqt_computation, OpType.z, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.z, qargs, params, qubit_map)
+
     if name in ["h", "ch"]:
-        return _add_operation(mqt_computation, OpType.h, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.h, qargs, params, qubit_map)
+
     if name == "s":
-        return _add_operation(mqt_computation, OpType.s, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.s, qargs, params, qubit_map)
+
     if name == "sdg":
-        return _add_operation(mqt_computation, OpType.sdag, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.sdag, qargs, params, qubit_map)
+
     if name == "t":
-        return _add_operation(mqt_computation, OpType.t, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.t, qargs, params, qubit_map)
+
     if name == "tdg":
-        return _add_operation(mqt_computation, OpType.tdag, qargs, params, qubit_map)
-    if name in ["rx", "crx", "mcrx"]:
-        return _add_operation(mqt_computation, OpType.rx, qargs, params, qubit_map)
-    if name in ["ry", "cry", "mcry"]:
-        return _add_operation(mqt_computation, OpType.ry, qargs, params, qubit_map)
-    if name in ["rz", "crz", "mcrz"]:
-        return _add_operation(mqt_computation, OpType.rz, qargs, params, qubit_map)
-    if name in ["p", "u1", "cp", "cu1", "mcphase"]:
-        return _add_operation(mqt_computation, OpType.phase, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.tdag, qargs, params, qubit_map)
+
     if name in ["sx", "csx"]:
-        return _add_operation(mqt_computation, OpType.sx, qargs, params, qubit_map)
-    if name in ["swap", "cswap"]:
-        return _add_two_target_operation(mqt_computation, OpType.swap, qargs, params, qubit_map)
-    if name == "iswap":
-        return _add_two_target_operation(mqt_computation, OpType.iswap, qargs, params, qubit_map)
-    if name == "dcx":
-        return _add_two_target_operation(mqt_computation, OpType.dcx, qargs, params, qubit_map)
-    if name == "ecr":
-        return _add_two_target_operation(mqt_computation, OpType.ecr, qargs, params, qubit_map)
-    if name == "rxx":
-        return _add_two_target_operation(mqt_computation, OpType.rxx, qargs, params, qubit_map)
-    if name == "ryy":
-        return _add_two_target_operation(mqt_computation, OpType.ryy, qargs, params, qubit_map)
-    if name == "rzz":
-        return _add_two_target_operation(mqt_computation, OpType.rzz, qargs, params, qubit_map)
-    if name == "xx_minus_yy":
-        return _add_two_target_operation(mqt_computation, OpType.xx_minus_yy, qargs, params, qubit_map)
-    if name == "xx_plus_yy":
-        return _add_two_target_operation(mqt_computation, OpType.xx_plus_yy, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.sx, qargs, params, qubit_map)
+
     if name == "mcx_recursive":
         if len(qargs) <= 5:
-            return _add_operation(mqt_computation, OpType.x, qargs, params, qubit_map)
-        return _add_operation(mqt_computation, OpType.x, list(qargs[1:]), params, qubit_map)
+            return _add_operation(qc, OpType.x, qargs, params, qubit_map)
+        # reconfigure controls and targets (drops the last qubit as ancilla)
+        qargs = qargs[:-1]
+        return _add_operation(qc, OpType.x, qargs, params, qubit_map)
+
     if name == "mcx_vchain":
         size = len(qargs)
         num_controls = (size + 1) // 2
-        return _add_operation(mqt_computation, OpType.x, list(qargs[num_controls - 2 :]), params, qubit_map)
-    try:
-        return _import_definition(mqt_computation, instr.definition, qargs, cargs, qubit_map, clbit_map)
-    except Exception:
-        print("Failed to import instruction: " + name + " from Qiskit QuantumCircuit\n", sys.stderr)
+        # reconfigure controls and targets (drops the last num_controls - 2 qubits as ancilla)
+        if num_controls > 2:
+            qargs = qargs[: -num_controls + 2]
+        return _add_operation(qc, OpType.x, qargs, params, qubit_map)
+
+    if name in ["rx", "crx", "mcrx"]:
+        return _add_operation(qc, OpType.rx, qargs, params, qubit_map)
+
+    if name in ["ry", "cry", "mcry"]:
+        return _add_operation(qc, OpType.ry, qargs, params, qubit_map)
+
+    if name in ["rz", "crz", "mcrz"]:
+        return _add_operation(qc, OpType.rz, qargs, params, qubit_map)
+
+    if name in ["p", "u1", "cp", "cu1", "mcphase"]:
+        return _add_operation(qc, OpType.phase, qargs, params, qubit_map)
+
+    if name in ["u2"]:
+        return _add_operation(qc, OpType.u2, qargs, params, qubit_map)
+
+    if name in ["u", "u3", "cu3"]:
+        return _add_operation(qc, OpType.u3, qargs, params, qubit_map)
+
+    if name in ["swap", "cswap"]:
+        return _add_two_target_operation(qc, OpType.swap, qargs, params, qubit_map)
+
+    if name == "iswap":
+        return _add_two_target_operation(qc, OpType.iswap, qargs, params, qubit_map)
+
+    if name == "dcx":
+        return _add_two_target_operation(qc, OpType.dcx, qargs, params, qubit_map)
+
+    if name == "ecr":
+        return _add_two_target_operation(qc, OpType.ecr, qargs, params, qubit_map)
+
+    if name == "rxx":
+        return _add_two_target_operation(qc, OpType.rxx, qargs, params, qubit_map)
+
+    if name == "ryy":
+        return _add_two_target_operation(qc, OpType.ryy, qargs, params, qubit_map)
+
+    if name == "rzz":
+        return _add_two_target_operation(qc, OpType.rzz, qargs, params, qubit_map)
+
+    if name == "rzx":
+        return _add_two_target_operation(qc, OpType.rzx, qargs, params, qubit_map)
+
+    if name == "xx_minus_yy":
+        return _add_two_target_operation(qc, OpType.xx_minus_yy, qargs, params, qubit_map)
+
+    if name == "xx_plus_yy":
+        return _add_two_target_operation(qc, OpType.xx_plus_yy, qargs, params, qubit_map)
+
     return []
 
 
 _SUM_REGEX = re.compile("[+|-]?[^+-]+")
-_PROD_REGEX = re.compile("[\\*/]?[^\\*/]+")
+_PROD_REGEX = re.compile("[*/]?[^*/]+")
 
 
 def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> float | Expression:
@@ -221,112 +340,93 @@ def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> floa
 
 
 def _add_operation(
-    mqt_computation: QuantumComputation | CompoundOperation,
+    qc: QuantumComputation | CompoundOperation,
     type_: OpType,
     qargs: Sequence[Qubit],
-    params: list[float | ParameterExpression],
-    qubit_map: dict[Qubit, int],
+    params: Sequence[float | ParameterExpression],
+    qubit_map: Mapping[Qubit, int],
 ) -> list[float | ParameterExpression]:
     qubits = [qubit_map[qubit] for qubit in qargs]
     target = qubits.pop()
-    parameters = [_parse_symbolic_expression(param) for param in params]
     controls = {Control(qubit) for qubit in qubits}
-    if all(isinstance(parameter, float) for parameter in parameters):
-        float_parameters = [cast(float, parameter) for parameter in parameters]
-        mqt_computation.append(StandardOperation(mqt_computation.num_qubits, controls, target, type_, float_parameters))
+    parameters = [_parse_symbolic_expression(param) for param in params]
+    if any(isinstance(parameter, Expression) for parameter in parameters):
+        qc.append(SymbolicOperation(qc.num_qubits, controls, target, type_, parameters))
     else:
-        mqt_computation.append(SymbolicOperation(mqt_computation.num_qubits, controls, target, type_, parameters))
-
+        qc.append(StandardOperation(qc.num_qubits, controls, target, type_, cast(list[float], parameters)))
     return parameters
 
 
 def _add_two_target_operation(
-    mqt_computation: QuantumComputation | CompoundOperation,
+    qc: QuantumComputation | CompoundOperation,
     type_: OpType,
     qargs: Sequence[Qubit],
-    params: list[float | ParameterExpression],
-    qubit_map: dict[Qubit, int],
+    params: Sequence[float | ParameterExpression],
+    qubit_map: Mapping[Qubit, int],
 ) -> list[float | ParameterExpression]:
     qubits = [qubit_map[qubit] for qubit in qargs]
     target1 = qubits.pop()
     target2 = qubits.pop()
-    parameters = [_parse_symbolic_expression(param) for param in params]
     controls = {Control(qubit) for qubit in qubits}
-    if all(isinstance(parameter, float) for parameter in parameters):
-        float_parameters = [cast(float, parameter) for parameter in parameters]
-        mqt_computation.append(
-            StandardOperation(mqt_computation.num_qubits, controls, target1, target2, type_, float_parameters)
-        )
+    parameters = [_parse_symbolic_expression(param) for param in params]
+    if any(isinstance(parameter, Expression) for parameter in parameters):
+        qc.append(SymbolicOperation(qc.num_qubits, controls, target1, target2, type_, parameters))
     else:
-        mqt_computation.append(
-            SymbolicOperation(mqt_computation.num_qubits, controls, target1, target2, type_, parameters)
-        )
+        qc.append(StandardOperation(qc.num_qubits, controls, target1, target2, type_, cast(list[float], parameters)))
     return parameters
 
 
-def _get_logical_qubit_indices(mqt_computation: QuantumComputation, layout: Layout) -> dict[Qubit, int]:
-    logical_qubit_index = 0
-    logical_qubit_indices = {}
-    ancilla_register = None
+def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
+    # qiskit-terra 0.24.0 added a (public) `layout` attribute
+    layout = circ.layout if hasattr(circ, "layout") else circ._layout  # noqa: SLF001
 
-    for register in layout.get_registers():
-        if register.name == "ancilla" or isinstance(register, AncillaRegister):
-            ancilla_register = register
-            continue
+    initial_layout = layout.initial_layout
+    print("initial_layout: ", initial_layout)
 
-        for physical_qubit_index in range(register.size):
-            logical_qubit_indices[Qubit(register, physical_qubit_index)] = logical_qubit_index
-            logical_qubit_index += 1
+    # The registers of the layout. These should be the registers of the original circuit.
+    registers = initial_layout.get_registers()
+    qubit_to_idx: dict[Qubit, int] = {}
+    idx = 0
+    for register in registers:
+        is_ancilla = register.name == "ancilla" or isinstance(register, AncillaRegister)
+        for qubit in register:
+            qubit_to_idx[qubit] = idx
+            if is_ancilla:
+                qc.set_circuit_qubit_ancillary(idx)
+            idx += 1
 
-    if ancilla_register is not None:
-        for physical_qubit_index in range(ancilla_register.size):
-            logical_qubit_indices[AncillaQubit(ancilla_register, physical_qubit_index)] = logical_qubit_index
-            mqt_computation.set_circuit_qubit_ancillary(logical_qubit_index)
-            logical_qubit_index += 1
+    compiled_to_original = initial_layout.get_physical_bits()
+    for device_qubit, circuit_qubit in compiled_to_original.items():
+        qc.initial_layout[device_qubit] = qubit_to_idx[circuit_qubit]
 
-    return logical_qubit_indices
+    final_layout = layout.final_layout
+    if final_layout is None:
+        return
 
-
-def _import_layouts(mqt_computation: QuantumComputation, qiskit_circuit: QuantumCircuit) -> None:
-    # qiskit-terra 0.24.0 added a `_layout` attribute
-    if hasattr(qiskit_circuit, "layout"):
-        initial_layout = qiskit_circuit.layout.initial_layout
-        final_layout = qiskit_circuit.layout.final_layout
-    else:
-        initial_layout = qiskit_circuit._layout.initial_layout  # noqa: SLF001
-        final_layout = qiskit_circuit._layout.final_layout  # noqa: SLF001
-
-    initial_logical_qubit_indices = _get_logical_qubit_indices(mqt_computation, initial_layout)
-    final_logical_qubit_indices = _get_logical_qubit_indices(mqt_computation, final_layout)
-
-    for physical_qubit, logical_qubit in initial_layout.get_physical_bits().items():
-        if logical_qubit in initial_logical_qubit_indices:
-            mqt_computation.initial_layout[physical_qubit] = initial_logical_qubit_indices[logical_qubit]
-
-    for physical_qubit, logical_qubit in final_layout.get_physical_bits().items():
-        if logical_qubit in final_logical_qubit_indices:
-            mqt_computation.output_permutation[physical_qubit] = final_logical_qubit_indices[logical_qubit]
+    # process the final layout
+    print("final_layout: ", final_layout)
 
 
 def _import_definition(
-    mqt_computation: QuantumComputation | CompoundOperation,
-    qiskit_circuit: QuantumCircuit,
-    qargs: Sequence[int],
-    cargs: Sequence[int],
-    qubit_map: dict[Qubit, int],
-    clbit_map: dict[Clbit, int],
+    qc: QuantumComputation | CompoundOperation,
+    circ: QuantumCircuit,
+    qargs: Sequence[Qubit],
+    cargs: Sequence[Qubit],
+    qubit_map: Mapping[Qubit, int],
+    clbit_map: Mapping[Clbit, int],
 ) -> list[float | ParameterExpression]:
     qarg_map = {}
-    for def_qubit, qarg in zip(qiskit_circuit.qubits, qargs):
+    for def_qubit, qarg in zip(circ.qubits, qargs):
         qarg_map[def_qubit] = qarg
     carg_map = {}
-    for def_clbit, carg in zip(qiskit_circuit.clbits, cargs):
+    for def_clbit, carg in zip(circ.clbits, cargs):
         carg_map[def_clbit] = carg
 
-    comp_op = CompoundOperation(mqt_computation.num_qubits)
+    qc.append(CompoundOperation(qc.num_qubits))
+    comp_op = cast(CompoundOperation, qc[-1])
 
     params = []
-    for instruction, qargs, cargs in qiskit_circuit.data:
+    for instruction, qargs, cargs in circ.data:
         mapped_qargs = [qarg_map[qarg] for qarg in qargs]
         mapped_cargs = [carg_map[carg] for carg in cargs]
         instruction_params = instruction.params
@@ -334,5 +434,4 @@ def _import_definition(
             comp_op, instruction, mapped_qargs, mapped_cargs, instruction_params, qubit_map, clbit_map
         )
         params.extend(new_params)
-    mqt_computation.append(comp_op)
     return params
