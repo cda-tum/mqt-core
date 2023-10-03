@@ -131,7 +131,7 @@ TEST_F(SymbolicTest, Gates) {
 
 TEST_F(SymbolicTest, TestClone) {
   symQc.u3(0, {1_pc, 2_nc}, xMonom, yMonom, zMonom);
-  const auto& clonedQc = symQc.clone();
+  const auto clonedQc = symQc;
 
   symQc.u3(0, xMonom, yMonom, zMonom);
   EXPECT_NE(symQc.getNops(), clonedQc.getNops());

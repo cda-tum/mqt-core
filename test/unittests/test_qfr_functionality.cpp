@@ -778,7 +778,7 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
   qc.reset(0);
   qc.reset({1, 2});
 
-  auto qcCloned = qc.clone();
+  const auto qcCloned = qc;
   ASSERT_EQ(qc.size(), qcCloned.size());
   ASSERT_EQ(qcCloned.getGlobalPhase(), PI);
 }
@@ -792,7 +792,7 @@ TEST_F(QFRFunctionality, cloningDifferentOperations) {
   qc.emplace_back(comp.asOperation());
   qc.classicControlled(qc::X, 0, qc.getCregs().at("c"), 1);
 
-  auto qcCloned = qc.clone();
+  const auto qcCloned = qc;
   ASSERT_EQ(qc.size(), qcCloned.size());
 }
 
