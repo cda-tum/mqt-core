@@ -139,7 +139,7 @@ inline std::string toString(const OpType& opType) {
   case Teleportation:
     return "teleportation";
   case ClassicControlled:
-    return "classic controlled";
+    return "classic_controlled";
   default:
     throw std::invalid_argument("Invalid OpType!");
   }
@@ -237,7 +237,7 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"reset", OpType::Reset},
         {"barrier", OpType::Barrier},
         {"teleportation", OpType::Teleportation},
-        {"classic controlled", OpType::ClassicControlled},
+        {"classic_controlled", OpType::ClassicControlled},
         {"compound", OpType::Compound},
 };
 
