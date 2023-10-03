@@ -55,12 +55,6 @@ static constexpr fp PI_2 = static_cast<fp>(
 static constexpr fp PI_4 = static_cast<fp>(
     0.785398163397448309615660845819875721049292349843776455243L);
 
-using CVec = std::vector<std::complex<fp>>;
-using CMat = std::vector<CVec>;
-
-// use hash maps for representing sparse vectors of probabilities
-using ProbabilityVector = std::unordered_map<std::size_t, fp>;
-
 static constexpr std::uint64_t SERIALIZATION_VERSION = 1;
 
 /**
@@ -90,6 +84,38 @@ constexpr std::size_t murmur64(std::size_t k) noexcept {
 constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) noexcept {
   lhs ^= rhs + 0x9e3779b97f4a7c15ULL + (lhs << 6) + (lhs >> 2);
   return lhs;
+}
+
+struct PairHash {
+  std::size_t
+  operator()(const std::pair<std::size_t, std::size_t>& p) const noexcept {
+    return combineHash(p.first, p.second);
+  }
+};
+
+using CVec = std::vector<std::complex<fp>>;
+using SparseCVec = std::unordered_map<std::size_t, std::complex<fp>>;
+using SparsePVec = std::unordered_map<std::size_t, fp>;
+using SparsePVecStrKeys = std::unordered_map<std::string, fp>;
+using CMat = std::vector<CVec>;
+using SparseCMat = std::unordered_map<std::pair<std::size_t, std::size_t>,
+                                      std::complex<fp>, PairHash>;
+
+/**
+ * @brief Converts a decimal number to a binary string (big endian)
+ * @param value The decimal number to convert
+ * @param nbits The number of bits to use for the binary representation
+ * @return The binary representation of the decimal number
+ */
+[[nodiscard]] static inline std::string
+intToBinaryString(const std::size_t value, const std::size_t nbits) {
+  std::string binary(nbits, '0');
+  for (std::size_t j = 0; j < nbits; ++j) {
+    if ((value & (1U << j)) != 0U) {
+      binary[nbits - 1 - j] = '1';
+    }
+  }
+  return binary;
 }
 
 // calculates the Units in Last Place (ULP) distance of two floating point

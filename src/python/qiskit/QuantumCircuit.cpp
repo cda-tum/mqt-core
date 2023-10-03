@@ -468,10 +468,12 @@ void qc::qiskit::QuantumCircuit::importInitialLayout(qc::QuantumComputation& qc,
   const auto physicalQubits =
       layout.attr("get_physical_bits")().cast<py::dict>();
 
-  // create initial layout
+  // create initial layout (and assume identical output permutation)
   for (const auto& [physicalQubit, logicalQubit] : physicalQubits) {
     if (logicalQubitIndices.contains(logicalQubit)) {
       qc.initialLayout[physicalQubit.cast<Qubit>()] =
+          logicalQubitIndices[logicalQubit].cast<Qubit>();
+      qc.outputPermutation[physicalQubit.cast<Qubit>()] =
           logicalQubitIndices[logicalQubit].cast<Qubit>();
     }
   }

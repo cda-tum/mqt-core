@@ -28,6 +28,8 @@ package_add_test(
   algorithms/test_qpe.cpp
   algorithms/test_wstate.cpp)
 
+package_add_test(${PROJECT_NAME}-test-dd-edge ${PROJECT_NAME}-dd dd/test_edge_functionality.cpp)
+
 package_add_test(
   ${PROJECT_NAME}-test-zx
   ${PROJECT_NAME}-zx

@@ -73,7 +73,7 @@ TEST_P(QFT, Functionality) {
 
   qc->printStatistics(std::cout);
   // QFT DD should consist of 2^n nodes
-  ASSERT_EQ(dd->size(func), std::pow(2, nqubits));
+  ASSERT_EQ(func.size(), std::pow(2, nqubits));
 
   // Force garbage collection of compute table and complex table
   dd->garbageCollect(true);
@@ -92,16 +92,16 @@ TEST_P(QFT, Functionality) {
   // first row and first column should consist only of (1/sqrt(2))**nqubits
   for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
        ++i) {
-    auto c = dd->getValueByPath(func, 0, i);
-    EXPECT_NEAR(c.r,
+    auto c = func.getValueByIndex(0, i);
+    EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
-    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
-    c = dd->getValueByPath(func, i, 0);
-    EXPECT_NEAR(c.r,
+    EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
+    c = func.getValueByIndex(i, 0);
+    EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
-    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
+    EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
   }
 }
 
@@ -114,7 +114,7 @@ TEST_P(QFT, FunctionalityRecursive) {
 
   qc->printStatistics(std::cout);
   // QFT DD should consist of 2^n nodes
-  ASSERT_EQ(dd->size(func), std::pow(2, nqubits));
+  ASSERT_EQ(func.size(), std::pow(2, nqubits));
 
   // Force garbage collection of compute table and complex table
   dd->garbageCollect(true);
@@ -133,16 +133,16 @@ TEST_P(QFT, FunctionalityRecursive) {
   // first row and first column should consist only of (1/sqrt(2))**nqubits
   for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
        ++i) {
-    auto c = dd->getValueByPath(func, 0, i);
-    EXPECT_NEAR(c.r,
+    auto c = func.getValueByIndex(0, i);
+    EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
-    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
-    c = dd->getValueByPath(func, i, 0);
-    EXPECT_NEAR(c.r,
+    EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
+    c = func.getValueByIndex(i, 0);
+    EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
-    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
+    EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
   }
 }
 
@@ -158,7 +158,7 @@ TEST_P(QFT, Simulation) {
   qc->printStatistics(std::cout);
 
   // QFT DD |0...0> sim should consist of n nodes
-  ASSERT_EQ(dd->size(sim), nqubits + 1);
+  ASSERT_EQ(sim.size(), nqubits + 1);
 
   // Force garbage collection of compute table and complex table
   dd->garbageCollect(true);
@@ -170,11 +170,11 @@ TEST_P(QFT, Simulation) {
   // first column should consist only of sqrt(0.5)^n's
   for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
        ++i) {
-    auto c = dd->getValueByPath(sim, i);
-    EXPECT_NEAR(c.r,
+    auto c = sim.getValueByIndex(i);
+    EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
-    EXPECT_NEAR(c.i, 0, dd::RealNumber::eps);
+    EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
   }
 }
 
