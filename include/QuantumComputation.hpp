@@ -1032,6 +1032,30 @@ public:
   }
 
   /**
+   * @brief Invert the circuit
+   * @details Inverts the circuit by inverting all operations and reversing the
+   * order of the operations. Additionally, the initial layout and output
+   * permutation are swapped. If the circuit has different initial
+   * layout and output permutation sizes, the initial layout and output
+   * permutation will not be swapped.
+   */
+  void invert() {
+    for (auto& op : ops) {
+      op->invert();
+    }
+    std::reverse(ops.begin(), ops.end());
+
+    if (initialLayout.size() == outputPermutation.size()) {
+      std::swap(initialLayout, outputPermutation);
+    } else {
+      std::cerr << "Warning: Inverting a circuit with different initial layout "
+                   "and output permutation sizes. This is not supported yet.\n"
+                   "The circuit will be inverted, but the initial layout and "
+                   "output permutation will not be swapped.\n";
+    }
+  }
+
+  /**
    * printing
    */
   virtual std::ostream& print(std::ostream& os) const;
