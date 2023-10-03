@@ -1180,7 +1180,11 @@ public:
   }
 
   [[nodiscard]] const auto& at(const std::size_t i) const { return ops.at(i); }
+  [[nodiscard]] auto& at(const std::size_t i) { return ops.at(i); }
   [[nodiscard]] const auto& front() const { return ops.front(); }
   [[nodiscard]] const auto& back() const { return ops.back(); }
+
+  // reverse
+  void reverse() { std::reverse(ops.begin(), ops.end()); }
 };
 } // namespace qc
