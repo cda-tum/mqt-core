@@ -19,8 +19,6 @@ void registerCompoundOperation(py::module& m) {
            }),
            "nq"_a, "ops"_a,
            "Create a compound operation from a list of operations.")
-      .def_property_readonly("ops", &qc::CompoundOperation::getOps,
-                             "Return list of sub-operations.")
       .def("__len__", &qc::CompoundOperation::size,
            "Return number of sub-operations.")
       .def(
