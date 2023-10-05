@@ -39,12 +39,19 @@ test = ["pytest>=7.0", "mqt.core[qiskit]"]
 coverage = ["mqt.core[test]", "pytest-cov"]
 docs = [
     "furo>=2023.08.17",
-    "sphinx~=7.0",
+    "sphinx",
     "myst_parser>=0.13",
     "setuptools-scm>=7",
     "sphinx-copybutton",
     "sphinx_design",
     "sphinxext-opengraph",
+    "sphinxcontrib-bibtex>=2.4.2",
+    "pybtex>=0.24",
+    "ipython",
+    "ipykernel",
+    "nbsphinx",
+    "sphinx-autodoc-typehints",
+    "qiskit-terra[visualization]"
 ]
 qiskit = [
    "qiskit-terra>=0.20.2",

@@ -5,6 +5,15 @@ from __future__ import annotations
 import warnings
 from importlib import metadata
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+import pybtex.plugin
+from pybtex.style.formatting.unsrt import Style as UnsrtStyle
+from pybtex.style.template import field, href
+
+if TYPE_CHECKING:
+    from pybtex.database import Entry
+    from pybtex.richtext import HRef
 
 ROOT = Path(__file__).parent.parent.resolve()
 
@@ -81,7 +90,6 @@ intersphinx_mapping = {
     "qecc": ("https://mqt.readthedocs.io/projects/qecc/en/latest/", None),
     "syrec": ("https://mqt.readthedocs.io/projects/syrec/en/latest/", None),
 }
-intersphinx_disabled_reftypes = ["*"]
 
 myst_enable_extensions = [
     "colon_fence",
@@ -93,9 +101,41 @@ myst_substitutions = {
     "version": version,
 }
 
+nbsphinx_execute = "auto"
+highlight_language = "python3"
+nbsphinx_execute_arguments = [
+    "--InlineBackend.figure_formats={'svg', 'pdf'}",
+    "--InlineBackend.rc=figure.dpi=200",
+]
+nbsphinx_kernel_name = "python3"
+
+autosectionlabel_prefix_document = True
+
+
+class CDAStyle(UnsrtStyle):
+    """Custom style for including PDF links."""
+
+    def format_url(self, _e: Entry) -> HRef:  # noqa: ANN101
+        """Format URL field as a link to the PDF."""
+        url = field("url", raw=True)
+        return href()[url, "[PDF]"]
+
+
+pybtex.plugin.register_plugin("pybtex.style.formatting", "cda_style", CDAStyle)
+
+bibtex_bibfiles = ["refs.bib"]
+bibtex_default_style = "cda_style"
+
 copybutton_prompt_text = r"(?:\(venv\) )?(?:\[.*\] )?\$ "
 copybutton_prompt_is_regexp = True
 copybutton_line_continuation_character = "\\"
+
+# autosummary_generate = True
+
+# typehints_use_rtype = False
+# napoleon_use_rtype = False
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = "furo"
