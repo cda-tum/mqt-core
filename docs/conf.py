@@ -44,23 +44,18 @@ project_copyright = "2023, Chair for Design Automation, Technical University of 
 
 extensions = [
     "myst_parser",
+    "nbsphinx",
+    "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
-    "sphinx_design",
-    "sphinx_copybutton",
-    "sphinxext.opengraph",
-    "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",
-    "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
     "sphinx.ext.mathjax",
-    "sphinx.ext.intersphinx",
+    "sphinx.ext.napoleon",
+    "sphinx_copybutton",
+    "sphinx_design",
+    "sphinxext.opengraph",
+    "sphinx.ext.autosummary",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.viewcode",
-    "sphinx.ext.githubpages",
-    "sphinx_copybutton",
-    "sphinxext.opengraph",
     "sphinx_autodoc_typehints",
-    "nbsphinx",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -76,9 +71,9 @@ exclude_patterns = [
 
 pygments_style = "colorful"
 
-add_module_names = False
+# add_module_names = False
 
-modindex_common_prefix = ["mqt.core."]
+# modindex_common_prefix = ["mqt.core."]
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
@@ -134,8 +129,10 @@ copybutton_line_continuation_character = "\\"
 
 # typehints_use_rtype = False
 # napoleon_use_rtype = False
-napoleon_google_docstring = True
-napoleon_numpy_docstring = False
+# napoleon_google_docstring = True
+# napoleon_numpy_docstring = False
+
+# autodoc_mock_imports = ["mqt.core._core"]
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = "furo"

@@ -20,3 +20,26 @@ For a full list of tools and libraries, please visit the {doc}`MQT website <mqt:
 
 self
 ```
+
+```{toctree}
+:maxdepth: 2
+:caption: User Guide
+
+quickstart
+```
+
+```{toctree}
+:maxdepth: 2
+:titlesonly:
+:caption: Developers
+:glob:
+
+contributing
+support
+```
+
+```{toctree}
+:caption: API Reference
+
+api/modules
+```
