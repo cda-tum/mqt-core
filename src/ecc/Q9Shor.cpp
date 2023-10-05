@@ -12,15 +12,15 @@ void Q9Shor::writeEncoding() {
       controls.at(j) = {static_cast<Qubit>(i + 3 * j * nQubits),
                         qc::Control::Type::Pos};
       if (j > 0) {
-        qcMapped->x(controls[0], static_cast<Qubit>(i + 3 * j * nQubits));
+        qcMapped->cx(controls[0], static_cast<Qubit>(i + 3 * j * nQubits));
       }
     }
     for (std::size_t j = 0; j < controls.size(); j++) {
       qcMapped->h(static_cast<Qubit>(i + 3 * j * nQubits));
-      qcMapped->x(controls.at(j),
-                  static_cast<Qubit>(i + (3 * j + 1) * nQubits));
-      qcMapped->x(controls.at(j),
-                  static_cast<Qubit>(i + (3 * j + 2) * nQubits));
+      qcMapped->cx(controls.at(j),
+                   static_cast<Qubit>(i + (3 * j + 1) * nQubits));
+      qcMapped->cx(controls.at(j),
+                   static_cast<Qubit>(i + (3 * j + 2) * nQubits));
     }
   }
   gatesWritten = true;
@@ -61,16 +61,16 @@ void Q9Shor::measureAndCorrect() {
     }
     // x errors = indirectly via controlled z
     for (std::size_t j = 0; j < 3; j++) {
-      qcMapped->z(ancillaControls.at(2 * j), qubits.at(3 * j));
-      qcMapped->z(ancillaControls.at(2 * j), qubits.at(3 * j + 1));
-      qcMapped->z(ancillaControls.at(2 * j + 1), qubits.at(3 * j + 1));
-      qcMapped->z(ancillaControls.at(2 * j + 1), qubits.at(3 * j + 2));
+      qcMapped->cz(ancillaControls.at(2 * j), qubits.at(3 * j));
+      qcMapped->cz(ancillaControls.at(2 * j), qubits.at(3 * j + 1));
+      qcMapped->cz(ancillaControls.at(2 * j + 1), qubits.at(3 * j + 1));
+      qcMapped->cz(ancillaControls.at(2 * j + 1), qubits.at(3 * j + 2));
     }
 
     // z errors = indirectly via controlled x/C-NOT
     for (std::size_t j = 0; j < 6; j++) {
-      qcMapped->x(ancillaControls[6], qubits.at(j));
-      qcMapped->x(ancillaControls[7], qubits.at(3 + j));
+      qcMapped->cx(ancillaControls[6], qubits.at(j));
+      qcMapped->cx(ancillaControls[7], qubits.at(3 + j));
     }
 
     for (Qubit const j : ancillaQubits) {
@@ -120,15 +120,15 @@ void Q9Shor::writeDecoding() {
           static_cast<Qubit>(i + 3 * j * nQubits),
           static_cast<Qubit>(i + (3 * j + 1) * nQubits),
           static_cast<Qubit>(i + (3 * j + 2) * nQubits)};
-      qcMapped->x(ci.at(3 * j), targets.at(1));
-      qcMapped->x(ci.at(3 * j), targets.at(2));
-      qcMapped->x({ci.at(3 * j + 1), ci.at(3 * j + 2)}, targets.at(0));
+      qcMapped->cx(ci.at(3 * j), targets.at(1));
+      qcMapped->cx(ci.at(3 * j), targets.at(2));
+      qcMapped->mcx({ci.at(3 * j + 1), ci.at(3 * j + 2)}, targets.at(0));
       qcMapped->h(targets.at(0));
     }
 
-    qcMapped->x(ci[0], static_cast<Qubit>(i + 3 * nQubits));
-    qcMapped->x(ci[0], static_cast<Qubit>(i + 6 * nQubits));
-    qcMapped->x({ci.at(3), ci.at(6)}, i);
+    qcMapped->cx(ci[0], static_cast<Qubit>(i + 3 * nQubits));
+    qcMapped->cx(ci[0], static_cast<Qubit>(i + 6 * nQubits));
+    qcMapped->mcx({ci.at(3), ci.at(6)}, i);
   }
   isDecoded = true;
 }

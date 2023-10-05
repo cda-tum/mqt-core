@@ -63,13 +63,13 @@ void QFT::createCircuit() {
       for (std::size_t j = i; j > 0; --j) {
         const auto d = static_cast<Qubit>(q - j);
         if (j == 1) {
-          s(Control{q}, d);
+          cs(q, d);
         } else if (j == 2) {
-          t(Control{q}, d);
+          ct(q, d);
         } else {
           const auto powerOfTwo = std::pow(2., j);
           const auto lambda = PI / powerOfTwo;
-          phase(lambda, Control{q}, d);
+          cp(lambda, q, d);
         }
       }
 

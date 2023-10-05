@@ -132,7 +132,7 @@ std::ostream& GoogleRandomCircuitSampling::print(std::ostream& os) const {
       os << std::setw(static_cast<int>(std::log10(getNops()) + 1.)) << ++j
          << ": ";
       op->print(os, initialLayout);
-      os << std::endl;
+      os << "\n";
     }
   }
   return os;
@@ -142,11 +142,13 @@ std::ostream&
 GoogleRandomCircuitSampling::printStatistics(std::ostream& os) const {
   os << "GoogleRandomCircuitSampling Statistics:\n";
   os << "\tLayout: "
-     << ((layout == Rectangular) ? "Rectangular" : "Bristlecone") << std::endl;
-  os << "\tn: " << static_cast<std::size_t>(nqubits) << std::endl;
-  os << "\tm: " << getNops() << std::endl;
-  os << "\tc: 1 + " << cycles.size() - 2 << " + 1" << std::endl;
-  os << "--------------" << std::endl;
+     << ((layout == Rectangular) ? "Rectangular" : "Bristlecone") << "\n";
+  os << "\tn: " << static_cast<std::size_t>(nqubits) << "\n";
+  os << "\tm: " << getNops() << "\n";
+  os << "\tc: 1 + " << cycles.size() - 2 << " + 1"
+     << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 } // namespace qc

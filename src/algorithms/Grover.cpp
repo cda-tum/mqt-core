@@ -14,11 +14,11 @@ void Grover::setup(QuantumComputation& qc) const {
 void Grover::oracle(QuantumComputation& qc) const {
   Controls controls{};
   for (std::size_t i = 0; i < nDataQubits; ++i) {
-    controls.emplace(Control{static_cast<Qubit>(i), targetValue.test(i)
-                                                        ? Control::Type::Pos
-                                                        : Control::Type::Neg});
+    controls.emplace(static_cast<Qubit>(i), targetValue.test(i)
+                                                ? Control::Type::Pos
+                                                : Control::Type::Neg);
   }
-  qc.z(controls, static_cast<Qubit>(nDataQubits));
+  qc.mcz(controls, static_cast<Qubit>(nDataQubits));
 }
 
 void Grover::diffusion(QuantumComputation& qc) const {
@@ -32,9 +32,9 @@ void Grover::diffusion(QuantumComputation& qc) const {
   qc.h(0);
   Controls controls{};
   for (Qubit j = 1; j < nDataQubits; ++j) {
-    controls.emplace(Control{j});
+    controls.emplace(j);
   }
-  qc.x(controls, 0);
+  qc.mcx(controls, 0);
   qc.h(0);
 
   for (auto i = static_cast<std::make_signed_t<Qubit>>(nDataQubits - 1); i >= 0;

@@ -369,7 +369,7 @@ TEST_F(IO, PeresDumpIsValid) {
 
 TEST_F(IO, PeresdagDumpIsValid) {
   qc->addQubitRegister(2);
-  qc->peresdag(0, 1);
+  qc->peresdg(0, 1);
   std::cout << *qc << "\n";
   std::stringstream ss{};
   qc->dumpOpenQASM(ss);

@@ -23,6 +23,10 @@ struct Control {
     oss << "\")";
     return oss.str();
   }
+
+  // Explicitly allow implicit conversion from `Qubit` to `Control`
+  // NOLINTNEXTLINE(google-explicit-constructor)
+  Control(const Qubit q = {}, const Type t = Type::Pos) : qubit(q), type(t) {}
 };
 
 inline bool operator<(const Control& lhs, const Control& rhs) {

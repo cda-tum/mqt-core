@@ -87,8 +87,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
     } else if (cmd == ".DEFINE") {
       // TODO: Defines currently not supported
       std::cerr << "[WARN] File contains 'define' statement, which is "
-                   "currently not supported and thus simply skipped."
-                << std::endl;
+                   "currently not supported and thus simply skipped.\n";
       while (cmd != ".ENDDEFINE") {
         is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         is >> cmd;
@@ -200,9 +199,9 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
         throw QFRException("[real parser] l:" + std::to_string(line) +
                            " msg: Label " + label + " not found!");
       }
-      controls.emplace_back(
-          Control{iter->second.first,
-                  negativeControl ? Control::Type::Neg : Control::Type::Pos});
+      controls.emplace_back(iter->second.first, negativeControl
+                                                    ? Control::Type::Neg
+                                                    : Control::Type::Pos);
     }
 
     if (!(iss >> label)) {
@@ -233,8 +232,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
           nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate);
       break;
     case X:
-      emplace_back<StandardOperation>(
-          nqubits, Controls{controls.cbegin(), controls.cend()}, target);
+      mcx(Controls{controls.cbegin(), controls.cend()}, target);
       break;
     case RX:
     case RY:
@@ -256,8 +254,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
       break;
     }
     default:
-      std::cerr << "Unsupported operation encountered:  " << gate << "!"
-                << std::endl;
+      std::cerr << "Unsupported operation encountered:  " << gate << "!\n";
       break;
     }
   }

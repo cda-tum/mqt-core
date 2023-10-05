@@ -21,7 +21,7 @@ void qc::QuantumComputation::importGRCS(std::istream& is) {
     if (identifier == "cz") {
       ss >> control;
       ss >> target;
-      z(qc::Control{control}, target);
+      cz(control, target);
     } else if (identifier == "is") {
       ss >> control;
       ss >> target;

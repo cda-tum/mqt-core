@@ -73,7 +73,7 @@ protected:
     qc->addClassicalRegister(1U, "resultReg");
     qc->h(0);
     qc->t(0);
-    qc->tdag(0);
+    qc->tdg(0);
     qc->h(0);
     qc->measure(0, {"resultReg", 0});
     return qc;
@@ -95,7 +95,7 @@ protected:
     qc->addQubitRegister(2U);
     qc->addClassicalRegister(2U, "resultReg");
     qc->x(0);
-    qc->x(0_pc, 1);
+    qc->cx(0, 1);
     qc->measure(0, {"resultReg", 0});
     qc->measure(1, {"resultReg", 1});
     return qc;
@@ -107,7 +107,7 @@ protected:
     qc->addClassicalRegister(2U, "resultReg");
     qc->x(0);
     qc->h(1);
-    qc->z(0_pc, 1);
+    qc->cz(0, 1);
     qc->h(1);
     qc->measure(0, {"resultReg", 0});
     qc->measure(1, {"resultReg", 1});
@@ -119,7 +119,7 @@ protected:
     qc->addQubitRegister(2U);
     qc->addClassicalRegister(2U, "resultReg");
     qc->x(0);
-    qc->y(0_pc, 1);
+    qc->cy(0, 1);
     qc->measure(0, {"resultReg", 0});
     qc->measure(1, {"resultReg", 1});
     return qc;

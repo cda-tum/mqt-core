@@ -136,10 +136,10 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
 TEST_F(ZXFunctionalityTest, Phase) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(2);
-  qc.phase(zx::PI / 4, 0);
-  qc.phase(zx::PI / 4, 1_pc, 0);
-  qc.phase(-zx::PI / 4, 1_pc, 0);
-  qc.phase(-zx::PI / 4, 0);
+  qc.p(zx::PI / 4, 0);
+  qc.cp(zx::PI / 4, 1, 0);
+  qc.cp(-zx::PI / 4, 1, 0);
+  qc.p(-zx::PI / 4, 0);
 
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
   zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
@@ -170,7 +170,7 @@ TEST_F(ZXFunctionalityTest, Compound) {
 TEST_F(ZXFunctionalityTest, UnsupportedMultiControl) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(4);
-  qc.x({1_pc, 2_pc, 3_pc}, 0);
+  qc.mcx({1, 2, 3}, 0);
   EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
   EXPECT_THROW(const zx::ZXDiagram diag =
                    zx::FunctionalityConstruction::buildFunctionality(&qc),
@@ -180,7 +180,7 @@ TEST_F(ZXFunctionalityTest, UnsupportedMultiControl) {
 TEST_F(ZXFunctionalityTest, UnsupportedControl) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(2);
-  qc.y(1_pc, 0);
+  qc.cy(1, 0);
   EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
   EXPECT_THROW(const zx::ZXDiagram diag =
                    zx::FunctionalityConstruction::buildFunctionality(&qc),
@@ -190,7 +190,7 @@ TEST_F(ZXFunctionalityTest, UnsupportedControl) {
 TEST_F(ZXFunctionalityTest, UnsupportedControl2) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(3);
-  qc.y({1_pc, 2_pc}, 0);
+  qc.mcy({1, 2}, 0);
   EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
   EXPECT_THROW(const zx::ZXDiagram diag =
                    zx::FunctionalityConstruction::buildFunctionality(&qc),
@@ -237,7 +237,7 @@ TEST_F(ZXFunctionalityTest, RZ) {
   qc.rz(zx::PI / 8, 0);
 
   auto qcPrime = qc::QuantumComputation(1);
-  qcPrime.phase(zx::PI / 8, 0);
+  qcPrime.p(zx::PI / 8, 0);
 
   auto d = zx::FunctionalityConstruction::buildFunctionality(&qc);
   auto dPrime = zx::FunctionalityConstruction::buildFunctionality(&qcPrime);
@@ -259,8 +259,8 @@ TEST_F(ZXFunctionalityTest, ISWAP) {
   qcPrime.s(0);
   qcPrime.s(1);
   qcPrime.h(0);
-  qcPrime.x(0_pc, 1);
-  qcPrime.x(1_pc, 0);
+  qcPrime.cx(0, 1);
+  qcPrime.cx(1, 0);
   qc.h(1);
 
   auto d = zx::FunctionalityConstruction::buildFunctionality(&qc);

@@ -72,7 +72,7 @@ void BernsteinVazirani::createCircuit() {
 
       // apply controlled-Z gate according to secret bitstring
       if (s.test(i)) {
-        z(1_pc, 0);
+        cz(1, 0);
       }
 
       // final Hadamard
@@ -95,7 +95,7 @@ void BernsteinVazirani::createCircuit() {
     // apply controlled-Z gates according to secret bitstring
     for (std::size_t i = 1; i <= bitwidth; ++i) {
       if (s.test(i - 1)) {
-        z(qc::Control{static_cast<Qubit>(i)}, 0);
+        cz(static_cast<Qubit>(i), 0);
       }
     }
 

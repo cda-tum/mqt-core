@@ -207,11 +207,9 @@ void QuantumComputation::initializeIOMapping() {
     }
 
     // if the qubit is not an output, mark it as garbage
-    const bool isOutput =
-        std::any_of(outputPermutation.begin(), outputPermutation.end(),
-                    [&logicalIn = logicalIn](const auto& p) {
-                      return p.second == logicalIn;
-                    });
+    const bool isOutput = std::any_of(
+        outputPermutation.begin(), outputPermutation.end(),
+        [&logicIn = logicalIn](const auto& p) { return p.second == logicIn; });
     if (!isOutput) {
       setLogicalQubitGarbage(logicalIn);
     }
@@ -661,7 +659,7 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
   for (const auto& q : inverseInitialLayout) {
     of << " " << static_cast<std::size_t>(q.second);
   }
-  of << std::endl;
+  of << "\n";
 
   Permutation inverseOutputPermutation{};
   for (const auto& q : outputPermutation) {
@@ -671,29 +669,29 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
   for (const auto& q : inverseOutputPermutation) {
     of << " " << q.second;
   }
-  of << std::endl;
+  of << "\n";
 
-  of << "OPENQASM 2.0;" << std::endl;
-  of << "include \"qelib1.inc\";" << std::endl;
+  of << "OPENQASM 2.0;\n";
+  of << "include \"qelib1.inc\";\n";
   if (std::any_of(std::begin(ops), std::end(ops), [](const auto& op) {
         return op->getType() == OpType::Teleportation;
       })) {
-    of << "opaque teleport src, anc, tgt;" << std::endl;
+    of << "opaque teleport src, anc, tgt;\n";
   }
   if (!qregs.empty()) {
     printSortedRegisters(qregs, "qreg", of);
   } else if (nqubits > 0) {
-    of << "qreg q[" << nqubits << "];" << std::endl;
+    of << "qreg q[" << nqubits << "];\n";
   }
   if (!cregs.empty()) {
     printSortedRegisters(cregs, "creg", of);
   } else if (nclassics > 0) {
-    of << "creg c[" << nclassics << "];" << std::endl;
+    of << "creg c[" << nclassics << "];\n";
   }
   if (!ancregs.empty()) {
     printSortedRegisters(ancregs, "qreg", of);
   } else if (nancillae > 0) {
-    of << "qreg anc[" << nancillae << "];" << std::endl;
+    of << "qreg anc[" << nancillae << "];\n";
   }
 
   RegisterNames qregnames{};
@@ -888,7 +886,7 @@ std::ostream&
 QuantumComputation::printPermutation(const Permutation& permutation,
                                      std::ostream& os) {
   for (const auto& [physical, logical] : permutation) {
-    os << "\t" << physical << ": " << logical << std::endl;
+    os << "\t" << physical << ": " << logical << "\n";
   }
   return os;
 }
@@ -899,21 +897,21 @@ std::ostream& QuantumComputation::printRegisters(std::ostream& os) const {
     os << " {" << qreg.first << ", {" << qreg.second.first << ", "
        << qreg.second.second << "}}";
   }
-  os << std::endl;
+  os << "\n";
   if (!ancregs.empty()) {
     os << "ancregs:";
     for (const auto& ancreg : ancregs) {
       os << " {" << ancreg.first << ", {" << ancreg.second.first << ", "
          << ancreg.second.second << "}}";
     }
-    os << std::endl;
+    os << "\n";
   }
   os << "cregs:";
   for (const auto& creg : cregs) {
     os << " {" << creg.first << ", {" << creg.second.first << ", "
        << creg.second.second << "}}";
   }
-  os << std::endl;
+  os << "\n";
   return os;
 }
 

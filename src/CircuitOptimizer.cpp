@@ -894,7 +894,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
             const auto controlQubit = measurementQubit;
             const auto controlType =
                 (expectedValue == 1) ? Control::Type::Pos : Control::Type::Neg;
-            controls.emplace(Control{controlQubit, controlType});
+            controls.emplace(controlQubit, controlType);
 
             const auto parameters = standardOp->getParameter();
 

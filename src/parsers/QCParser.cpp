@@ -264,16 +264,16 @@ void qc::QuantumComputation::readQCGateDescriptions(
       label = qubits.substr(0, pos);
       if (label.back() == '\'') {
         label.erase(label.size() - 1);
-        controls.emplace_back(Control{varMap.at(label), Control::Type::Neg});
+        controls.emplace_back(varMap.at(label), Control::Type::Neg);
       } else {
-        controls.emplace_back(Control{varMap.at(label)});
+        controls.emplace_back(varMap.at(label));
       }
       qubits.erase(0, pos + 1);
     }
     // delete whitespace at the end
     qubits.erase(std::remove(qubits.begin(), qubits.end(), delimiter),
                  qubits.end());
-    controls.emplace_back(Control{varMap.at(qubits)});
+    controls.emplace_back(varMap.at(qubits));
 
     if (controls.size() > nqubits + nancillae) {
       throw QFRException(
@@ -285,7 +285,7 @@ void qc::QuantumComputation::readQCGateDescriptions(
     if (gate == X) {
       const Qubit target = controls.back().qubit;
       controls.pop_back();
-      x(Controls{controls.cbegin(), controls.cend()}, target);
+      mcx(Controls{controls.cbegin(), controls.cend()}, target);
     } else if (gate == H || gate == Y || gate == Z || gate == S ||
                gate == Sdag || gate == T || gate == Tdag) {
       const Qubit target = controls.back().qubit;
@@ -297,7 +297,7 @@ void qc::QuantumComputation::readQCGateDescriptions(
       controls.pop_back();
       const Qubit target1 = controls.back().qubit;
       controls.pop_back();
-      swap(Controls{controls.cbegin(), controls.cend()}, target0, target1);
+      mcswap(Controls{controls.cbegin(), controls.cend()}, target0, target1);
     } else if (gate == RX || gate == RY || gate == RZ) {
       const Qubit target = controls.back().qubit;
       controls.pop_back();

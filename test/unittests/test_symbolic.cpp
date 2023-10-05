@@ -27,52 +27,52 @@ TEST_F(SymbolicTest, Gates) {
   auto zVal = PI / 3;
 
   // test all kinds of symbolic operations supported
-  symQc.u(xMonom, yMonom, zMonom, {1_pc, 2_nc}, 0);
-  symQc.u(xMonom, yMonom, zMonom, 1_pc, 0);
+  symQc.mcu(xMonom, yMonom, zMonom, {1, 2_nc}, 0);
+  symQc.cu(xMonom, yMonom, zMonom, 1, 0);
   symQc.u(xMonom, yMonom, zMonom, 0);
 
-  symQc.u2(xMonom, yMonom, {1_pc, 2_nc}, 0);
-  symQc.u2(xMonom, yMonom, 1_pc, 0);
+  symQc.mcu2(xMonom, yMonom, {1, 2_nc}, 0);
+  symQc.cu2(xMonom, yMonom, 1, 0);
   symQc.u2(xMonom, yMonom, 0);
 
-  symQc.phase(xMonom, {1_pc, 2_nc}, 0);
-  symQc.phase(xMonom, 1_pc, 0);
-  symQc.phase(xMonom, 0);
+  symQc.mcp(xMonom, {1, 2_nc}, 0);
+  symQc.cp(xMonom, 1, 0);
+  symQc.p(xMonom, 0);
 
-  symQc.rx(xMonom, {1_pc, 2_nc}, 0);
-  symQc.rx(xMonom, 1_pc, 0);
+  symQc.mcrx(xMonom, {1, 2_nc}, 0);
+  symQc.crx(xMonom, 1, 0);
   symQc.rx(xMonom, 0);
 
-  symQc.ry(xMonom, {1_pc, 2_nc}, 0);
-  symQc.ry(xMonom, 1_pc, 0);
+  symQc.mcry(xMonom, {1, 2_nc}, 0);
+  symQc.cry(xMonom, 1, 0);
   symQc.ry(xMonom, 0);
 
-  symQc.rz(xMonom, {1_pc, 2_nc}, 0);
-  symQc.rz(xMonom, 1_pc, 0);
+  symQc.mcrz(xMonom, {1, 2_nc}, 0);
+  symQc.crz(xMonom, 1, 0);
   symQc.rz(xMonom, 0);
 
-  symQc.rxx(xMonom, {3_pc, 2_nc}, 0, 1);
-  symQc.rxx(xMonom, 2_pc, 0, 1);
+  symQc.mcrxx(xMonom, {3, 2_nc}, 0, 1);
+  symQc.crxx(xMonom, 2, 0, 1);
   symQc.rxx(xMonom, 0, 1);
 
-  symQc.ryy(xMonom, {3_pc, 2_nc}, 0, 1);
-  symQc.ryy(xMonom, 2_pc, 0, 1);
+  symQc.mcryy(xMonom, {3, 2_nc}, 0, 1);
+  symQc.cryy(xMonom, 2, 0, 1);
   symQc.ryy(xMonom, 0, 1);
 
-  symQc.rzz(xMonom, {3_pc, 2_nc}, 0, 1);
-  symQc.rzz(xMonom, 2_pc, 0, 1);
+  symQc.mcrzz(xMonom, {3, 2_nc}, 0, 1);
+  symQc.crzz(xMonom, 2, 0, 1);
   symQc.rzz(xMonom, 0, 1);
 
-  symQc.rzx(xMonom, {3_pc, 2_nc}, 0, 1);
-  symQc.rzx(xMonom, 2_pc, 0, 1);
+  symQc.mcrzx(xMonom, {3, 2_nc}, 0, 1);
+  symQc.crzx(xMonom, 2, 0, 1);
   symQc.rzx(xMonom, 0, 1);
 
-  symQc.xx_minus_yy(xMonom, yMonom, {3_pc, 2_nc}, 0, 1);
-  symQc.xx_minus_yy(xMonom, yMonom, 2_pc, 0, 1);
+  symQc.mcxx_minus_yy(xMonom, yMonom, {3, 2_nc}, 0, 1);
+  symQc.cxx_minus_yy(xMonom, yMonom, 2, 0, 1);
   symQc.xx_minus_yy(xMonom, yMonom, 0, 1);
 
-  symQc.xx_plus_yy(xMonom, yMonom, {3_pc, 2_nc}, 0, 1);
-  symQc.xx_plus_yy(xMonom, yMonom, 2_pc, 0, 1);
+  symQc.mcxx_plus_yy(xMonom, yMonom, {3, 2_nc}, 0, 1);
+  symQc.cxx_plus_yy(xMonom, yMonom, 2, 0, 1);
   symQc.xx_plus_yy(xMonom, yMonom, 0, 1);
 
   EXPECT_FALSE(symQc.isVariableFree());
@@ -81,52 +81,52 @@ TEST_F(SymbolicTest, Gates) {
   }
 
   // normal circuit
-  qc.u(xVal, yVal, zVal, {1_pc, 2_nc}, 0);
-  qc.u(xVal, yVal, zVal, 1_pc, 0);
+  qc.mcu(xVal, yVal, zVal, {1, 2_nc}, 0);
+  qc.cu(xVal, yVal, zVal, 1, 0);
   qc.u(xVal, yVal, zVal, 0);
 
-  qc.u2(xVal, yVal, {1_pc, 2_nc}, 0);
-  qc.u2(xVal, yVal, 1_pc, 0);
+  qc.mcu2(xVal, yVal, {1, 2_nc}, 0);
+  qc.cu2(xVal, yVal, 1, 0);
   qc.u2(xVal, yVal, 0);
 
-  qc.phase(xVal, {1_pc, 2_nc}, 0);
-  qc.phase(xVal, 1_pc, 0);
-  qc.phase(xVal, 0);
+  qc.mcp(xVal, {1, 2_nc}, 0);
+  qc.cp(xVal, 1, 0);
+  qc.p(xVal, 0);
 
-  qc.rx(xVal, {1_pc, 2_nc}, 0);
-  qc.rx(xVal, 1_pc, 0);
+  qc.mcrx(xVal, {1, 2_nc}, 0);
+  qc.crx(xVal, 1, 0);
   qc.rx(xVal, 0);
 
-  qc.ry(xVal, {1_pc, 2_nc}, 0);
-  qc.ry(xVal, 1_pc, 0);
+  qc.mcry(xVal, {1, 2_nc}, 0);
+  qc.cry(xVal, 1, 0);
   qc.ry(xVal, 0);
 
-  qc.rz(xVal, {1_pc, 2_nc}, 0);
-  qc.rz(xVal, 1_pc, 0);
+  qc.mcrz(xVal, {1, 2_nc}, 0);
+  qc.crz(xVal, 1, 0);
   qc.rz(xVal, 0);
 
-  qc.rxx(xVal, {3_pc, 2_nc}, 0, 1);
-  qc.rxx(xVal, 2_pc, 0, 1);
+  qc.mcrxx(xVal, {3, 2_nc}, 0, 1);
+  qc.crxx(xVal, 2, 0, 1);
   qc.rxx(xVal, 0, 1);
 
-  qc.ryy(xVal, {3_pc, 2_nc}, 0, 1);
-  qc.ryy(xVal, 2_pc, 0, 1);
+  qc.mcryy(xVal, {3, 2_nc}, 0, 1);
+  qc.cryy(xVal, 2, 0, 1);
   qc.ryy(xVal, 0, 1);
 
-  qc.rzz(xVal, {3_pc, 2_nc}, 0, 1);
-  qc.rzz(xVal, 2_pc, 0, 1);
+  qc.mcrzz(xVal, {3, 2_nc}, 0, 1);
+  qc.crzz(xVal, 2, 0, 1);
   qc.rzz(xVal, 0, 1);
 
-  qc.rzx(xVal, {3_pc, 2_nc}, 0, 1);
-  qc.rzx(xVal, 2_pc, 0, 1);
+  qc.mcrzx(xVal, {3, 2_nc}, 0, 1);
+  qc.crzx(xVal, 2, 0, 1);
   qc.rzx(xVal, 0, 1);
 
-  qc.xx_minus_yy(xVal, yVal, {3_pc, 2_nc}, 0, 1);
-  qc.xx_minus_yy(xVal, yVal, 2_pc, 0, 1);
+  qc.mcxx_minus_yy(xVal, yVal, {3, 2_nc}, 0, 1);
+  qc.cxx_minus_yy(xVal, yVal, 2, 0, 1);
   qc.xx_minus_yy(xVal, yVal, 0, 1);
 
-  qc.xx_plus_yy(xVal, yVal, {3_pc, 2_nc}, 0, 1);
-  qc.xx_plus_yy(xVal, yVal, 2_pc, 0, 1);
+  qc.mcxx_plus_yy(xVal, yVal, {3, 2_nc}, 0, 1);
+  qc.cxx_plus_yy(xVal, yVal, 2, 0, 1);
   qc.xx_plus_yy(xVal, yVal, 0, 1);
 
   EXPECT_TRUE(qc.isVariableFree());
@@ -150,7 +150,7 @@ TEST_F(SymbolicTest, Gates) {
 }
 
 TEST_F(SymbolicTest, TestClone) {
-  symQc.u(xMonom, yMonom, zMonom, {1_pc, 2_nc}, 0);
+  symQc.mcu(xMonom, yMonom, zMonom, {1, 2_nc}, 0);
   const auto clonedQc = symQc;
 
   symQc.u(xMonom, yMonom, zMonom, 0);
