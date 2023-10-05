@@ -309,7 +309,7 @@ bool SymbolicOperation::equals(const Operation& op, const Permutation& perm1,
     [[maybe_unused]] std::ostream& of,
     [[maybe_unused]] const RegisterNames& qreg,
     [[maybe_unused]] const RegisterNames& creg) const {
-  throw QFRException("OpenQasm2.0 doesn't support parametrized gates!");
+  throw QFRException("OpenQASM 2.0 doesn't support parametrized gates!");
 }
 
 StandardOperation SymbolicOperation::getInstantiatedOperation(
