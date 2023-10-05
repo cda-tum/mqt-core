@@ -179,6 +179,9 @@ protected:
   void checkQubitRange(Qubit qubit0, Qubit qubit1,
                        const Controls& controls) const;
   void checkQubitRange(const std::vector<Qubit>& qubits) const;
+  void checkBitRange(Bit bit) const;
+  void checkBitRange(const std::vector<Bit>& bits) const;
+  void checkClassicalRegister(const ClassicalRegister& creg) const;
 
 public:
   QuantumComputation() = default;
@@ -552,33 +555,18 @@ public:
 #undef DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION
 #undef DEFINE_TWO_TARGET_TWO_PARAMETER_OPERATION
 
-  void measure(const Qubit qubit, const std::size_t clbit) {
+  void measure(const Qubit qubit, const std::size_t bit) {
     checkQubitRange(qubit);
-    emplace_back<NonUnitaryOperation>(getNqubits(), qubit, clbit);
+    checkBitRange(bit);
+    emplace_back<NonUnitaryOperation>(getNqubits(), qubit, bit);
   }
 
-  void measure(const Qubit qubit, const std::pair<std::string, Bit>& clbit) {
-    checkQubitRange(qubit);
-    if (const auto cRegister = cregs.find(clbit.first);
-        cRegister != cregs.end()) {
-      if (clbit.second >= cRegister->second.second) {
-        std::cerr << "The classical register \"" << clbit.first
-                  << "\" is too small!\n";
-      }
-      emplace_back<NonUnitaryOperation>(getNqubits(), qubit,
-                                        cRegister->second.first + clbit.second);
+  void measure(Qubit qubit, const std::pair<std::string, Bit>& registerBit);
 
-    } else {
-      std::cerr << "The classical register \"" << clbit.first
-                << "\" does not exist!\n";
-    }
-  }
-
-  void measure(const Targets& qubitRegister,
-               const std::vector<Bit>& classicalRegister) {
-    checkQubitRange(qubitRegister);
-    emplace_back<NonUnitaryOperation>(getNqubits(), qubitRegister,
-                                      classicalRegister);
+  void measure(const Targets& qubits, const std::vector<Bit>& bits) {
+    checkQubitRange(qubits);
+    checkBitRange(bits);
+    emplace_back<NonUnitaryOperation>(getNqubits(), qubits, bits);
   }
 
   /**
@@ -588,30 +576,7 @@ public:
    * appends a new classical register (named "meas") to the circuit if addBits
    * is true. Otherwise, qubit q is measured into classical bit q.
    */
-  void measureAll(const bool addBits = true) {
-    if (addBits) {
-      addClassicalRegister(getNqubits(), "meas");
-    }
-
-    if (nclassics < getNqubits()) {
-      std::stringstream ss{};
-      ss << "The number of classical bits (" << nclassics
-         << ") is smaller than the number of qubits (" << getNqubits() << ")!";
-      throw QFRException(ss.str());
-    }
-
-    barrier();
-    Qubit start = 0U;
-    if (addBits) {
-      start = static_cast<Qubit>(cregs.at("meas").first);
-    }
-    // measure i -> (start+i) in descending order
-    // (this is an optimization for the simulator)
-    for (std::size_t i = getNqubits(); i > 0; --i) {
-      const auto q = static_cast<Qubit>(i - 1);
-      measure(q, start + q);
-    }
-  }
+  void measureAll(bool addBits = true);
 
   void reset(const Qubit target) {
     checkQubitRange(target);
@@ -658,6 +623,7 @@ public:
                          const std::uint64_t expectedValue = 1U,
                          const std::vector<fp>& params = {}) {
     checkQubitRange(target, controls);
+    checkClassicalRegister(controlRegister);
     std::unique_ptr<Operation> gate = std::make_unique<StandardOperation>(
         getNqubits(), controls, target, op, params);
     emplace_back<ClassicControlledOperation>(std::move(gate), controlRegister,

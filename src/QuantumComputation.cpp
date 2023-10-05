@@ -1049,6 +1049,31 @@ void QuantumComputation::checkQubitRange(
   }
 }
 
+void QuantumComputation::checkBitRange(const qc::Bit bit) const {
+  if (bit >= nclassics) {
+    std::stringstream ss{};
+    ss << "Classical bit index " << bit << " not found in any register";
+    throw QFRException(ss.str());
+  }
+}
+
+void QuantumComputation::checkBitRange(const std::vector<Bit>& bits) const {
+  for (const auto& bit : bits) {
+    checkBitRange(bit);
+  }
+}
+
+void QuantumComputation::checkClassicalRegister(
+    const ClassicalRegister& creg) const {
+  if (creg.first + creg.second > nclassics) {
+    std::stringstream ss{};
+    ss << "Classical register starting at index " << creg.first << " with "
+       << creg.second << " bits is too large! The circuit has " << nclassics
+       << " classical bits.";
+    throw QFRException(ss.str());
+  }
+}
+
 void QuantumComputation::addVariable(const SymbolOrNumber& expr) {
   if (std::holds_alternative<Symbolic>(expr)) {
     const auto& sym = std::get<Symbolic>(expr);
@@ -1065,6 +1090,54 @@ void QuantumComputation::instantiate(const VariableAssignment& assignment) {
         symOp != nullptr) {
       symOp->instantiate(assignment);
     }
+  }
+}
+
+void QuantumComputation::measure(
+    const Qubit qubit, const std::pair<std::string, Bit>& registerBit) {
+  checkQubitRange(qubit);
+  if (const auto cRegister = cregs.find(registerBit.first);
+      cRegister != cregs.end()) {
+    if (registerBit.second >= cRegister->second.second) {
+      std::stringstream ss{};
+      ss << "The classical register \"" << registerBit.first
+         << "\" is too small! (" << registerBit.second
+         << " >= " << cRegister->second.second << ")";
+      throw QFRException(ss.str());
+    }
+    emplace_back<NonUnitaryOperation>(
+        getNqubits(), qubit, cRegister->second.first + registerBit.second);
+
+  } else {
+    std::stringstream ss{};
+    ss << "The classical register \"" << registerBit.first
+       << "\" does not exist!";
+    throw QFRException(ss.str());
+  }
+}
+
+void QuantumComputation::measureAll(const bool addBits) {
+  if (addBits) {
+    addClassicalRegister(getNqubits(), "meas");
+  }
+
+  if (nclassics < getNqubits()) {
+    std::stringstream ss{};
+    ss << "The number of classical bits (" << nclassics
+       << ") is smaller than the number of qubits (" << getNqubits() << ")!";
+    throw QFRException(ss.str());
+  }
+
+  barrier();
+  Qubit start = 0U;
+  if (addBits) {
+    start = static_cast<Qubit>(cregs.at("meas").first);
+  }
+  // measure i -> (start+i) in descending order
+  // (this is an optimization for the simulator)
+  for (std::size_t i = getNqubits(); i > 0; --i) {
+    const auto q = static_cast<Qubit>(i - 1);
+    measure(q, start + q);
   }
 }
 } // namespace qc

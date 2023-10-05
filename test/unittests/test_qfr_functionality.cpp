@@ -277,7 +277,7 @@ TEST_F(QFRFunctionality, unknownInverseInCompoundOperation) {
 
 TEST_F(QFRFunctionality, removeDiagonalSingleQubitBeforeMeasure) {
   const std::size_t nqubits = 1;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.z(0);
   qc.measure(0, 0);
   std::cout << "-----------------------------\n";
@@ -291,7 +291,7 @@ TEST_F(QFRFunctionality, removeDiagonalSingleQubitBeforeMeasure) {
 
 TEST_F(QFRFunctionality, removeDiagonalCompoundOpBeforeMeasure) {
   const std::size_t nqubits = 1;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.z(0);
   qc.t(0);
   qc.measure(0, 0);
@@ -307,7 +307,7 @@ TEST_F(QFRFunctionality, removeDiagonalCompoundOpBeforeMeasure) {
 
 TEST_F(QFRFunctionality, removeDiagonalTwoQubitGateBeforeMeasure) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.cz(0, 1);
   qc.measure({0, 1}, {0, 1});
   std::cout << "-----------------------------\n";
@@ -321,7 +321,7 @@ TEST_F(QFRFunctionality, removeDiagonalTwoQubitGateBeforeMeasure) {
 
 TEST_F(QFRFunctionality, leaveGateBeforeMeasure) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.cz(0, 1);
   qc.x(0);
   qc.measure({0, 1}, {0, 1});
@@ -335,7 +335,7 @@ TEST_F(QFRFunctionality, leaveGateBeforeMeasure) {
 
 TEST_F(QFRFunctionality, removeComplexGateBeforeMeasure) {
   const std::size_t nqubits = 4;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.cz(0, 1);
   qc.x(0);
   qc.cz(1, 2);
@@ -356,7 +356,7 @@ TEST_F(QFRFunctionality, removeComplexGateBeforeMeasure) {
 
 TEST_F(QFRFunctionality, removeSimpleCompoundOpBeforeMeasure) {
   const std::size_t nqubits = 1;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.x(0);
   qc.t(0);
   qc.measure(0, 0);
@@ -371,7 +371,7 @@ TEST_F(QFRFunctionality, removeSimpleCompoundOpBeforeMeasure) {
 
 TEST_F(QFRFunctionality, removePartOfCompoundOpBeforeMeasure) {
   const std::size_t nqubits = 1;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.t(0);
   qc.x(0);
   qc.t(0);
@@ -387,7 +387,7 @@ TEST_F(QFRFunctionality, removePartOfCompoundOpBeforeMeasure) {
 
 TEST_F(QFRFunctionality, decomposeSWAPsUndirectedArchitecture) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.swap(0, 1);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
@@ -514,7 +514,7 @@ TEST_F(QFRFunctionality, decomposeSWAPsCompoundDirected) {
 
 TEST_F(QFRFunctionality, removeFinalMeasurements) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.h(0);
   qc.h(1);
   qc.measure(0, 0);
@@ -540,7 +540,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurements) {
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsTwoQubitMeasurement) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.h(0);
   qc.h(1);
   qc.measure({0, 1}, {0, 1});
@@ -565,8 +565,8 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsTwoQubitMeasurement) {
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompound) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
-  QuantumComputation comp(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
+  QuantumComputation comp(nqubits, nqubits);
   comp.measure(0, 0);
   comp.measure(1, 1);
   comp.h(1);
@@ -593,8 +593,8 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsCompound) {
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundDegraded) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
-  QuantumComputation comp(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
+  QuantumComputation comp(nqubits, nqubits);
   comp.measure(0, 0);
   comp.h(1);
   qc.emplace_back(comp.asOperation());
@@ -618,8 +618,8 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundDegraded) {
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundEmpty) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
-  QuantumComputation comp(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
+  QuantumComputation comp(nqubits, nqubits);
   comp.measure(0, 0);
   qc.emplace_back(comp.asCompoundOperation());
   qc.h(1);
@@ -654,7 +654,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsWithBarrier) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.barrier({0, 1});
   qc.measure(0, 0);
   qc.measure(1, 1);
@@ -676,7 +676,7 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
   //  - with multiple controls.
   // Then, we clone the circuit and check if the resulting circuit contains the
   // same number of gates.
-  QuantumComputation qc(5);
+  QuantumComputation qc(5, 5);
   qc.gphase(PI);
   qc.i(0);
   qc.ci(1, 0);
@@ -785,7 +785,7 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
 
 TEST_F(QFRFunctionality, cloningDifferentOperations) {
   const std::size_t nqubits = 5;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   QuantumComputation comp(nqubits);
   comp.barrier(0);
   comp.h(0);
@@ -965,12 +965,12 @@ TEST_F(QFRFunctionality, eliminateResetsMultipleTargetReset) {
 }
 
 TEST_F(QFRFunctionality, eliminateResetsCompoundOperation) {
-  QuantumComputation qc(2U);
+  QuantumComputation qc(2U, 2U);
 
   qc.reset(0);
   qc.reset(1);
 
-  QuantumComputation comp(2U);
+  QuantumComputation comp(2U, 2U);
   comp.cx(1, 0);
   comp.reset(0);
   comp.measure(0, 0);
@@ -1442,7 +1442,7 @@ TEST_F(QFRFunctionality, deferMeasurementsErrorOnImplicitReset) {
   // Error, since the classic-controlled operation targets the qubit being
   // measured (this implicitly realizes a reset operation)
 
-  QuantumComputation qc{1};
+  QuantumComputation qc(1U, 1U);
   qc.h(0);
   qc.measure(0, 0U);
   qc.classicControlled(qc::X, 0, {0, 1U}, 1U);
@@ -1720,7 +1720,7 @@ TEST_F(QFRFunctionality, AddAncillaryQubits) {
 }
 
 TEST_F(QFRFunctionality, SingleQubitGateCount) {
-  QuantumComputation qc(2);
+  QuantumComputation qc(2U, 2U);
   qc.x(0);
   qc.h(0);
   qc.cx(1, 0);
@@ -1753,7 +1753,7 @@ TEST_F(QFRFunctionality, CircuitDepthStandardOperations) {
 }
 
 TEST_F(QFRFunctionality, CircuitDepthNonUnitaryOperations) {
-  QuantumComputation qc(2);
+  QuantumComputation qc(2U, 2U);
   qc.h(0);
   qc.h(1);
   qc.cx(1, 0);
@@ -1778,7 +1778,7 @@ TEST_F(QFRFunctionality, CircuitDepthCompoundOperation) {
 }
 
 TEST_F(QFRFunctionality, CircuitToOperation) {
-  QuantumComputation qc(2);
+  QuantumComputation qc(2U, 2U);
   EXPECT_EQ(qc.asOperation(), nullptr);
   qc.x(0);
   const auto& op = qc.asOperation();
@@ -1798,7 +1798,7 @@ TEST_F(QFRFunctionality, CircuitToOperation) {
 
 TEST_F(QFRFunctionality, AvoidStrippingIdleQubitWhenInOutputPermutation) {
   // a qubit being present in the output permutation should not be stripped
-  QuantumComputation qc(2);
+  QuantumComputation qc(2U, 2U);
   qc.measure(1, 0);
   qc.initializeIOMapping();
   qc.stripIdleQubits();

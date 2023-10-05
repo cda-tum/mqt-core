@@ -9,7 +9,7 @@ void fGate(QuantumComputation& qc, const Qubit i, const Qubit j, const Qubit k,
   qc.ry(theta, j);
 }
 
-WState::WState(const Qubit nq) : QuantumComputation(nq) {
+WState::WState(const Qubit nq) : QuantumComputation(nq, nq) {
   name = "wstate_" + std::to_string(nq);
 
   x(nq - 1);

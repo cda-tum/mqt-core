@@ -302,7 +302,7 @@ TEST_F(DDFunctionality, compoundTensorDumpTest) {
 }
 
 TEST_F(DDFunctionality, errorTensorDumpTest) {
-  QuantumComputation qc(2);
+  QuantumComputation qc(2U, 2U);
   qc.classicControlled(qc::X, 0, {0, 1U}, 1U);
 
   std::stringstream ss{};

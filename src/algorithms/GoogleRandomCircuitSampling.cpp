@@ -52,7 +52,7 @@ GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(
 void GoogleRandomCircuitSampling::importGRCS(const std::string& filename) {
   auto ifs = std::ifstream(filename);
   if (!ifs.good()) {
-    std::cerr << "Error opening/reading from file: " << filename << std::endl;
+    std::cerr << "Error opening/reading from file: " << filename << "\n";
     exit(3);
   }
   const std::size_t slash = filename.find_last_of('/');
