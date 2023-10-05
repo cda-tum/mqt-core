@@ -4,6 +4,7 @@
 #include <functional>
 #include <iostream>
 #include <string>
+#include <unordered_map>
 
 namespace qc {
 // Natively supported operations of the QFR library
