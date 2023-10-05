@@ -67,7 +67,7 @@ jobs:
           style: ""
           tidy-checks: ""
           version: ${{ env.clang-version }}
-          ignore: "build|include/python|src/python"
+          ignore: "build"
           thread-comments: ${{ github.event_name == 'pull_request' }}
           step-summary: true
           database: "build"
