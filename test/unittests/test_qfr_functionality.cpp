@@ -2202,3 +2202,30 @@ TEST_F(QFRFunctionality, invertSymbolicOpParamChange) {
   const auto expectedTargets = Targets{1U, 0U};
   ASSERT_EQ(op.getTargets(), expectedTargets);
 }
+
+TEST_F(QFRFunctionality, measureAll) {
+  qc::QuantumComputation qc(2U);
+  qc.measureAll();
+  std::cout << qc << "\n";
+  EXPECT_EQ(qc.getNops(), 3U);
+  EXPECT_EQ(qc.getNcbits(), 2U);
+  EXPECT_EQ(qc.getCregs().size(), 1U);
+  EXPECT_EQ(qc.getClassicalRegister(0U), "meas");
+  EXPECT_EQ(qc.getClassicalRegister(1U), "meas");
+}
+
+TEST_F(QFRFunctionality, measureAllExistingRegister) {
+  qc::QuantumComputation qc(2U, 2U);
+  qc.measureAll(false);
+  std::cout << qc << "\n";
+  EXPECT_EQ(qc.getNops(), 3U);
+  EXPECT_EQ(qc.getNcbits(), 2U);
+  EXPECT_EQ(qc.getCregs().size(), 1U);
+  EXPECT_EQ(qc.getClassicalRegister(0U), "c");
+  EXPECT_EQ(qc.getClassicalRegister(1U), "c");
+}
+
+TEST_F(QFRFunctionality, measureAllInsufficientRegisterSize) {
+  qc::QuantumComputation qc(2U, 1U);
+  EXPECT_THROW(qc.measureAll(false), QFRException);
+}

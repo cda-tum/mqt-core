@@ -29,9 +29,9 @@ void registerQuantumComputation(py::module& m) {
   ///---------------------------------------------------------------------------
 
   qc.def(py::init<>(), "Constructs an empty QuantumComputation.");
-  qc.def(py::init<std::size_t>(), "nq"_a,
+  qc.def(py::init<std::size_t, std::size_t>(), "nq"_a, "nc"_a = 0U,
          "Constructs an empty QuantumComputation with the given number of "
-         "qubits.");
+         "qubits and classical bits.");
   qc.def(py::init<std::string>(), "filename"_a,
          "Read QuantumComputation from given file. Supported formats are "
          "[OpenQASM2, Real, GRCS, TFC, QC]");
@@ -431,6 +431,12 @@ void registerQuantumComputation(py::module& m) {
          "qubits"_a, "cbits"_a,
          "Add a `measure(qubits, cbits)` gate that measures all qubits in "
          "`qubits` and stores the result in the classical bits in `cbits`.");
+  qc.def("measure_all", &qc::QuantumComputation::measureAll,
+         "add_bits"_a = true,
+         "Add measurements to all qubits. If `add_bits` is true, add a new "
+         "classical register (named \"meas\") with the same size as the number "
+         "of qubits and store the measurement results in there. Otherwise, "
+         "store the measurement results in the existing classical bits.");
 
   qc.def("reset", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::reset),
          "q"_a, "Add a `reset(q)` gate.");
@@ -440,6 +446,8 @@ void registerQuantumComputation(py::module& m) {
          "qubits"_a,
          "Add `reset(qs)` gate that resets all qubits in `qubits`.");
 
+  qc.def("barrier", py::overload_cast<>(&qc::QuantumComputation::barrier),
+         "Add a `barrier()` gate.");
   qc.def("barrier",
          py::overload_cast<qc::Qubit>(&qc::QuantumComputation::barrier), "q"_a,
          "Add a `barrier(q)` gate.");

@@ -182,10 +182,13 @@ protected:
 
 public:
   QuantumComputation() = default;
-  explicit QuantumComputation(const std::size_t nq, const std::size_t s = 0)
+  explicit QuantumComputation(const std::size_t nq, const std::size_t nc = 0U,
+                              const std::size_t s = 0)
       : seed(s) {
     addQubitRegister(nq);
-    addClassicalRegister(nq);
+    if (nc > 0) {
+      addClassicalRegister(nc);
+    }
     if (seed != 0) {
       mt.seed(seed);
     } else {
@@ -578,6 +581,38 @@ public:
                                       classicalRegister);
   }
 
+  /**
+   * @brief Add measurements to all qubits
+   * @param addBits Whether to add new classical bits to the circuit
+   * @details This function adds measurements to all qubits in the circuit and
+   * appends a new classical register (named "meas") to the circuit if addBits
+   * is true. Otherwise, qubit q is measured into classical bit q.
+   */
+  void measureAll(const bool addBits = true) {
+    if (addBits) {
+      addClassicalRegister(getNqubits(), "meas");
+    }
+
+    if (nclassics < getNqubits()) {
+      std::stringstream ss{};
+      ss << "The number of classical bits (" << nclassics
+         << ") is smaller than the number of qubits (" << getNqubits() << ")!";
+      throw QFRException(ss.str());
+    }
+
+    barrier();
+    Qubit start = 0U;
+    if (addBits) {
+      start = static_cast<Qubit>(cregs.at("meas").first);
+    }
+    // measure i -> (start+i) in descending order
+    // (this is an optimization for the simulator)
+    for (std::size_t i = getNqubits(); i > 0; --i) {
+      const auto q = static_cast<Qubit>(i - 1);
+      measure(q, start + q);
+    }
+  }
+
   void reset(const Qubit target) {
     checkQubitRange(target);
     emplace_back<NonUnitaryOperation>(getNqubits(), std::vector<Qubit>{target},
@@ -588,6 +623,11 @@ public:
     emplace_back<NonUnitaryOperation>(getNqubits(), targets, qc::Reset);
   }
 
+  void barrier() {
+    std::vector<Qubit> targets(getNqubits());
+    std::iota(targets.begin(), targets.end(), 0);
+    emplace_back<StandardOperation>(getNqubits(), targets, qc::Barrier);
+  }
   void barrier(const Qubit target) {
     checkQubitRange(target);
     emplace_back<StandardOperation>(getNqubits(), target, qc::Barrier);
