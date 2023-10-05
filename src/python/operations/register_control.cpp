@@ -32,6 +32,7 @@ void registerControl(py::module& m) {
                         "The qubit index of the control qubit.");
   control.def("__str__", [](const qc::Control& c) { return c.toString(); });
   control.def("__repr__", [](const qc::Control& c) { return c.toString(); });
+  py::implicitly_convertible<py::int_, qc::Control>();
 }
 
 } // namespace mqt
