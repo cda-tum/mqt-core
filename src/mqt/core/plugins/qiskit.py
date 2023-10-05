@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 import warnings
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, List, cast
 
 from qiskit.circuit import AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
 
@@ -337,7 +337,7 @@ def _add_operation(
     if any(isinstance(parameter, Expression) for parameter in parameters):
         qc.append(SymbolicOperation(qc.num_qubits, controls, target, type_, parameters))
     else:
-        qc.append(StandardOperation(qc.num_qubits, controls, target, type_, cast(list[float], parameters)))
+        qc.append(StandardOperation(qc.num_qubits, controls, target, type_, cast(List[float], parameters)))
     return parameters
 
 
@@ -356,7 +356,7 @@ def _add_two_target_operation(
     if any(isinstance(parameter, Expression) for parameter in parameters):
         qc.append(SymbolicOperation(qc.num_qubits, controls, target1, target2, type_, parameters))
     else:
-        qc.append(StandardOperation(qc.num_qubits, controls, target1, target2, type_, cast(list[float], parameters)))
+        qc.append(StandardOperation(qc.num_qubits, controls, target1, target2, type_, cast(List[float], parameters)))
     return parameters
 
 
@@ -395,7 +395,7 @@ def _import_definition(
     qc: QuantumComputation | CompoundOperation,
     circ: QuantumCircuit,
     qargs: Sequence[Qubit],
-    cargs: Sequence[Qubit],
+    cargs: Sequence[Clbit],
     qubit_map: Mapping[Qubit, int],
     clbit_map: Mapping[Clbit, int],
 ) -> list[float | ParameterExpression]:
