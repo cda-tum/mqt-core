@@ -380,14 +380,14 @@ public:
   DEFINE_SINGLE_TARGET_OPERATION(sxdg)
 
 #define DEFINE_SINGLE_TARGET_SINGLE_PARAMETER_OPERATION(op, param)             \
-  void op(const SymbolOrNumber& param, const Qubit target) {                   \
+  void op(const SymbolOrNumber&(param), const Qubit target) {                  \
     mc##op(param, Controls{}, target);                                         \
   }                                                                            \
-  void c##op(const SymbolOrNumber& param, const Control& control,              \
+  void c##op(const SymbolOrNumber&(param), const Control& control,             \
              const Qubit target) {                                             \
     mc##op(param, Controls{control}, target);                                  \
   }                                                                            \
-  void mc##op(const SymbolOrNumber& param, const Controls& controls,           \
+  void mc##op(const SymbolOrNumber&(param), const Controls& controls,          \
               const Qubit target) {                                            \
     checkQubitRange(target, controls);                                         \
     if (std::holds_alternative<fp>(param)) {                                   \
@@ -408,15 +408,15 @@ public:
   DEFINE_SINGLE_TARGET_SINGLE_PARAMETER_OPERATION(p, theta)
 
 #define DEFINE_SINGLE_TARGET_TWO_PARAMETER_OPERATION(op, param0, param1)       \
-  void op(const SymbolOrNumber& param0, const SymbolOrNumber& param1,          \
+  void op(const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),        \
           const Qubit target) {                                                \
     mc##op(param0, param1, Controls{}, target);                                \
   }                                                                            \
-  void c##op(const SymbolOrNumber& param0, const SymbolOrNumber& param1,       \
+  void c##op(const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),     \
              const Control& control, const Qubit target) {                     \
     mc##op(param0, param1, Controls{control}, target);                         \
   }                                                                            \
-  void mc##op(const SymbolOrNumber& param0, const SymbolOrNumber& param1,      \
+  void mc##op(const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),    \
               const Controls& controls, const Qubit target) {                  \
     checkQubitRange(target, controls);                                         \
     if (std::holds_alternative<fp>(param0) &&                                  \
@@ -436,17 +436,17 @@ public:
 
 #define DEFINE_SINGLE_TARGET_THREE_PARAMETER_OPERATION(op, param0, param1,     \
                                                        param2)                 \
-  void op(const SymbolOrNumber& param0, const SymbolOrNumber& param1,          \
-          const SymbolOrNumber& param2, const Qubit target) {                  \
+  void op(const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),        \
+          const SymbolOrNumber&(param2), const Qubit target) {                 \
     mc##op(param0, param1, param2, Controls{}, target);                        \
   }                                                                            \
-  void c##op(const SymbolOrNumber& param0, const SymbolOrNumber& param1,       \
-             const SymbolOrNumber& param2, const Control& control,             \
+  void c##op(const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),     \
+             const SymbolOrNumber&(param2), const Control& control,            \
              const Qubit target) {                                             \
     mc##op(param0, param1, param2, Controls{control}, target);                 \
   }                                                                            \
-  void mc##op(const SymbolOrNumber& param0, const SymbolOrNumber& param1,      \
-              const SymbolOrNumber& param2, const Controls& controls,          \
+  void mc##op(const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),    \
+              const SymbolOrNumber&(param2), const Controls& controls,         \
               const Qubit target) {                                            \
     checkQubitRange(target, controls);                                         \
     if (std::holds_alternative<fp>(param0) &&                                  \
@@ -489,15 +489,15 @@ public:
   DEFINE_TWO_TARGET_OPERATION(peresdg)
 
 #define DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(op, param)                \
-  void op(const SymbolOrNumber& param, const Qubit target0,                    \
+  void op(const SymbolOrNumber&(param), const Qubit target0,                   \
           const Qubit target1) {                                               \
     mc##op(param, Controls{}, target0, target1);                               \
   }                                                                            \
-  void c##op(const SymbolOrNumber& param, const Control& control,              \
+  void c##op(const SymbolOrNumber&(param), const Control& control,             \
              const Qubit target0, const Qubit target1) {                       \
     mc##op(param, Controls{control}, target0, target1);                        \
   }                                                                            \
-  void mc##op(const SymbolOrNumber& param, const Controls& controls,           \
+  void mc##op(const SymbolOrNumber&(param), const Controls& controls,          \
               const Qubit target0, const Qubit target1) {                      \
     checkQubitRange(target0, target1, controls);                               \
     if (std::holds_alternative<fp>(param)) {                                   \
@@ -518,16 +518,16 @@ public:
   DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(rzx, theta)
 
 #define DEFINE_TWO_TARGET_TWO_PARAMETER_OPERATION(op, param0, param1)          \
-  void op(const SymbolOrNumber& param0, const SymbolOrNumber& param1,          \
+  void op(const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),        \
           const Qubit target0, const Qubit target1) {                          \
     mc##op(param0, param1, Controls{}, target0, target1);                      \
   }                                                                            \
-  void c##op(const SymbolOrNumber& param0, const SymbolOrNumber& param1,       \
+  void c##op(const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),     \
              const Control& control, const Qubit target0,                      \
              const Qubit target1) {                                            \
     mc##op(param0, param1, Controls{control}, target0, target1);               \
   }                                                                            \
-  void mc##op(const SymbolOrNumber& param0, const SymbolOrNumber& param1,      \
+  void mc##op(const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),    \
               const Controls& controls, const Qubit target0,                   \
               const Qubit target1) {                                           \
     checkQubitRange(target0, target1, controls);                               \
