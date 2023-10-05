@@ -7,7 +7,7 @@ Entanglement::Entanglement(const std::size_t nq) : QuantumComputation(nq) {
 
   h(top);
   for (std::size_t i = 1; i < nq; i++) {
-    x(static_cast<Qubit>(top - i), qc::Control{top});
+    x(qc::Control{top}, static_cast<Qubit>(top - i));
   }
 }
 } // namespace qc

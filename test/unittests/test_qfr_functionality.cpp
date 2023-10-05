@@ -27,9 +27,9 @@ protected:
 TEST_F(QFRFunctionality, fuseCxToSwap) {
   const std::size_t nqubits = 2;
   QuantumComputation qc(nqubits);
-  qc.x(1, 0_pc);
-  qc.x(0, 1_pc);
-  qc.x(1, 0_pc);
+  qc.x(0_pc, 1);
+  qc.x(1_pc, 0);
+  qc.x(0_pc, 1);
   CircuitOptimizer::swapReconstruction(qc);
   const auto& op = qc.front();
   EXPECT_TRUE(op->isStandardOperation());
@@ -41,8 +41,8 @@ TEST_F(QFRFunctionality, fuseCxToSwap) {
 TEST_F(QFRFunctionality, replaceCxToSwapAtEnd) {
   const std::size_t nqubits = 2;
   QuantumComputation qc(nqubits);
-  qc.x(1, 0_pc);
-  qc.x(0, 1_pc);
+  qc.x(0_pc, 1);
+  qc.x(1_pc, 0);
   CircuitOptimizer::swapReconstruction(qc);
   auto it = qc.begin();
   const auto& op = *it;
@@ -62,8 +62,8 @@ TEST_F(QFRFunctionality, replaceCxToSwapAtEnd) {
 TEST_F(QFRFunctionality, replaceCxToSwap) {
   const std::size_t nqubits = 2;
   QuantumComputation qc(nqubits);
-  qc.x(1, 0_pc);
-  qc.x(0, 1_pc);
+  qc.x(0_pc, 1);
+  qc.x(1_pc, 0);
   qc.h(0);
   CircuitOptimizer::swapReconstruction(qc);
   auto it = qc.begin();
@@ -265,8 +265,8 @@ TEST_F(QFRFunctionality, eliminateInverseInCompoundOperation) {
 TEST_F(QFRFunctionality, unknownInverseInCompoundOperation) {
   const std::size_t nqubits = 1;
   QuantumComputation qc(nqubits);
-  qc.phase(0, 1.);
-  qc.phase(0, -1.);
+  qc.phase(1., 0);
+  qc.phase(-1., 0);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::singleQubitGateFusion(qc);
@@ -308,7 +308,7 @@ TEST_F(QFRFunctionality, removeDiagonalCompoundOpBeforeMeasure) {
 TEST_F(QFRFunctionality, removeDiagonalTwoQubitGateBeforeMeasure) {
   const std::size_t nqubits = 2;
   QuantumComputation qc(nqubits);
-  qc.z(1, 0_pc);
+  qc.z(0_pc, 1);
   qc.measure({0, 1}, {0, 1});
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
@@ -322,7 +322,7 @@ TEST_F(QFRFunctionality, removeDiagonalTwoQubitGateBeforeMeasure) {
 TEST_F(QFRFunctionality, leaveGateBeforeMeasure) {
   const std::size_t nqubits = 2;
   QuantumComputation qc(nqubits);
-  qc.z(1, 0_pc);
+  qc.z(0_pc, 1);
   qc.x(0);
   qc.measure({0, 1}, {0, 1});
   std::cout << "-----------------------------\n";
@@ -336,15 +336,15 @@ TEST_F(QFRFunctionality, leaveGateBeforeMeasure) {
 TEST_F(QFRFunctionality, removeComplexGateBeforeMeasure) {
   const std::size_t nqubits = 4;
   QuantumComputation qc(nqubits);
-  qc.z(1, 0_pc);
+  qc.z(0_pc, 1);
   qc.x(0);
-  qc.z(2, 1_pc);
-  qc.z(1, 0_pc);
+  qc.z(1_pc, 2);
+  qc.z(0_pc, 1);
   qc.z(0);
-  qc.z(2, 1_pc);
+  qc.z(1_pc, 2);
   qc.x(3);
   qc.t(3);
-  qc.z(3, {0_pc, 1_pc, 2_pc});
+  qc.z({0_pc, 1_pc, 2_pc}, 3);
   qc.measure({0, 1, 2, 3}, {0, 1, 2, 3});
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
@@ -679,98 +679,98 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
   QuantumComputation qc(5);
   qc.gphase(PI);
   qc.i(0);
-  qc.i(0, 1_pc);
-  qc.i(0, {1_pc, 2_nc});
+  qc.i(1_pc, 0);
+  qc.i({1_pc, 2_nc}, 0);
   qc.h(0);
-  qc.h(0, 1_pc);
-  qc.h(0, {1_pc, 2_nc});
+  qc.h(1_pc, 0);
+  qc.h({1_pc, 2_nc}, 0);
   qc.x(0);
-  qc.x(0, 1_pc);
-  qc.x(0, {1_pc, 2_nc});
+  qc.x(1_pc, 0);
+  qc.x({1_pc, 2_nc}, 0);
   qc.y(0);
-  qc.y(0, 1_pc);
-  qc.y(0, {1_pc, 2_nc});
+  qc.y(1_pc, 0);
+  qc.y({1_pc, 2_nc}, 0);
   qc.z(0);
-  qc.z(0, 1_pc);
-  qc.z(0, {1_pc, 2_nc});
+  qc.z(1_pc, 0);
+  qc.z({1_pc, 2_nc}, 0);
   qc.s(0);
-  qc.s(0, 1_pc);
-  qc.s(0, {1_pc, 2_nc});
+  qc.s(1_pc, 0);
+  qc.s({1_pc, 2_nc}, 0);
   qc.sdag(0);
-  qc.sdag(0, 1_pc);
-  qc.sdag(0, {1_pc, 2_nc});
+  qc.sdag(1_pc, 0);
+  qc.sdag({1_pc, 2_nc}, 0);
   qc.t(0);
-  qc.t(0, 1_pc);
-  qc.t(0, {1_pc, 2_nc});
+  qc.t(1_pc, 0);
+  qc.t({1_pc, 2_nc}, 0);
   qc.tdag(0);
-  qc.tdag(0, 1_pc);
-  qc.tdag(0, {1_pc, 2_nc});
+  qc.tdag(1_pc, 0);
+  qc.tdag({1_pc, 2_nc}, 0);
   qc.v(0);
-  qc.v(0, 1_pc);
-  qc.v(0, {1_pc, 2_nc});
+  qc.v(1_pc, 0);
+  qc.v({1_pc, 2_nc}, 0);
   qc.vdag(0);
-  qc.vdag(0, 1_pc);
-  qc.vdag(0, {1_pc, 2_nc});
-  qc.u3(0, PI, PI, PI);
-  qc.u3(0, 1_pc, PI, PI, PI);
-  qc.u3(0, {1_pc, 2_nc}, PI, PI, PI);
-  qc.u2(0, PI, PI);
-  qc.u2(0, 1_pc, PI, PI);
-  qc.u2(0, {1_pc, 2_nc}, PI, PI);
-  qc.phase(0, PI);
-  qc.phase(0, 1_pc, PI);
-  qc.phase(0, {1_pc, 2_nc}, PI);
+  qc.vdag(1_pc, 0);
+  qc.vdag({1_pc, 2_nc}, 0);
+  qc.u(PI, PI, PI, 0);
+  qc.u(PI, PI, PI, 1_pc, 0);
+  qc.u(PI, PI, PI, {1_pc, 2_nc}, 0);
+  qc.u2(PI, PI, 0);
+  qc.u2(PI, PI, 1_pc, 0);
+  qc.u2(PI, PI, {1_pc, 2_nc}, 0);
+  qc.phase(PI, 0);
+  qc.phase(PI, 1_pc, 0);
+  qc.phase(PI, {1_pc, 2_nc}, 0);
   qc.sx(0);
-  qc.sx(0, 1_pc);
-  qc.sx(0, {1_pc, 2_nc});
+  qc.sx(1_pc, 0);
+  qc.sx({1_pc, 2_nc}, 0);
   qc.sxdag(0);
-  qc.sxdag(0, 1_pc);
-  qc.sxdag(0, {1_pc, 2_nc});
-  qc.rx(0, PI);
-  qc.rx(0, 1_pc, PI);
-  qc.rx(0, {1_pc, 2_nc}, PI);
-  qc.ry(0, PI);
-  qc.ry(0, 1_pc, PI);
-  qc.ry(0, {1_pc, 2_nc}, PI);
-  qc.rz(0, PI);
-  qc.rz(0, 1_pc, PI);
-  qc.rz(0, {1_pc, 2_nc}, PI);
+  qc.sxdag(1_pc, 0);
+  qc.sxdag({1_pc, 2_nc}, 0);
+  qc.rx(PI, 0);
+  qc.rx(PI, 1_pc, 0);
+  qc.rx(PI, {1_pc, 2_nc}, 0);
+  qc.ry(PI, 0);
+  qc.ry(PI, 1_pc, 0);
+  qc.ry(PI, {1_pc, 2_nc}, 0);
+  qc.rz(PI, 0);
+  qc.rz(PI, 1_pc, 0);
+  qc.rz(PI, {1_pc, 2_nc}, 0);
   qc.swap(0, 1);
-  qc.swap(0, 1, 2_pc);
-  qc.swap(0, 1, {2_pc, 3_nc});
+  qc.swap(2_pc, 0, 1);
+  qc.swap({2_pc, 3_nc}, 0, 1);
   qc.iswap(0, 1);
-  qc.iswap(0, 1, 2_pc);
-  qc.iswap(0, 1, {2_pc, 3_nc});
+  qc.iswap(2_pc, 0, 1);
+  qc.iswap({2_pc, 3_nc}, 0, 1);
   qc.peres(0, 1);
-  qc.peres(0, 1, 2_pc);
-  qc.peres(0, 1, {2_pc, 3_nc});
+  qc.peres(2_pc, 0, 1);
+  qc.peres({2_pc, 3_nc}, 0, 1);
   qc.peresdag(0, 1);
-  qc.peresdag(0, 1, 2_pc);
-  qc.peresdag(0, 1, {2_pc, 3_nc});
+  qc.peresdag(2_pc, 0, 1);
+  qc.peresdag({2_pc, 3_nc}, 0, 1);
   qc.dcx(0, 1);
-  qc.dcx(0, 1, 2_pc);
-  qc.dcx(0, 1, {2_pc, 3_nc});
+  qc.dcx(2_pc, 0, 1);
+  qc.dcx({2_pc, 3_nc}, 0, 1);
   qc.ecr(0, 1);
-  qc.ecr(0, 1, 2_pc);
-  qc.ecr(0, 1, {2_pc, 3_nc});
-  qc.rxx(0, 1, PI);
-  qc.rxx(0, 1, 2_pc, PI);
-  qc.rxx(0, 1, {2_pc, 3_nc}, PI);
-  qc.ryy(0, 1, PI);
-  qc.ryy(0, 1, 2_pc, PI);
-  qc.ryy(0, 1, {2_pc, 3_nc}, PI);
-  qc.rzz(0, 1, PI);
-  qc.rzz(0, 1, 2_pc, PI);
-  qc.rzz(0, 1, {2_pc, 3_nc}, PI);
-  qc.rzx(0, 1, PI);
-  qc.rzx(0, 1, 2_pc, PI);
-  qc.rzx(0, 1, {2_pc, 3_nc}, PI);
-  qc.xx_minus_yy(0, 1, PI, PI);
-  qc.xx_minus_yy(0, 1, 2_pc, PI, PI);
-  qc.xx_minus_yy(0, 1, {2_pc, 3_nc}, PI, PI);
-  qc.xx_plus_yy(0, 1, PI, PI);
-  qc.xx_plus_yy(0, 1, 2_pc, PI, PI);
-  qc.xx_plus_yy(0, 1, {2_pc, 3_nc}, PI, PI);
+  qc.ecr(2_pc, 0, 1);
+  qc.ecr({2_pc, 3_nc}, 0, 1);
+  qc.rxx(PI, 0, 1);
+  qc.rxx(PI, 2_pc, 0, 1);
+  qc.rxx(PI, {2_pc, 3_nc}, 0, 1);
+  qc.ryy(PI, 0, 1);
+  qc.ryy(PI, 2_pc, 0, 1);
+  qc.ryy(PI, {2_pc, 3_nc}, 0, 1);
+  qc.rzz(PI, 0, 1);
+  qc.rzz(PI, 2_pc, 0, 1);
+  qc.rzz(PI, {2_pc, 3_nc}, 0, 1);
+  qc.rzx(PI, 0, 1);
+  qc.rzx(PI, 2_pc, 0, 1);
+  qc.rzx(PI, {2_pc, 3_nc}, 0, 1);
+  qc.xx_minus_yy(PI, PI, 0, 1);
+  qc.xx_minus_yy(PI, PI, 2_pc, 0, 1);
+  qc.xx_minus_yy(PI, PI, {2_pc, 3_nc}, 0, 1);
+  qc.xx_plus_yy(PI, PI, 0, 1);
+  qc.xx_plus_yy(PI, PI, 2_pc, 0, 1);
+  qc.xx_plus_yy(PI, PI, {2_pc, 3_nc}, 0, 1);
   qc.measure(0, 0);
   qc.measure({1, 2}, {1, 2});
   qc.barrier(0);
@@ -924,7 +924,7 @@ TEST_F(QFRFunctionality, eliminateResetsMultipleTargetReset) {
   qc.reset({0, 1});
   qc.x(0);
   qc.z(1);
-  qc.x(0, 1_pc);
+  qc.x(1_pc, 0);
 
   std::cout << qc << "\n";
 
@@ -971,7 +971,7 @@ TEST_F(QFRFunctionality, eliminateResetsCompoundOperation) {
   qc.reset(1);
 
   QuantumComputation comp(2U);
-  comp.x(0, 1_pc);
+  comp.x(1_pc, 0);
   comp.reset(0);
   comp.measure(0, 0);
   comp.classicControlled(qc::X, 0, {0, 1U}, 1U);
@@ -1603,8 +1603,8 @@ TEST_F(QFRFunctionality, OperationEquality) {
 
 TEST_F(QFRFunctionality, CNOTCancellation1) {
   QuantumComputation qc(2);
-  qc.x(0, 1_pc);
-  qc.x(0, 1_pc);
+  qc.x(1_pc, 0);
+  qc.x(1_pc, 0);
 
   CircuitOptimizer::cancelCNOTs(qc);
   EXPECT_TRUE(qc.empty());
@@ -1622,7 +1622,7 @@ TEST_F(QFRFunctionality, CNOTCancellation2) {
 TEST_F(QFRFunctionality, CNOTCancellation3) {
   QuantumComputation qc(2);
   qc.swap(0, 1);
-  qc.x(0, 1_pc);
+  qc.x(1_pc, 0);
 
   CircuitOptimizer::cancelCNOTs(qc);
   EXPECT_TRUE(qc.size() == 2U);
@@ -1639,7 +1639,7 @@ TEST_F(QFRFunctionality, CNOTCancellation3) {
 
 TEST_F(QFRFunctionality, CNOTCancellation4) {
   QuantumComputation qc(2);
-  qc.x(0, 1_pc);
+  qc.x(1_pc, 0);
   qc.swap(0, 1);
 
   CircuitOptimizer::cancelCNOTs(qc);
@@ -1657,9 +1657,9 @@ TEST_F(QFRFunctionality, CNOTCancellation4) {
 
 TEST_F(QFRFunctionality, CNOTCancellation5) {
   QuantumComputation qc(2);
-  qc.x(0, 1_pc);
-  qc.x(1, 0_pc);
-  qc.x(0, 1_pc);
+  qc.x(1_pc, 0);
+  qc.x(0_pc, 1);
+  qc.x(1_pc, 0);
 
   CircuitOptimizer::cancelCNOTs(qc);
   EXPECT_TRUE(qc.size() == 1U);
@@ -1678,11 +1678,11 @@ TEST_F(QFRFunctionality, IndexOutOfRange) {
   qc.x(0);
 
   EXPECT_THROW(qc.x(1), QFRException);
-  EXPECT_THROW(qc.x(0, 1_nc), QFRException);
-  EXPECT_THROW(qc.x(0, {2_nc, 1_nc}), QFRException);
+  EXPECT_THROW(qc.x(1_nc, 0), QFRException);
+  EXPECT_THROW(qc.x({2_nc, 1_nc}, 0), QFRException);
   EXPECT_THROW(qc.swap(0, 1), QFRException);
-  EXPECT_THROW(qc.swap(0, 2, 1_nc), QFRException);
-  EXPECT_THROW(qc.swap(0, 2, 1_nc), QFRException);
+  EXPECT_THROW(qc.swap(1_nc, 0, 2), QFRException);
+  EXPECT_THROW(qc.swap(1_nc, 0, 2), QFRException);
   EXPECT_THROW(qc.reset({0, 1, 2}), QFRException);
 }
 
@@ -1724,7 +1724,7 @@ TEST_F(QFRFunctionality, SingleQubitGateCount) {
   QuantumComputation qc(2);
   qc.x(0);
   qc.h(0);
-  qc.x(0, 1_pc);
+  qc.x(1_pc, 0);
   qc.z(0);
   qc.measure(0, 0);
 
@@ -1748,7 +1748,7 @@ TEST_F(QFRFunctionality, CircuitDepthStandardOperations) {
   QuantumComputation qc(2);
   qc.h(0);
   qc.h(1);
-  qc.x(0, 1_pc);
+  qc.x(1_pc, 0);
 
   EXPECT_EQ(qc.getDepth(), 2U);
 }
@@ -1757,7 +1757,7 @@ TEST_F(QFRFunctionality, CircuitDepthNonUnitaryOperations) {
   QuantumComputation qc(2);
   qc.h(0);
   qc.h(1);
-  qc.x(0, 1_pc);
+  qc.x(1_pc, 0);
   qc.barrier({0, 1});
   qc.measure(0, 0);
   qc.measure(1, 1);
@@ -1770,7 +1770,7 @@ TEST_F(QFRFunctionality, CircuitDepthCompoundOperation) {
   QuantumComputation comp(2);
   comp.h(0);
   comp.h(1);
-  comp.x(0, 1_pc);
+  comp.x(1_pc, 0);
 
   QuantumComputation qc(2);
   qc.emplace_back(comp.asOperation());
@@ -1828,11 +1828,11 @@ TEST_F(QFRFunctionality, RzAndPhaseDifference) {
 
 TEST_F(QFRFunctionality, U3toU2Gate) {
   QuantumComputation qc(1);
-  qc.u3(0, PI_2, 0., PI);      // H
-  qc.u3(0, PI_2, 0., 0.);      // RY(pi/2)
-  qc.u3(0, PI_2, -PI_2, PI_2); // V = RX(pi/2)
-  qc.u3(0, PI_2, PI_2, -PI_2); // Vdag = RX(-pi/2)
-  qc.u3(0, PI_2, 0.25, 0.5);   // U2(0.25, 0.5)
+  qc.u(PI_2, 0., PI, 0);      // H
+  qc.u(PI_2, 0., 0., 0);      // RY(pi/2)
+  qc.u(PI_2, -PI_2, PI_2, 0); // V = RX(pi/2)
+  qc.u(PI_2, PI_2, -PI_2, 0); // Vdag = RX(-pi/2)
+  qc.u(PI_2, 0.25, 0.5, 0);   // U2(0.25, 0.5)
   std::cout << qc << "\n";
   EXPECT_EQ(qc.at(0)->getType(), qc::H);
   EXPECT_EQ(qc.at(1)->getType(), qc::RY);
@@ -1846,13 +1846,13 @@ TEST_F(QFRFunctionality, U3toU2Gate) {
 
 TEST_F(QFRFunctionality, U3toU1Gate) {
   QuantumComputation qc(1);
-  qc.u3(0, 0., 0., 0.);    // I
-  qc.u3(0, 0., 0., PI);    // Z
-  qc.u3(0, 0., 0., PI_2);  // S
-  qc.u3(0, 0., 0., -PI_2); // Sdg
-  qc.u3(0, 0., 0., PI_4);  // T
-  qc.u3(0, 0., 0., -PI_4); // Tdg
-  qc.u3(0, 0., 0., 0.5);   // p(0.5)
+  qc.u(0., 0., 0., 0);    // I
+  qc.u(0., 0., PI, 0);    // Z
+  qc.u(0., 0., PI_2, 0);  // S
+  qc.u(0., 0., -PI_2, 0); // Sdg
+  qc.u(0., 0., PI_4, 0);  // T
+  qc.u(0., 0., -PI_4, 0); // Tdg
+  qc.u(0., 0., 0.5, 0);   // p(0.5)
 
   std::cout << qc << "\n";
   EXPECT_EQ(qc.at(0)->getType(), qc::I);
@@ -1867,12 +1867,12 @@ TEST_F(QFRFunctionality, U3toU1Gate) {
 
 TEST_F(QFRFunctionality, U3SpecialCases) {
   QuantumComputation qc(1);
-  qc.u3(0, 0.5, 0., 0.);      // RY(0.5)
-  qc.u3(0, 0.5, -PI_2, PI_2); // RX(0.5)
-  qc.u3(0, 0.5, PI_2, -PI_2); // RX(-0.5)
-  qc.u3(0, PI, PI_2, PI_2);   // Y
-  qc.u3(0, PI, 0., PI);       // X
-  qc.u3(0, 0.5, 0.25, 0.125); // U3(0.5, 0.25, 0.125)
+  qc.u(0.5, 0., 0., 0);      // RY(0.5)
+  qc.u(0.5, -PI_2, PI_2, 0); // RX(0.5)
+  qc.u(0.5, PI_2, -PI_2, 0); // RX(-0.5)
+  qc.u(PI, PI_2, PI_2, 0);   // Y
+  qc.u(PI, 0., PI, 0);       // X
+  qc.u(0.5, 0.25, 0.125, 0); // U3(0.5, 0.25, 0.125)
 
   std::cout << qc << "\n";
   EXPECT_EQ(qc.at(0)->getType(), qc::RY);

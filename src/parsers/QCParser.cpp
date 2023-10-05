@@ -285,7 +285,7 @@ void qc::QuantumComputation::readQCGateDescriptions(
     if (gate == X) {
       const Qubit target = controls.back().qubit;
       controls.pop_back();
-      x(target, Controls{controls.cbegin(), controls.cend()});
+      x(Controls{controls.cbegin(), controls.cend()}, target);
     } else if (gate == H || gate == Y || gate == Z || gate == S ||
                gate == Sdag || gate == T || gate == Tdag) {
       const Qubit target = controls.back().qubit;
@@ -297,7 +297,7 @@ void qc::QuantumComputation::readQCGateDescriptions(
       controls.pop_back();
       const Qubit target1 = controls.back().qubit;
       controls.pop_back();
-      swap(target0, target1, Controls{controls.cbegin(), controls.cend()});
+      swap(Controls{controls.cbegin(), controls.cend()}, target0, target1);
     } else if (gate == RX || gate == RY || gate == RZ) {
       const Qubit target = controls.back().qubit;
       controls.pop_back();

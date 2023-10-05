@@ -46,12 +46,14 @@ QPE::QPE(const fp l, const std::size_t prec, const bool iter)
 
 std::ostream& QPE::printStatistics(std::ostream& os) const {
   os << "QPE Statistics:\n";
-  os << "\tn: " << nqubits + 1 << std::endl;
-  os << "\tm: " << getNindividualOps() << std::endl;
-  os << "\tlambda: " << lambda << "π" << std::endl;
-  os << "\tprecision: " << precision << std::endl;
-  os << "\titerative: " << iterative << std::endl;
-  os << "--------------" << std::endl;
+  os << "\tn: " << nqubits + 1 << "\n";
+  os << "\tm: " << getNindividualOps() << "\n";
+  os << "\tlambda: " << lambda << "π"
+     << "\n";
+  os << "\tprecision: " << precision << "\n";
+  os << "\titerative: " << iterative << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 
@@ -79,7 +81,7 @@ void QPE::createCircuit() {
           static_cast<double>(1ULL << (precision - 1 - i)) * lambda, 2.0);
 
       // controlled phase rotation
-      phase(0, 1_pc, angle * PI);
+      phase(angle * PI, 1_pc, 0);
 
       // hybrid quantum-classical inverse QFT
       for (std::size_t j = 0; j < i; j++) {
@@ -108,18 +110,18 @@ void QPE::createCircuit() {
           static_cast<double>(1ULL << (precision - 1 - i)) * lambda, 2.0);
 
       // controlled phase rotation
-      phase(0, Control{static_cast<Qubit>(1 + i)}, angle * PI);
+      phase(angle * PI, Control{static_cast<Qubit>(1 + i)}, 0);
 
       // inverse QFT
       for (std::size_t j = 1; j < 1 + i; j++) {
         const auto iQFTLambda = -PI / static_cast<double>(2ULL << (i - j));
         if (j == i) {
-          sdag(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(i)});
+          sdag(Control{static_cast<Qubit>(i)}, static_cast<Qubit>(1 + i));
         } else if (j == (i - 1)) {
-          tdag(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(i - 1)});
+          tdag(Control{static_cast<Qubit>(i - 1)}, static_cast<Qubit>(1 + i));
         } else {
-          phase(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(j)},
-                iQFTLambda);
+          phase(iQFTLambda, Control{static_cast<Qubit>(j)},
+                static_cast<Qubit>(1 + i));
         }
       }
       h(static_cast<Qubit>(1 + i));

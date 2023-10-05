@@ -238,13 +238,13 @@ void qc::QuantumComputation::readTFCGateDescriptions(
     if (gate == X) {
       const Qubit target = controls.back().qubit;
       controls.pop_back();
-      x(target, Controls{controls.cbegin(), controls.cend()});
+      x(Controls{controls.cbegin(), controls.cend()}, target);
     } else {
       const Qubit target0 = controls.back().qubit;
       controls.pop_back();
       const Qubit target1 = controls.back().qubit;
       controls.pop_back();
-      swap(target0, target1, Controls{controls.cbegin(), controls.cend()});
+      swap(Controls{controls.cbegin(), controls.cend()}, target0, target1);
     }
   }
 }

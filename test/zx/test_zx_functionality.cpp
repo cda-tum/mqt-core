@@ -20,7 +20,7 @@ TEST_F(ZXFunctionalityTest, parseQasm) {
      << "include \"qelib1.inc\";"
      << "qreg q[2];"
      << "h q[0];"
-     << "cx q[0],q[1];" << std::endl;
+     << "cx q[0],q[1];\n";
   qc.import(ss, qc::Format::OpenQASM);
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
   const zx::ZXDiagram diag =
@@ -120,7 +120,7 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
      << "x q[2];"
      << "z q[1];"
      << "cx q[0],q[1];"
-     << "h q[0];" << std::endl;
+     << "h q[0];\n";
   qc.import(ss, qc::Format::OpenQASM);
 
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
@@ -136,10 +136,10 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
 TEST_F(ZXFunctionalityTest, Phase) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(2);
-  qc.phase(0, zx::PI / 4);
-  qc.phase(0, 1_pc, zx::PI / 4);
-  qc.phase(0, 1_pc, -zx::PI / 4);
-  qc.phase(0, -zx::PI / 4);
+  qc.phase(zx::PI / 4, 0);
+  qc.phase(zx::PI / 4, 1_pc, 0);
+  qc.phase(-zx::PI / 4, 1_pc, 0);
+  qc.phase(-zx::PI / 4, 0);
 
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
   zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
@@ -157,7 +157,7 @@ TEST_F(ZXFunctionalityTest, Compound) {
         "q1;cx q0,q1;p(pi/4) q2;h q2;}"
      << "qreg q[3];"
      << "toff q[0],q[1],q[2];"
-     << "ccx q[0],q[1],q[2];" << std::endl;
+     << "ccx q[0],q[1],q[2];\n";
 
   qc.import(ss, qc::Format::OpenQASM);
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
@@ -170,7 +170,7 @@ TEST_F(ZXFunctionalityTest, Compound) {
 TEST_F(ZXFunctionalityTest, UnsupportedMultiControl) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(4);
-  qc.x(0, {1_pc, 2_pc, 3_pc});
+  qc.x({1_pc, 2_pc, 3_pc}, 0);
   EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
   EXPECT_THROW(const zx::ZXDiagram diag =
                    zx::FunctionalityConstruction::buildFunctionality(&qc),
@@ -180,7 +180,7 @@ TEST_F(ZXFunctionalityTest, UnsupportedMultiControl) {
 TEST_F(ZXFunctionalityTest, UnsupportedControl) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(2);
-  qc.y(0, 1_pc);
+  qc.y(1_pc, 0);
   EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
   EXPECT_THROW(const zx::ZXDiagram diag =
                    zx::FunctionalityConstruction::buildFunctionality(&qc),
@@ -190,7 +190,7 @@ TEST_F(ZXFunctionalityTest, UnsupportedControl) {
 TEST_F(ZXFunctionalityTest, UnsupportedControl2) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(3);
-  qc.y(0, {1_pc, 2_pc});
+  qc.y({1_pc, 2_pc}, 0);
   EXPECT_FALSE(zx::FunctionalityConstruction::transformableToZX(&qc));
   EXPECT_THROW(const zx::ZXDiagram diag =
                    zx::FunctionalityConstruction::buildFunctionality(&qc),
@@ -221,10 +221,10 @@ TEST_F(ZXFunctionalityTest, InitialLayout) {
 
 TEST_F(ZXFunctionalityTest, FromSymbolic) {
   const sym::Variable x{"x"};
-  const sym::Term xTerm{1.0, x};
+  const sym::Term xTerm{x, 1.0};
   qc = qc::QuantumComputation{1};
-  qc.rz(0, qc::Symbolic(xTerm));
-  qc.rz(0, -qc::Symbolic(xTerm));
+  qc.rz(qc::Symbolic(xTerm), 0);
+  qc.rz(-qc::Symbolic(xTerm), 0);
 
   zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
 
@@ -234,10 +234,10 @@ TEST_F(ZXFunctionalityTest, FromSymbolic) {
 
 TEST_F(ZXFunctionalityTest, RZ) {
   qc = qc::QuantumComputation(1);
-  qc.rz(0, zx::PI / 8);
+  qc.rz(zx::PI / 8, 0);
 
   auto qcPrime = qc::QuantumComputation(1);
-  qcPrime.phase(0, zx::PI / 8);
+  qcPrime.phase(zx::PI / 8, 0);
 
   auto d = zx::FunctionalityConstruction::buildFunctionality(&qc);
   auto dPrime = zx::FunctionalityConstruction::buildFunctionality(&qcPrime);
@@ -259,8 +259,8 @@ TEST_F(ZXFunctionalityTest, ISWAP) {
   qcPrime.s(0);
   qcPrime.s(1);
   qcPrime.h(0);
-  qcPrime.x(1, 0_pc);
-  qcPrime.x(0, 1_pc);
+  qcPrime.x(0_pc, 1);
+  qcPrime.x(1_pc, 0);
   qc.h(1);
 
   auto d = zx::FunctionalityConstruction::buildFunctionality(&qc);

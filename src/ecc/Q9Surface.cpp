@@ -39,13 +39,13 @@ void Q9Surface::measureAndCorrect() {
 
     for (std::size_t q = 0; q < qubitCorrectionZ.size(); q++) {
       for (auto c : qubitCorrectionZ.at(q)) {
-        qcMapped->x(qubits.at(q), ancillaControls.at(c));
+        qcMapped->x(ancillaControls.at(c), qubits.at(q));
       }
     }
 
     for (std::size_t q = 0; q < qubitCorrectionX.size(); q++) {
       for (auto c : qubitCorrectionX.at(q)) {
-        qcMapped->x(ancillaQubits.at(c), controlQubits.at(q));
+        qcMapped->x(controlQubits.at(q), ancillaQubits.at(c));
       }
     }
 
@@ -99,12 +99,12 @@ void Q9Surface::writeDecoding() {
     qcMapped->measure(static_cast<Qubit>(i), i);
     qcMapped->measure(static_cast<Qubit>(i + 4 * nQubits), i);
     qcMapped->measure(static_cast<Qubit>(i + 8 * nQubits), i);
-    qcMapped->x(static_cast<Qubit>(i),
-                qc::Control{static_cast<Qubit>(i + 4 * nQubits),
-                            qc::Control::Type::Pos});
-    qcMapped->x(static_cast<Qubit>(i),
-                qc::Control{static_cast<Qubit>(i + 8 * nQubits),
-                            qc::Control::Type::Pos});
+    qcMapped->x(qc::Control{static_cast<Qubit>(i + 4 * nQubits),
+                            qc::Control::Type::Pos},
+                static_cast<Qubit>(i));
+    qcMapped->x(qc::Control{static_cast<Qubit>(i + 8 * nQubits),
+                            qc::Control::Type::Pos},
+                static_cast<Qubit>(i));
     qcMapped->measure(static_cast<Qubit>(i), i);
   }
   isDecoded = true;

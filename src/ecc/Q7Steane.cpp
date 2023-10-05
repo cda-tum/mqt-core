@@ -53,9 +53,9 @@ void Q7Steane::measureAndCorrectSingle(bool xSyndrome) {
         if (((q + 1) & (static_cast<std::size_t>(1U) << c)) != 0) {
           const auto target = static_cast<Qubit>(i + nQubits * q);
           if (xSyndrome) {
-            qcMapped->x(target, controls.at(c));
+            qcMapped->x(controls.at(c), target);
           } else {
-            qcMapped->z(target, controls.at(c));
+            qcMapped->z(controls.at(c), target);
           }
         }
       }
@@ -211,19 +211,19 @@ void Q7Steane::mapGate(const qc::Operation& gate) {
   case qc::Tdag:
     for (auto i : gate.getTargets()) {
       if (gate.getControls().empty()) {
-        qcMapped->x(static_cast<Qubit>(i + 5 * nQubits),
-                    qc::Control{static_cast<Qubit>(i + 6 * nQubits)});
-        qcMapped->x(static_cast<Qubit>(i + 0 * nQubits),
-                    qc::Control{static_cast<Qubit>(i + 5 * nQubits)});
+        qcMapped->x(qc::Control{static_cast<Qubit>(i + 6 * nQubits)},
+                    static_cast<Qubit>(i + 5 * nQubits));
+        qcMapped->x(qc::Control{static_cast<Qubit>(i + 5 * nQubits)},
+                    static_cast<Qubit>(i + 0 * nQubits));
         if (gate.getType() == qc::T) {
           qcMapped->t(static_cast<Qubit>(i + 0 * nQubits));
         } else {
           qcMapped->tdag(static_cast<Qubit>(i + 0 * nQubits));
         }
-        qcMapped->x(static_cast<Qubit>(i + 0 * nQubits),
-                    qc::Control{static_cast<Qubit>(i + 5 * nQubits)});
-        qcMapped->x(static_cast<Qubit>(i + 5 * nQubits),
-                    qc::Control{static_cast<Qubit>(i + 6 * nQubits)});
+        qcMapped->x(qc::Control{static_cast<Qubit>(i + 5 * nQubits)},
+                    static_cast<Qubit>(i + 0 * nQubits));
+        qcMapped->x(qc::Control{static_cast<Qubit>(i + 6 * nQubits)},
+                    static_cast<Qubit>(i + 5 * nQubits));
       } else {
         gateNotAvailableError(gate);
       }

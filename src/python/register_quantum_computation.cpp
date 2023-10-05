@@ -284,6 +284,7 @@ void registerQuantumComputation(py::module& m) {
   });
   qc.def("__repr__", [](qc::QuantumComputation& circ) {
     auto ss = std::stringstream();
+    ss << "\n"; // add newline to avoid cluttering
     circ.print(ss);
     return ss.str();
   });
@@ -298,286 +299,286 @@ void registerQuantumComputation(py::module& m) {
   qc.def("i", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::i), "q"_a,
          "Apply the identity on qubit q.");
   qc.def("i",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::i),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply a controlled identity gate on qubit q with control ctrl.");
   qc.def("i",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::i),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply a multi-controlled identity gate on qubit q with controls "
          "controls.");
 
   qc.def("h", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::h), "q"_a,
          "Apply the Hadamard gate on qubit q.");
   qc.def("h",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::h),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply a controlled Hadamard gate on qubit q with control ctrl.");
   qc.def("h",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::h),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply a multi-controlled Hadamard gate on qubit q with controls "
          "controls.");
 
   qc.def("x", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::x), "q"_a,
          "Apply an X gate on qubit q.");
   qc.def("x",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::x),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply a controlled X gate on qubit q with control ctrl.");
   qc.def("x",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::x),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply a multi-controlled X gate on qubit q with controls controls.");
 
   qc.def("y", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::y), "q"_a,
          "Apply a Y gate on qubit q.");
   qc.def("y",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::y),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply a controlled Y gate on qubit q with control ctrl.");
   qc.def("y",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::y),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply a multi-controlled Y gate on qubit q with controls controls.");
 
   qc.def("z", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::z), "q"_a,
          "Apply a Z gate on qubit q.");
   qc.def("z",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::z),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply a controlled Z gate on qubit q with control ctrl.");
   qc.def("z",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::z),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply a multi-controlled Z gate on qubit q with controls controls.");
 
   qc.def("s", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::s), "q"_a,
          "Apply an S gate on qubit q.");
   qc.def("s",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::s),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply a controlled S gate on qubit q with control ctrl.");
   qc.def("s",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::s),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply a multi-controlled S gate on qubit q with controls controls.");
 
   qc.def("sdag", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::sdag),
          "q"_a, "Apply an Sdag gate on qubit q.");
   qc.def("sdag",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::sdag),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply a controlled Sdag gate on qubit q with control ctrl.");
   qc.def("sdag",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::sdag),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply a multi-controlled Sdag gate on qubit q with controls "
          "controls.");
 
   qc.def("t", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::t), "q"_a,
          "Apply a T gate on qubit q.");
   qc.def("t",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::t),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply a controlled T gate on qubit q with control ctrl.");
   qc.def("t",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::t),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply a multi-controlled T gate on qubit q with controls controls.");
 
   qc.def("tdag", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::tdag),
          "q"_a, "Apply a Tdag gate on qubit q.");
   qc.def("tdag",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::tdag),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply a controlled Tdag gate on qubit q with control ctrl.");
   qc.def("tdag",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::tdag),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply a multi-controlled Tdag gate on qubit q with controls "
          "controls.");
 
   qc.def("v", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::v), "q"_a,
          "Apply a V gate on qubit q.");
   qc.def("v",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::v),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply a controlled V gate on qubit q with control ctrl.");
   qc.def("v",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::v),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply a multi-controlled V gate on qubit q with controls controls.");
 
   qc.def("vdag", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::vdag),
          "q"_a, "Apply a Vdag gate on qubit q.");
   qc.def("vdag",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::vdag),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply a controlled Vdag gate on qubit q with control ctrl.");
   qc.def("vdag",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::vdag),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply a multi-controlled Vdag gate on qubit q with controls "
          "controls.");
 
-  qc.def("u3",
-         py::overload_cast<qc::Qubit, const qc::fp, const qc::fp, const qc::fp>(
-             &qc::QuantumComputation::u3),
-         "q"_a, "theta"_a, "phi"_a, "lambda"_a,
+  qc.def("u",
+         py::overload_cast<const qc::fp, const qc::fp, const qc::fp, qc::Qubit>(
+             &qc::QuantumComputation::u),
+         "theta"_a, "phi"_a, "lambda"_a, "q"_a,
          "Apply a U3 gate on qubit q with parameters theta, phi, lambda.");
-  qc.def("u3",
-         py::overload_cast<qc::Qubit, const qc::Control&, const qc::fp,
-                           const qc::fp, const qc::fp>(
-             &qc::QuantumComputation::u3),
-         "q"_a, "ctrl"_a, "theta"_a, "phi"_a, "lambda"_a,
+  qc.def("u",
+         py::overload_cast<const qc::fp, const qc::fp, const qc::fp,
+                           const qc::Control&, qc::Qubit>(
+             &qc::QuantumComputation::u),
+         "theta"_a, "phi"_a, "lambda"_a, "ctrl"_a, "q"_a,
          "Apply a controlled U3 gate on qubit q with control ctrl and "
          "parameters theta, phi, lambda.");
-  qc.def("u3",
-         py::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp,
-                           const qc::fp, const qc::fp>(
-             &qc::QuantumComputation::u3),
-         "q"_a, "controls"_a, "theta"_a, "phi"_a, "lambda"_a,
+  qc.def("u",
+         py::overload_cast<const qc::fp, const qc::fp, const qc::fp,
+                           const qc::Controls&, qc::Qubit>(
+             &qc::QuantumComputation::u),
+         "theta"_a, "phi"_a, "lambda"_a, "controls"_a, "q"_a,
          "Apply a multi-controlled U3 gate on qubit q with controls controls "
          "and parameters theta, phi, lambda.");
 
   qc.def("u2",
-         py::overload_cast<qc::Qubit, const qc::fp, const qc::fp>(
+         py::overload_cast<const qc::fp, const qc::fp, qc::Qubit>(
              &qc::QuantumComputation::u2),
-         "q"_a, "phi"_a, "lambda"_a,
+         "phi"_a, "lambda"_a, "q"_a,
          "Apply a U2 gate on qubit q with parameters phi, lambda.");
   qc.def("u2",
-         py::overload_cast<qc::Qubit, const qc::Control&, const qc::fp,
-                           const qc::fp>(&qc::QuantumComputation::u2),
-         "q"_a, "ctrl"_a, "phi"_a, "lambda"_a,
+         py::overload_cast<const qc::fp, const qc::fp, const qc::Control&,
+                           qc::Qubit>(&qc::QuantumComputation::u2),
+         "phi"_a, "lambda"_a, "ctrl"_a, "q"_a,
          "Apply a controlled U2 gate on qubit q with control ctrl and "
          "parameters phi, lambda.");
   qc.def("u2",
-         py::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp,
-                           const qc::fp>(&qc::QuantumComputation::u2),
-         "q"_a, "controls"_a, "phi"_a, "lambda"_a,
+         py::overload_cast<const qc::fp, const qc::fp, const qc::Controls&,
+                           qc::Qubit>(&qc::QuantumComputation::u2),
+         "phi"_a, "lambda"_a, "controls"_a, "q"_a,
          "Apply a multi-controlled U2 gate on qubit q with controls controls "
          "and parameters phi, lambda.");
 
   qc.def("phase",
-         py::overload_cast<qc::Qubit, const qc::fp>(
+         py::overload_cast<const qc::fp, qc::Qubit>(
              &qc::QuantumComputation::phase),
-         "q"_a, "lambda"_a,
+         "lambda"_a, "q"_a,
          "Apply a phase gate on qubit q with parameter lambda.");
   qc.def("phase",
-         py::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
+         py::overload_cast<const qc::fp, const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::phase),
-         "q"_a, "ctrl"_a, "lambda"_a,
+         "lambda"_a, "ctrl"_a, "q"_a,
          "Apply a controlled phase gate on qubit q with control ctrl and "
          "parameter lambda.");
   qc.def("phase",
-         py::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
+         py::overload_cast<const qc::fp, const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::phase),
-         "q"_a, "controls"_a, "lambda"_a,
+         "lambda"_a, "controls"_a, "q"_a,
          "Apply a multi-controlled phase gate on qubit q with controls "
          "controls and parameter lambda.");
 
   qc.def("sx", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::sx), "q"_a,
          "Apply a square root of X gate on qubit q.");
   qc.def("sx",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::sx),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply a controlled square root of X gate on qubit q with control "
          "ctrl.");
   qc.def("sx",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::sx),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply a multi-controlled square root of X gate on qubit q with "
          "controls controls.");
 
   qc.def("sxdag", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::sxdag),
          "q"_a, "Apply the inverse of the square root of X gate on qubit q.");
   qc.def("sxdag",
-         py::overload_cast<qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::sxdag),
-         "q"_a, "ctrl"_a,
+         "ctrl"_a, "q"_a,
          "Apply the controlled inverse of the square root of X gate on qubit "
          "q with control ctrl.");
   qc.def("sxdag",
-         py::overload_cast<qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::sxdag),
-         "q"_a, "controls"_a,
+         "controls"_a, "q"_a,
          "Apply the multi-controlled inverse of the square root of X gate on "
          "qubit q with controls controls.");
 
   qc.def(
       "rx",
-      py::overload_cast<qc::Qubit, const qc::fp>(&qc::QuantumComputation::rx),
-      "q"_a, "theta"_a,
+      py::overload_cast<const qc::fp, qc::Qubit>(&qc::QuantumComputation::rx),
+      "theta"_a, "q"_a,
       "Apply an X-rotation gate on qubit q with angle theta.");
   qc.def("rx",
-         py::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
+         py::overload_cast<const qc::fp, const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::rx),
-         "q"_a, "ctrl"_a, "theta"_a,
+         "theta"_a, "ctrl"_a, "q"_a,
          "Apply a controlled X-rotation gate on qubit q with control ctrl "
          "and angle theta.");
   qc.def("rx",
-         py::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
+         py::overload_cast<const qc::fp, const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::rx),
-         "q"_a, "controls"_a, "theta"_a,
+         "theta"_a, "controls"_a, "q"_a,
          "Apply a multi-controlled X-rotation gate on qubit q with controls "
          "controls and angle theta.");
 
   qc.def(
       "ry",
-      py::overload_cast<qc::Qubit, const qc::fp>(&qc::QuantumComputation::ry),
-      "q"_a, "theta"_a, "Apply a Y-rotation gate on qubit q with angle theta.");
+      py::overload_cast<const qc::fp, qc::Qubit>(&qc::QuantumComputation::ry),
+      "theta"_a, "q"_a, "Apply a Y-rotation gate on qubit q with angle theta.");
   qc.def("ry",
-         py::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
+         py::overload_cast<const qc::fp, const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::ry),
-         "q"_a, "ctrl"_a, "theta"_a,
+         "theta"_a, "ctrl"_a, "q"_a,
          "Apply a controlled Y-rotation gate on qubit q with control ctrl "
          "and angle theta.");
   qc.def("ry",
-         py::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
+         py::overload_cast<const qc::fp, const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::ry),
-         "q"_a, "controls"_a, "theta"_a,
+         "theta"_a, "controls"_a, "q"_a,
          "Apply a multi-controlled Y-rotation gate on qubit q with controls "
          "controls and angle theta.");
 
   qc.def(
       "rz",
-      py::overload_cast<qc::Qubit, const qc::fp>(&qc::QuantumComputation::rz),
-      "q"_a, "phi"_a, "Apply a Z-rotation gate on qubit q with angle phi.");
+      py::overload_cast<const qc::fp, qc::Qubit>(&qc::QuantumComputation::rz),
+      "phi"_a, "q"_a, "Apply a Z-rotation gate on qubit q with angle phi.");
   qc.def("rz",
-         py::overload_cast<qc::Qubit, const qc::Control&, const qc::fp>(
+         py::overload_cast<const qc::fp, const qc::Control&, qc::Qubit>(
              &qc::QuantumComputation::rz),
-         "q"_a, "ctrl"_a, "phi"_a,
+         "phi"_a, "ctrl"_a, "q"_a,
          "Apply a controlled Z-rotation gate on qubit q with control ctrl "
          "and angle phi.");
   qc.def("rz",
-         py::overload_cast<qc::Qubit, const qc::Controls&, const qc::fp>(
+         py::overload_cast<const qc::fp, const qc::Controls&, qc::Qubit>(
              &qc::QuantumComputation::rz),
-         "q"_a, "controls"_a, "phi"_a,
+         "phi"_a, "controls"_a, "q"_a,
          "Apply a multi-controlled Z-rotation gate on qubit q with controls "
          "controls and angle phi.");
 
@@ -585,15 +586,15 @@ void registerQuantumComputation(py::module& m) {
          py::overload_cast<qc::Qubit, qc::Qubit>(&qc::QuantumComputation::swap),
          "q1"_a, "q2"_a, "Apply a SWAP gate on qubits q1 and q2.");
   qc.def("swap",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::swap),
-         "q1"_a, "q2"_a, "ctrl"_a,
+         "ctrl"_a, "q1"_a, "q2"_a,
          "Apply a controlled SWAP (Fredkin) gate on qubits q1 and q2 with "
          "control ctrl.");
   qc.def("swap",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::swap),
-         "q1"_a, "q2"_a, "controls"_a,
+         "controls"_a, "q1"_a, "q2"_a,
          "Apply a multi-controlled SWAP gate on qubits q1 and q2 with "
          "controls controls.");
 
@@ -602,15 +603,15 @@ void registerQuantumComputation(py::module& m) {
       py::overload_cast<qc::Qubit, qc::Qubit>(&qc::QuantumComputation::iswap),
       "q1"_a, "q2"_a, "Apply an iSWAP gate on qubits q1 and q2.");
   qc.def("iswap",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::iswap),
-         "q1"_a, "q2"_a, "ctrl"_a,
+         "ctrl"_a, "q1"_a, "q2"_a,
          "Apply a controlled iSWAP gate on qubits q1 and q2 with control "
          "ctrl.");
   qc.def("iswap",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::iswap),
-         "q1"_a, "q2"_a, "controls"_a,
+         "controls"_a, "q1"_a, "q2"_a,
          "Apply a multi-controlled iSWAP gate on qubits q1 and q2 with "
          "controls controls.");
 
@@ -619,15 +620,15 @@ void registerQuantumComputation(py::module& m) {
       py::overload_cast<qc::Qubit, qc::Qubit>(&qc::QuantumComputation::peres),
       "q1"_a, "q2"_a, "Apply a Peres gate on qubits q1 and q2.");
   qc.def("peres",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::peres),
-         "q1"_a, "q2"_a, "ctrl"_a,
+         "ctrl"_a, "q1"_a, "q2"_a,
          "Apply a controlled Peres gate on qubits q1 and q2 with control "
          "ctrl.");
   qc.def("peres",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::peres),
-         "q1"_a, "q2"_a, "controls"_a,
+         "controls"_a, "q1"_a, "q2"_a,
          "Apply a multi-controlled Peres gate on qubits q1 and q2 with "
          "controls controls.");
 
@@ -636,15 +637,15 @@ void registerQuantumComputation(py::module& m) {
              &qc::QuantumComputation::peresdag),
          "q1"_a, "q2"_a, "Apply an inverse Peres gate on qubits q1 and q2.");
   qc.def("peresdag",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::peresdag),
-         "q1"_a, "q2"_a, "ctrl"_a,
+         "ctrl"_a, "q1"_a, "q2"_a,
          "Apply a controlled inverse Peres gate on qubits q1 and q2 with "
          "control ctrl.");
   qc.def("peresdag",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::peresdag),
-         "q1"_a, "q2"_a, "controls"_a,
+         "controls"_a, "q1"_a, "q2"_a,
          "Apply a multi-controlled inverse Peres gate on qubits q1 and q2 "
          "with controls controls.");
 
@@ -652,15 +653,15 @@ void registerQuantumComputation(py::module& m) {
          py::overload_cast<qc::Qubit, qc::Qubit>(&qc::QuantumComputation::dcx),
          "q1"_a, "q2"_a, "Apply a double CNOT gate on qubits q1 and q2.");
   qc.def("dcx",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::dcx),
-         "q1"_a, "q2"_a, "ctrl"_a,
+         "ctrl"_a, "q1"_a, "q2"_a,
          "Apply a controlled double CNOT gate on qubits q1 and q2 with "
          "control ctrl.");
   qc.def("dcx",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::dcx),
-         "q1"_a, "q2"_a, "controls"_a,
+         "controls"_a, "q1"_a, "q2"_a,
          "Apply a multi-controlled double CNOT gate on qubits q1 and q2 with "
          "controls controls.");
 
@@ -669,137 +670,137 @@ void registerQuantumComputation(py::module& m) {
          "q1"_a, "q2"_a,
          "Apply an echoed cross-resonance gate on qubits q1 and q2.");
   qc.def("ecr",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&>(
+         py::overload_cast<const qc::Control&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::ecr),
-         "q1"_a, "q2"_a, "ctrl"_a,
+         "ctrl"_a, "q1"_a, "q2"_a,
          "Apply a controlled echoed cross-resonance gate on qubits q1 and q2 "
          "with control ctrl.");
   qc.def("ecr",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&>(
+         py::overload_cast<const qc::Controls&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::ecr),
-         "q1"_a, "q2"_a, "controls"_a,
+         "controls"_a, "q1"_a, "q2"_a,
          "Apply a multi-controlled echoed cross-resonance gate on qubits q1 "
          "and q2 with controls controls.");
 
   qc.def("rxx",
-         py::overload_cast<qc::Qubit, qc::Qubit, qc::fp>(
+         py::overload_cast<qc::fp, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::rxx),
-         "q1"_a, "q2"_a, "phi"_a,
+         "phi"_a, "q1"_a, "q2"_a,
          "Apply an XX-rotation gate on qubits q1 and q2 with angle phi.");
   qc.def("rxx",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp>(
+         py::overload_cast<qc::fp, const qc::Control&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::rxx),
-         "q1"_a, "q2"_a, "ctrl"_a, "phi"_a,
+         "phi"_a, "ctrl"_a, "q1"_a, "q2"_a,
          "Apply a controlled XX-rotation gate on qubits q1 and q2 with "
          "control ctrl and angle phi.");
   qc.def("rxx",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp>(
+         py::overload_cast<qc::fp, const qc::Controls&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::rxx),
-         "q1"_a, "q2"_a, "controls"_a, "phi"_a,
+         "phi"_a, "controls"_a, "q1"_a, "q2"_a,
          "Apply a multi-controlled XX-rotation gate on qubits q1 and q2 with "
          "controls controls and angle phi.");
 
   qc.def("ryy",
-         py::overload_cast<qc::Qubit, qc::Qubit, qc::fp>(
+         py::overload_cast<qc::fp, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::ryy),
-         "q1"_a, "q2"_a, "phi"_a,
+         "phi"_a, "q1"_a, "q2"_a,
          "Apply a YY-rotation gate on qubits q1 and q2 with angle phi.");
   qc.def("ryy",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp>(
+         py::overload_cast<qc::fp, const qc::Control&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::ryy),
-         "q1"_a, "q2"_a, "ctrl"_a, "phi"_a,
+         "phi"_a, "ctrl"_a, "q1"_a, "q2"_a,
          "Apply a controlled YY-rotation gate on qubits q1 and q2 with "
          "control ctrl and angle phi.");
   qc.def("ryy",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp>(
+         py::overload_cast<qc::fp, const qc::Controls&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::ryy),
-         "q1"_a, "q2"_a, "controls"_a, "phi"_a,
+         "phi"_a, "controls"_a, "q1"_a, "q2"_a,
          "Apply a multi-controlled YY-rotation gate on qubits q1 and q2 with "
          "controls controls and angle phi.");
 
   qc.def("rzz",
-         py::overload_cast<qc::Qubit, qc::Qubit, qc::fp>(
+         py::overload_cast<qc::fp, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::rzz),
-         "q1"_a, "q2"_a, "phi"_a,
+         "phi"_a, "q1"_a, "q2"_a,
          "Apply a ZZ-rotation gate on qubits q1 and q2 with angle phi.");
   qc.def("rzz",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp>(
+         py::overload_cast<qc::fp, const qc::Control&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::rzz),
-         "q1"_a, "q2"_a, "ctrl"_a, "phi"_a,
+         "phi"_a, "ctrl"_a, "q1"_a, "q2"_a,
          "Apply a controlled ZZ-rotation gate on qubits q1 and q2 with "
          "control ctrl and angle phi.");
   qc.def("rzz",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp>(
+         py::overload_cast<qc::fp, const qc::Controls&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::rzz),
-         "q1"_a, "q2"_a, "controls"_a, "phi"_a,
+         "phi"_a, "controls"_a, "q1"_a, "q2"_a,
          "Apply a multi-controlled ZZ-rotation gate on qubits q1 and q2 with "
          "controls controls and angle phi.");
 
   qc.def("rzx",
-         py::overload_cast<qc::Qubit, qc::Qubit, qc::fp>(
+         py::overload_cast<qc::fp, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::rzx),
-         "q1"_a, "q2"_a, "phi"_a,
+         "phi"_a, "q1"_a, "q2"_a,
          "Apply a ZX-rotation gate on qubits q1 and q2 with angle phi.");
   qc.def("rzx",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp>(
+         py::overload_cast<qc::fp, const qc::Control&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::rzx),
-         "q1"_a, "q2"_a, "ctrl"_a, "phi"_a,
+         "phi"_a, "ctrl"_a, "q1"_a, "q2"_a,
          "Apply a controlled ZX-rotation gate on qubits q1 and q2 with "
          "control ctrl and angle phi.");
   qc.def("rzx",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp>(
+         py::overload_cast<qc::fp, const qc::Controls&, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::rzx),
-         "q1"_a, "q2"_a, "controls"_a, "phi"_a,
+         "phi"_a, "controls"_a, "q1"_a, "q2"_a,
          "Apply a multi-controlled ZX-rotation gate on qubits q1 and q2 with "
          "controls controls and angle phi.");
 
   qc.def("xx_minus_yy",
-         py::overload_cast<qc::Qubit, qc::Qubit, qc::fp, qc::fp>(
+         py::overload_cast<qc::fp, qc::fp, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::xx_minus_yy),
-         "q1"_a, "q2"_a, "phi"_a, "lambda"_a,
+         "phi"_a, "lambda"_a, "q1"_a, "q2"_a,
          "Apply an XX-YY-rotation gate on qubits q1 and q2 with angles phi "
          "and lambda.");
   qc.def("xx_minus_yy",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp,
-                           qc::fp>(&qc::QuantumComputation::xx_minus_yy),
-         "q1"_a, "q2"_a, "ctrl"_a, "phi"_a, "lambda"_a,
+         py::overload_cast<qc::fp, qc::fp, const qc::Control&, qc::Qubit,
+                           qc::Qubit>(&qc::QuantumComputation::xx_minus_yy),
+         "phi"_a, "lambda"_a, "ctrl"_a, "q1"_a, "q2"_a,
          "Apply a controlled XX-YY-rotation gate on qubits q1 and q2 with "
          "control ctrl and angles phi and lambda.");
   qc.def("xx_minus_yy",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp,
-                           qc::fp>(&qc::QuantumComputation::xx_minus_yy),
-         "q1"_a, "q2"_a, "controls"_a, "phi"_a, "lambda"_a,
+         py::overload_cast<qc::fp, qc::fp, const qc::Controls&, qc::Qubit,
+                           qc::Qubit>(&qc::QuantumComputation::xx_minus_yy),
+         "phi"_a, "lambda"_a, "controls"_a, "q1"_a, "q2"_a,
          "Apply a multi-controlled XX-YY-rotation gate on qubits q1 and q2 "
          "with controls controls and angles phi and lambda.");
 
   qc.def("xx_plus_yy",
-         py::overload_cast<qc::Qubit, qc::Qubit, qc::fp, qc::fp>(
+         py::overload_cast<qc::fp, qc::fp, qc::Qubit, qc::Qubit>(
              &qc::QuantumComputation::xx_plus_yy),
-         "q1"_a, "q2"_a, "phi"_a, "lambda"_a,
+         "phi"_a, "lambda"_a, "q1"_a, "q2"_a,
          "Apply an XX+YY-rotation gate on qubits q1 and q2 with angles phi "
          "and lambda.");
   qc.def("xx_plus_yy",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Control&, qc::fp,
-                           qc::fp>(&qc::QuantumComputation::xx_plus_yy),
-         "q1"_a, "q2"_a, "ctrl"_a, "phi"_a, "lambda"_a,
+         py::overload_cast<qc::fp, qc::fp, const qc::Control&, qc::Qubit,
+                           qc::Qubit>(&qc::QuantumComputation::xx_plus_yy),
+         "phi"_a, "lambda"_a, "ctrl"_a, "q1"_a, "q2"_a,
          "Apply a controlled XX+YY-rotation gate on qubits q1 and q2 with "
          "control ctrl and angles phi and lambda.");
   qc.def("xx_plus_yy",
-         py::overload_cast<qc::Qubit, qc::Qubit, const qc::Controls&, qc::fp,
-                           qc::fp>(&qc::QuantumComputation::xx_plus_yy),
-         "q1"_a, "q2"_a, "controls"_a, "phi"_a, "lambda"_a,
+         py::overload_cast<qc::fp, qc::fp, const qc::Controls&, qc::Qubit,
+                           qc::Qubit>(&qc::QuantumComputation::xx_plus_yy),
+         "phi"_a, "lambda"_a, "controls"_a, "q1"_a, "q2"_a,
          "Apply a multi-controlled XX+YY-rotation gate on qubits q1 and q2 "
          "with controls controls and angles phi and lambda.");
 
   qc.def("measure",
          py::overload_cast<qc::Qubit, std::size_t>(
              &qc::QuantumComputation::measure),
-         "q"_a, "c"_a,
+         "c"_a, "q"_a,
          "Measure qubit q and store the result in classical register c.");
   qc.def("measure",
          py::overload_cast<qc::Qubit, const std::pair<std::string, qc::Bit>&>(
              &qc::QuantumComputation::measure),
-         "q"_a, "c"_a,
+         "c"_a, "q"_a,
          "Measure qubit q and store the result in a named classical register "
          "c.");
   qc.def("measure",

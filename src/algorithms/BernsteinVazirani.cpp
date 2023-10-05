@@ -33,11 +33,12 @@ BernsteinVazirani::BernsteinVazirani(const BitString& hiddenString,
 
 std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) const {
   os << "BernsteinVazirani (" << bitwidth << ") Statistics:\n";
-  os << "\tn: " << bitwidth + 1 << std::endl;
-  os << "\tm: " << getNindividualOps() << std::endl;
-  os << "\ts: " << expected << std::endl;
-  os << "\tdynamic: " << dynamic << std::endl;
-  os << "--------------" << std::endl;
+  os << "\tn: " << bitwidth + 1 << "\n";
+  os << "\tm: " << getNindividualOps() << "\n";
+  os << "\ts: " << expected << "\n";
+  os << "\tdynamic: " << dynamic << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 
@@ -71,7 +72,7 @@ void BernsteinVazirani::createCircuit() {
 
       // apply controlled-Z gate according to secret bitstring
       if (s.test(i)) {
-        z(0, 1_pc);
+        z(1_pc, 0);
       }
 
       // final Hadamard
@@ -94,7 +95,7 @@ void BernsteinVazirani::createCircuit() {
     // apply controlled-Z gates according to secret bitstring
     for (std::size_t i = 1; i <= bitwidth; ++i) {
       if (s.test(i - 1)) {
-        z(0, qc::Control{static_cast<Qubit>(i)});
+        z(qc::Control{static_cast<Qubit>(i)}, 0);
       }
     }
 

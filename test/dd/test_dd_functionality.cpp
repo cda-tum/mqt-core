@@ -132,48 +132,48 @@ TEST_F(DDFunctionality, buildCircuit) {
   qc.sdag(2);
   qc.v(0);
   qc.t(1);
-  qc.x(1, 0_pc);
-  qc.x(2, 3_pc);
-  qc.x(0, {2_pc, 3_pc});
+  qc.x(0_pc, 1);
+  qc.x(3_pc, 2);
+  qc.x({2_pc, 3_pc}, 0);
   qc.dcx(0, 1);
-  qc.dcx(0, 1, 2_pc);
+  qc.dcx(2_pc, 0, 1);
   qc.ecr(0, 1);
-  qc.ecr(0, 1, 2_pc);
+  qc.ecr(2_pc, 0, 1);
   const auto theta = dist(mt);
-  qc.rxx(0, 1, theta);
-  qc.rxx(0, 1, 2_pc, theta);
-  qc.ryy(0, 1, theta);
-  qc.ryy(0, 1, 2_pc, theta);
-  qc.rzz(0, 1, theta);
-  qc.rzz(0, 1, 2_pc, theta);
-  qc.rzx(0, 1, theta);
-  qc.rzx(0, 1, 2_pc, theta);
+  qc.rxx(theta, 0, 1);
+  qc.rxx(theta, 2_pc, 0, 1);
+  qc.ryy(theta, 0, 1);
+  qc.ryy(theta, 2_pc, 0, 1);
+  qc.rzz(theta, 0, 1);
+  qc.rzz(theta, 2_pc, 0, 1);
+  qc.rzx(theta, 0, 1);
+  qc.rzx(theta, 2_pc, 0, 1);
   const auto beta = dist(mt);
-  qc.xx_minus_yy(0, 1, theta, beta);
-  qc.xx_minus_yy(0, 1, 2_pc, theta, beta);
-  qc.xx_plus_yy(0, 1, theta, beta);
-  qc.xx_plus_yy(0, 1, 2_pc, theta, beta);
+  qc.xx_minus_yy(theta, beta, 0, 1);
+  qc.xx_minus_yy(theta, beta, 2_pc, 0, 1);
+  qc.xx_plus_yy(theta, beta, 0, 1);
+  qc.xx_plus_yy(theta, beta, 2_pc, 0, 1);
 
   // invert the circuit above
-  qc.xx_plus_yy(0, 1, 2_pc, -theta, beta);
-  qc.xx_plus_yy(0, 1, -theta, beta);
-  qc.xx_minus_yy(0, 1, 2_pc, -theta, beta);
-  qc.xx_minus_yy(0, 1, -theta, beta);
-  qc.rzx(0, 1, 2_pc, -theta);
-  qc.rzx(0, 1, -theta);
-  qc.rzz(0, 1, 2_pc, -theta);
-  qc.rzz(0, 1, -theta);
-  qc.ryy(0, 1, 2_pc, -theta);
-  qc.ryy(0, 1, -theta);
-  qc.rxx(0, 1, 2_pc, -theta);
-  qc.rxx(0, 1, -theta);
-  qc.ecr(0, 1, 2_pc);
+  qc.xx_plus_yy(-theta, beta, 2_pc, 0, 1);
+  qc.xx_plus_yy(-theta, beta, 0, 1);
+  qc.xx_minus_yy(-theta, beta, 2_pc, 0, 1);
+  qc.xx_minus_yy(-theta, beta, 0, 1);
+  qc.rzx(-theta, 2_pc, 0, 1);
+  qc.rzx(-theta, 0, 1);
+  qc.rzz(-theta, 2_pc, 0, 1);
+  qc.rzz(-theta, 0, 1);
+  qc.ryy(-theta, 2_pc, 0, 1);
+  qc.ryy(-theta, 0, 1);
+  qc.rxx(-theta, 2_pc, 0, 1);
+  qc.rxx(-theta, 0, 1);
+  qc.ecr(2_pc, 0, 1);
   qc.ecr(0, 1);
-  qc.dcx(1, 0, 2_pc);
+  qc.dcx(2_pc, 1, 0);
   qc.dcx(1, 0);
-  qc.x(0, {2_pc, 3_pc});
-  qc.x(2, 3_pc);
-  qc.x(1, 0_pc);
+  qc.x({2_pc, 3_pc}, 0);
+  qc.x(3_pc, 2);
+  qc.x(0_pc, 1);
   qc.tdag(1);
   qc.vdag(0);
   qc.s(2);
@@ -222,9 +222,9 @@ TEST_F(DDFunctionality, CircuitEquivalence) {
   qc1.h(0);
 
   qc::QuantumComputation qc2(1);
-  qc2.rz(0, PI_2);
+  qc2.rz(PI_2, 0);
   qc2.sx(0);
-  qc2.rz(0, PI_2);
+  qc2.rz(PI_2, 0);
 
   const qc::MatrixDD dd1 = buildFunctionality(&qc1, dd);
   const qc::MatrixDD dd2 = buildFunctionality(&qc2, dd);
@@ -260,7 +260,7 @@ TEST_F(DDFunctionality, changePermutation) {
 TEST_F(DDFunctionality, basicTensorDumpTest) {
   QuantumComputation qc(2);
   qc.h(1);
-  qc.x(0, 1_pc);
+  qc.x(1_pc, 0);
 
   std::stringstream ss{};
   dd::dumpTensorNetwork(ss, qc);
@@ -282,7 +282,7 @@ TEST_F(DDFunctionality, compoundTensorDumpTest) {
   QuantumComputation qc(2);
   QuantumComputation comp(2);
   comp.h(1);
-  comp.x(0, 1_pc);
+  comp.x(1_pc, 0);
   qc.emplace_back(comp.asOperation());
 
   std::stringstream ss{};
@@ -357,7 +357,7 @@ TEST_F(DDFunctionality, FuseNoSingleQubitGates) {
   nqubits = 2;
   QuantumComputation qc(nqubits);
   qc.h(0);
-  qc.x(1, 0_pc);
+  qc.x(0_pc, 1);
   qc.y(0);
   e = buildFunctionality(&qc, dd);
   std::cout << "-----------------------------\n";

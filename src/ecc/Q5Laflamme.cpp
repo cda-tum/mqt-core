@@ -16,7 +16,7 @@ void Q5Laflamme::writeEncoding() {
   for (Qubit i = 0; i < nQubits; i++) {
     qcMapped->h(ancStart);
     for (std::size_t j = 0; j < ecc.nRedundantQubits; j++) {
-      qcMapped->z(static_cast<Qubit>(i + j * nQubits), qc::Control{ancStart});
+      qcMapped->z(qc::Control{ancStart}, static_cast<Qubit>(i + j * nQubits));
     }
     qcMapped->h(ancStart);
     qcMapped->measure(ancStart, clEncode);
@@ -56,10 +56,10 @@ void Q5Laflamme::measureAndCorrect() {
       for (std::size_t q = 0; q < STABILIZER_MATRIX.at(c).size(); q++) {
         switch (STABILIZER_MATRIX.at(c).at(q)) {
         case qc::X:
-          qcMapped->x(qubits.at(q), controls.at(c));
+          qcMapped->x(controls.at(c), qubits.at(q));
           break;
         case qc::Z:
-          qcMapped->z(qubits.at(q), controls.at(c));
+          qcMapped->z(controls.at(c), qubits.at(q));
           break;
         default:
           break;

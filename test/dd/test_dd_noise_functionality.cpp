@@ -51,25 +51,25 @@ protected:
     qc.x(0);
     qc.x(1);
     qc.h(3);
-    qc.x(3, 2_pc);
+    qc.x(2_pc, 3);
     qc.t(0);
     qc.t(1);
     qc.t(2);
     qc.tdag(3);
-    qc.x(1, 0_pc);
-    qc.x(3, 2_pc);
-    qc.x(0, 3_pc);
-    qc.x(2, 1_pc);
-    qc.x(1, 0_pc);
-    qc.x(3, 2_pc);
+    qc.x(0_pc, 1);
+    qc.x(2_pc, 3);
+    qc.x(3_pc, 0);
+    qc.x(1_pc, 2);
+    qc.x(0_pc, 1);
+    qc.x(2_pc, 3);
     qc.tdag(0);
     qc.tdag(1);
     qc.tdag(2);
     qc.t(3);
-    qc.x(1, 0_pc);
-    qc.x(3, 2_pc);
+    qc.x(0_pc, 1);
+    qc.x(2_pc, 3);
     qc.s(3);
-    qc.x(0, 3_pc);
+    qc.x(3_pc, 0);
     qc.h(3);
   }
 

@@ -10,8 +10,8 @@ void Q3Shor::writeEncoding() {
 
   for (std::size_t i = 0; i < nQubits; i++) {
     auto ctrl = qc::Control{static_cast<Qubit>(i)};
-    qcMapped->x(static_cast<Qubit>(i + nQubits), ctrl);
-    qcMapped->x(static_cast<Qubit>(i + 2 * nQubits), ctrl);
+    qcMapped->x(ctrl, static_cast<Qubit>(i + nQubits));
+    qcMapped->x(ctrl, static_cast<Qubit>(i + 2 * nQubits));
   }
 }
 
@@ -28,10 +28,10 @@ void Q3Shor::measureAndCorrect() {
     qcMapped->reset(ancStart);
     qcMapped->reset(ancStart + 1);
 
-    qcMapped->x(ancStart, qc::Control{static_cast<Qubit>(i)});
-    qcMapped->x(ancStart, qc::Control{static_cast<Qubit>(i + nQubits)});
-    qcMapped->x(ancStart + 1, qc::Control{static_cast<Qubit>(i + nQubits)});
-    qcMapped->x(ancStart + 1, qc::Control{static_cast<Qubit>(i + 2 * nQubits)});
+    qcMapped->x(qc::Control{static_cast<Qubit>(i)}, ancStart);
+    qcMapped->x(qc::Control{static_cast<Qubit>(i + nQubits)}, ancStart);
+    qcMapped->x(qc::Control{static_cast<Qubit>(i + nQubits)}, ancStart + 1);
+    qcMapped->x(qc::Control{static_cast<Qubit>(i + 2 * nQubits)}, ancStart + 1);
 
     qcMapped->measure(ancStart, clStart);
     qcMapped->measure(ancStart + 1, clStart + 1);
@@ -56,9 +56,9 @@ void Q3Shor::writeDecoding() {
     std::array<Qubit, N_REDUNDANT_QUBITS> qubits = {
         i, static_cast<Qubit>(i + nQubits),
         static_cast<Qubit>(i + 2 * nQubits)};
-    qcMapped->x(qubits[1], qc::Control{qubits[0]});
-    qcMapped->x(qubits[2], qc::Control{qubits[0]});
-    qcMapped->x(qubits[0], {qc::Control{qubits[1]}, qc::Control{qubits[2]}});
+    qcMapped->x(qc::Control{qubits[0]}, qubits[1]);
+    qcMapped->x(qc::Control{qubits[0]}, qubits[2]);
+    qcMapped->x({qc::Control{qubits[1]}, qc::Control{qubits[2]}}, qubits[0]);
   }
   isDecoded = true;
 }
