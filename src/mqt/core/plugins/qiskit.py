@@ -157,22 +157,6 @@ def _emplace_operation(
 ) -> list[float | ParameterExpression]:
     name = instr.name
 
-    print(
-        "\n",
-        "name: ",
-        name,
-        "qargs: ",
-        qargs,
-        "cargs: ",
-        cargs,
-        "params: ",
-        params,
-        "qubit_map: ",
-        qubit_map,
-        "clbit_map: ",
-        clbit_map,
-    )
-
     if name not in _NATIVELY_SUPPORTED_GATES:
         try:
             return _import_definition(qc, instr.definition, qargs, cargs, qubit_map, clbit_map)
