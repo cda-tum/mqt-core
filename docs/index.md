@@ -36,6 +36,7 @@ quickstart
 
 contributing
 support
+DevelopmentGuide
 ```
 
 ```{toctree}
