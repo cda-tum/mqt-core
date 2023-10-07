@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from . import operations, symbolic
+from ._core import Permutation, QuantumComputation
 from ._version import version as __version__
-from .permutation import Permutation
-from .quantum_computation import QuantumComputation
 
 __all__ = [
     "operations",
@@ -14,3 +13,7 @@ __all__ = [
     "symbolic",
     "__version__",
 ]
+
+for cls in (Permutation, QuantumComputation):
+    cls.__module__ = "mqt.core"
+del cls

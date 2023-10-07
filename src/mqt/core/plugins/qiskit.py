@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, List, cast
 
 from qiskit.circuit import AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
 
+from .. import QuantumComputation
 from ..operations import (
     CompoundOperation,
     Control,
@@ -15,23 +16,22 @@ from ..operations import (
     StandardOperation,
     SymbolicOperation,
 )
-from ..quantum_computation import QuantumComputation
 from ..symbolic import Expression, Term, Variable
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from qiskit import QuantumCircuit
+    from qiskit.circuit import QuantumCircuit
 
 
 def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
     """Convert a Qiskit `QuantumCircuit` to a `QuantumComputation` object.
 
     Args:
-        circ (QuantumCircuit): The Qiskit circuit to convert.
+        circ: The Qiskit circuit to convert.
 
     Returns:
-        QuantumComputation: The converted circuit.
+        The converted circuit.
     """
     qc = QuantumComputation()
 

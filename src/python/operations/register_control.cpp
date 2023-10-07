@@ -9,13 +9,18 @@ void registerControl(py::module& m) {
   auto controlType = py::enum_<qc::Control::Type>(control, "Type");
   controlType.value("Pos", qc::Control::Type::Pos);
   controlType.value("Neg", qc::Control::Type::Neg);
-  controlType.export_values();
-  controlType.def("__str__", [](const qc::Control::Type& type) {
-    return type == qc::Control::Type::Pos ? "Pos" : "Neg";
-  });
-  controlType.def("__repr__", [](const qc::Control::Type& type) {
-    return type == qc::Control::Type::Pos ? "Pos" : "Neg";
-  });
+  controlType.def(
+      "__str__",
+      [](const qc::Control::Type& type) {
+        return type == qc::Control::Type::Pos ? "Pos" : "Neg";
+      },
+      py::prepend());
+  controlType.def(
+      "__repr__",
+      [](const qc::Control::Type& type) {
+        return type == qc::Control::Type::Pos ? "Pos" : "Neg";
+      },
+      py::prepend());
   controlType.def("__bool__", [](const qc::Control::Type& type) {
     return type == qc::Control::Type::Pos;
   });

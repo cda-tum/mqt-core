@@ -58,14 +58,6 @@ void registerOperation(py::module& m) {
           },
           "qreg"_a, "creg"_a,
           "Return the OpenQASM string representation of this operation.")
-      .def("equals",
-           py::overload_cast<const qc::Operation&, const qc::Permutation&,
-                             const qc::Permutation&>(&qc::Operation::equals,
-                                                     py::const_),
-           "other"_a, "perm1"_a = qc::Permutation{},
-           "perm2"_a = qc::Permutation{},
-           "Return true if this operation is equal to the other operation "
-           "accounting for the given permutations.")
       .def("__eq__", py::overload_cast<const qc::Operation&>(
                          &qc::Operation::equals, py::const_))
       .def("__str__",
