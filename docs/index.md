@@ -42,5 +42,5 @@ DevelopmentGuide
 ```{toctree}
 :caption: API Reference
 
-api/modules
+api/mqt/core/index
 ```

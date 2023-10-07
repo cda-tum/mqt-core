@@ -14,6 +14,7 @@ from pybtex.style.template import field, href
 if TYPE_CHECKING:
     from pybtex.database import Entry
     from pybtex.richtext import HRef
+    from sphinx.application import Sphinx
 
 ROOT = Path(__file__).parent.parent.resolve()
 
@@ -42,9 +43,12 @@ author = "Chair for Design Automation, Technical University of Munich"
 language = "en"
 project_copyright = "2023, Chair for Design Automation, Technical University of Munich"
 
+master_doc = "index"
+
 extensions = [
     "myst_parser",
     "nbsphinx",
+    "autoapi.extension",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
@@ -52,7 +56,6 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_design",
     "sphinxext.opengraph",
-    "sphinx.ext.autosummary",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
@@ -70,10 +73,6 @@ exclude_patterns = [
 ]
 
 pygments_style = "colorful"
-
-# add_module_names = False
-
-# modindex_common_prefix = ["mqt.core."]
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
@@ -125,14 +124,51 @@ copybutton_prompt_text = r"(?:\(venv\) )?(?:\[.*\] )?\$ "
 copybutton_prompt_is_regexp = True
 copybutton_line_continuation_character = "\\"
 
-# autosummary_generate = True
 
-# typehints_use_rtype = False
-# napoleon_use_rtype = False
-# napoleon_google_docstring = True
-# napoleon_numpy_docstring = False
+modindex_common_prefix = ["mqt.core."]
 
-# autodoc_mock_imports = ["mqt.core._core"]
+autoapi_dirs = ["../src/mqt"]
+autoapi_python_use_implicit_namespaces = True
+autoapi_root = "api"
+autoapi_add_toctree_entry = False
+autoapi_ignore = [
+    "*/**/_version.py",
+]
+autoapi_options = [
+    "members",
+    "inherited-members",
+    "imported-members",
+    "show-inheritance",
+    "special-members",
+    "undoc-members",
+]
+
+
+def skip_cpp_core(_app: Sphinx, what: str, name: str, _obj: object, skip: bool, _options) -> bool:  # noqa: ANN001
+    """Skip the _core module in documentation."""
+    if what == "package" and "_core" in name or "_compat" in name:
+        skip = True
+    return skip
+
+
+def setup(sphinx: Sphinx) -> None:
+    """Setup Sphinx."""
+    sphinx.connect("autoapi-skip-member", skip_cpp_core)
+
+
+autodoc_typehints = "signature"
+autodoc_typehints_format = "short"
+autodoc_type_aliases = {
+    "QuantumCircuit": "qiskit.circuit.QuantumCircuit",
+}
+
+typehints_use_signature = True
+typehints_use_signature_return = True
+
+add_module_names = False
+
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = "furo"

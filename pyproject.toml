@@ -51,6 +51,7 @@ docs = [
     "ipykernel",
     "nbsphinx",
     "sphinx-autodoc-typehints",
+    "sphinx-autoapi",
     "qiskit-terra[visualization]"
 ]
 qiskit = [
