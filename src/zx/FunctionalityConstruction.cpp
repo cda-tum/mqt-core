@@ -153,7 +153,7 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       addZSpider(diag, target, qubits, parseParam(op.get(), 0));
       break;
     }
-    case qc::OpType::Phase:
+    case qc::OpType::P:
       addZSpider(diag, target, qubits, parseParam(op.get(), 0));
       break;
     case qc::OpType::X:
@@ -182,13 +182,13 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
     case qc::OpType::T:
       addZSpider(diag, target, qubits, PiExpression(PiRational(1, 4)));
       break;
-    case qc::OpType::Tdag:
+    case qc::OpType::Tdg:
       addZSpider(diag, target, qubits, PiExpression(PiRational(-1, 4)));
       break;
     case qc::OpType::S:
       addZSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
       break;
-    case qc::OpType::Sdag:
+    case qc::OpType::Sdg:
       addZSpider(diag, target, qubits, PiExpression(PiRational(-1, 2)));
       break;
     case qc::OpType::U2:
@@ -198,7 +198,7 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       addZSpider(diag, target, qubits,
                  parseParam(op.get(), 0) + PiRational(1, 2));
       break;
-    case qc::OpType::U3:
+    case qc::OpType::U:
       addZSpider(diag, target, qubits, parseParam(op.get(), 2));
       addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
       addZSpider(diag, target, qubits,
@@ -232,7 +232,7 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
     case qc::OpType::SX:
       addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
       break;
-    case qc::OpType::SXdag:
+    case qc::OpType::SXdg:
       addXSpider(diag, target, qubits, PiExpression(PiRational(-1, 2)));
       break;
     default:
@@ -265,7 +265,7 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
     case qc::OpType::I:
       break;
 
-    case qc::OpType::Phase:
+    case qc::OpType::P:
       addCphase(diag, parseParam(op.get(), 0), ctrl, target, qubits);
       break;
 
@@ -277,12 +277,12 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       addCphase(diag, zx::PiExpression{PiRational(1, 2)}, ctrl, target, qubits);
       break;
 
-    case qc::OpType::Tdag:
+    case qc::OpType::Tdg:
       addCphase(diag, zx::PiExpression{PiRational(-1, 4)}, ctrl, target,
                 qubits);
       break;
 
-    case qc::OpType::Sdag:
+    case qc::OpType::Sdg:
       addCphase(diag, zx::PiExpression{PiRational(-1, 2)}, ctrl, target,
                 qubits);
       break;
@@ -378,24 +378,24 @@ bool FunctionalityConstruction::transformableToZX(const qc::Operation* op) {
     switch (op->getType()) {
     case qc::OpType::Z:
     case qc::OpType::RZ:
-    case qc::OpType::Phase:
+    case qc::OpType::P:
     case qc::OpType::X:
     case qc::OpType::RX:
     case qc::OpType::Y:
     case qc::OpType::RY:
     case qc::OpType::T:
-    case qc::OpType::Tdag:
+    case qc::OpType::Tdg:
     case qc::OpType::S:
-    case qc::OpType::Sdag:
+    case qc::OpType::Sdg:
     case qc::OpType::U2:
-    case qc::OpType::U3:
+    case qc::OpType::U:
     case qc::OpType::SWAP:
     case qc::OpType::iSWAP:
     case qc::OpType::H:
     case qc::OpType::Measure:
     case qc::OpType::I:
     case qc::OpType::SX:
-    case qc::OpType::SXdag:
+    case qc::OpType::SXdg:
       return true;
     default:
       return false;
@@ -405,11 +405,11 @@ bool FunctionalityConstruction::transformableToZX(const qc::Operation* op) {
     case qc::OpType::X:
     case qc::OpType::Z:
     case qc::OpType::I:
-    case qc::OpType::Phase:
+    case qc::OpType::P:
     case qc::OpType::T:
     case qc::OpType::S:
-    case qc::OpType::Tdag:
-    case qc::OpType::Sdag:
+    case qc::OpType::Tdg:
+    case qc::OpType::Sdg:
       return true;
 
     default:

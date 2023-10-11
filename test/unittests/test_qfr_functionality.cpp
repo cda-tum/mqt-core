@@ -1544,8 +1544,8 @@ TEST_F(QFRFunctionality, OperationEquality) {
   EXPECT_FALSE(cx01.equals(cx10));
   EXPECT_FALSE(x0.equals(cx01));
 
-  const auto p = StandardOperation(1U, 0, qc::Phase, {2.0});
-  const auto pm = StandardOperation(1U, 0, qc::Phase, {-2.0});
+  const auto p = StandardOperation(1U, 0, qc::P, {2.0});
+  const auto pm = StandardOperation(1U, 0, qc::P, {-2.0});
   EXPECT_FALSE(p.equals(pm));
 
   const auto measure0 = NonUnitaryOperation(2U, 0, 0U);
@@ -1837,7 +1837,7 @@ TEST_F(QFRFunctionality, U3toU2Gate) {
   EXPECT_EQ(qc.at(1)->getType(), qc::RY);
   EXPECT_EQ(qc.at(1)->getParameter().at(0), PI_2);
   EXPECT_EQ(qc.at(2)->getType(), qc::V);
-  EXPECT_EQ(qc.at(3)->getType(), qc::Vdag);
+  EXPECT_EQ(qc.at(3)->getType(), qc::Vdg);
   EXPECT_EQ(qc.at(4)->getType(), qc::U2);
   EXPECT_EQ(qc.at(4)->getParameter().at(0), 0.25);
   EXPECT_EQ(qc.at(4)->getParameter().at(1), 0.5);
@@ -1857,10 +1857,10 @@ TEST_F(QFRFunctionality, U3toU1Gate) {
   EXPECT_EQ(qc.at(0)->getType(), qc::I);
   EXPECT_EQ(qc.at(1)->getType(), qc::Z);
   EXPECT_EQ(qc.at(2)->getType(), qc::S);
-  EXPECT_EQ(qc.at(3)->getType(), qc::Sdag);
+  EXPECT_EQ(qc.at(3)->getType(), qc::Sdg);
   EXPECT_EQ(qc.at(4)->getType(), qc::T);
-  EXPECT_EQ(qc.at(5)->getType(), qc::Tdag);
-  EXPECT_EQ(qc.at(6)->getType(), qc::Phase);
+  EXPECT_EQ(qc.at(5)->getType(), qc::Tdg);
+  EXPECT_EQ(qc.at(6)->getType(), qc::P);
   EXPECT_EQ(qc.at(6)->getParameter().at(0), 0.5);
 }
 
@@ -1882,7 +1882,7 @@ TEST_F(QFRFunctionality, U3SpecialCases) {
   EXPECT_EQ(qc.at(2)->getParameter().at(0), -0.5);
   EXPECT_EQ(qc.at(3)->getType(), qc::Y);
   EXPECT_EQ(qc.at(4)->getType(), qc::X);
-  EXPECT_EQ(qc.at(5)->getType(), qc::U3);
+  EXPECT_EQ(qc.at(5)->getType(), qc::U);
   EXPECT_EQ(qc.at(5)->getParameter().at(0), 0.5);
   EXPECT_EQ(qc.at(5)->getParameter().at(1), 0.25);
   EXPECT_EQ(qc.at(5)->getParameter().at(2), 0.125);
@@ -1904,9 +1904,9 @@ TEST_F(QFRFunctionality, OpNameToTypeSimple) {
 
   EXPECT_EQ(qc::OpType::H, qc::opTypeFromString("h"));
   EXPECT_EQ(qc::OpType::S, qc::opTypeFromString("s"));
-  EXPECT_EQ(qc::OpType::Sdag, qc::opTypeFromString("sdg"));
+  EXPECT_EQ(qc::OpType::Sdg, qc::opTypeFromString("sdg"));
   EXPECT_EQ(qc::OpType::T, qc::opTypeFromString("t"));
-  EXPECT_EQ(qc::OpType::Tdag, qc::opTypeFromString("tdg"));
+  EXPECT_EQ(qc::OpType::Tdg, qc::opTypeFromString("tdg"));
 
   EXPECT_EQ(qc::OpType::X, qc::opTypeFromString("cnot"));
 
@@ -2099,13 +2099,13 @@ TEST_F(QFRFunctionality, invertStandardOpInvertClone) {
   auto op1 = StandardOperation(1U, 0U, S);
   auto op2 = op1.getInverted();
   ASSERT_EQ(op1.getType(), S);
-  ASSERT_EQ(op2->getType(), Sdag);
+  ASSERT_EQ(op2->getType(), Sdg);
 }
 
 TEST_F(QFRFunctionality, invertStandardOpSpecial) {
   const auto opTypes = {
-      std::pair{S, Sdag},   std::pair{T, Tdag},         std::pair{V, Vdag},
-      std::pair{SX, SXdag}, std::pair{Peres, Peresdag},
+      std::pair{S, Sdg},   std::pair{T, Tdg},         std::pair{V, Vdg},
+      std::pair{SX, SXdg}, std::pair{Peres, Peresdg},
   };
 
   for (const auto& [opType, opTypeInv] : opTypes) {
@@ -2122,7 +2122,7 @@ TEST_F(QFRFunctionality, invertStandardOpSpecial) {
 TEST_F(QFRFunctionality, invertStandardOpParamChange) {
   const auto cases = {
       std::tuple{OpType::GPhase, std::vector<fp>{1}, std::vector<fp>{-1}},
-      std::tuple{OpType::Phase, std::vector<fp>{1}, std::vector<fp>{-1}},
+      std::tuple{OpType::P, std::vector<fp>{1}, std::vector<fp>{-1}},
       std::tuple{OpType::RX, std::vector<fp>{1}, std::vector<fp>{-1}},
       std::tuple{OpType::RY, std::vector<fp>{1}, std::vector<fp>{-1}},
       std::tuple{OpType::RZ, std::vector<fp>{1}, std::vector<fp>{-1}},
@@ -2132,7 +2132,7 @@ TEST_F(QFRFunctionality, invertStandardOpParamChange) {
       std::tuple{OpType::RZX, std::vector<fp>{1}, std::vector<fp>{-1}},
       std::tuple{OpType::U2, std::vector<fp>{1, 1},
                  std::vector<fp>{-1 + PI, -1 - PI}},
-      std::tuple{OpType::U3, std::vector<fp>{1, 2, 3},
+      std::tuple{OpType::U, std::vector<fp>{1, 2, 3},
                  std::vector<fp>{-1, -3, -2}},
       std::tuple{OpType::XXminusYY, std::vector<fp>{1}, std::vector<fp>{-1}},
       std::tuple{OpType::XXplusYY, std::vector<fp>{1}, std::vector<fp>{-1}},
@@ -2160,7 +2160,7 @@ TEST_F(QFRFunctionality, invertCompoundOperation) {
 
   op.invert();
 
-  ASSERT_EQ(op.getOps()[0]->getType(), OpType::Sdag);
+  ASSERT_EQ(op.getOps()[0]->getType(), OpType::Sdg);
   ASSERT_EQ(op.getOps()[1]->getType(), OpType::RZ);
   ASSERT_EQ(op.getOps()[1]->getParameter(), std::vector<fp>{-1});
   ASSERT_EQ(op.getOps()[2]->getType(), OpType::X);
@@ -2177,7 +2177,7 @@ TEST_F(QFRFunctionality, invertSymbolicOpParamChange) {
       std::tuple{OpType::U2, std::vector<SymbolOrNumber>{Symbolic({x}), 1.0},
                  std::vector<SymbolOrNumber>{-1.0 + PI, -Symbolic({x}) - PI}},
       std::tuple{
-          OpType::U3,
+          OpType::U,
           std::vector<SymbolOrNumber>{Symbolic({x}), 2.0, Symbolic({y})},
           std::vector<SymbolOrNumber>{-Symbolic({x}), -Symbolic({y}), -2.0}},
       std::tuple{OpType::XXminusYY, std::vector<SymbolOrNumber>{Symbolic({x})},

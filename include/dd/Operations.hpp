@@ -43,22 +43,22 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
   case qc::S:
     gm = inverse ? Sdagmat : Smat;
     break;
-  case qc::Sdag:
+  case qc::Sdg:
     gm = inverse ? Smat : Sdagmat;
     break;
   case qc::T:
     gm = inverse ? Tdagmat : Tmat;
     break;
-  case qc::Tdag:
+  case qc::Tdg:
     gm = inverse ? Tmat : Tdagmat;
     break;
   case qc::V:
     gm = inverse ? Vdagmat : Vmat;
     break;
-  case qc::Vdag:
+  case qc::Vdg:
     gm = inverse ? Vmat : Vdagmat;
     break;
-  case qc::U3:
+  case qc::U:
     gm = inverse ? U3mat(-parameter[1U], -parameter[2U], -parameter[0U])
                  : U3mat(parameter[2U], parameter[1U], parameter[0U]);
     break;
@@ -66,13 +66,13 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
     gm = inverse ? U2mat(-parameter[0U] + PI, -parameter[1U] - PI)
                  : U2mat(parameter[1U], parameter[0U]);
     break;
-  case qc::Phase:
+  case qc::P:
     gm = inverse ? Phasemat(-parameter[0U]) : Phasemat(parameter[0U]);
     break;
   case qc::SX:
     gm = inverse ? SXdagmat : SXmat;
     break;
-  case qc::SXdag:
+  case qc::SXdg:
     gm = inverse ? SXmat : SXdagmat;
     break;
   case qc::RX:
@@ -171,7 +171,7 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
                                 startQubit);
     }
     return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
-  case qc::Peresdag:
+  case qc::Peresdg:
     if (inverse) {
       return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
     }

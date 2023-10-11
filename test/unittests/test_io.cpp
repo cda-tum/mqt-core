@@ -408,7 +408,7 @@ TEST_F(IO, sxAndSxdag) {
   auto& op1 = *(qc->begin());
   EXPECT_EQ(op1->getType(), qc::OpType::SX);
   auto& op2 = *(++qc->begin());
-  EXPECT_EQ(op2->getType(), qc::OpType::SXdag);
+  EXPECT_EQ(op2->getType(), qc::OpType::SXdg);
   auto& op3 = *(++(++qc->begin()));
   ASSERT_TRUE(op3->isCompoundOperation());
   auto* compOp = dynamic_cast<qc::CompoundOperation*>(op3.get());
@@ -416,7 +416,7 @@ TEST_F(IO, sxAndSxdag) {
   auto& compOp1 = *(compOp->begin());
   EXPECT_EQ(compOp1->getType(), qc::OpType::SX);
   auto& compOp2 = *(++compOp->begin());
-  EXPECT_EQ(compOp2->getType(), qc::OpType::SXdag);
+  EXPECT_EQ(compOp2->getType(), qc::OpType::SXdg);
 }
 
 TEST_F(IO, unifyRegisters) {

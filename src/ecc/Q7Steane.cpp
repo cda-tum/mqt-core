@@ -147,7 +147,7 @@ void Q7Steane::mapGate(const qc::Operation& gate) {
     break;
     // locigal S = 3 physical S's
   case qc::S:
-  case qc::Sdag:
+  case qc::Sdg:
     for (auto i : gate.getTargets()) {
       if (gate.getNcontrols() != 0U) {
         const auto& ctrls = gate.getControls();
@@ -208,7 +208,7 @@ void Q7Steane::mapGate(const qc::Operation& gate) {
 
     break;
   case qc::T:
-  case qc::Tdag:
+  case qc::Tdg:
     for (auto i : gate.getTargets()) {
       if (gate.getControls().empty()) {
         qcMapped->cx(static_cast<Qubit>(i + 6 * nQubits),

@@ -45,7 +45,7 @@ OpType SymbolicOperation::parseU3([[maybe_unused]] const Symbolic& theta,
   checkInteger(phi);
   checkFractionPi(phi);
 
-  return U3;
+  return U;
 }
 OpType SymbolicOperation::parseU3(fp& theta, const Symbolic& phi, fp& lambda) {
   if (std::abs(theta - PI_2) < PARAMETER_TOLERANCE) {
@@ -71,7 +71,7 @@ OpType SymbolicOperation::parseU3(fp& theta, const Symbolic& phi, fp& lambda) {
   checkInteger(theta);
   checkFractionPi(theta);
 
-  return U3;
+  return U;
 }
 OpType SymbolicOperation::parseU3(fp& theta, fp& phi,
                                   [[maybe_unused]] const Symbolic& lambda) {
@@ -92,7 +92,7 @@ OpType SymbolicOperation::parseU3(fp& theta, fp& phi,
   checkInteger(theta);
   checkFractionPi(theta);
 
-  return U3;
+  return U;
 }
 OpType SymbolicOperation::parseU3([[maybe_unused]] const Symbolic& theta,
                                   [[maybe_unused]] const Symbolic& phi,
@@ -101,7 +101,7 @@ OpType SymbolicOperation::parseU3([[maybe_unused]] const Symbolic& theta,
   checkInteger(lambda);
   checkFractionPi(lambda);
 
-  return U3;
+  return U;
 }
 OpType SymbolicOperation::parseU3([[maybe_unused]] const Symbolic& theta,
                                   fp& phi,
@@ -110,7 +110,7 @@ OpType SymbolicOperation::parseU3([[maybe_unused]] const Symbolic& theta,
   checkInteger(phi);
   checkFractionPi(phi);
 
-  return U3;
+  return U;
 }
 OpType SymbolicOperation::parseU3(fp& theta, const Symbolic& phi,
                                   const Symbolic& lambda) {
@@ -124,7 +124,7 @@ OpType SymbolicOperation::parseU3(fp& theta, const Symbolic& phi,
   checkInteger(theta);
   checkFractionPi(theta);
 
-  return U3;
+  return U;
 }
 
 OpType SymbolicOperation::parseU2([[maybe_unused]] const Symbolic& phi,
@@ -148,12 +148,12 @@ OpType SymbolicOperation::parseU2(fp& phi,
 }
 
 OpType SymbolicOperation::parseU1([[maybe_unused]] const Symbolic& lambda) {
-  return Phase;
+  return P;
 }
 
 void SymbolicOperation::checkSymbolicUgate() {
   // NOLINTBEGIN(bugprone-unchecked-optional-access) - we check for this
-  if (type == Phase) {
+  if (type == P) {
     if (!isSymbolicParameter(0)) {
       type = StandardOperation::parseU1(parameter[0]);
     }
@@ -165,7 +165,7 @@ void SymbolicOperation::checkSymbolicUgate() {
     } else if (isSymbolicParameter(1)) {
       type = parseU2(parameter[0], symbolicParameter[1].value());
     }
-  } else if (type == U3) {
+  } else if (type == U) {
     if (!isSymbolicParameter(0) && !isSymbolicParameter(1) &&
         !isSymbolicParameter(2)) {
       type =
@@ -357,7 +357,7 @@ void SymbolicOperation::addToSymbolicParameter(const std::size_t index,
 void SymbolicOperation::invert() {
   switch (type) {
   case GPhase:
-  case Phase:
+  case P:
   case RX:
   case RY:
   case RZ:
@@ -376,7 +376,7 @@ void SymbolicOperation::invert() {
     std::swap(parameter[0], parameter[1]);
     std::swap(symbolicParameter[0], symbolicParameter[1]);
     break;
-  case U3:
+  case U:
     negateSymbolicParameter(0);
     negateSymbolicParameter(1);
     negateSymbolicParameter(2);

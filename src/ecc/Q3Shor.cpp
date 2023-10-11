@@ -76,9 +76,9 @@ void Q3Shor::mapGate(const qc::Operation& gate) {
   case qc::Y:
   case qc::Z:
   case qc::S:
-  case qc::Sdag:
+  case qc::Sdg:
   case qc::T:
-  case qc::Tdag:
+  case qc::Tdg:
     for (std::size_t j = 0; j < gate.getNtargets(); j++) {
       auto i = gate.getTargets()[j];
       if (gate.getNcontrols() != 0U) {

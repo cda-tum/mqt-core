@@ -9,7 +9,7 @@ void Operation::setName() {
   case Peres:
     name = "Pr ";
     break;
-  case Peresdag:
+  case Peresdg:
     name = "Prdg";
     break;
   case RXX:

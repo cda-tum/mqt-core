@@ -55,11 +55,10 @@ protected:
 INSTANTIATE_TEST_SUITE_P(
     Parameters, DDFunctionality,
     testing::Values(qc::GPhase, qc::I, qc::H, qc::X, qc::Y, qc::Z, qc::S,
-                    qc::Sdag, qc::T, qc::Tdag, qc::SX, qc::SXdag, qc::V,
-                    qc::Vdag, qc::U3, qc::U2, qc::Phase, qc::RX, qc::RY, qc::RZ,
-                    qc::Peres, qc::Peresdag, qc::SWAP, qc::iSWAP, qc::DCX,
-                    qc::ECR, qc::RXX, qc::RYY, qc::RZZ, qc::RZX, qc::XXminusYY,
-                    qc::XXplusYY),
+                    qc::Sdg, qc::T, qc::Tdg, qc::SX, qc::SXdg, qc::V, qc::Vdg,
+                    qc::U, qc::U2, qc::P, qc::RX, qc::RY, qc::RZ, qc::Peres,
+                    qc::Peresdg, qc::SWAP, qc::iSWAP, qc::DCX, qc::ECR, qc::RXX,
+                    qc::RYY, qc::RZZ, qc::RZX, qc::XXminusYY, qc::XXplusYY),
     [](const testing::TestParamInfo<DDFunctionality::ParamType>& inf) {
       const auto gate = inf.param;
       return toString(gate);
@@ -75,7 +74,7 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
     op = qc::StandardOperation(nqubits, Controls{}, Targets{}, gate,
                                std::vector{dist(mt)});
     break;
-  case qc::U3:
+  case qc::U:
     op = qc::StandardOperation(nqubits, 0, gate,
                                std::vector{dist(mt), dist(mt), dist(mt)});
     break;
@@ -86,7 +85,7 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
   case qc::RX:
   case qc::RY:
   case qc::RZ:
-  case qc::Phase:
+  case qc::P:
     op = qc::StandardOperation(nqubits, 0, gate, std::vector{dist(mt)});
     break;
 
@@ -97,7 +96,7 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
     op = qc::StandardOperation(nqubits, Controls{}, 0, 1, gate);
     break;
   case qc::Peres:
-  case qc::Peresdag:
+  case qc::Peresdg:
     op = qc::StandardOperation(nqubits, {0_pc}, 1, 2, gate);
     break;
   case qc::RXX:

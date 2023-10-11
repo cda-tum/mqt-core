@@ -86,7 +86,7 @@ void QPE::createCircuit() {
       // hybrid quantum-classical inverse QFT
       for (std::size_t j = 0; j < i; j++) {
         auto iQFTLambda = -PI / static_cast<double>(1ULL << (i - j));
-        classicControlled(Phase, 1, {j, 1U}, 1U, {iQFTLambda});
+        classicControlled(P, 1, {j, 1U}, 1U, {iQFTLambda});
       }
       h(1);
 

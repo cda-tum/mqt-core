@@ -214,11 +214,11 @@ void qc::QuantumComputation::readQCGateDescriptions(
     } else if (gateType == "P" || gateType == "S") {
       gate = S;
     } else if (gateType == "P*" || gateType == "S*") {
-      gate = Sdag;
+      gate = Sdg;
     } else if (gateType == "T") {
       gate = T;
     } else if (gateType == "T*") {
-      gate = Tdag;
+      gate = Tdg;
     } else if (gateType == "swap") {
       gate = SWAP;
     } else if (gateType == "Rx") {
@@ -287,7 +287,7 @@ void qc::QuantumComputation::readQCGateDescriptions(
       controls.pop_back();
       mcx(Controls{controls.cbegin(), controls.cend()}, target);
     } else if (gate == H || gate == Y || gate == Z || gate == S ||
-               gate == Sdag || gate == T || gate == Tdag) {
+               gate == Sdg || gate == T || gate == Tdg) {
       const Qubit target = controls.back().qubit;
       controls.pop_back();
       emplace_back<StandardOperation>(

@@ -159,7 +159,7 @@ TEST_F(SymbolicTest, TestClone) {
 
 TEST_F(SymbolicTest, TestU3SymLambdaPhase) {
   symQc.u(0.0, 0.0, xMonom, 0);
-  EXPECT_EQ((*symQc.begin())->getType(), OpType::Phase);
+  EXPECT_EQ((*symQc.begin())->getType(), OpType::P);
 }
 
 TEST_F(SymbolicTest, TestU3SymLambdaU2) {
@@ -169,7 +169,7 @@ TEST_F(SymbolicTest, TestU3SymLambdaU2) {
 
 TEST_F(SymbolicTest, TestU3SymLambdaU3) {
   symQc.u(4.567, 1.234, xMonom, 0);
-  EXPECT_EQ((*symQc.begin())->getType(), OpType::U3);
+  EXPECT_EQ((*symQc.begin())->getType(), OpType::U);
 }
 
 TEST_F(SymbolicTest, TestU3SymPhiU2) {
@@ -179,30 +179,30 @@ TEST_F(SymbolicTest, TestU3SymPhiU2) {
 
 TEST_F(SymbolicTest, TestU3SymPhiU3) {
   symQc.u(4.567, xMonom, 0.0, 0);
-  EXPECT_EQ((*symQc.begin())->getType(), OpType::U3);
+  EXPECT_EQ((*symQc.begin())->getType(), OpType::U);
 
   symQc.u(1.234, xMonom, PI_2, 0);
-  EXPECT_EQ((*(symQc.begin() + 1))->getType(), OpType::U3);
+  EXPECT_EQ((*(symQc.begin() + 1))->getType(), OpType::U);
 
   symQc.u(3.465, xMonom, PI, 0);
-  EXPECT_EQ((*(symQc.begin() + 2))->getType(), OpType::U3);
+  EXPECT_EQ((*(symQc.begin() + 2))->getType(), OpType::U);
 
   symQc.u(1.2345, xMonom, 3.465, 0);
-  EXPECT_EQ((*(symQc.begin() + 3))->getType(), OpType::U3);
+  EXPECT_EQ((*(symQc.begin() + 3))->getType(), OpType::U);
 }
 
 TEST_F(SymbolicTest, TestU3SymThetaU3) {
   symQc.u(xMonom, 0.0, 0.0, 0);
-  EXPECT_EQ((*symQc.begin())->getType(), OpType::U3);
+  EXPECT_EQ((*symQc.begin())->getType(), OpType::U);
 
   symQc.u(xMonom, PI_2, PI_2, 0);
-  EXPECT_EQ((*(symQc.begin() + 1))->getType(), OpType::U3);
+  EXPECT_EQ((*(symQc.begin() + 1))->getType(), OpType::U);
 
   symQc.u(xMonom, 0.0, PI, 0);
-  EXPECT_EQ((*(symQc.begin() + 2))->getType(), OpType::U3);
+  EXPECT_EQ((*(symQc.begin() + 2))->getType(), OpType::U);
 
   symQc.u(xMonom, 4.567, 1.234, 0);
-  EXPECT_EQ((*(symQc.begin() + 3))->getType(), OpType::U3);
+  EXPECT_EQ((*(symQc.begin() + 3))->getType(), OpType::U);
 }
 
 TEST_F(SymbolicTest, TestU3SymLambdaSymPhiU2) {
@@ -212,17 +212,17 @@ TEST_F(SymbolicTest, TestU3SymLambdaSymPhiU2) {
 
 TEST_F(SymbolicTest, TestU3SymLambdaSymPhiU3) {
   symQc.u(PI_2 - 0.2, xMonom, yMonom, 0);
-  EXPECT_EQ((*symQc.begin())->getType(), OpType::U3);
+  EXPECT_EQ((*symQc.begin())->getType(), OpType::U);
 }
 
 TEST_F(SymbolicTest, TestU3SymLambdaSymThetaU3) {
   symQc.u(xMonom, 0.0, yMonom, 0);
-  EXPECT_EQ((*symQc.begin())->getType(), OpType::U3);
+  EXPECT_EQ((*symQc.begin())->getType(), OpType::U);
 }
 
 TEST_F(SymbolicTest, TestU3SymPhiSymThetaU3) {
   symQc.u(xMonom, yMonom, 1.2345, 0);
-  EXPECT_EQ((*symQc.begin())->getType(), OpType::U3);
+  EXPECT_EQ((*symQc.begin())->getType(), OpType::U);
 }
 
 TEST_F(SymbolicTest, TestU2SymLambda) {
