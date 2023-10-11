@@ -15,7 +15,7 @@ if(NOT SKBUILD)
   in your environment once and use the following command that avoids
   a costly creation of a new virtual environment at every compilation:
   =====================================================================
-   $ pip install nanobind 'scikit-build-core[pyproject]' setuptools_scm pybind11
+   $ pip install 'scikit-build-core[pyproject]' setuptools_scm pybind11
    $ pip install --no-build-isolation -ve .
   =====================================================================
   You may optionally add -Ceditable.rebuild=true to auto-rebuild when
@@ -24,45 +24,28 @@ if(NOT SKBUILD)
 endif()
 
 if(NOT SKBUILD)
-  # Manually detect the installed nanobind package and import it into CMake.
+  # Manually detect the installed pybind11 package and import it into CMake.
   execute_process(
-    COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+    COMMAND "${Python_EXECUTABLE}" -m pybind11 --cmakedir
     OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE nanobind_DIR)
-  list(APPEND CMAKE_PREFIX_PATH "${nanobind_DIR}")
+    OUTPUT_VARIABLE pybind11_DIR)
+  list(APPEND CMAKE_PREFIX_PATH "${pybind11_DIR}")
 endif()
 
-# Import nanobind through CMake's find_package mechanism
-find_package(nanobind CONFIG REQUIRED)
+# Import pybind11 through CMake's find_package mechanism
+find_package(pybind11 CONFIG REQUIRED)
 
 # We are now ready to compile the actual extension module
-nanobind_add_module(
+pybind11_add_module(
   # Name of the extension
   _core
   # Target the stable ABI for Python 3.12+, which reduces the number of binary wheels that must be
   # built. This does nothing on older Python versions
-  STABLE_ABI
-  # Build libnanobind statically and merge it into the extension (which itself remains a shared
-  # library)
-  NB_STATIC
+  WITH_SOABI
   # Source code goes here
-  ${PROJECT_SOURCE_DIR}/include/python/nanobind.hpp
+  ${PROJECT_SOURCE_DIR}/include/python/pybind11.hpp
   module.cpp)
-target_link_libraries(_core PRIVATE MQT::Core)
-
-if(TARGET nanobind-static)
-  set(NANOBIND_LIB nanobind-static)
-elseif(TARGET nanobind-static-abi3)
-  set(NANOBIND_LIB nanobind-static-abi3)
-else()
-  message(FATAL_ERROR "nanobind library not found")
-endif()
-
-# the following sets the SYSTEM flag for the include dirs of the nanobind libs to suppress warnings
-# cmake-lint: disable=C0307
-set_target_properties(
-  ${NANOBIND_LIB} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                             $<TARGET_PROPERTY:${NANOBIND_LIB},INTERFACE_INCLUDE_DIRECTORIES>)
+target_link_libraries(_core PRIVATE MQT::CoreDD)
 
 # Install directive for scikit-build-core
 install(TARGETS _core LIBRARY DESTINATION mqt/core)

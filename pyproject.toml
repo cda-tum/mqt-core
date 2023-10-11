@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core>=0.5.0", "nanobind>=1.5.2", "setuptools-scm>=7", "pybind11>=2.11"]
+requires = ["scikit-build-core>=0.5.0", "setuptools-scm>=7", "pybind11>=2.11"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -217,6 +217,9 @@ skip = "*-musllinux_*"
 archs = "auto64"
 test-command = "python -c \"from mqt import core\""
 build-frontend = "build"
+
+[tool.cibuildwheel.linux]
+environment = { DEPLOY = "ON" }
 
 [tool.cibuildwheel.macos]
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }

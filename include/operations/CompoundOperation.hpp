@@ -54,6 +54,41 @@ public:
     });
   }
 
+  void addControl(const Control c) override {
+    controls.insert(c);
+    // we can just add the controls to each operation, as the operations will
+    // check if they already act on the control qubits.
+    for (auto& op : ops) {
+      op->addControl(c);
+    }
+  }
+
+  void clearControls() override {
+    // we remove just our controls from nested operations
+    removeControls(controls);
+  }
+
+  void removeControl(const Control c) override {
+    // first we iterate over our controls and check if we are actually allowed
+    // to remove them
+    if (controls.erase(c) == 0) {
+      throw QFRException("Cannot remove control from compound operation as it "
+                         "is not a control.");
+    }
+
+    for (auto& op : ops) {
+      op->removeControl(c);
+    }
+  }
+
+  Controls::iterator removeControl(const Controls::iterator it) override {
+    for (auto& op : ops) {
+      op->removeControl(*it);
+    }
+
+    return controls.erase(it);
+  }
+
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override {
     if (const auto* comp = dynamic_cast<const CompoundOperation*>(&op)) {
@@ -189,6 +224,13 @@ public:
       usedQubits.merge(op->getUsedQubits());
     }
     return usedQubits;
+  }
+
+  void invert() override {
+    for (auto& op : ops) {
+      op->invert();
+    }
+    std::reverse(ops.begin(), ops.end());
   }
 };
 } // namespace qc

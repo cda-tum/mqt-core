@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include <nanobind/nanobind.h>
+#include <pybind11/pybind11.h>
 
 namespace mqt {
-namespace nb = nanobind;
-using namespace nb::literals;
+namespace py = pybind11;
+using namespace py::literals;
 
 } // namespace mqt

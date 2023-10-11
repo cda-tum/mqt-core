@@ -39,14 +39,14 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
 
 template <class Config>
 void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in,
-                              dd::ProbabilityVector& probVector,
+                              dd::SparsePVec& probVector,
                               std::unique_ptr<dd::Package<Config>>& dd);
 
 template <class Config>
 void extractProbabilityVectorRecursive(
     const QuantumComputation* qc, const VectorDD& currentState,
     decltype(qc->begin()) currentIt, std::map<std::size_t, char> measurements,
-    dd::fp commonFactor, dd::ProbabilityVector& probVector,
+    dd::fp commonFactor, dd::SparsePVec& probVector,
     std::unique_ptr<dd::Package<Config>>& dd);
 
 template <class Config>

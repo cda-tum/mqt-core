@@ -467,4 +467,95 @@ void StandardOperation::dumpOpenQASMTeleportation(
   of << "teleport " << qreg[targets[0]].second << ", "
      << qreg[targets[1]].second << ", " << qreg[targets[2]].second << ";\n";
 }
+
+void StandardOperation::invert() {
+  switch (type) {
+  // self-inverting gates
+  case I:
+  case X:
+  case Y:
+  case Z:
+  case H:
+  case SWAP:
+  case ECR:
+  case Barrier:
+    break;
+  // gates where we just update parameters
+  case GPhase:
+  case Phase:
+  case RX:
+  case RY:
+  case RZ:
+  case RXX:
+  case RYY:
+  case RZZ:
+  case RZX:
+    parameter[0] = -parameter[0];
+    break;
+  case U2:
+    std::swap(parameter[0], parameter[1]);
+    parameter[0] = -parameter[0] + PI;
+    parameter[1] = -parameter[1] - PI;
+    break;
+  case U3:
+    parameter[0] = -parameter[0];
+    parameter[1] = -parameter[1];
+    parameter[2] = -parameter[2];
+    std::swap(parameter[1], parameter[2]);
+    break;
+  case XXminusYY:
+  case XXplusYY:
+    parameter[0] = -parameter[0];
+    break;
+  case DCX:
+    std::swap(targets[0], targets[1]);
+    break;
+  // gates where we have specialized inverted operation types
+  case S:
+    type = Sdag;
+    break;
+  case Sdag:
+    type = S;
+    break;
+  case T:
+    type = Tdag;
+    break;
+  case Tdag:
+    type = T;
+    break;
+  case V:
+    type = Vdag;
+    break;
+  case Vdag:
+    type = V;
+    break;
+  case SX:
+    type = SXdag;
+    break;
+  case SXdag:
+    type = SX;
+    break;
+  case Peres:
+    type = Peresdag;
+    break;
+  case Peresdag:
+    type = Peres;
+    break;
+  // Tracking issue for iSwap: https://github.com/cda-tum/mqt-core/issues/423
+  case iSWAP:
+  case None:
+  case Compound:
+  case Measure:
+  case Reset:
+  case Teleportation:
+  case ClassicControlled:
+  case ATrue:
+  case AFalse:
+  case MultiATrue:
+  case MultiAFalse:
+  case OpCount:
+    throw QFRException("Inverting gate" + toString(type) +
+                       " is not supported.");
+  }
+}
 } // namespace qc

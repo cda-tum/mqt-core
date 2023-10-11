@@ -40,6 +40,37 @@ public:
   std::vector<Bit>& getClassics() { return classics; }
   [[nodiscard]] size_t getNclassics() const { return classics.size(); }
 
+  [[nodiscard]] std::set<Qubit> getUsedQubits() const override {
+    const auto& opTargets = getTargets();
+    return {opTargets.begin(), opTargets.end()};
+  }
+
+  [[nodiscard]] const Controls& getControls() const override {
+    throw QFRException("Cannot get controls from non-unitary operation.");
+  }
+
+  [[nodiscard]] Controls& getControls() override {
+    throw QFRException("Cannot get controls from non-unitary operation.");
+  }
+
+  void addDepthContribution(std::vector<std::size_t>& depths) const override;
+
+  void addControl(const Control /*c*/) override {
+    throw QFRException("Cannot add control to non-unitary operation.");
+  }
+
+  void clearControls() override {
+    throw QFRException("Cannot clear controls from non-unitary operation.");
+  }
+
+  void removeControl(const Control /*c*/) override {
+    throw QFRException("Cannot remove controls from non-unitary operation.");
+  }
+
+  Controls::iterator removeControl(const Controls::iterator /*it*/) override {
+    throw QFRException("Cannot remove controls from non-unitary operation.");
+  }
+
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override;
   [[nodiscard]] bool equals(const Operation& operation) const override {
@@ -52,5 +83,9 @@ public:
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                     const RegisterNames& creg) const override;
+
+  void invert() override {
+    throw QFRException("Inverting a non-unitary operation is not supported.");
+  }
 };
 } // namespace qc

@@ -204,7 +204,7 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
 
 template <class Config>
 void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in,
-                              ProbabilityVector& probVector,
+                              SparsePVec& probVector,
                               std::unique_ptr<Package<Config>>& dd) {
   // ! initial layout, output permutation and garbage qubits are currently not
   // supported here
@@ -218,8 +218,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
                                        const VectorDD& currentState,
                                        decltype(qc->begin()) currentIt,
                                        std::map<std::size_t, char> measurements,
-                                       fp commonFactor,
-                                       ProbabilityVector& probVector,
+                                       fp commonFactor, SparsePVec& probVector,
                                        std::unique_ptr<Package<Config>>& dd) {
   auto state = currentState;
   for (auto it = currentIt; it != qc->end(); ++it) {
@@ -449,13 +448,12 @@ simulate<DDPackageConfig>(const QuantumComputation* qc, const VectorDD& in,
                           std::unique_ptr<Package<DDPackageConfig>>& dd,
                           std::size_t shots, std::size_t seed);
 template void extractProbabilityVector<DDPackageConfig>(
-    const QuantumComputation* qc, const VectorDD& in,
-    ProbabilityVector& probVector,
+    const QuantumComputation* qc, const VectorDD& in, SparsePVec& probVector,
     std::unique_ptr<Package<DDPackageConfig>>& dd);
 template void extractProbabilityVectorRecursive<DDPackageConfig>(
     const QuantumComputation* qc, const VectorDD& in,
     decltype(qc->begin()) currentIt, std::map<std::size_t, char> measurements,
-    fp commonFactor, ProbabilityVector& probVector,
+    fp commonFactor, SparsePVec& probVector,
     std::unique_ptr<Package<DDPackageConfig>>& dd);
 template VectorDD
 simulate<DDPackageConfig>(GoogleRandomCircuitSampling* qc, const VectorDD& in,

@@ -3,10 +3,6 @@ name: 🐍 • Packaging
 on:
   workflow_call:
     inputs:
-      package-name:
-        description: "The name of the Python package"
-        required: true
-        type: string
       setup-z3:
         description: "Whether to set up Z3"
         default: false
@@ -21,7 +17,7 @@ jobs:
     name: 📦 SDist
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
@@ -42,7 +38,7 @@ jobs:
         runs-on: [ubuntu-latest, macos-11, windows-latest]
         python: ["cp38", "cp39", "cp310", "cp311", "cp312"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
@@ -54,18 +50,18 @@ jobs:
           version: ${{ inputs.z3-version }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - if: ${{ inputs.setup-z3 }} && matrix.os == 'ubuntu-latest'
+      - if: ${{ inputs.setup-z3 }} && matrix.runs-on == 'ubuntu-latest'
         name: Set environment variables for Z3 installation in manylinux image
         run: |
           echo "CIBW_BEFORE_ALL_LINUX=/opt/python/cp311-cp311/bin/pip install z3-solver==${{ inputs.z3-version }}" >> $GITHUB_ENV
-      - if: matrix.os != 'ubuntu-latest'
+      - if: matrix.runs-on != 'ubuntu-latest'
         name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1
         with:
           prepend_symlinks_to_path: false
           windows_compile_environment: msvc
           override_cache_key: wheels-${{ matrix.runs-on }}-${{ matrix.python }}
-      - uses: pypa/cibuildwheel@v2.15
+      - uses: pypa/cibuildwheel@v2.16
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
       - name: Verify clean directory
@@ -85,18 +81,18 @@ jobs:
         arch: ["s390x", "ppc64le"]
         python: ["cp38", "cp39", "cp310", "cp311", "cp312"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
       - if: ${{ inputs.setup-z3 }}
         name: Set environment variables for Z3 installation in manylinux image
         run: |
           echo "CIBW_BEFORE_ALL_LINUX=/opt/python/cp311-cp311/bin/pip install z3-solver==${{ inputs.z3-version }}" >> $GITHUB_ENV
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.15
+        uses: pypa/cibuildwheel@v2.16
         env:
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
           CIBW_BUILD: ${{ matrix.python }}-*
@@ -104,20 +100,3 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
-
-  deploy:
-    if: github.event_name == 'release' && github.event.action == 'published'
-    name: 🚀 Deploy to PyPI
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/${{ inputs.package-name }}
-    permissions:
-      id-token: write
-    needs: [build_wheels, build_sdist, build_wheels_emulation]
-    steps:
-      - uses: actions/download-artifact@v3
-        with:
-          name: artifact
-          path: dist
-      - uses: pypa/gh-action-pypi-publish@release/v1
