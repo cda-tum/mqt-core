@@ -207,11 +207,11 @@ TEST_F(QFRFunctionality, StripIdleAndDump) {
   qc.print(std::cout);
   std::stringstream goal{};
   qc.print(goal);
-  std::stringstream testss{};
-  qc.dump(testss, qc::Format::OpenQASM);
-  std::cout << testss.str() << "\n";
+  std::stringstream test{};
+  qc.dump(test, qc::Format::OpenQASM);
+  std::cout << test.str() << "\n";
   qc.reset();
-  qc.import(testss, qc::Format::OpenQASM);
+  qc.import(test, qc::Format::OpenQASM);
   qc.print(std::cout);
   qc.stripIdleQubits();
   qc.print(std::cout);
