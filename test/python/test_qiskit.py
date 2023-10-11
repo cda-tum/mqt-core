@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from typing import cast
 
-from qiskit import QuantumCircuit
-from qiskit.circuit import AncillaRegister, ClassicalRegister, Parameter, QuantumRegister, Qubit
+from qiskit import QuantumCircuit, transpile
+from qiskit.circuit import AncillaRegister, ClassicalRegister, Parameter, QuantumRegister
 from qiskit.circuit.library import XXMinusYYGate, XXPlusYYGate
-from qiskit.transpiler import Layout, TranspileLayout
 
 from mqt.core.operations import CompoundOperation, SymbolicOperation
 from mqt.core.plugins.qiskit import qiskit_to_mqt
@@ -131,56 +130,6 @@ def test_custom_gate() -> None:
     assert {control.qubit for control in mqt_qc[0][2].controls} == {0}
 
 
-def test_layout() -> None:
-    """Test import of initial layout."""
-    qc = QuantumCircuit(3)
-    q_reg = QuantumRegister(3, "q")
-    qc._layout = TranspileLayout(  # noqa: SLF001
-        Layout.from_intlist([2, 1, 0], q_reg),
-        {Qubit(q_reg, 0): 0, Qubit(q_reg, 1): 1, Qubit(q_reg, 2): 2},
-        Layout.from_intlist([1, 2, 0], q_reg),
-    )
-    qc.h(0)
-    qc.s(1)
-    qc.x(2)
-    mqt_qc = qiskit_to_mqt(qc)
-    print("\n", mqt_qc, sep="")
-    assert mqt_qc.num_qubits == 3
-    assert mqt_qc.num_ops == 3
-    assert mqt_qc.initial_layout[0] == 2
-    assert mqt_qc.initial_layout[1] == 1
-    assert mqt_qc.initial_layout[2] == 0
-    assert mqt_qc.output_permutation[0] == 2
-    assert mqt_qc.output_permutation[1] == 0
-    assert mqt_qc.output_permutation[2] == 1
-
-
-def test_layout_ancilla() -> None:
-    """Test import of initial layout with ancilla information."""
-    q_reg = QuantumRegister(2, "q")
-    a_reg = AncillaRegister(1, "a")
-    qc = QuantumCircuit(q_reg, a_reg)
-    qc._layout = TranspileLayout(  # noqa: SLF001
-        Layout.from_intlist([2, 1, 0], q_reg, a_reg),
-        {Qubit(q_reg, 0): 0, Qubit(q_reg, 1): 1, Qubit(a_reg, 0): 2},
-        Layout.from_intlist([1, 2, 0], q_reg, a_reg),
-    )
-    qc.h(0)
-    qc.s(1)
-    qc.x(2)
-    mqt_qc = qiskit_to_mqt(qc)
-    print("\n", mqt_qc, sep="")
-    assert mqt_qc.num_qubits == 3
-    assert mqt_qc.num_ancilla_qubits == 1
-    assert mqt_qc.num_ops == 3
-    assert mqt_qc.initial_layout[0] == 2
-    assert mqt_qc.initial_layout[1] == 1
-    assert mqt_qc.initial_layout[2] == 0
-    assert mqt_qc.output_permutation[0] == 2
-    assert mqt_qc.output_permutation[1] == 0
-    assert mqt_qc.output_permutation[2] == 1
-
-
 def test_ancilla() -> None:
     """Test import of ancilla register."""
     anc_reg = AncillaRegister(1, "anc")
@@ -257,5 +206,75 @@ def test_symbolic() -> None:
     assert isinstance(mqt_qc[0].get_parameter(0), Expression)
     expr = cast(Expression, mqt_qc[0].get_parameter(0))
     assert expr.num_terms() == 3
-    assert expr.constant == 0.0
+    assert expr.constant == 0
     assert not mqt_qc.is_variable_free()
+
+
+def test_trivial_initial_layout_multiple_registers() -> None:
+    """Test that trivial initial layout import works with multiple registers.
+
+    Correctly inferring the initial layout is not an easy task; especially when
+    multiple registers are involved. This test checks that the initial layout
+    is imported properly from a circuit with multiple registers that are not
+    sorted alphabetically.
+    """
+    a = QuantumRegister(2, "a")
+    b = QuantumRegister(2, "b")
+    qc = QuantumCircuit(b, a)
+    initial_layout = [0, 1, 2, 3]
+    qc_transpiled = transpile(qc, initial_layout=initial_layout)
+    mqt_qc = qiskit_to_mqt(qc_transpiled)
+    for k, v in [(0, 0), (1, 1), (2, 2), (3, 3)]:
+        assert mqt_qc.initial_layout[k] == v
+
+
+def test_non_trivial_initial_layout_multiple_registers() -> None:
+    """Test that non-trivial initial layout import works with multiple registers."""
+    a = QuantumRegister(2, "a")
+    b = QuantumRegister(2, "b")
+    qc = QuantumCircuit(b, a)
+    initial_layout = [3, 2, 1, 0]
+    qc_transpiled = transpile(qc, initial_layout=initial_layout)
+    mqt_qc = qiskit_to_mqt(qc_transpiled)
+    for k, v in [(0, 3), (1, 2), (2, 1), (3, 0)]:
+        assert mqt_qc.initial_layout[k] == v
+
+
+def test_non_symmetric_initial_layout_multiple_registers() -> None:
+    """Test that non-symmetric initial layout import works with multiple registers."""
+    a = QuantumRegister(2, "a")
+    b = QuantumRegister(1, "b")
+    qc = QuantumCircuit(b, a)
+    initial_layout = [1, 2, 0]
+    qc_transpiled = transpile(qc, initial_layout=initial_layout)
+    mqt_qc = qiskit_to_mqt(qc_transpiled)
+    for k, v in [(0, 2), (1, 0), (2, 1)]:
+        assert mqt_qc.initial_layout[k] == v
+
+
+def test_initial_layout_with_ancilla_in_front() -> None:
+    """Test that initial layout import works with ancilla in front."""
+    a = QuantumRegister(2, "a")
+    b_anc = AncillaRegister(1, "b")
+    qc = QuantumCircuit(b_anc, a)
+    initial_layout = [0, 1, 2]
+    qc_transpiled = transpile(qc, initial_layout=initial_layout)
+    mqt_qc = qiskit_to_mqt(qc_transpiled)
+    for k, v in [(0, 0), (1, 1), (2, 2)]:
+        assert mqt_qc.initial_layout[k] == v
+    assert mqt_qc.num_ancilla_qubits == 1
+    assert mqt_qc.is_circuit_qubit_ancillary(0)
+
+
+def test_initial_layout_with_ancilla_in_back() -> None:
+    """Test that initial layout import works with ancilla in back."""
+    a = QuantumRegister(2, "a")
+    b_anc = AncillaRegister(1, "b")
+    qc = QuantumCircuit(a, b_anc)
+    initial_layout = [0, 1, 2]
+    qc_transpiled = transpile(qc, initial_layout=initial_layout)
+    mqt_qc = qiskit_to_mqt(qc_transpiled)
+    for k, v in [(0, 0), (1, 1), (2, 2)]:
+        assert mqt_qc.initial_layout[k] == v
+    assert mqt_qc.num_ancilla_qubits == 1
+    assert mqt_qc.is_circuit_qubit_ancillary(2)
