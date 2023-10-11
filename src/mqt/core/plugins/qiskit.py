@@ -198,13 +198,13 @@ def _emplace_operation(
         return _add_operation(qc, OpType.s, qargs, params, qubit_map)
 
     if name == "sdg":
-        return _add_operation(qc, OpType.sdag, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.sdg, qargs, params, qubit_map)
 
     if name == "t":
         return _add_operation(qc, OpType.t, qargs, params, qubit_map)
 
     if name == "tdg":
-        return _add_operation(qc, OpType.tdag, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.tdg, qargs, params, qubit_map)
 
     if name in ["sx", "csx"]:
         return _add_operation(qc, OpType.sx, qargs, params, qubit_map)
@@ -234,13 +234,13 @@ def _emplace_operation(
         return _add_operation(qc, OpType.rz, qargs, params, qubit_map)
 
     if name in ["p", "u1", "cp", "cu1", "mcphase"]:
-        return _add_operation(qc, OpType.phase, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.p, qargs, params, qubit_map)
 
     if name in ["u2"]:
         return _add_operation(qc, OpType.u2, qargs, params, qubit_map)
 
     if name in ["u", "u3", "cu3"]:
-        return _add_operation(qc, OpType.u3, qargs, params, qubit_map)
+        return _add_operation(qc, OpType.u, qargs, params, qubit_map)
 
     if name in ["swap", "cswap"]:
         return _add_two_target_operation(qc, OpType.swap, qargs, params, qubit_map)
