@@ -5,7 +5,7 @@ import re
 import warnings
 from typing import TYPE_CHECKING, List, cast
 
-from qiskit.circuit import AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
+from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
 
 from .. import QuantumComputation
 from ..operations import (
@@ -365,30 +365,33 @@ def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
     layout = circ.layout if hasattr(circ, "layout") else circ._layout  # noqa: SLF001
 
     initial_layout = layout.initial_layout
-    print("initial_layout: ", initial_layout)
 
-    # The registers of the layout. These should be the registers of the original circuit.
-    registers = initial_layout.get_registers()
+    # The following creates a map of virtual qubits in the layout to an integer index.
+    # Using the `get_virtual_bits()` method of the layout guarantees that the order
+    # of the qubits is the same as in the original circuit. In contrast, the
+    # `get_registers()` method does not guarantee this as it returns a set that
+    # reorders the qubits.
     qubit_to_idx: dict[Qubit, int] = {}
     idx = 0
-    for register in registers:
-        is_ancilla = register.name == "ancilla" or isinstance(register, AncillaRegister)
-        for qubit in register:
-            qubit_to_idx[qubit] = idx
-            if is_ancilla:
-                qc.set_circuit_qubit_ancillary(idx)
-            idx += 1
+    for qubit in initial_layout.get_virtual_bits():
+        qubit_to_idx[qubit] = idx
+        if isinstance(qubit, AncillaQubit):
+            qc.set_circuit_qubit_ancillary(idx)
+        idx += 1
 
-    compiled_to_original = initial_layout.get_physical_bits()
-    for device_qubit, circuit_qubit in compiled_to_original.items():
+    for register in initial_layout.get_registers():
+        is_ancilla = register.name == "ancilla" or isinstance(register, AncillaRegister)
+        if not is_ancilla:
+            continue
+        for qubit in register:
+            qc.set_circuit_qubit_ancillary(qubit_to_idx[qubit])
+
+    for device_qubit, circuit_qubit in initial_layout.get_physical_bits().items():
         qc.initial_layout[device_qubit] = qubit_to_idx[circuit_qubit]
 
     final_layout = layout.final_layout
     if final_layout is None:
         return
-
-    # process the final layout
-    print("final_layout: ", final_layout)
 
 
 def _import_definition(
