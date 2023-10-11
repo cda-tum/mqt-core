@@ -319,10 +319,11 @@ void registerQuantumComputation(py::module& m) {
          "Add a `" #op "(" #param ", q)` gate.");                              \
   qc.def("c" #op, &qc::QuantumComputation::c##op, py::arg(#param),             \
          "control"_a, "target"_a,                                              \
-         "Add a `c" #op "(" #param ", control, target)` gate.");               \
+         "Add a `controlled-" #op "(" #param ", control, target)` gate.");     \
   qc.def("mc" #op, &qc::QuantumComputation::mc##op, py::arg(#param),           \
          "controls"_a, "target"_a,                                             \
-         "Add a `mc" #op "(" #param ", controls, target)` gate.");
+         "Add a `multi-controlled-" #op "(" #param                             \
+         ", controls, target)` gate.");
 
   DEFINE_SINGLE_TARGET_SINGLE_PARAMETER_OPERATION(rx, theta)
   DEFINE_SINGLE_TARGET_SINGLE_PARAMETER_OPERATION(ry, theta)
@@ -334,10 +335,11 @@ void registerQuantumComputation(py::module& m) {
          "q"_a, "Add a `" #op "(" #param0 ", " #param1 ", q)` gate.");         \
   qc.def("c" #op, &qc::QuantumComputation::c##op, py::arg(#param0),            \
          py::arg(#param1), "control"_a, "target"_a,                            \
-         "Add a `c" #op "(" #param0 ", " #param1 ", control, target)` gate."); \
+         "Add a `controlled-" #op "(" #param0 ", " #param1                     \
+         ", control, target)` gate.");                                         \
   qc.def("mc" #op, &qc::QuantumComputation::mc##op, py::arg(#param0),          \
          py::arg(#param1), "controls"_a, "target"_a,                           \
-         "Add a `mc" #op "(" #param0 ", " #param1                              \
+         "Add a `multi-controlled-" #op "(" #param0 ", " #param1               \
          ", controls, target)` gate.");
 
   DEFINE_SINGLE_TARGET_TWO_PARAMETER_OPERATION(u2, phi, lambda_)
@@ -349,11 +351,11 @@ void registerQuantumComputation(py::module& m) {
          "Add a `" #op "(" #param0 ", " #param1 ", " #param2 ", q)` gate.");   \
   qc.def("c" #op, &qc::QuantumComputation::c##op, py::arg(#param0),            \
          py::arg(#param1), py::arg(#param2), "control"_a, "target"_a,          \
-         "Add a `c" #op "(" #param0 ", " #param1 ", " #param2                  \
+         "Add a `controlled-" #op "(" #param0 ", " #param1 ", " #param2        \
          ", control, target)` gate.");                                         \
   qc.def("mc" #op, &qc::QuantumComputation::mc##op, py::arg(#param0),          \
          py::arg(#param1), py::arg(#param2), "controls"_a, "target"_a,         \
-         "Add a `mc" #op "(" #param0 ", " #param1 ", " #param2                 \
+         "Add a `multi-controlled-" #op "(" #param0 ", " #param1 ", " #param2  \
          ", controls, target)` gate.");
 
   DEFINE_SINGLE_TARGET_THREE_PARAMETER_OPERATION(u, theta, phi, lambda_)
@@ -362,9 +364,12 @@ void registerQuantumComputation(py::module& m) {
   qc.def(#op, &qc::QuantumComputation::op, "target1"_a, "target2"_a,           \
          "Add a `" #op "(target1, target2)` gate.");                           \
   qc.def("c" #op, &qc::QuantumComputation::c##op, "control"_a, "target1"_a,    \
-         "target2"_a, "Add a `c" #op "(control, target1, target2)` gate.");    \
+         "target2"_a,                                                          \
+         "Add a `controlled-" #op "(control, target1, target2)` gate.");       \
   qc.def("mc" #op, &qc::QuantumComputation::mc##op, "controls"_a, "target1"_a, \
-         "target2"_a, "Add a `mc" #op " (controls, target1, target2)` gate.");
+         "target2"_a,                                                          \
+         "Add a `multi-controlled-" #op                                        \
+         " (controls, target1, target2)` gate.");
 
   DEFINE_TWO_TARGET_OPERATION(swap)
   DEFINE_TWO_TARGET_OPERATION(dcx)
@@ -378,10 +383,12 @@ void registerQuantumComputation(py::module& m) {
          "target2"_a, "Add a `" #op "(" #param ", target1, target2)` gate.");  \
   qc.def("c" #op, &qc::QuantumComputation::c##op, py::arg(#param),             \
          "control"_a, "target1"_a, "target2"_a,                                \
-         "Add a `c" #op "(" #param ", control, target1, target2)` gate.");     \
+         "Add a `controlled-" #op "(" #param                                   \
+         ", control, target1, target2)` gate.");                               \
   qc.def("mc" #op, &qc::QuantumComputation::mc##op, py::arg(#param),           \
          "controls"_a, "target1"_a, "target2"_a,                               \
-         "Add a `mc" #op "(" #param ", controls, target1, target2)` gate.");
+         "Add a `multi-controlled-" #op "(" #param                             \
+         ", controls, target1, target2)` gate.");
 
   DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(rxx, theta)
   DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(ryy, theta)
@@ -395,11 +402,11 @@ void registerQuantumComputation(py::module& m) {
          "gate.");                                                             \
   qc.def("c" #op, &qc::QuantumComputation::c##op, py::arg(#param0),            \
          py::arg(#param1), "control"_a, "target1"_a, "target2"_a,              \
-         "Add a `c" #op "(" #param0 ", " #param1                               \
+         "Add a `controlled-" #op "(" #param0 ", " #param1                     \
          ", control, target1, target2)` gate.");                               \
   qc.def("mc" #op, &qc::QuantumComputation::mc##op, py::arg(#param0),          \
          py::arg(#param1), "controls"_a, "target1"_a, "target2"_a,             \
-         "Add a `mc" #op "(" #param0 ", " #param1                              \
+         "Add a `multi-controlled-" #op "(" #param0 ", " #param1               \
          ", controls, target1, target2)` gate.");
 
   DEFINE_TWO_TARGET_TWO_PARAMETER_OPERATION(xx_minus_yy, theta, beta)
