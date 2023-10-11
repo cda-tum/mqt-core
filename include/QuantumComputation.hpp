@@ -318,7 +318,12 @@ public:
     return ancillary[logicalQubitIndex];
   }
   void setLogicalQubitAncillary(const Qubit logicalQubitIndex) {
+    if (logicalQubitIsAncillary(logicalQubitIndex)) {
+      return;
+    }
     ancillary[logicalQubitIndex] = true;
+    nancillae++;
+    nqubits--;
   }
   [[nodiscard]] bool
   logicalQubitIsGarbage(const Qubit logicalQubitIndex) const {
