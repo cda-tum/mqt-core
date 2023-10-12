@@ -4,6 +4,7 @@
 #include "dd/statistics/PackageStatistics.hpp"
 #include "operations/Control.hpp"
 
+#include <filesystem>
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <memory>
@@ -87,6 +88,21 @@ TEST(DDPackageTest, BellState) {
   export2Dot(bellState, "bell_state_memory.dot", false, true, true, true,
              false);
   dd::exportEdgeWeights(bellState, std::cout);
+
+  const auto filenames = {
+      "bell_state_colored_labels.dot", "bell_state_colored_labels_classic.dot",
+      "bell_state_mono_labels.dot",    "bell_state_mono_labels_classic.dot",
+      "bell_state_colored.dot",        "bell_state_colored_classic.dot",
+      "bell_state_mono.dot",           "bell_state_mono_classic.dot",
+      "bell_state_memory.dot"};
+
+  for (const auto filename : filenames) {
+    std::ifstream ifs(filename);
+    ASSERT_TRUE(ifs.good());
+    ASSERT_NE(ifs.peek(), std::ifstream::traits_type::eof());
+    ifs.close();
+    std::filesystem::remove(filename);
+  }
 
   dd::printStatistics(dd.get());
 }
@@ -176,6 +192,42 @@ TEST(DDPackageTest, QFTState) {
              false, false, false);
   export2Dot(qftOp, "qft_op_rectangular_memory.dot", false, true, true, true,
              false, false);
+
+  const auto filenames = {"qft_state_colored_labels.dot",
+                          "qft_state_colored_labels_classic.dot",
+                          "qft_state_mono_labels.dot",
+                          "qft_state_mono_labels_classic.dot",
+                          "qft_state_colored.dot",
+                          "qft_state_colored_classic.dot",
+                          "qft_state_mono.dot",
+                          "qft_state_mono_classic.dot",
+                          "qft_state_memory.dot",
+                          "qft_op_polar_colored_labels.dot",
+                          "qft_op_polar_colored_labels_classic.dot",
+                          "qft_op_polar_mono_labels.dot",
+                          "qft_op_polar_mono_labels_classic.dot",
+                          "qft_op_polar_colored.dot",
+                          "qft_op_polar_colored_classic.dot",
+                          "qft_op_polar_mono.dot",
+                          "qft_op_polar_mono_classic.dot",
+                          "qft_op_polar_memory.dot",
+                          "qft_op_rectangular_colored_labels.dot",
+                          "qft_op_rectangular_colored_labels_classic.dot",
+                          "qft_op_rectangular_mono_labels.dot",
+                          "qft_op_rectangular_mono_labels_classic.dot",
+                          "qft_op_rectangular_colored.dot",
+                          "qft_op_rectangular_colored_classic.dot",
+                          "qft_op_rectangular_mono.dot",
+                          "qft_op_rectangular_mono_classic.dot",
+                          "qft_op_rectangular_memory.dot"};
+
+  for (const auto filename : filenames) {
+    std::ifstream ifs(filename);
+    ASSERT_TRUE(ifs.good());
+    ASSERT_NE(ifs.peek(), std::ifstream::traits_type::eof());
+    ifs.close();
+    std::filesystem::remove(filename);
+  }
 
   dd::printStatistics(dd.get());
 }
@@ -326,6 +378,24 @@ TEST(DDPackageTest, BellMatrix) {
              false, false);
   export2Dot(bellMatrix, "bell_matrix_memory.dot", false, true, true, true,
              false);
+
+  const auto filenames = {"bell_matrix_colored_labels.dot",
+                          "bell_matrix_colored_labels_classic.dot",
+                          "bell_matrix_mono_labels.dot",
+                          "bell_matrix_mono_labels_classic.dot",
+                          "bell_matrix_colored.dot",
+                          "bell_matrix_colored_classic.dot",
+                          "bell_matrix_mono.dot",
+                          "bell_matrix_mono_classic.dot",
+                          "bell_matrix_memory.dot"};
+
+  for (const auto filename : filenames) {
+    std::ifstream ifs(filename);
+    ASSERT_TRUE(ifs.good());
+    ASSERT_NE(ifs.peek(), std::ifstream::traits_type::eof());
+    ifs.close();
+    std::filesystem::remove(filename);
+  }
 
   dd::printStatistics(dd.get());
 }
@@ -720,6 +790,20 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
   dd::export2Dot(one, "oneColored.dot", true, false, false, false, false);
   dd::export2Dot(one, "oneClassic.dot", false, false, false, false, false);
   dd::export2Dot(one, "oneMemory.dot", true, true, false, true, false);
+
+  const auto filenames = {
+      "oneColored.dot",
+      "oneClassic.dot",
+      "oneMemory.dot",
+  };
+
+  for (const auto filename : filenames) {
+    std::ifstream ifs(filename);
+    ASSERT_TRUE(ifs.good());
+    ASSERT_NE(ifs.peek(), std::ifstream::traits_type::eof());
+    ifs.close();
+    std::filesystem::remove(filename);
+  }
 
   EXPECT_EQ(dd->vUniqueTable.lookup(one), one);
 
