@@ -387,8 +387,11 @@ def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
         for qubit in register:
             qc.set_circuit_qubit_ancillary(qubit_to_idx[qubit])
 
+    # create initial layout (and assume identical output permutation)
     for device_qubit, circuit_qubit in initial_layout.get_physical_bits().items():
-        qc.initial_layout[device_qubit] = qubit_to_idx[circuit_qubit]
+        idx = qubit_to_idx[circuit_qubit]
+        qc.initial_layout[device_qubit] = idx
+        qc.output_permutation[device_qubit] = idx
 
     final_layout = layout.final_layout
     if final_layout is None:
