@@ -394,6 +394,9 @@ def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
         qc.initial_layout[device_qubit] = idx
         qc.output_permutation[device_qubit] = idx
 
+    if not hasattr(layout, "final_layout"):
+        return
+
     final_layout = layout.final_layout
     if final_layout is None:
         return
