@@ -27,6 +27,15 @@ void registerClassicControlledOperation(py::module& m) {
   ccop.def_property_readonly(
       "expected_value", &qc::ClassicControlledOperation::getExpectedValue,
       "Returns the expected value of the classical register.");
+  ccop.def("__repr__", [](const qc::ClassicControlledOperation& op) {
+    std::stringstream ss;
+    const auto& controlReg = op.getControlRegister();
+    ss << "ClassicControlledOperation(<...op...>, "
+       << "control_register=(" << controlReg.first << ", " << controlReg.second
+       << "), "
+       << "expected_value=" << op.getExpectedValue() << ")";
+    return ss.str();
+  });
 }
 
 } // namespace mqt

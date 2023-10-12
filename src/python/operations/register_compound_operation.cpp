@@ -69,6 +69,11 @@ void registerCompoundOperation(py::module& m) {
             compOp.emplace_back(op.clone());
           },
           "op"_a, "Append operation op to the `CompoundOperation`.")
-      .def("empty", &qc::CompoundOperation::empty);
+      .def("empty", &qc::CompoundOperation::empty)
+      .def("__repr__", [](const qc::CompoundOperation& op) {
+        std::stringstream ss;
+        ss << "CompoundOperation(" << op.getNqubits() << ", [...ops...])";
+        return ss.str();
+      });
 }
 } // namespace mqt

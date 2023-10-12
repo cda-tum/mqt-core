@@ -22,7 +22,36 @@ void registerNonUnitaryOperation(py::module& m) {
           "classics",
           py::overload_cast<>(&qc::NonUnitaryOperation::getClassics,
                               py::const_),
-          "Return the classical bits.");
+          "Return the classical bits.")
+      .def("__repr__", [](const qc::NonUnitaryOperation& op) {
+        std::stringstream ss;
+        ss << "NonUnitaryOperation(" << op.getNqubits() << ", ";
+        const auto& targets = op.getTargets();
+        if (targets.size() == 1U) {
+          ss << "target=" << targets[0];
+        } else {
+          ss << "targets=[";
+          for (const auto& target : targets) {
+            ss << target << ", ";
+          }
+          ss << "]";
+        }
+        const auto& classics = op.getClassics();
+        if (!classics.empty()) {
+          ss << ", ";
+          if (classics.size() == 1U) {
+            ss << "classic=" << classics[0];
+          } else {
+            ss << "classics=[";
+            for (const auto& classic : classics) {
+              ss << classic << ", ";
+            }
+            ss << "]";
+          }
+        }
+        ss << ")";
+        return ss.str();
+      });
 }
 
 } // namespace mqt

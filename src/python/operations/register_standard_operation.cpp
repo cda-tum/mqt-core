@@ -52,6 +52,43 @@ void registerStandardOperation(py::module& m) {
                     qc::OpType, std::vector<qc::fp>, qc::Qubit>(),
            "nq"_a, "controls"_a, "target0"_a, "target1"_a, "op_type"_a,
            "params"_a = std::vector<qc::fp>{}, "starting_qubit"_a = 0,
-           "Create a multi-controlled two-target operation of specified type.");
+           "Create a multi-controlled two-target operation of specified type.")
+      .def("__repr__", [](const qc::StandardOperation& op) {
+        std::stringstream ss;
+        ss << "StandardOperation(" << op.getNqubits() << ", ";
+        const auto& controls = op.getControls();
+        if (controls.size() == 1U) {
+          ss << "control=";
+          const auto& control = *controls.begin();
+          ss << control.toString() << ", ";
+        } else if (!controls.empty()) {
+          ss << "controls={";
+          for (const auto& control : controls) {
+            ss << control.toString() << ", ";
+          }
+          ss << "}, ";
+        }
+        const auto& targets = op.getTargets();
+        if (targets.size() == 1U) {
+          ss << "target=" << targets.front() << ", ";
+        } else if (!targets.empty()) {
+          ss << "targets=[";
+          for (const auto& target : targets) {
+            ss << target << ", ";
+          }
+          ss << "], ";
+        }
+        ss << "op_type=" << toString(op.getType());
+        const auto& params = op.getParameter();
+        if (!params.empty()) {
+          ss << ", params=[";
+          for (const auto& param : params) {
+            ss << param << ", ";
+          }
+          ss << "]";
+        }
+        ss << ")";
+        return ss.str();
+      });
 }
 } // namespace mqt
