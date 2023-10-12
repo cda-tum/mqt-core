@@ -284,7 +284,6 @@ void registerQuantumComputation(py::module& m) {
   });
   qc.def("__repr__", [](qc::QuantumComputation& circ) {
     auto ss = std::stringstream();
-    ss << "\n"; // add newline to avoid cluttering
     circ.print(ss);
     return ss.str();
   });
