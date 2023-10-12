@@ -14,7 +14,7 @@ public:
     }
     Controls c{};
     for (const auto& control : controls) {
-      c.emplace(Control{at(control.qubit), control.type});
+      c.emplace(at(control.qubit), control.type);
     }
     return c;
   }

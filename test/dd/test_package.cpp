@@ -96,7 +96,7 @@ TEST(DDPackageTest, BellState) {
       "bell_state_mono.dot",           "bell_state_mono_classic.dot",
       "bell_state_memory.dot"};
 
-  for (const auto filename : filenames) {
+  for (const auto* const filename : filenames) {
     std::ifstream ifs(filename);
     ASSERT_TRUE(ifs.good());
     ASSERT_NE(ifs.peek(), std::ifstream::traits_type::eof());
@@ -221,7 +221,7 @@ TEST(DDPackageTest, QFTState) {
                           "qft_op_rectangular_mono_classic.dot",
                           "qft_op_rectangular_memory.dot"};
 
-  for (const auto filename : filenames) {
+  for (const auto* const filename : filenames) {
     std::ifstream ifs(filename);
     ASSERT_TRUE(ifs.good());
     ASSERT_NE(ifs.peek(), std::ifstream::traits_type::eof());
@@ -391,7 +391,7 @@ TEST(DDPackageTest, BellMatrix) {
                           "bell_matrix_mono_classic.dot",
                           "bell_matrix_memory.dot"};
 
-  for (const auto filename : filenames) {
+  for (const auto* const filename : filenames) {
     std::ifstream ifs(filename);
     ASSERT_TRUE(ifs.good());
     ASSERT_NE(ifs.peek(), std::ifstream::traits_type::eof());
@@ -801,7 +801,7 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
       "oneMemory.dot",
   };
 
-  for (const auto filename : filenames) {
+  for (const auto* const filename : filenames) {
     std::ifstream ifs(filename);
     ASSERT_TRUE(ifs.good());
     ASSERT_NE(ifs.peek(), std::ifstream::traits_type::eof());

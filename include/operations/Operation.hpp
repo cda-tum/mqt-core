@@ -170,7 +170,7 @@ public:
   virtual std::ostream& printParameters(std::ostream& os) const;
   std::ostream& print(std::ostream& os) const { return print(os, {}, 0); }
   virtual std::ostream& print(std::ostream& os, const Permutation& permutation,
-                              const std::size_t prefixWidth) const;
+                              std::size_t prefixWidth) const;
 
   friend std::ostream& operator<<(std::ostream& os, const Operation& op) {
     return op.print(os);

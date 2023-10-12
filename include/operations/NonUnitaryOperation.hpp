@@ -73,7 +73,7 @@ public:
   }
 
   std::ostream& print(std::ostream& os, const Permutation& permutation,
-                      const std::size_t prefixWidth) const override;
+                      std::size_t prefixWidth) const override;
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                     const RegisterNames& creg) const override;
