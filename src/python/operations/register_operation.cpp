@@ -5,7 +5,7 @@ namespace mqt {
 
 void registerOperation(py::module& m) {
   py::class_<qc::Operation>(m, "Operation", "Generic quantum operation.")
-      .def_property("name", &qc::Operation::getName, &qc::Operation::setName)
+      .def_property_readonly("name", &qc::Operation::getName)
       .def_property("type_", &qc::Operation::getType, &qc::Operation::setGate)
       .def_property(
           "targets", [](const qc::Operation& op) { return op.getTargets(); },

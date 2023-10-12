@@ -90,12 +90,13 @@ class OpType:
     def __setstate__(self: Self, state: int) -> None: ...
 
 class Operation(metaclass=ABCMeta):
-    name: str
     type_: OpType
     controls: set[Control]
     num_qubits: int
     targets: list[int]
     parameter: list[float]
+    @property
+    def name(self: Self) -> str: ...
     @property
     def num_targets(self: Self) -> int: ...
     @property
