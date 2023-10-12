@@ -188,7 +188,7 @@ bool Operation::equals(const Operation& op, const Permutation& perm1,
       controls1 = getControls();
     } else {
       for (const auto& control : getControls()) {
-        controls1.emplace(Control{perm1.at(control.qubit), control.type});
+        controls1.emplace(perm1.at(control.qubit), control.type);
       }
     }
 
@@ -197,7 +197,7 @@ bool Operation::equals(const Operation& op, const Permutation& perm1,
       controls2 = op.getControls();
     } else {
       for (const auto& control : op.getControls()) {
-        controls2.emplace(Control{perm2.at(control.qubit), control.type});
+        controls2.emplace(perm2.at(control.qubit), control.type);
       }
     }
 
