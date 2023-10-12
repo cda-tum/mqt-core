@@ -307,6 +307,7 @@ def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> floa
                 factor_no_operator = factor[1:]
                 is_div = True
 
+            factor_no_operator = factor_no_operator.strip()
             if factor_no_operator.replace(".", "").isnumeric():
                 f = float(factor_no_operator)
                 coeff *= 1.0 / f if is_div else f

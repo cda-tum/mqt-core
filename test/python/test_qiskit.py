@@ -197,10 +197,10 @@ def test_operations() -> None:
 def test_symbolic() -> None:
     """Test import of symbolic parameters."""
     qc = QuantumCircuit(1)
-    theta = Parameter("theta")
-    phi = Parameter("phi")
     lambda_ = Parameter("lambda")
-    qc.rx(2 * theta + phi - lambda_, 0)
+    phi = Parameter("phi")
+    theta = Parameter("theta")
+    qc.rx(2 * theta + phi / 2 - lambda_ + 2, 0)
     mqt_qc = qiskit_to_mqt(qc)
     print(mqt_qc)
 
@@ -210,8 +210,15 @@ def test_symbolic() -> None:
     assert isinstance(mqt_qc[0], SymbolicOperation)
     assert isinstance(mqt_qc[0].get_parameter(0), Expression)
     expr = cast(Expression, mqt_qc[0].get_parameter(0))
+    print(expr)
     assert expr.num_terms() == 3
-    assert expr.constant == 0
+    assert expr.terms[0].coefficient == -1
+    assert expr.terms[0].variable.name == "lambda"
+    assert expr.terms[1].coefficient == 0.5
+    assert expr.terms[1].variable.name == "phi"
+    assert expr.terms[2].coefficient == 2
+    assert expr.terms[2].variable.name == "theta"
+    assert expr.constant == 2
     assert not mqt_qc.is_variable_free()
 
 
