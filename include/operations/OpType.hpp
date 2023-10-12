@@ -141,8 +141,10 @@ inline std::string toString(const OpType& opType) {
     return "teleportation";
   case ClassicControlled:
     return "classic_controlled";
+  // GCOV_EXCL_START
   default:
     throw std::invalid_argument("Invalid OpType!");
+    // GCOV_EXCL_STOP
   }
 }
 

@@ -110,6 +110,7 @@ INSTANTIATE_TEST_SUITE_P(
 TEST_P(QPE, QPETest) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
   auto qc = qc::QPE(lambda, precision);
+  qc.print(std::cout);
   ASSERT_EQ(qc.getNqubits(), precision + 1);
   ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(qc); });
 
