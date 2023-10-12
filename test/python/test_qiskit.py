@@ -19,7 +19,7 @@ def test_empty_circuit() -> None:
     q = QuantumCircuit()
 
     mqt_qc = qiskit_to_mqt(q)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
 
     assert mqt_qc.num_qubits == 0
     assert mqt_qc.num_ops == 0
@@ -30,7 +30,7 @@ def test_single_gate() -> None:
     q = QuantumCircuit(1)
     q.h(0)
     mqt_qc = qiskit_to_mqt(q)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
     assert mqt_qc.num_qubits == 1
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "h"
@@ -42,7 +42,7 @@ def test_two_qubit_gate() -> None:
     q = QuantumCircuit(2)
     q.cx(0, 1)
     mqt_qc = qiskit_to_mqt(q)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
     assert mqt_qc.num_qubits == 2
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "x"
@@ -55,7 +55,7 @@ def test_mcx() -> None:
     q = QuantumCircuit(3)
     q.mcx([0, 1], 2)
     mqt_qc = qiskit_to_mqt(q)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
     assert mqt_qc.num_qubits == 3
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "x"
@@ -68,7 +68,7 @@ def test_mcx_recursive() -> None:
     q = QuantumCircuit(9)
     q.mcx(control_qubits=list(range(7)), target_qubit=7, ancilla_qubits=list(range(8, 9)), mode="recursion")
     mqt_qc = qiskit_to_mqt(q)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
     assert mqt_qc.num_qubits == 9
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "x"
@@ -82,7 +82,7 @@ def test_small_mcx_recursive() -> None:
     q = QuantumCircuit(5)
     q.mcx(target_qubit=4, control_qubits=list(range(4)), mode="recursion")
     mqt_qc = qiskit_to_mqt(q)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
     assert mqt_qc.num_qubits == 5
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "x"
@@ -95,7 +95,7 @@ def test_mcx_vchain() -> None:
     q = QuantumCircuit(9)
     q.mcx(target_qubit=5, control_qubits=list(range(5)), ancilla_qubits=list(range(6, 9)), mode="v-chain")
     mqt_qc = qiskit_to_mqt(q)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
     assert mqt_qc.num_qubits == 9
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "x"
@@ -116,14 +116,14 @@ def test_custom_gate() -> None:
     qc = QuantumCircuit(3, 1)
     qc.append(custom_instr, range(3), range(1))
     mqt_qc = qiskit_to_mqt(qc)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
     assert mqt_qc.num_qubits == 3
     assert mqt_qc.num_ops == 1
     assert isinstance(mqt_qc[0], CompoundOperation)
     assert mqt_qc[0][0].name.strip() == "h"
     assert mqt_qc[0][1].name.strip() == "x"
     assert mqt_qc[0][2].name.strip() == "x"
-    assert mqt_qc[0][3].name.strip() == "meas"
+    assert mqt_qc[0][3].name.strip() == "measure"
     assert mqt_qc[0][0].num_qubits == 3
     assert mqt_qc[0][1].num_qubits == 3
     assert mqt_qc[0][1].num_qubits == 3
@@ -139,7 +139,7 @@ def test_ancilla() -> None:
     qc.h(anc_reg[0])
     qc.cx(anc_reg[0], q_reg[0])
     mqt_qc = qiskit_to_mqt(qc)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
     assert mqt_qc.num_qubits_without_ancilla_qubits == 1
     assert mqt_qc.num_ancilla_qubits == 1
 
@@ -154,7 +154,7 @@ def test_classical() -> None:
     qc.measure(q_reg[0], c_reg[0])
     qc.reset(q_reg[0])
     mqt_qc = qiskit_to_mqt(qc)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
     assert mqt_qc.num_qubits == 1
     assert mqt_qc.num_classical_bits == 1
 
@@ -188,9 +188,9 @@ def test_operations() -> None:
     qc.append(XXPlusYYGate(0.1, 0.0), [0, 1])
 
     mqt_qc = qiskit_to_mqt(qc)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
     assert mqt_qc.num_qubits == 3
-    assert mqt_qc.num_ops == 20
+    assert mqt_qc.num_ops == 24
     assert mqt_qc.is_variable_free()
 
 
@@ -202,7 +202,7 @@ def test_symbolic() -> None:
     lambda_ = Parameter("lambda")
     qc.rx(2 * theta + phi - lambda_, 0)
     mqt_qc = qiskit_to_mqt(qc)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
 
     assert mqt_qc.num_qubits == 1
     assert mqt_qc.num_ops == 1
@@ -221,7 +221,7 @@ def test_symbolic_two_qubit() -> None:
     theta = Parameter("theta")
     qc.rxx(theta, 0, 1)
     mqt_qc = qiskit_to_mqt(qc)
-    print("\n", mqt_qc, sep="")
+    print(mqt_qc)
 
     assert mqt_qc.num_qubits == 2
     assert mqt_qc.num_ops == 1
@@ -262,6 +262,7 @@ def test_non_trivial_initial_layout_multiple_registers() -> None:
     mqt_qc = qiskit_to_mqt(qc_transpiled)
     for k, v in [(0, 3), (1, 2), (2, 1), (3, 0)]:
         assert mqt_qc.initial_layout[k] == v
+        assert mqt_qc.output_permutation[k] == v
 
 
 def test_non_symmetric_initial_layout_multiple_registers() -> None:
@@ -274,6 +275,7 @@ def test_non_symmetric_initial_layout_multiple_registers() -> None:
     mqt_qc = qiskit_to_mqt(qc_transpiled)
     for k, v in [(0, 2), (1, 0), (2, 1)]:
         assert mqt_qc.initial_layout[k] == v
+        assert mqt_qc.output_permutation[k] == v
 
 
 def test_initial_layout_with_ancilla_in_front() -> None:
@@ -284,6 +286,7 @@ def test_initial_layout_with_ancilla_in_front() -> None:
     initial_layout = [0, 1, 2]
     qc_transpiled = transpile(qc, initial_layout=initial_layout)
     mqt_qc = qiskit_to_mqt(qc_transpiled)
+    print(mqt_qc)
     for k, v in [(0, 0), (1, 1), (2, 2)]:
         assert mqt_qc.initial_layout[k] == v
     assert mqt_qc.num_ancilla_qubits == 1
@@ -298,6 +301,7 @@ def test_initial_layout_with_ancilla_in_back() -> None:
     initial_layout = [0, 1, 2]
     qc_transpiled = transpile(qc, initial_layout=initial_layout)
     mqt_qc = qiskit_to_mqt(qc_transpiled)
+    print(mqt_qc)
     for k, v in [(0, 0), (1, 1), (2, 2)]:
         assert mqt_qc.initial_layout[k] == v
     assert mqt_qc.num_ancilla_qubits == 1
