@@ -99,6 +99,8 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
      << "ccz q[1],q[2],q[0];"
      << "cp(pi/2) q[0], q[1];"
      << "cp(pi/4) q[0], q[1];"
+     << "cp(pi/8) q[0], q[1];"
+     << "cp(-pi/8) q[0], q[1];"
      << "cp(-pi/4) q[0], q[1];"
      << "cp(-pi/2) q[0], q[1];"
      << "ccz q[1],q[2],q[0];"
