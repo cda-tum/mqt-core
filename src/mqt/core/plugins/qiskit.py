@@ -350,8 +350,8 @@ def _add_two_target_operation(
     qubit_map: Mapping[Qubit, int],
 ) -> list[float | ParameterExpression]:
     qubits = [qubit_map[qubit] for qubit in qargs]
-    target1 = qubits.pop()
     target2 = qubits.pop()
+    target1 = qubits.pop()
     controls = {Control(qubit) for qubit in qubits}
     parameters = [_parse_symbolic_expression(param) for param in params]
     if any(isinstance(parameter, Expression) for parameter in parameters):
