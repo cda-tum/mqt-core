@@ -18,6 +18,9 @@ protected:
 
   void mapGate(const qc::Operation& gate) override;
 
+  void addOperation(const qc::Controls& controls, const qc::Targets& targets,
+                    qc::OpType type);
+
   static constexpr std::size_t N_REDUNDANT_QUBITS = 3;
 };
 } // namespace ecc

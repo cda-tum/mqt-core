@@ -63,11 +63,44 @@ void Q3Shor::writeDecoding() {
   isDecoded = true;
 }
 
+void Q3Shor::addOperation(const qc::Controls& controls,
+                          const qc::Targets& targets, const qc::OpType type) {
+  const auto numTargets = targets.size();
+  const auto numControls = controls.size();
+  const auto numQubits = qcOriginal->getNqubits();
+  const auto numMappedQubits = qcMapped->getNqubits();
+  for (std::size_t j = 0; j < numTargets; j++) {
+    auto i = targets[j];
+    if (numControls > 0) {
+      qcMapped->emplace_back<qc::StandardOperation>(numMappedQubits, controls,
+                                                    i, type);
+      qc::Controls controls2;
+      qc::Controls controls3;
+      for (const auto& ct : controls) {
+        controls2.insert(
+            qc::Control{static_cast<Qubit>(ct.qubit + numQubits), ct.type});
+        controls3.insert(
+            qc::Control{static_cast<Qubit>(ct.qubit + 2 * numQubits), ct.type});
+      }
+      qcMapped->emplace_back<qc::StandardOperation>(
+          numMappedQubits, controls2, static_cast<Qubit>(i + numQubits), type);
+      qcMapped->emplace_back<qc::StandardOperation>(
+          numMappedQubits, controls3, static_cast<Qubit>(i + 2 * numQubits),
+          type);
+    } else {
+      qcMapped->emplace_back<qc::StandardOperation>(numMappedQubits, i, type);
+      qcMapped->emplace_back<qc::StandardOperation>(
+          numMappedQubits, static_cast<Qubit>(i + numQubits), type);
+      qcMapped->emplace_back<qc::StandardOperation>(
+          numMappedQubits, static_cast<Qubit>(i + 2 * numQubits), type);
+    }
+  }
+}
+
 void Q3Shor::mapGate(const qc::Operation& gate) {
   if (isDecoded && gate.getType() != qc::Measure && gate.getType() != qc::H) {
     writeEncoding();
   }
-  const auto nQubits = qcOriginal->getNqubits();
   switch (gate.getType()) {
   case qc::I:
   case qc::Barrier:
@@ -79,37 +112,7 @@ void Q3Shor::mapGate(const qc::Operation& gate) {
   case qc::Sdg:
   case qc::T:
   case qc::Tdg:
-    for (std::size_t j = 0; j < gate.getNtargets(); j++) {
-      auto i = gate.getTargets()[j];
-      if (gate.getNcontrols() != 0U) {
-        const auto& controls = gate.getControls();
-        qcMapped->emplace_back<qc::StandardOperation>(
-            qcMapped->getNqubits(), controls, i, gate.getType());
-        qc::Controls controls2;
-        qc::Controls controls3;
-        for (const auto& ct : controls) {
-          controls2.insert(
-              qc::Control{static_cast<Qubit>(ct.qubit + nQubits), ct.type});
-          controls3.insert(
-              qc::Control{static_cast<Qubit>(ct.qubit + 2 * nQubits), ct.type});
-        }
-        qcMapped->emplace_back<qc::StandardOperation>(
-            qcMapped->getNqubits(), controls2, static_cast<Qubit>(i + nQubits),
-            gate.getType());
-        qcMapped->emplace_back<qc::StandardOperation>(
-            qcMapped->getNqubits(), controls3,
-            static_cast<Qubit>(i + 2 * nQubits), gate.getType());
-      } else {
-        qcMapped->emplace_back<qc::StandardOperation>(qcMapped->getNqubits(), i,
-                                                      gate.getType());
-        qcMapped->emplace_back<qc::StandardOperation>(
-            qcMapped->getNqubits(), static_cast<Qubit>(i + nQubits),
-            gate.getType());
-        qcMapped->emplace_back<qc::StandardOperation>(
-            qcMapped->getNqubits(), static_cast<Qubit>(i + 2 * nQubits),
-            gate.getType());
-      }
-    }
+    addOperation(gate.getControls(), gate.getTargets(), gate.getType());
     break;
   case qc::Measure:
     if (!isDecoded) {
