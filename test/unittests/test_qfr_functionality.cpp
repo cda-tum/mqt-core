@@ -82,7 +82,7 @@ TEST_F(QFRFunctionality, replaceCxToSwap) {
 
 TEST_F(QFRFunctionality, removeTrailingIdleQubits) {
   const std::size_t nqubits = 4;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.x(0);
   qc.x(2);
   std::cout << qc;
@@ -2228,4 +2228,17 @@ TEST_F(QFRFunctionality, measureAllExistingRegister) {
 TEST_F(QFRFunctionality, measureAllInsufficientRegisterSize) {
   qc::QuantumComputation qc(2U, 1U);
   EXPECT_THROW(qc.measureAll(false), QFRException);
+}
+
+TEST_F(QFRFunctionality, checkClassicalRegisters) {
+  qc::QuantumComputation qc(1U, 1U);
+  EXPECT_THROW(qc.classicControlled(qc::X, 0U, {0U, 2U}), QFRException);
+}
+
+TEST_F(QFRFunctionality, MeasurementSanityCheck) {
+  qc::QuantumComputation qc(1U);
+  qc.addClassicalRegister(1U, "c");
+
+  EXPECT_THROW(qc.measure(0, {"c", 1U}), QFRException);
+  EXPECT_THROW(qc.measure(0, {"d", 0U}), QFRException);
 }

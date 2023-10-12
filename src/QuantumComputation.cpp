@@ -678,21 +678,15 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
       })) {
     of << "opaque teleport src, anc, tgt;\n";
   }
-  if (!qregs.empty()) {
-    printSortedRegisters(qregs, "qreg", of);
-  } else if (nqubits > 0) {
-    of << "qreg q[" << nqubits << "];\n";
-  }
-  if (!cregs.empty()) {
-    printSortedRegisters(cregs, "creg", of);
-  } else if (nclassics > 0) {
-    of << "creg c[" << nclassics << "];\n";
-  }
-  if (!ancregs.empty()) {
-    printSortedRegisters(ancregs, "qreg", of);
-  } else if (nancillae > 0) {
-    of << "qreg anc[" << nancillae << "];\n";
-  }
+
+  assert(nqubits == 0U || !qregs.empty());
+  printSortedRegisters(qregs, "qreg", of);
+
+  assert(nclassics == 0U || !cregs.empty());
+  printSortedRegisters(cregs, "creg", of);
+
+  assert(nancillae == 0U || !ancregs.empty());
+  printSortedRegisters(ancregs, "qreg", of);
 
   RegisterNames qregnames{};
   RegisterNames cregnames{};
