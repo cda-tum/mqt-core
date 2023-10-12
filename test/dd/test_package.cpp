@@ -307,11 +307,13 @@ TEST(DDPackageTest, VectorSerializationTest) {
   auto deserializedBellState =
       dd->deserialize<dd::vNode>("bell_state.dd", false);
   EXPECT_EQ(bellState, deserializedBellState);
+  std::filesystem::remove("bell_state.dd");
 
   serialize(bellState, "bell_state_binary.dd", true);
   deserializedBellState =
       dd->deserialize<dd::vNode>("bell_state_binary.dd", true);
   EXPECT_EQ(bellState, deserializedBellState);
+  std::filesystem::remove("bell_state_binary.dd");
 }
 
 TEST(DDPackageTest, BellMatrix) {
@@ -412,11 +414,13 @@ TEST(DDPackageTest, MatrixSerializationTest) {
   auto deserializedBellMatrix =
       dd->deserialize<dd::mNode>("bell_matrix.dd", false);
   EXPECT_EQ(bellMatrix, deserializedBellMatrix);
+  std::filesystem::remove("bell_matrix.dd");
 
   serialize(bellMatrix, "bell_matrix_binary.dd", true);
   deserializedBellMatrix =
       dd->deserialize<dd::mNode>("bell_matrix_binary.dd", true);
   EXPECT_EQ(bellMatrix, deserializedBellMatrix);
+  std::filesystem::remove("bell_matrix_binary.dd");
 }
 
 TEST(DDPackageTest, SerializationErrors) {

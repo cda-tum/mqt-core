@@ -1,6 +1,7 @@
 #include "QuantumComputation.hpp"
 
-#include "gtest/gtest.h"
+#include <filesystem>
+#include <gtest/gtest.h>
 #include <iostream>
 #include <string>
 
@@ -64,6 +65,8 @@ TEST_P(IO, importAndDump) {
   ASSERT_NO_THROW(qc->dump(output2, format));
 
   compareFiles(output, output2, true);
+  std::filesystem::remove(output);
+  std::filesystem::remove(output2);
 }
 
 TEST_F(IO, importFromString) {
@@ -142,6 +145,7 @@ TEST_F(IO, dumpNegativeControl) {
   ++it;
   EXPECT_EQ((*it)->getType(), qc::X);
   EXPECT_EQ((*it)->getControls().size(), 0);
+  std::filesystem::remove("testdump.qasm");
 }
 
 TEST_F(IO, qiskitMcxGray) {
