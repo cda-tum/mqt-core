@@ -556,44 +556,37 @@ void QuantumComputation::addQubit(const Qubit logicalQubitIndex,
 }
 
 std::ostream& QuantumComputation::print(std::ostream& os) const {
+  os << name << "\n";
   const auto width =
       ops.empty() ? 1 : static_cast<int>(std::log10(ops.size()) + 1.);
-  if (!ops.empty()) {
-    os << std::setw(width) << "i"
-       << ": \t\t\t";
-  } else {
-    os << "i: \t\t\t";
-  }
+
+  os << std::setw(width + 1) << "i:";
   for (const auto& [physical, logical] : initialLayout) {
     if (ancillary[logical]) {
-      os << "\033[31m" << logical << "\t\033[0m";
-    } else {
-      os << logical << "\t";
+      os << "\033[31m";
     }
+    os << std::setw(4) << logical << "\033[0m";
   }
   os << "\n";
+
   size_t i = 0U;
   for (const auto& op : ops) {
-    os << std::setw(width) << ++i << ": \t";
-    op->print(os, initialLayout);
+    os << std::setw(width) << ++i << ":";
+    op->print(os, initialLayout, static_cast<std::size_t>(width + 1));
     os << "\n";
   }
-  if (!ops.empty()) {
-    os << std::setw(width) << "o"
-       << ": \t\t\t";
-  } else {
-    os << "o: \t\t\t";
-  }
+
+  os << std::setw(width + 1) << "o:";
   for (const auto& physicalQubit : initialLayout) {
     auto it = outputPermutation.find(physicalQubit.first);
     if (it == outputPermutation.end()) {
       if (garbage[physicalQubit.second]) {
-        os << "\033[31m|\t\033[0m";
-      } else {
-        os << "|\t";
+        os << "\033[31m";
       }
+      os << std::setw(4) << "|"
+         << "\033[0m";
     } else {
-      os << it->second << "\t";
+      os << std::setw(4) << it->second;
     }
   }
   os << "\n";

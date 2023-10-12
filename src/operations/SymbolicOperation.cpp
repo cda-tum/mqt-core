@@ -202,7 +202,7 @@ void SymbolicOperation::setup(const std::size_t nq,
   }
   startQubit = startingQubit;
   checkSymbolicUgate();
-  setName();
+  name = toString(type);
 }
 
 [[nodiscard]] fp

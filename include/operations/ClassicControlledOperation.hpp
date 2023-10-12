@@ -21,7 +21,7 @@ public:
       : op(std::move(operation)), controlRegister(std::move(controlReg)),
         expectedValue(expectedVal) {
     nqubits = op->getNqubits();
-    name = "c_" + op->getName();
+    name = "c_" + shortName(op->getType());
     parameter.reserve(3);
     parameter.emplace_back(static_cast<fp>(controlRegister.first));
     parameter.emplace_back(static_cast<fp>(controlRegister.second));

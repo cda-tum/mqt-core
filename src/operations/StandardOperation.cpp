@@ -164,7 +164,7 @@ void StandardOperation::setup(const std::size_t nq, const Qubit startingQubit) {
   nqubits = nq;
   startQubit = startingQubit;
   checkUgate();
-  setName();
+  name = toString(type);
 }
 
 /***

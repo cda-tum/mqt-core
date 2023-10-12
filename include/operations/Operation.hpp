@@ -116,11 +116,9 @@ public:
     }
   }
 
-  virtual void setName();
-
   virtual void setGate(const OpType g) {
     type = g;
-    setName();
+    name = toString(g);
   }
 
   virtual void setParameter(const std::vector<fp>& p) { parameter = p; }
@@ -170,9 +168,9 @@ public:
   }
 
   virtual std::ostream& printParameters(std::ostream& os) const;
-  virtual std::ostream& print(std::ostream& os) const;
-  virtual std::ostream& print(std::ostream& os,
-                              const Permutation& permutation) const;
+  std::ostream& print(std::ostream& os) const { return print(os, {}, 0); }
+  virtual std::ostream& print(std::ostream& os, const Permutation& permutation,
+                              const std::size_t prefixWidth) const;
 
   friend std::ostream& operator<<(std::ostream& os, const Operation& op) {
     return op.print(os);

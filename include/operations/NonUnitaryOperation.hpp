@@ -72,9 +72,8 @@ public:
     return equals(operation, {}, {});
   }
 
-  std::ostream& print(std::ostream& os) const override { return print(os, {}); }
-  std::ostream& print(std::ostream& os,
-                      const Permutation& permutation) const override;
+  std::ostream& print(std::ostream& os, const Permutation& permutation,
+                      const std::size_t prefixWidth) const override;
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                     const RegisterNames& creg) const override;

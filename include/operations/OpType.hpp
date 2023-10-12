@@ -146,6 +146,42 @@ inline std::string toString(const OpType& opType) {
   }
 }
 
+/**
+ * @brief Gives a short name for the given OpType (at most 3 characters)
+ * @param opType OpType to get the short name for
+ * @return Short name for the given OpType
+ */
+inline std::string shortName(const OpType& opType) {
+  switch (opType) {
+  case GPhase:
+    return "GPh";
+  case SXdg:
+    return "sxd";
+  case SWAP:
+    return "sw";
+  case iSWAP:
+    return "isw";
+  case Peres:
+    return "pr";
+  case Peresdg:
+    return "prd";
+  case XXminusYY:
+    return "x-y";
+  case XXplusYY:
+    return "x+y";
+  case Barrier:
+    return "====";
+  case Measure:
+    return "msr";
+  case Reset:
+    return "rst";
+  case Teleportation:
+    return "tel";
+  default:
+    return toString(opType);
+  }
+}
+
 inline bool isTwoQubitGate(const OpType& opType) {
   switch (opType) {
   case SWAP:

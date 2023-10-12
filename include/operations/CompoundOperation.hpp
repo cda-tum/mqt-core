@@ -123,24 +123,16 @@ public:
     return equals(operation, {}, {});
   }
 
-  std::ostream& print(std::ostream& os) const override {
-    os << name;
+  std::ostream& print(std::ostream& os, const Permutation& permutation,
+                      const std::size_t prefixWidth) const override {
+    const auto prefix = std::string(prefixWidth - 1, ' ');
+    os << std::string(4 * nqubits, '-') << "\n";
     for (const auto& op : ops) {
-      os << std::endl << "\t";
-      op->print(os);
+      os << prefix << ":";
+      op->print(os, permutation, prefixWidth);
+      os << "\n";
     }
-
-    return os;
-  }
-
-  std::ostream& print(std::ostream& os,
-                      const Permutation& permutation) const override {
-    os << name;
-    for (const auto& op : ops) {
-      os << std::endl << "\t";
-      op->print(os, permutation);
-    }
-
+    os << prefix << std::string(4 * nqubits + 1, '-');
     return os;
   }
 

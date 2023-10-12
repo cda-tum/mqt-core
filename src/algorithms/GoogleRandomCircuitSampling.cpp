@@ -131,7 +131,7 @@ std::ostream& GoogleRandomCircuitSampling::print(std::ostream& os) const {
     for (const auto& op : cycle) {
       os << std::setw(static_cast<int>(std::log10(getNops()) + 1.)) << ++j
          << ": ";
-      op->print(os, initialLayout);
+      op->print(os, initialLayout, 0U);
       os << "\n";
     }
   }
