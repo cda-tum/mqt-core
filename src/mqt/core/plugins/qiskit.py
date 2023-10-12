@@ -272,8 +272,8 @@ def _emplace_operation(
     if name == "xx_plus_yy":
         return _add_two_target_operation(qc, OpType.xx_plus_yy, qargs, params, qubit_map)
 
-    msg = f"Unsupported gate {name}"
-    raise NotImplementedError(msg)  # pragma: no cover
+    msg = f"Unsupported gate {name}"  # pragma: no cover
+    raise NotImplementedError(msg)
 
 
 _SUM_REGEX = re.compile("[+|-]?[^+-]+")
