@@ -58,7 +58,7 @@ docs = [
 qiskit = [
    "qiskit-terra>=0.22.0",
 ]
-dev = ["mqt.core[coverage, docs, qiskit]",]
+dev = ["mqt.core[coverage, docs]",]
 
 [project.urls]
 Homepage = "https://github.com/cda-tum/mqt-core"
