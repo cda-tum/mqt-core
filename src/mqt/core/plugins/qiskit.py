@@ -160,7 +160,7 @@ def _emplace_operation(
     if name not in _NATIVELY_SUPPORTED_GATES:
         try:
             return _import_definition(qc, instr.definition, qargs, cargs, qubit_map, clbit_map)
-        except Exception as ex:
+        except Exception as ex:  # PRAGMA: NO COVER
             msg = f"Unsupported gate {name} with definition {instr.definition}"
             raise NotImplementedError(msg) from ex
 
@@ -272,7 +272,8 @@ def _emplace_operation(
     if name == "xx_plus_yy":
         return _add_two_target_operation(qc, OpType.xx_plus_yy, qargs, params, qubit_map)
 
-    return []
+    msg = f"Unsupported gate {name}"
+    raise NotImplementedError(msg)  # pragma: no cover
 
 
 _SUM_REGEX = re.compile("[+|-]?[^+-]+")

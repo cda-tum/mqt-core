@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import cast
 
+import pytest
 from qiskit import QuantumCircuit, transpile
 from qiskit.circuit import AncillaRegister, ClassicalRegister, Parameter, QuantumRegister
-from qiskit.circuit.library import XXMinusYYGate, XXPlusYYGate
+from qiskit.circuit.library import U2Gate, XXMinusYYGate, XXPlusYYGate
 
 from mqt.core.operations import CompoundOperation, SymbolicOperation
 from mqt.core.plugins.qiskit import qiskit_to_mqt
@@ -78,15 +79,15 @@ def test_mcx_recursive() -> None:
 
 def test_small_mcx_recursive() -> None:
     """Test import of small mcx_recursive gate."""
-    q = QuantumCircuit(3)
-    q.mcx(target_qubit=2, control_qubits=list(range(2)), mode="recursion")
+    q = QuantumCircuit(5)
+    q.mcx(target_qubit=4, control_qubits=list(range(4)), mode="recursion")
     mqt_qc = qiskit_to_mqt(q)
     print("\n", mqt_qc, sep="")
-    assert mqt_qc.num_qubits == 3
+    assert mqt_qc.num_qubits == 5
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "x"
-    assert mqt_qc[0].num_qubits == 3
-    assert {control.qubit for control in mqt_qc[0].controls} == {0, 1}
+    assert mqt_qc[0].num_qubits == 5
+    assert {control.qubit for control in mqt_qc[0].controls} == {0, 1, 2, 3}
 
 
 def test_mcx_vchain() -> None:
@@ -161,26 +162,30 @@ def test_classical() -> None:
 def test_operations() -> None:
     """Test import of operations."""
     qc = QuantumCircuit(3)
-    qc.i(0)  # op 1
-    qc.cy(0, 1)  # op 2
-    qc.z(2)  # op 3
-    qc.sdg(2)  # op 4
-    qc.t(2)  # op 5
-    qc.tdg(1)  # op 6
-    qc.crx(0.5, 2, 0)  # op 7
-    qc.ry(0.5, 0)  # op 8
-    qc.rz(0.5, 1)  # op 9
-    qc.mcp(0.5, [0, 1], 2)  # op 10
-    qc.sx(0)  # op 11
-    qc.swap(0, 1)  # op 12
-    qc.iswap(0, 1)  # op 13
-    qc.dcx(0, 1)  # op 14
-    qc.ecr(0, 1)  # op 15
-    qc.rxx(0.5, 0, 1)  # op 16
-    qc.rzz(0.5, 0, 1)  # op 17
-    qc.ryy(0.5, 0, 1)  # op 18
-    qc.append(XXMinusYYGate(0.1, 0.0), [0, 1])  # op 19
-    qc.append(XXPlusYYGate(0.1, 0.0), [0, 1])  # op 20
+    qc.i(0)
+    qc.cy(0, 1)
+    qc.z(2)
+    qc.s(2)
+    qc.sdg(2)
+    qc.t(2)
+    qc.tdg(1)
+    qc.u(0.5, 0.5, 0.5, 0)
+    qc.crx(0.5, 2, 0)
+    qc.ry(0.5, 0)
+    qc.rz(0.5, 1)
+    qc.mcp(0.5, [0, 1], 2)
+    qc.sx(0)
+    qc.swap(0, 1)
+    qc.iswap(0, 1)
+    qc.dcx(0, 1)
+    qc.ecr(0, 1)
+    qc.rxx(0.5, 0, 1)
+    qc.rzz(0.5, 0, 1)
+    qc.ryy(0.5, 0, 1)
+    qc.rzx(0.5, 0, 1)
+    qc.append(U2Gate(0.5, 0.5), [0])
+    qc.append(XXMinusYYGate(0.1, 0.0), [0, 1])
+    qc.append(XXPlusYYGate(0.1, 0.0), [0, 1])
 
     mqt_qc = qiskit_to_mqt(qc)
     print("\n", mqt_qc, sep="")
@@ -206,6 +211,25 @@ def test_symbolic() -> None:
     assert isinstance(mqt_qc[0].get_parameter(0), Expression)
     expr = cast(Expression, mqt_qc[0].get_parameter(0))
     assert expr.num_terms() == 3
+    assert expr.constant == 0
+    assert not mqt_qc.is_variable_free()
+
+
+def test_symbolic_two_qubit() -> None:
+    """Test import of symbolic two-qubit gate."""
+    qc = QuantumCircuit(2)
+    theta = Parameter("theta")
+    qc.rxx(theta, 0, 1)
+    mqt_qc = qiskit_to_mqt(qc)
+    print("\n", mqt_qc, sep="")
+
+    assert mqt_qc.num_qubits == 2
+    assert mqt_qc.num_ops == 1
+    assert mqt_qc[0].name.strip() == "rxx"
+    assert isinstance(mqt_qc[0], SymbolicOperation)
+    assert isinstance(mqt_qc[0].get_parameter(0), Expression)
+    expr = cast(Expression, mqt_qc[0].get_parameter(0))
+    assert expr.num_terms() == 1
     assert expr.constant == 0
     assert not mqt_qc.is_variable_free()
 
@@ -278,3 +302,15 @@ def test_initial_layout_with_ancilla_in_back() -> None:
         assert mqt_qc.initial_layout[k] == v
     assert mqt_qc.num_ancilla_qubits == 1
     assert mqt_qc.is_circuit_qubit_ancillary(2)
+
+
+def test_symbolic_global_phase() -> None:
+    """Test whether symbolic global phase works properly."""
+    qc = QuantumCircuit(1)
+    theta = Parameter("theta")
+    qc.global_phase = theta
+
+    with pytest.warns(RuntimeWarning):
+        mqt_qc = qiskit_to_mqt(qc)
+
+    assert mqt_qc.global_phase == 0
