@@ -221,6 +221,11 @@ def test_symbolic() -> None:
     assert expr.constant == 2
     assert not mqt_qc.is_variable_free()
 
+    qc = qc.bind_parameters({lambda_: 0, phi: 0, theta: 0})
+    mqt_qc = qiskit_to_mqt(qc)
+    assert mqt_qc.is_variable_free()
+    assert mqt_qc[0].parameter[0] == 2
+
 
 def test_symbolic_two_qubit() -> None:
     """Test import of symbolic two-qubit gate."""
