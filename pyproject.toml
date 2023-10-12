@@ -140,9 +140,14 @@ testpaths = ["test/python"]
 
 [tool.coverage]
 run.source = ["mqt.core"]
+run.omit = [
+    'src/mqt/core/_compat/*',
+]
 report.exclude_also = [
     '\.\.\.',
     'if TYPE_CHECKING:',
+    'raise AssertionError',
+    'raise NotImplementedError',
 ]
 
 
