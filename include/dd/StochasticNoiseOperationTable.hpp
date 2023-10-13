@@ -49,7 +49,7 @@ public:
     ++stats.lookups;
     Edge* r = nullptr;
     auto& entry = table.at(target).at(kind);
-    if (entry.w.r == nullptr) {
+    if (entry.p == nullptr) {
       return r;
     }
     ++stats.hits;

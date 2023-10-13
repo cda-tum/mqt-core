@@ -2,7 +2,6 @@
 #include "algorithms/BernsteinVazirani.hpp"
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
-#include "dd/Export.hpp"
 #include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"

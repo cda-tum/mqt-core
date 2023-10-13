@@ -5,18 +5,12 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
   add_library(
     ${PROJECT_NAME}-dd
     ${DD_HEADERS}
-    CachedEdge.cpp
-    Complex.cpp
-    ComplexNumbers.cpp
-    ComplexValue.cpp
     Edge.cpp
     FunctionalityConstruction.cpp
     MemoryManager.cpp
     Node.cpp
     NoiseFunctionality.cpp
     Operations.cpp
-    RealNumber.cpp
-    RealNumberUniqueTable.cpp
     Simulation.cpp
     statistics/MemoryManagerStatistics.cpp
     statistics/Statistics.cpp

@@ -1,10 +1,5 @@
 #include "dd/Node.hpp"
 
-#include "dd/ComplexNumbers.hpp"
-
-#include <cassert>
-#include <utility>
-
 namespace dd {
 
 void dNode::setDensityMatrixNodeFlag(const bool densityMatrix) noexcept {
@@ -30,7 +25,7 @@ std::uint8_t dNode::alignDensityNodeNode(dNode*& p) noexcept {
   }
 
   if (!isConjugateTempFlagSet(flags)) {
-    p->e[2].w = ComplexNumbers::conj(p->e[2].w);
+    p->e[2].w = std::conj(p->e[2].w);
     setConjugateTempFlagTrue(p->e[2].p);
     // Mark the first edge
     setNonReduceTempFlagTrue(p->e[1].p);
@@ -42,7 +37,7 @@ std::uint8_t dNode::alignDensityNodeNode(dNode*& p) noexcept {
   } else {
     std::swap(p->e[2], p->e[1]);
     for (auto& edge : p->e) {
-      edge.w = ComplexNumbers::conj(edge.w);
+      edge.w = std::conj(edge.w);
       setConjugateTempFlagTrue(edge.p);
       setDensityMatTempFlagTrue(edge.p);
     }
@@ -65,11 +60,11 @@ void dNode::getAlignedNodeRevertModificationsOnSubEdges(dNode* p) noexcept {
   }
 
   if (!isConjugateTempFlagSet(p->flags)) {
-    p->e[2].w = ComplexNumbers::conj(p->e[2].w);
+    p->e[2].w = std::conj(p->e[2].w);
     return;
   }
   for (auto& edge : p->e) {
-    edge.w = ComplexNumbers::conj(edge.w);
+    edge.w = std::conj(edge.w);
   }
   std::swap(p->e[2], p->e[1]);
 }

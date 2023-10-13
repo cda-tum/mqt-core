@@ -12,8 +12,6 @@ static constexpr auto M_NODE_MEMORY_MIB =
     static_cast<double>(sizeof(mNode)) / static_cast<double>(1ULL << 20U);
 static constexpr auto D_NODE_MEMORY_MIB =
     static_cast<double>(sizeof(dNode)) / static_cast<double>(1ULL << 20U);
-static constexpr auto REAL_NUMBER_MEMORY_MIB =
-    static_cast<double>(sizeof(RealNumber)) / static_cast<double>(1ULL << 20U);
 
 static constexpr auto V_EDGE_MEMORY_MIB =
     static_cast<double>(sizeof(Edge<vNode>)) / static_cast<double>(1ULL << 20U);
@@ -52,11 +50,7 @@ template <class Config>
   const auto memoryForEdges =
       vMemoryForEdges + mMemoryForEdges + dMemoryForEdges;
 
-  const auto activeRealNumbers =
-      static_cast<double>(package->cUniqueTable.getStats().numActiveEntries);
-  const auto memoryForRealNumbers = activeRealNumbers * REAL_NUMBER_MEMORY_MIB;
-
-  return memoryForNodes + memoryForEdges + memoryForRealNumbers;
+  return memoryForNodes + memoryForEdges;
 }
 
 /**
@@ -89,11 +83,7 @@ template <class Config>
   const auto memoryForEdges =
       vMemoryForEdges + mMemoryForEdges + dMemoryForEdges;
 
-  const auto peakRealNumbers =
-      static_cast<double>(package->cMemoryManager.getStats().peakNumUsed);
-  const auto memoryForRealNumbers = peakRealNumbers * REAL_NUMBER_MEMORY_MIB;
-
-  return memoryForNodes + memoryForEdges + memoryForRealNumbers;
+  return memoryForNodes + memoryForEdges;
 }
 
 template <class Config = DDPackageConfig>
@@ -116,11 +106,6 @@ getStatistics(Package<Config>* package,
   densityMatrix["unique_table"] =
       package->dUniqueTable.getStatsJson(includeIndividualTables);
   densityMatrix["memory_manager"] = package->dMemoryManager.getStats().json();
-
-  auto& realNumbers = j["real_numbers"];
-  realNumbers["unique_table"] = package->cUniqueTable.getStats().json();
-  realNumbers["memory_manager"] = package->cMemoryManager.getStats().json();
-  realNumbers["cache_manager"] = package->cCacheManager.getStats().json();
 
   auto& computeTables = j["compute_tables"];
   computeTables["vector_add"] = package->vectorAdd.getStats().json();
@@ -191,22 +176,6 @@ getDataStructureStatistics(Package<Config>* package) {
   auto& densityEdge = j["dEdge"];
   densityEdge["size_B"] = sizeof(Edge<dNode>);
   densityEdge["alignment_B"] = alignof(Edge<dNode>);
-
-  auto& realNumber = j["RealNumber"];
-  realNumber["size_B"] = sizeof(RealNumber);
-  realNumber["alignment_B"] = alignof(RealNumber);
-
-  auto& complexValue = j["ComplexValue"];
-  complexValue["size_B"] = sizeof(ComplexValue);
-  complexValue["alignment_B"] = alignof(ComplexValue);
-
-  auto& complex = j["Complex"];
-  complex["size_B"] = sizeof(Complex);
-  complex["alignment_B"] = alignof(Complex);
-
-  auto& complexNumbers = j["ComplexNumbers"];
-  complexNumbers["size_B"] = sizeof(ComplexNumbers);
-  complexNumbers["alignment_B"] = alignof(ComplexNumbers);
 
   // Information about all the compute table entries
   // For every entry, we store the size in bytes and the alignment in bytes

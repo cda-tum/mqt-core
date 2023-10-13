@@ -1,6 +1,5 @@
 #pragma once
 
-#include "dd/Complex.hpp"
 #include "dd/DDDefinitions.hpp"
 
 #include <complex>
@@ -48,14 +47,14 @@ using MatrixEntryFunc = std::function<void(const std::size_t, const std::size_t,
  */
 template <class Node> struct Edge {
   Node* p;
-  Complex w;
+  std::complex<fp> w;
 
   /// Comparing two DD edges with another involves comparing the respective
   /// pointers and checking whether the corresponding weights are "close enough"
   /// according to a given tolerance this notion of equivalence is chosen to
   /// counter floating point inaccuracies
   constexpr bool operator==(const Edge& other) const {
-    return p == other.p && w.approximatelyEquals(other.w);
+    return p == other.p && std::abs(w - other.w) < dd::EPS;
   }
   constexpr bool operator!=(const Edge& other) const {
     return !operator==(other);
@@ -74,7 +73,7 @@ template <class Node> struct Edge {
    * @param w the edge weight
    * @return the terminal DD representing (w)
    */
-  [[nodiscard]] static Edge terminal(const Complex& w) {
+  [[nodiscard]] static Edge terminal(const std::complex<fp>& w) {
     return Edge{Node::getTerminal(), w};
   }
 
@@ -88,17 +87,13 @@ template <class Node> struct Edge {
    * @brief Check whether this is a zero terminal
    * @return whether this is a zero terminal
    */
-  [[nodiscard]] bool isZeroTerminal() const {
-    return isTerminal() && w == Complex::zero;
-  }
+  [[nodiscard]] bool isZeroTerminal() const { return isTerminal() && w == 0.; }
 
   /**
    * @brief Check whether this is a one terminal
    * @return whether this is a one terminal
    */
-  [[nodiscard]] bool isOneTerminal() const {
-    return isTerminal() && w == Complex::one;
-  }
+  [[nodiscard]] bool isOneTerminal() const { return isTerminal() && w == 1.; }
 
   /**
    * @brief Get a single element of the vector or matrix represented by the DD
@@ -344,10 +339,8 @@ private:
 };
 
 // NOLINTBEGIN(cppcoreguidelines-interfaces-global-init)
-template <class Node>
-const Edge<Node> Edge<Node>::zero{Node::getTerminal(), Complex::zero};
-template <class Node>
-const Edge<Node> Edge<Node>::one{Node::getTerminal(), Complex::one};
+template <class Node> const Edge<Node> Edge<Node>::zero{Node::getTerminal(), 0};
+template <class Node> const Edge<Node> Edge<Node>::one{Node::getTerminal(), 1};
 // NOLINTEND(cppcoreguidelines-interfaces-global-init)
 } // namespace dd
 

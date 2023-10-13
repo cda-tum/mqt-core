@@ -13,29 +13,17 @@ protected:
     dd->decRef(sim);
     dd->decRef(func);
     dd->garbageCollect(true);
-
-    // number of complex table entries after clean-up should equal initial
-    // number of entries
-    EXPECT_EQ(dd->cn.realCount(), initialComplexCount);
-
-    // number of available cache entries after clean-up should equal initial
-    // number of entries
-    EXPECT_EQ(dd->cn.cacheCount(), initialCacheCount);
   }
 
   void SetUp() override {
     std::tie(nqubits, seed) = GetParam();
     dd = std::make_unique<dd::Package<>>(nqubits + 1);
-    initialCacheCount = dd->cn.cacheCount();
-    initialComplexCount = dd->cn.realCount();
   }
 
   std::size_t nqubits = 0;
   std::size_t seed = 0;
   std::unique_ptr<dd::Package<>> dd;
   std::unique_ptr<qc::Grover> qc;
-  std::size_t initialCacheCount = 0;
-  std::size_t initialComplexCount = 0;
   qc::VectorDD sim{};
   qc::MatrixDD func{};
 };

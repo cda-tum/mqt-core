@@ -266,7 +266,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
       pzero /= norm;
       pone /= norm;
 
-      if (RealNumber::approximatelyOne(pone)) {
+      if (std::abs(pone - 1.) < EPS) {
         const qc::MatrixDD xGate =
             dd->makeGateDD(Xmat, static_cast<std::size_t>(state.p->v) + 1U,
                            static_cast<Qubit>(targets[0U]));
@@ -277,7 +277,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
         continue;
       }
 
-      if (!RealNumber::approximatelyOne(pzero)) {
+      if (std::abs(pzero - 1.) > EPS) {
         throw qc::QFRException("Reset on non basis state encountered. This is "
                                "not supported in this method.");
       }
@@ -330,11 +330,11 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
           }
         }
         const auto prob0 = commonFactor * pzero;
-        if (!RealNumber::approximatelyZero(prob0)) {
+        if (std::abs(prob0) > EPS) {
           probVector[idx0] = prob0;
         }
         const auto prob1 = commonFactor * pone;
-        if (!RealNumber::approximatelyZero(prob1)) {
+        if (std::abs(prob1) > EPS) {
           probVector[idx1] = prob1;
         }
 
@@ -343,8 +343,8 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
         return;
       }
 
-      const bool nonZeroP0 = !RealNumber::approximatelyZero(pzero);
-      const bool nonZeroP1 = !RealNumber::approximatelyZero(pone);
+      const bool nonZeroP0 = std::abs(pzero) > EPS;
+      const bool nonZeroP1 = std::abs(pone) > EPS;
 
       // in case both outcomes are non-zero the reference count of the state has
       // to be increased once more in order to avoid reference counting errors
@@ -367,10 +367,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
             measurementMatrix, static_cast<std::size_t>(state.p->v) + 1U,
             targets[0]);
         qc::VectorDD measuredState = dd->multiply(measurementGate, state);
-
-        auto c = dd->cn.getTemporary(1. / std::sqrt(pzero), 0);
-        ComplexNumbers::mul(c, c, measuredState.w);
-        measuredState.w = dd->cn.lookup(c);
+        measuredState.w /= std::sqrt(pzero);
         dd->incRef(measuredState);
         dd->decRef(state);
         // recursive call from here
@@ -394,10 +391,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
             measurementMatrix, static_cast<std::size_t>(state.p->v) + 1U,
             targets[0]);
         qc::VectorDD measuredState = dd->multiply(measurementGate, state);
-
-        auto c = dd->cn.getTemporary(1. / std::sqrt(pone), 0);
-        ComplexNumbers::mul(c, measuredState.w, c);
-        measuredState.w = dd->cn.lookup(c);
+        measuredState.w /= std::sqrt(pone);
         dd->incRef(measuredState);
         dd->decRef(state);
         // recursive call from here

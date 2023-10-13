@@ -1,8 +1,5 @@
 #pragma once
 
-#include "dd/Complex.hpp"
-#include "dd/ComplexNumbers.hpp"
-#include "dd/ComplexValue.hpp"
 #include "dd/ComputeTable.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/DensityNoiseTable.hpp"
@@ -98,18 +95,6 @@ public:
   MemoryManager<mNode> mMemoryManager{Config::UT_MAT_INITIAL_ALLOCATION_SIZE};
   /// The memory manager for density matrix nodes
   MemoryManager<dNode> dMemoryManager{Config::UT_DM_INITIAL_ALLOCATION_SIZE};
-  /**
-   * @brief The memory manager for complex numbers
-   * @note The real and imaginary part of complex numbers are treated
-   * separately. Hence, it suffices for the manager to only manage real numbers.
-   */
-  MemoryManager<RealNumber> cMemoryManager{};
-  /**
-   * @brief The cache manager for complex numbers
-   * @note Similar to the memory manager, the cache only maintains real entries,
-   * but typically gives them out in pairs to form complex numbers.
-   */
-  MemoryManager<RealNumber> cCacheManager{};
 
   /**
    * @brief Get the memory manager for a given type
@@ -123,8 +108,6 @@ public:
       return mMemoryManager;
     } else if constexpr (std::is_same_v<T, dNode>) {
       return dMemoryManager;
-    } else if constexpr (std::is_same_v<T, RealNumber>) {
-      return cMemoryManager;
     }
   }
 
@@ -138,8 +121,6 @@ public:
     vMemoryManager.reset(resizeToTotal);
     mMemoryManager.reset(resizeToTotal);
     dMemoryManager.reset(resizeToTotal);
-    cMemoryManager.reset(resizeToTotal);
-    cCacheManager.reset(resizeToTotal);
   }
 
   /// The unique table used for vector nodes
@@ -148,14 +129,6 @@ public:
   UniqueTable<mNode, Config::UT_MAT_NBUCKET> mUniqueTable{0U, mMemoryManager};
   /// The unique table used for density matrix nodes
   UniqueTable<dNode, Config::UT_DM_NBUCKET> dUniqueTable{0U, dMemoryManager};
-  /**
-   * @brief The unique table used for complex numbers
-   * @note The table actually only stores real numbers in the interval [0, 1],
-   * but is used to manages all complex numbers throughout the package.
-   * @see RealNumberUniqueTable
-   */
-  RealNumberUniqueTable cUniqueTable{cMemoryManager};
-  ComplexNumbers cn{cUniqueTable, cCacheManager};
 
   /**
    * @brief Get the unique table for a given type
@@ -169,8 +142,6 @@ public:
       return mUniqueTable;
     } else if constexpr (std::is_same_v<T, dNode>) {
       return dUniqueTable;
-    } else if constexpr (std::is_same_v<T, RealNumber>) {
-      return cUniqueTable;
     }
   }
 
@@ -183,7 +154,6 @@ public:
     vUniqueTable.clear();
     mUniqueTable.clear();
     dUniqueTable.clear();
-    cUniqueTable.clear();
   }
 
   /**
@@ -197,7 +167,6 @@ public:
    * @param e The edge to increase the reference count of
    */
   template <class Node> void incRef(const Edge<Node>& e) noexcept {
-    cn.incRef(e.w);
     const auto& p = e.p;
     const auto inc = getUniqueTable<Node>().incRef(p);
     if (inc && p->ref == 1U) {
@@ -218,7 +187,6 @@ public:
    * @param e The edge to decrease the reference count of
    */
   template <class Node> void decRef(const Edge<Node>& e) noexcept {
-    cn.decRef(e.w);
     const auto& p = e.p;
     const auto dec = getUniqueTable<Node>().decRef(p);
     if (dec && p->ref == 0U) {
@@ -232,17 +200,10 @@ public:
     // return immediately if no table needs collection
     if (!force && !vUniqueTable.possiblyNeedsCollection() &&
         !mUniqueTable.possiblyNeedsCollection() &&
-        !dUniqueTable.possiblyNeedsCollection() &&
-        !cUniqueTable.possiblyNeedsCollection()) {
+        !dUniqueTable.possiblyNeedsCollection()) {
       return false;
     }
 
-    auto cCollect = cUniqueTable.garbageCollect(force);
-    if (cCollect > 0) {
-      // Collecting garbage in the complex numbers table requires collecting the
-      // node tables as well
-      force = true;
-    }
     auto vCollect = vUniqueTable.garbageCollect(force);
     auto mCollect = mUniqueTable.garbageCollect(force);
     auto dCollect = dUniqueTable.garbageCollect(force);
@@ -259,6 +220,7 @@ public:
     // been collected
     if (mCollect > 0 || dCollect > 0) {
       matrixAdd.clear();
+      matrixTranspose.clear();
       conjugateMatrixTranspose.clear();
       matrixKronecker.clear();
       matrixVectorMultiplication.clear();
@@ -269,47 +231,20 @@ public:
       densityDensityMultiplication.clear();
       densityNoise.clear();
     }
-    // invalidate all compute tables where any component of the entry contains
-    // numbers from the complex table if any complex numbers were collected
-    if (cCollect > 0) {
-      matrixVectorMultiplication.clear();
-      matrixMatrixMultiplication.clear();
-      conjugateMatrixTranspose.clear();
-      vectorInnerProduct.clear();
-      vectorKronecker.clear();
-      matrixKronecker.clear();
-      stochasticNoiseOperationCache.clear();
-      densityAdd.clear();
-      densityDensityMultiplication.clear();
-      densityNoise.clear();
-    }
-    return vCollect > 0 || mCollect > 0 || cCollect > 0;
+    return vCollect > 0 || mCollect > 0 || dCollect > 0;
   }
 
   ///
   /// Vector nodes, edges and quantum states
   ///
-  vEdge normalize(const vEdge& e, bool cached) {
-    auto zero = std::array{e.p->e[0].w.approximatelyZero(),
-                           e.p->e[1].w.approximatelyZero()};
-
-    // make sure to release cached numbers approximately zero, but not exactly
-    // zero
-    if (cached) {
-      for (auto i = 0U; i < RADIX; i++) {
-        if (zero[i]) {
-          cn.returnToCache(e.p->e[i].w);
-          e.p->e[i] = vEdge::zero;
-        }
-      }
-    }
+  vEdge normalize(const vEdge& e) {
+    auto zero =
+        std::array{std::abs(e.p->e[0].w) < EPS, std::abs(e.p->e[1].w) < EPS};
 
     if (zero[0]) {
       // all equal to zero
       if (zero[1]) {
-        if (!cached && !e.isTerminal()) {
-          // If it is not a cached computation, the node has to be put back into
-          // the chain
+        if (!e.isTerminal()) {
           vMemoryManager.returnEntry(e.p);
         }
         return vEdge::zero;
@@ -317,70 +252,35 @@ public:
 
       auto r = e;
       auto& w = r.p->e[1].w;
-      if (cached) {
-        r.w = w;
-      } else {
-        r.w = cn.lookup(w);
-      }
-      w = Complex::one;
+      r.w = w;
+      w = 1;
       return r;
     }
 
     if (zero[1]) {
       auto r = e;
       auto& w = r.p->e[0].w;
-      if (cached) {
-        r.w = w;
-      } else {
-        r.w = cn.lookup(w);
-      }
-      w = Complex::one;
+      r.w = w;
+      w = 1;
       return r;
     }
 
-    const auto mag0 = ComplexNumbers::mag2(e.p->e[0].w);
-    const auto mag1 = ComplexNumbers::mag2(e.p->e[1].w);
+    const auto mag0 = std::norm(e.p->e[0].w);
+    const auto mag1 = std::norm(e.p->e[1].w);
     const auto norm2 = mag0 + mag1;
-    const auto mag2Max = (mag0 + RealNumber::eps >= mag1) ? mag0 : mag1;
-    const auto argMax = (mag0 + RealNumber::eps >= mag1) ? 0 : 1;
+    const auto mag2Max = (mag0 + EPS >= mag1) ? mag0 : mag1;
+    const auto argMax = (mag0 + EPS >= mag1) ? 0U : 1U;
+    const auto argMin = (argMax + 1U) % 2U;
     const auto norm = std::sqrt(norm2);
     const auto magMax = std::sqrt(mag2Max);
     const auto commonFactor = norm / magMax;
 
     auto r = e;
-    auto& max = r.p->e[static_cast<std::size_t>(argMax)];
-    if (cached) {
-      if (max.w.exactlyOne()) {
-        r.w = cn.lookup(commonFactor, 0.);
-      } else {
-        r.w = max.w;
-        r.w.r->value *= commonFactor;
-        r.w.i->value *= commonFactor;
-      }
-    } else {
-      r.w = cn.lookup(RealNumber::val(max.w.r) * commonFactor,
-                      RealNumber::val(max.w.i) * commonFactor);
-      if (r.w.approximatelyZero()) {
-        return vEdge::zero;
-      }
-    }
-
-    max.w = cn.lookup(magMax / norm, 0.);
-    if (max.w == Complex::zero) {
-      max = vEdge::zero;
-    }
-
-    const auto argMin = (argMax + 1) % 2;
-    auto& min = r.p->e[static_cast<std::size_t>(argMin)];
-    if (cached) {
-      ComplexNumbers::div(min.w, min.w, r.w);
-      min.w = cn.lookup(min.w, true);
-    } else {
-      min.w = cn.lookup(cn.divTemp(min.w, r.w));
-    }
-    if (min.w == Complex::zero) {
-      min = vEdge::zero;
-    }
+    auto& max = r.p->e[argMax];
+    r.w = max.w * commonFactor;
+    max.w = magMax / norm;
+    auto& min = r.p->e[argMin];
+    min.w /= r.w;
 
     return r;
   }
@@ -458,26 +358,24 @@ public:
       case BasisStates::plus:
         f = makeDDNode(
             static_cast<Qubit>(p),
-            std::array<vEdge, RADIX>{{{f.p, cn.lookup(dd::SQRT2_2, 0)},
-                                      {f.p, cn.lookup(dd::SQRT2_2, 0)}}});
+            std::array<vEdge, RADIX>{{{f.p, dd::SQRT2_2}, {f.p, dd::SQRT2_2}}});
         break;
       case BasisStates::minus:
-        f = makeDDNode(
-            static_cast<Qubit>(p),
-            std::array<vEdge, RADIX>{{{f.p, cn.lookup(dd::SQRT2_2, 0)},
-                                      {f.p, cn.lookup(-dd::SQRT2_2, 0)}}});
+        f = makeDDNode(static_cast<Qubit>(p),
+                       std::array<vEdge, RADIX>{
+                           {{f.p, dd::SQRT2_2}, {f.p, -dd::SQRT2_2}}});
         break;
       case BasisStates::right:
         f = makeDDNode(
             static_cast<Qubit>(p),
-            std::array<vEdge, RADIX>{{{f.p, cn.lookup(dd::SQRT2_2, 0)},
-                                      {f.p, cn.lookup(0, dd::SQRT2_2)}}});
+            std::array<vEdge, RADIX>{
+                {{f.p, dd::SQRT2_2}, {f.p, std::complex<fp>(0, dd::SQRT2_2)}}});
         break;
       case BasisStates::left:
-        f = makeDDNode(
-            static_cast<Qubit>(p),
-            std::array<vEdge, RADIX>{{{f.p, cn.lookup(dd::SQRT2_2, 0)},
-                                      {f.p, cn.lookup(0, -dd::SQRT2_2)}}});
+        f = makeDDNode(static_cast<Qubit>(p),
+                       std::array<vEdge, RADIX>{
+                           {{f.p, dd::SQRT2_2},
+                            {f.p, std::complex<fp>(0, -dd::SQRT2_2)}}});
         break;
       }
     }
@@ -496,21 +394,11 @@ public:
     }
 
     if (length == 1) {
-      return vEdge::terminal(cn.lookup(stateVector[0]));
+      return vEdge::terminal(stateVector[0]);
     }
 
-    [[maybe_unused]] const auto before = cn.cacheCount();
-
     const auto level = static_cast<Qubit>(std::log2(length) - 1);
-    auto state =
-        makeStateFromVector(stateVector.begin(), stateVector.end(), level);
-
-    // the recursive function makes use of the cache, so we have to clean it up
-    state.w = cn.lookup(state.w, true);
-
-    [[maybe_unused]] const auto after = cn.cacheCount();
-    assert(after == before);
-    return state;
+    return makeStateFromVector(stateVector.begin(), stateVector.end(), level);
   }
 
   /**
@@ -537,47 +425,33 @@ public:
     }
 
     if (length == 1) {
-      return mEdge::terminal(cn.lookup(matrix[0][0]));
+      return mEdge::terminal(matrix[0][0]);
     }
 
-    [[maybe_unused]] const auto before = cn.cacheCount();
-
     const auto level = static_cast<Qubit>(std::log2(length) - 1);
-
-    auto matrixDD = makeDDFromMatrix(matrix, level, 0, length, 0, width);
-
-    matrixDD.w = cn.lookup(matrixDD.w, true);
-
-    [[maybe_unused]] const auto after = cn.cacheCount();
-    assert(after == before);
-    return matrixDD;
+    return makeDDFromMatrix(matrix, level, 0, length, 0, width);
   }
 
   ///
   /// Matrix nodes, edges and quantum gates
   ///
-  template <class Node> Edge<Node> normalize(const Edge<Node>& e, bool cached) {
+  template <class Node> Edge<Node> normalize(const Edge<Node>& e) {
     if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
       auto argmax = -1;
 
-      auto zero = std::array{
-          e.p->e[0].w.approximatelyZero(), e.p->e[1].w.approximatelyZero(),
-          e.p->e[2].w.approximatelyZero(), e.p->e[3].w.approximatelyZero()};
+      auto zero =
+          std::array{std::abs(e.p->e[0].w) < EPS, std::abs(e.p->e[1].w) < EPS,
+                     std::abs(e.p->e[2].w) < EPS, std::abs(e.p->e[3].w) < EPS};
 
-      // make sure to release cached numbers approximately zero, but not exactly
-      // zero
-      if (cached) {
-        for (auto i = 0U; i < NEDGE; i++) {
-          auto& successor = e.p->e[i];
-          if (zero[i]) {
-            cn.returnToCache(successor.w);
-            successor = Edge<Node>::zero;
-          }
+      for (auto i = 0U; i < NEDGE; i++) {
+        auto& successor = e.p->e[i];
+        if (zero[i]) {
+          successor = Edge<Node>::zero;
         }
       }
 
       fp max = 0;
-      auto maxc = Complex::one;
+      auto maxc = std::complex<fp>(1, 0);
       // determine max amplitude
       for (auto i = 0U; i < NEDGE; ++i) {
         if (zero[i]) {
@@ -586,11 +460,11 @@ public:
         const auto& w = e.p->e[i].w;
         if (argmax == -1) {
           argmax = static_cast<decltype(argmax)>(i);
-          max = ComplexNumbers::mag2(w);
+          max = std::norm(w);
           maxc = w;
         } else {
-          auto mag = ComplexNumbers::mag2(w);
-          if (mag - max > RealNumber::eps) {
+          auto mag = std::norm(w);
+          if (mag - max > EPS) {
             argmax = static_cast<decltype(argmax)>(i);
             max = mag;
             maxc = w;
@@ -610,37 +484,14 @@ public:
       // divide each entry by max
       for (auto i = 0U; i < NEDGE; ++i) {
         if (static_cast<decltype(argmax)>(i) == argmax) {
-          r.p->e[i].w = Complex::one;
-          if (r.w.exactlyOne()) {
-            r.w = maxc;
-            continue;
-          }
-
-          if (cached) {
-            ComplexNumbers::mul(r.w, r.w, maxc);
-          } else {
-            r.w = cn.lookup(cn.mulTemp(r.w, maxc));
-          }
+          r.p->e[i].w = 1;
+          r.w *= maxc;
         } else {
           auto& successor = r.p->e[i];
           if (zero[i]) {
-            assert(successor.w.exactlyZero() &&
-                   "Should have been set to zero at the start");
             continue;
           }
-          // TODO: it might be worth revisiting whether this check actually
-          // improves performance or rather causes more instability.
-          if (successor.w.approximatelyOne()) {
-            if (cached) {
-              cn.returnToCache(successor.w);
-            }
-            successor.w = Complex::one;
-          }
-          const auto c = cn.divTemp(successor.w, maxc);
-          if (cached) {
-            cn.returnToCache(successor.w);
-          }
-          successor.w = cn.lookup(c);
+          successor.w /= maxc;
         }
       }
       return r;
@@ -648,17 +499,17 @@ public:
   }
 
   // build matrix representation for a single gate on an n-qubit circuit
-  mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat,
+  mEdge makeGateDD(const std::array<std::complex<fp>, NEDGE>& mat,
                    const std::size_t n, const qc::Qubit target,
                    const std::size_t start = 0) {
     return makeGateDD(mat, n, qc::Controls{}, target, start);
   }
-  mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat,
+  mEdge makeGateDD(const std::array<std::complex<fp>, NEDGE>& mat,
                    const std::size_t n, const qc::Control& control,
                    const qc::Qubit target, const std::size_t start = 0) {
     return makeGateDD(mat, n, qc::Controls{control}, target, start);
   }
-  mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat,
+  mEdge makeGateDD(const std::array<std::complex<fp>, NEDGE>& mat,
                    const std::size_t n, const qc::Controls& controls,
                    const qc::Qubit target, const std::size_t start = 0) {
     if (n + start > nqubits) {
@@ -672,10 +523,10 @@ public:
     auto it = controls.begin();
     for (auto i = 0U; i < NEDGE; ++i) {
       // NOLINTNEXTLINE(clang-diagnostic-float-equal) it has to be really zero
-      if (mat[i].r == 0 && mat[i].i == 0) {
+      if (mat[i].real() == 0 && mat[i].imag() == 0) {
         em[i] = mEdge::zero;
       } else {
-        em[i] = mEdge::terminal(cn.lookup(mat[i]));
+        em[i] = mEdge::terminal(mat[i]);
       }
     }
 
@@ -753,7 +604,7 @@ public:
   configuration
   **/
   mEdge makeTwoQubitGateDD(
-      const std::array<std::array<ComplexValue, NEDGE>, NEDGE>& mat,
+      const std::array<std::array<std::complex<fp>, NEDGE>, NEDGE>& mat,
       const std::size_t n, const qc::Qubit target0, const qc::Qubit target1,
       const std::size_t start = 0) {
     // sanity check
@@ -774,10 +625,10 @@ public:
         const auto& matEntry = matRow.at(i2);
         auto& emEntry = emRow.at(i2);
         // NOLINTNEXTLINE(clang-diagnostic-float-equal) it has to be really zero
-        if (matEntry.r == 0 && matEntry.i == 0) {
+        if (matEntry.real() == 0 && matEntry.imag() == 0) {
           emEntry = mEdge::zero;
         } else {
-          emEntry = mEdge::terminal(cn.lookup(matEntry));
+          emEntry = mEdge::terminal(matEntry);
         }
       }
     }
@@ -840,6 +691,10 @@ public:
     return e;
   }
 
+  mEdge makeSWAPDD(const std::size_t n, const qc::Qubit target0,
+                   const qc::Qubit target1, const std::size_t start = 0) {
+    return makeTwoQubitGateDD(SWAPmat, n, target0, target1, start);
+  }
   mEdge makeSWAPDD(const std::size_t n, const qc::Controls& controls,
                    const qc::Qubit target0, const qc::Qubit target1,
                    const std::size_t start = 0) {
@@ -872,6 +727,10 @@ public:
     return e;
   }
 
+  mEdge makeiSWAPDD(const std::size_t n, const qc::Qubit target0,
+                    const qc::Qubit target1, const std::size_t start = 0) {
+    return makeTwoQubitGateDD(iSWAPmat, n, target0, target1, start);
+  }
   mEdge makeiSWAPDD(const std::size_t n, const qc::Controls& controls,
                     const qc::Qubit target0, const qc::Qubit target1,
                     const std::size_t start = 0) {
@@ -888,6 +747,10 @@ public:
     return e;
   }
 
+  mEdge makeiSWAPinvDD(const std::size_t n, const qc::Qubit target0,
+                       const qc::Qubit target1, const std::size_t start = 0) {
+    return makeTwoQubitGateDD(iSWAPinvmat, n, target0, target1, start);
+  }
   mEdge makeiSWAPinvDD(const std::size_t n, const qc::Controls& controls,
                        const qc::Qubit target0, const qc::Qubit target1,
                        const std::size_t start = 0) {
@@ -906,6 +769,10 @@ public:
     return e;
   }
 
+  mEdge makeDCXDD(const std::size_t n, const qc::Qubit target0,
+                  const qc::Qubit target1, const std::size_t start = 0) {
+    return makeTwoQubitGateDD(DCXmat, n, target0, target1, start);
+  }
   mEdge makeDCXDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const std::size_t start = 0) {
@@ -918,6 +785,11 @@ public:
     return e;
   }
 
+  mEdge makeRZZDD(const std::size_t n, const qc::Qubit target0,
+                  const qc::Qubit target1, const fp theta,
+                  const std::size_t start = 0) {
+    return makeTwoQubitGateDD(RZZmat(theta), n, target0, target1, start);
+  }
   mEdge makeRZZDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const fp theta, const std::size_t start = 0) {
@@ -931,6 +803,11 @@ public:
     return e;
   }
 
+  mEdge makeRYYDD(const std::size_t n, const qc::Qubit target0,
+                  const qc::Qubit target1, const fp theta,
+                  const std::size_t start = 0) {
+    return makeTwoQubitGateDD(RYYmat(theta), n, target0, target1, start);
+  }
   mEdge makeRYYDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const fp theta, const std::size_t start = 0) {
@@ -946,6 +823,11 @@ public:
     return e;
   }
 
+  mEdge makeRXXDD(const std::size_t n, const qc::Qubit target0,
+                  const qc::Qubit target1, const fp theta,
+                  const std::size_t start = 0) {
+    return makeTwoQubitGateDD(RXXmat(theta), n, target0, target1, start);
+  }
   mEdge makeRXXDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const fp theta, const std::size_t start = 0) {
@@ -959,6 +841,11 @@ public:
     return e;
   }
 
+  mEdge makeRZXDD(const std::size_t n, const qc::Qubit target0,
+                  const qc::Qubit target1, const fp theta,
+                  const std::size_t start = 0) {
+    return makeTwoQubitGateDD(RZXmat(theta), n, target0, target1, start);
+  }
   mEdge makeRZXDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const fp theta, const std::size_t start = 0) {
@@ -970,6 +857,10 @@ public:
     return e;
   }
 
+  mEdge makeECRDD(const std::size_t n, const qc::Qubit target0,
+                  const qc::Qubit target1, const std::size_t start = 0) {
+    return makeTwoQubitGateDD(ECRmat, n, target0, target1, start);
+  }
   mEdge makeECRDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const std::size_t start = 0) {
@@ -979,6 +870,12 @@ public:
     return e;
   }
 
+  mEdge makeXXMinusYYDD(const std::size_t n, const qc::Qubit target0,
+                        const qc::Qubit target1, const fp theta,
+                        const fp beta = 0., const std::size_t start = 0) {
+    return makeTwoQubitGateDD(XXMinusYYmat(theta, beta), n, target0, target1,
+                              start);
+  }
   mEdge makeXXMinusYYDD(const std::size_t n, const qc::Controls& controls,
                         const qc::Qubit target0, const qc::Qubit target1,
                         const fp theta, const fp beta = 0.,
@@ -1006,6 +903,12 @@ public:
     return e;
   }
 
+  mEdge makeXXPlusYYDD(const std::size_t n, const qc::Qubit target0,
+                       const qc::Qubit target1, const fp theta,
+                       const fp beta = 0., const std::size_t start = 0) {
+    return makeTwoQubitGateDD(XXPlusYYmat(theta, beta), n, target0, target1,
+                              start);
+  }
   mEdge makeXXPlusYYDD(const std::size_t n, const qc::Controls& controls,
                        const qc::Qubit target0, const qc::Qubit target1,
                        const fp theta, const fp beta = 0.,
@@ -1040,15 +943,25 @@ private:
       return;
     }
 
-    // check if matrix resembles identity
     p->setIdentity(false);
+    p->setSymmetric(false);
+
+    // check if matrix is symmetric
     const auto& e0 = p->e[0];
+    const auto& e3 = p->e[3];
+    if (!mNode::isSymmetric(e0.p) || !mNode::isSymmetric(e3.p)) {
+      return;
+    }
+    if (transpose(p->e[1]) != p->e[2]) {
+      return;
+    }
+    p->setSymmetric(true);
+
+    // check if matrix resembles identity
     const auto& e1 = p->e[1];
     const auto& e2 = p->e[2];
-    const auto& e3 = p->e[3];
-    if (!mNode::isIdentity(e0.p) || !e1.w.exactlyZero() ||
-        !e2.w.exactlyZero() || !e0.w.exactlyOne() || !e3.w.exactlyOne() ||
-        !mNode::isIdentity(e3.p)) {
+    if (!mNode::isIdentity(e0.p) || e1.w != 0. || e2.w != 0. || e0.w != 1. ||
+        e3.w != 1. || !mNode::isIdentity(e3.p)) {
       return;
     }
     p->setIdentity(true);
@@ -1059,18 +972,18 @@ private:
                             const Qubit level) {
     if (level == 0U) {
       assert(std::distance(begin, end) == 2);
-      const auto& zeroWeight = cn.getCached(*begin);
-      const auto& oneWeight = cn.getCached(*std::next(begin));
+      const auto& zeroWeight = *begin;
+      const auto& oneWeight = *std::next(begin);
       const auto zeroSuccessor = vEdge{vNode::getTerminal(), zeroWeight};
       const auto oneSuccessor = vEdge{vNode::getTerminal(), oneWeight};
-      return makeDDNode<vNode>(0, {zeroSuccessor, oneSuccessor}, true);
+      return makeDDNode<vNode>(0, {zeroSuccessor, oneSuccessor});
     }
 
     const auto half = std::distance(begin, end) / 2;
     const auto zeroSuccessor =
         makeStateFromVector(begin, begin + half, level - 1);
     const auto oneSuccessor = makeStateFromVector(begin + half, end, level - 1);
-    return makeDDNode<vNode>(level, {zeroSuccessor, oneSuccessor}, true);
+    return makeDDNode<vNode>(level, {zeroSuccessor, oneSuccessor});
   }
 
   /**
@@ -1100,15 +1013,15 @@ private:
     if (level == 0U) {
       assert(rowEnd - rowStart == 2);
       assert(colEnd - colStart == 2);
-      const auto w0 = cn.getCached(matrix[rowStart][colStart]);
+      const auto w0 = matrix[rowStart][colStart];
       const auto e0 = mEdge{mNode::getTerminal(), w0};
-      const auto w1 = cn.getCached(matrix[rowStart][colStart + 1]);
+      const auto w1 = matrix[rowStart][colStart + 1];
       const auto e1 = mEdge{mNode::getTerminal(), w1};
-      const auto w2 = cn.getCached(matrix[rowStart + 1][colStart]);
+      const auto w2 = matrix[rowStart + 1][colStart];
       const auto e2 = mEdge{mNode::getTerminal(), w2};
-      const auto w3 = cn.getCached(matrix[rowStart + 1][colStart + 1]);
+      const auto w3 = matrix[rowStart + 1][colStart + 1];
       const auto e3 = mEdge{mNode::getTerminal(), w3};
-      return makeDDNode<mNode>(0U, {e0, e1, e2, e3}, true);
+      return makeDDNode<mNode>(0U, {e0, e1, e2, e3});
     }
 
     // recursively call the function on all quadrants
@@ -1124,7 +1037,7 @@ private:
     const auto edge3 =
         makeDDFromMatrix(matrix, level - 1, rowMid, rowEnd, colMid, colEnd);
 
-    return makeDDNode<mNode>(level, {edge0, edge1, edge2, edge3}, true);
+    return makeDDNode<mNode>(level, {edge0, edge1, edge2, edge3});
   }
 
 public:
@@ -1134,10 +1047,9 @@ public:
   Edge<Node> makeDDNode(
       const Qubit var,
       const std::array<Edge<Node>, std::tuple_size_v<decltype(Node::e)>>& edges,
-      const bool cached = false,
       [[maybe_unused]] const bool generateDensityMatrix = false) {
     auto& memoryManager = getMemoryManager<Node>();
-    Edge<Node> e{memoryManager.get(), Complex::one};
+    Edge<Node> e{memoryManager.get(), 1};
     e.p->v = var;
     e.p->e = edges;
 
@@ -1156,7 +1068,7 @@ public:
     }
 
     // normalize it
-    e = normalize(e, cached);
+    e = normalize(e);
     assert(e.isTerminal() || e.p->v == var);
 
     // look it up in the unique tables
@@ -1212,13 +1124,7 @@ private:
       newedge = makeDDNode(e.p->v, edges);
       nodes[e.p] = newedge;
     }
-
-    if (newedge.w.approximatelyOne()) {
-      newedge.w = e.w;
-    } else {
-      newedge.w = cn.lookup(cn.mulTemp(newedge.w, e.w));
-    }
-
+    newedge.w *= e.w;
     return newedge;
   }
 
@@ -1229,6 +1135,7 @@ public:
   void clearComputeTables() {
     vectorAdd.clear();
     matrixAdd.clear();
+    matrixTranspose.clear();
     conjugateMatrixTranspose.clear();
     matrixMatrixMultiplication.clear();
     matrixVectorMultiplication.clear();
@@ -1249,14 +1156,14 @@ public:
   ///
   std::string measureAll(vEdge& rootEdge, const bool collapse,
                          std::mt19937_64& mt, const fp epsilon = 0.001) {
-    if (std::abs(ComplexNumbers::mag2(rootEdge.w) - 1.0) > epsilon) {
-      if (rootEdge.w.approximatelyZero()) {
+    if (std::abs(std::norm(rootEdge.w) - 1.0) > epsilon) {
+      if (std::abs(rootEdge.w) < EPS) {
         throw std::runtime_error(
             "Numerical instabilities led to a 0-vector! Abort simulation!");
       }
       std::cerr << "WARNING in MAll: numerical instability occurred during "
                    "simulation: |alpha|^2 + |beta|^2 = "
-                << ComplexNumbers::mag2(rootEdge.w) << ", but should be 1!\n";
+                << std::norm(rootEdge.w) << ", but should be 1!\n";
     }
 
     if (rootEdge.isTerminal()) {
@@ -1271,8 +1178,8 @@ public:
     std::uniform_real_distribution<fp> dist(0.0, 1.0L);
 
     for (auto i = numberOfQubits; i > 0; --i) {
-      fp p0 = ComplexNumbers::mag2(cur.p->e.at(0).w);
-      const fp p1 = ComplexNumbers::mag2(cur.p->e.at(1).w);
+      fp p0 = std::norm(cur.p->e.at(0).w);
+      const fp p1 = std::norm(cur.p->e.at(1).w);
       const fp tmp = p0 + p1;
 
       if (std::abs(tmp - 1.0) > epsilon) {
@@ -1304,7 +1211,7 @@ public:
           edges[0] = vEdge::zero;
           edges[1] = e;
         }
-        e = makeDDNode(static_cast<Qubit>(p), edges, false);
+        e = makeDDNode(static_cast<Qubit>(p), edges);
       }
       incRef(e);
       rootEdge = e;
@@ -1319,7 +1226,7 @@ private:
                              std::unordered_map<const vNode*, fp>& probs) {
     auto it = probs.find(edge.p);
     if (it != probs.end()) {
-      return ComplexNumbers::mag2(edge.w) * it->second;
+      return std::norm(edge.w) * it->second;
     }
     double sum{1};
     if (!edge.isTerminal()) {
@@ -1329,7 +1236,7 @@ private:
 
     probs.insert({edge.p, sum});
 
-    return ComplexNumbers::mag2(edge.w) * sum;
+    return std::norm(edge.w) * sum;
   }
 
 public:
@@ -1340,7 +1247,7 @@ public:
     std::set<const vNode*> visited;
     std::queue<const vNode*> q;
 
-    probsMone[rootEdge.p] = ComplexNumbers::mag2(rootEdge.w);
+    probsMone[rootEdge.p] = std::norm(rootEdge.w);
     visited.insert(rootEdge.p);
     q.push(rootEdge.p);
 
@@ -1350,8 +1257,8 @@ public:
       const fp prob = probsMone[ptr];
 
       const auto& s0 = ptr->e[0];
-      if (!s0.w.approximatelyZero()) {
-        const fp tmp1 = prob * ComplexNumbers::mag2(s0.w);
+      if (std::abs(s0.w) > EPS) {
+        const fp tmp1 = prob * std::norm(s0.w);
 
         if (visited.find(s0.p) != visited.end()) {
           probsMone[s0.p] = probsMone[s0.p] + tmp1;
@@ -1363,8 +1270,8 @@ public:
       }
 
       const auto& s1 = ptr->e[1];
-      if (!s1.w.approximatelyZero()) {
-        const fp tmp1 = prob * ComplexNumbers::mag2(s1.w);
+      if (std::abs(s1.w) > EPS) {
+        const fp tmp1 = prob * std::norm(s1.w);
 
         if (visited.find(s1.p) != visited.end()) {
           probsMone[s1.p] = probsMone[s1.p] + tmp1;
@@ -1384,12 +1291,12 @@ public:
         const auto* ptr = q.front();
         q.pop();
         const auto& s0 = ptr->e[0];
-        if (!s0.w.approximatelyZero()) {
-          pzero += probsMone[ptr] * ComplexNumbers::mag2(s0.w);
+        if (std::abs(s0.w) > EPS) {
+          pzero += probsMone[ptr] * std::norm(s0.w);
         }
         const auto& s1 = ptr->e[1];
-        if (!s1.w.approximatelyZero()) {
-          pone += probsMone[ptr] * ComplexNumbers::mag2(s1.w);
+        if (std::abs(s1.w) > EPS) {
+          pone += probsMone[ptr] * std::norm(s1.w);
         }
       }
     } else {
@@ -1401,12 +1308,12 @@ public:
         q.pop();
 
         const auto& s0 = ptr->e[0];
-        if (!s0.w.approximatelyZero()) {
-          pzero += probsMone[ptr] * probs[s0.p] * ComplexNumbers::mag2(s0.w);
+        if (std::abs(s0.w) > EPS) {
+          pzero += probsMone[ptr] * probs[s0.p] * std::norm(s0.w);
         }
         const auto& s1 = ptr->e[1];
-        if (!s1.w.approximatelyZero()) {
-          pone += probsMone[ptr] * probs[s1.p] * ComplexNumbers::mag2(s1.w);
+        if (std::abs(s1.w) > EPS) {
+          pone += probsMone[ptr] * probs[s1.p] * std::norm(s1.w);
         }
       }
     }
@@ -1477,9 +1384,7 @@ public:
     vEdge e = multiply(measurementGate, rootEdge);
 
     assert(probability > 0.);
-    Complex c = cn.getTemporary(std::sqrt(1.0 / probability), 0);
-    ComplexNumbers::mul(c, e.w, c);
-    e.w = cn.lookup(c);
+    e.w *= std::sqrt(1.0 / probability);
     incRef(e);
     decRef(rootEdge);
     rootEdge = e;
@@ -1488,14 +1393,9 @@ public:
   ///
   /// Addition
   ///
-  ComputeTable<vCachedEdge, vCachedEdge, vCachedEdge,
-               Config::CT_VEC_ADD_NBUCKET>
-      vectorAdd{};
-  ComputeTable<mCachedEdge, mCachedEdge, mCachedEdge,
-               Config::CT_MAT_ADD_NBUCKET>
-      matrixAdd{};
-  ComputeTable<dCachedEdge, dCachedEdge, dCachedEdge, Config::CT_DM_ADD_NBUCKET>
-      densityAdd{};
+  ComputeTable<vEdge, vEdge, vEdge, Config::CT_VEC_ADD_NBUCKET> vectorAdd{};
+  ComputeTable<mEdge, mEdge, mEdge, Config::CT_MAT_ADD_NBUCKET> matrixAdd{};
+  ComputeTable<dEdge, dEdge, dEdge, Config::CT_DM_ADD_NBUCKET> densityAdd{};
 
   template <class Node> [[nodiscard]] auto& getAddComputeTable() {
     if constexpr (std::is_same_v<Node, vNode>) {
@@ -1508,8 +1408,6 @@ public:
   }
 
   template <class Edge> Edge add(const Edge& x, const Edge& y) {
-    [[maybe_unused]] const auto before = cn.cacheCount();
-
     Qubit var{};
     if (!x.isTerminal()) {
       var = x.p->v;
@@ -1517,44 +1415,35 @@ public:
     if (!y.isTerminal() && (y.p->v) > var) {
       var = y.p->v;
     }
-
-    auto result = add2(x, y, var);
-    result.w = cn.lookup(result.w, true);
-
-    [[maybe_unused]] const auto after = cn.cacheCount();
-    assert(after == before);
-
-    return result;
+    return add2(x, y, var);
   }
 
   template <class Node>
   Edge<Node> add2(const Edge<Node>& x, const Edge<Node>& y, const Qubit var) {
-    if (x.w.exactlyZero()) {
-      if (y.w.exactlyZero()) {
+    if (x.w == 0.) {
+      if (y.w == 0.) {
         return Edge<Node>::zero;
       }
-      return {y.p, cn.getCached(y.w)};
+      return {y.p, y.w};
     }
-    if (y.w.exactlyZero()) {
-      return {x.p, cn.getCached(x.w)};
+    if (y.w == 0.) {
+      return {x.p, x.w};
     }
     if (x.p == y.p) {
       auto r = y;
-      r.w = cn.addCached(x.w, y.w);
-      if (r.w.approximatelyZero()) {
-        cn.returnToCache(r.w);
+      r.w = x.w + y.w;
+      if (std::abs(r.w) < EPS) {
         return Edge<Node>::zero;
       }
       return r;
     }
 
     auto& computeTable = getAddComputeTable<Node>();
-    if (const auto* r = computeTable.lookup({x.p, x.w}, {y.p, y.w});
-        r != nullptr) {
-      if (r->w.approximatelyZero()) {
+    if (const auto* r = computeTable.lookup(x, y); r != nullptr) {
+      if (std::abs(r->w) < EPS) {
         return Edge<Node>::zero;
       }
-      return {r->p, cn.getCached(r->w)};
+      return {r->p, r->w};
     }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
@@ -1564,8 +1453,8 @@ public:
       if (!x.isTerminal()) {
         e1 = x.p->e[i];
 
-        if (!e1.w.exactlyZero()) {
-          e1.w = cn.mulCached(e1.w, x.w);
+        if (e1.w != 0.) {
+          e1.w *= x.w;
         }
       } else {
         e1 = x;
@@ -1577,8 +1466,8 @@ public:
       if (!y.isTerminal()) {
         e2 = y.p->e[i];
 
-        if (!e2.w.exactlyZero()) {
-          e2.w = cn.mulCached(e2.w, y.w);
+        if (e2.w != 0.) {
+          e2.w *= y.w;
         }
       } else {
         e2 = y;
@@ -1594,31 +1483,51 @@ public:
       } else {
         edge[i] = add2(e1, e2, var - 1);
       }
-
-      if (!x.isTerminal() && x.p->v == var) {
-        cn.returnToCache(e1.w);
-      }
-
-      if (!y.isTerminal() && y.p->v == var) {
-        cn.returnToCache(e2.w);
-      }
     }
 
-    auto e = makeDDNode(var, edge, true);
+    auto e = makeDDNode(var, edge);
 
-    computeTable.insert({x.p, x.w}, {y.p, y.w}, {e.p, e.w});
+    computeTable.insert(x, y, e);
     return e;
   }
 
   ///
   /// Matrix (conjugate) transpose
   ///
+  UnaryComputeTable<mEdge, mEdge, Config::CT_MAT_TRANS_NBUCKET>
+      matrixTranspose{};
   UnaryComputeTable<mEdge, mEdge, Config::CT_MAT_CONJ_TRANS_NBUCKET>
       conjugateMatrixTranspose{};
 
+  mEdge transpose(const mEdge& a) {
+    if (a.isTerminal() || a.p->isSymmetric()) {
+      return a;
+    }
+
+    // check in compute table
+    if (const auto* r = matrixTranspose.lookup(a); r != nullptr) {
+      return *r;
+    }
+
+    std::array<mEdge, NEDGE> e{};
+    // transpose sub-matrices and rearrange as required
+    for (auto i = 0U; i < RADIX; ++i) {
+      for (auto j = 0U; j < RADIX; ++j) {
+        e[RADIX * i + j] = transpose(a.p->e[RADIX * j + i]);
+      }
+    }
+    // create new top node
+    auto res = makeDDNode(a.p->v, e);
+    // adjust top weight
+    res.w *= a.w;
+
+    // put in compute table
+    matrixTranspose.insert(a, res);
+    return res;
+  }
   mEdge conjugateTranspose(const mEdge& a) {
     if (a.isTerminal()) { // terminal case
-      return {a.p, ComplexNumbers::conj(a.w)};
+      return {a.p, std::conj(a.w)};
     }
 
     // check if in compute table
@@ -1637,7 +1546,7 @@ public:
     auto res = makeDDNode(a.p->v, e);
 
     // adjust top weight including conjugate
-    res.w = cn.lookup(cn.mulTemp(res.w, ComplexNumbers::conj(a.w)));
+    res.w *= std::conj(a.w);
 
     // put it in the compute table
     conjugateMatrixTranspose.insert(a, res);
@@ -1647,14 +1556,14 @@ public:
   ///
   /// Multiplication
   ///
-  ComputeTable<mEdge, vEdge, vCachedEdge, Config::CT_MAT_VEC_MULT_NBUCKET>
+  ComputeTable<mEdge, vEdge, vEdge, Config::CT_MAT_VEC_MULT_NBUCKET>
       matrixVectorMultiplication{};
-  ComputeTable<mEdge, mEdge, mCachedEdge, Config::CT_MAT_MAT_MULT_NBUCKET>
+  ComputeTable<mEdge, mEdge, mEdge, Config::CT_MAT_MAT_MULT_NBUCKET>
       matrixMatrixMultiplication{};
-  ComputeTable<dEdge, dEdge, dCachedEdge, Config::CT_DM_DM_MULT_NBUCKET>
+  ComputeTable<dEdge, dEdge, dEdge, Config::CT_DM_DM_MULT_NBUCKET>
       densityDensityMultiplication{};
 
-  template <class LeftOperandNode, class RightOperandNode>
+  template <class RightOperandNode>
   [[nodiscard]] auto& getMultiplicationComputeTable() {
     if constexpr (std::is_same_v<RightOperandNode, vNode>) {
       return matrixVectorMultiplication;
@@ -1667,7 +1576,6 @@ public:
 
   dEdge applyOperationToDensity(dEdge& e, const mEdge& operation,
                                 const bool generateDensityMatrix = false) {
-    [[maybe_unused]] const auto before = cn.cacheCount();
     auto tmp0 = conjugateTranspose(operation);
     auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
     auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0,
@@ -1695,8 +1603,6 @@ public:
                                      std::is_same<RightOperand, mEdge>,
                                      std::is_same<RightOperand, dEdge>>,
                   "Right operand must be a vector, matrix or density matrix");
-
-    [[maybe_unused]] const auto before = cn.cacheCount();
 
     Qubit var{};
     RightOperand e;
@@ -1726,12 +1632,6 @@ public:
       }
       e = multiply2(x, y, var, start);
     }
-
-    e.w = cn.lookup(e.w, true);
-
-    [[maybe_unused]] const auto after = cn.cacheCount();
-    assert(before == after);
-
     return e;
   }
 
@@ -1745,37 +1645,35 @@ private:
     using REdge = Edge<RightOperandNode>;
     using ResultEdge = Edge<RightOperandNode>;
 
-    if (x.w.exactlyZero() || y.w.exactlyZero()) {
+    if (x.w == 0. || y.w == 0.) {
       return ResultEdge::zero;
     }
 
     if (x.isIdentity()) {
-      return {y.p, cn.mulCached(x.w, y.w)};
+      return {y.p, x.w * y.w};
     }
 
     if constexpr (std::is_same_v<RightOperandNode, mNode> ||
                   std::is_same_v<RightOperandNode, dNode>) {
       if (y.isIdentity()) {
-        return {x.p, cn.mulCached(x.w, y.w)};
+        return {x.p, x.w * y.w};
       }
     }
 
-    auto xCopy = LEdge{x.p, Complex::one};
-    auto yCopy = REdge{y.p, Complex::one};
+    auto xCopy = LEdge{x.p, 1.};
+    auto yCopy = REdge{y.p, 1.};
 
-    auto& computeTable =
-        getMultiplicationComputeTable<LeftOperandNode, RightOperandNode>();
+    auto& computeTable = getMultiplicationComputeTable<RightOperandNode>();
     if (const auto* r =
             computeTable.lookup(xCopy, yCopy, generateDensityMatrix);
         r != nullptr) {
-      if (r->w.approximatelyZero()) {
+      if (std::abs(r->w) < EPS) {
         return ResultEdge::zero;
       }
-      auto e = ResultEdge{r->p, cn.getCached(r->w)};
-      ComplexNumbers::mul(e.w, e.w, x.w);
-      ComplexNumbers::mul(e.w, e.w, y.w);
-      if (e.w.approximatelyZero()) {
-        cn.returnToCache(e.w);
+      auto e = ResultEdge{r->p, r->w};
+      e.w *= x.w;
+      e.w *= y.w;
+      if (std::abs(e.w) < EPS) {
         return ResultEdge::zero;
       }
       return e;
@@ -1811,10 +1709,10 @@ private:
               // When I have the second edge and generateDensityMatrix == false,
               // then edge[2] == edge[1]
               if (k == 0) {
-                if (edge[1].w.approximatelyZero()) {
+                if (std::abs(edge[1].w) < EPS) {
                   edge[2] = ResultEdge::zero;
                 } else {
-                  edge[2] = {edge[1].p, cn.getCached(edge[1].w)};
+                  edge[2] = edge[1];
                 }
               }
               continue;
@@ -1822,46 +1720,35 @@ private:
               m = multiply2(e1, e2, v, start, generateDensityMatrix);
             }
 
-            if (k == 0 || edge[idx].w.exactlyZero()) {
+            if (k == 0 || edge[idx].w == 0.) {
               edge[idx] = m;
-            } else if (!m.w.exactlyZero()) {
+            } else if (m.w != 0.) {
               dEdge::applyDmChangesToEdges(edge[idx], m);
-              const auto w = edge[idx].w;
               edge[idx] = add2(edge[idx], m, v);
               dEdge::revertDmChangesToEdges(edge[idx], e2);
-              cn.returnToCache(w);
-              cn.returnToCache(m.w);
             }
             // Undo modifications on density matrices
             dEdge::revertDmChangesToEdges(e1, e2);
           } else {
             auto m = multiply2(e1, e2, v, start);
 
-            if (k == 0 || edge[idx].w.exactlyZero()) {
+            if (k == 0 || edge[idx].w == 0.) {
               edge[idx] = m;
-            } else if (!m.w.exactlyZero()) {
-              const auto w = edge[idx].w;
+            } else if (m.w != 0.) {
               edge[idx] = add2(edge[idx], m, v);
-              cn.returnToCache(w);
-              cn.returnToCache(m.w);
             }
           }
         }
       }
     }
 
-    auto e = makeDDNode(var, edge, true, generateDensityMatrix);
+    auto e = makeDDNode(var, edge, generateDensityMatrix);
     computeTable.insert(xCopy, yCopy, {e.p, e.w});
 
-    if (!e.w.exactlyZero()) {
-      if (e.w.exactlyOne()) {
-        e.w = cn.mulCached(x.w, y.w);
-      } else {
-        ComplexNumbers::mul(e.w, e.w, x.w);
-        ComplexNumbers::mul(e.w, e.w, y.w);
-      }
-      if (e.w.approximatelyZero()) {
-        cn.returnToCache(e.w);
+    if (e.w != 0.) {
+      e.w *= x.w;
+      e.w *= y.w;
+      if (std::abs(e.w) < EPS) {
         return ResultEdge::zero;
       }
     }
@@ -1872,7 +1759,7 @@ private:
   /// Inner product, fidelity, expectation value
   ///
 public:
-  ComputeTable<vEdge, vEdge, vCachedEdge, Config::CT_VEC_INNER_PROD_NBUCKET>
+  ComputeTable<vEdge, vEdge, vEdge, Config::CT_VEC_INNER_PROD_NBUCKET>
       vectorInnerProduct{};
 
   /**
@@ -1881,13 +1768,11 @@ public:
       @param y a vector DD representing a quantum state
       @return a complex number representing the scalar product of the DDs
   **/
-  ComplexValue innerProduct(const vEdge& x, const vEdge& y) {
-    if (x.isTerminal() || y.isTerminal() || x.w.approximatelyZero() ||
-        y.w.approximatelyZero()) { // the 0 case
+  std::complex<fp> innerProduct(const vEdge& x, const vEdge& y) {
+    if (x.isTerminal() || y.isTerminal() || std::abs(x.w) < EPS ||
+        std::abs(y.w) < EPS) { // the 0 case
       return {0, 0};
     }
-
-    [[maybe_unused]] const auto before = cn.cacheCount();
 
     auto w = x.p->v;
     if (y.p->v > w) {
@@ -1895,23 +1780,17 @@ public:
     }
     // Overall normalization factor needs to be conjugated
     // before input into recursive private function
-    auto xCopy = vEdge{x.p, ComplexNumbers::conj(x.w)};
-    const ComplexValue ip = innerProduct(xCopy, y, w + 1U);
-
-    [[maybe_unused]] const auto after = cn.cacheCount();
-    assert(after == before);
-
-    return ip;
+    auto xCopy = vEdge{x.p, std::conj(x.w)};
+    return innerProduct(xCopy, y, w + 1U);
   }
 
   fp fidelity(const vEdge& x, const vEdge& y) {
-    const auto fid = innerProduct(x, y);
-    return fid.r * fid.r + fid.i * fid.i;
+    return std::norm(innerProduct(x, y));
   }
 
   dd::fp fidelityOfMeasurementOutcomes(const vEdge& e,
                                        const SparsePVec& probs) {
-    if (e.w.approximatelyZero()) {
+    if (std::abs(e.w) < EPS) {
       return 0.;
     }
     return fidelityOfMeasurementOutcomesRecursive(e, probs, 0);
@@ -1920,7 +1799,7 @@ public:
   dd::fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e,
                                                 const SparsePVec& probs,
                                                 const std::size_t i) {
-    const auto topw = dd::ComplexNumbers::mag(e.w);
+    const auto topw = std::abs(e.w);
     if (e.isTerminal()) {
       if (auto it = probs.find(i); it != probs.end()) {
         return topw * std::sqrt(it->second);
@@ -1930,14 +1809,14 @@ public:
 
     std::size_t leftIdx = i;
     dd::fp leftContribution = 0.;
-    if (!e.p->e[0].w.approximatelyZero()) {
+    if (std::abs(e.p->e[0].w) > EPS) {
       leftContribution =
           fidelityOfMeasurementOutcomesRecursive(e.p->e[0], probs, leftIdx);
     }
 
     std::size_t rightIdx = i | (1ULL << e.p->v);
     auto rightContribution = 0.;
-    if (!e.p->e[1].w.approximatelyZero()) {
+    if (std::abs(e.p->e[1].w) > EPS) {
       rightContribution =
           fidelityOfMeasurementOutcomesRecursive(e.p->e[1], probs, rightIdx);
     }
@@ -1956,34 +1835,30 @@ private:
       @note This function is called recursively such that the number of levels
   decreases each time to traverse the DDs.
   **/
-  ComplexValue innerProduct(const vEdge& x, const vEdge& y, Qubit var) {
-    if (x.w.approximatelyZero() || y.w.approximatelyZero()) { // the 0 case
-      return {0.0, 0.0};
+  std::complex<fp> innerProduct(const vEdge& x, const vEdge& y, Qubit var) {
+    if (std::abs(x.w) < EPS || std::abs(y.w) < EPS) { // the 0 case
+      return 0;
     }
 
     if (var == 0) { // Multiplies terminal weights
-      auto c = cn.mulTemp(x.w, y.w);
-      return {c.r->value, c.i->value};
+      return x.w * y.w;
     }
 
     // Set to one to generate more lookup hits
-    auto xCopy = vEdge{x.p, Complex::one};
-    auto yCopy = vEdge{y.p, Complex::one};
+    auto xCopy = vEdge{x.p, 1.};
+    auto yCopy = vEdge{y.p, 1.};
     if (const auto* r = vectorInnerProduct.lookup(xCopy, yCopy); r != nullptr) {
-      auto c = cn.getTemporary(r->w);
-      ComplexNumbers::mul(c, c, x.w);
-      ComplexNumbers::mul(c, c, y.w);
-      return {c.r->value, c.i->value};
+      return r->w * x.w * y.w;
     }
 
     auto w = static_cast<Qubit>(var - 1U);
-    ComplexValue sum{0.0, 0.0};
+    std::complex<fp> sum = 0;
     // Iterates through edge weights recursively until terminal
     for (auto i = 0U; i < RADIX; i++) {
       vEdge e1{};
       if (!x.isTerminal() && x.p->v == w) {
         e1 = x.p->e[i];
-        e1.w = ComplexNumbers::conj(e1.w);
+        e1.w = std::conj(e1.w);
       } else {
         e1 = xCopy;
       }
@@ -1993,16 +1868,11 @@ private:
       } else {
         e2 = yCopy;
       }
-      auto cv = innerProduct(e1, e2, w);
-      sum.r += cv.r;
-      sum.i += cv.i;
+      sum += innerProduct(e1, e2, w);
     }
 
     vectorInnerProduct.insert(xCopy, yCopy, {vNode::getTerminal(), sum});
-    auto c = cn.getTemporary(sum);
-    ComplexNumbers::mul(c, c, x.w);
-    ComplexNumbers::mul(c, c, y.w);
-    return {c.r->value, c.i->value};
+    return sum * x.w * y.w;
   }
 
 public:
@@ -2030,22 +1900,19 @@ public:
     }
 
     auto yPrime = multiply(x, y);
-    const ComplexValue expValue = innerProduct(y, yPrime);
-
-    assert(RealNumber::approximatelyZero(expValue.i));
-
+    const auto expValue = innerProduct(y, yPrime);
     garbageCollect();
 
-    return expValue.r;
+    return expValue.real();
   }
 
   ///
   /// Kronecker/tensor product
   ///
 
-  ComputeTable<vEdge, vEdge, vCachedEdge, Config::CT_VEC_KRON_NBUCKET>
+  ComputeTable<vEdge, vEdge, vEdge, Config::CT_VEC_KRON_NBUCKET>
       vectorKronecker{};
-  ComputeTable<mEdge, mEdge, mCachedEdge, Config::CT_MAT_KRON_NBUCKET>
+  ComputeTable<mEdge, mEdge, mEdge, Config::CT_MAT_KRON_NBUCKET>
       matrixKronecker{};
 
   template <class Node> [[nodiscard]] auto& getKroneckerComputeTable() {
@@ -2062,11 +1929,7 @@ public:
       throw std::invalid_argument(
           "Kronecker is currently not supported for density matrices");
     }
-
-    auto e = kronecker2(x, y, incIdx);
-    e.w = cn.lookup(e.w, true);
-
-    return e;
+    return kronecker2(x, y, incIdx);
   }
 
   // extent the DD pointed to by `e` with `h` identities on top and `l`
@@ -2081,20 +1944,20 @@ private:
   template <class Node>
   Edge<Node> kronecker2(const Edge<Node>& x, const Edge<Node>& y,
                         const bool incIdx = true) {
-    if (x.w.approximatelyZero() || y.w.approximatelyZero()) {
+    if (std::abs(x.w) < EPS || std::abs(y.w) < EPS) {
       return Edge<Node>::zero;
     }
 
     if (x.isTerminal()) {
-      return {y.p, cn.mulCached(x.w, y.w)};
+      return {y.p, x.w * y.w};
     }
 
     auto& computeTable = getKroneckerComputeTable<Node>();
     if (const auto* r = computeTable.lookup(x, y); r != nullptr) {
-      if (r->w.approximatelyZero()) {
+      if (std::abs(r->w) < EPS) {
         return Edge<Node>::zero;
       }
-      return {r->p, cn.getCached(r->w)};
+      return {r->p, r->w};
     }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
@@ -2110,8 +1973,8 @@ private:
                          std::array{e, Edge<Node>::zero, Edge<Node>::zero, e});
         }
 
-        e.w = cn.getCached(y.w);
-        computeTable.insert(x, y, {e.p, e.w});
+        e.w = y.w;
+        computeTable.insert(x, y, e);
         return e;
       }
     }
@@ -2122,9 +1985,9 @@ private:
     }
 
     auto idx = incIdx ? (y.p->v + x.p->v + 1) : x.p->v;
-    auto e = makeDDNode(static_cast<Qubit>(idx), edge, true);
-    ComplexNumbers::mul(e.w, e.w, x.w);
-    computeTable.insert(x, y, {e.p, e.w});
+    auto e = makeDDNode(static_cast<Qubit>(idx), edge);
+    e.w *= x.w;
+    computeTable.insert(x, y, e);
     return e;
   }
 
@@ -2133,19 +1996,11 @@ private:
   ///
 public:
   mEdge partialTrace(const mEdge& a, const std::vector<bool>& eliminate) {
-    [[maybe_unused]] const auto before = cn.cacheCount();
-    const auto result = trace(a, eliminate);
-    [[maybe_unused]] const auto after = cn.cacheCount();
-    assert(before == after);
-    return result;
+    return trace(a, eliminate);
   }
-  ComplexValue trace(const mEdge& a) {
+  std::complex<fp> trace(const mEdge& a) {
     const auto eliminate = std::vector<bool>(nqubits, true);
-    [[maybe_unused]] const auto before = cn.cacheCount();
-    const auto res = partialTrace(a, eliminate);
-    [[maybe_unused]] const auto after = cn.cacheCount();
-    assert(before == after);
-    return {RealNumber::val(res.w.r), RealNumber::val(res.w.i)};
+    return partialTrace(a, eliminate).w;
   }
   bool isCloseToIdentity(const mEdge& m, const dd::fp tol = 1e-10) {
     std::unordered_set<decltype(m.p)> visited{};
@@ -2157,7 +2012,7 @@ private:
   /// TODO: introduce a compute table for the trace?
   mEdge trace(const mEdge& a, const std::vector<bool>& eliminate,
               std::size_t alreadyEliminated = 0) {
-    if (a.w.approximatelyZero()) {
+    if (std::abs(a.w) < EPS) {
       return mEdge::zero;
     }
 
@@ -2173,22 +2028,15 @@ private:
 
       const auto t0 = trace(a.p->e[0], eliminate, elims);
       r = add2(r, t0, v - 1);
-      auto r1 = r;
-
       const auto t1 = trace(a.p->e[3], eliminate, elims);
       r = add2(r, t1, v - 1);
-      auto r2 = r;
-
-      if (r.w.exactlyOne()) {
+      if (r.w == 1.) {
         r.w = a.w;
       } else {
         // better safe than sorry. this may result in complex
         // values with magnitude > 1 in the complex table
-        r.w = cn.lookup(cn.mulTemp(r.w, a.w));
+        r.w *= a.w;
       }
-
-      cn.returnToCache(r1.w);
-      cn.returnToCache(r2.w);
 
       return r;
     }
@@ -2205,11 +2053,7 @@ private:
                                 eliminate.begin(), eliminate.end(), true)) -
                             alreadyEliminated));
     auto r = makeDDNode(adjustedV, edge);
-    if (r.w.exactlyOne()) {
-      r.w = a.w;
-    } else {
-      r.w = cn.lookup(cn.mulTemp(r.w, a.w));
-    }
+    r.w *= a.w;
     return r;
   }
 
@@ -2228,20 +2072,20 @@ private:
 
     // check whether any of the middle successors is non-zero, i.e., m = [ x 0 0
     // y ]
-    const auto mag1 = dd::ComplexNumbers::mag2(m.p->e[1U].w);
-    const auto mag2 = dd::ComplexNumbers::mag2(m.p->e[2U].w);
+    const auto mag1 = std::norm(m.p->e[1U].w);
+    const auto mag2 = std::norm(m.p->e[2U].w);
     if (mag1 > tol || mag2 > tol) {
       visited.insert(m.p);
       return false;
     }
 
     // check whether  m = [ ~1 0 0 y ]
-    const auto mag0 = dd::ComplexNumbers::mag2(m.p->e[0U].w);
+    const auto mag0 = std::norm(m.p->e[0U].w);
     if (std::abs(mag0 - 1.0) > tol) {
       visited.insert(m.p);
       return false;
     }
-    const auto arg0 = dd::ComplexNumbers::arg(m.p->e[0U].w);
+    const auto arg0 = std::arg(m.p->e[0U].w);
     if (std::abs(arg0) > tol) {
       visited.insert(m.p);
       return false;
@@ -2249,13 +2093,13 @@ private:
 
     // check whether m = [ x 0 0 ~1 ] or m = [ x 0 0 ~0 ] (the last case is true
     // for an ancillary qubit)
-    const auto mag3 = dd::ComplexNumbers::mag2(m.p->e[3U].w);
+    const auto mag3 = std::norm(m.p->e[3U].w);
     if (mag3 > tol) {
       if (std::abs(mag3 - 1.0) > tol) {
         visited.insert(m.p);
         return false;
       }
-      const auto arg3 = dd::ComplexNumbers::arg(m.p->e[3U].w);
+      const auto arg3 = std::arg(m.p->e[3U].w);
       if (std::abs(arg3) > tol) {
         visited.insert(m.p);
         return false;
@@ -2456,18 +2300,18 @@ private:
     // something to reduce for this qubit
     if (ancillary[f.p->v]) {
       if (regular) {
-        if (f.p->e[1].w != Complex::zero || f.p->e[3].w != Complex::zero) {
+        if (f.p->e[1].w != 0. || f.p->e[3].w != 0.) {
           f = makeDDNode(f.p->v, std::array{f.p->e[0], mEdge::zero, f.p->e[2],
                                             mEdge::zero});
         }
       } else {
-        if (f.p->e[2].w != Complex::zero || f.p->e[3].w != Complex::zero) {
+        if (f.p->e[2].w != 0. || f.p->e[3].w != 0.) {
           f = makeDDNode(f.p->v, std::array{f.p->e[0], f.p->e[1], mEdge::zero,
                                             mEdge::zero});
         }
       }
     }
-    f.w = cn.lookup(cn.mulTemp(f.w, e.w));
+    f.w *= e.w;
     return f;
   }
 
@@ -2501,11 +2345,11 @@ private:
 
     // something to reduce for this qubit
     if (garbage[f.p->v]) {
-      if (f.p->e[1].w != Complex::zero) {
+      if (f.p->e[1].w != 0.) {
         vEdge g{};
-        if (f.p->e[0].w == Complex::zero && f.p->e[1].w != Complex::zero) {
+        if (f.p->e[0].w == 0. && f.p->e[1].w != 0.) {
           g = f.p->e[1];
-        } else if (f.p->e[1].w != Complex::zero) {
+        } else if (f.p->e[1].w != 0.) {
           g = add(f.p->e[0], f.p->e[1]);
         } else {
           g = f.p->e[0];
@@ -2513,11 +2357,11 @@ private:
         f = makeDDNode(e.p->v, std::array{g, vEdge::zero});
       }
     }
-    f.w = cn.lookup(cn.mulTemp(f.w, e.w));
+    f.w *= e.w;
 
     // Quick-fix for normalization bug
-    if (ComplexNumbers::mag2(f.w) > 1.0) {
-      f.w = Complex::one;
+    if (std::norm(f.w) > 1.0) {
+      f.w = 1;
     }
 
     return f;
@@ -2555,19 +2399,19 @@ private:
     // something to reduce for this qubit
     if (garbage[f.p->v]) {
       if (regular) {
-        if (f.p->e[2].w != Complex::zero || f.p->e[3].w != Complex::zero) {
+        if (f.p->e[2].w != 0. || f.p->e[3].w != 0.) {
           mEdge g{};
-          if (f.p->e[0].w == Complex::zero && f.p->e[2].w != Complex::zero) {
+          if (f.p->e[0].w == 0. && f.p->e[2].w != 0.) {
             g = f.p->e[2];
-          } else if (f.p->e[2].w != Complex::zero) {
+          } else if (f.p->e[2].w != 0.) {
             g = add(f.p->e[0], f.p->e[2]);
           } else {
             g = f.p->e[0];
           }
           mEdge h{};
-          if (f.p->e[1].w == Complex::zero && f.p->e[3].w != Complex::zero) {
+          if (f.p->e[1].w == 0. && f.p->e[3].w != 0.) {
             h = f.p->e[3];
-          } else if (f.p->e[3].w != Complex::zero) {
+          } else if (f.p->e[3].w != 0.) {
             h = add(f.p->e[1], f.p->e[3]);
           } else {
             h = f.p->e[1];
@@ -2575,19 +2419,19 @@ private:
           f = makeDDNode(e.p->v, std::array{g, h, mEdge::zero, mEdge::zero});
         }
       } else {
-        if (f.p->e[1].w != Complex::zero || f.p->e[3].w != Complex::zero) {
+        if (f.p->e[1].w != 0. || f.p->e[3].w != 0.) {
           mEdge g{};
-          if (f.p->e[0].w == Complex::zero && f.p->e[1].w != Complex::zero) {
+          if (f.p->e[0].w == 0. && f.p->e[1].w != 0.) {
             g = f.p->e[1];
-          } else if (f.p->e[1].w != Complex::zero) {
+          } else if (f.p->e[1].w != 0.) {
             g = add(f.p->e[0], f.p->e[1]);
           } else {
             g = f.p->e[0];
           }
           mEdge h{};
-          if (f.p->e[2].w == Complex::zero && f.p->e[3].w != Complex::zero) {
+          if (f.p->e[2].w == 0. && f.p->e[3].w != 0.) {
             h = f.p->e[3];
-          } else if (f.p->e[3].w != Complex::zero) {
+          } else if (f.p->e[3].w != 0.) {
             h = add(f.p->e[2], f.p->e[3]);
           } else {
             h = f.p->e[2];
@@ -2596,11 +2440,11 @@ private:
         }
       }
     }
-    f.w = cn.lookup(cn.mulTemp(f.w, e.w));
+    f.w *= e.w;
 
     // Quick-fix for normalization bug
-    if (ComplexNumbers::mag2(f.w) > 1.0) {
-      f.w = Complex::one;
+    if (std::norm(f.w) > 1.0) {
+      f.w = 1;
     }
 
     return f;
@@ -2630,7 +2474,7 @@ public:
             if (edge.isTerminal()) {
               continue;
             }
-            if (edge.w.approximatelyZero()) {
+            if (std::abs(edge.w) < EPS) {
               continue;
             }
             if (mappedNode.find(edge.p) != mappedNode.end()) {
@@ -2649,7 +2493,7 @@ public:
         bool hasChild = false;
         for (std::size_t i = 1; i < n && !hasChild; ++i) {
           auto& edge = currentEdge->p->e[i];
-          if (edge.w.approximatelyZero()) {
+          if (std::abs(edge.w) < EPS) {
             continue;
           }
           if (mappedNode.find(edge.p) != mappedNode.end()) {
@@ -2675,17 +2519,17 @@ public:
             } else {
               edges[i].p = mappedNode[currentEdge->p->e[i].p];
             }
-            edges[i].w = cn.lookup(currentEdge->p->e[i].w);
+            edges[i].w = currentEdge->p->e[i].w;
           }
           root = makeDDNode(currentEdge->p->v, edges);
           mappedNode[currentEdge->p] = root.p;
           currentEdge = nullptr;
         }
       } while (!stack.empty());
-      root.w = cn.lookup(cn.mulTemp(original.w, root.w));
+      root.w *= original.w;
     } else {
       root.p = original.p; // terminal -> static
-      root.w = cn.lookup(original.w);
+      root.w = original.w;
     }
     return root;
   }
@@ -2700,12 +2544,12 @@ public:
             std::size_t N = std::tuple_size_v<decltype(Node::e)>>
   Edge deserialize(std::istream& is, const bool readBinary = false) {
     auto result = Edge::zero;
-    ComplexValue rootweight{};
+    std::complex<fp> rootweight{};
 
     std::unordered_map<std::int64_t, Node*> nodes{};
     std::int64_t nodeIndex{};
     Qubit v{};
-    std::array<ComplexValue, N> edgeWeights{};
+    std::array<std::complex<fp>, N> edgeWeights{};
     std::array<std::int64_t, N> edgeIndices{};
     edgeIndices.fill(-2);
 
@@ -2721,7 +2565,11 @@ public:
       }
 
       if (!is.eof()) {
-        rootweight.readBinary(is);
+        fp real{};
+        is.read(reinterpret_cast<char*>(&real), sizeof(fp));
+        fp imag{};
+        is.read(reinterpret_cast<char*>(&imag), sizeof(fp));
+        rootweight = {real, imag};
       }
 
       while (is.read(reinterpret_cast<char*>(&nodeIndex),
@@ -2765,7 +2613,7 @@ public:
         if (!std::regex_match(line, m, complexWeightRegex)) {
           throw std::runtime_error("Regex did not match second line: " + line);
         }
-        rootweight.fromString(m.str(1), m.str(2));
+        rootweight = {std::stod(m.str(1)), std::stod(m.str(2))};
       }
 
       while (std::getline(is, line)) {
@@ -2801,10 +2649,7 @@ public:
         result = deserializeNode(nodeIndex, v, edgeIndices, edgeWeights, nodes);
       }
     }
-
-    auto w = cn.getTemporary(rootweight.r, rootweight.i);
-    ComplexNumbers::mul(w, w, result.w);
-    result.w = cn.lookup(w);
+    result.w *= rootweight;
 
     return result;
   }
@@ -2826,7 +2671,7 @@ private:
             std::size_t N = std::tuple_size_v<decltype(Node::e)>>
   Edge deserializeNode(const std::int64_t index, const Qubit v,
                        std::array<std::int64_t, N>& edgeIdx,
-                       const std::array<ComplexValue, N>& edgeWeight,
+                       const std::array<std::complex<fp>, N>& edgeWeight,
                        std::unordered_map<std::int64_t, Node*>& nodes) {
     if (index == -1) {
       return Edge::zero;
@@ -2842,7 +2687,7 @@ private:
         } else {
           edges[i].p = nodes[edgeIdx[i]];
         }
-        edges[i].w = cn.lookup(edgeWeight[i]);
+        edges[i].w = edgeWeight[i];
       }
     }
 
@@ -2855,5 +2700,4 @@ private:
     return newedge;
   }
 };
-
 } // namespace dd

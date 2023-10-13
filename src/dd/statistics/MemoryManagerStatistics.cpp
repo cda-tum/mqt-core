@@ -1,7 +1,6 @@
 #include "dd/statistics/MemoryManagerStatistics.hpp"
 
 #include "dd/Node.hpp"
-#include "dd/RealNumber.hpp"
 
 #include <algorithm>
 #include <nlohmann/json.hpp>
@@ -90,7 +89,6 @@ template <typename T> nlohmann::json MemoryManagerStatistics<T>::json() const {
   return j;
 }
 
-template struct MemoryManagerStatistics<RealNumber>;
 template struct MemoryManagerStatistics<vNode>;
 template struct MemoryManagerStatistics<mNode>;
 template struct MemoryManagerStatistics<dNode>;

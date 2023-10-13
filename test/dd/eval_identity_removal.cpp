@@ -14,7 +14,7 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
-static constexpr bool ON_FEATURE_BRANCH = false;
+static constexpr bool ON_FEATURE_BRANCH = true;
 
 // a function that parses a nlohmann::json from a file "results.json", populates
 // it with the results of the current run and writes it back to the file
@@ -380,8 +380,8 @@ TEST(JSON, JSONTranspose) {
           const auto& peakMemoryMiB = dd["peak_memory_mib"];
           k[algorithm][type][nqubits]["dd"]["peak_memory_mib"][branch] =
               peakMemoryMiB;
-          for (const auto& stat : {"matrix", "vector", "density_matrix",
-                                   "real_numbers", "compute_tables"}) {
+          for (const auto& stat :
+               {"matrix", "vector", "density_matrix", "compute_tables"}) {
             for (const auto& [key, value] : dd[stat].items()) {
               if (value == "unused") {
                 k[algorithm][type][nqubits]["dd"][stat][key][branch] = value;

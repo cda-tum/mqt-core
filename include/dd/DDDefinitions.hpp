@@ -2,6 +2,7 @@
 
 #include <complex>
 #include <cstdint>
+#include <limits>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -54,6 +55,10 @@ static constexpr fp PI_2 = static_cast<fp>(
     1.570796326794896619231321691639751442098584699687552910487L);
 static constexpr fp PI_4 = static_cast<fp>(
     0.785398163397448309615660845819875721049292349843776455243L);
+
+/// numerical tolerance to be used for floating point values
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+static constexpr fp EPS = std::numeric_limits<dd::fp>::epsilon() * 1024;
 
 static constexpr std::uint64_t SERIALIZATION_VERSION = 1;
 

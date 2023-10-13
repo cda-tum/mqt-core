@@ -1,6 +1,5 @@
 #pragma once
 
-#include "dd/CachedEdge.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Edge.hpp"
 
@@ -27,7 +26,6 @@ struct vNode {                        // NOLINT(readability-identifier-naming)
   static constexpr vNode* getTerminal() noexcept { return nullptr; }
 };
 using vEdge = Edge<vNode>;
-using vCachedEdge = CachedEdge<vNode>;
 
 /**
  * @brief A matrix DD node
@@ -68,7 +66,6 @@ struct mNode {                        // NOLINT(readability-identifier-naming)
   }
 };
 using mEdge = Edge<mNode>;
-using mCachedEdge = CachedEdge<mNode>;
 
 /**
  * @brief A density matrix DD node
@@ -173,7 +170,6 @@ struct dNode {                        // NOLINT(readability-identifier-naming)
   static void revertDmChangesToNode(dNode*& p) noexcept;
 };
 using dEdge = Edge<dNode>;
-using dCachedEdge = CachedEdge<dNode>;
 
 static inline dEdge densityFromMatrixEdge(const mEdge& e) {
   return dEdge{reinterpret_cast<dNode*>(e.p), e.w};

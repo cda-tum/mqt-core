@@ -283,7 +283,7 @@ qc::MatrixDD getDD(const qc::Operation* op,
       phase = -phase;
     }
     auto id = dd->makeIdent(nqubits);
-    id.w = dd->cn.lookup(std::cos(phase), std::sin(phase));
+    id.w = {std::cos(phase), std::sin(phase)};
     return id;
   }
 
