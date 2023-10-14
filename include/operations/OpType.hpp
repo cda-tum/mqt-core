@@ -4,6 +4,7 @@
 #include <functional>
 #include <iostream>
 #include <string>
+#include <unordered_map>
 
 namespace qc {
 // Natively supported operations of the QFR library
@@ -18,23 +19,23 @@ enum OpType : std::uint8_t {
   Y,
   Z,
   S,
-  Sdag,
+  Sdg,
   T,
-  Tdag,
+  Tdg,
   V,
-  Vdag,
-  U3,
+  Vdg,
+  U,
   U2,
-  Phase,
+  P,
   SX,
-  SXdag,
+  SXdg,
   RX,
   RY,
   RZ,
   SWAP,
   iSWAP, // NOLINT (readability-identifier-naming)
   Peres,
-  Peresdag,
+  Peresdg,
   DCX,
   ECR,
   RXX,
@@ -78,25 +79,25 @@ inline std::string toString(const OpType& opType) {
     return "z";
   case S:
     return "s";
-  case Sdag:
+  case Sdg:
     return "sdg";
   case T:
     return "t";
-  case Tdag:
+  case Tdg:
     return "tdg";
   case V:
     return "v";
-  case Vdag:
+  case Vdg:
     return "vdg";
-  case U3:
-    return "u3";
+  case U:
+    return "u";
   case U2:
     return "u2";
-  case Phase:
+  case P:
     return "p";
   case SX:
     return "sx";
-  case SXdag:
+  case SXdg:
     return "sxdg";
   case RX:
     return "rx";
@@ -110,7 +111,7 @@ inline std::string toString(const OpType& opType) {
     return "iswap";
   case Peres:
     return "peres";
-  case Peresdag:
+  case Peresdg:
     return "peresdg";
   case DCX:
     return "dcx";
@@ -139,9 +140,47 @@ inline std::string toString(const OpType& opType) {
   case Teleportation:
     return "teleportation";
   case ClassicControlled:
-    return "classic controlled";
+    return "classic_controlled";
+  // GCOV_EXCL_START
   default:
     throw std::invalid_argument("Invalid OpType!");
+    // GCOV_EXCL_STOP
+  }
+}
+
+/**
+ * @brief Gives a short name for the given OpType (at most 3 characters)
+ * @param opType OpType to get the short name for
+ * @return Short name for the given OpType
+ */
+inline std::string shortName(const OpType& opType) {
+  switch (opType) {
+  case GPhase:
+    return "GPh";
+  case SXdg:
+    return "sxd";
+  case SWAP:
+    return "sw";
+  case iSWAP:
+    return "isw";
+  case Peres:
+    return "pr";
+  case Peresdg:
+    return "prd";
+  case XXminusYY:
+    return "x-y";
+  case XXplusYY:
+    return "x+y";
+  case Barrier:
+    return "====";
+  case Measure:
+    return "msr";
+  case Reset:
+    return "rst";
+  case Teleportation:
+    return "tel";
+  default:
+    return toString(opType);
   }
 }
 
@@ -150,7 +189,7 @@ inline bool isTwoQubitGate(const OpType& opType) {
   case SWAP:
   case iSWAP:
   case Peres:
-  case Peresdag:
+  case Peresdg:
   case DCX:
   case ECR:
   case RXX:
@@ -188,32 +227,32 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"cz", OpType::Z},
         {"s", OpType::S},
         {"cs", OpType::S},
-        {"sdg", OpType::Sdag},
-        {"csdg", OpType::Sdag},
+        {"sdg", OpType::Sdg},
+        {"csdg", OpType::Sdg},
         {"t", OpType::T},
         {"ct", OpType::T},
-        {"tdg", OpType::Tdag},
-        {"ctdg", OpType::Tdag},
+        {"tdg", OpType::Tdg},
+        {"ctdg", OpType::Tdg},
         {"v", OpType::V},
-        {"vdg", OpType::Vdag},
-        {"u", OpType::U3},
-        {"cu", OpType::U3},
-        {"u3", OpType::U3},
-        {"cu3", OpType::U3},
+        {"vdg", OpType::Vdg},
+        {"u", OpType::U},
+        {"cu", OpType::U},
+        {"u3", OpType::U},
+        {"cu3", OpType::U},
         {"u2", OpType::U2},
         {"cu2", OpType::U2},
-        {"p", OpType::Phase},
-        {"cp", OpType::Phase},
-        {"mcp", OpType::Phase},
-        {"phase", OpType::Phase},
-        {"cphase", OpType::Phase},
-        {"mcphase", OpType::Phase},
-        {"u1", OpType::Phase},
-        {"cu1", OpType::Phase},
+        {"p", OpType::P},
+        {"cp", OpType::P},
+        {"mcp", OpType::P},
+        {"phase", OpType::P},
+        {"cphase", OpType::P},
+        {"mcphase", OpType::P},
+        {"u1", OpType::P},
+        {"cu1", OpType::P},
         {"sx", OpType::SX},
         {"csx", OpType::SX},
-        {"sxdg", OpType::SXdag},
-        {"csxdg", OpType::SXdag},
+        {"sxdg", OpType::SXdg},
+        {"csxdg", OpType::SXdg},
         {"rx", OpType::RX},
         {"crx", OpType::RX},
         {"ry", OpType::RY},
@@ -224,7 +263,7 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"cswap", OpType::SWAP},
         {"iswap", OpType::iSWAP},
         {"peres", OpType::Peres},
-        {"peresdg", OpType::Peresdag},
+        {"peresdg", OpType::Peresdg},
         {"dcx", OpType::DCX},
         {"ecr", OpType::ECR},
         {"rxx", OpType::RXX},
@@ -237,7 +276,7 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"reset", OpType::Reset},
         {"barrier", OpType::Barrier},
         {"teleportation", OpType::Teleportation},
-        {"classic controlled", OpType::ClassicControlled},
+        {"classic_controlled", OpType::ClassicControlled},
         {"compound", OpType::Compound},
 };
 

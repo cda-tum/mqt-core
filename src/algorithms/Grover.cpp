@@ -14,11 +14,11 @@ void Grover::setup(QuantumComputation& qc) const {
 void Grover::oracle(QuantumComputation& qc) const {
   Controls controls{};
   for (std::size_t i = 0; i < nDataQubits; ++i) {
-    controls.emplace(Control{static_cast<Qubit>(i), targetValue.test(i)
-                                                        ? Control::Type::Pos
-                                                        : Control::Type::Neg});
+    controls.emplace(static_cast<Qubit>(i), targetValue.test(i)
+                                                ? Control::Type::Pos
+                                                : Control::Type::Neg);
   }
-  qc.z(static_cast<Qubit>(nDataQubits), controls);
+  qc.mcz(controls, static_cast<Qubit>(nDataQubits));
 }
 
 void Grover::diffusion(QuantumComputation& qc) const {
@@ -32,9 +32,9 @@ void Grover::diffusion(QuantumComputation& qc) const {
   qc.h(0);
   Controls controls{};
   for (Qubit j = 1; j < nDataQubits; ++j) {
-    controls.emplace(Control{j});
+    controls.emplace(j);
   }
-  qc.x(0, controls);
+  qc.mcx(controls, 0);
   qc.h(0);
 
   for (auto i = static_cast<std::make_signed_t<Qubit>>(nDataQubits - 1); i >= 0;
@@ -105,12 +105,13 @@ Grover::Grover(std::size_t nq, std::size_t s) : seed(s), nDataQubits(nq) {
 
 std::ostream& Grover::printStatistics(std::ostream& os) const {
   os << "Grover (" << nqubits - 1 << ") Statistics:\n";
-  os << "\tn: " << nqubits << std::endl;
-  os << "\tm: " << getNindividualOps() << std::endl;
-  os << "\tseed: " << seed << std::endl;
-  os << "\tx: " << expected << std::endl;
-  os << "\ti: " << iterations << std::endl;
-  os << "--------------" << std::endl;
+  os << "\tn: " << nqubits << "\n";
+  os << "\tm: " << getNindividualOps() << "\n";
+  os << "\tseed: " << seed << "\n";
+  os << "\tx: " << expected << "\n";
+  os << "\ti: " << iterations << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 } // namespace qc

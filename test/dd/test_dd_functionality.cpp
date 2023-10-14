@@ -55,11 +55,10 @@ protected:
 INSTANTIATE_TEST_SUITE_P(
     Parameters, DDFunctionality,
     testing::Values(qc::GPhase, qc::I, qc::H, qc::X, qc::Y, qc::Z, qc::S,
-                    qc::Sdag, qc::T, qc::Tdag, qc::SX, qc::SXdag, qc::V,
-                    qc::Vdag, qc::U3, qc::U2, qc::Phase, qc::RX, qc::RY, qc::RZ,
-                    qc::Peres, qc::Peresdag, qc::SWAP, qc::iSWAP, qc::DCX,
-                    qc::ECR, qc::RXX, qc::RYY, qc::RZZ, qc::RZX, qc::XXminusYY,
-                    qc::XXplusYY),
+                    qc::Sdg, qc::T, qc::Tdg, qc::SX, qc::SXdg, qc::V, qc::Vdg,
+                    qc::U, qc::U2, qc::P, qc::RX, qc::RY, qc::RZ, qc::Peres,
+                    qc::Peresdg, qc::SWAP, qc::iSWAP, qc::DCX, qc::ECR, qc::RXX,
+                    qc::RYY, qc::RZZ, qc::RZX, qc::XXminusYY, qc::XXplusYY),
     [](const testing::TestParamInfo<DDFunctionality::ParamType>& inf) {
       const auto gate = inf.param;
       return toString(gate);
@@ -75,7 +74,7 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
     op = qc::StandardOperation(nqubits, Controls{}, Targets{}, gate,
                                std::vector{dist(mt)});
     break;
-  case qc::U3:
+  case qc::U:
     op = qc::StandardOperation(nqubits, 0, gate,
                                std::vector{dist(mt), dist(mt), dist(mt)});
     break;
@@ -86,7 +85,7 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
   case qc::RX:
   case qc::RY:
   case qc::RZ:
-  case qc::Phase:
+  case qc::P:
     op = qc::StandardOperation(nqubits, 0, gate, std::vector{dist(mt)});
     break;
 
@@ -97,7 +96,7 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
     op = qc::StandardOperation(nqubits, Controls{}, 0, 1, gate);
     break;
   case qc::Peres:
-  case qc::Peresdag:
+  case qc::Peresdg:
     op = qc::StandardOperation(nqubits, {0_pc}, 1, 2, gate);
     break;
   case qc::RXX:
@@ -129,55 +128,55 @@ TEST_F(DDFunctionality, buildCircuit) {
   qc.swap(0, 1);
   qc.h(0);
   qc.s(3);
-  qc.sdag(2);
+  qc.sdg(2);
   qc.v(0);
   qc.t(1);
-  qc.x(1, 0_pc);
-  qc.x(2, 3_pc);
-  qc.x(0, {2_pc, 3_pc});
+  qc.cx(0, 1);
+  qc.cx(3, 2);
+  qc.mcx({2, 3}, 0);
   qc.dcx(0, 1);
-  qc.dcx(0, 1, 2_pc);
+  qc.cdcx(2, 0, 1);
   qc.ecr(0, 1);
-  qc.ecr(0, 1, 2_pc);
+  qc.cecr(2, 0, 1);
   const auto theta = dist(mt);
-  qc.rxx(0, 1, theta);
-  qc.rxx(0, 1, 2_pc, theta);
-  qc.ryy(0, 1, theta);
-  qc.ryy(0, 1, 2_pc, theta);
-  qc.rzz(0, 1, theta);
-  qc.rzz(0, 1, 2_pc, theta);
-  qc.rzx(0, 1, theta);
-  qc.rzx(0, 1, 2_pc, theta);
+  qc.rxx(theta, 0, 1);
+  qc.crxx(theta, 2, 0, 1);
+  qc.ryy(theta, 0, 1);
+  qc.cryy(theta, 2, 0, 1);
+  qc.rzz(theta, 0, 1);
+  qc.crzz(theta, 2, 0, 1);
+  qc.rzx(theta, 0, 1);
+  qc.crzx(theta, 2, 0, 1);
   const auto beta = dist(mt);
-  qc.xx_minus_yy(0, 1, theta, beta);
-  qc.xx_minus_yy(0, 1, 2_pc, theta, beta);
-  qc.xx_plus_yy(0, 1, theta, beta);
-  qc.xx_plus_yy(0, 1, 2_pc, theta, beta);
+  qc.xx_minus_yy(theta, beta, 0, 1);
+  qc.cxx_minus_yy(theta, beta, 2, 0, 1);
+  qc.xx_plus_yy(theta, beta, 0, 1);
+  qc.cxx_plus_yy(theta, beta, 2, 0, 1);
 
   // invert the circuit above
-  qc.xx_plus_yy(0, 1, 2_pc, -theta, beta);
-  qc.xx_plus_yy(0, 1, -theta, beta);
-  qc.xx_minus_yy(0, 1, 2_pc, -theta, beta);
-  qc.xx_minus_yy(0, 1, -theta, beta);
-  qc.rzx(0, 1, 2_pc, -theta);
-  qc.rzx(0, 1, -theta);
-  qc.rzz(0, 1, 2_pc, -theta);
-  qc.rzz(0, 1, -theta);
-  qc.ryy(0, 1, 2_pc, -theta);
-  qc.ryy(0, 1, -theta);
-  qc.rxx(0, 1, 2_pc, -theta);
-  qc.rxx(0, 1, -theta);
-  qc.ecr(0, 1, 2_pc);
+  qc.cxx_plus_yy(-theta, beta, 2, 0, 1);
+  qc.xx_plus_yy(-theta, beta, 0, 1);
+  qc.cxx_minus_yy(-theta, beta, 2, 0, 1);
+  qc.xx_minus_yy(-theta, beta, 0, 1);
+  qc.crzx(-theta, 2, 0, 1);
+  qc.rzx(-theta, 0, 1);
+  qc.crzz(-theta, 2, 0, 1);
+  qc.rzz(-theta, 0, 1);
+  qc.cryy(-theta, 2, 0, 1);
+  qc.ryy(-theta, 0, 1);
+  qc.crxx(-theta, 2, 0, 1);
+  qc.rxx(-theta, 0, 1);
+  qc.cecr(2, 0, 1);
   qc.ecr(0, 1);
-  qc.dcx(1, 0, 2_pc);
+  qc.cdcx(2, 1, 0);
   qc.dcx(1, 0);
-  qc.x(0, {2_pc, 3_pc});
-  qc.x(2, 3_pc);
-  qc.x(1, 0_pc);
-  qc.tdag(1);
-  qc.vdag(0);
+  qc.mcx({2, 3}, 0);
+  qc.cx(3, 2);
+  qc.cx(0, 1);
+  qc.tdg(1);
+  qc.vdg(0);
   qc.s(2);
-  qc.sdag(3);
+  qc.sdg(3);
   qc.h(0);
   qc.swap(0, 1);
   qc.x(0);
@@ -222,9 +221,9 @@ TEST_F(DDFunctionality, CircuitEquivalence) {
   qc1.h(0);
 
   qc::QuantumComputation qc2(1);
-  qc2.rz(0, PI_2);
+  qc2.rz(PI_2, 0);
   qc2.sx(0);
-  qc2.rz(0, PI_2);
+  qc2.rz(PI_2, 0);
 
   const qc::MatrixDD dd1 = buildFunctionality(&qc1, dd);
   const qc::MatrixDD dd2 = buildFunctionality(&qc2, dd);
@@ -260,17 +259,17 @@ TEST_F(DDFunctionality, changePermutation) {
 TEST_F(DDFunctionality, basicTensorDumpTest) {
   QuantumComputation qc(2);
   qc.h(1);
-  qc.x(0, 1_pc);
+  qc.cx(1, 0);
 
   std::stringstream ss{};
   dd::dumpTensorNetwork(ss, qc);
 
   const std::string reference =
       "{\"tensors\": [\n"
-      "[[\"h   \", \"Q1\", \"GATE0\"], [\"q1_0\", \"q1_1\"], [2, 2], "
+      "[[\"h\", \"Q1\", \"GATE0\"], [\"q1_0\", \"q1_1\"], [2, 2], "
       "[[0.70710678118654757, 0], [0.70710678118654757, 0], "
       "[0.70710678118654757, 0], [-0.70710678118654757, 0]]],\n"
-      "[[\"x   \", \"Q1\", \"Q0\", \"GATE1\"], [\"q1_1\", \"q0_0\", \"q1_2\", "
+      "[[\"x\", \"Q1\", \"Q0\", \"GATE1\"], [\"q1_1\", \"q0_0\", \"q1_2\", "
       "\"q0_1\"], [2, 2, 2, 2], [[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, "
       "0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [1, "
       "0], [0, 0]]]\n"
@@ -282,7 +281,7 @@ TEST_F(DDFunctionality, compoundTensorDumpTest) {
   QuantumComputation qc(2);
   QuantumComputation comp(2);
   comp.h(1);
-  comp.x(0, 1_pc);
+  comp.cx(1, 0);
   qc.emplace_back(comp.asOperation());
 
   std::stringstream ss{};
@@ -290,10 +289,10 @@ TEST_F(DDFunctionality, compoundTensorDumpTest) {
 
   const std::string reference =
       "{\"tensors\": [\n"
-      "[[\"h   \", \"Q1\", \"GATE0\"], [\"q1_0\", \"q1_1\"], [2, 2], "
+      "[[\"h\", \"Q1\", \"GATE0\"], [\"q1_0\", \"q1_1\"], [2, 2], "
       "[[0.70710678118654757, 0], [0.70710678118654757, 0], "
       "[0.70710678118654757, 0], [-0.70710678118654757, 0]]],\n"
-      "[[\"x   \", \"Q1\", \"Q0\", \"GATE1\"], [\"q1_1\", \"q0_0\", \"q1_2\", "
+      "[[\"x\", \"Q1\", \"Q0\", \"GATE1\"], [\"q1_1\", \"q0_0\", \"q1_2\", "
       "\"q0_1\"], [2, 2, 2, 2], [[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, "
       "0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [1, "
       "0], [0, 0]]]\n"
@@ -302,7 +301,7 @@ TEST_F(DDFunctionality, compoundTensorDumpTest) {
 }
 
 TEST_F(DDFunctionality, errorTensorDumpTest) {
-  QuantumComputation qc(2);
+  QuantumComputation qc(2U, 2U);
   qc.classicControlled(qc::X, 0, {0, 1U}, 1U);
 
   std::stringstream ss{};
@@ -357,7 +356,7 @@ TEST_F(DDFunctionality, FuseNoSingleQubitGates) {
   nqubits = 2;
   QuantumComputation qc(nqubits);
   qc.h(0);
-  qc.x(1, 0_pc);
+  qc.cx(0, 1);
   qc.y(0);
   e = buildFunctionality(&qc, dd);
   std::cout << "-----------------------------\n";

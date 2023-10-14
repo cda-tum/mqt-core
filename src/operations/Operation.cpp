@@ -1,50 +1,10 @@
 #include "operations/Operation.hpp"
 
 namespace qc {
-void Operation::setName() {
-  switch (type) {
-  case iSWAP:
-    name = "iSWP";
-    break;
-  case Peres:
-    name = "Pr ";
-    break;
-  case Peresdag:
-    name = "Prdg";
-    break;
-  case RXX:
-    name = "XX  ";
-    break;
-  case RYY:
-    name = "YY  ";
-    break;
-  case RZZ:
-    name = "ZZ  ";
-    break;
-  case RZX:
-    name = "ZX  ";
-    break;
-  case XXminusYY:
-    name = "XY- ";
-    break;
-  case XXplusYY:
-    name = "XY+ ";
-    break;
-  case Reset:
-    name = "Rst ";
-    break;
-  case ClassicControlled:
-    name = "clc_";
-    break;
-  default:
-    name = toString(type);
-    name.resize(4, ' ');
-  }
-}
 
 std::ostream& Operation::printParameters(std::ostream& os) const {
   if (isClassicControlledOperation()) {
-    os << "\tc[" << parameter[0];
+    os << "  c[" << parameter[0];
     if (parameter[1] != 1) {
       os << " ... " << (parameter[0] + parameter[1] - 1);
     }
@@ -60,7 +20,7 @@ std::ostream& Operation::printParameters(std::ostream& os) const {
     }
   }
   if (!isZero) {
-    os << "\tp: (" << parameter[0] << ") ";
+    os << "  p: (" << parameter[0] << ") ";
     for (size_t j = 1; j < parameter.size(); ++j) {
       isZero = true;
       for (size_t i = j; i < parameter.size(); ++i) {
@@ -79,78 +39,43 @@ std::ostream& Operation::printParameters(std::ostream& os) const {
   return os;
 }
 
-std::ostream& Operation::print(std::ostream& os) const {
+std::ostream&
+Operation::print(std::ostream& os, const Permutation& permutation,
+                 [[maybe_unused]] const std::size_t prefixWidth) const {
   const auto precBefore = std::cout.precision(20);
+  const auto& actualControls = permutation.apply(getControls());
+  const auto& actualTargets = permutation.apply(getTargets());
 
-  os << std::setw(4) << name << "\t";
-
-  auto controlIt = controls.begin();
-  auto targetIt = targets.begin();
   for (std::size_t i = 0; i < nqubits; ++i) {
-    if (targetIt != targets.end() && *targetIt == i) {
+    if (std::find(actualTargets.cbegin(), actualTargets.cend(), i) !=
+        actualTargets.cend()) {
       if (type == ClassicControlled) {
-        os << "\033[1m\033[35m" << name[2] << name[3];
+        const auto reducedName = name.substr(2);
+        os << "\033[1m\033[35m" << std::setw(4) << reducedName;
       } else if (type == Barrier) {
-        os << "\033[1m\033[32mb";
+        os << "\033[1m\033[32m" << std::setw(4) << shortName(type);
       } else {
-        os << "\033[1m\033[36m" << name[0] << name[1];
+        os << "\033[1m\033[36m" << std::setw(4) << shortName(type);
       }
-      os << "\t\033[0m";
-      ++targetIt;
-    } else if (controlIt != controls.end() && controlIt->qubit == i) {
-      if (controlIt->type == Control::Type::Pos) {
+      os << "\033[0m";
+      continue;
+    }
+
+    if (const auto it =
+            std::find(actualControls.cbegin(), actualControls.cend(), i);
+        it != actualControls.cend()) {
+      if (it->type == Control::Type::Pos) {
         os << "\033[32m";
       } else {
         os << "\033[31m";
       }
-      os << "c\t"
+      os << std::setw(4) << "c"
          << "\033[0m";
-      ++controlIt;
-    } else {
-      os << "|\t";
+      continue;
     }
-  }
 
-  printParameters(os);
-
-  std::cout.precision(precBefore);
-
-  return os;
-}
-
-std::ostream& Operation::print(std::ostream& os,
-                               const Permutation& permutation) const {
-  const auto precBefore = std::cout.precision(20);
-
-  os << std::setw(4) << name << "\t";
-  const auto& actualControls = getControls();
-  const auto& actualTargets = getTargets();
-  auto controlIt = actualControls.cbegin();
-  auto targetIt = actualTargets.cbegin();
-  for (const auto& [physical, logical] : permutation) {
-    if (targetIt != actualTargets.cend() && *targetIt == physical) {
-      if (type == ClassicControlled) {
-        os << "\033[1m\033[35m" << name[2] << name[3];
-      } else if (type == Barrier) {
-        os << "\033[1m\033[32mb";
-      } else {
-        os << "\033[1m\033[36m" << name[0] << name[1];
-      }
-      os << "\t\033[0m";
-      ++targetIt;
-    } else if (controlIt != actualControls.cend() &&
-               controlIt->qubit == physical) {
-      if (controlIt->type == Control::Type::Pos) {
-        os << "\033[32m";
-      } else {
-        os << "\033[31m";
-      }
-      os << "c\t"
-         << "\033[0m";
-      ++controlIt;
-    } else {
-      os << "|\t";
-    }
+    os << std::setw(4) << "|"
+       << "\033[0m";
   }
 
   printParameters(os);
@@ -188,7 +113,7 @@ bool Operation::equals(const Operation& op, const Permutation& perm1,
       controls1 = getControls();
     } else {
       for (const auto& control : getControls()) {
-        controls1.emplace(Control{perm1.at(control.qubit), control.type});
+        controls1.emplace(perm1.at(control.qubit), control.type);
       }
     }
 
@@ -197,7 +122,7 @@ bool Operation::equals(const Operation& op, const Permutation& perm1,
       controls2 = op.getControls();
     } else {
       for (const auto& control : op.getControls()) {
-        controls2.emplace(Control{perm2.at(control.qubit), control.type});
+        controls2.emplace(perm2.at(control.qubit), control.type);
       }
     }
 

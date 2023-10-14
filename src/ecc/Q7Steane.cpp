@@ -53,9 +53,9 @@ void Q7Steane::measureAndCorrectSingle(bool xSyndrome) {
         if (((q + 1) & (static_cast<std::size_t>(1U) << c)) != 0) {
           const auto target = static_cast<Qubit>(i + nQubits * q);
           if (xSyndrome) {
-            qcMapped->x(target, controls.at(c));
+            qcMapped->cx(controls.at(c), target);
           } else {
-            qcMapped->z(target, controls.at(c));
+            qcMapped->cz(controls.at(c), target);
           }
         }
       }
@@ -110,6 +110,46 @@ void Q7Steane::writeDecoding() {
   isDecoded = true;
 }
 
+void Q7Steane::addSOperation(const qc::Controls& controls,
+                             const qc::Targets& targets,
+                             const qc::OpType type) {
+  const auto numTargets = targets.size();
+  const auto numControls = controls.size();
+  const auto numQubits = qcOriginal->getNqubits();
+  const auto numMappedQubits = qcMapped->getNqubits();
+
+  for (std::size_t k = 0; k < numTargets; k++) {
+    auto i = targets[k];
+    if (numControls > 0) {
+      for (std::size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
+        qc::Controls controls2;
+        for (const auto& ct : controls) {
+          controls2.emplace(static_cast<Qubit>(ct.qubit + j * numQubits),
+                            ct.type);
+        }
+        qcMapped->emplace_back<qc::StandardOperation>(
+            numMappedQubits, controls2, static_cast<Qubit>(i + j * numQubits),
+            type);
+        qcMapped->emplace_back<qc::StandardOperation>(
+            numMappedQubits, controls2, static_cast<Qubit>(i + j * numQubits),
+            type);
+        qcMapped->emplace_back<qc::StandardOperation>(
+            numMappedQubits, controls2, static_cast<Qubit>(i + j * numQubits),
+            type);
+      }
+    } else {
+      for (std::size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
+        qcMapped->emplace_back<qc::StandardOperation>(
+            numMappedQubits, static_cast<Qubit>(i + j * numQubits), type);
+        qcMapped->emplace_back<qc::StandardOperation>(
+            numMappedQubits, static_cast<Qubit>(i + j * numQubits), type);
+        qcMapped->emplace_back<qc::StandardOperation>(
+            numMappedQubits, static_cast<Qubit>(i + j * numQubits), type);
+      }
+    }
+  }
+}
+
 void Q7Steane::mapGate(const qc::Operation& gate) {
   if (isDecoded && gate.getType() != qc::Measure) {
     writeEncoding();
@@ -147,40 +187,8 @@ void Q7Steane::mapGate(const qc::Operation& gate) {
     break;
     // locigal S = 3 physical S's
   case qc::S:
-  case qc::Sdag:
-    for (auto i : gate.getTargets()) {
-      if (gate.getNcontrols() != 0U) {
-        const auto& ctrls = gate.getControls();
-        for (std::size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
-          qc::Controls ctrls2;
-          for (const auto& ct : ctrls) {
-            ctrls2.insert(qc::Control{
-                static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
-          }
-          qcMapped->emplace_back<qc::StandardOperation>(
-              qcMapped->getNqubits(), ctrls2,
-              static_cast<Qubit>(i + j * nQubits), gate.getType());
-          qcMapped->emplace_back<qc::StandardOperation>(
-              qcMapped->getNqubits(), ctrls2,
-              static_cast<Qubit>(i + j * nQubits), gate.getType());
-          qcMapped->emplace_back<qc::StandardOperation>(
-              qcMapped->getNqubits(), ctrls2,
-              static_cast<Qubit>(i + j * nQubits), gate.getType());
-        }
-      } else {
-        for (std::size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
-          qcMapped->emplace_back<qc::StandardOperation>(
-              qcMapped->getNqubits(), static_cast<Qubit>(i + j * nQubits),
-              gate.getType());
-          qcMapped->emplace_back<qc::StandardOperation>(
-              qcMapped->getNqubits(), static_cast<Qubit>(i + j * nQubits),
-              gate.getType());
-          qcMapped->emplace_back<qc::StandardOperation>(
-              qcMapped->getNqubits(), static_cast<Qubit>(i + j * nQubits),
-              gate.getType());
-        }
-      }
-    }
+  case qc::Sdg:
+    addSOperation(gate.getControls(), gate.getTargets(), gate.getType());
     break;
   case qc::Measure:
     if (!isDecoded) {
@@ -208,22 +216,22 @@ void Q7Steane::mapGate(const qc::Operation& gate) {
 
     break;
   case qc::T:
-  case qc::Tdag:
+  case qc::Tdg:
     for (auto i : gate.getTargets()) {
       if (gate.getControls().empty()) {
-        qcMapped->x(static_cast<Qubit>(i + 5 * nQubits),
-                    qc::Control{static_cast<Qubit>(i + 6 * nQubits)});
-        qcMapped->x(static_cast<Qubit>(i + 0 * nQubits),
-                    qc::Control{static_cast<Qubit>(i + 5 * nQubits)});
+        qcMapped->cx(static_cast<Qubit>(i + 6 * nQubits),
+                     static_cast<Qubit>(i + 5 * nQubits));
+        qcMapped->cx(static_cast<Qubit>(i + 5 * nQubits),
+                     static_cast<Qubit>(i + 0 * nQubits));
         if (gate.getType() == qc::T) {
           qcMapped->t(static_cast<Qubit>(i + 0 * nQubits));
         } else {
-          qcMapped->tdag(static_cast<Qubit>(i + 0 * nQubits));
+          qcMapped->tdg(static_cast<Qubit>(i + 0 * nQubits));
         }
-        qcMapped->x(static_cast<Qubit>(i + 0 * nQubits),
-                    qc::Control{static_cast<Qubit>(i + 5 * nQubits)});
-        qcMapped->x(static_cast<Qubit>(i + 5 * nQubits),
-                    qc::Control{static_cast<Qubit>(i + 6 * nQubits)});
+        qcMapped->cx(static_cast<Qubit>(i + 5 * nQubits),
+                     static_cast<Qubit>(i + 0 * nQubits));
+        qcMapped->cx(static_cast<Qubit>(i + 6 * nQubits),
+                     static_cast<Qubit>(i + 5 * nQubits));
       } else {
         gateNotAvailableError(gate);
       }

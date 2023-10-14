@@ -227,24 +227,24 @@ void qc::QuantumComputation::readTFCGateDescriptions(
       label = qubits.substr(0, pos);
       if (label.back() == '\'') {
         label.erase(label.size() - 1);
-        controls.emplace_back(Control{varMap.at(label), Control::Type::Neg});
+        controls.emplace_back(varMap.at(label), Control::Type::Neg);
       } else {
-        controls.emplace_back(Control{varMap.at(label)});
+        controls.emplace_back(varMap.at(label));
       }
       qubits.erase(0, pos + 1);
     }
-    controls.emplace_back(Control{varMap.at(qubits)});
+    controls.emplace_back(varMap.at(qubits));
 
     if (gate == X) {
       const Qubit target = controls.back().qubit;
       controls.pop_back();
-      x(target, Controls{controls.cbegin(), controls.cend()});
+      mcx(Controls{controls.cbegin(), controls.cend()}, target);
     } else {
       const Qubit target0 = controls.back().qubit;
       controls.pop_back();
       const Qubit target1 = controls.back().qubit;
       controls.pop_back();
-      swap(target0, target1, Controls{controls.cbegin(), controls.cend()});
+      mcswap(Controls{controls.cbegin(), controls.cend()}, target0, target1);
     }
   }
 }

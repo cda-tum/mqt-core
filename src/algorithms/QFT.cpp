@@ -19,10 +19,11 @@ QFT::QFT(const std::size_t nq, const bool includeMeas, const bool dyn)
 
 std::ostream& QFT::printStatistics(std::ostream& os) const {
   os << "QFT (" << precision << ") Statistics:\n";
-  os << "\tn: " << nqubits << std::endl;
-  os << "\tm: " << getNindividualOps() << std::endl;
-  os << "\tdynamic: " << dynamic << std::endl;
-  os << "--------------" << std::endl;
+  os << "\tn: " << nqubits << "\n";
+  os << "\tm: " << getNindividualOps() << "\n";
+  os << "\tdynamic: " << dynamic << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 void QFT::createCircuit() {
@@ -38,7 +39,7 @@ void QFT::createCircuit() {
         } else {
           const auto powerOfTwo = std::pow(2., i - j + 1);
           const auto lambda = PI / powerOfTwo;
-          classicControlled(Phase, 0, {d, 1U}, 1U, std::vector{lambda});
+          classicControlled(P, 0, {d, 1U}, 1U, std::vector{lambda});
         }
       }
 
@@ -62,13 +63,13 @@ void QFT::createCircuit() {
       for (std::size_t j = i; j > 0; --j) {
         const auto d = static_cast<Qubit>(q - j);
         if (j == 1) {
-          s(d, Control{q});
+          cs(q, d);
         } else if (j == 2) {
-          t(d, Control{q});
+          ct(q, d);
         } else {
           const auto powerOfTwo = std::pow(2., j);
           const auto lambda = PI / powerOfTwo;
-          phase(d, Control{q}, lambda);
+          cp(lambda, q, d);
         }
       }
 

@@ -73,8 +73,20 @@ protected:
     qc->addClassicalRegister(1U, "resultReg");
     qc->h(0);
     qc->t(0);
-    qc->tdag(0);
+    qc->tdg(0);
     qc->h(0);
+    qc->measure(0, {"resultReg", 0});
+    return qc;
+  }
+
+  static std::shared_ptr<qc::QuantumComputation> createXSCircuit() {
+    auto qc = std::make_shared<qc::QuantumComputation>();
+    qc->addQubitRegister(1U);
+    qc->addClassicalRegister(1U, "resultReg");
+    qc->x(0);
+    qc->s(0);
+    qc->sdg(0);
+    qc->x(0);
     qc->measure(0, {"resultReg", 0});
     return qc;
   }
@@ -95,7 +107,7 @@ protected:
     qc->addQubitRegister(2U);
     qc->addClassicalRegister(2U, "resultReg");
     qc->x(0);
-    qc->x(1, 0_pc);
+    qc->cx(0, 1);
     qc->measure(0, {"resultReg", 0});
     qc->measure(1, {"resultReg", 1});
     return qc;
@@ -107,7 +119,7 @@ protected:
     qc->addClassicalRegister(2U, "resultReg");
     qc->x(0);
     qc->h(1);
-    qc->z(1, 0_pc);
+    qc->cz(0, 1);
     qc->h(1);
     qc->measure(0, {"resultReg", 0});
     qc->measure(1, {"resultReg", 1});
@@ -119,7 +131,7 @@ protected:
     qc->addQubitRegister(2U);
     qc->addClassicalRegister(2U, "resultReg");
     qc->x(0);
-    qc->y(1, 0_pc);
+    qc->cy(0, 1);
     qc->measure(0, {"resultReg", 0});
     qc->measure(1, {"resultReg", 1});
     return qc;
@@ -231,6 +243,7 @@ TEST_F(DDECCFunctionalityTest, testIdEcc) {
       {createYCircuit, false, insertNoiseAfterNQubits},
       {createHCircuit, false, insertNoiseAfterNQubits},
       {createHTCircuit, false, insertNoiseAfterNQubits},
+      {createXSCircuit, false, insertNoiseAfterNQubits},
       {createHZCircuit, false, insertNoiseAfterNQubits},
       {createCXCircuit, false, insertNoiseAfterNQubits},
       {createCZCircuit, false, insertNoiseAfterNQubits},
@@ -245,6 +258,7 @@ TEST_F(DDECCFunctionalityTest, testQ3Shor) {
   std::vector<TestCase> const circuitsExpectToPass = {
       {createIdentityCircuit, true, insertNoiseAfterNQubits},
       {createXCircuit, true, insertNoiseAfterNQubits},
+      {createXSCircuit, true, insertNoiseAfterNQubits},
       {createCXCircuit, true, insertNoiseAfterNQubits * 2},
       {createCYCircuit, true, insertNoiseAfterNQubits * 2},
   };
@@ -272,6 +286,7 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
       {createHCircuit, true, insertNoiseAfterNQubits},
       {createHTCircuit, true, insertNoiseAfterNQubits},
       {createHZCircuit, true, insertNoiseAfterNQubits},
+      {createXSCircuit, true, insertNoiseAfterNQubits},
       {createCXCircuit, true, insertNoiseAfterNQubits},
       {createCZCircuit, true, insertNoiseAfterNQubits},
       {createCYCircuit, true, insertNoiseAfterNQubits},
@@ -291,6 +306,7 @@ TEST_F(DDECCFunctionalityTest, testQ7Steane) {
       {createHCircuit, true, insertNoiseAfterNQubits},
       {createHTCircuit, true, insertNoiseAfterNQubits},
       {createHZCircuit, true, insertNoiseAfterNQubits},
+      {createXSCircuit, true, insertNoiseAfterNQubits},
       {createCXCircuit, true, insertNoiseAfterNQubits * 2},
       {createCZCircuit, true, insertNoiseAfterNQubits * 2},
       {createCYCircuit, true, insertNoiseAfterNQubits * 2},
@@ -313,6 +329,7 @@ TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
       {createHCircuit, true, insertNoiseAfterNQubits},
       {createHTCircuit, true, insertNoiseAfterNQubits},
       {createHZCircuit, true, insertNoiseAfterNQubits},
+      {createXSCircuit, true, insertNoiseAfterNQubits},
       {createCZCircuit, true, insertNoiseAfterNQubits},
   };
 
@@ -334,6 +351,7 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
 
   std::vector<TestCase> const circuitsExpectToFail = {
       {createHTCircuit, true, insertNoiseAfterNQubits},
+      {createXSCircuit, true, insertNoiseAfterNQubits},
       {createCXCircuit, true, insertNoiseAfterNQubits},
       {createCZCircuit, true, insertNoiseAfterNQubits},
       {createCYCircuit, true, insertNoiseAfterNQubits},
@@ -358,6 +376,7 @@ TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
 
   std::vector<TestCase> const circuitsExpectToFail = {
       {createHTCircuit, true, insertNoiseAfterNQubits},
+      {createXSCircuit, true, insertNoiseAfterNQubits},
       {createCXCircuit, true, insertNoiseAfterNQubits},
       {createCZCircuit, true, insertNoiseAfterNQubits},
       {createCYCircuit, true, insertNoiseAfterNQubits},
