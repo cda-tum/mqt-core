@@ -1,6 +1,15 @@
 name-template: "MQT Core $RESOLVED_VERSION Release"
 tag-template: "v$RESOLVED_VERSION"
 categories:
+  - title: "⚛️ MQT Core"
+    labels:
+      - "Core"
+  - title: "⚖️ MQT Core DD Package"
+    labels:
+      - "DD"
+  - title: "🕸️ MQT Core ZX Package"
+    labels:
+      - "ZX"
   - title: "🚀 Features and Enhancements"
     labels:
       - "feature"

@@ -26,7 +26,7 @@ QPE::QPE(const std::size_t nq, const bool exact, const bool iter)
     auto distribution =
         std::uniform_int_distribution<std::uint64_t>(0, max - 1);
     std::uint64_t theta = 0;
-    while (theta == 0 && (theta & 1) == 0) {
+    while ((theta & 1) == 0) {
       theta = distribution(mt);
     }
     lambda = 0.;

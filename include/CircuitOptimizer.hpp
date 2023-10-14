@@ -8,8 +8,9 @@
 #include <memory>
 
 namespace qc {
-static constexpr std::array<qc::OpType, 8> DIAGONAL_GATES = {
-    qc::I, qc::Z, qc::S, qc::Sdag, qc::T, qc::Tdag, qc::Phase, qc::RZ};
+static constexpr std::array<qc::OpType, 10> DIAGONAL_GATES = {
+    qc::Barrier, qc::I,    qc::Z,     qc::S,  qc::Sdag,
+    qc::T,       qc::Tdag, qc::Phase, qc::RZ, qc::RZZ};
 
 class CircuitOptimizer {
 protected:

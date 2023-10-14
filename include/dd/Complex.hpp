@@ -2,6 +2,7 @@
 
 #include "dd/DDDefinitions.hpp"
 
+#include <complex>
 #include <cstddef>
 #include <iostream>
 #include <string>
@@ -102,6 +103,12 @@ struct Complex {
    * @see CTEntry::writeBinary
    */
   void writeBinary(std::ostream& os) const;
+
+  /**
+   * @brief Convert the Complex number to an std::complex<fp>.
+   * @returns The std::complex<fp> representation of the Complex number.
+   */
+  [[nodiscard]] explicit operator std::complex<fp>() const noexcept;
 };
 
 /**

@@ -88,7 +88,7 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
     const auto localDD = getDD(localOp.get(), dd);
 
     // translate local DD to matrix
-    const auto localMatrix = dd->getMatrix(localDD);
+    const auto localMatrix = localDD.getMatrix();
 
     // restore nqubits
     op->setNqubits(globalQubits);
@@ -124,11 +124,10 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
       }
       dumpTensor(operation.get(), of, inds, gateIdx, dd);
     }
-  } else if (type == qc::Barrier || type == qc::ShowProbabilities ||
-             type == qc::Snapshot) {
+  } else if (type == qc::Barrier) {
     return;
   } else if (type == qc::Measure) {
-    std::clog << "Skipping measurement in tensor dump." << std::endl;
+    std::clog << "Skipping measurement in tensor dump.\n";
   } else {
     throw qc::QFRException("Dumping of tensors is currently only supported for "
                            "StandardOperations.");

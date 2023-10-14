@@ -72,6 +72,30 @@ public:
 
   [[nodiscard]] bool isStandardOperation() const override { return true; }
 
+  void addControl(const Control c) override {
+    if (actsOn(c.qubit)) {
+      throw QFRException("Cannot add control on qubit " +
+                         std::to_string(c.qubit) +
+                         " to operation it already acts on the qubit.");
+    }
+
+    controls.emplace(c);
+  }
+
+  void clearControls() override { controls.clear(); }
+
+  void removeControl(const Control c) override {
+    if (controls.erase(c) == 0) {
+      throw QFRException("Cannot remove control on qubit " +
+                         std::to_string(c.qubit) +
+                         " from operation as it is not a control.");
+    }
+  }
+
+  Controls::iterator removeControl(const Controls::iterator it) override {
+    return controls.erase(it);
+  }
+
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override {
     return Operation::equals(op, perm1, perm2);
@@ -82,6 +106,8 @@ public:
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                     const RegisterNames& creg) const override;
+
+  void invert() override;
 };
 
 } // namespace qc

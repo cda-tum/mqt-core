@@ -2,6 +2,7 @@
 
 #include "Definitions.hpp"
 #include "dd/DDDefinitions.hpp"
+#include "dd/statistics/TableStatistics.hpp"
 
 #include <array>
 #include <cassert>
@@ -16,10 +17,15 @@ class StochasticNoiseOperationTable {
 public:
   explicit StochasticNoiseOperationTable(const std::size_t nv) : nvars(nv) {
     resize(nv);
+    stats.entrySize = sizeof(Edge);
+    stats.numBuckets = nv * numberOfStochasticOperations;
   };
 
-  // access functions
+  /// Get a reference to the table
   [[nodiscard]] const auto& getTable() const { return table; }
+
+  /// Get a reference to the statistics
+  [[nodiscard]] const auto& getStats() const noexcept { return stats; }
 
   void resize(std::size_t nq) {
     nvars = nq;
@@ -32,52 +38,36 @@ public:
                                           // Increase the value of
                                           // numberOfOperations accordingly
     table.at(target).at(kind) = r;
-    ++count;
+    stats.trackInsert();
   }
 
-  Edge lookup(std::uint8_t kind, qc::Qubit target) {
+  Edge* lookup(std::uint8_t kind, qc::Qubit target) {
     assert(kind <
            numberOfStochasticOperations); // There are new operations in OpType.
                                           // Increase the value of
                                           // numberOfOperations accordingly
-    lookups++;
-    Edge r{};
-    auto entry = table.at(target).at(kind);
-    if (entry.p == nullptr) {
+    ++stats.lookups;
+    Edge* r = nullptr;
+    auto& entry = table.at(target).at(kind);
+    if (entry.w.r == nullptr) {
       return r;
     }
-    hits++;
-    return entry;
+    ++stats.hits;
+    return &entry;
   }
 
   void clear() {
-    if (count > 0) {
-      for (auto& tableRow : table) {
-        for (auto& entry : tableRow) {
-          entry.p = nullptr;
-        }
+    if (stats.numEntries > 0) {
+      for (auto& t : table) {
+        std::fill(t.begin(), t.end(), Edge{});
       }
-      count = 0;
+      stats.numEntries = 0;
     }
-  }
-
-  [[nodiscard]] fp hitRatio() const {
-    return static_cast<fp>(hits) / static_cast<fp>(lookups);
-  }
-
-  std::ostream& printStatistics(std::ostream& os = std::cout) {
-    os << "hits: " << hits << ", looks: " << lookups
-       << ", ratio: " << hitRatio() << std::endl;
-    return os;
   }
 
 private:
   std::size_t nvars;
   std::vector<std::array<Edge, numberOfStochasticOperations>> table;
-
-  // operation table lookup statistics
-  std::size_t hits = 0;
-  std::size_t lookups = 0;
-  std::size_t count = 0;
+  TableStatistics stats{};
 };
 } // namespace dd

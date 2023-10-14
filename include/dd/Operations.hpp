@@ -273,8 +273,7 @@ qc::MatrixDD getDD(const qc::Operation* op,
     return dd->makeIdent(nqubits);
   }
 
-  if (type == qc::ShowProbabilities || type == qc::Barrier ||
-      type == qc::Snapshot) {
+  if (type == qc::Barrier) {
     return dd->makeIdent(nqubits);
   }
 

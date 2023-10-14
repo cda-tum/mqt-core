@@ -1,50 +1,51 @@
-name: 🇨‌➕➕ • Lint
-
+name: 🇨 • Lint
 on:
-  merge_group:
-  pull_request:
-    paths:
-      - "**/*.cpp"
-      - "**/*.hpp"
-      - ".github/workflows/cpp-linter.yml"
-      - ".clang-tidy"
-      - "!include/python/**"
-      - "!src/python/**"
-  push:
-    branches:
-      - main
-    paths:
-      - "**/*.cpp"
-      - "**/*.hpp"
-      - ".github/workflows/cpp-linter.yml"
-      - ".clang-tidy"
-      - "!include/python/**"
-      - "!src/python/**"
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
-
-env:
-  clang-version: 16
+  workflow_call:
+    inputs:
+      clang-version:
+        description: "Clang version to use"
+        default: 16
+        type: number
+      cmake-args:
+        description: "Additional arguments to pass to CMake"
+        default: ""
+        type: string
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
 
 jobs:
-  cpp-linter:
+  lint:
+    name: 🚨 Lint
     runs-on: ubuntu-latest
-    name: Run
+    env:
+      clang-version: ${{ inputs.clang-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
-
+      - if: ${{ inputs.setup-z3 }}
+        name: Setup Z3
+        uses: cda-tum/setup-z3@v1
+        with:
+          version: ${{ inputs.z3-version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Install clang-${{ env.clang-version }}
         run: |
           sudo apt-get update
           wget https://apt.llvm.org/llvm.sh -O ${{ runner.temp }}/llvm_install.sh
           chmod +x ${{ runner.temp }}/llvm_install.sh
           if sudo ${{ runner.temp }}/llvm_install.sh ${{ env.clang-version }}; then
-            sudo apt-get install -y clang-format-${{ env.clang-version }} clang-tidy-${{ env.clang-version }}
+            sudo apt-get install -y clang-format-${{ env.clang-version }} clang-tidy-${{ env.clang-version }} || exit 1
+          else
+            echo "Installation from script failed."
+            exit 1
           fi
           echo "CC=clang-${{ env.clang-version }}" >> $GITHUB_ENV
           echo "CXX=clang++-${{ env.clang-version }}" >> $GITHUB_ENV
@@ -55,19 +56,19 @@ jobs:
           echo $CXX
           $CC --version
           $CXX --version
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug ${{ inputs.cmake-args }}
 
       - name: Run cpp-linter
         uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           style: ""
           tidy-checks: ""
           version: ${{ env.clang-version }}
           ignore: "build|include/python|src/python"
-          thread-comments: true
+          thread-comments: ${{ github.event_name == 'pull_request' }}
           step-summary: true
           database: "build"
           extra-args: -std=c++17

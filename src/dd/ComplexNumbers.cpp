@@ -245,11 +245,11 @@ void ComplexNumbers::returnToCache(const Complex& c) noexcept {
 }
 
 std::size_t ComplexNumbers::cacheCount() const noexcept {
-  return cacheManager->getUsedCount();
+  return cacheManager->getStats().numUsed;
 }
 
 std::size_t ComplexNumbers::realCount() const noexcept {
-  return uniqueTable->getStats().entryCount;
+  return uniqueTable->getStats().numEntries;
 }
 
 } // namespace dd

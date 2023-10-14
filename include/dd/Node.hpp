@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dd/CachedEdge.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Edge.hpp"
 
@@ -104,6 +105,10 @@ struct dNode {                        // NOLINT(readability-identifier-naming)
     return p == nullptr;
   }
   static constexpr dNode* getTerminal() noexcept { return nullptr; }
+
+  [[nodiscard]] static constexpr bool isIdentity(const dNode* p) noexcept {
+    return p == nullptr;
+  }
 
   [[nodiscard]] [[maybe_unused]] static inline bool
   tempDensityMatrixFlagsEqual(const std::uint8_t a,

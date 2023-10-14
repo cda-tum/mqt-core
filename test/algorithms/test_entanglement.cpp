@@ -30,8 +30,6 @@ TEST_P(Entanglement, FunctionTest) {
   ASSERT_EQ(qc.getNops(), nq);
   const qc::VectorDD r = dd->multiply(e, dd->makeZeroState(nq));
 
-  ASSERT_EQ(dd->getValueByPath(r, std::string(nq, '0')),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(r, std::string(nq, '1')),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
+  ASSERT_EQ(r.getValueByPath(std::string(nq, '0')), dd::SQRT2_2);
+  ASSERT_EQ(r.getValueByPath(std::string(nq, '1')), dd::SQRT2_2);
 }

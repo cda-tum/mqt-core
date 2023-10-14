@@ -63,7 +63,7 @@ public:
   Controls& getControls() override { return op->getControls(); }
 
   [[nodiscard]] std::size_t getNcontrols() const override {
-    return controls.size();
+    return op->getNcontrols();
   }
 
   [[nodiscard]] bool isUnitary() const override { return false; }
@@ -73,6 +73,16 @@ public:
   }
 
   [[nodiscard]] bool actsOn(Qubit i) const override { return op->actsOn(i); }
+
+  void addControl(const Control c) override { op->addControl(c); }
+
+  void clearControls() override { op->clearControls(); }
+
+  void removeControl(const Control c) override { op->removeControl(c); }
+
+  Controls::iterator removeControl(const Controls::iterator it) override {
+    return op->removeControl(it);
+  }
 
   [[nodiscard]] bool equals(const Operation& operation,
                             const Permutation& perm1,
@@ -102,5 +112,7 @@ public:
     of << " == " << expectedValue << ") ";
     op->dumpOpenQASM(of, qreg, creg);
   }
+
+  void invert() override { op->invert(); }
 };
 } // namespace qc

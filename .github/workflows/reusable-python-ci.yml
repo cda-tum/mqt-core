@@ -1,0 +1,141 @@
+name: 🐍 • CI
+
+on:
+  workflow_call:
+    secrets:
+      token:
+        description: "The token to use for Codecov"
+        required: true
+    inputs:
+      setup-z3:
+        description: "Whether to set up Z3"
+        default: false
+        type: boolean
+      z3-version:
+        description: "The version of Z3 to set up"
+        default: "4.11.2"
+        type: string
+
+jobs:
+  lint:
+    name: 🚨 Lint
+    uses: ./.github/workflows/reusable-python-linter.yml
+    with:
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
+
+  python-tests-ubuntu:
+    name: 🐧 ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+    uses: ./.github/workflows/reusable-python-tests.yml
+    with:
+      runs-on: ubuntu-latest
+      python-version: ${{ matrix.python-version }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
+
+  python-tests-macos:
+    name: 🍎 ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.11"]
+    uses: ./.github/workflows/reusable-python-tests.yml
+    with:
+      runs-on: macos-latest
+      python-version: ${{ matrix.python-version }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
+
+  python-tests-windows:
+    name: 🏁 ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.11"]
+    uses: ./.github/workflows/reusable-python-tests.yml
+    with:
+      runs-on: windows-latest
+      python-version: ${{ matrix.python-version }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
+
+  coverage:
+    name: 📈 ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.11"]
+    uses: ./.github/workflows/reusable-python-coverage.yml
+    with:
+      python-version: ${{ matrix.python-version }}
+      setup-z3: ${{ inputs.setup-z3 }}
+      z3-version: ${{ inputs.z3-version }}
+    secrets:
+      token: ${{ secrets.token }}
+
+  minimums:
+    name: 🐍 Minimal Versions
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - if: ${{ inputs.setup-z3 }}
+        name: Setup Z3
+        uses: cda-tum/setup-z3@v1
+        with:
+          version: ${{ inputs.z3-version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          override_cache_key: python-minimums
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+          cache: "pip"
+      - name: Set up mold as linker (Linux only)
+        uses: rui314/setup-mold@v1
+      - name: Tests with minimal versions
+        run: pipx run nox -s minimums -- --cov --cov-report=xml
+      - name: Upload coverage to Codecov
+        # Coverage uploads can be flaky, so we retry them a few times.
+        uses: Wandalen/wretry.action@v1.3.0
+        with:
+          action: codecov/codecov-action@v3
+          attempt_limit: 5
+          attempt_delay: 2000
+          with: |
+            fail_ci_if_error: true
+            flags: python
+            token: ${{ secrets.token }}
+
+  dist:
+    name: 📦 Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - if: ${{ inputs.setup-z3 }}
+        name: Setup Z3
+        uses: cda-tum/setup-z3@v1
+        with:
+          version: ${{ inputs.z3-version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Set up mold as linker (Linux only)
+        uses: rui314/setup-mold@v1
+      - uses: hynek/build-and-inspect-python-package@v1

@@ -208,14 +208,11 @@ TEST_F(DDFunctionality, nonUnitary) {
     dummyMap[i] = i;
   }
   auto barrier =
-      qc::NonUnitaryOperation(nqubits, {0, 1, 2, 3}, qc::OpType::Barrier);
+      qc::StandardOperation(nqubits, {0, 1, 2, 3}, qc::OpType::Barrier);
   EXPECT_EQ(getDD(&barrier, dd), dd->makeIdent(nqubits));
   EXPECT_EQ(getInverseDD(&barrier, dd), dd->makeIdent(nqubits));
   EXPECT_EQ(getDD(&barrier, dd, dummyMap), dd->makeIdent(nqubits));
   EXPECT_EQ(getInverseDD(&barrier, dd, dummyMap), dd->makeIdent(nqubits));
-  for (Qubit i = 0; i < nqubits; ++i) {
-    EXPECT_FALSE(barrier.actsOn(i));
-  }
 }
 
 TEST_F(DDFunctionality, CircuitEquivalence) {
