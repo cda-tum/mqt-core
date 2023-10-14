@@ -21,7 +21,7 @@ void qc::QuantumComputation::importGRCS(std::istream& is) {
     if (identifier == "cz") {
       ss >> control;
       ss >> target;
-      z(target, qc::Control{control});
+      cz(control, target);
     } else if (identifier == "is") {
       ss >> control;
       ss >> target;
@@ -33,9 +33,9 @@ void qc::QuantumComputation::importGRCS(std::istream& is) {
       } else if (identifier == "t") {
         t(target);
       } else if (identifier == "x_1_2") {
-        rx(target, qc::PI_2);
+        rx(qc::PI_2, target);
       } else if (identifier == "y_1_2") {
-        ry(target, qc::PI_2);
+        ry(qc::PI_2, target);
       } else {
         throw QFRException("[grcs parser] unknown gate '" + identifier + "'");
       }

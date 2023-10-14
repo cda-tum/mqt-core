@@ -112,11 +112,8 @@ if(BINDINGS AND NOT TARGET ${PROJECT_NAME}-python)
   endif()
 
   # add Python interface library
-  add_library(
-    ${PROJECT_NAME}-python
-    ${PROJECT_SOURCE_DIR}/include/python/qiskit/QuantumCircuit.hpp
-    ${PROJECT_SOURCE_DIR}/include/python/qiskit/QasmQobjExperiment.hpp
-    python/qiskit/QuantumCircuit.cpp python/qiskit/QasmQobjExperiment.cpp)
+  add_library(${PROJECT_NAME}-python ${PROJECT_SOURCE_DIR}/include/python/qiskit/QuantumCircuit.hpp
+                                     python/qiskit/QuantumCircuit.cpp)
 
   # link with main project library and pybind11 libraries
   target_link_libraries(${PROJECT_NAME}-python PUBLIC ${PROJECT_NAME} pybind11::pybind11

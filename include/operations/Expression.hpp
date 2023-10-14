@@ -73,10 +73,9 @@ public:
     return std::abs(static_cast<double>(coeff)) < TOLERANCE;
   }
 
-  Term(T coef, const Variable v) : coeff(coef), var(v){};
-  explicit Term(const Variable v) : coeff(1), var(v){};
+  explicit Term(const Variable v, T coef = 1.) : coeff(coef), var(v){};
 
-  Term operator-() const { return Term(-coeff, var); }
+  Term operator-() const { return Term(var, -coeff); }
 
   void addCoeff(const T& r) { coeff += r; }
   Term& operator*=(const T& rhs) {
@@ -147,7 +146,7 @@ public:
   }
 
   template <typename... Args> explicit Expression(Variable v, Args&&... ms) {
-    terms.emplace_back(Term(T{1}, v));
+    terms.emplace_back(Term<T>(v));
     (terms.emplace_back(std::forward<Args>(ms)), ...);
     sortTerms();
     aggregateEqualTerms();

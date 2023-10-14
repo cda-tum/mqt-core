@@ -9,8 +9,8 @@
 
 namespace qc {
 static constexpr std::array<qc::OpType, 10> DIAGONAL_GATES = {
-    qc::Barrier, qc::I,    qc::Z,     qc::S,  qc::Sdag,
-    qc::T,       qc::Tdag, qc::Phase, qc::RZ, qc::RZZ};
+    qc::Barrier, qc::I,   qc::Z, qc::S,  qc::Sdg,
+    qc::T,       qc::Tdg, qc::P, qc::RZ, qc::RZZ};
 
 class CircuitOptimizer {
 protected:

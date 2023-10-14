@@ -76,7 +76,7 @@ OpType StandardOperation::parseU3(fp& theta, fp& phi, fp& lambda) {
   checkInteger(theta);
   checkFractionPi(theta);
 
-  return U3;
+  return U;
 }
 
 OpType StandardOperation::parseU2(fp& phi, fp& lambda) {
@@ -104,7 +104,7 @@ OpType StandardOperation::parseU2(fp& phi, fp& lambda) {
     lambda = -PI_2;
     if (std::abs(phi - PI_2) < PARAMETER_TOLERANCE) {
       parameter.clear();
-      return Vdag;
+      return Vdg;
     }
   }
 
@@ -130,31 +130,31 @@ OpType StandardOperation::parseU1(fp& lambda) {
 
   if (std::abs(std::abs(lambda) - PI_2) < PARAMETER_TOLERANCE) {
     parameter.clear();
-    return sign ? Sdag : S;
+    return sign ? Sdg : S;
   }
 
   if (std::abs(std::abs(lambda) - PI_4) < PARAMETER_TOLERANCE) {
     parameter.clear();
-    return sign ? Tdag : T;
+    return sign ? Tdg : T;
   }
 
   checkInteger(lambda);
   checkFractionPi(lambda);
 
-  return Phase;
+  return P;
 }
 
 void StandardOperation::checkUgate() {
   if (parameter.empty()) {
     return;
   }
-  if (type == Phase) {
+  if (type == P) {
     assert(parameter.size() == 1);
     type = parseU1(parameter.at(0));
   } else if (type == U2) {
     assert(parameter.size() == 2);
     type = parseU2(parameter.at(0), parameter.at(1));
-  } else if (type == U3) {
+  } else if (type == U) {
     assert(parameter.size() == 3);
     type = parseU3(parameter.at(0), parameter.at(1), parameter.at(2));
   }
@@ -164,7 +164,7 @@ void StandardOperation::setup(const std::size_t nq, const Qubit startingQubit) {
   nqubits = nq;
   startQubit = startingQubit;
   checkUgate();
-  setName();
+  name = toString(type);
 }
 
 /***
@@ -286,7 +286,7 @@ void StandardOperation::dumpOpenQASM(
       op << "s";
     }
     break;
-  case Sdag:
+  case Sdg:
     if (!controls.empty()) {
       op << "p(-pi/2)";
     } else {
@@ -300,7 +300,7 @@ void StandardOperation::dumpOpenQASM(
       op << "t";
     }
     break;
-  case Tdag:
+  case Tdg:
     if (!controls.empty()) {
       op << "p(-pi/4)";
     } else {
@@ -310,23 +310,23 @@ void StandardOperation::dumpOpenQASM(
   case V:
     op << "u3(pi/2,-pi/2,pi/2)";
     break;
-  case Vdag:
+  case Vdg:
     op << "u3(pi/2,pi/2,-pi/2)";
     break;
-  case U3:
+  case U:
     op << "u3(" << parameter[0] << "," << parameter[1] << "," << parameter[2]
        << ")";
     break;
   case U2:
     op << "u3(pi/2," << parameter[0] << "," << parameter[1] << ")";
     break;
-  case Phase:
+  case P:
     op << "p(" << parameter[0] << ")";
     break;
   case SX:
     op << "sx";
     break;
-  case SXdag:
+  case SXdg:
     op << "sxdg";
     break;
   case RX:
@@ -382,7 +382,7 @@ void StandardOperation::dumpOpenQASM(
     }
     of << " " << qreg[targets[1]].second << ";\n";
     return;
-  case Peresdag:
+  case Peresdg:
     of << op.str() << "x";
     for (const auto& c : controls) {
       of << " " << qreg[c.qubit].second << ",";
@@ -482,7 +482,7 @@ void StandardOperation::invert() {
     break;
   // gates where we just update parameters
   case GPhase:
-  case Phase:
+  case P:
   case RX:
   case RY:
   case RZ:
@@ -497,7 +497,7 @@ void StandardOperation::invert() {
     parameter[0] = -parameter[0] + PI;
     parameter[1] = -parameter[1] - PI;
     break;
-  case U3:
+  case U:
     parameter[0] = -parameter[0];
     parameter[1] = -parameter[1];
     parameter[2] = -parameter[2];
@@ -512,33 +512,33 @@ void StandardOperation::invert() {
     break;
   // gates where we have specialized inverted operation types
   case S:
-    type = Sdag;
+    type = Sdg;
     break;
-  case Sdag:
+  case Sdg:
     type = S;
     break;
   case T:
-    type = Tdag;
+    type = Tdg;
     break;
-  case Tdag:
+  case Tdg:
     type = T;
     break;
   case V:
-    type = Vdag;
+    type = Vdg;
     break;
-  case Vdag:
+  case Vdg:
     type = V;
     break;
   case SX:
-    type = SXdag;
+    type = SXdg;
     break;
-  case SXdag:
+  case SXdg:
     type = SX;
     break;
   case Peres:
-    type = Peresdag;
+    type = Peresdg;
     break;
-  case Peresdag:
+  case Peresdg:
     type = Peres;
     break;
   // Tracking issue for iSwap: https://github.com/cda-tum/mqt-core/issues/423

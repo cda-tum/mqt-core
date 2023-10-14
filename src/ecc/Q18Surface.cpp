@@ -31,7 +31,7 @@ void Q18Surface::measureAndCorrect() {
     // initialize ancillas: X-check
     for (const auto& [targetIndex, ancillaIndices] : qubitCorrectionX) {
       for (const auto ancilla : ancillaIndices) {
-        qcMapped->x(qubits.at(ancilla), controlQubits.at(targetIndex));
+        qcMapped->cx(controlQubits.at(targetIndex), qubits.at(ancilla));
       }
     }
 
@@ -64,14 +64,12 @@ void Q18Surface::writeDecoding() {
   for (Qubit i = 0; i < nQubits; i++) {
     qcMapped->reset(static_cast<Qubit>(i + X_INFORMATION * nQubits));
     for (const Qubit qubit : ANCILLA_QUBITS_DECODE) {
-      qcMapped->x(static_cast<Qubit>(i + X_INFORMATION * nQubits),
-                  qc::Control{static_cast<Qubit>(i + qubit * nQubits),
-                              qc::Control::Type::Pos});
+      qcMapped->cx(static_cast<Qubit>(i + qubit * nQubits),
+                   static_cast<Qubit>(i + X_INFORMATION * nQubits));
     }
     qcMapped->measure(static_cast<Qubit>(i + X_INFORMATION * nQubits), i);
     qcMapped->reset(i);
-    qcMapped->x(i, qc::Control{static_cast<Qubit>(i + X_INFORMATION * nQubits),
-                               qc::Control::Type::Pos});
+    qcMapped->cx(static_cast<Qubit>(i + X_INFORMATION * nQubits), i);
   }
   isDecoded = true;
 }

@@ -47,41 +47,42 @@ RandomCliffordCircuit::RandomCliffordCircuit(const std::size_t nq,
 
 std::ostream& RandomCliffordCircuit::printStatistics(std::ostream& os) const {
   os << "Random Clifford circuit statistics:\n";
-  os << "\tn: " << nqubits << std::endl;
-  os << "\tm: " << getNindividualOps() << std::endl;
-  os << "\tdepth: " << depth << std::endl;
-  os << "\tseed: " << seed << std::endl;
-  os << "--------------" << std::endl;
+  os << "\tn: " << nqubits << "\n";
+  os << "\tm: " << getNindividualOps() << "\n";
+  os << "\tdepth: " << depth << "\n";
+  os << "\tseed: " << seed << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 
 void RandomCliffordCircuit::append1QClifford(const std::uint16_t idx,
                                              const Qubit target) {
   const auto id = static_cast<std::uint8_t>(idx % 24);
-  emplace_back<CompoundOperation>(nqubits);
-  auto* comp = dynamic_cast<CompoundOperation*>(ops.back().get());
+  auto qc = QuantumComputation(nqubits);
   // Hadamard
   if ((id / 12 % 2) != 0) {
-    comp->emplace_back<StandardOperation>(nqubits, target, H);
+    qc.h(target);
   }
 
   // Rotation
   if (id / 4 % 3 == 1) {
-    comp->emplace_back<StandardOperation>(nqubits, target, H);
-    comp->emplace_back<StandardOperation>(nqubits, target, S);
+    qc.h(target);
+    qc.s(target);
   } else if (id / 4 % 3 == 2) {
-    comp->emplace_back<StandardOperation>(nqubits, target, Sdag);
-    comp->emplace_back<StandardOperation>(nqubits, target, H);
+    qc.sdg(target);
+    qc.h(target);
   }
 
   // Pauli
   if (id % 4 == 1) {
-    comp->emplace_back<StandardOperation>(nqubits, target, Z);
+    qc.z(target);
   } else if (id % 4 == 2) {
-    comp->emplace_back<StandardOperation>(nqubits, target, X);
+    qc.x(target);
   } else if (id % 4 == 3) {
-    comp->emplace_back<StandardOperation>(nqubits, target, Y);
+    qc.y(target);
   }
+  emplace_back<CompoundOperation>(qc.asCompoundOperation());
 }
 
 void RandomCliffordCircuit::append2QClifford(const std::uint16_t idx,
@@ -91,169 +92,150 @@ void RandomCliffordCircuit::append2QClifford(const std::uint16_t idx,
   const auto pauliIdx = static_cast<std::uint8_t>(id % 16);
   id /= 16;
 
-  emplace_back<CompoundOperation>(nqubits);
-  auto* comp = dynamic_cast<CompoundOperation*>(ops.back().get());
+  auto qc = QuantumComputation(nqubits);
   if (id < 36) {
     // single-qubit Cliffords
     if ((id / 9 % 2) != 0) {
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
+      qc.h(control);
     }
     if ((id / 18 % 2) != 0) {
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
+      qc.h(target);
     }
 
     if (id % 3 == 1) {
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
-      comp->emplace_back<StandardOperation>(nqubits, control, S);
+      qc.h(control);
+      qc.s(control);
     } else if (id % 3 == 2) {
-      comp->emplace_back<StandardOperation>(nqubits, control, Sdag);
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
+      qc.sdg(control);
+      qc.h(control);
     }
     if (id / 3 % 3 == 1) {
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
-      comp->emplace_back<StandardOperation>(nqubits, target, S);
+      qc.h(target);
+      qc.s(target);
     } else if (id / 3 % 3 == 2) {
-      comp->emplace_back<StandardOperation>(nqubits, target, Sdag);
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
+      qc.sdg(target);
+      qc.h(target);
     }
   } else if (id < 360) {
     // Cliffords with a single CNOT
     id -= 36;
 
     if ((id / 81 % 2) != 0) {
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
+      qc.h(control);
     }
     if ((id / 162 % 2) != 0) {
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
+      qc.h(target);
     }
 
     if (id % 3 == 1) {
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
-      comp->emplace_back<StandardOperation>(nqubits, control, S);
+      qc.h(control);
+      qc.s(control);
     } else if (id % 3 == 2) {
-      comp->emplace_back<StandardOperation>(nqubits, control, Sdag);
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
+      qc.sdg(control);
+      qc.h(control);
     }
     if (id / 3 % 3 == 1) {
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
-      comp->emplace_back<StandardOperation>(nqubits, target, S);
+      qc.h(target);
+      qc.s(target);
     } else if (id / 3 % 3 == 2) {
-      comp->emplace_back<StandardOperation>(nqubits, target, Sdag);
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
+      qc.sdg(target);
+      qc.h(target);
     }
 
-    comp->emplace_back<StandardOperation>(nqubits, qc::Control{control}, target,
-                                          X);
+    qc.cx(control, target);
 
     if (id / 9 % 3 == 1) {
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
-      comp->emplace_back<StandardOperation>(nqubits, control, S);
+      qc.h(control);
+      qc.s(control);
     } else if (id / 9 % 3 == 2) {
-      comp->emplace_back<StandardOperation>(nqubits, control, Sdag);
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
+      qc.sdg(control);
+      qc.h(control);
     }
     if (id / 27 % 3 == 1) {
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
-      comp->emplace_back<StandardOperation>(nqubits, target, S);
+      qc.h(target);
+      qc.s(target);
     } else if (id / 27 % 3 == 2) {
-      comp->emplace_back<StandardOperation>(nqubits, target, Sdag);
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
+      qc.sdg(target);
+      qc.h(target);
     }
   } else if (id < 684) {
     // Cliffords with two CNOTs
     id -= 360;
 
     if ((id / 81 % 2) != 0) {
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
+      qc.h(control);
     }
     if ((id / 162 % 2) != 0) {
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
+      qc.h(target);
     }
 
     if (id % 3 == 1) {
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
-      comp->emplace_back<StandardOperation>(nqubits, control, S);
+      qc.h(control);
+      qc.s(control);
     } else if (id % 3 == 2) {
-      comp->emplace_back<StandardOperation>(nqubits, control, Sdag);
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
+      qc.sdg(control);
+      qc.h(control);
     }
     if (id / 3 % 3 == 1) {
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
-      comp->emplace_back<StandardOperation>(nqubits, target, S);
+      qc.h(target);
+      qc.s(target);
     } else if (id / 3 % 3 == 2) {
-      comp->emplace_back<StandardOperation>(nqubits, target, Sdag);
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
+      qc.sdg(target);
+      qc.h(target);
     }
 
-    comp->emplace_back<StandardOperation>(nqubits, qc::Control{control}, target,
-                                          X);
-    comp->emplace_back<StandardOperation>(nqubits, qc::Control{target}, control,
-                                          X);
+    qc.cx(control, target);
+    qc.cx(target, control);
 
     if (id / 9 % 3 == 1) {
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
-      comp->emplace_back<StandardOperation>(nqubits, control, S);
+      qc.h(control);
+      qc.s(control);
     } else if (id / 9 % 3 == 2) {
-      comp->emplace_back<StandardOperation>(nqubits, control, Sdag);
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
-    }
-    if (id / 27 % 3 == 1) {
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
-      comp->emplace_back<StandardOperation>(nqubits, target, S);
-    } else if (id / 27 % 3 == 2) {
-      comp->emplace_back<StandardOperation>(nqubits, target, Sdag);
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
+      qc.sdg(control);
+      qc.h(control);
     }
   } else {
     // Cliffords with a SWAP
     id -= 684;
 
     if ((id / 9 % 2) != 0) {
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
+      qc.h(control);
     }
     if ((id / 18 % 2) != 0) {
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
+      qc.h(target);
     }
 
     if (id % 3 == 1) {
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
-      comp->emplace_back<StandardOperation>(nqubits, control, S);
+      qc.h(control);
+      qc.s(control);
     } else if (id % 3 == 2) {
-      comp->emplace_back<StandardOperation>(nqubits, control, Sdag);
-      comp->emplace_back<StandardOperation>(nqubits, control, H);
-    }
-    if (id / 3 % 3 == 1) {
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
-      comp->emplace_back<StandardOperation>(nqubits, target, S);
-    } else if (id / 3 % 3 == 2) {
-      comp->emplace_back<StandardOperation>(nqubits, target, Sdag);
-      comp->emplace_back<StandardOperation>(nqubits, target, H);
+      qc.sdg(control);
+      qc.h(control);
     }
 
-    comp->emplace_back<StandardOperation>(nqubits, qc::Control{control}, target,
-                                          X);
-    comp->emplace_back<StandardOperation>(nqubits, qc::Control{target}, control,
-                                          X);
-    comp->emplace_back<StandardOperation>(nqubits, qc::Control{control}, target,
-                                          X);
+    qc.cx(control, target);
+    qc.cx(target, control);
+    qc.cx(control, target);
   }
 
   // random Pauli on control qubit
   if (pauliIdx % 4 == 1) {
-    comp->emplace_back<StandardOperation>(nqubits, control, Z);
+    qc.z(control);
   } else if (pauliIdx % 4 == 2) {
-    comp->emplace_back<StandardOperation>(nqubits, control, X);
+    qc.x(control);
   } else if (pauliIdx % 4 == 3) {
-    comp->emplace_back<StandardOperation>(nqubits, control, Y);
+    qc.y(control);
   }
 
   // random Pauli on target qubit
   if (pauliIdx / 4 == 1) {
-    comp->emplace_back<StandardOperation>(nqubits, target, Z);
+    qc.z(target);
   } else if (pauliIdx / 4 == 2) {
-    comp->emplace_back<StandardOperation>(nqubits, target, X);
+    qc.x(target);
   } else if (pauliIdx / 4 == 3) {
-    comp->emplace_back<StandardOperation>(nqubits, target, Y);
+    qc.y(target);
   }
+
+  emplace_back<CompoundOperation>(qc.asCompoundOperation());
 }
 } // namespace qc

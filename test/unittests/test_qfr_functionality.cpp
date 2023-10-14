@@ -27,9 +27,9 @@ protected:
 TEST_F(QFRFunctionality, fuseCxToSwap) {
   const std::size_t nqubits = 2;
   QuantumComputation qc(nqubits);
-  qc.x(1, 0_pc);
-  qc.x(0, 1_pc);
-  qc.x(1, 0_pc);
+  qc.cx(0, 1);
+  qc.cx(1, 0);
+  qc.cx(0, 1);
   CircuitOptimizer::swapReconstruction(qc);
   const auto& op = qc.front();
   EXPECT_TRUE(op->isStandardOperation());
@@ -41,8 +41,8 @@ TEST_F(QFRFunctionality, fuseCxToSwap) {
 TEST_F(QFRFunctionality, replaceCxToSwapAtEnd) {
   const std::size_t nqubits = 2;
   QuantumComputation qc(nqubits);
-  qc.x(1, 0_pc);
-  qc.x(0, 1_pc);
+  qc.cx(0, 1);
+  qc.cx(1, 0);
   CircuitOptimizer::swapReconstruction(qc);
   auto it = qc.begin();
   const auto& op = *it;
@@ -62,8 +62,8 @@ TEST_F(QFRFunctionality, replaceCxToSwapAtEnd) {
 TEST_F(QFRFunctionality, replaceCxToSwap) {
   const std::size_t nqubits = 2;
   QuantumComputation qc(nqubits);
-  qc.x(1, 0_pc);
-  qc.x(0, 1_pc);
+  qc.cx(0, 1);
+  qc.cx(1, 0);
   qc.h(0);
   CircuitOptimizer::swapReconstruction(qc);
   auto it = qc.begin();
@@ -82,7 +82,7 @@ TEST_F(QFRFunctionality, replaceCxToSwap) {
 
 TEST_F(QFRFunctionality, removeTrailingIdleQubits) {
   const std::size_t nqubits = 4;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.x(0);
   qc.x(2);
   std::cout << qc;
@@ -252,7 +252,7 @@ TEST_F(QFRFunctionality, eliminateInverseInCompoundOperation) {
   const std::size_t nqubits = 1;
   QuantumComputation qc(nqubits);
   qc.s(0);
-  qc.sdag(0);
+  qc.sdg(0);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::singleQubitGateFusion(qc);
@@ -265,8 +265,8 @@ TEST_F(QFRFunctionality, eliminateInverseInCompoundOperation) {
 TEST_F(QFRFunctionality, unknownInverseInCompoundOperation) {
   const std::size_t nqubits = 1;
   QuantumComputation qc(nqubits);
-  qc.phase(0, 1.);
-  qc.phase(0, -1.);
+  qc.p(1., 0);
+  qc.p(-1., 0);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::singleQubitGateFusion(qc);
@@ -277,7 +277,7 @@ TEST_F(QFRFunctionality, unknownInverseInCompoundOperation) {
 
 TEST_F(QFRFunctionality, removeDiagonalSingleQubitBeforeMeasure) {
   const std::size_t nqubits = 1;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.z(0);
   qc.measure(0, 0);
   std::cout << "-----------------------------\n";
@@ -291,7 +291,7 @@ TEST_F(QFRFunctionality, removeDiagonalSingleQubitBeforeMeasure) {
 
 TEST_F(QFRFunctionality, removeDiagonalCompoundOpBeforeMeasure) {
   const std::size_t nqubits = 1;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.z(0);
   qc.t(0);
   qc.measure(0, 0);
@@ -307,8 +307,8 @@ TEST_F(QFRFunctionality, removeDiagonalCompoundOpBeforeMeasure) {
 
 TEST_F(QFRFunctionality, removeDiagonalTwoQubitGateBeforeMeasure) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
-  qc.z(1, 0_pc);
+  QuantumComputation qc(nqubits, nqubits);
+  qc.cz(0, 1);
   qc.measure({0, 1}, {0, 1});
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
@@ -321,8 +321,8 @@ TEST_F(QFRFunctionality, removeDiagonalTwoQubitGateBeforeMeasure) {
 
 TEST_F(QFRFunctionality, leaveGateBeforeMeasure) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
-  qc.z(1, 0_pc);
+  QuantumComputation qc(nqubits, nqubits);
+  qc.cz(0, 1);
   qc.x(0);
   qc.measure({0, 1}, {0, 1});
   std::cout << "-----------------------------\n";
@@ -335,16 +335,16 @@ TEST_F(QFRFunctionality, leaveGateBeforeMeasure) {
 
 TEST_F(QFRFunctionality, removeComplexGateBeforeMeasure) {
   const std::size_t nqubits = 4;
-  QuantumComputation qc(nqubits);
-  qc.z(1, 0_pc);
+  QuantumComputation qc(nqubits, nqubits);
+  qc.cz(0, 1);
   qc.x(0);
-  qc.z(2, 1_pc);
-  qc.z(1, 0_pc);
+  qc.cz(1, 2);
+  qc.cz(0, 1);
   qc.z(0);
-  qc.z(2, 1_pc);
+  qc.cz(1, 2);
   qc.x(3);
   qc.t(3);
-  qc.z(3, {0_pc, 1_pc, 2_pc});
+  qc.mcz({0, 1, 2}, 3);
   qc.measure({0, 1, 2, 3}, {0, 1, 2, 3});
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
@@ -356,7 +356,7 @@ TEST_F(QFRFunctionality, removeComplexGateBeforeMeasure) {
 
 TEST_F(QFRFunctionality, removeSimpleCompoundOpBeforeMeasure) {
   const std::size_t nqubits = 1;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.x(0);
   qc.t(0);
   qc.measure(0, 0);
@@ -371,7 +371,7 @@ TEST_F(QFRFunctionality, removeSimpleCompoundOpBeforeMeasure) {
 
 TEST_F(QFRFunctionality, removePartOfCompoundOpBeforeMeasure) {
   const std::size_t nqubits = 1;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.t(0);
   qc.x(0);
   qc.t(0);
@@ -387,7 +387,7 @@ TEST_F(QFRFunctionality, removePartOfCompoundOpBeforeMeasure) {
 
 TEST_F(QFRFunctionality, decomposeSWAPsUndirectedArchitecture) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.swap(0, 1);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
@@ -514,7 +514,7 @@ TEST_F(QFRFunctionality, decomposeSWAPsCompoundDirected) {
 
 TEST_F(QFRFunctionality, removeFinalMeasurements) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.h(0);
   qc.h(1);
   qc.measure(0, 0);
@@ -540,7 +540,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurements) {
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsTwoQubitMeasurement) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.h(0);
   qc.h(1);
   qc.measure({0, 1}, {0, 1});
@@ -565,8 +565,8 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsTwoQubitMeasurement) {
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompound) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
-  QuantumComputation comp(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
+  QuantumComputation comp(nqubits, nqubits);
   comp.measure(0, 0);
   comp.measure(1, 1);
   comp.h(1);
@@ -593,8 +593,8 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsCompound) {
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundDegraded) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
-  QuantumComputation comp(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
+  QuantumComputation comp(nqubits, nqubits);
   comp.measure(0, 0);
   comp.h(1);
   qc.emplace_back(comp.asOperation());
@@ -618,8 +618,8 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundDegraded) {
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsCompoundEmpty) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
-  QuantumComputation comp(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
+  QuantumComputation comp(nqubits, nqubits);
   comp.measure(0, 0);
   qc.emplace_back(comp.asCompoundOperation());
   qc.h(1);
@@ -654,7 +654,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
 
 TEST_F(QFRFunctionality, removeFinalMeasurementsWithBarrier) {
   const std::size_t nqubits = 2;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   qc.barrier({0, 1});
   qc.measure(0, 0);
   qc.measure(1, 1);
@@ -676,101 +676,101 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
   //  - with multiple controls.
   // Then, we clone the circuit and check if the resulting circuit contains the
   // same number of gates.
-  QuantumComputation qc(5);
+  QuantumComputation qc(5, 5);
   qc.gphase(PI);
   qc.i(0);
-  qc.i(0, 1_pc);
-  qc.i(0, {1_pc, 2_nc});
+  qc.ci(1, 0);
+  qc.mci({1, 2_nc}, 0);
   qc.h(0);
-  qc.h(0, 1_pc);
-  qc.h(0, {1_pc, 2_nc});
+  qc.ch(1, 0);
+  qc.mch({1, 2_nc}, 0);
   qc.x(0);
-  qc.x(0, 1_pc);
-  qc.x(0, {1_pc, 2_nc});
+  qc.cx(1, 0);
+  qc.mcx({1, 2_nc}, 0);
   qc.y(0);
-  qc.y(0, 1_pc);
-  qc.y(0, {1_pc, 2_nc});
+  qc.cy(1, 0);
+  qc.mcy({1, 2_nc}, 0);
   qc.z(0);
-  qc.z(0, 1_pc);
-  qc.z(0, {1_pc, 2_nc});
+  qc.cz(1, 0);
+  qc.mcz({1, 2_nc}, 0);
   qc.s(0);
-  qc.s(0, 1_pc);
-  qc.s(0, {1_pc, 2_nc});
-  qc.sdag(0);
-  qc.sdag(0, 1_pc);
-  qc.sdag(0, {1_pc, 2_nc});
+  qc.cs(1, 0);
+  qc.mcs({1, 2_nc}, 0);
+  qc.sdg(0);
+  qc.csdg(1, 0);
+  qc.mcsdg({1, 2_nc}, 0);
   qc.t(0);
-  qc.t(0, 1_pc);
-  qc.t(0, {1_pc, 2_nc});
-  qc.tdag(0);
-  qc.tdag(0, 1_pc);
-  qc.tdag(0, {1_pc, 2_nc});
+  qc.ct(1, 0);
+  qc.mct({1, 2_nc}, 0);
+  qc.tdg(0);
+  qc.ctdg(1, 0);
+  qc.mctdg({1, 2_nc}, 0);
   qc.v(0);
-  qc.v(0, 1_pc);
-  qc.v(0, {1_pc, 2_nc});
-  qc.vdag(0);
-  qc.vdag(0, 1_pc);
-  qc.vdag(0, {1_pc, 2_nc});
-  qc.u3(0, PI, PI, PI);
-  qc.u3(0, 1_pc, PI, PI, PI);
-  qc.u3(0, {1_pc, 2_nc}, PI, PI, PI);
-  qc.u2(0, PI, PI);
-  qc.u2(0, 1_pc, PI, PI);
-  qc.u2(0, {1_pc, 2_nc}, PI, PI);
-  qc.phase(0, PI);
-  qc.phase(0, 1_pc, PI);
-  qc.phase(0, {1_pc, 2_nc}, PI);
+  qc.cv(1, 0);
+  qc.mcv({1, 2_nc}, 0);
+  qc.vdg(0);
+  qc.cvdg(1, 0);
+  qc.mcvdg({1, 2_nc}, 0);
+  qc.u(PI, PI, PI, 0);
+  qc.cu(PI, PI, PI, 1, 0);
+  qc.mcu(PI, PI, PI, {1, 2_nc}, 0);
+  qc.u2(PI, PI, 0);
+  qc.cu2(PI, PI, 1, 0);
+  qc.mcu2(PI, PI, {1, 2_nc}, 0);
+  qc.p(PI, 0);
+  qc.cp(PI, 1, 0);
+  qc.mcp(PI, {1, 2_nc}, 0);
   qc.sx(0);
-  qc.sx(0, 1_pc);
-  qc.sx(0, {1_pc, 2_nc});
-  qc.sxdag(0);
-  qc.sxdag(0, 1_pc);
-  qc.sxdag(0, {1_pc, 2_nc});
-  qc.rx(0, PI);
-  qc.rx(0, 1_pc, PI);
-  qc.rx(0, {1_pc, 2_nc}, PI);
-  qc.ry(0, PI);
-  qc.ry(0, 1_pc, PI);
-  qc.ry(0, {1_pc, 2_nc}, PI);
-  qc.rz(0, PI);
-  qc.rz(0, 1_pc, PI);
-  qc.rz(0, {1_pc, 2_nc}, PI);
+  qc.csx(1, 0);
+  qc.mcsx({1, 2_nc}, 0);
+  qc.sxdg(0);
+  qc.csxdg(1, 0);
+  qc.mcsxdg({1, 2_nc}, 0);
+  qc.rx(PI, 0);
+  qc.crx(PI, 1, 0);
+  qc.mcrx(PI, {1, 2_nc}, 0);
+  qc.ry(PI, 0);
+  qc.cry(PI, 1, 0);
+  qc.mcry(PI, {1, 2_nc}, 0);
+  qc.rz(PI, 0);
+  qc.crz(PI, 1, 0);
+  qc.mcrz(PI, {1, 2_nc}, 0);
   qc.swap(0, 1);
-  qc.swap(0, 1, 2_pc);
-  qc.swap(0, 1, {2_pc, 3_nc});
+  qc.cswap(2, 0, 1);
+  qc.mcswap({2, 3_nc}, 0, 1);
   qc.iswap(0, 1);
-  qc.iswap(0, 1, 2_pc);
-  qc.iswap(0, 1, {2_pc, 3_nc});
+  qc.ciswap(2, 0, 1);
+  qc.mciswap({2, 3_nc}, 0, 1);
   qc.peres(0, 1);
-  qc.peres(0, 1, 2_pc);
-  qc.peres(0, 1, {2_pc, 3_nc});
-  qc.peresdag(0, 1);
-  qc.peresdag(0, 1, 2_pc);
-  qc.peresdag(0, 1, {2_pc, 3_nc});
+  qc.cperes(2, 0, 1);
+  qc.mcperes({2, 3_nc}, 0, 1);
+  qc.peresdg(0, 1);
+  qc.cperesdg(2, 0, 1);
+  qc.mcperesdg({2, 3_nc}, 0, 1);
   qc.dcx(0, 1);
-  qc.dcx(0, 1, 2_pc);
-  qc.dcx(0, 1, {2_pc, 3_nc});
+  qc.cdcx(2, 0, 1);
+  qc.mcdcx({2, 3_nc}, 0, 1);
   qc.ecr(0, 1);
-  qc.ecr(0, 1, 2_pc);
-  qc.ecr(0, 1, {2_pc, 3_nc});
-  qc.rxx(0, 1, PI);
-  qc.rxx(0, 1, 2_pc, PI);
-  qc.rxx(0, 1, {2_pc, 3_nc}, PI);
-  qc.ryy(0, 1, PI);
-  qc.ryy(0, 1, 2_pc, PI);
-  qc.ryy(0, 1, {2_pc, 3_nc}, PI);
-  qc.rzz(0, 1, PI);
-  qc.rzz(0, 1, 2_pc, PI);
-  qc.rzz(0, 1, {2_pc, 3_nc}, PI);
-  qc.rzx(0, 1, PI);
-  qc.rzx(0, 1, 2_pc, PI);
-  qc.rzx(0, 1, {2_pc, 3_nc}, PI);
-  qc.xx_minus_yy(0, 1, PI, PI);
-  qc.xx_minus_yy(0, 1, 2_pc, PI, PI);
-  qc.xx_minus_yy(0, 1, {2_pc, 3_nc}, PI, PI);
-  qc.xx_plus_yy(0, 1, PI, PI);
-  qc.xx_plus_yy(0, 1, 2_pc, PI, PI);
-  qc.xx_plus_yy(0, 1, {2_pc, 3_nc}, PI, PI);
+  qc.cecr(2, 0, 1);
+  qc.mcecr({2, 3_nc}, 0, 1);
+  qc.rxx(PI, 0, 1);
+  qc.crxx(PI, 2, 0, 1);
+  qc.mcrxx(PI, {2, 3_nc}, 0, 1);
+  qc.ryy(PI, 0, 1);
+  qc.cryy(PI, 2, 0, 1);
+  qc.mcryy(PI, {2, 3_nc}, 0, 1);
+  qc.rzz(PI, 0, 1);
+  qc.crzz(PI, 2, 0, 1);
+  qc.mcrzz(PI, {2, 3_nc}, 0, 1);
+  qc.rzx(PI, 0, 1);
+  qc.crzx(PI, 2, 0, 1);
+  qc.mcrzx(PI, {2, 3_nc}, 0, 1);
+  qc.xx_minus_yy(PI, PI, 0, 1);
+  qc.cxx_minus_yy(PI, PI, 2, 0, 1);
+  qc.mcxx_minus_yy(PI, PI, {2, 3_nc}, 0, 1);
+  qc.xx_plus_yy(PI, PI, 0, 1);
+  qc.cxx_plus_yy(PI, PI, 2, 0, 1);
+  qc.mcxx_plus_yy(PI, PI, {2, 3_nc}, 0, 1);
   qc.measure(0, 0);
   qc.measure({1, 2}, {1, 2});
   qc.barrier(0);
@@ -778,21 +778,21 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
   qc.reset(0);
   qc.reset({1, 2});
 
-  auto qcCloned = qc.clone();
+  const auto qcCloned = qc;
   ASSERT_EQ(qc.size(), qcCloned.size());
   ASSERT_EQ(qcCloned.getGlobalPhase(), PI);
 }
 
 TEST_F(QFRFunctionality, cloningDifferentOperations) {
   const std::size_t nqubits = 5;
-  QuantumComputation qc(nqubits);
+  QuantumComputation qc(nqubits, nqubits);
   QuantumComputation comp(nqubits);
   comp.barrier(0);
   comp.h(0);
   qc.emplace_back(comp.asOperation());
   qc.classicControlled(qc::X, 0, qc.getCregs().at("c"), 1);
 
-  auto qcCloned = qc.clone();
+  const auto qcCloned = qc;
   ASSERT_EQ(qc.size(), qcCloned.size());
 }
 
@@ -924,7 +924,7 @@ TEST_F(QFRFunctionality, eliminateResetsMultipleTargetReset) {
   qc.reset({0, 1});
   qc.x(0);
   qc.z(1);
-  qc.x(0, 1_pc);
+  qc.cx(1, 0);
 
   std::cout << qc << "\n";
 
@@ -965,13 +965,13 @@ TEST_F(QFRFunctionality, eliminateResetsMultipleTargetReset) {
 }
 
 TEST_F(QFRFunctionality, eliminateResetsCompoundOperation) {
-  QuantumComputation qc(2U);
+  QuantumComputation qc(2U, 2U);
 
   qc.reset(0);
   qc.reset(1);
 
-  QuantumComputation comp(2U);
-  comp.x(0, 1_pc);
+  QuantumComputation comp(2U, 2U);
+  comp.cx(1, 0);
   comp.reset(0);
   comp.measure(0, 0);
   comp.classicControlled(qc::X, 0, {0, 1U}, 1U);
@@ -1442,7 +1442,7 @@ TEST_F(QFRFunctionality, deferMeasurementsErrorOnImplicitReset) {
   // Error, since the classic-controlled operation targets the qubit being
   // measured (this implicitly realizes a reset operation)
 
-  QuantumComputation qc{1};
+  QuantumComputation qc(1U, 1U);
   qc.h(0);
   qc.measure(0, 0U);
   qc.classicControlled(qc::X, 0, {0, 1U}, 1U);
@@ -1539,13 +1539,13 @@ TEST_F(QFRFunctionality, OperationEquality) {
   EXPECT_TRUE(x0.equals(x1, perm0, {}));
   EXPECT_TRUE(x0.equals(x1, {}, perm0));
 
-  const auto cx01 = StandardOperation(2U, 0_pc, 1, qc::X);
-  const auto cx10 = StandardOperation(2U, 1_pc, 0, qc::X);
+  const auto cx01 = StandardOperation(2U, 0, 1, qc::X);
+  const auto cx10 = StandardOperation(2U, 1, 0, qc::X);
   EXPECT_FALSE(cx01.equals(cx10));
   EXPECT_FALSE(x0.equals(cx01));
 
-  const auto p = StandardOperation(1U, 0, qc::Phase, {2.0});
-  const auto pm = StandardOperation(1U, 0, qc::Phase, {-2.0});
+  const auto p = StandardOperation(1U, 0, qc::P, {2.0});
+  const auto pm = StandardOperation(1U, 0, qc::P, {-2.0});
   EXPECT_FALSE(p.equals(pm));
 
   const auto measure0 = NonUnitaryOperation(2U, 0, 0U);
@@ -1603,8 +1603,8 @@ TEST_F(QFRFunctionality, OperationEquality) {
 
 TEST_F(QFRFunctionality, CNOTCancellation1) {
   QuantumComputation qc(2);
-  qc.x(0, 1_pc);
-  qc.x(0, 1_pc);
+  qc.cx(1, 0);
+  qc.cx(1, 0);
 
   CircuitOptimizer::cancelCNOTs(qc);
   EXPECT_TRUE(qc.empty());
@@ -1622,7 +1622,7 @@ TEST_F(QFRFunctionality, CNOTCancellation2) {
 TEST_F(QFRFunctionality, CNOTCancellation3) {
   QuantumComputation qc(2);
   qc.swap(0, 1);
-  qc.x(0, 1_pc);
+  qc.cx(1, 0);
 
   CircuitOptimizer::cancelCNOTs(qc);
   EXPECT_TRUE(qc.size() == 2U);
@@ -1639,7 +1639,7 @@ TEST_F(QFRFunctionality, CNOTCancellation3) {
 
 TEST_F(QFRFunctionality, CNOTCancellation4) {
   QuantumComputation qc(2);
-  qc.x(0, 1_pc);
+  qc.cx(1, 0);
   qc.swap(0, 1);
 
   CircuitOptimizer::cancelCNOTs(qc);
@@ -1657,9 +1657,9 @@ TEST_F(QFRFunctionality, CNOTCancellation4) {
 
 TEST_F(QFRFunctionality, CNOTCancellation5) {
   QuantumComputation qc(2);
-  qc.x(0, 1_pc);
-  qc.x(1, 0_pc);
-  qc.x(0, 1_pc);
+  qc.cx(1, 0);
+  qc.cx(0, 1);
+  qc.cx(1, 0);
 
   CircuitOptimizer::cancelCNOTs(qc);
   EXPECT_TRUE(qc.size() == 1U);
@@ -1678,11 +1678,10 @@ TEST_F(QFRFunctionality, IndexOutOfRange) {
   qc.x(0);
 
   EXPECT_THROW(qc.x(1), QFRException);
-  EXPECT_THROW(qc.x(0, 1_nc), QFRException);
-  EXPECT_THROW(qc.x(0, {2_nc, 1_nc}), QFRException);
+  EXPECT_THROW(qc.cx(1_nc, 0), QFRException);
+  EXPECT_THROW(qc.mcx({2_nc, 1_nc}, 0), QFRException);
   EXPECT_THROW(qc.swap(0, 1), QFRException);
-  EXPECT_THROW(qc.swap(0, 2, 1_nc), QFRException);
-  EXPECT_THROW(qc.swap(0, 2, 1_nc), QFRException);
+  EXPECT_THROW(qc.cswap(1_nc, 0, 2), QFRException);
   EXPECT_THROW(qc.reset({0, 1, 2}), QFRException);
 }
 
@@ -1721,10 +1720,10 @@ TEST_F(QFRFunctionality, AddAncillaryQubits) {
 }
 
 TEST_F(QFRFunctionality, SingleQubitGateCount) {
-  QuantumComputation qc(2);
+  QuantumComputation qc(2U, 2U);
   qc.x(0);
   qc.h(0);
-  qc.x(0, 1_pc);
+  qc.cx(1, 0);
   qc.z(0);
   qc.measure(0, 0);
 
@@ -1748,16 +1747,16 @@ TEST_F(QFRFunctionality, CircuitDepthStandardOperations) {
   QuantumComputation qc(2);
   qc.h(0);
   qc.h(1);
-  qc.x(0, 1_pc);
+  qc.cx(1, 0);
 
   EXPECT_EQ(qc.getDepth(), 2U);
 }
 
 TEST_F(QFRFunctionality, CircuitDepthNonUnitaryOperations) {
-  QuantumComputation qc(2);
+  QuantumComputation qc(2U, 2U);
   qc.h(0);
   qc.h(1);
-  qc.x(0, 1_pc);
+  qc.cx(1, 0);
   qc.barrier({0, 1});
   qc.measure(0, 0);
   qc.measure(1, 1);
@@ -1770,7 +1769,7 @@ TEST_F(QFRFunctionality, CircuitDepthCompoundOperation) {
   QuantumComputation comp(2);
   comp.h(0);
   comp.h(1);
-  comp.x(0, 1_pc);
+  comp.cx(1, 0);
 
   QuantumComputation qc(2);
   qc.emplace_back(comp.asOperation());
@@ -1779,7 +1778,7 @@ TEST_F(QFRFunctionality, CircuitDepthCompoundOperation) {
 }
 
 TEST_F(QFRFunctionality, CircuitToOperation) {
-  QuantumComputation qc(2);
+  QuantumComputation qc(2U, 2U);
   EXPECT_EQ(qc.asOperation(), nullptr);
   qc.x(0);
   const auto& op = qc.asOperation();
@@ -1790,7 +1789,7 @@ TEST_F(QFRFunctionality, CircuitToOperation) {
   EXPECT_TRUE(qc.empty());
   qc.x(0);
   qc.h(0);
-  qc.classicControlled(qc::X, 0, 1_pc, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 0, 1, {0, 1U}, 1U);
   const auto& op2 = qc.asOperation();
   EXPECT_EQ(op2->getType(), qc::Compound);
   EXPECT_EQ(op2->getNqubits(), 2U);
@@ -1799,7 +1798,7 @@ TEST_F(QFRFunctionality, CircuitToOperation) {
 
 TEST_F(QFRFunctionality, AvoidStrippingIdleQubitWhenInOutputPermutation) {
   // a qubit being present in the output permutation should not be stripped
-  QuantumComputation qc(2);
+  QuantumComputation qc(2U, 2U);
   qc.measure(1, 0);
   qc.initializeIOMapping();
   qc.stripIdleQubits();
@@ -1828,17 +1827,17 @@ TEST_F(QFRFunctionality, RzAndPhaseDifference) {
 
 TEST_F(QFRFunctionality, U3toU2Gate) {
   QuantumComputation qc(1);
-  qc.u3(0, PI_2, 0., PI);      // H
-  qc.u3(0, PI_2, 0., 0.);      // RY(pi/2)
-  qc.u3(0, PI_2, -PI_2, PI_2); // V = RX(pi/2)
-  qc.u3(0, PI_2, PI_2, -PI_2); // Vdag = RX(-pi/2)
-  qc.u3(0, PI_2, 0.25, 0.5);   // U2(0.25, 0.5)
+  qc.u(PI_2, 0., PI, 0);      // H
+  qc.u(PI_2, 0., 0., 0);      // RY(pi/2)
+  qc.u(PI_2, -PI_2, PI_2, 0); // V = RX(pi/2)
+  qc.u(PI_2, PI_2, -PI_2, 0); // Vdag = RX(-pi/2)
+  qc.u(PI_2, 0.25, 0.5, 0);   // U2(0.25, 0.5)
   std::cout << qc << "\n";
   EXPECT_EQ(qc.at(0)->getType(), qc::H);
   EXPECT_EQ(qc.at(1)->getType(), qc::RY);
   EXPECT_EQ(qc.at(1)->getParameter().at(0), PI_2);
   EXPECT_EQ(qc.at(2)->getType(), qc::V);
-  EXPECT_EQ(qc.at(3)->getType(), qc::Vdag);
+  EXPECT_EQ(qc.at(3)->getType(), qc::Vdg);
   EXPECT_EQ(qc.at(4)->getType(), qc::U2);
   EXPECT_EQ(qc.at(4)->getParameter().at(0), 0.25);
   EXPECT_EQ(qc.at(4)->getParameter().at(1), 0.5);
@@ -1846,33 +1845,33 @@ TEST_F(QFRFunctionality, U3toU2Gate) {
 
 TEST_F(QFRFunctionality, U3toU1Gate) {
   QuantumComputation qc(1);
-  qc.u3(0, 0., 0., 0.);    // I
-  qc.u3(0, 0., 0., PI);    // Z
-  qc.u3(0, 0., 0., PI_2);  // S
-  qc.u3(0, 0., 0., -PI_2); // Sdg
-  qc.u3(0, 0., 0., PI_4);  // T
-  qc.u3(0, 0., 0., -PI_4); // Tdg
-  qc.u3(0, 0., 0., 0.5);   // p(0.5)
+  qc.u(0., 0., 0., 0);    // I
+  qc.u(0., 0., PI, 0);    // Z
+  qc.u(0., 0., PI_2, 0);  // S
+  qc.u(0., 0., -PI_2, 0); // Sdg
+  qc.u(0., 0., PI_4, 0);  // T
+  qc.u(0., 0., -PI_4, 0); // Tdg
+  qc.u(0., 0., 0.5, 0);   // p(0.5)
 
   std::cout << qc << "\n";
   EXPECT_EQ(qc.at(0)->getType(), qc::I);
   EXPECT_EQ(qc.at(1)->getType(), qc::Z);
   EXPECT_EQ(qc.at(2)->getType(), qc::S);
-  EXPECT_EQ(qc.at(3)->getType(), qc::Sdag);
+  EXPECT_EQ(qc.at(3)->getType(), qc::Sdg);
   EXPECT_EQ(qc.at(4)->getType(), qc::T);
-  EXPECT_EQ(qc.at(5)->getType(), qc::Tdag);
-  EXPECT_EQ(qc.at(6)->getType(), qc::Phase);
+  EXPECT_EQ(qc.at(5)->getType(), qc::Tdg);
+  EXPECT_EQ(qc.at(6)->getType(), qc::P);
   EXPECT_EQ(qc.at(6)->getParameter().at(0), 0.5);
 }
 
 TEST_F(QFRFunctionality, U3SpecialCases) {
   QuantumComputation qc(1);
-  qc.u3(0, 0.5, 0., 0.);      // RY(0.5)
-  qc.u3(0, 0.5, -PI_2, PI_2); // RX(0.5)
-  qc.u3(0, 0.5, PI_2, -PI_2); // RX(-0.5)
-  qc.u3(0, PI, PI_2, PI_2);   // Y
-  qc.u3(0, PI, 0., PI);       // X
-  qc.u3(0, 0.5, 0.25, 0.125); // U3(0.5, 0.25, 0.125)
+  qc.u(0.5, 0., 0., 0);      // RY(0.5)
+  qc.u(0.5, -PI_2, PI_2, 0); // RX(0.5)
+  qc.u(0.5, PI_2, -PI_2, 0); // RX(-0.5)
+  qc.u(PI, PI_2, PI_2, 0);   // Y
+  qc.u(PI, 0., PI, 0);       // X
+  qc.u(0.5, 0.25, 0.125, 0); // U3(0.5, 0.25, 0.125)
 
   std::cout << qc << "\n";
   EXPECT_EQ(qc.at(0)->getType(), qc::RY);
@@ -1883,7 +1882,7 @@ TEST_F(QFRFunctionality, U3SpecialCases) {
   EXPECT_EQ(qc.at(2)->getParameter().at(0), -0.5);
   EXPECT_EQ(qc.at(3)->getType(), qc::Y);
   EXPECT_EQ(qc.at(4)->getType(), qc::X);
-  EXPECT_EQ(qc.at(5)->getType(), qc::U3);
+  EXPECT_EQ(qc.at(5)->getType(), qc::U);
   EXPECT_EQ(qc.at(5)->getParameter().at(0), 0.5);
   EXPECT_EQ(qc.at(5)->getParameter().at(1), 0.25);
   EXPECT_EQ(qc.at(5)->getParameter().at(2), 0.125);
@@ -1905,9 +1904,9 @@ TEST_F(QFRFunctionality, OpNameToTypeSimple) {
 
   EXPECT_EQ(qc::OpType::H, qc::opTypeFromString("h"));
   EXPECT_EQ(qc::OpType::S, qc::opTypeFromString("s"));
-  EXPECT_EQ(qc::OpType::Sdag, qc::opTypeFromString("sdg"));
+  EXPECT_EQ(qc::OpType::Sdg, qc::opTypeFromString("sdg"));
   EXPECT_EQ(qc::OpType::T, qc::opTypeFromString("t"));
-  EXPECT_EQ(qc::OpType::Tdag, qc::opTypeFromString("tdg"));
+  EXPECT_EQ(qc::OpType::Tdg, qc::opTypeFromString("tdg"));
 
   EXPECT_EQ(qc::OpType::X, qc::opTypeFromString("cnot"));
 
@@ -1931,19 +1930,19 @@ TEST_F(QFRFunctionality, dumpAndImportTeleportation) {
 
 TEST_F(QFRFunctionality, addControlStandardOperation) {
   auto op = StandardOperation(3, 0, OpType::X);
-  op.addControl(1_pc);
-  op.addControl(2_pc);
+  op.addControl(1);
+  op.addControl(2);
   ASSERT_EQ(op.getNcontrols(), 2);
-  const auto expectedControls = Controls{1_pc, 2_pc};
+  const auto expectedControls = Controls{1, 2};
   EXPECT_EQ(op.getControls(), expectedControls);
-  op.removeControl(1_pc);
-  const auto expectedControlsAfterRemove = Controls{2_pc};
+  op.removeControl(1);
+  const auto expectedControlsAfterRemove = Controls{2};
   EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
-  ASSERT_THROW(op.removeControl(1_pc), QFRException);
+  ASSERT_THROW(op.removeControl(1), QFRException);
 
-  op.addControl(1_pc);
+  op.addControl(1);
   const auto& controls = op.getControls();
   EXPECT_EQ(op.removeControl(controls.begin()), controls.end());
 }
@@ -1951,19 +1950,19 @@ TEST_F(QFRFunctionality, addControlStandardOperation) {
 TEST_F(QFRFunctionality, addControlSymbolicOperation) {
   auto op = SymbolicOperation(3, 0, OpType::X);
 
-  op.addControl(1_pc);
-  op.addControl(2_pc);
+  op.addControl(1);
+  op.addControl(2);
 
   ASSERT_EQ(op.getNcontrols(), 2);
-  auto expectedControls = Controls{1_pc, 2_pc};
+  auto expectedControls = Controls{1, 2};
   EXPECT_EQ(op.getControls(), expectedControls);
-  op.removeControl(1_pc);
-  auto expectedControlsAfterRemove = Controls{2_pc};
+  op.removeControl(1);
+  auto expectedControlsAfterRemove = Controls{2};
   EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
 
-  op.addControl(1_pc);
+  op.addControl(1);
   const auto& controls = op.getControls();
   EXPECT_EQ(op.removeControl(controls.begin()), controls.end());
 }
@@ -1975,18 +1974,18 @@ TEST_F(QFRFunctionality, addControlClassicControlledOperation) {
   const auto expectedValue = 0U;
   auto op = ClassicControlledOperation(xp, controlRegister, expectedValue);
 
-  op.addControl(1_pc);
-  op.addControl(2_pc);
+  op.addControl(1);
+  op.addControl(2);
 
   ASSERT_EQ(op.getNcontrols(), 2);
-  auto expectedControls = Controls{1_pc, 2_pc};
+  auto expectedControls = Controls{1, 2};
   EXPECT_EQ(op.getControls(), expectedControls);
-  op.removeControl(1_pc);
-  auto expectedControlsAfterRemove = Controls{2_pc};
+  op.removeControl(1);
+  auto expectedControlsAfterRemove = Controls{2};
   EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
-  op.addControl(1_pc);
+  op.addControl(1);
   const auto& controls = op.getControls();
   EXPECT_EQ(op.removeControl(controls.begin()), controls.end());
 }
@@ -1995,8 +1994,8 @@ TEST_F(QFRFunctionality, addControlNonUnitaryOperation) {
   auto op = NonUnitaryOperation(1U, 0U, Measure);
 
   EXPECT_THROW(static_cast<void>(op.getControls()), QFRException);
-  EXPECT_THROW(op.addControl(1_pc), QFRException);
-  EXPECT_THROW(op.removeControl(1_pc), QFRException);
+  EXPECT_THROW(op.addControl(1), QFRException);
+  EXPECT_THROW(op.removeControl(1), QFRException);
   EXPECT_THROW(op.clearControls(), QFRException);
   // we pass an invalid iterator to removeControl, which is fine, since the
   // function call should unconditionally trap
@@ -2006,8 +2005,8 @@ TEST_F(QFRFunctionality, addControlNonUnitaryOperation) {
 TEST_F(QFRFunctionality, addControlCompundOperation) {
   auto op = CompoundOperation(4);
 
-  auto control0 = 0_pc;
-  auto control1 = 1_pc;
+  auto control0 = 0U;
+  auto control1 = 1U;
 
   auto xOp = std::make_unique<StandardOperation>(4, Targets{1}, OpType::X);
   auto cxOp = std::make_unique<StandardOperation>(4, Targets{3}, OpType::X);
@@ -2030,7 +2029,7 @@ TEST_F(QFRFunctionality, addControlCompundOperation) {
 }
 
 TEST_F(QFRFunctionality, addControlTwice) {
-  auto control = 0_pc;
+  auto control = 0U;
 
   std::unique_ptr<Operation> op =
       std::make_unique<StandardOperation>(2, Targets{1}, OpType::X);
@@ -2048,7 +2047,7 @@ TEST_F(QFRFunctionality, addControlTwice) {
 
 TEST_F(QFRFunctionality, addTargetAsControl) {
   // Adding a control that is already a target
-  auto control = 1_pc;
+  auto control = 1U;
 
   std::unique_ptr<Operation> op =
       std::make_unique<StandardOperation>(2, Targets{1}, OpType::X);
@@ -2065,7 +2064,7 @@ TEST_F(QFRFunctionality, addTargetAsControl) {
 TEST_F(QFRFunctionality, addControlCompundOperationInvalid) {
   auto op = CompoundOperation(4);
 
-  auto control1 = 1_pc;
+  auto control1 = 1U;
 
   auto xOp = std::make_unique<StandardOperation>(4, Targets{1}, OpType::X);
   auto cxOp = std::make_unique<StandardOperation>(4, Targets{3}, OpType::X);
@@ -2100,13 +2099,13 @@ TEST_F(QFRFunctionality, invertStandardOpInvertClone) {
   auto op1 = StandardOperation(1U, 0U, S);
   auto op2 = op1.getInverted();
   ASSERT_EQ(op1.getType(), S);
-  ASSERT_EQ(op2->getType(), Sdag);
+  ASSERT_EQ(op2->getType(), Sdg);
 }
 
 TEST_F(QFRFunctionality, invertStandardOpSpecial) {
   const auto opTypes = {
-      std::pair{S, Sdag},   std::pair{T, Tdag},         std::pair{V, Vdag},
-      std::pair{SX, SXdag}, std::pair{Peres, Peresdag},
+      std::pair{S, Sdg},   std::pair{T, Tdg},         std::pair{V, Vdg},
+      std::pair{SX, SXdg}, std::pair{Peres, Peresdg},
   };
 
   for (const auto& [opType, opTypeInv] : opTypes) {
@@ -2123,7 +2122,7 @@ TEST_F(QFRFunctionality, invertStandardOpSpecial) {
 TEST_F(QFRFunctionality, invertStandardOpParamChange) {
   const auto cases = {
       std::tuple{OpType::GPhase, std::vector<fp>{1}, std::vector<fp>{-1}},
-      std::tuple{OpType::Phase, std::vector<fp>{1}, std::vector<fp>{-1}},
+      std::tuple{OpType::P, std::vector<fp>{1}, std::vector<fp>{-1}},
       std::tuple{OpType::RX, std::vector<fp>{1}, std::vector<fp>{-1}},
       std::tuple{OpType::RY, std::vector<fp>{1}, std::vector<fp>{-1}},
       std::tuple{OpType::RZ, std::vector<fp>{1}, std::vector<fp>{-1}},
@@ -2133,7 +2132,7 @@ TEST_F(QFRFunctionality, invertStandardOpParamChange) {
       std::tuple{OpType::RZX, std::vector<fp>{1}, std::vector<fp>{-1}},
       std::tuple{OpType::U2, std::vector<fp>{1, 1},
                  std::vector<fp>{-1 + PI, -1 - PI}},
-      std::tuple{OpType::U3, std::vector<fp>{1, 2, 3},
+      std::tuple{OpType::U, std::vector<fp>{1, 2, 3},
                  std::vector<fp>{-1, -3, -2}},
       std::tuple{OpType::XXminusYY, std::vector<fp>{1}, std::vector<fp>{-1}},
       std::tuple{OpType::XXplusYY, std::vector<fp>{1}, std::vector<fp>{-1}},
@@ -2161,7 +2160,7 @@ TEST_F(QFRFunctionality, invertCompoundOperation) {
 
   op.invert();
 
-  ASSERT_EQ(op.getOps()[0]->getType(), OpType::Sdag);
+  ASSERT_EQ(op.getOps()[0]->getType(), OpType::Sdg);
   ASSERT_EQ(op.getOps()[1]->getType(), OpType::RZ);
   ASSERT_EQ(op.getOps()[1]->getParameter(), std::vector<fp>{-1});
   ASSERT_EQ(op.getOps()[2]->getType(), OpType::X);
@@ -2178,7 +2177,7 @@ TEST_F(QFRFunctionality, invertSymbolicOpParamChange) {
       std::tuple{OpType::U2, std::vector<SymbolOrNumber>{Symbolic({x}), 1.0},
                  std::vector<SymbolOrNumber>{-1.0 + PI, -Symbolic({x}) - PI}},
       std::tuple{
-          OpType::U3,
+          OpType::U,
           std::vector<SymbolOrNumber>{Symbolic({x}), 2.0, Symbolic({y})},
           std::vector<SymbolOrNumber>{-Symbolic({x}), -Symbolic({y}), -2.0}},
       std::tuple{OpType::XXminusYY, std::vector<SymbolOrNumber>{Symbolic({x})},
@@ -2202,4 +2201,44 @@ TEST_F(QFRFunctionality, invertSymbolicOpParamChange) {
   op.invert();
   const auto expectedTargets = Targets{1U, 0U};
   ASSERT_EQ(op.getTargets(), expectedTargets);
+}
+
+TEST_F(QFRFunctionality, measureAll) {
+  qc::QuantumComputation qc(2U);
+  qc.measureAll();
+  std::cout << qc << "\n";
+  EXPECT_EQ(qc.getNops(), 3U);
+  EXPECT_EQ(qc.getNcbits(), 2U);
+  EXPECT_EQ(qc.getCregs().size(), 1U);
+  EXPECT_EQ(qc.getClassicalRegister(0U), "meas");
+  EXPECT_EQ(qc.getClassicalRegister(1U), "meas");
+}
+
+TEST_F(QFRFunctionality, measureAllExistingRegister) {
+  qc::QuantumComputation qc(2U, 2U);
+  qc.measureAll(false);
+  std::cout << qc << "\n";
+  EXPECT_EQ(qc.getNops(), 3U);
+  EXPECT_EQ(qc.getNcbits(), 2U);
+  EXPECT_EQ(qc.getCregs().size(), 1U);
+  EXPECT_EQ(qc.getClassicalRegister(0U), "c");
+  EXPECT_EQ(qc.getClassicalRegister(1U), "c");
+}
+
+TEST_F(QFRFunctionality, measureAllInsufficientRegisterSize) {
+  qc::QuantumComputation qc(2U, 1U);
+  EXPECT_THROW(qc.measureAll(false), QFRException);
+}
+
+TEST_F(QFRFunctionality, checkClassicalRegisters) {
+  qc::QuantumComputation qc(1U, 1U);
+  EXPECT_THROW(qc.classicControlled(qc::X, 0U, {0U, 2U}), QFRException);
+}
+
+TEST_F(QFRFunctionality, MeasurementSanityCheck) {
+  qc::QuantumComputation qc(1U);
+  qc.addClassicalRegister(1U, "c");
+
+  EXPECT_THROW(qc.measure(0, {"c", 1U}), QFRException);
+  EXPECT_THROW(qc.measure(0, {"d", 0U}), QFRException);
 }

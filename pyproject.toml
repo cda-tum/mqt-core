@@ -36,18 +36,29 @@ requires-python = ">=3.8"
 dynamic = ["version"]
 
 [project.optional-dependencies]
-test = ["pytest>=7.0"]
+test = ["pytest>=7.0", "mqt.core[qiskit]"]
 coverage = ["mqt.core[test]", "pytest-cov"]
 docs = [
     "furo>=2023.08.17",
-    "sphinx~=7.0",
+    "sphinx",
     "myst_parser>=0.13",
     "setuptools-scm>=7",
     "sphinx-copybutton",
     "sphinx_design",
     "sphinxext-opengraph",
+    "sphinxcontrib-bibtex>=2.4.2",
+    "pybtex>=0.24",
+    "ipython",
+    "ipykernel",
+    "nbsphinx",
+    "sphinx-autodoc-typehints",
+    "sphinx-autoapi",
+    "qiskit-terra[visualization]"
 ]
-dev = ["mqt.core[coverage, docs]"]
+qiskit = [
+   "qiskit-terra>=0.22.0",
+]
+dev = ["mqt.core[coverage, docs]",]
 
 [project.urls]
 Homepage = "https://github.com/cda-tum/mqt-core"
@@ -122,16 +133,21 @@ line-length = 120
 minversion = "7.0"
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
-filterwarnings = ["error"]
+filterwarnings = ["error", 'ignore:.*qiskit.__qiskit_version__.*:DeprecationWarning:qiskit:']
 log_cli_level = "info"
 testpaths = ["test/python"]
 
 
 [tool.coverage]
 run.source = ["mqt.core"]
+run.omit = [
+    'src/mqt/core/_compat/*',
+]
 report.exclude_also = [
     '\.\.\.',
     'if TYPE_CHECKING:',
+    'raise AssertionError',
+    'raise NotImplementedError',
 ]
 
 
@@ -147,6 +163,9 @@ disallow_untyped_defs = false
 explicit_package_bases = true
 warn_unreachable = true
 
+[[tool.mypy.overrides]]
+module = ["qiskit.*", "matplotlib.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
@@ -183,21 +202,32 @@ select = [
     "SLOT",        # flake8-slots
     "SIM",         # flake8-simplify
     "TCH",         # flake8-type-checking
-    "TID",         # flake8-tidy-imports
+    "TID251",      # flake8-tidy-imports.banned-api
     "TRY",         # tryceratops
     "UP",          # pyupgrade
     "YTT",         # flake8-2020
 ]
 extend-ignore = [
-    "ANN101",  # Missing type annotation for self in method
-    "ANN102",  # Missing type annotation for cls in classmethod
     "E501",    # Line too long (Black is enough)
     "PLR",     # Design related pylint codes
 ]
+typing-modules = ["mqt.core._compat.typing"]
 src = ["src"]
 flake8-unused-arguments.ignore-variadic-names = true
 isort.required-imports = ["from __future__ import annotations"]
 line-length = 120
+
+[tool.ruff.flake8-tidy-imports.banned-api]
+"typing.Callable".msg = "Use collections.abc.Callable instead."
+"typing.Iterator".msg = "Use collections.abc.Iterator instead."
+"typing.Mapping".msg = "Use collections.abc.Mapping instead."
+"typing.Sequence".msg = "Use collections.abc.Sequence instead."
+"typing.Set".msg = "Use collections.abc.Set instead."
+"typing.Self".msg = "Use scikit_build_core._compat.typing.Self instead."
+"typing_extensions.Self".msg = "Use scikit_build_core._compat.typing.Self instead."
+"typing.assert_never".msg = "Use scikit_build_core._compat.typing.assert_never instead."
+"importlib.resources".msg = "Use scikit_build_core._compat.importlib.resources instead."
+"importlib_resources".msg = "Use scikit_build_core._compat.importlib.resources instead."
 
 [tool.ruff.per-file-ignores]
 "*.pyi" = ["D"]  # pydocstyle
@@ -206,6 +236,7 @@ line-length = 120
     "E402", # Allow imports to appear anywhere in Jupyter notebooks
     "I002", # Allow missing `from __future__ import annotations` import
 ]
+"src/mqt/core/_compat/**.py" = ["TID251"]
 
 [tool.ruff.pydocstyle]
 convention = "google"

@@ -1,6 +1,7 @@
 #include "QuantumComputation.hpp"
 
-#include "gtest/gtest.h"
+#include <filesystem>
+#include <gtest/gtest.h>
 #include <iostream>
 #include <string>
 
@@ -64,6 +65,8 @@ TEST_P(IO, importAndDump) {
   ASSERT_NO_THROW(qc->dump(output2, format));
 
   compareFiles(output, output2, true);
+  std::filesystem::remove(output);
+  std::filesystem::remove(output2);
 }
 
 TEST_F(IO, importFromString) {
@@ -142,6 +145,7 @@ TEST_F(IO, dumpNegativeControl) {
   ++it;
   EXPECT_EQ((*it)->getType(), qc::X);
   EXPECT_EQ((*it)->getControls().size(), 0);
+  std::filesystem::remove("testdump.qasm");
 }
 
 TEST_F(IO, qiskitMcxGray) {
@@ -369,7 +373,7 @@ TEST_F(IO, PeresDumpIsValid) {
 
 TEST_F(IO, PeresdagDumpIsValid) {
   qc->addQubitRegister(2);
-  qc->peresdag(0, 1);
+  qc->peresdg(0, 1);
   std::cout << *qc << "\n";
   std::stringstream ss{};
   qc->dumpOpenQASM(ss);
@@ -408,7 +412,7 @@ TEST_F(IO, sxAndSxdag) {
   auto& op1 = *(qc->begin());
   EXPECT_EQ(op1->getType(), qc::OpType::SX);
   auto& op2 = *(++qc->begin());
-  EXPECT_EQ(op2->getType(), qc::OpType::SXdag);
+  EXPECT_EQ(op2->getType(), qc::OpType::SXdg);
   auto& op3 = *(++(++qc->begin()));
   ASSERT_TRUE(op3->isCompoundOperation());
   auto* compOp = dynamic_cast<qc::CompoundOperation*>(op3.get());
@@ -416,7 +420,7 @@ TEST_F(IO, sxAndSxdag) {
   auto& compOp1 = *(compOp->begin());
   EXPECT_EQ(compOp1->getType(), qc::OpType::SX);
   auto& compOp2 = *(++compOp->begin());
-  EXPECT_EQ(compOp2->getType(), qc::OpType::SXdag);
+  EXPECT_EQ(compOp2->getType(), qc::OpType::SXdg);
 }
 
 TEST_F(IO, unifyRegisters) {
@@ -609,4 +613,26 @@ TEST_F(IO, ParametrizedGateDefinition) {
   ASSERT_NE(rx, nullptr);
   EXPECT_EQ(rz->getParameter().at(0), 2 * std::cos(qc::PI_4));
   EXPECT_EQ(rx->getParameter().at(0), 0.5 * std::sin(qc::PI_2));
+}
+
+TEST_F(IO, NonExistingInclude) {
+  std::stringstream ss{};
+  ss << "include \"qelib.inc\";\n";
+  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
+}
+
+TEST_F(IO, NonStandardInclude) {
+  std::ofstream ofs{"defs.inc"};
+  ofs << "gate foo q { h q; }\n";
+  ofs.close();
+  std::stringstream ss{};
+  ss << "include \"defs.inc\";\n"
+     << "qreg q[1];\n"
+     << "foo q[0];\n";
+  qc->import(ss, qc::Format::OpenQASM);
+  std::cout << *qc << "\n";
+  EXPECT_EQ(qc->getNqubits(), 1U);
+  EXPECT_EQ(qc->getNops(), 1U);
+  EXPECT_EQ(qc->at(0)->getType(), qc::H);
+  std::filesystem::remove("defs.inc");
 }
