@@ -259,7 +259,6 @@ public:
     // been collected
     if (mCollect > 0 || dCollect > 0) {
       matrixAdd.clear();
-      matrixTranspose.clear();
       conjugateMatrixTranspose.clear();
       matrixKronecker.clear();
       matrixVectorMultiplication.clear();
@@ -275,7 +274,6 @@ public:
     if (cCollect > 0) {
       matrixVectorMultiplication.clear();
       matrixMatrixMultiplication.clear();
-      matrixTranspose.clear();
       conjugateMatrixTranspose.clear();
       vectorInnerProduct.clear();
       vectorKronecker.clear();
@@ -1094,23 +1092,12 @@ private:
       return;
     }
 
-    p->setIdentity(false);
-    p->setSymmetric(false);
-
-    // check if matrix is symmetric
-    const auto& e0 = p->e[0];
-    const auto& e3 = p->e[3];
-    if (!mNode::isSymmetric(e0.p) || !mNode::isSymmetric(e3.p)) {
-      return;
-    }
-    if (transpose(p->e[1]) != p->e[2]) {
-      return;
-    }
-    p->setSymmetric(true);
-
     // check if matrix resembles identity
+    p->setIdentity(false);
+    const auto& e0 = p->e[0];
     const auto& e1 = p->e[1];
     const auto& e2 = p->e[2];
+    const auto& e3 = p->e[3];
     if (!mNode::isIdentity(e0.p) || !e1.w.exactlyZero() ||
         !e2.w.exactlyZero() || !e0.w.exactlyOne() || !e3.w.exactlyOne() ||
         !mNode::isIdentity(e3.p)) {
@@ -1294,7 +1281,6 @@ public:
   void clearComputeTables() {
     vectorAdd.clear();
     matrixAdd.clear();
-    matrixTranspose.clear();
     conjugateMatrixTranspose.clear();
     matrixMatrixMultiplication.clear();
     matrixVectorMultiplication.clear();
@@ -1679,37 +1665,9 @@ public:
   ///
   /// Matrix (conjugate) transpose
   ///
-  UnaryComputeTable<mEdge, mEdge, Config::CT_MAT_TRANS_NBUCKET>
-      matrixTranspose{};
   UnaryComputeTable<mEdge, mEdge, Config::CT_MAT_CONJ_TRANS_NBUCKET>
       conjugateMatrixTranspose{};
 
-  mEdge transpose(const mEdge& a) {
-    if (a.isTerminal() || a.p->isSymmetric()) {
-      return a;
-    }
-
-    // check in compute table
-    if (const auto* r = matrixTranspose.lookup(a); r != nullptr) {
-      return *r;
-    }
-
-    std::array<mEdge, NEDGE> e{};
-    // transpose sub-matrices and rearrange as required
-    for (auto i = 0U; i < RADIX; ++i) {
-      for (auto j = 0U; j < RADIX; ++j) {
-        e[RADIX * i + j] = transpose(a.p->e[RADIX * j + i]);
-      }
-    }
-    // create new top node
-    auto res = makeDDNode(a.p->v, e);
-    // adjust top weight
-    res.w = cn.lookup(cn.mulTemp(res.w, a.w));
-
-    // put in compute table
-    matrixTranspose.insert(a, res);
-    return res;
-  }
   mEdge conjugateTranspose(const mEdge& a) {
     if (a.isTerminal()) { // terminal case
       return {a.p, ComplexNumbers::conj(a.w)};

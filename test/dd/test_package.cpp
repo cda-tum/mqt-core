@@ -766,28 +766,6 @@ TEST(DDPackageTest, UniqueTableAllocation) {
   EXPECT_EQ(dd->vMemoryManager.getStats().numAllocated, allocs);
 }
 
-TEST(DDPackageTest, MatrixTranspose) {
-  auto dd = std::make_unique<dd::Package<>>(2);
-  auto cx = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
-
-  // transposing a symmetric matrix shall yield a symmetric matrix
-  auto cxTransposed = dd->transpose(cx);
-  EXPECT_EQ(cxTransposed, cx);
-
-  // the Y gate is not symmetric
-  auto y = dd->makeGateDD(dd::Ymat, 2, 0);
-  auto yTransposed = dd->transpose(y);
-  EXPECT_NE(yTransposed, y);
-
-  // transposing twice should yield the original matrix
-  auto yTT = dd->transpose(yTransposed);
-  EXPECT_EQ(yTT, y);
-
-  // perform the same computation again -> trigger a compute table hit
-  auto yAgain = dd->transpose(yTransposed);
-  EXPECT_EQ(yAgain, y);
-}
-
 TEST(DDPackageTest, SpecialCaseTerminal) {
   auto dd = std::make_unique<dd::Package<>>(2);
   auto one = dd::vEdge::one;
