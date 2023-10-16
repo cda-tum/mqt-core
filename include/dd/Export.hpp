@@ -154,9 +154,9 @@ inline std::string conditionalFormat(const Complex& a,
   return ss.str();
 }
 
-template <class Edge>
-static std::ostream& header(const Edge& e, std::ostream& os, bool edgeLabels,
-                            bool formatAsPolar = true) {
+template <class Node>
+static std::ostream& header(const Edge<Node>& e, std::ostream& os,
+                            bool edgeLabels, bool formatAsPolar = true) {
   os << "digraph \"DD\" {graph[];node[shape=plain];edge[arrowhead=none]\n";
   os << "root [label=\"\",shape=point,style=invis]\n";
   os << "t [label=<<font "
@@ -183,8 +183,8 @@ static std::ostream& header(const Edge& e, std::ostream& os, bool edgeLabels,
 
   return os;
 }
-template <class Edge>
-static std::ostream& coloredHeader(const Edge& e, std::ostream& os,
+template <class Node>
+static std::ostream& coloredHeader(const Edge<Node>& e, std::ostream& os,
                                    bool edgeLabels, bool formatAsPolar = true) {
   os << "digraph \"DD\" {graph[];node[shape=plain];edge[arrowhead=none]\n";
   os << "root [label=\"\",shape=point,style=invis]\n";
@@ -210,8 +210,8 @@ static std::ostream& coloredHeader(const Edge& e, std::ostream& os,
   os << "]\n";
   return os;
 }
-template <class Edge>
-static std::ostream& memoryHeader(const Edge& e, std::ostream& os,
+template <class Node>
+static std::ostream& memoryHeader(const Edge<Node>& e, std::ostream& os,
                                   bool edgeLabels) {
   os << "digraph \"DD\" {graph[];node[shape=plain];edge[arrowhead=none]\n";
   os << "root [label=\"\",shape=point,style=invis]\n";
@@ -412,8 +412,8 @@ classicNode(const vEdge& e, std::ostream& os, bool formatAsPolar = true) {
      << "\"]\n";
   return os;
 }
-template <class Edge>
-static std::ostream& memoryNode(const Edge& e, std::ostream& os) {
+template <class Node>
+static std::ostream& memoryNode(const Edge<Node>& e, std::ostream& os) {
   constexpr std::size_t n = std::tuple_size_v<decltype(e.p->e)>;
   auto nodelabel = (reinterpret_cast<std::uintptr_t>(e.p) & 0x001fffffU) >>
                    1U; // this allows for 2^20 (roughly 1e6) unique nodes
@@ -426,7 +426,7 @@ static std::ostream& memoryNode(const Edge& e, std::ostream& os) {
   for (std::size_t i = 0; i < n; ++i) {
     os << "<td port=\"" << i << R"(" href="javascript:;" border="0" tooltip=")"
        << e.p->e[i].w.toString(false, 4) << "\">";
-    if (e.p->e[i] == Edge::zero) {
+    if (e.p->e[i] == Edge<Node>::zero) {
       os << "&nbsp;0 "
             "";
     } else {
@@ -593,8 +593,8 @@ coloredEdge(const vEdge& from, const vEdge& to, std::uint16_t idx,
 
   return os;
 }
-template <class Edge>
-static std::ostream& memoryEdge(const Edge& from, const Edge& to,
+template <class Node>
+static std::ostream& memoryEdge(const Edge<Node>& from, const Edge<Node>& to,
                                 std::uint16_t idx, std::ostream& os,
                                 bool edgeLabels = false) {
   auto fromlabel =
@@ -644,8 +644,8 @@ static std::ostream& memoryEdge(const Edge& from, const Edge& to,
   return os;
 }
 
-template <class Edge>
-static void toDot(const Edge& e, std::ostream& os, bool colored = true,
+template <class Node>
+static void toDot(const Edge<Node>& e, std::ostream& os, bool colored = true,
                   bool edgeLabels = false, bool classic = false,
                   bool memory = false, bool formatAsPolar = true) {
   std::ostringstream oss{};
@@ -661,7 +661,7 @@ static void toDot(const Edge& e, std::ostream& os, bool colored = true,
 
   std::unordered_set<decltype(e.p)> nodes{};
 
-  auto priocmp = [](const Edge* left, const Edge* right) {
+  auto priocmp = [](const Edge<Node>* left, const Edge<Node>* right) {
     if (left->p == nullptr) {
       return right->p != nullptr;
     }
@@ -671,7 +671,8 @@ static void toDot(const Edge& e, std::ostream& os, bool colored = true,
     return left->p->v < right->p->v;
   };
 
-  std::priority_queue<const Edge*, std::vector<const Edge*>, decltype(priocmp)>
+  std::priority_queue<const Edge<Node>*, std::vector<const Edge<Node>*>,
+                      decltype(priocmp)>
       q(priocmp);
   q.push(&e);
 
@@ -729,11 +730,11 @@ static void toDot(const Edge& e, std::ostream& os, bool colored = true,
   os << oss.str() << std::flush;
 }
 
-template <class Edge>
+template <class Node>
 [[maybe_unused]] static void
-export2Dot(Edge basic, const std::string& outputFilename, bool colored = true,
-           bool edgeLabels = false, bool classic = false, bool memory = false,
-           bool show = true, bool formatAsPolar = true) {
+export2Dot(Edge<Node> basic, const std::string& outputFilename,
+           bool colored = true, bool edgeLabels = false, bool classic = false,
+           bool memory = false, bool show = true, bool formatAsPolar = true) {
   std::ofstream init(outputFilename);
   toDot(basic, init, colored, edgeLabels, classic, memory, formatAsPolar);
   init.close();
@@ -926,8 +927,9 @@ static void serializeMatrix(const mEdge& basic, std::int64_t& idx,
   std::unordered_set<mNode*> visited{};
   serializeMatrix(basic, idx, nodeIndex, visited, os, writeBinary);
 }
-template <class Edge>
-static void serialize(const Edge& basic, const std::string& outputFilename,
+template <class Node>
+static void serialize(const Edge<Node>& basic,
+                      const std::string& outputFilename,
                       bool writeBinary = false) {
   std::ofstream ofs = std::ofstream(outputFilename, std::ios::binary);
 
@@ -938,10 +940,10 @@ static void serialize(const Edge& basic, const std::string& outputFilename,
   serialize(basic, ofs, writeBinary);
 }
 
-template <typename Edge>
-static void exportEdgeWeights(const Edge& edge, std::ostream& stream) {
+template <typename Node>
+static void exportEdgeWeights(const Edge<Node>& edge, std::ostream& stream) {
   struct Priocmp {
-    bool operator()(const Edge* left, const Edge* right) {
+    bool operator()(const Edge<Node>* left, const Edge<Node>* right) {
       if (left->p == nullptr) {
         return right->p != nullptr;
       }
@@ -956,7 +958,9 @@ static void exportEdgeWeights(const Edge& edge, std::ostream& stream) {
 
   std::unordered_set<decltype(edge.p)> nodes{};
 
-  std::priority_queue<const Edge*, std::vector<const Edge*>, Priocmp> q;
+  std::priority_queue<const Edge<Node>*, std::vector<const Edge<Node>*>,
+                      Priocmp>
+      q;
   q.push(&edge);
 
   // bfs until finished
