@@ -1538,9 +1538,9 @@ public:
 
     for (dd::Qubit p = 1; p < numberOfQubits; p++) {
       if (p == index) {
-        f = makeDDNode(static_cast<dd::Qubit>(p), measureMatrix);
+        f = makeDDNode(p, measureMatrix);
       } else {
-        f = makeDDNode(static_cast<dd::Qubit>(p), identityMatrix);
+        f = makeDDNode(p, identityMatrix);
       }
       measOp = kronecker(measOp, f);
     }
