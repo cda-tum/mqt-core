@@ -474,30 +474,6 @@ TEST(DDPackageTest, SerializationErrors) {
   EXPECT_THROW(dd->deserialize<dd::mNode>(ss), std::runtime_error);
 }
 
-TEST(DDPackageTest, TestConsistency) {
-  auto dd = std::make_unique<dd::Package<>>(2);
-
-  auto hGate = dd->makeGateDD(dd::Hmat, 2, 1);
-  auto cxGate = dd->makeGateDD(dd::Xmat, 2, 1_pc, 0);
-  auto zeroState = dd->makeZeroState(2);
-
-  auto bellMatrix = dd->multiply(cxGate, hGate);
-  dd->incRef(bellMatrix);
-  auto local = dd->isLocallyConsistent(bellMatrix);
-  EXPECT_TRUE(local);
-  auto global = dd->isGloballyConsistent(bellMatrix);
-  EXPECT_TRUE(global);
-  dd->debugnode(bellMatrix.p);
-
-  auto bellState = dd->multiply(bellMatrix, zeroState);
-  dd->incRef(bellState);
-  local = dd->isLocallyConsistent(bellState);
-  EXPECT_TRUE(local);
-  global = dd->isGloballyConsistent(bellState);
-  EXPECT_TRUE(global);
-  dd->debugnode(bellState.p);
-}
-
 TEST(DDPackageTest, Extend) {
   auto dd = std::make_unique<dd::Package<>>(4);
 
@@ -533,33 +509,6 @@ TEST(DDPackageTest, Identity) {
 
   auto idCached = dd->makeIdent(4);
   EXPECT_EQ(id4, idCached);
-}
-
-TEST(DDPackageTest, TestLocalInconsistency) {
-  auto dd = std::make_unique<dd::Package<>>(3);
-
-  auto hGate = dd->makeGateDD(dd::Hmat, 2, 0);
-  auto cxGate = dd->makeGateDD(dd::Xmat, 2, 0_pc, 1);
-  auto zeroState = dd->makeZeroState(2);
-
-  auto bellState = dd->multiply(dd->multiply(cxGate, hGate), zeroState);
-  auto local = dd->isLocallyConsistent(bellState);
-  EXPECT_FALSE(local);
-  bellState.p->ref = 1;
-  local = dd->isLocallyConsistent(bellState);
-  EXPECT_FALSE(local);
-  bellState.p->ref = 0;
-  dd->incRef(bellState);
-
-  bellState.p->v = 2;
-  local = dd->isLocallyConsistent(bellState);
-  EXPECT_FALSE(local);
-  bellState.p->v = 1;
-
-  bellState.p->e[0].w.r->ref = 0;
-  local = dd->isLocallyConsistent(bellState);
-  EXPECT_FALSE(local);
-  bellState.p->e[0].w.r->ref = 1;
 }
 
 TEST(DDPackageTest, Ancillaries) {
@@ -793,7 +742,6 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
   EXPECT_EQ(dd->kronecker(zero, one), zero);
   EXPECT_EQ(dd->kronecker(one, one), one);
 
-  dd->debugnode(one.p);
   EXPECT_EQ(one.getValueByPath(""), 1.);
   EXPECT_EQ(one.getValueByIndex(0), 1.);
   EXPECT_EQ(dd::mEdge::one.getValueByIndex(0, 0), 1.);
