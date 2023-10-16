@@ -1547,11 +1547,9 @@ public:
     return measOp;
   }
 
-  std::pair<dEdge, char>
-  measureOneCollapsing(dEdge& rootEdge, const Qubit index,
-                        const bool assumeProbabilityNormalization,
-                        std::mt19937_64& mt, const fp epsilon = 0.001) {
-
+  std::pair<dEdge, char> measureOneCollapsing(dEdge& rootEdge,
+                                              const Qubit index,
+                                              std::mt19937_64& mt) {
     const auto numberOfQubits = static_cast<std::size_t>(rootEdge.p->v) + 1U;
     char measuredResult = '0';
 
