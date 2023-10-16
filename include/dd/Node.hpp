@@ -39,7 +39,7 @@ struct mNode {                        // NOLINT(readability-identifier-naming)
   RefCount ref{};                     // reference count
   Qubit v{};                          // variable index
   std::uint8_t flags = 0;
-  // 32 = marks a node with is symmetric.
+  // 32 = unused (was used to mark a node with is symmetric).
   // 16 = marks a node resembling identity
   // 8 = marks a reduced dm node,
   // 4 = marks a dm (tmp flag),
@@ -51,20 +51,6 @@ struct mNode {                        // NOLINT(readability-identifier-naming)
   }
   [[nodiscard]] static constexpr mNode* getTerminal() noexcept {
     return nullptr;
-  }
-
-  [[nodiscard]] inline bool isSymmetric() const noexcept {
-    return (flags & static_cast<std::uint8_t>(32U)) != 0;
-  }
-  [[nodiscard]] static constexpr bool isSymmetric(const mNode* p) noexcept {
-    return p == nullptr || p->isSymmetric();
-  }
-  inline void setSymmetric(const bool symmetric) noexcept {
-    if (symmetric) {
-      flags = (flags | static_cast<std::uint8_t>(32U));
-    } else {
-      flags = (flags & static_cast<std::uint8_t>(~32U));
-    }
   }
 
   [[nodiscard]] inline bool isIdentity() const noexcept {
@@ -94,7 +80,7 @@ struct dNode {                        // NOLINT(readability-identifier-naming)
   RefCount ref{};                     // reference count
   Qubit v{};                          // variable index
   std::uint8_t flags = 0;
-  // 32 = marks a node with is symmetric.
+  // 32 = unused (was used to mark a node with is symmetric).
   // 16 = marks a node resembling identity
   // 8 = marks a reduced dm node,
   // 4 = marks a dm (tmp flag),

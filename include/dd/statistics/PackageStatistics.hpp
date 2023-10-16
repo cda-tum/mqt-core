@@ -126,8 +126,6 @@ getStatistics(Package<Config>* package,
   computeTables["vector_add"] = package->vectorAdd.getStats().json();
   computeTables["matrix_add"] = package->matrixAdd.getStats().json();
   computeTables["density_matrix_add"] = package->densityAdd.getStats().json();
-  computeTables["matrix_transpose"] =
-      package->matrixTranspose.getStats().json();
   computeTables["matrix_conjugate_transpose"] =
       package->conjugateMatrixTranspose.getStats().json();
   computeTables["matrix_vector_mult"] =
@@ -227,12 +225,6 @@ getDataStructureStatistics(Package<Config>* package) {
   densityAdd["size_B"] = sizeof(typename decltype(package->densityAdd)::Entry);
   densityAdd["alignment_B"] =
       alignof(typename decltype(package->densityAdd)::Entry);
-
-  auto& matrixTranspose = ctEntries["matrix_transpose"];
-  matrixTranspose["size_B"] =
-      sizeof(typename decltype(package->matrixTranspose)::Entry);
-  matrixTranspose["alignment_B"] =
-      alignof(typename decltype(package->matrixTranspose)::Entry);
 
   auto& conjugateMatrixTranspose = ctEntries["conjugate_matrix_transpose"];
   conjugateMatrixTranspose["size_B"] =
