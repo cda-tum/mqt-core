@@ -3,6 +3,7 @@
 #include "dd/Complex.hpp"
 #include "dd/DDDefinitions.hpp"
 
+#include <array>
 #include <complex>
 #include <cstddef>
 #include <functional>
@@ -18,6 +19,8 @@ namespace dd {
 struct vNode;
 struct mNode;
 struct dNode;
+class ComplexNumbers;
+template <typename T> class MemoryManager;
 
 ///-----------------------------------------------------------------------------
 ///                        \n Type traits and typedefs \n
@@ -142,6 +145,20 @@ private:
   ///---------------------------------------------------------------------------
 public:
   /**
+   * @brief Get a normalized vector DD from a fresh node and a list of edges
+   * @tparam T template parameter to enable this function only for vNode
+   * @param p the fresh node
+   * @param e the list of edges that form the successor nodes
+   * @param mm a reference to the memory manager (for returning unused nodes)
+   * @param cn a reference to the complex number manager (for adding new
+   * complex numbers)
+   * @return the normalized vector DD
+   */
+  template <typename T = Node, isVector<T> = true>
+  static Edge<Node> normalize(Node* p, const std::array<Edge<Node>, RADIX>& e,
+                              MemoryManager<Node>& mm, ComplexNumbers& cn);
+
+  /**
    * @brief Get a single element of the vector represented by the DD
    * @tparam T template parameter to enable this function only for vNode
    * @param i index of the element
@@ -206,6 +223,21 @@ private:
   ///                     \n Methods for matrix DDs \n
   ///---------------------------------------------------------------------------
 public:
+  /**
+   * @brief Get a normalized (density) matrix DD from a fresh node and a list
+   * of edges
+   * @tparam T template parameter to enable this function only for matrix nodes
+   * @param p the fresh node
+   * @param e the list of edges that form the successor nodes
+   * @param mm a reference to the memory manager (for returning unused nodes)
+   * @param cn a reference to the complex number manager (for adding new
+   * complex numbers)
+   * @return the normalized (density) matrix DD
+   */
+  template <typename T = Node, isMatrixVariant<T> = true>
+  static Edge<Node> normalize(Node* p, const std::array<Edge<Node>, NEDGE>& e,
+                              MemoryManager<Node>& mm, ComplexNumbers& cn);
+
   /**
    * @brief Check whether the matrix represented by the DD is the identity
    * @tparam T template parameter to enable this function only for matrix nodes

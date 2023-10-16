@@ -35,6 +35,13 @@ struct ComplexValue {
   [[nodiscard]] bool operator!=(const ComplexValue& other) const noexcept;
 
   /**
+   * @brief Check whether the complex number is exactly equal to zero.
+   * @return True if the complex number is exactly equal to zero, false
+   * otherwise.
+   */
+  [[nodiscard]] bool exactlyZero() const noexcept { return r == 0. && i == 0.; }
+
+  /**
    * @brief Check whether the complex number is approximately equal to the
    * given complex number.
    * @param c The complex number to compare to.

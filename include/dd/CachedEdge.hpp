@@ -4,15 +4,32 @@
 #include "dd/ComplexValue.hpp"
 #include "dd/DDDefinitions.hpp"
 
+#include <array>
 #include <complex>
-#include <utility>
+#include <cstddef>
+#include <functional>
+#include <type_traits>
 
 namespace dd {
 
 ///-----------------------------------------------------------------------------
 ///                        \n Forward declarations \n
 ///-----------------------------------------------------------------------------
-struct Complex;
+struct vNode;
+struct mNode;
+struct dNode;
+class ComplexNumbers;
+template <typename T> class MemoryManager;
+
+///-----------------------------------------------------------------------------
+///                        \n Type traits and typedefs \n
+///-----------------------------------------------------------------------------
+template <typename T>
+using isVector = std::enable_if_t<std::is_same_v<T, vNode>, bool>;
+template <typename T>
+using isMatrixVariant =
+    std::enable_if_t<std::is_same_v<T, mNode> || std::is_same_v<T, dNode>,
+                     bool>;
 
 /**
  * @brief A DD node with a cached edge weight
@@ -82,6 +99,43 @@ template <typename Node> struct CachedEdge {
   [[nodiscard]] static constexpr CachedEdge one() {
     return terminal(ComplexValue(1.));
   }
+
+  ///---------------------------------------------------------------------------
+  ///                     \n Methods for vector DDs \n
+  ///---------------------------------------------------------------------------
+
+  /**
+   * @brief Get a normalized vector DD from a fresh node and a list of edges.
+   * @tparam T template parameter to enable this method only for vNode
+   * @param p the fresh node
+   * @param e the list of edges that form the successor nodes
+   * @param mm a reference to the memory manager (for returning unused nodes)
+   * @param cn a reference to the complex number manager (for adding new
+   * complex numbers)
+   * @return the normalized vector DD
+   */
+  template <typename T = Node, isVector<T> = true>
+  static CachedEdge normalize(Node* p, const std::array<CachedEdge, RADIX>& e,
+                              MemoryManager<Node>& mm, ComplexNumbers& cn);
+
+  ///---------------------------------------------------------------------------
+  ///                     \n Methods for matrix DDs \n
+  ///---------------------------------------------------------------------------
+
+  /**
+   * @brief Get a normalized (density) matrix) DD from a fresh node and a list
+   * of edges.
+   * @tparam T template parameter to enable this method only for matrix nodes
+   * @param p the fresh node
+   * @param e the list of edges that form the successor nodes
+   * @param mm a reference to the memory manager (for returning unused nodes)
+   * @param cn a reference to the complex number manager (for adding new
+   * complex numbers)
+   * @return the normalized (density) matrix DD
+   */
+  template <typename T = Node, isMatrixVariant<T> = true>
+  static CachedEdge normalize(Node* p, const std::array<CachedEdge, NEDGE>& e,
+                              MemoryManager<Node>& mm, ComplexNumbers& cn);
 };
 
 } // namespace dd

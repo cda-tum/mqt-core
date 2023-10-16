@@ -19,29 +19,6 @@ template <typename T> T* MemoryManager<T>::get() {
   return getEntryFromChunk();
 }
 
-template <typename T> std::pair<T*, T*> MemoryManager<T>::getPair() {
-  if (entryAvailableForReuse()) {
-    auto* r = available;
-    assert(r->next != nullptr && "At least two entries must be available");
-    auto* i = available->next;
-    available = i->next;
-    stats.trackReusedEntries(2U);
-    return {r, i};
-  }
-
-  if (!entryAvailableInChunk()) {
-    allocateNewChunk();
-  }
-
-  auto* r = &(*chunkIt);
-  ++chunkIt;
-  assert(chunkIt != chunkEndIt && "At least two entries must be available");
-  auto* i = &(*chunkIt);
-  ++chunkIt;
-  stats.trackUsedEntries(2U);
-  return {r, i};
-}
-
 template <typename T> void MemoryManager<T>::returnEntry(T* entry) noexcept {
   assert(entry != nullptr);
   assert(entry->ref == 0);

@@ -1,12 +1,19 @@
 #include "dd/Edge.hpp"
 
 #include "dd/Complex.hpp"
+#include "dd/ComplexNumbers.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/MemoryManager.hpp"
 #include "dd/Node.hpp"
 #include "dd/RealNumber.hpp"
 
+#include <algorithm>
+#include <array>
 #include <cassert>
+#include <complex>
 #include <iomanip>
-#include <utility>
+#include <optional>
+#include <unordered_set>
 
 namespace dd {
 
@@ -69,6 +76,63 @@ std::size_t Edge<Node>::size(std::unordered_set<const Node*>& visited) const {
 ///-----------------------------------------------------------------------------
 ///                      \n Methods for vector DDs \n
 ///-----------------------------------------------------------------------------
+
+template <class Node>
+template <typename T, isVector<T>>
+Edge<Node> Edge<Node>::normalize(Node* p,
+                                 const std::array<Edge<Node>, RADIX>& e,
+                                 MemoryManager<Node>& mm, ComplexNumbers& cn) {
+  assert(p != nullptr && "Node pointer passed to normalize is null.");
+  const auto zero = std::array{e[0].w.exactlyZero(), e[1].w.exactlyZero()};
+
+  if (zero[0]) {
+    if (zero[1]) {
+      mm.returnEntry(p);
+      return Edge::zero();
+    }
+    p->e = e;
+    vEdge r{p, e[1].w};
+    p->e[1].w = Complex::one();
+    return r;
+  }
+
+  p->e = e;
+  if (zero[1]) {
+    vEdge r{p, e[0].w};
+    p->e[0].w = Complex::one();
+    return r;
+  }
+
+  const auto mag0 = ComplexNumbers::mag2(e[0].w);
+  const auto mag1 = ComplexNumbers::mag2(e[1].w);
+  const auto norm2 = mag0 + mag1;
+  const auto mag2Max = (mag0 + RealNumber::eps >= mag1) ? mag0 : mag1;
+  const auto argMax = (mag0 + RealNumber::eps >= mag1) ? 0U : 1U;
+  const auto argMin = (argMax + 1U) % 2U;
+  const auto norm = std::sqrt(norm2);
+  const auto magMax = std::sqrt(mag2Max);
+  const auto commonFactor = norm / magMax;
+
+  auto& max = p->e[argMax];
+  vEdge r = {p, cn.lookup(max.w * commonFactor)};
+  if (r.w.exactlyZero()) {
+    r.p = Node::getTerminal();
+    return r;
+  }
+
+  max.w = cn.lookup(magMax / norm);
+  if (max.w.exactlyZero()) {
+    max.p = Node::getTerminal();
+  }
+
+  auto& min = p->e[argMin];
+  min.w = cn.lookup(min.w / r.w);
+  if (min.w.exactlyZero()) {
+    min.p = Node::getTerminal();
+  }
+
+  return r;
+}
 
 template <class Node>
 template <typename T, isVector<T>>
@@ -185,6 +249,68 @@ void Edge<Node>::traverseVector(const std::complex<fp>& amp,
 ///-----------------------------------------------------------------------------
 ///                      \n Methods for matrix DDs \n
 ///-----------------------------------------------------------------------------
+
+template <class Node>
+template <typename T, isMatrixVariant<T>>
+Edge<Node> Edge<Node>::normalize(Node* p,
+                                 const std::array<Edge<Node>, NEDGE>& e,
+                                 MemoryManager<Node>& mm, ComplexNumbers& cn) {
+  assert(p != nullptr && "Node pointer passed to normalize is null.");
+  const auto zero = std::array{e[0].w.exactlyZero(), e[1].w.exactlyZero(),
+                               e[2].w.exactlyZero(), e[3].w.exactlyZero()};
+
+  if (std::all_of(zero.begin(), zero.end(), [](auto b) { return b; })) {
+    mm.returnEntry(p);
+    return Edge::zero();
+  }
+
+  const auto weights = std::array{
+      static_cast<ComplexValue>(e[0].w), static_cast<ComplexValue>(e[1].w),
+      static_cast<ComplexValue>(e[2].w), static_cast<ComplexValue>(e[3].w)};
+
+  std::optional<std::size_t> argMax = std::nullopt;
+  fp maxMag = 0.;
+  auto maxVal = Complex::one();
+  // determine max amplitude
+  for (auto i = 0U; i < NEDGE; ++i) {
+    if (zero[i]) {
+      p->e[i] = Edge::zero();
+      continue;
+    }
+    const auto& w = weights[i];
+    if (!argMax.has_value()) {
+      argMax = i;
+      maxMag = w.mag2();
+      maxVal = e[i].w;
+    } else {
+      if (const auto mag = w.mag2(); mag - maxMag > RealNumber::eps) {
+        argMax = i;
+        maxMag = mag;
+        maxVal = e[i].w;
+      }
+    }
+  }
+  assert(argMax.has_value() && "argMax should have been set by now");
+
+  const auto argMaxValue = *argMax;
+  const auto argMaxWeight = weights[argMaxValue];
+  for (auto i = 0U; i < NEDGE; ++i) {
+    if (zero[i]) {
+      continue;
+    }
+    auto& successor = p->e[i];
+    successor.p = e[i].p;
+    if (i == argMaxValue) {
+      successor.w = Complex::one();
+      continue;
+    }
+    successor.w = cn.lookup(weights[i] / argMaxWeight);
+    if (successor.w.exactlyZero()) {
+      successor.p = Node::getTerminal();
+    }
+  }
+  return Edge<Node>{p, maxVal};
+}
 
 template <class Node>
 template <typename T, isMatrixVariant<T>>
@@ -414,6 +540,9 @@ template struct Edge<vNode>;
 template struct Edge<mNode>;
 template struct Edge<dNode>;
 
+template Edge<vNode> Edge<vNode>::normalize<vNode, true>(
+    vNode* p, const std::array<Edge<vNode>, RADIX>& e, MemoryManager<vNode>& mm,
+    ComplexNumbers& cn);
 template std::complex<fp>
 Edge<vNode>::getValueByIndex<vNode, true>(const std::size_t i) const;
 template CVec Edge<vNode>::getVector<vNode, true>(const fp threshold) const;
@@ -426,6 +555,9 @@ Edge<vNode>::traverseVector<vNode, true>(const std::complex<fp>& amp,
                                          const std::size_t i, AmplitudeFunc f,
                                          const fp threshold) const;
 
+template Edge<mNode> Edge<mNode>::normalize<mNode, true>(
+    mNode* p, const std::array<Edge<mNode>, NEDGE>& e, MemoryManager<mNode>& mm,
+    ComplexNumbers& cn);
 template std::complex<fp>
 Edge<mNode>::getValueByIndex<mNode, true>(const std::size_t i,
                                           const std::size_t j) const;
@@ -437,6 +569,9 @@ template void Edge<mNode>::traverseMatrix<mNode, true>(
     const std::complex<fp>& amp, const std::size_t i, const std::size_t j,
     MatrixEntryFunc f, const fp threshold) const;
 
+template Edge<dNode> Edge<dNode>::normalize<dNode, true>(
+    dNode* p, const std::array<Edge<dNode>, NEDGE>& e, MemoryManager<dNode>& mm,
+    ComplexNumbers& cn);
 template CMat Edge<dNode>::getMatrix<dNode, true>(const fp threshold) const;
 template SparseCMat
 Edge<dNode>::getSparseMatrix<dNode, true>(const fp threshold) const;

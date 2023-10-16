@@ -19,15 +19,11 @@ protected:
     // number of complex table entries after clean-up should equal initial
     // number of entries
     EXPECT_EQ(dd->cn.realCount(), initialComplexCount);
-    // number of available cache entries after clean-up should equal initial
-    // number of entries
-    EXPECT_EQ(dd->cn.cacheCount(), initialCacheCount);
   }
 
   void SetUp() override {
     // dd
     dd = std::make_unique<dd::Package<>>(nqubits);
-    initialCacheCount = dd->cn.cacheCount();
     initialComplexCount = dd->cn.realCount();
 
     // initial state preparation
@@ -44,7 +40,6 @@ protected:
   }
 
   std::size_t nqubits = 4U;
-  std::size_t initialCacheCount = 0U;
   std::size_t initialComplexCount = 0U;
   qc::MatrixDD e{}, ident{};
   std::unique_ptr<dd::Package<>> dd;
