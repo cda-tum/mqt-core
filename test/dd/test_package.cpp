@@ -1,3 +1,4 @@
+#include "dd/DDDefinitions.hpp"
 #include "dd/Export.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
@@ -10,6 +11,8 @@
 #include <memory>
 #include <random>
 #include <sstream>
+#include <stdexcept>
+#include <vector>
 
 using namespace qc::literals;
 
@@ -267,7 +270,7 @@ TEST(DDPackageTest, IdentityTrace) {
   auto dd = std::make_unique<dd::Package<>>(4);
   auto fullTrace = dd->trace(dd->makeIdent(4));
 
-  ASSERT_EQ(fullTrace, (dd::ComplexValue{16, 0}));
+  ASSERT_EQ(fullTrace.r, 16.);
 }
 
 TEST(DDPackageTest, PartialIdentityTrace) {
@@ -746,8 +749,7 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
   EXPECT_EQ(one.getValueByIndex(0), 1.);
   EXPECT_EQ(dd::mEdge::one().getValueByIndex(0, 0), 1.);
 
-  const dd::ComplexValue cZero{0.0, 0.0};
-  EXPECT_EQ(dd->innerProduct(zero, zero), cZero);
+  EXPECT_EQ(dd->innerProduct(zero, zero), dd::ComplexValue(0.));
 }
 
 TEST(DDPackageTest, KroneckerProduct) {
@@ -797,16 +799,16 @@ TEST(DDPackageTest, NearZeroNormalize) {
   ve.p = dd->vMemoryManager.get();
   ve.p->v = 1;
   ve.w = dd::Complex::one();
-  std::array<dd::vEdge, dd::RADIX> edges{};
+  std::array<dd::vCachedEdge, dd::RADIX> edges{};
   for (auto& edge : edges) {
     edge.p = dd->vMemoryManager.get();
     edge.p->v = 0;
-    edge.w = dd->cn.getCached(nearZero, 0.);
+    edge.w = nearZero;
     edge.p->e = {dd::vEdge::one(), dd::vEdge::one()};
   }
   auto veNormalizedCached =
-      dd::vEdge::normalizeCached(ve.p, edges, dd->vMemoryManager, dd->cn);
-  EXPECT_EQ(veNormalizedCached, dd::vEdge::zero());
+      dd::vCachedEdge::normalize(ve.p, edges, dd->vMemoryManager, dd->cn);
+  EXPECT_EQ(veNormalizedCached, dd::vCachedEdge::zero());
 
   std::array<dd::vEdge, dd::RADIX> edges2{};
   for (auto& edge : edges2) {
@@ -823,17 +825,17 @@ TEST(DDPackageTest, NearZeroNormalize) {
   me.p = dd->mMemoryManager.get();
   me.p->v = 1;
   me.w = dd::Complex::one();
-  std::array<dd::mEdge, dd::NEDGE> edges3{};
+  std::array<dd::mCachedEdge, dd::NEDGE> edges3{};
   for (auto& edge : edges3) {
     edge.p = dd->mMemoryManager.get();
     edge.p->v = 0;
-    edge.w = dd->cn.getCached(nearZero, 0.);
+    edge.w = nearZero;
     edge.p->e = {dd::mEdge::one(), dd::mEdge::one(), dd::mEdge::one(),
                  dd::mEdge::one()};
   }
   auto meNormalizedCached =
-      dd::mEdge::normalizeCached(me.p, edges3, dd->mMemoryManager, dd->cn);
-  EXPECT_EQ(meNormalizedCached, dd::mEdge::zero());
+      dd::mCachedEdge::normalize(me.p, edges3, dd->mMemoryManager, dd->cn);
+  EXPECT_EQ(meNormalizedCached, dd::mCachedEdge::zero());
 
   me.p = dd->mMemoryManager.get();
   std::array<dd::mEdge, 4> edges4{};
@@ -1079,7 +1081,6 @@ TEST(DDPackageTest, NormalizationNumericStabilityTest) {
     auto result = dd->multiply(p, pdag);
     EXPECT_TRUE(result.p->isIdentity());
     dd->cUniqueTable.clear();
-    dd->cCacheManager.reset();
     dd->cMemoryManager.reset();
   }
 }
