@@ -840,10 +840,6 @@ public:
     return e;
   }
 
-  mEdge makeSWAPDD(const std::size_t n, const qc::Qubit target0,
-                   const qc::Qubit target1, const std::size_t start = 0) {
-    return makeTwoQubitGateDD(SWAPmat, n, target0, target1, start);
-  }
   mEdge makeSWAPDD(const std::size_t n, const qc::Controls& controls,
                    const qc::Qubit target0, const qc::Qubit target1,
                    const std::size_t start = 0) {
@@ -876,10 +872,6 @@ public:
     return e;
   }
 
-  mEdge makeiSWAPDD(const std::size_t n, const qc::Qubit target0,
-                    const qc::Qubit target1, const std::size_t start = 0) {
-    return makeTwoQubitGateDD(iSWAPmat, n, target0, target1, start);
-  }
   mEdge makeiSWAPDD(const std::size_t n, const qc::Controls& controls,
                     const qc::Qubit target0, const qc::Qubit target1,
                     const std::size_t start = 0) {
@@ -896,10 +888,6 @@ public:
     return e;
   }
 
-  mEdge makeiSWAPinvDD(const std::size_t n, const qc::Qubit target0,
-                       const qc::Qubit target1, const std::size_t start = 0) {
-    return makeTwoQubitGateDD(iSWAPinvmat, n, target0, target1, start);
-  }
   mEdge makeiSWAPinvDD(const std::size_t n, const qc::Controls& controls,
                        const qc::Qubit target0, const qc::Qubit target1,
                        const std::size_t start = 0) {
@@ -918,10 +906,6 @@ public:
     return e;
   }
 
-  mEdge makeDCXDD(const std::size_t n, const qc::Qubit target0,
-                  const qc::Qubit target1, const std::size_t start = 0) {
-    return makeTwoQubitGateDD(DCXmat, n, target0, target1, start);
-  }
   mEdge makeDCXDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const std::size_t start = 0) {
@@ -934,11 +918,6 @@ public:
     return e;
   }
 
-  mEdge makeRZZDD(const std::size_t n, const qc::Qubit target0,
-                  const qc::Qubit target1, const fp theta,
-                  const std::size_t start = 0) {
-    return makeTwoQubitGateDD(RZZmat(theta), n, target0, target1, start);
-  }
   mEdge makeRZZDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const fp theta, const std::size_t start = 0) {
@@ -952,11 +931,6 @@ public:
     return e;
   }
 
-  mEdge makeRYYDD(const std::size_t n, const qc::Qubit target0,
-                  const qc::Qubit target1, const fp theta,
-                  const std::size_t start = 0) {
-    return makeTwoQubitGateDD(RYYmat(theta), n, target0, target1, start);
-  }
   mEdge makeRYYDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const fp theta, const std::size_t start = 0) {
@@ -972,11 +946,6 @@ public:
     return e;
   }
 
-  mEdge makeRXXDD(const std::size_t n, const qc::Qubit target0,
-                  const qc::Qubit target1, const fp theta,
-                  const std::size_t start = 0) {
-    return makeTwoQubitGateDD(RXXmat(theta), n, target0, target1, start);
-  }
   mEdge makeRXXDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const fp theta, const std::size_t start = 0) {
@@ -990,11 +959,6 @@ public:
     return e;
   }
 
-  mEdge makeRZXDD(const std::size_t n, const qc::Qubit target0,
-                  const qc::Qubit target1, const fp theta,
-                  const std::size_t start = 0) {
-    return makeTwoQubitGateDD(RZXmat(theta), n, target0, target1, start);
-  }
   mEdge makeRZXDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const fp theta, const std::size_t start = 0) {
@@ -1006,10 +970,6 @@ public:
     return e;
   }
 
-  mEdge makeECRDD(const std::size_t n, const qc::Qubit target0,
-                  const qc::Qubit target1, const std::size_t start = 0) {
-    return makeTwoQubitGateDD(ECRmat, n, target0, target1, start);
-  }
   mEdge makeECRDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const std::size_t start = 0) {
@@ -1019,12 +979,6 @@ public:
     return e;
   }
 
-  mEdge makeXXMinusYYDD(const std::size_t n, const qc::Qubit target0,
-                        const qc::Qubit target1, const fp theta,
-                        const fp beta = 0., const std::size_t start = 0) {
-    return makeTwoQubitGateDD(XXMinusYYmat(theta, beta), n, target0, target1,
-                              start);
-  }
   mEdge makeXXMinusYYDD(const std::size_t n, const qc::Controls& controls,
                         const qc::Qubit target0, const qc::Qubit target1,
                         const fp theta, const fp beta = 0.,
@@ -1052,12 +1006,6 @@ public:
     return e;
   }
 
-  mEdge makeXXPlusYYDD(const std::size_t n, const qc::Qubit target0,
-                       const qc::Qubit target1, const fp theta,
-                       const fp beta = 0., const std::size_t start = 0) {
-    return makeTwoQubitGateDD(XXPlusYYmat(theta, beta), n, target0, target1,
-                              start);
-  }
   mEdge makeXXPlusYYDD(const std::size_t n, const qc::Controls& controls,
                        const qc::Qubit target0, const qc::Qubit target1,
                        const fp theta, const fp beta = 0.,
