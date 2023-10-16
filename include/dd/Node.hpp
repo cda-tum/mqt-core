@@ -6,8 +6,8 @@
 
 #include <array>
 #include <cassert>
-#include <cstddef>
-#include <utility>
+#include <cstdint>
+#include <limits>
 
 namespace dd {
 

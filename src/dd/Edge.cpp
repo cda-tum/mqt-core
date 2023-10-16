@@ -4,8 +4,9 @@
 #include "dd/Node.hpp"
 #include "dd/RealNumber.hpp"
 
-#include <fstream>
+#include <cassert>
 #include <iomanip>
+#include <utility>
 
 namespace dd {
 
