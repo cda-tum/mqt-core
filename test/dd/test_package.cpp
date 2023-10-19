@@ -107,6 +107,31 @@ TEST(DDPackageTest, BellState) {
   dd::printStatistics(dd.get());
 }
 
+TEST(DDPackageTest, GHZStateTest) {
+  auto dd = std::make_unique<dd::Package<>>(3);
+  auto ghz = dd->makeGHZState(3);
+
+  // build state vector for (|000> + |111>) * 1/sqrt(2)
+  const dd::CVec state = {dd::SQRT2_2, 0, 0, 0, 0, 0, 0, dd::SQRT2_2};
+  const auto stateDD = dd->makeStateFromVector(state);
+
+  EXPECT_EQ(ghz, stateDD);
+}
+
+TEST(DDPackage, WStateTest) {
+  auto dd = std::make_unique<dd::Package<>>(3);
+  auto wState = dd->makeWState(3);
+
+  // build state vector for (|001> + |010> + |100>) * 1/sqrt(3)
+  const dd::CVec state = {
+      0, std::sqrt(3) / 3, std::sqrt(3) / 3, 0, std::sqrt(3) / 3, 0, 0, 0};
+  const auto stateDD = dd->makeStateFromVector(state);
+
+  wState.printVector();
+
+  EXPECT_EQ(wState, stateDD);
+}
+
 TEST(DDPackageTest, QFTState) {
   auto dd = std::make_unique<dd::Package<>>(3);
 

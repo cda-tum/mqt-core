@@ -484,6 +484,52 @@ public:
     return f;
   }
 
+  // generate general GHZ state with n qubits
+  vEdge makeGHZState(const std::size_t n, const size_t start = 0) {
+    if (n + start > nqubits) {
+      throw std::runtime_error{
+          "Requested state with " + std::to_string(n + start) +
+          " qubits, but current package configuration only supports up to " +
+          std::to_string(nqubits) +
+          " qubits. Please allocate a larger package instance."};
+    }
+
+    std::vector<BasisStates> oneBasisState =
+        std::vector<BasisStates>(n, BasisStates::one);
+    auto zeroState = makeZeroState(n);
+    auto oneState = makeBasisState(n, oneBasisState);
+    auto f = normalize(add(zeroState, oneState), false);
+
+    return f;
+  }
+
+  // generate general W state with n qubits
+  vEdge makeWState(const std::size_t n, const size_t start = 0) {
+    if (n + start > nqubits) {
+      throw std::runtime_error{
+          "Requested state with " + std::to_string(n + start) +
+          " qubits, but current package configuration only supports up to " +
+          std::to_string(nqubits) +
+          " qubits. Please allocate a larger package instance."};
+    }
+
+    if (n < 2) {
+      return makeBasisState(n, {BasisStates::one});
+    }
+
+    auto f = vEdge::one;
+    for (size_t i = 0; i < n + start; ++i) {
+      std::vector<BasisStates> state =
+          std::vector<BasisStates>(n, BasisStates::zero);
+      state[i] = BasisStates::one;
+
+      auto newBasisState = makeBasisState(n, state);
+      f = add(newBasisState, f);
+    }
+    f = normalize(f, false);
+    return f;
+  }
+
   // generate the decision diagram from an arbitrary state vector
   vEdge makeStateFromVector(const CVec& stateVector) {
     if (stateVector.empty()) {
