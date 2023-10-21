@@ -42,6 +42,18 @@ if(NOT TARGET ${PROJECT_NAME})
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Parser.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
+          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Scanner.hpp
+          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Token.hpp
+          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Parser.hpp
+          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Statement.hpp
+          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Types.hpp
+          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/InstVisitor.hpp
+          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/NestedEnvironment.hpp
+          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Gate.hpp
+          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/StdGates.hpp
+          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/passes/CompilerPass.hpp
+          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/passes/ConstEvalPass.hpp
+          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/passes/TypeCheckPass.hpp
     ${PROJECT_SOURCE_DIR}/include/Permutation.hpp
     ${PROJECT_SOURCE_DIR}/include/QuantumComputation.hpp
     algorithms/BernsteinVazirani.cpp
@@ -60,11 +72,16 @@ if(NOT TARGET ${PROJECT_NAME})
     operations/SymbolicOperation.cpp
     parsers/GRCSParser.cpp
     parsers/QASMParser.cpp
+          parsers/QASM3Parser.cpp
     parsers/QCParser.cpp
     parsers/RealParser.cpp
     parsers/TFCParser.cpp
     parsers/qasm_parser/Parser.cpp
     parsers/qasm_parser/Scanner.cpp
+          parsers/qasm3_parser/Parser.cpp
+          parsers/qasm3_parser/Scanner.cpp
+          parsers/qasm3_parser/passes/ConstEvalPass.cpp
+          parsers/qasm3_parser/passes/TypeCheckPass.cpp
     QuantumComputation.cpp)
 
   # set include directories

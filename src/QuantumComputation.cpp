@@ -106,6 +106,9 @@ void QuantumComputation::import(std::istream&& is, Format format) {
     updateMaxControls(2);
     importOpenQASM(is);
     break;
+  case Format::OpenQASM3:
+    importOpenQASM3(is);
+    break;
   case Format::GRCS:
     importGRCS(is);
     break;

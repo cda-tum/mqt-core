@@ -54,6 +54,7 @@ protected:
   std::unordered_set<sym::Variable> occuringVariables;
 
   void importOpenQASM(std::istream& is);
+  void importOpenQASM3(std::istream& is);
   void importReal(std::istream& is);
   int readRealHeader(std::istream& is);
   void readRealGateDescriptions(std::istream& is, int line);
