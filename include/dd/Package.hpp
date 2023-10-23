@@ -1116,10 +1116,12 @@ private:
     const auto l = static_cast<Qubit>(level - 1U);
 
     return makeDDNode<mNode>(
-        level, {makeDDFromMatrix(matrix, l, rowStart, rowMid, colStart, colMid),
-                makeDDFromMatrix(matrix, l, rowStart, rowMid, colMid, colEnd),
-                makeDDFromMatrix(matrix, l, rowMid, rowEnd, colStart, colMid),
-                makeDDFromMatrix(matrix, l, rowMid, rowEnd, colMid, colEnd)});
+        level,
+        {makeDDFromMatrix(matrix, l, rowStart, rowMid, colStart, colMid),
+         makeDDFromMatrix(matrix, l, rowStart, rowMid, colMid, colEnd),
+         makeDDFromMatrix(matrix, l, rowMid, rowEnd, colStart, colMid),
+         makeDDFromMatrix(matrix, l, rowMid, rowEnd, colMid, colEnd)},
+        true);
   }
 
 public:
