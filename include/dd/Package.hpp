@@ -485,29 +485,36 @@ public:
   }
 
   // generate general GHZ state with n qubits
-  vEdge makeGHZState(const std::size_t n, const size_t start = 0) {
-    if (n + start > nqubits) {
+  vEdge makeGHZState(const std::size_t n) {
+    if (n > nqubits) {
       throw std::runtime_error{
-          "Requested state with " + std::to_string(n + start) +
+          "Requested state with " + std::to_string(n) +
           " qubits, but current package configuration only supports up to " +
           std::to_string(nqubits) +
           " qubits. Please allocate a larger package instance."};
     }
 
-    std::vector<BasisStates> oneBasisState =
-        std::vector<BasisStates>(n, BasisStates::one);
-    auto zeroState = makeZeroState(n);
-    auto oneState = makeBasisState(n, oneBasisState);
-    auto f = normalize(add(zeroState, oneState), false);
+    auto leftSubtree = vEdge::one;
+    auto rightSubtree = vEdge::one;
+
+    for (std::size_t p = 0; p < n - 1; ++p) {
+      leftSubtree = makeDDNode(static_cast<Qubit>(p), std::array{leftSubtree, vEdge::zero});
+      rightSubtree = makeDDNode(static_cast<Qubit>(p), std::array{vEdge::zero, rightSubtree});
+    }
+
+    auto f = makeDDNode(
+        static_cast<Qubit>(n - 1),
+        std::array<vEdge, RADIX>{{{leftSubtree.p, cn.lookup(dd::SQRT2_2, 0)},
+                                  {rightSubtree.p, cn.lookup(dd::SQRT2_2, 0)}}});
 
     return f;
   }
 
   // generate general W state with n qubits
-  vEdge makeWState(const std::size_t n, const size_t start = 0) {
-    if (n + start > nqubits) {
+  vEdge makeWState(const std::size_t n) {
+    if (n > nqubits) {
       throw std::runtime_error{
-          "Requested state with " + std::to_string(n + start) +
+          "Requested state with " + std::to_string(n) +
           " qubits, but current package configuration only supports up to " +
           std::to_string(nqubits) +
           " qubits. Please allocate a larger package instance."};
@@ -518,7 +525,7 @@ public:
     }
 
     auto f = vEdge::one;
-    for (size_t i = 0; i < n + start; ++i) {
+    for (size_t i = 0; i < n; ++i) {
       std::vector<BasisStates> state =
           std::vector<BasisStates>(n, BasisStates::zero);
       state[i] = BasisStates::one;
