@@ -649,19 +649,18 @@ public:
   }
 
   // build matrix representation for a single gate on an n-qubit circuit
-  mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat,
-                   const std::size_t n, const qc::Qubit target,
-                   const std::size_t start = 0) {
+  mEdge makeGateDD(const GateMatrix& mat, const std::size_t n,
+                   const qc::Qubit target, const std::size_t start = 0) {
     return makeGateDD(mat, n, qc::Controls{}, target, start);
   }
-  mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat,
-                   const std::size_t n, const qc::Control& control,
-                   const qc::Qubit target, const std::size_t start = 0) {
+  mEdge makeGateDD(const GateMatrix& mat, const std::size_t n,
+                   const qc::Control& control, const qc::Qubit target,
+                   const std::size_t start = 0) {
     return makeGateDD(mat, n, qc::Controls{control}, target, start);
   }
-  mEdge makeGateDD(const std::array<ComplexValue, NEDGE>& mat,
-                   const std::size_t n, const qc::Controls& controls,
-                   const qc::Qubit target, const std::size_t start = 0) {
+  mEdge makeGateDD(const GateMatrix& mat, const std::size_t n,
+                   const qc::Controls& controls, const qc::Qubit target,
+                   const std::size_t start = 0) {
     if (n + start > nqubits) {
       throw std::runtime_error{
           "Requested gate with " + std::to_string(n + start) +
@@ -753,10 +752,9 @@ public:
   @throws std::runtime_error if the number of qubits is larger than the package
   configuration
   **/
-  mEdge makeTwoQubitGateDD(
-      const std::array<std::array<ComplexValue, NEDGE>, NEDGE>& mat,
-      const std::size_t n, const qc::Qubit target0, const qc::Qubit target1,
-      const std::size_t start = 0) {
+  mEdge makeTwoQubitGateDD(const TwoQubitGateMatrix& mat, const std::size_t n,
+                           const qc::Qubit target0, const qc::Qubit target1,
+                           const std::size_t start = 0) {
     // sanity check
     if (n + start > nqubits) {
       throw std::runtime_error{
@@ -1310,8 +1308,8 @@ public:
   }
 
 private:
-  double assignProbabilities(const vEdge& edge,
-                             std::unordered_map<const vNode*, fp>& probs) {
+  fp assignProbabilities(const vEdge& edge,
+                         std::unordered_map<const vNode*, fp>& probs) {
     auto it = probs.find(edge.p);
     if (it != probs.end()) {
       return ComplexNumbers::mag2(edge.w) * it->second;
@@ -1649,7 +1647,7 @@ public:
   ComputeTable<dEdge, dEdge, dCachedEdge, Config::CT_DM_DM_MULT_NBUCKET>
       densityDensityMultiplication{};
 
-  template <class LeftOperandNode, class RightOperandNode>
+  template <class RightOperandNode>
   [[nodiscard]] auto& getMultiplicationComputeTable() {
     if constexpr (std::is_same_v<RightOperandNode, vNode>) {
       return matrixVectorMultiplication;
@@ -1758,8 +1756,7 @@ private:
     auto xCopy = LEdge{x.p, Complex::one()};
     auto yCopy = REdge{y.p, Complex::one()};
 
-    auto& computeTable =
-        getMultiplicationComputeTable<LeftOperandNode, RightOperandNode>();
+    auto& computeTable = getMultiplicationComputeTable<RightOperandNode>();
     if (const auto* r =
             computeTable.lookup(xCopy, yCopy, generateDensityMatrix);
         r != nullptr) {
@@ -1904,27 +1901,26 @@ public:
     return fid.r * fid.r + fid.i * fid.i;
   }
 
-  dd::fp fidelityOfMeasurementOutcomes(const vEdge& e,
-                                       const SparsePVec& probs) {
+  fp fidelityOfMeasurementOutcomes(const vEdge& e, const SparsePVec& probs) {
     if (e.w.approximatelyZero()) {
       return 0.;
     }
     return fidelityOfMeasurementOutcomesRecursive(e, probs, 0);
   }
 
-  dd::fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e,
-                                                const SparsePVec& probs,
-                                                const std::size_t i) {
-    const auto topw = dd::ComplexNumbers::mag(e.w);
+  fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e,
+                                            const SparsePVec& probs,
+                                            const std::size_t i) {
+    const auto top = ComplexNumbers::mag(e.w);
     if (e.isTerminal()) {
       if (auto it = probs.find(i); it != probs.end()) {
-        return topw * std::sqrt(it->second);
+        return top * std::sqrt(it->second);
       }
       return 0.;
     }
 
     std::size_t leftIdx = i;
-    dd::fp leftContribution = 0.;
+    fp leftContribution = 0.;
     if (!e.p->e[0].w.approximatelyZero()) {
       leftContribution =
           fidelityOfMeasurementOutcomesRecursive(e.p->e[0], probs, leftIdx);
@@ -1937,7 +1933,7 @@ public:
           fidelityOfMeasurementOutcomesRecursive(e.p->e[1], probs, rightIdx);
     }
 
-    return topw * (leftContribution + rightContribution);
+    return top * (leftContribution + rightContribution);
   }
 
 private:
@@ -2609,6 +2605,10 @@ private:
 public:
   // transfers a decision diagram from another package to this package
   template <class Edge> Edge transfer(Edge& original) {
+    if (original.isTerminal()) {
+      return {original.p, cn.lookup(original.w)};
+    }
+
     // POST ORDER TRAVERSAL USING ONE STACK
     // https://www.geeksforgeeks.org/iterative-postorder-traversal-using-stack/
     Edge root{};
@@ -2617,73 +2617,68 @@ public:
     std::unordered_map<decltype(original.p), decltype(original.p)> mappedNode{};
 
     Edge* currentEdge = &original;
-    if (!currentEdge->isTerminal()) {
-      constexpr std::size_t n = std::tuple_size_v<decltype(original.p->e)>;
-      // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
-      do {
-        while (currentEdge != nullptr && !currentEdge->isTerminal()) {
-          for (std::size_t i = n - 1; i > 0; --i) {
-            auto& edge = currentEdge->p->e[i];
-            if (edge.isTerminal()) {
-              continue;
-            }
-            if (edge.w.approximatelyZero()) {
-              continue;
-            }
-            if (mappedNode.find(edge.p) != mappedNode.end()) {
-              continue;
-            }
-
-            // non-zero edge to be included
-            stack.push(&edge);
-          }
-          stack.push(currentEdge);
-          currentEdge = &currentEdge->p->e[0];
-        }
-        currentEdge = stack.top();
-        stack.pop();
-
-        bool hasChild = false;
-        for (std::size_t i = 1; i < n && !hasChild; ++i) {
+    constexpr std::size_t n = std::tuple_size_v<decltype(original.p->e)>;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
+    do {
+      while (currentEdge != nullptr && !currentEdge->isTerminal()) {
+        for (std::size_t i = n - 1; i > 0; --i) {
           auto& edge = currentEdge->p->e[i];
+          if (edge.isTerminal()) {
+            continue;
+          }
           if (edge.w.approximatelyZero()) {
             continue;
           }
           if (mappedNode.find(edge.p) != mappedNode.end()) {
             continue;
           }
-          hasChild = edge.p == stack.top()->p;
-        }
 
-        if (hasChild) {
-          Edge* temp = stack.top();
-          stack.pop();
-          stack.push(currentEdge);
-          currentEdge = temp;
-        } else {
-          if (mappedNode.find(currentEdge->p) != mappedNode.end()) {
-            currentEdge = nullptr;
-            continue;
-          }
-          std::array<Edge, n> edges{};
-          for (std::size_t i = 0; i < n; i++) {
-            if (currentEdge->p->e[i].isTerminal()) {
-              edges[i].p = currentEdge->p->e[i].p;
-            } else {
-              edges[i].p = mappedNode[currentEdge->p->e[i].p];
-            }
-            edges[i].w = cn.lookup(currentEdge->p->e[i].w);
-          }
-          root = makeDDNode(currentEdge->p->v, edges);
-          mappedNode[currentEdge->p] = root.p;
-          currentEdge = nullptr;
+          // non-zero edge to be included
+          stack.push(&edge);
         }
-      } while (!stack.empty());
-      root.w = cn.lookup(cn.mulTemp(original.w, root.w));
-    } else {
-      root.p = original.p; // terminal -> static
-      root.w = cn.lookup(original.w);
-    }
+        stack.push(currentEdge);
+        currentEdge = &currentEdge->p->e[0];
+      }
+      currentEdge = stack.top();
+      stack.pop();
+
+      bool hasChild = false;
+      for (std::size_t i = 1; i < n && !hasChild; ++i) {
+        auto& edge = currentEdge->p->e[i];
+        if (edge.w.approximatelyZero()) {
+          continue;
+        }
+        if (mappedNode.find(edge.p) != mappedNode.end()) {
+          continue;
+        }
+        hasChild = edge.p == stack.top()->p;
+      }
+
+      if (hasChild) {
+        Edge* temp = stack.top();
+        stack.pop();
+        stack.push(currentEdge);
+        currentEdge = temp;
+      } else {
+        if (mappedNode.find(currentEdge->p) != mappedNode.end()) {
+          currentEdge = nullptr;
+          continue;
+        }
+        std::array<Edge, n> edges{};
+        for (std::size_t i = 0; i < n; i++) {
+          if (currentEdge->p->e[i].isTerminal()) {
+            edges[i].p = currentEdge->p->e[i].p;
+          } else {
+            edges[i].p = mappedNode[currentEdge->p->e[i].p];
+          }
+          edges[i].w = cn.lookup(currentEdge->p->e[i].w);
+        }
+        root = makeDDNode(currentEdge->p->v, edges);
+        mappedNode[currentEdge->p] = root.p;
+        currentEdge = nullptr;
+      }
+    } while (!stack.empty());
+    root.w = cn.lookup(cn.mulTemp(original.w, root.w));
     return root;
   }
 
