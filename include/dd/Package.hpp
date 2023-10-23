@@ -1301,7 +1301,6 @@ public:
       incRef(e);
       decRef(rootEdge);
       rootEdge = e;
-      garbageCollect();
     }
 
     return std::string{result.rbegin(), result.rend()};
@@ -2024,9 +2023,6 @@ public:
     const ComplexValue expValue = innerProduct(y, yPrime);
 
     assert(RealNumber::approximatelyZero(expValue.i));
-
-    garbageCollect();
-
     return expValue.r;
   }
 
