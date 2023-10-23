@@ -446,9 +446,9 @@ Edge<dNode>::getSparseProbabilityVector(const fp threshold) const;
 template SparsePVecStrKeys
 Edge<dNode>::getSparseProbabilityVectorStrKeys(const fp threshold) const;
 template std::complex<fp>
-Edge<mNode>::getValueByIndex<dNode, true>(const std::size_t i,
+Edge<dNode>::getValueByIndex<dNode, true>(const std::size_t i,
                                           const std::size_t j) const;
-template void Edge<mNode>::traverseMatrix<dNode, true>(
+template void Edge<dNode>::traverseMatrix<dNode, true>(
     const std::complex<fp>& amp, const std::size_t i, const std::size_t j,
     MatrixEntryFunc f, const fp threshold) const;
 template void Edge<dNode>::traverseDiagonal(const fp& prob, const std::size_t i,
