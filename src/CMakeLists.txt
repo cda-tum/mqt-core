@@ -90,7 +90,7 @@ add_subdirectory(zx)
 # add ECC library
 add_subdirectory(ecc)
 
-#add Eval library
+# add Eval library
 add_subdirectory(eval)
 
 # ** Note ** The following target will soon be removed from the project. All top-level projects

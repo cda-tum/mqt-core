@@ -5,7 +5,7 @@
 #include <memory>
 
 namespace qc {
-  class QuantumComputation;
+class QuantumComputation;
 }
 
 class SimulationTask : public Task {

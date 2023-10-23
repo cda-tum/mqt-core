@@ -1,14 +1,12 @@
 if(NOT TARGET gtest OR NOT TARGET gmock)
-    # Prevent overriding the parent project's compiler/linker settings on Windows
-    set(gtest_force_shared_crt # cmake-lint: disable=C0103
-            ON
-            CACHE BOOL "" FORCE)
+  # Prevent overriding the parent project's compiler/linker settings on Windows
+  set(gtest_force_shared_crt # cmake-lint: disable=C0103
+      ON
+      CACHE BOOL "" FORCE)
 
-    # store path to googletest in variable
-    set(GTEST_PATH "extern/googletest")
-    add_subdirectory("${PROJECT_SOURCE_DIR}/${GTEST_PATH}" "${GTEST_PATH}"
-            EXCLUDE_FROM_ALL)
+  # store path to googletest in variable
+  set(GTEST_PATH "extern/googletest")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/${GTEST_PATH}" "${GTEST_PATH}" EXCLUDE_FROM_ALL)
 endif()
 
-package_add_test(
-        ${PROJECT_NAME}_sim_benchmark ${PROJECT_NAME})
+package_add_test(${PROJECT_NAME}_sim_benchmark ${PROJECT_NAME})
