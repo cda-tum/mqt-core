@@ -136,7 +136,7 @@ public:
   /// Get the total number of entries
   [[nodiscard]] std::size_t getNumEntries() const noexcept {
     return std::accumulate(
-        stats.begin(), stats.end(), 0U,
+        stats.begin(), stats.end(), std::size_t{0},
         [](const std::size_t& sum, const UniqueTableStatistics& stat) {
           return sum + stat.numEntries;
         });
@@ -145,7 +145,7 @@ public:
   /// Get the total number of active entries
   [[nodiscard]] std::size_t getNumActiveEntries() const noexcept {
     return std::accumulate(
-        stats.begin(), stats.end(), 0U,
+        stats.begin(), stats.end(), std::size_t{0},
         [](const std::size_t& sum, const UniqueTableStatistics& stat) {
           return sum + stat.numActiveEntries;
         });
@@ -154,7 +154,7 @@ public:
   /// Get the peak total number of active entries
   [[nodiscard]] std::size_t getPeakNumActiveEntries() const noexcept {
     return std::accumulate(
-        stats.begin(), stats.end(), 0U,
+        stats.begin(), stats.end(), std::size_t{0},
         [](const std::size_t& sum, const UniqueTableStatistics& stat) {
           return sum + stat.peakNumActiveEntries;
         });
@@ -208,7 +208,6 @@ public:
    */
   [[nodiscard]] bool incRef(Node* p) noexcept {
     const auto inc = ::dd::incRef(p);
-    assert(!inc || p != nullptr);
     if (inc && p->ref == 1U) {
       stats[p->v].trackActiveEntry();
     }
@@ -227,7 +226,6 @@ public:
    */
   [[nodiscard]] bool decRef(Node* p) noexcept {
     const auto dec = ::dd::decRef(p);
-    assert(!dec || p != nullptr);
     if (dec && p->ref == 0U) {
       --stats[p->v].numActiveEntries;
     }
