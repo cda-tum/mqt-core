@@ -16,18 +16,6 @@ RealNumber* RealNumber::getNegativePointer(const RealNumber* e) noexcept {
                                        LSB);
 }
 
-bool RealNumber::exactlyZero(const RealNumber* e) noexcept {
-  return (e == &constants::zero);
-}
-
-bool RealNumber::exactlyOne(const RealNumber* e) noexcept {
-  return (e == &constants::one);
-}
-
-bool RealNumber::exactlySqrt2over2(const dd::RealNumber* e) noexcept {
-  return (e == &constants::sqrt2over2);
-}
-
 RealNumber* RealNumber::flipPointerSign(const RealNumber* e) noexcept {
   if (exactlyZero(e)) {
     return &constants::zero;
