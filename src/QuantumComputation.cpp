@@ -611,6 +611,7 @@ std::ostream& QuantumComputation::printStatistics(std::ostream& os) const {
 
 void QuantumComputation::dump(const std::string& filename) {
   const std::size_t dot = filename.find_last_of('.');
+  assert(dot != std::string::npos);
   std::string extension = filename.substr(dot + 1);
   std::transform(
       extension.begin(), extension.end(), extension.begin(),
@@ -698,7 +699,6 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
 }
 
 void QuantumComputation::dump(const std::string& filename, Format format) {
-  assert(std::count(filename.begin(), filename.end(), '.') == 1);
   auto of = std::ofstream(filename);
   if (!of.good()) {
     throw QFRException("[dump] Error opening file: " + filename);
