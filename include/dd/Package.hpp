@@ -498,14 +498,16 @@ public:
     auto rightSubtree = vEdge::one;
 
     for (std::size_t p = 0; p < n - 1; ++p) {
-      leftSubtree = makeDDNode(static_cast<Qubit>(p), std::array{leftSubtree, vEdge::zero});
-      rightSubtree = makeDDNode(static_cast<Qubit>(p), std::array{vEdge::zero, rightSubtree});
+      leftSubtree = makeDDNode(static_cast<Qubit>(p),
+                               std::array{leftSubtree, vEdge::zero});
+      rightSubtree = makeDDNode(static_cast<Qubit>(p),
+                                std::array{vEdge::zero, rightSubtree});
     }
 
-    auto f = makeDDNode(
-        static_cast<Qubit>(n - 1),
-        std::array<vEdge, RADIX>{{{leftSubtree.p, cn.lookup(dd::SQRT2_2, 0)},
-                                  {rightSubtree.p, cn.lookup(dd::SQRT2_2, 0)}}});
+    auto f = makeDDNode(static_cast<Qubit>(n - 1),
+                        std::array<vEdge, RADIX>{
+                            {{leftSubtree.p, cn.lookup(dd::SQRT2_2, 0)},
+                             {rightSubtree.p, cn.lookup(dd::SQRT2_2, 0)}}});
 
     return f;
   }
