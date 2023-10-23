@@ -2069,7 +2069,7 @@ private:
   Edge<Node> kronecker2(const Edge<Node>& x, const Edge<Node>& y,
                         const bool incIdx = true) {
     if (x.w.approximatelyZero() || y.w.approximatelyZero()) {
-      return Edge<Node>::zero;
+      return Edge<Node>::zero();
     }
 
     if (x.isTerminal()) {

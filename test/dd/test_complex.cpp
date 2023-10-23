@@ -40,9 +40,9 @@ TEST_F(CNTest, TrivialTest) {
 }
 
 TEST_F(CNTest, ComplexNumberCreation) {
-  EXPECT_EQ(cn.lookup(Complex::zero), Complex::zero);
-  EXPECT_EQ(cn.lookup(Complex::one), Complex::one);
-  EXPECT_EQ(cn.lookup(1e-16, 0.), Complex::zero);
+  EXPECT_TRUE(cn.lookup(Complex::zero()).exactlyZero());
+  EXPECT_TRUE(cn.lookup(Complex::one()).exactlyOne());
+  EXPECT_TRUE(cn.lookup(1e-16, 0.).exactlyZero());
   EXPECT_EQ(RealNumber::val(cn.lookup(1e-16, 1.).r), 0.);
   EXPECT_EQ(RealNumber::val(cn.lookup(1e-16, 1.).i), 1.);
   EXPECT_EQ(RealNumber::val(cn.lookup(1e-16, -1.).r), 0.);
@@ -92,9 +92,9 @@ TEST_F(CNTest, ComplexNumberArithmetic) {
   cn.decRef(c);
   cn.decRef(d);
   e = cn.lookup(e);
-  EXPECT_EQ(e, Complex::one);
+  EXPECT_EQ(e, Complex::one());
   auto f = cn.getTemporary();
-  ComplexNumbers::div(f, Complex::zero, Complex::one);
+  ComplexNumbers::div(f, Complex::zero(), Complex::one());
 
   const dd::ComplexValue zero{0., 0.};
   const dd::ComplexValue one{1., 0.};
@@ -102,10 +102,8 @@ TEST_F(CNTest, ComplexNumberArithmetic) {
 }
 
 TEST_F(CNTest, NearZeroLookup) {
-  auto c = cn.getTemporary(RealNumber::eps / 10., RealNumber::eps / 10.);
-  auto d = cn.lookup(c);
-  EXPECT_EQ(d.r, Complex::zero.r);
-  EXPECT_EQ(d.i, Complex::zero.i);
+  auto d = cn.lookup(RealNumber::eps / 10., RealNumber::eps / 10.);
+  EXPECT_TRUE(d.exactlyZero());
 }
 
 TEST_F(CNTest, SortedBuckets) {
@@ -270,14 +268,14 @@ TEST(DDComplexTest, ComplexValueEquals) {
 }
 
 TEST(DDComplexTest, LowestFractions) {
-  EXPECT_THAT(dd::ComplexValue::getLowestFraction(0.0), ::testing::Pair(0, 1));
-  EXPECT_THAT(dd::ComplexValue::getLowestFraction(0.2), ::testing::Pair(1, 5));
-  EXPECT_THAT(dd::ComplexValue::getLowestFraction(0.25), ::testing::Pair(1, 4));
-  EXPECT_THAT(dd::ComplexValue::getLowestFraction(0.5), ::testing::Pair(1, 2));
-  EXPECT_THAT(dd::ComplexValue::getLowestFraction(0.75), ::testing::Pair(3, 4));
-  EXPECT_THAT(dd::ComplexValue::getLowestFraction(1.5), ::testing::Pair(3, 2));
-  EXPECT_THAT(dd::ComplexValue::getLowestFraction(2.0), ::testing::Pair(2, 1));
-  EXPECT_THAT(dd::ComplexValue::getLowestFraction(2047.0 / 2048.0, 1024U),
+  EXPECT_THAT(ComplexValue::getLowestFraction(0.0), ::testing::Pair(0, 1));
+  EXPECT_THAT(ComplexValue::getLowestFraction(0.2), ::testing::Pair(1, 5));
+  EXPECT_THAT(ComplexValue::getLowestFraction(0.25), ::testing::Pair(1, 4));
+  EXPECT_THAT(ComplexValue::getLowestFraction(0.5), ::testing::Pair(1, 2));
+  EXPECT_THAT(ComplexValue::getLowestFraction(0.75), ::testing::Pair(3, 4));
+  EXPECT_THAT(ComplexValue::getLowestFraction(1.5), ::testing::Pair(3, 2));
+  EXPECT_THAT(ComplexValue::getLowestFraction(2.0), ::testing::Pair(2, 1));
+  EXPECT_THAT(ComplexValue::getLowestFraction(2047.0 / 2048.0, 1024U),
               ::testing::Pair(1, 1));
 }
 
@@ -616,33 +614,33 @@ TEST_F(CNTest, exactlyOneComparison) {
 }
 
 TEST_F(CNTest, ExportConditionalFormat1) {
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(1, 0)).c_str(), "1");
+  EXPECT_STREQ(dd::conditionalFormat(cn.lookup(1, 0)).c_str(), "1");
 }
 
 TEST_F(CNTest, ExportConditionalFormat2) {
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(0, 1)).c_str(), "i");
+  EXPECT_STREQ(dd::conditionalFormat(cn.lookup(0, 1)).c_str(), "i");
 }
 
 TEST_F(CNTest, ExportConditionalFormat3) {
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-1, 0)).c_str(), "-1");
+  EXPECT_STREQ(dd::conditionalFormat(cn.lookup(-1, 0)).c_str(), "-1");
 }
 
 TEST_F(CNTest, ExportConditionalFormat4) {
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(0, -1)).c_str(), "-i");
+  EXPECT_STREQ(dd::conditionalFormat(cn.lookup(0, -1)).c_str(), "-i");
 }
 
 TEST_F(CNTest, ExportConditionalFormat5) {
-  const auto num = cn.getCached(-dd::SQRT2_2, -dd::SQRT2_2);
+  const auto num = cn.lookup(-dd::SQRT2_2, -dd::SQRT2_2);
   EXPECT_STREQ(dd::conditionalFormat(num).c_str(), "ℯ(-iπ 3/4)");
   EXPECT_STREQ(dd::conditionalFormat(num, false).c_str(), "-1/√2(1+i)");
 }
 
 TEST_F(CNTest, ExportConditionalFormat6) {
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-1, -1)).c_str(),
+  EXPECT_STREQ(dd::conditionalFormat(cn.lookup(-1, -1)).c_str(),
                "2/√2 ℯ(-iπ 3/4)");
 }
 
 TEST_F(CNTest, ExportConditionalFormat7) {
-  EXPECT_STREQ(dd::conditionalFormat(cn.getCached(-dd::SQRT2_2, 0)).c_str(),
+  EXPECT_STREQ(dd::conditionalFormat(cn.lookup(-dd::SQRT2_2, 0)).c_str(),
                "-1/√2");
 }
