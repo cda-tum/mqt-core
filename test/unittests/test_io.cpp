@@ -74,18 +74,18 @@ TEST_P(IO, importAndDump) {
 }
 
 TEST_F(IO, dumpValidFilenames) {
-  
+
   qc::QuantumComputation qc{4, 4};
   qc.x(0);
   qc.cx(qc::Control{3}, 2);
   ASSERT_NO_THROW(qc.dump(output3, qc::Format::OpenQASM));
   ASSERT_NO_THROW(qc.dump(output4, qc::Format::OpenQASM));
   ASSERT_NO_THROW(qc.dump(output4));
-  
+
   std::filesystem::create_directory(output5dir);
   ASSERT_NO_THROW(qc.dump(output5, qc::Format::OpenQASM));
   ASSERT_NO_THROW(qc.dump(output5));
-  
+
   std::filesystem::remove(output3);
   std::filesystem::remove(output4);
   std::filesystem::remove(output5);
