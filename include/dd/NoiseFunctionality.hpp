@@ -2,6 +2,7 @@
 
 #include "dd/Operations.hpp"
 
+#include <optional>
 #include <random>
 #include <utility>
 
