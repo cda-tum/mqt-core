@@ -1220,16 +1220,15 @@ public:
 
     // look it up in the unique tables
     auto& uniqueTable = getUniqueTable<Node>();
-    auto l = uniqueTable.lookup(e, false);
-    assert(l.isTerminal() || l.p->v == var);
+    auto* l = uniqueTable.lookup(e.p);
 
     // set specific node properties for matrices
     if constexpr (std::is_same_v<Node, mNode>) {
-      if (l.p == e.p) {
-        checkSpecialMatrices(l.p);
+      if (l == e.p) {
+        checkSpecialMatrices(l);
       }
     }
-    return l;
+    return {l, e.w};
   }
 
   template <class Node>
