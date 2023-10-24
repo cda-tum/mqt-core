@@ -549,8 +549,6 @@ private:
 
   void applyDetNoiseSequential(dEdge& originalEdge,
                                const std::set<qc::Qubit>& targets) {
-    dEdge tmp = {};
-
     std::array<mEdge, NrEdges::value> idleOperation{};
 
     // Iterate over qubits and check if the qubit had been used
@@ -558,7 +556,7 @@ private:
       for (auto const& type : noiseEffects) {
         generateGate(idleOperation, type, targetQubit,
                      getNoiseProbability(type, targets));
-        tmp.p = nullptr;
+        std::optional<dEdge> tmp{};
         // Apply all noise matrices of the current noise effect
         for (std::size_t m = 0; m < SEQUENTIAL_NOISE_MAP.find(type)->second;
              m++) {
@@ -568,16 +566,18 @@ private:
           auto tmp2 =
               package->multiply(densityFromMatrixEdge(idleOperation.at(m)),
                                 tmp1, 0, useDensityMatrixType);
-          if (tmp.p == nullptr) {
+          if (!tmp.has_value()) {
             tmp = tmp2;
           } else {
-            tmp = package->add(tmp2, tmp);
+            tmp = package->add(tmp2, *tmp);
           }
         }
-        package->incRef(tmp);
+        assert(tmp.has_value());
+        auto& tmpEdge = *tmp;
+        package->incRef(tmpEdge);
         dEdge::alignDensityEdge(originalEdge);
         package->decRef(originalEdge);
-        originalEdge = tmp;
+        originalEdge = tmpEdge;
         if (useDensityMatrixType) {
           dEdge::setDensityMatrixTrue(originalEdge);
         }
