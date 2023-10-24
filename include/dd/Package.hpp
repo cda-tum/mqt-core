@@ -1330,9 +1330,9 @@ public:
       const fp prob = probsMone[ptr];
 
       const auto& s0 = ptr->e[0];
-      if (!s0.w.approximatelyZero()) {
-        const fp tmp1 = prob * ComplexNumbers::mag2(s0.w);
-
+      if (const auto s0w = static_cast<ComplexValue>(s0.w);
+          !s0w.approximatelyZero()) {
+        const fp tmp1 = prob * s0w.mag2();
         if (visited.find(s0.p) != visited.end()) {
           probsMone[s0.p] = probsMone[s0.p] + tmp1;
         } else {
@@ -1343,9 +1343,9 @@ public:
       }
 
       const auto& s1 = ptr->e[1];
-      if (!s1.w.approximatelyZero()) {
-        const fp tmp1 = prob * ComplexNumbers::mag2(s1.w);
-
+      if (const auto s1w = static_cast<ComplexValue>(s1.w);
+          !s1w.approximatelyZero()) {
+        const fp tmp1 = prob * s1w.mag2();
         if (visited.find(s1.p) != visited.end()) {
           probsMone[s1.p] = probsMone[s1.p] + tmp1;
         } else {
@@ -1364,12 +1364,14 @@ public:
         const auto* ptr = q.front();
         q.pop();
         const auto& s0 = ptr->e[0];
-        if (!s0.w.approximatelyZero()) {
-          pzero += probsMone[ptr] * ComplexNumbers::mag2(s0.w);
+        if (const auto s0w = static_cast<ComplexValue>(s0.w);
+            !s0w.approximatelyZero()) {
+          pzero += probsMone[ptr] * s0w.mag2();
         }
         const auto& s1 = ptr->e[1];
-        if (!s1.w.approximatelyZero()) {
-          pone += probsMone[ptr] * ComplexNumbers::mag2(s1.w);
+        if (const auto s1w = static_cast<ComplexValue>(s1.w);
+            !s1w.approximatelyZero()) {
+          pone += probsMone[ptr] * s1w.mag2();
         }
       }
     } else {
@@ -1381,12 +1383,14 @@ public:
         q.pop();
 
         const auto& s0 = ptr->e[0];
-        if (!s0.w.approximatelyZero()) {
-          pzero += probsMone[ptr] * probs[s0.p] * ComplexNumbers::mag2(s0.w);
+        if (const auto s0w = static_cast<ComplexValue>(s0.w);
+            !s0w.approximatelyZero()) {
+          pzero += probsMone[ptr] * probs[s0.p] * s0w.mag2();
         }
         const auto& s1 = ptr->e[1];
-        if (!s1.w.approximatelyZero()) {
-          pone += probsMone[ptr] * probs[s1.p] * ComplexNumbers::mag2(s1.w);
+        if (const auto s1w = static_cast<ComplexValue>(s1.w);
+            !s1w.approximatelyZero()) {
+          pone += probsMone[ptr] * probs[s1.p] * s1w.mag2();
         }
       }
     }
