@@ -498,14 +498,16 @@ public:
     auto rightSubtree = vEdge::one;
 
     for (std::size_t p = 0; p < n - 1; ++p) {
-      leftSubtree = makeDDNode(static_cast<Qubit>(p), std::array{leftSubtree, vEdge::zero});
-      rightSubtree = makeDDNode(static_cast<Qubit>(p), std::array{vEdge::zero, rightSubtree});
+      leftSubtree = makeDDNode(static_cast<Qubit>(p),
+                               std::array{leftSubtree, vEdge::zero});
+      rightSubtree = makeDDNode(static_cast<Qubit>(p),
+                                std::array{vEdge::zero, rightSubtree});
     }
 
-    auto f = makeDDNode(
-        static_cast<Qubit>(n - 1),
-        std::array<vEdge, RADIX>{{{leftSubtree.p, cn.lookup(dd::SQRT2_2, 0)},
-                                  {rightSubtree.p, cn.lookup(dd::SQRT2_2, 0)}}});
+    auto f = makeDDNode(static_cast<Qubit>(n - 1),
+                        std::array<vEdge, RADIX>{
+                            {{leftSubtree.p, cn.lookup(dd::SQRT2_2, 0)},
+                             {rightSubtree.p, cn.lookup(dd::SQRT2_2, 0)}}});
 
     return f;
   }
@@ -520,20 +522,32 @@ public:
           " qubits. Please allocate a larger package instance."};
     }
 
-    if (n < 2) {
+    if (n == 1) {
       return makeBasisState(n, {BasisStates::one});
+    } else if (n == 0) {
+      throw std::runtime_error{
+          "Cannot create W state for 0 qubits. Please choose n > 0."};
     }
 
-    auto f = vEdge::one;
-    for (size_t i = 0; i < n; ++i) {
-      std::vector<BasisStates> state =
-          std::vector<BasisStates>(n, BasisStates::zero);
-      state[i] = BasisStates::one;
+    auto leftSubtree = vEdge::one;
+    auto rightSubtree = vEdge::one;
 
-      auto newBasisState = makeBasisState(n, state);
-      f = add(newBasisState, f);
+    leftSubtree =
+        makeDDNode(static_cast<Qubit>(0), std::array{vEdge::zero, leftSubtree});
+    rightSubtree = makeDDNode(static_cast<Qubit>(0),
+                              std::array{rightSubtree, vEdge::zero});
+
+    for (size_t p = 1; p < n - 1; ++p) {
+      leftSubtree = makeDDNode(static_cast<Qubit>(p),
+                               std::array{leftSubtree, rightSubtree});
+      rightSubtree = makeDDNode(static_cast<Qubit>(p),
+                                std::array{rightSubtree, vEdge::zero});
     }
+
+    auto f = makeDDNode(static_cast<Qubit>(n - 1),
+                        std::array{leftSubtree, rightSubtree});
     f = normalize(f, false);
+
     return f;
   }
 
