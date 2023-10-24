@@ -16,6 +16,7 @@ package_add_test(
   ${PROJECT_NAME}-dd
   dd/test_complex.cpp
   dd/test_package.cpp
+  dd/test_state_preparation.cpp
   dd/test_dd_functionality.cpp
   dd/test_dd_noise_functionality.cpp
   algorithms/eval_dynamic_circuits.cpp

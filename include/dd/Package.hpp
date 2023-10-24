@@ -495,6 +495,11 @@ public:
           " qubits. Please allocate a larger package instance."};
     }
 
+    if (n == 0) {
+      throw std::runtime_error{
+          "Cannot create GHZ state for 0 qubits. Please choose n > 0."};
+    }
+
     auto leftSubtree = vEdge::one();
     auto rightSubtree = vEdge::one();
 
