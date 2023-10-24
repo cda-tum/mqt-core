@@ -144,10 +144,13 @@ std::ostream& operator<<(std::ostream& os, const Complex& c);
 ComplexValue operator*(const Complex& c1, const ComplexValue& c2);
 ComplexValue operator*(const ComplexValue& c1, const Complex& c2);
 ComplexValue operator*(const Complex& c1, const Complex& c2);
+ComplexValue operator*(const Complex& c1, fp real);
+ComplexValue operator*(fp real, const Complex& c1);
 
 ComplexValue operator/(const Complex& c1, const ComplexValue& c2);
 ComplexValue operator/(const ComplexValue& c1, const Complex& c2);
 ComplexValue operator/(const Complex& c1, const Complex& c2);
+ComplexValue operator/(const Complex& c1, fp real);
 
 } // namespace dd
 
