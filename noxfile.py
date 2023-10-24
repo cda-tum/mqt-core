@@ -31,7 +31,7 @@ def lint(session: nox.Session) -> None:
 def pylint(session: nox.Session) -> None:
     """Run PyLint."""
     session.install("scikit-build-core[pyproject]", "setuptools_scm", "pybind11")
-    session.install("--no-build-isolation", ".", "pylint")
+    session.install("--no-build-isolation", "-ve.", "pylint")
     session.run("pylint", "mqt.core", *session.posargs)
 
 
@@ -90,7 +90,7 @@ def docs(session: nox.Session) -> None:
     build_requirements = ["scikit-build-core[pyproject]", "setuptools_scm", "pybind11"]
     extra_installs = ["sphinx-autobuild"] if args.serve else []
     session.install(*build_requirements, *extra_installs)
-    session.install("--no-build-isolation", ".[docs]")
+    session.install("--no-build-isolation", "-ve.[docs]")
     session.chdir("docs")
 
     if args.builder == "linkcheck":
