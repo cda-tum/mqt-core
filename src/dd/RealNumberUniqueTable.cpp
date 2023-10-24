@@ -55,19 +55,16 @@ void RealNumberUniqueTable::decRef(RealNumber* num) noexcept {
 RealNumber* RealNumberUniqueTable::lookupNonNegative(const fp val) {
   assert(!std::isnan(val));
   assert(val > 0);
-  ++stats.lookups;
 
   if (RealNumber::approximatelyOne(val)) {
-    ++stats.hits;
     return &constants::one;
   }
 
   if (RealNumber::approximatelyEquals(val, SQRT2_2)) {
-    ++stats.hits;
     return &constants::sqrt2over2;
   }
-  assert(val - RealNumber::eps >= 0); // should be handle above as special case
 
+  ++stats.lookups;
   const auto lowerKey = hash(val - RealNumber::eps);
   const auto upperKey = hash(val + RealNumber::eps);
 
