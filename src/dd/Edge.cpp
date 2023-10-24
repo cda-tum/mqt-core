@@ -79,7 +79,7 @@ std::complex<fp> Edge<Node>::getValueByIndex(const std::size_t i) const {
 
   auto decisions = std::string(p->v + 1U, '0');
   for (auto j = 0U; j <= p->v; ++j) {
-    if ((i & (1U << j)) != 0U) {
+    if ((i & (1ULL << j)) != 0U) {
       decisions[j] = '1';
     }
   }
@@ -196,12 +196,12 @@ std::complex<fp> Edge<Node>::getValueByIndex(const std::size_t i,
 
   auto decisions = std::string(p->v + 1U, '0');
   for (auto k = 0U; k <= p->v; ++k) {
-    if ((i & (1U << k)) != 0U) {
+    if ((i & (1ULL << k)) != 0U) {
       decisions[k] = '2';
     }
   }
   for (auto k = 0U; k <= p->v; ++k) {
-    if ((j & (1U << k)) != 0U) {
+    if ((j & (1ULL << k)) != 0U) {
       if (decisions[k] == '2') {
         decisions[k] = '3';
       } else {

@@ -9,8 +9,8 @@ void ComplexNumbers::setTolerance(fp tol) noexcept { RealNumber::eps = tol; }
 
 void ComplexNumbers::add(Complex& r, const Complex& a,
                          const Complex& b) noexcept {
-  assert(r != Complex::zero);
-  assert(r != Complex::one);
+  assert(!r.exactlyZero());
+  assert(!r.exactlyOne());
   assert(r.r != a.i && "r.r and a.i point to the same entry!");
   assert(r.i != a.r && "r.i and a.r point to the same entry!");
   assert(r.r != b.i && "r.r and b.i point to the same entry!");
@@ -21,8 +21,8 @@ void ComplexNumbers::add(Complex& r, const Complex& a,
 
 void ComplexNumbers::sub(Complex& r, const Complex& a,
                          const Complex& b) noexcept {
-  assert(r != Complex::zero);
-  assert(r != Complex::one);
+  assert(!r.exactlyZero());
+  assert(!r.exactlyOne());
   assert(r.r != a.i && "r.r and a.i point to the same entry!");
   assert(r.i != a.r && "r.i and a.r point to the same entry!");
   assert(r.r != b.i && "r.r and b.i point to the same entry!");
@@ -33,8 +33,8 @@ void ComplexNumbers::sub(Complex& r, const Complex& a,
 
 void ComplexNumbers::mul(Complex& r, const Complex& a,
                          const Complex& b) noexcept {
-  assert(r != Complex::zero);
-  assert(r != Complex::one);
+  assert(!r.exactlyZero());
+  assert(!r.exactlyOne());
   assert(r.r != a.i && "r.r and a.i point to the same entry!");
   assert(r.i != a.r && "r.i and a.r point to the same entry!");
   assert(r.r != b.i && "r.r and b.i point to the same entry!");
@@ -59,8 +59,8 @@ void ComplexNumbers::mul(Complex& r, const Complex& a,
 
 void ComplexNumbers::div(Complex& r, const Complex& a,
                          const Complex& b) noexcept {
-  assert(r != Complex::zero);
-  assert(r != Complex::one);
+  assert(!r.exactlyZero());
+  assert(!r.exactlyOne());
   assert(r.r != a.i && "r.r and a.i point to the same entry!");
   assert(r.i != a.r && "r.i and a.r point to the same entry!");
   assert(r.r != b.i && "r.r and b.i point to the same entry!");

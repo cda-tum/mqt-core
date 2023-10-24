@@ -123,7 +123,7 @@ public:
                                                   true, multiQubitOperation);
         tmp = package->multiply(stackedOperation, state);
       }
-      tmp.w = Complex::one;
+      tmp.w = Complex::one();
 
       package->incRef(tmp);
       package->decRef(state);
@@ -327,7 +327,7 @@ private:
       return {originalEdge.p, package->cn.getCached(originalEdge.w)};
     }
 
-    auto originalCopy = qc::DensityMatrixDD{originalEdge.p, Complex::one};
+    auto originalCopy = qc::DensityMatrixDD{originalEdge.p, Complex::one()};
     ArrayOfEdges newEdges{};
     for (size_t i = 0; i < newEdges.size(); i++) {
       auto& successor = originalCopy.p->e[i];
@@ -484,7 +484,7 @@ private:
         complexProb.r->value = (2 - probability) * 0.5;
         helperEdge[0].w = package->cn.mulCached(e[0].w, complexProb);
       } else {
-        helperEdge[0].w = Complex::zero;
+        helperEdge[0].w = Complex::zero();
       }
 
       // helperEdge[1] = 0.5*p*e[3]
@@ -493,7 +493,7 @@ private:
         complexProb.r->value = probability * 0.5;
         helperEdge[1].w = package->cn.mulCached(e[3].w, complexProb);
       } else {
-        helperEdge[1].w = Complex::zero;
+        helperEdge[1].w = Complex::zero();
       }
 
       // e[0] = helperEdge[0] + helperEdge[1]
@@ -532,7 +532,7 @@ private:
         complexProb.r->value = (2 - probability) * 0.5;
         helperEdge[0].w = package->cn.mulCached(e[3].w, complexProb);
       } else {
-        helperEdge[0].w = Complex::zero;
+        helperEdge[0].w = Complex::zero();
       }
 
       // helperEdge[1] = 0.5*p*e[0]
@@ -541,7 +541,7 @@ private:
         complexProb.r->value = probability * 0.5;
         helperEdge[1].w = package->cn.mulCached(oldE0Edge.w, complexProb);
       } else {
-        helperEdge[1].w = Complex::zero;
+        helperEdge[1].w = Complex::zero();
       }
 
       package->cn.returnToCache(e[3].w);
