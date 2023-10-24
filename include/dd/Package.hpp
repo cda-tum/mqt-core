@@ -376,7 +376,7 @@ public:
       ComplexNumbers::div(min.w, min.w, r.w);
       min.w = cn.lookup(min.w, true);
     } else {
-      min.w = cn.lookup(cn.divTemp(min.w, r.w));
+      min.w = cn.lookup(min.w / r.w);
     }
     if (min.w.exactlyZero()) {
       min = vEdge::zero();
@@ -620,7 +620,7 @@ public:
           if (cached) {
             ComplexNumbers::mul(r.w, r.w, maxc);
           } else {
-            r.w = cn.lookup(cn.mulTemp(r.w, maxc));
+            r.w = cn.lookup(r.w * maxc);
           }
         } else {
           auto& successor = r.p->e[i];
@@ -637,7 +637,7 @@ public:
             }
             successor.w = Complex::one();
           }
-          const auto c = cn.divTemp(successor.w, maxc);
+          const auto c = successor.w / maxc;
           if (cached) {
             cn.returnToCache(successor.w);
           }
@@ -1200,7 +1200,7 @@ private:
     if (r.w.approximatelyOne()) {
       r.w = e.w;
     } else {
-      r.w = cn.lookup(cn.mulTemp(r.w, e.w));
+      r.w = cn.lookup(r.w * e.w);
     }
     return r;
   }
@@ -1612,7 +1612,7 @@ public:
     auto res = makeDDNode(a.p->v, e);
 
     // adjust top weight including conjugate
-    res.w = cn.lookup(cn.mulTemp(res.w, ComplexNumbers::conj(a.w)));
+    res.w = cn.lookup(res.w * ComplexNumbers::conj(a.w));
 
     // put it in the compute table
     conjugateMatrixTranspose.insert(a, res);
@@ -2153,7 +2153,7 @@ private:
       } else {
         // better safe than sorry. this may result in complex
         // values with magnitude > 1 in the complex table
-        r.w = cn.lookup(cn.mulTemp(r.w, a.w));
+        r.w = cn.lookup(r.w * a.w);
       }
 
       cn.returnToCache(r1.w);
@@ -2177,7 +2177,7 @@ private:
     if (r.w.exactlyOne()) {
       r.w = a.w;
     } else {
-      r.w = cn.lookup(cn.mulTemp(r.w, a.w));
+      r.w = cn.lookup(r.w * a.w);
     }
     return r;
   }
@@ -2436,7 +2436,7 @@ private:
         }
       }
     }
-    f.w = cn.lookup(cn.mulTemp(f.w, e.w));
+    f.w = cn.lookup(f.w * e.w);
     return f;
   }
 
@@ -2482,7 +2482,7 @@ private:
         f = makeDDNode(e.p->v, std::array{g, vEdge::zero()});
       }
     }
-    f.w = cn.lookup(cn.mulTemp(f.w, e.w));
+    f.w = cn.lookup(f.w * e.w);
 
     // Quick-fix for normalization bug
     if (ComplexNumbers::mag2(f.w) > 1.0) {
@@ -2567,7 +2567,7 @@ private:
         }
       }
     }
-    f.w = cn.lookup(cn.mulTemp(f.w, e.w));
+    f.w = cn.lookup(f.w * e.w);
 
     // Quick-fix for normalization bug
     if (ComplexNumbers::mag2(f.w) > 1.0) {
@@ -2656,7 +2656,7 @@ public:
         currentEdge = nullptr;
       }
     } while (!stack.empty());
-    root.w = cn.lookup(cn.mulTemp(original.w, root.w));
+    root.w = cn.lookup(original.w * root.w);
     return root;
   }
 

@@ -128,30 +128,6 @@ Complex ComplexNumbers::divCached(const Complex& a, const Complex& b) {
   return c;
 }
 
-Complex ComplexNumbers::addTemp(const dd::Complex& a, const dd::Complex& b) {
-  auto c = getTemporary();
-  add(c, a, b);
-  return c;
-}
-
-Complex ComplexNumbers::subTemp(const dd::Complex& a, const dd::Complex& b) {
-  auto c = getTemporary();
-  sub(c, a, b);
-  return c;
-}
-
-Complex ComplexNumbers::mulTemp(const dd::Complex& a, const dd::Complex& b) {
-  auto c = getTemporary();
-  mul(c, a, b);
-  return c;
-}
-
-Complex ComplexNumbers::divTemp(const dd::Complex& a, const dd::Complex& b) {
-  auto c = getTemporary();
-  div(c, a, b);
-  return c;
-}
-
 Complex ComplexNumbers::lookup(const Complex& c, const bool cached) {
   if (isStaticComplex(c)) {
     return c;
@@ -191,26 +167,6 @@ Complex ComplexNumbers::lookup(const fp r) {
 
 Complex ComplexNumbers::lookup(const fp r, const fp i) {
   return {uniqueTable->lookup(r), uniqueTable->lookup(i)};
-}
-
-Complex ComplexNumbers::getTemporary() {
-  const auto [rv, iv] = cacheManager->getTemporaryPair();
-  return {rv, iv};
-}
-
-Complex ComplexNumbers::getTemporary(const fp r, const fp i) {
-  const auto [rv, iv] = cacheManager->getTemporaryPair();
-  rv->value = r;
-  iv->value = i;
-  return {rv, iv};
-}
-
-Complex ComplexNumbers::getTemporary(const ComplexValue& c) {
-  return getTemporary(c.r, c.i);
-}
-
-Complex ComplexNumbers::getTemporary(const Complex& c) {
-  return getTemporary(RealNumber::val(c.r), RealNumber::val(c.i));
 }
 
 Complex ComplexNumbers::getCached() {
