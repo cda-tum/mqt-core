@@ -28,12 +28,11 @@ std::int64_t RealNumberUniqueTable::hash(const fp val) noexcept {
 }
 
 RealNumber* RealNumberUniqueTable::lookup(const fp val) {
+  // if the value is close enough to zero, return the zero entry (avoiding -0.0)
+  if (RealNumber::approximatelyZero(val)) {
+    return &constants::zero;
+  }
   if (const auto sign = std::signbit(val); sign) {
-    // if absolute value is close enough to zero, just return the zero entry
-    // (avoiding -0.0)
-    if (RealNumber::approximatelyZero(val)) {
-      return &constants::zero;
-    }
     return RealNumber::getNegativePointer(lookupNonNegative(std::abs(val)));
   }
   return lookupNonNegative(val);
@@ -55,12 +54,8 @@ void RealNumberUniqueTable::decRef(RealNumber* num) noexcept {
 
 RealNumber* RealNumberUniqueTable::lookupNonNegative(const fp val) {
   assert(!std::isnan(val));
-  assert(val >= 0); // required anyway for the hash function
+  assert(val > 0);
   ++stats.lookups;
-  if (RealNumber::approximatelyZero(val)) {
-    ++stats.hits;
-    return &constants::zero;
-  }
 
   if (RealNumber::approximatelyOne(val)) {
     ++stats.hits;
