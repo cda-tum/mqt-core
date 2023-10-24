@@ -136,50 +136,6 @@ public:
   [[nodiscard]] Complex divCached(const Complex& a, const Complex& b);
 
   /**
-   * @brief Add two complex numbers and return the result in temporary complex
-   * number taken from the cache.
-   * @param a The first operand.
-   * @param b The second operand.
-   * @return The result.
-   * @note The result is only valid until the next call to any function that
-   * requests a temporary or cached complex number.
-   */
-  [[nodiscard]] Complex addTemp(const Complex& a, const Complex& b);
-
-  /**
-   * @brief Subtract two complex numbers and return the result in temporary
-   * complex number taken from the cache.
-   * @param a The first operand.
-   * @param b The second operand.
-   * @return The result.
-   * @note The result is only valid until the next call to any function that
-   * requests a temporary or cached complex number.
-   */
-  [[nodiscard]] Complex subTemp(const Complex& a, const Complex& b);
-
-  /**
-   * @brief Multiply two complex numbers and return the result in temporary
-   * complex number taken from the cache.
-   * @param a The first operand.
-   * @param b The second operand.
-   * @return The result.
-   * @note The result is only valid until the next call to any function that
-   * requests a temporary or cached complex number.
-   */
-  [[nodiscard]] Complex mulTemp(const Complex& a, const Complex& b);
-
-  /**
-   * @brief Divide two complex numbers and return the result in temporary
-   * complex number taken from the cache.
-   * @param a The first operand.
-   * @param b The second operand.
-   * @return The result.
-   * @note The result is only valid until the next call to any function that
-   * requests a temporary or cached complex number.
-   */
-  [[nodiscard]] Complex divTemp(const Complex& a, const Complex& b);
-
-  /**
    * @brief Lookup a complex value in the complex table; if not found add it.
    * @param c The complex number.
    * @param cached Used to indicate whether the number to be looked up is from
@@ -242,38 +198,6 @@ public:
   [[nodiscard]] static constexpr bool isStaticComplex(const Complex& c) {
     return c.exactlyZero() || c.exactlyOne();
   }
-
-  /**
-   * @brief Get a temporary complex number from the complex cache.
-   * @return The temporary complex number.
-   * @see MemoryManager::getTemporaryPair
-   */
-  [[nodiscard]] Complex getTemporary();
-
-  /**
-   * @brief Get a temporary complex number from the complex cache.
-   * @param r The real part.
-   * @param i The imaginary part.
-   * @return The temporary complex number.
-   * @see MemoryManager::getTemporaryPair
-   */
-  [[nodiscard]] Complex getTemporary(fp r, fp i);
-
-  /**
-   * @brief Get a temporary complex number from the complex cache.
-   * @param c The complex value.
-   * @return The temporary complex number.
-   * @see MemoryManager::getTemporaryPair
-   */
-  [[nodiscard]] Complex getTemporary(const ComplexValue& c);
-
-  /**
-   * @brief Get a temporary complex number from the complex cache.
-   * @param c The complex number.
-   * @return The temporary complex number.
-   * @see MemoryManager::getTemporaryPair
-   */
-  [[nodiscard]] Complex getTemporary(const Complex& c);
 
   /**
    * @brief Get a complex number from the complex cache.

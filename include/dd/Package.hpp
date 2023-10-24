@@ -376,7 +376,7 @@ public:
       ComplexNumbers::div(min.w, min.w, r.w);
       min.w = cn.lookup(min.w, true);
     } else {
-      min.w = cn.lookup(cn.divTemp(min.w, r.w));
+      min.w = cn.lookup(min.w / r.w);
     }
     if (min.w.exactlyZero()) {
       min = vEdge::zero();
@@ -620,7 +620,7 @@ public:
           if (cached) {
             ComplexNumbers::mul(r.w, r.w, maxc);
           } else {
-            r.w = cn.lookup(cn.mulTemp(r.w, maxc));
+            r.w = cn.lookup(r.w * maxc);
           }
         } else {
           auto& successor = r.p->e[i];
@@ -637,7 +637,7 @@ public:
             }
             successor.w = Complex::one();
           }
-          const auto c = cn.divTemp(successor.w, maxc);
+          const auto c = successor.w / maxc;
           if (cached) {
             cn.returnToCache(successor.w);
           }
@@ -1173,10 +1173,10 @@ private:
       return e;
     }
 
-    const auto& nodeit = nodes.find(e.p);
-    Edge<Node> newedge{};
-    if (nodeit != nodes.end()) {
-      newedge = nodeit->second;
+    const auto& nodeIt = nodes.find(e.p);
+    Edge<Node> r{};
+    if (nodeIt != nodes.end()) {
+      r = nodeIt->second;
     } else {
       constexpr std::size_t n = std::tuple_size_v<decltype(e.p->e)>;
       std::array<Edge<Node>, n> edges{};
@@ -1193,17 +1193,16 @@ private:
         }
       }
 
-      newedge = makeDDNode(e.p->v, edges);
-      nodes[e.p] = newedge;
+      r = makeDDNode(e.p->v, edges);
+      nodes[e.p] = r;
     }
 
-    if (newedge.w.approximatelyOne()) {
-      newedge.w = e.w;
+    if (r.w.approximatelyOne()) {
+      r.w = e.w;
     } else {
-      newedge.w = cn.lookup(cn.mulTemp(newedge.w, e.w));
+      r.w = cn.lookup(r.w * e.w);
     }
-
-    return newedge;
+    return r;
   }
 
   ///
@@ -1331,9 +1330,9 @@ public:
       const fp prob = probsMone[ptr];
 
       const auto& s0 = ptr->e[0];
-      if (!s0.w.approximatelyZero()) {
-        const fp tmp1 = prob * ComplexNumbers::mag2(s0.w);
-
+      if (const auto s0w = static_cast<ComplexValue>(s0.w);
+          !s0w.approximatelyZero()) {
+        const fp tmp1 = prob * s0w.mag2();
         if (visited.find(s0.p) != visited.end()) {
           probsMone[s0.p] = probsMone[s0.p] + tmp1;
         } else {
@@ -1344,9 +1343,9 @@ public:
       }
 
       const auto& s1 = ptr->e[1];
-      if (!s1.w.approximatelyZero()) {
-        const fp tmp1 = prob * ComplexNumbers::mag2(s1.w);
-
+      if (const auto s1w = static_cast<ComplexValue>(s1.w);
+          !s1w.approximatelyZero()) {
+        const fp tmp1 = prob * s1w.mag2();
         if (visited.find(s1.p) != visited.end()) {
           probsMone[s1.p] = probsMone[s1.p] + tmp1;
         } else {
@@ -1365,12 +1364,14 @@ public:
         const auto* ptr = q.front();
         q.pop();
         const auto& s0 = ptr->e[0];
-        if (!s0.w.approximatelyZero()) {
-          pzero += probsMone[ptr] * ComplexNumbers::mag2(s0.w);
+        if (const auto s0w = static_cast<ComplexValue>(s0.w);
+            !s0w.approximatelyZero()) {
+          pzero += probsMone[ptr] * s0w.mag2();
         }
         const auto& s1 = ptr->e[1];
-        if (!s1.w.approximatelyZero()) {
-          pone += probsMone[ptr] * ComplexNumbers::mag2(s1.w);
+        if (const auto s1w = static_cast<ComplexValue>(s1.w);
+            !s1w.approximatelyZero()) {
+          pone += probsMone[ptr] * s1w.mag2();
         }
       }
     } else {
@@ -1382,12 +1383,14 @@ public:
         q.pop();
 
         const auto& s0 = ptr->e[0];
-        if (!s0.w.approximatelyZero()) {
-          pzero += probsMone[ptr] * probs[s0.p] * ComplexNumbers::mag2(s0.w);
+        if (const auto s0w = static_cast<ComplexValue>(s0.w);
+            !s0w.approximatelyZero()) {
+          pzero += probsMone[ptr] * probs[s0.p] * s0w.mag2();
         }
         const auto& s1 = ptr->e[1];
-        if (!s1.w.approximatelyZero()) {
-          pone += probsMone[ptr] * probs[s1.p] * ComplexNumbers::mag2(s1.w);
+        if (const auto s1w = static_cast<ComplexValue>(s1.w);
+            !s1w.approximatelyZero()) {
+          pone += probsMone[ptr] * probs[s1.p] * s1w.mag2();
         }
       }
     }
@@ -1451,9 +1454,7 @@ public:
     vEdge e = multiply(measurementGate, rootEdge);
 
     assert(probability > 0.);
-    Complex c = cn.getTemporary(std::sqrt(1.0 / probability), 0);
-    ComplexNumbers::mul(c, e.w, c);
-    e.w = cn.lookup(c);
+    e.w = cn.lookup(e.w / std::sqrt(probability));
     incRef(e);
     decRef(rootEdge);
     rootEdge = e;
@@ -1611,7 +1612,7 @@ public:
     auto res = makeDDNode(a.p->v, e);
 
     // adjust top weight including conjugate
-    res.w = cn.lookup(cn.mulTemp(res.w, ComplexNumbers::conj(a.w)));
+    res.w = cn.lookup(res.w * ComplexNumbers::conj(a.w));
 
     // put it in the compute table
     conjugateMatrixTranspose.insert(a, res);
@@ -1931,27 +1932,29 @@ private:
   decreases each time to traverse the DDs.
   **/
   ComplexValue innerProduct(const vEdge& x, const vEdge& y, Qubit var) {
-    if (x.w.approximatelyZero() || y.w.approximatelyZero()) { // the 0 case
-      return {0.0, 0.0};
+    const auto xWeight = static_cast<ComplexValue>(x.w);
+    if (xWeight.approximatelyZero()) {
+      return 0;
+    }
+    const auto yWeight = static_cast<ComplexValue>(y.w);
+    if (yWeight.approximatelyZero()) {
+      return 0;
     }
 
+    const auto rWeight = xWeight * yWeight;
     if (var == 0) { // Multiplies terminal weights
-      auto c = cn.mulTemp(x.w, y.w);
-      return {c.r->value, c.i->value};
+      return rWeight;
     }
 
     // Set to one to generate more lookup hits
     auto xCopy = vEdge{x.p, Complex::one()};
     auto yCopy = vEdge{y.p, Complex::one()};
     if (const auto* r = vectorInnerProduct.lookup(xCopy, yCopy); r != nullptr) {
-      auto c = cn.getTemporary(r->w);
-      ComplexNumbers::mul(c, c, x.w);
-      ComplexNumbers::mul(c, c, y.w);
-      return {c.r->value, c.i->value};
+      return r->w * rWeight;
     }
 
     auto w = static_cast<Qubit>(var - 1U);
-    ComplexValue sum{0.0, 0.0};
+    ComplexValue sum = 0;
     // Iterates through edge weights recursively until terminal
     for (auto i = 0U; i < RADIX; i++) {
       vEdge e1{};
@@ -1967,16 +1970,11 @@ private:
       } else {
         e2 = yCopy;
       }
-      auto cv = innerProduct(e1, e2, w);
-      sum.r += cv.r;
-      sum.i += cv.i;
+      sum += innerProduct(e1, e2, w);
     }
 
-    vectorInnerProduct.insert(xCopy, yCopy, {vNode::getTerminal(), sum});
-    auto c = cn.getTemporary(sum);
-    ComplexNumbers::mul(c, c, x.w);
-    ComplexNumbers::mul(c, c, y.w);
-    return {c.r->value, c.i->value};
+    vectorInnerProduct.insert(xCopy, yCopy, vCachedEdge ::terminal(sum));
+    return sum * rWeight;
   }
 
 public:
@@ -2155,7 +2153,7 @@ private:
       } else {
         // better safe than sorry. this may result in complex
         // values with magnitude > 1 in the complex table
-        r.w = cn.lookup(cn.mulTemp(r.w, a.w));
+        r.w = cn.lookup(r.w * a.w);
       }
 
       cn.returnToCache(r1.w);
@@ -2179,7 +2177,7 @@ private:
     if (r.w.exactlyOne()) {
       r.w = a.w;
     } else {
-      r.w = cn.lookup(cn.mulTemp(r.w, a.w));
+      r.w = cn.lookup(r.w * a.w);
     }
     return r;
   }
@@ -2438,7 +2436,7 @@ private:
         }
       }
     }
-    f.w = cn.lookup(cn.mulTemp(f.w, e.w));
+    f.w = cn.lookup(f.w * e.w);
     return f;
   }
 
@@ -2484,7 +2482,7 @@ private:
         f = makeDDNode(e.p->v, std::array{g, vEdge::zero()});
       }
     }
-    f.w = cn.lookup(cn.mulTemp(f.w, e.w));
+    f.w = cn.lookup(f.w * e.w);
 
     // Quick-fix for normalization bug
     if (ComplexNumbers::mag2(f.w) > 1.0) {
@@ -2569,7 +2567,7 @@ private:
         }
       }
     }
-    f.w = cn.lookup(cn.mulTemp(f.w, e.w));
+    f.w = cn.lookup(f.w * e.w);
 
     // Quick-fix for normalization bug
     if (ComplexNumbers::mag2(f.w) > 1.0) {
@@ -2658,7 +2656,7 @@ public:
         currentEdge = nullptr;
       }
     } while (!stack.empty());
-    root.w = cn.lookup(cn.mulTemp(original.w, root.w));
+    root.w = cn.lookup(original.w * root.w);
     return root;
   }
 
@@ -2773,12 +2771,7 @@ public:
         result = deserializeNode(nodeIndex, v, edgeIndices, edgeWeights, nodes);
       }
     }
-
-    auto w = cn.getTemporary(rootweight.r, rootweight.i);
-    ComplexNumbers::mul(w, w, result.w);
-    result.w = cn.lookup(w);
-
-    return result;
+    return {result.p, cn.lookup(result.w * rootweight)};
   }
 
   template <class Node, class Edge = Edge<Node>>

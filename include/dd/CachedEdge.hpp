@@ -1,8 +1,10 @@
 #pragma once
 
+#include "dd/Complex.hpp"
 #include "dd/ComplexValue.hpp"
 #include "dd/DDDefinitions.hpp"
 
+#include <complex>
 #include <utility>
 
 namespace dd {
@@ -25,7 +27,8 @@ template <typename Node> struct CachedEdge {
 
   CachedEdge() = default;
   CachedEdge(Node* n, const ComplexValue& v) : p(n), w(v) {}
-  CachedEdge(Node* n, const Complex& c);
+  CachedEdge(Node* n, const Complex& c)
+      : p(n), w(static_cast<ComplexValue>(c)) {}
 
   /// Comparing two DD edges with another involves comparing the respective
   /// pointers and checking whether the corresponding weights are "close enough"
@@ -35,6 +38,50 @@ template <typename Node> struct CachedEdge {
     return p == other.p && w.approximatelyEquals(other.w);
   }
   bool operator!=(const CachedEdge& other) const { return !operator==(other); }
+
+  /**
+   * @brief Create a terminal edge with the given weight.
+   * @param w The weight of the terminal edge.
+   * @return A terminal edge with the given weight.
+   */
+  [[nodiscard]] static constexpr CachedEdge terminal(const ComplexValue& w) {
+    return CachedEdge{Node::getTerminal(), w};
+  }
+
+  /**
+   * @brief Create a terminal edge with the given weight.
+   * @param w The weight of the terminal edge.
+   * @return A terminal edge with the given weight.
+   */
+  [[nodiscard]] static constexpr CachedEdge
+  terminal(const std::complex<fp>& w) {
+    return CachedEdge{Node::getTerminal(), static_cast<ComplexValue>(w)};
+  }
+
+  /**
+   * @brief Create a terminal edge with the given weight.
+   * @param w The weight of the terminal edge.
+   * @return A terminal edge with the given weight.
+   */
+  [[nodiscard]] static constexpr CachedEdge terminal(const Complex& w) {
+    return terminal(static_cast<ComplexValue>(w));
+  }
+
+  /**
+   * @brief Create a zero terminal edge.
+   * @return A zero terminal edge.
+   */
+  [[nodiscard]] static constexpr CachedEdge zero() {
+    return terminal(ComplexValue(0.));
+  }
+
+  /**
+   * @brief Create a one terminal edge.
+   * @return A one terminal edge.
+   */
+  [[nodiscard]] static constexpr CachedEdge one() {
+    return terminal(ComplexValue(1.));
+  }
 };
 
 } // namespace dd

@@ -74,33 +74,6 @@ TEST_F(CNTest, ComplexNumberCreation) {
   std::cout << ut.getStats();
 }
 
-TEST_F(CNTest, ComplexNumberArithmetic) {
-  auto c = cn.lookup(0., 1.);
-  auto d = ComplexNumbers::conj(c);
-  EXPECT_EQ(RealNumber::val(d.r), 0.);
-  EXPECT_EQ(RealNumber::val(d.i), -1.);
-  c = cn.lookup(-1., -1.);
-  d = ComplexNumbers::neg(c);
-  EXPECT_EQ(RealNumber::val(d.r), 1.);
-  EXPECT_EQ(RealNumber::val(d.i), 1.);
-  c = cn.lookup(0.5, 0.5);
-  cn.incRef(c);
-  d = cn.lookup(-0.5, 0.5);
-  cn.incRef(d);
-  auto e = cn.getTemporary();
-  ComplexNumbers::sub(e, c, d);
-  cn.decRef(c);
-  cn.decRef(d);
-  e = cn.lookup(e);
-  EXPECT_EQ(e, Complex::one());
-  auto f = cn.getTemporary();
-  ComplexNumbers::div(f, Complex::zero(), Complex::one());
-
-  const dd::ComplexValue zero{0., 0.};
-  const dd::ComplexValue one{1., 0.};
-  EXPECT_EQ(one + zero, one);
-}
-
 TEST_F(CNTest, NearZeroLookup) {
   auto d = cn.lookup(RealNumber::eps / 10., RealNumber::eps / 10.);
   EXPECT_TRUE(d.exactlyZero());
@@ -529,19 +502,6 @@ TEST_F(CNTest, ComplexCacheAllocation) {
   for (auto i = 0U; i < allocs; i += 2) {
     cnums[i % 2] = cn.getCached();
   }
-
-  // trigger new allocation for obtaining a temporary from cache
-  const auto tmp = cn.getTemporary();
-  ASSERT_NE(tmp.r, nullptr);
-  ASSERT_NE(tmp.i, nullptr);
-  EXPECT_EQ(cm.getStats().numAllocated,
-            (1. + MemoryManager<RealNumber>::GROWTH_FACTOR) *
-                static_cast<fp>(allocs));
-
-  // clearing the unique table should reduce the allocated size to the original
-  // size
-  cm.reset();
-  EXPECT_EQ(cm.getStats().numAllocated, allocs);
 }
 
 TEST_F(CNTest, DoubleHitInFindOrInsert) {

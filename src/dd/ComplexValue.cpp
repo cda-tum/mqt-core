@@ -6,7 +6,11 @@
 #include <cassert>
 #include <cmath>
 #include <iomanip>
+#include <istream>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <utility>
 
 namespace dd {
 bool ComplexValue::operator==(const ComplexValue& other) const noexcept {
@@ -216,9 +220,36 @@ ComplexValue& ComplexValue::operator+=(const ComplexValue& rhs) noexcept {
   return *this;
 }
 
-ComplexValue operator+(ComplexValue lhs, const ComplexValue& rhs) noexcept {
-  lhs += rhs;
-  return lhs;
+ComplexValue& ComplexValue::operator*=(const fp& real) noexcept {
+  r *= real;
+  i *= real;
+  return *this;
+}
+
+ComplexValue operator+(const ComplexValue& c1, const ComplexValue& c2) {
+  return {c1.r + c2.r, c1.i + c2.i};
+}
+
+ComplexValue operator*(const ComplexValue& c1, fp r) {
+  return {c1.r * r, c1.i * r};
+}
+
+ComplexValue operator*(fp r, const ComplexValue& c1) {
+  return {c1.r * r, c1.i * r};
+}
+
+ComplexValue operator*(const ComplexValue& c1, const ComplexValue& c2) {
+  return {c1.r * c2.r - c1.i * c2.i, c1.r * c2.i + c1.i * c2.r};
+}
+
+ComplexValue operator/(const ComplexValue& c1, fp r) {
+  return {c1.r / r, c1.i / r};
+}
+
+ComplexValue operator/(const ComplexValue& c1, const ComplexValue& c2) {
+  const auto denom = c2.r * c2.r + c2.i * c2.i;
+  return {(c1.r * c2.r + c1.i * c2.i) / denom,
+          (c1.i * c2.r - c1.r * c2.i) / denom};
 }
 
 std::ostream& operator<<(std::ostream& os, const ComplexValue& c) {

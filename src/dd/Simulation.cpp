@@ -367,10 +367,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
             MEAS_ZERO_MAT, static_cast<std::size_t>(state.p->v) + 1U,
             targets[0]);
         qc::VectorDD measuredState = dd->multiply(measurementGate, state);
-
-        auto c = dd->cn.getTemporary(1. / std::sqrt(pzero), 0);
-        ComplexNumbers::mul(c, c, measuredState.w);
-        measuredState.w = dd->cn.lookup(c);
+        measuredState.w = dd->cn.lookup(measuredState.w / std::sqrt(pzero));
         dd->incRef(measuredState);
         dd->decRef(state);
         // recursive call from here
@@ -392,10 +389,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
             MEAS_ONE_MAT, static_cast<std::size_t>(state.p->v) + 1U,
             targets[0]);
         qc::VectorDD measuredState = dd->multiply(measurementGate, state);
-
-        auto c = dd->cn.getTemporary(1. / std::sqrt(pone), 0);
-        ComplexNumbers::mul(c, measuredState.w, c);
-        measuredState.w = dd->cn.lookup(c);
+        measuredState.w = dd->cn.lookup(measuredState.w / std::sqrt(pone));
         dd->incRef(measuredState);
         dd->decRef(state);
         // recursive call from here
