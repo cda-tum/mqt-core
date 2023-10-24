@@ -32,7 +32,7 @@ struct ComplexValue {
    * @param c The complex number to compare to.
    * @returns True if the complex number is approximately equal to the given
    * complex number, false otherwise.
-   * @see CTEntry::approximatelyEquals
+   * @see RealNumber::approximatelyEquals
    */
   [[nodiscard]] bool approximatelyEquals(const ComplexValue& c) const noexcept;
 
@@ -40,7 +40,7 @@ struct ComplexValue {
    * @brief Check whether the complex number is approximately equal to zero.
    * @returns True if the complex number is approximately equal to zero, false
    * otherwise.
-   * @see CTEntry::approximatelyZero
+   * @see RealNumber::approximatelyZero
    */
   [[nodiscard]] bool approximatelyZero() const noexcept;
 
@@ -48,8 +48,8 @@ struct ComplexValue {
    * @brief Check whether the complex number is approximately equal to one.
    * @returns True if the complex number is approximately equal to one, false
    * otherwise.
-   * @see CTEntry::approximatelyOne
-   * @see CTEntry::approximatelyZero
+   * @see RealNumber::approximatelyOne
+   * @see RealNumber::approximatelyZero
    */
   [[nodiscard]] bool approximatelyOne() const noexcept;
 
@@ -82,7 +82,7 @@ struct ComplexValue {
    * and denominator.
    */
   static std::pair<std::uint64_t, std::uint64_t>
-  getLowestFraction(double x, std::uint64_t maxDenominator = 1U << 10);
+  getLowestFraction(fp x, std::uint64_t maxDenominator = 1U << 10);
 
   /**
    * @brief Pretty print the given real number to the given output stream.
@@ -105,6 +105,18 @@ struct ComplexValue {
 
   /// Automatically convert to std::complex<dd::fp>
   explicit operator auto() const noexcept { return std::complex<dd::fp>{r, i}; }
+
+  /**
+   * @brief Compute the squared magnitude of the complex number.
+   * @return The squared magnitude of the complex number.
+   */
+  [[nodiscard]] fp mag2() const noexcept { return r * r + i * i; }
+
+  /**
+   * @brief Compute the magnitude of the complex number.
+   * @return The magnitude of the complex number.
+   */
+  [[nodiscard]] fp mag() const noexcept { return std::sqrt(mag2()); }
 
   /// In-place addition of two complex numbers
   ComplexValue& operator+=(const ComplexValue& rhs) noexcept;

@@ -4,10 +4,11 @@
 #include "dd/ComplexNumbers.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Edge.hpp"
-#include "dd/Package.hpp"
+#include "dd/Node.hpp"
+#include "dd/RealNumber.hpp"
 
 #include <algorithm>
-#include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
@@ -15,6 +16,7 @@
 #include <iostream>
 #include <limits>
 #include <queue>
+#include <sstream>
 #include <stack>
 #include <stdexcept>
 #include <string>

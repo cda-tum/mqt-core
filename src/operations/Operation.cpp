@@ -1,5 +1,7 @@
 #include "operations/Operation.hpp"
 
+#include <algorithm>
+
 namespace qc {
 
 std::ostream& Operation::printParameters(std::ostream& os) const {
@@ -47,7 +49,8 @@ Operation::print(std::ostream& os, const Permutation& permutation,
   const auto& actualTargets = permutation.apply(getTargets());
 
   for (std::size_t i = 0; i < nqubits; ++i) {
-    if (std::find(actualTargets.cbegin(), actualTargets.cend(), i) !=
+    const auto q = static_cast<Qubit>(i);
+    if (std::find(actualTargets.cbegin(), actualTargets.cend(), q) !=
         actualTargets.cend()) {
       if (type == ClassicControlled) {
         const auto reducedName = name.substr(2);
@@ -62,7 +65,7 @@ Operation::print(std::ostream& os, const Permutation& permutation,
     }
 
     if (const auto it =
-            std::find(actualControls.cbegin(), actualControls.cend(), i);
+            std::find(actualControls.cbegin(), actualControls.cend(), q);
         it != actualControls.cend()) {
       if (it->type == Control::Type::Pos) {
         os << "\033[32m";

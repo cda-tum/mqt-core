@@ -2,7 +2,9 @@
 
 #include "dd/DDDefinitions.hpp"
 
+#include <istream>
 #include <limits>
+#include <ostream>
 
 namespace dd {
 /**
@@ -153,6 +155,20 @@ struct RealNumber {
    * @param os The stream to write to.
    */
   static void writeBinary(const RealNumber* e, std::ostream& os);
+
+  /**
+   * @brief Write a binary representation of a floating point number to a
+   * @param num The number to write.
+   * @param os The stream to write to.
+   */
+  static void writeBinary(fp num, std::ostream& os);
+
+  /**
+   * @brief Read a binary representation of a number from a stream.
+   * @param num The number to read into.
+   * @param is The stream to read from.
+   */
+  static void readBinary(fp& num, std::istream& is);
 
   /**
    * @brief Get an aligned pointer to the number.

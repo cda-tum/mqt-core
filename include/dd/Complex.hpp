@@ -12,6 +12,7 @@
 namespace dd {
 
 struct RealNumber;
+struct ComplexValue;
 
 /// A complex number represented by two pointers to compute table entries.
 struct Complex {
@@ -124,6 +125,12 @@ struct Complex {
    * @returns The std::complex<fp> representation of the Complex number.
    */
   [[nodiscard]] explicit operator std::complex<fp>() const noexcept;
+
+  /**
+   * @brief Convert the Complex number to a ComplexValue.
+   * @returns The ComplexValue representation of the Complex number.
+   */
+  [[nodiscard]] explicit operator ComplexValue() const noexcept;
 };
 
 /**

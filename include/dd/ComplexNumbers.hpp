@@ -200,6 +200,14 @@ public:
   [[nodiscard]] Complex lookup(const ComplexValue& c);
 
   /**
+   * @brief Lookup a real value in the complex table; if not found add it.
+   * @param r The real number.
+   * @return The found or added complex number with real part r and imaginary
+   * part zero.
+   */
+  [[nodiscard]] Complex lookup(fp r);
+
+  /**
    * @brief Lookup a complex value in the complex table; if not found add it.
    * @param r The real part.
    * @param i The imaginary part.

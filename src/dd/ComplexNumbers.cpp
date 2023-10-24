@@ -84,18 +84,16 @@ void ComplexNumbers::div(Complex& r, const Complex& a,
 }
 
 fp ComplexNumbers::mag2(const Complex& a) noexcept {
-  const auto ar = RealNumber::val(a.r);
-  const auto ai = RealNumber::val(a.i);
-
-  return ar * ar + ai * ai;
+  return static_cast<ComplexValue>(a).mag2();
 }
 
-fp ComplexNumbers::mag(const Complex& a) noexcept { return std::sqrt(mag2(a)); }
+fp ComplexNumbers::mag(const Complex& a) noexcept {
+  return static_cast<ComplexValue>(a).mag();
+}
 
 fp ComplexNumbers::arg(const Complex& a) noexcept {
-  const auto ar = RealNumber::val(a.r);
-  const auto ai = RealNumber::val(a.i);
-  return std::atan2(ai, ar);
+  const auto val = static_cast<ComplexValue>(a);
+  return std::atan2(val.i, val.r);
 }
 
 Complex ComplexNumbers::conj(const Complex& a) noexcept {
@@ -185,6 +183,10 @@ Complex ComplexNumbers::lookup(const std::complex<fp>& c) {
 
 Complex ComplexNumbers::lookup(const ComplexValue& c) {
   return lookup(c.r, c.i);
+}
+
+Complex ComplexNumbers::lookup(const fp r) {
+  return {uniqueTable->lookup(r), &constants::zero};
 }
 
 Complex ComplexNumbers::lookup(const fp r, const fp i) {

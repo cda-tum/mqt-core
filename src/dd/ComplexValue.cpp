@@ -32,13 +32,13 @@ bool ComplexValue::approximatelyOne() const noexcept {
 }
 
 void ComplexValue::writeBinary(std::ostream& os) const {
-  os.write(reinterpret_cast<const char*>(&r), sizeof(decltype(r)));
-  os.write(reinterpret_cast<const char*>(&i), sizeof(decltype(i)));
+  RealNumber::writeBinary(r, os);
+  RealNumber::writeBinary(i, os);
 }
 
 void ComplexValue::readBinary(std::istream& is) {
-  is.read(reinterpret_cast<char*>(&r), sizeof(decltype(r)));
-  is.read(reinterpret_cast<char*>(&i), sizeof(decltype(i)));
+  RealNumber::readBinary(r, is);
+  RealNumber::readBinary(i, is);
 }
 
 void ComplexValue::fromString(const std::string& realStr, std::string imagStr) {
@@ -53,7 +53,7 @@ void ComplexValue::fromString(const std::string& realStr, std::string imagStr) {
 }
 
 std::pair<std::uint64_t, std::uint64_t>
-ComplexValue::getLowestFraction(const double x,
+ComplexValue::getLowestFraction(const fp x,
                                 const std::uint64_t maxDenominator) {
   assert(x >= 0.);
 
@@ -229,9 +229,9 @@ std::ostream& operator<<(std::ostream& os, const ComplexValue& c) {
 namespace std {
 std::size_t
 hash<dd::ComplexValue>::operator()(const dd::ComplexValue& c) const noexcept {
-  auto h1 = dd::murmur64(
+  const auto h1 = dd::murmur64(
       static_cast<std::size_t>(std::round(c.r / dd::RealNumber::eps)));
-  auto h2 = dd::murmur64(
+  const auto h2 = dd::murmur64(
       static_cast<std::size_t>(std::round(c.i / dd::RealNumber::eps)));
   return dd::combineHash(h1, h2);
 }

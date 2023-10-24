@@ -365,7 +365,7 @@ public:
       }
     }
 
-    max.w = cn.lookup(magMax / norm, 0.);
+    max.w = cn.lookup(magMax / norm);
     if (max.w.exactlyZero()) {
       max = vEdge::zero();
     }
@@ -459,25 +459,25 @@ public:
       case BasisStates::plus:
         f = makeDDNode(
             static_cast<Qubit>(p),
-            std::array<vEdge, RADIX>{{{f.p, cn.lookup(dd::SQRT2_2, 0)},
-                                      {f.p, cn.lookup(dd::SQRT2_2, 0)}}});
+            std::array<vEdge, RADIX>{{{f.p, cn.lookup(dd::SQRT2_2)},
+                                      {f.p, cn.lookup(dd::SQRT2_2)}}});
         break;
       case BasisStates::minus:
         f = makeDDNode(
             static_cast<Qubit>(p),
-            std::array<vEdge, RADIX>{{{f.p, cn.lookup(dd::SQRT2_2, 0)},
-                                      {f.p, cn.lookup(-dd::SQRT2_2, 0)}}});
+            std::array<vEdge, RADIX>{{{f.p, cn.lookup(dd::SQRT2_2)},
+                                      {f.p, cn.lookup(-dd::SQRT2_2)}}});
         break;
       case BasisStates::right:
         f = makeDDNode(
             static_cast<Qubit>(p),
-            std::array<vEdge, RADIX>{{{f.p, cn.lookup(dd::SQRT2_2, 0)},
+            std::array<vEdge, RADIX>{{{f.p, cn.lookup(dd::SQRT2_2)},
                                       {f.p, cn.lookup(0, dd::SQRT2_2)}}});
         break;
       case BasisStates::left:
         f = makeDDNode(
             static_cast<Qubit>(p),
-            std::array<vEdge, RADIX>{{{f.p, cn.lookup(dd::SQRT2_2, 0)},
+            std::array<vEdge, RADIX>{{{f.p, cn.lookup(dd::SQRT2_2)},
                                       {f.p, cn.lookup(0, -dd::SQRT2_2)}}});
         break;
       }
@@ -1733,6 +1733,8 @@ private:
         return {x.p, cn.mulCached(x.w, y.w)};
       }
     }
+    assert(x.p != nullptr);
+    assert(y.p != nullptr);
 
     auto xCopy = LEdge{x.p, Complex::one()};
     auto yCopy = REdge{y.p, Complex::one()};
