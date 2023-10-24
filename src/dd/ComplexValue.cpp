@@ -6,7 +6,11 @@
 #include <cassert>
 #include <cmath>
 #include <iomanip>
+#include <istream>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <utility>
 
 namespace dd {
 bool ComplexValue::operator==(const ComplexValue& other) const noexcept {
