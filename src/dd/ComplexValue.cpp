@@ -229,9 +229,9 @@ std::ostream& operator<<(std::ostream& os, const ComplexValue& c) {
 namespace std {
 std::size_t
 hash<dd::ComplexValue>::operator()(const dd::ComplexValue& c) const noexcept {
-  auto h1 = dd::murmur64(
+  const auto h1 = dd::murmur64(
       static_cast<std::size_t>(std::round(c.r / dd::RealNumber::eps)));
-  auto h2 = dd::murmur64(
+  const auto h2 = dd::murmur64(
       static_cast<std::size_t>(std::round(c.i / dd::RealNumber::eps)));
   return dd::combineHash(h1, h2);
 }
