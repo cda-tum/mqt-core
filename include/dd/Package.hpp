@@ -2771,12 +2771,7 @@ public:
         result = deserializeNode(nodeIndex, v, edgeIndices, edgeWeights, nodes);
       }
     }
-
-    auto w = cn.getTemporary(rootweight.r, rootweight.i);
-    ComplexNumbers::mul(w, w, result.w);
-    result.w = cn.lookup(w);
-
-    return result;
+    return {result.p, cn.lookup(result.w * rootweight)};
   }
 
   template <class Node, class Edge = Edge<Node>>
