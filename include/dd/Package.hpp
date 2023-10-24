@@ -1196,12 +1196,7 @@ private:
       r = makeDDNode(e.p->v, edges);
       nodes[e.p] = r;
     }
-
-    if (r.w.approximatelyOne()) {
-      r.w = e.w;
-    } else {
-      r.w = cn.lookup(r.w * e.w);
-    }
+    r.w = cn.lookup(r.w * e.w);
     return r;
   }
 
