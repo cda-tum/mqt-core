@@ -1,5 +1,7 @@
 #include "dd/Simulation.hpp"
 
+#include "dd/GateMatrixDefinitions.hpp"
+
 namespace dd {
 template <class Config>
 std::map<std::string, std::size_t>
@@ -268,7 +270,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
 
       if (RealNumber::approximatelyOne(pone)) {
         const qc::MatrixDD xGate =
-            dd->makeGateDD(Xmat, static_cast<std::size_t>(state.p->v) + 1U,
+            dd->makeGateDD(X_MAT, static_cast<std::size_t>(state.p->v) + 1U,
                            static_cast<Qubit>(targets[0U]));
         const qc::VectorDD resetState = dd->multiply(xGate, state);
         dd->incRef(resetState);
@@ -361,10 +363,8 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
         // determine the next iteration point
         auto nextIt = it + 1;
         // actually collapse the state
-        const GateMatrix measurementMatrix{complex_one, complex_zero,
-                                           complex_zero, complex_zero};
         const qc::MatrixDD measurementGate = dd->makeGateDD(
-            measurementMatrix, static_cast<std::size_t>(state.p->v) + 1U,
+            MEAS_ZERO_MAT, static_cast<std::size_t>(state.p->v) + 1U,
             targets[0]);
         qc::VectorDD measuredState = dd->multiply(measurementGate, state);
 
@@ -388,10 +388,8 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
         // determine the next iteration point
         auto nextIt = it + 1;
         // actually collapse the state
-        const GateMatrix measurementMatrix{complex_zero, complex_zero,
-                                           complex_zero, complex_one};
         const qc::MatrixDD measurementGate = dd->makeGateDD(
-            measurementMatrix, static_cast<std::size_t>(state.p->v) + 1U,
+            MEAS_ONE_MAT, static_cast<std::size_t>(state.p->v) + 1U,
             targets[0]);
         qc::VectorDD measuredState = dd->multiply(measurementGate, state);
 

@@ -355,8 +355,8 @@ TEST(DensityMatrixFunctionality, GetValueByIndexProperDensityMatrix) {
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   auto zero = dd->makeZeroDensityOperator(nqubits);
   dd->incRef(zero);
-  const auto op1 = dd->makeGateDD(dd::Hmat, nqubits, 0U);
-  const auto op2 = dd->makeGateDD(dd::RZmat(dd::PI_4), nqubits, 0U);
+  const auto op1 = dd->makeGateDD(dd::H_MAT, nqubits, 0U);
+  const auto op2 = dd->makeGateDD(dd::rzMat(dd::PI_4), nqubits, 0U);
   auto state = dd->applyOperationToDensity(zero, op1, true);
   state = dd->applyOperationToDensity(state, op2, true);
 
@@ -390,8 +390,8 @@ TEST(DensityMatrixFunctionality, GetSparseMatrixConsistency) {
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   auto zero = dd->makeZeroDensityOperator(nqubits);
   dd->incRef(zero);
-  const auto op1 = dd->makeGateDD(dd::Hmat, nqubits, 0U);
-  const auto op2 = dd->makeGateDD(dd::RZmat(dd::PI_4), nqubits, 0U);
+  const auto op1 = dd->makeGateDD(dd::H_MAT, nqubits, 0U);
+  const auto op2 = dd->makeGateDD(dd::rzMat(dd::PI_4), nqubits, 0U);
   auto state = dd->applyOperationToDensity(zero, op1, true);
   state = dd->applyOperationToDensity(state, op2, true);
 
@@ -421,8 +421,8 @@ TEST(DensityMatrixFunctionality, PrintMatrix) {
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   auto zero = dd->makeZeroDensityOperator(nqubits);
   dd->incRef(zero);
-  const auto op1 = dd->makeGateDD(dd::Hmat, nqubits, 0U);
-  const auto op2 = dd->makeGateDD(dd::RZmat(dd::PI_4), nqubits, 0U);
+  const auto op1 = dd->makeGateDD(dd::H_MAT, nqubits, 0U);
+  const auto op2 = dd->makeGateDD(dd::rzMat(dd::PI_4), nqubits, 0U);
   auto state = dd->applyOperationToDensity(zero, op1, true);
   state = dd->applyOperationToDensity(state, op2, true);
 
