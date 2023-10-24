@@ -1934,27 +1934,29 @@ private:
   decreases each time to traverse the DDs.
   **/
   ComplexValue innerProduct(const vEdge& x, const vEdge& y, Qubit var) {
-    if (x.w.approximatelyZero() || y.w.approximatelyZero()) { // the 0 case
-      return {0.0, 0.0};
+    const auto xWeight = static_cast<ComplexValue>(x.w);
+    if (xWeight.approximatelyZero()) {
+      return 0;
+    }
+    const auto yWeight = static_cast<ComplexValue>(y.w);
+    if (yWeight.approximatelyZero()) {
+      return 0;
     }
 
+    const auto rWeight = xWeight * yWeight;
     if (var == 0) { // Multiplies terminal weights
-      auto c = cn.mulTemp(x.w, y.w);
-      return {c.r->value, c.i->value};
+      return rWeight;
     }
 
     // Set to one to generate more lookup hits
     auto xCopy = vEdge{x.p, Complex::one()};
     auto yCopy = vEdge{y.p, Complex::one()};
     if (const auto* r = vectorInnerProduct.lookup(xCopy, yCopy); r != nullptr) {
-      auto c = cn.getTemporary(r->w);
-      ComplexNumbers::mul(c, c, x.w);
-      ComplexNumbers::mul(c, c, y.w);
-      return {c.r->value, c.i->value};
+      return r->w * rWeight;
     }
 
     auto w = static_cast<Qubit>(var - 1U);
-    ComplexValue sum{0.0, 0.0};
+    ComplexValue sum = 0;
     // Iterates through edge weights recursively until terminal
     for (auto i = 0U; i < RADIX; i++) {
       vEdge e1{};
@@ -1970,16 +1972,11 @@ private:
       } else {
         e2 = yCopy;
       }
-      auto cv = innerProduct(e1, e2, w);
-      sum.r += cv.r;
-      sum.i += cv.i;
+      sum += innerProduct(e1, e2, w);
     }
 
-    vectorInnerProduct.insert(xCopy, yCopy, {vNode::getTerminal(), sum});
-    auto c = cn.getTemporary(sum);
-    ComplexNumbers::mul(c, c, x.w);
-    ComplexNumbers::mul(c, c, y.w);
-    return {c.r->value, c.i->value};
+    vectorInnerProduct.insert(xCopy, yCopy, vCachedEdge ::terminal(sum));
+    return sum * rWeight;
   }
 
 public:
