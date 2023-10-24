@@ -2,6 +2,7 @@
 
 #include "dd/DDDefinitions.hpp"
 
+#include <cmath>
 #include <complex>
 #include <cstddef>
 #include <iostream>
@@ -12,9 +13,16 @@ namespace dd {
 /// A complex number represented by two floating point values.
 struct ComplexValue {
   /// real part
-  fp r;
+  fp r{};
   /// imaginary part
-  fp i;
+  fp i{};
+
+  ComplexValue() = default;
+  // NOLINTNEXTLINE(google-explicit-constructor) We want impl. conv. from reals
+  ComplexValue(const fp real) noexcept : r{real} {}
+  explicit ComplexValue(const std::complex<fp>& c) noexcept
+      : r{c.real()}, i{c.imag()} {}
+  ComplexValue(const fp real, const fp imag) noexcept : r{real}, i{imag} {}
 
   /**
    * @brief Check for exact equality.
@@ -121,10 +129,15 @@ struct ComplexValue {
   /// In-place addition of two complex numbers
   ComplexValue& operator+=(const ComplexValue& rhs) noexcept;
 
-  /// Addition of two complex numbers
-  friend ComplexValue operator+(ComplexValue lhs,
-                                const ComplexValue& rhs) noexcept;
+  ComplexValue& operator*=(const fp& real) noexcept;
 };
+
+ComplexValue operator+(const ComplexValue& c1, const ComplexValue& c2);
+ComplexValue operator*(const ComplexValue& c1, fp r);
+ComplexValue operator*(fp r, const ComplexValue& c1);
+ComplexValue operator*(const ComplexValue& c1, const ComplexValue& c2);
+ComplexValue operator/(const ComplexValue& c1, fp r);
+ComplexValue operator/(const ComplexValue& c1, const ComplexValue& c2);
 
 /**
  * @brief Print a complex value to the given output stream.

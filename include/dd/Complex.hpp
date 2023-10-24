@@ -141,6 +141,14 @@ struct Complex {
  */
 std::ostream& operator<<(std::ostream& os, const Complex& c);
 
+ComplexValue operator*(const Complex& c1, const ComplexValue& c2);
+ComplexValue operator*(const ComplexValue& c1, const Complex& c2);
+ComplexValue operator*(const Complex& c1, const Complex& c2);
+
+ComplexValue operator/(const Complex& c1, const ComplexValue& c2);
+ComplexValue operator/(const ComplexValue& c1, const Complex& c2);
+ComplexValue operator/(const Complex& c1, const Complex& c2);
+
 } // namespace dd
 
 namespace std {

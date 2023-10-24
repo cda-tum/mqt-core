@@ -56,4 +56,24 @@ Complex::operator ComplexValue() const noexcept {
 std::ostream& operator<<(std::ostream& os, const Complex& c) {
   return os << c.toString();
 }
+
+ComplexValue operator*(const Complex& c1, const ComplexValue& c2) {
+  return static_cast<ComplexValue>(c1) * c2;
+}
+ComplexValue operator*(const ComplexValue& c1, const Complex& c2) {
+  return c1 * static_cast<ComplexValue>(c2);
+}
+ComplexValue operator*(const Complex& c1, const Complex& c2) {
+  return static_cast<ComplexValue>(c1) * static_cast<ComplexValue>(c2);
+}
+
+ComplexValue operator/(const Complex& c1, const ComplexValue& c2) {
+  return static_cast<ComplexValue>(c1) / c2;
+}
+ComplexValue operator/(const ComplexValue& c1, const Complex& c2) {
+  return c1 / static_cast<ComplexValue>(c2);
+}
+ComplexValue operator/(const Complex& c1, const Complex& c2) {
+  return static_cast<ComplexValue>(c1) / static_cast<ComplexValue>(c2);
+}
 } // namespace dd
