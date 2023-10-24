@@ -1173,10 +1173,10 @@ private:
       return e;
     }
 
-    const auto& nodeit = nodes.find(e.p);
-    Edge<Node> newedge{};
-    if (nodeit != nodes.end()) {
-      newedge = nodeit->second;
+    const auto& nodeIt = nodes.find(e.p);
+    Edge<Node> r{};
+    if (nodeIt != nodes.end()) {
+      r = nodeIt->second;
     } else {
       constexpr std::size_t n = std::tuple_size_v<decltype(e.p->e)>;
       std::array<Edge<Node>, n> edges{};
@@ -1193,17 +1193,16 @@ private:
         }
       }
 
-      newedge = makeDDNode(e.p->v, edges);
-      nodes[e.p] = newedge;
+      r = makeDDNode(e.p->v, edges);
+      nodes[e.p] = r;
     }
 
-    if (newedge.w.approximatelyOne()) {
-      newedge.w = e.w;
+    if (r.w.approximatelyOne()) {
+      r.w = e.w;
     } else {
-      newedge.w = cn.lookup(cn.mulTemp(newedge.w, e.w));
+      r.w = cn.lookup(cn.mulTemp(r.w, e.w));
     }
-
-    return newedge;
+    return r;
   }
 
   ///
