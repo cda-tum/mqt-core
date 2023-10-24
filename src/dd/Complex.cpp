@@ -3,16 +3,11 @@
 #include "dd/ComplexValue.hpp"
 #include "dd/RealNumber.hpp"
 
-#include <cassert>
+#include <complex>
+#include <ostream>
+#include <string>
 
 namespace dd {
-
-void Complex::setVal(const Complex& c) const noexcept {
-  assert(!RealNumber::isNegativePointer(r));
-  assert(!RealNumber::isNegativePointer(i));
-  r->value = RealNumber::val(c.r);
-  i->value = RealNumber::val(c.i);
-}
 
 bool Complex::approximatelyEquals(const Complex& c) const noexcept {
   return RealNumber::approximatelyEquals(r, c.r) &&
@@ -25,14 +20,6 @@ bool Complex::approximatelyZero() const noexcept {
 
 bool Complex::approximatelyOne() const noexcept {
   return RealNumber::approximatelyOne(r) && RealNumber::approximatelyZero(i);
-}
-
-bool Complex::operator==(const Complex& other) const noexcept {
-  return r == other.r && i == other.i;
-}
-
-bool Complex::operator!=(const Complex& other) const noexcept {
-  return !operator==(other);
 }
 
 std::string Complex::toString(bool formatted, int precision) const {
