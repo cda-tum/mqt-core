@@ -185,6 +185,10 @@ Complex ComplexNumbers::lookup(const ComplexValue& c) {
   return lookup(c.r, c.i);
 }
 
+Complex ComplexNumbers::lookup(const fp r) {
+  return {uniqueTable->lookup(r), &constants::zero};
+}
+
 Complex ComplexNumbers::lookup(const fp r, const fp i) {
   return {uniqueTable->lookup(r), uniqueTable->lookup(i)};
 }
