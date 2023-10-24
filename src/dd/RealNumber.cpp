@@ -97,7 +97,15 @@ bool RealNumber::decRef(const dd::RealNumber* num) noexcept {
 
 void RealNumber::writeBinary(const RealNumber* e, std::ostream& os) {
   const auto temp = val(e);
-  os.write(reinterpret_cast<const char*>(&temp), sizeof(decltype(temp)));
+  writeBinary(temp, os);
+}
+
+void RealNumber::writeBinary(const fp num, std::ostream& os) {
+  os.write(reinterpret_cast<const char*>(&num), sizeof(fp));
+}
+
+void RealNumber::readBinary(dd::fp& num, std::istream& is) {
+  is.read(reinterpret_cast<char*>(&num), sizeof(fp));
 }
 
 namespace constants {

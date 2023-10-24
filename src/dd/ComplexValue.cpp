@@ -32,13 +32,13 @@ bool ComplexValue::approximatelyOne() const noexcept {
 }
 
 void ComplexValue::writeBinary(std::ostream& os) const {
-  os.write(reinterpret_cast<const char*>(&r), sizeof(decltype(r)));
-  os.write(reinterpret_cast<const char*>(&i), sizeof(decltype(i)));
+  RealNumber::writeBinary(r, os);
+  RealNumber::writeBinary(i, os);
 }
 
 void ComplexValue::readBinary(std::istream& is) {
-  is.read(reinterpret_cast<char*>(&r), sizeof(decltype(r)));
-  is.read(reinterpret_cast<char*>(&i), sizeof(decltype(i)));
+  RealNumber::readBinary(r, is);
+  RealNumber::readBinary(i, is);
 }
 
 void ComplexValue::fromString(const std::string& realStr, std::string imagStr) {
