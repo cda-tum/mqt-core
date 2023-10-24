@@ -32,7 +32,7 @@ struct ComplexValue {
    * @param c The complex number to compare to.
    * @returns True if the complex number is approximately equal to the given
    * complex number, false otherwise.
-   * @see CTEntry::approximatelyEquals
+   * @see RealNumber::approximatelyEquals
    */
   [[nodiscard]] bool approximatelyEquals(const ComplexValue& c) const noexcept;
 
@@ -40,7 +40,7 @@ struct ComplexValue {
    * @brief Check whether the complex number is approximately equal to zero.
    * @returns True if the complex number is approximately equal to zero, false
    * otherwise.
-   * @see CTEntry::approximatelyZero
+   * @see RealNumber::approximatelyZero
    */
   [[nodiscard]] bool approximatelyZero() const noexcept;
 
@@ -48,8 +48,8 @@ struct ComplexValue {
    * @brief Check whether the complex number is approximately equal to one.
    * @returns True if the complex number is approximately equal to one, false
    * otherwise.
-   * @see CTEntry::approximatelyOne
-   * @see CTEntry::approximatelyZero
+   * @see RealNumber::approximatelyOne
+   * @see RealNumber::approximatelyZero
    */
   [[nodiscard]] bool approximatelyOne() const noexcept;
 
