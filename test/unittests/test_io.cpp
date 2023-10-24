@@ -15,6 +15,10 @@ protected:
   unsigned int seed = 0;
   std::string output = "tmp.txt";
   std::string output2 = "tmp2.txt";
+  std::string output3 = "tmp";
+  std::string output4 = "tmp.tmp.qasm";
+  std::string output5 = "./tmpdir/circuit.qasm";
+  std::string output5dir = "tmpdir";
   std::unique_ptr<qc::QuantumComputation> qc;
 };
 
@@ -67,6 +71,25 @@ TEST_P(IO, importAndDump) {
   compareFiles(output, output2, true);
   std::filesystem::remove(output);
   std::filesystem::remove(output2);
+}
+
+TEST_F(IO, dumpValidFilenames) {
+
+  qc::QuantumComputation qc{4, 4};
+  qc.x(0);
+  qc.cx(qc::Control{3}, 2);
+  ASSERT_NO_THROW(qc.dump(output3, qc::Format::OpenQASM));
+  ASSERT_NO_THROW(qc.dump(output4, qc::Format::OpenQASM));
+  ASSERT_NO_THROW(qc.dump(output4));
+
+  std::filesystem::create_directory(output5dir);
+  ASSERT_NO_THROW(qc.dump(output5, qc::Format::OpenQASM));
+  ASSERT_NO_THROW(qc.dump(output5));
+
+  std::filesystem::remove(output3);
+  std::filesystem::remove(output4);
+  std::filesystem::remove(output5);
+  std::filesystem::remove(output5dir);
 }
 
 TEST_F(IO, importFromString) {
