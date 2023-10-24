@@ -1,4 +1,5 @@
 #include "dd/Package.hpp"
+
 #include <gtest/gtest.h>
 
 TEST(DDPackageTest, GHZStateTest) {
