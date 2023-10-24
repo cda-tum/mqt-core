@@ -1733,6 +1733,8 @@ private:
         return {x.p, cn.mulCached(x.w, y.w)};
       }
     }
+    assert(x.p != nullptr);
+    assert(y.p != nullptr);
 
     auto xCopy = LEdge{x.p, Complex::one()};
     auto yCopy = REdge{y.p, Complex::one()};
