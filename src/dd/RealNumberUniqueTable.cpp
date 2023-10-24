@@ -28,12 +28,11 @@ std::int64_t RealNumberUniqueTable::hash(const fp val) noexcept {
 }
 
 RealNumber* RealNumberUniqueTable::lookup(const fp val) {
+  // if the value is close enough to zero, return the zero entry (avoiding -0.0)
+  if (RealNumber::approximatelyZero(val)) {
+    return &constants::zero;
+  }
   if (const auto sign = std::signbit(val); sign) {
-    // if absolute value is close enough to zero, just return the zero entry
-    // (avoiding -0.0)
-    if (RealNumber::approximatelyZero(val)) {
-      return &constants::zero;
-    }
     return RealNumber::getNegativePointer(lookupNonNegative(std::abs(val)));
   }
   return lookupNonNegative(val);
@@ -55,24 +54,17 @@ void RealNumberUniqueTable::decRef(RealNumber* num) noexcept {
 
 RealNumber* RealNumberUniqueTable::lookupNonNegative(const fp val) {
   assert(!std::isnan(val));
-  assert(val >= 0); // required anyway for the hash function
-  ++stats.lookups;
-  if (RealNumber::approximatelyZero(val)) {
-    ++stats.hits;
-    return &constants::zero;
-  }
+  assert(val > 0);
 
   if (RealNumber::approximatelyOne(val)) {
-    ++stats.hits;
     return &constants::one;
   }
 
   if (RealNumber::approximatelyEquals(val, SQRT2_2)) {
-    ++stats.hits;
     return &constants::sqrt2over2;
   }
-  assert(val - RealNumber::eps >= 0); // should be handle above as special case
 
+  ++stats.lookups;
   const auto lowerKey = hash(val - RealNumber::eps);
   const auto upperKey = hash(val + RealNumber::eps);
 
