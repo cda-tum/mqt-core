@@ -1454,9 +1454,7 @@ public:
     vEdge e = multiply(measurementGate, rootEdge);
 
     assert(probability > 0.);
-    Complex c = cn.getTemporary(std::sqrt(1.0 / probability), 0);
-    ComplexNumbers::mul(c, e.w, c);
-    e.w = cn.lookup(c);
+    e.w = cn.lookup(e.w / std::sqrt(probability));
     incRef(e);
     decRef(rootEdge);
     rootEdge = e;
