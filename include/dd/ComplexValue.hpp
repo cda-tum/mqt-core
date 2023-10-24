@@ -106,6 +106,18 @@ struct ComplexValue {
   /// Automatically convert to std::complex<dd::fp>
   explicit operator auto() const noexcept { return std::complex<dd::fp>{r, i}; }
 
+  /**
+   * @brief Compute the squared magnitude of the complex number.
+   * @return The squared magnitude of the complex number.
+   */
+  [[nodiscard]] fp mag2() const noexcept { return r * r + i * i; }
+
+  /**
+   * @brief Compute the magnitude of the complex number.
+   * @return The magnitude of the complex number.
+   */
+  [[nodiscard]] fp mag() const noexcept { return std::sqrt(mag2()); }
+
   /// In-place addition of two complex numbers
   ComplexValue& operator+=(const ComplexValue& rhs) noexcept;
 
