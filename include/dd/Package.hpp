@@ -1482,7 +1482,8 @@ public:
     }
   }
 
-  template <class Edge> Edge add(const Edge& x, const Edge& y) {
+  template <class Node>
+  Edge<Node> add(const Edge<Node>& x, const Edge<Node>& y) {
     [[maybe_unused]] const auto before = cn.cacheCount();
 
     Qubit var{};
@@ -1659,24 +1660,26 @@ public:
     return e;
   }
 
-  template <class LeftOperand, class RightOperand>
-  RightOperand
-  multiply(const LeftOperand& x, const RightOperand& y, const Qubit start = 0,
+  template <class LeftOperandNode, class RightOperandNode>
+  Edge<RightOperandNode>
+  multiply(const Edge<LeftOperandNode>& x, const Edge<RightOperandNode>& y,
+           const Qubit start = 0,
            [[maybe_unused]] const bool generateDensityMatrix = false) {
-    static_assert(std::disjunction_v<std::is_same<LeftOperand, mEdge>,
-                                     std::is_same<LeftOperand, dEdge>>,
+    using LEdge = Edge<LeftOperandNode>;
+    using REdge = Edge<RightOperandNode>;
+    static_assert(std::disjunction_v<std::is_same<LEdge, mEdge>,
+                                     std::is_same<LEdge, dEdge>>,
                   "Left operand must be a matrix or density matrix");
-    static_assert(std::disjunction_v<std::is_same<RightOperand, vEdge>,
-                                     std::is_same<RightOperand, mEdge>,
-                                     std::is_same<RightOperand, dEdge>>,
+    static_assert(std::disjunction_v<std::is_same<REdge, vEdge>,
+                                     std::is_same<REdge, mEdge>,
+                                     std::is_same<REdge, dEdge>>,
                   "Right operand must be a vector, matrix or density matrix");
 
     [[maybe_unused]] const auto before = cn.cacheCount();
 
     Qubit var{};
-    RightOperand e;
-
-    if constexpr (std::is_same_v<LeftOperand, dEdge>) {
+    REdge e;
+    if constexpr (std::is_same_v<LEdge, dEdge>) {
       auto xCopy = x;
       auto yCopy = y;
       dEdge::applyDmChangesToEdges(xCopy, yCopy);
@@ -1692,11 +1695,9 @@ public:
       dEdge::revertDmChangesToEdges(xCopy, yCopy);
     } else {
       if (!x.isTerminal()) {
-        assert(x.p != nullptr);
         var = x.p->v;
       }
-      if (!y.isTerminal() && (y.p->v) > var) {
-        assert(y.p != nullptr);
+      if (!y.isTerminal() && y.p->v > var) {
         var = y.p->v;
       }
       e = multiply2(x, y, var, start);
@@ -2025,17 +2026,16 @@ public:
     }
   }
 
-  template <class Edge>
-  Edge kronecker(const Edge& x, const Edge& y, const bool incIdx = true) {
-    if constexpr (std::is_same_v<Edge, dEdge>) {
+  template <class Node>
+  Edge<Node> kronecker(const Edge<Node>& x, const Edge<Node>& y,
+                       const bool incIdx = true) {
+    if constexpr (std::is_same_v<Node, dNode>) {
       throw std::invalid_argument(
           "Kronecker is currently not supported for density matrices");
     }
 
     auto e = kronecker2(x, y, incIdx);
-    e.w = cn.lookup(e.w, true);
-
-    return e;
+    return {e.p, cn.lookup(e.w, true)};
   }
 
   // extent the DD pointed to by `e` with `h` identities on top and `l`
@@ -2582,19 +2582,19 @@ private:
   ///
 public:
   // transfers a decision diagram from another package to this package
-  template <class Edge> Edge transfer(Edge& original) {
+  template <class Node> Edge<Node> transfer(Edge<Node>& original) {
     if (original.isTerminal()) {
       return {original.p, cn.lookup(original.w)};
     }
 
     // POST ORDER TRAVERSAL USING ONE STACK
     // https://www.geeksforgeeks.org/iterative-postorder-traversal-using-stack/
-    Edge root{};
-    std::stack<Edge*> stack;
+    Edge<Node> root{};
+    std::stack<Edge<Node>*> stack;
 
     std::unordered_map<decltype(original.p), decltype(original.p)> mappedNode{};
 
-    Edge* currentEdge = &original;
+    Edge<Node>* currentEdge = &original;
     constexpr std::size_t n = std::tuple_size_v<decltype(original.p->e)>;
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
     do {
@@ -2633,7 +2633,7 @@ public:
       }
 
       if (hasChild) {
-        Edge* temp = stack.top();
+        Edge<Node>* temp = stack.top();
         stack.pop();
         stack.push(currentEdge);
         currentEdge = temp;
@@ -2642,7 +2642,7 @@ public:
           currentEdge = nullptr;
           continue;
         }
-        std::array<Edge, n> edges{};
+        std::array<Edge<Node>, n> edges{};
         for (std::size_t i = 0; i < n; i++) {
           if (currentEdge->p->e[i].isTerminal()) {
             edges[i].p = currentEdge->p->e[i].p;
