@@ -736,7 +736,7 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
     std::filesystem::remove(filename);
   }
 
-  EXPECT_EQ(dd->vUniqueTable.lookup(one), one);
+  EXPECT_EQ(dd->vUniqueTable.lookup(one.p), one.p);
 
   auto zero = dd::vEdge::zero();
   EXPECT_TRUE(dd->kronecker(zero, one).isZeroTerminal());
