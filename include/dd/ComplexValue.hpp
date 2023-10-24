@@ -82,7 +82,7 @@ struct ComplexValue {
    * and denominator.
    */
   static std::pair<std::uint64_t, std::uint64_t>
-  getLowestFraction(double x, std::uint64_t maxDenominator = 1U << 10);
+  getLowestFraction(fp x, std::uint64_t maxDenominator = 1U << 10);
 
   /**
    * @brief Pretty print the given real number to the given output stream.

@@ -53,7 +53,7 @@ void ComplexValue::fromString(const std::string& realStr, std::string imagStr) {
 }
 
 std::pair<std::uint64_t, std::uint64_t>
-ComplexValue::getLowestFraction(const double x,
+ComplexValue::getLowestFraction(const fp x,
                                 const std::uint64_t maxDenominator) {
   assert(x >= 0.);
 
