@@ -61,9 +61,17 @@ template <class Node> struct Edge {
     return !operator==(other);
   }
 
-  // edges pointing to zero and one terminals
-  static const Edge zero; // NOLINT(readability-identifier-naming)
-  static const Edge one;  // NOLINT(readability-identifier-naming)
+  /**
+   * @brief Get the static zero terminal
+   * @return the zero terminal
+   */
+  static constexpr Edge zero() { return terminal(Complex::zero()); }
+
+  /**
+   * @brief Get the static one terminal
+   * @return the one terminal
+   */
+  static constexpr Edge one() { return terminal(Complex::one()); }
 
   ///---------------------------------------------------------------------------
   ///                     \n General purpose methods \n
@@ -74,7 +82,7 @@ template <class Node> struct Edge {
    * @param w the edge weight
    * @return the terminal DD representing (w)
    */
-  [[nodiscard]] static Edge terminal(const Complex& w) {
+  [[nodiscard]] static constexpr Edge terminal(const Complex& w) {
     return Edge{Node::getTerminal(), w};
   }
 
@@ -82,22 +90,24 @@ template <class Node> struct Edge {
    * @brief Check whether this is a terminal
    * @return whether this is a terminal
    */
-  [[nodiscard]] bool isTerminal() const { return Node::isTerminal(p); }
+  [[nodiscard]] constexpr bool isTerminal() const {
+    return Node::isTerminal(p);
+  }
 
   /**
    * @brief Check whether this is a zero terminal
    * @return whether this is a zero terminal
    */
-  [[nodiscard]] bool isZeroTerminal() const {
-    return isTerminal() && w == Complex::zero;
+  [[nodiscard]] constexpr bool isZeroTerminal() const {
+    return isTerminal() && w.exactlyZero();
   }
 
   /**
    * @brief Check whether this is a one terminal
    * @return whether this is a one terminal
    */
-  [[nodiscard]] bool isOneTerminal() const {
-    return isTerminal() && w == Complex::one;
+  [[nodiscard]] constexpr bool isOneTerminal() const {
+    return isTerminal() && w.exactlyOne();
   }
 
   /**
@@ -342,13 +352,6 @@ private:
   void traverseDiagonal(const fp& prob, std::size_t i, ProbabilityFunc f,
                         fp threshold = 0.) const;
 };
-
-// NOLINTBEGIN(cppcoreguidelines-interfaces-global-init)
-template <class Node>
-const Edge<Node> Edge<Node>::zero{Node::getTerminal(), Complex::zero};
-template <class Node>
-const Edge<Node> Edge<Node>::one{Node::getTerminal(), Complex::one};
-// NOLINTEND(cppcoreguidelines-interfaces-global-init)
 } // namespace dd
 
 ///-----------------------------------------------------------------------------

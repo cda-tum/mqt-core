@@ -387,7 +387,7 @@ private:
     }
 
     // Node not found in bucket
-    return Edge<Node>::zero;
+    return Edge<Node>::zero();
   }
 };
 

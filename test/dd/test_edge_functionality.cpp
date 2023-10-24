@@ -9,13 +9,13 @@ namespace dd {
 ///-----------------------------------------------------------------------------
 
 TEST(VectorFunctionality, GetValueByPathTerminal) {
-  EXPECT_EQ(vEdge::zero.getValueByPath("0"), 0.);
-  EXPECT_EQ(vEdge::one.getValueByPath("0"), 1.);
+  EXPECT_EQ(vEdge::zero().getValueByPath("0"), 0.);
+  EXPECT_EQ(vEdge::one().getValueByPath("0"), 1.);
 }
 
 TEST(VectorFunctionality, GetValueByIndexTerminal) {
-  EXPECT_EQ(vEdge::zero.getValueByIndex(0), 0.);
-  EXPECT_EQ(vEdge::one.getValueByIndex(0), 1.);
+  EXPECT_EQ(vEdge::zero().getValueByIndex(0), 0.);
+  EXPECT_EQ(vEdge::one().getValueByIndex(0), 1.);
 }
 
 TEST(VectorFunctionality, GetValueByIndexEndianness) {
@@ -30,8 +30,8 @@ TEST(VectorFunctionality, GetValueByIndexEndianness) {
 }
 
 TEST(VectorFunctionality, GetVectorTerminal) {
-  EXPECT_EQ(vEdge::zero.getVector(), CVec{0.});
-  EXPECT_EQ(vEdge::one.getVector(), CVec{1.});
+  EXPECT_EQ(vEdge::zero().getVector(), CVec{0.});
+  EXPECT_EQ(vEdge::one().getVector(), CVec{1.});
 }
 
 TEST(VectorFunctionality, GetVectorRoundtrip) {
@@ -57,9 +57,9 @@ TEST(VectorFunctionality, GetVectorTolerance) {
 
 TEST(VectorFunctionality, GetSparseVectorTerminal) {
   const auto zero = SparseCVec{{0, 0}};
-  EXPECT_EQ(vEdge::zero.getSparseVector(), zero);
+  EXPECT_EQ(vEdge::zero().getSparseVector(), zero);
   const auto one = SparseCVec{{0, 1}};
-  EXPECT_EQ(vEdge::one.getSparseVector(), one);
+  EXPECT_EQ(vEdge::one().getSparseVector(), one);
 }
 
 TEST(VectorFunctionality, GetSparseVectorConsistency) {
@@ -91,11 +91,11 @@ TEST(VectorFunctionality, GetSparseVectorTolerance) {
 
 TEST(VectorFunctionality, PrintVectorTerminal) {
   testing::internal::CaptureStdout();
-  vEdge::zero.printVector();
+  vEdge::zero().printVector();
   const auto zeroStr = testing::internal::GetCapturedStdout();
   EXPECT_EQ(zeroStr, "0: (0,0)\n");
   testing::internal::CaptureStdout();
-  vEdge::one.printVector();
+  vEdge::one().printVector();
   const auto oneStr = testing::internal::GetCapturedStdout();
   EXPECT_EQ(oneStr, "0: (1,0)\n");
 }
@@ -114,7 +114,7 @@ TEST(VectorFunctionality, PrintVector) {
 
 TEST(VectorFunctionality, AddToVectorTerminal) {
   CVec vec = {0.};
-  vEdge::one.addToVector(vec);
+  vEdge::one().addToVector(vec);
   EXPECT_EQ(vec, CVec{1.});
 }
 
@@ -130,8 +130,8 @@ TEST(VectorFunctionality, AddToVector) {
 }
 
 TEST(VectorFunctionality, SizeTerminal) {
-  EXPECT_EQ(vEdge::zero.size(), 1);
-  EXPECT_EQ(vEdge::one.size(), 1);
+  EXPECT_EQ(vEdge::zero().size(), 1);
+  EXPECT_EQ(vEdge::one().size(), 1);
 }
 
 TEST(VectorFunctionality, SizeBellState) {
@@ -146,13 +146,13 @@ TEST(VectorFunctionality, SizeBellState) {
 ///-----------------------------------------------------------------------------
 
 TEST(MatrixFunctionality, GetValueByPathTerminal) {
-  EXPECT_EQ(mEdge::zero.getValueByPath("0"), 0.);
-  EXPECT_EQ(mEdge::one.getValueByPath("0"), 1.);
+  EXPECT_EQ(mEdge::zero().getValueByPath("0"), 0.);
+  EXPECT_EQ(mEdge::one().getValueByPath("0"), 1.);
 }
 
 TEST(MatrixFunctionality, GetValueByIndexTerminal) {
-  EXPECT_EQ(mEdge::zero.getValueByIndex(0, 0), 0.);
-  EXPECT_EQ(mEdge::one.getValueByIndex(0, 0), 1.);
+  EXPECT_EQ(mEdge::zero().getValueByIndex(0, 0), 0.);
+  EXPECT_EQ(mEdge::one().getValueByIndex(0, 0), 1.);
 }
 
 TEST(MatrixFunctionality, GetValueByIndexEndianness) {
@@ -178,8 +178,8 @@ TEST(MatrixFunctionality, GetValueByIndexEndianness) {
 }
 
 TEST(MatrixFunctionality, GetMatrixTerminal) {
-  EXPECT_EQ(mEdge::zero.getMatrix(), CMat{{0.}});
-  EXPECT_EQ(mEdge::one.getMatrix(), CMat{{1.}});
+  EXPECT_EQ(mEdge::zero().getMatrix(), CMat{{0.}});
+  EXPECT_EQ(mEdge::one().getMatrix(), CMat{{1.}});
 }
 
 TEST(MatrixFunctionality, GetMatrixRoundtrip) {
@@ -234,9 +234,9 @@ TEST(MatrixFunctionality, GetMatrixTolerance) {
 
 TEST(MatrixFunctionality, GetSparseMatrixTerminal) {
   const auto zero = SparseCMat{{{0, 0}, 0.}};
-  EXPECT_EQ(mEdge::zero.getSparseMatrix(), zero);
+  EXPECT_EQ(mEdge::zero().getSparseMatrix(), zero);
   const auto one = SparseCMat{{{0, 0}, 1.}};
-  EXPECT_EQ(mEdge::one.getSparseMatrix(), one);
+  EXPECT_EQ(mEdge::one().getSparseMatrix(), one);
 }
 
 TEST(MatrixFunctionality, GetSparseMatrixConsistency) {
@@ -288,11 +288,11 @@ TEST(MatrixFunctionality, GetSparseMatrixTolerance) {
 
 TEST(MatrixFunctionality, PrintMatrixTerminal) {
   testing::internal::CaptureStdout();
-  mEdge::zero.printMatrix();
+  mEdge::zero().printMatrix();
   const auto zeroStr = testing::internal::GetCapturedStdout();
   EXPECT_EQ(zeroStr, "(0,0)\n");
   testing::internal::CaptureStdout();
-  mEdge::one.printMatrix();
+  mEdge::one().printMatrix();
   const auto oneStr = testing::internal::GetCapturedStdout();
   EXPECT_EQ(oneStr, "(1,0)\n");
 }
@@ -318,8 +318,8 @@ TEST(MatrixFunctionality, PrintMatrix) {
 }
 
 TEST(MatrixFunctionality, SizeTerminal) {
-  EXPECT_EQ(mEdge::zero.size(), 1);
-  EXPECT_EQ(mEdge::one.size(), 1);
+  EXPECT_EQ(mEdge::zero().size(), 1);
+  EXPECT_EQ(mEdge::one().size(), 1);
 }
 
 TEST(MatrixFunctionality, SizeBellState) {
@@ -341,13 +341,13 @@ TEST(MatrixFunctionality, SizeBellState) {
 ///-----------------------------------------------------------------------------
 
 TEST(DensityMatrixFunctionality, GetValueByPathTerminal) {
-  EXPECT_EQ(dEdge::zero.getValueByPath("0"), 0.);
-  EXPECT_EQ(dEdge::one.getValueByPath("0"), 1.);
+  EXPECT_EQ(dEdge::zero().getValueByPath("0"), 0.);
+  EXPECT_EQ(dEdge::one().getValueByPath("0"), 1.);
 }
 
 TEST(DensityMatrixFunctionality, GetValueByIndexTerminal) {
-  EXPECT_EQ(dEdge::zero.getValueByIndex(0, 0), 0.);
-  EXPECT_EQ(dEdge::one.getValueByIndex(0, 0), 1.);
+  EXPECT_EQ(dEdge::zero().getValueByIndex(0, 0), 0.);
+  EXPECT_EQ(dEdge::one().getValueByIndex(0, 0), 1.);
 }
 
 TEST(DensityMatrixFunctionality, GetValueByIndexProperDensityMatrix) {
@@ -355,8 +355,8 @@ TEST(DensityMatrixFunctionality, GetValueByIndexProperDensityMatrix) {
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   auto zero = dd->makeZeroDensityOperator(nqubits);
   dd->incRef(zero);
-  const auto op1 = dd->makeGateDD(dd::Hmat, nqubits, 0U);
-  const auto op2 = dd->makeGateDD(dd::RZmat(dd::PI_4), nqubits, 0U);
+  const auto op1 = dd->makeGateDD(dd::H_MAT, nqubits, 0U);
+  const auto op2 = dd->makeGateDD(dd::rzMat(dd::PI_4), nqubits, 0U);
   auto state = dd->applyOperationToDensity(zero, op1, true);
   state = dd->applyOperationToDensity(state, op2, true);
 
@@ -380,9 +380,9 @@ TEST(DensityMatrixFunctionality, GetValueByIndexProperDensityMatrix) {
 
 TEST(DensityMatrixFunctionality, GetSparseMatrixTerminal) {
   const auto zero = SparseCMat{{{0, 0}, 0.}};
-  EXPECT_EQ(dEdge::zero.getSparseMatrix(), zero);
+  EXPECT_EQ(dEdge::zero().getSparseMatrix(), zero);
   const auto one = SparseCMat{{{0, 0}, 1.}};
-  EXPECT_EQ(dEdge::one.getSparseMatrix(), one);
+  EXPECT_EQ(dEdge::one().getSparseMatrix(), one);
 }
 
 TEST(DensityMatrixFunctionality, GetSparseMatrixConsistency) {
@@ -390,8 +390,8 @@ TEST(DensityMatrixFunctionality, GetSparseMatrixConsistency) {
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   auto zero = dd->makeZeroDensityOperator(nqubits);
   dd->incRef(zero);
-  const auto op1 = dd->makeGateDD(dd::Hmat, nqubits, 0U);
-  const auto op2 = dd->makeGateDD(dd::RZmat(dd::PI_4), nqubits, 0U);
+  const auto op1 = dd->makeGateDD(dd::H_MAT, nqubits, 0U);
+  const auto op2 = dd->makeGateDD(dd::rzMat(dd::PI_4), nqubits, 0U);
   auto state = dd->applyOperationToDensity(zero, op1, true);
   state = dd->applyOperationToDensity(state, op2, true);
 
@@ -407,11 +407,11 @@ TEST(DensityMatrixFunctionality, GetSparseMatrixConsistency) {
 
 TEST(DensityMatrixFunctionality, PrintMatrixTerminal) {
   testing::internal::CaptureStdout();
-  dEdge::zero.printMatrix();
+  dEdge::zero().printMatrix();
   const auto zeroStr = testing::internal::GetCapturedStdout();
   EXPECT_EQ(zeroStr, "(0,0)\n");
   testing::internal::CaptureStdout();
-  dEdge::one.printMatrix();
+  dEdge::one().printMatrix();
   const auto oneStr = testing::internal::GetCapturedStdout();
   EXPECT_EQ(oneStr, "(1,0)\n");
 }
@@ -421,8 +421,8 @@ TEST(DensityMatrixFunctionality, PrintMatrix) {
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   auto zero = dd->makeZeroDensityOperator(nqubits);
   dd->incRef(zero);
-  const auto op1 = dd->makeGateDD(dd::Hmat, nqubits, 0U);
-  const auto op2 = dd->makeGateDD(dd::RZmat(dd::PI_4), nqubits, 0U);
+  const auto op1 = dd->makeGateDD(dd::H_MAT, nqubits, 0U);
+  const auto op2 = dd->makeGateDD(dd::rzMat(dd::PI_4), nqubits, 0U);
   auto state = dd->applyOperationToDensity(zero, op1, true);
   state = dd->applyOperationToDensity(state, op2, true);
 
