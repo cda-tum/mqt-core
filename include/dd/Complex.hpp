@@ -5,9 +5,9 @@
 
 #include <complex>
 #include <cstddef>
+#include <functional>
 #include <iostream>
 #include <string>
-#include <utility>
 
 namespace dd {
 
@@ -37,12 +37,6 @@ struct Complex {
   static constexpr Complex one() noexcept {
     return {&constants::one, &constants::zero};
   }
-
-  /**
-   * @brief Set the value based on the given complex number.
-   * @param c The value to set.
-   */
-  void setVal(const Complex& c) const noexcept;
 
   /**
    * @brief Check whether the complex number is exactly equal to zero.
@@ -91,17 +85,6 @@ struct Complex {
    * @see RealNumber::approximatelyZero
    */
   [[nodiscard]] bool approximatelyOne() const noexcept;
-
-  /**
-   * @brief Check for exact equality.
-   * @param other The complex number to compare to.
-   * @returns True if the complex numbers are exactly equal, false otherwise.
-   * @note Boils down to a pointer comparison.
-   */
-  [[nodiscard]] bool operator==(const Complex& other) const noexcept;
-
-  /// @see operator==
-  [[nodiscard]] bool operator!=(const Complex& other) const noexcept;
 
   /**
    * @brief Convert the complex number to a string.

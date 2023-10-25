@@ -39,11 +39,7 @@ void ComplexNumbers::mul(Complex& r, const Complex& a,
   assert(r.i != a.r && "r.i and a.r point to the same entry!");
   assert(r.r != b.i && "r.r and b.i point to the same entry!");
   assert(r.i != b.r && "r.i and b.r point to the same entry!");
-  if (a.approximatelyOne()) {
-    r.setVal(b);
-  } else if (b.approximatelyOne()) {
-    r.setVal(a);
-  } else if (a.approximatelyZero() || b.approximatelyZero()) {
+  if (a.approximatelyZero() || b.approximatelyZero()) {
     r.r->value = 0.;
     r.i->value = 0.;
   } else {
@@ -65,22 +61,14 @@ void ComplexNumbers::div(Complex& r, const Complex& a,
   assert(r.i != a.r && "r.i and a.r point to the same entry!");
   assert(r.r != b.i && "r.r and b.i point to the same entry!");
   assert(r.i != b.r && "r.i and b.r point to the same entry!");
-  if (a.approximatelyEquals(b)) {
-    r.r->value = 1.;
-    r.i->value = 0.;
-  } else if (b.approximatelyOne()) {
-    r.setVal(a);
-  } else {
-    const auto ar = RealNumber::val(a.r);
-    const auto ai = RealNumber::val(a.i);
-    const auto br = RealNumber::val(b.r);
-    const auto bi = RealNumber::val(b.i);
+  const auto ar = RealNumber::val(a.r);
+  const auto ai = RealNumber::val(a.i);
+  const auto br = RealNumber::val(b.r);
+  const auto bi = RealNumber::val(b.i);
 
-    const auto cmag = br * br + bi * bi;
-
-    r.r->value = (ar * br + ai * bi) / cmag;
-    r.i->value = (ai * br - ar * bi) / cmag;
-  }
+  const auto cmag = br * br + bi * bi;
+  r.r->value = (ar * br + ai * bi) / cmag;
+  r.i->value = (ai * br - ar * bi) / cmag;
 }
 
 fp ComplexNumbers::mag2(const Complex& a) noexcept {
