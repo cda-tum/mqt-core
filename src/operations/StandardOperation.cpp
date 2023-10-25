@@ -541,8 +541,12 @@ void StandardOperation::invert() {
   case Peresdg:
     type = Peres;
     break;
-  // Tracking issue for iSwap: https://github.com/cda-tum/mqt-core/issues/423
   case iSWAP:
+    type = iSWAPdg;
+    break;
+  case iSWAPdg:
+    type = iSWAP;
+    break;
   case None:
   case Compound:
   case Measure:

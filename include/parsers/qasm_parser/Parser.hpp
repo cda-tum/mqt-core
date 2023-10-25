@@ -151,6 +151,7 @@ public:
       {"teleport", {0, 3, 0, qc::Teleportation}},
       {"swap", {0, 2, 0, qc::SWAP}},
       {"iswap", {0, 2, 0, qc::iSWAP}},
+      {"iswapdg", {0, 2, 0, qc::iSWAPdg}},
       {"cnot", {1, 1, 0, qc::X}},
       {"CX", {1, 1, 0, qc::X}},
       {"cx", {1, 1, 0, qc::X}},

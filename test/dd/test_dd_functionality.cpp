@@ -57,7 +57,7 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(qc::GPhase, qc::I, qc::H, qc::X, qc::Y, qc::Z, qc::S,
                     qc::Sdg, qc::T, qc::Tdg, qc::SX, qc::SXdg, qc::V, qc::Vdg,
                     qc::U, qc::U2, qc::P, qc::RX, qc::RY, qc::RZ, qc::Peres,
-                    qc::Peresdg, qc::SWAP, qc::iSWAP, qc::DCX, qc::ECR, qc::RXX,
+                    qc::Peresdg, qc::SWAP, qc::iSWAP, qc::iSWAPdg, qc::DCX, qc::ECR, qc::RXX,
                     qc::RYY, qc::RZZ, qc::RZX, qc::XXminusYY, qc::XXplusYY),
     [](const testing::TestParamInfo<DDFunctionality::ParamType>& inf) {
       const auto gate = inf.param;
@@ -91,6 +91,7 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
 
   case qc::SWAP:
   case qc::iSWAP:
+  case qc::iSWAPdg:
   case qc::DCX:
   case qc::ECR:
     op = qc::StandardOperation(nqubits, Controls{}, 0, 1, gate);
