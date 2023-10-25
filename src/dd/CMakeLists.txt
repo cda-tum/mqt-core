@@ -5,6 +5,7 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
   add_library(
     ${PROJECT_NAME}-dd
     ${DD_HEADERS}
+    Benchmark.cpp
     CachedEdge.cpp
     Complex.cpp
     ComplexNumbers.cpp

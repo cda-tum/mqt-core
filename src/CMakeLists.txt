@@ -90,9 +90,6 @@ add_subdirectory(zx)
 # add ECC library
 add_subdirectory(ecc)
 
-# add Eval library
-add_subdirectory(eval)
-
 # ** Note ** The following target will soon be removed from the project. All top-level projects
 # should switch to nanobind. After that, the pybind submodules will be removed.
 if(BINDINGS AND NOT TARGET ${PROJECT_NAME}-python)
