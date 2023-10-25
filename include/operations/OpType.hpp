@@ -33,7 +33,7 @@ enum OpType : std::uint8_t {
   RY,
   RZ,
   SWAP,
-  iSWAP, // NOLINT (readability-identifier-naming)
+  iSWAP,   // NOLINT (readability-identifier-naming)
   iSWAPdg, // NOLINT (readability-identifier-naming)
   Peres,
   Peresdg,
