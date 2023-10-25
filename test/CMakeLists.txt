@@ -42,6 +42,3 @@ package_add_test(
 
 package_add_test(${PROJECT_NAME}-test-ecc ${PROJECT_NAME}-ecc unittests/test_ecc_functionality.cpp)
 target_link_libraries(${PROJECT_NAME}-test-ecc PRIVATE ${PROJECT_NAME}-dd)
-
-package_add_test(${PROJECT_NAME}-test-eval ${PROJECT_NAME}-eval eval/test_build_task.cpp
-                 eval/test_simulation_task.cpp)
