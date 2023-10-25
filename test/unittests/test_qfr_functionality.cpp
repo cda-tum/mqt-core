@@ -275,6 +275,37 @@ TEST_F(QFRFunctionality, unknownInverseInCompoundOperation) {
   EXPECT_EQ(qc.getNops(), 1);
 }
 
+TEST_F(QFRFunctionality, repeatedCancellationInSingleQubitGateFusion) {
+  const std::size_t nqubits = 1U;
+  QuantumComputation qc(nqubits);
+  qc.x(0);
+  qc.h(0); // causes the creation of a CompoundOperation
+  qc.h(0); // cancels a gate in the compound operation
+  qc.x(0); // cancels the first gate, making the CompoundOperation empty
+  qc.z(0); // adds another gate to the CompoundOperation
+  std::cout << "-----------------------------\n";
+  qc.print(std::cout);
+  CircuitOptimizer::singleQubitGateFusion(qc);
+  std::cout << "-----------------------------\n";
+  qc.print(std::cout);
+  EXPECT_EQ(qc.getNops(), 1U);
+}
+
+TEST_F(QFRFunctionality, emptyCompoundGatesRemovedInSingleQubitGateFusion) {
+  const std::size_t nqubits = 1U;
+  QuantumComputation qc(nqubits);
+  qc.x(0);
+  qc.h(0); // causes the creation of a CompoundOperation
+  qc.h(0); // cancels a gate in the compound operation
+  qc.x(0); // cancels the first gate, making the CompoundOperation empty
+  std::cout << "-----------------------------\n";
+  qc.print(std::cout);
+  CircuitOptimizer::singleQubitGateFusion(qc);
+  std::cout << "-----------------------------\n";
+  qc.print(std::cout);
+  EXPECT_EQ(qc.getNops(), 0U);
+}
+
 TEST_F(QFRFunctionality, removeDiagonalSingleQubitBeforeMeasure) {
   const std::size_t nqubits = 1;
   QuantumComputation qc(nqubits, nqubits);
