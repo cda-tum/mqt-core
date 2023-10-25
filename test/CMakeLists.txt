@@ -14,7 +14,7 @@ package_add_test(${PROJECT_NAME}-test ${PROJECT_NAME} unittests/test_io.cpp
 package_add_test(
   ${PROJECT_NAME}-test-dd
   ${PROJECT_NAME}-dd
-        dd/test_benchmark.cpp
+  dd/test_benchmark.cpp
   dd/test_complex.cpp
   dd/test_package.cpp
   dd/test_dd_functionality.cpp
@@ -43,8 +43,5 @@ package_add_test(
 package_add_test(${PROJECT_NAME}-test-ecc ${PROJECT_NAME}-ecc unittests/test_ecc_functionality.cpp)
 target_link_libraries(${PROJECT_NAME}-test-ecc PRIVATE ${PROJECT_NAME}-dd)
 
-package_add_test(
-        ${PROJECT_NAME}-test-eval
-        ${PROJECT_NAME}-eval
-        eval/test_build_task.cpp
-        eval/test_simulation_task.cpp)
+package_add_test(${PROJECT_NAME}-test-eval ${PROJECT_NAME}-eval eval/test_build_task.cpp
+                 eval/test_simulation_task.cpp)
