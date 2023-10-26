@@ -368,6 +368,9 @@ void StandardOperation::dumpOpenQASM(
   case iSWAP:
     op << "iswap";
     break;
+  case iSWAPdg:
+    op << "iswapdg";
+    break;
   case Peres:
     of << op.str() << "cx";
     for (const auto& c : controls) {

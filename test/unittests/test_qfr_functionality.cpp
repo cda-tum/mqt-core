@@ -2139,7 +2139,7 @@ TEST_F(QFRFunctionality, invertStandardOpInvertClone) {
 TEST_F(QFRFunctionality, invertStandardOpSpecial) {
   const auto opTypes = {
       std::pair{S, Sdg},   std::pair{T, Tdg},         std::pair{V, Vdg},
-      std::pair{SX, SXdg}, std::pair{Peres, Peresdg},
+      std::pair{SX, SXdg}, std::pair{Peres, Peresdg}, std::pair{iSWAP, iSWAPdg},
   };
 
   for (const auto& [opType, opTypeInv] : opTypes) {
