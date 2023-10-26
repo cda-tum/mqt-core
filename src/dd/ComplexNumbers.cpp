@@ -1,5 +1,7 @@
 #include "dd/ComplexNumbers.hpp"
 
+#include "dd/ComplexValue.hpp"
+
 #include <cassert>
 #include <cmath>
 
@@ -39,18 +41,11 @@ void ComplexNumbers::mul(Complex& r, const Complex& a,
   assert(r.i != a.r && "r.i and a.r point to the same entry!");
   assert(r.r != b.i && "r.r and b.i point to the same entry!");
   assert(r.i != b.r && "r.i and b.r point to the same entry!");
-  if (a.approximatelyZero() || b.approximatelyZero()) {
-    r.r->value = 0.;
-    r.i->value = 0.;
-  } else {
-    const auto ar = RealNumber::val(a.r);
-    const auto ai = RealNumber::val(a.i);
-    const auto br = RealNumber::val(b.r);
-    const auto bi = RealNumber::val(b.i);
-
-    r.r->value = ar * br - ai * bi;
-    r.i->value = ar * bi + ai * br;
-  }
+  const auto aVal = static_cast<ComplexValue>(a);
+  const auto bVal = static_cast<ComplexValue>(b);
+  const auto rVal = aVal * bVal;
+  r.r->value = rVal.r;
+  r.i->value = rVal.i;
 }
 
 void ComplexNumbers::div(Complex& r, const Complex& a,
@@ -61,14 +56,11 @@ void ComplexNumbers::div(Complex& r, const Complex& a,
   assert(r.i != a.r && "r.i and a.r point to the same entry!");
   assert(r.r != b.i && "r.r and b.i point to the same entry!");
   assert(r.i != b.r && "r.i and b.r point to the same entry!");
-  const auto ar = RealNumber::val(a.r);
-  const auto ai = RealNumber::val(a.i);
-  const auto br = RealNumber::val(b.r);
-  const auto bi = RealNumber::val(b.i);
-
-  const auto cmag = br * br + bi * bi;
-  r.r->value = (ar * br + ai * bi) / cmag;
-  r.i->value = (ai * br - ar * bi) / cmag;
+  const auto aVal = static_cast<ComplexValue>(a);
+  const auto bVal = static_cast<ComplexValue>(b);
+  const auto rVal = aVal / bVal;
+  r.r->value = rVal.r;
+  r.i->value = rVal.i;
 }
 
 fp ComplexNumbers::mag2(const Complex& a) noexcept {
