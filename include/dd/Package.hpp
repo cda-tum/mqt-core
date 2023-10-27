@@ -530,7 +530,6 @@ public:
       return vEdge::one();
     }
 
-
     auto leftSubtree = vEdge::one();
     auto rightSubtree = vEdge::one();
 
