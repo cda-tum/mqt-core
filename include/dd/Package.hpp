@@ -526,9 +526,8 @@ public:
           " qubits. Please allocate a larger package instance."};
     }
 
-    if (n == 0) {
-      throw std::runtime_error{
-          "Cannot create W state for 0 qubits. Please choose n > 0."};
+    if (n == 0U) {
+      return vEdge::one();
     }
 
     if (n == 1) {
