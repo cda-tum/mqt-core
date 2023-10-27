@@ -530,9 +530,6 @@ public:
       return vEdge::one();
     }
 
-    if (n == 1) {
-      return makeBasisState(n, {BasisStates::one});
-    }
 
     auto leftSubtree = vEdge::one();
     auto rightSubtree = vEdge::one();
