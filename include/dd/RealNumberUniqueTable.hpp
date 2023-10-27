@@ -189,14 +189,20 @@ private:
   RealNumber* findOrInsert(std::int64_t key, fp val);
 
   /**
-   * @brief Inserts a value into the bucket indexed by key.
-   * @details This function inserts a value into the bucket indexed by key.
-   * It assumes that no element within TOLERANCE is present in the bucket.
+   * @brief Inserts a value in the front of the bucket indexed by key.
    * @param key The index of the bucket to insert the value into.
    * @param val The value to insert.
-   * @returns A pointer to the inserted entry.
+   * @return A pointer to the inserted entry.
    */
-  RealNumber* insert(std::int64_t key, fp val);
+  RealNumber* insertFront(std::int64_t key, fp val);
+
+  /**
+   * @brief Inserts a value in the back of the bucket indexed by key.
+   * @param key The index of the bucket to insert the value into.
+   * @param val The value to insert.
+   * @return A pointer to the inserted entry.
+   */
+  RealNumber* insertBack(std::int64_t key, fp val);
 
   /**
    * @brief Lookup a non-negative number in the table.

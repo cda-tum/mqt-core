@@ -54,7 +54,7 @@ def _run_tests(
         posargs.append("--cov-config=pyproject.toml")
 
     session.install("scikit-build-core[pyproject]", "setuptools_scm", "pybind11", *install_args, env=env)
-    install_arg = f"-ve.[{','.join(_extras)}]"
+    install_arg = f".[{','.join(_extras)}]"
     session.install("--no-build-isolation", install_arg, *install_args, env=env)
     session.run("pytest", *run_args, *posargs, env=env)
 

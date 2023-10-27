@@ -1,5 +1,7 @@
 #include "dd/ComplexNumbers.hpp"
 
+#include "dd/ComplexValue.hpp"
+
 #include <cassert>
 #include <cmath>
 
@@ -9,8 +11,8 @@ void ComplexNumbers::setTolerance(fp tol) noexcept { RealNumber::eps = tol; }
 
 void ComplexNumbers::add(Complex& r, const Complex& a,
                          const Complex& b) noexcept {
-  assert(r != Complex::zero);
-  assert(r != Complex::one);
+  assert(!r.exactlyZero());
+  assert(!r.exactlyOne());
   assert(r.r != a.i && "r.r and a.i point to the same entry!");
   assert(r.i != a.r && "r.i and a.r point to the same entry!");
   assert(r.r != b.i && "r.r and b.i point to the same entry!");
@@ -21,8 +23,8 @@ void ComplexNumbers::add(Complex& r, const Complex& a,
 
 void ComplexNumbers::sub(Complex& r, const Complex& a,
                          const Complex& b) noexcept {
-  assert(r != Complex::zero);
-  assert(r != Complex::one);
+  assert(!r.exactlyZero());
+  assert(!r.exactlyOne());
   assert(r.r != a.i && "r.r and a.i point to the same entry!");
   assert(r.i != a.r && "r.i and a.r point to the same entry!");
   assert(r.r != b.i && "r.r and b.i point to the same entry!");
@@ -33,69 +35,45 @@ void ComplexNumbers::sub(Complex& r, const Complex& a,
 
 void ComplexNumbers::mul(Complex& r, const Complex& a,
                          const Complex& b) noexcept {
-  assert(r != Complex::zero);
-  assert(r != Complex::one);
+  assert(!r.exactlyZero());
+  assert(!r.exactlyOne());
   assert(r.r != a.i && "r.r and a.i point to the same entry!");
   assert(r.i != a.r && "r.i and a.r point to the same entry!");
   assert(r.r != b.i && "r.r and b.i point to the same entry!");
   assert(r.i != b.r && "r.i and b.r point to the same entry!");
-  if (a.approximatelyOne()) {
-    r.setVal(b);
-  } else if (b.approximatelyOne()) {
-    r.setVal(a);
-  } else if (a.approximatelyZero() || b.approximatelyZero()) {
-    r.r->value = 0.;
-    r.i->value = 0.;
-  } else {
-    const auto ar = RealNumber::val(a.r);
-    const auto ai = RealNumber::val(a.i);
-    const auto br = RealNumber::val(b.r);
-    const auto bi = RealNumber::val(b.i);
-
-    r.r->value = ar * br - ai * bi;
-    r.i->value = ar * bi + ai * br;
-  }
+  const auto aVal = static_cast<ComplexValue>(a);
+  const auto bVal = static_cast<ComplexValue>(b);
+  const auto rVal = aVal * bVal;
+  r.r->value = rVal.r;
+  r.i->value = rVal.i;
 }
 
 void ComplexNumbers::div(Complex& r, const Complex& a,
                          const Complex& b) noexcept {
-  assert(r != Complex::zero);
-  assert(r != Complex::one);
+  assert(!r.exactlyZero());
+  assert(!r.exactlyOne());
   assert(r.r != a.i && "r.r and a.i point to the same entry!");
   assert(r.i != a.r && "r.i and a.r point to the same entry!");
   assert(r.r != b.i && "r.r and b.i point to the same entry!");
   assert(r.i != b.r && "r.i and b.r point to the same entry!");
-  if (a.approximatelyEquals(b)) {
-    r.r->value = 1.;
-    r.i->value = 0.;
-  } else if (b.approximatelyOne()) {
-    r.setVal(a);
-  } else {
-    const auto ar = RealNumber::val(a.r);
-    const auto ai = RealNumber::val(a.i);
-    const auto br = RealNumber::val(b.r);
-    const auto bi = RealNumber::val(b.i);
-
-    const auto cmag = br * br + bi * bi;
-
-    r.r->value = (ar * br + ai * bi) / cmag;
-    r.i->value = (ai * br - ar * bi) / cmag;
-  }
+  const auto aVal = static_cast<ComplexValue>(a);
+  const auto bVal = static_cast<ComplexValue>(b);
+  const auto rVal = aVal / bVal;
+  r.r->value = rVal.r;
+  r.i->value = rVal.i;
 }
 
 fp ComplexNumbers::mag2(const Complex& a) noexcept {
-  const auto ar = RealNumber::val(a.r);
-  const auto ai = RealNumber::val(a.i);
-
-  return ar * ar + ai * ai;
+  return static_cast<ComplexValue>(a).mag2();
 }
 
-fp ComplexNumbers::mag(const Complex& a) noexcept { return std::sqrt(mag2(a)); }
+fp ComplexNumbers::mag(const Complex& a) noexcept {
+  return static_cast<ComplexValue>(a).mag();
+}
 
 fp ComplexNumbers::arg(const Complex& a) noexcept {
-  const auto ar = RealNumber::val(a.r);
-  const auto ai = RealNumber::val(a.i);
-  return std::atan2(ai, ar);
+  const auto val = static_cast<ComplexValue>(a);
+  return std::atan2(val.i, val.r);
 }
 
 Complex ComplexNumbers::conj(const Complex& a) noexcept {
@@ -126,30 +104,6 @@ Complex ComplexNumbers::mulCached(const Complex& a, const Complex& b) {
 
 Complex ComplexNumbers::divCached(const Complex& a, const Complex& b) {
   auto c = getCached();
-  div(c, a, b);
-  return c;
-}
-
-Complex ComplexNumbers::addTemp(const dd::Complex& a, const dd::Complex& b) {
-  auto c = getTemporary();
-  add(c, a, b);
-  return c;
-}
-
-Complex ComplexNumbers::subTemp(const dd::Complex& a, const dd::Complex& b) {
-  auto c = getTemporary();
-  sub(c, a, b);
-  return c;
-}
-
-Complex ComplexNumbers::mulTemp(const dd::Complex& a, const dd::Complex& b) {
-  auto c = getTemporary();
-  mul(c, a, b);
-  return c;
-}
-
-Complex ComplexNumbers::divTemp(const dd::Complex& a, const dd::Complex& b) {
-  auto c = getTemporary();
   div(c, a, b);
   return c;
 }
@@ -187,28 +141,12 @@ Complex ComplexNumbers::lookup(const ComplexValue& c) {
   return lookup(c.r, c.i);
 }
 
+Complex ComplexNumbers::lookup(const fp r) {
+  return {uniqueTable->lookup(r), &constants::zero};
+}
+
 Complex ComplexNumbers::lookup(const fp r, const fp i) {
   return {uniqueTable->lookup(r), uniqueTable->lookup(i)};
-}
-
-Complex ComplexNumbers::getTemporary() {
-  const auto [rv, iv] = cacheManager->getTemporaryPair();
-  return {rv, iv};
-}
-
-Complex ComplexNumbers::getTemporary(const fp r, const fp i) {
-  const auto [rv, iv] = cacheManager->getTemporaryPair();
-  rv->value = r;
-  iv->value = i;
-  return {rv, iv};
-}
-
-Complex ComplexNumbers::getTemporary(const ComplexValue& c) {
-  return getTemporary(c.r, c.i);
-}
-
-Complex ComplexNumbers::getTemporary(const Complex& c) {
-  return getTemporary(RealNumber::val(c.r), RealNumber::val(c.i));
 }
 
 Complex ComplexNumbers::getCached() {
