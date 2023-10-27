@@ -509,12 +509,10 @@ public:
                                 std::array{vEdge::zero(), rightSubtree});
     }
 
-    auto f = makeDDNode(static_cast<Qubit>(n - 1),
+    return makeDDNode(static_cast<Qubit>(n - 1),
                         std::array<vEdge, RADIX>{
-                            {{leftSubtree.p, cn.lookup(dd::SQRT2_2, 0)},
-                             {rightSubtree.p, cn.lookup(dd::SQRT2_2, 0)}}});
-
-    return f;
+                            {{leftSubtree.p, {&constants::sqrt2over2, &constants::zero}},
+                             {rightSubtree.p, {&constants::sqrt2over2, &constants::zero}}}});
   }
 
   // generate general W state with n qubits
