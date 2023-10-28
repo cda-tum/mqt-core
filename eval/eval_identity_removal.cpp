@@ -5,22 +5,58 @@
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
 #include "algorithms/WState.hpp"
-#include "dd/FunctionalityConstruction.hpp"
-#include "dd/Simulation.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
 
-#include <chrono>
+#include "dd/Benchmark.hpp"
+
+
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 #include <string>
+#include <utility>
 
 static constexpr bool ON_FEATURE_BRANCH = false;
 
 // a function that parses a nlohmann::json from a file "results.json", populates
 // it with the results of the current run and writes it back to the file
-void writeResults(const std::string& name, const std::string& type,
-                  qc::QuantumComputation& qc, const double runtime,
-                  std::unique_ptr<dd::Package<>>& dd) {
+void verifyAndSaveSim(const std::string& name, const std::string& type,
+                  qc::QuantumComputation& qc, const SimWithDDStats& simWithDdStats) {
+EXPECT_NE(simWithDdStats.sim.p, nullptr);
+
+nlohmann::json j;
+
+  std::fstream file("results.json",
+                    std::ios::in | std::ios::out | std::ios::ate);
+  if (!file.is_open()) {
+    std::ofstream outputFile("results.json");
+    outputFile << nlohmann::json();
+  } else if (file.tellg() == 0) {
+    file << nlohmann::json();
+  }
+  file.close();
+
+  std::ifstream ifs("results.json");
+  ifs >> j;
+  ifs.close();
+
+  auto& entry = j[name][type][std::to_string(qc.getNqubits())]
+                 [ON_FEATURE_BRANCH ? "feature" : "main"];
+
+  entry["gate_count"] = qc.getNindividualOps();
+  entry["runtime"] = simWithDdStats.runtime.count();
+
+  // collect statistics from DD package
+  entry["dd"] = simWithDdStats.ddStats;
+
+  std::ofstream ofs("results.json");
+  ofs << j.dump(2);
+  ofs.close();
+}
+
+void verifyAndSaveFunc(const std::string& name, const std::string& type,
+                      qc::QuantumComputation& qc, const FuncWithDDStats& funcWithDdStats) {
+  EXPECT_NE(funcWithDdStats.func.p, nullptr);
+
   nlohmann::json j;
 
   std::fstream file("results.json",
@@ -41,10 +77,10 @@ void writeResults(const std::string& name, const std::string& type,
                  [ON_FEATURE_BRANCH ? "feature" : "main"];
 
   entry["gate_count"] = qc.getNindividualOps();
-  entry["runtime"] = runtime;
+  entry["runtime"] = funcWithDdStats.runtime.count();
 
   // collect statistics from DD package
-  entry["dd"] = dd::getStatistics(dd.get());
+  entry["dd"] = funcWithDdStats.ddStats;
 
   std::ofstream ofs("results.json");
   ofs << j.dump(2);
@@ -57,11 +93,9 @@ protected:
   void SetUp() override {
     nqubits = GetParam();
     qc = std::make_unique<qc::Entanglement>(nqubits);
-    dd = std::make_unique<dd::Package<>>(qc->getNqubits());
   }
 
   std::size_t nqubits = 0;
-  std::unique_ptr<dd::Package<>> dd;
   std::unique_ptr<qc::Entanglement> qc;
 };
 
@@ -69,25 +103,13 @@ INSTANTIATE_TEST_SUITE_P(GHZ, GHZEval,
                          testing::Values(256U, 512U, 1024U, 2048U, 4096U));
 
 TEST_P(GHZEval, GHZSimulation) {
-  const auto start = std::chrono::high_resolution_clock::now();
-  const auto out = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd);
-  const auto end = std::chrono::high_resolution_clock::now();
-  EXPECT_NE(out.p, nullptr);
-  const auto runtime =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-
-  writeResults("GHZ", "Simulation", *qc, runtime.count(), dd);
+  const auto out = benchmarkSimulate(*qc);
+  verifyAndSaveSim("GHZ", "Simulation", *qc, out);
 }
 
 TEST_P(GHZEval, GHZFunctionality) {
-  const auto start = std::chrono::high_resolution_clock::now();
-  const auto out = buildFunctionality(qc.get(), dd);
-  const auto end = std::chrono::high_resolution_clock::now();
-  EXPECT_NE(out.p, nullptr);
-  const auto runtime =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-
-  writeResults("GHZ", "Functionality", *qc, runtime.count(), dd);
+  const auto out = benchmarkBuildFunctionality(*qc);
+  verifyAndSaveFunc("GHZ", "Functionality", *qc, out);
 }
 
 class WStateEval : public testing::TestWithParam<std::size_t> {
@@ -96,11 +118,9 @@ protected:
   void SetUp() override {
     nqubits = GetParam();
     qc = std::make_unique<qc::WState>(nqubits);
-    dd = std::make_unique<dd::Package<>>(qc->getNqubits());
   }
 
   std::size_t nqubits = 0;
-  std::unique_ptr<dd::Package<>> dd;
   std::unique_ptr<qc::WState> qc;
 };
 
@@ -108,39 +128,26 @@ INSTANTIATE_TEST_SUITE_P(WState, WStateEval,
                          testing::Values(256U, 512U, 1024U, 2048U, 4096U));
 
 TEST_P(WStateEval, WStateSimulation) {
-  const auto start = std::chrono::high_resolution_clock::now();
-  const auto out = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd);
-  const auto end = std::chrono::high_resolution_clock::now();
-  EXPECT_NE(out.p, nullptr);
-  const auto runtime =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-
-  writeResults("WState", "Simulation", *qc, runtime.count(), dd);
+  const auto out = benchmarkSimulate(*qc);
+  verifyAndSaveSim("WState", "Simulation", *qc, out);
 }
 
 TEST_P(WStateEval, WStateFunctionality) {
-  const auto start = std::chrono::high_resolution_clock::now();
-  const auto out = buildFunctionality(qc.get(), dd);
-  const auto end = std::chrono::high_resolution_clock::now();
-  EXPECT_NE(out.p, nullptr);
-  const auto runtime =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-
-  writeResults("WState", "Functionality", *qc, runtime.count(), dd);
+  const auto out = benchmarkBuildFunctionality(*qc);
+  verifyAndSaveFunc("WState", "Functionality", *qc, out);
 }
 
+// dynamic?
 class BVEval : public testing::TestWithParam<std::size_t> {
 protected:
   void TearDown() override {}
   void SetUp() override {
     nqubits = GetParam();
     qc = std::make_unique<qc::BernsteinVazirani>(nqubits);
-    dd = std::make_unique<dd::Package<>>(qc->getNqubits());
     qc::CircuitOptimizer::removeFinalMeasurements(*qc);
   }
 
   std::size_t nqubits = 0;
-  std::unique_ptr<dd::Package<>> dd;
   std::unique_ptr<qc::BernsteinVazirani> qc;
 };
 
@@ -148,25 +155,13 @@ INSTANTIATE_TEST_SUITE_P(BV, BVEval,
                          testing::Values(255U, 511U, 1023U, 2047U, 4095U));
 
 TEST_P(BVEval, BVSimulation) {
-  const auto start = std::chrono::high_resolution_clock::now();
-  const auto out = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd);
-  const auto end = std::chrono::high_resolution_clock::now();
-  EXPECT_NE(out.p, nullptr);
-  const auto runtime =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-
-  writeResults("BV", "Simulation", *qc, runtime.count(), dd);
+  const auto out = benchmarkSimulate(*qc);
+  verifyAndSaveSim("BV", "Simulation", *qc, out);
 }
 
 TEST_P(BVEval, BVFunctionality) {
-  const auto start = std::chrono::high_resolution_clock::now();
-  const auto out = buildFunctionality(qc.get(), dd);
-  const auto end = std::chrono::high_resolution_clock::now();
-  EXPECT_NE(out.p, nullptr);
-  const auto runtime =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-
-  writeResults("BV", "Functionality", *qc, runtime.count(), dd);
+  const auto out = benchmarkBuildFunctionality(*qc);
+  verifyAndSaveFunc("BV", "Functionality", *qc, out);
 }
 
 class QFTEval : public testing::TestWithParam<std::size_t> {
@@ -175,11 +170,9 @@ protected:
   void SetUp() override {
     nqubits = GetParam();
     qc = std::make_unique<qc::QFT>(nqubits, false);
-    dd = std::make_unique<dd::Package<>>(qc->getNqubits());
   }
 
   std::size_t nqubits = 0;
-  std::unique_ptr<dd::Package<>> dd;
   std::unique_ptr<qc::QFT> qc;
 };
 
@@ -187,14 +180,8 @@ INSTANTIATE_TEST_SUITE_P(QFT, QFTEval,
                          testing::Values(256U, 512U, 1024U, 2048U, 4096U));
 
 TEST_P(QFTEval, QFTSimulation) {
-  const auto start = std::chrono::high_resolution_clock::now();
-  const auto out = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd);
-  const auto end = std::chrono::high_resolution_clock::now();
-  EXPECT_NE(out.p, nullptr);
-  const auto runtime =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-
-  writeResults("QFT", "Simulation", *qc, runtime.count(), dd);
+  const auto out = benchmarkSimulate(*qc);
+  verifyAndSaveSim("QFT", "Simulation", *qc, out);
 }
 
 class QFTEvalFunctionality : public testing::TestWithParam<std::size_t> {
@@ -203,11 +190,9 @@ protected:
   void SetUp() override {
     nqubits = GetParam();
     qc = std::make_unique<qc::QFT>(nqubits, false);
-    dd = std::make_unique<dd::Package<>>(qc->getNqubits());
   }
 
   std::size_t nqubits = 0;
-  std::unique_ptr<dd::Package<>> dd;
   std::unique_ptr<qc::QFT> qc;
 };
 
@@ -215,14 +200,8 @@ INSTANTIATE_TEST_SUITE_P(QFT, QFTEvalFunctionality,
                          testing::Values(18U, 19U, 20U, 21U, 22U));
 
 TEST_P(QFTEvalFunctionality, QFTFunctionality) {
-  const auto start = std::chrono::high_resolution_clock::now();
-  const auto out = buildFunctionality(qc.get(), dd);
-  const auto end = std::chrono::high_resolution_clock::now();
-  EXPECT_NE(out.p, nullptr);
-  const auto runtime =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-
-  writeResults("QFT", "Functionality", *qc, runtime.count(), dd);
+  const auto out = benchmarkBuildFunctionality(*qc);
+  verifyAndSaveFunc("QFT", "Functionality", *qc, out);
 }
 
 class GroverEval : public testing::TestWithParam<qc::Qubit> {
@@ -283,18 +262,12 @@ TEST_P(GroverEval, GroverSimulator) {
   const auto runtime =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
 
-  writeResults("Grover", "Simulation", *qc, runtime.count(), dd);
+  verifyAndSaveSim("Grover", "Simulation", *qc, {e, dd::getStatistics(dd.get()), runtime});
 }
 
 TEST_P(GroverEval, GroverFunctionality) {
-  const auto start = std::chrono::high_resolution_clock::now();
-  const auto out = buildFunctionalityRecursive(qc.get(), dd);
-  const auto end = std::chrono::high_resolution_clock::now();
-  EXPECT_NE(out.p, nullptr);
-  const auto runtime =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-
-  writeResults("Grover", "Functionality", *qc, runtime.count(), dd);
+  const auto out = benchmarkBuildFunctionality(*qc, true);
+  verifyAndSaveFunc("Grover", "Functionality", *qc, out);
 }
 
 class QPEEval : public testing::TestWithParam<std::size_t> {
@@ -303,12 +276,10 @@ protected:
   void SetUp() override {
     nqubits = GetParam();
     qc = std::make_unique<qc::QPE>(nqubits, false);
-    dd = std::make_unique<dd::Package<>>(qc->getNqubits());
     qc::CircuitOptimizer::removeFinalMeasurements(*qc);
   }
 
   std::size_t nqubits = 0;
-  std::unique_ptr<dd::Package<>> dd;
   std::unique_ptr<qc::QPE> qc;
 };
 
@@ -316,14 +287,8 @@ INSTANTIATE_TEST_SUITE_P(QPE, QPEEval,
                          testing::Values(14U, 15U, 16U, 17U, 18U));
 
 TEST_P(QPEEval, QPESimulation) {
-  const auto start = std::chrono::high_resolution_clock::now();
-  const auto out = simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd);
-  const auto end = std::chrono::high_resolution_clock::now();
-  EXPECT_NE(out.p, nullptr);
-  const auto runtime =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-
-  writeResults("QPE", "Simulation", *qc, runtime.count(), dd);
+  const auto out = benchmarkSimulate(*qc);
+  verifyAndSaveSim("QPE", "Simulation", *qc, out);
 }
 
 class QPEEvalFunctionality : public testing::TestWithParam<std::size_t> {
@@ -332,12 +297,10 @@ protected:
   void SetUp() override {
     nqubits = GetParam();
     qc = std::make_unique<qc::QPE>(nqubits, false);
-    dd = std::make_unique<dd::Package<>>(qc->getNqubits());
     qc::CircuitOptimizer::removeFinalMeasurements(*qc);
   }
 
   std::size_t nqubits = 0;
-  std::unique_ptr<dd::Package<>> dd;
   std::unique_ptr<qc::QPE> qc;
 };
 
@@ -345,15 +308,12 @@ INSTANTIATE_TEST_SUITE_P(QPE, QPEEvalFunctionality,
                          testing::Values(7U, 8U, 9U, 10U, 11U));
 
 TEST_P(QPEEvalFunctionality, QPEFunctionality) {
-  const auto start = std::chrono::high_resolution_clock::now();
-  const auto out = buildFunctionality(qc.get(), dd);
-  const auto end = std::chrono::high_resolution_clock::now();
-  EXPECT_NE(out.p, nullptr);
-  const auto runtime =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-
-  writeResults("QPE", "Functionality", *qc, runtime.count(), dd);
+  const auto out = benchmarkBuildFunctionality(*qc);
+  verifyAndSaveFunc("QPE", "Functionality", *qc, out);
 }
+
+
+////RandomClifford
 
 TEST(JSON, JSONTranspose) {
   std::ifstream ifs("results.json");
