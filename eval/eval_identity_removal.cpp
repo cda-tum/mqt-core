@@ -5,7 +5,7 @@
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
 #include "algorithms/WState.hpp"
-#include "dd/statistics/PackageStatistics.hpp"
+
 
 #include "dd/Benchmark.hpp"
 
