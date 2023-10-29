@@ -530,24 +530,21 @@ public:
       return vEdge::one();
     }
 
-    auto leftSubtree = vEdge::one();
+    auto leftSubtree = vEdge::zero();
     auto rightSubtree = vEdge::one();
-
-    leftSubtree = makeDDNode(static_cast<Qubit>(0),
-                             std::array{vEdge::zero(), leftSubtree});
-    rightSubtree = makeDDNode(static_cast<Qubit>(0),
-                              std::array{rightSubtree, vEdge::zero()});
-
-    for (size_t p = 1; p < n - 1; ++p) {
+    for (size_t p = 0; p < n - 1; ++p) {
       leftSubtree = makeDDNode(static_cast<Qubit>(p),
                                std::array{leftSubtree, rightSubtree});
       rightSubtree = makeDDNode(static_cast<Qubit>(p),
                                 std::array{rightSubtree, vEdge::zero()});
     }
 
-    auto f = makeDDNode(static_cast<Qubit>(n - 1),
-                        std::array{leftSubtree, rightSubtree});
-    f = normalize(f, false);
+    vEdge f = makeDDNode(static_cast<Qubit>(n - 1),
+                         std::array<vEdge, RADIX>{
+                             {{leftSubtree.p, cn.lookup(leftSubtree.w)},
+                              {rightSubtree.p, cn.lookup(rightSubtree.w)}}});
+
+    f.w.setVal(Complex::one());
 
     return f;
   }

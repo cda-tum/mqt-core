@@ -28,14 +28,17 @@ TEST(DDPackage, WStateTest) {
 TEST(DDPackageTest, GHZStateEdgeCasesTest) {
   auto dd = std::make_unique<dd::Package<>>(3);
 
-  ASSERT_THROW(dd->makeGHZState(0), std::runtime_error);
+  EXPECT_EQ(dd->makeGHZState(0),
+            dd->makeBasisState(0, {dd::BasisStates::zero}));
+  EXPECT_EQ(dd->makeGHZState(0), dd->makeBasisState(0, {dd::BasisStates::one}));
   ASSERT_THROW(dd->makeGHZState(6), std::runtime_error);
 }
 
 TEST(DDPackageTest, WStateEdgeCasesTest) {
   auto dd = std::make_unique<dd::Package<>>(3);
 
+  EXPECT_EQ(dd->makeWState(0), dd->makeBasisState(0, {dd::BasisStates::zero}));
+  EXPECT_EQ(dd->makeWState(0), dd->makeBasisState(0, {dd::BasisStates::one}));
   EXPECT_EQ(dd->makeWState(1), dd->makeBasisState(1, {dd::BasisStates::one}));
-  ASSERT_THROW(dd->makeWState(0), std::runtime_error);
   ASSERT_THROW(dd->makeWState(6), std::runtime_error);
 }
