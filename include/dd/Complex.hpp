@@ -5,13 +5,14 @@
 
 #include <complex>
 #include <cstddef>
+#include <functional>
 #include <iostream>
 #include <string>
-#include <utility>
 
 namespace dd {
 
 struct RealNumber;
+struct ComplexValue;
 
 /// A complex number represented by two pointers to compute table entries.
 struct Complex {
@@ -36,12 +37,6 @@ struct Complex {
   static constexpr Complex one() noexcept {
     return {&constants::one, &constants::zero};
   }
-
-  /**
-   * @brief Set the value based on the given complex number.
-   * @param c The value to set.
-   */
-  void setVal(const Complex& c) const noexcept;
 
   /**
    * @brief Check whether the complex number is exactly equal to zero.
@@ -92,17 +87,6 @@ struct Complex {
   [[nodiscard]] bool approximatelyOne() const noexcept;
 
   /**
-   * @brief Check for exact equality.
-   * @param other The complex number to compare to.
-   * @returns True if the complex numbers are exactly equal, false otherwise.
-   * @note Boils down to a pointer comparison.
-   */
-  [[nodiscard]] bool operator==(const Complex& other) const noexcept;
-
-  /// @see operator==
-  [[nodiscard]] bool operator!=(const Complex& other) const noexcept;
-
-  /**
    * @brief Convert the complex number to a string.
    * @param formatted Whether to apply special formatting to the numbers.
    * @param precision The precision to use for the numbers.
@@ -124,6 +108,12 @@ struct Complex {
    * @returns The std::complex<fp> representation of the Complex number.
    */
   [[nodiscard]] explicit operator std::complex<fp>() const noexcept;
+
+  /**
+   * @brief Convert the Complex number to a ComplexValue.
+   * @returns The ComplexValue representation of the Complex number.
+   */
+  [[nodiscard]] explicit operator ComplexValue() const noexcept;
 };
 
 /**
@@ -133,6 +123,17 @@ struct Complex {
  * @returns The output stream.
  */
 std::ostream& operator<<(std::ostream& os, const Complex& c);
+
+ComplexValue operator*(const Complex& c1, const ComplexValue& c2);
+ComplexValue operator*(const ComplexValue& c1, const Complex& c2);
+ComplexValue operator*(const Complex& c1, const Complex& c2);
+ComplexValue operator*(const Complex& c1, fp real);
+ComplexValue operator*(fp real, const Complex& c1);
+
+ComplexValue operator/(const Complex& c1, const ComplexValue& c2);
+ComplexValue operator/(const ComplexValue& c1, const Complex& c2);
+ComplexValue operator/(const Complex& c1, const Complex& c2);
+ComplexValue operator/(const Complex& c1, fp real);
 
 } // namespace dd
 

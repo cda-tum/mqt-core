@@ -243,6 +243,13 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
         continue;
       }
 
+      // check if the compound operation is empty (e.g., -X-H-H-X-Z-)
+      if (compop->empty()) {
+        compop->emplace_back(it->clone());
+        it->setGate(I);
+        continue;
+      }
+
       // check if inverse
       auto lastop = (--(compop->end()));
       auto inverseIt = INVERSE_MAP.find((*lastop)->getType());

@@ -96,21 +96,21 @@ struct dNode {                        // NOLINT(readability-identifier-naming)
     return p == nullptr;
   }
 
-  [[nodiscard]] [[maybe_unused]] static inline bool
+  [[nodiscard]] [[maybe_unused]] static constexpr bool
   tempDensityMatrixFlagsEqual(const std::uint8_t a,
                               const std::uint8_t b) noexcept {
     return getDensityMatrixTempFlags(a) == getDensityMatrixTempFlags(b);
   }
 
-  [[nodiscard]] static inline bool
+  [[nodiscard]] static constexpr bool
   isConjugateTempFlagSet(const std::uintptr_t p) noexcept {
     return (p & (1ULL << 0)) != 0U;
   }
-  [[nodiscard]] static inline bool
+  [[nodiscard]] static constexpr bool
   isNonReduceTempFlagSet(const std::uintptr_t p) noexcept {
     return (p & (1ULL << 1)) != 0U;
   }
-  [[nodiscard]] static inline bool
+  [[nodiscard]] static constexpr bool
   isDensityMatrixTempFlagSet(const std::uintptr_t p) noexcept {
     return (p & (1ULL << 2)) != 0U;
   }
@@ -153,12 +153,12 @@ struct dNode {                        // NOLINT(readability-identifier-naming)
   getDensityMatrixTempFlags(dNode*& p) noexcept {
     return getDensityMatrixTempFlags(reinterpret_cast<std::uintptr_t>(p));
   }
-  [[nodiscard]] static inline std::uintptr_t
+  [[nodiscard]] static constexpr std::uintptr_t
   getDensityMatrixTempFlags(const std::uintptr_t a) noexcept {
     return a & (7ULL);
   }
 
-  void unsetTempDensityMatrixFlags() noexcept {
+  constexpr void unsetTempDensityMatrixFlags() noexcept {
     flags = flags & static_cast<std::uint8_t>(~7U);
   }
 
@@ -180,22 +180,6 @@ static inline dEdge densityFromMatrixEdge(const mEdge& e) {
 }
 
 /**
- * @brief Indicates whether a given node needs reference count updates.
- * @details This function checks whether a given node needs reference count
- * updates. A node needs reference count updates if the pointer to it is
- * not the null pointer, if it is not a terminal node, and if the reference
- * count has saturated.
- * @tparam Node Type of the node to check.
- * @param num Pointer to the node to check.
- * @returns Whether the node needs reference count updates.
- */
-template <typename Node>
-[[nodiscard]] static inline bool
-noRefCountingNeeded(const Node* const p) noexcept {
-  return Node::isTerminal(p) || p->ref == std::numeric_limits<RefCount>::max();
-}
-
-/**
  * @brief Increment the reference count of a node.
  * @details This function increments the reference count of a node. If the
  * reference count has saturated (i.e. reached the maximum value of RefCount)
@@ -208,7 +192,7 @@ noRefCountingNeeded(const Node* const p) noexcept {
  */
 template <typename Node>
 [[nodiscard]] static inline bool incRef(Node* p) noexcept {
-  if (noRefCountingNeeded(p)) {
+  if (p == nullptr || p->ref == std::numeric_limits<RefCount>::max()) {
     return false;
   }
   ++p->ref;
@@ -228,7 +212,7 @@ template <typename Node>
  */
 template <typename Node>
 [[nodiscard]] static inline bool decRef(Node* p) noexcept {
-  if (noRefCountingNeeded(p)) {
+  if (p == nullptr || p->ref == std::numeric_limits<RefCount>::max()) {
     return false;
   }
   assert(p->ref != 0 &&

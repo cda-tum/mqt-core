@@ -1,16 +1,9 @@
 #include "dd/CachedEdge.hpp"
 
-#include "dd/Complex.hpp"
 #include "dd/Node.hpp"
 #include "dd/RealNumber.hpp"
 
 namespace dd {
-
-template <typename Node>
-CachedEdge<Node>::CachedEdge(Node* n, const Complex& c) : p(n) {
-  w.r = RealNumber::val(c.r);
-  w.i = RealNumber::val(c.i);
-}
 
 template struct CachedEdge<vNode>;
 template struct CachedEdge<mNode>;
