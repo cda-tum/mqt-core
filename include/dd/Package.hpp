@@ -544,7 +544,7 @@ public:
                              {{leftSubtree.p, cn.lookup(leftSubtree.w)},
                               {rightSubtree.p, cn.lookup(rightSubtree.w)}}});
 
-    f.w.setVal(Complex::one());
+    f.w = Complex::one();
 
     return f;
   }
