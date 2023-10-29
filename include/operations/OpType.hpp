@@ -167,7 +167,7 @@ inline std::string shortName(const OpType& opType) {
   case iSWAP:
     return "isw";
   case iSWAPdg:
-    return "iswd";
+    return "isd";
   case Peres:
     return "pr";
   case Peresdg:

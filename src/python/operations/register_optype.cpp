@@ -30,7 +30,7 @@ void registerOptype(py::module& m) {
       .value("rz", qc::OpType::RZ)
       .value("swap", qc::OpType::SWAP)
       .value("iswap", qc::OpType::iSWAP)
-      //      .value("iswapdg", qc::OpType::iSWAPdg)
+      .value("iswapdg", qc::OpType::iSWAPdg)
       .value("peres", qc::OpType::Peres)
       .value("peresdg", qc::OpType::Peresdg)
       .value("dcx", qc::OpType::DCX)

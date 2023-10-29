@@ -43,7 +43,7 @@ class OpType:
     h: ClassVar[OpType]  # value = <OpType.h: 4>
     i: ClassVar[OpType]  # value = <OpType.i: 2>
     iswap: ClassVar[OpType]  # value = <OpType.iswap: 23>
-    # iswapdg: ClassVar[OpType]  # value = <OpType.iswapdg: 24>
+    iswapdg: ClassVar[OpType]  # value = <OpType.iswapdg: 24>
     measure: ClassVar[OpType]  # value = <OpType.measure: 36>
     none: ClassVar[OpType]  # value = <OpType.none: 0>
     peres: ClassVar[OpType]  # value = <OpType.peres: 25>
