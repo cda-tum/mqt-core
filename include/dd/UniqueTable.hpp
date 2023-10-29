@@ -79,7 +79,7 @@ public:
     static constexpr std::size_t MASK = NBUCKET - 1;
     std::size_t key = 0;
     for (std::size_t i = 0; i < p->e.size(); ++i) {
-      key = combineHash(key, std::hash<Edge<Node>>{}(p->e[i]));
+      key = qc::combineHash(key, std::hash<Edge<Node>>{}(p->e[i]));
     }
     key &= MASK;
     return key;

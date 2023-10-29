@@ -1,17 +1,31 @@
 #pragma once
 
-#include "operations/Expression.hpp"
-
 #include <bitset>
 #include <cstdint>
 #include <deque>
 #include <map>
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
+
+namespace sym {
+struct Variable;
+template <typename T,
+          typename = std::enable_if<std::is_constructible_v<int, T> &&
+                                    std::is_constructible_v<T, double>>>
+class Term;
+template <
+    typename T, typename U,
+    typename = std::enable_if<
+        std::is_constructible_v<T, U> && std::is_constructible_v<U, T> &&
+        std::is_constructible_v<int, T> && std::is_constructible_v<T, double> &&
+        std::is_constructible_v<U, double>>>
+class Expression;
+} // namespace sym
 
 namespace qc {
 class QFRException : public std::invalid_argument {
@@ -71,4 +85,33 @@ using DAGReverseIterators = std::vector<DAGReverseIterator>;
 using Symbolic = sym::Expression<fp, fp>;
 using VariableAssignment = std::unordered_map<sym::Variable, fp>;
 using SymbolOrNumber = std::variant<Symbolic, fp>;
+
+/**
+ * @brief 64bit mixing hash (from MurmurHash3)
+ * @details Hash function for 64bit integers adapted from MurmurHash3
+ * @param k the number to hash
+ * @returns the hash value
+ * @see https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
+ */
+constexpr std::size_t murmur64(std::size_t k) noexcept {
+  k ^= k >> 33;
+  k *= 0xff51afd7ed558ccdULL;
+  k ^= k >> 33;
+  k *= 0xc4ceb9fe1a85ec53ULL;
+  k ^= k >> 33;
+  return k;
+}
+
+/**
+ * @brief Combine two 64bit hashes into one 64bit hash
+ * @details Combines two 64bit hashes into one 64bit hash based on
+ * boost::hash_combine (https://www.boost.org/LICENSE_1_0.txt)
+ * @param lhs The first hash
+ * @param rhs The second hash
+ * @returns The combined hash
+ */
+constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) noexcept {
+  lhs ^= rhs + 0x9e3779b97f4a7c15ULL + (lhs << 6) + (lhs >> 2);
+  return lhs;
+}
 } // namespace qc

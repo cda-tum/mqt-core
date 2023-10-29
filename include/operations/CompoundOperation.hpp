@@ -246,3 +246,15 @@ public:
   }
 };
 } // namespace qc
+
+namespace std {
+template <> struct hash<qc::CompoundOperation> {
+  std::size_t operator()(const qc::CompoundOperation& co) const noexcept {
+    std::size_t seed = 0;
+    for (const auto& op : co) {
+      qc::combineHash(seed, std::hash<qc::Operation>{}(*op));
+    }
+    return seed;
+  }
+};
+} // namespace std

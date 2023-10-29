@@ -1,6 +1,8 @@
 #include "operations/Operation.hpp"
 #include "python/pybind11.hpp"
 
+#include <pybind11/operators.h>
+
 namespace mqt {
 
 void registerOperation(py::module& m) {
@@ -58,8 +60,9 @@ void registerOperation(py::module& m) {
           },
           "qreg"_a, "creg"_a,
           "Return the OpenQASM string representation of this operation.")
-      .def("__eq__", py::overload_cast<const qc::Operation&>(
-                         &qc::Operation::equals, py::const_))
+      .def(py::self == py::self)
+      .def(py::self != py::self)
+      .def(hash(py::self))
       .def("__str__",
            [](const qc::Operation& op) {
              std::ostringstream oss;
