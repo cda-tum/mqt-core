@@ -11,6 +11,10 @@
 #include <variant>
 
 namespace qc {
+using Symbolic = sym::Expression<fp, fp>;
+using VariableAssignment = std::unordered_map<sym::Variable, fp>;
+using SymbolOrNumber = std::variant<Symbolic, fp>;
+
 // Overload pattern for std::visit
 template <typename... Ts> struct Overload : Ts... {
   using Ts::operator()...;

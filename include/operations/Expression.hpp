@@ -63,7 +63,10 @@ template <> struct hash<sym::Variable> {
 namespace sym {
 using VariableAssignment = std::unordered_map<Variable, double>;
 
-template <typename T, typename> class Term {
+template <typename T,
+          typename = std::enable_if<std::is_constructible_v<int, T> &&
+                                    std::is_constructible_v<T, double>>>
+class Term {
 public:
   [[nodiscard]] Variable getVar() const { return var; }
   [[nodiscard]] T getCoeff() const { return coeff; }
@@ -147,7 +150,13 @@ template <typename T> struct hash<sym::Term<T>> {
 } // namespace std
 
 namespace sym {
-template <typename T, typename U, typename> class Expression {
+template <
+    typename T, typename U,
+    typename = std::enable_if<
+        std::is_constructible_v<T, U> && std::is_constructible_v<U, T> &&
+        std::is_constructible_v<int, T> && std::is_constructible_v<T, double> &&
+        std::is_constructible_v<U, double>>>
+class Expression {
 public:
   using iterator = typename std::vector<Term<T>>::iterator;
   using const_iterator = typename std::vector<Term<T>>::const_iterator;

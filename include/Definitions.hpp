@@ -12,21 +12,6 @@
 #include <variant>
 #include <vector>
 
-namespace sym {
-struct Variable;
-template <typename T,
-          typename = std::enable_if<std::is_constructible_v<int, T> &&
-                                    std::is_constructible_v<T, double>>>
-class Term;
-template <
-    typename T, typename U,
-    typename = std::enable_if<
-        std::is_constructible_v<T, U> && std::is_constructible_v<U, T> &&
-        std::is_constructible_v<int, T> && std::is_constructible_v<T, double> &&
-        std::is_constructible_v<U, double>>>
-class Expression;
-} // namespace sym
-
 namespace qc {
 class QFRException : public std::invalid_argument {
   std::string msg;
@@ -81,10 +66,6 @@ using DAGReverseIterator =
     std::deque<std::unique_ptr<Operation>*>::reverse_iterator;
 using DAGIterators = std::vector<DAGIterator>;
 using DAGReverseIterators = std::vector<DAGReverseIterator>;
-
-using Symbolic = sym::Expression<fp, fp>;
-using VariableAssignment = std::unordered_map<sym::Variable, fp>;
-using SymbolOrNumber = std::variant<Symbolic, fp>;
 
 /**
  * @brief 64bit mixing hash (from MurmurHash3)
