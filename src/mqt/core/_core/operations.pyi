@@ -89,7 +89,7 @@ class OpType:
     def __ne__(self: Self, other: object) -> bool: ...
     def __setstate__(self: Self, state: int) -> None: ...
 
-class Operation(metaclass=ABCMeta):  # noqa: PLW1641
+class Operation(metaclass=ABCMeta):
     type_: OpType
     controls: set[Control]
     num_qubits: int

@@ -3,7 +3,7 @@ from typing import overload
 
 from .._compat.typing import Self
 
-class Variable:  # noqa: PLW1641
+class Variable:
     def __eq__(self: Self, arg0: object) -> bool: ...
     def __gt__(self: Self, arg0: Variable) -> bool: ...
     def __hash__(self: Self) -> int: ...
@@ -30,7 +30,7 @@ class Term:
     @property
     def variable(self: Self) -> Variable: ...
 
-class Expression:  # noqa: PLW1641
+class Expression:
     constant: float
     @overload
     def __add__(self: Self, arg0: Expression) -> Expression: ...
