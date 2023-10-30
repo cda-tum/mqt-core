@@ -5,6 +5,7 @@
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
 #include "algorithms/WState.hpp"
+#include "algorithms/RandomCliffordCircuit.hpp"
 
 
 #include "dd/Benchmark.hpp"
@@ -16,6 +17,10 @@
 #include <utility>
 
 static constexpr bool ON_FEATURE_BRANCH = false;
+
+namespace constants {
+const int GLOBAL_SEED = 15;
+}
 
 // a function that parses a nlohmann::json from a file "results.json", populates
 // it with the results of the current run and writes it back to the file
@@ -312,8 +317,45 @@ TEST_P(QPEEvalFunctionality, QPEFunctionality) {
   verifyAndSaveFunc("QPE", "Functionality", *qc, out);
 }
 
+class RandomCliffordEval : public testing::TestWithParam<std::size_t> {
+protected:
+  void TearDown() override {}
+  void SetUp() override {
+    nqubits = GetParam();
+    qc = std::make_unique<qc::RandomCliffordCircuit>(nqubits, nqubits*nqubits, constants::GLOBAL_SEED);
+  }
 
-////RandomClifford
+  std::size_t nqubits = 0;
+  std::unique_ptr<qc::RandomCliffordCircuit> qc;
+};
+
+INSTANTIATE_TEST_SUITE_P(RandomCliffordCircuit, RandomCliffordEval,
+                         testing::Values(14U, 15U, 16U, 17U, 18U));
+
+TEST_P(RandomCliffordEval, RandomCliffordSimulation) {
+  const auto out = benchmarkSimulate(*qc);
+  verifyAndSaveSim("RandomClifford", "Simulation", *qc, out);
+}
+
+class RandomCliffordEvalFunctionality : public testing::TestWithParam<std::size_t> {
+protected:
+  void TearDown() override {}
+  void SetUp() override {
+    nqubits = GetParam();
+    qc = std::make_unique<qc::RandomCliffordCircuit>(nqubits, nqubits*nqubits, constants::GLOBAL_SEED);
+  }
+
+  std::size_t nqubits = 0;
+  std::unique_ptr<qc::RandomCliffordCircuit> qc;
+};
+
+INSTANTIATE_TEST_SUITE_P(RandomCliffordCircuit, RandomCliffordEvalFunctionality,
+                         testing::Values(7U, 8U, 9U, 10U, 11U));
+
+TEST_P(RandomCliffordEvalFunctionality, RandomCliffordFunctionality) {
+  const auto out = benchmarkBuildFunctionality(*qc);
+  verifyAndSaveFunc("RandomClifford", "Functionality", *qc, out);
+}
 
 TEST(JSON, JSONTranspose) {
   std::ifstream ifs("results.json");
