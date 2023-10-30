@@ -1,5 +1,6 @@
 #include "zx/FunctionalityConstruction.hpp"
 
+#include "operations/OpType.hpp"
 #include "zx/Definitions.hpp"
 #include "zx/Rational.hpp"
 #include "zx/ZXDiagram.hpp"
@@ -223,6 +224,31 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       addZSpider(diag, target2, qubits, PiExpression(), EdgeType::Hadamard);
       break;
     }
+    case qc::OpType::RZZ: {
+      const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
+      addCnot(diag, target, target2, qubits);
+      addZSpider(diag, target2, qubits, parseParam(op.get(), 0));
+      addCnot(diag, target, target2, qubits);
+      break;
+    }
+    case qc::OpType::RXX: {
+      const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
+      addCnot(diag, target2, target, qubits);
+      addXSpider(diag, target2, qubits, parseParam(op.get(), 0));
+      addCnot(diag, target2, target, qubits);
+      break;
+    }
+    case qc::OpType::RYY: {
+      const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
+      addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
+      addXSpider(diag, target2, qubits, PiExpression(PiRational(1, 2)));
+      addCnot(diag, target, target2, qubits);
+      addZSpider(diag, target2, qubits, parseParam(op.get(), 0));
+      addCnot(diag, target, target2, qubits);
+      addXSpider(diag, target, qubits, PiExpression(-PiRational(1, 2)));
+      addXSpider(diag, target2, qubits, PiExpression(-PiRational(1, 2)));
+      break;
+    }
     case qc::OpType::H:
       addZSpider(diag, target, qubits, PiExpression(), EdgeType::Hadamard);
       break;
@@ -396,6 +422,9 @@ bool FunctionalityConstruction::transformableToZX(const qc::Operation* op) {
     case qc::OpType::I:
     case qc::OpType::SX:
     case qc::OpType::SXdg:
+    case qc::OpType::RZZ:
+    case qc::OpType::RXX:
+    case qc::OpType::RYY:
       return true;
     default:
       return false;
