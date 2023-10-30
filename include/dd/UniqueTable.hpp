@@ -77,9 +77,9 @@ public:
    */
   static std::size_t hash(const Node* p) {
     static constexpr std::size_t MASK = NBUCKET - 1;
-    std::size_t key = 0;
-    for (std::size_t i = 0; i < p->e.size(); ++i) {
-      key = qc::combineHash(key, std::hash<Edge<Node>>{}(p->e[i]));
+    std::size_t key = 0U;
+    for (std::size_t i = 0U; i < p->e.size(); ++i) {
+      qc::hashCombine(key, std::hash<Edge<Node>>{}(p->e[i]));
     }
     key &= MASK;
     return key;
