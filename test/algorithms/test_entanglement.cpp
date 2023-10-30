@@ -1,5 +1,6 @@
 #include "algorithms/Entanglement.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Benchmark.hpp"
 
 #include "gtest/gtest.h"
 #include <string>
@@ -32,4 +33,20 @@ TEST_P(Entanglement, FunctionTest) {
 
   ASSERT_EQ(r.getValueByPath(std::string(nq, '0')), dd::SQRT2_2);
   ASSERT_EQ(r.getValueByPath(std::string(nq, '1')), dd::SQRT2_2);
+}
+
+TEST_P(Entanglement, BenchmarkSimulate) {
+  const auto nq = GetParam();
+
+  auto qc = qc::Entanglement(nq);
+  auto out = benchmarkSimulate(qc);
+  EXPECT_NE(out.sim.p, nullptr);
+}
+
+TEST_P(Entanglement, BenchmarkBuildFunctionality) {
+  const auto nq = GetParam();
+
+  auto qc = qc::Entanglement(nq);
+  auto out = benchmarkBuildFunctionality(qc);
+  EXPECT_NE(out.func.p, nullptr);
 }

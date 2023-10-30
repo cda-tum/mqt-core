@@ -1,5 +1,6 @@
 #include "algorithms/WState.hpp"
 #include "dd/Simulation.hpp"
+#include "dd/Benchmark.hpp"
 
 #include "gtest/gtest.h"
 #include <iostream>
@@ -39,4 +40,20 @@ TEST_P(WState, FunctionTest) {
   for (const auto& result : generateWStateStrings(nq)) {
     EXPECT_TRUE(measurements.find(result) != measurements.end());
   }
+}
+
+TEST_P(WState, BenchmarkSimulate) {
+  const auto nq = GetParam();
+
+  auto qc = qc::WState(nq);
+  auto out = benchmarkSimulate(qc);
+  EXPECT_NE(out.sim.p, nullptr);
+}
+
+TEST_P(WState, BenchmarkBuildFunctionality) {
+  const auto nq = GetParam();
+
+  auto qc = qc::WState(nq);
+  auto out = benchmarkBuildFunctionality(qc);
+  EXPECT_NE(out.func.p, nullptr);
 }

@@ -1,6 +1,7 @@
 #include "algorithms/RandomCliffordCircuit.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Simulation.hpp"
+#include "dd/Benchmark.hpp"
 
 #include "gtest/gtest.h"
 #include <string>
@@ -40,5 +41,23 @@ TEST_P(RandomClifford, buildFunctionality) {
   auto qc = qc::RandomCliffordCircuit(nq, nq * nq, 12345);
   std::cout << qc << "\n";
   ASSERT_NO_THROW({ buildFunctionality(&qc, dd); });
+  qc.printStatistics(std::cout);
+}
+
+TEST_P(RandomClifford, benchmarkSimulate) {
+  const auto nq = GetParam();
+
+  auto qc = qc::RandomCliffordCircuit(nq, nq * nq, 12345);
+  std::cout << qc << "\n";
+  ASSERT_NO_THROW({ benchmarkSimulate(qc); });
+  qc.printStatistics(std::cout);
+}
+
+TEST_P(RandomClifford, benchmarkBuildFunctionality) {
+  const auto nq = GetParam();
+
+  auto qc = qc::RandomCliffordCircuit(nq, nq * nq, 12345);
+  std::cout << qc << "\n";
+  ASSERT_NO_THROW({ benchmarkBuildFunctionality(qc); });
   qc.printStatistics(std::cout);
 }

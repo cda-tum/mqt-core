@@ -14,7 +14,6 @@ package_add_test(${PROJECT_NAME}-test ${PROJECT_NAME} unittests/test_io.cpp
 package_add_test(
   ${PROJECT_NAME}-test-dd
   ${PROJECT_NAME}-dd
-  dd/test_benchmark.cpp
   dd/test_complex.cpp
   dd/test_package.cpp
   dd/test_dd_functionality.cpp

@@ -1,6 +1,7 @@
 #include "algorithms/Grover.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Simulation.hpp"
+#include "dd/Benchmark.hpp"
 
 #include "gtest/gtest.h"
 #include <cmath>
@@ -123,4 +124,10 @@ TEST_P(Grover, Simulation) {
       static_cast<double>(correctShots) / static_cast<double>(shots);
 
   EXPECT_GE(probability, GROVER_GOAL_PROBABILITY);
+}
+
+TEST_P(Grover, BenchmarkBuildFunctionality) {
+  qc = std::make_unique<qc::Grover>(nqubits, seed);
+  const auto out = benchmarkBuildFunctionality(*qc, true);
+  EXPECT_NE(out.func.p, nullptr);
 }
