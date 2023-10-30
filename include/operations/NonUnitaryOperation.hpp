@@ -87,13 +87,13 @@ public:
 namespace std {
 template <> struct hash<qc::NonUnitaryOperation> {
   std::size_t operator()(qc::NonUnitaryOperation const& op) const noexcept {
-    std::size_t seed = 0;
-    qc::combineHash(seed, op.getType());
+    std::size_t seed = 0U;
+    qc::hashCombine(seed, op.getType());
     for (const auto& q : op.getTargets()) {
-      qc::combineHash(seed, q);
+      qc::hashCombine(seed, q);
     }
     for (const auto& c : op.getClassics()) {
-      qc::combineHash(seed, c);
+      qc::hashCombine(seed, c);
     }
     return seed;
   }

@@ -485,9 +485,10 @@ template <typename T, typename U> struct hash<sym::Expression<T, U>> {
   std::size_t operator()(const sym::Expression<T, U>& expr) const {
     std::size_t seed = 0U;
     for (const auto& term : expr) {
-      seed = qc::combineHash(seed, std::hash<sym::Term<T>>{}(term));
+      qc::hashCombine(seed, std::hash<sym::Term<T>>{}(term));
     }
-    return qc::combineHash(seed, std::hash<U>{}(expr.getConst()));
+    qc::hashCombine(seed, std::hash<U>{}(expr.getConst()));
+    return seed;
   }
 };
 } // namespace std

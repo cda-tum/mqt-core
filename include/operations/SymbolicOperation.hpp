@@ -150,14 +150,13 @@ public:
 namespace std {
 template <> struct hash<qc::SymbolicOperation> {
   std::size_t operator()(qc::SymbolicOperation const& op) const noexcept {
-    std::size_t seed = 0ULL;
-    seed = qc::combineHash(seed, std::hash<qc::Operation>{}(op));
+    std::size_t seed = 0U;
+    qc::hashCombine(seed, std::hash<qc::Operation>{}(op));
     for (const auto& param : op.getParameters()) {
       if (std::holds_alternative<qc::fp>(param)) {
-        seed = qc::combineHash(seed, hash<qc::fp>{}(get<qc::fp>(param)));
+        qc::hashCombine(seed, hash<qc::fp>{}(get<qc::fp>(param)));
       } else {
-        seed = qc::combineHash(seed,
-                               hash<qc::Symbolic>{}(get<qc::Symbolic>(param)));
+        qc::hashCombine(seed, hash<qc::Symbolic>{}(get<qc::Symbolic>(param)));
       }
     }
     return seed;

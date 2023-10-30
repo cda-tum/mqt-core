@@ -93,7 +93,7 @@ using SymbolOrNumber = std::variant<Symbolic, fp>;
  * @returns the hash value
  * @see https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
  */
-constexpr std::size_t murmur64(std::size_t k) noexcept {
+[[nodiscard]] constexpr std::size_t murmur64(std::size_t k) noexcept {
   k ^= k >> 33;
   k *= 0xff51afd7ed558ccdULL;
   k ^= k >> 33;
@@ -110,8 +110,18 @@ constexpr std::size_t murmur64(std::size_t k) noexcept {
  * @param rhs The second hash
  * @returns The combined hash
  */
-constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) noexcept {
-  lhs ^= rhs + 0x9e3779b97f4a7c15ULL + (lhs << 6) + (lhs >> 2);
-  return lhs;
+[[nodiscard]] constexpr std::size_t
+combineHash(const std::size_t lhs, const std::size_t rhs) noexcept {
+  return lhs ^ (rhs + 0x9e3779b97f4a7c15ULL + (lhs << 6) + (lhs >> 2));
+}
+
+/**
+ * @brief Extend a 64bit hash with a 64bit integer
+ * @param hash The hash to extend
+ * @param with The integer to extend the hash with
+ * @return The combined hash
+ */
+constexpr void hashCombine(std::size_t& hash, const std::size_t with) noexcept {
+  hash = combineHash(hash, with);
 }
 } // namespace qc

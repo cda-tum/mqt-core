@@ -250,9 +250,9 @@ public:
 namespace std {
 template <> struct hash<qc::CompoundOperation> {
   std::size_t operator()(const qc::CompoundOperation& co) const noexcept {
-    std::size_t seed = 0;
+    std::size_t seed = 0U;
     for (const auto& op : co) {
-      qc::combineHash(seed, std::hash<qc::Operation>{}(*op));
+      qc::hashCombine(seed, std::hash<qc::Operation>{}(*op));
     }
     return seed;
   }
