@@ -13,21 +13,18 @@
 #include <string>
 #include <utility>
 
-static constexpr bool ON_FEATURE_BRANCH = false;
+namespace dd {
 
-namespace constants {
-const int GLOBAL_SEED = 15;
-}
+static constexpr bool ON_FEATURE_BRANCH = false;
+static constexpr std::size_t SEED = 42U;
 
 // a function that parses a nlohmann::json from a file "results.json", populates
 // it with the results of the current run and writes it back to the file
-void verifyAndSaveSim(const std::string& name, const std::string& type,
-                      qc::QuantumComputation& qc,
-                      const SimWithDDStats& simWithDdStats) {
-  EXPECT_NE(simWithDdStats.sim.p, nullptr);
+void verifyAndSave(const std::string& name, const std::string& type,
+                   qc::QuantumComputation& qc, const Experiment* exp) {
+  EXPECT_TRUE(exp->success());
 
   nlohmann::json j;
-
   std::fstream file("results.json",
                     std::ios::in | std::ios::out | std::ios::ate);
   if (!file.is_open()) {
@@ -46,48 +43,13 @@ void verifyAndSaveSim(const std::string& name, const std::string& type,
                  [ON_FEATURE_BRANCH ? "feature" : "main"];
 
   entry["gate_count"] = qc.getNindividualOps();
-  entry["runtime"] = simWithDdStats.runtime.count();
+  entry["runtime"] = exp->runtime.count();
 
   // collect statistics from DD package
-  entry["dd"] = simWithDdStats.ddStats;
+  entry["dd"] = exp->stats;
 
   std::ofstream ofs("results.json");
-  ofs << j.dump(2);
-  ofs.close();
-}
-
-void verifyAndSaveFunc(const std::string& name, const std::string& type,
-                       qc::QuantumComputation& qc,
-                       const FuncWithDDStats& funcWithDdStats) {
-  EXPECT_NE(funcWithDdStats.func.p, nullptr);
-
-  nlohmann::json j;
-
-  std::fstream file("results.json",
-                    std::ios::in | std::ios::out | std::ios::ate);
-  if (!file.is_open()) {
-    std::ofstream outputFile("results.json");
-    outputFile << nlohmann::json();
-  } else if (file.tellg() == 0) {
-    file << nlohmann::json();
-  }
-  file.close();
-
-  std::ifstream ifs("results.json");
-  ifs >> j;
-  ifs.close();
-
-  auto& entry = j[name][type][std::to_string(qc.getNqubits())]
-                 [ON_FEATURE_BRANCH ? "feature" : "main"];
-
-  entry["gate_count"] = qc.getNindividualOps();
-  entry["runtime"] = funcWithDdStats.runtime.count();
-
-  // collect statistics from DD package
-  entry["dd"] = funcWithDdStats.ddStats;
-
-  std::ofstream ofs("results.json");
-  ofs << j.dump(2);
+  ofs << j.dump(2U);
   ofs.close();
 }
 
@@ -360,97 +322,4 @@ TEST_P(RandomCliffordEvalFunctionality, RandomCliffordFunctionality) {
   verifyAndSaveFunc("RandomClifford", "Functionality", *qc, out);
 }
 
-TEST(JSON, JSONTranspose) {
-  std::ifstream ifs("results.json");
-  nlohmann::json j;
-  ifs >> j;
-  ifs.close();
-
-  nlohmann::json k;
-
-  for (const auto& [algorithm, resultsA] : j.items()) {
-    for (const auto& [type, resultsT] : resultsA.items()) {
-      for (const auto& [nqubits, resultsN] : resultsT.items()) {
-        for (const auto& [branch, resultsB] : resultsN.items()) {
-          const auto& runtime = resultsB["runtime"];
-          k[algorithm][type][nqubits]["runtime"][branch] = runtime;
-
-          const auto& gateCount = resultsB["gate_count"];
-          k[algorithm][type][nqubits]["gate_count"][branch] = gateCount;
-
-          const auto& dd = resultsB["dd"];
-          const auto& activeMemoryMiB = dd["active_memory_mib"];
-          k[algorithm][type][nqubits]["dd"]["active_memory_mib"][branch] =
-              activeMemoryMiB;
-          const auto& peakMemoryMiB = dd["peak_memory_mib"];
-          k[algorithm][type][nqubits]["dd"]["peak_memory_mib"][branch] =
-              peakMemoryMiB;
-          for (const auto& stat : {"matrix", "vector", "density_matrix",
-                                   "real_numbers", "compute_tables"}) {
-            for (const auto& [key, value] : dd[stat].items()) {
-              if (value == "unused") {
-                k[algorithm][type][nqubits]["dd"][stat][key][branch] = value;
-                continue;
-              }
-
-              for (const auto& [key2, value2] : value.items()) {
-                if ((std::strcmp(stat, "matrix") != 0 ||
-                     std::strcmp(stat, "vector") != 0 ||
-                     std::strcmp(stat, "density_matrix") != 0) &&
-                    key == "unique_table") {
-                  for (const auto& [key3, value3] : value2.items()) {
-                    k[algorithm][type][nqubits]["dd"][stat][key][key2][key3]
-                     [branch] = value3;
-                  }
-                  continue;
-                }
-                k[algorithm][type][nqubits]["dd"][stat][key][key2][branch] =
-                    value2;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  std::ofstream ofs("results_transposed.json");
-  ofs << k.dump(2);
-  ofs.close();
-}
-
-TEST(JSON, JSONReduce) {
-  std::ifstream ifs("results_transposed.json");
-  nlohmann::json j;
-  ifs >> j;
-  ifs.close();
-
-  for (const auto& [algorithm, resultsA] : j.items()) {
-    for (const auto& [type, resultsT] : resultsA.items()) {
-      for (const auto& [nqubits, resultsN] : resultsT.items()) {
-        auto& dd = resultsN["dd"];
-        dd.erase("density_matrix");
-
-        auto& computeTables = dd["compute_tables"];
-        computeTables.erase("density_matrix_add");
-        computeTables.erase("density_density_mult");
-        computeTables.erase("density_noise_operations");
-        computeTables.erase("stochastic_noise_operations");
-        computeTables.erase("matrix_kronecker");
-        computeTables.erase("vector_kronecker");
-        computeTables.erase("vector_inner_product");
-        computeTables.erase("matrix_conjugate_transpose");
-
-        if (type == "Functionality") {
-          dd.erase("vector");
-          computeTables.erase("vector_add");
-          computeTables.erase("matrix_vector_mult");
-        }
-      }
-    }
-  }
-
-  std::ofstream ofs("results_reduced.json");
-  ofs << j.dump(2);
-  ofs.close();
-}
+} // namespace dd
