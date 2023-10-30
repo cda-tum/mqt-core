@@ -209,8 +209,7 @@ extend-select = [
     "YTT",         # flake8-2020
 ]
 ignore = [
-    "PLR",     # Design related pylint codes
-    "ISC001",  # Conflicts with formatter
+    "PLR",  # Design related pylint codes
 ]
 typing-modules = ["mqt.core._compat.typing"]
 isort.required-imports = ["from __future__ import annotations"]
