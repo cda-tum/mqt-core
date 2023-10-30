@@ -314,7 +314,7 @@ def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> floa
             else:
                 var = factor_no_operator
 
-        if var == "":
+        if not var:
             expr += coeff
         else:
             is_const = False
@@ -410,12 +410,8 @@ def _import_definition(
     qubit_map: Mapping[Qubit, int],
     clbit_map: Mapping[Clbit, int],
 ) -> list[float | ParameterExpression]:
-    qarg_map = {}
-    for def_qubit, qarg in zip(circ.qubits, qargs):
-        qarg_map[def_qubit] = qarg
-    carg_map = {}
-    for def_clbit, carg in zip(circ.clbits, cargs):
-        carg_map[def_clbit] = carg
+    qarg_map = dict(zip(circ.qubits, qargs))
+    carg_map = dict(zip(circ.clbits, cargs))
 
     qc.append(CompoundOperation(qc.num_qubits))
     comp_op = cast(CompoundOperation, qc[-1])
