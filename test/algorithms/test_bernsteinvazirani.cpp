@@ -1,7 +1,7 @@
 #include "CircuitOptimizer.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
-#include "dd/Simulation.hpp"
 #include "dd/Benchmark.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 
@@ -153,7 +153,7 @@ TEST_F(BernsteinVazirani, BVBenchmarkSimulate) {
   EXPECT_NE(out.sim.p, nullptr);
 }
 
-TEST_F(BernsteinVazirani, BVBenchmarkFunctionality){
+TEST_F(BernsteinVazirani, BVBenchmarkFunctionality) {
   auto nqubits = 20;
   auto qc = std::make_unique<qc::BernsteinVazirani>(nqubits);
   qc::CircuitOptimizer::removeFinalMeasurements(*qc);

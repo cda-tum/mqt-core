@@ -2,8 +2,8 @@
 
 #include "QuantumComputation.hpp"
 #include "dd/FunctionalityConstruction.hpp"
-#include "dd/Simulation.hpp"
 #include "dd/Package.hpp"
+#include "dd/Simulation.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
 
 #include <chrono>
@@ -12,21 +12,20 @@ namespace constants {
 const std::size_t SHOTS = 1024;
 }
 
-struct SimWithDDStats{
-    dd::VectorDD sim{};
-    nlohmann::json ddStats = nlohmann::json::object();
-    std::chrono::duration<double> runtime{};
+struct SimWithDDStats {
+  dd::VectorDD sim{};
+  nlohmann::json ddStats = nlohmann::json::object();
+  std::chrono::duration<double> runtime{};
 };
 
-struct FuncWithDDStats{
-    dd::MatrixDD func{};
-    nlohmann::json ddStats = nlohmann::json::object();
-    std::chrono::duration<double> runtime{};
+struct FuncWithDDStats {
+  dd::MatrixDD func{};
+  nlohmann::json ddStats = nlohmann::json::object();
+  std::chrono::duration<double> runtime{};
 };
-//combine these two?
+// combine these two?
 
-inline SimWithDDStats
-benchmarkSimulate(const qc::QuantumComputation& qc) {
+inline SimWithDDStats benchmarkSimulate(const qc::QuantumComputation& qc) {
   auto nq = qc.getNqubits();
   auto dd = std::make_unique<dd::Package<>>(nq);
   auto in = dd->makeZeroState(nq);
@@ -53,7 +52,8 @@ benchmarkSimulateWithShots(const qc::QuantumComputation& qc) {
 }
 
 inline FuncWithDDStats
-benchmarkBuildFunctionality(const qc::QuantumComputation& qc, bool recursive = false) {
+benchmarkBuildFunctionality(const qc::QuantumComputation& qc,
+                            bool recursive = false) {
   auto nq = qc.getNqubits();
   auto dd = std::make_unique<dd::Package<>>(nq);
   const auto start = std::chrono::high_resolution_clock::now();

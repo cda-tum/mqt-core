@@ -4,12 +4,9 @@
 #include "algorithms/Grover.hpp"
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
-#include "algorithms/WState.hpp"
 #include "algorithms/RandomCliffordCircuit.hpp"
-
-
+#include "algorithms/WState.hpp"
 #include "dd/Benchmark.hpp"
-
 
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
@@ -25,10 +22,11 @@ const int GLOBAL_SEED = 15;
 // a function that parses a nlohmann::json from a file "results.json", populates
 // it with the results of the current run and writes it back to the file
 void verifyAndSaveSim(const std::string& name, const std::string& type,
-                  qc::QuantumComputation& qc, const SimWithDDStats& simWithDdStats) {
-EXPECT_NE(simWithDdStats.sim.p, nullptr);
+                      qc::QuantumComputation& qc,
+                      const SimWithDDStats& simWithDdStats) {
+  EXPECT_NE(simWithDdStats.sim.p, nullptr);
 
-nlohmann::json j;
+  nlohmann::json j;
 
   std::fstream file("results.json",
                     std::ios::in | std::ios::out | std::ios::ate);
@@ -59,7 +57,8 @@ nlohmann::json j;
 }
 
 void verifyAndSaveFunc(const std::string& name, const std::string& type,
-                      qc::QuantumComputation& qc, const FuncWithDDStats& funcWithDdStats) {
+                       qc::QuantumComputation& qc,
+                       const FuncWithDDStats& funcWithDdStats) {
   EXPECT_NE(funcWithDdStats.func.p, nullptr);
 
   nlohmann::json j;
@@ -267,7 +266,8 @@ TEST_P(GroverEval, GroverSimulator) {
   const auto runtime =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
 
-  verifyAndSaveSim("Grover", "Simulation", *qc, {e, dd::getStatistics(dd.get()), runtime});
+  verifyAndSaveSim("Grover", "Simulation", *qc,
+                   {e, dd::getStatistics(dd.get()), runtime});
 }
 
 TEST_P(GroverEval, GroverFunctionality) {
@@ -322,7 +322,8 @@ protected:
   void TearDown() override {}
   void SetUp() override {
     nqubits = GetParam();
-    qc = std::make_unique<qc::RandomCliffordCircuit>(nqubits, nqubits*nqubits, constants::GLOBAL_SEED);
+    qc = std::make_unique<qc::RandomCliffordCircuit>(nqubits, nqubits * nqubits,
+                                                     constants::GLOBAL_SEED);
   }
 
   std::size_t nqubits = 0;
@@ -337,12 +338,14 @@ TEST_P(RandomCliffordEval, RandomCliffordSimulation) {
   verifyAndSaveSim("RandomClifford", "Simulation", *qc, out);
 }
 
-class RandomCliffordEvalFunctionality : public testing::TestWithParam<std::size_t> {
+class RandomCliffordEvalFunctionality
+    : public testing::TestWithParam<std::size_t> {
 protected:
   void TearDown() override {}
   void SetUp() override {
     nqubits = GetParam();
-    qc = std::make_unique<qc::RandomCliffordCircuit>(nqubits, nqubits*nqubits, constants::GLOBAL_SEED);
+    qc = std::make_unique<qc::RandomCliffordCircuit>(nqubits, nqubits * nqubits,
+                                                     constants::GLOBAL_SEED);
   }
 
   std::size_t nqubits = 0;

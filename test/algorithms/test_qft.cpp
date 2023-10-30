@@ -1,7 +1,7 @@
 #include "algorithms/QFT.hpp"
+#include "dd/Benchmark.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Simulation.hpp"
-#include "dd/Benchmark.hpp"
 
 #include "gtest/gtest.h"
 #include <cmath>
@@ -223,7 +223,7 @@ TEST_P(QFT, DynamicSimulation) {
   EXPECT_GE(ratio, 0.7);
 }
 
-TEST_P(QFT, BenchmarkSimulate){
+TEST_P(QFT, BenchmarkSimulate) {
   nqubits = 20;
   qc = std::make_unique<qc::QFT>(nqubits, false);
   auto out = benchmarkSimulate(*qc);
@@ -231,8 +231,8 @@ TEST_P(QFT, BenchmarkSimulate){
 }
 
 TEST_P(QFT, BenchmarkBuildFunctionality) {
-   nqubits = 10;
-   qc = std::make_unique<qc::QFT>(nqubits, false);
-   auto out = benchmarkBuildFunctionality(*qc);
-   EXPECT_NE(out.func.p, nullptr);
+  nqubits = 10;
+  qc = std::make_unique<qc::QFT>(nqubits, false);
+  auto out = benchmarkBuildFunctionality(*qc);
+  EXPECT_NE(out.func.p, nullptr);
 }

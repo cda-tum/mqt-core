@@ -1,6 +1,6 @@
 #include "algorithms/WState.hpp"
-#include "dd/Simulation.hpp"
 #include "dd/Benchmark.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <iostream>

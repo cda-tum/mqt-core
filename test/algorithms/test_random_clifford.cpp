@@ -1,7 +1,7 @@
 #include "algorithms/RandomCliffordCircuit.hpp"
+#include "dd/Benchmark.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Simulation.hpp"
-#include "dd/Benchmark.hpp"
 
 #include "gtest/gtest.h"
 #include <string>
