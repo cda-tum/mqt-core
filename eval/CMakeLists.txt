@@ -9,4 +9,4 @@ if(NOT TARGET gtest OR NOT TARGET gmock)
   add_subdirectory("${PROJECT_SOURCE_DIR}/${GTEST_PATH}" "${GTEST_PATH}" EXCLUDE_FROM_ALL)
 endif()
 
-package_add_test(${PROJECT_NAME}-eval ${PROJECT_NAME}-dd eval_identity_removal.cpp)
+package_add_test(${PROJECT_NAME}-eval ${PROJECT_NAME}-dd eval_dd_algorithms.cpp)
