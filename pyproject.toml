@@ -167,6 +167,8 @@ ignore_missing_imports = true
 line-length = 120
 extend-include = ["*.ipynb"]
 src = ["src"]
+preview = true
+unsafe-fixes = true
 
 [tool.ruff.lint]
 extend-select = [
