@@ -3,11 +3,8 @@ if(NOT TARGET gtest OR NOT TARGET gmock)
   set(gtest_force_shared_crt # cmake-lint: disable=C0103
       ON
       CACHE BOOL "" FORCE)
-
-  # store path to googletest in variable
-  set(GTEST_PATH "extern/googletest")
-  add_subdirectory("${PROJECT_SOURCE_DIR}/${GTEST_PATH}" "${GTEST_PATH}" EXCLUDE_FROM_ALL)
+  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest" "extern/googletest" EXCLUDE_FROM_ALL)
   set_target_properties(gtest gtest_main gmock gmock_main PROPERTIES FOLDER extern)
 endif()
 
-package_add_test(${PROJECT_NAME}-eval ${PROJECT_NAME}-dd eval_dd_algorithms.cpp)
+package_add_test(${PROJECT_NAME}-dd-eval ${PROJECT_NAME}-dd eval_dd_package.cpp)
