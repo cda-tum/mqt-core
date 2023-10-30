@@ -170,7 +170,6 @@ src = ["src"]
 
 [tool.ruff.lint]
 extend-select = [
-    "E", "F", "W", # flake8
     "A",           # flake8-builtins
     "ANN",         # flake8-annotations
     "ARG",         # flake8-unused-arguments
@@ -208,11 +207,10 @@ extend-select = [
     "YTT",         # flake8-2020
 ]
 ignore = [
-    "E501",    # Line too long (Black is enough)
     "PLR",     # Design related pylint codes
+    "ISC001",  # Conflicts with formatter
 ]
 typing-modules = ["mqt.core._compat.typing"]
-flake8-unused-arguments.ignore-variadic-names = true
 isort.required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
