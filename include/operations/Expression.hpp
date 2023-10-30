@@ -501,3 +501,9 @@ template <typename T, typename U> struct hash<sym::Expression<T, U>> {
   }
 };
 } // namespace std
+
+namespace qc {
+using Symbolic = sym::Expression<fp, fp>;
+using VariableAssignment = std::unordered_map<sym::Variable, fp>;
+using SymbolOrNumber = std::variant<Symbolic, fp>;
+} // namespace qc
