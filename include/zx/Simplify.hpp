@@ -1,7 +1,7 @@
 #pragma once
 
-#include "zx/Definitions.hpp"
 #include "zx/Rules.hpp"
+#include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
 #include <cstddef>
