@@ -43,7 +43,7 @@ benchmarkSimulate(const qc::QuantumComputation& qc) {
   return simWithDDStats;
 }
 
-inline std::map<std::string, std::size_t>
+[[maybe_unused]] inline std::map<std::string, std::size_t>
 benchmarkSimulateWithShots(const qc::QuantumComputation& qc) {
   auto nq = qc.getNqubits();
   auto dd = std::make_unique<dd::Package<>>(nq + 1);
