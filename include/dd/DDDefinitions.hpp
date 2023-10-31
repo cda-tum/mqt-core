@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Definitions.hpp"
+
 #include <array>
 #include <complex>
 #include <cstdint>
@@ -59,39 +61,10 @@ static constexpr fp PI_4 = static_cast<fp>(
 
 static constexpr std::uint64_t SERIALIZATION_VERSION = 1;
 
-/**
- * @brief 64bit mixing hash (from MurmurHash3)
- * @details Hash function for 64bit integers adapted from MurmurHash3
- * @param k the number to hash
- * @returns the hash value
- * @see https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
- */
-constexpr std::size_t murmur64(std::size_t k) noexcept {
-  k ^= k >> 33;
-  k *= 0xff51afd7ed558ccdULL;
-  k ^= k >> 33;
-  k *= 0xc4ceb9fe1a85ec53ULL;
-  k ^= k >> 33;
-  return k;
-}
-
-/**
- * @brief Combine two 64bit hashes into one 64bit hash
- * @details Combines two 64bit hashes into one 64bit hash based on
- * boost::hash_combine (https://www.boost.org/LICENSE_1_0.txt)
- * @param lhs The first hash
- * @param rhs The second hash
- * @returns The combined hash
- */
-constexpr std::size_t combineHash(std::size_t lhs, std::size_t rhs) noexcept {
-  lhs ^= rhs + 0x9e3779b97f4a7c15ULL + (lhs << 6) + (lhs >> 2);
-  return lhs;
-}
-
 struct PairHash {
   std::size_t
   operator()(const std::pair<std::size_t, std::size_t>& p) const noexcept {
-    return combineHash(p.first, p.second);
+    return qc::combineHash(p.first, p.second);
   }
 };
 
