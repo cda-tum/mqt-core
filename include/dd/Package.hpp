@@ -531,22 +531,21 @@ public:
     }
 
     auto leftSubtree = vEdge::zero();
-    auto rightSubtree = vEdge::one();
-    for (size_t p = 0; p < n - 1; ++p) {
+    // This is just a temporary trick to get the scaling right.
+    // It is inherently limited by the tolerance we employ and will crash once
+    // 1/sqrt(n) < RealNumber::eps.
+    // The trick to resolve this is to spread the 1/sqrt(n) across the various
+    // levels of the DD during construction.
+    auto rightSubtree = vEdge::terminal(cn.lookup(1. / std::sqrt(n)));
+    for (size_t p = 0; p < n; ++p) {
       leftSubtree = makeDDNode(static_cast<Qubit>(p),
                                std::array{leftSubtree, rightSubtree});
-      rightSubtree = makeDDNode(static_cast<Qubit>(p),
-                                std::array{rightSubtree, vEdge::zero()});
+      if (p != n - 1U) {
+        rightSubtree = makeDDNode(static_cast<Qubit>(p),
+                                  std::array{rightSubtree, vEdge::zero()});
+      }
     }
-
-    vEdge f = makeDDNode(static_cast<Qubit>(n - 1),
-                         std::array<vEdge, RADIX>{
-                             {{leftSubtree.p, cn.lookup(leftSubtree.w)},
-                              {rightSubtree.p, cn.lookup(rightSubtree.w)}}});
-
-    f.w = Complex::one();
-
-    return f;
+    return leftSubtree;
   }
 
   // generate the decision diagram from an arbitrary state vector
