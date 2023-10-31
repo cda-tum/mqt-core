@@ -225,27 +225,30 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       break;
     }
     case qc::OpType::RZZ: {
+      const auto ctrl = target;
       const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
-      addCnot(diag, target, target2, qubits);
+      addCnot(diag, ctrl, target2, qubits);
       addZSpider(diag, target2, qubits, parseParam(op.get(), 0));
-      addCnot(diag, target, target2, qubits);
+      addCnot(diag, ctrl, target2, qubits);
       break;
     }
     case qc::OpType::RXX: {
-      const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
-      addCnot(diag, target2, target, qubits);
-      addXSpider(diag, target2, qubits, parseParam(op.get(), 0));
-      addCnot(diag, target2, target, qubits);
+      const auto ctrl = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
+      ;
+      addCnot(diag, ctrl, target, qubits);
+      addXSpider(diag, target, qubits, parseParam(op.get(), 0));
+      addCnot(diag, ctrl, target, qubits);
       break;
     }
     case qc::OpType::RYY: {
+      const auto ctrl = target;
       const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
-      addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
+      addXSpider(diag, ctrl, qubits, PiExpression(PiRational(1, 2)));
       addXSpider(diag, target2, qubits, PiExpression(PiRational(1, 2)));
-      addCnot(diag, target, target2, qubits);
+      addCnot(diag, ctrl, target2, qubits);
       addZSpider(diag, target2, qubits, parseParam(op.get(), 0));
-      addCnot(diag, target, target2, qubits);
-      addXSpider(diag, target, qubits, PiExpression(-PiRational(1, 2)));
+      addCnot(diag, ctrl, target2, qubits);
+      addXSpider(diag, ctrl, qubits, PiExpression(-PiRational(1, 2)));
       addXSpider(diag, target2, qubits, PiExpression(-PiRational(1, 2)));
       break;
     }
