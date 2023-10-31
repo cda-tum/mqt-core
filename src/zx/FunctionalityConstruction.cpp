@@ -1,7 +1,6 @@
 #include "zx/FunctionalityConstruction.hpp"
 
 #include "operations/OpType.hpp"
-#include "zx/Definitions.hpp"
 #include "zx/Rational.hpp"
 #include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
