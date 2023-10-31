@@ -180,5 +180,30 @@ public:
                             const RegisterNames& creg) const = 0;
 
   virtual void invert() = 0;
+
+  virtual bool operator==(const Operation& rhs) const { return equals(rhs); }
+  bool operator!=(const Operation& rhs) const { return !(*this == rhs); }
 };
 } // namespace qc
+
+namespace std {
+template <> struct hash<qc::Operation> {
+  std::size_t operator()(const qc::Operation& op) const noexcept {
+    std::size_t seed = 0U;
+    qc::hashCombine(seed, hash<qc::OpType>{}(op.getType()));
+    for (const auto& control : op.getControls()) {
+      qc::hashCombine(seed, hash<qc::Qubit>{}(control.qubit));
+      if (control.type == qc::Control::Type::Neg) {
+        seed ^= 1ULL;
+      }
+    }
+    for (const auto& target : op.getTargets()) {
+      qc::hashCombine(seed, hash<qc::Qubit>{}(target));
+    }
+    for (const auto& param : op.getParameter()) {
+      qc::hashCombine(seed, hash<qc::fp>{}(param));
+    }
+    return seed;
+  }
+};
+} // namespace std

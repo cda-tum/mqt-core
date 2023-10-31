@@ -28,6 +28,9 @@ void registerTerm(py::module& m) {
       .def(double() * py::self)
       .def(py::self / double())
       .def(double() / py::self)
+      .def(py::self == py::self)
+      .def(py::self != py::self)
+      .def(hash(py::self))
       .def("__str__",
            [](const sym::Term<double>& term) {
              std::stringstream ss;
