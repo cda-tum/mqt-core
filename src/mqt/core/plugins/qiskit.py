@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, List, cast
 
 from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
 
-from .. import QuantumComputation
-from ..operations import (
+from ... import QuantumComputation
+from ... import (
     CompoundOperation,
     Control,
     NonUnitaryOperation,
@@ -16,7 +16,7 @@ from ..operations import (
     StandardOperation,
     SymbolicOperation,
 )
-from ..symbolic import Expression, Term, Variable
+from ... import Expression, Term, Variable
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
