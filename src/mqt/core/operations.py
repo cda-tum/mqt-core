@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ._core import (
+from ._core.operations import (
     ClassicControlledOperation,
     CompoundOperation,
     Control,
@@ -12,8 +12,6 @@ from ._core import (
     StandardOperation,
     SymbolicOperation,
 )
-
-
 
 __all__ = (
     "ClassicControlledOperation",

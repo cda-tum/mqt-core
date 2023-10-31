@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ._core import Expression, Term, Variable
+from ._core.symbolic import Expression, Term, Variable
 
 __all__ = ("Variable", "Term", "Expression")
 

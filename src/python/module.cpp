@@ -14,11 +14,11 @@ void registerQuantumComputation(py::module& m);
 PYBIND11_MODULE(_core, m) {
   registerPermutation(m);
 
-  // py::module symbolic = m.def_submodule("symbolic");
-  registerSymbolic(m);
+  py::module symbolic = m.def_submodule("symbolic");
+  registerSymbolic(symbolic);
 
-  // py::module operations = m.def_submodule("operations");
-  registerOperations(m);
+  py::module operations = m.def_submodule("operations");
+  registerOperations(operations);
 
   registerQuantumComputation(m);
 }

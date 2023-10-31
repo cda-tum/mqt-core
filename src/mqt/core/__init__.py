@@ -2,17 +2,7 @@
 
 from __future__ import annotations
 
-from ._core import (
-    ClassicControlledOperation,
-    CompoundOperation,
-    Control,
-    NonUnitaryOperation,
-    Operation,
-    OpType,
-    StandardOperation,
-    SymbolicOperation,
-)
-from ._core import Expression, Term, Variable
+from . import operations, symbolic
 from ._core import Permutation, QuantumComputation
 from ._version import version as __version__
 
@@ -22,15 +12,6 @@ __all__ = [
     "QuantumComputation",
     "symbolic",
     "__version__",
-    "Variable", "Term", "Expression",
-        "ClassicControlledOperation",
-    "CompoundOperation",
-    "Control",
-    "NonUnitaryOperation",
-    "Operation",
-    "OpType",
-    "StandardOperation",
-    "SymbolicOperation",
 ]
 
 for cls in (Permutation, QuantumComputation):
