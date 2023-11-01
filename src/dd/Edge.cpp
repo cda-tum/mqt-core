@@ -465,16 +465,16 @@ namespace std {
 template <class Node>
 std::size_t
 hash<dd::Edge<Node>>::operator()(const dd::Edge<Node>& e) const noexcept {
-  const auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(e.p));
+  const auto h1 = qc::murmur64(reinterpret_cast<std::size_t>(e.p));
   const auto h2 = std::hash<dd::Complex>{}(e.w);
-  auto h3 = dd::combineHash(h1, h2);
+  auto h3 = qc::combineHash(h1, h2);
   if constexpr (std::is_same_v<Node, dd::dNode>) {
     if (e.isTerminal()) {
       return h3;
     }
     assert((dd::dNode::isDensityMatrixTempFlagSet(e.p)) == false);
     const auto h4 = dd::dNode::getDensityMatrixTempFlags(e.p->flags);
-    h3 = dd::combineHash(h3, h4);
+    h3 = qc::combineHash(h3, h4);
   }
   return h3;
 }

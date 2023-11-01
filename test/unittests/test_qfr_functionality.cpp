@@ -1559,11 +1559,14 @@ TEST_F(QFRFunctionality, OperationEquality) {
   const auto x = StandardOperation(1U, 0, qc::X);
   const auto z = StandardOperation(1U, 0, qc::Z);
   EXPECT_TRUE(x.equals(x));
+  EXPECT_EQ(x, x);
   EXPECT_FALSE(x.equals(z));
+  EXPECT_NE(x, z);
 
   const auto x0 = StandardOperation(2U, 0, qc::X);
   const auto x1 = StandardOperation(2U, 1, qc::X);
   EXPECT_FALSE(x0.equals(x1));
+  EXPECT_NE(x0, x1);
   Permutation perm0{};
   perm0[0] = 1;
   perm0[1] = 0;
@@ -1573,19 +1576,26 @@ TEST_F(QFRFunctionality, OperationEquality) {
   const auto cx01 = StandardOperation(2U, 0, 1, qc::X);
   const auto cx10 = StandardOperation(2U, 1, 0, qc::X);
   EXPECT_FALSE(cx01.equals(cx10));
+  EXPECT_NE(cx01, cx10);
   EXPECT_FALSE(x0.equals(cx01));
+  EXPECT_NE(x0, cx01);
 
   const auto p = StandardOperation(1U, 0, qc::P, {2.0});
   const auto pm = StandardOperation(1U, 0, qc::P, {-2.0});
   EXPECT_FALSE(p.equals(pm));
+  EXPECT_NE(p, pm);
 
   const auto measure0 = NonUnitaryOperation(2U, 0, 0U);
   const auto measure1 = NonUnitaryOperation(2U, 0, 1U);
   const auto measure2 = NonUnitaryOperation(2U, 1, 0U);
   EXPECT_FALSE(measure0.equals(x0));
+  EXPECT_NE(measure0, x0);
   EXPECT_TRUE(measure0.equals(measure0));
+  EXPECT_EQ(measure0, measure0);
   EXPECT_FALSE(measure0.equals(measure1));
+  EXPECT_NE(measure0, measure1);
   EXPECT_FALSE(measure0.equals(measure2));
+  EXPECT_NE(measure0, measure2);
   EXPECT_TRUE(measure0.equals(measure2, perm0, {}));
   EXPECT_TRUE(measure0.equals(measure2, {}, perm0));
 
@@ -1611,10 +1621,15 @@ TEST_F(QFRFunctionality, OperationEquality) {
   const auto classic3 =
       ClassicControlledOperation(zp, controlRegister0, expectedValue0);
   EXPECT_FALSE(classic0.equals(x));
+  EXPECT_NE(classic0, x);
   EXPECT_TRUE(classic0.equals(classic0));
+  EXPECT_EQ(classic0, classic0);
   EXPECT_FALSE(classic0.equals(classic1));
+  EXPECT_NE(classic0, classic1);
   EXPECT_FALSE(classic0.equals(classic2));
+  EXPECT_NE(classic0, classic2);
   EXPECT_FALSE(classic0.equals(classic3));
+  EXPECT_NE(classic0, classic3);
 
   auto compound0 = CompoundOperation(1U);
   compound0.emplace_back<StandardOperation>(1U, 0, qc::X);
@@ -1627,9 +1642,13 @@ TEST_F(QFRFunctionality, OperationEquality) {
   compound2.emplace_back<StandardOperation>(1U, 0, qc::Z);
 
   EXPECT_FALSE(compound0.equals(x));
+  EXPECT_NE(compound0, x);
   EXPECT_TRUE(compound0.equals(compound0));
+  EXPECT_EQ(compound0, compound0);
   EXPECT_FALSE(compound0.equals(compound1));
+  EXPECT_NE(compound0, compound1);
   EXPECT_FALSE(compound0.equals(compound2));
+  EXPECT_NE(compound0, compound2);
 }
 
 TEST_F(QFRFunctionality, CNOTCancellation1) {

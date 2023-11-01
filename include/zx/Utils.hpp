@@ -1,7 +1,7 @@
 #pragma once
 
 #include "operations/Expression.hpp"
-#include "zx/Definitions.hpp"
+#include "zx/ZXDefinitions.hpp"
 
 #include <cstdint>
 #include <iterator>

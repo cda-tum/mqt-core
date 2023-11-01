@@ -179,19 +179,19 @@ def _emplace_operation(
         qc.append(StandardOperation(qc.num_qubits, qubits, OpType.barrier))
         return []
 
-    if name in ["i", "id", "iden"]:
+    if name in {"i", "id", "iden"}:
         return _add_operation(qc, OpType.i, qargs, params, qubit_map)
 
-    if name in ["x", "cx", "ccx", "ccx", "mcx", "mcx_gray"]:
+    if name in {"x", "cx", "ccx", "mcx", "mcx_gray"}:
         return _add_operation(qc, OpType.x, qargs, params, qubit_map)
 
-    if name in ["y", "cy"]:
+    if name in {"y", "cy"}:
         return _add_operation(qc, OpType.y, qargs, params, qubit_map)
 
-    if name in ["z", "cz"]:
+    if name in {"z", "cz"}:
         return _add_operation(qc, OpType.z, qargs, params, qubit_map)
 
-    if name in ["h", "ch"]:
+    if name in {"h", "ch"}:
         return _add_operation(qc, OpType.h, qargs, params, qubit_map)
 
     if name == "s":
@@ -206,7 +206,7 @@ def _emplace_operation(
     if name == "tdg":
         return _add_operation(qc, OpType.tdg, qargs, params, qubit_map)
 
-    if name in ["sx", "csx"]:
+    if name in {"sx", "csx"}:
         return _add_operation(qc, OpType.sx, qargs, params, qubit_map)
 
     if name == "mcx_recursive":
@@ -224,25 +224,25 @@ def _emplace_operation(
             qargs = qargs[: -num_controls + 2]
         return _add_operation(qc, OpType.x, qargs, params, qubit_map)
 
-    if name in ["rx", "crx", "mcrx"]:
+    if name in {"rx", "crx", "mcrx"}:
         return _add_operation(qc, OpType.rx, qargs, params, qubit_map)
 
-    if name in ["ry", "cry", "mcry"]:
+    if name in {"ry", "cry", "mcry"}:
         return _add_operation(qc, OpType.ry, qargs, params, qubit_map)
 
-    if name in ["rz", "crz", "mcrz"]:
+    if name in {"rz", "crz", "mcrz"}:
         return _add_operation(qc, OpType.rz, qargs, params, qubit_map)
 
-    if name in ["p", "u1", "cp", "cu1", "mcphase"]:
+    if name in {"p", "u1", "cp", "cu1", "mcphase"}:
         return _add_operation(qc, OpType.p, qargs, params, qubit_map)
 
-    if name in ["u2"]:
+    if name in {"u2"}:
         return _add_operation(qc, OpType.u2, qargs, params, qubit_map)
 
-    if name in ["u", "u3", "cu3"]:
+    if name in {"u", "u3", "cu3"}:
         return _add_operation(qc, OpType.u, qargs, params, qubit_map)
 
-    if name in ["swap", "cswap"]:
+    if name in {"swap", "cswap"}:
         return _add_two_target_operation(qc, OpType.swap, qargs, params, qubit_map)
 
     if name == "iswap":
@@ -314,7 +314,7 @@ def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> floa
             else:
                 var = factor_no_operator
 
-        if var == "":
+        if not var:
             expr += coeff
         else:
             is_const = False
@@ -410,12 +410,8 @@ def _import_definition(
     qubit_map: Mapping[Qubit, int],
     clbit_map: Mapping[Clbit, int],
 ) -> list[float | ParameterExpression]:
-    qarg_map = {}
-    for def_qubit, qarg in zip(circ.qubits, qargs):
-        qarg_map[def_qubit] = qarg
-    carg_map = {}
-    for def_clbit, carg in zip(circ.clbits, cargs):
-        carg_map[def_clbit] = carg
+    qarg_map = dict(zip(circ.qubits, qargs))
+    carg_map = dict(zip(circ.clbits, cargs))
 
     qc.append(CompoundOperation(qc.num_qubits))
     comp_op = cast(CompoundOperation, qc[-1])
