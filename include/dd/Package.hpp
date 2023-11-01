@@ -2814,6 +2814,50 @@ private:
 
     return newedge;
   }
+
+public:
+  mEdge shiftAllColumnsRecursive(mEdge& e, std::int64_t m,
+                                 std::int64_t offset) {
+
+    if (e.isTerminal()) {
+      return e;
+    }
+    if (m == 0 && offset == 0) {
+      return e;
+    }
+    // the matrix of the current DD has dimensions 2^h x 2^h
+    const auto h = e.p->v + 1;
+    const auto mDecremented = (m > 0 ? m - 1 : 0);
+    std::array<mEdge, NEDGE> edges{};
+    if (offset == 1 << (h - 1)) {
+      // shift the first half of the matrix
+      edges[0] = mEdge::zero();
+      edges[1] = shiftAllColumnsRecursive(e.p->e[0], mDecremented, 0);
+      // shift the second half of the matrix
+      edges[2] = mEdge::zero();
+      edges[3] = shiftAllColumnsRecursive(e.p->e[2], mDecremented,
+                                          m > 0 ? 1 << (m - 1) : 0);
+    } else {
+      edges[0] = shiftAllColumnsRecursive(e.p->e[0], mDecremented, offset);
+      edges[1] = shiftAllColumnsRecursive(e.p->e[1], mDecremented, offset);
+      if (m == h) {
+        // shift the second half of the matrix
+        edges[2] = mEdge::zero();
+        edges[3] = shiftAllColumnsRecursive(e.p->e[2], mDecremented, offset);
+      } else {
+        edges[2] = shiftAllColumnsRecursive(
+            e.p->e[2], mDecremented, (m > 0 ? 1 << (m - 1) : 0) + offset);
+        edges[3] = shiftAllColumnsRecursive(
+            e.p->e[3], mDecremented, (m > 0 ? 1 << (m - 1) : 0) + offset);
+      }
+    }
+    auto f = makeDDNode(e.p->v, edges);
+    f.w = e.w;
+    return f;
+  }
+  mEdge shiftAllColumns(mEdge& e, std::int64_t m) {
+    return shiftAllColumnsRecursive(e, m, 0);
+  }
 };
 
 } // namespace dd

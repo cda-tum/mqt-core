@@ -1942,3 +1942,89 @@ TEST(DDPackageTest, DDStatistics) {
   ASSERT_TRUE(uniqueTableStats["total"].contains("num_buckets"));
   EXPECT_GT(uniqueTableStats["total"]["num_buckets"], 0);
 }
+
+TEST(DDPackageTest, DDMShiftAllColumns) {
+  const auto nqubits = 2U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto inputMatrix =
+      dd::CMat{{1, 0, 0, 0}, {-1, 0, 0, 0}, {-1, 0, 0, 0}, {1, 0, 0, 0}};
+  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
+  // dd->incRef(inputDD);
+  const auto outputMatrix = dd->shiftAllColumns(inputDD, 1);
+  const auto expectedMatrix =
+      dd::CMat{{1, 0, 0, 0}, {-1, 0, 0, 0}, {0, -1, 0, 0}, {0, 1, 0, 0}};
+  EXPECT_EQ(outputMatrix.getMatrix(), expectedMatrix);
+
+  const auto outputMatrix2 = dd->shiftAllColumns(inputDD, 2);
+  const auto expectedMatrix2 =
+      dd::CMat{{1, 0, 0, 0}, {0, -1, 0, 0}, {0, 0, -1, 0}, {0, 0, 0, 1}};
+  EXPECT_EQ(outputMatrix2.getMatrix(), expectedMatrix2);
+}
+
+TEST(DDPackageTest, DDMShiftAllColumns2) {
+  const auto nqubits = 2U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto inputMatrix =
+      dd::CMat{{1, 0, 0, 0, 0, 0, 0, 0},  {-1, 0, 0, 0, 0, 0, 0, 0},
+               {-1, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0},
+               {1, 0, 0, 0, 0, 0, 0, 0},  {-1, 0, 0, 0, 0, 0, 0, 0},
+               {-1, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0}};
+  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
+  // dd->incRef(inputDD);
+  const auto outputMatrix = dd->shiftAllColumns(inputDD, 2);
+  const auto expectedMatrix =
+      dd::CMat{{1, 0, 0, 0, 0, 0, 0, 0},  {-1, 0, 0, 0, 0, 0, 0, 0},
+               {0, -1, 0, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0, 0, 0},
+               {0, 0, 1, 0, 0, 0, 0, 0},  {0, 0, -1, 0, 0, 0, 0, 0},
+               {0, 0, 0, -1, 0, 0, 0, 0}, {0, 0, 0, 1, 0, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix.getMatrix(), expectedMatrix);
+
+  const auto outputMatrix4 = dd->shiftAllColumns(inputDD, 1);
+  const auto expectedMatrix4 =
+      dd::CMat{{1, 0, 0, 0, 0, 0, 0, 0},  {-1, 0, 0, 0, 0, 0, 0, 0},
+               {-1, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0},
+               {0, 1, 0, 0, 0, 0, 0, 0},  {0, -1, 0, 0, 0, 0, 0, 0},
+               {0, -1, 0, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix4.getMatrix(), expectedMatrix4);
+
+  const auto outputMatrix2 = dd->shiftAllColumns(inputDD, 3);
+  const auto expectedMatrix2 =
+      dd::CMat{{1, 0, 0, 0, 0, 0, 0, 0},  {0, -1, 0, 0, 0, 0, 0, 0},
+               {0, 0, -1, 0, 0, 0, 0, 0}, {0, 0, 0, 1, 0, 0, 0, 0},
+               {0, 0, 0, 0, 1, 0, 0, 0},  {0, 0, 0, 0, 0, -1, 0, 0},
+               {0, 0, 0, 0, 0, 0, -1, 0}, {0, 0, 0, 0, 0, 0, 0, 1}};
+  EXPECT_EQ(outputMatrix2.getMatrix(), expectedMatrix2);
+
+  const auto inputMatrix2 =
+      dd::CMat{{1, 0, 0, 0, 1, 0, 0, 0},  {-1, 0, 0, 0, 1, 0, 0, 0},
+               {-1, 0, 0, 0, 1, 0, 0, 0}, {1, 0, 0, 0, 1, 0, 0, 0},
+               {1, 0, 0, 0, 1, 0, 0, 0},  {-1, 0, 0, 0, 1, 0, 0, 0},
+               {-1, 0, 0, 0, 1, 0, 0, 0}, {1, 0, 0, 0, 1, 0, 0, 0}};
+  auto inputDD2 = dd->makeDDFromMatrix(inputMatrix2);
+  const auto outputMatrix3 = dd->shiftAllColumns(inputDD2, 1);
+  const auto expectedMatrix3 =
+      dd::CMat{{1, 0, 0, 0, 1, 0, 0, 0},  {-1, 0, 0, 0, 1, 0, 0, 0},
+               {-1, 0, 0, 0, 1, 0, 0, 0}, {1, 0, 0, 0, 1, 0, 0, 0},
+               {0, 1, 0, 0, 0, 1, 0, 0},  {0, -1, 0, 0, 0, 1, 0, 0},
+               {0, -1, 0, 0, 0, 1, 0, 0}, {0, 1, 0, 0, 0, 1, 0, 0}};
+  EXPECT_EQ(outputMatrix3.getMatrix(), expectedMatrix3);
+}
+
+TEST(DDPackageTest, DDMTestToMatrixAndBack) {
+  const auto nqubits = 2U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto inputMatrix =
+      dd::CMat{{1, 1, 1, 1}, {1, -1, 1, -1}, {1, 1, -1, -1}, {1, -1, -1, 1}};
+  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
+  const auto expectedMatrix =
+      dd::CMat{{1, 1, 1, 1}, {1, -1, 1, -1}, {1, 1, -1, -1}, {1, -1, -1, 1}};
+  EXPECT_EQ(inputDD.getMatrix(), expectedMatrix);
+
+  std::array<dd::mEdge, dd::NEDGE> edges{};
+  edges[0] = inputDD.p->e[0];
+  edges[1] = inputDD.p->e[1];
+  edges[2] = inputDD.p->e[2];
+  edges[3] = inputDD.p->e[3];
+  auto f = dd->makeDDNode(inputDD.p->v, edges);
+  EXPECT_EQ(f.getMatrix(), expectedMatrix);
+}
