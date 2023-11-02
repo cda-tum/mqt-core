@@ -32,6 +32,8 @@ struct ConstEvalValue {
       return std::make_shared<Constant>(
           Constant(static_cast<int64_t>(std::get<2>(value)), false));
     }
+
+    __builtin_unreachable();
   }
 };
 
@@ -54,14 +56,15 @@ private:
                                     bool rhs);
 
 public:
-  ConstEvalPass() {}
+  ConstEvalPass() = default;
   ~ConstEvalPass() override = default;
 
   void addConst(const std::string& identifier, ConstEvalValue val) {
     env.emplace(identifier, val);
   }
+
   void addConst(const std::string& identifier, double val) {
-    env.emplace(identifier, ConstEvalValue{val});
+    env.emplace(identifier, ConstEvalValue(val));
   }
 
   void processStatement(Statement& statement) override {

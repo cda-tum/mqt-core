@@ -53,9 +53,9 @@ void TypeCheckPass::visitDeclarationStatement(
     if (!resolvedType->fits(*exprType.type)) {
       std::stringstream ss;
       ss << "Type mismatch in declaration statement: Expected '";
-      ss << resolvedType->to_string();
+      ss << resolvedType->toString();
       ss << "', found '";
-      ss << exprType.type->to_string();
+      ss << exprType.type->toString();
       ss << "'.";
       error(ss.str());
     }
@@ -101,9 +101,9 @@ void TypeCheckPass::visitAssignmentStatement(
   if (!idTy->second.type->fits(*exprTy.type)) {
     std::stringstream ss;
     ss << "Type mismatch in assignment. Expected '";
-    ss << idTy->second.type->to_string();
+    ss << idTy->second.type->toString();
     ss << "', found '";
-    ss << exprTy.type->to_string();
+    ss << exprTy.type->toString();
     ss << "'.";
     error(ss.str(), assignmentStatement->debugInfo);
   }
@@ -149,9 +149,9 @@ InferredType TypeCheckPass::visitBinaryExpression(
   } else if (lhs.type != rhs.type) {
     std::stringstream ss;
     ss << "Type mismatch in binary expression: ";
-    ss << lhs.type->to_string();
+    ss << lhs.type->toString();
     ss << ", ";
-    ss << rhs.type->to_string();
+    ss << rhs.type->toString();
     ss << ".";
     error(ss.str());
     return InferredType::error();

@@ -38,7 +38,7 @@ public:
 
   virtual bool fits(const Type<T>& other) { return *this == other; }
 
-  virtual std::string to_string() = 0;
+  virtual std::string toString() = 0;
 };
 
 enum DesignatedTy {
@@ -140,7 +140,7 @@ public:
     return false;
   }
 
-  std::string to_string() override {
+  std::string toString() override {
     switch (type) {
     case DesignatedTy::Qubit:
       return "qubit[" + std::to_string(designator) + "]";
@@ -225,7 +225,7 @@ public:
 
   bool isFP() override { return type == DesignatedTy::Float; }
 
-  std::string to_string() override {
+  std::string toString() override {
     switch (type) {
     case DesignatedTy::Qubit:
       return "qubit[expr]";
@@ -278,7 +278,7 @@ public:
 
   bool isBool() override { return type == UnsizedTy::Bool; }
 
-  std::string to_string() override {
+  std::string toString() override {
     switch (type) {
     case UnsizedTy::Bool:
       return "bool";
@@ -318,8 +318,8 @@ public:
     return false;
   }
 
-  std::string to_string() override {
-    return type->to_string() + "[" + std::to_string(size) + "]";
+  std::string toString() override {
+    return type->toString() + "[" + std::to_string(size) + "]";
   }
 };
 

@@ -32,7 +32,7 @@ public:
     if (isError) {
       return "error";
     }
-    return type->to_string();
+    return type->toString();
   }
 };
 
