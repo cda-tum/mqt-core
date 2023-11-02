@@ -14,11 +14,11 @@ struct ConstEvalValue {
   std::variant<int64_t, double, bool> value;
   size_t width;
 
-  explicit ConstEvalValue(double value, size_t width = 64)
-      : type(ConstFloat), value(value), width(width) {}
-  explicit ConstEvalValue(int64_t value, bool isSigned, size_t width = 64)
-      : type(isSigned ? Type::ConstInt : Type::ConstUint), value(value),
-        width(width) {}
+  explicit ConstEvalValue(double val, size_t w = 64)
+      : type(ConstFloat), value(val), width(w) {}
+  explicit ConstEvalValue(int64_t val, bool isSigned, size_t w = 64)
+      : type(isSigned ? Type::ConstInt : Type::ConstUint), value(val),
+        width(w) {}
 
   std::shared_ptr<Constant> toExpr() {
     switch (type) {

@@ -12,15 +12,15 @@ public:
   bool isError;
   std::shared_ptr<ResolvedType> type;
 
-  InferredType(bool isError, std::shared_ptr<ResolvedType> type)
-      : isError(isError), type(type) {}
+  InferredType(bool isError, std::shared_ptr<ResolvedType> ty)
+      : isError(isError), type(std::move(ty)) {}
 
-  explicit InferredType(std::shared_ptr<ResolvedType> type)
-      : isError(false), type(type) {}
+  explicit InferredType(std::shared_ptr<ResolvedType> ty)
+      : isError(false), type(std::move(ty)) {}
 
   static InferredType error() { return InferredType{true, nullptr}; }
 
-  bool matches(const InferredType& other) {
+  bool matches(const InferredType& other) const {
     if (isError || other.isError) {
       return true;
     }
@@ -28,7 +28,7 @@ public:
     return *type == *other.type;
   }
 
-  std::string to_string() {
+  std::string toString() {
     if (isError) {
       return "error";
     }
@@ -58,11 +58,11 @@ private:
   }
 
 public:
-  TypeCheckPass(ConstEvalPass* constEvalPass) : constEvalPass(constEvalPass) {}
+  TypeCheckPass(ConstEvalPass* pass) : constEvalPass(pass) {}
 
   ~TypeCheckPass() override = default;
 
-  void addBuiltin(std::string identifier, InferredType ty) {
+  void addBuiltin(const std::string& identifier, const InferredType& ty) {
     env.emplace(identifier, ty);
   }
 

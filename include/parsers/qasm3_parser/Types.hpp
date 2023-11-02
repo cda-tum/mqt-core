@@ -57,11 +57,11 @@ public:
   DesignatedTy type;
   uint64_t designator;
 
-  SizedType(DesignatedTy type, uint64_t designator)
-      : type(type), designator(designator) {}
+  SizedType(DesignatedTy ty, uint64_t design)
+      : type(ty), designator(design) {}
 
-  explicit SizedType(DesignatedTy type) : type(type) {
-    switch (type) {
+  explicit SizedType(DesignatedTy ty) : type(ty) {
+    switch (ty) {
     case DesignatedTy::Qubit:
     case DesignatedTy::Bit:
       designator = 1;
@@ -166,8 +166,8 @@ public:
 
   std::shared_ptr<Expression> designator;
 
-  DesignatedType(DesignatedTy type, std::shared_ptr<Expression> designator)
-      : type(type), designator(std::move(designator)) {}
+  DesignatedType(DesignatedTy ty, std::shared_ptr<Expression> design)
+      : type(ty), designator(std::move(design)) {}
 
   bool operator==(const TypeExpr& other) const override {
     if (const auto* o = dynamic_cast<const DesignatedType*>(&other)) {
@@ -251,7 +251,7 @@ public:
 
   UnsizedTy type;
 
-  explicit UnsizedType(UnsizedTy type) : type(type) {}
+  explicit UnsizedType(UnsizedTy ty) : type(ty) {}
 
   bool operator==(const Type<T>& other) const override {
     if (const auto* o = dynamic_cast<const UnsizedType*>(&other)) {
@@ -293,8 +293,8 @@ public:
   std::shared_ptr<Type<T>> type;
   T size;
 
-  ArrayType(std::shared_ptr<Type<T>> type, T size)
-      : type(std::move(type)), size(size) {}
+  ArrayType(std::shared_ptr<Type<T>> ty, T sz)
+      : type(std::move(ty)), size(sz) {}
   ~ArrayType() override = default;
 
   bool operator==(const Type<T>& other) const override {

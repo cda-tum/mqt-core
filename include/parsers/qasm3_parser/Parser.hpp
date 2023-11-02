@@ -43,16 +43,16 @@ private:
     }
 
     explicit ScannerState(std::istream& in,
-                          std::optional<std::string> filename = std::nullopt)
+                          std::optional<std::string> debugFilename = std::nullopt)
         : scanner(std::make_unique<Scanner>(in)),
-          filename(std::move(filename)) {
+          filename(std::move(debugFilename)) {
       scan();
     }
 
     explicit ScannerState(std::unique_ptr<std::istream> in,
-                          std::optional<std::string> filename = std::nullopt)
+                          std::optional<std::string> debugFilename = std::nullopt)
         : is(std::move(in)), scanner(std::make_unique<Scanner>(*is)),
-          filename(std::move(filename)) {
+          filename(std::move(debugFilename)) {
       scan();
     }
   };

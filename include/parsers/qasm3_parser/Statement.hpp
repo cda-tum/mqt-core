@@ -14,15 +14,13 @@ namespace qasm3 {
 struct DebugInfo {
   size_t line;
   size_t column;
-  size_t endLine;
-  size_t endColumn;
   std::string filename;
   std::shared_ptr<DebugInfo> parent;
 
-  DebugInfo(size_t line, size_t column, size_t endLine, size_t endColumn,
-            std::string filename, std::shared_ptr<DebugInfo> parent = nullptr)
-      : line(line), column(column), endLine(endLine), endColumn(endColumn),
-        filename(std::move(std::move(filename))), parent(std::move(parent)) {}
+  DebugInfo(size_t l, size_t c, std::string file,
+            std::shared_ptr<DebugInfo> parentDebugInfo = nullptr)
+      : line(l), column(c), filename(std::move(std::move(file))),
+        parent(std::move(parentDebugInfo)) {}
 
   [[nodiscard]] std::string toString() const {
     // TOOD: also print endLine and endColumn
@@ -43,8 +41,8 @@ class DeclarationExpression {
 public:
   std::shared_ptr<Expression> expression;
 
-  explicit DeclarationExpression(std::shared_ptr<Expression> expression)
-      : expression(std::move(expression)) {}
+  explicit DeclarationExpression(std::shared_ptr<Expression> expr)
+      : expression(std::move(expr)) {}
 
   virtual ~DeclarationExpression() = default;
 };
@@ -56,10 +54,10 @@ private:
   bool isFp;
 
 public:
-  Constant(int64_t val, bool isSigned)
-      : val(val), isSigned(isSigned), isFp(false) {}
+  Constant(int64_t value, bool valueIsSigned)
+      : val(value), isSigned(valueIsSigned), isFp(false) {}
 
-  explicit Constant(double val) : val(val), isSigned(true), isFp(true) {}
+  explicit Constant(double value) : val(value), isSigned(true), isFp(true) {}
 
   [[nodiscard]] bool isInt() const { return !isFp; }
   [[nodiscard]] bool isSInt() const { return !isFp && isSigned; }
@@ -112,9 +110,9 @@ public:
   std::shared_ptr<Expression> lhs;
   std::shared_ptr<Expression> rhs;
 
-  BinaryExpression(Op op, std::shared_ptr<Expression> lhs,
-                   std::shared_ptr<Expression> rhs)
-      : op(op), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+  BinaryExpression(Op opcode, std::shared_ptr<Expression> l,
+                   std::shared_ptr<Expression> r)
+      : op(opcode), lhs(std::move(l)), rhs(std::move(r)) {}
 
   std::string getName() override { return "BinaryExpr"; }
 };
@@ -138,8 +136,8 @@ public:
   std::shared_ptr<Expression> operand;
   Op op;
 
-  UnaryExpression(Op op, std::shared_ptr<Expression> operand)
-      : operand(std::move(operand)), op(op) {}
+  UnaryExpression(Op opcode, std::shared_ptr<Expression> expr)
+      : operand(std::move(expr)), op(opcode) {}
 
   std::string getName() override { return "UnaryExpr"; }
 };
@@ -150,8 +148,8 @@ class IdentifierExpression
 public:
   std::string identifier;
 
-  explicit IdentifierExpression(std::string identifier)
-      : identifier(std::move(identifier)) {}
+  explicit IdentifierExpression(std::string id)
+      : identifier(std::move(id)) {}
 
   std::string getName() override {
     return std::string{"IdentifierExpr ("} + identifier + ")";
@@ -164,8 +162,8 @@ public:
   std::vector<std::shared_ptr<IdentifierExpression>> identifiers;
 
   explicit IdentifierList(
-      std::vector<std::shared_ptr<IdentifierExpression>> identifiers)
-      : identifiers(std::move(identifiers)) {}
+      std::vector<std::shared_ptr<IdentifierExpression>> ids)
+      : identifiers(std::move(ids)) {}
 
   explicit IdentifierList() = default;
 
@@ -178,8 +176,8 @@ public:
   std::string identifier;
   std::shared_ptr<Expression> expression;
 
-  GateOperand(std::string identifier, std::shared_ptr<Expression> expression)
-      : identifier(std::move(identifier)), expression(std::move(expression)) {}
+  GateOperand(std::string id, std::shared_ptr<Expression> expr)
+      : identifier(std::move(id)), expression(std::move(expr)) {}
 };
 
 class MeasureExpression
@@ -188,8 +186,8 @@ class MeasureExpression
 public:
   std::shared_ptr<GateOperand> gate;
 
-  explicit MeasureExpression(std::shared_ptr<GateOperand> gate)
-      : gate(std::move(gate)) {}
+  explicit MeasureExpression(std::shared_ptr<GateOperand> gateOperand)
+      : gate(std::move(gateOperand)) {}
 
   std::string getName() override { return "MeasureExpression"; }
 };
@@ -199,8 +197,8 @@ public:
 class Statement {
 public:
   std::shared_ptr<DebugInfo> debugInfo;
-  explicit Statement(std::shared_ptr<DebugInfo> debugInfo)
-      : debugInfo(std::move(debugInfo)) {}
+  explicit Statement(std::shared_ptr<DebugInfo> debug)
+      : debugInfo(std::move(debug)) {}
   virtual ~Statement() = default;
 
   virtual void accept(InstVisitor* visitor) = 0;
@@ -215,13 +213,13 @@ public:
   std::vector<std::shared_ptr<GateCallStatement>> statements;
 
   explicit GateDeclaration(
-      std::shared_ptr<DebugInfo> debugInfo, std::string identifier,
-      std::shared_ptr<IdentifierList> parameters,
-      std::shared_ptr<IdentifierList> qubits,
-      std::vector<std::shared_ptr<GateCallStatement>> statements)
-      : Statement(std::move(debugInfo)), identifier(std::move(identifier)),
-        parameters(std::move(parameters)), qubits(std::move(qubits)),
-        statements(std::move(statements)) {}
+      std::shared_ptr<DebugInfo> debug, std::string id,
+      std::shared_ptr<IdentifierList> params,
+      std::shared_ptr<IdentifierList> qbits,
+      std::vector<std::shared_ptr<GateCallStatement>> stmts)
+      : Statement(std::move(debug)), identifier(std::move(id)),
+        parameters(std::move(params)), qubits(std::move(qbits)),
+        statements(std::move(stmts)) {}
 
   void accept(InstVisitor* visitor) override {
     visitor->visitGateStatement(shared_from_this());
@@ -234,9 +232,9 @@ class VersionDeclaration
 public:
   double version;
 
-  explicit VersionDeclaration(std::shared_ptr<DebugInfo> debugInfo,
-                              double version)
-      : Statement(std::move(debugInfo)), version(version) {}
+  explicit VersionDeclaration(std::shared_ptr<DebugInfo> debug,
+                              double versionNum)
+      : Statement(std::move(debug)), version(versionNum) {}
 
   void accept(InstVisitor* visitor) override {
     visitor->visitVersionDeclaration(shared_from_this());
@@ -248,9 +246,9 @@ class InitialLayout : public Statement,
 public:
   qc::Permutation permutation;
 
-  explicit InitialLayout(std::shared_ptr<DebugInfo> debugInfo,
-                         qc::Permutation permutation)
-      : Statement(std::move(debugInfo)), permutation(std::move(permutation)) {}
+  explicit InitialLayout(std::shared_ptr<DebugInfo> debug,
+                         qc::Permutation perm)
+      : Statement(std::move(debug)), permutation(std::move(perm)) {}
 
 private:
   void accept(InstVisitor* visitor) override {
@@ -264,9 +262,9 @@ class OutputPermutation
 public:
   qc::Permutation permutation;
 
-  explicit OutputPermutation(std::shared_ptr<DebugInfo> debugInfo,
-                             qc::Permutation permutation)
-      : Statement(std::move(debugInfo)), permutation(std::move(permutation)) {}
+  explicit OutputPermutation(std::shared_ptr<DebugInfo> debug,
+                             qc::Permutation perm)
+      : Statement(std::move(debug)), permutation(std::move(perm)) {}
 
 private:
   void accept(InstVisitor* visitor) override {
@@ -283,11 +281,11 @@ public:
   std::string identifier;
   std::shared_ptr<DeclarationExpression> expression;
 
-  DeclarationStatement(std::shared_ptr<DebugInfo> debugInfo, bool isConst,
-                       std::shared_ptr<TypeExpr> type, std::string identifier,
-                       std::shared_ptr<DeclarationExpression> expression)
-      : Statement(std::move(debugInfo)), isConst(isConst), type(type),
-        identifier(std::move(identifier)), expression(std::move(expression)) {}
+  DeclarationStatement(std::shared_ptr<DebugInfo> debug, bool declIsConst,
+                       std::shared_ptr<TypeExpr> ty, std::string id,
+                       std::shared_ptr<DeclarationExpression> expr)
+      : Statement(std::move(debug)), isConst(declIsConst), type(ty),
+        identifier(std::move(id)), expression(std::move(expr)) {}
 
   void accept(InstVisitor* visitor) override {
     visitor->visitDeclarationStatement(shared_from_this());
@@ -313,8 +311,8 @@ class PowGateModifier : public GateModifier,
 public:
   std::shared_ptr<Expression> expression;
 
-  explicit PowGateModifier(std::shared_ptr<Expression> expression)
-      : expression(std::move(expression)) {}
+  explicit PowGateModifier(std::shared_ptr<Expression> expr)
+      : expression(std::move(expr)) {}
 };
 
 class CtrlGateModifier : public GateModifier,
@@ -323,9 +321,9 @@ public:
   bool ctrlType;
   std::shared_ptr<Expression> expression;
 
-  explicit CtrlGateModifier(bool ctrlType,
-                            std::shared_ptr<Expression> expression)
-      : ctrlType(ctrlType), expression(std::move(expression)) {}
+  explicit CtrlGateModifier(bool ty,
+                            std::shared_ptr<Expression> expr)
+      : ctrlType(ty), expression(std::move(expr)) {}
 };
 
 class GateCallStatement
@@ -337,14 +335,14 @@ public:
   std::vector<std::shared_ptr<Expression>> arguments;
   std::vector<std::shared_ptr<GateOperand>> operands;
 
-  GateCallStatement(std::shared_ptr<DebugInfo> debugInfo,
-                    std::string identifier,
-                    std::vector<std::shared_ptr<GateModifier>> modifiers,
-                    std::vector<std::shared_ptr<Expression>> arguments,
-                    std::vector<std::shared_ptr<GateOperand>> operands)
-      : Statement(std::move(debugInfo)), identifier(std::move(identifier)),
-        modifiers(std::move(modifiers)), arguments(std::move(arguments)),
-        operands(std::move(operands)) {}
+  GateCallStatement(std::shared_ptr<DebugInfo> debug,
+                    std::string id,
+                    std::vector<std::shared_ptr<GateModifier>> modifierList,
+                    std::vector<std::shared_ptr<Expression>> argumentList,
+                    std::vector<std::shared_ptr<GateOperand>> operandList)
+      : Statement(std::move(debug)), identifier(std::move(id)),
+        modifiers(std::move(modifierList)), arguments(std::move(argumentList)),
+        operands(std::move(operandList)) {}
 
   void accept(InstVisitor* visitor) override {
     visitor->visitGateCallStatement(shared_from_this());
@@ -374,14 +372,14 @@ public:
   std::shared_ptr<Expression> indexExpression;
   std::shared_ptr<DeclarationExpression> expression;
 
-  AssignmentStatement(std::shared_ptr<DebugInfo> debugInfo, Type type,
-                      std::shared_ptr<IdentifierExpression> identifier,
-                      std::shared_ptr<Expression> indexExpression,
-                      std::shared_ptr<DeclarationExpression> expression)
-      : Statement(std::move(debugInfo)), type(type),
-        identifier(std::move(identifier)),
-        indexExpression(std::move(indexExpression)),
-        expression(std::move(expression)) {}
+  AssignmentStatement(std::shared_ptr<DebugInfo> debug, Type ty,
+                      std::shared_ptr<IdentifierExpression> id,
+                      std::shared_ptr<Expression> indexExpr,
+                      std::shared_ptr<DeclarationExpression> expr)
+      : Statement(std::move(debug)), type(ty),
+        identifier(std::move(id)),
+        indexExpression(std::move(indexExpr)),
+        expression(std::move(expr)) {}
 
   void accept(InstVisitor* visitor) override {
     visitor->visitAssignmentStatement(shared_from_this());
@@ -393,9 +391,9 @@ class BarrierStatement : public Statement,
 public:
   std::vector<std::shared_ptr<GateOperand>> gates;
 
-  explicit BarrierStatement(std::shared_ptr<DebugInfo> debugInfo,
-                            std::vector<std::shared_ptr<GateOperand>> gates)
-      : Statement(std::move(debugInfo)), gates(std::move(gates)) {}
+  explicit BarrierStatement(std::shared_ptr<DebugInfo> debug,
+                            std::vector<std::shared_ptr<GateOperand>> gateList)
+      : Statement(std::move(debug)), gates(std::move(gateList)) {}
 
   void accept(InstVisitor* visitor) override {
     visitor->visitBarrierStatement(shared_from_this());
@@ -407,9 +405,9 @@ class ResetStatement : public Statement,
 public:
   std::shared_ptr<GateOperand> gate;
 
-  explicit ResetStatement(std::shared_ptr<DebugInfo> debugInfo,
-                          std::shared_ptr<GateOperand> gate)
-      : Statement(std::move(debugInfo)), gate(std::move(gate)) {}
+  explicit ResetStatement(std::shared_ptr<DebugInfo> debug,
+                          std::shared_ptr<GateOperand> g)
+      : Statement(std::move(debug)), gate(std::move(g)) {}
 
   void accept(InstVisitor* visitor) override {
     visitor->visitResetStatement(shared_from_this());

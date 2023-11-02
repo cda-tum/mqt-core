@@ -26,7 +26,7 @@ struct StandardGate : public Gate {
 public:
   GateInfo info;
 
-  explicit StandardGate(GateInfo info) : info(info) {}
+  explicit StandardGate(GateInfo gateInfo) : info(gateInfo) {}
 
   size_t getNControls() override { return info.nControls; }
 
@@ -40,11 +40,11 @@ public:
   std::vector<std::string> targetNames;
   std::vector<std::shared_ptr<GateCallStatement>> body;
 
-  explicit CompoundGate(std::vector<std::string> parameterNames,
-                        std::vector<std::string> targetNames,
-                        std::vector<std::shared_ptr<GateCallStatement>> body)
-      : parameterNames(std::move(parameterNames)),
-        targetNames(std::move(targetNames)), body(std::move(body)) {}
+  explicit CompoundGate(std::vector<std::string> parameters,
+                        std::vector<std::string> targets,
+                        std::vector<std::shared_ptr<GateCallStatement>> bodyStatements)
+      : parameterNames(std::move(parameters)),
+        targetNames(std::move(targets)), body(std::move(bodyStatements)) {}
 
   size_t getNControls() override { return 0; }
 

@@ -35,7 +35,6 @@ public:
     In,
 
     Pragma,
-    //            At, // can be AnnotationKeyword or '@'
 
     // types
     Input,
