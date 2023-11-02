@@ -4,6 +4,7 @@
 #include "CompilerPass.hpp"
 
 namespace qasm3 {
+namespace const_eval {
 struct ConstEvalValue {
   enum Type {
     ConstInt,
@@ -99,4 +100,5 @@ public:
   std::shared_ptr<ResolvedType>
   visitArrayType(ArrayType<std::shared_ptr<Expression>>* arrayType) override;
 };
+} // namespace const_eval
 } // namespace qasm3

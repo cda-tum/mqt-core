@@ -6,6 +6,9 @@
 #include "ConstEvalPass.hpp"
 
 namespace qasm3 {
+namespace type_checking {
+
+using const_eval::ConstEvalPass;
 
 struct InferredType {
 public:
@@ -123,4 +126,5 @@ public:
   std::shared_ptr<ResolvedType>
   visitArrayType(ArrayType<std::shared_ptr<Expression>>* arrayType) override;
 };
+} // namespace type_checking
 } // namespace qasm3

@@ -1,6 +1,7 @@
 #include "parsers/qasm3_parser/passes/ConstEvalPass.hpp"
 
 namespace qasm3 {
+namespace const_eval {
 void ConstEvalPass::visitDeclarationStatement(
     std::shared_ptr<DeclarationStatement> declarationStatement) {
   // The type designator expression is already resolved by the type check pass.
@@ -502,4 +503,5 @@ std::shared_ptr<ResolvedType> ConstEvalPass::visitArrayType(
   return std::make_shared<ArrayType<uint64_t>>(
       inner, static_cast<uint64_t>(std::get<0>(size->value)));
 }
+} // namespace const_eval
 } // namespace qasm3

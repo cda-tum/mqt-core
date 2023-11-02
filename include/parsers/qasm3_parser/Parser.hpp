@@ -42,15 +42,17 @@ private:
       return t.kind != Token::Kind::Eof;
     }
 
-    explicit ScannerState(std::istream& in,
-                          std::optional<std::string> debugFilename = std::nullopt)
+    explicit ScannerState(
+        std::istream& in,
+        std::optional<std::string> debugFilename = std::nullopt)
         : scanner(std::make_unique<Scanner>(in)),
           filename(std::move(debugFilename)) {
       scan();
     }
 
-    explicit ScannerState(std::unique_ptr<std::istream> in,
-                          std::optional<std::string> debugFilename = std::nullopt)
+    explicit ScannerState(
+        std::unique_ptr<std::istream> in,
+        std::optional<std::string> debugFilename = std::nullopt)
         : is(std::move(in)), scanner(std::make_unique<Scanner>(*is)),
           filename(std::move(debugFilename)) {
       scan();
@@ -147,16 +149,17 @@ public:
   void scan();
 
   std::shared_ptr<DebugInfo> makeDebugInfo(Token const& begin,
-                                           Token const& end) {
+                                           Token const& /*end*/) {
+    // Parameter `end` is currently not used.
     return std::make_shared<DebugInfo>(
-        begin.line, begin.col, end.endLine, end.endCol,
-        scanner.top().filename.value_or("<input>"), includeDebugInfo);
+        begin.line, begin.col, scanner.top().filename.value_or("<input>"),
+        includeDebugInfo);
   }
 
   std::shared_ptr<DebugInfo> makeDebugInfo(Token const& token) {
     return std::make_shared<DebugInfo>(
-        token.line, token.col, token.line, token.col,
-        scanner.top().filename.value_or("<input>"), includeDebugInfo);
+        token.line, token.col, scanner.top().filename.value_or("<input>"),
+        includeDebugInfo);
   }
 
   [[nodiscard]] bool isAtEnd() const {

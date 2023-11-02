@@ -3,6 +3,7 @@
 #include <vector>
 
 namespace qasm3 {
+namespace type_checking {
 
 void TypeCheckPass::visitGateStatement(
     std::shared_ptr<GateDeclaration> gateStatement) {
@@ -303,4 +304,5 @@ std::shared_ptr<ResolvedType> TypeCheckPass::visitArrayType(
   arrayType->accept(this);
   return nullptr;
 }
+} // namespace type_checking
 } // namespace qasm3
