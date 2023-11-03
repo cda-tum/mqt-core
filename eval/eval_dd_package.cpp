@@ -54,7 +54,6 @@ void verifyAndSave(const std::string& name, const std::string& type,
   ifs >> j;
   ifs.close();
 
-
   const std::string branch = runCLI("git symbolic-ref --short -q HEAD");
   static bool const ON_FEATURE_BRANCH = branch != "main";
 
