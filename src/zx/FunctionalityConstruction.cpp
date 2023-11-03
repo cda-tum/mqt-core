@@ -120,6 +120,23 @@ void FunctionalityConstruction::addRxx(ZXDiagram& diag,
   diag.addGlobalPhase(-phase / 2.0);
 }
 
+void FunctionalityConstruction::addRzx(ZXDiagram& diag,
+                                       const PiExpression& phase,
+                                       const Qubit target, const Qubit target2,
+                                       std::vector<Vertex>& qubits) {
+  addZSpider(diag, target, qubits);
+  addZSpider(diag, target2, qubits);
+
+  const auto midX =
+      diag.addVertex(-1, -1, PiExpression(PiRational(0, 1)), zx::VertexType::X);
+  const auto midZ = diag.addVertex(-1, -1, phase, zx::VertexType::Z);
+  diag.addEdge(qubits[static_cast<std::size_t>(target)], midX);
+  diag.addEdge(qubits[static_cast<std::size_t>(target2)], midX,
+               EdgeType::Hadamard);
+  diag.addEdge(midX, midZ);
+  diag.addGlobalPhase(-phase / 2.0);
+}
+
 void FunctionalityConstruction::addSwap(ZXDiagram& diag, const Qubit target,
                                         const Qubit target2,
                                         std::vector<Vertex>& qubits) {
@@ -266,6 +283,11 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
     case qc::OpType::RXX: {
       const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
       addRxx(diag, parseParam(op.get(), 0), target, target2, qubits);
+      break;
+    }
+    case qc::OpType::RZX: {
+      const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
+      addRzx(diag, parseParam(op.get(), 0), target, target2, qubits);
       break;
     }
     case qc::OpType::RYY: {
@@ -457,6 +479,7 @@ bool FunctionalityConstruction::transformableToZX(const qc::Operation* op) {
     case qc::OpType::SXdg:
     case qc::OpType::RZZ:
     case qc::OpType::RXX:
+    case qc::OpType::RZX:
     case qc::OpType::RYY:
       return true;
     default:

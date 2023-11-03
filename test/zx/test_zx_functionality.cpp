@@ -103,6 +103,8 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
      << "rzz(pi/4) q[0], q[1];"
      << "rxx(pi/4) q[0], q[1];"
      << "ryy(pi/4) q[0], q[1];"
+     << "rzx(pi/4) q[0], q[1];"
+     << "rzx(-pi/4) q[0], q[1];"
      << "ryy(-pi/4) q[0], q[1];"
      << "rxx(-pi/4) q[0], q[1];"
      << "rzz(-pi/4) q[0], q[1];"
