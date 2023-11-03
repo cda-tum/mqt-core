@@ -7,6 +7,9 @@
 #include "algorithms/RandomCliffordCircuit.hpp"
 #include "algorithms/WState.hpp"
 #include "dd/Benchmark.hpp"
+#include "dd/Simulation.hpp"
+#include "dd/FunctionalityConstruction.hpp"
+#include "dd/statistics/PackageStatistics.hpp"
 
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
@@ -20,9 +23,10 @@ static constexpr std::size_t SEED = 42U;
 
 // a function that parses a nlohmann::json from a file "results.json", populates
 // it with the results of the current run and writes it back to the file
+//template <typename Experiment>
 void verifyAndSave(const std::string& name, const std::string& type,
-                   qc::QuantumComputation& qc, const Experiment* exp) {
-  EXPECT_TRUE(exp->success());
+                   qc::QuantumComputation& qc, const Experiment &exp) {
+  EXPECT_TRUE(exp.success());
 
   nlohmann::json j;
   std::fstream file("results.json",
@@ -43,10 +47,10 @@ void verifyAndSave(const std::string& name, const std::string& type,
                  [ON_FEATURE_BRANCH ? "feature" : "main"];
 
   entry["gate_count"] = qc.getNindividualOps();
-  entry["runtime"] = exp->runtime.count();
+  entry["runtime"] = exp.runtime.count();
 
   // collect statistics from DD package
-  entry["dd"] = exp->stats;
+  entry["dd"] = exp.stats;
 
   std::ofstream ofs("results.json");
   ofs << j.dump(2U);
@@ -70,12 +74,12 @@ INSTANTIATE_TEST_SUITE_P(GHZ, GHZEval,
 
 TEST_P(GHZEval, GHZSimulation) {
   const auto out = benchmarkSimulate(*qc);
-  verifyAndSaveSim("GHZ", "Simulation", *qc, out);
+  verifyAndSave("GHZ", "Simulation", *qc, *out);
 }
 
 TEST_P(GHZEval, GHZFunctionality) {
-  const auto out = benchmarkBuildFunctionality(*qc);
-  verifyAndSaveFunc("GHZ", "Functionality", *qc, out);
+  const auto out = benchmarkFunctionalityConstruction(*qc);
+  verifyAndSave("GHZ", "Functionality", *qc, *out);
 }
 
 class WStateEval : public testing::TestWithParam<std::size_t> {
@@ -95,12 +99,12 @@ INSTANTIATE_TEST_SUITE_P(WState, WStateEval,
 
 TEST_P(WStateEval, WStateSimulation) {
   const auto out = benchmarkSimulate(*qc);
-  verifyAndSaveSim("WState", "Simulation", *qc, out);
+  verifyAndSave("WState", "Simulation", *qc, *out);
 }
 
 TEST_P(WStateEval, WStateFunctionality) {
-  const auto out = benchmarkBuildFunctionality(*qc);
-  verifyAndSaveFunc("WState", "Functionality", *qc, out);
+  const auto out = benchmarkFunctionalityConstruction(*qc);
+  verifyAndSave("WState", "Functionality", *qc, *out);
 }
 
 // dynamic?
@@ -122,12 +126,12 @@ INSTANTIATE_TEST_SUITE_P(BV, BVEval,
 
 TEST_P(BVEval, BVSimulation) {
   const auto out = benchmarkSimulate(*qc);
-  verifyAndSaveSim("BV", "Simulation", *qc, out);
+  verifyAndSave("BV", "Simulation", *qc, *out);
 }
 
 TEST_P(BVEval, BVFunctionality) {
-  const auto out = benchmarkBuildFunctionality(*qc);
-  verifyAndSaveFunc("BV", "Functionality", *qc, out);
+  const auto out = benchmarkFunctionalityConstruction(*qc);
+  verifyAndSave("BV", "Functionality", *qc, *out);
 }
 
 class QFTEval : public testing::TestWithParam<std::size_t> {
@@ -147,7 +151,7 @@ INSTANTIATE_TEST_SUITE_P(QFT, QFTEval,
 
 TEST_P(QFTEval, QFTSimulation) {
   const auto out = benchmarkSimulate(*qc);
-  verifyAndSaveSim("QFT", "Simulation", *qc, out);
+  verifyAndSave("QFT", "Simulation", *qc, *out);
 }
 
 class QFTEvalFunctionality : public testing::TestWithParam<std::size_t> {
@@ -166,8 +170,8 @@ INSTANTIATE_TEST_SUITE_P(QFT, QFTEvalFunctionality,
                          testing::Values(18U, 19U, 20U, 21U, 22U));
 
 TEST_P(QFTEvalFunctionality, QFTFunctionality) {
-  const auto out = benchmarkBuildFunctionality(*qc);
-  verifyAndSaveFunc("QFT", "Functionality", *qc, out);
+  const auto out = benchmarkFunctionalityConstruction(*qc);
+  verifyAndSave("QFT", "Functionality", *qc, *out);
 }
 
 class GroverEval : public testing::TestWithParam<qc::Qubit> {
@@ -224,17 +228,21 @@ TEST_P(GroverEval, GroverSimulator) {
   }
   dd->decRef(f);
   const auto end = std::chrono::high_resolution_clock::now();
-  EXPECT_NE(e.p, nullptr);
   const auto runtime =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+  std::unique_ptr<SimulationExperiment> exp = std::make_unique<SimulationExperiment>();
+  exp->dd = std::move(dd);
+  exp->sim = e;
+  exp->runtime = runtime;
+  exp->stats = dd::getStatistics(exp->dd.get());
 
-  verifyAndSaveSim("Grover", "Simulation", *qc,
-                   {e, dd::getStatistics(dd.get()), runtime});
+  verifyAndSave("Grover", "Simulation", *qc, *exp);
 }
 
+
 TEST_P(GroverEval, GroverFunctionality) {
-  const auto out = benchmarkBuildFunctionality(*qc, true);
-  verifyAndSaveFunc("Grover", "Functionality", *qc, out);
+  const auto out = benchmarkFunctionalityConstruction(*qc, true);
+  verifyAndSave("Grover", "Functionality", *qc, *out);
 }
 
 class QPEEval : public testing::TestWithParam<std::size_t> {
@@ -255,7 +263,7 @@ INSTANTIATE_TEST_SUITE_P(QPE, QPEEval,
 
 TEST_P(QPEEval, QPESimulation) {
   const auto out = benchmarkSimulate(*qc);
-  verifyAndSaveSim("QPE", "Simulation", *qc, out);
+  verifyAndSave("QPE", "Simulation", *qc, *out);
 }
 
 class QPEEvalFunctionality : public testing::TestWithParam<std::size_t> {
@@ -275,8 +283,8 @@ INSTANTIATE_TEST_SUITE_P(QPE, QPEEvalFunctionality,
                          testing::Values(7U, 8U, 9U, 10U, 11U));
 
 TEST_P(QPEEvalFunctionality, QPEFunctionality) {
-  const auto out = benchmarkBuildFunctionality(*qc);
-  verifyAndSaveFunc("QPE", "Functionality", *qc, out);
+  const auto out = benchmarkFunctionalityConstruction(*qc);
+  verifyAndSave("QPE", "Functionality", *qc, *out);
 }
 
 class RandomCliffordEval : public testing::TestWithParam<std::size_t> {
@@ -285,7 +293,7 @@ protected:
   void SetUp() override {
     nqubits = GetParam();
     qc = std::make_unique<qc::RandomCliffordCircuit>(nqubits, nqubits * nqubits,
-                                                     constants::GLOBAL_SEED);
+                                                     SEED);
   }
 
   std::size_t nqubits = 0;
@@ -297,7 +305,7 @@ INSTANTIATE_TEST_SUITE_P(RandomCliffordCircuit, RandomCliffordEval,
 
 TEST_P(RandomCliffordEval, RandomCliffordSimulation) {
   const auto out = benchmarkSimulate(*qc);
-  verifyAndSaveSim("RandomClifford", "Simulation", *qc, out);
+  verifyAndSave("RandomClifford", "Simulation", *qc, *out);
 }
 
 class RandomCliffordEvalFunctionality
@@ -307,7 +315,7 @@ protected:
   void SetUp() override {
     nqubits = GetParam();
     qc = std::make_unique<qc::RandomCliffordCircuit>(nqubits, nqubits * nqubits,
-                                                     constants::GLOBAL_SEED);
+                                                     SEED);
   }
 
   std::size_t nqubits = 0;
@@ -318,8 +326,8 @@ INSTANTIATE_TEST_SUITE_P(RandomCliffordCircuit, RandomCliffordEvalFunctionality,
                          testing::Values(7U, 8U, 9U, 10U, 11U));
 
 TEST_P(RandomCliffordEvalFunctionality, RandomCliffordFunctionality) {
-  const auto out = benchmarkBuildFunctionality(*qc);
-  verifyAndSaveFunc("RandomClifford", "Functionality", *qc, out);
+  const auto out = benchmarkFunctionalityConstruction(*qc);
+  verifyAndSave("RandomClifford", "Functionality", *qc, *out);
 }
 
 } // namespace dd

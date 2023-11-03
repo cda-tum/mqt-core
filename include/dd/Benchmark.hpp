@@ -22,6 +22,7 @@ struct Experiment {
 };
 
 struct SimulationExperiment : public Experiment {
+  SimulationExperiment() = default;
   qc::VectorDD sim{};
 
   [[nodiscard]] bool success() const noexcept override {
@@ -37,9 +38,9 @@ struct FunctionalityConstructionExperiment : public Experiment {
   }
 };
 
-SimulationExperiment benchmarkSimulate(const qc::QuantumComputation& qc);
+std::unique_ptr<SimulationExperiment> benchmarkSimulate(const qc::QuantumComputation& qc);
 
-FunctionalityConstructionExperiment
+std::unique_ptr<FunctionalityConstructionExperiment>
 benchmarkFunctionalityConstruction(const qc::QuantumComputation& qc,
                                    bool recursive = false);
 } // namespace dd
