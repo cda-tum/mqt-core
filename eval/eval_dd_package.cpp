@@ -7,8 +7,8 @@
 #include "algorithms/RandomCliffordCircuit.hpp"
 #include "algorithms/WState.hpp"
 #include "dd/Benchmark.hpp"
-#include "dd/Simulation.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Simulation.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
 
 #include <gtest/gtest.h>
@@ -23,9 +23,9 @@ static constexpr std::size_t SEED = 42U;
 
 // a function that parses a nlohmann::json from a file "results.json", populates
 // it with the results of the current run and writes it back to the file
-//template <typename Experiment>
+// template <typename Experiment>
 void verifyAndSave(const std::string& name, const std::string& type,
-                   qc::QuantumComputation& qc, const Experiment &exp) {
+                   qc::QuantumComputation& qc, const Experiment& exp) {
   EXPECT_TRUE(exp.success());
 
   nlohmann::json j;
@@ -230,7 +230,8 @@ TEST_P(GroverEval, GroverSimulator) {
   const auto end = std::chrono::high_resolution_clock::now();
   const auto runtime =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-  std::unique_ptr<SimulationExperiment> exp = std::make_unique<SimulationExperiment>();
+  std::unique_ptr<SimulationExperiment> exp =
+      std::make_unique<SimulationExperiment>();
   exp->dd = std::move(dd);
   exp->sim = e;
   exp->runtime = runtime;
@@ -238,7 +239,6 @@ TEST_P(GroverEval, GroverSimulator) {
 
   verifyAndSave("Grover", "Simulation", *qc, *exp);
 }
-
 
 TEST_P(GroverEval, GroverFunctionality) {
   const auto out = benchmarkFunctionalityConstruction(*qc, true);

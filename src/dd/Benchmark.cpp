@@ -8,8 +8,10 @@
 
 namespace dd {
 
-std::unique_ptr<SimulationExperiment> benchmarkSimulate(const QuantumComputation& qc) {
-  std::unique_ptr<SimulationExperiment> exp = std::make_unique<SimulationExperiment>();
+std::unique_ptr<SimulationExperiment>
+benchmarkSimulate(const QuantumComputation& qc) {
+  std::unique_ptr<SimulationExperiment> exp =
+      std::make_unique<SimulationExperiment>();
   const auto nq = qc.getNqubits();
   exp->dd = std::make_unique<Package<>>(nq);
   const auto start = std::chrono::high_resolution_clock::now();
@@ -25,7 +27,8 @@ std::unique_ptr<SimulationExperiment> benchmarkSimulate(const QuantumComputation
 std::unique_ptr<FunctionalityConstructionExperiment>
 benchmarkFunctionalityConstruction(const QuantumComputation& qc,
                                    const bool recursive) {
-  std::unique_ptr<FunctionalityConstructionExperiment> exp = std::make_unique<FunctionalityConstructionExperiment>();
+  std::unique_ptr<FunctionalityConstructionExperiment> exp =
+      std::make_unique<FunctionalityConstructionExperiment>();
   const auto nq = qc.getNqubits();
   exp->dd = std::make_unique<Package<>>(nq);
   const auto start = std::chrono::high_resolution_clock::now();

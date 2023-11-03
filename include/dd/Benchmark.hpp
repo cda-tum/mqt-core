@@ -38,7 +38,8 @@ struct FunctionalityConstructionExperiment : public Experiment {
   }
 };
 
-std::unique_ptr<SimulationExperiment> benchmarkSimulate(const qc::QuantumComputation& qc);
+std::unique_ptr<SimulationExperiment>
+benchmarkSimulate(const qc::QuantumComputation& qc);
 
 std::unique_ptr<FunctionalityConstructionExperiment>
 benchmarkFunctionalityConstruction(const qc::QuantumComputation& qc,
