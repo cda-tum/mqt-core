@@ -8,7 +8,6 @@
 #include "algorithms/WState.hpp"
 #include "dd/Benchmark.hpp"
 #include "dd/FunctionalityConstruction.hpp"
-#include "dd/Simulation.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
 
 #include <gtest/gtest.h>
