@@ -88,6 +88,32 @@ void FunctionalityConstruction::addCphase(ZXDiagram& diag,
   addZSpider(diag, target, qubits, newPhase);
 }
 
+void FunctionalityConstruction::addRzz(ZXDiagram& diag, const PiExpression& phase, Qubit ctrl,
+                                         Qubit target, std::vector<Vertex>& qubits) {
+  addZSpider(diag, ctrl, qubits);
+  addZSpider(diag, target, qubits);
+
+  const auto midX = diag.addVertex(-1, -1, PiExpression(PiRational(0, 1)), zx::VertexType::X);
+  const auto midZ = diag.addVertex(-1, -1, phase, zx::VertexType::Z);
+  diag.addEdge(qubits[static_cast<std::size_t>(ctrl)], midX);
+  diag.addEdge(qubits[static_cast<std::size_t>(target)], midX);
+  diag.addEdge(midX, midZ);
+  diag.addGlobalPhase(-phase/2.0);
+}
+
+void FunctionalityConstruction::addRxx(ZXDiagram& diag, const PiExpression& phase, Qubit ctrl,
+                                         Qubit target, std::vector<Vertex>& qubits) {
+  addXSpider(diag, ctrl, qubits);
+  addXSpider(diag, target, qubits);
+      
+  const auto midZ = diag.addVertex(-1, -1, PiExpression(PiRational(0, 1)), zx::VertexType::Z);
+  const auto midX = diag.addVertex(-1, -1, phase, zx::VertexType::X);
+  diag.addEdge(qubits[static_cast<std::size_t>(ctrl)], midZ);
+  diag.addEdge(qubits[static_cast<std::size_t>(target)], midZ);
+  diag.addEdge(midZ, midX);
+  diag.addGlobalPhase(-phase / 2.0);
+}
+
 void FunctionalityConstruction::addSwap(ZXDiagram& diag, const Qubit target,
                                         const Qubit target2,
                                         std::vector<Vertex>& qubits) {
@@ -227,59 +253,26 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       break;
     }
     case qc::OpType::RZZ: {
-      const auto ctrl = target;
-      const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
-      const auto param = parseParam(op.get(), 0);
-      
-      addZSpider(diag, ctrl, qubits);
-      addZSpider(diag, target2, qubits);
-
-      auto mid_x = diag.addVertex(-1, -1, PiExpression(PiRational(0, 1)), zx::VertexType::X);
-      auto mid_z = diag.addVertex(-1, -1, param, zx::VertexType::Z);
-      diag.addEdge(qubits[static_cast<std::size_t>(ctrl)], mid_x);
-      diag.addEdge(qubits[static_cast<std::size_t>(target2)], mid_x);
-      diag.addEdge(mid_x, mid_z);
-      diag.addGlobalPhase(-param/2.0);
-      
+      const auto ctrl = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
+      addRzz(diag, parseParam(op.get(), 0), ctrl, target, qubits);
       break;
     }
     case qc::OpType::RXX: {
-      const auto ctrl = target;
-      const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
-      const auto param = parseParam(op.get(), 0);
-
-      addXSpider(diag, ctrl, qubits);
-      addXSpider(diag, target2, qubits);
-      
-      auto mid_z = diag.addVertex(-1, -1, PiExpression(PiRational(0, 1)), zx::VertexType::Z);
-      auto mid_x = diag.addVertex(-1, -1, param, zx::VertexType::X);
-      diag.addEdge(qubits[static_cast<std::size_t>(ctrl)], mid_z);
-      diag.addEdge(qubits[static_cast<std::size_t>(target2)], mid_z);
-      diag.addEdge(mid_z, mid_x);
-      diag.addGlobalPhase(-param/2.0);
+      const auto ctrl = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
+      addRxx(diag, parseParam(op.get(), 0), ctrl, target, qubits);
       break;
     }
     case qc::OpType::RYY: {
-      const auto ctrl = target;
-      const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
+      const auto ctrl = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
       const auto param = parseParam(op.get(), 0);
       
       addXSpider(diag, ctrl, qubits, PiExpression(PiRational(1, 2)));
-      addXSpider(diag, target2, qubits, PiExpression(PiRational(1, 2)));
+      addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
 
-      addZSpider(diag, ctrl, qubits);
-      addZSpider(diag, target2, qubits);
-      
-      auto mid_x = diag.addVertex(-1, -1, PiExpression(PiRational(0, 1)), zx::VertexType::X);
-      auto mid_z = diag.addVertex(-1, -1, param, zx::VertexType::Z);
-      diag.addEdge(qubits[static_cast<std::size_t>(ctrl)], mid_x);
-      diag.addEdge(qubits[static_cast<std::size_t>(target2)], mid_x);
-      diag.addEdge(mid_x, mid_z);
+      addRzz(diag, parseParam(op.get(), 0), ctrl, target, qubits);
       
       addXSpider(diag, ctrl, qubits, PiExpression(-PiRational(1, 2)));
-      addXSpider(diag, target2, qubits, PiExpression(-PiRational(1, 2)));
-
-      diag.addGlobalPhase(-param / 2.0);
+      addXSpider(diag, target, qubits, PiExpression(-PiRational(1, 2)));
       break;
     }
     case qc::OpType::H:
