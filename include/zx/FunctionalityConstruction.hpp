@@ -36,9 +36,9 @@ protected:
   static void addSwap(ZXDiagram& diag, Qubit target, Qubit target2,
                       std::vector<Vertex>& qubits);
   static void addRzz(ZXDiagram& diag, const PiExpression& phase, Qubit ctrl,
-                        Qubit target, std::vector<Vertex>& qubits);
+                     Qubit target, std::vector<Vertex>& qubits);
   static void addRxx(ZXDiagram& diag, const PiExpression& phase, Qubit ctrl,
-                        Qubit target, std::vector<Vertex>& qubits);
+                     Qubit target, std::vector<Vertex>& qubits);
   static void addCcx(ZXDiagram& diag, Qubit ctrl0, Qubit ctrl1, Qubit target,
                      std::vector<Vertex>& qubits);
   static op_it parseOp(ZXDiagram& diag, op_it it, op_it end,
