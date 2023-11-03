@@ -17,7 +17,19 @@
 
 namespace dd {
 
-static constexpr bool ON_FEATURE_BRANCH = false;
+std::string runCLI(const char* cmd) {
+  std::array<char, 128> buffer{};
+  std::string result;
+  const std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+  if (!pipe) {
+    throw std::runtime_error("popen() failed!");
+  }
+  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+    result += buffer.data();
+  }
+  return result;
+}
+
 static constexpr std::size_t SEED = 42U;
 
 // a function that parses a nlohmann::json from a file "results.json", populates
@@ -41,6 +53,10 @@ void verifyAndSave(const std::string& name, const std::string& type,
   std::ifstream ifs("results.json");
   ifs >> j;
   ifs.close();
+
+
+  const std::string branch = runCLI("git symbolic-ref --short -q HEAD");
+  static bool const ON_FEATURE_BRANCH = branch != "main";
 
   auto& entry = j[name][type][std::to_string(qc.getNqubits())]
                  [ON_FEATURE_BRANCH ? "feature" : "main"];
