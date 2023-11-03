@@ -125,7 +125,7 @@ void FunctionalityConstruction::addRzx(ZXDiagram& diag,
                                        const Qubit target, const Qubit target2,
                                        std::vector<Vertex>& qubits) {
   addZSpider(diag, target, qubits);
-  addZSpider(diag, target2, qubits);
+  addXSpider(diag, target2, qubits);
 
   const auto midX =
       diag.addVertex(-1, -1, PiExpression(PiRational(0, 1)), zx::VertexType::X);
