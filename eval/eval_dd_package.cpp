@@ -106,7 +106,7 @@ TEST_P(WStateEval, WStateFunctionality) {
   verifyAndSave("WState", "Functionality", *qc, *out);
 }
 
-// dynamic?
+// add dynamic
 class BVEval : public testing::TestWithParam<std::size_t> {
 protected:
   void TearDown() override {}
