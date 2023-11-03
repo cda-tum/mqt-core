@@ -265,7 +265,7 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
     case qc::OpType::RYY: {
       const auto ctrl = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
       const auto param = parseParam(op.get(), 0);
-      
+
       addXSpider(diag, ctrl, qubits, PiExpression(PiRational(1, 2)));
       addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
 
@@ -308,10 +308,11 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
 
       break;
     case qc::OpType::Z:
-        addZSpider(diag, ctrl, qubits);
-        addZSpider(diag, target, qubits);
-        diag.addEdge(qubits[static_cast<std::size_t>(ctrl)],
-                     qubits[static_cast<std::size_t>(target)], zx::EdgeType::Hadamard);
+      addZSpider(diag, ctrl, qubits);
+      addZSpider(diag, target, qubits);
+      diag.addEdge(qubits[static_cast<std::size_t>(ctrl)],
+                   qubits[static_cast<std::size_t>(target)],
+                   zx::EdgeType::Hadamard);
       break;
 
     case qc::OpType::I:

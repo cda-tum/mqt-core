@@ -29,7 +29,8 @@ protected:
                          const PiExpression& phase = PiExpression(),
                          EdgeType type = EdgeType::Simple);
   static void addCnot(ZXDiagram& diag, Qubit ctrl, Qubit target,
-                      std::vector<Vertex>& qubits, EdgeType type = EdgeType::Simple);
+                      std::vector<Vertex>& qubits,
+                      EdgeType type = EdgeType::Simple);
   static void addCphase(ZXDiagram& diag, const PiExpression& phase, Qubit ctrl,
                         Qubit target, std::vector<Vertex>& qubits);
   static void addSwap(ZXDiagram& diag, Qubit target, Qubit target2,
