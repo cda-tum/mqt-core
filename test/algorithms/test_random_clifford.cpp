@@ -49,7 +49,7 @@ TEST_P(RandomClifford, benchmarkSimulate) {
 
   auto qc = qc::RandomCliffordCircuit(nq, nq * nq, 12345);
   std::cout << qc << "\n";
-  ASSERT_NO_THROW({ benchmarkSimulate(qc); });
+  ASSERT_NO_THROW({ dd::benchmarkSimulate(qc); });
   qc.printStatistics(std::cout);
 }
 
@@ -58,6 +58,6 @@ TEST_P(RandomClifford, benchmarkBuildFunctionality) {
 
   auto qc = qc::RandomCliffordCircuit(nq, nq * nq, 12345);
   std::cout << qc << "\n";
-  ASSERT_NO_THROW({ benchmarkBuildFunctionality(qc); });
+  ASSERT_NO_THROW({ dd::benchmarkFunctionalityConstruction(qc); });
   qc.printStatistics(std::cout);
 }

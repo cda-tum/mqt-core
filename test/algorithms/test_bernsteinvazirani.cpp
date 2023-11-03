@@ -149,14 +149,14 @@ TEST_F(BernsteinVazirani, BVBenchmarkSimulate) {
   auto nqubits = 20;
   auto qc = std::make_unique<qc::BernsteinVazirani>(nqubits);
   qc::CircuitOptimizer::removeFinalMeasurements(*qc);
-  const auto out = benchmarkSimulate(*qc);
-  EXPECT_NE(out.sim.p, nullptr);
+  const auto out = dd::benchmarkSimulate(*qc);
+  EXPECT_NE(out->sim.p, nullptr);
 }
 
 TEST_F(BernsteinVazirani, BVBenchmarkFunctionality) {
   auto nqubits = 20;
   auto qc = std::make_unique<qc::BernsteinVazirani>(nqubits);
   qc::CircuitOptimizer::removeFinalMeasurements(*qc);
-  const auto out = benchmarkBuildFunctionality(*qc);
-  EXPECT_NE(out.func.p, nullptr);
+  const auto out = dd::benchmarkFunctionalityConstruction(*qc);
+  EXPECT_NE(out->func.p, nullptr);
 }

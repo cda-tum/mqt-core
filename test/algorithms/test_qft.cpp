@@ -226,13 +226,13 @@ TEST_P(QFT, DynamicSimulation) {
 TEST_P(QFT, BenchmarkSimulate) {
   nqubits = 20;
   qc = std::make_unique<qc::QFT>(nqubits, false);
-  auto out = benchmarkSimulate(*qc);
-  EXPECT_NE(out.sim.p, nullptr);
+  auto out = dd::benchmarkSimulate(*qc);
+  EXPECT_NE(out->sim.p, nullptr);
 }
 
 TEST_P(QFT, BenchmarkBuildFunctionality) {
   nqubits = 10;
   qc = std::make_unique<qc::QFT>(nqubits, false);
-  auto out = benchmarkBuildFunctionality(*qc);
-  EXPECT_NE(out.func.p, nullptr);
+  auto out = dd::benchmarkFunctionalityConstruction(*qc);
+  EXPECT_NE(out->func.p, nullptr);
 }

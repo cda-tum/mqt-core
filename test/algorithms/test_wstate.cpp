@@ -46,14 +46,14 @@ TEST_P(WState, BenchmarkSimulate) {
   const auto nq = GetParam();
 
   auto qc = qc::WState(nq);
-  auto out = benchmarkSimulate(qc);
-  EXPECT_NE(out.sim.p, nullptr);
+  auto out = dd::benchmarkSimulate(qc);
+  EXPECT_NE(out->sim.p, nullptr);
 }
 
 TEST_P(WState, BenchmarkBuildFunctionality) {
   const auto nq = GetParam();
 
   auto qc = qc::WState(nq);
-  auto out = benchmarkBuildFunctionality(qc);
-  EXPECT_NE(out.func.p, nullptr);
+  auto out = dd::benchmarkFunctionalityConstruction(qc);
+  EXPECT_NE(out->fuc.p, nullptr);
 }
