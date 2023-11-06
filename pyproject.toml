@@ -132,7 +132,8 @@ xfail_strict = true
 filterwarnings = [
     "error",
     'ignore:.*qiskit.__qiskit_version__.*:DeprecationWarning:qiskit:',
-    'ignore:.*qiskit.utils.algorithm_globals.QiskitAlgorithmGlobals*:DeprecationWarning:qiskit'
+    'ignore:.*qiskit.utils.algorithm_globals.QiskitAlgorithmGlobals*:DeprecationWarning:qiskit',
+    'ignore:.*Building a flow controller with keyword arguments is going to be deprecated*:PendingDeprecationWarning:qiskit',
 ]
 log_cli_level = "info"
 testpaths = ["test/python"]
