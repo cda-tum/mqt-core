@@ -495,8 +495,11 @@ std::shared_ptr<ResolvedType> ConstEvalPass::visitUnsizedType(
 }
 std::shared_ptr<ResolvedType> ConstEvalPass::visitArrayType(
     ArrayType<std::shared_ptr<Expression>>* arrayType) {
-  std::shared_ptr<Type<uint64_t>> inner = arrayType->type->accept(this);
+  std::shared_ptr<Type<uint64_t>> const inner = arrayType->type->accept(this);
   auto size = visit(arrayType->size);
+  if (!size.has_value()) {
+    throw std::runtime_error("Array size must be a constant expression.");
+  }
   if (size->type != ConstEvalValue::Type::ConstUint) {
     throw std::runtime_error("Array size must be an unsigned integer.");
   }
