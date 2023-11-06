@@ -1,16 +1,18 @@
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
+#include "dd/RealNumber.hpp"
 
 #include <complex>
 #include <cstddef>
+#include <functional>
 #include <iostream>
 #include <string>
-#include <utility>
 
 namespace dd {
 
 struct RealNumber;
+struct ComplexValue;
 
 /// A complex number represented by two pointers to compute table entries.
 struct Complex {
@@ -19,35 +21,43 @@ struct Complex {
   /// Compute table entry for the imaginary part.
   RealNumber* i;
 
-  // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
-  /// The static zero constant.
-  static Complex zero;
-  /// The static one constant.
-  static Complex one;
-  // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
+  /**
+   * @brief The static constant for the complex number zero.
+   * @return A complex number with real and imaginary part equal to zero.
+   */
+  static constexpr Complex zero() noexcept {
+    return {&constants::zero, &constants::zero};
+  }
 
   /**
-   * @brief Set the value based on the given complex number.
-   * @param c The value to set.
+   * @brief The static constant for the complex number one.
+   * @return A complex number with real part equal to one and imaginary part
+   * equal to zero.
    */
-  void setVal(const Complex& c) const noexcept;
+  static constexpr Complex one() noexcept {
+    return {&constants::one, &constants::zero};
+  }
 
   /**
    * @brief Check whether the complex number is exactly equal to zero.
    * @returns True if the complex number is exactly equal to zero, false
    * otherwise.
-   * @see CTEntry::exactlyZero
+   * @see RealNumber::exactlyZero
    */
-  [[nodiscard]] bool exactlyZero() const noexcept;
+  [[nodiscard]] constexpr bool exactlyZero() const noexcept {
+    return RealNumber::exactlyZero(r) && RealNumber::exactlyZero(i);
+  }
 
   /**
    * @brief Check whether the complex number is exactly equal to one.
    * @returns True if the complex number is exactly equal to one, false
    * otherwise.
-   * @see CTEntry::exactlyOne
-   * @see CTEntry::exactlyZero
+   * @see RealNumber::exactlyOne
+   * @see RealNumber::exactlyZero
    */
-  [[nodiscard]] bool exactlyOne() const noexcept;
+  [[nodiscard]] constexpr bool exactlyOne() const noexcept {
+    return RealNumber::exactlyOne(r) && RealNumber::exactlyZero(i);
+  }
 
   /**
    * @brief Check whether the complex number is approximately equal to the
@@ -55,7 +65,7 @@ struct Complex {
    * @param c The complex number to compare to.
    * @returns True if the complex number is approximately equal to the given
    * complex number, false otherwise.
-   * @see CTEntry::approximatelyEquals
+   * @see RealNumber::approximatelyEquals
    */
   [[nodiscard]] bool approximatelyEquals(const Complex& c) const noexcept;
 
@@ -63,7 +73,7 @@ struct Complex {
    * @brief Check whether the complex number is approximately equal to zero.
    * @returns True if the complex number is approximately equal to zero, false
    * otherwise.
-   * @see CTEntry::approximatelyZero
+   * @see RealNumber::approximatelyZero
    */
   [[nodiscard]] bool approximatelyZero() const noexcept;
 
@@ -71,21 +81,10 @@ struct Complex {
    * @brief Check whether the complex number is approximately equal to one.
    * @returns True if the complex number is approximately equal to one, false
    * otherwise.
-   * @see CTEntry::approximatelyOne
-   * @see CTEntry::approximatelyZero
+   * @see RealNumber::approximatelyOne
+   * @see RealNumber::approximatelyZero
    */
   [[nodiscard]] bool approximatelyOne() const noexcept;
-
-  /**
-   * @brief Check for exact equality.
-   * @param other The complex number to compare to.
-   * @returns True if the complex numbers are exactly equal, false otherwise.
-   * @note Boils down to a pointer comparison.
-   */
-  [[nodiscard]] bool operator==(const Complex& other) const noexcept;
-
-  /// @see operator==
-  [[nodiscard]] bool operator!=(const Complex& other) const noexcept;
 
   /**
    * @brief Convert the complex number to a string.
@@ -100,7 +99,7 @@ struct Complex {
   /**
    * @brief Write the complex number to a binary stream.
    * @param os The output stream to write to.
-   * @see CTEntry::writeBinary
+   * @see RealNumber::writeBinary
    */
   void writeBinary(std::ostream& os) const;
 
@@ -109,6 +108,12 @@ struct Complex {
    * @returns The std::complex<fp> representation of the Complex number.
    */
   [[nodiscard]] explicit operator std::complex<fp>() const noexcept;
+
+  /**
+   * @brief Convert the Complex number to a ComplexValue.
+   * @returns The ComplexValue representation of the Complex number.
+   */
+  [[nodiscard]] explicit operator ComplexValue() const noexcept;
 };
 
 /**
@@ -118,6 +123,17 @@ struct Complex {
  * @returns The output stream.
  */
 std::ostream& operator<<(std::ostream& os, const Complex& c);
+
+ComplexValue operator*(const Complex& c1, const ComplexValue& c2);
+ComplexValue operator*(const ComplexValue& c1, const Complex& c2);
+ComplexValue operator*(const Complex& c1, const Complex& c2);
+ComplexValue operator*(const Complex& c1, fp real);
+ComplexValue operator*(fp real, const Complex& c1);
+
+ComplexValue operator/(const Complex& c1, const ComplexValue& c2);
+ComplexValue operator/(const ComplexValue& c1, const Complex& c2);
+ComplexValue operator/(const Complex& c1, const Complex& c2);
+ComplexValue operator/(const Complex& c1, fp real);
 
 } // namespace dd
 
@@ -135,9 +151,9 @@ template <> struct hash<dd::Complex> {
    * @see dd::combineHash
    */
   std::size_t operator()(dd::Complex const& c) const noexcept {
-    const auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(c.r));
-    const auto h2 = dd::murmur64(reinterpret_cast<std::size_t>(c.i));
-    return dd::combineHash(h1, h2);
+    const auto h1 = qc::murmur64(reinterpret_cast<std::size_t>(c.r));
+    const auto h2 = qc::murmur64(reinterpret_cast<std::size_t>(c.i));
+    return qc::combineHash(h1, h2);
   }
 };
 } // namespace std

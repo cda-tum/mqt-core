@@ -1,13 +1,15 @@
 #include "QuantumComputation.hpp"
+#include "dd/DDpackageConfig.hpp"
 #include "dd/NoiseFunctionality.hpp"
+#include "dd/Operations.hpp"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include <random>
 
 using namespace qc;
 
 struct StochasticNoiseSimulatorDDPackageConfig : public dd::DDPackageConfig {
-  static constexpr std::size_t STOCHASTIC_CACHE_OPS = qc::OpType::OpCount;
+  static constexpr std::size_t STOCHASTIC_CACHE_OPS = OpType::OpCount;
 };
 
 using StochasticNoiseTestPackage =

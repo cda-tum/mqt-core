@@ -33,7 +33,7 @@ TEST_P(WState, FunctionTest) {
 
   auto qc = qc::WState(nq);
   auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const std::size_t shots = 1024;
+  const std::size_t shots = 4096U;
   const auto measurements =
       simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
   for (const auto& result : generateWStateStrings(nq)) {

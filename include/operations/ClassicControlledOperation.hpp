@@ -131,3 +131,16 @@ public:
   void invert() override { op->invert(); }
 };
 } // namespace qc
+
+namespace std {
+template <> struct hash<qc::ClassicControlledOperation> {
+  std::size_t
+  operator()(qc::ClassicControlledOperation const& ccop) const noexcept {
+    auto seed = qc::combineHash(ccop.getControlRegister().first,
+                                ccop.getControlRegister().second);
+    qc::hashCombine(seed, ccop.getExpectedValue());
+    qc::hashCombine(seed, std::hash<qc::Operation>{}(*ccop.getOperation()));
+    return seed;
+  }
+};
+} // namespace std

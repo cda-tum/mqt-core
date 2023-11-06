@@ -1,6 +1,7 @@
 #include "operations/Expression.hpp"
-#include "pybind11/operators.h"
 #include "python/pybind11.hpp"
+
+#include <pybind11/operators.h>
 
 namespace mqt {
 
@@ -15,6 +16,7 @@ void registerVariable(py::module& m) {
       .def("__repr__", &sym::Variable::getName)
       .def(py::self == py::self)
       .def(py::self != py::self)
+      .def(hash(py::self))
       .def(py::self < py::self)
       .def(py::self > py::self);
 }

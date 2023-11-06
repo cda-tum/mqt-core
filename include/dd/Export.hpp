@@ -4,10 +4,11 @@
 #include "dd/ComplexNumbers.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Edge.hpp"
-#include "dd/Package.hpp"
+#include "dd/Node.hpp"
+#include "dd/RealNumber.hpp"
 
 #include <algorithm>
-#include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
@@ -15,6 +16,7 @@
 #include <iostream>
 #include <limits>
 #include <queue>
+#include <sstream>
 #include <stack>
 #include <stdexcept>
 #include <string>
@@ -232,9 +234,9 @@ static std::ostream& memoryHeader(const Edge<Node>& e, std::ostream& os,
      << "\" color=\"" << color << "\"";
   if (edgeLabels) {
     os << ",label=<<font point-size=\"8\">&nbsp;[";
-    if (e.w == Complex::zero) {
+    if (e.w.exactlyZero()) {
       os << "0";
-    } else if (e.w == Complex::one) {
+    } else if (e.w.exactlyOne()) {
       os << "1";
     } else {
       if (RealNumber::exactlyZero(e.w.r)) {
@@ -426,7 +428,7 @@ static std::ostream& memoryNode(const Edge<Node>& e, std::ostream& os) {
   for (std::size_t i = 0; i < n; ++i) {
     os << "<td port=\"" << i << R"(" href="javascript:;" border="0" tooltip=")"
        << e.p->e[i].w.toString(false, 4) << "\">";
-    if (e.p->e[i] == Edge<Node>::zero) {
+    if (e.p->e[i].isZeroTerminal()) {
       os << "&nbsp;0 "
             "";
     } else {
@@ -614,7 +616,7 @@ static std::ostream& memoryEdge(const Edge<Node>& from, const Edge<Node>& to,
      << "\" color=\"" << color << "\"";
   if (edgeLabels) {
     os << ",label=<<font point-size=\"8\">&nbsp;[";
-    if (to.w == Complex::one) {
+    if (to.w.exactlyOne()) {
       os << "1";
     } else {
       if (RealNumber::exactlyZero(to.w.r)) {
@@ -706,7 +708,7 @@ static void toDot(const Edge<Node>& e, std::ostream& os, bool colored = true,
     for (auto i = static_cast<std::int16_t>(node->p->e.size() - 1); i >= 0;
          --i) {
       auto& edge = node->p->e[static_cast<std::size_t>(i)];
-      if ((!memory && edge.w.approximatelyZero()) || edge.w == Complex::zero) {
+      if ((!memory && edge.w.approximatelyZero()) || edge.w.exactlyZero()) {
         // potentially add zero stubs here
         continue;
       }

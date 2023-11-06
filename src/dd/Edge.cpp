@@ -79,7 +79,7 @@ std::complex<fp> Edge<Node>::getValueByIndex(const std::size_t i) const {
 
   auto decisions = std::string(p->v + 1U, '0');
   for (auto j = 0U; j <= p->v; ++j) {
-    if ((i & (1U << j)) != 0U) {
+    if ((i & (1ULL << j)) != 0U) {
       decisions[j] = '1';
     }
   }
@@ -196,12 +196,12 @@ std::complex<fp> Edge<Node>::getValueByIndex(const std::size_t i,
 
   auto decisions = std::string(p->v + 1U, '0');
   for (auto k = 0U; k <= p->v; ++k) {
-    if ((i & (1U << k)) != 0U) {
+    if ((i & (1ULL << k)) != 0U) {
       decisions[k] = '2';
     }
   }
   for (auto k = 0U; k <= p->v; ++k) {
-    if ((j & (1U << k)) != 0U) {
+    if ((j & (1ULL << k)) != 0U) {
       if (decisions[k] == '2') {
         decisions[k] = '3';
       } else {
@@ -446,9 +446,9 @@ Edge<dNode>::getSparseProbabilityVector(const fp threshold) const;
 template SparsePVecStrKeys
 Edge<dNode>::getSparseProbabilityVectorStrKeys(const fp threshold) const;
 template std::complex<fp>
-Edge<mNode>::getValueByIndex<dNode, true>(const std::size_t i,
+Edge<dNode>::getValueByIndex<dNode, true>(const std::size_t i,
                                           const std::size_t j) const;
-template void Edge<mNode>::traverseMatrix<dNode, true>(
+template void Edge<dNode>::traverseMatrix<dNode, true>(
     const std::complex<fp>& amp, const std::size_t i, const std::size_t j,
     MatrixEntryFunc f, const fp threshold) const;
 template void Edge<dNode>::traverseDiagonal(const fp& prob, const std::size_t i,
@@ -465,16 +465,16 @@ namespace std {
 template <class Node>
 std::size_t
 hash<dd::Edge<Node>>::operator()(const dd::Edge<Node>& e) const noexcept {
-  const auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(e.p));
+  const auto h1 = qc::murmur64(reinterpret_cast<std::size_t>(e.p));
   const auto h2 = std::hash<dd::Complex>{}(e.w);
-  auto h3 = dd::combineHash(h1, h2);
+  auto h3 = qc::combineHash(h1, h2);
   if constexpr (std::is_same_v<Node, dd::dNode>) {
     if (e.isTerminal()) {
       return h3;
     }
     assert((dd::dNode::isDensityMatrixTempFlagSet(e.p)) == false);
     const auto h4 = dd::dNode::getDensityMatrixTempFlags(e.p->flags);
-    h3 = dd::combineHash(h3, h4);
+    h3 = qc::combineHash(h3, h4);
   }
   return h3;
 }

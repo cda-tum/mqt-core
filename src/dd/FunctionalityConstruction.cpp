@@ -6,7 +6,7 @@ MatrixDD buildFunctionality(const QuantumComputation* qc,
                             std::unique_ptr<Package<Config>>& dd) {
   const auto nq = qc->getNqubits();
   if (nq == 0U) {
-    return MatrixDD::one;
+    return MatrixDD::one();
   }
 
   if (const auto* grover = dynamic_cast<const qc::Grover*>(qc)) {
@@ -37,7 +37,7 @@ template <class Config>
 MatrixDD buildFunctionalityRecursive(const QuantumComputation* qc,
                                      std::unique_ptr<Package<Config>>& dd) {
   if (qc->getNqubits() == 0U) {
-    return MatrixDD::one;
+    return MatrixDD::one();
   }
 
   if (const auto* grover = dynamic_cast<const qc::Grover*>(qc)) {
