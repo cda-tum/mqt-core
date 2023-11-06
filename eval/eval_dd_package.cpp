@@ -41,7 +41,7 @@ static constexpr std::size_t SEED = 42U;
 
 // a function that parses a nlohmann::json from a file "results.json", populates
 // it with the results of the current run and writes it back to the file
-// template <typename Experiment>
+
 void verifyAndSave(const std::string& name, const std::string& type,
                    qc::QuantumComputation& qc, const Experiment& exp) {
   EXPECT_TRUE(exp.success());
@@ -61,11 +61,7 @@ void verifyAndSave(const std::string& name, const std::string& type,
   ifs >> j;
   ifs.close();
 
-  const std::string branch = runCLI("git symbolic-ref --short -q HEAD");
-  static bool const ON_FEATURE_BRANCH = branch != "main";
-
-  auto& entry = j[name][type][std::to_string(qc.getNqubits())]
-                 [ON_FEATURE_BRANCH ? "feature" : "main"];
+  auto& entry = j[name][type][std::to_string(qc.getNqubits())][CURRENT_BRANCH];
 
   entry["gate_count"] = qc.getNindividualOps();
   entry["runtime"] = exp.runtime.count();
