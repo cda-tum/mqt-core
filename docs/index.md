@@ -41,6 +41,7 @@ DevelopmentGuide
 ```
 
 ```{toctree}
+:maxdepth: 3
 :caption: API Reference
 
 api/mqt/core/index
