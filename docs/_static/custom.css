@@ -1,0 +1,15 @@
+.acknowledgements {
+  margin-top: 1rem;
+  padding-bottom: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-background-border);
+  font-size: var(--font-size--small);
+  color: var(--color-foreground-secondary);
+}
+
+.acknowledgements-logos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  grid-gap: 1em;
+  align-items: center;
+}
