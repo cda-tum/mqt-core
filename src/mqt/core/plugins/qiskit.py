@@ -1,4 +1,5 @@
 """Functionality for interoperability with Qiskit."""
+
 from __future__ import annotations
 
 import re
