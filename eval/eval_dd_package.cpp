@@ -27,7 +27,8 @@ std::string runCLI(const char* cmd) {
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
     result += buffer.data();
   }
-  return result;
+  std::string realResult = result.erase(result.size() - 1);
+  return realResult;
 }
 
 static constexpr std::size_t SEED = 42U;
