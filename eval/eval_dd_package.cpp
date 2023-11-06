@@ -78,10 +78,14 @@ void transposeAndReduceJson(const std::string& fileName, const std::string& outF
                      std::strcmp(stat, "density_matrix") != 0) &&
                     key == "unique_table") {
                   for (const auto& [key3, value3] : value2.items()) {
-                    k[algorithm][type][nqubits]["dd"][stat][key][key2][key3]
-                      [branch] = value3;
+                    if (!key3.empty()) {
+                      k[algorithm][type][nqubits]["dd"][stat][key][key2][key3]
+                       [branch] = value3;
+                    } else {
+                      k[algorithm][type][nqubits]["dd"][stat][key][key2][branch] = value3;
+                    }
                   }
-                    continue;
+                  continue;
                 }
                 k[algorithm][type][nqubits]["dd"][stat][key][key2][branch] =
                     value2;
