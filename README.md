@@ -56,24 +56,29 @@ If you want to use the ZX library, it is recommended (although not strictly nece
 
 ---
 
+## Acknowledgements
+
 This project has received funding from the European
 Research Council (ERC) under the European Union's Horizon 2020 research and innovation program (grant agreement
 No. 101001318), the Bavarian State Ministry for Science and Arts through the Distinguished Professorship Program, as well as the
 Munich Quantum Valley, which is supported by the Bavarian state government with funds from the Hightech Agenda Bayern Plus.
 
-<p align="center">
+<div style="display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  grid-gap: 1em;
+  align-items: center;">
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/cda-tum/mqt-core/acks/docs/_static/tum_dark.svg" width="25%">
-<img src="https://raw.githubusercontent.com/cda-tum/mqt-core/acks/docs/_static/tum_light.svg" width="25%">
+<img src="https://raw.githubusercontent.com/cda-tum/mqt-core/acks/docs/_static/tum_light.svg">
 </picture>
 <picture>
-<img src="https://raw.githubusercontent.com/cda-tum/mqt-core/acks/docs/_static/logo-bavaria.svg" width="25%">
+<img src="https://raw.githubusercontent.com/cda-tum/mqt-core/acks/docs/_static/logo-bavaria.svg">
 </picture>
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/cda-tum/mqt-core/acks/docs/_static/erc_dark.svg" width="25%">
-<img src="https://raw.githubusercontent.com/cda-tum/mqt-core/acks/docs/_static/erc_light.svg" width="25%">
+<img src="https://raw.githubusercontent.com/cda-tum/mqt-core/acks/docs/_static/erc_light.svg">
 </picture>
 <picture>
-<img src="https://raw.githubusercontent.com/cda-tum/mqt-core/acks/docs/_static/logo-mqv.svg" width="25%">
+<img src="https://raw.githubusercontent.com/cda-tum/mqt-core/acks/docs/_static/logo-mqv.svg">
 </picture>
-</p>
+</div>
