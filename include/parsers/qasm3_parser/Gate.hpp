@@ -40,11 +40,11 @@ public:
   std::vector<std::string> targetNames;
   std::vector<std::shared_ptr<GateCallStatement>> body;
 
-  explicit CompoundGate(std::vector<std::string> parameters,
-                        std::vector<std::string> targets,
-                        std::vector<std::shared_ptr<GateCallStatement>> bodyStatements)
-      : parameterNames(std::move(parameters)),
-        targetNames(std::move(targets)), body(std::move(bodyStatements)) {}
+  explicit CompoundGate(
+      std::vector<std::string> parameters, std::vector<std::string> targets,
+      std::vector<std::shared_ptr<GateCallStatement>> bodyStatements)
+      : parameterNames(std::move(parameters)), targetNames(std::move(targets)),
+        body(std::move(bodyStatements)) {}
 
   size_t getNControls() override { return 0; }
 

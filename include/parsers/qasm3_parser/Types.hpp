@@ -57,8 +57,7 @@ public:
   DesignatedTy type;
   uint64_t designator;
 
-  SizedType(DesignatedTy ty, uint64_t design)
-      : type(ty), designator(design) {}
+  SizedType(DesignatedTy ty, uint64_t design) : type(ty), designator(design) {}
 
   explicit SizedType(DesignatedTy ty) : type(ty) {
     switch (ty) {

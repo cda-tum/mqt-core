@@ -148,8 +148,7 @@ class IdentifierExpression
 public:
   std::string identifier;
 
-  explicit IdentifierExpression(std::string id)
-      : identifier(std::move(id)) {}
+  explicit IdentifierExpression(std::string id) : identifier(std::move(id)) {}
 
   std::string getName() override {
     return std::string{"IdentifierExpr ("} + identifier + ")";
@@ -246,8 +245,7 @@ class InitialLayout : public Statement,
 public:
   qc::Permutation permutation;
 
-  explicit InitialLayout(std::shared_ptr<DebugInfo> debug,
-                         qc::Permutation perm)
+  explicit InitialLayout(std::shared_ptr<DebugInfo> debug, qc::Permutation perm)
       : Statement(std::move(debug)), permutation(std::move(perm)) {}
 
 private:
@@ -321,8 +319,7 @@ public:
   bool ctrlType;
   std::shared_ptr<Expression> expression;
 
-  explicit CtrlGateModifier(bool ty,
-                            std::shared_ptr<Expression> expr)
+  explicit CtrlGateModifier(bool ty, std::shared_ptr<Expression> expr)
       : ctrlType(ty), expression(std::move(expr)) {}
 };
 
@@ -335,8 +332,7 @@ public:
   std::vector<std::shared_ptr<Expression>> arguments;
   std::vector<std::shared_ptr<GateOperand>> operands;
 
-  GateCallStatement(std::shared_ptr<DebugInfo> debug,
-                    std::string id,
+  GateCallStatement(std::shared_ptr<DebugInfo> debug, std::string id,
                     std::vector<std::shared_ptr<GateModifier>> modifierList,
                     std::vector<std::shared_ptr<Expression>> argumentList,
                     std::vector<std::shared_ptr<GateOperand>> operandList)
@@ -376,10 +372,8 @@ public:
                       std::shared_ptr<IdentifierExpression> id,
                       std::shared_ptr<Expression> indexExpr,
                       std::shared_ptr<DeclarationExpression> expr)
-      : Statement(std::move(debug)), type(ty),
-        identifier(std::move(id)),
-        indexExpression(std::move(indexExpr)),
-        expression(std::move(expr)) {}
+      : Statement(std::move(debug)), type(ty), identifier(std::move(id)),
+        indexExpression(std::move(indexExpr)), expression(std::move(expr)) {}
 
   void accept(InstVisitor* visitor) override {
     visitor->visitAssignmentStatement(shared_from_this());

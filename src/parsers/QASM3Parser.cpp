@@ -13,10 +13,10 @@
 #include <utility>
 
 using namespace qasm3;
-using qasm3::type_checking::TypeCheckPass;
-using qasm3::type_checking::InferredType;
-using qasm3::const_eval::ConstEvalValue;
 using qasm3::const_eval::ConstEvalPass;
+using qasm3::const_eval::ConstEvalValue;
+using qasm3::type_checking::InferredType;
+using qasm3::type_checking::TypeCheckPass;
 
 struct CompilerError : public std::exception {
   std::string message;
