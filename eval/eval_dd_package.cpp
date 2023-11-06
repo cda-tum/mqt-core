@@ -31,6 +31,12 @@ std::string runCLI(const char* cmd) {
   return realResult;
 }
 
+[[maybe_unused]] static const std::string CURRENT_BRANCH = runCLI("git symbolic-ref --short -q HEAD");
+[[maybe_unused]] static const std::string CURRENT_COMMIT = runCLI("git rev-parse --short HEAD");
+static const std::string FILENAME = "results.json";
+static const std::string FILENAME_REDUCED = "results_reduced.json";
+// Add branch name or commit hash to filename if necessary
+
 static constexpr std::size_t SEED = 42U;
 
 // a function that parses a nlohmann::json from a file "results.json", populates
@@ -41,17 +47,17 @@ void verifyAndSave(const std::string& name, const std::string& type,
   EXPECT_TRUE(exp.success());
 
   nlohmann::json j;
-  std::fstream file("results.json",
+  std::fstream file(FILENAME,
                     std::ios::in | std::ios::out | std::ios::ate);
   if (!file.is_open()) {
-    std::ofstream outputFile("results.json");
+    std::ofstream outputFile(FILENAME);
     outputFile << nlohmann::json();
   } else if (file.tellg() == 0) {
     file << nlohmann::json();
   }
   file.close();
 
-  std::ifstream ifs("results.json");
+  std::ifstream ifs(FILENAME);
   ifs >> j;
   ifs.close();
 
@@ -67,7 +73,7 @@ void verifyAndSave(const std::string& name, const std::string& type,
   // collect statistics from DD package
   entry["dd"] = exp.stats;
 
-  std::ofstream ofs("results.json");
+  std::ofstream ofs(FILENAME);
   ofs << j.dump(2U);
   ofs.close();
 }
