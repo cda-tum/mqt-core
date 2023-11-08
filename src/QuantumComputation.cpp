@@ -674,27 +674,23 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
   }
 
   assert(nqubits == 0U || !qregs.empty());
-  printSortedRegisters(qregs, "qreg", of);
-
   assert(nclassics == 0U || !cregs.empty());
-  printSortedRegisters(cregs, "creg", of);
-
   assert(nancillae == 0U || !ancregs.empty());
-  printSortedRegisters(ancregs, "qreg", of);
 
-  RegisterNames qregnames{};
-  RegisterNames cregnames{};
-  RegisterNames ancregnames{};
-  createRegisterArray(qregs, qregnames, nqubits, "q");
-  createRegisterArray(cregs, cregnames, nclassics, "c");
-  createRegisterArray(ancregs, ancregnames, nancillae, "anc");
-
-  for (const auto& ancregname : ancregnames) {
-    qregnames.push_back(ancregname);
+  // combine qregs and ancregs
+  QuantumRegisterMap combinedRegs = qregs;
+  for (const auto& [regName, reg] : ancregs) {
+    combinedRegs.try_emplace(regName, reg.first, reg.second);
   }
+  printSortedRegisters(combinedRegs, "qreg", of);
+  RegisterNames combinedRegNames{};
+  createRegisterArray(combinedRegs, combinedRegNames);
 
+  printSortedRegisters(cregs, "creg", of);
+  RegisterNames cregnames{};
+  createRegisterArray(cregs, cregnames);
   for (const auto& op : ops) {
-    op->dumpOpenQASM(of, qregnames, cregnames);
+    op->dumpOpenQASM(of, combinedRegNames, cregnames);
   }
 }
 
