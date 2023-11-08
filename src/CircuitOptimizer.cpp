@@ -1174,27 +1174,27 @@ CircuitOptimizer::Iterator CircuitOptimizer::flattenCompoundOperation(
   assert((*it)->isCompoundOperation());
   auto& op = dynamic_cast<qc::CompoundOperation&>(**it);
   auto opIt = op.begin();
+  std::int64_t movedOperations = 0;
   while (opIt != op.end()) {
-    if ((*opIt)->isCompoundOperation()) {
-      // recursively flatten compound operations
-      opIt = flattenCompoundOperation(op.getOps(), opIt);
-      --opIt;
-    } else {
-      // move the operation from the compound operation in front of the compound
-      // operation in the flattened container. `it` then points to the newly
-      // inserted element
-      it = ops.insert(it, std::move(*opIt));
-      // advance the operation iterator to point past the now moved-from element
-      // in the compound operation
-      ++opIt;
-      // advance the general iterator to again point to the compound operation
-      ++it;
-    }
+    // move the operation from the compound operation in front of the compound
+    // operation in the flattened container. `it` then points to the newly
+    // inserted element
+    it = ops.insert(it, std::move(*opIt));
+    // advance the operation iterator to point past the now moved-from element
+    // in the compound operation
+    ++opIt;
+    // advance the general iterator to again point to the compound operation
+    ++it;
+    // track the moved operations
+    ++movedOperations;
   }
   // whenever all the operations have been processed, `it` points to the
-  // compound operation and `opIt` to `op.end()` the compound operation can now
+  // compound operation and `opIt` to `op.end()`. The compound operation can now
   // be deleted safely
-  return ops.erase(it);
+  it = ops.erase(it);
+  // move the general iterator back to the position of the last moved operation
+  std::advance(it, -movedOperations);
+  return it;
 }
 
 void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
