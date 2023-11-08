@@ -237,7 +237,7 @@ def _emplace_operation(
     if name in {"p", "u1", "cp", "cu1", "mcphase"}:
         return _add_operation(qc, OpType.p, qargs, params, qubit_map)
 
-    if name in {"u2"}:
+    if name == "u2":
         return _add_operation(qc, OpType.u2, qargs, params, qubit_map)
 
     if name in {"u", "u3", "cu3"}:
