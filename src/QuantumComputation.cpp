@@ -974,8 +974,9 @@ bool QuantumComputation::isLastOperationOnQubit(
 void QuantumComputation::unifyQuantumRegisters(const std::string& regName) {
   ancregs.clear();
   qregs.clear();
-  qregs[regName] = {0, getNqubits()};
+  nqubits += nancillae;
   nancillae = 0;
+  qregs[regName] = {0, nqubits};
 }
 
 void QuantumComputation::appendMeasurementsAccordingToOutputPermutation(
