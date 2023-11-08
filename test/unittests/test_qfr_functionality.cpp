@@ -1536,6 +1536,7 @@ TEST_F(QFRFunctionality, FlattenRecursive) {
   // create a nested compound operation
   QuantumComputation op(nqubits);
   op.x(0);
+  op.z(0);
   QuantumComputation op2(nqubits);
   op2.emplace_back(op.asCompoundOperation());
   QuantumComputation qc(nqubits);
@@ -1549,10 +1550,15 @@ TEST_F(QFRFunctionality, FlattenRecursive) {
     EXPECT_FALSE(g->isCompoundOperation());
   }
 
-  auto& gate = **qc.begin();
-  EXPECT_EQ(gate.getType(), qc::X);
-  EXPECT_EQ(gate.getTargets().at(0), 0U);
-  EXPECT_TRUE(gate.getControls().empty());
+  ASSERT_EQ(qc.getNops(), 2U);
+  auto& gate = qc.at(0);
+  EXPECT_EQ(gate->getType(), qc::X);
+  EXPECT_EQ(gate->getTargets().at(0), 0U);
+  EXPECT_TRUE(gate->getControls().empty());
+  auto& gate2 = qc.at(1);
+  EXPECT_EQ(gate2->getType(), qc::Z);
+  EXPECT_EQ(gate2->getTargets().at(0), 0U);
+  EXPECT_TRUE(gate2->getControls().empty());
 }
 
 TEST_F(QFRFunctionality, OperationEquality) {
