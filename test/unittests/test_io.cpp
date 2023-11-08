@@ -655,3 +655,16 @@ TEST_F(IO, NonStandardInclude) {
   EXPECT_EQ(qc->at(0)->getType(), qc::H);
   std::filesystem::remove("defs.inc");
 }
+
+TEST_F(IO, SingleRegistersDoubleCreg) {
+  std::stringstream ss{};
+  ss << "qreg p[1];\n"
+     << "qreg q[1];\n"
+     << "creg c[2];\n"
+     << "measure p[0] -> c[0];\n";
+  qc->import(ss, qc::Format::OpenQASM);
+  std::cout << *qc << "\n";
+  std::stringstream ss2{};
+  qc->dump(ss2, qc::Format::OpenQASM);
+  std::cout << ss2.str() << "\n";
+}
