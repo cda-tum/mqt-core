@@ -2045,20 +2045,31 @@ private:
   template <class Node>
   Edge<Node> kronecker2(const Edge<Node>& x, const Edge<Node>& y,
                         const bool incIdx = true) {
-    if (x.w.approximatelyZero() || y.w.approximatelyZero()) {
+    if (x.w.exactlyZero() || y.w.exactlyZero()) {
+      return Edge<Node>::zero();
+    }
+    const auto xWeight = static_cast<ComplexValue>(x.w);
+    if (xWeight.approximatelyZero()) {
+      return Edge<Node>::zero();
+    }
+    const auto yWeight = static_cast<ComplexValue>(y.w);
+    if (yWeight.approximatelyZero()) {
+      return Edge<Node>::zero();
+    }
+    const auto rWeight = xWeight * yWeight;
+    if (rWeight.approximatelyZero()) {
       return Edge<Node>::zero();
     }
 
     if (x.isTerminal()) {
-      return {y.p, cn.mulCached(x.w, y.w)};
+      return {y.p, cn.getCached(rWeight)};
     }
 
+    auto xCopy = Edge<Node>{x.p, Complex::one()};
+    auto yCopy = Edge<Node>{y.p, Complex::one()};
     auto& computeTable = getKroneckerComputeTable<Node>();
-    if (const auto* r = computeTable.lookup(x, y); r != nullptr) {
-      if (r->w.approximatelyZero()) {
-        return Edge<Node>::zero();
-      }
-      return {r->p, cn.getCached(r->w)};
+    if (const auto* r = computeTable.lookup(xCopy, yCopy); r != nullptr) {
+      return {r->p, cn.getCached(rWeight)};
     }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
@@ -2066,17 +2077,15 @@ private:
     if constexpr (n == NEDGE) {
       if (x.p->isIdentity()) {
         auto idx = incIdx ? static_cast<Qubit>(y.p->v + 1) : y.p->v;
-        auto e = makeDDNode(
-            idx, std::array{y, Edge<Node>::zero(), Edge<Node>::zero(), y});
+        auto e = makeDDNode(idx, std::array{yCopy, Edge<Node>::zero(),
+                                            Edge<Node>::zero(), yCopy});
         for (auto i = 0; i < x.p->v; ++i) {
           idx = incIdx ? (e.p->v + 1) : e.p->v;
           e = makeDDNode(
               idx, std::array{e, Edge<Node>::zero(), Edge<Node>::zero(), e});
         }
-
-        e.w = cn.getCached(y.w);
-        computeTable.insert(x, y, {e.p, e.w});
-        return e;
+        computeTable.insert(xCopy, yCopy, {e.p, e.w});
+        return {e.p, cn.getCached(rWeight)};
       }
     }
 
@@ -2087,9 +2096,8 @@ private:
 
     auto idx = incIdx ? (y.p->v + x.p->v + 1) : x.p->v;
     auto e = makeDDNode(static_cast<Qubit>(idx), edge, true);
-    ComplexNumbers::mul(e.w, e.w, x.w);
-    computeTable.insert(x, y, {e.p, e.w});
-    return e;
+    computeTable.insert(xCopy, yCopy, {e.p, e.w});
+    return {e.p, cn.getCached(rWeight)};
   }
 
   ///
