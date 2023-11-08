@@ -310,10 +310,9 @@ public:
     if (logicalQubitIsAncillary(logicalQubitIndex)) {
       return;
     }
-    // remove the logical qubit and add it back as an ancillary
-    const auto [initialLayoutIndex, outputPermutationIndex] =
-        removeQubit(logicalQubitIndex);
-    addAncillaryQubit(initialLayoutIndex, outputPermutationIndex);
+    ancillary[logicalQubitIndex] = true;
+    nancillae++;
+    nqubits--;
   }
   [[nodiscard]] bool
   logicalQubitIsGarbage(const Qubit logicalQubitIndex) const {
