@@ -1364,4 +1364,38 @@ void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
 
   removeIdentities(qc);
 }
+
+void CircuitOptimizer::replaceMCXWithMCZ(
+    std::vector<std::unique_ptr<Operation>>& ops) {
+  for (auto it = ops.begin(); it != ops.end(); ++it) {
+    auto& op = *it;
+    if (op->getType() == qc::X && op->getNcontrols() > 0) {
+      const auto& controls = op->getControls();
+      assert(op->getNtargets() == 1U);
+      const auto target = op->getTargets()[0];
+      const auto nqubits = op->getNqubits();
+
+      // -c-    ---c---
+      //  |  =     |
+      // -X-    -H-Z-H-
+      std::array<std::unique_ptr<Operation>, 3U> replacementOps{};
+      replacementOps[0] =
+          std::make_unique<StandardOperation>(nqubits, target, H);
+      replacementOps[1] =
+          std::make_unique<StandardOperation>(nqubits, controls, target, Z);
+      replacementOps[2] =
+          std::make_unique<StandardOperation>(nqubits, target, H);
+
+      it = ops.insert(it, std::make_move_iterator(replacementOps.begin()),
+                      std::make_move_iterator(replacementOps.end()));
+
+      // advance to the original operation and delete it
+      std::advance(it, 3);
+      it = ops.erase(it);
+      --it;
+    } else if (op->isCompoundOperation()) {
+      replaceMCXWithMCZ(dynamic_cast<qc::CompoundOperation&>(*op).getOps());
+    }
+  }
+}
 } // namespace qc

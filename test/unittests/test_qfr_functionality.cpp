@@ -2298,3 +2298,84 @@ TEST_F(QFRFunctionality, MeasurementSanityCheck) {
   EXPECT_THROW(qc.measure(0, {"c", 1U}), QFRException);
   EXPECT_THROW(qc.measure(0, {"d", 0U}), QFRException);
 }
+
+TEST_F(QFRFunctionality, replaceCXwithCZ) {
+  qc::QuantumComputation qc(2U);
+  qc.cx(0, 1);
+  CircuitOptimizer::replaceMCXWithMCZ(qc);
+  std::cout << qc << "\n";
+  EXPECT_EQ(qc.getNops(), 3U);
+  EXPECT_EQ(qc.at(0)->getType(), qc::H);
+  EXPECT_EQ(qc.at(0)->getTargets()[0], 1U);
+  EXPECT_EQ(qc.at(1)->getType(), qc::Z);
+  EXPECT_EQ(qc.at(1)->getTargets()[0], 1U);
+  EXPECT_EQ(*qc.at(1)->getControls().begin(), 0U);
+  EXPECT_EQ(qc.at(2)->getType(), qc::H);
+  EXPECT_EQ(qc.at(2)->getTargets()[0], 1U);
+}
+
+TEST_F(QFRFunctionality, replaceCCXwithCCZ) {
+  std::size_t const nqubits = 3U;
+  qc::QuantumComputation qc(nqubits);
+  Controls const controls = {0, 1};
+  Qubit const target = 2U;
+  qc.mcx(controls, target);
+  CircuitOptimizer::replaceMCXWithMCZ(qc);
+  std::cout << qc << "\n";
+  EXPECT_EQ(qc.getNops(), 3U);
+  EXPECT_EQ(qc.at(0)->getType(), qc::H);
+  EXPECT_EQ(qc.at(0)->getTargets()[0], target);
+  EXPECT_EQ(qc.at(1)->getType(), qc::Z);
+  EXPECT_EQ(qc.at(1)->getTargets()[0], target);
+  EXPECT_EQ(qc.at(1)->getControls(), controls);
+  EXPECT_EQ(qc.at(2)->getType(), qc::H);
+  EXPECT_EQ(qc.at(2)->getTargets()[0], target);
+}
+
+TEST_F(QFRFunctionality, replaceCXwithCZinCompoundOperation) {
+  std::size_t const nqubits = 2U;
+  qc::QuantumComputation op(nqubits);
+  op.cx(0, 1);
+
+  qc::QuantumComputation qc(nqubits);
+  qc.emplace_back(op.asCompoundOperation());
+
+  CircuitOptimizer::replaceMCXWithMCZ(qc);
+  std::cout << qc << "\n";
+
+  CircuitOptimizer::flattenOperations(qc);
+  std::cout << qc << "\n";
+  EXPECT_EQ(qc.getNops(), 3U);
+  EXPECT_EQ(qc.at(0)->getType(), qc::H);
+  EXPECT_EQ(qc.at(0)->getTargets()[0], 1U);
+  EXPECT_EQ(qc.at(1)->getType(), qc::Z);
+  EXPECT_EQ(qc.at(1)->getTargets()[0], 1U);
+  EXPECT_EQ(*qc.at(1)->getControls().begin(), 0U);
+  EXPECT_EQ(qc.at(2)->getType(), qc::H);
+  EXPECT_EQ(qc.at(2)->getTargets()[0], 1U);
+}
+
+TEST_F(QFRFunctionality, testToffoliSequenceSimplification) {
+  std::size_t const nqubits = 3U;
+  qc::QuantumComputation qc(nqubits);
+  Controls const controls = {0, 1};
+  Qubit const target = 2U;
+  qc.cx(0, target);
+  qc.mcx(controls, target);
+  CircuitOptimizer::replaceMCXWithMCZ(qc);
+  CircuitOptimizer::singleQubitGateFusion(qc);
+  CircuitOptimizer::flattenOperations(qc);
+  std::cout << qc << "\n";
+
+  qc::QuantumComputation reference(nqubits);
+  reference.h(target);
+  reference.cz(0, target);
+  reference.mcz(controls, target);
+  reference.h(target);
+
+  for (std::size_t i = 0; i < reference.getNops(); ++i) {
+    EXPECT_EQ(qc.at(i)->getType(), reference.at(i)->getType());
+    EXPECT_EQ(qc.at(i)->getTargets(), reference.at(i)->getTargets());
+    EXPECT_EQ(qc.at(i)->getControls(), reference.at(i)->getControls());
+  }
+}
