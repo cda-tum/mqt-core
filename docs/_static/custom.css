@@ -12,4 +12,11 @@
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   grid-gap: 1em;
   align-items: center;
+  margin-top: 0.5rem;
+}
+.acknowledgement {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
