@@ -8,6 +8,7 @@
 #include "dd/DensityNoiseTable.hpp"
 #include "dd/Edge.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
+#include "dd/Node.hpp"
 #include "dd/Package_fwd.hpp"
 #include "dd/StochasticNoiseOperationTable.hpp"
 #include "dd/UnaryComputeTable.hpp"
@@ -2815,7 +2816,6 @@ private:
     return newedge;
   }
 
-public:
   mEdge shiftAllColumnsRecursive(mEdge& e, std::int64_t m,
                                  std::int64_t offset) {
 
@@ -2855,8 +2855,121 @@ public:
     f.w = e.w;
     return f;
   }
+
+public:
   mEdge shiftAllColumns(mEdge& e, std::int64_t m) {
     return shiftAllColumnsRecursive(e, m, 0);
+  }
+
+  mEdge setColumnsToZero(mEdge& e, Qubit k) {
+    if (e.isTerminal()) {
+      return e;
+    }
+    if (k == 0) {
+      return e;
+    }
+    // the matrix of the current DD has dimensions 2^h x 2^h
+    const auto h = e.p->v + 1;
+    std::array<mEdge, NEDGE> edges{};
+    edges[0] = setColumnsToZero(e.p->e[0], k);
+    edges[2] = setColumnsToZero(e.p->e[2], k);
+    if (k < h) {
+      edges[1] = setColumnsToZero(e.p->e[1], k);
+      edges[3] = setColumnsToZero(e.p->e[3], k);
+    } else {
+      edges[1] = mEdge::zero();
+      edges[3] = mEdge::zero();
+    }
+    auto f = makeDDNode(e.p->v, edges);
+    f.w = e.w;
+    return f;
+  }
+
+  mEdge setRowsToZero(mEdge& e, Qubit k) {
+    if (e.isTerminal()) {
+      return e;
+    }
+    if (k == 0) {
+      return e;
+    }
+    // the matrix of the current DD has dimensions 2^h x 2^h
+    const auto h = e.p->v + 1;
+    std::array<mEdge, NEDGE> edges{};
+    edges[0] = setRowsToZero(e.p->e[0], k);
+    edges[1] = setRowsToZero(e.p->e[1], k);
+    if (k < h) {
+      edges[2] = setRowsToZero(e.p->e[2], k);
+      edges[3] = setRowsToZero(e.p->e[3], k);
+    } else {
+      edges[2] = mEdge::zero();
+      edges[3] = mEdge::zero();
+    }
+    auto f = makeDDNode(e.p->v, edges);
+    f.w = e.w;
+    return f;
+  }
+
+  mEdge partialEquivalenceCheckSubroutine(mEdge& u, Qubit m, Qubit k,
+                                          Qubit extra) {
+    // u.printMatrix();
+    // std::cout << "\n";
+    auto u1{u};
+    if (extra > 0) {
+      // u1.printMatrix();
+      // std::cout << "\n";
+      auto idExtra = makeIdent(extra);
+      // idExtra.printMatrix();
+      // std::cout << "\n";
+      u1 = kronecker(u, idExtra);
+      // u1.printMatrix();
+      // std::cout << "\n";
+    }
+    // u1.printMatrix();
+    // std::cout << "\n";
+    auto u2 = setColumnsToZero(u1, k);
+    // u2.printMatrix();
+    // std::cout << "\n";
+    auto u3 = shiftAllColumns(u2, m);
+    // u3.printMatrix();
+    // std::cout << "\n";
+    auto u4 = multiply(conjugateTranspose(u1), u3);
+    // u4.printMatrix();
+    // std::cout << "\n";
+    auto u5 = setRowsToZero(u4, k);
+    // u5.printMatrix();
+    // std::cout << "\n";
+    return u5;
+  }
+
+  bool partialEquivalenceCheck(mEdge& u1, mEdge& u2, Qubit d, Qubit m) {
+    if (u1.isTerminal() && u2.isTerminal()) {
+      return u1 == u2;
+    }
+
+    if (u1.isTerminal() || u2.isTerminal() || u1.p->v != u2.p->v) {
+      throw std::invalid_argument(
+          "The two circuits need to have the same amount of qubits. u1 has " +
+          std::to_string(u1.p->v) + " qubits, and u2 has " +
+          std::to_string(u2.p->v) + " qubits:");
+    }
+    const Qubit h = u1.p->v + 1;
+    Qubit k = h - d;
+    Qubit extra{0};
+    if (m > k) {
+      extra = m - k;
+    }
+    k = k + extra;
+    auto u1Prime = partialEquivalenceCheckSubroutine(u1, m, k, extra);
+    // std::cout << "u1'\n";
+    // u1Prime.printMatrix();
+    // std::cout << "\n";
+    // std::cout << "u2'\n";
+    auto u2Prime = partialEquivalenceCheckSubroutine(u2, m, k, extra);
+    // u2Prime.printMatrix();
+    // std::cout << "\n";
+    bool result = u1Prime == u2Prime;
+
+    return result;
   }
 };
 
