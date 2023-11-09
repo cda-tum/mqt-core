@@ -667,4 +667,22 @@ TEST_F(IO, SingleRegistersDoubleCreg) {
   std::stringstream ss2{};
   qc->dump(ss2, qc::Format::OpenQASM);
   std::cout << ss2.str() << "\n";
+  EXPECT_NE(ss2.str().find(ss.str()), std::string::npos);
+}
+
+TEST_F(IO, MarkAncillaryAndDump) {
+  std::stringstream ss{};
+  ss << "qreg q[2];\n"
+     << "x q[0];\n"
+     << "x q[1];\n";
+  qc->import(ss, qc::Format::OpenQASM);
+  std::cout << *qc << "\n";
+  qc->setLogicalQubitAncillary(0U);
+  EXPECT_EQ(qc->getNancillae(), 1U);
+  EXPECT_TRUE(qc->logicalQubitIsAncillary(0U));
+  std::cout << *qc << "\n";
+  std::stringstream ss2{};
+  qc->dump(ss2, qc::Format::OpenQASM);
+  std::cout << ss2.str() << "\n";
+  EXPECT_NE(ss2.str().find(ss.str()), std::string::npos);
 }
