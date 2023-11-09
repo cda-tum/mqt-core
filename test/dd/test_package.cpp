@@ -768,6 +768,28 @@ TEST(DDPackageTest, KroneckerProduct) {
   EXPECT_EQ(kronecker, kronecker2);
 }
 
+TEST(DDPackageTest, KroneckerIdentityHandling) {
+  auto dd = std::make_unique<dd::Package<>>(3U);
+  // create a Hadamard gate on the middle qubit
+  auto h = dd->makeGateDD(dd::H_MAT, 2U, 1U);
+  // create a single qubit identity
+  auto id = dd->makeIdent(1U);
+  // kronecker both DDs
+  const auto combined = dd->kronecker(h, id);
+  const auto matrix = combined.getMatrix();
+  const auto expectedMatrix = dd::CMat{
+      {dd::SQRT2_2, 0, 0, 0, dd::SQRT2_2, 0, 0, 0},
+      {0, dd::SQRT2_2, 0, 0, 0, dd::SQRT2_2, 0, 0},
+      {0, 0, dd::SQRT2_2, 0, 0, 0, dd::SQRT2_2, 0},
+      {0, 0, 0, dd::SQRT2_2, 0, 0, 0, dd::SQRT2_2},
+      {dd::SQRT2_2, 0, 0, 0, -dd::SQRT2_2, 0, 0, 0},
+      {0, dd::SQRT2_2, 0, 0, 0, -dd::SQRT2_2, 0, 0},
+      {0, 0, dd::SQRT2_2, 0, 0, 0, -dd::SQRT2_2, 0},
+      {0, 0, 0, dd::SQRT2_2, 0, 0, 0, -dd::SQRT2_2},
+  };
+  EXPECT_EQ(matrix, expectedMatrix);
+}
+
 TEST(DDPackageTest, NearZeroNormalize) {
   auto dd = std::make_unique<dd::Package<>>(2);
   const dd::fp nearZero = dd::RealNumber::eps / 10;

@@ -162,7 +162,7 @@ def test_classical() -> None:
 def test_operations() -> None:
     """Test import of operations."""
     qc = QuantumCircuit(3)
-    qc.i(0)
+    qc.id(0)
     qc.cy(0, 1)
     qc.z(2)
     qc.s(2)
@@ -221,7 +221,7 @@ def test_symbolic() -> None:
     assert expr.constant == 2
     assert not mqt_qc.is_variable_free()
 
-    qc = qc.bind_parameters({lambda_: 0, phi: 0, theta: 0})
+    qc = qc.assign_parameters({lambda_: 0, phi: 0, theta: 0})
     mqt_qc = qiskit_to_mqt(qc)
     assert mqt_qc.is_variable_free()
     assert mqt_qc[0].parameter[0] == 2

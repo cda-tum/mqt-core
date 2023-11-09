@@ -129,7 +129,12 @@ write_to = "src/mqt/core/_version.py"
 minversion = "7.0"
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
-filterwarnings = ["error", 'ignore:.*qiskit.__qiskit_version__.*:DeprecationWarning:qiskit:']
+filterwarnings = [
+    "error",
+    'ignore:.*qiskit.__qiskit_version__.*:DeprecationWarning:qiskit:',
+    'ignore:.*qiskit.utils.algorithm_globals.QiskitAlgorithmGlobals*:DeprecationWarning:qiskit',
+    'ignore:.*Building a flow controller with keyword arguments is going to be deprecated*:PendingDeprecationWarning:qiskit',
+]
 log_cli_level = "info"
 testpaths = ["test/python"]
 
@@ -183,9 +188,11 @@ extend-select = [
     "EXE",         # flake8-executable
     "FA",          # flake8-future-annotations
     "FLY",         # flynt
+    "FURB",        # refurb
     "I",           # isort
     "ICN",         # flake8-import-conventions
     "ISC",         # flake8-implicit-str-concat
+    "LOG",         # flake8-logging-format
     "N",           # flake8-naming
     "NPY",         # numpy
     "PERF",        # perflint
@@ -199,17 +206,30 @@ extend-select = [
     "RET",         # flake8-return
     "RSE",         # flake8-raise
     "RUF",         # Ruff-specific
+    "S",           # flake8-bandit
     "SLF",         # flake8-self
     "SLOT",        # flake8-slots
     "SIM",         # flake8-simplify
+    "T20",         # flake8-print
     "TCH",         # flake8-type-checking
     "TID251",      # flake8-tidy-imports.banned-api
     "TRY",         # tryceratops
     "UP",          # pyupgrade
     "YTT",         # flake8-2020
 ]
-ignore = [
-    "PLR",  # Design related pylint codes
+extend-ignore = [
+    "ANN101",  # Missing type annotation for `self` in method
+    "ANN102",  # Missing type annotation for `cls` in classmethod
+    "ISC001",  # Conflicts with formatter
+    "PLR0904", # Too many public methods
+    "PLR0911", # Too many return statements
+    "PLR0912", # Too many branches
+    "PLR0913", # Too many arguments
+    "PLR0915", # Too many local statements
+    "PLR2004", # Magic value used in comparison
+    "PLC0415", # Import should be at top of file
+    "PT004",   # Incorrect, just usefixtures instead.
+    "S101",    # Use of assert detected
 ]
 typing-modules = ["mqt.core._compat.typing"]
 isort.required-imports = ["from __future__ import annotations"]
@@ -227,6 +247,9 @@ isort.required-imports = ["from __future__ import annotations"]
 "importlib_resources".msg = "Use scikit_build_core._compat.importlib.resources instead."
 
 [tool.ruff.lint.per-file-ignores]
+"test/python/**" = ["T20", "ANN"]
+"docs/**" = ["T20"]
+"noxfile.py" = ["T20", "TID251"]
 "*.pyi" = ["D"]  # pydocstyle
 "*.ipynb" = [
     "D",    # pydocstyle

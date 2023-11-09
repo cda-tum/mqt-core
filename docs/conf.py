@@ -109,7 +109,7 @@ autosectionlabel_prefix_document = True
 class CDAStyle(UnsrtStyle):
     """Custom style for including PDF links."""
 
-    def format_url(self, _e: Entry) -> HRef:  # noqa: ANN101
+    def format_url(self, _e: Entry) -> HRef:  # noqa: PLR6301
         """Format URL field as a link to the PDF."""
         url = field("url", raw=True)
         return href()[url, "[PDF]"]
