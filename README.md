@@ -58,7 +58,7 @@ If you want to use the ZX library, it is recommended (although not strictly nece
 
 ## Acknowledgements
 
-This project has received funding from the European
+The Munich Quantum Toolkit has been supported by the European
 Research Council (ERC) under the European Union's Horizon 2020 research and innovation program (grant agreement
 No. 101001318), the Bavarian State Ministry for Science and Arts through the Distinguished Professorship Program, as well as the
 Munich Quantum Valley, which is supported by the Bavarian state government with funds from the Hightech Agenda Bayern Plus.
