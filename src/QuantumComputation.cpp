@@ -673,10 +673,6 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
     of << "opaque teleport src, anc, tgt;\n";
   }
 
-  assert(nqubits == 0U || !qregs.empty());
-  assert(nclassics == 0U || !cregs.empty());
-  assert(nancillae == 0U || !ancregs.empty());
-
   // combine qregs and ancregs
   QuantumRegisterMap combinedRegs = qregs;
   for (const auto& [regName, reg] : ancregs) {
@@ -685,10 +681,13 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
   printSortedRegisters(combinedRegs, "qreg", of);
   RegisterNames combinedRegNames{};
   createRegisterArray(combinedRegs, combinedRegNames);
+  assert(combinedRegNames.size() == nqubits + nancillae);
 
   printSortedRegisters(cregs, "creg", of);
   RegisterNames cregnames{};
   createRegisterArray(cregs, cregnames);
+  assert(cregnames.size() == nclassics);
+
   for (const auto& op : ops) {
     op->dumpOpenQASM(of, combinedRegNames, cregnames);
   }
