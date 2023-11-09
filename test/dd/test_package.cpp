@@ -2051,7 +2051,6 @@ TEST(DDPackageTest, DDMShiftAllColumns3) {
   expectedMatrix.insert(expectedMatrix.end(), expectedMatrixPart2.begin(),
                         expectedMatrixPart2.end());
   EXPECT_EQ(outputMatrix.getMatrix(), expectedMatrix);
-  // TODO
 }
 
 TEST(DDPackageTest, DDMTestToMatrixAndBack) {
@@ -2113,7 +2112,7 @@ TEST(DDPackageTest, DDMSetRowsToZero) {
 }
 
 TEST(DDPackageTest, DDMPartialEquivalenceChecking) {
-  const auto nqubits = 2U;
+  const auto nqubits = 4U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   const auto inputMatrix =
       dd::CMat{{1, 1, 1, 1}, {1, -1, 1, -1}, {1, 1, -1, -1}, {1, -1, -1, 1}};
@@ -2139,7 +2138,7 @@ TEST(DDPackageTest, DDMPartialEquivalenceChecking) {
 }
 
 TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaper) {
-  const auto nqubits = 3U;
+  const auto nqubits = 4U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
   auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 2);
@@ -2185,8 +2184,8 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaperWith4thQubit) {
   EXPECT_TRUE(result);
 }
 
-TEST(DDPackageTest, DDMKroeneckerProduct) { // passed
-  const auto nqubits = 3U;
+TEST(DDPackageTest, DDMKroneckerProduct) { // passed
+  const auto nqubits = 2U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   const auto inputMatrix = dd::CMat{{1, dd::SQRT2_2}, {dd::SQRT2_2, 1}};
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
@@ -2199,8 +2198,8 @@ TEST(DDPackageTest, DDMKroeneckerProduct) { // passed
   EXPECT_EQ(outputDD.getMatrix(), expectedMatrix);
 }
 
-TEST(DDPackageTest, DDMKroeneckerProduct2) { // passed
-  const auto nqubits = 3U;
+TEST(DDPackageTest, DDMKroneckerProduct2) {
+  const auto nqubits = 2U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   const auto inputMatrix =
       dd::CMat{{-dd::SQRT2_2, dd::SQRT2_2}, {dd::SQRT2_2, -dd::SQRT2_2}};
@@ -2214,8 +2213,8 @@ TEST(DDPackageTest, DDMKroeneckerProduct2) { // passed
   EXPECT_EQ(outputDD.getMatrix(), expectedMatrix);
 }
 
-TEST(DDPackageTest, DDMKroeneckerProduct3) { // passed
-  const auto nqubits = 3U;
+TEST(DDPackageTest, DDMKroneckerProduct3) {
+  const auto nqubits = 2U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   const auto inputMatrix = dd::CMat{{dd::SQRT2_2, 0}, {0, dd::SQRT2_2}};
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
@@ -2225,11 +2224,11 @@ TEST(DDPackageTest, DDMKroeneckerProduct3) { // passed
                                        {0, dd::SQRT2_2, 0, 0},
                                        {0, 0, dd::SQRT2_2, 0},
                                        {0, 0, 0, dd::SQRT2_2}};
-  EXPECT_EQ(outputDD, dd->makeIdent(2));
+  EXPECT_EQ(outputDD.getMatrix(), expectedMatrix);
 }
 
-TEST(DDPackageTest, DDMKroeneckerProduct4) { // passed but it's wrong
-  const auto nqubits = 3U;
+TEST(DDPackageTest, DDMKroneckerProduct4) {
+  const auto nqubits = 4U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   const auto inputMatrix =
       dd::CMat{{0, 0, 1, 0, 0, 0, 0, 0},
@@ -2244,22 +2243,22 @@ TEST(DDPackageTest, DDMKroeneckerProduct4) { // passed but it's wrong
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
   auto identity = dd->makeIdent(1);
   auto outputDD = dd->kronecker(inputDD, identity);
-  const auto expectedMatrix =
-      dd::CMat{{0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-               {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-               {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-               {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-               {1, 0, 0, 0, 0, 0, 0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0},
-               {0, 1, 0, 0, 0, 0, 0, 0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0},
-               {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0},
-               {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, dd::SQRT2_2, 0, 0, 0, 0},
-               {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
-               {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},
-               {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-               {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-               {dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-               {0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-               {0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0},
-               {0, 0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0}};
+  const auto expectedMatrix = dd::CMat{
+      {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+      {dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0},
+      {0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0},
+      {0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0},
+      {0, 0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, dd::SQRT2_2, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+      {dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, -dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0},
+      {0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, -dd::SQRT2_2, 0, 0, 0, 0, 0, 0},
+      {0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, -dd::SQRT2_2, 0, 0, 0, 0, 0},
+      {0, 0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, -dd::SQRT2_2, 0, 0, 0, 0}};
   EXPECT_EQ(outputDD.getMatrix(), expectedMatrix);
 }
