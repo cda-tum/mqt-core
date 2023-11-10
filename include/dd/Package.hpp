@@ -2824,8 +2824,12 @@ private:
     return newedge;
   }
 
-  mEdge shiftAllColumnsRecursive(mEdge& e, std::int64_t m,
-                                 std::int64_t offset) {
+  /**
+      Equally divides the rows of the matrix represented by e intro 2^m parts.
+      For the i-th part (i starts from 0), right shifts the contents for (i +
+  offset) columns.
+  **/
+  mEdge shiftAllRowsRecursive(mEdge& e, std::int64_t m, std::int64_t offset) {
 
     if (e.isTerminal()) {
       return e;
@@ -2838,25 +2842,27 @@ private:
     const auto mDecremented = (m > 0 ? m - 1 : 0);
     std::array<mEdge, NEDGE> edges{};
     if (offset == 1 << (h - 1)) {
-      // shift the first half of the matrix
+      // shift the first half of the matrix by 2^(h-1)
       edges[0] = mEdge::zero();
-      edges[1] = shiftAllColumnsRecursive(e.p->e[0], mDecremented, 0);
-      // shift the second half of the matrix
+      edges[1] = shiftAllRowsRecursive(e.p->e[0], mDecremented, 0);
+      // shift the second half of the matrix by 2^(h-1)
       edges[2] = mEdge::zero();
-      edges[3] = shiftAllColumnsRecursive(e.p->e[2], mDecremented,
-                                          m > 0 ? 1 << (m - 1) : 0);
+      edges[3] = shiftAllRowsRecursive(e.p->e[2], mDecremented,
+                                       m > 0 ? 1 << (m - 1) : 0);
     } else {
-      edges[0] = shiftAllColumnsRecursive(e.p->e[0], mDecremented, offset);
-      edges[1] = shiftAllColumnsRecursive(e.p->e[1], mDecremented, offset);
+      // don't shift the first half of the matrix yet
+      edges[0] = shiftAllRowsRecursive(e.p->e[0], mDecremented, offset);
+      edges[1] = shiftAllRowsRecursive(e.p->e[1], mDecremented, offset);
       if (m == h) {
-        // shift the second half of the matrix
+        // shift the second half of the matrix by 2^(h-1)
         edges[2] = mEdge::zero();
-        edges[3] = shiftAllColumnsRecursive(e.p->e[2], mDecremented, offset);
+        edges[3] = shiftAllRowsRecursive(e.p->e[2], mDecremented, offset);
       } else {
-        edges[2] = shiftAllColumnsRecursive(
-            e.p->e[2], mDecremented, (m > 0 ? 1 << (m - 1) : 0) + offset);
-        edges[3] = shiftAllColumnsRecursive(
-            e.p->e[3], mDecremented, (m > 0 ? 1 << (m - 1) : 0) + offset);
+        // don't shift the second half of the matrix yet
+        edges[2] = shiftAllRowsRecursive(e.p->e[2], mDecremented,
+                                         (m > 0 ? 1 << (m - 1) : 0) + offset);
+        edges[3] = shiftAllRowsRecursive(e.p->e[3], mDecremented,
+                                         (m > 0 ? 1 << (m - 1) : 0) + offset);
       }
     }
     auto f = makeDDNode(e.p->v, edges);
@@ -2865,10 +2871,20 @@ private:
   }
 
 public:
-  mEdge shiftAllColumns(mEdge& e, std::int64_t m) {
-    return shiftAllColumnsRecursive(e, m, 0);
+  /**
+      Equally divides the rows of the matrix represented by e intro 2^m parts.
+      For the i-th part (i starts from 0), right shifts the contents for i
+  columns.
+  **/
+  mEdge shiftAllRows(mEdge& e, std::int64_t m) {
+    return shiftAllRowsRecursive(e, m, 0);
   }
 
+  /**
+      Equally divides the columns of the matrix represented by e intro parts of
+  size 2^k. For each part, keeps the leftmost column unchanged, and sets the
+  remaining columns to 0.
+  **/
   mEdge setColumnsToZero(mEdge& e, Qubit k) {
     if (e.isTerminal()) {
       return e;
@@ -2893,6 +2909,11 @@ public:
     return f;
   }
 
+  /**
+      Equally divides the rows of the matrix represented by e intro parts of
+  size 2^k. For each part, keeps the top row unchanged, and sets the remaining
+  entries to 0.
+  **/
   mEdge setRowsToZero(mEdge& e, Qubit k) {
     if (e.isTerminal()) {
       return e;
@@ -2917,49 +2938,54 @@ public:
     return f;
   }
 
+private:
   mEdge partialEquivalenceCheckSubroutine(mEdge& u, Qubit m, Qubit k,
                                           Qubit extra) {
-    // u.printMatrix();
-    // std::cout << "\n";
     auto u1{u};
+    // add extra ancillary qubits
     if (extra > 0) {
-      // u1.printMatrix();
-      // std::cout << "\n";
+      if (u.p->v + 1U + extra > nqubits) {
+        resize(u.p->v + 1U + extra);
+      }
       auto idExtra = makeIdent(extra);
-      // idExtra.printMatrix();
-      // std::cout << "\n";
       u1 = kronecker(u, idExtra);
-      // u1.printMatrix();
-      // std::cout << "\n";
     }
-    // u1.printMatrix();
-    // std::cout << "\n";
     auto u2 = setColumnsToZero(u1, k);
-    // u2.printMatrix();
-    // std::cout << "\n";
-    auto u3 = shiftAllColumns(u2, m);
-    // u3.printMatrix();
-    // std::cout << "\n";
+    auto u3 = shiftAllRows(u2, m);
     auto u4 = multiply(conjugateTranspose(u1), u3);
-    // u4.printMatrix();
-    // std::cout << "\n";
     auto u5 = setRowsToZero(u4, k);
-    // u5.printMatrix();
-    // std::cout << "\n";
     return u5;
   }
 
+public:
+  /**
+    Checks for partial equivalence between the two circuits u1 and u2,
+     where the last d qubits of the circuits are the data qubits and
+     the last m qubits are the measured qubits.
+    @param u1 First circuit
+    @param u2 Second circuit
+    @param d Number of data qubits
+    @param m Number of measured qubits
+    @return true if the two circuits u1 and u2 are partially equivalent
+    **/
   bool partialEquivalenceCheck(mEdge& u1, mEdge& u2, Qubit d, Qubit m) {
+    if (m == 0) {
+      return true;
+    }
     if (u1.isTerminal() && u2.isTerminal()) {
       return u1 == u2;
     }
-
-    if (u1.isTerminal() || u2.isTerminal() || u1.p->v != u2.p->v) {
-      throw std::invalid_argument(
-          "The two circuits need to have the same amount of qubits. u1 has " +
-          std::to_string(u1.p->v) + " qubits, and u2 has " +
-          std::to_string(u2.p->v) + " qubits:");
+    // add qubits such that u1 and u2 have the same dimension
+    if (u1.isTerminal()) {
+      u1 = kronecker(u1, makeIdent(u2.p->v + 1));
+    } else if (u2.isTerminal()) {
+      u2 = kronecker(u2, makeIdent(u1.p->v + 1));
+    } else if (u1.p->v < u2.p->v) {
+      u1 = kronecker(u1, makeIdent(u2.p->v - u1.p->v));
+    } else if (u1.p->v > u2.p->v) {
+      u2 = kronecker(u2, makeIdent(u1.p->v - u2.p->v));
     }
+
     const Qubit h = u1.p->v + 1;
     Qubit k = h - d;
     Qubit extra{0};
@@ -2967,17 +2993,11 @@ public:
       extra = m - k;
     }
     k = k + extra;
-    auto u1Prime = partialEquivalenceCheckSubroutine(u1, m, k, extra);
-    // std::cout << "u1'\n";
-    // u1Prime.printMatrix();
-    // std::cout << "\n";
-    // std::cout << "u2'\n";
-    auto u2Prime = partialEquivalenceCheckSubroutine(u2, m, k, extra);
-    // u2Prime.printMatrix();
-    // std::cout << "\n";
-    bool result = u1Prime == u2Prime;
 
-    return result;
+    auto u1Prime = partialEquivalenceCheckSubroutine(u1, m, k, extra);
+    auto u2Prime = partialEquivalenceCheckSubroutine(u2, m, k, extra);
+
+    return u1Prime == u2Prime;
   }
 };
 
