@@ -5,12 +5,14 @@ from __future__ import annotations
 from . import operations, symbolic
 from ._core import Permutation, QuantumComputation
 from ._version import version as __version__
+from evaluation import compare
 
 __all__ = [
     "operations",
     "Permutation",
     "QuantumComputation",
     "symbolic",
+    "compare",
     "__version__",
 ]
 
