@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from . import operations, symbolic
 from ._core import Permutation, QuantumComputation
 from ._version import version as __version__
 
 __all__ = [
-    "operations",
     "Permutation",
     "QuantumComputation",
-    "symbolic",
     "__version__",
 ]
 

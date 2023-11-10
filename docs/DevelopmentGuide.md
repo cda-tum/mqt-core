@@ -206,8 +206,7 @@ If you don't want to use {code}`nox`, you can also run the tests directly using 
 The Python code is formatted and linted using a collection of [pre-commit hooks](https://pre-commit.com/).
 This collection includes:
 
-- [black](https://black.readthedocs.io/en/stable/) -- a code formatter that automatically formats Python code according to the [PEP 8 style guide](https://peps.python.org/pep-0008/)
-- [ruff](https://docs.astral.sh/ruff/) -- an extremely fast Python linter, written in Rust.
+- [ruff](https://docs.astral.sh/ruff/) -- an extremely fast Python linter and formatter, written in Rust.
 - [mypy](https://mypy-lang.org/) -- a static type checker for Python code
 
 There are two ways of using these hooks:
