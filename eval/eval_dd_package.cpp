@@ -31,15 +31,18 @@ std::string runCLI(const char* cmd) {
   return realResult;
 }
 
-[[maybe_unused]] static const std::string CURRENT_BRANCH = runCLI("git symbolic-ref --short -q HEAD");
-[[maybe_unused]] static const std::string CURRENT_COMMIT = runCLI("git rev-parse --short HEAD");
+[[maybe_unused]] static const std::string CURRENT_BRANCH =
+    runCLI("git symbolic-ref --short -q HEAD");
+[[maybe_unused]] static const std::string CURRENT_COMMIT =
+    runCLI("git rev-parse --short HEAD");
 static const std::string FILENAME = "results.json";
 static const std::string FILENAME_REDUCED = "results_reduced.json";
 // Add branch name or commit hash to filename if necessary
 
 static constexpr std::size_t SEED = 42U;
 
-void transposeAndReduceJson(const std::string& fileName, const std::string& outFilename){
+void transposeAndReduceJson(const std::string& fileName,
+                            const std::string& outFilename) {
   std::ifstream ifs(fileName);
   nlohmann::json j;
   ifs >> j;
@@ -82,7 +85,8 @@ void transposeAndReduceJson(const std::string& fileName, const std::string& outF
                       k[algorithm][type][nqubits]["dd"][stat][key][key2][key3]
                        [branch] = value3;
                     } else {
-                      k[algorithm][type][nqubits]["dd"][stat][key][key2][branch] = value3;
+                      k[algorithm][type][nqubits]["dd"][stat][key][key2]
+                       [branch] = value3;
                     }
                   }
                   continue;
@@ -135,8 +139,7 @@ void verifyAndSave(const std::string& name, const std::string& type,
   EXPECT_TRUE(exp.success());
 
   nlohmann::json j;
-  std::fstream file(FILENAME,
-                    std::ios::in | std::ios::out | std::ios::ate);
+  std::fstream file(FILENAME, std::ios::in | std::ios::out | std::ios::ate);
   if (!file.is_open()) {
     std::ofstream outputFile(FILENAME);
     outputFile << nlohmann::json();
