@@ -1,7 +1,7 @@
 #include "operations/Expression.hpp"
-#include "pybind11/operators.h"
 #include "python/pybind11.hpp"
 
+#include <pybind11/operators.h>
 #include <sstream>
 
 namespace mqt {
@@ -84,6 +84,8 @@ void registerExpression(py::module& m) {
                               double lhs) { return rhs / lhs; })
       // comparison operators
       .def(py::self == py::self)
+      .def(py::self != py::self)
+      .def(hash(py::self))
       .def("__str__",
            [](const sym::Expression<double, double>& expr) {
              std::stringstream ss;

@@ -1536,6 +1536,7 @@ TEST_F(QFRFunctionality, FlattenRecursive) {
   // create a nested compound operation
   QuantumComputation op(nqubits);
   op.x(0);
+  op.z(0);
   QuantumComputation op2(nqubits);
   op2.emplace_back(op.asCompoundOperation());
   QuantumComputation qc(nqubits);
@@ -1549,21 +1550,29 @@ TEST_F(QFRFunctionality, FlattenRecursive) {
     EXPECT_FALSE(g->isCompoundOperation());
   }
 
-  auto& gate = **qc.begin();
-  EXPECT_EQ(gate.getType(), qc::X);
-  EXPECT_EQ(gate.getTargets().at(0), 0U);
-  EXPECT_TRUE(gate.getControls().empty());
+  ASSERT_EQ(qc.getNops(), 2U);
+  auto& gate = qc.at(0);
+  EXPECT_EQ(gate->getType(), qc::X);
+  EXPECT_EQ(gate->getTargets().at(0), 0U);
+  EXPECT_TRUE(gate->getControls().empty());
+  auto& gate2 = qc.at(1);
+  EXPECT_EQ(gate2->getType(), qc::Z);
+  EXPECT_EQ(gate2->getTargets().at(0), 0U);
+  EXPECT_TRUE(gate2->getControls().empty());
 }
 
 TEST_F(QFRFunctionality, OperationEquality) {
   const auto x = StandardOperation(1U, 0, qc::X);
   const auto z = StandardOperation(1U, 0, qc::Z);
   EXPECT_TRUE(x.equals(x));
+  EXPECT_EQ(x, x);
   EXPECT_FALSE(x.equals(z));
+  EXPECT_NE(x, z);
 
   const auto x0 = StandardOperation(2U, 0, qc::X);
   const auto x1 = StandardOperation(2U, 1, qc::X);
   EXPECT_FALSE(x0.equals(x1));
+  EXPECT_NE(x0, x1);
   Permutation perm0{};
   perm0[0] = 1;
   perm0[1] = 0;
@@ -1573,19 +1582,26 @@ TEST_F(QFRFunctionality, OperationEquality) {
   const auto cx01 = StandardOperation(2U, 0, 1, qc::X);
   const auto cx10 = StandardOperation(2U, 1, 0, qc::X);
   EXPECT_FALSE(cx01.equals(cx10));
+  EXPECT_NE(cx01, cx10);
   EXPECT_FALSE(x0.equals(cx01));
+  EXPECT_NE(x0, cx01);
 
   const auto p = StandardOperation(1U, 0, qc::P, {2.0});
   const auto pm = StandardOperation(1U, 0, qc::P, {-2.0});
   EXPECT_FALSE(p.equals(pm));
+  EXPECT_NE(p, pm);
 
   const auto measure0 = NonUnitaryOperation(2U, 0, 0U);
   const auto measure1 = NonUnitaryOperation(2U, 0, 1U);
   const auto measure2 = NonUnitaryOperation(2U, 1, 0U);
   EXPECT_FALSE(measure0.equals(x0));
+  EXPECT_NE(measure0, x0);
   EXPECT_TRUE(measure0.equals(measure0));
+  EXPECT_EQ(measure0, measure0);
   EXPECT_FALSE(measure0.equals(measure1));
+  EXPECT_NE(measure0, measure1);
   EXPECT_FALSE(measure0.equals(measure2));
+  EXPECT_NE(measure0, measure2);
   EXPECT_TRUE(measure0.equals(measure2, perm0, {}));
   EXPECT_TRUE(measure0.equals(measure2, {}, perm0));
 
@@ -1611,10 +1627,15 @@ TEST_F(QFRFunctionality, OperationEquality) {
   const auto classic3 =
       ClassicControlledOperation(zp, controlRegister0, expectedValue0);
   EXPECT_FALSE(classic0.equals(x));
+  EXPECT_NE(classic0, x);
   EXPECT_TRUE(classic0.equals(classic0));
+  EXPECT_EQ(classic0, classic0);
   EXPECT_FALSE(classic0.equals(classic1));
+  EXPECT_NE(classic0, classic1);
   EXPECT_FALSE(classic0.equals(classic2));
+  EXPECT_NE(classic0, classic2);
   EXPECT_FALSE(classic0.equals(classic3));
+  EXPECT_NE(classic0, classic3);
 
   auto compound0 = CompoundOperation(1U);
   compound0.emplace_back<StandardOperation>(1U, 0, qc::X);
@@ -1627,9 +1648,13 @@ TEST_F(QFRFunctionality, OperationEquality) {
   compound2.emplace_back<StandardOperation>(1U, 0, qc::Z);
 
   EXPECT_FALSE(compound0.equals(x));
+  EXPECT_NE(compound0, x);
   EXPECT_TRUE(compound0.equals(compound0));
+  EXPECT_EQ(compound0, compound0);
   EXPECT_FALSE(compound0.equals(compound1));
+  EXPECT_NE(compound0, compound1);
   EXPECT_FALSE(compound0.equals(compound2));
+  EXPECT_NE(compound0, compound2);
 }
 
 TEST_F(QFRFunctionality, CNOTCancellation1) {
@@ -2272,4 +2297,85 @@ TEST_F(QFRFunctionality, MeasurementSanityCheck) {
 
   EXPECT_THROW(qc.measure(0, {"c", 1U}), QFRException);
   EXPECT_THROW(qc.measure(0, {"d", 0U}), QFRException);
+}
+
+TEST_F(QFRFunctionality, replaceCXwithCZ) {
+  qc::QuantumComputation qc(2U);
+  qc.cx(0, 1);
+  CircuitOptimizer::replaceMCXWithMCZ(qc);
+  std::cout << qc << "\n";
+  EXPECT_EQ(qc.getNops(), 3U);
+  EXPECT_EQ(qc.at(0)->getType(), qc::H);
+  EXPECT_EQ(qc.at(0)->getTargets()[0], 1U);
+  EXPECT_EQ(qc.at(1)->getType(), qc::Z);
+  EXPECT_EQ(qc.at(1)->getTargets()[0], 1U);
+  EXPECT_EQ(*qc.at(1)->getControls().begin(), 0U);
+  EXPECT_EQ(qc.at(2)->getType(), qc::H);
+  EXPECT_EQ(qc.at(2)->getTargets()[0], 1U);
+}
+
+TEST_F(QFRFunctionality, replaceCCXwithCCZ) {
+  std::size_t const nqubits = 3U;
+  qc::QuantumComputation qc(nqubits);
+  Controls const controls = {0, 1};
+  Qubit const target = 2U;
+  qc.mcx(controls, target);
+  CircuitOptimizer::replaceMCXWithMCZ(qc);
+  std::cout << qc << "\n";
+  EXPECT_EQ(qc.getNops(), 3U);
+  EXPECT_EQ(qc.at(0)->getType(), qc::H);
+  EXPECT_EQ(qc.at(0)->getTargets()[0], target);
+  EXPECT_EQ(qc.at(1)->getType(), qc::Z);
+  EXPECT_EQ(qc.at(1)->getTargets()[0], target);
+  EXPECT_EQ(qc.at(1)->getControls(), controls);
+  EXPECT_EQ(qc.at(2)->getType(), qc::H);
+  EXPECT_EQ(qc.at(2)->getTargets()[0], target);
+}
+
+TEST_F(QFRFunctionality, replaceCXwithCZinCompoundOperation) {
+  std::size_t const nqubits = 2U;
+  qc::QuantumComputation op(nqubits);
+  op.cx(0, 1);
+
+  qc::QuantumComputation qc(nqubits);
+  qc.emplace_back(op.asCompoundOperation());
+
+  CircuitOptimizer::replaceMCXWithMCZ(qc);
+  std::cout << qc << "\n";
+
+  CircuitOptimizer::flattenOperations(qc);
+  std::cout << qc << "\n";
+  EXPECT_EQ(qc.getNops(), 3U);
+  EXPECT_EQ(qc.at(0)->getType(), qc::H);
+  EXPECT_EQ(qc.at(0)->getTargets()[0], 1U);
+  EXPECT_EQ(qc.at(1)->getType(), qc::Z);
+  EXPECT_EQ(qc.at(1)->getTargets()[0], 1U);
+  EXPECT_EQ(*qc.at(1)->getControls().begin(), 0U);
+  EXPECT_EQ(qc.at(2)->getType(), qc::H);
+  EXPECT_EQ(qc.at(2)->getTargets()[0], 1U);
+}
+
+TEST_F(QFRFunctionality, testToffoliSequenceSimplification) {
+  std::size_t const nqubits = 3U;
+  qc::QuantumComputation qc(nqubits);
+  Controls const controls = {0, 1};
+  Qubit const target = 2U;
+  qc.cx(0, target);
+  qc.mcx(controls, target);
+  CircuitOptimizer::replaceMCXWithMCZ(qc);
+  CircuitOptimizer::singleQubitGateFusion(qc);
+  CircuitOptimizer::flattenOperations(qc);
+  std::cout << qc << "\n";
+
+  qc::QuantumComputation reference(nqubits);
+  reference.h(target);
+  reference.cz(0, target);
+  reference.mcz(controls, target);
+  reference.h(target);
+
+  for (std::size_t i = 0; i < reference.getNops(); ++i) {
+    EXPECT_EQ(qc.at(i)->getType(), reference.at(i)->getType());
+    EXPECT_EQ(qc.at(i)->getTargets(), reference.at(i)->getTargets());
+    EXPECT_EQ(qc.at(i)->getControls(), reference.at(i)->getControls());
+  }
 }

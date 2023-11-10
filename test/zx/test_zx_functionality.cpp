@@ -1,7 +1,7 @@
 #include "QuantumComputation.hpp"
-#include "zx/Definitions.hpp"
 #include "zx/FunctionalityConstruction.hpp"
 #include "zx/Simplify.hpp"
+#include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
 #include <array>
@@ -100,6 +100,14 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
      << "cp(pi/2) q[0], q[1];"
      << "cp(pi/4) q[0], q[1];"
      << "cp(pi/8) q[0], q[1];"
+     << "rzz(pi/4) q[0], q[1];"
+     << "rxx(pi/4) q[0], q[1];"
+     << "ryy(pi/4) q[0], q[1];"
+     << "rzx(pi/4) q[0], q[1];"
+     << "rzx(-pi/4) q[0], q[1];"
+     << "ryy(-pi/4) q[0], q[1];"
+     << "rxx(-pi/4) q[0], q[1];"
+     << "rzz(-pi/4) q[0], q[1];"
      << "cp(-pi/8) q[0], q[1];"
      << "cp(-pi/4) q[0], q[1];"
      << "cp(-pi/2) q[0], q[1];"
