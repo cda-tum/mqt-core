@@ -43,9 +43,6 @@ If you have any questions, feel free to create a [discussion](https://github.com
 Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/runner-images).
 However, the implementation should be compatible with any current C++ compiler supporting C++17 and a minimum CMake version of 3.19.
 
-_Disclaimer_: We noticed some issues when compiling with Microsoft's `MSVC` compiler toolchain. If you are developing under Windows, consider using the `clang` compiler toolchain.
-A detailed description of how to set this up can be found [here](https://learn.microsoft.com/en-us/cpp/build/clang-support-msbuild?view=msvc-160).
-
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
 If you want to use the ZX library, it is recommended (although not strictly necessary) to have [GMP](https://gmplib.org/) installed in your system.
