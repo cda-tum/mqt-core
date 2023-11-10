@@ -22,9 +22,42 @@ The MQT Core library forms the backbone of the quantum software tools developed 
 - [MQT QCEC](https://github.com/cda-tum/mqt-qcec): A Tool for Quantum Circuit Equivalence Checking.
 - [MQT QECC](https://github.com/cda-tum/mqt-qecc): A Tool for Quantum Error Correcting Codes.
 - [MQT DDVis](https://github.com/cda-tum/mqt-ddvis): A Web-Application visualizing Decision Diagrams for Quantum Computing.
-- [MQT SyReC](https://github.com/cda-tum/mqt-syrec): A Tool for Synthesis of Reversible Circuits/Quanutm Computing Oracles.
+- [MQT SyReC](https://github.com/cda-tum/mqt-syrec): A Tool for Synthesis of Reversible Circuits/Quantum Computing Oracles.
 
 For a full list of tools and libraries, please visit the [MQT website](https://mqt.readthedocs.io/).
+
+<p align="center">
+  <a href="https://mqt.readthedocs.io/projects/core">
+  <img width=30% src="https://img.shields.io/badge/documentation-blue?style=for-the-badge&logo=read%20the%20docs" alt="Documentation" />
+  </a>
+</p>
+
+If you have any questions, feel free to create a [discussion](https://github.com/cda-tum/mqt-core/discussions) or an [issue](https://github.com/cda-tum/mqt-core/issues) on [GitHub](https://github.com/cda-tum/mqt-core).
+
+## Getting Started
+
+`mqt.core` is available via [PyPI](https://pypi.org/project/mqt.core/) for all major operating systems and supports Python 3.8 to 3.12.
+
+```console
+(venv) $ pip install mqt.core
+```
+
+The following code gives an example on the usage:
+
+```python3
+from mqt.core import QuantumComputation
+
+qc = QuantumComputation(2, 2)
+qc.h(0)
+qc.cx(0, 1)
+qc.measure(range(2), range(2))
+
+print(qc)
+```
+
+**Detailed documentation and examples are available at [ReadTheDocs](https://mqt.readthedocs.io/projects/core).**
+
+## Library Overview
 
 <!-- SPHINX-START -->
 
@@ -35,8 +68,6 @@ MQT Core encompasses:
 - `MQT::CoreZX`: A library for working with ZX-diagrams and the ZX-calculus.
 - `MQT::CoreECC`: A library for working with error correcting codes (ECCs) for quantum computing.
 - `MQT::CorePython`: A Python interface for the MQT Core library (e.g., facilitating the import of Qiskit QuantumCircuits).
-
-If you have any questions, feel free to create a [discussion](https://github.com/cda-tum/mqt-core/discussions) or an [issue](https://github.com/cda-tum/mqt-core/issues) on [GitHub](https://github.com/cda-tum/mqt-core).
 
 ## System Requirements
 
