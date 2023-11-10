@@ -12,7 +12,6 @@ __all__ = [
     "Permutation",
     "QuantumComputation",
     "symbolic",
-    "compare",
     "__version__",
 ]
 
