@@ -93,6 +93,9 @@ int main() {
                         "ctrl(2) @ x q[CTRL_INDEX], q[CTRL_INDEX + 1], p;\n"
                         "c[0] = measure q[0];\n"
                         "c = measure q;\n"
+                        "if (c == 1) {\n"
+                        "  x q[0];\n"
+                        "}"
                         "";
 
   std::cout << s << '\n';

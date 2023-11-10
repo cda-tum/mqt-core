@@ -24,6 +24,7 @@ class IdentifierExpression;
 class IdentifierList;
 class Constant;
 class MeasureExpression;
+class IfStatement;
 
 class InstVisitor {
 public:
@@ -45,6 +46,7 @@ public:
   visitBarrierStatement(std::shared_ptr<BarrierStatement> barrierStatement) = 0;
   virtual void
   visitResetStatement(std::shared_ptr<ResetStatement> resetStatement) = 0;
+  virtual void visitIfStatement(std::shared_ptr<IfStatement> ifStatement) = 0;
 
   virtual ~InstVisitor() = default;
 };
@@ -70,6 +72,8 @@ public:
       std::shared_ptr<BarrierStatement> /*barrierStatement*/) override {}
   void visitResetStatement(
       std::shared_ptr<ResetStatement> /*resetStatement*/) override {}
+  void visitIfStatement(std::shared_ptr<IfStatement> /*ifStatement*/) override {
+  }
 };
 
 template <typename T> class ExpressionVisitor {

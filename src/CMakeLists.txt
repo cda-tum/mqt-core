@@ -65,6 +65,7 @@ if(NOT TARGET ${PROJECT_NAME})
     algorithms/RandomCliffordCircuit.cpp
     algorithms/WState.cpp
     CircuitOptimizer.cpp
+    operations/ClassicControlledOperation.cpp
     operations/Expression.cpp
     operations/NonUnitaryOperation.cpp
     operations/Operation.cpp

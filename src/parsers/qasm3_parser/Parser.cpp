@@ -159,6 +159,10 @@ std::shared_ptr<Statement> Parser::parseStatement() {
     return parseBarrierStatement();
   }
 
+  if (current().kind == Token::Kind::If) {
+    return parseIfStatement();
+  }
+
   error(current(), "Expected statement, got " + current().toString() + ".");
 }
 
@@ -310,6 +314,37 @@ std::shared_ptr<BarrierStatement> Parser::parseBarrierStatement() {
 
   return std::make_shared<BarrierStatement>(makeDebugInfo(tBegin, tEnd),
                                             operands);
+}
+
+std::shared_ptr<IfStatement> Parser::parseIfStatement() {
+  auto tBegin = expect(Token::Kind::If);
+  expect(Token::Kind::LParen, "after if keyword.");
+  auto condition = parseExpression();
+  expect(Token::Kind::RParen, "after if condition.");
+
+  expect(Token::Kind::LBrace, "after if statement.");
+
+  std::vector<std::shared_ptr<Statement>> thenStatements;
+  std::vector<std::shared_ptr<Statement>> elseStatements;
+
+  while (!isAtEnd() && current().kind != Token::Kind::RBrace) {
+    thenStatements.push_back(parseStatement());
+  }
+
+  auto tEnd = expect(Token::Kind::RBrace);
+
+  if (current().kind == Token::Kind::Else) {
+    expect(Token::Kind::Else);
+    expect(Token::Kind::LParen, "after else keyword.");
+
+    while (!isAtEnd() && current().kind != Token::Kind::RBrace) {
+      elseStatements.push_back(parseStatement());
+    }
+
+    tEnd = expect(Token::Kind::RBrace);
+  }
+
+  return std::make_shared<IfStatement>(std::move(condition), std::move(thenStatements), std::move(elseStatements), makeDebugInfo(tBegin, tEnd));
 }
 
 std::shared_ptr<GateCallStatement> Parser::parseGateCallStatement() {
@@ -590,6 +625,44 @@ std::shared_ptr<Expression> Parser::term() {
   return x;
 }
 
+std::shared_ptr<Expression> Parser::comparison() {
+  auto x = term();
+  while (current().kind == Token::Kind::DoubleEquals ||
+         current().kind == Token::Kind::NotEquals ||
+         current().kind == Token::Kind::LessThan ||
+         current().kind == Token::Kind::GreaterThan ||
+         current().kind == Token::Kind::LessThanEquals ||
+         current().kind == Token::Kind::GreaterThanEquals) {
+    BinaryExpression::Op op;
+    switch (current().kind) {
+    case Token::Kind::DoubleEquals:
+      op = BinaryExpression::Op::Equal;
+      break;
+    case Token::Kind::NotEquals:
+      op = BinaryExpression::Op::NotEqual;
+      break;
+    case Token::Kind::LessThan:
+      op = BinaryExpression::Op::LessThan;
+      break;
+    case Token::Kind::GreaterThan:
+      op = BinaryExpression::Op::GreaterThan;
+      break;
+    case Token::Kind::LessThanEquals:
+      op = BinaryExpression::Op::LessThanOrEqual;
+      break;
+    case Token::Kind::GreaterThanEquals:
+      op = BinaryExpression::Op::GreaterThanOrEqual;
+      break;
+    default:
+      error(current(), "Expected comparison operator");
+    }
+    scan();
+    auto y = term();
+    x = std::make_shared<BinaryExpression>(BinaryExpression{op, x, y});
+  }
+  return x;
+}
+
 std::shared_ptr<Expression> Parser::parseExpression() {
   std::shared_ptr<Expression> x{};
   if (current().kind == Token::Kind::Minus) {
@@ -597,7 +670,7 @@ std::shared_ptr<Expression> Parser::parseExpression() {
     x = std::make_shared<UnaryExpression>(
         UnaryExpression{UnaryExpression::Op::Negate, term()});
   } else {
-    x = term();
+    x = comparison();
   }
 
   while (current().kind == Token::Kind::Plus ||
@@ -606,7 +679,7 @@ std::shared_ptr<Expression> Parser::parseExpression() {
                         ? BinaryExpression::Op::Add
                         : BinaryExpression::Op::Subtract;
     scan();
-    auto y = term();
+    auto y = comparison();
     x = std::make_shared<BinaryExpression>(BinaryExpression{op, x, y});
   }
 

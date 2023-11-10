@@ -82,11 +82,16 @@ private:
     return scanner.top().next;
   }
 
-  Token expect(const Token::Kind& expected) {
+  Token expect(const Token::Kind& expected,
+               std::optional<std::string> context = std::nullopt) {
     if (current().kind != expected) {
-      error(current(), "Expected '" + Token::kindToString(expected) +
-                           "', got '" + Token::kindToString(current().kind) +
-                           "'");
+      std::string message = "Expected '" + Token::kindToString(expected) +
+                            "', got '" + Token::kindToString(current().kind) +
+                            "'";
+      if (context.has_value()) {
+        message += " " + context.value();
+      }
+      error(current(), message);
     }
 
     Token const token = current();
@@ -138,6 +143,8 @@ public:
 
   std::shared_ptr<Expression> term();
 
+  std::shared_ptr<Expression> comparison();
+
   std::shared_ptr<Expression> parseExpression();
 
   std::shared_ptr<IdentifierList> parseIdentifierList();
@@ -165,6 +172,7 @@ public:
   [[nodiscard]] bool isAtEnd() const {
     return current().kind == Token::Kind::Eof;
   }
+  std::shared_ptr<IfStatement> parseIfStatement();
 };
 
 } // namespace qasm3

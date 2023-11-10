@@ -22,8 +22,8 @@ struct CompilerError : public std::exception {
   std::string message;
   std::shared_ptr<DebugInfo> debugInfo;
 
-  CompilerError(std::string message, std::shared_ptr<DebugInfo> debugInfo)
-      : message(std::move(message)), debugInfo(std::move(debugInfo)) {}
+  CompilerError(std::string msg, std::shared_ptr<DebugInfo> debug)
+      : message(std::move(msg)), debugInfo(std::move(debug)) {}
 
   [[nodiscard]] std::string toString() const {
     std::stringstream ss;
@@ -155,8 +155,8 @@ class OpenQasm3Parser : public InstVisitor {
   }
 
 public:
-  explicit OpenQasm3Parser(qc::QuantumComputation* qc)
-      : typeCheckPass(&constEvalPass), qc(qc) {
+  explicit OpenQasm3Parser(qc::QuantumComputation* quantumComputation)
+      : typeCheckPass(&constEvalPass), qc(quantumComputation) {
     for (auto [identifier, builtin] : initializeBuiltins()) {
       constEvalPass.addConst(identifier, builtin.first);
       typeCheckPass.addBuiltin(identifier, builtin.second);
@@ -482,81 +482,19 @@ public:
       i++;
     }
 
-    auto applyGateOperation =
-        [this, &gate, evaluatedParameters, &gateCallStatement, invertOperation](
-            qc::Targets targetBits, std::vector<qc::Control> controlBits)
-        -> std::unique_ptr<qc::Operation> {
-      if (auto* standardGate = dynamic_cast<StandardGate*>(gate.get())) {
-        auto op = std::make_unique<qc::StandardOperation>(
-            qc->getNqubits(), qc::Controls{}, targetBits,
-            standardGate->info.type, evaluatedParameters);
-        if (invertOperation) {
-          op->invert();
-        }
-        op->setControls(qc::Controls{controlBits.begin(), controlBits.end()});
-        return op;
-      }
-      if (auto* compoundGate = dynamic_cast<CompoundGate*>(gate.get())) {
-        constEvalPass.pushEnv();
-
-        for (size_t i = 0; i < compoundGate->parameterNames.size(); ++i) {
-          constEvalPass.addConst(compoundGate->parameterNames[i],
-                                 evaluatedParameters[i]);
-        }
-
-        auto nestedQubits = qc::QuantumRegisterMap{};
-        size_t index = 0;
-        for (const auto& qubitIdentifier : compoundGate->targetNames) {
-          auto qubit = std::pair{targetBits[index], 1};
-
-          nestedQubits.emplace(qubitIdentifier, qubit);
-          index++;
-        }
-
-        auto op = std::make_unique<qc::CompoundOperation>(qc->getNqubits());
-        for (const auto& nestedGate : compoundGate->body) {
-          for (const auto& operand : nestedGate->operands) {
-            // OpenQASM 3.0 doesn't support indexing of gate arguments.
-            if (operand->expression != nullptr &&
-                std::find(compoundGate->targetNames.begin(),
-                          compoundGate->targetNames.end(),
-                          operand->identifier) !=
-                    compoundGate->targetNames.end()) {
-              error("Gate arguments cannot be indexed within gate body.",
-                    gateCallStatement->debugInfo);
-            }
-          }
-
-          auto nestedOp = evaluateGateCall(nestedGate, nestedGate->identifier,
-                                           nestedGate->arguments,
-                                           nestedGate->operands, nestedQubits);
-          if (nestedOp == nullptr) {
-            return nullptr;
-          }
-          op->getOps().emplace_back(std::move(nestedOp));
-        }
-        op->setControls(qc::Controls{controlBits.begin(), controlBits.end()});
-        if (invertOperation) {
-          op->invert();
-        }
-
-        constEvalPass.popEnv();
-
-        return op;
-      }
-
-      error("Unknown gate type.", gateCallStatement->debugInfo);
-    };
-
     if (broadcastingWidth == 1) {
-      return applyGateOperation(targetBits, controlBits);
+      return applyQuantumOperation(gate, targetBits, controlBits,
+                                   evaluatedParameters, invertOperation,
+                                   gateCallStatement->debugInfo);
     }
 
     // if we are broadcasting, we need to create a compound operation
     auto op = std::make_unique<qc::CompoundOperation>(qc->getNqubits());
     for (size_t j = 0; j < broadcastingWidth; ++j) {
       // first we apply the operation
-      auto nestedOp = applyGateOperation(targetBits, controlBits);
+      auto nestedOp = applyQuantumOperation(
+          gate, targetBits, controlBits, evaluatedParameters, invertOperation,
+          gateCallStatement->debugInfo);
       if (nestedOp == nullptr) {
         return nullptr;
       }
@@ -571,6 +509,73 @@ public:
       }
     }
     return op;
+  }
+
+  std::unique_ptr<qc::Operation>
+  applyQuantumOperation(std::shared_ptr<Gate> gate, qc::Targets targetBits,
+                        std::vector<qc::Control> controlBits,
+                        std::vector<qc::fp> evaluatedParameters,
+                        bool invertOperation,
+                        std::shared_ptr<DebugInfo> debugInfo) {
+    if (auto* standardGate = dynamic_cast<StandardGate*>(gate.get())) {
+      auto op = std::make_unique<qc::StandardOperation>(
+          qc->getNqubits(), qc::Controls{}, targetBits, standardGate->info.type,
+          evaluatedParameters);
+      if (invertOperation) {
+        op->invert();
+      }
+      op->setControls(qc::Controls{controlBits.begin(), controlBits.end()});
+      return op;
+    }
+    if (auto* compoundGate = dynamic_cast<CompoundGate*>(gate.get())) {
+      constEvalPass.pushEnv();
+
+      for (size_t i = 0; i < compoundGate->parameterNames.size(); ++i) {
+        constEvalPass.addConst(compoundGate->parameterNames[i],
+                               evaluatedParameters[i]);
+      }
+
+      auto nestedQubits = qc::QuantumRegisterMap{};
+      size_t index = 0;
+      for (const auto& qubitIdentifier : compoundGate->targetNames) {
+        auto qubit = std::pair{targetBits[index], 1};
+
+        nestedQubits.emplace(qubitIdentifier, qubit);
+        index++;
+      }
+
+      auto op = std::make_unique<qc::CompoundOperation>(qc->getNqubits());
+      for (const auto& nestedGate : compoundGate->body) {
+        for (const auto& operand : nestedGate->operands) {
+          // OpenQASM 3.0 doesn't support indexing of gate arguments.
+          if (operand->expression != nullptr &&
+              std::find(compoundGate->targetNames.begin(),
+                        compoundGate->targetNames.end(), operand->identifier) !=
+                  compoundGate->targetNames.end()) {
+            error("Gate arguments cannot be indexed within gate body.",
+                  debugInfo);
+          }
+        }
+
+        auto nestedOp = evaluateGateCall(nestedGate, nestedGate->identifier,
+                                         nestedGate->arguments,
+                                         nestedGate->operands, nestedQubits);
+        if (nestedOp == nullptr) {
+          return nullptr;
+        }
+        op->getOps().emplace_back(std::move(nestedOp));
+      }
+      op->setControls(qc::Controls{controlBits.begin(), controlBits.end()});
+      if (invertOperation) {
+        op->invert();
+      }
+
+      constEvalPass.popEnv();
+
+      return op;
+    }
+
+    error("Unknown gate type.", debugInfo);
   }
 
   void visitMeasureAssignment(
@@ -630,6 +635,87 @@ public:
     auto op = std::make_unique<qc::NonUnitaryOperation>(qc->getNqubits(),
                                                         qubits, qc::Reset);
     qc->emplace_back(std::move(op));
+  }
+
+  void visitIfStatement(std::shared_ptr<IfStatement> ifStatement) override {
+    // TODO: for now we only support statements comparing a classical bit reg
+    // to a constant.
+    auto condition =
+        std::dynamic_pointer_cast<BinaryExpression>(ifStatement->condition);
+    if (condition == nullptr) {
+      error("Condition not supported for if statement.",
+            ifStatement->debugInfo);
+    }
+
+    qc::ComparisonKind comparisonKind = qc::ComparisonKind::Eq;
+    switch (condition->op) {
+    case qasm3::BinaryExpression::Op::LessThan:
+      comparisonKind = qc::ComparisonKind::Lt;
+      break;
+    case qasm3::BinaryExpression::Op::LessThanOrEqual:
+      comparisonKind = qc::ComparisonKind::Leq;
+      break;
+    case qasm3::BinaryExpression::Op::GreaterThan:
+      comparisonKind = qc::ComparisonKind::Gt;
+      break;
+    case qasm3::BinaryExpression::Op::GreaterThanOrEqual:
+      comparisonKind = qc::ComparisonKind::Geq;
+      break;
+    case qasm3::BinaryExpression::Op::Equal:
+      comparisonKind = qc::ComparisonKind::Eq;
+      break;
+    case qasm3::BinaryExpression::Op::NotEqual:
+      comparisonKind = qc::ComparisonKind::Neq;
+      break;
+    default:
+      error("Unsupported comparison operator.", ifStatement->debugInfo);
+    }
+
+    auto lhs = std::dynamic_pointer_cast<IdentifierExpression>(condition->lhs);
+    auto rhs = std::dynamic_pointer_cast<Constant>(condition->rhs);
+
+    if (lhs == nullptr) {
+      error("Only classical registers are supported in conditions.",
+            ifStatement->debugInfo);
+    }
+    if (rhs == nullptr) {
+      error("Can only compare to constants.",
+            ifStatement->debugInfo);
+    }
+
+    auto creg = qc->getCregs().find(lhs->identifier);
+    if (creg == qc->getCregs().end()) {
+      error("Usage of unknown or invalid identifier '" + lhs->identifier +
+                "' in condition.",
+            ifStatement->debugInfo);
+    }
+
+
+    // translate statements in then block
+    auto thenOps = std::make_unique<qc::CompoundOperation>(qc->getNqubits());
+    for (const auto& statement : ifStatement->thenStatements) {
+      auto gateCall = std::dynamic_pointer_cast<GateCallStatement>(statement);
+      if (gateCall == nullptr) {
+        error("Only gate calls are supported in if statements.",
+              statement->debugInfo);
+      }
+      auto qregs = qc->getQregs();
+
+      auto op =
+          evaluateGateCall(gateCall, gateCall->identifier, gateCall->arguments,
+                           gateCall->operands, qregs);
+
+      thenOps->emplace_back(std::move(op));
+    }
+
+    if (!ifStatement->elseStatements.empty()) {
+      error("Else statements are not supported yet.", ifStatement->debugInfo);
+    }
+
+    std::unique_ptr<qc::Operation> thenOp = std::move(thenOps);
+
+    qc->emplace_back(std::make_unique<qc::ClassicControlledOperation>(
+        thenOp, creg->second, rhs->getUInt(), comparisonKind));
   }
 };
 

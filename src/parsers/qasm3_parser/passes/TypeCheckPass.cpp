@@ -137,16 +137,13 @@ InferredType TypeCheckPass::visitBinaryExpression(
   }
 
   auto ty = lhs;
-  if (lhs.type->isNumber() && rhs.type->isFP()) {
-    // we allow implicit coercion to float
-    ty = rhs;
-  } else if (rhs.type->isNumber() && lhs.type->isFP()) {
-    ty = lhs;
-  } else if (lhs.type->isNumber() && rhs.type->isUint()) {
-    // we allow implicit coercion to signed int
-    ty = lhs;
-  } else if (rhs.type->isNumber() && lhs.type->isUint()) {
-    ty = rhs;
+  if (lhs.type->isNumber() && rhs.type->isNumber()) {
+    if (rhs.type->isFP() || lhs.type->isUint()) {
+      // coerce to float or signed int
+      ty = rhs;
+    }
+    ty.type->setDesignator(
+        std::max(lhs.type->getDesignator(), rhs.type->getDesignator()));
   } else if (lhs.type != rhs.type) {
     std::stringstream ss;
     ss << "Type mismatch in binary expression: ";
@@ -181,10 +178,10 @@ InferredType TypeCheckPass::visitBinaryExpression(
       error("Cannot compare boolean types.");
       return InferredType::error();
     }
-    break;
+    return InferredType{UnsizedType<uint64_t>::getBoolTy()};
   case BinaryExpression::Equal:
   case BinaryExpression::NotEqual:
-    break;
+    return InferredType{UnsizedType<uint64_t>::getBoolTy()};
   case BinaryExpression::BitwiseAnd:
   case BinaryExpression::BitwiseXor:
   case BinaryExpression::BitwiseOr:
@@ -303,6 +300,21 @@ std::shared_ptr<ResolvedType> TypeCheckPass::visitArrayType(
   // TODO: check the size once it is converted to an expression.
   arrayType->accept(this);
   return nullptr;
+}
+
+void TypeCheckPass::visitIfStatement(std::shared_ptr<IfStatement> ifStatement) {
+  // We support ifs on bits and bools
+  auto ty = visit(ifStatement->condition);
+  if (!ty.isError && !ty.type->isBool()) {
+    error("Condition expression must be bool.");
+  }
+
+  for (const auto& stmt : ifStatement->thenStatements) {
+    stmt->accept(this);
+  }
+  for (const auto& stmt : ifStatement->elseStatements) {
+    stmt->accept(this);
+  }
 }
 } // namespace type_checking
 } // namespace qasm3

@@ -35,6 +35,7 @@ public:
   virtual bool isFP() { return false; }
   virtual bool isUint() { return false; }
   virtual bool isBit() { return false; }
+  virtual bool isBit(size_t /*width*/) { return false; }
 
   virtual bool fits(const Type<T>& other) { return *this == other; }
 
@@ -104,6 +105,8 @@ public:
     return std::make_shared<SizedType>(DesignatedTy::Angle, size);
   }
 
+  void setDesignator(uint64_t d) override { designator = d; }
+
   uint64_t getDesignator() override { return designator; }
 
   std::shared_ptr<ResolvedType>
@@ -114,12 +117,16 @@ public:
 
   bool isNumber() override {
     return type == DesignatedTy::Int || type == DesignatedTy::Uint ||
-           type == DesignatedTy::Float;
+           type == DesignatedTy::Bit || type == DesignatedTy::Float;
   }
 
   bool isUint() override { return type == DesignatedTy::Uint; }
 
   bool isBit() override { return type == DesignatedTy::Bit; }
+
+  bool isBit(size_t width) override {
+    return type == DesignatedTy::Bit && width == this->designator;
+  }
 
   bool isFP() override { return type == DesignatedTy::Float; }
 
@@ -215,7 +222,7 @@ public:
 
   bool isNumber() override {
     return type == DesignatedTy::Int || type == DesignatedTy::Uint ||
-           type == DesignatedTy::Float;
+           type == DesignatedTy::Bit || type == DesignatedTy::Float;
   }
 
   bool isUint() override { return type == DesignatedTy::Uint; }

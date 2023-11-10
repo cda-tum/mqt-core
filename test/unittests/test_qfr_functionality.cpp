@@ -2620,3 +2620,36 @@ TEST_F(QFRFunctionality, ImportQasm3NonUnitary) {
 
   EXPECT_EQ(out.str(), expected);
 }
+
+TEST_F(QFRFunctionality, ImportQasm3IfStatement) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "h q[0];\n"
+                               "bit c = measure q[0];\n"
+                               "if (c == 1) {\n"
+                               "  x q[1];\n"
+                               "}";
+
+  ss << testfile;
+  auto qc = qc::QuantumComputation();
+  qc.import(ss, qc::Format::OpenQASM3);
+
+  std::stringstream out{};
+  qc.dump(out, qc::Format::OpenQASM);
+
+  const std::string expected = "// i 0 1\n"
+                               "// o 0\n"
+                               "OPENQASM 2.0;\n"
+                               "include \"qelib1.inc\";\n"
+                               "qreg q[2];\n"
+                               "creg c[1];\n"
+                               "h q[0];\n"
+                               "measure q[0] -> c[0];\n"
+                               "if(c == 1) x q[1];\n"
+                               "";
+
+  EXPECT_EQ(out.str(), expected);
+}
+

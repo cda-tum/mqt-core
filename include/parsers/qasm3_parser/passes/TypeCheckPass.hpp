@@ -15,8 +15,8 @@ public:
   bool isError;
   std::shared_ptr<ResolvedType> type;
 
-  InferredType(bool isError, std::shared_ptr<ResolvedType> ty)
-      : isError(isError), type(std::move(ty)) {}
+  InferredType(bool isErr, std::shared_ptr<ResolvedType> ty)
+      : isError(isErr), type(std::move(ty)) {}
 
   explicit InferredType(std::shared_ptr<ResolvedType> ty)
       : isError(false), type(std::move(ty)) {}
@@ -89,6 +89,7 @@ public:
     }
   }
 
+  // Types
   void
   visitGateStatement(std::shared_ptr<GateDeclaration> gateStatement) override;
   void visitVersionDeclaration(
@@ -107,6 +108,9 @@ public:
       std::shared_ptr<BarrierStatement> barrierStatement) override;
   void
   visitResetStatement(std::shared_ptr<ResetStatement> resetStatement) override;
+  void visitIfStatement(std::shared_ptr<IfStatement> ifStatement) override;
+
+  // Expressions
   InferredType visitBinaryExpression(
       std::shared_ptr<BinaryExpression> binaryExpression) override;
   InferredType visitUnaryExpression(
@@ -119,6 +123,8 @@ public:
   visitIdentifierList(std::shared_ptr<IdentifierList> identifierList) override;
   InferredType visitMeasureExpression(
       std::shared_ptr<MeasureExpression> measureExpression) override;
+
+  // Types
   std::shared_ptr<ResolvedType>
   visitDesignatedType(DesignatedType* designatedType) override;
   std::shared_ptr<ResolvedType> visitUnsizedType(

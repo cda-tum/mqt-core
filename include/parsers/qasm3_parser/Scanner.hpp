@@ -25,7 +25,7 @@ private:
     return isalpha(c) != 0 || c == '_';
   }
 
-  [[nodiscard]] static bool isNum(const char c) { return isnumber(c) != 0; }
+  [[nodiscard]] static bool isNum(const char c) { return c >= '0' && c <= '9'; }
 
   [[nodiscard]] static bool isHex(const char c) {
     return isNum(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');

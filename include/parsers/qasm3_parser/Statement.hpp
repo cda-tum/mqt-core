@@ -407,4 +407,23 @@ public:
     visitor->visitResetStatement(shared_from_this());
   }
 };
+
+class IfStatement : public Statement,
+                    public std::enable_shared_from_this<IfStatement> {
+public:
+  std::shared_ptr<Expression> condition;
+  std::vector<std::shared_ptr<Statement>> thenStatements;
+  std::vector<std::shared_ptr<Statement>> elseStatements;
+
+  IfStatement(std::shared_ptr<Expression> cond,
+              std::vector<std::shared_ptr<Statement>> thenStmts,
+              std::vector<std::shared_ptr<Statement>> elseStmts,
+              std::shared_ptr<DebugInfo> debug)
+      : Statement(std::move(debug)), condition(cond), thenStatements(thenStmts),
+        elseStatements(elseStmts) {}
+
+  void accept(InstVisitor* visitor) override {
+    visitor->visitIfStatement(shared_from_this());
+  }
+};
 } // namespace qasm3
