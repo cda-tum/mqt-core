@@ -2653,3 +2653,53 @@ TEST_F(QFRFunctionality, ImportQasm3IfStatement) {
   EXPECT_EQ(out.str(), expected);
 }
 
+TEST_F(QFRFunctionality, ImportQasm3ImplicitInclude) {
+  std::stringstream ss{};
+  const std::string testfile = "qubit q;\n"
+                               "h q[0];\n"
+                               "";
+
+  ss << testfile;
+  auto qc = qc::QuantumComputation();
+  qc.import(ss, qc::Format::OpenQASM3);
+
+  std::stringstream out{};
+  qc.dump(out, qc::Format::OpenQASM);
+
+  const std::string expected = "// i 0\n"
+                               "// o 0\n"
+                               "OPENQASM 2.0;\n"
+                               "include \"qelib1.inc\";\n"
+                               "qreg q[1];\n"
+                               "h q[0];\n"
+                               "";
+
+  EXPECT_EQ(out.str(), expected);
+}
+
+TEST_F(QFRFunctionality, ImportQasm3Qelib1) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 2.0;\n"
+                               "include \"qelib1.inc\";\n"
+                               "qubit q;\n"
+                               "h q[0];\n"
+                               "";
+
+  ss << testfile;
+  auto qc = qc::QuantumComputation();
+  qc.import(ss, qc::Format::OpenQASM3);
+
+  std::stringstream out{};
+  qc.dump(out, qc::Format::OpenQASM);
+
+  const std::string expected = "// i 0\n"
+                               "// o 0\n"
+                               "OPENQASM 2.0;\n"
+                               "include \"qelib1.inc\";\n"
+                               "qreg q[1];\n"
+                               "h q[0];\n"
+                               "";
+
+  EXPECT_EQ(out.str(), expected);
+}
+

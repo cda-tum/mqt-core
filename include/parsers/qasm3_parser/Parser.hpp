@@ -9,6 +9,7 @@
 #include "Definitions.hpp"
 #include "Scanner.hpp"
 #include "Statement.hpp"
+#include "StdGates.hpp"
 #include "operations/CompoundOperation.hpp"
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/StandardOperation.hpp"
@@ -34,6 +35,7 @@ private:
     Token next{0, 0};
     std::unique_ptr<Scanner> scanner;
     std::optional<std::string> filename;
+    bool isImplicitInclude;
 
     bool scan() {
       t = next;
@@ -44,17 +46,17 @@ private:
 
     explicit ScannerState(
         std::istream& in,
-        std::optional<std::string> debugFilename = std::nullopt)
+        std::optional<std::string> debugFilename = std::nullopt, bool implicitInclude = false)
         : scanner(std::make_unique<Scanner>(in)),
-          filename(std::move(debugFilename)) {
+          filename(std::move(debugFilename)), isImplicitInclude(implicitInclude) {
       scan();
     }
 
     explicit ScannerState(
         std::unique_ptr<std::istream> in,
-        std::optional<std::string> debugFilename = std::nullopt)
+        std::optional<std::string> debugFilename = std::nullopt, bool implicitInclude = false)
         : is(std::move(in)), scanner(std::make_unique<Scanner>(*is)),
-          filename(std::move(debugFilename)) {
+          filename(std::move(debugFilename)), isImplicitInclude(implicitInclude) {
       scan();
     }
   };
@@ -66,6 +68,11 @@ private:
     std::cerr << "Error at line " << token.line << ", column " << token.col
               << ": " << msg << '\n';
     throw std::runtime_error("Parser error");
+  }
+
+  static void warn(const Token& token, const std::string& msg) {
+    std::cerr << "Warning at line " << token.line << ", column " << token.col
+              << ": " << msg << '\n';
   }
 
   [[nodiscard]] inline Token current() const {
@@ -102,6 +109,8 @@ private:
 public:
   explicit Parser(std::istream& is) {
     scanner.emplace(is);
+    scan();
+    scanner.emplace(std::make_unique<std::istringstream>(STDGATES), "stdgates.inc", true);
     scan();
   }
 

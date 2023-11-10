@@ -30,20 +30,22 @@ std::vector<std::shared_ptr<Statement>> Parser::parseProgram() {
   bool versionDeclarationAllowed = true;
 
   while (!isAtEnd()) {
-    // We allow a version declaration at the beginning of the file.
-    if (current().kind == Token::Kind::OpenQasm) {
-      if (!versionDeclarationAllowed) {
-        error(current(),
-              "Version declaration must be at the beginning of the file");
+    if (!scanner.top().isImplicitInclude) {
+      // We allow a version declaration at the beginning of the file.
+      if (current().kind == Token::Kind::OpenQasm) {
+        if (!versionDeclarationAllowed) {
+          error(current(),
+                "Version declaration must be at the beginning of the file");
+        }
+        statements.emplace_back(parseVersionDeclaration());
+        versionDeclarationAllowed = false;
+        continue;
       }
-      statements.emplace_back(parseVersionDeclaration());
-      versionDeclarationAllowed = false;
-      continue;
-    }
-    // Once we encounter a non-comment token, we don't allow a version
-    // declaration anymore.
-    if (current().kind != Token::Kind::Comment) {
-      versionDeclarationAllowed = false;
+      // Once we encounter a non-comment token, we don't allow a version
+      // declaration anymore.
+      if (current().kind != Token::Kind::Comment) {
+        versionDeclarationAllowed = false;
+      }
     }
 
     statements.push_back(parseStatement());
@@ -180,10 +182,16 @@ void Parser::parseInclude() {
   std::unique_ptr<std::istream> is{nullptr};
   if (in->fail()) {
     if (filename == "stdgates.inc") {
-      is = std::make_unique<std::istringstream>(STDGATES);
-    } else {
-      error(current(), "Failed to open file " + filename + ".");
+      // stdgates.inc has already been included implicitly, so we just return
+      return;
     }
+    if (filename == "qelib1.inc") {
+      warn(current(),
+           "In OpenQASM 3.0, 'qelib1.inc' is renamed to 'stdgates.inc'. Parser "
+           "will continue and assume 'stdgates.inc' instead.");
+      return;
+    }
+    error(current(), "Failed to open file " + filename + ".");
   } else {
     is = std::move(in);
   }
@@ -344,7 +352,9 @@ std::shared_ptr<IfStatement> Parser::parseIfStatement() {
     tEnd = expect(Token::Kind::RBrace);
   }
 
-  return std::make_shared<IfStatement>(std::move(condition), std::move(thenStatements), std::move(elseStatements), makeDebugInfo(tBegin, tEnd));
+  return std::make_shared<IfStatement>(
+      std::move(condition), std::move(thenStatements),
+      std::move(elseStatements), makeDebugInfo(tBegin, tEnd));
 }
 
 std::shared_ptr<GateCallStatement> Parser::parseGateCallStatement() {
