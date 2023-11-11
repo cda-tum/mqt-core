@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.mqt.core import compare
+from mqt.core.evaluation import compare
 
 
 def test_zero_point_one() -> None:
