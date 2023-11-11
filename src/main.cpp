@@ -105,7 +105,7 @@ int main() {
   q.import(iss, qc::Format::OpenQASM3);
 
   std::stringstream ss;
-  q.dump(ss, qc::Format::OpenQASM);
+  q.dump(ss, qc::Format::OpenQASM3);
 
   std::cout << ss.str() << '\n';
 

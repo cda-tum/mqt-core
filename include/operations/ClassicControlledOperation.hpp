@@ -142,6 +142,19 @@ public:
     op->dumpOpenQASM(of, qreg, creg);
   }
 
+  void dumpOpenQASM3(std::ostream& of, const RegisterNames& qreg,
+                     const RegisterNames& creg,
+                     uint32_t indent = 0) const override {
+    for (uint32_t i = 0; i < indent; ++i) {
+      of << "  ";
+    }
+    of << "if (";
+    of << creg[controlRegister.first].first;
+    of << " " << comparisonKind << " " << expectedValue << ") {\n";
+    op->dumpOpenQASM3(of, qreg, creg, indent + 1);
+    of << "}\n";
+  }
+
   void invert() override { op->invert(); }
 };
 } // namespace qc

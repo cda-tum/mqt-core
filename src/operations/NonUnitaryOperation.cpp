@@ -184,4 +184,32 @@ void NonUnitaryOperation::addDepthContribution(
     depths[target] += 1;
   }
 }
+
+void NonUnitaryOperation::dumpOpenQASM3(std::ostream& of,
+                                        const RegisterNames& qreg,
+                                        const RegisterNames& creg,
+                                        uint32_t indent) const {
+  for (uint32_t i = 0; i < indent; ++i) {
+    of << "  ";
+  }
+
+  if (isWholeQubitRegister(qreg, targets.front(), targets.back())) {
+    if (type == Measure) {
+      assert(isWholeQubitRegister(creg, classics.front(), classics.back()));
+      of << creg[classics.front()].first << " = ";
+    }
+    of << toString(type) << " " << qreg[targets.front()].first;
+    of << ";\n";
+    return;
+  }
+  auto classicsIt = classics.cbegin();
+  for (const auto& q : targets) {
+    if (type == Measure) {
+      of << creg[*classicsIt].second << " = ";
+      ++classicsIt;
+    }
+    of << toString(type) << " " << qreg[q].second;
+    of << ";\n";
+  }
+}
 } // namespace qc

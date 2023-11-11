@@ -558,4 +558,207 @@ void StandardOperation::invert() {
                        " is not supported.");
   }
 }
+void StandardOperation::dumpOpenQASM3(std::ostream& of,
+                                      const RegisterNames& qreg,
+                                      const RegisterNames& /*creg*/,
+                                      uint32_t indent) const {
+  std::ostringstream op;
+  op << std::setprecision(std::numeric_limits<fp>::digits10);
+
+  for (uint32_t i = 0; i < indent; ++i) {
+    op << "  ";
+  }
+
+  if (!controls.empty()) {
+    Control::Type currentType = controls.begin()->type;
+    int count = 0;
+
+    for (const auto& control : controls) {
+      if (control.type == currentType) {
+        ++count;
+      } else {
+        op << (currentType == Control::Type::Neg ? "negctrl" : "ctrl");
+        if (count > 1) {
+          op << "(" << count << ")";
+        }
+        op << " @ ";
+        currentType = control.type;
+        count = 1;
+      }
+    }
+
+    op << (currentType == Control::Type::Neg ? "negctrl" : "ctrl");
+    if (count > 1) {
+      op << "(" << count << ")";
+    }
+    op << " @ ";
+  }
+
+  switch (type) {
+  case GPhase:
+    op << "gphase(" << parameter.at(0) << ")";
+    break;
+  case I:
+    op << "id";
+    break;
+  case Barrier:
+    assert(controls.empty());
+    op << "barrier";
+    break;
+  case H:
+    op << "h";
+    break;
+  case X:
+    op << "x";
+    break;
+  case Y:
+    op << "y";
+    break;
+  case Z:
+    op << "z";
+    break;
+  case S:
+    if (!controls.empty()) {
+      op << "p(pi/2)";
+    } else {
+      op << "s";
+    }
+    break;
+  case Sdg:
+    if (!controls.empty()) {
+      op << "p(-pi/2)";
+    } else {
+      op << "sdg";
+    }
+    break;
+  case T:
+    if (!controls.empty()) {
+      op << "p(pi/4)";
+    } else {
+      op << "t";
+    }
+    break;
+  case Tdg:
+    if (!controls.empty()) {
+      op << "p(-pi/4)";
+    } else {
+      op << "tdg";
+    }
+    break;
+  case V:
+    op << "u3(pi/2,-pi/2,pi/2)";
+    break;
+  case Vdg:
+    op << "u3(pi/2,pi/2,-pi/2)";
+    break;
+  case U:
+    op << "u3(" << parameter[0] << "," << parameter[1] << "," << parameter[2]
+       << ")";
+    break;
+  case U2:
+    op << "u3(pi/2," << parameter[0] << "," << parameter[1] << ")";
+    break;
+  case P:
+    op << "p(" << parameter[0] << ")";
+    break;
+  case SX:
+    op << "sx";
+    break;
+  case SXdg:
+    op << "sxdg";
+    break;
+  case RX:
+    op << "rx(" << parameter[0] << ")";
+    break;
+  case RY:
+    op << "ry(" << parameter[0] << ")";
+    break;
+  case RZ:
+    op << "rz(" << parameter[0] << ")";
+    break;
+  case DCX:
+    op << "dcx";
+    break;
+  case ECR:
+    op << "ecr";
+    break;
+  case RXX:
+    op << "rxx(" << parameter[0] << ")";
+    break;
+  case RYY:
+    op << "ryy(" << parameter[0] << ")";
+    break;
+  case RZZ:
+    op << "rzz(" << parameter[0] << ")";
+    break;
+  case RZX:
+    op << "rzx(" << parameter[0] << ")";
+    break;
+  case XXminusYY:
+    op << "xx_minus_yy(" << parameter[0] << "," << parameter[1] << ")";
+    break;
+  case XXplusYY:
+    op << "xx_plus_yy(" << parameter[0] << "," << parameter[1] << ")";
+    break;
+  case SWAP:
+    op << "swap";
+    break;
+  case iSWAP:
+    op << "iswap";
+    break;
+  case Peres:
+    of << op.str() << "cx";
+    for (const auto& c : controls) {
+      of << " " << qreg[c.qubit].second << ",";
+    }
+    of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second
+       << ";\n";
+
+    of << op.str() << "x";
+    for (const auto& c : controls) {
+      of << " " << qreg[c.qubit].second << ",";
+    }
+    of << " " << qreg[targets[1]].second << ";\n";
+    return;
+  case Peresdg:
+    of << op.str() << "x";
+    for (const auto& c : controls) {
+      of << " " << qreg[c.qubit].second << ",";
+    }
+    of << " " << qreg[targets[1]].second << ";\n";
+
+    of << op.str() << "cx";
+    for (const auto& c : controls) {
+      of << " " << qreg[c.qubit].second << ",";
+    }
+    of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second
+       << ";\n";
+    return;
+  case Teleportation:
+    dumpOpenQASMTeleportation(of, qreg);
+    return;
+  default:
+    std::cerr << "gate type " << toString(type)
+              << " could not be converted to OpenQASM\n.";
+  }
+
+  // apply the operation
+  of << op.str();
+  // add controls and targets of the operation
+  for (const auto& c : controls) {
+    of << " " << qreg[c.qubit].second << ",";
+  }
+  if (!targets.empty()) {
+    if (type == Barrier &&
+        isWholeQubitRegister(qreg, targets.front(), targets.back())) {
+      of << " " << qreg[targets.front()].first;
+    } else {
+      for (const auto& t : targets) {
+        of << " " << qreg[t].second << ",";
+      }
+      of.seekp(-1, std::ios_base::cur);
+    }
+  }
+  of << ";\n";
+}
 } // namespace qc

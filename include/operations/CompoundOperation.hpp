@@ -156,6 +156,14 @@ public:
     }
   }
 
+  void dumpOpenQASM3(std::ostream& of, const RegisterNames& qreg,
+                     const RegisterNames& creg,
+                     uint32_t indent = 0) const override {
+    for (const auto& op : ops) {
+      op->dumpOpenQASM3(of, qreg, creg, indent);
+    }
+  }
+
   /**
    * Pass-Through
    */

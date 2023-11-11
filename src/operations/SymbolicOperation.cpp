@@ -312,6 +312,14 @@ bool SymbolicOperation::equals(const Operation& op, const Permutation& perm1,
   throw QFRException("OpenQASM 2.0 doesn't support parametrized gates!");
 }
 
+[[noreturn]] void
+SymbolicOperation::dumpOpenQASM3([[maybe_unused]] std::ostream& of,
+                                 [[maybe_unused]] const qc::RegisterNames& qreg,
+                                 [[maybe_unused]] const qc::RegisterNames& creg,
+                                 [[maybe_unused]] uint32_t indent) const {
+  throw QFRException("OpenQASM 2.0 doesn't support parametrized gates!");
+}
+
 StandardOperation SymbolicOperation::getInstantiatedOperation(
     const VariableAssignment& assignment) const {
   std::vector<fp> parameters;

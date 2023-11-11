@@ -2339,13 +2339,13 @@ TEST_F(QFRFunctionality, ImportQasm3GateDecl) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 0 1\n"
                                "// o 0 1\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q[2];\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
                                "x q[0];\n"
                                "x q[1];\n";
 
@@ -2365,15 +2365,15 @@ TEST_F(QFRFunctionality, ImportQasm3CtrlModifier) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 0 1 2\n"
                                "// o 0 1 2\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q[3];\n"
-                               "cx q[0], q[1];\n"
-                               "ccx q[0], q[1], q[2];\n";
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[3] q;\n"
+                               "ctrl @ x q[0], q[1];\n"
+                               "ctrl(2) @ x q[0], q[1], q[2];\n";
 
   EXPECT_EQ(out.str(), expected);
 }
@@ -2390,13 +2390,13 @@ TEST_F(QFRFunctionality, ImportQasm3InvModifier) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 0\n"
                                "// o 0\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q[1];\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[1] q;\n"
                                "sdg q[0];\n";
 
   EXPECT_EQ(out.str(), expected);
@@ -2418,13 +2418,13 @@ TEST_F(QFRFunctionality, ImportQasm3CompoundGate) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 0\n"
                                "// o 0\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q[1];\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[1] q;\n"
                                "x q[0];\n"
                                "h q[0];\n";
 
@@ -2446,14 +2446,14 @@ TEST_F(QFRFunctionality, ImportQasm3ControlledCompoundGate) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 0 1\n"
                                "// o 0 1\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q[2];\n"
-                               "cx q[0], q[1];\n";
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "ctrl @ x q[0], q[1];\n";
 
   EXPECT_EQ(out.str(), expected);
 }
@@ -2473,13 +2473,13 @@ TEST_F(QFRFunctionality, ImportQasm3ParamCompoundGate) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 0 1\n"
                                "// o 0 1\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q[2];\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
                                "gphase(-1.5707963267949);\n"
                                "z q[0];\n";
 
@@ -2505,22 +2505,22 @@ TEST_F(QFRFunctionality, ImportQasm3Measure) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 0 1\n"
                                "// o 0 1\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q[2];\n"
-                               "creg r1[1];\n"
-                               "creg r2[2];\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "bit[1] r1;\n"
+                               "bit[2] r2;\n"
                                "h q[0];\n"
                                "h q[1];\n"
-                               "measure q[0] -> r1[0];\n"
-                               "measure q[0] -> r1[0];\n"
-                               "measure q -> r2;\n"
-                               "measure q[1] -> r1[0];\n"
-                               "measure q[1] -> r2[0];\n";
+                               "r1[0] = measure q[0];\n"
+                               "r1[0] = measure q[0];\n"
+                               "r2 = measure q;\n"
+                               "r1[0] = measure q[1];\n"
+                               "r2[0] = measure q[1];\n";
 
   EXPECT_EQ(out.str(), expected);
 }
@@ -2538,13 +2538,13 @@ TEST_F(QFRFunctionality, ImportQasm3InitialLayout) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 1 0\n"
                                "// o 1 0\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q[2];\n";
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n";
 
   EXPECT_EQ(out.str(), expected);
 }
@@ -2564,15 +2564,15 @@ TEST_F(QFRFunctionality, ImportQasm3ConstEval) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 0 1 2 3 4 5 6 7\n"
                                "// o 0 1 2 3 4 5 6 7\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q[8];\n"
-                               "creg N[32];\n"
-                               "cx q[0], q[7];\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[8] q;\n"
+                               "bit[32] N;\n"
+                               "ctrl @ x q[0], q[7];\n"
                                "x q[0];\n"
                                "x q[1];\n"
                                "x q[2];\n"
@@ -2601,22 +2601,22 @@ TEST_F(QFRFunctionality, ImportQasm3NonUnitary) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 0 1 2 3\n"
                                "// o 0\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q1[2];\n"
-                               "qreg q2[2];\n"
-                               "creg c[1];\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q1;\n"
+                               "qubit[2] q2;\n"
+                               "bit[1] c;\n"
                                "reset q1[0];\n"
                                "barrier q1[0];\n"
                                "barrier q1[1];\n"
                                "barrier q2[0];\n"
                                "barrier q2[1];\n"
                                "reset q1;\n"
-                               "measure q1[0] -> c[0];\n";
+                               "c[0] = measure q1[0];\n";
 
   EXPECT_EQ(out.str(), expected);
 }
@@ -2637,17 +2637,19 @@ TEST_F(QFRFunctionality, ImportQasm3IfStatement) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 0 1\n"
                                "// o 0\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q[2];\n"
-                               "creg c[1];\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "bit[1] c;\n"
                                "h q[0];\n"
-                               "measure q[0] -> c[0];\n"
-                               "if(c == 1) x q[1];\n"
+                               "c[0] = measure q[0];\n"
+                               "if (c == 1) {\n"
+                               "  x q[1];\n"
+                               "}\n"
                                "";
 
   EXPECT_EQ(out.str(), expected);
@@ -2664,13 +2666,13 @@ TEST_F(QFRFunctionality, ImportQasm3ImplicitInclude) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 0\n"
                                "// o 0\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q[1];\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[1] q;\n"
                                "h q[0];\n"
                                "";
 
@@ -2690,16 +2692,15 @@ TEST_F(QFRFunctionality, ImportQasm3Qelib1) {
   qc.import(ss, qc::Format::OpenQASM3);
 
   std::stringstream out{};
-  qc.dump(out, qc::Format::OpenQASM);
+  qc.dump(out, qc::Format::OpenQASM3);
 
   const std::string expected = "// i 0\n"
                                "// o 0\n"
-                               "OPENQASM 2.0;\n"
-                               "include \"qelib1.inc\";\n"
-                               "qreg q[1];\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[1] q;\n"
                                "h q[0];\n"
                                "";
 
   EXPECT_EQ(out.str(), expected);
 }
-

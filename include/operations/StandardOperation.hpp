@@ -104,7 +104,9 @@ public:
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                     const RegisterNames& creg) const override;
-
+  void dumpOpenQASM3(std::ostream& of, const RegisterNames& qreg,
+                     const RegisterNames& creg,
+                     uint32_t indent = 0) const override;
   void invert() override;
 };
 

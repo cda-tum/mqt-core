@@ -635,7 +635,7 @@ void QuantumComputation::dump(const std::string& filename) {
   }
 }
 
-void QuantumComputation::dumpOpenQASM(std::ostream& of) {
+void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) {
   // Add missing physical qubits
   if (!qregs.empty()) {
     for (Qubit physicalQubit = 0; physicalQubit < initialLayout.rbegin()->first;
@@ -668,8 +668,13 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
   }
   of << "\n";
 
-  of << "OPENQASM 2.0;\n";
-  of << "include \"qelib1.inc\";\n";
+  if (openQASM3) {
+    of << "OPENQASM 3.0;\n";
+    of << "include \"stdgates.inc\";\n";
+  } else {
+    of << "OPENQASM 2.0;\n";
+    of << "include \"qelib1.inc\";\n";
+  }
   if (std::any_of(std::begin(ops), std::end(ops), [](const auto& op) {
         return op->getType() == OpType::Teleportation;
       })) {
@@ -677,13 +682,13 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
   }
 
   assert(nqubits == 0U || !qregs.empty());
-  printSortedRegisters(qregs, "qreg", of);
+  printSortedRegisters(qregs, openQASM3 ? "qubit" : "qreg", of, openQASM3);
 
   assert(nclassics == 0U || !cregs.empty());
-  printSortedRegisters(cregs, "creg", of);
+  printSortedRegisters(cregs, openQASM3 ? "bit" : "creg", of, openQASM3);
 
   assert(nancillae == 0U || !ancregs.empty());
-  printSortedRegisters(ancregs, "qreg", of);
+  printSortedRegisters(ancregs, openQASM3 ? "qubit" : "qreg", of, openQASM3);
 
   RegisterNames qregnames{};
   RegisterNames cregnames{};
@@ -696,8 +701,14 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
     qregnames.push_back(ancregname);
   }
 
-  for (const auto& op : ops) {
-    op->dumpOpenQASM(of, qregnames, cregnames);
+  if (openQASM3) {
+    for (const auto& op : ops) {
+      op->dumpOpenQASM3(of, qregnames, cregnames);
+    }
+  } else {
+    for (const auto& op : ops) {
+      op->dumpOpenQASM(of, qregnames, cregnames);
+    }
   }
 }
 
@@ -711,8 +722,11 @@ void QuantumComputation::dump(const std::string& filename, Format format) {
 
 void QuantumComputation::dump(std::ostream&& of, Format format) {
   switch (format) {
+  case Format::OpenQASM3:
+    dumpOpenQASM(of, true);
+    break;
   case Format::OpenQASM:
-    dumpOpenQASM(of);
+    dumpOpenQASM(of, false);
     break;
   case Format::Real:
     std::cerr << "Dumping in real format currently not supported\n";

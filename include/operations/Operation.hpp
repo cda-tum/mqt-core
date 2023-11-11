@@ -179,6 +179,10 @@ public:
   virtual void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                             const RegisterNames& creg) const = 0;
 
+  virtual void dumpOpenQASM3(std::ostream& of, const RegisterNames& qreg,
+                             const RegisterNames& creg,
+                             uint32_t indent = 0) const = 0;
+
   virtual void invert() = 0;
 
   virtual bool operator==(const Operation& rhs) const { return equals(rhs); }

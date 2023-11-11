@@ -71,7 +71,7 @@ protected:
   template <class RegisterType>
   static void printSortedRegisters(const RegisterMap<RegisterType>& regmap,
                                    const std::string& identifier,
-                                   std::ostream& of) {
+                                   std::ostream& of, bool openQASM3 = false) {
     // sort regs by start index
     std::map<decltype(RegisterType::first),
              std::pair<std::string, RegisterType>>
@@ -81,8 +81,13 @@ protected:
     }
 
     for (const auto& reg : sortedRegs) {
-      of << identifier << " " << reg.second.first << "["
-         << reg.second.second.second << "];" << std::endl;
+      if (openQASM3) {
+        of << identifier << "[" << reg.second.second.second << "] "
+           << reg.second.first << ";" << std::endl;
+      } else {
+        of << identifier << " " << reg.second.first << "["
+           << reg.second.second.second << "];" << std::endl;
+      }
     }
   }
   template <class RegisterType>
@@ -758,7 +763,7 @@ public:
     dump(std::move(of), format);
   }
   virtual void dump(std::ostream&& of, Format format);
-  virtual void dumpOpenQASM(std::ostream& of);
+  virtual void dumpOpenQASM(std::ostream& of, bool openQASM3 = false);
 
   // this convenience method allows to turn a circuit into a compound operation.
   std::unique_ptr<CompoundOperation> asCompoundOperation() {
