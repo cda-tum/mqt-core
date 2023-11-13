@@ -140,29 +140,27 @@ def compare(
         df_all = pd.concat([df_improved, df_same, df_worsened], ignore_index=True)
         df_all.index = [""] * len(df_all.index)
         df_all = df_all.sort_values(by=sort)
-        print("All benchmarks:")
-        print(header)
-        print(df_all)
+        print("All benchmarks:")  # noqa: T201
+        print(header)  # noqa: T201
+        print(df_all)  # noqa: T201
         return
 
     if no_split and only_changed:
         df_all = pd.concat([df_improved, df_worsened], ignore_index=True)
         df_all.index = [""] * len(df_all.index)
         df_all = df_all.sort_values(by=sort)
-        print("All changed benchmarks:")
-        print(header)
-        print(df_all)
+        print("All changed benchmarks:")  # noqa: T201
+        print(header)  # noqa: T201
+        print(df_all)  # noqa: T201
         return
-
-    print("Benchmarks that have improved:")
-    print(header)
-    print(df_improved)
+    print("Benchmarks that have improved:")  # noqa: T201
+    print(header)  # noqa: T201
+    print(df_improved)  # noqa: T201
 
     if not only_changed:
-        print("Benchmarks that have stayed the same:")
-        print(header)
-        print(df_same)
-
-    print("Benchmarks that have worsened:")
-    print(header)
-    print(df_worsened)
+        print("Benchmarks that have stayed the same:")  # noqa: T201
+        print(header)  # noqa: T201
+        print(df_same)  # noqa: T201
+    print("Benchmarks that have worsened:")  # noqa: T201
+    print(header)  # noqa: T201
+    print(df_worsened)  # noqa: T201
