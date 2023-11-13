@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -28,16 +30,19 @@ header[comparing_commit] = [comparing_branch]
 header.index = [""] * len(header.index)
 
 
-def higher_better(key):
+def higher_better(key: str) -> bool:
+    """Return whether a higher value is better for the given key."""
     higher_better_ls = ["hits", "hit_ratio"]
     return any(key.endswith(s) for s in higher_better_ls)
 
 
-def is_nested(d):
+def is_nested(d: dict[Any, Any]) -> bool:
+    """Return whether the given dictionary is nested."""
     return any(isinstance(val, dict) for val in d.values())
 
 
-def flatten_dict(d, parent_key="", sep="_"):
+def flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = "_") -> dict[str, Any]:
+    """Flatten a nested dictionary."""
     items = {}
     for key, value in d.items():
         new_key = f"{parent_key}{sep}{key}" if parent_key else key
@@ -50,14 +55,18 @@ def flatten_dict(d, parent_key="", sep="_"):
     return items
 
 
-def compare(filename, factor=0.1, only_changed=True, sort="ratio", no_split=False):
+def compare(
+    filename: str, factor: float = 0.1, only_changed: bool = True, sort: str = "ratio", no_split: bool = False
+) -> None:
+    """Compare the results of two benchmarking runs from the generated json file."""
     if factor < 0:
         msg = "Factor must be positive!"
         raise ValueError(msg)
     if sort not in sort_options:
         msg = "Invalid sort option!"
         raise ValueError(msg)
-    with open(filename) as f:
+    path = Path(filename)
+    with path.open(mode="r", encoding="utf-8") as f:
         d = json.load(f)
     flattened_data = flatten_dict(d)
 
