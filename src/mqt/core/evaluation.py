@@ -29,7 +29,7 @@ comparing_branch = "447-add-benchmark-suite-in-mqt-core"
 header = pd.DataFrame()
 header[base_commit] = [base_branch]
 header[comparing_commit] = [comparing_branch]
-header.index = [""] * len(header.index)
+header.index = pd.Index([""] * len(header.index))
 
 
 def higher_better(key: str) -> bool:
@@ -121,25 +121,25 @@ def compare(
     df_improved["ratio"] = improved_ratio
     df_improved["experiment"] = improved_exp
     df_improved = df_improved.sort_values(by=sort)
-    df_improved.index = [""] * len(df_improved.index)
+    df_improved.index = pd.Index([""] * len(df_improved.index))
 
     df_worsened["before"] = worsened_before
     df_worsened["after"] = worsened_after
     df_worsened["ratio"] = worsened_ratio
     df_worsened["experiment"] = worsened_exp
     df_worsened = df_worsened.sort_values(by=sort)
-    df_worsened.index = [""] * len(df_worsened.index)
+    df_worsened.index = pd.Index([""] * len(df_worsened.index))
 
     df_same["before"] = same_before
     df_same["after"] = same_after
     df_same["ratio"] = same_ratio
     df_same["experiment"] = same_exp
     df_same = df_same.sort_values(by=sort)
-    df_same.index = [""] * len(df_same.index)
+    df_same.index = pd.Index([""] * len(df_same.index))
 
     if no_split and not only_changed:
         df_all = pd.concat([df_improved, df_same, df_worsened], ignore_index=True)
-        df_all.index = [""] * len(df_all.index)
+        df_all.index = pd.Index([""] * len(df_all.index))
         df_all = df_all.sort_values(by=sort)
         print("All benchmarks:")  # noqa: T201
         print(header)  # noqa: T201
@@ -148,7 +148,7 @@ def compare(
 
     if no_split and only_changed:
         df_all = pd.concat([df_improved, df_worsened], ignore_index=True)
-        df_all.index = [""] * len(df_all.index)
+        df_all.index = pd.Index([""] * len(df_all.index))
         df_all = df_all.sort_values(by=sort)
         print("All changed benchmarks:")  # noqa: T201
         print(header)  # noqa: T201
