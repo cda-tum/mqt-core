@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 from mqt.core.evaluation import compare
 
 path = Path(__file__).resolve().parent / "example_results.json"
-
-
 
 
 def test_zero_point_one() -> None:
