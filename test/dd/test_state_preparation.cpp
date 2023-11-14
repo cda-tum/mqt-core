@@ -2,27 +2,39 @@
 
 #include <gtest/gtest.h>
 
-TEST(DDPackageTest, GHZStateTest) {
-  auto dd = std::make_unique<dd::Package<>>(3);
-  auto ghz = dd->makeGHZState(3);
+class StatePreparation : public testing::TestWithParam<qc::Qubit> {};
 
-  // build state vector for (|000> + |111>) * 1/sqrt(2)
-  const dd::CVec state = {dd::SQRT2_2, 0, 0, 0, 0, 0, 0, dd::SQRT2_2};
-  const auto stateDD = dd->makeStateFromVector(state);
+extern std::vector<std::string> generateWStateStrings(const std::size_t length);
 
-  EXPECT_EQ(ghz, stateDD);
+INSTANTIATE_TEST_SUITE_P(
+    StatePreparation, StatePreparation, testing::Range<qc::Qubit>(1U, 128U, 7U),
+    [](const testing::TestParamInfo<StatePreparation::ParamType>& inf) {
+      // Generate names for test cases
+      const auto nqubits = inf.param;
+      std::stringstream ss{};
+      ss << nqubits << "_qubits";
+      return ss.str();
+    });
+
+TEST_P(StatePreparation, GHZStateTest) {
+  const auto nq = GetParam();
+
+  auto dd = std::make_unique<dd::Package<>>(nq);
+  const auto ghz = dd->makeGHZState(nq);
+  EXPECT_EQ(ghz.getValueByIndex(0), dd::SQRT2_2);
+  EXPECT_EQ(ghz.getValueByPath(std::string(nq, '1')), dd::SQRT2_2);
 }
 
-TEST(DDPackage, WStateTest) {
-  auto dd = std::make_unique<dd::Package<>>(3);
-  auto wState = dd->makeWState(3);
+TEST_P(StatePreparation, WStateTest) {
+  const auto nq = GetParam();
 
-  // build state vector for (|001> + |010> + |100>) * 1/sqrt(3)
-  const dd::CVec state = {
-      0, std::sqrt(3) / 3, std::sqrt(3) / 3, 0, std::sqrt(3) / 3, 0, 0, 0};
-  const auto stateDD = dd->makeStateFromVector(state);
-
-  EXPECT_EQ(wState, stateDD);
+  auto dd = std::make_unique<dd::Package<>>(nq);
+  const auto w = dd->makeWState(nq);
+  for (const auto& wStateString : generateWStateStrings(nq)) {
+    EXPECT_NEAR(w.getValueByPath(wStateString).real(), 1. / std::sqrt(nq),
+                0.000001);
+    EXPECT_EQ(w.getValueByPath(wStateString).imag(), 0.);
+  }
 }
 
 TEST(DDPackageTest, GHZStateEdgeCasesTest) {
