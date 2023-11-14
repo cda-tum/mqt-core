@@ -61,6 +61,32 @@ void FunctionalityConstruction::addXSpider(ZXDiagram& diag, const Qubit qubit,
   qubits[q] = newVertex;
 }
 
+void FunctionalityConstruction::addRz(ZXDiagram& diag,
+                                      const PiExpression& phase,
+                                      const Qubit target,
+                                      std::vector<Vertex>& qubits) {
+  diag.addGlobalPhase(-phase / 2);
+  addZSpider(diag, target, qubits, phase);
+}
+
+void FunctionalityConstruction::addRx(ZXDiagram& diag,
+                                      const PiExpression& phase,
+                                      const Qubit target,
+                                      std::vector<Vertex>& qubits) {
+  addXSpider(diag, target, qubits, phase);
+}
+
+void FunctionalityConstruction::addRy(ZXDiagram& diag,
+                                      const PiExpression& phase,
+                                      const Qubit target,
+                                      std::vector<Vertex>& qubits) {
+  diag.addGlobalPhase(-phase / 2);
+  addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
+  addZSpider(diag, target, qubits, phase + PiRational(1, 1));
+  addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
+  addZSpider(diag, target, qubits, PiExpression(PiRational(1, 1)));
+}
+
 void FunctionalityConstruction::addCnot(ZXDiagram& diag, const Qubit ctrl,
                                         const Qubit target,
                                         std::vector<Vertex>& qubits,
@@ -208,13 +234,9 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
     case qc::OpType::Z:
       addZSpider(diag, target, qubits, PiExpression(PiRational(1, 1)));
       break;
-    case qc::OpType::RZ: {
-      const auto& param = parseParam(op.get(), 0);
-      diag.addGlobalPhase(-param / 2.0);
-
-      addZSpider(diag, target, qubits, parseParam(op.get(), 0));
+    case qc::OpType::RZ:
+      addRz(diag, parseParam(op.get(), 0), target, qubits);
       break;
-    }
     case qc::OpType::P:
       addZSpider(diag, target, qubits, parseParam(op.get(), 0));
       break;
@@ -222,7 +244,7 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       addXSpider(diag, target, qubits, PiExpression(PiRational(1, 1)));
       break;
     case qc::OpType::RX:
-      addXSpider(diag, target, qubits, parseParam(op.get(), 0));
+      addRx(diag, parseParam(op.get(), 0), target, qubits);
       break;
     case qc::OpType::Y:
       diag.addGlobalPhase(PiExpression{-PiRational(1, 2)});
@@ -231,15 +253,7 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       addXSpider(diag, target, qubits, PiExpression(PiRational(1, 1)));
       break;
     case qc::OpType::RY:
-      diag.addGlobalPhase(
-          PiExpression(-PiRational(op->getParameter().front()) / 2 +
-                       PiRational(1, 2) + PiRational(3, 2)));
-
-      addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
-      addZSpider(diag, target, qubits,
-                 parseParam(op.get(), 0) + PiRational(1, 1));
-      addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
-      addZSpider(diag, target, qubits, PiExpression(PiRational(3, 1)));
+      addRy(diag, parseParam(op.get(), 0), target, qubits);
       break;
     case qc::OpType::T:
       addZSpider(diag, target, qubits, PiExpression(PiRational(1, 4)));
