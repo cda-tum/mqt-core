@@ -44,4 +44,13 @@ benchmarkFunctionalityConstruction(const QuantumComputation& qc,
   return exp;
 }
 
+std::map<std::string, std::size_t>
+benchmarkSimulateWithShots(const qc::QuantumComputation& qc, const std::size_t shots) {
+  auto nq = qc.getNqubits();
+  auto dd = std::make_unique<dd::Package<>>(nq);
+  auto in = dd->makeZeroState(nq);
+  auto measurements = simulate(&qc, in, dd, shots);
+  return measurements;
+}
+
 } // namespace dd

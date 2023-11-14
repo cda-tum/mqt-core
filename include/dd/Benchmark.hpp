@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dd/Package_fwd.hpp"
+#include "dd/Package.hpp"
 
 #include <chrono>
 #include <nlohmann/json.hpp>
@@ -10,6 +10,10 @@ class QuantumComputation;
 }
 
 namespace dd {
+
+namespace constants {
+  static const std::size_t DEFAULT_SHOTS = 1024U;
+}
 
 struct Experiment {
   std::unique_ptr<Package<>> dd{};
@@ -44,4 +48,7 @@ benchmarkSimulate(const qc::QuantumComputation& qc);
 std::unique_ptr<FunctionalityConstructionExperiment>
 benchmarkFunctionalityConstruction(const qc::QuantumComputation& qc,
                                    bool recursive = false);
+
+std::map<std::string, std::size_t>
+benchmarkSimulateWithShots(const qc::QuantumComputation& qc, std::size_t shots = constants::DEFAULT_SHOTS);
 } // namespace dd
