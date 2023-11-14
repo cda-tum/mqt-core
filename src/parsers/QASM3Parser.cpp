@@ -584,6 +584,10 @@ public:
 
       constEvalPass.popEnv();
 
+      if (op->getOps().size() == 1) {
+        return std::move(op->getOps()[0]);
+      }
+
       return op;
     }
 

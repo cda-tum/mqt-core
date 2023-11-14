@@ -2821,3 +2821,21 @@ TEST_F(QFRFunctionality, ImportQasm3Teleportation) {
 
   EXPECT_EQ(out.str(), expected);
 }
+
+TEST_F(QFRFunctionality, ImportQasm3NestedGates) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "gate my_x q { x q; }\n"
+                               "gate my_x2 q1 { x q1; }\n"
+                               "qubit[1] q;\n"
+                               "my_x2 q[0];\n"
+                               "";
+
+  ss << testfile;
+  auto qc = qc::QuantumComputation();
+  qc.import(ss, qc::Format::OpenQASM3);
+
+  EXPECT_EQ(qc.getNops(), 1);
+  EXPECT_EQ(qc.at(0)->getType(), OpType::X);
+}
