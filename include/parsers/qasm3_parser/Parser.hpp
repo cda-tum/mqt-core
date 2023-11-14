@@ -46,17 +46,21 @@ private:
 
     explicit ScannerState(
         std::istream& in,
-        std::optional<std::string> debugFilename = std::nullopt, bool implicitInclude = false)
+        std::optional<std::string> debugFilename = std::nullopt,
+        bool implicitInclude = false)
         : scanner(std::make_unique<Scanner>(in)),
-          filename(std::move(debugFilename)), isImplicitInclude(implicitInclude) {
+          filename(std::move(debugFilename)),
+          isImplicitInclude(implicitInclude) {
       scan();
     }
 
     explicit ScannerState(
         std::unique_ptr<std::istream> in,
-        std::optional<std::string> debugFilename = std::nullopt, bool implicitInclude = false)
+        std::optional<std::string> debugFilename = std::nullopt,
+        bool implicitInclude = false)
         : is(std::move(in)), scanner(std::make_unique<Scanner>(*is)),
-          filename(std::move(debugFilename)), isImplicitInclude(implicitInclude) {
+          filename(std::move(debugFilename)),
+          isImplicitInclude(implicitInclude) {
       scan();
     }
   };
@@ -110,7 +114,8 @@ public:
   explicit Parser(std::istream& is) {
     scanner.emplace(is);
     scan();
-    scanner.emplace(std::make_unique<std::istringstream>(STDGATES), "stdgates.inc", true);
+    scanner.emplace(std::make_unique<std::istringstream>(STDGATES),
+                    "stdgates.inc", true);
     scan();
   }
 

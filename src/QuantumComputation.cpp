@@ -686,7 +686,8 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) {
   for (const auto& [regName, reg] : ancregs) {
     combinedRegs.try_emplace(regName, reg.first, reg.second);
   }
-  printSortedRegisters(combinedRegs, openQASM3 ? "qubit" : "qreg", of, openQASM3);
+  printSortedRegisters(combinedRegs, openQASM3 ? "qubit" : "qreg", of,
+                       openQASM3);
   RegisterNames combinedRegNames{};
   createRegisterArray(combinedRegs, combinedRegNames);
   assert(combinedRegNames.size() == nqubits + nancillae);

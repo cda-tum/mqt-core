@@ -2380,7 +2380,6 @@ TEST_F(QFRFunctionality, testToffoliSequenceSimplification) {
   }
 }
 
-
 TEST_F(QFRFunctionality, ImportQasm3) {
   std::stringstream ss{};
   const std::string testfile = "OPENQASM 3.0;\n"
