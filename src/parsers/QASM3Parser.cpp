@@ -186,8 +186,10 @@ public:
   }
 
   void visitVersionDeclaration(
-      std::shared_ptr<VersionDeclaration> /*versionDeclaration*/) override {
-    // TODO: do something with the version declaration
+      std::shared_ptr<VersionDeclaration> versionDeclaration) override {
+    if (versionDeclaration->version < 3) {
+      qc->updateMaxControls(2);
+    }
   }
 
   void visitDeclarationStatement(
