@@ -63,11 +63,12 @@ std::ostream& NonUnitaryOperation::print(
 void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
                                        const RegisterNames& qreg,
                                        const RegisterNames& creg) const {
-  if (isWholeQubitRegister(qreg, targets.front(), targets.back())) {
+  if (isWholeQubitRegister(qreg, targets.front(), targets.back()) &&
+      (type != Measure ||
+       isWholeQubitRegister(creg, classics.front(), classics.back()))) {
     of << toString(type) << " " << qreg[targets.front()].first;
     if (type == Measure) {
       of << " -> ";
-      assert(isWholeQubitRegister(creg, classics.front(), classics.back()));
       of << creg[classics.front()].first;
     }
     of << ";\n";

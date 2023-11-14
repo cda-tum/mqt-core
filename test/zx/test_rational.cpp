@@ -1,5 +1,5 @@
-#include "zx/Definitions.hpp"
 #include "zx/Rational.hpp"
+#include "zx/ZXDefinitions.hpp"
 
 #include <gtest/gtest.h>
 #include <iostream>

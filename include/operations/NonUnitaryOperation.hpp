@@ -83,3 +83,19 @@ public:
   }
 };
 } // namespace qc
+
+namespace std {
+template <> struct hash<qc::NonUnitaryOperation> {
+  std::size_t operator()(qc::NonUnitaryOperation const& op) const noexcept {
+    std::size_t seed = 0U;
+    qc::hashCombine(seed, op.getType());
+    for (const auto& q : op.getTargets()) {
+      qc::hashCombine(seed, q);
+    }
+    for (const auto& c : op.getClassics()) {
+      qc::hashCombine(seed, c);
+    }
+    return seed;
+  }
+};
+} // namespace std

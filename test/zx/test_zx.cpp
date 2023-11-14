@@ -1,6 +1,6 @@
-#include "zx/Definitions.hpp"
 #include "zx/Rational.hpp"
 #include "zx/Simplify.hpp"
+#include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
 #include <array>
