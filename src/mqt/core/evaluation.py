@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 pd.set_option("display.max_colwidth", None)
 pd.set_option("display.max_rows", None)
@@ -56,7 +58,7 @@ def flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = "_") -> dic
 
 
 def compare(
-    filename: str, factor: float = 0.1, only_changed: bool = True, sort: str = "ratio", no_split: bool = False
+    filepath: Path, factor: float = 0.1, only_changed: bool = True, sort: str = "ratio", no_split: bool = False
 ) -> None:
     """Compare the results of two benchmarking runs from the generated json file."""
     if factor < 0:
@@ -65,8 +67,7 @@ def compare(
     if sort not in sort_options:
         msg = "Invalid sort option!"
         raise ValueError(msg)
-    path = Path(filename)
-    with path.open(mode="r", encoding="utf-8") as f:
+    with filepath.open(mode="r", encoding="utf-8") as f:
         d = json.load(f)
     flattened_data = flatten_dict(d)
 
