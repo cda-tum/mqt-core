@@ -10,9 +10,9 @@ namespace qasm3 {
 const std::string STDGATES =
     "// OpenQASM 3 standard gate library\n"
     "\n"
-    "// phase gate\n"
-    "gate p(lambda) a { ctrl @ gphase(lambda) a; }\n"
-    "\n"
+    //    "// phase gate\n"
+    //    "gate p(lambda) a { ctrl @ gphase(lambda) a; }\n"
+    //    "\n"
     "// Pauli gate: bit-flip or NOT gate\n"
     "gate x a { U(pi, 0, pi) a; }\n"
     "// Pauli gate: bit and phase flip\n"
@@ -22,7 +22,7 @@ const std::string STDGATES =
     "\n"
     "// Clifford gate: Hadamard\n"
     "gate h a { U(pi/2, 0, pi) a; }\n"
-    "// Clifford gate: sqrt(Z) or S gate\n"
+    //    "// Clifford gate: sqrt(Z) or S gate\n"
     // unsupported gates due to `pow` modifier.
     //    "gate s a { pow(1/2) @ z a; }\n"
     //    "// Clifford gate: inverse of sqrt(Z)\n"
@@ -59,9 +59,9 @@ const std::string STDGATES =
     "gate crz(theta) a, b { ctrl @ rz(theta) a, b; }\n"
     "// controlled-H\n"
     "gate ch a, b { ctrl @ h a, b; }\n"
-    "\n"
-    "// swap\n"
-    "gate swap a, b { cx a, b; cx b, a; cx a, b; }\n"
+    //    "\n"
+    //    "// swap\n"
+    //    "gate swap a, b { cx a, b; cx b, a; cx a, b; }\n"
     "\n"
     "// Toffoli\n"
     "gate ccx a, b, c { ctrl @ ctrl @ x a, b, c; }\n"
@@ -93,6 +93,14 @@ const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
     {"gphase",
      std::make_shared<StandardGate>(StandardGate({0, 0, 1, qc::GPhase}))},
     {"U", std::make_shared<StandardGate>(StandardGate({0, 1, 3, qc::U}))},
+
+    // The controlled gphase is problematic so we natively support the phase
+    // gate.
+    {"p", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::P}))},
+    // we use mqt's native swap gate instead of the one from the stdgates.inc.
+    {"swap", std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::SWAP}))},
+    {"iswap",
+     std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::iSWAP}))},
 
     // gates from the stdgates.inc file which can't be parsed at the moment as
     // the `pow` modifier is unsupported at the moment.
