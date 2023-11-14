@@ -744,19 +744,23 @@ void StandardOperation::dumpOpenQASM3(std::ostream& of,
 
   // apply the operation
   of << op.str();
+
   // add controls and targets of the operation
-  for (const auto& c : controls) {
-    of << " " << qreg[c.qubit].second << ",";
+  for (auto it = controls.begin(); it != controls.end();) {
+    of << " " << qreg[it->qubit].second;
+    if (++it != controls.end() || !targets.empty()) {
+      of << ",";
+    }
   }
-  if (!targets.empty()) {
-    if (type == Barrier &&
-        isWholeQubitRegister(qreg, targets.front(), targets.back())) {
-      of << " " << qreg[targets.front()].first;
-    } else {
-      for (const auto& t : targets) {
-        of << " " << qreg[t].second << ",";
+  if (!targets.empty() && type == Barrier &&
+      isWholeQubitRegister(qreg, targets.front(), targets.back())) {
+    of << qreg[targets.front()].first;
+  } else {
+    for (auto it = targets.begin(); it != targets.end();) {
+      of << " " << qreg[*it].second;
+      if (++it != targets.end()) {
+        of << ",";
       }
-      of.seekp(-1, std::ios_base::cur);
     }
   }
   of << ";\n";
