@@ -471,13 +471,18 @@ std::shared_ptr<Statement> Parser::parseDeclaration(bool isConst) {
 
   auto const name = identifier.str;
 
-  if (isOldStyleDeclaration && current().kind == Token::Kind::LBracket) {
-    if (!type->allowsDesignator()) {
-      error(current(), "Type does not allow designator");
+  if (current().kind == Token::Kind::LBracket) {
+    if (isOldStyleDeclaration) {
+      if (!type->allowsDesignator()) {
+        error(current(), "Type does not allow designator");
+      }
+      // in this case, the designator expression is after the identifier
+      auto const designator = parseTypeDesignator();
+      type->setDesignator(designator);
+    } else {
+      error(current(), "In OpenQASM 3.0, the designator has been changed to "
+                       "`type[designator] identifier;`");
     }
-    // in this case, the designator expression is after the identifier
-    auto const designator = parseTypeDesignator();
-    type->setDesignator(designator);
   }
 
   //        std::shared_ptr<DeclarationStatement> statement;
@@ -518,7 +523,8 @@ std::shared_ptr<GateDeclaration> Parser::parseGateDefinition() {
   auto tEnd = expect(Token::Kind::RBrace);
 
   return std::make_shared<GateDeclaration>(
-      GateDeclaration(makeDebugInfo(tBegin, tEnd), identifier.str, parameters, qubits, statements));
+      GateDeclaration(makeDebugInfo(tBegin, tEnd), identifier.str, parameters,
+                      qubits, statements));
 }
 
 std::shared_ptr<GateDeclaration> Parser::parseOpaqueGateDefinition() {
