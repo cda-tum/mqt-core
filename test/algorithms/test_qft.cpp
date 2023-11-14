@@ -150,9 +150,7 @@ TEST_P(QFT, Simulation) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
   // there should be no error simulating the circuit
-  ASSERT_NO_THROW({
-    sim = dd::benchmarkSimulate(*qc)->sim;
-  });
+  ASSERT_NO_THROW({ sim = dd::benchmarkSimulate(*qc)->sim; });
   qc->printStatistics(std::cout);
 
   // QFT DD |0...0> sim should consist of n nodes
@@ -181,11 +179,13 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
   // there should be no error building the functionality recursively
-  ASSERT_NO_THROW({ func = dd::benchmarkFunctionalityConstruction(*qc)->func; });
+  ASSERT_NO_THROW(
+      { func = dd::benchmarkFunctionalityConstruction(*qc)->func; });
 
   // there should be no error building the functionality regularly
   qc::MatrixDD funcRec{};
-  ASSERT_NO_THROW({ funcRec = dd::benchmarkFunctionalityConstruction(*qc)->func; });
+  ASSERT_NO_THROW(
+      { funcRec = dd::benchmarkFunctionalityConstruction(*qc)->func; });
 
   ASSERT_EQ(func, funcRec);
   dd->decRef(funcRec);

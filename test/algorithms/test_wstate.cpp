@@ -32,8 +32,7 @@ TEST_P(WState, FunctionTest) {
   const auto nq = GetParam();
 
   auto qc = qc::WState(nq);
-  const auto measurements =
-      dd::benchmarkSimulateWithShots(qc, 4096U);
+  const auto measurements = dd::benchmarkSimulateWithShots(qc, 4096U);
   for (const auto& result : generateWStateStrings(nq)) {
     EXPECT_TRUE(measurements.find(result) != measurements.end());
   }

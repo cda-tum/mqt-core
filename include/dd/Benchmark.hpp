@@ -12,7 +12,7 @@ class QuantumComputation;
 namespace dd {
 
 namespace constants {
-  static const std::size_t DEFAULT_SHOTS = 1024U;
+static const std::size_t DEFAULT_SHOTS = 1024U;
 }
 
 struct Experiment {
@@ -50,5 +50,6 @@ benchmarkFunctionalityConstruction(const qc::QuantumComputation& qc,
                                    bool recursive = false);
 
 std::map<std::string, std::size_t>
-benchmarkSimulateWithShots(const qc::QuantumComputation& qc, std::size_t shots = constants::DEFAULT_SHOTS);
+benchmarkSimulateWithShots(const qc::QuantumComputation& qc,
+                           std::size_t shots = constants::DEFAULT_SHOTS);
 } // namespace dd

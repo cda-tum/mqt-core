@@ -115,8 +115,7 @@ TEST_P(QPE, QPETest) {
   ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(qc); });
 
   qc::VectorDD e{};
-  ASSERT_NO_THROW(
-      { e = dd::benchmarkSimulate(qc)->sim; });
+  ASSERT_NO_THROW({ e = dd::benchmarkSimulate(qc)->sim; });
   // account for the eigenstate qubit in the expected result by shifting and
   // adding 1
   const auto amplitude = e.getValueByIndex((expectedResult << 1) + 1);
@@ -147,8 +146,7 @@ TEST_P(QPE, IQPETest) {
   ASSERT_EQ(qc.getNqubits(), 2U);
 
   constexpr auto shots = 8192U;
-  auto measurements =
-      dd::benchmarkSimulateWithShots(qc, shots);
+  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   // sort the measurements
   using Measurement = std::pair<std::string, std::size_t>;
