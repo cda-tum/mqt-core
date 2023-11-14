@@ -1,6 +1,5 @@
 #include "algorithms/Entanglement.hpp"
 #include "dd/Benchmark.hpp"
-#include "dd/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
 #include <string>
@@ -26,7 +25,7 @@ TEST_P(Entanglement, FunctionTest) {
 
   auto dd = std::make_unique<dd::Package<>>(nq);
   auto qc = qc::Entanglement(nq);
-  auto e = buildFunctionality(&qc, dd);
+  auto e = dd::benchmarkFunctionalityConstruction(qc)->func;
 
   ASSERT_EQ(qc.getNops(), nq);
   const qc::VectorDD r = dd->multiply(e, dd->makeZeroState(nq));

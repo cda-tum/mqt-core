@@ -1,6 +1,5 @@
 #include "algorithms/WState.hpp"
 #include "dd/Benchmark.hpp"
-#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <iostream>
@@ -33,10 +32,8 @@ TEST_P(WState, FunctionTest) {
   const auto nq = GetParam();
 
   auto qc = qc::WState(nq);
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const std::size_t shots = 4096U;
   const auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+      dd::benchmarkSimulateWithShots(qc, 4096U);
   for (const auto& result : generateWStateStrings(nq)) {
     EXPECT_TRUE(measurements.find(result) != measurements.end());
   }

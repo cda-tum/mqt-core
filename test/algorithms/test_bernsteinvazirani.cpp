@@ -36,10 +36,9 @@ TEST_P(BernsteinVazirani, FunctionTest) {
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
   auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+      dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -58,10 +57,9 @@ TEST_P(BernsteinVazirani, FunctionTestDynamic) {
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
   auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+      dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -77,10 +75,9 @@ TEST_F(BernsteinVazirani, LargeCircuit) {
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
   auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+      dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -96,10 +93,9 @@ TEST_F(BernsteinVazirani, DynamicCircuit) {
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
   auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+      dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -122,7 +118,7 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(bv);
 
   // simulate circuit
-  auto e = simulate(&bv, dd->makeZeroState(bv.getNqubits()), dd);
+  auto e = dd::benchmarkSimulate(bv)->sim;
 
   // create dynamic BV circuit
   auto dbv = qc::BernsteinVazirani(s, true);

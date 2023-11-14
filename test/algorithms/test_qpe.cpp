@@ -109,7 +109,6 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(QPE, QPETest) {
-  auto dd = std::make_unique<dd::Package<>>(precision + 1);
   auto qc = qc::QPE(lambda, precision);
   qc.printStatistics(std::cout);
   ASSERT_EQ(qc.getNqubits(), precision + 1);
@@ -117,8 +116,7 @@ TEST_P(QPE, QPETest) {
 
   qc::VectorDD e{};
   ASSERT_NO_THROW(
-      { e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd); });
-
+      { e = dd::benchmarkSimulate(qc)->sim; });
   // account for the eigenstate qubit in the expected result by shifting and
   // adding 1
   const auto amplitude = e.getValueByIndex((expectedResult << 1) + 1);
@@ -145,13 +143,12 @@ TEST_P(QPE, QPETest) {
 }
 
 TEST_P(QPE, IQPETest) {
-  auto dd = std::make_unique<dd::Package<>>(precision + 1);
   auto qc = qc::QPE(lambda, precision, true);
   ASSERT_EQ(qc.getNqubits(), 2U);
 
   constexpr auto shots = 8192U;
   auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+      dd::benchmarkSimulateWithShots(qc, shots);
 
   // sort the measurements
   using Measurement = std::pair<std::string, std::size_t>;
@@ -192,8 +189,6 @@ TEST_P(QPE, IQPETest) {
 }
 
 TEST_P(QPE, DynamicEquivalenceSimulation) {
-  auto dd = std::make_unique<dd::Package<>>(precision + 1);
-
   // create standard QPE circuit
   auto qpe = qc::QPE(lambda, precision);
 
@@ -201,7 +196,8 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), dd);
+  auto out = dd::benchmarkSimulate(qpe);
+  auto e = out->sim;
 
   // create standard IQPE circuit
   auto iqpe = qc::QPE(lambda, precision, true);
@@ -215,10 +211,10 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = simulate(&iqpe, dd->makeZeroState(iqpe.getNqubits()), dd);
+  auto f = dd::benchmarkSimulate(iqpe)->sim;
 
   // calculate fidelity between both results
-  auto fidelity = dd->fidelity(e, f);
+  auto fidelity = out->dd->fidelity(e, f);
   std::cout << "Fidelity of both circuits: " << fidelity << "\n";
 
   EXPECT_NEAR(fidelity, 1.0, 1e-4);
@@ -289,7 +285,7 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), dd);
+  auto e = dd::benchmarkSimulate(qpe)->sim;
   const auto vec = e.getVector();
   std::cout << "QPE:\n";
   for (const auto& amp : vec) {

@@ -1,7 +1,7 @@
 #include "algorithms/Grover.hpp"
 #include "dd/Benchmark.hpp"
-#include "dd/FunctionalityConstruction.hpp"
-#include "dd/Simulation.hpp"
+//#include "dd/FunctionalityConstruction.hpp"
+//#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <cmath>
@@ -75,7 +75,7 @@ TEST_P(Grover, Functionality) {
   std::replace(x.begin(), x.end(), '1', '2');
 
   // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionality(qc.get(), dd); });
+  ASSERT_NO_THROW({ func = dd::benchmarkFunctionalityConstruction(*qc)->func; });
 
   // amplitude of the searched-for entry should be 1
   auto c = func.getValueByPath(x);
@@ -95,7 +95,7 @@ TEST_P(Grover, FunctionalityRecursive) {
   std::replace(x.begin(), x.end(), '1', '2');
 
   // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), dd); });
+  ASSERT_NO_THROW({ func = dd::benchmarkFunctionalityConstruction(*qc, true)->func; });
 
   // amplitude of the searched-for entry should be 1
   auto c = func.getValueByPath(x);
@@ -110,10 +110,9 @@ TEST_P(Grover, Simulation) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
   qc->printStatistics(std::cout);
-  auto in = dd->makeZeroState(nqubits + 1U);
   // there should be no error simulating the circuit
   const std::size_t shots = 1024;
-  auto measurements = simulate(qc.get(), in, dd, shots);
+  auto measurements = dd::benchmarkSimulateWithShots(*qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
