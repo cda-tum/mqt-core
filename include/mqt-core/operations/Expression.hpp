@@ -91,6 +91,10 @@ public:
     coeff /= rhs;
     return *this;
   }
+  Term& operator/=(const std::int64_t rhs) {
+    coeff /= static_cast<T>(rhs);
+    return *this;
+  }
   [[nodiscard]] bool
   totalAssignment(const VariableAssignment& assignment) const {
     return assignment.find(getVar()) != assignment.end();
