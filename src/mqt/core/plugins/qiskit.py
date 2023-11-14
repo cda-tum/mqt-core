@@ -1,4 +1,5 @@
 """Functionality for interoperability with Qiskit."""
+
 from __future__ import annotations
 
 import re
@@ -44,14 +45,11 @@ def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
         size = reg.size
         if isinstance(reg, AncillaRegister):
             qc.add_ancillary_register(size, reg.name)
-            for qubit in reg:
-                qubit_map[qubit] = qubit_index
-                qubit_index += 1
         else:
             qc.add_qubit_register(size, reg.name)
-            for qubit in reg:
-                qubit_map[qubit] = qubit_index
-                qubit_index += 1
+        for qubit in reg:
+            qubit_map[qubit] = qubit_index
+            qubit_index += 1
 
     clbit_index = 0
     clbit_map: dict[Clbit, int] = {}
@@ -236,7 +234,7 @@ def _emplace_operation(
     if name in {"p", "u1", "cp", "cu1", "mcphase"}:
         return _add_operation(qc, OpType.p, qargs, params, qubit_map)
 
-    if name in {"u2"}:
+    if name == "u2":
         return _add_operation(qc, OpType.u2, qargs, params, qubit_map)
 
     if name in {"u", "u3", "cu3"}:

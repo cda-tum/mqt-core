@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if sys.version_info < (3, 11):
     if TYPE_CHECKING:
@@ -9,7 +9,7 @@ if sys.version_info < (3, 11):
     else:
         Self = object
 
-        def assert_never(_: Any) -> None:  # noqa: ANN401
+        def assert_never(_: object) -> None:
             msg = "Expected code to be unreachable"
             raise AssertionError(msg)
 
