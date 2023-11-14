@@ -168,6 +168,44 @@ void FunctionalityConstruction::addDcx(ZXDiagram& diag, const Qubit qubit1,
   addCnot(diag, qubit2, qubit1, qubits);
 }
 
+void FunctionalityConstruction::addXXplusYY(
+    ZXDiagram& diag, const PiExpression& theta, const PiExpression& beta,
+    const Qubit qubit0, const Qubit qubit1, std::vector<Vertex>& qubits) {
+  addRz(diag, beta, qubit1, qubits);
+  addRz(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
+  addRx(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
+  addRz(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
+  addZSpider(diag, qubit1, qubits, PiExpression(PiRational(1, 2)));
+  addCnot(diag, qubit0, qubit1, qubits);
+  addRy(diag, theta / 2, qubit0, qubits);
+  addRy(diag, theta / 2, qubit1, qubits);
+  addCnot(diag, qubit0, qubit1, qubits);
+  addZSpider(diag, qubit1, qubits, PiExpression(PiRational(-1, 2)));
+  addRz(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
+  addRx(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
+  addRz(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
+  addRz(diag, -beta, qubit1, qubits);
+}
+
+void FunctionalityConstruction::addXXminusYY(
+    ZXDiagram& diag, const PiExpression& theta, const PiExpression& beta,
+    const Qubit qubit0, const Qubit qubit1, std::vector<Vertex>& qubits) {
+  addRz(diag, -beta, qubit1, qubits);
+  addRz(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
+  addRx(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
+  addRz(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
+  addZSpider(diag, qubit1, qubits, PiExpression(PiRational(1, 2)));
+  addCnot(diag, qubit0, qubit1, qubits);
+  addRy(diag, -theta / 2, qubit0, qubits);
+  addRy(diag, theta / 2, qubit1, qubits);
+  addCnot(diag, qubit0, qubit1, qubits);
+  addZSpider(diag, qubit1, qubits, PiExpression(PiRational(-1, 2)));
+  addRz(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
+  addRx(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
+  addRz(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
+  addRz(diag, beta, qubit1, qubits);
+}
+
 void FunctionalityConstruction::addSwap(ZXDiagram& diag, const Qubit target,
                                         const Qubit target2,
                                         std::vector<Vertex>& qubits) {
@@ -337,6 +375,18 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       addRzx(diag, PiExpression(PiRational(1, 4)), target, target2, qubits);
       addXSpider(diag, target, qubits);
       addRzx(diag, PiExpression(-PiRational(1, 4)), target, target2, qubits);
+      break;
+    }
+    case qc::OpType::XXplusYY: {
+      const auto target2 = static_cast<Qubit>(p.at(op->getTargets()[1]));
+      addXXplusYY(diag, parseParam(op.get(), 0), parseParam(op.get(), 1),
+                  target, target2, qubits);
+      break;
+    }
+    case qc::OpType::XXminusYY: {
+      const auto target2 = static_cast<Qubit>(p.at(op->getTargets()[1]));
+      addXXminusYY(diag, parseParam(op.get(), 0), parseParam(op.get(), 1),
+                   target, target2, qubits);
       break;
     }
     case qc::OpType::H:
@@ -527,6 +577,8 @@ bool FunctionalityConstruction::transformableToZX(const qc::Operation* op) {
     case qc::OpType::RYY:
     case qc::OpType::DCX:
     case qc::OpType::ECR:
+    case qc::OpType::XXplusYY:
+    case qc::OpType::XXminusYY:
       return true;
     default:
       return false;
