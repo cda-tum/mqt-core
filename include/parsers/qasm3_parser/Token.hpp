@@ -20,6 +20,7 @@ public:
     Cal,
     DefCal,
     Gate,
+    Opaque,
     Extern,
     Box,
     Let,
@@ -197,6 +198,8 @@ public:
       return "DefCal";
     case Kind::Gate:
       return "Gate";
+    case Kind::Opaque:
+      return "Opaque";
     case Kind::Extern:
       return "Extern";
     case Kind::Box:

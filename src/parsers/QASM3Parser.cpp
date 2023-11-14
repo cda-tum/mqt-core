@@ -295,6 +295,16 @@ public:
   void
   visitGateStatement(std::shared_ptr<GateDeclaration> gateStatement) override {
     auto identifier = gateStatement->identifier;
+    if (gateStatement->isOpaque) {
+      if (gates.find(identifier) == gates.end()) {
+        // only builtin gates may be declared as opaque.
+        error("Unsupported opaque gate '" + identifier + "'.",
+              gateStatement->debugInfo);
+      }
+
+      return;
+    }
+
     if (gates.find(identifier) != gates.end()) {
       // TODO: print location of previous declaration
       error("Gate '" + identifier + "' already declared.",
@@ -679,8 +689,7 @@ public:
             ifStatement->debugInfo);
     }
     if (rhs == nullptr) {
-      error("Can only compare to constants.",
-            ifStatement->debugInfo);
+      error("Can only compare to constants.", ifStatement->debugInfo);
     }
 
     auto creg = qc->getCregs().find(lhs->identifier);
@@ -689,7 +698,6 @@ public:
                 "' in condition.",
             ifStatement->debugInfo);
     }
-
 
     // translate statements in then block
     auto thenOps = std::make_unique<qc::CompoundOperation>(qc->getNqubits());

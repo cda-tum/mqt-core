@@ -111,8 +111,10 @@ std::shared_ptr<Statement> Parser::parseStatement() {
   }
 
   if (current().kind == Token::Kind::Gate) {
-    scan();
     return parseGateDefinition();
+  }
+  if (current().kind == Token::Kind::Opaque) {
+    return parseOpaqueGateDefinition();
   }
 
   if (current().kind == Token::Kind::Identifier) {
@@ -494,6 +496,7 @@ std::shared_ptr<Statement> Parser::parseDeclaration(bool isConst) {
 }
 
 std::shared_ptr<GateDeclaration> Parser::parseGateDefinition() {
+  auto tBegin = expect(Token::Kind::Gate);
   auto const identifier = expect(Token::Kind::Identifier);
 
   std::shared_ptr<IdentifierList> parameters{nullptr};
@@ -515,8 +518,29 @@ std::shared_ptr<GateDeclaration> Parser::parseGateDefinition() {
   auto tEnd = expect(Token::Kind::RBrace);
 
   return std::make_shared<GateDeclaration>(
-      GateDeclaration(makeDebugInfo(identifier, tEnd), identifier.str,
-                      parameters, qubits, statements));
+      GateDeclaration(makeDebugInfo(tBegin, tEnd), identifier.str, parameters, qubits, statements));
+}
+
+std::shared_ptr<GateDeclaration> Parser::parseOpaqueGateDefinition() {
+  auto tBegin = expect(Token::Kind::Opaque);
+  auto const identifier = expect(Token::Kind::Identifier);
+
+  std::shared_ptr<IdentifierList> parameters{nullptr};
+  if (current().kind == Token::Kind::LParen) {
+    scan();
+    parameters = parseIdentifierList();
+    expect(Token::Kind::RParen);
+  } else {
+    parameters = std::make_shared<IdentifierList>(IdentifierList{});
+  }
+
+  auto qubits = parseIdentifierList();
+
+  auto tEnd = expect(Token::Kind::Semicolon);
+
+  return std::make_shared<GateDeclaration>(
+      GateDeclaration(makeDebugInfo(tBegin, tEnd), identifier.str, parameters,
+                      qubits, {}, true));
 }
 
 std::shared_ptr<DeclarationExpression> Parser::parseDeclarationExpression() {

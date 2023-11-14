@@ -136,6 +136,8 @@ public:
 
   std::shared_ptr<GateDeclaration> parseGateDefinition();
 
+  std::shared_ptr<GateDeclaration> parseOpaqueGateDefinition();
+
   std::shared_ptr<GateCallStatement> parseGateCallStatement();
 
   std::shared_ptr<GateModifier> parseGateModifier();

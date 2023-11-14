@@ -262,6 +262,7 @@ Scanner::Scanner(std::istream& in) : is(in) {
   keywords["cal"] = Token::Kind::Cal;
   keywords["defcal"] = Token::Kind::DefCal;
   keywords["gate"] = Token::Kind::Gate;
+  keywords["opaque"] = Token::Kind::Opaque;
   keywords["extern"] = Token::Kind::Extern;
   keywords["box"] = Token::Kind::Box;
   keywords["let"] = Token::Kind::Let;

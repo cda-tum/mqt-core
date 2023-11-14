@@ -210,15 +210,21 @@ public:
   std::shared_ptr<IdentifierList> parameters;
   std::shared_ptr<IdentifierList> qubits;
   std::vector<std::shared_ptr<GateCallStatement>> statements;
+  bool isOpaque;
 
   explicit GateDeclaration(
       std::shared_ptr<DebugInfo> debug, std::string id,
       std::shared_ptr<IdentifierList> params,
       std::shared_ptr<IdentifierList> qbits,
-      std::vector<std::shared_ptr<GateCallStatement>> stmts)
+      std::vector<std::shared_ptr<GateCallStatement>> stmts,
+      bool opaque = false)
       : Statement(std::move(debug)), identifier(std::move(id)),
         parameters(std::move(params)), qubits(std::move(qbits)),
-        statements(std::move(stmts)) {}
+        statements(std::move(stmts)), isOpaque(opaque) {
+    if (opaque) {
+      assert(statements.empty() && "Opaque gate should not have statements.");
+    }
+  }
 
   void accept(InstVisitor* visitor) override {
     visitor->visitGateStatement(shared_from_this());

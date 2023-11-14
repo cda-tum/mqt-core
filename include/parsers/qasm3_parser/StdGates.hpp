@@ -102,5 +102,7 @@ const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
     {"tdg", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::Tdg}))},
     {"sx", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::SX}))},
     {"sxdg", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::SXdg}))},
+    {"teleport", std::make_shared<StandardGate>(
+                     StandardGate({0, 3, 0, qc::Teleportation}))},
 };
 } // namespace qasm3
