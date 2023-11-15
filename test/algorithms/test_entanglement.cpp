@@ -23,12 +23,12 @@ INSTANTIATE_TEST_SUITE_P(
 TEST_P(Entanglement, FunctionTest) {
   const auto nq = GetParam();
 
-  auto dd = std::make_unique<dd::Package<>>(nq);
   auto qc = qc::Entanglement(nq);
-  auto e = dd::benchmarkFunctionalityConstruction(qc)->func;
+  auto result = dd::benchmarkFunctionalityConstruction(qc);
+  auto e = result->func;
 
   ASSERT_EQ(qc.getNops(), nq);
-  const qc::VectorDD r = dd->multiply(e, dd->makeZeroState(nq));
+  const qc::VectorDD r = result->dd->multiply(e, result->dd->makeZeroState(nq));
 
   ASSERT_EQ(r.getValueByPath(std::string(nq, '0')), dd::SQRT2_2);
   ASSERT_EQ(r.getValueByPath(std::string(nq, '1')), dd::SQRT2_2);

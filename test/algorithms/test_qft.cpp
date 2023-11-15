@@ -179,13 +179,11 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
   // there should be no error building the functionality recursively
-  ASSERT_NO_THROW(
-      { func = dd::benchmarkFunctionalityConstruction(*qc)->func; });
+  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), dd); });
 
   // there should be no error building the functionality regularly
   qc::MatrixDD funcRec{};
-  ASSERT_NO_THROW(
-      { funcRec = dd::benchmarkFunctionalityConstruction(*qc)->func; });
+  ASSERT_NO_THROW({ funcRec = buildFunctionality(qc.get(), dd); });
 
   ASSERT_EQ(func, funcRec);
   dd->decRef(funcRec);

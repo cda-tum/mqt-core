@@ -169,7 +169,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto e = dd::benchmarkSimulate(*qpe)->sim;
+  auto e = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
 
   // extract measurement probabilities from IQPE simulations

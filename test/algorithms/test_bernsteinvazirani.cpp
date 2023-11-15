@@ -114,7 +114,7 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(bv);
 
   // simulate circuit
-  auto e = dd::benchmarkSimulate(bv)->sim;
+  auto e = simulate(&bv, dd->makeZeroState(bv.getNqubits()), dd);
 
   // create dynamic BV circuit
   auto dbv = qc::BernsteinVazirani(s, true);
