@@ -1,7 +1,6 @@
 #include "algorithms/Grover.hpp"
 #include "dd/Benchmark.hpp"
- #include "dd/FunctionalityConstruction.hpp"
- #include "dd/Simulation.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
 #include <cmath>
