@@ -1,6 +1,7 @@
 #include "algorithms/QFT.hpp"
 #include "dd/Benchmark.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <cmath>
@@ -150,7 +151,9 @@ TEST_P(QFT, Simulation) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
   // there should be no error simulating the circuit
-  ASSERT_NO_THROW({ sim = dd::benchmarkSimulate(*qc)->sim; });
+  ASSERT_NO_THROW({
+    auto in = dd->makeZeroState(nqubits);
+    sim = simulate(qc.get(), in, dd); });
   qc->printStatistics(std::cout);
 
   // QFT DD |0...0> sim should consist of n nodes

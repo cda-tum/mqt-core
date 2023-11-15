@@ -385,7 +385,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
   std::cout << "---- extraction done ----\n";
 
   // generate DD of QPE circuit via simulation
-  auto e = dd::benchmarkSimulate(*qpe)->sim;
+  auto e = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
   std::cout << "---- sim done ----\n";
 
@@ -537,7 +537,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto e = dd::benchmarkSimulate(*bv)->sim;
+  auto e = simulate(bv.get(), dd->makeZeroState(bv->getNqubits()), dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
 
   // extract measurement probabilities from IQPE simulations
