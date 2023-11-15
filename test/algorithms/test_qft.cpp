@@ -153,7 +153,8 @@ TEST_P(QFT, Simulation) {
   // there should be no error simulating the circuit
   ASSERT_NO_THROW({
     auto in = dd->makeZeroState(nqubits);
-    sim = simulate(qc.get(), in, dd); });
+    sim = simulate(qc.get(), in, dd);
+  });
   qc->printStatistics(std::cout);
 
   // QFT DD |0...0> sim should consist of n nodes
