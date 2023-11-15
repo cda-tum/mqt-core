@@ -28,9 +28,9 @@ def test_is_nested() -> None:
 
 def test_flatten_dict() -> None:
     """Test flatten_dict."""
-    d1 = {"a": {"b": {"c": 1}}}
+    d1 = {"a": {"b": {"main": 1}}}
     assert flatten_dict(d1) == {"a_b": [1, "skipped"]}
-    d2 = {"a": {"b": {{"c": 1}, {"d": 2}}, "d": {"e": 2}}}
+    d2 = {"a": {"b": {"main": 1, "447-add-benchmark-suite-in-mqt-core": 2}}, "d": {"main": 2}}
     assert flatten_dict(d2) == {"a_b": [1, 2], "d": [2, "skipped"]}
 
 
