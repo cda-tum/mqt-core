@@ -1,5 +1,6 @@
 #include "algorithms/Entanglement.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <string>
@@ -32,4 +33,15 @@ TEST_P(Entanglement, FunctionTest) {
 
   ASSERT_EQ(r.getValueByPath(std::string(nq, '0')), dd::SQRT2_2);
   ASSERT_EQ(r.getValueByPath(std::string(nq, '1')), dd::SQRT2_2);
+}
+
+TEST_P(Entanglement, GHZRoutineFunctionTest) {
+  const auto nq = GetParam();
+
+  auto qc = qc::Entanglement(nq);
+  auto dd = std::make_unique<dd::Package<>>(nq);
+  const dd::VectorDD e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
+  const auto f = dd->makeGHZState(nq);
+
+  EXPECT_EQ(e, f);
 }

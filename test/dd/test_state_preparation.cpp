@@ -4,7 +4,7 @@
 
 class StatePreparation : public testing::TestWithParam<qc::Qubit> {};
 
-extern std::vector<std::string> generateWStateStrings(const std::size_t length);
+extern std::vector<std::string> generateWStateStrings(std::size_t length);
 
 INSTANTIATE_TEST_SUITE_P(
     StatePreparation, StatePreparation, testing::Range<qc::Qubit>(1U, 128U, 7U),
@@ -32,7 +32,7 @@ TEST_P(StatePreparation, WStateTest) {
   const auto w = dd->makeWState(nq);
   for (const auto& wStateString : generateWStateStrings(nq)) {
     EXPECT_NEAR(w.getValueByPath(wStateString).real(), 1. / std::sqrt(nq),
-                0.000001);
+                dd::RealNumber::eps);
     EXPECT_EQ(w.getValueByPath(wStateString).imag(), 0.);
   }
 }

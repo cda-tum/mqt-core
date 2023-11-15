@@ -40,3 +40,14 @@ TEST_P(WState, FunctionTest) {
     EXPECT_TRUE(measurements.find(result) != measurements.end());
   }
 }
+
+TEST_P(WState, RoutineFunctionTest) {
+  const auto nq = GetParam();
+
+  auto qc = qc::WState(nq);
+  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
+  const dd::VectorDD e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
+  const auto f = dd->makeWState(nq);
+
+  EXPECT_EQ(e, f);
+}
