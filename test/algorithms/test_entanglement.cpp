@@ -51,24 +51,22 @@ TEST_P(Entanglement, BenchmarkBuildFunctionality) {
   EXPECT_NE(out->func.p, nullptr);
 }
 
-  TEST_P(Entanglement, GHZRoutineFunctionTest) {
-    const auto nq = GetParam();
+TEST_P(Entanglement, GHZRoutineFunctionTest) {
+  const auto nq = GetParam();
 
-    auto qc = qc::Entanglement(nq);
-    auto dd = std::make_unique<dd::Package<>>(nq);
-    const dd::VectorDD e =
-        simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
-    const auto f = dd->makeGHZState(nq);
+  auto qc = qc::Entanglement(nq);
+  auto dd = std::make_unique<dd::Package<>>(nq);
+  const dd::VectorDD e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
+  const auto f = dd->makeGHZState(nq);
 
-    EXPECT_EQ(e, f);
-  }
+  EXPECT_EQ(e, f);
+}
 
-  TEST(Entanglement, GHZStateEdgeCasesTest) {
-    auto dd = std::make_unique<dd::Package<>>(3);
+TEST(Entanglement, GHZStateEdgeCasesTest) {
+  auto dd = std::make_unique<dd::Package<>>(3);
 
-    EXPECT_EQ(dd->makeGHZState(0),
-              dd->makeBasisState(0, {dd::BasisStates::zero}));
-    EXPECT_EQ(dd->makeGHZState(0),
-              dd->makeBasisState(0, {dd::BasisStates::one}));
-    ASSERT_THROW(dd->makeGHZState(6), std::runtime_error);
-  }
+  EXPECT_EQ(dd->makeGHZState(0),
+            dd->makeBasisState(0, {dd::BasisStates::zero}));
+  EXPECT_EQ(dd->makeGHZState(0), dd->makeBasisState(0, {dd::BasisStates::one}));
+  ASSERT_THROW(dd->makeGHZState(6), std::runtime_error);
+}
