@@ -2,7 +2,6 @@
 #include "algorithms/BernsteinVazirani.hpp"
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
-#include "dd/Benchmark.hpp"
 #include "dd/Export.hpp"
 #include "dd/Simulation.hpp"
 
@@ -688,7 +687,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto e = dd::benchmarkSimulate(*qft)->sim;
+  auto e = simulate(qft.get(), dd->makeZeroState(qft->getNqubits()), dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
   const auto simulation =
       std::chrono::duration<double>(simulationEnd - start).count();
