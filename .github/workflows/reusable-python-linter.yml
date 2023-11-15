@@ -46,3 +46,6 @@ jobs:
       - uses: pre-commit/action@v3.0.0
         with:
           extra_args: mypy --all-files
+      - name: Run check-sdist
+        run: |
+          pipx run check-sdist --inject-junk

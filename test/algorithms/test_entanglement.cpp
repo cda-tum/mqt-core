@@ -1,5 +1,7 @@
 #include "algorithms/Entanglement.hpp"
 #include "dd/Benchmark.hpp"
+#include "dd/FunctionalityConstruction.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <string>
@@ -48,4 +50,23 @@ TEST_P(Entanglement, BenchmarkBuildFunctionality) {
   auto qc = qc::Entanglement(nq);
   auto out = dd::benchmarkFunctionalityConstruction(qc);
   EXPECT_NE(out->func.p, nullptr);
+
+TEST_P(Entanglement, GHZRoutineFunctionTest) {
+  const auto nq = GetParam();
+
+  auto qc = qc::Entanglement(nq);
+  auto dd = std::make_unique<dd::Package<>>(nq);
+  const dd::VectorDD e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
+  const auto f = dd->makeGHZState(nq);
+
+  EXPECT_EQ(e, f);
+}
+
+TEST(Entanglement, GHZStateEdgeCasesTest) {
+  auto dd = std::make_unique<dd::Package<>>(3);
+
+  EXPECT_EQ(dd->makeGHZState(0),
+            dd->makeBasisState(0, {dd::BasisStates::zero}));
+  EXPECT_EQ(dd->makeGHZState(0), dd->makeBasisState(0, {dd::BasisStates::one}));
+  ASSERT_THROW(dd->makeGHZState(6), std::runtime_error);
 }

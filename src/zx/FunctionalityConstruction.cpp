@@ -137,6 +137,14 @@ void FunctionalityConstruction::addRzx(ZXDiagram& diag,
   diag.addGlobalPhase(-phase / 2.0);
 }
 
+void FunctionalityConstruction::addDcx(zx::ZXDiagram& diag,
+                                       const zx::Qubit qubit1,
+                                       const zx::Qubit qubit2,
+                                       std::vector<Vertex>& qubits) {
+  addCnot(diag, qubit1, qubit2, qubits);
+  addCnot(diag, qubit2, qubit1, qubits);
+}
+
 void FunctionalityConstruction::addSwap(ZXDiagram& diag, const Qubit target,
                                         const Qubit target2,
                                         std::vector<Vertex>& qubits) {
@@ -301,6 +309,18 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
 
       addXSpider(diag, target2, qubits, PiExpression(-PiRational(1, 2)));
       addXSpider(diag, target, qubits, PiExpression(-PiRational(1, 2)));
+      break;
+    }
+    case qc::OpType::DCX: {
+      const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
+      addDcx(diag, target, target2, qubits);
+      break;
+    }
+    case qc::OpType::ECR: {
+      const auto target2 = static_cast<zx::Qubit>(p.at(op->getTargets()[1]));
+      addRzx(diag, PiExpression(PiRational(1, 4)), target, target2, qubits);
+      addXSpider(diag, target, qubits);
+      addRzx(diag, PiExpression(-PiRational(1, 4)), target, target2, qubits);
       break;
     }
     case qc::OpType::H:
@@ -481,6 +501,8 @@ bool FunctionalityConstruction::transformableToZX(const qc::Operation* op) {
     case qc::OpType::RXX:
     case qc::OpType::RZX:
     case qc::OpType::RYY:
+    case qc::OpType::DCX:
+    case qc::OpType::ECR:
       return true;
     default:
       return false;
