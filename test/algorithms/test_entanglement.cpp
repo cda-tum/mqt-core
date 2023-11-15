@@ -1,6 +1,5 @@
 #include "algorithms/Entanglement.hpp"
 #include "dd/Benchmark.hpp"
-#include "dd/FunctionalityConstruction.hpp"
 #include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
@@ -50,6 +49,7 @@ TEST_P(Entanglement, BenchmarkBuildFunctionality) {
   auto qc = qc::Entanglement(nq);
   auto out = dd::benchmarkFunctionalityConstruction(qc);
   EXPECT_NE(out->func.p, nullptr);
+}
 
   TEST_P(Entanglement, GHZRoutineFunctionTest) {
     const auto nq = GetParam();
