@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from mqt.core.evaluation import compare, flatten_dict, higher_better, is_nested
 
 path = Path(__file__).resolve().parent / "example_results.json"
@@ -34,14 +36,16 @@ def test_flatten_dict() -> None:
     assert flatten_dict(d3) == {"a_b_c": [1, "skipped"], "d_e": [2, "skipped"]}
 
 
-def test_compare_with_negative_factor(self) -> None:
+def test_compare_with_negative_factor() -> None:
     """Test factor -0.1."""
-    self.assertRaises(ValueError, compare, path, factor=-0.1)
+    with pytest.raises(ValueError, match="Factor must be positive!"):
+        compare(path, factor=-0.1)
 
 
-def test_compare_with_invalid_sort_option(self) -> None:
+def test_compare_with_invalid_sort_option() -> None:
     """Test invalid sort option."""
-    self.assertRaises(ValueError, compare, path, sort="after")
+    with pytest.raises(ValueError, match="Invalid sort option!"):
+        compare(path, sort="after")
 
 
 def test_compare_with_factor_zero_point_one() -> None:
