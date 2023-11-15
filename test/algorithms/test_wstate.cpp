@@ -44,7 +44,7 @@ TEST_P(WState, BenchmarkSimulate) {
 
   auto qc = qc::WState(nq);
   auto out = dd::benchmarkSimulate(qc);
-  EXPECT_NE(out->sim.p, nullptr);
+  EXPECT_TRUE(out->success());
 }
 
 TEST_P(WState, BenchmarkBuildFunctionality) {
@@ -52,7 +52,7 @@ TEST_P(WState, BenchmarkBuildFunctionality) {
 
   auto qc = qc::WState(nq);
   auto out = dd::benchmarkFunctionalityConstruction(qc);
-  EXPECT_NE(out->func.p, nullptr);
+  EXPECT_TRUE(out->success());
 }
 
 TEST_P(WState, RoutineFunctionTest) {
