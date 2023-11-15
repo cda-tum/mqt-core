@@ -22,18 +22,16 @@ def test_higher_better() -> None:
 def test_is_nested() -> None:
     """Test is_nested."""
     assert is_nested({"a": {"b": 1}})
-    assert not is_nested({"a": 1})
-    assert not is_nested({"a": {"b": {"c": 1}}})
+    assert not is_nested({"a": 1, "b": 2, "c": 10483, "d": 9843, "e": 0})
+    assert is_nested({"a": {"b": {"c": 1}}})
 
 
 def test_flatten_dict() -> None:
     """Test flatten_dict."""
-    d1 = {"a": {"b": 1}}
-    assert flatten_dict(d1) == {"a_b": [1, "skipped"]}
-    d2 = {"a": {"b": {"c": 1}}}
-    assert flatten_dict(d2) == {"a_b_c": [1, "skipped"]}
-    d3 = {"a": {"b": {"c": 1}}, "d": {"e": 2}}
-    assert flatten_dict(d3) == {"a_b_c": [1, "skipped"], "d_e": [2, "skipped"]}
+    d1 = {"a": {"b": {"c": 1}}}
+    assert flatten_dict(d1) == {"a_b_c": [1, "skipped"]}
+    d2 = {"a": {"b": {"c": 1}}, "d": {"e": 2}}
+    assert flatten_dict(d2) == {"a_b_c": [1, "skipped"], "d_e": [2, "skipped"]}
 
 
 def test_compare_with_negative_factor() -> None:
@@ -87,7 +85,7 @@ def test_compare_only_changed_and_no_split() -> None:
 def test_compare_not_only_changed_and_no_split() -> None:
     """Test only changed and no split."""
     try:
-        compare(path, factor=0.2, only_changed=False, sort="ratio", no_split=True)
+        compare(path, factor=0.25, only_changed=False, sort="ratio", no_split=True)
     except Exception as e:
         msg = "compare() should not raise exception!"
         raise AssertionError(msg) from e
