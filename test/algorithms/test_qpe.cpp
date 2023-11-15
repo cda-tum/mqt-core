@@ -286,7 +286,7 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = dd::benchmarkSimulate(qpe)->sim;
+  auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), dd);
   const auto vec = e.getVector();
   std::cout << "QPE:\n";
   for (const auto& amp : vec) {
