@@ -1,5 +1,6 @@
 #include "algorithms/WState.hpp"
 #include "dd/Benchmark.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <iostream>
@@ -52,6 +53,7 @@ TEST_P(WState, BenchmarkBuildFunctionality) {
   auto qc = qc::WState(nq);
   auto out = dd::benchmarkFunctionalityConstruction(qc);
   EXPECT_NE(out->func.p, nullptr);
+}
 
   TEST_P(WState, RoutineFunctionTest) {
     const auto nq = GetParam();
