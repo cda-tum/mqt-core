@@ -116,7 +116,8 @@ TEST_P(QPE, QPETest) {
   ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(qc); });
 
   qc::VectorDD e{};
-  ASSERT_NO_THROW({ e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd); });
+  ASSERT_NO_THROW(
+      { e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd); });
   // account for the eigenstate qubit in the expected result by shifting and
   // adding 1
   const auto amplitude = e.getValueByIndex((expectedResult << 1) + 1);
