@@ -51,3 +51,14 @@ TEST_P(WState, RoutineFunctionTest) {
 
   EXPECT_EQ(e, f);
 }
+
+TEST(WState, WStateEdgeCasesTest) {
+  auto dd = std::make_unique<dd::Package<>>(101);
+  dd::ComplexNumbers::setTolerance(0.1);
+
+  ASSERT_THROW(dd->makeWState(101), std::runtime_error);
+  EXPECT_EQ(dd->makeWState(0), dd->makeBasisState(0, {dd::BasisStates::zero}));
+  EXPECT_EQ(dd->makeWState(0), dd->makeBasisState(0, {dd::BasisStates::one}));
+  EXPECT_EQ(dd->makeWState(1), dd->makeBasisState(1, {dd::BasisStates::one}));
+  ASSERT_THROW(dd->makeWState(127), std::runtime_error);
+}

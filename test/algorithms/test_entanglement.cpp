@@ -45,3 +45,12 @@ TEST_P(Entanglement, GHZRoutineFunctionTest) {
 
   EXPECT_EQ(e, f);
 }
+
+TEST(Entanglement, GHZStateEdgeCasesTest) {
+  auto dd = std::make_unique<dd::Package<>>(3);
+
+  EXPECT_EQ(dd->makeGHZState(0),
+            dd->makeBasisState(0, {dd::BasisStates::zero}));
+  EXPECT_EQ(dd->makeGHZState(0), dd->makeBasisState(0, {dd::BasisStates::one}));
+  ASSERT_THROW(dd->makeGHZState(6), std::runtime_error);
+}

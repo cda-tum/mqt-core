@@ -531,11 +531,16 @@ public:
     }
 
     auto leftSubtree = vEdge::zero();
-    // This is just a temporary trick to get the scaling right.
-    // It is inherently limited by the tolerance we employ and will crash once
-    // 1/sqrt(n) < RealNumber::eps.
-    // The trick to resolve this is to spread the 1/sqrt(n) across the various
-    // levels of the DD during construction.
+    if ((1. / sqrt(static_cast<double>(n))) < RealNumber::eps) {
+      throw std::runtime_error(
+          "Requested qubit size for generating W-state would lead to an "
+          "underflow due to 1 / sqrt(n) being smaller than the currently set "
+          "tolerance " +
+          std::to_string(RealNumber::eps) +
+          ". If you still wanna run the computation, please lower "
+          "the tolerance accordingly.");
+    }
+
     auto rightSubtree = vEdge::terminal(cn.lookup(1. / std::sqrt(n)));
     for (size_t p = 0; p < n; ++p) {
       leftSubtree = makeDDNode(static_cast<Qubit>(p),
