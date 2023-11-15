@@ -29,9 +29,9 @@ def test_is_nested() -> None:
 def test_flatten_dict() -> None:
     """Test flatten_dict."""
     d1 = {"a": {"b": {"c": 1}}}
-    assert flatten_dict(d1) == {"a_b_c": [1, "skipped"]}
-    d2 = {"a": {"b": {"c": 1}}, "d": {"e": 2}}
-    assert flatten_dict(d2) == {"a_b_c": [1, "skipped"], "d_e": [2, "skipped"]}
+    assert flatten_dict(d1) == {"a_b": [1, "skipped"]}
+    d2 = {"a": {"b": {{"c": 1}, {"d": 2}}, "d": {"e": 2}}}
+    assert flatten_dict(d2) == {"a_b": [1, 2], "d": [2, "skipped"]}
 
 
 def test_compare_with_negative_factor() -> None:
