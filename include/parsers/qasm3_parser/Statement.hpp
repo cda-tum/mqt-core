@@ -160,8 +160,8 @@ class IdentifierList : public Expression,
 public:
   std::vector<std::shared_ptr<IdentifierExpression>> identifiers;
 
-  explicit IdentifierList(
-      std::vector<std::shared_ptr<IdentifierExpression>> ids)
+  explicit
+  IdentifierList(std::vector<std::shared_ptr<IdentifierExpression>> ids)
       : identifiers(std::move(ids)) {}
 
   explicit IdentifierList() = default;
@@ -203,7 +203,7 @@ public:
   virtual void accept(InstVisitor* visitor) = 0;
 };
 
-class QuantumStatement: public Statement {
+class QuantumStatement : public Statement {
 protected:
   explicit QuantumStatement(std::shared_ptr<DebugInfo> debug)
       : Statement(std::move(debug)) {}
@@ -218,12 +218,11 @@ public:
   std::vector<std::shared_ptr<QuantumStatement>> statements;
   bool isOpaque;
 
-  explicit GateDeclaration(
-      std::shared_ptr<DebugInfo> debug, std::string id,
-      std::shared_ptr<IdentifierList> params,
-      std::shared_ptr<IdentifierList> qbits,
-      std::vector<std::shared_ptr<QuantumStatement>> stmts,
-      bool opaque = false)
+  explicit GateDeclaration(std::shared_ptr<DebugInfo> debug, std::string id,
+                           std::shared_ptr<IdentifierList> params,
+                           std::shared_ptr<IdentifierList> qbits,
+                           std::vector<std::shared_ptr<QuantumStatement>> stmts,
+                           bool opaque = false)
       : Statement(std::move(debug)), identifier(std::move(id)),
         parameters(std::move(params)), qubits(std::move(qbits)),
         statements(std::move(stmts)), isOpaque(opaque) {

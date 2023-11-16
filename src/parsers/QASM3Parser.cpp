@@ -751,11 +751,11 @@ public:
   }
 
   std::unique_ptr<qc::Operation>
-  getBarrierOp(const std::shared_ptr<BarrierStatement> barrierStatement, const qc::QuantumRegisterMap& qregs) const {
+  getBarrierOp(const std::shared_ptr<BarrierStatement> barrierStatement,
+               const qc::QuantumRegisterMap& qregs) const {
     std::vector<qc::Qubit> qubits{};
     for (const auto& gate : barrierStatement->gates) {
-      translateGateOperand(gate, qubits, qregs,
-                           barrierStatement->debugInfo);
+      translateGateOperand(gate, qubits, qregs, barrierStatement->debugInfo);
     }
 
     return std::make_unique<qc::NonUnitaryOperation>(qc->getNqubits(), qubits,
@@ -763,7 +763,8 @@ public:
   }
 
   std::unique_ptr<qc::Operation>
-  getResetOp(const std::shared_ptr<ResetStatement> resetStatement, const qc::QuantumRegisterMap& qregs) const {
+  getResetOp(const std::shared_ptr<ResetStatement> resetStatement,
+             const qc::QuantumRegisterMap& qregs) const {
     std::vector<qc::Qubit> qubits{};
     translateGateOperand(resetStatement->gate, qubits, qregs,
                          resetStatement->debugInfo);
