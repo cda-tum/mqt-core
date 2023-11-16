@@ -143,6 +143,25 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
   EXPECT_TRUE(diag.connected(diag.getInput(2), diag.getOutput(2)));
 }
 
+TEST_F(ZXFunctionalityTest, nestedCompoundGate) {
+  qc = qc::QuantumComputation(1);
+  auto innerOp = std::make_unique<qc::StandardOperation>(1, 0, qc::OpType::X);
+  auto compound1 = std::make_unique<qc::CompoundOperation>(1);
+  auto compound2 = std::make_unique<qc::CompoundOperation>(1);
+
+  compound1->emplace_back(std::move(innerOp));
+  compound2->emplace_back(std::move(compound1));
+
+  qc.emplace_back<qc::CompoundOperation>(std::move(compound2));
+  qc.x(0);
+
+  EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
+  zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
+  zx::fullReduce(diag);
+
+  EXPECT_TRUE(diag.isIdentity());
+}
+
 TEST_F(ZXFunctionalityTest, Phase) {
   using namespace qc::literals;
   qc = qc::QuantumComputation(2);
