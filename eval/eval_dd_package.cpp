@@ -37,7 +37,6 @@ std::string runCLI(const char* cmd) {
     runCLI("git rev-parse --short HEAD");
 static const std::string FILENAME = "results.json";
 static const std::string FILENAME_REDUCED = "results_reduced.json";
-// Add branch name or commit hash to filename if necessary
 
 static constexpr std::size_t SEED = 42U;
 
@@ -153,6 +152,7 @@ void verifyAndSave(const std::string& name, const std::string& type,
   ifs.close();
 
   auto& entry = j[name][type][std::to_string(qc.getNqubits())][CURRENT_BRANCH];
+  // Change this line to CURRENT_COMMIT when comparing commits, or anything else to distinguish between runs
 
   entry["gate_count"] = qc.getNindividualOps();
   entry["runtime"] = exp.runtime.count();
