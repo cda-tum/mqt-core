@@ -69,7 +69,7 @@ void QuantumComputation::import(const std::string& filename) {
   if (extension == "real") {
     import(filename, Format::Real);
   } else if (extension == "qasm") {
-    import(filename, Format::OpenQASM);
+    import(filename, Format::OpenQASM3);
   } else if (extension == "txt") {
     import(filename, Format::GRCS);
   } else if (extension == "tfc") {

@@ -200,12 +200,10 @@ void Parser::parseInclude() {
       return;
     }
     if (filename == "qelib1.inc") {
-      warn(current(),
-           "In OpenQASM 3.0, 'qelib1.inc' is renamed to 'stdgates.inc'. Parser "
-           "will continue and assume 'stdgates.inc' instead.");
-      return;
+      is = std::make_unique<std::istringstream>(QE1LIB);
+    } else {
+      error(current(), "Failed to open file " + filename + ".");
     }
-    error(current(), "Failed to open file " + filename + ".");
   } else {
     is = std::move(in);
   }

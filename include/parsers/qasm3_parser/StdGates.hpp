@@ -35,7 +35,7 @@ const std::string STDGATES =
     //    "\n"
     //    "// sqrt(NOT) gate\n"
     //    "gate sx a { pow(1/2) @ x a; }\n"
-    "\n"
+    // "\n"
     "// Rotation around X-axis\n"
     "gate rx(theta) a { U(theta, -pi/2, pi/2) a; }\n"
     "// rotation around Y-axis\n"
@@ -86,7 +86,64 @@ const std::string STDGATES =
     "gate u2(phi, lambda) q { gphase(-(phi+lambda)/2); U(pi/2, phi, lambda) q; "
     "}\n"
     "gate u3(theta, phi, lambda) q { gphase(-(phi+lambda)/2); U(theta, phi, "
-    "lambda) q; }";
+    "lambda) q; }\n"
+    "";
+
+const std::string QE1LIB = "gate rccx a, b, c {\n"
+                           "  u2(0, pi) c; u1(pi/4) c; \n"
+                           "  cx b, c; u1(-pi/4) c; \n"
+                           "  cx a, c; u1(pi/4) c; \n"
+                           "  cx b, c; u1(-pi/4) c; \n"
+                           "  u2(0, pi) c; \n"
+                           "}\n"
+                           "gate rc3x a,b,c,d {\n"
+                           "  u2(0,pi) d; u1(pi/4) d; \n"
+                           "  cx c,d; u1(-pi/4) d; u2(0,pi) d; \n"
+                           "  cx a,d; u1(pi/4) d; \n"
+                           "  cx b,d; u1(-pi/4) d; \n"
+                           "  cx a,d; u1(pi/4) d; \n"
+                           "  cx b,d; u1(-pi/4) d; \n"
+                           "  u2(0,pi) d; u1(pi/4) d; \n"
+                           "  cx c,d; u1(-pi/4) d; \n"
+                           "  u2(0,pi) d; \n"
+                           "}\n"
+                           "gate c3x a,b,c,d {\n"
+                           "  h d; cu1(-pi/4) a,d; h d; \n"
+                           "  cx a,b; \n"
+                           "  h d; cu1(pi/4) b,d; h d; \n"
+                           "  cx a,b; \n"
+                           "  h d; cu1(-pi/4) b,d; h d; \n"
+                           "  cx b,c; \n"
+                           "  h d; cu1(pi/4) c,d; h d; \n"
+                           "  cx a,c; \n"
+                           "  h d; cu1(-pi/4) c,d; h d; \n"
+                           "  cx b,c; \n"
+                           "  h d; cu1(pi/4) c,d; h d; \n"
+                           "  cx a,c; \n"
+                           "  h d; cu1(-pi/4) c,d; h d; \n"
+                           "}\n"
+                           "gate c3sqrtx a,b,c,d {\n"
+                           "  h d; cu1(-pi/8) a,d; h d; \n"
+                           "  cx a,b; \n"
+                           "  h d; cu1(pi/8) b,d; h d; \n"
+                           "  cx a,b; \n"
+                           "  h d; cu1(-pi/8) b,d; h d; \n"
+                           "  cx b,c; \n"
+                           "  h d; cu1(pi/8) c,d; h d; \n"
+                           "  cx a,c; \n"
+                           "  h d; cu1(-pi/8) c,d; h d; \n"
+                           "  cx b,c; \n"
+                           "  h d; cu1(pi/8) c,d; h d; \n"
+                           "  cx a,c; \n"
+                           "  h d; cu1(-pi/8) c,d; h d; \n"
+                           "}\n"
+                           "gate c4x a,b,c,d,e {\n"
+                           "  h e; cu1(-pi/2) d,e; h e; \n"
+                           "  c3x a,b,c,d; \n"
+                           "  h e; cu1(pi/2) d,e; h e; \n"
+                           "  c3x a,b,c,d; \n"
+                           "  c3sqrtx a,b,c,e; \n"
+                           "}\n";
 
 const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
     // gates from which all other gates can be constructed.
@@ -112,5 +169,19 @@ const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
     {"sxdg", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::SXdg}))},
     {"teleport", std::make_shared<StandardGate>(
                      StandardGate({0, 3, 0, qc::Teleportation}))},
+};
+
+const std::map<std::string, std::shared_ptr<Gate>> QASM2_COMPAT_GATES = {
+    // natively supported gates for backward compatibility with OpenQASM 2.0
+    {"rxx", std::make_shared<StandardGate>(StandardGate({0, 2, 1, qc::RXX}))},
+    {"ryy", std::make_shared<StandardGate>(StandardGate({0, 2, 1, qc::RYY}))},
+    {"rzz", std::make_shared<StandardGate>(StandardGate({0, 2, 1, qc::RZZ}))},
+    {"rzx", std::make_shared<StandardGate>(StandardGate({0, 2, 1, qc::RZX}))},
+    {"dcx", std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::DCX}))},
+    {"ecr", std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::ECR}))},
+    {"xx_minus_yy",
+     std::make_shared<StandardGate>(StandardGate({0, 2, 2, qc::XXminusYY}))},
+    {"xx_plus_yy",
+     std::make_shared<StandardGate>(StandardGate({0, 2, 2, qc::XXplusYY}))},
 };
 } // namespace qasm3

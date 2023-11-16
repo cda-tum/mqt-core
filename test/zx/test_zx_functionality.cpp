@@ -95,8 +95,8 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
      << "swap q[0],q[1];"
      << "cz q[1],q[2];"
      << "cp(pi/4) q[0],q[1];"
-     << "ccx q[0],q[1],q[2];"
-     << "ccz q[1],q[2],q[0];"
+     << "ctrl(2) @ x q[0],q[1],q[2];"
+     << "ctrl(2) @ z q[1],q[2],q[0];"
      << "cp(pi/2) q[0], q[1];"
      << "cp(pi/4) q[0], q[1];"
      << "cp(pi/8) q[0], q[1];"
@@ -111,8 +111,8 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
      << "cp(-pi/8) q[0], q[1];"
      << "cp(-pi/4) q[0], q[1];"
      << "cp(-pi/2) q[0], q[1];"
-     << "ccz q[1],q[2],q[0];"
-     << "ccx q[0],q[1],q[2];"
+     << "ctrl(2) @ z q[1],q[2],q[0];"
+     << "ctrl(2) @ x q[0],q[1],q[2];"
      << "cp(-pi/4) q[0],q[1];"
      << "cz q[1],q[2];"
      << "cx q[1],q[0];"
@@ -131,7 +131,7 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
      << "z q[1];"
      << "cx q[0],q[1];"
      << "h q[0];\n";
-  qc.import(ss, qc::Format::OpenQASM);
+  qc.import(ss, qc::Format::OpenQASM3);
 
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
   zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);

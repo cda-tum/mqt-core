@@ -1,11 +1,11 @@
 // i 0 1 2 3
 // o 0 1 2 3
-OPENQASM 2.0;
-include "qelib1.inc";
-qreg q[2];
-qreg r[2];
-creg c[2];
-creg d[2];
+OPENQASM 3.0;
+include "stdgates.inc";
+qubit[2] q;
+qubit[2] r;
+bit[2] c;
+bit[2] d;
 
 gphase(pi/4);
 id q[0];
@@ -38,22 +38,22 @@ u3(1,2,3) r[0];
 u2(1,2) r[1];
 u1(1) q[0];
 barrier q;
-show_probabilities;
+//show_probabilities;
 measure q -> c;
 measure r[0] -> d[0];
 measure q -> d;
 reset q;
-snapshot(1) r[0],r[1];
+//snapshot(1) r[0],r[1];
 
-cz q[0],q[1];
-cy q[0],q[1];
-ch q[0],q[1];
-cs q[0],q[1];
-csdg q[0],q[1];
-ct q[0],q[1];
-ctdg q[0],q[1];
-ccx q[0],q[1],r[0];
-crz(pi/8) q[0],q[1];
-cu1(pi/8) q[0],q[1];
-cu3(pi,0,pi) q[0],q[1];
+ctrl @ z q[0],q[1];
+ctrl @ y q[0],q[1];
+ctrl @ h q[0],q[1];
+ctrl @ s q[0],q[1];
+ctrl @ sdg q[0],q[1];
+ctrl @ t q[0],q[1];
+ctrl @ tdg q[0],q[1];
+ctrl(2) @ x q[0],q[1],r[0];
+ctrl @ rz(pi/8) q[0],q[1];
+ctrl @ u1(pi/8) q[0],q[1];
+ctrl @ u3(pi,0,pi) q[0],q[1];
 swap q[0],q[1];
