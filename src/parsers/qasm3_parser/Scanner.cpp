@@ -87,37 +87,44 @@ Token Scanner::consumeName() {
   return t;
 }
 
-uint64_t Scanner::consumeIntegerLiteral(uint8_t base) {
-  uint64_t val = 0;
-  auto isValidChar = [base](char c) {
-    if (base == 2) {
-      return c == '0' || c == '1';
-    }
-    if (base == 8) {
-      return c >= '0' && c <= '7';
-    }
-    if (base == 10) {
-      return isNum(c);
-    }
-    if (base == 16) {
-      return isHex(c);
-    }
-    return false;
-  };
-  while (isValidChar(ch) || ch == '_') {
-    if (ch == '_') {
-      nextCh();
-      continue;
-    }
+bool Scanner::isValidDigit(uint8_t base, char c) {
+  if (base == 2) {
+    return c == '0' || c == '1';
+  }
+  if (base == 8) {
+    return c >= '0' && c <= '7';
+  }
+  if (base == 10) {
+    return isNum(c);
+  }
+  if (base == 16) {
+    return isHex(c);
+  }
+  return false;
+}
 
-    if (isNum(ch)) {
-      val *= base;
-      val += static_cast<uint64_t>(ch) - '0';
-    } else {
-      val *= base;
-      val += static_cast<uint64_t>(ch) - 'a' + 10;
+std::string Scanner::consumeNumberLiteral(uint8_t base) {
+  std::stringstream ss;
+  while (isValidDigit(base, ch) || ch == '_') {
+    if (ch != '_') {
+      ss << ch;
     }
     nextCh();
+  }
+
+  return ss.str();
+}
+
+uint64_t Scanner::parseIntegerLiteral(std::string str, uint8_t base) {
+  uint64_t val = 0;
+  for (auto c : str) {
+    if (isNum(c)) {
+      val *= base;
+      val += static_cast<uint64_t>(c) - '0';
+    } else {
+      val *= base;
+      val += static_cast<uint64_t>(c) - 'a' + 10;
+    }
   }
   return val;
 }
@@ -156,46 +163,37 @@ Token Scanner::consumeNumberLiteral() {
     nextCh();
   }
 
-  const auto valBeforeDecimalSeparator = consumeIntegerLiteral(base);
+  const auto valBeforeDecimalSeparator = consumeNumberLiteral(base);
 
-  if (ch == '.') {
+  if (ch == '.' || ch == 'e' || ch == 'E') {
     if (base != 10) {
-      error("unexpected `.` in non-decimal number");
+      error("Float literals are only allowed in base 10");
     }
 
+    char sep = ch;
     nextCh();
-    auto valAfterDecimalSeparator = consumeIntegerLiteral(base);
+    auto valAfterDecimalSeparator = consumeNumberLiteral(base);
 
-    const auto numDigits = log10(valAfterDecimalSeparator + 1);
-    const double val =
-        static_cast<double>(valBeforeDecimalSeparator) +
-        static_cast<double>(valAfterDecimalSeparator) / pow(10, numDigits);
+    std::stringstream ss;
+    ss << valBeforeDecimalSeparator << sep << valAfterDecimalSeparator;
+
+    try {
+      t.valReal = std::stod(ss.str().c_str());
+    } catch (std::invalid_argument) {
+      error("Unable to parse float literal");
+    }
 
     t.kind = Token::Kind::FloatLiteral;
-    t.valReal = val;
     if (negative) {
       t.valReal *= -1;
     }
-    return t;
-  }
-  if (ch == 'e' || ch == 'E') {
-    if (base != 10) {
-      error("unexpected `e` or `E` in non-decimal number");
-    }
 
-    const auto exponent = static_cast<double>(consumeIntegerLiteral(base));
-    const auto val =
-        static_cast<double>(valBeforeDecimalSeparator) * pow(10, exponent);
-    t.kind = Token::Kind::FloatLiteral;
-    t.valReal = val;
-    if (negative) {
-      t.valReal *= -1;
-    }
     return t;
   }
 
+  t.val = static_cast<int64_t>(
+      parseIntegerLiteral(valBeforeDecimalSeparator, base));
   t.kind = Token::Kind::IntegerLiteral;
-  t.val = static_cast<int64_t>(valBeforeDecimalSeparator);
   if (negative) {
     t.val *= -1;
     t.isSigned = true;

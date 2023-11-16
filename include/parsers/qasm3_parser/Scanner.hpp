@@ -39,7 +39,11 @@ private:
 
   std::optional<Token> consumeWhitespaceAndComments();
 
-  uint64_t consumeIntegerLiteral(uint8_t base);
+  bool isValidDigit(uint8_t base, char c);
+
+  std::string consumeNumberLiteral(uint8_t base);
+
+  uint64_t parseIntegerLiteral(std::string str, uint8_t base);
 
   Token consumeNumberLiteral();
 
