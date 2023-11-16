@@ -203,20 +203,26 @@ public:
   virtual void accept(InstVisitor* visitor) = 0;
 };
 
+class QuantumStatement: public Statement {
+protected:
+  explicit QuantumStatement(std::shared_ptr<DebugInfo> debug)
+      : Statement(std::move(debug)) {}
+};
+
 class GateDeclaration : public Statement,
                         public std::enable_shared_from_this<GateDeclaration> {
 public:
   std::string identifier;
   std::shared_ptr<IdentifierList> parameters;
   std::shared_ptr<IdentifierList> qubits;
-  std::vector<std::shared_ptr<GateCallStatement>> statements;
+  std::vector<std::shared_ptr<QuantumStatement>> statements;
   bool isOpaque;
 
   explicit GateDeclaration(
       std::shared_ptr<DebugInfo> debug, std::string id,
       std::shared_ptr<IdentifierList> params,
       std::shared_ptr<IdentifierList> qbits,
-      std::vector<std::shared_ptr<GateCallStatement>> stmts,
+      std::vector<std::shared_ptr<QuantumStatement>> stmts,
       bool opaque = false)
       : Statement(std::move(debug)), identifier(std::move(id)),
         parameters(std::move(params)), qubits(std::move(qbits)),
@@ -330,7 +336,7 @@ public:
 };
 
 class GateCallStatement
-    : public Statement,
+    : public QuantumStatement,
       public std::enable_shared_from_this<GateCallStatement> {
 public:
   std::string identifier;
@@ -342,7 +348,7 @@ public:
                     std::vector<std::shared_ptr<GateModifier>> modifierList,
                     std::vector<std::shared_ptr<Expression>> argumentList,
                     std::vector<std::shared_ptr<GateOperand>> operandList)
-      : Statement(std::move(debug)), identifier(std::move(id)),
+      : QuantumStatement(std::move(debug)), identifier(std::move(id)),
         modifiers(std::move(modifierList)), arguments(std::move(argumentList)),
         operands(std::move(operandList)) {}
 
@@ -386,28 +392,28 @@ public:
   }
 };
 
-class BarrierStatement : public Statement,
+class BarrierStatement : public QuantumStatement,
                          public std::enable_shared_from_this<BarrierStatement> {
 public:
   std::vector<std::shared_ptr<GateOperand>> gates;
 
   explicit BarrierStatement(std::shared_ptr<DebugInfo> debug,
                             std::vector<std::shared_ptr<GateOperand>> gateList)
-      : Statement(std::move(debug)), gates(std::move(gateList)) {}
+      : QuantumStatement(std::move(debug)), gates(std::move(gateList)) {}
 
   void accept(InstVisitor* visitor) override {
     visitor->visitBarrierStatement(shared_from_this());
   }
 };
 
-class ResetStatement : public Statement,
+class ResetStatement : public QuantumStatement,
                        public std::enable_shared_from_this<ResetStatement> {
 public:
   std::shared_ptr<GateOperand> gate;
 
   explicit ResetStatement(std::shared_ptr<DebugInfo> debug,
                           std::shared_ptr<GateOperand> g)
-      : Statement(std::move(debug)), gate(std::move(g)) {}
+      : QuantumStatement(std::move(debug)), gate(std::move(g)) {}
 
   void accept(InstVisitor* visitor) override {
     visitor->visitResetStatement(shared_from_this());

@@ -573,24 +573,40 @@ public:
 
       auto op = std::make_unique<qc::CompoundOperation>(qc->getNqubits());
       for (const auto& nestedGate : compoundGate->body) {
-        for (const auto& operand : nestedGate->operands) {
-          // OpenQASM 3.0 doesn't support indexing of gate arguments.
-          if (operand->expression != nullptr &&
-              std::find(compoundGate->targetNames.begin(),
-                        compoundGate->targetNames.end(), operand->identifier) !=
-                  compoundGate->targetNames.end()) {
-            error("Gate arguments cannot be indexed within gate body.",
-                  debugInfo);
+        if (auto barrierStatement =
+                std::dynamic_pointer_cast<BarrierStatement>(nestedGate);
+            barrierStatement != nullptr) {
+          // nothing to do here for the simulator.
+        } else if (auto resetStatement =
+                       std::dynamic_pointer_cast<ResetStatement>(nestedGate);
+                   resetStatement != nullptr) {
+          op->emplace_back(getResetOp(resetStatement, nestedQubits));
+        } else if (auto gateCallStatement =
+                       std::dynamic_pointer_cast<GateCallStatement>(nestedGate);
+                   gateCallStatement != nullptr) {
+          for (const auto& operand : gateCallStatement->operands) {
+            // OpenQASM 3.0 doesn't support indexing of gate arguments.
+            if (operand->expression != nullptr &&
+                std::find(compoundGate->targetNames.begin(),
+                          compoundGate->targetNames.end(),
+                          operand->identifier) !=
+                    compoundGate->targetNames.end()) {
+              error("Gate arguments cannot be indexed within gate body.",
+                    debugInfo);
+            }
           }
-        }
 
-        auto nestedOp = evaluateGateCall(nestedGate, nestedGate->identifier,
-                                         nestedGate->arguments,
-                                         nestedGate->operands, nestedQubits);
-        if (nestedOp == nullptr) {
-          return nullptr;
+          auto nestedOp =
+              evaluateGateCall(gateCallStatement, gateCallStatement->identifier,
+                               gateCallStatement->arguments,
+                               gateCallStatement->operands, nestedQubits);
+          if (nestedOp == nullptr) {
+            return nullptr;
+          }
+          op->getOps().emplace_back(std::move(nestedOp));
+        } else {
+          error("Unhandled quantum statement.", debugInfo);
         }
-        op->getOps().emplace_back(std::move(nestedOp));
       }
       op->setControls(qc::Controls{controlBits.begin(), controlBits.end()});
       if (invertOperation) {
@@ -646,26 +662,13 @@ public:
   }
 
   void visitBarrierStatement(
-      std::shared_ptr<BarrierStatement> barrierStatement) override {
-    std::vector<qc::Qubit> qubits{};
-    for (const auto& gate : barrierStatement->gates) {
-      translateGateOperand(gate, qubits, qc->getQregs(),
-                           barrierStatement->debugInfo);
-    }
-
-    auto op = std::make_unique<qc::NonUnitaryOperation>(qc->getNqubits(),
-                                                        qubits, qc::Barrier);
-    qc->emplace_back(std::move(op));
+      const std::shared_ptr<BarrierStatement> barrierStatement) override {
+    qc->emplace_back(getBarrierOp(barrierStatement, qc->getQregs()));
   }
 
   void
   visitResetStatement(std::shared_ptr<ResetStatement> resetStatement) override {
-    std::vector<qc::Qubit> qubits{};
-    translateGateOperand(resetStatement->gate, qubits, qc->getQregs(),
-                         resetStatement->debugInfo);
-    auto op = std::make_unique<qc::NonUnitaryOperation>(qc->getNqubits(),
-                                                        qubits, qc::Reset);
-    qc->emplace_back(std::move(op));
+    qc->emplace_back(getResetOp(resetStatement, qc->getQregs()));
   }
 
   void visitIfStatement(std::shared_ptr<IfStatement> ifStatement) override {
@@ -745,6 +748,27 @@ public:
 
     qc->emplace_back(std::make_unique<qc::ClassicControlledOperation>(
         thenOp, creg->second, rhs->getUInt(), comparisonKind));
+  }
+
+  std::unique_ptr<qc::Operation>
+  getBarrierOp(const std::shared_ptr<BarrierStatement> barrierStatement, const qc::QuantumRegisterMap& qregs) const {
+    std::vector<qc::Qubit> qubits{};
+    for (const auto& gate : barrierStatement->gates) {
+      translateGateOperand(gate, qubits, qregs,
+                           barrierStatement->debugInfo);
+    }
+
+    return std::make_unique<qc::NonUnitaryOperation>(qc->getNqubits(), qubits,
+                                                     qc::Barrier);
+  }
+
+  std::unique_ptr<qc::Operation>
+  getResetOp(const std::shared_ptr<ResetStatement> resetStatement, const qc::QuantumRegisterMap& qregs) const {
+    std::vector<qc::Qubit> qubits{};
+    translateGateOperand(resetStatement->gate, qubits, qregs,
+                         resetStatement->debugInfo);
+    return std::make_unique<qc::NonUnitaryOperation>(qc->getNqubits(), qubits,
+                                                     qc::Reset);
   }
 };
 

@@ -127,6 +127,8 @@ public:
 
   std::shared_ptr<Statement> parseStatement();
 
+  std::shared_ptr<QuantumStatement> parseQuantumStatement();
+
   void parseInclude();
 
   std::shared_ptr<AssignmentStatement> parseAssignmentStatement();

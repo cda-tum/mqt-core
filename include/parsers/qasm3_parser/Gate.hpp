@@ -38,11 +38,11 @@ struct CompoundGate : public Gate {
 public:
   std::vector<std::string> parameterNames;
   std::vector<std::string> targetNames;
-  std::vector<std::shared_ptr<GateCallStatement>> body;
+  std::vector<std::shared_ptr<QuantumStatement>> body;
 
   explicit CompoundGate(
       std::vector<std::string> parameters, std::vector<std::string> targets,
-      std::vector<std::shared_ptr<GateCallStatement>> bodyStatements)
+               std::vector<std::shared_ptr<QuantumStatement>> bodyStatements)
       : parameterNames(std::move(parameters)), targetNames(std::move(targets)),
         body(std::move(bodyStatements)) {}
 

@@ -140,6 +140,26 @@ std::shared_ptr<Statement> Parser::parseStatement() {
     }
   }
 
+  if (current().kind == Token::Kind::If) {
+    return parseIfStatement();
+  }
+  if (current().kind == Token::Kind::Measure) {
+    return parseMeasureStatement();
+  }
+
+  if (auto quantumStatement = parseQuantumStatement();
+      quantumStatement != nullptr) {
+    return quantumStatement;
+  }
+
+  error(current(), "Expected statement, got " + current().toString() + ".");
+}
+
+std::shared_ptr<QuantumStatement> Parser::parseQuantumStatement() {
+  while (current().kind == Token::Kind::Comment) {
+    scan();
+  }
+
   if (current().kind == Token::Kind::Inv ||
       current().kind == Token::Kind::Pow ||
       current().kind == Token::Kind::Ctrl ||
@@ -151,10 +171,6 @@ std::shared_ptr<Statement> Parser::parseStatement() {
     return parseGateCallStatement();
   }
 
-  if (current().kind == Token::Kind::Measure) {
-    return parseMeasureStatement();
-  }
-
   if (current().kind == Token::Kind::Reset) {
     return parseResetStatement();
   }
@@ -163,11 +179,7 @@ std::shared_ptr<Statement> Parser::parseStatement() {
     return parseBarrierStatement();
   }
 
-  if (current().kind == Token::Kind::If) {
-    return parseIfStatement();
-  }
-
-  error(current(), "Expected statement, got " + current().toString() + ".");
+  return nullptr;
 }
 
 void Parser::parseInclude() {
@@ -515,10 +527,10 @@ std::shared_ptr<GateDeclaration> Parser::parseGateDefinition() {
 
   auto qubits = parseIdentifierList();
 
-  std::vector<std::shared_ptr<GateCallStatement>> statements{};
+  std::vector<std::shared_ptr<QuantumStatement>> statements{};
   expect(Token::Kind::LBrace);
   while (current().kind != Token::Kind::RBrace) {
-    statements.emplace_back(parseGateCallStatement());
+    statements.emplace_back(parseQuantumStatement());
   }
   auto tEnd = expect(Token::Kind::RBrace);
 
