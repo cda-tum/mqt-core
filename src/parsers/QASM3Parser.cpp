@@ -494,6 +494,21 @@ public:
       i++;
     }
 
+    // check if any of the bits are duplicte
+    std::unordered_set<qc::Qubit> allQubits;
+    for (const auto& control : controlBits) {
+      if (allQubits.find(control.qubit) != allQubits.end()) {
+        error("Duplicate qubit in control list.", gateCallStatement->debugInfo);
+      }
+      allQubits.emplace(control.qubit);
+    }
+    for (const auto& qubit : targetBits) {
+      if (allQubits.find(qubit) != allQubits.end()) {
+        error("Duplicate qubit in target list.", gateCallStatement->debugInfo);
+      }
+      allQubits.emplace(qubit);
+    }
+
     if (broadcastingWidth == 1) {
       return applyQuantumOperation(gate, targetBits, controlBits,
                                    evaluatedParameters, invertOperation,
