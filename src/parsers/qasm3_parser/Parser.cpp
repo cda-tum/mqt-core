@@ -344,31 +344,39 @@ std::shared_ptr<IfStatement> Parser::parseIfStatement() {
   auto condition = parseExpression();
   expect(Token::Kind::RParen, "after if condition.");
 
-  expect(Token::Kind::LBrace, "after if statement.");
-
-  std::vector<std::shared_ptr<Statement>> thenStatements;
+  std::vector<std::shared_ptr<Statement>> thenStatements =
+      parseBlockOrStatement();
   std::vector<std::shared_ptr<Statement>> elseStatements;
-
-  while (!isAtEnd() && current().kind != Token::Kind::RBrace) {
-    thenStatements.push_back(parseStatement());
-  }
-
-  auto tEnd = expect(Token::Kind::RBrace);
 
   if (current().kind == Token::Kind::Else) {
     expect(Token::Kind::Else);
-    expect(Token::Kind::LParen, "after else keyword.");
 
-    while (!isAtEnd() && current().kind != Token::Kind::RBrace) {
-      elseStatements.push_back(parseStatement());
-    }
-
-    tEnd = expect(Token::Kind::RBrace);
+    elseStatements = parseBlockOrStatement();
   }
+
+  const auto tEnd = last();
 
   return std::make_shared<IfStatement>(
       std::move(condition), std::move(thenStatements),
       std::move(elseStatements), makeDebugInfo(tBegin, tEnd));
+}
+
+std::vector<std::shared_ptr<Statement>> Parser::parseBlockOrStatement() {
+  std::vector<std::shared_ptr<Statement>> statements;
+
+  if (current().kind == Token::Kind::LBrace) {
+    scan();
+
+    while (!isAtEnd() && current().kind != Token::Kind::RBrace) {
+      statements.push_back(parseStatement());
+    }
+
+    expect(Token::Kind::RBrace);
+  } else {
+    statements.push_back(parseStatement());
+  }
+
+  return statements;
 }
 
 std::shared_ptr<GateCallStatement> Parser::parseGateCallStatement() {

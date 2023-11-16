@@ -31,6 +31,7 @@ private:
     std::unique_ptr<std::istream> is;
 
   public:
+    Token last{0, 0};
     Token t{0, 0};
     Token next{0, 0};
     std::unique_ptr<Scanner> scanner;
@@ -38,6 +39,7 @@ private:
     bool isImplicitInclude;
 
     bool scan() {
+      last = t;
       t = next;
       next = scanner->next();
 
@@ -79,14 +81,21 @@ private:
               << ": " << msg << '\n';
   }
 
-  [[nodiscard]] inline Token current() const {
+  [[nodiscard]] Token last() const {
+    if (scanner.empty()) {
+      throw std::runtime_error("No scanner available");
+    }
+    return scanner.top().last;
+  }
+
+  [[nodiscard]] Token current() const {
     if (scanner.empty()) {
       throw std::runtime_error("No scanner available");
     }
     return scanner.top().t;
   }
 
-  [[nodiscard]] inline Token peek() const {
+  [[nodiscard]] Token peek() const {
     if (scanner.empty()) {
       throw std::runtime_error("No scanner available");
     }
@@ -191,6 +200,7 @@ public:
     return current().kind == Token::Kind::Eof;
   }
   std::shared_ptr<IfStatement> parseIfStatement();
+  std::vector<std::shared_ptr<Statement>> parseBlockOrStatement();
 };
 
 } // namespace qasm3
