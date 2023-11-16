@@ -646,17 +646,17 @@ void StandardOperation::dumpOpenQASM3(std::ostream& of,
     }
     break;
   case V:
-    op << "u3(pi/2,-pi/2,pi/2)";
+    op << "U(pi/2,-pi/2,pi/2)";
     break;
   case Vdg:
-    op << "u3(pi/2,pi/2,-pi/2)";
+    op << "U(pi/2,pi/2,-pi/2)";
     break;
   case U:
-    op << "u3(" << parameter[0] << "," << parameter[1] << "," << parameter[2]
+    op << "U(" << parameter[0] << "," << parameter[1] << "," << parameter[2]
        << ")";
     break;
   case U2:
-    op << "u3(pi/2," << parameter[0] << "," << parameter[1] << ")";
+    op << "U(pi/2," << parameter[0] << "," << parameter[1] << ")";
     break;
   case P:
     op << "p(" << parameter[0] << ")";
