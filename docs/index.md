@@ -13,6 +13,7 @@ For a full list of tools and libraries, please visit the {doc}`MQT website <mqt:
 
 ```{include} ../README.md
 :start-after: <!-- SPHINX-START -->
+:end-before: <!-- SPHINX-END -->
 ```
 
 ```{toctree}
@@ -40,6 +41,7 @@ DevelopmentGuide
 ```
 
 ```{toctree}
+:maxdepth: 3
 :caption: API Reference
 
 api/mqt/core/index

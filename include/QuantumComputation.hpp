@@ -121,33 +121,22 @@ protected:
 
   template <class RegisterType>
   static void createRegisterArray(const RegisterMap<RegisterType>& regs,
-                                  RegisterNames& regnames,
-                                  decltype(RegisterType::second) defaultnumber,
-                                  const std::string& defaultname) {
+                                  RegisterNames& regnames) {
     regnames.clear();
-
     std::stringstream ss;
-    if (!regs.empty()) {
-      // sort regs by start index
-      std::map<decltype(RegisterType::first),
-               std::pair<std::string, RegisterType>>
-          sortedRegs{};
-      for (const auto& reg : regs) {
-        sortedRegs.insert({reg.second.first, reg});
-      }
+    // sort regs by start index
+    std::map<decltype(RegisterType::first),
+             std::pair<std::string, RegisterType>>
+        sortedRegs{};
+    for (const auto& reg : regs) {
+      sortedRegs.insert({reg.second.first, reg});
+    }
 
-      for (const auto& reg : sortedRegs) {
-        for (decltype(RegisterType::second) i = 0; i < reg.second.second.second;
-             i++) {
-          ss << reg.second.first << "[" << i << "]";
-          regnames.push_back(std::make_pair(reg.second.first, ss.str()));
-          ss.str(std::string());
-        }
-      }
-    } else {
-      for (decltype(RegisterType::second) i = 0; i < defaultnumber; i++) {
-        ss << defaultname << "[" << i << "]";
-        regnames.emplace_back(defaultname, ss.str());
+    for (const auto& reg : sortedRegs) {
+      for (decltype(RegisterType::second) i = 0; i < reg.second.second.second;
+           i++) {
+        ss << reg.second.first << "[" << i << "]";
+        regnames.push_back(std::make_pair(reg.second.first, ss.str()));
         ss.str(std::string());
       }
     }

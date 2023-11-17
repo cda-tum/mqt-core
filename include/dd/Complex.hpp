@@ -151,9 +151,9 @@ template <> struct hash<dd::Complex> {
    * @see dd::combineHash
    */
   std::size_t operator()(dd::Complex const& c) const noexcept {
-    const auto h1 = dd::murmur64(reinterpret_cast<std::size_t>(c.r));
-    const auto h2 = dd::murmur64(reinterpret_cast<std::size_t>(c.i));
-    return dd::combineHash(h1, h2);
+    const auto h1 = qc::murmur64(reinterpret_cast<std::size_t>(c.r));
+    const auto h2 = qc::murmur64(reinterpret_cast<std::size_t>(c.i));
+    return qc::combineHash(h1, h2);
   }
 };
 } // namespace std

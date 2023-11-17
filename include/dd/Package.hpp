@@ -485,6 +485,74 @@ public:
     return f;
   }
 
+  // generate general GHZ state with n qubits
+  vEdge makeGHZState(const std::size_t n) {
+    if (n > nqubits) {
+      throw std::runtime_error{
+          "Requested state with " + std::to_string(n) +
+          " qubits, but current package configuration only supports up to " +
+          std::to_string(nqubits) +
+          " qubits. Please allocate a larger package instance."};
+    }
+
+    if (n == 0U) {
+      return vEdge::one();
+    }
+
+    auto leftSubtree = vEdge::one();
+    auto rightSubtree = vEdge::one();
+
+    for (std::size_t p = 0; p < n - 1; ++p) {
+      leftSubtree = makeDDNode(static_cast<Qubit>(p),
+                               std::array{leftSubtree, vEdge::zero()});
+      rightSubtree = makeDDNode(static_cast<Qubit>(p),
+                                std::array{vEdge::zero(), rightSubtree});
+    }
+
+    return makeDDNode(
+        static_cast<Qubit>(n - 1),
+        std::array<vEdge, RADIX>{
+            {{leftSubtree.p, {&constants::sqrt2over2, &constants::zero}},
+             {rightSubtree.p, {&constants::sqrt2over2, &constants::zero}}}});
+  }
+
+  // generate general W state with n qubits
+  vEdge makeWState(const std::size_t n) {
+    if (n > nqubits) {
+      throw std::runtime_error{
+          "Requested state with " + std::to_string(n) +
+          " qubits, but current package configuration only supports up to " +
+          std::to_string(nqubits) +
+          " qubits. Please allocate a larger package instance."};
+    }
+
+    if (n == 0U) {
+      return vEdge::one();
+    }
+
+    auto leftSubtree = vEdge::zero();
+    if ((1. / sqrt(static_cast<double>(n))) < RealNumber::eps) {
+      throw std::runtime_error(
+          "Requested qubit size for generating W-state would lead to an "
+          "underflow due to 1 / sqrt(n) being smaller than the currently set "
+          "tolerance " +
+          std::to_string(RealNumber::eps) +
+          ". If you still wanna run the computation, please lower "
+          "the tolerance accordingly.");
+    }
+
+    auto rightSubtree = vEdge::terminal(cn.lookup(1. / std::sqrt(n)));
+    for (size_t p = 0; p < n; ++p) {
+      leftSubtree = makeDDNode(static_cast<Qubit>(p),
+                               std::array{leftSubtree, rightSubtree});
+      if (p != n - 1U) {
+        rightSubtree = makeDDNode(static_cast<Qubit>(p),
+                                  std::array{rightSubtree, vEdge::zero()});
+      }
+    }
+    return leftSubtree;
+  }
+
   // generate the decision diagram from an arbitrary state vector
   vEdge makeStateFromVector(const CVec& stateVector) {
     if (stateVector.empty()) {
@@ -2045,20 +2113,31 @@ private:
   template <class Node>
   Edge<Node> kronecker2(const Edge<Node>& x, const Edge<Node>& y,
                         const bool incIdx = true) {
-    if (x.w.approximatelyZero() || y.w.approximatelyZero()) {
+    if (x.w.exactlyZero() || y.w.exactlyZero()) {
+      return Edge<Node>::zero();
+    }
+    const auto xWeight = static_cast<ComplexValue>(x.w);
+    if (xWeight.approximatelyZero()) {
+      return Edge<Node>::zero();
+    }
+    const auto yWeight = static_cast<ComplexValue>(y.w);
+    if (yWeight.approximatelyZero()) {
+      return Edge<Node>::zero();
+    }
+    const auto rWeight = xWeight * yWeight;
+    if (rWeight.approximatelyZero()) {
       return Edge<Node>::zero();
     }
 
     if (x.isTerminal()) {
-      return {y.p, cn.mulCached(x.w, y.w)};
+      return {y.p, cn.getCached(rWeight)};
     }
 
+    auto xCopy = Edge<Node>{x.p, Complex::one()};
+    auto yCopy = Edge<Node>{y.p, Complex::one()};
     auto& computeTable = getKroneckerComputeTable<Node>();
-    if (const auto* r = computeTable.lookup(x, y); r != nullptr) {
-      if (r->w.approximatelyZero()) {
-        return Edge<Node>::zero();
-      }
-      return {r->p, cn.getCached(r->w)};
+    if (const auto* r = computeTable.lookup(xCopy, yCopy); r != nullptr) {
+      return {r->p, cn.getCached(rWeight)};
     }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
@@ -2066,17 +2145,15 @@ private:
     if constexpr (n == NEDGE) {
       if (x.p->isIdentity()) {
         auto idx = incIdx ? static_cast<Qubit>(y.p->v + 1) : y.p->v;
-        auto e = makeDDNode(
-            idx, std::array{y, Edge<Node>::zero(), Edge<Node>::zero(), y});
+        auto e = makeDDNode(idx, std::array{yCopy, Edge<Node>::zero(),
+                                            Edge<Node>::zero(), yCopy});
         for (auto i = 0; i < x.p->v; ++i) {
           idx = incIdx ? (e.p->v + 1) : e.p->v;
           e = makeDDNode(
               idx, std::array{e, Edge<Node>::zero(), Edge<Node>::zero(), e});
         }
-
-        e.w = cn.getCached(y.w);
-        computeTable.insert(x, y, {e.p, e.w});
-        return e;
+        computeTable.insert(xCopy, yCopy, {e.p, e.w});
+        return {e.p, cn.getCached(rWeight)};
       }
     }
 
@@ -2087,9 +2164,8 @@ private:
 
     auto idx = incIdx ? (y.p->v + x.p->v + 1) : x.p->v;
     auto e = makeDDNode(static_cast<Qubit>(idx), edge, true);
-    ComplexNumbers::mul(e.w, e.w, x.w);
-    computeTable.insert(x, y, {e.p, e.w});
-    return e;
+    computeTable.insert(xCopy, yCopy, {e.p, e.w});
+    return {e.p, cn.getCached(rWeight)};
   }
 
   ///

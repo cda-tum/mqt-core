@@ -572,7 +572,7 @@ std::ostream& QuantumComputation::print(std::ostream& os) const {
   size_t i = 0U;
   for (const auto& op : ops) {
     os << std::setw(width) << ++i << ":";
-    op->print(os, initialLayout, static_cast<std::size_t>(width) + 1U);
+    op->print(os, {}, static_cast<std::size_t>(width) + 1U);
     os << "\n";
   }
 
@@ -673,28 +673,23 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
     of << "opaque teleport src, anc, tgt;\n";
   }
 
-  assert(nqubits == 0U || !qregs.empty());
-  printSortedRegisters(qregs, "qreg", of);
-
-  assert(nclassics == 0U || !cregs.empty());
-  printSortedRegisters(cregs, "creg", of);
-
-  assert(nancillae == 0U || !ancregs.empty());
-  printSortedRegisters(ancregs, "qreg", of);
-
-  RegisterNames qregnames{};
-  RegisterNames cregnames{};
-  RegisterNames ancregnames{};
-  createRegisterArray(qregs, qregnames, nqubits, "q");
-  createRegisterArray(cregs, cregnames, nclassics, "c");
-  createRegisterArray(ancregs, ancregnames, nancillae, "anc");
-
-  for (const auto& ancregname : ancregnames) {
-    qregnames.push_back(ancregname);
+  // combine qregs and ancregs
+  QuantumRegisterMap combinedRegs = qregs;
+  for (const auto& [regName, reg] : ancregs) {
+    combinedRegs.try_emplace(regName, reg.first, reg.second);
   }
+  printSortedRegisters(combinedRegs, "qreg", of);
+  RegisterNames combinedRegNames{};
+  createRegisterArray(combinedRegs, combinedRegNames);
+  assert(combinedRegNames.size() == nqubits + nancillae);
+
+  printSortedRegisters(cregs, "creg", of);
+  RegisterNames cregnames{};
+  createRegisterArray(cregs, cregnames);
+  assert(cregnames.size() == nclassics);
 
   for (const auto& op : ops) {
-    op->dumpOpenQASM(of, qregnames, cregnames);
+    op->dumpOpenQASM(of, combinedRegNames, cregnames);
   }
 }
 
@@ -978,8 +973,9 @@ bool QuantumComputation::isLastOperationOnQubit(
 void QuantumComputation::unifyQuantumRegisters(const std::string& regName) {
   ancregs.clear();
   qregs.clear();
-  qregs[regName] = {0, getNqubits()};
+  nqubits += nancillae;
   nancillae = 0;
+  qregs[regName] = {0, nqubits};
 }
 
 void QuantumComputation::appendMeasurementsAccordingToOutputPermutation(
