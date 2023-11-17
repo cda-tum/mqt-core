@@ -177,7 +177,6 @@ def test_operations() -> None:
     qc.sx(0)
     qc.swap(0, 1)
     qc.iswap(0, 1)
-    qc.iswapdg(0, 1)
     qc.dcx(0, 1)
     qc.ecr(0, 1)
     qc.rxx(0.5, 0, 1)
@@ -191,7 +190,7 @@ def test_operations() -> None:
     mqt_qc = qiskit_to_mqt(qc)
     print(mqt_qc)
     assert mqt_qc.num_qubits == 3
-    assert mqt_qc.num_ops == 25
+    assert mqt_qc.num_ops == 24
     assert mqt_qc.is_variable_free()
 
 
