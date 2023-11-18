@@ -368,6 +368,9 @@ void StandardOperation::dumpOpenQASM(
   case iSWAP:
     op << "iswap";
     break;
+  case iSWAPdg:
+    op << "iswapdg";
+    break;
   case Peres:
     of << op.str() << "cx";
     for (const auto& c : controls) {
@@ -541,8 +544,12 @@ void StandardOperation::invert() {
   case Peresdg:
     type = Peres;
     break;
-  // Tracking issue for iSwap: https://github.com/cda-tum/mqt-core/issues/423
   case iSWAP:
+    type = iSWAPdg;
+    break;
+  case iSWAPdg:
+    type = iSWAP;
+    break;
   case None:
   case Compound:
   case Measure:

@@ -57,8 +57,9 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(qc::GPhase, qc::I, qc::H, qc::X, qc::Y, qc::Z, qc::S,
                     qc::Sdg, qc::T, qc::Tdg, qc::SX, qc::SXdg, qc::V, qc::Vdg,
                     qc::U, qc::U2, qc::P, qc::RX, qc::RY, qc::RZ, qc::Peres,
-                    qc::Peresdg, qc::SWAP, qc::iSWAP, qc::DCX, qc::ECR, qc::RXX,
-                    qc::RYY, qc::RZZ, qc::RZX, qc::XXminusYY, qc::XXplusYY),
+                    qc::Peresdg, qc::SWAP, qc::iSWAP, qc::iSWAPdg, qc::DCX,
+                    qc::ECR, qc::RXX, qc::RYY, qc::RZZ, qc::RZX, qc::XXminusYY,
+                    qc::XXplusYY),
     [](const testing::TestParamInfo<DDFunctionality::ParamType>& inf) {
       const auto gate = inf.param;
       return toString(gate);
@@ -91,6 +92,7 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
 
   case qc::SWAP:
   case qc::iSWAP:
+  case qc::iSWAPdg:
   case qc::DCX:
   case qc::ECR:
     op = qc::StandardOperation(nqubits, Controls{}, 0, 1, gate);
@@ -126,6 +128,11 @@ TEST_F(DDFunctionality, buildCircuit) {
 
   qc.x(0);
   qc.swap(0, 1);
+  qc.cswap(2, 0, 1);
+  qc.mcswap({2, 3}, 0, 1);
+  qc.iswap(0, 1);
+  qc.ciswap(2, 0, 1);
+  qc.mciswap({2, 3}, 0, 1);
   qc.h(0);
   qc.s(3);
   qc.sdg(2);
@@ -178,6 +185,11 @@ TEST_F(DDFunctionality, buildCircuit) {
   qc.s(2);
   qc.sdg(3);
   qc.h(0);
+  qc.mciswapdg({2, 3}, 0, 1);
+  qc.ciswapdg(2, 0, 1);
+  qc.iswapdg(0, 1);
+  qc.mcswap({2, 3}, 0, 1);
+  qc.cswap(2, 0, 1);
   qc.swap(0, 1);
   qc.x(0);
 
