@@ -11,10 +11,6 @@ class QuantumComputation;
 
 namespace dd {
 
-namespace constants {
-static const std::size_t DEFAULT_SHOTS = 1024U;
-}
-
 struct Experiment {
   std::unique_ptr<Package<>> dd{};
   nlohmann::json stats = nlohmann::json::object();
@@ -51,5 +47,5 @@ benchmarkFunctionalityConstruction(const qc::QuantumComputation& qc,
 
 std::map<std::string, std::size_t>
 benchmarkSimulateWithShots(const qc::QuantumComputation& qc,
-                           std::size_t shots = constants::DEFAULT_SHOTS);
+                           std::size_t shots = 1024U);
 } // namespace dd
