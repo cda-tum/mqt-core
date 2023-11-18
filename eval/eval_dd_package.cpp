@@ -47,60 +47,7 @@ void transposeAndReduceJson(const std::string& fileName,
   ifs >> j;
   ifs.close();
 
-  nlohmann::json k;
-
   for (const auto& [algorithm, resultsA] : j.items()) {
-    for (const auto& [type, resultsT] : resultsA.items()) {
-      for (const auto& [nqubits, resultsN] : resultsT.items()) {
-        for (const auto& [branch, resultsB] : resultsN.items()) {
-          const auto& runtime = resultsB["runtime"];
-          k[algorithm][type][nqubits]["runtime"][branch] = runtime;
-
-          const auto& gateCount = resultsB["gate_count"];
-          k[algorithm][type][nqubits]["gate_count"][branch] = gateCount;
-
-          const auto& dd = resultsB["dd"];
-          const auto& activeMemoryMiB = dd["active_memory_mib"];
-          k[algorithm][type][nqubits]["dd"]["active_memory_mib"][branch] =
-              activeMemoryMiB;
-          const auto& peakMemoryMiB = dd["peak_memory_mib"];
-          k[algorithm][type][nqubits]["dd"]["peak_memory_mib"][branch] =
-              peakMemoryMiB;
-          for (const auto& stat : {"matrix", "vector", "density_matrix",
-                                   "real_numbers", "compute_tables"}) {
-            for (const auto& [key, value] : dd[stat].items()) {
-              if (value == "unused") {
-                k[algorithm][type][nqubits]["dd"][stat][key][branch] = value;
-                continue;
-              }
-
-              for (const auto& [key2, value2] : value.items()) {
-                if ((std::strcmp(stat, "matrix") != 0 ||
-                     std::strcmp(stat, "vector") != 0 ||
-                     std::strcmp(stat, "density_matrix") != 0) &&
-                    key == "unique_table") {
-                  for (const auto& [key3, value3] : value2.items()) {
-                    if (!key3.empty()) {
-                      k[algorithm][type][nqubits]["dd"][stat][key][key2][key3]
-                       [branch] = value3;
-                    } else {
-                      k[algorithm][type][nqubits]["dd"][stat][key][key2]
-                       [branch] = value3;
-                    }
-                  }
-                  continue;
-                }
-                k[algorithm][type][nqubits]["dd"][stat][key][key2][branch] =
-                    value2;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  for (const auto& [algorithm, resultsA] : k.items()) {
     for (const auto& [type, resultsT] : resultsA.items()) {
       for (const auto& [nqubits, resultsN] : resultsT.items()) {
         auto& dd = resultsN["dd"];
@@ -126,7 +73,7 @@ void transposeAndReduceJson(const std::string& fileName,
   }
 
   std::ofstream ofs(outFilename);
-  ofs << k.dump(2U);
+  ofs << j.dump(2U);
   ofs.close();
 }
 
@@ -151,7 +98,7 @@ void verifyAndSave(const std::string& name, const std::string& type,
   ifs >> j;
   ifs.close();
 
-  auto& entry = j[name][type][std::to_string(qc.getNqubits())][CURRENT_BRANCH];
+  auto& entry = j[name][type][std::to_string(qc.getNqubits())];
   // Change this line to CURRENT_COMMIT when comparing commits, or anything else
   // to distinguish between runs
 
