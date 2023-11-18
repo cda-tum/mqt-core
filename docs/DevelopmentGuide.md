@@ -51,7 +51,7 @@ Ready to contribute to the project? Here is how to set up a local development en
    Ensure that pip, setuptools, and wheel are up to date:
 
    ```console
-   (venv) $ pip install --upgrade pip, setuptools, wheel
+   (venv) $ pip install --upgrade pip setuptools wheel
    ```
 
    If you plan to work on the Python module, you should also install the build dependencies in the virtual environment:
