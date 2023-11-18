@@ -128,7 +128,11 @@ TEST_F(DDFunctionality, buildCircuit) {
 
   qc.x(0);
   qc.swap(0, 1);
+  qc.cswap(2, 0, 1);
+  qc.mcswap({2, 3}, 0, 1);
   qc.iswap(0, 1);
+  qc.ciswap(2, 0, 1);
+  qc.mciswap({2, 3}, 0, 1);
   qc.h(0);
   qc.s(3);
   qc.sdg(2);
@@ -181,7 +185,11 @@ TEST_F(DDFunctionality, buildCircuit) {
   qc.s(2);
   qc.sdg(3);
   qc.h(0);
+  qc.mciswapdg({2, 3}, 0, 1);
+  qc.ciswapdg(2, 0, 1);
   qc.iswapdg(0, 1);
+  qc.mcswap({2, 3}, 0, 1);
+  qc.cswap(2, 0, 1);
   qc.swap(0, 1);
   qc.x(0);
 
