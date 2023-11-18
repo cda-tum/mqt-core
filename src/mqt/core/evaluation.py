@@ -38,27 +38,25 @@ def higher_better(key: str) -> bool:
     return any(key.endswith(s) for s in higher_better_ls)
 
 
-def is_nested(d: dict[Any, Any]) -> bool:
-    """Return whether the given dictionary is nested."""
-    return any(isinstance(val, dict) for val in d.values())
-
-
 def flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = "_") -> dict[str, Any]:
     """Flatten a nested dictionary."""
     items = {}
     for key, value in d.items():
         new_key = f"{parent_key}{sep}{key}" if parent_key else key
-        if isinstance(value, dict) and is_nested(value):
+        if isinstance(value, dict):
             items.update(flatten_dict(value, new_key, sep=sep))
-        elif isinstance(value, dict) and not is_nested(value):
-            before = value.get(baseline, "skipped")
-            after = value.get(new_data, "skipped")
-            items[new_key] = [before, after]
+        else:
+            items[new_key] = value
     return items
 
 
 def compare(
-    filepath: Path, factor: float = 0.1, only_changed: bool = True, sort: str = "ratio", no_split: bool = False
+    baseline_filepath: Path,
+    feature_filepath: Path,
+    factor: float = 0.1,
+    only_changed: bool = True,
+    sort: str = "ratio",
+    no_split: bool = False,
 ) -> None:
     """Compare the results of two benchmarking runs from the generated json file."""
     if factor < 0:
@@ -67,9 +65,25 @@ def compare(
     if sort not in sort_options:
         msg = "Invalid sort option!"
         raise ValueError(msg)
-    with filepath.open(mode="r", encoding="utf-8") as f:
+    with baseline_filepath.open(mode="r", encoding="utf-8") as f:
         d = json.load(f)
     flattened_data = flatten_dict(d)
+
+    with feature_filepath.open(mode="r", encoding="utf-8") as f:
+        d_feature = json.load(f)
+    flattened_feature = flatten_dict(d_feature)
+
+    for k, v in flattened_data.items():
+        if k in flattened_feature:
+            ls = [v, flattened_feature[k]]
+            flattened_data[k] = ls
+            del flattened_feature[k]
+        else:
+            ls = [v, "skipped"]
+            flattened_data[k] = ls
+    for k, v in flattened_feature.items():
+        ls = ["skipped", v]
+        flattened_data[k] = ls
 
     df_improved = pd.DataFrame()
     improved_before = []
