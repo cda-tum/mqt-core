@@ -160,7 +160,6 @@ files = ["src/mqt", "test/python"]
 mypy_path = ["$MYPY_CONFIG_FILE_DIR/src"]
 python_version = "3.8"
 warn_unused_configs = true
-show_error_codes = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 strict = true
 disallow_untyped_defs = false
@@ -220,7 +219,7 @@ extend-select = [
     "UP",          # pyupgrade
     "YTT",         # flake8-2020
 ]
-extend-ignore = [
+ignore = [
     "ANN101",  # Missing type annotation for `self` in method
     "ANN102",  # Missing type annotation for `cls` in classmethod
     "ISC001",  # Conflicts with formatter
@@ -261,7 +260,7 @@ isort.required-imports = ["from __future__ import annotations"]
 ]
 "src/mqt/core/_compat/**.py" = ["TID251"]
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
 
