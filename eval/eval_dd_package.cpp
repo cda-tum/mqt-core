@@ -23,7 +23,7 @@ static const std::string FILENAME_END = ".json";
 
 static constexpr std::size_t SEED = 42U;
 
-void transposeAndReduceJson(const std::string& fileName,
+void reduceJson(const std::string& fileName,
                             const std::string& outFilename) {
   std::ifstream ifs(fileName);
   nlohmann::json j;
@@ -96,7 +96,8 @@ void verifyAndSave(const std::string& name, const std::string& type,
   ofs << j.dump(2U);
   ofs.close();
 
-  transposeAndReduceJson(FILENAME, FILENAME_REDUCED);
+  reduceJson(filename,
+             FILENAME_START + inputFilename + "_reduced" + FILENAME_END);
 }
 
 class GHZEval : public testing::TestWithParam<std::size_t> {
