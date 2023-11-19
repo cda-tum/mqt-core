@@ -23,43 +23,6 @@ static const std::string FILENAME_END = ".json";
 
 static constexpr std::size_t SEED = 42U;
 
-void reduceJson(const std::string& fileName,
-                            const std::string& outFilename) {
-  std::ifstream ifs(fileName);
-  nlohmann::json j;
-  ifs >> j;
-  ifs.close();
-
-  for (const auto& [algorithm, resultsA] : j.items()) {
-    for (const auto& [type, resultsT] : resultsA.items()) {
-      for (const auto& [nqubits, resultsN] : resultsT.items()) {
-        auto& dd = resultsN["dd"];
-        dd.erase("density_matrix");
-
-        auto& computeTables = dd["compute_tables"];
-        computeTables.erase("density_matrix_add");
-        computeTables.erase("density_density_mult");
-        computeTables.erase("density_noise_operations");
-        computeTables.erase("stochastic_noise_operations");
-        computeTables.erase("matrix_kronecker");
-        computeTables.erase("vector_kronecker");
-        computeTables.erase("vector_inner_product");
-        computeTables.erase("matrix_conjugate_transpose");
-
-        if (type == "Functionality") {
-          dd.erase("vector");
-          computeTables.erase("vector_add");
-          computeTables.erase("matrix_vector_mult");
-        }
-      }
-    }
-  }
-
-  std::ofstream ofs(outFilename);
-  ofs << j.dump(2U);
-  ofs.close();
-}
-
 // a function that parses a nlohmann::json from a file "results.json", populates
 // it with the results of the current run and writes it back to the file
 
@@ -83,8 +46,6 @@ void verifyAndSave(const std::string& name, const std::string& type,
   ifs.close();
 
   auto& entry = j[name][type][std::to_string(qc.getNqubits())];
-  // Change this line to CURRENT_COMMIT when comparing commits, or anything else
-  // to distinguish between runs
 
   entry["gate_count"] = qc.getNindividualOps();
   entry["runtime"] = exp.runtime.count();
@@ -92,12 +53,28 @@ void verifyAndSave(const std::string& name, const std::string& type,
   // collect statistics from DD package
   entry["dd"] = exp.stats;
 
+  // remove some entries not needed for the evaluation
+  entry["dd"].erase("density_matrix");
+
+  auto& computeTables = entry["dd"]["compute_tables"];
+  computeTables.erase("density_matrix_add");
+  computeTables.erase("density_density_mult");
+  computeTables.erase("density_noise_operations");
+  computeTables.erase("stochastic_noise_operations");
+  computeTables.erase("matrix_kronecker");
+  computeTables.erase("vector_kronecker");
+  computeTables.erase("vector_inner_product");
+  computeTables.erase("matrix_conjugate_transpose");
+
+  if (type == "Functionality") {
+    entry["dd"].erase("vector");
+    computeTables.erase("vector_add");
+    computeTables.erase("matrix_vector_mult");
+  }
+
   std::ofstream ofs(filename);
   ofs << j.dump(2U);
   ofs.close();
-
-  reduceJson(filename,
-             FILENAME_START + inputFilename + "_reduced" + FILENAME_END);
 }
 
 class GHZEval : public testing::TestWithParam<std::size_t> {
