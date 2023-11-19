@@ -14,22 +14,7 @@ pd.set_option("display.max_colwidth", None)
 pd.set_option("display.max_rows", None)
 pd.set_option("display.width", None)
 
-baseline = "main"
-new_data = "447-add-benchmark-suite-in-mqt-core"
-# Modify this according to key names in the json file
-
 sort_options = ["ratio", "experiment"]
-
-base_commit = "<3dshafo>"
-comparing_commit = "<bf5839f>"
-base_branch = "main"
-comparing_branch = "447-add-benchmark-suite-in-mqt-core"
-# Modify this depending on what header you want for the data table
-
-header = pd.DataFrame()
-header[base_commit] = [base_branch]
-header[comparing_commit] = [comparing_branch]
-header.index = pd.Index([""] * len(header.index))
 
 
 def higher_better(key: str) -> bool:
@@ -156,7 +141,6 @@ def compare(
         df_all.index = pd.Index([""] * len(df_all.index))
         df_all = df_all.sort_values(by=sort)
         print("All benchmarks:")  # noqa: T201
-        print(header)  # noqa: T201
         print(df_all)  # noqa: T201
         return
 
@@ -165,17 +149,13 @@ def compare(
         df_all.index = pd.Index([""] * len(df_all.index))
         df_all = df_all.sort_values(by=sort)
         print("All changed benchmarks:")  # noqa: T201
-        print(header)  # noqa: T201
         print(df_all)  # noqa: T201
         return
     print("Benchmarks that have improved:")  # noqa: T201
-    print(header)  # noqa: T201
     print(df_improved)  # noqa: T201
 
     if not only_changed:
         print("Benchmarks that have stayed the same:")  # noqa: T201
-        print(header)  # noqa: T201
         print(df_same)  # noqa: T201
     print("Benchmarks that have worsened:")  # noqa: T201
-    print(header)  # noqa: T201
     print(df_worsened)  # noqa: T201
