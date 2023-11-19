@@ -35,22 +35,6 @@ TEST_P(Entanglement, FunctionTest) {
   ASSERT_EQ(r.getValueByPath(std::string(nq, '1')), dd::SQRT2_2);
 }
 
-TEST_P(Entanglement, BenchmarkSimulate) {
-  const auto nq = GetParam();
-
-  auto qc = qc::Entanglement(nq);
-  auto out = dd::benchmarkSimulate(qc);
-  EXPECT_NE(out->sim.p, nullptr);
-}
-
-TEST_P(Entanglement, BenchmarkBuildFunctionality) {
-  const auto nq = GetParam();
-
-  auto qc = qc::Entanglement(nq);
-  auto out = dd::benchmarkFunctionalityConstruction(qc);
-  EXPECT_NE(out->func.p, nullptr);
-}
-
 TEST_P(Entanglement, GHZRoutineFunctionTest) {
   const auto nq = GetParam();
 

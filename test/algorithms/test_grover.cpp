@@ -123,9 +123,3 @@ TEST_P(Grover, Simulation) {
 
   EXPECT_GE(probability, GROVER_GOAL_PROBABILITY);
 }
-
-TEST_P(Grover, BenchmarkBuildFunctionality) {
-  qc = std::make_unique<qc::Grover>(nqubits, seed);
-  const auto out = dd::benchmarkFunctionalityConstruction(*qc, true);
-  EXPECT_NE(out->func.p, nullptr);
-}

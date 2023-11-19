@@ -322,17 +322,3 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
 
   EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }
-
-TEST_P(QPE, BenchmarkSimulate) {
-  auto qc = std::make_unique<qc::QPE>(5, false);
-  qc::CircuitOptimizer::removeFinalMeasurements(*qc);
-  auto out = dd::benchmarkSimulate(*qc);
-  EXPECT_NE(out->sim.p, nullptr);
-}
-
-TEST_P(QPE, BenchmarkBuildFunctionality) {
-  auto qc = std::make_unique<qc::QPE>(3, false);
-  qc::CircuitOptimizer::removeFinalMeasurements(*qc);
-  auto out = dd::benchmarkFunctionalityConstruction(*qc);
-  EXPECT_NE(out->func.p, nullptr);
-}

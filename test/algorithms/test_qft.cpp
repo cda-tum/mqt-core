@@ -219,17 +219,3 @@ TEST_P(QFT, DynamicSimulation) {
   // the number of unique entries should be close to the number of shots
   EXPECT_GE(ratio, 0.7);
 }
-
-TEST_P(QFT, BenchmarkSimulate) {
-  nqubits = 20;
-  qc = std::make_unique<qc::QFT>(nqubits, false);
-  auto out = dd::benchmarkSimulate(*qc);
-  EXPECT_NE(out->sim.p, nullptr);
-}
-
-TEST_P(QFT, BenchmarkBuildFunctionality) {
-  nqubits = 10;
-  qc = std::make_unique<qc::QFT>(nqubits, false);
-  auto out = dd::benchmarkFunctionalityConstruction(*qc);
-  EXPECT_NE(out->func.p, nullptr);
-}

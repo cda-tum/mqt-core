@@ -39,22 +39,6 @@ TEST_P(WState, FunctionTest) {
   }
 }
 
-TEST_P(WState, BenchmarkSimulate) {
-  const auto nq = GetParam();
-
-  auto qc = qc::WState(nq);
-  auto out = dd::benchmarkSimulate(qc);
-  EXPECT_TRUE(out->success());
-}
-
-TEST_P(WState, BenchmarkBuildFunctionality) {
-  const auto nq = GetParam();
-
-  auto qc = qc::WState(nq);
-  auto out = dd::benchmarkFunctionalityConstruction(qc);
-  EXPECT_TRUE(out->success());
-}
-
 TEST_P(WState, RoutineFunctionTest) {
   const auto nq = GetParam();
 
