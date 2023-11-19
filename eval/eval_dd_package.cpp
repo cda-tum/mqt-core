@@ -17,26 +17,9 @@
 
 namespace dd {
 
-std::string runCLI(const char* cmd) {
-  std::array<char, 128> buffer{};
-  std::string result;
-  const std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
-  if (!pipe) {
-    throw std::runtime_error("popen() failed!");
-  }
-  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-    result += buffer.data();
-  }
-  std::string realResult = result.erase(result.size() - 1);
-  return realResult;
-}
-
-[[maybe_unused]] static const std::string CURRENT_BRANCH =
-    runCLI("git symbolic-ref --short -q HEAD");
-[[maybe_unused]] static const std::string CURRENT_COMMIT =
-    runCLI("git rev-parse --short HEAD");
-static const std::string FILENAME = "results.json";
-static const std::string FILENAME_REDUCED = "results_reduced.json";
+std::string inputFilename;
+static const std::string FILENAME_START = "results_";
+static const std::string FILENAME_END = ".json";
 
 static constexpr std::size_t SEED = 42U;
 
@@ -83,18 +66,19 @@ void transposeAndReduceJson(const std::string& fileName,
 void verifyAndSave(const std::string& name, const std::string& type,
                    qc::QuantumComputation& qc, const Experiment& exp) {
   EXPECT_TRUE(exp.success());
+  const std::string& filename = FILENAME_START + inputFilename + FILENAME_END;
 
   nlohmann::json j;
-  std::fstream file(FILENAME, std::ios::in | std::ios::out | std::ios::ate);
+  std::fstream file(filename, std::ios::in | std::ios::out | std::ios::ate);
   if (!file.is_open()) {
-    std::ofstream outputFile(FILENAME);
+    std::ofstream outputFile(filename);
     outputFile << nlohmann::json();
   } else if (file.tellg() == 0) {
     file << nlohmann::json();
   }
   file.close();
 
-  std::ifstream ifs(FILENAME);
+  std::ifstream ifs(filename);
   ifs >> j;
   ifs.close();
 
@@ -108,7 +92,7 @@ void verifyAndSave(const std::string& name, const std::string& type,
   // collect statistics from DD package
   entry["dd"] = exp.stats;
 
-  std::ofstream ofs(FILENAME);
+  std::ofstream ofs(filename);
   ofs << j.dump(2U);
   ofs.close();
 
@@ -389,3 +373,13 @@ TEST_P(RandomCliffordEvalFunctionality, RandomCliffordFunctionality) {
 }
 
 } // namespace dd
+
+int main(int argc, char** argv) {
+  if (argc == 1) {
+    std::cerr << "Need specified file name" << '\n';
+    return 1;
+  }
+  dd::inputFilename = argv[1];
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
