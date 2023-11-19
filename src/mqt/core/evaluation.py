@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
 
 import pandas as pd
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 pd.set_option("display.max_colwidth", None)
 pd.set_option("display.max_rows", None)
@@ -36,8 +34,8 @@ def flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = "_") -> dic
 
 
 def compare(
-    baseline_filepath: Path,
-    feature_filepath: Path,
+    baseline_filepath: str,
+    feature_filepath: str,
     factor: float = 0.1,
     only_changed: bool = True,
     sort: str = "ratio",
@@ -50,11 +48,12 @@ def compare(
     if sort not in sort_options:
         msg = "Invalid sort option!"
         raise ValueError(msg)
-    with baseline_filepath.open(mode="r", encoding="utf-8") as f:
+    base_path = Path(__file__).resolve().parent / baseline_filepath
+    with base_path.open(mode="r", encoding="utf-8") as f:
         d = json.load(f)
     flattened_data = flatten_dict(d)
-
-    with feature_filepath.open(mode="r", encoding="utf-8") as f:
+    feature_path = Path(__file__).resolve().parent / feature_filepath
+    with feature_path.open(mode="r", encoding="utf-8") as f:
         d_feature = json.load(f)
     flattened_feature = flatten_dict(d_feature)
 
