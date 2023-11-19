@@ -41,7 +41,15 @@ def compare(
     sort: str = "ratio",
     no_split: bool = False,
 ) -> None:
-    """Compare the results of two benchmarking runs from the generated json file."""
+    """
+    Compare the results of two benchmarking runs from the generated json file.
+    :param baseline_filepath: Path to the baseline json file.
+    :param feature_filepath: Path to the feature json file.
+    :param factor: How much does the new metric have to differ from the baseline to be considered as a significant change?
+    :param only_changed: If False, a table with the benchmarks that haven't changed significantly will be shown.
+    :param sort: Sort the table by this column. Valid options are "ratio" and "experiment".
+    :param no_split: If True, the output tables (improved and worsened. Also the results that stay the same if `only_changed` in False) will be merged into one table.
+    """
     if factor < 0:
         msg = "Factor must be positive!"
         raise ValueError(msg)
