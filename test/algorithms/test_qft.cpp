@@ -10,14 +10,14 @@
 class QFTFunc : public testing::TestWithParam<std::size_t> {
 protected:
   void TearDown() override {
-//    expSim->dd->decRef(expSim->sim);
+    //    expSim->dd->decRef(expSim->sim);
     expFunc->dd->decRef(expFunc->func);
-//    expSim->dd->garbageCollect(true);
+    //    expSim->dd->garbageCollect(true);
     expFunc->dd->garbageCollect(true);
 
     // number of complex table entries after clean-up should equal initial
     // number of entries
-//    EXPECT_EQ(expSim->dd->cn.realCount(), initialComplexCount);
+    //    EXPECT_EQ(expSim->dd->cn.realCount(), initialComplexCount);
     // number of available cache entries after clean-up should equal initial
     // number of entries
     EXPECT_EQ(expFunc->dd->cn.cacheCount(), initialCacheCount);
@@ -25,7 +25,7 @@ protected:
 
   void SetUp() override {
     nqubits = GetParam();
-//    expSim->dd = std::make_unique<dd::Package<>>(nqubits);
+    //    expSim->dd = std::make_unique<dd::Package<>>(nqubits);
     expFunc = std::make_unique<dd::FunctionalityConstructionExperiment>();
     expFunc->dd = std::make_unique<dd::Package<>>(nqubits);
     initialCacheCount = expFunc->dd->cn.cacheCount();
@@ -33,13 +33,13 @@ protected:
   }
 
   std::size_t nqubits = 0;
-//  std::unique_ptr<dd::Package<>> dd;
+  //  std::unique_ptr<dd::Package<>> dd;
   std::unique_ptr<qc::QFT> qc;
   std::size_t initialCacheCount = 0;
   std::size_t initialComplexCount = 0;
-//  qc::VectorDD sim{};
-//  qc::MatrixDD func{};
-//  std::unique_ptr<dd::SimulationExperiment> expSim{};
+  //  qc::VectorDD sim{};
+  //  qc::MatrixDD func{};
+  //  std::unique_ptr<dd::SimulationExperiment> expSim{};
   std::unique_ptr<dd::FunctionalityConstructionExperiment> expFunc{};
 };
 
@@ -56,20 +56,19 @@ protected:
 ///	Utilizing more qubits requires the use of fp=long double
 constexpr std::size_t QFT_MAX_QUBITS = 20U;
 
-INSTANTIATE_TEST_SUITE_P(QFTFunc, QFTFunc,
-                         testing::Range<std::size_t>(0U, QFT_MAX_QUBITS + 1U,
-                                                     3U),
-                         [](const testing::TestParamInfo<QFTFunc::ParamType>& inf) {
-                           const auto nqubits = inf.param;
-                           std::stringstream ss{};
-                           ss << nqubits;
-                           if (nqubits == 1) {
-                             ss << "_qubit";
-                           } else {
-                             ss << "_qubits";
-                           }
-                           return ss.str();
-                         });
+INSTANTIATE_TEST_SUITE_P(
+    QFTFunc, QFTFunc, testing::Range<std::size_t>(0U, QFT_MAX_QUBITS + 1U, 3U),
+    [](const testing::TestParamInfo<QFTFunc::ParamType>& inf) {
+      const auto nqubits = inf.param;
+      std::stringstream ss{};
+      ss << nqubits;
+      if (nqubits == 1) {
+        ss << "_qubit";
+      } else {
+        ss << "_qubits";
+      }
+      return ss.str();
+    });
 
 TEST_P(QFTFunc, Functionality) {
   // there should be no error constructing the circuit
@@ -185,10 +184,9 @@ protected:
   void SetUp() override {
     nqubits = GetParam();
 
-
     expSim = std::make_unique<dd::SimulationExperiment>();
     expSim->dd = std::make_unique<dd::Package<>>(nqubits);
-//    expFunc->dd = std::make_unique<dd::Package<>>(nqubits);
+    //    expFunc->dd = std::make_unique<dd::Package<>>(nqubits);
     initialCacheCount = expSim->dd->cn.cacheCount();
     initialComplexCount = expSim->dd->cn.realCount();
   }
@@ -201,23 +199,22 @@ protected:
   //  qc::VectorDD sim{};
   //  qc::MatrixDD func{};
   std::unique_ptr<dd::SimulationExperiment> expSim{};
-//  std::unique_ptr<dd::FunctionalityConstructionExperiment> expFunc{};
+  //  std::unique_ptr<dd::FunctionalityConstructionExperiment> expFunc{};
 };
 
-INSTANTIATE_TEST_SUITE_P(QFTSim, QFTSim,
-                         testing::Range<std::size_t>(0U, QFT_MAX_QUBITS + 1U,
-                                                     3U),
-                         [](const testing::TestParamInfo<QFTSim::ParamType>& inf) {
-                           const auto nqubits = inf.param;
-                           std::stringstream ss{};
-                           ss << nqubits;
-                           if (nqubits == 1) {
-                             ss << "_qubit";
-                           } else {
-                             ss << "_qubits";
-                           }
-                           return ss.str();
-                         });
+INSTANTIATE_TEST_SUITE_P(
+    QFTSim, QFTSim, testing::Range<std::size_t>(0U, QFT_MAX_QUBITS + 1U, 3U),
+    [](const testing::TestParamInfo<QFTSim::ParamType>& inf) {
+      const auto nqubits = inf.param;
+      std::stringstream ss{};
+      ss << nqubits;
+      if (nqubits == 1) {
+        ss << "_qubit";
+      } else {
+        ss << "_qubits";
+      }
+      return ss.str();
+    });
 
 TEST_P(QFTSim, Simulation) {
   // there should be no error constructing the circuit
