@@ -47,5 +47,5 @@ benchmarkFunctionalityConstruction(const qc::QuantumComputation& qc,
 
 std::map<std::string, std::size_t>
 benchmarkSimulateWithShots(const qc::QuantumComputation& qc,
-                           std::size_t shots = 1024U);
+                           std::size_t shots);
 } // namespace dd
