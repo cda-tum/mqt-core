@@ -41,8 +41,8 @@ def compare(
     sort: str = "ratio",
     no_split: bool = False,
 ) -> None:
-    """
-    Compare the results of two benchmarking runs from the generated json file.
+    """Compare the results of two benchmarking runs from the generated json file.
+
     :param baseline_filepath: Path to the baseline json file.
     :param feature_filepath: Path to the feature json file.
     :param factor: How much does the new metric have to differ from the baseline to be considered as a significant change?
@@ -56,11 +56,11 @@ def compare(
     if sort not in sort_options:
         msg = "Invalid sort option!"
         raise ValueError(msg)
-    base_path = Path(__file__).resolve().parent / baseline_filepath
+    base_path = Path(baseline_filepath)
     with base_path.open(mode="r", encoding="utf-8") as f:
         d = json.load(f)
     flattened_data = flatten_dict(d)
-    feature_path = Path(__file__).resolve().parent / feature_filepath
+    feature_path = Path(feature_filepath)
     with feature_path.open(mode="r", encoding="utf-8") as f:
         d_feature = json.load(f)
     flattened_feature = flatten_dict(d_feature)

@@ -6,8 +6,8 @@ import pytest
 
 from mqt.core.evaluation import compare, flatten_dict, higher_better
 
-path_base = "example_baseline_results.json"
-path_feature = "example_feature_results.json"
+path_base = "test/python/example_baseline_results.json"
+path_feature = "test/python/example_feature_results.json"
 
 
 def test_higher_better() -> None:
