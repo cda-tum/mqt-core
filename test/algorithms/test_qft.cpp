@@ -18,9 +18,7 @@ protected:
     EXPECT_EQ(dd->cn.cacheCount(), initialCacheCount);
   }
 
-  void SetUp() override {
-    nqubits = GetParam();
-  }
+  void SetUp() override { nqubits = GetParam(); }
 
   std::size_t nqubits = 0;
   std::unique_ptr<qc::QFT> qc;
@@ -42,19 +40,20 @@ protected:
 ///	Utilizing more qubits requires the use of fp=long double
 constexpr std::size_t QFT_MAX_QUBITS = 20U;
 
-INSTANTIATE_TEST_SUITE_P(
-    QFT, QFT, testing::Range<std::size_t>(0U, QFT_MAX_QUBITS + 1U, 3U),
-    [](const testing::TestParamInfo<QFT::ParamType>& inf) {
-      const auto nqubits = inf.param;
-      std::stringstream ss{};
-      ss << nqubits;
-      if (nqubits == 1) {
-        ss << "_qubit";
-      } else {
-        ss << "_qubits";
-      }
-      return ss.str();
-    });
+INSTANTIATE_TEST_SUITE_P(QFT, QFT,
+                         testing::Range<std::size_t>(0U, QFT_MAX_QUBITS + 1U,
+                                                     3U),
+                         [](const testing::TestParamInfo<QFT::ParamType>& inf) {
+                           const auto nqubits = inf.param;
+                           std::stringstream ss{};
+                           ss << nqubits;
+                           if (nqubits == 1) {
+                             ss << "_qubit";
+                           } else {
+                             ss << "_qubits";
+                           }
+                           return ss.str();
+                         });
 
 TEST_P(QFT, Functionality) {
   // there should be no error constructing the circuit
