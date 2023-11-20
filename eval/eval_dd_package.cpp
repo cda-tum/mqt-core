@@ -17,7 +17,8 @@
 
 namespace dd {
 
-std::string inputFilename;
+std::string inputFilename; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
 static const std::string FILENAME_START = "results_";
 static const std::string FILENAME_END = ".json";
 
@@ -356,7 +357,7 @@ int main(int argc, char** argv) {
     std::cerr << "Need specified file name" << '\n';
     return 1;
   }
-  dd::inputFilename = argv[1];
+  dd::inputFilename = argv[1]; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
