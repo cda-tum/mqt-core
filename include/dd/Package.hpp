@@ -2962,13 +2962,13 @@ public:
     Checks for partial equivalence between the two circuits u1 and u2,
      where the last d qubits of the circuits are the data qubits and
      the last m qubits are the measured qubits.
-    @param u1 First circuit
-    @param u2 Second circuit
+    @param u1 DD representation of first circuit
+    @param u2 DD representation of second circuit
     @param d Number of data qubits
     @param m Number of measured qubits
-    @return true if the two circuits u1 and u2 are partially equivalent
+    @return true if the two circuits u1 and u2 are partially equivalent.
     **/
-  bool partialEquivalenceCheck(mEdge& u1, mEdge& u2, Qubit d, Qubit m) {
+  bool partialEquivalenceCheck(mEdge u1, mEdge u2, Qubit d, Qubit m) {
     if (m == 0) {
       return true;
     }

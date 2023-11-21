@@ -1,6 +1,7 @@
 #include "dd/Export.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
+#include "dd/Verification.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
 #include "operations/Control.hpp"
 
@@ -2230,4 +2231,29 @@ TEST(DDPackageTest, DDMKroneckerProduct4) {
       {0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, -dd::SQRT2_2, 0, 0, 0, 0, 0},
       {0, 0, 0, dd::SQRT2_2, 0, 0, 0, 0, 0, 0, 0, -dd::SQRT2_2, 0, 0, 0, 0}};
   EXPECT_EQ(outputDD.getMatrix(), expectedMatrix);
+}
+
+TEST(DDPackageTest,
+     DDMPartialEquivalenceCheckingExamplePaperDifferentQubitOrder) {
+  const auto nqubits = 3U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+
+  qc::QuantumComputation c1{3, 1};
+  c1.cswap(1, 0, 2);
+  c1.h(0);
+  c1.z(2);
+  c1.cswap(1, 0, 2);
+  // c1.measure(2, 0);
+
+  qc::QuantumComputation c2{3, 1};
+  c2.x(1);
+  c2.ch(1, 0);
+  // c2.measure(2, 0);
+
+  c1.setLogicalQubitGarbage(1);
+  c1.setLogicalQubitGarbage(2);
+
+  c2.setLogicalQubitGarbage(1);
+  c2.setLogicalQubitGarbage(2);
+  EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
 }

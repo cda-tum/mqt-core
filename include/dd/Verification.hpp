@@ -1,0 +1,72 @@
+#include "dd/FunctionalityConstruction.hpp"
+#include "dd/Package.hpp"
+
+namespace dd {
+
+// get next garbage qubit before n
+inline Qubit getNextGarbage(Qubit n, const std::vector<bool>& garbage) {
+  while (n > 0 && !garbage.at(n)) {
+    --n;
+  }
+  return n;
+}
+/**
+    Checks for partial equivalence between the two circuits c1 and c2.
+    Assumption: the data qubits are all at the end of the input qubits and
+    the input and output permutations are the same.
+
+    @param circuit1 First circuit
+    @param circuit2 Second circuit
+    @return true if the two circuits c1 and c2 are partially equivalent.
+    **/
+template <class Config>
+bool partialEquivalenceCheck(const qc::QuantumComputation& circuit1,
+                             const qc::QuantumComputation& circuit2,
+                             std::unique_ptr<dd::Package<Config>>& dd) {
+
+  auto c1 = circuit1;
+  auto c2 = circuit2;
+
+  auto d1 = c1.getNqubitsWithoutAncillae();
+  auto d2 = c2.getNqubitsWithoutAncillae();
+  auto m1 = c1.getNqubits() -
+            static_cast<std::size_t>(std::count(c1.getGarbage().begin(),
+                                                c1.getGarbage().end(), true));
+  auto m2 = c2.getNqubits() -
+            static_cast<std::size_t>(std::count(c2.getGarbage().begin(),
+                                                c2.getGarbage().end(), true));
+  if (m1 != m2 || d1 != d2) {
+    return false;
+  }
+
+  // add swaps in order to put the measured (= not garbage) qubits in the end
+  auto garbage = c1.getGarbage();
+  auto n = static_cast<Qubit>(garbage.size());
+  auto nextGarbage = getNextGarbage(n - 1, garbage);
+  // find the first garbage qubit at the end
+  for (Qubit i = 0U; i < n - static_cast<Qubit>(m1); i++) {
+    if (!garbage.at(i)) {
+      // swap it to the end
+      c1.swap(i, nextGarbage);
+      c2.swap(i, nextGarbage);
+      --nextGarbage;
+      nextGarbage = getNextGarbage(nextGarbage, garbage);
+    }
+  }
+
+  // pretend to not have any garbage qubits s.t. the buildFunctionality
+  // function doesn't use reduceGarbage
+
+  std::vector<bool> emptyGarbage(n, false);
+  c1.garbage = emptyGarbage;
+  c2.garbage = emptyGarbage;
+
+  // partialEquivalenceCheck with dd
+
+  auto u1 = buildFunctionality(&c1, dd);
+  auto u2 = buildFunctionality(&c2, dd);
+  return dd->partialEquivalenceCheck(u1, u2, static_cast<Qubit>(d1),
+                                     static_cast<Qubit>(m1));
+  // return true;
+}
+} // namespace dd
