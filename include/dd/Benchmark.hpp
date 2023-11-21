@@ -46,6 +46,5 @@ benchmarkFunctionalityConstruction(const qc::QuantumComputation& qc,
                                    bool recursive = false);
 
 std::map<std::string, std::size_t>
-benchmarkSimulateWithShots(const qc::QuantumComputation& qc,
-                           std::size_t shots);
+benchmarkSimulateWithShots(const qc::QuantumComputation& qc, std::size_t shots);
 } // namespace dd
