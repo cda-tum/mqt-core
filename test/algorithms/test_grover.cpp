@@ -74,6 +74,7 @@ TEST_P(Grover, Functionality) {
 
   auto exp = dd::benchmarkFunctionalityConstruction(*qc);
   func = exp->func;
+  dd = std::move(exp->dd);
 
   // amplitude of the searched-for entry should be 1
   auto c = func.getValueByPath(x);
@@ -94,6 +95,7 @@ TEST_P(Grover, FunctionalityRecursive) {
 
   auto exp = dd::benchmarkFunctionalityConstruction(*qc, true);
   func = exp->func;
+  dd = std::move(exp->dd);
 
   // amplitude of the searched-for entry should be 1
   auto c = func.getValueByPath(x);
