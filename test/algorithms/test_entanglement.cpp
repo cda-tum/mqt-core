@@ -39,8 +39,9 @@ TEST_P(Entanglement, GHZRoutineFunctionTest) {
   const auto nq = GetParam();
 
   auto qc = qc::Entanglement(nq);
-  auto dd = std::make_unique<dd::Package<>>(nq);
-  const dd::VectorDD e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
+  auto exp = dd::benchmarkSimulate(qc);
+  auto e = exp->sim;
+  auto& dd = exp->dd;
   const auto f = dd->makeGHZState(nq);
 
   EXPECT_EQ(e, f);

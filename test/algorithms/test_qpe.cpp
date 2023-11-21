@@ -231,7 +231,8 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = buildFunctionality(&qpe, dd);
+  auto exp = dd::benchmarkFunctionalityConstruction(qpe);
+  auto e = exp->func;
 
   // create standard IQPE circuit
   auto iqpe = qc::QPE(lambda, precision, true);
@@ -245,7 +246,7 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = buildFunctionality(&iqpe, dd);
+  auto f = buildFunctionality(&iqpe, exp->dd);
 
   EXPECT_EQ(e, f);
 }

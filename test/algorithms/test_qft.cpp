@@ -193,7 +193,8 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
   initialComplexCount = exp->dd->cn.realCount();
 
   // there should be no error building the functionality recursively
-  auto func = buildFunctionality(qc.get(), exp->dd);
+  exp = dd::benchmarkFunctionalityConstruction(*qc);
+  auto func = exp->func;
 
   // there should be no error building the functionality regularly
   auto funcRec = buildFunctionalityRecursive(qc.get(), exp->dd);

@@ -4,6 +4,7 @@
 #include "algorithms/QPE.hpp"
 #include "dd/Export.hpp"
 #include "dd/Simulation.hpp"
+#include "dd/Benchmark.hpp"
 
 #include "gtest/gtest.h"
 #include <bitset>
@@ -168,8 +169,10 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto e = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
+  auto exp = dd::benchmarkSimulate(*qpe);
   const auto simulationEnd = std::chrono::steady_clock::now();
+  auto e = exp->sim;
+  dd = std::move(exp->dd);
 
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
@@ -384,8 +387,10 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
   std::cout << "---- extraction done ----\n";
 
   // generate DD of QPE circuit via simulation
-  auto e = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
+  auto exp = dd::benchmarkSimulate(*qpe);
   const auto simulationEnd = std::chrono::steady_clock::now();
+  auto e = exp->sim;
+  dd = std::move(exp->dd);
   std::cout << "---- sim done ----\n";
 
   // extend to account for 0 qubit
@@ -536,8 +541,10 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto e = simulate(bv.get(), dd->makeZeroState(bv->getNqubits()), dd);
+  auto exp = dd::benchmarkSimulate(*bv);
   const auto simulationEnd = std::chrono::steady_clock::now();
+  auto e = exp->sim;
+  dd = std::move(exp->dd);
 
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
@@ -687,10 +694,12 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto e = simulate(qft.get(), dd->makeZeroState(qft->getNqubits()), dd);
+  auto exp = dd::benchmarkSimulate(*qft);
   const auto simulationEnd = std::chrono::steady_clock::now();
   const auto simulation =
       std::chrono::duration<double>(simulationEnd - start).count();
+  auto e = exp->sim;
+  dd = std::move(exp->dd);
 
   std::stringstream ss{};
   // extract measurement probabilities from IQPE simulations

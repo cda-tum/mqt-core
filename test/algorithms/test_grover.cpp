@@ -1,6 +1,5 @@
 #include "algorithms/Grover.hpp"
 #include "dd/Benchmark.hpp"
-#include "dd/FunctionalityConstruction.hpp"
 
 #include "gtest/gtest.h"
 #include <cmath>
@@ -73,8 +72,8 @@ TEST_P(Grover, Functionality) {
   std::reverse(x.begin(), x.end());
   std::replace(x.begin(), x.end(), '1', '2');
 
-  // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionality(qc.get(), dd); });
+  auto exp = dd::benchmarkFunctionalityConstruction(*qc);
+  func = exp->func;
 
   // amplitude of the searched-for entry should be 1
   auto c = func.getValueByPath(x);
@@ -93,8 +92,8 @@ TEST_P(Grover, FunctionalityRecursive) {
   std::reverse(x.begin(), x.end());
   std::replace(x.begin(), x.end(), '1', '2');
 
-  // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), dd); });
+  auto exp = dd::benchmarkFunctionalityConstruction(*qc, true);
+  func = exp->func;
 
   // amplitude of the searched-for entry should be 1
   auto c = func.getValueByPath(x);

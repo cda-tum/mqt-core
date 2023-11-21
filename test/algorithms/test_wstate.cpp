@@ -43,8 +43,9 @@ TEST_P(WState, RoutineFunctionTest) {
   const auto nq = GetParam();
 
   auto qc = qc::WState(nq);
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const dd::VectorDD e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
+  auto exp = dd::benchmarkSimulate(qc);
+  auto& dd = exp->dd;
+  auto e = exp->sim;
   const auto f = dd->makeWState(nq);
 
   EXPECT_EQ(e, f);
