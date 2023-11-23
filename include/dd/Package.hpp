@@ -2859,16 +2859,17 @@ private:
         edges[3] = shiftAllRowsRecursive(e.p->e[2], mDecremented, offset);
       } else {
         // don't shift the second half of the matrix yet
-        edges[2] = shiftAllRowsRecursive(e.p->e[2], mDecremented,
-                                         (m > 0 ? 1 << (m - 1) : 0) + offset);
-        edges[3] = shiftAllRowsRecursive(e.p->e[3], mDecremented,
-                                         (m > 0 ? 1 << (m - 1) : 0) + offset);
+        auto newOffset = (m > 0 ? 1 << (m - 1) : 0) + offset;
+        edges[2] = shiftAllRowsRecursive(e.p->e[2], mDecremented, newOffset);
+        edges[3] = shiftAllRowsRecursive(e.p->e[3], mDecremented, newOffset);
       }
     }
     auto f = makeDDNode(e.p->v, edges);
     f.w = e.w;
     return f;
   }
+  ComputeTable<mEdge, Qubit, mEdge> setMatrixColumnsToZero{};
+  ComputeTable<mEdge, Qubit, mEdge> setMatrixRowsToZero{};
 
 public:
   /**
@@ -2892,6 +2893,14 @@ public:
     if (k == 0) {
       return e;
     }
+    // check if it's in the compute table with an edge weight of one
+    if (const auto* r =
+            setMatrixColumnsToZero.lookup(mEdge{e.p, Complex::one()}, k);
+        r != nullptr) {
+      auto f = *r;
+      f.w = e.w;
+      return f;
+    }
     // the matrix of the current DD has dimensions 2^h x 2^h
     const auto h = e.p->v + 1;
     std::array<mEdge, NEDGE> edges{};
@@ -2905,6 +2914,10 @@ public:
       edges[3] = mEdge::zero();
     }
     auto f = makeDDNode(e.p->v, edges);
+
+    // add to the compute table with a weight of 1
+    f.w = Complex::one();
+    setMatrixColumnsToZero.insert(e, k, f);
     f.w = e.w;
     return f;
   }
@@ -2921,6 +2934,14 @@ public:
     if (k == 0) {
       return e;
     }
+    // check if it's in the compute table with an edge weight of one
+    if (const auto* r =
+            setMatrixRowsToZero.lookup(mEdge{e.p, Complex::one()}, k);
+        r != nullptr) {
+      auto f = *r;
+      f.w = e.w;
+      return f;
+    }
     // the matrix of the current DD has dimensions 2^h x 2^h
     const auto h = e.p->v + 1;
     std::array<mEdge, NEDGE> edges{};
@@ -2934,6 +2955,10 @@ public:
       edges[3] = mEdge::zero();
     }
     auto f = makeDDNode(e.p->v, edges);
+
+    // add to the compute table with a weight of 1
+    f.w = Complex::one();
+    setMatrixColumnsToZero.insert(e, k, f);
     f.w = e.w;
     return f;
   }
