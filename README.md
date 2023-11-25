@@ -24,7 +24,7 @@ The MQT Core library forms the backbone of the quantum software tools developed 
 - [MQT DDVis](https://github.com/cda-tum/mqt-ddvis): A Web-Application visualizing Decision Diagrams for Quantum Computing.
 - [MQT SyReC](https://github.com/cda-tum/mqt-syrec): A Tool for Synthesis of Reversible Circuits/Quantum Computing Oracles.
 
-For a full list of tools and libraries, please run the [MQT website](https://mqt.readthedocs.io/).
+For a full list of tools and libraries, please visit the [MQT website](https://mqt.readthedocs.io/).
 
 <p align="center">
   <a href="https://mqt.readthedocs.io/projects/core">

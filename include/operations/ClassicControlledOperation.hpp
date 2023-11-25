@@ -144,10 +144,8 @@ public:
 
   void dumpOpenQASM3(std::ostream& of, const RegisterNames& qreg,
                      const RegisterNames& creg,
-                     uint32_t indent = 0) const override {
-    for (uint32_t i = 0; i < indent; ++i) {
-      of << "  ";
-    }
+                     uint32_t indent) const override {
+    of << std::string(indent, ' ');
     of << "if (";
     of << creg[controlRegister.first].first;
     of << " " << comparisonKind << " " << expectedValue << ") {\n";

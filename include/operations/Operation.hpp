@@ -181,7 +181,7 @@ public:
 
   virtual void dumpOpenQASM3(std::ostream& of, const RegisterNames& qreg,
                              const RegisterNames& creg,
-                             uint32_t indent = 0) const = 0;
+                             uint32_t indent) const = 0;
 
   virtual void invert() = 0;
 

@@ -105,7 +105,7 @@ private:
       error(current(), message);
     }
 
-    Token const token = current();
+    auto token = current();
     scan();
     return token;
   }
