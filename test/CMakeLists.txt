@@ -8,8 +8,13 @@ if(NOT TARGET gtest OR NOT TARGET gmock)
 endif()
 
 # add unit tests
-package_add_test(${PROJECT_NAME}-test ${PROJECT_NAME} unittests/test_io.cpp
-                 unittests/test_qfr_functionality.cpp unittests/test_symbolic.cpp)
+package_add_test(
+  ${PROJECT_NAME}-test
+  ${PROJECT_NAME}
+  unittests/test_io.cpp
+  unittests/test_qfr_functionality.cpp
+  unittests/test_symbolic.cpp
+  unittests/test_qasm3_parser.cpp)
 
 package_add_test(
   ${PROJECT_NAME}-test-dd
