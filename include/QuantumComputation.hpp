@@ -754,8 +754,8 @@ public:
   }
   virtual void dump(std::ostream&& of, Format format);
   // defaults to OpenQASM 2.0
-  void dumpOpenQASM(std::ostream& of) { dumpOpenQASM(of, true); }
-  void dumpOpenQASM3(std::ostream& of) { dumpOpenQASM(of, false); }
+  void dumpOpenQASM(std::ostream& of) { dumpOpenQASM(of, false); }
+  void dumpOpenQASM3(std::ostream& of) { dumpOpenQASM(of, true); }
   virtual void dumpOpenQASM(std::ostream& of, bool openQasm3);
 
   // this convenience method allows to turn a circuit into a compound operation.

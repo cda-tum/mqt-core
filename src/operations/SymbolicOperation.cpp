@@ -305,18 +305,16 @@ bool SymbolicOperation::equals(const Operation& op, const Permutation& perm1,
   return true;
 }
 
-[[noreturn]] void SymbolicOperation::dumpOpenQASM(
-    [[maybe_unused]] std::ostream& of,
-    [[maybe_unused]] const RegisterNames& qreg,
-    [[maybe_unused]] const RegisterNames& creg) const {
-  throw QFRException("OpenQASM 2.0 doesn't support parametrized gates!");
-}
-
 [[noreturn]] void
-SymbolicOperation::dumpOpenQASM3([[maybe_unused]] std::ostream& of,
-                                 [[maybe_unused]] const qc::RegisterNames& qreg,
-                                 [[maybe_unused]] const qc::RegisterNames& creg,
-                                 [[maybe_unused]] uint32_t indent) const {
+SymbolicOperation::dumpOpenQASM([[maybe_unused]] std::ostream& of,
+                                [[maybe_unused]] const RegisterNames& qreg,
+                                [[maybe_unused]] const RegisterNames& creg,
+                                [[maybe_unused]] uint32_t indent,
+                                bool openQASM3) const {
+  if (openQASM3) {
+    throw QFRException(
+        "Printing OpenQASM 3.0 parametrized gates is not supported yet!");
+  }
   throw QFRException("OpenQASM 2.0 doesn't support parametrized gates!");
 }
 

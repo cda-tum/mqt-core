@@ -62,12 +62,18 @@ std::ostream& NonUnitaryOperation::print(
 
 void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
                                        const RegisterNames& qreg,
-                                       const RegisterNames& creg) const {
+                                       const RegisterNames& creg,
+                                       uint32_t indent, bool openQASM3) const {
+  of << std::string(indent * 2, ' ');
+
   if (isWholeQubitRegister(qreg, targets.front(), targets.back()) &&
       (type != Measure ||
        isWholeQubitRegister(creg, classics.front(), classics.back()))) {
+    if (type == Measure && openQASM3) {
+      of << creg[classics.front()].first << " = ";
+    }
     of << toString(type) << " " << qreg[targets.front()].first;
-    if (type == Measure) {
+    if (type == Measure && !openQASM3) {
       of << " -> ";
       of << creg[classics.front()].first;
     }
@@ -76,8 +82,11 @@ void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
   }
   auto classicsIt = classics.cbegin();
   for (const auto& q : targets) {
+    if (type == Measure && openQASM3) {
+      of << creg[*classicsIt].second << " = ";
+    }
     of << toString(type) << " " << qreg[q].second;
-    if (type == Measure) {
+    if (type == Measure && !openQASM3) {
       of << " -> " << creg[*classicsIt].second;
       ++classicsIt;
     }
@@ -183,34 +192,6 @@ void NonUnitaryOperation::addDepthContribution(
     std::vector<std::size_t>& depths) const {
   for (const auto& target : getTargets()) {
     depths[target] += 1;
-  }
-}
-
-void NonUnitaryOperation::dumpOpenQASM3(std::ostream& of,
-                                        const RegisterNames& qreg,
-                                        const RegisterNames& creg,
-                                        uint32_t indent) const {
-  for (uint32_t i = 0; i < indent; ++i) {
-    of << "  ";
-  }
-
-  if (isWholeQubitRegister(qreg, targets.front(), targets.back())) {
-    if (type == Measure) {
-      assert(isWholeQubitRegister(creg, classics.front(), classics.back()));
-      of << creg[classics.front()].first << " = ";
-    }
-    of << toString(type) << " " << qreg[targets.front()].first;
-    of << ";\n";
-    return;
-  }
-  auto classicsIt = classics.cbegin();
-  for (const auto& q : targets) {
-    if (type == Measure) {
-      of << creg[*classicsIt].second << " = ";
-      ++classicsIt;
-    }
-    of << toString(type) << " " << qreg[q].second;
-    of << ";\n";
   }
 }
 } // namespace qc

@@ -239,22 +239,54 @@ StandardOperation::StandardOperation(const std::size_t nq, const Controls& c,
 /***
  * Public Methods
  ***/
-void StandardOperation::dumpOpenQASM(
-    std::ostream& of, const RegisterNames& qreg,
-    [[maybe_unused]] const RegisterNames& creg) const {
+void StandardOperation::dumpOpenQASM(std::ostream& of,
+                                     const RegisterNames& qreg,
+                                     [[maybe_unused]] const RegisterNames& creg,
+                                     uint32_t indent, bool openQASM3) const {
   std::ostringstream op;
   op << std::setprecision(std::numeric_limits<fp>::digits10);
-  if ((controls.size() > 1 && type != X) || controls.size() > 2) {
-    std::cout << "[WARNING] Multiple controlled gates are not natively "
-                 "supported by OpenQASM. "
-              << "However, this library can parse .qasm files with multiple "
-                 "controlled gates (e.g., cccx) correctly. "
-              << "Thus, while not valid vanilla OpenQASM, the dumped file will "
-                 "work with this library.\n";
-  }
 
-  // safe the numbers of controls as a prefix to the operation name
-  op << std::string(controls.size(), 'c');
+  op << std::string(indent * 2, ' ');
+
+  if (openQASM3) {
+    if (!controls.empty()) {
+      Control::Type currentType = controls.begin()->type;
+      int count = 0;
+
+      for (const auto& control : controls) {
+        if (control.type == currentType) {
+          ++count;
+        } else {
+          op << (currentType == Control::Type::Neg ? "negctrl" : "ctrl");
+          if (count > 1) {
+            op << "(" << count << ")";
+          }
+          op << " @ ";
+          currentType = control.type;
+          count = 1;
+        }
+      }
+
+      op << (currentType == Control::Type::Neg ? "negctrl" : "ctrl");
+      if (count > 1) {
+        op << "(" << count << ")";
+      }
+      op << " @ ";
+    }
+  } else {
+    if ((controls.size() > 1 && type != X) || controls.size() > 2) {
+      std::cout
+          << "[WARNING] Multiple controlled gates are not natively "
+             "supported by OpenQASM. "
+          << "However, this library can parse .qasm files with multiple "
+             "controlled gates (e.g., cccx) correctly. "
+          << "Thus, while not valid vanilla OpenQASM, the dumped file will "
+             "work with this library.\n";
+    }
+
+    // safe the numbers of controls as a prefix to the operation name
+    op << std::string(controls.size(), 'c');
+  }
 
   switch (type) {
   case GPhase:
@@ -308,17 +340,37 @@ void StandardOperation::dumpOpenQASM(
     }
     break;
   case V:
-    op << "u3(pi/2,-pi/2,pi/2)";
+    if (openQASM3) {
+      op << "U";
+    } else {
+      op << "u3";
+    }
+    op << "(pi/2,-pi/2,pi/2)";
     break;
   case Vdg:
-    op << "u3(pi/2,pi/2,-pi/2)";
+    if (openQASM3) {
+      op << "U";
+    } else {
+      op << "u3";
+    }
+    op << "(pi/2,pi/2,-pi/2)";
     break;
   case U:
-    op << "u3(" << parameter[0] << "," << parameter[1] << "," << parameter[2]
+    if (openQASM3) {
+      op << "U";
+    } else {
+      op << "u3";
+    }
+    op << "(" << parameter[0] << "," << parameter[1] << "," << parameter[2]
        << ")";
     break;
   case U2:
-    op << "u3(pi/2," << parameter[0] << "," << parameter[1] << ")";
+    if (openQASM3) {
+      op << "U";
+    } else {
+      op << "u3";
+    }
+    op << "(pi/2," << parameter[0] << "," << parameter[1] << ")";
     break;
   case P:
     op << "p(" << parameter[0] << ")";
@@ -408,33 +460,43 @@ void StandardOperation::dumpOpenQASM(
   }
 
   // apply X operations to negate the respective controls
-  for (const auto& c : controls) {
-    if (c.type == Control::Type::Neg) {
-      of << "x " << qreg[c.qubit].second << ";\n";
+  if (!openQASM3) {
+    for (const auto& c : controls) {
+      if (c.type == Control::Type::Neg) {
+        of << "x " << qreg[c.qubit].second << ";\n";
+      }
     }
   }
+
   // apply the operation
   of << op.str();
+
   // add controls and targets of the operation
-  for (const auto& c : controls) {
-    of << " " << qreg[c.qubit].second << ",";
+  for (auto it = controls.begin(); it != controls.end();) {
+    of << " " << qreg[it->qubit].second;
+    if (++it != controls.end() || !targets.empty()) {
+      of << ",";
+    }
   }
-  if (!targets.empty()) {
-    if (type == Barrier &&
-        isWholeQubitRegister(qreg, targets.front(), targets.back())) {
-      of << " " << qreg[targets.front()].first;
-    } else {
-      for (const auto& t : targets) {
-        of << " " << qreg[t].second << ",";
+  if (!targets.empty() && type == Barrier &&
+      isWholeQubitRegister(qreg, targets.front(), targets.back())) {
+    of << " " << qreg[targets.front()].first;
+  } else {
+    for (auto it = targets.begin(); it != targets.end();) {
+      of << " " << qreg[*it].second;
+      if (++it != targets.end()) {
+        of << ",";
       }
-      of.seekp(-1, std::ios_base::cur);
     }
   }
   of << ";\n";
-  // apply X operations to negate the respective controls again
-  for (const auto& c : controls) {
-    if (c.type == Control::Type::Neg) {
-      of << "x " << qreg[c.qubit].second << ";\n";
+
+  if (!openQASM3) {
+    // apply X operations to negate the respective controls again
+    for (const auto& c : controls) {
+      if (c.type == Control::Type::Neg) {
+        of << "x " << qreg[c.qubit].second << ";\n";
+      }
     }
   }
 }
@@ -564,212 +626,5 @@ void StandardOperation::invert() {
     throw QFRException("Inverting gate" + toString(type) +
                        " is not supported.");
   }
-}
-void StandardOperation::dumpOpenQASM3(std::ostream& of,
-                                      const RegisterNames& qreg,
-                                      const RegisterNames& /*creg*/,
-                                      uint32_t indent) const {
-  std::ostringstream op;
-  op << std::setprecision(std::numeric_limits<fp>::digits10);
-
-  for (uint32_t i = 0; i < indent; ++i) {
-    op << "  ";
-  }
-
-  if (!controls.empty()) {
-    Control::Type currentType = controls.begin()->type;
-    int count = 0;
-
-    for (const auto& control : controls) {
-      if (control.type == currentType) {
-        ++count;
-      } else {
-        op << (currentType == Control::Type::Neg ? "negctrl" : "ctrl");
-        if (count > 1) {
-          op << "(" << count << ")";
-        }
-        op << " @ ";
-        currentType = control.type;
-        count = 1;
-      }
-    }
-
-    op << (currentType == Control::Type::Neg ? "negctrl" : "ctrl");
-    if (count > 1) {
-      op << "(" << count << ")";
-    }
-    op << " @ ";
-  }
-
-  switch (type) {
-  case GPhase:
-    op << "gphase(" << parameter.at(0) << ")";
-    break;
-  case I:
-    op << "id";
-    break;
-  case Barrier:
-    assert(controls.empty());
-    op << "barrier";
-    break;
-  case H:
-    op << "h";
-    break;
-  case X:
-    op << "x";
-    break;
-  case Y:
-    op << "y";
-    break;
-  case Z:
-    op << "z";
-    break;
-  case S:
-    if (!controls.empty()) {
-      op << "p(pi/2)";
-    } else {
-      op << "s";
-    }
-    break;
-  case Sdg:
-    if (!controls.empty()) {
-      op << "p(-pi/2)";
-    } else {
-      op << "sdg";
-    }
-    break;
-  case T:
-    if (!controls.empty()) {
-      op << "p(pi/4)";
-    } else {
-      op << "t";
-    }
-    break;
-  case Tdg:
-    if (!controls.empty()) {
-      op << "p(-pi/4)";
-    } else {
-      op << "tdg";
-    }
-    break;
-  case V:
-    op << "U(pi/2,-pi/2,pi/2)";
-    break;
-  case Vdg:
-    op << "U(pi/2,pi/2,-pi/2)";
-    break;
-  case U:
-    op << "U(" << parameter[0] << "," << parameter[1] << "," << parameter[2]
-       << ")";
-    break;
-  case U2:
-    op << "U(pi/2," << parameter[0] << "," << parameter[1] << ")";
-    break;
-  case P:
-    op << "p(" << parameter[0] << ")";
-    break;
-  case SX:
-    op << "sx";
-    break;
-  case SXdg:
-    op << "sxdg";
-    break;
-  case RX:
-    op << "rx(" << parameter[0] << ")";
-    break;
-  case RY:
-    op << "ry(" << parameter[0] << ")";
-    break;
-  case RZ:
-    op << "rz(" << parameter[0] << ")";
-    break;
-  case DCX:
-    op << "dcx";
-    break;
-  case ECR:
-    op << "ecr";
-    break;
-  case RXX:
-    op << "rxx(" << parameter[0] << ")";
-    break;
-  case RYY:
-    op << "ryy(" << parameter[0] << ")";
-    break;
-  case RZZ:
-    op << "rzz(" << parameter[0] << ")";
-    break;
-  case RZX:
-    op << "rzx(" << parameter[0] << ")";
-    break;
-  case XXminusYY:
-    op << "xx_minus_yy(" << parameter[0] << "," << parameter[1] << ")";
-    break;
-  case XXplusYY:
-    op << "xx_plus_yy(" << parameter[0] << "," << parameter[1] << ")";
-    break;
-  case SWAP:
-    op << "swap";
-    break;
-  case iSWAP:
-    op << "iswap";
-    break;
-  case Peres:
-    of << op.str() << "cx";
-    for (const auto& c : controls) {
-      of << " " << qreg[c.qubit].second << ",";
-    }
-    of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second
-       << ";\n";
-
-    of << op.str() << "x";
-    for (const auto& c : controls) {
-      of << " " << qreg[c.qubit].second << ",";
-    }
-    of << " " << qreg[targets[1]].second << ";\n";
-    return;
-  case Peresdg:
-    of << op.str() << "x";
-    for (const auto& c : controls) {
-      of << " " << qreg[c.qubit].second << ",";
-    }
-    of << " " << qreg[targets[1]].second << ";\n";
-
-    of << op.str() << "cx";
-    for (const auto& c : controls) {
-      of << " " << qreg[c.qubit].second << ",";
-    }
-    of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second
-       << ";\n";
-    return;
-  case Teleportation:
-    dumpOpenQASMTeleportation(of, qreg);
-    return;
-  default:
-    std::cerr << "gate type " << toString(type)
-              << " could not be converted to OpenQASM\n.";
-  }
-
-  // apply the operation
-  of << op.str();
-
-  // add controls and targets of the operation
-  for (auto it = controls.begin(); it != controls.end();) {
-    of << " " << qreg[it->qubit].second;
-    if (++it != controls.end() || !targets.empty()) {
-      of << ",";
-    }
-  }
-  if (!targets.empty() && type == Barrier &&
-      isWholeQubitRegister(qreg, targets.front(), targets.back())) {
-    of << qreg[targets.front()].first;
-  } else {
-    for (auto it = targets.begin(); it != targets.end();) {
-      of << " " << qreg[*it].second;
-      if (++it != targets.end()) {
-        of << ",";
-      }
-    }
-  }
-  of << ";\n";
 }
 } // namespace qc

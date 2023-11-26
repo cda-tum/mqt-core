@@ -135,22 +135,19 @@ public:
   }
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg) const override {
-    of << "if(";
-    of << creg[controlRegister.first].first;
-    of << " " << comparisonKind << " " << expectedValue << ") ";
-    op->dumpOpenQASM(of, qreg, creg);
-  }
-
-  void dumpOpenQASM3(std::ostream& of, const RegisterNames& qreg,
-                     const RegisterNames& creg,
-                     uint32_t indent) const override {
-    of << std::string(indent, ' ');
+                    const RegisterNames& creg, uint32_t indent,
+                    bool openQASM3) const override {
+    of << std::string(indent * 2, ' ');
     of << "if (";
     of << creg[controlRegister.first].first;
-    of << " " << comparisonKind << " " << expectedValue << ") {\n";
-    op->dumpOpenQASM3(of, qreg, creg, indent + 1);
-    of << "}\n";
+    of << " " << comparisonKind << " " << expectedValue << ") ";
+    if (openQASM3) {
+      of << "{\n";
+    }
+    op->dumpOpenQASM(of, qreg, creg, indent + 1, openQASM3);
+    if (openQASM3) {
+      of << "}\n";
+    }
   }
 
   void invert() override { op->invert(); }

@@ -17,9 +17,9 @@ public:
     type = Compound;
   }
 
-  explicit CompoundOperation(
-      const std::size_t nq,
-      std::vector<std::unique_ptr<Operation>>&& operations)
+  explicit
+  CompoundOperation(const std::size_t nq,
+                    std::vector<std::unique_ptr<Operation>>&& operations)
       : CompoundOperation(nq) {
     // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
     ops = std::move(operations);
@@ -152,17 +152,10 @@ public:
   }
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg) const override {
+                    const RegisterNames& creg, uint32_t indent,
+                    bool openQASM3) const override {
     for (const auto& op : ops) {
-      op->dumpOpenQASM(of, qreg, creg);
-    }
-  }
-
-  void dumpOpenQASM3(std::ostream& of, const RegisterNames& qreg,
-                     const RegisterNames& creg,
-                     uint32_t indent) const override {
-    for (const auto& op : ops) {
-      op->dumpOpenQASM3(of, qreg, creg, indent);
+      op->dumpOpenQASM(of, qreg, creg, indent, openQASM3);
     }
   }
 

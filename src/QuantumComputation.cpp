@@ -697,14 +697,8 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) {
   createRegisterArray(cregs, cregnames);
   assert(cregnames.size() == nclassics);
 
-  if (openQASM3) {
-    for (const auto& op : ops) {
-      op->dumpOpenQASM3(of, combinedRegNames, cregnames, 0);
-    }
-  } else {
-    for (const auto& op : ops) {
-      op->dumpOpenQASM(of, combinedRegNames, cregnames);
-    }
+  for (const auto& op : ops) {
+    op->dumpOpenQASM(of, combinedRegNames, cregnames, 0, openQASM3);
   }
 }
 

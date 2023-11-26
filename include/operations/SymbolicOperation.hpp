@@ -135,11 +135,8 @@ public:
   }
 
   [[noreturn]] void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                                 const RegisterNames& creg) const override;
-
-  [[noreturn]] void dumpOpenQASM3(std::ostream& of, const RegisterNames& qreg,
-                                  const RegisterNames& creg,
-                                  uint32_t indent) const override;
+                                 const RegisterNames& creg, uint32_t indent,
+                                 bool openQASM3) const override;
 
   [[nodiscard]] StandardOperation
   getInstantiatedOperation(const VariableAssignment& assignment) const;

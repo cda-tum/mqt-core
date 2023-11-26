@@ -76,10 +76,8 @@ public:
                       std::size_t prefixWidth) const override;
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg) const override;
-
-  void dumpOpenQASM3(std::ostream& of, const RegisterNames& qreg,
-                     const RegisterNames& creg, uint32_t indent) const override;
+                    const RegisterNames& creg, uint32_t indent,
+                    bool openQASM3) const override;
 
   void invert() override {
     throw QFRException("Inverting a non-unitary operation is not supported.");
