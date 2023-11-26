@@ -318,7 +318,11 @@ public:
   }
 
   std::string toString() override {
-    return type->toString() + "[" + std::to_string(size) + "]";
+    if constexpr (std::is_same_v<T, std::shared_ptr<Expression>>) {
+      return type->toString() + "[" + size->toString() + "]";
+    } else {
+      return type->toString() + "[" + std::to_string(size) + "]";
+    }
   }
 };
 
