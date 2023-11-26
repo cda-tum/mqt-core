@@ -21,7 +21,7 @@ struct InferredType {
 
   static InferredType error() { return InferredType{true, nullptr}; }
 
-  bool matches(const InferredType& other) const {
+  [[nodiscard]] bool matches(const InferredType& other) const {
     if (isError || other.isError) {
       return true;
     }
@@ -29,7 +29,7 @@ struct InferredType {
     return *type == *other.type;
   }
 
-  std::string toString() const {
+  [[nodiscard]] std::string toString() const {
     if (isError) {
       return "error";
     }

@@ -3,8 +3,7 @@
 #include "CompilerPass.hpp"
 #include "parsers/qasm3_parser/NestedEnvironment.hpp"
 
-namespace qasm3 {
-namespace const_eval {
+namespace qasm3::const_eval {
 struct ConstEvalValue {
   enum Type {
     ConstInt,
@@ -20,7 +19,7 @@ struct ConstEvalValue {
   explicit ConstEvalValue(int64_t val, const bool isSigned, const size_t w = 64)
       : type(isSigned ? ConstInt : ConstUint), value(val), width(w) {}
 
-  std::shared_ptr<Constant> toExpr() const {
+  [[nodiscard]] std::shared_ptr<Constant> toExpr() const {
     switch (type) {
     case ConstInt:
       return std::make_shared<Constant>(Constant(std::get<0>(value), true));
@@ -29,7 +28,8 @@ struct ConstEvalValue {
     case ConstFloat:
       return std::make_shared<Constant>(Constant(std::get<1>(value)));
     case ConstBool:
-      return std::make_shared<Constant>(Constant(std::get<2>(value), false));
+      return std::make_shared<Constant>(
+          Constant(static_cast<int64_t>(std::get<2>(value)), false));
     }
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -103,5 +103,4 @@ public:
   std::shared_ptr<ResolvedType>
   visitArrayType(ArrayType<std::shared_ptr<Expression>>* arrayType) override;
 };
-} // namespace const_eval
-} // namespace qasm3
+} // namespace qasm3::const_eval

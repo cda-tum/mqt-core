@@ -2,8 +2,7 @@
 
 #include <vector>
 
-namespace qasm3 {
-namespace type_checking {
+namespace qasm3::type_checking {
 
 void TypeCheckPass::visitGateStatement(
     std::shared_ptr<GateDeclaration> gateStatement) {
@@ -316,5 +315,4 @@ void TypeCheckPass::visitIfStatement(std::shared_ptr<IfStatement> ifStatement) {
     stmt->accept(this);
   }
 }
-} // namespace type_checking
-} // namespace qasm3
+} // namespace qasm3::type_checking

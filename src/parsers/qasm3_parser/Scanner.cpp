@@ -173,7 +173,7 @@ Token Scanner::consumeNumberLiteral() {
       error("Float literals are only allowed in base 10");
     }
 
-    char sep = ch;
+    char const sep = ch;
     nextCh();
     auto valAfterDecimalSeparator = consumeNumberLiteral(base);
 
@@ -181,8 +181,8 @@ Token Scanner::consumeNumberLiteral() {
     ss << valBeforeDecimalSeparator << sep << valAfterDecimalSeparator;
 
     try {
-      t.valReal = std::stod(ss.str().c_str());
-    } catch (std::invalid_argument*) {
+      t.valReal = std::stod(ss.str());
+    } catch (std::invalid_argument&) {
       error("Unable to parse float literal");
     }
 

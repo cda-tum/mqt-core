@@ -431,9 +431,8 @@ public:
               const std::vector<std::shared_ptr<Statement>>& thenStmts,
               const std::vector<std::shared_ptr<Statement>>& elseStmts,
               std::shared_ptr<DebugInfo> debug)
-      : Statement(std::move(debug)), condition(std::move(cond)),
-        thenStatements(std::move(thenStmts)),
-        elseStatements(std::move(elseStmts)) {}
+      : Statement(std::move(debug)), condition(cond), thenStatements(thenStmts),
+        elseStatements(elseStmts) {}
 
   void accept(InstVisitor* visitor) override {
     visitor->visitIfStatement(shared_from_this());

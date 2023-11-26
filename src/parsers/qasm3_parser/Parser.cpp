@@ -343,7 +343,7 @@ std::shared_ptr<IfStatement> Parser::parseIfStatement() {
   auto condition = parseExpression();
   expect(Token::Kind::RParen, "after if condition.");
 
-  std::vector<std::shared_ptr<Statement>> thenStatements =
+  std::vector<std::shared_ptr<Statement>> const thenStatements =
       parseBlockOrStatement();
   std::vector<std::shared_ptr<Statement>> elseStatements;
 

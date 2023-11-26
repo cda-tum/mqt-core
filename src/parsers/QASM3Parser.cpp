@@ -171,7 +171,7 @@ public:
     // actually insert a dummy entry; also, we need to synchronize to the next
     // semicolon, to make sure we don't do some weird stuff and report false
     // errors.
-    for (auto& statement : program) {
+    for (const auto& statement : program) {
       try {
         constEvalPass.processStatement(*statement);
         typeCheckPass.processStatement(*statement);
@@ -543,12 +543,11 @@ public:
     return op;
   }
 
-  std::unique_ptr<qc::Operation>
-  applyQuantumOperation(std::shared_ptr<Gate> gate, qc::Targets targetBits,
-                        std::vector<qc::Control> controlBits,
-                        std::vector<qc::fp> evaluatedParameters,
-                        bool invertOperation,
-                        std::shared_ptr<DebugInfo> debugInfo) {
+  std::unique_ptr<qc::Operation> applyQuantumOperation(
+      const std::shared_ptr<Gate>& gate, qc::Targets targetBits,
+      std::vector<qc::Control> controlBits,
+      std::vector<qc::fp> evaluatedParameters, bool invertOperation,
+      const std::shared_ptr<DebugInfo>& debugInfo) {
     if (auto* standardGate = dynamic_cast<StandardGate*>(gate.get())) {
       auto op = std::make_unique<qc::StandardOperation>(
           qc->getNqubits(), qc::Controls{}, targetBits, standardGate->info.type,
