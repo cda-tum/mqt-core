@@ -15,23 +15,23 @@ struct ConstEvalValue {
   std::variant<int64_t, double, bool> value;
   size_t width;
 
-  explicit ConstEvalValue(double val, size_t w = 64)
+  explicit ConstEvalValue(double val, const size_t w = 64)
       : type(ConstFloat), value(val), width(w) {}
-  explicit ConstEvalValue(int64_t val, bool isSigned, size_t w = 64)
-      : type(isSigned ? Type::ConstInt : Type::ConstUint), value(val),
+  explicit ConstEvalValue(int64_t val, const bool isSigned, const size_t w = 64)
+      : type(isSigned ? ConstInt : ConstUint), value(val),
         width(w) {}
 
-  std::shared_ptr<Constant> toExpr() {
+  std::shared_ptr<Constant> toExpr() const {
     switch (type) {
-    case ConstEvalValue::ConstInt:
+    case ConstInt:
       return std::make_shared<Constant>(Constant(std::get<0>(value), true));
-    case ConstEvalValue::ConstUint:
+    case ConstUint:
       return std::make_shared<Constant>(Constant(std::get<0>(value), false));
-    case ConstEvalValue::ConstFloat:
+    case ConstFloat:
       return std::make_shared<Constant>(Constant(std::get<1>(value)));
-    case ConstEvalValue::ConstBool:
+    case ConstBool:
       return std::make_shared<Constant>(
-          Constant(static_cast<int64_t>(std::get<2>(value)), false));
+          Constant(std::get<2>(value), false));
     }
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -47,29 +47,28 @@ class ConstEvalPass : public CompilerPass,
                       public DefaultInstVisitor,
                       public ExpressionVisitor<std::optional<ConstEvalValue>>,
                       public TypeVisitor<std::shared_ptr<Expression>> {
-private:
   NestedEnvironment<ConstEvalValue> env{};
 
-  template <typename T> int64_t castToWidth(int64_t value) {
+  template <typename T> static int64_t castToWidth(int64_t value) {
     return static_cast<int64_t>(static_cast<T>(value));
   }
 
   ConstEvalValue evalIntExpression(BinaryExpression::Op op, int64_t lhs,
                                    int64_t rhs, size_t width, bool isSigned);
-  ConstEvalValue evalFloatExpression(BinaryExpression::Op op, double lhs,
-                                     double rhs);
-  ConstEvalValue evalBoolExpression(BinaryExpression::Op op, bool lhs,
-                                    bool rhs);
+  static ConstEvalValue evalFloatExpression(BinaryExpression::Op op, double lhs,
+                                            double rhs);
+  static ConstEvalValue evalBoolExpression(BinaryExpression::Op op, bool lhs,
+                                           bool rhs);
 
 public:
   ConstEvalPass() = default;
   ~ConstEvalPass() override = default;
 
-  void addConst(const std::string& identifier, ConstEvalValue val) {
+  void addConst(const std::string& identifier, const ConstEvalValue& val) {
     env.emplace(identifier, val);
   }
 
-  void addConst(const std::string& identifier, double val) {
+  void addConst(const std::string& identifier, const double val) {
     env.emplace(identifier, ConstEvalValue(val));
   }
 

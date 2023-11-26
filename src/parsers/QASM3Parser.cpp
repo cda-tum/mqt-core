@@ -13,20 +13,20 @@
 #include <utility>
 
 using namespace qasm3;
-using qasm3::const_eval::ConstEvalPass;
-using qasm3::const_eval::ConstEvalValue;
-using qasm3::type_checking::InferredType;
-using qasm3::type_checking::TypeCheckPass;
+using const_eval::ConstEvalPass;
+using const_eval::ConstEvalValue;
+using type_checking::InferredType;
+using type_checking::TypeCheckPass;
 
-struct CompilerError : public std::exception {
-  std::string message;
-  std::shared_ptr<DebugInfo> debugInfo;
+struct CompilerError final : std::exception {
+  std::string message{};
+  std::shared_ptr<DebugInfo> debugInfo{};
 
   CompilerError(std::string msg, std::shared_ptr<DebugInfo> debug)
       : message(std::move(msg)), debugInfo(std::move(debug)) {}
 
   [[nodiscard]] std::string toString() const {
-    std::stringstream ss;
+    std::stringstream ss{};
     ss << debugInfo->toString();
 
     auto parentDebugInfo = debugInfo->parent;
@@ -41,12 +41,12 @@ struct CompilerError : public std::exception {
   }
 };
 
-class OpenQasm3Parser : public InstVisitor {
+class OpenQasm3Parser final : public InstVisitor {
   ConstEvalPass constEvalPass;
   TypeCheckPass typeCheckPass;
 
   NestedEnvironment<std::shared_ptr<DeclarationStatement>> declarations{};
-  qc::QuantumComputation* qc;
+  qc::QuantumComputation* qc{};
 
   std::vector<std::unique_ptr<qc::Operation>> ops{};
 
@@ -88,7 +88,7 @@ class OpenQasm3Parser : public InstVisitor {
                        std::vector<qc::Qubit>& qubits,
                        const qc::QuantumRegisterMap& qregs,
                        const std::shared_ptr<DebugInfo>& debugInfo) {
-    auto qubitIter = qregs.find(gateIdentifier);
+    const auto qubitIter = qregs.find(gateIdentifier);
     if (qubitIter == qregs.end()) {
       error("Usage of unknown quantum register.", debugInfo);
     }
@@ -122,7 +122,7 @@ class OpenQasm3Parser : public InstVisitor {
     auto creg = iter->second;
 
     if (indexExpr != nullptr) {
-      auto index = evaluatePositiveConstant(indexExpr, debugInfo);
+      const auto index = evaluatePositiveConstant(indexExpr, debugInfo);
       if (index >= creg.second) {
         error("Index expression must be smaller than the width of the "
               "classical register.",
@@ -141,12 +141,12 @@ class OpenQasm3Parser : public InstVisitor {
   static uint64_t
   evaluatePositiveConstant(const std::shared_ptr<Expression>& expr,
                            const std::shared_ptr<DebugInfo>& debugInfo,
-                           uint64_t defaultValue = 0) {
+                           const uint64_t defaultValue = 0) {
     if (expr == nullptr) {
       return defaultValue;
     }
 
-    auto constInt = std::dynamic_pointer_cast<Constant>(expr);
+    const auto constInt = std::dynamic_pointer_cast<Constant>(expr);
     if (!constInt) {
       error("Expected a constant integer expression.", debugInfo);
     }
@@ -165,7 +165,7 @@ public:
 
   ~OpenQasm3Parser() override = default;
 
-  bool visitProgram(std::vector<std::shared_ptr<Statement>>& program) {
+  bool visitProgram(const std::vector<std::shared_ptr<Statement>>& program) {
     // TODO: in the future, don't exit early, but collect all errors
     // To do this, we need to insert make sure that erroneous declarations
     // actually insert a dummy entry; also, we need to synchronize to the next
@@ -186,7 +186,7 @@ public:
   }
 
   void visitVersionDeclaration(
-      std::shared_ptr<VersionDeclaration> versionDeclaration) override {
+      const std::shared_ptr<VersionDeclaration> versionDeclaration) override {
     if (versionDeclaration->version < 3) {
       qc->updateMaxControls(2);
       for (auto [identifier, gate] : QASM2_COMPAT_GATES) {
@@ -195,9 +195,8 @@ public:
     }
   }
 
-  void visitDeclarationStatement(
-      std::shared_ptr<DeclarationStatement> declarationStatement) override {
-    auto identifier = declarationStatement->identifier;
+  void visitDeclarationStatement(const std::shared_ptr<DeclarationStatement> declarationStatement) override {
+    const auto identifier = declarationStatement->identifier;
     if (declarations.find(identifier).has_value()) {
       // TODO: show the location of the previous declaration
       error("Identifier '" + identifier + "' already declared.",
@@ -207,8 +206,8 @@ public:
     std::shared_ptr<ResolvedType> const ty =
         std::get<1>(declarationStatement->type);
 
-    if (auto sizedTy = std::dynamic_pointer_cast<SizedType>(ty)) {
-      auto designator = sizedTy->getDesignator();
+    if (const auto sizedTy = std::dynamic_pointer_cast<SizedType>(ty)) {
+      const auto designator = sizedTy->getDesignator();
       switch (sizedTy->type) {
       case Qubit:
         qc->addQubitRegister(designator, identifier);
@@ -238,7 +237,7 @@ public:
       // value is uninitialized
       return;
     }
-    if (auto measureExpression = std::dynamic_pointer_cast<MeasureExpression>(
+    if (const auto measureExpression = std::dynamic_pointer_cast<MeasureExpression>(
             declarationStatement->expression->expression)) {
       if (declarationStatement->isConst) {
         error("Cannot initialize a const register with a measure statement.",
@@ -254,9 +253,9 @@ public:
   }
 
   void visitAssignmentStatement(
-      std::shared_ptr<AssignmentStatement> assignmentStatement) override {
-    auto identifier = assignmentStatement->identifier->identifier;
-    auto declaration = declarations.find(identifier);
+      const std::shared_ptr<AssignmentStatement> assignmentStatement) override {
+    const auto identifier = assignmentStatement->identifier->identifier;
+    const auto declaration = declarations.find(identifier);
     if (!declaration.has_value()) {
       error("Usage of unknown identifier '" + identifier + "'.",
             assignmentStatement->debugInfo);
@@ -267,7 +266,7 @@ public:
             assignmentStatement->debugInfo);
     }
 
-    if (auto measureExpression = std::dynamic_pointer_cast<MeasureExpression>(
+    if (const auto measureExpression = std::dynamic_pointer_cast<MeasureExpression>(
             assignmentStatement->expression->expression)) {
       visitMeasureAssignment(identifier, assignmentStatement->indexExpression,
                              measureExpression, assignmentStatement->debugInfo);
@@ -280,7 +279,8 @@ public:
   }
 
   void
-  visitInitialLayout(std::shared_ptr<InitialLayout> initialLayout) override {
+  visitInitialLayout(
+      const std::shared_ptr<InitialLayout> initialLayout) override {
     if (!qc->initialLayout.empty()) {
       error("Multiple initial layout specifications found.",
             initialLayout->debugInfo);
@@ -289,7 +289,7 @@ public:
   }
 
   void visitOutputPermutation(
-      std::shared_ptr<OutputPermutation> outputPermutation) override {
+      const std::shared_ptr<OutputPermutation> outputPermutation) override {
     if (!qc->outputPermutation.empty()) {
       error("Multiple output permutation specifications found.",
             outputPermutation->debugInfo);
@@ -298,7 +298,8 @@ public:
   }
 
   void
-  visitGateStatement(std::shared_ptr<GateDeclaration> gateStatement) override {
+  visitGateStatement(
+      const std::shared_ptr<GateDeclaration> gateStatement) override {
     auto identifier = gateStatement->identifier;
     if (gateStatement->isOpaque) {
       if (gates.find(identifier) == gates.end()) {
@@ -316,8 +317,8 @@ public:
             gateStatement->debugInfo);
     }
 
-    auto parameters = gateStatement->parameters;
-    auto qubits = gateStatement->qubits;
+    const auto parameters = gateStatement->parameters;
+    const auto qubits = gateStatement->qubits;
 
     // first we check that all parameters and qubits are unique
     std::vector<std::string> parameterIdentifiers{};
@@ -346,7 +347,7 @@ public:
   }
 
   void visitGateCallStatement(
-      std::shared_ptr<GateCallStatement> gateCallStatement) override {
+      const std::shared_ptr<GateCallStatement> gateCallStatement) override {
     if (gates.find(gateCallStatement->identifier) == gates.end()) {
       error("Gate '" + gateCallStatement->identifier + "' not declared.",
             gateCallStatement->debugInfo);
@@ -354,10 +355,10 @@ public:
 
     auto qregs = qc->getQregs();
 
-    auto op = evaluateGateCall(gateCallStatement, gateCallStatement->identifier,
-                               gateCallStatement->arguments,
-                               gateCallStatement->operands, qregs);
-    if (op != nullptr) {
+    if (auto op = evaluateGateCall(
+            gateCallStatement, gateCallStatement->identifier,
+            gateCallStatement->arguments, gateCallStatement->operands, qregs);
+        op != nullptr) {
       qc->emplace_back(std::move(op));
     }
   }
@@ -383,7 +384,7 @@ public:
     }
 
     // here we count the number of controls
-    std::vector<std::pair<std::shared_ptr<GateOperand>, bool>> controls;
+    std::vector<std::pair<std::shared_ptr<GateOperand>, bool>> controls{};
     // since standard gates may define a number of control targets, we first
     // need to handle those
     size_t nControls{gate->getNControls()};
@@ -439,7 +440,7 @@ public:
     }
 
     // now evaluate all arguments; we only support const arguments.
-    std::vector<qc::fp> evaluatedParameters;
+    std::vector<qc::fp> evaluatedParameters{};
     for (const auto& param : parameters) {
       auto result = constEvalPass.visit(param);
       if (!result.has_value()) {
@@ -633,7 +634,7 @@ public:
       const std::shared_ptr<Expression>& indexExpression,
       const std::shared_ptr<MeasureExpression>& measureExpression,
       const std::shared_ptr<DebugInfo>& debugInfo) {
-    auto decl = declarations.find(identifier);
+    const auto decl = declarations.find(identifier);
     if (!decl.has_value()) {
       error("Usage of unknown identifier '" + identifier + "'.", debugInfo);
     }
@@ -677,7 +678,7 @@ public:
   void visitIfStatement(std::shared_ptr<IfStatement> ifStatement) override {
     // TODO: for now we only support statements comparing a classical bit reg
     // to a constant.
-    auto condition =
+    const auto condition =
         std::dynamic_pointer_cast<BinaryExpression>(ifStatement->condition);
     if (condition == nullptr) {
       error("Condition not supported for if statement.",
@@ -686,30 +687,31 @@ public:
 
     qc::ComparisonKind comparisonKind = qc::ComparisonKind::Eq;
     switch (condition->op) {
-    case qasm3::BinaryExpression::Op::LessThan:
+    case BinaryExpression::Op::LessThan:
       comparisonKind = qc::ComparisonKind::Lt;
       break;
-    case qasm3::BinaryExpression::Op::LessThanOrEqual:
+    case BinaryExpression::Op::LessThanOrEqual:
       comparisonKind = qc::ComparisonKind::Leq;
       break;
-    case qasm3::BinaryExpression::Op::GreaterThan:
+    case BinaryExpression::Op::GreaterThan:
       comparisonKind = qc::ComparisonKind::Gt;
       break;
-    case qasm3::BinaryExpression::Op::GreaterThanOrEqual:
+    case BinaryExpression::Op::GreaterThanOrEqual:
       comparisonKind = qc::ComparisonKind::Geq;
       break;
-    case qasm3::BinaryExpression::Op::Equal:
+    case BinaryExpression::Op::Equal:
       comparisonKind = qc::ComparisonKind::Eq;
       break;
-    case qasm3::BinaryExpression::Op::NotEqual:
+    case BinaryExpression::Op::NotEqual:
       comparisonKind = qc::ComparisonKind::Neq;
       break;
     default:
       error("Unsupported comparison operator.", ifStatement->debugInfo);
     }
 
-    auto lhs = std::dynamic_pointer_cast<IdentifierExpression>(condition->lhs);
-    auto rhs = std::dynamic_pointer_cast<Constant>(condition->rhs);
+    const auto lhs =
+        std::dynamic_pointer_cast<IdentifierExpression>(condition->lhs);
+    const auto rhs = std::dynamic_pointer_cast<Constant>(condition->rhs);
 
     if (lhs == nullptr) {
       error("Only classical registers are supported in conditions.",
@@ -719,7 +721,7 @@ public:
       error("Can only compare to constants.", ifStatement->debugInfo);
     }
 
-    auto creg = qc->getCregs().find(lhs->identifier);
+    const auto creg = qc->getCregs().find(lhs->identifier);
     if (creg == qc->getCregs().end()) {
       error("Usage of unknown or invalid identifier '" + lhs->identifier +
                 "' in condition.",
@@ -753,8 +755,8 @@ public:
         thenOp, creg->second, rhs->getUInt(), comparisonKind));
   }
 
-  std::unique_ptr<qc::Operation>
-  getBarrierOp(const std::shared_ptr<BarrierStatement> barrierStatement,
+  [[nodiscard]] std::unique_ptr<qc::Operation>
+  getBarrierOp(const std::shared_ptr<BarrierStatement>& barrierStatement,
                const qc::QuantumRegisterMap& qregs) const {
     std::vector<qc::Qubit> qubits{};
     for (const auto& gate : barrierStatement->gates) {
@@ -765,8 +767,8 @@ public:
                                                      qc::Barrier);
   }
 
-  std::unique_ptr<qc::Operation>
-  getResetOp(const std::shared_ptr<ResetStatement> resetStatement,
+  [[nodiscard]] std::unique_ptr<qc::Operation>
+  getResetOp(const std::shared_ptr<ResetStatement>& resetStatement,
              const qc::QuantumRegisterMap& qregs) const {
     std::vector<qc::Qubit> qubits{};
     translateGateOperand(resetStatement->gate, qubits, qregs,
@@ -782,8 +784,7 @@ void qc::QuantumComputation::importOpenQASM3(std::istream& is) {
   Parser p(&is);
 
   auto program = p.parseProgram();
-  OpenQasm3Parser parser{this};
-  if (!parser.visitProgram(program)) {
+  if (OpenQasm3Parser parser{this}; !parser.visitProgram(program)) {
     throw std::runtime_error("Error importing OpenQASM.");
   }
 }

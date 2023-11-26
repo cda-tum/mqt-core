@@ -479,7 +479,7 @@ ConstEvalPass::visitDesignatedType(DesignatedType* designatedType) {
   if (designatedType->designator == nullptr) {
     return std::make_shared<SizedType>(designatedType->type);
   }
-  auto result = visit(designatedType->designator);
+  const auto result = visit(designatedType->designator);
   if (!result) {
     throw std::runtime_error("Designator must be a constant expression.");
   }
@@ -496,7 +496,7 @@ std::shared_ptr<ResolvedType> ConstEvalPass::visitUnsizedType(
 std::shared_ptr<ResolvedType> ConstEvalPass::visitArrayType(
     ArrayType<std::shared_ptr<Expression>>* arrayType) {
   std::shared_ptr<Type<uint64_t>> const inner = arrayType->type->accept(this);
-  auto size = visit(arrayType->size);
+  const auto size = visit(arrayType->size);
   if (!size.has_value()) {
     throw std::runtime_error("Array size must be a constant expression.");
   }

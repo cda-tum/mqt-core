@@ -6,26 +6,18 @@
 
 #pragma once
 
-#include "Definitions.hpp"
 #include "Scanner.hpp"
 #include "Statement.hpp"
 #include "StdGates.hpp"
-#include "operations/CompoundOperation.hpp"
-#include "operations/NonUnitaryOperation.hpp"
-#include "operations/StandardOperation.hpp"
 
-#include <cmath>
 #include <iostream>
-#include <regex>
-#include <set>
 #include <sstream>
+#include <stack>
 #include <stdexcept>
-#include <utility>
 #include <vector>
 
 namespace qasm3 {
 class Parser {
-private:
   struct ScannerState {
   private:
     std::unique_ptr<std::istream> is;
@@ -46,20 +38,20 @@ private:
       return t.kind != Token::Kind::Eof;
     }
 
-    explicit ScannerState(
-        std::istream* in,
-        std::optional<std::string> debugFilename = std::nullopt,
-        bool implicitInclude = false)
+    explicit
+    ScannerState(std::istream* in,
+                 std::optional<std::string> debugFilename = std::nullopt,
+                 const bool implicitInclude = false)
         : scanner(std::make_unique<Scanner>(in)),
           filename(std::move(debugFilename)),
           isImplicitInclude(implicitInclude) {
       scan();
     }
 
-    explicit ScannerState(
-        std::unique_ptr<std::istream> in,
-        std::optional<std::string> debugFilename = std::nullopt,
-        bool implicitInclude = false)
+    explicit
+    ScannerState(std::unique_ptr<std::istream> in,
+                 std::optional<std::string> debugFilename = std::nullopt,
+                 const bool implicitInclude = false)
         : is(std::move(in)), scanner(std::make_unique<Scanner>(is.get())),
           filename(std::move(debugFilename)),
           isImplicitInclude(implicitInclude) {
@@ -103,7 +95,7 @@ private:
   }
 
   Token expect(const Token::Kind& expected,
-               std::optional<std::string> context = std::nullopt) {
+               const std::optional<std::string>& context = std::nullopt) {
     if (current().kind != expected) {
       std::string message = "Expected '" + Token::kindToString(expected) +
                             "', got '" + Token::kindToString(current().kind) +

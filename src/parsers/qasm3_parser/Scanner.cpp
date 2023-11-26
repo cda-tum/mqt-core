@@ -87,7 +87,7 @@ Token Scanner::consumeName() {
   return t;
 }
 
-bool Scanner::isValidDigit(uint8_t base, char c) {
+bool Scanner::isValidDigit(const uint8_t base, const char c) {
   if (base == 2) {
     return c == '0' || c == '1';
   }
@@ -103,7 +103,7 @@ bool Scanner::isValidDigit(uint8_t base, char c) {
   return false;
 }
 
-std::string Scanner::consumeNumberLiteral(uint8_t base) {
+std::string Scanner::consumeNumberLiteral(const uint8_t base) {
   std::stringstream ss;
   while (isValidDigit(base, ch) || ch == '_') {
     if (ch != '_') {
@@ -115,9 +115,10 @@ std::string Scanner::consumeNumberLiteral(uint8_t base) {
   return ss.str();
 }
 
-uint64_t Scanner::parseIntegerLiteral(std::string str, uint8_t base) {
+uint64_t Scanner::parseIntegerLiteral(const std::string& str,
+                                      const uint8_t base) {
   uint64_t val = 0;
-  for (auto c : str) {
+  for (const auto c : str) {
     if (isNum(c)) {
       val *= base;
       val += static_cast<uint64_t>(c) - '0';
@@ -151,6 +152,8 @@ Token Scanner::consumeNumberLiteral() {
       base = 16;
       nextCh();
       nextCh();
+      break;
+    default:
       break;
     }
   }
@@ -324,8 +327,7 @@ Scanner::Scanner(std::istream* in) : is(in) {
 }
 
 Token Scanner::next() {
-  auto commentToken = consumeWhitespaceAndComments();
-  if (commentToken) {
+  if (const auto commentToken = consumeWhitespaceAndComments()) {
     return *commentToken;
   }
 

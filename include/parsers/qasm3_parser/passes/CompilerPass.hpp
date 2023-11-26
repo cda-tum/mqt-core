@@ -2,8 +2,6 @@
 
 #include "parsers/qasm3_parser/Statement.hpp"
 
-#include <vector>
-
 namespace qasm3 {
 class CompilerPass {
 public:

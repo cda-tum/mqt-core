@@ -1,11 +1,8 @@
 #pragma once
 
 #include <any>
-#include <iostream>
-#include <map>
 #include <memory>
 #include <sstream>
-#include <utility>
 
 namespace qasm3 {
 class GateDeclaration;
@@ -94,30 +91,31 @@ public:
   // A manually implemented visitor function with a templated return type.
   // This is not possible as a virtual function in expression, which is why
   // we define it manually.
-  T visit(std::shared_ptr<Expression> expression) {
+  T visit(const std::shared_ptr<Expression>& expression) {
     if (expression == nullptr) {
       throw std::runtime_error("Expression is null");
     }
-    if (auto binaryExpression =
+    if (const auto binaryExpression =
             std::dynamic_pointer_cast<BinaryExpression>(expression)) {
       return visitBinaryExpression(binaryExpression);
     }
-    if (auto unaryExpression =
+    if (const auto unaryExpression =
             std::dynamic_pointer_cast<UnaryExpression>(expression)) {
       return visitUnaryExpression(unaryExpression);
     }
-    if (auto constantInt = std::dynamic_pointer_cast<Constant>(expression)) {
+    if (const auto constantInt =
+            std::dynamic_pointer_cast<Constant>(expression)) {
       return visitConstantExpression(constantInt);
     }
-    if (auto identifierExpression =
+    if (const auto identifierExpression =
             std::dynamic_pointer_cast<IdentifierExpression>(expression)) {
       return visitIdentifierExpression(identifierExpression);
     }
-    if (auto identifierList =
+    if (const auto identifierList =
             std::dynamic_pointer_cast<IdentifierList>(expression)) {
       return visitIdentifierList(identifierList);
     }
-    if (auto measureExpression =
+    if (const auto measureExpression =
             std::dynamic_pointer_cast<MeasureExpression>(expression)) {
       return visitMeasureExpression(measureExpression);
     }

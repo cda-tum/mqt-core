@@ -17,9 +17,9 @@ void Parser::scan() {
 }
 
 std::shared_ptr<VersionDeclaration> Parser::parseVersionDeclaration() {
-  auto tBegin = expect(Token::Kind::OpenQasm);
+  auto const tBegin = expect(Token::Kind::OpenQasm);
   Token const versionToken = expect(Token::Kind::FloatLiteral);
-  auto tEnd = expect(Token::Kind::Semicolon);
+  auto const tEnd = expect(Token::Kind::Semicolon);
   return std::make_shared<VersionDeclaration>(makeDebugInfo(tBegin, tEnd),
                                               versionToken.valReal);
 }
@@ -82,7 +82,7 @@ std::shared_ptr<Statement> Parser::parseStatement() {
     static const auto INITIAL_LAYOUT_REGEX = std::regex("i (\\d+ )*(\\d+)");
     static const auto OUTPUT_PERMUTATION_REGEX = std::regex("o (\\d+ )*(\\d+)");
 
-    auto tBegin = current();
+    auto const tBegin = current();
 
     std::string comment = current().str;
     scan();
@@ -184,9 +184,9 @@ std::shared_ptr<QuantumStatement> Parser::parseQuantumStatement() {
 }
 
 void Parser::parseInclude() {
-  auto tBegin = expect(Token::Kind::Include);
+  auto const tBegin = expect(Token::Kind::Include);
   auto filename = expect(Token::Kind::StringLiteral).str;
-  auto tEnd = expect(Token::Kind::Semicolon);
+  auto const tEnd = expect(Token::Kind::Semicolon);
 
   // we need to make sure to report errors across includes
   includeDebugInfo = makeDebugInfo(tBegin, tEnd);
@@ -277,7 +277,7 @@ std::shared_ptr<AssignmentStatement> Parser::parseAssignmentStatement() {
 
   auto declarationExpression = parseDeclarationExpression();
 
-  auto tEnd = expect(Token::Kind::Semicolon);
+  auto const tEnd = expect(Token::Kind::Semicolon);
 
   return std::make_shared<AssignmentStatement>(
       makeDebugInfo(identifierToken, tEnd), type, identifier, indexExpression,
@@ -285,7 +285,7 @@ std::shared_ptr<AssignmentStatement> Parser::parseAssignmentStatement() {
 }
 
 std::shared_ptr<AssignmentStatement> Parser::parseMeasureStatement() {
-  auto tBegin = expect(Token::Kind::Measure);
+  auto const tBegin = expect(Token::Kind::Measure);
 
   auto gateOperand = parseGateOperand();
 
@@ -300,7 +300,7 @@ std::shared_ptr<AssignmentStatement> Parser::parseMeasureStatement() {
     expect(Token::Kind::RBracket);
   }
 
-  auto tEnd = expect(Token::Kind::Semicolon);
+  auto const tEnd = expect(Token::Kind::Semicolon);
 
   std::shared_ptr<Expression> const gateOperandExpr{
       std::make_shared<MeasureExpression>(gateOperand)};
@@ -311,17 +311,17 @@ std::shared_ptr<AssignmentStatement> Parser::parseMeasureStatement() {
 }
 
 std::shared_ptr<ResetStatement> Parser::parseResetStatement() {
-  auto tBegin = expect(Token::Kind::Reset);
+  auto const tBegin = expect(Token::Kind::Reset);
 
   auto operand = parseGateOperand();
 
-  auto tEnd = expect(Token::Kind::Semicolon);
+  auto const tEnd = expect(Token::Kind::Semicolon);
 
   return std::make_shared<ResetStatement>(makeDebugInfo(tBegin, tEnd), operand);
 }
 
 std::shared_ptr<BarrierStatement> Parser::parseBarrierStatement() {
-  auto tBegin = expect(Token::Kind::Barrier);
+  auto const tBegin = expect(Token::Kind::Barrier);
 
   std::vector<std::shared_ptr<GateOperand>> operands{};
   while (current().kind != Token::Kind::Semicolon) {
@@ -331,14 +331,14 @@ std::shared_ptr<BarrierStatement> Parser::parseBarrierStatement() {
     }
   }
 
-  auto tEnd = expect(Token::Kind::Semicolon);
+  auto const tEnd = expect(Token::Kind::Semicolon);
 
   return std::make_shared<BarrierStatement>(makeDebugInfo(tBegin, tEnd),
                                             operands);
 }
 
 std::shared_ptr<IfStatement> Parser::parseIfStatement() {
-  auto tBegin = expect(Token::Kind::If);
+  const auto tBegin = expect(Token::Kind::If);
   expect(Token::Kind::LParen, "after if keyword.");
   auto condition = parseExpression();
   expect(Token::Kind::RParen, "after if condition.");
@@ -379,7 +379,7 @@ std::vector<std::shared_ptr<Statement>> Parser::parseBlockOrStatement() {
 }
 
 std::shared_ptr<GateCallStatement> Parser::parseGateCallStatement() {
-  auto tBegin = current();
+  auto const tBegin = current();
   std::vector<std::shared_ptr<GateModifier>> modifiers{};
 
   while (current().kind == Token::Kind::Inv ||
@@ -433,7 +433,7 @@ std::shared_ptr<GateCallStatement> Parser::parseGateCallStatement() {
     error(current(), "Expected gate operands");
   }
 
-  auto tEnd = expect(Token::Kind::Semicolon);
+  auto const tEnd = expect(Token::Kind::Semicolon);
 
   return std::make_shared<GateCallStatement>(
       GateCallStatement{makeDebugInfo(tBegin, tEnd), std::move(identifier),
@@ -474,7 +474,7 @@ std::shared_ptr<GateModifier> Parser::parseGateModifier() {
 
 std::shared_ptr<GateOperand> Parser::parseGateOperand() {
   // TODO: support hardware qubits
-  auto identifier = expect(Token::Kind::Identifier);
+  const auto identifier = expect(Token::Kind::Identifier);
 
   std::shared_ptr<Expression> expression{nullptr};
   if (current().kind == Token::Kind::LBracket) {
@@ -487,7 +487,7 @@ std::shared_ptr<GateOperand> Parser::parseGateOperand() {
 }
 
 std::shared_ptr<Statement> Parser::parseDeclaration(bool isConst) {
-  auto tBegin = current();
+  auto const tBegin = current();
   auto [type, isOldStyleDeclaration] = parseType();
   Token const identifier = expect(Token::Kind::Identifier);
 
@@ -514,7 +514,7 @@ std::shared_ptr<Statement> Parser::parseDeclaration(bool isConst) {
     expression = parseDeclarationExpression();
   }
 
-  auto tEnd = expect(Token::Kind::Semicolon);
+  auto const tEnd = expect(Token::Kind::Semicolon);
 
   auto statement = std::make_shared<DeclarationStatement>(DeclarationStatement{
       makeDebugInfo(tBegin, tEnd), isConst, type, name, expression});
@@ -523,7 +523,7 @@ std::shared_ptr<Statement> Parser::parseDeclaration(bool isConst) {
 }
 
 std::shared_ptr<GateDeclaration> Parser::parseGateDefinition() {
-  auto tBegin = expect(Token::Kind::Gate);
+  auto const tBegin = expect(Token::Kind::Gate);
   auto const identifier = expect(Token::Kind::Identifier);
 
   std::shared_ptr<IdentifierList> parameters{nullptr};
@@ -535,14 +535,14 @@ std::shared_ptr<GateDeclaration> Parser::parseGateDefinition() {
     parameters = std::make_shared<IdentifierList>(IdentifierList{});
   }
 
-  auto qubits = parseIdentifierList();
+  const auto qubits = parseIdentifierList();
 
   std::vector<std::shared_ptr<QuantumStatement>> statements{};
   expect(Token::Kind::LBrace);
   while (current().kind != Token::Kind::RBrace) {
     statements.emplace_back(parseQuantumStatement());
   }
-  auto tEnd = expect(Token::Kind::RBrace);
+  auto const tEnd = expect(Token::Kind::RBrace);
 
   return std::make_shared<GateDeclaration>(
       GateDeclaration(makeDebugInfo(tBegin, tEnd), identifier.str, parameters,
@@ -550,7 +550,7 @@ std::shared_ptr<GateDeclaration> Parser::parseGateDefinition() {
 }
 
 std::shared_ptr<GateDeclaration> Parser::parseOpaqueGateDefinition() {
-  auto tBegin = expect(Token::Kind::Opaque);
+  auto const tBegin = expect(Token::Kind::Opaque);
   auto const identifier = expect(Token::Kind::Identifier);
 
   std::shared_ptr<IdentifierList> parameters{nullptr};
@@ -562,9 +562,9 @@ std::shared_ptr<GateDeclaration> Parser::parseOpaqueGateDefinition() {
     parameters = std::make_shared<IdentifierList>(IdentifierList{});
   }
 
-  auto qubits = parseIdentifierList();
+  const auto qubits = parseIdentifierList();
 
-  auto tEnd = expect(Token::Kind::Semicolon);
+  auto const tEnd = expect(Token::Kind::Semicolon);
 
   return std::make_shared<GateDeclaration>(
       GateDeclaration(makeDebugInfo(tBegin, tEnd), identifier.str, parameters,
@@ -595,29 +595,29 @@ std::shared_ptr<Expression> Parser::exponentiation() {
   switch (current().kind) {
   case Token::Kind::Minus: {
     scan();
-    auto x = exponentiation();
+    const auto x = exponentiation();
     return std::make_shared<UnaryExpression>(
         UnaryExpression{UnaryExpression::Op::Negate, x});
   }
   case Token::Kind::FloatLiteral: {
-    auto val = current().valReal;
+    const auto val = current().valReal;
     scan();
     return std::make_shared<Constant>(Constant{val});
   }
   case Token::Kind::IntegerLiteral: {
-    auto val = current().val;
-    auto isSigned = current().isSigned;
+    auto const val = current().val;
+    auto const isSigned = current().isSigned;
     scan();
     return std::make_shared<Constant>(Constant{val, isSigned});
   }
   case Token::Kind::Identifier: {
-    auto str = current().str;
+    auto const str = current().str;
     scan();
     return std::make_shared<IdentifierExpression>(IdentifierExpression{str});
   }
   case Token::Kind::LParen: {
     scan();
-    auto x = parseExpression();
+    auto const x = parseExpression();
     expect(Token::Kind::RParen);
     return x;
   }
@@ -652,7 +652,7 @@ std::shared_ptr<Expression> Parser::exponentiation() {
     }
     scan();
     expect(Token::Kind::LParen);
-    auto x = parseExpression();
+    const auto x = parseExpression();
     expect(Token::Kind::RParen);
     return std::make_shared<UnaryExpression>(UnaryExpression{op, x});
   }
@@ -666,7 +666,7 @@ std::shared_ptr<Expression> Parser::factor() {
   auto x = exponentiation();
   while (current().kind == Token::Kind::Caret) {
     scan();
-    auto y = exponentiation();
+    const auto y = exponentiation();
     x = std::make_shared<BinaryExpression>(
         BinaryExpression{BinaryExpression::Op::Power, x, y});
   }
@@ -681,7 +681,7 @@ std::shared_ptr<Expression> Parser::term() {
                         ? BinaryExpression::Op::Multiply
                         : BinaryExpression::Op::Divide;
     scan();
-    auto y = factor();
+    const auto y = factor();
     x = std::make_shared<BinaryExpression>(BinaryExpression{op, x, y});
   }
   return x;
@@ -719,7 +719,7 @@ std::shared_ptr<Expression> Parser::comparison() {
       error(current(), "Expected comparison operator");
     }
     scan();
-    auto y = term();
+    const auto y = term();
     x = std::make_shared<BinaryExpression>(BinaryExpression{op, x, y});
   }
   return x;
@@ -741,7 +741,7 @@ std::shared_ptr<Expression> Parser::parseExpression() {
                         ? BinaryExpression::Op::Add
                         : BinaryExpression::Op::Subtract;
     scan();
-    auto y = comparison();
+    const auto y = comparison();
     x = std::make_shared<BinaryExpression>(BinaryExpression{op, x, y});
   }
 

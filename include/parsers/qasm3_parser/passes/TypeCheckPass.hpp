@@ -3,17 +3,17 @@
 #include "ConstEvalPass.hpp"
 #include "parsers/qasm3_parser/Types.hpp"
 
-namespace qasm3 {
-namespace type_checking {
+#include <iostream>
+
+namespace qasm3::type_checking {
 
 using const_eval::ConstEvalPass;
 
 struct InferredType {
-public:
   bool isError;
   std::shared_ptr<ResolvedType> type;
 
-  InferredType(bool isErr, std::shared_ptr<ResolvedType> ty)
+  InferredType(const bool isErr, std::shared_ptr<ResolvedType> ty)
       : isError(isErr), type(std::move(ty)) {}
 
   explicit InferredType(std::shared_ptr<ResolvedType> ty)
@@ -29,7 +29,7 @@ public:
     return *type == *other.type;
   }
 
-  std::string toString() {
+  std::string toString() const {
     if (isError) {
       return "error";
     }
@@ -41,7 +41,6 @@ class TypeCheckPass : public CompilerPass,
                       public InstVisitor,
                       public ExpressionVisitor<InferredType>,
                       public TypeVisitor<std::shared_ptr<Expression>> {
-private:
   bool hasError = false;
   std::map<std::string, InferredType> env;
   // We need a reference to a const eval pass to evaluate types before type
@@ -49,7 +48,7 @@ private:
   ConstEvalPass* constEvalPass;
 
   InferredType error(const std::string& msg,
-                     std::shared_ptr<DebugInfo> debugInfo = nullptr) {
+                     const std::shared_ptr<DebugInfo>& debugInfo = nullptr) {
     std::cerr << "Type check error: " << msg << '\n';
     if (debugInfo) {
       std::cerr << "  " << debugInfo->toString() << '\n';
@@ -59,7 +58,7 @@ private:
   }
 
 public:
-  TypeCheckPass(ConstEvalPass* pass) : constEvalPass(pass) {}
+  explicit TypeCheckPass(ConstEvalPass* pass) : constEvalPass(pass) {}
 
   ~TypeCheckPass() override = default;
 
@@ -76,13 +75,13 @@ public:
     }
   }
 
-  void checkGateOperand(GateOperand& operand) {
+  void checkGateOperand(const GateOperand& operand) {
     if (operand.expression == nullptr) {
       return;
     }
 
-    auto type = visit(operand.expression);
-    if (!type.isError && !type.type->isUint()) {
+    if (const auto type = visit(operand.expression);
+        !type.isError && !type.type->isUint()) {
       error("Index must be an unsigned integer");
     }
   }
@@ -130,5 +129,4 @@ public:
   std::shared_ptr<ResolvedType>
   visitArrayType(ArrayType<std::shared_ptr<Expression>>* arrayType) override;
 };
-} // namespace type_checking
-} // namespace qasm3
+} // namespace qasm3::type_checking

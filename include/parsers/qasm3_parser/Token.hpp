@@ -175,11 +175,12 @@ public:
   qc::fp valReal{};
   std::string str;
 
-  Token(size_t l, size_t c) : line(l), col(c), endLine(l), endCol(c) {}
-  Token(Kind k, size_t l, size_t c)
+  Token(const size_t l, const size_t c)
+      : line(l), col(c), endLine(l), endCol(c) {}
+  Token(const Kind k, const size_t l, const size_t c)
       : kind(k), line(l), col(c), endLine(l), endCol(c) {}
 
-  static std::string kindToString(Token::Kind kind) {
+  static std::string kindToString(const Kind kind) {
     switch (kind) {
     case Kind::None:
       return "None";
@@ -431,6 +432,8 @@ public:
       return "Ln";
     case Kind::Sqrt:
       return "Sqrt";
+    default:
+      throw std::runtime_error("Unknown token kind");
     }
   }
 

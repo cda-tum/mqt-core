@@ -2,11 +2,7 @@
 
 #include "Token.hpp"
 
-#include <fstream>
 #include <iostream>
-#include <map>
-#include <sstream>
-#include <stack>
 
 namespace qasm3 {
 class Scanner {
@@ -30,7 +26,7 @@ class Scanner {
     return isNum(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
   }
 
-  static char readUtf8Codepoint(std::istream* ss);
+  static char readUtf8Codepoint(std::istream* in);
 
   void nextCh();
 
@@ -38,11 +34,11 @@ class Scanner {
 
   std::optional<Token> consumeWhitespaceAndComments();
 
-  bool isValidDigit(uint8_t base, char c);
+  static bool isValidDigit(uint8_t base, char c);
 
   std::string consumeNumberLiteral(uint8_t base);
 
-  uint64_t parseIntegerLiteral(std::string str, uint8_t base);
+  static uint64_t parseIntegerLiteral(const std::string& str, uint8_t base);
 
   Token consumeNumberLiteral();
 

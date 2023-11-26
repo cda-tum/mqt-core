@@ -2,9 +2,6 @@
 
 #include "InstVisitor.hpp"
 
-#include <memory>
-#include <utility>
-
 namespace qasm3 {
 class Expression;
 
@@ -58,20 +55,21 @@ public:
   DesignatedTy type;
   uint64_t designator;
 
-  SizedType(DesignatedTy ty, uint64_t design) : type(ty), designator(design) {}
+  SizedType(const DesignatedTy ty, const uint64_t design)
+      : type(ty), designator(design) {}
 
-  explicit SizedType(DesignatedTy ty) : type(ty) {
+  explicit SizedType(const DesignatedTy ty) : type(ty) {
     switch (ty) {
-    case DesignatedTy::Qubit:
-    case DesignatedTy::Bit:
+    case Qubit:
+    case Bit:
       designator = 1;
       break;
-    case DesignatedTy::Int:
-    case DesignatedTy::Uint:
+    case Int:
+    case Uint:
       designator = 32;
       break;
-    case DesignatedTy::Float:
-    case DesignatedTy::Angle:
+    case Float:
+    case Angle:
       designator = 64;
       break;
     }
@@ -87,25 +85,25 @@ public:
   [[nodiscard]] bool allowsDesignator() const override { return true; }
 
   static std::shared_ptr<ResolvedType> getQubitTy(uint64_t size = 1) {
-    return std::make_shared<SizedType>(DesignatedTy::Qubit, size);
+    return std::make_shared<SizedType>(Qubit, size);
   }
   static std::shared_ptr<ResolvedType> getBitTy(uint64_t size = 1) {
-    return std::make_shared<SizedType>(DesignatedTy::Bit, size);
+    return std::make_shared<SizedType>(Bit, size);
   }
   static std::shared_ptr<ResolvedType> getIntTy(uint64_t size = 32) {
-    return std::make_shared<SizedType>(DesignatedTy::Int, size);
+    return std::make_shared<SizedType>(Int, size);
   }
   static std::shared_ptr<ResolvedType> getUintTy(uint64_t size = 32) {
-    return std::make_shared<SizedType>(DesignatedTy::Uint, size);
+    return std::make_shared<SizedType>(Uint, size);
   }
   static std::shared_ptr<ResolvedType> getFloatTy(uint64_t size = 64) {
-    return std::make_shared<SizedType>(DesignatedTy::Float, size);
+    return std::make_shared<SizedType>(Float, size);
   }
   static std::shared_ptr<ResolvedType> getAngleTy(uint64_t size = 64) {
-    return std::make_shared<SizedType>(DesignatedTy::Angle, size);
+    return std::make_shared<SizedType>(Angle, size);
   }
 
-  void setDesignator(uint64_t d) override { designator = d; }
+  void setDesignator(const uint64_t d) override { designator = d; }
 
   uint64_t getDesignator() override { return designator; }
 
@@ -116,28 +114,26 @@ public:
   }
 
   bool isNumber() override {
-    return type == DesignatedTy::Int || type == DesignatedTy::Uint ||
-           type == DesignatedTy::Bit || type == DesignatedTy::Float;
+    return type == Int || type == Uint || type == Bit || type == Float;
   }
 
-  bool isUint() override { return type == DesignatedTy::Uint; }
+  bool isUint() override { return type == Uint; }
 
-  bool isBit() override { return type == DesignatedTy::Bit; }
+  bool isBit() override { return type == Bit; }
 
-  bool isBit(size_t width) override {
-    return type == DesignatedTy::Bit && width == this->designator;
+  bool isBit(const size_t width) override {
+    return type == Bit && width == this->designator;
   }
 
-  bool isFP() override { return type == DesignatedTy::Float; }
+  bool isFP() override { return type == Float; }
 
   bool fits(const ResolvedType& other) override {
     if (const auto* o = dynamic_cast<const SizedType*>(&other)) {
       bool typeFits = type == o->type;
-      if (type == DesignatedTy::Int && o->type == DesignatedTy::Uint) {
+      if (type == Int && o->type == Uint) {
         typeFits = true;
       }
-      if (type == DesignatedTy::Float &&
-          (o->type == DesignatedTy::Int || o->type == DesignatedTy::Uint)) {
+      if (type == Float && (o->type == Int || o->type == Uint)) {
         typeFits = true;
       }
 
@@ -148,19 +144,20 @@ public:
 
   std::string toString() override {
     switch (type) {
-    case DesignatedTy::Qubit:
+    case Qubit:
       return "qubit[" + std::to_string(designator) + "]";
-    case DesignatedTy::Bit:
+    case Bit:
       return "bit[" + std::to_string(designator) + "]";
-    case DesignatedTy::Int:
+    case Int:
       return "int[" + std::to_string(designator) + "]";
-    case DesignatedTy::Uint:
+    case Uint:
       return "uint[" + std::to_string(designator) + "]";
-    case DesignatedTy::Float:
+    case Float:
       return "float[" + std::to_string(designator) + "]";
-    case DesignatedTy::Angle:
+    case Angle:
       return "angle[" + std::to_string(designator) + "]";
     }
+    throw std::runtime_error("Unhandled type");
   }
 };
 
@@ -172,7 +169,7 @@ public:
 
   std::shared_ptr<Expression> designator;
 
-  DesignatedType(DesignatedTy ty, std::shared_ptr<Expression> design)
+  DesignatedType(const DesignatedTy ty, std::shared_ptr<Expression> design)
       : type(ty), designator(std::move(design)) {}
 
   bool operator==(const TypeExpr& other) const override {
@@ -186,27 +183,27 @@ public:
 
   static std::shared_ptr<TypeExpr>
   getQubitTy(const std::shared_ptr<Expression>& designator = nullptr) {
-    return std::make_shared<DesignatedType>(DesignatedTy::Qubit, designator);
+    return std::make_shared<DesignatedType>(Qubit, designator);
   }
   static std::shared_ptr<TypeExpr>
   getBitTy(const std::shared_ptr<Expression>& designator = nullptr) {
-    return std::make_shared<DesignatedType>(DesignatedTy::Bit, designator);
+    return std::make_shared<DesignatedType>(Bit, designator);
   }
   static std::shared_ptr<TypeExpr>
   getIntTy(const std::shared_ptr<Expression>& designator = nullptr) {
-    return std::make_shared<DesignatedType>(DesignatedTy::Int, designator);
+    return std::make_shared<DesignatedType>(Int, designator);
   }
   static std::shared_ptr<TypeExpr>
   getUintTy(const std::shared_ptr<Expression>& designator = nullptr) {
-    return std::make_shared<DesignatedType>(DesignatedTy::Uint, designator);
+    return std::make_shared<DesignatedType>(Uint, designator);
   }
   static std::shared_ptr<TypeExpr>
   getFloatTy(const std::shared_ptr<Expression>& designator = nullptr) {
-    return std::make_shared<DesignatedType>(DesignatedTy::Float, designator);
+    return std::make_shared<DesignatedType>(Float, designator);
   }
   static std::shared_ptr<TypeExpr>
   getAngleTy(const std::shared_ptr<Expression>& designator = nullptr) {
-    return std::make_shared<DesignatedType>(DesignatedTy::Angle, designator);
+    return std::make_shared<DesignatedType>(Angle, designator);
   }
 
   void setDesignator(std::shared_ptr<Expression> d) override {
@@ -221,31 +218,31 @@ public:
   }
 
   bool isNumber() override {
-    return type == DesignatedTy::Int || type == DesignatedTy::Uint ||
-           type == DesignatedTy::Bit || type == DesignatedTy::Float;
+    return type == Int || type == Uint || type == Bit || type == Float;
   }
 
-  bool isUint() override { return type == DesignatedTy::Uint; }
+  bool isUint() override { return type == Uint; }
 
-  bool isBit() override { return type == DesignatedTy::Bit; }
+  bool isBit() override { return type == Bit; }
 
-  bool isFP() override { return type == DesignatedTy::Float; }
+  bool isFP() override { return type == Float; }
 
   std::string toString() override {
     switch (type) {
-    case DesignatedTy::Qubit:
+    case Qubit:
       return "qubit[expr]";
-    case DesignatedTy::Bit:
+    case Bit:
       return "bit[expr]";
-    case DesignatedTy::Int:
+    case Int:
       return "int[expr]";
-    case DesignatedTy::Uint:
+    case Uint:
       return "uint[expr]";
-    case DesignatedTy::Float:
+    case Float:
       return "float[expr]";
-    case DesignatedTy::Angle:
+    case Angle:
       return "angle[expr]";
     }
+    throw std::runtime_error("Unhandled type");
   }
 };
 
@@ -257,7 +254,7 @@ public:
 
   UnsizedTy type;
 
-  explicit UnsizedType(UnsizedTy ty) : type(ty) {}
+  explicit UnsizedType(const UnsizedTy ty) : type(ty) {}
 
   bool operator==(const Type<T>& other) const override {
     if (const auto* o = dynamic_cast<const UnsizedType*>(&other)) {
@@ -268,10 +265,10 @@ public:
   [[nodiscard]] bool allowsDesignator() const override { return false; }
 
   static std::shared_ptr<Type<T>> getBoolTy() {
-    return std::make_shared<UnsizedType>(UnsizedTy::Bool);
+    return std::make_shared<UnsizedType>(Bool);
   }
   static std::shared_ptr<Type<T>> getDurationTy() {
-    return std::make_shared<UnsizedType>(UnsizedTy::Duration);
+    return std::make_shared<UnsizedType>(Duration);
   }
 
   T getDesignator() override {
@@ -282,15 +279,16 @@ public:
     return visitor->visitUnsizedType(this);
   }
 
-  bool isBool() override { return type == UnsizedTy::Bool; }
+  bool isBool() override { return type == Bool; }
 
   std::string toString() override {
     switch (type) {
-    case UnsizedTy::Bool:
+    case Bool:
       return "bool";
-    case UnsizedTy::Duration:
+    case Duration:
       return "duration";
     }
+    throw std::runtime_error("Unhandled type");
   }
 };
 

@@ -6,7 +6,6 @@
 
 namespace qasm3 {
 struct GateInfo {
-public:
   size_t nControls;
   size_t nTargets;
   size_t nParameters;
@@ -14,7 +13,6 @@ public:
 };
 
 struct Gate {
-public:
   virtual ~Gate() = default;
 
   virtual size_t getNControls() = 0;
@@ -22,11 +20,10 @@ public:
   virtual size_t getNParameters() = 0;
 };
 
-struct StandardGate : public Gate {
-public:
+struct StandardGate : Gate {
   GateInfo info;
 
-  explicit StandardGate(GateInfo gateInfo) : info(gateInfo) {}
+  explicit StandardGate(const GateInfo& gateInfo) : info(gateInfo) {}
 
   size_t getNControls() override { return info.nControls; }
 
@@ -34,15 +31,15 @@ public:
   size_t getNParameters() override { return info.nParameters; }
 };
 
-struct CompoundGate : public Gate {
-public:
+struct CompoundGate : Gate {
   std::vector<std::string> parameterNames;
   std::vector<std::string> targetNames;
   std::vector<std::shared_ptr<QuantumStatement>> body;
 
-  explicit CompoundGate(
-      std::vector<std::string> parameters, std::vector<std::string> targets,
-      std::vector<std::shared_ptr<QuantumStatement>> bodyStatements)
+  explicit
+  CompoundGate(std::vector<std::string> parameters,
+               std::vector<std::string> targets,
+               std::vector<std::shared_ptr<QuantumStatement>> bodyStatements)
       : parameterNames(std::move(parameters)), targetNames(std::move(targets)),
         body(std::move(bodyStatements)) {}
 

@@ -1,13 +1,16 @@
 #pragma once
 
 #include "InstVisitor.hpp"
-#include "QuantumComputation.hpp"
+#include "Permutation.hpp"
 #include "Types.hpp"
 
-#include <any>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace qasm3 {
@@ -18,7 +21,7 @@ struct DebugInfo {
   std::string filename;
   std::shared_ptr<DebugInfo> parent;
 
-  DebugInfo(size_t l, size_t c, std::string file,
+  DebugInfo(const size_t l, const size_t c, std::string file,
             std::shared_ptr<DebugInfo> parentDebugInfo = nullptr)
       : line(l), column(c), filename(std::move(std::move(file))),
         parent(std::move(parentDebugInfo)) {}
@@ -47,13 +50,12 @@ public:
 };
 
 class Constant : public Expression {
-private:
   std::variant<int64_t, double> val;
   bool isSigned;
   bool isFp;
 
 public:
-  Constant(int64_t value, bool valueIsSigned)
+  Constant(int64_t value, const bool valueIsSigned)
       : val(value), isSigned(valueIsSigned), isFp(false) {}
 
   explicit Constant(double value) : val(value), isSigned(true), isFp(true) {}
@@ -61,12 +63,12 @@ public:
   [[nodiscard]] bool isInt() const { return !isFp; }
   [[nodiscard]] bool isSInt() const { return !isFp && isSigned; }
   [[nodiscard]] bool isUInt() const { return !isFp && !isSigned; }
-  [[nodiscard]] bool isFP() const { return isFp; };
-  [[nodiscard]] virtual int64_t getSInt() const { return std::get<0>(val); };
+  [[nodiscard]] bool isFP() const { return isFp; }
+  [[nodiscard]] virtual int64_t getSInt() const { return std::get<0>(val); }
   [[nodiscard]] virtual uint64_t getUInt() const {
     return static_cast<uint64_t>(std::get<0>(val));
-  };
-  [[nodiscard]] virtual double getFP() const { return std::get<1>(val); };
+  }
+  [[nodiscard]] virtual double getFP() const { return std::get<1>(val); }
   [[nodiscard]] virtual double asFP() const {
     if (isFp) {
       return getFP();
@@ -75,7 +77,7 @@ public:
       return static_cast<double>(getSInt());
     }
     return static_cast<double>(getUInt());
-  };
+  }
 
   std::string getName() override { return "Constant"; }
 };
@@ -109,7 +111,7 @@ public:
   std::shared_ptr<Expression> lhs;
   std::shared_ptr<Expression> rhs;
 
-  BinaryExpression(Op opcode, std::shared_ptr<Expression> l,
+  BinaryExpression(const Op opcode, std::shared_ptr<Expression> l,
                    std::shared_ptr<Expression> r)
       : op(opcode), lhs(std::move(l)), rhs(std::move(r)) {}
 
@@ -135,7 +137,7 @@ public:
   std::shared_ptr<Expression> operand;
   Op op;
 
-  UnaryExpression(Op opcode, std::shared_ptr<Expression> expr)
+  UnaryExpression(const Op opcode, std::shared_ptr<Expression> expr)
       : operand(std::move(expr)), op(opcode) {}
 
   std::string getName() override { return "UnaryExpr"; }
@@ -159,8 +161,8 @@ class IdentifierList : public Expression,
 public:
   std::vector<std::shared_ptr<IdentifierExpression>> identifiers{};
 
-  explicit IdentifierList(
-      std::vector<std::shared_ptr<IdentifierExpression>> ids)
+  explicit
+  IdentifierList(std::vector<std::shared_ptr<IdentifierExpression>> ids)
       : identifiers(std::move(ids)) {}
 
   explicit IdentifierList() = default;
@@ -221,7 +223,7 @@ public:
                            std::shared_ptr<IdentifierList> params,
                            std::shared_ptr<IdentifierList> qbits,
                            std::vector<std::shared_ptr<QuantumStatement>> stmts,
-                           bool opaque = false)
+                           const bool opaque = false)
       : Statement(std::move(debug)), identifier(std::move(id)),
         parameters(std::move(params)), qubits(std::move(qbits)),
         statements(std::move(stmts)), isOpaque(opaque) {
@@ -242,7 +244,7 @@ public:
   double version;
 
   explicit VersionDeclaration(std::shared_ptr<DebugInfo> debug,
-                              double versionNum)
+                              const double versionNum)
       : Statement(std::move(debug)), version(versionNum) {}
 
   void accept(InstVisitor* visitor) override {
@@ -289,7 +291,7 @@ public:
   std::string identifier;
   std::shared_ptr<DeclarationExpression> expression;
 
-  DeclarationStatement(std::shared_ptr<DebugInfo> debug, bool declIsConst,
+  DeclarationStatement(std::shared_ptr<DebugInfo> debug, const bool declIsConst,
                        std::shared_ptr<TypeExpr> ty, std::string id,
                        std::shared_ptr<DeclarationExpression> expr)
       : Statement(std::move(debug)), isConst(declIsConst), type(ty),
@@ -329,7 +331,7 @@ public:
   bool ctrlType;
   std::shared_ptr<Expression> expression;
 
-  explicit CtrlGateModifier(bool ty, std::shared_ptr<Expression> expr)
+  explicit CtrlGateModifier(const bool ty, std::shared_ptr<Expression> expr)
       : ctrlType(ty), expression(std::move(expr)) {}
 };
 
@@ -378,7 +380,7 @@ public:
   std::shared_ptr<Expression> indexExpression;
   std::shared_ptr<DeclarationExpression> expression;
 
-  AssignmentStatement(std::shared_ptr<DebugInfo> debug, Type ty,
+  AssignmentStatement(std::shared_ptr<DebugInfo> debug, const Type ty,
                       std::shared_ptr<IdentifierExpression> id,
                       std::shared_ptr<Expression> indexExpr,
                       std::shared_ptr<DeclarationExpression> expr)
@@ -425,12 +427,13 @@ public:
   std::vector<std::shared_ptr<Statement>> thenStatements;
   std::vector<std::shared_ptr<Statement>> elseStatements;
 
-  IfStatement(std::shared_ptr<Expression> cond,
-              std::vector<std::shared_ptr<Statement>> thenStmts,
-              std::vector<std::shared_ptr<Statement>> elseStmts,
+  IfStatement(const std::shared_ptr<Expression>& cond,
+              const std::vector<std::shared_ptr<Statement>>& thenStmts,
+              const std::vector<std::shared_ptr<Statement>>& elseStmts,
               std::shared_ptr<DebugInfo> debug)
-      : Statement(std::move(debug)), condition(cond), thenStatements(thenStmts),
-        elseStatements(elseStmts) {}
+      : Statement(std::move(debug)), condition(std::move(cond)),
+        thenStatements(std::move(thenStmts)),
+        elseStatements(std::move(elseStmts)) {}
 
   void accept(InstVisitor* visitor) override {
     visitor->visitIfStatement(shared_from_this());

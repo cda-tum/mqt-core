@@ -8,16 +8,16 @@ namespace type_checking {
 void TypeCheckPass::visitGateStatement(
     std::shared_ptr<GateDeclaration> gateStatement) {
   // we save the current environment to restore it afterwards
-  auto oldEnv = env;
+  const auto oldEnv = env;
 
-  for (auto& param : gateStatement->parameters->identifiers) {
+  for (const auto& param : gateStatement->parameters->identifiers) {
     env.emplace(param->identifier, InferredType{SizedType::getFloatTy()});
   }
-  for (auto& operand : gateStatement->qubits->identifiers) {
+  for (const auto& operand : gateStatement->qubits->identifiers) {
     env.emplace(operand->identifier, InferredType{SizedType::getQubitTy()});
   }
 
-  for (auto& stmt : gateStatement->statements) {
+  for (const auto& stmt : gateStatement->statements) {
     stmt->accept(this);
   }
 
@@ -32,7 +32,7 @@ void TypeCheckPass::visitDeclarationStatement(
     std::shared_ptr<DeclarationStatement> declarationStatement) {
   // Type checking declarations is a bit involved. If the type contains a
   // designator expression, we need to resolve the statement in three steps.
-  auto typeExpr = std::get<0>(declarationStatement->type);
+  const auto typeExpr = std::get<0>(declarationStatement->type);
   // First, type-check the type itself.
   if (typeExpr->getDesignator() != nullptr &&
       visit(typeExpr->getDesignator()).isError) {
@@ -50,7 +50,7 @@ void TypeCheckPass::visitDeclarationStatement(
 
   // Lastly, we type check the actual expression
   if (declarationStatement->expression != nullptr) {
-    auto exprType = visit(declarationStatement->expression->expression);
+    const auto exprType = visit(declarationStatement->expression->expression);
     if (!resolvedType->fits(*exprType.type)) {
       std::stringstream ss;
       ss << "Type mismatch in declaration statement: Expected '";
@@ -73,7 +73,7 @@ void TypeCheckPass::visitOutputPermutation(
 
 void TypeCheckPass::visitGateCallStatement(
     std::shared_ptr<GateCallStatement> gateCallStatement) {
-  for (auto& arg : gateCallStatement->arguments) {
+  for (const auto& arg : gateCallStatement->arguments) {
     visit(arg);
   }
 }
@@ -89,8 +89,8 @@ void TypeCheckPass::visitAssignmentStatement(
     }
   }
 
-  auto exprTy = visit(assignmentStatement->expression->expression);
-  auto idTy = env.find(assignmentStatement->identifier->identifier);
+  const auto exprTy = visit(assignmentStatement->expression->expression);
+  const auto idTy = env.find(assignmentStatement->identifier->identifier);
 
   if (idTy == env.end()) {
     error("Unknown identifier '" + assignmentStatement->identifier->identifier +
@@ -251,7 +251,7 @@ TypeCheckPass::visitConstantExpression(std::shared_ptr<Constant> constant) {
 
 InferredType TypeCheckPass::visitIdentifierExpression(
     std::shared_ptr<IdentifierExpression> identifierExpression) {
-  auto type = env.find(identifierExpression->identifier);
+  const auto type = env.find(identifierExpression->identifier);
   if (type == env.end()) {
     error("Unknown identifier '" + identifierExpression->identifier + "'.");
     return InferredType::error();
@@ -271,7 +271,7 @@ InferredType TypeCheckPass::visitMeasureExpression(
   if (measureExpression->gate->expression != nullptr) {
     visit(measureExpression->gate->expression);
   } else {
-    auto gate = env.find(measureExpression->gate->identifier);
+    const auto gate = env.find(measureExpression->gate->identifier);
     if (gate == env.end()) {
       error("Unknown identifier '" + measureExpression->gate->identifier +
             "'.");
@@ -284,7 +284,7 @@ InferredType TypeCheckPass::visitMeasureExpression(
 }
 std::shared_ptr<ResolvedType>
 TypeCheckPass::visitDesignatedType(DesignatedType* designatedType) {
-  auto resolvedTy = visit(designatedType->designator);
+  const auto resolvedTy = visit(designatedType->designator);
   if (!resolvedTy.isError && !resolvedTy.type->isUint()) {
     error("Designator must be an unsigned integer");
   }
@@ -304,7 +304,7 @@ std::shared_ptr<ResolvedType> TypeCheckPass::visitArrayType(
 
 void TypeCheckPass::visitIfStatement(std::shared_ptr<IfStatement> ifStatement) {
   // We support ifs on bits and bools
-  auto ty = visit(ifStatement->condition);
+  const auto ty = visit(ifStatement->condition);
   if (!ty.isError && !ty.type->isBool()) {
     error("Condition expression must be bool.");
   }
