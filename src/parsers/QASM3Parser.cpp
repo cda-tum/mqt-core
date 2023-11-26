@@ -95,7 +95,7 @@ class OpenQasm3Parser : public InstVisitor {
     auto qubit = qubitIter->second;
 
     if (indexExpr != nullptr) {
-      auto result = evaluatePositiveConstant(indexExpr, debugInfo);
+      const auto result = evaluatePositiveConstant(indexExpr, debugInfo);
 
       if (result >= qubit.second) {
         error("Index expression must be smaller than the width of the "
