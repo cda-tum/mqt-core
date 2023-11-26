@@ -1,14 +1,14 @@
 #include "parsers/qasm3_parser/Scanner.hpp"
 
 namespace qasm3 {
-char Scanner::readUtf8Codepoint(std::istream& in) {
+char Scanner::readUtf8Codepoint(std::istream* in) {
   char c = 0;
-  in.get(c);
+  in->get(c);
   return c;
 }
 
 void Scanner::nextCh() {
-  if (!is.eof()) {
+  if (!is->eof()) {
     col++;
     ch = readUtf8Codepoint(is);
   } else {
@@ -21,8 +21,8 @@ void Scanner::nextCh() {
 }
 
 char Scanner::peek() const {
-  if (!is.eof()) {
-    return static_cast<char>(is.peek());
+  if (!is->eof()) {
+    return static_cast<char>(is->peek());
   }
   return 0;
 }
@@ -252,7 +252,7 @@ Token Scanner::consumeString() {
   return t;
 }
 
-Scanner::Scanner(std::istream& in) : is(in) {
+Scanner::Scanner(std::istream* in) : is(in) {
   keywords["OPENQASM"] = Token::Kind::OpenQasm;
   keywords["include"] = Token::Kind::Include;
   keywords["defcalgrammar"] = Token::Kind::DefCalGrammar;

@@ -46,10 +46,10 @@ private:
       return t.kind != Token::Kind::Eof;
     }
 
-    explicit ScannerState(
-        std::istream& in,
-        std::optional<std::string> debugFilename = std::nullopt,
-        bool implicitInclude = false)
+    explicit
+    ScannerState(std::istream* in,
+                 std::optional<std::string> debugFilename = std::nullopt,
+                 bool implicitInclude = false)
         : scanner(std::make_unique<Scanner>(in)),
           filename(std::move(debugFilename)),
           isImplicitInclude(implicitInclude) {
@@ -60,7 +60,7 @@ private:
         std::unique_ptr<std::istream> in,
         std::optional<std::string> debugFilename = std::nullopt,
         bool implicitInclude = false)
-        : is(std::move(in)), scanner(std::make_unique<Scanner>(*is)),
+        : is(std::move(in)), scanner(std::make_unique<Scanner>(is.get())),
           filename(std::move(debugFilename)),
           isImplicitInclude(implicitInclude) {
       scan();
@@ -120,7 +120,7 @@ private:
   }
 
 public:
-  explicit Parser(std::istream& is) {
+  explicit Parser(std::istream* is) {
     scanner.emplace(is);
     scan();
     scanner.emplace(std::make_unique<std::istringstream>(STDGATES),

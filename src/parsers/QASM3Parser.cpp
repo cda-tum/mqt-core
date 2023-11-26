@@ -779,7 +779,7 @@ public:
 void qc::QuantumComputation::importOpenQASM3(std::istream& is) {
   using namespace qasm3;
 
-  Parser p(is);
+  Parser p(&is);
 
   auto program = p.parseProgram();
   OpenQasm3Parser parser{this};

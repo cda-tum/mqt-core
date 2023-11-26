@@ -10,9 +10,8 @@
 
 namespace qasm3 {
 class Scanner {
-private:
-  std::istream& is;
-  std::map<std::string, Token::Kind, std::less<>> keywords{};
+  std::istream* is;
+  std::unordered_map<std::string, Token::Kind> keywords{};
   char ch = 0;
   size_t line = 1;
   size_t col = 0;
@@ -31,7 +30,7 @@ private:
     return isNum(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
   }
 
-  static char readUtf8Codepoint(std::istream& ss);
+  static char readUtf8Codepoint(std::istream* ss);
 
   void nextCh();
 
@@ -67,7 +66,7 @@ private:
   }
 
 public:
-  explicit Scanner(std::istream& in);
+  explicit Scanner(std::istream* in);
 
   ~Scanner() = default;
 
