@@ -1,4 +1,5 @@
 #include "parsers/qasm3_parser/passes/ConstEvalPass.hpp"
+
 #include <cmath>
 
 namespace qasm3 {
