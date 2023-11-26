@@ -34,7 +34,12 @@ struct ConstEvalValue {
           Constant(static_cast<int64_t>(std::get<2>(value)), false));
     }
 
+#if defined(__GNUC__) || defined(__clang__)
     __builtin_unreachable();
+#elif defined(_MSC_VER)
+    __assume(0);
+#else
+#endif
   }
 };
 
