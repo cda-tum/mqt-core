@@ -355,9 +355,9 @@ std::shared_ptr<IfStatement> Parser::parseIfStatement() {
 
   const auto tEnd = last();
 
-  return std::make_shared<IfStatement>(
-      std::move(condition), std::move(thenStatements),
-      std::move(elseStatements), makeDebugInfo(tBegin, tEnd));
+  return std::make_shared<IfStatement>(std::move(condition), thenStatements,
+                                       elseStatements,
+                                       makeDebugInfo(tBegin, tEnd));
 }
 
 std::vector<std::shared_ptr<Statement>> Parser::parseBlockOrStatement() {
@@ -617,7 +617,7 @@ std::shared_ptr<Expression> Parser::exponentiation() {
   }
   case Token::Kind::LParen: {
     scan();
-    auto const x = parseExpression();
+    auto x = parseExpression();
     expect(Token::Kind::RParen);
     return x;
   }
@@ -627,7 +627,7 @@ std::shared_ptr<Expression> Parser::exponentiation() {
   case Token::Kind::Exp:
   case Token::Kind::Ln:
   case Token::Kind::Sqrt: {
-    UnaryExpression::Op op;
+    UnaryExpression::Op op = UnaryExpression::Op::Sin;
     switch (current().kind) {
     case Token::Kind::Sin:
       op = UnaryExpression::Op::Sin;
@@ -695,7 +695,7 @@ std::shared_ptr<Expression> Parser::comparison() {
          current().kind == Token::Kind::GreaterThan ||
          current().kind == Token::Kind::LessThanEquals ||
          current().kind == Token::Kind::GreaterThanEquals) {
-    BinaryExpression::Op op;
+    BinaryExpression::Op op = BinaryExpression::Op::Equal;
     switch (current().kind) {
     case Token::Kind::DoubleEquals:
       op = BinaryExpression::Op::Equal;

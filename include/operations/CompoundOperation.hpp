@@ -103,7 +103,7 @@ public:
     return controls.erase(it);
   }
 
-  inline virtual bool isControlled() const override { return false; }
+  [[nodiscard]] inline bool isControlled() const override { return false; }
 
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override {
@@ -152,7 +152,7 @@ public:
   }
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg, uint32_t indent,
+                    const RegisterNames& creg, size_t indent,
                     bool openQASM3) const override {
     for (const auto& op : ops) {
       op->dumpOpenQASM(of, qreg, creg, indent, openQASM3);

@@ -3,6 +3,21 @@
 #include <cmath>
 
 namespace qasm3::const_eval {
+template <typename T> static T power(T base, T exponent) {
+  if (exponent == 0) {
+    return 1;
+  }
+
+  T result = 1;
+  for (T i = 0; i < exponent; ++i) {
+    if (result > std::numeric_limits<T>::max() / base) {
+      throw std::runtime_error("Integer overflow in constant evaluation.");
+    }
+    result *= base;
+  }
+  return result;
+}
+
 void ConstEvalPass::visitDeclarationStatement(
     const std::shared_ptr<DeclarationStatement> declarationStatement) {
   // The type designator expression is already resolved by the type check pass.
@@ -62,9 +77,9 @@ ConstEvalValue ConstEvalPass::evalIntExpression(BinaryExpression::Op op,
   switch (op) {
   case BinaryExpression::Power:
     if (isSigned) {
-      result.value = static_cast<int64_t>(pow(lhs, rhs));
+      result.value = power(lhs, rhs);
     } else {
-      result.value = static_cast<int64_t>(pow(lhsU, rhsU));
+      result.value = static_cast<int64_t>(power(lhsU, rhsU));
     }
     break;
   case BinaryExpression::Add:

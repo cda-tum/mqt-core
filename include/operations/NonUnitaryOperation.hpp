@@ -76,7 +76,7 @@ public:
                       std::size_t prefixWidth) const override;
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg, uint32_t indent,
+                    const RegisterNames& creg, size_t indent,
                     bool openQASM3) const override;
 
   void invert() override {

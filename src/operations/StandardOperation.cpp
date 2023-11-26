@@ -242,7 +242,7 @@ StandardOperation::StandardOperation(const std::size_t nq, const Controls& c,
 void StandardOperation::dumpOpenQASM(std::ostream& of,
                                      const RegisterNames& qreg,
                                      [[maybe_unused]] const RegisterNames& creg,
-                                     uint32_t indent, bool openQASM3) const {
+                                     size_t indent, bool openQASM3) const {
   std::ostringstream op;
   op << std::setprecision(std::numeric_limits<fp>::digits10);
 

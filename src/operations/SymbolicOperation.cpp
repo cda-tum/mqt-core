@@ -309,7 +309,7 @@ bool SymbolicOperation::equals(const Operation& op, const Permutation& perm1,
 SymbolicOperation::dumpOpenQASM([[maybe_unused]] std::ostream& of,
                                 [[maybe_unused]] const RegisterNames& qreg,
                                 [[maybe_unused]] const RegisterNames& creg,
-                                [[maybe_unused]] uint32_t indent,
+                                [[maybe_unused]] size_t indent,
                                 bool openQASM3) const {
   if (openQASM3) {
     throw QFRException(
