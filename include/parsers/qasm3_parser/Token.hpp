@@ -136,7 +136,7 @@ public:
 
     Imag,
 
-    Undescore,
+    Underscore,
 
     TimeUnitDt,
     TimeUnitNs,
@@ -389,8 +389,8 @@ public:
       return "RightShift";
     case Kind::Imag:
       return "Imag";
-    case Kind::Undescore:
-      return "Undescore";
+    case Kind::Underscore:
+      return "Underscore";
     case Kind::TimeUnitDt:
       return "TimeUnitDt";
     case Kind::TimeUnitNs:

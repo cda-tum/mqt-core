@@ -24,7 +24,6 @@ struct DebugInfo {
         parent(std::move(parentDebugInfo)) {}
 
   [[nodiscard]] std::string toString() const {
-    // TOOD: also print endLine and endColumn
     return filename + ":" + std::to_string(line) + ":" + std::to_string(column);
   }
 };
@@ -32,7 +31,6 @@ struct DebugInfo {
 // Expressions
 class Expression {
 public:
-  // TODO: in the future, add inferred type here.
   virtual ~Expression() = default;
 
   virtual std::string getName() = 0;
