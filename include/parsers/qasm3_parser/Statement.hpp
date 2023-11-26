@@ -5,6 +5,7 @@
 #include "Types.hpp"
 
 #include <any>
+#include <cassert>
 #include <string>
 #include <utility>
 #include <vector>
@@ -158,7 +159,7 @@ public:
 class IdentifierList : public Expression,
                        public std::enable_shared_from_this<IdentifierList> {
 public:
-  std::vector<std::shared_ptr<IdentifierExpression>> identifiers;
+  std::vector<std::shared_ptr<IdentifierExpression>> identifiers{};
 
   explicit
   IdentifierList(std::vector<std::shared_ptr<IdentifierExpression>> ids)
