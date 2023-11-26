@@ -46,10 +46,10 @@ private:
       return t.kind != Token::Kind::Eof;
     }
 
-    explicit
-    ScannerState(std::istream* in,
-                 std::optional<std::string> debugFilename = std::nullopt,
-                 bool implicitInclude = false)
+    explicit ScannerState(
+        std::istream* in,
+        std::optional<std::string> debugFilename = std::nullopt,
+        bool implicitInclude = false)
         : scanner(std::make_unique<Scanner>(in)),
           filename(std::move(debugFilename)),
           isImplicitInclude(implicitInclude) {

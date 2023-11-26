@@ -42,7 +42,7 @@ public:
 
   explicit CompoundGate(
       std::vector<std::string> parameters, std::vector<std::string> targets,
-               std::vector<std::shared_ptr<QuantumStatement>> bodyStatements)
+      std::vector<std::shared_ptr<QuantumStatement>> bodyStatements)
       : parameterNames(std::move(parameters)), targetNames(std::move(targets)),
         body(std::move(bodyStatements)) {}
 
