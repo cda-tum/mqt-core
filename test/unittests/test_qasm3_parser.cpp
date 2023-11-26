@@ -472,3 +472,31 @@ TEST_F(Qasm3ParserTest, ImportQasm3NestedGates) {
   EXPECT_EQ(qc.getNops(), 1);
   EXPECT_EQ(qc.at(0)->getType(), OpType::X);
 }
+
+TEST_F(Qasm3ParserTest, ImportQasm3AlternatingControl) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[7] q;\n"
+                               "ctrl @ negctrl(2) @ negctrl @ ctrl @ ctrl @ x "
+                               "q[0], q[1], q[2], q[3], q[4], q[5], q[6];\n"
+                               "";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  qc.import(ss, Format::OpenQASM3);
+
+  std::stringstream out{};
+  qc.dump(out, Format::OpenQASM3);
+
+  const std::string expected = "// i 0 1 2 3 4 5 6\n"
+                               "// o 0 1 2 3 4 5 6\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[7] q;\n"
+                               "ctrl @ negctrl(3) @ ctrl(2) @ x q[0], q[1], "
+                               "q[2], q[3], q[4], q[5], q[6];\n"
+                               "";
+
+  EXPECT_EQ(out.str(), expected);
+}
