@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../NestedEnvironment.hpp"
 #include "CompilerPass.hpp"
+#include "parsers/qasm3_parser/NestedEnvironment.hpp"
 
 namespace qasm3 {
 namespace const_eval {

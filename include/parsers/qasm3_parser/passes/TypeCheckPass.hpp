@@ -1,9 +1,7 @@
 #pragma once
 
-#include "../InstVisitor.hpp"
-#include "../Types.hpp"
-#include "CompilerPass.hpp"
 #include "ConstEvalPass.hpp"
+#include "parsers/qasm3_parser/Types.hpp"
 
 namespace qasm3 {
 namespace type_checking {
