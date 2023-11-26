@@ -669,13 +669,13 @@ TEST_F(Qasm3ParserTest, ImportQasmParseBinaryExpressions) {
   qasm3::Parser parser(&ss, false);
 
   const auto expectedTypes = std::vector{
-    qasm3::BinaryExpression::Op::Power,
-    qasm3::BinaryExpression::Op::Equal,
-    qasm3::BinaryExpression::Op::NotEqual,
-    qasm3::BinaryExpression::Op::LessThanOrEqual,
-    qasm3::BinaryExpression::Op::LessThan,
-    qasm3::BinaryExpression::Op::GreaterThanOrEqual,
-    qasm3::BinaryExpression::Op::GreaterThan,
+      qasm3::BinaryExpression::Op::Power,
+      qasm3::BinaryExpression::Op::Equal,
+      qasm3::BinaryExpression::Op::NotEqual,
+      qasm3::BinaryExpression::Op::LessThanOrEqual,
+      qasm3::BinaryExpression::Op::LessThan,
+      qasm3::BinaryExpression::Op::GreaterThanOrEqual,
+      qasm3::BinaryExpression::Op::GreaterThan,
   };
 
   for (const auto& expected : expectedTypes) {
