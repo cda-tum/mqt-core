@@ -17,9 +17,9 @@ public:
     type = Compound;
   }
 
-  explicit
-  CompoundOperation(const std::size_t nq,
-                    std::vector<std::unique_ptr<Operation>>&& operations)
+  explicit CompoundOperation(
+      const std::size_t nq,
+      std::vector<std::unique_ptr<Operation>>&& operations)
       : CompoundOperation(nq) {
     // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
     ops = std::move(operations);
