@@ -10,41 +10,6 @@ namespace qasm3 {
 const std::string STDGATES =
     "// OpenQASM 3 standard gate library\n"
     "\n"
-    //    "// phase gate\n"
-    //    "gate p(lambda) a { ctrl @ gphase(lambda) a; }\n"
-    //    "\n"
-    "// Pauli gate: bit-flip or NOT gate\n"
-    "gate x a { U(pi, 0, pi) a; }\n"
-    "// Pauli gate: bit and phase flip\n"
-    "gate y a { U(pi, pi/2, pi/2) a; }\n"
-    "// Pauli gate: phase flip\n"
-    "gate z a { p(pi) a; }\n"
-    "\n"
-    "// Clifford gate: Hadamard\n"
-    "gate h a { U(pi/2, 0, pi) a; }\n"
-    //    "// Clifford gate: sqrt(Z) or S gate\n"
-    // unsupported gates due to `pow` modifier.
-    //    "gate s a { pow(1/2) @ z a; }\n"
-    //    "// Clifford gate: inverse of sqrt(Z)\n"
-    //    "gate sdg a { inv @ pow(1/2) @ z a; }\n"
-    //    "\n"
-    //    "// sqrt(S) or T gate\n"
-    //    "gate t a { pow(1/2) @ s a; }\n"
-    //    "// inverse of sqrt(S)\n"
-    //    "gate tdg a { inv @ pow(1/2) @ s a; }\n"
-    //    "\n"
-    //    "// sqrt(NOT) gate\n"
-    //    "gate sx a { pow(1/2) @ x a; }\n"
-    // "\n"
-    "// Rotation around X-axis\n"
-    "gate rx(theta) a { U(theta, -pi/2, pi/2) a; }\n"
-    "// rotation around Y-axis\n"
-    "gate ry(theta) a { U(theta, 0, 0) a; }\n"
-    "// rotation around Z axis\n"
-    "gate rz(lambda) a { gphase(-lambda/2); U(0, 0, lambda) a; }\n"
-    "\n"
-    "// controlled-NOT\n"
-    "gate cx c, t { ctrl @ x c, t; }\n"
     "// controlled-Y\n"
     "gate cy a, b { ctrl @ y a, b; }\n"
     "// controlled-Z\n"
@@ -73,20 +38,12 @@ const std::string STDGATES =
     "phi, lambda) c, t; }\n"
     "\n"
     "// Gates for OpenQASM 2 backwards compatibility\n"
-    "// CNOT\n"
-    "gate CX c, t { ctrl @ U(pi, 0, pi) c, t; }\n"
     "// phase gate\n"
     "gate phase(lambda) q { U(0, 0, lambda) q; }\n"
     "// controlled-phase\n"
     "gate cphase(lambda) a, b { ctrl @ phase(lambda) a, b; }\n"
-    "// identity or idle gate\n"
-    "gate id a { U(0, 0, 0) a; }\n"
     "// IBM Quantum experience gates\n"
     "gate u1(lambda) q { U(0, 0, lambda) q; }\n"
-    "gate u2(phi, lambda) q { gphase(-(phi+lambda)/2); U(pi/2, phi, lambda) q; "
-    "}\n"
-    "gate u3(theta, phi, lambda) q { gphase(-(phi+lambda)/2); U(theta, phi, "
-    "lambda) q; }\n"
     "";
 
 const std::string QE1LIB = "gate rccx a, b, c {\n"
@@ -151,16 +108,20 @@ const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
      std::make_shared<StandardGate>(StandardGate({0, 0, 1, qc::GPhase}))},
     {"U", std::make_shared<StandardGate>(StandardGate({0, 1, 3, qc::U}))},
 
-    // The controlled gphase is problematic so we natively support the phase
-    // gate.
+    // natively supported gates
     {"p", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::P}))},
-    // we use mqt's native swap gate instead of the one from the stdgates.inc.
-    {"swap", std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::SWAP}))},
-    {"iswap",
-     std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::iSWAP}))},
-
-    // gates from the stdgates.inc file which can't be parsed at the moment as
-    // the `pow` modifier is unsupported at the moment.
+    {"x", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::X}))},
+    {"y", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::Y}))},
+    {"z", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::Z}))},
+    {"h", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::H}))},
+    {"rx", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::RX}))},
+    {"ry", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::RY}))},
+    {"rz", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::RZ}))},
+    {"cx", std::make_shared<StandardGate>(StandardGate({1, 1, 0, qc::X}))},
+    {"CX", std::make_shared<StandardGate>(StandardGate({1, 1, 0, qc::X}))},
+    {"id", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::I}))},
+    {"u2", std::make_shared<StandardGate>(StandardGate({0, 1, 2, qc::U2}))},
+    {"u3", std::make_shared<StandardGate>(StandardGate({0, 1, 3, qc::U}))},
     {"s", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::S}))},
     {"sdg", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::Sdg}))},
     {"t", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::T}))},
@@ -169,6 +130,9 @@ const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
     {"sxdg", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::SXdg}))},
     {"teleport", std::make_shared<StandardGate>(
                      StandardGate({0, 3, 0, qc::Teleportation}))},
+    {"swap", std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::SWAP}))},
+    {"iswap",
+     std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::iSWAP}))},
 };
 
 const std::map<std::string, std::shared_ptr<Gate>> QASM2_COMPAT_GATES = {

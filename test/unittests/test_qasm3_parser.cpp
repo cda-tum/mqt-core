@@ -201,8 +201,7 @@ TEST_F(Qasm3ParserTest, ImportQasm3ParamCompoundGate) {
                                "OPENQASM 3.0;\n"
                                "include \"stdgates.inc\";\n"
                                "qubit[2] q;\n"
-                               "gphase(-1.5707963267949);\n"
-                               "z q[0];\n";
+                               "rz(3.14159265358979) q[0];\n";
 
   EXPECT_EQ(out.str(), expected);
 }
