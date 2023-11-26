@@ -76,7 +76,3 @@ if(BUILD_MQT_CORE_TESTS)
   include(GoogleTest)
   add_subdirectory(test)
 endif()
-
-# TODO: remove before merging
-add_executable(main-test src/main.cpp)
-target_link_libraries(main-test PUBLIC MQT::qfr)
