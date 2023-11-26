@@ -51,8 +51,9 @@ class ConstEvalPass : public CompilerPass,
     return static_cast<int64_t>(static_cast<T>(value));
   }
 
-  ConstEvalValue evalIntExpression(BinaryExpression::Op op, int64_t lhs,
-                                   int64_t rhs, size_t width, bool isSigned);
+  static ConstEvalValue evalIntExpression(BinaryExpression::Op op, int64_t lhs,
+                                          int64_t rhs, size_t width,
+                                          bool isSigned);
   static ConstEvalValue evalFloatExpression(BinaryExpression::Op op, double lhs,
                                             double rhs);
   static ConstEvalValue evalBoolExpression(BinaryExpression::Op op, bool lhs,

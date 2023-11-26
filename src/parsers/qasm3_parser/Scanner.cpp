@@ -182,7 +182,7 @@ Token Scanner::consumeNumberLiteral() {
 
     try {
       t.valReal = std::stod(ss.str().c_str());
-    } catch (std::invalid_argument) {
+    } catch (std::invalid_argument*) {
       error("Unable to parse float literal");
     }
 

@@ -32,7 +32,6 @@ public:
   virtual bool isFP() { return false; }
   virtual bool isUint() { return false; }
   virtual bool isBit() { return false; }
-  virtual bool isBit(size_t /*width*/) { return false; }
 
   virtual bool fits(const Type<T>& other) { return *this == other; }
 
@@ -120,10 +119,6 @@ public:
   bool isUint() override { return type == Uint; }
 
   bool isBit() override { return type == Bit; }
-
-  bool isBit(const size_t width) override {
-    return type == Bit && width == this->designator;
-  }
 
   bool isFP() override { return type == Float; }
 

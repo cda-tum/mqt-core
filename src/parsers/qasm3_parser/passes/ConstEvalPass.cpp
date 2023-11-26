@@ -3,13 +3,13 @@
 namespace qasm3 {
 namespace const_eval {
 void ConstEvalPass::visitDeclarationStatement(
-    std::shared_ptr<DeclarationStatement> declarationStatement) {
+    const std::shared_ptr<DeclarationStatement> declarationStatement) {
   // The type designator expression is already resolved by the type check pass.
   if (!declarationStatement->isConst) {
     return;
   }
 
-  auto value = visit(declarationStatement->expression->expression);
+  const auto value = visit(declarationStatement->expression->expression);
   if (!value) {
     throw std::runtime_error(
         "Constant declaration initialization expression must be const.");
@@ -23,8 +23,7 @@ void ConstEvalPass::visitDeclarationStatement(
 void ConstEvalPass::visitGateCallStatement(
     std::shared_ptr<GateCallStatement> gateCallStatement) {
   for (auto& arg : gateCallStatement->arguments) {
-    auto evaluatedArg = visit(arg);
-    if (evaluatedArg) {
+    if (auto evaluatedArg = visit(arg)) {
       arg = evaluatedArg->toExpr();
     }
   }
@@ -32,23 +31,20 @@ void ConstEvalPass::visitGateCallStatement(
     if (op->expression == nullptr) {
       continue;
     }
-    auto evaluatedArg = visit(op->expression);
-    if (evaluatedArg) {
+    if (auto evaluatedArg = visit(op->expression)) {
       op->expression = evaluatedArg->toExpr();
     }
   }
   for (auto& modifier : gateCallStatement->modifiers) {
     if (auto powModifier = std::dynamic_pointer_cast<PowGateModifier>(modifier);
         powModifier != nullptr && powModifier->expression != nullptr) {
-      auto evaluatedArg = visit(powModifier->expression);
-      if (evaluatedArg) {
+      if (auto evaluatedArg = visit(powModifier->expression)) {
         powModifier->expression = evaluatedArg->toExpr();
       }
     } else if (auto ctrlModifier =
                    std::dynamic_pointer_cast<CtrlGateModifier>(modifier);
                ctrlModifier != nullptr && ctrlModifier->expression != nullptr) {
-      auto evaluatedArg = visit(ctrlModifier->expression);
-      if (evaluatedArg) {
+      if (auto evaluatedArg = visit(ctrlModifier->expression)) {
         ctrlModifier->expression = evaluatedArg->toExpr();
       }
     }
@@ -65,9 +61,9 @@ ConstEvalValue ConstEvalPass::evalIntExpression(BinaryExpression::Op op,
   switch (op) {
   case BinaryExpression::Power:
     if (isSigned) {
-      result.value = static_cast<int64_t>(std::pow(lhs, rhs));
+      result.value = static_cast<int64_t>(pow(lhs, rhs));
     } else {
-      result.value = static_cast<int64_t>(std::pow(lhsU, rhsU));
+      result.value = static_cast<int64_t>(pow(lhsU, rhsU));
     }
     break;
   case BinaryExpression::Add:
@@ -78,35 +74,35 @@ ConstEvalValue ConstEvalPass::evalIntExpression(BinaryExpression::Op op,
     break;
   case BinaryExpression::Multiply:
     if (isSigned) {
-      result.value = static_cast<int64_t>(lhs * rhs);
+      result.value = lhs * rhs;
     } else {
       result.value = static_cast<int64_t>(lhsU * rhsU);
     }
     break;
   case BinaryExpression::Divide:
     if (isSigned) {
-      result.value = static_cast<int64_t>(lhs / rhs);
+      result.value = lhs / rhs;
     } else {
       result.value = static_cast<int64_t>(lhsU / rhsU);
     }
     break;
   case BinaryExpression::Modulo:
     if (isSigned) {
-      result.value = static_cast<int64_t>(lhs % rhs);
+      result.value = lhs % rhs;
     } else {
       result.value = static_cast<int64_t>(lhsU % rhsU);
     }
     break;
   case BinaryExpression::LeftShift:
     if (isSigned) {
-      result.value = static_cast<int64_t>(lhs << rhs);
+      result.value = lhs << rhs;
     } else {
       result.value = static_cast<int64_t>(lhsU << rhsU);
     }
     break;
   case BinaryExpression::RightShift:
     if (isSigned) {
-      result.value = static_cast<int64_t>(lhs >> rhs);
+      result.value = lhs >> rhs;
     } else {
       result.value = static_cast<int64_t>(lhsU >> rhsU);
     }
@@ -203,7 +199,7 @@ ConstEvalValue ConstEvalPass::evalFloatExpression(BinaryExpression::Op op,
 
   switch (op) {
   case BinaryExpression::Power:
-    result.value = std::pow(lhs, rhs);
+    result.value = pow(lhs, rhs);
     break;
   case BinaryExpression::Add:
     result.value = lhs + rhs;
@@ -218,7 +214,7 @@ ConstEvalValue ConstEvalPass::evalFloatExpression(BinaryExpression::Op op,
     result.value = lhs / rhs;
     break;
   case BinaryExpression::Modulo:
-    result.value = std::fmod(lhs, rhs);
+    result.value = fmod(lhs, rhs);
     break;
   case BinaryExpression::LessThan:
     result.value = lhs < rhs;
@@ -251,8 +247,9 @@ ConstEvalValue ConstEvalPass::evalFloatExpression(BinaryExpression::Op op,
 
   return result;
 }
-ConstEvalValue ConstEvalPass::evalBoolExpression(BinaryExpression::Op op,
-                                                 bool lhs, bool rhs) {
+ConstEvalValue ConstEvalPass::evalBoolExpression(const BinaryExpression::Op op,
+                                                 const bool lhs,
+                                                 const bool rhs) {
   ConstEvalValue result{ConstEvalValue::Type::ConstBool, false, 1};
 
   switch (op) {
@@ -286,7 +283,7 @@ ConstEvalValue ConstEvalPass::evalBoolExpression(BinaryExpression::Op op,
 }
 
 std::optional<ConstEvalValue> ConstEvalPass::visitBinaryExpression(
-    std::shared_ptr<BinaryExpression> binaryExpression) {
+    const std::shared_ptr<BinaryExpression> binaryExpression) {
   auto lhsVal = visit(binaryExpression->lhs);
   if (!lhsVal) {
     return std::nullopt;
@@ -348,10 +345,12 @@ std::optional<ConstEvalValue> ConstEvalPass::visitBinaryExpression(
     return evalBoolExpression(binaryExpression->op, std::get<2>(lhsVal->value),
                               std::get<2>(rhsVal->value));
   }
+
+  throw std::runtime_error("Unhandled binary expression type.");
 }
 
 std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
-    std::shared_ptr<UnaryExpression> unaryExpression) {
+    const std::shared_ptr<UnaryExpression> unaryExpression) {
 
   auto val = visit(unaryExpression->operand);
   if (!val) {
@@ -382,9 +381,9 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
     return std::nullopt;
   case UnaryExpression::Sin:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
-      val->value = std::sin(std::get<1>(val->value));
+      val->value = sin(std::get<1>(val->value));
     } else if (val->type == ConstEvalValue::Type::ConstInt) {
-      val->value = std::sin(static_cast<double>(std::get<0>(val->value)));
+      val->value = sin(static_cast<double>(std::get<0>(val->value)));
       val->type = ConstEvalValue::Type::ConstFloat;
     } else {
       return std::nullopt;
@@ -392,9 +391,9 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
     break;
   case UnaryExpression::Cos:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
-      val->value = std::cos(std::get<1>(val->value));
+      val->value = cos(std::get<1>(val->value));
     } else if (val->type == ConstEvalValue::Type::ConstInt) {
-      val->value = std::cos(static_cast<double>(std::get<0>(val->value)));
+      val->value = cos(static_cast<double>(std::get<0>(val->value)));
       val->type = ConstEvalValue::Type::ConstFloat;
     } else {
       return std::nullopt;
@@ -402,9 +401,9 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
     break;
   case UnaryExpression::Tan:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
-      val->value = std::tan(std::get<1>(val->value));
+      val->value = tan(std::get<1>(val->value));
     } else if (val->type == ConstEvalValue::Type::ConstInt) {
-      val->value = std::tan(static_cast<double>(std::get<0>(val->value)));
+      val->value = tan(static_cast<double>(std::get<0>(val->value)));
       val->type = ConstEvalValue::Type::ConstFloat;
     } else {
       return std::nullopt;
@@ -412,9 +411,9 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
     break;
   case UnaryExpression::Exp:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
-      val->value = std::exp(std::get<1>(val->value));
+      val->value = exp(std::get<1>(val->value));
     } else if (val->type == ConstEvalValue::Type::ConstInt) {
-      val->value = std::exp(static_cast<double>(std::get<0>(val->value)));
+      val->value = exp(static_cast<double>(std::get<0>(val->value)));
       val->type = ConstEvalValue::Type::ConstFloat;
     } else {
       return std::nullopt;
@@ -422,9 +421,9 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
     break;
   case UnaryExpression::Ln:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
-      val->value = std::log(std::get<1>(val->value));
+      val->value = log(std::get<1>(val->value));
     } else if (val->type == ConstEvalValue::Type::ConstInt) {
-      val->value = std::log(static_cast<double>(std::get<0>(val->value)));
+      val->value = log(static_cast<double>(std::get<0>(val->value)));
       val->type = ConstEvalValue::Type::ConstFloat;
     } else {
       return std::nullopt;
@@ -432,9 +431,9 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
     break;
   case UnaryExpression::Sqrt:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
-      val->value = std::sqrt(std::get<1>(val->value));
+      val->value = sqrt(std::get<1>(val->value));
     } else if (val->type == ConstEvalValue::Type::ConstInt) {
-      val->value = std::sqrt(static_cast<double>(std::get<0>(val->value)));
+      val->value = sqrt(static_cast<double>(std::get<0>(val->value)));
       val->type = ConstEvalValue::Type::ConstFloat;
     } else {
       return std::nullopt;
@@ -445,8 +444,8 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
   return val;
 }
 
-std::optional<ConstEvalValue>
-ConstEvalPass::visitConstantExpression(std::shared_ptr<Constant> constant) {
+std::optional<ConstEvalValue> ConstEvalPass::visitConstantExpression(
+    const std::shared_ptr<Constant> constant) {
 
   if (constant->isFP()) {
     return ConstEvalValue{constant->getFP()};
@@ -461,7 +460,7 @@ ConstEvalPass::visitConstantExpression(std::shared_ptr<Constant> constant) {
 }
 
 std::optional<ConstEvalValue> ConstEvalPass::visitIdentifierExpression(
-    std::shared_ptr<IdentifierExpression> identifierExpression) {
+    const std::shared_ptr<IdentifierExpression> identifierExpression) {
   return env.find(identifierExpression->identifier);
 }
 
