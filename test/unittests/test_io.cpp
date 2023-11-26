@@ -381,6 +381,16 @@ TEST_F(IO, iSWAPDumpIsValid) {
   std::cout << *qc << "\n";
 }
 
+TEST_F(IO, iSWAPdagDumpIsValid) {
+  qc->addQubitRegister(2);
+  qc->iswapdg(0, 1);
+  std::cout << *qc << "\n";
+  std::stringstream ss{};
+  qc->dumpOpenQASM(ss);
+  EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM););
+  std::cout << *qc << "\n";
+}
+
 TEST_F(IO, PeresDumpIsValid) {
   qc->addQubitRegister(2);
   qc->peres(0, 1);

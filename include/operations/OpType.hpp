@@ -33,7 +33,8 @@ enum OpType : std::uint8_t {
   RY,
   RZ,
   SWAP,
-  iSWAP, // NOLINT (readability-identifier-naming)
+  iSWAP,   // NOLINT (readability-identifier-naming)
+  iSWAPdg, // NOLINT (readability-identifier-naming)
   Peres,
   Peresdg,
   DCX,
@@ -109,6 +110,8 @@ inline std::string toString(const OpType& opType) {
     return "swap";
   case iSWAP:
     return "iswap";
+  case iSWAPdg:
+    return "iswapdg";
   case Peres:
     return "peres";
   case Peresdg:
@@ -163,6 +166,8 @@ inline std::string shortName(const OpType& opType) {
     return "sw";
   case iSWAP:
     return "isw";
+  case iSWAPdg:
+    return "isd";
   case Peres:
     return "pr";
   case Peresdg:
@@ -188,6 +193,7 @@ inline bool isTwoQubitGate(const OpType& opType) {
   switch (opType) {
   case SWAP:
   case iSWAP:
+  case iSWAPdg:
   case Peres:
   case Peresdg:
   case DCX:
@@ -262,6 +268,7 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"swap", OpType::SWAP},
         {"cswap", OpType::SWAP},
         {"iswap", OpType::iSWAP},
+        {"iswapdg", OpType::iSWAPdg},
         {"peres", OpType::Peres},
         {"peresdg", OpType::Peresdg},
         {"dcx", OpType::DCX},
