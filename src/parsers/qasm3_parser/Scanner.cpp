@@ -273,7 +273,6 @@ Scanner::Scanner(std::istream* in) : is(in) {
   keywords["for"] = Token::Kind::For;
   keywords["while"] = Token::Kind::While;
   keywords["in"] = Token::Kind::In;
-  // TOOD: handle pragma properly
   keywords["pragma"] = Token::Kind::Pragma;
   keywords["input"] = Token::Kind::Input;
   keywords["output"] = Token::Kind::Output;
@@ -308,12 +307,12 @@ Scanner::Scanner(std::istream* in) : is(in) {
   keywords["true"] = Token::Kind::True;
   keywords["false"] = Token::Kind::False;
   keywords["im"] = Token::Kind::Imag;
-  //        keywords["dt"]         = Token::Kind::TimeUnitDt;
-  //        keywords["ns"]         = Token::Kind::TimeUnitNs;
-  //        keywords["us"]         = Token::Kind::TimeUnitUs;
-  //        keywords["mys"]        = Token::Kind::TimeUnitMys;
-  //        keywords["ms"]         = Token::Kind::TimeUnitMs;
-  //        keywords["s"]          = Token::Kind::TimeUnitS;
+  keywords["dt"] = Token::Kind::TimeUnitDt;
+  keywords["ns"] = Token::Kind::TimeUnitNs;
+  keywords["us"] = Token::Kind::TimeUnitUs;
+  keywords["mys"] = Token::Kind::TimeUnitMys;
+  keywords["ms"] = Token::Kind::TimeUnitMs;
+  keywords["s"] = Token::Kind::S;
   keywords["sin"] = Token::Kind::Sin;
   keywords["cos"] = Token::Kind::Cos;
   keywords["tan"] = Token::Kind::Tan;

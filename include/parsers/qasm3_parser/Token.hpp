@@ -143,7 +143,8 @@ public:
     TimeUnitUs,
     TimeUnitMys,
     TimeUnitMs,
-    TimeUnitS,
+    // might be either TimeUnitS or the `s` gate
+    S,
 
     DoubleQuote,
     SingleQuote,
@@ -400,7 +401,7 @@ public:
       return "TimeUnitMys";
     case Kind::TimeUnitMs:
       return "TimeUnitMs";
-    case Kind::TimeUnitS:
+    case Kind::S:
       return "TimeUnitS";
     case Kind::DoubleQuote:
       return "DoubleQuote";
