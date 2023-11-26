@@ -699,7 +699,7 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) {
 
   if (openQASM3) {
     for (const auto& op : ops) {
-      op->dumpOpenQASM3(of, combinedRegNames, cregnames);
+      op->dumpOpenQASM3(of, combinedRegNames, cregnames, 0);
     }
   } else {
     for (const auto& op : ops) {
