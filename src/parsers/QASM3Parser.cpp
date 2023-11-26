@@ -497,7 +497,7 @@ public:
       i++;
     }
 
-    // check if any of the bits are duplicte
+    // check if any of the bits are duplicate
     std::unordered_set<qc::Qubit> allQubits;
     for (const auto& control : controlBits) {
       if (allQubits.find(control.qubit) != allQubits.end()) {
