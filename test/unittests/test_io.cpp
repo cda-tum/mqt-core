@@ -106,7 +106,7 @@ TEST_F(IO, importFromString) {
 TEST_F(IO, controlledOpActingOnWholeRegister) {
   const std::string circuitQasm = "qreg q[2];\ncx q,q[1];\n";
   std::stringstream ss{circuitQasm};
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), std::runtime_error);
+  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), qc::QFRException);
 }
 
 TEST_F(IO, invalidRealHeader) {
@@ -634,19 +634,13 @@ TEST_F(IO, ParametrizedGateDefinition) {
   const auto& op = dynamic_cast<const qc::CompoundOperation*>(qc->at(0).get());
   ASSERT_NE(op, nullptr);
   EXPECT_EQ(op->size(), 2U);
-  // RZ is implemented as a compound operation with a gphase and a U gate
-  EXPECT_EQ(op->at(0)->getType(), qc::Compound);
+  EXPECT_EQ(op->at(0)->getType(), qc::RZ);
   EXPECT_EQ(op->at(1)->getType(), qc::RX);
-
+  const auto& rz = dynamic_cast<const qc::StandardOperation*>(op->at(0).get());
+  ASSERT_NE(rz, nullptr);
   const auto& rx = dynamic_cast<const qc::StandardOperation*>(op->at(1).get());
   ASSERT_NE(rx, nullptr);
-  const auto& rz = dynamic_cast<const qc::CompoundOperation*>(op->at(0).get());
-  ASSERT_NE(rz, nullptr);
-  EXPECT_EQ(rz->size(), 2);
-  EXPECT_EQ(rz->at(0)->getType(), qc::GPhase);
-  EXPECT_EQ(rz->at(0)->getParameter().at(0), -std::cos(qc::PI_4));
-  EXPECT_EQ(rz->at(1)->getType(), qc::P);
-  EXPECT_EQ(rz->at(1)->getParameter().at(0), 2 * std::cos(qc::PI_4));
+  EXPECT_EQ(rz->getParameter().at(0), 2 * std::cos(qc::PI_4));
   EXPECT_EQ(rx->getParameter().at(0), 0.5 * std::sin(qc::PI_2));
 }
 
