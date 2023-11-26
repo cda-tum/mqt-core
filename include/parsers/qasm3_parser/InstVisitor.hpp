@@ -91,7 +91,7 @@ public:
   // A manually implemented visitor function with a templated return type.
   // This is not possible as a virtual function in expression, which is why
   // we define it manually.
-  T visit(const std::shared_ptr<Expression>& expression) {
+  T visit(std::shared_ptr<Expression> expression) {
     if (expression == nullptr) {
       throw std::runtime_error("Expression is null");
     }

@@ -334,7 +334,8 @@ Token Scanner::next() {
   if (isFirstIdChar(ch)) {
     return consumeName();
   }
-  if (isNum(ch) || ch == '.' || (ch == '-' && isNum(peek()))) {
+  if (isNum(ch) || (ch == '.' && isNum(peek())) ||
+      (ch == '-' && isNum(peek()))) {
     return consumeNumberLiteral();
   }
   if (ch == '$') {
@@ -507,7 +508,15 @@ Token Scanner::next() {
     }
     break;
   case '!':
-    t.kind = Token::Kind::ExclamationPoint;
+    switch (peek()) {
+    case '=':
+      nextCh();
+      t.kind = Token::Kind::NotEquals;
+      break;
+    default:
+      t.kind = Token::Kind::ExclamationPoint;
+      break;
+    }
     break;
   case '<':
     switch (peek()) {

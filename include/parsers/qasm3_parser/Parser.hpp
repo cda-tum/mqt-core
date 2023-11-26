@@ -112,12 +112,14 @@ class Parser {
   }
 
 public:
-  explicit Parser(std::istream* is) {
+  explicit Parser(std::istream* is, bool implicitlyIncludeStdgates = true) {
     scanner.emplace(is);
     scan();
-    scanner.emplace(std::make_unique<std::istringstream>(STDGATES),
-                    "stdgates.inc", true);
-    scan();
+    if (implicitlyIncludeStdgates) {
+      scanner.emplace(std::make_unique<std::istringstream>(STDGATES),
+                      "stdgates.inc", true);
+      scan();
+    }
   }
 
   virtual ~Parser() = default;

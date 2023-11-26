@@ -33,7 +33,7 @@ void TypeCheckPass::visitDeclarationStatement(
   // designator expression, we need to resolve the statement in three steps.
   const auto typeExpr = std::get<0>(declarationStatement->type);
   // First, type-check the type itself.
-  if (typeExpr->getDesignator() != nullptr &&
+  if (typeExpr->allowsDesignator() && typeExpr->getDesignator() != nullptr &&
       visit(typeExpr->getDesignator()).isError) {
     error("Designator expression type check failed.",
           declarationStatement->debugInfo);
