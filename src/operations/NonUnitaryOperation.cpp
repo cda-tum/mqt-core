@@ -62,8 +62,8 @@ std::ostream& NonUnitaryOperation::print(
 
 void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
                                        const RegisterNames& qreg,
-                                       const RegisterNames& creg,
-                                       size_t indent, bool openQASM3) const {
+                                       const RegisterNames& creg, size_t indent,
+                                       bool openQASM3) const {
   of << std::string(indent * 2, ' ');
 
   if (isWholeQubitRegister(qreg, targets.front(), targets.back()) &&
