@@ -697,14 +697,14 @@ TEST_F(IO, MarkAncillaryAndDump) {
   EXPECT_NE(ss2.str().find(ss.str()), std::string::npos);
 }
 
-TEST_F(IO, dumpOpenQASM2_3) {
+TEST_F(IO, dumpEmptyOpenQASM) {
   std::stringstream ss{};
   ss << "\n";
   qc->import(ss, qc::Format::OpenQASM);
 
-  std::string openQASM2 =
+  std::string const openQASM2 =
       "// i\n// o\nOPENQASM 2.0;\ninclude \"qelib1.inc\";\n";
-  std::string openQASM3 =
+  std::string const openQASM3 =
       "// i\n// o\nOPENQASM 3.0;\ninclude \"stdgates.inc\";\n";
 
   std::stringstream out1;
