@@ -38,20 +38,20 @@ class Parser {
       return t.kind != Token::Kind::Eof;
     }
 
-    explicit
-    ScannerState(std::istream* in,
-                 std::optional<std::string> debugFilename = std::nullopt,
-                 const bool implicitInclude = false)
+    explicit ScannerState(
+        std::istream* in,
+        std::optional<std::string> debugFilename = std::nullopt,
+        const bool implicitInclude = false)
         : scanner(std::make_unique<Scanner>(in)),
           filename(std::move(debugFilename)),
           isImplicitInclude(implicitInclude) {
       scan();
     }
 
-    explicit
-    ScannerState(std::unique_ptr<std::istream> in,
-                 std::optional<std::string> debugFilename = std::nullopt,
-                 const bool implicitInclude = false)
+    explicit ScannerState(
+        std::unique_ptr<std::istream> in,
+        std::optional<std::string> debugFilename = std::nullopt,
+        const bool implicitInclude = false)
         : is(std::move(in)), scanner(std::make_unique<Scanner>(is.get())),
           filename(std::move(debugFilename)),
           isImplicitInclude(implicitInclude) {

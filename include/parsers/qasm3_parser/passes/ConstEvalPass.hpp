@@ -18,8 +18,7 @@ struct ConstEvalValue {
   explicit ConstEvalValue(double val, const size_t w = 64)
       : type(ConstFloat), value(val), width(w) {}
   explicit ConstEvalValue(int64_t val, const bool isSigned, const size_t w = 64)
-      : type(isSigned ? ConstInt : ConstUint), value(val),
-        width(w) {}
+      : type(isSigned ? ConstInt : ConstUint), value(val), width(w) {}
 
   std::shared_ptr<Constant> toExpr() const {
     switch (type) {
@@ -30,8 +29,7 @@ struct ConstEvalValue {
     case ConstFloat:
       return std::make_shared<Constant>(Constant(std::get<1>(value)));
     case ConstBool:
-      return std::make_shared<Constant>(
-          Constant(std::get<2>(value), false));
+      return std::make_shared<Constant>(Constant(std::get<2>(value), false));
     }
 
 #if defined(__GNUC__) || defined(__clang__)

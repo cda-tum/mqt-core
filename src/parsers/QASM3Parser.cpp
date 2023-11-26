@@ -195,7 +195,8 @@ public:
     }
   }
 
-  void visitDeclarationStatement(const std::shared_ptr<DeclarationStatement> declarationStatement) override {
+  void visitDeclarationStatement(const std::shared_ptr<DeclarationStatement>
+                                     declarationStatement) override {
     const auto identifier = declarationStatement->identifier;
     if (declarations.find(identifier).has_value()) {
       // TODO: show the location of the previous declaration
@@ -237,8 +238,9 @@ public:
       // value is uninitialized
       return;
     }
-    if (const auto measureExpression = std::dynamic_pointer_cast<MeasureExpression>(
-            declarationStatement->expression->expression)) {
+    if (const auto measureExpression =
+            std::dynamic_pointer_cast<MeasureExpression>(
+                declarationStatement->expression->expression)) {
       if (declarationStatement->isConst) {
         error("Cannot initialize a const register with a measure statement.",
               declarationStatement->debugInfo);
@@ -266,8 +268,9 @@ public:
             assignmentStatement->debugInfo);
     }
 
-    if (const auto measureExpression = std::dynamic_pointer_cast<MeasureExpression>(
-            assignmentStatement->expression->expression)) {
+    if (const auto measureExpression =
+            std::dynamic_pointer_cast<MeasureExpression>(
+                assignmentStatement->expression->expression)) {
       visitMeasureAssignment(identifier, assignmentStatement->indexExpression,
                              measureExpression, assignmentStatement->debugInfo);
       return;
@@ -278,8 +281,7 @@ public:
           assignmentStatement->debugInfo);
   }
 
-  void
-  visitInitialLayout(
+  void visitInitialLayout(
       const std::shared_ptr<InitialLayout> initialLayout) override {
     if (!qc->initialLayout.empty()) {
       error("Multiple initial layout specifications found.",
@@ -297,8 +299,7 @@ public:
     qc->outputPermutation = outputPermutation->permutation;
   }
 
-  void
-  visitGateStatement(
+  void visitGateStatement(
       const std::shared_ptr<GateDeclaration> gateStatement) override {
     auto identifier = gateStatement->identifier;
     if (gateStatement->isOpaque) {
