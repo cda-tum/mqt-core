@@ -3118,7 +3118,6 @@ public:
   bool zeroAncillaPartialEquivalenceCheck(mEdge u1, mEdge u2, Qubit m) {
 
     auto u1u2 = multiply(u1, conjugateTranspose(u2));
-    u1u2.printMatrix();
     return zeroAncillaPartialEquivalenceCheckSubroutine(u1u2, m);
   }
 };

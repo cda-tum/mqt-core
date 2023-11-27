@@ -2115,8 +2115,8 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingTrivialEquivalence) {
 TEST(DDPackageTest, DDMPartialEquivalenceCheckingTest) {
   const auto nqubits = 3U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
-  // only the first qubit has differing gates in the two circuits,
-  // therefore they should be equivalent if we only measure the second qubit
+  // only the second qubit has differing gates in the two circuits,
+  // therefore they should be equivalent if we only measure the third qubit
   auto hGate = dd->makeGateDD(dd::H_MAT, 3, 1);
   auto xGate = dd->makeGateDD(dd::X_MAT, 3, 1);
   auto circuit1 = dd->multiply(xGate, hGate);
@@ -2128,8 +2128,8 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingTest) {
 TEST(DDPackageTest, DDMPartialEquivalenceCheckingTestNotEquivalent) {
   const auto nqubits = 2U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
-  // only the first qubit has differing gates in the two circuits,
-  // therefore they should be equivalent if we only measure the second qubit
+  // the second qubit has differing gates in the two circuits,
+  // therefore they should not be equivalent if we only measure the second qubit
   auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 1);
   auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
   auto circuit1 = dd->multiply(xGate, hGate);
@@ -2194,12 +2194,10 @@ TEST(DDPackageTest,
   c1.h(0);
   c1.z(2);
   c1.cswap(1, 0, 2);
-  // c1.measure(2, 0);
 
   qc::QuantumComputation c2{3, 1};
   c2.x(1);
   c2.ch(1, 0);
-  // c2.measure(2, 0);
 
   c1.setLogicalQubitGarbage(1);
   c1.setLogicalQubitGarbage(2);
