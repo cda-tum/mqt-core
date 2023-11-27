@@ -39,6 +39,13 @@ if(NOT TARGET ${PROJECT_NAME})
     ${PROJECT_SOURCE_DIR}/include/operations/Operation.hpp
     ${PROJECT_SOURCE_DIR}/include/operations/StandardOperation.hpp
     ${PROJECT_SOURCE_DIR}/include/operations/SymbolicOperation.hpp
+    ${PROJECT_SOURCE_DIR}/include/operations/gates/GateMatrixInterface.hpp
+    ${PROJECT_SOURCE_DIR}/include/operations/gates/HGate.hpp
+    ${PROJECT_SOURCE_DIR}/include/operations/gates/IGate.hpp
+    ${PROJECT_SOURCE_DIR}/include/operations/gates/SGate.hpp
+    ${PROJECT_SOURCE_DIR}/include/operations/gates/XGate.hpp
+    ${PROJECT_SOURCE_DIR}/include/operations/gates/YGate.hpp
+    ${PROJECT_SOURCE_DIR}/include/operations/gates/ZGate.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Parser.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
