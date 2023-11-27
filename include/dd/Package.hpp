@@ -2868,6 +2868,7 @@ private:
     f.w = e.w;
     return f;
   }
+
   ComputeTable<mEdge, Qubit, mEdge> setMatrixColumnsToZero{};
   ComputeTable<mEdge, Qubit, mEdge> setMatrixRowsToZero{};
 

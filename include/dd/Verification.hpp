@@ -64,7 +64,8 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
   auto u2 = buildFunctionality(&c2, dd);
   if (d1 == n) {
     // no ancilla qubits
-    return dd->zeroAncillaPartialEquivalenceCheck(u1, u2, m1);
+    return dd->zeroAncillaPartialEquivalenceCheck(u1, u2,
+                                                  static_cast<Qubit>(m1));
   }
   return dd->partialEquivalenceCheck(u1, u2, static_cast<Qubit>(d1),
                                      static_cast<Qubit>(m1));
