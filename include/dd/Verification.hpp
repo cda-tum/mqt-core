@@ -20,12 +20,9 @@ inline Qubit getNextGarbage(Qubit n, const std::vector<bool>& garbage) {
     @return true if the two circuits c1 and c2 are partially equivalent.
     **/
 template <class Config>
-bool partialEquivalenceCheck(const qc::QuantumComputation& circuit1,
-                             const qc::QuantumComputation& circuit2,
+bool partialEquivalenceCheck(qc::QuantumComputation c1,
+                             qc::QuantumComputation c2,
                              std::unique_ptr<dd::Package<Config>>& dd) {
-
-  auto c1 = circuit1;
-  auto c2 = circuit2;
 
   auto d1 = c1.getNqubitsWithoutAncillae();
   auto d2 = c2.getNqubitsWithoutAncillae();
@@ -65,6 +62,10 @@ bool partialEquivalenceCheck(const qc::QuantumComputation& circuit1,
 
   auto u1 = buildFunctionality(&c1, dd);
   auto u2 = buildFunctionality(&c2, dd);
+  if (d1 == n) {
+    // no ancilla qubits
+    return dd->zeroAncillaPartialEquivalenceCheck(u1, u2, m1);
+  }
   return dd->partialEquivalenceCheck(u1, u2, static_cast<Qubit>(d1),
                                      static_cast<Qubit>(m1));
   // return true;

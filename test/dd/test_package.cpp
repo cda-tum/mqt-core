@@ -2154,6 +2154,36 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaper) {
   EXPECT_TRUE(dd->partialEquivalenceCheck(c1, c2, 3, 1));
 }
 
+TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaperZeroAncilla) {
+  const auto nqubits = 3U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
+  auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 2);
+  auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 0);
+  auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
+  auto controlledHGate = dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 2);
+
+  auto c1 = dd->multiply(
+      controlledSwapGate,
+      dd->multiply(hGate, dd->multiply(zGate, controlledSwapGate)));
+  auto c2 = dd->multiply(controlledHGate, xGate);
+
+  EXPECT_TRUE(dd->zeroAncillaPartialEquivalenceCheck(c1, c2, 1));
+  EXPECT_FALSE(dd->zeroAncillaPartialEquivalenceCheck(c1, c2, 2));
+
+  auto hGate2 = dd->makeGateDD(dd::H_MAT, nqubits, 0);
+  auto zGate2 = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
+  auto controlledHGate2 =
+      dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 2);
+
+  auto c3 = dd->multiply(
+      controlledSwapGate,
+      dd->multiply(hGate2, dd->multiply(zGate2, controlledSwapGate)));
+  auto c4 = dd->multiply(controlledHGate2, xGate);
+
+  EXPECT_FALSE(dd->zeroAncillaPartialEquivalenceCheck(c3, c4, 1));
+}
+
 TEST(DDPackageTest, DDMKroneckerProduct) {
   const auto nqubits = 2U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);

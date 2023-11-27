@@ -2982,6 +2982,19 @@ private:
     return u5;
   }
 
+  bool zeroAncillaPartialEquivalenceCheckSubroutine(mEdge u, Qubit m) {
+    if (u.isTerminal()) {
+      return m < 1;
+    }
+    if (m == 0) {
+      return true;
+    }
+
+    return u.p->e[1].isZeroTerminal() && u.p->e[2].isZeroTerminal() &&
+           zeroAncillaPartialEquivalenceCheckSubroutine(u.p->e[0], m - 1) &&
+           zeroAncillaPartialEquivalenceCheckSubroutine(u.p->e[3], m - 1);
+  }
+
 public:
   /**
     Checks for partial equivalence between the two circuits u1 and u2,
@@ -3023,6 +3036,22 @@ public:
     auto u2Prime = partialEquivalenceCheckSubroutine(u2, m, k, extra);
 
     return u1Prime == u2Prime;
+  }
+
+  /**
+      Checks for partial equivalence between the two circuits u1 and u2,
+       where all qubits of the circuits are the data qubits and
+       the last m qubits are the measured qubits.
+      @param u1 DD representation of first circuit
+      @param u2 DD representation of second circuit
+      @param m Number of measured qubits
+      @return true if the two circuits u1 and u2 are partially equivalent.
+      **/
+  bool zeroAncillaPartialEquivalenceCheck(mEdge u1, mEdge u2, Qubit m) {
+
+    auto u1u2 = multiply(u1, conjugateTranspose(u2));
+    u1u2.printMatrix();
+    return zeroAncillaPartialEquivalenceCheckSubroutine(u1u2, m);
   }
 };
 
