@@ -69,6 +69,5 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
   }
   return dd->partialEquivalenceCheck(u1, u2, static_cast<Qubit>(d1),
                                      static_cast<Qubit>(m1));
-  // return true;
 }
 } // namespace dd

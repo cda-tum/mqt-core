@@ -8,7 +8,6 @@
 #include "dd/DensityNoiseTable.hpp"
 #include "dd/Edge.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
-#include "dd/Node.hpp"
 #include "dd/Package_fwd.hpp"
 #include "dd/StochasticNoiseOperationTable.hpp"
 #include "dd/UnaryComputeTable.hpp"
