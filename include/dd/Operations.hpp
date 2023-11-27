@@ -121,6 +121,9 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
     case qc::iSWAP:
       gm = inverse ? ISWAPDG_MAT : ISWAP_MAT;
       break;
+    case qc::iSWAPdg:
+      gm = inverse ? ISWAP_MAT : ISWAPDG_MAT;
+      break;
     case qc::DCX:
       gm = DCX_MAT;
       break;
@@ -165,6 +168,11 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
                                 startQubit);
     }
     return dd->makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
+  case qc::iSWAPdg:
+    if (inverse) {
+      return dd->makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
+    }
+    return dd->makeiSWAPinvDD(nqubits, controls, target0, target1, startQubit);
   case qc::Peres:
     if (inverse) {
       return dd->makePeresdagDD(nqubits, controls, target0, target1,

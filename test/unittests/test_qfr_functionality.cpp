@@ -772,6 +772,9 @@ TEST_F(QFRFunctionality, gateShortCutsAndCloning) {
   qc.iswap(0, 1);
   qc.ciswap(2, 0, 1);
   qc.mciswap({2, 3_nc}, 0, 1);
+  qc.iswapdg(0, 1);
+  qc.ciswapdg(2, 0, 1);
+  qc.mciswapdg({2, 3_nc}, 0, 1);
   qc.peres(0, 1);
   qc.cperes(2, 0, 1);
   qc.mcperes({2, 3_nc}, 0, 1);
@@ -2161,7 +2164,7 @@ TEST_F(QFRFunctionality, invertStandardOpInvertClone) {
 TEST_F(QFRFunctionality, invertStandardOpSpecial) {
   const auto opTypes = {
       std::pair{S, Sdg},   std::pair{T, Tdg},         std::pair{V, Vdg},
-      std::pair{SX, SXdg}, std::pair{Peres, Peresdg},
+      std::pair{SX, SXdg}, std::pair{Peres, Peresdg}, std::pair{iSWAP, iSWAPdg},
   };
 
   for (const auto& [opType, opTypeInv] : opTypes) {

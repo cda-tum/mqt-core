@@ -486,6 +486,74 @@ public:
     return f;
   }
 
+  // generate general GHZ state with n qubits
+  vEdge makeGHZState(const std::size_t n) {
+    if (n > nqubits) {
+      throw std::runtime_error{
+          "Requested state with " + std::to_string(n) +
+          " qubits, but current package configuration only supports up to " +
+          std::to_string(nqubits) +
+          " qubits. Please allocate a larger package instance."};
+    }
+
+    if (n == 0U) {
+      return vEdge::one();
+    }
+
+    auto leftSubtree = vEdge::one();
+    auto rightSubtree = vEdge::one();
+
+    for (std::size_t p = 0; p < n - 1; ++p) {
+      leftSubtree = makeDDNode(static_cast<Qubit>(p),
+                               std::array{leftSubtree, vEdge::zero()});
+      rightSubtree = makeDDNode(static_cast<Qubit>(p),
+                                std::array{vEdge::zero(), rightSubtree});
+    }
+
+    return makeDDNode(
+        static_cast<Qubit>(n - 1),
+        std::array<vEdge, RADIX>{
+            {{leftSubtree.p, {&constants::sqrt2over2, &constants::zero}},
+             {rightSubtree.p, {&constants::sqrt2over2, &constants::zero}}}});
+  }
+
+  // generate general W state with n qubits
+  vEdge makeWState(const std::size_t n) {
+    if (n > nqubits) {
+      throw std::runtime_error{
+          "Requested state with " + std::to_string(n) +
+          " qubits, but current package configuration only supports up to " +
+          std::to_string(nqubits) +
+          " qubits. Please allocate a larger package instance."};
+    }
+
+    if (n == 0U) {
+      return vEdge::one();
+    }
+
+    auto leftSubtree = vEdge::zero();
+    if ((1. / sqrt(static_cast<double>(n))) < RealNumber::eps) {
+      throw std::runtime_error(
+          "Requested qubit size for generating W-state would lead to an "
+          "underflow due to 1 / sqrt(n) being smaller than the currently set "
+          "tolerance " +
+          std::to_string(RealNumber::eps) +
+          ". If you still wanna run the computation, please lower "
+          "the tolerance accordingly.");
+    }
+
+    auto rightSubtree = vEdge::terminal(cn.lookup(1. / std::sqrt(n)));
+    for (size_t p = 0; p < n; ++p) {
+      leftSubtree = makeDDNode(static_cast<Qubit>(p),
+                               std::array{leftSubtree, rightSubtree});
+      if (p != n - 1U) {
+        rightSubtree = makeDDNode(static_cast<Qubit>(p),
+                                  std::array{rightSubtree, vEdge::zero()});
+      }
+    }
+    return leftSubtree;
+  }
+
   // generate the decision diagram from an arbitrary state vector
   vEdge makeStateFromVector(const CVec& stateVector) {
     if (stateVector.empty()) {
