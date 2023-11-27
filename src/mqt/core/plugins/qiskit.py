@@ -415,9 +415,9 @@ def _import_definition(
     comp_op = cast(CompoundOperation, qc[-1])
 
     params = []
-    for instruction, qargs, cargs in circ.data:
-        mapped_qargs = [qarg_map[qarg] for qarg in qargs]
-        mapped_cargs = [carg_map[carg] for carg in cargs]
+    for instruction, q_args, c_args in circ.data:
+        mapped_qargs = [qarg_map[qarg] for qarg in q_args]
+        mapped_cargs = [carg_map[carg] for carg in c_args]
         instruction_params = instruction.params
         new_params = _emplace_operation(
             comp_op, instruction, mapped_qargs, mapped_cargs, instruction_params, qubit_map, clbit_map
