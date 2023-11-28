@@ -7,16 +7,16 @@
 
 namespace qc {
 class SWAPGate : public GateMatrixInterface, StandardOperation {
-//  dd::TwoQubitGateMatrix getGateMatrix() override { return swapMat; }
+  //  dd::TwoQubitGateMatrix getGateMatrix() override { return swapMat; }
 
   bool isSingleTargetGate() override { return false; }
   bool isTwoTargetGate() override { return true; }
   bool isThreeOrMoreTargetGate() override { return false; }
 
-//  dd::TwoQubitGateMatrix getInverseGateMatrix() override { return swapMat; }
+  //  dd::TwoQubitGateMatrix getInverseGateMatrix() override { return swapMat; }
 
 private:
   dd::TwoQubitGateMatrix swapMat{
       {{1, 0, 0, 0}, {0, 0, 1, 0}, {0, 1, 0, 0}, {0, 0, 0, 1}}};
 };
-}  // namespace qc
+} // namespace qc

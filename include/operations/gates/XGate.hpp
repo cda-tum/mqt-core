@@ -18,4 +18,4 @@ class XGate : public GateMatrixInterface, StandardOperation {
 private:
   dd::GateMatrix xMat{0, 1, 1, 0};
 };
-}  // namespace qc
+} // namespace qc

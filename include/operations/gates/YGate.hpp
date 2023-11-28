@@ -18,4 +18,4 @@ class YGate : public GateMatrixInterface, StandardOperation {
 private:
   dd::GateMatrix yMat{0, {0, -1}, {0, 1}, 0};
 };
-}  // namespace qc
+} // namespace qc
