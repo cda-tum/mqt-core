@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <stdexcept>
 
 namespace qasm3 {
 class GateDeclaration;

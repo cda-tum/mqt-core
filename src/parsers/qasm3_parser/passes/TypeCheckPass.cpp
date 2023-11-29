@@ -3,6 +3,7 @@
 #include "parsers/qasm3_parser/Statement.hpp"
 #include "parsers/qasm3_parser/Types.hpp"
 
+#include <stdexcept>
 #include <vector>
 
 namespace qasm3::type_checking {
