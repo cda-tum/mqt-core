@@ -2,6 +2,8 @@
 
 #include "InstVisitor.hpp"
 
+#include <string>
+
 namespace qasm3 {
 class Expression;
 
@@ -318,10 +320,10 @@ public:
   }
 
   std::string toString() override {
-    if constexpr (std::is_same_v<T, std::shared_ptr<Expression>>) {
-      return type->toString() + "[" + size->toString() + "]";
-    } else {
+    if constexpr (std::is_same_v<T, size_t>) {
       return type->toString() + "[" + std::to_string(size) + "]";
+    } else {
+      return type->toString() + "[<expression>]";
     }
   }
 };
