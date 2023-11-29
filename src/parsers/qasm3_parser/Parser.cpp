@@ -35,7 +35,7 @@ std::vector<std::shared_ptr<Statement>> Parser::parseProgram() {
       if (current().kind == Token::Kind::OpenQasm) {
         if (!versionDeclarationAllowed) {
           error(current(),
-                "Version declaration must be at the beginning of the file");
+                "Version declaration must be at the beginning of the file.");
         }
         statements.emplace_back(parseVersionDeclaration());
         versionDeclarationAllowed = false;

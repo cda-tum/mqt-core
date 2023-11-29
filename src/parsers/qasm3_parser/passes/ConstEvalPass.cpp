@@ -1,5 +1,7 @@
 #include "parsers/qasm3_parser/passes/ConstEvalPass.hpp"
 
+#include "parsers/qasm3_parser/Exception.hpp"
+
 #include <cmath>
 
 namespace qasm3::const_eval {
@@ -12,7 +14,7 @@ template <typename T> T power(T base, T exponent) {
   T result = 1;
   for (T i = 0; i < exponent; ++i) {
     if (result > std::numeric_limits<T>::max() / base) {
-      throw std::runtime_error("Integer overflow in constant evaluation.");
+      throw ConstEvalError("Integer overflow in constant evaluation.");
     }
     result *= base;
   }
@@ -29,7 +31,7 @@ void ConstEvalPass::visitDeclarationStatement(
 
   const auto value = visit(declarationStatement->expression->expression);
   if (!value) {
-    throw std::runtime_error(
+    throw ConstEvalError(
         "Constant declaration initialization expression must be const.");
   }
 
@@ -182,8 +184,7 @@ ConstEvalValue ConstEvalPass::evalIntExpression(BinaryExpression::Op op,
     result.value = static_cast<int64_t>(lhsU | rhsU);
     break;
   default:
-    throw std::runtime_error(
-        "Unsupported binary expression operator on integer.");
+    throw ConstEvalError("Unsupported binary expression operator on integer.");
   }
 
   // now we need to make sure the result is correct according to the bit width
@@ -204,7 +205,7 @@ ConstEvalValue ConstEvalPass::evalIntExpression(BinaryExpression::Op op,
       result.value = castToWidth<int64_t>(std::get<0>(result.value));
       break;
     default:
-      throw std::runtime_error("Unsupported bit width.");
+      throw ConstEvalError("Unsupported bit width.");
     }
   }
 
@@ -259,7 +260,7 @@ ConstEvalValue ConstEvalPass::evalFloatExpression(BinaryExpression::Op op,
     result.type = ConstEvalValue::Type::ConstBool;
     break;
   default:
-    throw std::runtime_error(
+    throw ConstEvalError(
         "Unsupported binary expression operator on floating point.");
   }
 
@@ -293,8 +294,7 @@ ConstEvalValue ConstEvalPass::evalBoolExpression(const BinaryExpression::Op op,
     result.value = lhs || rhs;
     break;
   default:
-    throw std::runtime_error(
-        "Unsupported binary expression operator on boolean.");
+    throw ConstEvalError("Unsupported binary expression operator on boolean.");
   }
 
   return result;
@@ -341,7 +341,7 @@ std::optional<ConstEvalValue> ConstEvalPass::visitBinaryExpression(
     rhsVal->value = static_cast<double>(std::get<0>(rhsVal->value));
     rhsVal->type = ConstEvalValue::Type::ConstFloat;
   } else if (lhsVal->type != rhsVal->type) {
-    throw std::runtime_error(
+    throw ConstEvalError(
         "Type mismatch, cannot evaluate binary expression on types " +
         std::to_string(lhsVal->type) + " and " + std::to_string(rhsVal->type) +
         ".");
@@ -364,7 +364,7 @@ std::optional<ConstEvalValue> ConstEvalPass::visitBinaryExpression(
                               std::get<2>(rhsVal->value));
   }
 
-  throw std::runtime_error("Unhandled binary expression type.");
+  throw ConstEvalError("Unhandled binary expression type.");
 }
 
 std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
@@ -498,10 +498,10 @@ ConstEvalPass::visitDesignatedType(DesignatedType* designatedType) {
   }
   const auto result = visit(designatedType->designator);
   if (!result) {
-    throw std::runtime_error("Designator must be a constant expression.");
+    throw ConstEvalError("Designator must be a constant expression.");
   }
   if (result->type != ConstEvalValue::Type::ConstUint) {
-    throw std::runtime_error("Designator must be an unsigned integer.");
+    throw ConstEvalError("Designator must be an unsigned integer.");
   }
   return std::make_shared<SizedType>(
       designatedType->type, static_cast<uint64_t>(std::get<0>(result->value)));
@@ -515,10 +515,10 @@ std::shared_ptr<ResolvedType> ConstEvalPass::visitArrayType(
   std::shared_ptr<Type<uint64_t>> const inner = arrayType->type->accept(this);
   const auto size = visit(arrayType->size);
   if (!size.has_value()) {
-    throw std::runtime_error("Array size must be a constant expression.");
+    throw ConstEvalError("Array size must be a constant expression.");
   }
   if (size->type != ConstEvalValue::Type::ConstUint) {
-    throw std::runtime_error("Array size must be an unsigned integer.");
+    throw ConstEvalError("Array size must be an unsigned integer.");
   }
   return std::make_shared<ArrayType<uint64_t>>(
       inner, static_cast<uint64_t>(std::get<0>(size->value)));

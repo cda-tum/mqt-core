@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "Exception.hpp"
 #include "Scanner.hpp"
 #include "Statement.hpp"
 #include "StdGates.hpp"
@@ -62,13 +63,13 @@ class Parser {
   std::stack<ScannerState> scanner{};
   std::shared_ptr<DebugInfo> includeDebugInfo{nullptr};
 
-  [[noreturn]] static void error(const Token& token, const std::string& msg) {
+  [[noreturn]] void error(const Token& token, const std::string& msg) {
     std::cerr << "Error at line " << token.line << ", column " << token.col
               << ": " << msg << '\n';
-    throw std::runtime_error("Parser error");
+    throw CompilerError(msg, makeDebugInfo(token));
   }
 
-  static void warn(const Token& token, const std::string& msg) {
+  void warn(const Token& token, const std::string& msg) {
     std::cerr << "Warning at line " << token.line << ", column " << token.col
               << ": " << msg << '\n';
   }

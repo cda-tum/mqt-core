@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CompilerPass.hpp"
+#include "parsers/qasm3_parser/Exception.hpp"
 #include "parsers/qasm3_parser/NestedEnvironment.hpp"
 
 namespace qasm3::const_eval {
@@ -72,7 +73,12 @@ public:
   }
 
   void processStatement(Statement& statement) override {
-    statement.accept(this);
+    try {
+      statement.accept(this);
+    } catch (const ConstEvalError& e) {
+      throw CompilerError("Constant Evaluation: " + e.message,
+                          statement.debugInfo);
+    }
   }
 
   void pushEnv() { env.push(); }

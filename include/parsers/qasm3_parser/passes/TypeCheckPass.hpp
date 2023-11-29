@@ -67,11 +67,15 @@ public:
   }
 
   void processStatement(Statement& statement) override {
-    statement.accept(this);
+    try {
+      statement.accept(this);
 
-    if (hasError) {
-      error("Type check failed for statement.", statement.debugInfo);
-      throw std::runtime_error("Type check failed.");
+      if (hasError) {
+        throw CompilerError("Type check failed.", statement.debugInfo);
+      }
+    } catch (const TypeCheckError& e) {
+      throw CompilerError("Type Check Error: " + e.message,
+                          statement.debugInfo);
     }
   }
 

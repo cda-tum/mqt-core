@@ -1,9 +1,9 @@
 #include "parsers/qasm3_parser/passes/TypeCheckPass.hpp"
 
+#include "parsers/qasm3_parser/Exception.hpp"
 #include "parsers/qasm3_parser/Statement.hpp"
 #include "parsers/qasm3_parser/Types.hpp"
 
-#include <stdexcept>
 #include <vector>
 
 namespace qasm3::type_checking {
@@ -47,7 +47,7 @@ void TypeCheckPass::visitDeclarationStatement(
   auto resolvedType =
       std::get<0>(declarationStatement->type)->accept(constEvalPass);
   if (!resolvedType) {
-    throw std::runtime_error("Expression in types must be const.");
+    throw TypeCheckError("Expression in types must be const.");
   }
   declarationStatement->type = resolvedType;
 
@@ -264,8 +264,7 @@ InferredType TypeCheckPass::visitIdentifierExpression(
 
 InferredType TypeCheckPass::visitIdentifierList(
     std::shared_ptr<IdentifierList> /*identifierList*/) {
-  throw std::runtime_error(
-      "TypeCheckPass::visitIdentifierList not implemented");
+  throw TypeCheckError("TypeCheckPass::visitIdentifierList not implemented");
 }
 
 InferredType TypeCheckPass::visitMeasureExpression(

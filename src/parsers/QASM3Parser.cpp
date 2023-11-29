@@ -1,5 +1,6 @@
 #include "QuantumComputation.hpp"
 #include "operations/Operation.hpp"
+#include "parsers/qasm3_parser/Exception.hpp"
 #include "parsers/qasm3_parser/Gate.hpp"
 #include "parsers/qasm3_parser/InstVisitor.hpp"
 #include "parsers/qasm3_parser/NestedEnvironment.hpp"
@@ -17,29 +18,6 @@ using const_eval::ConstEvalPass;
 using const_eval::ConstEvalValue;
 using type_checking::InferredType;
 using type_checking::TypeCheckPass;
-
-struct CompilerError final : std::exception {
-  std::string message{};
-  std::shared_ptr<DebugInfo> debugInfo{};
-
-  CompilerError(std::string msg, std::shared_ptr<DebugInfo> debug)
-      : message(std::move(msg)), debugInfo(std::move(debug)) {}
-
-  [[nodiscard]] std::string toString() const {
-    std::stringstream ss{};
-    ss << debugInfo->toString();
-
-    auto parentDebugInfo = debugInfo->parent;
-    while (parentDebugInfo != nullptr) {
-      ss << "\n  (included from " << parentDebugInfo->toString() << ")";
-      parentDebugInfo = parentDebugInfo->parent;
-    }
-
-    ss << ":\n" << message;
-
-    return ss.str();
-  }
-};
 
 class OpenQasm3Parser final : public InstVisitor {
   ConstEvalPass constEvalPass;
@@ -165,7 +143,7 @@ public:
 
   ~OpenQasm3Parser() override = default;
 
-  bool visitProgram(const std::vector<std::shared_ptr<Statement>>& program) {
+  void visitProgram(const std::vector<std::shared_ptr<Statement>>& program) {
     // TODO: in the future, don't exit early, but collect all errors
     // To do this, we need to insert make sure that erroneous declarations
     // actually insert a dummy entry; also, we need to synchronize to the next
@@ -178,11 +156,9 @@ public:
         statement->accept(this);
       } catch (CompilerError& e) {
         std::cerr << e.toString() << '\n';
-        return false;
+        throw;
       }
     }
-
-    return true;
   }
 
   void visitVersionDeclaration(
@@ -230,10 +206,6 @@ public:
     }
     declarations.emplace(identifier, declarationStatement);
 
-    if (declarationStatement->isConst) {
-      // nothing to do
-      return;
-    }
     if (declarationStatement->expression == nullptr) {
       // value is uninitialized
       return;
@@ -241,12 +213,14 @@ public:
     if (const auto measureExpression =
             std::dynamic_pointer_cast<MeasureExpression>(
                 declarationStatement->expression->expression)) {
-      if (declarationStatement->isConst) {
-        error("Cannot initialize a const register with a measure statement.",
-              declarationStatement->debugInfo);
-      }
+      assert(!declarationStatement->isConst &&
+             "Type check pass should catch this");
       visitMeasureAssignment(identifier, nullptr, measureExpression,
                              declarationStatement->debugInfo);
+      return;
+    }
+    if (declarationStatement->isConst) {
+      // nothing to do
       return;
     }
 
@@ -258,15 +232,8 @@ public:
       const std::shared_ptr<AssignmentStatement> assignmentStatement) override {
     const auto identifier = assignmentStatement->identifier->identifier;
     const auto declaration = declarations.find(identifier);
-    if (!declaration.has_value()) {
-      error("Usage of unknown identifier '" + identifier + "'.",
-            assignmentStatement->debugInfo);
-    }
-
-    if (declaration->get()->isConst) {
-      error("Assignment to constant identifier '" + identifier + "'.",
-            assignmentStatement->debugInfo);
-    }
+    assert(declaration.has_value() && "Checked by type check pass");
+    assert(!declaration->get()->isConst && "Checked by type check pass");
 
     if (const auto measureExpression =
             std::dynamic_pointer_cast<MeasureExpression>(
@@ -349,11 +316,6 @@ public:
 
   void visitGateCallStatement(
       const std::shared_ptr<GateCallStatement> gateCallStatement) override {
-    if (gates.find(gateCallStatement->identifier) == gates.end()) {
-      error("Gate '" + gateCallStatement->identifier + "' not declared.",
-            gateCallStatement->debugInfo);
-    }
-
     auto qregs = qc->getQregs();
 
     if (auto op = evaluateGateCall(
@@ -392,7 +354,7 @@ public:
     if (targets.size() < nControls) {
       error("Gate '" + identifier + "' takes " + std::to_string(nControls) +
                 " controls, but only " + std::to_string(targets.size()) +
-                " were supplied.",
+                " qubit swere supplied.",
             gateCallStatement->debugInfo);
     }
 
@@ -445,7 +407,8 @@ public:
     for (const auto& param : parameters) {
       auto result = constEvalPass.visit(param);
       if (!result.has_value()) {
-        error("Only const expressions are supported, but found '" +
+        error("Only const expressions are supported as gate parameters, but "
+              "found '" +
                   param->getName() + "'.",
               gateCallStatement->debugInfo);
       }
@@ -783,8 +746,7 @@ void qc::QuantumComputation::importOpenQASM3(std::istream& is) {
 
   Parser p(&is);
 
-  auto program = p.parseProgram();
-  if (OpenQasm3Parser parser{this}; !parser.visitProgram(program)) {
-    throw std::runtime_error("Error importing OpenQASM.");
-  }
+  const auto program = p.parseProgram();
+  OpenQasm3Parser parser{this};
+  parser.visitProgram(program);
 }

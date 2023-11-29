@@ -1,4 +1,5 @@
 #include "QuantumComputation.hpp"
+#include "parsers/qasm3_parser/Exception.hpp"
 
 #include <filesystem>
 #include <gtest/gtest.h>
@@ -126,26 +127,26 @@ TEST_F(IO, invalidRealCommand) {
 TEST_F(IO, insufficientRegistersQelib) {
   const std::string circuitQasm = "qreg q[2];\ncx q[0];\n";
   std::stringstream ss{circuitQasm};
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), std::runtime_error);
+  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), qasm3::CompilerError);
 }
 
 TEST_F(IO, insufficientRegistersEnhancedQelib) {
   const std::string circuitQasm = "qreg q[4];\nctrl(3) @ z q[0], q[1], q[2];\n";
   std::stringstream ss{circuitQasm};
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), std::runtime_error);
+  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), qasm3::CompilerError);
 }
 
 TEST_F(IO, superfluousRegistersQelib) {
   const std::string circuitQasm = "qreg q[3];\ncx q[0], q[1], q[2];\n";
   std::stringstream ss{circuitQasm};
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), std::runtime_error);
+  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), qasm3::CompilerError);
 }
 
 TEST_F(IO, superfluousRegistersEnhancedQelib) {
   const std::string circuitQasm =
       "qreg q[5];\nctrl(3) z q[0], q[1], q[2], q[3], q[4];\n";
   std::stringstream ss{circuitQasm};
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), std::runtime_error);
+  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), qasm3::CompilerError);
 }
 
 TEST_F(IO, dumpNegativeControl) {
@@ -647,7 +648,7 @@ TEST_F(IO, ParametrizedGateDefinition) {
 TEST_F(IO, NonExistingInclude) {
   std::stringstream ss{};
   ss << "include \"qelib.inc\";\n";
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), std::runtime_error);
+  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), qasm3::CompilerError);
 }
 
 TEST_F(IO, NonStandardInclude) {
