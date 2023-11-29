@@ -119,8 +119,7 @@ public:
     try {
       statement.accept(this);
     } catch (const ConstEvalError& e) {
-      throw CompilerError("Constant Evaluation: " + e.message,
-                          statement.debugInfo);
+      throw CompilerError(e.toString(), statement.debugInfo);
     }
   }
 

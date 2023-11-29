@@ -32,16 +32,20 @@ class ConstEvalError final : std::exception {
 public:
   std::string message{};
 
-  ConstEvalError(std::string msg) : message(std::move(msg)) {}
+  explicit ConstEvalError(std::string msg) : message(std::move(msg)) {}
 
-  [[nodiscard]] std::string toString() const { return message; }
+  [[nodiscard]] std::string toString() const {
+    return "Constant Evaluation: " + message;
+  }
 };
 
 class TypeCheckError final : std::exception {
 public:
   std::string message{};
 
-  TypeCheckError(std::string msg) : message(std::move(msg)) {}
+  explicit TypeCheckError(std::string msg) : message(std::move(msg)) {}
 
-  [[nodiscard]] std::string toString() const { return message; }
+  [[nodiscard]] std::string toString() const {
+    return "Type Check Error: " + message;
+  }
 };

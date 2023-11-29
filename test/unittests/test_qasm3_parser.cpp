@@ -790,7 +790,7 @@ TEST_F(Qasm3ParserTest, ImportQasmUnknownQreg) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Usage of unknown quantum register.");
           throw;
         }
@@ -812,7 +812,7 @@ TEST_F(Qasm3ParserTest, ImportQasmIndexOutOfBounds) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Index expression must be smaller than the "
                                "width of the quantum register.");
           throw;
@@ -836,7 +836,7 @@ TEST_F(Qasm3ParserTest, ImportQasmIndexOutOfBoundsClassical) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Index expression must be smaller than the "
                                "width of the classical register.");
           throw;
@@ -859,7 +859,7 @@ TEST_F(Qasm3ParserTest, ImportQasmDuplicateDeclaration) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Identifier 'q' already declared.");
           throw;
         }
@@ -881,7 +881,7 @@ TEST_F(Qasm3ParserTest, ImportQasmInitConstRegWithMeasure) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Constant Evaluation: Constant declaration "
                                "initialization expression must be const.");
           throw;
@@ -904,7 +904,7 @@ TEST_F(Qasm3ParserTest, ImportQasmAssignmentUnknownIdentifier) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Type check failed.");
           throw;
         }
@@ -927,7 +927,7 @@ TEST_F(Qasm3ParserTest, ImportQasmAssignmentConstVar) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Type check failed.");
           throw;
         }
@@ -949,7 +949,7 @@ TEST_F(Qasm3ParserTest, ImportQasmMultipleInputPermutations) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Multiple initial layout specifications found.");
           throw;
         }
@@ -971,7 +971,7 @@ TEST_F(Qasm3ParserTest, ImportQasmMultipleOutputPermutations) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message,
                     "Multiple output permutation specifications found.");
           throw;
@@ -992,7 +992,7 @@ TEST_F(Qasm3ParserTest, ImportQasmInvalidOpaqueGate) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Unsupported opaque gate 'asdf'.");
           throw;
         }
@@ -1013,7 +1013,7 @@ TEST_F(Qasm3ParserTest, ImportQasmDuplicateGateDecl) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Gate 'my_x' already declared.");
           throw;
         }
@@ -1033,7 +1033,7 @@ TEST_F(Qasm3ParserTest, ImportQasmDuplicateQubitArgGate) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Qubit 'q' already declared.");
           throw;
         }
@@ -1054,7 +1054,7 @@ TEST_F(Qasm3ParserTest, ImportQasmUndeclaredGate) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Usage of unknown gate 'my_x'.");
           throw;
         }
@@ -1076,7 +1076,7 @@ TEST_F(Qasm3ParserTest, ImportQasmInvalidGateTargets) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message,
                     "Gate 'my_x' takes 1 targets, but 2 were supplied.");
           throw;
@@ -1098,7 +1098,7 @@ TEST_F(Qasm3ParserTest, ImportQasmInvalidGateControls) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message,
                     "Gate 'cx' takes 1 targets, but 0 were supplied.");
           throw;
@@ -1120,7 +1120,7 @@ TEST_F(Qasm3ParserTest, ImportQasmInvalidGateModifiers) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message,
                     "Gate 'x' takes 2 controls, but only 1 were supplied.");
           throw;
@@ -1143,7 +1143,7 @@ TEST_F(Qasm3ParserTest, ImportQasmGateCallNonConst) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Only const expressions are supported as gate "
                                "parameters, but found 'IdentifierExpr (c)'.");
           throw;
@@ -1166,7 +1166,7 @@ TEST_F(Qasm3ParserTest, ImportQasmGateCallBroadcastingInvalidWidth) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(
               e.message,
               "When broadcasting, all registers must be of the same width.");
@@ -1190,7 +1190,7 @@ TEST_F(Qasm3ParserTest, ImportQasmGateCallIndexingGateBody) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message,
                     "Gate arguments cannot be indexed within gate body.");
           throw;
@@ -1212,7 +1212,7 @@ TEST_F(Qasm3ParserTest, ImportQasmGateMeasureInvalidSizes) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message,
                     "Classical and quantum register must have the same width "
                     "in measure statement. Classical register 'c' has 3 bits, "
@@ -1236,7 +1236,7 @@ TEST_F(Qasm3ParserTest, ImportQasmGateOldStyleDesignator) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "In OpenQASM 3.0, the designator has been "
                                "changed to `type[designator] identifier;`");
           throw;
@@ -1258,7 +1258,7 @@ TEST_F(Qasm3ParserTest, ImportQasmGateExpectStatement) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Expected statement, got '+'.");
           throw;
         }
@@ -1278,7 +1278,7 @@ TEST_F(Qasm3ParserTest, ImportQasmGateVersionDeclaration) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(
               e.message,
               "Version declaration must be at the beginning of the file.");
@@ -1300,7 +1300,7 @@ TEST_F(Qasm3ParserTest, ImportQasmInvalidExpected) {
       {
         try {
           qc.import(ss, Format::OpenQASM3);
-        } catch (const qasm3::CompilerError e) {
+        } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Expected ',', got 'Identifier'.");
           throw;
         }

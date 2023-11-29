@@ -69,11 +69,6 @@ class Parser {
     throw CompilerError(msg, makeDebugInfo(token));
   }
 
-  void warn(const Token& token, const std::string& msg) {
-    std::cerr << "Warning at line " << token.line << ", column " << token.col
-              << ": " << msg << '\n';
-  }
-
   [[nodiscard]] Token last() const {
     if (scanner.empty()) {
       throw std::runtime_error("No scanner available");

@@ -74,8 +74,7 @@ public:
         throw CompilerError("Type check failed.", statement.debugInfo);
       }
     } catch (const TypeCheckError& e) {
-      throw CompilerError("Type Check Error: " + e.message,
-                          statement.debugInfo);
+      throw CompilerError(e.toString(), statement.debugInfo);
     }
   }
 
