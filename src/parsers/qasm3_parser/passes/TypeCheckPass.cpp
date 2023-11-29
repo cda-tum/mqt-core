@@ -1,5 +1,8 @@
 #include "parsers/qasm3_parser/passes/TypeCheckPass.hpp"
 
+#include "parsers/qasm3_parser/Statement.hpp"
+#include "parsers/qasm3_parser/Types.hpp"
+
 #include <vector>
 
 namespace qasm3::type_checking {
@@ -296,7 +299,10 @@ std::shared_ptr<ResolvedType> TypeCheckPass::visitUnsizedType(
 }
 std::shared_ptr<ResolvedType> TypeCheckPass::visitArrayType(
     ArrayType<std::shared_ptr<Expression>>* arrayType) {
-  // TODO: check the size once it is converted to an expression.
+  const auto resolvedTy = visit(arrayType->size);
+  if (!resolvedTy.isError && !resolvedTy.type->isUint()) {
+    error("Designator must be an unsigned integer");
+  }
   arrayType->accept(this);
   return nullptr;
 }

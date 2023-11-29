@@ -3,7 +3,8 @@
 #include <cmath>
 
 namespace qasm3::const_eval {
-template <typename T> static T power(T base, T exponent) {
+namespace {
+template <typename T> T power(T base, T exponent) {
   if (exponent == 0) {
     return 1;
   }
@@ -17,6 +18,7 @@ template <typename T> static T power(T base, T exponent) {
   }
   return result;
 }
+} // namespace
 
 void ConstEvalPass::visitDeclarationStatement(
     const std::shared_ptr<DeclarationStatement> declarationStatement) {
