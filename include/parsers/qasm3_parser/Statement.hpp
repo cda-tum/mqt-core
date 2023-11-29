@@ -167,8 +167,8 @@ class IdentifierList : public Expression,
 public:
   std::vector<std::shared_ptr<IdentifierExpression>> identifiers{};
 
-  explicit
-  IdentifierList(std::vector<std::shared_ptr<IdentifierExpression>> ids)
+  explicit IdentifierList(
+      std::vector<std::shared_ptr<IdentifierExpression>> ids)
       : identifiers(std::move(ids)) {}
 
   explicit IdentifierList() = default;
