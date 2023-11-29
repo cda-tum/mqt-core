@@ -49,7 +49,7 @@ if(NOT TARGET ${PROJECT_NAME})
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Types.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/InstVisitor.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/NestedEnvironment.hpp
-          ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Exception.hpp
+    ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Exception.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Gate.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/StdGates.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/passes/CompilerPass.hpp
