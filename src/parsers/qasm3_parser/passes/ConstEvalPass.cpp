@@ -133,6 +133,7 @@ ConstEvalValue ConstEvalPass::evalIntExpression(BinaryExpression::Op op,
     } else {
       result.value = lhsU < rhsU;
     }
+    result.type = ConstEvalValue::Type::ConstBool;
     break;
   case BinaryExpression::LessThanOrEqual:
     if (isSigned) {
@@ -269,7 +270,7 @@ ConstEvalValue ConstEvalPass::evalFloatExpression(BinaryExpression::Op op,
 ConstEvalValue ConstEvalPass::evalBoolExpression(const BinaryExpression::Op op,
                                                  const bool lhs,
                                                  const bool rhs) {
-  ConstEvalValue result{ConstEvalValue::Type::ConstBool, false, 1};
+  ConstEvalValue result{false};
 
   switch (op) {
   case BinaryExpression::Op::Equal:
@@ -320,8 +321,8 @@ std::optional<ConstEvalValue> ConstEvalPass::visitBinaryExpression(
        rhsVal->type == ConstEvalValue::Type::ConstUint) ||
       (lhsVal->type == ConstEvalValue::Type::ConstUint &&
        rhsVal->type == ConstEvalValue::Type::ConstInt)) {
-    lhsVal->type = ConstEvalValue::Type::ConstUint;
-    rhsVal->type = ConstEvalValue::Type::ConstUint;
+    lhsVal->type = ConstEvalValue::Type::ConstInt;
+    rhsVal->type = ConstEvalValue::Type::ConstInt;
   } else if (lhsVal->type == ConstEvalValue::Type::ConstUint &&
              rhsVal->type == ConstEvalValue::Type::ConstFloat) {
     lhsVal->value =
@@ -377,6 +378,10 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
 
   switch (unaryExpression->op) {
   case UnaryExpression::BitwiseNot:
+    if (val->type != ConstEvalValue::Type::ConstInt &&
+        val->type != ConstEvalValue::Type::ConstUint) {
+      return std::nullopt;
+    }
     val->value = ~std::get<0>(val->value);
     break;
   case UnaryExpression::LogicalNot:
@@ -400,9 +405,6 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
   case UnaryExpression::Sin:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
       val->value = sin(std::get<1>(val->value));
-    } else if (val->type == ConstEvalValue::Type::ConstInt) {
-      val->value = sin(static_cast<double>(std::get<0>(val->value)));
-      val->type = ConstEvalValue::Type::ConstFloat;
     } else {
       return std::nullopt;
     }
@@ -410,9 +412,6 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
   case UnaryExpression::Cos:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
       val->value = cos(std::get<1>(val->value));
-    } else if (val->type == ConstEvalValue::Type::ConstInt) {
-      val->value = cos(static_cast<double>(std::get<0>(val->value)));
-      val->type = ConstEvalValue::Type::ConstFloat;
     } else {
       return std::nullopt;
     }
@@ -420,9 +419,6 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
   case UnaryExpression::Tan:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
       val->value = tan(std::get<1>(val->value));
-    } else if (val->type == ConstEvalValue::Type::ConstInt) {
-      val->value = tan(static_cast<double>(std::get<0>(val->value)));
-      val->type = ConstEvalValue::Type::ConstFloat;
     } else {
       return std::nullopt;
     }
@@ -430,9 +426,6 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
   case UnaryExpression::Exp:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
       val->value = exp(std::get<1>(val->value));
-    } else if (val->type == ConstEvalValue::Type::ConstInt) {
-      val->value = exp(static_cast<double>(std::get<0>(val->value)));
-      val->type = ConstEvalValue::Type::ConstFloat;
     } else {
       return std::nullopt;
     }
@@ -440,9 +433,6 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
   case UnaryExpression::Ln:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
       val->value = log(std::get<1>(val->value));
-    } else if (val->type == ConstEvalValue::Type::ConstInt) {
-      val->value = log(static_cast<double>(std::get<0>(val->value)));
-      val->type = ConstEvalValue::Type::ConstFloat;
     } else {
       return std::nullopt;
     }
@@ -450,9 +440,6 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
   case UnaryExpression::Sqrt:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
       val->value = sqrt(std::get<1>(val->value));
-    } else if (val->type == ConstEvalValue::Type::ConstInt) {
-      val->value = sqrt(static_cast<double>(std::get<0>(val->value)));
-      val->type = ConstEvalValue::Type::ConstFloat;
     } else {
       return std::nullopt;
     }
@@ -470,6 +457,9 @@ std::optional<ConstEvalValue> ConstEvalPass::visitConstantExpression(
   }
   if (constant->isSInt()) {
     return ConstEvalValue{constant->getSInt(), true};
+  }
+  if (constant->isBool()) {
+    return ConstEvalValue(constant->getBool());
   }
   assert(constant->isUInt());
   // we still call getSInt here as we will store the int value as its bit
@@ -500,11 +490,14 @@ ConstEvalPass::visitDesignatedType(DesignatedType* designatedType) {
   if (!result) {
     throw ConstEvalError("Designator must be a constant expression.");
   }
-  if (result->type != ConstEvalValue::Type::ConstUint) {
-    throw ConstEvalError("Designator must be an unsigned integer.");
+  if (result->type == ConstEvalValue::Type::ConstUint ||
+      (result->type == ConstEvalValue::Type::ConstInt &&
+       std::get<0>(result->value) >= 0)) {
+    return std::make_shared<SizedType>(
+        designatedType->type,
+        static_cast<uint64_t>(std::get<0>(result->value)));
   }
-  return std::make_shared<SizedType>(
-      designatedType->type, static_cast<uint64_t>(std::get<0>(result->value)));
+  throw ConstEvalError("Designator must be an unsigned integer.");
 }
 std::shared_ptr<ResolvedType> ConstEvalPass::visitUnsizedType(
     UnsizedType<std::shared_ptr<Expression>>* unsizedType) {

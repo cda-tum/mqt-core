@@ -187,9 +187,9 @@ public:
     case Kind::Comment:
       return "Comment";
     case Kind::OpenQasm:
-      return "OpenQasm";
+      return "OPENQASM";
     case Kind::Include:
-      return "Include";
+      return "include";
     case Kind::DefCalGrammar:
       return "DefCalGrammar";
     case Kind::Def:
@@ -199,217 +199,217 @@ public:
     case Kind::DefCal:
       return "DefCal";
     case Kind::Gate:
-      return "Gate";
+      return "gate";
     case Kind::Opaque:
-      return "Opaque";
+      return "opaque";
     case Kind::Extern:
-      return "Extern";
+      return "extern";
     case Kind::Box:
-      return "Box";
+      return "box";
     case Kind::Let:
-      return "Let";
+      return "let";
     case Kind::Break:
-      return "Break";
+      return "break";
     case Kind::Continue:
-      return "Continue";
+      return "continue";
     case Kind::If:
-      return "If";
+      return "if";
     case Kind::Else:
-      return "Else";
+      return "else";
     case Kind::End:
-      return "End";
+      return "end";
     case Kind::Return:
-      return "Return";
+      return "return";
     case Kind::For:
-      return "For";
+      return "for";
     case Kind::While:
-      return "While";
+      return "while";
     case Kind::In:
-      return "In";
+      return "in";
     case Kind::Pragma:
-      return "Pragma";
+      return "pragma";
     case Kind::Input:
-      return "Input";
+      return "input";
     case Kind::Output:
-      return "Output";
+      return "output";
     case Kind::Const:
-      return "Const";
+      return "const";
     case Kind::ReadOnly:
-      return "ReadOnly";
+      return "readOnly";
     case Kind::Mutable:
-      return "Mutable";
+      return "mutable";
     case Kind::Qreg:
-      return "Qreg";
+      return "qreg";
     case Kind::Qubit:
-      return "Qubit";
+      return "qubit";
     case Kind::CReg:
-      return "CReg";
+      return "cReg";
     case Kind::Bool:
-      return "Bool";
+      return "bool";
     case Kind::Bit:
-      return "Bit";
+      return "bit";
     case Kind::Int:
-      return "Int";
+      return "int";
     case Kind::Uint:
-      return "Uint";
+      return "uint";
     case Kind::Float:
-      return "Float";
+      return "float";
     case Kind::Angle:
-      return "Angle";
+      return "angle";
     case Kind::Complex:
-      return "Complex";
+      return "complex";
     case Kind::Array:
-      return "Array";
+      return "array";
     case Kind::Void:
-      return "Void";
+      return "void";
     case Kind::Duration:
-      return "Duration";
+      return "duration";
     case Kind::Stretch:
-      return "Stretch";
+      return "stretch";
     case Kind::Gphase:
-      return "Gphase";
+      return "gphase";
     case Kind::Inv:
-      return "Inv";
+      return "inv";
     case Kind::Pow:
-      return "Pow";
+      return "pow";
     case Kind::Ctrl:
-      return "Ctrl";
+      return "ctrl";
     case Kind::NegCtrl:
-      return "NegCtrl";
+      return "negCtrl";
     case Kind::Dim:
-      return "Dim";
+      return "#dim";
     case Kind::DurationOf:
-      return "DurationOf";
+      return "durationof";
     case Kind::Delay:
-      return "Delay";
+      return "delay";
     case Kind::Reset:
-      return "Reset";
+      return "reset";
     case Kind::Measure:
-      return "Measure";
+      return "measure";
     case Kind::Barrier:
-      return "Barrier";
+      return "barrier";
     case Kind::True:
-      return "True";
+      return "true";
     case Kind::False:
-      return "False";
+      return "false";
     case Kind::LBracket:
-      return "LBracket";
+      return "[";
     case Kind::RBracket:
-      return "RBracket";
+      return "]";
     case Kind::LBrace:
-      return "LBrace";
+      return "{";
     case Kind::RBrace:
-      return "RBrace";
+      return "}";
     case Kind::LParen:
-      return "LParen";
+      return "(";
     case Kind::RParen:
-      return "RParen";
+      return ")";
     case Kind::Colon:
-      return "Colon";
+      return ":";
     case Kind::Semicolon:
-      return "Semicolon";
+      return ";";
     case Kind::Eof:
       return "Eof";
     case Kind::Dot:
-      return "Dot";
+      return ".";
     case Kind::Comma:
-      return "Comma";
+      return ",";
     case Kind::Equals:
-      return "Equals";
+      return "=";
     case Kind::Arrow:
-      return "Arrow";
+      return "->";
     case Kind::Plus:
-      return "Plus";
+      return "+";
     case Kind::DoublePlus:
-      return "DoublePlus";
+      return "++";
     case Kind::Minus:
-      return "Minus";
+      return "-";
     case Kind::Asterisk:
-      return "Asterisk";
+      return "*";
     case Kind::DoubleAsterisk:
-      return "DoubleAsterisk";
+      return "**";
     case Kind::Slash:
-      return "Slash";
+      return "/";
     case Kind::Percent:
-      return "Percent";
+      return "%";
     case Kind::Pipe:
-      return "Pipe";
+      return "|";
     case Kind::DoublePipe:
-      return "DoublePipe";
+      return "||";
     case Kind::Ampersand:
-      return "Ampersand";
+      return "&";
     case Kind::DoubleAmpersand:
-      return "DoubleAmpersand";
+      return "&&";
     case Kind::Caret:
-      return "Caret";
+      return "^";
     case Kind::At:
-      return "At";
+      return "@";
     case Kind::Tilde:
-      return "Tilde";
+      return "~";
     case Kind::ExclamationPoint:
-      return "ExclamationPoint";
+      return "!";
     case Kind::DoubleEquals:
-      return "DoubleEquals";
+      return "==";
     case Kind::NotEquals:
-      return "NotEquals";
+      return "!=";
     case Kind::PlusEquals:
-      return "PlusEquals";
+      return "+=";
     case Kind::MinusEquals:
-      return "MinusEquals";
+      return "+=";
     case Kind::AsteriskEquals:
-      return "AsteriskEquals";
+      return "*=";
     case Kind::SlashEquals:
-      return "SlashEquals";
+      return "/=";
     case Kind::AmpersandEquals:
-      return "AmpersandEquals";
+      return "&=";
     case Kind::PipeEquals:
-      return "PipeEquals";
+      return "|=";
     case Kind::TildeEquals:
-      return "TildeEquals";
+      return "~=";
     case Kind::CaretEquals:
-      return "CaretEquals";
+      return "^=";
     case Kind::LeftShitEquals:
-      return "LeftShitEquals";
+      return "<<=";
     case Kind::RightShiftEquals:
-      return "RightShiftEquals";
+      return ">>=";
     case Kind::PercentEquals:
-      return "PercentEquals";
+      return "%=";
     case Kind::DoubleAsteriskEquals:
-      return "DoubleAsteriskEquals";
+      return "**=";
     case Kind::LessThan:
-      return "LessThan";
+      return "<";
     case Kind::LessThanEquals:
-      return "LessThanEquals";
+      return "<=";
     case Kind::GreaterThan:
-      return "GreaterThan";
+      return ">";
     case Kind::GreaterThanEquals:
-      return "GreaterThanEquals";
+      return ">=";
     case Kind::LeftShift:
-      return "LeftShift";
+      return "<<";
     case Kind::RightShift:
-      return "RightShift";
+      return ">>";
     case Kind::Imag:
-      return "Imag";
+      return "imag";
     case Kind::Underscore:
-      return "Underscore";
+      return "underscore";
     case Kind::TimeUnitDt:
-      return "TimeUnitDt";
+      return "dt";
     case Kind::TimeUnitNs:
-      return "TimeUnitNs";
+      return "ns";
     case Kind::TimeUnitUs:
-      return "TimeUnitUs";
+      return "us";
     case Kind::TimeUnitMys:
-      return "TimeUnitMys";
+      return "mys";
     case Kind::TimeUnitMs:
-      return "TimeUnitMs";
+      return "ms";
     case Kind::S:
-      return "TimeUnitS";
+      return "s";
     case Kind::DoubleQuote:
-      return "DoubleQuote";
+      return "\"";
     case Kind::SingleQuote:
-      return "SingleQuote";
+      return "'";
     case Kind::BackSlash:
-      return "BackSlash";
+      return "\\";
     case Kind::Identifier:
       return "Identifier";
     case Kind::HardwareQubit:
@@ -421,17 +421,17 @@ public:
     case Kind::FloatLiteral:
       return "FloatLiteral";
     case Kind::Sin:
-      return "Sin";
+      return "sin";
     case Kind::Cos:
-      return "Cos";
+      return "cos";
     case Kind::Tan:
-      return "Tan";
+      return "tan";
     case Kind::Exp:
-      return "Exp";
+      return "exp";
     case Kind::Ln:
-      return "Ln";
+      return "ln";
     case Kind::Sqrt:
-      return "Sqrt";
+      return "sqrt";
     default:
       throw std::runtime_error("Unknown token kind");
     }
@@ -445,7 +445,7 @@ public:
       ss << " (" << str << ")";
       break;
     case Kind::StringLiteral:
-      ss << " ('" << str << "')";
+      ss << " (\"" << str << "\")";
       break;
     case Kind::IntegerLiteral:
       ss << " (" << val << ")";

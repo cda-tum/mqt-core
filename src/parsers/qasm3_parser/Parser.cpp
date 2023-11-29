@@ -152,7 +152,7 @@ std::shared_ptr<Statement> Parser::parseStatement() {
     return quantumStatement;
   }
 
-  error(current(), "Expected statement, got " + current().toString() + ".");
+  error(current(), "Expected statement, got '" + current().toString() + "'.");
 }
 
 std::shared_ptr<QuantumStatement> Parser::parseQuantumStatement() {

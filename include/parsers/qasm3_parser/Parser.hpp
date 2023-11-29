@@ -100,7 +100,7 @@ class Parser {
     if (current().kind != expected) {
       std::string message = "Expected '" + Token::kindToString(expected) +
                             "', got '" + Token::kindToString(current().kind) +
-                            "'";
+                            "'.";
       if (context.has_value()) {
         message += " " + context.value();
       }

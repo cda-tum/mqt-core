@@ -19,6 +19,8 @@ struct ConstEvalValue {
       : type(ConstFloat), value(val), width(w) {}
   explicit ConstEvalValue(int64_t val, const bool isSigned, const size_t w = 64)
       : type(isSigned ? ConstInt : ConstUint), value(val), width(w) {}
+  explicit ConstEvalValue(bool value)
+      : type(ConstBool), value(value), width(1) {}
 
   [[nodiscard]] std::shared_ptr<Constant> toExpr() const {
     switch (type) {
@@ -39,6 +41,47 @@ struct ConstEvalValue {
     __assume(0);
 #else
 #endif
+  }
+
+  bool operator==(const ConstEvalValue& rhs) const {
+    if (type != rhs.type) {
+      return false;
+    }
+
+    switch (type) {
+    case ConstInt:
+      return std::get<0>(value) == std::get<0>(rhs.value);
+    case ConstUint:
+      return std::get<0>(value) == std::get<0>(rhs.value);
+    case ConstFloat:
+      return std::get<1>(value) == std::get<1>(rhs.value);
+    case ConstBool:
+      return std::get<2>(value) == std::get<2>(rhs.value);
+    }
+
+    return false;
+  }
+
+  bool operator!=(const ConstEvalValue& rhs) const { return !(*this == rhs); }
+
+  [[nodiscard]] std::string toString() const {
+    std::stringstream ss{};
+    switch (type) {
+    case ConstInt:
+      ss << "ConstInt(" << std::get<0>(value) << ")";
+      break;
+    case ConstUint:
+      ss << "ConstUint(" << std::get<0>(value) << ")";
+      break;
+    case ConstFloat:
+      ss << "ConstFloat(" << std::get<1>(value) << ")";
+      break;
+    case ConstBool:
+      ss << "ConstBool(" << std::get<2>(value) << ")";
+      break;
+    }
+
+    return ss.str();
   }
 };
 

@@ -50,20 +50,25 @@ public:
 };
 
 class Constant : public Expression {
-  std::variant<int64_t, double> val;
+  std::variant<int64_t, double, bool> val;
   bool isSigned;
   bool isFp;
+  bool isBoolean;
 
 public:
   Constant(int64_t value, const bool valueIsSigned)
-      : val(value), isSigned(valueIsSigned), isFp(false) {}
+      : val(value), isSigned(valueIsSigned), isFp(false), isBoolean(false) {}
 
-  explicit Constant(double value) : val(value), isSigned(true), isFp(true) {}
+  explicit Constant(double value)
+      : val(value), isSigned(true), isFp(true), isBoolean(false) {}
+  explicit Constant(bool value)
+      : val(value), isSigned(false), isFp(false), isBoolean(true) {}
 
   [[nodiscard]] bool isInt() const { return !isFp; }
   [[nodiscard]] bool isSInt() const { return !isFp && isSigned; }
   [[nodiscard]] bool isUInt() const { return !isFp && !isSigned; }
   [[nodiscard]] bool isFP() const { return isFp; }
+  [[nodiscard]] bool isBool() const { return isBoolean; }
   [[nodiscard]] virtual int64_t getSInt() const { return std::get<0>(val); }
   [[nodiscard]] virtual uint64_t getUInt() const {
     return static_cast<uint64_t>(std::get<0>(val));
@@ -78,6 +83,7 @@ public:
     }
     return static_cast<double>(getUInt());
   }
+  [[nodiscard]] virtual bool getBool() const { return std::get<2>(val); }
 
   std::string getName() override { return "Constant"; }
 };
@@ -161,8 +167,8 @@ class IdentifierList : public Expression,
 public:
   std::vector<std::shared_ptr<IdentifierExpression>> identifiers{};
 
-  explicit IdentifierList(
-      std::vector<std::shared_ptr<IdentifierExpression>> ids)
+  explicit
+  IdentifierList(std::vector<std::shared_ptr<IdentifierExpression>> ids)
       : identifiers(std::move(ids)) {}
 
   explicit IdentifierList() = default;

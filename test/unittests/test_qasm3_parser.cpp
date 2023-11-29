@@ -3,6 +3,7 @@
 #include "parsers/qasm3_parser/Exception.hpp"
 #include "parsers/qasm3_parser/Parser.hpp"
 #include "parsers/qasm3_parser/Scanner.hpp"
+#include "parsers/qasm3_parser/passes/ConstEvalPass.hpp"
 
 #include "gtest/gtest.h"
 #include <cstddef>
@@ -790,7 +791,6 @@ TEST_F(Qasm3ParserTest, ImportQasmUnknownQreg) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Usage of unknown quantum register.");
           throw;
         }
@@ -813,7 +813,6 @@ TEST_F(Qasm3ParserTest, ImportQasmIndexOutOfBounds) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Index expression must be smaller than the "
                                "width of the quantum register.");
           throw;
@@ -838,7 +837,6 @@ TEST_F(Qasm3ParserTest, ImportQasmIndexOutOfBoundsClassical) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Index expression must be smaller than the "
                                "width of the classical register.");
           throw;
@@ -862,7 +860,6 @@ TEST_F(Qasm3ParserTest, ImportQasmDuplicateDeclaration) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Identifier 'q' already declared.");
           throw;
         }
@@ -885,7 +882,6 @@ TEST_F(Qasm3ParserTest, ImportQasmInitConstRegWithMeasure) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Constant Evaluation: Constant declaration "
                                "initialization expression must be const.");
           throw;
@@ -909,7 +905,6 @@ TEST_F(Qasm3ParserTest, ImportQasmAssignmentUnknownIdentifier) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Type check failed.");
           throw;
         }
@@ -933,7 +928,6 @@ TEST_F(Qasm3ParserTest, ImportQasmAssignmentConstVar) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Type check failed.");
           throw;
         }
@@ -956,7 +950,6 @@ TEST_F(Qasm3ParserTest, ImportQasmMultipleInputPermutations) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Multiple initial layout specifications found.");
           throw;
         }
@@ -979,7 +972,6 @@ TEST_F(Qasm3ParserTest, ImportQasmMultipleOutputPermutations) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message,
                     "Multiple output permutation specifications found.");
           throw;
@@ -1001,7 +993,6 @@ TEST_F(Qasm3ParserTest, ImportQasmInvalidOpaqueGate) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Unsupported opaque gate 'asdf'.");
           throw;
         }
@@ -1023,7 +1014,6 @@ TEST_F(Qasm3ParserTest, ImportQasmDuplicateGateDecl) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Gate 'my_x' already declared.");
           throw;
         }
@@ -1044,7 +1034,6 @@ TEST_F(Qasm3ParserTest, ImportQasmDuplicateQubitArgGate) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Qubit 'q' already declared.");
           throw;
         }
@@ -1066,7 +1055,6 @@ TEST_F(Qasm3ParserTest, ImportQasmUndeclaredGate) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Usage of unknown gate 'my_x'.");
           throw;
         }
@@ -1089,7 +1077,6 @@ TEST_F(Qasm3ParserTest, ImportQasmInvalidGateTargets) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message,
                     "Gate 'my_x' takes 1 targets, but 2 were supplied.");
           throw;
@@ -1112,7 +1099,6 @@ TEST_F(Qasm3ParserTest, ImportQasmInvalidGateControls) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message,
                     "Gate 'cx' takes 1 targets, but 0 were supplied.");
           throw;
@@ -1135,7 +1121,6 @@ TEST_F(Qasm3ParserTest, ImportQasmInvalidGateModifiers) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message,
                     "Gate 'x' takes 2 controls, but only 1 were supplied.");
           throw;
@@ -1159,7 +1144,6 @@ TEST_F(Qasm3ParserTest, ImportQasmGateCallNonConst) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "Only const expressions are supported as gate "
                                "parameters, but found 'IdentifierExpr (c)'.");
           throw;
@@ -1183,7 +1167,6 @@ TEST_F(Qasm3ParserTest, ImportQasmGateCallBroadcastingInvalidWidth) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(
               e.message,
               "When broadcasting, all registers must be of the same width.");
@@ -1208,7 +1191,6 @@ TEST_F(Qasm3ParserTest, ImportQasmGateCallIndexingGateBody) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message,
                     "Gate arguments cannot be indexed within gate body.");
           throw;
@@ -1231,7 +1213,6 @@ TEST_F(Qasm3ParserTest, ImportQasmGateMeasureInvalidSizes) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message,
                     "Classical and quantum register must have the same width "
                     "in measure statement. Classical register 'c' has 3 bits, "
@@ -1256,7 +1237,6 @@ TEST_F(Qasm3ParserTest, ImportQasmGateOldStyleDesignator) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(e.message, "In OpenQASM 3.0, the designator has been "
                                "changed to `type[designator] identifier;`");
           throw;
@@ -1279,8 +1259,7 @@ TEST_F(Qasm3ParserTest, ImportQasmGateExpectStatement) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
-          EXPECT_EQ(e.message, "Expected statement, got Plus.");
+          EXPECT_EQ(e.message, "Expected statement, got '+'.");
           throw;
         }
       },
@@ -1300,7 +1279,6 @@ TEST_F(Qasm3ParserTest, ImportQasmGateVersionDeclaration) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError e) {
-          std::cerr << e.message << "\n";
           EXPECT_EQ(
               e.message,
               "Version declaration must be at the beginning of the file.");
@@ -1308,4 +1286,648 @@ TEST_F(Qasm3ParserTest, ImportQasmGateVersionDeclaration) {
         }
       },
       qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasmInvalidExpected) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "qubit[2] q;\n"
+                               "cx q[0] q[1];"; // missing comma
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError e) {
+          EXPECT_EQ(e.message, "Expected ',', got 'Identifier'.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, TestPrintTokens) {
+  const auto tokens = std::vector{
+      qasm3::Token(qasm3::Token::Kind::None, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Comment, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::OpenQasm, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Include, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::DefCalGrammar, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Def, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Cal, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::DefCal, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Gate, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Opaque, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Extern, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Box, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Let, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Break, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Continue, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::If, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Else, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::End, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Return, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::For, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::While, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::In, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Pragma, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Input, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Output, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Const, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::ReadOnly, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Mutable, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Qreg, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Qubit, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::CReg, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Bool, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Bit, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Int, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Uint, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Float, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Angle, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Complex, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Array, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Void, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Duration, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Stretch, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Gphase, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Inv, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Pow, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Ctrl, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::NegCtrl, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Dim, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::DurationOf, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Delay, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Reset, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Measure, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Barrier, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::True, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::False, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::LBracket, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::RBracket, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::LBrace, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::RBrace, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::LParen, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::RParen, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Colon, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Semicolon, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Eof, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Dot, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Comma, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Equals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Arrow, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Plus, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::DoublePlus, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Minus, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Asterisk, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::DoubleAsterisk, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Slash, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Percent, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Pipe, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::DoublePipe, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Ampersand, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::DoubleAmpersand, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Caret, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::At, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Tilde, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::ExclamationPoint, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::DoubleEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::NotEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::PlusEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::MinusEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::AsteriskEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::SlashEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::AmpersandEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::PipeEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::TildeEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::CaretEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::LeftShitEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::RightShiftEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::PercentEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::DoubleAsteriskEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::LessThan, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::LessThanEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::GreaterThan, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::GreaterThanEquals, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::LeftShift, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::RightShift, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Imag, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Underscore, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::TimeUnitDt, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::TimeUnitNs, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::TimeUnitUs, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::TimeUnitMys, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::TimeUnitMs, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::S, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::DoubleQuote, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::SingleQuote, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::BackSlash, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Identifier, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::HardwareQubit, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::StringLiteral, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::IntegerLiteral, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::FloatLiteral, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Sin, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Cos, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Tan, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Exp, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Ln, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Sqrt, 0, 0),
+  };
+
+  std::stringstream ss{};
+  for (const auto& token : tokens) {
+    ss << token << "\n";
+  }
+
+  const std::string expected = "None\n"
+                               "Comment\n"
+                               "OPENQASM\n"
+                               "include\n"
+                               "DefCalGrammar\n"
+                               "Def\n"
+                               "Cal\n"
+                               "DefCal\n"
+                               "gate\n"
+                               "opaque\n"
+                               "extern\n"
+                               "box\n"
+                               "let\n"
+                               "break\n"
+                               "continue\n"
+                               "if\n"
+                               "else\n"
+                               "end\n"
+                               "return\n"
+                               "for\n"
+                               "while\n"
+                               "in\n"
+                               "pragma\n"
+                               "input\n"
+                               "output\n"
+                               "const\n"
+                               "readOnly\n"
+                               "mutable\n"
+                               "qreg\n"
+                               "qubit\n"
+                               "cReg\n"
+                               "bool\n"
+                               "bit\n"
+                               "int\n"
+                               "uint\n"
+                               "float\n"
+                               "angle\n"
+                               "complex\n"
+                               "array\n"
+                               "void\n"
+                               "duration\n"
+                               "stretch\n"
+                               "gphase\n"
+                               "inv\n"
+                               "pow\n"
+                               "ctrl\n"
+                               "negCtrl\n"
+                               "#dim\n"
+                               "durationof\n"
+                               "delay\n"
+                               "reset\n"
+                               "measure\n"
+                               "barrier\n"
+                               "true\n"
+                               "false\n"
+                               "[\n"
+                               "]\n"
+                               "{\n"
+                               "}\n"
+                               "(\n"
+                               ")\n"
+                               ":\n"
+                               ";\n"
+                               "Eof\n"
+                               ".\n"
+                               ",\n"
+                               "=\n"
+                               "->\n"
+                               "+\n"
+                               "++\n"
+                               "-\n"
+                               "*\n"
+                               "**\n"
+                               "/\n"
+                               "%\n"
+                               "|\n"
+                               "||\n"
+                               "&\n"
+                               "&&\n"
+                               "^\n"
+                               "@\n"
+                               "~\n"
+                               "!\n"
+                               "==\n"
+                               "!=\n"
+                               "+=\n"
+                               "+=\n"
+                               "*=\n"
+                               "/=\n"
+                               "&=\n"
+                               "|=\n"
+                               "~=\n"
+                               "^=\n"
+                               "<<=\n"
+                               ">>=\n"
+                               "%=\n"
+                               "**=\n"
+                               "<\n"
+                               "<=\n"
+                               ">\n"
+                               ">=\n"
+                               "<<\n"
+                               ">>\n"
+                               "imag\n"
+                               "underscore\n"
+                               "dt\n"
+                               "ns\n"
+                               "us\n"
+                               "mys\n"
+                               "ms\n"
+                               "s\n"
+                               "\"\n"
+                               "'\n"
+                               "\\\n"
+                               "Identifier ()\n"
+                               "HardwareQubit\n"
+                               "StringLiteral (\"\")\n"
+                               "IntegerLiteral (0)\n"
+                               "FloatLiteral (0)\n"
+                               "sin\n"
+                               "cos\n"
+                               "tan\n"
+                               "exp\n"
+                               "ln\n"
+                               "sqrt\n";
+
+  EXPECT_EQ(ss.str(), expected);
+}
+
+TEST_F(Qasm3ParserTest, TestConstEval) {
+  qasm3::const_eval::ConstEvalPass constEvalPass{};
+
+  const auto inputs = std::vector<std::pair<std::shared_ptr<qasm3::Expression>,
+                                            qasm3::const_eval::ConstEvalValue>>{
+      // integer unsigned
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Power,
+                    std::make_shared<qasm3::Constant>(2, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(4, false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Add,
+                    std::make_shared<qasm3::Constant>(1, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(3, false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Subtract,
+                    std::make_shared<qasm3::Constant>(5, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(3, false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Multiply,
+                    std::make_shared<qasm3::Constant>(1, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(2, false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Divide,
+                    std::make_shared<qasm3::Constant>(6, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(3, false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Modulo,
+                    std::make_shared<qasm3::Constant>(1, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(1, false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::LeftShift,
+                    std::make_shared<qasm3::Constant>(2, false),
+                    std::make_shared<qasm3::Constant>(1, false)),
+                qasm3::const_eval::ConstEvalValue(4, false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::RightShift,
+                    std::make_shared<qasm3::Constant>(2, false),
+                    std::make_shared<qasm3::Constant>(1, false)),
+                qasm3::const_eval::ConstEvalValue(1, false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::LessThan,
+                    std::make_shared<qasm3::Constant>(1, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::LessThanOrEqual,
+                    std::make_shared<qasm3::Constant>(1, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::GreaterThan,
+                    std::make_shared<qasm3::Constant>(1, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::GreaterThanOrEqual,
+                    std::make_shared<qasm3::Constant>(1, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Equal,
+                    std::make_shared<qasm3::Constant>(1, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::NotEqual,
+                    std::make_shared<qasm3::Constant>(1, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::BitwiseAnd,
+                    std::make_shared<qasm3::Constant>(1, false),
+                    std::make_shared<qasm3::Constant>(3, false)),
+                qasm3::const_eval::ConstEvalValue(1, false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::BitwiseXor,
+                    std::make_shared<qasm3::Constant>(1, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(3, false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::BitwiseOr,
+                    std::make_shared<qasm3::Constant>(1, false),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(3, false)},
+
+      // integer signed
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Power,
+                    std::make_shared<qasm3::Constant>(2, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(4, true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Add,
+                    std::make_shared<qasm3::Constant>(1, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(3, true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Subtract,
+                    std::make_shared<qasm3::Constant>(5, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(3, true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Multiply,
+                    std::make_shared<qasm3::Constant>(1, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(2, true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Divide,
+                    std::make_shared<qasm3::Constant>(6, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(3, true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Modulo,
+                    std::make_shared<qasm3::Constant>(1, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(1, true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::LeftShift,
+                    std::make_shared<qasm3::Constant>(2, true),
+                    std::make_shared<qasm3::Constant>(1, true)),
+                qasm3::const_eval::ConstEvalValue(4, true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::RightShift,
+                    std::make_shared<qasm3::Constant>(2, true),
+                    std::make_shared<qasm3::Constant>(1, true)),
+                qasm3::const_eval::ConstEvalValue(1, true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::LessThan,
+                    std::make_shared<qasm3::Constant>(1, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::LessThanOrEqual,
+                    std::make_shared<qasm3::Constant>(1, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::GreaterThan,
+                    std::make_shared<qasm3::Constant>(1, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::GreaterThanOrEqual,
+                    std::make_shared<qasm3::Constant>(1, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Equal,
+                    std::make_shared<qasm3::Constant>(1, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::NotEqual,
+                    std::make_shared<qasm3::Constant>(1, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::BitwiseAnd,
+                    std::make_shared<qasm3::Constant>(1, true),
+                    std::make_shared<qasm3::Constant>(3, true)),
+                qasm3::const_eval::ConstEvalValue(1, true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::BitwiseXor,
+                    std::make_shared<qasm3::Constant>(1, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(3, true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::BitwiseOr,
+                    std::make_shared<qasm3::Constant>(1, true),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(3, true)},
+
+      // float
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Power,
+                    std::make_shared<qasm3::Constant>(2.0),
+                    std::make_shared<qasm3::Constant>(2.0)),
+                qasm3::const_eval::ConstEvalValue(4.0)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Add,
+                    std::make_shared<qasm3::Constant>(1.0),
+                    std::make_shared<qasm3::Constant>(2.0)),
+                qasm3::const_eval::ConstEvalValue(3.0)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Subtract,
+                    std::make_shared<qasm3::Constant>(5.0),
+                    std::make_shared<qasm3::Constant>(2.0)),
+                qasm3::const_eval::ConstEvalValue(3.0)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Multiply,
+                    std::make_shared<qasm3::Constant>(1.0),
+                    std::make_shared<qasm3::Constant>(2.0)),
+                qasm3::const_eval::ConstEvalValue(2.0)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Divide,
+                    std::make_shared<qasm3::Constant>(6.0),
+                    std::make_shared<qasm3::Constant>(2.0)),
+                qasm3::const_eval::ConstEvalValue(3.0)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Modulo,
+                    std::make_shared<qasm3::Constant>(1.0),
+                    std::make_shared<qasm3::Constant>(2.0)),
+                qasm3::const_eval::ConstEvalValue(1.0)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::LessThan,
+                    std::make_shared<qasm3::Constant>(1.0),
+                    std::make_shared<qasm3::Constant>(2.0)),
+                qasm3::const_eval::ConstEvalValue(true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::LessThanOrEqual,
+                    std::make_shared<qasm3::Constant>(1.0),
+                    std::make_shared<qasm3::Constant>(2.0)),
+                qasm3::const_eval::ConstEvalValue(true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::GreaterThan,
+                    std::make_shared<qasm3::Constant>(1.0),
+                    std::make_shared<qasm3::Constant>(2.0)),
+                qasm3::const_eval::ConstEvalValue(false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::GreaterThanOrEqual,
+                    std::make_shared<qasm3::Constant>(1.0),
+                    std::make_shared<qasm3::Constant>(2.0)),
+                qasm3::const_eval::ConstEvalValue(false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Equal,
+                    std::make_shared<qasm3::Constant>(1.0),
+                    std::make_shared<qasm3::Constant>(2.0)),
+                qasm3::const_eval::ConstEvalValue(false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::NotEqual,
+                    std::make_shared<qasm3::Constant>(1.0),
+                    std::make_shared<qasm3::Constant>(2.0)),
+                qasm3::const_eval::ConstEvalValue(true)},
+
+      // bool
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Equal,
+                    std::make_shared<qasm3::Constant>(true),
+                    std::make_shared<qasm3::Constant>(false)),
+                qasm3::const_eval::ConstEvalValue(false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::NotEqual,
+                    std::make_shared<qasm3::Constant>(true),
+                    std::make_shared<qasm3::Constant>(false)),
+                qasm3::const_eval::ConstEvalValue(true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::BitwiseAnd,
+                    std::make_shared<qasm3::Constant>(true),
+                    std::make_shared<qasm3::Constant>(false)),
+                qasm3::const_eval::ConstEvalValue(false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::BitwiseXor,
+                    std::make_shared<qasm3::Constant>(true),
+                    std::make_shared<qasm3::Constant>(false)),
+                qasm3::const_eval::ConstEvalValue(true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::BitwiseOr,
+                    std::make_shared<qasm3::Constant>(true),
+                    std::make_shared<qasm3::Constant>(false)),
+                qasm3::const_eval::ConstEvalValue(true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::LogicalAnd,
+                    std::make_shared<qasm3::Constant>(true),
+                    std::make_shared<qasm3::Constant>(false)),
+                qasm3::const_eval::ConstEvalValue(false)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::LogicalOr,
+                    std::make_shared<qasm3::Constant>(true),
+                    std::make_shared<qasm3::Constant>(false)),
+                qasm3::const_eval::ConstEvalValue(true)},
+
+      // coercion
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Add,
+                    std::make_shared<qasm3::Constant>(2, true),
+                    std::make_shared<qasm3::Constant>(3.0)),
+                qasm3::const_eval::ConstEvalValue(5.0)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Add,
+                    std::make_shared<qasm3::Constant>(2, false),
+                    std::make_shared<qasm3::Constant>(3.0)),
+                qasm3::const_eval::ConstEvalValue(5.0)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Subtract,
+                    std::make_shared<qasm3::Constant>(6u, false),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(4, true)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Add,
+                    std::make_shared<qasm3::Constant>(3.0),
+                    std::make_shared<qasm3::Constant>(2, true)),
+                qasm3::const_eval::ConstEvalValue(5.0)},
+      std::pair{std::make_shared<qasm3::BinaryExpression>(
+                    qasm3::BinaryExpression::Op::Add,
+                    std::make_shared<qasm3::Constant>(3.0),
+                    std::make_shared<qasm3::Constant>(2, false)),
+                qasm3::const_eval::ConstEvalValue(5.0)},
+
+      // unary expr
+      std::pair{
+          std::make_shared<qasm3::UnaryExpression>(
+              qasm3::UnaryExpression::Op::BitwiseNot,
+              std::make_shared<qasm3::Constant>(0xFFFF'FFFF'FFFF'FFFF, false)),
+          qasm3::const_eval::ConstEvalValue(0, false)},
+      std::pair{std::make_shared<qasm3::UnaryExpression>(
+                    qasm3::UnaryExpression::Op::LogicalNot,
+                    std::make_shared<qasm3::Constant>(false)),
+                qasm3::const_eval::ConstEvalValue(true)},
+      std::pair{std::make_shared<qasm3::UnaryExpression>(
+                    qasm3::UnaryExpression::Op::Negate,
+                    std::make_shared<qasm3::Constant>(1.0)),
+                qasm3::const_eval::ConstEvalValue(-1.0)},
+      std::pair{std::make_shared<qasm3::UnaryExpression>(
+                    qasm3::UnaryExpression::Op::Negate,
+                    std::make_shared<qasm3::Constant>(1, true)),
+                qasm3::const_eval::ConstEvalValue(-1, true)},
+      std::pair{std::make_shared<qasm3::UnaryExpression>(
+                    qasm3::UnaryExpression::Op::Sin,
+                    std::make_shared<qasm3::Constant>(1.0)),
+                qasm3::const_eval::ConstEvalValue(std::sin(1.0))},
+      std::pair{std::make_shared<qasm3::UnaryExpression>(
+                    qasm3::UnaryExpression::Op::Cos,
+                    std::make_shared<qasm3::Constant>(1.0)),
+                qasm3::const_eval::ConstEvalValue(std::cos(1.0))},
+      std::pair{std::make_shared<qasm3::UnaryExpression>(
+                    qasm3::UnaryExpression::Op::Tan,
+                    std::make_shared<qasm3::Constant>(1.0)),
+                qasm3::const_eval::ConstEvalValue(std::tan(1.0))},
+      std::pair{std::make_shared<qasm3::UnaryExpression>(
+                    qasm3::UnaryExpression::Op::Exp,
+                    std::make_shared<qasm3::Constant>(1.0)),
+                qasm3::const_eval::ConstEvalValue(std::exp(1.0))},
+      std::pair{std::make_shared<qasm3::UnaryExpression>(
+                    qasm3::UnaryExpression::Op::Ln,
+                    std::make_shared<qasm3::Constant>(1.0)),
+                qasm3::const_eval::ConstEvalValue(std::log(1.0))},
+      std::pair{std::make_shared<qasm3::UnaryExpression>(
+                    qasm3::UnaryExpression::Op::Sqrt,
+                    std::make_shared<qasm3::Constant>(1.0)),
+                qasm3::const_eval::ConstEvalValue(std::sqrt(1.0))},
+
+  };
+
+  for (const auto& [expr, expected] : inputs) {
+    auto result = constEvalPass.visit(expr);
+    EXPECT_TRUE(result.has_value());
+    if (result != expected) {
+      std::cerr << "Expected: " << expected.toString()
+                << ", got: " << result->toString() << "\n";
+    }
+    EXPECT_EQ(result, expected);
+  }
 }
