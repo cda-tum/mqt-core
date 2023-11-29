@@ -9,11 +9,15 @@ using namespace qc;
 
 template <class Config>
 MatrixDD buildFunctionality(const QuantumComputation* qc,
-                            std::unique_ptr<dd::Package<Config>>& dd);
+                            std::unique_ptr<dd::Package<Config>>& dd,
+                            bool reduceAncillaeQubits = true,
+                            bool reduceGarbageQubits = true);
 
 template <class Config>
 MatrixDD buildFunctionalityRecursive(const QuantumComputation* qc,
-                                     std::unique_ptr<dd::Package<Config>>& dd);
+                                     std::unique_ptr<dd::Package<Config>>& dd,
+                                     bool reduceAncillaeQubits = true,
+                                     bool reduceGarbageQubits = true);
 
 template <class Config>
 bool buildFunctionalityRecursive(const QuantumComputation* qc,

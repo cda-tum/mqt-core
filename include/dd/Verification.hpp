@@ -51,17 +51,10 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
     }
   }
 
-  // pretend to not have any garbage qubits s.t. the buildFunctionality
-  // function doesn't use reduceGarbage
-
-  std::vector<bool> emptyGarbage(n, false);
-  c1.garbage = emptyGarbage;
-  c2.garbage = emptyGarbage;
-
   // partialEquivalenceCheck with dd
 
-  auto u1 = buildFunctionality(&c1, dd);
-  auto u2 = buildFunctionality(&c2, dd);
+  auto u1 = buildFunctionality(&c1, dd, false, false);
+  auto u2 = buildFunctionality(&c2, dd, false, false);
   if (d1 == n) {
     // no ancilla qubits
     return dd->zeroAncillaPartialEquivalenceCheck(u1, u2,
