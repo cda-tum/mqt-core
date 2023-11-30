@@ -9,8 +9,8 @@
 
 namespace qc {
 static constexpr std::array<qc::OpType, 10> DIAGONAL_GATES = {
-    qc::Barrier, qc::I,    qc::Z,     qc::S,  qc::Sdag,
-    qc::T,       qc::Tdag, qc::Phase, qc::RZ, qc::RZZ};
+    qc::Barrier, qc::I,   qc::Z, qc::S,  qc::Sdg,
+    qc::T,       qc::Tdg, qc::P, qc::RZ, qc::RZZ};
 
 class CircuitOptimizer {
 protected:
@@ -52,6 +52,15 @@ public:
 
   static void cancelCNOTs(QuantumComputation& qc);
 
+  /**
+   * @brief Replaces all MCX gates with MCZ gates (and H gates surrounding the
+   * target qubit) in the given circuit.
+   * @param qc the quantum circuit
+   */
+  static void replaceMCXWithMCZ(qc::QuantumComputation& qc) {
+    replaceMCXWithMCZ(qc.ops);
+  }
+
 protected:
   static void removeDiagonalGatesBeforeMeasureRecursive(
       DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
@@ -77,5 +86,7 @@ protected:
   static Iterator
   flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops,
                            Iterator it);
+
+  static void replaceMCXWithMCZ(std::vector<std::unique_ptr<Operation>>& ops);
 };
 } // namespace qc

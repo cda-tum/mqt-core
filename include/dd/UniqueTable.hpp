@@ -77,9 +77,9 @@ public:
    */
   static std::size_t hash(const Node* p) {
     static constexpr std::size_t MASK = NBUCKET - 1;
-    std::size_t key = 0;
-    for (std::size_t i = 0; i < p->e.size(); ++i) {
-      key = combineHash(key, std::hash<Edge<Node>>{}(p->e[i]));
+    std::size_t key = 0U;
+    for (std::size_t i = 0U; i < p->e.size(); ++i) {
+      qc::hashCombine(key, std::hash<Edge<Node>>{}(p->e[i]));
     }
     key &= MASK;
     return key;
@@ -136,7 +136,7 @@ public:
   /// Get the total number of entries
   [[nodiscard]] std::size_t getNumEntries() const noexcept {
     return std::accumulate(
-        stats.begin(), stats.end(), 0U,
+        stats.begin(), stats.end(), std::size_t{0},
         [](const std::size_t& sum, const UniqueTableStatistics& stat) {
           return sum + stat.numEntries;
         });
@@ -145,7 +145,7 @@ public:
   /// Get the total number of active entries
   [[nodiscard]] std::size_t getNumActiveEntries() const noexcept {
     return std::accumulate(
-        stats.begin(), stats.end(), 0U,
+        stats.begin(), stats.end(), std::size_t{0},
         [](const std::size_t& sum, const UniqueTableStatistics& stat) {
           return sum + stat.numActiveEntries;
         });
@@ -154,7 +154,7 @@ public:
   /// Get the peak total number of active entries
   [[nodiscard]] std::size_t getPeakNumActiveEntries() const noexcept {
     return std::accumulate(
-        stats.begin(), stats.end(), 0U,
+        stats.begin(), stats.end(), std::size_t{0},
         [](const std::size_t& sum, const UniqueTableStatistics& stat) {
           return sum + stat.peakNumActiveEntries;
         });
@@ -172,29 +172,28 @@ public:
   // if it has not been found NOTE: reference counting is to be adjusted by
   // function invoking the table lookup and only normalized nodes shall be
   // stored.
-  Edge<Node> lookup(const Edge<Node>& e, bool keepNode = false) {
+  Node* lookup(Node* p) {
     // there are unique terminal nodes
-    if (e.isTerminal()) {
-      return e;
+    if (Node::isTerminal(p)) {
+      return p;
     }
 
-    const auto key = hash(e.p);
-    const auto v = e.p->v;
+    const auto key = hash(p);
+    const auto v = p->v;
     ++stats[v].lookups;
 
     // search bucket in table corresponding to hashed value for the given node
     // and return it if found.
-    if (const auto hashedNode = searchTable(e, key, keepNode);
-        !hashedNode.isZeroTerminal()) {
+    if (auto* hashedNode = searchTable(p, key); !Node::isTerminal(hashedNode)) {
       return hashedNode;
     }
 
     // if node not found -> add it to front of unique table bucket
-    e.p->next = tables[v][key];
-    tables[v][key] = e.p;
+    p->next = tables[v][key];
+    tables[v][key] = p;
     stats[v].trackInsert();
 
-    return e;
+    return p;
   }
 
   /**
@@ -209,7 +208,6 @@ public:
    */
   [[nodiscard]] bool incRef(Node* p) noexcept {
     const auto inc = ::dd::incRef(p);
-    assert(!inc || p != nullptr);
     if (inc && p->ref == 1U) {
       stats[p->v].trackActiveEntry();
     }
@@ -228,7 +226,6 @@ public:
    */
   [[nodiscard]] bool decRef(Node* p) noexcept {
     const auto dec = ::dd::decRef(p);
-    assert(!dec || p != nullptr);
     if (dec && p->ref == 0U) {
       --stats[p->v].numActiveEntries;
     }
@@ -359,35 +356,28 @@ private:
   Searches for a node in the hash table with the given key.
   @param e The node to search for.
   @param key The hashed value used to search the table.
-  @param keepNode If true, the node pointed to by e.p will not be put on the
-  available chain.
   @return The Edge<Node> found in the hash table or Edge<Node>::zero if not
   found.
   **/
-  Edge<Node> searchTable(const Edge<Node>& e, const std::size_t& key,
-                         const bool keepNode = false) {
-    const auto v = e.p->v;
-    Node* p = tables[v][key];
-    while (p != nullptr) {
-      if (nodesAreEqual(e.p, p)) {
+  Node* searchTable(Node* p, const std::size_t& key) {
+    const auto v = p->v;
+    Node* bucket = tables[v][key];
+    while (bucket != nullptr) {
+      if (nodesAreEqual(p, bucket)) {
         // Match found
-        if (e.p != p && !keepNode) {
-          // put node pointed to by e.p on available chain
-          memoryManager->returnEntry(e.p);
+        if (p != bucket) {
+          // put node pointed to by p on available chain
+          memoryManager->returnEntry(p);
         }
         ++stats[v].hits;
-
-        // variables should stay the same
-        assert(p->v == v);
-
-        return {p, e.w};
+        return bucket;
       }
       ++stats[v].collisions;
-      p = p->next;
+      bucket = bucket->next;
     }
 
     // Node not found in bucket
-    return Edge<Node>::zero;
+    return Node::getTerminal();
   }
 };
 

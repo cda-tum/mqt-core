@@ -35,12 +35,9 @@ protected:
 
 public:
   Operation() = default;
-
-  Operation(const Operation& op) = delete;
+  Operation(const Operation& op) = default;
   Operation(Operation&& op) noexcept = default;
-
-  Operation& operator=(const Operation& op) = delete;
-
+  Operation& operator=(const Operation& op) = default;
   Operation& operator=(Operation&& op) noexcept = default;
 
   // Virtual Destructor
@@ -119,11 +116,9 @@ public:
     }
   }
 
-  virtual void setName();
-
   virtual void setGate(const OpType g) {
     type = g;
-    setName();
+    name = toString(g);
   }
 
   virtual void setParameter(const std::vector<fp>& p) { parameter = p; }
@@ -173,9 +168,9 @@ public:
   }
 
   virtual std::ostream& printParameters(std::ostream& os) const;
-  virtual std::ostream& print(std::ostream& os) const;
-  virtual std::ostream& print(std::ostream& os,
-                              const Permutation& permutation) const;
+  std::ostream& print(std::ostream& os) const { return print(os, {}, 0); }
+  virtual std::ostream& print(std::ostream& os, const Permutation& permutation,
+                              std::size_t prefixWidth) const;
 
   friend std::ostream& operator<<(std::ostream& os, const Operation& op) {
     return op.print(os);
@@ -185,5 +180,30 @@ public:
                             const RegisterNames& creg) const = 0;
 
   virtual void invert() = 0;
+
+  virtual bool operator==(const Operation& rhs) const { return equals(rhs); }
+  bool operator!=(const Operation& rhs) const { return !(*this == rhs); }
 };
 } // namespace qc
+
+namespace std {
+template <> struct hash<qc::Operation> {
+  std::size_t operator()(const qc::Operation& op) const noexcept {
+    std::size_t seed = 0U;
+    qc::hashCombine(seed, hash<qc::OpType>{}(op.getType()));
+    for (const auto& control : op.getControls()) {
+      qc::hashCombine(seed, hash<qc::Qubit>{}(control.qubit));
+      if (control.type == qc::Control::Type::Neg) {
+        seed ^= 1ULL;
+      }
+    }
+    for (const auto& target : op.getTargets()) {
+      qc::hashCombine(seed, hash<qc::Qubit>{}(target));
+    }
+    for (const auto& param : op.getParameter()) {
+      qc::hashCombine(seed, hash<qc::fp>{}(param));
+    }
+    return seed;
+  }
+};
+} // namespace std

@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
-from ._core import add
+from ._core import Permutation, QuantumComputation
 from ._version import version as __version__
 
-__all__ = ["__version__", "add"]
+__all__ = [
+    "Permutation",
+    "QuantumComputation",
+    "__version__",
+]
+
+for cls in (Permutation, QuantumComputation):
+    cls.__module__ = "mqt.core"
+del cls

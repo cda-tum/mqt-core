@@ -19,7 +19,7 @@ NonUnitaryOperation::NonUnitaryOperation(const std::size_t nq,
   type = Measure;
   nqubits = nq;
   targets = std::move(qubitRegister);
-  Operation::setName();
+  name = toString(type);
   if (targets.size() != classics.size()) {
     throw std::invalid_argument(
         "Sizes of qubit register and classical register do not match.");
@@ -31,7 +31,7 @@ NonUnitaryOperation::NonUnitaryOperation(const std::size_t nq,
   type = Measure;
   nqubits = nq;
   targets = {qubit};
-  Operation::setName();
+  name = toString(type);
 }
 
 // General constructor
@@ -41,11 +41,12 @@ NonUnitaryOperation::NonUnitaryOperation(const std::size_t nq, Targets qubits,
   nqubits = nq;
   targets = std::move(qubits);
   std::sort(targets.begin(), targets.end());
-  Operation::setName();
+  name = toString(type);
 }
 
-std::ostream& NonUnitaryOperation::print(std::ostream& os,
-                                         const Permutation& permutation) const {
+std::ostream& NonUnitaryOperation::print(
+    std::ostream& os, const Permutation& permutation,
+    [[maybe_unused]] const std::size_t prefixWidth) const {
   switch (type) {
   case Measure:
     printMeasurement(os, targets, classics, permutation);
@@ -62,11 +63,12 @@ std::ostream& NonUnitaryOperation::print(std::ostream& os,
 void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
                                        const RegisterNames& qreg,
                                        const RegisterNames& creg) const {
-  if (isWholeQubitRegister(qreg, targets.front(), targets.back())) {
+  if (isWholeQubitRegister(qreg, targets.front(), targets.back()) &&
+      (type != Measure ||
+       isWholeQubitRegister(creg, classics.front(), classics.back()))) {
     of << toString(type) << " " << qreg[targets.front()].first;
     if (type == Measure) {
       of << " -> ";
-      assert(isWholeQubitRegister(creg, classics.front(), classics.back()));
       of << creg[classics.front()].first;
     }
     of << ";\n";
@@ -140,27 +142,24 @@ void NonUnitaryOperation::printMeasurement(
     const Permutation& permutation) const {
   auto qubitIt = q.cbegin();
   auto classicIt = c.cbegin();
-  os << name << "\t";
   if (permutation.empty()) {
     for (std::size_t i = 0; i < nqubits; ++i) {
       if (qubitIt != q.cend() && *qubitIt == i) {
-        os << "\033[34m" << *classicIt << "\t"
-           << "\033[0m";
+        os << "\033[34m" << std::setw(4) << *classicIt << "\033[0m";
         ++qubitIt;
         ++classicIt;
       } else {
-        os << "|\t";
+        os << std::setw(4) << "|";
       }
     }
   } else {
     for (const auto& [physical, logical] : permutation) {
       if (qubitIt != q.cend() && *qubitIt == physical) {
-        os << "\033[34m" << *classicIt << "\t"
-           << "\033[0m";
+        os << "\033[34m" << std::setw(4) << *classicIt << "\033[0m";
         ++qubitIt;
         ++classicIt;
       } else {
-        os << "|\t";
+        os << std::setw(4) << "|";
       }
     }
   }
@@ -169,26 +168,14 @@ void NonUnitaryOperation::printMeasurement(
 void NonUnitaryOperation::printReset(std::ostream& os,
                                      const std::vector<Qubit>& q,
                                      const Permutation& permutation) const {
-  auto qubitIt = q.cbegin();
-  os << name << "\t";
-  if (permutation.empty()) {
-    for (std::size_t i = 0; i < nqubits; ++i) {
-      if (qubitIt != q.cend() && *qubitIt == i) {
-        os << "\033[31mr\t\033[0m";
-        ++qubitIt;
-      } else {
-        os << "|\t";
-      }
+  const auto actualTargets = permutation.apply(q);
+  for (std::size_t i = 0; i < nqubits; ++i) {
+    if (std::find(actualTargets.cbegin(), actualTargets.cend(), i) !=
+        actualTargets.cend()) {
+      os << "\033[31m" << std::setw(4) << shortName(type) << "\033[0m";
+      continue;
     }
-  } else {
-    for (const auto& [physical, logical] : permutation) {
-      if (qubitIt != q.cend() && *qubitIt == physical) {
-        os << "\033[31mr\t\033[0m";
-        ++qubitIt;
-      } else {
-        os << "|\t";
-      }
-    }
+    os << std::setw(4) << "|";
   }
 }
 

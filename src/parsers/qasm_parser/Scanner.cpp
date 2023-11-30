@@ -373,7 +373,9 @@ void Scanner::addFileInput(const std::string& filename) {
     col = 0;
   } else if (in->fail()) {
     // file could not be found and it was not the standard include file
-    std::cerr << "Failed to open file '" << filename << "'!" << std::endl;
+    std::stringstream ss{};
+    ss << "Failed to open file '" << filename << "'!";
+    throw std::runtime_error(ss.str());
   } else {
     // file was found and opened
     streams.push(in);

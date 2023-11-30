@@ -182,10 +182,10 @@ void CircuitOptimizer::addNonStandardOperationToDag(
 
 void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
   static const std::map<qc::OpType, qc::OpType> INVERSE_MAP = {
-      {qc::I, qc::I},      {qc::X, qc::X},      {qc::Y, qc::Y},
-      {qc::Z, qc::Z},      {qc::H, qc::H},      {qc::S, qc::Sdag},
-      {qc::Sdag, qc::S},   {qc::T, qc::Tdag},   {qc::Tdag, qc::T},
-      {qc::SX, qc::SXdag}, {qc::SXdag, qc::SX}, {qc::Barrier, qc::Barrier}};
+      {qc::I, qc::I},     {qc::X, qc::X},     {qc::Y, qc::Y},
+      {qc::Z, qc::Z},     {qc::H, qc::H},     {qc::S, qc::Sdg},
+      {qc::Sdg, qc::S},   {qc::T, qc::Tdg},   {qc::Tdg, qc::T},
+      {qc::SX, qc::SXdg}, {qc::SXdg, qc::SX}, {qc::Barrier, qc::Barrier}};
 
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : qc.initialLayout) {
@@ -240,6 +240,13 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
       }
       if (involvedQubits > 1) {
         addToDag(dag, &it);
+        continue;
+      }
+
+      // check if the compound operation is empty (e.g., -X-H-H-X-Z-)
+      if (compop->empty()) {
+        compop->emplace_back(it->clone());
+        it->setGate(I);
         continue;
       }
 
@@ -894,7 +901,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
             const auto controlQubit = measurementQubit;
             const auto controlType =
                 (expectedValue == 1) ? Control::Type::Pos : Control::Type::Neg;
-            controls.emplace(Control{controlQubit, controlType});
+            controls.emplace(controlQubit, controlType);
 
             const auto parameters = standardOp->getParameter();
 
@@ -1167,27 +1174,27 @@ CircuitOptimizer::Iterator CircuitOptimizer::flattenCompoundOperation(
   assert((*it)->isCompoundOperation());
   auto& op = dynamic_cast<qc::CompoundOperation&>(**it);
   auto opIt = op.begin();
+  std::int64_t movedOperations = 0;
   while (opIt != op.end()) {
-    if ((*opIt)->isCompoundOperation()) {
-      // recursively flatten compound operations
-      opIt = flattenCompoundOperation(op.getOps(), opIt);
-      --opIt;
-    } else {
-      // move the operation from the compound operation in front of the compound
-      // operation in the flattened container. `it` then points to the newly
-      // inserted element
-      it = ops.insert(it, std::move(*opIt));
-      // advance the operation iterator to point past the now moved-from element
-      // in the compound operation
-      ++opIt;
-      // advance the general iterator to again point to the compound operation
-      ++it;
-    }
+    // move the operation from the compound operation in front of the compound
+    // operation in the flattened container. `it` then points to the newly
+    // inserted element
+    it = ops.insert(it, std::move(*opIt));
+    // advance the operation iterator to point past the now moved-from element
+    // in the compound operation
+    ++opIt;
+    // advance the general iterator to again point to the compound operation
+    ++it;
+    // track the moved operations
+    ++movedOperations;
   }
   // whenever all the operations have been processed, `it` points to the
-  // compound operation and `opIt` to `op.end()` the compound operation can now
+  // compound operation and `opIt` to `op.end()`. The compound operation can now
   // be deleted safely
-  return ops.erase(it);
+  it = ops.erase(it);
+  // move the general iterator back to the position of the last moved operation
+  std::advance(it, -movedOperations);
+  return it;
 }
 
 void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
@@ -1356,5 +1363,39 @@ void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
   }
 
   removeIdentities(qc);
+}
+
+void CircuitOptimizer::replaceMCXWithMCZ(
+    std::vector<std::unique_ptr<Operation>>& ops) {
+  for (auto it = ops.begin(); it != ops.end(); ++it) {
+    auto& op = *it;
+    if (op->getType() == qc::X && op->getNcontrols() > 0) {
+      const auto& controls = op->getControls();
+      assert(op->getNtargets() == 1U);
+      const auto target = op->getTargets()[0];
+      const auto nqubits = op->getNqubits();
+
+      // -c-    ---c---
+      //  |  =     |
+      // -X-    -H-Z-H-
+      std::array<std::unique_ptr<Operation>, 3U> replacementOps{};
+      replacementOps[0] =
+          std::make_unique<StandardOperation>(nqubits, target, H);
+      replacementOps[1] =
+          std::make_unique<StandardOperation>(nqubits, controls, target, Z);
+      replacementOps[2] =
+          std::make_unique<StandardOperation>(nqubits, target, H);
+
+      it = ops.insert(it, std::make_move_iterator(replacementOps.begin()),
+                      std::make_move_iterator(replacementOps.end()));
+
+      // advance to the original operation and delete it
+      std::advance(it, 3);
+      it = ops.erase(it);
+      --it;
+    } else if (op->isCompoundOperation()) {
+      replaceMCXWithMCZ(dynamic_cast<qc::CompoundOperation&>(*op).getOps());
+    }
+  }
 }
 } // namespace qc

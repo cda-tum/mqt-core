@@ -2,6 +2,10 @@
 
 #include "dd/DDDefinitions.hpp"
 
+#include <istream>
+#include <limits>
+#include <ostream>
+
 namespace dd {
 /**
  * @brief A struct for representing real numbers as part of the DD package.
@@ -18,21 +22,22 @@ struct RealNumber {
    * @param e The number to check.
    * @returns Whether the number points to zero.
    */
-  [[nodiscard]] static bool exactlyZero(const RealNumber* e) noexcept;
+  [[nodiscard]] static constexpr bool exactlyZero(const RealNumber* e) noexcept;
 
   /**
    * @brief Check whether the number points to the one number.
    * @param e The number to check.
    * @returns Whether the number points to one.
    */
-  [[nodiscard]] static bool exactlyOne(const RealNumber* e) noexcept;
+  [[nodiscard]] static constexpr bool exactlyOne(const RealNumber* e) noexcept;
 
   /**
    * @brief Check whether the number points to the sqrt(2)/2 = 1/sqrt(2) number.
    * @param e The number to check.
    * @returns Whether the number points to negative one.
    */
-  [[nodiscard]] static bool exactlySqrt2over2(const RealNumber* e) noexcept;
+  [[nodiscard]] static constexpr bool
+  exactlySqrt2over2(const RealNumber* e) noexcept;
 
   /**
    * @brief Get the value of the number.
@@ -152,6 +157,20 @@ struct RealNumber {
   static void writeBinary(const RealNumber* e, std::ostream& os);
 
   /**
+   * @brief Write a binary representation of a floating point number to a
+   * @param num The number to write.
+   * @param os The stream to write to.
+   */
+  static void writeBinary(fp num, std::ostream& os);
+
+  /**
+   * @brief Read a binary representation of a number from a stream.
+   * @param num The number to read into.
+   * @param is The stream to read from.
+   */
+  static void readBinary(fp& num, std::istream& is);
+
+  /**
    * @brief Get an aligned pointer to the number.
    * @details Since the least significant bit of the memory address of the
    * number is used to encode the sign of the value, the pointer to the number
@@ -239,7 +258,20 @@ extern RealNumber sqrt2over2;
  * @return Whether the number is one of the static numbers.
  */
 [[nodiscard]] constexpr bool isStaticNumber(const RealNumber* e) noexcept {
-  return e == &zero || e == &one || e == &sqrt2over2;
+  return RealNumber::exactlyZero(e) || RealNumber::exactlyOne(e) ||
+         RealNumber::exactlySqrt2over2(e);
 }
 } // namespace constants
+
+constexpr bool RealNumber::exactlyZero(const RealNumber* e) noexcept {
+  return e == &constants::zero;
+}
+
+constexpr bool RealNumber::exactlyOne(const RealNumber* e) noexcept {
+  return e == &constants::one;
+}
+
+constexpr bool RealNumber::exactlySqrt2over2(const RealNumber* e) noexcept {
+  return e == &constants::sqrt2over2;
+}
 } // namespace dd

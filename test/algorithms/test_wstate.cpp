@@ -33,10 +33,32 @@ TEST_P(WState, FunctionTest) {
 
   auto qc = qc::WState(nq);
   auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const std::size_t shots = 1024;
+  const std::size_t shots = 4096U;
   const auto measurements =
       simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
   for (const auto& result : generateWStateStrings(nq)) {
     EXPECT_TRUE(measurements.find(result) != measurements.end());
   }
+}
+
+TEST_P(WState, RoutineFunctionTest) {
+  const auto nq = GetParam();
+
+  auto qc = qc::WState(nq);
+  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
+  const dd::VectorDD e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
+  const auto f = dd->makeWState(nq);
+
+  EXPECT_EQ(e, f);
+}
+
+TEST(WState, WStateEdgeCasesTest) {
+  auto dd = std::make_unique<dd::Package<>>(101);
+  dd::ComplexNumbers::setTolerance(0.1);
+
+  ASSERT_THROW(dd->makeWState(101), std::runtime_error);
+  EXPECT_EQ(dd->makeWState(0), dd->makeBasisState(0, {dd::BasisStates::zero}));
+  EXPECT_EQ(dd->makeWState(0), dd->makeBasisState(0, {dd::BasisStates::one}));
+  EXPECT_EQ(dd->makeWState(1), dd->makeBasisState(1, {dd::BasisStates::one}));
+  ASSERT_THROW(dd->makeWState(127), std::runtime_error);
 }

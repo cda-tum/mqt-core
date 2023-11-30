@@ -2,6 +2,8 @@
 
 #include "Operation.hpp"
 
+#include <algorithm>
+
 namespace qc {
 
 class CompoundOperation final : public Operation {
@@ -23,14 +25,26 @@ public:
     ops = std::move(operations);
   }
 
-  [[nodiscard]] std::unique_ptr<Operation> clone() const override {
-    auto clonedCo = std::make_unique<CompoundOperation>(nqubits);
-    clonedCo->reserve(ops.size());
-
-    for (const auto& op : ops) {
-      clonedCo->ops.emplace_back<>(op->clone());
+  CompoundOperation(const CompoundOperation& co)
+      : Operation(co), ops(co.ops.size()) {
+    for (std::size_t i = 0; i < co.ops.size(); ++i) {
+      ops[i] = co.ops[i]->clone();
     }
-    return clonedCo;
+  }
+
+  CompoundOperation& operator=(const CompoundOperation& co) {
+    if (this != &co) {
+      Operation::operator=(co);
+      ops.resize(co.ops.size());
+      for (std::size_t i = 0; i < co.ops.size(); ++i) {
+        ops[i] = co.ops[i]->clone();
+      }
+    }
+    return *this;
+  }
+
+  [[nodiscard]] std::unique_ptr<Operation> clone() const override {
+    return std::make_unique<CompoundOperation>(*this);
   }
 
   void setNqubits(const std::size_t nq) override {
@@ -111,24 +125,16 @@ public:
     return equals(operation, {}, {});
   }
 
-  std::ostream& print(std::ostream& os) const override {
-    os << name;
+  std::ostream& print(std::ostream& os, const Permutation& permutation,
+                      const std::size_t prefixWidth) const override {
+    const auto prefix = std::string(prefixWidth - 1, ' ');
+    os << std::string(4 * nqubits, '-') << "\n";
     for (const auto& op : ops) {
-      os << std::endl << "\t";
-      op->print(os);
+      os << prefix << ":";
+      op->print(os, permutation, prefixWidth);
+      os << "\n";
     }
-
-    return os;
-  }
-
-  std::ostream& print(std::ostream& os,
-                      const Permutation& permutation) const override {
-    os << name;
-    for (const auto& op : ops) {
-      os << std::endl << "\t";
-      op->print(os, permutation);
-    }
-
+    os << prefix << std::string(4 * nqubits + 1, '-');
     return os;
   }
 
@@ -193,14 +199,22 @@ public:
         std::vector<std::unique_ptr<Operation>>::const_iterator last) {
     return ops.erase(first, last);
   }
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  template <class T> void emplace_back(std::unique_ptr<T>& op) {
-    ops.emplace_back(std::move(op));
-  }
+
   // NOLINTNEXTLINE(readability-identifier-naming)
   template <class T, class... Args> void emplace_back(Args&&... args) {
     ops.emplace_back(std::make_unique<T>(args...));
   }
+
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  template <class T> void emplace_back(std::unique_ptr<T>& op) {
+    ops.emplace_back(std::move(op));
+  }
+
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  template <class T> void emplace_back(std::unique_ptr<T>&& op) {
+    ops.emplace_back(std::move(op));
+  }
+
   template <class T, class... Args>
   std::vector<std::unique_ptr<Operation>>::iterator
   insert(std::vector<std::unique_ptr<Operation>>::const_iterator iterator,
@@ -234,3 +248,15 @@ public:
   }
 };
 } // namespace qc
+
+namespace std {
+template <> struct hash<qc::CompoundOperation> {
+  std::size_t operator()(const qc::CompoundOperation& co) const noexcept {
+    std::size_t seed = 0U;
+    for (const auto& op : co) {
+      qc::hashCombine(seed, std::hash<qc::Operation>{}(*op));
+    }
+    return seed;
+  }
+};
+} // namespace std

@@ -1,13 +1,15 @@
 #include "QuantumComputation.hpp"
+#include "dd/DDpackageConfig.hpp"
 #include "dd/NoiseFunctionality.hpp"
+#include "dd/Operations.hpp"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include <random>
 
 using namespace qc;
 
 struct StochasticNoiseSimulatorDDPackageConfig : public dd::DDPackageConfig {
-  static constexpr std::size_t STOCHASTIC_CACHE_OPS = qc::OpType::OpCount;
+  static constexpr std::size_t STOCHASTIC_CACHE_OPS = OpType::OpCount;
 };
 
 using StochasticNoiseTestPackage =
@@ -51,25 +53,25 @@ protected:
     qc.x(0);
     qc.x(1);
     qc.h(3);
-    qc.x(3, 2_pc);
+    qc.cx(2, 3);
     qc.t(0);
     qc.t(1);
     qc.t(2);
-    qc.tdag(3);
-    qc.x(1, 0_pc);
-    qc.x(3, 2_pc);
-    qc.x(0, 3_pc);
-    qc.x(2, 1_pc);
-    qc.x(1, 0_pc);
-    qc.x(3, 2_pc);
-    qc.tdag(0);
-    qc.tdag(1);
-    qc.tdag(2);
+    qc.tdg(3);
+    qc.cx(0, 1);
+    qc.cx(2, 3);
+    qc.cx(3, 0);
+    qc.cx(1, 2);
+    qc.cx(0, 1);
+    qc.cx(2, 3);
+    qc.tdg(0);
+    qc.tdg(1);
+    qc.tdg(2);
     qc.t(3);
-    qc.x(1, 0_pc);
-    qc.x(3, 2_pc);
+    qc.cx(0, 1);
+    qc.cx(2, 3);
     qc.s(3);
-    qc.x(0, 3_pc);
+    qc.cx(3, 0);
     qc.h(3);
   }
 

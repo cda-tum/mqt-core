@@ -207,11 +207,9 @@ void QuantumComputation::initializeIOMapping() {
     }
 
     // if the qubit is not an output, mark it as garbage
-    const bool isOutput =
-        std::any_of(outputPermutation.begin(), outputPermutation.end(),
-                    [&logicalIn = logicalIn](const auto& p) {
-                      return p.second == logicalIn;
-                    });
+    const bool isOutput = std::any_of(
+        outputPermutation.begin(), outputPermutation.end(),
+        [&logicIn = logicalIn](const auto& p) { return p.second == logicIn; });
     if (!isOutput) {
       setLogicalQubitGarbage(logicalIn);
     }
@@ -558,44 +556,37 @@ void QuantumComputation::addQubit(const Qubit logicalQubitIndex,
 }
 
 std::ostream& QuantumComputation::print(std::ostream& os) const {
+  os << name << "\n";
   const auto width =
       ops.empty() ? 1 : static_cast<int>(std::log10(ops.size()) + 1.);
-  if (!ops.empty()) {
-    os << std::setw(width) << "i"
-       << ": \t\t\t";
-  } else {
-    os << "i: \t\t\t";
-  }
+
+  os << std::setw(width + 1) << "i:";
   for (const auto& [physical, logical] : initialLayout) {
     if (ancillary[logical]) {
-      os << "\033[31m" << logical << "\t\033[0m";
-    } else {
-      os << logical << "\t";
+      os << "\033[31m";
     }
+    os << std::setw(4) << logical << "\033[0m";
   }
   os << "\n";
+
   size_t i = 0U;
   for (const auto& op : ops) {
-    os << std::setw(width) << ++i << ": \t";
-    op->print(os, initialLayout);
+    os << std::setw(width) << ++i << ":";
+    op->print(os, {}, static_cast<std::size_t>(width) + 1U);
     os << "\n";
   }
-  if (!ops.empty()) {
-    os << std::setw(width) << "o"
-       << ": \t\t\t";
-  } else {
-    os << "o: \t\t\t";
-  }
+
+  os << std::setw(width + 1) << "o:";
   for (const auto& physicalQubit : initialLayout) {
     auto it = outputPermutation.find(physicalQubit.first);
     if (it == outputPermutation.end()) {
       if (garbage[physicalQubit.second]) {
-        os << "\033[31m|\t\033[0m";
-      } else {
-        os << "|\t";
+        os << "\033[31m";
       }
+      os << std::setw(4) << "|"
+         << "\033[0m";
     } else {
-      os << it->second << "\t";
+      os << std::setw(4) << it->second;
     }
   }
   os << "\n";
@@ -620,6 +611,7 @@ std::ostream& QuantumComputation::printStatistics(std::ostream& os) const {
 
 void QuantumComputation::dump(const std::string& filename) {
   const std::size_t dot = filename.find_last_of('.');
+  assert(dot != std::string::npos);
   std::string extension = filename.substr(dot + 1);
   std::transform(
       extension.begin(), extension.end(), extension.begin(),
@@ -661,7 +653,7 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
   for (const auto& q : inverseInitialLayout) {
     of << " " << static_cast<std::size_t>(q.second);
   }
-  of << std::endl;
+  of << "\n";
 
   Permutation inverseOutputPermutation{};
   for (const auto& q : outputPermutation) {
@@ -671,49 +663,37 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
   for (const auto& q : inverseOutputPermutation) {
     of << " " << q.second;
   }
-  of << std::endl;
+  of << "\n";
 
-  of << "OPENQASM 2.0;" << std::endl;
-  of << "include \"qelib1.inc\";" << std::endl;
+  of << "OPENQASM 2.0;\n";
+  of << "include \"qelib1.inc\";\n";
   if (std::any_of(std::begin(ops), std::end(ops), [](const auto& op) {
         return op->getType() == OpType::Teleportation;
       })) {
-    of << "opaque teleport src, anc, tgt;" << std::endl;
-  }
-  if (!qregs.empty()) {
-    printSortedRegisters(qregs, "qreg", of);
-  } else if (nqubits > 0) {
-    of << "qreg q[" << nqubits << "];" << std::endl;
-  }
-  if (!cregs.empty()) {
-    printSortedRegisters(cregs, "creg", of);
-  } else if (nclassics > 0) {
-    of << "creg c[" << nclassics << "];" << std::endl;
-  }
-  if (!ancregs.empty()) {
-    printSortedRegisters(ancregs, "qreg", of);
-  } else if (nancillae > 0) {
-    of << "qreg anc[" << nancillae << "];" << std::endl;
+    of << "opaque teleport src, anc, tgt;\n";
   }
 
-  RegisterNames qregnames{};
+  // combine qregs and ancregs
+  QuantumRegisterMap combinedRegs = qregs;
+  for (const auto& [regName, reg] : ancregs) {
+    combinedRegs.try_emplace(regName, reg.first, reg.second);
+  }
+  printSortedRegisters(combinedRegs, "qreg", of);
+  RegisterNames combinedRegNames{};
+  createRegisterArray(combinedRegs, combinedRegNames);
+  assert(combinedRegNames.size() == nqubits + nancillae);
+
+  printSortedRegisters(cregs, "creg", of);
   RegisterNames cregnames{};
-  RegisterNames ancregnames{};
-  createRegisterArray(qregs, qregnames, nqubits, "q");
-  createRegisterArray(cregs, cregnames, nclassics, "c");
-  createRegisterArray(ancregs, ancregnames, nancillae, "anc");
-
-  for (const auto& ancregname : ancregnames) {
-    qregnames.push_back(ancregname);
-  }
+  createRegisterArray(cregs, cregnames);
+  assert(cregnames.size() == nclassics);
 
   for (const auto& op : ops) {
-    op->dumpOpenQASM(of, qregnames, cregnames);
+    op->dumpOpenQASM(of, combinedRegNames, cregnames);
   }
 }
 
 void QuantumComputation::dump(const std::string& filename, Format format) {
-  assert(std::count(filename.begin(), filename.end(), '.') == 1);
   auto of = std::ofstream(filename);
   if (!of.good()) {
     throw QFRException("[dump] Error opening file: " + filename);
@@ -888,7 +868,7 @@ std::ostream&
 QuantumComputation::printPermutation(const Permutation& permutation,
                                      std::ostream& os) {
   for (const auto& [physical, logical] : permutation) {
-    os << "\t" << physical << ": " << logical << std::endl;
+    os << "\t" << physical << ": " << logical << "\n";
   }
   return os;
 }
@@ -899,21 +879,21 @@ std::ostream& QuantumComputation::printRegisters(std::ostream& os) const {
     os << " {" << qreg.first << ", {" << qreg.second.first << ", "
        << qreg.second.second << "}}";
   }
-  os << std::endl;
+  os << "\n";
   if (!ancregs.empty()) {
     os << "ancregs:";
     for (const auto& ancreg : ancregs) {
       os << " {" << ancreg.first << ", {" << ancreg.second.first << ", "
          << ancreg.second.second << "}}";
     }
-    os << std::endl;
+    os << "\n";
   }
   os << "cregs:";
   for (const auto& creg : cregs) {
     os << " {" << creg.first << ", {" << creg.second.first << ", "
        << creg.second.second << "}}";
   }
-  os << std::endl;
+  os << "\n";
   return os;
 }
 
@@ -993,8 +973,9 @@ bool QuantumComputation::isLastOperationOnQubit(
 void QuantumComputation::unifyQuantumRegisters(const std::string& regName) {
   ancregs.clear();
   qregs.clear();
-  qregs[regName] = {0, getNqubits()};
+  nqubits += nancillae;
   nancillae = 0;
+  qregs[regName] = {0, nqubits};
 }
 
 void QuantumComputation::appendMeasurementsAccordingToOutputPermutation(
@@ -1051,6 +1032,31 @@ void QuantumComputation::checkQubitRange(
   }
 }
 
+void QuantumComputation::checkBitRange(const qc::Bit bit) const {
+  if (bit >= nclassics) {
+    std::stringstream ss{};
+    ss << "Classical bit index " << bit << " not found in any register";
+    throw QFRException(ss.str());
+  }
+}
+
+void QuantumComputation::checkBitRange(const std::vector<Bit>& bits) const {
+  for (const auto& bit : bits) {
+    checkBitRange(bit);
+  }
+}
+
+void QuantumComputation::checkClassicalRegister(
+    const ClassicalRegister& creg) const {
+  if (creg.first + creg.second > nclassics) {
+    std::stringstream ss{};
+    ss << "Classical register starting at index " << creg.first << " with "
+       << creg.second << " bits is too large! The circuit has " << nclassics
+       << " classical bits.";
+    throw QFRException(ss.str());
+  }
+}
+
 void QuantumComputation::addVariable(const SymbolOrNumber& expr) {
   if (std::holds_alternative<Symbolic>(expr)) {
     const auto& sym = std::get<Symbolic>(expr);
@@ -1067,6 +1073,54 @@ void QuantumComputation::instantiate(const VariableAssignment& assignment) {
         symOp != nullptr) {
       symOp->instantiate(assignment);
     }
+  }
+}
+
+void QuantumComputation::measure(
+    const Qubit qubit, const std::pair<std::string, Bit>& registerBit) {
+  checkQubitRange(qubit);
+  if (const auto cRegister = cregs.find(registerBit.first);
+      cRegister != cregs.end()) {
+    if (registerBit.second >= cRegister->second.second) {
+      std::stringstream ss{};
+      ss << "The classical register \"" << registerBit.first
+         << "\" is too small! (" << registerBit.second
+         << " >= " << cRegister->second.second << ")";
+      throw QFRException(ss.str());
+    }
+    emplace_back<NonUnitaryOperation>(
+        getNqubits(), qubit, cRegister->second.first + registerBit.second);
+
+  } else {
+    std::stringstream ss{};
+    ss << "The classical register \"" << registerBit.first
+       << "\" does not exist!";
+    throw QFRException(ss.str());
+  }
+}
+
+void QuantumComputation::measureAll(const bool addBits) {
+  if (addBits) {
+    addClassicalRegister(getNqubits(), "meas");
+  }
+
+  if (nclassics < getNqubits()) {
+    std::stringstream ss{};
+    ss << "The number of classical bits (" << nclassics
+       << ") is smaller than the number of qubits (" << getNqubits() << ")!";
+    throw QFRException(ss.str());
+  }
+
+  barrier();
+  Qubit start = 0U;
+  if (addBits) {
+    start = static_cast<Qubit>(cregs.at("meas").first);
+  }
+  // measure i -> (start+i) in descending order
+  // (this is an optimization for the simulator)
+  for (std::size_t i = getNqubits(); i > 0; --i) {
+    const auto q = static_cast<Qubit>(i - 1);
+    measure(q, start + q);
   }
 }
 } // namespace qc

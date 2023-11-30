@@ -21,7 +21,7 @@ public:
       : op(std::move(operation)), controlRegister(std::move(controlReg)),
         expectedValue(expectedVal) {
     nqubits = op->getNqubits();
-    name = "c_" + op->getName();
+    name = "c_" + shortName(op->getType());
     parameter.reserve(3);
     parameter.emplace_back(static_cast<fp>(controlRegister.first));
     parameter.emplace_back(static_cast<fp>(controlRegister.second));
@@ -29,10 +29,25 @@ public:
     type = ClassicControlled;
   }
 
+  ClassicControlledOperation(const ClassicControlledOperation& ccop)
+      : Operation(ccop), controlRegister(ccop.controlRegister),
+        expectedValue(ccop.expectedValue) {
+    op = ccop.op->clone();
+  }
+
+  ClassicControlledOperation&
+  operator=(const ClassicControlledOperation& ccop) {
+    if (this != &ccop) {
+      Operation::operator=(ccop);
+      controlRegister = ccop.controlRegister;
+      expectedValue = ccop.expectedValue;
+      op = ccop.op->clone();
+    }
+    return *this;
+  }
+
   [[nodiscard]] std::unique_ptr<Operation> clone() const override {
-    auto opCloned = op->clone();
-    return std::make_unique<ClassicControlledOperation>(
-        opCloned, controlRegister, expectedValue);
+    return std::make_unique<ClassicControlledOperation>(*this);
   }
 
   [[nodiscard]] auto getControlRegister() const { return controlRegister; }
@@ -116,3 +131,16 @@ public:
   void invert() override { op->invert(); }
 };
 } // namespace qc
+
+namespace std {
+template <> struct hash<qc::ClassicControlledOperation> {
+  std::size_t
+  operator()(qc::ClassicControlledOperation const& ccop) const noexcept {
+    auto seed = qc::combineHash(ccop.getControlRegister().first,
+                                ccop.getControlRegister().second);
+    qc::hashCombine(seed, ccop.getExpectedValue());
+    qc::hashCombine(seed, std::hash<qc::Operation>{}(*ccop.getOperation()));
+    return seed;
+  }
+};
+} // namespace std

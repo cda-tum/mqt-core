@@ -6,7 +6,7 @@ MatrixDD buildFunctionality(const QuantumComputation* qc,
                             std::unique_ptr<Package<Config>>& dd) {
   const auto nq = qc->getNqubits();
   if (nq == 0U) {
-    return MatrixDD::one;
+    return MatrixDD::one();
   }
 
   if (const auto* grover = dynamic_cast<const qc::Grover*>(qc)) {
@@ -37,7 +37,7 @@ template <class Config>
 MatrixDD buildFunctionalityRecursive(const QuantumComputation* qc,
                                      std::unique_ptr<Package<Config>>& dd) {
   if (qc->getNqubits() == 0U) {
-    return MatrixDD::one;
+    return MatrixDD::one();
   }
 
   if (const auto* grover = dynamic_cast<const qc::Grover*>(qc)) {
@@ -199,32 +199,6 @@ MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
   return e;
 }
 
-template <class DDPackage>
-MatrixDD buildFunctionality(GoogleRandomCircuitSampling* qc,
-                            std::unique_ptr<DDPackage>& dd,
-                            const std::optional<std::size_t> ncycles) {
-  if (ncycles.has_value() && (*ncycles < qc->cycles.size() - 2U)) {
-    qc->removeCycles(qc->cycles.size() - 2U - *ncycles);
-  }
-
-  const auto nq = qc->getNqubits();
-  Permutation permutation = qc->initialLayout;
-  auto e = dd->makeIdent(nq);
-  dd->incRef(e);
-  for (const auto& cycle : qc->cycles) {
-    auto f = dd->makeIdent(nq);
-    for (const auto& op : cycle) {
-      f = dd->multiply(getDD(op.get(), dd, permutation), f);
-    }
-    auto g = dd->multiply(f, e);
-    dd->decRef(e);
-    dd->incRef(g);
-    e = g;
-    dd->garbageCollect();
-  }
-  return e;
-}
-
 template MatrixDD
 buildFunctionality(const qc::QuantumComputation* qc,
                    std::unique_ptr<Package<DDPackageConfig>>& dd);
@@ -243,8 +217,4 @@ buildFunctionality(const qc::Grover* qc,
 template MatrixDD
 buildFunctionalityRecursive(const qc::Grover* qc,
                             std::unique_ptr<Package<DDPackageConfig>>& dd);
-template MatrixDD
-buildFunctionality(GoogleRandomCircuitSampling* qc,
-                   std::unique_ptr<Package<DDPackageConfig>>& dd,
-                   const std::optional<std::size_t> ncycles);
 } // namespace dd

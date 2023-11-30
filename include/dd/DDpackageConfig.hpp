@@ -12,7 +12,6 @@ struct DDPackageConfig {
   static constexpr std::size_t UT_MAT_INITIAL_ALLOCATION_SIZE = 2048U;
   static constexpr std::size_t CT_VEC_ADD_NBUCKET = 16384U;
   static constexpr std::size_t CT_MAT_ADD_NBUCKET = 16384U;
-  static constexpr std::size_t CT_MAT_TRANS_NBUCKET = 4096U;
   static constexpr std::size_t CT_MAT_CONJ_TRANS_NBUCKET = 4096U;
   static constexpr std::size_t CT_MAT_VEC_MULT_NBUCKET = 16384U;
   static constexpr std::size_t CT_MAT_MAT_MULT_NBUCKET = 16384U;

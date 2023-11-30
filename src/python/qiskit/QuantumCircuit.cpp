@@ -152,11 +152,11 @@ void qc::qiskit::QuantumCircuit::emplaceOperation(
     } else if (instructionName == "s") {
       addOperation(qc, S, qargs, params, qubitMap);
     } else if (instructionName == "sdg") {
-      addOperation(qc, Sdag, qargs, params, qubitMap);
+      addOperation(qc, Sdg, qargs, params, qubitMap);
     } else if (instructionName == "t") {
       addOperation(qc, T, qargs, params, qubitMap);
     } else if (instructionName == "tdg") {
-      addOperation(qc, Tdag, qargs, params, qubitMap);
+      addOperation(qc, Tdg, qargs, params, qubitMap);
     } else if (instructionName == "rx" || instructionName == "crx" ||
                instructionName == "mcrx") {
       addOperation(qc, RX, qargs, params, qubitMap);
@@ -169,16 +169,16 @@ void qc::qiskit::QuantumCircuit::emplaceOperation(
     } else if (instructionName == "p" || instructionName == "u1" ||
                instructionName == "cp" || instructionName == "cu1" ||
                instructionName == "mcphase") {
-      addOperation(qc, Phase, qargs, params, qubitMap);
+      addOperation(qc, P, qargs, params, qubitMap);
     } else if (instructionName == "sx" || instructionName == "csx") {
       addOperation(qc, SX, qargs, params, qubitMap);
     } else if (instructionName == "sxdg") {
-      addOperation(qc, SXdag, qargs, params, qubitMap);
+      addOperation(qc, SXdg, qargs, params, qubitMap);
     } else if (instructionName == "u2") {
       addOperation(qc, U2, qargs, params, qubitMap);
     } else if (instructionName == "u" || instructionName == "u3" ||
                instructionName == "cu3") {
-      addOperation(qc, U3, qargs, params, qubitMap);
+      addOperation(qc, U, qargs, params, qubitMap);
     } else if (instructionName == "swap" || instructionName == "cswap") {
       addTwoTargetOperation(qc, SWAP, qargs, params, qubitMap);
     } else if (instructionName == "iswap") {
@@ -283,7 +283,7 @@ qc::qiskit::QuantumCircuit::parseSymbolicExpr(const py::object& pyExpr) {
       sym += coeff;
     } else {
       isConst = false;
-      sym += sym::Term(sign * coeff, sym::Variable{var});
+      sym += sym::Term(sym::Variable{var}, sign * coeff);
     }
     ++sumIt;
   }

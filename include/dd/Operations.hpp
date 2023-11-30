@@ -4,7 +4,7 @@
 #include "dd/Package.hpp"
 #include "operations/ClassicControlledOperation.hpp"
 #include "operations/CompoundOperation.hpp"
-#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
 #include "operations/StandardOperation.hpp"
 
 #include <variant>
@@ -26,63 +26,63 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
 
   switch (type) {
   case qc::I:
-    gm = Imat;
+    gm = I_MAT;
     break;
   case qc::H:
-    gm = Hmat;
+    gm = H_MAT;
     break;
   case qc::X:
-    gm = Xmat;
+    gm = X_MAT;
     break;
   case qc::Y:
-    gm = Ymat;
+    gm = Y_MAT;
     break;
   case qc::Z:
-    gm = Zmat;
+    gm = Z_MAT;
     break;
   case qc::S:
-    gm = inverse ? Sdagmat : Smat;
+    gm = inverse ? SDG_MAT : S_MAT;
     break;
-  case qc::Sdag:
-    gm = inverse ? Smat : Sdagmat;
+  case qc::Sdg:
+    gm = inverse ? S_MAT : SDG_MAT;
     break;
   case qc::T:
-    gm = inverse ? Tdagmat : Tmat;
+    gm = inverse ? TDG_MAT : T_MAT;
     break;
-  case qc::Tdag:
-    gm = inverse ? Tmat : Tdagmat;
+  case qc::Tdg:
+    gm = inverse ? T_MAT : TDG_MAT;
     break;
   case qc::V:
-    gm = inverse ? Vdagmat : Vmat;
+    gm = inverse ? VDG_MAT : V_MAT;
     break;
-  case qc::Vdag:
-    gm = inverse ? Vmat : Vdagmat;
+  case qc::Vdg:
+    gm = inverse ? V_MAT : VDG_MAT;
     break;
-  case qc::U3:
-    gm = inverse ? U3mat(-parameter[1U], -parameter[2U], -parameter[0U])
-                 : U3mat(parameter[2U], parameter[1U], parameter[0U]);
+  case qc::U:
+    gm = inverse ? uMat(-parameter[1U], -parameter[2U], -parameter[0U])
+                 : uMat(parameter[2U], parameter[1U], parameter[0U]);
     break;
   case qc::U2:
-    gm = inverse ? U2mat(-parameter[0U] + PI, -parameter[1U] - PI)
-                 : U2mat(parameter[1U], parameter[0U]);
+    gm = inverse ? u2Mat(-parameter[0U] + PI, -parameter[1U] - PI)
+                 : u2Mat(parameter[1U], parameter[0U]);
     break;
-  case qc::Phase:
-    gm = inverse ? Phasemat(-parameter[0U]) : Phasemat(parameter[0U]);
+  case qc::P:
+    gm = inverse ? pMat(-parameter[0U]) : pMat(parameter[0U]);
     break;
   case qc::SX:
-    gm = inverse ? SXdagmat : SXmat;
+    gm = inverse ? SXDG_MAT : SX_MAT;
     break;
-  case qc::SXdag:
-    gm = inverse ? SXmat : SXdagmat;
+  case qc::SXdg:
+    gm = inverse ? SX_MAT : SXDG_MAT;
     break;
   case qc::RX:
-    gm = inverse ? RXmat(-parameter[0U]) : RXmat(parameter[0U]);
+    gm = inverse ? rxMat(-parameter[0U]) : rxMat(parameter[0U]);
     break;
   case qc::RY:
-    gm = inverse ? RYmat(-parameter[0U]) : RYmat(parameter[0U]);
+    gm = inverse ? ryMat(-parameter[0U]) : ryMat(parameter[0U]);
     break;
   case qc::RZ:
-    gm = inverse ? RZmat(-parameter[0U]) : RZmat(parameter[0U]);
+    gm = inverse ? rzMat(-parameter[0U]) : rzMat(parameter[0U]);
     break;
   default:
     std::ostringstream oss{};
@@ -116,36 +116,39 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
     bool definitionFound = true;
     switch (type) {
     case qc::SWAP:
-      gm = SWAPmat;
+      gm = SWAP_MAT;
       break;
     case qc::iSWAP:
-      gm = inverse ? iSWAPinvmat : iSWAPmat;
+      gm = inverse ? ISWAPDG_MAT : ISWAP_MAT;
+      break;
+    case qc::iSWAPdg:
+      gm = inverse ? ISWAP_MAT : ISWAPDG_MAT;
       break;
     case qc::DCX:
-      gm = DCXmat;
+      gm = DCX_MAT;
       break;
     case qc::ECR:
-      gm = ECRmat;
+      gm = ECR_MAT;
       break;
     case qc::RXX:
-      gm = inverse ? RXXmat(-parameter[0U]) : RXXmat(parameter[0U]);
+      gm = inverse ? rxxMat(-parameter[0U]) : rxxMat(parameter[0U]);
       break;
     case qc::RYY:
-      gm = inverse ? RYYmat(-parameter[0U]) : RYYmat(parameter[0U]);
+      gm = inverse ? ryyMat(-parameter[0U]) : ryyMat(parameter[0U]);
       break;
     case qc::RZZ:
-      gm = inverse ? RZZmat(-parameter[0U]) : RZZmat(parameter[0U]);
+      gm = inverse ? rzzMat(-parameter[0U]) : rzzMat(parameter[0U]);
       break;
     case qc::RZX:
-      gm = inverse ? RZXmat(-parameter[0U]) : RZXmat(parameter[0U]);
+      gm = inverse ? rzxMat(-parameter[0U]) : rzxMat(parameter[0U]);
       break;
     case qc::XXminusYY:
-      gm = inverse ? XXMinusYYmat(-parameter[0U], parameter[1U])
-                   : XXMinusYYmat(parameter[0U], parameter[1U]);
+      gm = inverse ? xxMinusYYMat(-parameter[0U], parameter[1U])
+                   : xxMinusYYMat(parameter[0U], parameter[1U]);
       break;
     case qc::XXplusYY:
-      gm = inverse ? XXPlusYYmat(-parameter[0U], parameter[1U])
-                   : XXPlusYYmat(parameter[0U], parameter[1U]);
+      gm = inverse ? xxPlusYYMat(-parameter[0U], parameter[1U])
+                   : xxPlusYYMat(parameter[0U], parameter[1U]);
       break;
     default:
       definitionFound = false;
@@ -165,13 +168,18 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
                                 startQubit);
     }
     return dd->makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
+  case qc::iSWAPdg:
+    if (inverse) {
+      return dd->makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
+    }
+    return dd->makeiSWAPinvDD(nqubits, controls, target0, target1, startQubit);
   case qc::Peres:
     if (inverse) {
       return dd->makePeresdagDD(nqubits, controls, target0, target1,
                                 startQubit);
     }
     return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
-  case qc::Peresdag:
+  case qc::Peresdg:
     if (inverse) {
       return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
     }
@@ -362,6 +370,10 @@ void changePermutation(DDType& on, qc::Permutation& from,
                        std::unique_ptr<Package<Config>>& dd,
                        const bool regular = true) {
   assert(from.size() >= to.size());
+  if (on.isTerminal()) {
+    return;
+  }
+  assert(on.p != nullptr);
 
   // iterate over (k,v) pairs of second permutation
   for (const auto& [i, goal] : to) {
@@ -390,7 +402,8 @@ void changePermutation(DDType& on, qc::Permutation& from,
 
     // swap i and j
     auto saved = on;
-    const auto swapDD = dd->makeSWAPDD(on.p->v + 1U, from.at(i), from.at(j));
+    const auto swapDD =
+        dd->makeTwoQubitGateDD(SWAP_MAT, on.p->v + 1U, from.at(i), from.at(j));
     if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
       on = dd->multiply(swapDD, on);
     } else {

@@ -42,33 +42,6 @@ template <typename T> std::pair<T*, T*> MemoryManager<T>::getPair() {
   return {r, i};
 }
 
-template <typename T> T* MemoryManager<T>::getTemporary() {
-  if (entryAvailableForReuse()) {
-    return available;
-  }
-
-  if (!entryAvailableInChunk()) {
-    allocateNewChunk();
-  }
-
-  return &(*chunkIt);
-}
-
-template <typename T> std::pair<T*, T*> MemoryManager<T>::getTemporaryPair() {
-  if (entryAvailableForReuse()) {
-    assert(available->next != nullptr &&
-           "At least two entries must be available");
-    return {available, available->next};
-  }
-
-  if (!entryAvailableInChunk()) {
-    allocateNewChunk();
-  }
-
-  assert(chunkIt + 1 != chunkEndIt && "At least two entries must be available");
-  return {&(*chunkIt), &(*(chunkIt + 1))};
-}
-
 template <typename T> void MemoryManager<T>::returnEntry(T* entry) noexcept {
   assert(entry != nullptr);
   assert(entry->ref == 0);

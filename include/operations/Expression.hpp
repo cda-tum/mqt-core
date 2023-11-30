@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Definitions.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -9,6 +11,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace sym {
@@ -73,10 +76,9 @@ public:
     return std::abs(static_cast<double>(coeff)) < TOLERANCE;
   }
 
-  Term(T coef, const Variable v) : coeff(coef), var(v){};
-  explicit Term(const Variable v) : coeff(1), var(v){};
+  explicit Term(const Variable v, T coef = 1.) : coeff(coef), var(v){};
 
-  Term operator-() const { return Term(-coeff, var); }
+  Term operator-() const { return Term(var, -coeff); }
 
   void addCoeff(const T& r) { coeff += r; }
   Term& operator*=(const T& rhs) {
@@ -127,7 +129,28 @@ template <typename T,
 inline Term<T> operator/(double lhs, const Term<T>& rhs) {
   return rhs / lhs;
 }
+template <typename T>
+inline bool operator==(const Term<T>& lhs, const Term<T>& rhs) {
+  return lhs.getVar() == rhs.getVar() &&
+         std::abs(lhs.getCoeff() - rhs.getCoeff()) < TOLERANCE;
+}
+template <typename T>
+inline bool operator!=(const Term<T>& lhs, const Term<T>& rhs) {
+  return !(lhs == rhs);
+}
+} // namespace sym
 
+namespace std {
+template <typename T> struct hash<sym::Term<T>> {
+  std::size_t operator()(const sym::Term<T>& term) const {
+    const auto h1 = std::hash<sym::Variable>{}(term.getVar());
+    const auto h2 = std::hash<T>{}(term.getCoeff());
+    return qc::combineHash(h1, h2);
+  }
+};
+} // namespace std
+
+namespace sym {
 template <
     typename T, typename U,
     typename = std::enable_if<
@@ -147,7 +170,7 @@ public:
   }
 
   template <typename... Args> explicit Expression(Variable v, Args&&... ms) {
-    terms.emplace_back(Term(T{1}, v));
+    terms.emplace_back(Term<T>(v));
     (terms.emplace_back(std::forward<Args>(ms)), ...);
     sortTerms();
     aggregateEqualTerms();
@@ -444,6 +467,12 @@ inline bool operator==(const Expression<T, U>& lhs,
   return true;
 }
 
+template <typename T, typename U>
+inline bool operator!=(const Expression<T, U>& lhs,
+                       const Expression<T, U>& rhs) {
+  return !(lhs == rhs);
+}
+
 std::ostream& operator<<(std::ostream& os, const Variable& var);
 
 template <typename T>
@@ -460,3 +489,22 @@ std::ostream& operator<<(std::ostream& os, const Expression<T, U>& expr) {
   return os;
 }
 } // namespace sym
+
+namespace std {
+template <typename T, typename U> struct hash<sym::Expression<T, U>> {
+  std::size_t operator()(const sym::Expression<T, U>& expr) const {
+    std::size_t seed = 0U;
+    for (const auto& term : expr) {
+      qc::hashCombine(seed, std::hash<sym::Term<T>>{}(term));
+    }
+    qc::hashCombine(seed, std::hash<U>{}(expr.getConst()));
+    return seed;
+  }
+};
+} // namespace std
+
+namespace qc {
+using Symbolic = sym::Expression<fp, fp>;
+using VariableAssignment = std::unordered_map<sym::Variable, fp>;
+using SymbolOrNumber = std::variant<Symbolic, fp>;
+} // namespace qc
