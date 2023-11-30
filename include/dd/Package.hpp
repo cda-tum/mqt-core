@@ -1502,14 +1502,13 @@ public:
     mEdge f = {};
 
     const auto identityMatrix =
-        std::array{qc::MatrixDD::one, qc::MatrixDD::zero, qc::MatrixDD::zero,
-                   qc::MatrixDD::one};
+        std::array{mEdge::one(), mEdge::zero(), mEdge::zero(), mEdge::one()};
 
-    const auto measureMatrix =
-        measureFor == '0' ? std::array{qc::MatrixDD::one, qc::MatrixDD::zero,
-                                       qc::MatrixDD::zero, qc::MatrixDD::zero}
-                          : std::array{qc::MatrixDD::zero, qc::MatrixDD::zero,
-                                       qc::MatrixDD::zero, qc::MatrixDD::one};
+    const auto measureMatrix = measureFor == '0'
+                                   ? std::array{mEdge::one(), mEdge::zero(),
+                                                mEdge::zero(), mEdge::zero()}
+                                   : std::array{mEdge::zero(), mEdge::zero(),
+                                                mEdge::zero(), mEdge::one()};
 
     if (index == 0) {
       measOp = makeDDNode(static_cast<dd::Qubit>(0), measureMatrix);
@@ -1540,16 +1539,16 @@ public:
     auto tmp0 = conjugateTranspose(operation);
     auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
     auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0, true);
-    auto densityMatrixTrace = trace(tmp2).r;
+    auto densityMatrixTrace = trace(tmp2);
 
     std::uniform_real_distribution<fp> dist(0., 1.);
-    if (const auto threshold = dist(mt); threshold > densityMatrixTrace) {
+    if (const auto threshold = dist(mt); threshold > densityMatrixTrace.r) {
       operation = buildMeasOp(index, numberOfQubits, '1');
       tmp0 = conjugateTranspose(operation);
       tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
       tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0, true);
       measuredResult = '1';
-      densityMatrixTrace = trace(tmp2).r;
+      densityMatrixTrace = trace(tmp2);
     }
 
     incRef(tmp2);
@@ -1561,10 +1560,11 @@ public:
     // Normalize density matrix
 
     auto densityMatrixTraceCached = cn.getCached(densityMatrixTrace);
-    auto res = cn.divTemp(e.w, densityMatrixTraceCached);
+    auto res = cn.divCached(e.w, densityMatrixTraceCached);
     cn.returnToCache(densityMatrixTraceCached);
     cn.decRef(e.w);
     e.w = cn.lookup(res);
+    cn.returnToCache(res);
     cn.incRef(e.w);
     return {e, measuredResult};
   }
