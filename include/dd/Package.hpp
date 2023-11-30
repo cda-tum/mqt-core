@@ -3026,7 +3026,7 @@ public:
 
     // add to the compute table with a weight of 1
     f.w = Complex::one();
-    setMatrixColumnsToZero.insert(e, k, f);
+    setMatrixRowsToZero.insert(e, k, f);
     f.w = e.w;
     return f;
   }
@@ -3080,6 +3080,9 @@ public:
     }
     if (u1.isTerminal() && u2.isTerminal()) {
       return u1 == u2;
+    }
+    if (u1.isZeroTerminal() || u2.isZeroTerminal()) {
+      return false;
     }
     // add qubits such that u1 and u2 have the same dimension
     if (u1.isTerminal()) {

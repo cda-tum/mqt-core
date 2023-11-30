@@ -2034,14 +2034,14 @@ TEST(DDPackageTest, DDMShiftAllRows3Qubits) {
 TEST(DDPackageTest, DDMShiftAllRows5Qubits) {
   const auto nqubits = 5U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
-  std::uint64_t n = 1 << nqubits;
+  const std::uint64_t n = 1 << nqubits;
   std::vector<std::complex<double>> row10(n, 0);
   std::vector<std::complex<double>> row01(n, 1);
   for (std::uint64_t i = 0; i < n; i += 2) {
     row10[i] = 1;
     row01[i] = 0;
   }
-  dd::CMat inputMatrix(
+  const dd::CMat inputMatrix(
       n, row10); // inputMatrix = [1, 0, 1, 0...]...[1, 0, 1, 0...]...
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
 
@@ -2065,6 +2065,8 @@ TEST(DDPackageTest, DDMSetColumnsToZero) {
   const auto expectedMatrix =
       dd::CMat{{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, -1, 0}, {1, 0, -1, 0}};
   EXPECT_EQ(outputMatrix.getMatrix(), expectedMatrix);
+
+  EXPECT_EQ(dd->setColumnsToZero(inputDD, 0), inputDD);
 }
 
 TEST(DDPackageTest,
@@ -2092,6 +2094,8 @@ TEST(DDPackageTest, DDMSetRowsToZero) {
   const auto expectedMatrix =
       dd::CMat{{1, 1, 1, 1}, {0, 0, 0, 0}, {1, 1, -1, -1}, {0, 0, 0, 0}};
   EXPECT_EQ(outputMatrix.getMatrix(), expectedMatrix);
+
+  EXPECT_EQ(dd->setRowsToZero(inputDD, 0), inputDD);
 }
 
 TEST(DDPackageTest, DDMPartialEquivalenceCheckingTrivialEquivalence) {
@@ -2205,4 +2209,50 @@ TEST(DDPackageTest,
   c2.setLogicalQubitGarbage(1);
   c2.setLogicalQubitGarbage(2);
   EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
+}
+
+TEST(DDPackageTest, DDMPartialEquivalenceWithDifferentNumberOfQubits) {
+  auto dd = std::make_unique<dd::Package<>>(3);
+  auto controlledSwapGate = dd->makeSWAPDD(3, qc::Controls{1}, 0, 2);
+  auto hGate = dd->makeGateDD(dd::H_MAT, 3, 2);
+  auto zGate = dd->makeGateDD(dd::Z_MAT, 3, 0);
+  auto xGate = dd->makeGateDD(dd::X_MAT, 2, 0);
+  auto controlledHGate = dd->makeGateDD(dd::H_MAT, 2, qc::Controls{0}, 1);
+
+  auto c1 = dd->multiply(
+      controlledSwapGate,
+      dd->multiply(hGate, dd->multiply(zGate, controlledSwapGate)));
+  auto c2 = dd->multiply(controlledHGate, xGate);
+
+  EXPECT_TRUE(dd->zeroAncillaPartialEquivalenceCheck(c1, c2, 1));
+  EXPECT_TRUE(dd->partialEquivalenceCheck(c1, c2, 3, 1));
+  EXPECT_FALSE(dd->partialEquivalenceCheck(c2, c1, 3, 3));
+  EXPECT_FALSE(dd->partialEquivalenceCheck(c2, dd::mEdge::zero(), 2, 1));
+  EXPECT_FALSE(dd->partialEquivalenceCheck(c2, dd::mEdge::one(), 2, 1));
+  EXPECT_FALSE(dd->partialEquivalenceCheck(dd::mEdge::one(), c1, 2, 1));
+  EXPECT_TRUE(
+      dd->partialEquivalenceCheck(dd::mEdge::one(), dd::mEdge::one(), 0, 1));
+  EXPECT_TRUE(
+      dd->partialEquivalenceCheck(dd::mEdge::one(), dd::mEdge::one(), 0, 0));
+}
+
+TEST(DDPackageTest, DDMPartialEquivalenceCheckingComputeTable) {
+  const auto nqubits = 3U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
+  auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 2);
+  auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 0);
+  auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
+  auto controlledHGate = dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 2);
+
+  auto c1 = dd->multiply(
+      controlledSwapGate,
+      dd->multiply(hGate, dd->multiply(zGate, controlledSwapGate)));
+  auto c2 = dd->multiply(controlledHGate, xGate);
+
+  EXPECT_TRUE(dd->partialEquivalenceCheck(c1, c2, 3, 1));
+  EXPECT_TRUE(dd->partialEquivalenceCheck(c1, c2, 3, 1));
+  EXPECT_TRUE(dd->partialEquivalenceCheck(c1, c2, 3, 1));
+  EXPECT_TRUE(dd->partialEquivalenceCheck(c1, c2, 3, 1));
+  EXPECT_TRUE(dd->partialEquivalenceCheck(c1, c2, 3, 1));
 }
