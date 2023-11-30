@@ -184,7 +184,8 @@ public:
     std::shared_ptr<ResolvedType> const ty =
         std::get<1>(declarationStatement->type);
 
-    if (const auto sizedTy = std::dynamic_pointer_cast<DesignatedType<uint64_t>>(ty)) {
+    if (const auto sizedTy =
+            std::dynamic_pointer_cast<DesignatedType<uint64_t>>(ty)) {
       const auto designator = sizedTy->getDesignator();
       switch (sizedTy->type) {
       case Qubit:

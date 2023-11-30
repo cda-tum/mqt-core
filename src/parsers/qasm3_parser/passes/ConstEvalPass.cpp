@@ -481,10 +481,11 @@ std::optional<ConstEvalValue> ConstEvalPass::visitMeasureExpression(
     std::shared_ptr<MeasureExpression> /*measureExpression*/) {
   return std::nullopt;
 }
-std::shared_ptr<ResolvedType>
-ConstEvalPass::visitDesignatedType(DesignatedType<std::shared_ptr<Expression>>* designatedType) {
+std::shared_ptr<ResolvedType> ConstEvalPass::visitDesignatedType(
+    DesignatedType<std::shared_ptr<Expression>>* designatedType) {
   if (designatedType->designator == nullptr) {
-    const auto ty = std::make_shared<DesignatedType<uint64_t>>(designatedType->type);
+    const auto ty =
+        std::make_shared<DesignatedType<uint64_t>>(designatedType->type);
     return std::dynamic_pointer_cast<ResolvedType>(ty);
   }
   const auto result = visit(designatedType->designator);

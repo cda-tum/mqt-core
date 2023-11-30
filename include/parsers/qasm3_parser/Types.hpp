@@ -224,17 +224,17 @@ public:
   std::string toString() override {
     switch (type) {
     case Qubit:
-      return "qubit[" + designatorToString() +  "]";
+      return "qubit[" + designatorToString() + "]";
     case Bit:
-      return "bit[" + designatorToString() +  "]";
+      return "bit[" + designatorToString() + "]";
     case Int:
-      return "int[" + designatorToString() +  "]";
+      return "int[" + designatorToString() + "]";
     case Uint:
-      return "uint[" + designatorToString() +  "]";
+      return "uint[" + designatorToString() + "]";
     case Float:
-      return "float[" + designatorToString() +  "]";
+      return "float[" + designatorToString() + "]";
     case Angle:
-      return "angle[" + designatorToString() +  "]";
+      return "angle[" + designatorToString() + "]";
     }
     throw std::runtime_error("Unhandled type");
   }

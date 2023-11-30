@@ -58,7 +58,8 @@ DesignatedType<uint64_t>::DesignatedType(DesignatedTy ty)
   }
 }
 
-template <> std::string DesignatedType<std::shared_ptr<Expression>>::designatorToString() {
+template <>
+std::string DesignatedType<std::shared_ptr<Expression>>::designatorToString() {
   return "expr";
 }
 
