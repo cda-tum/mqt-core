@@ -39,7 +39,8 @@ class OpenQasm3Parser final : public InstVisitor {
   initializeBuiltins() {
     std::map<std::string, std::pair<ConstEvalValue, InferredType>> builtins{};
 
-    InferredType const floatTy{std::make_shared<SizedType>(Float, 64)};
+    InferredType const floatTy{std::dynamic_pointer_cast<ResolvedType>(
+        std::make_shared<DesignatedType<uint64_t>>(Float, 64))};
 
     builtins.emplace("pi", std::pair{ConstEvalValue(qc::PI), floatTy});
     builtins.emplace("π", std::pair{ConstEvalValue(qc::PI), floatTy});
@@ -183,7 +184,7 @@ public:
     std::shared_ptr<ResolvedType> const ty =
         std::get<1>(declarationStatement->type);
 
-    if (const auto sizedTy = std::dynamic_pointer_cast<SizedType>(ty)) {
+    if (const auto sizedTy = std::dynamic_pointer_cast<DesignatedType<uint64_t>>(ty)) {
       const auto designator = sizedTy->getDesignator();
       switch (sizedTy->type) {
       case Qubit:

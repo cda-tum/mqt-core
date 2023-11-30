@@ -127,7 +127,7 @@ public:
 
 template <typename T> class Type;
 using ResolvedType = Type<uint64_t>;
-class DesignatedType;
+template <typename T> class DesignatedType;
 template <typename T> class UnsizedType;
 template <typename T> class ArrayType;
 
@@ -136,7 +136,7 @@ public:
   virtual ~TypeVisitor() = default;
 
   virtual std::shared_ptr<ResolvedType>
-  visitDesignatedType(DesignatedType* designatedType) = 0;
+  visitDesignatedType(DesignatedType<T>* designatedType) = 0;
   virtual std::shared_ptr<ResolvedType>
   visitUnsizedType(UnsizedType<T>* unsizedType) = 0;
   virtual std::shared_ptr<ResolvedType>

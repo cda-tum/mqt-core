@@ -482,9 +482,10 @@ std::optional<ConstEvalValue> ConstEvalPass::visitMeasureExpression(
   return std::nullopt;
 }
 std::shared_ptr<ResolvedType>
-ConstEvalPass::visitDesignatedType(DesignatedType* designatedType) {
+ConstEvalPass::visitDesignatedType(DesignatedType<std::shared_ptr<Expression>>* designatedType) {
   if (designatedType->designator == nullptr) {
-    return std::make_shared<SizedType>(designatedType->type);
+    const auto ty = std::make_shared<DesignatedType<uint64_t>>(designatedType->type);
+    return std::dynamic_pointer_cast<ResolvedType>(ty);
   }
   const auto result = visit(designatedType->designator);
   if (!result) {
@@ -493,9 +494,10 @@ ConstEvalPass::visitDesignatedType(DesignatedType* designatedType) {
   if (result->type == ConstEvalValue::Type::ConstUint ||
       (result->type == ConstEvalValue::Type::ConstInt &&
        std::get<0>(result->value) >= 0)) {
-    return std::make_shared<SizedType>(
+    const auto ty = std::make_shared<DesignatedType<uint64_t>>(
         designatedType->type,
         static_cast<uint64_t>(std::get<0>(result->value)));
+    return std::dynamic_pointer_cast<ResolvedType>(ty);
   }
   throw ConstEvalError("Designator must be an unsigned integer.");
 }

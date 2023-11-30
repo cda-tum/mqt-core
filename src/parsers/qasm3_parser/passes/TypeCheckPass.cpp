@@ -4,6 +4,8 @@
 #include "parsers/qasm3_parser/Statement.hpp"
 #include "parsers/qasm3_parser/Types.hpp"
 
+#include <cassert>
+#include <cstdint>
 #include <vector>
 
 namespace qasm3::type_checking {
@@ -14,10 +16,14 @@ void TypeCheckPass::visitGateStatement(
   const auto oldEnv = env;
 
   for (const auto& param : gateStatement->parameters->identifiers) {
-    env.emplace(param->identifier, InferredType{SizedType::getFloatTy()});
+    env.emplace(param->identifier,
+                InferredType{std::dynamic_pointer_cast<ResolvedType>(
+                    DesignatedType<uint64_t>::getFloatTy(64))});
   }
   for (const auto& operand : gateStatement->qubits->identifiers) {
-    env.emplace(operand->identifier, InferredType{SizedType::getQubitTy()});
+    env.emplace(operand->identifier,
+                InferredType{std::dynamic_pointer_cast<ResolvedType>(
+                    DesignatedType<uint64_t>::getQubitTy(1))});
   }
 
   for (const auto& stmt : gateStatement->statements) {
@@ -104,6 +110,7 @@ void TypeCheckPass::visitAssignmentStatement(
 
   if (!idTy->second.type->fits(*exprTy.type)) {
     std::stringstream ss;
+    ss << idTy->second.type->fits(*exprTy.type);
     ss << "Type mismatch in assignment. Expected '";
     ss << idTy->second.type->toString();
     ss << "', found '";
@@ -232,7 +239,8 @@ InferredType TypeCheckPass::visitUnaryExpression(
   case UnaryExpression::Exp:
   case UnaryExpression::Ln:
   case UnaryExpression::Sqrt:
-    return InferredType{SizedType::getFloatTy()};
+    return InferredType{std::dynamic_pointer_cast<ResolvedType>(
+        DesignatedType<uint64_t>::getFloatTy(64))};
   }
 
   return type;
@@ -241,15 +249,24 @@ InferredType TypeCheckPass::visitUnaryExpression(
 InferredType
 TypeCheckPass::visitConstantExpression(std::shared_ptr<Constant> constant) {
   if (constant->isFP()) {
-    return InferredType{SizedType::getFloatTy()};
+    return InferredType{std::dynamic_pointer_cast<ResolvedType>(
+        DesignatedType<uint64_t>::getFloatTy(64))};
   }
   assert(constant->isInt());
 
-  if (constant->isSInt()) {
-    return InferredType{SizedType::getIntTy()};
+  size_t width = 32;
+  if ((constant->isSInt() && constant->getSInt() > INT32_MAX) ||
+      (constant->isUInt() && constant->getUInt() > UINT32_MAX)) {
+    width = 64;
   }
 
-  return InferredType{SizedType::getUintTy()};
+  if (constant->isSInt()) {
+    return InferredType{std::dynamic_pointer_cast<ResolvedType>(
+        DesignatedType<uint64_t>::getIntTy(width))};
+  }
+
+  return InferredType{std::dynamic_pointer_cast<ResolvedType>(
+      DesignatedType<uint64_t>::getUintTy(width))};
 }
 
 InferredType TypeCheckPass::visitIdentifierExpression(
@@ -282,10 +299,11 @@ InferredType TypeCheckPass::visitMeasureExpression(
     width = gate->second.type->getDesignator();
   }
 
-  return InferredType{SizedType::getBitTy(width)};
+  return InferredType{std::dynamic_pointer_cast<ResolvedType>(
+      DesignatedType<uint64_t>::getBitTy(width))};
 }
-std::shared_ptr<ResolvedType>
-TypeCheckPass::visitDesignatedType(DesignatedType* designatedType) {
+std::shared_ptr<ResolvedType> TypeCheckPass::visitDesignatedType(
+    DesignatedType<std::shared_ptr<Expression>>* designatedType) {
   const auto resolvedTy = visit(designatedType->designator);
   if (!resolvedTy.isError && !resolvedTy.type->isUint()) {
     error("Designator must be an unsigned integer");

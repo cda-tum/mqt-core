@@ -769,30 +769,30 @@ std::pair<std::shared_ptr<TypeExpr>, bool> Parser::parseType() {
 
   switch (current().kind) {
   case Token::Kind::CReg:
-    type = DesignatedType::getBitTy();
+    type = DesignatedType<std::shared_ptr<Expression>>::getBitTy(nullptr);
     isOldStyleDeclaration = true;
     break;
   case Token::Kind::Qreg:
-    type = DesignatedType::getQubitTy();
+    type = DesignatedType<std::shared_ptr<Expression>>::getQubitTy(nullptr);
     isOldStyleDeclaration = true;
     break;
   case Token::Kind::Int:
-    type = DesignatedType::getIntTy();
+    type = DesignatedType<std::shared_ptr<Expression>>::getIntTy(nullptr);
     break;
   case Token::Kind::Uint:
-    type = DesignatedType::getUintTy();
+    type = DesignatedType<std::shared_ptr<Expression>>::getUintTy(nullptr);
     break;
   case Token::Kind::Bit:
-    type = DesignatedType::getBitTy();
+    type = DesignatedType<std::shared_ptr<Expression>>::getBitTy(nullptr);
     break;
   case Token::Kind::Qubit:
-    type = DesignatedType::getQubitTy();
+    type = DesignatedType<std::shared_ptr<Expression>>::getQubitTy(nullptr);
     break;
   case Token::Kind::Float:
-    type = DesignatedType::getFloatTy();
+    type = DesignatedType<std::shared_ptr<Expression>>::getFloatTy(nullptr);
     break;
   case Token::Kind::Angle:
-    type = DesignatedType::getAngleTy();
+    type = DesignatedType<std::shared_ptr<Expression>>::getAngleTy(nullptr);
     break;
   case Token::Kind::Bool:
     type = UnsizedType<std::shared_ptr<Expression>>::getBoolTy();

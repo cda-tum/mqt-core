@@ -145,7 +145,7 @@ public:
       std::shared_ptr<MeasureExpression> measureExpression) override;
 
   std::shared_ptr<ResolvedType>
-  visitDesignatedType(DesignatedType* designatedType) override;
+  visitDesignatedType(DesignatedType<std::shared_ptr<Expression>>* designatedType) override;
   std::shared_ptr<ResolvedType> visitUnsizedType(
       UnsizedType<std::shared_ptr<Expression>>* unsizedType) override;
   std::shared_ptr<ResolvedType>
