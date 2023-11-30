@@ -250,14 +250,13 @@ public:
                                   double ampDampProbSingleQubit,
                                   double ampDampProbMultiQubit,
                                   std::vector<NoiseOperations> effects,
-                                  bool useDensityMatType, bool seqApplyNoise)
+                                  bool seqApplyNoise)
       : package(dd), nQubits(nq),
         noiseProbSingleQubit(noiseProbabilitySingleQubit),
         noiseProbMultiQubit(noiseProbabilityMultiQubit),
         ampDampingProbSingleQubit(ampDampProbSingleQubit),
         ampDampingProbMultiQubit(ampDampProbMultiQubit),
         noiseEffects(std::move(effects)),
-        useDensityMatrixType(useDensityMatType),
         sequentiallyApplyNoise(seqApplyNoise) {}
 
 protected:

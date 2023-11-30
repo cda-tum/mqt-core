@@ -1525,10 +1525,10 @@ public:
                    qc::MatrixDD::one};
 
     const auto measureMatrix =
-        measureFor == '0' ? std::array{qc::MatrixDD::zero, qc::MatrixDD::zero,
-                                       qc::MatrixDD::zero, qc::MatrixDD::one}
-                          : std::array{qc::MatrixDD::one, qc::MatrixDD::zero,
-                                       qc::MatrixDD::zero, qc::MatrixDD::zero};
+        measureFor == '0' ? std::array{qc::MatrixDD::one, qc::MatrixDD::zero,
+                                       qc::MatrixDD::zero, qc::MatrixDD::zero}
+                          : std::array{qc::MatrixDD::zero, qc::MatrixDD::zero,
+                                       qc::MatrixDD::zero, qc::MatrixDD::one};
 
     if (index == 0) {
       measOp = makeDDNode(static_cast<dd::Qubit>(0), measureMatrix);
@@ -1538,36 +1538,54 @@ public:
 
     for (dd::Qubit p = 1; p < numberOfQubits; p++) {
       if (p == index) {
-        f = makeDDNode(p, measureMatrix);
+        f = makeDDNode(static_cast<dd::Qubit>(0), measureMatrix);
       } else {
-        f = makeDDNode(p, identityMatrix);
+        f = makeDDNode(static_cast<dd::Qubit>(0), identityMatrix);
       }
-      measOp = kronecker(measOp, f);
+      measOp = kronecker(f, measOp);
     }
     return measOp;
   }
 
-  std::pair<dEdge, char> measureOneCollapsing(dEdge& rootEdge,
-                                              const Qubit index,
+  std::pair<dEdge, char> measureOneCollapsing(dEdge& e, const Qubit index,
                                               std::mt19937_64& mt) {
-    const auto numberOfQubits = static_cast<std::size_t>(rootEdge.p->v) + 1U;
+    dEdge::alignDensityEdge(e);
+    const auto numberOfQubits = qubits();
+    dEdge::setDensityMatrixTrue(e);
     char measuredResult = '0';
 
-    auto tmp0 = applyOperationToDensity(
-        rootEdge, buildMeasOp(index, numberOfQubits, '0'), true);
+    auto operation = buildMeasOp(index, numberOfQubits, '0');
 
-    auto pzero = RealNumber::val(rootEdge.w.r);
+    auto tmp0 = conjugateTranspose(operation);
+    auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
+    auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0, true);
+    auto densityMatrixTrace = trace(tmp2).r;
 
     std::uniform_real_distribution<fp> dist(0., 1.);
-    if (const auto threshold = dist(mt); threshold < pzero) {
-      rootEdge = tmp0;
-    } else {
-      rootEdge = applyOperationToDensity(
-          rootEdge, buildMeasOp(index, numberOfQubits, '1'), true);
+    if (const auto threshold = dist(mt); threshold > densityMatrixTrace) {
+      operation = buildMeasOp(index, numberOfQubits, '1');
+      tmp0 = conjugateTranspose(operation);
+      tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
+      tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0, true);
       measuredResult = '1';
+      densityMatrixTrace = trace(tmp2).r;
     }
-    rootEdge.w = Complex::one;
-    return {rootEdge, measuredResult};
+
+    incRef(tmp2);
+    dEdge::alignDensityEdge(e);
+    decRef(e);
+    e = tmp2;
+    dEdge::setDensityMatrixTrue(e);
+
+    // Normalize density matrix
+
+    auto densityMatrixTraceCached = cn.getCached(densityMatrixTrace);
+    auto res = cn.divTemp(e.w, densityMatrixTraceCached);
+    cn.returnToCache(densityMatrixTraceCached);
+    cn.decRef(e.w);
+    e.w = cn.lookup(res);
+    cn.incRef(e.w);
+    return {e, measuredResult};
   }
 
   /**
@@ -1814,22 +1832,16 @@ public:
     }
   }
 
-  dEdge applyOperationToDensity(dEdge& e, const mEdge& operation,
-                                const bool generateDensityMatrix = false) {
+  dEdge applyOperationToDensity(dEdge& e, const mEdge& operation) {
     [[maybe_unused]] const auto before = cn.cacheCount();
     auto tmp0 = conjugateTranspose(operation);
     auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
-    auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0,
-                         generateDensityMatrix);
+    auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0, true);
     incRef(tmp2);
     dEdge::alignDensityEdge(e);
     decRef(e);
     e = tmp2;
-
-    if (generateDensityMatrix) {
-      dEdge::setDensityMatrixTrue(e);
-    }
-
+    dEdge::setDensityMatrixTrue(e);
     return e;
   }
 
@@ -2281,14 +2293,15 @@ private:
   /// (Partial) trace
   ///
 public:
-  mEdge partialTrace(const mEdge& a, const std::vector<bool>& eliminate) {
+  template <class Edge>
+  Edge partialTrace(const Edge& a, const std::vector<bool>& eliminate) {
     [[maybe_unused]] const auto before = cn.cacheCount();
     const auto result = trace(a, eliminate);
     [[maybe_unused]] const auto after = cn.cacheCount();
     assert(before == after);
     return result;
   }
-  ComplexValue trace(const mEdge& a) {
+  template <class Edge> ComplexValue trace(const Edge& a) {
     const auto eliminate = std::vector<bool>(nqubits, true);
     [[maybe_unused]] const auto before = cn.cacheCount();
     const auto res = partialTrace(a, eliminate);
@@ -2304,10 +2317,11 @@ public:
 
 private:
   /// TODO: introduce a compute table for the trace?
-  mEdge trace(const mEdge& a, const std::vector<bool>& eliminate,
-              std::size_t alreadyEliminated = 0) {
+  template <class Edge>
+  Edge trace(const Edge& a, const std::vector<bool>& eliminate,
+             std::size_t alreadyEliminated = 0) {
     if (a.w.approximatelyZero()) {
-      return mEdge::zero;
+      return Edge::zero;
     }
 
     if (a.isTerminal() || std::none_of(eliminate.begin(), eliminate.end(),
@@ -2318,7 +2332,7 @@ private:
     const auto v = a.p->v;
     if (eliminate[v]) {
       const auto elims = alreadyEliminated + 1;
-      auto r = mEdge::zero;
+      auto r = Edge::zero;
 
       const auto t0 = trace(a.p->e[0], eliminate, elims);
       r = add2(r, t0, v - 1);
@@ -2342,10 +2356,10 @@ private:
       return r;
     }
 
-    std::array<mEdge, NEDGE> edge{};
+    std::array<Edge, NEDGE> edge{};
     std::transform(
         a.p->e.cbegin(), a.p->e.cend(), edge.begin(),
-        [this, &eliminate, &alreadyEliminated](const mEdge& e) -> mEdge {
+        [this, &eliminate, &alreadyEliminated](const Edge& e) -> Edge {
           return trace(e, eliminate, alreadyEliminated);
         });
     const auto adjustedV =
