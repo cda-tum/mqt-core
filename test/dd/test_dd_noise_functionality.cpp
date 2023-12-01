@@ -90,7 +90,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
       {"0011", 0.0242454336917}, {"1011", 0.0262779844799},
       {"0111", 0.0239296920989}, {"1111", 0.0110373166627}};
 
-  std::array<std::array<dd::SparsePVecStrKeys, 2>, 2> results{};
+  const std::array<std::array<dd::SparsePVecStrKeys, 2>, 2> results{};
   auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
   auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
@@ -111,13 +111,50 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
 
   // Expect that all results are the same
   static constexpr fp TOLERANCE = 1e-10;
-  for (auto& result : results) {
-    for (auto& j : result) {
+  for (const auto& result : results) {
+    for (const auto& j : result) {
       for (const auto& [key, value] : j) {
         EXPECT_NEAR(value, reference.at(key), TOLERANCE);
       }
     }
   }
+}
+
+TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
+  std::mt19937_64 mt{0}; // NOLINT(cert-msc51-cpp)
+
+  qc::QuantumComputation qcOp{};
+
+  qcOp.addQubitRegister(1U);
+  qcOp.h(0);
+
+  auto dd = std::make_unique<DensityMatrixTestPackage>(qcOp.getNqubits());
+
+  auto rootEdge = dd->makeZeroDensityOperator(qcOp.getNqubits());
+  dd->incRef(rootEdge);
+
+  auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
+      dd, qcOp.getNqubits(), 0.01, 0.02, 0.02, 0.04, {});
+
+  for (auto const& op : qcOp) {
+    dd->applyOperationToDensity(rootEdge, dd::getDD(op.get(), dd));
+    deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
+  }
+  char result;
+
+
+  auto tmp = rootEdge.getSparseProbabilityVectorStrKeys();
+
+  const double tolerance = 1e-10;
+
+  EXPECT_NEAR(tmp["0"], 0.5, tolerance);
+  EXPECT_NEAR(tmp["1"], 0.5, tolerance);
+
+  std::tie(rootEdge, result) = dd->measureOneCollapsing(rootEdge, 0, mt);
+
+  auto tmp0 = rootEdge.getSparseProbabilityVectorStrKeys();
+
+  EXPECT_TRUE(fabs(tmp0["0"] - 1) < tolerance ||  fabs(tmp0["1"] - 1) < tolerance);
 }
 
 TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {

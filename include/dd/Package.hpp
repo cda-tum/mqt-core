@@ -1529,9 +1529,7 @@ public:
 
   std::pair<dEdge, char> measureOneCollapsing(dEdge& e, const Qubit index,
                                               std::mt19937_64& mt) {
-    dEdge::alignDensityEdge(e);
     const auto numberOfQubits = qubits();
-    dEdge::setDensityMatrixTrue(e);
     char measuredResult = '0';
 
     auto operation = buildMeasOp(index, numberOfQubits, '0');
