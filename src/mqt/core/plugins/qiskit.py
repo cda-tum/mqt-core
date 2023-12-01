@@ -282,7 +282,7 @@ def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> floa
     if isinstance(qiskit_expr, float):
         return qiskit_expr
 
-    expr_str = qiskit_expr.__str__().strip()
+    expr_str = str(qiskit_expr).strip()
     expr = Expression()
     is_const = True
     for summand in _SUM_REGEX.findall(expr_str):
