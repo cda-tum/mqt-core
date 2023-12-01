@@ -142,7 +142,6 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
   }
   char result;
 
-
   auto tmp = rootEdge.getSparseProbabilityVectorStrKeys();
 
   const double tolerance = 1e-10;
@@ -154,7 +153,8 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
 
   auto tmp0 = rootEdge.getSparseProbabilityVectorStrKeys();
 
-  EXPECT_TRUE(fabs(tmp0["0"] - 1) < tolerance ||  fabs(tmp0["1"] - 1) < tolerance);
+  EXPECT_TRUE(fabs(tmp0["0"] - 1) < tolerance ||
+              fabs(tmp0["1"] - 1) < tolerance);
 }
 
 TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
