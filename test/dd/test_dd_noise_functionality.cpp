@@ -91,32 +91,24 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
       {"0111", 0.0239296920989}, {"1111", 0.0110373166627}};
 
   std::array<std::array<dd::SparsePVecStrKeys, 2>, 2> results{};
-  for (const auto useDensityMatrixType : {false, true}) {
-    for (const auto applyNoiseSequentially : {false, true}) {
-      auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
+  auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
-      auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
-      dd->incRef(rootEdge);
+  auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
+  dd->incRef(rootEdge);
 
-      const auto noiseEffects = {dd::AmplitudeDamping, dd::PhaseFlip,
-                                 dd::Depolarization, dd::Identity};
+  const auto noiseEffects = {dd::AmplitudeDamping, dd::PhaseFlip,
+                             dd::Depolarization, dd::Identity};
 
-      auto deterministicNoiseFunctionality =
-          dd::DeterministicNoiseFunctionality(
-              dd, qc.getNqubits(), 0.01, 0.02, 0.02, 0.04, noiseEffects,
-              useDensityMatrixType, applyNoiseSequentially);
+  auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
+      dd, qc.getNqubits(), 0.01, 0.02, 0.02, 0.04, noiseEffects);
 
-      for (auto const& op : qc) {
-        dd->applyOperationToDensity(rootEdge, dd::getDD(op.get(), dd),
-                                    useDensityMatrixType);
-        deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
-      }
-
-      const auto m = rootEdge.getSparseProbabilityVectorStrKeys(0.001);
-      results[static_cast<std::size_t>(useDensityMatrixType)]
-             [static_cast<std::size_t>(applyNoiseSequentially)] = m;
-    }
+  for (auto const& op : qc) {
+    dd->applyOperationToDensity(rootEdge, dd::getDD(op.get(), dd));
+    deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
   }
+
+  const auto m = rootEdge.getSparseProbabilityVectorStrKeys(0.001);
+
   // Expect that all results are the same
   static constexpr fp TOLERANCE = 1e-10;
   for (auto& result : results) {
