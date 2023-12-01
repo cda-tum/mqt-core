@@ -264,14 +264,6 @@ protected:
 
   std::vector<NoiseOperations> noiseEffects;
 
-  inline static const std::map<NoiseOperations, std::size_t>
-      SEQUENTIAL_NOISE_MAP = {
-          {Identity, 1},         // Identity Noise
-          {PhaseFlip, 2},        // Phase-flip
-          {AmplitudeDamping, 2}, // Amplitude Damping
-          {Depolarization, 4},   // Depolarisation
-  };
-
   [[nodiscard]] std::size_t getNumberOfQubits() const { return nQubits; }
 
 public:
