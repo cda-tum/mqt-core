@@ -244,15 +244,13 @@ public:
                                   double noiseProbabilityMultiQubit,
                                   double ampDampProbSingleQubit,
                                   double ampDampProbMultiQubit,
-                                  std::vector<NoiseOperations> effects,
-                                  bool seqApplyNoise)
+                                  std::vector<NoiseOperations> effects)
       : package(dd), nQubits(nq),
         noiseProbSingleQubit(noiseProbabilitySingleQubit),
         noiseProbMultiQubit(noiseProbabilityMultiQubit),
         ampDampingProbSingleQubit(ampDampProbSingleQubit),
         ampDampingProbMultiQubit(ampDampProbMultiQubit),
-        noiseEffects(std::move(effects)),
-        sequentiallyApplyNoise(seqApplyNoise) {}
+        noiseEffects(std::move(effects)) {}
 
 protected:
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -265,8 +263,6 @@ protected:
   double ampDampingProbMultiQubit;
 
   std::vector<NoiseOperations> noiseEffects;
-  bool useDensityMatrixType;
-  bool sequentiallyApplyNoise;
 
   inline static const std::map<NoiseOperations, std::size_t>
       SEQUENTIAL_NOISE_MAP = {
@@ -285,27 +281,18 @@ public:
 
     [[maybe_unused]] const auto cacheSizeBefore = package->cn.cacheCount();
 
-    if (sequentiallyApplyNoise) {
-      applyDetNoiseSequential(originalEdge, usedQubits);
-    } else {
-      dEdge nodeAfterNoise = {};
-      if (useDensityMatrixType) {
-        dEdge::applyDmChangesToEdge(originalEdge);
-        nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, false);
-        dEdge::revertDmChangesToEdge(originalEdge);
-      } else {
-        nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, true);
-      }
-      nodeAfterNoise.w = package->cn.lookup(nodeAfterNoise.w, true);
+    dEdge::applyDmChangesToEdge(originalEdge);
+    auto nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, false);
+    dEdge::revertDmChangesToEdge(originalEdge);
 
-      package->incRef(nodeAfterNoise);
-      dEdge::alignDensityEdge(originalEdge);
-      package->decRef(originalEdge);
-      originalEdge = nodeAfterNoise;
-      if (useDensityMatrixType) {
-        dEdge::setDensityMatrixTrue(originalEdge);
-      }
-    }
+    nodeAfterNoise.w = package->cn.lookup(nodeAfterNoise.w, true);
+
+    package->incRef(nodeAfterNoise);
+    dEdge::alignDensityEdge(originalEdge);
+    package->decRef(originalEdge);
+    originalEdge = nodeAfterNoise;
+    dEdge::setDensityMatrixTrue(originalEdge);
+
     [[maybe_unused]] const auto cacheSizeAfter = package->cn.cacheCount();
     assert(cacheSizeAfter == cacheSizeBefore);
   }
@@ -545,44 +532,6 @@ private:
     }
     package->cn.returnToCache(oldE0Edge.w);
     package->cn.returnToCache(complexProb);
-  }
-
-  void applyDetNoiseSequential(dEdge& originalEdge,
-                               const std::set<qc::Qubit>& targets) {
-    std::array<mEdge, NrEdges::value> idleOperation{};
-
-    // Iterate over qubits and check if the qubit had been used
-    for (const auto targetQubit : targets) {
-      for (auto const& type : noiseEffects) {
-        generateGate(idleOperation, type, targetQubit,
-                     getNoiseProbability(type, targets));
-        std::optional<dEdge> tmp{};
-        // Apply all noise matrices of the current noise effect
-        for (std::size_t m = 0; m < SEQUENTIAL_NOISE_MAP.find(type)->second;
-             m++) {
-          auto tmp0 = package->conjugateTranspose(idleOperation.at(m));
-          auto tmp1 = package->multiply(originalEdge,
-                                        densityFromMatrixEdge(tmp0), 0, false);
-          auto tmp2 =
-              package->multiply(densityFromMatrixEdge(idleOperation.at(m)),
-                                tmp1, 0, useDensityMatrixType);
-          if (!tmp.has_value()) {
-            tmp = tmp2;
-          } else {
-            tmp = package->add(tmp2, *tmp);
-          }
-        }
-        assert(tmp.has_value());
-        auto& tmpEdge = *tmp;
-        package->incRef(tmpEdge);
-        dEdge::alignDensityEdge(originalEdge);
-        package->decRef(originalEdge);
-        originalEdge = tmpEdge;
-        if (useDensityMatrixType) {
-          dEdge::setDensityMatrixTrue(originalEdge);
-        }
-      }
-    }
   }
 
   void generateDepolarizationGate(
