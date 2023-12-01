@@ -140,7 +140,7 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
     dd->applyOperationToDensity(rootEdge, dd::getDD(op.get(), dd));
     deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
   }
-  char result;
+  char result = '2';
 
   auto tmp = rootEdge.getSparseProbabilityVectorStrKeys();
 

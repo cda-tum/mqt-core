@@ -1496,8 +1496,7 @@ public:
     return '1';
   }
 
-  mEdge buildMeasOp(const Qubit index, const size_t numberOfQubits,
-                    const char measureFor = '0') {
+  mEdge buildMeasOp(const Qubit index, const char measureFor = '0') {
     mEdge measOp = {};
     mEdge f = {};
 
@@ -1516,7 +1515,7 @@ public:
       measOp = makeDDNode(static_cast<dd::Qubit>(0), identityMatrix);
     }
 
-    for (dd::Qubit p = 1; p < numberOfQubits; p++) {
+    for (dd::Qubit p = 1; p < static_cast<dd::Qubit>(qubits()); p++) {
       if (p == index) {
         f = makeDDNode(static_cast<dd::Qubit>(0), measureMatrix);
       } else {
@@ -1532,7 +1531,7 @@ public:
     const auto numberOfQubits = qubits();
     char measuredResult = '0';
 
-    auto operation = buildMeasOp(index, numberOfQubits, '0');
+    auto operation = buildMeasOp(index, '0');
 
     auto tmp0 = conjugateTranspose(operation);
     auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
@@ -1541,7 +1540,7 @@ public:
 
     std::uniform_real_distribution<fp> dist(0., 1.);
     if (const auto threshold = dist(mt); threshold > densityMatrixTrace.r) {
-      operation = buildMeasOp(index, numberOfQubits, '1');
+      operation = buildMeasOp(index, '1');
       tmp0 = conjugateTranspose(operation);
       tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
       tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0, true);
