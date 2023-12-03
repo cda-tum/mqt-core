@@ -66,7 +66,7 @@ def compare(
         msg = "Factor must be positive!"
         raise ValueError(msg)
     if sort not in sort_options:
-        msg = "Invalid sort option!"
+        msg = "Invalid sort option! Valid options are 'ratio' and 'experiment'."
         raise ValueError(msg)
     base_path = Path(baseline_filepath)
     with base_path.open(mode="r", encoding="utf-8") as f:
