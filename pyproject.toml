@@ -259,6 +259,7 @@ isort.required-imports = ["from __future__ import annotations"]
     "I002", # Allow missing `from __future__ import annotations` import
 ]
 "src/mqt/core/_compat/**.py" = ["TID251"]
+"src/mqt/core/evaluation.py" = ["T201"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

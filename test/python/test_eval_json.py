@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from mqt.core.evaluation import __flatten_dict, __higher_better, compare
 
-path_base = "test/python/example_baseline_results.json"
-path_feature = "test/python/example_feature_results.json"
+path_base = Path("test/python/example_baseline_results.json")
+path_feature = Path("test/python/example_feature_results.json")
 
 
 def test_higher_better() -> None:

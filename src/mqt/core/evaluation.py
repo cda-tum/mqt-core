@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from os import PathLike
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
+if TYPE_CHECKING:
+    from os import PathLike
+
+# Avoid output truncation
 pd.set_option("display.max_colwidth", None)
 pd.set_option("display.max_rows", None)
 pd.set_option("display.width", None)
@@ -35,12 +38,12 @@ def __flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = "_") -> d
 
 
 def compare(
-        baseline_filepath: PathLike,
-        feature_filepath: PathLike,
-        factor: float = 0.1,
-        only_changed: bool = True,
-        sort: str = "ratio",
-        no_split: bool = False,
+    baseline_filepath: PathLike[Any],
+    feature_filepath: PathLike[Any],
+    factor: float = 0.1,
+    only_changed: bool = True,
+    sort: str = "ratio",
+    no_split: bool = False,
 ) -> None:
     """Compare the results of two benchmarking runs from the generated json file.
 
@@ -51,6 +54,7 @@ def compare(
         only_changed: Whether to only show results that changed significantly.
         sort: Sort the table by this column. Valid options are "ratio" and "experiment".
         no_split: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
+
     Returns:
         None
     Raises:
@@ -154,20 +158,20 @@ def compare(
     if no_split:
         if only_changed:
             df_all = pd.concat([df_improved, df_worsened], ignore_index=True)
-            print("All changed benchmarks:")  # noqa: T201
+            print("All changed benchmarks:")
         else:
             df_all = pd.concat([df_improved, df_same, df_worsened], ignore_index=True)
-            print("All benchmarks:")  # noqa: T201
+            print("All benchmarks:")
         df_all.index = pd.Index([""] * len(df_all.index))
         df_all = df_all.sort_values(by=sort)
-        print(df_all)  # noqa: T201
+        print(df_all)
         return
 
-    print("Benchmarks that have improved:")  # noqa: T201
-    print(df_improved)  # noqa: T201
+    print("Benchmarks that have improved:")
+    print(df_improved)
 
     if not only_changed:
-        print("Benchmarks that have stayed the same:")  # noqa: T201
-        print(df_same)  # noqa: T201
-    print("Benchmarks that have worsened:")  # noqa: T201
-    print(df_worsened)  # noqa: T201
+        print("Benchmarks that have stayed the same:")
+        print(df_same)
+    print("Benchmarks that have worsened:")
+    print(df_worsened)
