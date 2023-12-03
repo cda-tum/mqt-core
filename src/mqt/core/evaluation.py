@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from os import PathLike
 from typing import Any
 
 import pandas as pd
@@ -34,12 +35,12 @@ def __flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = "_") -> d
 
 
 def compare(
-    baseline_filepath: str,
-    feature_filepath: str,
-    factor: float = 0.1,
-    only_changed: bool = True,
-    sort: str = "ratio",
-    no_split: bool = False,
+        baseline_filepath: PathLike,
+        feature_filepath: PathLike,
+        factor: float = 0.1,
+        only_changed: bool = True,
+        sort: str = "ratio",
+        no_split: bool = False,
 ) -> None:
     """Compare the results of two benchmarking runs from the generated json file.
 
@@ -150,20 +151,18 @@ def compare(
     df_same = df_same.sort_values(by=sort)
     df_same.index = pd.Index([""] * len(df_same.index))
 
-    if no_split and not only_changed:
-        df_all = pd.concat([df_improved, df_same, df_worsened], ignore_index=True)
+    if no_split:
+        if only_changed:
+            df_all = pd.concat([df_improved, df_worsened], ignore_index=True)
+            print("All changed benchmarks:")  # noqa: T201
+        else:
+            df_all = pd.concat([df_improved, df_same, df_worsened], ignore_index=True)
+            print("All benchmarks:")  # noqa: T201
         df_all.index = pd.Index([""] * len(df_all.index))
         df_all = df_all.sort_values(by=sort)
-        print(f"All benchmarks:\n{df_all}")  # noqa: T201
-        return
-
-    if no_split and only_changed:
-        df_all = pd.concat([df_improved, df_worsened], ignore_index=True)
-        df_all.index = pd.Index([""] * len(df_all.index))
-        df_all = df_all.sort_values(by=sort)
-        print("All changed benchmarks:")  # noqa: T201
         print(df_all)  # noqa: T201
         return
+
     print("Benchmarks that have improved:")  # noqa: T201
     print(df_improved)  # noqa: T201
 
