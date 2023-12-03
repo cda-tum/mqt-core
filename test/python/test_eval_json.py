@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mqt.core.evaluation import compare, flatten_dict, higher_better
+from mqt.core.evaluation import __flatten_dict, __higher_better, compare
 
 path_base = "test/python/example_baseline_results.json"
 path_feature = "test/python/example_feature_results.json"
@@ -12,18 +12,18 @@ path_feature = "test/python/example_feature_results.json"
 
 def test_higher_better() -> None:
     """Test if a metric is better if higher."""
-    assert higher_better("BV_Functionality_1024_dd_matrix_unique_table_total_hits")
-    assert higher_better("BV_Functionality_1024_dd_compute_tables_matrix_add_hit_ratio")
-    assert not higher_better("GHZ_Simulation_256_dd_matrix_unique_table_total_num_active_entries")
-    assert not higher_better("WState_Simulation_1024_dd_real_numbers_cache_manager_num_available_for_reuse_peak")
+    assert __higher_better("BV_Functionality_1024_dd_matrix_unique_table_total_hits")
+    assert __higher_better("BV_Functionality_1024_dd_compute_tables_matrix_add_hit_ratio")
+    assert not __higher_better("GHZ_Simulation_256_dd_matrix_unique_table_total_num_active_entries")
+    assert not __higher_better("WState_Simulation_1024_dd_real_numbers_cache_manager_num_available_for_reuse_peak")
 
 
 def test_flatten_dict() -> None:
     """Test flatten_dict."""
     d1 = {"a": {"b": {"main": 1}}}
-    assert flatten_dict(d1) == {"a_b_main": 1}
+    assert __flatten_dict(d1) == {"a_b_main": 1}
     d2 = {"a": {"b": {"main": 1, "447-add-benchmark-suite-in-mqt-core": 2}}, "d": {"main": 2}}
-    assert flatten_dict(d2) == {"a_b_main": 1, "a_b_447-add-benchmark-suite-in-mqt-core": 2, "d_main": 2}
+    assert __flatten_dict(d2) == {"a_b_main": 1, "a_b_447-add-benchmark-suite-in-mqt-core": 2, "d_main": 2}
 
 
 def test_compare_with_negative_factor() -> None:

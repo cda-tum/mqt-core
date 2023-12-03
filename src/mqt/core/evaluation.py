@@ -15,19 +15,19 @@ pd.set_option("display.width", None)
 sort_options = ["ratio", "experiment"]
 
 
-def higher_better(key: str) -> bool:
+def __higher_better(key: str) -> bool:
     """Return whether a higher value is better for the given key."""
     higher_better_ls = ["hits", "hit_ratio"]
     return any(key.endswith(s) for s in higher_better_ls)
 
 
-def flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = "_") -> dict[str, Any]:
+def __flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = "_") -> dict[str, Any]:
     """Flatten a nested dictionary."""
     items = {}
     for key, value in d.items():
         new_key = f"{parent_key}{sep}{key}" if parent_key else key
         if isinstance(value, dict):
-            items.update(flatten_dict(value, new_key, sep=sep))
+            items.update(__flatten_dict(value, new_key, sep=sep))
         else:
             items[new_key] = value
     return items
@@ -59,11 +59,11 @@ def compare(
     base_path = Path(baseline_filepath)
     with base_path.open(mode="r", encoding="utf-8") as f:
         d = json.load(f)
-    flattened_data = flatten_dict(d)
+    flattened_data = __flatten_dict(d)
     feature_path = Path(feature_filepath)
     with feature_path.open(mode="r", encoding="utf-8") as f:
         d_feature = json.load(f)
-    flattened_feature = flatten_dict(d_feature)
+    flattened_feature = __flatten_dict(d_feature)
 
     for k, v in flattened_data.items():
         if k in flattened_feature:
@@ -111,7 +111,7 @@ def compare(
             same_after.append(after)
             same_ratio.append(ratio)
             same_exp.append(k)
-        elif (ratio < 1 - factor and not higher_better(k)) or (ratio > 1 + factor and higher_better(k)):
+        elif (ratio < 1 - factor and not __higher_better(k)) or (ratio > 1 + factor and __higher_better(k)):
             improved_before.append(before)
             improved_after.append(after)
             improved_ratio.append(ratio)
