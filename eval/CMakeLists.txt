@@ -7,4 +7,6 @@ if(NOT TARGET gtest OR NOT TARGET gmock)
   set_target_properties(gtest gtest_main gmock gmock_main PROPERTIES FOLDER extern)
 endif()
 
-package_add_test(${PROJECT_NAME}-dd-eval ${PROJECT_NAME}-dd eval_dd_package.cpp)
+add_executable(${PROJECT_NAME}-dd-eval eval_dd_package.cpp)
+target_link_libraries(${PROJECT_NAME}-dd-eval ${PROJECT_NAME}-dd gtest)
+gtest_discover_tests(${PROJECT_NAME}-dd-eval)
