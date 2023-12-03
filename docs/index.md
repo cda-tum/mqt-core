@@ -31,6 +31,13 @@ quickstart
 
 ```{toctree}
 :maxdepth: 2
+:caption: Evaluation Guide
+
+json_evaluation
+```
+
+```{toctree}
+:maxdepth: 2
 :titlesonly:
 :caption: Developers
 :glob:
