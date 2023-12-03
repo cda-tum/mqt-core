@@ -30,7 +30,7 @@ static constexpr std::size_t SEED = 42U;
 
 void verifyAndSave(const std::string& name, const std::string& type,
                    qc::QuantumComputation& qc, const Experiment& exp) {
-  EXPECT_TRUE(exp.success());
+  ASSERT_TRUE(exp.success());
   const std::string& filename = FILENAME_START + inputFilename + FILENAME_END;
 
   nlohmann::json j;

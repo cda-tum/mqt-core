@@ -112,7 +112,7 @@ TEST_P(Grover, Simulation) {
   qc->printStatistics(std::cout);
   // there should be no error simulating the circuit
   const std::size_t shots = 1024;
-  auto measurements = dd::benchmarkSimulateWithShots(*qc, shots);
+  const auto measurements = dd::benchmarkSimulateWithShots(*qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";

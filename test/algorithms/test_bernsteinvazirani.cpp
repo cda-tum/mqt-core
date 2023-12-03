@@ -37,7 +37,7 @@ TEST_P(BernsteinVazirani, FunctionTest) {
 
   // simulate the circuit
   const std::size_t shots = 1024;
-  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
+  const auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -57,7 +57,7 @@ TEST_P(BernsteinVazirani, FunctionTestDynamic) {
 
   // simulate the circuit
   const std::size_t shots = 1024;
-  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
+  const auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -74,7 +74,7 @@ TEST_F(BernsteinVazirani, LargeCircuit) {
 
   // simulate the circuit
   const std::size_t shots = 1024;
-  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
+  const auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -91,7 +91,7 @@ TEST_F(BernsteinVazirani, DynamicCircuit) {
 
   // simulate the circuit
   const std::size_t shots = 1024;
-  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
+  const auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";

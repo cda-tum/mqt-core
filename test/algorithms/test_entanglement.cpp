@@ -41,8 +41,7 @@ TEST_P(Entanglement, GHZRoutineFunctionTest) {
   auto qc = qc::Entanglement(nq);
   auto exp = dd::benchmarkSimulate(qc);
   auto e = exp->sim;
-  auto& dd = exp->dd;
-  const auto f = dd->makeGHZState(nq);
+  const auto f = exp->dd->makeGHZState(nq);
 
   EXPECT_EQ(e, f);
 }

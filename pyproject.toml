@@ -36,7 +36,7 @@ requires-python = ">=3.8"
 dynamic = ["version"]
 
 [project.optional-dependencies]
-test = ["pytest>=7.0", "mqt.core[qiskit]", "mqt.core[evaluation]"]
+test = ["pytest>=7.0", "mqt.core[qiskit, evaluation]"]
 coverage = ["mqt.core[test]", "pytest-cov"]
 docs = [
     "furo>=2023.08.17",

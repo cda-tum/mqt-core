@@ -45,10 +45,10 @@ def compare(
 
     :param baseline_filepath: Path to the baseline json file.
     :param feature_filepath: Path to the feature json file.
-    :param factor: How much does the new metric have to differ from the baseline to be considered as a significant change?
-    :param only_changed: If False, a table with the benchmarks that haven't changed significantly will be shown.
+    :param factor: How much a result has to change to be considered significant.
+    :param only_changed: Whether to only show results that changed significantly.
     :param sort: Sort the table by this column. Valid options are "ratio" and "experiment".
-    :param no_split: If True, the output tables (improved and worsened. Also the results that stay the same if `only_changed` in False) will be merged into one table.
+    :param no_split: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
     """
     if factor < 0:
         msg = "Factor must be positive!"
@@ -147,8 +147,7 @@ def compare(
         df_all = pd.concat([df_improved, df_same, df_worsened], ignore_index=True)
         df_all.index = pd.Index([""] * len(df_all.index))
         df_all = df_all.sort_values(by=sort)
-        print("All benchmarks:")  # noqa: T201
-        print(df_all)  # noqa: T201
+        print(f"All benchmarks:\n{df_all}")  # noqa: T201
         return
 
     if no_split and only_changed:

@@ -44,9 +44,8 @@ TEST_P(WState, RoutineFunctionTest) {
 
   auto qc = qc::WState(nq);
   auto exp = dd::benchmarkSimulate(qc);
-  auto& dd = exp->dd;
   auto e = exp->sim;
-  const auto f = dd->makeWState(nq);
+  const auto f = exp->dd->makeWState(nq);
 
   EXPECT_EQ(e, f);
 }

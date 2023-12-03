@@ -201,7 +201,6 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
 
   dd = std::move(exp->dd);
   ASSERT_EQ(func, funcRec);
-
   dd->decRef(funcRec);
   dd->decRef(func);
 }
@@ -209,13 +208,6 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
 TEST_P(QFT, DynamicSimulation) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, true, true); });
-
-  auto exp = std::make_unique<dd::SimulationExperiment>();
-  exp->dd = std::make_unique<dd::Package<>>(nqubits);
-  initialCacheCount = exp->dd->cn.cacheCount();
-  initialComplexCount = exp->dd->cn.realCount();
-  auto sim = exp->sim;
-  dd = std::move(exp->dd);
 
   qc->printStatistics(std::cout);
 
@@ -238,6 +230,4 @@ TEST_P(QFT, DynamicSimulation) {
 
   // the number of unique entries should be close to the number of shots
   EXPECT_GE(ratio, 0.7);
-
-  dd->decRef(sim);
 }
