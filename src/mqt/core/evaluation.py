@@ -43,12 +43,19 @@ def compare(
 ) -> None:
     """Compare the results of two benchmarking runs from the generated json file.
 
-    :param baseline_filepath: Path to the baseline json file.
-    :param feature_filepath: Path to the feature json file.
-    :param factor: How much a result has to change to be considered significant.
-    :param only_changed: Whether to only show results that changed significantly.
-    :param sort: Sort the table by this column. Valid options are "ratio" and "experiment".
-    :param no_split: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
+    Args:
+        baseline_filepath: Path to the baseline json file.
+        feature_filepath: Path to the feature json file.
+        factor: How much a result has to change to be considered significant.
+        only_changed: Whether to only show results that changed significantly.
+        sort: Sort the table by this column. Valid options are "ratio" and "experiment".
+        no_split: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
+    Returns:
+        None
+    Raises:
+        ValueError: If factor is negative or sort is invalid.
+        FileNotFoundError: If the baseline_filepath argument or the feature_filepath argument does not point to a valid file.
+        JSONDecodeError: If the baseline_filepath argument or the feature_filepath argument points to a file that is not a valid JSON file.
     """
     if factor < 0:
         msg = "Factor must be positive!"
