@@ -109,15 +109,13 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(QPE, QPETest) {
-  auto dd = std::make_unique<dd::Package<>>(precision + 1);
   auto qc = qc::QPE(lambda, precision);
   qc.printStatistics(std::cout);
   ASSERT_EQ(qc.getNqubits(), precision + 1);
   ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(qc); });
 
-  qc::VectorDD e{};
-  ASSERT_NO_THROW(
-      { e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd); });
+  auto out = dd::benchmarkSimulate(qc);
+  qc::VectorDD const e = out->sim;
   // account for the eigenstate qubit in the expected result by shifting and
   // adding 1
   const auto amplitude = e.getValueByIndex((expectedResult << 1) + 1);
