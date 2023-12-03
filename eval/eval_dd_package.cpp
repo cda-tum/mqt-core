@@ -55,25 +55,6 @@ void verifyAndSave(const std::string& name, const std::string& type,
   // collect statistics from DD package
   entry["dd"] = exp.stats;
 
-  // remove some entries not needed for the evaluation
-  entry["dd"].erase("density_matrix");
-
-  auto& computeTables = entry["dd"]["compute_tables"];
-  computeTables.erase("density_matrix_add");
-  computeTables.erase("density_density_mult");
-  computeTables.erase("density_noise_operations");
-  computeTables.erase("stochastic_noise_operations");
-  computeTables.erase("matrix_kronecker");
-  computeTables.erase("vector_kronecker");
-  computeTables.erase("vector_inner_product");
-  computeTables.erase("matrix_conjugate_transpose");
-
-  if (type == "Functionality") {
-    entry["dd"].erase("vector");
-    computeTables.erase("vector_add");
-    computeTables.erase("matrix_vector_mult");
-  }
-
   std::ofstream ofs(filename);
   ofs << j.dump(2U);
   ofs.close();
