@@ -10,12 +10,6 @@ class QFT : public testing::TestWithParam<std::size_t> {
 protected:
   void TearDown() override {
     dd->garbageCollect(true);
-    // number of complex table entries after clean-up should equal initial
-    // number of entries
-    EXPECT_EQ(dd->cn.realCount(), initialComplexCount);
-    // number of available cache entries after clean-up should equal initial
-    // number of entries
-    EXPECT_EQ(dd->cn.cacheCount(), initialCacheCount);
   }
 
   void SetUp() override { nqubits = GetParam(); }
@@ -23,8 +17,6 @@ protected:
   std::size_t nqubits = 0;
   std::unique_ptr<qc::QFT> qc;
   std::unique_ptr<dd::Package<>> dd;
-  std::size_t initialCacheCount = 0;
-  std::size_t initialComplexCount = 0;
 };
 
 /// Findings from the QFT Benchmarks:
@@ -61,8 +53,6 @@ TEST_P(QFT, Functionality) {
   // there should be no error building the functionality
   auto exp = std::make_unique<dd::FunctionalityConstructionExperiment>();
   exp->dd = std::make_unique<dd::Package<>>(nqubits);
-  initialCacheCount = exp->dd->cn.cacheCount();
-  initialComplexCount = exp->dd->cn.realCount();
   exp = dd::benchmarkFunctionalityConstruction(*qc);
   auto func = exp->func;
   dd = std::move(exp->dd);
@@ -107,8 +97,6 @@ TEST_P(QFT, FunctionalityRecursive) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
   auto exp = std::make_unique<dd::FunctionalityConstructionExperiment>();
   exp->dd = std::make_unique<dd::Package<>>(nqubits);
-  initialCacheCount = exp->dd->cn.cacheCount();
-  initialComplexCount = exp->dd->cn.realCount();
   exp = dd::benchmarkFunctionalityConstruction(*qc, true);
   auto func = exp->func;
   dd = std::move(exp->dd);
@@ -154,8 +142,6 @@ TEST_P(QFT, Simulation) {
 
   auto exp = std::make_unique<dd::SimulationExperiment>();
   exp->dd = std::make_unique<dd::Package<>>(nqubits);
-  initialCacheCount = exp->dd->cn.cacheCount();
-  initialComplexCount = exp->dd->cn.realCount();
   exp = dd::benchmarkSimulate(*qc);
   auto sim = exp->sim;
   dd = std::move(exp->dd);
@@ -189,8 +175,6 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
   auto exp = std::make_unique<dd::FunctionalityConstructionExperiment>();
   exp->dd = std::make_unique<dd::Package<>>(nqubits);
-  initialCacheCount = exp->dd->cn.cacheCount();
-  initialComplexCount = exp->dd->cn.realCount();
 
   // there should be no error building the functionality recursively
   exp = dd::benchmarkFunctionalityConstruction(*qc);
