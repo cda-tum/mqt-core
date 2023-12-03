@@ -336,7 +336,8 @@ TEST_P(RandomCliffordEvalFunctionality, RandomCliffordFunctionality) {
 
 int main(int argc, char** argv) {
   if (argc != 2) {
-    std::cerr << "Exactly one argument is required to name the results file." << '\n';
+    std::cerr << "Exactly one argument is required to name the results file."
+              << '\n';
     return 1;
   }
   dd::inputFilename =
