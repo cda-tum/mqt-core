@@ -16,105 +16,9 @@
               "num_buckets": 16384,
               "num_entries": 468,
               "peak_num_entries": 767
-            },
-            "matrix_matrix_mult": {
-              "col_ratio": 0.22864354920877333,
-              "collisions": 1433063,
-              "hit_ratio": 0.7078684545284989,
-              "hits": 4436688,
-              "inserts": 397922,
-              "load_factor": 0.58099365234375,
-              "lookups": 6267673,
-              "memory_MiB": 1.125,
-              "num_buckets": 16384,
-              "num_entries": 9519,
-              "peak_num_entries": 16310
-            }
-          },
-          "matrix": {
-            "memory_manager": {
-              "memory_allocated_MiB": 27.78125,
-              "memory_used_MiB": 2.654052734375,
-              "memory_used_MiB_peak": 14.267990112304688,
-              "num_allocated": 260096,
-              "num_allocations": 7,
-              "num_available_for_reuse": 108733,
-              "num_available_for_reuse_peak": 131770,
-              "num_available_from_chunks": 126515,
-              "num_available_total": 235248,
-              "num_used": 24848,
-              "num_used_peak": 133581,
-              "usage_ratio": 0.09553395669291338
-            },
-            "unique_table": {
-              "total": {
-                "col_ratio": 0.0013509112432658473,
-                "collisions": 10428,
-                "gc_runs": 24,
-                "hit_ratio": 0.5920878936951516,
-                "hits": 4570465,
-                "inserts": 3148769,
-                "load_factor": 0.0007405281066894531,
-                "lookups": 7719234,
-                "memory_MiB": 256.0,
-                "num_active_entries": 2046,
-                "num_buckets": 33554432,
-                "num_entries": 24848,
-                "peak_num_active_entries": 4092,
-                "peak_num_entries": 283390
-              }
-            }
-          },
-          "peak_memory_mib": 17.348899841308594,
-          "real_numbers": {
-            "cache_manager": {
-              "memory_allocated_MiB": 0.046875,
-              "memory_used_MiB": 0.0,
-              "memory_used_MiB_peak": 0.001556396484375,
-              "num_allocated": 2048,
-              "num_allocations": 1,
-              "num_available_for_reuse": 68,
-              "num_available_for_reuse_peak": 68,
-              "num_available_from_chunks": 1980,
-              "num_available_total": 2048,
-              "num_used": 0,
-              "num_used_peak": 68,
-              "usage_ratio": 0.0
-            },
-            "memory_manager": {
-              "memory_allocated_MiB": 0.046875,
-              "memory_used_MiB": 0.0234832763671875,
-              "memory_used_MiB_peak": 0.0234832763671875,
-              "num_allocated": 2048,
-              "num_allocations": 1,
-              "num_available_for_reuse": 0,
-              "num_available_for_reuse_peak": 0,
-              "num_available_from_chunks": 1022,
-              "num_available_total": 1022,
-              "num_used": 1026,
-              "num_used_peak": 1026,
-              "usage_ratio": 0.5009765625
-            },
-            "unique_table": {
-              "col_ratio": 0.7782147070389304,
-              "collisions": 1979,
-              "gc_runs": 0,
-              "hit_ratio": 0.5965395202516712,
-              "hits": 1517,
-              "inserts": 1026,
-              "load_factor": 0.01565527869752964,
-              "lookups": 2543,
-              "memory_MiB": 0.5000076293945313,
-              "num_active_entries": 1,
-              "num_buckets": 65537,
-              "num_entries": 1026,
-              "peak_num_active_entries": 2,
-              "peak_num_entries": 1026
             }
           }
-        },
-        "gate_count": 2546,
-        "runtime": 8.731477667
+        }
       },
       "256": {
         "dd": {
@@ -123,109 +27,15 @@
             "matrix_add": {
               "col_ratio": 0.004940711462450593,
               "collisions": 10,
-              "hit_ratio": 0.5,
-              "hits": 1012,
-              "inserts": 1002,
-              "load_factor": 0.04315185546875,
-              "lookups": 2024,
-              "memory_MiB": 1.125,
-              "num_buckets": 16384,
-              "num_entries": 707,
-              "peak_num_entries": 707
-            },
-            "matrix_matrix_mult": {
-              "col_ratio": 0.2150845822345147,
-              "collisions": 83598,
-              "hit_ratio": 0.7066186402521387,
-              "hits": 274645,
-              "inserts": 30432,
-              "load_factor": 0.864013671875,
-              "lookups": 388675,
-              "memory_MiB": 1.125,
-              "num_buckets": 16384,
-              "num_entries": 14156,
-              "peak_num_entries": 16276
+              "num_buckets": 16384
             }
           },
           "matrix": {
-            "memory_manager": {
-              "memory_allocated_MiB": 27.78125,
-              "memory_used_MiB": 5.30169677734375,
-              "memory_used_MiB_peak": 14.013565063476563,
-              "num_allocated": 260096,
-              "num_allocations": 7,
-              "num_available_for_reuse": 81563,
-              "num_available_for_reuse_peak": 130689,
-              "num_available_from_chunks": 128897,
-              "num_available_total": 210460,
-              "num_used": 49636,
-              "num_used_peak": 131199,
-              "usage_ratio": 0.19083722933070865
-            },
             "unique_table": {
               "total": {
                 "col_ratio": 0.0038910748341151494,
-                "collisions": 1873,
-                "gc_runs": 1,
-                "hit_ratio": 0.625382771243025,
-                "hits": 301033,
-                "inserts": 180325,
-                "load_factor": 0.005917072296142578,
-                "lookups": 481358,
-                "memory_MiB": 64.0,
-                "num_active_entries": 510,
-                "num_buckets": 8388608,
-                "num_entries": 49636,
-                "peak_num_active_entries": 1020,
-                "peak_num_entries": 131199
+                "collisions": 1873
               }
-            }
-          },
-          "peak_memory_mib": 17.022377014160156,
-          "real_numbers": {
-            "cache_manager": {
-              "memory_allocated_MiB": 0.046875,
-              "memory_used_MiB": 0.0,
-              "memory_used_MiB_peak": 0.001556396484375,
-              "num_allocated": 2048,
-              "num_allocations": 1,
-              "num_available_for_reuse": 68,
-              "num_available_for_reuse_peak": 68,
-              "num_available_from_chunks": 1980,
-              "num_available_total": 2048,
-              "num_used": 0,
-              "num_used_peak": 68,
-              "usage_ratio": 0.0
-            },
-            "memory_manager": {
-              "memory_allocated_MiB": 0.046875,
-              "memory_used_MiB": 0.0059051513671875,
-              "memory_used_MiB_peak": 0.0059051513671875,
-              "num_allocated": 2048,
-              "num_allocations": 1,
-              "num_available_for_reuse": 0,
-              "num_available_for_reuse_peak": 0,
-              "num_available_from_chunks": 1790,
-              "num_available_total": 1790,
-              "num_used": 258,
-              "num_used_peak": 258,
-              "usage_ratio": 0.1259765625
-            },
-            "unique_table": {
-              "col_ratio": 1.9131121642969984,
-              "collisions": 1211,
-              "gc_runs": 0,
-              "hit_ratio": 0.5924170616113744,
-              "hits": 375,
-              "inserts": 258,
-              "load_factor": 0.0039367075087355236,
-              "lookups": 633,
-              "memory_MiB": 0.5000076293945313,
-              "num_active_entries": 1,
-              "num_buckets": 65537,
-              "num_entries": 258,
-              "peak_num_active_entries": 2,
-              "peak_num_entries": 258
             }
           }
         },
@@ -234,261 +44,28 @@
       },
       "512": {
         "dd": {
-          "active_memory_mib": 0.1327056884765625,
           "compute_tables": {
             "matrix_add": {
               "col_ratio": 0.009077526987242394,
-              "collisions": 37,
-              "hit_ratio": 0.5,
-              "hits": 2038,
-              "inserts": 2001,
-              "load_factor": 0.01123046875,
-              "lookups": 4076,
-              "memory_MiB": 1.125,
-              "num_buckets": 16384,
-              "num_entries": 184,
-              "peak_num_entries": 978
-            },
-            "matrix_matrix_mult": {
-              "col_ratio": 0.22911780485935465,
-              "collisions": 358716,
-              "hit_ratio": 0.7075285506246647,
-              "hits": 1107735,
-              "inserts": 99189,
-              "load_factor": 0.12646484375,
-              "lookups": 1565640,
-              "memory_MiB": 1.125,
-              "num_buckets": 16384,
-              "num_entries": 2072,
-              "peak_num_entries": 16309
-            }
-          },
-          "matrix": {
-            "memory_manager": {
-              "memory_allocated_MiB": 27.78125,
-              "memory_used_MiB": 0.5305328369140625,
-              "memory_used_MiB_peak": 14.087265014648438,
-              "num_allocated": 260096,
-              "num_allocations": 7,
-              "num_available_for_reuse": 126922,
-              "num_available_for_reuse_peak": 130866,
-              "num_available_from_chunks": 128207,
-              "num_available_total": 255129,
-              "num_used": 4967,
-              "num_used_peak": 131889,
-              "usage_ratio": 0.01909679502952756
-            },
-            "unique_table": {
-              "total": {
-                "col_ratio": 0.002471411521344597,
-                "collisions": 4773,
-                "gc_runs": 6,
-                "hit_ratio": 0.5921704978809446,
-                "hits": 1143650,
-                "inserts": 787635,
-                "load_factor": 0.00029605627059936523,
-                "lookups": 1931285,
-                "memory_MiB": 128.0,
-                "num_active_entries": 1023,
-                "num_buckets": 16777216,
-                "num_entries": 4967,
-                "peak_num_active_entries": 2046,
-                "peak_num_entries": 201972
-              }
-            }
-          },
-          "peak_memory_mib": 17.11772918701172,
-          "real_numbers": {
-            "cache_manager": {
-              "memory_allocated_MiB": 0.046875,
-              "memory_used_MiB": 0.0,
-              "memory_used_MiB_peak": 0.001556396484375,
-              "num_allocated": 2048,
-              "num_allocations": 1,
-              "num_available_for_reuse": 68,
-              "num_available_for_reuse_peak": 68,
-              "num_available_from_chunks": 1980,
-              "num_available_total": 2048,
-              "num_used": 0,
-              "num_used_peak": 68,
-              "usage_ratio": 0.0
-            },
-            "memory_manager": {
-              "memory_allocated_MiB": 0.046875,
-              "memory_used_MiB": 0.0117645263671875,
-              "memory_used_MiB_peak": 0.0117645263671875,
-              "num_allocated": 2048,
-              "num_allocations": 1,
-              "num_available_for_reuse": 0,
-              "num_available_for_reuse_peak": 0,
-              "num_available_from_chunks": 1534,
-              "num_available_total": 1534,
-              "num_used": 514,
-              "num_used_peak": 514,
-              "usage_ratio": 0.2509765625
-            },
-            "unique_table": {
-              "col_ratio": 1.1569400630914826,
-              "collisions": 1467,
-              "gc_runs": 0,
-              "hit_ratio": 0.5946372239747634,
-              "hits": 754,
-              "inserts": 514,
-              "load_factor": 0.007842897905000229,
-              "lookups": 1268,
-              "memory_MiB": 0.5000076293945313,
-              "num_active_entries": 1,
-              "num_buckets": 65537,
-              "num_entries": 514,
-              "peak_num_active_entries": 2,
-              "peak_num_entries": 514
+              "collisions": 37
             }
           }
-        },
-        "gate_count": 1271,
-        "runtime": 1.956320083
+      }
       }
     },
     "Simulation": {
       "256": {
         "dd": {
           "active_memory_mib": 0.021484375,
-          "compute_tables": {
-            "matrix_add": "unused",
-            "matrix_matrix_mult": "unused",
-            "matrix_vector_mult": {
-              "col_ratio": 0.5023769607055095,
-              "collisions": 65625,
-              "hit_ratio": 0.37310245045127804,
-              "hits": 48738,
-              "inserts": 16266,
-              "load_factor": 0.9927978515625,
-              "lookups": 130629,
-              "memory_MiB": 1.125,
-              "num_buckets": 16384,
-              "num_entries": 16266,
-              "peak_num_entries": 16266
-            },
-            "vector_add": "unused"
-          },
           "matrix": {
-            "memory_manager": {
-              "memory_allocated_MiB": 6.78125,
-              "memory_used_MiB": 5.287811279296875,
-              "memory_used_MiB_peak": 5.2879180908203125,
-              "num_allocated": 63488,
-              "num_allocations": 5,
-              "num_available_for_reuse": 1,
-              "num_available_for_reuse_peak": 1,
-              "num_available_from_chunks": 13981,
-              "num_available_total": 13982,
-              "num_used": 49506,
-              "num_used_peak": 49507,
-              "usage_ratio": 0.7797694052419355
-            },
             "unique_table": {
               "total": {
                 "col_ratio": 0.0009288094847839152,
-                "collisions": 340,
-                "gc_runs": 0,
-                "hit_ratio": 0.8647598754302573,
-                "hits": 316554,
-                "inserts": 49506,
-                "load_factor": 0.0059015750885009766,
-                "lookups": 366060,
-                "memory_MiB": 64.0,
-                "num_active_entries": 0,
-                "num_buckets": 8388608,
-                "num_entries": 49506,
-                "peak_num_active_entries": 0,
-                "peak_num_entries": 49506
-              }
-            }
-          },
-          "peak_memory_mib": 13.293716430664063,
-          "real_numbers": {
-            "cache_manager": {
-              "memory_allocated_MiB": 0.046875,
-              "memory_used_MiB": 0.0,
-              "memory_used_MiB_peak": 0.00018310546875,
-              "num_allocated": 2048,
-              "num_allocations": 1,
-              "num_available_for_reuse": 8,
-              "num_available_for_reuse_peak": 8,
-              "num_available_from_chunks": 2040,
-              "num_available_total": 2048,
-              "num_used": 0,
-              "num_used_peak": 8,
-              "usage_ratio": 0.0
-            },
-            "memory_manager": {
-              "memory_allocated_MiB": 0.046875,
-              "memory_used_MiB": 2.288818359375e-5,
-              "memory_used_MiB_peak": 2.288818359375e-5,
-              "num_allocated": 2048,
-              "num_allocations": 1,
-              "num_available_for_reuse": 0,
-              "num_available_for_reuse_peak": 0,
-              "num_available_from_chunks": 2047,
-              "num_available_total": 2047,
-              "num_used": 1,
-              "num_used_peak": 1,
-              "usage_ratio": 0.00048828125
-            },
-            "unique_table": {
-              "col_ratio": 0.0,
-              "collisions": 0,
-              "gc_runs": 0,
-              "hit_ratio": 0.0,
-              "hits": 0,
-              "inserts": 1,
-              "load_factor": 1.5258556235409006e-5,
-              "lookups": 1,
-              "memory_MiB": 0.5000076293945313,
-              "num_active_entries": 0,
-              "num_buckets": 65537,
-              "num_entries": 1,
-              "peak_num_active_entries": 0,
-              "peak_num_entries": 1
-            }
-          },
-          "vector": {
-            "memory_manager": {
-              "memory_allocated_MiB": 7.875,
-              "memory_used_MiB": 4.998291015625,
-              "memory_used_MiB_peak": 4.998291015625,
-              "num_allocated": 129024,
-              "num_allocations": 6,
-              "num_available_for_reuse": 0,
-              "num_available_for_reuse_peak": 1,
-              "num_available_from_chunks": 47132,
-              "num_available_total": 47132,
-              "num_used": 81892,
-              "num_used_peak": 81892,
-              "usage_ratio": 0.634703621031746
-            },
-            "unique_table": {
-              "total": {
-                "col_ratio": 0.006269249029179398,
-                "collisions": 515,
-                "gc_runs": 0,
-                "hit_ratio": 0.003104191266875236,
-                "hits": 255,
-                "inserts": 81892,
-                "load_factor": 0.009762287139892578,
-                "lookups": 82147,
-                "memory_MiB": 64.0,
-                "num_active_entries": 256,
-                "num_buckets": 8388608,
-                "num_entries": 81892,
-                "peak_num_active_entries": 512,
-                "peak_num_entries": 81892
+                "collisions": 340
               }
             }
           }
-        },
-        "gate_count": 636,
-        "runtime": 0.283486333
+        }
       }
     }
   }
