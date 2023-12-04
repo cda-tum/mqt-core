@@ -21,10 +21,8 @@ static const std::string FILENAME_END = ".json";
 
 static constexpr std::size_t SEED = 42U;
 
-
 class BenchmarkDDPackage {
 protected:
-
   void verifyAndSave(const std::string& name, const std::string& type,
                      qc::QuantumComputation& qc, const Experiment& exp) {
 
@@ -59,7 +57,7 @@ protected:
 
   std::string inputFilename;
 
-  void runGHZ(){
+  void runGHZ() {
     const std::array nqubits = {256U, 512U, 1024U, 2048U, 4096U};
     std::cout << "Running GHZ Simulation..." << '\n';
     for (const auto& nq : nqubits) {
@@ -75,7 +73,7 @@ protected:
     }
   }
 
-  void runWState(){
+  void runWState() {
     const std::array nqubits = {256U, 512U, 1024U, 2048U, 4096U};
     std::cout << "Running WState Simulation..." << '\n';
     for (const auto& nq : nqubits) {
@@ -91,7 +89,7 @@ protected:
     }
   }
 
-  void runBV(){
+  void runBV() {
     const std::array nqubits = {255U, 511U, 1023U, 2047U, 4095U};
     std::cout << "Running BV Simulation..." << '\n';
     for (const auto& nq : nqubits) {
@@ -109,7 +107,7 @@ protected:
     }
   }
 
-  void runQFT(){
+  void runQFT() {
     const std::array nqubitsSim = {256U, 512U, 1024U, 2048U, 4096U};
     std::cout << "Running QFT Simulation..." << '\n';
     for (const auto& nq : nqubitsSim) {
@@ -148,7 +146,8 @@ protected:
 
       auto iter = buildFunctionalityRecursive(&groverIteration, dd);
       std::bitset<128U> iterBits(qc->iterations);
-      auto msb = static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
+      auto msb =
+          static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
       auto f = iter;
       dd->incRef(f);
       for (std::size_t j = 0U; j <= msb; ++j) {
@@ -169,7 +168,8 @@ protected:
       dd->decRef(f);
       const auto end = std::chrono::high_resolution_clock::now();
       const auto runtime =
-          std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+          std::chrono::duration_cast<std::chrono::duration<double>>(end -
+                                                                    start);
       std::unique_ptr<SimulationExperiment> exp =
           std::make_unique<SimulationExperiment>();
       exp->dd = std::move(dd);
@@ -226,40 +226,36 @@ protected:
   }
 
 public:
-  explicit BenchmarkDDPackage(std::string filename) : inputFilename(std::move(filename)){};
-
-
-
+  explicit BenchmarkDDPackage(std::string filename)
+      : inputFilename(std::move(filename)){};
 
   void runAll() {
-        runGHZ();
-        runWState();
-        runBV();
-        runQFT();
-        runGrover();
-        runQPE();
-        runRandomClifford();
+    runGHZ();
+    runWState();
+    runBV();
+    runQFT();
+    runGrover();
+    runQPE();
+    runRandomClifford();
   }
-
-
-
 };
 
 } // namespace dd
 
 int main(int argc, char** argv) {
-                if (argc != 2) {
-                std::cerr << "Exactly one argument is required to name the results file."
-                          << '\n';
-                return 1;
-                }
-                try{
-                dd::BenchmarkDDPackage run = dd::BenchmarkDDPackage(argv[1]); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                run.runAll();
-                } catch (const std::exception& e) {
-                std::cerr << "Exception caught: " << e.what() << '\n';
-                return 1;
-                }
-                std::cout << "Benchmarks done." << '\n';
-                return 0;
+  if (argc != 2) {
+    std::cerr << "Exactly one argument is required to name the results file."
+              << '\n';
+    return 1;
+  }
+  try {
+    dd::BenchmarkDDPackage run = dd::BenchmarkDDPackage(
+        argv[1]); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    run.runAll();
+  } catch (const std::exception& e) {
+    std::cerr << "Exception caught: " << e.what() << '\n';
+    return 1;
+  }
+  std::cout << "Benchmarks done." << '\n';
+  return 0;
 }
