@@ -41,7 +41,7 @@ template <> bool DesignatedType<uint64_t>::fits(const Type<uint64_t>& other) {
 }
 
 template <>
-DesignatedType<uint64_t>::DesignatedType(DesignatedTy<uint64_t> ty)
+DesignatedType<uint64_t>::DesignatedType(DesignatedTy ty)
     : type(ty), designator(0) {
   switch (ty) {
   case Qubit:

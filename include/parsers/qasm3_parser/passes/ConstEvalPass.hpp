@@ -19,8 +19,8 @@ struct ConstEvalValue {
       : type(ConstFloat), value(val), width(w) {}
   explicit ConstEvalValue(int64_t val, const bool isSigned, const size_t w = 64)
       : type(isSigned ? ConstInt : ConstUint), value(val), width(w) {}
-  explicit ConstEvalValue(bool value)
-      : type(ConstBool), value(value), width(1) {}
+  explicit ConstEvalValue(bool val)
+      : type(ConstBool), value(val), width(1) {}
 
   [[nodiscard]] std::shared_ptr<Constant> toExpr() const {
     switch (type) {
