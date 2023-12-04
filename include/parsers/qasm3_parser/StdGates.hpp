@@ -133,6 +133,8 @@ const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
     {"swap", std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::SWAP}))},
     {"iswap",
      std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::iSWAP}))},
+    {"iswapdg",
+     std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::iSWAPdg}))},
 };
 
 const std::map<std::string, std::shared_ptr<Gate>> QASM2_COMPAT_GATES = {
