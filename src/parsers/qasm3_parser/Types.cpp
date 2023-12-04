@@ -10,7 +10,8 @@ template <typename T>
 DesignatedType<T>::DesignatedType(DesignatedTy ty)
     : type(ty), designator(nullptr) {}
 template <>
-bool DesignatedType<std::shared_ptr<Expression>>::fits(const Type<std::shared_ptr<Expression>>& other) {
+bool DesignatedType<std::shared_ptr<Expression>>::fits(
+    const Type<std::shared_ptr<Expression>>& other) {
   if (const auto* o = dynamic_cast<const DesignatedType*>(&other)) {
     if (type == Int && o->type == Uint) {
       return true;
