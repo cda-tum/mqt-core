@@ -1647,7 +1647,7 @@ TEST_F(Qasm3ParserTest, TestPrintTokens) {
                                "==\n"
                                "!=\n"
                                "+=\n"
-                               "+=\n"
+                               "-=\n"
                                "*=\n"
                                "/=\n"
                                "&=\n"
