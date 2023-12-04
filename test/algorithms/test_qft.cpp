@@ -175,15 +175,15 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
   auto exp = std::make_unique<dd::FunctionalityConstructionExperiment>();
   exp->dd = std::make_unique<dd::Package<>>(nqubits);
+  dd = std::move(exp->dd);
 
   // there should be no error building the functionality recursively
   exp = dd::benchmarkFunctionalityConstruction(*qc);
   auto func = exp->func;
 
   // there should be no error building the functionality regularly
-  auto funcRec = buildFunctionalityRecursive(qc.get(), exp->dd);
+  auto funcRec = buildFunctionalityRecursive(qc.get(), dd);
 
-  dd = std::move(exp->dd);
   ASSERT_EQ(func, funcRec);
   dd->decRef(funcRec);
   dd->decRef(func);
