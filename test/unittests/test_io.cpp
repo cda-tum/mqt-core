@@ -184,7 +184,7 @@ TEST_F(IO, qiskitMcxGray) {
 TEST_F(IO, qiskitMcxSkipGateDefinition) {
   std::stringstream ss{};
   ss << "qreg q[4];"
-     << "gate mcx q0,q1,q2,q3 { cccx q0,q1,q2,q3; }"
+     << "gate mcx q0,q1,q2,q3 { ctrl(3) @ x q0,q1,q2,q3; }"
      << "mcx q[0], q[1], q[2], q[3];\n";
   qc->import(ss, qc::Format::OpenQASM);
   auto& gate = *(qc->begin());
@@ -289,7 +289,7 @@ TEST_F(IO, qiskitMcxDuplicateQubit) {
   ss << "qreg q[4];"
      << "qreg anc[1];"
      << "mcx_vchain q[0], q[0], q[2], q[3], anc[0];\n";
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
+  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm3::CompilerError);
 }
 
 TEST_F(IO, qiskitMcxQubitRegister) {
@@ -297,7 +297,7 @@ TEST_F(IO, qiskitMcxQubitRegister) {
   ss << "qreg q[4];"
      << "qreg anc[1];"
      << "mcx_vchain q, q[0], q[2], q[3], anc[0];\n";
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), std::runtime_error);
+  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm3::CompilerError);
 }
 
 TEST_F(IO, barrierInDeclaration) {
@@ -388,6 +388,7 @@ TEST_F(IO, iSWAPdagDumpIsValid) {
   std::cout << *qc << "\n";
   std::stringstream ss{};
   qc->dumpOpenQASM(ss);
+  std::cerr << ss.str() << "\n";
   EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM););
   std::cout << *qc << "\n";
 }
