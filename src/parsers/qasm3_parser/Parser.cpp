@@ -2,6 +2,8 @@
 
 #include "parsers/qasm3_parser/StdGates.hpp"
 
+#include <regex>
+
 namespace qasm3 {
 void Parser::scan() {
   if (scanner.empty()) {

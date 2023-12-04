@@ -103,9 +103,6 @@ void QuantumComputation::import(std::istream&& is, Format format) {
     importReal(is);
     break;
   case Format::OpenQASM:
-    updateMaxControls(2);
-    importOpenQASM(is);
-    break;
   case Format::OpenQASM3:
     importOpenQASM3(is);
     break;

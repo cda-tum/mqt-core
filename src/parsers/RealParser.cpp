@@ -1,5 +1,7 @@
 #include "QuantumComputation.hpp"
 
+#include <regex>
+
 void qc::QuantumComputation::importReal(std::istream& is) {
   auto line = readRealHeader(is);
   readRealGateDescriptions(is, line);

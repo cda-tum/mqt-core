@@ -2,10 +2,10 @@
 
 #include "Definitions.hpp"
 #include "operations/ClassicControlledOperation.hpp"
+#include "operations/CompoundOperation.hpp"
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/StandardOperation.hpp"
 #include "operations/SymbolicOperation.hpp"
-#include "parsers/qasm_parser/Parser.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -53,7 +53,6 @@ protected:
 
   std::unordered_set<sym::Variable> occuringVariables;
 
-  void importOpenQASM(std::istream& is);
   void importOpenQASM3(std::istream& is);
   void importReal(std::istream& is);
   int readRealHeader(std::istream& is);

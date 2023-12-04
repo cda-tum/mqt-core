@@ -39,9 +39,6 @@ if(NOT TARGET ${PROJECT_NAME})
     ${PROJECT_SOURCE_DIR}/include/operations/Operation.hpp
     ${PROJECT_SOURCE_DIR}/include/operations/StandardOperation.hpp
     ${PROJECT_SOURCE_DIR}/include/operations/SymbolicOperation.hpp
-    ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Parser.hpp
-    ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Scanner.hpp
-    ${PROJECT_SOURCE_DIR}/include/parsers/qasm_parser/Token.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Scanner.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Token.hpp
     ${PROJECT_SOURCE_DIR}/include/parsers/qasm3_parser/Parser.hpp
@@ -73,13 +70,10 @@ if(NOT TARGET ${PROJECT_NAME})
     operations/StandardOperation.cpp
     operations/SymbolicOperation.cpp
     parsers/GRCSParser.cpp
-    parsers/QASMParser.cpp
     parsers/QASM3Parser.cpp
     parsers/QCParser.cpp
     parsers/RealParser.cpp
     parsers/TFCParser.cpp
-    parsers/qasm_parser/Parser.cpp
-    parsers/qasm_parser/Scanner.cpp
     parsers/qasm3_parser/Parser.cpp
     parsers/qasm3_parser/Scanner.cpp
     parsers/qasm3_parser/Types.cpp
