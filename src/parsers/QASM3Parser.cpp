@@ -520,7 +520,7 @@ public:
 
   static std::shared_ptr<Gate>
   getMcGateDefinition(const std::string& identifier, size_t operandSize,
-                     const std::shared_ptr<DebugInfo>& debugInfo) {
+                      const std::shared_ptr<DebugInfo>& debugInfo) {
     std::vector<std::string> targetParams{};
     std::vector<std::shared_ptr<GateOperand>> operands;
     size_t nTargets = operandSize;
