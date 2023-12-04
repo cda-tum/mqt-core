@@ -617,6 +617,14 @@ std::shared_ptr<Expression> Parser::exponentiation() {
     scan();
     return std::make_shared<IdentifierExpression>(IdentifierExpression{str});
   }
+  case Token::Kind::False: {
+    scan();
+    return std::make_shared<Constant>(false);
+  }
+  case Token::Kind::True: {
+    scan();
+    return std::make_shared<Constant>(true);
+  }
   case Token::Kind::LParen: {
     scan();
     auto x = parseExpression();
@@ -733,6 +741,14 @@ std::shared_ptr<Expression> Parser::parseExpression() {
     scan();
     x = std::make_shared<UnaryExpression>(
         UnaryExpression{UnaryExpression::Op::Negate, term()});
+  } else if (current().kind == Token::Kind::ExclamationPoint) {
+    scan();
+    x = std::make_shared<UnaryExpression>(
+        UnaryExpression{UnaryExpression::Op::LogicalNot, term()});
+  } else if (current().kind == Token::Kind::Tilde) {
+    scan();
+    x = std::make_shared<UnaryExpression>(
+        UnaryExpression{UnaryExpression::Op::BitwiseNot, term()});
   } else {
     x = comparison();
   }

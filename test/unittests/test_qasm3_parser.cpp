@@ -1308,6 +1308,106 @@ TEST_F(Qasm3ParserTest, ImportQasmInvalidExpected) {
       qasm3::CompilerError);
 }
 
+TEST_F(Qasm3ParserTest, ImportQasmTypeMismatchAssignment) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "bit x;\n"
+                               "x = 10;";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Type check failed.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasmTypeMismatchBinaryExpr) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "const bit x = 0;\n"
+                               "const int y = 10 + x;\n";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Type check failed.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasmConstNotInitialized) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "const bit x;\n";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message,
+                    "Constant Evaluation: Constant declaration initialization "
+                    "expression must be initialized.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasmUnaryTypeMismatchLogicalNot) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "int x = !0;\n";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Type check failed.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasmUnaryTypeMismatchBitwiseNot) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "bool x = ~false;\n"
+                               "bool y = !true;\n";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Type check failed.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
 TEST_F(Qasm3ParserTest, TestPrintTokens) {
   const auto tokens = std::vector{
       qasm3::Token(qasm3::Token::Kind::None, 0, 0),

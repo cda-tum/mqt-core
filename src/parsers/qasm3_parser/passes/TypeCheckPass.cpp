@@ -60,7 +60,7 @@ void TypeCheckPass::visitDeclarationStatement(
   // Lastly, we type check the actual expression
   if (declarationStatement->expression != nullptr) {
     const auto exprType = visit(declarationStatement->expression->expression);
-    if (!resolvedType->fits(*exprType.type)) {
+    if (!exprType.isError && !resolvedType->fits(*exprType.type)) {
       std::stringstream ss;
       ss << "Type mismatch in declaration statement: Expected '";
       ss << resolvedType->toString();
@@ -110,7 +110,6 @@ void TypeCheckPass::visitAssignmentStatement(
 
   if (!idTy->second.type->fits(*exprTy.type)) {
     std::stringstream ss;
-    ss << idTy->second.type->fits(*exprTy.type);
     ss << "Type mismatch in assignment. Expected '";
     ss << idTy->second.type->toString();
     ss << "', found '";
@@ -219,14 +218,12 @@ InferredType TypeCheckPass::visitUnaryExpression(
   switch (unaryExpression->op) {
   case UnaryExpression::BitwiseNot:
     if (!type.type->isNumber()) {
-      error("Cannot apply bitwise not to non-numeric type.");
-      return InferredType::error();
+      return error("Cannot apply bitwise not to non-numeric type.");
     }
     break;
   case UnaryExpression::LogicalNot:
     if (!type.type->isBool()) {
-      error("Cannot apply logical not to non-boolean type.");
-      return InferredType::error();
+      return error("Cannot apply logical not to non-boolean type.");
     }
     break;
   case UnaryExpression::Negate:
@@ -251,6 +248,10 @@ TypeCheckPass::visitConstantExpression(std::shared_ptr<Constant> constant) {
   if (constant->isFP()) {
     return InferredType{std::dynamic_pointer_cast<ResolvedType>(
         DesignatedType<uint64_t>::getFloatTy(64))};
+  }
+  if (constant->isBool()) {
+    return InferredType(std::dynamic_pointer_cast<ResolvedType>(
+        UnsizedType<uint64_t>::getBoolTy()));
   }
   assert(constant->isInt());
 

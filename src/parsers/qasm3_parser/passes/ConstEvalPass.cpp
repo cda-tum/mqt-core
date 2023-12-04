@@ -28,6 +28,10 @@ void ConstEvalPass::visitDeclarationStatement(
   if (!declarationStatement->isConst) {
     return;
   }
+  if (declarationStatement->expression == nullptr) {
+    throw ConstEvalError(
+        "Constant declaration initialization expression must be initialized.");
+  }
 
   const auto value = visit(declarationStatement->expression->expression);
   if (!value) {
