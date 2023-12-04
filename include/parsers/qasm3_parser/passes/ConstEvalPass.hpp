@@ -49,7 +49,6 @@ struct ConstEvalValue {
 
     switch (type) {
     case ConstInt:
-      return std::get<0>(value) == std::get<0>(rhs.value);
     case ConstUint:
       return std::get<0>(value) == std::get<0>(rhs.value);
     case ConstFloat:

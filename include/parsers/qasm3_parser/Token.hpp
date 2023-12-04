@@ -355,7 +355,7 @@ public:
     case Kind::PlusEquals:
       return "+=";
     case Kind::MinusEquals:
-      return "+=";
+      return "-=";
     case Kind::AsteriskEquals:
       return "*=";
     case Kind::SlashEquals:

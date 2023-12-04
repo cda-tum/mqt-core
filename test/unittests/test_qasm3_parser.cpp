@@ -1408,6 +1408,25 @@ TEST_F(Qasm3ParserTest, ImportQasmUnaryTypeMismatchBitwiseNot) {
       qasm3::CompilerError);
 }
 
+TEST_F(Qasm3ParserTest, ImportQasmBinaryTypeMismatch) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "int x = 1 + false;\n";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Type check failed.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
 TEST_F(Qasm3ParserTest, TestPrintTokens) {
   const auto tokens = std::vector{
       qasm3::Token(qasm3::Token::Kind::None, 0, 0),
@@ -1962,7 +1981,7 @@ TEST_F(Qasm3ParserTest, TestConstEval) {
                 qasm3::const_eval::ConstEvalValue(5.0)},
       std::pair{std::make_shared<qasm3::BinaryExpression>(
                     qasm3::BinaryExpression::Op::Subtract,
-                    std::make_shared<qasm3::Constant>(6u, false),
+                    std::make_shared<qasm3::Constant>(6U, false),
                     std::make_shared<qasm3::Constant>(2, true)),
                 qasm3::const_eval::ConstEvalValue(4, true)},
       std::pair{std::make_shared<qasm3::BinaryExpression>(
@@ -2024,10 +2043,6 @@ TEST_F(Qasm3ParserTest, TestConstEval) {
   for (const auto& [expr, expected] : inputs) {
     auto result = constEvalPass.visit(expr);
     EXPECT_TRUE(result.has_value());
-    if (result != expected) {
-      std::cerr << "Expected: " << expected.toString()
-                << ", got: " << result->toString() << "\n";
-    }
     EXPECT_EQ(result, expected);
   }
 }

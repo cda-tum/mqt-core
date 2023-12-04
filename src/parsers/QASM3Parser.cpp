@@ -93,8 +93,8 @@ class OpenQasm3Parser final : public InstVisitor {
   void translateBitOperand(const std::string& bitIdentifier,
                            const std::shared_ptr<Expression>& indexExpr,
                            std::vector<qc::Bit>& bits,
-                           const std::shared_ptr<DebugInfo>& debugInfo) {
-    auto iter = qc->getCregs().find(bitIdentifier);
+                           const std::shared_ptr<DebugInfo>& debugInfo) const {
+    const auto iter = qc->getCregs().find(bitIdentifier);
     if (iter == qc->getCregs().end()) {
       error("Usage of unknown classical register.", debugInfo);
     }
@@ -518,10 +518,10 @@ public:
     return op;
   }
 
-  std::shared_ptr<Gate>
-  getMcGateDefinition(std::string identifier, size_t operandSize,
-                      std::shared_ptr<DebugInfo> debugInfo) {
-    std::vector<std::string> target_params{};
+  static std::shared_ptr<Gate>
+  getMcGateDefinition(const std::string& identifier, size_t operandSize,
+                     const std::shared_ptr<DebugInfo>& debugInfo) {
+    std::vector<std::string> targetParams{};
     std::vector<std::shared_ptr<GateOperand>> operands;
     size_t nTargets = operandSize;
     if (identifier == "mcx_vchain") {
@@ -530,13 +530,13 @@ public:
       nTargets -= 1;
     }
     for (size_t i = 0; i < operandSize; ++i) {
-      target_params.emplace_back("q" + std::to_string(i));
+      targetParams.emplace_back("q" + std::to_string(i));
       if (i < nTargets) {
         operands.emplace_back(
             std::make_shared<GateOperand>("q" + std::to_string(i), nullptr));
       }
     }
-    size_t nControls = nTargets - 1;
+    const size_t nControls = nTargets - 1;
 
     std::string nestedGateIdentifier = "x";
     std::vector<std::shared_ptr<Expression>> nestedParameters{};
@@ -550,14 +550,14 @@ public:
 
     // ctrl(nTargets - 1) @ x q0, ..., q(nTargets - 1)
     const auto gateCall = GateCallStatement(
-        debugInfo, nestedGateIdentifier,
+        std::move(debugInfo), nestedGateIdentifier,
         std::vector<std::shared_ptr<GateModifier>>{
             std::make_shared<CtrlGateModifier>(
                 true, std::make_shared<Constant>(nControls, false))},
         nestedParameters, operands);
     const auto inner = std::make_shared<GateCallStatement>(gateCall);
 
-    const CompoundGate g{nestedParameterNames, target_params, {inner}};
+    const CompoundGate g{nestedParameterNames, targetParams, {inner}};
     return std::make_shared<CompoundGate>(g);
   }
 
