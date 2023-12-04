@@ -8,8 +8,8 @@ import pytest
 
 from mqt.core.evaluation import __flatten_dict, __higher_better, compare
 
-path_base = Path("test/python/results_baseline.json")
-path_feature = Path("test/python/results_feature.json")
+path_base = Path(__file__).resolve().parent / "results_baseline.json"
+path_feature = Path(__file__).resolve().parent / "results_feature.json"
 
 
 def test_higher_better() -> None:
