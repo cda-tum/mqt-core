@@ -550,7 +550,7 @@ public:
 
     // ctrl(nTargets - 1) @ x q0, ..., q(nTargets - 1)
     const auto gateCall = GateCallStatement(
-        std::move(debugInfo), nestedGateIdentifier,
+        debugInfo, nestedGateIdentifier,
         std::vector<std::shared_ptr<GateModifier>>{
             std::make_shared<CtrlGateModifier>(
                 true, std::make_shared<Constant>(nControls, false))},
