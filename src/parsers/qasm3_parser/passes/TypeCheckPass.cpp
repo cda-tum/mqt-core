@@ -43,11 +43,13 @@ void TypeCheckPass::visitDeclarationStatement(
   // designator expression, we need to resolve the statement in three steps.
   const auto typeExpr = std::get<0>(declarationStatement->type);
   // First, type-check the type itself.
-  if (typeExpr->allowsDesignator() && typeExpr->getDesignator() != nullptr &&
-      visit(typeExpr->getDesignator()).isError) {
-    error("Designator expression type check failed.",
-          declarationStatement->debugInfo);
-    return;
+  if (typeExpr->allowsDesignator() && typeExpr->getDesignator() != nullptr) {
+    auto type = visit(typeExpr->getDesignator());
+    if (type.isError || !type.type->isUint()) {
+      error("Designator expression type check failed.",
+            declarationStatement->debugInfo);
+      return;
+    }
   }
   // Now we know the type is valid, we can evaluate the designator expression.
   auto resolvedType =
@@ -160,8 +162,7 @@ InferredType TypeCheckPass::visitBinaryExpression(
     ss << ", ";
     ss << rhs.type->toString();
     ss << ".";
-    error(ss.str());
-    return InferredType::error();
+    return error(ss.str());
   }
 
   switch (binaryExpression->op) {
@@ -174,8 +175,7 @@ InferredType TypeCheckPass::visitBinaryExpression(
   case BinaryExpression::LeftShift:
   case BinaryExpression::RightShift:
     if (!ty.type->isNumber()) {
-      error("Cannot apply arithmetic operation to non-numeric type.");
-      return InferredType::error();
+      return error("Cannot apply arithmetic operation to non-numeric type.");
     }
     break;
   case BinaryExpression::LessThan:
@@ -184,8 +184,7 @@ InferredType TypeCheckPass::visitBinaryExpression(
   case BinaryExpression::GreaterThanOrEqual:
     // all types except for bool
     if (ty.type->isBool()) {
-      error("Cannot compare boolean types.");
-      return InferredType::error();
+      return error("Cannot compare boolean types.");
     }
     return InferredType{UnsizedType<uint64_t>::getBoolTy()};
   case BinaryExpression::Equal:
@@ -195,15 +194,13 @@ InferredType TypeCheckPass::visitBinaryExpression(
   case BinaryExpression::BitwiseXor:
   case BinaryExpression::BitwiseOr:
     if (!ty.type->isNumber()) {
-      error("Cannot apply bitwise operation to non-numeric type.");
-      return InferredType::error();
+      return error("Cannot apply bitwise operation to non-numeric type.");
     }
     break;
   case BinaryExpression::LogicalAnd:
   case BinaryExpression::LogicalOr:
     if (!ty.type->isBool()) {
-      error("Cannot apply logical operation to non-boolean type.");
-      return InferredType::error();
+      return error("Cannot apply logical operation to non-boolean type.");
     }
     break;
   }
@@ -302,28 +299,6 @@ InferredType TypeCheckPass::visitMeasureExpression(
 
   return InferredType{std::dynamic_pointer_cast<ResolvedType>(
       DesignatedType<uint64_t>::getBitTy(width))};
-}
-std::shared_ptr<ResolvedType> TypeCheckPass::visitDesignatedType(
-    DesignatedType<std::shared_ptr<Expression>>* designatedType) {
-  const auto resolvedTy = visit(designatedType->designator);
-  if (!resolvedTy.isError && !resolvedTy.type->isUint()) {
-    error("Designator must be an unsigned integer");
-  }
-  return nullptr;
-}
-std::shared_ptr<ResolvedType> TypeCheckPass::visitUnsizedType(
-    UnsizedType<std::shared_ptr<Expression>>* /*unsizedType*/) {
-  // Nothing to type check
-  return nullptr;
-}
-std::shared_ptr<ResolvedType> TypeCheckPass::visitArrayType(
-    ArrayType<std::shared_ptr<Expression>>* arrayType) {
-  const auto resolvedTy = visit(arrayType->size);
-  if (!resolvedTy.isError && !resolvedTy.type->isUint()) {
-    error("Designator must be an unsigned integer");
-  }
-  arrayType->accept(this);
-  return nullptr;
 }
 
 void TypeCheckPass::visitIfStatement(std::shared_ptr<IfStatement> ifStatement) {

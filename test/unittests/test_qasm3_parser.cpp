@@ -515,8 +515,8 @@ TEST_F(Qasm3ParserTest, ImportQasmConstEval) {
   const std::string testfile = "OPENQASM 3.0;\n"
                                "include \"stdgates.inc\";\n"
                                "const uint N_1 = 0xa;\n"
-                               "const int N_2 = -8;\n"
-                               "qubit[N_1 - -N_2] q;\n"
+                               "const uint N_2 = 8;\n"
+                               "qubit[N_1 - N_2] q;\n"
                                "";
 
   ss << testfile;
@@ -1412,6 +1412,83 @@ TEST_F(Qasm3ParserTest, ImportQasmBinaryTypeMismatch) {
   std::stringstream ss{};
   const std::string testfile = "OPENQASM 3.0;\n"
                                "int x = 1 + false;\n";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Type check failed.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasmAssignmentIndexType) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "bit[16] x;\n"
+                               "x[-1] = 0;\n";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Type check failed.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasmUnknownIdentifier) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "int x = y;\n";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Type check failed.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasmUnknownQubit) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "bit x = measure q;\n";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Type check failed.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasmNegativeTypeDesignator) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "bit[-1] c;\n";
 
   ss << testfile;
   auto qc = QuantumComputation();

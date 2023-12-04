@@ -39,8 +39,7 @@ struct InferredType {
 
 class TypeCheckPass : public CompilerPass,
                       public InstVisitor,
-                      public ExpressionVisitor<InferredType>,
-                      public TypeVisitor<std::shared_ptr<Expression>> {
+                      public ExpressionVisitor<InferredType> {
   bool hasError = false;
   std::map<std::string, InferredType> env;
   // We need a reference to a const eval pass to evaluate types before type
@@ -123,13 +122,5 @@ public:
   visitIdentifierList(std::shared_ptr<IdentifierList> identifierList) override;
   InferredType visitMeasureExpression(
       std::shared_ptr<MeasureExpression> measureExpression) override;
-
-  // Types
-  std::shared_ptr<ResolvedType> visitDesignatedType(
-      DesignatedType<std::shared_ptr<Expression>>* designatedType) override;
-  std::shared_ptr<ResolvedType> visitUnsizedType(
-      UnsizedType<std::shared_ptr<Expression>>* unsizedType) override;
-  std::shared_ptr<ResolvedType>
-  visitArrayType(ArrayType<std::shared_ptr<Expression>>* arrayType) override;
 };
 } // namespace qasm3::type_checking
