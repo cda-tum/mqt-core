@@ -37,7 +37,7 @@ public:
   virtual bool isUint() { return false; }
   virtual bool isBit() { return false; }
 
-  virtual bool fits(const Type& other) { return *this == other; }
+  virtual bool fits(const Type<T>& other) { return *this == other; }
 
   virtual std::string toString() = 0;
 };
@@ -50,115 +50,6 @@ enum DesignatedTy {
   Float,
   Angle,
 };
-//
-// class SizedType : public ResolvedType {
-// public:
-//   ~SizedType() override = default;
-//
-//   DesignatedTy type;
-//   uint64_t designator;
-//
-//   SizedType(const DesignatedTy ty, const uint64_t design)
-//       : type(ty), designator(design) {}
-//
-//   explicit SizedType(const DesignatedTy ty) : type(ty) {
-//     switch (ty) {
-//     case Qubit:
-//     case Bit:
-//       designator = 1;
-//       break;
-//     case Int:
-//     case Uint:
-//       designator = 32;
-//       break;
-//     case Float:
-//     case Angle:
-//       designator = 64;
-//       break;
-//     }
-//   }
-//
-//   bool operator==(const ResolvedType& other) const override {
-//     if (const auto* o = dynamic_cast<const SizedType*>(&other)) {
-//       return type == o->type && designator == o->designator;
-//     }
-//     return false;
-//   }
-//
-//   [[nodiscard]] bool allowsDesignator() const override { return true; }
-//
-//   static std::shared_ptr<ResolvedType> getQubitTy(uint64_t size = 1) {
-//     return std::make_shared<SizedType>(Qubit, size);
-//   }
-//   static std::shared_ptr<ResolvedType> getBitTy(uint64_t size = 1) {
-//     return std::make_shared<SizedType>(Bit, size);
-//   }
-//   static std::shared_ptr<ResolvedType> getIntTy(uint64_t size = 32) {
-//     return std::make_shared<SizedType>(Int, size);
-//   }
-//   static std::shared_ptr<ResolvedType> getUintTy(uint64_t size = 32) {
-//     return std::make_shared<SizedType>(Uint, size);
-//   }
-//   static std::shared_ptr<ResolvedType> getFloatTy(uint64_t size = 64) {
-//     return std::make_shared<SizedType>(Float, size);
-//   }
-//   static std::shared_ptr<ResolvedType> getAngleTy(uint64_t size = 64) {
-//     return std::make_shared<SizedType>(Angle, size);
-//   }
-//
-//   void setDesignator(const uint64_t d) override { designator = d; }
-//
-//   uint64_t getDesignator() override { return designator; }
-//
-//   std::shared_ptr<ResolvedType>
-//   accept(TypeVisitor<uint64_t>* /*visitor*/) override {
-//     // don't need to visit sized types
-//     return nullptr;
-//   }
-//
-//   bool isNumber() override {
-//     return type == Int || type == Uint || type == Bit || type == Float;
-//   }
-//
-//   bool isUint() override { return type == Uint; }
-//
-//   bool isBit() override { return type == Bit; }
-//
-//   bool isFP() override { return type == Float; }
-//
-//   bool fits(const ResolvedType& other) override {
-//     if (const auto* o = dynamic_cast<const SizedType*>(&other)) {
-//       bool typeFits = type == o->type;
-//       if (type == Int && o->type == Uint) {
-//         typeFits = true;
-//       }
-//       if (type == Float && (o->type == Int || o->type == Uint)) {
-//         typeFits = true;
-//       }
-//
-//       return typeFits && designator >= o->designator;
-//     }
-//     return false;
-//   }
-//
-//   std::string toString() override {
-//     switch (type) {
-//     case Qubit:
-//       return "qubit[" + std::to_string(designator) + "]";
-//     case Bit:
-//       return "bit[" + std::to_string(designator) + "]";
-//     case Int:
-//       return "int[" + std::to_string(designator) + "]";
-//     case Uint:
-//       return "uint[" + std::to_string(designator) + "]";
-//     case Float:
-//       return "float[" + std::to_string(designator) + "]";
-//     case Angle:
-//       return "angle[" + std::to_string(designator) + "]";
-//     }
-//     throw std::runtime_error("Unhandled type");
-//   }
-// };
 
 template <typename T> class DesignatedType : public Type<T> {
 public:
@@ -174,7 +65,7 @@ public:
   explicit DesignatedType(DesignatedTy ty);
 
   bool operator==(const Type<T>& other) const override {
-    if (const auto* o = dynamic_cast<const DesignatedType*>(&other)) {
+    if (const auto* o = dynamic_cast<const DesignatedType<T>*>(&other)) {
       return type == o->type && designator == o->designator;
     }
     return false;
