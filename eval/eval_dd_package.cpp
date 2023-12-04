@@ -260,5 +260,6 @@ int main(int argc, char** argv) {
                 std::cerr << "Exception caught: " << e.what() << '\n';
                 return 1;
                 }
+                std::cout << "Benchmarks done." << '\n';
                 return 0;
 }
