@@ -8,9 +8,7 @@
 
 class QFT : public testing::TestWithParam<std::size_t> {
 protected:
-  void TearDown() override {
-    dd->garbageCollect(true);
-  }
+  void TearDown() override { dd->garbageCollect(true); }
 
   void SetUp() override { nqubits = GetParam(); }
 
