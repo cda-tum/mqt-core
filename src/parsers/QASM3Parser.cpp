@@ -340,44 +340,9 @@ public:
       // we create a temp gate definition for these gates
       if (identifier == "mcx_gray" || identifier == "mcx_vchain" ||
           identifier == "mcx_recursive" || identifier == "mcphase") {
-        std::vector<std::string> target_params{};
-        std::vector<std::shared_ptr<GateOperand>> operands;
-        size_t nTargets = gateCallStatement->operands.size();
-        if (identifier == "mcx_vchain") {
-          nTargets -= (nTargets + 1) / 2 - 2;
-        } else if (identifier == "mcx_recursive" && nTargets > 5) {
-          nTargets -= 1;
-        }
-        for (size_t i = 0; i < gateCallStatement->operands.size(); ++i) {
-          target_params.emplace_back("q" + std::to_string(i));
-          if (i < nTargets) {
-            operands.emplace_back(std::make_shared<GateOperand>(
-                "q" + std::to_string(i), nullptr));
-          }
-        }
-        size_t nControls = nTargets - 1;
-
-        std::string nestedGateIdentifier = "x";
-        std::vector<std::shared_ptr<Expression>> nestedParameters{};
-        std::vector<std::string> nestedParameterNames{};
-        if (identifier == "mcphase") {
-          nestedGateIdentifier = "p";
-          nestedParameters.emplace_back(
-              std::make_shared<IdentifierExpression>("x"));
-          nestedParameterNames.emplace_back("x");
-        }
-
-        // ctrl(nTargets - 1) @ x q0, ..., q(nTargets - 1)
-        const auto gateCall = GateCallStatement(
-            gateCallStatement->debugInfo, nestedGateIdentifier,
-            std::vector<std::shared_ptr<GateModifier>>{
-                std::make_shared<CtrlGateModifier>(
-                    true, std::make_shared<Constant>(nControls, false))},
-            nestedParameters, operands);
-        const auto inner = std::make_shared<GateCallStatement>(gateCall);
-
-        const CompoundGate g{nestedParameterNames, target_params, {inner}};
-        gate = std::make_shared<CompoundGate>(g);
+        gate =
+            getMcGateDefinition(identifier, gateCallStatement->operands.size(),
+                                gateCallStatement->debugInfo);
       } else {
         error("Usage of unknown gate '" + identifier + "'.",
               gateCallStatement->debugInfo);
@@ -551,6 +516,49 @@ public:
       }
     }
     return op;
+  }
+
+  std::shared_ptr<Gate>
+  getMcGateDefinition(std::string identifier, size_t operandSize,
+                      std::shared_ptr<DebugInfo> debugInfo) {
+    std::vector<std::string> target_params{};
+    std::vector<std::shared_ptr<GateOperand>> operands;
+    size_t nTargets = operandSize;
+    if (identifier == "mcx_vchain") {
+      nTargets -= (nTargets + 1) / 2 - 2;
+    } else if (identifier == "mcx_recursive" && nTargets > 5) {
+      nTargets -= 1;
+    }
+    for (size_t i = 0; i < operandSize; ++i) {
+      target_params.emplace_back("q" + std::to_string(i));
+      if (i < nTargets) {
+        operands.emplace_back(
+            std::make_shared<GateOperand>("q" + std::to_string(i), nullptr));
+      }
+    }
+    size_t nControls = nTargets - 1;
+
+    std::string nestedGateIdentifier = "x";
+    std::vector<std::shared_ptr<Expression>> nestedParameters{};
+    std::vector<std::string> nestedParameterNames{};
+    if (identifier == "mcphase") {
+      nestedGateIdentifier = "p";
+      nestedParameters.emplace_back(
+          std::make_shared<IdentifierExpression>("x"));
+      nestedParameterNames.emplace_back("x");
+    }
+
+    // ctrl(nTargets - 1) @ x q0, ..., q(nTargets - 1)
+    const auto gateCall = GateCallStatement(
+        debugInfo, nestedGateIdentifier,
+        std::vector<std::shared_ptr<GateModifier>>{
+            std::make_shared<CtrlGateModifier>(
+                true, std::make_shared<Constant>(nControls, false))},
+        nestedParameters, operands);
+    const auto inner = std::make_shared<GateCallStatement>(gateCall);
+
+    const CompoundGate g{nestedParameterNames, target_params, {inner}};
+    return std::make_shared<CompoundGate>(g);
   }
 
   std::unique_ptr<qc::Operation> applyQuantumOperation(
