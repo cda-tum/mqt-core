@@ -10,11 +10,16 @@ class QFT : public testing::TestWithParam<std::size_t> {
 protected:
   void TearDown() override { dd->garbageCollect(true); }
 
-  void SetUp() override { nqubits = GetParam(); }
+  void SetUp() override {
+    nqubits = GetParam();
+    exp = std::make_unique<dd::Experiment>();
+    exp->dd = std::make_unique<dd::Package<>>(nqubits);
+  }
 
   std::size_t nqubits = 0;
   std::unique_ptr<qc::QFT> qc;
   std::unique_ptr<dd::Package<>> dd;
+  std::unique_ptr<dd::Experiment> exp;
 };
 
 /// Findings from the QFT Benchmarks:
@@ -49,10 +54,12 @@ TEST_P(QFT, Functionality) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
   // there should be no error building the functionality
-  auto exp = std::make_unique<dd::FunctionalityConstructionExperiment>();
-  exp->dd = std::make_unique<dd::Package<>>(nqubits);
+
   exp = dd::benchmarkFunctionalityConstruction(*qc);
-  auto func = exp->func;
+  auto* expFunc =
+      dynamic_cast<dd::FunctionalityConstructionExperiment*>(exp.get());
+  assert(expFunc != nullptr);
+  auto func = expFunc->func;
   dd = std::move(exp->dd);
 
   qc->printStatistics(std::cout);
@@ -93,10 +100,12 @@ TEST_P(QFT, Functionality) {
 TEST_P(QFT, FunctionalityRecursive) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
-  auto exp = std::make_unique<dd::FunctionalityConstructionExperiment>();
-  exp->dd = std::make_unique<dd::Package<>>(nqubits);
+
   exp = dd::benchmarkFunctionalityConstruction(*qc, true);
-  auto func = exp->func;
+  auto* expFunc =
+      dynamic_cast<dd::FunctionalityConstructionExperiment*>(exp.get());
+  assert(expFunc != nullptr);
+  auto func = expFunc->func;
   dd = std::move(exp->dd);
 
   qc->printStatistics(std::cout);
@@ -138,10 +147,9 @@ TEST_P(QFT, Simulation) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
-  auto exp = std::make_unique<dd::SimulationExperiment>();
-  exp->dd = std::make_unique<dd::Package<>>(nqubits);
   exp = dd::benchmarkSimulate(*qc);
-  auto sim = exp->sim;
+  auto* expSim = dynamic_cast<dd::SimulationExperiment*>(exp.get());
+  auto sim = expSim->sim;
   dd = std::move(exp->dd);
 
   qc->printStatistics(std::cout);
@@ -171,13 +179,14 @@ TEST_P(QFT, Simulation) {
 TEST_P(QFT, FunctionalityRecursiveEquality) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
-  auto exp = std::make_unique<dd::FunctionalityConstructionExperiment>();
-  exp->dd = std::make_unique<dd::Package<>>(nqubits);
-  dd = std::move(exp->dd);
 
   // there should be no error building the functionality recursively
   exp = dd::benchmarkFunctionalityConstruction(*qc);
-  auto func = exp->func;
+  auto* expFunc =
+      dynamic_cast<dd::FunctionalityConstructionExperiment*>(exp.get());
+  assert(expFunc != nullptr);
+  auto func = expFunc->func;
+  dd = std::move(exp->dd);
 
   // there should be no error building the functionality regularly
   auto funcRec = buildFunctionalityRecursive(qc.get(), dd);
@@ -190,7 +199,7 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
 TEST_P(QFT, DynamicSimulation) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, true, true); });
-
+  dd = std::make_unique<dd::Package<>>(nqubits);
   qc->printStatistics(std::cout);
 
   // simulate the circuit
