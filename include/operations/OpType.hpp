@@ -289,59 +289,6 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"compound", OpType::Compound},
 };
 
-const inline static std::unordered_map<qc::OpType, qc::OpType>
-    OP_TYPE_TO_INVERSE_TYPE = {
-        {OpType::I, OpType::I},   {OpType::H, OpType::H},
-        {OpType::X, OpType::X},   {OpType::Y, OpType::Y},
-        {OpType::Z, OpType::Z},   {OpType::S, OpType::Sdg},
-        {OpType::T, OpType::Tdg}, {OpType::V, OpType::Vdg},
-        // TODO: find a way to store the parametrised gates and their inverses
-};
-
-const inline static std::unordered_map<qc::OpType, dd::GateMatrix>
-    OP_TYPE_TO_MATRIX = {
-        {OpType::I, {1, 0, 0, 1}},
-        {OpType::H, {dd::SQRT2_2, dd::SQRT2_2, dd::SQRT2_2, -dd::SQRT2_2}},
-        {OpType::X, {0, 1, 1, 0}},
-        {OpType::Y, {0, {0, -1}, {0, 1}, 0}},
-        {OpType::Z, {1, 0, 0, -1}},
-        {OpType::S, {1, 0, 0, {0, 1}}},
-        {OpType::Sdg, {1, 0, 0, {0, -1}}},
-        {OpType::T, {1, 0, 0, {dd::SQRT2_2, dd::SQRT2_2}}},
-        {OpType::Tdg, {1, 0, 0, {dd::SQRT2_2, dd::SQRT2_2}}},
-        {OpType::SX,
-         {std::complex{0.5, 0.5}, {0.5, -0.5}, {0.5, -0.5}, {0.5, 0.5}}},
-        {OpType::SXdg,
-         {std::complex{0.5, -0.5}, {0.5, 0.5}, {0.5, 0.5}, {0.5, -0.5}}},
-        {OpType::V,
-         {dd::SQRT2_2, {0, -dd::SQRT2_2}, {0, -dd::SQRT2_2}, dd::SQRT2_2}},
-        {OpType::Vdg,
-         {dd::SQRT2_2, {0, dd::SQRT2_2}, {0, dd::SQRT2_2}, dd::SQRT2_2}},
-        // TODO: extend this for all Matrices in GateMatrixDefinitions.hpp
-};
-
-[[nodiscard]] inline OpType opInverseFromType(const qc::OpType& opType) {
-  // try to find the operation inverse type in the map of known operation types
-  // and return it if found or throw an exception otherwise.
-  if (const auto it = OP_TYPE_TO_INVERSE_TYPE.find(opType);
-      it != OP_TYPE_TO_INVERSE_TYPE.end()) {
-    return OP_TYPE_TO_INVERSE_TYPE.at(opType);
-  }
-  throw std::invalid_argument("Unsupported inverse operation for type: " +
-                              toString(opType));
-}
-
-[[nodiscard]] inline dd::GateMatrix opMatrixFromType(const qc::OpType& opType) {
-  // try to find the operation matrix in the map of known operation matrices and
-  // return it if found or throw an exception otherwise.
-  if (const auto it = OP_TYPE_TO_MATRIX.find(opType);
-      it != OP_TYPE_TO_MATRIX.end()) {
-    return OP_TYPE_TO_MATRIX.at(opType);
-  }
-  throw std::invalid_argument("Unsupported operation matrix for type: " +
-                              toString(opType));
-}
-
 [[nodiscard]] inline OpType opTypeFromString(const std::string& opType) {
   // try to find the operation type in the map of known operation types and
   // return it if found or throw an exception otherwise.

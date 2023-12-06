@@ -174,7 +174,6 @@ StandardOperation::StandardOperation(const std::size_t nq, const Qubit target,
                                      const OpType g, std::vector<fp> params,
                                      const Qubit startingQubit) {
   type = g;
-  gateMatrix = opMatrixFromType(type);
   parameter = std::move(params);
   setup(nq, startingQubit);
   targets.emplace_back(target);
@@ -184,7 +183,6 @@ StandardOperation::StandardOperation(const std::size_t nq, const Targets& targ,
                                      const OpType g, std::vector<fp> params,
                                      const Qubit startingQubit) {
   type = g;
-  gateMatrix = opMatrixFromType(type);
   parameter = std::move(params);
   setup(nq, startingQubit);
   targets = targ;
