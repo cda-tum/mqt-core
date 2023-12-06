@@ -38,8 +38,8 @@ def __flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = "_") -> d
 
 
 def compare(
-    baseline_filepath: PathLike[Any],
-    feature_filepath: PathLike[Any],
+    baseline_filepath: str | PathLike[str],
+    feature_filepath: str | PathLike[str],
     factor: float = 0.1,
     only_changed: bool = True,
     sort: str = "ratio",
