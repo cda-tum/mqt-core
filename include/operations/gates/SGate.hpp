@@ -30,4 +30,4 @@ private:
   dd::GateMatrix sMat{1, 0, 0, {0, 1}};
   dd::GateMatrix sdgMat{1, 0, 0, {0, -1}};
 };
-}  // namespace qc
+} // namespace qc

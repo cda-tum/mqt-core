@@ -18,4 +18,4 @@ class IGate : public GateMatrixInterface, StandardOperation {
 private:
   dd::GateMatrix iMat{1, 0, 0, 1};
 };
-}  // namespace qc
+} // namespace qc

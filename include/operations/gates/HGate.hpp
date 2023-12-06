@@ -18,4 +18,4 @@ class HGate : public GateMatrixInterface, StandardOperation {
 private:
   dd::GateMatrix hMat{dd::SQRT2_2, dd::SQRT2_2, dd::SQRT2_2, dd::SQRT2_2};
 };
-}  // namespace qc
+} // namespace qc
