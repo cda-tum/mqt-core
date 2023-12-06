@@ -1,12 +1,15 @@
 #pragma once
 
 #include "Operation.hpp"
+#include "dd/DDDefinitions.hpp"
 
 #include <cmath>
 
 namespace qc {
 class StandardOperation : public Operation {
 protected:
+  dd::GateMatrix gateMatrix;
+
   static void checkInteger(fp& ld) {
     const fp nearest = std::nearbyint(ld);
     if (std::abs(ld - nearest) < PARAMETER_TOLERANCE) {

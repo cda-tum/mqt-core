@@ -15,7 +15,16 @@ class XGate : public GateMatrixInterface, StandardOperation {
 
   dd::GateMatrix getInverseGateMatrix() override { return xMat; }
 
+  void invert() override {
+    if (type != OpType::X) {
+      throw std::runtime_error(
+          "Object XGate does not contain correct operation type!");
+    }
+
+    // leave xMat as it is since X gate is self-inverting
+  }
+
 private:
   dd::GateMatrix xMat{0, 1, 1, 0};
 };
-}  // namespace qc
+} // namespace qc
