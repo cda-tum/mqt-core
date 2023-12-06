@@ -291,14 +291,10 @@ const inline static std::unordered_map<std::string, qc::OpType>
 
 const inline static std::unordered_map<qc::OpType, qc::OpType>
     OP_TYPE_TO_INVERSE_TYPE = {
-        {OpType::I, OpType::I},
-        {OpType::H, OpType::H},
-        {OpType::X, OpType::X},
-        {OpType::Y, OpType::Y},
-        {OpType::Z, OpType::Z},
-        {OpType::S, OpType::Sdg},
-        {OpType::T, OpType::Tdg},
-        {OpType::V, OpType::Vdg},
+        {OpType::I, OpType::I},   {OpType::H, OpType::H},
+        {OpType::X, OpType::X},   {OpType::Y, OpType::Y},
+        {OpType::Z, OpType::Z},   {OpType::S, OpType::Sdg},
+        {OpType::T, OpType::Tdg}, {OpType::V, OpType::Vdg},
         // TODO: find a way to store the parametrised gates and their inverses
 };
 

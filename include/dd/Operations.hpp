@@ -90,11 +90,11 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
     throw qc::QFRException(oss.str());
   }
 
-//  if (inverse) {
-//    gm = qc::opMatrixFromType(qc::opInverseFromType(type));
-//  } else {
-//    gm = qc::opMatrixFromType(type);
-//  }
+  //  if (inverse) {
+  //    gm = qc::opMatrixFromType(qc::opInverseFromType(type));
+  //  } else {
+  //    gm = qc::opMatrixFromType(type);
+  //  }
 
   return dd->makeGateDD(gm, nqubits, controls, target, startQubit);
 }
