@@ -377,7 +377,7 @@ TEST_F(IO, iSWAPDumpIsValid) {
   qc->iswap(0, 1);
   std::cout << *qc << "\n";
   std::stringstream ss{};
-  qc->dumpOpenQASM(ss);
+  qc->dumpOpenQASM2(ss);
   EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3););
   std::cout << *qc << "\n";
 }
@@ -387,7 +387,7 @@ TEST_F(IO, iSWAPdagDumpIsValid) {
   qc->iswapdg(0, 1);
   std::cout << *qc << "\n";
   std::stringstream ss{};
-  qc->dumpOpenQASM(ss);
+  qc->dumpOpenQASM2(ss);
   std::cerr << ss.str() << "\n";
   EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM););
   std::cout << *qc << "\n";
@@ -398,7 +398,7 @@ TEST_F(IO, PeresDumpIsValid) {
   qc->peres(0, 1);
   std::cout << *qc << "\n";
   std::stringstream ss{};
-  qc->dumpOpenQASM(ss);
+  qc->dumpOpenQASM2(ss);
   EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3););
   std::cout << *qc << "\n";
 }
@@ -408,7 +408,7 @@ TEST_F(IO, PeresdagDumpIsValid) {
   qc->peresdg(0, 1);
   std::cout << *qc << "\n";
   std::stringstream ss{};
-  qc->dumpOpenQASM(ss);
+  qc->dumpOpenQASM2(ss);
   EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3););
   std::cout << *qc << "\n";
 }
@@ -710,7 +710,7 @@ TEST_F(IO, dumpEmptyOpenQASM) {
       "// i\n// o\nOPENQASM 3.0;\ninclude \"stdgates.inc\";\n";
 
   std::stringstream out1;
-  qc->dumpOpenQASM(out1);
+  qc->dumpOpenQASM2(out1);
   EXPECT_EQ(openQASM2, out1.str());
   std::stringstream out2;
   qc->dumpOpenQASM3(out2);

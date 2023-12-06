@@ -752,8 +752,7 @@ public:
     dump(std::move(of), format);
   }
   virtual void dump(std::ostream&& of, Format format);
-  // defaults to OpenQASM 2.0
-  void dumpOpenQASM(std::ostream& of) { dumpOpenQASM(of, false); }
+  void dumpOpenQASM2(std::ostream& of) { dumpOpenQASM(of, false); }
   void dumpOpenQASM3(std::ostream& of) { dumpOpenQASM(of, true); }
   virtual void dumpOpenQASM(std::ostream& of, bool openQasm3);
 
