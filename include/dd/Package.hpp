@@ -2896,7 +2896,8 @@ private:
       For the i-th part (i starts from 0), right shifts the contents for (i +
   offset) columns.
   **/
-  mEdge shiftAllRowsRecursive(mEdge& e, std::int64_t m, std::int64_t offset) {
+  mEdge shiftAllRowsRecursive(const mEdge& e, std::int64_t m,
+                              std::int64_t offset) {
 
     if (e.isTerminal()) {
       return e;
@@ -2932,7 +2933,7 @@ private:
       }
     }
     auto f = makeDDNode(e.p->v, edges);
-    f.w = e.w;
+    f.w = cn.lookup(e.w * f.w);
     return f;
   }
 
@@ -2945,7 +2946,7 @@ public:
       For the i-th part (i starts from 0), right shifts the contents for i
   columns.
   **/
-  mEdge shiftAllRows(mEdge& e, std::int64_t m) {
+  mEdge shiftAllRows(const mEdge& e, std::int64_t m) {
     return shiftAllRowsRecursive(e, m, 0);
   }
 
@@ -2954,7 +2955,7 @@ public:
   size 2^k. For each part, keeps the leftmost column unchanged, and sets the
   remaining columns to 0.
   **/
-  mEdge setColumnsToZero(mEdge& e, Qubit k) {
+  mEdge setColumnsToZero(const mEdge& e, Qubit k) {
     if (e.isTerminal()) {
       return e;
     }
@@ -2982,11 +2983,11 @@ public:
       edges[3] = mEdge::zero();
     }
     auto f = makeDDNode(e.p->v, edges);
-
+    auto temp = cn.lookup(e.w * f.w);
     // add to the compute table with a weight of 1
     f.w = Complex::one();
     setMatrixColumnsToZero.insert(e, k, f);
-    f.w = e.w;
+    f.w = temp;
     return f;
   }
 
@@ -2995,7 +2996,7 @@ public:
   size 2^k. For each part, keeps the top row unchanged, and sets the remaining
   entries to 0.
   **/
-  mEdge setRowsToZero(mEdge& e, Qubit k) {
+  mEdge setRowsToZero(const mEdge& e, Qubit k) {
     if (e.isTerminal()) {
       return e;
     }
@@ -3023,11 +3024,11 @@ public:
       edges[3] = mEdge::zero();
     }
     auto f = makeDDNode(e.p->v, edges);
-
+    auto temp = cn.lookup(e.w * f.w);
     // add to the compute table with a weight of 1
     f.w = Complex::one();
     setMatrixRowsToZero.insert(e, k, f);
-    f.w = e.w;
+    f.w = temp;
     return f;
   }
 

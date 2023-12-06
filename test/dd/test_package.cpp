@@ -2098,6 +2098,29 @@ TEST(DDPackageTest, DDMSetRowsToZero) {
   EXPECT_EQ(dd->setRowsToZero(inputDD, 0), inputDD);
 }
 
+TEST(DDPackageTest, DDMPECFunctionsNotNormalized) {
+  const auto nqubits = 2U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto inputMatrix = dd::CMat{
+      {7, 9, 4, 1}, {3, -51, 0, -10000}, {7, 1, -7, -7}, {7, -1, -7, 1}};
+  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
+
+  const auto outputMatrix = dd->setRowsToZero(inputDD, 1);
+  const auto expectedMatrix =
+      dd::CMat{{7, 9, 4, 1}, {0, 0, 0, 0}, {7, 1, -7, -7}, {0, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix, dd->makeDDFromMatrix(expectedMatrix));
+
+  const auto outputMatrix2 = dd->setColumnsToZero(inputDD, 1);
+  const auto expectedMatrix2 =
+      dd::CMat{{7, 0, 4, 0}, {3, 0, 0, 0}, {7, 0, -7, 0}, {7, 0, -7, 0}};
+  EXPECT_EQ(outputMatrix2, dd->makeDDFromMatrix(expectedMatrix2));
+
+  const auto outputMatrix3 = dd->shiftAllRows(outputMatrix2, 1);
+  const auto expectedMatrix3 =
+      dd::CMat{{7, 0, 4, 0}, {3, 0, 0, 0}, {0, 7, 0, -7}, {0, 7, 0, -7}};
+  EXPECT_EQ(outputMatrix3, dd->makeDDFromMatrix(expectedMatrix3));
+}
+
 TEST(DDPackageTest, DDMPartialEquivalenceCheckingTrivialEquivalence) {
   const auto nqubits = 2U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
