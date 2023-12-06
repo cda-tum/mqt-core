@@ -4,16 +4,16 @@
 #include "dd/GateMatrixDefinitions.hpp"
 
 namespace qc {
+template<typename MatrixType>
 class GateMatrixInterface {
 public:
   virtual ~GateMatrixInterface() = default;
 
-  virtual dd::GateMatrix getGateMatrix() = 0;
-  //  virtual dd::TwoQubitGateMatrix getGateMatrix() = 0;
+  virtual MatrixType getGateMatrix() = 0;
+  virtual MatrixType getInverseGateMatrix() = 0;
   virtual bool isSingleTargetGate() = 0;
   virtual bool isTwoTargetGate() = 0;
   virtual bool isThreeOrMoreTargetGate() = 0;
-  virtual dd::GateMatrix getInverseGateMatrix() = 0;
 
   // TODO: add other useful methods
 };
