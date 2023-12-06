@@ -246,7 +246,7 @@ void StandardOperation::dumpOpenQASM(std::ostream& of,
   std::ostringstream op;
   op << std::setprecision(std::numeric_limits<fp>::digits10);
 
-  op << std::string(indent * 2, ' ');
+  op << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
 
   if (openQASM3) {
     if (!controls.empty()) {

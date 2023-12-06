@@ -137,7 +137,7 @@ public:
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                     const RegisterNames& creg, size_t indent,
                     bool openQASM3) const override {
-    of << std::string(indent * 2, ' ');
+    of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
     of << "if (";
     of << creg[controlRegister.first].first;
     of << " " << comparisonKind << " " << expectedValue << ") ";

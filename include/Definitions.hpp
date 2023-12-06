@@ -57,6 +57,8 @@ static constexpr fp TAU = static_cast<fp>(
 static constexpr fp E = static_cast<fp>(
     2.718281828459045235360287471352662497757247093699959574967L);
 
+static constexpr size_t OUTPUT_INDENT_SIZE = 2;
+
 // forward declaration
 class Operation;
 
