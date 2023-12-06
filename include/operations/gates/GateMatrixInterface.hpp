@@ -4,8 +4,7 @@
 #include "dd/GateMatrixDefinitions.hpp"
 
 namespace qc {
-template<typename MatrixType>
-class GateMatrixInterface {
+template <typename MatrixType> class GateMatrixInterface {
 public:
   virtual ~GateMatrixInterface() = default;
 
