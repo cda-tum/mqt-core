@@ -258,7 +258,7 @@ void registerQuantumComputation(py::module& m) {
       "qasm_str",
       [](qc::QuantumComputation& circ) {
         auto ss = std::stringstream();
-        circ.dumpOpenQASM(ss);
+        circ.dumpOpenQASM2(ss);
         return ss.str();
       },
       "Get a OpenQASM 2.0 representation of the circuit. Note that this uses "
@@ -269,7 +269,7 @@ void registerQuantumComputation(py::module& m) {
       "qasm",
       [](qc::QuantumComputation& circ, const std::string& filename) {
         std::ofstream ofs(filename);
-        circ.dumpOpenQASM(ofs);
+        circ.dumpOpenQASM2(ofs);
         ofs.close();
       },
       "filename"_a,
@@ -281,7 +281,7 @@ void registerQuantumComputation(py::module& m) {
       "qasm3_str",
       [](qc::QuantumComputation& circ) {
         auto ss = std::stringstream();
-        circ.dumpOpenQASM(ss);
+        circ.dumpOpenQASM3(ss);
         return ss.str();
       },
       "Get a OpenQASM 3.0 representation of the circuit.");
@@ -289,7 +289,7 @@ void registerQuantumComputation(py::module& m) {
       "qasm3",
       [](qc::QuantumComputation& circ, const std::string& filename) {
         std::ofstream ofs(filename);
-        circ.dumpOpenQASM(ofs);
+        circ.dumpOpenQASM3(ofs);
         ofs.close();
       },
       "filename"_a,
