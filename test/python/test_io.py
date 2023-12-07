@@ -6,10 +6,9 @@ import sys
 from pathlib import Path
 
 import pytest
-from qiskit import QuantumCircuit
-
 from mqt.core import QuantumComputation
 from mqt.core.io import load
+from qiskit import QuantumCircuit
 
 
 def test_loading_quantum_computation() -> None:
@@ -40,6 +39,26 @@ def test_loading_file() -> None:
     # check the result
     assert isinstance(qc, QuantumComputation)
     qc_qasm = qc.qasm_str()
+
+    assert qasm in qc_qasm
+
+    # remove the file
+    Path("test.qasm").unlink()
+
+
+def test_loading_file_qasm3() -> None:
+    """Test whether importing a simple QASM file works."""
+    qasm = "qbit[2] q;\nbit[2] c;\nh q[0];\ncx q[0], q[1];\nc = measure q;\n"
+    with Path("test.qasm").open("w") as f:
+        f.write(qasm)
+
+    # load the file
+    qc = load("test.qasm")
+    print(qc)
+
+    # check the result
+    assert isinstance(qc, QuantumComputation)
+    qc_qasm = qc.qasm3_str()
 
     assert qasm in qc_qasm
 

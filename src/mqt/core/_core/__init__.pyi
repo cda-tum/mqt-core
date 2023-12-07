@@ -2,9 +2,10 @@ from collections.abc import Iterable, Iterator, Mapping, MutableMapping, Mutable
 from os import PathLike
 from typing import overload
 
-from .._compat.typing import Self
 from .operations import Control, Operation, OpType
 from .symbolic import Expression, Variable
+from .._compat.typing import Self
+
 
 class Permutation(MutableMapping[int, int]):
     def __getitem__(self: Self, idx: int) -> int: ...
@@ -123,6 +124,10 @@ class QuantumComputation(MutableSequence[Operation]):
 
     def qasm_str(self: Self) -> str: ...
     def qasm(self: Self, filename: PathLike[str]) -> None: ...
+
+    def qasm3_str(self: Self) -> str: ...
+
+    def qasm3(self: Self, filename: PathLike[str]) -> None: ...
 
     # --------------------------------------------------------------------------
     #                               Operations
