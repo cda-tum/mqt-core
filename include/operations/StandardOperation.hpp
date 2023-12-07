@@ -105,7 +105,17 @@ public:
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                     const RegisterNames& creg, size_t indent,
                     bool openQASM3) const override;
+
   void invert() override;
+
+protected:
+  void dumpOpenQASM2(std::ostream& of, std::ostringstream& op,
+                     const RegisterNames& qreg) const;
+  void dumpOpenQASM3(std::ostream& of, std::ostringstream& op,
+                     const RegisterNames& qreg) const;
+
+  void dumpGateType(std::ostream& of, std::ostringstream& op,
+                    const RegisterNames& qreg) const;
 };
 
 } // namespace qc
