@@ -38,12 +38,10 @@ u3(1,2,3) r[0];
 u2(1,2) r[1];
 u1(1) q[0];
 barrier q;
-//show_probabilities;
 measure q -> c;
 measure r[0] -> d[0];
 measure q -> d;
 reset q;
-//snapshot(1) r[0],r[1];
 
 ctrl @ z q[0],q[1];
 ctrl @ y q[0],q[1];
