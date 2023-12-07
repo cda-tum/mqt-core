@@ -198,15 +198,16 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
   if (op->getType() == qc::OpType::Barrier) {
     return it + 1;
   }
-  // global phase is ignored
-  if (op->getType() == qc::OpType::GPhase && !op->isControlled()) {
-    return it + 1;
-  }
 
   if (!op->isControlled()) {
     // single qubit gates
     const auto target = static_cast<zx::Qubit>(p.at(op->getTargets().front()));
     switch (op->getType()) {
+    case qc::OpType::GPhase: {
+      const auto& param = parseParam(op.get(), 0);
+      diag.addGlobalPhase(param);
+      break;
+    }
     case qc::OpType::Z:
       addZSpider(diag, target, qubits, PiExpression(PiRational(1, 1)));
       break;
