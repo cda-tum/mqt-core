@@ -6,9 +6,10 @@ import sys
 from pathlib import Path
 
 import pytest
+from qiskit import QuantumCircuit
+
 from mqt.core import QuantumComputation
 from mqt.core.io import load
-from qiskit import QuantumCircuit
 
 
 def test_loading_quantum_computation() -> None:
