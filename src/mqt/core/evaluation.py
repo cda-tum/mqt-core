@@ -17,12 +17,7 @@ pd.set_option("display.max_rows", None)
 pd.set_option("display.width", None)
 
 sort_options = ["ratio", "experiment"]
-
-
-def __higher_better(key: str) -> bool:
-    """Return whether a higher value is better for the given key."""
-    higher_better_ls = ["hits", "hit_ratio"]
-    return any(key.endswith(s) for s in higher_better_ls)
+higher_better_metrics = ["hits", "hit_ratio"]
 
 
 def __flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = "_") -> dict[str, Any]:
@@ -89,89 +84,56 @@ def compare(
         ls = ["skipped", v]
         flattened_data[k] = ls
 
-    df_improved = pd.DataFrame()
-    improved_before = []
-    improved_after = []
-    improved_ratio = []
-    improved_exp = []
-
-    df_worsened = pd.DataFrame()
-    worsened_before = []
-    worsened_after = []
-    worsened_ratio = []
-    worsened_exp = []
-
-    df_same = pd.DataFrame()
-    same_before = []
-    same_after = []
-    same_ratio = []
-    same_exp = []
+    before_ls, after_ls, ratio_ls, exp_ls = [], [], [], []
 
     for k, v in flattened_data.items():
         after = v[1]
         before = v[0]
         if before in {"unused", "skipped"} or after in {"unused", "skipped"}:
             ratio = float("nan")
-            same_before.append(before)
-            same_after.append(after)
-            same_ratio.append(ratio)
-            same_exp.append(k)
-            continue
-        ratio = after / before if before != 0 else 1 if after == 0 else 1000000000.0
-        if 1 - factor < ratio < 1 + factor:
-            same_before.append(before)
-            same_after.append(after)
-            same_ratio.append(ratio)
-            same_exp.append(k)
-        elif (ratio < 1 - factor and not __higher_better(k)) or (ratio > 1 + factor and __higher_better(k)):
-            improved_before.append(before)
-            improved_after.append(after)
-            improved_ratio.append(ratio)
-            improved_exp.append(k)
         else:
-            worsened_before.append(before)
-            worsened_after.append(after)
-            worsened_ratio.append(ratio)
-            worsened_exp.append(k)
+            ratio = after / before if before != 0 else 1 if after == 0 else 1000000000.0
+        before_ls.append(before)
+        after_ls.append(after)
+        ratio_ls.append(ratio)
+        exp_ls.append(k)
 
-    df_improved["before"] = improved_before
-    df_improved["after"] = improved_after
-    df_improved["ratio"] = improved_ratio
-    df_improved["experiment"] = improved_exp
-    df_improved = df_improved.sort_values(by=sort)
-    df_improved.index = pd.Index([""] * len(df_improved.index))
+    df_all = pd.DataFrame()
+    df_all["before"] = before_ls
+    df_all["after"] = after_ls
+    df_all["ratio"] = ratio_ls
+    df_all["experiment"] = exp_ls
+    df_all.index = pd.Index([""] * len(df_all.index))
 
-    df_worsened["before"] = worsened_before
-    df_worsened["after"] = worsened_after
-    df_worsened["ratio"] = worsened_ratio
-    df_worsened["experiment"] = worsened_exp
-    df_worsened = df_worsened.sort_values(by=sort)
-    df_worsened.index = pd.Index([""] * len(df_worsened.index))
-
-    df_same["before"] = same_before
-    df_same["after"] = same_after
-    df_same["ratio"] = same_ratio
-    df_same["experiment"] = same_exp
-    df_same = df_same.sort_values(by=sort)
-    df_same.index = pd.Index([""] * len(df_same.index))
+    m1 = df_all["ratio"] < 1 - factor  # after significantly smaller than before
+    m2 = df_all["experiment"].str.endswith(tuple(higher_better_metrics))  # if the metric is "better" when it's higher
+    m3 = df_all["ratio"] > 1 + factor  # after significantly larger than before
+    m4 = (df_all["ratio"] != df_all["ratio"]) | ((1 - factor < df_all["ratio"]) & (df_all["ratio"] < 1 + factor))  #
+    # ratio is NaN or after not significantly different from before
 
     if no_split:
         if only_changed:
-            df_all = pd.concat([df_improved, df_worsened], ignore_index=True)
+            df_all = df_all[m1 & m3]
             print("All changed benchmarks:")
         else:
-            df_all = pd.concat([df_improved, df_same, df_worsened], ignore_index=True)
             print("All benchmarks:")
-        df_all.index = pd.Index([""] * len(df_all.index))
+
         df_all = df_all.sort_values(by=sort)
         print(df_all)
         return
 
     print("Benchmarks that have improved:")
+    df_improved = df_all[(m1 & ~m2) | (m3 & m2)]
+    df_improved = df_improved.sort_values(by=sort)
     print(df_improved)
 
     if not only_changed:
         print("Benchmarks that have stayed the same:")
+        df_same = df_all[m4]
+        df_same = df_same.sort_values(by=sort)
         print(df_same)
+
     print("Benchmarks that have worsened:")
+    df_worsened = df_all[(m3 & ~m2) | (m1 & m2)]
+    df_worsened = df_worsened.sort_values(by=sort)
     print(df_worsened)

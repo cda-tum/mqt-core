@@ -6,18 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from mqt.core.evaluation import __flatten_dict, __higher_better, compare
+from mqt.core.evaluation import __flatten_dict, compare
 
 path_base = Path(__file__).resolve().parent / "results_baseline.json"
 path_feature = Path(__file__).resolve().parent / "results_feature.json"
-
-
-def test_higher_better() -> None:
-    """Test if a metric is better if higher."""
-    assert __higher_better("BV_Functionality_1024_dd_matrix_unique_table_total_hits")
-    assert __higher_better("BV_Functionality_1024_dd_compute_tables_matrix_add_hit_ratio")
-    assert not __higher_better("GHZ_Simulation_256_dd_matrix_unique_table_total_num_active_entries")
-    assert not __higher_better("WState_Simulation_1024_dd_real_numbers_cache_manager_num_available_for_reuse_peak")
 
 
 def test_flatten_dict() -> None:
