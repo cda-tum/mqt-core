@@ -14,8 +14,8 @@
               "load_factor": 0.0283203125,
               "lookups": 8172,
               "memory_MiB": 1.125,
-              "num_buckets": 16384,
-              "num_entries": 464,
+              "num_buckets": 0,
+              "num_entries": 0,
               "peak_num_entries": "unused"
             }
           }
