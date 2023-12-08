@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from mqt.core.evaluation import __flatten_dict, compare
+from mqt.core.evaluation import __flatten_dict, __post_processing, compare
 
 path_base = Path(__file__).resolve().parent / "results_baseline.json"
 path_feature = Path(__file__).resolve().parent / "results_feature.json"
@@ -15,9 +15,43 @@ path_feature = Path(__file__).resolve().parent / "results_feature.json"
 def test_flatten_dict() -> None:
     """Test flatten_dict."""
     d1 = {"a": {"b": {"main": 1}}}
-    assert __flatten_dict(d1) == {"a_b_main": 1}
+    assert __flatten_dict(d1) == {"a.b.main": 1}
     d2 = {"a": {"b": {"main": 1, "447-add-benchmark-suite-in-mqt-core": 2}}, "d": {"main": 2}}
-    assert __flatten_dict(d2) == {"a_b_main": 1, "a_b_447-add-benchmark-suite-in-mqt-core": 2, "d_main": 2}
+    assert __flatten_dict(d2) == {"a.b.main": 1, "a.b.447-add-benchmark-suite-in-mqt-core": 2, "d.main": 2}
+
+
+def test_post_processing() -> None:
+    """Test postprocessing."""
+    with pytest.raises(ValueError, match="Benchmark a.b is missing algorithm, task, number of qubits or metric!"):
+        __post_processing("a.b")
+    assert __post_processing("a.b.main.feature") == {
+        "algorithm": "a",
+        "task": "b",
+        "num_qubits": "main",
+        "component": "",
+        "metric": "feature",
+    }
+    assert __post_processing("a.b.main.feature.algorithm") == {
+        "algorithm": "a",
+        "task": "b",
+        "num_qubits": "main",
+        "component": "feature",
+        "metric": "algorithm",
+    }
+    assert __post_processing("RandomClifford.Simulation.14.dd.real_numbers.cache_manager.memory_used_MiB_peak") == {
+        "algorithm": "RandomClifford",
+        "task": "Simulation",
+        "num_qubits": "14",
+        "component": "dd_real_numbers_cache_manager",
+        "metric": "memory_used_MiB_peak",
+    }
+    assert __post_processing("QPE.Functionality.15.dd.matrix.unique_table.total.lookups") == {
+        "algorithm": "QPE",
+        "task": "Functionality",
+        "num_qubits": "15",
+        "component": "dd_matrix_unique_table",
+        "metric": "total_lookups",
+    }
 
 
 def test_compare_with_negative_factor() -> None:
@@ -80,7 +114,7 @@ def test_compare_not_only_changed_and_no_split() -> None:
 def test_compare_sort_by_experiment() -> None:
     """Test sort by experiment."""
     try:
-        compare(path_base, path_feature, factor=0.2, only_changed=True, sort="experiment", no_split=True)
+        compare(path_base, path_feature, factor=0.2, only_changed=True, sort="algorithm", no_split=True)
     except Exception as e:
         msg = "compare() should not raise exception!"
         raise AssertionError(msg) from e

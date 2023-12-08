@@ -16,12 +16,12 @@ pd.set_option("display.max_colwidth", None)
 pd.set_option("display.max_rows", None)
 pd.set_option("display.width", None)
 
-sort_options = ["ratio", "experiment"]
+sort_options = ["ratio", "algorithm"]
 higher_better_metrics = ["hits", "hit_ratio"]
 
 
-def __flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = "_") -> dict[str, Any]:
-    """Flatten a nested dictionary."""
+def __flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = ".") -> dict[str, Any]:
+    """Flatten a nested dictionary. Every value only has one key which is the path to the value."""
     items = {}
     for key, value in d.items():
         new_key = f"{parent_key}{sep}{key}" if parent_key else key
@@ -30,6 +30,38 @@ def __flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = "_") -> d
         else:
             items[new_key] = value
     return items
+
+
+def __post_processing(key: str) -> dict[str, str]:
+    """Postprocess the key of a flattened dictionary to get the metrics for the DataFrame columns."""
+    metrics_divided = key.split(".")
+    result_metrics = {}
+    if len(metrics_divided) < 4:
+        raise ValueError("Benchmark " + key + " is missing algorithm, task, number of qubits or metric!")
+    result_metrics["algorithm"] = metrics_divided.pop(0)
+    result_metrics["task"] = metrics_divided.pop(0)
+    result_metrics["num_qubits"] = metrics_divided.pop(0)
+    num_remaining_benchmarks = len(metrics_divided)
+    if num_remaining_benchmarks == 1:
+        result_metrics["component"] = ""
+        result_metrics["metric"] = metrics_divided.pop(0)
+    elif num_remaining_benchmarks == 2:
+        result_metrics["component"] = metrics_divided.pop(0)
+        result_metrics["metric"] = metrics_divided.pop(0)
+    else:
+        separator = "_"
+        # if the second-to-last element is not "total" then only the last element is the metric and the rest component
+        if metrics_divided[-2] == "total":
+            metric = separator.join(metrics_divided[-2:])
+            result_metrics["metric"] = metric
+            component = separator.join(metrics_divided[:-2])
+            result_metrics["component"] = component
+        else:
+            result_metrics["metric"] = metrics_divided[-1]
+            component = separator.join(metrics_divided[:-1])
+            result_metrics["component"] = component
+
+    return result_metrics
 
 
 def compare(
@@ -61,7 +93,7 @@ def compare(
         msg = "Factor must be positive!"
         raise ValueError(msg)
     if sort not in sort_options:
-        msg = "Invalid sort option! Valid options are 'ratio' and 'experiment'."
+        msg = "Invalid sort option! Valid options are 'ratio' and 'algorithm'."
         raise ValueError(msg)
     base_path = Path(baseline_filepath)
     with base_path.open(mode="r", encoding="utf-8") as f:
@@ -80,11 +112,22 @@ def compare(
         else:
             ls = [v, "skipped"]
             flattened_data[k] = ls
+    # If a benchmark is in the feature file but not in the baseline file, it should be added with baseline marked as
+    # "skipped"
     for k, v in flattened_feature.items():
         ls = ["skipped", v]
         flattened_data[k] = ls
 
-    before_ls, after_ls, ratio_ls, exp_ls = [], [], [], []
+    before_ls, after_ls, ratio_ls, algorithm_ls, task_ls, num_qubits_ls, component_ls, metric_ls = (
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+    )
 
     for k, v in flattened_data.items():
         after = v[1]
@@ -96,17 +139,29 @@ def compare(
         before_ls.append(before)
         after_ls.append(after)
         ratio_ls.append(ratio)
-        exp_ls.append(k)
+
+        # postprocessing
+        result_metrics = __post_processing(k)
+        algorithm_ls.append(result_metrics["algorithm"])
+        task_ls.append(result_metrics["task"])
+        num_qubits_ls.append(result_metrics["num_qubits"])
+        component_ls.append(result_metrics["component"])
+        metric_ls.append(result_metrics["metric"])
 
     df_all = pd.DataFrame()
     df_all["before"] = before_ls
     df_all["after"] = after_ls
     df_all["ratio"] = ratio_ls
-    df_all["experiment"] = exp_ls
+
+    df_all["algorithm"] = algorithm_ls
+    df_all["task"] = task_ls
+    df_all["num_qubits"] = num_qubits_ls
+    df_all["component"] = component_ls
+    df_all["metric"] = metric_ls
     df_all.index = pd.Index([""] * len(df_all.index))
 
     m1 = df_all["ratio"] < 1 - factor  # after significantly smaller than before
-    m2 = df_all["experiment"].str.endswith(tuple(higher_better_metrics))  # if the metric is "better" when it's higher
+    m2 = df_all["metric"].str.endswith(tuple(higher_better_metrics))  # if the metric is "better" when it's higher
     m3 = df_all["ratio"] > 1 + factor  # after significantly larger than before
     m4 = (df_all["ratio"] != df_all["ratio"]) | ((1 - factor < df_all["ratio"]) & (df_all["ratio"] < 1 + factor))  #
     # ratio is NaN or after not significantly different from before
