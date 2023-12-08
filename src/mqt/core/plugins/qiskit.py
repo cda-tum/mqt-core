@@ -383,7 +383,7 @@ def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
         is_ancilla = register.name == "ancilla" or isinstance(register, AncillaRegister)
         if not is_ancilla:
             continue
-        for qubit in register:
+        for qubit in reversed(register):
             qc.set_circuit_qubit_ancillary(qubit_to_idx[qubit])
 
     # create initial layout (and assume identical output permutation)

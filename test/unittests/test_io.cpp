@@ -694,5 +694,14 @@ TEST_F(IO, MarkAncillaryAndDump) {
   std::stringstream ss2{};
   qc->dump(ss2, qc::Format::OpenQASM);
   std::cout << ss2.str() << "\n";
-  EXPECT_NE(ss2.str().find(ss.str()), std::string::npos);
+  std::stringstream expected{};
+  expected << "// i 0 1\n"
+           << "// o 0 1\n"
+           << "OPENQASM 2.0;\n"
+           << "include \"qelib1.inc\";\n"
+           << "qreg anc[1];\n"
+           << "qreg q[1];\n"
+           << "x anc[0];\n"
+           << "x q[0];\n";
+  EXPECT_STREQ(ss2.str().c_str(), expected.str().c_str());
 }
