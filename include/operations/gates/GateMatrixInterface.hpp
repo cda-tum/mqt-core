@@ -14,6 +14,7 @@ public:
   virtual bool isTwoTargetGate() = 0;
   virtual bool isThreeOrMoreTargetGate() = 0;
 
-  // TODO: add other useful methods
+  // TODO: add other useful methods (e.g. pow - raise a gate matrix to a certain
+  //  power)
 };
 } // namespace qc
