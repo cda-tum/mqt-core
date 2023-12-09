@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pytest_console_scripts import ScriptRunner
 
 from mqt.core.evaluation import __aggregate, __flatten_dict, __post_processing, compare
 
@@ -183,3 +184,18 @@ def test_compare_sort_by_algorithm(capsys: Any) -> None:
     except Exception as e:
         msg = "compare() should not raise exception!"
         raise AssertionError(msg) from e
+
+
+@pytest.mark.script_launch_mode("subprocess")
+def test_cli_with_filepath(script_runner: ScriptRunner) -> None:
+    """Testing the script with different parameters."""
+    script_runner = ScriptRunner(launch_mode="subprocess", rootdir="./src/mqt/core")
+    ret = script_runner.run(
+        [
+            "evaluation",
+            "results_baseline.json",
+            "results_feature.json",
+        ]
+    )
+    assert ret.success
+    print(ret)

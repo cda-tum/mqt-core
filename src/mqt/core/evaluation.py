@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -200,3 +201,33 @@ def compare(
     df_worsened = df_all[(m3 & ~m2) | (m1 & m2)]
     df_worsened = df_worsened.sort_values(by=sort)
     print(df_worsened)
+
+
+def main() -> None:
+    """Main function for the command line interface."""
+    parser = argparse.ArgumentParser(
+        description="Compare the results of two benchmarking runs from the generated json files."
+    )
+    parser.add_argument("baseline_filepath", type=str, help="Path to the baseline json file.")
+    parser.add_argument("feature_filepath", type=str, help="Path to the feature json file.")
+    parser.add_argument(
+        "--factor", type=float, default=0.1, help="How much a result has to change to be considered significant."
+    )
+    parser.add_argument(
+        "--only_changed", action="store_true", help="Whether to only show results that changed significantly."
+    )
+    parser.add_argument(
+        "--sort",
+        type=str,
+        default="ratio",
+        help="Sort the table by this column. Valid options are 'ratio' and 'algorithm'.",
+    )
+    parser.add_argument(
+        "--no_split",
+        action="store_true",
+        help="Whether to merge all results together in one table or to separate the results into "
+        "benchmarks that improved, stayed the same, or worsened.",
+    )
+    args = parser.parse_args()
+    assert args is not None
+    compare(args.baseline_filepath, args.feature_filepath, args.factor, args.only_changed, args.sort, args.no_split)
