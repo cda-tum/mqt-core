@@ -64,37 +64,8 @@ def __post_processing(key: str) -> dict[str, str]:
     return result_metrics
 
 
-def compare(
-    baseline_filepath: str | PathLike[str],
-    feature_filepath: str | PathLike[str],
-    factor: float = 0.1,
-    only_changed: bool = True,
-    sort: str = "ratio",
-    no_split: bool = False,
-) -> None:
-    """Compare the results of two benchmarking runs from the generated json file.
-
-    Args:
-        baseline_filepath: Path to the baseline json file.
-        feature_filepath: Path to the feature json file.
-        factor: How much a result has to change to be considered significant.
-        only_changed: Whether to only show results that changed significantly.
-        sort: Sort the table by this column. Valid options are "ratio" and "experiment".
-        no_split: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
-
-    Returns:
-        None
-    Raises:
-        ValueError: If factor is negative or sort is invalid.
-        FileNotFoundError: If the baseline_filepath argument or the feature_filepath argument does not point to a valid file.
-        JSONDecodeError: If the baseline_filepath argument or the feature_filepath argument points to a file that is not a valid JSON file.
-    """
-    if factor < 0:
-        msg = "Factor must be positive!"
-        raise ValueError(msg)
-    if sort not in sort_options:
-        msg = "Invalid sort option! Valid options are 'ratio' and 'algorithm'."
-        raise ValueError(msg)
+def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | PathLike[str]) -> pd.DataFrame:
+    """Aggregate the data from the baseline and feature json files into one DataFrame for visualization."""
     base_path = Path(baseline_filepath)
     with base_path.open(mode="r", encoding="utf-8") as f:
         d = json.load(f)
@@ -160,10 +131,47 @@ def compare(
     df_all["metric"] = metric_ls
     df_all.index = pd.Index([""] * len(df_all.index))
 
+    return df_all
+
+
+def compare(
+    baseline_filepath: str | PathLike[str],
+    feature_filepath: str | PathLike[str],
+    factor: float = 0.1,
+    only_changed: bool = True,
+    sort: str = "ratio",
+    no_split: bool = False,
+) -> None:
+    """Compare the results of two benchmarking runs from the generated json file.
+
+    Args:
+        baseline_filepath: Path to the baseline json file.
+        feature_filepath: Path to the feature json file.
+        factor: How much a result has to change to be considered significant.
+        only_changed: Whether to only show results that changed significantly.
+        sort: Sort the table by this column. Valid options are "ratio" and "experiment".
+        no_split: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
+
+    Returns:
+        None
+    Raises:
+        ValueError: If factor is negative or sort is invalid.
+        FileNotFoundError: If the baseline_filepath argument or the feature_filepath argument does not point to a valid file.
+        JSONDecodeError: If the baseline_filepath argument or the feature_filepath argument points to a file that is not a valid JSON file.
+    """
+    if factor < 0:
+        msg = "Factor must be positive!"
+        raise ValueError(msg)
+    if sort not in sort_options:
+        msg = "Invalid sort option! Valid options are 'ratio' and 'algorithm'."
+        raise ValueError(msg)
+
+    df_all = __aggregate(baseline_filepath, feature_filepath)
+
     m1 = df_all["ratio"] < 1 - factor  # after significantly smaller than before
     m2 = df_all["metric"].str.endswith(tuple(higher_better_metrics))  # if the metric is "better" when it's higher
     m3 = df_all["ratio"] > 1 + factor  # after significantly larger than before
-    m4 = (df_all["ratio"] != df_all["ratio"]) | ((1 - factor < df_all["ratio"]) & (df_all["ratio"] < 1 + factor))  #
+    m4 = (df_all["ratio"] != df_all["ratio"]) | ((1 - factor < df_all["ratio"]) & (df_all["ratio"] < 1 + factor))
     # ratio is NaN or after not significantly different from before
 
     if no_split:
