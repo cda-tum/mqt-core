@@ -41,16 +41,6 @@
         },
         "gate_count": 636,
         "runtime": 0.4284935
-      },
-      "512": {
-        "dd": {
-          "compute_tables": {
-            "matrix_add": {
-              "col_ratio": 0.009077526987242394,
-              "collisions": 37
-            }
-          }
-        }
       }
     },
     "Simulation": {
@@ -66,6 +56,20 @@
             }
           }
         }
+      }
+    }
+  },
+  "GHZ": {
+    "Functionality": {
+      "512": {
+        "dd": {
+          "compute_tables": {
+            "matrix_add": {
+              "col_ratio": 0.009077526987242394,
+              "collisions": 37
+            }
+          }
+      }
       }
     }
   }
