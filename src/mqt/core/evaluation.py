@@ -178,26 +178,26 @@ def compare(
     if no_split:
         if only_changed:
             df_all = df_all[m1 | m3]
-            print("All changed benchmarks:")
+            print("\nAll changed benchmarks:\n")
         else:
-            print("All benchmarks:")
+            print("\nAll benchmarks:\n")
 
         df_all = df_all.sort_values(by=sort)
         print(df_all)
         return
 
-    print("Benchmarks that have improved:")
+    print("\nBenchmarks that have improved:\n")
     df_improved = df_all[(m1 & ~m2) | (m3 & m2)]
     df_improved = df_improved.sort_values(by=sort)
     print(df_improved)
 
     if not only_changed:
-        print("Benchmarks that have stayed the same:")
+        print("\nBenchmarks that have stayed the same:\n")
         df_same = df_all[m4]
         df_same = df_same.sort_values(by=sort)
         print(df_same)
 
-    print("Benchmarks that have worsened:")
+    print("\nBenchmarks that have worsened:\n")
     df_worsened = df_all[(m3 & ~m2) | (m1 & m2)]
     df_worsened = df_worsened.sort_values(by=sort)
     print(df_worsened)
