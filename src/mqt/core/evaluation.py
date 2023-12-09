@@ -177,7 +177,7 @@ def compare(
 
     if no_split:
         if only_changed:
-            df_all = df_all[m1 & m3]
+            df_all = df_all[m1 | m3]
             print("All changed benchmarks:")
         else:
             print("All benchmarks:")
