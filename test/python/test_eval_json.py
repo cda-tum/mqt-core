@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from pytest_console_scripts import ScriptRunner
 
 from mqt.core.evaluation import __aggregate, __flatten_dict, __post_processing, compare
+
+if TYPE_CHECKING:
+    from pytest_console_scripts import ScriptRunner
 
 path_base = Path(__file__).resolve().parent / "results_baseline.json"
 path_feature = Path(__file__).resolve().parent / "results_feature.json"
@@ -187,15 +189,17 @@ def test_compare_sort_by_algorithm(capsys: Any) -> None:
 
 
 @pytest.mark.script_launch_mode("subprocess")
-def test_cli_with_filepath(script_runner: ScriptRunner) -> None:
+def test_cli_with_filepath(script_runner: ScriptRunner, capsys: Any) -> None:
     """Testing the script with different parameters."""
-    script_runner = ScriptRunner(launch_mode="subprocess", rootdir="./src/mqt/core")
     ret = script_runner.run(
         [
-            "evaluation",
-            "results_baseline.json",
-            "results_feature.json",
+            "compare",
+            "./test/python/results_baseline.json",
+            "./test/python/results_feature.json",
         ]
     )
+    captured = capsys.readouterr()
+    assert "Benchmarks that have improved:" in captured.out
+    assert "Benchmarks that have stayed the same:" in captured.out
+    assert "Benchmarks that have worsened:" in captured.out
     assert ret.success
-    print(ret)

@@ -64,6 +64,9 @@ evaluation = [
 ]
 dev = ["mqt.core[coverage, docs]",]
 
+[project.scripts]
+compare = "mqt.core.evaluation:main"
+
 [project.urls]
 Homepage = "https://github.com/cda-tum/mqt-core"
 Documentation = "https://mqt.readthedocs.io/projects/core"
