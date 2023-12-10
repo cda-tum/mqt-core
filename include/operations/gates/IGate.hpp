@@ -6,14 +6,33 @@
 #include "operations/StandardOperation.hpp"
 
 namespace qc {
-class IGate : public GateMatrixInterface, StandardOperation {
-  dd::GateMatrix getGateMatrix() override { return iMat; }
+template <typename MatrixType>
+class IGate : public GateMatrixInterface<MatrixType>, StandardOperation {
+  MatrixType getGateMatrix() override {
+    if (std::is_same<MatrixType, dd::GateMatrix>::value) {
+      return iMat;
+    }
 
-  bool isSingleTargetGate() override { return true; }
+    throw std::runtime_error("Unsupported type for template object IGate!");
+  }
+
+  MatrixType getInverseGateMatrix() override { return getGateMatrix(); }
+
+  bool isSingleTargetGate() override {
+    return std::is_same<MatrixType, dd::GateMatrix>::value;
+  }
+
   bool isTwoTargetGate() override { return false; }
   bool isThreeOrMoreTargetGate() override { return false; }
 
-  dd::GateMatrix getInverseGateMatrix() override { return iMat; }
+  void invert() override {
+    if (type != OpType::I) {
+      throw std::runtime_error(
+          "Object IGate does not contain correct operation type!");
+    }
+
+    // leave iMat as it is since I gate is self-inverting
+  }
 
 private:
   dd::GateMatrix iMat{1, 0, 0, 1};

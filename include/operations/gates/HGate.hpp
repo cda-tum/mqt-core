@@ -19,7 +19,7 @@ class HGate : public GateMatrixInterface<MatrixType>, StandardOperation {
   MatrixType getInverseGateMatrix() override { return getGateMatrix(); }
 
   bool isSingleTargetGate() override {
-    return static_cast<bool>(std::is_same<MatrixType, dd::GateMatrix>::value);
+    return std::is_same<MatrixType, dd::GateMatrix>::value;
   }
 
   bool isTwoTargetGate() override { return false; }

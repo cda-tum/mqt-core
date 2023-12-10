@@ -7,16 +7,16 @@
 
 namespace qc {
 template <typename MatrixType>
-class ZGate : public GateMatrixInterface<MatrixType>, StandardOperation {
+class SXGate : public GateMatrixInterface<MatrixType>, StandardOperation {
   MatrixType getGateMatrix() override {
     if (std::is_same<MatrixType, dd::GateMatrix>::value) {
-      return zMat;
+      return sxMat;
     }
 
-    throw std::runtime_error("Unsupported type for template object XGate!");
+    throw std::runtime_error("Unsupported type for template object SXGate!");
   }
 
-  MatrixType getInverseGateMatrix() override { return getGateMatrix(); }
+  MatrixType getInverseGateMatrix() override { return sxDgMat; }
 
   bool isSingleTargetGate() override {
     return std::is_same<MatrixType, dd::GateMatrix>::value;
@@ -26,15 +26,18 @@ class ZGate : public GateMatrixInterface<MatrixType>, StandardOperation {
   bool isThreeOrMoreTargetGate() override { return false; }
 
   void invert() override {
-    if (type != OpType::Z) {
+    if (type != OpType::SX) {
       throw std::runtime_error(
-          "Object ZGate does not contain correct operation type!");
+          "Object SXGate does not contain correct operation type!");
     }
 
-    // leave zMat as it is since Z gate is self-inverting
+    type = SXdg;
   }
 
 private:
-  dd::GateMatrix zMat{1, 0, 0, -1};
+  dd::GateMatrix sxMat{
+      std::complex{0.5, 0.5}, {0.5, -0.5}, {0.5, -0.5}, {0.5, 0.5}};
+  dd::GateMatrix sxDgMat{
+      std::complex{0.5, -0.5}, {0.5, 0.5}, {0.5, 0.5}, {0.5, -0.5}};
 };
 } // namespace qc

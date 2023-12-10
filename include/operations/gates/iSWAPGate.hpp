@@ -7,16 +7,16 @@
 
 namespace qc {
 template <typename MatrixType>
-class SWAPGate : public GateMatrixInterface<MatrixType>, StandardOperation {
+class iSWAPGate : public GateMatrixInterface<MatrixType>, StandardOperation {
   MatrixType getGateMatrix() override {
     if (std::is_same<MatrixType, dd::TwoQubitGateMatrix>::value) {
-      return swapMat;
+      return iswapMat;
     }
 
-    throw std::runtime_error("Unsupported type for template object SWAPGate!");
+    throw std::runtime_error("Unsupported type for template object iSWAPGate!");
   }
 
-  MatrixType getInverseGateMatrix() override { return getGateMatrix(); }
+  MatrixType getInverseGateMatrix() override { return iswapdgMat; }
 
   bool isSingleTargetGate() override { return false; }
 
@@ -27,16 +27,18 @@ class SWAPGate : public GateMatrixInterface<MatrixType>, StandardOperation {
   bool isThreeOrMoreTargetGate() override { return false; }
 
   void invert() override {
-    if (type != OpType::SWAP) {
+    if (type != OpType::iSWAP) {
       throw std::runtime_error(
-          "Object SWAPGate does not contain correct operation type!");
+          "Object iSWAPGate does not contain correct operation type!");
     }
 
-    // leave swapMat as it is since SWAP gate is self-inverting
+    type = iSWAP;
   }
 
 private:
-  dd::TwoQubitGateMatrix swapMat{
-      {{1, 0, 0, 0}, {0, 0, 1, 0}, {0, 1, 0, 0}, {0, 0, 0, 1}}};
+  dd::TwoQubitGateMatrix iswapMat{
+      {{1, 0, 0, 0}, {0, 0, {0, 1}, 0}, {0, {0, 1}, 0, 0}, {0, 0, 0, 1}}};
+  dd::TwoQubitGateMatrix iswapdgMat{
+      {{1, 0, 0, 0}, {0, 0, {0, -1}, 0}, {0, {0, -1}, 0, 0}, {0, 0, 0, 1}}};
 };
 } // namespace qc

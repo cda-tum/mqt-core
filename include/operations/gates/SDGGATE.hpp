@@ -7,13 +7,13 @@
 
 namespace qc {
 template <typename MatrixType>
-class SGate : public GateMatrixInterface<MatrixType>, StandardOperation {
+class SDGGate : public GateMatrixInterface<MatrixType>, StandardOperation {
   MatrixType getGateMatrix() override {
     if (std::is_same<MatrixType, dd::GateMatrix>::value) {
-      return sMat;
+      return sdgMat;
     }
 
-    throw std::runtime_error("Unsupported type for template object SGate!");
+    throw std::runtime_error("Unsupported type for template object SDGGate!");
   }
 
   MatrixType getInverseGateMatrix() override { return sdgMat; }
@@ -26,23 +26,19 @@ class SGate : public GateMatrixInterface<MatrixType>, StandardOperation {
   bool isThreeOrMoreTargetGate() override { return false; }
 
   void invert() override {
-    if (type != OpType::S) {
+    if (type != OpType::Sdg) {
       throw std::runtime_error(
-          "Object SGate does not contain correct operation type!");
+          "Object SDGGate does not contain correct operation type!");
     }
 
-    type = Sdg;
+    type = S;
 
-    // TODO: in theory here arises a problem, because we would have to
-    //  change this object from being an SGate to SDGGate. This issue would
-    //  happen to all kind of gates which are not self-inverting or are not
-    //  parameterised.
-    // A solution might be to have invert() return a pointer, but this might
-    // force us to free the original gate after inverting it.
+    // TODO: semantic problem: we would have to change this object from being an
+    //  SDGGate to SGate.
   }
 
 private:
-  dd::GateMatrix sMat{1, 0, 0, {0, 1}};
   dd::GateMatrix sdgMat{1, 0, 0, {0, -1}};
+  dd::GateMatrix sMat{1, 0, 0, {0, 1}};
 };
 } // namespace qc
