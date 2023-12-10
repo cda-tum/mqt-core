@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from mqt.core.evaluation import __aggregate, __flatten_dict, __post_processing, compare
+from mqt.core.evaluation import __aggregate, __flatten_dict, __post_processing
 
 if TYPE_CHECKING:
     from pytest_console_scripts import ScriptRunner
@@ -96,101 +96,38 @@ def test_aggregate() -> None:
         raise AssertionError(msg) from e
 
 
-def test_compare_with_negative_factor() -> None:
+def test_compare_with_negative_factor(script_runner: ScriptRunner) -> None:
     """Test factor -0.1."""
-    with pytest.raises(ValueError, match="Factor must be positive!"):
-        compare(path_base, path_feature, factor=-0.1)
-
-
-def test_compare_with_invalid_sort_option() -> None:
-    """Test invalid sort option."""
-    with pytest.raises(ValueError, match="Invalid sort option!"):
-        compare(path_base, path_feature, sort="after")
-
-
-def test_compare_with_factor_zero_point_one(capsys: Any) -> None:
-    """Test factor 0.1."""
-    try:
-        compare(path_base, path_feature, factor=0.1, only_changed=False, sort="ratio", no_split=False)
-        captured = capsys.readouterr()
-        assert "Benchmarks that have improved:" in captured.out
-        assert "Benchmarks that have stayed the same:" in captured.out
-        assert "Benchmarks that have worsened:" in captured.out
-    except Exception as e:
-        msg = "compare() should not raise exception!"
-        raise AssertionError(msg) from e
-
-
-def test_compare_with_factor_zero_point_three(capsys: Any) -> None:
-    """Test factor 0.3."""
-    try:
-        compare(path_base, path_feature, factor=0.3, only_changed=False, sort="ratio", no_split=False)
-        captured = capsys.readouterr()
-        assert "Benchmarks that have improved:" in captured.out
-        assert "Benchmarks that have stayed the same:" in captured.out
-        assert "Benchmarks that have worsened:" in captured.out
-    except Exception as e:
-        msg = "compare() should not raise exception!"
-        raise AssertionError(msg) from e
-
-
-def test_compare_only_changed(capsys: Any) -> None:
-    """Test only changed."""
-    try:
-        compare(path_base, path_feature, factor=0.2, only_changed=True, sort="ratio", no_split=False)
-        captured = capsys.readouterr()
-        assert "Benchmarks that have improved:" in captured.out
-        assert "Benchmarks that have stayed the same:" not in captured.out
-        assert "Benchmarks that have worsened:" in captured.out
-    except Exception as e:
-        msg = "compare() should not raise exception!"
-        raise AssertionError(msg) from e
-
-
-def test_compare_only_changed_and_no_split(capsys: Any) -> None:
-    """Test only changed and no split."""
-    try:
-        compare(path_base, path_feature, factor=0.2, only_changed=True, sort="ratio", no_split=True)
-        captured = capsys.readouterr()
-        assert "All changed benchmarks:" in captured.out
-        assert "All benchmarks:" not in captured.out
-        assert "Benchmarks that have improved:" not in captured.out
-        assert "Benchmarks that have stayed the same:" not in captured.out
-        assert "Benchmarks that have worsened:" not in captured.out
-    except Exception as e:
-        msg = "compare() should not raise exception!"
-        raise AssertionError(msg) from e
-
-
-def test_compare_not_only_changed_and_no_split(capsys: Any) -> None:
-    """Test only changed and no split."""
-    try:
-        compare(path_base, path_feature, factor=0.25, only_changed=False, sort="ratio", no_split=True)
-        captured = capsys.readouterr()
-        assert "All benchmarks:" in captured.out
-        assert "All changed benchmarks:" not in captured.out
-        assert "Benchmarks that have improved:" not in captured.out
-        assert "Benchmarks that have stayed the same:" not in captured.out
-        assert "Benchmarks that have worsened:" not in captured.out
-    except Exception as e:
-        msg = "compare() should not raise exception!"
-        raise AssertionError(msg) from e
-
-
-def test_compare_sort_by_algorithm(capsys: Any) -> None:
-    """Test sort by algorithm."""
-    try:
-        compare(path_base, path_feature, factor=0.2, only_changed=True, sort="algorithm", no_split=True)
-        captured = capsys.readouterr()
-        assert "All changed benchmarks:" in captured.out
-    except Exception as e:
-        msg = "compare() should not raise exception!"
-        raise AssertionError(msg) from e
+    ret = script_runner.run(
+        [
+            "compare",
+            "./test/python/results_baseline.json",
+            "./test/python/results_feature.json",
+            "--factor=-0.1",
+        ]
+    )
+    assert not ret.success
+    assert "Factor must be positive!" in ret.stderr
 
 
 @pytest.mark.script_launch_mode("subprocess")
-def test_cli_with_filepath(script_runner: ScriptRunner, capsys: Any) -> None:
-    """Testing the script with different parameters."""
+def test_compare_with_invalid_sort_option(script_runner: ScriptRunner) -> None:
+    """Test invalid sort option."""
+    ret = script_runner.run(
+        [
+            "compare",
+            "./test/python/results_baseline.json",
+            "./test/python/results_feature.json",
+            "--sort=after",
+        ]
+    )
+    assert not ret.success
+    assert "Invalid sort option!" in ret.stderr
+
+
+@pytest.mark.script_launch_mode("subprocess")
+def test_cli_with_default_parameters(script_runner: ScriptRunner, capsys: Any) -> None:
+    """Testing the command line functionality with different parameters."""
     ret = script_runner.run(
         [
             "compare",
@@ -202,4 +139,100 @@ def test_cli_with_filepath(script_runner: ScriptRunner, capsys: Any) -> None:
     assert "Benchmarks that have improved:" in captured.out
     assert "Benchmarks that have stayed the same:" in captured.out
     assert "Benchmarks that have worsened:" in captured.out
+    assert ret.success
+
+
+@pytest.mark.script_launch_mode("subprocess")
+def test_cli_with_factor_point_three(script_runner: ScriptRunner, capsys: Any) -> None:
+    """Testing the command line functionality with different parameters."""
+    ret = script_runner.run(
+        [
+            "compare",
+            "./test/python/results_baseline.json",
+            "./test/python/results_feature.json",
+            "--factor=0.3",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert "Benchmarks that have improved:" in captured.out
+    assert "Benchmarks that have stayed the same:" in captured.out
+    assert "Benchmarks that have worsened:" in captured.out
+    assert ret.success
+
+
+@pytest.mark.script_launch_mode("subprocess")
+def test_cli_with_only_changed(script_runner: ScriptRunner, capsys: Any) -> None:
+    """Testing the command line functionality with different parameters."""
+    ret = script_runner.run(
+        [
+            "compare",
+            "./test/python/results_baseline.json",
+            "./test/python/results_feature.json",
+            "--factor=0.2",
+            "--only_changed",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert "Benchmarks that have improved:" in captured.out
+    assert "Benchmarks that have stayed the same:" not in captured.out
+    assert "Benchmarks that have worsened:" in captured.out
+    assert ret.success
+
+
+@pytest.mark.script_launch_mode("subprocess")
+def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner, capsys: Any) -> None:
+    """Testing the command line functionality with different parameters."""
+    ret = script_runner.run(
+        [
+            "compare",
+            "./test/python/results_baseline.json",
+            "./test/python/results_feature.json",
+            "--only_changed",
+            "--no_split",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert "All changed benchmarks:" in captured.out
+    assert "All benchmarks:" not in captured.out
+    assert "Benchmarks that have improved:" not in captured.out
+    assert "Benchmarks that have stayed the same:" not in captured.out
+    assert "Benchmarks that have worsened:" not in captured.out
+    assert ret.success
+
+
+@pytest.mark.script_launch_mode("subprocess")
+def test_cli_with_no_split(script_runner: ScriptRunner, capsys: Any) -> None:
+    """Testing the command line functionality with different parameters."""
+    ret = script_runner.run(
+        [
+            "compare",
+            "./test/python/results_baseline.json",
+            "./test/python/results_feature.json",
+            "--no_split",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert "All benchmarks:" in captured.out
+    assert "All changed benchmarks:" not in captured.out
+    assert "Benchmarks that have improved:" not in captured.out
+    assert "Benchmarks that have stayed the same:" not in captured.out
+    assert "Benchmarks that have worsened:" not in captured.out
+    assert ret.success
+
+
+@pytest.mark.script_launch_mode("subprocess")
+def test_cli_with_sort_by_algorithm(script_runner: ScriptRunner, capsys: Any) -> None:
+    """Testing the command line functionality with different parameters."""
+    ret = script_runner.run(
+        [
+            "compare",
+            "./test/python/results_baseline.json",
+            "./test/python/results_feature.json",
+            "--only_changed",
+            "--sort=algorithm",
+            "--no_split",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert "All changed benchmarks:" in captured.out
     assert ret.success
