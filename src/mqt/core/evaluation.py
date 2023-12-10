@@ -182,24 +182,24 @@ def compare(
         else:
             print("\nAll benchmarks:\n")
 
-        df_all = df_all.sort_values(by=sort)
+        df_all = df_all.sort_values(by=sort) if sort == "ratio" else df_all.sort_values([sort, "ratio"])
         print(df_all)
         return
 
     print("\nBenchmarks that have improved:\n")
     df_improved = df_all[(m1 & ~m2) | (m3 & m2)]
-    df_improved = df_improved.sort_values(by=sort)
+    df_improved = df_improved.sort_values(by=sort) if sort == "ratio" else df_improved.sort_values([sort, "ratio"])
     print(df_improved)
 
     if not only_changed:
         print("\nBenchmarks that have stayed the same:\n")
         df_same = df_all[m4]
-        df_same = df_same.sort_values(by=sort)
+        df_same = df_same.sort_values(by=sort) if sort == "ratio" else df_same.sort_values([sort, "ratio"])
         print(df_same)
 
     print("\nBenchmarks that have worsened:\n")
     df_worsened = df_all[(m3 & ~m2) | (m1 & m2)]
-    df_worsened = df_worsened.sort_values(by=sort)
+    df_worsened = df_worsened.sort_values(by=sort) if sort == "ratio" else df_worsened.sort_values([sort, "ratio"])
     print(df_worsened)
 
 
