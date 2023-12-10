@@ -12,6 +12,8 @@ import pandas as pd
 if TYPE_CHECKING:
     from os import PathLike
 
+from colorama import Fore, Style
+
 # Avoid output truncation
 pd.set_option("display.max_colwidth", None)
 pd.set_option("display.max_rows", None)
@@ -139,8 +141,8 @@ def compare(
     baseline_filepath: str | PathLike[str],
     feature_filepath: str | PathLike[str],
     factor: float = 0.1,
-    only_changed: bool = True,
     sort: str = "ratio",
+    only_changed: bool = False,
     no_split: bool = False,
 ) -> None:
     """Compare the results of two benchmarking runs from the generated json file.
@@ -183,24 +185,24 @@ def compare(
             print("\nAll benchmarks:\n")
 
         df_all = df_all.sort_values(by=sort) if sort == "ratio" else df_all.sort_values([sort, "ratio"])
-        print(df_all)
+        print(df_all.to_markdown(index=False))
         return
 
-    print("\nBenchmarks that have improved:\n")
+    print(f"\n{Fore.GREEN}Benchmarks that have improved:{Style.RESET_ALL}\n")
     df_improved = df_all[(m1 & ~m2) | (m3 & m2)]
     df_improved = df_improved.sort_values(by=sort) if sort == "ratio" else df_improved.sort_values([sort, "ratio"])
-    print(df_improved)
+    print(df_improved.to_markdown(index=False))
 
     if not only_changed:
         print("\nBenchmarks that have stayed the same:\n")
         df_same = df_all[m4]
         df_same = df_same.sort_values(by=sort) if sort == "ratio" else df_same.sort_values([sort, "ratio"])
-        print(df_same)
+        print(df_same.to_markdown(index=False))
 
-    print("\nBenchmarks that have worsened:\n")
+    print(f"\n{Fore.RED}Benchmarks that have worsened:{Style.RESET_ALL}\n")
     df_worsened = df_all[(m3 & ~m2) | (m1 & m2)]
     df_worsened = df_worsened.sort_values(by=sort) if sort == "ratio" else df_worsened.sort_values([sort, "ratio"])
-    print(df_worsened)
+    print(df_worsened.to_markdown(index=False))
 
 
 def main() -> None:
@@ -214,20 +216,21 @@ def main() -> None:
         "--factor", type=float, default=0.1, help="How much a result has to change to be considered significant."
     )
     parser.add_argument(
-        "--only_changed", action="store_true", help="Whether to only show results that changed significantly."
-    )
-    parser.add_argument(
         "--sort",
         type=str,
         default="ratio",
         help="Sort the table by this column. Valid options are 'ratio' and 'algorithm'.",
     )
     parser.add_argument(
+        "--only_changed", type=bool, default=False, help="Whether to only show results that changed significantly."
+    )
+    parser.add_argument(
         "--no_split",
-        action="store_true",
+        type=bool,
+        default=False,
         help="Whether to merge all results together in one table or to separate the results into "
         "benchmarks that improved, stayed the same, or worsened.",
     )
     args = parser.parse_args()
     assert args is not None
-    compare(args.baseline_filepath, args.feature_filepath, args.factor, args.only_changed, args.sort, args.no_split)
+    compare(args.baseline_filepath, args.feature_filepath, args.factor, args.sort, args.only_changed, args.no_split)

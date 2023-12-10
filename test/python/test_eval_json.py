@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -126,7 +126,7 @@ def test_compare_with_invalid_sort_option(script_runner: ScriptRunner) -> None:
 
 
 @pytest.mark.script_launch_mode("subprocess")
-def test_cli_with_default_parameters(script_runner: ScriptRunner, capsys: Any) -> None:
+def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with different parameters."""
     ret = script_runner.run(
         [
@@ -135,15 +135,14 @@ def test_cli_with_default_parameters(script_runner: ScriptRunner, capsys: Any) -
             "./test/python/results_feature.json",
         ]
     )
-    captured = capsys.readouterr()
-    assert "Benchmarks that have improved:" in captured.out
-    assert "Benchmarks that have stayed the same:" in captured.out
-    assert "Benchmarks that have worsened:" in captured.out
+    assert "Benchmarks that have improved:" in ret.stdout
+    assert "Benchmarks that have stayed the same:" in ret.stdout
+    assert "Benchmarks that have worsened:" in ret.stdout
     assert ret.success
 
 
 @pytest.mark.script_launch_mode("subprocess")
-def test_cli_with_factor_point_three(script_runner: ScriptRunner, capsys: Any) -> None:
+def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with different parameters."""
     ret = script_runner.run(
         [
@@ -153,15 +152,14 @@ def test_cli_with_factor_point_three(script_runner: ScriptRunner, capsys: Any) -
             "--factor=0.3",
         ]
     )
-    captured = capsys.readouterr()
-    assert "Benchmarks that have improved:" in captured.out
-    assert "Benchmarks that have stayed the same:" in captured.out
-    assert "Benchmarks that have worsened:" in captured.out
+    assert "Benchmarks that have improved:" in ret.stdout
+    assert "Benchmarks that have stayed the same:" in ret.stdout
+    assert "Benchmarks that have worsened:" in ret.stdout
     assert ret.success
 
 
 @pytest.mark.script_launch_mode("subprocess")
-def test_cli_with_only_changed(script_runner: ScriptRunner, capsys: Any) -> None:
+def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with different parameters."""
     ret = script_runner.run(
         [
@@ -169,70 +167,66 @@ def test_cli_with_only_changed(script_runner: ScriptRunner, capsys: Any) -> None
             "./test/python/results_baseline.json",
             "./test/python/results_feature.json",
             "--factor=0.2",
-            "--only_changed",
+            "--only_changed=true",
         ]
     )
-    captured = capsys.readouterr()
-    assert "Benchmarks that have improved:" in captured.out
-    assert "Benchmarks that have stayed the same:" not in captured.out
-    assert "Benchmarks that have worsened:" in captured.out
+    assert "Benchmarks that have improved:" in ret.stdout
+    assert "Benchmarks that have stayed the same:" not in ret.stdout
+    assert "Benchmarks that have worsened:" in ret.stdout
     assert ret.success
 
 
 @pytest.mark.script_launch_mode("subprocess")
-def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner, capsys: Any) -> None:
+def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with different parameters."""
     ret = script_runner.run(
         [
             "compare",
             "./test/python/results_baseline.json",
             "./test/python/results_feature.json",
-            "--only_changed",
-            "--no_split",
+            "--only_changed=true",
+            "--no_split=true",
         ]
     )
-    captured = capsys.readouterr()
-    assert "All changed benchmarks:" in captured.out
-    assert "All benchmarks:" not in captured.out
-    assert "Benchmarks that have improved:" not in captured.out
-    assert "Benchmarks that have stayed the same:" not in captured.out
-    assert "Benchmarks that have worsened:" not in captured.out
+    assert "All changed benchmarks:" in ret.stdout
+    assert "All benchmarks:" not in ret.stdout
+    assert "Benchmarks that have improved:" not in ret.stdout
+    assert "Benchmarks that have stayed the same:" not in ret.stdout
+    assert "Benchmarks that have worsened:" not in ret.stdout
     assert ret.success
 
 
 @pytest.mark.script_launch_mode("subprocess")
-def test_cli_with_no_split(script_runner: ScriptRunner, capsys: Any) -> None:
+def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with different parameters."""
     ret = script_runner.run(
         [
             "compare",
             "./test/python/results_baseline.json",
             "./test/python/results_feature.json",
-            "--no_split",
+            "--no_split=true",
         ]
     )
-    captured = capsys.readouterr()
-    assert "All benchmarks:" in captured.out
-    assert "All changed benchmarks:" not in captured.out
-    assert "Benchmarks that have improved:" not in captured.out
-    assert "Benchmarks that have stayed the same:" not in captured.out
-    assert "Benchmarks that have worsened:" not in captured.out
+    assert "All benchmarks:" in ret.stdout
+    assert "All changed benchmarks:" not in ret.stdout
+    assert "Benchmarks that have improved:" not in ret.stdout
+    assert "Benchmarks that have stayed the same:" not in ret.stdout
+    assert "Benchmarks that have worsened:" not in ret.stdout
     assert ret.success
 
 
 @pytest.mark.script_launch_mode("subprocess")
-def test_cli_with_sort_by_algorithm(script_runner: ScriptRunner, capsys: Any) -> None:
+def test_cli_with_sort_by_algorithm(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with different parameters."""
     ret = script_runner.run(
         [
             "compare",
             "./test/python/results_baseline.json",
             "./test/python/results_feature.json",
-            "--only_changed",
             "--sort=algorithm",
-            "--no_split",
+            "--only_changed=true",
+            "--no_split=true",
         ]
     )
-    captured = capsys.readouterr()
-    assert "All changed benchmarks:" in captured.out
+    assert "All changed benchmarks:" in ret.stdout
     assert ret.success
