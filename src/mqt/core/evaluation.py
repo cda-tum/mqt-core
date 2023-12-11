@@ -12,8 +12,6 @@ import pandas as pd
 if TYPE_CHECKING:
     from os import PathLike
 
-from colorama import Fore, Style
-
 # Avoid output truncation
 pd.set_option("display.max_colwidth", None)
 pd.set_option("display.max_rows", None)
@@ -21,6 +19,14 @@ pd.set_option("display.width", None)
 
 sort_options = ["ratio", "algorithm"]
 higher_better_metrics = ["hits", "hit_ratio"]
+
+
+class Bcolors:
+    """Class for colored output in the terminal."""
+
+    OKGREEN = "\033[92m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
 
 
 def __flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = ".") -> dict[str, Any]:
@@ -188,7 +194,7 @@ def compare(
         print(df_all.to_markdown(index=False))
         return
 
-    print(f"\n{Fore.GREEN}Benchmarks that have improved:{Style.RESET_ALL}\n")
+    print(f"\n{Bcolors.OKGREEN}Benchmarks that have improved:{Bcolors.ENDC}\n")
     df_improved = df_all[(m1 & ~m2) | (m3 & m2)]
     df_improved = df_improved.sort_values(by=sort) if sort == "ratio" else df_improved.sort_values([sort, "ratio"])
     print(df_improved.to_markdown(index=False))
@@ -199,7 +205,7 @@ def compare(
         df_same = df_same.sort_values(by=sort) if sort == "ratio" else df_same.sort_values([sort, "ratio"])
         print(df_same.to_markdown(index=False))
 
-    print(f"\n{Fore.RED}Benchmarks that have worsened:{Style.RESET_ALL}\n")
+    print(f"\n{Bcolors.FAIL}Benchmarks that have worsened:{Bcolors.ENDC}\n")
     df_worsened = df_all[(m3 & ~m2) | (m1 & m2)]
     df_worsened = df_worsened.sort_values(by=sort) if sort == "ratio" else df_worsened.sort_values([sort, "ratio"])
     print(df_worsened.to_markdown(index=False))
