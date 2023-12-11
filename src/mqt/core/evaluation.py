@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+from math import inf
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-
-from math import inf
 
 import pandas as pd
 
