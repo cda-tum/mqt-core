@@ -2423,3 +2423,48 @@ TEST_F(QFRFunctionality, testSettingAncillariesProperlyCreatesRegisters) {
   ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 1U);
   ASSERT_EQ(qc.getNancillae(), 0U);
 }
+
+TEST_F(QFRFunctionality, StripIdleQubitsInMiddleOfCircuit) {
+  qc::QuantumComputation qc(5U);
+  qc.setLogicalQubitAncillary(3U);
+  qc.setLogicalQubitAncillary(4U);
+  qc.setLogicalQubitGarbage(3U);
+  qc.setLogicalQubitGarbage(4U);
+  qc.initialLayout.clear();
+  qc.initialLayout[0U] = 3U;
+  qc.initialLayout[1U] = 0U;
+  qc.initialLayout[2U] = 4U;
+  qc.initialLayout[3U] = 2U;
+  qc.initialLayout[4U] = 1U;
+  qc.outputPermutation.clear();
+  qc.outputPermutation[1U] = 2U;
+  qc.outputPermutation[3U] = 0U;
+  qc.outputPermutation[4U] = 1U;
+
+  qc.x(1);
+  qc.x(3);
+  qc.x(4);
+
+  const auto& qregs = qc.getQregs();
+  ASSERT_EQ(qregs.size(), 1U);
+  const auto& reg = *qregs.begin();
+  const auto name = reg.first;
+  ASSERT_EQ(reg.second.first, 0U);
+  ASSERT_EQ(reg.second.second, 5U);
+  const auto& ancRegs = qc.getANCregs();
+  ASSERT_TRUE(ancRegs.empty());
+  ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 3U);
+  ASSERT_EQ(qc.getNancillae(), 2U);
+
+  qc.stripIdleQubits();
+
+  ASSERT_EQ(qregs.size(), 2U);
+  ASSERT_EQ(reg.second.first, 1U);
+  ASSERT_EQ(reg.second.second, 1U);
+  const auto& reg2 = *(++qregs.begin());
+  ASSERT_EQ(reg2.second.first, 3U);
+  ASSERT_EQ(reg2.second.second, 2U);
+  ASSERT_TRUE(ancRegs.empty());
+  ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 3U);
+  ASSERT_EQ(qc.getNancillae(), 0U);
+}
