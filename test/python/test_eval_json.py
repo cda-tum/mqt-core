@@ -29,19 +29,19 @@ def test_post_processing() -> None:
     """Test postprocessing."""
     with pytest.raises(ValueError, match="Benchmark a.b is missing algorithm, task, number of qubits or metric!"):
         __post_processing("a.b")
-    assert __post_processing("a.b.main.feature") == {
-        "algorithm": "a",
-        "task": "b",
-        "num_qubits": "main",
+    assert __post_processing("BV.Functionality.1024.gate_count") == {
+        "algorithm": "BV",
+        "task": "Functionality",
+        "num_qubits": "1024",
         "component": "",
-        "metric": "feature",
+        "metric": "gate_count",
     }
-    assert __post_processing("a.b.main.feature.algorithm") == {
-        "algorithm": "a",
-        "task": "b",
-        "num_qubits": "main",
-        "component": "feature",
-        "metric": "algorithm",
+    assert __post_processing("GHZ.Simulation.128.dd.active_memory_mib") == {
+        "algorithm": "GHZ",
+        "task": "Simulation",
+        "num_qubits": "128",
+        "component": "dd",
+        "metric": "active_memory_mib",
     }
     assert __post_processing("RandomClifford.Simulation.14.dd.real_numbers.cache_manager.memory_used_MiB_peak") == {
         "algorithm": "RandomClifford",
