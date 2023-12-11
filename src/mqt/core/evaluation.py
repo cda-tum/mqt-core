@@ -116,9 +116,9 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
             ratio = float("nan")
         else:
             ratio = after / before if before != 0 else 1 if after == 0 else 1000000000.0
-        before_ls.append(before)
-        after_ls.append(after)
-        ratio_ls.append(ratio)
+        before_ls.append(round(before, 3) if isinstance(before, float) else before)
+        after_ls.append(round(after, 3) if isinstance(after, float) else after)
+        ratio_ls.append(round(ratio, 3))
 
         # postprocessing
         result_metrics = __post_processing(k)
