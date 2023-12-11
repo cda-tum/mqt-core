@@ -699,9 +699,8 @@ TEST_F(IO, MarkAncillaryAndDump) {
            << "// o 0 1\n"
            << "OPENQASM 2.0;\n"
            << "include \"qelib1.inc\";\n"
-           << "qreg anc[1];\n"
-           << "qreg q[1];\n"
-           << "x anc[0];\n"
-           << "x q[0];\n";
+           << "qreg q[2];\n"
+           << "x q[0];\n"
+           << "x q[1];\n";
   EXPECT_STREQ(ss2.str().c_str(), expected.str().c_str());
 }

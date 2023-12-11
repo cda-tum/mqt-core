@@ -2402,12 +2402,9 @@ TEST_F(QFRFunctionality, testSettingAncillariesProperlyCreatesRegisters) {
   qc.setLogicalQubitAncillary(1U);
   ASSERT_EQ(qregs.size(), 1U);
   ASSERT_EQ(reg.second.first, 0U);
-  ASSERT_EQ(reg.second.second, 1U);
+  ASSERT_EQ(reg.second.second, 3U);
   ASSERT_EQ(name, reg.first);
-  ASSERT_EQ(ancRegs.size(), 1U);
-  const auto& ancReg = *ancRegs.begin();
-  ASSERT_EQ(ancReg.second.first, 1U);
-  ASSERT_EQ(ancReg.second.second, 2U);
+  ASSERT_TRUE(ancRegs.empty());
   ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 1U);
   ASSERT_EQ(qc.getNancillae(), 2U);
 
@@ -2422,7 +2419,7 @@ TEST_F(QFRFunctionality, testSettingAncillariesProperlyCreatesRegisters) {
   ASSERT_EQ(reg.second.first, 0U);
   ASSERT_EQ(reg.second.second, 1U);
   ASSERT_EQ(name, reg.first);
-  ASSERT_EQ(ancRegs.size(), 0U);
+  ASSERT_TRUE(ancRegs.empty());
   ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 1U);
   ASSERT_EQ(qc.getNancillae(), 0U);
 }
