@@ -2891,6 +2891,8 @@ private:
     return newedge;
   }
 
+  ComputeTable<mEdge, std::int64_t, mEdge> shiftAllMatrixRows{};
+
   /**
       Equally divides the rows of the matrix represented by e intro 2^m parts.
       For the i-th part (i starts from 0), right shifts the contents for (i +
@@ -2904,6 +2906,16 @@ private:
     }
     if (m == 0 && offset == 0) {
       return e;
+    }
+    mEdge eCopy{e.p, Complex::one()};
+    // check if it's in the compute table with an edge weight of one
+    // only store elements in the compute table if the offset is 0
+    if (offset == 0) {
+      if (const auto* r = shiftAllMatrixRows.lookup(eCopy, m); r != nullptr) {
+        auto f = *r;
+        f.w = cn.lookup(e.w * f.w);
+        return f;
+      }
     }
     // the matrix of the current DD has dimensions 2^h x 2^h
     const auto h = e.p->v + 1;
@@ -2933,6 +2945,10 @@ private:
       }
     }
     auto f = makeDDNode(e.p->v, edges);
+    // add to the compute table with a weight of 1
+    if (offset == 0) {
+      shiftAllMatrixRows.insert(eCopy, m, f);
+    }
     f.w = cn.lookup(e.w * f.w);
     return f;
   }
@@ -2962,12 +2978,11 @@ public:
     if (k == 0) {
       return e;
     }
+    mEdge eCopy{e.p, Complex::one()};
     // check if it's in the compute table with an edge weight of one
-    if (const auto* r =
-            setMatrixColumnsToZero.lookup(mEdge{e.p, Complex::one()}, k);
-        r != nullptr) {
+    if (const auto* r = setMatrixColumnsToZero.lookup(eCopy, k); r != nullptr) {
       auto f = *r;
-      f.w = e.w;
+      f.w = cn.lookup(e.w * f.w);
       return f;
     }
     // the matrix of the current DD has dimensions 2^h x 2^h
@@ -2983,11 +2998,9 @@ public:
       edges[3] = mEdge::zero();
     }
     auto f = makeDDNode(e.p->v, edges);
-    auto temp = cn.lookup(e.w * f.w);
     // add to the compute table with a weight of 1
-    f.w = Complex::one();
-    setMatrixColumnsToZero.insert(e, k, f);
-    f.w = temp;
+    setMatrixColumnsToZero.insert(eCopy, k, f);
+    f.w = cn.lookup(e.w * f.w);
     return f;
   }
 
@@ -3003,12 +3016,11 @@ public:
     if (k == 0) {
       return e;
     }
+    mEdge eCopy{e.p, Complex::one()};
     // check if it's in the compute table with an edge weight of one
-    if (const auto* r =
-            setMatrixRowsToZero.lookup(mEdge{e.p, Complex::one()}, k);
-        r != nullptr) {
+    if (const auto* r = setMatrixRowsToZero.lookup(eCopy, k); r != nullptr) {
       auto f = *r;
-      f.w = e.w;
+      f.w = cn.lookup(e.w * f.w);
       return f;
     }
     // the matrix of the current DD has dimensions 2^h x 2^h
@@ -3024,11 +3036,9 @@ public:
       edges[3] = mEdge::zero();
     }
     auto f = makeDDNode(e.p->v, edges);
-    auto temp = cn.lookup(e.w * f.w);
     // add to the compute table with a weight of 1
-    f.w = Complex::one();
-    setMatrixRowsToZero.insert(e, k, f);
-    f.w = temp;
+    setMatrixRowsToZero.insert(eCopy, k, f);
+    f.w = cn.lookup(e.w * f.w);
     return f;
   }
 
@@ -3051,17 +3061,33 @@ private:
     return u5;
   }
 
-  bool zeroAncillaPartialEquivalenceCheckSubroutine(mEdge u, Qubit m) {
-    if (u.isTerminal()) {
+  ComputeTable<mEdge, Qubit, bool>
+      zeroAncillaPartialEquivalenceCheckSubroutineComputeTable{};
+
+  bool zeroAncillaPartialEquivalenceCheckSubroutine(mEdge e, Qubit m) {
+    if (e.isTerminal()) {
       return m < 1;
     }
     if (m == 0) {
       return true;
     }
-
-    return u.p->e[1].isZeroTerminal() && u.p->e[2].isZeroTerminal() &&
-           zeroAncillaPartialEquivalenceCheckSubroutine(u.p->e[0], m - 1) &&
-           zeroAncillaPartialEquivalenceCheckSubroutine(u.p->e[3], m - 1);
+    mEdge eCopy{e.p, Complex::one()};
+    // check if it's in the compute table with an edge weight of one
+    if (const auto* r =
+            zeroAncillaPartialEquivalenceCheckSubroutineComputeTable.lookup(
+                eCopy, m);
+        r != nullptr) {
+      auto f = *r;
+      return f;
+    }
+    bool result =
+        e.p->e[1].isZeroTerminal() && e.p->e[2].isZeroTerminal() &&
+        zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[0], m - 1) &&
+        zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[3], m - 1);
+    // add to the compute table with a weight of 1
+    zeroAncillaPartialEquivalenceCheckSubroutineComputeTable.insert(eCopy, m,
+                                                                    result);
+    return result;
   }
 
 public:
