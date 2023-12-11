@@ -136,7 +136,7 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
 
     df_all["algorithm"] = algorithm_ls
     df_all["task"] = task_ls
-    df_all["num_qubits"] = num_qubits_ls
+    df_all["n"] = num_qubits_ls
     df_all["component"] = component_ls
     df_all["metric"] = metric_ls
     df_all.index = pd.Index([""] * len(df_all.index))
