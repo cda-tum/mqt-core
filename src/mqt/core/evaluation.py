@@ -202,8 +202,11 @@ def compare(
 
     print(f"\n{Bcolors.FAIL}Benchmarks that have worsened:{Bcolors.ENDC}\n")
     df_worsened = df_all[(m3 & ~m2) | (m1 & m2)]
-    df_worsened = df_worsened.sort_values(by=sort) if sort == "ratio" else df_worsened.sort_values([sort, "ratio"])
-    print(df_worsened.to_markdown(index=False))
+    df_worsened = (
+        df_worsened.sort_values(by=sort, ascending=False)
+        if sort == "ratio"
+        else df_worsened.sort_values([sort, "ratio"])
+    )
     print(df_worsened.to_markdown(index=False, stralign="right"))
 
     if not only_changed:
