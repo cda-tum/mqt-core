@@ -326,7 +326,7 @@ void StandardOperation::dumpOpenQASM3(std::ostream& of, std::ostringstream& op,
 
 void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
                                      const RegisterNames& qreg) const {
-
+  // Dump the operation name and parameters.
   switch (type) {
   case GPhase:
     op << "gphase(" << parameter.at(0) << ")";
@@ -481,19 +481,22 @@ void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
   // apply the operation
   of << op.str();
 
-  // add controls and targets of the operation
+  // First print control qubits.
   for (auto it = controls.begin(); it != controls.end();) {
     of << " " << qreg[it->qubit].second;
+    // we only print a comma if there are more controls or targets.
     if (++it != controls.end() || !targets.empty()) {
       of << ",";
     }
   }
+  // Print target qubits.
   if (!targets.empty() && type == Barrier &&
       isWholeQubitRegister(qreg, targets.front(), targets.back())) {
     of << " " << qreg[targets.front()].first;
   } else {
     for (auto it = targets.begin(); it != targets.end();) {
       of << " " << qreg[*it].second;
+      // only print comma if there are more targets
       if (++it != targets.end()) {
         of << ",";
       }

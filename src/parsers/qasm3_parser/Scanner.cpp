@@ -434,25 +434,19 @@ Token Scanner::next() {
     }
     break;
   case '/':
-    switch (peek()) {
-    case '=':
+    if (peek() == '=') {
       nextCh();
       t.kind = Token::Kind::SlashEquals;
-      break;
-    default:
+    } else {
       t.kind = Token::Kind::Slash;
-      break;
     }
     break;
   case '%':
-    switch (peek()) {
-    case '=':
+    if (peek() == '=') {
       nextCh();
       t.kind = Token::Kind::PercentEquals;
-      break;
-    default:
+    } else {
       t.kind = Token::Kind::Percent;
-      break;
     }
     break;
   case '|':
@@ -486,36 +480,27 @@ Token Scanner::next() {
     }
     break;
   case '^':
-    switch (peek()) {
-    case '=':
+    if (peek() == '=') {
       nextCh();
       t.kind = Token::Kind::CaretEquals;
-      break;
-    default:
+    } else {
       t.kind = Token::Kind::Caret;
-      break;
     }
     break;
   case '~':
-    switch (peek()) {
-    case '=':
+    if (peek() == '=') {
       nextCh();
       t.kind = Token::Kind::TildeEquals;
-      break;
-    default:
+    } else {
       t.kind = Token::Kind::Tilde;
-      break;
     }
     break;
   case '!':
-    switch (peek()) {
-    case '=':
+    if (peek() == '=') {
       nextCh();
       t.kind = Token::Kind::NotEquals;
-      break;
-    default:
+    } else {
       t.kind = Token::Kind::ExclamationPoint;
-      break;
     }
     break;
   case '<':

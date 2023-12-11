@@ -181,6 +181,8 @@ public:
       : kind(k), line(l), col(c), endLine(l), endCol(c) {}
 
   static std::string kindToString(const Kind kind) {
+    // Print a token kind string representation.
+    // This is the representation used in the error messages.
     switch (kind) {
     case Kind::None:
       return "None";
@@ -433,6 +435,8 @@ public:
     case Kind::Sqrt:
       return "sqrt";
     default:
+      // This cannot happen, as we have a case for every enum value.
+      // The default case is only here to silence compiler warnings.
       throw std::runtime_error("Unknown token kind");
     }
   }

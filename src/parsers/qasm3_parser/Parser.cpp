@@ -509,7 +509,6 @@ std::shared_ptr<Statement> Parser::parseDeclaration(bool isConst) {
     }
   }
 
-  //        std::shared_ptr<DeclarationStatement> statement;
   std::shared_ptr<DeclarationExpression> expression{nullptr};
   if (current().kind == Token::Kind::Equals) {
     scan();

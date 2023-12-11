@@ -82,6 +82,9 @@ ConstEvalValue ConstEvalPass::evalIntExpression(BinaryExpression::Op op,
   auto rhsU = static_cast<uint64_t>(rhs);
   ConstEvalValue result{0, isSigned, width};
 
+  // First evaluate the result. For some operations (e.g. division, comparison)
+  // we need to handle signed and unsigned integers differently. For others,
+  // such as addition and subtraction we can use the unsigned version directly.
   switch (op) {
   case BinaryExpression::Power:
     if (isSigned) {
@@ -307,6 +310,7 @@ ConstEvalValue ConstEvalPass::evalBoolExpression(const BinaryExpression::Op op,
 
 std::optional<ConstEvalValue> ConstEvalPass::visitBinaryExpression(
     const std::shared_ptr<BinaryExpression> binaryExpression) {
+  // If we cannot evaluate either of the two operands, return.
   auto lhsVal = visit(binaryExpression->lhs);
   if (!lhsVal) {
     return std::nullopt;
@@ -352,6 +356,7 @@ std::optional<ConstEvalValue> ConstEvalPass::visitBinaryExpression(
         ".");
   }
 
+  // If we are operating on two types with different width, coerce to the wider.
   size_t const width = std::max(lhsVal->width, rhsVal->width);
 
   switch (lhsVal->type) {
@@ -374,12 +379,14 @@ std::optional<ConstEvalValue> ConstEvalPass::visitBinaryExpression(
 
 std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
     const std::shared_ptr<UnaryExpression> unaryExpression) {
-
+  // If we cannot evaluate the operand, return.
   auto val = visit(unaryExpression->operand);
   if (!val) {
     return std::nullopt;
   }
 
+  // For each unary operator, we need to check the type of the operand and
+  // determine whether the operation is valid.
   switch (unaryExpression->op) {
   case UnaryExpression::BitwiseNot:
     if (val->type != ConstEvalValue::Type::ConstInt &&
