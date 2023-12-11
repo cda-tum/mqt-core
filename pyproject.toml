@@ -54,7 +54,6 @@ docs = [
     "sphinx-autodoc-typehints",
     "sphinx-autoapi",
     "qiskit-terra[visualization]",
-    "colorama>=0.4.4",
     "tabulate>=0.8.9"
 ]
 qiskit = [
