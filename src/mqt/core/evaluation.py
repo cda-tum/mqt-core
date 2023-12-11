@@ -210,6 +210,7 @@ def compare(
         df_same = df_same.sort_values(by=sort) if sort == "ratio" else df_same.sort_values([sort, "ratio"])
         print(df_same.to_markdown(index=False))
 
+
 def main() -> None:
     """Main function for the command line interface."""
     parser = argparse.ArgumentParser(
