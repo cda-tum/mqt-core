@@ -228,12 +228,11 @@ def main() -> None:
         help="Sort the table by this column. Valid options are 'ratio' and 'algorithm'.",
     )
     parser.add_argument(
-        "--only_changed", type=bool, default=False, help="Whether to only show results that changed significantly."
+        "--only_changed", action="store_true", help="Whether to only show results that changed significantly."
     )
     parser.add_argument(
         "--no_split",
-        type=bool,
-        default=False,
+        action="store_true",
         help="Whether to merge all results together in one table or to separate the results into "
         "benchmarks that improved, stayed the same, or worsened.",
     )

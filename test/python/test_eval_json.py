@@ -167,7 +167,7 @@ def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
             "./test/python/results_baseline.json",
             "./test/python/results_feature.json",
             "--factor=0.2",
-            "--only_changed=true",
+            "--only_changed",
         ]
     )
     assert "Benchmarks that have improved:" in ret.stdout
@@ -184,8 +184,8 @@ def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None
             "compare",
             "./test/python/results_baseline.json",
             "./test/python/results_feature.json",
-            "--only_changed=true",
-            "--no_split=true",
+            "--only_changed",
+            "--no_split",
         ]
     )
     assert "All changed benchmarks:" in ret.stdout
@@ -204,7 +204,7 @@ def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
             "compare",
             "./test/python/results_baseline.json",
             "./test/python/results_feature.json",
-            "--no_split=true",
+            "--no_split",
         ]
     )
     assert "All benchmarks:" in ret.stdout
@@ -224,8 +224,8 @@ def test_cli_with_sort_by_algorithm(script_runner: ScriptRunner) -> None:
             "./test/python/results_baseline.json",
             "./test/python/results_feature.json",
             "--sort=algorithm",
-            "--only_changed=true",
-            "--no_split=true",
+            "--only_changed",
+            "--no_split",
         ]
     )
     assert "All changed benchmarks:" in ret.stdout
