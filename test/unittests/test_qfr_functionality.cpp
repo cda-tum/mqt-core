@@ -2382,3 +2382,47 @@ TEST_F(QFRFunctionality, testToffoliSequenceSimplification) {
     EXPECT_EQ(qc.at(i)->getControls(), reference.at(i)->getControls());
   }
 }
+
+TEST_F(QFRFunctionality, testSettingAncillariesProperlyCreatesRegisters) {
+  // create an empty circuit and assert some properties about its registers
+  qc::QuantumComputation qc(3U);
+  const auto& qregs = qc.getQregs();
+  ASSERT_EQ(qregs.size(), 1U);
+  const auto& reg = *qregs.begin();
+  const auto name = reg.first;
+  ASSERT_EQ(reg.second.first, 0U);
+  ASSERT_EQ(reg.second.second, 3U);
+  const auto& ancRegs = qc.getANCregs();
+  ASSERT_TRUE(ancRegs.empty());
+  ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 3U);
+  ASSERT_EQ(qc.getNancillae(), 0U);
+
+  // set some ancillaries and assert that the registers are created properly
+  qc.setLogicalQubitAncillary(2U);
+  qc.setLogicalQubitAncillary(1U);
+  ASSERT_EQ(qregs.size(), 1U);
+  ASSERT_EQ(reg.second.first, 0U);
+  ASSERT_EQ(reg.second.second, 1U);
+  ASSERT_EQ(name, reg.first);
+  ASSERT_EQ(ancRegs.size(), 1U);
+  const auto& ancReg = *ancRegs.begin();
+  ASSERT_EQ(ancReg.second.first, 1U);
+  ASSERT_EQ(ancReg.second.second, 2U);
+  ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 1U);
+  ASSERT_EQ(qc.getNancillae(), 2U);
+
+  // add one gate to the circuit, mark the last two qubits as garbage and call
+  // the `stripIdleQubits` method to remove the (idle) ancillary qubits. Then,
+  // assert that the registers are still correct.
+  qc.x(0);
+  qc.setLogicalQubitGarbage(1U);
+  qc.setLogicalQubitGarbage(2U);
+  qc.stripIdleQubits();
+  ASSERT_EQ(qregs.size(), 1U);
+  ASSERT_EQ(reg.second.first, 0U);
+  ASSERT_EQ(reg.second.second, 1U);
+  ASSERT_EQ(name, reg.first);
+  ASSERT_EQ(ancRegs.size(), 0U);
+  ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 1U);
+  ASSERT_EQ(qc.getNancillae(), 0U);
+}
