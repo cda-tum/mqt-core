@@ -1,7 +1,6 @@
 #pragma once
 
 #include "QuantumComputation.hpp"
-#include "algorithms/GoogleRandomCircuitSampling.hpp"
 #include "algorithms/Grover.hpp"
 #include "dd/Operations.hpp"
 
@@ -30,11 +29,6 @@ MatrixDD buildFunctionality(const qc::Grover* qc,
 template <class Config>
 MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
                                      std::unique_ptr<dd::Package<Config>>& dd);
-
-template <class DDPackage>
-MatrixDD buildFunctionality(GoogleRandomCircuitSampling* qc,
-                            std::unique_ptr<DDPackage>& dd,
-                            std::optional<std::size_t> ncycles = std::nullopt);
 
 inline void dumpTensorNetwork(std::ostream& of, const QuantumComputation& qc) {
   of << "{\"tensors\": [\n";
