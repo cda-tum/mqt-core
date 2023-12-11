@@ -86,7 +86,7 @@ protected:
   }
   template <class RegisterType>
   static void consolidateRegister(RegisterMap<RegisterType>& regs) {
-    bool finished = false;
+    bool finished = regs.empty();
     while (!finished) {
       for (const auto& qreg : regs) {
         finished = true;
@@ -118,6 +118,34 @@ protected:
       }
     }
   }
+
+  /**
+   * @brief Removes a certain qubit in a register from the register map
+   * @details If this was the last qubit in the register, the register is
+   * deleted. Removals at the beginning or the end of a register just modify the
+   * existing register. Removals in the middle of a register split the register
+   * into two new registers. The new registers are named by appending "_l" and
+   * "_h" to the original register name.
+   * @param regs A collection of all the registers
+   * @param reg The name of the register containing the qubit to be removed
+   * @param idx The index of the qubit in the register to be removed
+   */
+  static void removeQubitfromQubitRegister(QuantumRegisterMap& regs,
+                                           const std::string& reg, Qubit idx);
+
+  /**
+   * @brief Adds a qubit to a register in the register map
+   * @details If the register map is empty, a new register is created with the
+   * default name. If the qubit can be appended to the start or the end of an
+   * existing register, it is appended. Otherwise a new register is created with
+   * the default name and the qubit index appended.
+   * @param regs A collection of all the registers
+   * @param physicalQubitIndex The index of the qubit to be added
+   * @param defaultRegName The default name of the register to be created
+   */
+  static void addQubitToQubitRegister(QuantumRegisterMap& regs,
+                                      Qubit physicalQubitIndex,
+                                      const std::string& defaultRegName);
 
   template <class RegisterType>
   static void createRegisterArray(const RegisterMap<RegisterType>& regs,
@@ -293,6 +321,14 @@ public:
   getQubitRegisterAndIndex(Qubit physicalQubitIndex) const;
   [[nodiscard]] std::pair<std::string, Bit>
   getClassicalRegisterAndIndex(Bit classicalIndex) const;
+  /**
+   * @brief Returns the physical qubit index of the given logical qubit index
+   * @details Iterates over the initial layout dictionary and returns the key
+   * corresponding to the given value.
+   * @param logicalQubitIndex The logical qubit index to look for
+   * @return The physical qubit index of the given logical qubit index
+   */
+  [[nodiscard]] Qubit getPhysicalQubitIndex(Qubit logicalQubitIndex);
 
   [[nodiscard]] Qubit
   getIndexFromQubitRegister(const std::pair<std::string, Qubit>& qubit) const;
@@ -306,14 +342,14 @@ public:
   logicalQubitIsAncillary(const Qubit logicalQubitIndex) const {
     return ancillary[logicalQubitIndex];
   }
-  void setLogicalQubitAncillary(const Qubit logicalQubitIndex) {
-    if (logicalQubitIsAncillary(logicalQubitIndex)) {
-      return;
-    }
-    ancillary[logicalQubitIndex] = true;
-    nancillae++;
-    nqubits--;
-  }
+  /**
+   * @brief Sets the given logical qubit to be ancillary
+   * @details Removes the qubit from the qubit register and adds it to the
+   * ancillary register, if such a register exists. Otherwise a new ancillary
+   * register is created.
+   * @param logicalQubitIndex
+   */
+  void setLogicalQubitAncillary(Qubit logicalQubitIndex);
   [[nodiscard]] bool
   logicalQubitIsGarbage(const Qubit logicalQubitIndex) const {
     return garbage[logicalQubitIndex];

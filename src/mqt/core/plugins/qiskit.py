@@ -282,7 +282,7 @@ def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> floa
     if isinstance(qiskit_expr, float):
         return qiskit_expr
 
-    expr_str = qiskit_expr.__str__().strip()
+    expr_str = str(qiskit_expr).strip()
     expr = Expression()
     is_const = True
     for summand in _SUM_REGEX.findall(expr_str):
@@ -383,7 +383,7 @@ def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
         is_ancilla = register.name == "ancilla" or isinstance(register, AncillaRegister)
         if not is_ancilla:
             continue
-        for qubit in register:
+        for qubit in reversed(register):
             qc.set_circuit_qubit_ancillary(qubit_to_idx[qubit])
 
     # create initial layout (and assume identical output permutation)
@@ -415,9 +415,9 @@ def _import_definition(
     comp_op = cast(CompoundOperation, qc[-1])
 
     params = []
-    for instruction, qargs, cargs in circ.data:
-        mapped_qargs = [qarg_map[qarg] for qarg in qargs]
-        mapped_cargs = [carg_map[carg] for carg in cargs]
+    for instruction, q_args, c_args in circ.data:
+        mapped_qargs = [qarg_map[qarg] for qarg in q_args]
+        mapped_cargs = [carg_map[carg] for carg in c_args]
         instruction_params = instruction.params
         new_params = _emplace_operation(
             comp_op, instruction, mapped_qargs, mapped_cargs, instruction_params, qubit_map, clbit_map
