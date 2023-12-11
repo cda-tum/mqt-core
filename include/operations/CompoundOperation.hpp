@@ -103,10 +103,6 @@ public:
     return controls.erase(it);
   }
 
-  [[nodiscard]] inline bool isControlled() const override {
-    return !controls.empty();
-  }
-
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override {
     if (const auto* comp = dynamic_cast<const CompoundOperation*>(&op)) {
