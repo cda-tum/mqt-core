@@ -31,9 +31,9 @@ quickstart
 
 ```{toctree}
 :maxdepth: 2
-:caption: Evaluation Guide
+:caption: DD Package Evaluation
 
-json_evaluation
+dd_package_evaluation
 ```
 
 ```{toctree}

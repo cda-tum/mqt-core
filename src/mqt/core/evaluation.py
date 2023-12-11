@@ -104,8 +104,8 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
     )
 
     for k, v in flattened_data.items():
-        after = v[1]
         before = v[0]
+        after = v[1]
         if before in {"unused", "skipped"} or after in {"unused", "skipped"}:
             ratio = float("nan")
         else:

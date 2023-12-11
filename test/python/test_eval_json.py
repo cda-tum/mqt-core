@@ -20,8 +20,8 @@ def test_flatten_dict() -> None:
     """Test flatten_dict."""
     d1 = {"a": {"b": {"main": 1}}}
     assert __flatten_dict(d1) == {"a.b.main": 1}
-    d2 = {"a": {"b": {"main": 1, "447-add-benchmark-suite-in-mqt-core": 2}}, "d": {"main": 2}}
-    assert __flatten_dict(d2) == {"a.b.main": 1, "a.b.447-add-benchmark-suite-in-mqt-core": 2, "d.main": 2}
+    d2 = {"a": {"b": {"main": 1, "feature": 2}}, "d": {"main": 2}}
+    assert __flatten_dict(d2) == {"a.b.main": 1, "a.b.feature": 2, "d.main": 2}
 
 
 def test_post_processing() -> None:
