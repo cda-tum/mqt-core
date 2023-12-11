@@ -98,14 +98,12 @@ def test_aggregate() -> None:
 
 def test_compare_with_negative_factor(script_runner: ScriptRunner) -> None:
     """Test factor -0.1."""
-    ret = script_runner.run(
-        [
-            "compare",
-            "./test/python/results_baseline.json",
-            "./test/python/results_feature.json",
-            "--factor=-0.1",
-        ]
-    )
+    ret = script_runner.run([
+        "compare",
+        "./test/python/results_baseline.json",
+        "./test/python/results_feature.json",
+        "--factor=-0.1",
+    ])
     assert not ret.success
     assert "Factor must be positive!" in ret.stderr
 
@@ -113,14 +111,12 @@ def test_compare_with_negative_factor(script_runner: ScriptRunner) -> None:
 @pytest.mark.script_launch_mode("subprocess")
 def test_compare_with_invalid_sort_option(script_runner: ScriptRunner) -> None:
     """Test invalid sort option."""
-    ret = script_runner.run(
-        [
-            "compare",
-            "./test/python/results_baseline.json",
-            "./test/python/results_feature.json",
-            "--sort=after",
-        ]
-    )
+    ret = script_runner.run([
+        "compare",
+        "./test/python/results_baseline.json",
+        "./test/python/results_feature.json",
+        "--sort=after",
+    ])
     assert not ret.success
     assert "Invalid sort option!" in ret.stderr
 
@@ -128,13 +124,11 @@ def test_compare_with_invalid_sort_option(script_runner: ScriptRunner) -> None:
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with different parameters."""
-    ret = script_runner.run(
-        [
-            "compare",
-            "./test/python/results_baseline.json",
-            "./test/python/results_feature.json",
-        ]
-    )
+    ret = script_runner.run([
+        "compare",
+        "./test/python/results_baseline.json",
+        "./test/python/results_feature.json",
+    ])
     assert "Benchmarks that have improved:" in ret.stdout
     assert "Benchmarks that have stayed the same:" in ret.stdout
     assert "Benchmarks that have worsened:" in ret.stdout
@@ -144,14 +138,12 @@ def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with different parameters."""
-    ret = script_runner.run(
-        [
-            "compare",
-            "./test/python/results_baseline.json",
-            "./test/python/results_feature.json",
-            "--factor=0.3",
-        ]
-    )
+    ret = script_runner.run([
+        "compare",
+        "./test/python/results_baseline.json",
+        "./test/python/results_feature.json",
+        "--factor=0.3",
+    ])
     assert "Benchmarks that have improved:" in ret.stdout
     assert "Benchmarks that have stayed the same:" in ret.stdout
     assert "Benchmarks that have worsened:" in ret.stdout
@@ -161,15 +153,13 @@ def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with different parameters."""
-    ret = script_runner.run(
-        [
-            "compare",
-            "./test/python/results_baseline.json",
-            "./test/python/results_feature.json",
-            "--factor=0.2",
-            "--only_changed=true",
-        ]
-    )
+    ret = script_runner.run([
+        "compare",
+        "./test/python/results_baseline.json",
+        "./test/python/results_feature.json",
+        "--factor=0.2",
+        "--only_changed=true",
+    ])
     assert "Benchmarks that have improved:" in ret.stdout
     assert "Benchmarks that have stayed the same:" not in ret.stdout
     assert "Benchmarks that have worsened:" in ret.stdout
@@ -179,15 +169,13 @@ def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with different parameters."""
-    ret = script_runner.run(
-        [
-            "compare",
-            "./test/python/results_baseline.json",
-            "./test/python/results_feature.json",
-            "--only_changed=true",
-            "--no_split=true",
-        ]
-    )
+    ret = script_runner.run([
+        "compare",
+        "./test/python/results_baseline.json",
+        "./test/python/results_feature.json",
+        "--only_changed=true",
+        "--no_split=true",
+    ])
     assert "All changed benchmarks:" in ret.stdout
     assert "All benchmarks:" not in ret.stdout
     assert "Benchmarks that have improved:" not in ret.stdout
@@ -199,14 +187,12 @@ def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with different parameters."""
-    ret = script_runner.run(
-        [
-            "compare",
-            "./test/python/results_baseline.json",
-            "./test/python/results_feature.json",
-            "--no_split=true",
-        ]
-    )
+    ret = script_runner.run([
+        "compare",
+        "./test/python/results_baseline.json",
+        "./test/python/results_feature.json",
+        "--no_split=true",
+    ])
     assert "All benchmarks:" in ret.stdout
     assert "All changed benchmarks:" not in ret.stdout
     assert "Benchmarks that have improved:" not in ret.stdout
@@ -218,15 +204,13 @@ def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_sort_by_algorithm(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with different parameters."""
-    ret = script_runner.run(
-        [
-            "compare",
-            "./test/python/results_baseline.json",
-            "./test/python/results_feature.json",
-            "--sort=algorithm",
-            "--only_changed=true",
-            "--no_split=true",
-        ]
-    )
+    ret = script_runner.run([
+        "compare",
+        "./test/python/results_baseline.json",
+        "./test/python/results_feature.json",
+        "--sort=algorithm",
+        "--only_changed=true",
+        "--no_split=true",
+    ])
     assert "All changed benchmarks:" in ret.stdout
     assert ret.success
