@@ -60,8 +60,7 @@ qiskit = [
    "qiskit-terra>=0.22.0",
 ]
 evaluation = [
-    "pandas>=1.3.0",
-    "tabulate>=0.8.9"
+    "pandas[output-formatting]>=1.3.0"
 ]
 dev = ["mqt.core[coverage, docs]",]
 
