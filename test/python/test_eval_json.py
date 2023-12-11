@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from math import inf
+
 import pytest
 
 from mqt.core.evaluation import __aggregate, __flatten_dict, __post_processing
@@ -89,7 +91,7 @@ def test_aggregate() -> None:
         assert len(num_buckets.index) == 1
         assert num_buckets["before"].values[0] == 0
         assert num_buckets["after"].values[0] == 16384
-        assert num_buckets["ratio"].values[0] == 1000000000.0
+        assert num_buckets["ratio"].values[0] == inf
 
     except Exception as e:
         msg = "__aggregate() should not raise exception!"

@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from math import inf
+
 import pandas as pd
 
 if TYPE_CHECKING:
@@ -115,7 +117,7 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
         if before in {"unused", "skipped"} or after in {"unused", "skipped"}:
             ratio = float("nan")
         else:
-            ratio = after / before if before != 0 else 1 if after == 0 else 1000000000.0
+            ratio = after / before if before != 0 else 1 if after == 0 else inf
         before_ls.append(round(before, 3) if isinstance(before, float) else before)
         after_ls.append(round(after, 3) if isinstance(after, float) else after)
         ratio_ls.append(round(ratio, 3))
