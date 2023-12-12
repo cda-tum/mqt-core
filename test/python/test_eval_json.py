@@ -29,12 +29,12 @@ def test_post_processing() -> None:
     """Test postprocessing."""
     with pytest.raises(ValueError, match="Benchmark a.b is missing algorithm, task, number of qubits or metric!"):
         __post_processing("a.b")
-    assert __post_processing("BV.Functionality.1024.gate_count") == {
+    assert __post_processing("BV.Functionality.1024.runtime") == {
         "algorithm": "BV",
         "task": "Functionality",
         "num_qubits": "1024",
         "component": "",
-        "metric": "gate_count",
+        "metric": "runtime",
     }
     assert __post_processing("GHZ.Simulation.128.dd.active_memory_mib") == {
         "algorithm": "GHZ",
