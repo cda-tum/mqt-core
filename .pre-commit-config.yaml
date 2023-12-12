@@ -70,6 +70,7 @@ repos:
         args: []
         additional_dependencies:
           - pytest
+          - pandas-stubs
 
   # Also run Black on examples in the documentation
   - repo: https://github.com/adamchainz/blacken-docs

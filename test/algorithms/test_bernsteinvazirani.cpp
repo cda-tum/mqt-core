@@ -1,5 +1,6 @@
 #include "CircuitOptimizer.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
+#include "dd/Benchmark.hpp"
 #include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
@@ -35,10 +36,8 @@ TEST_P(BernsteinVazirani, FunctionTest) {
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -57,10 +56,8 @@ TEST_P(BernsteinVazirani, FunctionTestDynamic) {
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -76,10 +73,8 @@ TEST_F(BernsteinVazirani, LargeCircuit) {
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -95,10 +90,8 @@ TEST_F(BernsteinVazirani, DynamicCircuit) {
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
