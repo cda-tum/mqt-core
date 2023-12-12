@@ -2459,11 +2459,12 @@ TEST_F(QFRFunctionality, StripIdleQubitsInMiddleOfCircuit) {
   qc.stripIdleQubits();
 
   ASSERT_EQ(qregs.size(), 2U);
-  ASSERT_EQ(reg.second.first, 1U);
-  ASSERT_EQ(reg.second.second, 1U);
-  const auto& reg2 = *(++qregs.begin());
-  ASSERT_EQ(reg2.second.first, 3U);
-  ASSERT_EQ(reg2.second.second, 2U);
+  const auto& regAfter = *qregs.begin();
+  ASSERT_EQ(regAfter.second.first, 1U);
+  ASSERT_EQ(regAfter.second.second, 1U);
+  const auto& reg2After = *(++qregs.begin());
+  ASSERT_EQ(reg2After.second.first, 3U);
+  ASSERT_EQ(reg2After.second.second, 2U);
   ASSERT_TRUE(ancRegs.empty());
   ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 3U);
   ASSERT_EQ(qc.getNancillae(), 0U);
