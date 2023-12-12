@@ -40,21 +40,21 @@ def test_post_processing() -> None:
         "algorithm": "GHZ",
         "task": "Simulation",
         "num_qubits": "128",
-        "component": "dd",
+        "component": "",
         "metric": "active_memory_mib",
     }
     assert __post_processing("RandomClifford.Simulation.14.dd.real_numbers.cache_manager.memory_used_MiB_peak") == {
         "algorithm": "RandomClifford",
         "task": "Simulation",
         "num_qubits": "14",
-        "component": "dd_real_numbers_cache_manager",
+        "component": "real_numbers_cache_manager",
         "metric": "memory_used_MiB_peak",
     }
     assert __post_processing("QPE.Functionality.15.dd.matrix.unique_table.total.lookups") == {
         "algorithm": "QPE",
         "task": "Functionality",
         "num_qubits": "15",
-        "component": "dd_matrix_unique_table",
+        "component": "matrix_unique_table",
         "metric": "total_lookups",
     }
 

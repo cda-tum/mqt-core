@@ -56,8 +56,9 @@ def __post_processing(key: str) -> dict[str, str]:
         result_metrics["component"] = ""
         result_metrics["metric"] = metrics_divided.pop(0)
     elif num_remaining_benchmarks == 2:
-        result_metrics["component"] = metrics_divided.pop(0)
-        result_metrics["metric"] = metrics_divided.pop(0)
+        if metrics_divided[0] == "dd":
+            result_metrics["component"] = "" if metrics_divided[0] == "dd" else metrics_divided.pop(0)
+            result_metrics["metric"] = metrics_divided[-1]
     else:
         separator = "_"
         # if the second-to-last element is not "total" then only the last element is the metric and the rest component
@@ -65,10 +66,14 @@ def __post_processing(key: str) -> dict[str, str]:
             metric = separator.join(metrics_divided[-2:])
             result_metrics["metric"] = metric
             component = separator.join(metrics_divided[:-2])
+            if component.startswith("dd_"):
+                component = component[3:]
             result_metrics["component"] = component
         else:
             result_metrics["metric"] = metrics_divided[-1]
             component = separator.join(metrics_divided[:-1])
+            if component.startswith("dd_"):
+                component = component[3:]
             result_metrics["component"] = component
 
     return result_metrics
@@ -177,6 +182,13 @@ def compare(
         raise ValueError(msg)
 
     df_all = __aggregate(baseline_filepath, feature_filepath)
+
+    df_runtime = df_all[df_all["metric"] == "runtime"]
+    df_runtime = df_runtime.drop(columns=["component", "metric"])
+    print("\nAll runtimes:\n")
+    print(df_runtime.to_markdown(index=False, stralign="right"))
+
+    print("\nDD details:")
 
     m1 = df_all["ratio"] < 1 - factor  # after significantly smaller than before
     m2 = df_all["metric"].str.endswith(tuple(higher_better_metrics))  # if the metric is "better" when it's higher
