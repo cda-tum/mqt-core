@@ -134,7 +134,7 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
     df_all["after"] = after_ls
     df_all["ratio"] = ratio_ls
 
-    df_all["algorithm"] = algorithm_ls
+    df_all["algo"] = algorithm_ls
     df_all["task"] = task_ls
     df_all["n"] = num_qubits_ls
     df_all["component"] = component_ls
@@ -194,7 +194,7 @@ def compare(
         df_all = (
             df_all.sort_values(by=sort)
             if sort == "ratio"
-            else df_all.sort_values([sort, "task", "n", "component", "metric"])
+            else df_all.sort_values(["algo", "task", "n", "component", "metric"])
         )
         print(df_all.to_markdown(index=False, stralign="right"))
         return
@@ -204,7 +204,7 @@ def compare(
     df_improved = (
         df_improved.sort_values(by=sort)
         if sort == "ratio"
-        else df_improved.sort_values([sort, "task", "n", "component", "metric"])
+        else df_improved.sort_values(["algo", "task", "n", "component", "metric"])
     )
     print(df_improved.to_markdown(index=False, stralign="right"))
 
@@ -213,7 +213,7 @@ def compare(
     df_worsened = (
         df_worsened.sort_values(by=sort, ascending=False)
         if sort == "ratio"
-        else df_worsened.sort_values([sort, "task", "n", "component", "metric"])
+        else df_worsened.sort_values(["algo", "task", "n", "component", "metric"])
     )
     print(df_worsened.to_markdown(index=False, stralign="right"))
 
@@ -223,7 +223,7 @@ def compare(
         df_same = (
             df_same.sort_values(by=sort)
             if sort == "ratio"
-            else df_same.sort_values([sort, "task", "n", "component", "metric"])
+            else df_same.sort_values(["algo", "task", "n", "component", "metric"])
         )
         print(df_same.to_markdown(index=False, stralign="right"))
 
