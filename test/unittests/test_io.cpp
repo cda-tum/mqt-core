@@ -704,3 +704,34 @@ TEST_F(IO, MarkAncillaryAndDump) {
            << "x q[1];\n";
   EXPECT_STREQ(ss2.str().c_str(), expected.str().c_str());
 }
+
+TEST_F(IO, DumpWithRemovedIdleQubit) {
+  qc::QuantumComputation qc(2U);
+  qc.setLogicalQubitAncillary(1U);
+  qc.setLogicalQubitGarbage(1U);
+  qc.initialLayout.clear();
+  qc.initialLayout[1U] = 0U;
+  qc.initialLayout[1U] = 0U;
+  qc.outputPermutation.clear();
+  qc.outputPermutation[1U] = 0U;
+
+  qc.x(1);
+  std::cout << qc << "\n";
+  std::cout << "nQubits: " << qc.getNqubitsWithoutAncillae() << "\n";
+  std::cout << "nAncillae: " << qc.getNancillae() << "\n";
+  qc.printRegisters(std::cout);
+
+  qc.stripIdleQubits();
+
+  std::cout << qc << "\n";
+  std::cout << "nQubits: " << qc.getNqubitsWithoutAncillae() << "\n";
+  std::cout << "nAncillae: " << qc.getNancillae() << "\n";
+  qc.printRegisters(std::cout);
+
+  qc.dumpOpenQASM(std::cout);
+
+  std::cout << qc << "\n";
+  std::cout << "nQubits: " << qc.getNqubitsWithoutAncillae() << "\n";
+  std::cout << "nAncillae: " << qc.getNancillae() << "\n";
+  qc.printRegisters(std::cout);
+}
