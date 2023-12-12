@@ -171,6 +171,36 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
     return df_all
 
 
+def __print_results(
+    df: pd.DataFrame, sort_indices: list[str], factor: float, no_split: bool, only_changed: bool
+) -> None:
+    """Print the results in a nice table."""
+    # after significantly smaller than before
+    m1 = df["ratio"] < 1 - factor
+    # after significantly larger than before
+    m2 = df["ratio"] > 1 + factor
+    # after is nan or before is nan or after is close to before
+    m3 = (df["ratio"] != df["ratio"]) | ((1 - factor <= df["ratio"]) & (df["ratio"] <= 1 + factor))
+
+    if no_split:
+        if only_changed:
+            df = df[m1 | m2]
+        print(df.sort_values(by=sort_indices).to_markdown(index=False, stralign="right"))
+        return
+
+    print(f"\n{Bcolors.OKGREEN}Benchmarks that have improved:{Bcolors.ENDC}\n")
+    print(df[m1].sort_values(by=sort_indices).to_markdown(index=False, stralign="right"))
+
+    print(f"\n{Bcolors.FAIL}Benchmarks that have worsened:{Bcolors.ENDC}\n")
+    print(df[m2].sort_values(by=sort_indices, ascending=False).to_markdown(index=False, stralign="right"))
+
+    if only_changed:
+        return
+
+    print("\nBenchmarks that have stayed the same:\n")
+    print(df[m3].sort_values(by=sort_indices).to_markdown(index=False, stralign="right"))
+
+
 def compare(
     baseline_filepath: str | PathLike[str],
     feature_filepath: str | PathLike[str],
@@ -181,7 +211,7 @@ def compare(
     no_split: bool = False,
     algorithm: str | None = None,
     task: str | None = None,
-    num_qubits: str | None = None,
+    num_qubits: int | None = None,
 ) -> None:
     """Compare the results of two benchmarking runs from the generated json file.
 
@@ -190,15 +220,13 @@ def compare(
         feature_filepath: Path to the feature json file.
         factor: How much a result has to change to be considered significant.
         sort: Sort the table by this column. Valid options are "ratio" and "experiment".
-        dd: Whether to show the detailed dd benchmarks.
+        dd: Whether to show the detailed DD benchmark results.
         only_changed: Whether to only show results that changed significantly.
         no_split: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
         algorithm: Only show results for this algorithm.
         task: Only show results for this task.
         num_qubits: Only show results for this number of qubits. Can only be used if algorithm is also specified.
 
-    Returns:
-        None
     Raises:
         ValueError: If factor is negative or sort is invalid or if num_qubits is specified while algorithm is not.
         FileNotFoundError: If the baseline_filepath argument or the feature_filepath argument does not point to a valid file.
@@ -225,98 +253,17 @@ def compare(
 
     df_runtime = df_all[df_all["metric"] == "runtime"]
     df_runtime = df_runtime.drop(columns=["component", "metric"])
-    m1_runtime = df_runtime["ratio"] < 1 - factor
-    m2_runtime = df_runtime["ratio"] > 1 + factor
-    m3_runtime = (df_runtime["ratio"] != df_runtime["ratio"]) | (
-        (1 - factor < df_runtime["ratio"]) & (df_runtime["ratio"] < 1 + factor)
-    )
+    print("\nRuntime:")
+    sort_indices = ["ratio"] if sort == "ratio" else ["algo", "task", "n"]
+    __print_results(df_runtime, sort_indices, factor, no_split, only_changed)
 
-    print("\nDD runtimes:")
-    if no_split:
-        if only_changed:
-            df_runtime = df_runtime[m1_runtime | m2_runtime]
-            print("\nAll changed runtimes:\n")
-        else:
-            print("\nAll runtimes:\n")
-        print(df_runtime.to_markdown(index=False, stralign="right"))
-    else:
-        print(f"\n{Bcolors.OKGREEN}Runtimes that have improved:{Bcolors.ENDC}\n")
-        df_runtime_improved = df_runtime[m1_runtime]
-        df_runtime_improved = (
-            df_runtime_improved.sort_values(by=sort)
-            if sort == "ratio"
-            else df_runtime_improved.sort_values(["algo", "task", "n"])
-        )
-        print(df_runtime_improved.to_markdown(index=False, stralign="right"))
+    if not dd:
+        return
 
-        print(f"\n{Bcolors.FAIL}Runtimes that have worsened:{Bcolors.ENDC}\n")
-        df_runtime_worsened = df_runtime[m2_runtime]
-        df_runtime_worsened = (
-            df_runtime_worsened.sort_values(by=sort, ascending=False)
-            if sort == "ratio"
-            else df_runtime_worsened.sort_values(["algo", "task", "n"])
-        )
-        print(df_runtime_worsened.to_markdown(index=False, stralign="right"))
-
-        if not only_changed:
-            print("\nRuntimes that have stayed the same:\n")
-            df_runtime_same = df_runtime[m3_runtime]
-            df_runtime_same = (
-                df_runtime_same.sort_values(by=sort)
-                if sort == "ratio"
-                else df_runtime_same.sort_values(["algo", "task", "n"])
-            )
-            print(df_runtime_same.to_markdown(index=False, stralign="right"))
-    if dd:
-        print("\nDD details:")
-        df_all = df_all[df_all["metric"] != "runtime"]
-
-        m1 = df_all["ratio"] < 1 - factor  # after significantly smaller than before
-        m2 = df_all["ratio"] > 1 + factor  # after significantly larger than before
-        m3 = (df_all["ratio"] != df_all["ratio"]) | ((1 - factor < df_all["ratio"]) & (df_all["ratio"] < 1 + factor))
-        # ratio is NaN or after not significantly different from before
-
-        if no_split:
-            if only_changed:
-                df_all = df_all[m1 | m2]
-                print("\nAll changed DD benchmarks:\n")
-            else:
-                print("\nAll DD benchmarks:\n")
-
-            df_all = (
-                df_all.sort_values(by=sort)
-                if sort == "ratio"
-                else df_all.sort_values(["algo", "task", "n", "component", "metric"])
-            )
-            print(df_all.to_markdown(index=False, stralign="right"))
-        else:
-            print(f"\n{Bcolors.OKGREEN}DD Benchmarks that have improved:{Bcolors.ENDC}\n")
-            df_improved = df_all[m1]
-            df_improved = (
-                df_improved.sort_values(by=sort)
-                if sort == "ratio"
-                else df_improved.sort_values(["algo", "task", "n", "component", "metric"])
-            )
-            print(df_improved.to_markdown(index=False, stralign="right"))
-
-            print(f"\n{Bcolors.FAIL}DD Benchmarks that have worsened:{Bcolors.ENDC}\n")
-            df_worsened = df_all[m2]
-            df_worsened = (
-                df_worsened.sort_values(by=sort, ascending=False)
-                if sort == "ratio"
-                else df_worsened.sort_values(["algo", "task", "n", "component", "metric"])
-            )
-            print(df_worsened.to_markdown(index=False, stralign="right"))
-
-            if not only_changed:
-                print("\nDD Benchmarks that have stayed the same:\n")
-                df_same = df_all[m3]
-                df_same = (
-                    df_same.sort_values(by=sort)
-                    if sort == "ratio"
-                    else df_same.sort_values(["algo", "task", "n", "component", "metric"])
-                )
-                print(df_same.to_markdown(index=False, stralign="right"))
+    print("\nDD Package details:")
+    df_dd = df_all[df_all["metric"] != "runtime"]
+    sort_indices = ["ratio"] if sort == "ratio" else ["algo", "task", "n", "component", "metric"]
+    __print_results(df_dd, sort_indices, factor, no_split, only_changed)
 
 
 def main() -> None:
@@ -335,7 +282,7 @@ def main() -> None:
         default="ratio",
         help="Sort the table by this column. Valid options are 'ratio' and 'algorithm'.",
     )
-    parser.add_argument("--dd", action="store_true", help="Whether to show the detailed dd benchmarks.")
+    parser.add_argument("--dd", action="store_true", help="Whether to show the detailed DD benchmark results.")
     parser.add_argument(
         "--only_changed", action="store_true", help="Whether to only show results that changed significantly."
     )
@@ -349,8 +296,8 @@ def main() -> None:
     parser.add_argument("--task", type=str, help="Only show results for this task.")
     parser.add_argument(
         "--num_qubits",
-        type=str,
-        help="Only show results for this number of qubits. Can only be used " "if algorithm is also specified.",
+        type=int,
+        help="Only show results for this number of qubits. Can only be used if algorithm is also specified.",
     )
     args = parser.parse_args()
     assert args is not None
