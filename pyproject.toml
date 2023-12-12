@@ -40,7 +40,7 @@ test = ["pytest>=7.0", "pytest-console-scripts>=1.4", "mqt.core[qiskit, evaluati
 coverage = ["mqt.core[test]", "pytest-cov"]
 evaluation = [
     "pandas[output_formatting]>=2.0; python_version < '3.9'",
-    "pandas[output-formatting]>=2.1; python_version >= '3.9'",
+    "pandas[output-formatting]>=2.1.2; python_version >= '3.9'",
 ]
 docs = [
     "furo>=2023.08.17",
