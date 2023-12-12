@@ -782,7 +782,7 @@ public:
     }
 
     return std::make_unique<qc::StandardOperation>(qc->getNqubits(), qubits,
-                                                     qc::Barrier);
+                                                   qc::Barrier);
   }
 
   [[nodiscard]] std::unique_ptr<qc::Operation>
