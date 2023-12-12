@@ -191,13 +191,21 @@ def compare(
         else:
             print("\nAll benchmarks:\n")
 
-        df_all = df_all.sort_values(by=sort) if sort == "ratio" else df_all.sort_values([sort, "ratio"])
+        df_all = (
+            df_all.sort_values(by=sort)
+            if sort == "ratio"
+            else df_all.sort_values([sort, "task", "n", "component", "metric"])
+        )
         print(df_all.to_markdown(index=False, stralign="right"))
         return
 
     print(f"\n{Bcolors.OKGREEN}Benchmarks that have improved:{Bcolors.ENDC}\n")
     df_improved = df_all[(m1 & ~m2) | (m3 & m2)]
-    df_improved = df_improved.sort_values(by=sort) if sort == "ratio" else df_improved.sort_values([sort, "ratio"])
+    df_improved = (
+        df_improved.sort_values(by=sort)
+        if sort == "ratio"
+        else df_improved.sort_values([sort, "task", "n", "component", "metric"])
+    )
     print(df_improved.to_markdown(index=False, stralign="right"))
 
     print(f"\n{Bcolors.FAIL}Benchmarks that have worsened:{Bcolors.ENDC}\n")
@@ -205,14 +213,18 @@ def compare(
     df_worsened = (
         df_worsened.sort_values(by=sort, ascending=False)
         if sort == "ratio"
-        else df_worsened.sort_values([sort, "ratio"])
+        else df_worsened.sort_values([sort, "task", "n", "component", "metric"])
     )
     print(df_worsened.to_markdown(index=False, stralign="right"))
 
     if not only_changed:
         print("\nBenchmarks that have stayed the same:\n")
         df_same = df_all[m4]
-        df_same = df_same.sort_values(by=sort) if sort == "ratio" else df_same.sort_values([sort, "ratio"])
+        df_same = (
+            df_same.sort_values(by=sort)
+            if sort == "ratio"
+            else df_same.sort_values([sort, "task", "n", "component", "metric"])
+        )
         print(df_same.to_markdown(index=False, stralign="right"))
 
 
