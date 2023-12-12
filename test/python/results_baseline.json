@@ -19,7 +19,8 @@
               "peak_num_entries": "unused"
             }
           }
-        }
+        },
+        "runtime": 1.2
       },
       "256": {
         "dd": {
@@ -39,7 +40,6 @@
             }
           }
         },
-        "gate_count": 636,
         "runtime": 0.440665166
       }
     },
@@ -69,7 +69,8 @@
               "collisions": 47
             }
           }
-        }
+        },
+        "runtime": 0.2
       }
     }
   }
