@@ -202,6 +202,7 @@ extend-select = [
     "LOG",         # flake8-logging-format
     "N",           # flake8-naming
     "NPY",         # numpy
+    "PD",          # pandas-vet
     "PERF",        # perflint
     "PGH",         # pygrep-hooks
     "PIE",         # flake8-pie

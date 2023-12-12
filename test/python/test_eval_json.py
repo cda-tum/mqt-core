@@ -65,32 +65,32 @@ def test_aggregate() -> None:
         df_all = __aggregate(path_base, path_feature)
         lookups = df_all[df_all["metric"] == "lookups"]
         assert len(lookups.index) == 1
-        assert lookups["before"].values[0] == 8172
-        assert lookups["after"].values[0] == 0
-        assert lookups["ratio"].values[0] == 0.0
+        assert lookups["before"].to_numpy()[0] == 8172
+        assert lookups["after"].to_numpy()[0] == 0
+        assert lookups["ratio"].to_numpy()[0] == 0.0
         hit_ratio = df_all[df_all["metric"] == "hit_ratio*"]
         assert len(hit_ratio.index) == 1
-        assert hit_ratio["before"].values[0] == 0.5
-        assert hit_ratio["after"].values[0] == 0.8
-        assert hit_ratio["ratio"].values[0] == 0.625
+        assert hit_ratio["before"].to_numpy()[0] == 0.5
+        assert hit_ratio["after"].to_numpy()[0] == 0.8
+        assert hit_ratio["ratio"].to_numpy()[0] == 0.625
         memory_mib = df_all[df_all["metric"] == "memory_MiB"]
         assert len(memory_mib.index) == 1
-        assert memory_mib["after"].values[0] != memory_mib["after"].values[0]
-        assert memory_mib["ratio"].values[0] != memory_mib["ratio"].values[0]
+        assert memory_mib["after"].to_numpy()[0] != memory_mib["after"].to_numpy()[0]
+        assert memory_mib["ratio"].to_numpy()[0] != memory_mib["ratio"].to_numpy()[0]
         peak_num_entries = df_all[df_all["metric"] == "peak_num_entries"]
         assert len(peak_num_entries.index) == 1
-        assert peak_num_entries["before"].values[0] != peak_num_entries["before"].values[0]
-        assert peak_num_entries["ratio"].values[0] != peak_num_entries["ratio"].values[0]
+        assert peak_num_entries["before"].to_numpy()[0] != peak_num_entries["before"].to_numpy()[0]
+        assert peak_num_entries["ratio"].to_numpy()[0] != peak_num_entries["ratio"].to_numpy()[0]
         num_entries = df_all[df_all["metric"] == "num_entries"]
         assert len(num_entries.index) == 1
-        assert num_entries["before"].values[0] == 0
-        assert num_entries["after"].values[0] == 0
-        assert num_entries["ratio"].values[0] == 1.0
+        assert num_entries["before"].to_numpy()[0] == 0
+        assert num_entries["after"].to_numpy()[0] == 0
+        assert num_entries["ratio"].to_numpy()[0] == 1.0
         num_buckets = df_all[(df_all["metric"] == "num_buckets") & (df_all["before"] == df_all["before"])]
         assert len(num_buckets.index) == 1
-        assert num_buckets["before"].values[0] == 0
-        assert num_buckets["after"].values[0] == 16384
-        assert num_buckets["ratio"].values[0] == inf
+        assert num_buckets["before"].to_numpy()[0] == 0
+        assert num_buckets["after"].to_numpy()[0] == 16384
+        assert num_buckets["ratio"].to_numpy()[0] == inf
 
     except Exception as e:
         msg = "__aggregate() should not raise exception!"
