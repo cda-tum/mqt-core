@@ -366,7 +366,7 @@ public:
     if (targets.size() < nControls) {
       error("Gate '" + identifier + "' takes " + std::to_string(nControls) +
                 " controls, but only " + std::to_string(targets.size()) +
-                " qubit swere supplied.",
+                " qubits were supplied.",
             gateCallStatement->debugInfo);
     }
 
