@@ -189,6 +189,7 @@ def compare(
     print(df_runtime.to_markdown(index=False, stralign="right"))
 
     print("\nDD details:")
+    df_all = df_all[df_all["metric"] != "runtime"]
 
     m1 = df_all["ratio"] < 1 - factor  # after significantly smaller than before
     m2 = df_all["metric"].str.endswith(tuple(higher_better_metrics))  # if the metric is "better" when it's higher
