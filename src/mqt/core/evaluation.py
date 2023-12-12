@@ -167,6 +167,9 @@ def compare(
     dd: bool = False,
     only_changed: bool = False,
     no_split: bool = False,
+    algorithm: str | None = None,
+    task: str | None = None,
+    num_qubits: str | None = None,
 ) -> None:
     """Compare the results of two benchmarking runs from the generated json file.
 
@@ -178,11 +181,14 @@ def compare(
         dd: Whether to show the detailed dd benchmarks.
         only_changed: Whether to only show results that changed significantly.
         no_split: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
+        algorithm: Only show results for this algorithm.
+        task: Only show results for this task.
+        num_qubits: Only show results for this number of qubits. Can only be used if algorithm is also specified.
 
     Returns:
         None
     Raises:
-        ValueError: If factor is negative or sort is invalid.
+        ValueError: If factor is negative or sort is invalid or if num_qubits is specified while algorithm is not.
         FileNotFoundError: If the baseline_filepath argument or the feature_filepath argument does not point to a valid file.
         JSONDecodeError: If the baseline_filepath argument or the feature_filepath argument points to a file that is not a valid JSON file.
     """
@@ -192,8 +198,18 @@ def compare(
     if sort not in sort_options:
         msg = "Invalid sort option! Valid options are 'ratio' and 'algorithm'."
         raise ValueError(msg)
+    if algorithm is None and num_qubits is not None:
+        msg = "num_qubits can only be specified if algorithm is also specified!"
+        raise ValueError(msg)
 
     df_all = __aggregate(baseline_filepath, feature_filepath)
+
+    if task is not None:
+        df_all = df_all[df_all["task"].str.contains(task, case=False)]
+    if algorithm is not None:
+        df_all = df_all[df_all["algo"].str.contains(algorithm, case=False)]
+    if num_qubits is not None:
+        df_all = df_all[df_all["n"] == num_qubits]
 
     df_runtime = df_all[df_all["metric"] == "runtime"]
     df_runtime = df_runtime.drop(columns=["component", "metric"])
@@ -317,8 +333,24 @@ def main() -> None:
         help="Whether to merge all results together in one table or to separate the results into "
         "benchmarks that improved, stayed the same, or worsened.",
     )
+    parser.add_argument("--algorithm", type=str, help="Only show results for this algorithm.")
+    parser.add_argument("--task", type=str, help="Only show results for this task.")
+    parser.add_argument(
+        "--num_qubits",
+        type=str,
+        help="Only show results for this number of qubits. Can only be used " "if algorithm is also specified.",
+    )
     args = parser.parse_args()
     assert args is not None
     compare(
-        args.baseline_filepath, args.feature_filepath, args.factor, args.sort, args.dd, args.only_changed, args.no_split
+        args.baseline_filepath,
+        args.feature_filepath,
+        args.factor,
+        args.sort,
+        args.dd,
+        args.only_changed,
+        args.no_split,
+        args.algorithm,
+        args.task,
+        args.num_qubits,
     )
