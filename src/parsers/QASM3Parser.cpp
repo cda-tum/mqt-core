@@ -781,7 +781,7 @@ public:
       translateGateOperand(gate, qubits, qregs, barrierStatement->debugInfo);
     }
 
-    return std::make_unique<qc::NonUnitaryOperation>(qc->getNqubits(), qubits,
+    return std::make_unique<qc::StandardOperation>(qc->getNqubits(), qubits,
                                                      qc::Barrier);
   }
 
