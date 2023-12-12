@@ -44,7 +44,6 @@ protected:
 
     auto& entry = j[name][type][std::to_string(qc.getNqubits())];
 
-    entry["gate_count"] = qc.getNindividualOps();
     entry["runtime"] = exp.runtime.count();
 
     // collect statistics from DD package
