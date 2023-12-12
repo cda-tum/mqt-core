@@ -30,30 +30,30 @@ def test_post_processing() -> None:
     with pytest.raises(ValueError, match="Benchmark a.b is missing algorithm, task, number of qubits or metric!"):
         __post_processing("a.b")
     assert __post_processing("BV.Functionality.1024.runtime") == {
-        "algorithm": "BV",
+        "algo": "BV",
         "task": "Functionality",
-        "num_qubits": "1024",
+        "n": 1024,
         "component": "",
         "metric": "runtime",
     }
     assert __post_processing("GHZ.Simulation.128.dd.active_memory_mib") == {
-        "algorithm": "GHZ",
+        "algo": "GHZ",
         "task": "Simulation",
-        "num_qubits": "128",
+        "n": 128,
         "component": "",
         "metric": "active_memory_mib",
     }
     assert __post_processing("RandomClifford.Simulation.14.dd.real_numbers.cache_manager.memory_used_MiB_peak") == {
-        "algorithm": "RandomClifford",
+        "algo": "RandomClifford",
         "task": "Simulation",
-        "num_qubits": "14",
+        "n": 14,
         "component": "real_numbers_cache_manager",
         "metric": "memory_used_MiB_peak",
     }
     assert __post_processing("QPE.Functionality.15.dd.matrix.unique_table.total.lookups") == {
-        "algorithm": "QPE",
+        "algo": "QPE",
         "task": "Functionality",
-        "num_qubits": "15",
+        "n": 15,
         "component": "matrix_unique_table",
         "metric": "total_lookups",
     }
@@ -144,14 +144,11 @@ def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
     ])
-    assert "DD runtimes:" in ret.stdout
-    assert "Runtimes that have improved:" in ret.stdout
-    assert "Runtimes that have stayed the same:" in ret.stdout
-    assert "Runtimes that have worsened:" in ret.stdout
-    assert "DD details:" not in ret.stdout
-    assert "DD Benchmarks that have improved:" not in ret.stdout
-    assert "DD Benchmarks that have stayed the same:" not in ret.stdout
-    assert "DD Benchmarks that have worsened:" not in ret.stdout
+    assert "Runtime:" in ret.stdout
+    assert "Benchmarks that have improved:" in ret.stdout
+    assert "Benchmarks that have stayed the same:" in ret.stdout
+    assert "Benchmarks that have worsened:" in ret.stdout
+    assert "DD Package details:" not in ret.stdout
     assert ret.success
 
 
@@ -165,14 +162,11 @@ def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
         "--factor=0.3",
         "--dd",
     ])
-    assert "DD runtimes:" in ret.stdout
-    assert "Runtimes that have improved:" in ret.stdout
-    assert "Runtimes that have stayed the same:" in ret.stdout
-    assert "Runtimes that have worsened:" in ret.stdout
-    assert "DD details:" in ret.stdout
-    assert "DD Benchmarks that have improved:" in ret.stdout
-    assert "DD Benchmarks that have stayed the same:" in ret.stdout
-    assert "DD Benchmarks that have worsened:" in ret.stdout
+    assert "Runtime:" in ret.stdout
+    assert "Benchmarks that have improved:" in ret.stdout
+    assert "Benchmarks that have stayed the same:" in ret.stdout
+    assert "Benchmarks that have worsened:" in ret.stdout
+    assert "DD Package details:" in ret.stdout
     assert ret.success
 
 
@@ -186,9 +180,9 @@ def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
         "--factor=0.2",
         "--only_changed",
     ])
-    assert "Runtimes that have improved:" in ret.stdout
-    assert "Runtimes that have stayed the same:" not in ret.stdout
-    assert "Runtimes that have worsened:" in ret.stdout
+    assert "Benchmarks that have improved:" in ret.stdout
+    assert "Benchmarks that have stayed the same:" not in ret.stdout
+    assert "Benchmarks that have worsened:" in ret.stdout
     assert ret.success
 
 
@@ -203,16 +197,11 @@ def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None
         "--only_changed",
         "--no_split",
     ])
-    assert "All changed runtimes:" in ret.stdout
-    assert "All runtimes:" not in ret.stdout
-    assert "Runtimes that have improved:" not in ret.stdout
-    assert "Runtimes that have stayed the same:" not in ret.stdout
-    assert "Runtimes that have worsened:" not in ret.stdout
-    assert "All changed DD benchmarks:" in ret.stdout
-    assert "All DD benchmarks:" not in ret.stdout
-    assert "DD Benchmarks that have improved:" not in ret.stdout
-    assert "DD Benchmarks that have stayed the same:" not in ret.stdout
-    assert "DD Benchmarks that have worsened:" not in ret.stdout
+    assert "Runtime:" in ret.stdout
+    assert "Benchmarks that have improved:" not in ret.stdout
+    assert "Benchmarks that have stayed the same:" not in ret.stdout
+    assert "Benchmarks that have worsened:" not in ret.stdout
+    assert "DD Package details:" in ret.stdout
     assert ret.success
 
 
@@ -227,13 +216,9 @@ def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
         "--dd",
         "--task=functionality",
     ])
-    assert "All runtimes:" in ret.stdout
-    assert "All changed runtimes:" not in ret.stdout
-    assert "All DD benchmarks:" in ret.stdout
-    assert "All DD changed benchmarks:" not in ret.stdout
-    assert "DD Benchmarks that have improved:" not in ret.stdout
-    assert "DD Benchmarks that have stayed the same:" not in ret.stdout
-    assert "DD Benchmarks that have worsened:" not in ret.stdout
+    assert "Benchmarks that have improved:" not in ret.stdout
+    assert "Benchmarks that have stayed the same:" not in ret.stdout
+    assert "Benchmarks that have worsened:" not in ret.stdout
     assert "Simulation" not in ret.stdout
     assert "Functionality" in ret.stdout
     assert ret.success
@@ -252,6 +237,8 @@ def test_cli_with_sort_by_algorithm(script_runner: ScriptRunner) -> None:
         "--algorithm=bv",
         "--num_qubits=1024",
     ])
-    assert "All runtimes:" in ret.stdout
+    assert "Benchmarks that have improved" not in ret.stdout
+    assert "Benchmarks that have stayed the same" not in ret.stdout
+    assert "Benchmarks that have worsened" not in ret.stdout
     assert "GHZ" not in ret.stdout
     assert ret.success
