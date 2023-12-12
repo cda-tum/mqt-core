@@ -158,6 +158,7 @@ def compare(
     feature_filepath: str | PathLike[str],
     factor: float = 0.1,
     sort: str = "ratio",
+    dd: bool = False,
     only_changed: bool = False,
     no_split: bool = False,
 ) -> None:
@@ -167,8 +168,9 @@ def compare(
         baseline_filepath: Path to the baseline json file.
         feature_filepath: Path to the feature json file.
         factor: How much a result has to change to be considered significant.
-        only_changed: Whether to only show results that changed significantly.
         sort: Sort the table by this column. Valid options are "ratio" and "experiment".
+        dd: Whether to show the detailed dd benchmarks.
+        only_changed: Whether to only show results that changed significantly.
         no_split: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
 
     Returns:
@@ -231,56 +233,56 @@ def compare(
                 else df_runtime_same.sort_values(["algo", "task", "n"])
             )
             print(df_runtime_same.to_markdown(index=False, stralign="right"))
+    if dd:
+        print("\nDD details:")
+        df_all = df_all[df_all["metric"] != "runtime"]
 
-    print("\nDD details:")
-    df_all = df_all[df_all["metric"] != "runtime"]
+        m1 = df_all["ratio"] < 1 - factor  # after significantly smaller than before
+        m2 = df_all["ratio"] > 1 + factor  # after significantly larger than before
+        m3 = (df_all["ratio"] != df_all["ratio"]) | ((1 - factor < df_all["ratio"]) & (df_all["ratio"] < 1 + factor))
+        # ratio is NaN or after not significantly different from before
 
-    m1 = df_all["ratio"] < 1 - factor  # after significantly smaller than before
-    m2 = df_all["ratio"] > 1 + factor  # after significantly larger than before
-    m3 = (df_all["ratio"] != df_all["ratio"]) | ((1 - factor < df_all["ratio"]) & (df_all["ratio"] < 1 + factor))
-    # ratio is NaN or after not significantly different from before
+        if no_split:
+            if only_changed:
+                df_all = df_all[m1 | m2]
+                print("\nAll changed DD benchmarks:\n")
+            else:
+                print("\nAll DD benchmarks:\n")
 
-    if no_split:
-        if only_changed:
-            df_all = df_all[m1 | m2]
-            print("\nAll changed DD benchmarks:\n")
-        else:
-            print("\nAll DD benchmarks:\n")
-
-        df_all = (
-            df_all.sort_values(by=sort)
-            if sort == "ratio"
-            else df_all.sort_values(["algo", "task", "n", "component", "metric"])
-        )
-        print(df_all.to_markdown(index=False, stralign="right"))
-    else:
-        print(f"\n{Bcolors.OKGREEN}DD Benchmarks that have improved:{Bcolors.ENDC}\n")
-        df_improved = df_all[m1]
-        df_improved = (
-            df_improved.sort_values(by=sort)
-            if sort == "ratio"
-            else df_improved.sort_values(["algo", "task", "n", "component", "metric"])
-        )
-        print(df_improved.to_markdown(index=False, stralign="right"))
-
-        print(f"\n{Bcolors.FAIL}DD Benchmarks that have worsened:{Bcolors.ENDC}\n")
-        df_worsened = df_all[m2]
-        df_worsened = (
-            df_worsened.sort_values(by=sort, ascending=False)
-            if sort == "ratio"
-            else df_worsened.sort_values(["algo", "task", "n", "component", "metric"])
-        )
-        print(df_worsened.to_markdown(index=False, stralign="right"))
-
-        if not only_changed:
-            print("\nDD Benchmarks that have stayed the same:\n")
-            df_same = df_all[m3]
-            df_same = (
-                df_same.sort_values(by=sort)
+            df_all = (
+                df_all.sort_values(by=sort)
                 if sort == "ratio"
-                else df_same.sort_values(["algo", "task", "n", "component", "metric"])
+                else df_all.sort_values(["algo", "task", "n", "component", "metric"])
             )
-            print(df_same.to_markdown(index=False, stralign="right"))
+            print(df_all.to_markdown(index=False, stralign="right"))
+        else:
+            print(f"\n{Bcolors.OKGREEN}DD Benchmarks that have improved:{Bcolors.ENDC}\n")
+            df_improved = df_all[m1]
+            df_improved = (
+                df_improved.sort_values(by=sort)
+                if sort == "ratio"
+                else df_improved.sort_values(["algo", "task", "n", "component", "metric"])
+            )
+            print(df_improved.to_markdown(index=False, stralign="right"))
+
+            print(f"\n{Bcolors.FAIL}DD Benchmarks that have worsened:{Bcolors.ENDC}\n")
+            df_worsened = df_all[m2]
+            df_worsened = (
+                df_worsened.sort_values(by=sort, ascending=False)
+                if sort == "ratio"
+                else df_worsened.sort_values(["algo", "task", "n", "component", "metric"])
+            )
+            print(df_worsened.to_markdown(index=False, stralign="right"))
+
+            if not only_changed:
+                print("\nDD Benchmarks that have stayed the same:\n")
+                df_same = df_all[m3]
+                df_same = (
+                    df_same.sort_values(by=sort)
+                    if sort == "ratio"
+                    else df_same.sort_values(["algo", "task", "n", "component", "metric"])
+                )
+                print(df_same.to_markdown(index=False, stralign="right"))
 
 
 def main() -> None:
@@ -299,6 +301,7 @@ def main() -> None:
         default="ratio",
         help="Sort the table by this column. Valid options are 'ratio' and 'algorithm'.",
     )
+    parser.add_argument("--dd", action="store_true", help="Whether to show the detailed dd benchmarks.")
     parser.add_argument(
         "--only_changed", action="store_true", help="Whether to only show results that changed significantly."
     )
@@ -310,4 +313,6 @@ def main() -> None:
     )
     args = parser.parse_args()
     assert args is not None
-    compare(args.baseline_filepath, args.feature_filepath, args.factor, args.sort, args.only_changed, args.no_split)
+    compare(
+        args.baseline_filepath, args.feature_filepath, args.factor, args.sort, args.dd, args.only_changed, args.no_split
+    )

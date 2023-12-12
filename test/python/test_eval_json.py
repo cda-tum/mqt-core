@@ -130,21 +130,32 @@ def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
     ])
-    assert "DD Benchmarks that have improved:" in ret.stdout
-    assert "DD Benchmarks that have stayed the same:" in ret.stdout
-    assert "DD Benchmarks that have worsened:" in ret.stdout
+    assert "DD runtimes:" in ret.stdout
+    assert "Runtimes that have improved:" in ret.stdout
+    assert "Runtimes that have stayed the same:" in ret.stdout
+    assert "Runtimes that have worsened:" in ret.stdout
+    assert "DD details:" not in ret.stdout
+    assert "DD Benchmarks that have improved:" not in ret.stdout
+    assert "DD Benchmarks that have stayed the same:" not in ret.stdout
+    assert "DD Benchmarks that have worsened:" not in ret.stdout
     assert ret.success
 
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with default parameters, except that factor is set to 0.3."""
+    """Testing the command line functionality with default parameters, except that factor is set to 0.3 and dd details should be shown."""
     ret = script_runner.run([
         "compare",
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
         "--factor=0.3",
+        "--dd",
     ])
+    assert "DD runtimes:" in ret.stdout
+    assert "Runtimes that have improved:" in ret.stdout
+    assert "Runtimes that have stayed the same:" in ret.stdout
+    assert "Runtimes that have worsened:" in ret.stdout
+    assert "DD details:" in ret.stdout
     assert "DD Benchmarks that have improved:" in ret.stdout
     assert "DD Benchmarks that have stayed the same:" in ret.stdout
     assert "DD Benchmarks that have worsened:" in ret.stdout
@@ -161,9 +172,9 @@ def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
         "--factor=0.2",
         "--only_changed",
     ])
-    assert "DD Benchmarks that have improved:" in ret.stdout
-    assert "DD Benchmarks that have stayed the same:" not in ret.stdout
-    assert "DD Benchmarks that have worsened:" in ret.stdout
+    assert "Runtimes that have improved:" in ret.stdout
+    assert "Runtimes that have stayed the same:" not in ret.stdout
+    assert "Runtimes that have worsened:" in ret.stdout
     assert ret.success
 
 
@@ -174,9 +185,15 @@ def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None
         "compare",
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
+        "--dd",
         "--only_changed",
         "--no_split",
     ])
+    assert "All changed runtimes:" in ret.stdout
+    assert "All runtimes:" not in ret.stdout
+    assert "Runtimes that have improved:" not in ret.stdout
+    assert "Runtimes that have stayed the same:" not in ret.stdout
+    assert "Runtimes that have worsened:" not in ret.stdout
     assert "All changed DD benchmarks:" in ret.stdout
     assert "All DD benchmarks:" not in ret.stdout
     assert "DD Benchmarks that have improved:" not in ret.stdout
@@ -193,7 +210,10 @@ def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
         "--no_split",
+        "--dd",
     ])
+    assert "All runtimes:" in ret.stdout
+    assert "All changed runtimes:" not in ret.stdout
     assert "All DD benchmarks:" in ret.stdout
     assert "All DD changed benchmarks:" not in ret.stdout
     assert "DD Benchmarks that have improved:" not in ret.stdout
@@ -213,5 +233,5 @@ def test_cli_with_sort_by_algorithm(script_runner: ScriptRunner) -> None:
         "--only_changed",
         "--no_split",
     ])
-    assert "All changed DD benchmarks:" in ret.stdout
+    assert "All changed runtimes:" in ret.stdout
     assert ret.success
