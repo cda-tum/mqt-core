@@ -184,7 +184,7 @@ def __print_results(
 
     if no_split:
         if only_changed:
-            df = df[m1 | m2]
+            print(df[m1 | m2].sort_values(by=sort_indices).to_markdown(index=False, stralign="right"))
         print(df.sort_values(by=sort_indices).to_markdown(index=False, stralign="right"))
         return
 
