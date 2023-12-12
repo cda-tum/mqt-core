@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from math import inf
+import math
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -91,17 +91,23 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
     flattened_feature = __flatten_dict(d_feature)
 
     for k, v in flattened_data.items():
+        value = v
+        if value == "unused":
+            value = float("nan")
         if k in flattened_feature:
-            ls = [v, flattened_feature[k]]
+            ls = [value, flattened_feature[k]]
             flattened_data[k] = ls
             del flattened_feature[k]
         else:
-            ls = [v, "skipped"]
+            ls = [value, float("nan")]
             flattened_data[k] = ls
     # If a benchmark is in the feature file but not in the baseline file, it should be added with baseline marked as
     # "skipped"
     for k, v in flattened_feature.items():
-        ls = ["skipped", v]
+        value = v
+        if value == "unused":
+            value = float("nan")
+        ls = [float("nan"), value]
         flattened_data[k] = ls
 
     before_ls, after_ls, ratio_ls, algorithm_ls, task_ls, num_qubits_ls, component_ls, metric_ls = (
@@ -118,10 +124,10 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
     for k, v in flattened_data.items():
         before = v[0]
         after = v[1]
-        if before in {"unused", "skipped"} or after in {"unused", "skipped"}:
+        if math.isnan(before) or math.isnan(after):
             ratio = float("nan")
         else:
-            ratio = after / before if before != 0 else 1 if after == 0 else inf
+            ratio = after / before if before != 0 else 1 if after == 0 else math.inf
         key = k
         if k.endswith(tuple(higher_better_metrics)):
             ratio = 1 / ratio
