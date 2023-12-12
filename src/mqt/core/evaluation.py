@@ -189,8 +189,48 @@ def compare(
 
     df_runtime = df_all[df_all["metric"] == "runtime"]
     df_runtime = df_runtime.drop(columns=["component", "metric"])
-    print("\nAll runtimes:\n")
-    print(df_runtime.to_markdown(index=False, stralign="right"))
+    m1_runtime = df_runtime["ratio"] < 1 - factor
+    m2_runtime = df_runtime["ratio"] > 1 + factor
+    m3_runtime = (df_runtime["ratio"] != df_runtime["ratio"]) | (
+        (1 - factor < df_runtime["ratio"]) & (df_runtime["ratio"] < 1 + factor)
+    )
+
+    print("\nDD runtimes:")
+    if no_split:
+        if only_changed:
+            df_runtime = df_runtime[m1_runtime | m2_runtime]
+            print("\nAll changed runtimes:\n")
+        else:
+            print("\nAll runtimes:\n")
+        print(df_runtime.to_markdown(index=False, stralign="right"))
+    else:
+        print(f"\n{Bcolors.OKGREEN}Runtimes that have improved:{Bcolors.ENDC}\n")
+        df_runtime_improved = df_runtime[m1_runtime]
+        df_runtime_improved = (
+            df_runtime_improved.sort_values(by=sort)
+            if sort == "ratio"
+            else df_runtime_improved.sort_values(["algo", "task", "n"])
+        )
+        print(df_runtime_improved.to_markdown(index=False, stralign="right"))
+
+        print(f"\n{Bcolors.FAIL}Runtimes that have worsened:{Bcolors.ENDC}\n")
+        df_runtime_worsened = df_runtime[m2_runtime]
+        df_runtime_worsened = (
+            df_runtime_worsened.sort_values(by=sort, ascending=False)
+            if sort == "ratio"
+            else df_runtime_worsened.sort_values(["algo", "task", "n"])
+        )
+        print(df_runtime_worsened.to_markdown(index=False, stralign="right"))
+
+        if not only_changed:
+            print("\nRuntimes that have stayed the same:\n")
+            df_runtime_same = df_runtime[m3_runtime]
+            df_runtime_same = (
+                df_runtime_same.sort_values(by=sort)
+                if sort == "ratio"
+                else df_runtime_same.sort_values(["algo", "task", "n"])
+            )
+            print(df_runtime_same.to_markdown(index=False, stralign="right"))
 
     print("\nDD details:")
     df_all = df_all[df_all["metric"] != "runtime"]
@@ -203,9 +243,9 @@ def compare(
     if no_split:
         if only_changed:
             df_all = df_all[m1 | m2]
-            print("\nAll changed benchmarks:\n")
+            print("\nAll changed DD benchmarks:\n")
         else:
-            print("\nAll benchmarks:\n")
+            print("\nAll DD benchmarks:\n")
 
         df_all = (
             df_all.sort_values(by=sort)
@@ -213,35 +253,34 @@ def compare(
             else df_all.sort_values(["algo", "task", "n", "component", "metric"])
         )
         print(df_all.to_markdown(index=False, stralign="right"))
-        return
-
-    print(f"\n{Bcolors.OKGREEN}Benchmarks that have improved:{Bcolors.ENDC}\n")
-    df_improved = df_all[m1]
-    df_improved = (
-        df_improved.sort_values(by=sort)
-        if sort == "ratio"
-        else df_improved.sort_values(["algo", "task", "n", "component", "metric"])
-    )
-    print(df_improved.to_markdown(index=False, stralign="right"))
-
-    print(f"\n{Bcolors.FAIL}Benchmarks that have worsened:{Bcolors.ENDC}\n")
-    df_worsened = df_all[m2]
-    df_worsened = (
-        df_worsened.sort_values(by=sort, ascending=False)
-        if sort == "ratio"
-        else df_worsened.sort_values(["algo", "task", "n", "component", "metric"])
-    )
-    print(df_worsened.to_markdown(index=False, stralign="right"))
-
-    if not only_changed:
-        print("\nBenchmarks that have stayed the same:\n")
-        df_same = df_all[m3]
-        df_same = (
-            df_same.sort_values(by=sort)
+    else:
+        print(f"\n{Bcolors.OKGREEN}DD Benchmarks that have improved:{Bcolors.ENDC}\n")
+        df_improved = df_all[m1]
+        df_improved = (
+            df_improved.sort_values(by=sort)
             if sort == "ratio"
-            else df_same.sort_values(["algo", "task", "n", "component", "metric"])
+            else df_improved.sort_values(["algo", "task", "n", "component", "metric"])
         )
-        print(df_same.to_markdown(index=False, stralign="right"))
+        print(df_improved.to_markdown(index=False, stralign="right"))
+
+        print(f"\n{Bcolors.FAIL}DD Benchmarks that have worsened:{Bcolors.ENDC}\n")
+        df_worsened = df_all[m2]
+        df_worsened = (
+            df_worsened.sort_values(by=sort, ascending=False)
+            if sort == "ratio"
+            else df_worsened.sort_values(["algo", "task", "n", "component", "metric"])
+        )
+        print(df_worsened.to_markdown(index=False, stralign="right"))
+
+        if not only_changed:
+            print("\nDD Benchmarks that have stayed the same:\n")
+            df_same = df_all[m3]
+            df_same = (
+                df_same.sort_values(by=sort)
+                if sort == "ratio"
+                else df_same.sort_values(["algo", "task", "n", "component", "metric"])
+            )
+            print(df_same.to_markdown(index=False, stralign="right"))
 
 
 def main() -> None:

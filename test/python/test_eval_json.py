@@ -130,9 +130,9 @@ def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
     ])
-    assert "Benchmarks that have improved:" in ret.stdout
-    assert "Benchmarks that have stayed the same:" in ret.stdout
-    assert "Benchmarks that have worsened:" in ret.stdout
+    assert "DD Benchmarks that have improved:" in ret.stdout
+    assert "DD Benchmarks that have stayed the same:" in ret.stdout
+    assert "DD Benchmarks that have worsened:" in ret.stdout
     assert ret.success
 
 
@@ -145,9 +145,9 @@ def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
         "./test/python/results_feature.json",
         "--factor=0.3",
     ])
-    assert "Benchmarks that have improved:" in ret.stdout
-    assert "Benchmarks that have stayed the same:" in ret.stdout
-    assert "Benchmarks that have worsened:" in ret.stdout
+    assert "DD Benchmarks that have improved:" in ret.stdout
+    assert "DD Benchmarks that have stayed the same:" in ret.stdout
+    assert "DD Benchmarks that have worsened:" in ret.stdout
     assert ret.success
 
 
@@ -161,9 +161,9 @@ def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
         "--factor=0.2",
         "--only_changed",
     ])
-    assert "Benchmarks that have improved:" in ret.stdout
-    assert "Benchmarks that have stayed the same:" not in ret.stdout
-    assert "Benchmarks that have worsened:" in ret.stdout
+    assert "DD Benchmarks that have improved:" in ret.stdout
+    assert "DD Benchmarks that have stayed the same:" not in ret.stdout
+    assert "DD Benchmarks that have worsened:" in ret.stdout
     assert ret.success
 
 
@@ -177,11 +177,11 @@ def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None
         "--only_changed",
         "--no_split",
     ])
-    assert "All changed benchmarks:" in ret.stdout
-    assert "All benchmarks:" not in ret.stdout
-    assert "Benchmarks that have improved:" not in ret.stdout
-    assert "Benchmarks that have stayed the same:" not in ret.stdout
-    assert "Benchmarks that have worsened:" not in ret.stdout
+    assert "All changed DD benchmarks:" in ret.stdout
+    assert "All DD benchmarks:" not in ret.stdout
+    assert "DD Benchmarks that have improved:" not in ret.stdout
+    assert "DD Benchmarks that have stayed the same:" not in ret.stdout
+    assert "DD Benchmarks that have worsened:" not in ret.stdout
     assert ret.success
 
 
@@ -194,11 +194,11 @@ def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
         "./test/python/results_feature.json",
         "--no_split",
     ])
-    assert "All benchmarks:" in ret.stdout
-    assert "All changed benchmarks:" not in ret.stdout
-    assert "Benchmarks that have improved:" not in ret.stdout
-    assert "Benchmarks that have stayed the same:" not in ret.stdout
-    assert "Benchmarks that have worsened:" not in ret.stdout
+    assert "All DD benchmarks:" in ret.stdout
+    assert "All DD changed benchmarks:" not in ret.stdout
+    assert "DD Benchmarks that have improved:" not in ret.stdout
+    assert "DD Benchmarks that have stayed the same:" not in ret.stdout
+    assert "DD Benchmarks that have worsened:" not in ret.stdout
     assert ret.success
 
 
@@ -213,5 +213,5 @@ def test_cli_with_sort_by_algorithm(script_runner: ScriptRunner) -> None:
         "--only_changed",
         "--no_split",
     ])
-    assert "All changed benchmarks:" in ret.stdout
+    assert "All changed DD benchmarks:" in ret.stdout
     assert ret.success
