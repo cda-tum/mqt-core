@@ -122,12 +122,16 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
             ratio = float("nan")
         else:
             ratio = after / before if before != 0 else 1 if after == 0 else inf
+        key = k
+        if k.endswith(tuple(higher_better_metrics)):
+            ratio = 1 / ratio
+            key += "*"
         before_ls.append(round(before, 3) if isinstance(before, float) else before)
         after_ls.append(round(after, 3) if isinstance(after, float) else after)
         ratio_ls.append(round(ratio, 3))
 
         # postprocessing
-        result_metrics = __post_processing(k)
+        result_metrics = __post_processing(key)
         algorithm_ls.append(result_metrics["algorithm"])
         task_ls.append(result_metrics["task"])
         num_qubits_ls.append(result_metrics["num_qubits"])
@@ -192,14 +196,13 @@ def compare(
     df_all = df_all[df_all["metric"] != "runtime"]
 
     m1 = df_all["ratio"] < 1 - factor  # after significantly smaller than before
-    m2 = df_all["metric"].str.endswith(tuple(higher_better_metrics))  # if the metric is "better" when it's higher
-    m3 = df_all["ratio"] > 1 + factor  # after significantly larger than before
-    m4 = (df_all["ratio"] != df_all["ratio"]) | ((1 - factor < df_all["ratio"]) & (df_all["ratio"] < 1 + factor))
+    m2 = df_all["ratio"] > 1 + factor  # after significantly larger than before
+    m3 = (df_all["ratio"] != df_all["ratio"]) | ((1 - factor < df_all["ratio"]) & (df_all["ratio"] < 1 + factor))
     # ratio is NaN or after not significantly different from before
 
     if no_split:
         if only_changed:
-            df_all = df_all[m1 | m3]
+            df_all = df_all[m1 | m2]
             print("\nAll changed benchmarks:\n")
         else:
             print("\nAll benchmarks:\n")
@@ -213,7 +216,7 @@ def compare(
         return
 
     print(f"\n{Bcolors.OKGREEN}Benchmarks that have improved:{Bcolors.ENDC}\n")
-    df_improved = df_all[(m1 & ~m2) | (m3 & m2)]
+    df_improved = df_all[m1]
     df_improved = (
         df_improved.sort_values(by=sort)
         if sort == "ratio"
@@ -222,7 +225,7 @@ def compare(
     print(df_improved.to_markdown(index=False, stralign="right"))
 
     print(f"\n{Bcolors.FAIL}Benchmarks that have worsened:{Bcolors.ENDC}\n")
-    df_worsened = df_all[(m3 & ~m2) | (m1 & m2)]
+    df_worsened = df_all[m2]
     df_worsened = (
         df_worsened.sort_values(by=sort, ascending=False)
         if sort == "ratio"
@@ -232,7 +235,7 @@ def compare(
 
     if not only_changed:
         print("\nBenchmarks that have stayed the same:\n")
-        df_same = df_all[m4]
+        df_same = df_all[m3]
         df_same = (
             df_same.sort_values(by=sort)
             if sort == "ratio"

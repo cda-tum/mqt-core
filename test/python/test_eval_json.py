@@ -68,11 +68,11 @@ def test_aggregate() -> None:
         assert lookups["before"].values[0] == 8172
         assert lookups["after"].values[0] == 0
         assert lookups["ratio"].values[0] == 0.0
-        hit_ratio = df_all[df_all["metric"] == "hit_ratio"]
+        hit_ratio = df_all[df_all["metric"] == "hit_ratio*"]
         assert len(hit_ratio.index) == 1
         assert hit_ratio["before"].values[0] == 0.5
         assert hit_ratio["after"].values[0] == 0.8
-        assert hit_ratio["ratio"].values[0] == 1.6
+        assert hit_ratio["ratio"].values[0] == 0.625
         memory_mib = df_all[df_all["metric"] == "memory_MiB"]
         assert len(memory_mib.index) == 1
         assert memory_mib["after"].values[0] == "skipped"
