@@ -6,7 +6,7 @@ import argparse
 import json
 import math
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import pandas as pd
 
@@ -42,15 +42,25 @@ def __flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = ".") -> d
     return items
 
 
-def __post_processing(key: str) -> dict[str, str]:
+class BenchmarkDict(TypedDict, total=False):
+    """A dictionary containing the data of one particular benchmark."""
+
+    algo: str
+    task: str
+    n: int
+    component: str
+    metric: str
+
+
+def __post_processing(key: str) -> BenchmarkDict:
     """Postprocess the key of a flattened dictionary to get the metrics for the DataFrame columns."""
     metrics_divided = key.split(".")
-    result_metrics = {}
+    result_metrics = BenchmarkDict()
     if len(metrics_divided) < 4:
         raise ValueError("Benchmark " + key + " is missing algorithm, task, number of qubits or metric!")
-    result_metrics["algorithm"] = metrics_divided.pop(0)
+    result_metrics["algo"] = metrics_divided.pop(0)
     result_metrics["task"] = metrics_divided.pop(0)
-    result_metrics["num_qubits"] = metrics_divided.pop(0)
+    result_metrics["n"] = int(metrics_divided.pop(0))
     num_remaining_benchmarks = len(metrics_divided)
     if num_remaining_benchmarks == 1:
         result_metrics["component"] = ""
@@ -77,6 +87,19 @@ def __post_processing(key: str) -> dict[str, str]:
             result_metrics["component"] = component
 
     return result_metrics
+
+
+class DataDict(TypedDict):
+    """A dictionary containing the data for one entry in the DataFrame."""
+
+    before: float
+    after: float
+    ratio: float
+    algo: str
+    task: str
+    n: int
+    component: str
+    metric: str
 
 
 def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | PathLike[str]) -> pd.DataFrame:
@@ -110,16 +133,7 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
         ls = [float("nan"), value]
         flattened_data[k] = ls
 
-    before_ls, after_ls, ratio_ls, algorithm_ls, task_ls, num_qubits_ls, component_ls, metric_ls = (
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-    )
+    df_all_entries = []  # records individual entries
 
     for k, v in flattened_data.items():
         before = v[0]
@@ -132,28 +146,26 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
         if k.endswith(tuple(higher_better_metrics)):
             ratio = 1 / ratio
             key += "*"
-        before_ls.append(round(before, 3) if isinstance(before, float) else before)
-        after_ls.append(round(after, 3) if isinstance(after, float) else after)
-        ratio_ls.append(round(ratio, 3))
-
+        before = round(before, 3) if isinstance(before, float) else before
+        after = round(after, 3) if isinstance(after, float) else after
+        ratio = round(ratio, 3)
         # postprocessing
         result_metrics = __post_processing(key)
-        algorithm_ls.append(result_metrics["algorithm"])
-        task_ls.append(result_metrics["task"])
-        num_qubits_ls.append(result_metrics["num_qubits"])
-        component_ls.append(result_metrics["component"])
-        metric_ls.append(result_metrics["metric"])
 
-    df_all = pd.DataFrame()
-    df_all["before"] = before_ls
-    df_all["after"] = after_ls
-    df_all["ratio"] = ratio_ls
+        df_all_entries.append(
+            DataDict(
+                before=before,
+                after=after,
+                ratio=ratio,
+                algo=result_metrics["algo"],
+                task=result_metrics["task"],
+                n=result_metrics["n"],
+                component=result_metrics["component"],
+                metric=result_metrics["metric"],
+            )
+        )
 
-    df_all["algo"] = algorithm_ls
-    df_all["task"] = task_ls
-    df_all["n"] = num_qubits_ls
-    df_all["component"] = component_ls
-    df_all["metric"] = metric_ls
+    df_all = pd.DataFrame(df_all_entries)
     df_all.index = pd.Index([""] * len(df_all.index))
 
     return df_all
