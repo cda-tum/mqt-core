@@ -381,7 +381,12 @@ QuantumComputation::removeQubit(const Qubit logicalQubitIndex) {
   } else {
     removeQubitfromQubitRegister(qregs, reg, idx);
     // reduce qubit count
-    nqubits--;
+    if (ancillary.at(logicalQubitIndex)) {
+      // if the qubit is ancillary, it is not counted as a qubit
+      nancillae--;
+    } else {
+      nqubits--;
+    }
   }
 
   // adjust initial layout permutation
@@ -889,12 +894,6 @@ void QuantumComputation::setLogicalQubitAncillary(
     return;
   }
 
-  const auto physicalQubitIndex = getPhysicalQubitIndex(logicalQubitIndex);
-
-  // get register and register-index of the corresponding qubit
-  const auto [reg, idx] = getQubitRegisterAndIndex(physicalQubitIndex);
-  removeQubitfromQubitRegister(qregs, reg, idx);
-  addQubitToQubitRegister(ancregs, physicalQubitIndex, "anc");
   nqubits--;
   nancillae++;
   ancillary[logicalQubitIndex] = true;

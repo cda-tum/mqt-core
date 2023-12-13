@@ -39,7 +39,7 @@ using RegisterNames = std::vector<std::pair<std::string, std::string>>;
 
 using Targets = std::vector<Qubit>;
 
-using BitString = std::bitset<128>;
+using BitString = std::bitset<4096>;
 
 // floating-point type used throughout the library
 using fp = double;

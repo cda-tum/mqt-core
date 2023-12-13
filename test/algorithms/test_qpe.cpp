@@ -1,5 +1,6 @@
 #include "CircuitOptimizer.hpp"
 #include "algorithms/QPE.hpp"
+#include "dd/Benchmark.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Simulation.hpp"
 
@@ -108,16 +109,13 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(QPE, QPETest) {
-  auto dd = std::make_unique<dd::Package<>>(precision + 1);
   auto qc = qc::QPE(lambda, precision);
   qc.printStatistics(std::cout);
   ASSERT_EQ(qc.getNqubits(), precision + 1);
   ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(qc); });
 
-  qc::VectorDD e{};
-  ASSERT_NO_THROW(
-      { e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd); });
-
+  auto out = dd::benchmarkSimulate(qc);
+  qc::VectorDD const e = out->sim;
   // account for the eigenstate qubit in the expected result by shifting and
   // adding 1
   const auto amplitude = e.getValueByIndex((expectedResult << 1) + 1);
@@ -144,13 +142,11 @@ TEST_P(QPE, QPETest) {
 }
 
 TEST_P(QPE, IQPETest) {
-  auto dd = std::make_unique<dd::Package<>>(precision + 1);
   auto qc = qc::QPE(lambda, precision, true);
   ASSERT_EQ(qc.getNqubits(), 2U);
 
   constexpr auto shots = 8192U;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   // sort the measurements
   using Measurement = std::pair<std::string, std::size_t>;
@@ -233,7 +229,8 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = buildFunctionality(&qpe, dd);
+  auto exp = dd::benchmarkFunctionalityConstruction(qpe);
+  auto e = exp->func;
 
   // create standard IQPE circuit
   auto iqpe = qc::QPE(lambda, precision, true);
@@ -247,7 +244,7 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = buildFunctionality(&iqpe, dd);
+  auto f = buildFunctionality(&iqpe, exp->dd);
 
   EXPECT_EQ(e, f);
 }
