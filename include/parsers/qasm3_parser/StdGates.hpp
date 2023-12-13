@@ -129,10 +129,7 @@ const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
      std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::iSWAP}))},
     {"iswapdg",
      std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::iSWAPdg}))},
-};
 
-const std::map<std::string, std::shared_ptr<Gate>> QASM2_COMPAT_GATES = {
-    // natively supported gates for backward compatibility with OpenQASM 2.0
     {"rxx", std::make_shared<StandardGate>(StandardGate({0, 2, 1, qc::RXX}))},
     {"ryy", std::make_shared<StandardGate>(StandardGate({0, 2, 1, qc::RYY}))},
     {"rzz", std::make_shared<StandardGate>(StandardGate({0, 2, 1, qc::RZZ}))},
