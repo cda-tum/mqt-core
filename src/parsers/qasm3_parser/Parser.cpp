@@ -45,7 +45,8 @@ std::vector<std::shared_ptr<Statement>> Parser::parseProgram() {
       }
       // Once we encounter a non-comment token, we don't allow a version
       // declaration anymore.
-      if (current().kind != Token::Kind::Comment) {
+      if (current().kind != Token::Kind::InitialLayout &&
+          current().kind != Token::Kind::OutputPermutation) {
         versionDeclarationAllowed = false;
       }
     }
@@ -80,36 +81,17 @@ std::shared_ptr<Statement> Parser::parseStatement() {
     return parseDeclaration(false);
   }
 
-  while (current().kind == Token::Kind::Comment) {
-    static const auto INITIAL_LAYOUT_REGEX = std::regex("i (\\d+ )*(\\d+)");
-    static const auto OUTPUT_PERMUTATION_REGEX = std::regex("o (\\d+ )*(\\d+)");
-
-    auto const tBegin = current();
-
-    std::string comment = current().str;
+  if (current().kind == Token::Kind::InitialLayout) {
+    const auto tBegin = current();
     scan();
-
-    auto parsePermutation = [&comment]() -> qc::Permutation {
-      qc::Permutation permutation{};
-      static const auto QUBIT_REGEX = std::regex("\\d+");
-      qc::Qubit logicalQubit = 0;
-      for (std::smatch m; std::regex_search(comment, m, QUBIT_REGEX);
-           comment = m.suffix()) {
-        auto physicalQubit = static_cast<qc::Qubit>(std::stoul(m.str()));
-        permutation.insert({physicalQubit, logicalQubit});
-        ++logicalQubit;
-      }
-      return permutation;
-    };
-
-    if (std::regex_search(comment, INITIAL_LAYOUT_REGEX)) {
-      return std::make_shared<InitialLayout>(
-          InitialLayout{makeDebugInfo(tBegin), parsePermutation()});
-    }
-    if (std::regex_search(comment, OUTPUT_PERMUTATION_REGEX)) {
-      return std::make_shared<OutputPermutation>(
-          OutputPermutation{makeDebugInfo(tBegin), parsePermutation()});
-    }
+    return std::make_shared<InitialLayout>(
+        InitialLayout{makeDebugInfo(tBegin), parsePermutation(tBegin.str)});
+  }
+  if (current().kind == Token::Kind::OutputPermutation) {
+    const auto tBegin = current();
+    scan();
+    return std::make_shared<OutputPermutation>(
+        OutputPermutation{makeDebugInfo(tBegin), parsePermutation(tBegin.str)});
   }
 
   if (current().kind == Token::Kind::Gate) {
@@ -158,10 +140,6 @@ std::shared_ptr<Statement> Parser::parseStatement() {
 }
 
 std::shared_ptr<QuantumStatement> Parser::parseQuantumStatement() {
-  while (current().kind == Token::Kind::Comment) {
-    scan();
-  }
-
   if (current().kind == Token::Kind::Inv ||
       current().kind == Token::Kind::Pow ||
       current().kind == Token::Kind::Ctrl ||
@@ -840,5 +818,17 @@ std::shared_ptr<Expression> Parser::parseTypeDesignator() {
   auto expr = parseExpression();
   expect(Token::Kind::RBracket);
   return expr;
+}
+
+qc::Permutation Parser::parsePermutation(std::string s) {
+  qc::Permutation permutation{};
+  static const auto QUBIT_REGEX = std::regex("\\d+");
+  qc::Qubit logicalQubit = 0;
+  for (std::smatch m; std::regex_search(s, m, QUBIT_REGEX); s = m.suffix()) {
+    auto physicalQubit = static_cast<qc::Qubit>(std::stoul(m.str()));
+    permutation.insert({physicalQubit, logicalQubit});
+    ++logicalQubit;
+  }
+  return permutation;
 }
 } // namespace qasm3

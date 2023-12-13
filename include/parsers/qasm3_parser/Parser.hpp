@@ -170,6 +170,8 @@ public:
 
   std::shared_ptr<Expression> parseTypeDesignator();
 
+  static qc::Permutation parsePermutation(std::string s);
+
   void scan();
 
   std::shared_ptr<DebugInfo> makeDebugInfo(Token const& begin,

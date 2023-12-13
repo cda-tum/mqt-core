@@ -1606,7 +1606,6 @@ TEST_F(Qasm3ParserTest, TestPrintTokens) {
   // This test is to print all tokens and make the coverage report happy.
   const auto tokens = std::vector{
       qasm3::Token(qasm3::Token::Kind::None, 0, 0),
-      qasm3::Token(qasm3::Token::Kind::Comment, 0, 0),
       qasm3::Token(qasm3::Token::Kind::OpenQasm, 0, 0),
       qasm3::Token(qasm3::Token::Kind::Include, 0, 0),
       qasm3::Token(qasm3::Token::Kind::DefCalGrammar, 0, 0),
@@ -1719,9 +1718,9 @@ TEST_F(Qasm3ParserTest, TestPrintTokens) {
       qasm3::Token(qasm3::Token::Kind::DoubleQuote, 0, 0),
       qasm3::Token(qasm3::Token::Kind::SingleQuote, 0, 0),
       qasm3::Token(qasm3::Token::Kind::BackSlash, 0, 0),
-      qasm3::Token(qasm3::Token::Kind::Identifier, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::Identifier, 0, 0, "qubit"),
       qasm3::Token(qasm3::Token::Kind::HardwareQubit, 0, 0),
-      qasm3::Token(qasm3::Token::Kind::StringLiteral, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::StringLiteral, 0, 0, "hello, world"),
       qasm3::Token(qasm3::Token::Kind::IntegerLiteral, 0, 0),
       qasm3::Token(qasm3::Token::Kind::FloatLiteral, 0, 0),
       qasm3::Token(qasm3::Token::Kind::Sin, 0, 0),
@@ -1730,6 +1729,8 @@ TEST_F(Qasm3ParserTest, TestPrintTokens) {
       qasm3::Token(qasm3::Token::Kind::Exp, 0, 0),
       qasm3::Token(qasm3::Token::Kind::Ln, 0, 0),
       qasm3::Token(qasm3::Token::Kind::Sqrt, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::InitialLayout, 0, 0, "i 0 1 2 3"),
+      qasm3::Token(qasm3::Token::Kind::OutputPermutation, 0, 0, "o 0 1 2 3"),
   };
 
   // Print all tokens.
@@ -1742,7 +1743,6 @@ TEST_F(Qasm3ParserTest, TestPrintTokens) {
   // These are just all tokens joined by a newline.
   const std::string expected =
       "None\n"
-      "Comment\n"
       "OPENQASM\n"
       "include\n"
       "DefCalGrammar\n"
@@ -1856,9 +1856,9 @@ TEST_F(Qasm3ParserTest, TestPrintTokens) {
       "'\n"
       "\\\n"
       // These tokens are not keywords, but have a value associated
-      "Identifier ()\n"
+      "Identifier (qubit)\n"
       "HardwareQubit\n"
-      "StringLiteral (\"\")\n"
+      "StringLiteral (\"hello, world\")\n"
       "IntegerLiteral (0)\n"
       "FloatLiteral (0)\n"
       "sin\n"
@@ -1866,7 +1866,9 @@ TEST_F(Qasm3ParserTest, TestPrintTokens) {
       "tan\n"
       "exp\n"
       "ln\n"
-      "sqrt\n";
+      "sqrt\n"
+      "InitialLayout (i 0 1 2 3)\n"
+      "OutputPermutation (o 0 1 2 3)\n";
 
   // Now we check if they are the same.
   EXPECT_EQ(ss.str(), expected);

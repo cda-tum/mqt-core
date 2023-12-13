@@ -11,8 +11,6 @@ public:
   enum class Kind {
     None,
 
-    Comment,
-
     OpenQasm,
     Include,
     DefCalGrammar,
@@ -163,6 +161,9 @@ public:
     Exp,
     Ln,
     Sqrt,
+
+    InitialLayout,
+    OutputPermutation,
   };
 
   Kind kind = Kind::None;
@@ -179,6 +180,8 @@ public:
       : line(l), col(c), endLine(l), endCol(c) {}
   Token(const Kind k, const size_t l, const size_t c)
       : kind(k), line(l), col(c), endLine(l), endCol(c) {}
+  Token(const Kind k, const size_t l, const size_t c, std::string s)
+      : kind(k), line(l), col(c), endLine(l), endCol(c), str(s) {}
 
   static std::string kindToString(const Kind kind) {
     // Print a token kind string representation.
@@ -186,8 +189,6 @@ public:
     switch (kind) {
     case Kind::None:
       return "None";
-    case Kind::Comment:
-      return "Comment";
     case Kind::OpenQasm:
       return "OPENQASM";
     case Kind::Include:
@@ -434,6 +435,11 @@ public:
       return "ln";
     case Kind::Sqrt:
       return "sqrt";
+    case Kind::InitialLayout:
+      return "InitialLayout";
+    case Kind::OutputPermutation:
+      return "OutputPermutation";
+
     default:
       // This cannot happen, as we have a case for every enum value.
       // The default case is only here to silence compiler warnings.
@@ -450,6 +456,10 @@ public:
       break;
     case Kind::StringLiteral:
       ss << " (\"" << str << "\")";
+      break;
+    case Kind::InitialLayout:
+    case Kind::OutputPermutation:
+      ss << " (" << str << ")";
       break;
     case Kind::IntegerLiteral:
       ss << " (" << val << ")";

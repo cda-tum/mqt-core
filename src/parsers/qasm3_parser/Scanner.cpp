@@ -1,5 +1,7 @@
 #include "parsers/qasm3_parser/Scanner.hpp"
 
+#include <regex>
+
 namespace qasm3 {
 char Scanner::readUtf8Codepoint(std::istream* in) {
   char c = 0;
@@ -43,8 +45,19 @@ std::optional<Token> Scanner::consumeWhitespaceAndComments() {
       nextCh();
     }
 
+    static const auto INITIAL_LAYOUT_REGEX = std::regex("i (\\d+ )*(\\d+)");
+    static const auto OUTPUT_PERMUTATION_REGEX = std::regex("o (\\d+ )*(\\d+)");
+
+    const auto str = content.str();
+    if (std::regex_search(str, INITIAL_LAYOUT_REGEX)) {
+      t.kind = Token::Kind::InitialLayout;
+    } else if (std::regex_search(str, OUTPUT_PERMUTATION_REGEX)) {
+      t.kind = Token::Kind::OutputPermutation;
+    } else {
+      return consumeWhitespaceAndComments();
+    }
+
     t.str = content.str();
-    t.kind = Token::Kind::Comment;
     t.endCol = col;
     t.endLine = line;
     return t;
