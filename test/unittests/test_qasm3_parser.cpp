@@ -657,6 +657,9 @@ TEST_F(Qasm3ParserTest, ImportQasm2CPrefix) {
   std::stringstream ss{};
   const std::string testfile = "OPENQASM 2.0;\n"
                                "qubit[5] q;\n"
+                               "// nothing in the declaration on purpose\n"
+                               "gate ccccx q1, q2, q3, q4, q5 {\n"
+                               "}\n"
                                "ccccx q[0], q[1], q[2], q[3], q[4];\n"
                                "";
 
@@ -692,7 +695,7 @@ TEST_F(Qasm3ParserTest, ImportQasm2CPrefixInvalidGate) {
         try {
           qc.import(ss, Format::OpenQASM3);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Usage of unknown gate 'k'.");
+          EXPECT_EQ(e.message, "Usage of unknown gate 'cccck'.");
           throw;
         }
       },

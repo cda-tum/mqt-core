@@ -284,6 +284,11 @@ public:
       return;
     }
 
+    if (openQASM2CompatMode) {
+      // we need to check if this is a standard gate
+      identifier = parseGateIdentifierCompatMode(identifier).first;
+    }
+
     if (auto prevDeclaration = gates.find(identifier);
         prevDeclaration != gates.end()) {
       if (std::dynamic_pointer_cast<StandardGate>(prevDeclaration->second)) {
@@ -348,18 +353,16 @@ public:
 
     if (iter == gates.end()) {
       if (openQASM2CompatMode) {
-        while (!identifier.empty() && identifier[0] == 'c') {
-          identifier = identifier.substr(1);
-          implicitControls++;
-        }
+        auto [updatedIdentifier, nControls] =
+            parseGateIdentifierCompatMode(identifier);
 
-        // now we check again if this is a standard gate
-        iter = gates.find(identifier);
+        iter = gates.find(updatedIdentifier);
         if (iter == gates.end()) {
           error("Usage of unknown gate '" + identifier + "'.",
                 gateCallStatement->debugInfo);
         }
         gate = iter->second;
+        implicitControls = nControls;
       } else if (identifier == "mcx_gray" || identifier == "mcx_vchain" ||
                  identifier == "mcx_recursive" || identifier == "mcphase") {
         // we create a temp gate definition for these gates
@@ -816,6 +819,24 @@ public:
                          resetStatement->debugInfo);
     return std::make_unique<qc::NonUnitaryOperation>(qc->getNqubits(), qubits,
                                                      qc::Reset);
+  }
+
+  std::pair<std::string, size_t>
+  parseGateIdentifierCompatMode(std::string identifier) {
+    // we need to copy as we modify the string and need to return the original
+    // string if we don't find a match.
+    std::string gateIdentifier = identifier;
+    size_t implicitControls = 0;
+    while (!gateIdentifier.empty() && gateIdentifier[0] == 'c') {
+      gateIdentifier = gateIdentifier.substr(1);
+      implicitControls++;
+    }
+
+    if (gates.find(gateIdentifier) == gates.end()) {
+      return std::pair{identifier, 0};
+    } else {
+      return std::pair{gateIdentifier, implicitControls};
+    }
   }
 };
 
