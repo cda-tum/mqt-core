@@ -352,7 +352,13 @@ public:
     size_t implicitControls{0};
 
     if (iter == gates.end()) {
-      if (openQASM2CompatMode) {
+      if (identifier == "mcx_gray" || identifier == "mcx_vchain" ||
+          identifier == "mcx_recursive" || identifier == "mcphase") {
+        // we create a temp gate definition for these gates
+        gate =
+            getMcGateDefinition(identifier, gateCallStatement->operands.size(),
+                                gateCallStatement->debugInfo);
+      } else if (openQASM2CompatMode) {
         auto [updatedIdentifier, nControls] =
             parseGateIdentifierCompatMode(identifier);
 
@@ -363,12 +369,6 @@ public:
         }
         gate = iter->second;
         implicitControls = nControls;
-      } else if (identifier == "mcx_gray" || identifier == "mcx_vchain" ||
-                 identifier == "mcx_recursive" || identifier == "mcphase") {
-        // we create a temp gate definition for these gates
-        gate =
-            getMcGateDefinition(identifier, gateCallStatement->operands.size(),
-                                gateCallStatement->debugInfo);
       } else {
         error("Usage of unknown gate '" + identifier + "'.",
               gateCallStatement->debugInfo);
