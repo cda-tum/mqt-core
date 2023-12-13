@@ -37,7 +37,6 @@ protected:
   std::size_t nqubits = 0;
   std::size_t nclassics = 0;
   std::size_t nancillae = 0;
-  std::size_t maxControls = 0;
   std::string name;
 
   // register names are used as keys, while the values are `{startIndex,
@@ -248,9 +247,9 @@ public:
   QuantumComputation& operator=(QuantumComputation&& qc) noexcept = default;
   QuantumComputation(const QuantumComputation& qc)
       : nqubits(qc.nqubits), nclassics(qc.nclassics), nancillae(qc.nancillae),
-        maxControls(qc.maxControls), name(qc.name), qregs(qc.qregs),
-        cregs(qc.cregs), ancregs(qc.ancregs), mt(qc.mt), seed(qc.seed),
-        globalPhase(qc.globalPhase), occuringVariables(qc.occuringVariables),
+        name(qc.name), qregs(qc.qregs), cregs(qc.cregs), ancregs(qc.ancregs),
+        mt(qc.mt), seed(qc.seed), globalPhase(qc.globalPhase),
+        occuringVariables(qc.occuringVariables),
         initialLayout(qc.initialLayout),
         outputPermutation(qc.outputPermutation), ancillary(qc.ancillary),
         garbage(qc.garbage) {
@@ -264,7 +263,6 @@ public:
       nqubits = qc.nqubits;
       nclassics = qc.nclassics;
       nancillae = qc.nancillae;
-      maxControls = qc.maxControls;
       name = qc.name;
       qregs = qc.qregs;
       cregs = qc.cregs;
@@ -716,10 +714,6 @@ public:
   // certain output permutation value
   void addQubit(Qubit logicalQubitIndex, Qubit physicalQubitIndex,
                 std::optional<Qubit> outputQubitIndex);
-
-  void updateMaxControls(const std::size_t ncontrols) {
-    maxControls = std::max(ncontrols, maxControls);
-  }
 
   void instantiate(const VariableAssignment& assignment);
 

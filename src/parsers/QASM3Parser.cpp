@@ -168,7 +168,6 @@ public:
       const std::shared_ptr<VersionDeclaration> versionDeclaration) override {
     if (versionDeclaration->version < 3) {
       openQASM2CompatMode = true;
-      qc->updateMaxControls(2);
       for (auto [identifier, gate] : QASM2_COMPAT_GATES) {
         gates.emplace(identifier, gate);
       }

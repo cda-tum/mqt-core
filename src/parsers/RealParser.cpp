@@ -215,7 +215,6 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
                          " msg: Label " + label + " not found!");
     }
 
-    updateMaxControls(ncontrols);
     const Qubit target = iter->second.first;
     switch (gate) {
     case I:
