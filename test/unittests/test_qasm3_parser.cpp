@@ -340,10 +340,7 @@ TEST_F(Qasm3ParserTest, ImportQasm3NonUnitary) {
                                "qubit[2] q2;\n"
                                "bit[1] c;\n"
                                "reset q1[0];\n"
-                               "barrier q1[0];\n"
-                               "barrier q1[1];\n"
-                               "barrier q2[0];\n"
-                               "barrier q2[1];\n"
+                               "barrier q1[0], q1[1], q2[0], q2[1];\n"
                                "reset q1;\n"
                                "c[0] = measure q1[0];\n";
 
