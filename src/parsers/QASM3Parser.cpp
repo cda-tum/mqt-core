@@ -30,6 +30,8 @@ class OpenQasm3Parser final : public InstVisitor {
 
   std::map<std::string, std::shared_ptr<Gate>> gates = STANDARD_GATES;
 
+  bool openQASM2CompatMode{false};
+
   [[noreturn]] static void error(const std::string& message,
                                  const std::shared_ptr<DebugInfo>& debugInfo) {
     throw CompilerError(message, debugInfo);
@@ -165,6 +167,7 @@ public:
   void visitVersionDeclaration(
       const std::shared_ptr<VersionDeclaration> versionDeclaration) override {
     if (versionDeclaration->version < 3) {
+      openQASM2CompatMode = true;
       qc->updateMaxControls(2);
       for (auto [identifier, gate] : QASM2_COMPAT_GATES) {
         gates.emplace(identifier, gate);
@@ -335,16 +338,31 @@ public:
 
   std::unique_ptr<qc::Operation>
   evaluateGateCall(const std::shared_ptr<GateCallStatement>& gateCallStatement,
-                   const std::string& identifier,
+                   std::string identifier,
                    const std::vector<std::shared_ptr<Expression>>& parameters,
                    std::vector<std::shared_ptr<GateOperand>> targets,
                    qc::QuantumRegisterMap& qregs) {
     auto iter = gates.find(identifier);
     std::shared_ptr<Gate> gate;
+    size_t implicitControls{0};
+
     if (iter == gates.end()) {
-      // we create a temp gate definition for these gates
-      if (identifier == "mcx_gray" || identifier == "mcx_vchain" ||
-          identifier == "mcx_recursive" || identifier == "mcphase") {
+      if (openQASM2CompatMode) {
+        while (!identifier.empty() && identifier[0] == 'c') {
+          identifier = identifier.substr(1);
+          implicitControls++;
+        }
+
+        // now we check again if this is a standard gate
+        iter = gates.find(identifier);
+        if (iter == gates.end()) {
+          error("Usage of unknown gate '" + identifier + "'.",
+                gateCallStatement->debugInfo);
+        }
+        gate = iter->second;
+      } else if (identifier == "mcx_gray" || identifier == "mcx_vchain" ||
+                 identifier == "mcx_recursive" || identifier == "mcphase") {
+        // we create a temp gate definition for these gates
         gate =
             getMcGateDefinition(identifier, gateCallStatement->operands.size(),
                                 gateCallStatement->debugInfo);
@@ -367,7 +385,7 @@ public:
     std::vector<std::pair<std::shared_ptr<GateOperand>, bool>> controls{};
     // since standard gates may define a number of control targets, we first
     // need to handle those
-    size_t nControls{gate->getNControls()};
+    size_t nControls{gate->getNControls() + implicitControls};
     if (targets.size() < nControls) {
       error("Gate '" + identifier + "' takes " + std::to_string(nControls) +
                 " controls, but only " + std::to_string(targets.size()) +

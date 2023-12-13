@@ -653,6 +653,73 @@ TEST_F(Qasm3ParserTest, ImportQasmNativeRedeclaration) {
   EXPECT_EQ(out.str(), expected);
 }
 
+TEST_F(Qasm3ParserTest, ImportQasm2CPrefix) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 2.0;\n"
+                               "qubit[5] q;\n"
+                               "ccccx q[0], q[1], q[2], q[3], q[4];\n"
+                               "";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  qc.import(ss, Format::OpenQASM3);
+
+  std::stringstream out{};
+  qc.dump(out, Format::OpenQASM3);
+
+  const std::string expected = "// i 0 1 2 3 4\n"
+                               "// o 0 1 2 3 4\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[5] q;\n"
+                               "ctrl(4) @ x q[0], q[1], q[2], q[3], q[4];\n"
+                               "";
+
+  EXPECT_EQ(out.str(), expected);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasm2CPrefixInvalidGate) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 2.0;\n"
+                               "qubit[5] q;\n"
+                               "cccck q[0], q[1], q[2], q[3], q[4];\n"
+                               "";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Usage of unknown gate 'k'.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasm3CPrefix) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "qubit[5] q;\n"
+                               "ccccx q[0], q[1], q[2], q[3], q[4];\n"
+                               "";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      {
+        try {
+          qc.import(ss, Format::OpenQASM3);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Usage of unknown gate 'ccccx'.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
 TEST_F(Qasm3ParserTest, ImportQasmScanner) {
   std::stringstream ss{};
   const std::string testfile =
