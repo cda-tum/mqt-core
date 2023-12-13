@@ -5,14 +5,15 @@
 #include <string>
 
 namespace qasm3 {
-// from
-// https://github.com/Qiskit/qiskit-terra/blob/main/qiskit/qasm/libs/stdgates.inc
-// This only includes non-nativeliy supported gates.
+// Non-natively supported gates from
+// https://github.com/Qiskit/qiskit/blob/main/qiskit/qasm/libs/stdgates.inc
 const std::string STDGATES =
     "// four parameter controlled-U gate with relative phase\n"
     "gate cu(theta, phi, lambda, gamma) c, t { p(gamma) c; ctrl @ U(theta, "
     "phi, lambda) c, t; }\n";
 
+// Non-natively supported gates from
+// https://github.com/Qiskit/qiskit/blob/main/qiskit/qasm/libs/qelib1.inc
 const std::string QE1LIB = "gate rccx a, b, c {\n"
                            "  u2(0, pi) c; u1(pi/4) c; \n"
                            "  cx b, c; u1(-pi/4) c; \n"
