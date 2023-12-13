@@ -7,44 +7,11 @@
 namespace qasm3 {
 // from
 // https://github.com/Qiskit/qiskit-terra/blob/main/qiskit/qasm/libs/stdgates.inc
+// This only includes non-nativeliy supported gates.
 const std::string STDGATES =
-    "// OpenQASM 3 standard gate library\n"
-    "\n"
-    "// controlled-Y\n"
-    "gate cy a, b { ctrl @ y a, b; }\n"
-    "// controlled-Z\n"
-    "gate cz a, b { ctrl @ z a, b; }\n"
-    "// controlled-phase\n"
-    "gate cp(lambda) a, b { ctrl @ p(lambda) a, b; }\n"
-    "// controlled-rx\n"
-    "gate crx(theta) a, b { ctrl @ rx(theta) a, b; }\n"
-    "// controlled-ry\n"
-    "gate cry(theta) a, b { ctrl @ ry(theta) a, b; }\n"
-    "// controlled-rz\n"
-    "gate crz(theta) a, b { ctrl @ rz(theta) a, b; }\n"
-    "// controlled-H\n"
-    "gate ch a, b { ctrl @ h a, b; }\n"
-    //    "\n"
-    //    "// swap\n"
-    //    "gate swap a, b { cx a, b; cx b, a; cx a, b; }\n"
-    "\n"
-    "// Toffoli\n"
-    "gate ccx a, b, c { ctrl @ ctrl @ x a, b, c; }\n"
-    "// controlled-swap\n"
-    "gate cswap a, b, c { ctrl @ swap a, b, c; }\n"
-    "\n"
     "// four parameter controlled-U gate with relative phase\n"
     "gate cu(theta, phi, lambda, gamma) c, t { p(gamma) c; ctrl @ U(theta, "
-    "phi, lambda) c, t; }\n"
-    "\n"
-    "// Gates for OpenQASM 2 backwards compatibility\n"
-    "// phase gate\n"
-    "gate phase(lambda) q { U(0, 0, lambda) q; }\n"
-    "// controlled-phase\n"
-    "gate cphase(lambda) a, b { ctrl @ phase(lambda) a, b; }\n"
-    "// IBM Quantum experience gates\n"
-    "gate u1(lambda) q { U(0, 0, lambda) q; }\n"
-    "";
+    "phi, lambda) c, t; }\n";
 
 const std::string QE1LIB = "gate rccx a, b, c {\n"
                            "  u2(0, pi) c; u1(pi/4) c; \n"
@@ -110,27 +77,54 @@ const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
 
     // natively supported gates
     {"p", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::P}))},
-    {"x", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::X}))},
-    {"y", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::Y}))},
-    {"z", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::Z}))},
-    {"h", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::H}))},
-    {"rx", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::RX}))},
-    {"ry", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::RY}))},
-    {"rz", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::RZ}))},
-    {"cx", std::make_shared<StandardGate>(StandardGate({1, 1, 0, qc::X}))},
-    {"CX", std::make_shared<StandardGate>(StandardGate({1, 1, 0, qc::X}))},
+    {"u1", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::P}))},
+    {"phase", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::P}))},
+    {"cphase", std::make_shared<StandardGate>(StandardGate({1, 1, 1, qc::P}))},
+    {"cp", std::make_shared<StandardGate>(StandardGate({1, 1, 1, qc::P}))},
+
     {"id", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::I}))},
     {"u2", std::make_shared<StandardGate>(StandardGate({0, 1, 2, qc::U2}))},
     {"u3", std::make_shared<StandardGate>(StandardGate({0, 1, 3, qc::U}))},
+
+    {"x", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::X}))},
+    {"cx", std::make_shared<StandardGate>(StandardGate({1, 1, 0, qc::X}))},
+    {"CX", std::make_shared<StandardGate>(StandardGate({1, 1, 0, qc::X}))},
+    {"ccx", std::make_shared<StandardGate>(StandardGate({2, 1, 0, qc::X}))},
+
+    {"rx", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::RX}))},
+    {"crx", std::make_shared<StandardGate>(StandardGate({1, 1, 1, qc::RX}))},
+
+    {"y", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::Y}))},
+    {"cy", std::make_shared<StandardGate>(StandardGate({1, 1, 0, qc::Y}))},
+
+    {"ry", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::RY}))},
+    {"cry", std::make_shared<StandardGate>(StandardGate({1, 1, 1, qc::RY}))},
+
+    {"z", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::Z}))},
+    {"cz", std::make_shared<StandardGate>(StandardGate({1, 1, 0, qc::Z}))},
+
+    {"rz", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::RZ}))},
+    {"crz", std::make_shared<StandardGate>(StandardGate({1, 1, 1, qc::RZ}))},
+
+    {"h", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::H}))},
+    {"ch", std::make_shared<StandardGate>(StandardGate({1, 1, 0, qc::H}))},
+
     {"s", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::S}))},
     {"sdg", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::Sdg}))},
+
     {"t", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::T}))},
     {"tdg", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::Tdg}))},
+
     {"sx", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::SX}))},
     {"sxdg", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::SXdg}))},
+
     {"teleport", std::make_shared<StandardGate>(
                      StandardGate({0, 3, 0, qc::Teleportation}))},
+
     {"swap", std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::SWAP}))},
+    {"cswap",
+     std::make_shared<StandardGate>(StandardGate({1, 2, 0, qc::SWAP}))},
+
     {"iswap",
      std::make_shared<StandardGate>(StandardGate({0, 2, 0, qc::iSWAP}))},
     {"iswapdg",
