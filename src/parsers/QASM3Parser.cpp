@@ -281,7 +281,12 @@ public:
       return;
     }
 
-    if (gates.find(identifier) != gates.end()) {
+    if (auto prevDeclaration = gates.find(identifier);
+        prevDeclaration != gates.end()) {
+      if (std::dynamic_pointer_cast<StandardGate>(prevDeclaration->second)) {
+        // we ignore redeclarations of standard gates
+        return;
+      }
       // TODO: print location of previous declaration
       error("Gate '" + identifier + "' already declared.",
             gateStatement->debugInfo);

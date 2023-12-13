@@ -622,6 +622,37 @@ TEST_F(Qasm3ParserTest, ImportQasmComparison) {
   EXPECT_EQ(out.str(), expected);
 }
 
+TEST_F(Qasm3ParserTest, ImportQasmNativeRedeclaration) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit q;\n"
+                               "bit c1;\n"
+                               "gate h q { U(pi/2, 0, pi) q; }\n"
+                               "h q;\n"
+                               "c1 = measure q;\n"
+                               "";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  qc.import(ss, Format::OpenQASM3);
+
+  std::stringstream out{};
+  qc.dump(out, Format::OpenQASM3);
+
+  const std::string expected = "// i 0\n"
+                               "// o 0\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[1] q;\n"
+                               "bit[1] c1;\n"
+                               "h q[0];\n"
+                               "c1 = measure q;\n"
+                               "";
+
+  EXPECT_EQ(out.str(), expected);
+}
+
 TEST_F(Qasm3ParserTest, ImportQasmScanner) {
   std::stringstream ss{};
   const std::string testfile =
