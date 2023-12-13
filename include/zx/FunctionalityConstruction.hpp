@@ -47,6 +47,9 @@ protected:
                      std::vector<Vertex>& qubits);
   static op_it parseOp(ZXDiagram& diag, op_it it, op_it end,
                        std::vector<Vertex>& qubits, const qc::Permutation& p);
+  static op_it parseCompoundOp(ZXDiagram& diag, op_it it, op_it end,
+                               std::vector<Vertex>& qubits,
+                               const qc::Permutation& initialLayout);
 
   static PiExpression toPiExpr(const qc::SymbolOrNumber& param);
   static PiExpression parseParam(const qc::Operation* op, std::size_t i);

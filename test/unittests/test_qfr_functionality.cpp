@@ -1881,7 +1881,7 @@ TEST_F(QFRFunctionality, RzAndPhaseDifference) {
   qc.import(ss, qc::Format::OpenQASM);
   std::cout << qc << "\n";
   std::stringstream oss;
-  qc.dumpOpenQASM(oss);
+  qc.dumpOpenQASM2(oss);
 }
 
 TEST_F(QFRFunctionality, U3toU2Gate) {
@@ -1978,7 +1978,7 @@ TEST_F(QFRFunctionality, dumpAndImportTeleportation) {
   qc.emplace_back<StandardOperation>(3, Targets{0, 1, 2},
                                      OpType::Teleportation);
   std::stringstream ss;
-  qc.dumpOpenQASM(ss);
+  qc.dumpOpenQASM2(ss);
   EXPECT_TRUE(ss.str().find("teleport") != std::string::npos);
 
   QuantumComputation qcImported(3);

@@ -52,12 +52,18 @@ static constexpr fp PI_2 = static_cast<fp>(
     1.570796326794896619231321691639751442098584699687552910487L);
 static constexpr fp PI_4 = static_cast<fp>(
     0.785398163397448309615660845819875721049292349843776455243L);
+static constexpr fp TAU = static_cast<fp>(
+    6.283185307179586476925286766559005768394338798750211641950L);
+static constexpr fp E = static_cast<fp>(
+    2.718281828459045235360287471352662497757247093699959574967L);
+
+static constexpr size_t OUTPUT_INDENT_SIZE = 2;
 
 // forward declaration
 class Operation;
 
 // supported file formats
-enum class Format { Real, OpenQASM, GRCS, TFC, QC, Tensor };
+enum class Format { Real, OpenQASM, OpenQASM3, GRCS, TFC, QC, Tensor };
 
 using DAG = std::vector<std::deque<std::unique_ptr<Operation>*>>;
 using DAGIterator = std::deque<std::unique_ptr<Operation>*>::iterator;

@@ -6,20 +6,33 @@
 
 namespace qc {
 
+enum ComparisonKind {
+  Eq,
+  Neq,
+  Lt,
+  Leq,
+  Gt,
+  Geq,
+};
+
+std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind);
+
 class ClassicControlledOperation final : public Operation {
 private:
   std::unique_ptr<Operation> op;
   ClassicalRegister controlRegister{};
   std::uint64_t expectedValue = 1U;
+  ComparisonKind comparisonKind = ComparisonKind::Eq;
 
 public:
   // Applies operation `_op` if the creg starting at index `control` has the
   // expected value
   ClassicControlledOperation(std::unique_ptr<qc::Operation>& operation,
                              ClassicalRegister controlReg,
-                             std::uint64_t expectedVal = 1U)
+                             std::uint64_t expectedVal = 1U,
+                             ComparisonKind kind = ComparisonKind::Eq)
       : op(std::move(operation)), controlRegister(std::move(controlReg)),
-        expectedValue(expectedVal) {
+        expectedValue(expectedVal), comparisonKind(kind) {
     nqubits = op->getNqubits();
     name = "c_" + shortName(op->getType());
     parameter.reserve(3);
@@ -108,7 +121,8 @@ public:
         return false;
       }
 
-      if (expectedValue != classic->expectedValue) {
+      if (expectedValue != classic->expectedValue ||
+          comparisonKind != classic->comparisonKind) {
         return false;
       }
 
@@ -121,11 +135,19 @@ public:
   }
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg) const override {
-    of << "if(";
+                    const RegisterNames& creg, size_t indent,
+                    bool openQASM3) const override {
+    of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
+    of << "if (";
     of << creg[controlRegister.first].first;
-    of << " == " << expectedValue << ") ";
-    op->dumpOpenQASM(of, qreg, creg);
+    of << " " << comparisonKind << " " << expectedValue << ") ";
+    if (openQASM3) {
+      of << "{\n";
+    }
+    op->dumpOpenQASM(of, qreg, creg, indent + 1, openQASM3);
+    if (openQASM3) {
+      of << "}\n";
+    }
   }
 
   void invert() override { op->invert(); }
