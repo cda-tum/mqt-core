@@ -343,7 +343,7 @@ public:
 
   std::unique_ptr<qc::Operation>
   evaluateGateCall(const std::shared_ptr<GateCallStatement>& gateCallStatement,
-                   std::string identifier,
+                   const std::string& identifier,
                    const std::vector<std::shared_ptr<Expression>>& parameters,
                    std::vector<std::shared_ptr<GateOperand>> targets,
                    qc::QuantumRegisterMap& qregs) {
@@ -822,7 +822,7 @@ public:
   }
 
   std::pair<std::string, size_t>
-  parseGateIdentifierCompatMode(std::string identifier) {
+  parseGateIdentifierCompatMode(const std::string& identifier) {
     // we need to copy as we modify the string and need to return the original
     // string if we don't find a match.
     std::string gateIdentifier = identifier;
@@ -834,9 +834,8 @@ public:
 
     if (gates.find(gateIdentifier) == gates.end()) {
       return std::pair{identifier, 0};
-    } else {
-      return std::pair{gateIdentifier, implicitControls};
     }
+    return std::pair{gateIdentifier, implicitControls};
   }
 };
 

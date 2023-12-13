@@ -3,6 +3,7 @@
 #include "QuantumComputation.hpp"
 
 #include <iostream>
+#include <utility>
 
 namespace qasm3 {
 
@@ -181,7 +182,7 @@ public:
   Token(const Kind k, const size_t l, const size_t c)
       : kind(k), line(l), col(c), endLine(l), endCol(c) {}
   Token(const Kind k, const size_t l, const size_t c, std::string s)
-      : kind(k), line(l), col(c), endLine(l), endCol(c), str(s) {}
+      : kind(k), line(l), col(c), endLine(l), endCol(c), str(std::move(s)) {}
 
   static std::string kindToString(const Kind kind) {
     // Print a token kind string representation.
