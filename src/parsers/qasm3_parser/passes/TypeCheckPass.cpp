@@ -277,7 +277,7 @@ InferredType TypeCheckPass::visitIdentifierExpression(
   return type->second;
 }
 
-InferredType TypeCheckPass::visitIdentifierList(
+[[noreturn]] InferredType TypeCheckPass::visitIdentifierList(
     std::shared_ptr<IdentifierList> /*identifierList*/) {
   throw TypeCheckError("TypeCheckPass::visitIdentifierList not implemented");
 }
