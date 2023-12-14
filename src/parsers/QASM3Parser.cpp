@@ -83,7 +83,7 @@ class OpenQasm3Parser final : public InstVisitor {
               "quantum register.",
               debugInfo);
       }
-      qubit.first += result;
+      qubit.first += static_cast<qc::Qubit>(result);
       qubit.second = 1;
     }
 
