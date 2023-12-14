@@ -334,7 +334,7 @@ std::optional<ConstEvalValue> ConstEvalPass::visitBinaryExpression(
   } else if (lhsVal->type == ConstEvalValue::Type::ConstUint &&
              rhsVal->type == ConstEvalValue::Type::ConstFloat) {
     lhsVal->value =
-        static_cast<double>(static_cast<int64_t>(std::get<0>(lhsVal->value)));
+        static_cast<double>(std::get<0>(lhsVal->value));
     lhsVal->type = ConstEvalValue::Type::ConstFloat;
   } else if (lhsVal->type == ConstEvalValue::Type::ConstInt &&
              rhsVal->type == ConstEvalValue::Type::ConstFloat) {
