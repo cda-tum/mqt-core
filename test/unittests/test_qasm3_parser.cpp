@@ -382,44 +382,57 @@ TEST_F(Qasm3ParserTest, ImportQasm3IfStatement) {
 }
 
 TEST_F(Qasm3ParserTest, ImportQasm3IfElseStatement) {
-  std::stringstream ss{};
-  const std::string testfile = "OPENQASM 3.0;\n"
-                               "include \"stdgates.inc\";\n"
-                               "qubit[2] q;\n"
-                               "h q[0];\n"
-                               "bit c = measure q[0];\n"
-                               "if (c == 1) {\n"
-                               "  x q[1];\n"
-                               "} else {\n"
-                               "  x q[0];\n"
-                               "  x q[1];\n"
-                               "}";
+  const auto comparisonKinds = {ComparisonKind::Eq, ComparisonKind::Neq,
+                                ComparisonKind::Lt, ComparisonKind::Leq,
+                                ComparisonKind::Gt, ComparisonKind::Geq};
 
-  ss << testfile;
-  auto qc = QuantumComputation();
-  qc.import(ss, Format::OpenQASM3);
+  for (const auto comparisonKind : comparisonKinds) {
+    std::stringstream ss{};
+    const std::string testfile = "OPENQASM 3.0;\n"
+                                 "include \"stdgates.inc\";\n"
+                                 "qubit[2] q;\n"
+                                 "h q[0];\n"
+                                 "bit c = measure q[0];\n"
+                                 "if (c " +
+                                 toString(comparisonKind) +
+                                 " 1) {\n"
+                                 "  x q[1];\n"
+                                 "} else {\n"
+                                 "  x q[0];\n"
+                                 "  x q[1];\n"
+                                 "}";
 
-  std::stringstream out{};
-  qc.dump(out, Format::OpenQASM3);
+    ss << testfile;
+    auto qc = QuantumComputation();
+    qc.import(ss, Format::OpenQASM3);
 
-  const std::string expected = "// i 0 1\n"
-                               "// o 0\n"
-                               "OPENQASM 3.0;\n"
-                               "include \"stdgates.inc\";\n"
-                               "qubit[2] q;\n"
-                               "bit[1] c;\n"
-                               "h q[0];\n"
-                               "c[0] = measure q[0];\n"
-                               "if (c == 1) {\n"
-                               "  x q[1];\n"
-                               "}\n"
-                               "if (c != 1) {\n"
-                               "  x q[0];\n"
-                               "  x q[1];\n"
-                               "}\n"
-                               "";
+    std::stringstream out{};
+    qc.dump(out, Format::OpenQASM3);
 
-  EXPECT_EQ(out.str(), expected);
+    const std::string expected =
+        "// i 0 1\n"
+        "// o 0\n"
+        "OPENQASM 3.0;\n"
+        "include \"stdgates.inc\";\n"
+        "qubit[2] q;\n"
+        "bit[1] c;\n"
+        "h q[0];\n"
+        "c[0] = measure q[0];\n"
+        "if (c " +
+        toString(comparisonKind) +
+        " 1) {\n"
+        "  x q[1];\n"
+        "}\n"
+        "if (c " +
+        toString(getInvertedComparsionKind(comparisonKind)) +
+        " 1) {\n"
+        "  x q[0];\n"
+        "  x q[1];\n"
+        "}\n"
+        "";
+
+    EXPECT_EQ(out.str(), expected);
+  }
 }
 
 TEST_F(Qasm3ParserTest, ImportQasm3EmptyIfElse) {

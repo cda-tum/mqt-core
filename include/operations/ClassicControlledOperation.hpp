@@ -17,6 +17,8 @@ enum ComparisonKind : std::uint8_t {
 
 ComparisonKind getInvertedComparsionKind(ComparisonKind kind);
 
+std::string toString(const ComparisonKind& kind);
+
 std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind);
 
 class ClassicControlledOperation final : public Operation {

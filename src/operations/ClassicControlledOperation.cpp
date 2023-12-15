@@ -2,28 +2,32 @@
 
 namespace qc {
 
-std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind) {
+std::string toString(const ComparisonKind& kind) {
   switch (kind) {
   case ComparisonKind::Eq:
-    os << "==";
-    break;
+    return "==";
   case ComparisonKind::Neq:
-    os << "!=";
-    break;
+    return "!=";
   case ComparisonKind::Lt:
-    os << "<";
-    break;
+    return "<";
   case ComparisonKind::Leq:
-    os << "<=";
-    break;
+    return "<=";
   case ComparisonKind::Gt:
-    os << ">";
-    break;
+    return ">";
   case ComparisonKind::Geq:
-    os << ">=";
-    break;
+    return ">=";
+  default:
+#if defined(__GNUC__) || defined(__clang__)
+    __builtin_unreachable();
+#elif defined(_MSC_VER)
+    __assume(0);
+#else
+#endif
   }
+}
 
+std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind) {
+  os << toString(kind);
   return os;
 }
 
