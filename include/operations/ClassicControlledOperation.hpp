@@ -6,7 +6,7 @@
 
 namespace qc {
 
-enum ComparisonKind: std::uint8_t {
+enum ComparisonKind : std::uint8_t {
   Eq,
   Neq,
   Lt,
