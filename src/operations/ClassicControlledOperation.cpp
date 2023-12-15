@@ -2,28 +2,46 @@
 
 namespace qc {
 
-std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind) {
+std::string toString(const ComparisonKind& kind) {
   switch (kind) {
   case ComparisonKind::Eq:
-    os << "==";
-    break;
+    return "==";
   case ComparisonKind::Neq:
-    os << "!=";
-    break;
+    return "!=";
   case ComparisonKind::Lt:
-    os << "<";
-    break;
+    return "<";
   case ComparisonKind::Leq:
-    os << "<=";
-    break;
+    return "<=";
   case ComparisonKind::Gt:
-    os << ">";
-    break;
+    return ">";
   case ComparisonKind::Geq:
-    os << ">=";
-    break;
+    return ">=";
+  default:
+    unreachable();
   }
+}
 
+std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind) {
+  os << toString(kind);
   return os;
+}
+
+ComparisonKind getInvertedComparsionKind(const ComparisonKind kind) {
+  switch (kind) {
+  case Lt:
+    return Geq;
+  case Leq:
+    return Gt;
+  case Gt:
+    return Leq;
+  case Geq:
+    return Lt;
+  case Eq:
+    return Neq;
+  case Neq:
+    return Eq;
+  default:
+    unreachable();
+  }
 }
 } // namespace qc

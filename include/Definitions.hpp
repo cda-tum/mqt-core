@@ -110,4 +110,18 @@ combineHash(const std::size_t lhs, const std::size_t rhs) noexcept {
 constexpr void hashCombine(std::size_t& hash, const std::size_t with) noexcept {
   hash = combineHash(hash, with);
 }
+
+/**
+ * @brief Function used to mark unreachable code
+ * @details Uses compiler specific extensions if possible. Even if no extension
+ * is used, undefined behavior is still raised by an empty function body and the
+ * noreturn attribute.
+ */
+[[noreturn]] inline void unreachable() {
+#ifdef __GNUC__ // GCC, Clang, ICC
+  __builtin_unreachable();
+#elif defined(_MSC_VER) // MSVC
+  __assume(false);
+#endif
+}
 } // namespace qc

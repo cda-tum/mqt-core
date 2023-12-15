@@ -3,11 +3,13 @@
 #include "InstVisitor.hpp"
 #include "Permutation.hpp"
 #include "Types.hpp"
+#include "operations/ClassicControlledOperation.hpp"
 
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <variant>
@@ -123,6 +125,8 @@ public:
 
   std::string getName() override { return "BinaryExpr"; }
 };
+
+std::optional<qc::ComparisonKind> getComparisonKind(BinaryExpression::Op op);
 
 class UnaryExpression : public Expression,
                         public std::enable_shared_from_this<UnaryExpression> {

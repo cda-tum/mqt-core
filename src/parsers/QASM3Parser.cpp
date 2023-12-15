@@ -342,7 +342,7 @@ public:
                    const std::string& identifier,
                    const std::vector<std::shared_ptr<Expression>>& parameters,
                    std::vector<std::shared_ptr<GateOperand>> targets,
-                   qc::QuantumRegisterMap& qregs) {
+                   const qc::QuantumRegisterMap& qregs) {
     auto iter = gates.find(identifier);
     std::shared_ptr<Gate> gate;
     size_t implicitControls{0};
@@ -725,27 +725,8 @@ public:
             ifStatement->debugInfo);
     }
 
-    qc::ComparisonKind comparisonKind = qc::ComparisonKind::Eq;
-    switch (condition->op) {
-    case BinaryExpression::Op::LessThan:
-      comparisonKind = qc::ComparisonKind::Lt;
-      break;
-    case BinaryExpression::Op::LessThanOrEqual:
-      comparisonKind = qc::ComparisonKind::Leq;
-      break;
-    case BinaryExpression::Op::GreaterThan:
-      comparisonKind = qc::ComparisonKind::Gt;
-      break;
-    case BinaryExpression::Op::GreaterThanOrEqual:
-      comparisonKind = qc::ComparisonKind::Geq;
-      break;
-    case BinaryExpression::Op::Equal:
-      comparisonKind = qc::ComparisonKind::Eq;
-      break;
-    case BinaryExpression::Op::NotEqual:
-      comparisonKind = qc::ComparisonKind::Neq;
-      break;
-    default:
+    const auto comparisonKind = getComparisonKind(condition->op);
+    if (!comparisonKind) {
       error("Unsupported comparison operator.", ifStatement->debugInfo);
     }
 
@@ -768,31 +749,40 @@ public:
             ifStatement->debugInfo);
     }
 
-    // translate statements in then block
-    auto thenOps = std::make_unique<qc::CompoundOperation>(qc->getNqubits());
-    for (const auto& statement : ifStatement->thenStatements) {
+    // translate statements in then/else blocks
+    if (!ifStatement->thenStatements.empty()) {
+      auto thenOps = translateBlockOperations(ifStatement->thenStatements);
+      qc->emplace_back(std::make_unique<qc::ClassicControlledOperation>(
+          thenOps, creg->second, rhs->getUInt(), *comparisonKind));
+    }
+    if (!ifStatement->elseStatements.empty()) {
+      const auto invertedComparsionKind =
+          qc::getInvertedComparsionKind(*comparisonKind);
+      auto elseOps = translateBlockOperations(ifStatement->elseStatements);
+      qc->emplace_back(std::make_unique<qc::ClassicControlledOperation>(
+          elseOps, creg->second, rhs->getUInt(), invertedComparsionKind));
+    }
+  }
+
+  [[nodiscard]] std::unique_ptr<qc::Operation> translateBlockOperations(
+      const std::vector<std::shared_ptr<Statement>>& statements) {
+    auto blockOps = std::make_unique<qc::CompoundOperation>(qc->getNqubits());
+    for (const auto& statement : statements) {
       auto gateCall = std::dynamic_pointer_cast<GateCallStatement>(statement);
       if (gateCall == nullptr) {
-        error("Only gate calls are supported in if statements.",
+        error("Only quantum statements are supported in blocks.",
               statement->debugInfo);
       }
-      auto qregs = qc->getQregs();
+      const auto& qregs = qc->getQregs();
 
       auto op =
           evaluateGateCall(gateCall, gateCall->identifier, gateCall->arguments,
                            gateCall->operands, qregs);
 
-      thenOps->emplace_back(std::move(op));
+      blockOps->emplace_back(std::move(op));
     }
 
-    if (!ifStatement->elseStatements.empty()) {
-      error("Else statements are not supported yet.", ifStatement->debugInfo);
-    }
-
-    std::unique_ptr<qc::Operation> thenOp = std::move(thenOps);
-
-    qc->emplace_back(std::make_unique<qc::ClassicControlledOperation>(
-        thenOp, creg->second, rhs->getUInt(), comparisonKind));
+    return blockOps;
   }
 
   [[nodiscard]] std::unique_ptr<qc::Operation>

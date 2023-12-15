@@ -77,6 +77,7 @@ if(NOT TARGET ${PROJECT_NAME})
     parsers/qasm3_parser/Parser.cpp
     parsers/qasm3_parser/Scanner.cpp
     parsers/qasm3_parser/Types.cpp
+    parsers/qasm3_parser/Statement.cpp
     parsers/qasm3_parser/passes/ConstEvalPass.cpp
     parsers/qasm3_parser/passes/TypeCheckPass.cpp
     QuantumComputation.cpp)
