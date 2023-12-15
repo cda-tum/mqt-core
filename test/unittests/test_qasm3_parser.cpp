@@ -502,6 +502,29 @@ TEST_F(Qasm3ParserTest, ImportQasm3IfElseNoBlock) {
   EXPECT_EQ(out.str(), expected);
 }
 
+TEST_F(Qasm3ParserTest, ImportQasm3InvalidStatementInBlock) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit q;\n"
+                               "bit c = measure q;\n"
+                               "if (c == 1) {\n"
+                               "  qubit invalid;\n"
+                               "}";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  EXPECT_THROW(
+      try {
+        qc.import(ss, Format::OpenQASM3);
+      } catch (const qasm3::CompilerError& e) {
+        EXPECT_EQ(e.message,
+                  "Only quantum statements are supported in blocks.");
+        throw;
+      },
+      qasm3::CompilerError);
+}
+
 TEST_F(Qasm3ParserTest, ImportQasm3ImplicitInclude) {
   std::stringstream ss{};
   const std::string testfile = "qubit q;\n"
