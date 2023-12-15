@@ -52,6 +52,7 @@ TEST_P(WState, RoutineFunctionTest) {
 
 TEST(WState, WStateEdgeCasesTest) {
   auto dd = std::make_unique<dd::Package<>>(101);
+  const auto tolerance = dd::RealNumber::eps;
   dd::ComplexNumbers::setTolerance(0.1);
 
   ASSERT_THROW(dd->makeWState(101), std::runtime_error);
@@ -59,4 +60,5 @@ TEST(WState, WStateEdgeCasesTest) {
   EXPECT_EQ(dd->makeWState(0), dd->makeBasisState(0, {dd::BasisStates::one}));
   EXPECT_EQ(dd->makeWState(1), dd->makeBasisState(1, {dd::BasisStates::one}));
   ASSERT_THROW(dd->makeWState(127), std::runtime_error);
+  dd::ComplexNumbers::setTolerance(tolerance);
 }
