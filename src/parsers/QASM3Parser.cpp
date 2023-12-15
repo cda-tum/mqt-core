@@ -342,7 +342,7 @@ public:
                    const std::string& identifier,
                    const std::vector<std::shared_ptr<Expression>>& parameters,
                    std::vector<std::shared_ptr<GateOperand>> targets,
-                   qc::QuantumRegisterMap& qregs) {
+                   const qc::QuantumRegisterMap& qregs) {
     auto iter = gates.find(identifier);
     std::shared_ptr<Gate> gate;
     size_t implicitControls{0};
@@ -773,7 +773,7 @@ public:
         error("Only quantum statements are supported in blocks.",
               statement->debugInfo);
       }
-      auto qregs = qc->getQregs();
+      const auto& qregs = qc->getQregs();
 
       auto op =
           evaluateGateCall(gateCall, gateCall->identifier, gateCall->arguments,
