@@ -30,11 +30,9 @@ public:
 };
 
 struct Variable {
-  // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
   static inline std::unordered_map<std::string, std::size_t> registered{};
   static inline std::unordered_map<std::size_t, std::string> names{};
   static inline std::size_t nextId{};
-  // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
   explicit Variable(const std::string& name);
 
@@ -65,8 +63,8 @@ namespace sym {
 using VariableAssignment = std::unordered_map<Variable, double>;
 
 template <typename T,
-          typename = std::enable_if<std::is_constructible_v<int, T> &&
-                                    std::is_constructible_v<T, double>>>
+          typename = std::enable_if_t<std::is_constructible_v<int, T> &&
+                                      std::is_constructible_v<T, double>>>
 class Term {
 public:
   [[nodiscard]] Variable getVar() const { return var; }
@@ -108,24 +106,24 @@ private:
   Variable var;
 };
 template <typename T,
-          typename = std::enable_if<std::is_constructible_v<int, T>>>
+          typename = std::enable_if_t<std::is_constructible_v<int, T>>>
 inline Term<T> operator*(Term<T> lhs, const double rhs) {
   lhs *= rhs;
   return lhs;
 }
 template <typename T,
-          typename = std::enable_if<std::is_constructible_v<int, T>>>
+          typename = std::enable_if_t<std::is_constructible_v<int, T>>>
 inline Term<T> operator/(Term<T> lhs, const double rhs) {
   lhs /= rhs;
   return lhs;
 }
 template <typename T,
-          typename = std::enable_if<std::is_constructible_v<int, T>>>
+          typename = std::enable_if_t<std::is_constructible_v<int, T>>>
 inline Term<T> operator*(double lhs, const Term<T>& rhs) {
   return rhs * lhs;
 }
 template <typename T,
-          typename = std::enable_if<std::is_constructible_v<int, T>>>
+          typename = std::enable_if_t<std::is_constructible_v<int, T>>>
 inline Term<T> operator/(double lhs, const Term<T>& rhs) {
   return rhs / lhs;
 }
@@ -153,7 +151,7 @@ template <typename T> struct hash<sym::Term<T>> {
 namespace sym {
 template <
     typename T, typename U,
-    typename = std::enable_if<
+    typename = std::enable_if_t<
         std::is_constructible_v<T, U> && std::is_constructible_v<U, T> &&
         std::is_constructible_v<int, T> && std::is_constructible_v<T, double> &&
         std::is_constructible_v<U, double>>>
@@ -255,7 +253,8 @@ public:
     return *this;
   }
 
-  template <typename = std::enable_if<!std::is_same_v<T, U>>>
+  template <typename V = U,
+            typename std::enable_if_t<!std::is_same_v<T, V>, int> = 0>
   Expression<T, U>& operator*=(const U& rhs) {
     if (std::abs(static_cast<double>(T{rhs})) < TOLERANCE) {
       terms.clear();
@@ -277,7 +276,8 @@ public:
     return *this;
   }
 
-  template <typename = std::enable_if<!std::is_same_v<T, U>>>
+  template <typename V = U,
+            typename std::enable_if_t<!std::is_same_v<T, V>, int> = 0>
   Expression<T, U>& operator/=(const U& rhs) {
     if (std::abs(static_cast<double>(T{rhs})) < TOLERANCE) {
       throw std::runtime_error("Trying to divide expression by 0!");
