@@ -55,7 +55,7 @@ jobs:
           pip install --no-build-isolation -ve .
           echo "CODEQL_PYTHON=$(which python)" >> $GITHUB_ENV
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: python
           setup-python-dependencies: false
@@ -63,7 +63,7 @@ jobs:
             queries:
             - uses: security-and-quality
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
         with:
           upload: False
           output: sarif-results
@@ -75,6 +75,6 @@ jobs:
           input: sarif-results/python.sarif
           output: sarif-results/python.sarif
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: sarif-results/python.sarif
