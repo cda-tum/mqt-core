@@ -381,6 +381,114 @@ TEST_F(Qasm3ParserTest, ImportQasm3IfStatement) {
   EXPECT_EQ(out.str(), expected);
 }
 
+TEST_F(Qasm3ParserTest, ImportQasm3IfElseStatement) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "h q[0];\n"
+                               "bit c = measure q[0];\n"
+                               "if (c == 1) {\n"
+                               "  x q[1];\n"
+                               "} else {\n"
+                               "  x q[0];\n"
+                               "  x q[1];\n"
+                               "}";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  qc.import(ss, Format::OpenQASM3);
+
+  std::stringstream out{};
+  qc.dump(out, Format::OpenQASM3);
+
+  const std::string expected = "// i 0 1\n"
+                               "// o 0\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "bit[1] c;\n"
+                               "h q[0];\n"
+                               "c[0] = measure q[0];\n"
+                               "if (c == 1) {\n"
+                               "  x q[1];\n"
+                               "}\n"
+                               "if (c != 1) {\n"
+                               "  x q[0];\n"
+                               "  x q[1];\n"
+                               "}\n"
+                               "";
+
+  EXPECT_EQ(out.str(), expected);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasm3EmptyIfElse) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "h q[0];\n"
+                               "bit c = measure q[0];\n"
+                               "if (c == 1) {\n"
+                               "} else {\n"
+                               "}";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  qc.import(ss, Format::OpenQASM3);
+
+  std::stringstream out{};
+  qc.dump(out, Format::OpenQASM3);
+
+  const std::string expected = "// i 0 1\n"
+                               "// o 0\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "bit[1] c;\n"
+                               "h q[0];\n"
+                               "c[0] = measure q[0];\n"
+                               "";
+
+  EXPECT_EQ(out.str(), expected);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasm3IfElseNoBlock) {
+  std::stringstream ss{};
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "h q[0];\n"
+                               "bit c = measure q[0];\n"
+                               "if (c == 1) {} else \n"
+                               "  x q[1];\n"
+                               "x q[0];\n"
+                               "";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  qc.import(ss, Format::OpenQASM3);
+
+  std::stringstream out{};
+  qc.dump(out, Format::OpenQASM3);
+
+  const std::string expected = "// i 0 1\n"
+                               "// o 0\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "bit[1] c;\n"
+                               "h q[0];\n"
+                               "c[0] = measure q[0];\n"
+                               "if (c != 1) {\n"
+                               "  x q[1];\n"
+                               "}\n"
+                               "x q[0];\n"
+                               "";
+
+  EXPECT_EQ(out.str(), expected);
+}
+
 TEST_F(Qasm3ParserTest, ImportQasm3ImplicitInclude) {
   std::stringstream ss{};
   const std::string testfile = "qubit q;\n"
