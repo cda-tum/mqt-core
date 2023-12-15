@@ -729,8 +729,6 @@ public:
     if (!comparisonKind) {
       error("Unsupported comparison operator.", ifStatement->debugInfo);
     }
-    qc::ComparisonKind flippedComparisonKind =
-        qc::getInvertedComparsionKind(*comparisonKind);
 
     const auto lhs =
         std::dynamic_pointer_cast<IdentifierExpression>(condition->lhs);
@@ -758,9 +756,11 @@ public:
           thenOps, creg->second, rhs->getUInt(), *comparisonKind));
     }
     if (!ifStatement->elseStatements.empty()) {
+      const auto invertedComparsionKind =
+          qc::getInvertedComparsionKind(*comparisonKind);
       auto elseOps = translateBlockOperations(ifStatement->elseStatements);
       qc->emplace_back(std::make_unique<qc::ClassicControlledOperation>(
-          elseOps, creg->second, rhs->getUInt(), flippedComparisonKind));
+          elseOps, creg->second, rhs->getUInt(), invertedComparsionKind));
     }
   }
 
