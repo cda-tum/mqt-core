@@ -729,7 +729,8 @@ public:
     if (!comparisonKind) {
       error("Unsupported comparison operator.", ifStatement->debugInfo);
     }
-    qc::ComparisonKind flippedComparisonKind = qc::getInvertedComparsionKind(*comparisonKind);
+    qc::ComparisonKind flippedComparisonKind =
+        qc::getInvertedComparsionKind(*comparisonKind);
 
     const auto lhs =
         std::dynamic_pointer_cast<IdentifierExpression>(condition->lhs);

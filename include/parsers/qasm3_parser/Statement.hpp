@@ -125,8 +125,7 @@ public:
   std::string getName() override { return "BinaryExpr"; }
 };
 
-std::optional<qc::ComparisonKind>
-getComparisonKind(BinaryExpression::Op op);
+std::optional<qc::ComparisonKind> getComparisonKind(BinaryExpression::Op op);
 
 class UnaryExpression : public Expression,
                         public std::enable_shared_from_this<UnaryExpression> {
@@ -171,8 +170,8 @@ class IdentifierList : public Expression,
 public:
   std::vector<std::shared_ptr<IdentifierExpression>> identifiers{};
 
-  explicit
-  IdentifierList(std::vector<std::shared_ptr<IdentifierExpression>> ids)
+  explicit IdentifierList(
+      std::vector<std::shared_ptr<IdentifierExpression>> ids)
       : identifiers(std::move(ids)) {}
 
   explicit IdentifierList() = default;
