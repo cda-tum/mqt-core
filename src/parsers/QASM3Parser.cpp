@@ -766,7 +766,7 @@ public:
 
   [[nodiscard]] std::unique_ptr<qc::Operation> translateBlockOperations(
       const std::vector<std::shared_ptr<Statement>>& statements) {
-    auto thenOps = std::make_unique<qc::CompoundOperation>(qc->getNqubits());
+    auto blockOps = std::make_unique<qc::CompoundOperation>(qc->getNqubits());
     for (const auto& statement : statements) {
       auto gateCall = std::dynamic_pointer_cast<GateCallStatement>(statement);
       if (gateCall == nullptr) {
@@ -779,10 +779,10 @@ public:
           evaluateGateCall(gateCall, gateCall->identifier, gateCall->arguments,
                            gateCall->operands, qregs);
 
-      thenOps->emplace_back(std::move(op));
+      blockOps->emplace_back(std::move(op));
     }
 
-    return thenOps;
+    return blockOps;
   }
 
   [[nodiscard]] std::unique_ptr<qc::Operation>
