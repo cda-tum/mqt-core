@@ -15,6 +15,8 @@ enum ComparisonKind {
   Geq,
 };
 
+ComparisonKind getInvertedComparsionKind(const ComparisonKind kind);
+
 std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind);
 
 class ClassicControlledOperation final : public Operation {

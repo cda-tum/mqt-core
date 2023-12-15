@@ -725,36 +725,11 @@ public:
             ifStatement->debugInfo);
     }
 
-    qc::ComparisonKind comparisonKind = qc::ComparisonKind::Eq;
-    qc::ComparisonKind flippedComparisonKind = qc::ComparisonKind::Eq;
-    switch (condition->op) {
-    case BinaryExpression::Op::LessThan:
-      comparisonKind = qc::ComparisonKind::Lt;
-      flippedComparisonKind = qc::ComparisonKind::Geq;
-      break;
-    case BinaryExpression::Op::LessThanOrEqual:
-      comparisonKind = qc::ComparisonKind::Leq;
-      flippedComparisonKind = qc::ComparisonKind::Gt;
-      break;
-    case BinaryExpression::Op::GreaterThan:
-      comparisonKind = qc::ComparisonKind::Gt;
-      flippedComparisonKind = qc::ComparisonKind::Leq;
-      break;
-    case BinaryExpression::Op::GreaterThanOrEqual:
-      comparisonKind = qc::ComparisonKind::Geq;
-      flippedComparisonKind = qc::ComparisonKind::Lt;
-      break;
-    case BinaryExpression::Op::Equal:
-      comparisonKind = qc::ComparisonKind::Eq;
-      flippedComparisonKind = qc::ComparisonKind::Neq;
-      break;
-    case BinaryExpression::Op::NotEqual:
-      comparisonKind = qc::ComparisonKind::Neq;
-      flippedComparisonKind = qc::ComparisonKind::Eq;
-      break;
-    default:
+    const auto comparisonKind = getComparisonKind(condition->op);
+    if (!comparisonKind) {
       error("Unsupported comparison operator.", ifStatement->debugInfo);
     }
+    qc::ComparisonKind flippedComparisonKind = qc::getInvertedComparsionKind(*comparisonKind);
 
     const auto lhs =
         std::dynamic_pointer_cast<IdentifierExpression>(condition->lhs);
@@ -779,7 +754,7 @@ public:
     if (!ifStatement->thenStatements.empty()) {
       auto thenOps = translateBlockOperations(ifStatement->thenStatements);
       qc->emplace_back(std::make_unique<qc::ClassicControlledOperation>(
-          thenOps, creg->second, rhs->getUInt(), comparisonKind));
+          thenOps, creg->second, rhs->getUInt(), *comparisonKind));
     }
     if (!ifStatement->elseStatements.empty()) {
       auto elseOps = translateBlockOperations(ifStatement->elseStatements);
