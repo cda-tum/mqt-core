@@ -6,7 +6,7 @@
 
 namespace qc {
 
-enum ComparisonKind {
+enum ComparisonKind: std::uint8_t {
   Eq,
   Neq,
   Lt,
@@ -15,7 +15,7 @@ enum ComparisonKind {
   Geq,
 };
 
-ComparisonKind getInvertedComparsionKind(const ComparisonKind kind);
+ComparisonKind getInvertedComparsionKind(ComparisonKind kind);
 
 std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind);
 
