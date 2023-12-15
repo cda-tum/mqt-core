@@ -17,12 +17,7 @@ std::string toString(const ComparisonKind& kind) {
   case ComparisonKind::Geq:
     return ">=";
   default:
-#if defined(__GNUC__) || defined(__clang__)
-    __builtin_unreachable();
-#elif defined(_MSC_VER)
-    __assume(0);
-#else
-#endif
+    unreachable();
   }
 }
 
@@ -46,12 +41,7 @@ ComparisonKind getInvertedComparsionKind(const ComparisonKind kind) {
   case Neq:
     return Eq;
   default:
-#if defined(__GNUC__) || defined(__clang__)
-    __builtin_unreachable();
-#elif defined(_MSC_VER)
-    __assume(0);
-#else
-#endif
+    unreachable();
   }
 }
 } // namespace qc

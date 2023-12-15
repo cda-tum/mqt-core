@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CompilerPass.hpp"
+#include "Definitions.hpp"
 #include "parsers/qasm3_parser/Exception.hpp"
 #include "parsers/qasm3_parser/NestedEnvironment.hpp"
 
@@ -32,14 +33,9 @@ struct ConstEvalValue {
     case ConstBool:
       return std::make_shared<Constant>(
           Constant(static_cast<int64_t>(std::get<2>(value)), false));
+    default:
+      qc::unreachable();
     }
-
-#if defined(__GNUC__) || defined(__clang__)
-    __builtin_unreachable();
-#elif defined(_MSC_VER)
-    __assume(0);
-#else
-#endif
   }
 
   bool operator==(const ConstEvalValue& rhs) const {
