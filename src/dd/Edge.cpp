@@ -7,12 +7,14 @@
 #include "dd/Node.hpp"
 #include "dd/RealNumber.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cmath>
 #include <complex>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <unordered_set>
 
@@ -338,60 +340,60 @@ Edge<Node> Edge<Node>::normalize(Node* p,
                                  const std::array<Edge<Node>, NEDGE>& e,
                                  MemoryManager<Node>& mm, ComplexNumbers& cn) {
   assert(p != nullptr && "Node pointer passed to normalize is null.");
-  auto argmax = -1;
+  const auto zero = std::array{e[0].w.exactlyZero(), e[1].w.exactlyZero(),
+                               e[2].w.exactlyZero(), e[3].w.exactlyZero()};
 
-  auto zero =
-      std::array{e[0].w.approximatelyZero(), e[1].w.approximatelyZero(),
-                 e[2].w.approximatelyZero(), e[3].w.approximatelyZero()};
+  if (std::all_of(zero.begin(), zero.end(), [](auto b) { return b; })) {
+    mm.returnEntry(p);
+    return Edge::zero();
+  }
 
-  fp max = 0;
-  auto maxc = Complex::one();
+  const auto weights = std::array{
+      static_cast<ComplexValue>(e[0].w), static_cast<ComplexValue>(e[1].w),
+      static_cast<ComplexValue>(e[2].w), static_cast<ComplexValue>(e[3].w)};
+
+  std::optional<std::size_t> argMax = std::nullopt;
+  fp maxMag = 0.;
+  auto maxVal = Complex::one();
   // determine max amplitude
   for (auto i = 0U; i < NEDGE; ++i) {
     if (zero[i]) {
       p->e[i] = Edge::zero();
       continue;
     }
-    const auto& w = e[i].w;
-    if (argmax == -1) {
-      argmax = static_cast<decltype(argmax)>(i);
-      max = ComplexNumbers::mag2(w);
-      maxc = w;
+    const auto& w = weights[i];
+    if (!argMax.has_value()) {
+      argMax = i;
+      maxMag = w.mag2();
+      maxVal = e[i].w;
     } else {
-      auto mag = ComplexNumbers::mag2(w);
-      if (mag - max > RealNumber::eps) {
-        argmax = static_cast<decltype(argmax)>(i);
-        max = mag;
-        maxc = w;
+      if (const auto mag = w.mag2(); mag - maxMag > RealNumber::eps) {
+        argMax = i;
+        maxMag = mag;
+        maxVal = e[i].w;
       }
     }
   }
+  assert(argMax.has_value() && "argMax should have been set by now");
 
-  // all equal to zero
-  if (argmax == -1) {
-    mm.returnEntry(p);
-    return Edge<Node>::zero();
-  }
-
-  // divide each entry by max
+  const auto argMaxValue = *argMax;
+  const auto argMaxWeight = weights[argMaxValue];
   for (auto i = 0U; i < NEDGE; ++i) {
     if (zero[i]) {
       continue;
     }
     auto& successor = p->e[i];
     successor.p = e[i].p;
-    if (static_cast<decltype(argmax)>(i) == argmax) {
+    if (i == argMaxValue) {
       successor.w = Complex::one();
       continue;
     }
-    successor.w = e[i].w;
-    if (e[i].w.approximatelyOne()) {
-      successor.w = cn.lookup(1. / maxc);
-    } else {
-      successor.w = cn.lookup(successor.w / maxc);
+    successor.w = cn.lookup(weights[i] / argMaxWeight);
+    if (successor.w.exactlyZero()) {
+      successor.p = Node::getTerminal();
     }
   }
-  return {p, maxc};
+  return Edge<Node>{p, maxVal};
 }
 
 template <class Node>
@@ -400,70 +402,72 @@ Edge<Node>
 Edge<Node>::normalizeCached(Node* p, const std::array<Edge<Node>, NEDGE>& e,
                             MemoryManager<Node>& mm, ComplexNumbers& cn) {
   assert(p != nullptr && "Node pointer passed to normalize is null.");
-  auto argmax = -1;
+  const auto weights = std::array{
+      static_cast<ComplexValue>(e[0].w), static_cast<ComplexValue>(e[1].w),
+      static_cast<ComplexValue>(e[2].w), static_cast<ComplexValue>(e[3].w)};
 
-  auto zero =
-      std::array{e[0].w.approximatelyZero(), e[1].w.approximatelyZero(),
-                 e[2].w.approximatelyZero(), e[3].w.approximatelyZero()};
+  cn.returnToCache(e[3].w);
+  cn.returnToCache(e[2].w);
+  cn.returnToCache(e[1].w);
+  cn.returnToCache(e[0].w);
 
-  // make sure to release cached numbers approximately zero, but not exactly
-  // zero
-  for (auto i = 0U; i < NEDGE; i++) {
-    if (zero[i]) {
-      cn.returnToCache(e[i].w);
-    }
+  const auto zero = std::array{
+      weights[0].approximatelyZero(), weights[1].approximatelyZero(),
+      weights[2].approximatelyZero(), weights[3].approximatelyZero()};
+
+  if (std::all_of(zero.begin(), zero.end(), [](auto b) { return b; })) {
+    mm.returnEntry(p);
+    return Edge::zero();
   }
 
-  fp max = 0;
-  auto maxc = Complex::one();
+  std::optional<std::size_t> argMax = std::nullopt;
+  fp maxMag = 0.;
+  ComplexValue maxVal = 1.;
   // determine max amplitude
   for (auto i = 0U; i < NEDGE; ++i) {
     if (zero[i]) {
-      p->e[i] = Edge::zero();
       continue;
     }
-    const auto& w = e[i].w;
-    if (argmax == -1) {
-      argmax = static_cast<decltype(argmax)>(i);
-      max = ComplexNumbers::mag2(w);
-      maxc = w;
+    const auto& w = weights[i];
+    if (!argMax.has_value()) {
+      argMax = i;
+      maxMag = w.mag2();
+      maxVal = w;
     } else {
-      auto mag = ComplexNumbers::mag2(w);
-      if (mag - max > RealNumber::eps) {
-        argmax = static_cast<decltype(argmax)>(i);
-        max = mag;
-        maxc = w;
+      if (const auto mag = w.mag2(); mag - maxMag > RealNumber::eps) {
+        argMax = i;
+        maxMag = mag;
+        maxVal = w;
       }
     }
   }
+  assert(argMax.has_value() && "argMax should have been set by now");
 
-  // all equal to zero
-  if (argmax == -1) {
-    mm.returnEntry(p);
-    return Edge<Node>::zero();
-  }
-
-  // divide each entry by max
+  const auto argMaxValue = *argMax;
   for (auto i = 0U; i < NEDGE; ++i) {
-    if (zero[i]) {
-      continue;
-    }
     auto& successor = p->e[i];
     successor.p = e[i].p;
-    if (static_cast<decltype(argmax)>(i) == argmax) {
+    if (i == argMaxValue) {
       successor.w = Complex::one();
       continue;
     }
-    successor.w = e[i].w;
-    if (successor.w.approximatelyOne()) {
-      cn.returnToCache(successor.w);
-      successor.w = Complex::one();
+    const auto& weight = weights[i];
+    // The approximation below is really important for numerical stability.
+    // An exactly zero check will lead to numerical instabilities.
+    if (zero[i]) {
+      successor = Edge<Node>::zero();
+      continue;
     }
-    const auto c = successor.w / maxc;
-    cn.returnToCache(successor.w);
-    successor.w = cn.lookup(c);
+    if (weight.approximatelyOne()) {
+      successor.w = cn.lookup(1. / maxVal);
+    } else {
+      successor.w = cn.lookup(weight / maxVal);
+    }
+    if (successor.w.exactlyZero()) {
+      successor.p = Node::getTerminal();
+    }
   }
-  return {p, maxc};
+  return Edge<Node>{p, cn.getCached(maxVal)};
 }
 
 template <class Node>
