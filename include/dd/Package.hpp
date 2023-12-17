@@ -1015,7 +1015,8 @@ public:
     }
 
     // normalize it
-    auto e = Edge<Node>::normalize(p, edges, memoryManager, cn, cached);
+    auto e = cached ? Edge<Node>::normalizeCached(p, edges, memoryManager, cn)
+                    : Edge<Node>::normalize(p, edges, memoryManager, cn);
 
     // look it up in the unique tables
     auto& uniqueTable = getUniqueTable<Node>();

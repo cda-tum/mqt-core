@@ -11,6 +11,7 @@
 #include <cassert>
 #include <complex>
 #include <iomanip>
+#include <iostream>
 #include <unordered_set>
 
 namespace dd {
@@ -79,19 +80,73 @@ template <class Node>
 template <typename T, isVector<T>>
 Edge<Node> Edge<Node>::normalize(Node* p,
                                  const std::array<Edge<Node>, RADIX>& e,
-                                 MemoryManager<Node>& mm, ComplexNumbers& cn,
-                                 const bool cached) {
+                                 MemoryManager<Node>& mm, ComplexNumbers& cn) {
+  assert(p != nullptr && "Node pointer passed to normalize is null.");
+  const auto zero =
+      std::array{e[0].w.approximatelyZero(), e[1].w.approximatelyZero()};
+
+  if (zero[0]) {
+    if (zero[1]) {
+      mm.returnEntry(p);
+      return Edge::zero();
+    }
+    p->e = e;
+    vEdge r{p, cn.lookup(e[1].w)};
+    p->e[1].w = Complex::one();
+    return r;
+  }
+
+  p->e = e;
+  if (zero[1]) {
+    vEdge r{p, cn.lookup(e[0].w)};
+    p->e[0].w = Complex::one();
+    return r;
+  }
+
+  const auto mag0 = ComplexNumbers::mag2(e[0].w);
+  const auto mag1 = ComplexNumbers::mag2(e[1].w);
+  const auto norm2 = mag0 + mag1;
+  const auto mag2Max = (mag0 + RealNumber::eps >= mag1) ? mag0 : mag1;
+  const auto argMax = (mag0 + RealNumber::eps >= mag1) ? 0 : 1;
+  const auto norm = std::sqrt(norm2);
+  const auto magMax = std::sqrt(mag2Max);
+  const auto commonFactor = norm / magMax;
+
+  auto& max = p->e[static_cast<std::size_t>(argMax)];
+  vEdge r{p, cn.lookup(max.w * commonFactor)};
+  if (r.w.approximatelyZero()) {
+    return Edge::zero();
+  }
+
+  max.w = cn.lookup(magMax / norm);
+  if (max.w.exactlyZero()) {
+    max = Edge::zero();
+  }
+
+  const auto argMin = (argMax + 1) % 2;
+  auto& min = p->e[static_cast<std::size_t>(argMin)];
+  min.w = cn.lookup(min.w / r.w);
+  if (min.w.exactlyZero()) {
+    min = Edge::zero();
+  }
+
+  return r;
+}
+
+template <class Node>
+template <typename T, isVector<T>>
+Edge<Node>
+Edge<Node>::normalizeCached(Node* p, const std::array<Edge<Node>, RADIX>& e,
+                            MemoryManager<Node>& mm, ComplexNumbers& cn) {
   assert(p != nullptr && "Node pointer passed to normalize is null.");
   auto zero =
       std::array{e[0].w.approximatelyZero(), e[1].w.approximatelyZero()};
 
   // make sure to release cached numbers approximately zero, but not exactly
   // zero
-  if (cached) {
-    for (auto i = 0U; i < RADIX; i++) {
-      if (zero[i]) {
-        cn.returnToCache(e[i].w);
-      }
+  for (auto i = 0U; i < RADIX; i++) {
+    if (zero[i]) {
+      cn.returnToCache(e[i].w);
     }
   }
 
@@ -101,13 +156,7 @@ Edge<Node> Edge<Node>::normalize(Node* p,
       return Edge::zero();
     }
     p->e = e;
-    vEdge r{};
-    r.p = p;
-    if (cached) {
-      r.w = e[1].w;
-    } else {
-      r.w = cn.lookup(e[1].w);
-    }
+    vEdge r{p, e[1].w};
     p->e[0] = Edge::zero();
     p->e[1].w = Complex::one();
     return r;
@@ -115,13 +164,7 @@ Edge<Node> Edge<Node>::normalize(Node* p,
 
   p->e = e;
   if (zero[1]) {
-    vEdge r{};
-    r.p = p;
-    if (cached) {
-      r.w = e[0].w;
-    } else {
-      r.w = cn.lookup(e[0].w);
-    }
+    vEdge r{p, e[0].w};
     p->e[0].w = Complex::one();
     p->e[1] = Edge::zero();
     return r;
@@ -139,19 +182,12 @@ Edge<Node> Edge<Node>::normalize(Node* p,
   vEdge r{};
   r.p = p;
   auto& max = p->e[static_cast<std::size_t>(argMax)];
-  if (cached) {
-    if (max.w.exactlyOne()) {
-      r.w = cn.lookup(commonFactor);
-    } else {
-      r.w = max.w;
-      r.w.r->value *= commonFactor;
-      r.w.i->value *= commonFactor;
-    }
+  if (max.w.exactlyOne()) {
+    r.w = cn.lookup(commonFactor);
   } else {
-    r.w = cn.lookup(max.w * commonFactor);
-    if (r.w.approximatelyZero()) {
-      return Edge::zero();
-    }
+    r.w = max.w;
+    r.w.r->value *= commonFactor;
+    r.w.i->value *= commonFactor;
   }
 
   max.w = cn.lookup(magMax / norm);
@@ -161,12 +197,8 @@ Edge<Node> Edge<Node>::normalize(Node* p,
 
   const auto argMin = (argMax + 1) % 2;
   auto& min = p->e[static_cast<std::size_t>(argMin)];
-  if (cached) {
-    ComplexNumbers::div(min.w, min.w, r.w);
-    min.w = cn.lookup(min.w, true);
-  } else {
-    min.w = cn.lookup(min.w / r.w);
-  }
+  ComplexNumbers::div(min.w, min.w, r.w);
+  min.w = cn.lookup(min.w, true);
   if (min.w.exactlyZero()) {
     min = Edge::zero();
   }
@@ -293,8 +325,69 @@ template <class Node>
 template <typename T, isMatrixVariant<T>>
 Edge<Node> Edge<Node>::normalize(Node* p,
                                  const std::array<Edge<Node>, NEDGE>& e,
-                                 MemoryManager<Node>& mm, ComplexNumbers& cn,
-                                 bool cached) {
+                                 MemoryManager<Node>& mm, ComplexNumbers& cn) {
+  assert(p != nullptr && "Node pointer passed to normalize is null.");
+  auto argmax = -1;
+
+  auto zero =
+      std::array{e[0].w.approximatelyZero(), e[1].w.approximatelyZero(),
+                 e[2].w.approximatelyZero(), e[3].w.approximatelyZero()};
+
+  fp max = 0;
+  auto maxc = Complex::one();
+  // determine max amplitude
+  for (auto i = 0U; i < NEDGE; ++i) {
+    if (zero[i]) {
+      p->e[i] = Edge::zero();
+      continue;
+    }
+    const auto& w = e[i].w;
+    if (argmax == -1) {
+      argmax = static_cast<decltype(argmax)>(i);
+      max = ComplexNumbers::mag2(w);
+      maxc = w;
+    } else {
+      auto mag = ComplexNumbers::mag2(w);
+      if (mag - max > RealNumber::eps) {
+        argmax = static_cast<decltype(argmax)>(i);
+        max = mag;
+        maxc = w;
+      }
+    }
+  }
+
+  // all equal to zero
+  if (argmax == -1) {
+    mm.returnEntry(p);
+    return Edge<Node>::zero();
+  }
+
+  // divide each entry by max
+  for (auto i = 0U; i < NEDGE; ++i) {
+    if (zero[i]) {
+      continue;
+    }
+    auto& successor = p->e[i];
+    successor.p = e[i].p;
+    if (static_cast<decltype(argmax)>(i) == argmax) {
+      successor.w = Complex::one();
+      continue;
+    }
+    successor.w = e[i].w;
+    if (e[i].w.approximatelyOne()) {
+      successor.w = cn.lookup(1. / maxc);
+    } else {
+      successor.w = cn.lookup(successor.w / maxc);
+    }
+  }
+  return {p, maxc};
+}
+
+template <class Node>
+template <typename T, isMatrixVariant<T>>
+Edge<Node>
+Edge<Node>::normalizeCached(Node* p, const std::array<Edge<Node>, NEDGE>& e,
+                            MemoryManager<Node>& mm, ComplexNumbers& cn) {
   assert(p != nullptr && "Node pointer passed to normalize is null.");
   auto argmax = -1;
 
@@ -304,11 +397,9 @@ Edge<Node> Edge<Node>::normalize(Node* p,
 
   // make sure to release cached numbers approximately zero, but not exactly
   // zero
-  if (cached) {
-    for (auto i = 0U; i < NEDGE; i++) {
-      if (zero[i]) {
-        cn.returnToCache(e[i].w);
-      }
+  for (auto i = 0U; i < NEDGE; i++) {
+    if (zero[i]) {
+      cn.returnToCache(e[i].w);
     }
   }
 
@@ -354,15 +445,11 @@ Edge<Node> Edge<Node>::normalize(Node* p,
     }
     successor.w = e[i].w;
     if (successor.w.approximatelyOne()) {
-      if (cached) {
-        cn.returnToCache(successor.w);
-      }
+      cn.returnToCache(successor.w);
       successor.w = Complex::one();
     }
     const auto c = successor.w / maxc;
-    if (cached) {
-      cn.returnToCache(successor.w);
-    }
+    cn.returnToCache(successor.w);
     successor.w = cn.lookup(c);
   }
   return {p, maxc};
@@ -598,7 +685,10 @@ template struct Edge<dNode>;
 
 template Edge<vNode> Edge<vNode>::normalize<vNode, true>(
     vNode* p, const std::array<Edge<vNode>, RADIX>& e, MemoryManager<vNode>& mm,
-    ComplexNumbers& cn, const bool cached);
+    ComplexNumbers& cn);
+template Edge<vNode> Edge<vNode>::normalizeCached<vNode, true>(
+    vNode* p, const std::array<Edge<vNode>, RADIX>& e, MemoryManager<vNode>& mm,
+    ComplexNumbers& cn);
 template std::complex<fp>
 Edge<vNode>::getValueByIndex<vNode, true>(const std::size_t i) const;
 template CVec Edge<vNode>::getVector<vNode, true>(const fp threshold) const;
@@ -613,7 +703,10 @@ Edge<vNode>::traverseVector<vNode, true>(const std::complex<fp>& amp,
 
 template Edge<mNode> Edge<mNode>::normalize<mNode, true>(
     mNode* p, const std::array<Edge<mNode>, NEDGE>& e, MemoryManager<mNode>& mm,
-    ComplexNumbers& cn, const bool cached);
+    ComplexNumbers& cn);
+template Edge<mNode> Edge<mNode>::normalizeCached<mNode, true>(
+    mNode* p, const std::array<Edge<mNode>, NEDGE>& e, MemoryManager<mNode>& mm,
+    ComplexNumbers& cn);
 template std::complex<fp>
 Edge<mNode>::getValueByIndex<mNode, true>(const std::size_t i,
                                           const std::size_t j) const;
@@ -627,7 +720,10 @@ template void Edge<mNode>::traverseMatrix<mNode, true>(
 
 template Edge<dNode> Edge<dNode>::normalize<dNode, true>(
     dNode* p, const std::array<Edge<dNode>, NEDGE>& e, MemoryManager<dNode>& mm,
-    ComplexNumbers& cn, const bool cached);
+    ComplexNumbers& cn);
+template Edge<dNode> Edge<dNode>::normalizeCached<dNode, true>(
+    dNode* p, const std::array<Edge<dNode>, NEDGE>& e, MemoryManager<dNode>& mm,
+    ComplexNumbers& cn);
 template CMat Edge<dNode>::getMatrix<dNode, true>(const fp threshold) const;
 template SparseCMat
 Edge<dNode>::getSparseMatrix<dNode, true>(const fp threshold) const;

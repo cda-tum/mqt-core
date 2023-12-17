@@ -805,7 +805,7 @@ TEST(DDPackageTest, NearZeroNormalize) {
     edge.p->e = {dd::vEdge::one(), dd::vEdge::one()};
   }
   auto veNormalizedCached =
-      dd::vEdge::normalize(ve.p, edges, dd->vMemoryManager, dd->cn, true);
+      dd::vEdge::normalizeCached(ve.p, edges, dd->vMemoryManager, dd->cn);
   EXPECT_EQ(veNormalizedCached, dd::vEdge::zero());
 
   std::array<dd::vEdge, dd::RADIX> edges2{};
@@ -816,7 +816,7 @@ TEST(DDPackageTest, NearZeroNormalize) {
     edge.p->e = {dd::vEdge::one(), dd::vEdge::one()};
   }
   auto veNormalized =
-      dd::vEdge::normalize(ve.p, edges2, dd->vMemoryManager, dd->cn, false);
+      dd::vEdge::normalize(ve.p, edges2, dd->vMemoryManager, dd->cn);
   EXPECT_TRUE(veNormalized.isZeroTerminal());
 
   dd::mEdge me{};
@@ -832,7 +832,7 @@ TEST(DDPackageTest, NearZeroNormalize) {
                  dd::mEdge::one()};
   }
   auto meNormalizedCached =
-      dd::mEdge::normalize(me.p, edges3, dd->mMemoryManager, dd->cn, true);
+      dd::mEdge::normalizeCached(me.p, edges3, dd->mMemoryManager, dd->cn);
   EXPECT_EQ(meNormalizedCached, dd::mEdge::zero());
 
   me.p = dd->mMemoryManager.get();
@@ -845,7 +845,7 @@ TEST(DDPackageTest, NearZeroNormalize) {
                  dd::mEdge::one()};
   }
   auto meNormalized =
-      dd::mEdge::normalize(me.p, edges4, dd->mMemoryManager, dd->cn, false);
+      dd::mEdge::normalize(me.p, edges4, dd->mMemoryManager, dd->cn);
   EXPECT_TRUE(meNormalized.isZeroTerminal());
 }
 
