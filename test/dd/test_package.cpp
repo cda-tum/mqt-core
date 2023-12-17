@@ -797,47 +797,55 @@ TEST(DDPackageTest, NearZeroNormalize) {
   ve.p = dd->vMemoryManager.get();
   ve.p->v = 1;
   ve.w = dd::Complex::one();
-  for (auto& edge : ve.p->e) {
+  std::array<dd::vEdge, dd::RADIX> edges{};
+  for (auto& edge : edges) {
     edge.p = dd->vMemoryManager.get();
     edge.p->v = 0;
     edge.w = dd->cn.getCached(nearZero, 0.);
     edge.p->e = {dd::vEdge::one(), dd::vEdge::one()};
   }
-  auto veNormalizedCached = dd->normalize(ve, true);
+  auto veNormalizedCached =
+      dd::vEdge::normalize(ve.p, edges, dd->vMemoryManager, dd->cn, true);
   EXPECT_EQ(veNormalizedCached, dd::vEdge::zero());
 
-  for (auto& edge : ve.p->e) {
+  std::array<dd::vEdge, dd::RADIX> edges2{};
+  for (auto& edge : edges2) {
     edge.p = dd->vMemoryManager.get();
     edge.p->v = 0;
-    edge.w = dd->cn.lookup(nearZero, 0.);
+    edge.w = dd->cn.lookup(nearZero);
     edge.p->e = {dd::vEdge::one(), dd::vEdge::one()};
   }
-  auto veNormalized = dd->normalize(ve, false);
+  auto veNormalized =
+      dd::vEdge::normalize(ve.p, edges2, dd->vMemoryManager, dd->cn, false);
   EXPECT_TRUE(veNormalized.isZeroTerminal());
 
   dd::mEdge me{};
   me.p = dd->mMemoryManager.get();
   me.p->v = 1;
   me.w = dd::Complex::one();
-  for (auto& edge : me.p->e) {
+  std::array<dd::mEdge, dd::NEDGE> edges3{};
+  for (auto& edge : edges3) {
     edge.p = dd->mMemoryManager.get();
     edge.p->v = 0;
     edge.w = dd->cn.getCached(nearZero, 0.);
     edge.p->e = {dd::mEdge::one(), dd::mEdge::one(), dd::mEdge::one(),
                  dd::mEdge::one()};
   }
-  auto meNormalizedCached = dd->normalize(me, true);
+  auto meNormalizedCached =
+      dd::mEdge::normalize(me.p, edges3, dd->mMemoryManager, dd->cn, true);
   EXPECT_EQ(meNormalizedCached, dd::mEdge::zero());
 
   me.p = dd->mMemoryManager.get();
-  for (auto& edge : me.p->e) {
+  std::array<dd::mEdge, 4> edges4{};
+  for (auto& edge : edges4) {
     edge.p = dd->mMemoryManager.get();
     edge.p->v = 0;
     edge.w = dd->cn.lookup(nearZero, 0.);
     edge.p->e = {dd::mEdge::one(), dd::mEdge::one(), dd::mEdge::one(),
                  dd::mEdge::one()};
   }
-  auto meNormalized = dd->normalize(me, false);
+  auto meNormalized =
+      dd::mEdge::normalize(me.p, edges4, dd->mMemoryManager, dd->cn, false);
   EXPECT_TRUE(meNormalized.isZeroTerminal());
 }
 
