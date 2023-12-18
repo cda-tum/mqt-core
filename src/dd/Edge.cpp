@@ -109,39 +109,34 @@ Edge<Node> Edge<Node>::normalize(Node* p,
   const auto weights = std::array{static_cast<ComplexValue>(e[0].w),
                                   static_cast<ComplexValue>(e[1].w)};
 
-  const auto squaredMagnitudes =
-      std::array{weights[0].mag2(), weights[1].mag2()};
+  const auto mag2 = std::array{weights[0].mag2(), weights[1].mag2()};
 
-  const auto argMax =
-      (squaredMagnitudes[0] + RealNumber::eps >= squaredMagnitudes[1]) ? 0U
-                                                                       : 1U;
-  const auto& maxMag = squaredMagnitudes[argMax];
+  const auto argMax = (mag2[0] + RealNumber::eps >= mag2[1]) ? 0U : 1U;
+  const auto& maxMag2 = mag2[argMax];
 
   const auto argMin = 1U - argMax;
-  const auto& minMag = squaredMagnitudes[argMin];
+  const auto& minMag2 = mag2[argMin];
 
-  const auto maxWeight = std::sqrt(maxMag / (maxMag + minMag));
+  const auto norm = std::sqrt(maxMag2 + minMag2);
+  const auto maxMag = std::sqrt(maxMag2);
+  const auto commonFactor = norm / maxMag;
 
-  // In theory, one could just use 1/maxWeight for the common factor. However,
-  // the following computation is more numerically stable.
-  const auto commonFactor = std::sqrt(1. + minMag / maxMag);
   const auto topWeight = weights[argMax] * commonFactor;
-  vEdge r = {p, cn.lookup(topWeight)};
-
-  // In theory, the more efficient computation here would be
-  // weights[argMin] / weights[argMax]) * maxWeight;
-  // However, the lookup of the top weight can lead to a slightly different
-  // value for that value. Therefore, we use the following computation instead,
-  // which accounts for the potential difference (at the cost of a conversion
-  // of the top weight to a ComplexValue).
-  const auto minWeight = weights[argMin] / r.w;
-
-  assert(!r.w.exactlyZero() && "Top edge weight should not be zero.");
-
+  const auto maxWeight = maxMag / norm;
   p->e[argMax].w = cn.lookup(maxWeight);
   assert(!p->e[argMax].w.exactlyZero() &&
          "Max edge weight should not be zero.");
 
+  vEdge r = {p, cn.lookup(topWeight)};
+  assert(!r.w.exactlyZero() && "Top edge weight should not be zero.");
+
+  // In theory, the more efficient computation here would be
+  //              weights[argMin] / topWeight
+  // However, the lookup of the top weight can lead to a slightly different
+  // value for that value. Therefore, we use the following computation instead,
+  // which accounts for the potential difference (at the cost of a conversion
+  // of the looked-up top weight to a ComplexValue).
+  const auto minWeight = weights[argMin] / r.w;
   auto& min = p->e[argMin];
   min.w = cn.lookup(minWeight);
   if (min.w.exactlyZero()) {
@@ -190,18 +185,19 @@ Edge<Node>::normalizeCached(Node* p, const std::array<Edge<Node>, RADIX>& e,
   const auto argMax =
       (squaredMagnitudes[0] + RealNumber::eps >= squaredMagnitudes[1]) ? 0U
                                                                        : 1U;
-  const auto& maxMag = squaredMagnitudes[argMax];
+  const auto& maxMag2 = squaredMagnitudes[argMax];
 
   const auto argMin = 1U - argMax;
-  const auto& minMag = squaredMagnitudes[argMin];
+  const auto& minMag2 = squaredMagnitudes[argMin];
 
-  const auto maxWeight = std::sqrt(maxMag / (maxMag + minMag));
-  const auto minWeight = (weights[argMin] / weights[argMax]) * maxWeight;
+  const auto norm2 = maxMag2 + minMag2;
+  const auto norm = std::sqrt(norm2);
+  const auto maxMag = std::sqrt(maxMag2);
+  const auto commonFactor = norm / maxMag;
 
-  // In theory, one could just use 1/maxWeight for the common factor. However,
-  // the following computation is more numerically stable.
-  const auto commonFactor = std::sqrt(1. + minMag / maxMag);
   const auto topWeight = weights[argMax] * commonFactor;
+  const auto maxWeight = maxMag / norm;
+  const auto minWeight = weights[argMin] / topWeight;
 
   p->e[argMax] = {e[argMax].p, cn.lookup(maxWeight)};
   assert(!p->e[argMax].w.exactlyZero() &&
