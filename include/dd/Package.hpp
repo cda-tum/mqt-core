@@ -289,102 +289,6 @@ public:
   ///
   /// Vector nodes, edges and quantum states
   ///
-  vEdge normalize(const vEdge& e, bool cached) {
-    auto zero = std::array{e.p->e[0].w.approximatelyZero(),
-                           e.p->e[1].w.approximatelyZero()};
-
-    // make sure to release cached numbers approximately zero, but not exactly
-    // zero
-    if (cached) {
-      for (auto i = 0U; i < RADIX; i++) {
-        if (zero[i]) {
-          cn.returnToCache(e.p->e[i].w);
-          e.p->e[i] = vEdge::zero();
-        }
-      }
-    }
-
-    if (zero[0]) {
-      // all equal to zero
-      if (zero[1]) {
-        if (!cached && !e.isTerminal()) {
-          // If it is not a cached computation, the node has to be put back into
-          // the chain
-          vMemoryManager.returnEntry(e.p);
-        }
-        return vEdge::zero();
-      }
-
-      auto r = e;
-      auto& w = r.p->e[1].w;
-      if (cached) {
-        r.w = w;
-      } else {
-        r.w = cn.lookup(w);
-      }
-      w = Complex::one();
-      return r;
-    }
-
-    if (zero[1]) {
-      auto r = e;
-      auto& w = r.p->e[0].w;
-      if (cached) {
-        r.w = w;
-      } else {
-        r.w = cn.lookup(w);
-      }
-      w = Complex::one();
-      return r;
-    }
-
-    const auto mag0 = ComplexNumbers::mag2(e.p->e[0].w);
-    const auto mag1 = ComplexNumbers::mag2(e.p->e[1].w);
-    const auto norm2 = mag0 + mag1;
-    const auto mag2Max = (mag0 + RealNumber::eps >= mag1) ? mag0 : mag1;
-    const auto argMax = (mag0 + RealNumber::eps >= mag1) ? 0 : 1;
-    const auto norm = std::sqrt(norm2);
-    const auto magMax = std::sqrt(mag2Max);
-    const auto commonFactor = norm / magMax;
-
-    auto r = e;
-    auto& max = r.p->e[static_cast<std::size_t>(argMax)];
-    if (cached) {
-      if (max.w.exactlyOne()) {
-        r.w = cn.lookup(commonFactor, 0.);
-      } else {
-        r.w = max.w;
-        r.w.r->value *= commonFactor;
-        r.w.i->value *= commonFactor;
-      }
-    } else {
-      r.w = cn.lookup(RealNumber::val(max.w.r) * commonFactor,
-                      RealNumber::val(max.w.i) * commonFactor);
-      if (r.w.approximatelyZero()) {
-        return vEdge::zero();
-      }
-    }
-
-    max.w = cn.lookup(magMax / norm);
-    if (max.w.exactlyZero()) {
-      max = vEdge::zero();
-    }
-
-    const auto argMin = (argMax + 1) % 2;
-    auto& min = r.p->e[static_cast<std::size_t>(argMin)];
-    if (cached) {
-      ComplexNumbers::div(min.w, min.w, r.w);
-      min.w = cn.lookup(min.w, true);
-    } else {
-      min.w = cn.lookup(min.w / r.w);
-    }
-    if (min.w.exactlyZero()) {
-      min = vEdge::zero();
-    }
-
-    return r;
-  }
-
   dEdge makeZeroDensityOperator(const std::size_t n) {
     auto f = dEdge::one();
     for (std::size_t p = 0; p < n; p++) {
@@ -625,97 +529,6 @@ public:
   ///
   /// Matrix nodes, edges and quantum gates
   ///
-  template <class Node> Edge<Node> normalize(const Edge<Node>& e, bool cached) {
-    if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
-      auto argmax = -1;
-
-      auto zero = std::array{
-          e.p->e[0].w.approximatelyZero(), e.p->e[1].w.approximatelyZero(),
-          e.p->e[2].w.approximatelyZero(), e.p->e[3].w.approximatelyZero()};
-
-      // make sure to release cached numbers approximately zero, but not exactly
-      // zero
-      if (cached) {
-        for (auto i = 0U; i < NEDGE; i++) {
-          auto& successor = e.p->e[i];
-          if (zero[i]) {
-            cn.returnToCache(successor.w);
-            successor = Edge<Node>::zero();
-          }
-        }
-      }
-
-      fp max = 0;
-      auto maxc = Complex::one();
-      // determine max amplitude
-      for (auto i = 0U; i < NEDGE; ++i) {
-        if (zero[i]) {
-          continue;
-        }
-        const auto& w = e.p->e[i].w;
-        if (argmax == -1) {
-          argmax = static_cast<decltype(argmax)>(i);
-          max = ComplexNumbers::mag2(w);
-          maxc = w;
-        } else {
-          auto mag = ComplexNumbers::mag2(w);
-          if (mag - max > RealNumber::eps) {
-            argmax = static_cast<decltype(argmax)>(i);
-            max = mag;
-            maxc = w;
-          }
-        }
-      }
-
-      // all equal to zero
-      if (argmax == -1) {
-        if (!e.isTerminal()) {
-          getMemoryManager<Node>().returnEntry(e.p);
-        }
-        return Edge<Node>::zero();
-      }
-
-      auto r = e;
-      // divide each entry by max
-      for (auto i = 0U; i < NEDGE; ++i) {
-        if (static_cast<decltype(argmax)>(i) == argmax) {
-          r.p->e[i].w = Complex::one();
-          if (r.w.exactlyOne()) {
-            r.w = maxc;
-            continue;
-          }
-
-          if (cached) {
-            ComplexNumbers::mul(r.w, r.w, maxc);
-          } else {
-            r.w = cn.lookup(r.w * maxc);
-          }
-        } else {
-          auto& successor = r.p->e[i];
-          if (zero[i]) {
-            assert(successor.w.exactlyZero() &&
-                   "Should have been set to zero at the start");
-            continue;
-          }
-          // TODO: it might be worth revisiting whether this check actually
-          // improves performance or rather causes more instability.
-          if (successor.w.approximatelyOne()) {
-            if (cached) {
-              cn.returnToCache(successor.w);
-            }
-            successor.w = Complex::one();
-          }
-          const auto c = successor.w / maxc;
-          if (cached) {
-            cn.returnToCache(successor.w);
-          }
-          successor.w = cn.lookup(c);
-        }
-      }
-      return r;
-    }
-  }
-
   // build matrix representation for a single gate on an n-qubit circuit
   mEdge makeGateDD(const GateMatrix& mat, const std::size_t n,
                    const qc::Qubit target, const std::size_t start = 0) {
@@ -1190,27 +1003,20 @@ public:
       const bool cached = false,
       [[maybe_unused]] const bool generateDensityMatrix = false) {
     auto& memoryManager = getMemoryManager<Node>();
-    Edge<Node> e{memoryManager.get(), Complex::one()};
-    e.p->v = var;
-    e.p->e = edges;
+    auto p = memoryManager.get();
+    assert(p->ref == 0U);
 
+    p->v = var;
     if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
-      e.p->flags = 0;
+      p->flags = 0;
       if constexpr (std::is_same_v<Node, dNode>) {
-        e.p->setDensityMatrixNodeFlag(generateDensityMatrix);
+        p->setDensityMatrixNodeFlag(generateDensityMatrix);
       }
     }
 
-    assert(e.p->ref == 0);
-    for ([[maybe_unused]] const auto& edge : edges) {
-      // an error here indicates that cached nodes are assigned multiple times.
-      // Check if garbage collect correctly resets the cache tables!
-      assert(edge.isTerminal() || edge.p->v == var - 1);
-    }
-
     // normalize it
-    e = normalize(e, cached);
-    assert(e.isTerminal() || e.p->v == var);
+    auto e = cached ? Edge<Node>::normalizeCached(p, edges, memoryManager, cn)
+                    : Edge<Node>::normalize(p, edges, memoryManager, cn);
 
     // look it up in the unique tables
     auto& uniqueTable = getUniqueTable<Node>();
@@ -1222,7 +1028,7 @@ public:
         checkSpecialMatrices(l);
       }
     }
-    return {l, e.w};
+    return Edge<Node>{l, e.w};
   }
 
   template <class Node>
