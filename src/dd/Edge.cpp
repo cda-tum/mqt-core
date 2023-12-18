@@ -132,10 +132,9 @@ Edge<Node> Edge<Node>::normalize(Node* p,
 
   // In theory, the more efficient computation here would be
   //              weights[argMin] / topWeight
-  // However, the lookup of the top weight can lead to a slightly different
-  // value for that value. Therefore, we use the following computation instead,
-  // which accounts for the potential difference (at the cost of a conversion
-  // of the looked-up top weight to a ComplexValue).
+  // However, the lookup of the top weight can slightly change its value.
+  // Therefore, we use the following computation instead, which accounts for the
+  // potential difference (at the cost of a Complex->ComplexValue conversion).
   const auto minWeight = weights[argMin] / r.w;
   auto& min = p->e[argMin];
   min.w = cn.lookup(minWeight);
@@ -179,19 +178,15 @@ Edge<Node>::normalizeCached(Node* p, const std::array<Edge<Node>, RADIX>& e,
   cn.returnToCache(e[1].w);
   cn.returnToCache(e[0].w);
 
-  const auto squaredMagnitudes =
-      std::array{weights[0].mag2(), weights[1].mag2()};
+  const auto mag2 = std::array{weights[0].mag2(), weights[1].mag2()};
 
-  const auto argMax =
-      (squaredMagnitudes[0] + RealNumber::eps >= squaredMagnitudes[1]) ? 0U
-                                                                       : 1U;
-  const auto& maxMag2 = squaredMagnitudes[argMax];
+  const auto argMax = (mag2[0] + RealNumber::eps >= mag2[1]) ? 0U : 1U;
+  const auto& maxMag2 = mag2[argMax];
 
   const auto argMin = 1U - argMax;
-  const auto& minMag2 = squaredMagnitudes[argMin];
+  const auto& minMag2 = mag2[argMin];
 
-  const auto norm2 = maxMag2 + minMag2;
-  const auto norm = std::sqrt(norm2);
+  const auto norm = std::sqrt(maxMag2 + minMag2);
   const auto maxMag = std::sqrt(maxMag2);
   const auto commonFactor = norm / maxMag;
 
@@ -349,7 +344,7 @@ Edge<Node> Edge<Node>::normalize(Node* p,
       static_cast<ComplexValue>(e[2].w), static_cast<ComplexValue>(e[3].w)};
 
   std::optional<std::size_t> argMax = std::nullopt;
-  fp maxMag = 0.;
+  fp maxMag2 = 0.;
   auto maxVal = Complex::one();
   // determine max amplitude
   for (auto i = 0U; i < NEDGE; ++i) {
@@ -360,12 +355,12 @@ Edge<Node> Edge<Node>::normalize(Node* p,
     const auto& w = weights[i];
     if (!argMax.has_value()) {
       argMax = i;
-      maxMag = w.mag2();
+      maxMag2 = w.mag2();
       maxVal = e[i].w;
     } else {
-      if (const auto mag = w.mag2(); mag - maxMag > RealNumber::eps) {
+      if (const auto mag2 = w.mag2(); mag2 - maxMag2 > RealNumber::eps) {
         argMax = i;
-        maxMag = mag;
+        maxMag2 = mag2;
         maxVal = e[i].w;
       }
     }
@@ -378,15 +373,13 @@ Edge<Node> Edge<Node>::normalize(Node* p,
     if (zero[i]) {
       continue;
     }
-    auto& successor = p->e[i];
-    successor.p = e[i].p;
     if (i == argMaxValue) {
-      successor.w = Complex::one();
+      p->e[i] = {e[i].p, Complex::one()};
       continue;
     }
-    successor.w = cn.lookup(weights[i] / argMaxWeight);
-    if (successor.w.exactlyZero()) {
-      successor.p = Node::getTerminal();
+    p->e[i] = {e[i].p, cn.lookup(weights[i] / argMaxWeight)};
+    if (p->e[i].w.exactlyZero()) {
+      p->e[i].p = Node::getTerminal();
     }
   }
   return Edge<Node>{p, maxVal};
@@ -417,7 +410,7 @@ Edge<Node>::normalizeCached(Node* p, const std::array<Edge<Node>, NEDGE>& e,
   }
 
   std::optional<std::size_t> argMax = std::nullopt;
-  fp maxMag = 0.;
+  fp maxMag2 = 0.;
   ComplexValue maxVal = 1.;
   // determine max amplitude
   for (auto i = 0U; i < NEDGE; ++i) {
@@ -427,12 +420,12 @@ Edge<Node>::normalizeCached(Node* p, const std::array<Edge<Node>, NEDGE>& e,
     const auto& w = weights[i];
     if (!argMax.has_value()) {
       argMax = i;
-      maxMag = w.mag2();
+      maxMag2 = w.mag2();
       maxVal = w;
     } else {
-      if (const auto mag = w.mag2(); mag - maxMag > RealNumber::eps) {
+      if (const auto mag2 = w.mag2(); mag2 - maxMag2 > RealNumber::eps) {
         argMax = i;
-        maxMag = mag;
+        maxMag2 = mag2;
         maxVal = w;
       }
     }
@@ -441,26 +434,19 @@ Edge<Node>::normalizeCached(Node* p, const std::array<Edge<Node>, NEDGE>& e,
 
   const auto argMaxValue = *argMax;
   for (auto i = 0U; i < NEDGE; ++i) {
-    auto& successor = p->e[i];
-    successor.p = e[i].p;
-    if (i == argMaxValue) {
-      successor.w = Complex::one();
-      continue;
-    }
-    const auto& weight = weights[i];
     // The approximation below is really important for numerical stability.
     // An exactly zero check will lead to numerical instabilities.
     if (zero[i]) {
-      successor = Edge<Node>::zero();
+      p->e[i] = Edge<Node>::zero();
       continue;
     }
-    if (weight.approximatelyOne()) {
-      successor.w = cn.lookup(1. / maxVal);
-    } else {
-      successor.w = cn.lookup(weight / maxVal);
+    if (i == argMaxValue) {
+      p->e[i] = {e[i].p, Complex::one()};
+      continue;
     }
-    if (successor.w.exactlyZero()) {
-      successor.p = Node::getTerminal();
+    p->e[i] = {e[i].p, cn.lookup(weights[i] / maxVal)};
+    if (p->e[i].w.exactlyZero()) {
+      p->e[i].p = Node::getTerminal();
     }
   }
   return Edge<Node>{p, cn.getCached(maxVal)};
