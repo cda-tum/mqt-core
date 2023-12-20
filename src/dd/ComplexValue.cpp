@@ -239,15 +239,6 @@ ComplexValue operator*(fp r, const ComplexValue& c1) {
 }
 
 ComplexValue operator*(const ComplexValue& c1, const ComplexValue& c2) {
-  if (c1.approximatelyOne()) {
-    return c2;
-  }
-  if (c2.approximatelyOne()) {
-    return c1;
-  }
-  if (c1.approximatelyZero() || c2.approximatelyZero()) {
-    return {0., 0.};
-  }
   return {c1.r * c2.r - c1.i * c2.i, c1.r * c2.i + c1.i * c2.r};
 }
 
@@ -256,12 +247,6 @@ ComplexValue operator/(const ComplexValue& c1, fp r) {
 }
 
 ComplexValue operator/(const ComplexValue& c1, const ComplexValue& c2) {
-  if (c2.approximatelyOne()) {
-    return c1;
-  }
-  if (c1.approximatelyEquals(c2)) {
-    return {1., 0.};
-  }
   const auto denom = c2.r * c2.r + c2.i * c2.i;
   return {(c1.r * c2.r + c1.i * c2.i) / denom,
           (c1.i * c2.r - c1.r * c2.i) / denom};
