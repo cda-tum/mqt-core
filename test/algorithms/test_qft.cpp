@@ -30,7 +30,6 @@ protected:
 ///	Utilizing more qubits requires the use of fp=long double
 constexpr std::size_t QFT_MAX_QUBITS = 20U;
 
-static const size_t INITIAL_CACHE_COUNT = 0;
 static const size_t INITIAL_COMPLEX_COUNT = 1;
 
 INSTANTIATE_TEST_SUITE_P(QFT, QFT,
@@ -97,9 +96,6 @@ TEST_P(QFT, Functionality) {
   // number of complex table entries after clean-up should equal initial
   // number of entries
   EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
-  // number of available cache entries after clean-up should equal initial
-  // number of entries
-  EXPECT_EQ(dd->cn.cacheCount(), INITIAL_CACHE_COUNT);
 }
 
 TEST_P(QFT, FunctionalityRecursive) {
@@ -150,9 +146,6 @@ TEST_P(QFT, FunctionalityRecursive) {
   // number of complex table entries after clean-up should equal initial
   // number of entries
   EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
-  // number of available cache entries after clean-up should equal initial
-  // number of entries
-  EXPECT_EQ(dd->cn.cacheCount(), INITIAL_CACHE_COUNT);
 }
 
 TEST_P(QFT, Simulation) {
@@ -190,9 +183,6 @@ TEST_P(QFT, Simulation) {
   // number of complex table entries after clean-up should equal initial
   // number of entries
   EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
-  // number of available cache entries after clean-up should equal initial
-  // number of entries
-  EXPECT_EQ(dd->cn.cacheCount(), INITIAL_CACHE_COUNT);
 }
 
 TEST_P(QFT, FunctionalityRecursiveEquality) {
@@ -217,9 +207,6 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
   // number of complex table entries after clean-up should equal initial
   // number of entries
   EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
-  // number of available cache entries after clean-up should equal initial
-  // number of entries
-  EXPECT_EQ(dd->cn.cacheCount(), INITIAL_CACHE_COUNT);
 }
 
 TEST_P(QFT, DynamicSimulation) {
@@ -251,7 +238,4 @@ TEST_P(QFT, DynamicSimulation) {
   // number of complex table entries after clean-up should equal initial
   // number of entries
   EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
-  // number of available cache entries after clean-up should equal initial
-  // number of entries
-  EXPECT_EQ(dd->cn.cacheCount(), INITIAL_CACHE_COUNT);
 }

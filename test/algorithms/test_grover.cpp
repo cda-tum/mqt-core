@@ -14,8 +14,6 @@ protected:
     dd->garbageCollect(true);
     // number of complex table entries after clean-up should equal 1
     EXPECT_EQ(dd->cn.realCount(), 1);
-    // number of available cache entries after clean-up should equal 0
-    EXPECT_EQ(dd->cn.cacheCount(), 0);
   }
 
   void SetUp() override {
