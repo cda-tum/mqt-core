@@ -1568,7 +1568,9 @@ private:
       if (r->w.approximatelyZero()) {
         return ResultEdge::zero();
       }
-      const auto w = r->w * rWeight;
+      auto w = r->w;
+      w = w * xWeight;
+      w = w * yWeight;
       if (w.approximatelyZero()) {
         return ResultEdge::zero();
       }
@@ -1646,8 +1648,8 @@ private:
     if (e.w.approximatelyZero()) {
       return ResultEdge::zero();
     }
-
-    e.w = e.w * rWeight;
+    e.w = e.w * xWeight;
+    e.w = e.w * yWeight;
     if (e.w.approximatelyZero()) {
       return ResultEdge::zero();
     }
