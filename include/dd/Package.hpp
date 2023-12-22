@@ -1337,7 +1337,7 @@ public:
     }
 
     const auto result = add2(CachedEdge{x.p, x.w}, {y.p, y.w}, var);
-    return {result.p, cn.lookup(result.w)};
+    return cn.lookup(result);
   }
 
   template <class Node>
@@ -1515,7 +1515,7 @@ public:
 
       const auto e = multiply2(xCopy, yCopy, var, start, generateDensityMatrix);
       dEdge::revertDmChangesToEdges(xCopy, yCopy);
-      return {e.p, cn.lookup(e.w)};
+      return cn.lookup(e);
     } else {
       if (!x.isTerminal()) {
         var = x.p->v;
@@ -1524,7 +1524,7 @@ public:
         var = y.p->v;
       }
       const auto e = multiply2(x, y, var, start);
-      return {e.p, cn.lookup(e.w)};
+      return cn.lookup(e);
     }
   }
 
@@ -1833,8 +1833,8 @@ public:
           "Kronecker is currently not supported for density matrices");
     }
 
-    auto e = kronecker2(x, y, incIdx);
-    return {e.p, cn.lookup(e.w)};
+    const auto e = kronecker2(x, y, incIdx);
+    return cn.lookup(e);
   }
 
   // extent the DD pointed to by `e` with `h` identities on top and `l`
@@ -1910,7 +1910,7 @@ private:
 public:
   mEdge partialTrace(const mEdge& a, const std::vector<bool>& eliminate) {
     auto r = trace(a, eliminate);
-    return {r.p, cn.lookup(r.w)};
+    return cn.lookup(r);
   }
   ComplexValue trace(const mEdge& a) {
     const auto eliminate = std::vector<bool>(nqubits, true);
