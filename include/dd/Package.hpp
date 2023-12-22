@@ -1354,17 +1354,11 @@ public:
     }
     if (x.p == y.p) {
       const auto rWeight = x.w + y.w;
-      if (rWeight.approximatelyZero()) {
-        return CachedEdge<Node>::zero();
-      }
       return {x.p, rWeight};
     }
 
     auto& computeTable = getAddComputeTable<Node>();
     if (const auto* r = computeTable.lookup(x, y); r != nullptr) {
-      if (r->w.approximatelyZero()) {
-        return CachedEdge<Node>::zero();
-      }
       return *r;
     }
 
@@ -1561,14 +1555,7 @@ private:
     auto& computeTable = getMultiplicationComputeTable<RightOperandNode>();
     if (const auto* r = computeTable.lookup(x.p, y.p, generateDensityMatrix);
         r != nullptr) {
-      if (r->w.approximatelyZero()) {
-        return ResultEdge::zero();
-      }
-      const auto w = r->w * rWeight;
-      if (w.approximatelyZero()) {
-        return ResultEdge::zero();
-      }
-      return {r->p, w};
+      return {r->p, r->w * rWeight};
     }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(y.p->e)>;
@@ -1639,13 +1626,7 @@ private:
     auto e = makeDDNode(var, edge, generateDensityMatrix);
     computeTable.insert(x.p, y.p, e);
 
-    if (e.w.approximatelyZero()) {
-      return ResultEdge::zero();
-    }
     e.w = e.w * rWeight;
-    if (e.w.approximatelyZero()) {
-      return ResultEdge::zero();
-    }
     return e;
   }
 
