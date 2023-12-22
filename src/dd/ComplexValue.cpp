@@ -31,10 +31,6 @@ bool ComplexValue::approximatelyZero() const noexcept {
   return RealNumber::approximatelyZero(r) && RealNumber::approximatelyZero(i);
 }
 
-bool ComplexValue::approximatelyOne() const noexcept {
-  return RealNumber::approximatelyOne(r) && RealNumber::approximatelyZero(i);
-}
-
 void ComplexValue::writeBinary(std::ostream& os) const {
   RealNumber::writeBinary(r, os);
   RealNumber::writeBinary(i, os);

@@ -18,10 +18,6 @@ bool Complex::approximatelyZero() const noexcept {
   return RealNumber::approximatelyZero(r) && RealNumber::approximatelyZero(i);
 }
 
-bool Complex::approximatelyOne() const noexcept {
-  return RealNumber::approximatelyOne(r) && RealNumber::approximatelyZero(i);
-}
-
 std::string Complex::toString(bool formatted, int precision) const {
   return ComplexValue::toString(RealNumber::val(r), RealNumber::val(i),
                                 formatted, precision);
