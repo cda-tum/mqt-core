@@ -249,18 +249,18 @@ TEST_F(DDFunctionality, changePermutation) {
   qc.import(ss, qc::Format::OpenQASM);
   auto sim = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
   EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
-  EXPECT_TRUE(sim.p->e[1].w.approximatelyOne());
+  EXPECT_TRUE(sim.p->e[1].w.exactlyOne());
   EXPECT_TRUE(sim.p->e[1].p->e[1].isZeroTerminal());
-  EXPECT_TRUE(sim.p->e[1].p->e[0].w.approximatelyOne());
+  EXPECT_TRUE(sim.p->e[1].p->e[0].w.exactlyOne());
   auto func = buildFunctionality(&qc, dd);
   EXPECT_FALSE(func.p->e[0].isZeroTerminal());
   EXPECT_FALSE(func.p->e[1].isZeroTerminal());
   EXPECT_FALSE(func.p->e[2].isZeroTerminal());
   EXPECT_FALSE(func.p->e[3].isZeroTerminal());
-  EXPECT_TRUE(func.p->e[0].p->e[1].w.approximatelyOne());
-  EXPECT_TRUE(func.p->e[1].p->e[3].w.approximatelyOne());
-  EXPECT_TRUE(func.p->e[2].p->e[0].w.approximatelyOne());
-  EXPECT_TRUE(func.p->e[3].p->e[2].w.approximatelyOne());
+  EXPECT_TRUE(func.p->e[0].p->e[1].w.exactlyOne());
+  EXPECT_TRUE(func.p->e[1].p->e[3].w.exactlyOne());
+  EXPECT_TRUE(func.p->e[2].p->e[0].w.exactlyOne());
+  EXPECT_TRUE(func.p->e[3].p->e[2].w.exactlyOne());
 }
 
 TEST_F(DDFunctionality, basicTensorDumpTest) {

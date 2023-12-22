@@ -61,14 +61,6 @@ bool RealNumber::approximatelyZero(const RealNumber* e) noexcept {
   return e == &constants::zero || approximatelyZero(val(e));
 }
 
-bool RealNumber::approximatelyOne(const fp e) noexcept {
-  return approximatelyEquals(e, 1.0);
-}
-
-bool RealNumber::approximatelyOne(const RealNumber* e) noexcept {
-  return e == &constants::one || approximatelyOne(val(e));
-}
-
 bool RealNumber::noRefCountingNeeded(const RealNumber* const num) noexcept {
   assert(!isNegativePointer(num));
   return num == nullptr || constants::isStaticNumber(num) ||

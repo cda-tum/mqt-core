@@ -1337,7 +1337,7 @@ public:
     }
 
     const auto result = add2(CachedEdge{x.p, x.w}, {y.p, y.w}, var);
-    return {result.p, cn.lookup(result.w)};
+    return cn.lookup(result);
   }
 
   template <class Node>
@@ -1354,17 +1354,11 @@ public:
     }
     if (x.p == y.p) {
       const auto rWeight = x.w + y.w;
-      if (rWeight.approximatelyZero()) {
-        return CachedEdge<Node>::zero();
-      }
       return {x.p, rWeight};
     }
 
     auto& computeTable = getAddComputeTable<Node>();
     if (const auto* r = computeTable.lookup(x, y); r != nullptr) {
-      if (r->w.approximatelyZero()) {
-        return CachedEdge<Node>::zero();
-      }
       return *r;
     }
 
@@ -1450,11 +1444,11 @@ public:
   ///
   /// Multiplication
   ///
-  ComputeTable<mEdge, vEdge, vCachedEdge, Config::CT_MAT_VEC_MULT_NBUCKET>
+  ComputeTable<mNode*, vNode*, vCachedEdge, Config::CT_MAT_VEC_MULT_NBUCKET>
       matrixVectorMultiplication{};
-  ComputeTable<mEdge, mEdge, mCachedEdge, Config::CT_MAT_MAT_MULT_NBUCKET>
+  ComputeTable<mNode*, mNode*, mCachedEdge, Config::CT_MAT_MAT_MULT_NBUCKET>
       matrixMatrixMultiplication{};
-  ComputeTable<dEdge, dEdge, dCachedEdge, Config::CT_DM_DM_MULT_NBUCKET>
+  ComputeTable<dNode*, dNode*, dCachedEdge, Config::CT_DM_DM_MULT_NBUCKET>
       densityDensityMultiplication{};
 
   template <class RightOperandNode>
@@ -1515,7 +1509,7 @@ public:
 
       const auto e = multiply2(xCopy, yCopy, var, start, generateDensityMatrix);
       dEdge::revertDmChangesToEdges(xCopy, yCopy);
-      return {e.p, cn.lookup(e.w)};
+      return cn.lookup(e);
     } else {
       if (!x.isTerminal()) {
         var = x.p->v;
@@ -1524,7 +1518,7 @@ public:
         var = y.p->v;
       }
       const auto e = multiply2(x, y, var, start);
-      return {e.p, cn.lookup(e.w)};
+      return cn.lookup(e);
     }
   }
 
@@ -1558,23 +1552,10 @@ private:
     assert(x.p != nullptr);
     assert(y.p != nullptr);
 
-    auto xCopy = LEdge{x.p, Complex::one()};
-    auto yCopy = REdge{y.p, Complex::one()};
-
     auto& computeTable = getMultiplicationComputeTable<RightOperandNode>();
-    if (const auto* r =
-            computeTable.lookup(xCopy, yCopy, generateDensityMatrix);
+    if (const auto* r = computeTable.lookup(x.p, y.p, generateDensityMatrix);
         r != nullptr) {
-      if (r->w.approximatelyZero()) {
-        return ResultEdge::zero();
-      }
-      auto w = r->w;
-      w = w * xWeight;
-      w = w * yWeight;
-      if (w.approximatelyZero()) {
-        return ResultEdge::zero();
-      }
-      return {r->p, w};
+      return {r->p, r->w * rWeight};
     }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(y.p->e)>;
@@ -1643,16 +1624,9 @@ private:
     }
 
     auto e = makeDDNode(var, edge, generateDensityMatrix);
-    computeTable.insert(xCopy, yCopy, e);
+    computeTable.insert(x.p, y.p, e);
 
-    if (e.w.approximatelyZero()) {
-      return ResultEdge::zero();
-    }
-    e.w = e.w * xWeight;
-    e.w = e.w * yWeight;
-    if (e.w.approximatelyZero()) {
-      return ResultEdge::zero();
-    }
+    e.w = e.w * rWeight;
     return e;
   }
 
@@ -1660,7 +1634,7 @@ private:
   /// Inner product, fidelity, expectation value
   ///
 public:
-  ComputeTable<vEdge, vEdge, vCachedEdge, Config::CT_VEC_INNER_PROD_NBUCKET>
+  ComputeTable<vNode*, vNode*, vCachedEdge, Config::CT_VEC_INNER_PROD_NBUCKET>
       vectorInnerProduct{};
 
   /**
@@ -1750,10 +1724,7 @@ private:
       return rWeight;
     }
 
-    // Set to one to generate more lookup hits
-    auto xCopy = vEdge{x.p, Complex::one()};
-    auto yCopy = vEdge{y.p, Complex::one()};
-    if (const auto* r = vectorInnerProduct.lookup(xCopy, yCopy); r != nullptr) {
+    if (const auto* r = vectorInnerProduct.lookup(x.p, y.p); r != nullptr) {
       return r->w * rWeight;
     }
 
@@ -1766,17 +1737,17 @@ private:
         e1 = x.p->e[i];
         e1.w = ComplexNumbers::conj(e1.w);
       } else {
-        e1 = xCopy;
+        e1 = {x.p, Complex::one()};
       }
       vEdge e2{};
       if (!y.isTerminal() && y.p->v == w) {
         e2 = y.p->e[i];
       } else {
-        e2 = yCopy;
+        e2 = {y.p, Complex::one()};
       }
       sum += innerProduct(e1, e2, w);
     }
-    vectorInnerProduct.insert(xCopy, yCopy, vCachedEdge::terminal(sum));
+    vectorInnerProduct.insert(x.p, y.p, vCachedEdge::terminal(sum));
     return sum * rWeight;
   }
 
@@ -1815,9 +1786,9 @@ public:
   /// Kronecker/tensor product
   ///
 
-  ComputeTable<vEdge, vEdge, vCachedEdge, Config::CT_VEC_KRON_NBUCKET>
+  ComputeTable<vNode*, vNode*, vCachedEdge, Config::CT_VEC_KRON_NBUCKET>
       vectorKronecker{};
-  ComputeTable<mEdge, mEdge, mCachedEdge, Config::CT_MAT_KRON_NBUCKET>
+  ComputeTable<mNode*, mNode*, mCachedEdge, Config::CT_MAT_KRON_NBUCKET>
       matrixKronecker{};
 
   template <class Node> [[nodiscard]] auto& getKroneckerComputeTable() {
@@ -1836,8 +1807,8 @@ public:
           "Kronecker is currently not supported for density matrices");
     }
 
-    auto e = kronecker2(x, y, incIdx);
-    return {e.p, cn.lookup(e.w)};
+    const auto e = kronecker2(x, y, incIdx);
+    return cn.lookup(e);
   }
 
   // extent the DD pointed to by `e` with `h` identities on top and `l`
@@ -1872,10 +1843,8 @@ private:
       return {y.p, rWeight};
     }
 
-    auto xCopy = Edge<Node>{x.p, Complex::one()};
-    auto yCopy = Edge<Node>{y.p, Complex::one()};
     auto& computeTable = getKroneckerComputeTable<Node>();
-    if (const auto* r = computeTable.lookup(xCopy, yCopy); r != nullptr) {
+    if (const auto* r = computeTable.lookup(x.p, y.p); r != nullptr) {
       return {r->p, rWeight};
     }
 
@@ -1884,6 +1853,7 @@ private:
     if constexpr (n == NEDGE) {
       if (x.p->isIdentity()) {
         auto idx = incIdx ? static_cast<Qubit>(y.p->v + 1) : y.p->v;
+        const auto yCopy = Edge<Node>{y.p, Complex::one()};
         auto e = makeDDNode(idx, std::array{yCopy, Edge<Node>::zero(),
                                             Edge<Node>::zero(), yCopy});
         for (auto i = 0; i < x.p->v; ++i) {
@@ -1891,7 +1861,7 @@ private:
           e = makeDDNode(
               idx, std::array{e, Edge<Node>::zero(), Edge<Node>::zero(), e});
         }
-        computeTable.insert(xCopy, yCopy, {e.p, e.w});
+        computeTable.insert(x.p, y.p, {e.p, e.w});
         return {e.p, rWeight};
       }
     }
@@ -1903,7 +1873,7 @@ private:
 
     auto idx = incIdx ? (y.p->v + x.p->v + 1) : x.p->v;
     auto e = makeDDNode(static_cast<Qubit>(idx), edge, true);
-    computeTable.insert(xCopy, yCopy, {e.p, e.w});
+    computeTable.insert(x.p, y.p, {e.p, e.w});
     return {e.p, rWeight};
   }
 
@@ -1913,7 +1883,7 @@ private:
 public:
   mEdge partialTrace(const mEdge& a, const std::vector<bool>& eliminate) {
     auto r = trace(a, eliminate);
-    return {r.p, cn.lookup(r.w)};
+    return cn.lookup(r);
   }
   ComplexValue trace(const mEdge& a) {
     const auto eliminate = std::vector<bool>(nqubits, true);

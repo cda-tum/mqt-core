@@ -2,6 +2,7 @@
 
 #include "dd/Complex.hpp"
 #include "dd/DDDefinitions.hpp"
+#include "dd/Node.hpp"
 #include "dd/RealNumberUniqueTable.hpp"
 
 namespace dd {
@@ -95,6 +96,22 @@ public:
    * @see ComplexTable::lookup
    */
   [[nodiscard]] Complex lookup(fp r, fp i);
+
+  /**
+   * @brief Turn CachedEdge into Edge via lookup.
+   * @tparam Node The type of the node.
+   * @param ce The cached edge.
+   * @return The edge with looked-up weight. The zero terminal if the new weight
+   * is exactly zero.
+   */
+  template <class Node>
+  [[nodiscard]] Edge<Node> lookup(const CachedEdge<Node>& ce) {
+    auto e = Edge<Node>{ce.p, lookup(ce.w)};
+    if (e.w.exactlyZero()) {
+      e.p = Node::getTerminal();
+    }
+    return e;
+  }
 
   /**
    * @brief Increment the reference count of a complex number.

@@ -60,15 +60,6 @@ struct ComplexValue {
   [[nodiscard]] bool approximatelyZero() const noexcept;
 
   /**
-   * @brief Check whether the complex number is approximately equal to one.
-   * @returns True if the complex number is approximately equal to one, false
-   * otherwise.
-   * @see RealNumber::approximatelyOne
-   * @see RealNumber::approximatelyZero
-   */
-  [[nodiscard]] bool approximatelyOne() const noexcept;
-
-  /**
    * @brief Write a binary representation of the complex number to the given
    * output stream.
    * @param os The output stream to write to.

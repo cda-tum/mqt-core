@@ -268,7 +268,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
       pzero /= norm;
       pone /= norm;
 
-      if (RealNumber::approximatelyOne(pone)) {
+      if (RealNumber::approximatelyEquals(pone, 1.)) {
         const qc::MatrixDD xGate =
             dd->makeGateDD(X_MAT, static_cast<std::size_t>(state.p->v) + 1U,
                            static_cast<Qubit>(targets[0U]));
@@ -279,7 +279,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
         continue;
       }
 
-      if (!RealNumber::approximatelyOne(pzero)) {
+      if (!RealNumber::approximatelyEquals(pzero, 1.)) {
         throw qc::QFRException("Reset on non basis state encountered. This is "
                                "not supported in this method.");
       }
