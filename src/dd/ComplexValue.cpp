@@ -234,8 +234,27 @@ ComplexValue operator*(fp r, const ComplexValue& c1) {
   return {c1.r * r, c1.i * r};
 }
 
+/// Computes an approximation of ac+bd
+inline fp kahan(const fp a, const fp b, const fp c, const fp d) {
+  // w = RN(b * d)
+  const auto w = b * d;
+  // e = RN(b * d - w)
+  const auto e = std::fma(b, d, -w);
+  // f = RN(a * c + w)
+  const auto f = std::fma(a, c, w);
+  // g = RN(f + e)
+  return f + e;
+}
+
 ComplexValue operator*(const ComplexValue& c1, const ComplexValue& c2) {
-  return {c1.r * c2.r - c1.i * c2.i, c1.r * c2.i + c1.i * c2.r};
+  // Implements the CMulKahan algorithm from https://hal.science/hal-01512760v2
+  // p1 = RN(c1.r * c2.r)
+  // R = RN(RN(p1 - c1.i * c2.i) + RN(c1.r * c2.r - p1))
+  const auto r = kahan(-c1.i, c1.r, c2.i, c2.r);
+  // p3 = RN(c1.r * c2.i)
+  // I = RN(RN(p3 + c1.i * c2.r) + RN(c1.r * c2.i - p3))
+  const auto i = kahan(c1.i, c1.r, c2.r, c2.i);
+  return {r, i};
 }
 
 ComplexValue operator/(const ComplexValue& c1, fp r) {
@@ -243,9 +262,19 @@ ComplexValue operator/(const ComplexValue& c1, fp r) {
 }
 
 ComplexValue operator/(const ComplexValue& c1, const ComplexValue& c2) {
-  const auto denom = c2.r * c2.r + c2.i * c2.i;
-  return {(c1.r * c2.r + c1.i * c2.i) / denom,
-          (c1.i * c2.r - c1.r * c2.i) / denom};
+  // Implements the CompDivT algorithm from
+  // https://ens-lyon.hal.science/ensl-00734339v2
+
+  // Selects the denominator with the smallest relative error bound
+  const auto d = std::abs(c2.i) <= std::abs(c2.r)
+                     ? std::fma(c2.r, c2.r, c2.i * c2.i)
+                     : std::fma(c2.i, c2.i, c2.r * c2.r);
+  // evaluates c1.r * c2.r + c1.i * c2.i
+  const auto gr = kahan(c1.r, c1.i, c2.r, c2.i);
+  // evaluates c1.i * c2.r - c1.r * c2.i
+  const auto gi = kahan(c1.i, -c1.r, c2.r, c2.i);
+  // performs the division
+  return {gr / d, gi / d};
 }
 
 std::ostream& operator<<(std::ostream& os, const ComplexValue& c) {
