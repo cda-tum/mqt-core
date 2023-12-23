@@ -259,3 +259,41 @@ TEST_F(ZXDiagramTest, ConnectedSet) {
   EXPECT_FALSE(diag.isIn(4, connected));
   EXPECT_TRUE(diag.isIn(5, connected));
 }
+
+TEST_F(ZXDiagramTest, EdgeTypePrinting) {
+  diag = zx::ZXDiagram(3);
+  diag.addEdge(0, 1, zx::EdgeType::Simple);
+
+  const auto& edge = diag.getEdge(0, 1);
+  ASSERT_NE(edge, std::nullopt);
+  std::stringstream ss;
+  ss << edge->type;
+  EXPECT_EQ(ss.str(), "Simple");
+
+  // Change the type to Hadamard
+  diag.addHadamardEdge(1, 2);
+  const auto& edge2 = diag.getEdge(1, 2);
+  ASSERT_NE(edge2, std::nullopt);
+  std::stringstream ss2;
+  ss2 << edge2->type;
+  EXPECT_EQ(ss2.str(), "Hadamard");
+}
+
+TEST_F(ZXDiagramTest, VertexTypePrinting) {
+  diag = zx::ZXDiagram(1);
+  const auto boundary = diag.getInput(0);
+  EXPECT_EQ(diag.getVData(boundary)->type, zx::VertexType::Boundary);
+  std::stringstream ss;
+  ss << diag.getVData(boundary)->type;
+  EXPECT_EQ(ss.str(), "Boundary");
+  const auto z = diag.addVertex(0, 0, zx::PiExpression(), zx::VertexType::Z);
+  EXPECT_EQ(diag.getVData(z)->type, zx::VertexType::Z);
+  ss.str("");
+  ss << diag.getVData(z)->type;
+  EXPECT_EQ(ss.str(), "Z");
+  const auto x = diag.addVertex(0, 0, zx::PiExpression(), zx::VertexType::X);
+  EXPECT_EQ(diag.getVData(x)->type, zx::VertexType::X);
+  ss.str("");
+  ss << diag.getVData(x)->type;
+  EXPECT_EQ(ss.str(), "X");
+}
