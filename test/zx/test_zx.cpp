@@ -266,34 +266,50 @@ TEST_F(ZXDiagramTest, EdgeTypePrinting) {
 
   const auto& edge = diag.getEdge(0, 1);
   ASSERT_NE(edge, std::nullopt);
-  std::stringstream ss;
-  ss << edge->type;
-  EXPECT_EQ(ss.str(), "Simple");
+  if (edge) {
+    std::stringstream ss;
+    ss << edge->type;
+    EXPECT_EQ(ss.str(), "Simple");
+  }
 
   // Change the type to Hadamard
   diag.addHadamardEdge(1, 2);
   const auto& edge2 = diag.getEdge(1, 2);
   ASSERT_NE(edge2, std::nullopt);
-  std::stringstream ss2;
-  ss2 << edge2->type;
-  EXPECT_EQ(ss2.str(), "Hadamard");
+  if (edge2) {
+    std::stringstream ss2;
+    ss2 << edge2->type;
+    EXPECT_EQ(ss2.str(), "Hadamard");
+  }
 }
 
 TEST_F(ZXDiagramTest, VertexTypePrinting) {
   diag = zx::ZXDiagram(1);
   const auto boundary = diag.getInput(0);
-  EXPECT_EQ(diag.getVData(boundary)->type, zx::VertexType::Boundary);
-  std::stringstream ss;
-  ss << diag.getVData(boundary)->type;
-  EXPECT_EQ(ss.str(), "Boundary");
+  const auto boundaryData = diag.getVData(boundary);
+  ASSERT_NE(boundaryData, std::nullopt);
+  if (boundaryData) {
+    EXPECT_EQ(boundaryData->type, zx::VertexType::Boundary);
+    std::stringstream ss;
+    ss << boundaryData->type;
+    EXPECT_EQ(ss.str(), "Boundary");
+  }
   const auto z = diag.addVertex(0, 0, zx::PiExpression(), zx::VertexType::Z);
-  EXPECT_EQ(diag.getVData(z)->type, zx::VertexType::Z);
-  ss.str("");
-  ss << diag.getVData(z)->type;
-  EXPECT_EQ(ss.str(), "Z");
+  const auto zData = diag.getVData(z);
+  ASSERT_NE(zData, std::nullopt);
+  if (zData) {
+    EXPECT_EQ(zData->type, zx::VertexType::Z);
+    std::stringstream ss;
+    ss << zData->type;
+    EXPECT_EQ(ss.str(), "Z");
+  }
   const auto x = diag.addVertex(0, 0, zx::PiExpression(), zx::VertexType::X);
-  EXPECT_EQ(diag.getVData(x)->type, zx::VertexType::X);
-  ss.str("");
-  ss << diag.getVData(x)->type;
-  EXPECT_EQ(ss.str(), "X");
+  const auto xData = diag.getVData(x);
+  ASSERT_NE(xData, std::nullopt);
+  if (xData) {
+    EXPECT_EQ(xData->type, zx::VertexType::X);
+    std::stringstream ss;
+    ss << xData->type;
+    EXPECT_EQ(ss.str(), "X");
+  }
 }
