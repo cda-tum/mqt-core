@@ -466,6 +466,47 @@ TEST_F(Qasm3ParserTest, ImportQasm3EmptyIfElse) {
   EXPECT_EQ(out.str(), expected);
 }
 
+TEST_F(Qasm3ParserTest, ImportQasm3OutputPerm) {
+  std::stringstream ss{};
+  const std::string testfile = "// i 0 2 1 3\n"
+                               "// o 3 0\n"
+                               "qubit[4] q;\n";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  qc.import(ss, Format::OpenQASM3);
+
+  std::stringstream out{};
+  QuantumComputation::printPermutation(qc.outputPermutation, out);
+
+  const std::string expected = "\t0: 1\n"
+                               "\t3: 0\n"
+                               "";
+
+  EXPECT_EQ(out.str(), expected);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasm3OutputPermDefault) {
+  std::stringstream ss{};
+  const std::string testfile = "// i 0 2 1 3\n"
+                               "qubit[4] q;\n";
+
+  ss << testfile;
+  auto qc = QuantumComputation();
+  qc.import(ss, Format::OpenQASM3);
+
+  std::stringstream out{};
+  QuantumComputation::printPermutation(qc.outputPermutation, out);
+
+  const std::string expected = "\t0: 0\n"
+                               "\t1: 1\n"
+                               "\t2: 2\n"
+                               "\t3: 3\n"
+                               "";
+
+  EXPECT_EQ(out.str(), expected);
+}
+
 TEST_F(Qasm3ParserTest, ImportQasm3IfElseNoBlock) {
   std::stringstream ss{};
   const std::string testfile = "OPENQASM 3.0;\n"
