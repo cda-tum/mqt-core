@@ -32,6 +32,9 @@ class OpenQasm3Parser final : public InstVisitor {
 
   bool openQASM2CompatMode{false};
 
+  qc::Permutation initialLayout{};
+  qc::Permutation outputPermutation{};
+
   [[noreturn]] static void error(const std::string& message,
                                  const std::shared_ptr<DebugInfo>& debugInfo) {
     throw CompilerError(message, debugInfo);
@@ -162,6 +165,15 @@ public:
         throw;
       }
     }
+
+    // Finally, if we have a initial layout and output permutation specified,
+    // apply them.
+    if (!initialLayout.empty()) {
+      qc->initialLayout = initialLayout;
+    }
+    if (!outputPermutation.empty()) {
+      qc->outputPermutation = outputPermutation;
+    }
   }
 
   void visitVersionDeclaration(
@@ -249,22 +261,21 @@ public:
           assignmentStatement->debugInfo);
   }
 
-  void visitInitialLayout(
-      const std::shared_ptr<InitialLayout> initialLayout) override {
-    if (!qc->initialLayout.empty()) {
-      error("Multiple initial layout specifications found.",
-            initialLayout->debugInfo);
+  void
+  visitInitialLayout(const std::shared_ptr<InitialLayout> layout) override {
+    if (!initialLayout.empty()) {
+      error("Multiple initial layout specifications found.", layout->debugInfo);
     }
-    qc->initialLayout = initialLayout->permutation;
+    initialLayout = layout->permutation;
   }
 
   void visitOutputPermutation(
-      const std::shared_ptr<OutputPermutation> outputPermutation) override {
-    if (!qc->outputPermutation.empty()) {
+      const std::shared_ptr<OutputPermutation> permutation) override {
+    if (!outputPermutation.empty()) {
       error("Multiple output permutation specifications found.",
-            outputPermutation->debugInfo);
+            permutation->debugInfo);
     }
-    qc->outputPermutation = outputPermutation->permutation;
+    outputPermutation = permutation->permutation;
   }
 
   void visitGateStatement(
