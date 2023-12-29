@@ -950,9 +950,11 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
     }
     ++it;
   }
+  qc.outputPermutation.clear();
   for (const auto& [qubit, clbit] : qubitsToAddMeasurements) {
     qc.measure(qubit, clbit);
   }
+  qc.initializeIOMapping();
 }
 
 bool CircuitOptimizer::isDynamicCircuit(QuantumComputation& qc) {
