@@ -81,6 +81,8 @@ void QFT::createCircuit() {
       // measure qubits in reverse order
       for (std::size_t i = 0; i < precision; ++i) {
         measure(static_cast<Qubit>(i), precision - 1 - i);
+        outputPermutation[static_cast<Qubit>(i)] =
+            static_cast<Qubit>(precision - 1 - i);
       }
     } else {
       for (Qubit i = 0; i < static_cast<Qubit>(precision / 2); ++i) {

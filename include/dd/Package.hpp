@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Definitions.hpp"
+#include "Permutation.hpp"
 #include "dd/CachedEdge.hpp"
 #include "dd/Complex.hpp"
 #include "dd/ComplexNumbers.hpp"
@@ -1663,19 +1664,32 @@ public:
     return innerProduct(x, y).mag2();
   }
 
-  fp fidelityOfMeasurementOutcomes(const vEdge& e, const SparsePVec& probs) {
+  fp fidelityOfMeasurementOutcomes(const vEdge& e, const SparsePVec& probs,
+                                   const qc::Permutation& permutation = {}) {
     if (e.w.approximatelyZero()) {
       return 0.;
     }
-    return fidelityOfMeasurementOutcomesRecursive(e, probs, 0);
+    return fidelityOfMeasurementOutcomesRecursive(e, probs, 0, permutation,
+                                                  e.p->v + 1U);
   }
 
   fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e,
                                             const SparsePVec& probs,
-                                            const std::size_t i) {
+                                            const std::size_t i,
+                                            const qc::Permutation& permutation,
+                                            const std::size_t nQubits) {
     const auto top = ComplexNumbers::mag(e.w);
     if (e.isTerminal()) {
-      if (auto it = probs.find(i); it != probs.end()) {
+      auto idx = i;
+      if (!permutation.empty()) {
+        const auto binaryString = intToBinaryString(i, nQubits);
+        std::string filteredString(permutation.size(), '0');
+        for (const auto& [physical, logical] : permutation) {
+          filteredString[logical] = binaryString[physical];
+        }
+        idx = std::stoull(filteredString, nullptr, 2);
+      }
+      if (auto it = probs.find(idx); it != probs.end()) {
         return top * std::sqrt(it->second);
       }
       return 0.;
@@ -1684,15 +1698,15 @@ public:
     std::size_t leftIdx = i;
     fp leftContribution = 0.;
     if (!e.p->e[0].w.approximatelyZero()) {
-      leftContribution =
-          fidelityOfMeasurementOutcomesRecursive(e.p->e[0], probs, leftIdx);
+      leftContribution = fidelityOfMeasurementOutcomesRecursive(
+          e.p->e[0], probs, leftIdx, permutation, nQubits);
     }
 
     std::size_t rightIdx = i | (1ULL << e.p->v);
     auto rightContribution = 0.;
     if (!e.p->e[1].w.approximatelyZero()) {
-      rightContribution =
-          fidelityOfMeasurementOutcomesRecursive(e.p->e[1], probs, rightIdx);
+      rightContribution = fidelityOfMeasurementOutcomesRecursive(
+          e.p->e[1], probs, rightIdx, permutation, nQubits);
     }
 
     return top * (leftContribution + rightContribution);
