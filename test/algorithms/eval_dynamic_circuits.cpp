@@ -180,15 +180,9 @@ TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
                            probs, dd);
   const auto extractionEnd = std::chrono::steady_clock::now();
 
-  // extend to account for 0 qubit
-  auto stub = dd::SparsePVec{};
-  stub.reserve(probs.size());
-  for (const auto& [state, prob] : probs) {
-    stub[2ULL * state + 1] = prob;
-  }
-
   // compare outcomes
-  auto fidelity = dd->fidelityOfMeasurementOutcomes(e, stub);
+  auto fidelity =
+      dd->fidelityOfMeasurementOutcomes(e, probs, qpe->outputPermutation);
   const auto comparisonEnd = std::chrono::steady_clock::now();
 
   const auto simulation =
@@ -393,15 +387,9 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
   dd = std::move(exp->dd);
   std::cout << "---- sim done ----\n";
 
-  // extend to account for 0 qubit
-  auto stub = dd::SparsePVec{};
-  stub.reserve(probs.size());
-  for (const auto& [state, prob] : probs) {
-    stub[2 * state + 1] = prob;
-  }
-
   // compare outcomes
-  auto fidelity = dd->fidelityOfMeasurementOutcomes(e, stub);
+  auto fidelity =
+      dd->fidelityOfMeasurementOutcomes(e, probs, qpe->outputPermutation);
   const auto comparisonEnd = std::chrono::steady_clock::now();
 
   const auto extraction =
@@ -552,15 +540,9 @@ TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
                            probs, dd);
   const auto extractionEnd = std::chrono::steady_clock::now();
 
-  // extend to account for 0 qubit
-  auto stub = dd::SparsePVec{};
-  stub.reserve(probs.size());
-  for (const auto& [state, prob] : probs) {
-    stub[2ULL * state + 1] = prob;
-  }
-
   // compare outcomes
-  auto fidelity = dd->fidelityOfMeasurementOutcomes(e, stub);
+  auto fidelity =
+      dd->fidelityOfMeasurementOutcomes(e, probs, bv->outputPermutation);
   const auto comparisonEnd = std::chrono::steady_clock::now();
 
   const auto simulation =
@@ -710,7 +692,8 @@ TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
     const auto extractionEnd = std::chrono::steady_clock::now();
 
     // compare outcomes
-    auto fidelity = dd->fidelityOfMeasurementOutcomes(e, probs);
+    auto fidelity =
+        dd->fidelityOfMeasurementOutcomes(e, probs, qft->outputPermutation);
     const auto comparisonEnd = std::chrono::steady_clock::now();
     const auto extraction =
         std::chrono::duration<double>(extractionEnd - simulationEnd).count();

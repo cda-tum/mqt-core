@@ -116,9 +116,9 @@ TEST_P(QPE, QPETest) {
 
   auto out = dd::benchmarkSimulate(qc);
   qc::VectorDD const e = out->sim;
-  // account for the eigenstate qubit in the expected result by shifting and
-  // adding 1
-  const auto amplitude = e.getValueByIndex((expectedResult << 1) + 1);
+  // account for the eigenstate qubit by adding an offset
+  const auto offset = 1ULL << (e.p->v + 1);
+  const auto amplitude = e.getValueByIndex(expectedResult + offset);
   const auto probability = std::norm(amplitude);
   std::cout << "Obtained probability for |" << expectedResultRepresentation
             << ">: " << probability << "\n";
@@ -130,7 +130,7 @@ TEST_P(QPE, QPETest) {
     // account for the eigenstate qubit in the expected result by shifting and
     // adding 1
     const auto secondAmplitude =
-        e.getValueByIndex((secondExpectedResult << 1) + 1);
+        e.getValueByIndex(secondExpectedResult + offset);
     const auto secondProbability = std::norm(secondAmplitude);
     std::cout << "Obtained probability for |"
               << secondExpectedResultRepresentation
@@ -239,6 +239,7 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   // afterwards deferring measurements
   qc::CircuitOptimizer::eliminateResets(iqpe);
   qc::CircuitOptimizer::deferMeasurements(iqpe);
+  qc::CircuitOptimizer::backpropagateOutputPermutation(iqpe);
 
   // remove final measurements to obtain statevector
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
@@ -300,22 +301,16 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
   extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()), probs,
                            dd);
 
-  // extend to account for 0 qubit
-  auto stub = dd::SparsePVec{};
-  stub.reserve(probs.size());
-  for (const auto& [state, prob] : probs) {
-    stub[2 * state + 1] = prob;
-  }
-
   std::cout << "IQPE:\n";
-  for (const auto& [state, prob] : stub) {
+  for (const auto& [state, prob] : probs) {
     std::stringstream ss{};
     qc::QuantumComputation::printBin(state, ss);
     std::cout << ss.str() << ": " << prob << "\n";
   }
 
   // calculate fidelity between both results
-  auto fidelity = dd->fidelityOfMeasurementOutcomes(e, stub);
+  auto fidelity =
+      dd->fidelityOfMeasurementOutcomes(e, probs, qpe.outputPermutation);
   std::cout << "Fidelity of both circuits' measurement outcomes: " << fidelity
             << "\n";
 
