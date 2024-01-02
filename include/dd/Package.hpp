@@ -1687,7 +1687,7 @@ public:
         for (const auto& [physical, logical] : permutation) {
           filteredString[logical] = binaryString[physical];
         }
-        idx = std::stoul(filteredString, nullptr, 2);
+        idx = std::stoull(filteredString, nullptr, 2);
       }
       if (auto it = probs.find(idx); it != probs.end()) {
         return top * std::sqrt(it->second);
