@@ -107,13 +107,14 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
           // measurement map specifies that the circuit `qubit` is measured into
           // a certain `bit`
           measurement[qc->getNcbits() - 1U - bit] =
-              bitstring[bitstring.size() - 1U - qubit];
+              bitstring[bitstring.size() - 1U -
+                        qc->outputPermutation.at(qubit)];
         }
       } else {
         // otherwise, we consider the output permutation for determining where
         // to measure the qubits to
         for (const auto& [qubit, bit] : qc->outputPermutation) {
-          measurement[qc->getNcbits() - 1 - bit] =
+          measurement[qc->getNcbits() - 1U - bit] =
               bitstring[bitstring.size() - 1U - qubit];
         }
       }
@@ -151,8 +152,8 @@ simulate(const QuantumComputation* qc, const VectorDD& in,
                 e, static_cast<Qubit>(permutation.at(qubit)), true, mt);
             // apply an X operation whenever the measured result is one
             if (bit == '1') {
-              const auto x =
-                  qc::StandardOperation(qc->getNqubits(), qubit, qc::X);
+              const auto x = qc::StandardOperation(
+                  qc->getNqubits(), permutation.at(qubit), qc::X);
               auto tmp = dd->multiply(getDD(&x, dd), e);
               dd->incRef(tmp);
               dd->decRef(e);
