@@ -65,6 +65,13 @@ void BernsteinVazirani::createCircuit() {
   x(0);
 
   if (dynamic) {
+    // set up initial layout
+    initialLayout[0] = 1;
+    initialLayout[1] = 0;
+    setLogicalQubitGarbage(1);
+    outputPermutation.erase(0);
+    outputPermutation[1] = 0;
+
     for (std::size_t i = 0; i < bitwidth; ++i) {
       // initial Hadamard
       h(1);
@@ -86,6 +93,14 @@ void BernsteinVazirani::createCircuit() {
       }
     }
   } else {
+    // set up initial layout
+    initialLayout[0] = static_cast<Qubit>(bitwidth);
+    for (std::size_t i = 1; i <= bitwidth; ++i) {
+      initialLayout[static_cast<Qubit>(i)] = static_cast<Qubit>(i - 1);
+    }
+    setLogicalQubitGarbage(static_cast<Qubit>(bitwidth));
+    outputPermutation.erase(0);
+
     // initial Hadamard transformation
     for (std::size_t i = 1; i <= bitwidth; ++i) {
       h(static_cast<Qubit>(i));
@@ -106,6 +121,7 @@ void BernsteinVazirani::createCircuit() {
     // measure results
     for (std::size_t i = 1; i <= bitwidth; i++) {
       measure(static_cast<Qubit>(i), i - 1);
+      outputPermutation[static_cast<Qubit>(i)] = static_cast<Qubit>(i - 1);
     }
   }
 }
