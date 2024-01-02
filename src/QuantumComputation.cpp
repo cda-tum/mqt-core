@@ -198,6 +198,7 @@ void QuantumComputation::initializeIOMapping() {
   }
 
   const bool buildOutputPermutation = outputPermutation.empty();
+  garbage.assign(nqubits + nancillae, false);
   for (const auto& [physicalIn, logicalIn] : initialLayout) {
     const bool isIdle = isIdleQubit(physicalIn);
 
