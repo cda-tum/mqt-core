@@ -123,6 +123,7 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   // afterwards deferring measurements
   qc::CircuitOptimizer::eliminateResets(dbv);
   qc::CircuitOptimizer::deferMeasurements(dbv);
+  qc::CircuitOptimizer::backpropagateOutputPermutation(dbv);
 
   // remove final measurements to obtain statevector
   qc::CircuitOptimizer::removeFinalMeasurements(dbv);
