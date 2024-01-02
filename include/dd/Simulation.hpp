@@ -45,9 +45,9 @@ void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in,
 template <class Config>
 void extractProbabilityVectorRecursive(
     const QuantumComputation* qc, const VectorDD& currentState,
-    decltype(qc->begin()) currentIt, std::map<std::size_t, char> measurements,
-    dd::fp commonFactor, dd::SparsePVec& probVector,
-    std::unique_ptr<dd::Package<Config>>& dd);
+    decltype(qc->begin()) currentIt, Permutation& permutation,
+    std::map<std::size_t, char> measurements, dd::fp commonFactor,
+    dd::SparsePVec& probVector, std::unique_ptr<dd::Package<Config>>& dd);
 
 template <class Config>
 VectorDD simulate(GoogleRandomCircuitSampling* qc, const VectorDD& in,
