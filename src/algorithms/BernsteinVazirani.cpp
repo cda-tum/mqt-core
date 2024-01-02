@@ -43,14 +43,13 @@ std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) const {
 }
 
 void BernsteinVazirani::createCircuit() {
-  name = "bv_" + s.to_string();
-
   expected = s.to_string();
   std::reverse(expected.begin(), expected.end());
   while (expected.length() > bitwidth) {
     expected.pop_back();
   }
   std::reverse(expected.begin(), expected.end());
+  name = "bv_" + expected;
 
   addQubitRegister(1, "flag");
 
