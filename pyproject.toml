@@ -105,21 +105,12 @@ sdist.exclude = [
     "**/plots",
     "**/test",
     "**/tests",
-    "extern/json/include",
-    "extern/googletest",
-    "extern/boost/config/checks",
-    "extern/boost/config/tools",
-    "extern/boost/multiprecision/config",
-    "extern/boost/multiprecision/example",
-    "extern/boost/multiprecision/performance",
-    "extern/boost/multiprecision/tools"
 ]
 
 [tool.check-sdist]
 sdist-only = ["src/mqt/core/_version.py"]
 git-only = [
     "docs/*",
-    "extern/*",
     "test/*",
 ]
 
