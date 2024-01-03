@@ -6,9 +6,6 @@ project(
   LANGUAGES CXX
   DESCRIPTION "MQT Core - The Backbone of the Munich Quantum Toolkit")
 
-# this is to create aliases and maintain backwards compatibility
-set(OLD_PROJECT_NAME "qfr")
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(cmake/StandardProjectSettings.cmake)

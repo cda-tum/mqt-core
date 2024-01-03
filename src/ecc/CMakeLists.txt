@@ -17,5 +17,4 @@ if(NOT TARGET ${PROJECT_NAME}-ecc)
 
   # add MQT alias
   add_library(MQT::CoreECC ALIAS ${PROJECT_NAME}-ecc)
-  add_library(MQT::${OLD_PROJECT_NAME}_ecc ALIAS ${PROJECT_NAME}-ecc)
 endif()

@@ -74,7 +74,6 @@ if(NOT TARGET ${PROJECT_NAME})
 
   # add MQT alias
   add_library(MQT::Core ALIAS ${PROJECT_NAME})
-  add_library(MQT::${OLD_PROJECT_NAME} ALIAS ${PROJECT_NAME})
 endif()
 
 # add DD package library
@@ -99,7 +98,6 @@ if(BINDINGS AND NOT TARGET ${PROJECT_NAME}-python)
 
   # add MQT alias
   add_library(MQT::CorePython ALIAS ${PROJECT_NAME}-python)
-  add_library(MQT::${OLD_PROJECT_NAME}_python ALIAS ${PROJECT_NAME}-python)
 endif()
 
 if(BUILD_MQT_CORE_BINDINGS)

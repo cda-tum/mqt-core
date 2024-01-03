@@ -30,5 +30,4 @@ if(NOT TARGET ${PROJECT_NAME}-zx)
 
   # add MQT alias
   add_library(MQT::CoreZX ALIAS ${PROJECT_NAME}-zx)
-  add_library(MQT::${OLD_PROJECT_NAME}_zx ALIAS ${PROJECT_NAME}-zx)
 endif()
