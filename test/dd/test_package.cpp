@@ -2315,10 +2315,25 @@ TEST(DDPackageTest, DDMZAPECSliQECRandomCircuit) {
   qc::QuantumComputation c1{"./circuits/random_1.qasm"};
   qc::QuantumComputation c2{"./circuits/random_2.qasm"};
 
-  // calls buildFunctionality for c1 and c2 -> this takes already 2 minutes on
-  // my computer then it calls zeroAncillaPartialEquivalenceCheck, which calls
-  // multiply, that is very very slow on my computer
+  // calls buildFunctionality for c1 concatenated with the inverse of c2
+  // -> this is already very very slow on my computer
   // EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
+  EXPECT_TRUE(true);
+}
+
+TEST(DDPackageTest, DDMZAPECSliQECRandomCircuitMultiplication) {
+  // doesn't terminate
+  auto dd = std::make_unique<dd::Package<>>(20);
+  // full equivalence, 10 qubits
+  qc::QuantumComputation c1{"./circuits/random_1.qasm"};
+  qc::QuantumComputation c2{"./circuits/random_2.qasm"};
+  // calls buildFunctionality for c1 and c2 -> this takes already 2 minutes on
+  // my computer
+  // auto f1 = buildFunctionality(&c1, dd, false, false);
+  // auto f2 = buildFunctionality(&c2, dd, false, false);
+  //  zeroAncillaPartialEquivalenceCheck calls multiply,
+  // that is very very slow on my computer
+  // EXPECT_TRUE(dd->zeroAncillaPartialEquivalenceCheck(f1, f2, 10));
   EXPECT_TRUE(true);
 }
 

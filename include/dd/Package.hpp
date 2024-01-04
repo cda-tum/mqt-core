@@ -3051,13 +3051,13 @@ private:
   ComputeTable<mEdge, Qubit, bool>
       zeroAncillaPartialEquivalenceCheckSubroutineComputeTable{};
 
+public:
   bool zeroAncillaPartialEquivalenceCheckSubroutine(mEdge e, Qubit m) {
     if (e.isTerminal()) {
-      return m < 1;
-    }
-    if (m == 0) {
       return true;
     }
+    const auto n = e.p->v + 1;
+
     const mEdge eCopy{e.p, Complex::one()};
     // check if it's in the compute table with an edge weight of one
     if (const auto* r =
@@ -3067,17 +3067,24 @@ private:
       auto f = *r;
       return f;
     }
-    bool result =
-        e.p->e[1].isZeroTerminal() && e.p->e[2].isZeroTerminal() &&
-        zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[0], m - 1) &&
-        zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[3], m - 1);
+    bool result = false;
+    if (m >= n) {
+      result = e.p->e[1].isZeroTerminal() && e.p->e[2].isZeroTerminal() &&
+               zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[0], m) &&
+               zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[3], m);
+    } else {
+      result = zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[0], m) &&
+               zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[1], m) &&
+               zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[2], m) &&
+               zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[3], m);
+    }
+
     // add to the compute table with a weight of 1
     zeroAncillaPartialEquivalenceCheckSubroutineComputeTable.insert(eCopy, m,
                                                                     result);
     return result;
   }
 
-public:
   /**
    Checks for partial equivalence between the two circuits u1 and u2,
     where the first d qubits of the circuits are the data qubits and
@@ -3137,7 +3144,6 @@ public:
       @return true if the two circuits u1 and u2 are partially equivalent.
       **/
   bool zeroAncillaPartialEquivalenceCheck(mEdge u1, mEdge u2, Qubit m) {
-    // TODO adapt to new order of qubits
     auto u1u2 = multiply(u1, conjugateTranspose(u2));
     return zeroAncillaPartialEquivalenceCheckSubroutine(u1u2, m);
   }

@@ -12,7 +12,7 @@ inline Qubit getNextGarbage(Qubit n, const std::vector<bool>& garbage) {
 }
 /**
     Checks for partial equivalence between the two circuits c1 and c2.
-    Assumption: the data qubits are all at the end of the input qubits and
+    Assumption: the data qubits are all at the beginning of the input qubits and
     the input and output permutations are the same.
 
     @param circuit1 First circuit
@@ -26,8 +26,8 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
 
   auto d1 = c1.getNqubitsWithoutAncillae();
   auto d2 = c2.getNqubitsWithoutAncillae();
-  auto m1 = c1.getNgarbageQubits();
-  auto m2 = c2.getNgarbageQubits();
+  auto m1 = c1.getNmeasuredQubits();
+  auto m2 = c2.getNmeasuredQubits();
   if (m1 != m2 || d1 != d2) {
     return false;
   }
@@ -51,11 +51,11 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
 
   auto u1 = buildFunctionality(&c1, dd, false, false);
   auto u2 = buildFunctionality(&c2, dd, false, false);
-  // if (d1 == n) {
-  //   // no ancilla qubits
-  //   return dd->zeroAncillaPartialEquivalenceCheck(u1, u2,
-  //                                                 static_cast<Qubit>(m1));
-  // }
+  if (d1 == n) {
+    // no ancilla qubits
+    return dd->zeroAncillaPartialEquivalenceCheck(u1, u2,
+                                                  static_cast<Qubit>(m1));
+  }
   return dd->partialEquivalenceCheck(u1, u2, static_cast<Qubit>(d1),
                                      static_cast<Qubit>(m1));
 }
