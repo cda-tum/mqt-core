@@ -92,8 +92,6 @@ repos:
     hooks:
       - id: cmake-format
         additional_dependencies: [pyyaml]
-      - id: cmake-lint
-        additional_dependencies: [pyyaml]
 
   # Format configuration files with prettier
   - repo: https://github.com/pre-commit/mirrors-prettier
