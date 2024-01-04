@@ -2238,9 +2238,10 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingComputeTable) {
 TEST(DDPackageTest, DDMPECMQTBenchGrover3Qubits) {
   auto dd = std::make_unique<dd::Package<>>(7);
 
-  qc::QuantumComputation c1{
+  const qc::QuantumComputation c1{
       "./circuits/grover-noancilla_nativegates_ibm_qiskit_opt0_3.qasm"};
-  qc::QuantumComputation c2{"./circuits/grover-noancilla_indep_qiskit_3.qasm"};
+  const qc::QuantumComputation c2{
+      "./circuits/grover-noancilla_indep_qiskit_3.qasm"};
 
   // 3 measured qubits and 3 data qubits, full equivalence
   EXPECT_TRUE(dd->partialEquivalenceCheck(
@@ -2251,9 +2252,9 @@ TEST(DDPackageTest, DDMPECMQTBenchGrover3Qubits) {
 TEST(DDPackageTest, DDMPECMQTBenchGrover7Qubits) {
   auto dd = std::make_unique<dd::Package<>>(7);
 
-  qc::QuantumComputation c1{
+  const qc::QuantumComputation c1{
       "./circuits/grover-noancilla_nativegates_ibm_qiskit_opt0_7.qasm"};
-  qc::QuantumComputation c2{
+  const qc::QuantumComputation c2{
       "./circuits/grover-noancilla_nativegates_ibm_qiskit_opt1_7.qasm"};
 
   // 7 measured qubits and 7 data qubits, full equivalence
@@ -2267,9 +2268,9 @@ TEST(DDPackageTest, DDMZAPECMQTBenchQPE30Qubits) {
   auto dd = std::make_unique<dd::Package<>>(31);
 
   // 30 qubits
-  qc::QuantumComputation c1{
+  const qc::QuantumComputation c1{
       "./circuits/qpeexact_nativegates_ibm_qiskit_opt0_30.qasm"};
-  qc::QuantumComputation c2{"./circuits/qpeexact_indep_qiskit_30.qasm"};
+  const qc::QuantumComputation c2{"./circuits/qpeexact_indep_qiskit_30.qasm"};
 
   // buildFunctionality is already very very slow...
   // auto f1 = buildFunctionality(&c1, dd, false, false);

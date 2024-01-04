@@ -26,12 +26,8 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
 
   auto d1 = c1.getNqubitsWithoutAncillae();
   auto d2 = c2.getNqubitsWithoutAncillae();
-  auto m1 = c1.getNqubits() -
-            static_cast<std::size_t>(std::count(c1.getGarbage().begin(),
-                                                c1.getGarbage().end(), true));
-  auto m2 = c2.getNqubits() -
-            static_cast<std::size_t>(std::count(c2.getGarbage().begin(),
-                                                c2.getGarbage().end(), true));
+  auto m1 = c1.getNgarbageQubits();
+  auto m2 = c2.getNgarbageQubits();
   if (m1 != m2 || d1 != d2) {
     return false;
   }

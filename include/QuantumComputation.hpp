@@ -289,6 +289,11 @@ public:
   [[nodiscard]] std::size_t getNqubitsWithoutAncillae() const {
     return nqubits;
   }
+  [[nodiscard]] std::size_t getNgarbageQubits() const {
+    return getNqubits() - static_cast<std::size_t>(std::count(
+                              getGarbage().begin(), getGarbage().end(), true));
+    ;
+  }
   [[nodiscard]] std::size_t getNcbits() const { return nclassics; }
   [[nodiscard]] std::string getName() const { return name; }
   [[nodiscard]] const QuantumRegisterMap& getQregs() const { return qregs; }

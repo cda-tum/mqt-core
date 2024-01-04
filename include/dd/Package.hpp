@@ -3039,8 +3039,7 @@ private:
       if (u.p->v + 1U + extra > nqubits) {
         resize(u.p->v + 1U + extra);
       }
-      auto idExtra = makeIdent(extra);
-      u = kronecker(idExtra, u);
+      u = kronecker(makeIdent(extra), u);
     }
     const auto n = static_cast<Qubit>(u.p->v + 1);
     Qubit d = n - k;
@@ -3059,7 +3058,7 @@ private:
     if (m == 0) {
       return true;
     }
-    mEdge eCopy{e.p, Complex::one()};
+    const mEdge eCopy{e.p, Complex::one()};
     // check if it's in the compute table with an edge weight of one
     if (const auto* r =
             zeroAncillaPartialEquivalenceCheckSubroutineComputeTable.lookup(
@@ -3114,8 +3113,8 @@ public:
       u2 = kronecker(makeIdent(u1.p->v - u2.p->v), u2);
     }
 
-    const Qubit h = u1.p->v + 1;
-    Qubit k = h - d;
+    const Qubit n = u1.p->v + 1;
+    Qubit k = n - d;
     Qubit extra{0};
     if (m > k) {
       extra = m - k;
