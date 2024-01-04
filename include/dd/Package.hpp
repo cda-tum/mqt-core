@@ -2890,175 +2890,163 @@ private:
 
     return newedge;
   }
-
-  ComputeTable<mEdge, std::int64_t, mEdge> shiftAllMatrixRows{};
-
-  /**
-      Equally divides the rows of the matrix represented by e intro 2^m parts.
-      For the i-th part (i starts from 0), right shifts the contents for (i +
-  offset) columns.
-  **/
-  mEdge shiftAllRowsRecursive(const mEdge& e, std::int64_t m,
-                              std::int64_t offset) {
-
+  // only keeps the first 2^d columns
+  mEdge setColumnsToZero(const mEdge& e, Qubit d) {
     if (e.isTerminal()) {
       return e;
     }
-    if (m == 0 && offset == 0) {
+    // the matrix of the current DD has dimensions 2^n x 2^n
+    const auto n = e.p->v + 1;
+
+    if (d >= n) {
       return e;
     }
-    mEdge eCopy{e.p, Complex::one()};
-    // check if it's in the compute table with an edge weight of one
-    // only store elements in the compute table if the offset is 0
-    if (offset == 0) {
-      if (const auto* r = shiftAllMatrixRows.lookup(eCopy, m); r != nullptr) {
-        auto f = *r;
-        f.w = cn.lookup(e.w * f.w);
-        return f;
-      }
-    }
-    // the matrix of the current DD has dimensions 2^h x 2^h
-    const auto h = e.p->v + 1;
-    const auto mDecremented = (m > 0 ? m - 1 : 0);
+
     std::array<mEdge, NEDGE> edges{};
-    if (offset == 1 << (h - 1)) {
-      // shift the first half of the matrix by 2^(h-1)
-      edges[0] = mEdge::zero();
-      edges[1] = shiftAllRowsRecursive(e.p->e[0], mDecremented, 0);
-      // shift the second half of the matrix by 2^(h-1)
-      edges[2] = mEdge::zero();
-      edges[3] = shiftAllRowsRecursive(e.p->e[2], mDecremented,
-                                       m > 0 ? 1 << (m - 1) : 0);
-    } else {
-      // don't shift the first half of the matrix yet
-      edges[0] = shiftAllRowsRecursive(e.p->e[0], mDecremented, offset);
-      edges[1] = shiftAllRowsRecursive(e.p->e[1], mDecremented, offset);
-      if (m == h) {
-        // shift the second half of the matrix by 2^(h-1)
-        edges[2] = mEdge::zero();
-        edges[3] = shiftAllRowsRecursive(e.p->e[2], mDecremented, offset);
-      } else {
-        // don't shift the second half of the matrix yet
-        auto newOffset = (m > 0 ? 1 << (m - 1) : 0) + offset;
-        edges[2] = shiftAllRowsRecursive(e.p->e[2], mDecremented, newOffset);
-        edges[3] = shiftAllRowsRecursive(e.p->e[3], mDecremented, newOffset);
-      }
-    }
+    edges[0] = setColumnsToZero(e.p->e[0], d);
+    edges[1] = mEdge::zero();
+    edges[2] = setColumnsToZero(e.p->e[2], d);
+    edges[3] = mEdge::zero();
+
     auto f = makeDDNode(e.p->v, edges);
-    // add to the compute table with a weight of 1
-    if (offset == 0) {
-      shiftAllMatrixRows.insert(eCopy, m, f);
-    }
     f.w = cn.lookup(e.w * f.w);
     return f;
   }
+  mEdge keepOnlyIthRow(const mEdge& e, std::int64_t i) {
+    if (e.isZeroTerminal()) {
+      return e;
+    }
+    if (e.isTerminal()) {
+      if (i == 0) {
+        return e;
+      }
+      return mEdge::zero();
+    }
+    // the matrix of the current DD has dimensions 2^n x 2^n
+    const auto n = e.p->v + 1;
+    const auto twoPowNMinusOne = 1 << (n - 1);
+    std::array<mEdge, NEDGE> edges{};
+    if (i < twoPowNMinusOne) {
+      edges[0] = keepOnlyIthRow(e.p->e[0], i);
+      edges[1] = keepOnlyIthRow(e.p->e[1], i);
+      edges[2] = mEdge::zero();
+      edges[3] = mEdge::zero();
+    } else {
+      edges[0] = mEdge::zero();
+      edges[1] = mEdge::zero();
+      edges[2] = keepOnlyIthRow(e.p->e[2], i - twoPowNMinusOne);
+      edges[3] = keepOnlyIthRow(e.p->e[3], i - twoPowNMinusOne);
+    }
 
-  ComputeTable<mEdge, Qubit, mEdge> setMatrixColumnsToZero{};
-  ComputeTable<mEdge, Qubit, mEdge> setMatrixRowsToZero{};
+    auto f = makeDDNode(e.p->v, edges);
+    f.w = cn.lookup(e.w * f.w);
+    return f;
+  }
+  /**
+    Equally divides the rows of the matrix represented by e (of size 2^n x 2^n)
+    into 2^g parts of size 2^m (where g = n - m).
+    For each part the (upperOffset + i)-th row is shifted by i*2^d columns.
+    **/
+  mEdge shiftAllRowsRecursive(const mEdge& e, Qubit m, Qubit d,
+                              std::int64_t upperOffset) {
+    if (e.isTerminal() && upperOffset == 0) {
+      return e;
+    }
+    if (e.isTerminal()) {
+      return mEdge::zero();
+    }
+    if (upperOffset == 0 && m == 0) {
+      return e;
+    }
+    // the matrix of the current DD has dimensions 2^n x 2^n
+    const auto n = e.p->v + 1;
+    if (upperOffset < 0 && m < n) {
+      throw std::runtime_error("offset less than 0.");
+    }
+    if (upperOffset >= (1 << n) || upperOffset < 0) {
+      return mEdge::zero();
+    }
+
+    if (d >= n && m >= n) {
+      return keepOnlyIthRow(e, upperOffset);
+    }
+
+    std::array<mEdge, NEDGE> edges{};
+
+    // if the current submatrix size is less than 2^m,
+    // then the offset of the lower half needs to be adapted
+    bool adaptOffsetOfLowerMatrixHalf = n <= m;
+    edges[0] = shiftAllRowsRecursive(e.p->e[0], m, d, upperOffset);
+    if (n <= d) {
+      // CASE 1: this (sub)matrix has size < 2^d
+      // -> we need to keep all the columns of this submatrix
+      edges[1] = shiftAllRowsRecursive(e.p->e[1], m, d, upperOffset);
+      if (adaptOffsetOfLowerMatrixHalf) {
+        upperOffset -= (1 << (n - 1));
+      }
+      edges[2] = shiftAllRowsRecursive(e.p->e[2], m, d, upperOffset);
+      edges[3] = shiftAllRowsRecursive(e.p->e[3], m, d, upperOffset);
+    } else {
+      std::int64_t addedOffset{1 << (n - 1 - d)};
+      if (upperOffset + addedOffset < (1 << m)) {
+        // CASE 2: this submatrix doesn't contain ancilla qubits
+        // -> we don't need to set any columns to zero
+        edges[1] =
+            shiftAllRowsRecursive(e.p->e[0], m, d, upperOffset + addedOffset);
+
+        if (adaptOffsetOfLowerMatrixHalf) {
+          upperOffset -= (1 << (n - 1));
+        }
+        edges[2] = shiftAllRowsRecursive(e.p->e[2], m, d, upperOffset);
+        edges[3] =
+            shiftAllRowsRecursive(e.p->e[2], m, d, upperOffset + addedOffset);
+      } else {
+        // CASE 3: the right half of the matrix represents the ancilla qubits,
+        // therefore it is set to zero
+        edges[1] = mEdge::zero();
+        if (adaptOffsetOfLowerMatrixHalf) {
+          upperOffset -= (1 << (n - 1));
+        }
+        edges[2] = shiftAllRowsRecursive(e.p->e[2], m, d, upperOffset);
+        edges[3] = mEdge::zero();
+      }
+    }
+
+    auto f = makeDDNode(e.p->v, edges);
+    f.w = cn.lookup(e.w * f.w);
+    return f;
+  }
 
 public:
   /**
-      Equally divides the rows of the matrix represented by e intro 2^m parts.
-      For the i-th part (i starts from 0), right shifts the contents for i
-  columns.
+      Equally divides the rows of the matrix represented by e into parts
+      of size 2^m.
+      For each part we keep only the first 2^d columns
+      and the i-th row of each part is shifted by i*2^d columns.
   **/
-  mEdge shiftAllRows(const mEdge& e, std::int64_t m) {
-    return shiftAllRowsRecursive(e, m, 0);
-  }
-
-  /**
-      Equally divides the columns of the matrix represented by e intro parts of
-  size 2^k. For each part, keeps the leftmost column unchanged, and sets the
-  remaining columns to 0.
-  **/
-  mEdge setColumnsToZero(const mEdge& e, Qubit k) {
-    if (e.isTerminal()) {
-      return e;
-    }
-    if (k == 0) {
-      return e;
-    }
-    mEdge eCopy{e.p, Complex::one()};
-    // check if it's in the compute table with an edge weight of one
-    if (const auto* r = setMatrixColumnsToZero.lookup(eCopy, k); r != nullptr) {
-      auto f = *r;
-      f.w = cn.lookup(e.w * f.w);
-      return f;
-    }
-    // the matrix of the current DD has dimensions 2^h x 2^h
-    const auto h = e.p->v + 1;
-    std::array<mEdge, NEDGE> edges{};
-    edges[0] = setColumnsToZero(e.p->e[0], k);
-    edges[2] = setColumnsToZero(e.p->e[2], k);
-    if (k < h) {
-      edges[1] = setColumnsToZero(e.p->e[1], k);
-      edges[3] = setColumnsToZero(e.p->e[3], k);
-    } else {
-      edges[1] = mEdge::zero();
-      edges[3] = mEdge::zero();
-    }
-    auto f = makeDDNode(e.p->v, edges);
-    // add to the compute table with a weight of 1
-    setMatrixColumnsToZero.insert(eCopy, k, f);
-    f.w = cn.lookup(e.w * f.w);
-    return f;
-  }
-
-  /**
-      Equally divides the rows of the matrix represented by e intro parts of
-  size 2^k. For each part, keeps the top row unchanged, and sets the remaining
-  entries to 0.
-  **/
-  mEdge setRowsToZero(const mEdge& e, Qubit k) {
-    if (e.isTerminal()) {
-      return e;
-    }
-    if (k == 0) {
-      return e;
-    }
-    mEdge eCopy{e.p, Complex::one()};
-    // check if it's in the compute table with an edge weight of one
-    if (const auto* r = setMatrixRowsToZero.lookup(eCopy, k); r != nullptr) {
-      auto f = *r;
-      f.w = cn.lookup(e.w * f.w);
-      return f;
-    }
-    // the matrix of the current DD has dimensions 2^h x 2^h
-    const auto h = e.p->v + 1;
-    std::array<mEdge, NEDGE> edges{};
-    edges[0] = setRowsToZero(e.p->e[0], k);
-    edges[1] = setRowsToZero(e.p->e[1], k);
-    if (k < h) {
-      edges[2] = setRowsToZero(e.p->e[2], k);
-      edges[3] = setRowsToZero(e.p->e[3], k);
-    } else {
-      edges[2] = mEdge::zero();
-      edges[3] = mEdge::zero();
-    }
-    auto f = makeDDNode(e.p->v, edges);
-    // add to the compute table with a weight of 1
-    setMatrixRowsToZero.insert(eCopy, k, f);
-    f.w = cn.lookup(e.w * f.w);
-    return f;
+  mEdge shiftAllRows(const mEdge& e, Qubit m, Qubit d) {
+    return shiftAllRowsRecursive(e, m, d, 0);
   }
 
 private:
-  mEdge partialEquivalenceCheckSubroutine(mEdge& u, Qubit m, Qubit k,
+  // TODO: use compute tables
+  ComputeTable<mEdge, std::int64_t, mEdge> shiftAllMatrixRows{};
+
+  mEdge partialEquivalenceCheckSubroutine(mEdge u, Qubit m, Qubit k,
                                           Qubit extra) {
-    auto u1{u};
     // add extra ancillary qubits
     if (extra > 0) {
       if (u.p->v + 1U + extra > nqubits) {
         resize(u.p->v + 1U + extra);
       }
       auto idExtra = makeIdent(extra);
-      u1 = kronecker(u, idExtra);
+      u = kronecker(idExtra, u);
     }
-    auto u2 = setColumnsToZero(u1, k);
-    auto u3 = shiftAllRows(u2, m);
-    auto u4 = multiply(conjugateTranspose(u1), u3);
-    auto u5 = setRowsToZero(u4, k);
-    return u5;
+    const auto n = static_cast<Qubit>(u.p->v + 1);
+    Qubit d = n - k;
+    u = setColumnsToZero(u, d);
+    auto u2 = shiftAllRows(u, m, d);
+    return multiply(conjugateTranspose(u), u2);
   }
 
   ComputeTable<mEdge, Qubit, bool>
@@ -3092,15 +3080,15 @@ private:
 
 public:
   /**
-    Checks for partial equivalence between the two circuits u1 and u2,
-     where the last d qubits of the circuits are the data qubits and
-     the last m qubits are the measured qubits.
-    @param u1 DD representation of first circuit
-    @param u2 DD representation of second circuit
-    @param d Number of data qubits
-    @param m Number of measured qubits
-    @return true if the two circuits u1 and u2 are partially equivalent.
-    **/
+   Checks for partial equivalence between the two circuits u1 and u2,
+    where the first d qubits of the circuits are the data qubits and
+    the first m qubits are the measured qubits.
+   @param u1 DD representation of first circuit
+   @param u2 DD representation of second circuit
+   @param d Number of data qubits
+   @param m Number of measured qubits
+   @return true if the two circuits u1 and u2 are partially equivalent.
+   **/
   bool partialEquivalenceCheck(mEdge u1, mEdge u2, Qubit d, Qubit m) {
     if (m == 0) {
       return true;
@@ -3113,13 +3101,17 @@ public:
     }
     // add qubits such that u1 and u2 have the same dimension
     if (u1.isTerminal()) {
-      u1 = kronecker(u1, makeIdent(u2.p->v + 1));
+      auto w = u1.w;
+      u1 = makeIdent(u2.p->v + 1);
+      u1.w = w;
     } else if (u2.isTerminal()) {
-      u2 = kronecker(u2, makeIdent(u1.p->v + 1));
+      auto w = u2.w;
+      u2 = makeIdent(u1.p->v + 1);
+      u2.w = w;
     } else if (u1.p->v < u2.p->v) {
-      u1 = kronecker(u1, makeIdent(u2.p->v - u1.p->v));
+      u1 = kronecker(makeIdent(u2.p->v - u1.p->v), u1);
     } else if (u1.p->v > u2.p->v) {
-      u2 = kronecker(u2, makeIdent(u1.p->v - u2.p->v));
+      u2 = kronecker(makeIdent(u1.p->v - u2.p->v), u2);
     }
 
     const Qubit h = u1.p->v + 1;
@@ -3146,7 +3138,7 @@ public:
       @return true if the two circuits u1 and u2 are partially equivalent.
       **/
   bool zeroAncillaPartialEquivalenceCheck(mEdge u1, mEdge u2, Qubit m) {
-
+    // TODO adapt to new order of qubits
     auto u1u2 = multiply(u1, conjugateTranspose(u2));
     return zeroAncillaPartialEquivalenceCheckSubroutine(u1u2, m);
   }

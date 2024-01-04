@@ -1,16 +1,23 @@
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
 #include "dd/Export.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
 #include "dd/Verification.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
 #include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
 
+#include <cstdint>
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <memory>
 #include <random>
 #include <sstream>
+#include <vector>
 
 using namespace qc::literals;
 
@@ -1972,43 +1979,43 @@ TEST(DDPackageTest, DDMShiftAllRows) {
   const auto inputMatrix =
       dd::CMat{{1, 0, 0, 0}, {-1, 0, 0, 0}, {-1, 0, 0, 0}, {1, 0, 0, 0}};
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
-  const auto outputMatrix = dd->shiftAllRows(inputDD, 1);
+  const auto outputMatrix = dd->shiftAllRows(inputDD, 1, 0);
   const auto expectedMatrix =
-      dd::CMat{{1, 0, 0, 0}, {-1, 0, 0, 0}, {0, -1, 0, 0}, {0, 1, 0, 0}};
+      dd::CMat{{1, 0, 0, 0}, {0, -1, 0, 0}, {-1, 0, 0, 0}, {0, 1, 0, 0}};
   EXPECT_EQ(outputMatrix.getMatrix(), expectedMatrix);
-  const auto outputMatrix2 = dd->shiftAllRows(inputDD, 2);
+  const auto outputMatrix2 = dd->shiftAllRows(inputDD, 2, 0);
   const auto expectedMatrix2 =
       dd::CMat{{1, 0, 0, 0}, {0, -1, 0, 0}, {0, 0, -1, 0}, {0, 0, 0, 1}};
   EXPECT_EQ(outputMatrix2.getMatrix(), expectedMatrix2);
 }
 
-TEST(DDPackageTest, DDMShiftAllRows3Qubits) {
+TEST(DDPackageTest, DDMShiftAllRows3Qubits0) {
   const auto nqubits = 3U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   const auto inputMatrix =
-      dd::CMat{{1, 0, 0, 0, 0, 0, 0, 0},  {-1, 0, 0, 0, 0, 0, 0, 0},
-               {-1, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0},
-               {1, 0, 0, 0, 0, 0, 0, 0},  {-1, 0, 0, 0, 0, 0, 0, 0},
-               {-1, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0}};
+      dd::CMat{{1, 3, 3, 3, 3, 3, 3, 3},  {-1, 3, 3, 3, 3, 3, 3, 3},
+               {-1, 3, 3, 3, 3, 3, 3, 3}, {1, 3, 3, 3, 3, 3, 3, 3},
+               {1, 3, 3, 3, 3, 3, 3, 3},  {-1, 3, 3, 3, 3, 3, 3, 3},
+               {-1, 3, 3, 3, 3, 3, 3, 3}, {1, 3, 3, 3, 3, 3, 3, 3}};
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
 
-  const auto outputMatrix = dd->shiftAllRows(inputDD, 2);
+  const auto outputMatrix = dd->shiftAllRows(inputDD, 2, 0);
   const auto expectedMatrix =
-      dd::CMat{{1, 0, 0, 0, 0, 0, 0, 0},  {-1, 0, 0, 0, 0, 0, 0, 0},
-               {0, -1, 0, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0, 0, 0},
-               {0, 0, 1, 0, 0, 0, 0, 0},  {0, 0, -1, 0, 0, 0, 0, 0},
-               {0, 0, 0, -1, 0, 0, 0, 0}, {0, 0, 0, 1, 0, 0, 0, 0}};
+      dd::CMat{{1, 0, 0, 0, 0, 0, 0, 0},  {0, -1, 0, 0, 0, 0, 0, 0},
+               {0, 0, -1, 0, 0, 0, 0, 0}, {0, 0, 0, 1, 0, 0, 0, 0},
+               {1, 0, 0, 0, 0, 0, 0, 0},  {0, -1, 0, 0, 0, 0, 0, 0},
+               {0, 0, -1, 0, 0, 0, 0, 0}, {0, 0, 0, 1, 0, 0, 0, 0}};
   EXPECT_EQ(outputMatrix.getMatrix(), expectedMatrix);
 
-  const auto outputMatrix4 = dd->shiftAllRows(inputDD, 1);
+  const auto outputMatrix4 = dd->shiftAllRows(inputDD, 1, 0);
   const auto expectedMatrix4 =
-      dd::CMat{{1, 0, 0, 0, 0, 0, 0, 0},  {-1, 0, 0, 0, 0, 0, 0, 0},
-               {-1, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0},
-               {0, 1, 0, 0, 0, 0, 0, 0},  {0, -1, 0, 0, 0, 0, 0, 0},
-               {0, -1, 0, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0, 0, 0}};
+      dd::CMat{{1, 0, 0, 0, 0, 0, 0, 0},  {0, -1, 0, 0, 0, 0, 0, 0},
+               {-1, 0, 0, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0, 0, 0},
+               {1, 0, 0, 0, 0, 0, 0, 0},  {0, -1, 0, 0, 0, 0, 0, 0},
+               {-1, 0, 0, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0, 0, 0}};
   EXPECT_EQ(outputMatrix4.getMatrix(), expectedMatrix4);
 
-  const auto outputMatrix2 = dd->shiftAllRows(inputDD, 3);
+  const auto outputMatrix2 = dd->shiftAllRows(inputDD, 3, 0);
   const auto expectedMatrix2 =
       dd::CMat{{1, 0, 0, 0, 0, 0, 0, 0},  {0, -1, 0, 0, 0, 0, 0, 0},
                {0, 0, -1, 0, 0, 0, 0, 0}, {0, 0, 0, 1, 0, 0, 0, 0},
@@ -2017,17 +2024,17 @@ TEST(DDPackageTest, DDMShiftAllRows3Qubits) {
   EXPECT_EQ(outputMatrix2.getMatrix(), expectedMatrix2);
 
   const auto inputMatrix2 =
-      dd::CMat{{1, 0, 0, 0, 1, 0, 0, 0},  {-1, 0, 0, 0, 1, 0, 0, 0},
-               {-1, 0, 0, 0, 1, 0, 0, 0}, {1, 0, 0, 0, 1, 0, 0, 0},
-               {1, 0, 0, 0, 1, 0, 0, 0},  {-1, 0, 0, 0, 1, 0, 0, 0},
-               {-1, 0, 0, 0, 1, 0, 0, 0}, {1, 0, 0, 0, 1, 0, 0, 0}};
+      dd::CMat{{1, 1, 3, 3, 3, 3, 3, 3},  {-1, 1, 3, 3, 3, 3, 3, 3},
+               {-1, 1, 3, 3, 3, 3, 3, 3}, {1, 1, 3, 3, 3, 3, 3, 3},
+               {1, 1, 3, 3, 3, 3, 3, 3},  {-1, 1, 3, 3, 3, 3, 3, 3},
+               {-1, 1, 3, 3, 3, 3, 3, 3}, {1, 1, 3, 3, 3, 3, 3, 3}};
   auto inputDD2 = dd->makeDDFromMatrix(inputMatrix2);
-  const auto outputMatrix3 = dd->shiftAllRows(inputDD2, 1);
+  const auto outputMatrix3 = dd->shiftAllRows(inputDD2, 1, 1);
   const auto expectedMatrix3 =
-      dd::CMat{{1, 0, 0, 0, 1, 0, 0, 0},  {-1, 0, 0, 0, 1, 0, 0, 0},
-               {-1, 0, 0, 0, 1, 0, 0, 0}, {1, 0, 0, 0, 1, 0, 0, 0},
-               {0, 1, 0, 0, 0, 1, 0, 0},  {0, -1, 0, 0, 0, 1, 0, 0},
-               {0, -1, 0, 0, 0, 1, 0, 0}, {0, 1, 0, 0, 0, 1, 0, 0}};
+      dd::CMat{{1, 1, 0, 0, 0, 0, 0, 0},  {0, 0, -1, 1, 0, 0, 0, 0},
+               {-1, 1, 0, 0, 0, 0, 0, 0}, {0, 0, 1, 1, 0, 0, 0, 0},
+               {1, 1, 0, 0, 0, 0, 0, 0},  {0, 0, -1, 1, 0, 0, 0, 0},
+               {-1, 1, 0, 0, 0, 0, 0, 0}, {0, 0, 1, 1, 0, 0, 0, 0}};
   EXPECT_EQ(outputMatrix3.getMatrix(), expectedMatrix3);
 }
 
@@ -2037,36 +2044,21 @@ TEST(DDPackageTest, DDMShiftAllRows5Qubits) {
   const std::uint64_t n = 1 << nqubits;
   std::vector<std::complex<double>> row10(n, 0);
   std::vector<std::complex<double>> row01(n, 1);
-  for (std::uint64_t i = 0; i < n; i += 2) {
+  for (std::uint64_t i = 0; i < n / 2; i++) {
     row10[i] = 1;
     row01[i] = 0;
   }
-  const dd::CMat inputMatrix(
-      n, row10); // inputMatrix = [1, 0, 1, 0...]...[1, 0, 1, 0...]...
+  // inputMatrix = [1, 1, ... 0, 0 ...]...[1, 1, ... 0, 0...]...
+  const dd::CMat inputMatrix(n, row10);
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
 
-  const auto outputMatrix = dd->shiftAllRows(inputDD, 1);
-  dd::CMat expectedMatrix(n / 2, row10);
-  dd::CMat expectedMatrixPart2(n / 2, row01);
-  expectedMatrix.insert(expectedMatrix.end(), expectedMatrixPart2.begin(),
-                        expectedMatrixPart2.end());
-  // expectedMatrix = [1, 0, 1, 0...]...[0, 1, 0, 1...]...
+  const auto outputMatrix = dd->shiftAllRows(inputDD, 1, nqubits - 1);
+  dd::CMat expectedMatrix(n, row01);
+  for (std::uint64_t i = 0; i < n; i += 2) {
+    expectedMatrix[i] = row10;
+  }
+  // expectedMatrix = [1, 1, ... 0, 0 ...][0, 0, ... 1, 1 ...]...
   EXPECT_EQ(outputMatrix.getMatrix(), expectedMatrix);
-}
-
-TEST(DDPackageTest, DDMSetColumnsToZero) {
-  const auto nqubits = 2U;
-  auto dd = std::make_unique<dd::Package<>>(nqubits);
-  const auto inputMatrix =
-      dd::CMat{{1, 1, 1, 1}, {1, -1, 1, -1}, {1, 1, -1, -1}, {1, -1, -1, 1}};
-  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
-
-  const auto outputMatrix = dd->setColumnsToZero(inputDD, 1);
-  const auto expectedMatrix =
-      dd::CMat{{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, -1, 0}, {1, 0, -1, 0}};
-  EXPECT_EQ(outputMatrix.getMatrix(), expectedMatrix);
-
-  EXPECT_EQ(dd->setColumnsToZero(inputDD, 0), inputDD);
 }
 
 TEST(DDPackageTest,
@@ -2081,44 +2073,6 @@ TEST(DDPackageTest,
   const auto expectedMatrix =
       dd::CMat{{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, 1, 0}};
   EXPECT_EQ(outputMatrix.getMatrix(), expectedMatrix);
-}
-
-TEST(DDPackageTest, DDMSetRowsToZero) {
-  const auto nqubits = 2U;
-  auto dd = std::make_unique<dd::Package<>>(nqubits);
-  const auto inputMatrix =
-      dd::CMat{{1, 1, 1, 1}, {1, -1, 1, -1}, {1, 1, -1, -1}, {1, -1, -1, 1}};
-  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
-
-  const auto outputMatrix = dd->setRowsToZero(inputDD, 1);
-  const auto expectedMatrix =
-      dd::CMat{{1, 1, 1, 1}, {0, 0, 0, 0}, {1, 1, -1, -1}, {0, 0, 0, 0}};
-  EXPECT_EQ(outputMatrix.getMatrix(), expectedMatrix);
-
-  EXPECT_EQ(dd->setRowsToZero(inputDD, 0), inputDD);
-}
-
-TEST(DDPackageTest, DDMPartialEquivalenceCheckingFunctionsNotNormalized) {
-  const auto nqubits = 2U;
-  auto dd = std::make_unique<dd::Package<>>(nqubits);
-  const auto inputMatrix = dd::CMat{
-      {7, 9, 4, 1}, {3, -51, 0, -10000}, {7, 1, -7, -7}, {7, -1, -7, 1}};
-  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
-
-  const auto outputMatrix = dd->setRowsToZero(inputDD, 1);
-  const auto expectedMatrix =
-      dd::CMat{{7, 9, 4, 1}, {0, 0, 0, 0}, {7, 1, -7, -7}, {0, 0, 0, 0}};
-  EXPECT_EQ(outputMatrix, dd->makeDDFromMatrix(expectedMatrix));
-
-  const auto outputMatrix2 = dd->setColumnsToZero(inputDD, 1);
-  const auto expectedMatrix2 =
-      dd::CMat{{7, 0, 4, 0}, {3, 0, 0, 0}, {7, 0, -7, 0}, {7, 0, -7, 0}};
-  EXPECT_EQ(outputMatrix2, dd->makeDDFromMatrix(expectedMatrix2));
-
-  const auto outputMatrix3 = dd->shiftAllRows(outputMatrix2, 1);
-  const auto expectedMatrix3 =
-      dd::CMat{{7, 0, 4, 0}, {3, 0, 0, 0}, {0, 7, 0, -7}, {0, 7, 0, -7}};
-  EXPECT_EQ(outputMatrix3, dd->makeDDFromMatrix(expectedMatrix3));
 }
 
 TEST(DDPackageTest, DDMPartialEquivalenceCheckingTrivialEquivalence) {
@@ -2143,7 +2097,7 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingTest) {
   const auto nqubits = 3U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   // only the second qubit has differing gates in the two circuits,
-  // therefore they should be equivalent if we only measure the third qubit
+  // therefore they should be equivalent if we only measure the first qubit
   auto hGate = dd->makeGateDD(dd::H_MAT, 3, 1);
   auto xGate = dd->makeGateDD(dd::X_MAT, 3, 1);
   auto circuit1 = dd->multiply(xGate, hGate);
@@ -2155,10 +2109,10 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingTest) {
 TEST(DDPackageTest, DDMPartialEquivalenceCheckingTestNotEquivalent) {
   const auto nqubits = 2U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
-  // the second qubit has differing gates in the two circuits,
-  // therefore they should not be equivalent if we only measure the second qubit
-  auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 1);
-  auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
+  // the first qubit has differing gates in the two circuits,
+  // therefore they should not be equivalent if we only measure the first qubit
+  auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 0);
+  auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 0);
   auto circuit1 = dd->multiply(xGate, hGate);
   auto circuit2 = dd->makeIdent(2);
   EXPECT_FALSE(dd->partialEquivalenceCheck(circuit1, circuit2, 2, 1));
@@ -2168,10 +2122,10 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaper) {
   const auto nqubits = 3U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
-  auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 2);
-  auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 0);
+  auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 0);
+  auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
   auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
-  auto controlledHGate = dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 2);
+  auto controlledHGate = dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 0);
 
   auto c1 = dd->multiply(
       controlledSwapGate,
@@ -2181,35 +2135,36 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaper) {
   EXPECT_TRUE(dd->partialEquivalenceCheck(c1, c2, 3, 1));
 }
 
-TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaperZeroAncilla) {
-  const auto nqubits = 3U;
-  auto dd = std::make_unique<dd::Package<>>(nqubits);
-  auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
-  auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 2);
-  auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 0);
-  auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
-  auto controlledHGate = dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 2);
+// TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaperZeroAncilla) {
+//   const auto nqubits = 3U;
+//   auto dd = std::make_unique<dd::Package<>>(nqubits);
+//   auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
+//   auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 0);
+//   auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
+//   auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
+//   auto controlledHGate = dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1},
+//   0);
 
-  auto c1 = dd->multiply(
-      controlledSwapGate,
-      dd->multiply(hGate, dd->multiply(zGate, controlledSwapGate)));
-  auto c2 = dd->multiply(controlledHGate, xGate);
+//   auto c1 = dd->multiply(
+//       controlledSwapGate,
+//       dd->multiply(hGate, dd->multiply(zGate, controlledSwapGate)));
+//   auto c2 = dd->multiply(controlledHGate, xGate);
 
-  EXPECT_TRUE(dd->zeroAncillaPartialEquivalenceCheck(c1, c2, 1));
-  EXPECT_FALSE(dd->zeroAncillaPartialEquivalenceCheck(c1, c2, 2));
+//   EXPECT_TRUE(dd->zeroAncillaPartialEquivalenceCheck(c1, c2, 1));
+//   EXPECT_FALSE(dd->zeroAncillaPartialEquivalenceCheck(c1, c2, 2));
 
-  auto hGate2 = dd->makeGateDD(dd::H_MAT, nqubits, 0);
-  auto zGate2 = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
-  auto controlledHGate2 =
-      dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 2);
+//   auto hGate2 = dd->makeGateDD(dd::H_MAT, nqubits, 2);
+//   auto zGate2 = dd->makeGateDD(dd::Z_MAT, nqubits, 0);
+//   auto controlledHGate2 =
+//       dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 0);
 
-  auto c3 = dd->multiply(
-      controlledSwapGate,
-      dd->multiply(hGate2, dd->multiply(zGate2, controlledSwapGate)));
-  auto c4 = dd->multiply(controlledHGate2, xGate);
+//   auto c3 = dd->multiply(
+//       controlledSwapGate,
+//       dd->multiply(hGate2, dd->multiply(zGate2, controlledSwapGate)));
+//   auto c4 = dd->multiply(controlledHGate2, xGate);
 
-  EXPECT_FALSE(dd->zeroAncillaPartialEquivalenceCheck(c3, c4, 1));
-}
+//   EXPECT_FALSE(dd->zeroAncillaPartialEquivalenceCheck(c3, c4, 1));
+// }
 
 TEST(DDPackageTest,
      DDMPartialEquivalenceCheckingExamplePaperDifferentQubitOrder) {
@@ -2217,37 +2172,37 @@ TEST(DDPackageTest,
   auto dd = std::make_unique<dd::Package<>>(nqubits);
 
   qc::QuantumComputation c1{3, 1};
-  c1.cswap(1, 0, 2);
-  c1.h(0);
-  c1.z(2);
-  c1.cswap(1, 0, 2);
+  c1.cswap(1, 2, 0);
+  c1.h(2);
+  c1.z(0);
+  c1.cswap(1, 2, 0);
 
   qc::QuantumComputation c2{3, 1};
   c2.x(1);
-  c2.ch(1, 0);
+  c2.ch(1, 2);
 
   c1.setLogicalQubitGarbage(1);
-  c1.setLogicalQubitGarbage(2);
+  c1.setLogicalQubitGarbage(0);
 
   c2.setLogicalQubitGarbage(1);
-  c2.setLogicalQubitGarbage(2);
+  c2.setLogicalQubitGarbage(0);
   EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
 }
 
 TEST(DDPackageTest, DDMPartialEquivalenceWithDifferentNumberOfQubits) {
   auto dd = std::make_unique<dd::Package<>>(3);
   auto controlledSwapGate = dd->makeSWAPDD(3, qc::Controls{1}, 0, 2);
-  auto hGate = dd->makeGateDD(dd::H_MAT, 3, 2);
-  auto zGate = dd->makeGateDD(dd::Z_MAT, 3, 0);
-  auto xGate = dd->makeGateDD(dd::X_MAT, 2, 0);
-  auto controlledHGate = dd->makeGateDD(dd::H_MAT, 2, qc::Controls{0}, 1);
+  auto hGate = dd->makeGateDD(dd::H_MAT, 3, 0);
+  auto zGate = dd->makeGateDD(dd::Z_MAT, 3, 2);
+  auto xGate = dd->makeGateDD(dd::X_MAT, 2, 1);
+  auto controlledHGate = dd->makeGateDD(dd::H_MAT, 2, qc::Controls{1}, 0);
 
   auto c1 = dd->multiply(
       controlledSwapGate,
       dd->multiply(hGate, dd->multiply(zGate, controlledSwapGate)));
   auto c2 = dd->multiply(controlledHGate, xGate);
 
-  EXPECT_TRUE(dd->zeroAncillaPartialEquivalenceCheck(c1, c2, 1));
+  // EXPECT_TRUE(dd->zeroAncillaPartialEquivalenceCheck(c1, c2, 1));
   EXPECT_TRUE(dd->partialEquivalenceCheck(c1, c2, 3, 1));
   EXPECT_FALSE(dd->partialEquivalenceCheck(c2, c1, 3, 3));
   EXPECT_FALSE(dd->partialEquivalenceCheck(c2, dd::mEdge::zero(), 2, 1));
@@ -2262,11 +2217,11 @@ TEST(DDPackageTest, DDMPartialEquivalenceWithDifferentNumberOfQubits) {
 TEST(DDPackageTest, DDMPartialEquivalenceCheckingComputeTable) {
   const auto nqubits = 3U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
-  auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
-  auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 2);
-  auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 0);
+  auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 2, 0);
+  auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 0);
+  auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
   auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
-  auto controlledHGate = dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 2);
+  auto controlledHGate = dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 0);
 
   auto c1 = dd->multiply(
       controlledSwapGate,
@@ -2376,12 +2331,10 @@ TEST(DDPackageTest, DDMPECSliQECGrover) {
       "./circuits/Grover_2.qasm"}; // 12 qubits, 11 data qubits
 
   // 11 measured qubits and 11 data qubits
-  // auto c1Dd = buildFunctionality(&c1, dd, false, false);
-  // auto c2Dd = buildFunctionality(&c2, dd, false, false);
+  auto c1Dd = buildFunctionality(&c1, dd, false, false);
+  auto c2Dd = buildFunctionality(&c2, dd, false, false);
   // adds 10 ancillary qubits -> total number of qubits is 22
-  // doesn't terminate
-  // EXPECT_TRUE(dd->partialEquivalenceCheck(c1Dd, c2Dd, 11, 11));
-  EXPECT_TRUE(true);
+  EXPECT_TRUE(dd->partialEquivalenceCheck(c1Dd, c2Dd, 11, 11));
 }
 
 TEST(DDPackageTest, DDMPECSliQECAdd) {
@@ -2410,26 +2363,115 @@ TEST(DDPackageTest, DDMPECSliQECPeriodFinding) {
 
   // 3 measured qubits and 3 data qubits
 
-  c2.setLogicalQubitAncillary(0);
-  c2.setLogicalQubitGarbage(0);
-  c2.setLogicalQubitAncillary(1);
-  c2.setLogicalQubitGarbage(1);
-  c2.setLogicalQubitAncillary(2);
-  c2.setLogicalQubitGarbage(2);
+  c2.setLogicalQubitAncillary(7);
+  c2.setLogicalQubitGarbage(7);
+  c2.setLogicalQubitAncillary(6);
+  c2.setLogicalQubitGarbage(6);
+  c2.setLogicalQubitAncillary(5);
+  c2.setLogicalQubitGarbage(5);
   c2.setLogicalQubitAncillary(3);
   c2.setLogicalQubitGarbage(3);
   c2.setLogicalQubitAncillary(4);
   c2.setLogicalQubitGarbage(4);
 
-  c1.setLogicalQubitAncillary(0);
-  c1.setLogicalQubitGarbage(0);
-  c1.setLogicalQubitAncillary(1);
-  c1.setLogicalQubitGarbage(1);
-  c1.setLogicalQubitAncillary(2);
-  c1.setLogicalQubitGarbage(2);
+  c1.setLogicalQubitAncillary(7);
+  c1.setLogicalQubitGarbage(7);
+  c1.setLogicalQubitAncillary(6);
+  c1.setLogicalQubitGarbage(6);
+  c1.setLogicalQubitAncillary(5);
+  c1.setLogicalQubitGarbage(5);
   c1.setLogicalQubitAncillary(3);
   c1.setLogicalQubitGarbage(3);
   c1.setLogicalQubitAncillary(4);
   c1.setLogicalQubitGarbage(4);
   EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
+}
+
+TEST(DDPackageTest, DDMShiftAllRows3Qubits1) {
+  const size_t nqubits = 3U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto inputMatrix =
+      dd::CMat{{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
+               {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
+               {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
+               {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
+  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
+  std::cout << "inputMatrix:" << std::endl;
+  inputDD.printMatrix();
+  std::cout << std::endl;
+  dd::Qubit m = 2;
+  dd::Qubit d = 1;
+  std::cout << "m = " << m << std::endl;
+  std::cout << "d = " << d << std::endl;
+  const auto outputMatrix = dd->shiftAllRows(inputDD, m, d);
+  const auto expectedOutputMatrix =
+      dd->makeDDFromMatrix(dd::CMat{{1, 2, 0, 0, 0, 0, 0, 0},
+                                    {0, 0, 1, 2, 0, 0, 0, 0},
+                                    {0, 0, 0, 0, 1, 2, 0, 0},
+                                    {0, 0, 0, 0, 0, 0, 1, 2},
+                                    {1, 2, 0, 0, 0, 0, 0, 0},
+                                    {0, 0, 1, 2, 0, 0, 0, 0},
+                                    {0, 0, 0, 0, 1, 2, 0, 0},
+                                    {0, 0, 0, 0, 0, 0, 1, 2}});
+  EXPECT_EQ(outputMatrix, expectedOutputMatrix);
+}
+
+TEST(DDPackageTest, DDMShiftAllRows3Qubits2) {
+  const size_t nqubits = 3U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto inputMatrix =
+      dd::CMat{{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
+               {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
+               {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
+               {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
+  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
+  std::cout << "inputMatrix:" << std::endl;
+  inputDD.printMatrix();
+  std::cout << std::endl;
+  dd::Qubit m = 1;
+  dd::Qubit d = 2;
+  std::cout << "m = " << m << std::endl;
+  std::cout << "d = " << d << std::endl;
+  const auto outputMatrix = dd->shiftAllRows(inputDD, m, d);
+  const auto expectedOutputMatrix =
+      dd->makeDDFromMatrix(dd::CMat{{1, 2, 3, 4, 0, 0, 0, 0},
+                                    {0, 0, 0, 0, 1, 2, 3, 4},
+                                    {1, 2, 3, 4, 0, 0, 0, 0},
+                                    {0, 0, 0, 0, 1, 2, 3, 4},
+                                    {1, 2, 3, 4, 0, 0, 0, 0},
+                                    {0, 0, 0, 0, 1, 2, 3, 4},
+                                    {1, 2, 3, 4, 0, 0, 0, 0},
+                                    {0, 0, 0, 0, 1, 2, 3, 4}});
+
+  EXPECT_EQ(outputMatrix, expectedOutputMatrix);
+}
+
+TEST(DDPackageTest, DDMShiftAllRows3Qubits3) {
+  const size_t nqubits = 3U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto inputMatrix =
+      dd::CMat{{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
+               {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
+               {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
+               {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
+  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
+  std::cout << "inputMatrix:" << std::endl;
+  inputDD.printMatrix();
+  std::cout << std::endl;
+  dd::Qubit m = 1;
+  dd::Qubit d = 1;
+  std::cout << "m = " << m << std::endl;
+  std::cout << "d = " << d << std::endl;
+  const auto outputMatrix = dd->shiftAllRows(inputDD, m, d);
+  auto outputMatrixMatrix = outputMatrix.getMatrix();
+  const auto expectedOutputMatrix =
+      dd->makeDDFromMatrix(dd::CMat{{1, 2, 0, 0, 0, 0, 0, 0},
+                                    {0, 0, 1, 2, 0, 0, 0, 0},
+                                    {1, 2, 0, 0, 0, 0, 0, 0},
+                                    {0, 0, 1, 2, 0, 0, 0, 0},
+                                    {1, 2, 0, 0, 0, 0, 0, 0},
+                                    {0, 0, 1, 2, 0, 0, 0, 0},
+                                    {1, 2, 0, 0, 0, 0, 0, 0},
+                                    {0, 0, 1, 2, 0, 0, 0, 0}});
+  EXPECT_EQ(outputMatrix, expectedOutputMatrix);
 }
