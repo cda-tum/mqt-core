@@ -1,5 +1,6 @@
 #include "operations/StandardOperation.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <sstream>
 #include <variant>
