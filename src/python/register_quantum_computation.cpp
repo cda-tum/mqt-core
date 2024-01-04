@@ -34,7 +34,12 @@ void registerQuantumComputation(py::module& m) {
          "qubits and classical bits.");
   qc.def(py::init<std::string>(), "filename"_a,
          "Read QuantumComputation from given file. Supported formats are "
-         "[OpenQASM2, Real, GRCS, TFC, QC]");
+         "[OpenQASM2, OpenQASM3, Real, GRCS, TFC, QC]");
+
+  // expose the static constructor from qasm strings
+  qc.def_static(
+      "from_qasm", &qc::QuantumComputation::fromQASM, "qasm"_a,
+      "Construct a QuantumComputation from the given OpenQASM string.");
 
   ///---------------------------------------------------------------------------
   ///                       \n General Properties \n
@@ -255,45 +260,33 @@ void registerQuantumComputation(py::module& m) {
   ///---------------------------------------------------------------------------
 
   qc.def(
-      "qasm_str",
-      [](qc::QuantumComputation& circ) {
-        auto ss = std::stringstream();
-        circ.dumpOpenQASM2(ss);
-        return ss.str();
-      },
-      "Get a OpenQASM 2.0 representation of the circuit. Note that this uses "
+      "qasm2_str",
+      [](qc::QuantumComputation& circ) { return circ.toQASM(false); },
+      "Get an OpenQASM 2.0 representation of the circuit. Note that this uses "
       "some custom extensions to OpenQASM 2.0 that allow for easier definition "
       "of multi-controlled gates. These extensions might not be supported by "
       "all OpenQASM 2.0 parsers.");
   qc.def(
-      "qasm",
+      "qasm2",
       [](qc::QuantumComputation& circ, const std::string& filename) {
-        std::ofstream ofs(filename);
-        circ.dumpOpenQASM2(ofs);
-        ofs.close();
+        circ.dump(filename, qc::Format::OpenQASM2);
       },
       "filename"_a,
-      "Write a OpenQASM 2.0 representation of the circuit to the given file. "
+      "Write an OpenQASM 2.0 representation of the circuit to the given file. "
       "Note that this uses some custom extensions to OpenQASM 2.0 that allow "
       "for easier definition of multi-controlled gates. These extensions "
       "might not be supported by all OpenQASM 2.0 parsers.");
   qc.def(
       "qasm3_str",
-      [](qc::QuantumComputation& circ) {
-        auto ss = std::stringstream();
-        circ.dumpOpenQASM3(ss);
-        return ss.str();
-      },
-      "Get a OpenQASM 3.0 representation of the circuit.");
+      [](qc::QuantumComputation& circ) { return circ.toQASM(true); },
+      "Get an OpenQASM 3.0 representation of the circuit.");
   qc.def(
       "qasm3",
       [](qc::QuantumComputation& circ, const std::string& filename) {
-        std::ofstream ofs(filename);
-        circ.dumpOpenQASM3(ofs);
-        ofs.close();
+        circ.dump(filename, qc::Format::OpenQASM3);
       },
       "filename"_a,
-      "Write a OpenQASM 3.0 representation of the circuit to the given file.");
+      "Write an OpenQASM 3.0 representation of the circuit to the given file.");
   qc.def("__str__", [](qc::QuantumComputation& circ) {
     auto ss = std::stringstream();
     circ.print(ss);
