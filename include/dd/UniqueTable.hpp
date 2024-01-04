@@ -5,6 +5,7 @@
 #include "dd/MemoryManager.hpp"
 #include "dd/Node.hpp"
 #include "dd/statistics/UniqueTableStatistics.hpp"
+#include "nlohmann/json.hpp"
 
 #include <algorithm>
 #include <array>
@@ -12,7 +13,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <nlohmann/json.hpp>
 #include <type_traits>
 #include <vector>
 

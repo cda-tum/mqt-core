@@ -5,8 +5,8 @@
 #include "dd/statistics/PackageStatistics.hpp"
 #include "operations/Control.hpp"
 
+#include "gtest/gtest.h"
 #include <filesystem>
-#include <gtest/gtest.h>
 #include <iomanip>
 #include <memory>
 #include <random>

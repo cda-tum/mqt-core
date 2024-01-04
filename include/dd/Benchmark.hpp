@@ -1,9 +1,9 @@
 #pragma once
 
 #include "dd/Package.hpp"
+#include "nlohmann/json.hpp"
 
 #include <chrono>
-#include <nlohmann/json.hpp>
 
 namespace qc {
 class QuantumComputation;
