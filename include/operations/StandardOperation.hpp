@@ -116,6 +116,8 @@ protected:
 
   void dumpGateType(std::ostream& of, std::ostringstream& op,
                     const RegisterNames& qreg) const;
+
+  void dumpControls(std::ostringstream& op) const;
 };
 
 } // namespace qc

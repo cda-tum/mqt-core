@@ -1,5 +1,6 @@
 #include "operations/StandardOperation.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <sstream>
 #include <variant>
@@ -295,31 +296,7 @@ void StandardOperation::dumpOpenQASM2(std::ostream& of, std::ostringstream& op,
 
 void StandardOperation::dumpOpenQASM3(std::ostream& of, std::ostringstream& op,
                                       const RegisterNames& qreg) const {
-
-  if (!controls.empty()) {
-    Control::Type currentType = controls.begin()->type;
-    int count = 0;
-
-    for (const auto& control : controls) {
-      if (control.type == currentType) {
-        ++count;
-      } else {
-        op << (currentType == Control::Type::Neg ? "negctrl" : "ctrl");
-        if (count > 1) {
-          op << "(" << count << ")";
-        }
-        op << " @ ";
-        currentType = control.type;
-        count = 1;
-      }
-    }
-
-    op << (currentType == Control::Type::Neg ? "negctrl" : "ctrl");
-    if (count > 1) {
-      op << "(" << count << ")";
-    }
-    op << " @ ";
-  }
+  dumpControls(op);
 
   dumpGateType(of, op, qreg);
 }
@@ -630,5 +607,63 @@ void StandardOperation::invert() {
     throw QFRException("Inverting gate" + toString(type) +
                        " is not supported.");
   }
+}
+
+void StandardOperation::dumpControls(std::ostringstream& op) const {
+  if (controls.empty()) {
+    return;
+  }
+
+  // if operation is in stdgates.inc, we print a c prefix instead of ctrl @
+  if (bool printBuiltin = std::none_of(
+          controls.begin(), controls.end(),
+          [](const Control& c) { return c.type == Control::Type::Neg; });
+      printBuiltin) {
+    const auto numControls = controls.size();
+    switch (type) {
+    case P:
+    case RX:
+    case Y:
+    case RY:
+    case Z:
+    case RZ:
+    case H:
+    case SWAP:
+      printBuiltin = numControls == 1;
+      break;
+    case X:
+      printBuiltin = numControls == 1 || numControls == 2;
+      break;
+    default:
+      printBuiltin = false;
+    }
+    if (printBuiltin) {
+      op << std::string(numControls, 'c');
+      return;
+    }
+  }
+
+  Control::Type currentType = controls.begin()->type;
+  int count = 0;
+
+  for (const auto& control : controls) {
+    if (control.type == currentType) {
+      ++count;
+    } else {
+      op << (currentType == Control::Type::Neg ? "negctrl" : "ctrl");
+      if (count > 1) {
+        op << "(" << count << ")";
+      }
+      op << " @ ";
+      currentType = control.type;
+      count = 1;
+    }
+  }
+
+  op << (currentType == Control::Type::Neg ? "negctrl" : "ctrl");
+  if (count > 1) {
+    op << "(" << count << ")";
+  }
+  op << " @ ";
 }
 } // namespace qc
