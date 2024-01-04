@@ -17,21 +17,26 @@ def load(input_circuit: QuantumComputation | str | PathLike[str] | QuantumCircui
 
     Args:
         input_circuit: The input circuit to translate to a ``QuantumComputation``.
+        This can be a `QuantumComputation` itself, a file name to any of the supported file formats,
+        an OpenQASM (2.0 or 3.0) string, or a Qiskit `QuantumCircuit`.
 
     Returns:
         The ``QuantumComputation``.
 
     Raises:
         ValueError: If the input circuit is a Qiskit `QuantumCircuit` but the `qiskit` extra is not installed.
-        FileNotFoundError: If the input circuit is a file and the file does not exist.
+        FileNotFoundError: If the input circuit is a file name and the file does not exist.
     """
     if isinstance(input_circuit, QuantumComputation):
         return input_circuit
 
     if isinstance(input_circuit, (str, PathLike)):
         if not Path(input_circuit).is_file():
-            msg = f"File {input_circuit} does not exist."
-            raise FileNotFoundError(msg)
+            if isinstance(input_circuit, PathLike) or "OPENQASM" not in input_circuit:
+                msg = f"File {input_circuit} does not exist."
+                raise FileNotFoundError(msg)
+            # otherwise, we assume that this is a QASM string
+            return QuantumComputation.from_qasm(input_circuit)
 
         return QuantumComputation(input_circuit)
 
