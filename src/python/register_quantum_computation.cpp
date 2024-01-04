@@ -278,21 +278,15 @@ void registerQuantumComputation(py::module& m) {
       "might not be supported by all OpenQASM 2.0 parsers.");
   qc.def(
       "qasm3_str",
-      [](qc::QuantumComputation& circ) {
-        auto ss = std::stringstream();
-        circ.dumpOpenQASM3(ss);
-        return ss.str();
-      },
-      "Get a OpenQASM 3.0 representation of the circuit.");
+      [](qc::QuantumComputation& circ) { return circ.toQASM(true); },
+      "Get an OpenQASM 3.0 representation of the circuit.");
   qc.def(
       "qasm3",
       [](qc::QuantumComputation& circ, const std::string& filename) {
-        std::ofstream ofs(filename);
-        circ.dumpOpenQASM3(ofs);
-        ofs.close();
+        circ.dump(filename, qc::Format::OpenQASM3);
       },
       "filename"_a,
-      "Write a OpenQASM 3.0 representation of the circuit to the given file.");
+      "Write an OpenQASM 3.0 representation of the circuit to the given file.");
   qc.def("__str__", [](qc::QuantumComputation& circ) {
     auto ss = std::stringstream();
     circ.print(ss);
