@@ -50,7 +50,7 @@ void registerOperation(py::module& m) {
            "Return the inverse of this operation.")
       .def("invert", &qc::Operation::invert, "Invert this operation.")
       .def(
-          "qasm_str",
+          "qasm2_str",
           [](const qc::Operation& op, const qc::RegisterNames& qreg,
              const qc::RegisterNames& creg) {
             std::ostringstream oss;

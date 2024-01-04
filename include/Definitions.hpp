@@ -1,14 +1,15 @@
 #pragma once
 
 #include <bitset>
+#include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <map>
 #include <memory>
 #include <stdexcept>
-#include <unordered_map>
+#include <string>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace qc {
@@ -63,7 +64,15 @@ static constexpr size_t OUTPUT_INDENT_SIZE = 2;
 class Operation;
 
 // supported file formats
-enum class Format { Real, OpenQASM, OpenQASM3, GRCS, TFC, QC, Tensor };
+enum class Format : uint8_t {
+  Real,
+  OpenQASM2,
+  OpenQASM3,
+  GRCS,
+  TFC,
+  QC,
+  Tensor
+};
 
 using DAG = std::vector<std::deque<std::unique_ptr<Operation>*>>;
 using DAGIterator = std::deque<std::unique_ptr<Operation>*>::iterator;

@@ -239,14 +239,12 @@ TEST_F(DDFunctionality, CircuitEquivalence) {
 }
 
 TEST_F(DDFunctionality, changePermutation) {
-  qc::QuantumComputation qc{};
-  std::stringstream ss{};
-  ss << "// o 1 0\n"
-     << "OPENQASM 2.0;"
-     << "include \"qelib1.inc\";"
-     << "qreg q[2];"
-     << "x q[0];\n";
-  qc.import(ss, qc::Format::OpenQASM);
+  const std::string testfile = "// o 1 0\n"
+                               "OPENQASM 2.0;"
+                               "include \"qelib1.inc\";"
+                               "qreg q[2];"
+                               "x q[0];\n";
+  const auto qc = QuantumComputation::fromQASM(testfile);
   auto sim = simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd);
   EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
   EXPECT_TRUE(sim.p->e[1].w.exactlyOne());
