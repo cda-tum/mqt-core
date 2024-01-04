@@ -3,7 +3,7 @@
 #include "Statement.hpp"
 
 namespace qasm3 {
-class CompilerError final : std::exception {
+class CompilerError final : public std::exception {
 public:
   std::string message{};
   std::shared_ptr<DebugInfo> debugInfo{};
@@ -28,7 +28,7 @@ public:
 };
 } // namespace qasm3
 
-class ConstEvalError final : std::exception {
+class ConstEvalError final : public std::exception {
 public:
   std::string message{};
 
@@ -39,7 +39,7 @@ public:
   }
 };
 
-class TypeCheckError final : std::exception {
+class TypeCheckError final : public std::exception {
 public:
   std::string message{};
 
