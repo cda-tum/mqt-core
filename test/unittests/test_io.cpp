@@ -154,19 +154,13 @@ TEST_F(IO, dumpNegativeControl) {
       ".numvars 2\n.variables a b\n.begin\nt2 -a b\n.end";
   std::stringstream ss{circuitReal};
   qc->import(ss, qc::Format::Real);
-  qc->dump("testdump.qasm");
-  qc->import("testdump.qasm");
-  ASSERT_EQ(qc->getNops(), 3);
+  const auto qasm = qc->toQASM();
+  *qc = qc::QuantumComputation::fromQASM(qasm);
+  ASSERT_EQ(qc->getNops(), 1);
   auto it = qc->begin();
   EXPECT_EQ((*it)->getType(), qc::X);
-  EXPECT_EQ((*it)->getControls().size(), 0);
-  ++it;
-  EXPECT_EQ((*it)->getType(), qc::X);
   EXPECT_EQ((*it)->getControls().size(), 1);
-  ++it;
-  EXPECT_EQ((*it)->getType(), qc::X);
-  EXPECT_EQ((*it)->getControls().size(), 0);
-  std::filesystem::remove("testdump.qasm");
+  EXPECT_EQ((*it)->getControls().begin()->type, qc::Control::Type::Neg);
 }
 
 TEST_F(IO, qiskitMcxGray) {
