@@ -83,11 +83,26 @@ TEST_F(Qasm3ParserTest, ImportQasm3GateDecl) {
 
 TEST_F(Qasm3ParserTest, ImportQasm3CtrlModifier) {
   std::stringstream ss{};
-  const std::string testfile = "OPENQASM 3.0;\n"
-                               "include \"stdgates.inc\";\n"
-                               "qubit[3] q;\n"
-                               "ctrl @ x q[0], q[1];\n"
-                               "ctrl(2) @ x q[0], q[1], q[2];\n";
+  const std::string testfile =
+      "OPENQASM 3.0;\n"
+      "include \"stdgates.inc\";\n"
+      "qubit[5] q;\n"
+      "x q[0];\n"
+      "ctrl @ x q[0], q[1];\n"
+      "ctrl(2) @ x q[0], q[1], q[2];\n"
+      "ctrl(3) @ x q[0], q[1], q[2], q[3];\n"
+      "ctrl(3) @ negctrl @ x q[0], q[1], q[2], q[3], q[4];\n"
+      "ctrl @ p(0.5) q[0], q[1];\n"
+      "ctrl @ rx(pi) q[0], q[1];\n"
+      "ctrl @ y q[0], q[1];\n"
+      "ctrl @ ry(pi) q[0], q[1];\n"
+      "ctrl @ z q[0], q[1];\n"
+      "ctrl @ rz(pi) q[0], q[1];\n"
+      "ctrl @ h q[0], q[1];\n"
+      "ctrl @ swap q[0], q[1], q[2];\n"
+      "ctrl @ rxx(pi) q[0], q[1], q[2];\n"
+      "ctrl @ negctrl @ x q[0], q[1], q[2];\n"
+      "";
 
   ss << testfile;
   auto qc = QuantumComputation();
@@ -96,13 +111,28 @@ TEST_F(Qasm3ParserTest, ImportQasm3CtrlModifier) {
   std::stringstream out{};
   qc.dump(out, Format::OpenQASM3);
 
-  const std::string expected = "// i 0 1 2\n"
-                               "// o 0 1 2\n"
-                               "OPENQASM 3.0;\n"
-                               "include \"stdgates.inc\";\n"
-                               "qubit[3] q;\n"
-                               "ctrl @ x q[0], q[1];\n"
-                               "ctrl(2) @ x q[0], q[1], q[2];\n";
+  const std::string expected =
+      "// i 0 1 2 3 4\n"
+      "// o 0 1 2 3 4\n"
+      "OPENQASM 3.0;\n"
+      "include \"stdgates.inc\";\n"
+      "qubit[5] q;\n"
+      "x q[0];\n"
+      "cx q[0], q[1];\n"
+      "ccx q[0], q[1], q[2];\n"
+      "ctrl(3) @ x q[0], q[1], q[2], q[3];\n"
+      "ctrl(3) @ negctrl @ x q[0], q[1], q[2], q[3], q[4];\n"
+      "cp(0.5) q[0], q[1];\n"
+      "crx(3.14159265358979) q[0], q[1];\n"
+      "cy q[0], q[1];\n"
+      "cry(3.14159265358979) q[0], q[1];\n"
+      "cz q[0], q[1];\n"
+      "crz(3.14159265358979) q[0], q[1];\n"
+      "ch q[0], q[1];\n"
+      "cswap q[0], q[1], q[2];\n"
+      "ctrl @ rxx(3.14159265358979) q[0], q[1], q[2];\n"
+      "ctrl @ negctrl @ x q[0], q[1], q[2];\n"
+      "";
 
   EXPECT_EQ(out.str(), expected);
 }
@@ -183,7 +213,7 @@ TEST_F(Qasm3ParserTest, ImportQasm3ControlledCompoundGate) {
                                "OPENQASM 3.0;\n"
                                "include \"stdgates.inc\";\n"
                                "qubit[2] q;\n"
-                               "ctrl @ x q[0], q[1];\n";
+                               "cx q[0], q[1];\n";
 
   EXPECT_EQ(out.str(), expected);
 }
@@ -301,7 +331,7 @@ TEST_F(Qasm3ParserTest, ImportQasm3ConstEval) {
                                "include \"stdgates.inc\";\n"
                                "qubit[8] q;\n"
                                "bit[32] N;\n"
-                               "ctrl @ x q[0], q[7];\n"
+                               "cx q[0], q[7];\n"
                                "x q[0];\n"
                                "x q[1];\n"
                                "x q[2];\n"
@@ -746,8 +776,8 @@ TEST_F(Qasm3ParserTest, ImportQasmBroadcasting) {
                                "h q1[0];\n"
                                "h q1[1];\n"
                                "reset q2;\n"
-                               "ctrl @ x q1[0], q2[0];\n"
-                               "ctrl @ x q1[1], q2[1];\n"
+                               "cx q1[0], q2[0];\n"
+                               "cx q1[1], q2[1];\n"
                                "";
 
   EXPECT_EQ(out.str(), expected);
