@@ -50,7 +50,7 @@ INSTANTIATE_TEST_SUITE_P(
       switch (format) {
       case qc::Format::Real:
         return "Real";
-      case qc::Format::OpenQASM:
+      case qc::Format::OpenQASM2:
       case qc::Format::OpenQASM3:
         return "OpenQasm";
       case qc::Format::GRCS:
@@ -76,12 +76,12 @@ TEST_P(IO, importAndDump) {
 }
 
 TEST_F(IO, dumpValidFilenames) {
-  ASSERT_NO_THROW(qc->dump(output3, qc::Format::OpenQASM));
-  ASSERT_NO_THROW(qc->dump(output4, qc::Format::OpenQASM));
+  ASSERT_NO_THROW(qc->dump(output3, qc::Format::OpenQASM2));
+  ASSERT_NO_THROW(qc->dump(output4, qc::Format::OpenQASM2));
   ASSERT_NO_THROW(qc->dump(output4));
 
   std::filesystem::create_directory(output5dir);
-  ASSERT_NO_THROW(qc->dump(output5, qc::Format::OpenQASM));
+  ASSERT_NO_THROW(qc->dump(output5, qc::Format::OpenQASM2));
   ASSERT_NO_THROW(qc->dump(output5));
 
   std::filesystem::remove(output3);
@@ -173,7 +173,7 @@ TEST_F(IO, qiskitMcxGray) {
   std::stringstream ss{};
   ss << "qreg q[4];"
      << "mcx_gray q[0], q[1], q[2], q[3];\n";
-  qc->import(ss, qc::Format::OpenQASM);
+  qc->import(ss, qc::Format::OpenQASM2);
   auto& gate = *(qc->begin());
   std::cout << *qc << "\n";
   EXPECT_EQ(gate->getType(), qc::X);
@@ -186,7 +186,7 @@ TEST_F(IO, qiskitMcxSkipGateDefinition) {
   ss << "qreg q[4];"
      << "gate mcx q0,q1,q2,q3 { ctrl(3) @ x q0,q1,q2,q3; }"
      << "mcx q[0], q[1], q[2], q[3];\n";
-  qc->import(ss, qc::Format::OpenQASM);
+  qc->import(ss, qc::Format::OpenQASM2);
   auto& gate = *(qc->begin());
   std::cout << *qc << "\n";
   EXPECT_EQ(gate->getType(), qc::X);
@@ -198,7 +198,7 @@ TEST_F(IO, qiskitMcphase) {
   std::stringstream ss{};
   ss << "qreg q[4];"
      << "mcphase(pi) q[0], q[1], q[2], q[3];\n";
-  qc->import(ss, qc::Format::OpenQASM);
+  qc->import(ss, qc::Format::OpenQASM2);
   auto& gate = *(qc->begin());
   std::cout << *qc << "\n";
   EXPECT_EQ(gate->getType(), qc::Z);
@@ -211,7 +211,7 @@ TEST_F(IO, qiskitMcphaseInDeclaration) {
   ss << "qreg q[4];"
      << "gate foo q0, q1, q2, q3 { mcphase(pi) q0, q1, q2, q3; }"
      << "foo q[0], q[1], q[2], q[3];\n";
-  qc->import(ss, qc::Format::OpenQASM);
+  qc->import(ss, qc::Format::OpenQASM2);
   std::cout << *qc << "\n";
   auto& op = *(qc->begin());
   EXPECT_EQ(op->getType(), qc::Z);
@@ -226,7 +226,7 @@ TEST_F(IO, qiskitMcxRecursive) {
      << "mcx_recursive q[0], q[1], q[2], q[3], q[4];"
      << "mcx_recursive q[0], q[1], q[2], q[3], q[4], q[5], anc[0];"
      << "\n";
-  qc->import(ss, qc::Format::OpenQASM);
+  qc->import(ss, qc::Format::OpenQASM2);
   auto& gate = *(qc->begin());
   std::cout << *qc << "\n";
   EXPECT_EQ(gate->getType(), qc::X);
@@ -243,7 +243,7 @@ TEST_F(IO, qiskitMcxVchain) {
   ss << "qreg q[4];"
      << "qreg anc[1];"
      << "mcx_vchain q[0], q[1], q[2], q[3], anc[0];\n";
-  qc->import(ss, qc::Format::OpenQASM);
+  qc->import(ss, qc::Format::OpenQASM2);
   auto& gate = *(qc->begin());
   std::cout << *qc << "\n";
   EXPECT_EQ(gate->getType(), qc::X);
@@ -259,7 +259,7 @@ TEST_F(IO, qiskitMcxRecursiveInDeclaration) {
         "q4, q5, anc; }"
      << "foo q[0], q[1], q[2], q[3], q[4];"
      << "bar q[0], q[1], q[2], q[3], q[4], q[5], q[6];\n";
-  qc->import(ss, qc::Format::OpenQASM);
+  qc->import(ss, qc::Format::OpenQASM2);
   std::cout << *qc << "\n";
   const auto& op = qc->at(0);
   EXPECT_EQ(op->getType(), qc::X);
@@ -276,7 +276,7 @@ TEST_F(IO, qiskitMcxVchainInDeclaration) {
   ss << "qreg q[5];"
      << "gate foo q0, q1, q2, q3, anc { mcx_vchain q0, q1, q2, q3, anc; }"
      << "foo q[0], q[1], q[2], q[3], q[4];\n";
-  qc->import(ss, qc::Format::OpenQASM);
+  qc->import(ss, qc::Format::OpenQASM2);
   std::cout << *qc << "\n";
   const auto& op = qc->at(0);
   EXPECT_EQ(op->getType(), qc::X);
@@ -289,7 +289,7 @@ TEST_F(IO, qiskitMcxDuplicateQubit) {
   ss << "qreg q[4];"
      << "qreg anc[1];"
      << "mcx_vchain q[0], q[0], q[2], q[3], anc[0];\n";
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm3::CompilerError);
+  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM2), qasm3::CompilerError);
 }
 
 TEST_F(IO, qiskitMcxQubitRegister) {
@@ -297,7 +297,7 @@ TEST_F(IO, qiskitMcxQubitRegister) {
   ss << "qreg q[4];"
      << "qreg anc[1];"
      << "mcx_vchain q, q[0], q[2], q[3], anc[0];\n";
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM), qasm3::CompilerError);
+  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM2), qasm3::CompilerError);
 }
 
 TEST_F(IO, barrierInDeclaration) {
@@ -389,7 +389,7 @@ TEST_F(IO, iSWAPdagDumpIsValid) {
   std::stringstream ss{};
   qc->dumpOpenQASM2(ss);
   std::cerr << ss.str() << "\n";
-  EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM););
+  EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM2););
   std::cout << *qc << "\n";
 }
 
@@ -465,7 +465,7 @@ TEST_F(IO, unifyRegisters) {
   qc->unifyQuantumRegisters();
   std::cout << *qc << "\n";
   std::ostringstream oss{};
-  qc->dump(oss, qc::Format::OpenQASM);
+  qc->dump(oss, qc::Format::OpenQASM2);
   EXPECT_STREQ(oss.str().c_str(), "// i 0 1\n"
                                   "// o 0 1\n"
                                   "OPENQASM 2.0;\n"
@@ -520,7 +520,7 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAugmentRegister) {
   EXPECT_EQ(meas2->getClassics().size(), 1U);
   EXPECT_EQ(meas2->getClassics().front(), 0U);
   std::ostringstream oss{};
-  qc->dump(oss, qc::Format::OpenQASM);
+  qc->dump(oss, qc::Format::OpenQASM2);
   std::cout << oss.str() << "\n";
   EXPECT_STREQ(oss.str().c_str(), "// i 0 1\n"
                                   "// o 0 1\n"
@@ -562,7 +562,7 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAddRegister) {
   EXPECT_EQ(meas2->getClassics().size(), 1U);
   EXPECT_EQ(meas2->getClassics().front(), 0U);
   std::ostringstream oss{};
-  qc->dump(oss, qc::Format::OpenQASM);
+  qc->dump(oss, qc::Format::OpenQASM2);
   std::cout << oss.str() << "\n";
   EXPECT_STREQ(oss.str().c_str(), "// i 0 1\n"
                                   "// o 0 1\n"
@@ -600,7 +600,7 @@ TEST_F(IO, NativeTwoQubitGateImportAndExport) {
     qc->import(ss, qc::Format::OpenQASM3);
     std::cout << *qc << "\n";
     std::ostringstream oss{};
-    qc->dump(oss, qc::Format::OpenQASM);
+    qc->dump(oss, qc::Format::OpenQASM2);
     std::cout << oss.str() << "\n";
     EXPECT_STREQ(oss.str().c_str(), target.c_str());
     qc->reset();
@@ -677,7 +677,7 @@ TEST_F(IO, SingleRegistersDoubleCreg) {
   qc->import(ss, qc::Format::OpenQASM3);
   std::cout << *qc << "\n";
   std::stringstream ss2{};
-  qc->dump(ss2, qc::Format::OpenQASM);
+  qc->dump(ss2, qc::Format::OpenQASM2);
   std::cout << ss2.str() << "\n";
   EXPECT_NE(ss2.str().find(ss.str()), std::string::npos);
 }
@@ -694,7 +694,7 @@ TEST_F(IO, MarkAncillaryAndDump) {
   EXPECT_TRUE(qc->logicalQubitIsAncillary(0U));
   std::cout << *qc << "\n";
   std::stringstream ss2{};
-  qc->dump(ss2, qc::Format::OpenQASM);
+  qc->dump(ss2, qc::Format::OpenQASM2);
   std::cout << ss2.str() << "\n";
   std::stringstream expected{};
   expected << "// i 0 1\n"
@@ -710,7 +710,7 @@ TEST_F(IO, MarkAncillaryAndDump) {
 TEST_F(IO, dumpEmptyOpenQASM) {
   std::stringstream ss{};
   ss << "\n";
-  qc->import(ss, qc::Format::OpenQASM);
+  qc->import(ss, qc::Format::OpenQASM2);
 
   std::string const openQASM2 =
       "// i\n// o\nOPENQASM 2.0;\ninclude \"qelib1.inc\";\n";

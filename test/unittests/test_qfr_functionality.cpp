@@ -201,17 +201,17 @@ TEST_F(QFRFunctionality, StripIdleAndDump) {
 
   ss << testfile;
   auto qc = qc::QuantumComputation();
-  qc.import(ss, qc::Format::OpenQASM);
+  qc.import(ss, qc::Format::OpenQASM2);
   qc.print(std::cout);
   qc.stripIdleQubits();
   qc.print(std::cout);
   std::stringstream goal{};
   qc.print(goal);
   std::stringstream test{};
-  qc.dump(test, qc::Format::OpenQASM);
+  qc.dump(test, qc::Format::OpenQASM2);
   std::cout << test.str() << "\n";
   qc.reset();
-  qc.import(test, qc::Format::OpenQASM);
+  qc.import(test, qc::Format::OpenQASM2);
   qc.print(std::cout);
   qc.stripIdleQubits();
   qc.print(std::cout);
@@ -673,7 +673,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
   std::stringstream ss{};
   ss << circ;
   QuantumComputation qc{};
-  qc.import(ss, qc::Format::OpenQASM);
+  qc.import(ss, qc::Format::OpenQASM2);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::removeFinalMeasurements(qc);
@@ -1878,7 +1878,7 @@ TEST_F(QFRFunctionality, RzAndPhaseDifference) {
                            "cp(1/8) q[0],q[1];\n";
   std::stringstream ss;
   ss << qasm;
-  qc.import(ss, qc::Format::OpenQASM);
+  qc.import(ss, qc::Format::OpenQASM2);
   std::cout << qc << "\n";
   std::stringstream oss;
   qc.dumpOpenQASM2(oss);
@@ -1982,7 +1982,7 @@ TEST_F(QFRFunctionality, dumpAndImportTeleportation) {
   EXPECT_TRUE(ss.str().find("teleport") != std::string::npos);
 
   QuantumComputation qcImported(3);
-  qcImported.import(ss, qc::Format::OpenQASM);
+  qcImported.import(ss, qc::Format::OpenQASM2);
   ASSERT_EQ(qcImported.size(), 1);
   EXPECT_EQ(qcImported.at(0)->getType(), OpType::Teleportation);
 }

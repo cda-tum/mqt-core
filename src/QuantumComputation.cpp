@@ -102,7 +102,7 @@ void QuantumComputation::import(std::istream&& is, Format format) {
   case Format::Real:
     importReal(is);
     break;
-  case Format::OpenQASM:
+  case Format::OpenQASM2:
   case Format::OpenQASM3:
     importOpenQASM3(is);
     break;
@@ -570,7 +570,7 @@ void QuantumComputation::dump(const std::string& filename) {
   if (extension == "real") {
     dump(filename, Format::Real);
   } else if (extension == "qasm") {
-    dump(filename, Format::OpenQASM);
+    dump(filename, Format::OpenQASM3);
   } else if (extension == "qc") {
     dump(filename, Format::QC);
   } else if (extension == "tfc") {
@@ -663,7 +663,7 @@ void QuantumComputation::dump(std::ostream&& of, Format format) {
   case Format::OpenQASM3:
     dumpOpenQASM(of, true);
     break;
-  case Format::OpenQASM:
+  case Format::OpenQASM2:
     dumpOpenQASM(of, false);
     break;
   case Format::Real:

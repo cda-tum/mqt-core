@@ -39,7 +39,7 @@ def test_loading_file() -> None:
 
     # check the result
     assert isinstance(qc, QuantumComputation)
-    qc_qasm = qc.qasm_str()
+    qc_qasm = qc.qasm2_str()
 
     assert qasm in qc_qasm
 
@@ -72,7 +72,7 @@ def test_loading_qiskit_circuit() -> None:
 
     # check the result
     assert isinstance(qc, QuantumComputation)
-    qc_qasm = qc.qasm_str()
+    qc_qasm = qc.qasm2_str()
 
     # remove any whitespace from both QASM strings and check for equality
     assert "".join(qasm.split()) in "".join(qc_qasm.split())

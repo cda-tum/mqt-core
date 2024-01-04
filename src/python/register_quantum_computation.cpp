@@ -255,25 +255,19 @@ void registerQuantumComputation(py::module& m) {
   ///---------------------------------------------------------------------------
 
   qc.def(
-      "qasm_str",
-      [](qc::QuantumComputation& circ) {
-        auto ss = std::stringstream();
-        circ.dumpOpenQASM2(ss);
-        return ss.str();
-      },
-      "Get a OpenQASM 2.0 representation of the circuit. Note that this uses "
+      "qasm2_str",
+      [](qc::QuantumComputation& circ) { return circ.toQASM(false); },
+      "Get an OpenQASM 2.0 representation of the circuit. Note that this uses "
       "some custom extensions to OpenQASM 2.0 that allow for easier definition "
       "of multi-controlled gates. These extensions might not be supported by "
       "all OpenQASM 2.0 parsers.");
   qc.def(
-      "qasm",
+      "qasm2",
       [](qc::QuantumComputation& circ, const std::string& filename) {
-        std::ofstream ofs(filename);
-        circ.dumpOpenQASM2(ofs);
-        ofs.close();
+        circ.dump(filename, qc::Format::OpenQASM2);
       },
       "filename"_a,
-      "Write a OpenQASM 2.0 representation of the circuit to the given file. "
+      "Write an OpenQASM 2.0 representation of the circuit to the given file. "
       "Note that this uses some custom extensions to OpenQASM 2.0 that allow "
       "for easier definition of multi-controlled gates. These extensions "
       "might not be supported by all OpenQASM 2.0 parsers.");
