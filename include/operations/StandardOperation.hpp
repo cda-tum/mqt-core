@@ -117,7 +117,6 @@ protected:
   void dumpGateType(std::ostream& of, std::ostringstream& op,
                     const RegisterNames& qreg) const;
 
-private:
   void dumpControls(std::ostringstream& op) const;
 };
 
