@@ -613,37 +613,33 @@ void StandardOperation::dumpControls(std::ostringstream& op) const {
     return;
   }
 
-  // if operation is in stdgates, we print a c prefix instead of ctrl @
-  size_t posControls = 0;
-  bool printBuiltin = true;
-  for (const auto& control : controls) {
-    if (control.type == Control::Type::Neg) {
-      printBuiltin = false;
+  // if operation is in stdgates.inc, we print a c prefix instead of ctrl @
+  if (bool printBuiltin = std::none_of(
+          controls.begin(), controls.end(),
+          [](const Control& c) { return c.type == Control::Type::Neg; });
+      printBuiltin) {
+    const auto numControls = controls.size();
+    switch (type) {
+    case P:
+    case RX:
+    case Y:
+    case RY:
+    case Z:
+    case RZ:
+    case H:
+    case SWAP:
+      printBuiltin = numControls == 1;
       break;
+    case X:
+      printBuiltin = numControls == 1 || numControls == 2;
+      break;
+    default:
+      printBuiltin = false;
     }
-    ++posControls;
-  }
-  switch (type) {
-  case P:
-  case RX:
-  case Y:
-  case RY:
-  case Z:
-  case RZ:
-  case H:
-  case SWAP:
-    printBuiltin &= posControls == 1;
-    break;
-  case X:
-    printBuiltin &= posControls == 1 || posControls == 2;
-    break;
-  default:
-    printBuiltin = false;
-  }
-
-  if (printBuiltin) {
-    op << std::string(posControls, 'c');
-    return;
+    if (printBuiltin) {
+      op << std::string(numControls, 'c');
+      return;
+    }
   }
 
   Control::Type currentType = controls.begin()->type;
