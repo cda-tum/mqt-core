@@ -34,7 +34,12 @@ void registerQuantumComputation(py::module& m) {
          "qubits and classical bits.");
   qc.def(py::init<std::string>(), "filename"_a,
          "Read QuantumComputation from given file. Supported formats are "
-         "[OpenQASM2, Real, GRCS, TFC, QC]");
+         "[OpenQASM2, OpenQASM3, Real, GRCS, TFC, QC]");
+
+  // expose the static constructor from qasm strings
+  qc.def_static(
+      "from_qasm", &qc::QuantumComputation::fromQASM, "qasm"_a,
+      "Construct a QuantumComputation from the given OpenQASM string.");
 
   ///---------------------------------------------------------------------------
   ///                       \n General Properties \n
