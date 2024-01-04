@@ -4,8 +4,8 @@
 #include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
+#include "gtest/gtest.h"
 #include <array>
-#include <gtest/gtest.h>
 #include <iostream>
 #include <sstream>
 

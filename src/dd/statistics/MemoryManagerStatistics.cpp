@@ -2,9 +2,9 @@
 
 #include "dd/Node.hpp"
 #include "dd/RealNumber.hpp"
+#include "nlohmann/json.hpp"
 
 #include <algorithm>
-#include <nlohmann/json.hpp>
 
 namespace dd {
 

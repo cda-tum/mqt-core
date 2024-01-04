@@ -3,7 +3,7 @@
 #include "dd/NoiseFunctionality.hpp"
 #include "dd/Operations.hpp"
 
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 #include <random>
 
 using namespace qc;

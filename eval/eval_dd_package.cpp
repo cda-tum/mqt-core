@@ -9,8 +9,8 @@
 #include "dd/Benchmark.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
+#include "nlohmann/json.hpp"
 
-#include <nlohmann/json.hpp>
 #include <string>
 #include <utility>
 

@@ -3,8 +3,8 @@
 #include "dd/Export.hpp"
 
 #include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include <array>
-#include <gtest/gtest.h>
 #include <limits>
 #include <vector>
 

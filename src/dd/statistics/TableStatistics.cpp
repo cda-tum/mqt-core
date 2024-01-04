@@ -1,6 +1,6 @@
 #include "dd/statistics/TableStatistics.hpp"
 
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
 
 namespace dd {
 

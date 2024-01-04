@@ -1,8 +1,8 @@
 #include "QuantumComputation.hpp"
 #include "parsers/qasm3_parser/Exception.hpp"
 
+#include "gtest/gtest.h"
 #include <filesystem>
-#include <gtest/gtest.h>
 #include <iostream>
 #include <string>
 
