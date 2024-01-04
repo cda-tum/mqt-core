@@ -3,29 +3,49 @@
 include(FetchContent)
 set(FETCH_PACKAGES "")
 
-if(BUILD_MQT_CORE_TESTS)
-  set(gtest_force_shared_crt
-      ON
-      CACHE BOOL "" FORCE)
-  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+# A macro to declare a dependency that takes into account the different CMake versions and the
+# features that they make available. In particular: - CMake 3.24 introduced the `FIND_PACKAGE_ARGS`
+# option to `FetchContent` which allows to combine `FetchContent_Declare` and `find_package` in a
+# single call. - CMake 3.25 introduced the `SYSTEM` option to `FetchContent_Declare` which marks the
+# dependency as a system dependency. This is useful to avoid compiler warnings from external header
+# only libraries. - CMake 3.28 introduced the `EXCLUDE_FROM_ALL` option to `FetchContent_Declare`
+# which allows to exclude all targets from the dependency from the `all` target.
+macro(DECLARE_DEPENDENCY)
+  cmake_parse_arguments(DEPENDENCY "" "NAME;URL;MD5;MIN_VERSION;ALT_NAME" "" ${ARGN})
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28)
     FetchContent_Declare(
-      googletest
-      URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
-      URL_MD5 c8340a482851ef6a3fe618a082304cfc
-      EXCLUDE_FROM_ALL SYSTEM FIND_PACKAGE_ARGS NAMES GTest)
-    list(APPEND FETCH_PACKAGES googletest)
+      ${DEPENDENCY_NAME}
+      URL ${DEPENDENCY_URL}
+      URL_MD5 ${DEPENDENCY_MD5}
+      EXCLUDE_FROM_ALL SYSTEM FIND_PACKAGE_ARGS ${DEPENDENCY_MIN_VERSION} NAMES
+      ${DEPENDENCY_ALT_NAME})
+    list(APPEND FETCH_PACKAGES ${DEPENDENCY_NAME})
+  elseif(CMAKE_VERSION VERSION_GREATER_EQUAL 3.25)
+    FetchContent_Declare(
+      ${DEPENDENCY_NAME}
+      URL ${DEPENDENCY_URL}
+      URL_MD5 ${DEPENDENCY_MD5}
+      SYSTEM FIND_PACKAGE_ARGS ${DEPENDENCY_MIN_VERSION} NAMES ${DEPENDENCY_ALT_NAME})
+    list(APPEND FETCH_PACKAGES ${DEPENDENCY_NAME})
+  elseif(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+    FetchContent_Declare(
+      ${DEPENDENCY_NAME}
+      URL ${DEPENDENCY_URL}
+      URL_MD5 ${DEPENDENCY_MD5}
+      FIND_PACKAGE_ARGS ${DEPENDENCY_MIN_VERSION} NAMES ${DEPENDENCY_ALT_NAME})
+    list(APPEND FETCH_PACKAGES ${DEPENDENCY_NAME})
   else()
     # try to get the system installed version
-    find_package(GTest QUIET)
-    if(NOT GTest_FOUND)
+    find_package(${DEPENDENCY_NAME} ${DEPENDENCY_MIN_VERSION} QUIET NAMES ${DEPENDENCY_ALT_NAME})
+    if(NOT ${DEPENDENCY_NAME}_FOUND)
       FetchContent_Declare(
-        googletest
-        URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
-        URL_MD5 c8340a482851ef6a3fe618a082304cfc)
-      list(APPEND FETCH_PACKAGES googletest)
+        ${DEPENDENCY_NAME}
+        URL ${DEPENDENCY_URL}
+        URL_MD5 ${DEPENDENCY_MD5})
+      list(APPEND FETCH_PACKAGES ${DEPENDENCY_NAME})
     endif()
   endif()
-endif()
+endmacro()
 
 set(JSON_BuildTests
     OFF
@@ -33,23 +53,47 @@ set(JSON_BuildTests
 set(JSON_MultipleHeaders
     OFF
     CACHE INTERNAL "")
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
-  FetchContent_Declare(
-    nlohmann_json
-    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
-    URL_MD5 c23a33f04786d85c29fda8d16b5f0efd
-    SYSTEM EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS)
-  list(APPEND FETCH_PACKAGES nlohmann_json)
-else()
-  # try to get the system installed version
-  find_package(nlohmann_json QUIET)
-  if(NOT nlohmann_json_FOUND)
-    FetchContent_Declare(
-      nlohmann_json
-      URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
-      URL_MD5 c23a33f04786d85c29fda8d16b5f0efd)
-    list(APPEND FETCH_PACKAGES nlohmann_json)
-  endif()
+declare_dependency(
+  NAME
+  nlohmann_json
+  URL
+  https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+  MD5
+  c23a33f04786d85c29fda8d16b5f0efd
+  MIN_VERSION
+  3.11.3)
+
+set(BOOST_MP_STANDALONE
+    ON
+    CACHE INTERNAL "Use standalone boost multiprecision")
+declare_dependency(
+  NAME
+  boost_multiprecision
+  URL
+  https://github.com/boostorg/multiprecision/archive/refs/tags/Boost_1_84_0.tar.gz
+  MD5
+  b829378c90f4b268c79a796025c43eee
+  MIN_VERSION
+  1.74.0
+  ALT_NAME
+  Boost)
+
+if(BUILD_MQT_CORE_TESTS)
+  set(gtest_force_shared_crt
+      ON
+      CACHE BOOL "" FORCE)
+  set(FP_ARGS 1.14.0 NAMES GTest)
+  declare_dependency(
+    NAME
+    googletest
+    URL
+    https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
+    MD5
+    c8340a482851ef6a3fe618a082304cfc
+    MIN_VERSION
+    1.14.0
+    ALT_NAME
+    GTest)
 endif()
 
 if(BINDINGS)
@@ -65,46 +109,16 @@ if(BINDINGS)
   # add pybind11 library
   find_package(pybind11 CONFIG REQUIRED)
 
-  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
-    FetchContent_Declare(
-      pybind11_json
-      URL https://github.com/pybind/pybind11_json/archive/refs/tags/0.2.13.tar.gz
-      URL_MD5 93ebbea2bb69f71febe0f83c8f88ced2
-      SYSTEM EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS)
-    list(APPEND FETCH_PACKAGES pybind11_json)
-  else()
-    # try to get the system installed version
-    find_package(pybind11_json QUIET)
-    if(NOT pybind11_json_FOUND)
-      FetchContent_Declare(
-        pybind11_json
-        URL https://github.com/pybind/pybind11_json/archive/refs/tags/0.2.13.tar.gz
-        URL_MD5 93ebbea2bb69f71febe0f83c8f88ced2)
-      list(APPEND FETCH_PACKAGES pybind11_json)
-    endif()
-  endif()
+  declare_dependency(
+    NAME
+    pybind11_json
+    URL
+    https://github.com/pybind/pybind11_json/archive/refs/tags/0.2.13.tar.gz
+    MD5
+    93ebbea2bb69f71febe0f83c8f88ced2
+    MIN_VERSION
+    0.2.13)
 endif()
 
-set(BOOST_MP_STANDALONE
-    ON
-    CACHE INTERNAL "Use standalone boost multiprecision")
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
-  FetchContent_Declare(
-    boost_multiprecision
-    URL https://github.com/boostorg/multiprecision/archive/refs/tags/Boost_1_84_0.tar.gz
-    URL_MD5 b829378c90f4b268c79a796025c43eee
-    SYSTEM EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS 1.74.0 NAMES Boost)
-  list(APPEND FETCH_PACKAGES boost_multiprecision)
-else()
-  # try to get the system installed version
-  find_package(Boost 1.74.0 QUIET)
-  if(NOT Boost_FOUND)
-    FetchContent_Declare(
-      boost_multiprecision
-      URL https://github.com/boostorg/multiprecision/archive/refs/tags/Boost_1_84_0.tar.gz
-      URL_MD5 b829378c90f4b268c79a796025c43eee)
-    list(APPEND FETCH_PACKAGES boost_multiprecision)
-  endif()
-endif()
-
+# Make all declared dependencies available.
 FetchContent_MakeAvailable(${FETCH_PACKAGES})
