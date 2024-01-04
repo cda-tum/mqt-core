@@ -15,13 +15,12 @@ public:
 };
 
 TEST_F(ZXFunctionalityTest, parseQasm) {
-  std::stringstream ss{};
-  ss << "OPENQASM 2.0;"
-     << "include \"qelib1.inc\";"
-     << "qreg q[2];"
-     << "h q[0];"
-     << "cx q[0],q[1];\n";
-  qc.import(ss, qc::Format::OpenQASM);
+  const std::string testfile = "OPENQASM 2.0;"
+                               "include \"qelib1.inc\";"
+                               "qreg q[2];"
+                               "h q[0];"
+                               "cx q[0],q[1];\n";
+  qc = qc::QuantumComputation::fromQASM(testfile);
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
   const zx::ZXDiagram diag =
       zx::FunctionalityConstruction::buildFunctionality(&qc);
@@ -182,17 +181,16 @@ TEST_F(ZXFunctionalityTest, Phase) {
 }
 
 TEST_F(ZXFunctionalityTest, Compound) {
-  std::stringstream ss;
-  ss << "OPENQASM 2.0;"
-     << "include \"qelib1.inc\";"
-     << "gate toff q0,q1,q2 {h q2;cx q1,q2;p(-pi/4) q2;cx q0,q2;p(pi/4) q2;cx "
-        "q1,q2;p(pi/4) q1;p(-pi/4) q2;cx q0,q2;cx q0,q1;p(pi/4) q0;p(-pi/4) "
-        "q1;cx q0,q1;p(pi/4) q2;h q2;}"
-     << "qreg q[3];"
-     << "toff q[0],q[1],q[2];"
-     << "ccx q[0],q[1],q[2];\n";
-
-  qc.import(ss, qc::Format::OpenQASM);
+  const std::string testfile =
+      "OPENQASM 2.0;"
+      "include \"qelib1.inc\";"
+      "gate toff q0,q1,q2 {h q2;cx q1,q2;p(-pi/4) q2;cx q0,q2;p(pi/4) q2;cx "
+      "q1,q2;p(pi/4) q1;p(-pi/4) q2;cx q0,q2;cx q0,q1;p(pi/4) q0;p(-pi/4) "
+      "q1;cx q0,q1;p(pi/4) q2;h q2;}"
+      "qreg q[3];"
+      "toff q[0],q[1],q[2];"
+      "ccx q[0],q[1],q[2];\n";
+  qc = qc::QuantumComputation::fromQASM(testfile);
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
   zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
   zx::fullReduce(diag);

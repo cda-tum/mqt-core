@@ -286,6 +286,20 @@ public:
   }
   virtual ~QuantumComputation() = default;
 
+  /**
+   * @brief Construct a QuantumComputation from an OpenQASM string
+   * @param qasm The OpenQASM 2.0 or 3.0 string
+   * @return The constructed QuantumComputation
+   */
+  [[nodiscard]] static QuantumComputation fromQASM(const std::string& qasm) {
+    std::stringstream ss{};
+    ss << qasm;
+    QuantumComputation qc{};
+    qc.importOpenQASM3(ss);
+    qc.initializeIOMapping();
+    return qc;
+  }
+
   [[nodiscard]] virtual std::size_t getNops() const { return ops.size(); }
   [[nodiscard]] std::size_t getNqubits() const { return nqubits + nancillae; }
   [[nodiscard]] std::size_t getNancillae() const { return nancillae; }
@@ -785,6 +799,17 @@ public:
   void dumpOpenQASM2(std::ostream& of) { dumpOpenQASM(of, false); }
   void dumpOpenQASM3(std::ostream& of) { dumpOpenQASM(of, true); }
   virtual void dumpOpenQASM(std::ostream& of, bool openQasm3);
+
+  /**
+   * @brief Returns the OpenQASM representation of the circuit
+   * @param qasm3 Whether to use OpenQASM 3.0 or 2.0
+   * @return The OpenQASM representation of the circuit
+   */
+  [[nodiscard]] std::string toQASM(const bool qasm3 = true) {
+    std::stringstream ss;
+    dumpOpenQASM(ss, qasm3);
+    return ss.str();
+  }
 
   // this convenience method allows to turn a circuit into a compound operation.
   std::unique_ptr<CompoundOperation> asCompoundOperation() {
