@@ -96,7 +96,6 @@ if(BUILD_MQT_CORE_TESTS)
   set(gtest_force_shared_crt
       ON
       CACHE BOOL "" FORCE)
-  set(FP_ARGS 1.14.0 NAMES GTest)
   declare_dependency(
     NAME
     googletest
