@@ -86,7 +86,7 @@ declare_dependency(
   MD5
   b829378c90f4b268c79a796025c43eee
   MIN_VERSION
-  1.74.0
+  1.80.0
   ALT_NAME
   Boost
   SYSTEM
