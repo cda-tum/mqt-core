@@ -1973,3 +1973,18 @@ TEST(DDPackageTest, DDStatistics) {
   ASSERT_TRUE(uniqueTableStats["total"].contains("num_buckets"));
   EXPECT_GT(uniqueTableStats["total"]["num_buckets"], 0);
 }
+
+TEST(DDPackageTest, ReduceAncillaRegression) {
+  auto dd = std::make_unique<dd::Package<>>(2);
+  const auto inputMatrix =
+      dd::CMat{{1, 1, 1, 1}, {1, -1, 1, -1}, {1, 1, -1, -1}, {1, -1, -1, 1}};
+  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
+  dd->incRef(inputDD);
+  const auto outputDD = dd->reduceAncillae(inputDD, {true, false});
+
+  const auto outputMatrix = outputDD.getMatrix();
+  const auto expected =
+      dd::CMat{{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, -1, 0}, {1, 0, -1, 0}};
+
+  EXPECT_EQ(outputMatrix, expected);
+}
