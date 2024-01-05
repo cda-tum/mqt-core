@@ -196,7 +196,7 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), dd);
+  auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
 
   // create standard IQPE circuit
   auto iqpe = qc::QPE(lambda, precision, true);
@@ -210,7 +210,7 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = simulate(&iqpe, dd->makeZeroState(iqpe.getNqubits()), dd);
+  auto f = simulate(&iqpe, dd->makeZeroState(iqpe.getNqubits()), *dd);
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelity(e, f);
@@ -245,7 +245,7 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = buildFunctionality(&iqpe, exp->dd);
+  auto f = buildFunctionality(&iqpe, *(exp->dd));
 
   EXPECT_EQ(e, f);
 }
@@ -259,7 +259,7 @@ TEST_P(QPE, ProbabilityExtraction) {
   std::cout << iqpe << "\n";
   dd::SparsePVec probs{};
   extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()), probs,
-                           dd);
+                           *dd);
 
   for (const auto& [state, prob] : probs) {
     std::stringstream ss{};
@@ -286,7 +286,7 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), dd);
+  auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
   const auto vec = e.getVector();
   std::cout << "QPE:\n";
   for (const auto& amp : vec) {
@@ -299,7 +299,7 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
   extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()), probs,
-                           dd);
+                           *dd);
 
   std::cout << "IQPE:\n";
   for (const auto& [state, prob] : probs) {
