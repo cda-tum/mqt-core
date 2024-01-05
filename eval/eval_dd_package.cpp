@@ -134,7 +134,7 @@ protected:
       // apply state preparation setup
       qc::QuantumComputation statePrep(qc->getNqubits());
       qc->setup(statePrep);
-      auto s = buildFunctionality(&statePrep, dd);
+      auto s = buildFunctionality(&statePrep, *dd);
       auto e = dd->multiply(s, dd->makeZeroState(qc->getNqubits()));
       dd->incRef(e);
       dd->decRef(s);
@@ -143,7 +143,7 @@ protected:
       qc->oracle(groverIteration);
       qc->diffusion(groverIteration);
 
-      auto iter = buildFunctionalityRecursive(&groverIteration, dd);
+      auto iter = buildFunctionalityRecursive(&groverIteration, *dd);
       std::bitset<128U> iterBits(qc->iterations);
       auto msb =
           static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));

@@ -28,7 +28,7 @@ TEST_F(GRCS, simulate) {
   auto dd = std::make_unique<dd::Package<>>(qcBris.getNqubits());
   auto in = dd->makeZeroState(qcBris.getNqubits());
   const std::optional<std::size_t> ncycles = 4;
-  ASSERT_NO_THROW({ simulate(&qcBris, in, dd, ncycles); });
+  ASSERT_NO_THROW({ simulate(&qcBris, in, *dd, ncycles); });
   std::cout << qcBris << "\n";
   qcBris.printStatistics(std::cout);
 }

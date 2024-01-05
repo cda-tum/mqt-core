@@ -114,7 +114,7 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(bv);
 
   // simulate circuit
-  auto e = simulate(&bv, dd->makeZeroState(bv.getNqubits()), dd);
+  auto e = simulate(&bv, dd->makeZeroState(bv.getNqubits()), *dd);
 
   // create dynamic BV circuit
   auto dbv = qc::BernsteinVazirani(s, true);
@@ -129,7 +129,7 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(dbv);
 
   // simulate circuit
-  auto f = simulate(&dbv, dd->makeZeroState(dbv.getNqubits()), dd);
+  auto f = simulate(&dbv, dd->makeZeroState(dbv.getNqubits()), *dd);
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelity(e, f);

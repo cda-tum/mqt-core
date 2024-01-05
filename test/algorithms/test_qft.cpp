@@ -198,7 +198,7 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
   auto dd = std::move(exp->dd);
 
   // there should be no error building the functionality regularly
-  auto funcRec = buildFunctionalityRecursive(qc.get(), dd);
+  auto funcRec = buildFunctionalityRecursive(qc.get(), *dd);
 
   ASSERT_EQ(func, funcRec);
   dd->decRef(funcRec);
