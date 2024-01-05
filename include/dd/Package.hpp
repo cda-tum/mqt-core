@@ -2105,10 +2105,11 @@ public:
     if (e.p->v < lowerbound) {
       return e;
     }
-    auto f = reduceAncillaeRecursion(e, ancillary, lowerbound, regular);
-    incRef(f);
+    const auto f = reduceAncillaeRecursion(e.p, ancillary, lowerbound, regular);
+    const auto res = mEdge{f.p, cn.lookup(e.w * f.w)};
+    incRef(res);
     decRef(e);
-    return f;
+    return res;
   }
 
   // Garbage reduction works for reversible circuits --- to be thoroughly tested
@@ -2160,52 +2161,46 @@ public:
   }
 
 private:
-  mEdge reduceAncillaeRecursion(mEdge& e, const std::vector<bool>& ancillary,
-                                const Qubit lowerbound,
-                                const bool regular = true) {
-    if (e.p->v < lowerbound) {
-      return e;
+  mCachedEdge reduceAncillaeRecursion(mNode* p,
+                                      const std::vector<bool>& ancillary,
+                                      const Qubit lowerbound,
+                                      const bool regular = true) {
+    if (p->v < lowerbound) {
+      return {p, 1.};
     }
 
-    auto f = e;
-
-    std::array<mEdge, NEDGE> edges{};
+    std::array<mCachedEdge, NEDGE> edges{};
     std::bitset<NEDGE> handled{};
     for (auto i = 0U; i < NEDGE; ++i) {
       if (!handled.test(i)) {
-        if (e.p->e[i].isTerminal()) {
-          edges[i] = e.p->e[i];
+        if (p->e[i].isTerminal()) {
+          edges[i] = {p->e[i].p, p->e[i].w};
         } else {
-          edges[i] = reduceAncillaeRecursion(f.p->e[i], ancillary, lowerbound,
+          edges[i] = reduceAncillaeRecursion(p->e[i].p, ancillary, lowerbound,
                                              regular);
           for (auto j = i + 1; j < NEDGE; ++j) {
-            if (e.p->e[i].p == e.p->e[j].p) {
+            if (p->e[i].p == p->e[j].p) {
               edges[j] = edges[i];
+              edges[j].w = edges[j].w * p->e[j].w;
               handled.set(j);
             }
           }
+          edges[i].w = edges[i].w * p->e[i].w;
         }
         handled.set(i);
       }
     }
-    f = makeDDNode(f.p->v, edges);
+    if (!ancillary[p->v]) {
+      return makeDDNode(p->v, edges);
+    }
 
     // something to reduce for this qubit
-    if (ancillary[f.p->v]) {
-      if (regular) {
-        if (!f.p->e[1].w.exactlyZero() || !f.p->e[3].w.exactlyZero()) {
-          f = makeDDNode(f.p->v, std::array{f.p->e[0], mEdge::zero(), f.p->e[2],
-                                            mEdge::zero()});
-        }
-      } else {
-        if (!f.p->e[2].w.exactlyZero() || !f.p->e[3].w.exactlyZero()) {
-          f = makeDDNode(f.p->v, std::array{f.p->e[0], f.p->e[1], mEdge::zero(),
-                                            mEdge::zero()});
-        }
-      }
+    if (regular) {
+      return makeDDNode(p->v, std::array{edges[0], mCachedEdge::zero(),
+                                         edges[2], mCachedEdge::zero()});
     }
-    f.w = cn.lookup(f.w * e.w);
-    return f;
+    return makeDDNode(p->v, std::array{edges[0], edges[1], mCachedEdge::zero(),
+                                       mCachedEdge::zero()});
   }
 
   vEdge reduceGarbageRecursion(vEdge& e, const std::vector<bool>& garbage,
