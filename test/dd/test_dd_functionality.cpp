@@ -90,11 +90,9 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
   case qc::iSWAPdg:
   case qc::DCX:
   case qc::ECR:
-    op = qc::StandardOperation(nqubits, Controls{}, 0, 1, gate);
-    break;
   case qc::Peres:
   case qc::Peresdg:
-    op = qc::StandardOperation(nqubits, {0_pc}, 1, 2, gate);
+    op = qc::StandardOperation(nqubits, {}, 0, 1, gate);
     break;
   case qc::RXX:
   case qc::RYY:
@@ -110,6 +108,63 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
     break;
   default:
     op = qc::StandardOperation(nqubits, 0, gate);
+  }
+
+  ASSERT_NO_THROW(
+      { e = dd->multiply(getDD(&op, *dd), getInverseDD(&op, *dd)); });
+  dd->incRef(e);
+
+  EXPECT_EQ(ident, e);
+}
+
+TEST_P(DDFunctionality, controlledStandardOpBuildInverseBuild) {
+  using namespace qc::literals;
+  auto gate = static_cast<qc::OpType>(GetParam());
+
+  qc::StandardOperation op;
+  switch (gate) {
+  case qc::GPhase:
+    op = qc::StandardOperation(nqubits, Controls{0}, Targets{}, gate,
+                               std::vector{dist(mt)});
+    break;
+  case qc::U:
+    op = qc::StandardOperation(nqubits, 0, 1, gate,
+                               std::vector{dist(mt), dist(mt), dist(mt)});
+    break;
+  case qc::U2:
+    op = qc::StandardOperation(nqubits, 0, 1, gate,
+                               std::vector{dist(mt), dist(mt)});
+    break;
+  case qc::RX:
+  case qc::RY:
+  case qc::RZ:
+  case qc::P:
+    op = qc::StandardOperation(nqubits, 0, 1, gate, std::vector{dist(mt)});
+    break;
+
+  case qc::SWAP:
+  case qc::iSWAP:
+  case qc::iSWAPdg:
+  case qc::DCX:
+  case qc::ECR:
+  case qc::Peres:
+  case qc::Peresdg:
+    op = qc::StandardOperation(nqubits, Controls{0}, 1, 2, gate);
+    break;
+  case qc::RXX:
+  case qc::RYY:
+  case qc::RZZ:
+  case qc::RZX:
+    op = qc::StandardOperation(nqubits, Controls{0}, 1, 2, gate,
+                               std::vector{dist(mt)});
+    break;
+  case qc::XXminusYY:
+  case qc::XXplusYY:
+    op = qc::StandardOperation(nqubits, Controls{0}, 1, 2, gate,
+                               std::vector{dist(mt), dist(mt)});
+    break;
+  default:
+    op = qc::StandardOperation(nqubits, 0, 1, gate);
   }
 
   ASSERT_NO_THROW(
