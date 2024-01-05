@@ -561,6 +561,7 @@ TEST(DDPackageTest, GarbageVector) {
   auto cxGate = dd->makeGateDD(dd::X_MAT, 2, 0_pc, 1);
   auto zeroState = dd->makeZeroState(2);
   auto bellState = dd->multiply(dd->multiply(cxGate, hGate), zeroState);
+  std::cout << "Bell State:\n";
   bellState.printVector();
 
   dd->incRef(bellState);
@@ -574,12 +575,14 @@ TEST(DDPackageTest, GarbageVector) {
   dd->incRef(bellState);
   reducedBellState = dd->reduceGarbage(bellState, {false, true, false, false});
   auto vec = reducedBellState.getVector();
+  std::cout << "Reduced Bell State (q1 garbage):\n";
   reducedBellState.printVector();
   EXPECT_EQ(vec[2], 0.);
   EXPECT_EQ(vec[3], 0.);
 
   dd->incRef(bellState);
   reducedBellState = dd->reduceGarbage(bellState, {true, false, false, false});
+  std::cout << "Reduced Bell State (q0 garbage):\n";
   reducedBellState.printVector();
   vec = reducedBellState.getVector();
   EXPECT_EQ(vec[1], 0.);

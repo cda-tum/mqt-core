@@ -2131,10 +2131,11 @@ public:
     if (e.p->v < lowerbound) {
       return e;
     }
-    auto f = reduceGarbageRecursion(e, garbage, lowerbound);
-    incRef(f);
+    const auto f = reduceGarbageRecursion(e.p, garbage, lowerbound);
+    const auto res = vEdge{f.p, cn.lookup(e.w * f.w)};
+    incRef(res);
     decRef(e);
-    return f;
+    return res;
   }
   mEdge reduceGarbage(mEdge& e, const std::vector<bool>& garbage,
                       const bool regular = true) {
@@ -2154,10 +2155,11 @@ public:
     if (e.p->v < lowerbound) {
       return e;
     }
-    auto f = reduceGarbageRecursion(e, garbage, lowerbound, regular);
-    incRef(f);
+    const auto f = reduceGarbageRecursion(e.p, garbage, lowerbound, regular);
+    const auto res = mEdge{f.p, cn.lookup(e.w * f.w)};
+    incRef(res);
     decRef(e);
-    return f;
+    return res;
   }
 
 private:
@@ -2203,141 +2205,81 @@ private:
                                        mCachedEdge::zero()});
   }
 
-  vEdge reduceGarbageRecursion(vEdge& e, const std::vector<bool>& garbage,
-                               const Qubit lowerbound) {
-    if (e.p->v < lowerbound) {
-      return e;
+  vCachedEdge reduceGarbageRecursion(vNode* p, const std::vector<bool>& garbage,
+                                     const Qubit lowerbound) {
+    if (p->v < lowerbound) {
+      return {p, 1.};
     }
 
-    auto f = e;
-
-    std::array<vEdge, RADIX> edges{};
+    std::array<vCachedEdge, RADIX> edges{};
     std::bitset<RADIX> handled{};
     for (auto i = 0U; i < RADIX; ++i) {
       if (!handled.test(i)) {
-        if (e.p->e[i].isTerminal()) {
-          edges[i] = e.p->e[i];
+        if (p->e[i].isTerminal()) {
+          edges[i] = {p->e[i].p, p->e[i].w};
         } else {
-          edges[i] = reduceGarbageRecursion(f.p->e[i], garbage, lowerbound);
+          edges[i] = reduceGarbageRecursion(p->e[i].p, garbage, lowerbound);
           for (auto j = i + 1; j < RADIX; ++j) {
-            if (e.p->e[i].p == e.p->e[j].p) {
+            if (p->e[i].p == p->e[j].p) {
               edges[j] = edges[i];
+              edges[j].w = edges[j].w * p->e[j].w;
               handled.set(j);
             }
           }
+          edges[i].w = edges[i].w * p->e[i].w;
         }
         handled.set(i);
       }
     }
-    f = makeDDNode(f.p->v, edges);
-
+    if (!garbage[p->v]) {
+      return makeDDNode(p->v, edges);
+    }
     // something to reduce for this qubit
-    if (garbage[f.p->v]) {
-      if (!f.p->e[1].w.exactlyZero()) {
-        vEdge g{};
-        if (f.p->e[0].w.exactlyZero() && !f.p->e[1].w.exactlyZero()) {
-          g = f.p->e[1];
-        } else if (!f.p->e[1].w.exactlyZero()) {
-          g = add(f.p->e[0], f.p->e[1]);
-        } else {
-          g = f.p->e[0];
-        }
-        f = makeDDNode(e.p->v, std::array{g, vEdge::zero()});
-      }
-    }
-    const auto rWeight = e.w * f.w;
-    // Quick-fix for normalization bug
-    if (rWeight.mag2() > 1.) {
-      f.w = Complex::one();
-    } else {
-      f.w = cn.lookup(rWeight);
-    }
-    return f;
+    return makeDDNode(p->v, std::array{add2(edges[0], edges[1], p->v - 1),
+                                       vCachedEdge ::zero()});
   }
-  mEdge reduceGarbageRecursion(mEdge& e, const std::vector<bool>& garbage,
-                               const Qubit lowerbound,
-                               const bool regular = true) {
-    if (e.p->v < lowerbound) {
-      return e;
+  mCachedEdge reduceGarbageRecursion(mNode* p, const std::vector<bool>& garbage,
+                                     const Qubit lowerbound,
+                                     const bool regular = true) {
+    if (p->v < lowerbound) {
+      return {p, 1.};
     }
 
-    auto f = e;
-
-    std::array<mEdge, NEDGE> edges{};
+    std::array<mCachedEdge, NEDGE> edges{};
     std::bitset<NEDGE> handled{};
     for (auto i = 0U; i < NEDGE; ++i) {
       if (!handled.test(i)) {
-        if (e.p->e[i].isTerminal()) {
-          edges[i] = e.p->e[i];
+        if (p->e[i].isTerminal()) {
+          edges[i] = {p->e[i].p, p->e[i].w};
         } else {
           edges[i] =
-              reduceGarbageRecursion(f.p->e[i], garbage, lowerbound, regular);
+              reduceGarbageRecursion(p->e[i].p, garbage, lowerbound, regular);
           for (auto j = i + 1; j < NEDGE; ++j) {
-            if (e.p->e[i].p == e.p->e[j].p) {
+            if (p->e[i].p == p->e[j].p) {
               edges[j] = edges[i];
+              edges[j].w = edges[j].w * p->e[j].w;
               handled.set(j);
             }
           }
+          edges[i].w = edges[i].w * p->e[i].w;
         }
         handled.set(i);
       }
     }
-    f = makeDDNode(f.p->v, edges);
+    if (!garbage[p->v]) {
+      return makeDDNode(p->v, edges);
+    }
 
-    // something to reduce for this qubit
-    if (garbage[f.p->v]) {
-      if (regular) {
-        if (!f.p->e[2].w.exactlyZero() || !f.p->e[3].w.exactlyZero()) {
-          mEdge g{};
-          if (f.p->e[0].w.exactlyZero() && !f.p->e[2].w.exactlyZero()) {
-            g = f.p->e[2];
-          } else if (!f.p->e[2].w.exactlyZero()) {
-            g = add(f.p->e[0], f.p->e[2]);
-          } else {
-            g = f.p->e[0];
-          }
-          mEdge h{};
-          if (f.p->e[1].w.exactlyZero() && !f.p->e[3].w.exactlyZero()) {
-            h = f.p->e[3];
-          } else if (!f.p->e[3].w.exactlyZero()) {
-            h = add(f.p->e[1], f.p->e[3]);
-          } else {
-            h = f.p->e[1];
-          }
-          f = makeDDNode(e.p->v,
-                         std::array{g, h, mEdge::zero(), mEdge::zero()});
-        }
-      } else {
-        if (!f.p->e[1].w.exactlyZero() || !f.p->e[3].w.exactlyZero()) {
-          mEdge g{};
-          if (f.p->e[0].w.exactlyZero() && !f.p->e[1].w.exactlyZero()) {
-            g = f.p->e[1];
-          } else if (!f.p->e[1].w.exactlyZero()) {
-            g = add(f.p->e[0], f.p->e[1]);
-          } else {
-            g = f.p->e[0];
-          }
-          mEdge h{};
-          if (f.p->e[2].w.exactlyZero() && !f.p->e[3].w.exactlyZero()) {
-            h = f.p->e[3];
-          } else if (!f.p->e[3].w.exactlyZero()) {
-            h = add(f.p->e[2], f.p->e[3]);
-          } else {
-            h = f.p->e[2];
-          }
-          f = makeDDNode(e.p->v,
-                         std::array{g, mEdge::zero(), h, mEdge::zero()});
-        }
-      }
+    if (regular) {
+      return makeDDNode(p->v,
+                        std::array{add2(edges[0], edges[2], p->v - 1),
+                                   add2(edges[1], edges[3], p->v - 1),
+                                   mCachedEdge::zero(), mCachedEdge::zero()});
     }
-    const auto rWeight = e.w * f.w;
-    // Quick-fix for normalization bug
-    if (rWeight.mag2() > 1.) {
-      f.w = Complex::one();
-    } else {
-      f.w = cn.lookup(rWeight);
-    }
-    return f;
+    return makeDDNode(p->v, std::array{add2(edges[0], edges[1], p->v - 1),
+                                       mCachedEdge::zero(),
+                                       add2(edges[2], edges[3], p->v - 1),
+                                       mCachedEdge::zero()});
   }
 
   ///
