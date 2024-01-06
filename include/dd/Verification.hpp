@@ -33,17 +33,18 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
   }
 
   // add swaps in order to put the measured (= not garbage) qubits in the end
-  auto garbage = c1.getGarbage();
-  auto n = static_cast<Qubit>(garbage.size());
-  auto nextGarbage = getNextGarbage(0, garbage);
+  auto garbage1 = c1.getGarbage();
+  auto n1 = static_cast<Qubit>(garbage1.size());
+  auto n2 = static_cast<Qubit>(c2.getNqubits());
+  auto nextGarbage = getNextGarbage(0, garbage1);
   // find the first garbage qubit at the end
-  for (Qubit i = n - 1; i >= static_cast<Qubit>(m1); i--) {
-    if (!garbage.at(i)) {
+  for (Qubit i = std::min(n1, n2) - 1; i >= static_cast<Qubit>(m1); i--) {
+    if (!garbage1.at(i)) {
       // swap it to the beginning
       c1.swap(i, nextGarbage);
       c2.swap(i, nextGarbage);
       ++nextGarbage;
-      nextGarbage = getNextGarbage(nextGarbage, garbage);
+      nextGarbage = getNextGarbage(nextGarbage, garbage1);
     }
   }
 
@@ -51,7 +52,7 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
 
   auto u1 = buildFunctionality(&c1, dd, false, false);
   auto u2 = buildFunctionality(&c2, dd, false, false);
-  if (d1 == n) {
+  if (d1 == n1 && d2 == n2) {
     // no ancilla qubits
     return dd->zeroAncillaPartialEquivalenceCheck(u1, u2,
                                                   static_cast<Qubit>(m1));

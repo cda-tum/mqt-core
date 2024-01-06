@@ -2276,7 +2276,7 @@ TEST(DDPackageTest, DDMPartialEquivalenceWithDifferentNumberOfQubits) {
 
 TEST(DDPackageTest,
      DDMPartialEquivalenceCheckingExamplePaperDifferentQubitOrderAndNumber) {
-  const auto nqubits = 3U;
+  const auto nqubits = 4U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
 
   qc::QuantumComputation c1{4, 1};
@@ -2291,10 +2291,13 @@ TEST(DDPackageTest,
 
   c1.setLogicalQubitGarbage(1);
   c1.setLogicalQubitGarbage(0);
+  c1.setLogicalQubitGarbage(3);
+  c1.setLogicalQubitAncillary(3);
 
   c2.setLogicalQubitGarbage(1);
   c2.setLogicalQubitGarbage(0);
   EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
+  EXPECT_TRUE(dd::partialEquivalenceCheck(c2, c1, dd));
 }
 
 TEST(DDPackageTest, DDMPartialEquivalenceCheckingComputeTable) {
