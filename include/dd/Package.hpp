@@ -2890,6 +2890,7 @@ private:
 
     return newedge;
   }
+
   // only keeps the first 2^d columns
   mEdge setColumnsToZero(const mEdge& e, Qubit d) {
     if (e.isTerminal()) {
@@ -2912,6 +2913,7 @@ private:
     f.w = cn.lookup(e.w * f.w);
     return f;
   }
+
   mEdge keepOnlyIthRow(const mEdge& e, std::int64_t i) {
     if (e.isZeroTerminal()) {
       return e;
@@ -2942,6 +2944,11 @@ private:
     f.w = cn.lookup(e.w * f.w);
     return f;
   }
+
+  UnaryComputeTable<mEdge, mEdge> shiftAllMatrixRows{};
+  Qubit shiftAllMatrixRowsM{0};
+  Qubit shiftAllMatrixRowsD{0};
+
   /**
     Equally divides the rows of the matrix represented by e (of size 2^n x 2^n)
     into 2^g parts of size 2^m (where g = n - m).
@@ -2958,6 +2965,7 @@ private:
     if (upperOffset == 0 && m == 0) {
       return e;
     }
+
     // the matrix of the current DD has dimensions 2^n x 2^n
     const auto n = e.p->v + 1;
     if (upperOffset < 0 && m < n) {
@@ -2967,11 +2975,23 @@ private:
       return mEdge::zero();
     }
 
+    const mEdge eCopy{e.p, Complex::one()};
+    // check if it's in the compute table with an edge weight of one
+    // only store elements in the compute table if the offset is 0
+    if (upperOffset == 0) {
+      if (const auto* r = shiftAllMatrixRows.lookup(eCopy); r != nullptr) {
+        auto f = *r;
+        f.w = cn.lookup(e.w * f.w);
+        return f;
+      }
+    }
+
     if (d >= n && m >= n) {
       return keepOnlyIthRow(e, upperOffset);
     }
 
     std::array<mEdge, NEDGE> edges{};
+    auto originalUpperOffset = upperOffset;
 
     // if the current submatrix size is less than 2^m,
     // then the offset of the lower half needs to be adapted
@@ -3013,6 +3033,10 @@ private:
     }
 
     auto f = makeDDNode(e.p->v, edges);
+    // add to the compute table with a weight of 1
+    if (originalUpperOffset == 0) {
+      shiftAllMatrixRows.insert(eCopy, f);
+    }
     f.w = cn.lookup(e.w * f.w);
     return f;
   }
@@ -3025,13 +3049,15 @@ public:
       and the i-th row of each part is shifted by i*2^d columns.
   **/
   mEdge shiftAllRows(const mEdge& e, Qubit m, Qubit d) {
+    if (shiftAllMatrixRowsM != m || shiftAllMatrixRowsD != d) {
+      shiftAllMatrixRows.clear();
+      shiftAllMatrixRowsM = m;
+      shiftAllMatrixRowsD = d;
+    }
     return shiftAllRowsRecursive(e, m, d, 0);
   }
 
 private:
-  // TODO: use compute tables
-  ComputeTable<mEdge, std::int64_t, mEdge> shiftAllMatrixRows{};
-
   mEdge partialEquivalenceCheckSubroutine(mEdge u, Qubit m, Qubit k,
                                           Qubit extra) {
     // add extra ancillary qubits

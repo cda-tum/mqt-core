@@ -2420,6 +2420,9 @@ TEST(DDPackageTest, DDMShiftAllRows3Qubits1) {
   std::cout << "m = " << m << std::endl;
   std::cout << "d = " << d << std::endl;
   const auto outputMatrix = dd->shiftAllRows(inputDD, m, d);
+  std::cout << "outputMatrix:" << std::endl;
+  outputMatrix.printMatrix();
+  std::cout << std::endl;
   const auto expectedOutputMatrix =
       dd->makeDDFromMatrix(dd::CMat{{1, 2, 0, 0, 0, 0, 0, 0},
                                     {0, 0, 1, 2, 0, 0, 0, 0},
