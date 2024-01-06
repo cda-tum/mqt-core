@@ -2412,17 +2412,9 @@ TEST(DDPackageTest, DDMShiftAllRows3Qubits1) {
                {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
                {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
-  std::cout << "inputMatrix:" << std::endl;
-  inputDD.printMatrix();
-  std::cout << std::endl;
   dd::Qubit m = 2;
   dd::Qubit d = 1;
-  std::cout << "m = " << m << std::endl;
-  std::cout << "d = " << d << std::endl;
   const auto outputMatrix = dd->shiftAllRows(inputDD, m, d);
-  std::cout << "outputMatrix:" << std::endl;
-  outputMatrix.printMatrix();
-  std::cout << std::endl;
   const auto expectedOutputMatrix =
       dd->makeDDFromMatrix(dd::CMat{{1, 2, 0, 0, 0, 0, 0, 0},
                                     {0, 0, 1, 2, 0, 0, 0, 0},
@@ -2444,13 +2436,8 @@ TEST(DDPackageTest, DDMShiftAllRows3Qubits2) {
                {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
                {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
-  std::cout << "inputMatrix:" << std::endl;
-  inputDD.printMatrix();
-  std::cout << std::endl;
   dd::Qubit m = 1;
   dd::Qubit d = 2;
-  std::cout << "m = " << m << std::endl;
-  std::cout << "d = " << d << std::endl;
   const auto outputMatrix = dd->shiftAllRows(inputDD, m, d);
   const auto expectedOutputMatrix =
       dd->makeDDFromMatrix(dd::CMat{{1, 2, 3, 4, 0, 0, 0, 0},
@@ -2474,13 +2461,8 @@ TEST(DDPackageTest, DDMShiftAllRows3Qubits3) {
                {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
                {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
-  std::cout << "inputMatrix:" << std::endl;
-  inputDD.printMatrix();
-  std::cout << std::endl;
   dd::Qubit m = 1;
   dd::Qubit d = 1;
-  std::cout << "m = " << m << std::endl;
-  std::cout << "d = " << d << std::endl;
   const auto outputMatrix = dd->shiftAllRows(inputDD, m, d);
   auto outputMatrixMatrix = outputMatrix.getMatrix();
   const auto expectedOutputMatrix =
