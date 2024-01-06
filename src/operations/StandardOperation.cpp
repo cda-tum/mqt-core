@@ -1,5 +1,6 @@
 #include "operations/StandardOperation.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <sstream>
 #include <variant>
@@ -239,11 +240,24 @@ StandardOperation::StandardOperation(const std::size_t nq, const Controls& c,
 /***
  * Public Methods
  ***/
-void StandardOperation::dumpOpenQASM(
-    std::ostream& of, const RegisterNames& qreg,
-    [[maybe_unused]] const RegisterNames& creg) const {
+void StandardOperation::dumpOpenQASM(std::ostream& of,
+                                     const RegisterNames& qreg,
+                                     [[maybe_unused]] const RegisterNames& creg,
+                                     size_t indent, bool openQASM3) const {
   std::ostringstream op;
   op << std::setprecision(std::numeric_limits<fp>::digits10);
+
+  op << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
+
+  if (openQASM3) {
+    dumpOpenQASM3(of, op, qreg);
+  } else {
+    dumpOpenQASM2(of, op, qreg);
+  }
+}
+
+void StandardOperation::dumpOpenQASM2(std::ostream& of, std::ostringstream& op,
+                                      const RegisterNames& qreg) const {
   if ((controls.size() > 1 && type != X) || controls.size() > 2) {
     std::cout << "[WARNING] Multiple controlled gates are not natively "
                  "supported by OpenQASM. "
@@ -256,6 +270,40 @@ void StandardOperation::dumpOpenQASM(
   // safe the numbers of controls as a prefix to the operation name
   op << std::string(controls.size(), 'c');
 
+  const bool isSpecialGate =
+      type == Peres || type == Peresdg || type == Teleportation;
+
+  if (!isSpecialGate) {
+    // apply X operations to negate the respective controls
+    for (const auto& c : controls) {
+      if (c.type == Control::Type::Neg) {
+        of << "x " << qreg[c.qubit].second << ";\n";
+      }
+    }
+  }
+
+  dumpGateType(of, op, qreg);
+
+  if (!isSpecialGate) {
+    // apply X operations to negate the respective controls again
+    for (const auto& c : controls) {
+      if (c.type == Control::Type::Neg) {
+        of << "x " << qreg[c.qubit].second << ";\n";
+      }
+    }
+  }
+}
+
+void StandardOperation::dumpOpenQASM3(std::ostream& of, std::ostringstream& op,
+                                      const RegisterNames& qreg) const {
+  dumpControls(op);
+
+  dumpGateType(of, op, qreg);
+}
+
+void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
+                                     const RegisterNames& qreg) const {
+  // Dump the operation name and parameters.
   switch (type) {
   case GPhase:
     op << "gphase(" << parameter.at(0) << ")";
@@ -308,17 +356,17 @@ void StandardOperation::dumpOpenQASM(
     }
     break;
   case V:
-    op << "u3(pi/2,-pi/2,pi/2)";
+    op << "U(pi/2,-pi/2,pi/2)";
     break;
   case Vdg:
-    op << "u3(pi/2,pi/2,-pi/2)";
+    op << "U(pi/2,pi/2,-pi/2)";
     break;
   case U:
-    op << "u3(" << parameter[0] << "," << parameter[1] << "," << parameter[2]
+    op << "U(" << parameter[0] << "," << parameter[1] << "," << parameter[2]
        << ")";
     break;
   case U2:
-    op << "u3(pi/2," << parameter[0] << "," << parameter[1] << ")";
+    op << "U(pi/2," << parameter[0] << "," << parameter[1] << ")";
     break;
   case P:
     op << "p(" << parameter[0] << ")";
@@ -407,36 +455,31 @@ void StandardOperation::dumpOpenQASM(
               << " could not be converted to OpenQASM\n.";
   }
 
-  // apply X operations to negate the respective controls
-  for (const auto& c : controls) {
-    if (c.type == Control::Type::Neg) {
-      of << "x " << qreg[c.qubit].second << ";\n";
-    }
-  }
   // apply the operation
   of << op.str();
-  // add controls and targets of the operation
-  for (const auto& c : controls) {
-    of << " " << qreg[c.qubit].second << ",";
+
+  // First print control qubits.
+  for (auto it = controls.begin(); it != controls.end();) {
+    of << " " << qreg[it->qubit].second;
+    // we only print a comma if there are more controls or targets.
+    if (++it != controls.end() || !targets.empty()) {
+      of << ",";
+    }
   }
-  if (!targets.empty()) {
-    if (type == Barrier &&
-        isWholeQubitRegister(qreg, targets.front(), targets.back())) {
-      of << " " << qreg[targets.front()].first;
-    } else {
-      for (const auto& t : targets) {
-        of << " " << qreg[t].second << ",";
+  // Print target qubits.
+  if (!targets.empty() && type == Barrier &&
+      isWholeQubitRegister(qreg, targets.front(), targets.back())) {
+    of << " " << qreg[targets.front()].first;
+  } else {
+    for (auto it = targets.begin(); it != targets.end();) {
+      of << " " << qreg[*it].second;
+      // only print comma if there are more targets
+      if (++it != targets.end()) {
+        of << ",";
       }
-      of.seekp(-1, std::ios_base::cur);
     }
   }
   of << ";\n";
-  // apply X operations to negate the respective controls again
-  for (const auto& c : controls) {
-    if (c.type == Control::Type::Neg) {
-      of << "x " << qreg[c.qubit].second << ";\n";
-    }
-  }
 }
 
 void StandardOperation::dumpOpenQASMTeleportation(
@@ -564,5 +607,63 @@ void StandardOperation::invert() {
     throw QFRException("Inverting gate" + toString(type) +
                        " is not supported.");
   }
+}
+
+void StandardOperation::dumpControls(std::ostringstream& op) const {
+  if (controls.empty()) {
+    return;
+  }
+
+  // if operation is in stdgates.inc, we print a c prefix instead of ctrl @
+  if (bool printBuiltin = std::none_of(
+          controls.begin(), controls.end(),
+          [](const Control& c) { return c.type == Control::Type::Neg; });
+      printBuiltin) {
+    const auto numControls = controls.size();
+    switch (type) {
+    case P:
+    case RX:
+    case Y:
+    case RY:
+    case Z:
+    case RZ:
+    case H:
+    case SWAP:
+      printBuiltin = numControls == 1;
+      break;
+    case X:
+      printBuiltin = numControls == 1 || numControls == 2;
+      break;
+    default:
+      printBuiltin = false;
+    }
+    if (printBuiltin) {
+      op << std::string(numControls, 'c');
+      return;
+    }
+  }
+
+  Control::Type currentType = controls.begin()->type;
+  int count = 0;
+
+  for (const auto& control : controls) {
+    if (control.type == currentType) {
+      ++count;
+    } else {
+      op << (currentType == Control::Type::Neg ? "negctrl" : "ctrl");
+      if (count > 1) {
+        op << "(" << count << ")";
+      }
+      op << " @ ";
+      currentType = control.type;
+      count = 1;
+    }
+  }
+
+  op << (currentType == Control::Type::Neg ? "negctrl" : "ctrl");
+  if (count > 1) {
+    op << "(" << count << ")";
+  }
+  op << " @ ";
 }
 } // namespace qc

@@ -45,7 +45,7 @@ jobs:
           windows_compile_environment: msvc
           override_cache_key: python-tests-${{ inputs.runs-on }}-${{ inputs.python-version }}
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
           cache: "pip"

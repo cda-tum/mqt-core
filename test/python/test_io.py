@@ -39,7 +39,7 @@ def test_loading_file() -> None:
 
     # check the result
     assert isinstance(qc, QuantumComputation)
-    qc_qasm = qc.qasm_str()
+    qc_qasm = qc.qasm2_str()
 
     assert qasm in qc_qasm
 
@@ -72,7 +72,7 @@ def test_loading_qiskit_circuit() -> None:
 
     # check the result
     assert isinstance(qc, QuantumComputation)
-    qc_qasm = qc.qasm_str()
+    qc_qasm = qc.qasm2_str()
 
     # remove any whitespace from both QASM strings and check for equality
     assert "".join(qasm.split()) in "".join(qc_qasm.split())
@@ -84,3 +84,33 @@ def test_qiskit_import_error(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(ValueError, match="Qiskit is not installed"):
         load(QuantumCircuit())
+
+
+def test_loading_qasm2_string() -> None:
+    """Test whether importing a QASM2 string works."""
+    qasm = 'OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0], q[1];\nmeasure q -> c;\n'
+
+    # load the circuit
+    qc = load(qasm)
+    print(qc)
+
+    # check the result
+    assert isinstance(qc, QuantumComputation)
+    qc_qasm = qc.qasm2_str()
+
+    assert qasm in qc_qasm
+
+
+def test_loading_qasm3_string() -> None:
+    """Test whether importing a QASM3 string works."""
+    qasm = 'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nbit[2] c;\nh q[0];\ncx q[0], q[1];\nc = measure q;\n'
+
+    # load the circuit
+    qc = load(qasm)
+    print(qc)
+
+    # check the result
+    assert isinstance(qc, QuantumComputation)
+    qc_qasm = qc.qasm3_str()
+
+    assert qasm in qc_qasm

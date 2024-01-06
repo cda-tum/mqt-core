@@ -1,14 +1,15 @@
 #pragma once
 
 #include <bitset>
+#include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <map>
 #include <memory>
 #include <stdexcept>
-#include <unordered_map>
+#include <string>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace qc {
@@ -39,7 +40,7 @@ using RegisterNames = std::vector<std::pair<std::string, std::string>>;
 
 using Targets = std::vector<Qubit>;
 
-using BitString = std::bitset<128>;
+using BitString = std::bitset<4096>;
 
 // floating-point type used throughout the library
 using fp = double;
@@ -52,12 +53,26 @@ static constexpr fp PI_2 = static_cast<fp>(
     1.570796326794896619231321691639751442098584699687552910487L);
 static constexpr fp PI_4 = static_cast<fp>(
     0.785398163397448309615660845819875721049292349843776455243L);
+static constexpr fp TAU = static_cast<fp>(
+    6.283185307179586476925286766559005768394338798750211641950L);
+static constexpr fp E = static_cast<fp>(
+    2.718281828459045235360287471352662497757247093699959574967L);
+
+static constexpr size_t OUTPUT_INDENT_SIZE = 2;
 
 // forward declaration
 class Operation;
 
 // supported file formats
-enum class Format { Real, OpenQASM, GRCS, TFC, QC, Tensor };
+enum class Format : uint8_t {
+  Real,
+  OpenQASM2,
+  OpenQASM3,
+  GRCS,
+  TFC,
+  QC,
+  Tensor
+};
 
 using DAG = std::vector<std::deque<std::unique_ptr<Operation>*>>;
 using DAGIterator = std::deque<std::unique_ptr<Operation>*>::iterator;
@@ -103,5 +118,19 @@ combineHash(const std::size_t lhs, const std::size_t rhs) noexcept {
  */
 constexpr void hashCombine(std::size_t& hash, const std::size_t with) noexcept {
   hash = combineHash(hash, with);
+}
+
+/**
+ * @brief Function used to mark unreachable code
+ * @details Uses compiler specific extensions if possible. Even if no extension
+ * is used, undefined behavior is still raised by an empty function body and the
+ * noreturn attribute.
+ */
+[[noreturn]] inline void unreachable() {
+#ifdef __GNUC__ // GCC, Clang, ICC
+  __builtin_unreachable();
+#elif defined(_MSC_VER) // MSVC
+  __assume(false);
+#endif
 }
 } // namespace qc

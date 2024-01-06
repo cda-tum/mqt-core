@@ -122,7 +122,7 @@ inline std::string conditionalFormat(const Complex& a,
 
   std::ostringstream ss{};
   // magnitude is (almost) 1
-  if (RealNumber::approximatelyOne(mag)) {
+  if (RealNumber::approximatelyEquals(mag, 1.)) {
     if (RealNumber::approximatelyZero(phase)) {
       return "1";
     }
@@ -173,7 +173,7 @@ static std::ostream& header(const Edge<Node>& e, std::ostream& os,
   }
   os << "[penwidth=\"" << thicknessFromMagnitude(e.w) << "\",tooltip=\""
      << conditionalFormat(e.w, formatAsPolar) << "\"";
-  if (!e.w.approximatelyOne()) {
+  if (!e.w.exactlyOne()) {
     os << ",style=dashed";
   }
   if (edgeLabels) {
@@ -479,7 +479,7 @@ bwEdge(const mEdge& from, const mEdge& to, std::uint16_t idx, std::ostream& os,
   auto mag = thicknessFromMagnitude(to.w);
   os << "[penwidth=\"" << mag << "\",tooltip=\""
      << conditionalFormat(to.w, formatAsPolar) << "\"";
-  if (!to.w.approximatelyOne()) {
+  if (!to.w.exactlyOne()) {
     os << ",style=dashed";
   }
   if (edgeLabels) {
@@ -509,7 +509,7 @@ bwEdge(const vEdge& from, const vEdge& to, std::uint16_t idx, std::ostream& os,
   auto mag = thicknessFromMagnitude(to.w);
   os << "[penwidth=\"" << mag << "\",tooltip=\""
      << conditionalFormat(to.w, formatAsPolar) << "\"";
-  if (!to.w.approximatelyOne()) {
+  if (!to.w.exactlyOne()) {
     os << ",style=dashed";
   }
   if (edgeLabels) {

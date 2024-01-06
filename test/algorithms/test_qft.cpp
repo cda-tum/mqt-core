@@ -1,6 +1,6 @@
 #include "algorithms/QFT.hpp"
+#include "dd/Benchmark.hpp"
 #include "dd/FunctionalityConstruction.hpp"
-#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <cmath>
@@ -8,33 +8,13 @@
 
 class QFT : public testing::TestWithParam<std::size_t> {
 protected:
-  void TearDown() override {
-    dd->decRef(sim);
-    dd->decRef(func);
-    dd->garbageCollect(true);
+  void TearDown() override {}
 
-    // number of complex table entries after clean-up should equal initial
-    // number of entries
-    EXPECT_EQ(dd->cn.realCount(), initialComplexCount);
-    // number of available cache entries after clean-up should equal initial
-    // number of entries
-    EXPECT_EQ(dd->cn.cacheCount(), initialCacheCount);
-  }
-
-  void SetUp() override {
-    nqubits = GetParam();
-    dd = std::make_unique<dd::Package<>>(nqubits);
-    initialCacheCount = dd->cn.cacheCount();
-    initialComplexCount = dd->cn.realCount();
-  }
+  void SetUp() override { nqubits = GetParam(); }
 
   std::size_t nqubits = 0;
-  std::unique_ptr<dd::Package<>> dd;
   std::unique_ptr<qc::QFT> qc;
-  std::size_t initialCacheCount = 0;
-  std::size_t initialComplexCount = 0;
-  qc::VectorDD sim{};
-  qc::MatrixDD func{};
+  std::unique_ptr<dd::Experiment> exp;
 };
 
 /// Findings from the QFT Benchmarks:
@@ -49,6 +29,8 @@ protected:
 /// value of 10e-15
 ///	Utilizing more qubits requires the use of fp=long double
 constexpr std::size_t QFT_MAX_QUBITS = 20U;
+
+static const size_t INITIAL_COMPLEX_COUNT = 1;
 
 INSTANTIATE_TEST_SUITE_P(QFT, QFT,
                          testing::Range<std::size_t>(0U, QFT_MAX_QUBITS + 1U,
@@ -69,7 +51,13 @@ TEST_P(QFT, Functionality) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
   // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionality(qc.get(), dd); });
+
+  exp = dd::benchmarkFunctionalityConstruction(*qc);
+  auto* expFunc =
+      dynamic_cast<dd::FunctionalityConstructionExperiment*>(exp.get());
+  assert(expFunc != nullptr);
+  auto func = expFunc->func;
+  auto dd = std::move(exp->dd);
 
   qc->printStatistics(std::cout);
   // QFT DD should consist of 2^n nodes
@@ -103,14 +91,23 @@ TEST_P(QFT, Functionality) {
                 dd::RealNumber::eps);
     EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
   }
+  dd->decRef(func);
+  dd->garbageCollect(true);
+  // number of complex table entries after clean-up should equal initial
+  // number of entries
+  EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
 }
 
 TEST_P(QFT, FunctionalityRecursive) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
-  // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), dd); });
+  exp = dd::benchmarkFunctionalityConstruction(*qc, true);
+  auto* expFunc =
+      dynamic_cast<dd::FunctionalityConstructionExperiment*>(exp.get());
+  assert(expFunc != nullptr);
+  auto func = expFunc->func;
+  auto dd = std::move(exp->dd);
 
   qc->printStatistics(std::cout);
   // QFT DD should consist of 2^n nodes
@@ -144,17 +141,22 @@ TEST_P(QFT, FunctionalityRecursive) {
                 dd::RealNumber::eps);
     EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
   }
+  dd->decRef(func);
+  dd->garbageCollect(true);
+  // number of complex table entries after clean-up should equal initial
+  // number of entries
+  EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
 }
 
 TEST_P(QFT, Simulation) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
-  // there should be no error simulating the circuit
-  ASSERT_NO_THROW({
-    auto in = dd->makeZeroState(nqubits);
-    sim = simulate(qc.get(), in, dd);
-  });
+  exp = dd::benchmarkSimulate(*qc);
+  auto* expSim = dynamic_cast<dd::SimulationExperiment*>(exp.get());
+  auto sim = expSim->sim;
+  auto dd = std::move(exp->dd);
+
   qc->printStatistics(std::cout);
 
   // QFT DD |0...0> sim should consist of n nodes
@@ -176,6 +178,11 @@ TEST_P(QFT, Simulation) {
                 dd::RealNumber::eps);
     EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
   }
+  dd->decRef(sim);
+  dd->garbageCollect(true);
+  // number of complex table entries after clean-up should equal initial
+  // number of entries
+  EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
 }
 
 TEST_P(QFT, FunctionalityRecursiveEquality) {
@@ -183,27 +190,34 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
 
   // there should be no error building the functionality recursively
-  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), dd); });
+  exp = dd::benchmarkFunctionalityConstruction(*qc);
+  auto* expFunc =
+      dynamic_cast<dd::FunctionalityConstructionExperiment*>(exp.get());
+  assert(expFunc != nullptr);
+  auto func = expFunc->func;
+  auto dd = std::move(exp->dd);
 
   // there should be no error building the functionality regularly
-  qc::MatrixDD funcRec{};
-  ASSERT_NO_THROW({ funcRec = buildFunctionality(qc.get(), dd); });
+  auto funcRec = buildFunctionalityRecursive(qc.get(), *dd);
 
   ASSERT_EQ(func, funcRec);
   dd->decRef(funcRec);
+  dd->decRef(func);
+  dd->garbageCollect(true);
+  // number of complex table entries after clean-up should equal initial
+  // number of entries
+  EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
 }
 
 TEST_P(QFT, DynamicSimulation) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, true, true); });
-
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
   qc->printStatistics(std::cout);
 
   // simulate the circuit
   std::size_t shots = 8192U;
-  auto measurements =
-      simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), dd, shots);
-
+  auto measurements = dd::benchmarkSimulateWithShots(*qc, shots);
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
   }
@@ -220,4 +234,8 @@ TEST_P(QFT, DynamicSimulation) {
 
   // the number of unique entries should be close to the number of shots
   EXPECT_GE(ratio, 0.7);
+  dd->garbageCollect(true);
+  // number of complex table entries after clean-up should equal initial
+  // number of entries
+  EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
 }

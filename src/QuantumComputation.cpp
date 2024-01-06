@@ -69,7 +69,7 @@ void QuantumComputation::import(const std::string& filename) {
   if (extension == "real") {
     import(filename, Format::Real);
   } else if (extension == "qasm") {
-    import(filename, Format::OpenQASM);
+    import(filename, Format::OpenQASM3);
   } else if (extension == "txt") {
     import(filename, Format::GRCS);
   } else if (extension == "tfc") {
@@ -102,9 +102,9 @@ void QuantumComputation::import(std::istream&& is, Format format) {
   case Format::Real:
     importReal(is);
     break;
-  case Format::OpenQASM:
-    updateMaxControls(2);
-    importOpenQASM(is);
+  case Format::OpenQASM2:
+  case Format::OpenQASM3:
+    importOpenQASM3(is);
     break;
   case Format::GRCS:
     importGRCS(is);
@@ -198,6 +198,7 @@ void QuantumComputation::initializeIOMapping() {
   }
 
   const bool buildOutputPermutation = outputPermutation.empty();
+  garbage.assign(nqubits + nancillae, false);
   for (const auto& [physicalIn, logicalIn] : initialLayout) {
     const bool isIdle = isIdleQubit(physicalIn);
 
@@ -381,7 +382,12 @@ QuantumComputation::removeQubit(const Qubit logicalQubitIndex) {
   } else {
     removeQubitfromQubitRegister(qregs, reg, idx);
     // reduce qubit count
-    nqubits--;
+    if (ancillary.at(logicalQubitIndex)) {
+      // if the qubit is ancillary, it is not counted as a qubit
+      nancillae--;
+    } else {
+      nqubits--;
+    }
   }
 
   // adjust initial layout permutation
@@ -528,10 +534,7 @@ std::ostream& QuantumComputation::print(std::ostream& os) const {
   for (const auto& physicalQubit : initialLayout) {
     auto it = outputPermutation.find(physicalQubit.first);
     if (it == outputPermutation.end()) {
-      if (garbage[physicalQubit.second]) {
-        os << "\033[31m";
-      }
-      os << std::setw(4) << "|"
+      os << "\033[31m" << std::setw(4) << "|"
          << "\033[0m";
     } else {
       os << std::setw(4) << it->second;
@@ -567,7 +570,7 @@ void QuantumComputation::dump(const std::string& filename) {
   if (extension == "real") {
     dump(filename, Format::Real);
   } else if (extension == "qasm") {
-    dump(filename, Format::OpenQASM);
+    dump(filename, Format::OpenQASM3);
   } else if (extension == "qc") {
     dump(filename, Format::QC);
   } else if (extension == "tfc") {
@@ -580,7 +583,7 @@ void QuantumComputation::dump(const std::string& filename) {
   }
 }
 
-void QuantumComputation::dumpOpenQASM(std::ostream& of) {
+void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) {
   // Add missing physical qubits
   if (!qregs.empty()) {
     for (Qubit physicalQubit = 0; physicalQubit < initialLayout.rbegin()->first;
@@ -613,8 +616,13 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
   }
   of << "\n";
 
-  of << "OPENQASM 2.0;\n";
-  of << "include \"qelib1.inc\";\n";
+  if (openQASM3) {
+    of << "OPENQASM 3.0;\n";
+    of << "include \"stdgates.inc\";\n";
+  } else {
+    of << "OPENQASM 2.0;\n";
+    of << "include \"qelib1.inc\";\n";
+  }
   if (std::any_of(std::begin(ops), std::end(ops), [](const auto& op) {
         return op->getType() == OpType::Teleportation;
       })) {
@@ -626,18 +634,19 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
   for (const auto& [regName, reg] : ancregs) {
     combinedRegs.try_emplace(regName, reg.first, reg.second);
   }
-  printSortedRegisters(combinedRegs, "qreg", of);
+  printSortedRegisters(combinedRegs, openQASM3 ? "qubit" : "qreg", of,
+                       openQASM3);
   RegisterNames combinedRegNames{};
   createRegisterArray(combinedRegs, combinedRegNames);
   assert(combinedRegNames.size() == nqubits + nancillae);
 
-  printSortedRegisters(cregs, "creg", of);
+  printSortedRegisters(cregs, openQASM3 ? "bit" : "creg", of, openQASM3);
   RegisterNames cregnames{};
   createRegisterArray(cregs, cregnames);
   assert(cregnames.size() == nclassics);
 
   for (const auto& op : ops) {
-    op->dumpOpenQASM(of, combinedRegNames, cregnames);
+    op->dumpOpenQASM(of, combinedRegNames, cregnames, 0, openQASM3);
   }
 }
 
@@ -651,8 +660,11 @@ void QuantumComputation::dump(const std::string& filename, Format format) {
 
 void QuantumComputation::dump(std::ostream&& of, Format format) {
   switch (format) {
-  case Format::OpenQASM:
-    dumpOpenQASM(of);
+  case Format::OpenQASM3:
+    dumpOpenQASM(of, true);
+    break;
+  case Format::OpenQASM2:
+    dumpOpenQASM(of, false);
     break;
   case Format::Real:
     std::cerr << "Dumping in real format currently not supported\n";
@@ -880,12 +892,6 @@ void QuantumComputation::setLogicalQubitAncillary(
     return;
   }
 
-  const auto physicalQubitIndex = getPhysicalQubitIndex(logicalQubitIndex);
-
-  // get register and register-index of the corresponding qubit
-  const auto [reg, idx] = getQubitRegisterAndIndex(physicalQubitIndex);
-  removeQubitfromQubitRegister(qregs, reg, idx);
-  addQubitToQubitRegister(ancregs, physicalQubitIndex, "anc");
   nqubits--;
   nancillae++;
   ancillary[logicalQubitIndex] = true;

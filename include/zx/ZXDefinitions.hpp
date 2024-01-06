@@ -8,8 +8,36 @@
 #include <string>
 
 namespace zx {
-enum class EdgeType { Simple, Hadamard };
-enum class VertexType { Boundary, Z, X };
+
+enum class EdgeType : uint8_t { Simple, Hadamard };
+inline std::ostream& operator<<(std::ostream& os, const EdgeType& type) {
+  switch (type) {
+  case EdgeType::Simple:
+    os << "Simple";
+    break;
+  case EdgeType::Hadamard:
+    os << "Hadamard";
+    break;
+  }
+  return os;
+}
+
+enum class VertexType : uint8_t { Boundary, Z, X };
+inline std::ostream& operator<<(std::ostream& os, const VertexType& type) {
+  switch (type) {
+  case VertexType::Boundary:
+    os << "Boundary";
+    break;
+  case VertexType::Z:
+    os << "Z";
+    break;
+  case VertexType::X:
+    os << "X";
+    break;
+  }
+  return os;
+}
+
 using Vertex = std::size_t;
 using Col = std::int32_t;
 using Qubit = std::int32_t;

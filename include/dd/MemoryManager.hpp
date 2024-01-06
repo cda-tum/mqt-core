@@ -76,15 +76,6 @@ public:
   [[nodiscard]] T* get();
 
   /**
-   * @brief Get a pair of entries from the manager.
-   * @return A pair of pointers to entries.
-   * @see get()
-   * @note This method assumes that there is an even number of entries available
-   * from the manager. If this is not the case, the behavior is undefined.
-   */
-  [[nodiscard]] std::pair<T*, T*> getPair();
-
-  /**
    * @brief Return an entry to the manager.
    * @details The entry is added to the list of available entries. The entry
    * must not be used after it has been returned to the manager. Entries should

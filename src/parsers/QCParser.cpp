@@ -1,5 +1,7 @@
 #include "QuantumComputation.hpp"
 
+#include <regex>
+
 void qc::QuantumComputation::importQC(std::istream& is) {
   std::map<std::string, Qubit> varMap{};
   auto line = readQCHeader(is, varMap);

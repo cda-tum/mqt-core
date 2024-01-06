@@ -78,15 +78,6 @@ struct Complex {
   [[nodiscard]] bool approximatelyZero() const noexcept;
 
   /**
-   * @brief Check whether the complex number is approximately equal to one.
-   * @returns True if the complex number is approximately equal to one, false
-   * otherwise.
-   * @see RealNumber::approximatelyOne
-   * @see RealNumber::approximatelyZero
-   */
-  [[nodiscard]] bool approximatelyOne() const noexcept;
-
-  /**
    * @brief Convert the complex number to a string.
    * @param formatted Whether to apply special formatting to the numbers.
    * @param precision The precision to use for the numbers.

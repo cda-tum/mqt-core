@@ -62,12 +62,18 @@ std::ostream& NonUnitaryOperation::print(
 
 void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
                                        const RegisterNames& qreg,
-                                       const RegisterNames& creg) const {
+                                       const RegisterNames& creg, size_t indent,
+                                       bool openQASM3) const {
+  of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
+
   if (isWholeQubitRegister(qreg, targets.front(), targets.back()) &&
       (type != Measure ||
        isWholeQubitRegister(creg, classics.front(), classics.back()))) {
+    if (type == Measure && openQASM3) {
+      of << creg[classics.front()].first << " = ";
+    }
     of << toString(type) << " " << qreg[targets.front()].first;
-    if (type == Measure) {
+    if (type == Measure && !openQASM3) {
       of << " -> ";
       of << creg[classics.front()].first;
     }
@@ -76,8 +82,11 @@ void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
   }
   auto classicsIt = classics.cbegin();
   for (const auto& q : targets) {
+    if (type == Measure && openQASM3) {
+      of << creg[*classicsIt].second << " = ";
+    }
     of << toString(type) << " " << qreg[q].second;
-    if (type == Measure) {
+    if (type == Measure && !openQASM3) {
       of << " -> " << creg[*classicsIt].second;
       ++classicsIt;
     }

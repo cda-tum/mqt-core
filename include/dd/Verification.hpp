@@ -50,8 +50,8 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
 
   // partialEquivalenceCheck with dd
 
-  auto u1 = buildFunctionality(&c1, dd, false, false);
-  auto u2 = buildFunctionality(&c2, dd, false, false);
+  auto u1 = buildFunctionality(&c1, *dd, false, false);
+  auto u2 = buildFunctionality(&c2, *dd, false, false);
   if (d1 == n1 && d2 == n2) {
     // no ancilla qubits
     return dd->zeroAncillaPartialEquivalenceCheck(u1, u2,

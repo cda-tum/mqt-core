@@ -5,6 +5,7 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
   add_library(
     ${PROJECT_NAME}-dd
     ${DD_HEADERS}
+    Benchmark.cpp
     CachedEdge.cpp
     Complex.cpp
     ComplexNumbers.cpp
@@ -24,5 +25,4 @@ if(NOT TARGET ${PROJECT_NAME}-dd)
     statistics/UniqueTableStatistics.cpp)
   target_link_libraries(${PROJECT_NAME}-dd PUBLIC ${PROJECT_NAME})
   add_library(MQT::CoreDD ALIAS ${PROJECT_NAME}-dd)
-  add_library(MQT::${OLD_PROJECT_NAME}_dd ALIAS ${PROJECT_NAME}-dd)
 endif()

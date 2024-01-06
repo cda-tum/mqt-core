@@ -1,7 +1,7 @@
 #include "zx/Simplify.hpp"
 #include "zx/ZXDiagram.hpp"
 
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 
 using zx::fullReduceApproximate;
 
