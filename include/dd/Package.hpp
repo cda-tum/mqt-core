@@ -3074,10 +3074,8 @@ private:
     return multiply(conjugateTranspose(u), u2);
   }
 
-  ComputeTable<mEdge, Qubit, bool>
-      zeroAncillaPartialEquivalenceCheckSubroutineComputeTable{};
+  ComputeTable<mEdge, Qubit, bool> zeroAncillaPECComputeTable{};
 
-public:
   bool zeroAncillaPartialEquivalenceCheckSubroutine(mEdge e, Qubit m) {
     if (e.isTerminal()) {
       return true;
@@ -3086,9 +3084,7 @@ public:
 
     const mEdge eCopy{e.p, Complex::one()};
     // check if it's in the compute table with an edge weight of one
-    if (const auto* r =
-            zeroAncillaPartialEquivalenceCheckSubroutineComputeTable.lookup(
-                eCopy, m);
+    if (const auto* r = zeroAncillaPECComputeTable.lookup(eCopy, m);
         r != nullptr) {
       auto f = *r;
       return f;
@@ -3106,11 +3102,11 @@ public:
     }
 
     // add to the compute table with a weight of 1
-    zeroAncillaPartialEquivalenceCheckSubroutineComputeTable.insert(eCopy, m,
-                                                                    result);
+    zeroAncillaPECComputeTable.insert(eCopy, m, result);
     return result;
   }
 
+public:
   /**
    Checks for partial equivalence between the two circuits u1 and u2,
     where the first d qubits of the circuits are the data qubits and
@@ -3163,7 +3159,7 @@ public:
   /**
       Checks for partial equivalence between the two circuits u1 and u2,
        where all qubits of the circuits are the data qubits and
-       the last m qubits are the measured qubits.
+       the first m qubits are the measured qubits.
       @param u1 DD representation of first circuit
       @param u2 DD representation of second circuit
       @param m Number of measured qubits
