@@ -2600,9 +2600,6 @@ private:
 
     // the matrix of the current DD has dimensions 2^n x 2^n
     const auto n = e.p->v + 1;
-    if (upperOffset < 0 && m < n) {
-      throw std::runtime_error("offset less than 0.");
-    }
     if (upperOffset >= (1 << n) || upperOffset < 0) {
       return mEdge::zero();
     }
