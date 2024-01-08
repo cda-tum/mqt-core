@@ -359,8 +359,9 @@ public:
     size_t implicitControls{0};
 
     if (iter == gates.end()) {
-      if (identifier == "mcx_gray" || identifier == "mcx_vchain" ||
-          identifier == "mcx_recursive" || identifier == "mcphase") {
+      if (identifier == "mcx" || identifier == "mcx_gray" ||
+          identifier == "mcx_vchain" || identifier == "mcx_recursive" ||
+          identifier == "mcphase") {
         // we create a temp gate definition for these gates
         gate =
             getMcGateDefinition(identifier, gateCallStatement->operands.size(),
