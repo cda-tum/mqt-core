@@ -5,7 +5,7 @@ namespace dd {
 
 // get next garbage qubit after n
 inline Qubit getNextGarbage(Qubit n, const std::vector<bool>& garbage) {
-  while (n < garbage.size() && !garbage.at(n)) {
+  while (n < static_cast<Qubit>(garbage.size()) && !garbage.at(n)) {
     n++;
   }
   return n;

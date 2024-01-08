@@ -2627,7 +2627,7 @@ private:
 
     // if the current submatrix size is less than 2^m,
     // then the offset of the lower half needs to be adapted
-    bool adaptOffsetOfLowerMatrixHalf = n <= m;
+    const bool adaptOffsetOfLowerMatrixHalf = n <= m;
     edges[0] = shiftAllRowsRecursive(e.p->e[0], m, d, upperOffset);
     if (n <= d) {
       // CASE 1: this (sub)matrix has size < 2^d
@@ -2639,7 +2639,7 @@ private:
       edges[2] = shiftAllRowsRecursive(e.p->e[2], m, d, upperOffset);
       edges[3] = shiftAllRowsRecursive(e.p->e[3], m, d, upperOffset);
     } else {
-      std::int64_t addedOffset{1 << (n - 1 - d)};
+      const std::int64_t addedOffset{1 << (n - 1 - d)};
       if (upperOffset + addedOffset < (1 << m)) {
         // CASE 2: this submatrix doesn't contain ancilla qubits
         // -> we don't need to set any columns to zero
