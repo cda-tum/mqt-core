@@ -692,6 +692,22 @@ TEST_F(Qasm3ParserTest, ImportQasm2CPrefix) {
   EXPECT_EQ(out, expected);
 }
 
+TEST_F(Qasm3ParserTest, ImportMCXGate) {
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "qubit[4] q;\n"
+                               "mcx q[0], q[1], q[2], q[3];\n";
+  auto qc = QuantumComputation::fromQASM(testfile);
+
+  const std::string out = qc.toQASM();
+  const std::string expected = "// i 0 1 2 3\n"
+                               "// o 0 1 2 3\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[4] q;\n"
+                               "ctrl(3) @ x q[0], q[1], q[2], q[3];\n";
+  EXPECT_EQ(out, expected);
+}
+
 TEST_F(Qasm3ParserTest, ImportQasm2CPrefixInvalidGate) {
   const std::string testfile = "OPENQASM 2.0;\n"
                                "qubit[5] q;\n"
