@@ -3,7 +3,7 @@
 namespace dd {
 template <class Config>
 MatrixDD buildFunctionality(const QuantumComputation* qc, Package<Config>& dd,
-                            bool reduceAncillaeQubits,
+                            bool reduceAncillaryQubits,
                             bool reduceGarbageQubits) {
   const auto nq = qc->getNqubits();
   if (nq == 0U) {
@@ -28,7 +28,7 @@ MatrixDD buildFunctionality(const QuantumComputation* qc, Package<Config>& dd,
   }
   // correct permutation if necessary
   changePermutation(e, permutation, qc->outputPermutation, dd);
-  if (reduceAncillaeQubits) {
+  if (reduceAncillaryQubits) {
     e = dd.reduceAncillae(e, qc->ancillary);
   }
   if (reduceGarbageQubits) {
@@ -41,7 +41,7 @@ MatrixDD buildFunctionality(const QuantumComputation* qc, Package<Config>& dd,
 template <class Config>
 MatrixDD buildFunctionalityRecursive(const QuantumComputation* qc,
                                      Package<Config>& dd,
-                                     bool reduceAncillaeQubits,
+                                     bool reduceAncillaryQubits,
                                      bool reduceGarbageQubits) {
   if (qc->getNqubits() == 0U) {
     return MatrixDD::one();
@@ -68,7 +68,7 @@ MatrixDD buildFunctionalityRecursive(const QuantumComputation* qc,
   // correct permutation if necessary
   changePermutation(e, permutation, qc->outputPermutation, dd);
 
-  if (reduceAncillaeQubits) {
+  if (reduceAncillaryQubits) {
     e = dd.reduceAncillae(e, qc->ancillary);
   }
   if (reduceGarbageQubits) {
@@ -212,11 +212,11 @@ MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
 
 template MatrixDD buildFunctionality(const qc::QuantumComputation* qc,
                                      Package<DDPackageConfig>& dd,
-                                     bool reduceAncillaeQubits,
+                                     bool reduceAncillaryQubits,
                                      bool reduceGarbageQubits);
 template MatrixDD buildFunctionalityRecursive(const qc::QuantumComputation* qc,
                                               Package<DDPackageConfig>& dd,
-                                              bool reduceAncillaeQubits,
+                                              bool reduceAncillaryQubits,
                                               bool reduceGarbageQubits);
 template bool buildFunctionalityRecursive(const qc::QuantumComputation* qc,
                                           const std::size_t depth,

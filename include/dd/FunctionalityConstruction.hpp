@@ -9,13 +9,13 @@ using namespace qc;
 
 template <class Config>
 MatrixDD buildFunctionality(const QuantumComputation* qc, Package<Config>& dd,
-                            bool reduceAncillaeQubits = true,
+                            bool reduceAncillaryQubits = true,
                             bool reduceGarbageQubits = true);
 
 template <class Config>
 MatrixDD buildFunctionalityRecursive(const QuantumComputation* qc,
                                      Package<Config>& dd,
-                                     bool reduceAncillaeQubits = true,
+                                     bool reduceAncillaryQubits = true,
                                      bool reduceGarbageQubits = true);
 
 template <class Config>

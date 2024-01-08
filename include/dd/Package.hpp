@@ -2706,9 +2706,9 @@ private:
     return multiply(conjugateTranspose(u), u2);
   }
 
-  ComputeTable<mEdge, Qubit, bool> zeroAncillaPECComputeTable{};
+  ComputeTable<mEdge, Qubit, bool> zeroAncillaePECComputeTable{};
 
-  bool zeroAncillaPartialEquivalenceCheckSubroutine(mEdge e, Qubit m) {
+  bool zeroAncillaePartialEquivalenceCheckSubroutine(mEdge e, Qubit m) {
     if (e.isTerminal()) {
       return true;
     }
@@ -2716,7 +2716,7 @@ private:
 
     const mEdge eCopy{e.p, Complex::one()};
     // check if it's in the compute table with an edge weight of one
-    if (const auto* r = zeroAncillaPECComputeTable.lookup(eCopy, m);
+    if (const auto* r = zeroAncillaePECComputeTable.lookup(eCopy, m);
         r != nullptr) {
       auto f = *r;
       return f;
@@ -2724,17 +2724,17 @@ private:
     bool result = false;
     if (m >= n) {
       result = e.p->e[1].isZeroTerminal() && e.p->e[2].isZeroTerminal() &&
-               zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[0], m) &&
-               zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[3], m);
+               zeroAncillaePartialEquivalenceCheckSubroutine(e.p->e[0], m) &&
+               zeroAncillaePartialEquivalenceCheckSubroutine(e.p->e[3], m);
     } else {
-      result = zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[0], m) &&
-               zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[1], m) &&
-               zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[2], m) &&
-               zeroAncillaPartialEquivalenceCheckSubroutine(e.p->e[3], m);
+      result = zeroAncillaePartialEquivalenceCheckSubroutine(e.p->e[0], m) &&
+               zeroAncillaePartialEquivalenceCheckSubroutine(e.p->e[1], m) &&
+               zeroAncillaePartialEquivalenceCheckSubroutine(e.p->e[2], m) &&
+               zeroAncillaePartialEquivalenceCheckSubroutine(e.p->e[3], m);
     }
 
     // add to the compute table with a weight of 1
-    zeroAncillaPECComputeTable.insert(eCopy, m, result);
+    zeroAncillaePECComputeTable.insert(eCopy, m, result);
     return result;
   }
 
@@ -2797,9 +2797,9 @@ public:
       @param m Number of measured qubits
       @return true if the two circuits u1 and u2 are partially equivalent.
       **/
-  bool zeroAncillaPartialEquivalenceCheck(mEdge u1, mEdge u2, Qubit m) {
+  bool zeroAncillaePartialEquivalenceCheck(mEdge u1, mEdge u2, Qubit m) {
     auto u1u2 = multiply(u1, conjugateTranspose(u2));
-    return zeroAncillaPartialEquivalenceCheckSubroutine(u1u2, m);
+    return zeroAncillaePartialEquivalenceCheckSubroutine(u1u2, m);
   }
 };
 

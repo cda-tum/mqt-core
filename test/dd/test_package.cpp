@@ -2187,7 +2187,7 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingTestNotEquivalent) {
   auto circuit1 = dd->multiply(xGate, hGate);
   auto circuit2 = dd->makeIdent(2);
   EXPECT_FALSE(dd->partialEquivalenceCheck(circuit1, circuit2, 2, 1));
-  EXPECT_FALSE(dd->zeroAncillaPartialEquivalenceCheck(circuit1, circuit2, 1));
+  EXPECT_FALSE(dd->zeroAncillaePartialEquivalenceCheck(circuit1, circuit2, 1));
 }
 
 TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaper) {
@@ -2207,7 +2207,7 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaper) {
   EXPECT_TRUE(dd->partialEquivalenceCheck(c1, c2, 3, 1));
 }
 
-TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaperZeroAncilla) {
+TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaperZeroAncillae) {
   const auto nqubits = 3U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
@@ -2221,8 +2221,8 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaperZeroAncilla) {
       dd->multiply(hGate, dd->multiply(zGate, controlledSwapGate)));
   auto c2 = dd->multiply(controlledHGate, xGate);
 
-  EXPECT_TRUE(dd->zeroAncillaPartialEquivalenceCheck(c1, c2, 1));
-  EXPECT_FALSE(dd->zeroAncillaPartialEquivalenceCheck(c1, c2, 2));
+  EXPECT_TRUE(dd->zeroAncillaePartialEquivalenceCheck(c1, c2, 1));
+  EXPECT_FALSE(dd->zeroAncillaePartialEquivalenceCheck(c1, c2, 2));
 
   auto hGate2 = dd->makeGateDD(dd::H_MAT, nqubits, 2);
   auto zGate2 = dd->makeGateDD(dd::Z_MAT, nqubits, 0);
@@ -2234,7 +2234,7 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaperZeroAncilla) {
       dd->multiply(hGate2, dd->multiply(zGate2, controlledSwapGate)));
   auto c4 = dd->multiply(controlledHGate2, xGate);
 
-  EXPECT_FALSE(dd->zeroAncillaPartialEquivalenceCheck(c3, c4, 1));
+  EXPECT_FALSE(dd->zeroAncillaePartialEquivalenceCheck(c3, c4, 1));
 }
 
 TEST(DDPackageTest,
@@ -2273,7 +2273,7 @@ TEST(DDPackageTest, DDMPartialEquivalenceWithDifferentNumberOfQubits) {
       dd->multiply(hGate, dd->multiply(zGate, controlledSwapGate)));
   auto c2 = dd->multiply(controlledHGate, xGate);
 
-  // EXPECT_TRUE(dd->zeroAncillaPartialEquivalenceCheck(c1, c2, 1));
+  // EXPECT_TRUE(dd->zeroAncillaePartialEquivalenceCheck(c1, c2, 1));
   EXPECT_TRUE(dd->partialEquivalenceCheck(c1, c2, 3, 1));
   EXPECT_FALSE(dd->partialEquivalenceCheck(c2, c1, 3, 3));
   EXPECT_FALSE(dd->partialEquivalenceCheck(c2, dd::mEdge::zero(), 2, 1));
@@ -2374,7 +2374,7 @@ TEST(DDPackageTest, DDMZAPECMQTBenchQPE30Qubits) {
   // auto f2 = buildFunctionality(&c2, *dd, false, false);
 
   // 29 measured qubits and 30 data qubits
-  // calls zeroAncillaPartialEquivalenceCheck
+  // calls zeroAncillaePartialEquivalenceCheck
 
   // EXPECT_TRUE(dd->partialEquivalenceCheck(f1, f2, 30, 29));
   EXPECT_TRUE(true);
@@ -2387,21 +2387,21 @@ TEST(DDPackageTest, DDMZAPECSliQEC19Qubits) {
   qc::QuantumComputation c1{"./circuits/entanglement_1.qasm"};
   qc::QuantumComputation c2{"./circuits/entanglement_2.qasm"};
 
-  // calls zeroAncillaPartialEquivalenceCheck
+  // calls zeroAncillaePartialEquivalenceCheck
   EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
 
   // full equivalence, 19 qubits
   qc::QuantumComputation c3{"./circuits/add6_196_1.qasm"};
   qc::QuantumComputation c4{"./circuits/add6_196_2.qasm"};
 
-  // calls zeroAncillaPartialEquivalenceCheck
+  // calls zeroAncillaePartialEquivalenceCheck
   EXPECT_TRUE(dd::partialEquivalenceCheck(c3, c4, dd));
 
   // full equivalence, 10 qubits
   qc::QuantumComputation c5{"./circuits/bv_1.qasm"};
   qc::QuantumComputation c6{"./circuits/bv_2.qasm"};
 
-  // calls zeroAncillaPartialEquivalenceCheck
+  // calls zeroAncillaePartialEquivalenceCheck
   EXPECT_TRUE(dd::partialEquivalenceCheck(c5, c6, dd));
 }
 
@@ -2440,7 +2440,7 @@ TEST(DDPackageTest, DDMPECSliQECAdd19Qubits) {
 
   // full equivalence, 19 qubits
   // but this test uses algorithm for partial equivalence, not the "zero
-  // ancilla" version
+  // ancillae" version
   qc::QuantumComputation c1{"./circuits/add6_196_1.qasm"};
   qc::QuantumComputation c2{"./circuits/add6_196_2.qasm"};
 
@@ -2484,7 +2484,7 @@ TEST(DDPackageTest, DDMPECSliQECPeriodFinding8Qubits) {
   EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
 }
 
-TEST(DDPackageTest, ReduceAncillaRegression) {
+TEST(DDPackageTest, ReduceAncillaeRegression) {
   auto dd = std::make_unique<dd::Package<>>(2);
   const auto inputMatrix =
       dd::CMat{{1, 1, 1, 1}, {1, -1, 1, -1}, {1, 1, -1, -1}, {1, -1, -1, 1}};
