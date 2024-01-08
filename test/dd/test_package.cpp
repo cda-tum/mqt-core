@@ -2433,3 +2433,24 @@ TEST(DDPackageTest, DDMPECSliQECPeriodFinding) {
   c1.setLogicalQubitGarbage(4);
   EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
 }
+
+TEST(DDPackageTest, DDMPECBenchmark) {
+  auto dd = std::make_unique<dd::Package<>>(7);
+
+  auto [c1, c2] = dd::generateRandomBenchmark(5, 3, 1);
+
+  std::cout << "circuit 1: \n";
+  c1.print(std::cout);
+  std::cout << "circuit 2: \n";
+  c2.print(std::cout);
+
+  c1.setLogicalQubitAncillary(3);
+  c1.setLogicalQubitAncillary(4);
+
+  c2.setLogicalQubitGarbage(1);
+  c2.setLogicalQubitGarbage(2);
+  c2.setLogicalQubitGarbage(3);
+  c2.setLogicalQubitGarbage(4);
+
+  EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
+}
