@@ -2058,8 +2058,8 @@ TEST(DDPackageTest, DDMShiftAllRows3QubitsPart1) {
                {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
                {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
-  dd::Qubit m = 2;
-  dd::Qubit d = 1;
+  const dd::Qubit m = 2;
+  const dd::Qubit d = 1;
   const auto outputMatrix = dd->shiftAllRows(inputDD, m, d);
   const auto expectedOutputMatrix =
       dd->makeDDFromMatrix(dd::CMat{{1, 2, 0, 0, 0, 0, 0, 0},
@@ -2082,8 +2082,8 @@ TEST(DDPackageTest, DDMShiftAllRows3QubitsPart2) {
                {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
                {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
-  dd::Qubit m = 1;
-  dd::Qubit d = 2;
+  const dd::Qubit m = 1;
+  const dd::Qubit d = 2;
   const auto outputMatrix = dd->shiftAllRows(inputDD, m, d);
   const auto expectedOutputMatrix =
       dd->makeDDFromMatrix(dd::CMat{{1, 2, 3, 4, 0, 0, 0, 0},
@@ -2107,8 +2107,8 @@ TEST(DDPackageTest, DDMShiftAllRows3QubitsPart3) {
                {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8},
                {1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
-  dd::Qubit m = 1;
-  dd::Qubit d = 1;
+  const dd::Qubit m = 1;
+  const dd::Qubit d = 1;
   const auto outputMatrix = dd->shiftAllRows(inputDD, m, d);
   auto outputMatrixMatrix = outputMatrix.getMatrix();
   const auto expectedOutputMatrix =
@@ -2384,22 +2384,22 @@ TEST(DDPackageTest, DDMZAPECSliQEC19Qubits) {
   auto dd = std::make_unique<dd::Package<>>(20);
 
   // full equivalence, 10 qubits
-  qc::QuantumComputation c1{"./circuits/entanglement_1.qasm"};
-  qc::QuantumComputation c2{"./circuits/entanglement_2.qasm"};
+  const qc::QuantumComputation c1{"./circuits/entanglement_1.qasm"};
+  const qc::QuantumComputation c2{"./circuits/entanglement_2.qasm"};
 
   // calls zeroAncillaePartialEquivalenceCheck
   EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
 
   // full equivalence, 19 qubits
-  qc::QuantumComputation c3{"./circuits/add6_196_1.qasm"};
-  qc::QuantumComputation c4{"./circuits/add6_196_2.qasm"};
+  const qc::QuantumComputation c3{"./circuits/add6_196_1.qasm"};
+  const qc::QuantumComputation c4{"./circuits/add6_196_2.qasm"};
 
   // calls zeroAncillaePartialEquivalenceCheck
   EXPECT_TRUE(dd::partialEquivalenceCheck(c3, c4, dd));
 
   // full equivalence, 10 qubits
-  qc::QuantumComputation c5{"./circuits/bv_1.qasm"};
-  qc::QuantumComputation c6{"./circuits/bv_2.qasm"};
+  const qc::QuantumComputation c5{"./circuits/bv_1.qasm"};
+  const qc::QuantumComputation c6{"./circuits/bv_2.qasm"};
 
   // calls zeroAncillaePartialEquivalenceCheck
   EXPECT_TRUE(dd::partialEquivalenceCheck(c5, c6, dd));
@@ -2409,8 +2409,8 @@ TEST(DDPackageTest, DDMZAPECSliQECRandomCircuit) {
   // doesn't terminate
   auto dd = std::make_unique<dd::Package<>>(20);
   // full equivalence, 10 qubits
-  qc::QuantumComputation c1{"./circuits/random_1.qasm"};
-  qc::QuantumComputation c2{"./circuits/random_2.qasm"};
+  const qc::QuantumComputation c1{"./circuits/random_1.qasm"};
+  const qc::QuantumComputation c2{"./circuits/random_2.qasm"};
 
   // calls buildFunctionality for c1 and c2
   // -> this is already very very slow on my computer
@@ -2422,9 +2422,9 @@ TEST(DDPackageTest, DDMPECSliQECGrover22Qubits) {
   // doesn't terminate
   auto dd = std::make_unique<dd::Package<>>(22);
 
-  qc::QuantumComputation c1{
+  const qc::QuantumComputation c1{
       "./circuits/Grover_1.qasm"}; // 11 qubits, 11 data qubits
-  qc::QuantumComputation c2{
+  const qc::QuantumComputation c2{
       "./circuits/Grover_2.qasm"}; // 12 qubits, 11 data qubits
 
   // 11 measured qubits and 11 data qubits
@@ -2441,8 +2441,8 @@ TEST(DDPackageTest, DDMPECSliQECAdd19Qubits) {
   // full equivalence, 19 qubits
   // but this test uses algorithm for partial equivalence, not the "zero
   // ancillae" version
-  qc::QuantumComputation c1{"./circuits/add6_196_1.qasm"};
-  qc::QuantumComputation c2{"./circuits/add6_196_2.qasm"};
+  const qc::QuantumComputation c1{"./circuits/add6_196_1.qasm"};
+  const qc::QuantumComputation c2{"./circuits/add6_196_2.qasm"};
 
   // just for benchmarking reasons, we only measure 8 qubits
   auto c1Dd = buildFunctionality(&c1, *dd, false, false);
