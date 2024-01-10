@@ -12,11 +12,10 @@
 namespace dd {
 // single-target Operations
 template <class Config>
-qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
-                                    std::unique_ptr<Package<Config>>& dd,
-                                    const qc::Controls& controls,
-                                    const qc::Qubit target,
-                                    const bool inverse) {
+qc::MatrixDD
+getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
+                       const qc::Controls& controls, const qc::Qubit target,
+                       const bool inverse) {
   GateMatrix gm;
 
   const auto type = op->getType();
@@ -89,16 +88,15 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
     oss << "DD for gate" << op->getName() << " not available!";
     throw qc::QFRException(oss.str());
   }
-  return dd->makeGateDD(gm, nqubits, controls, target, startQubit);
+  return dd.makeGateDD(gm, nqubits, controls, target, startQubit);
 }
 
 // two-target Operations
 template <class Config>
-qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
-                                    std::unique_ptr<Package<Config>>& dd,
-                                    const qc::Controls& controls,
-                                    qc::Qubit target0, qc::Qubit target1,
-                                    const bool inverse) {
+qc::MatrixDD
+getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
+                       const qc::Controls& controls, qc::Qubit target0,
+                       qc::Qubit target1, const bool inverse) {
   const auto type = op->getType();
   const auto nqubits = op->getNqubits();
   const auto startQubit = op->getStartingQubit();
@@ -154,88 +152,86 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
       definitionFound = false;
     }
     if (definitionFound) {
-      return dd->makeTwoQubitGateDD(gm, nqubits, target0, target1, startQubit);
+      return dd.makeTwoQubitGateDD(gm, nqubits, target0, target1, startQubit);
     }
   }
 
   switch (type) {
   case qc::SWAP:
     // SWAP is self-inverse
-    return dd->makeSWAPDD(nqubits, controls, target0, target1, startQubit);
+    return dd.makeSWAPDD(nqubits, controls, target0, target1, startQubit);
   case qc::iSWAP:
     if (inverse) {
-      return dd->makeiSWAPinvDD(nqubits, controls, target0, target1,
-                                startQubit);
+      return dd.makeiSWAPinvDD(nqubits, controls, target0, target1, startQubit);
     }
-    return dd->makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
+    return dd.makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
   case qc::iSWAPdg:
     if (inverse) {
-      return dd->makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
+      return dd.makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
     }
-    return dd->makeiSWAPinvDD(nqubits, controls, target0, target1, startQubit);
+    return dd.makeiSWAPinvDD(nqubits, controls, target0, target1, startQubit);
   case qc::Peres:
     if (inverse) {
-      return dd->makePeresdagDD(nqubits, controls, target0, target1,
-                                startQubit);
+      return dd.makePeresdagDD(nqubits, controls, target0, target1, startQubit);
     }
-    return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
+    return dd.makePeresDD(nqubits, controls, target0, target1, startQubit);
   case qc::Peresdg:
     if (inverse) {
-      return dd->makePeresDD(nqubits, controls, target0, target1, startQubit);
+      return dd.makePeresDD(nqubits, controls, target0, target1, startQubit);
     }
-    return dd->makePeresdagDD(nqubits, controls, target0, target1, startQubit);
+    return dd.makePeresdagDD(nqubits, controls, target0, target1, startQubit);
   case qc::DCX:
-    return dd->makeDCXDD(nqubits, controls, target0, target1, startQubit);
+    return dd.makeDCXDD(nqubits, controls, target0, target1, startQubit);
   case qc::ECR:
     // ECR is self-inverse
-    return dd->makeECRDD(nqubits, controls, target0, target1, startQubit);
+    return dd.makeECRDD(nqubits, controls, target0, target1, startQubit);
   case qc::RXX: {
     if (inverse) {
-      return dd->makeRXXDD(nqubits, controls, target0, target1, -parameter[0U],
-                           startQubit);
+      return dd.makeRXXDD(nqubits, controls, target0, target1, -parameter[0U],
+                          startQubit);
     }
-    return dd->makeRXXDD(nqubits, controls, target0, target1, parameter[0U],
-                         startQubit);
+    return dd.makeRXXDD(nqubits, controls, target0, target1, parameter[0U],
+                        startQubit);
   }
   case qc::RYY: {
     if (inverse) {
-      return dd->makeRYYDD(nqubits, controls, target0, target1, -parameter[0U],
-                           startQubit);
+      return dd.makeRYYDD(nqubits, controls, target0, target1, -parameter[0U],
+                          startQubit);
     }
-    return dd->makeRYYDD(nqubits, controls, target0, target1, parameter[0U],
-                         startQubit);
+    return dd.makeRYYDD(nqubits, controls, target0, target1, parameter[0U],
+                        startQubit);
   }
   case qc::RZZ: {
     if (inverse) {
-      return dd->makeRZZDD(nqubits, controls, target0, target1, -parameter[0U],
-                           startQubit);
+      return dd.makeRZZDD(nqubits, controls, target0, target1, -parameter[0U],
+                          startQubit);
     }
-    return dd->makeRZZDD(nqubits, controls, target0, target1, parameter[0U],
-                         startQubit);
+    return dd.makeRZZDD(nqubits, controls, target0, target1, parameter[0U],
+                        startQubit);
   }
   case qc::RZX: {
     if (inverse) {
-      return dd->makeRZXDD(nqubits, controls, target0, target1, -parameter[0U],
-                           startQubit);
+      return dd.makeRZXDD(nqubits, controls, target0, target1, -parameter[0U],
+                          startQubit);
     }
-    return dd->makeRZXDD(nqubits, controls, target0, target1, parameter[0U],
-                         startQubit);
+    return dd.makeRZXDD(nqubits, controls, target0, target1, parameter[0U],
+                        startQubit);
   }
   case qc::XXminusYY: {
     if (inverse) {
-      return dd->makeXXMinusYYDD(nqubits, controls, target0, target1,
-                                 -parameter[0U], parameter[1U], startQubit);
+      return dd.makeXXMinusYYDD(nqubits, controls, target0, target1,
+                                -parameter[0U], parameter[1U], startQubit);
     }
-    return dd->makeXXMinusYYDD(nqubits, controls, target0, target1,
-                               parameter[0U], parameter[1U], startQubit);
+    return dd.makeXXMinusYYDD(nqubits, controls, target0, target1,
+                              parameter[0U], parameter[1U], startQubit);
   }
   case qc::XXplusYY: {
     if (inverse) {
-      return dd->makeXXPlusYYDD(nqubits, controls, target0, target1,
-                                -parameter[0U], parameter[1U], startQubit);
+      return dd.makeXXPlusYYDD(nqubits, controls, target0, target1,
+                               -parameter[0U], parameter[1U], startQubit);
     }
-    return dd->makeXXPlusYYDD(nqubits, controls, target0, target1,
-                              parameter[0U], parameter[1U], startQubit);
+    return dd.makeXXPlusYYDD(nqubits, controls, target0, target1, parameter[0U],
+                             parameter[1U], startQubit);
   }
   default:
     std::ostringstream oss{};
@@ -250,8 +246,7 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
 //      then cx 0 1 will be translated to cx perm[0] perm[1] == cx 1 0
 
 template <class Config>
-qc::MatrixDD getDD(const qc::Operation* op,
-                   std::unique_ptr<Package<Config>>& dd,
+qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
                    qc::Permutation& permutation, const bool inverse = false) {
   const auto type = op->getType();
   const auto nqubits = op->getNqubits();
@@ -278,11 +273,11 @@ qc::MatrixDD getDD(const qc::Operation* op,
     const auto target1 = targets[1U];
     // update permutation
     std::swap(permutation.at(target0), permutation.at(target1));
-    return dd->makeIdent(nqubits);
+    return dd.makeIdent(nqubits);
   }
 
   if (type == qc::Barrier) {
-    return dd->makeIdent(nqubits);
+    return dd.makeIdent(nqubits);
   }
 
   if (type == qc::GPhase) {
@@ -290,8 +285,8 @@ qc::MatrixDD getDD(const qc::Operation* op,
     if (inverse) {
       phase = -phase;
     }
-    auto id = dd->makeIdent(nqubits);
-    id.w = dd->cn.lookup(std::cos(phase), std::sin(phase));
+    auto id = dd.makeIdent(nqubits);
+    id.w = dd.cn.lookup(std::cos(phase), std::sin(phase));
     return id;
   }
 
@@ -314,14 +309,14 @@ qc::MatrixDD getDD(const qc::Operation* op,
   }
 
   if (const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
-    auto e = dd->makeIdent(op->getNqubits());
+    auto e = dd.makeIdent(op->getNqubits());
     if (inverse) {
       for (const auto& operation : *compoundOp) {
-        e = dd->multiply(e, getInverseDD(operation.get(), dd, permutation));
+        e = dd.multiply(e, getInverseDD(operation.get(), dd, permutation));
       }
     } else {
       for (const auto& operation : *compoundOp) {
-        e = dd->multiply(getDD(operation.get(), dd, permutation), e);
+        e = dd.multiply(getDD(operation.get(), dd, permutation), e);
       }
     }
     return e;
@@ -337,22 +332,19 @@ qc::MatrixDD getDD(const qc::Operation* op,
 }
 
 template <class Config>
-qc::MatrixDD getDD(const qc::Operation* op,
-                   std::unique_ptr<Package<Config>>& dd,
+qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
                    const bool inverse = false) {
   qc::Permutation perm{};
   return getDD(op, dd, perm, inverse);
 }
 
 template <class Config>
-qc::MatrixDD getInverseDD(const qc::Operation* op,
-                          std::unique_ptr<Package<Config>>& dd) {
+qc::MatrixDD getInverseDD(const qc::Operation* op, Package<Config>& dd) {
   return getDD(op, dd, true);
 }
 
 template <class Config>
-qc::MatrixDD getInverseDD(const qc::Operation* op,
-                          std::unique_ptr<Package<Config>>& dd,
+qc::MatrixDD getInverseDD(const qc::Operation* op, Package<Config>& dd,
                           qc::Permutation& permutation) {
   return getDD(op, dd, permutation, true);
 }
@@ -360,14 +352,13 @@ qc::MatrixDD getInverseDD(const qc::Operation* op,
 template <class Config>
 void dumpTensor(qc::Operation* op, std::ostream& of,
                 std::vector<std::size_t>& inds, std::size_t& gateIdx,
-                std::unique_ptr<Package<Config>>& dd);
+                Package<Config>& dd);
 
 // apply swaps 'on' DD in order to change 'from' to 'to'
 // where |from| >= |to|
 template <class DDType, class Config>
 void changePermutation(DDType& on, qc::Permutation& from,
-                       const qc::Permutation& to,
-                       std::unique_ptr<Package<Config>>& dd,
+                       const qc::Permutation& to, Package<Config>& dd,
                        const bool regular = true) {
   assert(from.size() >= to.size());
   if (on.isTerminal()) {
@@ -403,21 +394,21 @@ void changePermutation(DDType& on, qc::Permutation& from,
     // swap i and j
     auto saved = on;
     const auto swapDD =
-        dd->makeTwoQubitGateDD(SWAP_MAT, on.p->v + 1U, from.at(i), from.at(j));
+        dd.makeTwoQubitGateDD(SWAP_MAT, on.p->v + 1U, from.at(i), from.at(j));
     if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
-      on = dd->multiply(swapDD, on);
+      on = dd.multiply(swapDD, on);
     } else {
       // the regular flag only has an effect on matrix DDs
       if (regular) {
-        on = dd->multiply(swapDD, on);
+        on = dd.multiply(swapDD, on);
       } else {
-        on = dd->multiply(on, swapDD);
+        on = dd.multiply(on, swapDD);
       }
     }
 
-    dd->incRef(on);
-    dd->decRef(saved);
-    dd->garbageCollect();
+    dd.incRef(on);
+    dd.decRef(saved);
+    dd.garbageCollect();
 
     // update permutation
     from.at(i) = goal;

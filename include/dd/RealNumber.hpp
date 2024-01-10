@@ -99,21 +99,6 @@ struct RealNumber {
   [[nodiscard]] static bool approximatelyZero(const RealNumber* e) noexcept;
 
   /**
-   * @brief Check whether a floating point number is approximately one.
-   * @param e The floating point number to check.
-   * @returns Whether the floating point number is approximately one.
-   */
-  [[nodiscard]] static bool approximatelyOne(fp e) noexcept;
-
-  /**
-   * @brief Check whether a number is approximately one.
-   * @param e The number to check.
-   * @returns Whether the number is approximately one.
-   * @see approximatelyOne(fp)
-   */
-  [[nodiscard]] static bool approximatelyOne(const RealNumber* e) noexcept;
-
-  /**
    * @brief Indicates whether a given number needs reference count updates.
    * @details This function checks whether a given number needs reference count
    * updates. A number needs reference count updates if the pointer to it is

@@ -1,43 +1,21 @@
 #include "dd/ComplexNumbers.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/Export.hpp"
 
 #include "gmock/gmock.h"
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
+#include <array>
 #include <limits>
-#include <memory>
+#include <vector>
 
 using namespace dd;
-using CN = ComplexNumbers;
 
 class CNTest : public testing::Test {
 protected:
   MemoryManager<RealNumber> mm{};
-  MemoryManager<RealNumber> cm{};
   RealNumberUniqueTable ut{mm};
-  ComplexNumbers cn{ut, cm};
+  ComplexNumbers cn{ut};
 };
-
-TEST_F(CNTest, TrivialTest) {
-  const auto beforeCount = cn.cacheCount();
-
-  auto a = cn.getCached(2, -3);
-  auto b = cn.getCached(3, 2);
-
-  auto r0 = cn.getCached(12, -5);
-  auto r1 = cn.mulCached(a, b);
-  auto r2 = cn.divCached(r0, r1);
-
-  const auto betweenCount = cn.cacheCount();
-  ASSERT_LE(beforeCount, betweenCount);
-  cn.returnToCache(a);
-  cn.returnToCache(b);
-  cn.returnToCache(r0);
-  cn.returnToCache(r1);
-  cn.returnToCache(r2);
-  ut.garbageCollect(true);
-  const auto endCount = cn.cacheCount();
-  ASSERT_EQ(beforeCount, endCount);
-}
 
 TEST_F(CNTest, ComplexNumberCreation) {
   EXPECT_TRUE(cn.lookup(Complex::zero()).exactlyZero());
@@ -230,14 +208,6 @@ TEST_F(CNTest, LookupInNeighbouringBuckets) {
   const auto key6 = RealNumberUniqueTable::hash(num6 + RealNumber::eps);
   EXPECT_EQ(hashNextBorder, key6);
   EXPECT_NEAR(d.r->value, numNextBorder, RealNumber::eps);
-}
-
-TEST(DDComplexTest, ComplexValueEquals) {
-  const ComplexValue a{1.0, 0.0};
-  const ComplexValue aTol{1.0 + RealNumber::eps / 10, 0.0};
-  const ComplexValue b{0.0, 1.0};
-  EXPECT_TRUE(a.approximatelyEquals(aTol));
-  EXPECT_FALSE(a.approximatelyEquals(b));
 }
 
 TEST(DDComplexTest, LowestFractions) {
@@ -475,33 +445,6 @@ TEST_F(CNTest, ComplexTableAllocation) {
   // obtain the same entry again, but this time from the available stack
   auto* entry2 = mem.get();
   EXPECT_EQ(entry, entry2);
-}
-
-TEST_F(CNTest, ComplexCacheAllocation) {
-  auto allocs = cm.getStats().numAllocated;
-  std::cout << allocs << "\n";
-  std::vector<Complex> cnums{allocs};
-  // get all the cached complex numbers that are pre-allocated
-  for (auto i = 0U; i < allocs; i += 2) {
-    cnums[i % 2] = cn.getCached();
-  }
-
-  // trigger new allocation for obtaining a complex from cache
-  const auto cnum = cn.getCached();
-  ASSERT_NE(cnum.r, nullptr);
-  ASSERT_NE(cnum.i, nullptr);
-  EXPECT_EQ(cm.getStats().numAllocated,
-            (1. + MemoryManager<RealNumber>::GROWTH_FACTOR) *
-                static_cast<fp>(allocs));
-
-  // clearing the cache should reduce the allocated size to the original size
-  cm.reset();
-  EXPECT_EQ(cm.getStats().numAllocated, allocs);
-
-  // get all the cached complex numbers again
-  for (auto i = 0U; i < allocs; i += 2) {
-    cnums[i % 2] = cn.getCached();
-  }
 }
 
 TEST_F(CNTest, DoubleHitInFindOrInsert) {

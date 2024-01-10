@@ -9,13 +9,8 @@ Ready to contribute to the project? Here is how to set up a local development en
 2. Clone your fork locally
 
    ```console
-   $ git clone git@github.com:your_name_here/mqt-core --recursive
+   $ git clone git@github.com:your_name_here/mqt-core.git
    ```
-
-   :::{warning}
-   The {code}`--recursive` flag is required to also clone all the required submodules.
-   If you happen to forget passing the flag on your initial clone, you can initialize all the submodules by executing {code}`git submodule update --init --recursive` in the main project directory.
-   :::
 
 3. Change into the project directory
 

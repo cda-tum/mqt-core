@@ -201,17 +201,17 @@ TEST_F(QFRFunctionality, StripIdleAndDump) {
 
   ss << testfile;
   auto qc = qc::QuantumComputation();
-  qc.import(ss, qc::Format::OpenQASM);
+  qc.import(ss, qc::Format::OpenQASM2);
   qc.print(std::cout);
   qc.stripIdleQubits();
   qc.print(std::cout);
   std::stringstream goal{};
   qc.print(goal);
   std::stringstream test{};
-  qc.dump(test, qc::Format::OpenQASM);
+  qc.dump(test, qc::Format::OpenQASM2);
   std::cout << test.str() << "\n";
   qc.reset();
-  qc.import(test, qc::Format::OpenQASM);
+  qc.import(test, qc::Format::OpenQASM2);
   qc.print(std::cout);
   qc.stripIdleQubits();
   qc.print(std::cout);
@@ -673,7 +673,7 @@ TEST_F(QFRFunctionality, removeFinalMeasurementsWithOperationsInFront) {
   std::stringstream ss{};
   ss << circ;
   QuantumComputation qc{};
-  qc.import(ss, qc::Format::OpenQASM);
+  qc.import(ss, qc::Format::OpenQASM2);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::removeFinalMeasurements(qc);
@@ -1878,10 +1878,10 @@ TEST_F(QFRFunctionality, RzAndPhaseDifference) {
                            "cp(1/8) q[0],q[1];\n";
   std::stringstream ss;
   ss << qasm;
-  qc.import(ss, qc::Format::OpenQASM);
+  qc.import(ss, qc::Format::OpenQASM2);
   std::cout << qc << "\n";
   std::stringstream oss;
-  qc.dumpOpenQASM(oss);
+  qc.dumpOpenQASM2(oss);
 }
 
 TEST_F(QFRFunctionality, U3toU2Gate) {
@@ -1978,11 +1978,11 @@ TEST_F(QFRFunctionality, dumpAndImportTeleportation) {
   qc.emplace_back<StandardOperation>(3, Targets{0, 1, 2},
                                      OpType::Teleportation);
   std::stringstream ss;
-  qc.dumpOpenQASM(ss);
+  qc.dumpOpenQASM2(ss);
   EXPECT_TRUE(ss.str().find("teleport") != std::string::npos);
 
   QuantumComputation qcImported(3);
-  qcImported.import(ss, qc::Format::OpenQASM);
+  qcImported.import(ss, qc::Format::OpenQASM2);
   ASSERT_EQ(qcImported.size(), 1);
   EXPECT_EQ(qcImported.at(0)->getType(), OpType::Teleportation);
 }
@@ -2402,12 +2402,9 @@ TEST_F(QFRFunctionality, testSettingAncillariesProperlyCreatesRegisters) {
   qc.setLogicalQubitAncillary(1U);
   ASSERT_EQ(qregs.size(), 1U);
   ASSERT_EQ(reg.second.first, 0U);
-  ASSERT_EQ(reg.second.second, 1U);
+  ASSERT_EQ(reg.second.second, 3U);
   ASSERT_EQ(name, reg.first);
-  ASSERT_EQ(ancRegs.size(), 1U);
-  const auto& ancReg = *ancRegs.begin();
-  ASSERT_EQ(ancReg.second.first, 1U);
-  ASSERT_EQ(ancReg.second.second, 2U);
+  ASSERT_TRUE(ancRegs.empty());
   ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 1U);
   ASSERT_EQ(qc.getNancillae(), 2U);
 
@@ -2422,7 +2419,53 @@ TEST_F(QFRFunctionality, testSettingAncillariesProperlyCreatesRegisters) {
   ASSERT_EQ(reg.second.first, 0U);
   ASSERT_EQ(reg.second.second, 1U);
   ASSERT_EQ(name, reg.first);
-  ASSERT_EQ(ancRegs.size(), 0U);
+  ASSERT_TRUE(ancRegs.empty());
   ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 1U);
+  ASSERT_EQ(qc.getNancillae(), 0U);
+}
+
+TEST_F(QFRFunctionality, StripIdleQubitsInMiddleOfCircuit) {
+  qc::QuantumComputation qc(5U);
+  qc.setLogicalQubitAncillary(3U);
+  qc.setLogicalQubitAncillary(4U);
+  qc.setLogicalQubitGarbage(3U);
+  qc.setLogicalQubitGarbage(4U);
+  qc.initialLayout.clear();
+  qc.initialLayout[0U] = 3U;
+  qc.initialLayout[1U] = 0U;
+  qc.initialLayout[2U] = 4U;
+  qc.initialLayout[3U] = 2U;
+  qc.initialLayout[4U] = 1U;
+  qc.outputPermutation.clear();
+  qc.outputPermutation[1U] = 2U;
+  qc.outputPermutation[3U] = 0U;
+  qc.outputPermutation[4U] = 1U;
+
+  qc.x(1);
+  qc.x(3);
+  qc.x(4);
+
+  const auto& qregs = qc.getQregs();
+  ASSERT_EQ(qregs.size(), 1U);
+  const auto& reg = *qregs.begin();
+  const auto name = reg.first;
+  ASSERT_EQ(reg.second.first, 0U);
+  ASSERT_EQ(reg.second.second, 5U);
+  const auto& ancRegs = qc.getANCregs();
+  ASSERT_TRUE(ancRegs.empty());
+  ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 3U);
+  ASSERT_EQ(qc.getNancillae(), 2U);
+
+  qc.stripIdleQubits();
+
+  ASSERT_EQ(qregs.size(), 2U);
+  const auto& regAfter = *qregs.begin();
+  ASSERT_EQ(regAfter.second.first, 1U);
+  ASSERT_EQ(regAfter.second.second, 1U);
+  const auto& reg2After = *(++qregs.begin());
+  ASSERT_EQ(reg2After.second.first, 3U);
+  ASSERT_EQ(reg2After.second.second, 2U);
+  ASSERT_TRUE(ancRegs.empty());
+  ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 3U);
   ASSERT_EQ(qc.getNancillae(), 0U);
 }

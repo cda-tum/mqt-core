@@ -3,7 +3,7 @@
 #include "dd/NoiseFunctionality.hpp"
 #include "dd/Operations.hpp"
 
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 #include <random>
 
 using namespace qc;
@@ -107,7 +107,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
               useDensityMatrixType, applyNoiseSequentially);
 
       for (auto const& op : qc) {
-        dd->applyOperationToDensity(rootEdge, dd::getDD(op.get(), dd),
+        dd->applyOperationToDensity(rootEdge, dd::getDD(op.get(), *dd),
                                     useDensityMatrixType);
         deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
       }
@@ -147,7 +147,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
     dd->incRef(rootEdge);
 
     for (auto const& op : qc) {
-      auto operation = dd::getDD(op.get(), dd);
+      auto operation = dd::getDD(op.get(), *dd);
       auto usedQubits = op->getUsedQubits();
       stochasticNoiseFunctionality.applyNoiseOperation(
           usedQubits, operation, rootEdge, qc.getGenerator());
@@ -199,7 +199,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
     dd->incRef(rootEdge);
 
     for (auto const& op : qc) {
-      auto operation = dd::getDD(op.get(), dd);
+      auto operation = dd::getDD(op.get(), *dd);
       auto usedQubits = op->getUsedQubits();
       stochasticNoiseFunctionality.applyNoiseOperation(
           op->getUsedQubits(), operation, rootEdge, qc.getGenerator());

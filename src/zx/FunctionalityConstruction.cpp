@@ -203,6 +203,11 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
     // single qubit gates
     const auto target = static_cast<zx::Qubit>(p.at(op->getTargets().front()));
     switch (op->getType()) {
+    case qc::OpType::GPhase: {
+      const auto& param = parseParam(op.get(), 0);
+      diag.addGlobalPhase(param);
+      break;
+    }
     case qc::OpType::Z:
       addZSpider(diag, target, qubits, PiExpression(PiRational(1, 1)));
       break;
@@ -426,6 +431,23 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
   return it + 1;
 }
 
+FunctionalityConstruction::op_it FunctionalityConstruction::parseCompoundOp(
+    ZXDiagram& diag, op_it it, op_it end, std::vector<Vertex>& qubits,
+    const qc::Permutation& initialLayout) {
+  const auto& op = *it;
+
+  if (op->getType() == qc::OpType::Compound) {
+    const auto* compOp = dynamic_cast<qc::CompoundOperation*>(op.get());
+    for (auto subIt = compOp->cbegin(); subIt != compOp->cend();) {
+      subIt =
+          parseCompoundOp(diag, subIt, compOp->cend(), qubits, initialLayout);
+    }
+    return it + 1;
+  }
+
+  return parseOp(diag, it, end, qubits, initialLayout);
+}
+
 ZXDiagram FunctionalityConstruction::buildFunctionality(
     const qc::QuantumComputation* qc) {
   ZXDiagram diag(qc->getNqubits());
@@ -436,17 +458,7 @@ ZXDiagram FunctionalityConstruction::buildFunctionality(
   }
 
   for (auto it = qc->cbegin(); it != qc->cend();) {
-    const auto& op = *it;
-
-    if (op->getType() == qc::OpType::Compound) {
-      const auto* compOp = dynamic_cast<qc::CompoundOperation*>(op.get());
-      for (auto subIt = compOp->cbegin(); subIt != compOp->cend();) {
-        subIt = parseOp(diag, subIt, compOp->cend(), qubits, qc->initialLayout);
-      }
-      ++it;
-    } else {
-      it = parseOp(diag, it, qc->cend(), qubits, qc->initialLayout);
-    }
+    it = parseCompoundOp(diag, it, qc->cend(), qubits, qc->initialLayout);
   }
 
   for (std::size_t i = 0; i < qubits.size(); ++i) {
@@ -472,6 +484,9 @@ bool FunctionalityConstruction::transformableToZX(const qc::Operation* op) {
   }
 
   if (op->getType() == qc::OpType::Barrier) {
+    return true;
+  }
+  if (op->getType() == qc::OpType::GPhase && !op->isControlled()) {
     return true;
   }
 

@@ -35,6 +35,13 @@ struct ComplexValue {
   [[nodiscard]] bool operator!=(const ComplexValue& other) const noexcept;
 
   /**
+   * @brief Check whether the complex number is exactly equal to zero.
+   * @return True if the complex number is exactly equal to zero, false
+   * otherwise.
+   */
+  [[nodiscard]] bool exactlyZero() const noexcept { return r == 0. && i == 0.; }
+
+  /**
    * @brief Check whether the complex number is approximately equal to the
    * given complex number.
    * @param c The complex number to compare to.
@@ -51,15 +58,6 @@ struct ComplexValue {
    * @see RealNumber::approximatelyZero
    */
   [[nodiscard]] bool approximatelyZero() const noexcept;
-
-  /**
-   * @brief Check whether the complex number is approximately equal to one.
-   * @returns True if the complex number is approximately equal to one, false
-   * otherwise.
-   * @see RealNumber::approximatelyOne
-   * @see RealNumber::approximatelyZero
-   */
-  [[nodiscard]] bool approximatelyOne() const noexcept;
 
   /**
    * @brief Write a binary representation of the complex number to the given

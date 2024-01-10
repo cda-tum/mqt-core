@@ -1,7 +1,7 @@
 #include "operations/Expression.hpp"
+#include "pybind11/operators.h"
 #include "python/pybind11.hpp"
 
-#include <pybind11/operators.h>
 #include <sstream>
 
 namespace mqt {

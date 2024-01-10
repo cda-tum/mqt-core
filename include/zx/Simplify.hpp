@@ -16,7 +16,7 @@ std::size_t simplifyVertices(ZXDiagram& diag, VertexCheckFun check,
 
   while (newMatches) {
     newMatches = false;
-    for (const auto [v, _] : diag.getVertices()) {
+    for (const auto& [v, _] : diag.getVertices()) {
       if (check(diag, v)) {
         rule(diag, v);
         newMatches = true;

@@ -1,5 +1,7 @@
 #include "QuantumComputation.hpp"
 
+#include <regex>
+
 void qc::QuantumComputation::importReal(std::istream& is) {
   auto line = readRealHeader(is);
   readRealGateDescriptions(is, line);
@@ -213,7 +215,6 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
                          " msg: Label " + label + " not found!");
     }
 
-    updateMaxControls(ncontrols);
     const Qubit target = iter->second.first;
     switch (gate) {
     case I:

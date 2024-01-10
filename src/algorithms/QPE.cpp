@@ -72,6 +72,13 @@ void QPE::createCircuit() {
   x(0);
 
   if (iterative) {
+    // set up initial layout
+    initialLayout[0] = 1;
+    initialLayout[1] = 0;
+    setLogicalQubitGarbage(1);
+    outputPermutation.erase(0);
+    outputPermutation[1] = 0;
+
     for (std::size_t i = 0; i < precision; i++) {
       // Hadamard
       h(1);
@@ -99,6 +106,14 @@ void QPE::createCircuit() {
       }
     }
   } else {
+    // set up initial layout
+    initialLayout[0] = static_cast<Qubit>(precision);
+    for (std::size_t i = 1; i <= precision; ++i) {
+      initialLayout[static_cast<Qubit>(i)] = static_cast<Qubit>(i - 1);
+    }
+    setLogicalQubitGarbage(static_cast<Qubit>(precision));
+    outputPermutation.erase(0);
+
     // Hadamard Layer
     for (std::size_t i = 1; i <= precision; i++) {
       h(static_cast<Qubit>(i));
@@ -129,6 +144,7 @@ void QPE::createCircuit() {
     // measure results
     for (std::size_t i = 0; i < nqubits - 1; i++) {
       measure(static_cast<Qubit>(i + 1), i);
+      outputPermutation[static_cast<Qubit>(i + 1)] = static_cast<Qubit>(i);
     }
   }
 }

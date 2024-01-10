@@ -150,9 +150,10 @@ public:
   }
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg) const override {
+                    const RegisterNames& creg, size_t indent,
+                    bool openQASM3) const override {
     for (const auto& op : ops) {
-      op->dumpOpenQASM(of, qreg, creg);
+      op->dumpOpenQASM(of, qreg, creg, indent, openQASM3);
     }
   }
 

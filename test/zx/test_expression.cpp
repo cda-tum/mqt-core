@@ -2,7 +2,7 @@
 #include "zx/Rational.hpp"
 #include "zx/Utils.hpp"
 
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 #include <stdexcept>
 #include <variant>
 

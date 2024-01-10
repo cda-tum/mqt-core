@@ -199,14 +199,14 @@ protected:
     ddOriginal->incRef(originalRootEdge);
 
     auto measurementsOriginal =
-        simulate(qcOriginal.get(), originalRootEdge, ddOriginal, shots);
+        simulate(qcOriginal.get(), originalRootEdge, *ddOriginal, shots);
 
     auto ddEcc = std::make_unique<dd::Package<>>(qcMapped->getNqubits());
     auto eccRootEdge = ddEcc->makeZeroState(qcMapped->getNqubits());
     ddEcc->incRef(eccRootEdge);
 
     auto measurementsProtected =
-        simulate(qcMapped.get(), eccRootEdge, ddEcc, shots, seed);
+        simulate(qcMapped.get(), eccRootEdge, *ddEcc, shots, seed);
     for (auto const& [classicalBit, hits] : measurementsOriginal) {
       // Since the result is stored as one bit string. I have to count the
       // relevant classical bits.
