@@ -1048,7 +1048,8 @@ void QuantumComputation::addVariable(const SymbolOrNumber& expr) {
 }
 
 // Instantiates this computation
-void QuantumComputation::instantiate(const VariableAssignment& assignment) {
+void QuantumComputation::instantiateInplace(
+    const VariableAssignment& assignment) {
   for (auto& op : ops) {
     if (auto* symOp = dynamic_cast<SymbolicOperation*>(op.get());
         symOp != nullptr) {
