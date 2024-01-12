@@ -1,6 +1,7 @@
 #include "QuantumComputation.hpp"
 
 #include <cassert>
+#include <memory>
 
 namespace qc {
 
@@ -1054,6 +1055,12 @@ void QuantumComputation::instantiateInplace(
     if (auto* symOp = dynamic_cast<SymbolicOperation*>(op.get());
         symOp != nullptr) {
       symOp->instantiate(assignment);
+      // if the operation is fully instantiated, it can be replaced by the
+      // corresponding standard operation
+      if (symOp->isStandardOperation()) {
+        op = std::make_unique<StandardOperation>(
+            *dynamic_cast<StandardOperation*>(symOp));
+      }
     }
   }
   // after an operation is instantiated, the respective parameters can be
