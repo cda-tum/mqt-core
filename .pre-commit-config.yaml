@@ -32,7 +32,7 @@ repos:
 
   # Clean jupyter notebooks
   - repo: https://github.com/srstevenson/nb-clean
-    rev: 3.1.0
+    rev: 3.2.0
     hooks:
       - id: nb-clean
 
@@ -53,7 +53,7 @@ repos:
 
   # Python linting using ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.6
+    rev: v0.1.11
     hooks:
       - id: ruff
         args: ["--fix", "--show-fixes"]
@@ -63,13 +63,14 @@ repos:
 
   # Static type checking using mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.7.1
+    rev: v1.8.0
     hooks:
       - id: mypy
         files: ^(src/mqt|test/python)
         args: []
         additional_dependencies:
           - pytest
+          - pandas-stubs
 
   # Also run Black on examples in the documentation
   - repo: https://github.com/adamchainz/blacken-docs
@@ -80,7 +81,7 @@ repos:
 
   # Clang-format the C++ part of the code base automatically
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v17.0.5
+    rev: v17.0.6
     hooks:
       - id: clang-format
         types_or: [c++, c, cuda]
@@ -91,12 +92,10 @@ repos:
     hooks:
       - id: cmake-format
         additional_dependencies: [pyyaml]
-      - id: cmake-lint
-        additional_dependencies: [pyyaml]
 
   # Format configuration files with prettier
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.1.0
+    rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         types_or: [yaml, markdown, html, css, scss, javascript, json]
@@ -119,7 +118,7 @@ repos:
 
   # Check best practices for scientific Python code
   - repo: https://github.com/scientific-python/cookie
-    rev: 2023.11.17
+    rev: 2023.12.21
     hooks:
       - id: sp-repo-review
         additional_dependencies: ["repo-review[cli]"]

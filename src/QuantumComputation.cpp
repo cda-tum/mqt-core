@@ -69,7 +69,7 @@ void QuantumComputation::import(const std::string& filename) {
   if (extension == "real") {
     import(filename, Format::Real);
   } else if (extension == "qasm") {
-    import(filename, Format::OpenQASM);
+    import(filename, Format::OpenQASM3);
   } else if (extension == "txt") {
     import(filename, Format::GRCS);
   } else if (extension == "tfc") {
@@ -102,9 +102,9 @@ void QuantumComputation::import(std::istream&& is, Format format) {
   case Format::Real:
     importReal(is);
     break;
-  case Format::OpenQASM:
-    updateMaxControls(2);
-    importOpenQASM(is);
+  case Format::OpenQASM2:
+  case Format::OpenQASM3:
+    importOpenQASM3(is);
     break;
   case Format::GRCS:
     importGRCS(is);
@@ -198,6 +198,7 @@ void QuantumComputation::initializeIOMapping() {
   }
 
   const bool buildOutputPermutation = outputPermutation.empty();
+  garbage.assign(nqubits + nancillae, false);
   for (const auto& [physicalIn, logicalIn] : initialLayout) {
     const bool isIdle = isIdleQubit(physicalIn);
 
@@ -299,84 +300,94 @@ void QuantumComputation::addAncillaryRegister(std::size_t nq,
   }
 }
 
+void QuantumComputation::removeQubitfromQubitRegister(QuantumRegisterMap& regs,
+                                                      const std::string& reg,
+                                                      const Qubit idx) {
+  if (idx == 0) {
+    // last remaining qubit of register
+    if (regs[reg].second == 1) {
+      // delete register
+      regs.erase(reg);
+    }
+    // first qubit of register
+    else {
+      regs[reg].first++;
+      regs[reg].second--;
+    }
+    // last index
+  } else if (idx == regs[reg].second - 1) {
+    // reduce count of register
+    regs[reg].second--;
+  } else {
+    auto qreg = regs.at(reg);
+    auto lowPart = reg + "_l";
+    auto lowIndex = qreg.first;
+    auto lowCount = idx;
+    auto highPart = reg + "_h";
+    auto highIndex = qreg.first + idx + 1;
+    auto highCount = qreg.second - idx - 1;
+
+    regs.erase(reg);
+    regs.try_emplace(lowPart, lowIndex, lowCount);
+    regs.try_emplace(highPart, highIndex, highCount);
+  }
+}
+
+void QuantumComputation::addQubitToQubitRegister(
+    QuantumRegisterMap& regs, const Qubit physicalQubitIndex,
+    const std::string& defaultRegName) {
+  bool fusionPossible = false;
+  for (auto& reg : regs) {
+    auto& startIndex = reg.second.first;
+    auto& count = reg.second.second;
+    // 1st case: can append to start of existing register
+    if (startIndex == physicalQubitIndex + 1) {
+      startIndex--;
+      count++;
+      fusionPossible = true;
+      break;
+    }
+    // 2nd case: can append to end of existing register
+    if (startIndex + count == physicalQubitIndex) {
+      count++;
+      fusionPossible = true;
+      break;
+    }
+  }
+
+  consolidateRegister(regs);
+
+  if (regs.empty()) {
+    regs.try_emplace(defaultRegName, physicalQubitIndex, 1);
+  } else if (!fusionPossible) {
+    auto newRegName = defaultRegName + "_" + std::to_string(physicalQubitIndex);
+    regs.try_emplace(newRegName, physicalQubitIndex, 1);
+  }
+}
+
 // removes the i-th logical qubit and returns the index j it was assigned to in
 // the initial layout i.e., initialLayout[j] = i
 std::pair<Qubit, std::optional<Qubit>>
 QuantumComputation::removeQubit(const Qubit logicalQubitIndex) {
   // Find index of the physical qubit i is assigned to
-  Qubit physicalQubitIndex = 0;
-  for (const auto& [physical, logical] : initialLayout) {
-    if (logical == logicalQubitIndex) {
-      physicalQubitIndex = physical;
-    }
-  }
+  const auto physicalQubitIndex = getPhysicalQubitIndex(logicalQubitIndex);
 
   // get register and register-index of the corresponding qubit
-  auto reg = getQubitRegisterAndIndex(physicalQubitIndex);
+  const auto [reg, idx] = getQubitRegisterAndIndex(physicalQubitIndex);
 
   if (physicalQubitIsAncillary(physicalQubitIndex)) {
-    // first index
-    if (reg.second == 0) {
-      // last remaining qubit of register
-      if (ancregs[reg.first].second == 1) {
-        // delete register
-        ancregs.erase(reg.first);
-      }
-      // first qubit of register
-      else {
-        ancregs[reg.first].first++;
-        ancregs[reg.first].second--;
-      }
-      // last index
-    } else if (reg.second == ancregs[reg.first].second - 1) {
-      // reduce count of register
-      ancregs[reg.first].second--;
-    } else {
-      auto ancreg = ancregs.at(reg.first);
-      auto lowPart = reg.first + "_l";
-      auto lowIndex = ancreg.first;
-      auto lowCount = reg.second;
-      auto highPart = reg.first + "_h";
-      auto highIndex = ancreg.first + reg.second + 1;
-      auto highCount = ancreg.second - reg.second - 1;
-
-      ancregs.erase(reg.first);
-      ancregs.try_emplace(lowPart, lowIndex, lowCount);
-      ancregs.try_emplace(highPart, highIndex, highCount);
-    }
+    removeQubitfromQubitRegister(ancregs, reg, idx);
     // reduce ancilla count
     nancillae--;
   } else {
-    if (reg.second == 0) {
-      // last remaining qubit of register
-      if (qregs[reg.first].second == 1) {
-        // delete register
-        qregs.erase(reg.first);
-      }
-      // first qubit of register
-      else {
-        qregs[reg.first].first++;
-        qregs[reg.first].second--;
-      }
-      // last index
-    } else if (reg.second == qregs[reg.first].second - 1) {
-      // reduce count of register
-      qregs[reg.first].second--;
-    } else {
-      auto qreg = qregs.at(reg.first);
-      auto lowPart = reg.first + "_l";
-      auto lowIndex = qreg.first;
-      auto lowCount = reg.second;
-      auto highPart = reg.first + "_h";
-      auto highIndex = qreg.first + reg.second + 1;
-      auto highCount = qreg.second - reg.second - 1;
-
-      qregs.erase(reg.first);
-      qregs.try_emplace(lowPart, lowIndex, lowCount);
-      qregs.try_emplace(highPart, highIndex, highCount);
-    }
+    removeQubitfromQubitRegister(qregs, reg, idx);
     // reduce qubit count
-    nqubits--;
+    if (ancillary.at(logicalQubitIndex)) {
+      // if the qubit is ancillary, it is not counted as a qubit
+      nancillae--;
+    } else {
+      nqubits--;
+    }
   }
 
   // adjust initial layout permutation
@@ -419,31 +430,7 @@ void QuantumComputation::addAncillaryQubit(
                        "qubit that is already assigned");
   }
 
-  bool fusionPossible = false;
-  for (auto& ancreg : ancregs) {
-    auto& ancStartIndex = ancreg.second.first;
-    auto& ancCount = ancreg.second.second;
-    // 1st case: can append to start of existing register
-    if (ancStartIndex == physicalQubitIndex + 1) {
-      ancStartIndex--;
-      ancCount++;
-      fusionPossible = true;
-      break;
-    }
-    // 2nd case: can append to end of existing register
-    if (ancStartIndex + ancCount == physicalQubitIndex) {
-      ancCount++;
-      fusionPossible = true;
-      break;
-    }
-  }
-
-  if (ancregs.empty()) {
-    ancregs.try_emplace("anc", physicalQubitIndex, 1);
-  } else if (!fusionPossible) {
-    auto newRegName = "anc_" + std::to_string(physicalQubitIndex);
-    ancregs.try_emplace(newRegName, physicalQubitIndex, 1);
-  }
+  addQubitToQubitRegister(ancregs, physicalQubitIndex, "anc");
 
   // index of logical qubit
   const auto logicalQubitIndex = nqubits + nancillae;
@@ -492,40 +479,7 @@ void QuantumComputation::addQubit(const Qubit logicalQubitIndex,
     // register could be created and all ancillaries shifted
   }
 
-  // check if qubit fits in existing register
-  bool fusionPossible = false;
-  for (auto& qreg : qregs) {
-    auto& qStartIndex = qreg.second.first;
-    auto& qCount = qreg.second.second;
-    // 1st case: can append to start of existing register
-    if (qStartIndex == physicalQubitIndex + 1) {
-      qStartIndex--;
-      qCount++;
-      fusionPossible = true;
-      break;
-    }
-    // 2nd case: can append to end of existing register
-    if (qStartIndex + qCount == physicalQubitIndex) {
-      if (physicalQubitIndex == nqubits) {
-        // need to shift ancillaries
-        for (auto& ancreg : ancregs) {
-          ancreg.second.first++;
-        }
-      }
-      qCount++;
-      fusionPossible = true;
-      break;
-    }
-  }
-
-  consolidateRegister(qregs);
-
-  if (qregs.empty()) {
-    qregs.try_emplace("q", physicalQubitIndex, 1);
-  } else if (!fusionPossible) {
-    auto newRegName = "q_" + std::to_string(physicalQubitIndex);
-    qregs.try_emplace(newRegName, physicalQubitIndex, 1);
-  }
+  addQubitToQubitRegister(qregs, physicalQubitIndex, "q");
 
   // increase qubit count
   nqubits++;
@@ -580,10 +534,7 @@ std::ostream& QuantumComputation::print(std::ostream& os) const {
   for (const auto& physicalQubit : initialLayout) {
     auto it = outputPermutation.find(physicalQubit.first);
     if (it == outputPermutation.end()) {
-      if (garbage[physicalQubit.second]) {
-        os << "\033[31m";
-      }
-      os << std::setw(4) << "|"
+      os << "\033[31m" << std::setw(4) << "|"
          << "\033[0m";
     } else {
       os << std::setw(4) << it->second;
@@ -619,7 +570,7 @@ void QuantumComputation::dump(const std::string& filename) {
   if (extension == "real") {
     dump(filename, Format::Real);
   } else if (extension == "qasm") {
-    dump(filename, Format::OpenQASM);
+    dump(filename, Format::OpenQASM3);
   } else if (extension == "qc") {
     dump(filename, Format::QC);
   } else if (extension == "tfc") {
@@ -632,7 +583,7 @@ void QuantumComputation::dump(const std::string& filename) {
   }
 }
 
-void QuantumComputation::dumpOpenQASM(std::ostream& of) {
+void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) {
   // Add missing physical qubits
   if (!qregs.empty()) {
     for (Qubit physicalQubit = 0; physicalQubit < initialLayout.rbegin()->first;
@@ -665,8 +616,13 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
   }
   of << "\n";
 
-  of << "OPENQASM 2.0;\n";
-  of << "include \"qelib1.inc\";\n";
+  if (openQASM3) {
+    of << "OPENQASM 3.0;\n";
+    of << "include \"stdgates.inc\";\n";
+  } else {
+    of << "OPENQASM 2.0;\n";
+    of << "include \"qelib1.inc\";\n";
+  }
   if (std::any_of(std::begin(ops), std::end(ops), [](const auto& op) {
         return op->getType() == OpType::Teleportation;
       })) {
@@ -678,18 +634,19 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of) {
   for (const auto& [regName, reg] : ancregs) {
     combinedRegs.try_emplace(regName, reg.first, reg.second);
   }
-  printSortedRegisters(combinedRegs, "qreg", of);
+  printSortedRegisters(combinedRegs, openQASM3 ? "qubit" : "qreg", of,
+                       openQASM3);
   RegisterNames combinedRegNames{};
   createRegisterArray(combinedRegs, combinedRegNames);
   assert(combinedRegNames.size() == nqubits + nancillae);
 
-  printSortedRegisters(cregs, "creg", of);
+  printSortedRegisters(cregs, openQASM3 ? "bit" : "creg", of, openQASM3);
   RegisterNames cregnames{};
   createRegisterArray(cregs, cregnames);
   assert(cregnames.size() == nclassics);
 
   for (const auto& op : ops) {
-    op->dumpOpenQASM(of, combinedRegNames, cregnames);
+    op->dumpOpenQASM(of, combinedRegNames, cregnames, 0, openQASM3);
   }
 }
 
@@ -703,8 +660,11 @@ void QuantumComputation::dump(const std::string& filename, Format format) {
 
 void QuantumComputation::dump(std::ostream&& of, Format format) {
   switch (format) {
-  case Format::OpenQASM:
-    dumpOpenQASM(of);
+  case Format::OpenQASM3:
+    dumpOpenQASM(of, true);
+    break;
+  case Format::OpenQASM2:
+    dumpOpenQASM(of, false);
     break;
   case Format::Real:
     std::cerr << "Dumping in real format currently not supported\n";
@@ -848,9 +808,19 @@ std::pair<std::string, Bit> QuantumComputation::getClassicalRegisterAndIndex(
   auto it = cregs.find(regName);
   if (it != cregs.end()) {
     index = classicalIndex - it->second.first;
-  } // else branch not needed since getClassicalRegister already covers this
-    // case
+  } // else branch not needed since getClassicalRegister covers this case
   return {regName, index};
+}
+
+Qubit QuantumComputation::getPhysicalQubitIndex(const Qubit logicalQubitIndex) {
+  for (const auto& [physical, logical] : initialLayout) {
+    if (logical == logicalQubitIndex) {
+      return physical;
+    }
+  }
+  throw QFRException("[getPhysicalQubitIndex] Logical qubit index " +
+                     std::to_string(logicalQubitIndex) +
+                     " not found in initial layout");
 }
 
 Qubit QuantumComputation::getIndexFromQubitRegister(
@@ -914,6 +884,17 @@ bool QuantumComputation::physicalQubitIsAncillary(
                               physicalQubitIndex <
                                   ancreg.second.first + ancreg.second.second;
                      });
+}
+
+void QuantumComputation::setLogicalQubitAncillary(
+    const Qubit logicalQubitIndex) {
+  if (logicalQubitIsAncillary(logicalQubitIndex)) {
+    return;
+  }
+
+  nqubits--;
+  nancillae++;
+  ancillary[logicalQubitIndex] = true;
 }
 
 void QuantumComputation::setLogicalQubitGarbage(const Qubit logicalQubitIndex) {

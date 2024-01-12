@@ -1,6 +1,7 @@
 #pragma once
 
-#include <nlohmann/json_fwd.hpp>
+#include "nlohmann/json_fwd.hpp"
+
 #include <ostream>
 #include <string>
 

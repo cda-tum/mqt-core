@@ -25,8 +25,9 @@ jobs:
         run: pipx run build --sdist
       - name: Check metadata
         run: pipx run twine check dist/*
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: cibw-sdist
           path: dist/*.tar.gz
 
   build_wheels:
@@ -68,8 +69,9 @@ jobs:
         run: git diff --exit-code
         shell: bash
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
+          name: cibw-wheels-${{ matrix.runs-on }}-${{ matrix.python }}-${{ strategy.job-index }}
           path: wheelhouse/*.whl
 
   build_wheels_emulation:
@@ -97,6 +99,7 @@ jobs:
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
           CIBW_BUILD: ${{ matrix.python }}-*
           CIBW_TEST_SKIP: "cp*"
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: cibw-wheels-${{ matrix.arch }}-${{ matrix.python }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl

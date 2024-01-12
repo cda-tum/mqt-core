@@ -4,8 +4,8 @@
 #include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
+#include "gtest/gtest.h"
 #include <array>
-#include <gtest/gtest.h>
 #include <iostream>
 #include <sstream>
 
@@ -15,13 +15,12 @@ public:
 };
 
 TEST_F(ZXFunctionalityTest, parseQasm) {
-  std::stringstream ss{};
-  ss << "OPENQASM 2.0;"
-     << "include \"qelib1.inc\";"
-     << "qreg q[2];"
-     << "h q[0];"
-     << "cx q[0],q[1];\n";
-  qc.import(ss, qc::Format::OpenQASM);
+  const std::string testfile = "OPENQASM 2.0;"
+                               "include \"qelib1.inc\";"
+                               "qreg q[2];"
+                               "h q[0];"
+                               "cx q[0],q[1];\n";
+  qc = qc::QuantumComputation::fromQASM(testfile);
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
   const zx::ZXDiagram diag =
       zx::FunctionalityConstruction::buildFunctionality(&qc);
@@ -95,8 +94,8 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
      << "swap q[0],q[1];"
      << "cz q[1],q[2];"
      << "cp(pi/4) q[0],q[1];"
-     << "ccx q[0],q[1],q[2];"
-     << "ccz q[1],q[2],q[0];"
+     << "ctrl(2) @ x q[0],q[1],q[2];"
+     << "ctrl(2) @ z q[1],q[2],q[0];"
      << "cp(pi/2) q[0], q[1];"
      << "cp(pi/4) q[0], q[1];"
      << "cp(pi/8) q[0], q[1];"
@@ -115,8 +114,8 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
      << "cp(-pi/8) q[0], q[1];"
      << "cp(-pi/4) q[0], q[1];"
      << "cp(-pi/2) q[0], q[1];"
-     << "ccz q[1],q[2],q[0];"
-     << "ccx q[0],q[1],q[2];"
+     << "ctrl(2) @ z q[1],q[2],q[0];"
+     << "ctrl(2) @ x q[0],q[1],q[2];"
      << "cp(-pi/4) q[0],q[1];"
      << "cz q[1],q[2];"
      << "cx q[1],q[0];"
@@ -135,7 +134,7 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
      << "z q[1];"
      << "cx q[0],q[1];"
      << "h q[0];\n";
-  qc.import(ss, qc::Format::OpenQASM);
+  qc.import(ss, qc::Format::OpenQASM3);
 
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
   zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
@@ -145,6 +144,25 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
   EXPECT_TRUE(diag.connected(diag.getInput(0), diag.getOutput(0)));
   EXPECT_TRUE(diag.connected(diag.getInput(1), diag.getOutput(1)));
   EXPECT_TRUE(diag.connected(diag.getInput(2), diag.getOutput(2)));
+}
+
+TEST_F(ZXFunctionalityTest, nestedCompoundGate) {
+  qc = qc::QuantumComputation(1);
+  auto innerOp = std::make_unique<qc::StandardOperation>(1, 0, qc::OpType::X);
+  auto compound1 = std::make_unique<qc::CompoundOperation>(1);
+  auto compound2 = std::make_unique<qc::CompoundOperation>(1);
+
+  compound1->emplace_back(std::move(innerOp));
+  compound2->emplace_back(std::move(compound1));
+
+  qc.emplace_back<qc::CompoundOperation>(std::move(compound2));
+  qc.x(0);
+
+  EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
+  zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
+  zx::fullReduce(diag);
+
+  EXPECT_TRUE(diag.isIdentity());
 }
 
 TEST_F(ZXFunctionalityTest, Phase) {
@@ -163,17 +181,16 @@ TEST_F(ZXFunctionalityTest, Phase) {
 }
 
 TEST_F(ZXFunctionalityTest, Compound) {
-  std::stringstream ss;
-  ss << "OPENQASM 2.0;"
-     << "include \"qelib1.inc\";"
-     << "gate toff q0,q1,q2 {h q2;cx q1,q2;p(-pi/4) q2;cx q0,q2;p(pi/4) q2;cx "
-        "q1,q2;p(pi/4) q1;p(-pi/4) q2;cx q0,q2;cx q0,q1;p(pi/4) q0;p(-pi/4) "
-        "q1;cx q0,q1;p(pi/4) q2;h q2;}"
-     << "qreg q[3];"
-     << "toff q[0],q[1],q[2];"
-     << "ccx q[0],q[1],q[2];\n";
-
-  qc.import(ss, qc::Format::OpenQASM);
+  const std::string testfile =
+      "OPENQASM 2.0;"
+      "include \"qelib1.inc\";"
+      "gate toff q0,q1,q2 {h q2;cx q1,q2;p(-pi/4) q2;cx q0,q2;p(pi/4) q2;cx "
+      "q1,q2;p(pi/4) q1;p(-pi/4) q2;cx q0,q2;cx q0,q1;p(pi/4) q0;p(-pi/4) "
+      "q1;cx q0,q1;p(pi/4) q2;h q2;}"
+      "qreg q[3];"
+      "toff q[0],q[1],q[2];"
+      "ccx q[0],q[1],q[2];\n";
+  qc = qc::QuantumComputation::fromQASM(testfile);
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
   zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
   zx::fullReduce(diag);

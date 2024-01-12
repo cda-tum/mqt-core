@@ -1,5 +1,6 @@
 #include "CircuitOptimizer.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
+#include "dd/Benchmark.hpp"
 #include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
@@ -35,10 +36,8 @@ TEST_P(BernsteinVazirani, FunctionTest) {
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -57,10 +56,8 @@ TEST_P(BernsteinVazirani, FunctionTestDynamic) {
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -76,10 +73,8 @@ TEST_F(BernsteinVazirani, LargeCircuit) {
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -95,10 +90,8 @@ TEST_F(BernsteinVazirani, DynamicCircuit) {
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), dd, shots);
+  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";
@@ -121,7 +114,7 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(bv);
 
   // simulate circuit
-  auto e = simulate(&bv, dd->makeZeroState(bv.getNqubits()), dd);
+  auto e = simulate(&bv, dd->makeZeroState(bv.getNqubits()), *dd);
 
   // create dynamic BV circuit
   auto dbv = qc::BernsteinVazirani(s, true);
@@ -130,12 +123,13 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   // afterwards deferring measurements
   qc::CircuitOptimizer::eliminateResets(dbv);
   qc::CircuitOptimizer::deferMeasurements(dbv);
+  qc::CircuitOptimizer::backpropagateOutputPermutation(dbv);
 
   // remove final measurements to obtain statevector
   qc::CircuitOptimizer::removeFinalMeasurements(dbv);
 
   // simulate circuit
-  auto f = simulate(&dbv, dd->makeZeroState(dbv.getNqubits()), dd);
+  auto f = simulate(&dbv, dd->makeZeroState(dbv.getNqubits()), *dd);
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelity(e, f);

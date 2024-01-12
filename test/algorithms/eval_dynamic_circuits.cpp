@@ -2,6 +2,7 @@
 #include "algorithms/BernsteinVazirani.hpp"
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
+#include "dd/Benchmark.hpp"
 #include "dd/Export.hpp"
 #include "dd/Simulation.hpp"
 
@@ -116,8 +117,9 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
   auto rightIt = iqpe->begin();
 
   while (leftIt != qpe->end() && rightIt != iqpe->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), dd), e);
-    auto multRight = dd->multiply(multLeft, getInverseDD((*rightIt).get(), dd));
+    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
+    auto multRight =
+        dd->multiply(multLeft, getInverseDD((*rightIt).get(), *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -129,7 +131,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
   }
 
   while (leftIt != qpe->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), dd), e);
+    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
     dd->incRef(multLeft);
     dd->decRef(e);
     e = multLeft;
@@ -140,7 +142,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
   }
 
   while (rightIt != iqpe->end()) {
-    auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), dd));
+    auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -168,24 +170,20 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto e = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
+  auto exp = dd::benchmarkSimulate(*qpe);
   const auto simulationEnd = std::chrono::steady_clock::now();
+  auto e = exp->sim;
+  dd = std::move(exp->dd);
 
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
   extractProbabilityVector(iqpe.get(), dd->makeZeroState(iqpe->getNqubits()),
-                           probs, dd);
+                           probs, *dd);
   const auto extractionEnd = std::chrono::steady_clock::now();
 
-  // extend to account for 0 qubit
-  auto stub = dd::SparsePVec{};
-  stub.reserve(probs.size());
-  for (const auto& [state, prob] : probs) {
-    stub[2ULL * state + 1] = prob;
-  }
-
   // compare outcomes
-  auto fidelity = dd->fidelityOfMeasurementOutcomes(e, stub);
+  auto fidelity =
+      dd->fidelityOfMeasurementOutcomes(e, probs, qpe->outputPermutation);
   const auto comparisonEnd = std::chrono::steady_clock::now();
 
   const auto simulation =
@@ -325,8 +323,9 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
   auto rightIt = iqpe->begin();
 
   while (leftIt != qpe->end() && rightIt != iqpe->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), dd), e);
-    auto multRight = dd->multiply(multLeft, getInverseDD((*rightIt).get(), dd));
+    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
+    auto multRight =
+        dd->multiply(multLeft, getInverseDD((*rightIt).get(), *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -338,7 +337,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
   }
 
   while (leftIt != qpe->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), dd), e);
+    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
     dd->incRef(multLeft);
     dd->decRef(e);
     e = multLeft;
@@ -349,7 +348,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
   }
 
   while (rightIt != iqpe->end()) {
-    auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), dd));
+    auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -379,24 +378,20 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
   extractProbabilityVector(iqpe.get(), dd->makeZeroState(iqpe->getNqubits()),
-                           probs, dd);
+                           probs, *dd);
   const auto extractionEnd = std::chrono::steady_clock::now();
   std::cout << "---- extraction done ----\n";
 
   // generate DD of QPE circuit via simulation
-  auto e = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), dd);
+  auto exp = dd::benchmarkSimulate(*qpe);
   const auto simulationEnd = std::chrono::steady_clock::now();
+  auto e = exp->sim;
+  dd = std::move(exp->dd);
   std::cout << "---- sim done ----\n";
 
-  // extend to account for 0 qubit
-  auto stub = dd::SparsePVec{};
-  stub.reserve(probs.size());
-  for (const auto& [state, prob] : probs) {
-    stub[2 * state + 1] = prob;
-  }
-
   // compare outcomes
-  auto fidelity = dd->fidelityOfMeasurementOutcomes(e, stub);
+  auto fidelity =
+      dd->fidelityOfMeasurementOutcomes(e, probs, qpe->outputPermutation);
   const auto comparisonEnd = std::chrono::steady_clock::now();
 
   const auto extraction =
@@ -484,8 +479,9 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
   auto rightIt = dbv->begin();
 
   while (leftIt != bv->end() && rightIt != dbv->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), dd), e);
-    auto multRight = dd->multiply(multLeft, getInverseDD((*rightIt).get(), dd));
+    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
+    auto multRight =
+        dd->multiply(multLeft, getInverseDD((*rightIt).get(), *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -497,7 +493,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
   }
 
   while (leftIt != bv->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), dd), e);
+    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
     dd->incRef(multLeft);
     dd->decRef(e);
     e = multLeft;
@@ -508,7 +504,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
   }
 
   while (rightIt != dbv->end()) {
-    auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), dd));
+    auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -536,24 +532,20 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto e = simulate(bv.get(), dd->makeZeroState(bv->getNqubits()), dd);
+  auto exp = dd::benchmarkSimulate(*bv);
   const auto simulationEnd = std::chrono::steady_clock::now();
+  auto e = exp->sim;
+  dd = std::move(exp->dd);
 
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
   extractProbabilityVector(dbv.get(), dd->makeZeroState(dbv->getNqubits()),
-                           probs, dd);
+                           probs, *dd);
   const auto extractionEnd = std::chrono::steady_clock::now();
 
-  // extend to account for 0 qubit
-  auto stub = dd::SparsePVec{};
-  stub.reserve(probs.size());
-  for (const auto& [state, prob] : probs) {
-    stub[2ULL * state + 1] = prob;
-  }
-
   // compare outcomes
-  auto fidelity = dd->fidelityOfMeasurementOutcomes(e, stub);
+  auto fidelity =
+      dd->fidelityOfMeasurementOutcomes(e, probs, bv->outputPermutation);
   const auto comparisonEnd = std::chrono::steady_clock::now();
 
   const auto simulation =
@@ -635,8 +627,9 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
   auto rightIt = dqft->begin();
 
   while (leftIt != qft->end() && rightIt != dqft->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), dd), e);
-    auto multRight = dd->multiply(multLeft, getInverseDD((*rightIt).get(), dd));
+    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
+    auto multRight =
+        dd->multiply(multLeft, getInverseDD((*rightIt).get(), *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -648,7 +641,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
   }
 
   while (leftIt != qft->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), dd), e);
+    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
     dd->incRef(multLeft);
     dd->decRef(e);
     e = multLeft;
@@ -659,7 +652,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
   }
 
   while (rightIt != dqft->end()) {
-    auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), dd));
+    auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -687,21 +680,24 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto e = simulate(qft.get(), dd->makeZeroState(qft->getNqubits()), dd);
+  auto exp = dd::benchmarkSimulate(*qft);
   const auto simulationEnd = std::chrono::steady_clock::now();
   const auto simulation =
       std::chrono::duration<double>(simulationEnd - start).count();
+  auto e = exp->sim;
+  dd = std::move(exp->dd);
 
   std::stringstream ss{};
   // extract measurement probabilities from IQPE simulations
   if (qft->getNqubits() <= 15) {
     dd::SparsePVec probs{};
     extractProbabilityVector(dqft.get(), dd->makeZeroState(dqft->getNqubits()),
-                             probs, dd);
+                             probs, *dd);
     const auto extractionEnd = std::chrono::steady_clock::now();
 
     // compare outcomes
-    auto fidelity = dd->fidelityOfMeasurementOutcomes(e, probs);
+    auto fidelity =
+        dd->fidelityOfMeasurementOutcomes(e, probs, qft->outputPermutation);
     const auto comparisonEnd = std::chrono::steady_clock::now();
     const auto extraction =
         std::chrono::duration<double>(extractionEnd - simulationEnd).count();

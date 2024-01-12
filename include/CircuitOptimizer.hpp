@@ -6,6 +6,7 @@
 
 #include <array>
 #include <memory>
+#include <unordered_set>
 
 namespace qc {
 static constexpr std::array<qc::OpType, 10> DIAGONAL_GATES = {
@@ -61,6 +62,18 @@ public:
     replaceMCXWithMCZ(qc.ops);
   }
 
+  /**
+   * @brief Backpropagates the output permutation through the circuit.
+   * @details Starts at the end of the circuit with a potentially incomplete
+   * output permutation and backpropagates it through the circuit until the
+   * beginning of the circuit is reached. The tracked permutation is updated
+   * with every SWAP gate and, eventually, the initial layout of the circuit is
+   * set to the tracked permutation. Any unassigned qubit in the initial layout
+   * is assigned to the first available position (favoring an identity mapping).
+   * @param qc the quantum circuit
+   */
+  static void backpropagateOutputPermutation(QuantumComputation& qc);
+
 protected:
   static void removeDiagonalGatesBeforeMeasureRecursive(
       DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
@@ -88,5 +101,8 @@ protected:
                            Iterator it);
 
   static void replaceMCXWithMCZ(std::vector<std::unique_ptr<Operation>>& ops);
+  static void backpropagateOutputPermutation(
+      std::vector<std::unique_ptr<Operation>>& ops, Permutation& permutation,
+      std::unordered_set<Qubit>& missingLogicalQubits);
 };
 } // namespace qc

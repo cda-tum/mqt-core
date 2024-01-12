@@ -100,7 +100,7 @@ jobs:
           prepend_symlinks_to_path: false
           override_cache_key: python-minimums
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.8
           cache: "pip"
@@ -138,4 +138,4 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
-      - uses: hynek/build-and-inspect-python-package@v1
+      - uses: hynek/build-and-inspect-python-package@v2

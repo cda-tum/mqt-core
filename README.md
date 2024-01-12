@@ -74,6 +74,15 @@ MQT Core encompasses:
 Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/runner-images).
 However, the implementation should be compatible with any current C++ compiler supporting C++17 and a minimum CMake version of 3.19.
 
+MQT Core relies on some external dependencies:
+
+- [nlohmann/json](https://github.com/nlohmann/json): A JSON library for modern C++.
+- [boost/multiprecision](https://github.com/boostorg/multiprecision): A library for multiprecision arithmetic (used in the ZX package).
+- [google/googletest](https://github.com/google/googletest): A testing framework for C++ (only used in tests).
+- [pybind/pybind11_json](https://github.com/pybind/pybind11_json): Using nlohmann::json with pybind11 (only used for creating the Python bindings).
+
+CMake will automatically look for installed versions of these libraries. If it does not find them, they will be fetched automatically at configure time via the [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html) module (check out the documentation for more information on how to customize this behavior).
+
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
 If you want to use the ZX library, it is recommended (although not strictly necessary) to have [GMP](https://gmplib.org/) installed in your system.

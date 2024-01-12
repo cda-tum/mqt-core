@@ -36,8 +36,12 @@ requires-python = ">=3.8"
 dynamic = ["version"]
 
 [project.optional-dependencies]
-test = ["pytest>=7.0", "mqt.core[qiskit]"]
+test = ["pytest>=7.0", "pytest-console-scripts>=1.4", "mqt.core[qiskit, evaluation]"]
 coverage = ["mqt.core[test]", "pytest-cov"]
+evaluation = [
+    "pandas[output_formatting]>=2.0; python_version < '3.9'",
+    "pandas[output-formatting]>=2.1.2; python_version >= '3.9'",
+]
 docs = [
     "furo>=2023.08.17",
     "sphinx",
@@ -53,12 +57,16 @@ docs = [
     "nbsphinx",
     "sphinx-autodoc-typehints",
     "sphinx-autoapi",
-    "qiskit-terra[visualization]"
+    "qiskit-terra[visualization]",
+    "mqt.core[evaluation]"
 ]
 qiskit = [
    "qiskit-terra>=0.22.0",
 ]
 dev = ["mqt.core[coverage, docs]",]
+
+[project.scripts]
+compare = "mqt.core.evaluation:main"
 
 [project.urls]
 Homepage = "https://github.com/cda-tum/mqt-core"
@@ -97,21 +105,12 @@ sdist.exclude = [
     "**/plots",
     "**/test",
     "**/tests",
-    "extern/json/include",
-    "extern/googletest",
-    "extern/boost/config/checks",
-    "extern/boost/config/tools",
-    "extern/boost/multiprecision/config",
-    "extern/boost/multiprecision/example",
-    "extern/boost/multiprecision/performance",
-    "extern/boost/multiprecision/tools"
 ]
 
 [tool.check-sdist]
 sdist-only = ["src/mqt/core/_version.py"]
 git-only = [
     "docs/*",
-    "extern/*",
     "test/*",
 ]
 
@@ -164,7 +163,7 @@ explicit_package_bases = true
 warn_unreachable = true
 
 [[tool.mypy.overrides]]
-module = ["qiskit.*", "matplotlib.*"]
+module = ["qiskit.*", "matplotlib.*", "pytest_console_scripts.*"]
 ignore_missing_imports = true
 
 [tool.ruff]
@@ -194,6 +193,7 @@ extend-select = [
     "LOG",         # flake8-logging-format
     "N",           # flake8-naming
     "NPY",         # numpy
+    "PD",          # pandas-vet
     "PERF",        # perflint
     "PGH",         # pygrep-hooks
     "PIE",         # flake8-pie
@@ -220,11 +220,7 @@ ignore = [
     "ANN101",  # Missing type annotation for `self` in method
     "ANN102",  # Missing type annotation for `cls` in classmethod
     "ISC001",  # Conflicts with formatter
-    "PLR0904", # Too many public methods
-    "PLR0911", # Too many return statements
-    "PLR0912", # Too many branches
-    "PLR0913", # Too many arguments
-    "PLR0915", # Too many local statements
+    "PLR09",   # Too many <...>
     "PLR2004", # Magic value used in comparison
     "PLC0415", # Import should be at top of file
     "PT004",   # Incorrect, just usefixtures instead.
@@ -256,6 +252,7 @@ isort.required-imports = ["from __future__ import annotations"]
     "I002", # Allow missing `from __future__ import annotations` import
 ]
 "src/mqt/core/_compat/**.py" = ["TID251"]
+"src/mqt/core/evaluation.py" = ["T201"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

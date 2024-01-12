@@ -176,8 +176,17 @@ public:
     return op.print(os);
   }
 
+  void dumpOpenQASM2(std::ostream& of, const RegisterNames& qreg,
+                     const RegisterNames& creg) const {
+    dumpOpenQASM(of, qreg, creg, 0, false);
+  }
+  void dumpOpenQASM3(std::ostream& of, const RegisterNames& qreg,
+                     const RegisterNames& creg) const {
+    dumpOpenQASM(of, qreg, creg, 0, true);
+  }
   virtual void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                            const RegisterNames& creg) const = 0;
+                            const RegisterNames& creg, size_t indent,
+                            bool openQASM3) const = 0;
 
   virtual void invert() = 0;
 

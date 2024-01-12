@@ -1,8 +1,7 @@
 #pragma once
 
 #include "dd/Package.hpp"
-
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
 
 namespace dd {
 
@@ -120,7 +119,6 @@ getStatistics(Package<Config>* package,
   auto& realNumbers = j["real_numbers"];
   realNumbers["unique_table"] = package->cUniqueTable.getStats().json();
   realNumbers["memory_manager"] = package->cMemoryManager.getStats().json();
-  realNumbers["cache_manager"] = package->cCacheManager.getStats().json();
 
   auto& computeTables = j["compute_tables"];
   computeTables["vector_add"] = package->vectorAdd.getStats().json();

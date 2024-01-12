@@ -56,7 +56,7 @@ RealNumber* RealNumberUniqueTable::lookupNonNegative(const fp val) {
   assert(!std::isnan(val));
   assert(val > 0);
 
-  if (RealNumber::approximatelyOne(val)) {
+  if (RealNumber::approximatelyEquals(val, 1.0)) {
     return &constants::one;
   }
 

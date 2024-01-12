@@ -1,7 +1,8 @@
 #include "dd/statistics/UniqueTableStatistics.hpp"
 
+#include "nlohmann/json.hpp"
+
 #include <algorithm>
-#include <nlohmann/json.hpp>
 
 namespace dd {
 

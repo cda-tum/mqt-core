@@ -1,7 +1,6 @@
 #include "operations/Operation.hpp"
+#include "pybind11/operators.h"
 #include "python/pybind11.hpp"
-
-#include <pybind11/operators.h>
 
 namespace mqt {
 
@@ -51,15 +50,25 @@ void registerOperation(py::module& m) {
            "Return the inverse of this operation.")
       .def("invert", &qc::Operation::invert, "Invert this operation.")
       .def(
-          "qasm_str",
+          "qasm2_str",
           [](const qc::Operation& op, const qc::RegisterNames& qreg,
              const qc::RegisterNames& creg) {
             std::ostringstream oss;
-            op.dumpOpenQASM(oss, qreg, creg);
+            op.dumpOpenQASM2(oss, qreg, creg);
             return oss.str();
           },
           "qreg"_a, "creg"_a,
-          "Return the OpenQASM string representation of this operation.")
+          "Return the OpenQASM 2.0 string representation of this operation.")
+      .def(
+          "qasm3_str",
+          [](const qc::Operation& op, const qc::RegisterNames& qreg,
+             const qc::RegisterNames& creg) {
+            std::ostringstream oss;
+            op.dumpOpenQASM3(oss, qreg, creg);
+            return oss.str();
+          },
+          "qreg"_a, "creg"_a,
+          "Return the OpenQASM 3.0 string representation of this operation.")
       .def("__eq__", [](const qc::Operation& op,
                         const qc::Operation& other) { return op == other; })
       .def("__ne__", [](const qc::Operation& op,

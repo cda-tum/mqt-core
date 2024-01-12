@@ -2,10 +2,10 @@
 
 #include "Definitions.hpp"
 #include "operations/ClassicControlledOperation.hpp"
+#include "operations/CompoundOperation.hpp"
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/StandardOperation.hpp"
 #include "operations/SymbolicOperation.hpp"
-#include "parsers/qasm_parser/Parser.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -37,7 +37,6 @@ protected:
   std::size_t nqubits = 0;
   std::size_t nclassics = 0;
   std::size_t nancillae = 0;
-  std::size_t maxControls = 0;
   std::string name;
 
   // register names are used as keys, while the values are `{startIndex,
@@ -53,7 +52,7 @@ protected:
 
   std::unordered_set<sym::Variable> occuringVariables;
 
-  void importOpenQASM(std::istream& is);
+  void importOpenQASM3(std::istream& is);
   void importReal(std::istream& is);
   int readRealHeader(std::istream& is);
   void readRealGateDescriptions(std::istream& is, int line);
@@ -70,7 +69,7 @@ protected:
   template <class RegisterType>
   static void printSortedRegisters(const RegisterMap<RegisterType>& regmap,
                                    const std::string& identifier,
-                                   std::ostream& of) {
+                                   std::ostream& of, bool openQASM3 = false) {
     // sort regs by start index
     std::map<decltype(RegisterType::first),
              std::pair<std::string, RegisterType>>
@@ -80,13 +79,18 @@ protected:
     }
 
     for (const auto& reg : sortedRegs) {
-      of << identifier << " " << reg.second.first << "["
-         << reg.second.second.second << "];" << std::endl;
+      if (openQASM3) {
+        of << identifier << "[" << reg.second.second.second << "] "
+           << reg.second.first << ";" << std::endl;
+      } else {
+        of << identifier << " " << reg.second.first << "["
+           << reg.second.second.second << "];" << std::endl;
+      }
     }
   }
   template <class RegisterType>
   static void consolidateRegister(RegisterMap<RegisterType>& regs) {
-    bool finished = false;
+    bool finished = regs.empty();
     while (!finished) {
       for (const auto& qreg : regs) {
         finished = true;
@@ -118,6 +122,34 @@ protected:
       }
     }
   }
+
+  /**
+   * @brief Removes a certain qubit in a register from the register map
+   * @details If this was the last qubit in the register, the register is
+   * deleted. Removals at the beginning or the end of a register just modify the
+   * existing register. Removals in the middle of a register split the register
+   * into two new registers. The new registers are named by appending "_l" and
+   * "_h" to the original register name.
+   * @param regs A collection of all the registers
+   * @param reg The name of the register containing the qubit to be removed
+   * @param idx The index of the qubit in the register to be removed
+   */
+  static void removeQubitfromQubitRegister(QuantumRegisterMap& regs,
+                                           const std::string& reg, Qubit idx);
+
+  /**
+   * @brief Adds a qubit to a register in the register map
+   * @details If the register map is empty, a new register is created with the
+   * default name. If the qubit can be appended to the start or the end of an
+   * existing register, it is appended. Otherwise a new register is created with
+   * the default name and the qubit index appended.
+   * @param regs A collection of all the registers
+   * @param physicalQubitIndex The index of the qubit to be added
+   * @param defaultRegName The default name of the register to be created
+   */
+  static void addQubitToQubitRegister(QuantumRegisterMap& regs,
+                                      Qubit physicalQubitIndex,
+                                      const std::string& defaultRegName);
 
   template <class RegisterType>
   static void createRegisterArray(const RegisterMap<RegisterType>& regs,
@@ -215,9 +247,9 @@ public:
   QuantumComputation& operator=(QuantumComputation&& qc) noexcept = default;
   QuantumComputation(const QuantumComputation& qc)
       : nqubits(qc.nqubits), nclassics(qc.nclassics), nancillae(qc.nancillae),
-        maxControls(qc.maxControls), name(qc.name), qregs(qc.qregs),
-        cregs(qc.cregs), ancregs(qc.ancregs), mt(qc.mt), seed(qc.seed),
-        globalPhase(qc.globalPhase), occuringVariables(qc.occuringVariables),
+        name(qc.name), qregs(qc.qregs), cregs(qc.cregs), ancregs(qc.ancregs),
+        mt(qc.mt), seed(qc.seed), globalPhase(qc.globalPhase),
+        occuringVariables(qc.occuringVariables),
         initialLayout(qc.initialLayout),
         outputPermutation(qc.outputPermutation), ancillary(qc.ancillary),
         garbage(qc.garbage) {
@@ -231,7 +263,6 @@ public:
       nqubits = qc.nqubits;
       nclassics = qc.nclassics;
       nancillae = qc.nancillae;
-      maxControls = qc.maxControls;
       name = qc.name;
       qregs = qc.qregs;
       cregs = qc.cregs;
@@ -254,6 +285,20 @@ public:
     return *this;
   }
   virtual ~QuantumComputation() = default;
+
+  /**
+   * @brief Construct a QuantumComputation from an OpenQASM string
+   * @param qasm The OpenQASM 2.0 or 3.0 string
+   * @return The constructed QuantumComputation
+   */
+  [[nodiscard]] static QuantumComputation fromQASM(const std::string& qasm) {
+    std::stringstream ss{};
+    ss << qasm;
+    QuantumComputation qc{};
+    qc.importOpenQASM3(ss);
+    qc.initializeIOMapping();
+    return qc;
+  }
 
   [[nodiscard]] virtual std::size_t getNops() const { return ops.size(); }
   [[nodiscard]] std::size_t getNqubits() const { return nqubits + nancillae; }
@@ -293,6 +338,14 @@ public:
   getQubitRegisterAndIndex(Qubit physicalQubitIndex) const;
   [[nodiscard]] std::pair<std::string, Bit>
   getClassicalRegisterAndIndex(Bit classicalIndex) const;
+  /**
+   * @brief Returns the physical qubit index of the given logical qubit index
+   * @details Iterates over the initial layout dictionary and returns the key
+   * corresponding to the given value.
+   * @param logicalQubitIndex The logical qubit index to look for
+   * @return The physical qubit index of the given logical qubit index
+   */
+  [[nodiscard]] Qubit getPhysicalQubitIndex(Qubit logicalQubitIndex);
 
   [[nodiscard]] Qubit
   getIndexFromQubitRegister(const std::pair<std::string, Qubit>& qubit) const;
@@ -306,14 +359,14 @@ public:
   logicalQubitIsAncillary(const Qubit logicalQubitIndex) const {
     return ancillary[logicalQubitIndex];
   }
-  void setLogicalQubitAncillary(const Qubit logicalQubitIndex) {
-    if (logicalQubitIsAncillary(logicalQubitIndex)) {
-      return;
-    }
-    ancillary[logicalQubitIndex] = true;
-    nancillae++;
-    nqubits--;
-  }
+  /**
+   * @brief Sets the given logical qubit to be ancillary
+   * @details Removes the qubit from the qubit register and adds it to the
+   * ancillary register, if such a register exists. Otherwise a new ancillary
+   * register is created.
+   * @param logicalQubitIndex
+   */
+  void setLogicalQubitAncillary(Qubit logicalQubitIndex);
   [[nodiscard]] bool
   logicalQubitIsGarbage(const Qubit logicalQubitIndex) const {
     return garbage[logicalQubitIndex];
@@ -676,10 +729,6 @@ public:
   void addQubit(Qubit logicalQubitIndex, Qubit physicalQubitIndex,
                 std::optional<Qubit> outputQubitIndex);
 
-  void updateMaxControls(const std::size_t ncontrols) {
-    maxControls = std::max(ncontrols, maxControls);
-  }
-
   void instantiate(const VariableAssignment& assignment);
 
   void addVariable(const SymbolOrNumber& expr);
@@ -747,7 +796,20 @@ public:
     dump(std::move(of), format);
   }
   virtual void dump(std::ostream&& of, Format format);
-  virtual void dumpOpenQASM(std::ostream& of);
+  void dumpOpenQASM2(std::ostream& of) { dumpOpenQASM(of, false); }
+  void dumpOpenQASM3(std::ostream& of) { dumpOpenQASM(of, true); }
+  virtual void dumpOpenQASM(std::ostream& of, bool openQasm3);
+
+  /**
+   * @brief Returns the OpenQASM representation of the circuit
+   * @param qasm3 Whether to use OpenQASM 3.0 or 2.0
+   * @return The OpenQASM representation of the circuit
+   */
+  [[nodiscard]] std::string toQASM(const bool qasm3 = true) {
+    std::stringstream ss;
+    dumpOpenQASM(ss, qasm3);
+    return ss.str();
+  }
 
   // this convenience method allows to turn a circuit into a compound operation.
   std::unique_ptr<CompoundOperation> asCompoundOperation() {
