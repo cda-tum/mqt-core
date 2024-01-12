@@ -2,13 +2,19 @@
 
 #include "Definitions.hpp"
 #include "Expression.hpp"
+#include "Permutation.hpp"
 #include "StandardOperation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
 
 #include <algorithm>
 #include <cstddef>
+#include <functional>
+#include <memory>
 #include <optional>
-#include <unordered_set>
+#include <ostream>
 #include <variant>
+#include <vector>
 
 namespace qc {
 
@@ -120,7 +126,8 @@ public:
   }
 
   [[nodiscard]] inline bool isSymbolicOperation() const override {
-    return true;
+    return std::any_of(symbolicParameter.begin(), symbolicParameter.end(),
+                       [](const auto& sym) { return sym.has_value(); });
   }
 
   [[nodiscard]] inline bool isStandardOperation() const override {

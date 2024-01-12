@@ -139,12 +139,12 @@ TEST_F(SymbolicTest, Gates) {
   }
 
   const VariableAssignment assignment{{x, xVal}, {y, yVal}, {z, zVal}};
-  symQc.instantiate(assignment);
+  auto instantiated = symQc.instantiate(assignment);
 
   // after the instantiation, the symbolic circuit should be equal to the
   // standard circuit
-  for (auto it1 = symQc.begin(), it2 = qc.begin();
-       it1 != symQc.end() && it2 != qc.end(); ++it1, ++it2) {
+  for (auto it1 = instantiated.begin(), it2 = qc.begin();
+       it1 != instantiated.end() && it2 != qc.end(); ++it1, ++it2) {
     EXPECT_TRUE((*it1)->equals(*(*it2)));
   }
 }
