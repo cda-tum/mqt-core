@@ -120,7 +120,8 @@ public:
   }
 
   [[nodiscard]] inline bool isSymbolicOperation() const override {
-    return true;
+    return std::any_of(symbolicParameter.begin(), symbolicParameter.end(),
+                       [](const auto& sym) { return sym.has_value(); });
   }
 
   [[nodiscard]] inline bool isStandardOperation() const override {
