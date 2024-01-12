@@ -1056,6 +1056,11 @@ void QuantumComputation::instantiateInplace(
       symOp->instantiate(assignment);
     }
   }
+  // after an operation is instantiated, the respective parameters can be
+  // removed from the circuit
+  for (const auto& [var, _] : assignment) {
+    occuringVariables.erase(var);
+  }
 }
 
 void QuantumComputation::measure(
