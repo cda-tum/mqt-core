@@ -2,13 +2,19 @@
 
 #include "Definitions.hpp"
 #include "Expression.hpp"
+#include "Permutation.hpp"
 #include "StandardOperation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
 
 #include <algorithm>
 #include <cstddef>
+#include <functional>
+#include <memory>
 #include <optional>
-#include <unordered_set>
+#include <ostream>
 #include <variant>
+#include <vector>
 
 namespace qc {
 
