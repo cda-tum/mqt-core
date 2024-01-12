@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError
+from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
@@ -37,14 +38,18 @@ def test_cli_include_dir(script_runner: ScriptRunner) -> None:
     """Test running the CLI with the --include_dir argument."""
     ret = script_runner.run(["mqt-core-cli", "--include_dir"])
     assert ret.success
-    assert "mqt/core/include" in ret.stdout
+    include_dir = Path(ret.stdout.strip())
+    assert include_dir.exists()
+    assert include_dir.is_dir()
 
 
 def test_cli_cmake_dir(script_runner: ScriptRunner) -> None:
     """Test running the CLI with the --cmake_dir argument."""
     ret = script_runner.run(["mqt-core-cli", "--cmake_dir"])
     assert ret.success
-    assert "mqt/core/share/cmake" in ret.stdout
+    cmake_dir = Path(ret.stdout.strip())
+    assert cmake_dir.exists()
+    assert cmake_dir.is_dir()
 
 
 def test_cli_include_dir_not_installed(script_runner: ScriptRunner) -> None:
