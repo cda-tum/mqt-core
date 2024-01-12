@@ -36,7 +36,7 @@ def load(input_circuit: QuantumComputation | str | PathLike[str] | QuantumCircui
         return QuantumComputation(input_circuit)
 
     try:
-        from mqt.core.plugins.qiskit import qiskit_to_mqt
+        from .plugins.qiskit import qiskit_to_mqt
     except ImportError:
         msg = "Qiskit is not installed. Please install `mqt.core[qiskit]` to use Qiskit circuits as input."
         raise ValueError(msg) from None
