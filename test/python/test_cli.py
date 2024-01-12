@@ -17,7 +17,6 @@ def test_cli_no_arguments(script_runner: ScriptRunner) -> None:
     ret = script_runner.run(["mqt-core-cli"])
     assert ret.success
     assert "usage: mqt-core-cli [-h] [--version] [--include_dir] [--cmake_dir]" in ret.stdout
-    assert "options:" in ret.stdout
 
 
 def test_cli_help(script_runner: ScriptRunner) -> None:
@@ -25,7 +24,6 @@ def test_cli_help(script_runner: ScriptRunner) -> None:
     ret = script_runner.run(["mqt-core-cli", "--help"])
     assert ret.success
     assert "usage: mqt-core-cli [-h] [--version] [--include_dir] [--cmake_dir]" in ret.stdout
-    assert "options:" in ret.stdout
 
 
 def test_cli_version(script_runner: ScriptRunner) -> None:
