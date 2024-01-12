@@ -54,6 +54,8 @@ void registerExpression(py::module& m) {
       .def("__len__", &sym::Expression<double, double>::numTerms)
       .def_property_readonly("terms",
                              &sym::Expression<double, double>::getTerms)
+      .def_property_readonly("variables",
+                             &sym::Expression<double, double>::getVariables)
       .def("evaluate", &sym::Expression<double, double>::evaluate,
            "assignment"_a,
            "Return the value of this expression given by summing the values of "
