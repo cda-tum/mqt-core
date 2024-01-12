@@ -86,3 +86,11 @@ def test_cli_cmake_dir_not_found(script_runner: ScriptRunner) -> None:
         ret = script_runner.run(["mqt-core-cli", "--cmake_dir"])
         assert not ret.success
         assert "mqt-core CMake files not found." in ret.stderr
+
+
+def test_cli_execute_module() -> None:
+    """Test running the CLI by executing the mqt-core module."""
+    from subprocess import check_output
+
+    output = check_output(["python3", "-m", "mqt.core", "--version"])  # noqa: S603, S607
+    assert mqt_core_version in output.decode()
