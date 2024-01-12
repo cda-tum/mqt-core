@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import sys
 from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import patch
+
+import pytest
 
 from mqt.core import __version__ as mqt_core_version
 
@@ -88,6 +91,7 @@ def test_cli_cmake_dir_not_found(script_runner: ScriptRunner) -> None:
         assert "mqt-core CMake files not found." in ret.stderr
 
 
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="The subprocess calls do not work properly on Windows.")
 def test_cli_execute_module() -> None:
     """Test running the CLI by executing the mqt-core module."""
     from subprocess import check_output
