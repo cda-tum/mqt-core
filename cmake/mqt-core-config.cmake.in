@@ -1,0 +1,29 @@
+# A CMake config file for the library, to be used by external projects
+
+@PACKAGE_INIT@
+
+check_required_components(mqt-core)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
+
+include(CMakeFindDependencyMacro)
+find_dependency(GMP)
+find_dependency(pybind11_json)
+
+if(TARGET MQT::Core)
+  return()
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/Cache.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/CompilerOptions.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/CompilerWarnings.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/GetVersion.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/PackageAddTest.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/PreventInSourceBuilds.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Sanitizers.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/StandardProjectSettings.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/mqt-core-targets.cmake")
+
+if(NOT mqt-core_FIND_QUIETLY)
+  message(STATUS "Found mqt-core version ${mqt-core_VERSION}")
+endif()
