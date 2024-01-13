@@ -38,11 +38,12 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
   auto n2 = static_cast<Qubit>(c2.getNqubits());
   auto nextGarbage = getNextGarbage(0, garbage1);
   // find the first garbage qubit at the end
-  for (Qubit i = std::min(n1, n2) - 1; i >= static_cast<Qubit>(m1); i--) {
-    if (!garbage1.at(i)) {
+  for (std::int64_t i = std::min(n1, n2) - 1;
+       i >= static_cast<std::int64_t>(m1); i--) {
+    if (!garbage1.at(static_cast<Qubit>(i))) {
       // swap it to the beginning
-      c1.swap(i, nextGarbage);
-      c2.swap(i, nextGarbage);
+      c1.swap(static_cast<Qubit>(i), nextGarbage);
+      c2.swap(static_cast<Qubit>(i), nextGarbage);
       ++nextGarbage;
       nextGarbage = getNextGarbage(nextGarbage, garbage1);
     }
@@ -52,6 +53,15 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
 
   auto u1 = buildFunctionality(&c1, *dd, false, false);
   auto u2 = buildFunctionality(&c2, *dd, false, false);
+
+  // std::cout << "u1: \n";
+  // u1.printMatrix();
+  // std::cout << std::endl;
+
+  // std::cout << "u2: \n";
+  // u2.printMatrix();
+  // std::cout << std::endl;
+
   if (d1 == n1 && d2 == n2) {
     // no ancilla qubits
     return dd->zeroAncillaePartialEquivalenceCheck(u1, u2,
