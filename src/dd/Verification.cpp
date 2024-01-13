@@ -4,9 +4,6 @@
 #include "operations/OpType.hpp"
 #include "operations/StandardOperation.hpp"
 
-#include <stdexcept>
-#include <string>
-
 namespace dd {
 
 const std::vector<std::vector<OpType>> PRE_GENERATED_CIRCUITS_SIZE_1_1{{}};
@@ -25,45 +22,155 @@ void addDecomposedCxxGate(QuantumComputation& circuit, Qubit control1,
   circuit.cx(control2, target);
   circuit.t(target);
   circuit.cx(control1, target);
-  circuit.t(control1);
   circuit.tdg(target);
   circuit.cx(control2, target);
-  circuit.cx(control2, control1);
   circuit.t(target);
+  circuit.t(control1);
+  circuit.h(target);
+  circuit.cx(control2, control1);
   circuit.t(control2);
   circuit.tdg(control1);
-  circuit.h(target);
   circuit.cx(control2, control1);
 }
 
-void addRandomGate(QuantumComputation& circuit, size_t n, Qubit d,
-                   Qubit randomControl1, Qubit randomControl2,
-                   Qubit randomTarget, OpType randomStandardOperation,
-                   bool decomposeMcx) {
-  if (randomStandardOperation == opTypeFromString("mcx")) {
-    if (d >= 3) {
-      if (decomposeMcx) {
-        addDecomposedCxxGate(circuit, randomControl1, randomControl2,
-                             randomTarget);
-      } else {
-        const Controls controls{randomControl1, randomControl2};
-        StandardOperation op{n, controls, randomTarget,
-                             randomStandardOperation};
-        circuit.emplace_back<StandardOperation>();
-      }
-    }
+void addRandomStandardOperation(QuantumComputation& circuit,
+                                StandardOperation op, bool decomposeMcx) {
+  std::vector<Qubit> controls{};
+  for (auto c : op.getControls()) { // they are at most 2
+    controls.push_back(static_cast<Qubit>(c.qubit));
+  }
+  std::vector<Qubit> targets{};
+  for (auto t : op.getTargets()) { // they are at most 2
+    targets.push_back(static_cast<Qubit>(t));
+  }
 
-  } else if (isTwoQubitGate(randomStandardOperation)) {
-    if (d >= 2) {
-      circuit.emplace_back<StandardOperation>(n, randomControl1, randomTarget,
-                                              randomStandardOperation);
-    }
-  } else {
-    if (d >= 1) {
-      circuit.emplace_back<StandardOperation>(n, randomTarget,
-                                              randomStandardOperation);
+  if (op.getType() == qc::X && controls.size() == 2) {
+
+    if (decomposeMcx) {
+      addDecomposedCxxGate(circuit, controls[0], controls[1], targets[0]);
+      return;
     }
   }
+
+  circuit.emplace_back<StandardOperation>(op);
+}
+
+std::vector<Qubit> fiveDiffferentRandomNumbers(Qubit min, Qubit max) {
+  std::vector<Qubit> numbers;
+
+  for (Qubit i = min; i < max; i++) {
+    numbers.push_back(i);
+  }
+  unsigned seed = static_cast<unsigned>(
+      std::chrono::system_clock::now().time_since_epoch().count());
+  std::shuffle(numbers.begin(), numbers.end(),
+               std::default_random_engine(seed));
+
+  auto lengthOutputVector = std::min(5UL, numbers.size());
+  std::vector<Qubit> outputVector(numbers.begin(),
+                                  numbers.begin() +
+                                      static_cast<int64_t>(lengthOutputVector));
+  return outputVector;
+}
+
+StandardOperation makeRandomStandardOperation(size_t n, Qubit nrQubits,
+                                              Qubit min) {
+  auto randomNumbers = fiveDiffferentRandomNumbers(min, min + nrQubits);
+  auto randomOpType = static_cast<OpType>(rand() % Compound);
+  Qubit randomTarget1 = randomNumbers[0];
+  Qubit randomTarget2{min};
+  if (randomNumbers.size() > 1) {
+    randomTarget2 = randomNumbers[1];
+  };
+  size_t nrControls =
+      std::min(randomNumbers.size() - 3, static_cast<size_t>(rand() % 3));
+  if (randomNumbers.size() < 3) {
+    nrControls = 0;
+  }
+  if (nrControls == 2) {
+    // otherwise Cnots are almost never generated
+    randomOpType = qc::X;
+  }
+  Controls randomControls{};
+  for (size_t i = 0; i < nrControls; i++) {
+    randomControls.emplace(randomNumbers[i + 2]);
+  }
+  const fp randomParameter1 =
+      static_cast<fp>(rand()) / static_cast<fp>(RAND_MAX);
+  const fp randomParameter2 =
+      static_cast<fp>(rand()) / static_cast<fp>(RAND_MAX);
+  const fp randomParameter3 =
+      static_cast<fp>(rand()) / static_cast<fp>(RAND_MAX);
+  switch (randomOpType) {
+    // two targets and zero parameters
+  case qc::SWAP:
+  case qc::iSWAP:
+  case qc::iSWAPdg:
+  case qc::Peres:
+  case qc::Peresdg:
+  case qc::DCX:
+  case qc::ECR:
+    if (randomNumbers.size() > 1) {
+      return {n, randomControls, Targets{randomTarget1, randomTarget2},
+              randomOpType};
+    }
+    break;
+    // two targets and one parameter
+  case qc::RXX:
+  case qc::RYY:
+  case qc::RZZ:
+  case qc::RZX:
+    if (randomNumbers.size() > 1) {
+      return {n, randomControls, Targets{randomTarget1, randomTarget2},
+              randomOpType, std::vector<fp>{randomParameter1}};
+    }
+    break;
+
+    // two targets and two parameters
+  case qc::XXminusYY:
+  case qc::XXplusYY:
+    if (randomNumbers.size() > 1) {
+      return {n, randomControls, Targets{randomTarget1, randomTarget2},
+              randomOpType,
+              std::vector<fp>{randomParameter1, randomParameter2}};
+    }
+    break;
+
+    // one target and zero parameters
+  case qc::I:
+  case qc::H:
+  case qc::X:
+  case qc::Y:
+  case qc::Z:
+  case qc::S:
+  case qc::Sdg:
+  case qc::T:
+  case qc::Tdg:
+  case qc::V:
+  case qc::Vdg:
+  case qc::SX:
+  case qc::SXdg:
+    return {n, randomControls, randomTarget1, randomOpType};
+    // one target and three parameters
+  case qc::U:
+    return {
+        n, randomControls, randomTarget1, randomOpType,
+        std::vector<fp>{randomParameter1, randomParameter2, randomParameter3}};
+    // one target and two parameters
+  case qc::U2:
+    return {n, randomControls, randomTarget1, randomOpType,
+            std::vector<fp>{randomParameter1, randomParameter2}};
+    // one target and one parameter
+  case qc::P:
+  case qc::RX:
+  case qc::RY:
+  case qc::RZ:
+    return {n, randomControls, randomTarget1, randomOpType,
+            std::vector<fp>{randomParameter1}};
+  default:
+    return {n, randomTarget1, qc::I};
+  }
+  return {n, randomTarget1, qc::I};
 }
 
 void addPreGeneratedCircuits(QuantumComputation& circuit1,
@@ -94,33 +201,6 @@ void addPreGeneratedCircuits(QuantumComputation& circuit1,
   }
 }
 
-std::tuple<Qubit, Qubit, Qubit> threeDiffferentRandomNumbers(Qubit min,
-                                                             Qubit max) {
-  auto range = max - min;
-  auto randomTarget = static_cast<Qubit>(rand() % range) + min;
-  Qubit randomControl1{0};
-  Qubit randomControl2{0};
-  if (range > 1) {
-    randomControl1 = static_cast<Qubit>(rand() % (range - 1)) + min;
-    if (randomControl1 == randomTarget) {
-      randomControl1 = static_cast<Qubit>(max + min - 1);
-    }
-    if (range > 2) {
-      randomControl2 = static_cast<Qubit>(rand() % (range - 2)) + min;
-      if (randomControl2 == randomTarget) {
-        randomControl2 = static_cast<Qubit>(max + min - 1);
-      }
-      if (randomControl2 == randomControl1) {
-        randomControl2 = static_cast<Qubit>(max + min - 2);
-        if (randomControl2 == randomTarget) {
-          randomControl2 = static_cast<Qubit>(max + min - 1);
-        }
-      }
-    }
-  }
-  return std::make_tuple(randomTarget, randomControl1, randomControl2);
-}
-
 std::pair<qc::QuantumComputation, qc::QuantumComputation>
 generateRandomBenchmark(size_t n, Qubit d, Qubit m) {
   if (d > n) {
@@ -136,33 +216,23 @@ generateRandomBenchmark(size_t n, Qubit d, Qubit m) {
     circuit1.h(i);
     circuit2.h(i);
   }
-
-  circuit1.barrier(0);
-  circuit1.barrier(1);
-  circuit1.barrier(2);
-  circuit2.barrier(0);
-  circuit2.barrier(1);
-  circuit2.barrier(2);
-
+  for (Qubit i = 0U; i < static_cast<Qubit>(n); i++) {
+    circuit1.barrier(i);
+    circuit2.barrier(i);
+  }
   // 2) Totally equivalent subcircuits
-  //    generate a random subcircuit with d qubits and 3d gates to apply on both
-  //    circuits, but all the Toffoli gates in C2 are decomposed
+  //    generate a random subcircuit with d qubits and 3d gates to apply
+  //    on both circuits, but all the Toffoli gates in C2 are decomposed
 
   for (Qubit i = 0U; i < 3 * d; i++) {
-    auto [randomTarget, randomControl1, randomControl2] =
-        threeDiffferentRandomNumbers(0, d);
-    auto randomStandardOperation = static_cast<OpType>(rand() % Compound);
-    addRandomGate(circuit1, n, d, randomControl1, randomControl2, randomTarget,
-                  randomStandardOperation, false);
-    addRandomGate(circuit2, n, d, randomControl1, randomControl2, randomTarget,
-                  randomStandardOperation, true);
+    auto op = makeRandomStandardOperation(n, d, 0);
+    addRandomStandardOperation(circuit1, op, false);
+    addRandomStandardOperation(circuit2, op, true);
   }
-  circuit1.barrier(0);
-  circuit1.barrier(1);
-  circuit1.barrier(2);
-  circuit2.barrier(0);
-  circuit2.barrier(1);
-  circuit2.barrier(2);
+  for (Qubit i = 0U; i < static_cast<Qubit>(n); i++) {
+    circuit1.barrier(i);
+    circuit2.barrier(i);
+  }
   // 3) Partially equivalent subcircuits
 
   //    divide data qubits into groups of size 1 or 2
@@ -177,36 +247,27 @@ generateRandomBenchmark(size_t n, Qubit d, Qubit m) {
 
     groupBeginIndex += groupSize;
   }
-  circuit1.barrier(0);
-  circuit1.barrier(1);
-  circuit1.barrier(2);
-  circuit2.barrier(0);
-  circuit2.barrier(1);
-  circuit2.barrier(2);
+  for (Qubit i = 0U; i < static_cast<Qubit>(n); i++) {
+    circuit1.barrier(i);
+    circuit2.barrier(i);
+  }
   // 4) Arbitrary gates
   //    arbitrary gates are added to not measured qubits
   if (d > m) {
-    for (Qubit i = 0U; i < d - m; i++) {
-      auto [randomTarget, randomControl1, randomControl2] =
-          threeDiffferentRandomNumbers(m, d);
-      auto randomStandardOperation = static_cast<OpType>(rand() % Compound);
-      addRandomGate(circuit1, n, d - m, randomControl1, randomControl2,
-                    randomTarget, randomStandardOperation, false);
+    Qubit notMQubits = d - m;
+    for (Qubit i = 0U; i < notMQubits; i++) {
+      auto op = makeRandomStandardOperation(n, notMQubits, m);
+      addRandomStandardOperation(circuit1, op, false);
     }
     for (Qubit i = 0U; i < d - m; i++) {
-      auto [randomTarget, randomControl1, randomControl2] =
-          threeDiffferentRandomNumbers(m, d);
-      auto randomStandardOperation = static_cast<OpType>(rand() % Compound);
-      addRandomGate(circuit2, n, d - m, randomControl1, randomControl2,
-                    randomTarget, randomStandardOperation, false);
+      auto op = makeRandomStandardOperation(n, notMQubits, m);
+      addRandomStandardOperation(circuit2, op, false);
     }
   }
-  circuit1.barrier(0);
-  circuit1.barrier(1);
-  circuit1.barrier(2);
-  circuit2.barrier(0);
-  circuit2.barrier(1);
-  circuit2.barrier(2);
+  for (Qubit i = 0U; i < static_cast<Qubit>(n); i++) {
+    circuit1.barrier(i);
+    circuit2.barrier(i);
+  }
   // 5) CNOT gates (if there are ancilla qubits)
   Qubit currentDataQubit = 0;
   for (Qubit currentAncillaQubit = d;
@@ -215,6 +276,15 @@ generateRandomBenchmark(size_t n, Qubit d, Qubit m) {
     circuit1.cx(currentAncillaQubit, currentDataQubit);
     circuit2.cx(currentAncillaQubit, nextDataQubit);
     currentDataQubit = nextDataQubit;
+  }
+
+  for (Qubit i = d; i < static_cast<Qubit>(n); i++) {
+    circuit1.setLogicalQubitAncillary(i);
+    circuit2.setLogicalQubitAncillary(i);
+  }
+  for (Qubit i = m; i < static_cast<Qubit>(n); i++) {
+    circuit1.setLogicalQubitGarbage(i);
+    circuit2.setLogicalQubitGarbage(i);
   }
 
   return std::make_pair(circuit1, circuit2);

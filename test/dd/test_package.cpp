@@ -1984,6 +1984,21 @@ TEST(DDPackageTest, DDStatistics) {
   EXPECT_GT(uniqueTableStats["total"]["num_buckets"], 0);
 }
 
+TEST(DDPackageTest, ReduceAncillaeRegression) {
+  auto dd = std::make_unique<dd::Package<>>(2);
+  const auto inputMatrix =
+      dd::CMat{{1, 1, 1, 1}, {1, -1, 1, -1}, {1, 1, -1, -1}, {1, -1, -1, 1}};
+  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
+  dd->incRef(inputDD);
+  const auto outputDD = dd->reduceAncillae(inputDD, {true, false});
+
+  const auto outputMatrix = outputDD.getMatrix();
+  const auto expected =
+      dd::CMat{{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, -1, 0}, {1, 0, -1, 0}};
+
+  EXPECT_EQ(outputMatrix, expected);
+}
+
 TEST(DDPackageTest, DDMShiftAllRows) {
   const auto nqubits = 2U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
@@ -2485,37 +2500,74 @@ TEST(DDPackageTest, DDMPECSliQECPeriodFinding8Qubits) {
 }
 
 TEST(DDPackageTest, DDMPECBenchmark) {
-  auto dd = std::make_unique<dd::Package<>>(7);
+  auto dd = std::make_unique<dd::Package<>>(20);
+  size_t minN = 3;
+  size_t maxN = 9;
+  std::cout << "Partial equivalence check\n";
+  for (size_t n = minN; n < maxN; n++) {
+    dd::Qubit d =
+        static_cast<dd::Qubit>(static_cast<dd::Qubit>(rand()) % (n - 1)) + 1;
+    dd::Qubit m = static_cast<dd::Qubit>(rand()) % d;
+    auto [c1, c2] = dd::generateRandomBenchmark(n, d, m);
 
-  auto [c1, c2] = dd::generateRandomBenchmark(5, 3, 1);
+    std::cout << "circuit 1: \n";
+    c1.print(std::cout);
+    std::cout << "circuit 2: \n";
+    c2.print(std::cout);
+    auto start = std::chrono::high_resolution_clock::now();
+    EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
+    // Get ending timepoint
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration =
+        std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 
+    std::cout << "\nnumber of qubits = " << n << "; data qubits = " << d
+              << "; measured qubits = " << m
+              << "; number of gates = " << c2.size() << "\n";
+    std::cout << "time: " << static_cast<double>(duration.count()) / 1000000.
+              << " seconds\n";
+  }
+}
+
+TEST(DDPackageTest, DDMZAPECBenchmark) {
+  auto dd = std::make_unique<dd::Package<>>(20);
+  size_t minN = 3;
+  size_t maxN = 8;
+  std::cout << "Zero-ancilla partial equivalence check\n";
+  for (size_t n = minN; n < maxN; n++) {
+    auto d = static_cast<dd::Qubit>(n);
+    dd::Qubit m = static_cast<dd::Qubit>(rand()) % d;
+    auto [c1, c2] = dd::generateRandomBenchmark(n, d, m);
+
+    std::cout << "circuit 1: \n";
+    c1.print(std::cout);
+    std::cout << "circuit 2: \n";
+    c2.print(std::cout);
+    auto start = std::chrono::high_resolution_clock::now();
+    EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
+    // Get ending timepoint
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration =
+        std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+
+    std::cout << "\nnumber of qubits = " << n << "; data qubits = " << d
+              << "; measured qubits = " << m
+              << "; number of gates = " << c2.size() << "\n";
+    std::cout << "time: " << static_cast<double>(duration.count()) / 1000000.
+              << " seconds\n";
+  }
+}
+
+TEST(DDPackageTest, DDMPECZ) {
+  auto dd = std::make_unique<dd::Package<>>(1);
+
+  dd::QuantumComputation c1{1};
+  dd::QuantumComputation c2{1};
+  c2.z(0);
   std::cout << "circuit 1: \n";
   c1.print(std::cout);
   std::cout << "circuit 2: \n";
   c2.print(std::cout);
 
-  c1.setLogicalQubitAncillary(3);
-  c1.setLogicalQubitAncillary(4);
-
-  c2.setLogicalQubitGarbage(1);
-  c2.setLogicalQubitGarbage(2);
-  c2.setLogicalQubitGarbage(3);
-  c2.setLogicalQubitGarbage(4);
-
   EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
-}
-
-TEST(DDPackageTest, ReduceAncillaeRegression) {
-  auto dd = std::make_unique<dd::Package<>>(2);
-  const auto inputMatrix =
-      dd::CMat{{1, 1, 1, 1}, {1, -1, 1, -1}, {1, 1, -1, -1}, {1, -1, -1, 1}};
-  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
-  dd->incRef(inputDD);
-  const auto outputDD = dd->reduceAncillae(inputDD, {true, false});
-
-  const auto outputMatrix = outputDD.getMatrix();
-  const auto expected =
-      dd::CMat{{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, -1, 0}, {1, 0, -1, 0}};
-
-  EXPECT_EQ(outputMatrix, expected);
 }
