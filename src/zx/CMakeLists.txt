@@ -21,9 +21,11 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-zx)
                                         $<INSTALL_INTERFACE:${MQT_CORE_INCLUDE_INSTALL_DIR}>)
       add_library(MQT::Multiprecision ALIAS multiprecision)
 
-      # finally, we create install instructions for the respective header files
-      install(DIRECTORY ${MULTIPRECISION_INCLUDE_DIR}/boost
-              DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
+      if(MQT_CORE_INSTALL)
+        # finally, we create install instructions for the respective header files
+        install(DIRECTORY ${MULTIPRECISION_INCLUDE_DIR}/boost
+                DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
+      endif()
     endif()
   endif()
 
