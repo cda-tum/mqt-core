@@ -115,30 +115,5 @@ if(BUILD_MQT_CORE_TESTS)
     EXCLUDE_FROM_ALL)
 endif()
 
-if(BINDINGS)
-  if(NOT SKBUILD)
-    # Manually detect the installed pybind11 package and import it into CMake.
-    execute_process(
-      COMMAND "${Python_EXECUTABLE}" -m pybind11 --cmakedir
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-      OUTPUT_VARIABLE pybind11_DIR)
-    list(APPEND CMAKE_PREFIX_PATH "${pybind11_DIR}")
-  endif()
-
-  # add pybind11 library
-  find_package(pybind11 CONFIG REQUIRED)
-
-  declare_dependency(
-    NAME
-    pybind11_json
-    URL
-    https://github.com/pybind/pybind11_json/archive/refs/tags/0.2.13.tar.gz
-    MD5
-    93ebbea2bb69f71febe0f83c8f88ced2
-    MIN_VERSION
-    0.2.13
-    SYSTEM)
-endif()
-
 # Make all declared dependencies available.
 FetchContent_MakeAvailable(${FETCH_PACKAGES})
