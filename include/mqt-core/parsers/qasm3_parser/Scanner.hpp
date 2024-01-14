@@ -1,11 +1,18 @@
 #pragma once
 
 #include "Token.hpp"
+#include "mqt_core_export.h"
 
+#include <cctype>
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
+#include <optional>
+#include <string>
+#include <unordered_map>
 
 namespace qasm3 {
-class Scanner {
+class MQT_CORE_EXPORT Scanner {
   std::istream* is;
   std::unordered_map<std::string, Token::Kind> keywords{};
   char ch = 0;

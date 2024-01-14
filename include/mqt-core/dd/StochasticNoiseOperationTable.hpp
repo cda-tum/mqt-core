@@ -3,6 +3,7 @@
 #include "Definitions.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/statistics/TableStatistics.hpp"
+#include "mqt_core_export.h"
 
 #include <array>
 #include <cassert>
@@ -13,7 +14,7 @@
 
 namespace dd {
 template <class Edge, std::size_t numberOfStochasticOperations = 64>
-class StochasticNoiseOperationTable {
+class MQT_CORE_EXPORT StochasticNoiseOperationTable {
 public:
   explicit StochasticNoiseOperationTable(const std::size_t nv) : nvars(nv) {
     resize(nv);

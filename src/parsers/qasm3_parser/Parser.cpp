@@ -2,6 +2,7 @@
 
 #include "parsers/qasm3_parser/StdGates.hpp"
 
+#include <fstream>
 #include <regex>
 
 namespace qasm3 {

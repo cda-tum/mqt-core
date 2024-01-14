@@ -1,14 +1,15 @@
 #pragma once
 
+#include "mqt_core_export.h"
+
 #include <cstdint>
-#include <functional>
 #include <iostream>
 #include <string>
 #include <unordered_map>
 
 namespace qc {
 // Natively supported operations of the QFR library
-enum OpType : std::uint8_t {
+enum MQT_CORE_EXPORT OpType : std::uint8_t {
   None,
   // Standard Operations
   GPhase,
@@ -62,7 +63,7 @@ enum OpType : std::uint8_t {
   OpCount
 };
 
-inline std::string toString(const OpType& opType) {
+MQT_CORE_EXPORT inline std::string toString(const OpType& opType) {
   switch (opType) {
   case None:
     return "none";
@@ -156,7 +157,7 @@ inline std::string toString(const OpType& opType) {
  * @param opType OpType to get the short name for
  * @return Short name for the given OpType
  */
-inline std::string shortName(const OpType& opType) {
+MQT_CORE_EXPORT inline std::string shortName(const OpType& opType) {
   switch (opType) {
   case GPhase:
     return "GPh";
@@ -189,7 +190,7 @@ inline std::string shortName(const OpType& opType) {
   }
 }
 
-inline bool isTwoQubitGate(const OpType& opType) {
+MQT_CORE_EXPORT inline bool isTwoQubitGate(const OpType& opType) {
   switch (opType) {
   case SWAP:
   case iSWAP:
@@ -210,7 +211,8 @@ inline bool isTwoQubitGate(const OpType& opType) {
   }
 }
 
-inline std::ostream& operator<<(std::ostream& out, OpType& opType) {
+MQT_CORE_EXPORT inline std::ostream& operator<<(std::ostream& out,
+                                                OpType& opType) {
   out << toString(opType);
   return out;
 }
@@ -287,7 +289,8 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"compound", OpType::Compound},
 };
 
-[[nodiscard]] inline OpType opTypeFromString(const std::string& opType) {
+[[nodiscard]] MQT_CORE_EXPORT inline OpType
+opTypeFromString(const std::string& opType) {
   // try to find the operation type in the map of known operation types and
   // return it if found or throw an exception otherwise.
   if (const auto it = OP_NAME_TO_TYPE.find(opType);
@@ -297,7 +300,8 @@ const inline static std::unordered_map<std::string, qc::OpType>
   throw std::invalid_argument("Unsupported operation type: " + opType);
 }
 
-inline std::istream& operator>>(std::istream& in, OpType& opType) {
+MQT_CORE_EXPORT inline std::istream& operator>>(std::istream& in,
+                                                OpType& opType) {
   std::string opTypeStr;
   in >> opTypeStr;
 

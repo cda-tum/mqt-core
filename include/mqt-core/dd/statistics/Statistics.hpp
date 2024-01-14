@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mqt_core_export.h"
 #include "nlohmann/json_fwd.hpp"
 
 #include <ostream>
@@ -7,7 +8,7 @@
 
 namespace dd {
 
-struct Statistics {
+struct MQT_CORE_EXPORT Statistics {
   virtual ~Statistics() = default;
 
   /// Reset all statistics (except for peak values)

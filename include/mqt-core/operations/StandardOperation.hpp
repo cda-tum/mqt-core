@@ -1,11 +1,22 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "Operation.hpp"
+#include "Permutation.hpp"
+#include "mqt_core_export.h"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
 
 #include <cmath>
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace qc {
-class StandardOperation : public Operation {
+class MQT_CORE_EXPORT StandardOperation : public Operation {
 protected:
   static void checkInteger(fp& ld) {
     const fp nearest = std::nearbyint(ld);

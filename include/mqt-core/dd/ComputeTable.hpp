@@ -3,6 +3,7 @@
 #include "dd/DDDefinitions.hpp"
 #include "dd/Node.hpp"
 #include "dd/statistics/TableStatistics.hpp"
+#include "mqt_core_export.h"
 
 #include <array>
 #include <bitset>
@@ -19,7 +20,7 @@ namespace dd {
 /// \tparam NBUCKET number of hash buckets to use (has to be a power of two)
 template <class LeftOperandType, class RightOperandType, class ResultType,
           std::size_t NBUCKET = 16384>
-class ComputeTable {
+class MQT_CORE_EXPORT ComputeTable {
 public:
   ComputeTable() {
     stats.entrySize = sizeof(Entry);

@@ -1,13 +1,18 @@
 #pragma once
 
+#include "Permutation.hpp"
 #include "QuantumComputation.hpp"
+#include "mqt_core_export.h"
+#include "operations/Expression.hpp"
+#include "operations/Operation.hpp"
 #include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
 #include <cstddef>
+#include <vector>
 
 namespace zx {
-class FunctionalityConstruction {
+class MQT_CORE_EXPORT FunctionalityConstruction {
   using op_it = qc::QuantumComputation::const_iterator;
 
 public:

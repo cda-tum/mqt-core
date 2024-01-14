@@ -1,9 +1,18 @@
 #pragma once
 
 #include "ConstEvalPass.hpp"
+#include "mqt_core_export.h"
+#include "parsers/qasm3_parser/Exception.hpp"
+#include "parsers/qasm3_parser/InstVisitor.hpp"
+#include "parsers/qasm3_parser/Statement.hpp"
 #include "parsers/qasm3_parser/Types.hpp"
+#include "parsers/qasm3_parser/passes/CompilerPass.hpp"
 
 #include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
 
 namespace qasm3::type_checking {
 
@@ -37,9 +46,9 @@ struct InferredType {
   }
 };
 
-class TypeCheckPass : public CompilerPass,
-                      public InstVisitor,
-                      public ExpressionVisitor<InferredType> {
+class MQT_CORE_EXPORT TypeCheckPass : public CompilerPass,
+                                      public InstVisitor,
+                                      public ExpressionVisitor<InferredType> {
   bool hasError = false;
   std::map<std::string, InferredType> env;
   // We need a reference to a const eval pass to evaluate types before type

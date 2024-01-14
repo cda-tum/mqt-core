@@ -7,27 +7,35 @@
 #pragma once
 
 #include "Exception.hpp"
+#include "Permutation.hpp"
 #include "Scanner.hpp"
 #include "Statement.hpp"
 #include "StdGates.hpp"
+#include "mqt_core_export.h"
+#include "parsers/qasm3_parser/Token.hpp"
+#include "parsers/qasm3_parser/Types.hpp"
 
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <stack>
 #include <stdexcept>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace qasm3 {
-class Parser {
+class MQT_CORE_EXPORT Parser {
   struct ScannerState {
   private:
-    std::unique_ptr<std::istream> is;
+    std::shared_ptr<std::istream> is;
 
   public:
     Token last{0, 0};
     Token t{0, 0};
     Token next{0, 0};
-    std::unique_ptr<Scanner> scanner;
+    std::shared_ptr<Scanner> scanner;
     std::optional<std::string> filename;
     bool isImplicitInclude;
 
@@ -43,17 +51,17 @@ class Parser {
         std::istream* in,
         std::optional<std::string> debugFilename = std::nullopt,
         const bool implicitInclude = false)
-        : scanner(std::make_unique<Scanner>(in)),
+        : scanner(std::make_shared<Scanner>(in)),
           filename(std::move(debugFilename)),
           isImplicitInclude(implicitInclude) {
       scan();
     }
 
     explicit ScannerState(
-        std::unique_ptr<std::istream> in,
+        std::shared_ptr<std::istream> in,
         std::optional<std::string> debugFilename = std::nullopt,
         const bool implicitInclude = false)
-        : is(std::move(in)), scanner(std::make_unique<Scanner>(is.get())),
+        : is(std::move(in)), scanner(std::make_shared<Scanner>(is.get())),
           filename(std::move(debugFilename)),
           isImplicitInclude(implicitInclude) {
       scan();
@@ -112,7 +120,7 @@ public:
     scanner.emplace(is);
     scan();
     if (implicitlyIncludeStdgates) {
-      scanner.emplace(std::make_unique<std::istringstream>(STDGATES),
+      scanner.emplace(std::make_shared<std::istringstream>(STDGATES),
                       "stdgates.inc", true);
       scan();
     }

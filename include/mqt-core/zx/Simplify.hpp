@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mqt_core_export.h"
 #include "zx/Rules.hpp"
 #include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
@@ -49,25 +50,26 @@ std::size_t simplifyEdges(ZXDiagram& diag, EdgeCheckFun check,
   return nSimplifications;
 }
 
-std::size_t gadgetSimp(ZXDiagram& diag);
+MQT_CORE_EXPORT std::size_t gadgetSimp(ZXDiagram& diag);
 
-std::size_t idSimp(ZXDiagram& diag);
+MQT_CORE_EXPORT std::size_t idSimp(ZXDiagram& diag);
 
-std::size_t spiderSimp(ZXDiagram& diag);
+MQT_CORE_EXPORT std::size_t spiderSimp(ZXDiagram& diag);
 
-std::size_t localCompSimp(ZXDiagram& diag);
+MQT_CORE_EXPORT std::size_t localCompSimp(ZXDiagram& diag);
 
-std::size_t pivotPauliSimp(ZXDiagram& diag);
+MQT_CORE_EXPORT std::size_t pivotPauliSimp(ZXDiagram& diag);
 
-std::size_t pivotSimp(ZXDiagram& diag);
+MQT_CORE_EXPORT std::size_t pivotSimp(ZXDiagram& diag);
 
-std::size_t interiorCliffordSimp(ZXDiagram& diag);
+MQT_CORE_EXPORT std::size_t interiorCliffordSimp(ZXDiagram& diag);
 
-std::size_t cliffordSimp(ZXDiagram& diag);
+MQT_CORE_EXPORT std::size_t cliffordSimp(ZXDiagram& diag);
 
-std::size_t pivotgadgetSimp(ZXDiagram& diag);
+MQT_CORE_EXPORT std::size_t pivotgadgetSimp(ZXDiagram& diag);
 
-std::size_t fullReduce(ZXDiagram& diag);
-std::size_t fullReduceApproximate(ZXDiagram& diag, fp tolerance);
+MQT_CORE_EXPORT std::size_t fullReduce(ZXDiagram& diag);
+MQT_CORE_EXPORT std::size_t fullReduceApproximate(ZXDiagram& diag,
+                                                  fp tolerance);
 
 } // namespace zx
