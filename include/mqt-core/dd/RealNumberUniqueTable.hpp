@@ -3,6 +3,7 @@
 #include "dd/DDDefinitions.hpp"
 #include "dd/MemoryManager.hpp"
 #include "dd/statistics/UniqueTableStatistics.hpp"
+#include "mqt_core_export.h"
 
 #include <array>
 #include <cstddef>
@@ -22,7 +23,7 @@ struct RealNumber;
  * range [0, 1]. While numbers outside of this range can be stored, they will
  * always be placed in the same bucket and will therefore cause collisions.
  */
-class RealNumberUniqueTable {
+class MQT_CORE_EXPORT RealNumberUniqueTable {
   /**
    * @brief The number of buckets in the table.
    * @details The number of buckets is fixed and cannot be changed after the

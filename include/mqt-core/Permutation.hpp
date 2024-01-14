@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Definitions.hpp"
+#include "mqt_core_export.h"
 #include "operations/Control.hpp"
 
 #include <cstddef>
@@ -8,7 +9,7 @@
 #include <map>
 
 namespace qc {
-class Permutation : public std::map<Qubit, Qubit> {
+class MQT_CORE_EXPORT Permutation : public std::map<Qubit, Qubit> {
 public:
   [[nodiscard]] inline Controls apply(const Controls& controls) const {
     if (empty()) {

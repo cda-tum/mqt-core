@@ -1,8 +1,8 @@
 #pragma once
 
 #include "QuantumComputation.hpp"
-#include "algorithms/GoogleRandomCircuitSampling.hpp"
 #include "dd/Operations.hpp"
+#include "mqt_core_export.h"
 
 namespace dd {
 using namespace qc;
@@ -32,13 +32,14 @@ VectorDD simulate(const QuantumComputation* qc, const VectorDD& in,
 }
 
 template <class Config>
-std::map<std::string, std::size_t>
+MQT_CORE_EXPORT std::map<std::string, std::size_t>
 simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
          std::size_t shots, std::size_t seed = 0U);
 
 template <class Config>
-void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in,
-                              dd::SparsePVec& probVector, Package<Config>& dd);
+MQT_CORE_EXPORT void
+extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in,
+                         dd::SparsePVec& probVector, Package<Config>& dd);
 
 template <class Config>
 void extractProbabilityVectorRecursive(
@@ -46,9 +47,4 @@ void extractProbabilityVectorRecursive(
     decltype(qc->begin()) currentIt, Permutation& permutation,
     std::map<std::size_t, char> measurements, dd::fp commonFactor,
     dd::SparsePVec& probVector, Package<Config>& dd);
-
-template <class Config>
-VectorDD simulate(GoogleRandomCircuitSampling* qc, const VectorDD& in,
-                  Package<Config>& dd,
-                  std::optional<std::size_t> ncycles = std::nullopt);
 } // namespace dd

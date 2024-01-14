@@ -4,13 +4,14 @@
 #include "dd/DDDefinitions.hpp"
 #include "dd/Node.hpp"
 #include "dd/RealNumberUniqueTable.hpp"
+#include "mqt_core_export.h"
 
 namespace dd {
 
 struct ComplexValue;
 
 /// A class for managing complex numbers in the DD package.
-class ComplexNumbers {
+class MQT_CORE_EXPORT ComplexNumbers {
 
 public:
   /// Default constructor.

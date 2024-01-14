@@ -1,17 +1,24 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "Operation.hpp"
 #include "Permutation.hpp"
+#include "mqt_core_export.h"
 #include "operations/Control.hpp"
+#include "operations/OpType.hpp"
 
+#include <algorithm>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <ostream>
+#include <set>
+#include <utility>
 #include <vector>
 
 namespace qc {
 
-class CompoundOperation final : public Operation {
+class MQT_CORE_EXPORT CompoundOperation final : public Operation {
 private:
   std::vector<std::unique_ptr<Operation>> ops{};
 

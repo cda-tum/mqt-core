@@ -3,19 +3,19 @@
 #include "Definitions.hpp"
 #include "OpType.hpp"
 #include "Permutation.hpp"
+#include "mqt_core_export.h"
+#include "operations/Control.hpp"
 
-#include <array>
 #include <cstring>
-#include <fstream>
-#include <iomanip>
+#include <functional>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <set>
+#include <string>
 #include <vector>
 
 namespace qc {
-class Operation {
+class MQT_CORE_EXPORT Operation {
 protected:
   Controls controls;
   Targets targets;

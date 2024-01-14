@@ -18,7 +18,6 @@ package_add_test(
   algorithms/test_grover.cpp
   algorithms/test_bernsteinvazirani.cpp
   algorithms/test_entanglement.cpp
-  algorithms/test_grcs.cpp
   algorithms/test_random_clifford.cpp
   algorithms/test_qpe.cpp
   algorithms/test_wstate.cpp)

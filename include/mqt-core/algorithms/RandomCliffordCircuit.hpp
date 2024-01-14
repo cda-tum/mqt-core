@@ -1,11 +1,16 @@
 #pragma once
 
-#include <QuantumComputation.hpp>
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+#include "mqt_core_export.h"
+
+#include <cstddef>
+#include <cstdint>
 #include <functional>
-#include <random>
+#include <ostream>
 
 namespace qc {
-class RandomCliffordCircuit : public QuantumComputation {
+class MQT_CORE_EXPORT RandomCliffordCircuit : public QuantumComputation {
 protected:
   std::function<std::uint16_t()> cliffordGenerator;
 

@@ -3,6 +3,7 @@
 #include "dd/CachedEdge.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Edge.hpp"
+#include "mqt_core_export.h"
 
 #include <array>
 #include <cassert>
@@ -15,7 +16,7 @@ namespace dd {
  * @brief A vector DD node
  * @details Data Layout |24|24|8|4|2| = 62B (space for two more bytes)
  */
-struct vNode {                        // NOLINT(readability-identifier-naming)
+struct MQT_CORE_EXPORT vNode {        // NOLINT(readability-identifier-naming)
   std::array<Edge<vNode>, RADIX> e{}; // edges out of this node
   vNode* next{};                      // used to link nodes in unique table
   RefCount ref{};                     // reference count
@@ -33,7 +34,7 @@ using vCachedEdge = CachedEdge<vNode>;
  * @brief A matrix DD node
  * @details Data Layout |24|24|24|24|8|4|2|1| = 111B (space for one more byte)
  */
-struct mNode {                        // NOLINT(readability-identifier-naming)
+struct MQT_CORE_EXPORT mNode {        // NOLINT(readability-identifier-naming)
   std::array<Edge<mNode>, NEDGE> e{}; // edges out of this node
   mNode* next{};                      // used to link nodes in unique table
   RefCount ref{};                     // reference count
@@ -60,7 +61,7 @@ using mCachedEdge = CachedEdge<mNode>;
  * @brief A density matrix DD node
  * @details Data Layout |24|24|24|24|8|4|2|1| = 111B (space for one more byte)
  */
-struct dNode {                        // NOLINT(readability-identifier-naming)
+struct MQT_CORE_EXPORT dNode {        // NOLINT(readability-identifier-naming)
   std::array<Edge<dNode>, NEDGE> e{}; // edges out of this node
   dNode* next{};                      // used to link nodes in unique table
   RefCount ref{};                     // reference count

@@ -1,14 +1,26 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+#include "mqt_core_export.h"
+#include "operations/Operation.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <numeric>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace ecc {
 using Qubit = qc::Qubit;
 using QubitCount = std::size_t;
 
-class Ecc {
+class MQT_CORE_EXPORT Ecc {
 public:
-  enum class ID {
+  enum class ID : uint8_t {
     Id,
     Q3Shor,
     Q9Shor,

@@ -1,9 +1,19 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
+#include "mqt_core_export.h"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
+
+#include <cstddef>
+#include <memory>
+#include <utility>
+
 namespace ecc {
-class Q3Shor : public Ecc {
+class MQT_CORE_EXPORT Q3Shor : public Ecc {
 public:
   Q3Shor(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq)
       : Ecc({ID::Q3Shor, N_REDUNDANT_QUBITS, 2, "Q3Shor", {{2, "qecc"}}},

@@ -1,9 +1,10 @@
 #pragma once
 
 #include "Statement.hpp"
+#include "mqt_core_export.h"
 
 namespace qasm3 {
-class CompilerError final : public std::exception {
+class MQT_CORE_EXPORT CompilerError final : public std::exception {
 public:
   std::string message{};
   std::shared_ptr<DebugInfo> debugInfo{};

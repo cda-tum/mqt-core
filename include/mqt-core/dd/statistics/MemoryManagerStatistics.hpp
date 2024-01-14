@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dd/statistics/Statistics.hpp"
+#include "mqt_core_export.h"
 #include "nlohmann/json_fwd.hpp"
 
 #include <cstddef>
@@ -11,7 +12,8 @@ namespace dd {
  * @brief A utility class for storing statistics of a memory manager
  * @tparam T the type of entries managed by the memory manager
  */
-template <typename T> struct MemoryManagerStatistics : public Statistics {
+template <typename T>
+struct MQT_CORE_EXPORT MemoryManagerStatistics : public Statistics {
   /// The size of a single entry
   std::size_t entrySize = sizeof(T);
   /// The number of allocations performed

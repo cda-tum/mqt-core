@@ -171,7 +171,7 @@ std::size_t hash<dd::CachedEdge<Node>>::operator()(
   return qc::combineHash(h1, h2);
 }
 
-template struct hash<dd::CachedEdge<dd::vNode>>;
-template struct hash<dd::CachedEdge<dd::mNode>>;
-template struct hash<dd::CachedEdge<dd::dNode>>;
+template struct MQT_CORE_EXPORT hash<dd::CachedEdge<dd::vNode>>;
+template struct MQT_CORE_EXPORT hash<dd::CachedEdge<dd::mNode>>;
+template struct MQT_CORE_EXPORT hash<dd::CachedEdge<dd::dNode>>;
 } // namespace std

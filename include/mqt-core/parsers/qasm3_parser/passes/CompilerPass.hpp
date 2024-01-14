@@ -1,9 +1,10 @@
 #pragma once
 
+#include "mqt_core_export.h"
 #include "parsers/qasm3_parser/Statement.hpp"
 
 namespace qasm3 {
-class CompilerPass {
+class MQT_CORE_EXPORT CompilerPass {
 public:
   virtual ~CompilerPass() = default;
 

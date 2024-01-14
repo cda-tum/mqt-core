@@ -19,6 +19,7 @@
 #include "dd/StochasticNoiseOperationTable.hpp"
 #include "dd/UnaryComputeTable.hpp"
 #include "dd/UniqueTable.hpp"
+#include "mqt_core_export.h"
 #include "operations/Control.hpp"
 
 #include <algorithm>
@@ -50,7 +51,7 @@
 
 namespace dd {
 
-template <class Config> class Package {
+template <class Config> class MQT_CORE_EXPORT Package {
   static_assert(std::is_base_of_v<DDPackageConfig, Config>,
                 "Config must be derived from DDPackageConfig");
 

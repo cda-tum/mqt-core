@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dd/Package.hpp"
+#include "mqt_core_export.h"
 #include "nlohmann/json.hpp"
 
 #include <chrono>
@@ -11,7 +12,7 @@ class QuantumComputation;
 
 namespace dd {
 
-struct Experiment {
+struct MQT_CORE_EXPORT Experiment {
   std::unique_ptr<Package<>> dd{};
   nlohmann::json stats = nlohmann::json::object();
   std::chrono::duration<double> runtime{};
@@ -21,7 +22,7 @@ struct Experiment {
   [[nodiscard]] virtual bool success() const noexcept { return false; }
 };
 
-struct SimulationExperiment : public Experiment {
+struct MQT_CORE_EXPORT SimulationExperiment : public Experiment {
   SimulationExperiment() = default;
   qc::VectorDD sim{};
 
@@ -30,7 +31,7 @@ struct SimulationExperiment : public Experiment {
   }
 };
 
-struct FunctionalityConstructionExperiment : public Experiment {
+struct MQT_CORE_EXPORT FunctionalityConstructionExperiment : public Experiment {
   qc::MatrixDD func{};
 
   [[nodiscard]] bool success() const noexcept override {
@@ -38,13 +39,14 @@ struct FunctionalityConstructionExperiment : public Experiment {
   }
 };
 
-std::unique_ptr<SimulationExperiment>
+MQT_CORE_EXPORT std::unique_ptr<SimulationExperiment>
 benchmarkSimulate(const qc::QuantumComputation& qc);
 
+MQT_CORE_EXPORT
 std::unique_ptr<FunctionalityConstructionExperiment>
 benchmarkFunctionalityConstruction(const qc::QuantumComputation& qc,
                                    bool recursive = false);
 
-std::map<std::string, std::size_t>
+MQT_CORE_EXPORT std::map<std::string, std::size_t>
 benchmarkSimulateWithShots(const qc::QuantumComputation& qc, std::size_t shots);
 } // namespace dd

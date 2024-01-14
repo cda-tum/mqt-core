@@ -2,6 +2,7 @@
 
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
+#include "mqt_core_export.h"
 #include "operations/ClassicControlledOperation.hpp"
 #include "operations/CompoundOperation.hpp"
 #include "operations/OpType.hpp"
@@ -251,9 +252,9 @@ qc::MatrixDD getInverseDD(const qc::Operation* op, Package<Config>& dd,
 }
 
 template <class Config>
-void dumpTensor(qc::Operation* op, std::ostream& of,
-                std::vector<std::size_t>& inds, std::size_t& gateIdx,
-                Package<Config>& dd);
+MQT_CORE_EXPORT void dumpTensor(qc::Operation* op, std::ostream& of,
+                                std::vector<std::size_t>& inds,
+                                std::size_t& gateIdx, Package<Config>& dd);
 
 // apply swaps 'on' DD in order to change 'from' to 'to'
 // where |from| >= |to|

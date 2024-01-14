@@ -1,13 +1,14 @@
 #pragma once
 
 #include "dd/statistics/Statistics.hpp"
+#include "mqt_core_export.h"
 
 #include <cstddef>
 
 namespace dd {
 
 /// A utility class for storing statistics of a table
-struct TableStatistics : public Statistics {
+struct MQT_CORE_EXPORT TableStatistics : public Statistics {
   /// The size of a single entry
   std::size_t entrySize = 0U;
   /// The number of buckets in the table

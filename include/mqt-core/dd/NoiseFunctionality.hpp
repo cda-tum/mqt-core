@@ -4,6 +4,7 @@
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Node.hpp"
 #include "dd/Package.hpp"
+#include "mqt_core_export.h"
 #include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 
@@ -35,7 +36,7 @@ void sanityCheckOfNoiseProbabilities(double noiseProbability,
                                      double amplitudeDampingProb,
                                      double multiQubitGateFactor);
 
-class StochasticNoiseFunctionality {
+class MQT_CORE_EXPORT StochasticNoiseFunctionality {
 public:
   StochasticNoiseFunctionality(
       const std::unique_ptr<Package<StochasticNoiseSimulatorDDPackageConfig>>&
@@ -92,7 +93,7 @@ protected:
                                                 bool multiQubitNoiseFlag) const;
 };
 
-class DeterministicNoiseFunctionality {
+class MQT_CORE_EXPORT DeterministicNoiseFunctionality {
 public:
   DeterministicNoiseFunctionality(
       const std::unique_ptr<Package<DensityMatrixSimulatorDDPackageConfig>>& dd,
