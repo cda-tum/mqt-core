@@ -129,7 +129,11 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
 
   # add MQT alias
   add_library(MQT::Core ALIAS ${MQT_CORE_TARGET_NAME})
-  set_target_properties(${MQT_CORE_TARGET_NAME} PROPERTIES EXPORT_NAME Core)
+  set_target_properties(
+    ${MQT_CORE_TARGET_NAME}
+    PROPERTIES VERSION ${PROJECT_VERSION}
+               SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+               EXPORT_NAME Core)
   list(APPEND MQT_CORE_TARGETS ${MQT_CORE_TARGET_NAME})
 endif()
 
@@ -156,7 +160,11 @@ if(BINDINGS AND NOT TARGET mqt-core-python)
 
   # add MQT alias
   add_library(MQT::CorePython ALIAS ${MQT_CORE_TARGET_NAME}-python)
-  set_target_properties(${MQT_CORE_TARGET_NAME}-python PROPERTIES EXPORT_NAME CorePython)
+  set_target_properties(
+    ${MQT_CORE_TARGET_NAME}-python
+    PROPERTIES VERSION ${PROJECT_VERSION}
+               SOVERSION ${PROJECT_VERSION_MAJOR}
+               EXPORT_NAME CorePython)
   list(APPEND MQT_CORE_TARGETS ${MQT_CORE_TARGET_NAME}-python)
 endif()
 

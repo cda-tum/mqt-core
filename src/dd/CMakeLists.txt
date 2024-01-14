@@ -25,7 +25,11 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-dd)
     statistics/UniqueTableStatistics.cpp)
   target_link_libraries(${MQT_CORE_TARGET_NAME}-dd PUBLIC MQT::Core)
   add_library(MQT::CoreDD ALIAS ${MQT_CORE_TARGET_NAME}-dd)
-  set_target_properties(mqt-core-dd PROPERTIES EXPORT_NAME CoreDD)
+  set_target_properties(
+    mqt-core-dd
+    PROPERTIES VERSION ${PROJECT_VERSION}
+               SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+               EXPORT_NAME CoreDD)
   set(MQT_CORE_TARGETS
       ${MQT_CORE_TARGETS} ${MQT_CORE_TARGET_NAME}-dd
       PARENT_SCOPE)
