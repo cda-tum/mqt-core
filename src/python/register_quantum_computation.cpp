@@ -252,8 +252,13 @@ void registerQuantumComputation(py::module& m) {
          "Check if the quantum computation is free of variables.");
   qc.def("instantiate", &qc::QuantumComputation::instantiate, "assignment"_a,
          "Instantiate the quantum computation by replacing all variables "
-         "with their values dictated by the dict assignment which maps "
-         "Variable objects to float.");
+         "with their values dictated by the given assignment which maps "
+         "Variable objects to float. Returns a new QuantumComputation.");
+  qc.def("instantiate_inplace", &qc::QuantumComputation::instantiateInplace,
+         "assignment"_a,
+         "Instantiate the quantum computation by replacing all variables "
+         "with their values dictated by the given assignment which maps "
+         "Variable objects to float. This is done inplace.");
 
   ///---------------------------------------------------------------------------
   ///                       \n Output Handling \n

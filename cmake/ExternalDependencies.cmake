@@ -63,6 +63,11 @@ set(JSON_BuildTests
 set(JSON_MultipleHeaders
     OFF
     CACHE INTERNAL "")
+if(MQT_CORE_INSTALL)
+  set(JSON_Install
+      ON
+      CACHE INTERNAL "")
+endif()
 declare_dependency(
   NAME
   nlohmann_json
@@ -72,8 +77,7 @@ declare_dependency(
   c23a33f04786d85c29fda8d16b5f0efd
   MIN_VERSION
   3.11.3
-  SYSTEM
-  EXCLUDE_FROM_ALL)
+  SYSTEM)
 
 set(BOOST_MP_STANDALONE
     ON
@@ -133,8 +137,7 @@ if(BINDINGS)
     93ebbea2bb69f71febe0f83c8f88ced2
     MIN_VERSION
     0.2.13
-    SYSTEM
-    EXCLUDE_FROM_ALL)
+    SYSTEM)
 endif()
 
 # Make all declared dependencies available.
