@@ -69,6 +69,8 @@ MQT Core encompasses:
 - `MQT::CoreECC`: A library for working with error correcting codes (ECCs) for quantum computing.
 - `MQT::CorePython`: A Python interface for the MQT Core library (e.g., facilitating the import of Qiskit QuantumCircuits).
 
+<!-- SPHINX-END -->
+
 ## System Requirements
 
 Building (and running) is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/runner-images).
@@ -86,8 +88,6 @@ CMake will automatically look for installed versions of these libraries. If it d
 It is recommended (although not required) to have [GraphViz](https://www.graphviz.org) installed for visualization purposes.
 
 If you want to use the ZX library, it is recommended (although not strictly necessary) to have [GMP](https://gmplib.org/) installed in your system.
-
-<!-- SPHINX-END -->
 
 ---
 
