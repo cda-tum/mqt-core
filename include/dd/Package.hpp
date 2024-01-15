@@ -1903,6 +1903,9 @@ public:
     const auto eliminate = std::vector<bool>(nqubits, true);
     return trace(a, eliminate).w;
   }
+
+  // if checkCloseToOne is false, it only checks if it's close to a diagonal
+  // matrix
   bool isCloseToIdentity(const mEdge& m, const dd::fp tol = 1e-10,
                          const std::vector<bool>& garbage = {},
                          const bool checkCloseToOne = true) {
