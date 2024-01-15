@@ -1140,7 +1140,7 @@ TEST(DDPackageTest, CloseToIdentity) {
   EXPECT_FALSE(dd->isCloseToIdentity(notClose3));
 }
 
-TEST(DDPackageTest, CloseToIdentityWithGarbage) {
+TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheBeginning) {
   const dd::fp tol = 1.0E-10;
   const auto nqubits = 3U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
@@ -1161,13 +1161,21 @@ TEST(DDPackageTest, CloseToIdentityWithGarbage) {
                                     {false, true, true}, false));
   EXPECT_FALSE(dd->isCloseToIdentity(c1MultipliedWithC2, tol,
                                      {false, false, true}, false));
+}
+
+TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheEnd) {
+  const dd::fp tol = 1.0E-10;
+  const auto nqubits = 3U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+
+  auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
+  auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
 
   auto hGate2 = dd->makeGateDD(dd::H_MAT, nqubits, 2);
   auto zGate2 = dd->makeGateDD(dd::Z_MAT, nqubits, 0);
   auto controlledHGate2 =
       dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 2);
 
-  // different order of qubits
   auto c3 = dd->multiply(
       controlledSwapGate,
       dd->multiply(hGate2, dd->multiply(zGate2, controlledSwapGate)));
@@ -1181,7 +1189,15 @@ TEST(DDPackageTest, CloseToIdentityWithGarbage) {
                                      {true, false, true}, false));
   EXPECT_TRUE(dd->isCloseToIdentity(c3MultipliedWithC4, tol,
                                     {true, true, false}, false));
-  // yet another different order of qubits
+}
+
+TEST(DDPackageTest, CloseToIdentityWithGarbageInTheMiddle) {
+  const dd::fp tol = 1.0E-10;
+  const auto nqubits = 3U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+
+  auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
+
   auto controlledSwapGate3 = dd->makeSWAPDD(nqubits, qc::Controls{0}, 1, 2);
   auto hGate3 = dd->makeGateDD(dd::H_MAT, nqubits, 1);
   auto xGate3 = dd->makeGateDD(dd::X_MAT, nqubits, 0);
