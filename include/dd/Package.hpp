@@ -1904,8 +1904,18 @@ public:
     return trace(a, eliminate).w;
   }
 
-  // if checkCloseToOne is false, it only checks if it's close to a diagonal
-  // matrix
+  /**
+        Checks if a given matrix is close to the identity matrix, while ignoring
+    any potential garbage qubits and ignoring the diagonal weights if
+    `checkCloseToOne` is set to false.
+        @param m An mEdge that represents the DD of the matrix.
+        @param tol The accepted tolerance for the edge weights of the DD.
+        @param garbage A vector of boolean values that defines which qubits are
+    considered garbage qubits. If it's empty, then no qubit is considered to be
+    a garbage qubit.
+        @param checkCloseToOne If false, the function only checks if the matrix
+    is close to a diagonal matrix.
+    **/
   bool isCloseToIdentity(const mEdge& m, const dd::fp tol = 1e-10,
                          const std::vector<bool>& garbage = {},
                          const bool checkCloseToOne = true) {
