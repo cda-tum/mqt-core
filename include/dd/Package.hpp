@@ -2000,7 +2000,6 @@ private:
     const auto mag1 = dd::ComplexNumbers::mag2(m.p->e[1U].w);
     const auto mag2 = dd::ComplexNumbers::mag2(m.p->e[2U].w);
     if (mag1 > tol || mag2 > tol) {
-      visited.insert(m.p); // is that not superfluous?
       return false;
     }
 
@@ -2008,12 +2007,10 @@ private:
       // check whether  m = [ ~1 0 0 y ]
       const auto mag0 = dd::ComplexNumbers::mag2(m.p->e[0U].w);
       if (std::abs(mag0 - 1.0) > tol) {
-        visited.insert(m.p);
         return false;
       }
       const auto arg0 = dd::ComplexNumbers::arg(m.p->e[0U].w);
       if (std::abs(arg0) > tol) {
-        visited.insert(m.p);
         return false;
       }
 
@@ -2022,12 +2019,10 @@ private:
       const auto mag3 = dd::ComplexNumbers::mag2(m.p->e[3U].w);
       if (mag3 > tol) {
         if (std::abs(mag3 - 1.0) > tol) {
-          visited.insert(m.p);
           return false;
         }
         const auto arg3 = dd::ComplexNumbers::arg(m.p->e[3U].w);
         if (std::abs(arg3) > tol) {
-          visited.insert(m.p);
           return false;
         }
       }
@@ -2037,7 +2032,6 @@ private:
                                                    garbage, checkCloseToOne);
 
     if (!ident0) {
-      visited.insert(m.p);
       return false;
     }
     // m either has the form [ I 0 0 ~1 ] or [ I 0 0 ~0 ]
