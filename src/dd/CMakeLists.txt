@@ -24,6 +24,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-dd)
     statistics/TableStatistics.cpp
     statistics/UniqueTableStatistics.cpp)
   target_link_libraries(${MQT_CORE_TARGET_NAME}-dd PUBLIC MQT::Core)
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-dd PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
   add_library(MQT::CoreDD ALIAS ${MQT_CORE_TARGET_NAME}-dd)
   set_target_properties(
     mqt-core-dd

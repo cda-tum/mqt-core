@@ -42,6 +42,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-zx)
     Utils.cpp
     FunctionalityConstruction.cpp)
   target_link_libraries(${MQT_CORE_TARGET_NAME}-zx PUBLIC MQT::Core MQT::Multiprecision)
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-zx PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
 
   find_package(GMP)
   if(NOT GMP_FOUND)

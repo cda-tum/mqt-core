@@ -125,7 +125,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
   target_link_libraries(${MQT_CORE_TARGET_NAME} PUBLIC nlohmann_json)
 
   # add options and warnings to the library
-  target_link_libraries(${MQT_CORE_TARGET_NAME} PUBLIC MQT::ProjectOptions MQT::ProjectWarnings)
+  target_link_libraries(${MQT_CORE_TARGET_NAME} PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
 
   # add MQT alias
   add_library(MQT::Core ALIAS ${MQT_CORE_TARGET_NAME})

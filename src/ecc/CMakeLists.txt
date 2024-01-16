@@ -14,6 +14,8 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-ecc)
     Q18Surface.cpp)
 
   target_link_libraries(${MQT_CORE_TARGET_NAME}-ecc PUBLIC MQT::Core)
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-ecc PRIVATE MQT::ProjectOptions
+                                                            MQT::ProjectWarnings)
 
   # add MQT alias
   add_library(MQT::CoreECC ALIAS ${MQT_CORE_TARGET_NAME}-ecc)
