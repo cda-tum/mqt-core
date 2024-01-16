@@ -2,7 +2,34 @@
 #include "dd/Package.hpp"
 
 namespace dd {
+/**
+    Checks for partial equivalence between the two circuits c1 and c2
+    that have no ancilla qubits.
+    Assumption: the input and output permutations are the same.
 
+    @param circuit1 First circuit
+    @param circuit2 Second circuit
+    @return true if the two circuits c1 and c2 are partially equivalent.
+    **/
+template <class Config>
+bool zeroAncillaePartialEquivalenceCheck(
+    qc::QuantumComputation c1, qc::QuantumComputation c2,
+    std::unique_ptr<dd::Package<Config>>& dd) {
+  if (c1.getNqubits() != c2.getNqubits() ||
+      c1.getGarbage() != c2.getGarbage()) {
+    throw std::runtime_error(
+        "The circuits need to have the same number of qubits and the same "
+        "permutation of input and output qubits.");
+  }
+  c2.invert();
+  for (auto& gate : c1) {
+    c2.emplace_back(gate);
+  }
+
+  auto u = buildFunctionality(&c2, *dd, false, false);
+
+  return dd->isCloseToIdentity(u, 1.0E-10, c1.getGarbage(), false);
+}
 // get next garbage qubit after n
 inline Qubit getNextGarbage(Qubit n, const std::vector<bool>& garbage) {
   while (n < static_cast<Qubit>(garbage.size()) && !garbage.at(n)) {
@@ -31,11 +58,15 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
   if (m1 != m2 || d1 != d2) {
     return false;
   }
-
+  auto n1 = static_cast<Qubit>(c1.getNqubits());
+  auto n2 = static_cast<Qubit>(c2.getNqubits());
+  if (d1 == n1 && d2 == n2) {
+    // no ancilla qubits
+    return zeroAncillaePartialEquivalenceCheck(c1, c2, dd);
+  }
   // add swaps in order to put the measured (= not garbage) qubits in the end
   auto garbage1 = c1.getGarbage();
-  auto n1 = static_cast<Qubit>(garbage1.size());
-  auto n2 = static_cast<Qubit>(c2.getNqubits());
+
   auto nextGarbage = getNextGarbage(0, garbage1);
   // find the first garbage qubit at the end
   for (std::int64_t i = std::min(n1, n2) - 1;
@@ -54,19 +85,6 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
   auto u1 = buildFunctionality(&c1, *dd, false, false);
   auto u2 = buildFunctionality(&c2, *dd, false, false);
 
-  // std::cout << "u1: \n";
-  // u1.printMatrix();
-  // std::cout << std::endl;
-
-  // std::cout << "u2: \n";
-  // u2.printMatrix();
-  // std::cout << std::endl;
-
-  if (d1 == n1 && d2 == n2) {
-    // no ancilla qubits
-    return dd->zeroAncillaePartialEquivalenceCheck(u1, u2,
-                                                   static_cast<Qubit>(m1));
-  }
   return dd->partialEquivalenceCheck(u1, u2, static_cast<Qubit>(d1),
                                      static_cast<Qubit>(m1));
 }

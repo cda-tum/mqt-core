@@ -1903,10 +1903,26 @@ public:
     const auto eliminate = std::vector<bool>(nqubits, true);
     return trace(a, eliminate).w;
   }
-  bool isCloseToIdentity(const mEdge& m, const dd::fp tol = 1e-10) {
+
+  /**
+        Checks if a given matrix is close to the identity matrix, while ignoring
+    any potential garbage qubits and ignoring the diagonal weights if
+    `checkCloseToOne` is set to false.
+        @param m An mEdge that represents the DD of the matrix.
+        @param tol The accepted tolerance for the edge weights of the DD.
+        @param garbage A vector of boolean values that defines which qubits are
+    considered garbage qubits. If it's empty, then no qubit is considered to be
+    a garbage qubit.
+        @param checkCloseToOne If false, the function only checks if the matrix
+    is close to a diagonal matrix.
+    **/
+  bool isCloseToIdentity(const mEdge& m, const dd::fp tol = 1e-10,
+                         const std::vector<bool>& garbage = {},
+                         const bool checkCloseToOne = true) {
     std::unordered_set<decltype(m.p)> visited{};
     visited.reserve(mUniqueTable.getNumActiveEntries());
-    return isCloseToIdentityRecursive(m, visited, tol);
+    return isCloseToIdentityRecursive(m, visited, tol, garbage,
+                                      checkCloseToOne);
   }
 
 private:
@@ -1952,15 +1968,31 @@ private:
 
   bool isCloseToIdentityRecursive(const mEdge& m,
                                   std::unordered_set<decltype(m.p)>& visited,
-                                  const dd::fp tol) {
+                                  const dd::fp tol,
+                                  const std::vector<bool>& garbage,
+                                  const bool checkCloseToOne) {
     // immediately return if this node has already been visited
     if (visited.find(m.p) != visited.end()) {
       return true;
     }
 
-    // immediately return of this node is identical to the identity
+    // immediately return if this node is identical to the identity
     if (m.isTerminal() || m.p->isIdentity()) {
       return true;
+    }
+
+    const auto n = m.p->v;
+
+    if (garbage.size() > n && garbage[n]) {
+      return isCloseToIdentityRecursive(m.p->e[0U], visited, tol, garbage,
+                                        checkCloseToOne) &&
+             isCloseToIdentityRecursive(m.p->e[1U], visited, tol, garbage,
+                                        checkCloseToOne) &&
+             isCloseToIdentityRecursive(m.p->e[2U], visited, tol, garbage,
+                                        checkCloseToOne) &&
+             isCloseToIdentityRecursive(m.p->e[3U], visited, tol, garbage,
+                                        checkCloseToOne);
+      ;
     }
 
     // check whether any of the middle successors is non-zero, i.e., m = [ x 0 0
@@ -1968,46 +2000,44 @@ private:
     const auto mag1 = dd::ComplexNumbers::mag2(m.p->e[1U].w);
     const auto mag2 = dd::ComplexNumbers::mag2(m.p->e[2U].w);
     if (mag1 > tol || mag2 > tol) {
-      visited.insert(m.p);
       return false;
     }
 
-    // check whether  m = [ ~1 0 0 y ]
-    const auto mag0 = dd::ComplexNumbers::mag2(m.p->e[0U].w);
-    if (std::abs(mag0 - 1.0) > tol) {
-      visited.insert(m.p);
-      return false;
-    }
-    const auto arg0 = dd::ComplexNumbers::arg(m.p->e[0U].w);
-    if (std::abs(arg0) > tol) {
-      visited.insert(m.p);
-      return false;
-    }
-
-    // check whether m = [ x 0 0 ~1 ] or m = [ x 0 0 ~0 ] (the last case is true
-    // for an ancillary qubit)
-    const auto mag3 = dd::ComplexNumbers::mag2(m.p->e[3U].w);
-    if (mag3 > tol) {
-      if (std::abs(mag3 - 1.0) > tol) {
-        visited.insert(m.p);
+    if (checkCloseToOne) {
+      // check whether  m = [ ~1 0 0 y ]
+      const auto mag0 = dd::ComplexNumbers::mag2(m.p->e[0U].w);
+      if (std::abs(mag0 - 1.0) > tol) {
         return false;
       }
-      const auto arg3 = dd::ComplexNumbers::arg(m.p->e[3U].w);
-      if (std::abs(arg3) > tol) {
-        visited.insert(m.p);
+      const auto arg0 = dd::ComplexNumbers::arg(m.p->e[0U].w);
+      if (std::abs(arg0) > tol) {
         return false;
       }
-    }
 
+      // check whether m = [ x 0 0 ~1 ] or m = [ x 0 0 ~0 ] (the last case is
+      // true for an ancillary qubit)
+      const auto mag3 = dd::ComplexNumbers::mag2(m.p->e[3U].w);
+      if (mag3 > tol) {
+        if (std::abs(mag3 - 1.0) > tol) {
+          return false;
+        }
+        const auto arg3 = dd::ComplexNumbers::arg(m.p->e[3U].w);
+        if (std::abs(arg3) > tol) {
+          return false;
+        }
+      }
+    }
     // m either has the form [ ~1 0 0 ~1 ] or [ ~1 0 0 ~0 ]
-    const auto ident0 = isCloseToIdentityRecursive(m.p->e[0U], visited, tol);
+    const auto ident0 = isCloseToIdentityRecursive(m.p->e[0U], visited, tol,
+                                                   garbage, checkCloseToOne);
+
     if (!ident0) {
-      visited.insert(m.p);
       return false;
     }
-
     // m either has the form [ I 0 0 ~1 ] or [ I 0 0 ~0 ]
-    const auto ident3 = isCloseToIdentityRecursive(m.p->e[3U], visited, tol);
+    const auto ident3 = isCloseToIdentityRecursive(m.p->e[3U], visited, tol,
+                                                   garbage, checkCloseToOne);
+
     visited.insert(m.p);
     return ident3;
   }
@@ -2703,38 +2733,6 @@ private:
     return multiply(conjugateTranspose(u), u2);
   }
 
-  ComputeTable<mEdge, Qubit, bool> zeroAncillaePECComputeTable{};
-
-  bool zeroAncillaePartialEquivalenceCheckSubroutine(mEdge e, Qubit m) {
-    if (e.isTerminal()) {
-      return true;
-    }
-    const auto n = e.p->v + 1;
-
-    const mEdge eCopy{e.p, Complex::one()};
-    // check if it's in the compute table with an edge weight of one
-    if (const auto* r = zeroAncillaePECComputeTable.lookup(eCopy, m);
-        r != nullptr) {
-      auto f = *r;
-      return f;
-    }
-    bool result = false;
-    if (m >= n) {
-      result = e.p->e[1].isZeroTerminal() && e.p->e[2].isZeroTerminal() &&
-               zeroAncillaePartialEquivalenceCheckSubroutine(e.p->e[0], m) &&
-               zeroAncillaePartialEquivalenceCheckSubroutine(e.p->e[3], m);
-    } else {
-      result = zeroAncillaePartialEquivalenceCheckSubroutine(e.p->e[0], m) &&
-               zeroAncillaePartialEquivalenceCheckSubroutine(e.p->e[1], m) &&
-               zeroAncillaePartialEquivalenceCheckSubroutine(e.p->e[2], m) &&
-               zeroAncillaePartialEquivalenceCheckSubroutine(e.p->e[3], m);
-    }
-
-    // add to the compute table with a weight of 1
-    zeroAncillaePECComputeTable.insert(eCopy, m, result);
-    return result;
-  }
-
 public:
   /**
    Checks for partial equivalence between the two circuits u1 and u2,
@@ -2796,7 +2794,12 @@ public:
       **/
   bool zeroAncillaePartialEquivalenceCheck(mEdge u1, mEdge u2, Qubit m) {
     auto u1u2 = multiply(u1, conjugateTranspose(u2));
-    return zeroAncillaePartialEquivalenceCheckSubroutine(u1u2, m);
+    const Qubit n = u1.p->v + 1;
+    std::vector<bool> garbage(n, false);
+    for (size_t i = m; i < n; i++) {
+      garbage[i] = true;
+    }
+    return isCloseToIdentity(u1u2, 1.0E-10, garbage, false);
   }
 };
 
