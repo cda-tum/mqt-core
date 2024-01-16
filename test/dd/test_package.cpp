@@ -2447,15 +2447,9 @@ TEST(DDPackageTest, DDMZAPECMQTBenchQPE30Qubits) {
   const qc::QuantumComputation c1{
       "./circuits/qpeexact_nativegates_ibm_qiskit_opt0_30.qasm"};
   const qc::QuantumComputation c2{"./circuits/qpeexact_indep_qiskit_30.qasm"};
-
-  // buildFunctionality is already very very slow...
-  // auto f1 = buildFunctionality(&c1, *dd, false, false);
-  // auto f2 = buildFunctionality(&c2, *dd, false, false);
-
-  // 29 measured qubits and 30 data qubits
   // calls zeroAncillaePartialEquivalenceCheck
-
-  // EXPECT_TRUE(dd->partialEquivalenceCheck(f1, f2, 30, 29));
+  // buildFunctionality is already very very slow...
+  // EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
   EXPECT_TRUE(true);
 }
 
@@ -2491,10 +2485,8 @@ TEST(DDPackageTest, DDMZAPECSliQECRandomCircuit) {
   const qc::QuantumComputation c1{"./circuits/random_1.qasm"};
   const qc::QuantumComputation c2{"./circuits/random_2.qasm"};
 
-  // calls buildFunctionality for c1 and c2
-  // -> this is already very very slow on my computer
-  // EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, *dd));
-  EXPECT_TRUE(true);
+  // calls buildFunctionality for c2^-1 concatenated with c1
+  EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
 }
 
 TEST(DDPackageTest, DDMPECSliQECGrover22Qubits) {
