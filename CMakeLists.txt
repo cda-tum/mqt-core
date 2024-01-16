@@ -68,7 +68,12 @@ if(BUILD_MQT_CORE_BENCHMARKS)
   add_subdirectory(eval)
 endif()
 
-if(NOT MQT_CORE_MASTER_PROJECT)
+if(MQT_CORE_MASTER_PROJECT)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in
+                 ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake IMMEDIATE @ONLY)
+  add_custom_target(uninstall COMMAND ${CMAKE_COMMAND} -P
+                                      ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+else()
   set(mqt-core_FOUND
       TRUE
       CACHE INTERNAL "True if mqt-core is found on the system")
