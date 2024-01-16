@@ -615,6 +615,24 @@ public:
   mEdge makeTwoQubitGateDD(const TwoQubitGateMatrix& mat, const std::size_t n,
                            const qc::Qubit target0, const qc::Qubit target1,
                            const std::size_t start = 0) {
+    return makeTwoQubitGateDD(mat, n, qc::Controls{}, target0, target1, start);
+  }
+
+  /**
+  Creates the DD for a two-qubit gate
+  @param mat Matrix representation of the gate
+  @param n Number of qubits in the circuit
+  @param controls Control qubits of the two-qubit gate
+  @param target0 First target qubit
+  @param target1 Second target qubit
+  @param start Start index for the DD
+  @return DD representing the gate
+  @throws std::runtime_error if the number of qubits is larger than the package
+  configuration
+  **/
+  mEdge makeTwoQubitGateDD(const TwoQubitGateMatrix& mat, const std::size_t n,
+                           const qc::Controls& controls, const qc::Qubit target0,
+                           const qc::Qubit target1, const std::size_t start = 0) {
     // sanity check
     if (n + start > nqubits) {
       throw std::runtime_error{
@@ -635,14 +653,46 @@ public:
     }
 
     // process lines below smaller target (by creating identity structures)
+    auto it = controls.begin();
     auto z = static_cast<Qubit>(start);
     const auto smallerTarget = std::min(target0, target1);
     for (; z < smallerTarget; ++z) {
       for (auto& row : em) {
-        for (auto& entry : row) {
-          entry = makeDDNode(
-              z, std::array{entry, mEdge::zero(), mEdge::zero(), entry});
+        for (auto i1 = 0U; i1 < RADIX; ++i1) {
+          for (auto i2 = 0U; i2 < RADIX; ++i2) {
+            auto i = i1 * RADIX + i2;
+            if (it != controls.end() && it->qubit == z) {
+              auto edges = std::array{mEdge::zero(), mEdge::zero(), mEdge::zero(),
+                                      mEdge::zero()};
+              if (it->type == qc::Control::Type::Neg) {  // negative control
+                edges[0] = row[i];
+                if (i1 == i2) {
+                  if (z == 0U) {
+                    edges[3] = mEdge::one();
+                  } else {
+                    edges[3] = makeIdent(start, z - 1U);
+                  }
+                }
+              } else { // positive control
+                edges[3] = row[i];
+                if (i1 == i2) {
+                  if (z == 0U) {
+                    edges[0] = mEdge::one();
+                  } else {
+                    edges[0] = makeIdent(start, z - 1U);
+                  }
+                }
+              }
+              row[i] = makeDDNode(z, edges);
+            } else { // not connected (current qubit is not a control/target qubit)
+              row[i] = makeDDNode(
+                  z, std::array{row[i], mEdge::zero(), mEdge::zero(), row[i]});
+            }
+          }
         }
+      }
+      if (it != controls.end() && it->qubit == z) {
+        it++;
       }
     }
 
@@ -671,22 +721,63 @@ public:
       }
     }
 
-    // process lines between the two targets (by creating identity structures)
+    // process lines between the two targets
     for (++z; z < std::max(target0, target1); ++z) {
-      for (auto& entry : em0) {
-        entry = makeDDNode(
-            z, std::array{entry, mEdge::zero(), mEdge::zero(), entry});
+      for (auto i1 = 0U; i1 < RADIX; ++i1) {
+        for (auto i2 = 0U; i2 < RADIX; ++i2) {
+          auto i = i1 * RADIX + i2;
+          if (it != controls.end() && it->qubit == z) {
+            auto edges = std::array{mEdge::zero(), mEdge::zero(), mEdge::zero(),
+                                    mEdge::zero()};
+            if (it->type == qc::Control::Type::Neg) { // negative control
+              edges[0] = em0[i];
+              if (i1 == i2) {
+                if (z == 0U) {
+                  edges[3] = mEdge::one();
+                } else {
+                  edges[3] = makeIdent(smallerTarget, z - 1U);
+                }
+              }
+            } else { // positive control
+              edges[3] = em0[i];
+              if (i1 == i2) {
+                if (z == 0U) {
+                  edges[0] = mEdge::one();
+                } else {
+                  edges[0] = makeIdent(smallerTarget, z - 1U);
+                }
+              }
+            }
+            em0[i] = makeDDNode(z, edges);
+          } else { // not connected (current qubit is not a control/target qubit)
+            em0[i] = makeDDNode(
+                z, std::array{em0[i], mEdge::zero(), mEdge::zero(), em0[i]});
+          }
+        }
+      }
+      if (it != controls.end() && it->qubit == z) {
+        ++it;
       }
     }
 
-    // process the larger target by combining the four DDs from the smaller
-    // target
+    // process the larger target by combining the four DDs from the smaller target
     auto e = makeDDNode(z, em0);
 
-    // process lines above the larger target (by creating identity structures)
+    // process lines above the larger target
     const auto end = static_cast<Qubit>(n + start);
     for (++z; z < end; ++z) {
-      e = makeDDNode(z, std::array{e, mEdge::zero(), mEdge::zero(), e});
+      if (it != controls.end() && it->qubit == z) {
+        if (it->type == qc::Control::Type::Neg) { // negative control
+          e = makeDDNode(z, std::array{e, mEdge::zero(), mEdge::zero(),
+                                       makeIdent(start, z - 1U)});
+        } else { // positive control
+          e = makeDDNode(z, std::array{makeIdent(start, z - 1U), mEdge::zero(),
+                                       mEdge::zero(), e});
+        }
+        ++it;
+      } else { // not connected (current qubit is not a control/target qubit)
+        e = makeDDNode(z, std::array{e, mEdge::zero(), mEdge::zero(), e});
+      }
     }
 
     return e;
