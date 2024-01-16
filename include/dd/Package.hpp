@@ -631,8 +631,9 @@ public:
   configuration
   **/
   mEdge makeTwoQubitGateDD(const TwoQubitGateMatrix& mat, const std::size_t n,
-                           const qc::Controls& controls, const qc::Qubit target0,
-                           const qc::Qubit target1, const std::size_t start = 0) {
+                           const qc::Controls& controls,
+                           const qc::Qubit target0, const qc::Qubit target1,
+                           const std::size_t start = 0) {
     // sanity check
     if (n + start > nqubits) {
       throw std::runtime_error{
@@ -662,9 +663,9 @@ public:
           for (auto i2 = 0U; i2 < RADIX; ++i2) {
             auto i = i1 * RADIX + i2;
             if (it != controls.end() && it->qubit == z) {
-              auto edges = std::array{mEdge::zero(), mEdge::zero(), mEdge::zero(),
-                                      mEdge::zero()};
-              if (it->type == qc::Control::Type::Neg) {  // negative control
+              auto edges = std::array{mEdge::zero(), mEdge::zero(),
+                                      mEdge::zero(), mEdge::zero()};
+              if (it->type == qc::Control::Type::Neg) { // negative control
                 edges[0] = row[i];
                 if (i1 == i2) {
                   if (z == 0U) {
@@ -684,7 +685,8 @@ public:
                 }
               }
               row[i] = makeDDNode(z, edges);
-            } else { // not connected (current qubit is not a control/target qubit)
+            } else { // not connected (current qubit is not a control/target
+                     // qubit)
               row[i] = makeDDNode(
                   z, std::array{row[i], mEdge::zero(), mEdge::zero(), row[i]});
             }
@@ -749,7 +751,8 @@ public:
               }
             }
             em0[i] = makeDDNode(z, edges);
-          } else { // not connected (current qubit is not a control/target qubit)
+          } else { // not connected (current qubit is not a control/target
+                   // qubit)
             em0[i] = makeDDNode(
                 z, std::array{em0[i], mEdge::zero(), mEdge::zero(), em0[i]});
           }
@@ -760,7 +763,8 @@ public:
       }
     }
 
-    // process the larger target by combining the four DDs from the smaller target
+    // process the larger target by combining the four DDs from the smaller
+    // target
     auto e = makeDDNode(z, em0);
 
     // process lines above the larger target
