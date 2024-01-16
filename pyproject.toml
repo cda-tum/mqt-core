@@ -118,7 +118,6 @@ git-only = [
 [tool.scikit-build.cmake.define]
 BUILD_MQT_CORE_BINDINGS = "ON"
 BUILD_MQT_CORE_TESTS = "OFF"
-ENABLE_IPO = "ON"
 
 
 [tool.setuptools_scm]
