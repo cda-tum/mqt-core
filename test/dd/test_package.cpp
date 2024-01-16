@@ -1147,6 +1147,85 @@ TEST(DDPackageTest, CloseToIdentity) {
   EXPECT_FALSE(dd->isCloseToIdentity(notClose3));
 }
 
+TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheBeginning) {
+  const dd::fp tol = 1.0E-10;
+  const auto nqubits = 3U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
+  auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 0);
+  auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
+  auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
+  auto controlledHGate = dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 0);
+
+  auto c1 = dd->multiply(
+      controlledSwapGate,
+      dd->multiply(hGate, dd->multiply(zGate, controlledSwapGate)));
+  auto c2 = dd->multiply(controlledHGate, xGate);
+
+  auto c1MultipliedWithC2 = dd->multiply(c1, dd->conjugateTranspose(c2));
+
+  EXPECT_TRUE(dd->isCloseToIdentity(c1MultipliedWithC2, tol,
+                                    {false, true, true}, false));
+  EXPECT_FALSE(dd->isCloseToIdentity(c1MultipliedWithC2, tol,
+                                     {false, false, true}, false));
+}
+
+TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheEnd) {
+  const dd::fp tol = 1.0E-10;
+  const auto nqubits = 3U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+
+  auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
+  auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
+
+  auto hGate2 = dd->makeGateDD(dd::H_MAT, nqubits, 2);
+  auto zGate2 = dd->makeGateDD(dd::Z_MAT, nqubits, 0);
+  auto controlledHGate2 =
+      dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 2);
+
+  auto c3 = dd->multiply(
+      controlledSwapGate,
+      dd->multiply(hGate2, dd->multiply(zGate2, controlledSwapGate)));
+  auto c4 = dd->multiply(controlledHGate2, xGate);
+
+  auto c3MultipliedWithC4 = dd->multiply(c3, dd->conjugateTranspose(c4));
+
+  EXPECT_FALSE(dd->isCloseToIdentity(c3MultipliedWithC4, tol,
+                                     {false, true, true}, false));
+  EXPECT_FALSE(dd->isCloseToIdentity(c3MultipliedWithC4, tol,
+                                     {true, false, true}, false));
+  EXPECT_TRUE(dd->isCloseToIdentity(c3MultipliedWithC4, tol,
+                                    {true, true, false}, false));
+}
+
+TEST(DDPackageTest, CloseToIdentityWithGarbageInTheMiddle) {
+  const dd::fp tol = 1.0E-10;
+  const auto nqubits = 3U;
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+
+  auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
+
+  auto controlledSwapGate3 = dd->makeSWAPDD(nqubits, qc::Controls{0}, 1, 2);
+  auto hGate3 = dd->makeGateDD(dd::H_MAT, nqubits, 1);
+  auto xGate3 = dd->makeGateDD(dd::X_MAT, nqubits, 0);
+  auto controlledHGate3 =
+      dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{0}, 1);
+
+  auto c5 = dd->multiply(
+      controlledSwapGate3,
+      dd->multiply(hGate3, dd->multiply(zGate, controlledSwapGate3)));
+  auto c6 = dd->multiply(controlledHGate3, xGate3);
+
+  auto c5MultipliedWithC6 = dd->multiply(c5, dd->conjugateTranspose(c6));
+
+  EXPECT_FALSE(dd->isCloseToIdentity(c5MultipliedWithC6, tol,
+                                     {false, true, true}, false));
+  EXPECT_FALSE(dd->isCloseToIdentity(c5MultipliedWithC6, tol,
+                                     {true, true, false}, false));
+  EXPECT_TRUE(dd->isCloseToIdentity(c5MultipliedWithC6, tol,
+                                    {true, false, true}, false));
+}
+
 struct DensityMatrixSimulatorDDPackageConfigTesting
     : public dd::DDPackageConfig {
   static constexpr std::size_t UT_DM_NBUCKET = 65536U;

@@ -13,21 +13,13 @@ include(cmake/PreventInSourceBuilds.cmake)
 include(cmake/PackageAddTest.cmake)
 include(cmake/Cache.cmake)
 
-option(BUILD_MQT_CORE_TESTS "Also build tests for the MQT Core project" ON)
-option(BUILD_MQT_CORE_BENCHMARKS "Also build benchmarks for the MQT Core project")
 option(BUILD_MQT_CORE_BINDINGS "Build the MQT Core Python bindings" OFF)
-
 if(BUILD_MQT_CORE_BINDINGS)
   # ensure that the BINDINGS option is set
   set(BINDINGS
       ON
-      CACHE BOOL "Enable settings related to Python bindings" FORCE)
-  set(Python_FIND_VIRTUALENV
-      FIRST
-      CACHE STRING "Give precedence to virtualenvs when searching for Python")
-  set(Python_ARTIFACTS_INTERACTIVE
-      ON
-      CACHE BOOL "Prevent multiple searches for Python and instead cache the results.")
+      CACHE INTERNAL "Enable settings related to Python bindings")
+
   # top-level call to find Python
   find_package(
     Python 3.8 REQUIRED
@@ -35,29 +27,31 @@ if(BUILD_MQT_CORE_BINDINGS)
     OPTIONAL_COMPONENTS Development.SABIModule)
 endif()
 
-if(NOT TARGET project_warnings)
-  # Use the warnings specified in CompilerWarnings.cmake
-  add_library(project_warnings INTERFACE)
+# try to determine the version from either git or the Python package
+include(cmake/GetVersion.cmake)
+get_version()
 
-  # Standard compiler warnings
-  include(cmake/CompilerWarnings.cmake)
-  set_project_warnings(project_warnings)
+project(
+  mqt-core
+  LANGUAGES CXX
+  VERSION ${MQT_CORE_VERSION}
+  DESCRIPTION "MQT Core - The Backbone of the Munich Quantum Toolkit")
+
+# check if this is the master project or used via add_subdirectory
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  set(MQT_CORE_MASTER_PROJECT ON)
+else()
+  set(MQT_CORE_MASTER_PROJECT OFF)
 endif()
 
-if(NOT TARGET project_options)
-  # Use the options specified in CompilerOptions.cmake
-  add_library(project_options INTERFACE)
-
-  # Standard compiler options
-  include(cmake/CompilerOptions.cmake)
-  enable_project_options(project_options)
-
-  # Sanitizer options if supported by compiler
-  include(cmake/Sanitizers.cmake)
-  enable_sanitizers(project_options)
-endif()
+option(MQT_CORE_INSTALL "Generate installation instructions for MQT Core"
+       ${MQT_CORE_MASTER_PROJECT})
+option(BUILD_MQT_CORE_TESTS "Also build tests for the MQT Core project" ${MQT_CORE_MASTER_PROJECT})
 
 include(cmake/ExternalDependencies.cmake)
+
+# set the include directory for the build tree
+set(MQT_CORE_INCLUDE_BUILD_DIR "${PROJECT_SOURCE_DIR}/include")
 
 # add main library code
 add_subdirectory(src)
@@ -69,6 +63,13 @@ if(BUILD_MQT_CORE_TESTS)
   add_subdirectory(test)
 endif()
 
+option(BUILD_MQT_CORE_BENCHMARKS "Also build benchmarks for the MQT Core project" OFF)
 if(BUILD_MQT_CORE_BENCHMARKS)
   add_subdirectory(eval)
+endif()
+
+if(NOT MQT_CORE_MASTER_PROJECT)
+  set(mqt-core_FOUND
+      TRUE
+      CACHE INTERNAL "True if mqt-core is found on the system")
 endif()

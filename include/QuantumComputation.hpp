@@ -737,7 +737,12 @@ public:
   void addQubit(Qubit logicalQubitIndex, Qubit physicalQubitIndex,
                 std::optional<Qubit> outputQubitIndex);
 
-  void instantiate(const VariableAssignment& assignment);
+  QuantumComputation instantiate(const VariableAssignment& assignment) {
+    QuantumComputation result(*this);
+    result.instantiateInplace(assignment);
+    return result;
+  }
+  void instantiateInplace(const VariableAssignment& assignment);
 
   void addVariable(const SymbolOrNumber& expr);
 

@@ -10,6 +10,7 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -308,6 +309,14 @@ public:
   [[nodiscard]] auto numTerms() const { return terms.size(); }
 
   [[nodiscard]] const std::vector<Term<T>>& getTerms() const { return terms; }
+
+  [[nodiscard]] std::unordered_set<Variable> getVariables() const {
+    auto vars = std::unordered_set<Variable>{};
+    for (const auto& term : terms) {
+      vars.insert(term.getVar());
+    }
+    return vars;
+  }
 
   template <typename V,
             typename std::enable_if_t<std::is_constructible_v<U, V>>* = nullptr>
