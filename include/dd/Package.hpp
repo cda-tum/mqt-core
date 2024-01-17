@@ -727,7 +727,7 @@ public:
     for (++z; z < std::max(target0, target1); ++z) {
       for (auto i1 = 0U; i1 < RADIX; ++i1) {
         for (auto i2 = 0U; i2 < RADIX; ++i2) {
-          auto i = i1 * RADIX + i2;
+          const auto i = i1 * RADIX + i2;
           if (it != controls.end() && it->qubit == z) {
             auto edges = std::array{mEdge::zero(), mEdge::zero(), mEdge::zero(),
                                     mEdge::zero()};
