@@ -122,8 +122,6 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     ${MQT_CORE_TARGET_NAME} PUBLIC $<BUILD_INTERFACE:${MQT_CORE_INCLUDE_BUILD_DIR}>
                                    $<INSTALL_INTERFACE:${MQT_CORE_INCLUDE_INSTALL_DIR}>)
 
-  target_link_libraries(${MQT_CORE_TARGET_NAME} PUBLIC nlohmann_json)
-
   # add options and warnings to the library
   target_link_libraries(${MQT_CORE_TARGET_NAME} PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
 
