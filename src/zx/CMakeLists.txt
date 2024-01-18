@@ -53,6 +53,9 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-zx)
     target_compile_definitions(${MQT_CORE_TARGET_NAME}-zx PUBLIC GMP)
     target_link_libraries(${MQT_CORE_TARGET_NAME}-zx PUBLIC GMP::gmp GMP::gmpxx)
   endif()
+  set(MQT_CORE_ZX_WITH_GMP
+      ${GMP_FOUND}
+      CACHE BOOL "Whether to use GMP for multiprecision arithmetic")
 
   # add MQT alias
   add_library(MQT::CoreZX ALIAS ${MQT_CORE_TARGET_NAME}-zx)
