@@ -63,14 +63,3 @@ if(DEPLOY)
       "10.15"
       CACHE STRING "" FORCE)
 endif()
-
-# Some common settings for finding Python
-set(Python_FIND_VIRTUALENV
-    FIRST
-    CACHE STRING "Give precedence to virtualenvs when searching for Python")
-set(Python_FIND_FRAMEWORK
-    LAST
-    CACHE STRING "Prefer Brew/Conda to Apple framework Python")
-set(Python_ARTIFACTS_INTERACTIVE
-    ON
-    CACHE BOOL "Prevent multiple searches for Python and instead cache the results.")

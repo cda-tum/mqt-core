@@ -12,6 +12,7 @@ include(cmake/StandardProjectSettings.cmake)
 include(cmake/PreventInSourceBuilds.cmake)
 include(cmake/PackageAddTest.cmake)
 include(cmake/Cache.cmake)
+include(cmake/Python.cmake)
 
 option(BUILD_MQT_CORE_BINDINGS "Build the MQT Core Python bindings" OFF)
 if(BUILD_MQT_CORE_BINDINGS)
@@ -19,12 +20,7 @@ if(BUILD_MQT_CORE_BINDINGS)
   set(BINDINGS
       ON
       CACHE INTERNAL "Enable settings related to Python bindings")
-
-  # top-level call to find Python
-  find_package(
-    Python 3.8 REQUIRED
-    COMPONENTS Interpreter Development.Module
-    OPTIONAL_COMPONENTS Development.SABIModule)
+  find_python()
 endif()
 
 # check if this is the master project or used via add_subdirectory
