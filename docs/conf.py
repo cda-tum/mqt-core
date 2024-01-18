@@ -184,3 +184,32 @@ html_theme_options = {
     "source_directory": "docs/",
     "navigation_with_keys": True,
 }
+
+# -- Options for LaTeX output ------------------------------------------------
+latex_engine = "lualatex"
+latex_documents = [
+    (master_doc, "mqt-core.tex", "MQT Core Documentation", author, "howto", False),
+]
+latex_logo = "_static/mqt_dark.png"
+latex_elements = {
+    "papersize": "a4paper",
+    "printindex": r"\footnotesize\raggedright\printindex",
+    "fontpkg": r"""
+    \directlua{luaotfload.add_fallback
+   ("emojifallback",
+    {
+      "NotoColorEmoji:mode=harf;"
+    }
+   )}
+
+   \setmainfont{DejaVu Serif}[
+     RawFeature={fallback=emojifallback}
+    ]
+   \setsansfont{DejaVu Sans}[
+     RawFeature={fallback=emojifallback}
+   ]
+   \setmonofont{DejaVu Sans Mono}[
+     RawFeature={fallback=emojifallback}
+   ]
+""",
+}
