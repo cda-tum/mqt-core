@@ -191,13 +191,15 @@ function(get_version)
       FALSE
       CACHE INTERNAL "MQT_CORE_VERSION_FOUND")
 
-  version_from_skbuild()
-  if(MQT_CORE_VERSION_FOUND)
-    message(
-      STATUS
-        "Found project version ${MQT_CORE_VERSION} from scikit-build-core (full version: ${MQT_CORE_VERSION_STRING})"
-    )
-    return()
+  if(MQT_CORE_MASTER_PROJECT)
+    version_from_skbuild()
+    if(MQT_CORE_VERSION_FOUND)
+      message(
+        STATUS
+          "Found project version ${MQT_CORE_VERSION} from scikit-build-core (full version: ${MQT_CORE_VERSION_STRING})"
+      )
+      return()
+    endif()
   endif()
 
   version_from_git()

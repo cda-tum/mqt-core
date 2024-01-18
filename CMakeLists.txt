@@ -27,16 +27,6 @@ if(BUILD_MQT_CORE_BINDINGS)
     OPTIONAL_COMPONENTS Development.SABIModule)
 endif()
 
-# try to determine the version from either git or the Python package
-include(cmake/GetVersion.cmake)
-get_version()
-
-project(
-  mqt-core
-  LANGUAGES CXX
-  VERSION ${MQT_CORE_VERSION}
-  DESCRIPTION "MQT Core - The Backbone of the Munich Quantum Toolkit")
-
 # check if this is the master project or used via add_subdirectory
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(MQT_CORE_MASTER_PROJECT ON)
@@ -47,6 +37,16 @@ endif()
 option(MQT_CORE_INSTALL "Generate installation instructions for MQT Core"
        ${MQT_CORE_MASTER_PROJECT})
 option(BUILD_MQT_CORE_TESTS "Also build tests for the MQT Core project" ${MQT_CORE_MASTER_PROJECT})
+
+# try to determine the project version
+include(cmake/GetVersion.cmake)
+get_version()
+
+project(
+  mqt-core
+  LANGUAGES CXX
+  VERSION ${MQT_CORE_VERSION}
+  DESCRIPTION "MQT Core - The Backbone of the Munich Quantum Toolkit")
 
 include(cmake/ExternalDependencies.cmake)
 
