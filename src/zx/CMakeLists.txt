@@ -6,6 +6,9 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-zx)
       add_library(multiprecision INTERFACE)
       target_link_libraries(multiprecision INTERFACE Boost::headers)
       add_library(MQT::Multiprecision ALIAS multiprecision)
+      set(MQT_CORE_ZX_SYSTEM_BOOST
+          TRUE
+          CACHE BOOL "Whether a system version of Boost was used")
     else()
       # Boost::multiprecision does not provide its own installation instructions. As a consequence,
       # this needs a workaround.
@@ -26,6 +29,10 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-zx)
         install(DIRECTORY ${MULTIPRECISION_INCLUDE_DIR}/boost
                 DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
       endif()
+
+      set(MQT_CORE_ZX_SYSTEM_BOOST
+          FALSE
+          CACHE BOOL "Whether a system version of Boost was used")
     endif()
   endif()
 

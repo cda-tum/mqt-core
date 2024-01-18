@@ -23,24 +23,30 @@ else()
   endif()
 endif()
 
-set(BOOST_MP_STANDALONE
-    ON
-    CACHE INTERNAL "Use standalone boost multiprecision")
-set(BOOST_VERSION
-    1_84_0
-    CACHE STRING "Boost version")
-set(BOOST_MIN_VERSION 1.80.0)
-set(BOOST_URL
-    https://github.com/boostorg/multiprecision/archive/refs/tags/Boost_${BOOST_VERSION}.tar.gz)
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
-  FetchContent_Declare(boost_multiprecision URL ${BOOST_URL} FIND_PACKAGE_ARGS ${BOOST_MIN_VERSION}
-                                                NAMES Boost)
-  list(APPEND FETCH_PACKAGES boost_multiprecision)
-else()
-  find_package(boost_multiprecision ${BOOST_MIN_VERSION} QUIET NAMES Boost)
-  if(NOT boost_multiprecision_FOUND)
-    FetchContent_Declare(boost_multiprecision URL ${BOOST_URL})
+option(USE_SYSTEM_BOOST "Whether to try to use the system Boost installation" ON)
+set(BOOST_MIN_VERSION
+    1.80.0
+    CACHE STRING "Minimum required Boost version")
+find_package(Boost ${BOOST_MIN_VERSION} CONFIG QUIET)
+if(NOT Boost_FOUND OR NOT USE_SYSTEM_BOOST)
+  set(BOOST_MP_STANDALONE
+      ON
+      CACHE INTERNAL "Use standalone boost multiprecision")
+  set(BOOST_VERSION
+      1_84_0
+      CACHE INTERNAL "Boost version")
+  set(BOOST_URL
+      https://github.com/boostorg/multiprecision/archive/refs/tags/Boost_${BOOST_VERSION}.tar.gz)
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+    FetchContent_Declare(boost_multiprecision URL ${BOOST_URL} FIND_PACKAGE_ARGS
+                                                  ${BOOST_MIN_VERSION} CONFIG)
     list(APPEND FETCH_PACKAGES boost_multiprecision)
+  else()
+    find_package(boost_multiprecision ${BOOST_MIN_VERSION} QUIET CONFIG)
+    if(NOT boost_multiprecision_FOUND)
+      FetchContent_Declare(boost_multiprecision URL ${BOOST_URL})
+      list(APPEND FETCH_PACKAGES boost_multiprecision)
+    endif()
   endif()
 endif()
 
