@@ -51,7 +51,7 @@ option(BUILD_MQT_CORE_TESTS "Also build tests for the MQT Core project" ${MQT_CO
 include(cmake/ExternalDependencies.cmake)
 
 # set the include directory for the build tree
-set(MQT_CORE_INCLUDE_BUILD_DIR "${PROJECT_SOURCE_DIR}/include")
+set(MQT_CORE_INCLUDE_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/mqt-core")
 
 # add main library code
 add_subdirectory(src)
