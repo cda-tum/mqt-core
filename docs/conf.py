@@ -149,7 +149,7 @@ autoapi_options = [
 
 def skip_cpp_core(_app: Sphinx, what: str, name: str, _obj: object, skip: bool, _options) -> bool:  # noqa: ANN001
     """Skip the _core module in documentation."""
-    if what == "package" and "_core" in name or "_compat" in name:
+    if (what == "package" and "_core" in name) or "_compat" in name:
         skip = True
     return skip
 
