@@ -147,7 +147,7 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
   const double tolerance = 1e-10;
 
   auto tmp = rootEdge.getSparseProbabilityVectorStrKeys();
-  auto prob = 1.0 /8;
+  auto prob = 1.0 / 8;
   EXPECT_NEAR(tmp["000"], prob, tolerance);
   EXPECT_NEAR(tmp["001"], prob, tolerance);
   EXPECT_NEAR(tmp["010"], prob, tolerance);
@@ -160,7 +160,7 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
   std::tie(rootEdge, result) = dd->measureOneCollapsing(rootEdge, 0, mt);
 
   auto tmp0 = rootEdge.getSparseProbabilityVectorStrKeys();
-  prob = 1.0/4;
+  prob = 1.0 / 4;
 
   EXPECT_TRUE(fabs(tmp0["000"] + tmp0["001"] - prob) < tolerance);
   EXPECT_TRUE(fabs(tmp0["010"] + tmp0["011"] - prob) < tolerance);
@@ -170,19 +170,19 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
   std::tie(rootEdge, result) = dd->measureOneCollapsing(rootEdge, 1, mt);
 
   auto tmp1 = rootEdge.getSparseProbabilityVectorStrKeys();
-  prob = 1.0/2;
-  EXPECT_TRUE(fabs(tmp0["000"] + tmp0["001"] + tmp0["010"] + tmp0["011"] - prob) < tolerance);
-  EXPECT_TRUE(fabs(tmp0["100"] + tmp0["101"] + tmp0["110"] + tmp0["111"] - prob) < tolerance);
+  prob = 1.0 / 2;
+  EXPECT_TRUE(fabs(tmp0["000"] + tmp0["001"] + tmp0["010"] + tmp0["011"] -
+                   prob) < tolerance);
+  EXPECT_TRUE(fabs(tmp0["100"] + tmp0["101"] + tmp0["110"] + tmp0["111"] -
+                   prob) < tolerance);
 
   std::tie(rootEdge, result) = dd->measureOneCollapsing(rootEdge, 2, mt);
   auto tmp2 = rootEdge.getSparseProbabilityVectorStrKeys();
-  EXPECT_TRUE(fabs(tmp2["000"] - 1) < tolerance ||
-                fabs(tmp2["001"] - 1) < tolerance ||
-                fabs(tmp2["010"] - 1) < tolerance ||
-                fabs(tmp2["011"] - 1) < tolerance ||
-                fabs(tmp2["100"] - 1) < tolerance ||
-                fabs(tmp2["101"] - 1) < tolerance ||
-                fabs(tmp2["111"] - 1) < tolerance);
+  EXPECT_TRUE(
+      fabs(tmp2["000"] - 1) < tolerance || fabs(tmp2["001"] - 1) < tolerance ||
+      fabs(tmp2["010"] - 1) < tolerance || fabs(tmp2["011"] - 1) < tolerance ||
+      fabs(tmp2["100"] - 1) < tolerance || fabs(tmp2["101"] - 1) < tolerance ||
+      fabs(tmp2["111"] - 1) < tolerance);
 }
 
 TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
