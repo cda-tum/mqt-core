@@ -1971,9 +1971,9 @@ public:
 private:
   /// TODO: introduce a compute table for the trace?
   template <class OperandNode>
-  CachedEdge<OperandNode>
-          trace(const Edge<OperandNode>& a, const std::vector<bool>& eliminate,
-                    std::size_t alreadyEliminated = 0) {
+  CachedEdge<OperandNode> trace(const Edge<OperandNode>& a,
+                                const std::vector<bool>& eliminate,
+                                std::size_t alreadyEliminated = 0) {
     const auto aWeight = static_cast<ComplexValue>(a.w);
     if (aWeight.approximatelyZero()) {
       return CachedEdge<OperandNode>::zero();
@@ -1996,11 +1996,11 @@ private:
     }
 
     std::array<CachedEdge<OperandNode>, NEDGE> edge{};
-    std::transform(
-        a.p->e.cbegin(), a.p->e.cend(), edge.begin(),
-        [this, &eliminate, &alreadyEliminated](const Edge<OperandNode>& e) -> CachedEdge<OperandNode> {
-          return trace(e, eliminate, alreadyEliminated);
-        });
+    std::transform(a.p->e.cbegin(), a.p->e.cend(), edge.begin(),
+                   [this, &eliminate, &alreadyEliminated](
+                       const Edge<OperandNode>& e) -> CachedEdge<OperandNode> {
+                     return trace(e, eliminate, alreadyEliminated);
+                   });
     const auto adjustedV =
         static_cast<Qubit>(static_cast<std::size_t>(a.p->v) -
                            (static_cast<std::size_t>(std::count(

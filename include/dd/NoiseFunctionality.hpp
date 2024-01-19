@@ -280,18 +280,16 @@ public:
   void applyNoiseEffects(dEdge& originalEdge,
                          const std::unique_ptr<qc::Operation>& qcOperation) {
     auto usedQubits = qcOperation->getUsedQubits();
-      dCachedEdge nodeAfterNoise = {};
-      dEdge::applyDmChangesToEdge(originalEdge);
-      nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, false);
-      dEdge::revertDmChangesToEdge(originalEdge);
-      auto r = dEdge{nodeAfterNoise.p, package->cn.lookup(nodeAfterNoise.w)};
-      package->incRef(r);
-      dEdge::alignDensityEdge(originalEdge);
-      package->decRef(originalEdge);
-      originalEdge = r;
-      dEdge::setDensityMatrixTrue(originalEdge);
-
-
+    dCachedEdge nodeAfterNoise = {};
+    dEdge::applyDmChangesToEdge(originalEdge);
+    nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, false);
+    dEdge::revertDmChangesToEdge(originalEdge);
+    auto r = dEdge{nodeAfterNoise.p, package->cn.lookup(nodeAfterNoise.w)};
+    package->incRef(r);
+    dEdge::alignDensityEdge(originalEdge);
+    package->decRef(originalEdge);
+    originalEdge = r;
+    dEdge::setDensityMatrixTrue(originalEdge);
   }
 
 private:
