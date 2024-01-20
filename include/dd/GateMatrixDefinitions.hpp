@@ -93,6 +93,12 @@ constexpr TwoQubitGateMatrix ECR_MAT{
 constexpr TwoQubitGateMatrix DCX_MAT{
     {{1, 0, 0, 0}, {0, 0, 0, 1}, {0, 1, 0, 0}, {0, 0, 1, 0}}};
 
+constexpr TwoQubitGateMatrix PERES_MAT{
+    {{0, 0, 0, 1}, {0, 0, 1, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}}};
+
+constexpr TwoQubitGateMatrix PERESDG_MAT{
+    {{0, 0, 1, 0}, {0, 0, 0, 1}, {0, 1, 0, 0}, {1, 0, 0, 0}}};
+
 inline TwoQubitGateMatrix rxxMat(const fp theta) {
   const auto cosTheta = std::cos(theta / 2.);
   const auto sinTheta = std::sin(theta / 2.);

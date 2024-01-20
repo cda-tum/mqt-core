@@ -653,43 +653,40 @@ public:
       }
     }
 
-    // process lines below smaller target (by creating identity structures)
+    // process lines below smaller target
     auto it = controls.begin();
     auto z = static_cast<Qubit>(start);
     const auto smallerTarget = std::min(target0, target1);
     for (; z < smallerTarget; ++z) {
-      for (auto& row : em) {
-        for (auto i1 = 0U; i1 < RADIX; ++i1) {
-          for (auto i2 = 0U; i2 < RADIX; ++i2) {
-            const auto i = i1 * RADIX + i2;
-            if (it != controls.end() && it->qubit == z) {
-              auto edges = std::array{mEdge::zero(), mEdge::zero(),
-                                      mEdge::zero(), mEdge::zero()};
-              if (it->type == qc::Control::Type::Neg) { // negative control
-                edges[0] = row[i];
-                if (i1 == i2) {
-                  if (z == 0U) {
-                    edges[3] = mEdge::one();
-                  } else {
-                    edges[3] = makeIdent(start, z - 1U);
-                  }
-                }
-              } else { // positive control
-                edges[3] = row[i];
-                if (i1 == i2) {
-                  if (z == 0U) {
-                    edges[0] = mEdge::one();
-                  } else {
-                    edges[0] = makeIdent(start, z - 1U);
-                  }
+      for (auto row = 0U; row < NEDGE; ++row) {
+        for (auto col = 0U; col < NEDGE; ++col) {
+          if (it != controls.end() && it->qubit == z) {
+            auto edges = std::array{mEdge::zero(), mEdge::zero(), mEdge::zero(),
+                                    mEdge::zero()};
+            if (it->type == qc::Control::Type::Neg) { // negative control
+              edges[0] = em[row][col];
+              if (row == col) {
+                if (z == 0U) {
+                  edges[3] = mEdge::one();
+                } else {
+                  edges[3] = makeIdent(start, z - 1U);
                 }
               }
-              row[i] = makeDDNode(z, edges);
-            } else { // not connected (current qubit is not a control/target
-                     // qubit)
-              row[i] = makeDDNode(
-                  z, std::array{row[i], mEdge::zero(), mEdge::zero(), row[i]});
+            } else { // positive control
+              edges[3] = em[row][col];
+              if (row == col) {
+                if (z == 0U) {
+                  edges[0] = mEdge::one();
+                } else {
+                  edges[0] = makeIdent(start, z - 1U);
+                }
+              }
             }
+            em[row][col] = makeDDNode(z, edges);
+          } else { // not connected
+            em[row][col] =
+                makeDDNode(z, std::array{em[row][col], mEdge::zero(),
+                                         mEdge::zero(), em[row][col]});
           }
         }
       }
@@ -725,37 +722,25 @@ public:
 
     // process lines between the two targets
     for (++z; z < std::max(target0, target1); ++z) {
-      for (auto i1 = 0U; i1 < RADIX; ++i1) {
-        for (auto i2 = 0U; i2 < RADIX; ++i2) {
-          const auto i = i1 * RADIX + i2;
-          if (it != controls.end() && it->qubit == z) {
-            auto edges = std::array{mEdge::zero(), mEdge::zero(), mEdge::zero(),
-                                    mEdge::zero()};
-            if (it->type == qc::Control::Type::Neg) { // negative control
-              edges[0] = em0[i];
-              if (i1 == i2) {
-                if (z == 0U) {
-                  edges[3] = mEdge::one();
-                } else {
-                  edges[3] = makeIdent(smallerTarget, z - 1U);
-                }
-              }
-            } else { // positive control
-              edges[3] = em0[i];
-              if (i1 == i2) {
-                if (z == 0U) {
-                  edges[0] = mEdge::one();
-                } else {
-                  edges[0] = makeIdent(smallerTarget, z - 1U);
-                }
-              }
+      for (auto i = 0U; i < NEDGE; ++i) {
+        if (it != controls.end() && it->qubit == z) {
+          auto edges = std::array{mEdge::zero(), mEdge::zero(), mEdge::zero(),
+                                  mEdge::zero()};
+          if (it->type == qc::Control::Type::Neg) { // negative control
+            edges[0] = em0[i];
+            if (i == 0 || i == NEDGE - 1) {
+              edges[3] = makeIdent(start, z - 1U);
             }
-            em0[i] = makeDDNode(z, edges);
-          } else { // not connected (current qubit is not a control/target
-                   // qubit)
-            em0[i] = makeDDNode(
-                z, std::array{em0[i], mEdge::zero(), mEdge::zero(), em0[i]});
+          } else { // positive control
+            edges[3] = em0[i];
+            if (i == 0 || i == NEDGE - 1) {
+              edges[0] = makeIdent(start, z - 1U);
+            }
           }
+          em0[i] = makeDDNode(z, edges);
+        } else { // not connected
+          em0[i] = makeDDNode(
+              z, std::array{em0[i], mEdge::zero(), mEdge::zero(), em0[i]});
         }
       }
       if (it != controls.end() && it->qubit == z) {
