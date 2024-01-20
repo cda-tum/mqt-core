@@ -149,7 +149,7 @@ autoapi_options = [
 
 def skip_cpp_core(_app: Sphinx, what: str, name: str, _obj: object, skip: bool, _options) -> bool:  # noqa: ANN001
     """Skip the _core module in documentation."""
-    if what == "package" and "_core" in name or "_compat" in name:
+    if (what == "package" and "_core" in name) or "_compat" in name:
         skip = True
     return skip
 
@@ -183,4 +183,33 @@ html_theme_options = {
     "source_branch": "main",
     "source_directory": "docs/",
     "navigation_with_keys": True,
+}
+
+# -- Options for LaTeX output ------------------------------------------------
+latex_engine = "lualatex"
+latex_documents = [
+    (master_doc, "mqt-core.tex", "MQT Core Documentation", author, "howto", False),
+]
+latex_logo = "_static/mqt_dark.png"
+latex_elements = {
+    "papersize": "a4paper",
+    "printindex": r"\footnotesize\raggedright\printindex",
+    "fontpkg": r"""
+    \directlua{luaotfload.add_fallback
+   ("emojifallback",
+    {
+      "NotoColorEmoji:mode=harf;"
+    }
+   )}
+
+   \setmainfont{DejaVu Serif}[
+     RawFeature={fallback=emojifallback}
+    ]
+   \setsansfont{DejaVu Sans}[
+     RawFeature={fallback=emojifallback}
+   ]
+   \setmonofont{DejaVu Sans Mono}[
+     RawFeature={fallback=emojifallback}
+   ]
+""",
 }

@@ -1,5 +1,9 @@
 version: 2
 
+formats:
+  - pdf
+  - htmlzip
+
 build:
   os: ubuntu-22.04
   tools:
