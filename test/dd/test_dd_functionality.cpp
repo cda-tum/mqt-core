@@ -41,7 +41,7 @@ protected:
 
   std::size_t nqubits = 4U;
   std::size_t initialComplexCount = 0U;
-  qc::MatrixDD e{}, ident{};
+  qc::MatrixDD d{}, e{}, ident{};
   std::unique_ptr<dd::Package<>> dd;
   std::mt19937_64 mt;
   std::uniform_real_distribution<dd::fp> dist;
@@ -64,7 +64,7 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
   using namespace qc::literals;
   auto gate = static_cast<qc::OpType>(GetParam());
 
-  qc::StandardOperation op;
+  qc::StandardOperation op, op_neg;
   switch (gate) {
   case qc::GPhase:
     op = qc::StandardOperation(nqubits, Controls{}, Targets{}, gate,
@@ -121,7 +121,7 @@ TEST_P(DDFunctionality, controlledStandardOpBuildInverseBuild) {
   using namespace qc::literals;
   auto gate = static_cast<qc::OpType>(GetParam());
 
-  qc::StandardOperation op;
+  qc::StandardOperation op, op_neg;
   switch (gate) {
   case qc::GPhase:
     op = qc::StandardOperation(nqubits, Controls{0}, Targets{}, gate,
@@ -150,6 +150,7 @@ TEST_P(DDFunctionality, controlledStandardOpBuildInverseBuild) {
   case qc::Peres:
   case qc::Peresdg:
     op = qc::StandardOperation(nqubits, Controls{0}, 1, 2, gate);
+    op_neg = qc::StandardOperation(nqubits, Controls{0_nc}, 1, 2, gate);
     break;
   case qc::RXX:
   case qc::RYY:
@@ -157,11 +158,15 @@ TEST_P(DDFunctionality, controlledStandardOpBuildInverseBuild) {
   case qc::RZX:
     op = qc::StandardOperation(nqubits, Controls{0}, 1, 2, gate,
                                std::vector{dist(mt)});
+    op_neg = qc::StandardOperation(nqubits, Controls{0_nc}, 1, 2, gate,
+                                   std::vector{dist(mt)});
     break;
   case qc::XXminusYY:
   case qc::XXplusYY:
     op = qc::StandardOperation(nqubits, Controls{0}, 1, 2, gate,
                                std::vector{dist(mt), dist(mt)});
+    op_neg = qc::StandardOperation(nqubits, Controls{0_nc}, 1, 2, gate,
+                                   std::vector{dist(mt), dist(mt)});
     break;
   default:
     op = qc::StandardOperation(nqubits, 0, 1, gate);
@@ -172,6 +177,40 @@ TEST_P(DDFunctionality, controlledStandardOpBuildInverseBuild) {
   dd->incRef(e);
 
   EXPECT_EQ(ident, e);
+
+  if (qc::isTwoQubitGate(gate)) {
+    ASSERT_NO_THROW(
+        { d = dd->multiply(getDD(&op_neg, *dd), getInverseDD(&op_neg, *dd)); });
+    dd->incRef(d);
+
+    EXPECT_EQ(ident, d);
+  }
+}
+
+TEST_F(DDFunctionality, twoTargetControlledGateDDEdgeCases) {
+  using namespace qc::literals;
+  auto newNQubits = 8U;
+  auto newDD = std::make_unique<dd::Package<>>(newNQubits);
+  auto gate = SWAP;
+
+  qc::StandardOperation op, op_neg;
+  op = qc::StandardOperation(newNQubits, Controls{1, 3, 7}, 2, 5, gate);
+  op_neg =
+      qc::StandardOperation(newNQubits, Controls{1_nc, 3_nc, 7_nc}, 2, 5, gate);
+
+  ASSERT_NO_THROW(
+      { e = newDD->multiply(getDD(&op, *newDD), getInverseDD(&op, *newDD)); });
+  newDD->incRef(e);
+
+  ASSERT_NO_THROW(
+      { d = newDD->multiply(getDD(&op_neg, *newDD), getInverseDD(&op_neg, *newDD)); });
+  newDD->incRef(d);
+
+  // the DD of the identity needs to be reconstructed as well
+  ident = newDD->makeIdent(newNQubits);
+
+  EXPECT_EQ(ident, e);
+  EXPECT_EQ(ident, d);
 }
 
 TEST_F(DDFunctionality, buildCircuit) {

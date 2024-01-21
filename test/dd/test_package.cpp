@@ -119,7 +119,7 @@ TEST(DDPackageTest, QFTState) {
   auto h1Gate = dd->makeGateDD(dd::H_MAT, 3, 1);
   auto s1Gate = dd->makeGateDD(dd::S_MAT, 3, 2_pc, 1);
   auto h2Gate = dd->makeGateDD(dd::H_MAT, 3, 2);
-  auto swapGate = dd->makeSWAPDD(3, qc::Controls{}, 0, 2);
+  auto swapGate = dd->makeTwoQubitGateDD(dd::SWAP_MAT, 3, qc::Controls{}, 0, 2);
 
   auto qftOp = dd->multiply(s0Gate, h0Gate);
   qftOp = dd->multiply(t0Gate, qftOp);
@@ -1144,7 +1144,8 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheBeginning) {
   const dd::fp tol = 1.0E-10;
   const auto nqubits = 3U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
-  auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
+  auto controlledSwapGate =
+      dd->makeTwoQubitGateDD(dd::SWAP_MAT, nqubits, qc::Controls{1}, 0, 2);
   auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 0);
   auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
   auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
@@ -1168,7 +1169,8 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheEnd) {
   const auto nqubits = 3U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
 
-  auto controlledSwapGate = dd->makeSWAPDD(nqubits, qc::Controls{1}, 0, 2);
+  auto controlledSwapGate =
+      dd->makeTwoQubitGateDD(dd::SWAP_MAT, nqubits, qc::Controls{1}, 0, 2);
   auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
 
   auto hGate2 = dd->makeGateDD(dd::H_MAT, nqubits, 2);
@@ -1198,7 +1200,8 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageInTheMiddle) {
 
   auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
 
-  auto controlledSwapGate3 = dd->makeSWAPDD(nqubits, qc::Controls{0}, 1, 2);
+  auto controlledSwapGate3 =
+      dd->makeTwoQubitGateDD(dd::SWAP_MAT, nqubits, qc::Controls{0}, 1, 2);
   auto hGate3 = dd->makeGateDD(dd::H_MAT, nqubits, 1);
   auto xGate3 = dd->makeGateDD(dd::X_MAT, nqubits, 0);
   auto controlledHGate3 =
@@ -1697,6 +1700,30 @@ TEST(DDPackageTest, SWAPGateDDConstruction) {
       const auto gateDD =
           dd->makeSWAPDD(nrQubits, qc::Controls{}, control, target);
       EXPECT_EQ(swapGateDD, gateDD);
+    }
+  }
+}
+
+TEST(DDPackageTest, PeresGateDDConstruction) {
+  const auto nrQubits = 5U;
+  const auto dd = std::make_unique<dd::Package<>>(nrQubits);
+
+  for (dd::Qubit control = 0; control < nrQubits; ++control) {
+    for (dd::Qubit target = 0; target < nrQubits; ++target) {
+      if (control == target) {
+        continue;
+      }
+      const auto peresGateDD =
+          dd->makeTwoQubitGateDD(dd::PERES_MAT, nrQubits, control, target);
+      const auto gateDD =
+          dd->makePeresDD(nrQubits, qc::Controls{}, control, target);
+      EXPECT_EQ(peresGateDD, gateDD);
+
+      const auto peresInvDD =
+          dd->makeTwoQubitGateDD(dd::PERESDG_MAT, nrQubits, control, target);
+      const auto gateInvDD =
+          dd->makePeresInvDD(nrQubits, qc::Controls{}, control, target);
+      EXPECT_EQ(peresInvDD, gateInvDD);
     }
   }
 }

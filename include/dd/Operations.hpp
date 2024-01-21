@@ -152,7 +152,7 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
     break;
   default:
     std::ostringstream oss{};
-    oss << "DD for gate" << op->getName() << " not available!";
+    oss << "DD for gate " << op->getName() << " not available!";
     throw qc::QFRException(oss.str());
   }
 
