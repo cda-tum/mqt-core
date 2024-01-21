@@ -202,8 +202,9 @@ TEST_F(DDFunctionality, twoTargetControlledGateDDEdgeCases) {
       { e = newDD->multiply(getDD(&op, *newDD), getInverseDD(&op, *newDD)); });
   newDD->incRef(e);
 
-  ASSERT_NO_THROW(
-      { d = newDD->multiply(getDD(&op_neg, *newDD), getInverseDD(&op_neg, *newDD)); });
+  ASSERT_NO_THROW({
+    d = newDD->multiply(getDD(&op_neg, *newDD), getInverseDD(&op_neg, *newDD));
+  });
   newDD->incRef(d);
 
   // the DD of the identity needs to be reconstructed as well

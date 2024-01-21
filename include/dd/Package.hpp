@@ -870,7 +870,8 @@ public:
     // controls are 0.
     auto e = makeGateDD(rxMat(PI_2), n, qc::Controls{}, target0, start);
     e = multiply(e, makeGateDD(rxMat(PI_2), n, qc::Controls{}, target1, start));
-    e = multiply(e, makeTwoQubitGateDD(rzzMat(theta), n, controls, target0, target1, start));
+    e = multiply(e, makeTwoQubitGateDD(rzzMat(theta), n, controls, target0,
+                                       target1, start));
     e = multiply(e,
                  makeGateDD(rxMat(-PI_2), n, qc::Controls{}, target1, start));
     e = multiply(e,
@@ -885,7 +886,8 @@ public:
     // controls are 0.
     auto e = makeGateDD(H_MAT, n, qc::Controls{}, target0, start);
     e = multiply(e, makeGateDD(H_MAT, n, qc::Controls{}, target1, start));
-    e = multiply(e, makeTwoQubitGateDD(rzzMat(theta), n, controls, target0, target1, start));
+    e = multiply(e, makeTwoQubitGateDD(rzzMat(theta), n, controls, target0,
+                                       target1, start));
     e = multiply(e, makeGateDD(H_MAT, n, qc::Controls{}, target1, start));
     e = multiply(e, makeGateDD(H_MAT, n, qc::Controls{}, target0, start));
     return e;
@@ -897,7 +899,8 @@ public:
     // no controls are necessary on the H gates since they cancel if the
     // controls are 0.
     auto e = makeGateDD(H_MAT, n, qc::Controls{}, target1, start);
-    e = multiply(e, makeTwoQubitGateDD(rzzMat(theta), n, controls, target0, target1, start));
+    e = multiply(e, makeTwoQubitGateDD(rzzMat(theta), n, controls, target0,
+                                       target1, start));
     e = multiply(e, makeGateDD(H_MAT, n, qc::Controls{}, target1, start));
     return e;
   }
@@ -905,9 +908,11 @@ public:
   mEdge makeECRDD(const std::size_t n, const qc::Controls& controls,
                   const qc::Qubit target0, const qc::Qubit target1,
                   const std::size_t start = 0) {
-    auto e = makeTwoQubitGateDD(rzxMat(-PI_4), n, controls, target0, target1, start);
+    auto e =
+        makeTwoQubitGateDD(rzxMat(-PI_4), n, controls, target0, target1, start);
     e = multiply(e, makeGateDD(X_MAT, n, controls, target0, start));
-    e = multiply(e, makeTwoQubitGateDD(rzxMat(PI_4), n, controls, target0, target1, start));
+    e = multiply(e, makeTwoQubitGateDD(rzxMat(PI_4), n, controls, target0,
+                                       target1, start));
     return e;
   }
 
