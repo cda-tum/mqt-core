@@ -181,22 +181,22 @@ TEST_P(DDFunctionality, controlledStandardNegOpBuildInverseBuild) {
   qc::StandardOperation op;
   switch (gate) {
   case qc::GPhase:
-    op = qc::StandardOperation(nqubits, Controls{0}, Targets{}, gate,
+    op = qc::StandardOperation(nqubits, Controls{0_nc}, Targets{}, gate,
                                std::vector{dist(mt)});
     break;
   case qc::U:
-    op = qc::StandardOperation(nqubits, 0, 1, gate,
+    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, gate,
                                std::vector{dist(mt), dist(mt), dist(mt)});
     break;
   case qc::U2:
-    op = qc::StandardOperation(nqubits, 0, 1, gate,
+    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, gate,
                                std::vector{dist(mt), dist(mt)});
     break;
   case qc::RX:
   case qc::RY:
   case qc::RZ:
   case qc::P:
-    op = qc::StandardOperation(nqubits, 0, 1, gate, std::vector{dist(mt)});
+    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, gate, std::vector{dist(mt)});
     break;
 
   case qc::SWAP:
@@ -221,7 +221,7 @@ TEST_P(DDFunctionality, controlledStandardNegOpBuildInverseBuild) {
                                std::vector{dist(mt), dist(mt)});
     break;
   default:
-    op = qc::StandardOperation(nqubits, 0, 1, gate);
+    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, gate);
   }
 
   ASSERT_NO_THROW(
