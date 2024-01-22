@@ -196,7 +196,8 @@ TEST_P(DDFunctionality, controlledStandardNegOpBuildInverseBuild) {
   case qc::RY:
   case qc::RZ:
   case qc::P:
-    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, gate, std::vector{dist(mt)});
+    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, gate,
+                               std::vector{dist(mt)});
     break;
 
   case qc::SWAP:
