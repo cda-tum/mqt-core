@@ -231,36 +231,6 @@ TEST_P(DDFunctionality, controlledStandardNegOpBuildInverseBuild) {
   EXPECT_EQ(ident, e);
 }
 
-// TEST_F(DDFunctionality, twoTargetControlledGateDDEdgeCases) {
-//   using namespace qc::literals;
-//   auto newNQubits = 12U;
-//   auto newDD = std::make_unique<dd::Package<>>(newNQubits);
-//   auto gate = SWAP;
-//
-//   qc::StandardOperation op, op_neg;
-//   op = qc::StandardOperation(newNQubits, Controls{1, 5, 7, 11}, 3, 9, gate);
-//   op_neg = qc::StandardOperation(newNQubits, Controls{1_nc, 5_nc, 7_nc,
-//   11_nc},
-//                                  3, 9, gate);
-//
-//   ASSERT_NO_THROW(
-//       { e = newDD->multiply(getDD(&op, *newDD), getInverseDD(&op, *newDD));
-//       });
-//   newDD->incRef(e);
-//
-//   ASSERT_NO_THROW({
-//     d = newDD->multiply(getDD(&op_neg, *newDD), getInverseDD(&op_neg,
-//     *newDD));
-//   });
-//   newDD->incRef(d);
-//
-//   // the DD of the identity needs to be reconstructed as well
-//   ident = newDD->makeIdent(newNQubits);
-//
-//   EXPECT_EQ(ident, e);
-//   EXPECT_EQ(ident, d);
-// }
-
 TEST_F(DDFunctionality, buildCircuit) {
   qc::QuantumComputation qc(nqubits);
 
