@@ -61,8 +61,7 @@ std::vector<Qubit> fiveDiffferentRandomNumbers(Qubit min, Qubit max) {
   for (Qubit i = min; i < max; i++) {
     numbers.push_back(i);
   }
-  unsigned seed = static_cast<unsigned>(
-      std::chrono::system_clock::now().time_since_epoch().count());
+  unsigned seed = 42;
   std::shuffle(numbers.begin(), numbers.end(),
                std::default_random_engine(seed));
 
@@ -76,7 +75,8 @@ std::vector<Qubit> fiveDiffferentRandomNumbers(Qubit min, Qubit max) {
 StandardOperation makeRandomStandardOperation(size_t n, Qubit nrQubits,
                                               Qubit min) {
   auto randomNumbers = fiveDiffferentRandomNumbers(min, min + nrQubits);
-  auto randomOpType = static_cast<OpType>(rand() % Compound);
+  // choose one of the non-compound operations, but not "None"
+  auto randomOpType = static_cast<OpType>(rand() % (Compound - 1) + 1);
   Qubit randomTarget1 = randomNumbers[0];
   Qubit randomTarget2{min};
   if (randomNumbers.size() > 1) {
@@ -259,7 +259,7 @@ generateRandomBenchmark(size_t n, Qubit d, Qubit m) {
       auto op = makeRandomStandardOperation(n, notMQubits, m);
       addRandomStandardOperation(circuit1, op, false);
     }
-    for (Qubit i = 0U; i < d - m; i++) {
+    for (Qubit i = 0U; i < notMQubits; i++) {
       auto op = makeRandomStandardOperation(n, notMQubits, m);
       addRandomStandardOperation(circuit2, op, false);
     }

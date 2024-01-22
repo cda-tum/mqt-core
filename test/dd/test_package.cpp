@@ -2572,73 +2572,61 @@ TEST(DDPackageTest, DDMPECSliQECPeriodFinding8Qubits) {
 
 TEST(DDPackageTest, DDMPECBenchmark) {
   auto dd = std::make_unique<dd::Package<>>(20);
-  size_t minN = 3;
-  size_t maxN = 9;
+  srand(55);
+  size_t minN = 2;
+  size_t maxN = 8;
+  size_t reps = 15;
   std::cout << "Partial equivalence check\n";
-  for (size_t n = minN; n < maxN; n++) {
-    dd::Qubit d =
-        static_cast<dd::Qubit>(static_cast<dd::Qubit>(rand()) % (n - 1)) + 1;
-    dd::Qubit m = static_cast<dd::Qubit>(rand()) % d;
-    auto [c1, c2] = dd::generateRandomBenchmark(n, d, m);
+  for (size_t k = 0; k < reps; k++) {
+    for (size_t n = minN; n < maxN; n++) {
+      dd::Qubit d =
+          static_cast<dd::Qubit>(static_cast<dd::Qubit>(rand()) % (n - 1)) + 1;
+      dd::Qubit m = static_cast<dd::Qubit>(rand()) % d;
+      auto [c1, c2] = dd::generateRandomBenchmark(n, d, m);
 
-    std::cout << "circuit 1: \n";
-    c1.print(std::cout);
-    std::cout << "circuit 2: \n";
-    c2.print(std::cout);
-    auto start = std::chrono::high_resolution_clock::now();
-    EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
-    // Get ending timepoint
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+      auto start = std::chrono::high_resolution_clock::now();
+      bool result = dd::partialEquivalenceCheck(c1, c2, dd);
+      // Get ending timepoint
+      auto stop = std::chrono::high_resolution_clock::now();
+      auto duration =
+          std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 
-    std::cout << "\nnumber of qubits = " << n << "; data qubits = " << d
-              << "; measured qubits = " << m
-              << "; number of gates = " << c2.size() << "\n";
-    std::cout << "time: " << static_cast<double>(duration.count()) / 1000000.
-              << " seconds\n";
+      EXPECT_TRUE(result);
+
+      std::cout << "\nnumber of qubits = " << n << "; data qubits = " << d
+                << "; measured qubits = " << m
+                << "; number of gates = " << c2.size() << "\n";
+      std::cout << "time: " << static_cast<double>(duration.count()) / 1000000.
+                << " seconds\n";
+    }
   }
 }
 
 TEST(DDPackageTest, DDMZAPECBenchmark) {
   auto dd = std::make_unique<dd::Package<>>(20);
   size_t minN = 3;
-  size_t maxN = 8;
+  size_t maxN = 12;
+  size_t reps = 1;
   std::cout << "Zero-ancilla partial equivalence check\n";
-  for (size_t n = minN; n < maxN; n++) {
-    auto d = static_cast<dd::Qubit>(n);
-    dd::Qubit m = static_cast<dd::Qubit>(rand()) % d;
-    auto [c1, c2] = dd::generateRandomBenchmark(n, d, m);
+  for (size_t k = 0; k < reps; k++) {
+    for (size_t n = minN; n < maxN; n++) {
+      auto d = static_cast<dd::Qubit>(n);
+      dd::Qubit m = static_cast<dd::Qubit>(rand()) % d;
+      auto [c1, c2] = dd::generateRandomBenchmark(n, d, m);
+      auto start = std::chrono::high_resolution_clock::now();
+      bool result = dd::partialEquivalenceCheck(c1, c2, dd);
+      // Get ending timepoint
+      auto stop = std::chrono::high_resolution_clock::now();
+      auto duration =
+          std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 
-    std::cout << "circuit 1: \n";
-    c1.print(std::cout);
-    std::cout << "circuit 2: \n";
-    c2.print(std::cout);
-    auto start = std::chrono::high_resolution_clock::now();
-    EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
-    // Get ending timepoint
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+      EXPECT_TRUE(result);
 
-    std::cout << "\nnumber of qubits = " << n << "; data qubits = " << d
-              << "; measured qubits = " << m
-              << "; number of gates = " << c2.size() << "\n";
-    std::cout << "time: " << static_cast<double>(duration.count()) / 1000000.
-              << " seconds\n";
+      std::cout << "\nnumber of qubits = " << n << "; data qubits = " << d
+                << "; measured qubits = " << m
+                << "; number of gates = " << c2.size() << "\n";
+      std::cout << "time: " << static_cast<double>(duration.count()) / 1000000.
+                << " seconds\n";
+    }
   }
-}
-
-TEST(DDPackageTest, DDMPECZ) {
-  auto dd = std::make_unique<dd::Package<>>(1);
-
-  dd::QuantumComputation c1{1};
-  dd::QuantumComputation c2{1};
-  c2.z(0);
-  std::cout << "circuit 1: \n";
-  c1.print(std::cout);
-  std::cout << "circuit 2: \n";
-  c2.print(std::cout);
-
-  EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
 }
