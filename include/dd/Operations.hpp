@@ -107,137 +107,57 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
     std::swap(target0, target1);
   }
 
-  if (controls.empty()) {
-    // the DD creation without controls is faster, so we use it if possible
-    // and only use the DD creation with controls if necessary
-    TwoQubitGateMatrix gm;
-    bool definitionFound = true;
-    switch (type) {
-    case qc::SWAP:
-      gm = SWAP_MAT;
-      break;
-    case qc::iSWAP:
-      gm = inverse ? ISWAPDG_MAT : ISWAP_MAT;
-      break;
-    case qc::iSWAPdg:
-      gm = inverse ? ISWAP_MAT : ISWAPDG_MAT;
-      break;
-    case qc::DCX:
-      gm = DCX_MAT;
-      break;
-    case qc::ECR:
-      gm = ECR_MAT;
-      break;
-    case qc::RXX:
-      gm = inverse ? rxxMat(-parameter[0U]) : rxxMat(parameter[0U]);
-      break;
-    case qc::RYY:
-      gm = inverse ? ryyMat(-parameter[0U]) : ryyMat(parameter[0U]);
-      break;
-    case qc::RZZ:
-      gm = inverse ? rzzMat(-parameter[0U]) : rzzMat(parameter[0U]);
-      break;
-    case qc::RZX:
-      gm = inverse ? rzxMat(-parameter[0U]) : rzxMat(parameter[0U]);
-      break;
-    case qc::XXminusYY:
-      gm = inverse ? xxMinusYYMat(-parameter[0U], parameter[1U])
-                   : xxMinusYYMat(parameter[0U], parameter[1U]);
-      break;
-    case qc::XXplusYY:
-      gm = inverse ? xxPlusYYMat(-parameter[0U], parameter[1U])
-                   : xxPlusYYMat(parameter[0U], parameter[1U]);
-      break;
-    default:
-      definitionFound = false;
-    }
-    if (definitionFound) {
-      return dd.makeTwoQubitGateDD(gm, nqubits, target0, target1, startQubit);
-    }
-  }
-
+  TwoQubitGateMatrix gm;
   switch (type) {
   case qc::SWAP:
-    // SWAP is self-inverse
-    return dd.makeSWAPDD(nqubits, controls, target0, target1, startQubit);
+    gm = SWAP_MAT;
+    break;
   case qc::iSWAP:
-    if (inverse) {
-      return dd.makeiSWAPinvDD(nqubits, controls, target0, target1, startQubit);
-    }
-    return dd.makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
+    gm = inverse ? ISWAPDG_MAT : ISWAP_MAT;
+    break;
   case qc::iSWAPdg:
-    if (inverse) {
-      return dd.makeiSWAPDD(nqubits, controls, target0, target1, startQubit);
-    }
-    return dd.makeiSWAPinvDD(nqubits, controls, target0, target1, startQubit);
+    gm = inverse ? ISWAP_MAT : ISWAPDG_MAT;
+    break;
   case qc::Peres:
-    if (inverse) {
-      return dd.makePeresdagDD(nqubits, controls, target0, target1, startQubit);
-    }
-    return dd.makePeresDD(nqubits, controls, target0, target1, startQubit);
+    gm = inverse ? PERESDG_MAT : PERES_MAT;
+    break;
   case qc::Peresdg:
-    if (inverse) {
-      return dd.makePeresDD(nqubits, controls, target0, target1, startQubit);
-    }
-    return dd.makePeresdagDD(nqubits, controls, target0, target1, startQubit);
+    gm = inverse ? PERES_MAT : PERESDG_MAT;
+    break;
   case qc::DCX:
-    return dd.makeDCXDD(nqubits, controls, target0, target1, startQubit);
+    gm = DCX_MAT;
+    break;
   case qc::ECR:
-    // ECR is self-inverse
-    return dd.makeECRDD(nqubits, controls, target0, target1, startQubit);
-  case qc::RXX: {
-    if (inverse) {
-      return dd.makeRXXDD(nqubits, controls, target0, target1, -parameter[0U],
-                          startQubit);
-    }
-    return dd.makeRXXDD(nqubits, controls, target0, target1, parameter[0U],
-                        startQubit);
-  }
-  case qc::RYY: {
-    if (inverse) {
-      return dd.makeRYYDD(nqubits, controls, target0, target1, -parameter[0U],
-                          startQubit);
-    }
-    return dd.makeRYYDD(nqubits, controls, target0, target1, parameter[0U],
-                        startQubit);
-  }
-  case qc::RZZ: {
-    if (inverse) {
-      return dd.makeRZZDD(nqubits, controls, target0, target1, -parameter[0U],
-                          startQubit);
-    }
-    return dd.makeRZZDD(nqubits, controls, target0, target1, parameter[0U],
-                        startQubit);
-  }
-  case qc::RZX: {
-    if (inverse) {
-      return dd.makeRZXDD(nqubits, controls, target0, target1, -parameter[0U],
-                          startQubit);
-    }
-    return dd.makeRZXDD(nqubits, controls, target0, target1, parameter[0U],
-                        startQubit);
-  }
-  case qc::XXminusYY: {
-    if (inverse) {
-      return dd.makeXXMinusYYDD(nqubits, controls, target0, target1,
-                                -parameter[0U], parameter[1U], startQubit);
-    }
-    return dd.makeXXMinusYYDD(nqubits, controls, target0, target1,
-                              parameter[0U], parameter[1U], startQubit);
-  }
-  case qc::XXplusYY: {
-    if (inverse) {
-      return dd.makeXXPlusYYDD(nqubits, controls, target0, target1,
-                               -parameter[0U], parameter[1U], startQubit);
-    }
-    return dd.makeXXPlusYYDD(nqubits, controls, target0, target1, parameter[0U],
-                             parameter[1U], startQubit);
-  }
+    gm = ECR_MAT;
+    break;
+  case qc::RXX:
+    gm = inverse ? rxxMat(-parameter[0U]) : rxxMat(parameter[0U]);
+    break;
+  case qc::RYY:
+    gm = inverse ? ryyMat(-parameter[0U]) : ryyMat(parameter[0U]);
+    break;
+  case qc::RZZ:
+    gm = inverse ? rzzMat(-parameter[0U]) : rzzMat(parameter[0U]);
+    break;
+  case qc::RZX:
+    gm = inverse ? rzxMat(-parameter[0U]) : rzxMat(parameter[0U]);
+    break;
+  case qc::XXminusYY:
+    gm = inverse ? xxMinusYYMat(-parameter[0U], parameter[1U])
+                 : xxMinusYYMat(parameter[0U], parameter[1U]);
+    break;
+  case qc::XXplusYY:
+    gm = inverse ? xxPlusYYMat(-parameter[0U], parameter[1U])
+                 : xxPlusYYMat(parameter[0U], parameter[1U]);
+    break;
   default:
     std::ostringstream oss{};
-    oss << "DD for gate" << op->getName() << " not available!";
+    oss << "DD for gate " << op->getName() << " not available!";
     throw qc::QFRException(oss.str());
   }
+
+  return dd.makeTwoQubitGateDD(gm, nqubits, controls, target0, target1,
+                               startQubit);
 }
 
 // The methods with a permutation parameter apply these Operations according to
