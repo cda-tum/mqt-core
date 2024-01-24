@@ -156,7 +156,7 @@ function(version_from_package)
     OUTPUT_VARIABLE MQT_CORE_VERSION_STRING
     OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 
-  if(${MQT_CORE_VERSION_STRING} STREQUAL "")
+  if("${MQT_CORE_VERSION_STRING}" STREQUAL "")
     message(
       VERBOSE
       "Python package version not found. Cannot determine project version from Python package.")
