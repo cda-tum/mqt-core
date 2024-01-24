@@ -18,8 +18,8 @@ __all__ = (
     "CompoundOperation",
     "Control",
     "NonUnitaryOperation",
-    "Operation",
     "OpType",
+    "Operation",
     "StandardOperation",
     "SymbolicOperation",
 )

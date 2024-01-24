@@ -370,12 +370,10 @@ def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
     # `get_registers()` method does not guarantee this as it returns a set that
     # reorders the qubits.
     qubit_to_idx: dict[Qubit, int] = {}
-    idx = 0
-    for qubit in initial_layout.get_virtual_bits():
+    for idx, qubit in enumerate(initial_layout.get_virtual_bits()):
         qubit_to_idx[qubit] = idx
         if isinstance(qubit, AncillaQubit):
             qc.set_circuit_qubit_ancillary(idx)
-        idx += 1
 
     for register in initial_layout.get_registers():
         is_ancilla = register.name == "ancilla" or isinstance(register, AncillaRegister)
