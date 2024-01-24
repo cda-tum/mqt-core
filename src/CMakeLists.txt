@@ -189,10 +189,8 @@ if(MQT_CORE_INSTALL)
           ${PROJECT_SOURCE_DIR}/cmake/CompilerOptions.cmake
           ${PROJECT_SOURCE_DIR}/cmake/CompilerWarnings.cmake
           ${PROJECT_SOURCE_DIR}/cmake/FindGMP.cmake
-          ${PROJECT_SOURCE_DIR}/cmake/GetVersion.cmake
           ${PROJECT_SOURCE_DIR}/cmake/PackageAddTest.cmake
           ${PROJECT_SOURCE_DIR}/cmake/PreventInSourceBuilds.cmake
-          ${PROJECT_SOURCE_DIR}/cmake/Python.cmake
           ${PROJECT_SOURCE_DIR}/cmake/Sanitizers.cmake
           ${PROJECT_SOURCE_DIR}/cmake/StandardProjectSettings.cmake
     DESTINATION ${MQT_CORE_CONFIG_INSTALL_DIR})
