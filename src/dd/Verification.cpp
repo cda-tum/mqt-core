@@ -6,13 +6,17 @@
 
 namespace dd {
 
-const std::vector<std::vector<OpType>> PRE_GENERATED_CIRCUITS_SIZE_1_1{{}};
+const std::vector<std::vector<OpType>> PRE_GENERATED_CIRCUITS_SIZE_1_1{
+    {}, {}, {}, {}};
 
-const std::vector<std::vector<OpType>> PRE_GENERATED_CIRCUITS_SIZE_1_2{{Z}};
+const std::vector<std::vector<OpType>> PRE_GENERATED_CIRCUITS_SIZE_1_2{
+    {Z}, {Tdg}, {S}, {Sdg}};
 
-const std::vector<std::vector<OpType>> PRE_GENERATED_CIRCUITS_SIZE_2_1{{}};
+const std::vector<std::vector<OpType>> PRE_GENERATED_CIRCUITS_SIZE_2_1{
+    {}, {}, {}, {}};
 
-const std::vector<std::vector<OpType>> PRE_GENERATED_CIRCUITS_SIZE_2_2{{Z}};
+const std::vector<std::vector<OpType>> PRE_GENERATED_CIRCUITS_SIZE_2_2{
+    {Z}, {Tdg}, {S}, {Sdg}};
 
 void addDecomposedCxxGate(QuantumComputation& circuit, Qubit control1,
                           Qubit control2, Qubit target) {
@@ -72,35 +76,11 @@ std::vector<Qubit> fiveDiffferentRandomNumbers(Qubit min, Qubit max) {
   return outputVector;
 }
 
-StandardOperation makeRandomStandardOperation(size_t n, Qubit nrQubits,
-                                              Qubit min) {
-  auto randomNumbers = fiveDiffferentRandomNumbers(min, min + nrQubits);
-  // choose one of the non-compound operations, but not "None"
-  auto randomOpType = static_cast<OpType>(rand() % (Compound - 1) + 1);
-  Qubit randomTarget1 = randomNumbers[0];
-  Qubit randomTarget2{min};
-  if (randomNumbers.size() > 1) {
-    randomTarget2 = randomNumbers[1];
-  };
-  size_t nrControls =
-      std::min(randomNumbers.size() - 3, static_cast<size_t>(rand() % 3));
-  if (randomNumbers.size() < 3) {
-    nrControls = 0;
-  }
-  if (nrControls == 2) {
-    // otherwise Cnots are almost never generated
-    randomOpType = qc::X;
-  }
-  Controls randomControls{};
-  for (size_t i = 0; i < nrControls; i++) {
-    randomControls.emplace(randomNumbers[i + 2]);
-  }
-  const fp randomParameter1 =
-      static_cast<fp>(rand()) / static_cast<fp>(RAND_MAX);
-  const fp randomParameter2 =
-      static_cast<fp>(rand()) / static_cast<fp>(RAND_MAX);
-  const fp randomParameter3 =
-      static_cast<fp>(rand()) / static_cast<fp>(RAND_MAX);
+StandardOperation convertToStandardOperation(
+    size_t n, size_t nrQubits, OpType randomOpType, Qubit randomTarget1,
+    Qubit randomTarget2, fp randomParameter1, fp randomParameter2,
+    fp randomParameter3, const Controls& randomControls) {
+
   switch (randomOpType) {
     // two targets and zero parameters
   case qc::SWAP:
@@ -110,7 +90,7 @@ StandardOperation makeRandomStandardOperation(size_t n, Qubit nrQubits,
   case qc::Peresdg:
   case qc::DCX:
   case qc::ECR:
-    if (randomNumbers.size() > 1) {
+    if (nrQubits > 1) {
       return {n, randomControls, Targets{randomTarget1, randomTarget2},
               randomOpType};
     }
@@ -120,7 +100,7 @@ StandardOperation makeRandomStandardOperation(size_t n, Qubit nrQubits,
   case qc::RYY:
   case qc::RZZ:
   case qc::RZX:
-    if (randomNumbers.size() > 1) {
+    if (nrQubits > 1) {
       return {n, randomControls, Targets{randomTarget1, randomTarget2},
               randomOpType, std::vector<fp>{randomParameter1}};
     }
@@ -129,7 +109,7 @@ StandardOperation makeRandomStandardOperation(size_t n, Qubit nrQubits,
     // two targets and two parameters
   case qc::XXminusYY:
   case qc::XXplusYY:
-    if (randomNumbers.size() > 1) {
+    if (nrQubits > 1) {
       return {n, randomControls, Targets{randomTarget1, randomTarget2},
               randomOpType,
               std::vector<fp>{randomParameter1, randomParameter2}};
@@ -171,6 +151,41 @@ StandardOperation makeRandomStandardOperation(size_t n, Qubit nrQubits,
     return {n, randomTarget1, qc::I};
   }
   return {n, randomTarget1, qc::I};
+}
+
+StandardOperation makeRandomStandardOperation(size_t n, Qubit nrQubits,
+                                              Qubit min) {
+  auto randomNumbers = fiveDiffferentRandomNumbers(min, min + nrQubits);
+  // choose one of the non-compound operations, but not "None"
+  auto randomOpType = static_cast<OpType>(rand() % (Vdg - H) + H);
+  Qubit randomTarget1 = randomNumbers[0];
+  Qubit randomTarget2{min};
+  if (randomNumbers.size() > 1) {
+    randomTarget2 = randomNumbers[1];
+  };
+  size_t nrControls =
+      std::min(randomNumbers.size() - 3, static_cast<size_t>(rand() % 3));
+  if (randomNumbers.size() < 3) {
+    nrControls = 0;
+  }
+  if (nrControls == 2) {
+    // otherwise Cnots are almost never generated
+    randomOpType = qc::X;
+  }
+  Controls randomControls{};
+  for (size_t i = 0; i < nrControls; i++) {
+    randomControls.emplace(randomNumbers[i + 2]);
+  }
+  const std::vector<fp> randomParameters{PI, PI_2, PI_4};
+  const fp randomParameter1 =
+      randomParameters[static_cast<size_t>(rand()) % randomParameters.size()];
+  const fp randomParameter2 =
+      randomParameters[static_cast<size_t>(rand()) % randomParameters.size()];
+  const fp randomParameter3 =
+      randomParameters[static_cast<size_t>(rand()) % randomParameters.size()];
+  return convertToStandardOperation(
+      n, nrQubits, randomOpType, randomTarget1, randomTarget2, randomParameter1,
+      randomParameter2, randomParameter3, randomControls);
 }
 
 void addPreGeneratedCircuits(QuantumComputation& circuit1,
