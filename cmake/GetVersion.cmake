@@ -11,6 +11,12 @@
 # * MQT_CORE_VERSION_FOUND (TRUE if version was found, FALSE otherwise)
 
 function(version_from_skbuild)
+  if(NOT MQT_CORE_MASTER_PROJECT)
+    message(VERBOSE
+            "Not the master project. Cannot determine project version from scikit-build-core.")
+    return()
+  endif()
+
   if(NOT DEFINED SKBUILD_PROJECT_VERSION)
     message(
       VERBOSE
@@ -185,7 +191,7 @@ function(version_from_package)
       CACHE INTERNAL "MQT_CORE_VERSION_FOUND")
 endfunction()
 
-function(get_version)
+function(get_mqt_core_version)
   # Initialize as not found
   set(MQT_CORE_VERSION_FOUND
       FALSE

@@ -36,7 +36,7 @@ option(BUILD_MQT_CORE_TESTS "Also build tests for the MQT Core project" ${MQT_CO
 
 # try to determine the project version
 include(cmake/GetVersion.cmake)
-get_version()
+get_mqt_core_version()
 
 project(
   mqt-core
