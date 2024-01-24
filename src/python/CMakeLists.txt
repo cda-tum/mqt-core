@@ -5,9 +5,6 @@ pybind11_add_module(
   THIN_LTO
   # Optimize the bindings for size
   OPT_SIZE
-  # Target the stable ABI for Python 3.12+, which reduces the number of binary wheels that must be
-  # built. This does nothing on older Python versions
-  WITH_SOABI
   # Source code goes here
   ${MQT_CORE_INCLUDE_BUILD_DIR}/python/pybind11.hpp
   module.cpp
