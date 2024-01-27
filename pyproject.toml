@@ -57,11 +57,11 @@ docs = [
     "nbsphinx",
     "sphinx-autodoc-typehints",
     "sphinx-autoapi",
-    "qiskit-terra[visualization]",
+    "qiskit[visualization]",
     "mqt.core[evaluation]"
 ]
 qiskit = [
-   "qiskit-terra>=0.22.0",
+   "qiskit[qasm3-import]>=0.45.0",
 ]
 dev = ["mqt.core[coverage, docs]",]
 
@@ -90,9 +90,6 @@ ninja.minimum-version = "1.10"
 # Setuptools-style build caching in a local directory
 build-dir = "build/{wheel_tag}"
 
-# Build stable ABI wheels for CPython 3.12+
-wheel.py-api = "cp312"
-
 # Explicitly set the package directory
 wheel.packages = ["src/mqt"]
 
@@ -118,7 +115,6 @@ git-only = [
 [tool.scikit-build.cmake.define]
 BUILD_MQT_CORE_BINDINGS = "ON"
 BUILD_MQT_CORE_TESTS = "OFF"
-ENABLE_IPO = "ON"
 
 
 [tool.setuptools_scm]
@@ -135,6 +131,7 @@ filterwarnings = [
     'ignore:.*qiskit.utils.algorithm_globals.QiskitAlgorithmGlobals*:DeprecationWarning:qiskit',
     'ignore:.*Building a flow controller with keyword arguments is going to be deprecated*:PendingDeprecationWarning:qiskit',
     'ignore:\s.*Pyarrow.*:DeprecationWarning:',
+    'ignore:.*datetime\.datetime\.utcfromtimestamp.*:DeprecationWarning:',
 ]
 log_cli_level = "info"
 testpaths = ["test/python"]

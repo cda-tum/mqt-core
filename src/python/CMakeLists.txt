@@ -1,9 +1,10 @@
 pybind11_add_module(
   # Name of the extension
   _core
-  # Target the stable ABI for Python 3.12+, which reduces the number of binary wheels that must be
-  # built. This does nothing on older Python versions
-  WITH_SOABI
+  # Prefer thin LTO if available
+  THIN_LTO
+  # Optimize the bindings for size
+  OPT_SIZE
   # Source code goes here
   ${MQT_CORE_INCLUDE_BUILD_DIR}/python/pybind11.hpp
   module.cpp
@@ -22,7 +23,7 @@ pybind11_add_module(
   symbolic/register_variable.cpp
   symbolic/register_term.cpp
   symbolic/register_expression.cpp)
-target_link_libraries(_core PRIVATE MQT::Core)
+target_link_libraries(_core PRIVATE MQT::Core MQT::ProjectOptions MQT::ProjectWarnings)
 
 # Install directive for scikit-build-core
 install(

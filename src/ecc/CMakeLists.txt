@@ -14,10 +14,16 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-ecc)
     Q18Surface.cpp)
 
   target_link_libraries(${MQT_CORE_TARGET_NAME}-ecc PUBLIC MQT::Core)
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-ecc PRIVATE MQT::ProjectOptions
+                                                            MQT::ProjectWarnings)
 
   # add MQT alias
   add_library(MQT::CoreECC ALIAS ${MQT_CORE_TARGET_NAME}-ecc)
-  set_target_properties(${MQT_CORE_TARGET_NAME}-ecc PROPERTIES EXPORT_NAME CoreECC)
+  set_target_properties(
+    ${MQT_CORE_TARGET_NAME}-ecc
+    PROPERTIES VERSION ${PROJECT_VERSION}
+               SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+               EXPORT_NAME CoreECC)
   set(MQT_CORE_TARGETS
       ${MQT_CORE_TARGETS} ${MQT_CORE_TARGET_NAME}-ecc
       PARENT_SCOPE)

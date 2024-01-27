@@ -10,7 +10,7 @@ def include_dir() -> Path:
     """Return the path to the mqt-core include directory."""
     try:
         dist = distribution("mqt-core")
-        located_include_dir = Path(dist.locate_file("mqt/core/include"))
+        located_include_dir = Path(dist.locate_file("mqt/core/include/mqt-core"))
         if located_include_dir.exists() and located_include_dir.is_dir():
             return located_include_dir
         msg = "mqt-core include files not found."
