@@ -4,6 +4,22 @@ include(FetchContent)
 include(CMakeDependentOption)
 set(FETCH_PACKAGES "")
 
+if(BUILD_MQT_CORE_BINDINGS)
+  if(NOT SKBUILD)
+    # Manually detect the installed pybind11 package and import it into CMake.
+    execute_process(
+      COMMAND "${Python_EXECUTABLE}" -m pybind11 --cmakedir
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      OUTPUT_VARIABLE pybind11_DIR)
+    list(APPEND CMAKE_PREFIX_PATH "${pybind11_DIR}")
+  endif()
+
+  message(STATUS "Python executable: ${Python_EXECUTABLE}")
+
+  # add pybind11 library
+  find_package(pybind11 CONFIG REQUIRED)
+endif()
+
 set(JSON_VERSION
     3.11.3
     CACHE STRING "nlohmann_json version")
