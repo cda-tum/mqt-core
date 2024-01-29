@@ -6,8 +6,8 @@
 
 namespace qc {
 
-class CompoundOperation final : public Operation {
-private:
+class CompoundOperation : public Operation {
+protected:
   std::vector<std::unique_ptr<Operation>> ops{};
 
 public:

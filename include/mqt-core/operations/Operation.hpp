@@ -133,6 +133,10 @@ public:
     return false;
   }
 
+  [[nodiscard]] inline virtual bool isGlobalOperation() const {
+    return false;
+  }
+
   [[nodiscard]] inline virtual bool isNonUnitaryOperation() const {
     return false;
   }

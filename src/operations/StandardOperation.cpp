@@ -593,17 +593,7 @@ void StandardOperation::invert() {
   case iSWAPdg:
     type = iSWAP;
     break;
-  case None:
-  case Compound:
-  case Measure:
-  case Reset:
-  case Teleportation:
-  case ClassicControlled:
-  case ATrue:
-  case AFalse:
-  case MultiATrue:
-  case MultiAFalse:
-  case OpCount:
+  default:
     throw QFRException("Inverting gate" + toString(type) +
                        " is not supported.");
   }
