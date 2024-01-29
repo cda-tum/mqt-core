@@ -5,7 +5,6 @@
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
-#include "dd/Verification.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
 #include "operations/Control.hpp"
 #include "operations/OpType.hpp"
@@ -2063,6 +2062,21 @@ TEST(DDPackageTest, DDStatistics) {
   EXPECT_GT(uniqueTableStats["total"]["num_buckets"], 0);
 }
 
+TEST(DDPackageTest, ReduceAncillaeRegression) {
+  auto dd = std::make_unique<dd::Package<>>(2);
+  const auto inputMatrix =
+      dd::CMat{{1, 1, 1, 1}, {1, -1, 1, -1}, {1, 1, -1, -1}, {1, -1, -1, 1}};
+  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
+  dd->incRef(inputDD);
+  const auto outputDD = dd->reduceAncillae(inputDD, {true, false});
+
+  const auto outputMatrix = outputDD.getMatrix();
+  const auto expected =
+      dd::CMat{{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, -1, 0}, {1, 0, -1, 0}};
+
+  EXPECT_EQ(outputMatrix, expected);
+}
+
 TEST(DDPackageTest, DDMShiftAllRows) {
   const auto nqubits = 2U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
@@ -2316,29 +2330,6 @@ TEST(DDPackageTest, DDMPartialEquivalenceCheckingExamplePaperZeroAncillae) {
   EXPECT_FALSE(dd->zeroAncillaePartialEquivalenceCheck(c3, c4, 1));
 }
 
-TEST(DDPackageTest,
-     DDMPartialEquivalenceCheckingExamplePaperDifferentQubitOrder) {
-  const auto nqubits = 3U;
-  auto dd = std::make_unique<dd::Package<>>(nqubits);
-
-  qc::QuantumComputation c1{3, 1};
-  c1.cswap(1, 2, 0);
-  c1.h(2);
-  c1.z(0);
-  c1.cswap(1, 2, 0);
-
-  qc::QuantumComputation c2{3, 1};
-  c2.x(1);
-  c2.ch(1, 2);
-
-  c1.setLogicalQubitGarbage(1);
-  c1.setLogicalQubitGarbage(0);
-
-  c2.setLogicalQubitGarbage(1);
-  c2.setLogicalQubitGarbage(0);
-  EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
-}
-
 TEST(DDPackageTest, DDMPartialEquivalenceWithDifferentNumberOfQubits) {
   auto dd = std::make_unique<dd::Package<>>(3);
   auto controlledSwapGate = dd->makeSWAPDD(3, qc::Controls{1}, 0, 2);
@@ -2362,32 +2353,6 @@ TEST(DDPackageTest, DDMPartialEquivalenceWithDifferentNumberOfQubits) {
       dd->partialEquivalenceCheck(dd::mEdge::one(), dd::mEdge::one(), 0, 1));
   EXPECT_TRUE(
       dd->partialEquivalenceCheck(dd::mEdge::one(), dd::mEdge::one(), 0, 0));
-}
-
-TEST(DDPackageTest,
-     DDMPartialEquivalenceCheckingExamplePaperDifferentQubitOrderAndNumber) {
-  const auto nqubits = 4U;
-  auto dd = std::make_unique<dd::Package<>>(nqubits);
-
-  qc::QuantumComputation c1{4, 1};
-  c1.cswap(1, 2, 0);
-  c1.h(2);
-  c1.z(0);
-  c1.cswap(1, 2, 0);
-
-  qc::QuantumComputation c2{3, 1};
-  c2.x(1);
-  c2.ch(1, 2);
-
-  c1.setLogicalQubitGarbage(1);
-  c1.setLogicalQubitGarbage(0);
-  c1.setLogicalQubitGarbage(3);
-  c1.setLogicalQubitAncillary(3);
-
-  c2.setLogicalQubitGarbage(1);
-  c2.setLogicalQubitGarbage(0);
-  EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
-  EXPECT_TRUE(dd::partialEquivalenceCheck(c2, c1, dd));
 }
 
 TEST(DDPackageTest, DDMPartialEquivalenceCheckingComputeTable) {
@@ -2439,56 +2404,6 @@ TEST(DDPackageTest, DDMPECMQTBenchGrover7Qubits) {
       buildFunctionality(&c2, *dd, false, false), 7, 7));
 }
 
-TEST(DDPackageTest, DDMZAPECMQTBenchQPE30Qubits) {
-  // zero ancilla partial equivalence test
-  auto dd = std::make_unique<dd::Package<>>(31);
-
-  // 30 qubits
-  const qc::QuantumComputation c1{
-      "./circuits/qpeexact_nativegates_ibm_qiskit_opt0_30.qasm"};
-  const qc::QuantumComputation c2{"./circuits/qpeexact_indep_qiskit_30.qasm"};
-  // calls zeroAncillaePartialEquivalenceCheck
-  // buildFunctionality is already very very slow...
-  // EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
-  EXPECT_TRUE(true);
-}
-
-TEST(DDPackageTest, DDMZAPECSliQEC19Qubits) {
-  auto dd = std::make_unique<dd::Package<>>(20);
-
-  // full equivalence, 10 qubits
-  const qc::QuantumComputation c1{"./circuits/entanglement_1.qasm"};
-  const qc::QuantumComputation c2{"./circuits/entanglement_2.qasm"};
-
-  // calls zeroAncillaePartialEquivalenceCheck
-  EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
-
-  // full equivalence, 19 qubits
-  const qc::QuantumComputation c3{"./circuits/add6_196_1.qasm"};
-  const qc::QuantumComputation c4{"./circuits/add6_196_2.qasm"};
-
-  // calls zeroAncillaePartialEquivalenceCheck
-  EXPECT_TRUE(dd::partialEquivalenceCheck(c3, c4, dd));
-
-  // full equivalence, 10 qubits
-  const qc::QuantumComputation c5{"./circuits/bv_1.qasm"};
-  const qc::QuantumComputation c6{"./circuits/bv_2.qasm"};
-
-  // calls zeroAncillaePartialEquivalenceCheck
-  EXPECT_TRUE(dd::partialEquivalenceCheck(c5, c6, dd));
-}
-
-TEST(DDPackageTest, DDMZAPECSliQECRandomCircuit) {
-  // doesn't terminate
-  auto dd = std::make_unique<dd::Package<>>(20);
-  // full equivalence, 10 qubits
-  const qc::QuantumComputation c1{"./circuits/random_1.qasm"};
-  const qc::QuantumComputation c2{"./circuits/random_2.qasm"};
-
-  // calls buildFunctionality for c2^-1 concatenated with c1
-  EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
-}
-
 TEST(DDPackageTest, DDMPECSliQECGrover22Qubits) {
   // doesn't terminate
   auto dd = std::make_unique<dd::Package<>>(22);
@@ -2520,52 +2435,4 @@ TEST(DDPackageTest, DDMPECSliQECAdd19Qubits) {
   auto c2Dd = buildFunctionality(&c2, *dd, false, false);
   // doesn't add ancillary qubits -> total number of qubits is 19
   EXPECT_TRUE(dd->partialEquivalenceCheck(c1Dd, c2Dd, 8, 8));
-}
-
-TEST(DDPackageTest, DDMPECSliQECPeriodFinding8Qubits) {
-  auto dd = std::make_unique<dd::Package<>>(20);
-  // 8 qubits, 3 data qubits
-  qc::QuantumComputation c1{"./circuits/period_finding_1.qasm"};
-  // 8 qubits, 3 data qubits
-  qc::QuantumComputation c2{"./circuits/period_finding_2.qasm"};
-
-  // 3 measured qubits and 3 data qubits
-
-  c2.setLogicalQubitAncillary(7);
-  c2.setLogicalQubitGarbage(7);
-  c2.setLogicalQubitAncillary(6);
-  c2.setLogicalQubitGarbage(6);
-  c2.setLogicalQubitAncillary(5);
-  c2.setLogicalQubitGarbage(5);
-  c2.setLogicalQubitAncillary(3);
-  c2.setLogicalQubitGarbage(3);
-  c2.setLogicalQubitAncillary(4);
-  c2.setLogicalQubitGarbage(4);
-
-  c1.setLogicalQubitAncillary(7);
-  c1.setLogicalQubitGarbage(7);
-  c1.setLogicalQubitAncillary(6);
-  c1.setLogicalQubitGarbage(6);
-  c1.setLogicalQubitAncillary(5);
-  c1.setLogicalQubitGarbage(5);
-  c1.setLogicalQubitAncillary(3);
-  c1.setLogicalQubitGarbage(3);
-  c1.setLogicalQubitAncillary(4);
-  c1.setLogicalQubitGarbage(4);
-  EXPECT_TRUE(dd::partialEquivalenceCheck(c1, c2, dd));
-}
-
-TEST(DDPackageTest, ReduceAncillaeRegression) {
-  auto dd = std::make_unique<dd::Package<>>(2);
-  const auto inputMatrix =
-      dd::CMat{{1, 1, 1, 1}, {1, -1, 1, -1}, {1, 1, -1, -1}, {1, -1, -1, 1}};
-  auto inputDD = dd->makeDDFromMatrix(inputMatrix);
-  dd->incRef(inputDD);
-  const auto outputDD = dd->reduceAncillae(inputDD, {true, false});
-
-  const auto outputMatrix = outputDD.getMatrix();
-  const auto expected =
-      dd::CMat{{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, -1, 0}, {1, 0, -1, 0}};
-
-  EXPECT_EQ(outputMatrix, expected);
 }

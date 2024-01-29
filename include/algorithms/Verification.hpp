@@ -69,11 +69,12 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
 
   auto nextGarbage = getNextGarbage(0, garbage1);
   // find the first garbage qubit at the end
-  for (Qubit i = std::min(n1, n2) - 1; i >= static_cast<Qubit>(m1); i--) {
-    if (!garbage1.at(i)) {
+  for (std::int64_t i = std::min(n1, n2) - 1;
+       i >= static_cast<std::int64_t>(m1); i--) {
+    if (!garbage1.at(static_cast<Qubit>(i))) {
       // swap it to the beginning
-      c1.swap(i, nextGarbage);
-      c2.swap(i, nextGarbage);
+      c1.swap(static_cast<Qubit>(i), nextGarbage);
+      c2.swap(static_cast<Qubit>(i), nextGarbage);
       ++nextGarbage;
       nextGarbage = getNextGarbage(nextGarbage, garbage1);
     }
@@ -87,4 +88,7 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
   return dd->partialEquivalenceCheck(u1, u2, static_cast<Qubit>(d1),
                                      static_cast<Qubit>(m1));
 }
+
+std::pair<qc::QuantumComputation, qc::QuantumComputation>
+generateRandomBenchmark(size_t n, Qubit d, Qubit m);
 } // namespace dd

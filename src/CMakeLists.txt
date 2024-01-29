@@ -91,6 +91,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     algorithms/QFT.cpp
     algorithms/QPE.cpp
     algorithms/RandomCliffordCircuit.cpp
+    algorithms/Verification.cpp
     algorithms/WState.cpp
     CircuitOptimizer.cpp
     operations/ClassicControlledOperation.cpp
