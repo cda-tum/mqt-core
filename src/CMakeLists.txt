@@ -154,6 +154,8 @@ if(BINDINGS AND NOT TARGET mqt-core-python)
 
   # link with main project library and pybind11 libraries
   target_link_libraries(${MQT_CORE_TARGET_NAME}-python PUBLIC MQT::Core pybind11::pybind11)
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-python PRIVATE MQT::ProjectOptions
+                                                               MQT::ProjectWarnings)
 
   # add MQT alias
   add_library(MQT::CorePython ALIAS ${MQT_CORE_TARGET_NAME}-python)
