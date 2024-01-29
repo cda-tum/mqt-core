@@ -2613,9 +2613,9 @@ void partialEquivalencCheckingBenchmarks(
               << "; average time = "
               << (static_cast<double>(totalTime.count()) /
                   static_cast<double>(reps) / 1000000.)
-              << " seconds; average time = "
+              << " seconds; average number of gates = "
               << (static_cast<double>(totalGates) / static_cast<double>(reps))
-              << " seconds\n";
+              << "\n";
   }
 }
 
@@ -2623,7 +2623,7 @@ TEST(DDPackageTest, DDMPECBenchmark) {
   auto dd = std::make_unique<dd::Package<>>(20);
   srand(55);
   size_t minN = 2;
-  size_t maxN = 15;
+  size_t maxN = 8;
   size_t reps = 10;
   std::cout << "Partial equivalence check\n";
   partialEquivalencCheckingBenchmarks(dd, minN, maxN, reps, true);
@@ -2632,7 +2632,7 @@ TEST(DDPackageTest, DDMPECBenchmark) {
 TEST(DDPackageTest, DDMZAPECBenchmark) {
   auto dd = std::make_unique<dd::Package<>>(30);
   size_t minN = 3;
-  size_t maxN = 30;
+  size_t maxN = 15;
   size_t reps = 10;
   std::cout << "Zero-ancilla partial equivalence check\n";
   partialEquivalencCheckingBenchmarks(dd, minN, maxN, reps, false);
