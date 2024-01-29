@@ -52,6 +52,7 @@ enum OpType : std::uint8_t {
   Measure,
   Reset,
   Teleportation,
+  Shuttle,
   // Classically-controlled Operation
   ClassicControlled,
   // Noise operations
@@ -289,6 +290,7 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"classic_controlled", OpType::ClassicControlled},
         {"compound", OpType::Compound},
         {"global", OpType::Global},
+        {"shuttle", OpType::Shuttle},
 };
 
 [[nodiscard]] inline OpType opTypeFromString(const std::string& opType) {

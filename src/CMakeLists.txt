@@ -70,6 +70,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/ClassicControlledOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/CompoundOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/na/GlobalOperation.hpp
+    ${MQT_CORE_INCLUDE_BUILD_DIR}/na/ShuttlingOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/Control.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/NonUnitaryOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/Operation.hpp
@@ -102,6 +103,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     operations/ClassicControlledOperation.cpp
     operations/Expression.cpp
     na/GlobalOperation.cpp
+    na/ShuttlingOperation.cpp
     operations/NonUnitaryOperation.cpp
     operations/Operation.cpp
     operations/StandardOperation.cpp
