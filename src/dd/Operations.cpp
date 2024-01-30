@@ -4,7 +4,7 @@ namespace dd {
 template <class Config>
 void dumpTensor(qc::Operation* op, std::ostream& of,
                 std::vector<std::size_t>& inds, size_t& gateIdx,
-                std::unique_ptr<dd::Package<Config>>& dd) {
+                Package<Config>& dd) {
   const auto type = op->getType();
   if (op->isStandardOperation()) {
     auto nqubits = op->getNqubits();
@@ -74,7 +74,7 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
         localTargets.emplace_back(localIdx);
       } else {
         const auto* control = std::get_if<qc::Control>(&var);
-        localControls.emplace(qc::Control{localIdx, control->type});
+        localControls.emplace(localIdx, control->type);
       }
       ++localIdx;
     }
@@ -88,7 +88,7 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
     const auto localDD = getDD(localOp.get(), dd);
 
     // translate local DD to matrix
-    const auto localMatrix = dd->getMatrix(localDD, localQubits);
+    const auto localMatrix = dd.getMatrix(localDD, localQubits);
 
     // restore nqubits
     op->setNqubits(globalQubits);
@@ -134,8 +134,8 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
   }
 }
 
-template void
-dumpTensor<DDPackageConfig>(qc::Operation* op, std::ostream& of,
-                            std::vector<std::size_t>& inds, size_t& gateIdx,
-                            std::unique_ptr<dd::Package<DDPackageConfig>>& dd);
+template void dumpTensor<DDPackageConfig>(qc::Operation* op, std::ostream& of,
+                                          std::vector<std::size_t>& inds,
+                                          size_t& gateIdx,
+                                          Package<DDPackageConfig>& dd);
 } // namespace dd

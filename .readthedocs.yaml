@@ -1,8 +1,8 @@
 version: 2
 
-submodules:
-  include: all
-  recursive: true
+formats:
+  - pdf
+  - htmlzip
 
 build:
   os: ubuntu-22.04

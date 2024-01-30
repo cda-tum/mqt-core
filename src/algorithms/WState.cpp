@@ -4,12 +4,12 @@ namespace qc {
 void fGate(QuantumComputation& qc, const Qubit i, const Qubit j, const Qubit k,
            const Qubit n) {
   const auto theta = std::acos(std::sqrt(1.0 / static_cast<double>(k - n + 1)));
-  qc.ry(j, -theta);
-  qc.z(j, qc::Control{i});
-  qc.ry(j, theta);
+  qc.ry(-theta, j);
+  qc.cz(i, j);
+  qc.ry(theta, j);
 }
 
-WState::WState(const Qubit nq) : QuantumComputation(nq) {
+WState::WState(const Qubit nq) : QuantumComputation(nq, nq) {
   name = "wstate_" + std::to_string(nq);
 
   x(nq - 1);
@@ -19,7 +19,7 @@ WState::WState(const Qubit nq) : QuantumComputation(nq) {
   }
 
   for (Qubit k = nq - 1; k > 0; k--) {
-    x(k, qc::Control{k - 1});
+    cx(k - 1, k);
   }
 }
 } // namespace qc

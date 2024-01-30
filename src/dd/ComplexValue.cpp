@@ -6,7 +6,11 @@
 #include <cassert>
 #include <cmath>
 #include <iomanip>
+#include <istream>
+#include <ostream>
 #include <sstream>
+#include <string>
+#include <utility>
 
 namespace dd {
 bool ComplexValue::operator==(const ComplexValue& other) const noexcept {
@@ -27,18 +31,14 @@ bool ComplexValue::approximatelyZero() const noexcept {
   return RealNumber::approximatelyZero(r) && RealNumber::approximatelyZero(i);
 }
 
-bool ComplexValue::approximatelyOne() const noexcept {
-  return RealNumber::approximatelyOne(r) && RealNumber::approximatelyZero(i);
-}
-
 void ComplexValue::writeBinary(std::ostream& os) const {
-  os.write(reinterpret_cast<const char*>(&r), sizeof(decltype(r)));
-  os.write(reinterpret_cast<const char*>(&i), sizeof(decltype(i)));
+  RealNumber::writeBinary(r, os);
+  RealNumber::writeBinary(i, os);
 }
 
 void ComplexValue::readBinary(std::istream& is) {
-  is.read(reinterpret_cast<char*>(&r), sizeof(decltype(r)));
-  is.read(reinterpret_cast<char*>(&i), sizeof(decltype(i)));
+  RealNumber::readBinary(r, is);
+  RealNumber::readBinary(i, is);
 }
 
 void ComplexValue::fromString(const std::string& realStr, std::string imagStr) {
@@ -53,7 +53,7 @@ void ComplexValue::fromString(const std::string& realStr, std::string imagStr) {
 }
 
 std::pair<std::uint64_t, std::uint64_t>
-ComplexValue::getLowestFraction(const double x,
+ComplexValue::getLowestFraction(const fp x,
                                 const std::uint64_t maxDenominator) {
   assert(x >= 0.);
 
@@ -216,9 +216,65 @@ ComplexValue& ComplexValue::operator+=(const ComplexValue& rhs) noexcept {
   return *this;
 }
 
-ComplexValue operator+(ComplexValue lhs, const ComplexValue& rhs) noexcept {
-  lhs += rhs;
-  return lhs;
+ComplexValue& ComplexValue::operator*=(const fp& real) noexcept {
+  r *= real;
+  i *= real;
+  return *this;
+}
+
+ComplexValue operator+(const ComplexValue& c1, const ComplexValue& c2) {
+  return {c1.r + c2.r, c1.i + c2.i};
+}
+
+ComplexValue operator*(const ComplexValue& c1, fp r) {
+  return {c1.r * r, c1.i * r};
+}
+
+ComplexValue operator*(fp r, const ComplexValue& c1) {
+  return {c1.r * r, c1.i * r};
+}
+
+/// Computes an approximation of ac+bd
+inline fp kahan(const fp a, const fp b, const fp c, const fp d) {
+  // w = RN(b * d)
+  const auto w = b * d;
+  // e = RN(b * d - w)
+  const auto e = std::fma(b, d, -w);
+  // f = RN(a * c + w)
+  const auto f = std::fma(a, c, w);
+  // g = RN(f + e)
+  return f + e;
+}
+
+ComplexValue operator*(const ComplexValue& c1, const ComplexValue& c2) {
+  // Implements the CMulKahan algorithm from https://hal.science/hal-01512760v2
+  // p1 = RN(c1.r * c2.r)
+  // R = RN(RN(p1 - c1.i * c2.i) + RN(c1.r * c2.r - p1))
+  const auto r = kahan(-c1.i, c1.r, c2.i, c2.r);
+  // p3 = RN(c1.r * c2.i)
+  // I = RN(RN(p3 + c1.i * c2.r) + RN(c1.r * c2.i - p3))
+  const auto i = kahan(c1.i, c1.r, c2.r, c2.i);
+  return {r, i};
+}
+
+ComplexValue operator/(const ComplexValue& c1, fp r) {
+  return {c1.r / r, c1.i / r};
+}
+
+ComplexValue operator/(const ComplexValue& c1, const ComplexValue& c2) {
+  // Implements the CompDivT algorithm from
+  // https://ens-lyon.hal.science/ensl-00734339v2
+
+  // Selects the denominator with the smallest relative error bound
+  const auto d = std::abs(c2.i) <= std::abs(c2.r)
+                     ? std::fma(c2.r, c2.r, c2.i * c2.i)
+                     : std::fma(c2.i, c2.i, c2.r * c2.r);
+  // evaluates c1.r * c2.r + c1.i * c2.i
+  const auto gr = kahan(c1.r, c1.i, c2.r, c2.i);
+  // evaluates c1.i * c2.r - c1.r * c2.i
+  const auto gi = kahan(c1.i, -c1.r, c2.r, c2.i);
+  // performs the division
+  return {gr / d, gi / d};
 }
 
 std::ostream& operator<<(std::ostream& os, const ComplexValue& c) {
@@ -229,10 +285,10 @@ std::ostream& operator<<(std::ostream& os, const ComplexValue& c) {
 namespace std {
 std::size_t
 hash<dd::ComplexValue>::operator()(const dd::ComplexValue& c) const noexcept {
-  auto h1 = dd::murmur64(
+  const auto h1 = qc::murmur64(
       static_cast<std::size_t>(std::round(c.r / dd::RealNumber::eps)));
-  auto h2 = dd::murmur64(
+  const auto h2 = qc::murmur64(
       static_cast<std::size_t>(std::round(c.i / dd::RealNumber::eps)));
-  return dd::combineHash(h1, h2);
+  return qc::combineHash(h1, h2);
 }
 } // namespace std

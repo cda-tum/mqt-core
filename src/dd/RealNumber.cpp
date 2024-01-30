@@ -16,18 +16,6 @@ RealNumber* RealNumber::getNegativePointer(const RealNumber* e) noexcept {
                                        LSB);
 }
 
-bool RealNumber::exactlyZero(const RealNumber* e) noexcept {
-  return (e == &constants::zero);
-}
-
-bool RealNumber::exactlyOne(const RealNumber* e) noexcept {
-  return (e == &constants::one);
-}
-
-bool RealNumber::exactlySqrt2over2(const dd::RealNumber* e) noexcept {
-  return (e == &constants::sqrt2over2);
-}
-
 RealNumber* RealNumber::flipPointerSign(const RealNumber* e) noexcept {
   if (exactlyZero(e)) {
     return &constants::zero;
@@ -73,14 +61,6 @@ bool RealNumber::approximatelyZero(const RealNumber* e) noexcept {
   return e == &constants::zero || approximatelyZero(val(e));
 }
 
-bool RealNumber::approximatelyOne(const fp e) noexcept {
-  return approximatelyEquals(e, 1.0);
-}
-
-bool RealNumber::approximatelyOne(const RealNumber* e) noexcept {
-  return e == &constants::one || approximatelyOne(val(e));
-}
-
 bool RealNumber::noRefCountingNeeded(const RealNumber* const num) noexcept {
   assert(!isNegativePointer(num));
   return num == nullptr || constants::isStaticNumber(num) ||
@@ -109,7 +89,15 @@ bool RealNumber::decRef(const dd::RealNumber* num) noexcept {
 
 void RealNumber::writeBinary(const RealNumber* e, std::ostream& os) {
   const auto temp = val(e);
-  os.write(reinterpret_cast<const char*>(&temp), sizeof(decltype(temp)));
+  writeBinary(temp, os);
+}
+
+void RealNumber::writeBinary(const fp num, std::ostream& os) {
+  os.write(reinterpret_cast<const char*>(&num), sizeof(fp));
+}
+
+void RealNumber::readBinary(dd::fp& num, std::istream& is) {
+  is.read(reinterpret_cast<char*>(&num), sizeof(fp));
 }
 
 namespace constants {

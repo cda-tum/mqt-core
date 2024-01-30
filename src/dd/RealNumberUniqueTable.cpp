@@ -28,12 +28,11 @@ std::int64_t RealNumberUniqueTable::hash(const fp val) noexcept {
 }
 
 RealNumber* RealNumberUniqueTable::lookup(const fp val) {
+  // if the value is close enough to zero, return the zero entry (avoiding -0.0)
+  if (RealNumber::approximatelyZero(val)) {
+    return &constants::zero;
+  }
   if (const auto sign = std::signbit(val); sign) {
-    // if absolute value is close enough to zero, just return the zero entry
-    // (avoiding -0.0)
-    if (RealNumber::approximatelyZero(val)) {
-      return &constants::zero;
-    }
     return RealNumber::getNegativePointer(lookupNonNegative(std::abs(val)));
   }
   return lookupNonNegative(val);
@@ -55,24 +54,17 @@ void RealNumberUniqueTable::decRef(RealNumber* num) noexcept {
 
 RealNumber* RealNumberUniqueTable::lookupNonNegative(const fp val) {
   assert(!std::isnan(val));
-  assert(val >= 0); // required anyway for the hash function
-  ++stats.lookups;
-  if (RealNumber::approximatelyZero(val)) {
-    ++stats.hits;
-    return &constants::zero;
-  }
+  assert(val > 0);
 
-  if (RealNumber::approximatelyOne(val)) {
-    ++stats.hits;
+  if (RealNumber::approximatelyEquals(val, 1.0)) {
     return &constants::one;
   }
 
   if (RealNumber::approximatelyEquals(val, SQRT2_2)) {
-    ++stats.hits;
     return &constants::sqrt2over2;
   }
-  assert(val - RealNumber::eps >= 0); // should be handle above as special case
 
+  ++stats.lookups;
   const auto lowerKey = hash(val - RealNumber::eps);
   const auto upperKey = hash(val + RealNumber::eps);
 
@@ -125,9 +117,13 @@ RealNumber* RealNumberUniqueTable::lookupNonNegative(const fp val) {
     return pUpper;
   }
 
-  // value was not found in the table -> get a new entry and add it to the
-  // central bucket
-  return insert(key, val);
+  // Since no match was found, a new value needs to be added
+  // Depending on which border of the bucket the value lies, a value either
+  // needs to be inserted in the front or the back of the bucket.
+  if (key == lowerKey) {
+    return insertFront(key, val);
+  }
+  return insertBack(key, val);
 }
 
 bool RealNumberUniqueTable::possiblyNeedsCollection() const noexcept {
@@ -234,11 +230,36 @@ std::ostream& RealNumberUniqueTable::printBucketDistribution(std::ostream& os) {
 
 RealNumber* RealNumberUniqueTable::findOrInsert(const std::int64_t key,
                                                 const fp val) {
-  const fp valTol = val + RealNumber::eps;
+  const auto k = static_cast<std::size_t>(key);
+  auto* curr = table[k];
+  if (curr == nullptr) {
+    auto* entry = memoryManager->get();
+    entry->value = val;
+    entry->next = curr;
+    table[k] = entry;
+    tailTable[k] = entry;
+    stats.trackInsert();
+    return entry;
+  }
 
-  auto* curr = table[static_cast<std::size_t>(key)];
+  auto* back = tailTable[k];
+  if (back != nullptr && back->value <= val) {
+    if (RealNumber::approximatelyEquals(val, back->value)) {
+      ++stats.hits;
+      return back;
+    }
+    ++stats.collisions;
+    auto* entry = memoryManager->get();
+    entry->value = val;
+    entry->next = nullptr;
+    back->next = entry;
+    tailTable[k] = entry;
+    stats.trackInsert();
+    return entry;
+  }
+
   RealNumber* prev = nullptr;
-
+  const fp valTol = val + RealNumber::eps;
   while (curr != nullptr && curr->value <= valTol) {
     if (RealNumber::approximatelyEquals(curr->value, val)) {
       // check if val is actually closer to the next element in the list (if
@@ -268,11 +289,26 @@ RealNumber* RealNumberUniqueTable::findOrInsert(const std::int64_t key,
   entry->value = val;
 
   if (prev == nullptr) {
-    // table bucket is empty
-    table[static_cast<std::size_t>(key)] = entry;
+    // add to front of bucket
+    table[k] = entry;
   } else {
     prev->next = entry;
   }
+  entry->next = curr;
+  if (curr == nullptr) {
+    tailTable[k] = entry;
+  }
+  stats.trackInsert();
+  return entry;
+}
+
+RealNumber* RealNumberUniqueTable::insertFront(const std::int64_t key,
+                                               const fp val) {
+  auto* entry = memoryManager->get();
+  entry->value = val;
+
+  auto* curr = table[static_cast<std::size_t>(key)];
+  table[static_cast<std::size_t>(key)] = entry;
   entry->next = curr;
   if (curr == nullptr) {
     tailTable[static_cast<std::size_t>(key)] = entry;
@@ -281,29 +317,18 @@ RealNumber* RealNumberUniqueTable::findOrInsert(const std::int64_t key,
   return entry;
 }
 
-RealNumber* RealNumberUniqueTable::insert(const std::int64_t key,
-                                          const fp val) {
+RealNumber* RealNumberUniqueTable::insertBack(const std::int64_t key,
+                                              const fp val) {
   auto* entry = memoryManager->get();
   entry->value = val;
+  entry->next = nullptr;
 
-  auto* curr = table[static_cast<std::size_t>(key)];
-  RealNumber* prev = nullptr;
-
-  while (curr != nullptr && curr->value <= val) {
-    ++stats.collisions;
-    prev = curr;
-    curr = curr->next;
-  }
-
-  if (prev == nullptr) {
-    // table bucket is empty
+  auto* back = tailTable[static_cast<std::size_t>(key)];
+  tailTable[static_cast<std::size_t>(key)] = entry;
+  if (back == nullptr) {
     table[static_cast<std::size_t>(key)] = entry;
   } else {
-    prev->next = entry;
-  }
-  entry->next = curr;
-  if (curr == nullptr) {
-    tailTable[static_cast<std::size_t>(key)] = entry;
+    back->next = entry;
   }
   stats.trackInsert();
   return entry;

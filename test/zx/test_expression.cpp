@@ -2,13 +2,13 @@
 #include "zx/Rational.hpp"
 #include "zx/Utils.hpp"
 
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 #include <stdexcept>
 #include <variant>
 
 class ExpressionTest : public ::testing::Test {
 public:
-  sym::Term<double> x{1.0, sym::Variable("x")};
+  sym::Term<double> x{sym::Variable("x"), 1.0};
   sym::Term<double> y{sym::Variable("y")};
   sym::Term<double> z{sym::Variable("z")};
 };

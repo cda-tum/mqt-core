@@ -46,12 +46,14 @@ QPE::QPE(const fp l, const std::size_t prec, const bool iter)
 
 std::ostream& QPE::printStatistics(std::ostream& os) const {
   os << "QPE Statistics:\n";
-  os << "\tn: " << nqubits + 1 << std::endl;
-  os << "\tm: " << getNindividualOps() << std::endl;
-  os << "\tlambda: " << lambda << "π" << std::endl;
-  os << "\tprecision: " << precision << std::endl;
-  os << "\titerative: " << iterative << std::endl;
-  os << "--------------" << std::endl;
+  os << "\tn: " << nqubits + 1 << "\n";
+  os << "\tm: " << getNindividualOps() << "\n";
+  os << "\tlambda: " << lambda << "π"
+     << "\n";
+  os << "\tprecision: " << precision << "\n";
+  os << "\titerative: " << iterative << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 
@@ -70,6 +72,13 @@ void QPE::createCircuit() {
   x(0);
 
   if (iterative) {
+    // set up initial layout
+    initialLayout[0] = 1;
+    initialLayout[1] = 0;
+    setLogicalQubitGarbage(1);
+    outputPermutation.erase(0);
+    outputPermutation[1] = 0;
+
     for (std::size_t i = 0; i < precision; i++) {
       // Hadamard
       h(1);
@@ -79,12 +88,12 @@ void QPE::createCircuit() {
           static_cast<double>(1ULL << (precision - 1 - i)) * lambda, 2.0);
 
       // controlled phase rotation
-      phase(0, 1_pc, angle * PI);
+      cp(angle * PI, 1, 0);
 
       // hybrid quantum-classical inverse QFT
       for (std::size_t j = 0; j < i; j++) {
         auto iQFTLambda = -PI / static_cast<double>(1ULL << (i - j));
-        classicControlled(Phase, 1, {j, 1U}, 1U, {iQFTLambda});
+        classicControlled(P, 1, {j, 1U}, 1U, {iQFTLambda});
       }
       h(1);
 
@@ -97,6 +106,14 @@ void QPE::createCircuit() {
       }
     }
   } else {
+    // set up initial layout
+    initialLayout[0] = static_cast<Qubit>(precision);
+    for (std::size_t i = 1; i <= precision; ++i) {
+      initialLayout[static_cast<Qubit>(i)] = static_cast<Qubit>(i - 1);
+    }
+    setLogicalQubitGarbage(static_cast<Qubit>(precision));
+    outputPermutation.erase(0);
+
     // Hadamard Layer
     for (std::size_t i = 1; i <= precision; i++) {
       h(static_cast<Qubit>(i));
@@ -108,18 +125,17 @@ void QPE::createCircuit() {
           static_cast<double>(1ULL << (precision - 1 - i)) * lambda, 2.0);
 
       // controlled phase rotation
-      phase(0, Control{static_cast<Qubit>(1 + i)}, angle * PI);
+      cp(angle * PI, static_cast<Qubit>(1 + i), 0);
 
       // inverse QFT
       for (std::size_t j = 1; j < 1 + i; j++) {
         const auto iQFTLambda = -PI / static_cast<double>(2ULL << (i - j));
         if (j == i) {
-          sdag(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(i)});
+          csdg(static_cast<Qubit>(i), static_cast<Qubit>(1 + i));
         } else if (j == (i - 1)) {
-          tdag(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(i - 1)});
+          ctdg(static_cast<Qubit>(i - 1), static_cast<Qubit>(1 + i));
         } else {
-          phase(static_cast<Qubit>(1 + i), Control{static_cast<Qubit>(j)},
-                iQFTLambda);
+          cp(iQFTLambda, static_cast<Qubit>(j), static_cast<Qubit>(1 + i));
         }
       }
       h(static_cast<Qubit>(1 + i));
@@ -128,6 +144,7 @@ void QPE::createCircuit() {
     // measure results
     for (std::size_t i = 0; i < nqubits - 1; i++) {
       measure(static_cast<Qubit>(i + 1), i);
+      outputPermutation[static_cast<Qubit>(i + 1)] = static_cast<Qubit>(i);
     }
   }
 }

@@ -1,5 +1,4 @@
 #include "algorithms/GoogleRandomCircuitSampling.hpp"
-#include "dd/FunctionalityConstruction.hpp"
 #include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
@@ -29,17 +28,7 @@ TEST_F(GRCS, simulate) {
   auto dd = std::make_unique<dd::Package<>>(qcBris.getNqubits());
   auto in = dd->makeZeroState(qcBris.getNqubits());
   const std::optional<std::size_t> ncycles = 4;
-  ASSERT_NO_THROW({ simulate(&qcBris, in, dd, ncycles); });
-  std::cout << qcBris << "\n";
-  qcBris.printStatistics(std::cout);
-}
-
-TEST_F(GRCS, buildFunctionality) {
-  auto qcBris =
-      qc::GoogleRandomCircuitSampling("./circuits/grcs/bris_4_40_9_v2.txt");
-
-  auto dd = std::make_unique<dd::Package<>>(qcBris.getNqubits());
-  ASSERT_NO_THROW({ buildFunctionality(&qcBris, dd, 4); });
+  ASSERT_NO_THROW({ simulate(&qcBris, in, *dd, ncycles); });
   std::cout << qcBris << "\n";
   qcBris.printStatistics(std::cout);
 }

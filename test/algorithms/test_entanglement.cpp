@@ -1,5 +1,6 @@
 #include "algorithms/Entanglement.hpp"
-#include "dd/FunctionalityConstruction.hpp"
+#include "dd/Benchmark.hpp"
+#include "dd/Simulation.hpp"
 
 #include "gtest/gtest.h"
 #include <string>
@@ -23,15 +24,33 @@ INSTANTIATE_TEST_SUITE_P(
 TEST_P(Entanglement, FunctionTest) {
   const auto nq = GetParam();
 
-  auto dd = std::make_unique<dd::Package<>>(nq);
   auto qc = qc::Entanglement(nq);
-  auto e = buildFunctionality(&qc, dd);
+  auto result = dd::benchmarkFunctionalityConstruction(qc);
+  auto e = result->func;
 
   ASSERT_EQ(qc.getNops(), nq);
-  const qc::VectorDD r = dd->multiply(e, dd->makeZeroState(nq));
+  const qc::VectorDD r = result->dd->multiply(e, result->dd->makeZeroState(nq));
 
-  ASSERT_EQ(dd->getValueByPath(r, std::string(nq, '0')),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
-  ASSERT_EQ(dd->getValueByPath(r, std::string(nq, '1')),
-            (dd::ComplexValue{dd::SQRT2_2, 0}));
+  ASSERT_EQ(r.getValueByPath(std::string(nq, '0')), dd::SQRT2_2);
+  ASSERT_EQ(r.getValueByPath(std::string(nq, '1')), dd::SQRT2_2);
+}
+
+TEST_P(Entanglement, GHZRoutineFunctionTest) {
+  const auto nq = GetParam();
+
+  auto qc = qc::Entanglement(nq);
+  auto exp = dd::benchmarkSimulate(qc);
+  auto e = exp->sim;
+  const auto f = exp->dd->makeGHZState(nq);
+
+  EXPECT_EQ(e, f);
+}
+
+TEST(Entanglement, GHZStateEdgeCasesTest) {
+  auto dd = std::make_unique<dd::Package<>>(3);
+
+  EXPECT_EQ(dd->makeGHZState(0),
+            dd->makeBasisState(0, {dd::BasisStates::zero}));
+  EXPECT_EQ(dd->makeGHZState(0), dd->makeBasisState(0, {dd::BasisStates::one}));
+  ASSERT_THROW(dd->makeGHZState(6), std::runtime_error);
 }

@@ -1,9 +1,9 @@
-if(NOT TARGET ${PROJECT_NAME}-ecc)
-  file(GLOB_RECURSE ECC_HEADERS ${PROJECT_SOURCE_DIR}/include/ecc/*.hpp)
+if(NOT TARGET ${MQT_CORE_TARGET_NAME}-ecc)
+  file(GLOB_RECURSE ECC_HEADERS ${MQT_CORE_INCLUDE_BUILD_DIR}/ecc/*.hpp)
 
   # add ECC package library
   add_library(
-    ${PROJECT_NAME}-ecc
+    ${MQT_CORE_TARGET_NAME}-ecc
     ${ECC_HEADERS}
     Ecc.cpp
     Q3Shor.cpp
@@ -13,9 +13,18 @@ if(NOT TARGET ${PROJECT_NAME}-ecc)
     Q9Surface.cpp
     Q18Surface.cpp)
 
-  target_link_libraries(${PROJECT_NAME}-ecc PUBLIC ${PROJECT_NAME})
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-ecc PUBLIC MQT::Core)
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-ecc PRIVATE MQT::ProjectOptions
+                                                            MQT::ProjectWarnings)
 
   # add MQT alias
-  add_library(MQT::CoreECC ALIAS ${PROJECT_NAME}-ecc)
-  add_library(MQT::${OLD_PROJECT_NAME}_ecc ALIAS ${PROJECT_NAME}-ecc)
+  add_library(MQT::CoreECC ALIAS ${MQT_CORE_TARGET_NAME}-ecc)
+  set_target_properties(
+    ${MQT_CORE_TARGET_NAME}-ecc
+    PROPERTIES VERSION ${PROJECT_VERSION}
+               SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+               EXPORT_NAME CoreECC)
+  set(MQT_CORE_TARGETS
+      ${MQT_CORE_TARGETS} ${MQT_CORE_TARGET_NAME}-ecc
+      PARENT_SCOPE)
 endif()

@@ -5,6 +5,16 @@ from __future__ import annotations
 import warnings
 from importlib import metadata
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+import pybtex.plugin
+from pybtex.style.formatting.unsrt import Style as UnsrtStyle
+from pybtex.style.template import field, href
+
+if TYPE_CHECKING:
+    from pybtex.database import Entry
+    from pybtex.richtext import HRef
+    from sphinx.application import Sphinx
 
 ROOT = Path(__file__).parent.parent.resolve()
 
@@ -33,12 +43,25 @@ author = "Chair for Design Automation, Technical University of Munich"
 language = "en"
 project_copyright = "2023, Chair for Design Automation, Technical University of Munich"
 
+master_doc = "index"
+
+templates_path = ["_templates"]
+html_css_files = ["custom.css"]
+
 extensions = [
     "myst_parser",
+    "nbsphinx",
+    "autoapi.extension",
+    "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
-    "sphinx_design",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.napoleon",
     "sphinx_copybutton",
+    "sphinx_design",
     "sphinxext.opengraph",
+    "sphinx.ext.autosectionlabel",
+    "sphinx.ext.viewcode",
+    "sphinx_autodoc_typehints",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -54,10 +77,6 @@ exclude_patterns = [
 
 pygments_style = "colorful"
 
-add_module_names = False
-
-modindex_common_prefix = ["mqt.core."]
-
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "qiskit": ("https://qiskit.org/documentation/", None),
@@ -68,7 +87,6 @@ intersphinx_mapping = {
     "qecc": ("https://mqt.readthedocs.io/projects/qecc/en/latest/", None),
     "syrec": ("https://mqt.readthedocs.io/projects/syrec/en/latest/", None),
 }
-intersphinx_disabled_reftypes = ["*"]
 
 myst_enable_extensions = [
     "colon_fence",
@@ -80,9 +98,80 @@ myst_substitutions = {
     "version": version,
 }
 
+nbsphinx_execute = "auto"
+highlight_language = "python3"
+nbsphinx_execute_arguments = [
+    "--InlineBackend.figure_formats={'svg', 'pdf'}",
+    "--InlineBackend.rc=figure.dpi=200",
+]
+nbsphinx_kernel_name = "python3"
+
+autosectionlabel_prefix_document = True
+
+
+class CDAStyle(UnsrtStyle):
+    """Custom style for including PDF links."""
+
+    def format_url(self, _e: Entry) -> HRef:  # noqa: PLR6301
+        """Format URL field as a link to the PDF."""
+        url = field("url", raw=True)
+        return href()[url, "[PDF]"]
+
+
+pybtex.plugin.register_plugin("pybtex.style.formatting", "cda_style", CDAStyle)
+
+bibtex_bibfiles = ["refs.bib"]
+bibtex_default_style = "cda_style"
+
 copybutton_prompt_text = r"(?:\(venv\) )?(?:\[.*\] )?\$ "
 copybutton_prompt_is_regexp = True
 copybutton_line_continuation_character = "\\"
+
+
+modindex_common_prefix = ["mqt.core."]
+
+autoapi_dirs = ["../src/mqt"]
+autoapi_python_use_implicit_namespaces = True
+autoapi_root = "api"
+autoapi_add_toctree_entry = False
+autoapi_ignore = [
+    "*/**/_version.py",
+]
+autoapi_options = [
+    "members",
+    "inherited-members",
+    "imported-members",
+    "show-inheritance",
+    "special-members",
+    "undoc-members",
+]
+
+
+def skip_cpp_core(_app: Sphinx, what: str, name: str, _obj: object, skip: bool, _options) -> bool:  # noqa: ANN001
+    """Skip the _core module in documentation."""
+    if (what == "package" and "_core" in name) or "_compat" in name:
+        skip = True
+    return skip
+
+
+def setup(sphinx: Sphinx) -> None:
+    """Setup Sphinx."""
+    sphinx.connect("autoapi-skip-member", skip_cpp_core)
+
+
+autodoc_typehints = "signature"
+autodoc_typehints_format = "short"
+autodoc_type_aliases = {
+    "QuantumCircuit": "qiskit.circuit.QuantumCircuit",
+}
+
+typehints_use_signature = True
+typehints_use_signature_return = True
+
+add_module_names = False
+
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = "furo"
@@ -94,4 +183,33 @@ html_theme_options = {
     "source_branch": "main",
     "source_directory": "docs/",
     "navigation_with_keys": True,
+}
+
+# -- Options for LaTeX output ------------------------------------------------
+latex_engine = "lualatex"
+latex_documents = [
+    (master_doc, "mqt-core.tex", "MQT Core Documentation", author, "howto", False),
+]
+latex_logo = "_static/mqt_dark.png"
+latex_elements = {
+    "papersize": "a4paper",
+    "printindex": r"\footnotesize\raggedright\printindex",
+    "fontpkg": r"""
+    \directlua{luaotfload.add_fallback
+   ("emojifallback",
+    {
+      "NotoColorEmoji:mode=harf;"
+    }
+   )}
+
+   \setmainfont{DejaVu Serif}[
+     RawFeature={fallback=emojifallback}
+    ]
+   \setsansfont{DejaVu Sans}[
+     RawFeature={fallback=emojifallback}
+   ]
+   \setmonofont{DejaVu Sans Mono}[
+     RawFeature={fallback=emojifallback}
+   ]
+""",
 }

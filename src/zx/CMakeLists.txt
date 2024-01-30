@@ -1,9 +1,46 @@
-if(NOT TARGET ${PROJECT_NAME}-zx)
-  file(GLOB_RECURSE ZX_HEADERS ${PROJECT_SOURCE_DIR}/include/zx/*.hpp)
+if(NOT TARGET ${MQT_CORE_TARGET_NAME}-zx)
+  # make sure the MQT::multiprecision target is available
+  if(NOT TARGET MQT::Multiprecision)
+    # handle the case for a complete Boost installation
+    if(NOT TARGET Boost::multiprecision)
+      add_library(multiprecision INTERFACE)
+      target_link_libraries(multiprecision INTERFACE Boost::headers)
+      add_library(MQT::Multiprecision ALIAS multiprecision)
+      set(MQT_CORE_ZX_SYSTEM_BOOST
+          TRUE
+          CACHE BOOL "Whether a system version of Boost was used")
+    else()
+      # Boost::multiprecision does not provide its own installation instructions. As a consequence,
+      # this needs a workaround.
+
+      # first, we get the include directory of the multiprecision library
+      get_target_property(MULTIPRECISION_INCLUDE_DIR Boost::multiprecision
+                          INTERFACE_INCLUDE_DIRECTORIES)
+
+      # then, we create a target that will be used to export the include directory
+      add_library(multiprecision INTERFACE)
+      target_include_directories(
+        multiprecision SYSTEM INTERFACE $<BUILD_INTERFACE:${MULTIPRECISION_INCLUDE_DIR}>
+                                        $<INSTALL_INTERFACE:${MQT_CORE_INCLUDE_INSTALL_DIR}>)
+      add_library(MQT::Multiprecision ALIAS multiprecision)
+
+      if(MQT_CORE_INSTALL)
+        # finally, we create install instructions for the respective header files
+        install(DIRECTORY ${MULTIPRECISION_INCLUDE_DIR}/boost
+                DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
+      endif()
+
+      set(MQT_CORE_ZX_SYSTEM_BOOST
+          FALSE
+          CACHE BOOL "Whether a system version of Boost was used")
+    endif()
+  endif()
+
+  file(GLOB_RECURSE ZX_HEADERS ${MQT_CORE_INCLUDE_BUILD_DIR}/zx/*.hpp)
 
   # add ZX package library
   add_library(
-    ${PROJECT_NAME}-zx
+    ${MQT_CORE_TARGET_NAME}-zx
     ${ZX_HEADERS}
     Rational.cpp
     ZXDiagram.cpp
@@ -11,26 +48,8 @@ if(NOT TARGET ${PROJECT_NAME}-zx)
     Simplify.cpp
     Utils.cpp
     FunctionalityConstruction.cpp)
-  target_link_libraries(${PROJECT_NAME}-zx PUBLIC ${PROJECT_NAME})
-
-  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/boost/config" "extern/boost/config"
-                   EXCLUDE_FROM_ALL)
-  target_link_libraries(${PROJECT_NAME}-zx PUBLIC Boost::config)
-
-  set(BOOST_MP_STANDALONE ON)
-  add_subdirectory("${PROJECT_SOURCE_DIR}/extern/boost/multiprecision"
-                   "extern/boost/multiprecision" EXCLUDE_FROM_ALL)
-  target_link_libraries(${PROJECT_NAME}-zx PUBLIC Boost::multiprecision)
-  # the following sets the SYSTEM flag for the include dirs of the boost libs to suppress warnings
-  # cmake-lint: disable=C0307
-  set_target_properties(
-    boost_config PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                            $<TARGET_PROPERTY:boost_config,INTERFACE_INCLUDE_DIRECTORIES>)
-  # cmake-lint: disable=C0307
-  set_target_properties(
-    boost_multiprecision
-    PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-               $<TARGET_PROPERTY:boost_multiprecision,INTERFACE_INCLUDE_DIRECTORIES>)
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-zx PUBLIC MQT::Core MQT::Multiprecision)
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-zx PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
 
   find_package(GMP)
   if(NOT GMP_FOUND)
@@ -38,11 +57,21 @@ if(NOT TARGET ${PROJECT_NAME}-zx)
   endif()
   # # link to GMP libraries if present
   if(GMP_FOUND)
-    target_compile_definitions(${PROJECT_NAME}-zx PUBLIC GMP)
-    target_link_libraries(${PROJECT_NAME}-zx PUBLIC GMP::gmp GMP::gmpxx)
+    target_compile_definitions(${MQT_CORE_TARGET_NAME}-zx PUBLIC GMP)
+    target_link_libraries(${MQT_CORE_TARGET_NAME}-zx PUBLIC GMP::gmp GMP::gmpxx)
   endif()
+  set(MQT_CORE_ZX_WITH_GMP
+      ${GMP_FOUND}
+      CACHE BOOL "Whether to use GMP for multiprecision arithmetic")
 
   # add MQT alias
-  add_library(MQT::CoreZX ALIAS ${PROJECT_NAME}-zx)
-  add_library(MQT::${OLD_PROJECT_NAME}_zx ALIAS ${PROJECT_NAME}-zx)
+  add_library(MQT::CoreZX ALIAS ${MQT_CORE_TARGET_NAME}-zx)
+  set_target_properties(
+    ${MQT_CORE_TARGET_NAME}-zx
+    PROPERTIES VERSION ${PROJECT_VERSION}
+               SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+               EXPORT_NAME CoreZX)
+  set(MQT_CORE_TARGETS
+      ${MQT_CORE_TARGETS} ${MQT_CORE_TARGET_NAME}-zx multiprecision
+      PARENT_SCOPE)
 endif()

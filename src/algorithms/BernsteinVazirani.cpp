@@ -33,23 +33,23 @@ BernsteinVazirani::BernsteinVazirani(const BitString& hiddenString,
 
 std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) const {
   os << "BernsteinVazirani (" << bitwidth << ") Statistics:\n";
-  os << "\tn: " << bitwidth + 1 << std::endl;
-  os << "\tm: " << getNindividualOps() << std::endl;
-  os << "\ts: " << expected << std::endl;
-  os << "\tdynamic: " << dynamic << std::endl;
-  os << "--------------" << std::endl;
+  os << "\tn: " << bitwidth + 1 << "\n";
+  os << "\tm: " << getNindividualOps() << "\n";
+  os << "\ts: " << expected << "\n";
+  os << "\tdynamic: " << dynamic << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 
 void BernsteinVazirani::createCircuit() {
-  name = "bv_" + s.to_string();
-
   expected = s.to_string();
   std::reverse(expected.begin(), expected.end());
   while (expected.length() > bitwidth) {
     expected.pop_back();
   }
   std::reverse(expected.begin(), expected.end());
+  name = "bv_" + expected;
 
   addQubitRegister(1, "flag");
 
@@ -65,13 +65,20 @@ void BernsteinVazirani::createCircuit() {
   x(0);
 
   if (dynamic) {
+    // set up initial layout
+    initialLayout[0] = 1;
+    initialLayout[1] = 0;
+    setLogicalQubitGarbage(1);
+    outputPermutation.erase(0);
+    outputPermutation[1] = 0;
+
     for (std::size_t i = 0; i < bitwidth; ++i) {
       // initial Hadamard
       h(1);
 
       // apply controlled-Z gate according to secret bitstring
       if (s.test(i)) {
-        z(0, 1_pc);
+        cz(1, 0);
       }
 
       // final Hadamard
@@ -86,6 +93,14 @@ void BernsteinVazirani::createCircuit() {
       }
     }
   } else {
+    // set up initial layout
+    initialLayout[0] = static_cast<Qubit>(bitwidth);
+    for (std::size_t i = 1; i <= bitwidth; ++i) {
+      initialLayout[static_cast<Qubit>(i)] = static_cast<Qubit>(i - 1);
+    }
+    setLogicalQubitGarbage(static_cast<Qubit>(bitwidth));
+    outputPermutation.erase(0);
+
     // initial Hadamard transformation
     for (std::size_t i = 1; i <= bitwidth; ++i) {
       h(static_cast<Qubit>(i));
@@ -94,7 +109,7 @@ void BernsteinVazirani::createCircuit() {
     // apply controlled-Z gates according to secret bitstring
     for (std::size_t i = 1; i <= bitwidth; ++i) {
       if (s.test(i - 1)) {
-        z(0, qc::Control{static_cast<Qubit>(i)});
+        cz(static_cast<Qubit>(i), 0);
       }
     }
 
@@ -106,6 +121,7 @@ void BernsteinVazirani::createCircuit() {
     // measure results
     for (std::size_t i = 1; i <= bitwidth; i++) {
       measure(static_cast<Qubit>(i), i - 1);
+      outputPermutation[static_cast<Qubit>(i)] = static_cast<Qubit>(i - 1);
     }
   }
 }

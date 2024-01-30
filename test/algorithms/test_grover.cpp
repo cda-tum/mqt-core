@@ -1,6 +1,5 @@
 #include "algorithms/Grover.hpp"
-#include "dd/FunctionalityConstruction.hpp"
-#include "dd/Simulation.hpp"
+#include "dd/Benchmark.hpp"
 
 #include "gtest/gtest.h"
 #include <cmath>
@@ -13,29 +12,19 @@ protected:
     dd->decRef(sim);
     dd->decRef(func);
     dd->garbageCollect(true);
-
-    // number of complex table entries after clean-up should equal initial
-    // number of entries
-    EXPECT_EQ(dd->cn.realCount(), initialComplexCount);
-
-    // number of available cache entries after clean-up should equal initial
-    // number of entries
-    EXPECT_EQ(dd->cn.cacheCount(), initialCacheCount);
+    // number of complex table entries after clean-up should equal 1
+    EXPECT_EQ(dd->cn.realCount(), 1);
   }
 
   void SetUp() override {
     std::tie(nqubits, seed) = GetParam();
     dd = std::make_unique<dd::Package<>>(nqubits + 1);
-    initialCacheCount = dd->cn.cacheCount();
-    initialComplexCount = dd->cn.realCount();
   }
 
   std::size_t nqubits = 0;
   std::size_t seed = 0;
   std::unique_ptr<dd::Package<>> dd;
   std::unique_ptr<qc::Grover> qc;
-  std::size_t initialCacheCount = 0;
-  std::size_t initialComplexCount = 0;
   qc::VectorDD sim{};
   qc::MatrixDD func{};
 };
@@ -72,14 +61,15 @@ TEST_P(Grover, Functionality) {
   auto x = '1' + qc->expected;
   std::reverse(x.begin(), x.end());
 
-  // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionality(qc.get(), dd); });
+  auto exp = dd::benchmarkFunctionalityConstruction(*qc);
+  func = exp->func;
+  dd = std::move(exp->dd);
 
   // amplitude of the searched-for entry should be 1
-  auto c = dd->getValueByBitstring(func, x);
-  EXPECT_NEAR(std::abs(c.r), 1, GROVER_ACCURACY);
-  EXPECT_NEAR(std::abs(c.i), 0, GROVER_ACCURACY);
-  auto prob = c.r * c.r + c.i * c.i;
+  auto c = func.getValueByPath(x);
+  EXPECT_NEAR(std::abs(c.real()), 1, GROVER_ACCURACY);
+  EXPECT_NEAR(std::abs(c.imag()), 0, GROVER_ACCURACY);
+  const auto prob = std::norm(c);
   EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }
 
@@ -91,14 +81,15 @@ TEST_P(Grover, FunctionalityRecursive) {
   auto x = '1' + qc->expected;
   std::reverse(x.begin(), x.end());
 
-  // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), dd); });
+  auto exp = dd::benchmarkFunctionalityConstruction(*qc, true);
+  func = exp->func;
+  dd = std::move(exp->dd);
 
   // amplitude of the searched-for entry should be 1
-  auto c = dd->getValueByBitstring(func, x);
-  EXPECT_NEAR(std::abs(c.r), 1, GROVER_ACCURACY);
-  EXPECT_NEAR(std::abs(c.i), 0, GROVER_ACCURACY);
-  auto prob = c.r * c.r + c.i * c.i;
+  auto c = func.getValueByPath(x);
+  EXPECT_NEAR(std::abs(c.real()), 1, GROVER_ACCURACY);
+  EXPECT_NEAR(std::abs(c.imag()), 0, GROVER_ACCURACY);
+  const auto prob = std::norm(c);
   EXPECT_GE(prob, GROVER_GOAL_PROBABILITY);
 }
 
@@ -107,10 +98,9 @@ TEST_P(Grover, Simulation) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
   qc->printStatistics(std::cout);
-  auto in = dd->makeZeroState(nqubits + 1U);
   // there should be no error simulating the circuit
   const std::size_t shots = 1024;
-  auto measurements = simulate(qc.get(), in, dd, shots);
+  auto measurements = dd::benchmarkSimulateWithShots(*qc, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";

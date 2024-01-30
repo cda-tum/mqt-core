@@ -1,7 +1,9 @@
 #include "dd/Node.hpp"
 
 #include "dd/ComplexNumbers.hpp"
-#include "dd/RealNumber.hpp"
+
+#include <cassert>
+#include <utility>
 
 namespace dd {
 

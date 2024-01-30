@@ -1,6 +1,6 @@
 #include "zx/Rational.hpp"
 
-#include "zx/Definitions.hpp"
+#include "zx/ZXDefinitions.hpp"
 
 namespace zx {
 

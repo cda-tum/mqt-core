@@ -1,5 +1,7 @@
 #include "QuantumComputation.hpp"
 
+#include <regex>
+
 void qc::QuantumComputation::importReal(std::istream& is) {
   auto line = readRealHeader(is);
   readRealGateDescriptions(is, line);
@@ -87,8 +89,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
     } else if (cmd == ".DEFINE") {
       // TODO: Defines currently not supported
       std::cerr << "[WARN] File contains 'define' statement, which is "
-                   "currently not supported and thus simply skipped."
-                << std::endl;
+                   "currently not supported and thus simply skipped.\n";
       while (cmd != ".ENDDEFINE") {
         is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         is >> cmd;
@@ -113,13 +114,11 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
   std::string cmd;
 
   static const std::map<std::string, OpType> IDENTIFIER_MAP{
-      {"0", I},     {"id", I},    {"h", H},         {"n", X},
-      {"c", X},     {"x", X},     {"y", Y},         {"z", Z},
-      {"s", S},     {"si", Sdag}, {"sp", Sdag},     {"s+", Sdag},
-      {"v", V},     {"vi", Vdag}, {"vp", Vdag},     {"v+", Vdag},
-      {"rx", RX},   {"ry", RY},   {"rz", RZ},       {"f", SWAP},
-      {"if", SWAP}, {"p", Peres}, {"pi", Peresdag}, {"p+", Peresdag},
-      {"q", Phase}};
+      {"0", I},     {"id", I},    {"h", H},        {"n", X},        {"c", X},
+      {"x", X},     {"y", Y},     {"z", Z},        {"s", S},        {"si", Sdg},
+      {"sp", Sdg},  {"s+", Sdg},  {"v", V},        {"vi", Vdg},     {"vp", Vdg},
+      {"v+", Vdg},  {"rx", RX},   {"ry", RY},      {"rz", RZ},      {"f", SWAP},
+      {"if", SWAP}, {"p", Peres}, {"pi", Peresdg}, {"p+", Peresdg}, {"q", P}};
 
   while (!is.eof()) {
     if (!static_cast<bool>(is >> cmd)) {
@@ -163,9 +162,9 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     const fp lambda = m.str(3).empty() ? static_cast<fp>(0L)
                                        : static_cast<fp>(std::stold(m.str(3)));
 
-    if (gate == V || gate == Vdag || m.str(1) == "c" || gate == SWAP) {
+    if (gate == V || gate == Vdg || m.str(1) == "c" || gate == SWAP) {
       ncontrols = 1;
-    } else if (gate == Peres || gate == Peresdag) {
+    } else if (gate == Peres || gate == Peresdg) {
       ncontrols = 2;
     }
 
@@ -200,9 +199,9 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
         throw QFRException("[real parser] l:" + std::to_string(line) +
                            " msg: Label " + label + " not found!");
       }
-      controls.emplace_back(
-          Control{iter->second.first,
-                  negativeControl ? Control::Type::Neg : Control::Type::Pos});
+      controls.emplace_back(iter->second.first, negativeControl
+                                                    ? Control::Type::Neg
+                                                    : Control::Type::Pos);
     }
 
     if (!(iss >> label)) {
@@ -216,7 +215,6 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
                          " msg: Label " + label + " not found!");
     }
 
-    updateMaxControls(ncontrols);
     const Qubit target = iter->second.first;
     switch (gate) {
     case I:
@@ -224,29 +222,28 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     case Y:
     case Z:
     case S:
-    case Sdag:
+    case Sdg:
     case T:
-    case Tdag:
+    case Tdg:
     case V:
-    case Vdag:
+    case Vdg:
       emplace_back<StandardOperation>(
           nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate);
       break;
     case X:
-      emplace_back<StandardOperation>(
-          nqubits, Controls{controls.cbegin(), controls.cend()}, target);
+      mcx(Controls{controls.cbegin(), controls.cend()}, target);
       break;
     case RX:
     case RY:
     case RZ:
-    case Phase:
+    case P:
       emplace_back<StandardOperation>(
           nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate,
           std::vector{PI / (lambda)});
       break;
     case SWAP:
     case Peres:
-    case Peresdag:
+    case Peresdg:
     case iSWAP: {
       const auto target1 = controls.back().qubit;
       controls.pop_back();
@@ -256,8 +253,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
       break;
     }
     default:
-      std::cerr << "Unsupported operation encountered:  " << gate << "!"
-                << std::endl;
+      std::cerr << "Unsupported operation encountered:  " << gate << "!\n";
       break;
     }
   }

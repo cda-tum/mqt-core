@@ -15,7 +15,7 @@ ci:
 repos:
   # Standard hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
@@ -32,13 +32,13 @@ repos:
 
   # Clean jupyter notebooks
   - repo: https://github.com/srstevenson/nb-clean
-    rev: 3.0.0
+    rev: 3.2.0
     hooks:
       - id: nb-clean
 
   # Handling unwanted unicode characters
   - repo: https://github.com/sirosen/texthooks
-    rev: 0.5.0
+    rev: 0.6.4
     hooks:
       - id: fix-ligatures
       - id: fix-smartquotes
@@ -53,37 +53,35 @@ repos:
 
   # Python linting using ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.0.288
+    rev: v0.1.14
     hooks:
       - id: ruff
         args: ["--fix", "--show-fixes"]
+        types_or: [python, pyi, jupyter]
+      - id: ruff-format
+        types_or: [python, pyi, jupyter]
 
   # Static type checking using mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.5.1
+    rev: v1.8.0
     hooks:
       - id: mypy
         files: ^(src/mqt|test/python)
         args: []
         additional_dependencies:
           - pytest
-
-  # Run code formatting with Black
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 23.9.1 # Keep in sync with blacken-docs
-    hooks:
-      - id: black-jupyter
+          - pandas-stubs
 
   # Also run Black on examples in the documentation
   - repo: https://github.com/adamchainz/blacken-docs
     rev: 1.16.0
     hooks:
       - id: blacken-docs
-        additional_dependencies: [black==23.9.1] # Keep in sync with blacken-docs
+        additional_dependencies: [black==23.*]
 
   # Clang-format the C++ part of the code base automatically
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v16.0.6
+    rev: v17.0.6
     hooks:
       - id: clang-format
         types_or: [c++, c, cuda]
@@ -94,19 +92,19 @@ repos:
     hooks:
       - id: cmake-format
         additional_dependencies: [pyyaml]
-      - id: cmake-lint
-        additional_dependencies: [pyyaml]
+        types: [file]
+        files: (\.cmake|CMakeLists.txt)(.in)?$
 
   # Format configuration files with prettier
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.0.3
+    rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         types_or: [yaml, markdown, html, css, scss, javascript, json]
 
   # Check for spelling
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.5
+    rev: v2.2.6
     hooks:
       - id: codespell
         args: ["-L", "wille,linz", "--skip", "*.ipynb"]
@@ -120,14 +118,9 @@ repos:
         entry: PyBind|Numpy|Cmake|CCache|Github|PyTest|Mqt|Tum
         exclude: .pre-commit-config.yaml
 
-  # Checking sdist validity
-  - repo: https://github.com/henryiii/check-sdist
-    rev: v0.1.2
+  # Check best practices for scientific Python code
+  - repo: https://github.com/scientific-python/cookie
+    rev: 2024.01.24
     hooks:
-      - id: check-sdist
-        args: [--inject-junk]
-        additional_dependencies:
-          - nanobind>=1.5.2
-          - scikit-build-core[pyproject]>=0.5.0
-          - setuptools-scm>=7
-          - pybind11>=2.11
+      - id: sp-repo-review
+        additional_dependencies: ["repo-review[cli]"]

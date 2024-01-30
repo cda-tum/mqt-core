@@ -13,4 +13,43 @@ For a full list of tools and libraries, please visit the {doc}`MQT website <mqt:
 
 ```{include} ../README.md
 :start-after: <!-- SPHINX-START -->
+:end-before: <!-- SPHINX-END -->
+```
+
+```{toctree}
+:hidden:
+
+self
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: User Guide
+
+quickstart
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: DD Package Evaluation
+
+dd_package_evaluation
+```
+
+```{toctree}
+:maxdepth: 2
+:titlesonly:
+:caption: Developers
+:glob:
+
+contributing
+support
+DevelopmentGuide
+```
+
+```{toctree}
+:maxdepth: 3
+:caption: API Reference
+
+api/mqt/core/index
 ```

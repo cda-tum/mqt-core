@@ -25,8 +25,9 @@ jobs:
         run: pipx run build --sdist
       - name: Check metadata
         run: pipx run twine check dist/*
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: cibw-sdist
           path: dist/*.tar.gz
 
   build_wheels:
@@ -50,26 +51,27 @@ jobs:
           version: ${{ inputs.z3-version }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - if: ${{ inputs.setup-z3 }} && matrix.os == 'ubuntu-latest'
+      - if: ${{ inputs.setup-z3 }} && matrix.runs-on == 'ubuntu-latest'
         name: Set environment variables for Z3 installation in manylinux image
         run: |
           echo "CIBW_BEFORE_ALL_LINUX=/opt/python/cp311-cp311/bin/pip install z3-solver==${{ inputs.z3-version }}" >> $GITHUB_ENV
-      - if: matrix.os != 'ubuntu-latest'
+      - if: matrix.runs-on != 'ubuntu-latest'
         name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1
         with:
           prepend_symlinks_to_path: false
           windows_compile_environment: msvc
           override_cache_key: wheels-${{ matrix.runs-on }}-${{ matrix.python }}
-      - uses: pypa/cibuildwheel@v2.15
+      - uses: pypa/cibuildwheel@v2.16
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
       - name: Verify clean directory
         run: git diff --exit-code
         shell: bash
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
+          name: cibw-wheels-${{ matrix.runs-on }}-${{ matrix.python }}-${{ strategy.job-index }}
           path: wheelhouse/*.whl
 
   build_wheels_emulation:
@@ -92,11 +94,12 @@ jobs:
         run: |
           echo "CIBW_BEFORE_ALL_LINUX=/opt/python/cp311-cp311/bin/pip install z3-solver==${{ inputs.z3-version }}" >> $GITHUB_ENV
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.15
+        uses: pypa/cibuildwheel@v2.16
         env:
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
           CIBW_BUILD: ${{ matrix.python }}-*
           CIBW_TEST_SKIP: "cp*"
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: cibw-wheels-${{ matrix.arch }}-${{ matrix.python }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
