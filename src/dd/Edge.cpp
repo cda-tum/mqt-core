@@ -24,12 +24,12 @@ namespace dd {
 ///                      \n General purpose methods \n
 ///-----------------------------------------------------------------------------
 
-//template <class Node> bool Edge<Node>::isIdentity() const {
-//  if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
-//    return isTerminal() && w != Complex::zero();
-//  }
-//  return false;
-//}
+// template <class Node> bool Edge<Node>::isIdentity() const {
+//   if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
+//     return isTerminal() && w != Complex::zero();
+//   }
+//   return false;
+// }
 
 template <class Node>
 std::complex<fp>
