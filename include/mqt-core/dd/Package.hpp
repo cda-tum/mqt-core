@@ -1166,9 +1166,9 @@ public:
   }
 
   mEdge buildMeasOp(const Qubit index, const bool measureZero) {
-      GateMatrix measurementMatrix = measureZero ? MEAS_ZERO_MAT : MEAS_ONE_MAT;
-      const auto measurementGate = makeGateDD(measurementMatrix, nqubits, index);
-      return measurementGate;
+    GateMatrix measurementMatrix = measureZero ? MEAS_ZERO_MAT : MEAS_ONE_MAT;
+    const auto measurementGate = makeGateDD(measurementMatrix, nqubits, index);
+    return measurementGate;
   }
 
   std::pair<dEdge, char> measureOneCollapsing(dEdge& e, const Qubit index,
@@ -1852,8 +1852,8 @@ private:
   /// TODO: introduce a compute table for the trace?
   template <class Node>
   CachedEdge<Node> trace(const Edge<Node>& a,
-                                const std::vector<bool>& eliminate,
-                                std::size_t alreadyEliminated = 0) {
+                         const std::vector<bool>& eliminate,
+                         std::size_t alreadyEliminated = 0) {
     const auto aWeight = static_cast<ComplexValue>(a.w);
     if (aWeight.approximatelyZero()) {
       return CachedEdge<Node>::zero();

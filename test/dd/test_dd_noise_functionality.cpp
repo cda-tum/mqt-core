@@ -155,7 +155,8 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
   EXPECT_NEAR(tmp["110"], prob, tolerance);
   EXPECT_NEAR(tmp["111"], prob, tolerance);
 
-  std::tie(rootEdge, result) = dd->measureOneCollapsing(rootEdge, 0, qc.getGenerator());
+  std::tie(rootEdge, result) =
+      dd->measureOneCollapsing(rootEdge, 0, qc.getGenerator());
 
   auto tmp0 = rootEdge.getSparseProbabilityVectorStrKeys();
   prob = 0.25;
@@ -165,7 +166,8 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
   EXPECT_TRUE(fabs(tmp0["100"] + tmp0["101"] - prob) < tolerance);
   EXPECT_TRUE(fabs(tmp0["110"] + tmp0["111"] - prob) < tolerance);
 
-  std::tie(rootEdge, result) = dd->measureOneCollapsing(rootEdge, 1, qc.getGenerator());
+  std::tie(rootEdge, result) =
+      dd->measureOneCollapsing(rootEdge, 1, qc.getGenerator());
 
   auto tmp1 = rootEdge.getSparseProbabilityVectorStrKeys();
   prob = 0.5;
@@ -174,7 +176,8 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
   EXPECT_TRUE(fabs(tmp0["100"] + tmp0["101"] + tmp0["110"] + tmp0["111"] -
                    prob) < tolerance);
 
-  std::tie(rootEdge, result) = dd->measureOneCollapsing(rootEdge, 2, qc.getGenerator());
+  std::tie(rootEdge, result) =
+      dd->measureOneCollapsing(rootEdge, 2, qc.getGenerator());
   auto tmp2 = rootEdge.getSparseProbabilityVectorStrKeys();
   EXPECT_TRUE(
       fabs(tmp2["000"] - 1) < tolerance || fabs(tmp2["001"] - 1) < tolerance ||
