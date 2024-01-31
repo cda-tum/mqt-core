@@ -11,9 +11,9 @@ __all__ = [
     "Permutation",
     "QuantumComputation",
     "__version__",
-    "version_info",
     "cmake_dir",
     "include_dir",
+    "version_info",
 ]
 
 for cls in (Permutation, QuantumComputation):

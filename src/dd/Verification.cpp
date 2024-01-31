@@ -1,4 +1,4 @@
-#include "algorithms/Verification.hpp"
+#include "dd/Verification.hpp"
 
 #include "QuantumComputation.hpp"
 #include "operations/OpType.hpp"

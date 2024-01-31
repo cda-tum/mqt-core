@@ -24,9 +24,9 @@ def main() -> None:
     if not sys.argv[1:]:
         parser.print_help()
     if args.include_dir:
-        print(include_dir())
+        print(include_dir().resolve())
     if args.cmake_dir:
-        print(cmake_dir())
+        print(cmake_dir().resolve())
 
 
 if __name__ == "__main__":

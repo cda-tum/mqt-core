@@ -3,11 +3,8 @@ set(MQT_CORE_TARGETS "")
 
 if(MQT_CORE_INSTALL)
   include(GNUInstallDirs)
-  if(NOT APPLE)
-    set(basePoint $ORIGIN)
-  endif()
   set(MQT_CORE_CONFIG_INSTALL_DIR "${CMAKE_INSTALL_DATADIR}/cmake/mqt-core")
-  set(MQT_CORE_INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_INCLUDEDIR}")
+  set(MQT_CORE_INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_INCLUDEDIR}/mqt-core")
   set(MQT_CORE_TARGETS_EXPORT_NAME "mqt-core-targets")
   set(MQT_CORE_CMAKE_CONFIG_TEMPLATE "${PROJECT_SOURCE_DIR}/cmake/mqt-core-config.cmake.in")
   set(MQT_CORE_CMAKE_CONFIG_DIR "${CMAKE_CURRENT_BINARY_DIR}")
@@ -15,6 +12,14 @@ if(MQT_CORE_INSTALL)
       "${MQT_CORE_CMAKE_CONFIG_DIR}/mqt-core-config-version.cmake")
   set(MQT_CORE_CMAKE_PROJECT_CONFIG_FILE "${MQT_CORE_CMAKE_CONFIG_DIR}/mqt-core-config.cmake")
   set(MQT_CORE_CMAKE_PROJECT_TARGETS_FILE "${MQT_CORE_CMAKE_CONFIG_DIR}/mqt-core-targets.cmake")
+
+  if(APPLE)
+    set(BASEPOINT @loader_path)
+  else()
+    set(BASEPOINT $ORIGIN)
+  endif()
+  set(CMAKE_INSTALL_RPATH ${BASEPOINT} ${BASEPOINT}/${CMAKE_INSTALL_LIBDIR})
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 endif()
 
 if(NOT TARGET project_warnings)
@@ -91,7 +96,6 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     algorithms/QFT.cpp
     algorithms/QPE.cpp
     algorithms/RandomCliffordCircuit.cpp
-    algorithms/Verification.cpp
     algorithms/WState.cpp
     CircuitOptimizer.cpp
     operations/ClassicControlledOperation.cpp
@@ -118,14 +122,16 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     ${MQT_CORE_TARGET_NAME} PUBLIC $<BUILD_INTERFACE:${MQT_CORE_INCLUDE_BUILD_DIR}>
                                    $<INSTALL_INTERFACE:${MQT_CORE_INCLUDE_INSTALL_DIR}>)
 
-  target_link_libraries(${MQT_CORE_TARGET_NAME} PUBLIC nlohmann_json)
-
   # add options and warnings to the library
-  target_link_libraries(${MQT_CORE_TARGET_NAME} PUBLIC MQT::ProjectOptions MQT::ProjectWarnings)
+  target_link_libraries(${MQT_CORE_TARGET_NAME} PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
 
   # add MQT alias
   add_library(MQT::Core ALIAS ${MQT_CORE_TARGET_NAME})
-  set_target_properties(${MQT_CORE_TARGET_NAME} PROPERTIES EXPORT_NAME Core)
+  set_target_properties(
+    ${MQT_CORE_TARGET_NAME}
+    PROPERTIES VERSION ${PROJECT_VERSION}
+               SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+               EXPORT_NAME Core)
   list(APPEND MQT_CORE_TARGETS ${MQT_CORE_TARGET_NAME})
 endif()
 
@@ -147,12 +153,17 @@ if(BINDINGS AND NOT TARGET mqt-core-python)
                                    python/qiskit/QuantumCircuit.cpp)
 
   # link with main project library and pybind11 libraries
-  target_link_libraries(${MQT_CORE_TARGET_NAME}-python PUBLIC MQT::Core pybind11::pybind11
-                                                              pybind11_json)
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-python PUBLIC MQT::Core pybind11::pybind11)
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-python PRIVATE MQT::ProjectOptions
+                                                               MQT::ProjectWarnings)
 
   # add MQT alias
   add_library(MQT::CorePython ALIAS ${MQT_CORE_TARGET_NAME}-python)
-  set_target_properties(${MQT_CORE_TARGET_NAME}-python PROPERTIES EXPORT_NAME CorePython)
+  set_target_properties(
+    ${MQT_CORE_TARGET_NAME}-python
+    PROPERTIES VERSION ${PROJECT_VERSION}
+               SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+               EXPORT_NAME CorePython)
   list(APPEND MQT_CORE_TARGETS ${MQT_CORE_TARGET_NAME}-python)
 endif()
 
@@ -165,7 +176,9 @@ if(MQT_CORE_INSTALL)
   include(CMakePackageConfigHelpers)
   configure_package_config_file(
     ${MQT_CORE_CMAKE_CONFIG_TEMPLATE} ${MQT_CORE_CMAKE_PROJECT_CONFIG_FILE}
-    INSTALL_DESTINATION ${MQT_CORE_CONFIG_INSTALL_DIR})
+    INSTALL_DESTINATION ${MQT_CORE_CONFIG_INSTALL_DIR}
+    PATH_VARS MQT_CORE_ZX_WITH_GMP
+    NO_SET_AND_CHECK_MACRO NO_CHECK_REQUIRED_COMPONENTS_MACRO)
   write_basic_package_version_file(
     ${MQT_CORE_CMAKE_VERSION_CONFIG_FILE}
     VERSION ${PROJECT_VERSION}
@@ -177,6 +190,11 @@ if(MQT_CORE_INSTALL)
   install(
     TARGETS ${MQT_CORE_TARGETS} project_warnings project_options
     EXPORT ${MQT_CORE_TARGETS_EXPORT_NAME}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime
+            NAMELINK_COMPONENT ${MQT_CORE_TARGET_NAME}_Development
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${MQT_CORE_TARGET_NAME}_Development
     INCLUDES
     DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
 
@@ -186,14 +204,14 @@ if(MQT_CORE_INSTALL)
     EXPORT ${MQT_CORE_TARGETS_EXPORT_NAME}
     FILE ${MQT_CORE_PROJECT_TARGETS_FILE}
     NAMESPACE MQT::
-    DESTINATION ${MQT_CORE_CONFIG_INSTALL_DIR})
+    DESTINATION ${MQT_CORE_CONFIG_INSTALL_DIR}
+    COMPONENT ${MQT_CORE_TARGET_NAME}_Development)
 
   install(
     FILES ${PROJECT_SOURCE_DIR}/cmake/Cache.cmake
           ${PROJECT_SOURCE_DIR}/cmake/CompilerOptions.cmake
           ${PROJECT_SOURCE_DIR}/cmake/CompilerWarnings.cmake
           ${PROJECT_SOURCE_DIR}/cmake/FindGMP.cmake
-          ${PROJECT_SOURCE_DIR}/cmake/GetVersion.cmake
           ${PROJECT_SOURCE_DIR}/cmake/PackageAddTest.cmake
           ${PROJECT_SOURCE_DIR}/cmake/PreventInSourceBuilds.cmake
           ${PROJECT_SOURCE_DIR}/cmake/Sanitizers.cmake

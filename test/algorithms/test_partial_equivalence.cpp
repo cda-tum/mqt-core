@@ -1,6 +1,6 @@
-#include "algorithms/Verification.hpp"
 #include "dd/Benchmark.hpp"
 #include "dd/Package.hpp"
+#include "dd/Verification.hpp"
 
 #include "gtest/gtest.h"
 #include <iostream>

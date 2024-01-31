@@ -41,8 +41,9 @@ function(enable_project_options target_name)
     endif()
 
     # enable some more optimizations in release mode
-    target_compile_options(${target_name} INTERFACE $<$<CONFIG:RELEASE>:-fno-math-errno
-                                                    -ffinite-math-only -fno-trapping-math>)
+    target_compile_options(
+      ${target_name} INTERFACE $<$<CONFIG:RELEASE>:-fno-math-errno -ffinite-math-only
+                               -fno-trapping-math -fno-stack-protector>)
 
     # enable some more options for better debugging
     target_compile_options(
