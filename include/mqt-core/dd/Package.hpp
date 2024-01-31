@@ -1165,34 +1165,10 @@ public:
     return '1';
   }
 
-  mEdge buildMeasOp(const Qubit index, const char measureFor = '0') {
-    mEdge measOp = {};
-    mEdge f = {};
-
-    const auto identityMatrix =
-        std::array{mEdge::one(), mEdge::zero(), mEdge::zero(), mEdge::one()};
-
-    const auto measureMatrix = measureFor == '0'
-                                   ? std::array{mEdge::one(), mEdge::zero(),
-                                                mEdge::zero(), mEdge::zero()}
-                                   : std::array{mEdge::zero(), mEdge::zero(),
-                                                mEdge::zero(), mEdge::one()};
-
-    if (index == 0) {
-      measOp = makeDDNode(static_cast<dd::Qubit>(0), measureMatrix);
-    } else {
-      measOp = makeDDNode(static_cast<dd::Qubit>(0), identityMatrix);
-    }
-
-    for (dd::Qubit p = 1; p < static_cast<dd::Qubit>(qubits()); p++) {
-      if (p == index) {
-        f = makeDDNode(static_cast<dd::Qubit>(0), measureMatrix);
-      } else {
-        f = makeDDNode(static_cast<dd::Qubit>(0), identityMatrix);
-      }
-      measOp = kronecker(f, measOp);
-    }
-    return measOp;
+  mEdge buildMeasOp(const Qubit index, const bool measureZero) {
+      GateMatrix measurementMatrix = measureZero ? MEAS_ZERO_MAT : MEAS_ONE_MAT;
+      const auto measurementGate = makeGateDD(measurementMatrix, nqubits, index);
+      return measurementGate;
   }
 
   std::pair<dEdge, char> measureOneCollapsing(dEdge& e, const Qubit index,
@@ -1845,7 +1821,8 @@ public:
     auto r = trace(a, eliminate);
     return cn.lookup(r);
   }
-  template <class Edge> ComplexValue trace(const Edge& a) {
+
+  template <class Node> ComplexValue trace(const Edge<Node>& a) {
     const auto eliminate = std::vector<bool>(nqubits, true);
     return trace(a, eliminate).w;
   }
@@ -1873,19 +1850,19 @@ public:
 
 private:
   /// TODO: introduce a compute table for the trace?
-  template <class OperandNode>
-  CachedEdge<OperandNode> trace(const Edge<OperandNode>& a,
+  template <class Node>
+  CachedEdge<Node> trace(const Edge<Node>& a,
                                 const std::vector<bool>& eliminate,
                                 std::size_t alreadyEliminated = 0) {
     const auto aWeight = static_cast<ComplexValue>(a.w);
     if (aWeight.approximatelyZero()) {
-      return CachedEdge<OperandNode>::zero();
+      return CachedEdge<Node>::zero();
     }
 
-    if (OperandNode::isTerminal(a.p) ||
+    if (Node::isTerminal(a.p) ||
         std::none_of(eliminate.begin(), eliminate.end(),
                      [](bool v) { return v; })) {
-      return CachedEdge<OperandNode>{a.p, aWeight};
+      return CachedEdge<Node>{a.p, aWeight};
     }
 
     const auto v = a.p->v;
@@ -1898,10 +1875,10 @@ private:
       return r;
     }
 
-    std::array<CachedEdge<OperandNode>, NEDGE> edge{};
+    std::array<CachedEdge<Node>, NEDGE> edge{};
     std::transform(a.p->e.cbegin(), a.p->e.cend(), edge.begin(),
                    [this, &eliminate, &alreadyEliminated](
-                       const Edge<OperandNode>& e) -> CachedEdge<OperandNode> {
+                       const Edge<Node>& e) -> CachedEdge<Node> {
                      return trace(e, eliminate, alreadyEliminated);
                    });
     const auto adjustedV =
