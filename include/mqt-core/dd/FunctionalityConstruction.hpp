@@ -26,10 +26,6 @@ MatrixDD buildFunctionality(const qc::Grover* qc, Package<Config>& dd);
 template <class Config>
 MatrixDD buildFunctionalityRecursive(const qc::Grover* qc, Package<Config>& dd);
 
-template <class Config>
-MatrixDD buildFunctionality(const QuantumComputation* qc, Package<Config>& dd,
-                            const std::optional<std::size_t> ncycles);
-
 inline void dumpTensorNetwork(std::ostream& of, const QuantumComputation& qc) {
   of << "{\"tensors\": [\n";
 
