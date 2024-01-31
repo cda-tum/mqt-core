@@ -52,9 +52,6 @@ struct mNode {                        // NOLINT(readability-identifier-naming)
   [[nodiscard]] static constexpr mNode* getTerminal() noexcept {
     return nullptr;
   }
-  [[nodiscard]] inline bool isSymmetric() const noexcept {
-    return (flags & static_cast<std::uint8_t>(32U)) != 0;
-  }
   [[nodiscard]] static constexpr bool isSymmetric(const mNode* p) noexcept {
     return p == nullptr || p->isSymmetric();
   }
