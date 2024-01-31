@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ._core.symbolic import Expression, Term, Variable
 
-__all__ = ("Variable", "Term", "Expression")
+__all__ = ("Expression", "Term", "Variable")
 
 for cls in (Variable, Term, Expression):
     cls.__module__ = "mqt.core.symbolic"

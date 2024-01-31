@@ -615,6 +615,25 @@ public:
   mEdge makeTwoQubitGateDD(const TwoQubitGateMatrix& mat, const std::size_t n,
                            const qc::Qubit target0, const qc::Qubit target1,
                            const std::size_t start = 0) {
+    return makeTwoQubitGateDD(mat, n, qc::Controls{}, target0, target1, start);
+  }
+
+  /**
+  Creates the DD for a two-qubit gate
+  @param mat Matrix representation of the gate
+  @param n Number of qubits in the circuit
+  @param controls Control qubits of the two-qubit gate
+  @param target0 First target qubit
+  @param target1 Second target qubit
+  @param start Start index for the DD
+  @return DD representing the gate
+  @throws std::runtime_error if the number of qubits is larger than the package
+  configuration
+  **/
+  mEdge makeTwoQubitGateDD(const TwoQubitGateMatrix& mat, const std::size_t n,
+                           const qc::Controls& controls,
+                           const qc::Qubit target0, const qc::Qubit target1,
+                           const std::size_t start = 0) {
     // sanity check
     if (n + start > nqubits) {
       throw std::runtime_error{
@@ -634,15 +653,45 @@ public:
       }
     }
 
-    // process lines below smaller target (by creating identity structures)
+    // process lines below smaller target
+    auto it = controls.begin();
     auto z = static_cast<Qubit>(start);
     const auto smallerTarget = std::min(target0, target1);
     for (; z < smallerTarget; ++z) {
-      for (auto& row : em) {
-        for (auto& entry : row) {
-          entry = makeDDNode(
-              z, std::array{entry, mEdge::zero(), mEdge::zero(), entry});
+      for (auto row = 0U; row < NEDGE; ++row) {
+        for (auto col = 0U; col < NEDGE; ++col) {
+          if (it != controls.end() && it->qubit == z) {
+            auto edges = std::array{mEdge::zero(), mEdge::zero(), mEdge::zero(),
+                                    mEdge::zero()};
+            if (it->type == qc::Control::Type::Neg) { // negative control
+              edges[0] = em[row][col];
+              if (row == col) {
+                if (z == 0U) {
+                  edges[3] = mEdge::one();
+                } else {
+                  edges[3] = makeIdent(start, z - 1U);
+                }
+              }
+            } else { // positive control
+              edges[3] = em[row][col];
+              if (row == col) {
+                if (z == 0U) {
+                  edges[0] = mEdge::one();
+                } else {
+                  edges[0] = makeIdent(start, z - 1U);
+                }
+              }
+            }
+            em[row][col] = makeDDNode(z, edges);
+          } else { // not connected
+            em[row][col] =
+                makeDDNode(z, std::array{em[row][col], mEdge::zero(),
+                                         mEdge::zero(), em[row][col]});
+          }
         }
+      }
+      if (it != controls.end() && it->qubit == z) {
+        it++;
       }
     }
 
@@ -671,11 +720,31 @@ public:
       }
     }
 
-    // process lines between the two targets (by creating identity structures)
+    // process lines between the two targets
     for (++z; z < std::max(target0, target1); ++z) {
-      for (auto& entry : em0) {
-        entry = makeDDNode(
-            z, std::array{entry, mEdge::zero(), mEdge::zero(), entry});
+      for (auto i = 0U; i < NEDGE; ++i) {
+        if (it != controls.end() && it->qubit == z) {
+          auto edges = std::array{mEdge::zero(), mEdge::zero(), mEdge::zero(),
+                                  mEdge::zero()};
+          if (it->type == qc::Control::Type::Neg) { // negative control
+            edges[0] = em0[i];
+            if (i == 0 || i == NEDGE - 1) {
+              edges[3] = makeIdent(start, z - 1U);
+            }
+          } else { // positive control
+            edges[3] = em0[i];
+            if (i == 0 || i == NEDGE - 1) {
+              edges[0] = makeIdent(start, z - 1U);
+            }
+          }
+          em0[i] = makeDDNode(z, edges);
+        } else { // not connected
+          em0[i] = makeDDNode(
+              z, std::array{em0[i], mEdge::zero(), mEdge::zero(), em0[i]});
+        }
+      }
+      if (it != controls.end() && it->qubit == z) {
+        ++it;
       }
     }
 
@@ -683,205 +752,23 @@ public:
     // target
     auto e = makeDDNode(z, em0);
 
-    // process lines above the larger target (by creating identity structures)
+    // process lines above the larger target
     const auto end = static_cast<Qubit>(n + start);
     for (++z; z < end; ++z) {
-      e = makeDDNode(z, std::array{e, mEdge::zero(), mEdge::zero(), e});
+      if (it != controls.end() && it->qubit == z) {
+        if (it->type == qc::Control::Type::Neg) { // negative control
+          e = makeDDNode(z, std::array{e, mEdge::zero(), mEdge::zero(),
+                                       makeIdent(start, z - 1U)});
+        } else { // positive control
+          e = makeDDNode(z, std::array{makeIdent(start, z - 1U), mEdge::zero(),
+                                       mEdge::zero(), e});
+        }
+        ++it;
+      } else { // not connected (current qubit is not a control/target qubit)
+        e = makeDDNode(z, std::array{e, mEdge::zero(), mEdge::zero(), e});
+      }
     }
 
-    return e;
-  }
-
-  mEdge makeSWAPDD(const std::size_t n, const qc::Controls& controls,
-                   const qc::Qubit target0, const qc::Qubit target1,
-                   const std::size_t start = 0) {
-    auto c = controls;
-    c.insert(qc::Control{target0});
-    mEdge e = makeGateDD(X_MAT, n, c, target1, start);
-    c.erase(qc::Control{target0});
-    c.insert(qc::Control{target1});
-    e = multiply(e, multiply(makeGateDD(X_MAT, n, c, target0, start), e));
-    return e;
-  }
-
-  mEdge makePeresDD(const std::size_t n, const qc::Controls& controls,
-                    const qc::Qubit target0, const qc::Qubit target1,
-                    const std::size_t start = 0) {
-    auto c = controls;
-    c.insert(qc::Control{target1});
-    mEdge e = makeGateDD(X_MAT, n, c, target0, start);
-    e = multiply(makeGateDD(X_MAT, n, controls, target1, start), e);
-    return e;
-  }
-
-  mEdge makePeresdagDD(const std::size_t n, const qc::Controls& controls,
-                       const qc::Qubit target0, const qc::Qubit target1,
-                       const std::size_t start = 0) {
-    mEdge e = makeGateDD(X_MAT, n, controls, target1, start);
-    auto c = controls;
-    c.insert(qc::Control{target1});
-    e = multiply(makeGateDD(X_MAT, n, c, target0, start), e);
-    return e;
-  }
-
-  mEdge makeiSWAPDD(const std::size_t n, const qc::Controls& controls,
-                    const qc::Qubit target0, const qc::Qubit target1,
-                    const std::size_t start = 0) {
-    mEdge e = makeGateDD(S_MAT, n, controls, target1, start);        // S q[1]
-    e = multiply(e, makeGateDD(S_MAT, n, controls, target0, start)); // S q[0]
-    e = multiply(e, makeGateDD(H_MAT, n, controls, target0, start)); // H q[0]
-    auto c = controls;
-    c.insert(qc::Control{target0});
-    e = multiply(e, makeGateDD(X_MAT, n, c, target1, start)); // CX q[0], q[1]
-    c.erase(qc::Control{target0});
-    c.insert(qc::Control{target1});
-    e = multiply(e, makeGateDD(X_MAT, n, c, target0, start)); // CX q[1], q[0]
-    e = multiply(e, makeGateDD(H_MAT, n, controls, target1, start)); // H q[1]
-    return e;
-  }
-
-  mEdge makeiSWAPinvDD(const std::size_t n, const qc::Controls& controls,
-                       const qc::Qubit target0, const qc::Qubit target1,
-                       const std::size_t start = 0) {
-    mEdge e = makeGateDD(H_MAT, n, controls, target1, start); // H q[1]
-    auto c = controls;
-    c.insert(qc::Control{target1});
-    e = multiply(e, makeGateDD(X_MAT, n, c, target0, start)); // CX q[1], q[0]
-    c.erase(qc::Control{target1});
-    c.insert(qc::Control{target0});
-    e = multiply(e, makeGateDD(X_MAT, n, c, target1, start)); // CX q[0], q[1]
-    e = multiply(e, makeGateDD(H_MAT, n, controls, target0, start)); // H q[0]
-    e = multiply(e,
-                 makeGateDD(SDG_MAT, n, controls, target0, start)); // Sdag q[0]
-    e = multiply(e,
-                 makeGateDD(SDG_MAT, n, controls, target1, start)); // Sdag q[1]
-    return e;
-  }
-
-  mEdge makeDCXDD(const std::size_t n, const qc::Controls& controls,
-                  const qc::Qubit target0, const qc::Qubit target1,
-                  const std::size_t start = 0) {
-    auto c = controls;
-    c.insert(qc::Control{target0});
-    mEdge e = makeGateDD(X_MAT, n, c, target1, start);
-    c.erase(qc::Control{target0});
-    c.insert(qc::Control{target1});
-    e = multiply(e, makeGateDD(X_MAT, n, c, target0, start));
-    return e;
-  }
-
-  mEdge makeRZZDD(const std::size_t n, const qc::Controls& controls,
-                  const qc::Qubit target0, const qc::Qubit target1,
-                  const fp theta, const std::size_t start = 0) {
-    auto c = controls;
-    c.insert(qc::Control{target0});
-    auto e = makeGateDD(X_MAT, n, c, target1, start);
-    c.erase(qc::Control{target0});
-    e = multiply(e, makeGateDD(rzMat(theta), n, c, target1, start));
-    c.insert(qc::Control{target0});
-    e = multiply(e, makeGateDD(X_MAT, n, c, target1, start));
-    return e;
-  }
-
-  mEdge makeRYYDD(const std::size_t n, const qc::Controls& controls,
-                  const qc::Qubit target0, const qc::Qubit target1,
-                  const fp theta, const std::size_t start = 0) {
-    // no controls are necessary on the RX gates since they cancel if the
-    // controls are 0.
-    auto e = makeGateDD(rxMat(PI_2), n, qc::Controls{}, target0, start);
-    e = multiply(e, makeGateDD(rxMat(PI_2), n, qc::Controls{}, target1, start));
-    e = multiply(e, makeRZZDD(n, controls, target0, target1, theta, start));
-    e = multiply(e,
-                 makeGateDD(rxMat(-PI_2), n, qc::Controls{}, target1, start));
-    e = multiply(e,
-                 makeGateDD(rxMat(-PI_2), n, qc::Controls{}, target0, start));
-    return e;
-  }
-
-  mEdge makeRXXDD(const std::size_t n, const qc::Controls& controls,
-                  const qc::Qubit target0, const qc::Qubit target1,
-                  const fp theta, const std::size_t start = 0) {
-    // no controls are necessary on the H gates since they cancel if the
-    // controls are 0.
-    auto e = makeGateDD(H_MAT, n, qc::Controls{}, target0, start);
-    e = multiply(e, makeGateDD(H_MAT, n, qc::Controls{}, target1, start));
-    e = multiply(e, makeRZZDD(n, controls, target0, target1, theta, start));
-    e = multiply(e, makeGateDD(H_MAT, n, qc::Controls{}, target1, start));
-    e = multiply(e, makeGateDD(H_MAT, n, qc::Controls{}, target0, start));
-    return e;
-  }
-
-  mEdge makeRZXDD(const std::size_t n, const qc::Controls& controls,
-                  const qc::Qubit target0, const qc::Qubit target1,
-                  const fp theta, const std::size_t start = 0) {
-    // no controls are necessary on the H gates since they cancel if the
-    // controls are 0.
-    auto e = makeGateDD(H_MAT, n, qc::Controls{}, target1, start);
-    e = multiply(e, makeRZZDD(n, controls, target0, target1, theta, start));
-    e = multiply(e, makeGateDD(H_MAT, n, qc::Controls{}, target1, start));
-    return e;
-  }
-
-  mEdge makeECRDD(const std::size_t n, const qc::Controls& controls,
-                  const qc::Qubit target0, const qc::Qubit target1,
-                  const std::size_t start = 0) {
-    auto e = makeRZXDD(n, controls, target0, target1, -PI_4, start);
-    e = multiply(e, makeGateDD(X_MAT, n, controls, target0, start));
-    e = multiply(e, makeRZXDD(n, controls, target0, target1, PI_4, start));
-    return e;
-  }
-
-  mEdge makeXXMinusYYDD(const std::size_t n, const qc::Controls& controls,
-                        const qc::Qubit target0, const qc::Qubit target1,
-                        const fp theta, const fp beta = 0.,
-                        const std::size_t start = 0) {
-    auto e = makeGateDD(rzMat(-beta), n, qc::Controls{}, target1, start);
-    e = multiply(e,
-                 makeGateDD(rzMat(-PI_2), n, qc::Controls{}, target0, start));
-    e = multiply(e, makeGateDD(SX_MAT, n, qc::Controls{}, target0, start));
-    e = multiply(e, makeGateDD(rzMat(PI_2), n, qc::Controls{}, target0, start));
-    e = multiply(e, makeGateDD(S_MAT, n, qc::Controls{}, target1, start));
-    e = multiply(e, makeGateDD(X_MAT, n, qc::Control{target0}, target1, start));
-    // only the following two gates need to be controlled by the controls since
-    // the other gates cancel if the controls are 0.
-    e = multiply(e,
-                 makeGateDD(ryMat(-theta / 2.), n, controls, target0, start));
-    e = multiply(e, makeGateDD(ryMat(theta / 2.), n, controls, target1, start));
-
-    e = multiply(e, makeGateDD(X_MAT, n, qc::Control{target0}, target1, start));
-    e = multiply(e, makeGateDD(SDG_MAT, n, qc::Controls{}, target1, start));
-    e = multiply(e,
-                 makeGateDD(rzMat(-PI_2), n, qc::Controls{}, target0, start));
-    e = multiply(e, makeGateDD(SXDG_MAT, n, qc::Controls{}, target0, start));
-    e = multiply(e, makeGateDD(rzMat(PI_2), n, qc::Controls{}, target0, start));
-    e = multiply(e, makeGateDD(rzMat(beta), n, qc::Controls{}, target1, start));
-    return e;
-  }
-
-  mEdge makeXXPlusYYDD(const std::size_t n, const qc::Controls& controls,
-                       const qc::Qubit target0, const qc::Qubit target1,
-                       const fp theta, const fp beta = 0.,
-                       const std::size_t start = 0) {
-    auto e = makeGateDD(rzMat(beta), n, qc::Controls{}, target1, start);
-    e = multiply(e,
-                 makeGateDD(rzMat(-PI_2), n, qc::Controls{}, target0, start));
-    e = multiply(e, makeGateDD(SX_MAT, n, qc::Controls{}, target0, start));
-    e = multiply(e, makeGateDD(rzMat(PI_2), n, qc::Controls{}, target0, start));
-    e = multiply(e, makeGateDD(S_MAT, n, qc::Controls{}, target1, start));
-    e = multiply(e, makeGateDD(X_MAT, n, qc::Control{target0}, target1, start));
-    // only the following two gates need to be controlled by the controls since
-    // the other gates cancel if the controls are 0.
-    e = multiply(e, makeGateDD(ryMat(theta / 2.), n, controls, target0, start));
-    e = multiply(e, makeGateDD(ryMat(theta / 2.), n, controls, target1, start));
-
-    e = multiply(e, makeGateDD(X_MAT, n, qc::Control{target0}, target1, start));
-    e = multiply(e, makeGateDD(SDG_MAT, n, qc::Controls{}, target1, start));
-    e = multiply(e,
-                 makeGateDD(rzMat(-PI_2), n, qc::Controls{}, target0, start));
-    e = multiply(e, makeGateDD(SXDG_MAT, n, qc::Controls{}, target0, start));
-    e = multiply(e, makeGateDD(rzMat(PI_2), n, qc::Controls{}, target0, start));
-    e = multiply(e,
-                 makeGateDD(rzMat(-beta), n, qc::Controls{}, target1, start));
     return e;
   }
 
@@ -1962,10 +1849,26 @@ public:
     const auto eliminate = std::vector<bool>(nqubits, true);
     return trace(a, eliminate).w;
   }
-  bool isCloseToIdentity(const mEdge& m, const dd::fp tol = 1e-10) {
+
+  /**
+        Checks if a given matrix is close to the identity matrix, while ignoring
+    any potential garbage qubits and ignoring the diagonal weights if
+    `checkCloseToOne` is set to false.
+        @param m An mEdge that represents the DD of the matrix.
+        @param tol The accepted tolerance for the edge weights of the DD.
+        @param garbage A vector of boolean values that defines which qubits are
+    considered garbage qubits. If it's empty, then no qubit is considered to be
+    a garbage qubit.
+        @param checkCloseToOne If false, the function only checks if the matrix
+    is close to a diagonal matrix.
+    **/
+  bool isCloseToIdentity(const mEdge& m, const dd::fp tol = 1e-10,
+                         const std::vector<bool>& garbage = {},
+                         const bool checkCloseToOne = true) {
     std::unordered_set<decltype(m.p)> visited{};
     visited.reserve(mUniqueTable.getNumActiveEntries());
-    return isCloseToIdentityRecursive(m, visited, tol);
+    return isCloseToIdentityRecursive(m, visited, tol, garbage,
+                                      checkCloseToOne);
   }
 
 private:
@@ -2013,15 +1916,31 @@ private:
 
   bool isCloseToIdentityRecursive(const mEdge& m,
                                   std::unordered_set<decltype(m.p)>& visited,
-                                  const dd::fp tol) {
+                                  const dd::fp tol,
+                                  const std::vector<bool>& garbage,
+                                  const bool checkCloseToOne) {
     // immediately return if this node has already been visited
     if (visited.find(m.p) != visited.end()) {
       return true;
     }
 
-    // immediately return of this node is identical to the identity
+    // immediately return if this node is identical to the identity
     if (m.isTerminal() || m.p->isIdentity()) {
       return true;
+    }
+
+    const auto n = m.p->v;
+
+    if (garbage.size() > n && garbage[n]) {
+      return isCloseToIdentityRecursive(m.p->e[0U], visited, tol, garbage,
+                                        checkCloseToOne) &&
+             isCloseToIdentityRecursive(m.p->e[1U], visited, tol, garbage,
+                                        checkCloseToOne) &&
+             isCloseToIdentityRecursive(m.p->e[2U], visited, tol, garbage,
+                                        checkCloseToOne) &&
+             isCloseToIdentityRecursive(m.p->e[3U], visited, tol, garbage,
+                                        checkCloseToOne);
+      ;
     }
 
     // check whether any of the middle successors is non-zero, i.e., m = [ x 0 0
@@ -2029,46 +1948,44 @@ private:
     const auto mag1 = dd::ComplexNumbers::mag2(m.p->e[1U].w);
     const auto mag2 = dd::ComplexNumbers::mag2(m.p->e[2U].w);
     if (mag1 > tol || mag2 > tol) {
-      visited.insert(m.p);
       return false;
     }
 
-    // check whether  m = [ ~1 0 0 y ]
-    const auto mag0 = dd::ComplexNumbers::mag2(m.p->e[0U].w);
-    if (std::abs(mag0 - 1.0) > tol) {
-      visited.insert(m.p);
-      return false;
-    }
-    const auto arg0 = dd::ComplexNumbers::arg(m.p->e[0U].w);
-    if (std::abs(arg0) > tol) {
-      visited.insert(m.p);
-      return false;
-    }
-
-    // check whether m = [ x 0 0 ~1 ] or m = [ x 0 0 ~0 ] (the last case is true
-    // for an ancillary qubit)
-    const auto mag3 = dd::ComplexNumbers::mag2(m.p->e[3U].w);
-    if (mag3 > tol) {
-      if (std::abs(mag3 - 1.0) > tol) {
-        visited.insert(m.p);
+    if (checkCloseToOne) {
+      // check whether  m = [ ~1 0 0 y ]
+      const auto mag0 = dd::ComplexNumbers::mag2(m.p->e[0U].w);
+      if (std::abs(mag0 - 1.0) > tol) {
         return false;
       }
-      const auto arg3 = dd::ComplexNumbers::arg(m.p->e[3U].w);
-      if (std::abs(arg3) > tol) {
-        visited.insert(m.p);
+      const auto arg0 = dd::ComplexNumbers::arg(m.p->e[0U].w);
+      if (std::abs(arg0) > tol) {
         return false;
       }
-    }
 
+      // check whether m = [ x 0 0 ~1 ] or m = [ x 0 0 ~0 ] (the last case is
+      // true for an ancillary qubit)
+      const auto mag3 = dd::ComplexNumbers::mag2(m.p->e[3U].w);
+      if (mag3 > tol) {
+        if (std::abs(mag3 - 1.0) > tol) {
+          return false;
+        }
+        const auto arg3 = dd::ComplexNumbers::arg(m.p->e[3U].w);
+        if (std::abs(arg3) > tol) {
+          return false;
+        }
+      }
+    }
     // m either has the form [ ~1 0 0 ~1 ] or [ ~1 0 0 ~0 ]
-    const auto ident0 = isCloseToIdentityRecursive(m.p->e[0U], visited, tol);
+    const auto ident0 = isCloseToIdentityRecursive(m.p->e[0U], visited, tol,
+                                                   garbage, checkCloseToOne);
+
     if (!ident0) {
-      visited.insert(m.p);
       return false;
     }
-
     // m either has the form [ I 0 0 ~1 ] or [ I 0 0 ~0 ]
-    const auto ident3 = isCloseToIdentityRecursive(m.p->e[3U], visited, tol);
+    const auto ident3 = isCloseToIdentityRecursive(m.p->e[3U], visited, tol,
+                                                   garbage, checkCloseToOne);
+
     visited.insert(m.p);
     return ident3;
   }

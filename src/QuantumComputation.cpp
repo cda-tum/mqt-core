@@ -1,6 +1,7 @@
 #include "QuantumComputation.hpp"
 
 #include <cassert>
+#include <memory>
 
 namespace qc {
 
@@ -1048,12 +1049,24 @@ void QuantumComputation::addVariable(const SymbolOrNumber& expr) {
 }
 
 // Instantiates this computation
-void QuantumComputation::instantiate(const VariableAssignment& assignment) {
+void QuantumComputation::instantiateInplace(
+    const VariableAssignment& assignment) {
   for (auto& op : ops) {
     if (auto* symOp = dynamic_cast<SymbolicOperation*>(op.get());
         symOp != nullptr) {
       symOp->instantiate(assignment);
+      // if the operation is fully instantiated, it can be replaced by the
+      // corresponding standard operation
+      if (symOp->isStandardOperation()) {
+        op = std::make_unique<StandardOperation>(
+            *dynamic_cast<StandardOperation*>(symOp));
+      }
     }
+  }
+  // after an operation is instantiated, the respective parameters can be
+  // removed from the circuit
+  for (const auto& [var, _] : assignment) {
+    occuringVariables.erase(var);
   }
 }
 
